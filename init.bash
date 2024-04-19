@@ -46,6 +46,10 @@ function initializeGit {
         git pull origin "$branch"
         echo -e "${GREEN}Set $submodule to branch $branch.\n${NC}"
 
+        # Initialize lib/forge-std
+        echo -e "${YELLOW}Initializing submodule forge-std...\n${NC}"
+        git submodule update --init lib/forge-std
+
         # Now handle each submodule of this submodule
         submodule_list=`ls gitmodule`
 
@@ -76,7 +80,7 @@ function initializeGit {
             # This is happens because PermitC insode tapioca-periph is used in tap-token and tapiocaz
             if [ "$nested_submodule" = "tapioca-periph" ]; then
                 echo -e "\t${YELLOW}Initializing submodule permitc of tapioca-periph...\n${NC}"
-                git submodule update --init permitc
+                git submodule update --init gitmodule/permitc
             fi
 
             # Navigate back to the submodule directory
