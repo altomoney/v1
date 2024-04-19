@@ -62,7 +62,8 @@ function initializeGit {
             # Determine the branch of the nested submodule
             nested_branch="main" # Default to main if no specific branch is defined
             for j in "${!submodules[@]}"; do
-                if [ "${submodules[$j]}" = "$nested_submodule" ]; then
+                # Transform to lowercase for comparison
+                if [ "${submodules[$j]}" = `echo $nested_submodule | tr '[:upper:]' '[:lower:]'` ]; then
                     nested_branch="${branches[$j]}"
                     break
                 fi
@@ -125,9 +126,9 @@ function yarnInstallAndSetup {
 
 function main {
     initializeGit
+    echo -e "${GREEN}🎉🎉🎉 Git submodules initialized! 🎉🎉🎉\n${NC}"
     yarnInstallAndSetup
+    echo -e "${GREEN}🎉🎉🎉 Protocols initalized! 🎉🎉🎉\n${NC}"
 }
 
 main
-# Echo done in a fancy way with emojis
-echo -e "${GREEN}🎉🎉🎉 Protocols initalized! 🎉🎉🎉\n${NC}"
