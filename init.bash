@@ -1,10 +1,6 @@
 #!/bin/bash
 
-# Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+. utils.bash
 
 # List of submodules
 submodules=("tap-token" "tap-yieldbox" "tapioca-bar" "tapioca-periph" "tapiocaz")
@@ -14,13 +10,10 @@ branches=(
     "c4-02-2024-fixes-review-merged"  # tap-token
     "main"                            # tap-yieldbox
     "pre-prod-deployment-scripts"     # tapioca-bar
-    "c4-02-2024-fixes-and-changes"    # tapioca-periph
+    "pre-prod-deployment-scripts"    # tapioca-periph
     "deployment-scripts"              # tapiocaz
 )
 
-function printWd() {
-    echo -e "${YELLOW}Navigated to: `pwd`${NC}"
-}
 
 function initializeGit {
     # Init and update the git submodules
@@ -34,8 +27,8 @@ function initializeGit {
     echo -e "${YELLOW}Initializing and setting branches for submodules...\n${NC}"
     # Initialize each submodule and set to the specific branch
     for i in "${!submodules[@]}"; do
-        submodule="${submodules[$i]}"
-        branch="${branches[$i]}"
+        local submodule="${submodules[$i]}"
+        local branch="${branches[$i]}"
         
         echo -e "${GREEN}Processing $submodule...\n${NC}"
         git submodule update --init "$submodule"
@@ -51,16 +44,16 @@ function initializeGit {
         git submodule update --init lib/forge-std
 
         # Now handle each submodule of this submodule
-        submodule_list=`ls gitmodule`
+        local submodule_list=`ls gitmodule`
 
         # Context is now 2 level deep, in the submodule directory (gitmodule/submodule)
         for nested_submodule in $submodule_list; do
-            submodule_access="gitmodule/$nested_submodule"
+            local submodule_access="gitmodule/$nested_submodule"
             echo -e "\t${YELLOW}Initializing submodule $nested_submodule of $submodule...\n${NC}"
             git submodule update --init "$submodule_access"
 
             # Determine the branch of the nested submodule
-            nested_branch="main" # Default to main if no specific branch is defined
+            local nested_branch="main" # Default to main if no specific branch is defined
             for j in "${!submodules[@]}"; do
                 # Transform to lowercase for comparison
                 if [ "${submodules[$j]}" = `echo $nested_submodule | tr '[:upper:]' '[:lower:]'` ]; then
