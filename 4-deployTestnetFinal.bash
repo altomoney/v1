@@ -15,20 +15,23 @@ fi
 
 
 function 1-deployTapTokenPostLbp {
-    # Start with tap token
     echo -e "${GREEN}Deploying tap-token...\n${NC}"
-    cd gitmodule/tap-token
-    printWd
+    goToTapToken
     
-    npx hardhat deploys preLbp --network arbitrum_sepolia $tag
-    exportAndPushCommit 
+    npx hardhat deploys final --network arbitrum_sepolia $tag || printErrorHappened
+
+    exportAndPushCommit
 
     cd ../../
     printWd
 }
 
+
+
 function main {
     1-deployTapTokenPostLbp
+    2-deployTapiocaZPostLbp
+    3-deployTapiocaBarPostLbp
 }
 
 main

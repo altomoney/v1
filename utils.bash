@@ -1,14 +1,3 @@
-# Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
-
-# chains
-main_chain="arbitrum"
-side_chains=("ethereum" "optimism")
-mainnet_chains=("arbitrum" "ethereum" "optimism")
-testnet_chains=("arbitrum_sepolia" "sepolia" "optimism_sepolia")
 
 if [ -z "$1" ]; then
     echo -e "${RED}Please provide a tag to deploy to.\n${NC}"
@@ -25,10 +14,6 @@ tag="--tag $1"
 SDK_BRANCH_NAME="tagged-deployments-$1"
 
 # Functions
-function printWd() {
-    echo -e "${YELLOW}Navigated to: `pwd`${NC}"
-}
-
 
 # Context needs to be inside of a repo
 function exportAndPushCommit {

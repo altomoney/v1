@@ -1,0 +1,49 @@
+#!/bin/bash
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+# chains
+main_chain="arbitrum"
+side_chains=("ethereum" "optimism")
+mainnet_chains=("arbitrum" "ethereum" "optimism")
+testnet_chains=("arbitrum_sepolia" "sepolia" "optimism_sepolia")
+
+function printWd() {
+    echo -e "${YELLOW}Navigated to: `pwd`${NC}"
+}
+
+function printErrorHappened() {
+    echo -e "${RED}[-] An error occured. Exiting...${NC}"
+    exit 1
+}
+
+function _goToModule() {
+    local module=$1
+    echo -e "${GREEN}Navigating to $module...${NC}"
+    cd gitmodule/$module || { echo -e "${RED}Failed to find $module. Exiting...${NC}"; exit 1; }
+    printWd
+}
+
+function goToTapToken() {
+    _goToModule "tap-token"
+}
+
+function goToPeriph() {
+    _goToModule "tapioca-periph"
+}
+
+function goToYieldBox() {
+    _goToModule "tap-yieldbox"
+}
+
+function goToBar() {
+    _goToModule "tapioca-bar"
+}
+
+function goToTapiocaz() {
+    _goToModule "tapiocaz"
+}

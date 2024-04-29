@@ -1,6 +1,6 @@
 #!/bin/bash
 
-. utils.bash
+. constants.bash
 
 # List of submodules
 submodules=("tap-token" "tap-yieldbox" "tapioca-bar" "tapioca-periph" "tapiocaz")
