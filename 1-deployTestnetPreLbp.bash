@@ -39,7 +39,7 @@ function 3-deployYieldBoxPreLbp {
     npx hardhat deploys yieldBox --network $main_chain $tag || printErrorHappened
     for chain in "${side_chains[@]}"
     do
-        npx hardhat deploys preLbp --network $chain $tag || printErrorHappened
+        npx hardhat deploys yieldBox --network $chain $tag || printErrorHappened
     done
     exportAndPushCommit
 
