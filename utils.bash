@@ -1,3 +1,6 @@
+#!/bin/bash
+
+. constants.bash
 
 if [ -z "$1" ]; then
     echo -e "${RED}Please provide a tag to deploy to.\n${NC}"
