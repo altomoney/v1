@@ -7,11 +7,11 @@ submodules=("tap-token" "tap-yieldbox" "tapioca-bar" "tapioca-periph" "tapiocaz"
 
 # Corresponding branches for each submodule
 branches=(
-    "c4-02-2024-fixes-review-merged"  # tap-token
+    "dev"  # tap-token
     "main"                            # tap-yieldbox
     "pre-prod-deployment-scripts"     # tapioca-bar
-    "pre-prod-deployment-scripts"    # tapioca-periph
-    "deployment-scripts"              # tapiocaz
+    "dev"    # tapioca-periph
+    "pre-prod-deployment-scripts"              # tapiocaz
 )
 
 
