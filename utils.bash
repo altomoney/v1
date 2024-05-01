@@ -9,9 +9,24 @@ fi
 
 # Give help if requested
 if [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
-    echo -e "${YELLOW}Usage: ./deployTestnetPreLbp.bash <tag>\n${NC}"
+    echo -e "${YELLOW}Usage: [TESTNET|MAINNET]=true ./deployTestnetPreLbp.bash <tag>\n${NC}"
     exit 0
 fi
+
+
+# Set the main chain and side chains
+if [ "$TESTNET" = true ]; then
+    main_chain=$testnet_main_chain
+    side_chains=$testnet_side_chains
+elif [ "$MAINNET" = true ]; then
+    main_chain=$mainnet_main_chain
+    side_chains=$mainnet_side_chains
+else
+    echo -e "${RED}Please set either TESTNET or MAINNET as env var to true.${NC}"
+    echo -e "${RED}Example: TESTNET=true ./1-deployTestnetPreLbp.bash <tag>${NC}"
+    exit 1
+fi
+
 
 tag="--tag $1"
 SDK_BRANCH_NAME="tagged-deployments-$1"

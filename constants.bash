@@ -13,18 +13,6 @@ mainnet_side_chains=("ethereum" "optimism")
 testnet_main_chain="arbitrum_sepolia"
 testnet_side_chains=("sepolia" "optimism_sepolia")
 
-# Set the main chain and side chains
-if [ "$TESTNET" = true ]; then
-    main_chain=$testnet_main_chain
-    side_chains=$testnet_side_chains
-elif [ "$MAINNET" = true ]; then
-    main_chain=$mainnet_main_chain
-    side_chains=$mainnet_side_chains
-else
-    echo -e "${RED}Please set either TESTNET or MAINNET as env var to true.${NC}"
-    echo -e "${RED}Example: TESTNET=true ./1-deployTestnetPreLbp.bash myTag${NC}"
-    exit 1
-fi
 
 function printWd() {
     echo -e "${YELLOW}Navigated to: `pwd`${NC}"
