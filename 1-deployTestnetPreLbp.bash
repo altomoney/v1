@@ -2,7 +2,6 @@
 
 . utils.bash
 
-
 function 1-deployPeriphPreLbp {
     # Start with tap token
     echo -e "${GREEN}Deploying tapioca-periph...\n${NC}"
@@ -10,6 +9,10 @@ function 1-deployPeriphPreLbp {
     printWd
 
     npx hardhat deploys preLbp --network $main_chain $tag || printErrorHappened
+    for chain in "${side_chains[@]}"
+    do
+        npx hardhat deploys preLbp --network $chain $tag || printErrorHappened
+    done
     exportAndPushCommit
 
     cd ../../
@@ -34,6 +37,10 @@ function 3-deployYieldBoxPreLbp {
     goToYieldBox
 
     npx hardhat deploys yieldBox --network $main_chain $tag || printErrorHappened
+    for chain in "${side_chains[@]}"
+    do
+        npx hardhat deploys preLbp --network $chain $tag || printErrorHappened
+    done
     exportAndPushCommit
 
     cd ../../

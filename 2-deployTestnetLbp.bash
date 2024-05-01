@@ -2,7 +2,6 @@
 
 . utils.bash
 
-
 function 1-deployPeriphLbp {
     # Start with tap token
     echo -e "${GREEN}Deploying tapioca-periph...\n${NC}"
