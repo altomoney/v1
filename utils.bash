@@ -57,10 +57,51 @@ function exportAndPushCommit {
     fi
     git add src/global.db.json
     git commit -m "(\`${PWD##*/}\`): Exported deployments on $tag"
-    git push --set-upstream origin $SDK_BRANCH_NAME
+    git push --set-upstream origin $SDK_BRANCH_NAME --force
     echo -e "${GREEN}Changes committed and pushed!\n${NC}"
 
     # Navigate back to the root directory
     cd ../../
     printWd
+}
+
+function _goToModule() {
+    local module=$1
+    echo -e "${GREEN}Navigating to $module...${NC}"
+    cd gitmodule/$module || { echo -e "${RED}Failed to find $module. Exiting...${NC}"; exit 1; }
+    
+    # Make sure that the SDK branch is in sync the chosen tag 
+    cd gitmodule/tapioca-sdk
+    printWd
+    echo -e "${GREEN}Pulling latest changes from $SDK_BRANCH_NAME...${NC}"
+    if [ "$(git branch --show-current)" != "$SDK_BRANCH_NAME" ]; then
+        # Check if the branch exists and checkout, if not create it and checkout
+        git checkout $SDK_BRANCH_NAME 2>/dev/null || git checkout -b $SDK_BRANCH_NAME
+    fi
+    git fetch origin "$SDK_BRANCH_NAME"
+    git pull origin $SDK_BRANCH_NAME
+    echo -e "${GREEN}Latest changes pulled!${NC}"
+    cd ../../
+
+    printWd
+}
+
+function goToTapToken() {
+    _goToModule "tap-token"
+}
+
+function goToPeriph() {
+    _goToModule "tapioca-periph"
+}
+
+function goToYieldBox() {
+    _goToModule "tap-yieldbox"
+}
+
+function goToBar() {
+    _goToModule "tapioca-bar"
+}
+
+function goToTapiocaz() {
+    _goToModule "tapiocaz"
 }

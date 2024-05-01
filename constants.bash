@@ -22,30 +22,3 @@ function printErrorHappened() {
     echo -e "${RED}[-] An error occured. Exiting...${NC}"
     exit 1
 }
-
-function _goToModule() {
-    local module=$1
-    echo -e "${GREEN}Navigating to $module...${NC}"
-    cd gitmodule/$module || { echo -e "${RED}Failed to find $module. Exiting...${NC}"; exit 1; }
-    printWd
-}
-
-function goToTapToken() {
-    _goToModule "tap-token"
-}
-
-function goToPeriph() {
-    _goToModule "tapioca-periph"
-}
-
-function goToYieldBox() {
-    _goToModule "tap-yieldbox"
-}
-
-function goToBar() {
-    _goToModule "tapioca-bar"
-}
-
-function goToTapiocaz() {
-    _goToModule "tapiocaz"
-}
