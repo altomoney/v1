@@ -11,7 +11,7 @@ mainnet_main_chain="arbitrum"
 mainnet_side_chains=("ethereum" "optimism")
 
 testnet_main_chain="arbitrum_sepolia"
-testnet_side_chains=("sepolia" "optimism_sepolia")
+testnet_side_chains=("optimism_sepolia")
 
 
 function printWd() {
