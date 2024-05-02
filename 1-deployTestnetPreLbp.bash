@@ -8,10 +8,10 @@ function 1-deployPeriphPreLbp {
     goToPeriphAndGitSync
 
     set -x
-    npx hardhat deploys preLbp --network $main_chain $tag || printErrorHappened
+    npx hardhat deploys preLbp --network $main_chain $tag $verify_deps || printErrorHappened
     for chain in "${side_chains[@]}"
     do
-        npx hardhat deploys preLbp --network $chain $tag || printErrorHappened
+        npx hardhat deploys preLbp --network $chain $tag $verify_deps || printErrorHappened
     done
     set +x
     exportAndPushCommit
@@ -26,7 +26,7 @@ function 2-deployTapTokenPreLbp {
     goToTapTokenAndGitSync
 
     set -x
-    npx hardhat deploys preLbp --network $main_chain $tag || printErrorHappened
+    npx hardhat deploys preLbp --network $main_chain $tag $verify_deps || printErrorHappened
     set +x
     exportAndPushCommit
 
@@ -40,10 +40,10 @@ function 3-deployYieldBoxPreLbp {
     goToYieldBoxAndGitSync
 
     set -x
-    npx hardhat deploys yieldBox --network $main_chain $tag || printErrorHappened
+    npx hardhat deploys yieldBox --network $main_chain $tag $verify_deps || printErrorHappened
     for chain in "${side_chains[@]}"
     do
-        npx hardhat deploys yieldBox --network $chain $tag || printErrorHappened
+        npx hardhat deploys yieldBox --network $chain $tag $verify_deps || printErrorHappened
     done
     set +x
     exportAndPushCommit

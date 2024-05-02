@@ -8,7 +8,7 @@ function 1-deployPeriphLbp {
     goToPeriphAndGitSync
 
     set -x
-    npx hardhat deploys lbp --network $main_chain $tag || printErrorHappened
+    npx hardhat deploys lbp --network $main_chain $tag $verify_deps || printErrorHappened
     set +x
     exportAndPushCommit
 

@@ -2,18 +2,33 @@
 
 . constants.bash
 
+
+# *****************
+#       Vars
+# ******************
+
+tag="--tag $1"
+SDK_BRANCH_NAME="tagged-deployments-$1"
+verify_deps="" # can be verify="--verify" if VERIFY is set to true
+
+# *****************
+#       Args
+# ******************
+
+# TAG arg
 if [ -z "$1" ]; then
     echo -e "${RED}Please provide a tag to deploy to.\n${NC}"
     exit 1
 fi
 
+# TESTNET arg
 # Give help if requested
 if [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
-    echo -e "${YELLOW}Usage: [TESTNET|MAINNET]=true ./deployTestnetPreLbp.bash <tag>\n${NC}"
+    echo -e "${YELLOW}Usage: VERIFY=true/false [TESTNET|MAINNET]=true/false ./deployTestnetPreLbp.bash <tag>\n${NC}"
     exit 0
 fi
 
-
+# TESTNET / MAINNET arg
 # Set the main chain and side chains
 if [ "$TESTNET" = true ]; then
     main_chain=$testnet_main_chain
@@ -27,12 +42,13 @@ else
     exit 1
 fi
 
+# VERIFY arg
+if [ "$VERIFY" = true ]; then
+    verify_deps="--verify"
 
-tag="--tag $1"
-SDK_BRANCH_NAME="tagged-deployments-$1"
-
-# Functions
-
+# *****************
+#       Funcs
+# ******************
 # Context needs to be inside of a repo
 function exportAndPushCommit {
     if [ ! -f "foundry.toml" ]; then

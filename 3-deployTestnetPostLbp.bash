@@ -7,15 +7,15 @@ function 1-deployTapTokenPostLbp {
     goToTapTokenAndGitSync
     
     set -x
-    npx hardhat deploys postLbp1 --network $main_chain $tag || printErrorHappened
+    npx hardhat deploys postLbp1 --network $main_chain $tag $verify_deps || printErrorHappened
     for chain in "${side_chains[@]}"
     do
-        npx hardhat deploys postLbp1-sideChain --network $chain $tag || printErrorHappened
+        npx hardhat deploys postLbp1-sideChain --network $chain $tag $verify_deps || printErrorHappened
     done
     set +x
     1-2-deployPeriphPostLbp # Needs to be called after tap-token postLbp1
     set -x
-    npx hardhat deploys postLbp2 --network $main_chain $tag || printErrorHappened
+    npx hardhat deploys postLbp2 --network $main_chain $tag $verify_deps || printErrorHappened
     set +x
 
     exportAndPushCommit
@@ -29,7 +29,7 @@ function 1-2-deployPeriphPostLbp {
     goToPeriphAndGitSync
 
     set -x
-    npx hardhat deploys postLbp --network $main_chain $tag || printErrorHappened
+    npx hardhat deploys postLbp --network $main_chain $tag $verify_deps || printErrorHappened
     set +x
 
     exportAndPushCommit
@@ -43,10 +43,10 @@ function 2-deployTapiocaZPostLbp {
     goToTapiocazAndGitSync
 
     set -x
-    npx hardhat deploys postLbp --network $main_chain $tag || printErrorHappened
+    npx hardhat deploys postLbp --network $main_chain $tag $verify_deps || printErrorHappened
     for chain in "${side_chains[@]}"
     do
-        npx hardhat deploys postLbp --network $chain $tag || printErrorHappened
+        npx hardhat deploys postLbp --network $chain $tag $verify_deps || printErrorHappened
     done
     set +x
     
@@ -61,12 +61,12 @@ function 3-deployTapiocaBarPostLbp {
     goToBarAndGitSync
 
     set -x
-    npx hardhat deploys postLbp --network $main_chain $tag || printErrorHappened
+    npx hardhat deploys postLbp --network $main_chain $tag $verify_deps || printErrorHappened
     for chain in "${side_chains[@]}"
     do
-        npx hardhat deploys postLbp --network $chain $tag || printErrorHappened
+        npx hardhat deploys postLbp --network $chain $tag $verify_deps || printErrorHappened
     done
-    npx hardhat deploys postLbp2 --network $main_chain $tag || printErrorHappened
+    npx hardhat deploys postLbp2 --network $main_chain $tag $verify_deps || printErrorHappened
     set +x
 
     exportAndPushCommit

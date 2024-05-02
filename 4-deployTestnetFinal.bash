@@ -7,7 +7,7 @@ function 1-deployTapTokenPostLbp {
     goToTapTokenAndGitSync
     
     set -x
-    npx hardhat deploys final --network $main_chain $tag || printErrorHappened
+    npx hardhat deploys final --network $main_chain $tag $verify_deps || printErrorHappened
     set +x
 
     exportAndPushCommit
