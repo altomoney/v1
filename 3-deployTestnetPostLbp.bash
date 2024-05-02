@@ -6,13 +6,17 @@ function 1-deployTapTokenPostLbp {
     echo -e "${GREEN}Deploying tap-token...\n${NC}"
     goToTapToken
     
+    set -x
     npx hardhat deploys postLbp1 --network $main_chain $tag || printErrorHappened
     for chain in "${side_chains[@]}"
     do
         npx hardhat deploys postLbp1-sideChain --network $chain $tag || printErrorHappened
     done
+    set +x
     1-2-deployPeriphPostLbp # Needs to be called after tap-token postLbp1
+    set -x
     npx hardhat deploys postLbp2 --network $main_chain $tag || printErrorHappened
+    set +x
 
     exportAndPushCommit
 
@@ -24,7 +28,9 @@ function 1-2-deployPeriphPostLbp {
     echo -e "${GREEN}Deploying tapioca-periph...\n${NC}"
     goToPeriph
 
+    set -x
     npx hardhat deploys postLbp --network $main_chain $tag || printErrorHappened
+    set +x
 
     exportAndPushCommit
 
@@ -36,12 +42,14 @@ function 2-deployTapiocaZPostLbp {
     echo -e "${GREEN}Deploying tapiocaz...\n${NC}"
     goToTapiocaz
 
+    set -x
     npx hardhat deploys postLbp --network $main_chain $tag || printErrorHappened
     for chain in "${side_chains[@]}"
     do
         npx hardhat deploys postLbp --network $chain $tag || printErrorHappened
     done
-
+    set +x
+    
     exportAndPushCommit
 
     cd ../../
@@ -52,12 +60,14 @@ function 3-deployTapiocaBarPostLbp {
     echo -e "${GREEN}Deploying tapioca-bar...\n${NC}"
     goToBar
 
+    set -x
     npx hardhat deploys postLbp --network $main_chain $tag || printErrorHappened
     for chain in "${side_chains[@]}"
     do
         npx hardhat deploys postLbp --network $chain $tag || printErrorHappened
     done
     npx hardhat deploys postLbp2 --network $main_chain $tag || printErrorHappened
+    set +x
 
     exportAndPushCommit
 

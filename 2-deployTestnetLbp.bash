@@ -7,7 +7,9 @@ function 1-deployPeriphLbp {
     echo -e "${GREEN}Deploying tapioca-periph...\n${NC}"
     goToPeriph
 
+    set -x
     npx hardhat deploys lbp --network $main_chain $tag || printErrorHappened
+    set +x
     exportAndPushCommit
 
     cd ../../
