@@ -5,7 +5,7 @@
 function 1-deployPeriphLbp {
     # Start with tap token
     echo -e "${GREEN}Deploying tapioca-periph...\n${NC}"
-    goToPeriph
+    goToPeriphAndGitSync
 
     set -x
     npx hardhat deploys lbp --network $main_chain $tag || printErrorHappened

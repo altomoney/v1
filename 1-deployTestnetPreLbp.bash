@@ -5,8 +5,7 @@
 function 1-deployPeriphPreLbp {
     # Start with tap token
     echo -e "${GREEN}Deploying tapioca-periph...\n${NC}"
-    cd gitmodule/tapioca-periph
-    printWd
+    goToPeriphAndGitSync
 
     set -x
     npx hardhat deploys preLbp --network $main_chain $tag || printErrorHappened
@@ -24,7 +23,7 @@ function 1-deployPeriphPreLbp {
 function 2-deployTapTokenPreLbp {
     # Start with tap token
     echo -e "${GREEN}Deploying tap-token...\n${NC}"
-    goToTapToken
+    goToTapTokenAndGitSync
 
     set -x
     npx hardhat deploys preLbp --network $main_chain $tag || printErrorHappened
@@ -38,7 +37,7 @@ function 2-deployTapTokenPreLbp {
 function 3-deployYieldBoxPreLbp {
     # Start with tap token
     echo -e "${GREEN}Deploying tap-yieldbox...\n${NC}"
-    goToYieldBox
+    goToYieldBoxAndGitSync
 
     set -x
     npx hardhat deploys yieldBox --network $main_chain $tag || printErrorHappened

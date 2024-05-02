@@ -41,7 +41,8 @@ function exportAndPushCommit {
     fi
     
     # Export the deployments
-    echo -e "${GREEN}Exporting local deployments...\n${NC}"
+    local currProject=${PWD##*/}
+    echo -e "${GREEN}Exporting local deployments for ${currProject}...\n${NC}"
     npx hardhat sdk exportDep $tag
     echo -e "${GREEN}Local deployments exported!\n${NC}"
 
@@ -50,14 +51,9 @@ function exportAndPushCommit {
 
     # Commit and push the changes
     echo -e "${GREEN}Committing and pushing changes...\n${NC}"
-    # Check if current branch is $SDK_BRANCH_NAME, if not checkout to it
-    if [ "$(git branch --show-current)" != "$SDK_BRANCH_NAME" ]; then
-        # Check if the branch exists and checkout, if not create it and checkout
-        git checkout $SDK_BRANCH_NAME 2>/dev/null || git checkout -b $SDK_BRANCH_NAME
-    fi
     git add src/global.db.json
-    git commit -m "(\`${PWD##*/}\`): Exported deployments on $tag"
-    git push --set-upstream origin $SDK_BRANCH_NAME --force
+    git commit -m "(\`${currProject}\`): Exported deployments on tag \`$SDK_BRANCH_NAME\`"
+    git push --set-upstream origin $SDK_BRANCH_NAME
     echo -e "${GREEN}Changes committed and pushed!\n${NC}"
 
     # Navigate back to the root directory
@@ -65,7 +61,7 @@ function exportAndPushCommit {
     printWd
 }
 
-function _goToModule() {
+function _goToModuleAndGitSync() {
     local module=$1
     echo -e "${GREEN}Navigating to $module...${NC}"
     cd gitmodule/$module || { echo -e "${RED}Failed to find $module. Exiting...${NC}"; exit 1; }
@@ -73,35 +69,40 @@ function _goToModule() {
     # Make sure that the SDK branch is in sync the chosen tag 
     cd gitmodule/tapioca-sdk
     printWd
-    echo -e "${GREEN}Pulling latest changes from $SDK_BRANCH_NAME...${NC}"
+
+
+    # pull latest changes from SDK
+    echo -e "${GREEN}Pulling SDK latest changes from $SDK_BRANCH_NAME...${NC}"
+
+    git fetch origin
     if [ "$(git branch --show-current)" != "$SDK_BRANCH_NAME" ]; then
         # Check if the branch exists and checkout, if not create it and checkout
-        git checkout $SDK_BRANCH_NAME 2>/dev/null || git checkout -b $SDK_BRANCH_NAME
+        git checkout --track origin/$SDK_BRANCH_NAME 2>/dev/null || git checkout -b $SDK_BRANCH_NAME
     fi
-    git fetch origin "$SDK_BRANCH_NAME"
     git pull origin $SDK_BRANCH_NAME
-    echo -e "${GREEN}Latest changes pulled!${NC}"
-    cd ../../
 
+    echo -e "${GREEN}Latest changes pulled!${NC}"
+
+    cd ../../
     printWd
 }
 
-function goToTapToken() {
-    _goToModule "tap-token"
+function goToTapTokenAndGitSync() {
+    _goToModuleAndGitSync "tap-token"
 }
 
-function goToPeriph() {
-    _goToModule "tapioca-periph"
+function goToPeriphAndGitSync() {
+    _goToModuleAndGitSync "tapioca-periph"
 }
 
-function goToYieldBox() {
-    _goToModule "tap-yieldbox"
+function goToYieldBoxAndGitSync() {
+    _goToModuleAndGitSync "tap-yieldbox"
 }
 
-function goToBar() {
-    _goToModule "tapioca-bar"
+function goToBarAndGitSync() {
+    _goToModuleAndGitSync "tapioca-bar"
 }
 
-function goToTapiocaz() {
-    _goToModule "tapiocaz"
+function goToTapiocazAndGitSync() {
+    _goToModuleAndGitSync "tapiocaz"
 }

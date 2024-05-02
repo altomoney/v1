@@ -4,7 +4,7 @@
 
 function 1-deployTapTokenPostLbp {
     echo -e "${GREEN}Deploying tap-token...\n${NC}"
-    goToTapToken
+    goToTapTokenAndGitSync
     
     set -x
     npx hardhat deploys postLbp1 --network $main_chain $tag || printErrorHappened
@@ -26,7 +26,7 @@ function 1-deployTapTokenPostLbp {
 
 function 1-2-deployPeriphPostLbp {
     echo -e "${GREEN}Deploying tapioca-periph...\n${NC}"
-    goToPeriph
+    goToPeriphAndGitSync
 
     set -x
     npx hardhat deploys postLbp --network $main_chain $tag || printErrorHappened
@@ -40,7 +40,7 @@ function 1-2-deployPeriphPostLbp {
 
 function 2-deployTapiocaZPostLbp {
     echo -e "${GREEN}Deploying tapiocaz...\n${NC}"
-    goToTapiocaz
+    goToTapiocazAndGitSync
 
     set -x
     npx hardhat deploys postLbp --network $main_chain $tag || printErrorHappened
@@ -58,7 +58,7 @@ function 2-deployTapiocaZPostLbp {
 
 function 3-deployTapiocaBarPostLbp {
     echo -e "${GREEN}Deploying tapioca-bar...\n${NC}"
-    goToBar
+    goToBarAndGitSync
 
     set -x
     npx hardhat deploys postLbp --network $main_chain $tag || printErrorHappened
