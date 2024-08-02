@@ -1,9 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.22;
 
+// Lz
+import {TestHelper} from "test/utils/LZSetup/TestHelper.sol";
+
 // External
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import {TapiocaOmnichainEngineHelper} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainEngineHelper.sol";
+import {TapiocaOmnichainEngineHelper} from
+    "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainEngineHelper.sol";
 import {SimpleLeverageExecutor} from "tapioca-bar/markets/leverage/SimpleLeverageExecutor.sol";
 import {SGLInterestHelper} from "tapioca-bar/markets/singularity/SGLInterestHelper.sol";
 import {ERC20WithoutStrategy} from "yieldbox/strategies/ERC20WithoutStrategy.sol";
@@ -19,6 +23,7 @@ import {BBCollateral} from "tapioca-bar/markets/bigBang/BBCollateral.sol";
 import {BBLeverage} from "tapioca-bar/markets/bigBang/BBLeverage.sol";
 import {BBBorrow} from "tapioca-bar/markets/bigBang/BBBorrow.sol";
 import {BigBang} from "tapioca-bar/markets/bigBang/BigBang.sol";
+import {BBDebtRateHelper} from "tapioca-bar/markets/bigBang/BBDebtRateHelper.sol";
 
 import {MagnetarCollateralModule} from "tapioca-periph/Magnetar/modules/MagnetarCollateralModule.sol";
 import {ITapiocaOmnichainEngine} from "tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
@@ -58,6 +63,9 @@ import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
 import {IZeroXSwapper} from "tap-utils/interfaces/periph/IZeroXSwapper.sol";
 import {IERC20} from "@boringcrypto/boring-solidity/contracts/libraries/BoringERC20.sol";
 
+import {ZerroXSwapperMockTarget} from "test/utils/ZeroXSwapper/ZerroXSwapperMockTarget.sol";
+import {ZeroXSwapper} from "tap-utils/Swapper/ZeroXSwapper.sol";
+
 import {OracleMock} from "../../mocks/OracleMock.sol";
 import {ERC20Mock} from "../../mocks/ERC20Mock.sol";
 
@@ -85,7 +93,6 @@ import {ERC20PermitStruct} from "tap-utils/interfaces/periph/ITapiocaOmnichainEn
 
 import {MagnetarWithdrawData} from "tap-utils/interfaces/periph/IMagnetar.sol";
 import {SGLInit} from "tapioca-bar/markets/singularity/SGLInit.sol";
-import {TestHelper} from "../../LZSetup/TestHelper.sol";
 
 import "forge-std/Test.sol";
 
@@ -197,24 +204,10 @@ contract MagnetarTestHelper is TestHelper {
 
         yieldBox = createYieldBox(address(weth), pearlmit);
 
-        ERC20WithoutStrategy wethStrategy = createYieldBoxEmptyStrategy(
-            address(yieldBox),
-            address(weth)
-        );
-        ERC20WithoutStrategy tapStrategy = createYieldBoxEmptyStrategy(
-            address(yieldBox),
-            address(tap)
-        );
-        wethId = registerYieldBoxAsset(
-            address(yieldBox),
-            address(weth),
-            address(wethStrategy)
-        );
-        tapId = registerYieldBoxAsset(
-            address(yieldBox),
-            address(weth),
-            address(wethStrategy)
-        );
+        ERC20WithoutStrategy wethStrategy = createYieldBoxEmptyStrategy(address(yieldBox), address(weth));
+        ERC20WithoutStrategy tapStrategy = createYieldBoxEmptyStrategy(address(yieldBox), address(tap));
+        wethId = registerYieldBoxAsset(address(yieldBox), address(weth), address(wethStrategy));
+        tapId = registerYieldBoxAsset(address(yieldBox), address(weth), address(wethStrategy));
 
         sglInit = new SGLInit();
         (penrose, sglMC, bbMC) = createPenrose(
@@ -230,20 +223,8 @@ contract MagnetarTestHelper is TestHelper {
 
         // crete USDO
         TapiocaOmnichainExtExec extExec = new TapiocaOmnichainExtExec();
-        assetA = createUsdo(
-            address(yieldBox),
-            address(clusterA),
-            address(extExec),
-            address(pearlmit),
-            aEid
-        );
-        assetB = createUsdo(
-            address(yieldBox),
-            address(clusterB),
-            address(extExec),
-            address(pearlmit),
-            bEid
-        );
+        assetA = createUsdo(address(yieldBox), address(clusterA), address(extExec), address(pearlmit), aEid);
+        assetB = createUsdo(address(yieldBox), address(clusterB), address(extExec), address(pearlmit), bEid);
 
         // create TOFT
         collateralA = createTOFT(
@@ -265,42 +246,14 @@ contract MagnetarTestHelper is TestHelper {
             aEid
         );
 
-        ERC20WithoutStrategy assetAStrategy = createYieldBoxEmptyStrategy(
-            address(yieldBox),
-            address(assetA)
-        );
-        ERC20WithoutStrategy assetBStrategy = createYieldBoxEmptyStrategy(
-            address(yieldBox),
-            address(assetB)
-        );
-        ERC20WithoutStrategy collateralAStrategy = createYieldBoxEmptyStrategy(
-            address(yieldBox),
-            address(collateralA)
-        );
-        ERC20WithoutStrategy collateralBStrategy = createYieldBoxEmptyStrategy(
-            address(yieldBox),
-            address(collateralB)
-        );
-        assetAId = registerYieldBoxAsset(
-            address(yieldBox),
-            address(assetA),
-            address(assetAStrategy)
-        );
-        collateralAId = registerYieldBoxAsset(
-            address(yieldBox),
-            address(collateralA),
-            address(collateralAStrategy)
-        );
-        assetBId = registerYieldBoxAsset(
-            address(yieldBox),
-            address(assetB),
-            address(assetBStrategy)
-        );
-        collateralBId = registerYieldBoxAsset(
-            address(yieldBox),
-            address(collateralB),
-            address(collateralBStrategy)
-        );
+        ERC20WithoutStrategy assetAStrategy = createYieldBoxEmptyStrategy(address(yieldBox), address(assetA));
+        ERC20WithoutStrategy assetBStrategy = createYieldBoxEmptyStrategy(address(yieldBox), address(assetB));
+        ERC20WithoutStrategy collateralAStrategy = createYieldBoxEmptyStrategy(address(yieldBox), address(collateralA));
+        ERC20WithoutStrategy collateralBStrategy = createYieldBoxEmptyStrategy(address(yieldBox), address(collateralB));
+        assetAId = registerYieldBoxAsset(address(yieldBox), address(assetA), address(assetAStrategy));
+        collateralAId = registerYieldBoxAsset(address(yieldBox), address(collateralA), address(collateralAStrategy));
+        assetBId = registerYieldBoxAsset(address(yieldBox), address(assetB), address(assetBStrategy));
+        collateralBId = registerYieldBoxAsset(address(yieldBox), address(collateralB), address(collateralBStrategy));
 
         penrose.setUsdoToken(address(assetA), assetAId);
 
@@ -330,6 +283,13 @@ contract MagnetarTestHelper is TestHelper {
             address(bbMC)
         );
         setAssetOracle(penrose, bb, address(oracle));
+       
+        address[] memory markets = new address[](1);
+        markets[0] = address(bb);
+        bytes[] memory marketsData = new bytes[](1);
+        BBDebtRateHelper bbRateHelper = new BBDebtRateHelper();
+        marketsData[0] = abi.encodeWithSelector(BigBang.setDebtRateHelper.selector, address(bbRateHelper));
+        penrose.executeMarketFn(markets, marketsData, true);
 
         assetA.setMinterStatus(address(bb), true);
         assetA.setBurnerStatus(address(bb), true);
@@ -379,7 +339,6 @@ contract MagnetarTestHelper is TestHelper {
         vm.label(address(clusterA), "Cluster A");
         vm.label(address(clusterB), "Cluster B");
     }
-
     // -----------------------
     //
     // Setup helpers
@@ -413,55 +372,30 @@ contract MagnetarTestHelper is TestHelper {
         {
             TOFTSender toftSender = new TOFTSender(toftInitStruct);
             mTOFTReceiver toftReceiver = new mTOFTReceiver(toftInitStruct);
-            TOFTMarketReceiverModule toftMarketReceiverModule = new TOFTMarketReceiverModule(
-                    toftInitStruct
-                );
-            TOFTOptionsReceiverModule toftOptionsReceiverModule = new TOFTOptionsReceiverModule(
-                    toftInitStruct
-                );
-            TOFTGenericReceiverModule toftGenericReceiverModule = new TOFTGenericReceiverModule(
-                    toftInitStruct
-                );
+            TOFTMarketReceiverModule toftMarketReceiverModule = new TOFTMarketReceiverModule(toftInitStruct);
+            TOFTOptionsReceiverModule toftOptionsReceiverModule = new TOFTOptionsReceiverModule(toftInitStruct);
+            TOFTGenericReceiverModule toftGenericReceiverModule = new TOFTGenericReceiverModule(toftInitStruct);
             vm.label(address(toftSender), "toftSender");
             vm.label(address(toftReceiver), "toftReceiver");
-            vm.label(
-                address(toftMarketReceiverModule),
-                "toftMarketReceiverModule"
-            );
-            vm.label(
-                address(toftOptionsReceiverModule),
-                "toftOptionsReceiverModule"
-            );
-            vm.label(
-                address(toftGenericReceiverModule),
-                "toftGenericReceiverModule"
-            );
-            TOFTModulesInitStruct
-                memory toftModulesInitStruct = TOFTModulesInitStruct({
-                    tOFTSenderModule: address(toftSender),
-                    tOFTReceiverModule: address(toftReceiver),
-                    marketReceiverModule: address(toftMarketReceiverModule),
-                    optionsReceiverModule: address(toftOptionsReceiverModule),
-                    genericReceiverModule: address(toftGenericReceiverModule)
-                });
-            toft = TOFT(
-                payable(
-                    _deployOApp(
-                        type(TOFT).creationCode,
-                        abi.encode(toftInitStruct, toftModulesInitStruct)
-                    )
-                )
-            );
+            vm.label(address(toftMarketReceiverModule), "toftMarketReceiverModule");
+            vm.label(address(toftOptionsReceiverModule), "toftOptionsReceiverModule");
+            vm.label(address(toftGenericReceiverModule), "toftGenericReceiverModule");
+            TOFTModulesInitStruct memory toftModulesInitStruct = TOFTModulesInitStruct({
+                tOFTSenderModule: address(toftSender),
+                tOFTReceiverModule: address(toftReceiver),
+                marketReceiverModule: address(toftMarketReceiverModule),
+                optionsReceiverModule: address(toftOptionsReceiverModule),
+                genericReceiverModule: address(toftGenericReceiverModule)
+            });
+            toft =
+                TOFT(payable(_deployOApp(type(TOFT).creationCode, abi.encode(toftInitStruct, toftModulesInitStruct))));
         }
     }
 
-    function createUsdo(
-        address yieldBox,
-        address cluster,
-        address extExec,
-        address pearlmit,
-        uint32 endointId
-    ) public returns (Usdo usdo) {
+    function createUsdo(address yieldBox, address cluster, address extExec, address pearlmit, uint32 endointId)
+        public
+        returns (Usdo usdo)
+    {
         UsdoInitStruct memory usdoInitStruct = UsdoInitStruct({
             endpoint: address(endpoints[endointId]),
             delegate: __owner,
@@ -472,40 +406,22 @@ contract MagnetarTestHelper is TestHelper {
         });
         UsdoSender usdoSender = new UsdoSender(usdoInitStruct);
         UsdoReceiver usdoReceiver = new UsdoReceiver(usdoInitStruct);
-        UsdoMarketReceiverModule usdoMarketReceiverModule = new UsdoMarketReceiverModule(
-                usdoInitStruct
-            );
-        UsdoOptionReceiverModule usdoOptionsReceiverModule = new UsdoOptionReceiverModule(
-                usdoInitStruct
-            );
+        UsdoMarketReceiverModule usdoMarketReceiverModule = new UsdoMarketReceiverModule(usdoInitStruct);
+        UsdoOptionReceiverModule usdoOptionsReceiverModule = new UsdoOptionReceiverModule(usdoInitStruct);
         vm.label(address(usdoSender), "usdoSender");
         vm.label(address(usdoReceiver), "usdoReceiver");
         vm.label(address(usdoMarketReceiverModule), "usdoMarketReceiverModule");
-        vm.label(
-            address(usdoOptionsReceiverModule),
-            "usdoOptionsReceiverModule"
-        );
-        UsdoModulesInitStruct
-            memory usdoModulesInitStruct = UsdoModulesInitStruct({
-                usdoSenderModule: address(usdoSender),
-                usdoReceiverModule: address(usdoReceiver),
-                marketReceiverModule: address(usdoMarketReceiverModule),
-                optionReceiverModule: address(usdoOptionsReceiverModule)
-            });
-        usdo = Usdo(
-            payable(
-                _deployOApp(
-                    type(Usdo).creationCode,
-                    abi.encode(usdoInitStruct, usdoModulesInitStruct)
-                )
-            )
-        );
+        vm.label(address(usdoOptionsReceiverModule), "usdoOptionsReceiverModule");
+        UsdoModulesInitStruct memory usdoModulesInitStruct = UsdoModulesInitStruct({
+            usdoSenderModule: address(usdoSender),
+            usdoReceiverModule: address(usdoReceiver),
+            marketReceiverModule: address(usdoMarketReceiverModule),
+            optionReceiverModule: address(usdoOptionsReceiverModule)
+        });
+        usdo = Usdo(payable(_deployOApp(type(Usdo).creationCode, abi.encode(usdoInitStruct, usdoModulesInitStruct))));
     }
 
-    function createYieldBox(
-        address weth,
-        Pearlmit pearlmit
-    ) public returns (YieldBox yb) {
+    function createYieldBox(address weth, Pearlmit pearlmit) public returns (YieldBox yb) {
         YieldBoxURIBuilder ybUri = new YieldBoxURIBuilder();
         yb = new YieldBox(IWrappedNative(weth), ybUri, pearlmit, address(this));
     }
@@ -514,29 +430,14 @@ contract MagnetarTestHelper is TestHelper {
         penrose.setBigBangEthMarket(market);
     }
 
-    function createMagnetar(
-        address _cluster,
-        address _pearlmit
-    ) public returns (Magnetar magnetar) {
+    function createMagnetar(address _cluster, address _pearlmit) public returns (Magnetar magnetar) {
         TapiocaOmnichainEngineHelper toeHelper = new TapiocaOmnichainEngineHelper();
 
         MagnetarSetupData memory setup;
-        setup.collateralModule = new MagnetarCollateralModule(
-            IPearlmit(_pearlmit),
-            address(toeHelper)
-        );
-        setup.mintModule = new MagnetarMintModule(
-            IPearlmit(_pearlmit),
-            address(toeHelper)
-        );
-        setup.optionModule = new MagnetarOptionModule(
-            IPearlmit(_pearlmit),
-            address(toeHelper)
-        );
-        setup.yieldBoxModule = new MagnetarYieldBoxModule(
-            IPearlmit(_pearlmit),
-            address(toeHelper)
-        );
+        setup.collateralModule = new MagnetarCollateralModule(IPearlmit(_pearlmit), address(toeHelper));
+        setup.mintModule = new MagnetarMintModule(IPearlmit(_pearlmit), address(toeHelper));
+        setup.optionModule = new MagnetarOptionModule(IPearlmit(_pearlmit), address(toeHelper));
+        setup.yieldBoxModule = new MagnetarYieldBoxModule(IPearlmit(_pearlmit), address(toeHelper));
 
         magnetar = new Magnetar(
             ICluster(_cluster),
@@ -560,14 +461,7 @@ contract MagnetarTestHelper is TestHelper {
         uint256 tapTokenId_,
         uint256 mainTokenId_,
         address owner
-    )
-        public
-        returns (
-            Penrose penrose,
-            Singularity mediumRiskMC,
-            BigBang bbMediumRiskMC
-        )
-    {
+    ) public returns (Penrose penrose, Singularity mediumRiskMC, BigBang bbMediumRiskMC) {
         penrose = new Penrose(
             IYieldBox(_yieldBox),
             ICluster(_cluster),
@@ -581,59 +475,29 @@ contract MagnetarTestHelper is TestHelper {
         mediumRiskMC = new Singularity();
         bbMediumRiskMC = new BigBang();
 
-        penrose.registerSingularityMasterContract(
-            address(mediumRiskMC),
-            IPenrose.ContractType.mediumRisk
-        );
-        penrose.registerBigBangMasterContract(
-            address(bbMediumRiskMC),
-            IPenrose.ContractType.mediumRisk
-        );
+        penrose.registerSingularityMasterContract(address(mediumRiskMC), IPenrose.ContractType.mediumRisk);
+        penrose.registerBigBangMasterContract(address(bbMediumRiskMC), IPenrose.ContractType.mediumRisk);
     }
 
-    function setAssetOracle(
-        Penrose penrose,
-        BigBang bb,
-        address oracle
-    ) public {
+    function setAssetOracle(Penrose penrose, BigBang bb, address oracle) public {
         // function executeMarketFn(address[] calldata mc, bytes[] memory data, bool forceSuccess)
         address[] memory markets = new address[](1);
         markets[0] = address(bb);
         bytes[] memory marketsData = new bytes[](1);
-        marketsData[0] = abi.encodeWithSelector(
-            BigBang.setAssetOracle.selector,
-            oracle,
-            "0x"
-        );
+        marketsData[0] = abi.encodeWithSelector(BigBang.setAssetOracle.selector, oracle, "0x");
 
         penrose.executeMarketFn(markets, marketsData, true);
     }
 
-    function registerYieldBoxAsset(
-        address _yieldBox,
-        address _token,
-        address _strategy
-    ) public returns (uint256) {
-        return
-            YieldBox(_yieldBox).registerAsset(
-                TokenType.ERC20,
-                _token,
-                IStrategy(_strategy),
-                0
-            );
+    function registerYieldBoxAsset(address _yieldBox, address _token, address _strategy) public returns (uint256) {
+        return YieldBox(_yieldBox).registerAsset(TokenType.ERC20, _token, IStrategy(_strategy), 0);
     }
 
-    function createYieldBoxEmptyStrategy(
-        address _yieldBox,
-        address _erc20
-    ) public returns (ERC20WithoutStrategy) {
+    function createYieldBoxEmptyStrategy(address _yieldBox, address _erc20) public returns (ERC20WithoutStrategy) {
         return new ERC20WithoutStrategy(IYieldBox(_yieldBox), IERC20(_erc20));
     }
 
-    function createBigBang(
-        TestBigBangData memory _bb,
-        address _mc
-    ) public returns (BigBang) {
+    function createBigBang(TestBigBangData memory _bb, address _mc) public returns (BigBang) {
         BigBang bb = new BigBang();
 
         (
@@ -653,10 +517,7 @@ contract MagnetarTestHelper is TestHelper {
         return bb;
     }
 
-    function createSingularity(
-        TestSingularityData memory _sgl,
-        address _mc
-    ) public returns (Singularity) {
+    function createSingularity(TestSingularityData memory _sgl, address _mc) public returns (Singularity) {
         Singularity sgl = new Singularity();
         (
             Singularity._InitMemoryModulesData memory _modulesData,
@@ -664,10 +525,7 @@ contract MagnetarTestHelper is TestHelper {
             Singularity._InitMemoryData memory _data
         ) = _getSingularityInitData(_sgl);
         {
-            sgl.init(
-                address(sglInit),
-                abi.encode(_modulesData, _tokensData, _data)
-            );
+            sgl.init(address(sglInit), abi.encode(_modulesData, _tokensData, _data));
         }
 
         {
@@ -686,7 +544,8 @@ contract MagnetarTestHelper is TestHelper {
                 0,
                 0,
                 0,
-                address(sglInterestHelper)
+                address(sglInterestHelper),
+                0
             );
             address[] memory mc = new address[](1);
             mc[0] = address(sgl);
@@ -699,9 +558,7 @@ contract MagnetarTestHelper is TestHelper {
         return sgl;
     }
 
-    function _getBigBangInitData(
-        TestBigBangData memory _bb
-    )
+    function _getBigBangInitData(TestBigBangData memory _bb)
         private
         returns (
             BigBang._InitMemoryModulesData memory modulesData,
@@ -714,18 +571,10 @@ contract MagnetarTestHelper is TestHelper {
         BBCollateral bbCollateral = new BBCollateral();
         BBLeverage bbLev = new BBLeverage();
 
-        modulesData = BigBang._InitMemoryModulesData(
-            address(bbLiq),
-            address(bbBorrow),
-            address(bbCollateral),
-            address(bbLev)
-        );
+        modulesData =
+            BigBang._InitMemoryModulesData(address(bbLiq), address(bbBorrow), address(bbCollateral), address(bbLev));
 
-        debtData = BigBang._InitMemoryDebtData(
-            _bb.debtRateAgainstEth,
-            _bb.debtRateMin,
-            _bb.debtRateMax
-        );
+        debtData = BigBang._InitMemoryDebtData(_bb.debtRateAgainstEth, _bb.debtRateMin, _bb.debtRateMax);
 
         data = BigBang._InitMemoryData(
             IPenrose(_bb.penrose),
@@ -739,9 +588,7 @@ contract MagnetarTestHelper is TestHelper {
         );
     }
 
-    function _getSingularityInitData(
-        TestSingularityData memory _sgl
-    )
+    function _getSingularityInitData(TestSingularityData memory _sgl)
         private
         returns (
             Singularity._InitMemoryModulesData memory modulesData,
@@ -755,26 +602,15 @@ contract MagnetarTestHelper is TestHelper {
         SGLLeverage sglLev = new SGLLeverage();
 
         modulesData = Singularity._InitMemoryModulesData(
-            address(sglLiq),
-            address(sglBorrow),
-            address(sglCollateral),
-            address(sglLev)
+            address(sglLiq), address(sglBorrow), address(sglCollateral), address(sglLev)
         );
 
         tokensData = Singularity._InitMemoryTokensData(
-            IERC20(_sgl.asset),
-            _sgl.assetId,
-            IERC20(_sgl.collateral),
-            _sgl.collateralId
+            IERC20(_sgl.asset), _sgl.assetId, IERC20(_sgl.collateral), _sgl.collateralId
         );
 
         data = Singularity._InitMemoryData(
-            IPenrose(_sgl.penrose),
-            ITapiocaOracle(address(_sgl.oracle)),
-            0,
-            75000,
-            80000,
-            _sgl.leverageExecutor
+            IPenrose(_sgl.penrose), ITapiocaOracle(address(_sgl.oracle)), 0, 75000, 80000, _sgl.leverageExecutor
         );
     }
 
@@ -783,41 +619,25 @@ contract MagnetarTestHelper is TestHelper {
     // Market helpers
     //
     // -----------------------
-    function createEmptyWithdrawData()
-        public
-        returns (MagnetarWithdrawData memory)
-    {
-        return
-            MagnetarWithdrawData({
-                yieldBox: address(0),
-                assetId: 0,
-                receiver: address(this),
-                amount: 1 ether,
-                withdraw: false,
-                unwrap: false,
-                extractFromSender: false
-            });
+    function createEmptyWithdrawData() public returns (MagnetarWithdrawData memory) {
+        return MagnetarWithdrawData({
+            yieldBox: address(0),
+            assetId: 0,
+            receiver: address(this),
+            amount: 1 ether,
+            withdraw: false,
+            unwrap: false,
+            extractFromSender: false
+        });
     }
 
-    function depositAsset(
-        Usdo _asset,
-        uint256 _assetId,
-        Singularity _sgl,
-        uint256 amount
-    ) public {
+    function depositAsset(Usdo _asset, uint256 _assetId, Singularity _sgl, uint256 amount) public {
         deal(address(_asset), address(this), amount);
         _asset.approve(address(yieldBox), type(uint256).max);
         _asset.approve(address(pearlmit), type(uint256).max);
         _setYieldBoxApproval(yieldBox, address(_sgl));
         _setYieldBoxApproval(yieldBox, address(pearlmit));
-        pearlmit.approve(
-            1155,
-            address(yieldBox),
-            _assetId,
-            address(_sgl),
-            type(uint200).max,
-            uint48(block.timestamp)
-        );
+        pearlmit.approve(1155, address(yieldBox), _assetId, address(_sgl), type(uint200).max, uint48(block.timestamp));
 
         uint256 share = yieldBox.toShare(_assetId, amount, false);
         yieldBox.depositAsset(_assetId, address(this), address(this), 0, share);
@@ -826,72 +646,36 @@ contract MagnetarTestHelper is TestHelper {
         _setYieldBoxRevoke(yieldBox, address(pearlmit));
     }
 
-    function depositCollateral(
-        TOFT _collateral,
-        uint256 _collateralId,
-        Singularity _sgl,
-        uint256 amount
-    ) public {
+    function depositCollateral(TOFT _collateral, uint256 _collateralId, Singularity _sgl, uint256 amount) public {
         deal(address(_collateral), address(this), amount);
         _collateral.approve(address(yieldBox), type(uint256).max);
         _collateral.approve(address(pearlmit), type(uint256).max);
         _setYieldBoxApproval(yieldBox, address(_sgl));
         _setYieldBoxApproval(yieldBox, address(pearlmit));
         pearlmit.approve(
-            1155,
-            address(yieldBox),
-            _collateralId,
-            address(_sgl),
-            type(uint200).max,
-            uint48(block.timestamp)
+            1155, address(yieldBox), _collateralId, address(_sgl), type(uint200).max, uint48(block.timestamp)
         );
 
         uint256 share = yieldBox.toShare(_collateralId, amount, false);
-        yieldBox.depositAsset(
-            _collateralId,
-            address(this),
-            address(this),
-            0,
-            share
-        );
+        yieldBox.depositAsset(_collateralId, address(this), address(this), 0, share);
 
-        (Module[] memory modules, bytes[] memory calls) = marketHelper
-            .addCollateral(address(this), address(this), false, 0, share);
+        (Module[] memory modules, bytes[] memory calls) =
+            marketHelper.addCollateral(address(this), address(this), false, 0, share);
         _sgl.execute(modules, calls, true);
         _setYieldBoxRevoke(yieldBox, address(_sgl));
         _setYieldBoxRevoke(yieldBox, address(pearlmit));
     }
 
-    function borrow(
-        Singularity _sgl,
-        uint256 amount,
-        bool expectRevert
-    ) public {
-        (Module[] memory modules, bytes[] memory calls) = marketHelper.borrow(
-            address(this),
-            address(this),
-            amount
-        );
+    function borrow(Singularity _sgl, uint256 amount, bool expectRevert) public {
+        (Module[] memory modules, bytes[] memory calls) = marketHelper.borrow(address(this), address(this), amount);
 
         if (expectRevert) vm.expectRevert();
         _sgl.execute(modules, calls, true);
     }
 
     function repay(uint256 part, uint256 _assetId, Singularity _sgl) public {
-        pearlmit.approve(
-            1155,
-            address(yieldBox),
-            _assetId,
-            address(_sgl),
-            type(uint200).max,
-            uint48(block.timestamp)
-        );
-        (Module[] memory modules, bytes[] memory calls) = marketHelper.repay(
-            address(this),
-            address(this),
-            false,
-            part
-        );
+        pearlmit.approve(1155, address(yieldBox), _assetId, address(_sgl), type(uint200).max, uint48(block.timestamp));
+        (Module[] memory modules, bytes[] memory calls) = marketHelper.repay(address(this), address(this), false, part);
         _sgl.execute(modules, calls, true);
     }
 
@@ -908,28 +692,11 @@ contract MagnetarTestHelper is TestHelper {
     // Approval helpers
     //
     // -----------------------
-    function _createErc20Permit(
-        address _owner,
-        uint256 _pkSigner,
-        address _spender,
-        uint256 _amount,
-        address _asset
-    )
+    function _createErc20Permit(address _owner, uint256 _pkSigner, address _spender, uint256 _amount, address _asset)
         internal
-        returns (
-            ERC20PermitStruct memory permitStruct,
-            uint8 v_,
-            bytes32 r_,
-            bytes32 s_
-        )
+        returns (ERC20PermitStruct memory permitStruct, uint8 v_, bytes32 r_, bytes32 s_)
     {
-        permitStruct = ERC20PermitStruct({
-            owner: _owner,
-            spender: _spender,
-            value: _amount,
-            nonce: 0,
-            deadline: 1 days
-        });
+        permitStruct = ERC20PermitStruct({owner: _owner, spender: _spender, value: _amount, nonce: 0, deadline: 1 days});
         bytes32 digest_ = ITOFT(_asset).getTypedDataHash(permitStruct);
         (v_, r_, s_) = vm.sign(_pkSigner, digest_);
     }
@@ -944,27 +711,14 @@ contract MagnetarTestHelper is TestHelper {
         uint256 _deadline;
     }
 
-    function _createErc20PearlmitBatchPermit(
-        Erc20PearlmitBatchPermitInternal memory data
-    )
+    function _createErc20PearlmitBatchPermit(Erc20PearlmitBatchPermitInternal memory data)
         internal
-        returns (
-            IPearlmit.PermitBatchTransferFrom memory batchData,
-            bytes32 hashedData
-        )
+        returns (IPearlmit.PermitBatchTransferFrom memory batchData, bytes32 hashedData)
     {
-        (
-            IPearlmit.SignatureApproval[] memory signatureApprovals,
-            bytes32[] memory hashApprovals
-        ) = _getPearlmitSigApprovals(
-                data._asset,
-                data._id,
-                data._owner,
-                data._pkSigner,
-                data._operator,
-                data._amount,
-                data._deadline
-            );
+        (IPearlmit.SignatureApproval[] memory signatureApprovals, bytes32[] memory hashApprovals) =
+        _getPearlmitSigApprovals(
+            data._asset, data._id, data._owner, data._pkSigner, data._operator, data._amount, data._deadline
+        );
 
         bytes memory signedPermit;
         {
@@ -1007,15 +761,8 @@ contract MagnetarTestHelper is TestHelper {
         address _operator,
         uint256 _amount,
         uint256 _deadline
-    )
-        private
-        returns (
-            IPearlmit.SignatureApproval[] memory,
-            bytes32[] memory hashApprovals
-        )
-    {
-        IPearlmit.SignatureApproval[]
-            memory signatureApprovals = new IPearlmit.SignatureApproval[](1);
+    ) private returns (IPearlmit.SignatureApproval[] memory, bytes32[] memory hashApprovals) {
+        IPearlmit.SignatureApproval[] memory signatureApprovals = new IPearlmit.SignatureApproval[](1);
 
         signatureApprovals[0] = IPearlmit.SignatureApproval({
             tokenType: 20,

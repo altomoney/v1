@@ -28,6 +28,9 @@ import {IZeroXSwapper} from "tap-utils/interfaces/periph/IZeroXSwapper.sol";
 import {IPearlmit} from "tap-utils/interfaces/periph/IPearlmit.sol";
 import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
 
+import {ZerroXSwapperMockTarget} from "test/utils/ZeroXSwapper/ZerroXSwapperMockTarget.sol";
+import {ZeroXSwapper} from "tap-utils/Swapper/ZeroXSwapper.sol";
+
 import {TokenType} from "yieldbox/enums/YieldBoxTokenType.sol";
 import {IStrategy} from "yieldbox/interfaces/IStrategy.sol";
 import {YieldBox} from "yieldbox/YieldBox.sol";
@@ -72,14 +75,7 @@ contract MagnetarTestUtils {
         address mainToken_,
         uint256 tapTokenId_,
         uint256 mainTokenId_
-    )
-        external
-        returns (
-            Penrose penrose,
-            Singularity mediumRiskMC,
-            BigBang bbMediumRiskMC
-        )
-    {
+    ) external returns (Penrose penrose, Singularity mediumRiskMC, BigBang bbMediumRiskMC) {
         penrose = new Penrose(
             _yieldBox,
             _cluster,
@@ -93,59 +89,29 @@ contract MagnetarTestUtils {
         mediumRiskMC = new Singularity();
         bbMediumRiskMC = new BigBang();
 
-        penrose.registerSingularityMasterContract(
-            address(mediumRiskMC),
-            IPenrose.ContractType.mediumRisk
-        );
-        penrose.registerBigBangMasterContract(
-            address(bbMediumRiskMC),
-            IPenrose.ContractType.mediumRisk
-        );
+        penrose.registerSingularityMasterContract(address(mediumRiskMC), IPenrose.ContractType.mediumRisk);
+        penrose.registerBigBangMasterContract(address(bbMediumRiskMC), IPenrose.ContractType.mediumRisk);
     }
 
-    function setAssetOracle(
-        Penrose penrose,
-        BigBang bb,
-        address oracle
-    ) external {
+    function setAssetOracle(Penrose penrose, BigBang bb, address oracle) external {
         // function executeMarketFn(address[] calldata mc, bytes[] memory data, bool forceSuccess)
         address[] memory markets = new address[](1);
         markets[0] = address(bb);
         bytes[] memory marketsData = new bytes[](1);
-        marketsData[0] = abi.encodeWithSelector(
-            BigBang.setAssetOracle.selector,
-            oracle,
-            "0x"
-        );
+        marketsData[0] = abi.encodeWithSelector(BigBang.setAssetOracle.selector, oracle, "0x");
 
         penrose.executeMarketFn(markets, marketsData, true);
     }
 
-    function registerYieldBoxAsset(
-        address _yieldBox,
-        address _token,
-        address _strategy
-    ) public returns (uint256) {
-        return
-            YieldBox(_yieldBox).registerAsset(
-                TokenType.ERC20,
-                _token,
-                IStrategy(_strategy),
-                0
-            );
+    function registerYieldBoxAsset(address _yieldBox, address _token, address _strategy) public returns (uint256) {
+        return YieldBox(_yieldBox).registerAsset(TokenType.ERC20, _token, IStrategy(_strategy), 0);
     }
 
-    function createYieldBoxEmptyStrategy(
-        address _yieldBox,
-        address _erc20
-    ) public returns (ERC20WithoutStrategy) {
+    function createYieldBoxEmptyStrategy(address _yieldBox, address _erc20) public returns (ERC20WithoutStrategy) {
         return new ERC20WithoutStrategy(IYieldBox(_yieldBox), IERC20(_erc20));
     }
 
-    function createBigBang(
-        TestBigBangData memory _bb,
-        address _mc
-    ) public returns (BigBang) {
+    function createBigBang(TestBigBangData memory _bb, address _mc) public returns (BigBang) {
         BigBang bb = new BigBang();
 
         (
@@ -165,10 +131,7 @@ contract MagnetarTestUtils {
         return bb;
     }
 
-    function createSingularity(
-        TestSingularityData memory _sgl,
-        address _mc
-    ) public returns (Singularity) {
+    function createSingularity(TestSingularityData memory _sgl, address _mc) public returns (Singularity) {
         Singularity sgl = new Singularity();
         SGLInit sglInit = new SGLInit();
 
@@ -178,10 +141,7 @@ contract MagnetarTestUtils {
             Singularity._InitMemoryData memory _data
         ) = _getSingularityInitData(_sgl);
         {
-            sgl.init(
-                address(sglInit),
-                abi.encode(_modulesData, _tokensData, _data)
-            );
+            sgl.init(address(sglInit), abi.encode(_modulesData, _tokensData, _data));
         }
 
         {
@@ -212,9 +172,7 @@ contract MagnetarTestUtils {
         return sgl;
     }
 
-    function _getBigBangInitData(
-        TestBigBangData memory _bb
-    )
+    function _getBigBangInitData(TestBigBangData memory _bb)
         private
         returns (
             BigBang._InitMemoryModulesData memory modulesData,
@@ -227,18 +185,10 @@ contract MagnetarTestUtils {
         BBCollateral bbCollateral = new BBCollateral();
         BBLeverage bbLev = new BBLeverage();
 
-        modulesData = BigBang._InitMemoryModulesData(
-            address(bbLiq),
-            address(bbBorrow),
-            address(bbCollateral),
-            address(bbLev)
-        );
+        modulesData =
+            BigBang._InitMemoryModulesData(address(bbLiq), address(bbBorrow), address(bbCollateral), address(bbLev));
 
-        debtData = BigBang._InitMemoryDebtData(
-            _bb.debtRateAgainstEth,
-            _bb.debtRateMin,
-            _bb.debtRateMax
-        );
+        debtData = BigBang._InitMemoryDebtData(_bb.debtRateAgainstEth, _bb.debtRateMin, _bb.debtRateMax);
 
         data = BigBang._InitMemoryData(
             IPenrose(_bb.penrose),
@@ -252,9 +202,7 @@ contract MagnetarTestUtils {
         );
     }
 
-    function _getSingularityInitData(
-        TestSingularityData memory _sgl
-    )
+    function _getSingularityInitData(TestSingularityData memory _sgl)
         private
         returns (
             Singularity._InitMemoryModulesData memory modulesData,
@@ -268,26 +216,15 @@ contract MagnetarTestUtils {
         SGLLeverage sglLev = new SGLLeverage();
 
         modulesData = Singularity._InitMemoryModulesData(
-            address(sglLiq),
-            address(sglBorrow),
-            address(sglCollateral),
-            address(sglLev)
+            address(sglLiq), address(sglBorrow), address(sglCollateral), address(sglLev)
         );
 
         tokensData = Singularity._InitMemoryTokensData(
-            IERC20(_sgl.asset),
-            _sgl.assetId,
-            IERC20(_sgl.collateral),
-            _sgl.collateralId
+            IERC20(_sgl.asset), _sgl.assetId, IERC20(_sgl.collateral), _sgl.collateralId
         );
 
         data = Singularity._InitMemoryData(
-            IPenrose(_sgl.penrose),
-            ITapiocaOracle(address(_sgl.oracle)),
-            0,
-            75000,
-            80000,
-            _sgl.leverageExecutor
+            IPenrose(_sgl.penrose), ITapiocaOracle(address(_sgl.oracle)), 0, 75000, 80000, _sgl.leverageExecutor
         );
     }
 
