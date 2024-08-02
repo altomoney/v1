@@ -1,0 +1,35 @@
+[profile.default]
+src = 'contracts'
+libs = ['node_modules', 'lib']
+test = 'test'
+no-match-path = 'contracts/mocks/research/*'
+no-match-contract = ".*Fork.*"
+broadcast = 'gen/broadcast'
+
+evm_version='paris'
+optimizer = true
+optimizer_runs = 30
+
+
+remappings = [
+	"solidity-bytes-utils/=node_modules/@layerzerolabs/solidity-bytes-utils/",
+	"tapioca-sdk/=contracts/sdk/",
+	"tap-utils/=contracts/utils/",
+	"src/tap-utils/=contracts/utils/",
+	"tapioca-strategies/=contracts/yieldbox-strategies/",
+	"yieldbox/=contracts/yieldbox/",
+	'tapiocaz/=contracts/tapiocaz/',
+	"permitc/=lib/PermitC/src/",
+	'tapioca-periph/=contracts/periph/',
+	'tap-token/=contracts/tap-token',
+	'tap-yieldbox/=contracts/yieldbox/',
+	'tapioca-bar/=contracts/bar/',
+	'tapioca-mocks/=contracts/mocks/',
+]
+
+[etherscan]
+arbitrum-sepolia = { key = "${ARBITRUM_SEPOLIA_API_KEY}", url = "https://api-sepolia.arbiscan.io/api"}
+
+[profile.fork]
+# replace no-match-contract from profile.default
+no-match-contract = "zzz"
