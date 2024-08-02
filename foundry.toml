@@ -2,6 +2,7 @@
 src = 'contracts'
 libs = ['node_modules', 'lib']
 test = 'test'
+script = 'script'
 no-match-path = 'contracts/mocks/research/*'
 no-match-contract = ".*Fork.*"
 broadcast = 'gen/broadcast'
@@ -25,6 +26,7 @@ remappings = [
 	'tap-yieldbox/=contracts/yieldbox/',
 	'tapioca-bar/=contracts/bar/',
 	'tapioca-mocks/=contracts/mocks/',
+	'deployments/=contracts/deployments/',
 ]
 
 [etherscan]
