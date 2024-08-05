@@ -32,6 +32,8 @@ library TapiocaRelease {
             magnetarDepsReport
         );
 
+        // Pending: USDO batches
+
         return _generateMarketReport(utilitiesReport, yieldboxReport, magnetarDepsReport, magnetarReport);
     }
 

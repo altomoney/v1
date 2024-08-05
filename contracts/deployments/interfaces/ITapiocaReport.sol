@@ -51,6 +51,7 @@ struct TapiocaInput {
     address owner;
     address wrappedNativeToken;
     address zeroXSwapper;
+    address tapToken;
     uint16 lzChainId;
     bool isTestnet;
 }
@@ -58,4 +59,19 @@ struct TapiocaInput {
 struct YieldboxReport {
     address yieldbox;
     address yieldboxUri;
+    address delegate;
+}
+
+struct UsdoModulesReport {
+    address usdoSenderModule;
+    address usdoReceiverModule;
+}
+
+struct UsdoMarketModulesReport {
+    address marketReceiverModule;
+    address optionReceiverModule;
+}
+
+struct UsdoReport {
+    address usdo;
 }

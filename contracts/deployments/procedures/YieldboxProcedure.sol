@@ -6,7 +6,7 @@ import {Pearlmit} from "tap-utils/pearlmit/Pearlmit.sol";
 import {YieldBox} from "tap-yieldbox/YieldBox.sol";
 import {YieldBoxURIBuilder} from "tap-yieldbox/YieldBoxURIBuilder.sol";
 import {IWrappedNative} from "tap-yieldbox/interfaces/IWrappedNative.sol";
-import {TapiocaOmnichainEngineHelper} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainEngineHelper.sol";
+import {TapiocaOmnichainExtExec} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainExtExec.sol";
 import "forge-std/console2.sol";
 
 abstract contract YieldboxProcedure {
@@ -20,6 +20,7 @@ abstract contract YieldboxProcedure {
                 IWrappedNative(wrappedNativeToken), YieldBoxURIBuilder(report.yieldboxUri), Pearlmit(pearlmit), owner
             )
         );
+        report.delegate = address(new TapiocaOmnichainExtExec());
         return report;
     }
 }

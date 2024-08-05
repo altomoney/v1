@@ -7,16 +7,34 @@ import {TapiocaMagnetarBatchOne} from "deployments/releases/tapioca-v1/batches/T
 import {TapiocaMagnetarBatchTwo} from "deployments/releases/tapioca-v1/batches/TapiocaMagnetarBatchTwo.sol";
 import {TapiocaUtilitiesBatch} from "deployments/releases/tapioca-v1/batches/TapiocaUtilitiesBatch.sol";
 import {TapiocaYieldboxBatch} from "deployments/releases/tapioca-v1/batches/TapiocaYieldboxBatch.sol";
+import {TapiocaUsdoBatchOne} from "deployments/releases/tapioca-v1/batches/TapiocaUsdoBatchOne.sol";
+import {TapiocaUsdoBatchTwo} from "deployments/releases/tapioca-v1/batches/TapiocaUsdoBatchTwo.sol";
+import {TapiocaUsdoBatchThree} from "deployments/releases/tapioca-v1/batches/TapiocaUsdoBatchThree.sol";
 import "deployments/interfaces/ITapiocaReport.sol";
+import {LZEndpointMock} from "tapioca-mocks/LZEndpointMock.sol";
+import {TapiocaOmnichainExtExec} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainExtExec.sol";
 
 contract ProcedureLimits is Test {
     address owner;
     address zeroXSwapper;
+    address endpointMock;
+    address delegate;
     uint256 constant MAX_INIT_CONSTRUCTOR_CODE_SIZE = 49152;
+    UsdoModulesReport usdoModulesReport;
+    UsdoMarketModulesReport usdoMarketModulesReport;
 
     function setUp() public {
         owner = makeAddr("owner");
         zeroXSwapper = makeAddr("zeroXSwapper");
+        endpointMock = address(new LZEndpointMock(1));
+        delegate = address(new TapiocaOmnichainExtExec());
+
+        usdoModulesReport = (
+            new TapiocaUsdoBatchOne(endpointMock, delegate, address(0), address(0), address(0), address(0))
+        ).getUsdoModulesReport();
+        usdoMarketModulesReport = (
+            new TapiocaUsdoBatchTwo(endpointMock, delegate, address(0), address(0), address(0), address(0))
+        ).getUsdoMarketModulesReport();
     }
 
     function test_new_TapiocaMagnetarBatchOne() public {
@@ -40,29 +58,59 @@ contract ProcedureLimits is Test {
         new TapiocaYieldboxBatch(owner, address(0), address(0));
     }
 
-    function test_codesizes() public {
+    function test_new_TapiocaUsdoBatchOne() public {
+        new TapiocaUsdoBatchOne(endpointMock, delegate, address(0), address(0), address(0), address(0));
+    }
+
+    function test_new_TapiocaUsdoBatchTwo() public {
+        new TapiocaUsdoBatchTwo(endpointMock, delegate, address(0), address(0), address(0), address(0));
+    }
+
+    function test_new_TapiocaUsdoBatchThree() public {
+        new TapiocaUsdoBatchThree(
+            endpointMock,
+            delegate,
+            address(0),
+            address(0),
+            address(0),
+            address(0),
+            usdoModulesReport.usdoSenderModule,
+            usdoModulesReport.usdoReceiverModule,
+            usdoMarketModulesReport.marketReceiverModule,
+            usdoMarketModulesReport.optionReceiverModule
+        );
+    }
+
+    function test_codesizes() public pure {
         uint256 magnetarBatchOneCreationSize = type(TapiocaMagnetarBatchOne).creationCode.length;
         uint256 magnetarBatchTwoCreationSize = type(TapiocaMagnetarBatchTwo).creationCode.length;
         uint256 utilitiesBatchCreationSize = type(TapiocaUtilitiesBatch).creationCode.length;
         uint256 yieldboxBatchCreationSize = type(TapiocaYieldboxBatch).creationCode.length;
+        uint256 usdoBatchCreationSize = type(TapiocaUsdoBatchOne).creationCode.length;
+        uint256 usdoBatchTwoCreationSize = type(TapiocaUsdoBatchTwo).creationCode.length;
+        uint256 usdoBatchThreeCreationSize = type(TapiocaUsdoBatchThree).creationCode.length;
 
         uint256 totalCreationSize = magnetarBatchOneCreationSize + magnetarBatchTwoCreationSize
-            + utilitiesBatchCreationSize + yieldboxBatchCreationSize;
+            + utilitiesBatchCreationSize + yieldboxBatchCreationSize + usdoBatchCreationSize + usdoBatchTwoCreationSize
+            + usdoBatchThreeCreationSize;
 
         console2.log("TapiocaUtilitiesBatch", utilitiesBatchCreationSize);
         console2.log("TapiocaYieldboxBatch", yieldboxBatchCreationSize);
         console2.log("TapiocaMagnetarBatchOne", magnetarBatchOneCreationSize);
         console2.log("TapiocaMagnetarBatchTwo", magnetarBatchTwoCreationSize);
+        console2.log("TapiocaUsdoBatchOne", usdoBatchCreationSize);
+        console2.log("TapiocaUsdoBatchTwo", usdoBatchTwoCreationSize);
+        console2.log("TapiocaUsdoBatchThree", usdoBatchThreeCreationSize);
 
-        // Max code size for constuctor pattern is 2x code size (48kb) multiplied by number of constructor batches (4) used to deploy Tapioca contracts
+        // Max code size for constuctor pattern is 2x code size (49kb) multiplied by number of constructor batches (4) used to deploy Tapioca contracts
         assertLe(
-            totalCreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE * 4, "Total creation code size exceeds number of batches"
+            totalCreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE * 7, "Total creation code size exceeds number of batches"
         );
         console2.log("Total / Used / Available init code size");
         console2.log(
-            (MAX_INIT_CONSTRUCTOR_CODE_SIZE * 4),
+            (MAX_INIT_CONSTRUCTOR_CODE_SIZE * 7),
             totalCreationSize,
-            (MAX_INIT_CONSTRUCTOR_CODE_SIZE * 4) - totalCreationSize
+            (MAX_INIT_CONSTRUCTOR_CODE_SIZE * 7) - totalCreationSize
         );
 
         assertLe(
@@ -76,5 +124,9 @@ contract ProcedureLimits is Test {
         assertLe(utilitiesBatchCreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "TapiocaUtilitiesBatch max init code size");
 
         assertLe(yieldboxBatchCreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "TapiocaYieldBoxBatch max init code size");
+
+        assertLe(usdoBatchCreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "TapiocaUsdoBatchOne max init code size");
+
+        assertLe(usdoBatchTwoCreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "TapiocaUsdoBatchTwo max init code size");
     }
 }
