@@ -15,6 +15,7 @@ import {IMagnetarHelper} from "tap-utils/interfaces/periph/IMagnetarHelper.sol";
 import {IYieldBox} from "yieldbox/interfaces/IYieldBox.sol";
 import {IERC20} from "@boringcrypto/boring-solidity/contracts/libraries/BoringERC20.sol";
 import {UsdoInitStruct, UsdoModulesInitStruct} from "tap-utils/interfaces/oft/IUsdo.sol";
+import {UsdoHelper} from "tapioca-bar/usdo/extensions/UsdoHelper.sol";
 
 abstract contract BarProcedure {
     function _deployPenrose(
@@ -118,6 +119,7 @@ abstract contract BarProcedure {
         modulesData.optionReceiverModule = usdoOptionReceiverModule;
 
         report.usdo = (address(new Usdo(initData, modulesData)));
+        report.usdoHelper = address(new UsdoHelper());
         return report;
     }
 }

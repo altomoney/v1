@@ -10,8 +10,16 @@ import {MagnetarReport, MagnetarDepsReport} from "../../../interfaces/ITapiocaRe
 contract TapiocaMagnetarBatchTwo is MagnetarProcedure {
     MagnetarReport internal _magnetarReport;
 
-    constructor(address owner, address cluster, address pearlmit, address toeHelper, MagnetarDepsReport memory deps) {
-        _magnetarReport = _deployMagnetar(owner, cluster, pearlmit, toeHelper, deps);
+    constructor(
+        address owner,
+        address cluster,
+        address pearlmit,
+        address toeHelper,
+        address zeroXSwap,
+        address nativeTokenWrapper,
+        MagnetarDepsReport memory deps
+    ) {
+        _magnetarReport = _deployMagnetar(owner, cluster, pearlmit, toeHelper, zeroXSwap, nativeTokenWrapper, deps);
     }
 
     function getMagnetarReport() external view returns (MagnetarReport memory) {

@@ -17,6 +17,13 @@ struct TapiocaReport {
     address yieldbox;
     address yieldboxUri;
     address tapiocaMulticall;
+    address extExec;
+    address liquidatorReceiver;
+    address usdoSenderModule;
+    address usdoReceiverModule;
+    address marketReceiverModule;
+    address optionReceiverModule;
+    address usdo;
 }
 
 struct MagnetarReport {
@@ -29,6 +36,7 @@ struct MagnetarReport {
     address magnetarAssetXChainModule;
     address magnetarBaseModuleExternal;
     address magnetarHelper;
+    address simpleLeverageExecutor;
 }
 
 struct MagnetarDepsReport {
@@ -52,6 +60,7 @@ struct TapiocaInput {
     address wrappedNativeToken;
     address zeroXSwapper;
     address tapToken;
+    address lzEndpoint;
     uint16 lzChainId;
     bool isTestnet;
 }
@@ -59,7 +68,8 @@ struct TapiocaInput {
 struct YieldboxReport {
     address yieldbox;
     address yieldboxUri;
-    address delegate;
+    address extExec;
+    address liquidatorReceiver;
 }
 
 struct UsdoModulesReport {
@@ -74,4 +84,15 @@ struct UsdoMarketModulesReport {
 
 struct UsdoReport {
     address usdo;
+    address usdoHelper;
+}
+
+struct SGLReport {
+    address sglInit;
+    address sglInterestHelper;
+    address sglLiquidationModule;
+    address sglBorrowModule;
+    address sglCollateralModule;
+    address sglLeverageModule;
+    address singularity;
 }

@@ -9,8 +9,8 @@ import {UtilitiesReport} from "../../../interfaces/ITapiocaReport.sol";
 contract TapiocaUtilitiesBatch is UtilitiesProcedure {
     UtilitiesReport internal _utilitiesReport;
 
-    constructor(address owner, address zeroXSwapper, uint16 lzChainId, bool isTestnet) {
-        _utilitiesReport = _deployUtilities(owner, zeroXSwapper, lzChainId, isTestnet);
+    constructor(address owner, address zeroXSwapper, address nativeTokenWrapper, uint16 lzChainId, bool isTestnet) {
+        _utilitiesReport = _deployUtilities(owner, zeroXSwapper, nativeTokenWrapper, lzChainId, isTestnet);
     }
 
     function getUtilitiesReport() public view returns (UtilitiesReport memory) {

@@ -11,13 +11,15 @@ import {Pauser} from "tap-utils/Pauser/Pauser.sol";
 import {ZeroXSwapper} from "tap-utils/Swapper/ZeroXSwapper.sol";
 import {ZeroXSwapperMock} from "tapioca-mocks/ZeroXSwapperMock.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
-import "forge-std/console2.sol";
 
 abstract contract UtilitiesProcedure {
-    function _deployUtilities(address owner, address zeroXProxy, uint32 lzChainId, bool isTestnet)
-        internal
-        returns (UtilitiesReport memory report)
-    {
+    function _deployUtilities(
+        address owner,
+        address zeroXProxy,
+        address wrappedNativeToken,
+        uint32 lzChainId,
+        bool isTestnet
+    ) internal returns (UtilitiesReport memory report) {
         report.tapiocaMulticall = address(new TapiocaMulticall());
         report.pearlmit = address(new Pearlmit("PEARLMIT", "1", report.tapiocaMulticall, 0));
         report.cluster = address(new Cluster(lzChainId, report.tapiocaMulticall));

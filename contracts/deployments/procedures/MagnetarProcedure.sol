@@ -8,10 +8,12 @@ import {MagnetarMintModule} from "tapioca-periph/Magnetar/modules/MagnetarMintMo
 import {MagnetarYieldBoxModule} from "tapioca-periph/Magnetar/modules/MagnetarYieldBoxModule.sol";
 import {MagnetarHelper} from "tapioca-periph/Magnetar/MagnetarHelper.sol";
 import {MagnetarReport, MagnetarDepsReport} from "../interfaces/ITapiocaReport.sol";
+import {SimpleLeverageExecutor} from "tapioca-bar/markets/leverage/SimpleLeverageExecutor.sol";
 
 import {IPearlmit} from "tap-utils/pearlmit/PearlmitHandler.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {IMagnetarHelper} from "tap-utils/interfaces/periph/IMagnetarHelper.sol";
+import {IZeroXSwapper} from "tap-utils/interfaces/periph/IZeroXSwapper.sol";
 
 abstract contract MagnetarProcedure {
     function _deployMagnetarDeps(address pearlmit, address toeHelper)
@@ -24,10 +26,15 @@ abstract contract MagnetarProcedure {
         deps.magnetarYieldboxModule = address(new MagnetarYieldBoxModule(IPearlmit(pearlmit), toeHelper));
     }
 
-    function _deployMagnetar(address owner, address cluster, address pearlmit, address toeHelper, MagnetarDepsReport memory deps)
-        internal
-        returns (MagnetarReport memory report)
-    {
+    function _deployMagnetar(
+        address owner,
+        address cluster,
+        address pearlmit,
+        address toeHelper,
+        address zeroXSwapper,
+        address wrappedNativeToken,
+        MagnetarDepsReport memory deps
+    ) internal returns (MagnetarReport memory report) {
         report.magnetarHelper = address(new MagnetarHelper());
         report.magnetar = address(
             new Magnetar(
@@ -40,6 +47,11 @@ abstract contract MagnetarProcedure {
                 IPearlmit(pearlmit),
                 toeHelper,
                 IMagnetarHelper(report.magnetarHelper)
+            )
+        );
+        report.simpleLeverageExecutor = address(
+            new SimpleLeverageExecutor(
+                IZeroXSwapper(zeroXSwapper), ICluster(cluster), wrappedNativeToken, IPearlmit(pearlmit)
             )
         );
     }

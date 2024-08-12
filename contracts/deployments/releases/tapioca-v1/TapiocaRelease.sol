@@ -5,6 +5,13 @@ import {TapiocaMagnetarBatchOne} from "./batches/TapiocaMagnetarBatchOne.sol";
 import {TapiocaMagnetarBatchTwo} from "./batches/TapiocaMagnetarBatchTwo.sol";
 import {TapiocaUtilitiesBatch} from "./batches/TapiocaUtilitiesBatch.sol";
 import {TapiocaYieldboxBatch} from "./batches/TapiocaYieldboxBatch.sol";
+import {TapiocaUsdoBatchOne} from "./batches/TapiocaUsdoBatchOne.sol";
+import {TapiocaUsdoBatchTwo} from "./batches/TapiocaUsdoBatchTwo.sol";
+import {TapiocaUsdoBatchThree} from "./batches/TapiocaUsdoBatchThree.sol";
+import {TapiocaSingularityBatch1} from "./batches/TapiocaSingularityBatch1.sol";
+import {TapiocaSingularityBatch2} from "./batches/TapiocaSingularityBatch2.sol";
+import {TapiocaSingularityBatch3} from "./batches/TapiocaSingularityBatch3.sol";
+
 import "../../interfaces/ITapiocaReport.sol";
 
 /// @title TapiocaRelease
@@ -16,7 +23,8 @@ library TapiocaRelease {
         internal
         returns (TapiocaReport memory)
     {
-        UtilitiesReport memory utilitiesReport = _deployUtilities(input.owner, input.zeroXSwapper, input.lzChainId);
+        UtilitiesReport memory utilitiesReport =
+            _deployUtilities(input.owner, input.zeroXSwapper, input.lzChainId, input.wrappedNativeToken);
 
         YieldboxReport memory yieldboxReport =
             _deployYieldBox(input.owner, input.wrappedNativeToken, utilitiesReport.pearlmit);
@@ -29,12 +37,33 @@ library TapiocaRelease {
             utilitiesReport.cluster,
             utilitiesReport.pearlmit,
             utilitiesReport.toeHelper,
+            input.zeroXSwapper,
+            input.wrappedNativeToken,
             magnetarDepsReport
         );
 
-        // Pending: USDO batches
+        (
+            UsdoModulesReport memory modulesReport,
+            UsdoMarketModulesReport memory marketModulesReport,
+            UsdoReport memory usdoReport
+        ) = _deployUSDO(
+            input.lzEndpoint,
+            input.owner, // delegate
+            yieldboxReport.yieldbox,
+            utilitiesReport.cluster,
+            yieldboxReport.extExec,
+            utilitiesReport.pearlmit
+        );
 
-        return _generateMarketReport(utilitiesReport, yieldboxReport, magnetarDepsReport, magnetarReport);
+        return _generateMarketReport(
+            utilitiesReport,
+            yieldboxReport,
+            magnetarDepsReport,
+            magnetarReport,
+            modulesReport,
+            marketModulesReport,
+            usdoReport
+        );
     }
 
     ///
@@ -54,18 +83,21 @@ library TapiocaRelease {
         address cluster,
         address pearlmit,
         address toeHelper,
+        address zeroXSwapper,
+        address wrappedNativeToken,
         MagnetarDepsReport memory deps
     ) private returns (MagnetarReport memory report) {
         TapiocaMagnetarBatchTwo magnetarBatchTwo =
-            new TapiocaMagnetarBatchTwo(owner, cluster, pearlmit, toeHelper, deps);
+            new TapiocaMagnetarBatchTwo(owner, cluster, pearlmit, toeHelper, zeroXSwapper, wrappedNativeToken, deps);
         return magnetarBatchTwo.getMagnetarReport();
     }
 
-    function _deployUtilities(address owner, address zeroXSwapper, uint16 lzChainId)
+    function _deployUtilities(address owner, address zeroXSwapper, uint16 lzChainId, address wrappedNativeToken)
         private
         returns (UtilitiesReport memory report)
     {
-        TapiocaUtilitiesBatch utilitiesBatch = new TapiocaUtilitiesBatch(owner, zeroXSwapper, lzChainId, false);
+        TapiocaUtilitiesBatch utilitiesBatch =
+            new TapiocaUtilitiesBatch(owner, zeroXSwapper, wrappedNativeToken, lzChainId, false);
         return utilitiesBatch.getUtilitiesReport();
     }
 
@@ -77,11 +109,52 @@ library TapiocaRelease {
         return yieldboxBatch.getYieldboxReport();
     }
 
+    function _deployUSDO(
+        address endpoint,
+        address delegate,
+        address yieldbox,
+        address cluster,
+        address extExec,
+        address pearlmit
+    )
+        private
+        returns (
+            UsdoModulesReport memory modulesReport,
+            UsdoMarketModulesReport memory marketModulesReport,
+            UsdoReport memory usdoReport
+        )
+    {
+        TapiocaUsdoBatchOne usdoBatchOne =
+            new TapiocaUsdoBatchOne(endpoint, delegate, yieldbox, cluster, extExec, pearlmit);
+        modulesReport = usdoBatchOne.getUsdoModulesReport();
+
+        TapiocaUsdoBatchTwo usdoBatchTwo =
+            new TapiocaUsdoBatchTwo(endpoint, delegate, yieldbox, cluster, extExec, pearlmit);
+        marketModulesReport = usdoBatchTwo.getUsdoMarketModulesReport();
+        TapiocaUsdoBatchThree usdoBatchThree = new TapiocaUsdoBatchThree(
+            endpoint,
+            delegate,
+            yieldbox,
+            cluster,
+            extExec,
+            pearlmit,
+            modulesReport.usdoSenderModule,
+            modulesReport.usdoReceiverModule,
+            marketModulesReport.marketReceiverModule,
+            marketModulesReport.optionReceiverModule
+        );
+        usdoReport = usdoBatchThree.getUsdoReport();
+        return (modulesReport, marketModulesReport, usdoReport);
+    }
+
     function _generateMarketReport(
         UtilitiesReport memory utilitiesReport,
         YieldboxReport memory yieldboxReport,
         MagnetarDepsReport memory magnetarDepsReport,
-        MagnetarReport memory magnetarReport
+        MagnetarReport memory magnetarReport,
+        UsdoModulesReport memory modulesReport,
+        UsdoMarketModulesReport memory marketModulesReport,
+        UsdoReport memory usdoReport
     ) private pure returns (TapiocaReport memory) {
         TapiocaReport memory report;
 
@@ -100,6 +173,13 @@ library TapiocaRelease {
 
         report.magnetar = magnetarReport.magnetar;
         report.magnetarHelper = magnetarReport.magnetarHelper;
+        report.liquidatorReceiver = yieldboxReport.liquidatorReceiver;
+        report.extExec = yieldboxReport.extExec;
+        report.usdoSenderModule = modulesReport.usdoSenderModule;
+        report.usdoReceiverModule = modulesReport.usdoReceiverModule;
+        report.marketReceiverModule = marketModulesReport.marketReceiverModule;
+        report.optionReceiverModule = marketModulesReport.optionReceiverModule;
+        report.usdo = usdoReport.usdo;
 
         return report;
     }
