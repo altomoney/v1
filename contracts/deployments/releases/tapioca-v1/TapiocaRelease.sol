@@ -55,6 +55,8 @@ library TapiocaRelease {
             utilitiesReport.pearlmit
         );
 
+        SGLReport memory sglReport = _deploySingularity();
+
         return _generateMarketReport(
             utilitiesReport,
             yieldboxReport,
@@ -145,6 +147,17 @@ library TapiocaRelease {
         );
         usdoReport = usdoBatchThree.getUsdoReport();
         return (modulesReport, marketModulesReport, usdoReport);
+    }
+
+    // deploy singularity batches
+    function _deploySingularity() private returns (SGLReport memory) {
+        TapiocaSingularityBatch1 singularityBatch1 = new TapiocaSingularityBatch1();
+
+        TapiocaSingularityBatch2 singularityBatch2 = new TapiocaSingularityBatch2(singularityBatch1.getSGLReport());
+
+        TapiocaSingularityBatch3 singularityBatch3 = new TapiocaSingularityBatch3(singularityBatch2.getSGLReport());
+
+        return singularityBatch3.getSGLReport();
     }
 
     function _generateMarketReport(

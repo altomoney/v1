@@ -85,6 +85,7 @@ struct UsdoMarketModulesReport {
 struct UsdoReport {
     address usdo;
     address usdoHelper;
+    address usdoFlashloanHelper;
 }
 
 struct SGLReport {
@@ -95,4 +96,11 @@ struct SGLReport {
     address sglCollateralModule;
     address sglLeverageModule;
     address singularity;
+}
+
+struct PenroseReport {
+    address penrose;
+    address tapStrat;
+    address wrappedTokenStrat;
+    address usdoStrat;
 }

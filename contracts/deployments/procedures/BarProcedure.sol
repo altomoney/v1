@@ -8,7 +8,8 @@ import {UsdoMarketReceiverModule} from "tapioca-bar/usdo/modules/UsdoMarketRecei
 import {UsdoOptionReceiverModule} from "tapioca-bar/usdo/modules/UsdoOptionReceiverModule.sol";
 import {Usdo} from "tapioca-bar/usdo/Usdo.sol";
 import {TapiocaOmnichainExtExec} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainExtExec.sol";
-import {UsdoReport, UsdoModulesReport, UsdoMarketModulesReport} from "../interfaces/ITapiocaReport.sol";
+import {UsdoReport, UsdoModulesReport, UsdoMarketModulesReport, PenroseReport} from "../interfaces/ITapiocaReport.sol";
+import {ERC20WithoutStrategy} from "yieldbox/strategies/ERC20WithoutStrategy.sol";
 import {IPearlmit} from "tap-utils/pearlmit/PearlmitHandler.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {IMagnetarHelper} from "tap-utils/interfaces/periph/IMagnetarHelper.sol";
@@ -16,33 +17,40 @@ import {IYieldBox} from "yieldbox/interfaces/IYieldBox.sol";
 import {IERC20} from "@boringcrypto/boring-solidity/contracts/libraries/BoringERC20.sol";
 import {UsdoInitStruct, UsdoModulesInitStruct} from "tap-utils/interfaces/oft/IUsdo.sol";
 import {UsdoHelper} from "tapioca-bar/usdo/extensions/UsdoHelper.sol";
+import {USDOFlashloanHelper} from "tapioca-bar/usdo/USDOFlashloanHelper.sol";
+import {IUsdo} from "tap-utils/interfaces/oft/IUsdo.sol";
+import {TokenType} from "yieldbox/enums/YieldBoxTokenType.sol";
 
 abstract contract BarProcedure {
     function _deployPenrose(
-        address owner,
         address yieldbox,
         address cluster,
         address tapToken,
+        address usdoToken,
         address nativeWrappedToken,
         address pearlmit,
-        uint256 tapAssetId,
-        uint256 wrappedTokenId,
-        uint256 usdoId,
-        address usdoToken
-    ) internal returns (address penrose) {
-        penrose = address(
+        address owner
+    ) internal returns (PenroseReport memory report) {
+        report.tapStrat = address(new ERC20WithoutStrategy(IYieldBox(yieldbox), IERC20(tapToken)));
+        report.wrappedTokenStrat = address(new ERC20WithoutStrategy(IYieldBox(yieldbox), IERC20(nativeWrappedToken)));
+        report.usdoStrat = address(new ERC20WithoutStrategy(IYieldBox(yieldbox), IERC20(usdoToken)));
+
+        report.penrose = address(
             new Penrose(
                 IYieldBox(yieldbox),
                 ICluster(cluster),
                 IERC20(tapToken),
                 IERC20(nativeWrappedToken),
                 IPearlmit(pearlmit),
-                tapAssetId,
-                wrappedTokenId,
-                owner
+                IYieldBox(yieldbox).registerAsset(TokenType.ERC20, tapToken, report.tapStrat, 0),
+                IYieldBox(yieldbox).registerAsset(TokenType.ERC20, nativeWrappedToken, report.wrappedTokenStrat, 0),
+                address(this)
             )
         );
-        Penrose(penrose).setUsdoToken(usdoToken, usdoId);
+        Penrose(report.penrose).setUsdoToken(
+            usdoToken, IYieldBox(yieldbox).registerAsset(TokenType.ERC20, usdoToken, report.usdoStrat, 0)
+        );
+        Penrose(report.penrose).transferOwnership(owner);
     }
 
     function _deployUsdoSenderAndReceiver(
@@ -117,8 +125,8 @@ abstract contract BarProcedure {
         modulesData.usdoReceiverModule = usdoReceiverModule;
         modulesData.marketReceiverModule = usdoMarketReceiverModule;
         modulesData.optionReceiverModule = usdoOptionReceiverModule;
-
         report.usdo = (address(new Usdo(initData, modulesData)));
+        report.usdoFlashloanHelper = address(new USDOFlashloanHelper(IUsdo(report.usdo), delegate));
         report.usdoHelper = address(new UsdoHelper());
         return report;
     }
