@@ -24,6 +24,23 @@ struct TapiocaReport {
     address marketReceiverModule;
     address optionReceiverModule;
     address usdo;
+    address sglInit;
+    address sglInterestHelper;
+    address sglLiquidationModule;
+    address sglBorrowModule;
+    address sglCollateralModule;
+    address sglLeverageModule;
+    address singularity;
+    address penrose;
+    address tapStrat;
+    address wrappedTokenStrat;
+    address usdoStrat;
+    address marketHelper;
+    address bbLiquidation;
+    address bbBorrow;
+    address bbCollateral;
+    address bbLeverage;
+    address bbDebtRateHelper;
 }
 
 struct MagnetarReport {
@@ -103,4 +120,13 @@ struct PenroseReport {
     address tapStrat;
     address wrappedTokenStrat;
     address usdoStrat;
+    address marketHelper;
+}
+
+struct BBReport {
+    address bbLiquidation;
+    address bbBorrow;
+    address bbCollateral;
+    address bbLeverage;
+    address bbDebtRateHelper;
 }

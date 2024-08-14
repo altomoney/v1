@@ -8,7 +8,13 @@ import {UsdoMarketReceiverModule} from "tapioca-bar/usdo/modules/UsdoMarketRecei
 import {UsdoOptionReceiverModule} from "tapioca-bar/usdo/modules/UsdoOptionReceiverModule.sol";
 import {Usdo} from "tapioca-bar/usdo/Usdo.sol";
 import {TapiocaOmnichainExtExec} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainExtExec.sol";
-import {UsdoReport, UsdoModulesReport, UsdoMarketModulesReport, PenroseReport} from "../interfaces/ITapiocaReport.sol";
+import {
+    UsdoReport,
+    UsdoModulesReport,
+    UsdoMarketModulesReport,
+    PenroseReport,
+    BBReport
+} from "../interfaces/ITapiocaReport.sol";
 import {ERC20WithoutStrategy} from "yieldbox/strategies/ERC20WithoutStrategy.sol";
 import {IPearlmit} from "tap-utils/pearlmit/PearlmitHandler.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
@@ -20,6 +26,14 @@ import {UsdoHelper} from "tapioca-bar/usdo/extensions/UsdoHelper.sol";
 import {USDOFlashloanHelper} from "tapioca-bar/usdo/USDOFlashloanHelper.sol";
 import {IUsdo} from "tap-utils/interfaces/oft/IUsdo.sol";
 import {TokenType} from "yieldbox/enums/YieldBoxTokenType.sol";
+import {MarketHelper} from "tapioca-bar/markets/MarketHelper.sol";
+import {BBLiquidation} from "tapioca-bar/markets/bigBang/BBLiquidation.sol";
+import {BBBorrow} from "tapioca-bar/markets/bigBang/BBBorrow.sol";
+import {BBCollateral} from "tapioca-bar/markets/bigBang/BBCollateral.sol";
+import {BBLeverage} from "tapioca-bar/markets/bigBang/BBLeverage.sol";
+import {BBDebtRateHelper} from "tapioca-bar/markets/bigBang/BBDebtRateHelper.sol";
+import {BigBang} from "tapioca-bar/markets/bigBang/BigBang.sol";
+import {BBDebtRateHelper} from "tapioca-bar/markets/bigBang/BBDebtRateHelper.sol";
 
 abstract contract BarProcedure {
     function _deployPenrose(
@@ -29,28 +43,33 @@ abstract contract BarProcedure {
         address usdoToken,
         address nativeWrappedToken,
         address pearlmit,
-        address owner
+        address owner,
+        address prevPenrose
     ) internal returns (PenroseReport memory report) {
         report.tapStrat = address(new ERC20WithoutStrategy(IYieldBox(yieldbox), IERC20(tapToken)));
         report.wrappedTokenStrat = address(new ERC20WithoutStrategy(IYieldBox(yieldbox), IERC20(nativeWrappedToken)));
         report.usdoStrat = address(new ERC20WithoutStrategy(IYieldBox(yieldbox), IERC20(usdoToken)));
-
-        report.penrose = address(
-            new Penrose(
-                IYieldBox(yieldbox),
-                ICluster(cluster),
-                IERC20(tapToken),
-                IERC20(nativeWrappedToken),
-                IPearlmit(pearlmit),
-                IYieldBox(yieldbox).registerAsset(TokenType.ERC20, tapToken, report.tapStrat, 0),
-                IYieldBox(yieldbox).registerAsset(TokenType.ERC20, nativeWrappedToken, report.wrappedTokenStrat, 0),
-                address(this)
-            )
-        );
-        Penrose(report.penrose).setUsdoToken(
-            usdoToken, IYieldBox(yieldbox).registerAsset(TokenType.ERC20, usdoToken, report.usdoStrat, 0)
-        );
-        Penrose(report.penrose).transferOwnership(owner);
+        report.marketHelper = address(new MarketHelper());
+        if (prevPenrose == address(0)) {
+            report.penrose = address(
+                new Penrose(
+                    IYieldBox(yieldbox),
+                    ICluster(cluster),
+                    IERC20(tapToken),
+                    IERC20(nativeWrappedToken),
+                    IPearlmit(pearlmit),
+                    IYieldBox(yieldbox).registerAsset(TokenType.ERC20, tapToken, report.tapStrat, 0),
+                    IYieldBox(yieldbox).registerAsset(TokenType.ERC20, nativeWrappedToken, report.wrappedTokenStrat, 0),
+                    address(this) // set owner temporarily for setup
+                )
+            );
+            Penrose(report.penrose).setUsdoToken(
+                usdoToken, IYieldBox(yieldbox).registerAsset(TokenType.ERC20, usdoToken, report.usdoStrat, 0)
+            );
+            Penrose(report.penrose).transferOwnership(owner);
+        } else {
+            report.penrose = prevPenrose;
+        }
     }
 
     function _deployUsdoSenderAndReceiver(
@@ -128,6 +147,21 @@ abstract contract BarProcedure {
         report.usdo = (address(new Usdo(initData, modulesData)));
         report.usdoFlashloanHelper = address(new USDOFlashloanHelper(IUsdo(report.usdo), delegate));
         report.usdoHelper = address(new UsdoHelper());
+        return report;
+    }
+
+    function _deployBBModulesOne() internal returns (BBReport memory report) {
+        report.bbLiquidation = address(new BBLiquidation());
+        report.bbBorrow = address(new BBBorrow());
+        report.bbDebtRateHelper = address(new BBDebtRateHelper());
+
+        return report;
+    }
+
+    function _deployBBModulesTwo(BBReport memory report) internal returns (BBReport memory) {
+        report.bbCollateral = address(new BBCollateral());
+        report.bbLeverage = address(new BBLeverage());
+
         return report;
     }
 }

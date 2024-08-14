@@ -13,6 +13,8 @@ import {TapiocaUsdoBatchThree} from "deployments/releases/tapioca-v1/batches/Tap
 import {TapiocaSingularityBatch1} from "deployments/releases/tapioca-v1/batches/TapiocaSingularityBatch1.sol";
 import {TapiocaSingularityBatch2} from "deployments/releases/tapioca-v1/batches/TapiocaSingularityBatch2.sol";
 import {TapiocaSingularityBatch3} from "deployments/releases/tapioca-v1/batches/TapiocaSingularityBatch3.sol";
+import {TapiocaBBBatch1} from "deployments/releases/tapioca-v1/batches/TapiocaBBBatch1.sol";
+import {TapiocaBBBatch2} from "deployments/releases/tapioca-v1/batches/TapiocaBBBatch2.sol";
 import "deployments/interfaces/ITapiocaReport.sol";
 import {LZEndpointMock} from "tapioca-mocks/LZEndpointMock.sol";
 import {TapiocaOmnichainExtExec} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainExtExec.sol";
@@ -23,6 +25,7 @@ import {Pearlmit} from "tap-utils/pearlmit/Pearlmit.sol";
 import "tap-yieldbox/interfaces/IWrappedNative.sol";
 import {ERC20Mock} from "../bar/mocks/ERC20Mock.sol";
 
+// @dev forge test --match-path test/deployments/ProcedureLimits.t.sol
 contract ProcedureLimits is Test {
     address owner;
     address zeroXSwapper;
@@ -88,6 +91,15 @@ contract ProcedureLimits is Test {
         new TapiocaUsdoBatchTwo(endpointMock, delegate, address(1), address(2), address(3), address(4));
     }
 
+    function test_new_TapiocaBBBatchOne() public {
+        new TapiocaBBBatch1();
+    }
+
+    function test_new_TapiocaBBBatch2() public {
+        BBReport memory emptyInput;
+        new TapiocaBBBatch2(emptyInput);
+    }
+
     function test_new_TapiocaUsdoBatchThree() public {
         new TapiocaUsdoBatchThree(
             endpointMock,
@@ -108,7 +120,9 @@ contract ProcedureLimits is Test {
     }
 
     function test_new_PenroseBatch() public {
-        new TapiocaPenroseBatch(yieldboxMock, address(3), erc20Mock1, erc20Mock2, erc20Mock3, address(7), address(8));
+        new TapiocaPenroseBatch(
+            yieldboxMock, address(3), erc20Mock1, erc20Mock2, erc20Mock3, address(7), address(8), address(0)
+        );
     }
 
     function test_codesizes() public pure {
@@ -123,6 +137,8 @@ contract ProcedureLimits is Test {
         uint256 singularityBatch2CreationSize = type(TapiocaSingularityBatch2).creationCode.length;
         uint256 singularityBatch3CreationSize = type(TapiocaSingularityBatch3).creationCode.length;
         uint256 penroseBatchCreationSize = type(TapiocaPenroseBatch).creationCode.length;
+        uint256 bbBatchOneCreationSize = type(TapiocaBBBatch1).creationCode.length;
+        uint256 bbBatchTwoCreationSize = type(TapiocaBBBatch2).creationCode.length;
 
         console2.log("TapiocaUtilitiesBatch", utilitiesBatchCreationSize);
         console2.log("TapiocaYieldboxBatch", yieldboxBatchCreationSize);
@@ -135,6 +151,8 @@ contract ProcedureLimits is Test {
         console2.log("TapiocaSigularityBatch2", singularityBatch2CreationSize);
         console2.log("TapiocaSigularityBatch3", singularityBatch3CreationSize);
         console2.log("TapiocaPenroseBatch", penroseBatchCreationSize);
+        console2.log("TapiocaBBBatch1", bbBatchOneCreationSize);
+        console2.log("TapiocaBBBatch2", bbBatchTwoCreationSize);
 
         assertLe(
             magnetarBatchOneCreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "TapiocaMagnetarBatchOne max init code size"
@@ -156,5 +174,7 @@ contract ProcedureLimits is Test {
         assertLe(singularityBatch2CreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "singularityBatch2 max init code size");
         assertLe(singularityBatch3CreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "singularityBatch3 max init code size");
         assertLe(penroseBatchCreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "penroseBatch max init code size");
+        assertLe(bbBatchOneCreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "bbBatchOne max init code size");
+        assertLe(bbBatchTwoCreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "bbBatchTwo max init code size");
     }
 }

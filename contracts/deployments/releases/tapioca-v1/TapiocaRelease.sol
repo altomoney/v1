@@ -11,6 +11,9 @@ import {TapiocaUsdoBatchThree} from "./batches/TapiocaUsdoBatchThree.sol";
 import {TapiocaSingularityBatch1} from "./batches/TapiocaSingularityBatch1.sol";
 import {TapiocaSingularityBatch2} from "./batches/TapiocaSingularityBatch2.sol";
 import {TapiocaSingularityBatch3} from "./batches/TapiocaSingularityBatch3.sol";
+import {TapiocaPenroseBatch} from "./batches/TapiocaPenroseBatch.sol";
+import {TapiocaBBBatch1} from "./batches/TapiocaBBBatch1.sol";
+import {TapiocaBBBatch2} from "./batches/TapiocaBBBatch2.sol";
 
 import "../../interfaces/ITapiocaReport.sol";
 
@@ -57,6 +60,19 @@ library TapiocaRelease {
 
         SGLReport memory sglReport = _deploySingularity();
 
+        PenroseReport memory penroseReport = _deployPenrose(
+            yieldboxReport.yieldbox,
+            utilitiesReport.cluster,
+            input.tapToken,
+            usdoReport.usdo,
+            input.wrappedNativeToken,
+            utilitiesReport.pearlmit,
+            input.owner,
+            prevReport.penrose
+        );
+
+        BBReport memory bbReport = _deployBigBangModules();
+
         return _generateMarketReport(
             utilitiesReport,
             yieldboxReport,
@@ -64,7 +80,10 @@ library TapiocaRelease {
             magnetarReport,
             modulesReport,
             marketModulesReport,
-            usdoReport
+            usdoReport,
+            sglReport,
+            penroseReport,
+            bbReport
         );
     }
 
@@ -109,6 +128,29 @@ library TapiocaRelease {
     {
         TapiocaYieldboxBatch yieldboxBatch = new TapiocaYieldboxBatch(owner, wrappedNativeToken, pearlmit);
         return yieldboxBatch.getYieldboxReport();
+    }
+
+    function _deployPenrose(
+        address yieldbox,
+        address cluster,
+        address tapToken,
+        address usdoToken,
+        address nativeWrappedToken,
+        address pearlmit,
+        address owner,
+        address prevPenrose
+    ) private returns (PenroseReport memory report) {
+        TapiocaPenroseBatch penroseBatch = new TapiocaPenroseBatch(
+            yieldbox, cluster, tapToken, usdoToken, nativeWrappedToken, pearlmit, owner, prevPenrose
+        );
+        return penroseBatch.getPenroseReport();
+    }
+
+    function _deployBigBangModules() private returns (BBReport memory report) {
+        TapiocaBBBatch1 bbBatchOne = new TapiocaBBBatch1();
+        TapiocaBBBatch2 bbBatchTwo = new TapiocaBBBatch2(bbBatchOne.getBBReport());
+
+        return bbBatchTwo.getBBReport();
     }
 
     function _deployUSDO(
@@ -167,7 +209,10 @@ library TapiocaRelease {
         MagnetarReport memory magnetarReport,
         UsdoModulesReport memory modulesReport,
         UsdoMarketModulesReport memory marketModulesReport,
-        UsdoReport memory usdoReport
+        UsdoReport memory usdoReport,
+        SGLReport memory sglReport,
+        PenroseReport memory penroseReport,
+        BBReport memory bbReport
     ) private pure returns (TapiocaReport memory) {
         TapiocaReport memory report;
 
@@ -193,6 +238,25 @@ library TapiocaRelease {
         report.marketReceiverModule = marketModulesReport.marketReceiverModule;
         report.optionReceiverModule = marketModulesReport.optionReceiverModule;
         report.usdo = usdoReport.usdo;
+
+        report.sglInit = sglReport.sglInit;
+        report.sglInterestHelper = sglReport.sglInterestHelper;
+        report.sglLiquidationModule = sglReport.sglLiquidationModule;
+        report.sglBorrowModule = sglReport.sglBorrowModule;
+        report.sglCollateralModule = sglReport.sglCollateralModule;
+        report.sglLeverageModule = sglReport.sglLeverageModule;
+        report.singularity = sglReport.singularity;
+        report.penrose = penroseReport.penrose;
+        report.tapStrat = penroseReport.tapStrat;
+        report.wrappedTokenStrat = penroseReport.wrappedTokenStrat;
+        report.usdoStrat = penroseReport.usdoStrat;
+        report.marketHelper = penroseReport.marketHelper;
+
+        report.bbLiquidation = bbReport.bbLiquidation;
+        report.bbBorrow = bbReport.bbBorrow;
+        report.bbCollateral = bbReport.bbCollateral;
+        report.bbLeverage = bbReport.bbLeverage;
+        report.bbDebtRateHelper = bbReport.bbDebtRateHelper;
 
         return report;
     }

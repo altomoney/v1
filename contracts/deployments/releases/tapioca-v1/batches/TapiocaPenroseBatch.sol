@@ -17,9 +17,11 @@ contract TapiocaPenroseBatch is BarProcedure {
         address usdoToken,
         address nativeWrappedToken,
         address pearlmit,
-        address owner
+        address owner,
+        address prevPenrose
     ) {
-        _penroseReport = _deployPenrose(yieldbox, cluster, tapToken, usdoToken, nativeWrappedToken, pearlmit, owner);
+        _penroseReport =
+            _deployPenrose(yieldbox, cluster, tapToken, usdoToken, nativeWrappedToken, pearlmit, owner, prevPenrose);
     }
 
     function getPenroseReport() external view returns (PenroseReport memory) {
