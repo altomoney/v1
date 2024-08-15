@@ -13,13 +13,10 @@ import {ZeroXSwapperMock} from "tapioca-mocks/ZeroXSwapperMock.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 
 abstract contract UtilitiesProcedure {
-    function _deployUtilities(
-        address owner,
-        address zeroXProxy,
-        address wrappedNativeToken,
-        uint32 lzChainId,
-        bool isTestnet
-    ) internal returns (UtilitiesReport memory report) {
+    function _deployUtilities(address owner, address zeroXProxy, uint32 lzChainId, bool isTestnet)
+        internal
+        returns (UtilitiesReport memory report)
+    {
         report.tapiocaMulticall = address(new TapiocaMulticall());
         report.pearlmit = address(new Pearlmit("PEARLMIT", "1", report.tapiocaMulticall, 0));
         report.cluster = address(new Cluster(lzChainId, report.tapiocaMulticall));
@@ -32,5 +29,15 @@ abstract contract UtilitiesProcedure {
         }
 
         return report;
+    }
+
+    function _clusterWhitelist(address cluster, address magnetar, address pauser, address pearlmit, address yieldbox)
+        internal
+    {
+        /*
+        cluster.setRoleForContract(magnetar, keccak256("TOE"), true);
+        cluster.setRoleForContract(pauser, keccak256("PAUSER"), true);
+        cluster.updateContract(0, address(0), true)
+        */
     }
 }

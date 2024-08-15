@@ -15,6 +15,7 @@ import {TapiocaSingularityBatch2} from "deployments/releases/tapioca-v1/batches/
 import {TapiocaSingularityBatch3} from "deployments/releases/tapioca-v1/batches/TapiocaSingularityBatch3.sol";
 import {TapiocaBBBatch1} from "deployments/releases/tapioca-v1/batches/TapiocaBBBatch1.sol";
 import {TapiocaBBBatch2} from "deployments/releases/tapioca-v1/batches/TapiocaBBBatch2.sol";
+import {TapiocaBBBatch3} from "deployments/releases/tapioca-v1/batches/TapiocaBBBatch3.sol";
 import "deployments/interfaces/ITapiocaReport.sol";
 import {LZEndpointMock} from "tapioca-mocks/LZEndpointMock.sol";
 import {TapiocaOmnichainExtExec} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainExtExec.sol";
@@ -72,11 +73,11 @@ contract ProcedureLimits is Test {
     }
 
     function test_new_UtilityBatch_isTestnet_false() public {
-        new TapiocaUtilitiesBatch(owner, zeroXSwapper, address(1), 0, false);
+        new TapiocaUtilitiesBatch(owner, zeroXSwapper, 0, false);
     }
 
     function test_new_UtilityBatch_isTestnet_true() public {
-        new TapiocaUtilitiesBatch(owner, zeroXSwapper, address(1), 0, true);
+        new TapiocaUtilitiesBatch(owner, zeroXSwapper, 0, true);
     }
 
     function test_new_YieldboxBatch() public {
@@ -100,6 +101,11 @@ contract ProcedureLimits is Test {
         new TapiocaBBBatch2(emptyInput);
     }
 
+    function test_new_TapiocaBBBatch3() public {
+        BBReport memory emptyInput;
+        new TapiocaBBBatch3(emptyInput);
+    }
+
     function test_new_TapiocaUsdoBatchThree() public {
         new TapiocaUsdoBatchThree(
             endpointMock,
@@ -121,7 +127,18 @@ contract ProcedureLimits is Test {
 
     function test_new_PenroseBatch() public {
         new TapiocaPenroseBatch(
-            yieldboxMock, address(3), erc20Mock1, erc20Mock2, erc20Mock3, address(7), address(8), address(0)
+            IPenroseInput(
+                yieldboxMock,
+                address(3),
+                erc20Mock1,
+                erc20Mock2,
+                erc20Mock3,
+                address(7),
+                address(8),
+                address(1),
+                address(1),
+                address(0)
+            )
         );
     }
 
@@ -139,6 +156,7 @@ contract ProcedureLimits is Test {
         uint256 penroseBatchCreationSize = type(TapiocaPenroseBatch).creationCode.length;
         uint256 bbBatchOneCreationSize = type(TapiocaBBBatch1).creationCode.length;
         uint256 bbBatchTwoCreationSize = type(TapiocaBBBatch2).creationCode.length;
+        uint256 bbBatchThreeCreationSize = type(TapiocaBBBatch3).creationCode.length;
 
         console2.log("TapiocaUtilitiesBatch", utilitiesBatchCreationSize);
         console2.log("TapiocaYieldboxBatch", yieldboxBatchCreationSize);
@@ -153,6 +171,7 @@ contract ProcedureLimits is Test {
         console2.log("TapiocaPenroseBatch", penroseBatchCreationSize);
         console2.log("TapiocaBBBatch1", bbBatchOneCreationSize);
         console2.log("TapiocaBBBatch2", bbBatchTwoCreationSize);
+        console2.log("TapiocaBBBatch3", bbBatchThreeCreationSize);
 
         assertLe(
             magnetarBatchOneCreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "TapiocaMagnetarBatchOne max init code size"
@@ -176,5 +195,6 @@ contract ProcedureLimits is Test {
         assertLe(penroseBatchCreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "penroseBatch max init code size");
         assertLe(bbBatchOneCreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "bbBatchOne max init code size");
         assertLe(bbBatchTwoCreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "bbBatchTwo max init code size");
+        assertLe(bbBatchThreeCreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "bbBatchThree max init code size");
     }
 }

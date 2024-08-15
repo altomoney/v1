@@ -4,8 +4,8 @@ pragma solidity 0.8.22;
 import {BarProcedure} from "../../../procedures/BarProcedure.sol";
 import {BBReport} from "../../../interfaces/ITapiocaReport.sol";
 
-/// @title TapiocaPenroseBatch2
-/// @notice Deploy Penrose
+/// @title TapiocaBBBatch2
+/// @notice Deploy big bang modules
 /// @dev Batches performs 1-tx deployments via constructor deployment pattern and contains on-chain reports of deployed contracts
 contract TapiocaBBBatch2 is BarProcedure {
     BBReport internal _bbReport;

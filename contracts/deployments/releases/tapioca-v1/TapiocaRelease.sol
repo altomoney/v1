@@ -14,6 +14,7 @@ import {TapiocaSingularityBatch3} from "./batches/TapiocaSingularityBatch3.sol";
 import {TapiocaPenroseBatch} from "./batches/TapiocaPenroseBatch.sol";
 import {TapiocaBBBatch1} from "./batches/TapiocaBBBatch1.sol";
 import {TapiocaBBBatch2} from "./batches/TapiocaBBBatch2.sol";
+import {TapiocaBBBatch3} from "./batches/TapiocaBBBatch3.sol";
 
 import "../../interfaces/ITapiocaReport.sol";
 
@@ -26,65 +27,52 @@ library TapiocaRelease {
         internal
         returns (TapiocaReport memory)
     {
-        UtilitiesReport memory utilitiesReport =
-            _deployUtilities(input.owner, input.zeroXSwapper, input.lzChainId, input.wrappedNativeToken);
+        Reports memory reports;
 
-        YieldboxReport memory yieldboxReport =
-            _deployYieldBox(input.owner, input.wrappedNativeToken, utilitiesReport.pearlmit);
+        reports.utilitiesReport = _deployUtilities(input.owner, input.zeroXSwapper, input.lzChainId);
 
-        MagnetarDepsReport memory magnetarDepsReport =
-            _deployMagnetarDeps(utilitiesReport.pearlmit, utilitiesReport.toeHelper);
+        reports.yieldboxReport =
+            _deployYieldBox(input.owner, input.wrappedNativeToken, reports.utilitiesReport.pearlmit);
 
-        MagnetarReport memory magnetarReport = _deployMagnetar(
+        reports.magnetarDepsReport =
+            _deployMagnetarDeps(reports.utilitiesReport.pearlmit, reports.utilitiesReport.toeHelper);
+
+        reports.magnetarReport = _deployMagnetar(
             input.owner,
-            utilitiesReport.cluster,
-            utilitiesReport.pearlmit,
-            utilitiesReport.toeHelper,
+            reports.utilitiesReport.cluster,
+            reports.utilitiesReport.pearlmit,
+            reports.utilitiesReport.toeHelper,
             input.zeroXSwapper,
             input.wrappedNativeToken,
-            magnetarDepsReport
+            reports.magnetarDepsReport
         );
 
-        (
-            UsdoModulesReport memory modulesReport,
-            UsdoMarketModulesReport memory marketModulesReport,
-            UsdoReport memory usdoReport
-        ) = _deployUSDO(
+        (reports.usdoModulesReport, reports.usdoMarketModulesReport, reports.usdoReport) = _deployUSDO(
             input.lzEndpoint,
             input.owner, // delegate
-            yieldboxReport.yieldbox,
-            utilitiesReport.cluster,
-            yieldboxReport.extExec,
-            utilitiesReport.pearlmit
+            reports.yieldboxReport.yieldbox,
+            reports.utilitiesReport.cluster,
+            reports.yieldboxReport.extExec,
+            reports.utilitiesReport.pearlmit
         );
 
-        SGLReport memory sglReport = _deploySingularity();
+        reports.sglReport = _deploySingularity();
 
-        PenroseReport memory penroseReport = _deployPenrose(
-            yieldboxReport.yieldbox,
-            utilitiesReport.cluster,
+        reports.bbReport = _deployBigBangModules();
+        reports.penroseReport = _deployPenrose(
+            reports.yieldboxReport.yieldbox,
+            reports.utilitiesReport.cluster,
             input.tapToken,
-            usdoReport.usdo,
+            reports.usdoReport.usdo,
             input.wrappedNativeToken,
-            utilitiesReport.pearlmit,
+            reports.utilitiesReport.pearlmit,
             input.owner,
+            reports.sglReport.singularity,
+            reports.bbReport.bigbang,
             prevReport.penrose
         );
 
-        BBReport memory bbReport = _deployBigBangModules();
-
-        return _generateMarketReport(
-            utilitiesReport,
-            yieldboxReport,
-            magnetarDepsReport,
-            magnetarReport,
-            modulesReport,
-            marketModulesReport,
-            usdoReport,
-            sglReport,
-            penroseReport,
-            bbReport
-        );
+        return _generateMarketReport(reports);
     }
 
     ///
@@ -113,12 +101,11 @@ library TapiocaRelease {
         return magnetarBatchTwo.getMagnetarReport();
     }
 
-    function _deployUtilities(address owner, address zeroXSwapper, uint16 lzChainId, address wrappedNativeToken)
+    function _deployUtilities(address owner, address zeroXSwapper, uint16 lzChainId)
         private
         returns (UtilitiesReport memory report)
     {
-        TapiocaUtilitiesBatch utilitiesBatch =
-            new TapiocaUtilitiesBatch(owner, zeroXSwapper, wrappedNativeToken, lzChainId, false);
+        TapiocaUtilitiesBatch utilitiesBatch = new TapiocaUtilitiesBatch(owner, zeroXSwapper, lzChainId, false);
         return utilitiesBatch.getUtilitiesReport();
     }
 
@@ -138,10 +125,23 @@ library TapiocaRelease {
         address nativeWrappedToken,
         address pearlmit,
         address owner,
+        address singularityMaster,
+        address bigbangMaster,
         address prevPenrose
     ) private returns (PenroseReport memory report) {
         TapiocaPenroseBatch penroseBatch = new TapiocaPenroseBatch(
-            yieldbox, cluster, tapToken, usdoToken, nativeWrappedToken, pearlmit, owner, prevPenrose
+            IPenroseInput(
+                yieldbox,
+                cluster,
+                tapToken,
+                usdoToken,
+                nativeWrappedToken,
+                pearlmit,
+                owner,
+                singularityMaster,
+                bigbangMaster,
+                prevPenrose
+            )
         );
         return penroseBatch.getPenroseReport();
     }
@@ -149,8 +149,9 @@ library TapiocaRelease {
     function _deployBigBangModules() private returns (BBReport memory report) {
         TapiocaBBBatch1 bbBatchOne = new TapiocaBBBatch1();
         TapiocaBBBatch2 bbBatchTwo = new TapiocaBBBatch2(bbBatchOne.getBBReport());
+        TapiocaBBBatch3 bbBatchThree = new TapiocaBBBatch3(bbBatchTwo.getBBReport());
 
-        return bbBatchTwo.getBBReport();
+        return bbBatchThree.getBBReport();
     }
 
     function _deployUSDO(
@@ -202,61 +203,52 @@ library TapiocaRelease {
         return singularityBatch3.getSGLReport();
     }
 
-    function _generateMarketReport(
-        UtilitiesReport memory utilitiesReport,
-        YieldboxReport memory yieldboxReport,
-        MagnetarDepsReport memory magnetarDepsReport,
-        MagnetarReport memory magnetarReport,
-        UsdoModulesReport memory modulesReport,
-        UsdoMarketModulesReport memory marketModulesReport,
-        UsdoReport memory usdoReport,
-        SGLReport memory sglReport,
-        PenroseReport memory penroseReport,
-        BBReport memory bbReport
-    ) private pure returns (TapiocaReport memory) {
+    function _generateMarketReport(Reports memory reports) private pure returns (TapiocaReport memory) {
         TapiocaReport memory report;
 
-        report.cluster = utilitiesReport.cluster;
-        report.pearlmit = utilitiesReport.pearlmit;
-        report.tapiocaMulticall = utilitiesReport.tapiocaMulticall;
-        report.toeHelper = utilitiesReport.toeHelper;
+        report.cluster = reports.utilitiesReport.cluster;
+        report.pearlmit = reports.utilitiesReport.pearlmit;
+        report.tapiocaMulticall = reports.utilitiesReport.tapiocaMulticall;
+        report.toeHelper = reports.utilitiesReport.toeHelper;
 
-        report.yieldbox = yieldboxReport.yieldbox;
-        report.yieldboxUri = yieldboxReport.yieldboxUri;
+        report.yieldbox = reports.yieldboxReport.yieldbox;
+        report.yieldboxUri = reports.yieldboxReport.yieldboxUri;
 
-        report.magnetarCollateralModule = magnetarDepsReport.magnetarCollateralModule;
-        report.magnetarMintModule = magnetarDepsReport.magnetarMintModule;
-        report.magnetarOptionModule = magnetarDepsReport.magnetarOptionModule;
-        report.magnetarYieldboxModule = magnetarDepsReport.magnetarYieldboxModule;
+        report.magnetarCollateralModule = reports.magnetarDepsReport.magnetarCollateralModule;
+        report.magnetarMintModule = reports.magnetarDepsReport.magnetarMintModule;
+        report.magnetarOptionModule = reports.magnetarDepsReport.magnetarOptionModule;
+        report.magnetarYieldboxModule = reports.magnetarDepsReport.magnetarYieldboxModule;
 
-        report.magnetar = magnetarReport.magnetar;
-        report.magnetarHelper = magnetarReport.magnetarHelper;
-        report.liquidatorReceiver = yieldboxReport.liquidatorReceiver;
-        report.extExec = yieldboxReport.extExec;
-        report.usdoSenderModule = modulesReport.usdoSenderModule;
-        report.usdoReceiverModule = modulesReport.usdoReceiverModule;
-        report.marketReceiverModule = marketModulesReport.marketReceiverModule;
-        report.optionReceiverModule = marketModulesReport.optionReceiverModule;
-        report.usdo = usdoReport.usdo;
+        report.magnetar = reports.magnetarReport.magnetar;
+        report.magnetarHelper = reports.magnetarReport.magnetarHelper;
+        report.toftHelper = reports.magnetarReport.toftHelper;
+        report.liquidatorReceiver = reports.yieldboxReport.liquidatorReceiver;
+        report.extExec = reports.yieldboxReport.extExec;
+        report.usdoSenderModule = reports.usdoModulesReport.usdoSenderModule;
+        report.usdoReceiverModule = reports.usdoModulesReport.usdoReceiverModule;
+        report.marketReceiverModule = reports.usdoMarketModulesReport.marketReceiverModule;
+        report.optionReceiverModule = reports.usdoMarketModulesReport.optionReceiverModule;
+        report.usdo = reports.usdoReport.usdo;
 
-        report.sglInit = sglReport.sglInit;
-        report.sglInterestHelper = sglReport.sglInterestHelper;
-        report.sglLiquidationModule = sglReport.sglLiquidationModule;
-        report.sglBorrowModule = sglReport.sglBorrowModule;
-        report.sglCollateralModule = sglReport.sglCollateralModule;
-        report.sglLeverageModule = sglReport.sglLeverageModule;
-        report.singularity = sglReport.singularity;
-        report.penrose = penroseReport.penrose;
-        report.tapStrat = penroseReport.tapStrat;
-        report.wrappedTokenStrat = penroseReport.wrappedTokenStrat;
-        report.usdoStrat = penroseReport.usdoStrat;
-        report.marketHelper = penroseReport.marketHelper;
+        report.sglInit = reports.sglReport.sglInit;
+        report.sglInterestHelper = reports.sglReport.sglInterestHelper;
+        report.sglLiquidationModule = reports.sglReport.sglLiquidationModule;
+        report.sglBorrowModule = reports.sglReport.sglBorrowModule;
+        report.sglCollateralModule = reports.sglReport.sglCollateralModule;
+        report.sglLeverageModule = reports.sglReport.sglLeverageModule;
+        report.singularity = reports.sglReport.singularity;
+        report.penrose = reports.penroseReport.penrose;
+        report.tapStrat = reports.penroseReport.tapStrat;
+        report.wrappedTokenStrat = reports.penroseReport.wrappedTokenStrat;
+        report.usdoStrat = reports.penroseReport.usdoStrat;
+        report.marketHelper = reports.penroseReport.marketHelper;
 
-        report.bbLiquidation = bbReport.bbLiquidation;
-        report.bbBorrow = bbReport.bbBorrow;
-        report.bbCollateral = bbReport.bbCollateral;
-        report.bbLeverage = bbReport.bbLeverage;
-        report.bbDebtRateHelper = bbReport.bbDebtRateHelper;
+        report.bbLiquidation = reports.bbReport.bbLiquidation;
+        report.bbBorrow = reports.bbReport.bbBorrow;
+        report.bbCollateral = reports.bbReport.bbCollateral;
+        report.bbLeverage = reports.bbReport.bbLeverage;
+        report.bbDebtRateHelper = reports.bbReport.bbDebtRateHelper;
+        report.bigbang = reports.bbReport.bigbang;
 
         return report;
     }

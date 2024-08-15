@@ -9,6 +9,7 @@ struct TapiocaReport {
     address magnetarAssetModule;
     address magnetarYieldboxModule;
     address magnetarHelper;
+    address toftHelper;
     address zeroXSwapper;
     address toeHelper;
     address cluster;
@@ -41,19 +42,14 @@ struct TapiocaReport {
     address bbCollateral;
     address bbLeverage;
     address bbDebtRateHelper;
+    address bigbang;
 }
 
 struct MagnetarReport {
     address magnetar;
-    address magnetarCollateralModule;
-    address magnetarMintModule;
-    address magnetarOptionModule;
-    address magnetarYieldboxModule;
-    address magnetarMintXChainModule;
-    address magnetarAssetXChainModule;
-    address magnetarBaseModuleExternal;
     address magnetarHelper;
     address simpleLeverageExecutor;
+    address toftHelper;
 }
 
 struct MagnetarDepsReport {
@@ -129,4 +125,32 @@ struct BBReport {
     address bbCollateral;
     address bbLeverage;
     address bbDebtRateHelper;
+    address bigbang;
+}
+
+struct IPenroseInput {
+    address yieldbox;
+    address cluster;
+    address tapToken;
+    address usdoToken;
+    address nativeWrappedToken;
+    address pearlmit;
+    address owner;
+    address singularityMaster;
+    address bigbangMaster;
+    address prevPenrose;
+}
+
+struct Reports {
+    TapiocaReport tapiocaReport;
+    MagnetarReport magnetarReport;
+    MagnetarDepsReport magnetarDepsReport;
+    UtilitiesReport utilitiesReport;
+    YieldboxReport yieldboxReport;
+    UsdoModulesReport usdoModulesReport;
+    UsdoMarketModulesReport usdoMarketModulesReport;
+    UsdoReport usdoReport;
+    SGLReport sglReport;
+    PenroseReport penroseReport;
+    BBReport bbReport;
 }

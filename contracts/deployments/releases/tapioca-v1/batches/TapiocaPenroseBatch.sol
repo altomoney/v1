@@ -2,7 +2,7 @@
 pragma solidity 0.8.22;
 
 import {BarProcedure} from "../../../procedures/BarProcedure.sol";
-import {PenroseReport} from "../../../interfaces/ITapiocaReport.sol";
+import {PenroseReport, IPenroseInput} from "../../../interfaces/ITapiocaReport.sol";
 
 /// @title TapiocaPenroseBatch
 /// @notice Deploy Penrose
@@ -10,18 +10,8 @@ import {PenroseReport} from "../../../interfaces/ITapiocaReport.sol";
 contract TapiocaPenroseBatch is BarProcedure {
     PenroseReport internal _penroseReport;
 
-    constructor(
-        address yieldbox,
-        address cluster,
-        address tapToken,
-        address usdoToken,
-        address nativeWrappedToken,
-        address pearlmit,
-        address owner,
-        address prevPenrose
-    ) {
-        _penroseReport =
-            _deployPenrose(yieldbox, cluster, tapToken, usdoToken, nativeWrappedToken, pearlmit, owner, prevPenrose);
+    constructor(IPenroseInput memory input) {
+        _penroseReport = _deployPenrose(input);
     }
 
     function getPenroseReport() external view returns (PenroseReport memory) {

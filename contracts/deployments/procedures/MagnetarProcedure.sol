@@ -9,7 +9,7 @@ import {MagnetarYieldBoxModule} from "tapioca-periph/Magnetar/modules/MagnetarYi
 import {MagnetarHelper} from "tapioca-periph/Magnetar/MagnetarHelper.sol";
 import {MagnetarReport, MagnetarDepsReport} from "../interfaces/ITapiocaReport.sol";
 import {SimpleLeverageExecutor} from "tapioca-bar/markets/leverage/SimpleLeverageExecutor.sol";
-
+import {TOFTHelper} from "tapiocaz/tOFT/extensions/TOFTHelper.sol";
 import {IPearlmit} from "tap-utils/pearlmit/PearlmitHandler.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {IMagnetarHelper} from "tap-utils/interfaces/periph/IMagnetarHelper.sol";
@@ -54,5 +54,6 @@ abstract contract MagnetarProcedure {
                 IZeroXSwapper(zeroXSwapper), ICluster(cluster), wrappedNativeToken, IPearlmit(pearlmit)
             )
         );
+        report.toftHelper = address(new TOFTHelper());
     }
 }

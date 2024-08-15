@@ -10,6 +10,8 @@ import {TapiocaRelease} from "deployments/releases/tapioca-v1/TapiocaRelease.sol
 // @dev Temp for testing script execution
 import {LZEndpointMock} from "tapioca-mocks/LZEndpointMock.sol";
 
+import {ERC20Mock} from "../bar/mocks/ERC20Mock.sol";
+
 contract TapiocaReleaseTest is Test {
     address owner;
 
@@ -22,7 +24,9 @@ contract TapiocaReleaseTest is Test {
         TapiocaInput memory input;
         input.owner = owner;
         input.lzChainId = 0;
-        input.wrappedNativeToken = address(1);
+        input.wrappedNativeToken = address(new ERC20Mock("A", "A"));
+        input.tapToken = address(new ERC20Mock("B", "B"));
+
         input.lzEndpoint = address(new LZEndpointMock(1));
         input.zeroXSwapper = address(1);
 
