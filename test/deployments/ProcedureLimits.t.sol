@@ -176,19 +176,13 @@ contract ProcedureLimits is Test {
         assertLe(
             magnetarBatchOneCreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "TapiocaMagnetarBatchOne max init code size"
         );
-
         assertLe(
             magnetarBatchTwoCreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "TapiocaMagnetarBatchTwo max init code size"
         );
-
         assertLe(utilitiesBatchCreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "TapiocaUtilitiesBatch max init code size");
-
         assertLe(yieldboxBatchCreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "TapiocaYieldBoxBatch max init code size");
-
         assertLe(usdoBatchCreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "TapiocaUsdoBatchOne max init code size");
-
         assertLe(usdoBatchTwoCreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "TapiocaUsdoBatchTwo max init code size");
-
         assertLe(singularityBatch1CreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "singularityBatch1 max init code size");
         assertLe(singularityBatch2CreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "singularityBatch2 max init code size");
         assertLe(singularityBatch3CreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "singularityBatch3 max init code size");

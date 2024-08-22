@@ -9,6 +9,7 @@ struct TapiocaReport {
     address magnetarAssetModule;
     address magnetarYieldboxModule;
     address magnetarHelper;
+    address simpleLeverageExecutor;
     address toftHelper;
     address zeroXSwapper;
     address toeHelper;

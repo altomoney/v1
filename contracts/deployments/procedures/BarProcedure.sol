@@ -67,12 +67,12 @@ abstract contract BarProcedure {
             }
             {
                 Penrose(report.penrose).registerBigBangMasterContract(
-                    input.singularityMaster, IPenrose.ContractType.mediumRisk
+                    input.bigbangMaster, IPenrose.ContractType.mediumRisk
                 );
             }
             {
                 Penrose(report.penrose).registerSingularityMasterContract(
-                    input.bigbangMaster, IPenrose.ContractType.mediumRisk
+                    input.singularityMaster, IPenrose.ContractType.mediumRisk
                 );
             }
             {

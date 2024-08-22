@@ -28,8 +28,8 @@ library TapiocaRelease {
         returns (TapiocaReport memory)
     {
         Reports memory reports;
-
-        reports.utilitiesReport = _deployUtilities(input.owner, input.zeroXSwapper, input.lzChainId);
+        TapiocaUtilitiesBatch utilitiesBatch;
+        (utilitiesBatch, reports.utilitiesReport) = _deployUtilities(input.owner, input.zeroXSwapper, input.lzChainId);
 
         reports.yieldboxReport =
             _deployYieldBox(input.owner, input.wrappedNativeToken, reports.utilitiesReport.pearlmit);
@@ -72,6 +72,16 @@ library TapiocaRelease {
             prevReport.penrose
         );
 
+        utilitiesBatch.initializeCluster(
+            reports.utilitiesReport.cluster,
+            reports.utilitiesReport.zeroXSwapper,
+            reports.yieldboxReport.yieldbox,
+            reports.magnetarReport.magnetar,
+            reports.penroseReport.penrose,
+            reports.utilitiesReport.pauser,
+            reports.utilitiesReport.tapiocaMulticall
+        );
+
         return _generateMarketReport(reports);
     }
 
@@ -103,10 +113,11 @@ library TapiocaRelease {
 
     function _deployUtilities(address owner, address zeroXSwapper, uint16 lzChainId)
         private
-        returns (UtilitiesReport memory report)
+        returns (TapiocaUtilitiesBatch utilitiesBatch, UtilitiesReport memory report)
     {
-        TapiocaUtilitiesBatch utilitiesBatch = new TapiocaUtilitiesBatch(owner, zeroXSwapper, lzChainId, false);
-        return utilitiesBatch.getUtilitiesReport();
+        utilitiesBatch = new TapiocaUtilitiesBatch(owner, zeroXSwapper, lzChainId, false);
+
+        return (utilitiesBatch, utilitiesBatch.getUtilitiesReport());
     }
 
     function _deployYieldBox(address owner, address wrappedNativeToken, address pearlmit)
@@ -218,7 +229,7 @@ library TapiocaRelease {
         report.magnetarMintModule = reports.magnetarDepsReport.magnetarMintModule;
         report.magnetarOptionModule = reports.magnetarDepsReport.magnetarOptionModule;
         report.magnetarYieldboxModule = reports.magnetarDepsReport.magnetarYieldboxModule;
-
+        report.simpleLeverageExecutor = reports.magnetarReport.simpleLeverageExecutor;
         report.magnetar = reports.magnetarReport.magnetar;
         report.magnetarHelper = reports.magnetarReport.magnetarHelper;
         report.toftHelper = reports.magnetarReport.toftHelper;
