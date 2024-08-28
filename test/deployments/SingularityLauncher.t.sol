@@ -73,11 +73,6 @@ contract TapiocaReleaseTest is Test {
         riskParams.seedAmount = 1 ether;
 
         deal(input.wrappedNativeToken, address(this), 1 ether);
-        //vm.prank(Ownable(report.cluster).owner());
-        //Ownable(report.cluster).transferOwnership(address(singularityLauncher));
-
-        //singularityLauncher.createSingularity(tokensData, riskParams);
-
         bytes memory payload =
             abi.encodeWithSelector(singularityLauncher.createSingularity.selector, tokensData, riskParams);
 

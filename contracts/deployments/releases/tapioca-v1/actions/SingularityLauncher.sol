@@ -7,7 +7,6 @@ import {ILeverageExecutor} from "tap-utils/interfaces/bar/ILeverageExecutor.sol"
 import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
 import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
 import {ISingularityLauncher, RiskParams} from "deployments/interfaces/ISingularityLauncher.sol";
-import "forge-std/console2.sol";
 
 /// @notice Contract to create Singularity markets via delegatecall from admin of Penrose
 contract SingularityLauncher is ISingularityLauncher {
@@ -41,8 +40,6 @@ contract SingularityLauncher is ISingularityLauncher {
         LEVERAGE_EXECUTOR = ILeverageExecutor(leverageExecutor);
         SGL_INTEREST_HELPER = sglInterestHelper;
         SGL_MASTER = singularityMaster;
-
-        console2.log("input", liquidationModule, borrowModule);
     }
 
     function createSingularity(Singularity._InitMemoryTokensData memory tokensData, RiskParams memory riskParams)
@@ -62,8 +59,6 @@ contract SingularityLauncher is ISingularityLauncher {
             riskParams.liquidationCollateralizationRate,
             LEVERAGE_EXECUTOR
         );
-
-        console2.log("output", sglModules._liquidationModule, sglModules._borrowModule);
 
         singularityInstance.init(SGL_INIT, abi.encode(sglModules, tokensData, initData));
 
