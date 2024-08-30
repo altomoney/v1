@@ -81,9 +81,4 @@ contract TapiocaReleaseTest is Test {
         address marketAddress = abi.decode(returnData, (address));
         assertTrue(marketAddress != address(0), "Singularity market address should not be zero");
     }
-
-    function test_deposit() public {
-        vm.skip(true);
-        Singularity singularity = test_launchSingularityMarket();
-    }
 }

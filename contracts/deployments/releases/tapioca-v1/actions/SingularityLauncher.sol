@@ -43,7 +43,7 @@ contract SingularityLauncher is ISingularityLauncher {
     }
 
     function createSingularity(Singularity._InitMemoryTokensData memory tokensData, RiskParams memory riskParams)
-        public
+        external
         returns (Singularity)
     {
         Singularity._InitMemoryModulesData memory sglModules = Singularity._InitMemoryModulesData(
