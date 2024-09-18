@@ -54,6 +54,5 @@ abstract contract MagnetarProcedure {
                 IZeroXSwapper(zeroXSwapper), ICluster(cluster), wrappedNativeToken, IPearlmit(pearlmit)
             )
         );
-        report.toftHelper = address(new TOFTHelper());
     }
 }

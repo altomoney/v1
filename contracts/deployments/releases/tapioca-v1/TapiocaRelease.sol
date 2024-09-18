@@ -15,6 +15,9 @@ import {TapiocaPenroseBatch} from "./batches/TapiocaPenroseBatch.sol";
 import {TapiocaBBBatch1} from "./batches/TapiocaBBBatch1.sol";
 import {TapiocaBBBatch2} from "./batches/TapiocaBBBatch2.sol";
 import {TapiocaBBBatch3} from "./batches/TapiocaBBBatch3.sol";
+import {TapiocaTOFTModulesBatchOne} from "./batches/TapiocaTOFTModulesBatchOne.sol";
+import {TapiocaTOFTModulesBatchTwo} from "./batches/TapiocaTOFTModulesBatchTwo.sol";
+import {TapiocaTOFTModulesBatchThree} from "./batches/TapiocaTOFTModulesBatchThree.sol";
 
 import "../../interfaces/ITapiocaReport.sol";
 
@@ -81,6 +84,9 @@ library TapiocaRelease {
             reports.utilitiesReport.pauser,
             reports.utilitiesReport.tapiocaMulticall
         );
+
+        reports.toftModulesReport =
+            _deployTOFTModules(input.lzEndpoint, input.lzChainId, reports.utilitiesReport.tapiocaMulticall);
 
         return _generateMarketReport(reports);
     }
@@ -203,7 +209,7 @@ library TapiocaRelease {
         return (modulesReport, marketModulesReport, usdoReport);
     }
 
-    // deploy singularity batches
+    /// @dev deploy singularity batches
     function _deploySingularity() private returns (SGLReport memory) {
         TapiocaSingularityBatch1 singularityBatch1 = new TapiocaSingularityBatch1();
 
@@ -212,6 +218,18 @@ library TapiocaRelease {
         TapiocaSingularityBatch3 singularityBatch3 = new TapiocaSingularityBatch3(singularityBatch2.getSGLReport());
 
         return singularityBatch3.getSGLReport();
+    }
+
+    function _deployTOFTModules(address endpoint, uint256 hostEid, address delegate)
+        private
+        returns (TOFTModulesReport memory)
+    {
+        TapiocaTOFTModulesBatchOne toftModulesBatchOne = new TapiocaTOFTModulesBatchOne(endpoint, hostEid, delegate);
+        TapiocaTOFTModulesBatchTwo toftModulesBatchTwo =
+            new TapiocaTOFTModulesBatchTwo(toftModulesBatchOne.getTOFTModulesFirstReport());
+        TapiocaTOFTModulesBatchThree toftModulesBatchThree =
+            new TapiocaTOFTModulesBatchThree(toftModulesBatchTwo.getTOFTModulesSecondReport());
+        return toftModulesBatchThree.getTOFTModulesFinalReport();
     }
 
     function _generateMarketReport(Reports memory reports) private pure returns (TapiocaReport memory) {
@@ -232,7 +250,6 @@ library TapiocaRelease {
         report.simpleLeverageExecutor = reports.magnetarReport.simpleLeverageExecutor;
         report.magnetar = reports.magnetarReport.magnetar;
         report.magnetarHelper = reports.magnetarReport.magnetarHelper;
-        report.toftHelper = reports.magnetarReport.toftHelper;
         report.liquidatorReceiver = reports.yieldboxReport.liquidatorReceiver;
         report.extExec = reports.yieldboxReport.extExec;
         report.usdoSenderModule = reports.usdoModulesReport.usdoSenderModule;
@@ -260,6 +277,13 @@ library TapiocaRelease {
         report.bbLeverage = reports.bbReport.bbLeverage;
         report.bbDebtRateHelper = reports.bbReport.bbDebtRateHelper;
         report.bigbang = reports.bbReport.bigbang;
+
+        report.tOFTSenderModule = reports.toftModulesReport.tOFTSenderModule;
+        report.tOFTReceiverModule = reports.toftModulesReport.tOFTReceiverModule;
+        report.tOFTMarketReceiverModule = reports.toftModulesReport.tOFTMarketReceiverModule;
+        report.tOFTOptionsReceiverModule = reports.toftModulesReport.tOFTOptionsReceiverModule;
+        report.tOFTGenericReceiverModule = reports.toftModulesReport.tOFTGenericReceiverModule;
+        report.toftHelper = reports.toftModulesReport.toftHelper;
 
         return report;
     }

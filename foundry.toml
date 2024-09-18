@@ -7,9 +7,9 @@ no-match-path = 'contracts/mocks/research/*'
 no-match-contract = ".*Fork.*"
 broadcast = 'gen/broadcast'
 
-evm_version='cancun'
+evm_version='shanghai'
 optimizer = true
-optimizer_runs = 100
+optimizer_runs = 200
 
 
 remappings = [
