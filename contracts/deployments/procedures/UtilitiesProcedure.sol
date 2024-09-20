@@ -11,7 +11,6 @@ import {Pauser} from "tap-utils/Pauser/Pauser.sol";
 import {ZeroXSwapper} from "tap-utils/Swapper/ZeroXSwapper.sol";
 import {ZeroXSwapperMock} from "tapioca-mocks/ZeroXSwapperMock.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
-import "forge-std/console.sol";
 
 abstract contract UtilitiesProcedure {
     function _deployUtilities(address owner, address zeroXProxy, uint32 lzChainId, bool isTestnet)

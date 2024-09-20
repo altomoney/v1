@@ -23,6 +23,8 @@ import {TapiocaOmnichainExtExec} from "./extension/TapiocaOmnichainExtExec.sol";
 import {TapiocaOmnichainEngineCodec} from "./TapiocaOmnichainEngineCodec.sol";
 import {BaseTapiocaOmnichainEngine} from "./BaseTapiocaOmnichainEngine.sol";
 
+import "forge-std/console2.sol";
+
 /*
 
 ████████╗ █████╗ ██████╗ ██╗ ██████╗  ██████╗ █████╗ 
@@ -152,11 +154,13 @@ abstract contract TapiocaOmnichainReceiver is BaseTapiocaOmnichainEngine, IOAppC
         if (msgType_ == MSG_REMOTE_TRANSFER) {
             _remoteTransferReceiver(srcChainSender_, tapComposeMsg_);
         } else if (!_extExec(msgType_, srcChainSender_, tapComposeMsg_)) {
+            console2.log("1");
             // Check if the TOE extender is set and the msg type is valid. If so, call the TOE extender to handle msg.
             if (
                 address(tapiocaOmnichainReceiveExtender) != address(0)
                     && tapiocaOmnichainReceiveExtender.isMsgTypeValid(msgType_)
             ) {
+                console2.log("2");
                 bytes memory callData = abi.encodeWithSelector(
                     ITapiocaOmnichainReceiveExtender.toeComposeReceiver.selector,
                     msgType_,
@@ -166,11 +170,14 @@ abstract contract TapiocaOmnichainReceiver is BaseTapiocaOmnichainEngine, IOAppC
                 (bool success, bytes memory returnData) =
                     address(tapiocaOmnichainReceiveExtender).delegatecall(callData);
                 if (!success) {
+                    console2.log("3");
                     revert(_getTOEExtenderRevertMsg(returnData));
                 }
             } else {
+                console2.log("4");
                 // If no TOE extender is set or msg type doesn't match extender, try to call the internal receiver.
                 if (!_toeComposeReceiver(msgType_, srcChainSender_, tapComposeMsg_)) {
+                    console2.log("5");
                     revert InvalidMsgType(msgType_);
                 }
             }

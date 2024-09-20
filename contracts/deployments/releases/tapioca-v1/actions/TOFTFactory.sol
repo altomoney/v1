@@ -68,6 +68,8 @@ contract TOFTFactory is Ownable {
         onlyOwner
         returns (TOFTVault vault, TOFT toft)
     {
+        vault = new TOFTVault(erc20Token);
+
         TOFTInitStruct memory toftInitStruct = TOFTInitStruct({
             name: name,
             symbol: symbol,
@@ -76,7 +78,7 @@ contract TOFTFactory is Ownable {
             yieldBox: YIELD_BOX,
             cluster: CLUSTER,
             erc20: erc20Token,
-            vault: address(new TOFTVault(erc20Token)),
+            vault: address(vault),
             hostEid: HOST_EID,
             extExec: EXT_EXEC,
             pearlmit: IPearlmit(PEARLMIT)
@@ -89,7 +91,6 @@ contract TOFTFactory is Ownable {
             genericReceiverModule: GENERIC_RECEIVER_MODULE
         });
 
-        vault = new TOFTVault(erc20Token);
         toft = new TOFT(toftInitStruct, toftModulesInitStruct);
     }
 }
