@@ -5,6 +5,7 @@ import {TOFTModulesReport} from "../interfaces/ITapiocaReport.sol";
 import {TOFTVault} from "tapiocaz/tOFT/TOFTVault.sol";
 import {TOFTSender} from "tapiocaz/tOFT/modules/TOFTSender.sol";
 import {TOFTReceiver} from "tapiocaz/tOFT/modules/TOFTReceiver.sol";
+import {mTOFTReceiver} from "tapiocaz/tOFT/modules/mTOFTReceiver.sol";
 import {TOFTMarketReceiverModule} from "tapiocaz/tOFT/modules/TOFTMarketReceiverModule.sol";
 import {TOFTOptionsReceiverModule} from "tapiocaz/tOFT/modules/TOFTOptionsReceiverModule.sol";
 import {TOFTGenericReceiverModule} from "tapiocaz/tOFT/modules/TOFTGenericReceiverModule.sol";
@@ -18,8 +19,6 @@ abstract contract TapiocaZProcedures {
         internal
         returns (TOFTModulesReport memory report)
     {
-        address dummyErc20 = address(new ERC20Mock(0));
-
         TOFTInitStruct memory toftModulesInitStruct = TOFTInitStruct({
             name: "TOFT_MODULE",
             symbol: "TOFT_MODULE",
@@ -27,8 +26,8 @@ abstract contract TapiocaZProcedures {
             delegate: delegate,
             yieldBox: address(1),
             cluster: address(1),
-            erc20: dummyErc20,
-            vault: address(new TOFTVault(dummyErc20)),
+            erc20: address(1),
+            vault: address(new TOFTVault(address(1))),
             hostEid: hostEid,
             extExec: address(1),
             pearlmit: IPearlmit(address(1))
@@ -55,8 +54,29 @@ abstract contract TapiocaZProcedures {
             pearlmit: IPearlmit(address(1))
         });
 
-        report.tOFTMarketReceiverModule = address(new TOFTMarketReceiverModule(toftModulesInitStruct));
         report.tOFTReceiverModule = address(new TOFTReceiver(toftModulesInitStruct));
+        report.tOFTMarketReceiverModule = address(new TOFTMarketReceiverModule(toftModulesInitStruct));
+
+        return report;
+    }
+
+    function _deployTOFTMetaModulesTwo(TOFTModulesReport memory report) internal returns (TOFTModulesReport memory) {
+        TOFTInitStruct memory toftModulesInitStruct = TOFTInitStruct({
+            name: "TOFT_MODULE",
+            symbol: "TOFT_MODULE",
+            endpoint: address(TOFTSender(report.tOFTSenderModule).endpoint()),
+            delegate: TOFTSender(report.tOFTSenderModule).owner(),
+            yieldBox: address(1),
+            cluster: address(1),
+            erc20: TOFTSender(report.tOFTSenderModule).erc20(),
+            vault: address(TOFTSender(report.tOFTSenderModule).vault()),
+            hostEid: TOFTSender(report.tOFTSenderModule).hostEid(),
+            extExec: address(1),
+            pearlmit: IPearlmit(address(1))
+        });
+
+        report.mTOFTReceiverModule = address(new mTOFTReceiver(toftModulesInitStruct));
+        report.tOFTMarketReceiverModule = address(new TOFTMarketReceiverModule(toftModulesInitStruct));
 
         return report;
     }

@@ -204,7 +204,7 @@ contract TOFTTest is TOFTTestHelper, TapiocaZProcedures {
             )
         );
 
-        TOFTModulesReport memory toftModulesBReport = _deployTOFTModules(address(endpoints[bEid]), bEid, __owner);
+        TOFTModulesReport memory toftModulesBReport = _deployTOFTModules(address(endpoints[bEid]), bEid, __owner, false);
 
         TOFTFactory toftFactory_B = new TOFTFactory(
             TOFTFactory.TOFTConstructorParams(
@@ -344,7 +344,7 @@ contract TOFTTest is TOFTTestHelper, TapiocaZProcedures {
         bytes extraOptions;
     }
 
-    function _deployTOFTModules(address endpoint, uint32 eid, address owner)
+    function _deployTOFTModules(address endpoint, uint32 eid, address owner, bool isMetaInstance)
         internal
         returns (TOFTModulesReport memory modulesReport)
     {

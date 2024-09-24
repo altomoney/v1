@@ -2,18 +2,15 @@ pragma solidity ^0.8.22;
 
 import "tap-utils/interfaces/oft/ITOFT.sol";
 import "tapiocaz/tOFT/TOFT.sol";
+import "tapiocaz/tOFT/mTOFT.sol";
 import "tapiocaz/tOFT/TOFTVault.sol";
-import {TOFTSender} from "tapiocaz/tOFT/modules/TOFTSender.sol";
-import {TOFTReceiver} from "tapiocaz/tOFT/modules/TOFTReceiver.sol";
-import {TOFTMarketReceiverModule} from "tapiocaz/tOFT/modules/TOFTMarketReceiverModule.sol";
-import {TOFTOptionsReceiverModule} from "tapiocaz/tOFT/modules/TOFTOptionsReceiverModule.sol";
-import {TOFTGenericReceiverModule} from "tapiocaz/tOFT/modules/TOFTGenericReceiverModule.sol";
+import {mTOFTReceiver} from "tapiocaz/tOFT/modules/mTOFTReceiver.sol";
 import {ERC20Mock} from "yieldbox/mocks/ERC20Mock.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
  * @title TOFTFactory
- * @dev Factory for TOFT and mTOFT wrapper. Re-deploy if any of the immutable contracts are updated.
+ * @dev Factory for TOFT wrapper. Re-deploy if any of the immutable contracts are updated.
  */
 contract TOFTFactory is Ownable {
     address immutable CLUSTER;

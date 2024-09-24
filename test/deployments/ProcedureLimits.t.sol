@@ -18,6 +18,8 @@ import {TapiocaBBBatch2} from "deployments/releases/tapioca-v1/batches/TapiocaBB
 import {TapiocaBBBatch3} from "deployments/releases/tapioca-v1/batches/TapiocaBBBatch3.sol";
 import {TapiocaTOFTModulesBatchOne} from "deployments/releases/tapioca-v1/batches/TapiocaTOFTModulesBatchOne.sol";
 import {TapiocaTOFTModulesBatchTwo} from "deployments/releases/tapioca-v1/batches/TapiocaTOFTModulesBatchTwo.sol";
+import {TapiocaTOFTMetaModulesBatchTwo} from
+    "deployments/releases/tapioca-v1/batches/TapiocaTOFTMetaModulesBatchTwo.sol";
 import {TapiocaTOFTModulesBatchThree} from "deployments/releases/tapioca-v1/batches/TapiocaTOFTModulesBatchThree.sol";
 import "deployments/interfaces/ITapiocaReport.sol";
 import {LZEndpointMock} from "tapioca-mocks/LZEndpointMock.sol";
@@ -30,7 +32,7 @@ import "tap-yieldbox/interfaces/IWrappedNative.sol";
 import {ERC20Mock} from "../bar/mocks/ERC20Mock.sol";
 
 // @dev forge test --match-path test/deployments/ProcedureLimits.t.sol
-contract ProcedureLimits is Test {
+contract DeploymentProceduresLimits is Test {
     address owner;
     address zeroXSwapper;
     address endpointMock;
@@ -38,6 +40,7 @@ contract ProcedureLimits is Test {
     uint256 constant MAX_INIT_CONSTRUCTOR_CODE_SIZE = 49152;
     UsdoModulesReport usdoModulesReport;
     UsdoMarketModulesReport usdoMarketModulesReport;
+    TOFTModulesReport toftModulesReport;
     address yieldboxMock;
 
     address erc20Mock1;
@@ -64,6 +67,8 @@ contract ProcedureLimits is Test {
         erc20Mock1 = address(new ERC20Mock("A", "A"));
         erc20Mock2 = address(new ERC20Mock("B", "B"));
         erc20Mock3 = address(new ERC20Mock("C", "C"));
+
+        toftModulesReport = (new TapiocaTOFTModulesBatchOne(endpointMock, 1, delegate)).getTOFTModulesFirstReport();
     }
 
     function test_new_TapiocaMagnetarBatchOne() public {
@@ -145,19 +150,21 @@ contract ProcedureLimits is Test {
         );
     }
 
-    /*
-    function test_new_TOFTModulesBatch() public {
-        new TapiocaTOFTModulesBatch(
-            address(1),
-            address(2),
-            1,
-            address(3),
-            address(4),
-            address(5),
-            address(6)
-        );
+    function test_new_TOFTModulesBatchOne() public {
+        new TapiocaTOFTModulesBatchOne(endpointMock, 1, delegate);
     }
-    */
+
+    function test_new_TOFTModulesBatchTwo() public {
+        new TapiocaTOFTModulesBatchTwo(toftModulesReport);
+    }
+
+    function test_new_TOFTMetaModulesBatchTwo() public {
+        new TapiocaTOFTMetaModulesBatchTwo(toftModulesReport);
+    }
+
+    function test_new_TOFTModulesBatchThree() public {
+        new TapiocaTOFTModulesBatchThree(toftModulesReport);
+    }
 
     function test_codesizes() public pure {
         {
@@ -206,6 +213,7 @@ contract ProcedureLimits is Test {
         uint256 bbBatchThreeCreationSize = type(TapiocaBBBatch3).creationCode.length;
         uint256 toftModulesBatchOneCreationSize = type(TapiocaTOFTModulesBatchOne).creationCode.length;
         uint256 toftModulesBatchTwoCreationSize = type(TapiocaTOFTModulesBatchTwo).creationCode.length;
+        uint256 toftMetaModulesBatchTwoCreationSize = type(TapiocaTOFTMetaModulesBatchTwo).creationCode.length;
         uint256 toftModulesBatchThreeCreationSize = type(TapiocaTOFTModulesBatchThree).creationCode.length;
 
         console2.log("TapiocaSigularityBatch1", singularityBatch1CreationSize);
@@ -217,6 +225,7 @@ contract ProcedureLimits is Test {
         console2.log("TapiocaBBBatch3", bbBatchThreeCreationSize);
         console2.log("TapiocaTOFTModulesBatchOne", toftModulesBatchOneCreationSize);
         console2.log("TapiocaTOFTModulesBatchTwo", toftModulesBatchTwoCreationSize);
+        console2.log("TapiocaTOFTMetaModulesBatchTwo", toftMetaModulesBatchTwoCreationSize);
         console2.log("TapiocaTOFTModulesBatchThree", toftModulesBatchThreeCreationSize);
 
         assertLe(singularityBatch1CreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "singularityBatch1 max init code size");
