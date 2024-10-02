@@ -21,7 +21,7 @@ interface ISingularity is IMarket {
         uint128 feesEarnedFraction;
     }
 
-    function minLendAmount() external view returns (uint256); 
+    function minLendAmount() external view returns (uint256);
 
     function accrueInfo()
         external

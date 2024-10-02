@@ -29,7 +29,7 @@ import {MagnetarStorage, IPearlmit} from "./MagnetarStorage.sol";
  */
 contract BaseMagnetar is Ownable, Pausable, MagnetarStorage {
     IMagnetarModuleExtender public magnetarModuleExtender; // For future implementations
-    
+
     error Magnetar_FailRescueEth();
     error Magnetar_EmptyAddress();
     error Magnetar_PauserNotAuthorized();
@@ -50,9 +50,11 @@ contract BaseMagnetar is Ownable, Pausable, MagnetarStorage {
     /// =====================
     /**
      * @notice Un/Pauses this contract.
-    */
+     */
     function setPause(bool _pauseState) external {
-        if (!cluster.hasRole(msg.sender, keccak256("PAUSABLE")) && msg.sender != owner()) revert Magnetar_PauserNotAuthorized();
+        if (!cluster.hasRole(msg.sender, keccak256("PAUSABLE")) && msg.sender != owner()) {
+            revert Magnetar_PauserNotAuthorized();
+        }
         if (_pauseState) {
             _pause();
         } else {
