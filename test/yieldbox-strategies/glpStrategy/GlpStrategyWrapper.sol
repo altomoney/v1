@@ -23,17 +23,7 @@ contract GlpStrategyWrapper is GlpStrategy {
         ITapiocaOracle _wethGlpOracle,
         bytes memory _wethGlpOracleData,
         address _owner
-    )
-        GlpStrategy(
-            _yieldBox,
-            _gmxRewardRouter,
-            _glpRewardRouter,
-            _tsGlp,
-            _wethGlpOracle,
-            _wethGlpOracleData,
-            _owner
-        )
-    {}
+    ) GlpStrategy(_yieldBox, _gmxRewardRouter, _glpRewardRouter, _tsGlp, _wethGlpOracle, _wethGlpOracleData, _owner) {}
 
     function safeApprove(address token, address to, uint256 value) public {
         _safeApprove(token, to, value);

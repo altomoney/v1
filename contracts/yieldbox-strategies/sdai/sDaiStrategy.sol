@@ -4,14 +4,16 @@ pragma solidity 0.8.22;
 // External
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 // Tapioca
 import {ISavingsDai} from "tap-utils/interfaces/external/makerdao/ISavingsDai.sol";
 import {BaseERC20Strategy} from "yieldbox/strategies/BaseStrategy.sol";
+import {IPearlmit} from "tap-utils/interfaces/periph/IPearlmit.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {IYieldBox} from "yieldbox/interfaces/IYieldBox.sol";
-import {ITDai} from "./interfaces/ITDai.sol";
+import {ITOFT} from "tap-utils/interfaces/oft/ITOFT.sol";
 
 /*
 ████████╗ █████╗ ██████╗ ██╗ ██████╗  ██████╗ █████╗ 
@@ -24,6 +26,7 @@ import {ITDai} from "./interfaces/ITDai.sol";
 
 contract sDaiStrategy is BaseERC20Strategy, Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
+    using SafeCast for uint256;
 
     /// @notice Queues tokens up to depositThreshold
     /// @dev When the amount of tokens is greater than the threshold, a deposit operation is performed
@@ -47,10 +50,7 @@ contract sDaiStrategy is BaseERC20Strategy, Ownable, ReentrancyGuard {
     event AmountQueued(uint256 indexed amount);
     event AmountDeposited(uint256 indexed amount);
     event AmountWithdrawn(address indexed to, uint256 indexed amount);
-    event ClusterUpdated(
-        ICluster indexed oldCluster,
-        ICluster indexed newCluster
-    );
+    event ClusterUpdated(ICluster indexed oldCluster, ICluster indexed newCluster);
     event Paused(bool indexed prev, bool indexed crt, bool isDepositType);
 
     // ************** //
@@ -64,14 +64,11 @@ contract sDaiStrategy is BaseERC20Strategy, Ownable, ReentrancyGuard {
     error PauserNotAuthorized();
     error EmptyAddress();
 
-    constructor(
-        IYieldBox _yieldBox,
-        address _token,
-        ISavingsDai _sDai,
-        address _owner
-    ) BaseERC20Strategy(_yieldBox, _token) {
+    constructor(IYieldBox _yieldBox, address _token, ISavingsDai _sDai, address _owner)
+        BaseERC20Strategy(_yieldBox, _token)
+    {
         sDai = _sDai;
-        dai = IERC20(ITDai(_token).erc20());
+        dai = IERC20(ITOFT(_token).erc20());
         if (address(dai) != sDai.dai()) revert TokenNotValid();
 
         transferOwnership(_owner);
@@ -86,12 +83,7 @@ contract sDaiStrategy is BaseERC20Strategy, Ownable, ReentrancyGuard {
     }
 
     /// @notice Returns the description of this strategy
-    function description()
-        external
-        pure
-        override
-        returns (string memory description_)
-    {
+    function description() external pure override returns (string memory description_) {
         return "sDai strategy for tDai assets";
     }
 
@@ -108,10 +100,7 @@ contract sDaiStrategy is BaseERC20Strategy, Ownable, ReentrancyGuard {
     /// @param _val the new state
     /// @param depositType if true, pause refers to deposits
     function setPause(bool _val, PauseType depositType) external {
-        if (
-            !cluster.hasRole(msg.sender, keccak256("PAUSABLE")) &&
-            msg.sender != owner()
-        ) revert PauserNotAuthorized();
+        if (!cluster.hasRole(msg.sender, keccak256("PAUSABLE")) && msg.sender != owner()) revert PauserNotAuthorized();
 
         if (depositType == PauseType.Deposit) {
             emit Paused(depositPaused, _val, true);
@@ -126,7 +115,7 @@ contract sDaiStrategy is BaseERC20Strategy, Ownable, ReentrancyGuard {
     /// @param amount the amount to rescue
     /// @param to the recipient
     function rescueEth(uint256 amount, address to) external onlyOwner {
-        (bool success, ) = to.call{value: amount}("");
+        (bool success,) = to.call{value: amount}("");
         if (!success) revert TransferFailed();
     }
 
@@ -146,8 +135,18 @@ contract sDaiStrategy is BaseERC20Strategy, Ownable, ReentrancyGuard {
         // Withdraw from the pool, convert to Dai and wrap it into tDai
         uint256 maxWithdraw = sDai.maxWithdraw(address(this));
         sDai.withdraw(maxWithdraw, address(this), address(this));
-        dai.approve(contractAddress, maxWithdraw);
-        ITDai(contractAddress).wrap(address(this), address(this), maxWithdraw);
+
+        ITOFT toft = ITOFT(contractAddress);
+        IPearlmit pearlmit = toft.pearlmit();
+        // Approve the sGLP to the pearlmit contract, then pearlmit approve the tsGLP to use sGLP contract
+        dai.safeApprove(address(pearlmit), maxWithdraw);
+        pearlmit.approve(20, address(dai), 0, contractAddress, maxWithdraw.toUint200(), block.timestamp.toUint48());
+
+        toft.wrap(address(this), address(this), maxWithdraw); // wrap the sGLP to tsGLP first
+
+        // reset the approval
+        dai.safeApprove(address(pearlmit), 0);
+        pearlmit.clearAllowance(address(this), 20, address(dai), 0);
     }
 
     /**
@@ -167,9 +166,8 @@ contract sDaiStrategy is BaseERC20Strategy, Ownable, ReentrancyGuard {
 
     /// @notice Returns the amount of DAI in the pool plus the amount that can be withdrawn from the contract
     function _currentBalance() internal view override returns (uint256 amount) {
-        uint256 maxWithdraw = sDai.maxWithdraw(address(this));
-        uint256 queued = IERC20(contractAddress).balanceOf(address(this)); //tDai
-        return maxWithdraw + queued;
+        amount = sDai.maxWithdraw(address(this));
+        amount += IERC20(contractAddress).balanceOf(address(this)); //tDai
     }
 
     /// @dev deposits to SavingsDai or queues tokens if the 'depositThreshold' has not been met yet
@@ -180,7 +178,7 @@ contract sDaiStrategy is BaseERC20Strategy, Ownable, ReentrancyGuard {
         uint256 queued = IERC20(contractAddress).balanceOf(address(this));
 
         if (queued >= depositThreshold) {
-            ITDai(contractAddress).unwrap(address(this), queued);
+            ITOFT(contractAddress).unwrap(address(this), queued);
             dai.approve(address(sDai), queued);
             sDai.deposit(queued, address(this));
             emit AmountDeposited(queued);
@@ -191,16 +189,11 @@ contract sDaiStrategy is BaseERC20Strategy, Ownable, ReentrancyGuard {
 
     /// @dev burns sDai in exchange of Dai and wraps it into tDai
 
-    function _withdraw(
-        address to,
-        uint256 amount
-    ) internal override nonReentrant {
+    function _withdraw(address to, uint256 amount) internal override nonReentrant {
         if (withdrawPaused) revert WithdrawPaused();
 
         uint256 maxWithdraw = sDai.maxWithdraw(address(this)); // Total amount of Dai that can be withdrawn from the pool
-        uint256 assetInContract = IERC20(contractAddress).balanceOf(
-            address(this)
-        );
+        uint256 assetInContract = IERC20(contractAddress).balanceOf(address(this));
 
         // Can't realistically overflow. Units are in DAI, values are not externally passed.
         unchecked {
@@ -210,9 +203,7 @@ contract sDaiStrategy is BaseERC20Strategy, Ownable, ReentrancyGuard {
         uint256 toWithdrawFromPool;
         // Amount externally passed, but is already checked to be in realistic boundaries.
         unchecked {
-            toWithdrawFromPool = amount > assetInContract
-                ? amount - assetInContract
-                : 0; // Asset to withdraw from the pool if not enough available in the contract
+            toWithdrawFromPool = amount > assetInContract ? amount - assetInContract : 0; // Asset to withdraw from the pool if not enough available in the contract
         }
 
         // If there is nothing to withdraw from the pool, just transfer the tokens and return
@@ -224,12 +215,20 @@ contract sDaiStrategy is BaseERC20Strategy, Ownable, ReentrancyGuard {
 
         // Withdraw from the pool, convert to Dai and wrap it into tDai
         sDai.withdraw(toWithdrawFromPool, address(this), address(this));
-        dai.approve(contractAddress, toWithdrawFromPool);
-        ITDai(contractAddress).wrap(
-            address(this),
-            address(this),
-            toWithdrawFromPool
+
+        ITOFT toft = ITOFT(contractAddress);
+        IPearlmit pearlmit = toft.pearlmit();
+        // Approve the sGLP to the pearlmit contract, then pearlmit approve the tsGLP to use sGLP contract
+        dai.safeApprove(address(pearlmit), toWithdrawFromPool);
+        pearlmit.approve(
+            20, address(dai), 0, contractAddress, toWithdrawFromPool.toUint200(), block.timestamp.toUint48()
         );
+
+        toft.wrap(address(this), address(this), toWithdrawFromPool); // wrap the sGLP to tsGLP first
+
+        // reset the approval
+        dai.safeApprove(address(pearlmit), 0);
+        pearlmit.clearAllowance(address(this), 20, address(dai), 0);
 
         // Transfer the requested amount
         IERC20(contractAddress).safeTransfer(to, amount);
