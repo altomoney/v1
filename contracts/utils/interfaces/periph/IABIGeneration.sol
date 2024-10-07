@@ -9,10 +9,10 @@ interface IABIGeneration {
     //does nothing
     //for ABI generation only
 
-    function MarketLendOrRepayMsg(MarketLendOrRepayMsg calldata) external pure returns(uint256);
-    function MarketRemoveAssetMsg(MarketRemoveAssetMsg calldata) external pure returns(uint256);
-    function ExerciseOptionsMsg(ExerciseOptionsMsg calldata) external pure returns(uint256);
-    function MarketRemoveCollateralMsg(MarketRemoveCollateralMsg calldata) external pure returns(uint256);
-    function MarketBorrowMsg(MarketBorrowMsg calldata) external pure returns(uint256);
-    function LeverageUpActionMsg(LeverageUpActionMsg calldata) external pure returns(uint256);
+    function MarketLendOrRepayMsg(MarketLendOrRepayMsg calldata) external pure returns (uint256);
+    function MarketRemoveAssetMsg(MarketRemoveAssetMsg calldata) external pure returns (uint256);
+    function ExerciseOptionsMsg(ExerciseOptionsMsg calldata) external pure returns (uint256);
+    function MarketRemoveCollateralMsg(MarketRemoveCollateralMsg calldata) external pure returns (uint256);
+    function MarketBorrowMsg(MarketBorrowMsg calldata) external pure returns (uint256);
+    function LeverageUpActionMsg(LeverageUpActionMsg calldata) external pure returns (uint256);
 }

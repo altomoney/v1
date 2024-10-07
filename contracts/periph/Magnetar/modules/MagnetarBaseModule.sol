@@ -59,7 +59,7 @@ abstract contract MagnetarBaseModule is MagnetarStorage {
             if (cluster.isWhitelisted(0, msg.sender)) revert Magnetar_ExtractTokenFail();
 
             uint256 _share = _yb.toShare(data.assetId, data.amount, false);
-            
+
             // _yb.transfer(msg.sender, address(this), data.assetId, _share);
             bool isErr = pearlmit.transferFromERC1155(msg.sender, address(this), data.yieldBox, data.assetId, _share);
             if (isErr) {
