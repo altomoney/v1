@@ -127,7 +127,7 @@ contract BigBang is MarketStateView, BBCommon {
     function _initDebtStorage(uint256 _debtRateAgainstEth, uint256 _debtRateMin, uint256 _debtRateMax) private {
         isMainMarket = collateralId == penrose.mainAssetId();
         if (!isMainMarket) {
-            if (minDebtRate != 0 && maxDebtRate != 0) {
+            if (_debtRateMin != 0 && _debtRateMax != 0) {
                 if (_debtRateMin >= _debtRateMax) revert DebtRatesNotValid();
                 if (_debtRateMax > 1e18) revert MaxDebtRateNotValid();
             }
@@ -338,9 +338,13 @@ contract BigBang is MarketStateView, BBCommon {
     }
 
     /// @notice Transfers fees to penrose
-    /// @dev can only be called by the owner
+    /// @dev can only be called by the owner or FEES_EXTRACTOR role
     /// @return feeShares the amount of fees in shares withdrawn under Penrose
-    function refreshPenroseFees() external onlyOwner returns (uint256 feeShares) {
+    function refreshPenroseFees() external returns (uint256 feeShares) {
+        require(
+            penrose.cluster().hasRole(msg.sender, keccak256("FEES_EXTRACTOR")) || msg.sender == owner(),
+            "Ownable: caller is not the owner"
+        );
         uint256 fees = asset.balanceOf(address(this));
         feeShares = yieldBox.toShare(assetId, fees, false);
         if (feeShares > 0) {
