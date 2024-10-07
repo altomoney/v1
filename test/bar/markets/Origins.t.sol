@@ -37,6 +37,11 @@ import {UsdoSender} from "tapioca-bar/usdo/modules/UsdoSender.sol";
 import {UsdoTestHelper, TestPenroseData} from "../helpers/UsdoTestHelper.t.sol";
 import {Pearlmit, IPearlmit} from "tap-utils/pearlmit/Pearlmit.sol";
 
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {LZEndpointMock} from "tapioca-mocks/LZEndpointMock.sol";
+import {TapiocaRelease} from "deployments/releases/tapioca-v1/TapiocaRelease.sol";
+import "deployments/interfaces/ITapiocaReport.sol";
+
 import "forge-std/Test.sol";
 
 contract OriginsTest is UsdoTestHelper {
@@ -72,13 +77,27 @@ contract OriginsTest is UsdoTestHelper {
     address public userB = vm.addr(userBPKey);
     uint256 public initialBalance = 100 ether;
 
+    TapiocaInput input;
+    TapiocaReport report;
+
     function setUp() public override {
+        TapiocaReport memory emptyReport;
+
         vm.deal(userA, 1000 ether);
         vm.deal(userB, 1000 ether);
         vm.label(userA, "userA");
         vm.label(userB, "userB");
 
-        pearlmit = new Pearlmit("Test", "1", address(this), 0);
+        input.owner = address(this);
+        input.lzChainId = 0;
+        input.wrappedNativeToken = address(new ERC20Mock("A", "A"));
+        input.tapToken = address(new ERC20Mock("B", "B"));
+        input.lzEndpoint = address(new LZEndpointMock(1));
+        input.zeroXSwapper = address(1);
+
+        report = TapiocaRelease.deployTapiocaV1(input, emptyReport);
+
+        pearlmit = Pearlmit(report.pearlmit);
         {
             tapOFT = new ERC20Mock("Tapioca OFT", "TAP");
             vm.label(address(tapOFT), "tapOFT");
@@ -92,29 +111,21 @@ contract OriginsTest is UsdoTestHelper {
             collateralErc20 = new ERC20Mock("CERC", "CERC");
             vm.label(address(collateralErc20), "collateralErc20");
 
-            asset = new TOFTMock(
-                address(assetErc20),
-                IPearlmit(address(pearlmit))
-            );
+            asset = new TOFTMock(address(assetErc20), IPearlmit(address(pearlmit)));
             vm.label(address(asset), "asset");
 
-            collateral = new TOFTMock(
-                address(collateralErc20),
-                IPearlmit(address(pearlmit))
-            );
+            collateral = new TOFTMock(address(collateralErc20), IPearlmit(address(pearlmit)));
             vm.label(address(collateral), "collateral");
         }
 
         setUpEndpoints(3, LibraryType.UltraLightNode);
 
         {
-            pearlmit = new Pearlmit("Pearlmit", "1", address(this), 0);
-            yieldBox = createYieldBox(pearlmit, address(this));
-            cluster = createCluster(aEid, address(this));
-            magnetar = createMagnetar(
-                address(cluster),
-                IPearlmit(address(pearlmit))
-            );
+            pearlmit = Pearlmit(report.pearlmit);
+            yieldBox = YieldBox(report.yieldbox);
+            cluster = Cluster(report.cluster);
+            magnetar = MagnetarMock(report.magnetar);
+            penrose = Penrose(report.penrose);
 
             vm.label(address(endpoints[aEid]), "aEndpoint");
             vm.label(address(endpoints[bEid]), "bEndpoint");
@@ -125,36 +136,13 @@ contract OriginsTest is UsdoTestHelper {
         }
 
         {
-            ERC20WithoutStrategy assetStrategy = createYieldBoxEmptyStrategy(
-                address(yieldBox),
-                address(asset)
-            );
-            ERC20WithoutStrategy collateralStrategy = createYieldBoxEmptyStrategy(
-                    address(yieldBox),
-                    address(collateral)
-                );
-            assetYieldBoxId = registerYieldBoxAsset(
-                address(yieldBox),
-                address(asset),
-                address(assetStrategy)
-            );
-            collateralYieldBoxId = registerYieldBoxAsset(
-                address(yieldBox),
-                address(collateral),
-                address(collateralStrategy)
-            );
+            ERC20WithoutStrategy assetStrategy = createYieldBoxEmptyStrategy(address(yieldBox), address(asset));
+            ERC20WithoutStrategy collateralStrategy =
+                createYieldBoxEmptyStrategy(address(yieldBox), address(collateral));
+            assetYieldBoxId = registerYieldBoxAsset(address(yieldBox), address(asset), address(assetStrategy));
+            collateralYieldBoxId =
+                registerYieldBoxAsset(address(yieldBox), address(collateral), address(collateralStrategy));
         }
-
-        (penrose, ) = createPenrose(
-            TestPenroseData(
-                address(yieldBox),
-                address(cluster),
-                address(tapOFT),
-                address(weth),
-                IPearlmit(address(pearlmit)),
-                address(this)
-            )
-        );
 
         oracle = createOracle();
         origins = createOrigins(
@@ -187,13 +175,7 @@ contract OriginsTest is UsdoTestHelper {
         yieldBox.setApprovalForAll(address(origins), true);
 
         uint256 share = yieldBox.toShare(collateralYieldBoxId, amount, false);
-        yieldBox.depositAsset(
-            collateralYieldBoxId,
-            address(this),
-            address(this),
-            0,
-            share
-        );
+        yieldBox.depositAsset(collateralYieldBoxId, address(this), address(this), 0, share);
         origins.addCollateral(0, share);
     }
 
@@ -233,10 +215,7 @@ contract OriginsTest is UsdoTestHelper {
             assertEq(origins._maxLiquidatorReward(), toSetMaxValue);
             assertEq(origins._totalBorrowCap(), toSetValue);
             assertEq(origins._collateralizationRate(), toSetValue);
-            assertEq(
-                origins._liquidationCollateralizationRate(),
-                toSetMaxValue
-            );
+            assertEq(origins._liquidationCollateralizationRate(), toSetMaxValue);
             assertEq(origins._minBorrowAmount(), toSetValue);
         }
     }
@@ -244,20 +223,9 @@ contract OriginsTest is UsdoTestHelper {
     function test_should_not_work_when_paused_origins() public {
         {
             ICluster _cl = penrose.cluster();
+            vm.prank(Ownable(address(_cl)).owner());
             _cl.setRoleForContract(address(this), keccak256("PAUSABLE"), true);
-            origins.setMarketConfig(
-                ITapiocaOracle(address(0)),
-                "",
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0
-            );
+            origins.setMarketConfig(ITapiocaOracle(address(0)), "", 0, 0, 0, 0, 0, 0, 0, 0, 0);
         }
 
         //add collateral
@@ -340,18 +308,8 @@ contract OriginsTest is UsdoTestHelper {
         collateral.approve(address(yieldBox), type(uint256).max);
         yieldBox.setApprovalForAll(address(origins), true);
 
-        uint256 share = yieldBox.toShare(
-            collateralYieldBoxId,
-            collateralAmount,
-            false
-        );
-        yieldBox.depositAsset(
-            collateralYieldBoxId,
-            address(this),
-            address(this),
-            0,
-            share
-        );
+        uint256 share = yieldBox.toShare(collateralYieldBoxId, collateralAmount, false);
+        yieldBox.depositAsset(collateralYieldBoxId, address(this), address(this), 0, share);
 
         vm.startPrank(userA);
         vm.expectRevert(Origins.NotAuthorized.selector);

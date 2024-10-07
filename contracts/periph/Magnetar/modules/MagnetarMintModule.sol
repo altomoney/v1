@@ -6,8 +6,7 @@ import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 // Tapioca
-import {ITapiocaOptionLiquidityProvision} from
-    "tap-utils/interfaces/tap-token/ITapiocaOptionLiquidityProvision.sol";
+import {ITapiocaOptionLiquidityProvision} from "tap-utils/interfaces/tap-token/ITapiocaOptionLiquidityProvision.sol";
 import {ITapiocaOptionBroker} from "tap-utils/interfaces/tap-token/ITapiocaOptionBroker.sol";
 import {MintFromBBAndLendOnSGLData} from "tap-utils/interfaces/periph/IMagnetar.sol";
 import {ITapiocaOption} from "tap-utils/interfaces/tap-token/ITapiocaOption.sol";
@@ -40,7 +39,6 @@ contract MagnetarMintModule is MagnetarBaseModule {
 
     error MagnetarMintModule_LockTransferFailed();
     error MagnetarMintModule_ParticipateTransferFailed();
-    error Magnetar__minDiscountOutMismatch(uint128 expected, uint128 received);
 
     constructor(IPearlmit pearlmit, address _toeHelper) MagnetarBaseModule(pearlmit, _toeHelper) {}
     /// =====================
@@ -290,8 +288,6 @@ contract MagnetarMintModule is MagnetarBaseModule {
         uint256 oTAPTokenId = ITapiocaOptionBroker(data.participateData.target).participate(tOLPTokenId, 0);
 
         address oTapAddress = ITapiocaOptionBroker(data.participateData.target).oTAP();
-        (, ITapiocaOption.TapOption memory oTapAttributes) = ITapiocaOption(oTapAddress).attributes(oTAPTokenId);
-
         IERC721(oTapAddress).safeTransferFrom(address(this), data.user, oTAPTokenId);
     }
 }

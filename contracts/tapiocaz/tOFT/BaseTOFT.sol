@@ -14,7 +14,6 @@ import {IYieldBox} from "tap-utils/interfaces/yieldbox/IYieldBox.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {BaseTOFTTokenMsgType} from "./BaseTOFTTokenMsgType.sol";
 import {ModuleManager} from "./modules/ModuleManager.sol";
-
 /*
 
 ████████╗ █████╗ ██████╗ ██╗ ██████╗  ██████╗ █████╗ 
@@ -41,9 +40,9 @@ abstract contract BaseTOFT is
     using SafeERC20 for IERC20;
 
     IYieldBox public immutable yieldBox;
-    IToftVault public immutable vault;
+    IToftVault public vault;
     uint256 public immutable hostEid;
-    address public immutable erc20;
+    address public erc20;
 
     error TOFT_AllowanceNotValid();
     error TOFT_NotValid();
@@ -80,7 +79,9 @@ abstract contract BaseTOFT is
      * @notice Un/Pauses this contract.
      */
     function setPause(bool _pauseState) external {
-        if (!getCluster().hasRole(msg.sender, keccak256("PAUSABLE")) && msg.sender != owner()) revert TOFT_NotAuthorized();
+        if (!getCluster().hasRole(msg.sender, keccak256("PAUSABLE")) && msg.sender != owner()) {
+            revert TOFT_NotAuthorized();
+        }
         if (_pauseState) {
             _pause();
         } else {

@@ -56,10 +56,7 @@ contract GlpStrategy is BaseERC20Strategy, Ownable, Pausable {
     ICluster internal cluster;
 
     event SlippageUpdated(uint256 indexed oldVal, uint256 indexed newVal);
-    event ClusterUpdated(
-        ICluster indexed oldCluster,
-        ICluster indexed newCluster
-    );
+    event ClusterUpdated(ICluster indexed oldCluster, ICluster indexed newCluster);
 
     // *********************************** //
     /* ============ ERROR ============ */
@@ -118,12 +115,7 @@ contract GlpStrategy is BaseERC20Strategy, Ownable, Pausable {
     }
 
     /// @notice Returns the description of this strategy
-    function description()
-        external
-        pure
-        override
-        returns (string memory description_)
-    {
+    function description() external pure override returns (string memory description_) {
         return "Holds staked GLP tokens and compounds the rewards";
     }
 
@@ -157,10 +149,7 @@ contract GlpStrategy is BaseERC20Strategy, Ownable, Pausable {
      * @notice Un/Pauses this contract.
      */
     function setPause(bool _pauseState) external {
-        if (
-            !cluster.hasRole(msg.sender, keccak256("PAUSABLE")) &&
-            msg.sender != owner()
-        ) revert PauserNotAuthorized();
+        if (!cluster.hasRole(msg.sender, keccak256("PAUSABLE")) && msg.sender != owner()) revert PauserNotAuthorized();
         if (_pauseState) {
             _pause();
         } else {
@@ -216,14 +205,7 @@ contract GlpStrategy is BaseERC20Strategy, Ownable, Pausable {
         IPearlmit pearlmit = toft.pearlmit();
         // Approve the sGLP to the pearlmit contract, then pearlmit approve the tsGLP to use sGLP contract
         sGLP.safeApprove(address(pearlmit), amount);
-        pearlmit.approve(
-            20,
-            address(sGLP),
-            0,
-            contractAddress,
-            amount.toUint200(),
-            block.timestamp.toUint48()
-        );
+        pearlmit.approve(20, address(sGLP), 0, contractAddress, amount.toUint200(), block.timestamp.toUint48());
 
         uint256 wrapped = toft.wrap(address(this), address(this), amount); // wrap the sGLP to tsGLP first
         IERC20(contractAddress).safeTransfer(to, wrapped); // transfer the tsGLP to the recipient
@@ -260,12 +242,7 @@ contract GlpStrategy is BaseERC20Strategy, Ownable, Pausable {
             amountInGlp = amountInGlp - (amountInGlp * _slippage) / 10_000; //0.5%
 
             _safeApprove(address(weth), address(glpManager), wethAmount);
-            glpRewardRouter.mintAndStakeGlp(
-                address(weth),
-                wethAmount,
-                0,
-                amountInGlp
-            );
+            glpRewardRouter.mintAndStakeGlp(address(weth), wethAmount, 0, amountInGlp);
         }
     }
 
@@ -274,17 +251,9 @@ contract GlpStrategy is BaseERC20Strategy, Ownable, Pausable {
         bool success;
         bytes memory data;
         (success, data) = token.call(abi.encodeCall(IERC20.approve, (to, 0)));
-        require(
-            success && (data.length == 0 || abi.decode(data, (bool))),
-            "GlpStrategy::safeApprove: approve failed"
-        );
+        require(success && (data.length == 0 || abi.decode(data, (bool))), "GlpStrategy::safeApprove: approve failed");
 
-        (success, data) = token.call(
-            abi.encodeCall(IERC20.approve, (to, value))
-        );
-        require(
-            success && (data.length == 0 || abi.decode(data, (bool))),
-            "GlpStrategy::safeApprove: approve failed"
-        );
+        (success, data) = token.call(abi.encodeCall(IERC20.approve, (to, value)));
+        require(success && (data.length == 0 || abi.decode(data, (bool))), "GlpStrategy::safeApprove: approve failed");
     }
 }

@@ -144,8 +144,12 @@ interface IMagnetarModuleExtender {
 }
 
 interface IMagnetarCollateralModule {
-    function depositAddCollateralAndBorrowFromMarket(DepositAddCollateralAndBorrowFromMarketData memory data) external payable;
-    function depositRepayAndRemoveCollateralFromMarket(DepositRepayAndRemoveCollateralFromMarketData memory data) external payable;
+    function depositAddCollateralAndBorrowFromMarket(DepositAddCollateralAndBorrowFromMarketData memory data)
+        external
+        payable;
+    function depositRepayAndRemoveCollateralFromMarket(DepositRepayAndRemoveCollateralFromMarketData memory data)
+        external
+        payable;
 }
 
 interface IMagnetarYieldBoxModule {
