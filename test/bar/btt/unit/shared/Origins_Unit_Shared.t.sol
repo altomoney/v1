@@ -8,7 +8,7 @@ import {IERC20} from "@boringcrypto/boring-solidity/contracts/libraries/BoringER
 import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
 import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
 import {MarketHelper} from "tapioca-bar/markets/MarketHelper.sol";
-import {Origins} from "tapioca-bar/markets/Origins/Origins.sol";
+import {Origins} from "tapioca-bar/markets/origins/Origins.sol";
 
 import {Markets_Unit_Shared} from "./Markets_Unit_Shared.t.sol";
 

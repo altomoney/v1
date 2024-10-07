@@ -3,7 +3,7 @@ pragma solidity 0.8.22;
 
 // dependencies
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
-import {Origins} from "tapioca-bar/markets/Origins/Origins.sol";
+import {Origins} from "tapioca-bar/markets/origins/Origins.sol";
 import {Market} from "tapioca-bar/markets/Market.sol";
 
 import {Origins_Unit_Shared} from "../../shared/Origins_Unit_Shared.t.sol";
