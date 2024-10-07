@@ -136,6 +136,7 @@ contract MagnetarOptionModule is MagnetarBaseModule {
         uint256 oTAPTokenId = ITapiocaOptionBroker(data.participateData.target).participate(tOLPTokenId, 0);
 
         address oTapAddress = ITapiocaOptionBroker(data.participateData.target).oTAP();
+
         IERC721(oTapAddress).safeTransferFrom(address(this), data.user, oTAPTokenId, "");
     }
 
