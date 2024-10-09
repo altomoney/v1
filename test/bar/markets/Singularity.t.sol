@@ -52,6 +52,14 @@ import {UsdoSender} from "tapioca-bar/usdo/modules/UsdoSender.sol";
 import {UsdoTestHelper, TestPenroseData, TestSingularityData} from "../helpers/UsdoTestHelper.t.sol";
 import {Pearlmit, IPearlmit} from "tap-utils/pearlmit/Pearlmit.sol";
 
+import "deployments/interfaces/ITapiocaReport.sol";
+import {TapiocaRelease} from "deployments/releases/tapioca-v1/TapiocaRelease.sol";
+import {SingularityLauncher} from "deployments/releases/tapioca-v1/actions/SingularityLauncher.sol";
+import {RiskParams} from "deployments/interfaces/ISingularityLauncher.sol";
+import {LZEndpointMock} from "tapioca-mocks/LZEndpointMock.sol";
+import {Singularity} from "tapioca-bar/markets/singularity/Singularity.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+
 import "forge-std/Test.sol";
 
 contract SingularityTest is UsdoTestHelper {
@@ -78,6 +86,7 @@ contract SingularityTest is UsdoTestHelper {
     SimpleLeverageExecutor leverageExecutor;
     Singularity masterContract;
     Singularity singularity;
+    SingularityLauncher singularityLauncher;
     SGLInit sglInit;
     MarketHelper marketHelper;
     OracleMock oracle;
@@ -92,6 +101,9 @@ contract SingularityTest is UsdoTestHelper {
     address public userA = vm.addr(userAPKey);
     address public userB = vm.addr(userBPKey);
     uint256 public initialBalance = 100 ether;
+    address owner;
+    TapiocaInput input;
+    TapiocaReport report;
 
     function setUp() public override {
         vm.deal(userA, 1000 ether);
@@ -99,7 +111,29 @@ contract SingularityTest is UsdoTestHelper {
         vm.label(userA, "userA");
         vm.label(userB, "userB");
 
-        pearlmit = new Pearlmit("Test", "1", address(this), 0);
+        owner = address(this);
+        TapiocaReport memory emptyReport;
+
+        input.owner = owner;
+        input.lzChainId = 0;
+        input.wrappedNativeToken = address(new ERC20Mock("A", "A"));
+        input.tapToken = address(new ERC20Mock("B", "B"));
+
+        input.lzEndpoint = address(new LZEndpointMock(1));
+        input.zeroXSwapper = address(1);
+        report = TapiocaRelease.deployTapiocaV1(input, emptyReport);
+        singularityLauncher = new SingularityLauncher(
+            report.sglLiquidationModule,
+            report.sglBorrowModule,
+            report.sglCollateralModule,
+            report.sglLeverageModule,
+            report.sglInit,
+            report.penrose,
+            report.simpleLeverageExecutor,
+            report.sglInterestHelper,
+            report.singularity
+        );
+
         {
             tapOFT = new ERC20Mock("Tapioca OFT", "TAP");
             vm.label(address(tapOFT), "tapOFT");
@@ -113,33 +147,26 @@ contract SingularityTest is UsdoTestHelper {
             collateralErc20 = new ERC20Mock("CERC", "CERC");
             vm.label(address(collateralErc20), "collateralErc20");
 
-            asset = new TOFTMock(
-                address(assetErc20),
-                IPearlmit(address(pearlmit))
-            );
+            asset = new TOFTMock(address(assetErc20), IPearlmit(address(pearlmit)));
             vm.label(address(asset), "asset");
 
-            collateral = new TOFTMock(
-                address(collateralErc20),
-                IPearlmit(address(pearlmit))
-            );
+            collateral = new TOFTMock(address(collateralErc20), IPearlmit(address(pearlmit)));
             vm.label(address(collateral), "collateral");
         }
 
-        marketHelper = new MarketHelper();
-        magnetarHelper = new MagnetarHelper();
+        marketHelper = MarketHelper(report.marketHelper);
+        magnetarHelper = MagnetarHelper(report.magnetarHelper);
 
         setUpEndpoints(3, LibraryType.UltraLightNode);
 
         {
-            pearlmit = new Pearlmit("Pearlmit", "1", address(this), 0);
-            yieldBox = createYieldBox(pearlmit, address(this));
-            cluster = createCluster(aEid, address(this));
-            magnetar = createMagnetar(
-                address(cluster),
-                IPearlmit(address(pearlmit))
-            );
-            sglInit = new SGLInit();
+            pearlmit = Pearlmit(report.pearlmit);
+            yieldBox = YieldBox(report.yieldbox);
+            cluster = Cluster(report.cluster);
+            magnetar = MagnetarMock(report.magnetar);
+            sglInit = SGLInit(report.sglInit);
+            penrose = Penrose(report.penrose);
+            liquidatorMock = new MarketLiquidatorReceiverMock(IERC20(address(asset)));
 
             vm.label(address(endpoints[aEid]), "aEndpoint");
             vm.label(address(endpoints[bEid]), "bEndpoint");
@@ -150,57 +177,17 @@ contract SingularityTest is UsdoTestHelper {
         }
 
         {
-            ERC20WithoutStrategy assetStrategy = createYieldBoxEmptyStrategy(
-                address(yieldBox),
-                address(asset)
-            );
-            ERC20WithoutStrategy collateralStrategy = createYieldBoxEmptyStrategy(
-                    address(yieldBox),
-                    address(collateral)
-                );
+            ERC20WithoutStrategy assetStrategy = createYieldBoxEmptyStrategy(address(yieldBox), address(asset));
+            ERC20WithoutStrategy collateralStrategy =
+                createYieldBoxEmptyStrategy(address(yieldBox), address(collateral));
 
-            assetYieldBoxId = registerYieldBoxAsset(
-                address(yieldBox),
-                address(asset),
-                address(assetStrategy)
-            );
-            collateralYieldBoxId = registerYieldBoxAsset(
-                address(yieldBox),
-                address(collateral),
-                address(collateralStrategy)
-            );
+            assetYieldBoxId = registerYieldBoxAsset(address(yieldBox), address(asset), address(assetStrategy));
+            collateralYieldBoxId =
+                registerYieldBoxAsset(address(yieldBox), address(collateral), address(collateralStrategy));
         }
-
-        swapper = createSwapper(yieldBox);
-        leverageExecutor = createLeverageExecutor(
-            address(yieldBox),
-            address(swapper),
-            address(cluster),
-            address(pearlmit)
-        );
-        (penrose, masterContract) = createPenrose(
-            TestPenroseData(
-                address(yieldBox),
-                address(cluster),
-                address(tapOFT),
-                address(weth),
-                IPearlmit(address(pearlmit)),
-                address(this)
-            )
-        );
-        oracle = createOracle();
-        singularity = createSingularity(
-            penrose,
-            TestSingularityData(
-                address(penrose),
-                IERC20(address(asset)), //asset
-                assetYieldBoxId,
-                IERC20(address(collateral)), //collateral
-                collateralYieldBoxId,
-                IOracle(address(oracle)),
-                ILeverageExecutor(address(leverageExecutor))
-            ),
-            address(masterContract)
+        oracle = new OracleMock("Oracle Test", "ORCT", 1 ether);
+        singularity = launchSingularity(
+            address(asset), assetYieldBoxId, address(collateral), collateralYieldBoxId, address(oracle)
         );
         vm.label(address(singularity), "Singularity");
     }
@@ -212,22 +199,11 @@ contract SingularityTest is UsdoTestHelper {
         yieldBox.setApprovalForAll(address(singularity), true);
         yieldBox.setApprovalForAll(address(pearlmit), true);
         pearlmit.approve(
-            1155,
-            address(yieldBox),
-            assetYieldBoxId,
-            address(singularity),
-            type(uint200).max,
-            uint48(block.timestamp)
+            1155, address(yieldBox), assetYieldBoxId, address(singularity), type(uint200).max, uint48(block.timestamp)
         );
 
         uint256 share = yieldBox.toShare(assetYieldBoxId, amount, false);
-        yieldBox.depositAsset(
-            assetYieldBoxId,
-            address(this),
-            address(this),
-            0,
-            share
-        );
+        yieldBox.depositAsset(assetYieldBoxId, address(this), address(this), 0, share);
         singularity.addAsset(address(this), address(this), false, share);
     }
 
@@ -247,25 +223,15 @@ contract SingularityTest is UsdoTestHelper {
         );
 
         uint256 share = yieldBox.toShare(collateralYieldBoxId, amount, false);
-        yieldBox.depositAsset(
-            collateralYieldBoxId,
-            address(this),
-            address(this),
-            0,
-            share
-        );
+        yieldBox.depositAsset(collateralYieldBoxId, address(this), address(this), 0, share);
 
-        (Module[] memory modules, bytes[] memory calls) = marketHelper
-            .addCollateral(address(this), address(this), false, 0, share);
+        (Module[] memory modules, bytes[] memory calls) =
+            marketHelper.addCollateral(address(this), address(this), false, 0, share);
         singularity.execute(modules, calls, true);
     }
 
     function borrow(uint256 amount, bool expectRevert) public {
-        (Module[] memory modules, bytes[] memory calls) = marketHelper.borrow(
-            address(this),
-            address(this),
-            amount
-        );
+        (Module[] memory modules, bytes[] memory calls) = marketHelper.borrow(address(this), address(this), amount);
 
         if (expectRevert) vm.expectRevert();
         singularity.execute(modules, calls, true);
@@ -273,46 +239,23 @@ contract SingularityTest is UsdoTestHelper {
 
     function repay(uint256 part) public {
         pearlmit.approve(
-            1155,
-            address(yieldBox),
-            assetYieldBoxId,
-            address(singularity),
-            type(uint200).max,
-            uint48(block.timestamp)
+            1155, address(yieldBox), assetYieldBoxId, address(singularity), type(uint200).max, uint48(block.timestamp)
         );
-        (Module[] memory modules, bytes[] memory calls) = marketHelper.repay(
-            address(this),
-            address(this),
-            false,
-            part
-        );
+        (Module[] memory modules, bytes[] memory calls) = marketHelper.repay(address(this), address(this), false, part);
         singularity.execute(modules, calls, true);
     }
 
     function test_setSingularityConfig() public {
         uint256 borrowingOpeningFee = singularity.borrowOpeningFee();
         uint256 liquidationMultiplier = singularity._liquidationMultiplier();
-        uint256 minimumTargetUtilization = singularity
-            .minimumTargetUtilization();
-        uint256 maximumTargetUtilization = singularity
-            .maximumTargetUtilization();
-        uint256 minimumInterestPerSecond = singularity
-            .minimumInterestPerSecond();
-        uint256 maximumInterestPerSecond = singularity
-            .maximumInterestPerSecond();
+        uint256 minimumTargetUtilization = singularity.minimumTargetUtilization();
+        uint256 maximumTargetUtilization = singularity.maximumTargetUtilization();
+        uint256 minimumInterestPerSecond = singularity.minimumInterestPerSecond();
+        uint256 maximumInterestPerSecond = singularity.maximumInterestPerSecond();
         uint256 interestElasticity = singularity.interestElasticity();
 
         bytes memory payload = abi.encodeWithSelector(
-            Singularity.setSingularityConfig.selector,
-            singularity.borrowOpeningFee(),
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            address(0),
-            0
+            Singularity.setSingularityConfig.selector, singularity.borrowOpeningFee(), 0, 0, 0, 0, 0, 0, address(0), 0
         );
         address[] memory mc = new address[](1);
         mc[0] = address(singularity);
@@ -323,42 +266,18 @@ contract SingularityTest is UsdoTestHelper {
 
         {
             assertEq(singularity.borrowOpeningFee(), borrowingOpeningFee);
-            assertEq(
-                singularity._liquidationMultiplier(),
-                liquidationMultiplier
-            );
-            assertEq(
-                singularity.minimumTargetUtilization(),
-                minimumTargetUtilization
-            );
-            assertEq(
-                singularity.maximumTargetUtilization(),
-                maximumTargetUtilization
-            );
-            assertEq(
-                singularity.minimumInterestPerSecond(),
-                minimumInterestPerSecond
-            );
-            assertEq(
-                singularity.maximumInterestPerSecond(),
-                maximumInterestPerSecond
-            );
+            assertEq(singularity._liquidationMultiplier(), liquidationMultiplier);
+            assertEq(singularity.minimumTargetUtilization(), minimumTargetUtilization);
+            assertEq(singularity.maximumTargetUtilization(), maximumTargetUtilization);
+            assertEq(singularity.minimumInterestPerSecond(), minimumInterestPerSecond);
+            assertEq(singularity.maximumInterestPerSecond(), maximumInterestPerSecond);
             assertEq(singularity.interestElasticity(), interestElasticity);
         }
 
         uint256 toSetValue = 101;
         {
             payload = abi.encodeWithSelector(
-                Singularity.setSingularityConfig.selector,
-                toSetValue,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                address(0),
-                0
+                Singularity.setSingularityConfig.selector, toSetValue, 0, 0, 0, 0, 0, 0, address(0), 0
             );
             data = new bytes[](1);
             data[0] = payload;
@@ -401,10 +320,7 @@ contract SingularityTest is UsdoTestHelper {
             assertEq(singularity._maxLiquidatorReward(), toSetMaxValue);
             assertEq(singularity._totalBorrowCap(), toSetValue);
             assertEq(singularity._collateralizationRate(), toSetValue);
-            assertEq(
-                singularity._liquidationCollateralizationRate(),
-                toSetMaxValue
-            );
+            assertEq(singularity._liquidationCollateralizationRate(), toSetMaxValue);
             assertEq(singularity._minBorrowAmount(), toSetValue);
         }
     }
@@ -428,21 +344,10 @@ contract SingularityTest is UsdoTestHelper {
     function test_should_not_work_when_paused() public {
         {
             ICluster _cl = penrose.cluster();
+            vm.prank(Cluster(address(_cl)).owner());
             _cl.setRoleForContract(address(this), keccak256("PAUSABLE"), true);
-            bytes memory payload = abi.encodeWithSelector(
-                Market.setMarketConfig.selector,
-                address(0),
-                "",
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0
-            );
+            bytes memory payload =
+                abi.encodeWithSelector(Market.setMarketConfig.selector, address(0), "", 0, 0, 0, 0, 0, 0, 0, 0, 0);
             address[] memory mc = new address[](1);
             mc[0] = address(singularity);
 
@@ -456,23 +361,13 @@ contract SingularityTest is UsdoTestHelper {
 
         Module[] memory modules;
         bytes[] memory calls;
-        (modules, calls) = marketHelper.addCollateral(
-            address(this),
-            address(this),
-            false,
-            1,
-            0
-        );
+        (modules, calls) = marketHelper.addCollateral(address(this), address(this), false, 1, 0);
         vm.expectRevert("Market: paused");
         singularity.execute(modules, calls, true);
 
         //add collateral
         singularity.updatePause(Market.PauseType.RemoveCollateral, true, false);
-        (modules, calls) = marketHelper.removeCollateral(
-            address(this),
-            address(this),
-            1
-        );
+        (modules, calls) = marketHelper.removeCollateral(address(this), address(this), 1);
         vm.expectRevert("Market: paused");
         singularity.execute(modules, calls, true);
 
@@ -510,10 +405,8 @@ contract SingularityTest is UsdoTestHelper {
             borrow(borrowAmount, false);
         }
 
-        bytes memory setLiquidationMaxSlippageCall = abi.encodeWithSelector(
-            Market.setLiquidationMaxSlippage.selector,
-            1e4
-        ); //10%
+        bytes memory setLiquidationMaxSlippageCall =
+            abi.encodeWithSelector(Market.setLiquidationMaxSlippage.selector, 1e4); //10%
 
         address[] memory mc = new address[](1);
         mc[0] = address(singularity);
@@ -525,9 +418,7 @@ contract SingularityTest is UsdoTestHelper {
         uint256 oracleRate = oracle.rate();
         oracle.set((oracleRate * 10) / 6);
 
-        liquidatorMock = new MarketLiquidatorReceiverMock(
-            IERC20(address(asset))
-        );
+        liquidatorMock = new MarketLiquidatorReceiverMock(IERC20(address(asset)));
         deal(address(asset), address(liquidatorMock), borrowAmount * 2);
 
         address[] memory users = new address[](1);
@@ -539,22 +430,15 @@ contract SingularityTest is UsdoTestHelper {
         uint256[] memory minLiquidationBonuses = new uint256[](1);
         minLiquidationBonuses[0] = 1e4;
 
-        IMarketLiquidatorReceiver[]
-            memory receivers = new IMarketLiquidatorReceiver[](1);
+        IMarketLiquidatorReceiver[] memory receivers = new IMarketLiquidatorReceiver[](1);
         receivers[0] = IMarketLiquidatorReceiver(address(liquidatorMock));
 
         bytes[] memory receiverData = new bytes[](1);
         receiverData[0] = abi.encode(borrowAmount / 2);
 
         uint256 borrowPartBefore = singularity._userBorrowPart(address(this));
-        (Module[] memory modules, bytes[] memory calls) = marketHelper
-            .liquidate(
-                users,
-                borrowParts,
-                minLiquidationBonuses,
-                receivers,
-                receiverData
-            );
+        (Module[] memory modules, bytes[] memory calls) =
+            marketHelper.liquidate(users, borrowParts, minLiquidationBonuses, receivers, receiverData);
         singularity.execute(modules, calls, true);
         uint256 borrowPartAfter = singularity._userBorrowPart(address(this));
 
@@ -581,9 +465,7 @@ contract SingularityTest is UsdoTestHelper {
         uint256 oracleRate = oracle.rate();
         oracle.set(oracleRate * 100);
 
-        liquidatorMock = new MarketLiquidatorReceiverMock(
-            IERC20(address(asset))
-        );
+        liquidatorMock = new MarketLiquidatorReceiverMock(IERC20(address(asset)));
         // deal(address(asset), address(liquidatorMock), borrowAmount * 2);
 
         //cannot liquidate
@@ -597,56 +479,37 @@ contract SingularityTest is UsdoTestHelper {
             uint256[] memory minLiquidationBonuses = new uint256[](1);
             minLiquidationBonuses[0] = 1e4;
 
-            IMarketLiquidatorReceiver[]
-                memory receivers = new IMarketLiquidatorReceiver[](1);
+            IMarketLiquidatorReceiver[] memory receivers = new IMarketLiquidatorReceiver[](1);
             receivers[0] = IMarketLiquidatorReceiver(address(liquidatorMock));
 
             bytes[] memory receiverData = new bytes[](1);
             receiverData[0] = abi.encode(borrowAmount / 2);
 
-            uint256 borrowPartBefore = singularity._userBorrowPart(
-                address(this)
-            );
-            (Module[] memory modules, bytes[] memory calls) = marketHelper
-                .liquidate(
-                    users,
-                    borrowParts,
-                    minLiquidationBonuses,
-                    receivers,
-                    receiverData
-                );
+            uint256 borrowPartBefore = singularity._userBorrowPart(address(this));
+            (Module[] memory modules, bytes[] memory calls) =
+                marketHelper.liquidate(users, borrowParts, minLiquidationBonuses, receivers, receiverData);
             vm.expectRevert();
             singularity.execute(modules, calls, true);
-            uint256 borrowPartAfter = singularity._userBorrowPart(
-                address(this)
-            );
+            uint256 borrowPartAfter = singularity._userBorrowPart(address(this));
             assertEq(borrowPartBefore, borrowPartAfter);
         }
 
         //use liquidateBadDebt
         {
-            uint256 borrowPartBefore = singularity._userBorrowPart(
-                address(this)
+            uint256 borrowPartBefore = singularity._userBorrowPart(address(this));
+            (Module[] memory modules, bytes[] memory calls) = marketHelper.liquidateBadDebt(
+                address(this),
+                address(this),
+                address(this),
+                IMarketLiquidatorReceiver(address(liquidatorMock)),
+                "",
+                false
             );
-            (Module[] memory modules, bytes[] memory calls) = marketHelper
-                .liquidateBadDebt(
-                    address(this),
-                    address(this),
-                    address(this),
-                    IMarketLiquidatorReceiver(address(liquidatorMock)),
-                    "",
-                    false
-                );
-
+            vm.prank(cluster.owner());
             cluster.updateContract(0, address(this), true);
             deal(address(asset), address(this), borrowAmount * 2);
             asset.approve(address(singularity), type(uint256).max);
-            bytes memory badDebtCall = abi.encodeWithSelector(
-                Singularity.execute.selector,
-                modules,
-                calls,
-                true
-            );
+            bytes memory badDebtCall = abi.encodeWithSelector(Singularity.execute.selector, modules, calls, true);
 
             address[] memory mc = new address[](1);
             mc[0] = address(singularity);
@@ -654,9 +517,7 @@ contract SingularityTest is UsdoTestHelper {
             bytes[] memory data = new bytes[](1);
             data[0] = badDebtCall;
             penrose.executeMarketFn(mc, data, false);
-            uint256 borrowPartAfter = singularity._userBorrowPart(
-                address(this)
-            );
+            uint256 borrowPartAfter = singularity._userBorrowPart(address(this));
             assertGt(borrowPartBefore, borrowPartAfter);
         }
     }
@@ -680,31 +541,18 @@ contract SingularityTest is UsdoTestHelper {
 
         ISingularity[] memory markets = new ISingularity[](1);
         markets[0] = ISingularity(address(singularity));
-        MagnetarHelper.SingularityInfo[] memory info = magnetarHelper
-            .singularityMarketInfo(address(this), markets);
+        MagnetarHelper.SingularityInfo[] memory info = magnetarHelper.singularityMarketInfo(address(this), markets);
 
         assertEq(info[0].market.collateral, address(collateral));
         assertEq(info[0].market.asset, address(asset));
-        assertEq(
-            info[0].market.userCollateralShare,
-            singularity._userCollateralShare(address(this))
-        );
-        assertEq(
-            info[0].market.userBorrowPart,
-            singularity._userBorrowPart(address(this))
-        );
+        assertEq(info[0].market.userCollateralShare, singularity._userCollateralShare(address(this)));
+        assertEq(info[0].market.userBorrowPart, singularity._userBorrowPart(address(this)));
 
-        uint256 share = marketHelper.computeAllowedLendShare(
-            address(singularity),
-            1,
-            assetYieldBoxId
-        );
+        uint256 share = marketHelper.computeAllowedLendShare(address(singularity), 1, assetYieldBoxId);
         assertGe(share, 1);
 
         uint256 borrowAmountFromHelper = magnetarHelper.getAmountForBorrowPart(
-            IMarket(address(singularity)),
-            singularity._userBorrowPart(address(this)),
-            false
+            IMarket(address(singularity)), singularity._userBorrowPart(address(this)), false
         );
         assertGe(borrowAmountFromHelper, borrowAmount);
     }
@@ -730,22 +578,14 @@ contract SingularityTest is UsdoTestHelper {
             skip(86400 * 10);
             // prepare for repay
             deal(address(asset), address(this), borrowAmount * 2);
-            yieldBox.depositAsset(
-                assetYieldBoxId,
-                address(this),
-                address(this),
-                borrowAmount * 2,
-                0
-            );
+            yieldBox.depositAsset(assetYieldBoxId, address(this), address(this), borrowAmount * 2, 0);
             userBorrowPart = singularity._userBorrowPart(address(this));
 
             repay(singularity._userBorrowPart(address(this)));
         }
-        (, , uint128 feesEarnedFraction) = singularity.accrueInfo();
-        uint256 feesAmount = magnetarHelper.getAmountForAssetFraction(
-            ISingularity(address(singularity)),
-            feesEarnedFraction
-        );
+        (,, uint128 feesEarnedFraction) = singularity.accrueInfo();
+        uint256 feesAmount =
+            magnetarHelper.getAmountForAssetFraction(ISingularity(address(singularity)), feesEarnedFraction);
         assertGe(userBorrowPart, borrowAmount);
         assertGe(feesEarnedFraction, 0);
         assertGe(feesAmount, 0);
@@ -788,12 +628,7 @@ contract SingularityTest is UsdoTestHelper {
         yieldBox.setApprovalForAll(address(singularity), true);
         yieldBox.setApprovalForAll(address(pearlmit), true);
         pearlmit.approve(
-            1155,
-            address(yieldBox),
-            assetYieldBoxId,
-            address(singularity),
-            type(uint200).max,
-            uint48(block.timestamp)
+            1155, address(yieldBox), assetYieldBoxId, address(singularity), type(uint200).max, uint48(block.timestamp)
         );
 
         vm.stopPrank();
@@ -803,26 +638,12 @@ contract SingularityTest is UsdoTestHelper {
 
         deal(address(asset), address(userA), borrowAmount * 2);
 
-        uint256 share = yieldBox.toShare(
-            assetYieldBoxId,
-            borrowAmount * 2,
-            false
-        );
+        uint256 share = yieldBox.toShare(assetYieldBoxId, borrowAmount * 2, false);
         vm.prank(userA);
-        yieldBox.depositAsset(
-            assetYieldBoxId,
-            address(userA),
-            address(userA),
-            0,
-            share
-        );
+        yieldBox.depositAsset(assetYieldBoxId, address(userA), address(userA), 0, share);
 
-        (Module[] memory modules, bytes[] memory calls) = marketHelper.repay(
-            address(userA),
-            address(this),
-            false,
-            borrowPart
-        );
+        (Module[] memory modules, bytes[] memory calls) =
+            marketHelper.repay(address(userA), address(this), false, borrowPart);
         vm.prank(userA);
         singularity.execute(modules, calls, true);
 
@@ -862,4 +683,30 @@ contract SingularityTest is UsdoTestHelper {
     //     (modules, calls) = marketHelper.sellCollateral(address(this), share, leverageData);
     //     singularity.execute(modules, calls, true);
     // }
+
+    function launchSingularity(address asset, uint256 assetId, address collateral, uint256 collateralId, address oracle)
+        public
+        returns (Singularity singularity)
+    {
+        Singularity._InitMemoryTokensData memory tokensData;
+        RiskParams memory riskParams;
+
+        tokensData._asset = IERC20(asset);
+        tokensData._assetId = assetId;
+        tokensData._collateral = IERC20(collateral);
+        tokensData._collateralId = collateralId;
+
+        riskParams.oracle = oracle;
+        riskParams.seedAmount = 1 ether;
+
+        deal(collateral, address(this), 1 ether);
+        bytes memory payload =
+            abi.encodeWithSelector(singularityLauncher.createSingularity.selector, tokensData, riskParams);
+
+        (bool success, bytes memory returnData) = address(singularityLauncher).delegatecall(payload);
+        assertTrue(success, "Singularity market creation failed");
+        address marketAddress = abi.decode(returnData, (address));
+        assertTrue(marketAddress != address(0), "Singularity market address should not be zero");
+        return Singularity(payable(marketAddress));
+    }
 }

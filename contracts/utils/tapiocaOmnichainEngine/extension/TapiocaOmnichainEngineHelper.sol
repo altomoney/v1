@@ -333,11 +333,10 @@ contract TapiocaOmnichainEngineHelper is BaseToeMsgType {
     function _sanitizeMsgType(uint16 _msgType) internal pure {
         if (
             // LZ
-            _msgType == MSG_SEND
             // Tapioca msg types
-            || _msgType == MSG_APPROVALS || _msgType == MSG_NFT_APPROVALS || _msgType == MSG_PEARLMIT_APPROVAL
-                || _msgType == MSG_REMOTE_TRANSFER || _msgType == MSG_YB_APPROVE_ASSET || _msgType == MSG_YB_APPROVE_ALL
-                || _msgType == MSG_MARKET_PERMIT
+            _msgType == MSG_SEND || _msgType == MSG_APPROVALS || _msgType == MSG_NFT_APPROVALS
+                || _msgType == MSG_PEARLMIT_APPROVAL || _msgType == MSG_REMOTE_TRANSFER || _msgType == MSG_YB_APPROVE_ASSET
+                || _msgType == MSG_YB_APPROVE_ALL || _msgType == MSG_MARKET_PERMIT
         ) {
             return;
         } else if (!_sanitizeMsgTypeExtended(_msgType)) {

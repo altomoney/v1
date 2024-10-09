@@ -9,10 +9,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 contract MockERC20 is ERC20 {
     uint8 private _decimals = 18;
 
-    constructor(
-        string memory name_,
-        string memory symbol_
-    ) ERC20(name_, symbol_) {}
+    constructor(string memory name_, string memory symbol_) ERC20(name_, symbol_) {}
 
     function decimals() public view virtual override returns (uint8) {
         return 18;
@@ -32,10 +29,7 @@ contract MockERC20 is ERC20 {
         _burn(account, amount);
     }
 
-    function approve(
-        address spender,
-        uint256 amount
-    ) public virtual override returns (bool) {
+    function approve(address spender, uint256 amount) public virtual override returns (bool) {
         if (amount == type(uint256).max) {
             revert("MockERC20: approving max amount not permitted");
         }
