@@ -98,7 +98,7 @@ contract TwTAP is
 
     ICluster public cluster;
 
-    bool rescueMode;
+    bool public rescueMode;
     uint256 public emergencySweepCooldown = 2 days;
     uint256 public lastEmergencySweep;
 
@@ -190,6 +190,12 @@ contract TwTAP is
     /// @dev keeps compatibility with older interface
     function currentWeek() external view returns (uint256) {
         return currentEpoch();
+    }
+
+    /// @notice Returns the init timestamp
+    /// @dev keeps compatibility with older interface
+    function creation() external view returns (uint256) {
+        return INIT_TIMESTAMP;
     }
 
     /**

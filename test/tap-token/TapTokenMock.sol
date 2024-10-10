@@ -20,4 +20,11 @@ __/\\\\\\\\\\\\\\\_____/\\\\\\\\\_____/\\\\\\\\\\\\\____/\\\\\\\\\\\_______/\\\\
 
 contract TapTokenMock is TapToken {
     constructor(ITapToken.TapTokenConstructorData memory _data) TapToken(_data) {}
+<<<<<<< HEAD
+=======
+
+    function freeMint(address _to, uint256 _amount) external virtual {
+        _mint(_to, _amount);
+    }
+>>>>>>> 6173210 (chore: sync from tap-token repository unit tests and latest fixes)
 }
