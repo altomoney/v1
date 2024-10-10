@@ -23,8 +23,7 @@ import {
     PrepareLzCallReturn,
     ComposeMsgData
 } from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainEngineHelper.sol";
-import {TapiocaOmnichainEngineHelper} from
-    "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainEngineHelper.sol";
+import {TapiocaOmnichainEngineHelper} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainEngineHelper.sol";
 import {ITapiocaOmnichainEngine, LZSendParam} from "tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
 import {PearlmitHandler, IPearlmit} from "tap-utils/pearlmit/PearlmitHandler.sol";
 import {IMarketHelper} from "tap-utils/interfaces/bar/IMarketHelper.sol";
@@ -49,7 +48,7 @@ contract MagnetarMock_test is PearlmitHandler {
     error MagnetarMock_UnknownReason();
     error MagnetarMock_ActionNotValid(MagnetarAction action, bytes actionCalldata); // Burst did not find what to execute
     error Magnetar_MarketCallFailed(bytes call);
-    
+
     ICluster public cluster;
 
     constructor(address _cluster, IPearlmit _pearlmit) PearlmitHandler(_pearlmit) {
@@ -275,7 +274,7 @@ contract MagnetarMock_test is PearlmitHandler {
 
             singularity.removeAsset(_data.user, removeAssetTo, share);
         }
-         if (!_data.removeAndRepayData.assetWithdrawData.withdraw && _data.removeAndRepayData.repayAssetOnBB) {
+        if (!_data.removeAndRepayData.assetWithdrawData.withdraw && _data.removeAndRepayData.repayAssetOnBB) {
             _marketRepay(
                 IMarket(_data.externalData.bigBang),
                 _data.externalData.marketHelper,
@@ -283,7 +282,7 @@ contract MagnetarMock_test is PearlmitHandler {
                 _data.user,
                 _data.user
             );
-         }
+        }
         if (_data.removeAndRepayData.removeCollateralFromBB) {
             uint256 _collateralId = bigBang._collateralId();
             uint256 collateralShare = yieldBox.toShare(_collateralId, _data.removeAndRepayData.collateralAmount, false);
@@ -297,6 +296,7 @@ contract MagnetarMock_test is PearlmitHandler {
 
         yieldBox.setApprovalForAll(_data.externalData.singularity, false);
     }
+
     function _marketRepay(IMarket _market, address _marketHelper, uint256 _amount, address _from, address _to)
         internal
         returns (uint256 repayed)

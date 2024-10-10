@@ -2,7 +2,12 @@
 pragma solidity 0.8.22;
 
 // LZ
-import {SendParam, MessagingFee, MessagingReceipt, OFTReceipt} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/interfaces/IOFT.sol";
+import {
+    SendParam,
+    MessagingFee,
+    MessagingReceipt,
+    OFTReceipt
+} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/interfaces/IOFT.sol";
 import {OptionsBuilder} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/libs/OptionsBuilder.sol";
 import {OFTMsgCodec} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/libs/OFTMsgCodec.sol";
 
@@ -10,11 +15,46 @@ import {OFTMsgCodec} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/libs/OFTM
 import {IERC20} from "@boringcrypto/boring-solidity/contracts/libraries/BoringERC20.sol";
 
 // Tapioca
-import {IMagnetar, DepositRepayAndRemoveCollateralFromMarketData, MintFromBBAndLendOnSGLData, ExitPositionAndRemoveCollateralData, DepositAddCollateralAndBorrowFromMarketData, MagnetarWithdrawData} from "tap-utils/interfaces/periph/IMagnetar.sol";
-import {ITapiocaOptionBroker, IExerciseOptionsData, IOptionsParticipateData} from "tap-utils/interfaces/tap-token/ITapiocaOptionBroker.sol";
-import {TapiocaOmnichainEngineHelper, PrepareLzCallData, PrepareLzCallReturn, ComposeMsgData, LZSendParam, RemoteTransferMsg} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainEngineHelper.sol";
-import {IUsdo, UsdoInitStruct, UsdoModulesInitStruct, ExerciseOptionsMsg, YieldBoxApproveAssetMsg, YieldBoxApproveAllMsg, MarketPermitActionMsg, MarketRemoveAssetMsg, IRemoveAndRepay, MarketLendOrRepayMsg, IRemoveAndRepay, ILendOrRepayParams} from "tap-utils/interfaces/oft/IUsdo.sol";
-import {ITapiocaOptionLiquidityProvision, IOptionsLockData, IOptionsUnlockData} from "tap-utils/interfaces/tap-token/ITapiocaOptionLiquidityProvision.sol";
+import {
+    IMagnetar,
+    DepositRepayAndRemoveCollateralFromMarketData,
+    MintFromBBAndLendOnSGLData,
+    ExitPositionAndRemoveCollateralData,
+    DepositAddCollateralAndBorrowFromMarketData,
+    MagnetarWithdrawData
+} from "tap-utils/interfaces/periph/IMagnetar.sol";
+import {
+    ITapiocaOptionBroker,
+    IExerciseOptionsData,
+    IOptionsParticipateData
+} from "tap-utils/interfaces/tap-token/ITapiocaOptionBroker.sol";
+import {
+    TapiocaOmnichainEngineHelper,
+    PrepareLzCallData,
+    PrepareLzCallReturn,
+    ComposeMsgData,
+    LZSendParam,
+    RemoteTransferMsg
+} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainEngineHelper.sol";
+import {
+    IUsdo,
+    UsdoInitStruct,
+    UsdoModulesInitStruct,
+    ExerciseOptionsMsg,
+    YieldBoxApproveAssetMsg,
+    YieldBoxApproveAllMsg,
+    MarketPermitActionMsg,
+    MarketRemoveAssetMsg,
+    IRemoveAndRepay,
+    MarketLendOrRepayMsg,
+    IRemoveAndRepay,
+    ILendOrRepayParams
+} from "tap-utils/interfaces/oft/IUsdo.sol";
+import {
+    ITapiocaOptionLiquidityProvision,
+    IOptionsLockData,
+    IOptionsUnlockData
+} from "tap-utils/interfaces/tap-token/ITapiocaOptionLiquidityProvision.sol";
 import {ERC20PermitStruct, ERC20PermitApprovalMsg} from "tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
 import {TapiocaOmnichainExtExec} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainExtExec.sol";
 import {IOptionsExitData} from "tap-utils/interfaces/tap-token/ITapiocaOptionBroker.sol";
@@ -114,11 +154,7 @@ contract UsdoTest is UsdoTestHelper {
      * @dev TOFT global event checks
      */
     event OFTReceived(bytes32, address, uint256, uint256);
-    event ComposeReceived(
-        uint16 indexed msgType,
-        bytes32 indexed guid,
-        bytes composeMsg
-    );
+    event ComposeReceived(uint16 indexed msgType, bytes32 indexed guid, bytes composeMsg);
 
     function setUp() public override {
         vm.deal(userA, 1000 ether);
@@ -140,10 +176,7 @@ contract UsdoTest is UsdoTestHelper {
             pearlmit = new Pearlmit("Pearlmit", "1", address(this), 0);
             yieldBox = createYieldBox(pearlmit, address(this));
             cluster = createCluster(aEid, __owner);
-            magnetar = createMagnetar(
-                address(cluster),
-                IPearlmit(address(pearlmit))
-            );
+            magnetar = createMagnetar(address(cluster), IPearlmit(address(pearlmit)));
 
             vm.label(address(endpoints[aEid]), "aEndpoint");
             vm.label(address(endpoints[bEid]), "bEndpoint");
@@ -166,37 +199,21 @@ contract UsdoTest is UsdoTestHelper {
         });
         UsdoSender aUsdoSender = new UsdoSender(aUsdoInitStruct);
         UsdoReceiver aUsdoReceiver = new UsdoReceiver(aUsdoInitStruct);
-        UsdoMarketReceiverModule aUsdoMarketReceiverModule = new UsdoMarketReceiverModule(
-                aUsdoInitStruct
-            );
-        UsdoOptionReceiverModule aUsdoOptionsReceiverModule = new UsdoOptionReceiverModule(
-                aUsdoInitStruct
-            );
+        UsdoMarketReceiverModule aUsdoMarketReceiverModule = new UsdoMarketReceiverModule(aUsdoInitStruct);
+        UsdoOptionReceiverModule aUsdoOptionsReceiverModule = new UsdoOptionReceiverModule(aUsdoInitStruct);
         vm.label(address(aUsdoSender), "aUsdoSender");
         vm.label(address(aUsdoReceiver), "aUsdoReceiver");
-        vm.label(
-            address(aUsdoMarketReceiverModule),
-            "aUsdoMarketReceiverModule"
-        );
-        vm.label(
-            address(aUsdoOptionsReceiverModule),
-            "aUsdoOptionsReceiverModule"
-        );
+        vm.label(address(aUsdoMarketReceiverModule), "aUsdoMarketReceiverModule");
+        vm.label(address(aUsdoOptionsReceiverModule), "aUsdoOptionsReceiverModule");
 
-        UsdoModulesInitStruct
-            memory aUsdoModulesInitStruct = UsdoModulesInitStruct({
-                usdoSenderModule: address(aUsdoSender),
-                usdoReceiverModule: address(aUsdoReceiver),
-                marketReceiverModule: address(aUsdoMarketReceiverModule),
-                optionReceiverModule: address(aUsdoOptionsReceiverModule)
-            });
+        UsdoModulesInitStruct memory aUsdoModulesInitStruct = UsdoModulesInitStruct({
+            usdoSenderModule: address(aUsdoSender),
+            usdoReceiverModule: address(aUsdoReceiver),
+            marketReceiverModule: address(aUsdoMarketReceiverModule),
+            optionReceiverModule: address(aUsdoOptionsReceiverModule)
+        });
         aUsdo = UsdoMock(
-            payable(
-                _deployOApp(
-                    type(UsdoMock).creationCode,
-                    abi.encode(aUsdoInitStruct, aUsdoModulesInitStruct)
-                )
-            )
+            payable(_deployOApp(type(UsdoMock).creationCode, abi.encode(aUsdoInitStruct, aUsdoModulesInitStruct)))
         );
         vm.label(address(aUsdo), "aUsdo");
 
@@ -210,37 +227,21 @@ contract UsdoTest is UsdoTestHelper {
         });
         UsdoSender bUsdoSender = new UsdoSender(bUsdoInitStruct);
         UsdoReceiver bUsdoReceiver = new UsdoReceiver(bUsdoInitStruct);
-        UsdoMarketReceiverModule bUsdoMarketReceiverModule = new UsdoMarketReceiverModule(
-                bUsdoInitStruct
-            );
-        UsdoOptionReceiverModule bUsdoOptionsReceiverModule = new UsdoOptionReceiverModule(
-                bUsdoInitStruct
-            );
+        UsdoMarketReceiverModule bUsdoMarketReceiverModule = new UsdoMarketReceiverModule(bUsdoInitStruct);
+        UsdoOptionReceiverModule bUsdoOptionsReceiverModule = new UsdoOptionReceiverModule(bUsdoInitStruct);
         vm.label(address(bUsdoSender), "bUsdoSender");
         vm.label(address(bUsdoReceiver), "bUsdoReceiver");
-        vm.label(
-            address(bUsdoMarketReceiverModule),
-            "bUsdoMarketReceiverModule"
-        );
-        vm.label(
-            address(bUsdoOptionsReceiverModule),
-            "bUsdoOptionsReceiverModule"
-        );
+        vm.label(address(bUsdoMarketReceiverModule), "bUsdoMarketReceiverModule");
+        vm.label(address(bUsdoOptionsReceiverModule), "bUsdoOptionsReceiverModule");
 
-        UsdoModulesInitStruct
-            memory bUsdoModulesInitStruct = UsdoModulesInitStruct({
-                usdoSenderModule: address(bUsdoSender),
-                usdoReceiverModule: address(bUsdoReceiver),
-                marketReceiverModule: address(bUsdoMarketReceiverModule),
-                optionReceiverModule: address(bUsdoOptionsReceiverModule)
-            });
+        UsdoModulesInitStruct memory bUsdoModulesInitStruct = UsdoModulesInitStruct({
+            usdoSenderModule: address(bUsdoSender),
+            usdoReceiverModule: address(bUsdoReceiver),
+            marketReceiverModule: address(bUsdoMarketReceiverModule),
+            optionReceiverModule: address(bUsdoOptionsReceiverModule)
+        });
         bUsdo = UsdoMock(
-            payable(
-                _deployOApp(
-                    type(UsdoMock).creationCode,
-                    abi.encode(bUsdoInitStruct, bUsdoModulesInitStruct)
-                )
-            )
+            payable(_deployOApp(type(UsdoMock).creationCode, abi.encode(bUsdoInitStruct, bUsdoModulesInitStruct)))
         );
         vm.label(address(bUsdo), "bUsdo");
 
@@ -254,38 +255,17 @@ contract UsdoTest is UsdoTestHelper {
         this.wireOApps(ofts);
 
         // Setup YieldBox assets
-        aUsdoStrategy = createYieldBoxEmptyStrategy(
-            address(yieldBox),
-            address(aUsdo)
-        );
-        bUsdoStrategy = createYieldBoxEmptyStrategy(
-            address(yieldBox),
-            address(bUsdo)
-        );
+        aUsdoStrategy = createYieldBoxEmptyStrategy(address(yieldBox), address(aUsdo));
+        bUsdoStrategy = createYieldBoxEmptyStrategy(address(yieldBox), address(bUsdo));
 
-        aUsdoYieldBoxId = registerYieldBoxAsset(
-            address(yieldBox),
-            address(aUsdo),
-            address(aUsdoStrategy)
-        ); //we assume this is the asset Id
-        bUsdoYieldBoxId = registerYieldBoxAsset(
-            address(yieldBox),
-            address(bUsdo),
-            address(bUsdoStrategy)
-        ); //we assume this is the collateral Id
+        aUsdoYieldBoxId = registerYieldBoxAsset(address(yieldBox), address(aUsdo), address(aUsdoStrategy)); //we assume this is the asset Id
+        bUsdoYieldBoxId = registerYieldBoxAsset(address(yieldBox), address(bUsdo), address(bUsdoStrategy)); //we assume this is the collateral Id
 
-        tOB = new TapiocaOptionsBrokerMock(
-            address(tapOFT),
-            IPearlmit(address(pearlmit))
-        );
+        tOB = new TapiocaOptionsBrokerMock(address(tapOFT), IPearlmit(address(pearlmit)));
 
         swapper = createSwapper(yieldBox);
-        leverageExecutor = createLeverageExecutor(
-            address(yieldBox),
-            address(swapper),
-            address(cluster),
-            address(pearlmit)
-        );
+        leverageExecutor =
+            createLeverageExecutor(address(yieldBox), address(swapper), address(cluster), address(pearlmit));
         (penrose, masterContract) = createPenrose(
             TestPenroseData(
                 address(yieldBox),
@@ -373,16 +353,9 @@ contract UsdoTest is UsdoTestHelper {
      *
      * @param _lzOFTComposedData The data to pass to the lzCompose call.
      */
-
-    function __callLzCompose(
-        LzOFTComposedData memory _lzOFTComposedData
-    ) internal {
+    function __callLzCompose(LzOFTComposedData memory _lzOFTComposedData) internal {
         vm.expectEmit(true, true, true, false);
-        emit ComposeReceived(
-            _lzOFTComposedData.msgType,
-            _lzOFTComposedData.guid,
-            _lzOFTComposedData.composeMsg
-        );
+        emit ComposeReceived(_lzOFTComposedData.msgType, _lzOFTComposedData.guid, _lzOFTComposedData.composeMsg);
 
         this.lzCompose(
             _lzOFTComposedData.dstEid,
@@ -400,21 +373,12 @@ contract UsdoTest is UsdoTestHelper {
     }
 
     function test_erc20_permit() public {
-        ERC20PermitStruct memory permit_ = ERC20PermitStruct({
-            owner: userA,
-            spender: userB,
-            value: 1e18,
-            nonce: 0,
-            deadline: 1 days
-        });
+        ERC20PermitStruct memory permit_ =
+            ERC20PermitStruct({owner: userA, spender: userB, value: 1e18, nonce: 0, deadline: 1 days});
 
         bytes32 digest_ = aUsdo.getTypedDataHash(permit_);
-        ERC20PermitApprovalMsg memory permitApproval_ = __getERC20PermitData(
-            permit_,
-            digest_,
-            address(aUsdo),
-            userAPKey
-        );
+        ERC20PermitApprovalMsg memory permitApproval_ =
+            __getERC20PermitData(permit_, digest_, address(aUsdo), userAPKey);
 
         aUsdo.permit(
             permit_.owner,
@@ -442,13 +406,8 @@ contract UsdoTest is UsdoTestHelper {
         bytes memory approvalsMsg_;
 
         {
-            ERC20PermitStruct memory approvalUserB_ = ERC20PermitStruct({
-                owner: userA,
-                spender: userB,
-                value: 1e18,
-                nonce: 0,
-                deadline: 1 days
-            });
+            ERC20PermitStruct memory approvalUserB_ =
+                ERC20PermitStruct({owner: userA, spender: userB, value: 1e18, nonce: 0, deadline: 1 days});
             ERC20PermitStruct memory approvalUserC_ = ERC20PermitStruct({
                 owner: userA,
                 spender: userC_,
@@ -457,57 +416,47 @@ contract UsdoTest is UsdoTestHelper {
                 deadline: 2 days
             });
 
-            permitApprovalB_ = __getERC20PermitData(
-                approvalUserB_,
-                bUsdo.getTypedDataHash(approvalUserB_),
-                address(bUsdo),
-                userAPKey
-            );
+            permitApprovalB_ =
+                __getERC20PermitData(approvalUserB_, bUsdo.getTypedDataHash(approvalUserB_), address(bUsdo), userAPKey);
 
-            permitApprovalC_ = __getERC20PermitData(
-                approvalUserC_,
-                bUsdo.getTypedDataHash(approvalUserC_),
-                address(bUsdo),
-                userAPKey
-            );
+            permitApprovalC_ =
+                __getERC20PermitData(approvalUserC_, bUsdo.getTypedDataHash(approvalUserC_), address(bUsdo), userAPKey);
 
-            ERC20PermitApprovalMsg[]
-                memory approvals_ = new ERC20PermitApprovalMsg[](2);
+            ERC20PermitApprovalMsg[] memory approvals_ = new ERC20PermitApprovalMsg[](2);
             approvals_[0] = permitApprovalB_;
             approvals_[1] = permitApprovalC_;
 
             approvalsMsg_ = usdoHelper.encodeERC20PermitApprovalMsg(approvals_);
         }
 
-        PrepareLzCallReturn memory prepareLzCallReturn_ = usdoHelper
-            .prepareLzCall(
-                IUsdo(address(aUsdo)),
-                PrepareLzCallData({
-                    dstEid: bEid,
-                    recipient: OFTMsgCodec.addressToBytes32(address(this)),
-                    amountToSendLD: 0,
-                    minAmountToCreditLD: 0,
-                    msgType: PT_APPROVALS,
-                    composeMsgData: ComposeMsgData({
-                        index: 0,
-                        gas: 1_000_000,
-                        value: 0,
-                        data: approvalsMsg_,
-                        prevData: bytes(""),
-                        prevOptionsData: bytes("")
-                    }),
-                    lzReceiveGas: 1_000_000,
-                    lzReceiveValue: 0,
-                    refundAddress: address(this)
-                })
-            );
+        PrepareLzCallReturn memory prepareLzCallReturn_ = usdoHelper.prepareLzCall(
+            IUsdo(address(aUsdo)),
+            PrepareLzCallData({
+                dstEid: bEid,
+                recipient: OFTMsgCodec.addressToBytes32(address(this)),
+                amountToSendLD: 0,
+                minAmountToCreditLD: 0,
+                msgType: PT_APPROVALS,
+                composeMsgData: ComposeMsgData({
+                    index: 0,
+                    gas: 1_000_000,
+                    value: 0,
+                    data: approvalsMsg_,
+                    prevData: bytes(""),
+                    prevOptionsData: bytes("")
+                }),
+                lzReceiveGas: 1_000_000,
+                lzReceiveValue: 0,
+                refundAddress: address(this)
+            })
+        );
         bytes memory composeMsg_ = prepareLzCallReturn_.composeMsg;
         bytes memory oftMsgOptions_ = prepareLzCallReturn_.oftMsgOptions;
         MessagingFee memory msgFee_ = prepareLzCallReturn_.msgFee;
         LZSendParam memory lzSendParam_ = prepareLzCallReturn_.lzSendParam;
 
-        (MessagingReceipt memory msgReceipt_, , bytes memory sentMsg, ) = aUsdo
-            .sendPacket{value: msgFee_.nativeFee}(lzSendParam_, composeMsg_);
+        (MessagingReceipt memory msgReceipt_,, bytes memory sentMsg,) =
+            aUsdo.sendPacket{value: msgFee_.nativeFee}(lzSendParam_, composeMsg_);
 
         verifyPackets(uint32(bEid), address(bUsdo));
 
@@ -548,8 +497,7 @@ contract UsdoTest is UsdoTestHelper {
             deal(address(bUsdo), address(this), tokenAmount_);
 
             // @dev `remoteMsgFee_` is to be airdropped on dst to pay for the `remoteTransfer` operation (B->A).
-            PrepareLzCallReturn memory prepareLzCallReturn1_ = usdoHelper
-                .prepareLzCall( // B->A data
+            PrepareLzCallReturn memory prepareLzCallReturn1_ = usdoHelper.prepareLzCall( // B->A data
                 IUsdo(address(bUsdo)),
                 PrepareLzCallData({
                     dstEid: aEid,
@@ -577,44 +525,38 @@ contract UsdoTest is UsdoTestHelper {
         /**
          * Actions
          */
-        RemoteTransferMsg memory remoteTransferData = RemoteTransferMsg({
-            composeMsg: new bytes(0),
-            owner: address(this),
-            lzSendParam: remoteLzSendParam_
-        });
-        bytes memory remoteTransferMsg_ = usdoHelper.buildRemoteTransferMsg(
-            remoteTransferData
-        );
+        RemoteTransferMsg memory remoteTransferData =
+            RemoteTransferMsg({composeMsg: new bytes(0), owner: address(this), lzSendParam: remoteLzSendParam_});
+        bytes memory remoteTransferMsg_ = usdoHelper.buildRemoteTransferMsg(remoteTransferData);
 
-        PrepareLzCallReturn memory prepareLzCallReturn2_ = usdoHelper
-            .prepareLzCall(
-                IUsdo(address(aUsdo)),
-                PrepareLzCallData({
-                    dstEid: bEid,
-                    recipient: OFTMsgCodec.addressToBytes32(address(this)),
-                    amountToSendLD: 0,
-                    minAmountToCreditLD: 0,
-                    msgType: PT_REMOTE_TRANSFER,
-                    composeMsgData: ComposeMsgData({
-                        index: 0,
-                        gas: 500_000,
-                        value: uint128(remoteMsgFee_.nativeFee),
-                        data: remoteTransferMsg_,
-                        prevData: bytes(""),
-                        prevOptionsData: bytes("")
-                    }),
-                    lzReceiveGas: 500_000,
-                    lzReceiveValue: 0,
-                    refundAddress: address(this)
-                })
-            );
+        PrepareLzCallReturn memory prepareLzCallReturn2_ = usdoHelper.prepareLzCall(
+            IUsdo(address(aUsdo)),
+            PrepareLzCallData({
+                dstEid: bEid,
+                recipient: OFTMsgCodec.addressToBytes32(address(this)),
+                amountToSendLD: 0,
+                minAmountToCreditLD: 0,
+                msgType: PT_REMOTE_TRANSFER,
+                composeMsgData: ComposeMsgData({
+                    index: 0,
+                    gas: 500_000,
+                    value: uint128(remoteMsgFee_.nativeFee),
+                    data: remoteTransferMsg_,
+                    prevData: bytes(""),
+                    prevOptionsData: bytes("")
+                }),
+                lzReceiveGas: 500_000,
+                lzReceiveValue: 0,
+                refundAddress: address(this)
+            })
+        );
         bytes memory composeMsg_ = prepareLzCallReturn2_.composeMsg;
         bytes memory oftMsgOptions_ = prepareLzCallReturn2_.oftMsgOptions;
         MessagingFee memory msgFee_ = prepareLzCallReturn2_.msgFee;
         LZSendParam memory lzSendParam_ = prepareLzCallReturn2_.lzSendParam;
 
-        (MessagingReceipt memory msgReceipt_, , bytes memory sentMsg, ) = aUsdo
-            .sendPacket{value: msgFee_.nativeFee}(lzSendParam_, composeMsg_);
+        (MessagingReceipt memory msgReceipt_,, bytes memory sentMsg,) =
+            aUsdo.sendPacket{value: msgFee_.nativeFee}(lzSendParam_, composeMsg_);
 
         {
             verifyPackets(uint32(bEid), address(bUsdo));
@@ -661,22 +603,8 @@ contract UsdoTest is UsdoTestHelper {
             tOB.setPaymentTokenAmount(erc20Amount_);
         }
 
-        pearlmit.approve(
-            721,
-            tOB.oTAP(),
-            0,
-            address(magnetar),
-            type(uint200).max,
-            uint48(block.timestamp)
-        );
-        pearlmit.approve(
-            721,
-            tOB.oTAP(),
-            0,
-            address(bUsdo),
-            type(uint200).max,
-            uint48(block.timestamp)
-        );
+        pearlmit.approve(721, tOB.oTAP(), 0, address(magnetar), type(uint200).max, uint48(block.timestamp));
+        pearlmit.approve(721, tOB.oTAP(), 0, address(bUsdo), type(uint200).max, uint48(block.timestamp));
 
         //useful in case of withdraw after borrow
         LZSendParam memory withdrawLzSendParam_;
@@ -684,8 +612,7 @@ contract UsdoTest is UsdoTestHelper {
 
         {
             // @dev `withdrawMsgFee_` is to be airdropped on dst to pay for the send to source operation (B->A).
-            PrepareLzCallReturn memory prepareLzCallReturn1_ = usdoHelper
-                .prepareLzCall( // B->A data
+            PrepareLzCallReturn memory prepareLzCallReturn1_ = usdoHelper.prepareLzCall( // B->A data
                 IUsdo(address(bUsdo)),
                 PrepareLzCallData({
                     dstEid: aEid,
@@ -713,10 +640,7 @@ contract UsdoTest is UsdoTestHelper {
         /**
          * Actions
          */
-        uint256 tokenAmountSD = usdoHelper.toSD(
-            erc20Amount_,
-            aUsdo.decimalConversionRate()
-        );
+        uint256 tokenAmountSD = usdoHelper.toSD(erc20Amount_, aUsdo.decimalConversionRate());
 
         //approve magnetar
         ExerciseOptionsMsg memory exerciseMsg = ExerciseOptionsMsg({
@@ -745,35 +669,34 @@ contract UsdoTest is UsdoTestHelper {
         });
         bytes memory sendMsg_ = usdoHelper.buildExerciseOptionMsg(exerciseMsg);
 
-        PrepareLzCallReturn memory prepareLzCallReturn2_ = usdoHelper
-            .prepareLzCall(
-                IUsdo(address(aUsdo)),
-                PrepareLzCallData({
-                    dstEid: bEid,
-                    recipient: OFTMsgCodec.addressToBytes32(address(this)),
-                    amountToSendLD: erc20Amount_,
-                    minAmountToCreditLD: erc20Amount_,
-                    msgType: PT_TAP_EXERCISE,
-                    composeMsgData: ComposeMsgData({
-                        index: 0,
-                        gas: 500_000,
-                        value: uint128(withdrawMsgFee_.nativeFee),
-                        data: sendMsg_,
-                        prevData: bytes(""),
-                        prevOptionsData: bytes("")
-                    }),
-                    lzReceiveGas: 500_000,
-                    lzReceiveValue: 0,
-                    refundAddress: address(this)
-                })
-            );
+        PrepareLzCallReturn memory prepareLzCallReturn2_ = usdoHelper.prepareLzCall(
+            IUsdo(address(aUsdo)),
+            PrepareLzCallData({
+                dstEid: bEid,
+                recipient: OFTMsgCodec.addressToBytes32(address(this)),
+                amountToSendLD: erc20Amount_,
+                minAmountToCreditLD: erc20Amount_,
+                msgType: PT_TAP_EXERCISE,
+                composeMsgData: ComposeMsgData({
+                    index: 0,
+                    gas: 500_000,
+                    value: uint128(withdrawMsgFee_.nativeFee),
+                    data: sendMsg_,
+                    prevData: bytes(""),
+                    prevOptionsData: bytes("")
+                }),
+                lzReceiveGas: 500_000,
+                lzReceiveValue: 0,
+                refundAddress: address(this)
+            })
+        );
         bytes memory composeMsg_ = prepareLzCallReturn2_.composeMsg;
         bytes memory oftMsgOptions_ = prepareLzCallReturn2_.oftMsgOptions;
         MessagingFee memory msgFee_ = prepareLzCallReturn2_.msgFee;
         LZSendParam memory lzSendParam_ = prepareLzCallReturn2_.lzSendParam;
 
-        (MessagingReceipt memory msgReceipt_, , bytes memory sentMsg, ) = aUsdo
-            .sendPacket{value: msgFee_.nativeFee}(lzSendParam_, composeMsg_);
+        (MessagingReceipt memory msgReceipt_,, bytes memory sentMsg,) =
+            aUsdo.sendPacket{value: msgFee_.nativeFee}(lzSendParam_, composeMsg_);
 
         {
             verifyPackets(uint32(bEid), address(bUsdo));
@@ -805,66 +728,46 @@ contract UsdoTest is UsdoTestHelper {
     function test_usdo_yb_permit_all() public {
         bytes memory approvalMsg_;
         {
-            ERC20PermitStruct memory approvalUserB_ = ERC20PermitStruct({
-                owner: userA,
-                spender: userB,
-                value: 0,
-                nonce: 0,
-                deadline: 1 days
-            });
+            ERC20PermitStruct memory approvalUserB_ =
+                ERC20PermitStruct({owner: userA, spender: userB, value: 0, nonce: 0, deadline: 1 days});
 
-            bytes32 digest_ = _getYieldBoxPermitAllTypedDataHash(
-                approvalUserB_,
-                true
-            );
-            YieldBoxApproveAllMsg
-                memory permitApproval_ = __getYieldBoxPermitAllData(
-                    approvalUserB_,
-                    address(yieldBox),
-                    true,
-                    digest_,
-                    userAPKey
-                );
+            bytes32 digest_ = _getYieldBoxPermitAllTypedDataHash(approvalUserB_, true);
+            YieldBoxApproveAllMsg memory permitApproval_ =
+                __getYieldBoxPermitAllData(approvalUserB_, address(yieldBox), true, digest_, userAPKey);
 
-            approvalMsg_ = usdoHelper.buildYieldBoxApproveAllMsg(
-                permitApproval_
-            );
+            approvalMsg_ = usdoHelper.buildYieldBoxApproveAllMsg(permitApproval_);
         }
 
-        PrepareLzCallReturn memory prepareLzCallReturn_ = usdoHelper
-            .prepareLzCall(
-                IUsdo(address(aUsdo)),
-                PrepareLzCallData({
-                    dstEid: bEid,
-                    recipient: OFTMsgCodec.addressToBytes32(address(this)),
-                    amountToSendLD: 0,
-                    minAmountToCreditLD: 0,
-                    msgType: PT_YB_APPROVE_ALL,
-                    composeMsgData: ComposeMsgData({
-                        index: 0,
-                        gas: 1_000_000,
-                        value: 0,
-                        data: approvalMsg_,
-                        prevData: bytes(""),
-                        prevOptionsData: bytes("")
-                    }),
-                    lzReceiveGas: 1_000_000,
-                    lzReceiveValue: 0,
-                    refundAddress: address(this)
-                })
-            );
+        PrepareLzCallReturn memory prepareLzCallReturn_ = usdoHelper.prepareLzCall(
+            IUsdo(address(aUsdo)),
+            PrepareLzCallData({
+                dstEid: bEid,
+                recipient: OFTMsgCodec.addressToBytes32(address(this)),
+                amountToSendLD: 0,
+                minAmountToCreditLD: 0,
+                msgType: PT_YB_APPROVE_ALL,
+                composeMsgData: ComposeMsgData({
+                    index: 0,
+                    gas: 1_000_000,
+                    value: 0,
+                    data: approvalMsg_,
+                    prevData: bytes(""),
+                    prevOptionsData: bytes("")
+                }),
+                lzReceiveGas: 1_000_000,
+                lzReceiveValue: 0,
+                refundAddress: address(this)
+            })
+        );
         bytes memory composeMsg_ = prepareLzCallReturn_.composeMsg;
         bytes memory oftMsgOptions_ = prepareLzCallReturn_.oftMsgOptions;
         MessagingFee memory msgFee_ = prepareLzCallReturn_.msgFee;
         LZSendParam memory lzSendParam_ = prepareLzCallReturn_.lzSendParam;
 
-        assertEq(
-            yieldBox.isApprovedForAll(address(userA), address(userB)),
-            false
-        );
+        assertEq(yieldBox.isApprovedForAll(address(userA), address(userB)), false);
 
-        (MessagingReceipt memory msgReceipt_, , bytes memory sentMsg, ) = aUsdo
-            .sendPacket{value: msgFee_.nativeFee}(lzSendParam_, composeMsg_);
+        (MessagingReceipt memory msgReceipt_,, bytes memory sentMsg,) =
+            aUsdo.sendPacket{value: msgFee_.nativeFee}(lzSendParam_, composeMsg_);
 
         verifyPackets(uint32(bEid), address(bUsdo));
 
@@ -881,67 +784,44 @@ contract UsdoTest is UsdoTestHelper {
             )
         );
 
-        assertEq(
-            yieldBox.isApprovedForAll(address(userA), address(userB)),
-            true
-        );
-        assertEq(
-            yieldBox.isApprovedForAll(address(userA), address(this)),
-            false
-        );
+        assertEq(yieldBox.isApprovedForAll(address(userA), address(userB)), true);
+        assertEq(yieldBox.isApprovedForAll(address(userA), address(this)), false);
     }
 
     function test_usdo_yb_revoke_all() public {
         bytes memory approvalMsg_;
         {
-            ERC20PermitStruct memory approvalUserB_ = ERC20PermitStruct({
-                owner: userA,
-                spender: userB,
-                value: 0,
-                nonce: 0,
-                deadline: 1 days
-            });
+            ERC20PermitStruct memory approvalUserB_ =
+                ERC20PermitStruct({owner: userA, spender: userB, value: 0, nonce: 0, deadline: 1 days});
 
-            bytes32 digest_ = _getYieldBoxPermitAllTypedDataHash(
-                approvalUserB_,
-                false
-            );
-            YieldBoxApproveAllMsg
-                memory permitApproval_ = __getYieldBoxPermitAllData(
-                    approvalUserB_,
-                    address(yieldBox),
-                    false,
-                    digest_,
-                    userAPKey
-                );
+            bytes32 digest_ = _getYieldBoxPermitAllTypedDataHash(approvalUserB_, false);
+            YieldBoxApproveAllMsg memory permitApproval_ =
+                __getYieldBoxPermitAllData(approvalUserB_, address(yieldBox), false, digest_, userAPKey);
 
-            approvalMsg_ = usdoHelper.buildYieldBoxApproveAllMsg(
-                permitApproval_
-            );
+            approvalMsg_ = usdoHelper.buildYieldBoxApproveAllMsg(permitApproval_);
         }
 
-        PrepareLzCallReturn memory prepareLzCallReturn_ = usdoHelper
-            .prepareLzCall(
-                IUsdo(address(aUsdo)),
-                PrepareLzCallData({
-                    dstEid: bEid,
-                    recipient: OFTMsgCodec.addressToBytes32(address(this)),
-                    amountToSendLD: 0,
-                    minAmountToCreditLD: 0,
-                    msgType: PT_YB_APPROVE_ALL,
-                    composeMsgData: ComposeMsgData({
-                        index: 0,
-                        gas: 1_000_000,
-                        value: 0,
-                        data: approvalMsg_,
-                        prevData: bytes(""),
-                        prevOptionsData: bytes("")
-                    }),
-                    lzReceiveGas: 1_000_000,
-                    lzReceiveValue: 0,
-                    refundAddress: address(this)
-                })
-            );
+        PrepareLzCallReturn memory prepareLzCallReturn_ = usdoHelper.prepareLzCall(
+            IUsdo(address(aUsdo)),
+            PrepareLzCallData({
+                dstEid: bEid,
+                recipient: OFTMsgCodec.addressToBytes32(address(this)),
+                amountToSendLD: 0,
+                minAmountToCreditLD: 0,
+                msgType: PT_YB_APPROVE_ALL,
+                composeMsgData: ComposeMsgData({
+                    index: 0,
+                    gas: 1_000_000,
+                    value: 0,
+                    data: approvalMsg_,
+                    prevData: bytes(""),
+                    prevOptionsData: bytes("")
+                }),
+                lzReceiveGas: 1_000_000,
+                lzReceiveValue: 0,
+                refundAddress: address(this)
+            })
+        );
         bytes memory composeMsg_ = prepareLzCallReturn_.composeMsg;
         bytes memory oftMsgOptions_ = prepareLzCallReturn_.oftMsgOptions;
         MessagingFee memory msgFee_ = prepareLzCallReturn_.msgFee;
@@ -949,13 +829,10 @@ contract UsdoTest is UsdoTestHelper {
 
         vm.prank(address(userA));
         yieldBox.setApprovalForAll(address(userB), true);
-        assertEq(
-            yieldBox.isApprovedForAll(address(userA), address(userB)),
-            true
-        );
+        assertEq(yieldBox.isApprovedForAll(address(userA), address(userB)), true);
 
-        (MessagingReceipt memory msgReceipt_, , bytes memory sentMsg, ) = aUsdo
-            .sendPacket{value: msgFee_.nativeFee}(lzSendParam_, composeMsg_);
+        (MessagingReceipt memory msgReceipt_,, bytes memory sentMsg,) =
+            aUsdo.sendPacket{value: msgFee_.nativeFee}(lzSendParam_, composeMsg_);
 
         verifyPackets(uint32(bEid), address(bUsdo));
 
@@ -972,10 +849,7 @@ contract UsdoTest is UsdoTestHelper {
             )
         );
 
-        assertEq(
-            yieldBox.isApprovedForAll(address(userA), address(userB)),
-            false
-        );
+        assertEq(yieldBox.isApprovedForAll(address(userA), address(userB)), false);
     }
 
     function test_usdo_yb_permit_asset() public {
@@ -984,13 +858,8 @@ contract UsdoTest is UsdoTestHelper {
         bytes memory approvalsMsg_;
 
         {
-            ERC20PermitStruct memory approvalUserB_ = ERC20PermitStruct({
-                owner: userA,
-                spender: userB,
-                value: aUsdoYieldBoxId,
-                nonce: 0,
-                deadline: 1 days
-            });
+            ERC20PermitStruct memory approvalUserB_ =
+                ERC20PermitStruct({owner: userA, spender: userB, value: aUsdoYieldBoxId, nonce: 0, deadline: 1 days});
             ERC20PermitStruct memory approvalUserC_ = ERC20PermitStruct({
                 owner: userA,
                 spender: address(this),
@@ -1015,60 +884,44 @@ contract UsdoTest is UsdoTestHelper {
                 userAPKey
             );
 
-            YieldBoxApproveAssetMsg[]
-                memory approvals_ = new YieldBoxApproveAssetMsg[](2);
+            YieldBoxApproveAssetMsg[] memory approvals_ = new YieldBoxApproveAssetMsg[](2);
             approvals_[0] = permitApprovalB_;
             approvals_[1] = permitApprovalC_;
 
             approvalsMsg_ = usdoHelper.buildYieldBoxApproveAssetMsg(approvals_);
         }
 
-        PrepareLzCallReturn memory prepareLzCallReturn_ = usdoHelper
-            .prepareLzCall(
-                IUsdo(address(aUsdo)),
-                PrepareLzCallData({
-                    dstEid: bEid,
-                    recipient: OFTMsgCodec.addressToBytes32(address(this)),
-                    amountToSendLD: 0,
-                    minAmountToCreditLD: 0,
-                    msgType: PT_YB_APPROVE_ASSET,
-                    composeMsgData: ComposeMsgData({
-                        index: 0,
-                        gas: 1_000_000,
-                        value: 0,
-                        data: approvalsMsg_,
-                        prevData: bytes(""),
-                        prevOptionsData: bytes("")
-                    }),
-                    lzReceiveGas: 1_000_000,
-                    lzReceiveValue: 0,
-                    refundAddress: address(this)
-                })
-            );
+        PrepareLzCallReturn memory prepareLzCallReturn_ = usdoHelper.prepareLzCall(
+            IUsdo(address(aUsdo)),
+            PrepareLzCallData({
+                dstEid: bEid,
+                recipient: OFTMsgCodec.addressToBytes32(address(this)),
+                amountToSendLD: 0,
+                minAmountToCreditLD: 0,
+                msgType: PT_YB_APPROVE_ASSET,
+                composeMsgData: ComposeMsgData({
+                    index: 0,
+                    gas: 1_000_000,
+                    value: 0,
+                    data: approvalsMsg_,
+                    prevData: bytes(""),
+                    prevOptionsData: bytes("")
+                }),
+                lzReceiveGas: 1_000_000,
+                lzReceiveValue: 0,
+                refundAddress: address(this)
+            })
+        );
         bytes memory composeMsg_ = prepareLzCallReturn_.composeMsg;
         bytes memory oftMsgOptions_ = prepareLzCallReturn_.oftMsgOptions;
         MessagingFee memory msgFee_ = prepareLzCallReturn_.msgFee;
         LZSendParam memory lzSendParam_ = prepareLzCallReturn_.lzSendParam;
 
-        assertEq(
-            yieldBox.isApprovedForAsset(
-                address(userA),
-                address(userB),
-                aUsdoYieldBoxId
-            ),
-            false
-        );
-        assertEq(
-            yieldBox.isApprovedForAsset(
-                address(userA),
-                address(this),
-                bUsdoYieldBoxId
-            ),
-            false
-        );
+        assertEq(yieldBox.isApprovedForAsset(address(userA), address(userB), aUsdoYieldBoxId), false);
+        assertEq(yieldBox.isApprovedForAsset(address(userA), address(this), bUsdoYieldBoxId), false);
 
-        (MessagingReceipt memory msgReceipt_, , bytes memory sentMsg, ) = aUsdo
-            .sendPacket{value: msgFee_.nativeFee}(lzSendParam_, composeMsg_);
+        (MessagingReceipt memory msgReceipt_,, bytes memory sentMsg,) =
+            aUsdo.sendPacket{value: msgFee_.nativeFee}(lzSendParam_, composeMsg_);
 
         verifyPackets(uint32(bEid), address(bUsdo));
 
@@ -1085,22 +938,8 @@ contract UsdoTest is UsdoTestHelper {
             )
         );
 
-        assertEq(
-            yieldBox.isApprovedForAsset(
-                address(userA),
-                address(userB),
-                aUsdoYieldBoxId
-            ),
-            true
-        );
-        assertEq(
-            yieldBox.isApprovedForAsset(
-                address(userA),
-                address(this),
-                bUsdoYieldBoxId
-            ),
-            true
-        );
+        assertEq(yieldBox.isApprovedForAsset(address(userA), address(userB), aUsdoYieldBoxId), true);
+        assertEq(yieldBox.isApprovedForAsset(address(userA), address(this), bUsdoYieldBoxId), true);
     }
 
     function test_usdo_yb_revoke_asset() public {
@@ -1109,13 +948,8 @@ contract UsdoTest is UsdoTestHelper {
         bytes memory approvalsMsg_;
 
         {
-            ERC20PermitStruct memory approvalUserB_ = ERC20PermitStruct({
-                owner: userA,
-                spender: userB,
-                value: aUsdoYieldBoxId,
-                nonce: 0,
-                deadline: 1 days
-            });
+            ERC20PermitStruct memory approvalUserB_ =
+                ERC20PermitStruct({owner: userA, spender: userB, value: aUsdoYieldBoxId, nonce: 0, deadline: 1 days});
             ERC20PermitStruct memory approvalUserC_ = ERC20PermitStruct({
                 owner: userA,
                 spender: address(this),
@@ -1140,36 +974,34 @@ contract UsdoTest is UsdoTestHelper {
                 userAPKey
             );
 
-            YieldBoxApproveAssetMsg[]
-                memory approvals_ = new YieldBoxApproveAssetMsg[](2);
+            YieldBoxApproveAssetMsg[] memory approvals_ = new YieldBoxApproveAssetMsg[](2);
             approvals_[0] = permitApprovalB_;
             approvals_[1] = permitApprovalC_;
 
             approvalsMsg_ = usdoHelper.buildYieldBoxApproveAssetMsg(approvals_);
         }
 
-        PrepareLzCallReturn memory prepareLzCallReturn_ = usdoHelper
-            .prepareLzCall(
-                IUsdo(address(aUsdo)),
-                PrepareLzCallData({
-                    dstEid: bEid,
-                    recipient: OFTMsgCodec.addressToBytes32(address(this)),
-                    amountToSendLD: 0,
-                    minAmountToCreditLD: 0,
-                    msgType: PT_YB_APPROVE_ASSET,
-                    composeMsgData: ComposeMsgData({
-                        index: 0,
-                        gas: 1_000_000,
-                        value: 0,
-                        data: approvalsMsg_,
-                        prevData: bytes(""),
-                        prevOptionsData: bytes("")
-                    }),
-                    lzReceiveGas: 1_000_000,
-                    lzReceiveValue: 0,
-                    refundAddress: address(this)
-                })
-            );
+        PrepareLzCallReturn memory prepareLzCallReturn_ = usdoHelper.prepareLzCall(
+            IUsdo(address(aUsdo)),
+            PrepareLzCallData({
+                dstEid: bEid,
+                recipient: OFTMsgCodec.addressToBytes32(address(this)),
+                amountToSendLD: 0,
+                minAmountToCreditLD: 0,
+                msgType: PT_YB_APPROVE_ASSET,
+                composeMsgData: ComposeMsgData({
+                    index: 0,
+                    gas: 1_000_000,
+                    value: 0,
+                    data: approvalsMsg_,
+                    prevData: bytes(""),
+                    prevOptionsData: bytes("")
+                }),
+                lzReceiveGas: 1_000_000,
+                lzReceiveValue: 0,
+                refundAddress: address(this)
+            })
+        );
         bytes memory composeMsg_ = prepareLzCallReturn_.composeMsg;
         bytes memory oftMsgOptions_ = prepareLzCallReturn_.oftMsgOptions;
         MessagingFee memory msgFee_ = prepareLzCallReturn_.msgFee;
@@ -1179,25 +1011,11 @@ contract UsdoTest is UsdoTestHelper {
         yieldBox.setApprovalForAsset(address(userB), aUsdoYieldBoxId, true);
         vm.prank(address(userA));
         yieldBox.setApprovalForAsset(address(this), bUsdoYieldBoxId, true);
-        assertEq(
-            yieldBox.isApprovedForAsset(
-                address(userA),
-                address(userB),
-                aUsdoYieldBoxId
-            ),
-            true
-        );
-        assertEq(
-            yieldBox.isApprovedForAsset(
-                address(userA),
-                address(this),
-                bUsdoYieldBoxId
-            ),
-            true
-        );
+        assertEq(yieldBox.isApprovedForAsset(address(userA), address(userB), aUsdoYieldBoxId), true);
+        assertEq(yieldBox.isApprovedForAsset(address(userA), address(this), bUsdoYieldBoxId), true);
 
-        (MessagingReceipt memory msgReceipt_, , bytes memory sentMsg, ) = aUsdo
-            .sendPacket{value: msgFee_.nativeFee}(lzSendParam_, composeMsg_);
+        (MessagingReceipt memory msgReceipt_,, bytes memory sentMsg,) =
+            aUsdo.sendPacket{value: msgFee_.nativeFee}(lzSendParam_, composeMsg_);
 
         verifyPackets(uint32(bEid), address(bUsdo));
 
@@ -1214,91 +1032,62 @@ contract UsdoTest is UsdoTestHelper {
             )
         );
 
-        assertEq(
-            yieldBox.isApprovedForAsset(
-                address(userA),
-                address(userB),
-                aUsdoYieldBoxId
-            ),
-            false
-        );
-        assertEq(
-            yieldBox.isApprovedForAsset(
-                address(userA),
-                address(this),
-                bUsdoYieldBoxId
-            ),
-            false
-        );
+        assertEq(yieldBox.isApprovedForAsset(address(userA), address(userB), aUsdoYieldBoxId), false);
+        assertEq(yieldBox.isApprovedForAsset(address(userA), address(this), bUsdoYieldBoxId), false);
     }
 
     function test_usdo_market_permit_asset() public {
         bytes memory approvalMsg_;
         {
             // @dev v,r,s will be completed on `__getMarketPermitData`
-            MarketPermitActionMsg
-                memory approvalUserB_ = MarketPermitActionMsg({
-                    target: address(singularity),
-                    owner: userA,
-                    spender: userB,
-                    value: 1e18,
-                    deadline: 1 days,
-                    v: 0,
-                    r: 0,
-                    s: 0,
-                    permitAsset: true
-                });
+            MarketPermitActionMsg memory approvalUserB_ = MarketPermitActionMsg({
+                target: address(singularity),
+                owner: userA,
+                spender: userB,
+                value: 1e18,
+                deadline: 1 days,
+                v: 0,
+                r: 0,
+                s: 0,
+                permitAsset: true
+            });
 
-            bytes32 digest_ = _getMarketPermitTypedDataHash(
-                true,
-                userA,
-                userB,
-                1e18,
-                1 days
-            );
-            MarketPermitActionMsg
-                memory permitApproval_ = __getMarketPermitData(
-                    approvalUserB_,
-                    digest_,
-                    userAPKey
-                );
+            bytes32 digest_ = _getMarketPermitTypedDataHash(true, userA, userB, 1e18, 1 days);
+            MarketPermitActionMsg memory permitApproval_ = __getMarketPermitData(approvalUserB_, digest_, userAPKey);
 
-            approvalMsg_ = usdoHelper.buildMarketPermitApprovalMsg(
-                permitApproval_
-            );
+            approvalMsg_ = usdoHelper.buildMarketPermitApprovalMsg(permitApproval_);
         }
 
         cluster.updateContract(0, address(bUsdo), true);
 
-        PrepareLzCallReturn memory prepareLzCallReturn_ = usdoHelper
-            .prepareLzCall(
-                IUsdo(address(aUsdo)),
-                PrepareLzCallData({
-                    dstEid: bEid,
-                    recipient: OFTMsgCodec.addressToBytes32(address(this)),
-                    amountToSendLD: 0,
-                    minAmountToCreditLD: 0,
-                    msgType: PT_MARKET_PERMIT,
-                    composeMsgData: ComposeMsgData({
-                        index: 0,
-                        gas: 1_000_000,
-                        value: 0,
-                        data: approvalMsg_,
-                        prevData: bytes(""),
-                        prevOptionsData: bytes("")
-                    }),
-                    lzReceiveGas: 1_000_000,
-                    lzReceiveValue: 0,
-                    refundAddress: address(this)
-                })
-            );
+        PrepareLzCallReturn memory prepareLzCallReturn_ = usdoHelper.prepareLzCall(
+            IUsdo(address(aUsdo)),
+            PrepareLzCallData({
+                dstEid: bEid,
+                recipient: OFTMsgCodec.addressToBytes32(address(this)),
+                amountToSendLD: 0,
+                minAmountToCreditLD: 0,
+                msgType: PT_MARKET_PERMIT,
+                composeMsgData: ComposeMsgData({
+                    index: 0,
+                    gas: 1_000_000,
+                    value: 0,
+                    data: approvalMsg_,
+                    prevData: bytes(""),
+                    prevOptionsData: bytes("")
+                }),
+                lzReceiveGas: 1_000_000,
+                lzReceiveValue: 0,
+                refundAddress: address(this)
+            })
+        );
         bytes memory composeMsg_ = prepareLzCallReturn_.composeMsg;
         bytes memory oftMsgOptions_ = prepareLzCallReturn_.oftMsgOptions;
         MessagingFee memory msgFee_ = prepareLzCallReturn_.msgFee;
         LZSendParam memory lzSendParam_ = prepareLzCallReturn_.lzSendParam;
 
-        (MessagingReceipt memory msgReceipt_, , bytes memory sentMsg, ) = aUsdo
-            .sendPacket{value: msgFee_.nativeFee}(lzSendParam_, composeMsg_);
+        (MessagingReceipt memory msgReceipt_,, bytes memory sentMsg,) =
+            aUsdo.sendPacket{value: msgFee_.nativeFee}(lzSendParam_, composeMsg_);
 
         verifyPackets(uint32(bEid), address(bUsdo));
 
@@ -1322,69 +1111,54 @@ contract UsdoTest is UsdoTestHelper {
         bytes memory approvalMsg_;
         {
             // @dev v,r,s will be completed on `__getMarketPermitData`
-            MarketPermitActionMsg
-                memory approvalUserB_ = MarketPermitActionMsg({
-                    target: address(singularity),
-                    owner: userA,
-                    spender: userB,
-                    value: 1e18,
-                    deadline: 1 days,
-                    v: 0,
-                    r: 0,
-                    s: 0,
-                    permitAsset: false
-                });
+            MarketPermitActionMsg memory approvalUserB_ = MarketPermitActionMsg({
+                target: address(singularity),
+                owner: userA,
+                spender: userB,
+                value: 1e18,
+                deadline: 1 days,
+                v: 0,
+                r: 0,
+                s: 0,
+                permitAsset: false
+            });
 
-            bytes32 digest_ = _getMarketPermitTypedDataHash(
-                false,
-                userA,
-                userB,
-                1e18,
-                1 days
-            );
-            MarketPermitActionMsg
-                memory permitApproval_ = __getMarketPermitData(
-                    approvalUserB_,
-                    digest_,
-                    userAPKey
-                );
+            bytes32 digest_ = _getMarketPermitTypedDataHash(false, userA, userB, 1e18, 1 days);
+            MarketPermitActionMsg memory permitApproval_ = __getMarketPermitData(approvalUserB_, digest_, userAPKey);
 
-            approvalMsg_ = usdoHelper.buildMarketPermitApprovalMsg(
-                permitApproval_
-            );
+            approvalMsg_ = usdoHelper.buildMarketPermitApprovalMsg(permitApproval_);
         }
 
         cluster.updateContract(0, address(bUsdo), true);
 
-        PrepareLzCallReturn memory prepareLzCallReturn_ = usdoHelper
-            .prepareLzCall(
-                IUsdo(address(aUsdo)),
-                PrepareLzCallData({
-                    dstEid: bEid,
-                    recipient: OFTMsgCodec.addressToBytes32(address(this)),
-                    amountToSendLD: 0,
-                    minAmountToCreditLD: 0,
-                    msgType: PT_MARKET_PERMIT,
-                    composeMsgData: ComposeMsgData({
-                        index: 0,
-                        gas: 1_000_000,
-                        value: 0,
-                        data: approvalMsg_,
-                        prevData: bytes(""),
-                        prevOptionsData: bytes("")
-                    }),
-                    lzReceiveGas: 1_000_000,
-                    lzReceiveValue: 0,
-                    refundAddress: address(this)
-                })
-            );
+        PrepareLzCallReturn memory prepareLzCallReturn_ = usdoHelper.prepareLzCall(
+            IUsdo(address(aUsdo)),
+            PrepareLzCallData({
+                dstEid: bEid,
+                recipient: OFTMsgCodec.addressToBytes32(address(this)),
+                amountToSendLD: 0,
+                minAmountToCreditLD: 0,
+                msgType: PT_MARKET_PERMIT,
+                composeMsgData: ComposeMsgData({
+                    index: 0,
+                    gas: 1_000_000,
+                    value: 0,
+                    data: approvalMsg_,
+                    prevData: bytes(""),
+                    prevOptionsData: bytes("")
+                }),
+                lzReceiveGas: 1_000_000,
+                lzReceiveValue: 0,
+                refundAddress: address(this)
+            })
+        );
         bytes memory composeMsg_ = prepareLzCallReturn_.composeMsg;
         bytes memory oftMsgOptions_ = prepareLzCallReturn_.oftMsgOptions;
         MessagingFee memory msgFee_ = prepareLzCallReturn_.msgFee;
         LZSendParam memory lzSendParam_ = prepareLzCallReturn_.lzSendParam;
 
-        (MessagingReceipt memory msgReceipt_, , bytes memory sentMsg, ) = aUsdo
-            .sendPacket{value: msgFee_.nativeFee}(lzSendParam_, composeMsg_);
+        (MessagingReceipt memory msgReceipt_,, bytes memory sentMsg,) =
+            aUsdo.sendPacket{value: msgFee_.nativeFee}(lzSendParam_, composeMsg_);
 
         verifyPackets(uint32(bEid), address(bUsdo));
 
@@ -1409,14 +1183,7 @@ contract UsdoTest is UsdoTestHelper {
         uint256 tokenAmount_ = 0.5 ether;
 
         deal(address(bUsdo), address(this), erc20Amount_);
-        pearlmit.approve(
-            20,
-            address(bUsdo),
-            0,
-            address(magnetar),
-            uint200(tokenAmount_),
-            uint48(block.timestamp)
-        ); // Atomic approval
+        pearlmit.approve(20, address(bUsdo), 0, address(magnetar), uint200(tokenAmount_), uint48(block.timestamp)); // Atomic approval
         bUsdo.approve(address(pearlmit), tokenAmount_);
 
         LZSendParam memory withdrawLzSendParam_;
@@ -1424,8 +1191,7 @@ contract UsdoTest is UsdoTestHelper {
 
         {
             // @dev `withdrawMsgFee_` is to be airdropped on dst to pay for the send to source operation (B->A).
-            PrepareLzCallReturn memory prepareLzCallReturn1_ = usdoHelper
-                .prepareLzCall( // B->A data
+            PrepareLzCallReturn memory prepareLzCallReturn1_ = usdoHelper.prepareLzCall( // B->A data
                 IUsdo(address(bUsdo)),
                 PrepareLzCallData({
                     dstEid: aEid,
@@ -1457,19 +1223,11 @@ contract UsdoTest is UsdoTestHelper {
 
         uint256 sh = yieldBox.toShare(bUsdoYieldBoxId, tokenAmount_, false);
         pearlmit.approve(
-            1155,
-            address(yieldBox),
-            bUsdoYieldBoxId,
-            address(singularity),
-            uint200(sh),
-            uint48(block.timestamp)
+            1155, address(yieldBox), bUsdoYieldBoxId, address(singularity), uint200(sh), uint48(block.timestamp)
         ); // Atomic approval
         yieldBox.setApprovalForAll(address(pearlmit), true);
 
-        uint256 tokenAmountSD = usdoHelper.toSD(
-            tokenAmount_,
-            aUsdo.decimalConversionRate()
-        );
+        uint256 tokenAmountSD = usdoHelper.toSD(tokenAmount_, aUsdo.decimalConversionRate());
         MarketLendOrRepayMsg memory marketMsg = MarketLendOrRepayMsg({
             user: address(this),
             lendParams: ILendOrRepayParams({
@@ -1490,11 +1248,7 @@ contract UsdoTest is UsdoTestHelper {
                     fraction: 0,
                     minDiscountOut: 0
                 }),
-                participateData: IOptionsParticipateData({
-                    participate: false,
-                    target: address(0),
-                    tOLPTokenId: 0
-                })
+                participateData: IOptionsParticipateData({participate: false, target: address(0), tOLPTokenId: 0})
             }),
             withdrawParams: MagnetarWithdrawData({
                 yieldBox: address(0),
@@ -1508,32 +1262,29 @@ contract UsdoTest is UsdoTestHelper {
             value: 0
         });
 
-        bytes memory marketMsg_ = usdoHelper.buildMarketLendOrRepayMsg(
-            marketMsg
-        );
+        bytes memory marketMsg_ = usdoHelper.buildMarketLendOrRepayMsg(marketMsg);
 
-        PrepareLzCallReturn memory prepareLzCallReturn2_ = usdoHelper
-            .prepareLzCall(
-                IUsdo(address(aUsdo)),
-                PrepareLzCallData({
-                    dstEid: bEid,
-                    recipient: OFTMsgCodec.addressToBytes32(address(this)),
-                    amountToSendLD: 0,
-                    minAmountToCreditLD: 0,
-                    msgType: PT_YB_SEND_SGL_LEND_OR_REPAY,
-                    composeMsgData: ComposeMsgData({
-                        index: 0,
-                        gas: 5_000_000,
-                        value: uint128(withdrawMsgFee_.nativeFee),
-                        data: marketMsg_,
-                        prevData: bytes(""),
-                        prevOptionsData: bytes("")
-                    }),
-                    lzReceiveGas: 5_000_000,
-                    lzReceiveValue: 0,
-                    refundAddress: address(this)
-                })
-            );
+        PrepareLzCallReturn memory prepareLzCallReturn2_ = usdoHelper.prepareLzCall(
+            IUsdo(address(aUsdo)),
+            PrepareLzCallData({
+                dstEid: bEid,
+                recipient: OFTMsgCodec.addressToBytes32(address(this)),
+                amountToSendLD: 0,
+                minAmountToCreditLD: 0,
+                msgType: PT_YB_SEND_SGL_LEND_OR_REPAY,
+                composeMsgData: ComposeMsgData({
+                    index: 0,
+                    gas: 5_000_000,
+                    value: uint128(withdrawMsgFee_.nativeFee),
+                    data: marketMsg_,
+                    prevData: bytes(""),
+                    prevOptionsData: bytes("")
+                }),
+                lzReceiveGas: 5_000_000,
+                lzReceiveValue: 0,
+                refundAddress: address(this)
+            })
+        );
         bytes memory oftMsgOptions_ = prepareLzCallReturn2_.oftMsgOptions;
         MessagingReceipt memory msgReceipt_;
         bytes memory sentMsg;
@@ -1542,9 +1293,7 @@ contract UsdoTest is UsdoTestHelper {
             bytes memory composeMsg_ = prepareLzCallReturn2_.composeMsg;
             MessagingFee memory msgFee_ = prepareLzCallReturn2_.msgFee;
             LZSendParam memory lzSendParam_ = prepareLzCallReturn2_.lzSendParam;
-            (msgReceipt_, , sentMsg, ) = aUsdo.sendPacket{
-                value: msgFee_.nativeFee
-            }(lzSendParam_, composeMsg_);
+            (msgReceipt_,, sentMsg,) = aUsdo.sendPacket{value: msgFee_.nativeFee}(lzSendParam_, composeMsg_);
         }
 
         {
@@ -1586,77 +1335,35 @@ contract UsdoTest is UsdoTestHelper {
             bUsdo.approve(address(yieldBox), type(uint256).max);
 
             deal(address(bUsdo), address(this), erc20Amount_);
-            yieldBox.depositAsset(
-                bUsdoYieldBoxId,
-                address(this),
-                address(this),
-                erc20Amount_,
-                0
-            );
+            yieldBox.depositAsset(bUsdoYieldBoxId, address(this), address(this), erc20Amount_, 0);
 
             yieldBox.setApprovalForAll(address(pearlmit), true);
             pearlmit.approve(
-                1155,
-                address(yieldBox),
-                bUsdoYieldBoxId,
-                address(singularity),
-                uint200(sh),
-                uint48(block.timestamp)
+                1155, address(yieldBox), bUsdoYieldBoxId, address(singularity), uint200(sh), uint48(block.timestamp)
             ); // Atomic approval
             singularity.addAsset(address(this), address(this), false, sh);
 
             deal(address(aUsdo), address(this), erc20Amount_);
-            yieldBox.depositAsset(
-                aUsdoYieldBoxId,
-                address(this),
-                address(this),
-                erc20Amount_,
-                0
-            );
+            yieldBox.depositAsset(aUsdoYieldBoxId, address(this), address(this), erc20Amount_, 0);
 
             pearlmit.approve(
-                1155,
-                address(yieldBox),
-                collateralId,
-                address(singularity),
-                uint200(sh),
-                uint48(block.timestamp)
+                1155, address(yieldBox), collateralId, address(singularity), uint200(sh), uint48(block.timestamp)
             ); // Atomic approval
 
-            uint256 collateralShare = yieldBox.toShare(
-                aUsdoYieldBoxId,
-                erc20Amount_,
-                false
-            );
+            uint256 collateralShare = yieldBox.toShare(aUsdoYieldBoxId, erc20Amount_, false);
             Module[] memory modules;
             bytes[] memory calls;
-            (modules, calls) = marketHelper.addCollateral(
-                address(this),
-                address(this),
-                false,
-                0,
-                collateralShare
-            );
+            (modules, calls) = marketHelper.addCollateral(address(this), address(this), false, 0, collateralShare);
             singularity.execute(modules, calls, true);
 
             assertEq(singularity._userBorrowPart(address(this)), 0);
-            (modules, calls) = marketHelper.borrow(
-                address(this),
-                address(this),
-                tokenAmount_
-            );
+            (modules, calls) = marketHelper.borrow(address(this), address(this), tokenAmount_);
             singularity.execute(modules, calls, true);
             assertGt(singularity._userBorrowPart(address(this)), 0);
 
             // deal more to cover repay fees
             deal(address(bUsdo), address(this), erc20Amount_);
-            yieldBox.depositAsset(
-                bUsdoYieldBoxId,
-                address(this),
-                address(this),
-                erc20Amount_,
-                0
-            );
+            yieldBox.depositAsset(bUsdoYieldBoxId, address(this), address(this), erc20Amount_, 0);
         }
 
         LZSendParam memory withdrawLzSendParam_;
@@ -1664,8 +1371,7 @@ contract UsdoTest is UsdoTestHelper {
 
         {
             // @dev `withdrawMsgFee_` is to be airdropped on dst to pay for the send to source operation (B->A).
-            PrepareLzCallReturn memory prepareLzCallReturn1_ = usdoHelper
-                .prepareLzCall( // B->A data
+            PrepareLzCallReturn memory prepareLzCallReturn1_ = usdoHelper.prepareLzCall( // B->A data
                 IUsdo(address(bUsdo)),
                 PrepareLzCallData({
                     dstEid: aEid,
@@ -1696,22 +1402,12 @@ contract UsdoTest is UsdoTestHelper {
         singularity.approveBorrow(address(magnetar), type(uint256).max);
 
         pearlmit.approve(
-            1155,
-            address(yieldBox),
-            bUsdoYieldBoxId,
-            address(singularity),
-            uint200(sh),
-            uint48(block.timestamp)
+            1155, address(yieldBox), bUsdoYieldBoxId, address(singularity), uint200(sh), uint48(block.timestamp)
         ); // Atomic approval
         yieldBox.setApprovalForAll(address(pearlmit), true);
 
-        uint256 userCollateralShareBefore = singularity._userCollateralShare(
-            address(this)
-        );
-        uint256 tokenAmountSD = usdoHelper.toSD(
-            tokenAmount_,
-            aUsdo.decimalConversionRate()
-        );
+        uint256 userCollateralShareBefore = singularity._userCollateralShare(address(this));
+        uint256 tokenAmountSD = usdoHelper.toSD(tokenAmount_, aUsdo.decimalConversionRate());
 
         MarketLendOrRepayMsg memory marketMsg = MarketLendOrRepayMsg({
             user: address(this),
@@ -1733,11 +1429,7 @@ contract UsdoTest is UsdoTestHelper {
                     fraction: 0,
                     minDiscountOut: 0
                 }),
-                participateData: IOptionsParticipateData({
-                    participate: false,
-                    target: address(0),
-                    tOLPTokenId: 0
-                })
+                participateData: IOptionsParticipateData({participate: false, target: address(0), tOLPTokenId: 0})
             }),
             withdrawParams: MagnetarWithdrawData({
                 yieldBox: address(0),
@@ -1751,39 +1443,36 @@ contract UsdoTest is UsdoTestHelper {
             value: 0
         });
 
-        bytes memory marketMsg_ = usdoHelper.buildMarketLendOrRepayMsg(
-            marketMsg
-        );
+        bytes memory marketMsg_ = usdoHelper.buildMarketLendOrRepayMsg(marketMsg);
 
-        PrepareLzCallReturn memory prepareLzCallReturn2_ = usdoHelper
-            .prepareLzCall(
-                IUsdo(address(aUsdo)),
-                PrepareLzCallData({
-                    dstEid: bEid,
-                    recipient: OFTMsgCodec.addressToBytes32(address(this)),
-                    amountToSendLD: 0,
-                    minAmountToCreditLD: 0,
-                    msgType: PT_YB_SEND_SGL_LEND_OR_REPAY,
-                    composeMsgData: ComposeMsgData({
-                        index: 0,
-                        gas: 500_000,
-                        value: uint128(withdrawMsgFee_.nativeFee),
-                        data: marketMsg_,
-                        prevData: bytes(""),
-                        prevOptionsData: bytes("")
-                    }),
-                    lzReceiveGas: 500_000,
-                    lzReceiveValue: 0,
-                    refundAddress: address(this)
-                })
-            );
+        PrepareLzCallReturn memory prepareLzCallReturn2_ = usdoHelper.prepareLzCall(
+            IUsdo(address(aUsdo)),
+            PrepareLzCallData({
+                dstEid: bEid,
+                recipient: OFTMsgCodec.addressToBytes32(address(this)),
+                amountToSendLD: 0,
+                minAmountToCreditLD: 0,
+                msgType: PT_YB_SEND_SGL_LEND_OR_REPAY,
+                composeMsgData: ComposeMsgData({
+                    index: 0,
+                    gas: 500_000,
+                    value: uint128(withdrawMsgFee_.nativeFee),
+                    data: marketMsg_,
+                    prevData: bytes(""),
+                    prevOptionsData: bytes("")
+                }),
+                lzReceiveGas: 500_000,
+                lzReceiveValue: 0,
+                refundAddress: address(this)
+            })
+        );
         bytes memory composeMsg_ = prepareLzCallReturn2_.composeMsg;
         bytes memory oftMsgOptions_ = prepareLzCallReturn2_.oftMsgOptions;
         MessagingFee memory msgFee_ = prepareLzCallReturn2_.msgFee;
         LZSendParam memory lzSendParam_ = prepareLzCallReturn2_.lzSendParam;
 
-        (MessagingReceipt memory msgReceipt_, , bytes memory sentMsg, ) = aUsdo
-            .sendPacket{value: msgFee_.nativeFee}(lzSendParam_, composeMsg_);
+        (MessagingReceipt memory msgReceipt_,, bytes memory sentMsg,) =
+            aUsdo.sendPacket{value: msgFee_.nativeFee}(lzSendParam_, composeMsg_);
 
         {
             verifyPackets(uint32(bEid), address(bUsdo));
@@ -1805,10 +1494,7 @@ contract UsdoTest is UsdoTestHelper {
         // Check execution
         {
             assertEq(singularity._userBorrowPart(address(this)), 0);
-            assertGt(
-                userCollateralShareBefore,
-                singularity._userCollateralShare(address(this))
-            );
+            assertGt(userCollateralShareBefore, singularity._userCollateralShare(address(this)));
         }
     }
 
@@ -1819,23 +1505,12 @@ contract UsdoTest is UsdoTestHelper {
         {
             deal(address(bUsdo), address(this), erc20Amount_);
             bUsdo.approve(address(yieldBox), type(uint256).max);
-            yieldBox.depositAsset(
-                bUsdoYieldBoxId,
-                address(this),
-                address(this),
-                erc20Amount_,
-                0
-            );
+            yieldBox.depositAsset(bUsdoYieldBoxId, address(this), address(this), erc20Amount_, 0);
 
             uint256 sh = yieldBox.toShare(bUsdoYieldBoxId, erc20Amount_, false);
             yieldBox.setApprovalForAll(address(pearlmit), true);
             pearlmit.approve(
-                1155,
-                address(yieldBox),
-                bUsdoYieldBoxId,
-                address(singularity),
-                uint200(sh),
-                uint48(block.timestamp)
+                1155, address(yieldBox), bUsdoYieldBoxId, address(singularity), uint200(sh), uint48(block.timestamp)
             );
             singularity.addAsset(address(this), address(this), false, sh);
         }
@@ -1848,8 +1523,7 @@ contract UsdoTest is UsdoTestHelper {
 
         {
             // @dev `withdrawMsgFee_` is to be airdropped on dst to pay for the send to source operation (B->A).
-            PrepareLzCallReturn memory prepareLzCallReturn1_ = usdoHelper
-                .prepareLzCall( // B->A data
+            PrepareLzCallReturn memory prepareLzCallReturn1_ = usdoHelper.prepareLzCall( // B->A data
                 IUsdo(address(bUsdo)),
                 PrepareLzCallData({
                     dstEid: aEid,
@@ -1877,10 +1551,7 @@ contract UsdoTest is UsdoTestHelper {
         /**
          * Actions
          */
-        uint256 tokenAmountSD = usdoHelper.toSD(
-            tokenAmount_,
-            aUsdo.decimalConversionRate()
-        );
+        uint256 tokenAmountSD = usdoHelper.toSD(tokenAmount_, aUsdo.decimalConversionRate());
 
         //approve magnetar
         bUsdo.approve(address(magnetar), type(uint256).max);
@@ -1900,16 +1571,8 @@ contract UsdoTest is UsdoTestHelper {
                 repayAmount: 0,
                 removeCollateralFromBB: false,
                 collateralAmount: 0,
-                exitData: IOptionsExitData({
-                    exit: false,
-                    target: address(0),
-                    oTAPTokenID: 0
-                }),
-                unlockData: IOptionsUnlockData({
-                    unlock: false,
-                    target: address(0),
-                    tokenId: 0
-                }),
+                exitData: IOptionsExitData({exit: false, target: address(0), oTAPTokenID: 0}),
+                unlockData: IOptionsUnlockData({unlock: false, target: address(0), tokenId: 0}),
                 assetWithdrawData: MagnetarWithdrawData({
                     yieldBox: address(0),
                     assetId: 0,
@@ -1931,39 +1594,36 @@ contract UsdoTest is UsdoTestHelper {
             }),
             value: 0
         });
-        bytes memory marketMsg_ = usdoHelper.buildMarketRemoveAssetMsg(
-            marketMsg
-        );
+        bytes memory marketMsg_ = usdoHelper.buildMarketRemoveAssetMsg(marketMsg);
 
-        PrepareLzCallReturn memory prepareLzCallReturn2_ = usdoHelper
-            .prepareLzCall(
-                IUsdo(address(aUsdo)),
-                PrepareLzCallData({
-                    dstEid: bEid,
-                    recipient: OFTMsgCodec.addressToBytes32(address(this)),
-                    amountToSendLD: 0,
-                    minAmountToCreditLD: 0,
-                    msgType: PT_MARKET_REMOVE_ASSET,
-                    composeMsgData: ComposeMsgData({
-                        index: 0,
-                        gas: 500_000,
-                        value: uint128(withdrawMsgFee_.nativeFee),
-                        data: marketMsg_,
-                        prevData: bytes(""),
-                        prevOptionsData: bytes("")
-                    }),
-                    lzReceiveGas: 500_000,
-                    lzReceiveValue: 0,
-                    refundAddress: address(this)
-                })
-            );
+        PrepareLzCallReturn memory prepareLzCallReturn2_ = usdoHelper.prepareLzCall(
+            IUsdo(address(aUsdo)),
+            PrepareLzCallData({
+                dstEid: bEid,
+                recipient: OFTMsgCodec.addressToBytes32(address(this)),
+                amountToSendLD: 0,
+                minAmountToCreditLD: 0,
+                msgType: PT_MARKET_REMOVE_ASSET,
+                composeMsgData: ComposeMsgData({
+                    index: 0,
+                    gas: 500_000,
+                    value: uint128(withdrawMsgFee_.nativeFee),
+                    data: marketMsg_,
+                    prevData: bytes(""),
+                    prevOptionsData: bytes("")
+                }),
+                lzReceiveGas: 500_000,
+                lzReceiveValue: 0,
+                refundAddress: address(this)
+            })
+        );
         bytes memory composeMsg_ = prepareLzCallReturn2_.composeMsg;
         bytes memory oftMsgOptions_ = prepareLzCallReturn2_.oftMsgOptions;
         MessagingFee memory msgFee_ = prepareLzCallReturn2_.msgFee;
         LZSendParam memory lzSendParam_ = prepareLzCallReturn2_.lzSendParam;
 
-        (MessagingReceipt memory msgReceipt_, , bytes memory sentMsg, ) = aUsdo
-            .sendPacket{value: msgFee_.nativeFee}(lzSendParam_, composeMsg_);
+        (MessagingReceipt memory msgReceipt_,, bytes memory sentMsg,) =
+            aUsdo.sendPacket{value: msgFee_.nativeFee}(lzSendParam_, composeMsg_);
 
         {
             verifyPackets(uint32(bEid), address(bUsdo));
@@ -1986,11 +1646,7 @@ contract UsdoTest is UsdoTestHelper {
         {
             assertEq(bUsdo.balanceOf(address(this)), 0);
             assertEq(
-                yieldBox.toAmount(
-                    bUsdoYieldBoxId,
-                    yieldBox.balanceOf(address(this), bUsdoYieldBoxId),
-                    false
-                ),
+                yieldBox.toAmount(bUsdoYieldBoxId, yieldBox.balanceOf(address(this), bUsdoYieldBoxId), false),
                 tokenAmount_
             );
         }
@@ -2007,22 +1663,11 @@ contract UsdoTest is UsdoTestHelper {
             vm.startPrank(alice);
             deal(address(bUsdo), alice, erc20Amount_);
             bUsdo.approve(address(yieldBox), type(uint256).max);
-            (, uint256 shares) = yieldBox.depositAsset(
-                bUsdoYieldBoxId,
-                alice,
-                alice,
-                erc20Amount_,
-                0
-            );
+            (, uint256 shares) = yieldBox.depositAsset(bUsdoYieldBoxId, alice, alice, erc20Amount_, 0);
 
             yieldBox.setApprovalForAll(address(pearlmit), true);
             pearlmit.approve(
-                1155,
-                address(yieldBox),
-                bUsdoYieldBoxId,
-                address(singularity),
-                uint200(shares),
-                uint48(block.timestamp)
+                1155, address(yieldBox), bUsdoYieldBoxId, address(singularity), uint200(shares), uint48(block.timestamp)
             );
             singularity.addAsset(alice, alice, false, shares);
 
@@ -2035,40 +1680,19 @@ contract UsdoTest is UsdoTestHelper {
             vm.startPrank(charlie);
             deal(address(aUsdo), charlie, collateralAmount);
             aUsdo.approve(address(yieldBox), type(uint256).max);
-            (, uint256 shares) = yieldBox.depositAsset(
-                aUsdoYieldBoxId,
-                charlie,
-                charlie,
-                collateralAmount,
-                0
-            );
+            (, uint256 shares) = yieldBox.depositAsset(aUsdoYieldBoxId, charlie, charlie, collateralAmount, 0);
 
             yieldBox.setApprovalForAll(address(pearlmit), true);
             pearlmit.approve(
-                1155,
-                address(yieldBox),
-                aUsdoYieldBoxId,
-                address(singularity),
-                uint200(shares),
-                uint48(block.timestamp)
+                1155, address(yieldBox), aUsdoYieldBoxId, address(singularity), uint200(shares), uint48(block.timestamp)
             );
 
             Module[] memory modules;
             bytes[] memory calls;
-            (modules, calls) = marketHelper.addCollateral(
-                charlie,
-                charlie,
-                false,
-                0,
-                shares
-            );
+            (modules, calls) = marketHelper.addCollateral(charlie, charlie, false, 0, shares);
             singularity.execute(modules, calls, true);
 
-            (modules, calls) = marketHelper.borrow(
-                charlie,
-                charlie,
-                (erc20Amount_ * 9) / 10
-            );
+            (modules, calls) = marketHelper.borrow(charlie, charlie, (erc20Amount_ * 9) / 10);
             singularity.execute(modules, calls, true);
 
             vm.stopPrank();
@@ -2096,78 +1720,39 @@ contract UsdoTest is UsdoTestHelper {
         uint256 deadline_
     ) private view returns (bytes32) {
         bytes32 permitTypeHash_ = permitAsset
-            ? bytes32(
-                0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9
-            )
-            : bytes32(
-                0xe9685ff6d48c617fe4f692c50e602cce27cbad0290beb93cfa77eac43968d58c
-            );
+            ? bytes32(0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9)
+            : bytes32(0xe9685ff6d48c617fe4f692c50e602cce27cbad0290beb93cfa77eac43968d58c);
 
         uint256 nonce = singularity.nonces(owner_);
-        bytes32 structHash_ = keccak256(
-            abi.encode(
-                permitTypeHash_,
-                owner_,
-                spender_,
-                value_,
-                nonce++,
-                deadline_
-            )
-        );
+        bytes32 structHash_ = keccak256(abi.encode(permitTypeHash_, owner_, spender_, value_, nonce++, deadline_));
 
-        return
-            keccak256(
-                abi.encodePacked(
-                    "\x19\x01",
-                    singularity.DOMAIN_SEPARATOR(),
-                    structHash_
-                )
-            );
+        return keccak256(abi.encodePacked("\x19\x01", singularity.DOMAIN_SEPARATOR(), structHash_));
     }
 
-    function _getYieldBoxPermitAllTypedDataHash(
-        ERC20PermitStruct memory _permitData,
-        bool permit
-    ) private view returns (bytes32) {
+    function _getYieldBoxPermitAllTypedDataHash(ERC20PermitStruct memory _permitData, bool permit)
+        private
+        view
+        returns (bytes32)
+    {
         bytes32 permitTypeHash_ = permit
-            ? keccak256(
-                "PermitAll(address owner,address spender,uint256 nonce,uint256 deadline)"
-            )
-            : keccak256(
-                "RevokeAll(address owner,address spender,uint256 nonce,uint256 deadline)"
-            );
+            ? keccak256("PermitAll(address owner,address spender,uint256 nonce,uint256 deadline)")
+            : keccak256("RevokeAll(address owner,address spender,uint256 nonce,uint256 deadline)");
 
         bytes32 structHash_ = keccak256(
-            abi.encode(
-                permitTypeHash_,
-                _permitData.owner,
-                _permitData.spender,
-                _permitData.nonce,
-                _permitData.deadline
-            )
+            abi.encode(permitTypeHash_, _permitData.owner, _permitData.spender, _permitData.nonce, _permitData.deadline)
         );
 
-        return
-            keccak256(
-                abi.encodePacked(
-                    "\x19\x01",
-                    _getYieldBoxDomainSeparator(),
-                    structHash_
-                )
-            );
+        return keccak256(abi.encodePacked("\x19\x01", _getYieldBoxDomainSeparator(), structHash_));
     }
 
-    function _getYieldBoxPermitAssetTypedDataHash(
-        ERC20PermitStruct memory _permitData,
-        bool permit
-    ) private view returns (bytes32) {
+    function _getYieldBoxPermitAssetTypedDataHash(ERC20PermitStruct memory _permitData, bool permit)
+        private
+        view
+        returns (bytes32)
+    {
         bytes32 permitTypeHash_ = permit
-            ? keccak256(
-                "Permit(address owner,address spender,uint256 assetId,uint256 nonce,uint256 deadline)"
-            )
-            : keccak256(
-                "Revoke(address owner,address spender,uint256 assetId,uint256 nonce,uint256 deadline)"
-            );
+            ? keccak256("Permit(address owner,address spender,uint256 assetId,uint256 nonce,uint256 deadline)")
+            : keccak256("Revoke(address owner,address spender,uint256 assetId,uint256 nonce,uint256 deadline)");
 
         bytes32 structHash_ = keccak256(
             abi.encode(
@@ -2180,31 +1765,16 @@ contract UsdoTest is UsdoTestHelper {
             )
         );
 
-        return
-            keccak256(
-                abi.encodePacked(
-                    "\x19\x01",
-                    _getYieldBoxDomainSeparator(),
-                    structHash_
-                )
-            );
+        return keccak256(abi.encodePacked("\x19\x01", _getYieldBoxDomainSeparator(), structHash_));
     }
 
     function _getYieldBoxDomainSeparator() private view returns (bytes32) {
-        bytes32 typeHash = keccak256(
-            "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
-        );
+        bytes32 typeHash =
+            keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
         bytes32 hashedName = keccak256(bytes("YieldBox"));
         bytes32 hashedVersion = keccak256(bytes("1"));
-        bytes32 domainSeparator = keccak256(
-            abi.encode(
-                typeHash,
-                hashedName,
-                hashedVersion,
-                block.chainid,
-                address(yieldBox)
-            )
-        );
+        bytes32 domainSeparator =
+            keccak256(abi.encode(typeHash, hashedName, hashedVersion, block.chainid, address(yieldBox)));
         return domainSeparator;
     }
 }

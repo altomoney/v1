@@ -4,7 +4,6 @@ pragma solidity 0.8.22;
 // External
 import {IERC20} from "@boringcrypto/boring-solidity/contracts/libraries/BoringERC20.sol";
 
-
 // Tapioca
 import {SGLInterestHelper} from "tapioca-bar/markets/singularity/SGLInterestHelper.sol";
 import {SGLLiquidation} from "tapioca-bar/markets/singularity/SGLLiquidation.sol";
@@ -31,7 +30,6 @@ abstract contract Singularity_Unit_Shared is Markets_Unit_Shared {
     Singularity randomSglMC;
     Singularity randomSgl;
 
-
     // ************* //
     // *** SETUP *** //
     // ************* //
@@ -51,7 +49,10 @@ abstract contract Singularity_Unit_Shared is Markets_Unit_Shared {
     // *** INTERNAL *** //
     // **************** //
 
-    function _registerSGLMarket(address _collateral, uint256 _collateralId, address _asset, uint256 _assetId) internal returns (address) {
+    function _registerSGLMarket(address _collateral, uint256 _collateralId, address _asset, uint256 _assetId)
+        internal
+        returns (address)
+    {
         (
             Singularity._InitMemoryModulesData memory modulesData,
             Singularity._InitMemoryTokensData memory tokensData,
@@ -78,16 +79,7 @@ abstract contract Singularity_Unit_Shared is Markets_Unit_Shared {
             SGLInterestHelper sglInterestHelper = new SGLInterestHelper();
 
             bytes memory payload = abi.encodeWithSelector(
-                Singularity.setSingularityConfig.selector,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                address(sglInterestHelper),
-                0
+                Singularity.setSingularityConfig.selector, 0, 0, 0, 0, 0, 0, 0, address(sglInterestHelper), 0
             );
             address[] memory mc = new address[](1);
             mc[0] = address(sgl);
@@ -100,7 +92,6 @@ abstract contract Singularity_Unit_Shared is Markets_Unit_Shared {
         vm.label(address(sgl), "Singularity market");
         return address(sgl);
     }
-
 
     function _getSingularityInitData(SingularityInitData memory _sgl)
         internal
@@ -119,13 +110,14 @@ abstract contract Singularity_Unit_Shared is Markets_Unit_Shared {
             address(sglLiq), address(sglBorrow), address(sglCollateral), address(sglLev)
         );
 
-        tokensData = Singularity._InitMemoryTokensData(IERC20(_sgl.asset), _sgl.assetId, IERC20(_sgl.collateral), _sgl.collateralId);
+        tokensData = Singularity._InitMemoryTokensData(
+            IERC20(_sgl.asset), _sgl.assetId, IERC20(_sgl.collateral), _sgl.collateralId
+        );
 
         data = Singularity._InitMemoryData(
             IPenrose(_sgl.penrose), ITapiocaOracle(address(_sgl.oracle)), 0, CR_RATE, LQ_CR_RATE, _sgl.leverageExecutor
         );
     }
 
-    function _approveForCollateral(address txExecutor) internal virtual override resetPrank(txExecutor) {
-    }
+    function _approveForCollateral(address txExecutor) internal virtual override resetPrank(txExecutor) {}
 }

@@ -8,11 +8,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 // contracts
 import {IPearlmit, Pearlmit} from "tap-utils/pearlmit/Pearlmit.sol";
 import {Cluster} from "tap-utils/Cluster/Cluster.sol";
-import {
-    ITOFT,
-    TOFTInitStruct,
-    TOFTModulesInitStruct
-} from "tap-utils/interfaces/oft/ITOFT.sol";
+import {ITOFT, TOFTInitStruct, TOFTModulesInitStruct} from "tap-utils/interfaces/oft/ITOFT.sol";
 import {YieldBox} from "yieldbox/YieldBox.sol";
 
 import {TapiocaOmnichainExtExec} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainExtExec.sol";
@@ -53,8 +49,8 @@ abstract contract Base_Test is TestHelper, Utils, Types, Events {
     Cluster cluster;
 
     // tokens
-    ERC20Mock_test underlyingErc20; 
-    ERC20Mock_test underlyingLowDecimalsErc20; 
+    ERC20Mock_test underlyingErc20;
+    ERC20Mock_test underlyingLowDecimalsErc20;
     TOFT toft;
     TOFT toftLowDecimals;
     TOFT toftEth;
@@ -96,7 +92,7 @@ abstract contract Base_Test is TestHelper, Utils, Types, Events {
     function setUp() public virtual override {
         // ***  *** //
         userA = _createUser(USER_A_PKEY, "User A");
-        userB = _createUser(USER_B_PKEY, "User B"); 
+        userB = _createUser(USER_B_PKEY, "User B");
 
         // setup 3 LZ endpoints
         setUpEndpoints(3, LibraryType.UltraLightNode);
@@ -141,16 +137,20 @@ abstract contract Base_Test is TestHelper, Utils, Types, Events {
         vm.label(address(toftGenericReceiverModuleEth), "toftGenericReceiverModuleEth");
 
         // creat TOFT underlyingLowDecimalsErc20
-        TOFTInitStruct memory toftInitStructLowDecimals = _createOftInitStruct(address(underlyingLowDecimalsErc20), aEid);
+        TOFTInitStruct memory toftInitStructLowDecimals =
+            _createOftInitStruct(address(underlyingLowDecimalsErc20), aEid);
         TOFTSender toftSenderLowDecimals = new TOFTSender(toftInitStructLowDecimals);
         vm.label(address(toftSenderLowDecimals), "toftSenderLowDecimals");
         TOFTReceiver toftReceiverLowDecimals = new TOFTReceiver(toftInitStructLowDecimals);
         vm.label(address(toftReceiverLowDecimals), "toftReceiverLowDecimals");
-        TOFTMarketReceiverModule toftMarketReceiverModuleLowDecimals = new TOFTMarketReceiverModule(toftInitStructLowDecimals);
+        TOFTMarketReceiverModule toftMarketReceiverModuleLowDecimals =
+            new TOFTMarketReceiverModule(toftInitStructLowDecimals);
         vm.label(address(toftMarketReceiverModuleLowDecimals), "toftMarketReceiverModuleLowDecimals");
-        TOFTOptionsReceiverModule toftOptionsReceiverModuleLowDecimals = new TOFTOptionsReceiverModule(toftInitStructLowDecimals);
+        TOFTOptionsReceiverModule toftOptionsReceiverModuleLowDecimals =
+            new TOFTOptionsReceiverModule(toftInitStructLowDecimals);
         vm.label(address(toftOptionsReceiverModuleLowDecimals), "toftOptionsReceiverModuleLowDecimals");
-        TOFTGenericReceiverModule toftGenericReceiverModuleLowDecimals = new TOFTGenericReceiverModule(toftInitStructLowDecimals);
+        TOFTGenericReceiverModule toftGenericReceiverModuleLowDecimals =
+            new TOFTGenericReceiverModule(toftInitStructLowDecimals);
         vm.label(address(toftGenericReceiverModuleLowDecimals), "toftGenericReceiverModuleLowDecimals");
 
         // creat mTOFT underlyingErc20
@@ -180,51 +180,121 @@ abstract contract Base_Test is TestHelper, Utils, Types, Events {
         vm.label(address(mtoftGenericReceiverModuleEth), "mtoftGenericReceiverModuleEth");
 
         // creat mTOFT underlyingLowDecimalsErc20
-        TOFTInitStruct memory mtoftInitStructLowDecimals = _createOftInitStruct(address(underlyingLowDecimalsErc20), aEid);
+        TOFTInitStruct memory mtoftInitStructLowDecimals =
+            _createOftInitStruct(address(underlyingLowDecimalsErc20), aEid);
         TOFTSender mtoftSenderLowDecimals = new TOFTSender(mtoftInitStructLowDecimals);
         vm.label(address(mtoftSenderLowDecimals), "mtoftSenderLowDecimals");
         TOFTReceiver mtoftReceiverLowDecimals = new TOFTReceiver(mtoftInitStructLowDecimals);
         vm.label(address(mtoftReceiverLowDecimals), "mtoftReceiverLowDecimals");
-        TOFTMarketReceiverModule mtoftMarketReceiverModuleLowDecimals = new TOFTMarketReceiverModule(mtoftInitStructLowDecimals);
+        TOFTMarketReceiverModule mtoftMarketReceiverModuleLowDecimals =
+            new TOFTMarketReceiverModule(mtoftInitStructLowDecimals);
         vm.label(address(mtoftMarketReceiverModuleLowDecimals), "mtoftMarketReceiverModuleLowDecimals");
-        TOFTOptionsReceiverModule mtoftOptionsReceiverModuleLowDecimals = new TOFTOptionsReceiverModule(mtoftInitStructLowDecimals);
+        TOFTOptionsReceiverModule mtoftOptionsReceiverModuleLowDecimals =
+            new TOFTOptionsReceiverModule(mtoftInitStructLowDecimals);
         vm.label(address(mtoftOptionsReceiverModuleLowDecimals), "mtoftOptionsReceiverModuleLowDecimals");
-        TOFTGenericReceiverModule mtoftGenericReceiverModuleLowDecimals = new TOFTGenericReceiverModule(mtoftInitStructLowDecimals);
+        TOFTGenericReceiverModule mtoftGenericReceiverModuleLowDecimals =
+            new TOFTGenericReceiverModule(mtoftInitStructLowDecimals);
         vm.label(address(mtoftGenericReceiverModuleLowDecimals), "mtoftGenericReceiverModuleLowDecimals");
 
-        toft = _createToft(address(underlyingErc20), aEid, address(toftSender), address(toftReceiver), address(toftMarketReceiverModule), address(toftOptionsReceiverModule), address(toftGenericReceiverModule));
+        toft = _createToft(
+            address(underlyingErc20),
+            aEid,
+            address(toftSender),
+            address(toftReceiver),
+            address(toftMarketReceiverModule),
+            address(toftOptionsReceiverModule),
+            address(toftGenericReceiverModule)
+        );
         assertEq(address(toft.erc20()), address(underlyingErc20));
-        toftLowDecimals = _createToft(address(underlyingLowDecimalsErc20), aEid, address(toftSenderLowDecimals), address(toftReceiverLowDecimals), address(toftMarketReceiverModuleLowDecimals), address(toftOptionsReceiverModuleLowDecimals), address(toftGenericReceiverModuleLowDecimals));
+        toftLowDecimals = _createToft(
+            address(underlyingLowDecimalsErc20),
+            aEid,
+            address(toftSenderLowDecimals),
+            address(toftReceiverLowDecimals),
+            address(toftMarketReceiverModuleLowDecimals),
+            address(toftOptionsReceiverModuleLowDecimals),
+            address(toftGenericReceiverModuleLowDecimals)
+        );
         assertEq(address(toftLowDecimals.erc20()), address(underlyingLowDecimalsErc20));
-        toftEth = _createToft(address(0), aEid, address(toftSenderEth), address(toftReceiverEth), address(toftMarketReceiverModuleEth), address(toftOptionsReceiverModuleEth), address(toftGenericReceiverModuleEth));
+        toftEth = _createToft(
+            address(0),
+            aEid,
+            address(toftSenderEth),
+            address(toftReceiverEth),
+            address(toftMarketReceiverModuleEth),
+            address(toftOptionsReceiverModuleEth),
+            address(toftGenericReceiverModuleEth)
+        );
         assertEq(address(toftEth.erc20()), address(0));
-        mToft = _createMToft(address(underlyingErc20), aEid, address(mtoftSender), address(mtoftReceiver), address(mtoftMarketReceiverModule), address(mtoftOptionsReceiverModule), address(mtoftGenericReceiverModule), address(this));
+        mToft = _createMToft(
+            address(underlyingErc20),
+            aEid,
+            address(mtoftSender),
+            address(mtoftReceiver),
+            address(mtoftMarketReceiverModule),
+            address(mtoftOptionsReceiverModule),
+            address(mtoftGenericReceiverModule),
+            address(this)
+        );
         assertEq(address(mToft.erc20()), address(underlyingErc20));
-        mToftLowDecimals = _createMToft(address(underlyingLowDecimalsErc20), aEid, address(mtoftSenderLowDecimals), address(mtoftReceiverLowDecimals), address(mtoftMarketReceiverModuleLowDecimals), address(mtoftOptionsReceiverModuleLowDecimals), address(mtoftGenericReceiverModuleLowDecimals), address(this));
+        mToftLowDecimals = _createMToft(
+            address(underlyingLowDecimalsErc20),
+            aEid,
+            address(mtoftSenderLowDecimals),
+            address(mtoftReceiverLowDecimals),
+            address(mtoftMarketReceiverModuleLowDecimals),
+            address(mtoftOptionsReceiverModuleLowDecimals),
+            address(mtoftGenericReceiverModuleLowDecimals),
+            address(this)
+        );
         assertEq(address(mToftLowDecimals.erc20()), address(underlyingLowDecimalsErc20));
-        mToftEth = _createMToft(address(0), aEid, address(mtoftSenderEth), address(mtoftReceiverEth), address(mtoftMarketReceiverModuleEth), address(mtoftOptionsReceiverModuleEth), address(mtoftGenericReceiverModuleEth), address(this));
+        mToftEth = _createMToft(
+            address(0),
+            aEid,
+            address(mtoftSenderEth),
+            address(mtoftReceiverEth),
+            address(mtoftMarketReceiverModuleEth),
+            address(mtoftOptionsReceiverModuleEth),
+            address(mtoftGenericReceiverModuleEth),
+            address(this)
+        );
         assertEq(address(mToftEth.erc20()), address(0));
     }
 
     // *************** //
     // *** HELPERS *** //
     // *************** //
-    function _createToft(address _underlyingToken, uint32 _endpoint, address sender, address receiver, address marketReceiver, address optionsReceiver, address genericReceiver) internal returns (TOFT oft) {
+    function _createToft(
+        address _underlyingToken,
+        uint32 _endpoint,
+        address sender,
+        address receiver,
+        address marketReceiver,
+        address optionsReceiver,
+        address genericReceiver
+    ) internal returns (TOFT oft) {
         TOFTInitStruct memory initData = _createOftInitStruct(_underlyingToken, _endpoint);
-        TOFTModulesInitStruct memory modulesData = _createOftModuleStruct(sender, receiver, marketReceiver, optionsReceiver, genericReceiver);
+        TOFTModulesInitStruct memory modulesData =
+            _createOftModuleStruct(sender, receiver, marketReceiver, optionsReceiver, genericReceiver);
 
-        oft = TOFT(
-            payable(_deployOApp(type(TOFT).creationCode, abi.encode(initData, modulesData)))
-        );
+        oft = TOFT(payable(_deployOApp(type(TOFT).creationCode, abi.encode(initData, modulesData))));
     }
 
-    function _createMToft(address _underlyingToken, uint32 _endpoint, address sender, address receiver, address marketReceiver, address optionsReceiver, address genericReceiver, address stgRouter) internal returns (mTOFT oft) {
+    function _createMToft(
+        address _underlyingToken,
+        uint32 _endpoint,
+        address sender,
+        address receiver,
+        address marketReceiver,
+        address optionsReceiver,
+        address genericReceiver,
+        address stgRouter
+    ) internal returns (mTOFT oft) {
         TOFTInitStruct memory initData = _createOftInitStruct(_underlyingToken, _endpoint);
-        TOFTModulesInitStruct memory modulesData = _createOftModuleStruct(sender, receiver, marketReceiver, optionsReceiver, genericReceiver);
+        TOFTModulesInitStruct memory modulesData =
+            _createOftModuleStruct(sender, receiver, marketReceiver, optionsReceiver, genericReceiver);
 
-        oft = mTOFT(
-            payable(_deployOApp(type(mTOFT).creationCode, abi.encode(initData, modulesData, stgRouter)))
-        );
+        oft = mTOFT(payable(_deployOApp(type(mTOFT).creationCode, abi.encode(initData, modulesData, stgRouter))));
     }
 
     // ***************** //
@@ -299,7 +369,10 @@ abstract contract Base_Test is TestHelper, Utils, Types, Events {
     // *************** //
     // *** PRIVATE *** //
     // *************** //
-    function _createOftInitStruct(address _underlyingToken, uint32 _endpoint) internal returns (TOFTInitStruct memory) {
+    function _createOftInitStruct(address _underlyingToken, uint32 _endpoint)
+        internal
+        returns (TOFTInitStruct memory)
+    {
         TOFTVault _vault = new TOFTVault(address(_underlyingToken));
         TapiocaOmnichainExtExec _extExec = new TapiocaOmnichainExtExec();
         return TOFTInitStruct({
@@ -316,13 +389,20 @@ abstract contract Base_Test is TestHelper, Utils, Types, Events {
             pearlmit: IPearlmit(address(pearlmit))
         });
     }
-    function _createOftModuleStruct(address sender, address receiver, address marketReceiver, address optionsReceiver, address genericReceiver) internal pure returns (TOFTModulesInitStruct memory) {
+
+    function _createOftModuleStruct(
+        address sender,
+        address receiver,
+        address marketReceiver,
+        address optionsReceiver,
+        address genericReceiver
+    ) internal pure returns (TOFTModulesInitStruct memory) {
         return TOFTModulesInitStruct({
-                tOFTSenderModule: sender,
-                tOFTReceiverModule: receiver,
-                marketReceiverModule: marketReceiver,
-                optionsReceiverModule: optionsReceiver,
-                genericReceiverModule: genericReceiver
+            tOFTSenderModule: sender,
+            tOFTReceiverModule: receiver,
+            marketReceiverModule: marketReceiver,
+            optionsReceiverModule: optionsReceiver,
+            genericReceiverModule: genericReceiver
         });
     }
 }

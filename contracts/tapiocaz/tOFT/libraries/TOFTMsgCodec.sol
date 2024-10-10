@@ -11,9 +11,7 @@ import {
     SendParamsMsg,
     LeverageUpActionMsg
 } from "tap-utils/interfaces/oft/ITOFT.sol";
-import {
-    LockAndParticipateData
-} from "tap-utils/interfaces/periph/IMagnetar.sol";
+import {LockAndParticipateData} from "tap-utils/interfaces/periph/IMagnetar.sol";
 import {ITOFT} from "tap-utils/interfaces/oft/ITOFT.sol";
 
 /*

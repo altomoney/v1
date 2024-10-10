@@ -19,7 +19,10 @@ contract TapiocaOptionsLiquidityProvisionMock is PearlmitHandler, ERC721 {
         bool rescue; // If true, the pool will be used to rescue funds in case of emergency
     }
 
-    constructor(uint256 _sglAssetId, address _yb, IPearlmit _pearlmit) PearlmitHandler(_pearlmit) ERC721("tOLP Mock", "MOCK") {
+    constructor(uint256 _sglAssetId, address _yb, IPearlmit _pearlmit)
+        PearlmitHandler(_pearlmit)
+        ERC721("tOLP Mock", "MOCK")
+    {
         sglAssetId = _sglAssetId;
         yieldBox = _yb;
     }
@@ -41,7 +44,6 @@ contract TapiocaOptionsLiquidityProvisionMock is PearlmitHandler, ERC721 {
     function activeSingularities(address _sgl) external view returns (uint256, uint256, uint256, bool) {
         return (sglAssetId, 0, 0, false);
     }
-
 
     function onERC1155Received(address, address, uint256, uint256, bytes calldata) external pure returns (bytes4) {
         // bytes4(keccak256("onERC1155Received(address,address,uint256,uint256,bytes)"))

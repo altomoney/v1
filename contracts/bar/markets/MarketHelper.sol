@@ -44,9 +44,8 @@ contract MarketHelper {
         uint256 exchangeRatePrecision = market._exchangeRatePrecision();
 
         // get collateral amount for total share
-        uint256 collateralPartInAsset = (
-                yieldBox.toAmount(collateralId, collateralShare, false) * exchangeRatePrecision
-            ) / _exchangeRate;
+        uint256 collateralPartInAsset =
+            (yieldBox.toAmount(collateralId, collateralShare, false) * exchangeRatePrecision) / _exchangeRate;
 
         // get closing factor
         uint256 borrowPartWithBonus = computeClosingFactor(market, borrowPart, collateralPartInAsset);
@@ -80,6 +79,7 @@ contract MarketHelper {
             _totalBorrow
         );
     }
+
     function _computeClosingFactor(
         uint256 borrowPart,
         uint256 collateralPartInAsset,
@@ -116,7 +116,11 @@ contract MarketHelper {
 
     /// @notice returns the solvency status of a market's position
     /// @param _market the BB or SGL market
-    function isPositionSolvent(address _market, address _user, uint256 _exchangeRate, bool _forLiquidation) external view returns (bool) {
+    function isPositionSolvent(address _market, address _user, uint256 _exchangeRate, bool _forLiquidation)
+        external
+        view
+        returns (bool)
+    {
         IMarket market = IMarket(_market);
 
         uint256 borrowPart = market._userBorrowPart(_user);
@@ -424,7 +428,8 @@ contract MarketHelper {
         if (borrowPart == 0) revert Solvent();
 
         if (_data.liquidationBonusAmount > 0) {
-            borrowPartWithBonus = borrowPartWithBonus + (borrowPartWithBonus * _data.liquidationBonusAmount) / FEE_PRECISION;
+            borrowPartWithBonus =
+                borrowPartWithBonus + (borrowPartWithBonus * _data.liquidationBonusAmount) / FEE_PRECISION;
         }
 
         if (collateralPartInAsset < borrowPartWithBonus) {

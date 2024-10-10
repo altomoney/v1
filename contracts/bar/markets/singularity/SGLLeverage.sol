@@ -38,6 +38,7 @@ contract SGLLeverage is SGLLendingCommon {
         uint256 supplyAmount;
         bytes data;
     }
+
     struct _BuyCollateralMemoryData {
         uint256 supplyShareToAmount;
         uint256 borrowShareToAmount;
@@ -82,11 +83,16 @@ contract SGLLeverage is SGLLendingCommon {
                 yieldBox.withdraw(assetId, address(this), address(leverageExecutor), 0, borrowShare);
 
             updateExchangeRate();
-            uint256 assetPartInCollateral = (memoryData.supplyShareToAmount + memoryData.borrowShareToAmount) * exchangeRate / EXCHANGE_RATE_PRECISION;
+            uint256 assetPartInCollateral = (memoryData.supplyShareToAmount + memoryData.borrowShareToAmount)
+                * exchangeRate / EXCHANGE_RATE_PRECISION;
             _allowedBorrow(calldata_.from, yieldBox.toShare(collateralId, assetPartInCollateral, false));
 
             amountOut = leverageExecutor.getCollateral(
-                from, address(asset), address(collateral), memoryData.supplyShareToAmount + memoryData.borrowShareToAmount, calldata_.data
+                from,
+                address(asset),
+                address(collateral),
+                memoryData.supplyShareToAmount + memoryData.borrowShareToAmount,
+                calldata_.data
             );
         }
 

@@ -3,7 +3,12 @@
 pragma solidity 0.8.22;
 
 // LZ
-import {SendParam, MessagingFee, MessagingReceipt, OFTReceipt} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/interfaces/IOFT.sol";
+import {
+    SendParam,
+    MessagingFee,
+    MessagingReceipt,
+    OFTReceipt
+} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/interfaces/IOFT.sol";
 import {OptionsBuilder} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/libs/OptionsBuilder.sol";
 import {OFTMsgCodec} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/libs/OFTMsgCodec.sol";
 
@@ -13,8 +18,24 @@ import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 // Tapioca
-import {ITapToken, LockTwTapPositionMsg, UnlockTwTapPositionMsg, LZSendParam, ERC20PermitStruct, ERC721PermitStruct, ERC20PermitApprovalMsg, ERC721PermitApprovalMsg, ClaimTwTapRewardsMsg, RemoteTransferMsg} from "tap-token/tokens/ITapToken.sol";
-import {TapTokenHelper, PrepareLzCallData, PrepareLzCallReturn, ComposeMsgData} from "tap-token/tokens/extensions/TapTokenHelper.sol";
+import {
+    ITapToken,
+    LockTwTapPositionMsg,
+    UnlockTwTapPositionMsg,
+    LZSendParam,
+    ERC20PermitStruct,
+    ERC721PermitStruct,
+    ERC20PermitApprovalMsg,
+    ERC721PermitApprovalMsg,
+    ClaimTwTapRewardsMsg,
+    RemoteTransferMsg
+} from "tap-token/tokens/ITapToken.sol";
+import {
+    TapTokenHelper,
+    PrepareLzCallData,
+    PrepareLzCallReturn,
+    ComposeMsgData
+} from "tap-token/tokens/extensions/TapTokenHelper.sol";
 import {TapiocaOmnichainExtExec} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainExtExec.sol";
 import {IPearlmit, Pearlmit} from "tap-utils/pearlmit/Pearlmit.sol";
 import {TapTokenReceiver} from "tap-token/tokens/TapTokenReceiver.sol";
@@ -85,11 +106,7 @@ contract TapTokenTest is TapTestHelper, IERC721Receiver {
      * @dev TapToken global event checks
      */
     event OFTReceived(bytes32, address, uint256, uint256);
-    event ComposeReceived(
-        uint16 indexed msgType,
-        bytes32 indexed guid,
-        bytes composeMsg
-    );
+    event ComposeReceived(uint16 indexed msgType, bytes32 indexed guid, bytes composeMsg);
 
     /**
      * @dev Setup the OApps by deploying them and setting up the endpoints.
@@ -118,24 +135,8 @@ contract TapTokenTest is TapTestHelper, IERC721Receiver {
                 __airdrop,
                 __governanceEid,
                 address(this),
-                address(
-                    new TapTokenSender(
-                        "",
-                        "",
-                        address(endpoints[aEid]),
-                        address(this),
-                        address(0)
-                    )
-                ),
-                address(
-                    new TapTokenReceiver(
-                        "",
-                        "",
-                        address(endpoints[aEid]),
-                        address(this),
-                        address(0)
-                    )
-                ),
+                address(new TapTokenSender("", "", address(endpoints[aEid]), address(this), address(0))),
+                address(new TapTokenReceiver("", "", address(endpoints[aEid]), address(this), address(0))),
                 address(extExec),
                 IPearlmit(address(pearlmit)),
                 ICluster(address(cluster))
@@ -155,24 +156,8 @@ contract TapTokenTest is TapTestHelper, IERC721Receiver {
                 __airdrop,
                 __governanceEid,
                 address(this),
-                address(
-                    new TapTokenSender(
-                        "",
-                        "",
-                        address(endpoints[bEid]),
-                        address(this),
-                        address(0)
-                    )
-                ),
-                address(
-                    new TapTokenReceiver(
-                        "",
-                        "",
-                        address(endpoints[bEid]),
-                        address(this),
-                        address(0)
-                    )
-                ),
+                address(new TapTokenSender("", "", address(endpoints[bEid]), address(this), address(0))),
+                address(new TapTokenReceiver("", "", address(endpoints[bEid]), address(this), address(0))),
                 address(extExec),
                 IPearlmit(address(pearlmit)),
                 ICluster(address(cluster))
@@ -180,11 +165,7 @@ contract TapTokenTest is TapTestHelper, IERC721Receiver {
         );
         vm.label(address(bTapOFT), "bTapOFT");
 
-        twTap = new TwTAP(
-            payable(address(bTapOFT)),
-            IPearlmit(address(pearlmit)),
-            address(this)
-        );
+        twTap = new TwTAP(payable(address(bTapOFT)), IPearlmit(address(pearlmit)), address(this));
         twTap.setCluster(cluster);
 
         // Cluster approvals
@@ -251,21 +232,12 @@ contract TapTokenTest is TapTestHelper, IERC721Receiver {
     }
 
     function test_erc20_permit() public {
-        ERC20PermitStruct memory permit_ = ERC20PermitStruct({
-            owner: userA,
-            spender: userB,
-            value: 1e18,
-            nonce: 0,
-            deadline: 1 days
-        });
+        ERC20PermitStruct memory permit_ =
+            ERC20PermitStruct({owner: userA, spender: userB, value: 1e18, nonce: 0, deadline: 1 days});
 
         bytes32 digest_ = aTapOFT.getTypedDataHash(permit_);
-        ERC20PermitApprovalMsg memory permitApproval_ = __getERC20PermitData(
-            permit_,
-            digest_,
-            address(aTapOFT),
-            userAPKey
-        );
+        ERC20PermitApprovalMsg memory permitApproval_ =
+            __getERC20PermitData(permit_, digest_, address(aTapOFT), userAPKey);
 
         aTapOFT.permit(
             permit_.owner,
@@ -285,28 +257,14 @@ contract TapTokenTest is TapTestHelper, IERC721Receiver {
         vm.label(address(erc721Mock), "erc721Mock");
         erc721Mock.mint(address(userA), 1);
 
-        ERC721PermitStruct memory permit_ = ERC721PermitStruct({
-            spender: userB,
-            tokenId: 1,
-            nonce: 1,
-            deadline: 1 days
-        });
+        ERC721PermitStruct memory permit_ = ERC721PermitStruct({spender: userB, tokenId: 1, nonce: 1, deadline: 1 days});
 
         bytes32 digest_ = erc721Mock.getTypedDataHash(permit_);
-        ERC721PermitApprovalMsg memory permitApproval_ = __getERC721PermitData(
-            permit_,
-            digest_,
-            address(erc721Mock),
-            userAPKey
-        );
+        ERC721PermitApprovalMsg memory permitApproval_ =
+            __getERC721PermitData(permit_, digest_, address(erc721Mock), userAPKey);
 
         erc721Mock.permit(
-            permit_.spender,
-            permit_.tokenId,
-            permit_.deadline,
-            permitApproval_.v,
-            permitApproval_.r,
-            permitApproval_.s
+            permit_.spender, permit_.tokenId, permit_.deadline, permitApproval_.v, permitApproval_.r, permitApproval_.s
         );
         assertEq(erc721Mock.getApproved(1), userB);
         assertEq(erc721Mock.nonces(permit_.tokenId), 2);
@@ -323,13 +281,8 @@ contract TapTokenTest is TapTestHelper, IERC721Receiver {
         bytes memory approvalsMsg_;
 
         {
-            ERC20PermitStruct memory approvalUserB_ = ERC20PermitStruct({
-                owner: userA,
-                spender: userB,
-                value: 1e18,
-                nonce: 0,
-                deadline: 1 days
-            });
+            ERC20PermitStruct memory approvalUserB_ =
+                ERC20PermitStruct({owner: userA, spender: userB, value: 1e18, nonce: 0, deadline: 1 days});
             ERC20PermitStruct memory approvalUserC_ = ERC20PermitStruct({
                 owner: userA,
                 spender: userC_,
@@ -339,65 +292,48 @@ contract TapTokenTest is TapTestHelper, IERC721Receiver {
             });
 
             permitApprovalB_ = __getERC20PermitData(
-                approvalUserB_,
-                bTapOFT.getTypedDataHash(approvalUserB_),
-                address(bTapOFT),
-                userAPKey
+                approvalUserB_, bTapOFT.getTypedDataHash(approvalUserB_), address(bTapOFT), userAPKey
             );
 
             permitApprovalC_ = __getERC20PermitData(
-                approvalUserC_,
-                bTapOFT.getTypedDataHash(approvalUserC_),
-                address(bTapOFT),
-                userAPKey
+                approvalUserC_, bTapOFT.getTypedDataHash(approvalUserC_), address(bTapOFT), userAPKey
             );
 
-            ERC20PermitApprovalMsg[]
-                memory approvals_ = new ERC20PermitApprovalMsg[](2);
+            ERC20PermitApprovalMsg[] memory approvals_ = new ERC20PermitApprovalMsg[](2);
             approvals_[0] = permitApprovalB_;
             approvals_[1] = permitApprovalC_;
 
-            approvalsMsg_ = tapTokenHelper.encodeERC20PermitApprovalMsg(
-                approvals_
-            );
+            approvalsMsg_ = tapTokenHelper.encodeERC20PermitApprovalMsg(approvals_);
         }
 
-        PrepareLzCallReturn memory prepareLzCallReturn_ = tapTokenHelper
-            .prepareLzCall(
-                ITapToken(address(aTapOFT)),
-                PrepareLzCallData({
-                    dstEid: bEid,
-                    recipient: OFTMsgCodec.addressToBytes32(address(this)),
-                    amountToSendLD: 0,
-                    minAmountToCreditLD: 0,
-                    msgType: PT_APPROVALS,
-                    composeMsgData: ComposeMsgData({
-                        index: 0,
-                        gas: 1_000_000,
-                        value: 0,
-                        data: approvalsMsg_,
-                        prevData: bytes(""),
-                        prevOptionsData: bytes("")
-                    }),
-                    lzReceiveGas: 1_000_000,
-                    lzReceiveValue: 0,
-                    refundAddress: address(this)
-                })
-            );
+        PrepareLzCallReturn memory prepareLzCallReturn_ = tapTokenHelper.prepareLzCall(
+            ITapToken(address(aTapOFT)),
+            PrepareLzCallData({
+                dstEid: bEid,
+                recipient: OFTMsgCodec.addressToBytes32(address(this)),
+                amountToSendLD: 0,
+                minAmountToCreditLD: 0,
+                msgType: PT_APPROVALS,
+                composeMsgData: ComposeMsgData({
+                    index: 0,
+                    gas: 1_000_000,
+                    value: 0,
+                    data: approvalsMsg_,
+                    prevData: bytes(""),
+                    prevOptionsData: bytes("")
+                }),
+                lzReceiveGas: 1_000_000,
+                lzReceiveValue: 0,
+                refundAddress: address(this)
+            })
+        );
         bytes memory composeMsg_ = prepareLzCallReturn_.composeMsg;
         bytes memory oftMsgOptions_ = prepareLzCallReturn_.oftMsgOptions;
         MessagingFee memory msgFee_ = prepareLzCallReturn_.msgFee;
         LZSendParam memory lzSendParam_ = prepareLzCallReturn_.lzSendParam;
 
-        (
-            MessagingReceipt memory msgReceipt_,
-            ,
-            bytes memory msgSent,
-
-        ) = aTapOFT.sendPacket{value: msgFee_.nativeFee}(
-                lzSendParam_,
-                composeMsg_
-            );
+        (MessagingReceipt memory msgReceipt_,, bytes memory msgSent,) =
+            aTapOFT.sendPacket{value: msgFee_.nativeFee}(lzSendParam_, composeMsg_);
 
         verifyPackets(uint32(bEid), address(bTapOFT));
 
@@ -437,26 +373,12 @@ contract TapTokenTest is TapTestHelper, IERC721Receiver {
 
             vm.startPrank(userA);
             bTapOFT.approve(address(pearlmit), 1e18);
-            pearlmit.approve(
-                20,
-                address(bTapOFT),
-                0,
-                address(twTap),
-                uint200(1e18),
-                uint48(block.timestamp + 1)
-            );
+            pearlmit.approve(20, address(bTapOFT), 0, address(twTap), uint200(1e18), uint48(block.timestamp + 1));
             twTap.participate(address(userA), 1e18, 1 weeks);
 
             vm.startPrank(userB);
             bTapOFT.approve(address(pearlmit), 1e18);
-            pearlmit.approve(
-                20,
-                address(bTapOFT),
-                0,
-                address(twTap),
-                uint200(1e18),
-                uint48(block.timestamp + 1)
-            );
+            pearlmit.approve(20, address(bTapOFT), 0, address(twTap), uint200(1e18), uint48(block.timestamp + 1));
             twTap.participate(address(userB), 1e18, 1 weeks);
             vm.stopPrank();
         }
@@ -466,79 +388,52 @@ contract TapTokenTest is TapTestHelper, IERC721Receiver {
         bytes memory approvalsMsg_;
 
         {
-            ERC721PermitStruct memory approvalUserB_ = ERC721PermitStruct({
-                spender: userB,
-                tokenId: 1,
-                nonce: 1,
-                deadline: 1 days
-            });
-            ERC721PermitStruct memory approvalUserC_ = ERC721PermitStruct({
-                spender: userC_,
-                tokenId: 2,
-                nonce: 1,
-                deadline: 1 days
-            });
+            ERC721PermitStruct memory approvalUserB_ =
+                ERC721PermitStruct({spender: userB, tokenId: 1, nonce: 1, deadline: 1 days});
+            ERC721PermitStruct memory approvalUserC_ =
+                ERC721PermitStruct({spender: userC_, tokenId: 2, nonce: 1, deadline: 1 days});
 
-            permitApprovalB_ = __getERC721PermitData(
-                approvalUserB_,
-                twTap.getTypedDataHash(approvalUserB_),
-                address(twTap),
-                userAPKey
-            );
+            permitApprovalB_ =
+                __getERC721PermitData(approvalUserB_, twTap.getTypedDataHash(approvalUserB_), address(twTap), userAPKey);
 
-            permitApprovalC_ = __getERC721PermitData(
-                approvalUserC_,
-                twTap.getTypedDataHash(approvalUserC_),
-                address(twTap),
-                userBPKey
-            );
+            permitApprovalC_ =
+                __getERC721PermitData(approvalUserC_, twTap.getTypedDataHash(approvalUserC_), address(twTap), userBPKey);
 
-            ERC721PermitApprovalMsg[]
-                memory approvals_ = new ERC721PermitApprovalMsg[](2);
+            ERC721PermitApprovalMsg[] memory approvals_ = new ERC721PermitApprovalMsg[](2);
             approvals_[0] = permitApprovalB_;
             approvals_[1] = permitApprovalC_;
 
-            approvalsMsg_ = tapTokenHelper.encodeERC721PermitApprovalMsg(
-                approvals_
-            );
+            approvalsMsg_ = tapTokenHelper.encodeERC721PermitApprovalMsg(approvals_);
         }
 
-        PrepareLzCallReturn memory prepareLzCallReturn_ = tapTokenHelper
-            .prepareLzCall(
-                ITapToken(address(aTapOFT)),
-                PrepareLzCallData({
-                    dstEid: bEid,
-                    recipient: OFTMsgCodec.addressToBytes32(address(this)),
-                    amountToSendLD: 0,
-                    minAmountToCreditLD: 0,
-                    msgType: PT_NFT_APPROVALS,
-                    composeMsgData: ComposeMsgData({
-                        index: 0,
-                        gas: 1_000_000,
-                        value: 0,
-                        data: approvalsMsg_,
-                        prevData: bytes(""),
-                        prevOptionsData: bytes("")
-                    }),
-                    lzReceiveGas: 1_000_000,
-                    lzReceiveValue: 0,
-                    refundAddress: address(this)
-                })
-            );
+        PrepareLzCallReturn memory prepareLzCallReturn_ = tapTokenHelper.prepareLzCall(
+            ITapToken(address(aTapOFT)),
+            PrepareLzCallData({
+                dstEid: bEid,
+                recipient: OFTMsgCodec.addressToBytes32(address(this)),
+                amountToSendLD: 0,
+                minAmountToCreditLD: 0,
+                msgType: PT_NFT_APPROVALS,
+                composeMsgData: ComposeMsgData({
+                    index: 0,
+                    gas: 1_000_000,
+                    value: 0,
+                    data: approvalsMsg_,
+                    prevData: bytes(""),
+                    prevOptionsData: bytes("")
+                }),
+                lzReceiveGas: 1_000_000,
+                lzReceiveValue: 0,
+                refundAddress: address(this)
+            })
+        );
         bytes memory composeMsg_ = prepareLzCallReturn_.composeMsg;
         bytes memory oftMsgOptions_ = prepareLzCallReturn_.oftMsgOptions;
         MessagingFee memory msgFee_ = prepareLzCallReturn_.msgFee;
         LZSendParam memory lzSendParam_ = prepareLzCallReturn_.lzSendParam;
 
-        (
-            MessagingReceipt memory msgReceipt_,
-            ,
-            bytes memory msgSent,
-
-        ) = aTapOFT.sendPacket{value: msgFee_.nativeFee}(
-                lzSendParam_,
-                composeMsg_
-            );
+        (MessagingReceipt memory msgReceipt_,, bytes memory msgSent,) =
+            aTapOFT.sendPacket{value: msgFee_.nativeFee}(lzSendParam_, composeMsg_);
 
         verifyPackets(uint32(bEid), address(bTapOFT));
 
@@ -576,39 +471,32 @@ contract TapTokenTest is TapTestHelper, IERC721Receiver {
         uint256 amountToSendLD = 1 ether;
         uint96 lockDuration = 1 weeks;
 
-        LockTwTapPositionMsg
-            memory lockTwTapPositionMsg = LockTwTapPositionMsg({
-                user: address(this),
-                duration: lockDuration,
-                amount: amountToSendLD
-            });
+        LockTwTapPositionMsg memory lockTwTapPositionMsg =
+            LockTwTapPositionMsg({user: address(this), duration: lockDuration, amount: amountToSendLD});
 
-        bytes memory lockPosition_ = TapTokenCodec.buildLockTwTapPositionMsg(
-            lockTwTapPositionMsg
+        bytes memory lockPosition_ = TapTokenCodec.buildLockTwTapPositionMsg(lockTwTapPositionMsg);
+
+        PrepareLzCallReturn memory prepareLzCallReturn_ = tapTokenHelper.prepareLzCall(
+            ITapToken(address(aTapOFT)),
+            PrepareLzCallData({
+                dstEid: bEid,
+                recipient: OFTMsgCodec.addressToBytes32(address(this)),
+                amountToSendLD: amountToSendLD,
+                minAmountToCreditLD: amountToSendLD,
+                msgType: PT_LOCK_TWTAP,
+                composeMsgData: ComposeMsgData({
+                    index: 0,
+                    gas: 1_000_000,
+                    value: 0,
+                    data: lockPosition_,
+                    prevData: bytes(""),
+                    prevOptionsData: bytes("")
+                }),
+                lzReceiveGas: 1_000_000,
+                lzReceiveValue: 0,
+                refundAddress: address(this)
+            })
         );
-
-        PrepareLzCallReturn memory prepareLzCallReturn_ = tapTokenHelper
-            .prepareLzCall(
-                ITapToken(address(aTapOFT)),
-                PrepareLzCallData({
-                    dstEid: bEid,
-                    recipient: OFTMsgCodec.addressToBytes32(address(this)),
-                    amountToSendLD: amountToSendLD,
-                    minAmountToCreditLD: amountToSendLD,
-                    msgType: PT_LOCK_TWTAP,
-                    composeMsgData: ComposeMsgData({
-                        index: 0,
-                        gas: 1_000_000,
-                        value: 0,
-                        data: lockPosition_,
-                        prevData: bytes(""),
-                        prevOptionsData: bytes("")
-                    }),
-                    lzReceiveGas: 1_000_000,
-                    lzReceiveValue: 0,
-                    refundAddress: address(this)
-                })
-            );
         bytes memory composeMsg_ = prepareLzCallReturn_.composeMsg;
         bytes memory oftMsgOptions_ = prepareLzCallReturn_.oftMsgOptions;
         MessagingFee memory msgFee_ = prepareLzCallReturn_.msgFee;
@@ -617,24 +505,13 @@ contract TapTokenTest is TapTestHelper, IERC721Receiver {
         // Mint necessary tokens
         deal(address(aTapOFT), address(this), amountToSendLD);
 
-        (
-            MessagingReceipt memory msgReceipt_,
-            ,
-            bytes memory msgSent,
-
-        ) = aTapOFT.sendPacket{value: msgFee_.nativeFee}(
-                lzSendParam_,
-                composeMsg_
-            );
+        (MessagingReceipt memory msgReceipt_,, bytes memory msgSent,) =
+            aTapOFT.sendPacket{value: msgFee_.nativeFee}(lzSendParam_, composeMsg_);
 
         verifyPackets(uint32(bEid), address(bTapOFT));
 
         vm.expectEmit(true, true, true, false);
-        emit ITapToken.LockTwTapReceived(
-            lockTwTapPositionMsg.user,
-            lockTwTapPositionMsg.duration,
-            amountToSendLD
-        );
+        emit ITapToken.LockTwTapReceived(lockTwTapPositionMsg.user, lockTwTapPositionMsg.duration, amountToSendLD);
 
         __callLzCompose(
             LzOFTComposedData(
@@ -676,19 +553,8 @@ contract TapTokenTest is TapTestHelper, IERC721Receiver {
         {
             deal(address(bTapOFT), address(this), lockAmount_);
             bTapOFT.approve(address(pearlmit), lockAmount_);
-            pearlmit.approve(
-                20,
-                address(bTapOFT),
-                0,
-                address(twTap),
-                uint200(lockAmount_),
-                uint48(block.timestamp + 1)
-            );
-            tokenId_ = twTap.participate(
-                address(this),
-                lockAmount_,
-                lockDuration_
-            );
+            pearlmit.approve(20, address(bTapOFT), 0, address(twTap), uint200(lockAmount_), uint48(block.timestamp + 1));
+            tokenId_ = twTap.participate(address(this), lockAmount_, lockDuration_);
 
             // Skip block timestamp to
             skip(lockDuration_);
@@ -697,57 +563,42 @@ contract TapTokenTest is TapTestHelper, IERC721Receiver {
         /**
          * Actions
          */
-        UnlockTwTapPositionMsg
-            memory unlockTwTapPosition_ = UnlockTwTapPositionMsg({
-                tokenId: tokenId_
-            });
-        bytes memory unlockTwTapPositionMsg_ = tapTokenHelper
-            .buildUnlockTwpTapPositionMsg(unlockTwTapPosition_);
+        UnlockTwTapPositionMsg memory unlockTwTapPosition_ = UnlockTwTapPositionMsg({tokenId: tokenId_});
+        bytes memory unlockTwTapPositionMsg_ = tapTokenHelper.buildUnlockTwpTapPositionMsg(unlockTwTapPosition_);
 
-        PrepareLzCallReturn memory prepareLzCallReturn_ = tapTokenHelper
-            .prepareLzCall(
-                ITapToken(address(aTapOFT)),
-                PrepareLzCallData({
-                    dstEid: bEid,
-                    recipient: OFTMsgCodec.addressToBytes32(address(this)),
-                    amountToSendLD: 0,
-                    minAmountToCreditLD: 0,
-                    msgType: PT_UNLOCK_TWTAP,
-                    composeMsgData: ComposeMsgData({
-                        index: 0,
-                        gas: 1_000_000,
-                        value: 0,
-                        data: unlockTwTapPositionMsg_,
-                        prevData: bytes(""),
-                        prevOptionsData: bytes("")
-                    }),
-                    lzReceiveGas: 1_000_000,
-                    lzReceiveValue: 0,
-                    refundAddress: address(this)
-                })
-            );
+        PrepareLzCallReturn memory prepareLzCallReturn_ = tapTokenHelper.prepareLzCall(
+            ITapToken(address(aTapOFT)),
+            PrepareLzCallData({
+                dstEid: bEid,
+                recipient: OFTMsgCodec.addressToBytes32(address(this)),
+                amountToSendLD: 0,
+                minAmountToCreditLD: 0,
+                msgType: PT_UNLOCK_TWTAP,
+                composeMsgData: ComposeMsgData({
+                    index: 0,
+                    gas: 1_000_000,
+                    value: 0,
+                    data: unlockTwTapPositionMsg_,
+                    prevData: bytes(""),
+                    prevOptionsData: bytes("")
+                }),
+                lzReceiveGas: 1_000_000,
+                lzReceiveValue: 0,
+                refundAddress: address(this)
+            })
+        );
         bytes memory composeMsg_ = prepareLzCallReturn_.composeMsg;
         bytes memory oftMsgOptions_ = prepareLzCallReturn_.oftMsgOptions;
         MessagingFee memory msgFee_ = prepareLzCallReturn_.msgFee;
         LZSendParam memory lzSendParam_ = prepareLzCallReturn_.lzSendParam;
 
-        (
-            MessagingReceipt memory msgReceipt_,
-            ,
-            bytes memory msgSent,
-
-        ) = aTapOFT.sendPacket{value: msgFee_.nativeFee}(
-                lzSendParam_,
-                composeMsg_
-            );
+        (MessagingReceipt memory msgReceipt_,, bytes memory msgSent,) =
+            aTapOFT.sendPacket{value: msgFee_.nativeFee}(lzSendParam_, composeMsg_);
 
         verifyPackets(uint32(bEid), address(bTapOFT));
 
         vm.expectEmit(true, true, true, false);
-        emit ITapToken.UnlockTwTapReceived(
-            unlockTwTapPosition_.tokenId,
-            lockAmount_
-        );
+        emit ITapToken.UnlockTwTapReceived(unlockTwTapPosition_.tokenId, lockAmount_);
 
         __callLzCompose(
             LzOFTComposedData(
@@ -778,8 +629,7 @@ contract TapTokenTest is TapTestHelper, IERC721Receiver {
             deal(address(bTapOFT), address(this), tokenAmount_);
 
             // @dev `remoteMsgFee_` is to be airdropped on dst to pay for the `remoteTransfer` operation (B->A).
-            PrepareLzCallReturn memory prepareLzCallReturn1_ = tapTokenHelper
-                .prepareLzCall( // B->A data
+            PrepareLzCallReturn memory prepareLzCallReturn1_ = tapTokenHelper.prepareLzCall( // B->A data
                 ITapToken(address(bTapOFT)),
                 PrepareLzCallData({
                     dstEid: aEid,
@@ -807,51 +657,38 @@ contract TapTokenTest is TapTestHelper, IERC721Receiver {
         /**
          * Actions
          */
-        RemoteTransferMsg memory remoteTransferData = RemoteTransferMsg({
-            composeMsg: new bytes(0),
-            owner: address(this),
-            lzSendParam: remoteLzSendParam_
-        });
-        bytes memory remoteTransferMsg_ = tapTokenHelper.buildRemoteTransferMsg(
-            remoteTransferData
-        );
+        RemoteTransferMsg memory remoteTransferData =
+            RemoteTransferMsg({composeMsg: new bytes(0), owner: address(this), lzSendParam: remoteLzSendParam_});
+        bytes memory remoteTransferMsg_ = tapTokenHelper.buildRemoteTransferMsg(remoteTransferData);
 
-        PrepareLzCallReturn memory prepareLzCallReturn2_ = tapTokenHelper
-            .prepareLzCall(
-                ITapToken(address(aTapOFT)),
-                PrepareLzCallData({
-                    dstEid: bEid,
-                    recipient: OFTMsgCodec.addressToBytes32(address(this)),
-                    amountToSendLD: 0,
-                    minAmountToCreditLD: 0,
-                    msgType: PT_REMOTE_TRANSFER,
-                    composeMsgData: ComposeMsgData({
-                        index: 0,
-                        gas: 1_000_000,
-                        value: uint128(remoteMsgFee_.nativeFee), // TODO Should we care about verifying cast boundaries?
-                        data: remoteTransferMsg_,
-                        prevData: bytes(""),
-                        prevOptionsData: bytes("")
-                    }),
-                    lzReceiveGas: 2_000_000,
-                    lzReceiveValue: 0,
-                    refundAddress: address(this)
-                })
-            );
+        PrepareLzCallReturn memory prepareLzCallReturn2_ = tapTokenHelper.prepareLzCall(
+            ITapToken(address(aTapOFT)),
+            PrepareLzCallData({
+                dstEid: bEid,
+                recipient: OFTMsgCodec.addressToBytes32(address(this)),
+                amountToSendLD: 0,
+                minAmountToCreditLD: 0,
+                msgType: PT_REMOTE_TRANSFER,
+                composeMsgData: ComposeMsgData({
+                    index: 0,
+                    gas: 1_000_000,
+                    value: uint128(remoteMsgFee_.nativeFee), // TODO Should we care about verifying cast boundaries?
+                    data: remoteTransferMsg_,
+                    prevData: bytes(""),
+                    prevOptionsData: bytes("")
+                }),
+                lzReceiveGas: 2_000_000,
+                lzReceiveValue: 0,
+                refundAddress: address(this)
+            })
+        );
         bytes memory composeMsg_ = prepareLzCallReturn2_.composeMsg;
         bytes memory oftMsgOptions_ = prepareLzCallReturn2_.oftMsgOptions;
         MessagingFee memory msgFee_ = prepareLzCallReturn2_.msgFee;
         LZSendParam memory lzSendParam_ = prepareLzCallReturn2_.lzSendParam;
 
-        (
-            MessagingReceipt memory msgReceipt_,
-            ,
-            bytes memory msgSent,
-
-        ) = aTapOFT.sendPacket{value: msgFee_.nativeFee}(
-                lzSendParam_,
-                composeMsg_
-            );
+        (MessagingReceipt memory msgReceipt_,, bytes memory msgSent,) =
+            aTapOFT.sendPacket{value: msgFee_.nativeFee}(lzSendParam_, composeMsg_);
 
         {
             verifyPackets(uint32(bEid), address(bTapOFT));
@@ -904,23 +741,11 @@ contract TapTokenTest is TapTestHelper, IERC721Receiver {
     function test_claim_rewards() public {
         // Init vars
         TestClaimRewardsData memory testData_;
-        testData_.erc20Mock1 = _createNewToftToken(
-            "ERCM1",
-            address(endpoints[bEid])
-        );
-        testData_.erc20Mock1Dst = _createNewToftToken(
-            "ERCM1",
-            address(endpoints[aEid])
-        );
+        testData_.erc20Mock1 = _createNewToftToken("ERCM1", address(endpoints[bEid]));
+        testData_.erc20Mock1Dst = _createNewToftToken("ERCM1", address(endpoints[aEid]));
 
-        testData_.erc20Mock2 = _createNewToftToken(
-            "ERCM2",
-            address(endpoints[bEid])
-        );
-        testData_.erc20Mock2Dst = _createNewToftToken(
-            "ERCM2",
-            address(endpoints[aEid])
-        );
+        testData_.erc20Mock2 = _createNewToftToken("ERCM2", address(endpoints[bEid]));
+        testData_.erc20Mock2Dst = _createNewToftToken("ERCM2", address(endpoints[aEid]));
 
         testData_.tokenAmount1 = 1 ether;
         testData_.tokenAmount2 = 2 ether;
@@ -951,45 +776,20 @@ contract TapTokenTest is TapTestHelper, IERC721Receiver {
             deal(address(bTapOFT), address(this), lockAmount_);
 
             // bTapOFT.approve(address(twTap), lockAmount_);
-            pearlmit.approve(
-                20,
-                address(bTapOFT),
-                0,
-                address(twTap),
-                uint200(lockAmount_),
-                uint48(block.timestamp + 1)
-            );
+            pearlmit.approve(20, address(bTapOFT), 0, address(twTap), uint200(lockAmount_), uint48(block.timestamp + 1));
             bTapOFT.approve(address(pearlmit), lockAmount_); // Approve pearlmit to transfer
-            testData_.tokenId = twTap.participate(
-                address(this),
-                lockAmount_,
-                1 weeks
-            );
+            testData_.tokenId = twTap.participate(address(this), lockAmount_, 1 weeks);
             bTapOFT.approve(address(pearlmit), 0); // reset approval
 
             // Distribute rewards
-            deal(
-                address(testData_.erc20Mock1),
-                address(this),
-                testData_.tokenAmount1
-            );
-            deal(
-                address(testData_.erc20Mock2),
-                address(this),
-                testData_.tokenAmount2
-            );
+            deal(address(testData_.erc20Mock1), address(this), testData_.tokenAmount1);
+            deal(address(testData_.erc20Mock2), address(this), testData_.tokenAmount2);
 
             twTap.addRewardToken(testData_.erc20Mock1);
             twTap.addRewardToken(testData_.erc20Mock2);
 
-            testData_.erc20Mock1.approve(
-                address(twTap),
-                testData_.tokenAmount1
-            );
-            testData_.erc20Mock2.approve(
-                address(twTap),
-                testData_.tokenAmount2
-            );
+            testData_.erc20Mock1.approve(address(twTap), testData_.tokenAmount1);
+            testData_.erc20Mock2.approve(address(twTap), testData_.tokenAmount2);
 
             // Skip block timestamp to
             skip(1 weeks);
@@ -999,9 +799,7 @@ contract TapTokenTest is TapTestHelper, IERC721Receiver {
             twTap.distributeReward(2, testData_.tokenAmount2);
 
             // Compute claimable and receivable amounts. Without dust
-            uint256[] memory claimableAmounts_ = twTap.claimable(
-                testData_.tokenId
-            );
+            uint256[] memory claimableAmounts_ = twTap.claimable(testData_.tokenId);
             testData_.expectReceive1 = bTapOFT.removeDust(claimableAmounts_[1]);
             testData_.expectReceive2 = bTapOFT.removeDust(claimableAmounts_[2]);
         }
@@ -1013,8 +811,7 @@ contract TapTokenTest is TapTestHelper, IERC721Receiver {
 
         {
             // @dev `remoteMsgFee_` is to be airdropped on dst to pay for the `remoteTransfer` operation (B->A).
-            PrepareLzCallReturn memory prepareLzCallReturn1_ = tapTokenHelper
-                .prepareLzCall( // B->A data
+            PrepareLzCallReturn memory prepareLzCallReturn1_ = tapTokenHelper.prepareLzCall( // B->A data
                 ITapToken(address(testData_.erc20Mock1)),
                 PrepareLzCallData({
                     dstEid: aEid,
@@ -1039,8 +836,7 @@ contract TapTokenTest is TapTestHelper, IERC721Receiver {
             testData_.remoteLzSendParam1 = prepareLzCallReturn1_.lzSendParam;
 
             // @dev `remoteMsgFee_` is to be airdropped on dst to pay for the `remoteTransfer` operation (B->A).
-            PrepareLzCallReturn memory prepareLzCallReturn2_ = tapTokenHelper
-                .prepareLzCall( // B->A data
+            PrepareLzCallReturn memory prepareLzCallReturn2_ = tapTokenHelper.prepareLzCall( // B->A data
                 ITapToken(address(testData_.erc20Mock2)),
                 PrepareLzCallData({
                     dstEid: aEid,
@@ -1073,14 +869,9 @@ contract TapTokenTest is TapTestHelper, IERC721Receiver {
          */
         bytes memory claimTwTapRewardsMsg_;
         {
-            ClaimTwTapRewardsMsg
-                memory claimTwTapRewards_ = ClaimTwTapRewardsMsg({
-                    tokenId: testData_.tokenId,
-                    sendParam: claimTwTapRewardsParam_
-                });
-            claimTwTapRewardsMsg_ = tapTokenHelper.buildClaimRewardsMsg(
-                claimTwTapRewards_
-            );
+            ClaimTwTapRewardsMsg memory claimTwTapRewards_ =
+                ClaimTwTapRewardsMsg({tokenId: testData_.tokenId, sendParam: claimTwTapRewardsParam_});
+            claimTwTapRewardsMsg_ = tapTokenHelper.buildClaimRewardsMsg(claimTwTapRewards_);
         }
 
         bytes memory composeMsg_;
@@ -1088,55 +879,37 @@ contract TapTokenTest is TapTestHelper, IERC721Receiver {
         MessagingFee memory msgFee_;
         LZSendParam memory lzSendParam_;
         {
-            PrepareLzCallReturn memory prepareLzCallReturn_ = tapTokenHelper
-                .prepareLzCall(
-                    ITapToken(address(aTapOFT)),
-                    PrepareLzCallData({
-                        dstEid: bEid,
-                        recipient: OFTMsgCodec.addressToBytes32(address(this)),
-                        amountToSendLD: 0,
-                        minAmountToCreditLD: 0,
-                        msgType: PT_CLAIM_REWARDS,
-                        composeMsgData: ComposeMsgData({
-                            index: 0,
-                            gas: 2_000_000,
-                            value: uint128(
-                                testData_.remoteMsgFee1.nativeFee +
-                                    testData_.remoteMsgFee2.nativeFee
-                            ), // TODO Should we care about verifying cast boundaries?
-                            data: claimTwTapRewardsMsg_,
-                            prevData: bytes(""),
-                            prevOptionsData: bytes("")
-                        }),
-                        lzReceiveGas: 500_000,
-                        lzReceiveValue: 0,
-                        refundAddress: address(this)
-                    })
-                );
+            PrepareLzCallReturn memory prepareLzCallReturn_ = tapTokenHelper.prepareLzCall(
+                ITapToken(address(aTapOFT)),
+                PrepareLzCallData({
+                    dstEid: bEid,
+                    recipient: OFTMsgCodec.addressToBytes32(address(this)),
+                    amountToSendLD: 0,
+                    minAmountToCreditLD: 0,
+                    msgType: PT_CLAIM_REWARDS,
+                    composeMsgData: ComposeMsgData({
+                        index: 0,
+                        gas: 2_000_000,
+                        value: uint128(testData_.remoteMsgFee1.nativeFee + testData_.remoteMsgFee2.nativeFee), // TODO Should we care about verifying cast boundaries?
+                        data: claimTwTapRewardsMsg_,
+                        prevData: bytes(""),
+                        prevOptionsData: bytes("")
+                    }),
+                    lzReceiveGas: 500_000,
+                    lzReceiveValue: 0,
+                    refundAddress: address(this)
+                })
+            );
             composeMsg_ = prepareLzCallReturn_.composeMsg;
             oftMsgOptions_ = prepareLzCallReturn_.oftMsgOptions;
             msgFee_ = prepareLzCallReturn_.msgFee;
             lzSendParam_ = prepareLzCallReturn_.lzSendParam;
         }
 
-        (
-            MessagingReceipt memory msgReceipt_,
-            ,
-            bytes memory msgSent,
+        (MessagingReceipt memory msgReceipt_,, bytes memory msgSent,) =
+            aTapOFT.sendPacket{value: msgFee_.nativeFee}(lzSendParam_, composeMsg_);
 
-        ) = aTapOFT.sendPacket{value: msgFee_.nativeFee}(
-                lzSendParam_,
-                composeMsg_
-            );
-
-        pearlmit.approve(
-            721,
-            address(twTap),
-            testData_.tokenId,
-            address(bTapOFT),
-            1,
-            uint48(block.timestamp)
-        );
+        pearlmit.approve(721, address(twTap), testData_.tokenId, address(bTapOFT), 1, uint48(block.timestamp));
 
         {
             // A->B
@@ -1250,15 +1023,9 @@ contract TapTokenTest is TapTestHelper, IERC721Receiver {
      *
      * @param _lzOFTComposedData The data to pass to the lzCompose call.
      */
-    function __callLzCompose(
-        LzOFTComposedData memory _lzOFTComposedData
-    ) internal {
+    function __callLzCompose(LzOFTComposedData memory _lzOFTComposedData) internal {
         vm.expectEmit(true, true, true, false);
-        emit ComposeReceived(
-            _lzOFTComposedData.msgType,
-            _lzOFTComposedData.guid,
-            _lzOFTComposedData.composeMsg
-        );
+        emit ComposeReceived(_lzOFTComposedData.msgType, _lzOFTComposedData.guid, _lzOFTComposedData.composeMsg);
 
         this.lzCompose{value: 1_000_000}(
             _lzOFTComposedData.dstEid,
@@ -1270,10 +1037,10 @@ contract TapTokenTest is TapTestHelper, IERC721Receiver {
         );
     }
 
-    function _createNewToftToken(
-        string memory _tokenLabel,
-        address _endpoint
-    ) internal returns (TapTokenMock newToken_) {
+    function _createNewToftToken(string memory _tokenLabel, address _endpoint)
+        internal
+        returns (TapTokenMock newToken_)
+    {
         newToken_ = new TapTokenMock(
             ITapToken.TapTokenConstructorData(
                 EPOCH_DURATION,
@@ -1286,24 +1053,8 @@ contract TapTokenTest is TapTestHelper, IERC721Receiver {
                 __airdrop,
                 __governanceEid,
                 address(this),
-                address(
-                    new TapTokenSender(
-                        "",
-                        "",
-                        _endpoint,
-                        address(this),
-                        address(extExec)
-                    )
-                ),
-                address(
-                    new TapTokenReceiver(
-                        "",
-                        "",
-                        _endpoint,
-                        address(this),
-                        address(extExec)
-                    )
-                ),
+                address(new TapTokenSender("", "", _endpoint, address(this), address(extExec))),
+                address(new TapTokenReceiver("", "", _endpoint, address(this), address(extExec))),
                 address(extExec),
                 IPearlmit(address(pearlmit)),
                 ICluster(address(cluster))

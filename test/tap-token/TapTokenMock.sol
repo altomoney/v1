@@ -19,7 +19,5 @@ __/\\\\\\\\\\\\\\\_____/\\\\\\\\\_____/\\\\\\\\\\\\\____/\\\\\\\\\\\_______/\\\\
 */
 
 contract TapTokenMock is TapToken {
-    constructor(
-        ITapToken.TapTokenConstructorData memory _data
-    ) TapToken(_data) {}
+    constructor(ITapToken.TapTokenConstructorData memory _data) TapToken(_data) {}
 }

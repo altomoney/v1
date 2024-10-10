@@ -6,7 +6,6 @@ import {IBigBangDebtRateHelper} from "tap-utils/interfaces/bar/IBigBangDebtRateH
 import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
 import {IBigBang} from "tap-utils/interfaces/bar/IBigBang.sol";
 
-
 /*
 
 ████████╗ █████╗ ██████╗ ██╗ ██████╗  ██████╗ █████╗ 
@@ -18,11 +17,10 @@ import {IBigBang} from "tap-utils/interfaces/bar/IBigBang.sol";
    
 */
 
-
 contract BBDebtRateHelper is IBigBangDebtRateHelper {
     uint256 internal constant DEBT_PRECISION = 1e18;
 
-    function getDebtRate(DebtRateCall memory data) external override view returns (uint256) {
+    function getDebtRate(DebtRateCall memory data) external view override returns (uint256) {
         if (data.isMainMarket) return data.penrose.bigBangEthDebtRate(); // default 0.5%
         if (data.elastic == 0) return data.minDebtRate;
 

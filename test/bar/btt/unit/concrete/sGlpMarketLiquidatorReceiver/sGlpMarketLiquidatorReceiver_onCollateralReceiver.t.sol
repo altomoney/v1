@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.22;
 
-// external 
+// external
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 // contracts
@@ -60,7 +60,6 @@ contract sGlpMarketLiquidatorReceiver_onCollateralReceiver is MarketLiquidatorRe
         deal(address(usdo), address(swapperTarget), amount); // for usdc <> usdo swap
         deal(address(weth), address(gmxMock), amount); // for sGLp unstake
 
-
         IZeroXSwapper.SZeroXSwapData memory zeroXSwapData = IZeroXSwapper.SZeroXSwapData({
             sellToken: IERC20(address(weth)),
             buyToken: IERC20(address(usdo)),
@@ -73,10 +72,7 @@ contract sGlpMarketLiquidatorReceiver_onCollateralReceiver is MarketLiquidatorRe
         SGlpMarketLiquidatorReceiver.SGlpSwapData memory data = SGlpMarketLiquidatorReceiver.SGlpSwapData({
             token: address(weth),
             minAmountOut: 0,
-            zeroXswapData: SGlpMarketLiquidatorReceiver.SSwapData({
-                minAmountOut: amount,
-                data: zeroXSwapData
-            })
+            zeroXswapData: SGlpMarketLiquidatorReceiver.SSwapData({minAmountOut: amount, data: zeroXSwapData})
         });
 
         uint256 usdoBalanceBefore = usdo.balanceOf(address(this));

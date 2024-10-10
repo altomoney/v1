@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.22;
 
-import {AssetToSGLPLeverageExecutor, SGlpLeverageSwapData} from "tapioca-bar/markets/leverage/AssetToSGLPLeverageExecutor.sol";
+import {
+    AssetToSGLPLeverageExecutor,
+    SGlpLeverageSwapData
+} from "tapioca-bar/markets/leverage/AssetToSGLPLeverageExecutor.sol";
 import {SToftInfo, SLeverageSwapData} from "tapioca-bar/markets/leverage/BaseLeverageExecutor.sol";
 // import {IERC20} from "@boringcrypto/boring-solidity/contracts/libraries/BoringERC20.sol";
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -62,10 +65,7 @@ contract AssetToSGLPLeverageExecutorTest is BaseLeverageExecutorTest {
             glp = new ERC20Mock("glp", "glp");
             vm.label(address(glp), "glp");
 
-            collateral = new TOFTMock(
-                address(glp),
-                IPearlmit(address(pearlmit))
-            );
+            collateral = new TOFTMock(address(glp), IPearlmit(address(pearlmit)));
             vm.label(address(collateral), "collateral");
 
             gmxMock = new GmxMarketMock(address(0), address(0), address(0));
@@ -73,67 +73,27 @@ contract AssetToSGLPLeverageExecutorTest is BaseLeverageExecutorTest {
         }
         {
             YieldBoxURIBuilder uriBuilder = new YieldBoxURIBuilder();
-            yieldBox = new YieldBox(
-                IWrappedNative(address(0)),
-                uriBuilder,
-                pearlmit,
-                address(this)
-            );
+            yieldBox = new YieldBox(IWrappedNative(address(0)), uriBuilder, pearlmit, address(this));
 
-            ERC20WithoutStrategy usdcStrategy = createEmptyStrategy(
-                address(yieldBox),
-                address(usdc)
-            );
-            usdcYieldBoxId = yieldBox.registerAsset(
-                TokenType.ERC20,
-                address(usdc),
-                IStrategy(address(usdcStrategy)),
-                0
-            );
+            ERC20WithoutStrategy usdcStrategy = createEmptyStrategy(address(yieldBox), address(usdc));
+            usdcYieldBoxId = yieldBox.registerAsset(TokenType.ERC20, address(usdc), IStrategy(address(usdcStrategy)), 0);
 
-            ERC20WithoutStrategy wethStrategy = createEmptyStrategy(
-                address(yieldBox),
-                address(weth)
-            );
-            wethYieldBoxId = yieldBox.registerAsset(
-                TokenType.ERC20,
-                address(weth),
-                IStrategy(address(wethStrategy)),
-                0
-            );
+            ERC20WithoutStrategy wethStrategy = createEmptyStrategy(address(yieldBox), address(weth));
+            wethYieldBoxId = yieldBox.registerAsset(TokenType.ERC20, address(weth), IStrategy(address(wethStrategy)), 0);
 
-            ERC20WithoutStrategy glpStrategy = createEmptyStrategy(
-                address(yieldBox),
-                address(glp)
-            );
-            glpYieldBoxId = yieldBox.registerAsset(
-                TokenType.ERC20,
-                address(glp),
-                IStrategy(address(glpStrategy)),
-                0
-            );
+            ERC20WithoutStrategy glpStrategy = createEmptyStrategy(address(yieldBox), address(glp));
+            glpYieldBoxId = yieldBox.registerAsset(TokenType.ERC20, address(glp), IStrategy(address(glpStrategy)), 0);
 
-            ERC20WithoutStrategy collateralStrategy = createEmptyStrategy(
-                address(yieldBox),
-                address(collateral)
-            );
-            collateralYieldBoxId = yieldBox.registerAsset(
-                TokenType.ERC20,
-                address(collateral),
-                IStrategy(address(collateralStrategy)),
-                0
-            );
+            ERC20WithoutStrategy collateralStrategy = createEmptyStrategy(address(yieldBox), address(collateral));
+            collateralYieldBoxId =
+                yieldBox.registerAsset(TokenType.ERC20, address(collateral), IStrategy(address(collateralStrategy)), 0);
         }
 
         {
             cluster = new Cluster(0, address(this));
 
             swapperTarget = new ZeroXSwapperMockTarget();
-            swapper = new ZeroXSwapper(
-                address(swapperTarget),
-                ICluster(address(cluster)),
-                address(this)
-            );
+            swapper = new ZeroXSwapper(address(swapperTarget), ICluster(address(cluster)), address(this));
 
             executor = new AssetToSGLPLeverageExecutor(
                 IZeroXSwapper(address(swapper)),
@@ -175,38 +135,20 @@ contract AssetToSGLPLeverageExecutorTest is BaseLeverageExecutorTest {
         deal(address(weth), address(executor), amountIn);
         deal(address(glp), address(gmxMock), amountIn);
 
-        IZeroXSwapper.SZeroXSwapData memory zeroXSwapData = IZeroXSwapper
-            .SZeroXSwapData({
-                sellToken: IERC20(address(usdc)),
-                buyToken: IERC20(address(weth)),
-                swapTarget: payable(swapperTarget),
-                swapCallData: abi.encodeWithSelector(
-                    ZeroXSwapperMockTarget.transferTokens.selector,
-                    address(weth),
-                    amountIn
-                )
-            });
-        SToftInfo memory toftInfo = SToftInfo({
-            isTokenInToft: false,
-            isTokenOutToft: false
+        IZeroXSwapper.SZeroXSwapData memory zeroXSwapData = IZeroXSwapper.SZeroXSwapData({
+            sellToken: IERC20(address(usdc)),
+            buyToken: IERC20(address(weth)),
+            swapTarget: payable(swapperTarget),
+            swapCallData: abi.encodeWithSelector(ZeroXSwapperMockTarget.transferTokens.selector, address(weth), amountIn)
         });
-        SLeverageSwapData memory swapData = SLeverageSwapData({
-            minAmountOut: 0,
-            toftInfo: toftInfo,
-            swapperData: abi.encode(zeroXSwapData)
-        });
-        SGlpLeverageSwapData memory sglLeverageSwapData = SGlpLeverageSwapData({
-            token: address(weth),
-            minAmountOut: amountIn,
-            swapData: swapData
-        });
+        SToftInfo memory toftInfo = SToftInfo({isTokenInToft: false, isTokenOutToft: false});
+        SLeverageSwapData memory swapData =
+            SLeverageSwapData({minAmountOut: 0, toftInfo: toftInfo, swapperData: abi.encode(zeroXSwapData)});
+        SGlpLeverageSwapData memory sglLeverageSwapData =
+            SGlpLeverageSwapData({token: address(weth), minAmountOut: amountIn, swapData: swapData});
 
         executor.getCollateral(
-            address(this),
-            address(usdc),
-            address(collateral),
-            amountIn,
-            abi.encode(sglLeverageSwapData)
+            address(this), address(usdc), address(collateral), amountIn, abi.encode(sglLeverageSwapData)
         );
 
         assertEq(collateral.balanceOf(address(this)), amountIn);
@@ -223,39 +165,19 @@ contract AssetToSGLPLeverageExecutorTest is BaseLeverageExecutorTest {
         deal(address(glp), address(collateral), amountIn);
         deal(address(collateral), address(executor), amountIn);
 
-        IZeroXSwapper.SZeroXSwapData memory zeroXSwapData = IZeroXSwapper
-            .SZeroXSwapData({
-                sellToken: IERC20(address(weth)),
-                buyToken: IERC20(address(usdc)),
-                swapTarget: payable(swapperTarget),
-                swapCallData: abi.encodeWithSelector(
-                    ZeroXSwapperMockTarget.transferTokens.selector,
-                    address(usdc),
-                    amountIn
-                )
-            });
-        SToftInfo memory toftInfo = SToftInfo({
-            isTokenInToft: false,
-            isTokenOutToft: false
+        IZeroXSwapper.SZeroXSwapData memory zeroXSwapData = IZeroXSwapper.SZeroXSwapData({
+            sellToken: IERC20(address(weth)),
+            buyToken: IERC20(address(usdc)),
+            swapTarget: payable(swapperTarget),
+            swapCallData: abi.encodeWithSelector(ZeroXSwapperMockTarget.transferTokens.selector, address(usdc), amountIn)
         });
-        SLeverageSwapData memory swapData = SLeverageSwapData({
-            minAmountOut: 0,
-            toftInfo: toftInfo,
-            swapperData: abi.encode(zeroXSwapData)
-        });
-        SGlpLeverageSwapData memory sglLeverageSwapData = SGlpLeverageSwapData({
-            token: address(weth),
-            minAmountOut: amountIn,
-            swapData: swapData
-        });
+        SToftInfo memory toftInfo = SToftInfo({isTokenInToft: false, isTokenOutToft: false});
+        SLeverageSwapData memory swapData =
+            SLeverageSwapData({minAmountOut: 0, toftInfo: toftInfo, swapperData: abi.encode(zeroXSwapData)});
+        SGlpLeverageSwapData memory sglLeverageSwapData =
+            SGlpLeverageSwapData({token: address(weth), minAmountOut: amountIn, swapData: swapData});
 
-        executor.getAsset(
-            address(this),
-            address(collateral),
-            address(usdc),
-            amountIn,
-            abi.encode(sglLeverageSwapData)
-        );
+        executor.getAsset(address(this), address(collateral), address(usdc), amountIn, abi.encode(sglLeverageSwapData));
 
         assertEq(usdc.balanceOf(address(this)), amountIn);
     }
@@ -275,41 +197,21 @@ contract AssetToSGLPLeverageExecutorTest is BaseLeverageExecutorTest {
         deal(address(weth), address(executor), amountIn);
         deal(address(glp), address(gmxMock), amountIn);
 
-        IZeroXSwapper.SZeroXSwapData memory zeroXSwapData = IZeroXSwapper
-            .SZeroXSwapData({
-                sellToken: IERC20(address(usdc)),
-                buyToken: IERC20(address(weth)),
-                swapTarget: payable(swapperTarget),
-                swapCallData: abi.encodeWithSelector(
-                    ZeroXSwapperMockTarget.transferTokensWithDust.selector,
-                    address(usdc),
-                    address(weth),
-                    amountIn,
-                    minAmountIn
-                )
-            });
-        SToftInfo memory toftInfo = SToftInfo({
-            isTokenInToft: false,
-            isTokenOutToft: false
+        IZeroXSwapper.SZeroXSwapData memory zeroXSwapData = IZeroXSwapper.SZeroXSwapData({
+            sellToken: IERC20(address(usdc)),
+            buyToken: IERC20(address(weth)),
+            swapTarget: payable(swapperTarget),
+            swapCallData: abi.encodeWithSelector(
+                ZeroXSwapperMockTarget.transferTokensWithDust.selector, address(usdc), address(weth), amountIn, minAmountIn
+            )
         });
-        SLeverageSwapData memory swapData = SLeverageSwapData({
-            minAmountOut: 0,
-            toftInfo: toftInfo,
-            swapperData: abi.encode(zeroXSwapData)
-        });
-        SGlpLeverageSwapData memory sglLeverageSwapData = SGlpLeverageSwapData({
-            token: address(weth),
-            minAmountOut: minAmountIn,
-            swapData: swapData
-        });
+        SToftInfo memory toftInfo = SToftInfo({isTokenInToft: false, isTokenOutToft: false});
+        SLeverageSwapData memory swapData =
+            SLeverageSwapData({minAmountOut: 0, toftInfo: toftInfo, swapperData: abi.encode(zeroXSwapData)});
+        SGlpLeverageSwapData memory sglLeverageSwapData =
+            SGlpLeverageSwapData({token: address(weth), minAmountOut: minAmountIn, swapData: swapData});
 
-        executor.getCollateral(
-            rndAddr,
-            address(usdc),
-            address(collateral),
-            amountIn,
-            abi.encode(sglLeverageSwapData)
-        );
+        executor.getCollateral(rndAddr, address(usdc), address(collateral), amountIn, abi.encode(sglLeverageSwapData));
 
         assertEq(collateral.balanceOf(address(this)), minAmountIn);
         assertEq(usdc.balanceOf(rndAddr), amountIn - minAmountIn);

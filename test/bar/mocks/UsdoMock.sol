@@ -18,8 +18,7 @@ __/\\\\\\\\\\\\\\\_____/\\\\\\\\\_____/\\\\\\\\\\\\\____/\\\\\\\\\\\_______/\\\\
 
 */
 contract UsdoMock is Usdo {
-    constructor(
-        UsdoInitStruct memory _usdoData,
-        UsdoModulesInitStruct memory _moduleData
-    ) Usdo(_usdoData, _moduleData) {}
+    constructor(UsdoInitStruct memory _usdoData, UsdoModulesInitStruct memory _moduleData)
+        Usdo(_usdoData, _moduleData)
+    {}
 }

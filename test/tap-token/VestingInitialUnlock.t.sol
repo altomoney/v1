@@ -27,12 +27,7 @@ contract VestingInitialUnlockTest is Test, Vesting {
         console.log("totalAmount : ", totalAmount);
         console.log("initialUnlockAmount : ", initialUnlockAmount);
 
-        uint256 initialUnlockTimeOffset = _computeTimeFromAmount(
-            start,
-            totalAmount,
-            initialUnlockAmount,
-            duration
-        );
+        uint256 initialUnlockTimeOffset = _computeTimeFromAmount(start, totalAmount, initialUnlockAmount, duration);
         console.log("initialUnlockTimeOffset : ", initialUnlockTimeOffset);
         __initialUnlockTimeOffset = initialUnlockTimeOffset;
 
@@ -40,29 +35,20 @@ contract VestingInitialUnlockTest is Test, Vesting {
             vm.warp(start + 0 days);
             uint256 vestedAmount = _vested(totalAmount);
             // assertLt(vestedAmount, totalAmount);
-            console.log(
-                "vestedAmount before the duration is completed : ",
-                vestedAmount
-            );
+            console.log("vestedAmount before the duration is completed : ", vestedAmount);
         }
 
         {
             vm.warp(start + 686 days);
             uint256 vestedAmount = _vested(totalAmount);
             // assertLt(vestedAmount, totalAmount);
-            console.log(
-                "vestedAmount before the duration is completed : ",
-                vestedAmount
-            );
+            console.log("vestedAmount before the duration is completed : ", vestedAmount);
         }
         {
             vm.warp(start + 687 days);
             uint256 vestedAmount = _vested(totalAmount);
             // assertEq(vestedAmount, totalAmount);
-            console.log(
-                "vestedAmount after the duration is completed : ",
-                vestedAmount
-            );
+            console.log("vestedAmount after the duration is completed : ", vestedAmount);
         }
     }
 }

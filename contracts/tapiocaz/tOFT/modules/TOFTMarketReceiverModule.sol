@@ -26,7 +26,6 @@ import {IMarket, Module} from "tap-utils/interfaces/bar/IMarket.sol";
 import {TOFTMsgCodec} from "../libraries/TOFTMsgCodec.sol";
 import {BaseTOFT} from "../BaseTOFT.sol";
 
-
 /*
 
 ████████╗ █████╗ ██████╗ ██╗ ██████╗  ██████╗ █████╗ 
@@ -77,18 +76,18 @@ contract TOFTMarketReceiverModule is BaseTOFT {
         LeverageUpActionMsg memory msg_ = TOFTMsgCodec.decodeLeverageUpMsg(_data);
 
         /**
-        * @dev validate data
-        */
+         * @dev validate data
+         */
         msg_ = _validateLeverageUpReceiver(msg_, srcChainSender);
 
         /**
-        * @dev executes market action
-        */
+         * @dev executes market action
+         */
         _marketLeverage(msg_);
 
         emit LeverageUpReceived(msg_.user, msg_.market, msg_.borrowAmount, msg_.supplyAmount);
     }
-    
+
     /**
      * @notice Calls depositAddCollateralAndBorrowFromMarket on Magnetar
      * @param srcChainSender The address of the sender on the source chain.
@@ -102,13 +101,13 @@ contract TOFTMarketReceiverModule is BaseTOFT {
         MarketBorrowMsg memory msg_ = TOFTMsgCodec.decodeMarketBorrowMsg(_data);
 
         /**
-        * @dev validate data
-        */
+         * @dev validate data
+         */
         msg_ = _validateMarketBorrowReceiver(msg_, srcChainSender);
 
         /**
-        * @dev execute market's action
-        */
+         * @dev execute market's action
+         */
         _marketBorrow(msg_);
 
         emit BorrowReceived(
@@ -133,18 +132,18 @@ contract TOFTMarketReceiverModule is BaseTOFT {
         MarketRemoveCollateralMsg memory msg_ = TOFTMsgCodec.decodeMarketRemoveCollateralMsg(_data);
 
         /**
-        * @dev validate data
-        */
+         * @dev validate data
+         */
         _validateMarketRemoveCollateral(msg_, srcChainSender);
 
         /**
-        * @dev execute market's action
-        */
+         * @dev execute market's action
+         */
         _marketRemoveCollateral(msg_);
 
         /**
-        * @dev try withdraw through `Magnetar`
-        */
+         * @dev try withdraw through `Magnetar`
+         */
         if (msg_.withdrawParams.withdraw) {
             _magnetarWithdraw(msg_);
         }
@@ -154,7 +153,10 @@ contract TOFTMarketReceiverModule is BaseTOFT {
         );
     }
 
-    function _validateLeverageUpReceiver(LeverageUpActionMsg memory msg_, address srcChainSender) private returns (LeverageUpActionMsg memory) {
+    function _validateLeverageUpReceiver(LeverageUpActionMsg memory msg_, address srcChainSender)
+        private
+        returns (LeverageUpActionMsg memory)
+    {
         _checkWhitelistStatus(msg_.market);
         _checkWhitelistStatus(msg_.marketHelper);
 
@@ -180,7 +182,10 @@ contract TOFTMarketReceiverModule is BaseTOFT {
         IMarket(msg_.market).execute(modules, calls, true);
     }
 
-     function _validateMarketBorrowReceiver(MarketBorrowMsg memory msg_, address srcChainSender) private returns (MarketBorrowMsg memory) {
+    function _validateMarketBorrowReceiver(MarketBorrowMsg memory msg_, address srcChainSender)
+        private
+        returns (MarketBorrowMsg memory)
+    {
         _checkWhitelistStatus(msg_.borrowParams.marketHelper);
         _checkWhitelistStatus(msg_.borrowParams.magnetar);
         _checkWhitelistStatus(msg_.borrowParams.market);
@@ -218,7 +223,10 @@ contract TOFTMarketReceiverModule is BaseTOFT {
         IMagnetar(payable(msg_.borrowParams.magnetar)).burst{value: msg_.value}(magnetarCall);
     }
 
-    function _validateMarketRemoveCollateral(MarketRemoveCollateralMsg memory msg_, address srcChainSender) private returns (MarketRemoveCollateralMsg memory) {
+    function _validateMarketRemoveCollateral(MarketRemoveCollateralMsg memory msg_, address srcChainSender)
+        private
+        returns (MarketRemoveCollateralMsg memory)
+    {
         _checkWhitelistStatus(msg_.removeParams.market);
         _checkWhitelistStatus(msg_.removeParams.marketHelper);
         _checkWhitelistStatus(msg_.removeParams.magnetar);
@@ -227,7 +235,7 @@ contract TOFTMarketReceiverModule is BaseTOFT {
 
         if (msg_.removeParams.amount == 0) revert TOFTMarketReceiverModule_AmountNotValid();
         _validateAndSpendAllowance(msg_.user, srcChainSender, msg_.removeParams.amount);
-        
+
         return msg_;
     }
 
@@ -237,13 +245,14 @@ contract TOFTMarketReceiverModule is BaseTOFT {
 
         uint256 share = IYieldBox(ybAddress).toShare(assetId, msg_.removeParams.amount, false);
 
-        (Module[] memory modules, bytes[] memory calls) = IMarketHelper(msg_.removeParams.marketHelper)
-            .removeCollateral(msg_.user, msg_.withdrawParams.withdraw ? msg_.removeParams.magnetar : msg_.user, share);
+        (Module[] memory modules, bytes[] memory calls) = IMarketHelper(msg_.removeParams.marketHelper).removeCollateral(
+            msg_.user, msg_.withdrawParams.withdraw ? msg_.removeParams.magnetar : msg_.user, share
+        );
         IMarket(msg_.removeParams.market).execute(modules, calls, true);
     }
+
     function _magnetarWithdraw(MarketRemoveCollateralMsg memory msg_) private {
-        bytes memory call =
-            abi.encodeWithSelector(IMagnetarYieldBoxModule.withdrawHere.selector, msg_.withdrawParams);
+        bytes memory call = abi.encodeWithSelector(IMagnetarYieldBoxModule.withdrawHere.selector, msg_.withdrawParams);
         MagnetarCall[] memory magnetarCall = new MagnetarCall[](1);
         magnetarCall[0] = MagnetarCall({
             id: uint8(MagnetarAction.YieldBoxModule),

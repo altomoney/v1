@@ -66,7 +66,6 @@ abstract contract Constants {
     uint256 public constant CR_RATE = 75000;
     uint256 public constant LQ_CR_RATE = 80000;
 
-
     // ************ //
     // *** USDO *** //
     // ************ //

@@ -77,53 +77,25 @@ struct TestBigBangData {
 }
 
 contract UsdoTestHelper is TestHelper, TestUtils {
-    function createYieldBoxEmptyStrategy(
-        address _yieldBox,
-        address _erc20
-    ) public returns (ERC20WithoutStrategy) {
+    function createYieldBoxEmptyStrategy(address _yieldBox, address _erc20) public returns (ERC20WithoutStrategy) {
         return new ERC20WithoutStrategy(IYieldBox(_yieldBox), IERC20(_erc20));
     }
 
-    function registerYieldBoxAsset(
-        address _yieldBox,
-        address _token,
-        address _strategy
-    ) public returns (uint256) {
-        return
-            YieldBox(_yieldBox).registerAsset(
-                TokenType.ERC20,
-                _token,
-                IStrategy(_strategy),
-                0
-            );
+    function registerYieldBoxAsset(address _yieldBox, address _token, address _strategy) public returns (uint256) {
+        return YieldBox(_yieldBox).registerAsset(TokenType.ERC20, _token, IStrategy(_strategy), 0);
     }
 
-    function createMagnetar(
-        address cluster,
-        IPearlmit _pearlmit
-    ) public returns (MagnetarMock) {
+    function createMagnetar(address cluster, IPearlmit _pearlmit) public returns (MagnetarMock) {
         return new MagnetarMock(cluster, _pearlmit);
     }
 
-    function createYieldBox(
-        Pearlmit pearlmit,
-        address owner
-    ) public returns (YieldBox) {
+    function createYieldBox(Pearlmit pearlmit, address owner) public returns (YieldBox) {
         YieldBoxURIBuilder uriBuilder = new YieldBoxURIBuilder();
 
-        return
-            new YieldBox(
-                IWrappedNative(address(0)),
-                uriBuilder,
-                pearlmit,
-                owner
-            );
+        return new YieldBox(IWrappedNative(address(0)), uriBuilder, pearlmit, owner);
     }
 
-    function createCluster(
-        uint32 hostEid,
-        address owner
-    ) public returns (Cluster) {
+    function createCluster(uint32 hostEid, address owner) public returns (Cluster) {
         return new Cluster(hostEid, owner);
     }
 
@@ -135,43 +107,19 @@ contract UsdoTestHelper is TestHelper, TestUtils {
         return new OracleMock("Oracle Test", "ORCT", 1 ether);
     }
 
-    function createLeverageExecutor(
-        address,
-        address _swapper,
-        address _cluster,
-        address _pearlmit
-    ) public returns (SimpleLeverageExecutor) {
-        return
-            new SimpleLeverageExecutor(
-                IZeroXSwapper(_swapper),
-                ICluster(_cluster),
-                address(0),
-                IPearlmit(_pearlmit)
-            );
+    function createLeverageExecutor(address, address _swapper, address _cluster, address _pearlmit)
+        public
+        returns (SimpleLeverageExecutor)
+    {
+        return new SimpleLeverageExecutor(IZeroXSwapper(_swapper), ICluster(_cluster), address(0), IPearlmit(_pearlmit));
     }
 
-    function createPenrose(
-        TestPenroseData memory _data
-    ) public returns (Penrose pen, Singularity mediumRiskMC) {
-        address tapStrat = address(
-            createYieldBoxEmptyStrategy(_data.yb, _data.tap)
-        );
-        address tokenStrat = address(
-            createYieldBoxEmptyStrategy(_data.yb, _data.token)
-        );
+    function createPenrose(TestPenroseData memory _data) public returns (Penrose pen, Singularity mediumRiskMC) {
+        address tapStrat = address(createYieldBoxEmptyStrategy(_data.yb, _data.tap));
+        address tokenStrat = address(createYieldBoxEmptyStrategy(_data.yb, _data.token));
 
-        uint256 tapAssetId = IYieldBox(_data.yb).registerAsset(
-            TokenType.ERC20,
-            _data.tap,
-            tapStrat,
-            0
-        );
-        uint256 tokenAssetId = IYieldBox(_data.yb).registerAsset(
-            TokenType.ERC20,
-            _data.token,
-            tokenStrat,
-            0
-        );
+        uint256 tapAssetId = IYieldBox(_data.yb).registerAsset(TokenType.ERC20, _data.tap, tapStrat, 0);
+        uint256 tokenAssetId = IYieldBox(_data.yb).registerAsset(TokenType.ERC20, _data.token, tokenStrat, 0);
 
         pen = new Penrose(
             IYieldBox(_data.yb),
@@ -185,10 +133,7 @@ contract UsdoTestHelper is TestHelper, TestUtils {
         );
         mediumRiskMC = new Singularity();
 
-        pen.registerSingularityMasterContract(
-            address(mediumRiskMC),
-            IPenrose.ContractType.mediumRisk
-        );
+        pen.registerSingularityMasterContract(address(mediumRiskMC), IPenrose.ContractType.mediumRisk);
     }
 
     function createOrigins(
@@ -203,25 +148,21 @@ contract UsdoTestHelper is TestHelper, TestUtils {
         uint256 collateralizationRate,
         address penrose
     ) public returns (Origins) {
-        return
-            new Origins(
-                owner,
-                yb,
-                IERC20(asset),
-                assetId,
-                IERC20(collateral),
-                collateralId,
-                oracle,
-                exchangePrecision,
-                collateralizationRate,
-                IPenrose(penrose)
-            );
+        return new Origins(
+            owner,
+            yb,
+            IERC20(asset),
+            assetId,
+            IERC20(collateral),
+            collateralId,
+            oracle,
+            exchangePrecision,
+            collateralizationRate,
+            IPenrose(penrose)
+        );
     }
 
-    function createBigBang(
-        TestBigBangData memory _bb,
-        address _mc
-    ) public returns (BigBang) {
+    function createBigBang(TestBigBangData memory _bb, address _mc) public returns (BigBang) {
         BigBang bb = new BigBang();
 
         (
@@ -241,9 +182,7 @@ contract UsdoTestHelper is TestHelper, TestUtils {
         return bb;
     }
 
-    function _getBigBangInitData(
-        TestBigBangData memory _bb
-    )
+    function _getBigBangInitData(TestBigBangData memory _bb)
         private
         returns (
             BigBang._InitMemoryModulesData memory modulesData,
@@ -256,18 +195,10 @@ contract UsdoTestHelper is TestHelper, TestUtils {
         BBCollateral bbCollateral = new BBCollateral();
         BBLeverage bbLev = new BBLeverage();
 
-        modulesData = BigBang._InitMemoryModulesData(
-            address(bbLiq),
-            address(bbBorrow),
-            address(bbCollateral),
-            address(bbLev)
-        );
+        modulesData =
+            BigBang._InitMemoryModulesData(address(bbLiq), address(bbBorrow), address(bbCollateral), address(bbLev));
 
-        debtData = BigBang._InitMemoryDebtData(
-            _bb.debtRateAgainstEth,
-            _bb.debtRateMin,
-            _bb.debtRateMax
-        );
+        debtData = BigBang._InitMemoryDebtData(_bb.debtRateAgainstEth, _bb.debtRateMin, _bb.debtRateMax);
 
         data = BigBang._InitMemoryData(
             IPenrose(_bb.penrose),
@@ -281,11 +212,10 @@ contract UsdoTestHelper is TestHelper, TestUtils {
         );
     }
 
-    function createSingularity(
-        Penrose _penrose,
-        TestSingularityData memory _sgl,
-        address _mc
-    ) public returns (Singularity) {
+    function createSingularity(Penrose _penrose, TestSingularityData memory _sgl, address _mc)
+        public
+        returns (Singularity)
+    {
         Singularity sgl = new Singularity();
         SGLInit sglInit = new SGLInit();
         (
@@ -294,10 +224,7 @@ contract UsdoTestHelper is TestHelper, TestUtils {
             Singularity._InitMemoryData memory _data
         ) = _getSingularityInitData(_sgl, address(_penrose));
         {
-            sgl.init(
-                address(sglInit),
-                abi.encode(_modulesData, _tokensData, _data)
-            );
+            sgl.init(address(sglInit), abi.encode(_modulesData, _tokensData, _data));
         }
 
         {
@@ -330,10 +257,7 @@ contract UsdoTestHelper is TestHelper, TestUtils {
         return sgl;
     }
 
-    function _getSingularityInitData(
-        TestSingularityData memory _sgl,
-        address _penrose
-    )
+    function _getSingularityInitData(TestSingularityData memory _sgl, address _penrose)
         private
         returns (
             Singularity._InitMemoryModulesData memory modulesData,
@@ -347,26 +271,13 @@ contract UsdoTestHelper is TestHelper, TestUtils {
         SGLLeverage sglLev = new SGLLeverage();
 
         modulesData = Singularity._InitMemoryModulesData(
-            address(sglLiq),
-            address(sglBorrow),
-            address(sglCollateral),
-            address(sglLev)
+            address(sglLiq), address(sglBorrow), address(sglCollateral), address(sglLev)
         );
 
-        tokensData = Singularity._InitMemoryTokensData(
-            _sgl.asset,
-            _sgl.assetId,
-            _sgl.collateral,
-            _sgl.collateralId
-        );
+        tokensData = Singularity._InitMemoryTokensData(_sgl.asset, _sgl.assetId, _sgl.collateral, _sgl.collateralId);
 
         data = Singularity._InitMemoryData(
-            IPenrose(_penrose),
-            ITapiocaOracle(address(_sgl.oracle)),
-            0,
-            75000,
-            80000,
-            _sgl.leverageExecutor
+            IPenrose(_penrose), ITapiocaOracle(address(_sgl.oracle)), 0, 75000, 80000, _sgl.leverageExecutor
         );
     }
 }

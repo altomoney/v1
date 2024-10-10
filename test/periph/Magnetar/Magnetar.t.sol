@@ -19,8 +19,7 @@ import {OFTMsgCodec} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/libs/OFTM
 
 // External
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {TapiocaOmnichainEngineHelper} from
-    "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainEngineHelper.sol";
+import {TapiocaOmnichainEngineHelper} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainEngineHelper.sol";
 import {TapiocaOmnichainExtExec} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainExtExec.sol";
 import {TapiocaOmnichainEngineCodec} from "tap-utils/tapiocaOmnichainEngine/TapiocaOmnichainEngineCodec.sol";
 import {MagnetarCollateralModule} from "tapioca-periph/Magnetar/modules/MagnetarCollateralModule.sol";
@@ -997,7 +996,15 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
                         collateralDepositData: IDepositData({deposit: true, amount: tokenAmount_})
                     }),
                     depositData: IDepositData({deposit: false, amount: 0}),
-                    lockData: IOptionsLockData({lock: false, target: address(0), tAsset:address(0), lockDuration: 0, amount: 0, fraction: 0, minDiscountOut: 0}),
+                    lockData: IOptionsLockData({
+                        lock: false,
+                        target: address(0),
+                        tAsset: address(0),
+                        lockDuration: 0,
+                        amount: 0,
+                        fraction: 0,
+                        minDiscountOut: 0
+                    }),
                     participateData: IOptionsParticipateData({participate: false, target: address(0), tOLPTokenId: 0}),
                     externalContracts: ICommonExternalContracts({
                         singularity: address(0),
@@ -1043,8 +1050,12 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
         pearlmit.approve(20, address(collateral), 0, address(magnetar), type(uint200).max, uint48(block.timestamp)); // Atomic approval
         pearlmit.approve(20, address(asset), 0, address(magnetar), type(uint200).max, uint48(block.timestamp)); // Atomic approval
         // pearlmit.approve(20, address(magnetar), 0, address(bb), type(uint200).max, uint48(block.timestamp)); // Atomic approval
-        pearlmit.approve(1155, address(yieldBox), bb._collateralId(), address(bb), type(uint200).max, uint48(block.timestamp)); // Atomic approval
-        pearlmit.approve(1155, address(yieldBox), bb._assetId(), address(bb), type(uint200).max, uint48(block.timestamp)); // this is needed for Pearlmit.allowance check on market
+        pearlmit.approve(
+            1155, address(yieldBox), bb._collateralId(), address(bb), type(uint200).max, uint48(block.timestamp)
+        ); // Atomic approval
+        pearlmit.approve(
+            1155, address(yieldBox), bb._assetId(), address(bb), type(uint200).max, uint48(block.timestamp)
+        ); // this is needed for Pearlmit.allowance check on market
 
         yieldBox.setApprovalForAll(address(magnetar), true);
         yieldBox.setApprovalForAll(address(pearlmit), true);
@@ -1068,7 +1079,15 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
                         collateralDepositData: IDepositData({deposit: true, amount: tokenAmount_})
                     }),
                     depositData: IDepositData({deposit: false, amount: 0}),
-                    lockData: IOptionsLockData({lock: false, target: address(0), tAsset:address(0), lockDuration: 0, amount: 0, fraction: 0, minDiscountOut: 0}),
+                    lockData: IOptionsLockData({
+                        lock: false,
+                        target: address(0),
+                        tAsset: address(0),
+                        lockDuration: 0,
+                        amount: 0,
+                        fraction: 0,
+                        minDiscountOut: 0
+                    }),
                     participateData: IOptionsParticipateData({participate: false, target: address(0), tOLPTokenId: 0}),
                     externalContracts: ICommonExternalContracts({
                         singularity: address(0),
@@ -1090,13 +1109,13 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
             magnetar.burst(calls);
         }
 
-
         pearlmit.approve(20, address(collateral), 0, address(magnetar), type(uint200).max, uint48(block.timestamp)); // Atomic approval
         pearlmit.approve(20, address(asset), 0, address(magnetar), type(uint200).max, uint48(block.timestamp)); // Atomic approval
         // pearlmit.approve(20, address(magnetar), 0, address(bb), type(uint200).max, uint48(block.timestamp)); // Atomic approval
         pearlmit.approve(1155, address(yieldBox), collateralId, address(bb), type(uint200).max, uint48(block.timestamp)); // Atomic approval
-        pearlmit.approve(1155, address(yieldBox), bb._assetId(), address(bb), type(uint200).max, uint48(block.timestamp)); // this is needed for Pearlmit.allowance check on market
-
+        pearlmit.approve(
+            1155, address(yieldBox), bb._assetId(), address(bb), type(uint200).max, uint48(block.timestamp)
+        ); // this is needed for Pearlmit.allowance check on market
 
         uint256 colShare = bb._userCollateralShare(address(this));
         assertGt(colShare, 0);
@@ -1228,7 +1247,15 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
                         collateralDepositData: IDepositData({deposit: false, amount: 0})
                     }),
                     depositData: IDepositData({deposit: false, amount: 0}),
-                    lockData: IOptionsLockData({lock: false, target: address(0), tAsset:address(0), lockDuration: 0, amount: 0, fraction: 0, minDiscountOut: 0}),
+                    lockData: IOptionsLockData({
+                        lock: false,
+                        target: address(0),
+                        tAsset: address(0),
+                        lockDuration: 0,
+                        amount: 0,
+                        fraction: 0,
+                        minDiscountOut: 0
+                    }),
                     participateData: IOptionsParticipateData({participate: false, target: address(0), tOLPTokenId: 0}),
                     externalContracts: ICommonExternalContracts({
                         singularity: address(sgl),
@@ -1286,7 +1313,7 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
             value: 0,
             call: abi.encodeWithSelector(
                 TapiocaOptionsBrokerMock.exerciseOption.selector, 0, address(paymentToken), 1 ether
-                )
+            )
         });
         magnetar.burst(calls);
 

@@ -17,7 +17,11 @@ import {
     MintFromBBAndLendOnSGLData,
     ExitPositionAndRemoveCollateralData
 } from "tap-utils/interfaces/periph/IMagnetar.sol";
-import {IMagnetarCollateralModule, IMagnetarOptionModule,IMagnetarMintModule} from "tap-utils/interfaces/periph/IMagnetar.sol";
+import {
+    IMagnetarCollateralModule,
+    IMagnetarOptionModule,
+    IMagnetarMintModule
+} from "tap-utils/interfaces/periph/IMagnetar.sol";
 
 import {IMagnetarHelper} from "tap-utils/interfaces/periph/IMagnetarHelper.sol";
 import {IMintData} from "tap-utils/interfaces/oft/IUsdo.sol";
@@ -168,7 +172,8 @@ contract UsdoMarketReceiverModule is BaseUsdo {
             IMarket(msg_.lendParams.market).updateExchangeRate();
             uint256 exchangeRatePrecision = IMarket(msg_.lendParams.market)._exchangeRatePrecision();
             uint256 exchangeRate = IMarket(msg_.lendParams.market)._exchangeRate();
-            uint256 collateralPartInAsset = (msg_.lendParams.removeCollateralAmount * exchangeRatePrecision + exchangeRate - 1) / exchangeRate;
+            uint256 collateralPartInAsset =
+                (msg_.lendParams.removeCollateralAmount * exchangeRatePrecision + exchangeRate - 1) / exchangeRate;
             _validateAndSpendAllowance(msg_.user, srcChainSender, collateralPartInAsset);
         }
 

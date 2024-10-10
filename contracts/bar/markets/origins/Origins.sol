@@ -120,7 +120,10 @@ contract Origins is Ownable, Market, MarketStateView, ReentrancyGuard {
     /// @dev can only be called by the conservator
     /// @param val the new value
     function updatePause(PauseType _type, bool val) external {
-        require(penrose.cluster().hasRole(msg.sender, keccak256("PAUSABLE")) || msg.sender == owner(), "Market: unauthorized");
+        require(
+            penrose.cluster().hasRole(msg.sender, keccak256("PAUSABLE")) || msg.sender == owner(),
+            "Market: unauthorized"
+        );
         require(val != pauseOptions[_type], "Market: same state");
         emit PausedUpdated(_type, pauseOptions[_type], val);
         pauseOptions[_type] = val;
@@ -129,7 +132,10 @@ contract Origins is Ownable, Market, MarketStateView, ReentrancyGuard {
     /// @notice updates the pause state of the contract for all types
     /// @param val the new val
     function updatePauseAll(bool val) external {
-        require(penrose.cluster().hasRole(msg.sender, keccak256("PAUSABLE")) || msg.sender == owner(), "Market: unauthorized");
+        require(
+            penrose.cluster().hasRole(msg.sender, keccak256("PAUSABLE")) || msg.sender == owner(),
+            "Market: unauthorized"
+        );
 
         pauseOptions[PauseType.Borrow] = val;
         pauseOptions[PauseType.Repay] = val;

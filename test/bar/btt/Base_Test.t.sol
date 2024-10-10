@@ -187,7 +187,8 @@ abstract contract Base_Test is TestHelper, Utils, Types, Events {
             marketReceiverModule: address(secondaryUsdoMarketReceiverModule),
             optionReceiverModule: address(secondaryUsdoOptionsReceiverModule)
         });
-        secondaryUsdo = Usdo(payable(_deployOApp(type(Usdo).creationCode, abi.encode(usdoInitStruct, usdoModulesInitStruct))));
+        secondaryUsdo =
+            Usdo(payable(_deployOApp(type(Usdo).creationCode, abi.encode(usdoInitStruct, usdoModulesInitStruct))));
         vm.label(address(secondaryUsdo), "Secondary Usdo");
 
         // create YieldBox id for the secondary Usdo
@@ -197,7 +198,6 @@ abstract contract Base_Test is TestHelper, Utils, Types, Events {
             IStrategy(address(_createEmptyStrategy(address(yieldBox), address(secondaryUsdo)))),
             0
         );
-
 
         // *** AFTER DEPLOYMENT *** //
 

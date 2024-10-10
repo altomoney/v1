@@ -6,8 +6,7 @@ import {TestHelper} from "../../../utils/LZSetup/TestHelper.sol";
 
 // External
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import {TapiocaOmnichainEngineHelper} from
-    "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainEngineHelper.sol";
+import {TapiocaOmnichainEngineHelper} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainEngineHelper.sol";
 import {SimpleLeverageExecutor} from "tapioca-bar/markets/leverage/SimpleLeverageExecutor.sol";
 import {SGLInterestHelper} from "tapioca-bar/markets/singularity/SGLInterestHelper.sol";
 import {ERC20WithoutStrategy} from "yieldbox/strategies/ERC20WithoutStrategy.sol";
@@ -284,7 +283,7 @@ contract MagnetarTestHelper is TestHelper {
         );
         setAssetOracle(penrose, bb, address(oracle));
         penrose.setBigBangEthMarket(address(bb));
-       
+
         address[] memory markets = new address[](1);
         markets[0] = address(bb);
         bytes[] memory marketsData = new bytes[](1);

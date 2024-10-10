@@ -75,19 +75,18 @@ abstract contract ERC721Permit is ERC721, EIP712 {
      * @dev "Consume a nonce": return the current value and increment.
      *
      */
-     function _useNonce(uint256 _tokenId) internal virtual returns (uint256 current) {
-         Counters.Counter storage nonce = _nonces[_tokenId];
-         current = nonce.current();
-         nonce.increment();
-     } 
+    function _useNonce(uint256 _tokenId) internal virtual returns (uint256 current) {
+        Counters.Counter storage nonce = _nonces[_tokenId];
+        current = nonce.current();
+        nonce.increment();
+    }
 
-     function _afterTokenTransfer(
-          address from,
-          address to,
-          uint256 firstTokenId,
-          uint256 batchSize
-      ) internal virtual override {
-          _useNonce(firstTokenId);
-          super._afterTokenTransfer(from, to, firstTokenId, batchSize);
-      } 
+    function _afterTokenTransfer(address from, address to, uint256 firstTokenId, uint256 batchSize)
+        internal
+        virtual
+        override
+    {
+        _useNonce(firstTokenId);
+        super._afterTokenTransfer(from, to, firstTokenId, batchSize);
+    }
 }

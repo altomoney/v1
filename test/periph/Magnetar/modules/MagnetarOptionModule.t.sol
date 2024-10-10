@@ -19,8 +19,7 @@ import {MagnetarMintModule} from "tapioca-periph/Magnetar/modules/MagnetarMintMo
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 
 import {
-    IOptionsLockData,
-    IOptionsUnlockData
+    IOptionsLockData, IOptionsUnlockData
 } from "tap-utils/interfaces/tap-token/ITapiocaOptionLiquidityProvision.sol";
 import {ICommonExternalContracts, IDepositData} from "tap-utils/interfaces/common/ICommonData.sol";
 import {IOptionsParticipateData, IOptionsExitData} from "tap-utils/interfaces/tap-token/ITapiocaOptionBroker.sol";
@@ -78,13 +77,16 @@ contract MagnetarOptionModuleTest is MagnetarTestHelper, IERC721Receiver {
             tSglToken: singularity,
             yieldBox: yieldBox,
             magnetar: magnetar,
-            lockData: IOptionsLockData({lock: false, target: address(0), tAsset:address(0), lockDuration: 0, amount: 0, fraction: 0, minDiscountOut: 0}),
-            participateData: IOptionsParticipateData({
-                participate: false,
+            lockData: IOptionsLockData({
+                lock: false,
                 target: address(0),
-                tOLPTokenId: 0
-
+                tAsset: address(0),
+                lockDuration: 0,
+                amount: 0,
+                fraction: 0,
+                minDiscountOut: 0
             }),
+            participateData: IOptionsParticipateData({participate: false, target: address(0), tOLPTokenId: 0}),
             value: 0
         });
     }
@@ -109,13 +111,16 @@ contract MagnetarOptionModuleTest is MagnetarTestHelper, IERC721Receiver {
                 collateralDepositData: IDepositData({deposit: false, amount: depositAmount})
             }),
             depositData: IDepositData({deposit: false, amount: depositAmount}),
-            lockData: IOptionsLockData({lock: false, target: address(0), tAsset:address(0), lockDuration: 0, amount: 0, fraction: 0, minDiscountOut: 0}),
-            participateData: IOptionsParticipateData({
-                participate: false,
+            lockData: IOptionsLockData({
+                lock: false,
                 target: address(0),
-                tOLPTokenId: 0
-
+                tAsset: address(0),
+                lockDuration: 0,
+                amount: 0,
+                fraction: 0,
+                minDiscountOut: 0
             }),
+            participateData: IOptionsParticipateData({participate: false, target: address(0), tOLPTokenId: 0}),
             externalContracts: ICommonExternalContracts({
                 magnetar: _magnetar,
                 singularity: _singularity,

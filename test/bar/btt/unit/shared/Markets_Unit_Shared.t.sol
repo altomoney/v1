@@ -77,8 +77,9 @@ abstract contract Markets_Unit_Shared is Base_Test {
         swapper = new ZeroXSwapper(address(swapperTarget), ICluster(address(cluster)), address(this));
         vm.label(address(swapper), "ZeroXSwapper Test");
 
-        liquidatorReceiver =
-            new MarketLiquidatorReceiver(address(mainToken), ICluster(address(cluster)), address(swapper), address(this));
+        liquidatorReceiver = new MarketLiquidatorReceiver(
+            address(mainToken), ICluster(address(cluster)), address(swapper), address(this)
+        );
         vm.label(address(liquidatorReceiver), "MarketLiquidatorReceiver Test");
 
         // *** AFTER DEPLOYMENT *** //
@@ -89,16 +90,17 @@ abstract contract Markets_Unit_Shared is Base_Test {
         deal(address(usdo), address(swapperTarget), type(uint128).max); // for liquidations
 
         deal(address(randomCollateralErc20), address(randomCollateral), type(uint128).max);
-
-
     }
 
     // **************** //
     // *** INTERNAL *** //
     // **************** //
-    function _approveForCollateral(address) internal virtual  {}
+    function _approveForCollateral(address) internal virtual {}
 
-    function _depositToYieldBox(address asset, uint256 id, uint256 share, address from, address to) internal resetPrank(from) {
+    function _depositToYieldBox(address asset, uint256 id, uint256 share, address from, address to)
+        internal
+        resetPrank(from)
+    {
         _approveViaERC20(asset, from, address(yieldBox), type(uint256).max);
         _approveViaERC20(asset, from, address(pearlmit), type(uint256).max);
         _approveYieldBoxForAll(yieldBox, from, address(pearlmit));
@@ -106,15 +108,19 @@ abstract contract Markets_Unit_Shared is Base_Test {
         yieldBox.depositAsset(id, from, to, 0, share);
     }
 
-    function _computeMaxBorrowAmount(uint256 collateralAmount, IMarket market) internal view returns (uint256 inAssetAmount) {
+    function _computeMaxBorrowAmount(uint256 collateralAmount, IMarket market)
+        internal
+        view
+        returns (uint256 inAssetAmount)
+    {
         (, uint256 rate) = oracle.peek("");
 
         // `FEE_PRECISION` is constant for all markets
-        inAssetAmount =
-            (collateralAmount * (market._exchangeRatePrecision() / FEE_PRECISION) * market._collateralizationRate()) / rate;
+        inAssetAmount = (
+            collateralAmount * (market._exchangeRatePrecision() / FEE_PRECISION) * market._collateralizationRate()
+        ) / rate;
     }
 
-    
     function _executeFromPenrose(address market, bytes memory encodedData) internal {
         address[] memory mc = new address[](1);
         bytes[] memory data = new bytes[](1);

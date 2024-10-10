@@ -13,7 +13,9 @@ import {Balancer} from "tapiocaz/Balancer.sol";
 import {TestUtils} from "./TestUtils.t.sol";
 
 import {ITOFT, TOFTInitStruct, TOFTModulesInitStruct} from "tap-utils/interfaces/oft/ITOFT.sol";
-import {TOFTHelper, PrepareLzCallData, PrepareLzCallReturn, ComposeMsgData} from "tapiocaz/tOFT/extensions/TOFTHelper.sol";
+import {
+    TOFTHelper, PrepareLzCallData, PrepareLzCallReturn, ComposeMsgData
+} from "tapiocaz/tOFT/extensions/TOFTHelper.sol";
 import {TapiocaOmnichainExtExec} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainExtExec.sol";
 import {TOFTGenericReceiverModule} from "tapiocaz/tOFT/modules/TOFTGenericReceiverModule.sol";
 import {TOFTOptionsReceiverModule} from "tapiocaz/tOFT/modules/TOFTOptionsReceiverModule.sol";
@@ -91,12 +93,7 @@ contract TOFTTest is TOFTTestHelper {
 
         setUpEndpoints(3, LibraryType.UltraLightNode);
 
-        balancer = new Balancer(
-            routerEth,
-            address(routerA),
-            address(factory),
-            address(this)
-        );
+        balancer = new Balancer(routerEth, address(routerA), address(factory), address(this));
         vm.label(address(balancer), "Balancer");
 
         pearlmit = new Pearlmit("Pearlmit", "1", address(this), 0);
@@ -129,45 +126,24 @@ contract TOFTTest is TOFTTestHelper {
         {
             TOFTSender aTOFTSender = new TOFTSender(aTOFTInitStruct);
             mTOFTReceiver aTOFTReceiver = new mTOFTReceiver(aTOFTInitStruct);
-            TOFTMarketReceiverModule aTOFTMarketReceiverModule = new TOFTMarketReceiverModule(
-                    aTOFTInitStruct
-                );
-            TOFTOptionsReceiverModule aTOFTOptionsReceiverModule = new TOFTOptionsReceiverModule(
-                    aTOFTInitStruct
-                );
-            TOFTGenericReceiverModule aTOFTGenericReceiverModule = new TOFTGenericReceiverModule(
-                    aTOFTInitStruct
-                );
+            TOFTMarketReceiverModule aTOFTMarketReceiverModule = new TOFTMarketReceiverModule(aTOFTInitStruct);
+            TOFTOptionsReceiverModule aTOFTOptionsReceiverModule = new TOFTOptionsReceiverModule(aTOFTInitStruct);
+            TOFTGenericReceiverModule aTOFTGenericReceiverModule = new TOFTGenericReceiverModule(aTOFTInitStruct);
             vm.label(address(aTOFTSender), "aTOFTSender");
             vm.label(address(aTOFTReceiver), "aTOFTReceiver");
-            vm.label(
-                address(aTOFTMarketReceiverModule),
-                "aTOFTMarketReceiverModule"
-            );
-            vm.label(
-                address(aTOFTOptionsReceiverModule),
-                "aTOFTOptionsReceiverModule"
-            );
-            vm.label(
-                address(aTOFTGenericReceiverModule),
-                "aTOFTGenericReceiverModule"
-            );
-            TOFTModulesInitStruct
-                memory aTOFTModulesInitStruct = TOFTModulesInitStruct({
-                    tOFTSenderModule: address(aTOFTSender),
-                    tOFTReceiverModule: address(aTOFTReceiver),
-                    marketReceiverModule: address(aTOFTMarketReceiverModule),
-                    optionsReceiverModule: address(aTOFTMarketReceiverModule),
-                    genericReceiverModule: address(aTOFTGenericReceiverModule)
-                });
+            vm.label(address(aTOFTMarketReceiverModule), "aTOFTMarketReceiverModule");
+            vm.label(address(aTOFTOptionsReceiverModule), "aTOFTOptionsReceiverModule");
+            vm.label(address(aTOFTGenericReceiverModule), "aTOFTGenericReceiverModule");
+            TOFTModulesInitStruct memory aTOFTModulesInitStruct = TOFTModulesInitStruct({
+                tOFTSenderModule: address(aTOFTSender),
+                tOFTReceiverModule: address(aTOFTReceiver),
+                marketReceiverModule: address(aTOFTMarketReceiverModule),
+                optionsReceiverModule: address(aTOFTMarketReceiverModule),
+                genericReceiverModule: address(aTOFTGenericReceiverModule)
+            });
 
             aTOFT = mTOFT(
-                payable(
-                    _deployOApp(
-                        type(mTOFT).creationCode,
-                        abi.encode(aTOFTInitStruct, aTOFTModulesInitStruct)
-                    )
-                )
+                payable(_deployOApp(type(mTOFT).creationCode, abi.encode(aTOFTInitStruct, aTOFTModulesInitStruct)))
             );
             vm.label(address(aTOFT), "aTOFT");
         }
@@ -189,44 +165,23 @@ contract TOFTTest is TOFTTestHelper {
         {
             TOFTSender bTOFTSender = new TOFTSender(bTOFTInitStruct);
             mTOFTReceiver bTOFTReceiver = new mTOFTReceiver(bTOFTInitStruct);
-            TOFTMarketReceiverModule bTOFTMarketReceiverModule = new TOFTMarketReceiverModule(
-                    bTOFTInitStruct
-                );
-            TOFTOptionsReceiverModule bTOFTOptionsReceiverModule = new TOFTOptionsReceiverModule(
-                    bTOFTInitStruct
-                );
-            TOFTGenericReceiverModule bTOFTGenericReceiverModule = new TOFTGenericReceiverModule(
-                    bTOFTInitStruct
-                );
+            TOFTMarketReceiverModule bTOFTMarketReceiverModule = new TOFTMarketReceiverModule(bTOFTInitStruct);
+            TOFTOptionsReceiverModule bTOFTOptionsReceiverModule = new TOFTOptionsReceiverModule(bTOFTInitStruct);
+            TOFTGenericReceiverModule bTOFTGenericReceiverModule = new TOFTGenericReceiverModule(bTOFTInitStruct);
             vm.label(address(bTOFTSender), "bTOFTSender");
             vm.label(address(bTOFTReceiver), "bTOFTReceiver");
-            vm.label(
-                address(bTOFTMarketReceiverModule),
-                "bTOFTMarketReceiverModule"
-            );
-            vm.label(
-                address(bTOFTOptionsReceiverModule),
-                "bTOFTOptionsReceiverModule"
-            );
-            vm.label(
-                address(bTOFTGenericReceiverModule),
-                "bTOFTGenericReceiverModule"
-            );
-            TOFTModulesInitStruct
-                memory bTOFTModulesInitStruct = TOFTModulesInitStruct({
-                    tOFTSenderModule: address(bTOFTSender),
-                    tOFTReceiverModule: address(bTOFTReceiver),
-                    marketReceiverModule: address(bTOFTMarketReceiverModule),
-                    optionsReceiverModule: address(bTOFTOptionsReceiverModule),
-                    genericReceiverModule: address(bTOFTGenericReceiverModule)
-                });
+            vm.label(address(bTOFTMarketReceiverModule), "bTOFTMarketReceiverModule");
+            vm.label(address(bTOFTOptionsReceiverModule), "bTOFTOptionsReceiverModule");
+            vm.label(address(bTOFTGenericReceiverModule), "bTOFTGenericReceiverModule");
+            TOFTModulesInitStruct memory bTOFTModulesInitStruct = TOFTModulesInitStruct({
+                tOFTSenderModule: address(bTOFTSender),
+                tOFTReceiverModule: address(bTOFTReceiver),
+                marketReceiverModule: address(bTOFTMarketReceiverModule),
+                optionsReceiverModule: address(bTOFTOptionsReceiverModule),
+                genericReceiverModule: address(bTOFTGenericReceiverModule)
+            });
             bTOFT = mTOFT(
-                payable(
-                    _deployOApp(
-                        type(mTOFT).creationCode,
-                        abi.encode(bTOFTInitStruct, bTOFTModulesInitStruct)
-                    )
-                )
+                payable(_deployOApp(type(mTOFT).creationCode, abi.encode(bTOFTInitStruct, bTOFTModulesInitStruct)))
             );
             vm.label(address(bTOFT), "bTOFT");
         }
@@ -241,24 +196,14 @@ contract TOFTTest is TOFTTestHelper {
 
         vm.startPrank(userA);
         vm.expectRevert("Ownable: caller is not the owner");
-        balancer.initConnectedOFT(
-            address(aERC20),
-            1,
-            address(bERC20),
-            abi.encode(1, 1)
-        );
+        balancer.initConnectedOFT(address(aERC20), 1, address(bERC20), abi.encode(1, 1));
         vm.stopPrank();
     }
 
     function test_add_connected_chains() public {
-        balancer.initConnectedOFT(
-            address(aERC20),
-            1,
-            address(bERC20),
-            abi.encode(uint256(1), uint256(1))
-        );
+        balancer.initConnectedOFT(address(aERC20), 1, address(bERC20), abi.encode(uint256(1), uint256(1)));
 
-        (, , address dstOft, ) = balancer.connectedOFTs(address(aERC20), 1);
+        (,, address dstOft,) = balancer.connectedOFTs(address(aERC20), 1);
         assertEq(dstOft, address(bERC20));
     }
 
@@ -283,25 +228,11 @@ contract TOFTTest is TOFTTestHelper {
             assertEq(aERC20.balanceOf(address(this)), erc20Amount_);
             assertEq(bERC20.balanceOf(address(this)), erc20Amount_);
 
-            pearlmit.approve(
-                20,
-                address(aERC20),
-                0,
-                address(aTOFT),
-                uint200(erc20Amount_),
-                uint48(block.timestamp)
-            ); // Atomic approval
+            pearlmit.approve(20, address(aERC20), 0, address(aTOFT), uint200(erc20Amount_), uint48(block.timestamp)); // Atomic approval
             aERC20.approve(address(pearlmit), uint200(erc20Amount_));
             aTOFT.wrap(address(this), address(this), erc20Amount_);
 
-            pearlmit.approve(
-                20,
-                address(bERC20),
-                0,
-                address(bTOFT),
-                uint200(erc20Amount_),
-                uint48(block.timestamp)
-            ); // Atomic approval
+            pearlmit.approve(20, address(bERC20), 0, address(bTOFT), uint200(erc20Amount_), uint48(block.timestamp)); // Atomic approval
             bERC20.approve(address(pearlmit), uint200(erc20Amount_));
             bTOFT.wrap(address(this), address(this), erc20Amount_);
 
@@ -320,12 +251,7 @@ contract TOFTTest is TOFTTestHelper {
         });
         aTOFT.setOwnerState(dataA);
 
-        balancer.initConnectedOFT(
-            address(aTOFT),
-            uint16(bEid),
-            address(bTOFT),
-            abi.encode(uint256(1), uint256(1))
-        );
+        balancer.initConnectedOFT(address(aTOFT), uint16(bEid), address(bTOFT), abi.encode(uint256(1), uint256(1)));
         balancer.addRebalanceAmount(address(aTOFT), uint16(bEid), erc20Amount_);
         balancer.setSgReceiveGas(uint16(aEid), 500_000);
         balancer.setSgReceiveGas(uint16(bEid), 500_000);
@@ -347,18 +273,9 @@ contract TOFTTest is TOFTTestHelper {
         }
 
         {
-            uint256 bERC20BalanceBefore = bERC20.balanceOf(
-                address(bTOFT.vault())
-            );
-            balancer.rebalance{value: 1e17}(
-                payable(address(aTOFT)),
-                uint16(bEid),
-                1e3,
-                erc20Amount_
-            );
-            uint256 bERC20BalanceAfter = bERC20.balanceOf(
-                address(bTOFT.vault())
-            );
+            uint256 bERC20BalanceBefore = bERC20.balanceOf(address(bTOFT.vault()));
+            balancer.rebalance{value: 1e17}(payable(address(aTOFT)), uint16(bEid), 1e3, erc20Amount_);
+            uint256 bERC20BalanceAfter = bERC20.balanceOf(address(bTOFT.vault()));
             assertGt(bERC20BalanceAfter, bERC20BalanceBefore);
         }
     }
@@ -366,24 +283,11 @@ contract TOFTTest is TOFTTestHelper {
     function test_balancer_checker() public {
         bool canExec;
         bytes memory execPayload;
-        (canExec, execPayload) = balancer.checker(
-            payable(address(aTOFT)),
-            uint16(bEid),
-            1e4
-        );
+        (canExec, execPayload) = balancer.checker(payable(address(aTOFT)), uint16(bEid), 1e4);
         assertFalse(canExec);
 
-        balancer.initConnectedOFT(
-            address(aTOFT),
-            uint16(bEid),
-            address(bTOFT),
-            abi.encode(1, 1)
-        );
-        (canExec, execPayload) = balancer.checker(
-            payable(address(aTOFT)),
-            uint16(bEid),
-            1e4
-        );
+        balancer.initConnectedOFT(address(aTOFT), uint16(bEid), address(bTOFT), abi.encode(1, 1));
+        (canExec, execPayload) = balancer.checker(payable(address(aTOFT)), uint16(bEid), 1e4);
         assertFalse(canExec);
 
         uint256 erc20Amount_ = 1 ether;
@@ -396,25 +300,11 @@ contract TOFTTest is TOFTTestHelper {
             assertEq(aERC20.balanceOf(address(this)), erc20Amount_);
             assertEq(bERC20.balanceOf(address(this)), erc20Amount_);
 
-            pearlmit.approve(
-                20,
-                address(aERC20),
-                0,
-                address(aTOFT),
-                uint200(erc20Amount_),
-                uint48(block.timestamp)
-            ); // Atomic approval
+            pearlmit.approve(20, address(aERC20), 0, address(aTOFT), uint200(erc20Amount_), uint48(block.timestamp)); // Atomic approval
             aERC20.approve(address(pearlmit), uint200(erc20Amount_));
             aTOFT.wrap(address(this), address(this), erc20Amount_);
 
-            pearlmit.approve(
-                20,
-                address(bERC20),
-                0,
-                address(bTOFT),
-                uint200(erc20Amount_),
-                uint48(block.timestamp)
-            ); // Atomic approval
+            pearlmit.approve(20, address(bERC20), 0, address(bTOFT), uint200(erc20Amount_), uint48(block.timestamp)); // Atomic approval
             bERC20.approve(address(pearlmit), uint200(erc20Amount_));
             bTOFT.wrap(address(this), address(this), erc20Amount_);
 
@@ -423,11 +313,7 @@ contract TOFTTest is TOFTTestHelper {
         }
 
         balancer.addRebalanceAmount(address(aTOFT), uint16(bEid), erc20Amount_);
-        (canExec, execPayload) = balancer.checker(
-            payable(address(aTOFT)),
-            uint16(bEid),
-            1e4
-        );
+        (canExec, execPayload) = balancer.checker(payable(address(aTOFT)), uint16(bEid), 1e4);
         assertTrue(canExec);
     }
 }

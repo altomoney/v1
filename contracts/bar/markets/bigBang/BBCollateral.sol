@@ -41,7 +41,7 @@ contract BBCollateral is BBLendingCommon {
             amount = yieldBox.toAmount(collateralId, share, false);
         }
         if (amount <= minCollateralAmount) revert MinCollateralAmountNotMet();
-        
+
         _allowedBorrow(from, share);
 
         _addCollateral(from, to, skim, amount, share, true);

@@ -61,51 +61,24 @@ contract AssetToSDaiLeverageExecutorTest is BaseLeverageExecutorTest {
         }
         {
             YieldBoxURIBuilder uriBuilder = new YieldBoxURIBuilder();
-            yieldBox = new YieldBox(
-                IWrappedNative(address(0)),
-                uriBuilder,
-                pearlmit,
-                address(this)
-            );
+            yieldBox = new YieldBox(IWrappedNative(address(0)), uriBuilder, pearlmit, address(this));
 
-            ERC20WithoutStrategy assetStrategy = createEmptyStrategy(
-                address(yieldBox),
-                address(asset)
-            );
-            assetYieldBoxId = yieldBox.registerAsset(
-                TokenType.ERC20,
-                address(asset),
-                IStrategy(address(assetStrategy)),
-                0
-            );
+            ERC20WithoutStrategy assetStrategy = createEmptyStrategy(address(yieldBox), address(asset));
+            assetYieldBoxId =
+                yieldBox.registerAsset(TokenType.ERC20, address(asset), IStrategy(address(assetStrategy)), 0);
 
-            ERC20WithoutStrategy toftStrategy = createEmptyStrategy(
-                address(yieldBox),
-                address(toft)
-            );
-            toftYieldBoxId = yieldBox.registerAsset(
-                TokenType.ERC20,
-                address(toft),
-                IStrategy(address(toftStrategy)),
-                0
-            );
+            ERC20WithoutStrategy toftStrategy = createEmptyStrategy(address(yieldBox), address(toft));
+            toftYieldBoxId = yieldBox.registerAsset(TokenType.ERC20, address(toft), IStrategy(address(toftStrategy)), 0);
         }
 
         {
             cluster = new Cluster(0, address(this));
 
             swapperTarget = new ZeroXSwapperMockTarget();
-            swapper = new ZeroXSwapper(
-                address(swapperTarget),
-                ICluster(address(cluster)),
-                address(this)
-            );
+            swapper = new ZeroXSwapper(address(swapperTarget), ICluster(address(cluster)), address(this));
 
             executor = new AssetTotsDaiLeverageExecutor(
-                IZeroXSwapper(address(swapper)),
-                ICluster(address(cluster)),
-                address(0),
-                IPearlmit(address(pearlmit))
+                IZeroXSwapper(address(swapper)), ICluster(address(cluster)), address(0), IPearlmit(address(pearlmit))
             );
         }
 
@@ -134,35 +107,18 @@ contract AssetToSDaiLeverageExecutorTest is BaseLeverageExecutorTest {
         deal(address(dai), address(swapperTarget), amountIn);
         deal(address(asset), address(executor), amountIn);
 
-        IZeroXSwapper.SZeroXSwapData memory zeroXSwapData = IZeroXSwapper
-            .SZeroXSwapData({
-                sellToken: IERC20(address(asset)),
-                buyToken: IERC20(address(dai)),
-                swapTarget: payable(swapperTarget),
-                swapCallData: abi.encodeWithSelector(
-                    ZeroXSwapperMockTarget.transferTokens.selector,
-                    address(dai),
-                    amountIn
-                )
-            });
-
-        SToftInfo memory toftInfo = SToftInfo({
-            isTokenInToft: false,
-            isTokenOutToft: false
-        });
-        SLeverageSwapData memory swapData = SLeverageSwapData({
-            minAmountOut: 0,
-            toftInfo: toftInfo,
-            swapperData: abi.encode(zeroXSwapData)
+        IZeroXSwapper.SZeroXSwapData memory zeroXSwapData = IZeroXSwapper.SZeroXSwapData({
+            sellToken: IERC20(address(asset)),
+            buyToken: IERC20(address(dai)),
+            swapTarget: payable(swapperTarget),
+            swapCallData: abi.encodeWithSelector(ZeroXSwapperMockTarget.transferTokens.selector, address(dai), amountIn)
         });
 
-        executor.getCollateral(
-            address(this),
-            address(asset),
-            address(toft),
-            amountIn,
-            abi.encode(swapData)
-        );
+        SToftInfo memory toftInfo = SToftInfo({isTokenInToft: false, isTokenOutToft: false});
+        SLeverageSwapData memory swapData =
+            SLeverageSwapData({minAmountOut: 0, toftInfo: toftInfo, swapperData: abi.encode(zeroXSwapData)});
+
+        executor.getCollateral(address(this), address(asset), address(toft), amountIn, abi.encode(swapData));
 
         assertEq(toft.balanceOf(address(this)), amountIn);
     }
@@ -178,35 +134,18 @@ contract AssetToSDaiLeverageExecutorTest is BaseLeverageExecutorTest {
         deal(address(dai), address(sDai), amountIn);
         deal(address(asset), address(swapperTarget), amountIn);
 
-        IZeroXSwapper.SZeroXSwapData memory zeroXSwapData = IZeroXSwapper
-            .SZeroXSwapData({
-                sellToken: IERC20(address(dai)),
-                buyToken: IERC20(address(asset)),
-                swapTarget: payable(swapperTarget),
-                swapCallData: abi.encodeWithSelector(
-                    ZeroXSwapperMockTarget.transferTokens.selector,
-                    address(asset),
-                    amountIn
-                )
-            });
-
-        SToftInfo memory toftInfo = SToftInfo({
-            isTokenInToft: false,
-            isTokenOutToft: false
-        });
-        SLeverageSwapData memory swapData = SLeverageSwapData({
-            minAmountOut: 0,
-            toftInfo: toftInfo,
-            swapperData: abi.encode(zeroXSwapData)
+        IZeroXSwapper.SZeroXSwapData memory zeroXSwapData = IZeroXSwapper.SZeroXSwapData({
+            sellToken: IERC20(address(dai)),
+            buyToken: IERC20(address(asset)),
+            swapTarget: payable(swapperTarget),
+            swapCallData: abi.encodeWithSelector(ZeroXSwapperMockTarget.transferTokens.selector, address(asset), amountIn)
         });
 
-        executor.getAsset(
-            address(this),
-            address(toft),
-            address(asset),
-            amountIn,
-            abi.encode(swapData)
-        );
+        SToftInfo memory toftInfo = SToftInfo({isTokenInToft: false, isTokenOutToft: false});
+        SLeverageSwapData memory swapData =
+            SLeverageSwapData({minAmountOut: 0, toftInfo: toftInfo, swapperData: abi.encode(zeroXSwapData)});
+
+        executor.getAsset(address(this), address(toft), address(asset), amountIn, abi.encode(swapData));
         assertEq(asset.balanceOf(address(this)), amountIn);
     }
 }

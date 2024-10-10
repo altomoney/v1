@@ -75,10 +75,7 @@ contract PenroseTest is UsdoTestHelper {
             pearlmit = new Pearlmit("Pearlmit", "1", address(this), 0);
             yieldBox = createYieldBox(pearlmit, address(this));
             cluster = createCluster(aEid, __owner);
-            magnetar = createMagnetar(
-                address(cluster),
-                IPearlmit(address(pearlmit))
-            );
+            magnetar = createMagnetar(address(cluster), IPearlmit(address(pearlmit)));
 
             setUpEndpoints(3, LibraryType.UltraLightNode);
 
@@ -96,25 +93,13 @@ contract PenroseTest is UsdoTestHelper {
             collateral = new ERC20Mock("Collateral", "coll");
             vm.label(address(collateral), "collateral");
 
-            ERC20WithoutStrategy assetStrategy = createYieldBoxEmptyStrategy(
-                address(yieldBox),
-                address(asset)
-            );
-            ERC20WithoutStrategy collateralStrategy = createYieldBoxEmptyStrategy(
-                    address(yieldBox),
-                    address(collateral)
-                );
+            ERC20WithoutStrategy assetStrategy = createYieldBoxEmptyStrategy(address(yieldBox), address(asset));
+            ERC20WithoutStrategy collateralStrategy =
+                createYieldBoxEmptyStrategy(address(yieldBox), address(collateral));
 
-            assetYieldBoxId = registerYieldBoxAsset(
-                address(yieldBox),
-                address(asset),
-                address(assetStrategy)
-            );
-            collateralYieldBoxId = registerYieldBoxAsset(
-                address(yieldBox),
-                address(collateral),
-                address(collateralStrategy)
-            );
+            assetYieldBoxId = registerYieldBoxAsset(address(yieldBox), address(asset), address(assetStrategy));
+            collateralYieldBoxId =
+                registerYieldBoxAsset(address(yieldBox), address(collateral), address(collateralStrategy));
         }
 
         {
@@ -136,12 +121,8 @@ contract PenroseTest is UsdoTestHelper {
             )
         );
 
-        leverageExecutor = createLeverageExecutor(
-            address(yieldBox),
-            address(swapper),
-            address(cluster),
-            address(pearlmit)
-        );
+        leverageExecutor =
+            createLeverageExecutor(address(yieldBox), address(swapper), address(cluster), address(pearlmit));
         (penrose, masterContract) = createPenrose(
             TestPenroseData(
                 address(yieldBox),
@@ -212,10 +193,7 @@ contract PenroseTest is UsdoTestHelper {
 
     function test_penrose_should_not_register_same_mc() public {
         vm.expectRevert();
-        penrose.registerSingularityMasterContract(
-            address(masterContract),
-            IPenrose.ContractType.mediumRisk
-        );
+        penrose.registerSingularityMasterContract(address(masterContract), IPenrose.ContractType.mediumRisk);
     }
 
     function test_penrose_should_not_execute_without_mc() public {
@@ -243,10 +221,7 @@ contract PenroseTest is UsdoTestHelper {
         Singularity newMc = new Singularity();
 
         uint256 mcLengthBefore = penrose.singularityMasterContractLength();
-        penrose.registerSingularityMasterContract(
-            address(newMc),
-            IPenrose.ContractType.mediumRisk
-        );
+        penrose.registerSingularityMasterContract(address(newMc), IPenrose.ContractType.mediumRisk);
         uint256 mcLengthAfter = penrose.singularityMasterContractLength();
         assertGt(mcLengthAfter, mcLengthBefore);
     }

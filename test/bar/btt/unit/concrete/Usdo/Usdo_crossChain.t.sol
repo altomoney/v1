@@ -11,7 +11,13 @@ import {
 
 // Tapioca
 import {UsdoMarketReceiverModule} from "tapioca-bar/usdo/modules/UsdoMarketReceiverModule.sol";
-import {MarketLendOrRepayMsg, MarketRemoveAssetMsg, YieldBoxApproveAllMsg, YieldBoxApproveAssetMsg, MarketPermitActionMsg} from "tap-utils/interfaces/oft/IUsdo.sol";
+import {
+    MarketLendOrRepayMsg,
+    MarketRemoveAssetMsg,
+    YieldBoxApproveAllMsg,
+    YieldBoxApproveAssetMsg,
+    MarketPermitActionMsg
+} from "tap-utils/interfaces/oft/IUsdo.sol";
 
 import {MarketHelper} from "tapioca-bar/markets/MarketHelper.sol";
 import {BigBang} from "tapioca-bar/markets/bigBang/BigBang.sol";
@@ -32,7 +38,6 @@ import {Singularity_Unit_Shared} from "../../shared/Singularity_Unit_Shared.t.so
 import {BigBang_Unit_Shared} from "../../shared/BigBang_Unit_Shared.t.sol";
 import {Usdo_Unit_Shared} from "../../shared/Usdo_Unit_Shared.t.sol";
 
-
 import "forge-std/console.sol";
 
 contract Usdo_crossChain is Usdo_Unit_Shared, BigBang_Unit_Shared, Singularity_Unit_Shared {
@@ -42,7 +47,12 @@ contract Usdo_crossChain is Usdo_Unit_Shared, BigBang_Unit_Shared, Singularity_U
     function setUp() public override(Usdo_Unit_Shared, BigBang_Unit_Shared, Singularity_Unit_Shared) {
         super.setUp();
     }
-    function _approveForCollateral(address txExecutor) internal override(BigBang_Unit_Shared, Singularity_Unit_Shared) resetPrank(txExecutor) {
+
+    function _approveForCollateral(address txExecutor)
+        internal
+        override(BigBang_Unit_Shared, Singularity_Unit_Shared)
+        resetPrank(txExecutor)
+    {
         _approveViaERC20(mainBB._collateral(), txExecutor, address(yieldBox), type(uint256).max);
         _approveViaERC20(mainBB._collateral(), txExecutor, address(pearlmit), type(uint256).max);
         _approveYieldBoxForAll(yieldBox, txExecutor, address(mainBB));
@@ -74,7 +84,10 @@ contract Usdo_crossChain is Usdo_Unit_Shared, BigBang_Unit_Shared, Singularity_U
         );
     }
 
-    function test_WhenErc20ApprovalIsPerformedOnCurrentChain(uint256 amount) external assumeRange(amount, SMALL_AMOUNT, LARGE_AMOUNT) {
+    function test_WhenErc20ApprovalIsPerformedOnCurrentChain(uint256 amount)
+        external
+        assumeRange(amount, SMALL_AMOUNT, LARGE_AMOUNT)
+    {
         ERC20PermitStruct memory permit_ = _createErc20PermitStruct(userA, userB, amount, 0);
 
         // get permit message
@@ -99,20 +112,33 @@ contract Usdo_crossChain is Usdo_Unit_Shared, BigBang_Unit_Shared, Singularity_U
         assertEq(usdo.nonces(userA), 1);
     }
 
-    function test_WhenErc20ApprovalIsPerformedOnCrossChainLevel(uint256 amount) external assumeRange(amount, SMALL_AMOUNT, LARGE_AMOUNT) {
+    function test_WhenErc20ApprovalIsPerformedOnCrossChainLevel(uint256 amount)
+        external
+        assumeRange(amount, SMALL_AMOUNT, LARGE_AMOUNT)
+    {
         cluster.updateContract(0, address(secondaryUsdo), true);
 
         // create permit messages
         ERC20PermitApprovalMsg memory permitApprovalB_;
-        ERC20PermitApprovalMsg memory permitApprovalC_; 
+        ERC20PermitApprovalMsg memory permitApprovalC_;
         bytes memory approvalsMsg_;
 
         {
             ERC20PermitStruct memory permitStructUserB = _createErc20PermitStruct(userA, userB, amount, 0);
             ERC20PermitStruct memory permitStructUserC = _createErc20PermitStruct(userA, userC, amount, 1); // nonce 1
 
-            permitApprovalB_ = __getERC20PermitData(permitStructUserB, secondaryUsdo.getTypedDataHash(permitStructUserB), address(secondaryUsdo), USER_A_PKEY);
-            permitApprovalC_ = __getERC20PermitData(permitStructUserC, secondaryUsdo.getTypedDataHash(permitStructUserC), address(secondaryUsdo), USER_A_PKEY);
+            permitApprovalB_ = __getERC20PermitData(
+                permitStructUserB,
+                secondaryUsdo.getTypedDataHash(permitStructUserB),
+                address(secondaryUsdo),
+                USER_A_PKEY
+            );
+            permitApprovalC_ = __getERC20PermitData(
+                permitStructUserC,
+                secondaryUsdo.getTypedDataHash(permitStructUserC),
+                address(secondaryUsdo),
+                USER_A_PKEY
+            );
 
             ERC20PermitApprovalMsg[] memory approvals_ = new ERC20PermitApprovalMsg[](2);
             approvals_[0] = permitApprovalB_;
@@ -121,8 +147,10 @@ contract Usdo_crossChain is Usdo_Unit_Shared, BigBang_Unit_Shared, Singularity_U
             approvalsMsg_ = usdoHelper.encodeERC20PermitApprovalMsg(approvals_);
         }
 
-        _prepareAndExecuteCrossChainPackets(address(usdo), address(secondaryUsdo), bEid, address(this), 0, PT_APPROVALS, approvalsMsg_);
-     
+        _prepareAndExecuteCrossChainPackets(
+            address(usdo), address(secondaryUsdo), bEid, address(this), 0, PT_APPROVALS, approvalsMsg_
+        );
+
         // it should increase allowance of secondary Usdo for 2 users
         assertEq(secondaryUsdo.allowance(userA, userB), amount);
         assertEq(secondaryUsdo.allowance(userA, userC), amount);
@@ -131,16 +159,18 @@ contract Usdo_crossChain is Usdo_Unit_Shared, BigBang_Unit_Shared, Singularity_U
         assertEq(secondaryUsdo.nonces(userA), 2);
     }
 
-
-
-    function test_WhenRemoteTransferIsCalledFromSecondaryChain(uint256 amount) external assumeRange(amount, SMALL_AMOUNT, LARGE_AMOUNT) whenApprovedViaERC20(address(secondaryUsdo), address(this), address(secondaryUsdo), amount) {
-
+    function test_WhenRemoteTransferIsCalledFromSecondaryChain(uint256 amount)
+        external
+        assumeRange(amount, SMALL_AMOUNT, LARGE_AMOUNT)
+        whenApprovedViaERC20(address(secondaryUsdo), address(this), address(secondaryUsdo), amount)
+    {
         LZSendParam memory remoteLzSendParam_;
         MessagingFee memory remoteMsgFee_;
         {
             deal(address(secondaryUsdo), address(this), amount);
 
-            PrepareLzCallReturn memory prepareLzCallReturn1_ = _prepareLzCall(address(secondaryUsdo), aEid, address(this), amount, SEND, "", 0);
+            PrepareLzCallReturn memory prepareLzCallReturn1_ =
+                _prepareLzCall(address(secondaryUsdo), aEid, address(this), amount, SEND, "", 0);
             remoteLzSendParam_ = prepareLzCallReturn1_.lzSendParam;
             remoteMsgFee_ = prepareLzCallReturn1_.msgFee;
         }
@@ -150,7 +180,9 @@ contract Usdo_crossChain is Usdo_Unit_Shared, BigBang_Unit_Shared, Singularity_U
                 RemoteTransferMsg({composeMsg: new bytes(0), owner: address(this), lzSendParam: remoteLzSendParam_});
             bytes memory remoteTransferMsg_ = usdoHelper.buildRemoteTransferMsg(remoteTransferData);
 
-            PrepareLzCallReturn memory prepareLzCallReturn2_ = _prepareLzCall(address(usdo), bEid, address(this), 0, PT_REMOTE_TRANSFER, remoteTransferMsg_, remoteMsgFee_.nativeFee);
+            PrepareLzCallReturn memory prepareLzCallReturn2_ = _prepareLzCall(
+                address(usdo), bEid, address(this), 0, PT_REMOTE_TRANSFER, remoteTransferMsg_, remoteMsgFee_.nativeFee
+            );
             bytes memory composeMsg_ = prepareLzCallReturn2_.composeMsg;
             bytes memory oftMsgOptions_ = prepareLzCallReturn2_.oftMsgOptions;
             MessagingFee memory msgFee_ = prepareLzCallReturn2_.msgFee;
@@ -159,7 +191,7 @@ contract Usdo_crossChain is Usdo_Unit_Shared, BigBang_Unit_Shared, Singularity_U
             (MessagingReceipt memory msgReceipt_,, bytes memory sentMsg,) =
                 usdo.sendPacket{value: msgFee_.nativeFee}(lzSendParam_, composeMsg_);
 
-            verifyPackets(uint32(bEid), address(secondaryUsdo)); 
+            verifyPackets(uint32(bEid), address(secondaryUsdo));
 
             __callLzCompose(
                 LzOFTComposedData(
@@ -181,7 +213,10 @@ contract Usdo_crossChain is Usdo_Unit_Shared, BigBang_Unit_Shared, Singularity_U
         assertApproxEqRel(usdo.balanceOf(address(this)), amount, 0.0001e18); // to pass over the LD to SD and SD to LD conversion
     }
 
-    function test_whenCrossChainPermitOrRevokeIsTriggered_WhenPermitAllIsCalled() external whenWhitelisted(address(yieldBox)) {
+    function test_whenCrossChainPermitOrRevokeIsTriggered_WhenPermitAllIsCalled()
+        external
+        whenWhitelisted(address(yieldBox))
+    {
         _resetPrank(address(this));
         _crossChainApproveOrRevokeAll(true);
 
@@ -189,7 +224,11 @@ contract Usdo_crossChain is Usdo_Unit_Shared, BigBang_Unit_Shared, Singularity_U
         assertEq(yieldBox.isApprovedForAll(address(userA), address(userB)), true);
     }
 
-    function test_whenCrossChainPermitOrRevokeIsTriggered_WhenRevokeAllIsCalled() external whenWhitelisted(address(yieldBox)) whenYieldBoxApprovedForAll(userA, userB) {
+    function test_whenCrossChainPermitOrRevokeIsTriggered_WhenRevokeAllIsCalled()
+        external
+        whenWhitelisted(address(yieldBox))
+        whenYieldBoxApprovedForAll(userA, userB)
+    {
         _resetPrank(address(this));
         _crossChainApproveOrRevokeAll(false);
 
@@ -197,14 +236,21 @@ contract Usdo_crossChain is Usdo_Unit_Shared, BigBang_Unit_Shared, Singularity_U
         assertEq(yieldBox.isApprovedForAll(address(userA), address(userB)), false);
     }
 
-    function test_whenCrossChainPermitOrRevokeIsTriggered_WhenPermitIsCalled() external whenWhitelisted(address(yieldBox)) {
+    function test_whenCrossChainPermitOrRevokeIsTriggered_WhenPermitIsCalled()
+        external
+        whenWhitelisted(address(yieldBox))
+    {
         _crossChainYieldBoxPermitOrRevokeAsset(true);
 
         // it should set approval for the asset on YieldBox
         assertEq(yieldBox.isApprovedForAsset(address(userA), address(userB), usdoId), true);
     }
 
-    function test_whenCrossChainPermitOrRevokeIsTriggered_WhenRevokeIsCalled() external whenWhitelisted(address(yieldBox)) whenYieldBoxApprovedForAssetID(userA, userB, usdoId) {
+    function test_whenCrossChainPermitOrRevokeIsTriggered_WhenRevokeIsCalled()
+        external
+        whenWhitelisted(address(yieldBox))
+        whenYieldBoxApprovedForAssetID(userA, userB, usdoId)
+    {
         _resetPrank(address(this));
         _crossChainYieldBoxPermitOrRevokeAsset(false);
 
@@ -212,22 +258,35 @@ contract Usdo_crossChain is Usdo_Unit_Shared, BigBang_Unit_Shared, Singularity_U
         assertEq(yieldBox.isApprovedForAsset(address(userA), address(userB), usdoId), false);
     }
 
-    function test_whenMarketPermitIsCalled_WhenPermitAsset(uint256 amount) external assumeRange(amount, SMALL_AMOUNT, LARGE_AMOUNT) whenWhitelisted(address(secondaryUsdo)) whenWhitelisted(address(mainBB)) {
+    function test_whenMarketPermitIsCalled_WhenPermitAsset(uint256 amount)
+        external
+        assumeRange(amount, SMALL_AMOUNT, LARGE_AMOUNT)
+        whenWhitelisted(address(secondaryUsdo))
+        whenWhitelisted(address(mainBB))
+    {
         _marketPermit(amount, true);
 
         // it should increase market allowance for asset
         assertEq(mainBB.allowance(userA, userB), amount);
     }
 
-    function test_whenMarketPermitIsCalled_WhenPermitCollateral(uint256 amount) external assumeRange(amount, SMALL_AMOUNT, LARGE_AMOUNT) whenWhitelisted(address(secondaryUsdo)) whenWhitelisted(address(mainBB)) {
+    function test_whenMarketPermitIsCalled_WhenPermitCollateral(uint256 amount)
+        external
+        assumeRange(amount, SMALL_AMOUNT, LARGE_AMOUNT)
+        whenWhitelisted(address(secondaryUsdo))
+        whenWhitelisted(address(mainBB))
+    {
         _marketPermit(amount, false);
 
         // it should increase market allowance for collateral
         assertEq(mainBB.allowanceBorrow(userA, userB), amount);
     }
 
-
-    function test_WhenRepayAndRemoveCollateralIsPerformed(uint256 collateralAmount, uint256 borrowAmount, uint256 repayPart)
+    function test_WhenRepayAndRemoveCollateralIsPerformed(
+        uint256 collateralAmount,
+        uint256 borrowAmount,
+        uint256 repayPart
+    )
         external
         whenContractIsNotPaused
         whenCollateralAmountIsValid(collateralAmount)
@@ -249,7 +308,7 @@ contract Usdo_crossChain is Usdo_Unit_Shared, BigBang_Unit_Shared, Singularity_U
 
         repayPart = _boundRepayAmount(repayPart, mainBB);
         uint256 repayPercentage = repayPart * FEE_PRECISION / borrowAmount;
-        uint256 removeCollateralAmount = repayPercentage * collateralAmount / FEE_PRECISION; 
+        uint256 removeCollateralAmount = repayPercentage * collateralAmount / FEE_PRECISION;
 
         MarketLendOrRepayMsg memory marketMsg = _createMinimalLendOrRepayMsg(
             _LendOrRepayInternal({
@@ -277,13 +336,49 @@ contract Usdo_crossChain is Usdo_Unit_Shared, BigBang_Unit_Shared, Singularity_U
         // approvals
         {
             mainBB.approveBorrow(address(magnetar), type(uint256).max);
-            _approveViaPearlmit(TOKEN_TYPE_ERC1155, address(yieldBox), IPearlmit(address(pearlmit)), address(this), address(mainBB), type(uint200).max, block.timestamp, usdoId);
-            _approveViaPearlmit(TOKEN_TYPE_ERC1155, address(yieldBox), IPearlmit(address(pearlmit)), address(this), address(magnetar), type(uint200).max, block.timestamp, mainBB._collateralId());
-            _approveViaPearlmit(TOKEN_TYPE_ERC20, address(mainBB), IPearlmit(address(pearlmit)), address(this), address(magnetar), type(uint200).max, block.timestamp, 0);
+            _approveViaPearlmit(
+                TOKEN_TYPE_ERC1155,
+                address(yieldBox),
+                IPearlmit(address(pearlmit)),
+                address(this),
+                address(mainBB),
+                type(uint200).max,
+                block.timestamp,
+                usdoId
+            );
+            _approveViaPearlmit(
+                TOKEN_TYPE_ERC1155,
+                address(yieldBox),
+                IPearlmit(address(pearlmit)),
+                address(this),
+                address(magnetar),
+                type(uint200).max,
+                block.timestamp,
+                mainBB._collateralId()
+            );
+            _approveViaPearlmit(
+                TOKEN_TYPE_ERC20,
+                address(mainBB),
+                IPearlmit(address(pearlmit)),
+                address(this),
+                address(magnetar),
+                type(uint200).max,
+                block.timestamp,
+                0
+            );
             _approveYieldBoxForAll({yieldBox: yieldBox, from: address(this), operator: address(pearlmit)});
         }
 
-        _prepareAndExecuteComposedCrossChainPackets(address(usdo), address(secondaryUsdo), aEid, bEid, address(this), 0, PT_YB_SEND_SGL_LEND_OR_REPAY, usdoHelper.buildMarketLendOrRepayMsg(marketMsg));
+        _prepareAndExecuteComposedCrossChainPackets(
+            address(usdo),
+            address(secondaryUsdo),
+            aEid,
+            bEid,
+            address(this),
+            0,
+            PT_YB_SEND_SGL_LEND_OR_REPAY,
+            usdoHelper.buildMarketLendOrRepayMsg(marketMsg)
+        );
 
         _data.userCollateralAfter = mainBB._userCollateralShare(address(this));
         _data.totalCollateralShareAfter = mainBB._totalCollateralShare();
@@ -301,7 +396,8 @@ contract Usdo_crossChain is Usdo_Unit_Shared, BigBang_Unit_Shared, Singularity_U
         assertGt(_borrowData.totalBorrowBefore.elastic, _borrowData.totalBorrowAfter.elastic);
     }
 
-    function test_whenRemoveAssetIsCalledCrossChain_WhenMagnetarIsAvailable(uint256 collateralAmount)  external
+    function test_whenRemoveAssetIsCalledCrossChain_WhenMagnetarIsAvailable(uint256 collateralAmount)
+        external
         whenContractIsNotPaused
         whenOracleRateIsEth
         whenAssetOracleRateIsBelowMin
@@ -312,23 +408,22 @@ contract Usdo_crossChain is Usdo_Unit_Shared, BigBang_Unit_Shared, Singularity_U
         whenWhitelisted(address(randomSgl))
     {
         uint256 repayPart;
-        uint256 removeCollateralAmount = collateralAmount * 1e4/1e5; //remove 10%
+        uint256 removeCollateralAmount = collateralAmount * 1e4 / 1e5; //remove 10%
         // BigBang section - to obtain Usdo
         {
             uint256 minLendAmount = randomSgl.minLendAmount() + 1;
-             // **** Add collateral ****
+            // **** Add collateral ****
             _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this), address(this), false);
 
             uint256 borrowAmount = minLendAmount * 2;
             repayPart = minLendAmount;
 
-             // **** Borrow ****
+            // **** Borrow ****
             _borrow(borrowAmount, mainBB, address(this), address(this), address(this));
-
         }
 
         uint256 lendAmount = repayPart;
-        uint256 removeAmount = lendAmount/4;
+        uint256 removeAmount = lendAmount / 4;
 
         MarketRemoveAssetMsg memory marketMsg = _createMinimalRemoveAssetMsg(
             _RemoveAssetInternal({
@@ -344,13 +439,58 @@ contract Usdo_crossChain is Usdo_Unit_Shared, BigBang_Unit_Shared, Singularity_U
         // approvals
         {
             mainBB.approveBorrow(address(magnetar), type(uint256).max);
-            _approveViaPearlmit(TOKEN_TYPE_ERC1155, address(yieldBox), IPearlmit(address(pearlmit)), address(this), address(mainBB), type(uint200).max, block.timestamp, usdoId);
-            _approveViaPearlmit(TOKEN_TYPE_ERC1155, address(yieldBox), IPearlmit(address(pearlmit)), address(this), address(magnetar), type(uint200).max, block.timestamp, mainBB._collateralId());
-            _approveViaPearlmit(TOKEN_TYPE_ERC20, address(mainBB), IPearlmit(address(pearlmit)), address(this), address(magnetar), type(uint200).max, block.timestamp, 0);
+            _approveViaPearlmit(
+                TOKEN_TYPE_ERC1155,
+                address(yieldBox),
+                IPearlmit(address(pearlmit)),
+                address(this),
+                address(mainBB),
+                type(uint200).max,
+                block.timestamp,
+                usdoId
+            );
+            _approveViaPearlmit(
+                TOKEN_TYPE_ERC1155,
+                address(yieldBox),
+                IPearlmit(address(pearlmit)),
+                address(this),
+                address(magnetar),
+                type(uint200).max,
+                block.timestamp,
+                mainBB._collateralId()
+            );
+            _approveViaPearlmit(
+                TOKEN_TYPE_ERC20,
+                address(mainBB),
+                IPearlmit(address(pearlmit)),
+                address(this),
+                address(magnetar),
+                type(uint200).max,
+                block.timestamp,
+                0
+            );
             _approveYieldBoxForAll({yieldBox: yieldBox, from: address(this), operator: address(pearlmit)});
 
-            _approveViaPearlmit(TOKEN_TYPE_ERC1155, address(yieldBox), IPearlmit(address(pearlmit)), address(this), address(randomSgl), type(uint200).max, block.timestamp, usdoId);
-            _approveViaPearlmit(TOKEN_TYPE_ERC20, address(randomSgl), IPearlmit(address(pearlmit)), address(this), address(magnetar), type(uint200).max, block.timestamp, 0);
+            _approveViaPearlmit(
+                TOKEN_TYPE_ERC1155,
+                address(yieldBox),
+                IPearlmit(address(pearlmit)),
+                address(this),
+                address(randomSgl),
+                type(uint200).max,
+                block.timestamp,
+                usdoId
+            );
+            _approveViaPearlmit(
+                TOKEN_TYPE_ERC20,
+                address(randomSgl),
+                IPearlmit(address(pearlmit)),
+                address(this),
+                address(magnetar),
+                type(uint200).max,
+                block.timestamp,
+                0
+            );
         }
 
         // add asset
@@ -361,7 +501,16 @@ contract Usdo_crossChain is Usdo_Unit_Shared, BigBang_Unit_Shared, Singularity_U
         uint256 supplyBefore = randomSgl.totalSupply();
         uint256 userSupplyBefore = yieldBox.balanceOf(address(this), mainBB._collateralId());
 
-        _prepareAndExecuteComposedCrossChainPackets(address(usdo), address(secondaryUsdo), aEid, bEid, address(this), 0, PT_MARKET_REMOVE_ASSET, usdoHelper.buildMarketRemoveAssetMsg(marketMsg));
+        _prepareAndExecuteComposedCrossChainPackets(
+            address(usdo),
+            address(secondaryUsdo),
+            aEid,
+            bEid,
+            address(this),
+            0,
+            PT_MARKET_REMOVE_ASSET,
+            usdoHelper.buildMarketRemoveAssetMsg(marketMsg)
+        );
 
         uint256 balanceAfter = randomSgl.balanceOf(address(this));
         uint256 supplyAfter = randomSgl.totalSupply();
@@ -392,13 +541,16 @@ contract Usdo_crossChain is Usdo_Unit_Shared, BigBang_Unit_Shared, Singularity_U
                 s: 0,
                 permitAsset: permit
             });
-            bytes32 digest_ = _getMarketPermitTypedDataHash(permit, userA, userB, amount, 1 days, 0, mainBB.DOMAIN_SEPARATOR());
+            bytes32 digest_ =
+                _getMarketPermitTypedDataHash(permit, userA, userB, amount, 1 days, 0, mainBB.DOMAIN_SEPARATOR());
             MarketPermitActionMsg memory permitApproval_ = __getMarketPermitData(approvalUserB_, digest_, USER_A_PKEY);
 
             approvalMsg_ = usdoHelper.buildMarketPermitApprovalMsg(permitApproval_);
         }
 
-        _prepareAndExecuteCrossChainPackets(address(usdo), address(secondaryUsdo), bEid, address(this), 0, PT_MARKET_PERMIT, approvalMsg_);
+        _prepareAndExecuteCrossChainPackets(
+            address(usdo), address(secondaryUsdo), bEid, address(this), 0, PT_MARKET_PERMIT, approvalMsg_
+        );
     }
 
     function _crossChainApproveOrRevokeAll(bool approve) private {
@@ -413,7 +565,9 @@ contract Usdo_crossChain is Usdo_Unit_Shared, BigBang_Unit_Shared, Singularity_U
             approvalMsg_ = usdoHelper.buildYieldBoxApproveAllMsg(permitApproval_);
         }
 
-        _prepareAndExecuteCrossChainPackets(address(usdo), address(secondaryUsdo), bEid, address(this), 0, PT_YB_APPROVE_ALL, approvalMsg_);
+        _prepareAndExecuteCrossChainPackets(
+            address(usdo), address(secondaryUsdo), bEid, address(this), 0, PT_YB_APPROVE_ALL, approvalMsg_
+        );
     }
 
     function _crossChainYieldBoxPermitOrRevokeAsset(bool approve) private {
@@ -427,12 +581,14 @@ contract Usdo_crossChain is Usdo_Unit_Shared, BigBang_Unit_Shared, Singularity_U
                 _getYieldBoxPermitAssetTypedDataHash(approvalUserB_, approve),
                 USER_A_PKEY
             );
-            
+
             YieldBoxApproveAssetMsg[] memory approvals_ = new YieldBoxApproveAssetMsg[](1);
             approvals_[0] = permitApprovalB_;
 
             approvalMsg_ = usdoHelper.buildYieldBoxApproveAssetMsg(approvals_);
         }
-        _prepareAndExecuteCrossChainPackets(address(usdo), address(secondaryUsdo), bEid, address(this), 0, PT_YB_APPROVE_ASSET, approvalMsg_);
+        _prepareAndExecuteCrossChainPackets(
+            address(usdo), address(secondaryUsdo), bEid, address(this), 0, PT_YB_APPROVE_ASSET, approvalMsg_
+        );
     }
 }

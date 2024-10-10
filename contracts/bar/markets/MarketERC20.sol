@@ -30,7 +30,6 @@ contract MarketERC20 is IERC20, IERC20Permit, IERC1155Receiver, EIP712 {
     /// @notice returns Penrose address
     IPenrose internal penrose;
 
-
     // keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
     bytes32 private constant _PERMIT_TYPEHASH = 0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9;
     // keccak256("PermitBorrow(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)")
@@ -215,7 +214,9 @@ contract MarketERC20 is IERC20, IERC20Permit, IERC1155Receiver, EIP712 {
     ) internal {
         require(block.timestamp <= deadline, "ERC20Permit: expired deadline");
 
-        if (!ICluster(penrose.cluster()).isWhitelisted(0, msg.sender)) require (owner == msg.sender, "MarketERC20: not authorized");
+        if (!ICluster(penrose.cluster()).isWhitelisted(0, msg.sender)) {
+            require(owner == msg.sender, "MarketERC20: not authorized");
+        }
 
         bytes32 structHash;
 

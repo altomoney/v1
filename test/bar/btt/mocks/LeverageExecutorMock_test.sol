@@ -33,8 +33,7 @@ contract LeverageExecutorMock_test {
         if (returnZero) return 0;
         uint256 assetAmount = abi.decode(swapperData, (uint256));
         (, uint256 rate) = oracle.peek("");
-        collateralAmountOut =
-            (assetAmount * rate ) / EXCHANGE_PRECISION;
+        collateralAmountOut = (assetAmount * rate) / EXCHANGE_PRECISION;
 
         IERC20(collateralAddress).safeTransfer(msg.sender, collateralAmountOut);
     }
@@ -46,8 +45,7 @@ contract LeverageExecutorMock_test {
         if (returnZero) return 0;
         uint256 collateralAmount = abi.decode(swapperData, (uint256));
         (, uint256 rate) = oracle.peek("");
-        assetAmountOut =
-            (collateralAmount * EXCHANGE_PRECISION) / rate;
+        assetAmountOut = (collateralAmount * EXCHANGE_PRECISION) / rate;
         IERC20(assetAddress).safeTransfer(msg.sender, assetAmountOut);
     }
 }

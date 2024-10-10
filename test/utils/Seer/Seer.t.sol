@@ -22,28 +22,18 @@ contract SeerForkTest is Test {
         vm.createSelectFork(vm.rpcUrl("mainnet"), mainnetBlock);
 
         address[] memory addressInAndOutUni = new address[](2);
-        addressInAndOutUni[0] = address(
-            0x6B175474E89094C44Da98b954EedeAC495271d0F
-        ); //dai
-        addressInAndOutUni[1] = address(
-            0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
-        ); //usdc
+        addressInAndOutUni[0] = address(0x6B175474E89094C44Da98b954EedeAC495271d0F); //dai
+        addressInAndOutUni[1] = address(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48); //usdc
 
         IUniswapV3Pool[] memory circuitUniswap = new IUniswapV3Pool[](1);
-        circuitUniswap[0] = IUniswapV3Pool(
-            address(0x5777d92f208679DB4b9778590Fa3CAB3aC9e2168)
-        );
+        circuitUniswap[0] = IUniswapV3Pool(address(0x5777d92f208679DB4b9778590Fa3CAB3aC9e2168));
 
         uint8[] memory circuitUniIsMultiplied = new uint8[](1);
         circuitUniIsMultiplied[0] = 1;
 
         address[] memory circuitChainlink = new address[](2);
-        circuitChainlink[0] = address(
-            0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9
-        ); //dai/usd
-        circuitChainlink[1] = address(
-            0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6
-        ); //usdc/usd
+        circuitChainlink[0] = address(0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9); //dai/usd
+        circuitChainlink[1] = address(0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6); //usdc/usd
 
         uint8[] memory circuitChainIsMultiplied = new uint8[](2);
         circuitChainIsMultiplied[0] = 1;
@@ -84,28 +74,18 @@ contract SeerForkTest is Test {
         vm.createSelectFork(vm.rpcUrl("mainnet"), mainnetBlock);
 
         address[] memory addressInAndOutUni = new address[](2);
-        addressInAndOutUni[0] = address(
-            0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2
-        ); //dai
-        addressInAndOutUni[1] = address(
-            0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
-        ); //usdc
+        addressInAndOutUni[0] = address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2); //dai
+        addressInAndOutUni[1] = address(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48); //usdc
 
         IUniswapV3Pool[] memory circuitUniswap = new IUniswapV3Pool[](1);
-        circuitUniswap[0] = IUniswapV3Pool(
-            address(0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640)
-        );
+        circuitUniswap[0] = IUniswapV3Pool(address(0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640));
 
         uint8[] memory circuitUniIsMultiplied = new uint8[](1);
         circuitUniIsMultiplied[0] = 0;
 
         address[] memory circuitChainlink = new address[](2);
-        circuitChainlink[0] = address(
-            0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419
-        ); //ETH/usd
-        circuitChainlink[1] = address(
-            0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6
-        ); //usdc/usd
+        circuitChainlink[0] = address(0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419); //ETH/usd
+        circuitChainlink[1] = address(0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6); //usdc/usd
 
         uint8[] memory circuitChainIsMultiplied = new uint8[](2);
         circuitChainIsMultiplied[0] = 1;
@@ -148,28 +128,18 @@ contract SeerForkTest is Test {
         SequencerFeedMock sequencer = new SequencerFeedMock();
 
         address[] memory addressInAndOutUni = new address[](2);
-        addressInAndOutUni[0] = address(
-            0x6B175474E89094C44Da98b954EedeAC495271d0F
-        ); //dai
-        addressInAndOutUni[1] = address(
-            0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
-        ); //usdc
+        addressInAndOutUni[0] = address(0x6B175474E89094C44Da98b954EedeAC495271d0F); //dai
+        addressInAndOutUni[1] = address(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48); //usdc
 
         IUniswapV3Pool[] memory circuitUniswap = new IUniswapV3Pool[](1);
-        circuitUniswap[0] = IUniswapV3Pool(
-            address(0x5777d92f208679DB4b9778590Fa3CAB3aC9e2168)
-        );
+        circuitUniswap[0] = IUniswapV3Pool(address(0x5777d92f208679DB4b9778590Fa3CAB3aC9e2168));
 
         uint8[] memory circuitUniIsMultiplied = new uint8[](1);
         circuitUniIsMultiplied[0] = 1;
 
         address[] memory circuitChainlink = new address[](2);
-        circuitChainlink[0] = address(
-            0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9
-        ); //dai/usd
-        circuitChainlink[1] = address(
-            0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6
-        ); //usdc/usd
+        circuitChainlink[0] = address(0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9); //dai/usd
+        circuitChainlink[1] = address(0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6); //usdc/usd
 
         uint8[] memory circuitChainIsMultiplied = new uint8[](2);
         circuitChainIsMultiplied[0] = 1;
@@ -199,13 +169,7 @@ contract SeerForkTest is Test {
         );
 
         sequencer.setLatestRoundData(
-            RoundData({
-                answer: 0,
-                roundId: 0,
-                startedAt: block.timestamp,
-                updatedAt: 0,
-                answeredInRound: 0
-            })
+            RoundData({answer: 0, roundId: 0, startedAt: block.timestamp, updatedAt: 0, answeredInRound: 0})
         );
 
         vm.expectRevert(SequencerCheck.GracePeriodNotOver.selector);
@@ -303,11 +267,8 @@ contract SeerForkTest is Test {
             address(this)
         );
 
-        EthGlpOracle ethGlpOracle = new EthGlpOracle(
-            ITapiocaOracle(address(ethOracle)),
-            ITapiocaOracle(address(glpOracle)),
-            address(this)
-        );
+        EthGlpOracle ethGlpOracle =
+            new EthGlpOracle(ITapiocaOracle(address(ethOracle)), ITapiocaOracle(address(glpOracle)), address(this));
 
         {
             (bool success, uint256 rate) = ethGlpOracle.peek("");

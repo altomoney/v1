@@ -63,7 +63,7 @@ contract MarketLiquidatorReceiver_onCollateralReceivertsol is MarketLiquidatorRe
             swapTarget: payable(swapperTarget),
             swapCallData: abi.encodeWithSelector(
                 ZeroXSwapperMockTarget_test.transferTokensWithDust.selector, address(weth), address(usdo), amount, amount
-                )
+            )
         });
 
         MarketLiquidatorReceiver.SSwapData memory swapData =

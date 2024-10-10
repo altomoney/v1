@@ -13,6 +13,7 @@ contract FeeGetterMock_test {
     function getWrapFee(uint256) external pure returns (uint256) {
         return 0;
     }
+
     function getUnwrapFee(uint256 _amount) external view returns (uint256) {
         if (_percentage == 0) return _amount;
         return _amount * _percentage / PERCENTAGE_PRECISION;

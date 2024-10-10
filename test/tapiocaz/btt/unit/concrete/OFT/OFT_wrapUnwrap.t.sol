@@ -8,11 +8,7 @@ import {BaseTOFT} from "tapiocaz/tOFT/BaseTOFT.sol";
 import {mTOFT} from "tapiocaz/tOFT/mTOFT.sol";
 import {IPearlmit} from "tap-utils/pearlmit/Pearlmit.sol";
 import {TOFT} from "tapiocaz/tOFT/TOFT.sol";
-import {
-    ITOFT,
-    TOFTInitStruct,
-    TOFTModulesInitStruct
-} from "tap-utils/interfaces/oft/ITOFT.sol";
+import {ITOFT, TOFTInitStruct, TOFTModulesInitStruct} from "tap-utils/interfaces/oft/ITOFT.sol";
 
 import {IMtoftFeeGetter} from "tap-utils/interfaces/oft/IMToftFeeGetter.sol";
 
@@ -34,14 +30,13 @@ contract TOFT_wrapUnwrap is OFT_Unit_Shared {
         oft.wrap(address(this), address(this), SMALL_AMOUNT);
     }
 
-    function test_whenCalledAgainstTOFT_whenCalledAgainstTOFT_WhenTOFTWrapCalledForETH(uint256 amount) 
-        external 
+    function test_whenCalledAgainstTOFT_whenCalledAgainstTOFT_WhenTOFTWrapCalledForETH(uint256 amount)
+        external
         assumeRange(amount, SMALL_AMOUNT, LARGE_AMOUNT)
     {
         // should revert as ETH is not sent with the tx
         vm.expectRevert(TOFT.TOFT_Failed.selector);
         toftEth.wrap(address(this), address(this), amount);
-
 
         TOFTVault vault = TOFTVault(address(toftEth.vault()));
 
@@ -68,13 +63,12 @@ contract TOFT_wrapUnwrap is OFT_Unit_Shared {
         external
         assumeRange(amount, SMALL_AMOUNT, LARGE_AMOUNT)
     {
-
         TOFTVault vault = TOFTVault(address(toft.vault()));
 
         uint256 vaultBalanceBefore = underlyingErc20.balanceOf(address(vault));
         uint256 toftSupplyBefore = toft.totalSupply();
         uint256 receiverBalanceBefore = toft.balanceOf(address(this));
-    
+
         _wrapOft(amount, address(underlyingErc20), payable(toft));
 
         uint256 vaultBalanceAfter = underlyingErc20.balanceOf(address(vault));
@@ -115,7 +109,6 @@ contract TOFT_wrapUnwrap is OFT_Unit_Shared {
         assertEq(toftSupplyBefore + amount, toftSupplyAfter);
         // it should increase supply for underlying erc20
         assertEq(underlyingSupplyBefore + amount, underlyingSupplyAfter);
-
     }
 
     function test_whenCalledAgainstTOFT_RevertWhen_TOFTUnwrapCalledFromNonHostChain() external {
@@ -138,21 +131,19 @@ contract TOFT_wrapUnwrap is OFT_Unit_Shared {
         toftEth.unwrap(address(this), LARGE_AMOUNT);
     }
 
-
-    function test_whenCalledAgainstTOFT_WhenTOFTUnwrapCalledForETH_WithoutFees(uint256 amount, uint256 unwrapAmount) 
-        external 
+    function test_whenCalledAgainstTOFT_WhenTOFTUnwrapCalledForETH_WithoutFees(uint256 amount, uint256 unwrapAmount)
+        external
         assumeRange(amount, SMALL_AMOUNT, LARGE_AMOUNT)
     {
         unwrapAmount = bound(unwrapAmount, SMALL_AMOUNT, amount);
 
-        // wrap 
+        // wrap
         toftEth.wrap{value: amount}(address(this), address(this), amount);
 
         TOFTVault vault = TOFTVault(address(toftEth.vault()));
         uint256 vaultBalanceBefore = address(vault).balance;
         uint256 toftSupplyBefore = toftEth.totalSupply();
         uint256 receiverBalanceBefore = toftEth.balanceOf(address(this));
-
 
         toftEth.unwrap(address(this), unwrapAmount);
 
@@ -167,20 +158,19 @@ contract TOFT_wrapUnwrap is OFT_Unit_Shared {
         assertEq(receiverBalanceBefore - unwrapAmount, receiverBalanceAfter);
     }
 
-    function test_whenCalledAgainstTOFT_WhenTOFTUnwrapCalledForToken(uint256 amount, uint256 unwrapAmount) 
-        external 
+    function test_whenCalledAgainstTOFT_WhenTOFTUnwrapCalledForToken(uint256 amount, uint256 unwrapAmount)
+        external
         assumeRange(amount, SMALL_AMOUNT, LARGE_AMOUNT)
     {
         unwrapAmount = bound(unwrapAmount, SMALL_AMOUNT, amount);
 
-        // wrap 
+        // wrap
         _wrapOft(amount, address(underlyingErc20), payable(toft));
 
         TOFTVault vault = TOFTVault(address(toft.vault()));
         uint256 vaultBalanceBefore = underlyingErc20.balanceOf(address(vault));
         uint256 toftSupplyBefore = toft.totalSupply();
         uint256 receiverBalanceBefore = toft.balanceOf(address(this));
-
 
         toft.unwrap(address(this), unwrapAmount);
 
@@ -194,7 +184,6 @@ contract TOFT_wrapUnwrap is OFT_Unit_Shared {
         assertEq(toftSupplyBefore - unwrapAmount, toftSupplyAfter);
         assertEq(receiverBalanceBefore - unwrapAmount, receiverBalanceAfter);
     }
-
 
     function test_whenCalledAgainstMTOFT_RevertWhen_MTOFTWrapCalledForPausedContract() external whenPaused {
         // it should revert
@@ -210,7 +199,6 @@ contract TOFT_wrapUnwrap is OFT_Unit_Shared {
         oft.wrap(address(this), address(this), SMALL_AMOUNT);
     }
 
-
     function test_whenCalledAgainstMTOFT_WhenMTOFTWrapCalledForETH(uint256 amount)
         external
         assumeRange(amount, SMALL_AMOUNT, LARGE_AMOUNT)
@@ -218,7 +206,6 @@ contract TOFT_wrapUnwrap is OFT_Unit_Shared {
         // should revert as ETH is not sent with the tx
         vm.expectRevert(mTOFT.mTOFT_Failed.selector);
         mToftEth.wrap(address(this), address(this), amount);
-
 
         TOFTVault vault = TOFTVault(address(mToftEth.vault()));
 
@@ -250,7 +237,7 @@ contract TOFT_wrapUnwrap is OFT_Unit_Shared {
         uint256 vaultBalanceBefore = underlyingErc20.balanceOf(address(vault));
         uint256 toftSupplyBefore = mToft.totalSupply();
         uint256 receiverBalanceBefore = mToft.balanceOf(address(this));
-    
+
         _wrapOft(amount, address(underlyingErc20), payable(mToft));
 
         uint256 vaultBalanceAfter = underlyingErc20.balanceOf(address(vault));
@@ -293,10 +280,7 @@ contract TOFT_wrapUnwrap is OFT_Unit_Shared {
         assertEq(underlyingSupplyBefore + amount, underlyingSupplyAfter);
     }
 
-
-    function test_whenCalledAgainstMTOFT_RevertWhen_MTOFTUnwrapCalledFromNonHostChain()
-        external
-    {
+    function test_whenCalledAgainstMTOFT_RevertWhen_MTOFTUnwrapCalledFromNonHostChain() external {
         mTOFT oft = _createWrongHostMToft();
 
         // it should revert
@@ -304,9 +288,7 @@ contract TOFT_wrapUnwrap is OFT_Unit_Shared {
         oft.unwrap(address(this), SMALL_AMOUNT);
     }
 
-    function test_whenCalledAgainstMTOFT_RevertWhen_MTOFTUnwrapCalledWithInvalidAmount()
-        external
-    {
+    function test_whenCalledAgainstMTOFT_RevertWhen_MTOFTUnwrapCalledWithInvalidAmount() external {
         vm.expectRevert("ERC20: burn amount exceeds balance");
         mToft.unwrap(address(this), LARGE_AMOUNT);
 
@@ -317,20 +299,19 @@ contract TOFT_wrapUnwrap is OFT_Unit_Shared {
         mToftEth.unwrap(address(this), LARGE_AMOUNT);
     }
 
-    function test_whenCalledAgainstMTOFT_WhenMTOFTUnwrapCalledForETH_WithoutFees(uint256 amount, uint256 unwrapAmount) 
-        external 
+    function test_whenCalledAgainstMTOFT_WhenMTOFTUnwrapCalledForETH_WithoutFees(uint256 amount, uint256 unwrapAmount)
+        external
         assumeRange(amount, SMALL_AMOUNT, LARGE_AMOUNT)
     {
         unwrapAmount = bound(unwrapAmount, SMALL_AMOUNT, amount);
 
-        // wrap 
+        // wrap
         mToftEth.wrap{value: amount}(address(this), address(this), amount);
 
         TOFTVault vault = TOFTVault(address(mToftEth.vault()));
         uint256 vaultBalanceBefore = address(vault).balance;
         uint256 toftSupplyBefore = mToftEth.totalSupply();
         uint256 receiverBalanceBefore = mToftEth.balanceOf(address(this));
-
 
         mToftEth.unwrap(address(this), unwrapAmount);
 
@@ -345,8 +326,8 @@ contract TOFT_wrapUnwrap is OFT_Unit_Shared {
         assertEq(receiverBalanceBefore - unwrapAmount, receiverBalanceAfter);
     }
 
-    function test_whenCalledAgainstMTOFT_WhenMTOFTUnwrapCalledForETH_WithFees(uint256 amount, uint256 unwrapAmount) 
-        external 
+    function test_whenCalledAgainstMTOFT_WhenMTOFTUnwrapCalledForETH_WithFees(uint256 amount, uint256 unwrapAmount)
+        external
         assumeRange(amount, SMALL_AMOUNT, LARGE_AMOUNT)
     {
         unwrapAmount = bound(unwrapAmount, SMALL_AMOUNT, amount);
@@ -364,7 +345,7 @@ contract TOFT_wrapUnwrap is OFT_Unit_Shared {
             mToftEth.setOwnerState(owState);
         }
 
-        // wrap 
+        // wrap
         mToftEth.wrap{value: amount}(address(this), address(this), amount);
 
         TOFTVault vault = TOFTVault(address(mToftEth.vault()));
@@ -391,20 +372,19 @@ contract TOFT_wrapUnwrap is OFT_Unit_Shared {
         }
     }
 
-    function test_whenCalledAgainstMTOFT_WhenMTOFTUnwrapCalledForToken(uint256 amount, uint256 unwrapAmount) 
-        external 
+    function test_whenCalledAgainstMTOFT_WhenMTOFTUnwrapCalledForToken(uint256 amount, uint256 unwrapAmount)
+        external
         assumeRange(amount, SMALL_AMOUNT, LARGE_AMOUNT)
     {
         unwrapAmount = bound(unwrapAmount, SMALL_AMOUNT, amount);
 
-        // wrap 
+        // wrap
         _wrapOft(amount, address(underlyingErc20), payable(mToft));
 
         TOFTVault vault = TOFTVault(address(mToft.vault()));
         uint256 vaultBalanceBefore = underlyingErc20.balanceOf(address(vault));
         uint256 toftSupplyBefore = mToft.totalSupply();
         uint256 receiverBalanceBefore = mToft.balanceOf(address(this));
-
 
         mToft.unwrap(address(this), unwrapAmount);
 
@@ -419,8 +399,6 @@ contract TOFT_wrapUnwrap is OFT_Unit_Shared {
         assertEq(receiverBalanceBefore - unwrapAmount, receiverBalanceAfter);
     }
 
-
-    
     function _createWrongHostToft() private returns (TOFT oft) {
         TOFTVault _vault = new TOFTVault(address(underlyingErc20));
         TapiocaOmnichainExtExec _extExec = new TapiocaOmnichainExtExec();
@@ -437,7 +415,13 @@ contract TOFT_wrapUnwrap is OFT_Unit_Shared {
             extExec: address(_extExec),
             pearlmit: IPearlmit(address(pearlmit))
         });
-        TOFTModulesInitStruct memory wrongModuleStruct = _createOftModuleStruct(address(toftSender), address(toftReceiver), address(toftMarketReceiverModule), address(toftOptionsReceiverModule), address(toftGenericReceiverModule));
+        TOFTModulesInitStruct memory wrongModuleStruct = _createOftModuleStruct(
+            address(toftSender),
+            address(toftReceiver),
+            address(toftMarketReceiverModule),
+            address(toftOptionsReceiverModule),
+            address(toftGenericReceiverModule)
+        );
 
         oft = new TOFT(wrongInitStruct, wrongModuleStruct);
     }
@@ -458,8 +442,14 @@ contract TOFT_wrapUnwrap is OFT_Unit_Shared {
             extExec: address(_extExec),
             pearlmit: IPearlmit(address(pearlmit))
         });
-        TOFTModulesInitStruct memory wrongModuleStruct = _createOftModuleStruct(address(mtoftSender), address(mtoftReceiver), address(mtoftMarketReceiverModule), address(mtoftOptionsReceiverModule), address(mtoftGenericReceiverModule));
-        
+        TOFTModulesInitStruct memory wrongModuleStruct = _createOftModuleStruct(
+            address(mtoftSender),
+            address(mtoftReceiver),
+            address(mtoftMarketReceiverModule),
+            address(mtoftOptionsReceiverModule),
+            address(mtoftGenericReceiverModule)
+        );
+
         oft = new mTOFT(wrongInitStruct, wrongModuleStruct, address(this));
     }
 }

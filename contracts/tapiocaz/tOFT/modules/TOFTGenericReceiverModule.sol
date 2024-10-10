@@ -55,13 +55,13 @@ contract TOFTGenericReceiverModule is BaseTOFT {
         SendParamsMsg memory msg_ = TOFTMsgCodec.decodeSendParamsMsg(_data);
 
         /**
-        * @dev validate data
-        */
+         * @dev validate data
+         */
         msg_ = _validateReceiveWithParams(msg_);
 
         /**
-        * @dev executes unwrap or revert
-        */
+         * @dev executes unwrap or revert
+         */
         _unwrapInReceiveWithParams(msg_, srcChainSender);
 
         emit WithParamsReceived(msg_.amount, msg_.receiver, srcChainSender);

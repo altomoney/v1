@@ -41,13 +41,7 @@ struct Phase2Info {
 /**
  * @notice More details found here https://docs.tapioca.xyz/tapioca/launch/option-airdrop
  */
-contract AirdropBroker is
-    Pausable,
-    Ownable,
-    PearlmitHandler,
-    FullMath,
-    ReentrancyGuard
-{
+contract AirdropBroker is Pausable, Ownable, PearlmitHandler, FullMath, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     bytes public tapOracleData;
@@ -86,12 +80,7 @@ contract AirdropBroker is
     // [OG Pearls, Tapiocans, Oysters, Cassava]
     bytes32[4] public phase2MerkleRoots; // merkle root of phase 2 airdrop
     uint8[4] public PHASE_2_AMOUNT_PER_USER = [200, 200, 190, 190];
-    uint24[4] public PHASE_2_DISCOUNT_PER_USER = [
-        500_000,
-        400_000,
-        330_000,
-        250_000
-    ];
+    uint24[4] public PHASE_2_DISCOUNT_PER_USER = [500_000, 400_000, 330_000, 250_000];
 
     /// =====-------======
     ///      Phase 3
@@ -105,8 +94,7 @@ contract AirdropBroker is
     /// =====-------======
 
     /// @notice user address => eligible TAP amount, 0 means no eligibility
-    mapping(address user => mapping(uint256 epoch => uint256 amount))
-        public phase4Users;
+    mapping(address user => mapping(uint256 epoch => uint256 amount)) public phase4Users;
     uint256 public constant PHASE_4_DISCOUNT = 330_000; //33 * 1e4;
 
     uint256 public EPOCH_DURATION = 2 days; // Becomes FROM_EPOCH_4_DURATION at the start of the phase 4
@@ -136,13 +124,9 @@ contract AirdropBroker is
     error AddressZero();
     error WaitForNewEpoch();
 
-    constructor(
-        address _aoTAP,
-        address _pcnft,
-        address _paymentTokenBeneficiary,
-        IPearlmit _pearlmit,
-        address _owner
-    ) PearlmitHandler(_pearlmit) {
+    constructor(address _aoTAP, address _pcnft, address _paymentTokenBeneficiary, IPearlmit _pearlmit, address _owner)
+        PearlmitHandler(_pearlmit)
+    {
         if (_aoTAP == address(0)) revert AddressZero();
         if (_pcnft == address(0)) revert AddressZero();
         if (address(pearlmit) == address(0)) revert AddressZero();
@@ -159,22 +143,10 @@ contract AirdropBroker is
     // ==========
     event Participate(uint256 indexed epoch, uint256 indexed aoTapTokenId);
     event ExerciseOption(
-        uint256 indexed epoch,
-        address indexed to,
-        ERC20 indexed paymentToken,
-        uint256 aoTapTokenId,
-        uint256 tapAmount
+        uint256 indexed epoch, address indexed to, ERC20 indexed paymentToken, uint256 aoTapTokenId, uint256 tapAmount
     );
-    event NewEpoch(
-        uint256 indexed epoch,
-        uint256 epochTapValuation,
-        uint256 epochDuration
-    );
-    event SetPaymentToken(
-        ERC20 indexed paymentToken,
-        ITapiocaOracle oracle,
-        bytes oracleData
-    );
+    event NewEpoch(uint256 indexed epoch, uint256 epochTapValuation, uint256 epochDuration);
+    event SetPaymentToken(ERC20 indexed paymentToken, ITapiocaOracle oracle, bytes oracleData);
     event SetTapOracle(ITapiocaOracle oracle, bytes oracleData);
     event Phase2MerkleRootsUpdated();
 
@@ -197,31 +169,19 @@ contract AirdropBroker is
     /// @return paymentTokenAmount The amount of payment tokens required for the deal
     /// @return tapAmount The amount of TAP to be exchanged
 
-    function getOTCDealDetails(
-        uint256 _aoTAPTokenID,
-        ERC20 _paymentToken,
-        uint256 _tapAmount
-    )
+    function getOTCDealDetails(uint256 _aoTAPTokenID, ERC20 _paymentToken, uint256 _tapAmount)
         external
         view
         tapExists
-        returns (
-            uint256 eligibleTapAmount,
-            uint256 paymentTokenAmount,
-            uint256 tapAmount
-        )
+        returns (uint256 eligibleTapAmount, uint256 paymentTokenAmount, uint256 tapAmount)
     {
         // Load data
-        (, AirdropTapOption memory aoTapOption) = aoTAP.attributes(
-            _aoTAPTokenID
-        );
+        (, AirdropTapOption memory aoTapOption) = aoTAP.attributes(_aoTAPTokenID);
         if (aoTapOption.expiry < block.timestamp) revert OptionExpired();
 
         uint256 cachedEpoch = epoch;
 
-        PaymentTokenOracle memory paymentTokenOracle = paymentTokens[
-            _paymentToken
-        ];
+        PaymentTokenOracle memory paymentTokenOracle = paymentTokens[_paymentToken];
 
         // Check requirements
         if (paymentTokenOracle.oracle == ITapiocaOracle(address(0))) {
@@ -237,15 +197,10 @@ contract AirdropBroker is
         // Get TAP valuation
         uint256 otcAmountInUSD = tapAmount * epochTAPValuation; // Divided by TAP decimals
         // Get payment token valuation
-        (, uint256 paymentTokenValuation) = paymentTokenOracle.oracle.peek(
-            paymentTokenOracle.oracleData
-        );
+        (, uint256 paymentTokenValuation) = paymentTokenOracle.oracle.peek(paymentTokenOracle.oracleData);
         // Get payment token amount
         paymentTokenAmount = _getDiscountedPaymentAmount(
-            otcAmountInUSD,
-            paymentTokenValuation,
-            aoTapOption.discount,
-            _paymentToken.decimals()
+            otcAmountInUSD, paymentTokenValuation, aoTapOption.discount, _paymentToken.decimals()
         );
     }
 
@@ -253,15 +208,10 @@ contract AirdropBroker is
     /// @param _aoTAPTokenId The aoTAP token ID
     /// @return aoTAPPosition The details of the aoTAP position
     /// @return claimedTapInEpoch The amount of TAP claimed in aoTAP position's epoch
-    function getOptionPosition(
-        uint256 _aoTAPTokenId
-    )
+    function getOptionPosition(uint256 _aoTAPTokenId)
         external
         view
-        returns (
-            AirdropTapOption memory aoTAPPosition,
-            uint256 claimedTapInEpoch
-        )
+        returns (AirdropTapOption memory aoTAPPosition, uint256 claimedTapInEpoch)
     {
         (, aoTAPPosition) = aoTAP.attributes(_aoTAPTokenId);
         claimedTapInEpoch = aoTAPCalls[_aoTAPTokenId][aoTAPPosition.phase];
@@ -273,9 +223,7 @@ contract AirdropBroker is
 
     /// @notice Participate in the airdrop
     /// @param _data The data to be used for the participation, varies by phases
-    function participate(
-        bytes calldata _data
-    ) external whenNotPaused tapExists returns (uint256 aoTAPTokenID) {
+    function participate(bytes calldata _data) external whenNotPaused tapExists returns (uint256 aoTAPTokenID) {
         uint256 cachedEpoch = epoch;
         if (cachedEpoch == 0) revert NotStarted();
         if (cachedEpoch > LAST_EPOCH) revert Ended();
@@ -302,22 +250,18 @@ contract AirdropBroker is
     /// @param _aoTAPTokenID tokenId of the aoTAP position, position must be active
     /// @param _paymentToken Address of the payment token to use, must be whitelisted
     /// @param _tapAmount Amount of TAP to exercise. If 0, the full amount is exercised
-    function exerciseOption(
-        uint256 _aoTAPTokenID,
-        ERC20 _paymentToken,
-        uint256 _tapAmount
-    ) external whenNotPaused tapExists {
+    function exerciseOption(uint256 _aoTAPTokenID, ERC20 _paymentToken, uint256 _tapAmount)
+        external
+        whenNotPaused
+        tapExists
+    {
         // Load data
-        (address owner, AirdropTapOption memory aoTapOption) = aoTAP.attributes(
-            _aoTAPTokenID
-        );
+        (address owner, AirdropTapOption memory aoTapOption) = aoTAP.attributes(_aoTAPTokenID);
         if (aoTapOption.expiry <= block.timestamp) revert OptionExpired();
 
         uint256 cachedEpoch = epoch;
 
-        PaymentTokenOracle memory paymentTokenOracle = paymentTokens[
-            _paymentToken
-        ];
+        PaymentTokenOracle memory paymentTokenOracle = paymentTokens[_paymentToken];
 
         // Check requirements
         if (paymentTokenOracle.oracle == ITapiocaOracle(address(0))) {
@@ -327,15 +271,7 @@ contract AirdropBroker is
         // Check allowance. Make sure to consume it post call
         {
             // aoTAP.isApprovedOrOwner(msg.sender, _aoTAPTokenID)
-            if (
-                owner != msg.sender &&
-                !isERC721Approved(
-                    owner,
-                    msg.sender,
-                    address(aoTAP),
-                    _aoTAPTokenID
-                )
-            ) {
+            if (owner != msg.sender && !isERC721Approved(owner, msg.sender, address(aoTAP), _aoTAPTokenID)) {
                 revert NotAuthorized();
             }
         }
@@ -351,20 +287,9 @@ contract AirdropBroker is
         aoTAPCalls[_aoTAPTokenID][cachedEpoch] += chosenAmount; // Adds up exercised amount to current epoch
 
         // Finalize the deal
-        _processOTCDeal(
-            _paymentToken,
-            paymentTokenOracle,
-            chosenAmount,
-            aoTapOption.discount
-        );
+        _processOTCDeal(_paymentToken, paymentTokenOracle, chosenAmount, aoTapOption.discount);
 
-        emit ExerciseOption(
-            cachedEpoch,
-            msg.sender,
-            _paymentToken,
-            _aoTAPTokenID,
-            chosenAmount
-        );
+        emit ExerciseOption(cachedEpoch, msg.sender, _paymentToken, _aoTAPTokenID, chosenAmount);
     }
 
     /// @notice Start a new epoch, extract TAP from the tapToken contract,
@@ -383,9 +308,7 @@ contract AirdropBroker is
         }
 
         // Get epoch TAP valuation
-        (bool success, uint256 _epochTAPValuation) = tapOracle.get(
-            tapOracleData
-        );
+        (bool success, uint256 _epochTAPValuation) = tapOracle.get(tapOracleData);
         if (!success) revert Failed();
         epochTAPValuation = uint128(_epochTAPValuation);
         emit NewEpoch(epoch, epochTAPValuation, EPOCH_DURATION);
@@ -408,19 +331,14 @@ contract AirdropBroker is
     /// @notice Set the tapToken Oracle address and data
     /// @param _tapOracle The new tapToken Oracle address
     /// @param _tapOracleData The new tapToken Oracle data
-    function setTapOracle(
-        ITapiocaOracle _tapOracle,
-        bytes calldata _tapOracleData
-    ) external onlyOwner {
+    function setTapOracle(ITapiocaOracle _tapOracle, bytes calldata _tapOracleData) external onlyOwner {
         tapOracle = _tapOracle;
         tapOracleData = _tapOracleData;
 
         emit SetTapOracle(_tapOracle, _tapOracleData);
     }
 
-    function setPhase2MerkleRoots(
-        bytes32[4] calldata _merkleRoots
-    ) external onlyOwner {
+    function setPhase2MerkleRoots(bytes32[4] calldata _merkleRoots) external onlyOwner {
         if (epoch >= 2) revert NotValid();
         phase2MerkleRoots = _merkleRoots;
         emit Phase2MerkleRootsUpdated();
@@ -432,11 +350,10 @@ contract AirdropBroker is
      * @param _users The users to register
      * @param _amounts The eligible amount of TAP for each user
      */
-    function registerUsersForPhase(
-        uint256 _phase,
-        address[] calldata _users,
-        uint256[] calldata _amounts
-    ) external onlyOwner {
+    function registerUsersForPhase(uint256 _phase, address[] calldata _users, uint256[] calldata _amounts)
+        external
+        onlyOwner
+    {
         if (_users.length != _amounts.length) revert NotValid();
 
         if (_phase == 1) {
@@ -455,11 +372,10 @@ contract AirdropBroker is
 
     /// @notice Activate or deactivate a payment token
     /// @dev set the oracle to address(0) to deactivate, expect the same decimal precision as TAP oracle
-    function setPaymentToken(
-        ERC20 _paymentToken,
-        ITapiocaOracle _oracle,
-        bytes calldata _oracleData
-    ) external onlyOwner {
+    function setPaymentToken(ERC20 _paymentToken, ITapiocaOracle _oracle, bytes calldata _oracleData)
+        external
+        onlyOwner
+    {
         paymentTokens[_paymentToken].oracle = _oracle;
         paymentTokens[_paymentToken].oracleData = _oracleData;
 
@@ -468,17 +384,13 @@ contract AirdropBroker is
 
     /// @notice Set the payment token beneficiary
     /// @param _paymentTokenBeneficiary The new payment token beneficiary
-    function setPaymentTokenBeneficiary(
-        address _paymentTokenBeneficiary
-    ) external onlyOwner {
+    function setPaymentTokenBeneficiary(address _paymentTokenBeneficiary) external onlyOwner {
         paymentTokenBeneficiary = _paymentTokenBeneficiary;
     }
 
     /// @notice Collect the payment tokens from the OTC deals
     /// @param _paymentTokens The payment tokens to collect
-    function collectPaymentTokens(
-        address[] calldata _paymentTokens
-    ) external onlyOwner nonReentrant {
+    function collectPaymentTokens(address[] calldata _paymentTokens) external onlyOwner nonReentrant {
         if (paymentTokenBeneficiary == address(0)) {
             revert TokenBeneficiaryNotSet();
         }
@@ -490,10 +402,7 @@ contract AirdropBroker is
                 if (address(paymentToken) == address(tapToken)) {
                     revert PaymentTokenNotValid();
                 }
-                paymentToken.safeTransfer(
-                    paymentTokenBeneficiary,
-                    paymentToken.balanceOf(address(this))
-                );
+                paymentToken.safeTransfer(paymentTokenBeneficiary, paymentToken.balanceOf(address(this)));
             }
         }
     }
@@ -520,10 +429,7 @@ contract AirdropBroker is
      * @notice Un/Pauses this contract.
      */
     function setPause(bool _pauseState) external {
-        if (
-            !cluster.hasRole(msg.sender, keccak256("PAUSABLE")) &&
-            msg.sender != owner()
-        ) revert NotAuthorized();
+        if (!cluster.hasRole(msg.sender, keccak256("PAUSABLE")) && msg.sender != owner()) revert NotAuthorized();
         if (_pauseState) {
             _pause();
         } else {
@@ -545,25 +451,14 @@ contract AirdropBroker is
 
         // Mint aoTAP
         uint128 expiry = uint128(lastEpochUpdate + EPOCH_DURATION); // Set expiry to the end of the epoch
-        oTAPTokenID = aoTAP.mint(
-            msg.sender,
-            expiry,
-            uint128(PHASE_1_DISCOUNT),
-            _eligibleAmount,
-            epoch
-        );
+        oTAPTokenID = aoTAP.mint(msg.sender, expiry, uint128(PHASE_1_DISCOUNT), _eligibleAmount, epoch);
     }
 
     /// @notice Participate in phase 2 of the Airdrop. Guild members will receive pre-defined discounts and TAP, based on role.
     /// @param _data The calldata. Needs to be the address of the user.
     /// _data = (uint256 role, bytes32[] _merkleProof). Refer to {phase2MerkleRoots} for role.
-    function _participatePhase2(
-        bytes calldata _data
-    ) internal returns (uint256 oTAPTokenID) {
-        (uint256 _role, bytes32[] memory _merkleProof) = abi.decode(
-            _data,
-            (uint256, bytes32[])
-        );
+    function _participatePhase2(bytes calldata _data) internal returns (uint256 oTAPTokenID) {
+        (uint256 _role, bytes32[] memory _merkleProof) = abi.decode(_data, (uint256, bytes32[]));
 
         bytes32 leaf = keccak256(abi.encodePacked(msg.sender));
         if (!MerkleProof.verify(_merkleProof, phase2MerkleRoots[_role], leaf)) {
@@ -581,27 +476,19 @@ contract AirdropBroker is
         uint128 expiry = uint128(lastEpochUpdate + EPOCH_DURATION); // Set expiry to the end of the epoch
         uint256 eligibleAmount = uint256(PHASE_2_AMOUNT_PER_USER[_role]) * 1e18;
         uint128 discount = uint128(PHASE_2_DISCOUNT_PER_USER[_role]);
-        oTAPTokenID = aoTAP.mint(
-            msg.sender,
-            expiry,
-            discount,
-            eligibleAmount,
-            epoch
-        );
+        oTAPTokenID = aoTAP.mint(msg.sender, expiry, discount, eligibleAmount, epoch);
     }
 
     /// @notice Participate in phase 3 of the Airdrop. PCNFT holder will receive pre-defined discount and TAP.
     /// @param _data The calldata. Needs to be an array of PCNFT tokenIDs.
     /// _data = (uint256 PCNFT tokenID[])
-    function _participatePhase3(
-        bytes calldata _data
-    ) internal returns (uint256 oTAPTokenID) {
+    function _participatePhase3(bytes calldata _data) internal returns (uint256 oTAPTokenID) {
         uint256[] memory _tokenIDs = abi.decode(_data, (uint256[]));
 
         uint256 arrLen = _tokenIDs.length;
         if (arrLen == 0) revert NotValid();
         address tokenIDToAddress;
-        for (uint256 i; i < arrLen; ) {
+        for (uint256 i; i < arrLen;) {
             if (_tokenIDs[i] == 0 || _tokenIDs[i] > 700) revert NotValid();
             if (PCNFT.ownerOf(_tokenIDs[i]) != msg.sender) revert NotEligible();
 
@@ -623,13 +510,7 @@ contract AirdropBroker is
         uint128 expiry = uint128(lastEpochUpdate + EPOCH_DURATION); // Set expiry to the end of the epoch
         uint256 eligibleAmount = arrLen * PHASE_3_AMOUNT_PER_USER * 1e18; // Phase 3 amount multiplied the number of PCNFTs
         uint128 discount = uint128(PHASE_3_DISCOUNT);
-        oTAPTokenID = aoTAP.mint(
-            msg.sender,
-            expiry,
-            discount,
-            eligibleAmount,
-            epoch
-        );
+        oTAPTokenID = aoTAP.mint(msg.sender, expiry, discount, eligibleAmount, epoch);
     }
 
     /// @notice Participate in phase 4 of the Airdrop. twTAP and Cassava guild's role are given TAP pro-rata.
@@ -642,13 +523,7 @@ contract AirdropBroker is
 
         // Mint aoTAP
         uint128 expiry = uint128(lastEpochUpdate + EPOCH_DURATION); // Set expiry to the end of the epoch
-        oTAPTokenID = aoTAP.mint(
-            msg.sender,
-            expiry,
-            uint128(PHASE_4_DISCOUNT),
-            _eligibleAmount,
-            epoch
-        );
+        oTAPTokenID = aoTAP.mint(msg.sender, expiry, uint128(PHASE_4_DISCOUNT), _eligibleAmount, epoch);
     }
 
     /// @notice Process the OTC deal, transfer the payment token to the broker and the TAP amount to the user
@@ -668,29 +543,19 @@ contract AirdropBroker is
         uint256 otcAmountInUSD = tapAmount * epochTAPValuation;
 
         // Get payment token valuation
-        (bool success, uint256 paymentTokenValuation) = _paymentTokenOracle
-            .oracle
-            .get(_paymentTokenOracle.oracleData);
+        (bool success, uint256 paymentTokenValuation) = _paymentTokenOracle.oracle.get(_paymentTokenOracle.oracleData);
         if (!success) revert Failed();
 
         // Calculate payment amount and initiate the transfers
-        uint256 discountedPaymentAmount = _getDiscountedPaymentAmount(
-            otcAmountInUSD,
-            paymentTokenValuation,
-            discount,
-            _paymentToken.decimals()
-        );
+        uint256 discountedPaymentAmount =
+            _getDiscountedPaymentAmount(otcAmountInUSD, paymentTokenValuation, discount, _paymentToken.decimals());
         if (discountedPaymentAmount == 0) revert PaymentAmountNotValid();
 
         uint256 balBefore = _paymentToken.balanceOf(address(this));
         // IERC20(address(_paymentToken)).safeTransferFrom(msg.sender, address(this), discountedPaymentAmount);
         {
-            bool isErr = pearlmit.transferFromERC20(
-                msg.sender,
-                address(this),
-                address(_paymentToken),
-                discountedPaymentAmount
-            );
+            bool isErr =
+                pearlmit.transferFromERC20(msg.sender, address(this), address(_paymentToken), discountedPaymentAmount);
             if (isErr) revert Failed();
         }
         uint256 balAfter = _paymentToken.balanceOf(address(this));
@@ -714,18 +579,12 @@ contract AirdropBroker is
         if (_paymentTokenValuation == 0) revert PaymentTokenValuationNotValid();
         // Calculate payment amount
         uint256 rawPaymentAmount = _otcAmountInUSD / _paymentTokenValuation;
-        paymentAmount =
-            rawPaymentAmount -
-            muldiv(rawPaymentAmount, _discount, 100e4); // 1e4 is discount decimals, 100 is discount percentage
+        paymentAmount = rawPaymentAmount - muldiv(rawPaymentAmount, _discount, 100e4); // 1e4 is discount decimals, 100 is discount percentage
 
         if (_paymentTokenDecimals <= 18) {
-            paymentAmount =
-                paymentAmount /
-                (10 ** (18 - _paymentTokenDecimals));
+            paymentAmount = paymentAmount / (10 ** (18 - _paymentTokenDecimals));
         } else {
-            paymentAmount =
-                paymentAmount *
-                (10 ** (_paymentTokenDecimals - 18));
+            paymentAmount = paymentAmount * (10 ** (_paymentTokenDecimals - 18));
         }
     }
 }

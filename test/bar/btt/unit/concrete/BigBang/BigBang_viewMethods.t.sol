@@ -7,7 +7,6 @@ import {BBCommon} from "tapioca-bar/markets/bigBang/BBCommon.sol";
 import {BigBang} from "tapioca-bar/markets/bigBang/BigBang.sol";
 import {Market} from "tapioca-bar/markets/Market.sol";
 
-
 import {IBigBangDebtRateHelper} from "tap-utils/interfaces/bar/IBigBangDebtRateHelper.sol";
 import {ILeverageExecutor} from "tap-utils/interfaces/bar/ILeverageExecutor.sol";
 import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
@@ -48,10 +47,7 @@ contract BigBang_viewMethods is BigBang_Unit_Shared {
         BigBang(payable(_contract)).computeVariableOpeningFee(SMALL_AMOUNT);
     }
 
-    function test_WhenComputeVariableOpeningFeeIsCalled() 
-        external 
-        whenOracleRateIsEth
-    {
+    function test_WhenComputeVariableOpeningFeeIsCalled() external whenOracleRateIsEth {
         // **** Main BB market ****
         uint256 minMintFeeStart = mainBB.minMintFeeStart();
         uint256 maxMintFeeStart = mainBB.maxMintFeeStart();
@@ -77,12 +73,13 @@ contract BigBang_viewMethods is BigBang_Unit_Shared {
         uint256 exchangeRate = (MAX_MINT_FEE_START + MIN_MINT_FEE_START) / 2;
         assetOracle.set(exchangeRate); // between `maxMintFeeStart` and `minMintFeeStart`
         openingFee = mainBB.computeVariableOpeningFee(SMALL_AMOUNT);
-        uint256 fee = maxMintFee- (((exchangeRate - maxMintFeeStart) * (maxMintFee - minMintFee)) / (minMintFeeStart - maxMintFeeStart));
+        uint256 fee = maxMintFee
+            - (((exchangeRate - maxMintFeeStart) * (maxMintFee - minMintFee)) / (minMintFeeStart - maxMintFeeStart));
         if (fee > maxMintFee) {
             fee = maxMintFee == 0 ? 0 : (SMALL_AMOUNT * maxMintFee) / FEE_PRECISION;
             assertEq(openingFee, fee);
         }
-        if (fee < minMintFee) { 
+        if (fee < minMintFee) {
             fee = minMintFee == 0 ? 0 : (SMALL_AMOUNT * minMintFee) / FEE_PRECISION;
             assertEq(openingFee, fee);
         }
@@ -115,12 +112,13 @@ contract BigBang_viewMethods is BigBang_Unit_Shared {
         exchangeRate = (MAX_MINT_FEE_START + MIN_MINT_FEE_START) / 2;
         assetOracle.set(exchangeRate); // between `maxMintFeeStart` and `minMintFeeStart`
         openingFee = secondaryBB.computeVariableOpeningFee(SMALL_AMOUNT);
-        fee = maxMintFee- (((exchangeRate - maxMintFeeStart) * (maxMintFee - minMintFee)) / (minMintFeeStart - maxMintFeeStart));
+        fee = maxMintFee
+            - (((exchangeRate - maxMintFeeStart) * (maxMintFee - minMintFee)) / (minMintFeeStart - maxMintFeeStart));
         if (fee > maxMintFee) {
             fee = maxMintFee == 0 ? 0 : (SMALL_AMOUNT * maxMintFee) / FEE_PRECISION;
             assertEq(openingFee, fee);
         }
-        if (fee < minMintFee) { 
+        if (fee < minMintFee) {
             fee = minMintFee == 0 ? 0 : (SMALL_AMOUNT * minMintFee) / FEE_PRECISION;
             assertEq(openingFee, fee);
         }

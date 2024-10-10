@@ -19,10 +19,7 @@ import {TwTAP} from "tap-token/governance/twTAP.sol";
    
 */
 
-abstract contract BaseTapToken is
-    BaseTapiocaOmnichainEngine,
-    BaseTapTokenMsgType
-{
+abstract contract BaseTapToken is BaseTapiocaOmnichainEngine, BaseTapTokenMsgType {
     uint16 internal constant PT_LOCK_TWTAP = 870;
     uint16 internal constant PT_UNLOCK_TWTAP = 871;
     uint16 internal constant PT_CLAIM_REWARDS = 872;
@@ -38,17 +35,7 @@ abstract contract BaseTapToken is
         address _extExec,
         IPearlmit _pearlmit,
         ICluster _cluster
-    )
-        BaseTapiocaOmnichainEngine(
-            _name,
-            _symbol,
-            _endpoint,
-            _delegate,
-            _extExec,
-            _pearlmit,
-            _cluster
-        )
-    {}
+    ) BaseTapiocaOmnichainEngine(_name, _symbol, _endpoint, _delegate, _extExec, _pearlmit, _cluster) {}
 
     error twTapNotSet();
 

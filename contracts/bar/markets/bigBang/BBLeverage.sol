@@ -93,7 +93,8 @@ contract BBLeverage is BBLendingCommon {
         }
         {
             updateExchangeRate();
-            uint256 assetPartInCollateral = (memoryData.supplyShareToAmount + memoryData.borrowShareToAmount) * exchangeRate / EXCHANGE_RATE_PRECISION;
+            uint256 assetPartInCollateral = (memoryData.supplyShareToAmount + memoryData.borrowShareToAmount)
+                * exchangeRate / EXCHANGE_RATE_PRECISION;
             uint256 _share = yieldBox.toShare(collateralId, assetPartInCollateral, false);
             _allowedBorrow(calldata_.from, _share);
 

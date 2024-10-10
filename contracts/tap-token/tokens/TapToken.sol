@@ -2,7 +2,12 @@
 pragma solidity 0.8.22;
 
 //LZ
-import {MessagingReceipt, OFTReceipt, SendParam, MessagingFee} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/interfaces/IOFT.sol";
+import {
+    MessagingReceipt,
+    OFTReceipt,
+    SendParam,
+    MessagingFee
+} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/interfaces/IOFT.sol";
 import {IMessagingChannel} from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/IMessagingChannel.sol";
 import {OAppReceiver} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/OAppReceiver.sol";
 import {Origin} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/OApp.sol";
@@ -136,18 +141,8 @@ contract TapToken is BaseTapToken, ModuleManager, ERC20Permit, Pausable {
      * @param _data.tapTokenReceiverModule Address of the TapTokenReceiverModule.
      * @param _data.extExec Address of the external executor.
      */
-    constructor(
-        ITapToken.TapTokenConstructorData memory _data
-    )
-        BaseTapToken(
-            "TapToken",
-            "TAP",
-            _data.endpoint,
-            _data.owner,
-            _data.extExec,
-            _data.pearlmit,
-            _data.cluster
-        )
+    constructor(ITapToken.TapTokenConstructorData memory _data)
+        BaseTapToken("TapToken", "TAP", _data.endpoint, _data.owner, _data.extExec, _data.pearlmit, _data.cluster)
         ERC20Permit("TAP")
     {
         if (_data.endpoint == address(0)) revert AddressWrong();
@@ -157,14 +152,8 @@ contract TapToken is BaseTapToken, ModuleManager, ERC20Permit, Pausable {
         if (_data.tapTokenSenderModule == address(0)) revert NotValid();
         if (_data.tapTokenReceiverModule == address(0)) revert NotValid();
 
-        _setModule(
-            uint8(ITapToken.Module.TapTokenSender),
-            _data.tapTokenSenderModule
-        );
-        _setModule(
-            uint8(ITapToken.Module.TapTokenReceiver),
-            _data.tapTokenReceiverModule
-        );
+        _setModule(uint8(ITapToken.Module.TapTokenSender), _data.tapTokenSenderModule);
+        _setModule(uint8(ITapToken.Module.TapTokenReceiver), _data.tapTokenReceiverModule);
 
         if (_data.epochDuration == 0) revert NotValid();
         EPOCH_DURATION = _data.epochDuration;
@@ -195,11 +184,7 @@ contract TapToken is BaseTapToken, ModuleManager, ERC20Permit, Pausable {
      */
     fallback() external payable {
         /// @dev Call the receiver module on fallback, assume it's gonna be called by endpoint.
-        _executeModule(
-            uint8(ITapToken.Module.TapTokenReceiver),
-            msg.data,
-            false
-        );
+        _executeModule(uint8(ITapToken.Module.TapTokenReceiver), msg.data, false);
     }
 
     receive() external payable {}
@@ -227,14 +212,7 @@ contract TapToken is BaseTapToken, ModuleManager, ERC20Permit, Pausable {
         // Call the internal OApp implementation of lzReceive.
         _executeModule(
             uint8(ITapToken.Module.TapTokenReceiver),
-            abi.encodeWithSelector(
-                OAppReceiver.lzReceive.selector,
-                _origin,
-                _guid,
-                _message,
-                _executor,
-                _extraData
-            ),
+            abi.encodeWithSelector(OAppReceiver.lzReceive.selector, _origin, _guid, _message, _executor, _extraData),
             false
         );
     }
@@ -251,11 +229,11 @@ contract TapToken is BaseTapToken, ModuleManager, ERC20Permit, Pausable {
      *
      * @return returnData The return data from the module execution, if any.
      */
-    function executeModule(
-        ITapToken.Module _module,
-        bytes memory _data,
-        bool _forwardRevert
-    ) external payable returns (bytes memory returnData) {
+    function executeModule(ITapToken.Module _module, bytes memory _data, bool _forwardRevert)
+        external
+        payable
+        returns (bytes memory returnData)
+    {
         return _executeModule(uint8(_module), _data, _forwardRevert);
     }
 
@@ -290,10 +268,7 @@ contract TapToken is BaseTapToken, ModuleManager, ERC20Permit, Pausable {
      *      - amountDebitLD::uint256: Amount of tokens ACTUALLY debited in local decimals.
      *      - amountCreditLD::uint256: Amount of tokens to be credited on the remote side.
      */
-    function sendPacket(
-        LZSendParam calldata _lzSendParam,
-        bytes calldata _composeMsg
-    )
+    function sendPacket(LZSendParam calldata _lzSendParam, bytes calldata _composeMsg)
         public
         payable
         whenNotPaused
@@ -307,10 +282,7 @@ contract TapToken is BaseTapToken, ModuleManager, ERC20Permit, Pausable {
         (msgReceipt, oftReceipt, message, options) = abi.decode(
             _executeModule(
                 uint8(ITapToken.Module.TapTokenSender),
-                abi.encodeCall(
-                    TapiocaOmnichainSender.sendPacket,
-                    (_lzSendParam, _composeMsg)
-                ),
+                abi.encodeCall(TapiocaOmnichainSender.sendPacket, (_lzSendParam, _composeMsg)),
                 false
             ),
             (MessagingReceipt, OFTReceipt, bytes, bytes)
@@ -320,11 +292,7 @@ contract TapToken is BaseTapToken, ModuleManager, ERC20Permit, Pausable {
     /**
      * @dev see `TapiocaOmniChainSender.sendPacketFrom`
      */
-    function sendPacketFrom(
-        address _from,
-        LZSendParam calldata _lzSendParam,
-        bytes calldata _composeMsg
-    )
+    function sendPacketFrom(address _from, LZSendParam calldata _lzSendParam, bytes calldata _composeMsg)
         public
         payable
         whenNotPaused
@@ -338,10 +306,7 @@ contract TapToken is BaseTapToken, ModuleManager, ERC20Permit, Pausable {
         (msgReceipt, oftReceipt, message, options) = abi.decode(
             _executeModule(
                 uint8(ITapToken.Module.TapTokenSender),
-                abi.encodeCall(
-                    TapiocaOmnichainSender.sendPacketFrom,
-                    (_from, _lzSendParam, _composeMsg)
-                ),
+                abi.encodeCall(TapiocaOmnichainSender.sendPacketFrom, (_from, _lzSendParam, _composeMsg)),
                 false
             ),
             (MessagingReceipt, OFTReceipt, bytes, bytes)
@@ -352,54 +317,28 @@ contract TapToken is BaseTapToken, ModuleManager, ERC20Permit, Pausable {
      * See `OFTCore::send()`
      * @dev override default `send` behavior to add `whenNotPaused` modifier
      */
-    function send(
-        SendParam calldata _sendParam,
-        MessagingFee calldata _fee,
-        address _refundAddress
-    )
+    function send(SendParam calldata _sendParam, MessagingFee calldata _fee, address _refundAddress)
         external
         payable
         override(OFTCore)
         whenNotPaused
-        returns (
-            MessagingReceipt memory msgReceipt,
-            OFTReceipt memory oftReceipt
-        )
+        returns (MessagingReceipt memory msgReceipt, OFTReceipt memory oftReceipt)
     {
         // @dev Applies the token transfers regarding this send() operation.
         // - amountSentLD is the amount in local decimals that was ACTUALLY sent/debited from the sender.
         // - amountReceivedLD is the amount in local decimals that will be received/credited to the recipient on the remote OFT instance.
-        (uint256 amountSentLD, uint256 amountReceivedLD) = _debit(
-            msg.sender,
-            _sendParam.amountLD,
-            _sendParam.minAmountLD,
-            _sendParam.dstEid
-        );
+        (uint256 amountSentLD, uint256 amountReceivedLD) =
+            _debit(msg.sender, _sendParam.amountLD, _sendParam.minAmountLD, _sendParam.dstEid);
 
         // @dev Builds the options and OFT message to quote in the endpoint.
-        (bytes memory message, bytes memory options) = _buildMsgAndOptions(
-            _sendParam,
-            amountReceivedLD
-        );
+        (bytes memory message, bytes memory options) = _buildMsgAndOptions(_sendParam, amountReceivedLD);
 
         // @dev Sends the message to the LayerZero endpoint and returns the LayerZero msg receipt.
-        msgReceipt = _lzSend(
-            _sendParam.dstEid,
-            message,
-            options,
-            _fee,
-            _refundAddress
-        );
+        msgReceipt = _lzSend(_sendParam.dstEid, message, options, _fee, _refundAddress);
         // @dev Formulate the OFT receipt.
         oftReceipt = OFTReceipt(amountSentLD, amountReceivedLD);
 
-        emit OFTSent(
-            msgReceipt.guid,
-            _sendParam.dstEid,
-            msg.sender,
-            amountSentLD,
-            amountReceivedLD
-        );
+        emit OFTSent(msgReceipt.guid, _sendParam.dstEid, msg.sender, amountSentLD, amountReceivedLD);
     }
 
     /// =====================
@@ -431,9 +370,7 @@ contract TapToken is BaseTapToken, ModuleManager, ERC20Permit, Pausable {
      * @notice Returns the current week given a timestamp
      * @param timestamp The timestamp to use to compute the week
      */
-    function timestampToWeek(
-        uint256 timestamp
-    ) external view returns (uint256) {
+    function timestampToWeek(uint256 timestamp) external view returns (uint256) {
         if (timestamp == 0) {
             timestamp = block.timestamp;
         }
@@ -446,12 +383,9 @@ contract TapToken is BaseTapToken, ModuleManager, ERC20Permit, Pausable {
      * @dev Returns the hash of the struct used by the permit function.
      * @param _permitData Struct containing permit data.
      */
-    function getTypedDataHash(
-        ERC20PermitStruct calldata _permitData
-    ) public view returns (bytes32) {
-        bytes32 permitTypeHash_ = keccak256(
-            "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
-        );
+    function getTypedDataHash(ERC20PermitStruct calldata _permitData) public view returns (bytes32) {
+        bytes32 permitTypeHash_ =
+            keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
 
         bytes32 structHash_ = keccak256(
             abi.encode(
@@ -485,10 +419,7 @@ contract TapToken is BaseTapToken, ModuleManager, ERC20Permit, Pausable {
      * @param _to Address to send the minted TAP to
      * @param _amount TAP amount
      */
-    function extractTAP(
-        address _to,
-        uint256 _amount
-    ) external onlyMinter whenNotPaused {
+    function extractTAP(address _to, uint256 _amount) external onlyMinter whenNotPaused {
         if (_amount == 0) revert NotValid();
         uint256 week = _timestampToWeek(block.timestamp);
 
@@ -541,13 +472,7 @@ contract TapToken is BaseTapToken, ModuleManager, ERC20Permit, Pausable {
      *
      * @return the emitted amount.
      */
-    function emitForWeek()
-        external
-        onlyMinter
-        onlyHostChain
-        whenNotPaused
-        returns (uint256)
-    {
+    function emitForWeek() external onlyMinter onlyHostChain whenNotPaused returns (uint256) {
         if (emissionsStartTime == 0) revert InitNotStarted();
 
         uint256 week = _timestampToWeek(block.timestamp);
@@ -588,9 +513,7 @@ contract TapToken is BaseTapToken, ModuleManager, ERC20Permit, Pausable {
     /**
      * @notice set the twTAP address, can be done only once.
      */
-    function setTwTAP(
-        address _twTap
-    ) external override onlyOwner onlyHostChain {
+    function setTwTAP(address _twTap) external override onlyOwner onlyHostChain {
         if (address(twTap) != address(0)) {
             revert TwTapAlreadySet();
         }
@@ -601,10 +524,7 @@ contract TapToken is BaseTapToken, ModuleManager, ERC20Permit, Pausable {
      * @notice Un/Pauses this contract.
      */
     function setPause(bool _pauseState) external {
-        if (
-            !getCluster().hasRole(msg.sender, keccak256("PAUSABLE")) &&
-            msg.sender != owner()
-        ) revert NotAuthorized();
+        if (!getCluster().hasRole(msg.sender, keccak256("PAUSABLE")) && msg.sender != owner()) revert NotAuthorized();
         if (_pauseState) {
             _pause();
         } else {
@@ -620,9 +540,7 @@ contract TapToken is BaseTapToken, ModuleManager, ERC20Permit, Pausable {
      * @dev Returns the current week given a timestamp
      * @param timestamp The timestamp to use to compute the week
      */
-    function _timestampToWeek(
-        uint256 timestamp
-    ) internal view returns (uint256) {
+    function _timestampToWeek(uint256 timestamp) internal view returns (uint256) {
         return ((timestamp - emissionsStartTime) / EPOCH_DURATION);
     }
 

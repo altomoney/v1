@@ -27,12 +27,7 @@ abstract contract BaseStrategy is IStrategy {
         return _currentBalance();
     }
 
-    function cheapWithdrawable()
-        external
-        view
-        virtual
-        returns (uint256 amount)
-    {
+    function cheapWithdrawable() external view virtual returns (uint256 amount) {
         return _currentBalance();
     }
 
@@ -56,10 +51,7 @@ abstract contract BaseERC20Strategy is BaseStrategy {
     uint256 public constant tokenId = 0;
     address public immutable contractAddress;
 
-    constructor(
-        IYieldBox _yieldBox,
-        address _contractAddress
-    ) BaseStrategy(_yieldBox) {
+    constructor(IYieldBox _yieldBox, address _contractAddress) BaseStrategy(_yieldBox) {
         contractAddress = _contractAddress;
     }
 }
@@ -69,11 +61,7 @@ abstract contract BaseERC1155Strategy is BaseStrategy {
     uint256 public immutable tokenId;
     address public immutable contractAddress;
 
-    constructor(
-        IYieldBox _yieldBox,
-        address _contractAddress,
-        uint256 _tokenId
-    ) BaseStrategy(_yieldBox) {
+    constructor(IYieldBox _yieldBox, address _contractAddress, uint256 _tokenId) BaseStrategy(_yieldBox) {
         contractAddress = _contractAddress;
         tokenId = _tokenId;
     }

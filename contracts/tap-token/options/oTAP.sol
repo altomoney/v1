@@ -30,23 +30,13 @@ struct TapOption {
     uint256 tOLP; // tOLP token ID
 }
 
-contract OTAP is
-    ERC721,
-    ERC721Permit,
-    ERC721Enumerable,
-    ERC721NftLoader,
-    PearlmitHandler,
-    BaseBoringBatchable
-{
+contract OTAP is ERC721, ERC721Permit, ERC721Enumerable, ERC721NftLoader, PearlmitHandler, BaseBoringBatchable {
     uint256 public mintedOTAP; // total number of OTAP minted
     address public broker; // address of the onlyBroker
 
     mapping(uint256 => TapOption) public options; // tokenId => Option
 
-    constructor(
-        IPearlmit _pearlmit,
-        address _owner
-    )
+    constructor(IPearlmit _pearlmit, address _owner)
         ERC721NftLoader("Option TAP", "oTAP", _owner)
         ERC721Permit("Option TAP")
         PearlmitHandler(_pearlmit)
@@ -55,16 +45,8 @@ contract OTAP is
     // ==========
     //   EVENTS
     // ==========
-    event Mint(
-        address indexed to,
-        uint256 indexed tokenId,
-        TapOption indexed option
-    );
-    event Burn(
-        address indexed from,
-        uint256 indexed tokenId,
-        TapOption indexed option
-    );
+    event Mint(address indexed to, uint256 indexed tokenId, TapOption indexed option);
+    event Burn(address indexed from, uint256 indexed tokenId, TapOption indexed option);
 
     error NotAuthorized();
     error OnlyBroker();
@@ -77,30 +59,17 @@ contract OTAP is
     /**
      * @inheritdoc ERC721NftLoader
      */
-    function tokenURI(
-        uint256 tokenId
-    ) public view override(ERC721, ERC721NftLoader) returns (string memory) {
+    function tokenURI(uint256 tokenId) public view override(ERC721, ERC721NftLoader) returns (string memory) {
         return ERC721NftLoader.tokenURI(tokenId);
     }
 
-    function isApprovedOrOwner(
-        address _spender,
-        uint256 _tokenId
-    ) external view returns (bool) {
-        return
-            _isApprovedOrOwner(_spender, _tokenId) ||
-            isERC721Approved(
-                _ownerOf(_tokenId),
-                _spender,
-                address(this),
-                _tokenId
-            );
+    function isApprovedOrOwner(address _spender, uint256 _tokenId) external view returns (bool) {
+        return _isApprovedOrOwner(_spender, _tokenId)
+            || isERC721Approved(_ownerOf(_tokenId), _spender, address(this), _tokenId);
     }
 
     /// @notice Return the owner of the tokenId and the attributes of the option.
-    function attributes(
-        uint256 _tokenId
-    ) external view returns (address, TapOption memory) {
+    function attributes(uint256 _tokenId) external view returns (address, TapOption memory) {
         return (ownerOf(_tokenId), options[_tokenId]);
     }
 
@@ -118,12 +87,7 @@ contract OTAP is
     /// @param _expiry timestamp
     /// @param _discount TAP discount in basis points
     /// @param _tOLP tOLP token ID
-    function mint(
-        address _to,
-        uint128 _expiry,
-        uint128 _discount,
-        uint256 _tOLP
-    ) external returns (uint256 tokenId) {
+    function mint(address _to, uint128 _expiry, uint128 _discount, uint256 _tOLP) external returns (uint256 tokenId) {
         if (msg.sender != broker) revert OnlyBroker();
 
         tokenId = ++mintedOTAP;
@@ -152,36 +116,32 @@ contract OTAP is
         broker = msg.sender;
     }
 
-    function _baseURI()
-        internal
-        view
-        override(ERC721, ERC721NftLoader)
-        returns (string memory)
-    {
+    function _baseURI() internal view override(ERC721, ERC721NftLoader) returns (string memory) {
         return baseURI;
     }
 
-    function supportsInterface(
-        bytes4 interfaceId
-    ) public view virtual override(ERC721Enumerable, ERC721) returns (bool) {
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        virtual
+        override(ERC721Enumerable, ERC721)
+        returns (bool)
+    {
         return super.supportsInterface(interfaceId);
     }
 
-    function _beforeTokenTransfer(
-        address from,
-        address to,
-        uint256 firstTokenId,
-        uint256 batchSize
-    ) internal override(ERC721, ERC721Enumerable) {
+    function _beforeTokenTransfer(address from, address to, uint256 firstTokenId, uint256 batchSize)
+        internal
+        override(ERC721, ERC721Enumerable)
+    {
         super._beforeTokenTransfer(from, to, firstTokenId, batchSize);
     }
 
-    function _afterTokenTransfer(
-        address from,
-        address to,
-        uint256 firstTokenId,
-        uint256 batchSize
-    ) internal virtual override(ERC721, ERC721Permit) {
+    function _afterTokenTransfer(address from, address to, uint256 firstTokenId, uint256 batchSize)
+        internal
+        virtual
+        override(ERC721, ERC721Permit)
+    {
         super._afterTokenTransfer(from, to, firstTokenId, batchSize);
     }
 }

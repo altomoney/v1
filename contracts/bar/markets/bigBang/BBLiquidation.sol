@@ -193,8 +193,14 @@ contract BBLiquidation is BBCommon {
         ) / _exchangeRate;
 
         // compute closing factor (liquidatable amount)
-        uint256 borrowPartWithBonus =
-            _computeClosingFactor(userBorrowPart[user], collateralPartInAsset, FEE_PRECISION_DECIMALS, liquidationCollateralizationRate, liquidationMultiplier, totalBorrow);
+        uint256 borrowPartWithBonus = _computeClosingFactor(
+            userBorrowPart[user],
+            collateralPartInAsset,
+            FEE_PRECISION_DECIMALS,
+            liquidationCollateralizationRate,
+            liquidationMultiplier,
+            totalBorrow
+        );
 
         // limit liquidable amount before bonus to the current debt
         uint256 userTotalBorrowAmount = totalBorrow.toElastic(userBorrowPart[user], true);
@@ -235,7 +241,8 @@ contract BBLiquidation is BBCommon {
                 revert InsufficientLiquidationBonus();
             }
         } else {
-            uint totalUserBorrowWithBonus = userTotalBorrowAmount + (userTotalBorrowAmount * liquidationBonusAmount) / FEE_PRECISION;
+            uint256 totalUserBorrowWithBonus =
+                userTotalBorrowAmount + (userTotalBorrowAmount * liquidationBonusAmount) / FEE_PRECISION;
             if (collateralPartInAsset < totalUserBorrowWithBonus) revert BadDebt();
             collateralShare =
                 yieldBox.toShare(collateralId, (borrowPartWithBonus * _exchangeRate) / EXCHANGE_RATE_PRECISION, false);

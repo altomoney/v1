@@ -3,7 +3,12 @@
 pragma solidity 0.8.22;
 
 // Tapioca
-import {ERC20PermitApprovalMsg, ERC20PermitStruct, ERC721PermitApprovalMsg, ERC721PermitStruct} from "tap-token/tokens/ITapToken.sol";
+import {
+    ERC20PermitApprovalMsg,
+    ERC20PermitStruct,
+    ERC721PermitApprovalMsg,
+    ERC721PermitStruct
+} from "tap-token/tokens/ITapToken.sol";
 
 import "forge-std/Test.sol";
 
@@ -15,12 +20,11 @@ contract TestUtils is Test {
      * @param _token The token contract to receive the permit.
      * @param _pkSigner The private key signer.
      */
-    function __getERC20PermitData(
-        ERC20PermitStruct memory _permit,
-        bytes32 _digest,
-        address _token,
-        uint256 _pkSigner
-    ) internal pure returns (ERC20PermitApprovalMsg memory permitApproval_) {
+    function __getERC20PermitData(ERC20PermitStruct memory _permit, bytes32 _digest, address _token, uint256 _pkSigner)
+        internal
+        pure
+        returns (ERC20PermitApprovalMsg memory permitApproval_)
+    {
         (uint8 v_, bytes32 r_, bytes32 s_) = vm.sign(_pkSigner, _digest);
 
         permitApproval_ = ERC20PermitApprovalMsg({

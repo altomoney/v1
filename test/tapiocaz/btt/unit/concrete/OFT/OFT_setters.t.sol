@@ -3,11 +3,7 @@ pragma solidity 0.8.22;
 
 // Tapioca
 import {IToftVault} from "tap-utils/interfaces/oft/ITOFT.sol";
-import {
-    ITOFT,
-    TOFTInitStruct,
-    TOFTModulesInitStruct
-} from "tap-utils/interfaces/oft/ITOFT.sol";
+import {ITOFT, TOFTInitStruct, TOFTModulesInitStruct} from "tap-utils/interfaces/oft/ITOFT.sol";
 import {IMtoftFeeGetter} from "tap-utils/interfaces/oft/IMToftFeeGetter.sol";
 import {TOFTVault} from "tapiocaz/tOFT/TOFTVault.sol";
 import {BaseTOFT} from "tapiocaz/tOFT/BaseTOFT.sol";
@@ -18,8 +14,7 @@ import {TOFT} from "tapiocaz/tOFT/TOFT.sol";
 import {OFT_Unit_Shared} from "../../shared/OFT_Unit_Shared.t.sol";
 
 contract TOFT_setters is OFT_Unit_Shared {
-    
-    modifier whenBalancer {
+    modifier whenBalancer() {
         mTOFT.SetOwnerStateData memory owState = mTOFT.SetOwnerStateData({
             stargateRouter: address(0),
             feeGetter: IMtoftFeeGetter(address(0)),
@@ -33,7 +28,6 @@ contract TOFT_setters is OFT_Unit_Shared {
         _;
     }
 
-
     function test_RevertWhen_MTOFTRescueEthIsCalledFromNon_owner() external resetPrank(userA) {
         // it should revert
         vm.expectRevert("Ownable: caller is not the owner");
@@ -46,7 +40,10 @@ contract TOFT_setters is OFT_Unit_Shared {
         mToft.rescueEth(SMALL_AMOUNT, address(this));
     }
 
-    function test_WhenMTOFTRescueEthIsCalledFromOwnerWithAnAvailableAmount(uint256 amount) external assumeRange(amount, SMALL_AMOUNT, LARGE_AMOUNT) {
+    function test_WhenMTOFTRescueEthIsCalledFromOwnerWithAnAvailableAmount(uint256 amount)
+        external
+        assumeRange(amount, SMALL_AMOUNT, LARGE_AMOUNT)
+    {
         address receiver = makeAddr("receiver");
 
         vm.deal(address(mToft), amount);
@@ -75,7 +72,7 @@ contract TOFT_setters is OFT_Unit_Shared {
         assertFalse(mToft.paused());
     }
 
-    function test_WhenMTOFTSetPauseIsCalledFromPauser() external  {
+    function test_WhenMTOFTSetPauseIsCalledFromPauser() external {
         // it should pause or unpause
         address rndAddr = makeAddr("rndAddress");
         cluster.setRoleForContract(rndAddr, keccak256("PAUSABLE"), true);
@@ -95,7 +92,10 @@ contract TOFT_setters is OFT_Unit_Shared {
         mToft.withdrawFees(address(this), SMALL_AMOUNT);
     }
 
-    function test_whenCalledForMTOFT_WhenWithdrawFeesCalledFromOwner(uint256 amount) external assumeRange(amount, SMALL_AMOUNT, LARGE_AMOUNT) {
+    function test_whenCalledForMTOFT_WhenWithdrawFeesCalledFromOwner(uint256 amount)
+        external
+        assumeRange(amount, SMALL_AMOUNT, LARGE_AMOUNT)
+    {
         TOFTVault vault = TOFTVault(address(mToft.vault()));
 
         // register fees on vault
@@ -128,7 +128,11 @@ contract TOFT_setters is OFT_Unit_Shared {
         mToft.extractUnderlying(0);
     }
 
-    function test_whenCalledForMTOFT_WhenExtractUnderlyingIsCalledFromBalancerWithValidAmount(uint256 amount) external whenBalancer assumeRange(amount, SMALL_AMOUNT, LARGE_AMOUNT) {
+    function test_whenCalledForMTOFT_WhenExtractUnderlyingIsCalledFromBalancerWithValidAmount(uint256 amount)
+        external
+        whenBalancer
+        assumeRange(amount, SMALL_AMOUNT, LARGE_AMOUNT)
+    {
         TOFTVault vault = TOFTVault(address(mToft.vault()));
 
         // add necessary funds
@@ -142,9 +146,9 @@ contract TOFT_setters is OFT_Unit_Shared {
         assertEq(balanceAfter, balanceBefore + amount);
     }
 
-    function test_whenCalledForMTOFT_RevertWhen_SetOwnerStateIsCalledFromNonOwner() external  {
+    function test_whenCalledForMTOFT_RevertWhen_SetOwnerStateIsCalledFromNonOwner() external {
         // it should revert
-         mTOFT.SetOwnerStateData memory owState = mTOFT.SetOwnerStateData({
+        mTOFT.SetOwnerStateData memory owState = mTOFT.SetOwnerStateData({
             stargateRouter: address(0),
             feeGetter: IMtoftFeeGetter(address(0)),
             mintCap: 0,
@@ -178,11 +182,13 @@ contract TOFT_setters is OFT_Unit_Shared {
         assertTrue(mToft.balancers(address(this)));
     }
 
-    function test_whenSetOwnerStateIsCalledFromOwner_RevertWhen_MintCapIsSmallerThanSupply(uint256 amount) external assumeRange(amount, SMALL_AMOUNT, LARGE_AMOUNT)  
+    function test_whenSetOwnerStateIsCalledFromOwner_RevertWhen_MintCapIsSmallerThanSupply(uint256 amount)
+        external
+        assumeRange(amount, SMALL_AMOUNT, LARGE_AMOUNT)
     {
         // increase TOFT supply my minting
         _wrap(amount);
-        
+
         // it should revert
         mTOFT.SetOwnerStateData memory owState = mTOFT.SetOwnerStateData({
             stargateRouter: address(0),
@@ -197,7 +203,8 @@ contract TOFT_setters is OFT_Unit_Shared {
         mToft.setOwnerState(owState);
     }
 
-    function _wrap(uint256 amount) private 
+    function _wrap(uint256 amount)
+        private
         whenApprovedViaERC20(address(underlyingErc20), address(this), address(pearlmit), type(uint256).max)
         whenApprovedViaPearlmit(
             TOKEN_TYPE_ERC20,
@@ -207,15 +214,14 @@ contract TOFT_setters is OFT_Unit_Shared {
             address(mToft),
             type(uint200).max,
             uint48(block.timestamp)
-        ) 
+        )
     {
         deal(address(underlyingErc20), address(this), amount);
         mToft.wrap(address(this), address(this), amount);
         assertTrue(mToft.totalSupply() > 0);
     }
 
-
-    function test_whenCalledForTOFT_RevertWhen_RescueEthIsCalledFromNon_owner() external resetPrank(userA)  {
+    function test_whenCalledForTOFT_RevertWhen_RescueEthIsCalledFromNon_owner() external resetPrank(userA) {
         // it should revert
         vm.expectRevert("Ownable: caller is not the owner");
         toft.rescueEth(SMALL_AMOUNT, address(this));
@@ -227,7 +233,10 @@ contract TOFT_setters is OFT_Unit_Shared {
         toft.rescueEth(SMALL_AMOUNT, address(this));
     }
 
-    function test_whenCalledForTOFT_WhenRescueEthIsCalledFromOwnerWithAnAvailableAmount(uint256 amount) external assumeRange(amount, SMALL_AMOUNT, LARGE_AMOUNT) {
+    function test_whenCalledForTOFT_WhenRescueEthIsCalledFromOwnerWithAnAvailableAmount(uint256 amount)
+        external
+        assumeRange(amount, SMALL_AMOUNT, LARGE_AMOUNT)
+    {
         address receiver = makeAddr("receiver");
 
         vm.deal(address(toft), amount);
@@ -238,7 +247,10 @@ contract TOFT_setters is OFT_Unit_Shared {
         assertEq(balanceAfter, balanceBefore + amount);
     }
 
-    function test_whenCalledForTOFT_RevertWhen_SetPauseIsCalledFromNon_ownerAndNon_pauser() external resetPrank(userA) {
+    function test_whenCalledForTOFT_RevertWhen_SetPauseIsCalledFromNon_ownerAndNon_pauser()
+        external
+        resetPrank(userA)
+    {
         // it should revert
         vm.expectRevert(BaseTOFT.TOFT_NotAuthorized.selector);
         toft.setPause(true);

@@ -19,8 +19,7 @@ __/\\\\\\\\\\\\\\\_____/\\\\\\\\\_____/\\\\\\\\\\\\\____/\\\\\\\\\\\_______/\\\\
 */
 
 contract TOFTMock is TOFT {
-    constructor(
-        TOFTInitStruct memory _tOFTData,
-        TOFTModulesInitStruct memory _moduleData
-    ) TOFT(_tOFTData, _moduleData) {}
+    constructor(TOFTInitStruct memory _tOFTData, TOFTModulesInitStruct memory _moduleData)
+        TOFT(_tOFTData, _moduleData)
+    {}
 }

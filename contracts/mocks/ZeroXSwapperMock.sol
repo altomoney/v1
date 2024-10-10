@@ -23,13 +23,14 @@ contract ZeroXSwapperMock is IZeroXSwapper, Ownable {
         cluster = _cluster;
     }
 
-    function swap(
-        SZeroXSwapData calldata swapData,
-        uint256 amountIn,
-        uint256 minAmountOut
-    ) public payable returns (uint256 amountOut) {
-        if (!cluster.isWhitelisted(0, msg.sender))
+    function swap(SZeroXSwapData calldata swapData, uint256 amountIn, uint256 minAmountOut)
+        public
+        payable
+        returns (uint256 amountOut)
+    {
+        if (!cluster.isWhitelisted(0, msg.sender)) {
             revert SenderNotValid(msg.sender);
+        }
         // Transfer tokens to this contract
         swapData.sellToken.transferFrom(msg.sender, address(this), amountIn);
 

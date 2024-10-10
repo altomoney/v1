@@ -30,19 +30,27 @@ contract Usdo_constructor is Usdo_Unit_Shared {
         // it should set the name to 'USDO Stablecoin'
         assertEq(usdo.name(), "USDO Stablecoin");
 
-        // it should set the symbol to 'USDO' 
+        // it should set the symbol to 'USDO'
         assertEq(usdo.symbol(), "USDO");
 
         // it should be able to receive native gas
         payable(address(usdo)).transfer(SMALL_AMOUNT);
-        assertEq(address(usdo).balance, SMALL_AMOUNT);   
+        assertEq(address(usdo).balance, SMALL_AMOUNT);
     }
 
     function test_whenUsdoIsCreatedWithTheWrongParameters_WhenEmptyAddressIsUsed() external {
         // it should revert for UsdoSender module
-        _tryCreateUsdo(true, address(0), address(usdoReceiver), address(usdoMarketReceiverModule), address(usdoOptionsReceiverModule));
+        _tryCreateUsdo(
+            true,
+            address(0),
+            address(usdoReceiver),
+            address(usdoMarketReceiverModule),
+            address(usdoOptionsReceiverModule)
+        );
         // it should revert for UsdoReceiver module
-        _tryCreateUsdo(true, address(usdoSender), address(0), address(usdoMarketReceiverModule), address(usdoOptionsReceiverModule));
+        _tryCreateUsdo(
+            true, address(usdoSender), address(0), address(usdoMarketReceiverModule), address(usdoOptionsReceiverModule)
+        );
         // it should revert for UsdoMarketReceiver module
         _tryCreateUsdo(true, address(usdoSender), address(usdoReceiver), address(0), address(usdoOptionsReceiverModule));
         // it should revert for UsdoOptionReceiver module

@@ -13,15 +13,9 @@ import {OFTMsgCodec} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/libs/OFTM
 
 // Tapioca
 import {UsdoOptionReceiverModule} from "tapioca-bar/usdo/modules/UsdoOptionReceiverModule.sol";
-import {
-    IExerciseOptionsData
-} from "tap-utils/interfaces/tap-token/ITapiocaOptionBroker.sol";
-import {
-    ExerciseOptionsMsg
-} from "tap-utils/interfaces/oft/IUsdo.sol";
-import {
-    LZSendParam
-} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainEngineHelper.sol";
+import {IExerciseOptionsData} from "tap-utils/interfaces/tap-token/ITapiocaOptionBroker.sol";
+import {ExerciseOptionsMsg} from "tap-utils/interfaces/oft/IUsdo.sol";
+import {LZSendParam} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainEngineHelper.sol";
 import {IPearlmit} from "tap-utils/pearlmit/Pearlmit.sol";
 
 // tests
@@ -31,7 +25,6 @@ import {BigBang_Unit_Shared} from "../../shared/BigBang_Unit_Shared.t.sol";
 // mocks
 import {MagnetarDecoder_test} from "../../../mocks/MagnetarDecoder_test.sol";
 import {TapiocaOptionsBrokerMock_test, OTapMock_test} from "../../../mocks/TapiocaOptionsBrokerMock_test.sol";
-
 
 contract Usdo_OptionReceiverModule is Usdo_Unit_Shared, BigBang_Unit_Shared {
     address _magnetar;
@@ -43,7 +36,7 @@ contract Usdo_OptionReceiverModule is Usdo_Unit_Shared, BigBang_Unit_Shared {
     function setUp() public override(Usdo_Unit_Shared, BigBang_Unit_Shared) {
         super.setUp();
 
-        _magnetar = address(new MagnetarDecoder_test()); 
+        _magnetar = address(new MagnetarDecoder_test());
         tOB = new TapiocaOptionsBrokerMock_test(address(tapToken), IPearlmit(address(pearlmit)));
         cluster.updateContract(0, address(tOB), true);
     }
@@ -75,55 +68,51 @@ contract Usdo_OptionReceiverModule is Usdo_Unit_Shared, BigBang_Unit_Shared {
         });
         return _msg;
     }
-    function test_whenExerciseOptionsReceiverIsCalled_RevertGiven_OptionsDataTargetIsNotWhitelisted()
-        external
-    {
+
+    function test_whenExerciseOptionsReceiverIsCalled_RevertGiven_OptionsDataTargetIsNotWhitelisted() external {
         cluster.updateContract(0, address(tOB), false);
         ExerciseOptionsMsg memory _msg = _createMinimalExerciseOptionsMsg(0);
 
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(
-            UsdoOptionReceiverModule.UsdoOptionReceiverModule_NotAuthorized.selector,
-            address(tOB)
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                UsdoOptionReceiverModule.UsdoOptionReceiverModule_NotAuthorized.selector, address(tOB)
+            )
+        );
         usdoOptionsReceiverModule.exerciseOptionsReceiver(address(this), abi.encode(_msg));
     }
 
-    function test_whenExerciseOptionsReceiverIsCalled_RevertGiven_ExerciseOptionCallerIsNotOTapOwner()
-        external
-    {
+    function test_whenExerciseOptionsReceiverIsCalled_RevertGiven_ExerciseOptionCallerIsNotOTapOwner() external {
         address _owner = makeAddr("_owner");
         address oTapMock = tOB.oTapMock();
         OTapMock_test(oTapMock).setOwner(_owner);
         ExerciseOptionsMsg memory _msg = _createMinimalExerciseOptionsMsg(0);
 
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(
-            UsdoOptionReceiverModule.UsdoOptionReceiverModule_NotAuthorized.selector,
-            address(this)
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                UsdoOptionReceiverModule.UsdoOptionReceiverModule_NotAuthorized.selector, address(this)
+            )
+        );
         usdoOptionsReceiverModule.exerciseOptionsReceiver(address(this), abi.encode(_msg));
     }
 
-    function test_whenExerciseOptionsReceiverIsCalled_RevertGiven_OTapOwnerDidNotApproveTheModule()
-        external
-    {
+    function test_whenExerciseOptionsReceiverIsCalled_RevertGiven_OTapOwnerDidNotApproveTheModule() external {
         address _owner = makeAddr("_owner");
         address oTapMock = tOB.oTapMock();
         OTapMock_test(oTapMock).setOwner(address(this));
         ExerciseOptionsMsg memory _msg = _createMinimalExerciseOptionsMsg(0);
-        
+
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(
-            UsdoOptionReceiverModule.UsdoOptionReceiverModule_NotAuthorized.selector,
-            address(this)
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                UsdoOptionReceiverModule.UsdoOptionReceiverModule_NotAuthorized.selector, address(this)
+            )
+        );
         usdoOptionsReceiverModule.exerciseOptionsReceiver(address(this), abi.encode(_msg));
     }
 
-    function test_whenExerciseOptionsReceiverIsCalled_GivenCalledFromOwnerAndApprovedModule(uint256 amount)
-        external
-    {
+    function test_whenExerciseOptionsReceiverIsCalled_GivenCalledFromOwnerAndApprovedModule(uint256 amount) external {
         vm.assume(amount > SMALL_AMOUNT && amount < LARGE_AMOUNT);
 
         uint256 _amountSD = usdoHelper.toSD(amount, usdo.decimalConversionRate());
@@ -137,31 +126,43 @@ contract Usdo_OptionReceiverModule is Usdo_Unit_Shared, BigBang_Unit_Shared {
         OTapMock_test(oTapMock).setOwner(address(this));
         ExerciseOptionsMsg memory _msg = _createMinimalExerciseOptionsMsg(_amountSD);
 
-        pearlmit.approve(TOKEN_TYPE_ERC721, tOB.oTAP(), 0, address(usdoOptionsReceiverModule), type(uint200).max, uint48(block.timestamp));
+        pearlmit.approve(
+            TOKEN_TYPE_ERC721,
+            tOB.oTAP(),
+            0,
+            address(usdoOptionsReceiverModule),
+            type(uint200).max,
+            uint48(block.timestamp)
+        );
         usdoOptionsReceiverModule.exerciseOptionsReceiver(address(this), abi.encode(_msg));
-            
+
         assertEq(tapToken.balanceOf(address(this)), amount, "TapOFT");
     }
 
-    function test_whenExerciseOptionsReceiverIsCalled_WhenAskedToWithdraw(uint256 amount)
-        external
-    {
+    function test_whenExerciseOptionsReceiverIsCalled_WhenAskedToWithdraw(uint256 amount) external {
         vm.assume(amount > SMALL_AMOUNT && amount < LARGE_AMOUNT);
 
         uint256 _amountSD = usdoHelper.toSD(amount, usdo.decimalConversionRate());
         {
             deal(address(usdoOptionsReceiverModule), address(this), amount);
             deal(address(tapToken), address(usdoOptionsReceiverModule), amount);
-            tOB.setPaymentTokenAmount(amount/2);
+            tOB.setPaymentTokenAmount(amount / 2);
         }
 
         address oTapMock = tOB.oTapMock();
         OTapMock_test(oTapMock).setOwner(address(this));
         ExerciseOptionsMsg memory _msg = _createMinimalExerciseOptionsMsg(_amountSD);
 
-        pearlmit.approve(TOKEN_TYPE_ERC721, tOB.oTAP(), 0, address(usdoOptionsReceiverModule), type(uint200).max, uint48(block.timestamp));
+        pearlmit.approve(
+            TOKEN_TYPE_ERC721,
+            tOB.oTAP(),
+            0,
+            address(usdoOptionsReceiverModule),
+            type(uint200).max,
+            uint48(block.timestamp)
+        );
         usdoOptionsReceiverModule.exerciseOptionsReceiver(address(this), abi.encode(_msg));
-            
+
         assertEq(tapToken.balanceOf(address(this)), amount, "TapOFT");
     }
 }

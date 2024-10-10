@@ -4,7 +4,6 @@ pragma solidity 0.8.22;
 // External
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-
 // Tapioca
 import {ERC20PermitStruct} from "tap-utils/interfaces/oft/ITOFT.sol";
 

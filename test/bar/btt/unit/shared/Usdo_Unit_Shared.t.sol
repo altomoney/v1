@@ -11,9 +11,19 @@ import {
 import {OptionsBuilder} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/libs/OptionsBuilder.sol";
 import {OFTMsgCodec} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/libs/OFTMsgCodec.sol";
 
-
 // Tapioca
-import {UsdoInitStruct, UsdoModulesInitStruct, MarketLendOrRepayMsg, MarketRemoveAssetMsg, IRemoveAndRepay, ILendOrRepayParams, YieldBoxApproveAllMsg, YieldBoxApproveAssetMsg, MarketPermitActionMsg, IUsdo} from "tap-utils/interfaces/oft/IUsdo.sol";
+import {
+    UsdoInitStruct,
+    UsdoModulesInitStruct,
+    MarketLendOrRepayMsg,
+    MarketRemoveAssetMsg,
+    IRemoveAndRepay,
+    ILendOrRepayParams,
+    YieldBoxApproveAllMsg,
+    YieldBoxApproveAssetMsg,
+    MarketPermitActionMsg,
+    IUsdo
+} from "tap-utils/interfaces/oft/IUsdo.sol";
 import {TapiocaOmnichainExtExec} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainExtExec.sol";
 import {UsdoHelper} from "tapioca-bar/usdo/extensions/UsdoHelper.sol";
 import {Usdo} from "tapioca-bar/usdo/Usdo.sol";
@@ -78,7 +88,13 @@ abstract contract Usdo_Unit_Shared is Base_Test {
     // **************** //
     // *** INTERNAL *** //
     // **************** //
-    function _tryCreateUsdo(bool shouldRevert, address _sender, address _receiver, address _marketReceiver, address _optionReceiver) internal {
+    function _tryCreateUsdo(
+        bool shouldRevert,
+        address _sender,
+        address _receiver,
+        address _marketReceiver,
+        address _optionReceiver
+    ) internal {
         TapiocaOmnichainExtExec extExec = new TapiocaOmnichainExtExec();
         UsdoInitStruct memory usdoInitStruct = UsdoInitStruct({
             endpoint: address(endpoints[aEid]),
@@ -102,7 +118,7 @@ abstract contract Usdo_Unit_Shared is Base_Test {
     }
 
     struct _LendOrRepayInternal {
-        bool repay; 
+        bool repay;
         bool lock;
         bool participate;
         bool removeCollateral;
@@ -115,9 +131,12 @@ abstract contract Usdo_Unit_Shared is Base_Test {
         address lockDataTarget;
         address participateDataTarget;
     }
-    function _createMinimalLendOrRepayMsg(
-        _LendOrRepayInternal memory data
-    ) internal view returns (MarketLendOrRepayMsg memory marketMsg) {
+
+    function _createMinimalLendOrRepayMsg(_LendOrRepayInternal memory data)
+        internal
+        view
+        returns (MarketLendOrRepayMsg memory marketMsg)
+    {
         uint256 _depositAmountSD = usdoHelper.toSD(data.depositAmount, usdo.decimalConversionRate());
         uint256 _repayAmountSD = usdoHelper.toSD(data.repayAmount, usdo.decimalConversionRate());
         uint256 _removeCollateralAmountSD = usdoHelper.toSD(data.removeCollateralAmount, usdo.decimalConversionRate());
@@ -133,8 +152,20 @@ abstract contract Usdo_Unit_Shared is Base_Test {
                 market: data.market,
                 removeCollateral: data.removeCollateral,
                 removeCollateralAmount: _removeCollateralAmountSD,
-                lockData: IOptionsLockData({lock: data.lock, target: data.lockDataTarget, tAsset:address(0), lockDuration: 0, amount: 0, fraction: 0, minDiscountOut: 0}),
-                participateData: IOptionsParticipateData({participate: data.participate, target: data.participateDataTarget, tOLPTokenId: 0})
+                lockData: IOptionsLockData({
+                    lock: data.lock,
+                    target: data.lockDataTarget,
+                    tAsset: address(0),
+                    lockDuration: 0,
+                    amount: 0,
+                    fraction: 0,
+                    minDiscountOut: 0
+                }),
+                participateData: IOptionsParticipateData({
+                    participate: data.participate,
+                    target: data.participateDataTarget,
+                    tOLPTokenId: 0
+                })
             }),
             withdrawParams: MagnetarWithdrawData({
                 yieldBox: address(0),
@@ -158,7 +189,12 @@ abstract contract Usdo_Unit_Shared is Base_Test {
         uint256 repayAmount;
         uint256 removeCollateralAmount;
     }
-    function _createMinimalRemoveAssetMsg(_RemoveAssetInternal memory data) internal view returns (MarketRemoveAssetMsg memory marketMsg) {
+
+    function _createMinimalRemoveAssetMsg(_RemoveAssetInternal memory data)
+        internal
+        view
+        returns (MarketRemoveAssetMsg memory marketMsg)
+    {
         uint256 _removeAmountSD = usdoHelper.toSD(data.removeAmount, usdo.decimalConversionRate());
         uint256 _repayAmountSD = usdoHelper.toSD(data.repayAmount, usdo.decimalConversionRate());
         uint256 _removeCollateralAmountSD = usdoHelper.toSD(data.removeCollateralAmount, usdo.decimalConversionRate());
@@ -244,6 +280,7 @@ abstract contract Usdo_Unit_Shared is Base_Test {
 
         return keccak256(abi.encodePacked("\x19\x01", _getYieldBoxDomainSeparator(), structHash_));
     }
+
     function __getYieldBoxPermitAssetData(
         ERC20PermitStruct memory _permit,
         address _target,
@@ -265,6 +302,7 @@ abstract contract Usdo_Unit_Shared is Base_Test {
             permit: _isPermit
         });
     }
+
     function __getYieldBoxPermitAllData(
         ERC20PermitStruct memory _permit,
         address _target,
@@ -303,6 +341,7 @@ abstract contract Usdo_Unit_Shared is Base_Test {
 
         return keccak256(abi.encodePacked("\x19\x01", domainSeparator_, structHash_));
     }
+
     function __getMarketPermitData(MarketPermitActionMsg memory _permit, bytes32 _digest, uint256 _pkSigner)
         internal
         pure
@@ -338,8 +377,16 @@ abstract contract Usdo_Unit_Shared is Base_Test {
         );
     }
 
-    function _prepareLzCall(address _token, uint32 _dstEid, address _recipient, uint256 _amount, uint16 _msgType, bytes memory _composeData, uint256 _composeValue) internal view returns (PrepareLzCallReturn memory prepareLzCallReturn_) {
-        uint256 minAmount = _amount - _amount * 1e4/1e5; 
+    function _prepareLzCall(
+        address _token,
+        uint32 _dstEid,
+        address _recipient,
+        uint256 _amount,
+        uint16 _msgType,
+        bytes memory _composeData,
+        uint256 _composeValue
+    ) internal view returns (PrepareLzCallReturn memory prepareLzCallReturn_) {
+        uint256 minAmount = _amount - _amount * 1e4 / 1e5;
         return usdoHelper.prepareLzCall(
             IUsdo(_token),
             PrepareLzCallData({
@@ -362,8 +409,18 @@ abstract contract Usdo_Unit_Shared is Base_Test {
             })
         );
     }
-    function _prepareAndExecuteCrossChainPackets(address _token, address _receivingToken, uint32 _dstEid, address _recipient, uint256 _amount, uint16 _msgType, bytes memory _composeData) internal {
-        PrepareLzCallReturn memory _lzCallReturn = _prepareLzCall(_token, _dstEid, _recipient, _amount, _msgType, _composeData, 0);
+
+    function _prepareAndExecuteCrossChainPackets(
+        address _token,
+        address _receivingToken,
+        uint32 _dstEid,
+        address _recipient,
+        uint256 _amount,
+        uint16 _msgType,
+        bytes memory _composeData
+    ) internal {
+        PrepareLzCallReturn memory _lzCallReturn =
+            _prepareLzCall(_token, _dstEid, _recipient, _amount, _msgType, _composeData, 0);
 
         bytes memory composeMsg_ = _lzCallReturn.composeMsg;
         bytes memory oftMsgOptions_ = _lzCallReturn.oftMsgOptions;
@@ -389,15 +446,28 @@ abstract contract Usdo_Unit_Shared is Base_Test {
         );
     }
 
-    function _prepareAndExecuteComposedCrossChainPackets(address _token, address _receivingToken, uint32 _srcEid, uint32 _dstEid, address _recipient, uint256 _amount, uint16 _msgType, bytes memory _composeData) internal {
+    function _prepareAndExecuteComposedCrossChainPackets(
+        address _token,
+        address _receivingToken,
+        uint32 _srcEid,
+        uint32 _dstEid,
+        address _recipient,
+        uint256 _amount,
+        uint16 _msgType,
+        bytes memory _composeData
+    ) internal {
         // usually for withdrawal
-        PrepareLzCallReturn memory prepareLzCallReturn1_ = _prepareLzCall(_receivingToken, _srcEid, _recipient, _amount, SEND, "", 0);
-        PrepareLzCallReturn memory prepareLzCallReturn2_ = _prepareLzCall(_token, _dstEid, _recipient, 0, _msgType, _composeData, prepareLzCallReturn1_.msgFee.nativeFee);
+        PrepareLzCallReturn memory prepareLzCallReturn1_ =
+            _prepareLzCall(_receivingToken, _srcEid, _recipient, _amount, SEND, "", 0);
+        PrepareLzCallReturn memory prepareLzCallReturn2_ = _prepareLzCall(
+            _token, _dstEid, _recipient, 0, _msgType, _composeData, prepareLzCallReturn1_.msgFee.nativeFee
+        );
 
-        (MessagingReceipt memory msgReceipt_,, bytes memory sentMsg,) =
-            Usdo(payable(_token)).sendPacket{value: prepareLzCallReturn2_.msgFee.nativeFee}(prepareLzCallReturn2_.lzSendParam, prepareLzCallReturn2_.composeMsg);
+        (MessagingReceipt memory msgReceipt_,, bytes memory sentMsg,) = Usdo(payable(_token)).sendPacket{
+            value: prepareLzCallReturn2_.msgFee.nativeFee
+        }(prepareLzCallReturn2_.lzSendParam, prepareLzCallReturn2_.composeMsg);
 
-        verifyPackets(_dstEid, _receivingToken); 
+        verifyPackets(_dstEid, _receivingToken);
 
         __callLzCompose(
             LzOFTComposedData(

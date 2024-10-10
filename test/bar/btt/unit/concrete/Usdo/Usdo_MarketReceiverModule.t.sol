@@ -16,7 +16,7 @@ import {MagnetarDecoder_test} from "../../../mocks/MagnetarDecoder_test.sol";
 
 contract Usdo_MarketReceiverModule is Usdo_Unit_Shared, BigBang_Unit_Shared {
     address _magnetar;
-    address _marketHelper; 
+    address _marketHelper;
     address _market;
     address _lockDataTarget;
     address _participateDataTarget;
@@ -27,8 +27,8 @@ contract Usdo_MarketReceiverModule is Usdo_Unit_Shared, BigBang_Unit_Shared {
     function setUp() public override(Usdo_Unit_Shared, BigBang_Unit_Shared) {
         super.setUp();
 
-        _magnetar = address(new MagnetarDecoder_test()); 
-        _marketHelper = address (new MarketHelper());
+        _magnetar = address(new MagnetarDecoder_test());
+        _marketHelper = address(new MarketHelper());
         _market = address(mainBB);
         _lockDataTarget = makeAddr("_lockDataTarget");
         _participateDataTarget = makeAddr("_participateDataTarget");
@@ -53,10 +53,12 @@ contract Usdo_MarketReceiverModule is Usdo_Unit_Shared, BigBang_Unit_Shared {
     // *************** //
     // *** HELPERS *** //
     // *************** //
-    function _expectLendOrRepayToRevertFor(address _for, uint256 _repayAmount, uint256 _depositAmount, uint256 _removeCollateralAmount) 
-        private 
-        whenAmountsAreValid(_repayAmount, _depositAmount, _removeCollateralAmount)
-    {
+    function _expectLendOrRepayToRevertFor(
+        address _for,
+        uint256 _repayAmount,
+        uint256 _depositAmount,
+        uint256 _removeCollateralAmount
+    ) private whenAmountsAreValid(_repayAmount, _depositAmount, _removeCollateralAmount) {
         cluster.updateContract(0, _for, false);
 
         _LendOrRepayInternal memory _lendOrRepayInternal = _LendOrRepayInternal({
@@ -76,16 +78,19 @@ contract Usdo_MarketReceiverModule is Usdo_Unit_Shared, BigBang_Unit_Shared {
         MarketLendOrRepayMsg memory _msg = _createMinimalLendOrRepayMsg(_lendOrRepayInternal);
 
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(
-            UsdoMarketReceiverModule.UsdoMarketReceiverModule_NotAuthorized.selector,
-            _for
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(UsdoMarketReceiverModule.UsdoMarketReceiverModule_NotAuthorized.selector, _for)
+        );
         usdoMarketReceiverModule.lendOrRepayReceiver(address(this), abi.encode(_msg));
     }
 
-    function _expectLendOrRepayToForwardTheCall(bool _repay, bool _removeCollateral, uint256 _repayAmount, uint256 _depositAmount, uint256 _removeCollateralAmount) 
-        private
-    {
+    function _expectLendOrRepayToForwardTheCall(
+        bool _repay,
+        bool _removeCollateral,
+        uint256 _repayAmount,
+        uint256 _depositAmount,
+        uint256 _removeCollateralAmount
+    ) private {
         _LendOrRepayInternal memory _lendOrRepayInternal = _LendOrRepayInternal({
             repay: _repay,
             lock: false,
@@ -104,8 +109,7 @@ contract Usdo_MarketReceiverModule is Usdo_Unit_Shared, BigBang_Unit_Shared {
         usdoMarketReceiverModule.lendOrRepayReceiver(address(this), abi.encode(_msg));
     }
 
-    function _expectRemoveAssetToRevertFor(address _for, uint256 _removeAmount) private 
-    {
+    function _expectRemoveAssetToRevertFor(address _for, uint256 _removeAmount) private {
         vm.assume(_removeAmount > SMALL_AMOUNT && _removeAmount < LARGE_AMOUNT);
         cluster.updateContract(0, _for, false);
         _RemoveAssetInternal memory _removeAssetData = _RemoveAssetInternal({
@@ -120,10 +124,9 @@ contract Usdo_MarketReceiverModule is Usdo_Unit_Shared, BigBang_Unit_Shared {
 
         MarketRemoveAssetMsg memory _msg = _createMinimalRemoveAssetMsg(_removeAssetData);
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(
-            UsdoMarketReceiverModule.UsdoMarketReceiverModule_NotAuthorized.selector,
-            _for
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(UsdoMarketReceiverModule.UsdoMarketReceiverModule_NotAuthorized.selector, _for)
+        );
         usdoMarketReceiverModule.removeAssetReceiver(address(this), abi.encode(_msg));
     }
 
@@ -140,45 +143,53 @@ contract Usdo_MarketReceiverModule is Usdo_Unit_Shared, BigBang_Unit_Shared {
         MarketRemoveAssetMsg memory _msg = _createMinimalRemoveAssetMsg(_removeAssetData);
         usdoMarketReceiverModule.removeAssetReceiver(address(this), abi.encode(_msg));
     }
-    
-    function test_whenLendOrRepayReceiverIsCalled_RevertGiven_MagnetarNotWhitelisted(uint256 _repayAmount, uint256 _depositAmount, uint256 _removeCollateralAmount)
-        external
-    {
+
+    function test_whenLendOrRepayReceiverIsCalled_RevertGiven_MagnetarNotWhitelisted(
+        uint256 _repayAmount,
+        uint256 _depositAmount,
+        uint256 _removeCollateralAmount
+    ) external {
         _expectLendOrRepayToRevertFor(_magnetar, _repayAmount, _depositAmount, _removeCollateralAmount);
     }
 
-    function test_whenLendOrRepayReceiverIsCalled_RevertGiven_MarketHelperNotWhitelisted(uint256 _repayAmount, uint256 _depositAmount, uint256 _removeCollateralAmount)
-        external
-    {
+    function test_whenLendOrRepayReceiverIsCalled_RevertGiven_MarketHelperNotWhitelisted(
+        uint256 _repayAmount,
+        uint256 _depositAmount,
+        uint256 _removeCollateralAmount
+    ) external {
         _expectLendOrRepayToRevertFor(_marketHelper, _repayAmount, _depositAmount, _removeCollateralAmount);
     }
 
-    function test_whenLendOrRepayReceiverIsCalled_RevertGiven_MarketIsNotWhitelisted(uint256 _repayAmount, uint256 _depositAmount, uint256 _removeCollateralAmount)
-        external
-    {
+    function test_whenLendOrRepayReceiverIsCalled_RevertGiven_MarketIsNotWhitelisted(
+        uint256 _repayAmount,
+        uint256 _depositAmount,
+        uint256 _removeCollateralAmount
+    ) external {
         _expectLendOrRepayToRevertFor(_market, _repayAmount, _depositAmount, _removeCollateralAmount);
     }
 
-    function test_whenLendOrRepayReceiverIsCalled_RevertGiven_LockDataTargetIsNotWhitelisted(uint256 _repayAmount, uint256 _depositAmount, uint256 _removeCollateralAmount)
-        external
-    {
+    function test_whenLendOrRepayReceiverIsCalled_RevertGiven_LockDataTargetIsNotWhitelisted(
+        uint256 _repayAmount,
+        uint256 _depositAmount,
+        uint256 _removeCollateralAmount
+    ) external {
         _expectLendOrRepayToRevertFor(_lockDataTarget, _repayAmount, _depositAmount, _removeCollateralAmount);
     }
 
-    function test_whenLendOrRepayReceiverIsCalled_RevertGiven_ParticipateDataTargetIsNotWhitelisted(uint256 _repayAmount, uint256 _depositAmount, uint256 _removeCollateralAmount)
-        external
-    {
+    function test_whenLendOrRepayReceiverIsCalled_RevertGiven_ParticipateDataTargetIsNotWhitelisted(
+        uint256 _repayAmount,
+        uint256 _depositAmount,
+        uint256 _removeCollateralAmount
+    ) external {
         _expectLendOrRepayToRevertFor(_participateDataTarget, _repayAmount, _depositAmount, _removeCollateralAmount);
     }
 
-    function test_whenLendOrRepayReceiverIsCalled_WhenRepaying_GivenRepayAmountIs0(uint256 _depositAmount)
-        external
-    {
+    function test_whenLendOrRepayReceiverIsCalled_WhenRepaying_GivenRepayAmountIs0(uint256 _depositAmount) external {
         vm.assume(_depositAmount > SMALL_AMOUNT && _depositAmount < LARGE_AMOUNT);
 
         // it should use depositAmount
         _expectLendOrRepayToForwardTheCall(true, false, VALUE_ZERO, _depositAmount, VALUE_ZERO);
-        
+
         uint256 _depositAmountSD = usdoHelper.toSD(_depositAmount, usdo.decimalConversionRate());
         uint256 _depositAmountLD = usdoHelper.toLD(uint64(_depositAmountSD), usdo.decimalConversionRate());
 
@@ -186,9 +197,10 @@ contract Usdo_MarketReceiverModule is Usdo_Unit_Shared, BigBang_Unit_Shared {
         assertEq(MagnetarDecoder_test(_magnetar).depositAmount(), _depositAmountLD);
     }
 
-    function test_whenLendOrRepayReceiverIsCalled_WhenRepaying_GivenRemoveCollateralAmountIsGreaterThanZero(uint256 _depositAmount, uint256 _removeCollateralAmount)
-        external
-    {
+    function test_whenLendOrRepayReceiverIsCalled_WhenRepaying_GivenRemoveCollateralAmountIsGreaterThanZero(
+        uint256 _depositAmount,
+        uint256 _removeCollateralAmount
+    ) external {
         _depositAmount = bound(_depositAmount, SMALL_AMOUNT, LARGE_AMOUNT);
         _removeCollateralAmount = bound(_removeCollateralAmount, SMALL_AMOUNT, LARGE_AMOUNT);
         _expectLendOrRepayToForwardTheCall(true, true, VALUE_ZERO, _depositAmount, _removeCollateralAmount);
@@ -197,15 +209,14 @@ contract Usdo_MarketReceiverModule is Usdo_Unit_Shared, BigBang_Unit_Shared {
         uint256 _depositAmountLD = usdoHelper.toLD(uint64(_depositAmountSD), usdo.decimalConversionRate());
 
         uint256 _removeCollateralAmountSD = usdoHelper.toSD(_removeCollateralAmount, usdo.decimalConversionRate());
-        uint256 _removeCollateralAmountLD = usdoHelper.toLD(uint64(_removeCollateralAmountSD), usdo.decimalConversionRate());
+        uint256 _removeCollateralAmountLD =
+            usdoHelper.toLD(uint64(_removeCollateralAmountSD), usdo.decimalConversionRate());
 
         assertEq(MagnetarDecoder_test(_magnetar).depositAmount(), _depositAmountLD);
         assertEq(MagnetarDecoder_test(_magnetar).removeAmount(), _removeCollateralAmountLD);
     }
 
-    function test_whenLendOrRepayReceiverIsCalled_WhenLending(uint256 _depositAmount)
-        external
-    {
+    function test_whenLendOrRepayReceiverIsCalled_WhenLending(uint256 _depositAmount) external {
         _depositAmount = bound(_depositAmount, SMALL_AMOUNT, LARGE_AMOUNT);
         _expectLendOrRepayToForwardTheCall(false, false, VALUE_ZERO, _depositAmount, VALUE_ZERO);
 
@@ -228,9 +239,7 @@ contract Usdo_MarketReceiverModule is Usdo_Unit_Shared, BigBang_Unit_Shared {
         _expectRemoveAssetToRevertFor(_marketHelper, _removeAmount);
     }
 
-    function test_whenRemoveAssetReceiverIsCalled_RevertGiven_BigBangIsNotWhitelisted(uint256 _removeAmount)
-        external
-    {
+    function test_whenRemoveAssetReceiverIsCalled_RevertGiven_BigBangIsNotWhitelisted(uint256 _removeAmount) external {
         // it should revert
         _expectRemoveAssetToRevertFor(_market, _removeAmount);
     }
@@ -242,7 +251,7 @@ contract Usdo_MarketReceiverModule is Usdo_Unit_Shared, BigBang_Unit_Shared {
         _expectRemoveAssetToRevertFor(_market, _removeAmount);
     }
 
-    function test_WhenRemoveAssetReceiverIsCalledWithRightParameters(uint256 _removeAmount) external  {
+    function test_WhenRemoveAssetReceiverIsCalledWithRightParameters(uint256 _removeAmount) external {
         _removeAmount = bound(_removeAmount, SMALL_AMOUNT, LARGE_AMOUNT);
         _expectRemoveAssetToForwardTheCall(_removeAmount);
 

@@ -50,6 +50,4 @@ contract TapiocaOptionsBrokerMock is PearlmitHandler {
         ERC721Mock(oTAP).mint(msg.sender, 1);
         return 1;
     }
-
-
 }

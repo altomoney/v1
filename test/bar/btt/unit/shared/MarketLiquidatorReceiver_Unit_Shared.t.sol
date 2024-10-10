@@ -65,6 +65,13 @@ abstract contract MarketLiquidatorReceiver_Unit_Shared is Base_Test {
 
         receiver =
             new MarketLiquidatorReceiver(address(weth), ICluster(address(cluster)), address(swapper), address(this));
-        sGlpReceiver= new SGlpMarketLiquidatorReceiver(address(weth), ICluster(address(cluster)), address(swapper), IGmxRewardRouterV2(address(gmxMock)), IGmxGlpManager(address(gmxMock)), address(this));
+        sGlpReceiver = new SGlpMarketLiquidatorReceiver(
+            address(weth),
+            ICluster(address(cluster)),
+            address(swapper),
+            IGmxRewardRouterV2(address(gmxMock)),
+            IGmxGlpManager(address(gmxMock)),
+            address(this)
+        );
     }
 }

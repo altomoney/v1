@@ -18,7 +18,8 @@ import {BigBang_Unit_Shared} from "../../shared/BigBang_Unit_Shared.t.sol";
 contract BigBang_liquidateBadDebt is BigBang_Unit_Shared {
     function test_RevertWhen_LiquidateBadDebtIsCalledFromNon_owner() external resetPrank(userA) {
         // **** Main BB market ****
-        (Module[] memory modules, bytes[] memory calls) = _getLiquidateBadDebtData(address(this), address(this), address(this), "", false);
+        (Module[] memory modules, bytes[] memory calls) =
+            _getLiquidateBadDebtData(address(this), address(this), address(this), "", false);
         // it should revert
         //    │   │   └─ ← [Revert] NotAuthorized()
         //     │   │   └─ ← [Revert] EvmError: Revert
@@ -37,7 +38,8 @@ contract BigBang_liquidateBadDebt is BigBang_Unit_Shared {
 
     function test_whenOwnerIsCalling_RevertWhen_FromIsNotWhitelisted() external {
         // **** Main BB market ****
-        (Module[] memory modules, bytes[] memory calls) = _getLiquidateBadDebtData(address(this), address(this), address(this), "", false);
+        (Module[] memory modules, bytes[] memory calls) =
+            _getLiquidateBadDebtData(address(this), address(this), address(this), "", false);
         // it should revert
         //         │   │   │   │   └─ ← [Revert] NotAuthorized()
         // │   │   │   └─ ← [Revert] EvmError: Revert
@@ -61,7 +63,8 @@ contract BigBang_liquidateBadDebt is BigBang_Unit_Shared {
         whenWhitelisted(address(this))
     {
         borrowAmount = _boundBorrowAmount(borrowAmount, collateralAmount);
-        (Module[] memory modules, bytes[] memory calls) = _getLiquidateBadDebtData(address(this), address(this), address(this), "", false);
+        (Module[] memory modules, bytes[] memory calls) =
+            _getLiquidateBadDebtData(address(this), address(this), address(this), "", false);
 
         // **** Main BB market ****
         // add collateral
@@ -70,7 +73,6 @@ contract BigBang_liquidateBadDebt is BigBang_Unit_Shared {
         // borrow
         // already does the necessary checks
         _borrow(borrowAmount, mainBB, address(this), address(this), address(this));
-
 
         // it should revert
         //        │   │   │   │   └─ ← [Revert] ForbiddenAction()
@@ -97,13 +99,9 @@ contract BigBang_liquidateBadDebt is BigBang_Unit_Shared {
         // └─ ← [Revert] revert: RevertMsgDecoder: no data
         vm.expectRevert();
         secondaryBB.execute(modules, calls, true);
-
     }
 
-    function test_whenOwnerIsCalling_WhenBadLiquidationIsExecuted(
-        uint256 collateralAmount,
-        uint256 borrowAmount
-    ) 
+    function test_whenOwnerIsCalling_WhenBadLiquidationIsExecuted(uint256 collateralAmount, uint256 borrowAmount)
         external
         whenAssetOracleRateIsBelowMin
         whenCollateralAmountIsValid(collateralAmount)
@@ -116,7 +114,7 @@ contract BigBang_liquidateBadDebt is BigBang_Unit_Shared {
         _liquidateBadDebt(collateralAmount, borrowAmount, mainBB, address(this), rndAddr, false);
 
         // **** Secondary BB market ****
-          _approveViaPearlmit(
+        _approveViaPearlmit(
             TOKEN_TYPE_ERC1155,
             address(yieldBox),
             IPearlmit(address(pearlmit)),
@@ -129,17 +127,13 @@ contract BigBang_liquidateBadDebt is BigBang_Unit_Shared {
         _liquidateBadDebt(collateralAmount, borrowAmount, secondaryBB, address(this), rndAddr, false);
     }
 
-    function test_whenOwnerIsCalling_WhenSwapCollateralIsRequired(
-        uint256 collateralAmount,
-        uint256 borrowAmount
-    ) 
-        external 
+    function test_whenOwnerIsCalling_WhenSwapCollateralIsRequired(uint256 collateralAmount, uint256 borrowAmount)
+        external
         whenAssetOracleRateIsBelowMin
         whenCollateralAmountIsValid(collateralAmount)
         givenBorrowCapIsNotReachedYet
         whenWhitelisted(address(this))
     {
-   
         address rndAddr = makeAddr("rndAddress");
 
         // it should transfer assets to the receiver
@@ -148,7 +142,7 @@ contract BigBang_liquidateBadDebt is BigBang_Unit_Shared {
         cluster.updateContract(0, address(liquidatorReceiver), true);
         _liquidateBadDebt(collateralAmount, borrowAmount, mainBB, address(this), rndAddr, true);
 
-         // **** Secondary BB market ****
+        // **** Secondary BB market ****
         cluster.updateContract(0, address(secondaryBB), true);
         cluster.updateContract(0, address(liquidatorReceiver), true);
         _liquidateBadDebt(collateralAmount, borrowAmount, secondaryBB, address(this), rndAddr, true);
@@ -156,15 +150,15 @@ contract BigBang_liquidateBadDebt is BigBang_Unit_Shared {
 
     function test_whenOwnerIsCalling_whenSwapCollateralIsRequired_RevertWhen_ReturnedAmountIsZero(
         uint256 collateralAmount
-    ) 
+    )
         external
         whenAssetOracleRateIsBelowMin
         whenOracleRateIsEth
         whenCollateralAmountIsValid(collateralAmount)
         givenBorrowCapIsNotReachedYet
-        whenWhitelisted(address(this)) 
-        whenWhitelisted(address(mainBB)) 
-        whenWhitelisted(address(liquidatorReceiver)) 
+        whenWhitelisted(address(this))
+        whenWhitelisted(address(mainBB))
+        whenWhitelisted(address(liquidatorReceiver))
     {
         // it should revert
         _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this), address(this), false);
@@ -182,17 +176,13 @@ contract BigBang_liquidateBadDebt is BigBang_Unit_Shared {
             sellToken: TOFTMock_test(payable(mainBB._collateral())).erc20(),
             buyToken: mainBB._asset(),
             swapTarget: payable(swapperTarget),
-            swapCallData: abi.encodeWithSelector(
-                ZeroXSwapperMockTarget_test.transferTokens.selector, mainBB._asset(), 0
-            )
+            swapCallData: abi.encodeWithSelector(ZeroXSwapperMockTarget_test.transferTokens.selector, mainBB._asset(), 0)
         });
-        SSwapData memory sswapData = SSwapData({
-            minAmountOut: 0,
-            data: szeroXSwapData
-        });
+        SSwapData memory sswapData = SSwapData({minAmountOut: 0, data: szeroXSwapData});
         bytes memory swapData = abi.encode(sswapData);
 
-        (Module[] memory modules, bytes[] memory calls) = _getLiquidateBadDebtData(address(this), address(this), address(this), swapData, true);
+        (Module[] memory modules, bytes[] memory calls) =
+            _getLiquidateBadDebtData(address(this), address(this), address(this), swapData, true);
         // │   │   │   └─ ← [Revert] OnCollateralReceiverFailed(0, 0)
         // │   │   └─ ← [Revert] revert: <empty>
         // │   └─ ← [Revert] revert: <empty>

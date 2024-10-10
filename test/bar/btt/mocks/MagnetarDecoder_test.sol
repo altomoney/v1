@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.22;
 
-
 import {
     IMagnetar,
     DepositRepayAndRemoveCollateralFromMarketData,
@@ -21,7 +20,6 @@ contract MagnetarDecoder_test {
     uint256 public depositAmount;
     uint256 public removeAmount;
 
-    
     function burst(MagnetarCall[] calldata calls) external payable {
         for (uint256 i; i < calls.length; i++) {
             MagnetarCall calldata _action = calls[i];
@@ -29,7 +27,9 @@ contract MagnetarDecoder_test {
         }
     }
 
-    function depositRepayAndRemoveCollateralFromMarket(DepositRepayAndRemoveCollateralFromMarketData memory _data) public payable
+    function depositRepayAndRemoveCollateralFromMarket(DepositRepayAndRemoveCollateralFromMarketData memory _data)
+        public
+        payable
     {
         depositAmount = _data.depositAmount;
         repayAmount = _data.repayAmount;

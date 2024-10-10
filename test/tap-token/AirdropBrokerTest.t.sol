@@ -15,45 +15,23 @@ contract ADBOracleMock is ITapiocaOracle {
 
     function decimals() external view virtual override returns (uint8) {}
 
-    function get(
-        bytes calldata
-    ) external pure override returns (bool success, uint256 rate) {
+    function get(bytes calldata) external pure override returns (bool success, uint256 rate) {
         return (true, 1e18);
     }
 
-    function peek(
-        bytes calldata data
-    ) external view virtual override returns (bool success, uint256 rate) {}
+    function peek(bytes calldata data) external view virtual override returns (bool success, uint256 rate) {}
 
-    function peekSpot(
-        bytes calldata data
-    ) external view virtual override returns (uint256 rate) {}
+    function peekSpot(bytes calldata data) external view virtual override returns (uint256 rate) {}
 
-    function symbol(
-        bytes calldata data
-    ) external view virtual override returns (string memory) {}
+    function symbol(bytes calldata data) external view virtual override returns (string memory) {}
 
-    function name(
-        bytes calldata data
-    ) external view virtual override returns (string memory) {}
+    function name(bytes calldata data) external view virtual override returns (string memory) {}
 }
 
 /// @dev We mock the AirdropBroker contract to be able to access internal functions with external ones.
 contract AirdropBrokerTestMock is AirdropBroker {
-    constructor(
-        address _AOTAP,
-        address _PCNFT,
-        address _PAYMENT_TOKEN_BENEFICIARY,
-        IPearlmit _PEARLMIT,
-        address _OWNER
-    )
-        AirdropBroker(
-            _AOTAP,
-            _PCNFT,
-            _PAYMENT_TOKEN_BENEFICIARY,
-            _PEARLMIT,
-            _OWNER
-        )
+    constructor(address _AOTAP, address _PCNFT, address _PAYMENT_TOKEN_BENEFICIARY, IPearlmit _PEARLMIT, address _OWNER)
+        AirdropBroker(_AOTAP, _PCNFT, _PAYMENT_TOKEN_BENEFICIARY, _PEARLMIT, _OWNER)
     {}
 }
 
@@ -61,23 +39,15 @@ contract AirdropBrokerTest is Test {
     AirdropBrokerTestMock airdropBroker;
 
     address AOTAP = address(0x1);
-    address payable TAPOFT =
-        payable(address(new ERC20Mock("TAPOFT", "TAPOFT")));
+    address payable TAPOFT = payable(address(new ERC20Mock("TAPOFT", "TAPOFT")));
     address PCNFT = address(0x2);
     address TAP_ORACLE = address(new ADBOracleMock());
     address PAYMENT_TOKEN_BENEFICIARY = address(0x3);
     address OWNER = address(this);
-    IPearlmit PEARLMIT =
-        IPearlmit(address(new Pearlmit("Pearlmit", "1", address(this), 0)));
+    IPearlmit PEARLMIT = IPearlmit(address(new Pearlmit("Pearlmit", "1", address(this), 0)));
 
     function setUp() public {
-        airdropBroker = new AirdropBrokerTestMock(
-            AOTAP,
-            PCNFT,
-            PAYMENT_TOKEN_BENEFICIARY,
-            PEARLMIT,
-            OWNER
-        );
+        airdropBroker = new AirdropBrokerTestMock(AOTAP, PCNFT, PAYMENT_TOKEN_BENEFICIARY, PEARLMIT, OWNER);
         airdropBroker.setTapOracle(ITapiocaOracle(TAP_ORACLE), "0x");
         airdropBroker.setTapToken(TAPOFT);
     }

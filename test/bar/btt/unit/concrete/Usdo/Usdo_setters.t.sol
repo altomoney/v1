@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.22;
 
-// Tapioca 
+// Tapioca
 import {Usdo} from "tapioca-bar/usdo/Usdo.sol";
 
 // tests
@@ -32,7 +32,7 @@ contract Usdo_setters is Usdo_Unit_Shared {
         address rndAddr = makeAddr("rndAddress");
         usdo.setFlashloanHelper(rndAddr);
 
-        // transfer Usdo fees 
+        // transfer Usdo fees
         deal(address(usdo), address(usdo), SMALL_AMOUNT);
         uint256 balanceBefore = usdo.balanceOf(address(this));
 
@@ -42,7 +42,7 @@ contract Usdo_setters is Usdo_Unit_Shared {
 
         _resetPrank(address(this));
         usdo.extractFees();
-        
+
         uint256 balanceAfter = usdo.balanceOf(address(this));
         assertEq(balanceBefore + SMALL_AMOUNT, balanceAfter);
     }

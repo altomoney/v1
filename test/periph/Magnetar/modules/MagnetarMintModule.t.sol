@@ -86,13 +86,16 @@ contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver {
                 collateralDepositData: IDepositData({deposit: false, amount: depositAmount})
             }),
             depositData: IDepositData({deposit: false, amount: depositAmount}),
-            lockData: IOptionsLockData({lock: false, target: address(0), tAsset:address(0), lockDuration: 0, amount: 0, fraction: 0, minDiscountOut: 0}),
-            participateData: IOptionsParticipateData({
-                participate: false,
+            lockData: IOptionsLockData({
+                lock: false,
                 target: address(0),
-                tOLPTokenId: 0
-
+                tAsset: address(0),
+                lockDuration: 0,
+                amount: 0,
+                fraction: 0,
+                minDiscountOut: 0
             }),
+            participateData: IOptionsParticipateData({participate: false, target: address(0), tOLPTokenId: 0}),
             externalContracts: ICommonExternalContracts({
                 magnetar: _magnetar,
                 singularity: _singularity,
@@ -507,7 +510,6 @@ contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver {
 
         tSgl = new TOFTMock(address(sgl), IPearlmit(address(pearlmit)));
         clusterA.updateContract(0, address(tSgl), true);
-        
 
         _params.mintData.mint = true;
         _params.mintData.mintAmount = mintAmount_;
@@ -593,7 +595,6 @@ contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver {
 
         tSgl = new TOFTMock(address(sgl), IPearlmit(address(pearlmit)));
         clusterA.updateContract(0, address(tSgl), true);
-        
 
         _params.mintData.mint = true;
         _params.mintData.mintAmount = mintAmount_;
@@ -642,7 +643,7 @@ contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver {
         tOLPMock.setApprovalForAll(address(pearlmit), true);
 
         deal(address(sgl), address(magnetarA), 99999999999999 ether);
-        
+
         magnetarA.burst{value: 0}(calls);
 
         sgl.approve(address(pearlmit), 0);

@@ -152,9 +152,14 @@ abstract contract Utils is Test, Constants {
     // ******************** //
     // *** DATA HELPERS *** //
     // ******************** //
-    function _createErc20PermitStruct(address user, address spender, uint256 amount, uint256 nonce) internal pure returns (ERC20PermitStruct memory permit_) {
+    function _createErc20PermitStruct(address user, address spender, uint256 amount, uint256 nonce)
+        internal
+        pure
+        returns (ERC20PermitStruct memory permit_)
+    {
         permit_ = ERC20PermitStruct({owner: user, spender: spender, value: amount, nonce: nonce, deadline: 1 days});
     }
+
     function __getERC20PermitData(ERC20PermitStruct memory _permit, bytes32 _digest, address _token, uint256 _pkSigner)
         internal
         pure

@@ -46,14 +46,16 @@ contract BBCommon is BBStorage {
 
     /// @notice returns the current debt rate
     function getDebtRate() public view returns (uint256) {
-        return IBigBangDebtRateHelper(debtRateHelper).getDebtRate(IBigBangDebtRateHelper.DebtRateCall({
-            isMainMarket: isMainMarket,
-            penrose: penrose,
-            elastic: totalBorrow.elastic,
-            debtRateAgainstEthMarket: debtRateAgainstEthMarket,
-            maxDebtRate: maxDebtRate,
-            minDebtRate: minDebtRate
-        }));
+        return IBigBangDebtRateHelper(debtRateHelper).getDebtRate(
+            IBigBangDebtRateHelper.DebtRateCall({
+                isMainMarket: isMainMarket,
+                penrose: penrose,
+                elastic: totalBorrow.elastic,
+                debtRateAgainstEthMarket: debtRateAgainstEthMarket,
+                maxDebtRate: maxDebtRate,
+                minDebtRate: minDebtRate
+            })
+        );
     }
 
     // ************************ //
@@ -123,7 +125,7 @@ contract BBCommon is BBStorage {
 
         emit LogAccrue(extraAmount, _accrueInfo.debtRate);
     }
-    
+
     function _computeVariableOpeningFee(uint256 amount) internal returns (uint256) {
         //get asset <> USDC price ( USDO <> USDC )
         (bool updated, uint256 _exchangeRate) = assetOracle.get(oracleData);

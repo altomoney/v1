@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.22;
 
-// Tapioca 
+// Tapioca
 import {Usdo} from "tapioca-bar/usdo/Usdo.sol";
 
 // tests
@@ -42,14 +42,22 @@ contract Usdo_minters_buners is Usdo_Unit_Shared {
         _;
     }
 
-    function test_RevertWhen_MintIsCalledAndSenderNotAllowed(uint256 amount) external whenNotPaused givenSenderIsNotAllowed {
+    function test_RevertWhen_MintIsCalledAndSenderNotAllowed(uint256 amount)
+        external
+        whenNotPaused
+        givenSenderIsNotAllowed
+    {
         vm.assume(amount > 0 && amount < LARGE_AMOUNT);
         // it should revert
         vm.expectRevert(Usdo.Usdo_NotAuthorized.selector);
         usdo.mint(address(this), amount);
     }
 
-    function test_RevertWhen_BurnIsCalledAndSenderNotAllowed(uint256 amount) external whenNotPaused givenSenderIsNotAllowed {
+    function test_RevertWhen_BurnIsCalledAndSenderNotAllowed(uint256 amount)
+        external
+        whenNotPaused
+        givenSenderIsNotAllowed
+    {
         vm.assume(amount > 0 && amount < LARGE_AMOUNT);
         // it should revert
         vm.expectRevert(Usdo.Usdo_NotAuthorized.selector);
@@ -98,7 +106,11 @@ contract Usdo_minters_buners is Usdo_Unit_Shared {
         assertEq(supplyRndBefore - burnAmount, supplyRndAfter);
     }
 
-    function test_RevertWhen_BurnIsCalledFromAnAmountTooBig(uint256 amount, uint256 burnAmount) external whenNotPaused givenSenderIsAllowed {
+    function test_RevertWhen_BurnIsCalledFromAnAmountTooBig(uint256 amount, uint256 burnAmount)
+        external
+        whenNotPaused
+        givenSenderIsAllowed
+    {
         address rndAddr = makeAddr("rndAddress");
         vm.assume(amount > 0 && amount < LARGE_AMOUNT);
         vm.assume(burnAmount > amount);

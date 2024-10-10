@@ -186,7 +186,7 @@ contract MagnetarCollateralModuleTest is MagnetarTestHelper {
             value: 0,
             call: abi.encodeWithSelector(
                 IPermit.permit.selector, permit.owner, permit.spender, permit.value, permit.deadline, v_, r_, s_
-                )
+            )
         });
 
         calls[1] = MagnetarCall({

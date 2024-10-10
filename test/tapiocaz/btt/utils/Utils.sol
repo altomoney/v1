@@ -14,7 +14,6 @@ import {YieldBoxURIBuilder} from "yieldbox/YieldBoxURIBuilder.sol";
 import {Cluster} from "tap-utils/Cluster/Cluster.sol";
 import {YieldBox} from "yieldbox/YieldBox.sol";
 
-
 // tests
 import {ERC20Mock_test} from "../mocks/ERC20Mock_test.sol";
 import {Test} from "forge-std/Test.sol";
@@ -61,7 +60,7 @@ abstract contract Utils is Test, Constants {
         vm.label(address(cluster), "Cluster Test");
         return cluster;
     }
-    
+
     // Creates real YieldBox
     function _createYieldBox(address _owner, Pearlmit _pearlmit) internal returns (YieldBox) {
         YieldBoxURIBuilder uriBuilder = new YieldBoxURIBuilder();
@@ -77,7 +76,6 @@ abstract contract Utils is Test, Constants {
         _resetPrank({msgSender: from});
         IERC20(token).approve(address(operator), amount);
     }
-
 
     function _approveViaPearlmit(
         uint256 tokenType,
