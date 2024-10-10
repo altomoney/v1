@@ -175,6 +175,7 @@ contract TapTokenTest is TapTestHelper, IERC721Receiver {
             epochFloor: 1,
             rewardsMultiplier: 1,
             lockEpochDuration: 1,
+            growthBufferPercent: 10_00,
             totalDepositsLastEpoch: 0,
             totalDeposits: 0
         });

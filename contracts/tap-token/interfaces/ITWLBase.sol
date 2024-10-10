@@ -7,8 +7,9 @@ struct Bucket {
     uint24 epochDecayRate; // Epoch decay if total deposits are decreasing versus previous epoch
     uint24 epochCeiling; // Maximum epoch limit
     uint24 epochFloor; // Minimum epoch limit
-    uint24 rewardsMultiplier; // Multiplier %, max 100 * 1e4
-    uint128 lockEpochDuration; // Current bucket lock epoch
+    uint16 rewardsMultiplier; // Multiplier %, max 1e4
+    uint16 growthBufferPercent; // uffer % to grow or decay lockEpochDuration, max 1e4
+    uint24 lockEpochDuration; // Current bucket lock epoch
     uint256 totalDepositsLastEpoch;
     uint256 totalDeposits;
 }
@@ -17,9 +18,13 @@ interface ITWLBase {
     error MAX_BUCKETS_REACHED();
     error BUCKET_DISABLED();
     error BUCKET_REWARDS_MULTIPLIER_MAX_REACHED();
+    error BUCKET_GROWTH_BUFFER_PERCENT_MAX_REACHED();
     error BUCKET_FLOOR_CEILING_MISMATCH();
     error EPOCH_NOT_FINISHED();
+    error EPOCH_DURATION_ZERO();
     error SafeCastOverflowedUintDowncast(uint256 uintType, uint256 amount);
+    error BUCKET_EPOCH_DURATION_CEILING_MISMATCH();
+    error BUCKET_EPOCH_DURATION_FLOOR_MISMATCH();
 
     event AdvanceEpoch(uint256 indexed newEpoch, uint256 lastEpoch);
     event BucketUpdated(uint256 indexed index);

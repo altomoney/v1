@@ -255,7 +255,8 @@ contract UnitBaseTest is TestHelper {
             epochDecayRate: 1,
             epochCeiling: 100,
             epochFloor: 1,
-            rewardsMultiplier: 50_0000,
+            rewardsMultiplier: 50_00,
+            growthBufferPercent: 10_00,
             totalDepositsLastEpoch: 0,
             totalDeposits: 0
         });

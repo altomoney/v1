@@ -58,16 +58,18 @@ contract twTapBaseTest is UnitBaseTest {
         usdcMock = new ERC20Mock("USDC", "USDC", 100e6, 6, adminAddr);
 
         tapOFT = createTapOftInstance(
-            EPOCH_DURATION,
-            ENDPOINT_A,
-            TAP_CONTRIBUTOR,
-            TAP_EARLY_SUPPORTERS,
-            TAP_SUPPORTERS,
-            TAP_LBP,
-            TAP_DAO,
-            TAP_AIRDROP,
-            EID_A,
-            adminAddr
+            TapOftInput(
+                EPOCH_DURATION,
+                ENDPOINT_A,
+                TAP_CONTRIBUTOR,
+                TAP_EARLY_SUPPORTERS,
+                TAP_SUPPORTERS,
+                TAP_LBP,
+                TAP_DAO,
+                TAP_AIRDROP,
+                EID_A,
+                adminAddr
+            )
         );
         twTap = createTwTap(payable(tapOFT), IPearlmit(address(pearlmit)), adminAddr);
 

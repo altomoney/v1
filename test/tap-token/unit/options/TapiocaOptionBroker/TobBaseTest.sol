@@ -68,16 +68,18 @@ contract TobBaseTest is TolpBaseTest {
         vm.label(address(usdcMock), "USDC");
 
         tapOFT = createTapOftInstance(
-            EPOCH_DURATION,
-            ENDPOINT_A,
-            TAP_CONTRIBUTOR,
-            TAP_EARLY_SUPPORTERS,
-            TAP_SUPPORTERS,
-            TAP_LBP,
-            TAP_DAO,
-            TAP_AIRDROP,
-            EID_A,
-            adminAddr
+            TapOftInput(
+                EPOCH_DURATION,
+                ENDPOINT_A,
+                TAP_CONTRIBUTOR,
+                TAP_EARLY_SUPPORTERS,
+                TAP_SUPPORTERS,
+                TAP_LBP,
+                TAP_DAO,
+                TAP_AIRDROP,
+                EID_A,
+                adminAddr
+            )
         );
         otap = createOtapInstance(IPearlmit(address(pearlmit)), adminAddr);
 

@@ -1,0 +1,18 @@
+TWLBase_addBucket
+├── when buckets length is greater than or equal to MAX_BUCKETS
+│   └── it should revert with MAX_BUCKETS_REACHED
+├── when rewardsMultiplier is greater than 1e4
+│   └── it should revert with BUCKET_REWARDS_MULTIPLIER_MAX_REACHED
+├── when growthBufferPercent is greater than 1e4
+│   └── it should revert with BUCKET_GROWTH_BUFFER_PERCENT_MAX_REACHED
+├── when epochFloor is greater than epochCeiling
+│   └── it should revert with BUCKET_FLOOR_CEILING_MISMATCH
+├── when lockEpochDuration is greater than epochCeiling
+│   └── it should revert with BUCKET_EPOCH_DURATION_CEILING_MISMATCH
+├── when lockEpochDuration is less than epochFloor
+│   └── it should revert with BUCKET_EPOCH_DURATION_FLOOR_MISMATCH
+└── when all conditions are met
+    ├── it should add the new bucket to the buckets array
+    ├── it should set totalDepositsLastEpoch to 0
+    ├── it should set totalDeposits to 0
+    └── it should emit a BucketUpdated event
