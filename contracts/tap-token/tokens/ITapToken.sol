@@ -31,7 +31,7 @@ interface ITapToken is ITapiocaOmnichainEngine {
     /**
      * EVENTS
      */
-    event LockTwTapReceived(address indexed user, uint96 duration, uint256 amount);
+    event LockTwTapReceived(address indexed user, uint8 bucketId, uint256 amount);
     /// @dev twTAP unlock operation received.
     event UnlockTwTapReceived(uint256 tokenId, uint256 amount);
 
@@ -72,12 +72,12 @@ interface ITapToken is ITapiocaOmnichainEngine {
 
 /**
  * @param user The user address to lock in the tokens.
- * @param duration The duration of the lock.
+ * @param bucketId The bucket ID to lock into.
  * @param amount The amount of TAP to lock.
  */
 struct LockTwTapPositionMsg {
     address user;
-    uint96 duration;
+    uint8 bucketId;
     uint256 amount;
 }
 

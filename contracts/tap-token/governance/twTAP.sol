@@ -17,7 +17,7 @@ import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {ERC721Permit} from "tap-utils/utils/ERC721Permit.sol";
 import {ERC721PermitStruct} from "tap-token/tokens/ITapToken.sol";
 import {TapToken} from "tap-token/tokens/TapToken.sol";
-import {TWAML} from "tap-token/options/twAML.sol";
+import {TWLBase, Bucket} from "tap-token/governance/TWLBase.sol";
 
 /*
 
@@ -30,36 +30,17 @@ import {TWAML} from "tap-token/options/twAML.sol";
    
 */
 
-// Justification for data sizes:
-// - 56 bits can represent over 2 billion years in seconds
-// - TAP has a maximum supply of 100 million, and a precision of 10^18. Any
-//   amount will therefore fit in (lg 10^26 = 87) bits.
-// - The multiplier has a maximum of 1 million; dMAX = 100 * 1e4, which fits
-//   in 20 bits.
-// - A week is 86400 * 7 = 604800 seconds; less than 2^20. Even if we start
-//   counting at the (Unix) epoch, we will run out of `expiry` before we
-//   saturate the week fields.
 struct Participation {
     // 1 slot
-    uint256 averageMagnitude; // average magnitude of the pool at the time of locking.
-    // 1 slot
-    bool hasVotingPower;
-    bool divergenceForce; // 0 negative, 1 positive
+    uint8 bucketId;
     bool tapReleased; // allow restaking while rewards may still accumulate
-    uint56 lockedAt; // timestamp when lock was created. Since it's locked at block.timestamp, it's safe to say 56 bits will suffice
+    uint240 lockedAt; // timestamp when lock was created
     // 1 slot
     uint56 expiry; // expiry timestamp. Big enough for over 2 billion years..
     uint88 tapAmount; // amount of TAP locked
     uint24 multiplier; // Votes = multiplier * tapAmount
     uint40 lastInactive; // One week BEFORE the staker gets a share of rewards
     uint40 lastActive; // Last week that the staker shares in rewards
-}
-
-struct TWAMLPool {
-    uint256 totalParticipants;
-    uint256 averageMagnitude;
-    uint256 totalDeposited;
-    uint256 cumulative;
 }
 
 struct WeekTotals {
@@ -73,7 +54,7 @@ struct WeekTotals {
 }
 
 contract TwTAP is
-    TWAML,
+    TWLBase,
     ERC721,
     ERC721Permit,
     ERC721Enumerable,
@@ -87,19 +68,7 @@ contract TwTAP is
 
     TapToken public immutable tapOFT;
 
-    /// ===== TWAML ======
-    TWAMLPool public twAML; // sglAssetId => twAMLPool
-
     mapping(uint256 => Participation) public participants; // tokenId => part.
-
-    /// @dev Virtual total amount to add to the total when computing twAML participation right. Default 10_000 * 1e18.
-    uint256 public VIRTUAL_TOTAL_AMOUNT = 10_000 ether;
-
-    uint256 public MIN_WEIGHT_FACTOR = 1000; // In BPS, default 10%
-    uint256 constant dMAX = 1_000_000; // 100 * 1e4; 0% - 100% voting power multiplier
-    uint256 constant dMIN = 0;
-    uint256 public constant EPOCH_DURATION = 7 days;
-    uint256 public constant MAX_LOCK_DURATION = 100 * 365 days; // 100 years
 
     // If we assume 128 bit balances for the reward token -- which fit 1e40
     // "tokens" at the most commonly used 1e18 precision -- then we can use the
@@ -124,7 +93,6 @@ contract TwTAP is
     // be done in time, the `lastProcessedWeek` will be behind until this is
     // done.
     uint256 public mintedTWTap;
-    uint256 public creation; // Week 0 starts here
     uint256 public lastProcessedWeek;
     mapping(uint256 => WeekTotals) public weekTotals;
 
@@ -144,40 +112,36 @@ contract TwTAP is
     error LockNotExpired();
     error LockNotAWeek();
     error LockTooLong();
-    error AdvanceEpochFirst();
     error DurationNotMultiple(); // Lock duration should be a multiple of 1 EPOCH
     error EmergencySweepCooldownNotReached();
+    error RescueModeActive();
+    error EmergencySweepActivated();
 
-    /// =====-------======
-    constructor(address payable _tapOFT, IPearlmit _pearlmit, address _owner)
+    constructor(
+        address payable _tapOFT,
+        IPearlmit _pearlmit,
+        address _owner,
+        uint256 epochDuration,
+        Bucket[] memory _buckets
+    )
         ERC721NftLoader("Time Weighted TAP", "twTAP", _owner)
         ERC721Permit("Time Weighted TAP")
         PearlmitHandler(_pearlmit)
+        TWLBase(epochDuration, _buckets)
     {
         tapOFT = TapToken(_tapOFT);
-        creation = block.timestamp;
-
         rewardTokens.push(IERC20(address(0x0))); // 0 index is reserved
-
         maxRewardTokens = 30;
-
-        // Seed the cumulative with 1 week of magnitude
-        twAML.cumulative = EPOCH_DURATION;
     }
 
     // ==========
     //   EVENTS
     // ==========
 
-    event AMLDivergence(
-        uint256 indexed cumulative, uint256 indexed averageMagnitude, uint256 indexed totalParticipants
-    );
-
     event AddRewardToken(address indexed rewardTokenAddress, uint256 rewardTokenIndex);
     event DistributeReward(
         address indexed rewardTokenAddress, address indexed from, uint256 amount, uint256 rewardTokenIndex
     );
-    event AdvanceEpoch(uint256 indexed newEpoch, uint256 lastEpoch);
 
     event ClaimReward(
         address indexed rewardTokenAddress,
@@ -187,13 +151,16 @@ contract TwTAP is
         uint256 rewardTokenIndex
     );
     event Participate(
-        address indexed participant, uint256 mintedTokenId, uint256 tapAmount, uint256 multiplier, uint256 lockDuration
+        address indexed participant,
+        uint256 mintedTokenId,
+        uint256 tapAmount,
+        uint256 multiplier,
+        uint256 expiry,
+        uint256 bucketId
     );
     event ExitPosition(uint256 indexed twTapTokenId, address indexed releasedTo, uint256 amount);
 
     event LogMaxRewardsLength(uint256 _oldLength, uint256 _newLength, uint256 _currentLength);
-    event SetMinWeightFactor(uint256 newMinWeightFactor, uint256 oldMinWeightFactor);
-    event SetVirtualTotalAmount(uint256 newVirtualTotalAmount, uint256 oldVirtualTotalAmount);
     event RescueMode(bool _rescueMode);
     event SetCluster(address _cluster);
     event EmergencySweepLocks();
@@ -219,8 +186,10 @@ contract TwTAP is
         return rewardTokens;
     }
 
-    function currentWeek() public view returns (uint256) {
-        return (block.timestamp - creation) / EPOCH_DURATION;
+    /// @notice Returns the current epoch number
+    /// @dev keeps compatibility with older interface
+    function currentWeek() external view returns (uint256) {
+        return currentEpoch();
     }
 
     /**
@@ -244,7 +213,7 @@ contract TwTAP is
     /**
      * @notice Amount currently claimable for each reward token.
      * @dev index 0 will ALWAYS return 0, as it's used by address(0x0).
-     * @dev Should be safe to claim even after position exit.
+     * @dev Safe to claim even after position exit.
      * @return claimable amounts mapped by reward token
      */
     function claimable(uint256 _tokenId) public view returns (uint256[] memory) {
@@ -254,7 +223,6 @@ contract TwTAP is
         Participation memory position = participants[_tokenId];
         uint256 votes;
         unchecked {
-            // Math is safe: Types fit
             votes = uint256(position.tapAmount) * uint256(position.multiplier);
         }
 
@@ -276,8 +244,6 @@ contract TwTAP is
         WeekTotals storage prev = weekTotals[position.lastInactive];
 
         for (uint256 i; i < len;) {
-            // Math is safe (but we do the checks anyway):
-            //
             // -- The `totalDistPerVote[i]` values are increasing as a
             //    function of weeks (see `advanceWeek()`), and if `week`
             //    were not greater than `position.lastInactive`, this bit
@@ -354,105 +320,36 @@ contract TwTAP is
     //    WRITE
     // ===========
 
-    /// @notice Participate in twAML voting and mint an twTap position
-    ///         Lock duration should be a multiple of 1 EPOCH, and have a minimum of 1 EPOCH.
+    /// @notice Participate in twAML voting and mint an twTap position in a lock bucket.
     /// @dev Requires a Pearlmit approval for the TAP amount
     ///
     /// @param _participant The address of the participant
     /// @param _amount The amount of TAP to participate with
-    /// @param _duration The duration of the lock
-    function participate(address _participant, uint256 _amount, uint256 _duration)
+    /// @param _bucketId The lock bucket id
+    function participate(address _participant, uint256 _amount, uint8 _bucketId)
         external
         whenNotPaused
         nonReentrant
         returns (uint256 tokenId)
     {
-        if (_duration < EPOCH_DURATION) revert LockNotAWeek();
-        if (_duration > MAX_LOCK_DURATION) revert LockTooLong();
-        if (_duration % EPOCH_DURATION != 0) revert DurationNotMultiple();
-        if (lastProcessedWeek != currentWeek()) revert AdvanceWeekFirst();
+        return _participate(_participant, _amount, _bucketId, true);
+    }
 
-        // Transfer TAP to this contract
-        {
-            // tapOFT.transferFrom(msg.sender, address(this), _amount);
-            bool isErr = pearlmit.transferFromERC20(msg.sender, address(this), address(tapOFT), _amount);
-            if (isErr) revert NotAuthorized();
-        }
+    /// @notice Reuse an expired participation to participate again in twAML voting and mint an twTap position in a lock bucket.
+    ///
+    /// @param _tokenId The tokenId of the expired participation
+    /// @param _bucketId The new lock bucket id to migrate the position from the expired participation in a new participation
+    function reuseParticipation(uint256 _tokenId, uint8 _bucketId)
+        external
+        whenNotPaused
+        nonReentrant
+        returns (uint256 tokenId)
+    {
+        address participationOwner = ownerOf(_tokenId);
 
-        // Copy to memory
-        TWAMLPool memory pool = twAML;
+        uint88 amountReleased = _releaseTap(_tokenId, participationOwner, false);
 
-        uint256 magnitude = computeMagnitude(_duration, pool.cumulative);
-        // Revert if the lock 4x the cumulative
-        if (magnitude >= pool.cumulative * 4) revert NotValid();
-        uint256 multiplier = computeTarget(dMIN, dMAX, magnitude, pool.cumulative);
-
-        // Calculate twAML voting weight
-        bool divergenceForce;
-        bool hasVotingPower = _amount >= computeMinWeight(pool.totalDeposited + VIRTUAL_TOTAL_AMOUNT, MIN_WEIGHT_FACTOR);
-        if (hasVotingPower) {
-            pool.totalParticipants++; // Save participation
-            pool.averageMagnitude = (pool.averageMagnitude + magnitude) / pool.totalParticipants; // compute new average magnitude
-
-            // Compute and save new cumulative
-            divergenceForce = _duration >= pool.cumulative;
-
-            if (divergenceForce) {
-                pool.cumulative += pool.averageMagnitude;
-            } else {
-                if (pool.cumulative > pool.averageMagnitude) {
-                    pool.cumulative -= pool.averageMagnitude;
-                } else {
-                    pool.cumulative = EPOCH_DURATION;
-                }
-            }
-
-            // Save new weight
-            pool.totalDeposited += _amount;
-
-            twAML = pool; // Save twAML participation
-            emit AMLDivergence(pool.cumulative, pool.averageMagnitude, pool.totalParticipants);
-        }
-
-        uint256 expiry = block.timestamp + _duration;
-        // Eligibility starts NEXT week, and lasts until the week that the lock
-        // expires. This is guaranteed to be at least one week later by the
-        // check on `_duration`.
-        // If a user locks right before the current week ends, and have a
-        // duration slightly over one week, straddling the two starting points,
-        // then that user is eligible for the rewards during both weeks; the
-        // price for this maneuver is a lower multiplier, and loss of voting
-        // power in the DAO after the lock expires.
-        uint256 w0 = currentWeek();
-        uint256 w1 = (expiry - creation) / EPOCH_DURATION;
-
-        // Save twAML participation
-        // Casts are safe: see struct definition
-        tokenId = ++mintedTWTap;
-        uint256 votes = _amount * multiplier;
-        participants[tokenId] = Participation({
-            averageMagnitude: pool.averageMagnitude,
-            hasVotingPower: hasVotingPower,
-            divergenceForce: divergenceForce,
-            tapReleased: false,
-            lockedAt: uint56(block.timestamp),
-            expiry: uint56(expiry),
-            tapAmount: uint88(_amount),
-            multiplier: uint24(multiplier),
-            lastInactive: uint40(w0),
-            lastActive: uint40(w1)
-        });
-
-        // w0 + 1 = lastInactive + 1 = first active
-        // w1 + 1 = lastActive + 1 = first inactive
-        // Cast is safe: `votes` is the product of a uint88 and a uint24
-        weekTotals[w0 + 1].netActiveVotes += int256(votes);
-        weekTotals[w1 + 1].netActiveVotes -= int256(votes);
-
-        // Mint twTAP position
-        _safeMint(_participant, tokenId);
-
-        emit Participate(_participant, tokenId, _amount, multiplier, _duration);
+        return _participate(participationOwner, amountReleased, _bucketId, false);
     }
 
     /**
@@ -497,19 +394,19 @@ contract TwTAP is
      */
     function exitPosition(uint256 _tokenId) external nonReentrant whenNotPaused returns (uint256 tapAmount_) {
         address owner_ = ownerOf(_tokenId);
-        tapAmount_ = _releaseTap(_tokenId, owner_);
+        tapAmount_ = _releaseTap(_tokenId, owner_, true);
     }
 
     /// @notice Indicate that (a) week(s) have passed and update running totals
     /// @notice Reverts if called in week 0. Let it.
     /// @param _limit Maximum number of weeks to process in one call
     function advanceWeek(uint256 _limit) public nonReentrant {
-        if (!cluster.hasRole(msg.sender, keccak256("NEW_EPOCH"))) {
-            revert NotAuthorized();
-        }
+        if (_limit == 0) revert NotValid();
+        if (lastProcessedWeek == currentEpoch()) revert NotValid();
 
         uint256 week = lastProcessedWeek;
-        uint256 goal = currentWeek();
+        uint256 goal = currentEpoch();
+
         unchecked {
             if (goal - week > _limit) {
                 goal = week + _limit;
@@ -528,6 +425,10 @@ contract TwTAP is
                 }
             }
         }
+
+        // Sync TWL Buckets
+        _syncTWLBuckets();
+
         emit AdvanceEpoch(goal, lastProcessedWeek);
         lastProcessedWeek = goal;
     }
@@ -539,7 +440,7 @@ contract TwTAP is
     /// @param _rewardTokenId index of the reward in `rewardTokens`
     /// @param _amount amount of reward token to distribute.
     function distributeReward(uint256 _rewardTokenId, uint256 _amount) external nonReentrant {
-        if (lastProcessedWeek != currentWeek()) revert AdvanceWeekFirst();
+        if (lastProcessedWeek != currentEpoch()) revert AdvanceWeekFirst();
         if (_amount == 0) revert NotValid();
         if (_rewardTokenId == 0) revert NotValid(); // @dev rewardTokens[0] is 0x0
 
@@ -569,23 +470,9 @@ contract TwTAP is
     }
 
     /**
-     * @notice Set the `VIRTUAL_TOTAL_AMOUNT` state variable.
-     * @param _virtualTotalAmount The new state variable value.
+     * @notice Set the maximum number of reward tokens.
+     * @param _length The new maximum number of reward tokens.
      */
-    function setVirtualTotalAmount(uint256 _virtualTotalAmount) external onlyOwner {
-        emit SetVirtualTotalAmount(_virtualTotalAmount, VIRTUAL_TOTAL_AMOUNT);
-        VIRTUAL_TOTAL_AMOUNT = _virtualTotalAmount;
-    }
-
-    /**
-     * @notice Set the minimum weight factor.
-     * @param _minWeightFactor The new minimum weight factor.
-     */
-    function setMinWeightFactor(uint256 _minWeightFactor) external onlyOwner {
-        emit SetMinWeightFactor(_minWeightFactor, MIN_WEIGHT_FACTOR);
-        MIN_WEIGHT_FACTOR = _minWeightFactor;
-    }
-
     function setMaxRewardTokensLength(uint256 _length) external onlyOwner {
         emit LogMaxRewardsLength(maxRewardTokens, _length, rewardTokens.length);
         maxRewardTokens = _length;
@@ -650,36 +537,19 @@ contract TwTAP is
     }
 
     /**
-     * @notice Emergency sweep of all tokens in case of a critical issue.
-     * Strategy is to sweep tokens, then recreate positions with them on a new contract.
+     * @notice Emergency sweep of all tokens in case of a critical issue, after a cooldown period.
+     * @dev Strategy is to sweep tokens, then recreate positions with them on a new contract.
      *
-     * @dev Only the owner with role `TWTAP_EMERGENCY_SWEEP` can call this function.
      */
-    function emergencySweepLocks() external onlyOwner {
-        if (block.timestamp < lastEmergencySweep + emergencySweepCooldown) {
+    function emergencySweep() external onlyOwner {
+        if (lastEmergencySweep == 0 || block.timestamp < lastEmergencySweep + emergencySweepCooldown) {
             revert EmergencySweepCooldownNotReached();
         }
-        if (!cluster.hasRole(msg.sender, keccak256("TWTAP_EMERGENCY_SWEEP"))) {
-            revert NotAuthorized();
-        }
 
+        // 1. Transfer the locks
         tapOFT.transfer(owner(), tapOFT.balanceOf(address(this)));
-    }
 
-    /**
-     * @notice Emergency sweep of all rewards in case of a critical issue.
-     * Strategy is to sweep tokens, then distribute reward on a new contract.
-     *
-     * @dev Only the owner with role `TWTAP_EMERGENCY_SWEEP` can call this function.
-     */
-    function emergencySweepRewards() external onlyOwner {
-        if (block.timestamp < lastEmergencySweep + emergencySweepCooldown) {
-            revert EmergencySweepCooldownNotReached();
-        }
-        if (!cluster.hasRole(msg.sender, keccak256("TWTAP_EMERGENCY_SWEEP"))) {
-            revert NotAuthorized();
-        }
-
+        // 2. Transfer the rewards
         uint256 len = rewardTokens.length;
         // Index starts at 1, see constructor
         for (uint256 i = 1; i < len; ++i) {
@@ -688,6 +558,25 @@ contract TwTAP is
                 token.safeTransfer(owner(), token.balanceOf(address(this)));
             }
         }
+
+        lastEmergencySweep = 0;
+    }
+
+    /**
+     * @notice Adds a new locking bucket
+     * @param bucket The bucket to add
+     */
+    function addBucket(Bucket memory bucket) external override onlyOwner {
+        _addBucket(bucket);
+    }
+
+    /**
+     * @notice Updates a bucket
+     * @param index Index of the bucket to update
+     * @param bucket Bucket struct to update, ignores lockEpochDuration field
+     */
+    function updateBucket(uint8 index, Bucket memory bucket) external override onlyOwner {
+        _updateBucket(index, bucket);
     }
 
     // ============
@@ -705,9 +594,9 @@ contract TwTAP is
         amounts_ = _claimRewards(_tokenId, msg.sender);
     }
 
-    /// @notice returns week for timestamp
-    function _timestampToWeek(uint256 timestamp) internal view returns (uint256) {
-        return ((timestamp - creation) / EPOCH_DURATION);
+    /// @notice returns epoch for timestamp
+    function _timestampToEpoch(uint256 timestamp) internal view returns (uint256) {
+        return ((timestamp - INIT_TIMESTAMP) / EPOCH_DURATION);
     }
 
     /**
@@ -733,12 +622,10 @@ contract TwTAP is
     /**
      * @notice Release the TAP locked in a position whose votes have expired.
      * @dev Clean up the twAML participation and delete the voting power if existing.
-     * @dev !!!!!!!!!! Make sure to verify ownership of `_tokenId` and `_to` !!!!!!!!!!
-     *
      * @param _tokenId tokenId whose locked TAP to claim
      * @param _to address to receive the TAP
      */
-    function _releaseTap(uint256 _tokenId, address _to) internal returns (uint256 releasedAmount) {
+    function _releaseTap(uint256 _tokenId, address _to, bool transferTap) internal returns (uint88 releasedAmount) {
         Participation memory position = participants[_tokenId];
 
         // If in rescue mode, allow the release of the TAP even if the lock has not expired.
@@ -753,58 +640,75 @@ contract TwTAP is
         releasedAmount = position.tapAmount;
 
         // Remove participation
-        if (position.hasVotingPower) {
-            TWAMLPool memory pool = twAML;
-            unchecked {
-                --pool.totalParticipants;
-            }
-
-            // Inverse of the participation. The participation entry tracks
-            // the average magnitude as it was at the time the participant
-            // entered. When going the other way around, this value matches the
-            // one in the pool, but here it does not.
-            if (position.divergenceForce) {
-                if (pool.cumulative > position.averageMagnitude) {
-                    pool.cumulative -= position.averageMagnitude;
-                } else {
-                    pool.cumulative = EPOCH_DURATION;
-                }
-            } else {
-                pool.cumulative += position.averageMagnitude;
-            }
-
-            // Save new weight
-            pool.totalDeposited -= position.tapAmount;
-
-            twAML = pool; // Save twAML exit
-            emit AMLDivergence(pool.cumulative, pool.averageMagnitude, pool.totalParticipants); // Register new voting power event
-        }
+        _withdrawFromBucket(participants[_tokenId].bucketId, releasedAmount);
 
         participants[_tokenId].tapReleased = true;
-        tapOFT.transfer(_to, releasedAmount);
 
-        emit ExitPosition(_tokenId, _to, releasedAmount);
-    }
-
-    /// @notice Checks if an element is in an array
-    /// @param _check The element to check
-    /// @param _array The array to check in
-    function _existInArray(address _check, address[] memory _array) internal pure returns (bool) {
-        uint256 len = _array.length;
-        unchecked {
-            for (uint256 i; i < len; ++i) {
-                if (_array[i] == _check) {
-                    return true;
-                }
-            }
+        if (transferTap) {
+            tapOFT.transfer(_to, releasedAmount);
+            emit ExitPosition(_tokenId, _to, releasedAmount);
+        } else {
+            emit ExitPosition(_tokenId, address(this), releasedAmount);
         }
-        return false;
     }
 
-    /// @notice Returns the chain ID of the current network.
-    /// @dev Used for dev purposes.
-    function _getChainId() internal view virtual returns (uint256) {
-        return block.chainid;
+    /// @dev Internal function to participate in twAML voting and mint an twTap position in a lock bucket.
+    /// @param _participant The address of the participant
+    /// @param _amount The amount of TAP to participate with. Max uint88.
+    /// @param _bucketId The lock bucket id
+    /// @return tokenId The tokenId of the minted twTap position
+    function _participate(address _participant, uint256 _amount, uint8 _bucketId, bool transferFrom)
+        internal
+        returns (uint256 tokenId)
+    {
+        if (_amount == 0) revert NotValid();
+        if (rescueMode) revert RescueModeActive();
+        if (lastEmergencySweep != 0) revert EmergencySweepActivated();
+        if (!buckets[_bucketId].enabled) revert BUCKET_DISABLED();
+        if (_amount > type(uint88).max) {
+            revert SafeCastOverflowedUintDowncast(88, _amount);
+        }
+
+        if (lastProcessedWeek != currentEpoch()) advanceWeek(currentEpoch() - lastProcessedWeek);
+
+        if (transferFrom) {
+            bool isErr = pearlmit.transferFromERC20(msg.sender, address(this), address(tapOFT), _amount);
+            if (isErr) revert NotAuthorized();
+        }
+
+        _supplyInBucket(_bucketId, _amount);
+        Bucket memory bucket = buckets[_bucketId];
+
+        uint256 expiry = block.timestamp + (bucket.lockEpochDuration * EPOCH_DURATION);
+
+        uint40 w0 = uint40(currentEpoch());
+        uint40 w1 = uint40(_timestampToEpoch(expiry));
+
+        // Save twAML participation
+        // Casts are safe: see struct definition
+        tokenId = ++mintedTWTap;
+        uint256 votes = _amount * bucket.rewardsMultiplier;
+        participants[tokenId] = Participation({
+            bucketId: _bucketId,
+            tapReleased: false,
+            lockedAt: uint56(block.timestamp),
+            expiry: uint56(expiry),
+            tapAmount: uint88(_amount),
+            multiplier: bucket.rewardsMultiplier,
+            lastInactive: w0,
+            lastActive: w1
+        });
+
+        // w0 + 1 = lastInactive + 1 = first active
+        // w1 + 1 = lastActive + 1 = first inactive
+        // Cast is safe: `votes` is the product of a uint88 and a uint24
+        weekTotals[w0 + 1].netActiveVotes += int256(votes);
+        weekTotals[w1 + 1].netActiveVotes -= int256(votes);
+
+        // Mint twTAP position
+        _safeMint(_participant, tokenId);
+
+        emit Participate(_participant, tokenId, _amount, bucket.rewardsMultiplier, expiry, _bucketId);
     }
 
     function _baseURI() internal view override(ERC721, ERC721NftLoader) returns (string memory) {
