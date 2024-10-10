@@ -207,32 +207,34 @@ contract UnitBaseTest is TestHelper {
         return tob;
     }
 
-    function createTapOftInstance(
-        uint256 _epochDuration,
-        address _endpoint,
-        address _contributor,
-        address _earlySupporters,
-        address _supporters,
-        address _lbp,
-        address _dao,
-        address _airdrop,
-        uint256 _governanceEid,
-        address _owner
-    ) internal returns (TapTokenMock) {
+    struct TapOftInput {
+        uint256 _epochDuration;
+        address _endpoint;
+        address _contributor;
+        address _earlySupporters;
+        address _supporters;
+        address _lbp;
+        address _dao;
+        address _airdrop;
+        uint256 _governanceEid;
+        address _owner;
+    }
+
+    function createTapOftInstance(TapOftInput memory i) internal returns (TapTokenMock) {
         return new TapTokenMock(
             ITapToken.TapTokenConstructorData(
-                _epochDuration,
-                _endpoint,
-                _contributor,
-                _earlySupporters,
-                _supporters,
-                _lbp,
-                _dao,
-                _airdrop,
-                _governanceEid,
-                _owner,
-                address(new TapTokenSender("", "", _endpoint, _owner, address(0))),
-                address(new TapTokenReceiver("", "", _endpoint, _owner, address(0))),
+                i._epochDuration,
+                i._endpoint,
+                i._contributor,
+                i._earlySupporters,
+                i._supporters,
+                i._lbp,
+                i._dao,
+                i._airdrop,
+                i._governanceEid,
+                i._owner,
+                address(new TapTokenSender("", "", i._endpoint, i._owner, address(0))),
+                address(new TapTokenReceiver("", "", i._endpoint, i._owner, address(0))),
                 address(new TapiocaOmnichainExtExec()),
                 IPearlmit(address(pearlmit)),
                 ICluster(address(cluster))
