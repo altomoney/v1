@@ -11,7 +11,7 @@ contract TWLBase_getBucket is Test {
     Bucket[] buckets;
 
     function setUp() external {
-        buckets.push(Bucket(true, 1, 1, 1, 1, 1, 1,1, 1, 1));
+        buckets.push(Bucket(true, 1, 1, 1, 1, 1, 1, 1, 1, 1));
         twlBaseMock = new TWLBaseMock(7 days, buckets);
     }
 

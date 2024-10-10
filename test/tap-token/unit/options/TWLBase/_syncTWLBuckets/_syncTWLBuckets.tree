@@ -5,7 +5,7 @@ TWLBase_syncTWLBuckets
     ├── given an empty buckets array
     │   └── it should only update lastEpoch
     └── given a non-empty buckets array
-        ├── when each bucket is enabled
+        ├── when bucket is enabled
         |   ├── when totalDeposits is greater than or equal to totalDepositsLastEpoch plus growthBufferPercent
         |   │   └── it should increase lockEpochDuration by epochGrowthRate
         |   ├── when totalDeposits is less than totalDepositsLastEpoch plus growthBufferPercent
@@ -16,7 +16,6 @@ TWLBase_syncTWLBuckets
         |   │   └── it should floor lockEpochDuration at epochFloor
         |   ├── it should update totalDepositsLastEpoch
         |   └── it should update lastEpoch to currentEpoch
-        └─── when each bucket is disabled
-            ├── it should update totalDepositsLastEpoch
+        └─── when bucket is disabled
             └── it should update lastEpoch to currentEpoch
         

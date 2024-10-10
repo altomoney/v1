@@ -26,8 +26,8 @@ contract TWLBase_supplyInBucket is Test {
 
     function setUp() external {
         Bucket[] memory buckets = new Bucket[](2);
-        buckets[0] = Bucket(true, 1, 1, 1, 1, 1,1, 1, 1, 1);
-        buckets[1] = Bucket(true, 2, 1, 1, 1, 1,1, 1, 1, 1);
+        buckets[0] = Bucket(true, 1, 1, 1, 1, 1, 1, 1, 1, 1);
+        buckets[1] = Bucket(true, 2, 1, 1, 1, 1, 1, 1, 1, 1);
         twlBaseMock = new TWLBaseMock(7 days, buckets);
     }
 

@@ -42,6 +42,11 @@ abstract contract TWLBase is ITWLBase {
 
         for (uint256 i = 0; i < buckets.length; i++) {
             Bucket storage bucket = buckets[i];
+
+            if (bucket.enabled == false) {
+                continue;
+            }
+
             if (
                 bucket.totalDeposits
                     >= bucket.totalDepositsLastEpoch + bucket.totalDepositsLastEpoch.percentMul(bucket.growthBufferPercent)

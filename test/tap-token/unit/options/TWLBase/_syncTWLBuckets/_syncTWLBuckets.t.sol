@@ -125,7 +125,7 @@ contract TWLBase_syncTWLBuckets is Test {
         _;
     }
 
-    function test_WhenEachBucketIsEnabled()
+    function test_WhenBucketIsEnabled()
         external
         whenLastEpochIsLessThanCurrentEpoch(14 days)
         givenANon_emptyBucketsArray(bucketsList)
@@ -234,7 +234,7 @@ contract TWLBase_syncTWLBuckets is Test {
         }
     }
 
-    function test_WhenEachBucketIsDisabled()
+    function test_WhenBucketIsDisabled()
         external
         whenLastEpochIsLessThanCurrentEpoch(7 days)
         supplyInBuckets(100e6)
@@ -251,20 +251,20 @@ contract TWLBase_syncTWLBuckets is Test {
 
         twlBaseMock.syncTWLBuckets();
 
+        assertEq(twlBaseMock.lastEpoch(), twlBaseMock.currentEpoch(), "lastEpoch");
         for (uint8 i = 0; i < twlBaseMock.getBuckets().length; i++) {
             Bucket memory bucket = twlBaseMock.getBucket(i);
-            assertEq(bucket.totalDepositsLastEpoch, pastBuckets[i].totalDeposits);
-            assertEq(twlBaseMock.lastEpoch(), twlBaseMock.currentEpoch());
 
             // Everything else should be unchanged
-            assertEq(bucket.totalDeposits, pastBuckets[i].totalDeposits);
-            assertEq(bucket.lockEpochDuration, pastBuckets[i].lockEpochDuration);
-            assertEq(bucket.epochGrowthRate, pastBuckets[i].epochGrowthRate);
-            assertEq(bucket.epochDecayRate, pastBuckets[i].epochDecayRate);
-            assertEq(bucket.epochCeiling, pastBuckets[i].epochCeiling);
-            assertEq(bucket.epochFloor, pastBuckets[i].epochFloor);
-            assertEq(bucket.rewardsMultiplier, pastBuckets[i].rewardsMultiplier);
-            assertEq(bucket.growthBufferPercent, pastBuckets[i].growthBufferPercent);
+            assertEq(bucket.totalDepositsLastEpoch, pastBuckets[i].totalDepositsLastEpoch, "totalDepositsLastEpoch");
+            assertEq(bucket.totalDeposits, pastBuckets[i].totalDeposits, "totalDeposits");
+            assertEq(bucket.lockEpochDuration, pastBuckets[i].lockEpochDuration, "lockEpochDuration");
+            assertEq(bucket.epochGrowthRate, pastBuckets[i].epochGrowthRate, "epochGrowthRate");
+            assertEq(bucket.epochDecayRate, pastBuckets[i].epochDecayRate, "epochDecayRate");
+            assertEq(bucket.epochCeiling, pastBuckets[i].epochCeiling, "epochCeiling");
+            assertEq(bucket.epochFloor, pastBuckets[i].epochFloor, "epochFloor");
+            assertEq(bucket.rewardsMultiplier, pastBuckets[i].rewardsMultiplier, "rewardsMultiplier");
+            assertEq(bucket.growthBufferPercent, pastBuckets[i].growthBufferPercent, "growthBufferPercent");
         }
     }
 }
