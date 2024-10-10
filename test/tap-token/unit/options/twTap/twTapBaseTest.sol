@@ -21,10 +21,11 @@ import {
     YieldBox1155Mock,
     Pearlmit,
     IPearlmit,
-    TwTAP
+    TwTAP,
+    ITWLBase
 } from "../../UnitBaseTest.sol";
 import {ERC20Mock} from "tapioca-mocks/ERC20Mock.sol";
-import {TapTokenMock} from "test/tap-token/TapTokenMock.sol";
+import {TapTokenMock} from "../../../TapTokenMock.sol";
 
 contract twTapBaseTest is UnitBaseTest {
     TapTokenMock public tapOFT;
@@ -113,33 +114,33 @@ contract twTapBaseTest is UnitBaseTest {
         _;
     }
 
-    modifier participate(uint256 _amount, uint256 _duration) {
-        _participate(_amount, _duration);
+    modifier participate(uint256 _amount, uint8 _bucketId) {
+        _participate(_amount, _bucketId);
         _;
     }
 
-    function _participate(uint256 _amount, uint256 _duration) internal {
+    function _participate(uint256 _amount, uint8 _bucketId) internal {
         vm.startPrank(aliceAddr);
         tapOFT.freeMint(aliceAddr, _amount);
         tapOFT.approve(address(pearlmit), _amount);
         pearlmit.approve(20, address(tapOFT), 0, address(twTap), uint200(_amount), uint48(block.timestamp + 1));
-        twTap.participate(aliceAddr, _amount, _duration * twTap.EPOCH_DURATION(), 0);
+        twTap.participate(aliceAddr, _amount, _bucketId);
         vm.stopPrank();
     }
 
-    function _participate(address _to, uint256 _amount, uint256 _duration) internal {
+    function _participate(address _to, uint256 _amount, uint8 _bucketId) internal {
         vm.startPrank(_to);
         tapOFT.freeMint(_to, _amount);
         tapOFT.approve(address(pearlmit), _amount);
         pearlmit.approve(20, address(tapOFT), 0, address(twTap), uint200(_amount), uint48(block.timestamp + 1));
-        twTap.participate(_to, _amount, _duration * twTap.EPOCH_DURATION(), 0);
+        twTap.participate(_to, _amount, _bucketId);
         vm.stopPrank();
     }
 
-    function _boundValues(uint256 _lockAmount, uint256 _lockDuration) internal returns (uint256, uint256) {
+    function _boundValues(uint256 _lockAmount, uint8 _bucketId) internal returns (uint256, uint8) {
         _lockAmount = bound(_lockAmount, 1, type(uint88).max);
-        _lockDuration = bound(_lockDuration, MIN_LOCK_DURATION, MAX_LOCK_DURATION);
-        return (_lockAmount, _lockDuration);
+        _bucketId = uint8(bound(_bucketId, 0, 0)); // update with bucket length
+        return (_lockAmount, _bucketId);
     }
 
     function _toWeek(uint256 _timestamp) internal returns (uint256) {

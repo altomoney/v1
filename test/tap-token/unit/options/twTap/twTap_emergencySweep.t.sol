@@ -21,7 +21,7 @@ contract twTap_emergencySweep is twTapBaseTest {
         twTap.emergencySweep();
     }
 
-    function test_ShouldSweepTheLocks() external participate(1e20, 1) skipWeeks(1) advanceWeeks(1) distributeRewards {
+    function test_ShouldSweepTheLocks() external participate(1e20, 0) skipWeeks(1) advanceWeeks(1) distributeRewards {
         // it should sweep the locks
         vm.startPrank(adminAddr);
         twTap.setEmergencySweepCooldown(0);

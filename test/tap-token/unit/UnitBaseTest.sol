@@ -15,6 +15,7 @@ import {TapTokenReceiver} from "tap-token/tokens/TapTokenReceiver.sol";
 import {TapTokenSender} from "tap-token/tokens/TapTokenSender.sol";
 import {ITapToken} from "tap-token/tokens/ITapToken.sol";
 import {TwTAP} from "tap-token/governance/twTAP.sol";
+import {ITWLBase} from "tap-token/interfaces/ITWLBase.sol";
 import {OTAP} from "tap-token/options/oTAP.sol";
 
 /**
@@ -59,6 +60,7 @@ import {BBBorrow} from "tapioca-bar/markets/bigBang/BBBorrow.sol";
 import {BigBang} from "tapioca-bar/markets/bigBang/BigBang.sol";
 import {Penrose} from "tapioca-bar/Penrose.sol";
 import {Usdo} from "tapioca-bar/usdo/Usdo.sol";
+import {Bucket} from "tap-token/interfaces/ITWLBase.sol";
 
 /**
  * Mocks
@@ -71,8 +73,8 @@ import {UsdoMock} from "tapioca-mocks/UsdoMock.sol";
 /**
  * Tests
  */
-import {TestHelper} from "test/tap-token/LZSetup/TestHelper.sol";
-import {TapTokenMock} from "test/tap-token/TapTokenMock.sol";
+import {TestHelper} from "../LZSetup/TestHelper.sol";
+import {TapTokenMock} from "../TapTokenMock.sol";
 import "forge-std/Test.sol";
 
 contract UnitBaseTest is TestHelper {
@@ -243,7 +245,19 @@ contract UnitBaseTest is TestHelper {
     }
 
     function createTwTap(address payable _tapOft, IPearlmit _pearlmit, address _owner) internal returns (TwTAP) {
-        return new TwTAP(_tapOft, _pearlmit, _owner);
+        Bucket[] memory buckets = new Bucket[](1);
+        buckets[0] = Bucket({
+            enabled: true,
+            lockEpochDuration: 2,
+            epochGrowthRate: 1,
+            epochDecayRate: 1,
+            epochCeiling: 100,
+            epochFloor: 1,
+            rewardsMultiplier: 50_0000,
+            totalDepositsLastEpoch: 0,
+            totalDeposits: 0
+        });
+        return new TwTAP(_tapOft, _pearlmit, _owner, 7 days, buckets);
     }
 
     /**

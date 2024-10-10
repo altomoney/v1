@@ -4,7 +4,6 @@ pragma solidity 0.8.22;
 // External
 import {RebaseLibrary, Rebase} from "@boringcrypto/boring-solidity/contracts/libraries/BoringRebase.sol";
 import {ERC721Enumerable} from "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
-import {BaseBoringBatchable} from "@boringcrypto/boring-solidity/contracts/BoringBatchable.sol";
 import {IERC1155Receiver} from "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
@@ -20,7 +19,7 @@ import {ISingularity} from "tap-utils/interfaces/bar/ISingularity.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {IBigBang} from "tap-utils/interfaces/bar/IBigBang.sol";
 import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
-import {IYieldBox} from "tap-token/interfaces/IYieldBox.sol";
+import {IYieldBox} from "../interfaces/IYieldBox.sol";
 import {ITOFT} from "tap-utils/interfaces/oft/ITOFT.sol";
 
 /*
@@ -260,7 +259,7 @@ contract TapiocaOptionLiquidityProvision is
     /// @param _ybShares Amount of YieldBox shares to lock
     /// @param _for Address to check the debt for
     /// @return tokenId The ID of the minted NFT
-    function lock(address _to, IERC20 _singularity, uint128 _lockDuration, uint256 _ybShares, address _for)
+    function lock(address _to, IERC20 _singularity, uint128 _lockDuration, uint128 _ybShares, address _for)
         external
         nonReentrant
         whenNotPaused
@@ -335,7 +334,7 @@ contract TapiocaOptionLiquidityProvision is
         SingularityPool memory sgl = activeSingularities[_singularity];
 
         // Check if debt ratio is below threshold, if so bypass lock expiration
-        bool isLockedWithDebt = _canLockWithDebt(tokenOwner, _singularity, lockPosition.ybShares);
+        bool isLockedWithDebt = _canLockWithDebt(tokenOwner, _singularity, uint128(lockPosition.ybShares));
         if (isLockedWithDebt) {
             // If the singularity is in rescue, the lock can be unlocked at any time
             if (!sgl.rescue) {
@@ -725,7 +724,7 @@ contract TapiocaOptionLiquidityProvision is
         override(ERC721, ERC721Enumerable)
     {
         super._beforeTokenTransfer(from, to, firstTokenId, batchSize);
-        if (to == tapiocaOptionBroker || from == tapiocaOptionBroker) {
+        if (to == tapiocaOptionBroker || to == address(this)) {
             return;
         }
 

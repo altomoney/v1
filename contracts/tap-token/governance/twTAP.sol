@@ -214,6 +214,12 @@ contract TwTAP is
         return currentEpoch();
     }
 
+    /// @notice Returns the init timestamp
+    /// @dev keeps compatibility with older interface
+    function creation() external view returns (uint256) {
+        return INIT_TIMESTAMP;
+    }
+
     /**
      * @notice Return the total amount distributed for a reward token in a given week.
      * @param _week The week to query.

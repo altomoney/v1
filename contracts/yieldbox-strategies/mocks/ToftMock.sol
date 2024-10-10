@@ -22,8 +22,6 @@ contract ToftMock is ERC20, PearlmitHandler {
 
     address public erc20;
 
-    error FailedToWrap();
-
     constructor(address erc20_, string memory name_, string memory symbol_, IPearlmit _pearlmit)
         ERC20(name_, symbol_)
         PearlmitHandler(_pearlmit)
@@ -33,8 +31,7 @@ contract ToftMock is ERC20, PearlmitHandler {
 
     function wrap(address from, address to, uint256 amount) external payable returns (uint256 minted) {
         bool isErr = pearlmit.transferFromERC20(from, address(this), erc20, amount);
-        if (isErr) revert FailedToWrap();
-
+        if (isErr) revert TOFT_NotValid();
         _mint(to, amount);
         return amount;
     }

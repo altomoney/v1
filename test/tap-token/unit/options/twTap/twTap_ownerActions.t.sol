@@ -6,18 +6,6 @@ import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract twTap_ownerActions is twTapBaseTest {
-    function test_RevertWhen_AdvancingWeekAndNotOwner() external skipWeeks(1) {
-        // it should revert
-        vm.expectRevert(TwTAP.NotAuthorized.selector);
-        twTap.advanceWeek(1);
-
-        vm.startPrank(adminAddr);
-        cluster.setRoleForContract(aliceAddr, keccak256("NEW_EPOCH"), true);
-        vm.expectEmit(true, true, false, false);
-        emit TwTAP.AdvanceEpoch(1, 0);
-        twTap.advanceWeek(1);
-    }
-
     function test_RevertWhen_SetRescueModeAndNotOwner() external {
         // it should revert
         vm.expectRevert("Ownable: caller is not the owner");
@@ -37,34 +25,6 @@ contract twTap_ownerActions is twTapBaseTest {
             twTap.rescueMode(),
             false,
             "twTap_ownerActions::test_RevertWhen_SetRescueModeAndNotOwner: Invalid rescue mode"
-        );
-    }
-
-    function test_RevertWhen_SetVirtualTotalAmountAndNotOwner() external {
-        // it should revert
-        vm.expectRevert("Ownable: caller is not the owner");
-        twTap.setVirtualTotalAmount(1e20);
-
-        vm.startPrank(adminAddr);
-        twTap.setVirtualTotalAmount(1e20);
-        assertEq(
-            twTap.VIRTUAL_TOTAL_AMOUNT(),
-            1e20,
-            "twTap_ownerActions::test_RevertWhen_SetVirtualTotalAmountAndNotOwner: Invalid virtual total amount"
-        );
-    }
-
-    function test_RevertWhen_SetMinWeightFactorAndNotOwner() external {
-        // it should revert
-        vm.expectRevert("Ownable: caller is not the owner");
-        twTap.setMinWeightFactor(1e20);
-
-        vm.startPrank(adminAddr);
-        twTap.setMinWeightFactor(1e20);
-        assertEq(
-            twTap.MIN_WEIGHT_FACTOR(),
-            1e20,
-            "twTap_ownerActions::test_RevertWhen_setMinWeightFactorAndNotOwner: Invalid min weight factor"
         );
     }
 
