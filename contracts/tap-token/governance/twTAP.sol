@@ -770,7 +770,6 @@ contract TwTAP is
         if (_amount == 0) revert NotValid();
         if (rescueMode) revert RescueModeActive();
         if (lastEmergencySweep != 0) revert EmergencySweepActivated();
-        if (!buckets[_bucketId].enabled) revert BUCKET_DISABLED();
         if (_amount > type(uint88).max) {
             revert SafeCastOverflowedUintDowncast(88, _amount);
         }
