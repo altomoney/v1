@@ -255,6 +255,16 @@ contract TWLBase_syncTWLBuckets is Test {
             Bucket memory bucket = twlBaseMock.getBucket(i);
             assertEq(bucket.totalDepositsLastEpoch, pastBuckets[i].totalDeposits);
             assertEq(twlBaseMock.lastEpoch(), twlBaseMock.currentEpoch());
+
+            // Everything else should be unchanged
+            assertEq(bucket.totalDeposits, pastBuckets[i].totalDeposits);
+            assertEq(bucket.lockEpochDuration, pastBuckets[i].lockEpochDuration);
+            assertEq(bucket.epochGrowthRate, pastBuckets[i].epochGrowthRate);
+            assertEq(bucket.epochDecayRate, pastBuckets[i].epochDecayRate);
+            assertEq(bucket.epochCeiling, pastBuckets[i].epochCeiling);
+            assertEq(bucket.epochFloor, pastBuckets[i].epochFloor);
+            assertEq(bucket.rewardsMultiplier, pastBuckets[i].rewardsMultiplier);
+            assertEq(bucket.growthBufferPercent, pastBuckets[i].growthBufferPercent);
         }
     }
 }
