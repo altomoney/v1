@@ -110,7 +110,7 @@ contract TapTokenMultiComposeTest is TapTokenTest {
                 }),
                 user: userA,
                 amountToSend: amountToSendLD,
-                lockDuration: lockDuration
+                bucketId: 0
             })
         );
 
@@ -158,7 +158,7 @@ contract TapTokenMultiComposeTest is TapTokenTest {
         // Global vars
         uint256 amountToSendLD_ = 1 ether;
         uint256 tokenId_ = 1;
-        uint256 lockDuration_ = 1 weeks;
+        uint256 lockDuration_ = twTap.getBucket(0).lockEpochDuration * twTap.EPOCH_DURATION();
         // Participate, get token and skip 1 week
         {
             deal(address(bTapOFT), userA, amountToSendLD_);
@@ -166,7 +166,7 @@ contract TapTokenMultiComposeTest is TapTokenTest {
             pearlmit.approve(
                 20, address(bTapOFT), 0, address(twTap), uint200(amountToSendLD_), uint48(block.timestamp + 1)
             );
-            twTap.participate(userA, amountToSendLD_, lockDuration_, 0);
+            twTap.participate(userA, amountToSendLD_, 0);
             skip(lockDuration_);
         }
 
@@ -400,7 +400,7 @@ contract TapTokenMultiComposeTest is TapTokenTest {
         ITapToken token;
         uint256 amountToSend;
         address user;
-        uint96 lockDuration;
+        uint8 bucketId;
     }
 
     struct SetupLockTwTapPositionMsgReturn {
@@ -414,7 +414,7 @@ contract TapTokenMultiComposeTest is TapTokenTest {
         returns (SetupLockTwTapPositionMsgReturn memory lockTwTapPositionMsgReturn_)
     {
         LockTwTapPositionMsg memory lockTwTapPositionMsg_ =
-            LockTwTapPositionMsg({user: _data.user, duration: _data.lockDuration, amount: _data.amountToSend});
+            LockTwTapPositionMsg({user: _data.user, bucketId: _data.bucketId, amount: _data.amountToSend});
 
         bytes memory lockPosition_ = TapTokenCodec.buildLockTwTapPositionMsg(lockTwTapPositionMsg_);
 

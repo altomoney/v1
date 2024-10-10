@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.22;
 
-import {ITWLBase} from "../interfaces/ITWLBase.sol";
+import {ITWLBase, Bucket} from "../interfaces/ITWLBase.sol";
 
 /**
  * @title TWLBase
@@ -10,8 +10,6 @@ import {ITWLBase} from "../interfaces/ITWLBase.sol";
 abstract contract TWLBase is ITWLBase {
     uint256 public immutable EPOCH_DURATION;
     uint256 public immutable INIT_TIMESTAMP;
-    uint256 public totalDeposits;
-    uint256 public totalDepositsLastEpoch;
     uint256 public lastEpoch;
 
     Bucket[] public buckets;
@@ -31,28 +29,37 @@ abstract contract TWLBase is ITWLBase {
      * @dev Update enabled buckets based on the total deposits in the contract.
      */
     function _syncTWLBuckets() internal {
-        if (lastEpoch == currentWeek()) {
+        if (lastEpoch == currentEpoch()) {
             revert EPOCH_NOT_FINISHED();
         }
 
         for (uint256 i = 0; i < buckets.length; i++) {
             Bucket storage bucket = buckets[i];
-            if (totalDeposits >= totalDepositsLastEpoch) {
+            if (bucket.totalDeposits >= bucket.totalDepositsLastEpoch) {
                 bucket.lockEpochDuration += bucket.epochGrowthRate;
             } else {
                 bucket.lockEpochDuration -= bucket.epochDecayRate;
             }
-
             if (bucket.lockEpochDuration > bucket.epochCeiling) {
                 bucket.lockEpochDuration = bucket.epochCeiling;
             }
             if (bucket.lockEpochDuration < bucket.epochFloor) {
                 bucket.lockEpochDuration = bucket.epochFloor;
             }
+            bucket.totalDepositsLastEpoch = bucket.totalDeposits;
         }
 
-        totalDepositsLastEpoch = totalDeposits;
-        lastEpoch = currentWeek();
+        lastEpoch = currentEpoch();
+    }
+
+    function _supplyInBucket(uint8 index, uint256 amount) internal {
+        Bucket storage bucket = buckets[index];
+        bucket.totalDeposits += amount;
+    }
+
+    function _withdrawFromBucket(uint8 index, uint256 amount) internal {
+        Bucket storage bucket = buckets[index];
+        bucket.totalDeposits -= amount;
     }
 
     function _addBucket(Bucket memory bucket) internal {
@@ -66,6 +73,9 @@ abstract contract TWLBase is ITWLBase {
             revert BUCKET_FLOOR_CEILING_MISMATCH();
         }
 
+        bucket.totalDepositsLastEpoch = 0;
+        bucket.totalDeposits = 0;
+
         buckets.push(bucket);
 
         emit BucketUpdated(buckets.length - 1);
@@ -73,6 +83,8 @@ abstract contract TWLBase is ITWLBase {
 
     /**
      * @dev Updates bucket params at a specific index.
+     * @param index Index of the bucket to update
+     * @param bucket Bucket to add into the system, ignores lockEpochDuration, totalDepositsLastEpoch and totalDeposits fields
      */
     function _updateBucket(uint8 index, Bucket memory bucket) internal {
         if (bucket.rewardsMultiplier > 1e6) {
@@ -81,25 +93,48 @@ abstract contract TWLBase is ITWLBase {
         if (bucket.epochFloor > bucket.epochCeiling) {
             revert BUCKET_FLOOR_CEILING_MISMATCH();
         }
+        // Replace input with current storage values for lockEpochDuration, totalDepositsLastEpoch and totalDeposits
         bucket.lockEpochDuration = buckets[index].lockEpochDuration;
+        bucket.totalDepositsLastEpoch = buckets[index].totalDepositsLastEpoch;
+        bucket.totalDeposits = buckets[index].totalDeposits;
 
         buckets[index] = bucket;
 
         emit BucketUpdated(index);
     }
 
-    function currentWeek() public view returns (uint256) {
+    /**
+     * @notice Returns the current epoch number
+     */
+    function currentEpoch() public view returns (uint256) {
         return (block.timestamp - INIT_TIMESTAMP) / EPOCH_DURATION;
     }
 
     /**
      * @notice Add a new bucket
+     * @param bucket Bucket to add into the system
      */
     function addBucket(Bucket memory bucket) external virtual;
 
     /**
      * @notice Updates an existing bucket
+     * @param index Index of the bucket to update
+     * @param bucket Bucket to add into the system
      * @dev Ignores the lockEpochDuration field.
      */
     function updateBucket(uint8 index, Bucket memory bucket) external virtual;
+
+    /**
+     * @notice Return bucket at a specific index
+     */
+    function getBucket(uint8 index) external view returns (Bucket memory) {
+        return buckets[index];
+    }
+
+    /**
+     * @notice Return a list of buckets
+     */
+    function getBuckets() external view returns (Bucket[] memory) {
+        return buckets;
+    }
 }

@@ -44,7 +44,7 @@ import {TwTAP, Participation} from "tap-token/governance/twTAP.sol";
 import {TapTokenSender} from "tap-token/tokens/TapTokenSender.sol";
 import {TapTokenCodec} from "tap-token/tokens/TapTokenCodec.sol";
 import {Cluster} from "tap-utils/Cluster/Cluster.sol";
-
+import {Bucket} from "tap-token/interfaces/ITWLBase.sol";
 // Tapioca Tests
 import {TapTestHelper} from "./TapTestHelper.t.sol";
 import {TapTokenMock} from "./TapTokenMock.sol";
@@ -73,7 +73,9 @@ contract TapTokenTest is TapTestHelper, IERC721Receiver {
     address public userA = vm.addr(userAPKey);
     address public userB = vm.addr(userBPKey);
     uint256 public initialBalance = 100 ether;
-    uint256 EPOCH_DURATION = 1 weeks;
+    uint256 EPOCH_DURATION = 7 days;
+
+    Bucket public defaultBucket;
 
     /**
      * DEPLOY setup addresses
@@ -165,7 +167,22 @@ contract TapTokenTest is TapTestHelper, IERC721Receiver {
         );
         vm.label(address(bTapOFT), "bTapOFT");
 
-        twTap = new TwTAP(payable(address(bTapOFT)), IPearlmit(address(pearlmit)), address(this));
+        defaultBucket = Bucket({
+            enabled: true,
+            epochGrowthRate: 1,
+            epochDecayRate: 1,
+            epochCeiling: 10,
+            epochFloor: 1,
+            rewardsMultiplier: 1,
+            lockEpochDuration: 1,
+            totalDepositsLastEpoch: 0,
+            totalDeposits: 0
+        });
+        Bucket[] memory buckets = new Bucket[](1);
+        buckets[0] = defaultBucket;
+
+        twTap =
+            new TwTAP(payable(address(bTapOFT)), IPearlmit(address(pearlmit)), address(this), EPOCH_DURATION, buckets);
         twTap.setCluster(cluster);
 
         // Cluster approvals
@@ -185,6 +202,9 @@ contract TapTokenTest is TapTestHelper, IERC721Receiver {
         ofts[0] = address(aTapOFT);
         ofts[1] = address(bTapOFT);
         this.wireOApps(ofts);
+
+        console.log("setup", twTap.lastProcessedWeek(), twTap.currentEpoch());
+        console.log("tup", twTap.INIT_TIMESTAMP(), twTap.EPOCH_DURATION());
     }
 
     /**
@@ -199,7 +219,7 @@ contract TapTokenTest is TapTestHelper, IERC721Receiver {
      * Airdrop: 2.5m
      * == 100M ==
      */
-    function test_constructor() public {
+    function test_constructor() public view {
         // A tests
         assertEq(aTapOFT.owner(), address(this));
         assertEq(aTapOFT.token(), address(aTapOFT));
@@ -374,12 +394,12 @@ contract TapTokenTest is TapTestHelper, IERC721Receiver {
             vm.startPrank(userA);
             bTapOFT.approve(address(pearlmit), 1e18);
             pearlmit.approve(20, address(bTapOFT), 0, address(twTap), uint200(1e18), uint48(block.timestamp + 1));
-            twTap.participate(address(userA), 1e18, 1 weeks, 0);
+            twTap.participate(address(userA), 1e18, 0);
 
             vm.startPrank(userB);
             bTapOFT.approve(address(pearlmit), 1e18);
             pearlmit.approve(20, address(bTapOFT), 0, address(twTap), uint200(1e18), uint48(block.timestamp + 1));
-            twTap.participate(address(userB), 1e18, 1 weeks, 0);
+            twTap.participate(address(userB), 1e18, 0);
             vm.stopPrank();
         }
 
@@ -469,10 +489,9 @@ contract TapTokenTest is TapTestHelper, IERC721Receiver {
         // TODO use userA in msg.sender context?
         // lock info
         uint256 amountToSendLD = 1 ether;
-        uint96 lockDuration = 1 weeks;
 
         LockTwTapPositionMsg memory lockTwTapPositionMsg =
-            LockTwTapPositionMsg({user: address(this), duration: lockDuration, amount: amountToSendLD});
+            LockTwTapPositionMsg({user: address(this), bucketId: 0, amount: amountToSendLD});
 
         bytes memory lockPosition_ = TapTokenCodec.buildLockTwTapPositionMsg(lockTwTapPositionMsg);
 
@@ -511,7 +530,7 @@ contract TapTokenTest is TapTestHelper, IERC721Receiver {
         verifyPackets(uint32(bEid), address(bTapOFT));
 
         vm.expectEmit(true, true, true, false);
-        emit ITapToken.LockTwTapReceived(lockTwTapPositionMsg.user, lockTwTapPositionMsg.duration, amountToSendLD);
+        emit ITapToken.LockTwTapReceived(lockTwTapPositionMsg.user, lockTwTapPositionMsg.bucketId, amountToSendLD);
 
         __callLzCompose(
             LzOFTComposedData(
@@ -530,7 +549,7 @@ contract TapTokenTest is TapTestHelper, IERC721Receiver {
             Participation memory participation = twTap.getParticipation(1);
             assertEq(twTap.ownerOf(1), address(this));
             assertEq(participation.tapAmount, amountToSendLD);
-            assertEq(participation.expiry, block.timestamp + lockDuration);
+            assertEq(participation.expiry, block.timestamp + (EPOCH_DURATION * defaultBucket.lockEpochDuration));
         }
     }
 
@@ -544,7 +563,7 @@ contract TapTokenTest is TapTestHelper, IERC721Receiver {
 
         // lock info
         uint256 lockAmount_ = 1 ether;
-        uint96 lockDuration_ = 1 weeks;
+        uint256 lockDuration_ = twTap.getBucket(0).lockEpochDuration * twTap.EPOCH_DURATION();
         uint256 tokenId_; // tokenId of the TwTap position
 
         /**
@@ -554,7 +573,7 @@ contract TapTokenTest is TapTestHelper, IERC721Receiver {
             deal(address(bTapOFT), address(this), lockAmount_);
             bTapOFT.approve(address(pearlmit), lockAmount_);
             pearlmit.approve(20, address(bTapOFT), 0, address(twTap), uint200(lockAmount_), uint48(block.timestamp + 1));
-            tokenId_ = twTap.participate(address(this), lockAmount_, lockDuration_, 0);
+            tokenId_ = twTap.participate(address(this), lockAmount_, 0);
 
             // Skip block timestamp to
             skip(lockDuration_);
@@ -778,7 +797,7 @@ contract TapTokenTest is TapTestHelper, IERC721Receiver {
             // bTapOFT.approve(address(twTap), lockAmount_);
             pearlmit.approve(20, address(bTapOFT), 0, address(twTap), uint200(lockAmount_), uint48(block.timestamp + 1));
             bTapOFT.approve(address(pearlmit), lockAmount_); // Approve pearlmit to transfer
-            testData_.tokenId = twTap.participate(address(this), lockAmount_, 1 weeks, 0);
+            testData_.tokenId = twTap.participate(address(this), lockAmount_, 0);
             bTapOFT.approve(address(pearlmit), 0); // reset approval
 
             // Distribute rewards
@@ -791,10 +810,14 @@ contract TapTokenTest is TapTestHelper, IERC721Receiver {
             testData_.erc20Mock1.approve(address(twTap), testData_.tokenAmount1);
             testData_.erc20Mock2.approve(address(twTap), testData_.tokenAmount2);
 
-            // Skip block timestamp to
-            skip(1 weeks);
+            console.log("previous skip", twTap.lastProcessedWeek(), twTap.currentEpoch());
 
+            // Skip block timestamp to
+            skip(block.timestamp + EPOCH_DURATION);
+            console.log(twTap.lastProcessedWeek(), twTap.currentEpoch());
             twTap.advanceWeek(1);
+
+            console.log(twTap.lastProcessedWeek(), twTap.currentEpoch());
             twTap.distributeReward(1, testData_.tokenAmount1); // Token index starts a 1, 0 is reserved
             twTap.distributeReward(2, testData_.tokenAmount2);
 
