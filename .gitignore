@@ -12,6 +12,8 @@ cache
 artifacts
 out
 cache_forge
+report
+lcov.info
 
 
 #Others

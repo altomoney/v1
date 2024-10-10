@@ -39,3 +39,6 @@ no-match-contract = "zzz"
 [rpc_endpoints]
 mainnet = "${RPC_URL}"
 arbitrum = "${RPC_URL_ARBITRUM}"
+[profile.twtap]
+src = "contracts/tap-token/governance"
+test = "test/tap-token/unit/options/twTap"

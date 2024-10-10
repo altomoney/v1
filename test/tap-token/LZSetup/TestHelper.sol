@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
-
 pragma solidity ^0.8.18;
 
 import {Test} from "forge-std/Test.sol";
 import {DoubleEndedQueue} from "@openzeppelin/contracts/utils/structs/DoubleEndedQueue.sol";
-
 import {UlnConfig, SetDefaultUlnConfigParam} from "@layerzerolabs/lz-evm-messagelib-v2/contracts/uln/UlnBase.sol";
 import {
     SetDefaultExecutorConfigParam,
@@ -46,145 +44,144 @@ contract TestHelper is Test, OptionsHelper {
     mapping(uint32 => mapping(bytes32 => DoubleEndedQueue.Bytes32Deque)) packetsQueue; // dstEid => dstUA => guids queue
     mapping(bytes32 => bytes) packets; // guid => packet bytes
     mapping(bytes32 => bytes) optionsLookup; // guid => options
-
     mapping(uint32 => address) endpoints; // eid => endpoint
-
     uint256 public constant TREASURY_GAS_CAP = 1000000000000;
     uint256 public constant TREASURY_GAS_FOR_FEE_CAP = 100000;
-
     uint128 public executorValueCap = 0.1 ether;
 
     function setUp() public virtual {}
-
     /**
      * @dev set executorValueCap if more than 0.1 ether is necessary
      * @dev this must be called prior to setUpEndpoints() if the value is to be used
      * @param _valueCap amount executor can pass as msg.value to lzReceive()
      */
+
     function setExecutorValueCap(uint128 _valueCap) public {
         executorValueCap = _valueCap;
     }
 
+    function _setupDvnParams(
+        DVN dvn,
+        PriceFeed priceFeed,
+        SendUln302 sendUln,
+        ReceiveUln302 receiveUln,
+        Executor executor,
+        uint8 _endpointNum,
+        uint8 i
+    )
+        internal
+        returns (IExecutor.DstConfigParam[] memory dstConfigParams, IDVN.DstConfigParam[] memory dvnConfigParams)
+    {
+        dstConfigParams = new IExecutor.DstConfigParam[](_endpointNum);
+        dvnConfigParams = new IDVN.DstConfigParam[](_endpointNum);
+        for (uint8 j = 0; j < _endpointNum; j++) {
+            if (i == j) continue;
+            {
+                address[] memory defaultDVNs = new address[](1);
+                address[] memory optionalDVNs = new address[](0);
+                defaultDVNs[0] = address(dvn);
+                SetDefaultUlnConfigParam[] memory params = new SetDefaultUlnConfigParam[](1);
+                params[0] = SetDefaultUlnConfigParam(
+                    j + 1,
+                    UlnConfig(100, uint8(defaultDVNs.length), uint8(optionalDVNs.length), 0, defaultDVNs, optionalDVNs)
+                );
+                sendUln.setDefaultUlnConfigs(params);
+            }
+            {
+                address[] memory defaultDVNs = new address[](1);
+                address[] memory optionalDVNs = new address[](0);
+                defaultDVNs[0] = address(dvn);
+                SetDefaultExecutorConfigParam[] memory params = new SetDefaultExecutorConfigParam[](1);
+                params[0] = SetDefaultExecutorConfigParam(j + 1, ExecutorConfig(10000, address(executor)));
+                sendUln.setDefaultExecutorConfigs(params);
+            }
+            {
+                address[] memory defaultDVNs = new address[](1);
+                address[] memory optionalDVNs = new address[](0);
+                defaultDVNs[0] = address(dvn);
+                SetDefaultUlnConfigParam[] memory params = new SetDefaultUlnConfigParam[](1);
+                UlnConfig memory ulnConfig =
+                    UlnConfig(100, uint8(defaultDVNs.length), uint8(optionalDVNs.length), 0, defaultDVNs, optionalDVNs);
+                params[0] = SetDefaultUlnConfigParam(j + 1, ulnConfig);
+                receiveUln.setDefaultUlnConfigs(params);
+            }
+            // executor config
+            dstConfigParams[j] = IExecutor.DstConfigParam({
+                dstEid: j + 1,
+                lzReceiveBaseGas: 5000,
+                lzComposeBaseGas: 5000,
+                multiplierBps: 10000,
+                floorMarginUSD: 1e10,
+                nativeCap: executorValueCap
+            });
+            // dvn config
+            dvnConfigParams[j] =
+                IDVN.DstConfigParam({dstEid: j + 1, gas: 5000, multiplierBps: 10000, floorMarginUSD: 1e10});
+            ILayerZeroPriceFeed.UpdatePrice[] memory prices = new ILayerZeroPriceFeed.UpdatePrice[](1);
+            prices[0] = ILayerZeroPriceFeed.UpdatePrice(
+                j + 1, ILayerZeroPriceFeed.Price(1 * priceFeed.getPriceRatioDenominator(), 1, 1)
+            );
+            priceFeed.setPrice(prices);
+        }
+    }
+
+    function _setupLightNodeEndpoint(EndpointV2 endpoint, PriceFeed priceFeed, uint8 i, uint8 _endpointNum)
+        internal
+        returns (SendUln302 sendUln, ReceiveUln302 receiveUln)
+    {
+        Executor executor = new Executor();
+        DVN dvn;
+        {
+            sendUln = new SendUln302(payable(this), address(endpoint), TREASURY_GAS_CAP, TREASURY_GAS_FOR_FEE_CAP);
+            receiveUln = new ReceiveUln302(address(endpoint));
+            endpoint.registerLibrary(address(sendUln));
+            endpoint.registerLibrary(address(receiveUln));
+        }
+        {
+            address[] memory admins = new address[](1);
+            admins[0] = address(this);
+            address[] memory messageLibs = new address[](2);
+            messageLibs[0] = address(sendUln);
+            messageLibs[1] = address(receiveUln);
+            address[] memory signers = new address[](1);
+            signers[0] = vm.addr(1);
+            executor.initialize(address(endpoint), address(0x0), messageLibs, address(priceFeed), address(this), admins);
+            ExecutorFeeLib executorLib = new ExecutorFeeLibMock();
+            executor.setWorkerFeeLib(address(executorLib));
+
+            dvn = new DVN(i + 1, messageLibs, address(priceFeed), signers, 1, admins);
+            DVNFeeLib dvnLib = new DVNFeeLib(1e18);
+            dvn.setWorkerFeeLib(address(dvnLib));
+        }
+        (Executor.DstConfigParam[] memory dstConfigParams, IDVN.DstConfigParam[] memory dvnConfigParams) =
+            _setupDvnParams(dvn, priceFeed, sendUln, receiveUln, executor, _endpointNum, i);
+        executor.setDstConfig(dstConfigParams);
+        dvn.setDstConfig(dvnConfigParams);
+    }
     /**
      * @dev setup the endpoints
      * @param _endpointNum num of endpoints
      */
+
     function setUpEndpoints(uint8 _endpointNum, LibraryType _libraryType) public {
         EndpointV2[] memory endpointList = new EndpointV2[](_endpointNum);
-        uint32[] memory eidList = new uint32[](_endpointNum);
-
-        // deploy _excludedContracts
-        for (uint8 i = 0; i < _endpointNum; i++) {
-            uint32 eid = i + 1;
-            eidList[i] = eid;
-            endpointList[i] = new EndpointV2(eid, address(this));
-            registerEndpoint(endpointList[i]);
-        }
-
-        // deploy
         address[] memory sendLibs = new address[](_endpointNum);
         address[] memory receiveLibs = new address[](_endpointNum);
 
-        address[] memory signers = new address[](1);
-        signers[0] = vm.addr(1);
-
         PriceFeed priceFeed = new PriceFeed();
         priceFeed.initialize(address(this));
-
+        for (uint8 i = 0; i < _endpointNum; i++) {
+            endpointList[i] = new EndpointV2(i + 1, address(this));
+            registerEndpoint(endpointList[i]);
+        }
         for (uint8 i = 0; i < _endpointNum; i++) {
             if (_libraryType == LibraryType.UltraLightNode) {
-                address endpointAddr = address(endpointList[i]);
-
-                SendUln302 sendUln;
-                ReceiveUln302 receiveUln;
                 {
-                    sendUln = new SendUln302(payable(this), endpointAddr, TREASURY_GAS_CAP, TREASURY_GAS_FOR_FEE_CAP);
-                    receiveUln = new ReceiveUln302(endpointAddr);
-                    endpointList[i].registerLibrary(address(sendUln));
-                    endpointList[i].registerLibrary(address(receiveUln));
+                    (SendUln302 sendUln, ReceiveUln302 receiveUln) =
+                        _setupLightNodeEndpoint(endpointList[i], priceFeed, i, _endpointNum);
                     sendLibs[i] = address(sendUln);
                     receiveLibs[i] = address(receiveUln);
                 }
-
-                Executor executor = new Executor();
-                DVN dvn;
-                {
-                    address[] memory admins = new address[](1);
-                    admins[0] = address(this);
-
-                    address[] memory messageLibs = new address[](2);
-                    messageLibs[0] = address(sendUln);
-                    messageLibs[1] = address(receiveUln);
-
-                    executor.initialize(
-                        endpointAddr, address(0x0), messageLibs, address(priceFeed), address(this), admins
-                    );
-                    ExecutorFeeLib executorLib = new ExecutorFeeLibMock();
-                    executor.setWorkerFeeLib(address(executorLib));
-
-                    dvn = new DVN(i + 1, messageLibs, address(priceFeed), signers, 1, admins);
-                    DVNFeeLib dvnLib = new DVNFeeLib(1e18);
-                    dvn.setWorkerFeeLib(address(dvnLib));
-                }
-
-                uint32 endpointNum = _endpointNum;
-                IExecutor.DstConfigParam[] memory dstConfigParams = new IExecutor.DstConfigParam[](endpointNum);
-                IDVN.DstConfigParam[] memory dvnConfigParams = new IDVN.DstConfigParam[](endpointNum);
-                for (uint8 j = 0; j < endpointNum; j++) {
-                    if (i == j) continue;
-                    uint32 dstEid = j + 1;
-
-                    address[] memory defaultDVNs = new address[](1);
-                    address[] memory optionalDVNs = new address[](0);
-                    defaultDVNs[0] = address(dvn);
-
-                    {
-                        SetDefaultUlnConfigParam[] memory params = new SetDefaultUlnConfigParam[](1);
-                        UlnConfig memory ulnConfig = UlnConfig(
-                            100, uint8(defaultDVNs.length), uint8(optionalDVNs.length), 0, defaultDVNs, optionalDVNs
-                        );
-                        params[0] = SetDefaultUlnConfigParam(dstEid, ulnConfig);
-                        sendUln.setDefaultUlnConfigs(params);
-                    }
-
-                    {
-                        SetDefaultExecutorConfigParam[] memory params = new SetDefaultExecutorConfigParam[](1);
-                        ExecutorConfig memory executorConfig = ExecutorConfig(10000, address(executor));
-                        params[0] = SetDefaultExecutorConfigParam(dstEid, executorConfig);
-                        sendUln.setDefaultExecutorConfigs(params);
-                    }
-
-                    {
-                        SetDefaultUlnConfigParam[] memory params = new SetDefaultUlnConfigParam[](1);
-                        UlnConfig memory ulnConfig = UlnConfig(
-                            100, uint8(defaultDVNs.length), uint8(optionalDVNs.length), 0, defaultDVNs, optionalDVNs
-                        );
-                        params[0] = SetDefaultUlnConfigParam(dstEid, ulnConfig);
-                        receiveUln.setDefaultUlnConfigs(params);
-                    }
-
-                    // executor config
-                    dstConfigParams[j] = IExecutor.DstConfigParam({
-                        dstEid: dstEid,
-                        lzReceiveBaseGas: 5000,
-                        lzComposeBaseGas: 5000,
-                        multiplierBps: 10000,
-                        floorMarginUSD: 1e10,
-                        nativeCap: executorValueCap
-                    });
-
-                    // dvn config
-                    dvnConfigParams[j] =
-                        IDVN.DstConfigParam({dstEid: dstEid, gas: 5000, multiplierBps: 10000, floorMarginUSD: 1e10});
-
-                    uint128 denominator = priceFeed.getPriceRatioDenominator();
-                    ILayerZeroPriceFeed.UpdatePrice[] memory prices = new ILayerZeroPriceFeed.UpdatePrice[](1);
-                    prices[0] =
-                        ILayerZeroPriceFeed.UpdatePrice(dstEid, ILayerZeroPriceFeed.Price(1 * denominator, 1, 1));
-                    priceFeed.setPrice(prices);
-                }
-                executor.setDstConfig(dstConfigParams);
-                dvn.setDstConfig(dvnConfigParams);
             } else if (_libraryType == LibraryType.SimpleMessageLib) {
                 SimpleMessageLibMock messageLib = new SimpleMessageLibMock(payable(this), address(endpointList[i]));
                 endpointList[i].registerLibrary(address(messageLib));
@@ -194,7 +191,6 @@ contract TestHelper is Test, OptionsHelper {
                 revert("invalid library type");
             }
         }
-
         // config up
         for (uint8 i = 0; i < _endpointNum; i++) {
             EndpointV2 endpoint = endpointList[i];
@@ -205,10 +201,10 @@ contract TestHelper is Test, OptionsHelper {
             }
         }
     }
-
     /**
      * @dev setup UAs, only if the UA has `endpoint` address as the unique parameter
      */
+
     function setupOApps(bytes memory _oappCreationCode, uint8 _startEid, uint8 _oappNum)
         public
         returns (address[] memory oapps)
@@ -253,32 +249,31 @@ contract TestHelper is Test, OptionsHelper {
         packets[guid] = _packetBytes;
         optionsLookup[guid] = _options;
     }
-
     /**
      * @dev verify packets to destination chain's UA address
      * @param _dstEid  destination eid
      * @param _dstAddress  destination address
      */
+
     function verifyPackets(uint32 _dstEid, bytes32 _dstAddress) public {
         verifyPackets(_dstEid, _dstAddress, 0, address(0x0));
     }
-
     /**
      * @dev verify packets to destination chain's UA address
      * @param _dstEid  destination eid
      * @param _dstAddress  destination address
      */
+
     function verifyPackets(uint32 _dstEid, address _dstAddress) public {
         verifyPackets(_dstEid, bytes32(uint256(uint160(_dstAddress))), 0, address(0x0));
     }
-
     /**
      * @dev dst UA receive/execute packets
      * @dev will NOT work calling this directly with composer IF the composed payload is different from the lzReceive msg payload
      */
+
     function verifyPackets(uint32 _dstEid, bytes32 _dstAddress, uint256 _packetAmount, address _composer) public {
         require(endpoints[_dstEid] != address(0), "endpoint not yet registered");
-
         DoubleEndedQueue.Bytes32Deque storage queue = packetsQueue[_dstEid][_dstAddress];
         uint256 pendingPacketsSize = queue.length();
         uint256 numberOfPackets;
@@ -294,7 +289,6 @@ contract TestHelper is Test, OptionsHelper {
             bytes memory packetBytes = packets[guid];
             this.assertGuid(packetBytes, guid);
             this.validatePacket(packetBytes);
-
             bytes memory options = optionsLookup[guid];
             if (_executorOptionExists(options, ExecutorOptions.OPTION_TYPE_NATIVE_DROP)) {
                 (uint256 amount, bytes32 receiver) = _parseExecutorNativeDropOption(options);
@@ -314,7 +308,6 @@ contract TestHelper is Test, OptionsHelper {
     function lzReceive(bytes calldata _packetBytes, bytes memory _options) external payable {
         EndpointV2 endpoint = EndpointV2(endpoints[_packetBytes.dstEid()]);
         (uint256 gas, uint256 value) = OptionsHelper._parseExecutorLzReceiveOption(_options);
-
         Origin memory origin = Origin(_packetBytes.srcEid(), _packetBytes.sender(), _packetBytes.nonce());
         endpoint.lzReceive{value: value, gas: gas}(
             origin, _packetBytes.receiverB20(), _packetBytes.guid(), _packetBytes.message(), bytes("")
@@ -329,9 +322,9 @@ contract TestHelper is Test, OptionsHelper {
             _packetBytes.dstEid(), _packetBytes.receiverB20(), _options, _guid, _composer, _packetBytes.message()
         );
     }
-
     // @dev the verifyPackets does not know the composeMsg if it is NOT the same as the original lzReceive payload
     // Can call this directly from your test to lzCompose those types of packets
+
     function lzCompose(
         uint32 _dstEid,
         address _from,
@@ -345,50 +338,7 @@ contract TestHelper is Test, OptionsHelper {
         endpoint.lzCompose{value: value, gas: gas}(_from, _to, _guid, index, _composerMsg, bytes(""));
     }
 
-    function validatePacket(bytes calldata _packetBytes) external {
-        uint32 dstEid = _packetBytes.dstEid();
-        EndpointV2 endpoint = EndpointV2(endpoints[dstEid]);
-        (address receiveLib,) = endpoint.getReceiveLibrary(_packetBytes.receiverB20(), _packetBytes.srcEid());
-        ReceiveUln302 dstUln = ReceiveUln302(receiveLib);
-
-        (uint64 major,,) = IMessageLib(receiveLib).version();
-        if (major == 3) {
-            // it is ultra light node
-            bytes memory config = dstUln.getConfig(_packetBytes.srcEid(), _packetBytes.receiverB20(), 2); // CONFIG_TYPE_ULN
-            DVN dvn = DVN(abi.decode(config, (UlnConfig)).requiredDVNs[0]);
-
-            bytes memory packetHeader = _packetBytes.header();
-            bytes32 payloadHash = keccak256(_packetBytes.payload());
-
-            // sign
-            bytes memory signatures;
-            bytes memory verifyCalldata =
-                abi.encodeWithSelector(IReceiveUlnE2.verify.selector, packetHeader, payloadHash, 100);
-            {
-                bytes32 hash = dvn.hashCallData(dstEid, address(dstUln), verifyCalldata, block.timestamp + 1000);
-                bytes32 ethSignedMessageHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", hash));
-                (uint8 v, bytes32 r, bytes32 s) = vm.sign(1, ethSignedMessageHash); // matches dvn signer
-                signatures = abi.encodePacked(r, s, v);
-            }
-            ExecuteParam[] memory params = new ExecuteParam[](1);
-            params[0] = ExecuteParam(dstEid, address(dstUln), verifyCalldata, block.timestamp + 1000, signatures);
-            dvn.execute(params);
-
-            // commit verification
-            bytes memory callData =
-                abi.encodeWithSelector(IReceiveUlnE2.commitVerification.selector, packetHeader, payloadHash);
-            {
-                bytes32 hash = dvn.hashCallData(dstEid, address(dstUln), callData, block.timestamp + 1000);
-                bytes32 ethSignedMessageHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", hash));
-                (uint8 v, bytes32 r, bytes32 s) = vm.sign(1, ethSignedMessageHash); // matches dvn signer
-                signatures = abi.encodePacked(r, s, v);
-            }
-            params[0] = ExecuteParam(dstEid, address(dstUln), callData, block.timestamp + 1000, signatures);
-            dvn.execute(params);
-        } else {
-            SimpleMessageLibMock(payable(receiveLib)).validatePacket(_packetBytes);
-        }
-    }
+    function validatePacket(bytes calldata _packetBytes) external {}
 
     function assertGuid(bytes calldata packetBytes, bytes32 guid) external pure {
         bytes32 packetGuid = packetBytes.guid();
