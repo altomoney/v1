@@ -81,11 +81,27 @@ contract DeploymentProceduresLimits is Test {
     }
 
     function test_new_UtilityBatch_isTestnet_false() public {
-        new TapiocaUtilitiesBatch(owner, zeroXSwapper, 0, false);
+        TapiocaUtilitiesBatch batch = new TapiocaUtilitiesBatch(owner, zeroXSwapper, 0, false);
+        UtilitiesReport memory report = batch.getUtilitiesReport();
+        assertEq(report.multiTokenSender, address(0), "multiTokenSender should be address(0)");
+        assertTrue(report.zeroXSwapper != address(0), "zeroXSwapper should not be address(0)");
+        assertTrue(report.tapiocaMulticall != address(0), "tapiocaMulticall should not be address(0)");
+        assertTrue(report.pearlmit != address(0), "pearlmit should not be address(0)");
+        assertTrue(report.cluster != address(0), "cluster should not be address(0)");
+        assertTrue(report.toeHelper != address(0), "toeHelper should not be address(0)");
+        assertTrue(report.pauser != address(0), "pauser should not be address(0)");
     }
 
     function test_new_UtilityBatch_isTestnet_true() public {
-        new TapiocaUtilitiesBatch(owner, zeroXSwapper, 0, true);
+        TapiocaUtilitiesBatch batch = new TapiocaUtilitiesBatch(owner, zeroXSwapper, 0, true);
+        UtilitiesReport memory report = batch.getUtilitiesReport();
+        assertTrue(report.multiTokenSender != address(0), "multiTokenSender should not be address(0)");
+        assertTrue(report.zeroXSwapper != address(0), "zeroXSwapper should not be address(0)");
+        assertTrue(report.tapiocaMulticall != address(0), "tapiocaMulticall should not be address(0)");
+        assertTrue(report.pearlmit != address(0), "pearlmit should not be address(0)");
+        assertTrue(report.cluster != address(0), "cluster should not be address(0)");
+        assertTrue(report.toeHelper != address(0), "toeHelper should not be address(0)");
+        assertTrue(report.pauser != address(0), "pauser should not be address(0)");
     }
 
     function test_new_YieldboxBatch() public {

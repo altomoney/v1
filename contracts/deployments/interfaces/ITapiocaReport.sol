@@ -12,6 +12,7 @@ struct TapiocaReport {
     address simpleLeverageExecutor;
     address toftHelper;
     address zeroXSwapper;
+    address multiTokenSender;
     address toeHelper;
     address cluster;
     address pearlmit;
@@ -72,6 +73,7 @@ struct UtilitiesReport {
     address toeHelper;
     address pauser;
     address zeroXSwapper;
+    address multiTokenSender;
 }
 
 struct TapiocaInput {

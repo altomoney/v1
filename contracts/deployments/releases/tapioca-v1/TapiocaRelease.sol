@@ -265,6 +265,8 @@ library TapiocaRelease {
         report.pearlmit = reports.utilitiesReport.pearlmit;
         report.tapiocaMulticall = reports.utilitiesReport.tapiocaMulticall;
         report.toeHelper = reports.utilitiesReport.toeHelper;
+        report.multiTokenSender = reports.utilitiesReport.multiTokenSender;
+        report.zeroXSwapper = reports.utilitiesReport.zeroXSwapper;
 
         report.yieldbox = reports.yieldboxReport.yieldbox;
         report.yieldboxUri = reports.yieldboxReport.yieldboxUri;

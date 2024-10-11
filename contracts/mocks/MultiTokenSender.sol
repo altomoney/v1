@@ -11,7 +11,7 @@ contract MultiTokenSender is Ownable {
     event WhitelistUpdated(address account, bool status);
 
     constructor(address _owner) {
-        whitelist[owner] = true;
+        whitelist[_owner] = true;
         transferOwnership(_owner);
     }
 
