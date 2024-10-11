@@ -9,8 +9,8 @@ import {YieldboxReport} from "../../../interfaces/ITapiocaReport.sol";
 contract TapiocaYieldboxBatch is YieldboxProcedure {
     YieldboxReport internal _yieldboxReport;
 
-    constructor(address owner, address wrappedNativeToken, address pearlmit) {
-        _yieldboxReport = _deployYieldbox(owner, wrappedNativeToken, pearlmit);
+    constructor(address owner, address wrappedNativeToken, address pearlmit, address cluster, address swapper) {
+        _yieldboxReport = _deployYieldbox(owner, wrappedNativeToken, pearlmit, cluster, swapper);
     }
 
     function getYieldboxReport() public view returns (YieldboxReport memory) {

@@ -35,8 +35,13 @@ library TapiocaRelease {
         TapiocaUtilitiesBatch utilitiesBatch;
         (utilitiesBatch, reports.utilitiesReport) = _deployUtilities(input.owner, input.zeroXSwapper, input.lzChainId);
 
-        reports.yieldboxReport =
-            _deployYieldBox(input.owner, input.wrappedNativeToken, reports.utilitiesReport.pearlmit);
+        reports.yieldboxReport = _deployYieldBox(
+            input.owner,
+            input.wrappedNativeToken,
+            reports.utilitiesReport.pearlmit,
+            reports.utilitiesReport.cluster,
+            input.zeroXSwapper
+        );
 
         reports.magnetarDepsReport =
             _deployMagnetarDeps(reports.utilitiesReport.pearlmit, reports.utilitiesReport.toeHelper);
@@ -129,11 +134,15 @@ library TapiocaRelease {
         return (utilitiesBatch, utilitiesBatch.getUtilitiesReport());
     }
 
-    function _deployYieldBox(address owner, address wrappedNativeToken, address pearlmit)
-        private
-        returns (YieldboxReport memory report)
-    {
-        TapiocaYieldboxBatch yieldboxBatch = new TapiocaYieldboxBatch(owner, wrappedNativeToken, pearlmit);
+    function _deployYieldBox(
+        address owner,
+        address wrappedNativeToken,
+        address pearlmit,
+        address cluster,
+        address swapper
+    ) private returns (YieldboxReport memory report) {
+        TapiocaYieldboxBatch yieldboxBatch =
+            new TapiocaYieldboxBatch(owner, wrappedNativeToken, pearlmit, cluster, swapper);
         return yieldboxBatch.getYieldboxReport();
     }
 

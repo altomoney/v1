@@ -8,12 +8,16 @@ import {YieldBoxURIBuilder} from "tap-yieldbox/YieldBoxURIBuilder.sol";
 import {IWrappedNative} from "tap-yieldbox/interfaces/IWrappedNative.sol";
 import {TapiocaOmnichainExtExec} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainExtExec.sol";
 import {MarketLiquidatorReceiver} from "tapioca-bar/liquidators/MarketLiquidatorReceiver.sol";
+import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 
 abstract contract YieldboxProcedure {
-    function _deployYieldbox(address owner, address wrappedNativeToken, address pearlmit)
-        internal
-        returns (YieldboxReport memory report)
-    {
+    function _deployYieldbox(
+        address owner,
+        address wrappedNativeToken,
+        address pearlmit,
+        address cluster,
+        address swapper
+    ) internal returns (YieldboxReport memory report) {
         report.yieldboxUri = address(new YieldBoxURIBuilder());
         report.yieldbox = address(
             new YieldBox(
@@ -21,7 +25,9 @@ abstract contract YieldboxProcedure {
             )
         );
         report.extExec = address(new TapiocaOmnichainExtExec());
-        report.liquidatorReceiver = address(new MarketLiquidatorReceiver(wrappedNativeToken));
+
+        report.liquidatorReceiver =
+            address(new MarketLiquidatorReceiver(wrappedNativeToken, ICluster(cluster), swapper, owner));
         return report;
     }
 }

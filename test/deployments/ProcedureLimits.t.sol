@@ -89,7 +89,7 @@ contract DeploymentProceduresLimits is Test {
     }
 
     function test_new_YieldboxBatch() public {
-        new TapiocaYieldboxBatch(owner, address(1), address(2));
+        new TapiocaYieldboxBatch(owner, address(1), address(2), address(3), address(4));
     }
 
     function test_new_TapiocaUsdoBatchOne() public {
