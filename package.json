@@ -11,7 +11,7 @@
     "test:main": "NODE_ENV=mainnet hardhat test",
     "test:deployments": "forge test --match-path  'test/deployments/*' -vvv",
     "prepare": "husky install",
-    "coverage:twtap": "FOUNDRY_PROFILE=twtap forge coverage --ir-minimum --match-path contracts/tap-token/governance/twTAP.sol --report lcov && genhtml lcov.info -o report --branch-coverage --ignore-errors category"
+    "coverage:twtap": "FOUNDRY_PROFILE=twTap forge coverage --match-path 'test/tap-token/unit/options/TWLBase/**/*.sol' --ir-minimum && genhtml lcov.info -o report --branch-coverage"
   },
   "devDependencies": {
     "@boringcrypto/boring-solidity": "https://github.com/boringcrypto/BoringSolidity",

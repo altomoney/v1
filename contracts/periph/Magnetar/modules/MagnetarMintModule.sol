@@ -222,41 +222,61 @@ contract MagnetarMintModule is MagnetarBaseModule {
         }
     }
 
+    struct LockParams {
+        IMarket singularity;
+        IYieldBox yieldBox;
+        uint256 tOLPSglAssetId;
+        uint256 fraction;
+        bool participate;
+    }
+
     function _lock(MintFromBBAndLendOnSGLData memory data, uint256 fraction, bool participate)
         private
         returns (uint256 tOLPTokenId)
     {
-        IMarket _singularity = IMarket(data.externalContracts.singularity);
-        IYieldBox _yieldBox = IYieldBox(_singularity._yieldBox());
+        LockParams memory params;
+        params.singularity = IMarket(data.externalContracts.singularity);
+        params.yieldBox = IYieldBox(params.singularity._yieldBox());
+        params.participate = participate;
 
         // use requested value
         if (data.lockData.fraction > 0) {
             fraction = data.lockData.fraction;
+        } else {
+            revert Magnetar_ActionParamsMismatch();
         }
-        if (fraction == 0) revert Magnetar_ActionParamsMismatch();
-
         // retrieve and deposit SGLAssetId registered in tOLP
-        (uint256 tOLPSglAssetId,,,) =
+        (params.tOLPSglAssetId,,,) =
             ITapiocaOptionLiquidityProvision(data.lockData.target).activeSingularities(data.lockData.tAsset);
 
         // Extract SGL tokens
         fraction = _extractTokens(data.user, data.externalContracts.singularity, fraction);
 
         // Wrap SGL tokens into tSgl
-        IERC20(address(_singularity)).approve(address(pearlmit), fraction);
+        IERC20(address(params.singularity)).approve(address(pearlmit), fraction);
         pearlmit.approve(
-            20, address(_singularity), 0, data.lockData.tAsset, fraction.toUint200(), block.timestamp.toUint48()
+            20, address(params.singularity), 0, data.lockData.tAsset, fraction.toUint200(), block.timestamp.toUint48()
         );
-        uint256 wrapped = ITOFT(data.lockData.tAsset).wrap(address(this), address(this), fraction);
+
+        params.fraction = fraction;
+
+        return _wrapAndLock(data, params);
+    }
+
+    function _wrapAndLock(MintFromBBAndLendOnSGLData memory data, LockParams memory params)
+        private
+        returns (uint256 tOLPTokenId)
+    {
+        uint256 wrapped = ITOFT(data.lockData.tAsset).wrap(address(this), address(this), params.fraction);
+        ITapiocaOptionLiquidityProvision tOLP = ITapiocaOptionLiquidityProvision(data.lockData.target);
 
         // deposit YB and revoke approval
-        (, uint256 obtainedShares) = _depositToYb(_yieldBox, address(this), tOLPSglAssetId, wrapped);
-        IERC20(address(_singularity)).approve(address(pearlmit), 0);
-
+        (, uint256 obtainedShares) = _depositToYb(params.yieldBox, address(this), params.tOLPSglAssetId, wrapped);
+        IERC20(address(params.singularity)).approve(address(pearlmit), 0);
         data.lockData.amount = obtainedShares.toUint128();
-        _pearlmitApprove(address(_yieldBox), tOLPSglAssetId, data.lockData.target, data.lockData.amount);
-        tOLPTokenId = ITapiocaOptionLiquidityProvision(data.lockData.target).lock(
-            participate ? address(this) : data.user,
+        _pearlmitApprove(address(params.yieldBox), params.tOLPSglAssetId, address(tOLP), data.lockData.amount);
+        return tOLP.lock(
+            params.participate ? address(this) : data.user,
             data.lockData.tAsset,
             data.lockData.lockDuration,
             data.lockData.amount,
