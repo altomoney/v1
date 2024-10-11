@@ -166,7 +166,7 @@ contract TapTokenMultiComposeTest is TapTokenTest {
             pearlmit.approve(
                 20, address(bTapOFT), 0, address(twTap), uint200(amountToSendLD_), uint48(block.timestamp + 1)
             );
-            twTap.participate(userA, amountToSendLD_, lockDuration_);
+            twTap.participate(userA, amountToSendLD_, lockDuration_, 0);
             skip(lockDuration_);
         }
 
@@ -384,7 +384,6 @@ contract TapTokenMultiComposeTest is TapTokenTest {
             approvals: approvals_
         });
     }
-
     /**
      * ==========================
      * ERC20 APPROVAL MSG BUILDER
@@ -428,12 +427,12 @@ contract TapTokenMultiComposeTest is TapTokenTest {
             lockTwTapPositionMsg: lockTwTapPositionMsg_
         });
     }
-
     /**
      * ==========================
      * UNLOCK TWTAP  MSG BUILDER
      * ==========================
      */
+
     struct SetupUnlockTwTapPositionMsgData {
         PrepareLzCallData prepareLzCallData;
         ITapToken token;

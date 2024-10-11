@@ -11,6 +11,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 // Tapioca
+import {ITwTapMagnitudeMultiplier} from "tap-token/interfaces/IMagnitudeMultiplier.sol";
 import {IPearlmit, PearlmitHandler} from "tap-utils/pearlmit/PearlmitHandler.sol";
 import {ERC721NftLoader} from "tap-token/erc721NftLoader/ERC721NftLoader.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
@@ -74,7 +75,6 @@ struct WeekTotals {
 
 contract TwTAP is
     TWAML,
-    ERC721,
     ERC721Permit,
     ERC721Enumerable,
     Ownable,
@@ -85,21 +85,30 @@ contract TwTAP is
 {
     using SafeERC20 for IERC20;
 
-    TapToken public immutable tapOFT;
+    TapToken public tapOFT;
 
     /// ===== TWAML ======
     TWAMLPool public twAML; // sglAssetId => twAMLPool
+    uint256 public growthCapBps = 15000; // 150%, 1.5x
+    /// @notice The minimum amount of difference between 2 epochs to activate a decay
+    /// If epoch 2 - epoch 1 < decayActivationBps, no decay will be activated
+    uint256 public decayActivationBps;
+    /// @notice The rate of decay per epoch
+    uint256 public decayRateBps;
+    /// @notice Total amount of decay amassed. Can be reset to 0
+    uint256 public decayAmassed;
+    uint256 public lastEpochCumulative; // Last cumulative for the last epoch
 
     mapping(uint256 => Participation) public participants; // tokenId => part.
 
-    /// @dev Virtual total amount to add to the total when computing twAML participation right. Default 10_000 * 1e18.
-    uint256 public VIRTUAL_TOTAL_AMOUNT = 10_000 ether;
+    /// @dev Virtual total amount to add to the total when computing twAML participation right.
+    uint256 public VIRTUAL_TOTAL_AMOUNT = 2000 ether;
 
     uint256 public MIN_WEIGHT_FACTOR = 1000; // In BPS, default 10%
     uint256 constant dMAX = 1_000_000; // 100 * 1e4; 0% - 100% voting power multiplier
     uint256 constant dMIN = 0;
     uint256 public constant EPOCH_DURATION = 7 days;
-    uint256 public constant MAX_LOCK_DURATION = 100 * 365 days; // 100 years
+    uint256 public MAX_LOCK_DURATION = 5 * 365 days; // 5 years
 
     // If we assume 128 bit balances for the reward token -- which fit 1e40
     // "tokens" at the most commonly used 1e18 precision -- then we can use the
@@ -130,9 +139,22 @@ contract TwTAP is
 
     ICluster public cluster;
 
-    bool rescueMode;
+    bool public rescueMode;
     uint256 public emergencySweepCooldown = 2 days;
     uint256 public lastEmergencySweep;
+
+    ITwTapMagnitudeMultiplier public twTapMagnitudeMultiplier;
+    uint256 constant MULTIPLIER_PRECISION = 1e18;
+
+    uint256 public constant REWARD_MULTIPLIER_BRACKET = 100_000; // 10% brackets
+    uint256 public constant REWARD_CAP_BRACKET = 50_000; // 5% cap to floor/ceil the reward
+    /// @notice The minimum amount of weeks to start decaying the cumulative
+    uint256 public minWeeksToDecay = 2;
+
+    /// @notice Last snapshot of the total value deposited in a pool, and the last time it was deposited
+    uint256 public lastTotalDeposited;
+    uint256 public lastTotalDepositRefresh;
+    uint256 public refreshCooldown = 12 hours;
 
     error NotAuthorized();
     error AdvanceWeekFirst();
@@ -140,13 +162,17 @@ contract TwTAP is
     error Registered();
     error TokenLimitReached();
     error NotApproved(uint256 tokenId, address spender);
-    error Duplicate();
     error LockNotExpired();
     error LockNotAWeek();
     error LockTooLong();
     error AdvanceEpochFirst();
     error DurationNotMultiple(); // Lock duration should be a multiple of 1 EPOCH
     error EmergencySweepCooldownNotReached();
+    error EpochTooLow();
+    error MaxLockCapReached();
+    error RescueModeActive();
+    error MinRewardTooLow();
+    error EmergencySweepActivated();
 
     /// =====-------======
     constructor(address payable _tapOFT, IPearlmit _pearlmit, address _owner)
@@ -161,8 +187,10 @@ contract TwTAP is
 
         maxRewardTokens = 30;
 
-        // Seed the cumulative with 1 week of magnitude
-        twAML.cumulative = EPOCH_DURATION;
+        // Seed the cumulative with 4 weeks of magnitude
+        uint256 seedEpochDuration = 4 * EPOCH_DURATION;
+        twAML.cumulative = seedEpochDuration;
+        lastEpochCumulative = seedEpochDuration;
     }
 
     // ==========
@@ -200,6 +228,15 @@ contract TwTAP is
     event EmergencySweepRewards();
     event SetEmergencySweepCooldown(uint256 emergencySweepCooldown);
     event ActivateEmergencySweep();
+    event DecayCumulative(uint256 amountDecayed);
+    event ResetDecayAmassed(uint256 decayAmassed);
+    event SetDecayActivationBps(uint256 decayActivationBps);
+    event SetGrowthCapBps(uint256 growthCapBps);
+    event SetDecayRateBps(uint256 decayRateBps);
+    event SetMaxLockDuration(uint256 maxLockDuration);
+    event SetTapOft(address tapOFT);
+    event SetMinWeeksToDecay(uint256 minWeeksToDecay);
+    event SetRefreshCooldown(uint256 refreshCooldown);
 
     // ==========
     //    READ
@@ -361,12 +398,15 @@ contract TwTAP is
     /// @param _participant The address of the participant
     /// @param _amount The amount of TAP to participate with
     /// @param _duration The duration of the lock
-    function participate(address _participant, uint256 _amount, uint256 _duration)
+    /// @param _minReward The minimum reward multiplier
+    function participate(address _participant, uint256 _amount, uint256 _duration, uint256 _minReward)
         external
         whenNotPaused
         nonReentrant
         returns (uint256 tokenId)
     {
+        if (rescueMode) revert RescueModeActive();
+        if (lastEmergencySweep != 0) revert EmergencySweepActivated();
         if (_duration < EPOCH_DURATION) revert LockNotAWeek();
         if (_duration > MAX_LOCK_DURATION) revert LockTooLong();
         if (_duration % EPOCH_DURATION != 0) revert DurationNotMultiple();
@@ -382,26 +422,50 @@ contract TwTAP is
         // Copy to memory
         TWAMLPool memory pool = twAML;
 
-        uint256 magnitude = computeMagnitude(_duration, pool.cumulative);
-        // Revert if the lock 4x the cumulative
-        if (magnitude >= pool.cumulative * 4) revert NotValid();
-        uint256 multiplier = computeTarget(dMIN, dMAX, magnitude, pool.cumulative);
+        uint256 magnitude = computeMagnitude(_duration, lastEpochCumulative);
+
+        // Revert if the lock is x time bigger than the cumulative
+        if (magnitude > (lastEpochCumulative * growthCapBps) / 1e4) revert NotValid();
+        uint256 multiplier;
+        bool hasVotingPower;
+        {
+            uint256 poolTotalDeposited = _snapshotTotalDepositedForSgl();
+            multiplier = capCumulativeReward(
+                computeTarget(dMIN, dMAX, magnitude, lastEpochCumulative), REWARD_MULTIPLIER_BRACKET, REWARD_CAP_BRACKET
+            );
+            if (multiplier < _minReward) revert MinRewardTooLow();
+            hasVotingPower = _amount >= computeMinWeight(poolTotalDeposited + VIRTUAL_TOTAL_AMOUNT, MIN_WEIGHT_FACTOR);
+        }
 
         // Calculate twAML voting weight
         bool divergenceForce;
-        bool hasVotingPower = _amount >= computeMinWeight(pool.totalDeposited + VIRTUAL_TOTAL_AMOUNT, MIN_WEIGHT_FACTOR);
         if (hasVotingPower) {
             pool.totalParticipants++; // Save participation
             pool.averageMagnitude = (pool.averageMagnitude + magnitude) / pool.totalParticipants; // compute new average magnitude
 
             // Compute and save new cumulative
-            divergenceForce = _duration >= pool.cumulative;
+            divergenceForce = _duration >= lastEpochCumulative;
 
             if (divergenceForce) {
-                pool.cumulative += pool.averageMagnitude;
+                uint256 aMagnitudeMultiplier = MULTIPLIER_PRECISION;
+                if (address(twTapMagnitudeMultiplier) != address(0)) {
+                    aMagnitudeMultiplier =
+                        twTapMagnitudeMultiplier.getPositiveMagnitudeMultiplier(_participant, _amount, _duration);
+                }
+
+                pool.cumulative += (pool.averageMagnitude * aMagnitudeMultiplier / MULTIPLIER_PRECISION);
             } else {
                 if (pool.cumulative > pool.averageMagnitude) {
-                    pool.cumulative -= pool.averageMagnitude;
+                    uint256 aMagnitudeMultiplier = MULTIPLIER_PRECISION;
+                    if (address(twTapMagnitudeMultiplier) != address(0)) {
+                        aMagnitudeMultiplier =
+                            twTapMagnitudeMultiplier.getNegativeMagnitudeMultiplier(_participant, _amount, _duration);
+                    }
+
+                    pool.cumulative -= (pool.averageMagnitude * aMagnitudeMultiplier / MULTIPLIER_PRECISION);
+                    if (pool.cumulative < EPOCH_DURATION) {
+                        pool.cumulative = EPOCH_DURATION;
+                    }
                 } else {
                     pool.cumulative = EPOCH_DURATION;
                 }
@@ -414,41 +478,42 @@ contract TwTAP is
             emit AMLDivergence(pool.cumulative, pool.averageMagnitude, pool.totalParticipants);
         }
 
-        uint256 expiry = block.timestamp + _duration;
-        // Eligibility starts NEXT week, and lasts until the week that the lock
-        // expires. This is guaranteed to be at least one week later by the
-        // check on `_duration`.
-        // If a user locks right before the current week ends, and have a
-        // duration slightly over one week, straddling the two starting points,
-        // then that user is eligible for the rewards during both weeks; the
-        // price for this maneuver is a lower multiplier, and loss of voting
-        // power in the DAO after the lock expires.
-        uint256 w0 = currentWeek();
-        uint256 w1 = (expiry - creation) / EPOCH_DURATION;
+        {
+            uint256 expiry = block.timestamp + _duration;
+            // Eligibility starts NEXT week, and lasts until the week that the lock
+            // expires. This is guaranteed to be at least one week later by the
+            // check on `_duration`.
+            // If a user locks right before the current week ends, and have a
+            // duration slightly over one week, straddling the two starting points,
+            // then that user is eligible for the rewards during both weeks; the
+            // price for this maneuver is a lower multiplier, and loss of voting
+            // power in the DAO after the lock expires.
+            uint256 w0 = currentWeek();
+            uint256 w1 = (expiry - creation) / EPOCH_DURATION;
 
-        // Save twAML participation
-        // Casts are safe: see struct definition
-        tokenId = ++mintedTWTap;
-        uint256 votes = _amount * multiplier;
-        participants[tokenId] = Participation({
-            averageMagnitude: pool.averageMagnitude,
-            hasVotingPower: hasVotingPower,
-            divergenceForce: divergenceForce,
-            tapReleased: false,
-            lockedAt: uint56(block.timestamp),
-            expiry: uint56(expiry),
-            tapAmount: uint88(_amount),
-            multiplier: uint24(multiplier),
-            lastInactive: uint40(w0),
-            lastActive: uint40(w1)
-        });
+            // Save twAML participation
+            // Casts are safe: see struct definition
+            tokenId = ++mintedTWTap;
+            uint256 votes = _amount * multiplier;
+            participants[tokenId] = Participation({
+                averageMagnitude: pool.averageMagnitude,
+                hasVotingPower: hasVotingPower,
+                divergenceForce: divergenceForce,
+                tapReleased: false,
+                lockedAt: uint56(block.timestamp),
+                expiry: uint56(expiry),
+                tapAmount: uint88(_amount),
+                multiplier: uint24(multiplier),
+                lastInactive: uint40(w0),
+                lastActive: uint40(w1)
+            });
 
-        // w0 + 1 = lastInactive + 1 = first active
-        // w1 + 1 = lastActive + 1 = first inactive
-        // Cast is safe: `votes` is the product of a uint88 and a uint24
-        weekTotals[w0 + 1].netActiveVotes += int256(votes);
-        weekTotals[w1 + 1].netActiveVotes -= int256(votes);
-
+            // w0 + 1 = lastInactive + 1 = first active
+            // w1 + 1 = lastActive + 1 = first inactive
+            // Cast is safe: `votes` is the product of a uint88 and a uint24
+            weekTotals[w0 + 1].netActiveVotes += int256(votes);
+            weekTotals[w1 + 1].netActiveVotes -= int256(votes);
+        }
         // Mint twTAP position
         _safeMint(_participant, tokenId);
 
@@ -504,9 +569,7 @@ contract TwTAP is
     /// @notice Reverts if called in week 0. Let it.
     /// @param _limit Maximum number of weeks to process in one call
     function advanceWeek(uint256 _limit) public nonReentrant {
-        if (!cluster.hasRole(msg.sender, keccak256("NEW_EPOCH"))) {
-            revert NotAuthorized();
-        }
+        if (!cluster.hasRole(msg.sender, keccak256("NEW_EPOCH"))) revert NotAuthorized();
 
         uint256 week = lastProcessedWeek;
         uint256 goal = currentWeek();
@@ -527,9 +590,11 @@ contract TwTAP is
                     ++i;
                 }
             }
+            _decayCumulative(); // Always called after updating the week
         }
         emit AdvanceEpoch(goal, lastProcessedWeek);
         lastProcessedWeek = goal;
+        lastEpochCumulative = twAML.cumulative;
     }
 
     /// @notice distributes a reward among all tokens, weighted by voting power
@@ -557,9 +622,20 @@ contract TwTAP is
         emit DistributeReward(address(rewardToken), msg.sender, _amount, _rewardTokenId);
     }
 
+    /// @notice Refresh the total deposited amount in the pool
+    /// @return totalDeposited The newly fetched total amount deposited in the pool
+    function refreshTotalDeposited() external returns (uint256 totalDeposited) {
+        return _snapshotTotalDepositedForSgl();
+    }
+
     // =========
     //   OWNER
     // =========
+
+    function setTwTapMagnitudeMultiplier(ITwTapMagnitudeMultiplier _twTapMagnitudeMultiplier) external onlyOwner {
+        twTapMagnitudeMultiplier = _twTapMagnitudeMultiplier;
+    }
+
     /**
      * @notice Set the rescue mode.
      */
@@ -634,11 +710,76 @@ contract TwTAP is
     }
 
     /**
+     * @notice Set the growth cap for the twAML pool.
+     */
+    function setGrowthCapBps(uint256 _growthCapBps) external onlyOwner {
+        growthCapBps = _growthCapBps;
+        emit SetGrowthCapBps(_growthCapBps);
+    }
+
+    /**
+     * @notice Set the max lock duration.
+     */
+    function setMaxLockDuration(uint256 _maxLockDuration) external onlyOwner {
+        MAX_LOCK_DURATION = _maxLockDuration;
+        emit SetMaxLockDuration(_maxLockDuration);
+    }
+
+    /**
+     * @notice Reset the decay by reimbursing it to the cumulative.
+     */
+    function resetDecayAmassed() external onlyOwner {
+        twAML.cumulative += decayAmassed;
+        decayAmassed = 0;
+        emit ResetDecayAmassed(decayAmassed);
+    }
+
+    /**
      * @notice Set the emergency sweep cooldown
      */
     function setEmergencySweepCooldown(uint256 _emergencySweepCooldown) external onlyOwner {
         emergencySweepCooldown = _emergencySweepCooldown;
         emit SetEmergencySweepCooldown(_emergencySweepCooldown);
+    }
+
+    /**
+     * @notice Set the decay activation bps
+     */
+    function setDecayActivationBps(uint256 _decayActivationBps) external onlyOwner {
+        decayActivationBps = _decayActivationBps;
+        emit SetDecayActivationBps(_decayActivationBps);
+    }
+
+    /**
+     * @notice Set the decay rate bps
+     */
+    function setDecayRateBps(uint256 _decayRateBps) external onlyOwner {
+        decayRateBps = _decayRateBps;
+        emit SetDecayRateBps(_decayRateBps);
+    }
+
+    /**
+     * @notice Set the tapOFT address
+     */
+    function setTapOFT(address payable _tapOFT) external onlyOwner {
+        tapOFT = TapToken(_tapOFT);
+        emit SetTapOft(_tapOFT);
+    }
+
+    /**
+     * @notice Set the minimum amount of weeks to start decaying the cumulative
+     */
+    function setMinWeeksToDecay(uint256 _minWeeksToDecay) external onlyOwner {
+        minWeeksToDecay = _minWeeksToDecay;
+        emit SetMinWeeksToDecay(_minWeeksToDecay);
+    }
+
+    /**
+     * @notice Set the refresh cooldown
+     */
+    function setRefreshCooldown(uint256 _refreshCooldown) external onlyOwner {
+        refreshCooldown = _refreshCooldown;
+        emit SetRefreshCooldown(_refreshCooldown);
     }
 
     /**
@@ -653,33 +794,16 @@ contract TwTAP is
      * @notice Emergency sweep of all tokens in case of a critical issue.
      * Strategy is to sweep tokens, then recreate positions with them on a new contract.
      *
-     * @dev Only the owner with role `TWTAP_EMERGENCY_SWEEP` can call this function.
      */
-    function emergencySweepLocks() external onlyOwner {
-        if (block.timestamp < lastEmergencySweep + emergencySweepCooldown) {
+    function emergencySweep() external onlyOwner {
+        if (lastEmergencySweep == 0 || block.timestamp < lastEmergencySweep + emergencySweepCooldown) {
             revert EmergencySweepCooldownNotReached();
         }
-        if (!cluster.hasRole(msg.sender, keccak256("TWTAP_EMERGENCY_SWEEP"))) {
-            revert NotAuthorized();
-        }
 
+        // 1. Transfer the locks
         tapOFT.transfer(owner(), tapOFT.balanceOf(address(this)));
-    }
 
-    /**
-     * @notice Emergency sweep of all rewards in case of a critical issue.
-     * Strategy is to sweep tokens, then distribute reward on a new contract.
-     *
-     * @dev Only the owner with role `TWTAP_EMERGENCY_SWEEP` can call this function.
-     */
-    function emergencySweepRewards() external onlyOwner {
-        if (block.timestamp < lastEmergencySweep + emergencySweepCooldown) {
-            revert EmergencySweepCooldownNotReached();
-        }
-        if (!cluster.hasRole(msg.sender, keccak256("TWTAP_EMERGENCY_SWEEP"))) {
-            revert NotAuthorized();
-        }
-
+        // 2. Transfer the rewards
         uint256 len = rewardTokens.length;
         // Index starts at 1, see constructor
         for (uint256 i = 1; i < len; ++i) {
@@ -688,6 +812,8 @@ contract TwTAP is
                 token.safeTransfer(owner(), token.balanceOf(address(this)));
             }
         }
+
+        lastEmergencySweep = 0;
     }
 
     // ============
@@ -801,10 +927,47 @@ contract TwTAP is
         return false;
     }
 
-    /// @notice Returns the chain ID of the current network.
-    /// @dev Used for dev purposes.
-    function _getChainId() internal view virtual returns (uint256) {
-        return block.chainid;
+    /// @notice Decays the cumulative if the liquidity is less than a threshold
+    /// @dev Expect the new epoch to be called already
+    function _decayCumulative() internal {
+        if (decayRateBps == 0) return;
+        uint256 _week = currentWeek();
+
+        if (_week < minWeeksToDecay) revert EpochTooLow(); // Need at least 2 epochs to be compared
+
+        int256 totalDepositedA = weekTotals[_week - 2].netActiveVotes;
+        int256 totalDepositedB = weekTotals[_week - 1].netActiveVotes;
+
+        int256 delta = totalDepositedA - totalDepositedB; // Check if the liquidity has decreased
+        if (delta > 0) {
+            // If so, check the percentage of decrease
+            delta = int256(muldiv(uint256(delta), 100e4, uint256(totalDepositedA)));
+
+            // Apply the decay if the decrease is more than the threshold
+            // Cast is ok, delta is always positive at this point
+            if (uint256(delta) >= decayActivationBps) {
+                TWAMLPool memory pool = twAML;
+                uint256 decayAmount = muldiv(pool.cumulative, decayRateBps, 100e4);
+                pool.cumulative -= decayAmount; // Update the cumulative
+                decayAmassed += decayAmount; // Save the decay amassed
+                twAML = pool;
+                emit DecayCumulative(decayAmount);
+            }
+        }
+    }
+
+    /// @notice Store the total pool deposited
+    /// @return totalDeposited The total deposited amount in the pool
+    function _snapshotTotalDepositedForSgl() internal returns (uint256 totalDeposited) {
+        totalDeposited = lastTotalDeposited;
+        if (block.timestamp > lastTotalDepositRefresh + refreshCooldown) {
+            TWAMLPool memory pool = twAML;
+            totalDeposited = pool.totalDeposited;
+            lastTotalDeposited = totalDeposited;
+            lastTotalDepositRefresh = block.timestamp;
+        }
+
+        return totalDeposited;
     }
 
     function _baseURI() internal view override(ERC721, ERC721NftLoader) returns (string memory) {
