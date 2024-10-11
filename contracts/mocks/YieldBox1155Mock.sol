@@ -5,7 +5,7 @@ import {IYieldBoxTokenType} from "tap-utils/interfaces/yieldbox/IYieldBox.sol";
 import {ERC1155} from "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 
 contract YieldBox1155Mock is ERC1155 {
-       constructor() ERC1155("YieldBox") {}
+    constructor() ERC1155("YieldBox") {}
 
     uint256 public nextAssetId = 100;
 
