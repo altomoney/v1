@@ -43,5 +43,5 @@ jobs:
         id: fmt
 
       - name: Check tests
-        run: forge test --gas-report
+        run: forge test
         id: test
