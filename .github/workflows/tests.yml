@@ -39,7 +39,7 @@ jobs:
         id: build
 
       - name: Check formatting
-        run: forge fmt --sizes
+        run: forge fmt --check
         id: fmt
 
       - name: Check tests
