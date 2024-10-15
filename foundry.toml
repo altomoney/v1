@@ -4,7 +4,7 @@ libs = ['node_modules', 'lib']
 test = 'test'
 script = 'script'
 no-match-path = 'contracts/mocks/research/*'
-no-match-contract = ".*Fork.*"
+no-match-contract = "(Fork|Stargate)"
 broadcast = 'gen/broadcast'
 
 evm_version='shanghai'

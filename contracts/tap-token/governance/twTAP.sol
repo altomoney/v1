@@ -79,6 +79,8 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, PearlmitHandler, ReentrancyGuard, 
         tapOFT = TapToken(_tapOFT);
         rewardTokens.push(IERC20(address(0x0))); // 0 index is reserved
         maxRewardTokens = 30;
+
+        _transferOwnership(_owner);
     }
 
     // ==========
