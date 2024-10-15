@@ -41,4 +41,4 @@ mainnet = "${RPC_URL}"
 arbitrum = "${RPC_URL_ARBITRUM}"
 [profile.twtap]
 src = "contracts/tap-token/governance"
-test = "test/tap-token/unit/options/TWLBase/"
+test = "test/tap-token/unit/options/"

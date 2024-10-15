@@ -11,7 +11,20 @@ contract TWLBase_getBucket is Test {
     Bucket[] buckets;
 
     function setUp() external {
-        buckets.push(Bucket(true, 1, 1, 1, 1, 1, 1, 1, 1, 1));
+        buckets.push(
+            Bucket({
+                enabled: true,
+                epochGrowthRate: 1,
+                epochDecayRate: 1,
+                epochCeiling: 1,
+                epochFloor: 1,
+                rewardsMultiplier: 1,
+                lockEpochDuration: 1,
+                currentEpochInflows: 0,
+                lastEpochInflows: 0,
+                growthGoal: 1000
+            })
+        );
         twlBaseMock = new TWLBaseMock(7 days, buckets);
     }
 

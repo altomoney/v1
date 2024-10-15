@@ -19,11 +19,7 @@ contract TWLBaseMock is TWLBase {
         _supplyInBucket(index, amount);
     }
 
-    function withdrawFromBucket(uint256 amount, uint8 index) external {
-        _withdrawFromBucket(index, amount);
-    }
-
-    function syncTWLBuckets() external {
-        _syncTWLBuckets();
+    function syncTWLBuckets(uint256 epochs) external {
+        _syncTWLBuckets(epochs);
     }
 }

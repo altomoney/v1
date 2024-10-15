@@ -22,7 +22,7 @@ import {Singularity} from "tapioca-bar/markets/singularity/Singularity.sol";
 import {Pearlmit, IPearlmit} from "tap-utils/pearlmit/Pearlmit.sol";
 import {TapiocaOptionsBrokerMock} from "./mocks/TapiocaOptionsBrokerMock.sol";
 import {IMarket} from "tap-utils/interfaces/bar/ISingularity.sol";
-import {ITwTap} from "tap-utils/interfaces/tap-token/ITwTap.sol";
+import {ITWTAPv2} from "tap-token/interfaces/ITWTAPv2.sol";
 import {IOracle} from "tap-utils/oracle/interfaces/IOracle.sol";
 import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
 import {MagnetarMock} from "./mocks/MagnetarMock.sol";
@@ -214,7 +214,7 @@ contract PenroseTest is UsdoTestHelper {
         markets[0] = IMarket(address(0));
 
         vm.expectRevert();
-        penrose.withdrawAllMarketFees(markets, ITwTap(address(0)));
+        penrose.withdrawAllMarketFees(markets, ITWTAPv2(address(0)));
     }
 
     function test_penrose_register_mc() public {

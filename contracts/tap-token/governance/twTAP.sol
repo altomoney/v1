@@ -2,23 +2,18 @@
 pragma solidity 0.8.22;
 
 // External
-import {ERC721Enumerable} from "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 // Tapioca
-import {ITwTapMagnitudeMultiplier} from "tap-token/interfaces/IMagnitudeMultiplier.sol";
 import {IPearlmit, PearlmitHandler} from "tap-utils/pearlmit/PearlmitHandler.sol";
-import {ERC721NftLoader} from "tap-token/erc721NftLoader/ERC721NftLoader.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
-import {ERC721Permit} from "tap-utils/utils/ERC721Permit.sol";
-import {ERC721PermitStruct} from "tap-token/tokens/ITapToken.sol";
 import {TapToken} from "tap-token/tokens/TapToken.sol";
 import {TWLBase, Bucket} from "tap-token/governance/TWLBase.sol";
+import {ITWTAPv2, Participation, Reward, WeekTotals} from "tap-token/interfaces/ITWTAPv2.sol";
 
 /*
 
@@ -31,63 +26,31 @@ import {TWLBase, Bucket} from "tap-token/governance/TWLBase.sol";
    
 */
 
-struct Participation {
-    // 1 slot
-    uint8 bucketId;
-    bool tapReleased; // allow restaking while rewards may still accumulate
-    uint240 lockedAt; // timestamp when lock was created
-    // 1 slot
-    uint56 expiry; // expiry timestamp. Big enough for over 2 billion years..
-    uint88 tapAmount; // amount of TAP locked
-    uint24 multiplier; // Votes = multiplier * tapAmount
-    uint40 lastInactive; // One week BEFORE the staker gets a share of rewards
-    uint40 lastActive; // Last week that the staker shares in rewards
-}
-
-struct WeekTotals {
-    // For [0..currentWeek] this is a cumulative total: it consists of the
-    // active votes in the previous week, minus the votes known to expire this
-    // week. For future weeks, it is a negative number corresponding to the
-    // expiring votes.
-    int256 netActiveVotes;
-    // rewardTokens index -> amount
-    mapping(uint256 => uint256) totalDistPerVote;
-}
-
-contract TwTAP is
-    TWLBase,
-    ERC721,
-    ERC721Permit,
-    ERC721Enumerable,
-    Ownable,
-    PearlmitHandler,
-    ERC721NftLoader,
-    ReentrancyGuard,
-    Pausable
-{
+/**
+ * @title TwTAP
+ * @author Tapioca
+ */
+contract TwTAP is ITWTAPv2, TWLBase, Ownable, PearlmitHandler, ReentrancyGuard, Pausable {
     using SafeERC20 for IERC20;
 
-    TapToken public tapOFT;
+    TapToken public immutable tapOFT;
 
-    mapping(uint256 => Participation) public participants; // tokenId => part.
+    mapping(address => mapping(uint256 => Participation)) public participations; // accountAddress => bucketId => Participation
 
     // If we assume 128 bit balances for the reward token -- which fit 1e40
     // "tokens" at the most commonly used 1e18 precision -- then we can use the
     // other 128 bits to store the tokens allotted to a single vote more
     // accurately. Votes in turn are proportional to the amount of TAP locked,
-    // weighted by a multiplier. This number is at most 107 bits long (see
-    // definition of `Participation` struct).
-    // the weight ranges from 10-100% where 1% = 1e4, so 1 million (20 bits).
-    // the multiplier is at most 100% = 1M (20 bits), so votes is at most a
-    // 107-bit number.
+    // weighted by a multiplier (100e2).
+    // the weight ranges from 10-100% where 10% = 10_00, maximum 100_00 (minimum type uint16).
     uint256 constant DIST_PRECISION = 2 ** 128; //2 ** 128;
 
     IERC20[] public rewardTokens;
     mapping(IERC20 => uint256) public rewardTokenIndex; // Index 0 is reserved with 0x0 address
     uint256 public maxRewardTokens;
 
-    // tokenId -> rewardTokens index -> amount
-    mapping(uint256 => mapping(uint256 => uint256)) public claimed;
+    // account -> bucketId -> rewardTokens index -> amount
+    mapping(address => mapping(uint256 => mapping(uint256 => Reward))) public rewards;
 
     // The current week is determined by creation, but there are values that
     // need to be updated weekly. If, for any reason whatsoever, this cannot
@@ -96,6 +59,7 @@ contract TwTAP is
     uint256 public mintedTWTap;
     uint256 public lastProcessedWeek;
     mapping(uint256 => WeekTotals) public weekTotals;
+    mapping(uint256 => mapping(uint256 => uint256)) public epochAutoSupply; // bucketId => epoch => amount
 
     ICluster public cluster;
 
@@ -103,32 +67,7 @@ contract TwTAP is
     uint256 public emergencySweepCooldown = 2 days;
     uint256 public lastEmergencySweep;
 
-    ITwTapMagnitudeMultiplier public twTapMagnitudeMultiplier;
     uint256 constant MULTIPLIER_PRECISION = 1e18;
-
-    uint256 public constant REWARD_MULTIPLIER_BRACKET = 100_000; // 10% brackets
-    uint256 public constant REWARD_CAP_BRACKET = 50_000; // 5% cap to floor/ceil the reward
-    /// @notice The minimum amount of weeks to start decaying the cumulative
-    uint256 public minWeeksToDecay = 2;
-
-    /// @notice Last snapshot of the total value deposited in a pool, and the last time it was deposited
-    uint256 public lastTotalDeposited;
-    uint256 public lastTotalDepositRefresh;
-    uint256 public refreshCooldown = 12 hours;
-
-    error NotAuthorized();
-    error AdvanceWeekFirst();
-    error NotValid();
-    error Registered();
-    error TokenLimitReached();
-    error NotApproved(uint256 tokenId, address spender);
-    error LockNotExpired();
-    error LockNotAWeek();
-    error LockTooLong();
-    error DurationNotMultiple(); // Lock duration should be a multiple of 1 EPOCH
-    error EmergencySweepCooldownNotReached();
-    error RescueModeActive();
-    error EmergencySweepActivated();
 
     constructor(
         address payable _tapOFT,
@@ -136,70 +75,15 @@ contract TwTAP is
         address _owner,
         uint256 epochDuration,
         Bucket[] memory _buckets
-    )
-        ERC721NftLoader("Time Weighted TAP", "twTAP", _owner)
-        ERC721Permit("Time Weighted TAP")
-        PearlmitHandler(_pearlmit)
-        TWLBase(epochDuration, _buckets)
-    {
+    ) PearlmitHandler(_pearlmit) TWLBase(epochDuration, _buckets) {
         tapOFT = TapToken(_tapOFT);
         rewardTokens.push(IERC20(address(0x0))); // 0 index is reserved
         maxRewardTokens = 30;
     }
 
     // ==========
-    //   EVENTS
-    // ==========
-
-    event AddRewardToken(address indexed rewardTokenAddress, uint256 rewardTokenIndex);
-    event DistributeReward(
-        address indexed rewardTokenAddress, address indexed from, uint256 amount, uint256 rewardTokenIndex
-    );
-
-    event ClaimReward(
-        address indexed rewardTokenAddress,
-        address indexed to,
-        uint256 indexed twTapTokenId,
-        uint256 amount,
-        uint256 rewardTokenIndex
-    );
-    event Participate(
-        address indexed participant,
-        uint256 mintedTokenId,
-        uint256 tapAmount,
-        uint256 multiplier,
-        uint256 expiry,
-        uint256 bucketId
-    );
-    event ExitPosition(uint256 indexed twTapTokenId, address indexed releasedTo, uint256 amount);
-
-    event LogMaxRewardsLength(uint256 _oldLength, uint256 _newLength, uint256 _currentLength);
-    event RescueMode(bool _rescueMode);
-    event SetCluster(address _cluster);
-    event EmergencySweepLocks();
-    event EmergencySweepRewards();
-    event SetEmergencySweepCooldown(uint256 emergencySweepCooldown);
-    event ActivateEmergencySweep();
-    event DecayCumulative(uint256 amountDecayed);
-    event ResetDecayAmassed(uint256 decayAmassed);
-    event SetDecayActivationBps(uint256 decayActivationBps);
-    event SetGrowthCapBps(uint256 growthCapBps);
-    event SetDecayRateBps(uint256 decayRateBps);
-    event SetMaxLockDuration(uint256 maxLockDuration);
-    event SetTapOft(address tapOFT);
-    event SetMinWeeksToDecay(uint256 minWeeksToDecay);
-    event SetRefreshCooldown(uint256 refreshCooldown);
-
-    // ==========
     //    READ
     // ==========
-
-    /**
-     * @inheritdoc ERC721NftLoader
-     */
-    function tokenURI(uint256 tokenId) public view override(ERC721, ERC721NftLoader) returns (string memory) {
-        return ERC721NftLoader.tokenURI(tokenId);
-    }
 
     /**
      * @notice Return the address of reward tokens.
@@ -220,22 +104,24 @@ contract TwTAP is
         return INIT_TIMESTAMP;
     }
 
-    /**
-     * @notice Return the total amount distributed for a reward token in a given week.
-     * @param _week The week to query.
-     * @param _rewardTokenId The reward token to query.
-     */
+    /// @notice Return the total amount distributed for a reward token in a given week.
+    /// @param _week The week to query.
+    /// @param _rewardTokenId The reward token to query.
+    /// @return The total amount distributed for the reward token in the given week.
     function getTotalDistPerVoteForWeek(uint256 _week, uint256 _rewardTokenId) external view returns (uint256) {
         return weekTotals[_week].totalDistPerVote[_rewardTokenId];
     }
 
-    /// @notice Return the participation of a token. Returns 0 votes for expired tokens.
-    function getParticipation(uint256 _tokenId) external view returns (Participation memory participant) {
-        participant = participants[_tokenId];
-        if (participant.expiry <= block.timestamp) {
-            participant.multiplier = 0;
-        }
-        return participant;
+    /// @notice Return the participation of an account in a bucket.
+    /// @param _account The account of the participant.
+    /// @param _bucketId The bucketId of the twTAP position.
+    /// @return participation The Participation of the account in the bucket.
+    function getParticipation(address _account, uint256 _bucketId)
+        external
+        view
+        returns (Participation memory participation)
+    {
+        return participations[_account][_bucketId];
     }
 
     /**
@@ -244,15 +130,12 @@ contract TwTAP is
      * @dev Safe to claim even after position exit.
      * @return claimable amounts mapped by reward token
      */
-    function claimable(uint256 _tokenId) public view returns (uint256[] memory) {
+    function claimable(address _account, uint256 _bucketId) public view returns (uint256[] memory) {
         uint256 len = rewardTokens.length;
         uint256[] memory result = new uint256[](len);
 
-        Participation memory position = participants[_tokenId];
-        uint256 votes;
-        unchecked {
-            votes = uint256(position.tapAmount) * uint256(position.multiplier);
-        }
+        Participation memory position = participations[_account][_bucketId];
+        uint256 votes = uint256(position.tapAmount) * uint256(position.multiplier);
 
         if (votes == 0) {
             return result;
@@ -271,7 +154,7 @@ contract TwTAP is
         WeekTotals storage cur = weekTotals[week];
         WeekTotals storage prev = weekTotals[position.lastInactive];
 
-        for (uint256 i; i < len;) {
+        for (uint256 i; i < len; i++) {
             // -- The `totalDistPerVote[i]` values are increasing as a
             //    function of weeks (see `advanceWeek()`), and if `week`
             //    were not greater than `position.lastInactive`, this bit
@@ -307,41 +190,25 @@ contract TwTAP is
             //    (The rounding the calculation favors the greater first
             //    term).
             //
+            Reward memory reward = rewards[_account][_bucketId][i];
             uint256 net = cur.totalDistPerVote[i] - prev.totalDistPerVote[i];
-            result[i] = ((votes * net) / DIST_PRECISION) - claimed[_tokenId][i];
-            unchecked {
-                ++i;
-            }
+            result[i] = ((votes * net) / DIST_PRECISION) + reward.pending - reward.claimed;
         }
         return result;
     }
 
     /// @notice Return the Participation of a token and the claimable amounts.
-    /// @param _tokenId The tokenId of the twTAP position.
+    /// @param _account The account of the participant.
+    /// @param _bucketId The bucketId of the twTAP position.
     /// @return position The Participation of the token.
     /// @return claimables The claimable amounts of each reward token.
-    function getPosition(uint256 _tokenId)
+    function getPosition(address _account, uint256 _bucketId)
         external
         view
         returns (Participation memory position, uint256[] memory claimables)
     {
-        position = participants[_tokenId];
-        claimables = claimable(_tokenId);
-    }
-
-    /**
-     * @dev Returns the hash of the struct used by the permit function.
-     * @param _permitData Struct containing permit data.
-     */
-    function getTypedDataHash(ERC721PermitStruct calldata _permitData) public view returns (bytes32) {
-        bytes32 permitTypeHash_ = keccak256("Permit(address spender,uint256 tokenId,uint256 nonce,uint256 deadline)");
-
-        bytes32 structHash_ = keccak256(
-            abi.encode(
-                permitTypeHash_, _permitData.spender, _permitData.tokenId, _permitData.nonce, _permitData.deadline
-            )
-        );
-        return _hashTypedDataV4(structHash_);
+        position = participations[_account][_bucketId];
+        claimables = claimable(_account, _bucketId);
     }
 
     // ===========
@@ -354,75 +221,102 @@ contract TwTAP is
     /// @param _participant The address of the participant
     /// @param _amount The amount of TAP to participate with
     /// @param _bucketId The lock bucket id
-    function participate(address _participant, uint256 _amount, uint8 _bucketId)
-        external
-        whenNotPaused
-        nonReentrant
-        returns (uint256 tokenId)
-    {
-        return _participate(_participant, _amount, _bucketId, true);
+    function participate(address _participant, uint256 _amount, uint8 _bucketId) external whenNotPaused nonReentrant {
+        _participate(_participant, _amount, _bucketId, true);
     }
 
     /// @notice Reuse an expired participation to participate again in twAML voting and mint an twTap position in a lock bucket.
-    ///
-    /// @param _tokenId The tokenId of the expired participation
     /// @param _bucketId The new lock bucket id to migrate the position from the expired participation in a new participation
-    function reuseParticipation(uint256 _tokenId, uint8 _bucketId)
-        external
-        whenNotPaused
-        nonReentrant
-        returns (uint256 tokenId)
-    {
-        address participationOwner = ownerOf(_tokenId);
+    function reuseParticipation(address _participant, uint8 _bucketId) external whenNotPaused nonReentrant {
+        Participation memory position = participations[_participant][_bucketId];
+        if (_participant != msg.sender || position.delegatee != msg.sender) revert NotAuthorized();
+        if (position.tapReleased) revert NotValid();
+        if (position.tapAmount == 0) revert NotValid();
 
-        uint88 amountReleased = _releaseTap(_tokenId, participationOwner, false);
-
-        return _participate(participationOwner, amountReleased, _bucketId, false);
+        _participate(_participant, position.tapAmount, _bucketId, false);
     }
 
     /**
      * @notice claims all rewards distributed since token mint or last claim.
-     * @dev Should be safe to claim even after position exit.
      *
-     * @param _tokenId tokenId whose rewards to claim
+     * @param _bucketId bucket Id whose rewards to claim
      *
      * @return amounts_ Claimed amount of each reward token.
      */
-    function claimRewards(uint256 _tokenId) external nonReentrant whenNotPaused returns (uint256[] memory amounts_) {
-        amounts_ = _claimRewardsForToken(_tokenId);
+    function claimRewards(address _participant, uint256 _bucketId)
+        external
+        nonReentrant
+        whenNotPaused
+        returns (uint256[] memory amounts_)
+    {
+        Participation memory position = participations[_participant][_bucketId];
+        if (_participant != msg.sender || position.delegatee != msg.sender) revert NotAuthorized();
+        amounts_ = _claimBucketRewards(_participant, _bucketId, true);
+    }
+
+    /**
+     * @notice claims all rewards distributed since token mint or last claim.
+     *
+     * @param _bucketId bucket Id whose rewards to claim
+     *
+     * @return amounts_ Claimed amount of each reward token.
+     */
+    function claimRewards(uint256 _bucketId) external nonReentrant whenNotPaused returns (uint256[] memory amounts_) {
+        amounts_ = _claimBucketRewards(msg.sender, _bucketId, true);
     }
 
     /**
      * @notice batch claims all rewards distributed since token mint or last claim.
-     * @dev Should be safe to claim even after position exit.
      *
-     * @param _tokenIds tokenIds whose rewards to claim
+     * @param _bucketIds The lock bucket ids whose rewards to claim
      *
-     * @return amounts_ Claimed amountsof each reward token, for each tokenId
+     * @return amounts_ Claimed amountsof each reward token, for each bucketId
      */
-    function batchClaimRewards(uint256[] calldata _tokenIds)
+    function batchClaimRewards(address _participant, uint256[] calldata _bucketIds)
         external
         nonReentrant
         whenNotPaused
         returns (uint256[][] memory amounts_)
     {
-        amounts_ = new uint256[][](_tokenIds.length);
-        uint256 len = _tokenIds.length;
-        for (uint256 i; i < len; i++) {
-            amounts_[i] = _claimRewardsForToken(_tokenIds[i]);
+        amounts_ = new uint256[][](_bucketIds.length);
+        for (uint256 i; i < _bucketIds.length; i++) {
+            Participation memory position = participations[_participant][_bucketIds[i]];
+            if (_participant != msg.sender || position.delegatee != msg.sender) revert NotAuthorized();
+            amounts_[i] = _claimBucketRewards(_participant, _bucketIds[i], true);
         }
     }
 
     /**
      * @notice Exit a twAML participation, delete the voting power if existing and send the TAP to `_to`.
-     *
-     * @param _tokenId The tokenId of the twTAP position.
-     *
-     * @return tapAmount_ The amount of TAP released.
+     * @param _bucketId The bucketId of the twTAP position.
+     * @return releasedAmount The amount of TAP released.
      */
-    function exitPosition(uint256 _tokenId) external nonReentrant whenNotPaused returns (uint256 tapAmount_) {
-        address owner_ = ownerOf(_tokenId);
-        tapAmount_ = _releaseTap(_tokenId, owner_, true);
+    function exitPosition(address _participant, address _to, uint256 _bucketId)
+        external
+        nonReentrant
+        whenNotPaused
+        returns (uint256 releasedAmount)
+    {
+        Participation memory position = participations[_participant][_bucketId];
+        if (_participant != msg.sender || position.delegatee != msg.sender) revert NotAuthorized();
+
+        // If in rescue mode, allow the release of the TAP even if the lock has not expired.
+        if (!rescueMode) {
+            if (position.expiry > block.timestamp) revert LockNotExpired();
+        }
+
+        if (position.tapReleased) {
+            return 0;
+        }
+
+        releasedAmount = position.tapAmount;
+
+        participations[_participant][_bucketId].tapReleased = true;
+        participations[_participant][_bucketId].tapAmount = 0;
+        participations[_participant][_bucketId].expiry = 0;
+
+        tapOFT.transfer(_to, releasedAmount);
+        emit ExitPosition(_bucketId, _to, releasedAmount);
     }
 
     /// @notice Indicate that (a) week(s) have passed and update running totals
@@ -435,32 +329,28 @@ contract TwTAP is
         uint256 week = lastProcessedWeek;
         uint256 goal = currentEpoch();
 
-        unchecked {
-            if (goal - week > _limit) {
-                goal = week + _limit;
-            }
+        if (goal - week > _limit) {
+            goal = week + _limit;
         }
+        uint256 pendingEpochs = goal - week;
+
         uint256 len = rewardTokens.length;
         while (week < goal) {
             WeekTotals storage prev = weekTotals[week];
             WeekTotals storage next = weekTotals[++week];
 
             next.netActiveVotes += prev.netActiveVotes;
-            for (uint256 i; i < len;) {
+            for (uint256 i; i < len; i++) {
                 next.totalDistPerVote[i] += prev.totalDistPerVote[i];
-                unchecked {
-                    ++i;
-                }
             }
-            _decayCumulative(); // Always called after updating the week
         }
 
         // Sync TWL Buckets
-        _syncTWLBuckets();
+        _syncTWLBuckets(_limit);
+
+        lastProcessedWeek = goal;
 
         emit AdvanceEpoch(goal, lastProcessedWeek);
-        lastProcessedWeek = goal;
-        lastEpochCumulative = twAML.cumulative;
     }
 
     /// @notice distributes a reward among all tokens, weighted by voting power
@@ -488,20 +378,18 @@ contract TwTAP is
         emit DistributeReward(address(rewardToken), msg.sender, _amount, _rewardTokenId);
     }
 
-    /// @notice Refresh the total deposited amount in the pool
-    /// @return totalDeposited The newly fetched total amount deposited in the pool
-    function refreshTotalDeposited() external returns (uint256 totalDeposited) {
-        return _snapshotTotalDepositedForSgl();
+    /// @notice Set the delegatee of a participation.
+    /// @param _bucketId The bucketId of the twTAP position.
+    /// @param _delegatee The address of the delegatee.
+    function setDelegatee(uint256 _bucketId, address _delegatee) external {
+        participations[msg.sender][_bucketId].delegatee = _delegatee;
+
+        emit NewDelegate(msg.sender, _bucketId, _delegatee);
     }
 
     // =========
     //   OWNER
     // =========
-
-    function setTwTapMagnitudeMultiplier(ITwTapMagnitudeMultiplier _twTapMagnitudeMultiplier) external onlyOwner {
-        twTapMagnitudeMultiplier = _twTapMagnitudeMultiplier;
-    }
-
     /**
      * @notice Set the rescue mode.
      */
@@ -562,76 +450,11 @@ contract TwTAP is
     }
 
     /**
-     * @notice Set the growth cap for the twAML pool.
-     */
-    function setGrowthCapBps(uint256 _growthCapBps) external onlyOwner {
-        growthCapBps = _growthCapBps;
-        emit SetGrowthCapBps(_growthCapBps);
-    }
-
-    /**
-     * @notice Set the max lock duration.
-     */
-    function setMaxLockDuration(uint256 _maxLockDuration) external onlyOwner {
-        MAX_LOCK_DURATION = _maxLockDuration;
-        emit SetMaxLockDuration(_maxLockDuration);
-    }
-
-    /**
-     * @notice Reset the decay by reimbursing it to the cumulative.
-     */
-    function resetDecayAmassed() external onlyOwner {
-        twAML.cumulative += decayAmassed;
-        decayAmassed = 0;
-        emit ResetDecayAmassed(decayAmassed);
-    }
-
-    /**
      * @notice Set the emergency sweep cooldown
      */
     function setEmergencySweepCooldown(uint256 _emergencySweepCooldown) external onlyOwner {
         emergencySweepCooldown = _emergencySweepCooldown;
         emit SetEmergencySweepCooldown(_emergencySweepCooldown);
-    }
-
-    /**
-     * @notice Set the decay activation bps
-     */
-    function setDecayActivationBps(uint256 _decayActivationBps) external onlyOwner {
-        decayActivationBps = _decayActivationBps;
-        emit SetDecayActivationBps(_decayActivationBps);
-    }
-
-    /**
-     * @notice Set the decay rate bps
-     */
-    function setDecayRateBps(uint256 _decayRateBps) external onlyOwner {
-        decayRateBps = _decayRateBps;
-        emit SetDecayRateBps(_decayRateBps);
-    }
-
-    /**
-     * @notice Set the tapOFT address
-     */
-    function setTapOFT(address payable _tapOFT) external onlyOwner {
-        tapOFT = TapToken(_tapOFT);
-        emit SetTapOft(_tapOFT);
-    }
-
-    /**
-     * @notice Set the minimum amount of weeks to start decaying the cumulative
-     */
-    function setMinWeeksToDecay(uint256 _minWeeksToDecay) external onlyOwner {
-        minWeeksToDecay = _minWeeksToDecay;
-        emit SetMinWeeksToDecay(_minWeeksToDecay);
-    }
-
-    /**
-     * @notice Set the refresh cooldown
-     */
-    function setRefreshCooldown(uint256 _refreshCooldown) external onlyOwner {
-        refreshCooldown = _refreshCooldown;
-        emit SetRefreshCooldown(_refreshCooldown);
     }
 
     /**
@@ -672,7 +495,7 @@ contract TwTAP is
      * @notice Adds a new locking bucket
      * @param bucket The bucket to add
      */
-    function addBucket(Bucket memory bucket) external override onlyOwner {
+    function addBucket(Bucket memory bucket) external override(ITWTAPv2, TWLBase) onlyOwner {
         _addBucket(bucket);
     }
 
@@ -681,80 +504,44 @@ contract TwTAP is
      * @param index Index of the bucket to update
      * @param bucket Bucket struct to update, ignores lockEpochDuration field
      */
-    function updateBucket(uint8 index, Bucket memory bucket) external override onlyOwner {
+    function updateBucket(uint8 index, Bucket memory bucket) external override(ITWTAPv2, TWLBase) onlyOwner {
         _updateBucket(index, bucket);
     }
 
     // ============
     //   INTERNAL
     // ============
-    function _claimRewardsForToken(uint256 _tokenId) private returns (uint256[] memory amounts_) {
-        // Either the owner or a delegate can claim the rewards
-        // In this case it's `TapToken` to claim the rewards on behalf of the user and send them xChain.
-        address owner = _ownerOf(_tokenId);
-
-        if (owner != msg.sender && !isERC721Approved(owner, msg.sender, address(this), _tokenId)) {
-            revert NotApproved(_tokenId, msg.sender);
-        }
-
-        amounts_ = _claimRewards(_tokenId, msg.sender);
-    }
-
-    /// @notice returns epoch for timestamp
     function _timestampToEpoch(uint256 timestamp) internal view returns (uint256) {
         return ((timestamp - INIT_TIMESTAMP) / EPOCH_DURATION);
     }
 
     /**
      * @dev Claim rewards on a token.
+     * @param _account The account of the participant.
+     * @param _bucketId The bucketId of the twTAP position.
+     * @param transferRewards Whether to transfer the rewards to the account.
      * @return amounts_ Claimed amount of each reward token.
      */
-    function _claimRewards(uint256 _tokenId, address _to) internal returns (uint256[] memory amounts_) {
-        amounts_ = claimable(_tokenId);
+    function _claimBucketRewards(address _account, uint256 _bucketId, bool transferRewards)
+        internal
+        returns (uint256[] memory amounts_)
+    {
+        amounts_ = claimable(_account, _bucketId);
+        Participation storage position = participations[_account][_bucketId];
+        position.lastInactive = uint40(currentEpoch());
+
         uint256 len = amounts_.length;
-        unchecked {
-            for (uint256 i; i < len; ++i) {
-                uint256 amount = amounts_[i];
-                if (amount > 0) {
-                    // Math is safe: `amount` calculated safely in `claimable()`
-                    claimed[_tokenId][i] += amount;
-                    rewardTokens[i].safeTransfer(_to, amount);
-                    emit ClaimReward(address(rewardTokens[i]), _to, _tokenId, amount, i);
-                }
+        for (uint256 i; i < len; ++i) {
+            uint256 amount = amounts_[i];
+            if (amount == 0) continue;
+            if (transferRewards) {
+                rewards[_account][_bucketId][i].claimed += amount;
+                rewards[_account][_bucketId][i].pending = 0;
+                rewardTokens[i].safeTransfer(_account, amount);
+                emit ClaimReward(address(rewardTokens[i]), _account, _bucketId, amount, i);
+            } else {
+                rewards[_account][_bucketId][i].pending += amount;
             }
-        }
-    }
-
-    /**
-     * @notice Release the TAP locked in a position whose votes have expired.
-     * @dev Clean up the twAML participation and delete the voting power if existing.
-     * @param _tokenId tokenId whose locked TAP to claim
-     * @param _to address to receive the TAP
-     */
-    function _releaseTap(uint256 _tokenId, address _to, bool transferTap) internal returns (uint88 releasedAmount) {
-        Participation memory position = participants[_tokenId];
-
-        // If in rescue mode, allow the release of the TAP even if the lock has not expired.
-        if (!rescueMode) {
-            if (position.expiry > block.timestamp) revert LockNotExpired();
-        }
-
-        if (position.tapReleased) {
-            return 0;
-        }
-
-        releasedAmount = position.tapAmount;
-
-        // Remove participation
-        _withdrawFromBucket(participants[_tokenId].bucketId, releasedAmount);
-
-        participants[_tokenId].tapReleased = true;
-
-        if (transferTap) {
-            tapOFT.transfer(_to, releasedAmount);
-            emit ExitPosition(_tokenId, _to, releasedAmount);
-        } else {
-            emit ExitPosition(_tokenId, address(this), releasedAmount);
         }
     }
 
@@ -762,86 +549,48 @@ contract TwTAP is
     /// @param _participant The address of the participant
     /// @param _amount The amount of TAP to participate with. Max uint88.
     /// @param _bucketId The lock bucket id
-    /// @return tokenId The tokenId of the minted twTap position
-    function _participate(address _participant, uint256 _amount, uint8 _bucketId, bool transferFrom)
-        internal
-        returns (uint256 tokenId)
-    {
+    /// @param _transferFrom Whether to transfer the TAP from the participant to the contract, or not due is a reuse of a participation
+    function _participate(address _participant, uint256 _amount, uint8 _bucketId, bool _transferFrom) internal {
         if (_amount == 0) revert NotValid();
         if (rescueMode) revert RescueModeActive();
         if (lastEmergencySweep != 0) revert EmergencySweepActivated();
         if (_amount > type(uint88).max) {
             revert SafeCastOverflowedUintDowncast(88, _amount);
         }
-
         if (lastProcessedWeek != currentEpoch()) advanceWeek(currentEpoch() - lastProcessedWeek);
 
-        if (transferFrom) {
+        if (_transferFrom) {
             bool isErr = pearlmit.transferFromERC20(msg.sender, address(this), address(tapOFT), _amount);
             if (isErr) revert NotAuthorized();
         }
 
-        _supplyInBucket(_bucketId, _amount);
+        Participation storage position = participations[_participant][_bucketId];
         Bucket memory bucket = buckets[_bucketId];
-
         uint256 expiry = block.timestamp + (bucket.lockEpochDuration * EPOCH_DURATION);
-
         uint40 w0 = uint40(currentEpoch());
         uint40 w1 = uint40(_timestampToEpoch(expiry));
 
-        // Save twAML participation
-        // Casts are safe: see struct definition
-        tokenId = ++mintedTWTap;
-        uint256 votes = _amount * bucket.rewardsMultiplier;
-        participants[tokenId] = Participation({
-            bucketId: _bucketId,
-            tapReleased: false,
-            lockedAt: uint56(block.timestamp),
-            expiry: uint56(expiry),
-            tapAmount: uint88(_amount),
-            multiplier: bucket.rewardsMultiplier,
-            lastInactive: w0,
-            lastActive: w1
-        });
+        if (position.expiry > 0 && block.timestamp < position.expiry) {
+            // Clear the expected votes at the past expected expiration date
+            weekTotals[_timestampToEpoch(position.expiry) + 1].netActiveVotes -=
+                int256(uint256(position.tapAmount) * position.multiplier);
+        }
 
-        // w0 + 1 = lastInactive + 1 = first active
-        // w1 + 1 = lastActive + 1 = first inactive
-        // Cast is safe: `votes` is the product of a uint88 and a uint24
-        weekTotals[w0 + 1].netActiveVotes += int256(votes);
-        weekTotals[w1 + 1].netActiveVotes -= int256(votes);
+        if (position.tapAmount > 0 && position.tapReleased == false) {
+            _claimBucketRewards(_participant, _bucketId, false);
+        }
+        position.bucketId = _bucketId;
+        position.tapReleased = false;
+        position.lockedAt = uint56(block.timestamp);
+        position.expiry = uint56(expiry);
+        position.tapAmount = position.tapAmount + uint88(_amount);
+        position.multiplier = bucket.rewardsMultiplier;
+        position.lastInactive = w0;
+        position.lastActive = w1;
 
-        // Mint twTAP position
-        _safeMint(_participant, tokenId);
+        weekTotals[w0 + 1].netActiveVotes += int256(_amount * bucket.rewardsMultiplier);
+        weekTotals[w1 + 1].netActiveVotes -= int256(_amount * bucket.rewardsMultiplier);
 
-        emit Participate(_participant, tokenId, _amount, bucket.rewardsMultiplier, expiry, _bucketId);
-    }
-
-    function _baseURI() internal view override(ERC721, ERC721NftLoader) returns (string memory) {
-        return baseURI;
-    }
-
-    function supportsInterface(bytes4 interfaceId)
-        public
-        view
-        virtual
-        override(ERC721Enumerable, ERC721)
-        returns (bool)
-    {
-        return super.supportsInterface(interfaceId);
-    }
-
-    function _beforeTokenTransfer(address from, address to, uint256 firstTokenId, uint256 batchSize)
-        internal
-        override(ERC721, ERC721Enumerable)
-    {
-        super._beforeTokenTransfer(from, to, firstTokenId, batchSize);
-    }
-
-    function _afterTokenTransfer(address from, address to, uint256 firstTokenId, uint256 batchSize)
-        internal
-        virtual
-        override(ERC721, ERC721Permit)
-    {
-        super._afterTokenTransfer(from, to, firstTokenId, batchSize);
+        emit Participate(_participant, _bucketId, _amount, bucket.rewardsMultiplier, expiry, _bucketId);
     }
 }

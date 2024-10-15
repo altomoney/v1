@@ -4,6 +4,7 @@ pragma solidity 0.8.22;
 // External
 import {IMasterContract} from "@boringcrypto/boring-solidity/contracts/interfaces/IMasterContract.sol";
 import {IERC20} from "@boringcrypto/boring-solidity/contracts/libraries/BoringERC20.sol";
+import {IERC20 as IERC20_OZ} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
@@ -15,7 +16,7 @@ import {PearlmitHandler, IPearlmit} from "tap-utils/pearlmit/PearlmitHandler.sol
 import {RevertMsgDecoder} from "./usdo/libraries/RevertMsgDecoder.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {IMarket} from "tap-utils/interfaces/bar/ISingularity.sol";
-import {ITwTap} from "tap-utils/interfaces/tap-token/ITwTap.sol";
+import {ITWTAPv2} from "tap-token/interfaces/ITWTAPv2.sol";
 import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
 import {IBigBang} from "tap-utils/interfaces/bar/IBigBang.sol";
 import {TokenType} from "yieldbox/enums/YieldBoxTokenType.sol";
@@ -288,7 +289,7 @@ contract Penrose is Ownable, Pausable, PearlmitHandler {
     /// @notice Loop through the master contracts and call `_depositFeesToTwTap()` to each one of their clones.
     /// @param markets_ Singularity &/ BigBang markets array
     /// @param twTap the TwTap contract
-    function withdrawAllMarketFees(IMarket[] calldata markets_, ITwTap twTap) external onlyOwner whenNotPaused {
+    function withdrawAllMarketFees(IMarket[] calldata markets_, ITWTAPv2 twTap) external onlyOwner whenNotPaused {
         if (address(twTap) == address(0)) revert ZeroAddress();
 
         uint256 length = markets_.length;
@@ -322,8 +323,8 @@ contract Penrose is Ownable, Pausable, PearlmitHandler {
             IUsdo(address(usdoToken)).mint(address(this), sum);
 
             //send it to twTap
-            uint256 rewardTokenId = ITwTap(twTap).rewardTokenIndex(address(usdoToken));
-            _distributeOnTwTap(sum, rewardTokenId, address(usdoToken), ITwTap(twTap));
+            uint256 rewardTokenId = ITWTAPv2(twTap).rewardTokenIndex(IERC20_OZ(address(usdoToken)));
+            _distributeOnTwTap(sum, rewardTokenId, address(usdoToken), ITWTAPv2(twTap));
         }
     }
 
@@ -639,7 +640,7 @@ contract Penrose is Ownable, Pausable, PearlmitHandler {
         emit ReaccruedMarkets(includeMainMarket);
     }
 
-    function _depositFeesToTwTap(IMarket market, ITwTap twTap) private {
+    function _depositFeesToTwTap(IMarket market, ITWTAPv2 twTap) private {
         if (!isMarketRegistered[address(market)]) revert NotValid();
 
         uint256 feeShares = market.refreshPenroseFees();
@@ -652,11 +653,11 @@ contract Penrose is Ownable, Pausable, PearlmitHandler {
 
         yieldBox.withdraw(_assetId, address(this), address(this), 0, feeShares);
 
-        uint256 rewardTokenId = twTap.rewardTokenIndex(_asset);
+        uint256 rewardTokenId = twTap.rewardTokenIndex(IERC20_OZ(_asset));
         _distributeOnTwTap(feeAmount, rewardTokenId, _asset, twTap);
     }
 
-    function _distributeOnTwTap(uint256 amount, uint256 rewardTokenId, address _asset, ITwTap twTap) private {
+    function _distributeOnTwTap(uint256 amount, uint256 rewardTokenId, address _asset, ITWTAPv2 twTap) private {
         _asset.safeApprove(address(twTap), amount);
         twTap.distributeReward(rewardTokenId, amount);
         _asset.safeApprove(address(twTap), 0);

@@ -26,27 +26,28 @@ contract TWLBase_supplyInBucket is Test {
 
     function setUp() external {
         Bucket[] memory buckets = new Bucket[](2);
-        buckets[0] = Bucket(true, 1, 1, 1, 1, 1, 1, 1, 1, 1);
-        buckets[1] = Bucket(true, 2, 1, 1, 1, 1, 1, 1, 1, 1);
+        buckets[0] = Bucket(true, 1, 1, 1, 1, 1, 1, 0, 0, 1000);
+        buckets[1] = Bucket(true, 2, 1, 1, 1, 1, 1, 0, 0, 1000);
         twlBaseMock = new TWLBaseMock(7 days, buckets);
     }
 
     function test_WhenAmountIsLessOrEqualMaxUint() external givenBucketIsEnabled(0) {
-        // it should decrease the bucket's totalDeposits by the given amount
+        // it should increase the bucket's currentEpochInflows by the given amount
         // it should not affect other buckets
         twlBaseMock.supplyInBucket(10 ether, 0);
-        assertEq(twlBaseMock.getBucket(0).totalDeposits, 10 ether);
-        assertEq(twlBaseMock.getBucket(1).totalDeposits, 0 ether);
+        assertEq(twlBaseMock.getBucket(0).currentEpochInflows, 10 ether);
+        assertEq(twlBaseMock.getBucket(1).currentEpochInflows, 0 ether);
 
         twlBaseMock.supplyInBucket(type(uint256).max - 10 ether, 0);
-        assertEq(twlBaseMock.getBucket(0).totalDeposits, type(uint256).max);
-        assertEq(twlBaseMock.getBucket(1).totalDeposits, 0 ether);
+        assertEq(twlBaseMock.getBucket(0).currentEpochInflows, type(uint256).max);
+        assertEq(twlBaseMock.getBucket(1).currentEpochInflows, 0 ether);
     }
 
     function test_RevertWhen_AmountIsGreaterThanMaxUint() external givenBucketIsEnabled(0) {
         // it should revert
         vm.expectRevert(stdError.arithmeticError);
-        twlBaseMock.supplyInBucket(type(uint256).max + 1, 0);
+        twlBaseMock.supplyInBucket(type(uint256).max, 0);
+        twlBaseMock.supplyInBucket(1, 0);
     }
 
     function test_RevertGiven_BucketIsDisabled() external givenBucketIsDisabled(0) {

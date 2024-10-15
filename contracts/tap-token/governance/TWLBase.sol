@@ -2,15 +2,12 @@
 pragma solidity 0.8.22;
 
 import {ITWLBase, Bucket} from "../interfaces/ITWLBase.sol";
-import {PercentageMath} from "../utils/PercentageMath.sol";
 /**
  * @title TWLBase
  * @dev The TWLBase contract is a base contract for managing Time Weighted Locks with different buckets/presets, each one with a locking epoch duration that grows or decays depending on the supply momentum.
  */
 
 abstract contract TWLBase is ITWLBase {
-    using PercentageMath for uint256;
-
     uint256 public constant MAX_BUCKETS = 255;
     uint256 public immutable EPOCH_DURATION;
     uint256 public immutable INIT_TIMESTAMP;
@@ -33,24 +30,29 @@ abstract contract TWLBase is ITWLBase {
     /**
      * @dev Update enabled buckets based on the total deposits in the contract.
      */
-    function _syncTWLBuckets() internal {
-        uint256 currEpoch = currentEpoch();
-        uint24 missingEpochs = uint24(currEpoch - lastEpoch);
-        if (lastEpoch == currEpoch) {
+    function _syncTWLBuckets(uint256 _limit) internal {
+        if (_limit == 0) revert LIMIT_IS_ZERO();
+        if (lastEpoch == currentEpoch()) {
             revert EPOCH_NOT_FINISHED();
         }
 
-        for (uint256 i = 0; i < buckets.length; i++) {
+        uint256 lastWeek = lastEpoch;
+        uint256 goal = currentEpoch();
+
+        if (goal - lastWeek > _limit) {
+            goal = lastWeek + _limit;
+        }
+
+        uint24 missingEpochs = uint24(goal - lastWeek);
+
+        for (uint256 i; i < buckets.length; i++) {
             Bucket storage bucket = buckets[i];
 
             if (bucket.enabled == false) {
                 continue;
             }
 
-            if (
-                bucket.totalDeposits
-                    >= bucket.totalDepositsLastEpoch + bucket.totalDepositsLastEpoch.percentMul(bucket.growthBufferPercent)
-            ) {
+            if (bucket.currentEpochInflows >= (bucket.lastEpochInflows + (bucket.growthGoal * missingEpochs))) {
                 bucket.lockEpochDuration += (bucket.epochGrowthRate * missingEpochs);
             } else {
                 if (bucket.lockEpochDuration >= (bucket.epochDecayRate * missingEpochs)) {
@@ -65,24 +67,18 @@ abstract contract TWLBase is ITWLBase {
             if (bucket.lockEpochDuration < bucket.epochFloor) {
                 bucket.lockEpochDuration = bucket.epochFloor;
             }
-            bucket.totalDepositsLastEpoch = bucket.totalDeposits;
+            bucket.lastEpochInflows = bucket.currentEpochInflows;
+            bucket.currentEpochInflows = 0;
         }
 
-        lastEpoch = currEpoch;
+        lastEpoch = goal;
     }
 
     function _supplyInBucket(uint8 index, uint256 amount) internal {
         if (buckets[index].enabled == false) revert BUCKET_DISABLED();
 
         Bucket storage bucket = buckets[index];
-        bucket.totalDeposits += amount;
-    }
-
-    function _withdrawFromBucket(uint8 index, uint256 amount) internal {
-        if (buckets[index].enabled == false) revert BUCKET_DISABLED();
-
-        Bucket storage bucket = buckets[index];
-        bucket.totalDeposits -= amount;
+        bucket.currentEpochInflows += amount;
     }
 
     function _addBucket(Bucket memory bucket) internal {
@@ -91,9 +87,6 @@ abstract contract TWLBase is ITWLBase {
         }
         if (bucket.rewardsMultiplier > 1e4) {
             revert BUCKET_REWARDS_MULTIPLIER_MAX_REACHED();
-        }
-        if (bucket.growthBufferPercent > 1e4) {
-            revert BUCKET_GROWTH_BUFFER_PERCENT_MAX_REACHED();
         }
         if (bucket.epochFloor > bucket.epochCeiling) {
             revert BUCKET_FLOOR_CEILING_MISMATCH();
@@ -105,8 +98,8 @@ abstract contract TWLBase is ITWLBase {
             revert BUCKET_EPOCH_DURATION_FLOOR_MISMATCH();
         }
 
-        bucket.totalDepositsLastEpoch = 0;
-        bucket.totalDeposits = 0;
+        bucket.currentEpochInflows = 0;
+        bucket.lastEpochInflows = 0;
 
         buckets.push(bucket);
 
@@ -122,9 +115,6 @@ abstract contract TWLBase is ITWLBase {
         if (bucket.rewardsMultiplier > 1e4) {
             revert BUCKET_REWARDS_MULTIPLIER_MAX_REACHED();
         }
-        if (bucket.growthBufferPercent > 1e4) {
-            revert BUCKET_GROWTH_BUFFER_PERCENT_MAX_REACHED();
-        }
         if (bucket.epochFloor > bucket.epochCeiling) {
             revert BUCKET_FLOOR_CEILING_MISMATCH();
         }
@@ -134,11 +124,10 @@ abstract contract TWLBase is ITWLBase {
         if (buckets[index].lockEpochDuration < bucket.epochFloor) {
             revert BUCKET_EPOCH_DURATION_FLOOR_MISMATCH();
         }
-        // Replace input with current storage values for lockEpochDuration, totalDepositsLastEpoch and totalDeposits
+        // Replace input with current storage values for lockEpochDuration and currentEpochInflows
         bucket.lockEpochDuration = buckets[index].lockEpochDuration;
-        bucket.totalDepositsLastEpoch = buckets[index].totalDepositsLastEpoch;
-        bucket.totalDeposits = buckets[index].totalDeposits;
-
+        bucket.currentEpochInflows = buckets[index].currentEpochInflows;
+        bucket.lastEpochInflows = buckets[index].lastEpochInflows;
         buckets[index] = bucket;
 
         emit BucketUpdated(index);

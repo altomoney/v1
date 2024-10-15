@@ -15,7 +15,7 @@ contract twTap_advanceWeek is twTapBaseTest {
 
     function test_RevertWhen_CallerDoesNotHaveRole() external {
         // it should revert
-        vm.expectRevert(TwTAP.NotAuthorized.selector);
+        vm.expectRevert(ITWTAPv2.NotAuthorized.selector);
         twTap.advanceWeek(1);
     }
 

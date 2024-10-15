@@ -26,6 +26,7 @@ import {
 } from "../../UnitBaseTest.sol";
 import {ERC20Mock} from "tapioca-mocks/ERC20Mock.sol";
 import {TapTokenMock} from "../../../TapTokenMock.sol";
+import {ITWTAPv2} from "tap-token/interfaces/ITWTAPv2.sol";
 
 contract twTapBaseTest is UnitBaseTest {
     TapTokenMock public tapOFT;

@@ -10,7 +10,7 @@ contract twTap_claimRewards is twTapBaseTest {
         twTap.setPause(true);
 
         vm.expectRevert("Pausable: paused");
-        twTap.claimRewards(1);
+        twTap.claimRewards(adminAddr, 1);
     }
 
     function test_ShouldReturnTheClaimableRewards()
@@ -22,6 +22,6 @@ contract twTap_claimRewards is twTapBaseTest {
     {
         // it should return the claimable rewards
         vm.startPrank(aliceAddr);
-        twTap.claimRewards(1);
+        twTap.claimRewards(aliceAddr, 1);
     }
 }

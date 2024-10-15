@@ -10,13 +10,13 @@ import {BytesLib} from "solidity-bytes-utils/contracts/BytesLib.sol";
 // Tapioca
 import {
     ITapToken,
-    LockTwTapPositionMsg,
-    UnlockTwTapPositionMsg,
     ERC20PermitApprovalMsg,
     ERC721PermitApprovalMsg,
     LZSendParam,
-    ClaimTwTapRewardsMsg,
-    RemoteTransferMsg
+    RemoteTransferMsg,
+    LockTwTapPositionMsg,
+    UnlockTwTapPositionMsg,
+    ClaimTwTapRewardsMsg
 } from "./ITapToken.sol";
 
 import {TapiocaOmnichainEngineCodec} from "tap-utils/tapiocaOmnichainEngine/TapiocaOmnichainEngineCodec.sol";
@@ -32,6 +32,12 @@ import {TapiocaOmnichainEngineCodec} from "tap-utils/tapiocaOmnichainEngine/Tapi
    
 */
 
+/**
+ * @title TapTokenCodec
+ * @author Tapioca
+ * @notice Codec for the TapToken
+ * @dev DEPRECATED, do not use twtap related operations
+ */
 library TapTokenCodec {
     // ***************************************
     // * Encoding & Decoding TapOFT messages *
@@ -47,7 +53,7 @@ library TapTokenCodec {
         returns (bytes memory)
     {
         return
-            abi.encodePacked(_lockTwTapPositionMsg.user, _lockTwTapPositionMsg.bucketId, _lockTwTapPositionMsg.amount);
+            abi.encodePacked(_lockTwTapPositionMsg.user, _lockTwTapPositionMsg.duration, _lockTwTapPositionMsg.amount);
     }
 
     /**
@@ -66,16 +72,16 @@ library TapTokenCodec {
     {
         // TODO bitwise operators
         // Offsets
-        uint8 userOffset = 20;
-        uint8 bucketIdOffset = 21;
+        uint8 userOffset_ = 20;
+        uint8 durationOffset_ = 32;
 
         // Decoded data
-        address user = BytesLib.toAddress(BytesLib.slice(_msg, 0, 20), 0);
-        uint8 bucketId = BytesLib.toUint8(BytesLib.slice(_msg, userOffset, 1), 0);
-        uint256 amount = BytesLib.toUint256(BytesLib.slice(_msg, bucketIdOffset, 32), 0);
+        address user = BytesLib.toAddress(BytesLib.slice(_msg, 0, userOffset_), 0);
+        uint96 duration = BytesLib.toUint96(BytesLib.slice(_msg, userOffset_, 12), 0);
+        uint256 amount = BytesLib.toUint256(BytesLib.slice(_msg, durationOffset_, 32), 0);
 
         // Return structured data
-        lockTwTapPositionMsg_ = LockTwTapPositionMsg(user, bucketId, amount);
+        lockTwTapPositionMsg_ = LockTwTapPositionMsg(user, duration, amount);
     }
 
     /**

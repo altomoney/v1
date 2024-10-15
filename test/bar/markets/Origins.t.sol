@@ -11,7 +11,6 @@ import {IERC20} from "@boringcrypto/boring-solidity/contracts/libraries/BoringER
 import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {IWrappedNative} from "yieldbox/interfaces/IWrappedNative.sol";
-import {ITwTap} from "tap-utils/interfaces/tap-token/ITwTap.sol";
 import {IOracle} from "tap-utils/oracle/interfaces/IOracle.sol";
 import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
 import {IYieldBox} from "yieldbox/interfaces/IYieldBox.sol";

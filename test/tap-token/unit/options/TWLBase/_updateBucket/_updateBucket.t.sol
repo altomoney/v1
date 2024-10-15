@@ -18,10 +18,10 @@ contract TWLBase_updateBucket is Test {
             epochCeiling: 1,
             epochFloor: 1,
             rewardsMultiplier: 1,
-            growthBufferPercent: 1,
             lockEpochDuration: 1,
-            totalDepositsLastEpoch: 1,
-            totalDeposits: 1
+            currentEpochInflows: 0,
+            lastEpochInflows: 0,
+            growthGoal: 1000
         });
         buckets[1] = Bucket({
             enabled: true,
@@ -30,10 +30,10 @@ contract TWLBase_updateBucket is Test {
             epochCeiling: 100,
             epochFloor: 10,
             rewardsMultiplier: 1,
-            growthBufferPercent: 1,
             lockEpochDuration: 15,
-            totalDepositsLastEpoch: 1,
-            totalDeposits: 1
+            currentEpochInflows: 0,
+            lastEpochInflows: 0,
+            growthGoal: 1000
         });
         twlBaseMock = new TWLBaseMock(7 days, buckets);
     }
@@ -50,30 +50,10 @@ contract TWLBase_updateBucket is Test {
                 epochCeiling: 1,
                 epochFloor: 1,
                 rewardsMultiplier: 1e4 + 1,
-                growthBufferPercent: 1,
                 lockEpochDuration: 1,
-                totalDepositsLastEpoch: 1,
-                totalDeposits: 1
-            })
-        );
-    }
-
-    function test_WhenGrowthBufferPercentIsGreaterThan1e4() external {
-        // it should revert with BUCKET_GROWTH_BUFFER_PERCENT_MAX_REACHED
-        vm.expectRevert(ITWLBase.BUCKET_GROWTH_BUFFER_PERCENT_MAX_REACHED.selector);
-        twlBaseMock.updateBucket(
-            1,
-            Bucket({
-                enabled: true,
-                epochGrowthRate: 1,
-                epochDecayRate: 1,
-                epochCeiling: 1,
-                epochFloor: 1,
-                rewardsMultiplier: 1,
-                growthBufferPercent: 1e4 + 1,
-                lockEpochDuration: 1,
-                totalDepositsLastEpoch: 1,
-                totalDeposits: 1
+                currentEpochInflows: 0,
+                lastEpochInflows: 0,
+                growthGoal: 1000
             })
         );
     }
@@ -90,10 +70,10 @@ contract TWLBase_updateBucket is Test {
                 epochCeiling: 1,
                 epochFloor: 2,
                 rewardsMultiplier: 1,
-                growthBufferPercent: 1,
                 lockEpochDuration: 1,
-                totalDepositsLastEpoch: 1,
-                totalDeposits: 1
+                currentEpochInflows: 0,
+                lastEpochInflows: 0,
+                growthGoal: 1000
             })
         );
     }
@@ -118,8 +98,8 @@ contract TWLBase_updateBucket is Test {
     function test_WhenAllConditionsAreMet() external {
         // it should update the bucket at the given index
         // it should preserve the existing lockEpochDuration
-        // it should preserve the existing totalDepositsLastEpoch
-        // it should preserve the existing totalDeposits
+        // it should preserve the existing currentEpochInflows
+        // it should preserve the existing lastEpochInflows
         // it should emit a BucketUpdated event
         Bucket memory currentBucket = twlBaseMock.getBucket(1);
 
@@ -135,10 +115,10 @@ contract TWLBase_updateBucket is Test {
                 epochCeiling: 100,
                 epochFloor: 3,
                 rewardsMultiplier: 6,
-                growthBufferPercent: 10_00,
                 lockEpochDuration: 100,
-                totalDepositsLastEpoch: 200,
-                totalDeposits: 300
+                currentEpochInflows: 200,
+                lastEpochInflows: 300,
+                growthGoal: 2000
             })
         );
 
@@ -148,18 +128,21 @@ contract TWLBase_updateBucket is Test {
         assertEq(updatedBucket.epochCeiling, 100);
         assertEq(updatedBucket.epochFloor, 3);
         assertEq(updatedBucket.rewardsMultiplier, 6);
+        assertEq(updatedBucket.growthGoal, 2000);
         assertEq(
             updatedBucket.lockEpochDuration,
             currentBucket.lockEpochDuration,
             "it should preserve the existing lockEpochDuration"
         );
         assertEq(
-            updatedBucket.totalDepositsLastEpoch,
-            currentBucket.totalDepositsLastEpoch,
-            "it should preserve the existing totalDepositsLastEpoch"
+            updatedBucket.currentEpochInflows,
+            currentBucket.currentEpochInflows,
+            "it should preserve the existing currentEpochInflows"
         );
         assertEq(
-            updatedBucket.totalDeposits, currentBucket.totalDeposits, "it should preserve the existing totalDeposits"
+            updatedBucket.lastEpochInflows,
+            currentBucket.lastEpochInflows,
+            "it should preserve the existing lastEpochInflows"
         );
     }
 }

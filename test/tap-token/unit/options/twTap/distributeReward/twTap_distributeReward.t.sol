@@ -2,23 +2,18 @@
 pragma solidity 0.8.22;
 
 import {twTapBaseTest, TwTAP} from "../twTapBaseTest.sol";
+import {ITWTAPv2} from "tap-token/interfaces/ITWTAPv2.sol";
 
 contract twTap_distributeReward is twTapBaseTest {
-    function test_RevertWhen_WeekNotAdvanced() external skipWeeks(1) {
-        // it should revert
-        vm.expectRevert(TwTAP.AdvanceWeekFirst.selector);
-        twTap.distributeReward(1, 1e18);
-    }
-
     function test_RevertWhen_AmountIsZero() external skipWeeks(1) advanceWeeks(1) {
         // it should revert
-        vm.expectRevert(TwTAP.NotValid.selector);
+        vm.expectRevert(ITWTAPv2.NotValid.selector);
         twTap.distributeReward(1, 0);
     }
 
     function test_RevertWhen_RewardTokenIsZero() external skipWeeks(1) advanceWeeks(1) {
         // it should revert
-        vm.expectRevert(TwTAP.NotValid.selector);
+        vm.expectRevert(ITWTAPv2.NotValid.selector);
         twTap.distributeReward(0, 1e18);
     }
 
@@ -35,7 +30,7 @@ contract twTap_distributeReward is twTapBaseTest {
         daiMock.approve(address(twTap), type(uint256).max);
 
         vm.expectEmit(true, true, true, true);
-        emit TwTAP.DistributeReward(address(daiMock), adminAddr, 1e18, 1);
+        emit ITWTAPv2.DistributeReward(address(daiMock), adminAddr, 1e18, 1);
         twTap.distributeReward(1, 1e18);
 
         assertEq(

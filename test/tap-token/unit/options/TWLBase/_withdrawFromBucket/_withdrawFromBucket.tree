@@ -1,9 +1,0 @@
-TWLBase_withdrawFromBucket
-├── given bucket is enabled
-│   ├── when amount is less than or equal to bucket's totalDeposits
-│   │   ├── it should decrease the bucket's totalDeposits by the given amount
-│   │   └── it should not affect other buckets
-│   ├── when amount is greater than bucket's totalDeposits
-│   │   └── it should revert
-└── given bucket is disabled
-    └── it should revert

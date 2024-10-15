@@ -256,9 +256,9 @@ contract UnitBaseTest is TestHelper {
             epochCeiling: 100,
             epochFloor: 1,
             rewardsMultiplier: 50_00,
-            growthBufferPercent: 10_00,
-            totalDepositsLastEpoch: 0,
-            totalDeposits: 0
+            currentEpochInflows: 0,
+            lastEpochInflows: 0,
+            growthGoal: 1000
         });
         return new TwTAP(_tapOft, _pearlmit, _owner, 7 days, buckets);
     }

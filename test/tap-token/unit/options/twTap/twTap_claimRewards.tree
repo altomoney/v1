@@ -1,4 +1,0 @@
-twTap_claimRewards
-├── when paused
-│   └── it should revert
-└── it should return the claimable rewards

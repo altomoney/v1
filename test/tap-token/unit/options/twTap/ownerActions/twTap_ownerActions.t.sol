@@ -4,6 +4,7 @@ pragma solidity 0.8.22;
 import {twTapBaseTest, TwTAP, ITWLBase} from "../twTapBaseTest.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {ITWTAPv2} from "tap-token/interfaces/ITWTAPv2.sol";
 
 contract twTap_ownerActions is twTapBaseTest {
     function test_RevertWhen_SetRescueModeAndNotOwner() external {
@@ -49,7 +50,7 @@ contract twTap_ownerActions is twTapBaseTest {
 
         vm.startPrank(adminAddr);
         vm.expectEmit(true, true, false, false);
-        emit TwTAP.AddRewardToken(address(daiMock), 1);
+        emit ITWTAPv2.AddRewardToken(address(daiMock), 1);
         twTap.addRewardToken(IERC20(address(daiMock)));
         assertEq(
             address(twTap.rewardTokens(1)),
@@ -74,9 +75,9 @@ contract twTap_ownerActions is twTapBaseTest {
 
     function test_RevertWhen_SetPauseAndNotOwner() external {
         // it should revert
-        vm.expectRevert(TwTAP.NotAuthorized.selector);
+        vm.expectRevert(ITWTAPv2.NotAuthorized.selector);
         twTap.setPause(true);
-        vm.expectRevert(TwTAP.NotAuthorized.selector);
+        vm.expectRevert(ITWTAPv2.NotAuthorized.selector);
         twTap.setPause(false);
 
         vm.startPrank(adminAddr);

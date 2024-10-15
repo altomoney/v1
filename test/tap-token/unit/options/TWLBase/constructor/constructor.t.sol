@@ -19,7 +19,18 @@ contract TWLBase_constructor is Test {
         // it should set INIT_TIMESTAMP
         // it should add all provided buckets
         Bucket[] memory buckets = new Bucket[](1);
-        buckets[0] = Bucket(true, 1, 1, 1, 1, 1, 1, 1, 1, 1);
+        buckets[0] = Bucket({
+            enabled: true,
+            epochGrowthRate: 1,
+            epochDecayRate: 1,
+            epochCeiling: 1,
+            epochFloor: 1,
+            rewardsMultiplier: 1,
+            lockEpochDuration: 1,
+            currentEpochInflows: 0,
+            lastEpochInflows: 0,
+            growthGoal: 1000
+        });
         TWLBaseMock twlBaseMock = new TWLBaseMock(7 days, buckets);
         assertEq(twlBaseMock.EPOCH_DURATION(), 7 days);
         assertEq(twlBaseMock.INIT_TIMESTAMP(), block.timestamp);

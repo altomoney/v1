@@ -10,7 +10,7 @@ import {BigBang} from "tapioca-bar/markets/bigBang/BigBang.sol";
 import {ILeverageExecutor} from "tap-utils/interfaces/bar/ILeverageExecutor.sol";
 import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
 import {IMarket} from "tap-utils/interfaces/bar/ISingularity.sol";
-import {ITwTap} from "tap-utils/interfaces/tap-token/ITwTap.sol";
+import {ITWTAPv2} from "tap-token/interfaces/ITWTAPv2.sol";
 
 import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
 
@@ -22,7 +22,7 @@ contract Penrose_withdrawAllMarketFees is BigBang_Unit_Shared {
 
         vm.startPrank(userA);
         vm.expectRevert();
-        penrose.withdrawAllMarketFees(markets, ITwTap(rndAddr));
+        penrose.withdrawAllMarketFees(markets, ITWTAPv2(rndAddr));
         vm.stopPrank();
     }
 
@@ -33,7 +33,7 @@ contract Penrose_withdrawAllMarketFees is BigBang_Unit_Shared {
         markets[0] = IMarket(rndAddr);
 
         vm.expectRevert();
-        penrose.withdrawAllMarketFees(markets, ITwTap(rndAddr));
+        penrose.withdrawAllMarketFees(markets, ITWTAPv2(rndAddr));
     }
 
     function test_RevertWhen_WithdrawAllMarketFeesIsCalledFromOwnerAndTwTapIsAddress0() external {
@@ -42,7 +42,7 @@ contract Penrose_withdrawAllMarketFees is BigBang_Unit_Shared {
         markets[0] = IMarket(rndAddr);
 
         vm.expectRevert();
-        penrose.withdrawAllMarketFees(markets, ITwTap(address(0)));
+        penrose.withdrawAllMarketFees(markets, ITWTAPv2(address(0)));
     }
 
     function test_WhenWithdrawAllMarketFeesIsCalledFromOwner() external {
@@ -75,6 +75,6 @@ contract Penrose_withdrawAllMarketFees is BigBang_Unit_Shared {
 
         IMarket[] memory markets = new IMarket[](1);
         markets[0] = IMarket(_contract);
-        penrose.withdrawAllMarketFees(markets, ITwTap(address(rndAddr)));
+        penrose.withdrawAllMarketFees(markets, ITWTAPv2(address(rndAddr)));
     }
 }

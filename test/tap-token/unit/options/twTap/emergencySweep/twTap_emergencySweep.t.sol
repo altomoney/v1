@@ -2,12 +2,13 @@
 pragma solidity 0.8.22;
 
 import {twTapBaseTest, TwTAP} from "../twTapBaseTest.sol";
+import {ITWTAPv2} from "tap-token/interfaces/ITWTAPv2.sol";
 
 contract twTap_emergencySweep is twTapBaseTest {
     function test_RevertWhen_EmergencyCooldownNotReached() external {
         // it should revert
         vm.startPrank(adminAddr);
-        vm.expectRevert(TwTAP.EmergencySweepCooldownNotReached.selector);
+        vm.expectRevert(ITWTAPv2.EmergencySweepCooldownNotReached.selector);
         twTap.emergencySweep();
     }
 

@@ -25,7 +25,7 @@ import {IBigBang} from "tap-utils/interfaces/bar/IBigBang.sol";
 import {IMarket, Module} from "tap-utils/interfaces/bar/IMarket.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {IWrappedNative} from "yieldbox/interfaces/IWrappedNative.sol";
-import {ITwTap} from "tap-utils/interfaces/tap-token/ITwTap.sol";
+import {ITWTAPv2} from "tap-token/interfaces/ITWTAPv2.sol";
 import {IOracle} from "tap-utils/oracle/interfaces/IOracle.sol";
 import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
 import {IYieldBox} from "yieldbox/interfaces/IYieldBox.sol";

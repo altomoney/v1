@@ -23,7 +23,7 @@ import {TapiocaOmnichainSender} from "tap-utils/tapiocaOmnichainEngine/TapiocaOm
 import {ERC20PermitStruct, ITapToken, LZSendParam} from "tap-token/tokens/ITapToken.sol";
 import {ModuleManager} from "./module/ModuleManager.sol";
 import {TapTokenReceiver} from "./TapTokenReceiver.sol";
-import {TwTAP} from "tap-token/governance/twTAP.sol";
+import {ITWTAPv0} from "tap-token/interfaces/ITWTAPv0.sol";
 import {TapTokenSender} from "./TapTokenSender.sol";
 import {BaseTapToken} from "./BaseTapToken.sol";
 
@@ -37,6 +37,7 @@ import {BaseTapToken} from "./BaseTapToken.sol";
    ╚═╝   ╚═╝  ╚═╝╚═╝     ╚═╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝
    
 */
+// TODO: add older TWAP interface and mark as DEPRECATED
 
 /// @title Tapioca OFTv2 token
 /// @notice OFT compatible TAP token
@@ -517,7 +518,7 @@ contract TapToken is BaseTapToken, ModuleManager, ERC20Permit, Pausable {
         if (address(twTap) != address(0)) {
             revert TwTapAlreadySet();
         }
-        twTap = TwTAP(_twTap);
+        twTap = ITWTAPv0(_twTap);
     }
 
     /**

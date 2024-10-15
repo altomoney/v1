@@ -14,7 +14,6 @@ import {Market} from "tapioca-bar/markets/Market.sol";
 import {ERC20WithoutStrategy} from "yieldbox/strategies/ERC20WithoutStrategy.sol";
 import {MagnetarHelper} from "tap-utils/Magnetar/MagnetarHelper.sol";
 
-// import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IMarketLiquidatorReceiver} from "tap-utils/interfaces/bar/IMarketLiquidatorReceiver.sol";
 import {IERC20} from "@boringcrypto/boring-solidity/contracts/libraries/BoringERC20.sol";
 import {ILeverageExecutor} from "tap-utils/interfaces/bar/ILeverageExecutor.sol";
@@ -24,7 +23,6 @@ import {ISingularity} from "tap-utils/interfaces/bar/ISingularity.sol";
 import {IMarket, Module} from "tap-utils/interfaces/bar/IMarket.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {IWrappedNative} from "yieldbox/interfaces/IWrappedNative.sol";
-import {ITwTap} from "tap-utils/interfaces/tap-token/ITwTap.sol";
 import {IOracle} from "tap-utils/oracle/interfaces/IOracle.sol";
 import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
 import {IYieldBox} from "yieldbox/interfaces/IYieldBox.sol";
@@ -59,6 +57,7 @@ import {RiskParams} from "deployments/interfaces/ISingularityLauncher.sol";
 import {LZEndpointMock} from "tapioca-mocks/LZEndpointMock.sol";
 import {Singularity} from "tapioca-bar/markets/singularity/Singularity.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {ITWTAPv2} from "tap-token/interfaces/ITWTAPv2.sol";
 
 import "forge-std/Test.sol";
 
@@ -596,7 +595,7 @@ contract SingularityTest is UsdoTestHelper {
         TwTapMock twTapMock = new TwTapMock(address(asset));
 
         uint256 twTapBalanceBefore = asset.balanceOf(address(twTapMock));
-        penrose.withdrawAllMarketFees(markets, ITwTap(address(twTapMock)));
+        penrose.withdrawAllMarketFees(markets, ITWTAPv2(address(twTapMock)));
         uint256 twTapBalanceAfter = asset.balanceOf(address(twTapMock));
         assertGe(twTapBalanceAfter, twTapBalanceBefore);
         assertGe(twTapBalanceAfter, feesAmount);

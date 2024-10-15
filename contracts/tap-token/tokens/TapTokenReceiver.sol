@@ -32,7 +32,6 @@ import {ITOFT} from "tap-utils/interfaces/oft/ITOFT.sol";
 import {TapTokenSender} from "./TapTokenSender.sol";
 import {TapTokenCodec} from "./TapTokenCodec.sol";
 import {BaseTapToken} from "./BaseTapToken.sol";
-
 /*
 
 ████████╗ █████╗ ██████╗ ██╗ ██████╗  ██████╗ █████╗ 
@@ -58,7 +57,7 @@ contract TapTokenReceiver is BaseTapToken, TapiocaOmnichainReceiver, ReentrancyG
     {}
 
     /// @dev twTAP lock operation received.
-    event LockTwTapReceived(address indexed user, uint8 bucketId, uint256 amount);
+    event LockTwTapReceived(address indexed user, uint96 duration, uint256 amount);
     /// @dev twTAP unlock operation received.
     event UnlockTwTapReceived(uint256 tokenId, uint256 amount);
     event ClaimRewardReceived(address indexed token, address indexed to, uint256 amount);
@@ -128,10 +127,10 @@ contract TapTokenReceiver is BaseTapToken, TapiocaOmnichainReceiver, ReentrancyG
         pearlmit.approve(
             20, address(this), 0, address(twTap), uint200(lockTwTapPositionMsg_.amount), uint48(block.timestamp + 1)
         );
-        twTap.participate(lockTwTapPositionMsg_.user, lockTwTapPositionMsg_.amount, lockTwTapPositionMsg_.bucketId);
+        twTap.participate(lockTwTapPositionMsg_.user, lockTwTapPositionMsg_.amount, lockTwTapPositionMsg_.duration);
         _approve(address(this), address(pearlmit), 0);
 
-        emit LockTwTapReceived(lockTwTapPositionMsg_.user, lockTwTapPositionMsg_.bucketId, lockTwTapPositionMsg_.amount);
+        emit LockTwTapReceived(lockTwTapPositionMsg_.user, lockTwTapPositionMsg_.duration, lockTwTapPositionMsg_.amount);
     }
 
     /**

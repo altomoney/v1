@@ -10,10 +10,10 @@ contract twTap_batchClaimRewards is twTapBaseTest {
         twTap.setPause(true);
 
         vm.expectRevert("Pausable: paused");
-        uint256[] memory tokenIds = new uint256[](2);
-        tokenIds[0] = 1;
-        tokenIds[1] = 2;
-        twTap.batchClaimRewards(tokenIds);
+        uint256[] memory bucketIds = new uint256[](2);
+        bucketIds[0] = 1;
+        bucketIds[1] = 2;
+        twTap.batchClaimRewards(adminAddr, bucketIds);
     }
 
     function test_ShouldReturnTheClaimableRewards()
@@ -26,9 +26,9 @@ contract twTap_batchClaimRewards is twTapBaseTest {
     {
         // it should return the claimable rewards
         vm.startPrank(aliceAddr);
-        uint256[] memory tokenIds = new uint256[](2);
-        tokenIds[0] = 1;
-        tokenIds[1] = 2;
-        twTap.batchClaimRewards(tokenIds);
+        uint256[] memory bucketIds = new uint256[](2);
+        bucketIds[0] = 1;
+        bucketIds[1] = 2;
+        twTap.batchClaimRewards(aliceAddr, bucketIds);
     }
 }

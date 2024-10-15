@@ -1,8 +1,6 @@
 TWLBase_updateBucket
 ├── when rewardsMultiplier is greater than 1e4
 │   └── it should revert with BUCKET_REWARDS_MULTIPLIER_MAX_REACHED
-├── when growthBufferPercent is greater than 1e4
-│   └── it should revert with BUCKET_GROWTH_BUFFER_PERCENT_MAX_REACHED
 ├── when epochFloor is greater than epochCeiling
 │   └── it should revert with BUCKET_FLOOR_CEILING_MISMATCH
 ├── when lockEpochDuration is greater than epochCeiling
@@ -12,6 +10,6 @@ TWLBase_updateBucket
 └── when all conditions are met
     ├── it should update the bucket at the given index
     ├── it should preserve the existing lockEpochDuration
-    ├── it should preserve the existing totalDepositsLastEpoch
-    ├── it should preserve the existing totalDeposits
+    ├── it should preserve the existing currentEpochInflows
+    ├── it should preserve the existing lastEpochInflows
     └── it should emit a BucketUpdated event

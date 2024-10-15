@@ -33,122 +33,13 @@ import {
 import {TapTokenCodec} from "tap-token/tokens/TapTokenCodec.sol";
 import {TapiocaOmnichainEngineCodec as ToeCodec} from "tap-utils/tapiocaOmnichainEngine/TapiocaOmnichainEngineCodec.sol";
 import {TwTAP, Participation} from "tap-token/governance/twTAP.sol";
-
+import {ITWTAPv0} from "tap-token/interfaces/ITWTAPv0.sol";
 // Tapioca test
 import {TapTokenTest} from "./TapToken.t.sol";
 
 import "forge-std/Test.sol";
 
 contract TapTokenMultiComposeTest is TapTokenTest {
-    /**
-     * @dev Integration test with both ERC20Permit and lockTwTapPosition
-     * @dev `userA` should be the sender
-     */
-    function test_multi_compose_participate() public {
-        vm.startPrank(userA);
-
-        // Global vars
-        uint256 amountToSendLD = 1 ether;
-        uint96 lockDuration = 1 weeks;
-
-        // First packet vars
-        SetupERC20ApprovalMsgData memory erc20ApprovalsData_ = SetupERC20ApprovalMsgData({
-            token: ITapToken(address(aTapOFT)),
-            prepareLzCallData: PrepareLzCallData({
-                dstEid: bEid,
-                recipient: OFTMsgCodec.addressToBytes32(userA),
-                amountToSendLD: 0,
-                minAmountToCreditLD: 0,
-                msgType: PT_APPROVALS,
-                composeMsgData: ComposeMsgData({
-                    index: 0,
-                    gas: 1_000_000,
-                    value: 0,
-                    data: bytes(""), // Will be written in the _setupERC20ApprovalMsg function.
-                    prevData: bytes(""),
-                    prevOptionsData: bytes("")
-                }),
-                lzReceiveGas: 1_000_000,
-                lzReceiveValue: 0,
-                refundAddress: address(this)
-            }),
-            approvalOn: ITapToken(address(bTapOFT)),
-            userPrivateKey: userAPKey,
-            permitData: new ERC20PermitStruct[](1)
-        });
-        erc20ApprovalsData_.permitData[0] = ERC20PermitStruct({
-            owner: userA,
-            spender: address(bTapOFT),
-            value: amountToSendLD,
-            nonce: 0,
-            deadline: block.timestamp + 1 days
-        });
-
-        SetupERC20ApprovalMsgReturn memory erc20ApprovalsReturn_ = _setupERC20ApprovalMsg(erc20ApprovalsData_);
-
-        // Second packet vars + lzSend params + options
-        SetupLockTwTapPositionMsgReturn memory lockTwTapPositionMsgReturn_ = _setupLockTwTapPositionMsg(
-            SetupLockTwTapPositionMsgData({
-                token: ITapToken(address(aTapOFT)),
-                prepareLzCallData: PrepareLzCallData({
-                    dstEid: bEid,
-                    recipient: OFTMsgCodec.addressToBytes32(userA),
-                    amountToSendLD: amountToSendLD, // We want to send the TAP to be locked
-                    minAmountToCreditLD: amountToSendLD,
-                    msgType: PT_LOCK_TWTAP,
-                    composeMsgData: ComposeMsgData({
-                        index: 1,
-                        gas: 1_000_000,
-                        value: 0,
-                        data: bytes(""), // Will be written in the _setupLockTwTapPositionMsg function.
-                        prevData: erc20ApprovalsReturn_.prepareLzCallReturn.composeMsg,
-                        prevOptionsData: erc20ApprovalsReturn_.prepareLzCallReturn.composeOptions
-                    }),
-                    lzReceiveGas: 1_000_000,
-                    lzReceiveValue: 0,
-                    refundAddress: address(this)
-                }),
-                user: userA,
-                amountToSend: amountToSendLD,
-                bucketId: 0
-            })
-        );
-
-        deal(address(aTapOFT), userA, amountToSendLD); // Mint free tokens
-
-        // Send packets
-        (MessagingReceipt memory msgReceipt_,, bytes memory msgSent,) = aTapOFT.sendPacket{
-            value: lockTwTapPositionMsgReturn_.prepareLzCallReturn.lzSendParam.fee.nativeFee
-        }(
-            lockTwTapPositionMsgReturn_.prepareLzCallReturn.lzSendParam,
-            lockTwTapPositionMsgReturn_.prepareLzCallReturn.composeMsg
-        );
-
-        {
-            verifyPackets(uint32(bEid), address(bTapOFT));
-            // Verify first message (approval)
-            __callLzCompose(
-                LzOFTComposedData(
-                    PT_APPROVALS,
-                    msgReceipt_.guid,
-                    msgSent, // All of the composed messages.
-                    bEid,
-                    address(bTapOFT), // Compose creator (at lzReceive).
-                    address(bTapOFT), // Compose receiver (at lzCompose).
-                    userA,
-                    lockTwTapPositionMsgReturn_.prepareLzCallReturn.oftMsgOptions // All of the options aggregated options.
-                )
-            );
-        }
-
-        {
-            Participation memory participation = twTap.getParticipation(1);
-            assertEq(twTap.ownerOf(1), userA);
-            assertEq(participation.tapAmount, amountToSendLD);
-            assertEq(participation.expiry, block.timestamp + lockDuration);
-        }
-    }
-
     /**
      * @dev Integration test with both ERC721Permit, unlockTwTapPosition, ERC20Permit and sendRemoteTransfer
      */
@@ -408,31 +299,11 @@ contract TapTokenMultiComposeTest is TapTokenTest {
         LockTwTapPositionMsg lockTwTapPositionMsg;
     }
 
-    function _setupLockTwTapPositionMsg(SetupLockTwTapPositionMsgData memory _data)
-        internal
-        view
-        returns (SetupLockTwTapPositionMsgReturn memory lockTwTapPositionMsgReturn_)
-    {
-        LockTwTapPositionMsg memory lockTwTapPositionMsg_ =
-            LockTwTapPositionMsg({user: _data.user, bucketId: _data.bucketId, amount: _data.amountToSend});
-
-        bytes memory lockPosition_ = TapTokenCodec.buildLockTwTapPositionMsg(lockTwTapPositionMsg_);
-
-        _data.prepareLzCallData.composeMsgData.data = lockPosition_; // Overwrite data
-        PrepareLzCallReturn memory prepareLzCallReturn_ =
-            tapTokenHelper.prepareLzCall(_data.token, _data.prepareLzCallData);
-
-        lockTwTapPositionMsgReturn_ = SetupLockTwTapPositionMsgReturn({
-            prepareLzCallReturn: prepareLzCallReturn_,
-            lockTwTapPositionMsg: lockTwTapPositionMsg_
-        });
-    }
     /**
      * ==========================
      * UNLOCK TWTAP  MSG BUILDER
      * ==========================
      */
-
     struct SetupUnlockTwTapPositionMsgData {
         PrepareLzCallData prepareLzCallData;
         ITapToken token;
@@ -583,7 +454,7 @@ contract TapTokenMultiComposeTest is TapTokenTest {
 
             permitApproval_ = __getERC721PermitData(
                 tapOftApprovals_,
-                TwTAP(_data.approvalOn).getTypedDataHash(tapOftApprovals_),
+                ITWTAPv0(_data.approvalOn).getTypedDataHash(tapOftApprovals_),
                 cacheData_.spender,
                 _data.userPrivateKey
             );
