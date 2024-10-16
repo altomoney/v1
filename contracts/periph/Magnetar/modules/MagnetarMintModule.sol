@@ -6,7 +6,6 @@ import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 // Tapioca
-import {ITapiocaOptionLiquidityProvision} from "tap-utils/interfaces/tap-token/ITapiocaOptionLiquidityProvision.sol";
 import {ITapiocaOptionBroker} from "tap-utils/interfaces/tap-token/ITapiocaOptionBroker.sol";
 import {MintFromBBAndLendOnSGLData} from "tap-utils/interfaces/periph/IMagnetar.sol";
 import {ITapiocaOption} from "tap-utils/interfaces/tap-token/ITapiocaOption.sol";
@@ -234,6 +233,7 @@ contract MagnetarMintModule is MagnetarBaseModule {
         private
         returns (uint256 tOLPTokenId)
     {
+        /*
         LockParams memory params;
         params.singularity = IMarket(data.externalContracts.singularity);
         params.yieldBox = IYieldBox(params.singularity._yieldBox());
@@ -261,12 +261,14 @@ contract MagnetarMintModule is MagnetarBaseModule {
         params.fraction = fraction;
 
         return _wrapAndLock(data, params);
+        */
     }
 
     function _wrapAndLock(MintFromBBAndLendOnSGLData memory data, LockParams memory params)
         private
         returns (uint256 tOLPTokenId)
     {
+        /*
         uint256 wrapped = ITOFT(data.lockData.tAsset).wrap(address(this), address(this), params.fraction);
         ITapiocaOptionLiquidityProvision tOLP = ITapiocaOptionLiquidityProvision(data.lockData.target);
 
@@ -282,10 +284,12 @@ contract MagnetarMintModule is MagnetarBaseModule {
             data.lockData.amount,
             msg.sender
         );
+        */
     }
 
     function _participate(MintFromBBAndLendOnSGLData memory data, uint256 tOLPTokenId, bool lock) private {
         // validate token ids
+        /*
         if (tOLPTokenId == 0 && data.participateData.tOLPTokenId == 0) revert Magnetar_ActionParamsMismatch();
         if (
             data.participateData.tOLPTokenId != tOLPTokenId && tOLPTokenId != 0 && data.participateData.tOLPTokenId != 0
@@ -309,5 +313,7 @@ contract MagnetarMintModule is MagnetarBaseModule {
 
         address oTapAddress = ITapiocaOptionBroker(data.participateData.target).oTAP();
         IERC721(oTapAddress).safeTransferFrom(address(this), data.user, oTAPTokenId);
+        }
+        */
     }
 }

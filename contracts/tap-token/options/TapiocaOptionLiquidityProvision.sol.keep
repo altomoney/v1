@@ -514,23 +514,6 @@ contract TapiocaOptionLiquidityProvision is
         emit SetPause(_pauseState);
     }
 
-    /// @notice Set the max debt buffer
-    function setMaxDebtBuffer(uint256 _maxDebtBuffer) external onlyOwner {
-        maxDebtBuffer = _maxDebtBuffer;
-        emit SetMaxDebtBuffer(_maxDebtBuffer);
-    }
-
-    /// @notice Set the max debt penalty
-    function setMaxDebtPenalty(uint256 _maxDebtPenalty) external onlyOwner {
-        maxDebtPenalty = _maxDebtPenalty;
-        emit SetMaxDebtPenalty(_maxDebtPenalty);
-    }
-
-    /// @notice Set the min debt penalty
-    function setMinDebtPenalty(uint256 _minDebtPenalty) external onlyOwner {
-        minDebtPenalty = _minDebtPenalty;
-        emit SetMinDebtPenalty(_minDebtPenalty);
-    }
 
     /**
      * @notice Harvest penalties to a given address

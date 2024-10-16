@@ -32,7 +32,7 @@ contract TapiocaOptionsBrokerMock is PearlmitHandler {
         return (1 ether, 1 ether, 1 ether);
     }
 
-    function exerciseOption(uint256 _oTAPTokenID, address _paymentToken, uint256 _tapAmount) external {
+    function exerciseOption(uint256 _bucketId, address _paymentToken, uint256 _tapAmount) external {
         {
             bool isErr = pearlmit.transferFromERC20(msg.sender, address(this), _paymentToken, 1 ether);
             if (isErr) revert TransferFailed();

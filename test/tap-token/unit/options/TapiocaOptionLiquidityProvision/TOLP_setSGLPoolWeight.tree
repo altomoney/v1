@@ -1,5 +1,0 @@
-TOLP_setSGLPoolWeight
-├── when asset id is 0
-│   └── it should revert
-└── it should set the weight of the pool
-    └── and also update the total weights

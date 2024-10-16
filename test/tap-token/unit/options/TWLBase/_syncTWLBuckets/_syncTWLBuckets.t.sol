@@ -70,7 +70,8 @@ contract TWLBase_syncTWLBuckets is Test {
         assertEq(updatedBucket.lockEpochDuration, 19);
     }
 
-    function test_WhenCurrentEpochInflowsIsLessThanLastEpochInflowsPlusGrowthGoalAndEpochDecayRateTimesMissingEpochsIsGreaterThanLockEpochDuration() external {
+    function test_WhenCurrentEpochInflowsIsLessThanLastEpochInflowsPlusGrowthGoalAndEpochDecayRateTimesMissingEpochsIsGreaterThanLockEpochDuration(
+    ) external {
         // it should set lockEpochDuration to zero and replaced by the epochFloor
         vm.warp(block.timestamp + 7 days);
         Bucket memory bucket = twlBaseMock.getBucket(0);
@@ -82,7 +83,6 @@ contract TWLBase_syncTWLBuckets is Test {
         Bucket memory updatedBucket = twlBaseMock.getBucket(0);
         assertEq(updatedBucket.lockEpochDuration, updatedBucket.epochFloor);
     }
-
 
     function test_WhenLockEpochDurationIsGreaterThanEpochCeiling() external {
         // it should cap lockEpochDuration at epochCeiling

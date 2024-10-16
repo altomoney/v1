@@ -9,14 +9,12 @@ import {IERC20 as BoringIERC20} from "@boringcrypto/boring-solidity/contracts/li
 /**
  * Tap Token core contracts
  */
-import {TapiocaOptionLiquidityProvision} from "tap-token/options/TapiocaOptionLiquidityProvision.sol";
 import {TapiocaOptionBroker} from "tap-token/options/TapiocaOptionBroker.sol";
 import {TapTokenReceiver} from "tap-token/tokens/TapTokenReceiver.sol";
 import {TapTokenSender} from "tap-token/tokens/TapTokenSender.sol";
 import {ITapToken} from "tap-token/tokens/ITapToken.sol";
 import {TwTAP} from "tap-token/governance/twTAP.sol";
 import {ITWLBase} from "tap-token/interfaces/ITWLBase.sol";
-import {OTAP} from "tap-token/options/oTAP.sol";
 
 /**
  * Utils contracts
@@ -168,35 +166,14 @@ contract UnitBaseTest is TestHelper {
         setUpSingularity();
     }
 
-    /**
-     * Tap Token core contracts
-     */
-    function createTolpInstance(
-        address _yieldBox,
-        uint256 _epochDuration,
-        IPearlmit _pearlmit,
-        address _penrose,
-        address _owner
-    ) internal returns (TapiocaOptionLiquidityProvision) {
-        TapiocaOptionLiquidityProvision tolp =
-            new TapiocaOptionLiquidityProvision(_yieldBox, _epochDuration, _pearlmit, _penrose, _owner);
-
-        vm.startPrank(_owner);
-        tolp.setCluster(ICluster(address(new Cluster(0, _owner))));
-        vm.stopPrank();
-
-        return tolp;
-    }
-
     function createTobInstance(
-        address _tOLP,
-        address _oTAP,
         address payable _tapOFT,
         address _paymentTokenBeneficiary,
         uint256 _epochDuration,
         IPearlmit _pearlmit,
         address _owner
     ) internal returns (TapiocaOptionBroker) {
+        /*
         TapiocaOptionBroker tob =
             new TapiocaOptionBroker(_tOLP, _oTAP, _tapOFT, _paymentTokenBeneficiary, _epochDuration, _pearlmit, _owner);
 
@@ -205,6 +182,7 @@ contract UnitBaseTest is TestHelper {
         vm.stopPrank();
 
         return tob;
+        */
     }
 
     struct TapOftInput {
@@ -240,10 +218,6 @@ contract UnitBaseTest is TestHelper {
                 ICluster(address(cluster))
             )
         );
-    }
-
-    function createOtapInstance(IPearlmit _pearlmit, address _owner) internal returns (OTAP) {
-        return new OTAP(_pearlmit, _owner);
     }
 
     function createTwTap(address payable _tapOft, IPearlmit _pearlmit, address _owner) internal returns (TwTAP) {

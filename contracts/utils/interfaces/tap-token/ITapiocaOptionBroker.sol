@@ -28,7 +28,7 @@ interface ITapiocaOptionBroker {
 
     function tapOFT() external view returns (address);
 
-    function getOTCDealDetails(uint256 _oTAPTokenID, address _paymentToken, uint256 _tapAmount)
+    function getOTCDealDetails(uint256 _bucketId, address _paymentToken, uint256 _tapAmount)
         external
         view
         returns (uint256 eligibleTapAmount, uint256 paymentTokenAmount, uint256 tapAmount);

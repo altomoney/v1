@@ -311,6 +311,7 @@ contract MagnetarOptionModule is MagnetarBaseModule {
     }
 
     function _exit(ExitPositionAndRemoveCollateralData memory data) private returns (uint256 tOLPId) {
+        /*
         address oTapAddress = ITapiocaOptionBroker(data.removeAndRepayData.exitData.target).oTAP();
         (, ITapiocaOption.TapOption memory oTAPPosition) =
             ITapiocaOption(oTapAddress).attributes(data.removeAndRepayData.exitData.oTAPTokenID);
@@ -341,6 +342,7 @@ contract MagnetarOptionModule is MagnetarBaseModule {
             //transfer tOLP to the data.user
             IERC721(tOLPContract).safeTransferFrom(address(this), data.user, tOLPId, "0x");
         }
+        */
     }
 
     function _unlock(ExitPositionAndRemoveCollateralData memory data, uint256 tOLPId) private {

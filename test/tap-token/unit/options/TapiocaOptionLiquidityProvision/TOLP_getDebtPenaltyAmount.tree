@@ -1,5 +1,0 @@
-TOLP_getDebtPenaltyAmount
-└── when user is locked and does not have enough BB debt
-    ├── it should unlock earlier
-    ├── it should apply the penalty
-    └── it should allow admin to withdraw the penalty
