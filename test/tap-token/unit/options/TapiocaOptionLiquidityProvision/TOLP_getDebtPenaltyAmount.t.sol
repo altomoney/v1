@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 import {TolpBaseTest, IERC20, TapiocaOptionLiquidityProvision} from "./TolpBaseTest.sol";
 import {LockPosition} from "tap-token/options/TapiocaOptionLiquidityProvision.sol";

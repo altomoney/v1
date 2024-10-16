@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // External
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -12,7 +12,7 @@ import {
     Pearlmit,
     IPearlmit,
     ICluster
-} from "../../UnitBaseTest.sol";
+} from "../../UnitBaseTest.t.sol";
 import {SingularityPool} from "tap-token/options/TapiocaOptionLiquidityProvision.sol";
 
 import {TapiocaOmnichainExtExec} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainExtExec.sol";

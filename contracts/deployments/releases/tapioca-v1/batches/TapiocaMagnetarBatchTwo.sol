@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 import {MagnetarProcedure} from "../../../procedures/MagnetarProcedure.sol";
 import {MagnetarReport, MagnetarDepsReport} from "../../../interfaces/ITapiocaReport.sol";

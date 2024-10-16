@@ -70,11 +70,24 @@ contract TWLBase_syncTWLBuckets is Test {
         assertEq(updatedBucket.lockEpochDuration, 19);
     }
 
+    function test_WhenCurrentEpochInflowsIsLessThanLastEpochInflowsPlusGrowthGoalAndEpochDecayRateTimesMissingEpochsIsGreaterThanLockEpochDuration() external {
+        // it should set lockEpochDuration to zero and replaced by the epochFloor
+        vm.warp(block.timestamp + 7 days);
+        Bucket memory bucket = twlBaseMock.getBucket(0);
+        bucket.epochDecayRate = 10000;
+        twlBaseMock.updateBucket(0, bucket);
+
+        twlBaseMock.syncTWLBuckets(1);
+
+        Bucket memory updatedBucket = twlBaseMock.getBucket(0);
+        assertEq(updatedBucket.lockEpochDuration, updatedBucket.epochFloor);
+    }
+
+
     function test_WhenLockEpochDurationIsGreaterThanEpochCeiling() external {
         // it should cap lockEpochDuration at epochCeiling
-        vm.warp(block.timestamp + 7 days);
-        twlBaseMock.supplyInBucket(2000, 0);
         for (uint256 i = 0; i < 100; i++) {
+            twlBaseMock.supplyInBucket(2000e18 + (2000 * i), 0);
             vm.warp(block.timestamp + 7 days);
             twlBaseMock.syncTWLBuckets(1);
         }
@@ -95,14 +108,22 @@ contract TWLBase_syncTWLBuckets is Test {
         assertEq(updatedBucket.lockEpochDuration, updatedBucket.epochFloor);
     }
 
+    function test_WhenLimitInputIsZero() external {
+        // it should not update the bucket and revert with LIMIT_IS_ZERO
+        vm.expectRevert(ITWLBase.LIMIT_IS_ZERO.selector);
+        twlBaseMock.syncTWLBuckets(0);
+    }
+
     function test_WhenBucketIsDisabled() external {
         // it should not update the bucket
+        twlBaseMock.supplyInBucket(2000, 0);
+        vm.warp(block.timestamp + 7 days);
+
         Bucket memory bucket = twlBaseMock.getBucket(0);
         bucket.enabled = false;
+
         twlBaseMock.updateBucket(0, bucket);
 
-        vm.warp(block.timestamp + 7 days);
-        twlBaseMock.supplyInBucket(2000, 0);
         twlBaseMock.syncTWLBuckets(1);
 
         Bucket memory updatedBucket = twlBaseMock.getBucket(0);

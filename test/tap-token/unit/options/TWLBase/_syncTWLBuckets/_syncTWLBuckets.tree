@@ -5,9 +5,13 @@ TWLBase_syncTWLBuckets
 │   └── it should increase lockEpochDuration by epochGrowthRate
 ├── when currentEpochInflows is less than lastEpochInflows plus growthGoal
 │   └── it should decrease lockEpochDuration by epochDecayRate
+├── when currentEpochInflows is less than lastEpochInflows plus growthGoal and epochDecayRate times missingEpochs is greater than lockEpochDuration
+│   └── it should set lockEpochDuration to zero and replaced by the epochFloor
 ├── when lockEpochDuration is greater than epochCeiling
 │   └── it should cap lockEpochDuration at epochCeiling
 ├── when lockEpochDuration is less than epochFloor
 │   └── it should floor lockEpochDuration at epochFloor
+├── when limit input is zero
+│   └── it should not update the bucket and revert with LIMIT_IS_ZERO
 └── when bucket is disabled
     └── it should not update the bucket

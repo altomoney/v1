@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 import {TobBaseTest, TapiocaOptionBroker, IERC20} from "./TobBaseTest.sol";
 import {TWAML} from "tap-token/options/twAML.sol";

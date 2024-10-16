@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 
 // contracts/oracle/OracleChainlinkSingle.sol
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // Tapioca
 import {AccessControlDefaultAdminRules} from "./external/AccessControlDefaultAdminRules.sol";

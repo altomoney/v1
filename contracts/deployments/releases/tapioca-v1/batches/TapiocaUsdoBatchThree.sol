@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 import {BarProcedure} from "../../../procedures/BarProcedure.sol";
 import {UsdoReport} from "../../../interfaces/ITapiocaReport.sol";

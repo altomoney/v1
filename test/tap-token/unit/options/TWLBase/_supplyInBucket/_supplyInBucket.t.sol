@@ -45,8 +45,9 @@ contract TWLBase_supplyInBucket is Test {
 
     function test_RevertWhen_AmountIsGreaterThanMaxUint() external givenBucketIsEnabled(0) {
         // it should revert
-        vm.expectRevert(stdError.arithmeticError);
         twlBaseMock.supplyInBucket(type(uint256).max, 0);
+
+        vm.expectRevert(stdError.arithmeticError);
         twlBaseMock.supplyInBucket(1, 0);
     }
 

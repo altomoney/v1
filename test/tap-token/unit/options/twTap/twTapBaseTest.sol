@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 /**
  * External
@@ -23,7 +23,7 @@ import {
     IPearlmit,
     TwTAP,
     ITWLBase
-} from "../../UnitBaseTest.sol";
+} from "../../UnitBaseTest.t.sol";
 import {ERC20Mock} from "tapioca-mocks/ERC20Mock.sol";
 import {TapTokenMock} from "../../../TapTokenMock.sol";
 import {ITWTAPv2} from "tap-token/interfaces/ITWTAPv2.sol";

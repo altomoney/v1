@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 import {twTapBaseTest, TwTAP} from "../twTapBaseTest.sol";
 
@@ -13,6 +13,7 @@ contract twTap_batchClaimRewards is twTapBaseTest {
         uint256[] memory bucketIds = new uint256[](2);
         bucketIds[0] = 1;
         bucketIds[1] = 2;
+        vm.prank(adminAddr);
         twTap.batchClaimRewards(adminAddr, bucketIds);
     }
 
@@ -29,6 +30,7 @@ contract twTap_batchClaimRewards is twTapBaseTest {
         uint256[] memory bucketIds = new uint256[](2);
         bucketIds[0] = 1;
         bucketIds[1] = 2;
+        vm.prank(aliceAddr);
         twTap.batchClaimRewards(aliceAddr, bucketIds);
     }
 }

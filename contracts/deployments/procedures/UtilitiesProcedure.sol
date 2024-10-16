@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 import {UtilitiesReport} from "../interfaces/ITapiocaReport.sol";
 import {Pearlmit} from "tap-utils/pearlmit/Pearlmit.sol";

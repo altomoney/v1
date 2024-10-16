@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 import {Origins} from "tapioca-bar/markets/origins/Origins.sol";
 import {Market} from "tapioca-bar/markets/Market.sol";
