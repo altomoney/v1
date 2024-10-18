@@ -140,12 +140,9 @@ contract TapiocaOptionLiquidityProvision is
     event Burn(address indexed from, uint256 indexed sglAssetId, address sglAddress, uint256 tolpTokenId);
     event UpdateTotalSingularityPoolWeights(uint256 totalSingularityPoolWeights);
     event SetSGLPoolWeight(uint256 indexed sglAssetId, address sglAddress, uint256 poolWeight);
-    event RequestSglPoolRescue(uint256 indexed sglAssetId, uint256 timestamp);
-    event ActivateSGLPoolRescue(uint256 indexed sglAssetId, address sglAddress);
-    event RegisterSingularity(uint256 indexed sglAssetId, address sglAddress, uint256 poolWeight);
+        event RegisterSingularity(uint256 indexed sglAssetId, address sglAddress, uint256 poolWeight);
     event UnregisterSingularity(uint256 indexed sglAssetId, address sglAddress);
-    event SetEmergencySweepCooldown(uint256 emergencySweepCooldown);
-    event ActivateEmergencySweep();
+    
     event HarvestPenalties(address to, uint256 amount);
     event SetCluster(ICluster cluster);
     event SetPenrose(IPenrose penrose);
@@ -350,7 +347,7 @@ contract TapiocaOptionLiquidityProvision is
 
         // Burn & Keep track of BB debt
         _burn(_tokenId);
-        delete lockPositions[_tokenId];
+        delete lockPositions
 
         // Transfer the YieldBox position back to the owner
         {

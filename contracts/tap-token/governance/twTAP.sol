@@ -53,7 +53,6 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, PearlmitHandler, ReentrancyGuard, 
     uint256 public mintedTWTap;
     uint256 public lastProcessedWeek;
     mapping(uint256 => WeekTotals) public weekTotals;
-    mapping(uint256 => mapping(uint256 => uint256)) public epochAutoSupply; // bucketId => epoch => amount
 
     ICluster public cluster;
 
@@ -550,7 +549,7 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, PearlmitHandler, ReentrancyGuard, 
         position.lastActive = w1;
 
         weekTotals[w0 + 1].netActiveVotes += int256(_amount * bucket.rewardsMultiplier);
-        weekTotals[w1 + 1].netActiveVotes -= int256(_amount * bucket.rewardsMultiplier);
+        weekTotals[w1 + 1].netActiveVotes -= int256(uint256(position.tapAmount) * bucket.rewardsMultiplier);
 
         emit Participate(_participant, _bucketId, _amount, bucket.rewardsMultiplier, expiry, _bucketId);
     }
