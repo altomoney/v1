@@ -18,7 +18,7 @@ contract YieldBox1155Mock is ERC1155 {
     }
 
     // YieldBox interface
-    function depositAsset(uint256 assetId, address from, address to, uint256 amount, uint256 share)
+    function depositAsset(uint256 assetId, address, address to, uint256 amount, uint256 share)
         external
         returns (uint256 amountOut, uint256 shareOut)
     {
@@ -45,7 +45,7 @@ contract YieldBox1155Mock is ERC1155 {
         return (amount, amount);
     }
 
-    function registerAsset(IYieldBoxTokenType tokenType, address contractAddress, address strategy, uint256 tokenId)
+    function registerAsset(IYieldBoxTokenType, address contractAddress, address strategy, uint256 tokenId)
         external
         returns (uint256 assetId)
     {
