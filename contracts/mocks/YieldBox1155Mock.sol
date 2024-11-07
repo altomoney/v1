@@ -45,22 +45,19 @@ contract YieldBox1155Mock is ERC1155 {
         return (amount, amount);
     }
 
-    function registerAsset(IYieldBoxTokenType, address contractAddress, address strategy, uint256 tokenId)
-        external
-        returns (uint256 assetId)
-    {
+    function registerAsset(IYieldBoxTokenType, address, address, uint256) external returns (uint256 assetId) {
         return nextAssetId++;
     }
 
-    function toAmount(uint256 assetId, uint256 share, bool roundUp) public view returns (uint256 amount) {
+    function toAmount(uint256, uint256 share, bool) public view returns (uint256 amount) {
         return share;
     }
 
-    function toShare(uint256 assetId, uint256 _amount, bool roundUp) public view returns (uint256 amount) {
+    function toShare(uint256, uint256 _amount, bool) public view returns (uint256 amount) {
         return _amount;
     }
 
-    function withdraw(uint256 assetId, address from, address to, uint256 amount, uint256 share)
+    function withdraw(uint256 assetId, address from, address, uint256 amount, uint256 share)
         external
         returns (uint256 amountOut, uint256 shareOut)
     {
