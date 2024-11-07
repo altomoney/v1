@@ -30,7 +30,7 @@ contract twTap_batchClaimRewards is twTapBaseTest {
         uint256[] memory bucketIds = new uint256[](2);
         bucketIds[0] = 1;
         bucketIds[1] = 2;
-        vm.prank(aliceAddr);
         twTap.batchClaimRewards(aliceAddr, bucketIds);
+        vm.stopPrank();
     }
 }

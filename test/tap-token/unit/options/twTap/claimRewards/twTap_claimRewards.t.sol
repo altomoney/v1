@@ -6,7 +6,7 @@ import {twTapBaseTest, TwTAP} from "../twTapBaseTest.sol";
 contract twTap_claimRewards is twTapBaseTest {
     function test_RevertWhen_Paused() external {
         // it should revert
-        vm.prank(adminAddr);
+        vm.startPrank(adminAddr);
         twTap.setPause(true);
 
         vm.expectRevert("Pausable: paused");

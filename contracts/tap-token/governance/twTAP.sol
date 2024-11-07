@@ -241,7 +241,7 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, PearlmitHandler, ReentrancyGuard, 
         amounts_ = new uint256[][](_bucketIds.length);
         for (uint256 i; i < _bucketIds.length; i++) {
             Participation memory position = participations[_participant][_bucketIds[i]];
-            if (_participant != msg.sender || position.delegatee != msg.sender) revert NotAuthorized();
+            if (_participant != msg.sender && position.delegatee != msg.sender) revert NotAuthorized();
             amounts_[i] = _claimBucketRewards(_participant, _bucketIds[i], true);
         }
     }
