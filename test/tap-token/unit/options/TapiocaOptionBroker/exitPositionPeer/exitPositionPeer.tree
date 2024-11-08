@@ -1,0 +1,17 @@
+TapiocaOptionBroker_exitPositionPeer.tree
+├── when contract is paused
+│   └── it should revert
+├── when caller is not MAGNETAR
+│   └── it should revert with NotAuthorized
+├── when position has not expired
+│   └── it should revert with LockNotExpired
+└── when all conditions are met
+    ├── it should store sglShares amount
+    ├── it should reset position's sglShares to 0
+    ├── it should transfer sglShares to caller
+    └── it should emit ExitPosition event with
+        ├── from address
+        ├── bucketId
+        ├── tSGLAddress
+        ├── currentEpoch
+        └── sglShares amount

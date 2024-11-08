@@ -38,7 +38,7 @@ struct Participation {
     address tSglAddress;
     uint256 sglShares; // amount of YieldBox shares locked
     uint256 totalUsdoLent; // amount of usdo lent
-    uint256 amountExercisedCurrentEpoch;
+    uint256 tapAmountExercised;
     uint256 lastEpochSync;
 }
 
@@ -68,6 +68,8 @@ contract TapiocaOptionBroker is Pausable, Ownable, PearlmitHandler, FullMath, Re
     address public _paymentTokenBeneficiary; // Where to collect the payment tokens
 
     address[] public _singularities; // Array of active singularity asset IDs
+
+    uint256 public _exerciseWindow = 30 days;
 
     mapping(address => mapping(uint256 => mapping(address => Participation))) public _participations; // accountAddress => bucketId => tSGL address => Participation
     mapping(uint256 => mapping(address => uint256)) public _singularityGauges; // epoch => tSGL address => availableTAP
@@ -105,6 +107,7 @@ contract TapiocaOptionBroker is Pausable, Ownable, PearlmitHandler, FullMath, Re
     error TooHigh();
     error TooLong();
     error TooLow();
+    error ExpiredCall();
 
     constructor(
         address payable tapOFT,
@@ -157,11 +160,12 @@ contract TapiocaOptionBroker is Pausable, Ownable, PearlmitHandler, FullMath, Re
     event ActivateEmergencySweep();
     event PaymentCollection(address indexed paymentToken, address indexed beneficiary, uint256 amount);
     event SingularityConfigUpdate(address indexed tSglAddress, uint256 poolWeight, bool active, bool rescue);
-
+    event SetExerciseWindow(uint256 exerciseWindow);
     // ==========
     //    READ
     // ==========
     /// @notice Returns the current epoch given a timestamp
+
     function timestampToEpoch(uint256 timestamp) external view returns (uint256) {
         if (timestamp == 0) {
             timestamp = block.timestamp;
@@ -224,7 +228,7 @@ contract TapiocaOptionBroker is Pausable, Ownable, PearlmitHandler, FullMath, Re
             if (netAmount == 0) revert NoLiquidity();
 
             eligibleTapAmount = muldiv(position.totalUsdoLent, gaugeTotalForEpoch, netAmount);
-            eligibleTapAmount -= position.amountExercisedCurrentEpoch;
+            eligibleTapAmount -= position.tapAmountExercised;
             if (eligibleTapAmount < buyAmount) revert TooHigh();
         }
 
@@ -275,6 +279,10 @@ contract TapiocaOptionBroker is Pausable, Ownable, PearlmitHandler, FullMath, Re
             _netDepositedForEpoch[_timestampToEpoch(position.expiry) + 1][tSGLAddress] -= int256(position.totalUsdoLent);
         }
 
+        if (block.timestamp > position.expiry) {
+            position.tapAmountExercised = 0;
+        }
+
         position.bucketId = bucketId;
         position.tSglAddress = tSGLAddress;
         position.sglShares = sglShares;
@@ -322,9 +330,13 @@ contract TapiocaOptionBroker is Pausable, Ownable, PearlmitHandler, FullMath, Re
     {
         Participation storage position = _participations[msg.sender][bucketId][tSGLAddress];
 
-        if (!_isPositionActive(position)) revert OptionExpired();
-
         uint256 cachedEpoch = currentEpoch();
+
+        if (!_isPositionActive(position)) {
+            cachedEpoch = _timestampToEpoch(position.expiry);
+        }
+
+        if (block.timestamp > position.expiry + _exerciseWindow) revert ExpiredCall();
 
         // Check requirements
         if (address(_paymentTokens[paymentToken].oracle) == address(0)) {
@@ -342,13 +354,13 @@ contract TapiocaOptionBroker is Pausable, Ownable, PearlmitHandler, FullMath, Re
         uint256 netAmount = uint256(_netDepositedForEpoch[cachedEpoch][tSGLAddress]);
         uint256 eligibleTapAmount = muldiv(position.totalUsdoLent, gaugeTotalForEpoch, netAmount);
 
-        eligibleTapAmount -= position.amountExercisedCurrentEpoch;
+        eligibleTapAmount -= position.tapAmountExercised;
 
         if (eligibleTapAmount < tapAmount) revert TooHigh();
 
         uint256 chosenAmount = tapAmount == 0 ? eligibleTapAmount : tapAmount;
         if (chosenAmount < 1e18) revert TooLow();
-        position.amountExercisedCurrentEpoch += chosenAmount;
+        position.tapAmountExercised += chosenAmount;
 
         // Finalize the deal
         uint256 paymentAmount = _processOTCDeal(paymentToken, chosenAmount, position.exerciseDiscountRate);
@@ -397,6 +409,13 @@ contract TapiocaOptionBroker is Pausable, Ownable, PearlmitHandler, FullMath, Re
         _paymentTokens[paymentToken].oracleData = oracleData;
 
         emit SetPaymentToken(paymentToken, oracle, oracleData);
+    }
+
+    /// @notice Set the exercise window
+    /// @param exerciseWindow The new exercise window
+    function setExerciseWindow(uint256 exerciseWindow) external onlyOwner {
+        _exerciseWindow = exerciseWindow;
+        emit SetExerciseWindow(exerciseWindow);
     }
 
     /// @notice Set the payment token beneficiary
