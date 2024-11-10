@@ -11,6 +11,7 @@ import {Pauser} from "tap-utils/Pauser/Pauser.sol";
 import {ZeroXSwapper} from "tap-utils/Swapper/ZeroXSwapper.sol";
 import {ZeroXSwapperMock} from "tapioca-mocks/ZeroXSwapperMock.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
+import {MultiTokenSender} from "tapioca-mocks/MultiTokenSender.sol";
 
 abstract contract UtilitiesProcedure {
     function _deployUtilities(address owner, address zeroXProxy, uint32 lzChainId, bool isTestnet)
@@ -24,6 +25,7 @@ abstract contract UtilitiesProcedure {
         report.pauser = address(new Pauser(report.cluster, owner));
         if (isTestnet) {
             report.zeroXSwapper = address(new ZeroXSwapperMock(ICluster(report.cluster), owner));
+            report.multiTokenSender = address(new MultiTokenSender(owner));
         } else {
             report.zeroXSwapper = address(new ZeroXSwapper(zeroXProxy, ICluster(report.cluster), owner));
         }
