@@ -53,11 +53,10 @@ struct SingularityPool {
     uint256 poolWeight;
 }
 
-contract TapiocaOptionBroker is Pausable, Ownable, PearlmitHandler, FullMath, ReentrancyGuard, TWLBase {
+contract TapiocaOptionBroker is Pausable, Ownable, FullMath, ReentrancyGuard, TWLBase {
     using SafeERC20 for IERC20;
 
     TapToken public immutable TAP_TOKEN;
-    IYieldBox public immutable YIELD_BOX;
     ITapiocaOracle public _tapOracle;
     ICluster public _cluster;
 
@@ -113,13 +112,10 @@ contract TapiocaOptionBroker is Pausable, Ownable, PearlmitHandler, FullMath, Re
         address payable tapOFT,
         address paymentTokenBeneficiary,
         uint256 epochDuration,
-        address pearlmit,
-        address yieldbox,
         Bucket[] memory buckets,
         address admin
-    ) PearlmitHandler(IPearlmit(pearlmit)) TWLBase(epochDuration, buckets) {
+    )  TWLBase(epochDuration, buckets) {
         TAP_TOKEN = TapToken(tapOFT);
-        YIELD_BOX = IYieldBox(yieldbox);
         _paymentTokenBeneficiary = paymentTokenBeneficiary;
 
         _transferOwnership(admin);

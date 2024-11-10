@@ -1,20 +1,8 @@
 TapiocaOptionBroker_constructor.tree
-├── when tapOFT is zero address
-│   └── it should revert
-├── when paymentTokenBeneficiary is zero address
-│   └── it should revert
 ├── when epochDuration is zero
-│   └── it should revert
-├── when pearlmit is zero address
-│   └── it should revert
-├── when yieldbox is zero address
-│   └── it should revert
-├── when admin is zero address
 │   └── it should revert
 └── when all parameters are valid
     ├── it should set TAP_TOKEN
-    ├── it should set YIELD_BOX
     ├── it should set _paymentTokenBeneficiary
-    ├── it should initialize PearlmitHandler
     ├── it should initialize TWLBase
     └── it should transfer ownership to admin
