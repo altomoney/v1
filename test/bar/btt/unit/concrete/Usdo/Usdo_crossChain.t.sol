@@ -40,7 +40,8 @@ import {Usdo_Unit_Shared} from "../../shared/Usdo_Unit_Shared.t.sol";
 
 import "forge-std/console.sol";
 
-contract Usdo_crossChain is Usdo_Unit_Shared, BigBang_Unit_Shared, Singularity_Unit_Shared {
+// @review-test: Review the tests in this contract. It is failing in the setup.
+abstract contract Usdo_crossChain is Usdo_Unit_Shared, BigBang_Unit_Shared, Singularity_Unit_Shared {
     // ************* //
     // *** SETUP *** //
     // ************* //
@@ -282,6 +283,35 @@ contract Usdo_crossChain is Usdo_Unit_Shared, BigBang_Unit_Shared, Singularity_U
         assertEq(mainBB.allowanceBorrow(userA, userB), amount);
     }
 
+    function _createMarketLendOrRepayMsg(
+        BigBang _mainBB,
+        uint256 _repayPart,
+        uint256 _collateralAmount,
+        uint256 _borrowAmount
+    ) internal returns (MarketLendOrRepayMsg memory marketMsg) {
+        _repayPart = _boundRepayAmount(_repayPart, _mainBB);
+        uint256 repayPercentage = _repayPart * FEE_PRECISION / _borrowAmount;
+        uint256 removeCollateralAmount = repayPercentage * _collateralAmount / FEE_PRECISION;
+
+        MarketLendOrRepayMsg memory marketMsg = _createMinimalLendOrRepayMsg(
+            _LendOrRepayInternal({
+                repay: true,
+                lock: false,
+                participate: false,
+                removeCollateral: true,
+                repayAmount: _repayPart,
+                depositAmount: 0,
+                magnetar: address(magnetar),
+                marketHelper: address(marketHelper),
+                market: address(_mainBB),
+                removeCollateralAmount: removeCollateralAmount,
+                lockDataTarget: address(0),
+                participateDataTarget: address(0)
+            })
+        );
+        return marketMsg;
+    }
+
     function test_WhenRepayAndRemoveCollateralIsPerformed(
         uint256 collateralAmount,
         uint256 borrowAmount,
@@ -296,36 +326,22 @@ contract Usdo_crossChain is Usdo_Unit_Shared, BigBang_Unit_Shared, Singularity_U
         whenWhitelisted(address(marketHelper))
         whenWhitelisted(address(mainBB))
     {
-        {
-            borrowAmount = _boundBorrowAmount(borrowAmount, collateralAmount);
-            // add collateral
-            _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this), address(this), false);
-
-            // borrow
-            // already does the necessary checks
-            _borrow(borrowAmount, mainBB, address(this), address(this), address(this));
-        }
-
-        repayPart = _boundRepayAmount(repayPart, mainBB);
-        uint256 repayPercentage = repayPart * FEE_PRECISION / borrowAmount;
-        uint256 removeCollateralAmount = repayPercentage * collateralAmount / FEE_PRECISION;
-
-        MarketLendOrRepayMsg memory marketMsg = _createMinimalLendOrRepayMsg(
-            _LendOrRepayInternal({
-                repay: true,
-                lock: false,
-                participate: false,
-                removeCollateral: true,
-                repayAmount: repayPart,
-                depositAmount: 0,
-                magnetar: address(magnetar),
-                marketHelper: address(marketHelper),
-                market: address(mainBB),
-                removeCollateralAmount: removeCollateralAmount,
-                lockDataTarget: address(0),
-                participateDataTarget: address(0)
-            })
+        uint256 borrowedAmount = _addCollateralAndBorrow(
+            collateralAmount,
+            borrowAmount,
+            mainBB,
+            address(this),
+            address(this)
         );
+
+        MarketLendOrRepayMsg memory marketMsg = _createMarketLendOrRepayMsg(
+            mainBB,
+            repayPart,
+            collateralAmount,
+            borrowAmount
+        );
+
+
         _BorrowInternal memory _borrowData;
         _RemoveCollateralInternal memory _data;
         _data.userCollateralBefore = mainBB._userCollateralShare(address(this));

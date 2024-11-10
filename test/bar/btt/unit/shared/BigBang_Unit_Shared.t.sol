@@ -18,6 +18,7 @@ import {BBLeverage} from "tapioca-bar/markets/bigBang/BBLeverage.sol";
 import {BBBorrow} from "tapioca-bar/markets/bigBang/BBBorrow.sol";
 import {BigBang} from "tapioca-bar/markets/bigBang/BigBang.sol";
 import {Market} from "tapioca-bar/markets/Market.sol";
+import {YieldBox} from "../../../../../contracts/yieldbox/YieldBox.sol";
 
 import {Module} from "tap-utils/interfaces/bar/IMarket.sol";
 
@@ -436,12 +437,7 @@ abstract contract BigBang_Unit_Shared is Markets_Unit_Shared {
         internal
         resetPrank(executor)
     {
-        _BorrowInternal memory _data;
-        // get `before` state
-        _data.totalBorrowBefore = bb._totalBorrow();
-        _data.userBorrowPartBefore = bb._userBorrowPart(to);
-        _data.userYieldBoxBalanceBefore = yieldBox.amountOf(address(to), bb._assetId());
-        _data.usdoSupplyBefore = usdo.totalSupply();
+        _BorrowInternal memory _data = _createBorrowInternal(yieldBox, bb, to);
 
         uint256 feeAmount = bb.computeVariableOpeningFee(borrowAmount);
         (Module[] memory modules, bytes[] memory calls) = _getBorrowData(borrowAmount, from, to);
@@ -497,6 +493,40 @@ abstract contract BigBang_Unit_Shared is Markets_Unit_Shared {
         uint256 totalCollateralShareAfter;
     }
 
+    function _createRemoveCollateralInternal(YieldBox _yieldBox, BigBang _bb, address _to) internal returns (_RemoveCollateralInternal memory) {
+        _RemoveCollateralInternal memory _data;
+        _data.bbYieldBoxBalanceBefore = _yieldBox.balanceOf(address(_bb), _bb._collateralId());
+        _data.userYieldBoxBalanceBefore = _yieldBox.balanceOf(address(_to), _bb._collateralId());
+        _data.userCollateralBefore = _bb._userCollateralShare(_to);
+        _data.totalCollateralShareBefore = _bb._totalCollateralShare();
+        return _data;
+    }
+
+    function _executeRemoveCollateral(
+        uint256 _removeShare,
+        YieldBox _yieldBox,
+        BigBang _bb,
+        address _executor,
+        address _from,
+        address _to
+    ) internal {
+        uint256 _removeAmount = 0;
+        uint256 removeAmount = _boundRemoveCollateralAmount(_removeAmount, _bb);
+        _removeShare = _yieldBox.toShare(_bb._collateralId(), removeAmount, false);
+        (
+            Module[] memory _modules,
+            bytes[] memory _calls
+        ) = _getRemoveCollateralData(_removeShare, _from, _to);
+
+        _resetPrank(_executor);
+
+        vm.expectEmit(true, true, true, false);
+        // it should emit 'LogRemoveCollateral'
+        emit LogRemoveCollateral(_from, _to, _removeShare);
+        _bb.execute(_modules, _calls, true);
+
+    }
+
     function _removeCollateral(
         uint256 addAmount,
         uint256 removeShare,
@@ -506,10 +536,6 @@ abstract contract BigBang_Unit_Shared is Markets_Unit_Shared {
         address from,
         address to
     ) internal {
-        Module[] memory modules;
-        bytes[] memory calls;
-        _RemoveCollateralInternal memory _data;
-
         // **** Add collateral ****
         _addCollateral(addAmount, bb, address(this), from, to, to, false);
 
@@ -520,25 +546,16 @@ abstract contract BigBang_Unit_Shared is Markets_Unit_Shared {
         }
 
         // **** Remove collateral ****
-        // get `before` state
-        _data.bbYieldBoxBalanceBefore = yieldBox.balanceOf(address(bb), bb._collateralId());
-        _data.userYieldBoxBalanceBefore = yieldBox.balanceOf(address(to), bb._collateralId());
-        _data.userCollateralBefore = bb._userCollateralShare(to);
-        _data.totalCollateralShareBefore = bb._totalCollateralShare();
+        _RemoveCollateralInternal memory _data = _createRemoveCollateralInternal(yieldBox, bb, to);
 
-        {
-            uint256 removeAmount;
-            removeAmount = _boundRemoveCollateralAmount(removeAmount, bb);
-            removeShare = yieldBox.toShare(bb._collateralId(), removeAmount, false);
-            (modules, calls) = _getRemoveCollateralData(removeShare, from, to);
-
-            _resetPrank(executor);
-
-            vm.expectEmit(true, true, true, false);
-            // it should emit 'LogRemoveCollateral'
-            emit LogRemoveCollateral(from, to, removeShare);
-            bb.execute(modules, calls, true);
-        }
+        _executeRemoveCollateral(
+            removeShare,
+            yieldBox,
+            bb,
+            executor,
+            from,
+            to
+        );
 
         _data.bbYieldBoxBalanceAfter = yieldBox.balanceOf(address(bb), bb._collateralId());
         _data.userYieldBoxBalanceAfter = yieldBox.balanceOf(address(to), bb._collateralId());
@@ -558,21 +575,19 @@ abstract contract BigBang_Unit_Shared is Markets_Unit_Shared {
         assertEq(_data.userYieldBoxBalanceBefore + removeShare, _data.userYieldBoxBalanceAfter);
     }
 
-    function _repay(
+    function _addCollateralAndBorrow(
         uint256 collateralAmount,
         uint256 borrowAmount,
-        uint256 repayPart,
         BigBang bb,
-        address executor,
         address from,
         address to
-    ) internal {
+    ) internal returns (uint256 borrowedAmount) {
         // **** Add collateral ****
         _addCollateral(collateralAmount, bb, address(this), from, to, to, false);
 
         // **** Borrow ****
-        borrowAmount = _boundBorrowAmount(borrowAmount, collateralAmount);
-        _borrow(borrowAmount, bb, address(this), from, to);
+        borrowedAmount = _boundBorrowAmount(borrowAmount, collateralAmount);
+        _borrow(borrowedAmount, bb, address(this), from, to);
 
         skip(86400 * 10);
         _approveViaPearlmit({
@@ -587,19 +602,56 @@ abstract contract BigBang_Unit_Shared is Markets_Unit_Shared {
         });
 
         bb.accrue();
+    }
 
+    function _createBorrowInternal(YieldBox _yieldBox, BigBang _bb, address _to) internal returns (_BorrowInternal memory) {
         _BorrowInternal memory _data;
         // get `before` state
-        _data.totalBorrowBefore = bb._totalBorrow();
-        _data.userBorrowPartBefore = bb._userBorrowPart(to);
-        _data.userYieldBoxBalanceBefore = yieldBox.amountOf(address(to), bb._assetId());
+        _data.totalBorrowBefore = _bb._totalBorrow();
+        _data.userBorrowPartBefore = _bb._userBorrowPart(_to);
+        _data.userYieldBoxBalanceBefore = _yieldBox.amountOf(address(_to), _bb._assetId());
         _data.usdoSupplyBefore = usdo.totalSupply();
+        return _data;
+    }
 
-        repayPart = _boundRepayAmount(repayPart, bb);
-        Rebase memory _totalBorrow = bb._totalBorrow();
-        uint256 repayAmount = _totalBorrow.toElastic(repayPart, false);
+    function _createRepayData(
+        uint256 _repayPart,
+        BigBang _bb,
+        address _from,
+        address _to
+    ) internal returns (Module[] memory modules, bytes[] memory calls, uint256 repayAmount) {
+        _repayPart = _boundRepayAmount(_repayPart, _bb);
+        Rebase memory _totalBorrow = _bb._totalBorrow();
+        repayAmount = _totalBorrow.toElastic(_repayPart, false);
+        (modules, calls) = _getRepayData(_repayPart, _from, _to);
+    }
 
-        (Module[] memory modules, bytes[] memory calls) = _getRepayData(repayPart, from, to);
+    function _repay(
+        uint256 collateralAmount,
+        uint256 borrowAmount,
+        uint256 repayPart,
+        BigBang bb,
+        address executor,
+        address from,
+        address to
+    ) internal {
+        
+        uint256 borrowedAmount = _addCollateralAndBorrow(
+            collateralAmount,
+            borrowAmount,
+            bb,
+            from,
+            to
+        );
+
+        _BorrowInternal memory _data = _createBorrowInternal(yieldBox, bb, to);
+
+        (
+            Module[] memory modules,
+            bytes[] memory calls,
+            uint256 repayAmount
+        ) = _createRepayData(repayPart, bb, from, to);
+
         _resetPrank(executor);
 
         // it should emit 'LogAccrue'

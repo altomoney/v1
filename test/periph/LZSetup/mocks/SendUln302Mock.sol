@@ -5,7 +5,7 @@ import {MessagingFee} from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfac
 import {SendUln302} from "@layerzerolabs/lz-evm-messagelib-v2/contracts/uln/uln302/SendUln302.sol";
 import {Packet} from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ISendLib.sol";
 
-import {TestHelper} from "../TestHelper.sol";
+import {TestHelper} from "../../../bar/LZSetup/TestHelper.sol";
 
 contract SendUln302Mock is SendUln302 {
     // offchain packets schedule
