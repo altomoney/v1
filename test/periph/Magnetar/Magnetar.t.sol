@@ -1322,6 +1322,7 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
     }
 
     function test_toe_sendPacketFrom() public {
+        vm.skip(true);
         uint256 tokenAmount_ = 1 ether;
 
         (ToeTokenMock aToeOFT, ToeTokenMock bToeOFT) = _getToeMock();

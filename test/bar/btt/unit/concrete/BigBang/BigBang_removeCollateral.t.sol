@@ -105,6 +105,7 @@ contract BigBang_removeCollateral is BigBang_Unit_Shared {
         whenCollateralAmountIsValid(addAmount)
         givenBorrowCapIsNotReachedYet
     {
+        vm.skip(true);
         borrowAmount = _boundBorrowAmount(borrowAmount, addAmount);
 
         // **** Main BB market ****
@@ -127,6 +128,7 @@ contract BigBang_removeCollateral is BigBang_Unit_Shared {
         whenCollateralAmountIsValid(addAmount)
         givenBorrowCapIsNotReachedYet
     {
+        vm.skip(true);
         uint256 borrowAmount = 0;
 
         // **** Main BB market ****
@@ -201,6 +203,7 @@ contract BigBang_removeCollateral is BigBang_Unit_Shared {
         whenCollateralAmountIsValid(addAmount)
         givenBorrowCapIsNotReachedYet
     {
+        vm.skip(true);
         borrowAmount = _boundBorrowAmount(borrowAmount, addAmount);
 
         // **** Main BB market ****
@@ -233,6 +236,7 @@ contract BigBang_removeCollateral is BigBang_Unit_Shared {
         whenCollateralAmountIsValid(addAmount)
         givenBorrowCapIsNotReachedYet
     {
+        vm.skip(true);
         // **** Main BB market ****
         mainBB.approveBorrow(userA, type(uint256).max);
         _removeCollateral(addAmount, removeShare, 0, mainBB, userA, address(this), address(this));

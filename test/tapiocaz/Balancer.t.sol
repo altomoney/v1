@@ -37,7 +37,7 @@ import {mTOFT} from "tapiocaz/tOFT/mTOFT.sol";
 import {ERC20Mock} from "./ERC20Mock.sol";
 import {TOFTMock} from "./TOFTMock.sol";
 
-contract TOFTTest is TOFTTestHelper {
+contract BalancerTest is TOFTTestHelper {
     Balancer balancer;
     StargateRouterMock routerA;
     StargateRouterMock routerB;

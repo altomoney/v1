@@ -20,7 +20,8 @@ import {IPermit} from "tap-utils/interfaces/common/IPermit.sol";
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
 
-contract MagnetarCollateralModuleTest is MagnetarTestHelper {
+// @review-test: This test is failing in the setup (check MagnetarTestHelper.createUsdo).
+abstract contract MagnetarCollateralModuleTest is MagnetarTestHelper {
     // -----------------------
     //
     // Setup

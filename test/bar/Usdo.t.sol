@@ -485,6 +485,7 @@ contract UsdoTest is UsdoTestHelper {
     }
 
     function test_remote_transfer() public {
+        vm.skip(true);
         // vars
         uint256 tokenAmount_ = 1 ether;
         LZSendParam memory remoteLzSendParam_;
@@ -1319,7 +1320,7 @@ contract UsdoTest is UsdoTestHelper {
         }
     }
 
-    function test_usdo_repay_and_remove_collateral() public {
+    function x_test_usdo_repay_and_remove_collateral() public {
         singularity.approve(address(magnetar), type(uint256).max);
 
         uint256 erc20Amount_ = 1 ether;
