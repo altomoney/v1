@@ -10,4 +10,5 @@ forge --version
 sudo apt-get update
 sudo apt-get -y install lcov
 
-
+# Install dependencies
+yarn
