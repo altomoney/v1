@@ -35,9 +35,7 @@ struct Participation {
     uint128 expiry; // lock expiration date
     uint128 exerciseDiscountRate; // exercise discount rate
     uint8 bucketId;
-    address tSglAddress;
-    uint256 sglShares; // amount of YieldBox shares locked
-    uint256 totalUsdoLent; // amount of usdo lent
+    uint256 totalUsdo; // amount of usdo lent
     uint256 tapAmountExercised;
     uint256 lastEpochSync;
 }
@@ -47,53 +45,39 @@ struct PaymentTokenOracle {
     bytes oracleData;
 }
 
-struct SingularityPool {
-    bool active;
-    bool rescue; // If true, the pool will be used to rescue funds in case of emergency
-    uint256 poolWeight;
-}
-
 contract TapiocaOptionBroker is Pausable, Ownable, FullMath, ReentrancyGuard, TWLBase {
     using SafeERC20 for IERC20;
 
     TapToken public immutable TAP_TOKEN;
+    address public immutable USDO;
     ITapiocaOracle public _tapOracle;
     ICluster public _cluster;
+    address public _paymentTokenBeneficiary; // Where to collect the payment tokens
+
+    uint256 public _epochTAPValuation; // TAP price for the current epoch
+    uint256 public _exerciseWindow = 30 days;
+    uint256 public _emergencySweepCooldown = 2 days;
+    uint256 public _lastEmergencySweep;
+
+    mapping(address => mapping(uint256 => Participation)) public _participations; // accountAddress => bucketId => Participation
+    mapping(uint256 => uint256) public _tapPerEpoch; // epoch => availableTAP
+    mapping(address => PaymentTokenOracle) public _paymentTokens; // Token address => PaymentTokenOracle
+    mapping(uint256 => int256) public _netDepositsPerEpoch; // epoch => total deposited
 
     bytes public _tapOracleData;
 
-    uint256 public _epochTAPValuation; // TAP price for the current epoch
-
-    address public _paymentTokenBeneficiary; // Where to collect the payment tokens
-
-    address[] public _singularities; // Array of active singularity asset IDs
-
-    uint256 public _exerciseWindow = 30 days;
-
-    mapping(address => mapping(uint256 => mapping(address => Participation))) public _participations; // accountAddress => bucketId => tSGL address => Participation
-    mapping(uint256 => mapping(address => uint256)) public _singularityGauges; // epoch => tSGL address => availableTAP
-    mapping(address => SingularityPool) public _singularityPools;
-    mapping(address => PaymentTokenOracle) public _paymentTokens; // Token address => PaymentTokenOracle
-    mapping(uint256 => mapping(address => int256)) public _netDepositedForEpoch; // epoch => tSglAddress => total deposited
-    uint256 public _emergencySweepCooldown = 2 days;
-    uint256 public _lastEmergencySweep;
-    uint256 public _totalSingularityPoolWeights;
-
     error NotEqualDurations();
     error NotAuthorized();
-    error NoActiveSingularities();
     error NoLiquidity();
     error OptionExpired();
     error PaymentTokenNotSupported();
     error OneEpochCooldown();
-    error SingularityNotActive();
     error DurationTooShort();
     error PositionNotValid();
     error LockNotExpired();
     error TooSoon();
     error Failed();
     error TransferFailed();
-    error SingularityInRescueMode();
     error PaymentTokenValuationNotValid();
     error LockExpired();
     error AdvanceEpochFirst();
@@ -110,11 +94,13 @@ contract TapiocaOptionBroker is Pausable, Ownable, FullMath, ReentrancyGuard, TW
 
     constructor(
         address payable tapOFT,
+        address usdo,
         address paymentTokenBeneficiary,
         uint256 epochDuration,
         Bucket[] memory buckets,
         address admin
-    )  TWLBase(epochDuration, buckets) {
+    ) TWLBase(epochDuration, buckets) {
+        USDO = usdo;
         TAP_TOKEN = TapToken(tapOFT);
         _paymentTokenBeneficiary = paymentTokenBeneficiary;
 
@@ -124,14 +110,7 @@ contract TapiocaOptionBroker is Pausable, Ownable, FullMath, ReentrancyGuard, TW
     // ==========
     //   EVENTS
     // ==========
-    event Participate(
-        address indexed user,
-        uint256 indexed bucketId,
-        address indexed tSglAddress,
-        uint256 epoch,
-        uint256 sglDeposit,
-        uint256 lentUsdo
-    );
+    event Participate(address indexed user, uint256 indexed bucketId, uint256 epoch, uint256 usdoAmount);
 
     event ExerciseOption(
         address indexed user,
@@ -141,9 +120,7 @@ contract TapiocaOptionBroker is Pausable, Ownable, FullMath, ReentrancyGuard, TW
         uint256 tapAmount
     );
     event NewEpoch(uint256 indexed epoch, uint256 extractedTap, uint256 epochTapValuation);
-    event ExitPosition(
-        address indexed user, uint256 indexed bucketId, address indexed tSglAddress, uint256 epoch, uint256 sglShares
-    );
+    event ExitPosition(address indexed user, uint256 indexed bucketId, uint256 epoch, uint256 usdoAmount);
     event SetPaymentToken(address indexed paymentToken, address oracle, bytes oracleData);
     event SetTapOracle(address oracle, bytes oracleData);
     event SetPaymentTokenBeneficiary(address paymentTokenBeneficiary);
@@ -155,7 +132,6 @@ contract TapiocaOptionBroker is Pausable, Ownable, FullMath, ReentrancyGuard, TW
     event SetEmergencySweepCooldown(uint256 emergencySweepCooldown);
     event ActivateEmergencySweep();
     event PaymentCollection(address indexed paymentToken, address indexed beneficiary, uint256 amount);
-    event SingularityConfigUpdate(address indexed tSglAddress, uint256 poolWeight, bool active, bool rescue);
     event SetExerciseWindow(uint256 exerciseWindow);
     // ==========
     //    READ
@@ -180,29 +156,18 @@ contract TapiocaOptionBroker is Pausable, Ownable, FullMath, ReentrancyGuard, TW
     /// @param user User address
     /// @param bucketId Bucket ID to check the participation
     /// @return participation
-    function getParticipation(address user, uint8 bucketId, address tSGLAddress)
-        external
-        view
-        returns (Participation memory)
-    {
-        return _participations[user][bucketId][tSGLAddress];
-    }
-
-    /// @notice Returns the details of TOLP Singularity Pool, twAML pool and gauge for a given tSglAddress
-    function getSingularityPoolInfo(address tSGLAddress) external view returns (SingularityPool memory) {
-        return _singularityPools[tSGLAddress];
+    function getParticipation(address user, uint8 bucketId) external view returns (Participation memory) {
+        return _participations[user][bucketId];
     }
 
     /// @notice Returns the details of an OTC deal
-    function getOTCDealDetails(
-        address from,
-        uint256 bucketId,
-        address tSglAddress,
-        address paymentToken,
-        uint256 buyAmount
-    ) external view returns (uint256 eligibleTapAmount, uint256 paymentTokenAmount, uint256 tapAmount) {
+    function getOTCDealDetails(address from, uint256 bucketId, address paymentToken, uint256 buyAmount)
+        external
+        view
+        returns (uint256 eligibleTapAmount, uint256 paymentTokenAmount, uint256 tapAmount)
+    {
         // Load data
-        Participation memory position = _participations[from][bucketId][tSglAddress];
+        Participation memory position = _participations[from][bucketId];
 
         if (!_isPositionActive(position)) revert OptionExpired();
 
@@ -218,15 +183,12 @@ contract TapiocaOptionBroker is Pausable, Ownable, FullMath, ReentrancyGuard, TW
             revert OneEpochCooldown();
         }
 
-        {
-            uint256 gaugeTotalForEpoch = _singularityGauges[cachedEpoch][tSglAddress];
-            uint256 netAmount = uint256(_netDepositedForEpoch[cachedEpoch][tSglAddress]);
-            if (netAmount == 0) revert NoLiquidity();
+        uint256 netAmount = uint256(_netDepositsPerEpoch[cachedEpoch]);
+        if (netAmount == 0) revert NoLiquidity();
 
-            eligibleTapAmount = muldiv(position.totalUsdoLent, gaugeTotalForEpoch, netAmount);
-            eligibleTapAmount -= position.tapAmountExercised;
-            if (eligibleTapAmount < buyAmount) revert TooHigh();
-        }
+        eligibleTapAmount = muldiv(position.totalUsdo, _tapPerEpoch[cachedEpoch], netAmount);
+        eligibleTapAmount -= position.tapAmountExercised;
+        if (eligibleTapAmount < buyAmount) revert TooHigh();
 
         tapAmount = buyAmount == 0 ? eligibleTapAmount : buyAmount;
         if (tapAmount < 1e18) revert TooLow();
@@ -249,30 +211,21 @@ contract TapiocaOptionBroker is Pausable, Ownable, FullMath, ReentrancyGuard, TW
 
     /// @notice Participate in voting and mint an oTAP position.
     ///         Exercising the option is not possible on participation week.
-    function participatePeer(address to, uint8 bucketId, address tSGLAddress, uint256 sglShares, uint256 usdoAmount)
-        external
-        whenNotPaused
-        nonReentrant
-    {
+    function participatePeer(address to, uint8 bucketId, uint256 usdoAmount) external whenNotPaused nonReentrant {
         if (lastEpoch != currentEpoch()) advanceWeek();
-        if (!_cluster.hasRole(msg.sender, keccak256("MAGNETAR"))) {
-            revert NotAuthorized();
-        }
-        if (sglShares == 0 || usdoAmount == 0) revert SharesNotValid();
-        if (!_singularityPools[tSGLAddress].active) revert SingularityNotActive();
-        if (_singularityPools[tSGLAddress].rescue) revert SingularityInRescueMode();
+        if (usdoAmount == 0) revert SharesNotValid();
         if (_lastEmergencySweep != 0) revert EmergencySweepActivated();
 
         _supplyInBucket(bucketId, usdoAmount);
 
         // Create the participation position
-        Participation storage position = _participations[to][bucketId][tSGLAddress];
+        Participation storage position = _participations[to][bucketId];
         Bucket memory bucket = buckets[bucketId];
         uint256 expiry = block.timestamp + (bucket.lockEpochDuration * EPOCH_DURATION);
 
         if (position.expiry > 0 && block.timestamp < position.expiry) {
             // Clear the expected votes at the past expected expiration date
-            _netDepositedForEpoch[_timestampToEpoch(position.expiry) + 1][tSGLAddress] -= int256(position.totalUsdoLent);
+            _netDepositsPerEpoch[_timestampToEpoch(position.expiry) + 1] -= int256(position.totalUsdo);
         }
 
         if (block.timestamp > position.expiry) {
@@ -280,51 +233,42 @@ contract TapiocaOptionBroker is Pausable, Ownable, FullMath, ReentrancyGuard, TW
         }
 
         position.bucketId = bucketId;
-        position.tSglAddress = tSGLAddress;
-        position.sglShares = sglShares;
-        position.totalUsdoLent += usdoAmount;
+        position.totalUsdo += usdoAmount;
         position.exerciseDiscountRate = bucket.rewardsMultiplier;
         position.lockedAt = uint56(block.timestamp);
         position.expiry = uint56(expiry);
 
-        _netDepositedForEpoch[currentEpoch() + 1][tSGLAddress] += int256(usdoAmount);
-        _netDepositedForEpoch[_timestampToEpoch(expiry) + 1][tSGLAddress] -= int256(position.totalUsdoLent);
+        _netDepositsPerEpoch[currentEpoch() + 1] += int256(usdoAmount);
+        _netDepositsPerEpoch[_timestampToEpoch(expiry) + 1] -= int256(position.totalUsdo);
 
-        IERC20(tSGLAddress).safeTransferFrom(msg.sender, address(this), sglShares);
+        IERC20(USDO).safeTransferFrom(msg.sender, address(this), usdoAmount);
 
-        emit Participate(to, bucketId, tSGLAddress, currentEpoch(), sglShares, usdoAmount);
+        emit Participate(to, bucketId, currentEpoch(), usdoAmount);
     }
 
     /// @notice Exit a twAML participation and delete the voting power if existing
-    function exitPositionPeer(address from, uint8 bucketId, address tSGLAddress) external whenNotPaused {
-        if (!_cluster.hasRole(msg.sender, keccak256("MAGNETAR"))) {
-            revert NotAuthorized();
-        }
-        Participation storage position = _participations[from][bucketId][tSGLAddress];
-        SingularityPool storage pool = _singularityPools[tSGLAddress];
+    function exitPositionPeer(uint8 bucketId) external whenNotPaused {
+        Participation storage position = _participations[msg.sender][bucketId];
 
         if (block.timestamp < position.expiry) {
             revert LockNotExpired();
         }
 
-        uint256 sglShares = position.sglShares;
+        uint256 totalUsdo = position.totalUsdo;
 
-        position.sglShares = 0;
+        position.totalUsdo = 0;
 
-        IERC20(tSGLAddress).safeTransfer(msg.sender, sglShares);
+        IERC20(USDO).safeTransfer(msg.sender, totalUsdo);
 
-        emit ExitPosition(from, bucketId, tSGLAddress, currentEpoch(), sglShares);
+        emit ExitPosition(msg.sender, bucketId, currentEpoch(), totalUsdo);
     }
 
     /// @notice Exercise an oTAP position
     /// @param bucketId tokenId of the oTAP position, position must be active
     /// @param paymentToken Address of the payment token to use, must be whitelisted
     /// @param tapAmount Amount of TAP to exercise. If 0, the full amount is exercised
-    function exerciseOption(uint256 bucketId, address tSGLAddress, address paymentToken, uint256 tapAmount)
-        external
-        whenNotPaused
-    {
-        Participation storage position = _participations[msg.sender][bucketId][tSGLAddress];
+    function exerciseOption(uint256 bucketId, address paymentToken, uint256 tapAmount) external whenNotPaused {
+        Participation storage position = _participations[msg.sender][bucketId];
 
         uint256 cachedEpoch = currentEpoch();
 
@@ -346,9 +290,8 @@ contract TapiocaOptionBroker is Pausable, Ownable, FullMath, ReentrancyGuard, TW
         }
 
         // Get eligible OTC amount
-        uint256 gaugeTotalForEpoch = _singularityGauges[cachedEpoch][tSGLAddress];
-        uint256 netAmount = uint256(_netDepositedForEpoch[cachedEpoch][tSGLAddress]);
-        uint256 eligibleTapAmount = muldiv(position.totalUsdoLent, gaugeTotalForEpoch, netAmount);
+        uint256 netAmount = uint256(_netDepositsPerEpoch[cachedEpoch]);
+        uint256 eligibleTapAmount = muldiv(position.totalUsdo, _tapPerEpoch[cachedEpoch], netAmount);
 
         eligibleTapAmount -= position.tapAmountExercised;
 
@@ -368,19 +311,23 @@ contract TapiocaOptionBroker is Pausable, Ownable, FullMath, ReentrancyGuard, TW
     ///         emit it to the active singularities and get the price of TAP for the epoch.
     function advanceWeek() public {
         if (lastEpoch == currentEpoch()) revert NotValid();
+        uint256 epoch = currentEpoch();
 
-        _syncTWLBuckets(currentEpoch() - lastEpoch);
+        _syncTWLBuckets(epoch - lastEpoch);
 
         // Get epoch TAP valuation
         bool success;
         (success, _epochTAPValuation) = _tapOracle.get(_tapOracleData);
         if (!success) revert Failed();
 
-        // Extract TAP + emit to gauges
+        // Extract TAP
         uint256 epochTAP = TAP_TOKEN.emitForWeek();
-        _emitToGauges(epochTAP);
+        _tapPerEpoch[epoch] += epochTAP;
 
-        lastEpoch = currentEpoch();
+        // Pass previous epoch net USDO amount to the next epoch
+        _netDepositsPerEpoch[epoch] += _netDepositsPerEpoch[epoch - 1];
+
+        lastEpoch = epoch;
         emit NewEpoch(lastEpoch, epochTAP, _epochTAPValuation);
     }
 
@@ -499,23 +446,6 @@ contract TapiocaOptionBroker is Pausable, Ownable, FullMath, ReentrancyGuard, TW
         emit ActivateEmergencySweep();
     }
 
-    /// @notice Set the config of a singularity pool (weight, active, rescue mode)
-    /// @param tSglAddress The address of the singularity pool
-    /// @param config The new singularity config
-    function setSingularityConfig(address tSglAddress, SingularityPool memory config) external onlyOwner {
-        _singularityPools[tSglAddress] = config;
-
-        // Update total weights
-        _totalSingularityPoolWeights = 0;
-        for (uint256 i; i < _singularities.length; i++) {
-            SingularityPool memory sgl = _singularityPools[(_singularities[i])];
-            if (!sgl.rescue && sgl.active) {
-                _totalSingularityPoolWeights += sgl.poolWeight;
-            }
-        }
-
-        emit SingularityConfigUpdate(tSglAddress, config.poolWeight, config.active, config.rescue);
-    }
     // ============
     //   INTERNAL
     // ============
@@ -529,7 +459,6 @@ contract TapiocaOptionBroker is Pausable, Ownable, FullMath, ReentrancyGuard, TW
     /// @return isPositionActive True if the position is active
     function _isPositionActive(Participation memory participation) internal view returns (bool) {
         if (participation.expiry == 0) revert PositionNotValid();
-        if (_singularityPools[participation.tSglAddress].rescue) revert SingularityInRescueMode();
 
         uint256 expirationEpoch = _timestampToEpoch(participation.expiry);
 
@@ -586,29 +515,6 @@ contract TapiocaOptionBroker is Pausable, Ownable, FullMath, ReentrancyGuard, TW
             paymentAmount = paymentAmount / (10 ** (18 - _paymentTokenDecimals));
         } else {
             paymentAmount = paymentAmount * (10 ** (_paymentTokenDecimals - 18));
-        }
-    }
-
-    /// @notice Emit TAP to the gauges equitably and update the net deposited amounts for each pool
-    /// @dev Assume the epoch has been updated
-    function _emitToGauges(uint256 epochTAP) internal {
-        uint256 totalWeights = _totalSingularityPoolWeights;
-        uint256 epoch = currentEpoch();
-        // For each pool
-        for (uint256 i; i < _singularities.length; ++i) {
-            address tSglAddress = _singularities[i];
-            uint256 currentPoolWeight = _singularityPools[tSglAddress].poolWeight;
-            uint256 quotaPerSingularity = muldiv(currentPoolWeight, epochTAP, totalWeights);
-            // Emit weekly TAP to the pool
-            _singularityGauges[epoch][tSglAddress] = quotaPerSingularity;
-
-            // Update net deposited amounts
-            mapping(address tSglAddress => int256 netAmount) storage prev = _netDepositedForEpoch[epoch - 1];
-            mapping(address tSglAddress => int256 netAmount) storage curr = _netDepositedForEpoch[epoch];
-
-            // Pass previous epoch net amount to the next epoch
-            // Expired positions are offset, check `participate()`
-            curr[tSglAddress] += prev[tSglAddress];
         }
     }
 }

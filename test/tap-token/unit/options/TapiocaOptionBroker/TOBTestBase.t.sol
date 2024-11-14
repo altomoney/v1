@@ -38,32 +38,31 @@ contract TOBTestBase is Test {
     address dao;
     address airdrop;
 
+    ERC20Mock sUSDX;
+    ERC20Mock sWETH;
+    ERC20Mock usdo;
+
     Bucket[] buckets;
 
     function setUp() public {
         deployDependencies();
 
-        buckets.push(Bucket({
-            enabled: true,
-            epochGrowthRate: 1, 
-            epochDecayRate: 1,
-            epochCeiling: 10,
-            epochFloor: 1,
-            rewardsMultiplier: 5000,
-            lockEpochDuration: 1,
-            currentEpochInflows: 0,
-            lastEpochInflows: 0,
-            growthGoal: 1000e18
-        }));
-
-
-        tob = new TapiocaOptionBroker(
-            payable(tapToken),
-            dao,
-            EPOCH_DURATION,
-            new Bucket[](0),
-            owner
+        buckets.push(
+            Bucket({
+                enabled: true,
+                epochGrowthRate: 1,
+                epochDecayRate: 1,
+                epochCeiling: 10,
+                epochFloor: 1,
+                rewardsMultiplier: 5000,
+                lockEpochDuration: 1,
+                currentEpochInflows: 0,
+                lastEpochInflows: 0,
+                growthGoal: 1000e18
+            })
         );
+
+        tob = new TapiocaOptionBroker(payable(tapToken), address(usdo), dao, EPOCH_DURATION, buckets, owner);
     }
 
     function deployDependencies() internal {
@@ -73,8 +72,10 @@ contract TOBTestBase is Test {
         lbp = makeAddr("lbp");
         dao = makeAddr("dao");
         airdrop = makeAddr("airdrop");
-
         owner = makeAddr("multisig");
+        sUSDX = new ERC20Mock("sUSDX", "sUSDX");
+        sWETH = new ERC20Mock("sWETH", "sWETH");
+        usdo = new ERC20Mock("USDO", "USDO");
         TapiocaReport memory emptyReport;
 
         input.owner = owner;
@@ -96,7 +97,7 @@ contract TOBTestBase is Test {
                 airdrop,
                 0,
                 owner,
-                address(new TapTokenSender("", "",  input.lzEndpoint, owner, address(0))),
+                address(new TapTokenSender("", "", input.lzEndpoint, owner, address(0))),
                 address(new TapTokenReceiver("", "", input.lzEndpoint, owner, address(0))),
                 address(address(0)),
                 IPearlmit(address(0)),
@@ -104,30 +105,15 @@ contract TOBTestBase is Test {
             )
         );
         vm.label(address(tapToken), "TapToken");
-        
+        vm.label(address(sUSDX), "sUSDX");
+        vm.label(address(usdo), "USDO");
         input.tapToken = address(tapToken);
 
-
         report = TapiocaRelease.deployTapiocaV1(input, emptyReport);
-        singularityLauncher = new SingularityLauncher(
-            report.sglLiquidationModule,
-            report.sglBorrowModule,
-            report.sglCollateralModule,
-            report.sglLeverageModule,
-            report.sglInit,
-            report.penrose,
-            report.simpleLeverageExecutor,
-            report.sglInterestHelper,
-            report.singularity
-        );
 
         vm.startPrank(owner);
         tapToken.setPearlmit(IPearlmit(report.pearlmit));
         tapToken.setCluster(ICluster(report.cluster));
         vm.stopPrank();
-    }
-
-    function registerSingularities() internal {
-        
     }
 }
