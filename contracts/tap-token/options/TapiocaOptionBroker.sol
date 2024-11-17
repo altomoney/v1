@@ -18,6 +18,8 @@ import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {TapToken} from "tap-token/tokens/TapToken.sol";
 import {TWLBase, Bucket} from "tap-token/governance/TWLBase.sol";
 import {IYieldBox} from "../interfaces/IYieldBox.sol";
+import {ISingularity} from "tap-utils/interfaces/periph/ISingularity.sol";
+import {IMarket} from "tap-utils/interfaces/bar/IMarket.sol";
 
 /*
 
@@ -38,6 +40,8 @@ struct Participation {
     uint256 totalUsdo; // amount of usdo lent
     uint256 tapAmountExercised;
     uint256 lastEpochSync;
+    address[] singularityMarkets;
+    mapping(address singularityMarket => uint256 shares) singularityShares;
 }
 
 struct PaymentTokenOracle {
@@ -209,9 +213,12 @@ contract TapiocaOptionBroker is Pausable, Ownable, FullMath, ReentrancyGuard, TW
     //    WRITE
     // ===========
 
-    /// @notice Participate in voting and mint an oTAP position.
-    ///         Exercising the option is not possible on participation week.
-    function participatePeer(address to, uint8 bucketId, uint256 usdoAmount) external whenNotPaused nonReentrant {
+    /// @notice Lock & lend USDO in a singularity market
+    function lock(address to, uint8 bucketId, uint256 usdoAmount, address singularityMarket)
+        external
+        whenNotPaused
+        nonReentrant
+    {
         if (lastEpoch != currentEpoch()) advanceWeek();
         if (usdoAmount == 0) revert SharesNotValid();
         if (_lastEmergencySweep != 0) revert EmergencySweepActivated();
@@ -238,6 +245,16 @@ contract TapiocaOptionBroker is Pausable, Ownable, FullMath, ReentrancyGuard, TW
         position.lockedAt = uint56(block.timestamp);
         position.expiry = uint56(expiry);
 
+        if (position.singularityShares[singularityMarket] == 0) {
+            position.singularityMarkets.push(singularityMarket);
+        }
+        USDO.approve(singularityMarket, usdoAmount);
+
+        // Important: Pending to check interface AND token amount after Yieldbox removal task, next line may need to be changed
+        position.singularityShares[singularityMarket] +=
+            ISingularity(singularityMarket).addAsset(address(this), address(this), false, usdoAmount);
+        USDO.approve(singularityMarket, 0);
+
         _netDepositsPerEpoch[currentEpoch() + 1] += int256(usdoAmount);
         _netDepositsPerEpoch[_timestampToEpoch(expiry) + 1] -= int256(position.totalUsdo);
 
@@ -246,8 +263,8 @@ contract TapiocaOptionBroker is Pausable, Ownable, FullMath, ReentrancyGuard, TW
         emit Participate(to, bucketId, currentEpoch(), usdoAmount);
     }
 
-    /// @notice Exit a twAML participation and delete the voting power if existing
-    function exitPositionPeer(uint8 bucketId) external whenNotPaused {
+    /// @notice Exit and unlock lent USDO in all markets if lock is expired
+    function unlock(uint8 bucketId, address to) external whenNotPaused {
         Participation storage position = _participations[msg.sender][bucketId];
 
         if (block.timestamp < position.expiry) {
@@ -258,9 +275,18 @@ contract TapiocaOptionBroker is Pausable, Ownable, FullMath, ReentrancyGuard, TW
 
         position.totalUsdo = 0;
 
-        IERC20(USDO).safeTransfer(msg.sender, totalUsdo);
+        for (uint256 i; i < position.singularityMarkets.length; ++i) {
+            address market = position.singularityMarkets[i];
+            uint256 shares = position.singularityShares[market];
+            delete position.singularityShares[market];
 
-        emit ExitPosition(msg.sender, bucketId, currentEpoch(), totalUsdo);
+            IERC20(market).approve(market, shares);
+            ISingularity(market).removeAsset(address(this), to, shares);
+            IERC20(market).approve(market, 0);
+        }
+        delete position.singularityMarkets;
+
+        emit ExitPosition(msg.sender, bucketId, currentEpoch(), to, totalUsdo);
     }
 
     /// @notice Exercise an oTAP position
