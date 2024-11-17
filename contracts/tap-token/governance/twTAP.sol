@@ -430,25 +430,11 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, PearlmitHandler, ReentrancyGuard, 
      * @dev Strategy is to sweep tokens, then recreate positions with them on a new contract.
      *
      */
-    function emergencySweep() external onlyOwner {
+    function emergencySweep(address token) external onlyOwner {
         if (lastEmergencySweep == 0 || block.timestamp < lastEmergencySweep + emergencySweepCooldown) {
             revert EmergencySweepCooldownNotReached();
         }
-
-        // 1. Transfer the locks
-        tapOFT.transfer(owner(), tapOFT.balanceOf(address(this)));
-
-        // 2. Transfer the rewards
-        uint256 len = rewardTokens.length;
-        // Index starts at 1, see constructor
-        for (uint256 i = 1; i < len; ++i) {
-            IERC20 token = rewardTokens[i];
-            if (token != IERC20(address(0x0))) {
-                token.safeTransfer(owner(), token.balanceOf(address(this)));
-            }
-        }
-
-        lastEmergencySweep = 0;
+        IERC20(token).safeTransfer(owner(), IERC20(token).balanceOf(address(this)));
     }
 
     /**

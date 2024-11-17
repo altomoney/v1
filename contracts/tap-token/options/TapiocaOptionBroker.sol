@@ -18,7 +18,7 @@ import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {TapToken} from "tap-token/tokens/TapToken.sol";
 import {TWLBase, Bucket} from "tap-token/governance/TWLBase.sol";
 import {IYieldBox} from "../interfaces/IYieldBox.sol";
-import {ISingularity} from "tap-utils/interfaces/periph/ISingularity.sol";
+import {ISingularity} from "tap-utils/interfaces/bar/ISingularity.sol";
 import {IMarket} from "tap-utils/interfaces/bar/IMarket.sol";
 
 /*
@@ -40,8 +40,7 @@ struct Participation {
     uint256 totalUsdo; // amount of usdo lent
     uint256 tapAmountExercised;
     uint256 lastEpochSync;
-    address[] singularityMarkets;
-    mapping(address singularityMarket => uint256 shares) singularityShares;
+    address[] markets;
 }
 
 struct PaymentTokenOracle {
@@ -53,7 +52,7 @@ contract TapiocaOptionBroker is Pausable, Ownable, FullMath, ReentrancyGuard, TW
     using SafeERC20 for IERC20;
 
     TapToken public immutable TAP_TOKEN;
-    address public immutable USDO;
+    IERC20 public immutable USDO;
     ITapiocaOracle public _tapOracle;
     ICluster public _cluster;
     address public _paymentTokenBeneficiary; // Where to collect the payment tokens
@@ -62,11 +61,14 @@ contract TapiocaOptionBroker is Pausable, Ownable, FullMath, ReentrancyGuard, TW
     uint256 public _exerciseWindow = 30 days;
     uint256 public _emergencySweepCooldown = 2 days;
     uint256 public _lastEmergencySweep;
+    bool public _rescueMode;
 
+    mapping(address => bool) public _activeMarkets;
     mapping(address => mapping(uint256 => Participation)) public _participations; // accountAddress => bucketId => Participation
     mapping(uint256 => uint256) public _tapPerEpoch; // epoch => availableTAP
     mapping(address => PaymentTokenOracle) public _paymentTokens; // Token address => PaymentTokenOracle
     mapping(uint256 => int256) public _netDepositsPerEpoch; // epoch => total deposited
+    mapping(address account => mapping(address marketAddress => uint256 shares)) public _marketShares; // accountAddress => marketAddress => shares
 
     bytes public _tapOracleData;
 
@@ -91,10 +93,12 @@ contract TapiocaOptionBroker is Pausable, Ownable, FullMath, ReentrancyGuard, TW
     error SharesNotValid();
     error MinRewardTooLow();
     error EmergencySweepActivated();
+    error EmergencySweepCooldownNotReached();
     error TooHigh();
     error TooLong();
     error TooLow();
     error ExpiredCall();
+    error MarketNotActive();
 
     constructor(
         address payable tapOFT,
@@ -104,7 +108,7 @@ contract TapiocaOptionBroker is Pausable, Ownable, FullMath, ReentrancyGuard, TW
         Bucket[] memory buckets,
         address admin
     ) TWLBase(epochDuration, buckets) {
-        USDO = usdo;
+        USDO = IERC20(usdo);
         TAP_TOKEN = TapToken(tapOFT);
         _paymentTokenBeneficiary = paymentTokenBeneficiary;
 
@@ -124,19 +128,20 @@ contract TapiocaOptionBroker is Pausable, Ownable, FullMath, ReentrancyGuard, TW
         uint256 tapAmount
     );
     event NewEpoch(uint256 indexed epoch, uint256 extractedTap, uint256 epochTapValuation);
-    event ExitPosition(address indexed user, uint256 indexed bucketId, uint256 epoch, uint256 usdoAmount);
+    event ExitPosition(
+        address indexed user, address indexed to, uint256 indexed bucketId, uint256 epoch, uint256 usdoAmount
+    );
     event SetPaymentToken(address indexed paymentToken, address oracle, bytes oracleData);
     event SetTapOracle(address oracle, bytes oracleData);
     event SetPaymentTokenBeneficiary(address paymentTokenBeneficiary);
     event SetCluster(address cluster);
     event Pause(bool pauseState);
     event SetTapOft(address tapOFT);
-    event RequestSglPoolRescue(uint256 indexed tSglAddress, uint256 timestamp);
-    event ActivateSGLPoolRescue(uint256 indexed tSglAddress, address sglAddress);
     event SetEmergencySweepCooldown(uint256 emergencySweepCooldown);
     event ActivateEmergencySweep();
     event PaymentCollection(address indexed paymentToken, address indexed beneficiary, uint256 amount);
     event SetExerciseWindow(uint256 exerciseWindow);
+    event SetMarket(address market, bool active);
     // ==========
     //    READ
     // ==========
@@ -214,14 +219,15 @@ contract TapiocaOptionBroker is Pausable, Ownable, FullMath, ReentrancyGuard, TW
     // ===========
 
     /// @notice Lock & lend USDO in a singularity market
-    function lock(address to, uint8 bucketId, uint256 usdoAmount, address singularityMarket)
-        external
-        whenNotPaused
-        nonReentrant
-    {
+    /// @param to The user that receives the lent USDO
+    /// @param bucketId The bucket ID to use
+    /// @param usdoAmount The amount of USDO to lend
+    /// @param market The singularity market to lend USDO to
+    function lock(address to, uint8 bucketId, uint256 usdoAmount, address market) external whenNotPaused nonReentrant {
         if (lastEpoch != currentEpoch()) advanceWeek();
         if (usdoAmount == 0) revert SharesNotValid();
         if (_lastEmergencySweep != 0) revert EmergencySweepActivated();
+        if (!_activeMarkets[market]) revert MarketNotActive();
 
         _supplyInBucket(bucketId, usdoAmount);
 
@@ -245,15 +251,14 @@ contract TapiocaOptionBroker is Pausable, Ownable, FullMath, ReentrancyGuard, TW
         position.lockedAt = uint56(block.timestamp);
         position.expiry = uint56(expiry);
 
-        if (position.singularityShares[singularityMarket] == 0) {
-            position.singularityMarkets.push(singularityMarket);
+        if (_marketShares[to][market] == 0) {
+            position.markets.push(market);
         }
-        USDO.approve(singularityMarket, usdoAmount);
+        USDO.safeApprove(market, usdoAmount);
 
         // Important: Pending to check interface AND token amount after Yieldbox removal task, next line may need to be changed
-        position.singularityShares[singularityMarket] +=
-            ISingularity(singularityMarket).addAsset(address(this), address(this), false, usdoAmount);
-        USDO.approve(singularityMarket, 0);
+        _marketShares[to][market] += ISingularity(market).addAsset(address(this), address(this), false, usdoAmount);
+        USDO.safeApprove(market, 0);
 
         _netDepositsPerEpoch[currentEpoch() + 1] += int256(usdoAmount);
         _netDepositsPerEpoch[_timestampToEpoch(expiry) + 1] -= int256(position.totalUsdo);
@@ -275,18 +280,18 @@ contract TapiocaOptionBroker is Pausable, Ownable, FullMath, ReentrancyGuard, TW
 
         position.totalUsdo = 0;
 
-        for (uint256 i; i < position.singularityMarkets.length; ++i) {
-            address market = position.singularityMarkets[i];
-            uint256 shares = position.singularityShares[market];
-            delete position.singularityShares[market];
+        for (uint256 i; i < position.markets.length; ++i) {
+            address market = position.markets[i];
+            uint256 shares = _marketShares[msg.sender][market];
+            delete _marketShares[msg.sender][market];
 
-            IERC20(market).approve(market, shares);
+            IERC20(market).safeApprove(market, shares);
             ISingularity(market).removeAsset(address(this), to, shares);
-            IERC20(market).approve(market, 0);
+            IERC20(market).safeApprove(market, 0);
         }
-        delete position.singularityMarkets;
+        delete position.markets;
 
-        emit ExitPosition(msg.sender, bucketId, currentEpoch(), to, totalUsdo);
+        emit ExitPosition(msg.sender, to, bucketId, currentEpoch(), totalUsdo);
     }
 
     /// @notice Exercise an oTAP position
@@ -439,6 +444,33 @@ contract TapiocaOptionBroker is Pausable, Ownable, FullMath, ReentrancyGuard, TW
     }
 
     /**
+     * @notice Set the emergency sweep cooldown
+     */
+    function setEmergencySweepCooldown(uint256 _emergencySweepCooldown) external onlyOwner {
+        _emergencySweepCooldown = _emergencySweepCooldown;
+        emit SetEmergencySweepCooldown(_emergencySweepCooldown);
+    }
+
+    /**
+     * @notice Activate the emergency sweep cooldown
+     */
+    function activateEmergencySweep() external onlyOwner {
+        _lastEmergencySweep = block.timestamp;
+        emit ActivateEmergencySweep();
+    }
+
+    /**
+     * @notice Emergency sweep tokens in case of a critical issue, after a cooldown period.
+     */
+    function emergencySweep(address token) external onlyOwner {
+        if (_lastEmergencySweep == 0 || block.timestamp < _lastEmergencySweep + _emergencySweepCooldown) {
+            revert EmergencySweepCooldownNotReached();
+        }
+
+        IERC20(token).safeTransfer(owner(), IERC20(token).balanceOf(address(this)));
+    }
+
+    /**
      * @notice Add a new bucket
      * @param bucket Bucket to add into the system
      */
@@ -457,19 +489,12 @@ contract TapiocaOptionBroker is Pausable, Ownable, FullMath, ReentrancyGuard, TW
     }
 
     /**
-     * @notice Set the emergency sweep cooldown
+     * @notice Set the market active state
+     * @param market The market to set the active state
      */
-    function setEmergencySweepCooldown(uint256 emergencySweepCooldown) external onlyOwner {
-        _emergencySweepCooldown = emergencySweepCooldown;
-        emit SetEmergencySweepCooldown(emergencySweepCooldown);
-    }
-
-    /**
-     * @notice Activate the emergency sweep cooldown
-     */
-    function activateEmergencySweep() external onlyOwner {
-        _lastEmergencySweep = block.timestamp;
-        emit ActivateEmergencySweep();
+    function setMarket(address market, bool isActive) external onlyOwner {
+        _activeMarkets[market] = isActive;
+        emit SetMarket(market, isActive);
     }
 
     // ============

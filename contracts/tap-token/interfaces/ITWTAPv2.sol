@@ -253,7 +253,7 @@ interface ITWTAPv2 is ITWLBase {
      * @dev Strategy is to sweep tokens, then recreate positions with them on a new contract.
      *
      */
-    function emergencySweep() external;
+    function emergencySweep(address token) external;
 
     /**
      * @notice Adds a new locking bucket
