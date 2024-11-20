@@ -28,6 +28,7 @@ remappings = [
 	'tapioca-bar/=contracts/bar/',
 	'tapioca-mocks/=contracts/mocks/',
 	'deployments/=contracts/deployments/',
+	'solady/=lib/solady/src/',
 ]
 
 [etherscan]

@@ -56,15 +56,16 @@ contract SGLLiquidation is SGLCommon {
         bytes calldata liquidatorReceiverData,
         bool swapCollateral
     ) external {
+        ICluster cluster = _cluster();
         require(
-            penrose.cluster().hasRole(msg.sender, keccak256("LIQUIDATOR")) || msg.sender == owner(),
+            cluster.hasRole(msg.sender, keccak256("LIQUIDATOR")) || msg.sender == owner(),
             "Market: unauthorized"
         );
         _tryUpdateExchangeRate();
 
         //check from whitelist status
         {
-            bool isWhitelisted = ICluster(penrose.cluster()).isWhitelisted(0, from);
+            bool isWhitelisted = cluster.isWhitelisted(0, from);
             if (!isWhitelisted) revert NotAuthorized();
         }
         // accrue before liquidation
@@ -73,10 +74,9 @@ contract SGLLiquidation is SGLCommon {
         // compute borrow amount with bonus
         uint256 elasticPart = totalBorrow.toElastic(userBorrowPart[user], false);
         uint256 borrowAmountWithBonus = elasticPart + (elasticPart * liquidationMultiplier) / FEE_PRECISION;
-        uint256 requiredCollateral =
-            yieldBox.toShare(collateralId, (borrowAmountWithBonus * exchangeRate) / EXCHANGE_RATE_PRECISION, false);
+        uint256 requiredCollateral = convertToShares((borrowAmountWithBonus * exchangeRate) / EXCHANGE_RATE_PRECISION);
 
-        uint256 collateralShare = userCollateralShare[user];
+        uint256 collateralShare = balanceOf(user);
 
         if (requiredCollateral < collateralShare) revert NotAuthorized();
 
@@ -85,19 +85,16 @@ contract SGLLiquidation is SGLCommon {
         totalBorrow.elastic -= borrowAmount.toUint128();
         totalBorrow.base -= userBorrowPart[user].toUint128();
 
-        // update totalCollateralShare
-        totalCollateralShare -= collateralShare;
+        // burn collateral shares from user.
+        _burn(user, collateralShare);
 
-        // set user share & part to 0
-        userCollateralShare[user] = 0;
+        // User collateral shares is now 0.
+        // Set user borrow part to 0
         userBorrowPart[user] = 0;
 
         // transfer asset from `from`
         asset.safeTransferFrom(from, address(this), borrowAmount);
-        address(asset).safeApprove(address(yieldBox), borrowAmount);
-        uint256 borrowShare = yieldBox.toShare(assetId, borrowAmount, false);
-        yieldBox.depositAsset(assetId, address(this), address(this), borrowAmount, 0);
-        address(asset).safeApprove(address(yieldBox), 0);
+        uint256 borrowShare = convertToShares(borrowAmount);
         totalAsset.elastic += borrowShare.toUint128();
 
         // swap collateral with asset and send it to `receiver`
@@ -106,7 +103,7 @@ contract SGLLiquidation is SGLCommon {
                 _swapCollateralWithAsset(collateralShare, liquidatorReceiver, liquidatorReceiverData, 0, false);
             asset.safeTransfer(receiver, returnedAmount);
         } else {
-            uint256 collateralAmount = yieldBox.toAmount(collateralId, collateralShare, false);
+            uint256 collateralAmount = convertToAssets(collateralShare);
             yieldBox.withdraw(collateralId, address(this), receiver, collateralAmount, 0);
         }
     }

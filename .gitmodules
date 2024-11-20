@@ -4,3 +4,7 @@
 [submodule "lib/PermitC"]
 	path = lib/PermitC
 	url = https://github.com/Tapioca-DAO/PermitC
+[submodule "lib/solady"]
+	path = lib/solady
+	url = https://github.com/vectorized/solady
+	branch = v0.0.267

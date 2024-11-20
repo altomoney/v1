@@ -148,23 +148,19 @@ contract BigBang is MarketStateView, BBCommon {
         ILeverageExecutor _leverageExecutor
     ) private {
         penrose = _penrose;
-        pearlmit = IPearlmit(_penrose.pearlmit());
-        yieldBox = IYieldBox(_penrose.yieldBox());
 
-        address _asset = penrose.usdoToken();
+        address __asset = penrose.usdoToken();
 
         if (address(_collateral) == address(0)) revert BadPair();
-        if (address(_asset) == address(0)) revert BadPair();
+        if (__asset == address(0)) revert BadPair();
         if (address(_oracle) == address(0)) revert BadPair();
         if (_collateralizationRate > FEE_PRECISION) revert NotValid();
         if (_liquidationCollateralizationRate > FEE_PRECISION) {
             revert NotValid();
         }
 
-        asset = IERC20(_asset);
-        assetId = penrose.usdoAssetId();
+        __initialize_MarketERC4626(IERC20(__asset));
         collateral = _collateral;
-        collateralId = _collateralId;
         oracle = _oracle;
         updateExchangeRate();
         protocolFee = 10000; // 10%; used for accrual

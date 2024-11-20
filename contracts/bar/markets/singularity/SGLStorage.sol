@@ -8,11 +8,10 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.
 import {IERC20} from "@boringcrypto/boring-solidity/contracts/ERC20.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-
 // Tapioca
 import {ISingularity} from "tap-utils/interfaces/bar/ISingularity.sol";
-import {Market, MarketERC20} from "../Market.sol";
-
+import {Market} from "../Market.sol";
+import {MarketERC4626} from "../MarketERC4626.sol";
 // solhint-disable max-line-length
 
 /*
@@ -37,6 +36,7 @@ contract SGLStorage is Ownable, Market, ReentrancyGuard {
     /// @notice information about the accrual info
     ISingularity.AccrueInfo public accrueInfo;
     /// @notice total assets share & amount
+    // TODO Should we remove this because it is managed by ERC4626?
     Rebase public totalAsset; // elastic = yieldBox shares held by the Singularity, base = Total fractions held by asset suppliers
 
     uint256 public minimumTargetUtilization;
@@ -95,7 +95,7 @@ contract SGLStorage is Ownable, Market, ReentrancyGuard {
     // ***************** //
     // *** CONSTANTS *** //
     // ***************** //
-    constructor() MarketERC20("Tapioca Singularity") {}
+    constructor() MarketERC4626("Tapioca Singularity", "SGL") {}
 
     // ********************** //
     // *** VIEW FUNCTIONS *** //
@@ -112,14 +112,14 @@ contract SGLStorage is Ownable, Market, ReentrancyGuard {
 
     /// @notice returns market's ERC20 decimals
     function decimals() external view returns (uint8) {
-        return asset.safeDecimals();
+        return asset.safeDecimals(); // TODO Check overriding ERC4626 decimals?
     }
 
     /// @notice returns market's ERC20 totalSupply
     /// @dev totalSupply for ERC20 compatibility
     ///      BalanceOf[user] represent a fraction
     function totalSupply() public view virtual override returns (uint256) {
-        return totalAsset.base;
+        return totalAsset.base; // TODO Check overriding ERC4626 totalSupply?
     }
 
     function _accrue() internal virtual override {}

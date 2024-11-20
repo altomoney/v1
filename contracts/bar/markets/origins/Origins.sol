@@ -16,7 +16,8 @@ import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
 import {IUsdo} from "tap-utils/interfaces/oft/IUsdo.sol";
 import {SafeApprove} from "../../libraries/SafeApprove.sol";
 import {MarketStateView} from "../MarketStateView.sol";
-import {Market, MarketERC20} from "../Market.sol";
+import {Market} from "../Market.sol";
+import {MarketERC4626} from "../MarketERC4626.sol";
 
 // solhint-disable max-line-length
 
@@ -75,7 +76,7 @@ contract Origins is Ownable, Market, MarketStateView, ReentrancyGuard {
         uint256 _exchangeRatePrecision,
         uint256 _collateralizationRate,
         IPenrose _penrose
-    ) MarketERC20("Origins") {
+    ) MarketERC4626("Origins", "ORI") {
         allowedParticipants[_owner] = true;
 
         yieldBox = IYieldBox(_yieldBox);

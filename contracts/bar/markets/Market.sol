@@ -9,10 +9,8 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 // Tapioca
 import {ILeverageExecutor} from "tap-utils/interfaces/bar/ILeverageExecutor.sol";
 import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
-import {IYieldBox} from "tap-utils/interfaces/yieldbox/IYieldBox.sol";
-import {IPearlmit} from "tap-utils/interfaces/periph/IPearlmit.sol";
 import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
-import {MarketERC20} from "./MarketERC20.sol";
+import {MarketERC4626} from "./MarketERC4626.sol";
 
 /*
 
@@ -25,7 +23,7 @@ import {MarketERC20} from "./MarketERC20.sol";
    
 */
 
-abstract contract Market is MarketERC20, Ownable {
+abstract contract Market is MarketERC4626, Ownable {
     using RebaseLibrary for Rebase;
 
     // ************ //
@@ -46,19 +44,9 @@ abstract contract Market is MarketERC20, Ownable {
     /// @notice pause options
     mapping(PauseType pauseProp => bool pauseStatus) internal pauseOptions;
 
-    /// @notice returns YieldBox address
-    IYieldBox internal yieldBox;
-
-    IPearlmit internal pearlmit;
-
-    /// @notice collateral token address
-    IERC20 internal collateral;
-    /// @notice collateral token YieldBox id
-    uint256 internal collateralId;
     /// @notice asset token address
-    IERC20 internal asset;
-    /// @notice asset token YieldBox id
-    uint256 internal assetId;
+    /// @dev This is the borrowable token
+    IERC20 internal _asset;
     /// @notice oracle address
     ITapiocaOracle internal oracle;
     /// @notice oracleData
@@ -71,19 +59,13 @@ abstract contract Market is MarketERC20, Ownable {
     uint256 internal rateValidDuration;
     /// @notice latest timestamp when `exchangeRate` was updated
     uint256 internal rateTimestamp;
-
     /// @notice total amount borrowed
     /// @dev elastic = Total token amount to be repayed by borrowers, base = Total parts of the debt held by borrowers
     Rebase internal totalBorrow;
-    /// @notice total collateral supplied
-    uint256 internal totalCollateralShare;
     /// @notice max borrow cap
     uint256 internal totalBorrowCap;
     /// @notice borrow amount per user
     mapping(address => uint256) internal userBorrowPart;
-    /// @notice collateral share per user
-    mapping(address => uint256) internal userCollateralShare;
-
     /// @notice accrual protocol rewards
     uint256 internal protocolFee; // 10%
     /// @notice min % a liquidator can receive in rewards
@@ -361,7 +343,7 @@ abstract contract Market is MarketERC20, Ownable {
         unchecked {
             amountToSolvency = borrowPart >= collateralAmountInAsset ? borrowPart - collateralAmountInAsset : 0;
         }
-        (minTVL, maxTVL) = _computeMaxAndMinLTVInAsset(userCollateralShare[user], _exchangeRate);
+        (minTVL, maxTVL) = _computeMaxAndMinLTVInAsset(balanceOf(user), _exchangeRate);
     }
 
     /// @notice Gets the exchange rate. I.e how much collateral to buy 1e18 asset.
@@ -395,19 +377,13 @@ abstract contract Market is MarketERC20, Ownable {
     function _accrueView() internal view virtual returns (Rebase memory);
 
     /**
-     * @inheritdoc MarketERC20
+     * @inheritdoc MarketERC4626
      */
     function _allowedLend(address from, uint256 share) internal virtual override {
         if (from != msg.sender) {
             if (share == 0) revert AllowanceNotValid();
-
-            uint256 pearlmitAllowed;
-            // Here we approve the market token, because it is unique to the market
-            if (penrose.cluster().isWhitelisted(0, msg.sender)) {
-                (pearlmitAllowed,) = penrose.pearlmit().allowance(from, msg.sender, 20, address(this), 0);
-            }
-            require(allowance[from][msg.sender] >= share || pearlmitAllowed >= share, "Market: not approved");
-            if (pearlmitAllowed >= share) return;
+            // TODO Not sure if we need all this logic.
+            require(allowance[from][msg.sender] >= share, "Market: not approved");
             if (allowance[from][msg.sender] != type(uint256).max) {
                 allowance[from][msg.sender] -= share;
             }
@@ -415,20 +391,13 @@ abstract contract Market is MarketERC20, Ownable {
     }
 
     /**
-     * @inheritdoc MarketERC20
+     * @inheritdoc MarketERC4626
      */
     function _allowedBorrow(address from, uint256 share) internal virtual override {
         if (from != msg.sender) {
             if (share == 0) revert AllowanceNotValid();
-
-            uint256 pearlmitAllowed;
-            // Here we approve the YB collateral token, because market token is already used in `_allowedLend`
-            if (penrose.cluster().isWhitelisted(0, msg.sender)) {
-                (pearlmitAllowed,) =
-                    penrose.pearlmit().allowance(from, msg.sender, 1155, address(yieldBox), collateralId);
-            }
-            require(allowanceBorrow[from][msg.sender] >= share || pearlmitAllowed >= share, "Market: not approved");
-            if (pearlmitAllowed >= share) return;
+            // TODO Not sure if we need all this logic.
+            require(allowanceBorrow[from][msg.sender] >= share, "Market: not approved");
             if (allowanceBorrow[from][msg.sender] != type(uint256).max) {
                 allowanceBorrow[from][msg.sender] -= share;
             }
@@ -467,7 +436,7 @@ abstract contract Market is MarketERC20, Ownable {
         returns (uint256 collateralAmountInAsset)
     {
         require(_exchangeRate > 0, "Market: exchangeRate not valid");
-        uint256 userCollateralAmount = yieldBox.toAmount(collateralId, userCollateralShare[user], false);
+        uint256 userCollateralAmount = balanceOf(user);
         collateralAmountInAsset =
             (userCollateralAmount * (EXCHANGE_RATE_PRECISION / FEE_PRECISION) * collateralizationRate) / _exchangeRate;
     }
@@ -478,12 +447,12 @@ abstract contract Market is MarketERC20, Ownable {
         // accrue must have already been called!
         uint256 borrowPart = userBorrowPart[user];
         if (borrowPart == 0) return true;
-        uint256 collateralShare = userCollateralShare[user];
+        uint256 collateralShare = balanceOf(user);
         if (collateralShare == 0) return false;
 
         Rebase memory _totalBorrow = totalBorrow;
 
-        uint256 collateralAmount = yieldBox.toAmount(collateralId, collateralShare, false);
+        uint256 collateralAmount = maxWithdraw(user);
         return collateralAmount * (EXCHANGE_RATE_PRECISION / FEE_PRECISION)
             * (_liquidation ? liquidationCollateralizationRate : collateralizationRate)
         // Moved exchangeRate here instead of dividing the other side to preserve more precision
@@ -497,7 +466,7 @@ abstract contract Market is MarketERC20, Ownable {
         returns (uint256 min, uint256 max)
     {
         require(_exchangeRate > 0, "Market: exchangeRate not valid");
-        uint256 collateralAmount = yieldBox.toAmount(collateralId, collateralShare, false);
+        uint256 collateralAmount = convertToAssets(collateralShare);
 
         max = (collateralAmount * EXCHANGE_RATE_PRECISION) / _exchangeRate;
         min = (max * collateralizationRate) / FEE_PRECISION;
@@ -505,7 +474,7 @@ abstract contract Market is MarketERC20, Ownable {
 
     function _getCallerReward(address user, uint256 _exchangeRate) internal view returns (uint256) {
         (uint256 startTVLInAsset, uint256 maxTVLInAsset) =
-            _computeMaxAndMinLTVInAsset(userCollateralShare[user], _exchangeRate);
+            _computeMaxAndMinLTVInAsset(balanceOf(user), _exchangeRate);
 
         uint256 borrowed = userBorrowPart[user];
         if (borrowed == 0) return 0;
@@ -537,7 +506,7 @@ abstract contract Market is MarketERC20, Ownable {
         uint256 maxBorrowable = _computeMaxBorrowableAmount(user, _exchangeRate);
 
         uint256 shareRatio = _getRatio(borrowAmount, maxBorrowable, assetDecimals);
-        return (shareRatio * userCollateralShare[user]) / (10 ** assetDecimals);
+        return (shareRatio * balanceOf(user)) / (10 ** assetDecimals);
     }
 
     function _getRatio(uint256 numerator, uint256 denominator, uint256 precision) internal pure returns (uint256) {

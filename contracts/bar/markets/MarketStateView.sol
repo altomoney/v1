@@ -23,30 +23,6 @@ abstract contract MarketStateView is Market {
         return pauseOptions[_pauseProp];
     }
 
-    function _penrose() external view returns (address) {
-        return address(penrose);
-    }
-
-    function _pearlmit() external view returns (address) {
-        return address(pearlmit);
-    }
-
-    function _collateral() external view returns (address) {
-        return address(collateral);
-    }
-
-    function _collateralId() external view returns (uint256) {
-        return collateralId;
-    }
-
-    function _asset() external view returns (address) {
-        return address(asset);
-    }
-
-    function _assetId() external view returns (uint256) {
-        return assetId;
-    }
-
     function _oracle() external view returns (address) {
         return address(oracle);
     }
@@ -72,7 +48,7 @@ abstract contract MarketStateView is Market {
     }
 
     function _totalCollateralShare() external view returns (uint256) {
-        return totalCollateralShare;
+        return totalSupply();
     }
 
     function _totalBorrowCap() external view returns (uint256) {
@@ -81,10 +57,6 @@ abstract contract MarketStateView is Market {
 
     function _userBorrowPart(address _user) external view returns (uint256) {
         return userBorrowPart[_user];
-    }
-
-    function _userCollateralShare(address _user) external view returns (uint256) {
-        return userCollateralShare[_user];
     }
 
     function _protocolFee() external view returns (uint256) {
@@ -121,10 +93,6 @@ abstract contract MarketStateView is Market {
 
     function _maxLiquidationSlippage() external view returns (uint256) {
         return maxLiquidationSlippage;
-    }
-
-    function _yieldBox() external view returns (address) {
-        return address(yieldBox);
     }
 
     function _exchangeRatePrecision() external view returns (uint256) {
