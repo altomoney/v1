@@ -61,7 +61,7 @@ contract BBLeverage is BBLendingCommon {
         if (address(leverageExecutor) == address(0)) {
             revert LeverageExecutorNotValid();
         }
-        penrose.reAccrueBigBangMarkets();
+        _penrose.reAccrueBigBangMarkets();
 
         // Stack too deep fix
         _BuyCollateralCalldata memory calldata_;
@@ -74,10 +74,9 @@ contract BBLeverage is BBLendingCommon {
         }
 
         {
-            uint256 supplyShare = yieldBox.toShare(assetId, calldata_.supplyAmount, true);
+            uint256 supplyShare = convertToShares(calldata_.supplyAmount);
             if (supplyShare > 0) {
-                (memoryData.supplyShareToAmount,) =
-                    yieldBox.withdraw(assetId, calldata_.from, address(leverageExecutor), 0, supplyShare);
+                memoryData.supplyShareToAmount = redeem(supplyShare, address(leverageExecutor), calldata_.from);
             }
         }
 
@@ -88,14 +87,13 @@ contract BBLeverage is BBLendingCommon {
                 calldata_.borrowAmount,
                 _computeVariableOpeningFee(calldata_.borrowAmount)
             );
-            (memoryData.borrowShareToAmount,) =
-                yieldBox.withdraw(assetId, address(this), address(leverageExecutor), 0, borrowShare);
+            memoryData.borrowShareToAmount = redeem(borrowShare, address(leverageExecutor), address(this));
         }
         {
             updateExchangeRate();
             uint256 assetPartInCollateral = (memoryData.supplyShareToAmount + memoryData.borrowShareToAmount)
                 * exchangeRate / EXCHANGE_RATE_PRECISION;
-            uint256 _share = yieldBox.toShare(collateralId, assetPartInCollateral, false);
+            uint256 _share = convertToShares(assetPartInCollateral);
             _allowedBorrow(calldata_.from, _share);
 
             amountOut = leverageExecutor.getCollateral(
@@ -106,12 +104,10 @@ contract BBLeverage is BBLendingCommon {
                 calldata_.data
             );
         }
-        uint256 collateralShare = yieldBox.toShare(collateralId, amountOut, false);
+        uint256 collateralShare = convertToShares(amountOut);
         if (collateralShare == 0) revert CollateralShareNotValid();
 
-        address(collateral).safeApprove(address(yieldBox), type(uint256).max);
-        yieldBox.depositAsset(collateralId, address(this), address(this), 0, collateralShare);
-        address(collateral).safeApprove(address(yieldBox), 0);
+        mint(collateralShare, address(this));
 
         _addCollateral(calldata_.from, calldata_.from, false, 0, collateralShare, false);
         if (amountOut == 0) revert AmountNotValid();
@@ -141,25 +137,25 @@ contract BBLeverage is BBLendingCommon {
         if (address(leverageExecutor) == address(0)) {
             revert LeverageExecutorNotValid();
         }
-        penrose.reAccrueBigBangMarkets();
+        _penrose.reAccrueBigBangMarkets();
 
         _allowedBorrow(from, share);
         _removeCollateral(from, address(this), share);
 
         _SellCollateralMemoryData memory memoryData;
 
-        (memoryData.leverageAmount,) =
-            yieldBox.withdraw(collateralId, address(this), address(leverageExecutor), 0, share);
+        memoryData.leverageAmount = redeem(share, address(leverageExecutor), address(this));
         amountOut =
             leverageExecutor.getAsset(from, address(collateral), address(asset), memoryData.leverageAmount, data);
-        memoryData.shareOut = yieldBox.toShare(assetId, amountOut, false);
-        address(asset).safeApprove(address(yieldBox), type(uint256).max);
-        yieldBox.depositAsset(assetId, address(this), from, 0, memoryData.shareOut); // TODO Check for rounding attack?
-        address(asset).safeApprove(address(yieldBox), 0);
+        
+        
+        memoryData.shareOut = convertToShares(amountOut);
+
+        mint(memoryData.shareOut, from); // TODO Check for rounding attack?
 
         memoryData.partOwed = userBorrowPart[from];
         memoryData.amountOwed = totalBorrow.toElastic(memoryData.partOwed, true);
-        memoryData.shareOwed = yieldBox.toShare(assetId, memoryData.amountOwed, true);
+        memoryData.shareOwed = convertToShares(memoryData.amountOwed);
         if (memoryData.shareOwed <= memoryData.shareOut) {
             _repay(from, from, memoryData.partOwed, false);
         } else {

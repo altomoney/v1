@@ -60,28 +60,26 @@ contract BBLiquidation is BBCommon {
         bool swapCollateral
     ) external {
         require(
-            penrose.cluster().hasRole(msg.sender, keccak256("LIQUIDATOR")) || msg.sender == owner(),
-            "Market: unauthorized"
+            _cluster().hasRole(msg.sender, keccak256("LIQUIDATOR")) || msg.sender == owner(), "Market: unauthorized"
         );
         _tryUpdateExchangeRate();
 
         //check from whitelist status
         {
-            bool isWhitelisted = ICluster(penrose.cluster()).isWhitelisted(0, from);
+            bool isWhitelisted = _cluster().isWhitelisted(0, from);
             if (!isWhitelisted) revert NotAuthorized();
         }
 
         // accrue before liquidation
         _accrue();
-        penrose.reAccrueBigBangMarkets();
+        _penrose.reAccrueBigBangMarkets();
 
         // compute borrow amount with bonus
         uint256 elasticPart = totalBorrow.toElastic(userBorrowPart[user], false);
         uint256 borrowAmountWithBonus = elasticPart + (elasticPart * liquidationMultiplier) / FEE_PRECISION;
-        uint256 requiredCollateral =
-            yieldBox.toShare(collateralId, (borrowAmountWithBonus * exchangeRate) / EXCHANGE_RATE_PRECISION, false);
+        uint256 requiredCollateral = convertToShares((borrowAmountWithBonus * exchangeRate) / EXCHANGE_RATE_PRECISION);
 
-        uint256 collateralShare = userCollateralShare[user];
+        uint256 collateralShare = balanceOf(user);
         if (requiredCollateral < collateralShare) revert ForbiddenAction();
 
         // update totalBorrow
@@ -137,7 +135,7 @@ contract BBLiquidation is BBCommon {
         _tryUpdateExchangeRate();
 
         _accrue();
-        penrose.reAccrueBigBangMarkets();
+        _penrose.reAccrueBigBangMarkets();
 
         _closedLiquidation(
             users, maxBorrowParts, minLiquidationBonuses, liquidatorReceivers, liquidatorReceiverDatas, exchangeRate

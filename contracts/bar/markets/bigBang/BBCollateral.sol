@@ -34,11 +34,11 @@ contract BBCollateral is BBLendingCommon {
         optionNotPaused(PauseType.AddCollateral)
     {
         if (share == 0) {
-            share = yieldBox.toShare(collateralId, amount, false);
+            share = convertToShares(amount);
         }
 
         if (amount == 0) {
-            amount = yieldBox.toAmount(collateralId, share, false);
+            amount = convertToAssets(share);
         }
         if (amount <= minCollateralAmount) revert MinCollateralAmountNotMet();
 

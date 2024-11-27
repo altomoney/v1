@@ -36,36 +36,36 @@ contract SGLLendingCommon is SGLCommon {
     // *** PRIVATE FUNCTIONS *** //
     // ************************* //
     /// @dev Concrete implementation of `addCollateral`.
-    function _addCollateral(address from, address to, bool skim, uint256 amount, uint256 share, bool addTokens)
+    // TODO Do we need skim and addTokens?
+    function _addCollateral(address from, address to, bool _skim, uint256 amount, uint256 share, bool addTokens)
         internal
     {
         if (share == 0) {
-            share = yieldBox.toShare(collateralId, amount, false);
+            share = convertToShares(amount);
         }
-        uint256 oldTotalCollateralShare = totalCollateralShare;
-        userCollateralShare[to] += share;
-        totalCollateralShare = oldTotalCollateralShare + share;
+        uint256 oldTotalCollateralShare = totalSupply();
 
-        if (addTokens) _addTokens(from, to, collateralId, share, oldTotalCollateralShare, skim);
+        _mint(to, share);
 
-        emit LogAddCollateral(skim ? address(yieldBox) : from, to, share);
+        emit LogAddCollateral(from, to, share);
     }
 
     /// @dev Concrete implementation of `removeCollateral`.
     function _removeCollateral(address from, address to, uint256 share) internal {
-        userCollateralShare[from] -= share;
-        totalCollateralShare -= share;
+        _burn(from, share);
+
         emit LogRemoveCollateral(from, to, share);
-        yieldBox.transfer(address(this), to, collateralId, share);
+        uint256 amount = convertToAssets(share);
+        _collateral().safeTransfer(to, amount);
     }
 
     /// @dev Concrete implementation of `borrow`.
     function _borrow(address from, address to, uint256 amount) internal returns (uint256 part, uint256 share) {
-        share = yieldBox.toShare(assetId, amount, true);
+        share = convertToShares(amount);
         Rebase memory _totalAsset = totalAsset;
         if (_totalAsset.base < 1000) revert MinLimit();
 
-        uint256 fullAssetAmountBefore = yieldBox.toAmount(assetId, _totalAsset.elastic, false) + totalBorrow.elastic;
+        uint256 fullAssetAmountBefore = convertToAssets(_totalAsset.elastic) + totalBorrow.elastic;
 
         _totalAsset.elastic -= share.toUint128();
 
@@ -81,15 +81,16 @@ contract SGLLendingCommon is SGLCommon {
         if (feeAmount > 0) {
             uint256 feeFraction = (feeAmount * _totalAsset.base) / fullAssetAmountBefore;
             _totalAsset.base += feeFraction.toUint128();
-            balanceOf[address(penrose)] += feeFraction;
+            _mint(address(_penrose), feeFraction);
         }
 
-        totalAsset = _totalAsset;
+        totalAsset = _totalAsset; // TODO Check it
 
-        yieldBox.transfer(address(this), to, assetId, share);
+        _borrowableToken().safeTransfer(to, amount);
     }
 
     /// @dev Concrete implementation of `repay`.
+    // TODO Do we need skim?
     function _repay(address from, address to, bool skim, uint256 part, bool checkAllowance)
         internal
         returns (uint256 amount)
@@ -113,12 +114,12 @@ contract SGLLendingCommon is SGLCommon {
 
         userBorrowPart[to] -= part;
 
-        uint256 share = yieldBox.toShare(assetId, amount, true);
+        uint256 share = convertToShares(amount);
         uint128 totalShare = totalAsset.elastic;
-        _addTokens(from, to, assetId, share, uint256(totalShare), skim);
+
         totalAsset.elastic = totalShare + share.toUint128();
 
-        emit LogRepay(skim ? address(yieldBox) : from, to, amount, part);
+        emit LogRepay(from, to, amount, part);
     }
 
     function _safeDecimals(IERC20 token) internal view returns (uint8) {

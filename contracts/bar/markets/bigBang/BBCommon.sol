@@ -49,7 +49,7 @@ contract BBCommon is BBStorage {
         return IBigBangDebtRateHelper(debtRateHelper).getDebtRate(
             IBigBangDebtRateHelper.DebtRateCall({
                 isMainMarket: isMainMarket,
-                penrose: penrose,
+                penrose: address(_penrose),
                 elastic: totalBorrow.elastic,
                 debtRateAgainstEthMarket: debtRateAgainstEthMarket,
                 maxDebtRate: maxDebtRate,
@@ -87,7 +87,7 @@ contract BBCommon is BBStorage {
     function _accrue() internal override {
         // accrue ETH market first
         {
-            address ethMarket = penrose.bigBangEthMarket();
+            address ethMarket = _penrose.bigBangEthMarket();
             if (ethMarket != address(this) && ethMarket != address(0)) {
                 IBigBang(ethMarket).accrue();
             }
@@ -157,35 +157,15 @@ contract BBCommon is BBStorage {
 
     /// @dev Helper function to move tokens.xc
     /// @param from Account to debit tokens from, in `yieldBox`.
-    /// @param _tokenId The ERC-20 token asset ID in yieldBox.
     /// @param share The amount in shares to add.
     /// @param total Grand total amount to deduct from this contract's balance. Only applicable if `skim` is True.
     /// Only used for accounting checks.
     /// @param skim If True, only does a balance check on this contract.
     /// False if tokens from msg.sender in `yieldBox` should be transferred.
-    function _addTokens(address from, uint256 _tokenId, uint256 share, uint256 total, bool skim) internal {
+    function _addTokens(address from, uint256 share, uint256 total, bool skim) internal {
+        // TODO: check if this is needed
         if (skim) {
-            require(share <= yieldBox.balanceOf(address(this), _tokenId) - total, "BB: too much");
-        } else {
-            // yieldBox.transfer(from, address(this), _tokenId, share);
-            bool isErr = pearlmit.transferFromERC1155(from, address(this), address(yieldBox), _tokenId, share);
-            if (isErr) {
-                revert TransferFailed();
-            }
+            require(share <= balanceOf(address(this)) - total, "BB: too much");
         }
-    }
-
-    /// @notice deposits an amount to YieldBox
-    /// @param token the IERC20 token to deposit
-    /// @param to the shares receiver
-    /// @param id the IERC20 YieldBox asset id
-    /// @param amount the amount to deposit
-    function _depositAmountToYb(IERC20 token, address to, uint256 id, uint256 amount)
-        internal
-        returns (uint256 share)
-    {
-        address(token).safeApprove(address(yieldBox), amount);
-        (, share) = yieldBox.depositAsset(id, address(this), to, amount, 0);
-        address(token).safeApprove(address(yieldBox), 0);
     }
 }

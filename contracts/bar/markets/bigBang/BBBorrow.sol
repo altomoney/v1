@@ -43,7 +43,7 @@ contract BBBorrow is BBLendingCommon {
     {
         if (amount <= minBorrowAmount) revert MinBorrowAmountNotMet();
 
-        penrose.reAccrueBigBangMarkets();
+        _penrose.reAccrueBigBangMarkets();
 
         uint256 feeAmount = _computeVariableOpeningFee(amount);
         uint256 allowanceShare =
@@ -67,7 +67,7 @@ contract BBBorrow is BBLendingCommon {
         _tryUpdateExchangeRate();
 
         _accrue();
-        penrose.reAccrueBigBangMarkets();
+        _penrose.reAccrueBigBangMarkets();
 
         amount = _repay(from, to, part, true);
     }

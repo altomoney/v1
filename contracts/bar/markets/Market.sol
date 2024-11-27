@@ -369,6 +369,15 @@ abstract contract Market is MarketERC4626, Ownable {
         return _getCallerReward(user, _exchangeRate);
     }
 
+    /**
+     * @notice Returns the borrowable token.
+     * @dev This is not the same as the asset token in the ERC4626.
+     * @return The borrowable token.
+     */
+    function _borrowableToken() internal view returns (IERC20) {
+        return IERC20(_asset);
+    }
+
     // ************************** //
     // *** INTERNAL FUNCTIONS *** //
     // ************************** //

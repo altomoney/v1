@@ -138,7 +138,7 @@ contract Singularity is MarketStateView, SGLCommon {
         allowedLend(from, share)
         returns (uint256 fraction)
     {
-        uint256 _amount = yieldBox.toAmount(assetId, share, false);
+        uint256 _amount = convertToAssets(share);
         if (_amount <= minLendAmount) revert MinLendAmountNotMet();
 
         _accrue();
@@ -167,7 +167,7 @@ contract Singularity is MarketStateView, SGLCommon {
     /// @dev can only be called by the conservator
     /// @param val the new value
     function updatePause(PauseType _type, bool val, bool resetAccrueTimestmap) external {
-        if (!penrose.cluster().hasRole(msg.sender, keccak256("PAUSABLE")) && msg.sender != owner()) {
+        if (!_cluster().hasRole(msg.sender, keccak256("PAUSABLE")) && msg.sender != owner()) {
             revert NotAuthorized();
         }
         if (val == pauseOptions[_type]) revert SameState();
@@ -198,10 +198,10 @@ contract Singularity is MarketStateView, SGLCommon {
     /// @return feeShares the amount of fees in shares withdrawn under Penrose
     function refreshPenroseFees() external returns (uint256 feeShares) {
         require(
-            penrose.cluster().hasRole(msg.sender, keccak256("FEES_EXTRACTOR")) || msg.sender == owner(),
+            _cluster().hasRole(msg.sender, keccak256("FEES_EXTRACTOR")) || msg.sender == owner(),
             "Ownable: caller is not the owner"
         );
-        address _feeTo = address(penrose);
+        address _feeTo = address(_penrose);
         // withdraw the fees accumulated in `accrueInfo.feesEarnedFraction` to the balance of `feeTo`.
         if (accrueInfo.feesEarnedFraction > 0) {
             _accrue();
@@ -315,7 +315,7 @@ contract Singularity is MarketStateView, SGLCommon {
     function _addAsset(address from, address to, bool skim, uint256 share) private returns (uint256 fraction) {
         Rebase memory _totalAsset = totalAsset;
         uint256 totalAssetShare = _totalAsset.elastic;
-        uint256 allShare = _totalAsset.elastic + yieldBox.toShare(assetId, totalBorrow.elastic, true);
+        uint256 allShare = _totalAsset.elastic + convertToShares(totalBorrow.elastic);
         fraction = allShare == 0 ? share : (share * _totalAsset.base) / allShare;
         if (_totalAsset.base + fraction.toUint128() < 1000) {
             return 0;
@@ -325,8 +325,8 @@ contract Singularity is MarketStateView, SGLCommon {
         balanceOf[to] += fraction;
         emit Transfer(address(0), to, fraction);
 
-        _addTokens(from, to, assetId, share, totalAssetShare, skim);
-        emit LogAddAsset(skim ? address(yieldBox) : from, to, share, fraction);
+        // _addTokens(from, to, assetId, share, totalAssetShare, skim); // TODO Check it if needed
+        emit LogAddAsset(from, to, share, fraction);
     }
 
     /// @dev Concrete implementation of `removeAsset`.
@@ -336,7 +336,7 @@ contract Singularity is MarketStateView, SGLCommon {
             return 0;
         }
         Rebase memory _totalAsset = totalAsset;
-        uint256 allShare = _totalAsset.elastic + yieldBox.toShare(assetId, totalBorrow.elastic, false);
+        uint256 allShare = _totalAsset.elastic + convertToShares(totalBorrow.elastic);
         share = (fraction * allShare) / _totalAsset.base;
 
         _totalAsset.base -= fraction.toUint128();
@@ -347,7 +347,8 @@ contract Singularity is MarketStateView, SGLCommon {
         _totalAsset.elastic -= share.toUint128();
         totalAsset = _totalAsset;
         emit LogRemoveAsset(from, to, share, fraction);
-        yieldBox.transfer(address(this), to, assetId, share);
+
+        transfer(address(this), to, share);
     }
 
     receive() external payable {}

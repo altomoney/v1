@@ -39,21 +39,23 @@ contract BBLendingCommon is BBCommon {
         internal
     {
         if (share == 0) {
-            share = yieldBox.toShare(collateralId, amount, false);
+            share = convertToShares(amount);
         }
-        userCollateralShare[to] += share;
-        uint256 oldTotalCollateralShare = totalCollateralShare;
-        totalCollateralShare = oldTotalCollateralShare + share;
-        if (addTokens) _addTokens(from, collateralId, share, oldTotalCollateralShare, skim);
-        emit LogAddCollateral(skim ? address(yieldBox) : from, to, share);
+
+        uint256 oldTotalCollateralShare = totalSupply();
+        _mint(to, share);
+
+        if (addTokens) _addTokens(from, share, oldTotalCollateralShare, skim);
+        emit LogAddCollateral(from, to, share);
     }
 
     /// @dev Concrete implementation of `removeCollateral`.
     function _removeCollateral(address from, address to, uint256 share) internal {
-        userCollateralShare[from] -= share;
-        totalCollateralShare -= share;
+        _burn(from, share);
+
         emit LogRemoveCollateral(from, to, share);
-        yieldBox.transfer(address(this), to, collateralId, share);
+
+        _collateral().safeTransfer(to, convertToAssets(share));
     }
 
     /// @dev Concrete implementation of `borrow`.
@@ -74,7 +76,8 @@ contract BBLendingCommon is BBCommon {
         IUsdo(address(asset)).mint(address(this), amount);
 
         //deposit borrowed amount to user
-        share = _depositAmountToYb(asset, to, assetId, amount);
+        _borrowableToken().safeTransfer(to, amount);
+        share = convertToShares(amount); // TODO Check it
     }
 
     /// @dev Concrete implementation of `repay`.
@@ -100,12 +103,9 @@ contract BBLendingCommon is BBCommon {
         userBorrowPart[to] -= part;
 
         // @dev amount includes the opening & accrued fees
-        uint256 _share = yieldBox.toShare(assetId, amount, false);
-        bool isErr = pearlmit.transferFromERC1155(from, address(this), address(yieldBox), assetId, _share);
-        if (isErr) {
-            revert TransferFailed();
-        }
-        (uint256 amountOut,) = yieldBox.withdraw(assetId, address(this), address(this), 0, _share);
+        uint256 _share = convertToShares(amount);
+        
+        uint256 amountOut = redeem(_share, address(this), address(this));
 
         // @dev burn USDO
         IUsdo(address(asset)).burn(address(this), amountOut);
