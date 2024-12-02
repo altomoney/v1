@@ -12,7 +12,6 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {
     ERC20WithoutStrategy, IStrategy, IYieldBox as IBoringYieldBox
 } from "yieldbox/strategies/ERC20WithoutStrategy.sol";
-import {PearlmitHandler, IPearlmit} from "tap-utils/pearlmit/PearlmitHandler.sol";
 import {RevertMsgDecoder} from "./usdo/libraries/RevertMsgDecoder.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {IMarket} from "tap-utils/interfaces/bar/ISingularity.sol";
@@ -21,7 +20,6 @@ import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
 import {IBigBang} from "tap-utils/interfaces/bar/IBigBang.sol";
 import {TokenType} from "yieldbox/enums/YieldBoxTokenType.sol";
 import {IUsdo} from "tap-utils/interfaces/oft/IUsdo.sol";
-import {IYieldBox} from "yieldbox/interfaces/IYieldBox.sol";
 import {SafeApprove} from "./libraries/SafeApprove.sol";
 
 /*
@@ -37,7 +35,7 @@ import {SafeApprove} from "./libraries/SafeApprove.sol";
 
 /// @title Global market registry
 /// @notice Singularity management
-contract Penrose is Ownable, Pausable, PearlmitHandler {
+contract Penrose is Ownable, Pausable {
     using SafeApprove for address;
 
     error AddressNotValid();
@@ -48,20 +46,12 @@ contract Penrose is Ownable, Pausable, PearlmitHandler {
     /// @notice returns the Cluster contract
     ICluster public cluster;
 
-    /// @notice returns the YieldBox contract
-    IYieldBox public immutable yieldBox;
     /// @notice returns the TAP contract
     IERC20 public tapToken;
-    /// @notice returns TAP asset id registered in the YieldBox contract
-    uint256 public tapAssetId;
     /// @notice returns USDO contract
     IERC20 public usdoToken;
-    /// @notice returns USDO asset id registered in the YieldBox contract
-    uint256 public usdoAssetId;
     /// @notice returns the WETH/main contract
     IERC20 public mainToken;
-    /// @notice returns WETH/main asset id registered in the YieldBox contract
-    uint256 public mainAssetId;
 
     /// @notice Singularity master contracts
     IPenrose.MasterContract[] public singularityMasterContracts;
@@ -94,37 +84,23 @@ contract Penrose is Ownable, Pausable, PearlmitHandler {
     mapping(address => address[]) public clonesOf;
 
     /// @notice creates a Penrose contract
-    /// @param _yieldBox YieldBox contract address
     /// @param _cluster Cluster contract address
     /// @param tapToken_ TapOFT contract address
     /// @param mainToken_ WETH contract address
     /// @param _owner owner address
     constructor(
-        IYieldBox _yieldBox,
         ICluster _cluster,
         IERC20 tapToken_,
         IERC20 mainToken_,
-        IPearlmit _pearlmit,
-        uint256 _tapAssetId,
-        uint256 _mainAssetId,
         address _owner
-    ) PearlmitHandler(_pearlmit) {
-        if (address(_yieldBox) == address(0)) revert AddressNotValid();
+    ) {
         if (address(_cluster) == address(0)) revert AddressNotValid();
         if (address(tapToken_) == address(0)) revert AddressNotValid();
-        if (address(_pearlmit) == address(0)) revert AddressNotValid();
         if (address(_owner) == address(0)) revert AddressNotValid();
-        if (_tapAssetId == 0) revert NotValid();
-        if (_mainAssetId == 0) revert NotValid();
 
-        yieldBox = _yieldBox;
         cluster = _cluster;
         tapToken = tapToken_;
         mainToken = mainToken_;
-
-        tapAssetId = _tapAssetId;
-        mainAssetId = _mainAssetId;
-
         bigBangEthDebtRate = 8e16;
 
         _transferOwnership(_owner);
@@ -146,7 +122,7 @@ contract Penrose is Ownable, Pausable, PearlmitHandler {
     /// @notice event emitted when Origins is registered
     event RegisterOrigins(address indexed location);
     /// @notice event emitted when USDO address is updated
-    event UsdoTokenUpdated(address indexed usdoToken, uint256 indexed assetId);
+    event UsdoTokenUpdated(address indexed usdoToken);
     /// @notice event emitted when conservator is updated
     event ConservatorUpdated(address indexed old, address indexed _new);
     /// @notice event emitted when BigBang ETH market address is updated
@@ -331,21 +307,12 @@ contract Penrose is Ownable, Pausable, PearlmitHandler {
     /**
      * @notice Set the main token addresses and IDs
      */
-    function setMainTokens(address _mainToken, uint256 _mainAssetId, address _tapToken, uint256 _tapTokenAssetId)
-        external
-        onlyOwner
-    {
+    function setMainTokens(address _mainToken, address _tapToken) external onlyOwner {
         if (_mainToken != address(0)) {
             mainToken = IERC20(_mainToken);
         }
-        if (_mainAssetId != 0) {
-            mainAssetId = _mainAssetId;
-        }
         if (_tapToken != address(0)) {
             tapToken = IERC20(_tapToken);
-        }
-        if (_tapTokenAssetId != 0) {
-            tapAssetId = _tapTokenAssetId;
         }
         emit MainTokensUpdated();
     }
@@ -407,15 +374,12 @@ contract Penrose is Ownable, Pausable, PearlmitHandler {
     /// @dev sets usdoToken and usdoAssetId
     ///      can only by called by the owner
     /// @param _usdoToken the USDO token address
-    /// @param _usdoAssetId the USDO asset id
-    function setUsdoToken(address _usdoToken, uint256 _usdoAssetId) external onlyOwner {
+    function setUsdoToken(address _usdoToken) external onlyOwner {
         if (_usdoToken == address(0)) revert ZeroAddress();
-        if (_usdoAssetId == 0) revert NotValid();
 
         usdoToken = IERC20(_usdoToken);
-        usdoAssetId = _usdoAssetId;
 
-        emit UsdoTokenUpdated(_usdoToken, _usdoAssetId);
+        emit UsdoTokenUpdated(_usdoToken);
     }
 
     /// @notice Register a Singularity master contract
@@ -647,11 +611,10 @@ contract Penrose is Ownable, Pausable, PearlmitHandler {
         if (feeShares == 0) return;
 
         address _asset = market._asset();
-        uint256 _assetId = market._assetId();
 
-        uint256 feeAmount = yieldBox.toAmount(_assetId, feeShares, false);
+        uint256 feeAmount = market.convertToAssets(feeShares);
 
-        yieldBox.withdraw(_assetId, address(this), address(this), 0, feeShares);
+        market.withdraw(feeAmount, address(this), address(this));
 
         uint256 rewardTokenId = twTap.rewardTokenIndex(IERC20_OZ(_asset));
         _distributeOnTwTap(feeAmount, rewardTokenId, _asset, twTap);

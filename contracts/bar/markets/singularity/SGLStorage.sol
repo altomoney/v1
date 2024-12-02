@@ -99,20 +99,15 @@ contract SGLStorage is Ownable, Market, ReentrancyGuard {
 
     // ********************** //
     // *** VIEW FUNCTIONS *** //
-    // ********************** //
+    // ********************** //    
     /// @notice returns market's ERC20 symbol
-    function symbol() external view returns (string memory) {
-        return string(abi.encodePacked("tm-", collateral.safeSymbol()));
+    function symbol() public view virtual override returns (string memory) {
+        return string(abi.encodePacked("tm-", IERC20(collateral()).safeSymbol()));
     }
 
     /// @notice returns market's ERC20 name
-    function name() external view returns (string memory) {
-        return string(abi.encodePacked("Tapioca Singularity-", collateral.safeName()));
-    }
-
-    /// @notice returns market's ERC20 decimals
-    function decimals() external view returns (uint8) {
-        return asset.safeDecimals(); // TODO Check overriding ERC4626 decimals?
+    function name() public view virtual override returns (string memory) {
+        return string(abi.encodePacked("Tapioca Singularity-", IERC20(collateral()).safeName()));
     }
 
     /// @notice returns market's ERC20 totalSupply

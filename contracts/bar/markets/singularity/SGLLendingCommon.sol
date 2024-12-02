@@ -56,7 +56,7 @@ contract SGLLendingCommon is SGLCommon {
 
         emit LogRemoveCollateral(from, to, share);
         uint256 amount = convertToAssets(share);
-        _collateral().safeTransfer(to, amount);
+        IERC20(collateral()).safeTransfer(to, amount);
     }
 
     /// @dev Concrete implementation of `borrow`.
@@ -106,7 +106,7 @@ contract SGLLendingCommon is SGLCommon {
             (_totalBorrow, partInAmount) = _totalBorrow.sub(part, true);
 
             uint256 allowanceShare =
-                _computeAllowanceAmountInAsset(to, exchangeRate, partInAmount, _safeDecimals(asset));
+                _computeAllowanceAmountInAsset(to, exchangeRate, partInAmount, _safeDecimals(_borrowableToken()));
             if (allowanceShare == 0) revert NotEnough();
             _allowedLend(from, allowanceShare);
         }

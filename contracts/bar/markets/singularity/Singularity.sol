@@ -19,6 +19,8 @@ import {SGLLeverage} from "./SGLLeverage.sol";
 import {SGLStorage} from "./SGLStorage.sol";
 import {SGLCommon} from "./SGLCommon.sol";
 import {SGLBorrow} from "./SGLBorrow.sol";
+import {MarketERC4626} from "../MarketERC4626.sol";
+import {ERC20} from "solady/tokens/ERC20.sol";
 
 // solhint-disable max-line-length
 
@@ -85,8 +87,17 @@ contract Singularity is MarketStateView, SGLCommon {
     error SameState();
     error MinLendAmountNotMet();
 
-    function totalSupply() public view override(MarketERC20, SGLStorage) returns (uint256) {
+    // TODO Do we need this?
+    function totalSupply() public view override(ERC20, SGLStorage) returns (uint256) {
         return totalAsset.base;
+    }
+
+    function name() public view override(MarketERC4626, SGLStorage) returns (string memory) {
+        return SGLStorage.name();
+    }
+
+    function symbol() public view override(MarketERC4626, SGLStorage) returns (string memory) {
+        return SGLStorage.symbol();
     }
 
     /**
@@ -206,13 +217,12 @@ contract Singularity is MarketStateView, SGLCommon {
         if (accrueInfo.feesEarnedFraction > 0) {
             _accrue();
             uint256 _feesEarnedFraction = accrueInfo.feesEarnedFraction;
-            balanceOf[_feeTo] += _feesEarnedFraction;
-            emit Transfer(address(0), _feeTo, _feesEarnedFraction);
+            _mint(_feesEarnedFraction, _feeTo); // TODO Check if this is correct (ERC20._mint -no ERC4626-)
             accrueInfo.feesEarnedFraction = 0;
             emit LogWithdrawFees(_feeTo, _feesEarnedFraction);
         }
 
-        feeShares = _removeAsset(_feeTo, msg.sender, balanceOf[_feeTo]);
+        feeShares = _removeAsset(_feeTo, msg.sender, balanceOf(_feeTo));
     }
 
     /// @notice sets Singularity specific configuration
@@ -322,8 +332,7 @@ contract Singularity is MarketStateView, SGLCommon {
         }
         totalAsset = _totalAsset.add(share, fraction);
 
-        balanceOf[to] += fraction;
-        emit Transfer(address(0), to, fraction);
+        _mint(fraction, to); // TODO Check if this is correct (ERC20._mint -no ERC4626-)
 
         // _addTokens(from, to, assetId, share, totalAssetShare, skim); // TODO Check it if needed
         emit LogAddAsset(from, to, share, fraction);
@@ -342,8 +351,9 @@ contract Singularity is MarketStateView, SGLCommon {
         _totalAsset.base -= fraction.toUint128();
         if (_totalAsset.base < 1000) revert MinLimit();
 
-        balanceOf[from] -= fraction;
-        emit Transfer(from, address(0), fraction);
+
+        _burn(fraction, from);
+
         _totalAsset.elastic -= share.toUint128();
         totalAsset = _totalAsset;
         emit LogRemoveAsset(from, to, share, fraction);

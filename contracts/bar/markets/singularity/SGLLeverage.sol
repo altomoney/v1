@@ -85,15 +85,15 @@ contract SGLLeverage is SGLLendingCommon {
 
             amountOut = leverageExecutor.getCollateral(
                 from,
-                address(asset),
-                address(collateral),
+                address(_borrowableToken()),
+                collateral(),
                 memoryData.supplyShareToAmount + memoryData.borrowShareToAmount,
                 calldata_.data
             );
         }
 
         {
-            uint256 collateralShare = deposit(amountOut, amountOut);
+            uint256 collateralShare = deposit(amountOut, address(this));
             if (collateralShare == 0) revert CollateralShareNotValid();
 
             _addCollateral(calldata_.from, calldata_.from, false, 0, collateralShare, false);
@@ -136,7 +136,7 @@ contract SGLLeverage is SGLLendingCommon {
 
         uint256 leverageAmount = redeem(calldata_.share, address(leverageExecutor), address(this));
 
-        amountOut = leverageExecutor.getAsset(from, address(collateral), address(asset), leverageAmount, calldata_.data);
+        amountOut = leverageExecutor.getAsset(from, collateral(), address(_borrowableToken()), leverageAmount, calldata_.data);
         uint256 shareOut = convertToShares(amountOut);
         deposit(amountOut, calldata_.from);
 

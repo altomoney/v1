@@ -90,7 +90,7 @@ contract SGLLiquidation is SGLCommon {
         userBorrowPart[user] = 0;
 
         // transfer asset from `from`
-        asset.safeTransferFrom(from, address(this), borrowAmount);
+        _borrowableToken().safeTransferFrom(from, address(this), borrowAmount);
         uint256 borrowShare = convertToShares(borrowAmount);
         totalAsset.elastic += borrowShare.toUint128();
 
@@ -98,7 +98,7 @@ contract SGLLiquidation is SGLCommon {
         if (swapCollateral) {
             (, uint256 returnedAmount) =
                 _swapCollateralWithAsset(collateralShare, liquidatorReceiver, liquidatorReceiverData, 0, false);
-            asset.safeTransfer(receiver, returnedAmount);
+            _borrowableToken().safeTransfer(receiver, returnedAmount);
         } else {
             uint256 collateralAmount = convertToAssets(collateralShare);
             withdraw(collateralAmount, receiver, address(this));
@@ -152,12 +152,12 @@ contract SGLLiquidation is SGLCommon {
         withdraw(collateralAmount, address(_liquidatorReceiver), address(this));
 
         {
-            uint256 assetBalanceBefore = asset.balanceOf(address(this));
+            uint256 assetBalanceBefore = _borrowableToken().balanceOf(address(this));
             //msg.sender should be validated against `initiator` on IMarketLiquidatorReceiver
             _liquidatorReceiver.onCollateralReceiver(
-                msg.sender, address(collateral), address(asset), collateralAmount, _liquidatorReceiverData
+                msg.sender, address(collateral()), address(_borrowableToken()), collateralAmount, _liquidatorReceiverData
             );
-            uint256 assetBalanceAfter = asset.balanceOf(address(this));
+            uint256 assetBalanceAfter = _borrowableToken().balanceOf(address(this));
             returnedAmount = assetBalanceAfter - assetBalanceBefore;
 
             if (checkReturned) {

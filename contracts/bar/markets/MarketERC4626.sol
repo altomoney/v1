@@ -90,11 +90,11 @@ abstract contract MarketERC4626 is IERC20Permit, ERC4626, IERC1155Receiver {
         return _collateral;
     }
 
-    function name() public view override returns (string memory) {
+    function name() public view virtual override returns (string memory) {
         return _name;
     }
 
-    function symbol() public view override returns (string memory) {
+    function symbol() public view virtual override returns (string memory) {
         return _symbol;
     }
 

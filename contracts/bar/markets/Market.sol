@@ -391,10 +391,10 @@ abstract contract Market is MarketERC4626, Ownable {
     function _allowedLend(address from, uint256 share) internal virtual override {
         if (from != msg.sender) {
             if (share == 0) revert AllowanceNotValid();
-            // TODO Not sure if we need all this logic.
-            require(allowance[from][msg.sender] >= share, "Market: not approved");
-            if (allowance[from][msg.sender] != type(uint256).max) {
-                allowance[from][msg.sender] -= share;
+            uint256 currentAllowance = allowance(from, msg.sender);
+            require(currentAllowance >= share, "Market: not approved");
+            if (currentAllowance != type(uint256).max) {
+                _approve(from, msg.sender, currentAllowance - share);
             }
         }
     }
@@ -404,11 +404,12 @@ abstract contract Market is MarketERC4626, Ownable {
      */
     function _allowedBorrow(address from, uint256 share) internal virtual override {
         if (from != msg.sender) {
+            // TODO Should we check the allowance for the borrowable token instead of collateral shares?
             if (share == 0) revert AllowanceNotValid();
-            // TODO Not sure if we need all this logic.
-            require(allowanceBorrow[from][msg.sender] >= share, "Market: not approved");
-            if (allowanceBorrow[from][msg.sender] != type(uint256).max) {
-                allowanceBorrow[from][msg.sender] -= share;
+            uint256 currentAllowance = allowance(from, msg.sender);
+            require(currentAllowance >= share, "Market: not approved");
+            if (currentAllowance != type(uint256).max) {
+                _approve(from, msg.sender, currentAllowance - share);
             }
         }
     }

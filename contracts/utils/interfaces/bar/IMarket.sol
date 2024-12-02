@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.22;
 
+import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
+
 /*
 
 ████████╗ █████╗ ██████╗ ██╗ ██████╗  ██████╗ █████╗ 
@@ -22,14 +24,10 @@ enum Module {
     Leverage
 }
 
-interface IMarket {
+interface IMarket is IERC4626 {
     function _asset() external view returns (address);
 
-    function _assetId() external view returns (uint256);
-
     function _collateral() external view returns (address);
-
-    function _collateralId() external view returns (uint256);
 
     function _totalBorrowCap() external view returns (uint256);
 
@@ -57,8 +55,6 @@ interface IMarket {
 
     function _liquidationCollateralizationRate() external view returns (uint256);
 
-    function _yieldBox() external view returns (address payable);
-
     function _exchangeRatePrecision() external view returns (uint256);
 
     function _minBorrowAmount() external view returns (uint256);
@@ -66,6 +62,7 @@ interface IMarket {
     function _minCollateralAmount() external view returns (uint256);
 
     function _minLiquidatorReward() external view returns (uint256);
+
     function _maxLiquidatorReward() external view returns (uint256);
 
     function computeClosingFactor(uint256 borrowPart, uint256 collateralPartInAsset, uint256 ratesPrecision)

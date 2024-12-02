@@ -66,43 +66,36 @@ contract Origins is Ownable, Market, MarketStateView, ReentrancyGuard {
     event UpdateParticipants(address indexed participant, bool indexed status);
 
     constructor(
-        address _owner,
-        address _yieldBox,
-        IERC20 _asset,
-        uint256 _assetId,
-        IERC20 _collateral,
-        uint256 _collateralId,
-        ITapiocaOracle _oracle,
-        uint256 _exchangeRatePrecision,
-        uint256 _collateralizationRate,
-        IPenrose _penrose
+        address __owner,
+        IERC20 __asset,
+        IERC20 __collateral,
+        ITapiocaOracle __oracle,
+        uint256 __exchangeRatePrecision,
+        uint256 __collateralizationRate,
+        IPenrose __penrose
     ) MarketERC4626("Origins", "ORI") {
-        allowedParticipants[_owner] = true;
+        allowedParticipants[__owner] = true;
 
-        yieldBox = IYieldBox(_yieldBox);
+        if (address(__collateral) == address(0)) revert BadPair();
+        if (address(__asset) == address(0)) revert BadPair();
+        if (address(__oracle) == address(0)) revert BadPair();
+        if (__collateralizationRate > FEE_PRECISION) revert NotValid();
 
-        if (address(_collateral) == address(0)) revert BadPair();
-        if (address(_asset) == address(0)) revert BadPair();
-        if (address(_oracle) == address(0)) revert BadPair();
-        if (_collateralizationRate > FEE_PRECISION) revert NotValid();
-
-        asset = _asset;
-        assetId = _assetId;
-        collateral = _collateral;
-        collateralId = _collateralId;
-        oracle = _oracle;
-        penrose = _penrose;
+        _asset = __asset;
+        collateral = __collateral;
+        oracle = __oracle;
+        _penrose = __penrose;
         updateExchangeRate();
 
-        EXCHANGE_RATE_PRECISION = _exchangeRatePrecision > 0 ? _exchangeRatePrecision : 1e18;
+        EXCHANGE_RATE_PRECISION = __exchangeRatePrecision > 0 ? __exchangeRatePrecision : 1e18;
 
-        collateralizationRate = _collateralizationRate;
+        collateralizationRate = __collateralizationRate;
         liquidationCollateralizationRate = 1e5;
 
         rateValidDuration = 24 hours;
         minBorrowAmount = 1e15;
 
-        _transferOwnership(_owner);
+        _transferOwnership(__owner);
     }
 
     // ************************* //
@@ -122,7 +115,7 @@ contract Origins is Ownable, Market, MarketStateView, ReentrancyGuard {
     /// @param val the new value
     function updatePause(PauseType _type, bool val) external {
         require(
-            penrose.cluster().hasRole(msg.sender, keccak256("PAUSABLE")) || msg.sender == owner(),
+            _cluster().hasRole(msg.sender, keccak256("PAUSABLE")) || msg.sender == owner(),
             "Market: unauthorized"
         );
         require(val != pauseOptions[_type], "Market: same state");
@@ -134,7 +127,7 @@ contract Origins is Ownable, Market, MarketStateView, ReentrancyGuard {
     /// @param val the new val
     function updatePauseAll(bool val) external {
         require(
-            penrose.cluster().hasRole(msg.sender, keccak256("PAUSABLE")) || msg.sender == owner(),
+            _cluster().hasRole(msg.sender, keccak256("PAUSABLE")) || msg.sender == owner(),
             "Market: unauthorized"
         );
 
@@ -174,7 +167,7 @@ contract Origins is Ownable, Market, MarketStateView, ReentrancyGuard {
         if (!allowedParticipants[msg.sender]) revert NotAuthorized();
 
         if (share == 0) {
-            share = yieldBox.toShare(collateralId, amount, false);
+            share = convertToShares(amount);
         }
 
         _addCollateral(msg.sender, msg.sender, amount, share);
@@ -242,7 +235,7 @@ contract Origins is Ownable, Market, MarketStateView, ReentrancyGuard {
 
         // amount includes the opening & accrued fees
         amountOut = amount;
-        yieldBox.withdraw(assetId, from, address(this), amount, 0);
+        withdraw(amount, address(this), from);
 
         //burn USDO
         IUsdo(address(asset)).burn(address(this), amount);
@@ -261,36 +254,23 @@ contract Origins is Ownable, Market, MarketStateView, ReentrancyGuard {
         emit LogBorrow(from, to, amount, part);
 
         //mint USDO
-        IUsdo(address(asset)).mint(address(this), amount);
+        IUsdo(address(_borrowableToken())).mint(address(this), amount);
 
-        //deposit borrowed amount to user
-        share = _depositAmountToYb(asset, to, assetId, amount);
-    }
-
-    function _depositAmountToYb(IERC20 token, address to, uint256 id, uint256 amount)
-        internal
-        returns (uint256 share)
-    {
-        address(token).safeApprove(address(yieldBox), amount);
-        (, share) = yieldBox.depositAsset(id, address(this), to, amount, 0);
-        address(token).safeApprove(address(yieldBox), 0);
+        //deposit borrowed amount to user TODO why it says borrowed amount and use collateralId in the depositAsset?
+        _borrowableToken().transfer(to, amount); // TODO check if this is correct
     }
 
     function _addCollateral(address from, address to, uint256 amount, uint256 share) internal {
+        // TODO What if amount is 0?
         if (share == 0) {
-            share = yieldBox.toShare(collateralId, amount, false);
+            share = convertToShares(amount);
         }
-        userCollateralShare[to] += share;
-        uint256 oldTotalCollateralShare = totalCollateralShare;
-        totalCollateralShare = oldTotalCollateralShare + share;
-        yieldBox.transfer(from, address(this), collateralId, share);
+        mint(to, share);
         emit LogAddCollateral(from, to, share);
     }
 
     function _removeCollateral(address from, address to, uint256 share) internal {
-        userCollateralShare[from] -= share;
-        totalCollateralShare -= share;
+        withdraw(share, to, from);
         emit LogRemoveCollateral(from, to, share);
-        yieldBox.transfer(address(this), to, collateralId, share);
     }
 }

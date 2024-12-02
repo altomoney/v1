@@ -125,7 +125,7 @@ contract BigBang is MarketStateView, BBCommon {
     }
 
     function _initDebtStorage(uint256 _debtRateAgainstEth, uint256 _debtRateMin, uint256 _debtRateMax) private {
-        isMainMarket = collateralId == penrose.mainAssetId();
+        isMainMarket = address(_collateral()) == _penrose.mainToken();
         if (!isMainMarket) {
             if (_debtRateMin != 0 && _debtRateMax != 0) {
                 if (_debtRateMin >= _debtRateMax) revert DebtRatesNotValid();
@@ -138,41 +138,39 @@ contract BigBang is MarketStateView, BBCommon {
     }
 
     function _initCoreStorage(
-        IPenrose _penrose,
-        IERC20 _collateral,
-        uint256 _collateralId,
-        ITapiocaOracle _oracle,
-        uint256 _exchangeRatePrecision,
-        uint256 _collateralizationRate,
-        uint256 _liquidationCollateralizationRate,
-        ILeverageExecutor _leverageExecutor
+        IPenrose __penrose,
+        IERC20 __collateral,
+        ITapiocaOracle __oracle,
+        uint256 __exchangeRatePrecision,
+        uint256 __collateralizationRate,
+        uint256 __liquidationCollateralizationRate,
+        ILeverageExecutor __leverageExecutor
     ) private {
-        penrose = _penrose;
+        _penrose = __penrose;
+        address __asset = __penrose.usdoToken();
 
-        address __asset = penrose.usdoToken();
-
-        if (address(_collateral) == address(0)) revert BadPair();
+        if (address(__collateral) == address(0)) revert BadPair();
         if (__asset == address(0)) revert BadPair();
-        if (address(_oracle) == address(0)) revert BadPair();
-        if (_collateralizationRate > FEE_PRECISION) revert NotValid();
-        if (_liquidationCollateralizationRate > FEE_PRECISION) {
+        if (address(__oracle) == address(0)) revert BadPair();
+        if (__collateralizationRate > FEE_PRECISION) revert NotValid();
+        if (__liquidationCollateralizationRate > FEE_PRECISION) {
             revert NotValid();
         }
 
         __initialize_MarketERC4626(IERC20(__asset));
-        collateral = _collateral;
-        oracle = _oracle;
+        _collateral = address(__collateral);
+        oracle = __oracle;
         updateExchangeRate();
         protocolFee = 10000; // 10%; used for accrual
-        collateralizationRate = _collateralizationRate > 0 ? _collateralizationRate : 75000;
+        collateralizationRate = __collateralizationRate > 0 ? __collateralizationRate : 75000;
         liquidationCollateralizationRate =
-            _liquidationCollateralizationRate > 0 ? _liquidationCollateralizationRate : 80000;
+            __liquidationCollateralizationRate > 0 ? __liquidationCollateralizationRate : 80000;
 
         if (liquidationCollateralizationRate < collateralizationRate) {
             revert NotValid();
         }
 
-        EXCHANGE_RATE_PRECISION = _exchangeRatePrecision > 0 ? _exchangeRatePrecision : 1e18;
+        EXCHANGE_RATE_PRECISION = __exchangeRatePrecision > 0 ? __exchangeRatePrecision : 1e18;
 
         minLiquidatorReward = 88e3;
         maxLiquidatorReward = 925e2;
@@ -185,11 +183,11 @@ contract BigBang is MarketStateView, BBCommon {
         maxMintFeeStart = 980000000000000000; // 0.98 *1e18
         minMintFeeStart = 1000000000000000000; // 1*1e18
 
-        leverageExecutor = _leverageExecutor;
+        leverageExecutor = __leverageExecutor;
         minBorrowAmount = 1e15;
         minCollateralAmount = 1e15;
 
-        _transferOwnership(address(penrose));
+        _transferOwnership(address(__penrose));
     }
 
     // ************************ //
@@ -253,7 +251,7 @@ contract BigBang is MarketStateView, BBCommon {
     /// @param val the new value
     function updatePause(PauseType _type, bool val) external {
         require(
-            penrose.cluster().hasRole(msg.sender, keccak256("PAUSABLE")) || msg.sender == owner(),
+            _cluster().hasRole(msg.sender, keccak256("PAUSABLE")) || msg.sender == owner(),
             "Market: unauthorized"
         );
         require(val != pauseOptions[_type], "Market: same state");
@@ -265,7 +263,7 @@ contract BigBang is MarketStateView, BBCommon {
     /// @param val the new val
     function updatePauseAll(bool val) external {
         require(
-            penrose.cluster().hasRole(msg.sender, keccak256("PAUSABLE")) || msg.sender == owner(),
+            _cluster().hasRole(msg.sender, keccak256("PAUSABLE")) || msg.sender == owner(),
             "Market: unauthorized"
         );
 
@@ -338,14 +336,12 @@ contract BigBang is MarketStateView, BBCommon {
     /// @return feeShares the amount of fees in shares withdrawn under Penrose
     function refreshPenroseFees() external returns (uint256 feeShares) {
         require(
-            penrose.cluster().hasRole(msg.sender, keccak256("FEES_EXTRACTOR")) || msg.sender == owner(),
+            _cluster().hasRole(msg.sender, keccak256("FEES_EXTRACTOR")) || msg.sender == owner(),
             "Ownable: caller is not the owner"
         );
         uint256 fees = asset.balanceOf(address(this));
-        feeShares = yieldBox.toShare(assetId, fees, false);
-        if (feeShares > 0) {
-            address(asset).safeApprove(address(yieldBox), fees);
-            yieldBox.depositAsset(assetId, address(this), msg.sender, 0, feeShares);
+        if (fees > 0) {
+            withdraw(fees, msg.sender, address(this)); // TODO: check if this is correct
         }
     }
 
@@ -361,7 +357,7 @@ contract BigBang is MarketStateView, BBCommon {
         uint256 _debtRateAgainstEthMarket,
         uint256 _liquidationMultiplier
     ) external onlyOwner {
-        isMainMarket = collateralId == penrose.mainAssetId();
+        isMainMarket = collateral == _penrose.mainToken();
 
         if (_liquidationMultiplier > 0) {
             if (_liquidationMultiplier >= FEE_PRECISION) revert NotValid();
