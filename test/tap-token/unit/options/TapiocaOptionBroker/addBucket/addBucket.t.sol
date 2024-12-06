@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-import {Test} from "forge-std/Test.sol";
+import {TapiocaOptionBroker, TOBTestBase} from "../TOBTestBase.t.sol";
 
-contract TapiocaOptionBroker_addBuckettree is Test {
+contract TapiocaOptionBroker_addBuckettree is TOBTestBase {
     function test_RevertWhen_CallerIsNotOwner() external {
         // it should revert
         vm.skip(true);

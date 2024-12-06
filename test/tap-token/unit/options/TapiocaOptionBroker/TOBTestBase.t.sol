@@ -62,7 +62,9 @@ contract TOBTestBase is Test {
             })
         );
 
-        tob = new TapiocaOptionBroker(payable(tapToken), address(usdo), dao, EPOCH_DURATION, buckets, owner);
+        tob = new TapiocaOptionBroker(
+            payable(tapToken), address(usdo), dao, EPOCH_DURATION, buckets, report.penrose, owner
+        );
     }
 
     function deployDependencies() internal {

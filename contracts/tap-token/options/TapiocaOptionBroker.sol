@@ -2,6 +2,7 @@
 pragma solidity ^0.8.22;
 
 // External
+import {RebaseLibrary, Rebase} from "@boringcrypto/boring-solidity/contracts/libraries/BoringRebase.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
@@ -20,7 +21,9 @@ import {TWLBase, Bucket} from "tap-token/governance/TWLBase.sol";
 import {IYieldBox} from "../interfaces/IYieldBox.sol";
 import {ISingularity} from "tap-utils/interfaces/bar/ISingularity.sol";
 import {IMarket} from "tap-utils/interfaces/bar/IMarket.sol";
-
+import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
+import {IBigBang} from "tap-utils/interfaces/bar/IBigBang.sol";
+import {ITapiocaOptionBroker, Participation, PaymentTokenOracle} from "tap-token/interfaces/ITapiocaOptionBroker.sol";
 /*
 
 ████████╗ █████╗ ██████╗ ██╗ ██████╗  ██████╗ █████╗ 
@@ -32,29 +35,14 @@ import {IMarket} from "tap-utils/interfaces/bar/IMarket.sol";
    
 */
 
-struct Participation {
-    uint128 lockedAt; // lock start date
-    uint128 expiry; // lock expiration date
-    uint128 exerciseDiscountRate; // exercise discount rate
-    uint8 bucketId;
-    uint256 totalUsdo; // amount of usdo lent
-    uint256 tapAmountExercised;
-    uint256 lastEpochSync;
-    address[] markets;
-}
-
-struct PaymentTokenOracle {
-    ITapiocaOracle oracle;
-    bytes oracleData;
-}
-
-contract TapiocaOptionBroker is Pausable, Ownable, FullMath, ReentrancyGuard, TWLBase {
+contract TapiocaOptionBroker is ITapiocaOptionBroker, Pausable, Ownable, FullMath, ReentrancyGuard, TWLBase {
     using SafeERC20 for IERC20;
 
     TapToken public immutable TAP_TOKEN;
     IERC20 public immutable USDO;
     ITapiocaOracle public _tapOracle;
     ICluster public _cluster;
+    IPenrose public _penrose;
     address public _paymentTokenBeneficiary; // Where to collect the payment tokens
 
     uint256 public _epochTAPValuation; // TAP price for the current epoch
@@ -62,6 +50,10 @@ contract TapiocaOptionBroker is Pausable, Ownable, FullMath, ReentrancyGuard, TW
     uint256 public _emergencySweepCooldown = 2 days;
     uint256 public _lastEmergencySweep;
     bool public _rescueMode;
+    uint256 public _penaltyFeesAccrued;
+    uint256 public _minDebtPenalty;
+    uint256 public _maxDebtPenalty;
+    uint256 public _maxDebtBuffer;
 
     mapping(address => bool) public _activeMarkets;
     mapping(address => mapping(uint256 => Participation)) public _participations; // accountAddress => bucketId => Participation
@@ -69,36 +61,9 @@ contract TapiocaOptionBroker is Pausable, Ownable, FullMath, ReentrancyGuard, TW
     mapping(address => PaymentTokenOracle) public _paymentTokens; // Token address => PaymentTokenOracle
     mapping(uint256 => int256) public _netDepositsPerEpoch; // epoch => total deposited
     mapping(address account => mapping(address marketAddress => uint256 shares)) public _marketShares; // accountAddress => marketAddress => shares
+    mapping(address => uint256) public _totalLockedUsdo; // accountAddress => total locked USDO across all markets and buckets
 
     bytes public _tapOracleData;
-
-    error NotEqualDurations();
-    error NotAuthorized();
-    error NoLiquidity();
-    error OptionExpired();
-    error PaymentTokenNotSupported();
-    error OneEpochCooldown();
-    error DurationTooShort();
-    error PositionNotValid();
-    error LockNotExpired();
-    error TooSoon();
-    error Failed();
-    error TransferFailed();
-    error PaymentTokenValuationNotValid();
-    error LockExpired();
-    error AdvanceEpochFirst();
-    error DurationNotMultiple();
-    error NotValid();
-    error EpochTooLow();
-    error SharesNotValid();
-    error MinRewardTooLow();
-    error EmergencySweepActivated();
-    error EmergencySweepCooldownNotReached();
-    error TooHigh();
-    error TooLong();
-    error TooLow();
-    error ExpiredCall();
-    error MarketNotActive();
 
     constructor(
         address payable tapOFT,
@@ -106,47 +71,22 @@ contract TapiocaOptionBroker is Pausable, Ownable, FullMath, ReentrancyGuard, TW
         address paymentTokenBeneficiary,
         uint256 epochDuration,
         Bucket[] memory buckets,
+        address penrose,
         address admin
     ) TWLBase(epochDuration, buckets) {
         USDO = IERC20(usdo);
         TAP_TOKEN = TapToken(tapOFT);
+        _penrose = IPenrose(penrose);
         _paymentTokenBeneficiary = paymentTokenBeneficiary;
 
         _transferOwnership(admin);
     }
 
     // ==========
-    //   EVENTS
-    // ==========
-    event Participate(address indexed user, uint256 indexed bucketId, uint256 epoch, uint256 usdoAmount);
-
-    event ExerciseOption(
-        address indexed user,
-        uint256 indexed epoch,
-        address indexed paymentToken,
-        uint256 paymentAmount,
-        uint256 tapAmount
-    );
-    event NewEpoch(uint256 indexed epoch, uint256 extractedTap, uint256 epochTapValuation);
-    event ExitPosition(
-        address indexed user, address indexed to, uint256 indexed bucketId, uint256 epoch, uint256 usdoAmount
-    );
-    event SetPaymentToken(address indexed paymentToken, address oracle, bytes oracleData);
-    event SetTapOracle(address oracle, bytes oracleData);
-    event SetPaymentTokenBeneficiary(address paymentTokenBeneficiary);
-    event SetCluster(address cluster);
-    event Pause(bool pauseState);
-    event SetTapOft(address tapOFT);
-    event SetEmergencySweepCooldown(uint256 emergencySweepCooldown);
-    event ActivateEmergencySweep();
-    event PaymentCollection(address indexed paymentToken, address indexed beneficiary, uint256 amount);
-    event SetExerciseWindow(uint256 exerciseWindow);
-    event SetMarket(address market, bool active);
-    // ==========
     //    READ
     // ==========
-    /// @notice Returns the current epoch given a timestamp
 
+    /// @notice Returns the current epoch given a timestamp
     function timestampToEpoch(uint256 timestamp) external view returns (uint256) {
         if (timestamp == 0) {
             timestamp = block.timestamp;
@@ -262,7 +202,7 @@ contract TapiocaOptionBroker is Pausable, Ownable, FullMath, ReentrancyGuard, TW
 
         _netDepositsPerEpoch[currentEpoch() + 1] += int256(usdoAmount);
         _netDepositsPerEpoch[_timestampToEpoch(expiry) + 1] -= int256(position.totalUsdo);
-
+        _totalLockedUsdo[to] += usdoAmount;
         IERC20(USDO).safeTransferFrom(msg.sender, address(this), usdoAmount);
 
         emit Participate(to, bucketId, currentEpoch(), usdoAmount);
@@ -290,8 +230,114 @@ contract TapiocaOptionBroker is Pausable, Ownable, FullMath, ReentrancyGuard, TW
             IERC20(market).safeApprove(market, 0);
         }
         delete position.markets;
-
+        _totalLockedUsdo[msg.sender] -= totalUsdo;
         emit ExitPosition(msg.sender, to, bucketId, currentEpoch(), totalUsdo);
+    }
+
+    /// @notice Exit and unlock lent USDO in all markets if user can't lock with debt
+    function forceUnlock(uint8 bucketId, address from) external whenNotPaused {
+        Participation storage position = _participations[from][bucketId];
+
+        if (block.timestamp >= position.expiry) {
+            revert LockExpired();
+        }
+        (bool canLock,,) = _canLockWithDebt(from, 0);
+        if (canLock) {
+            revert NotAuthorized();
+        }
+
+        uint256 totalUsdo = position.totalUsdo;
+
+        position.totalUsdo = 0;
+
+        for (uint256 i; i < position.markets.length; ++i) {
+            address market = position.markets[i];
+            uint256 shares = _marketShares[from][market];
+            delete _marketShares[from][market];
+
+            IERC20(market).safeApprove(market, shares);
+            uint256 marketUsdoAmount = ISingularity(market).removeAsset(address(this), address(this), shares);
+            IERC20(market).safeApprove(market, 0);
+
+            uint256 usdoPenalty =
+                _getDebtPenaltyAmount(position.lockedAt, position.expiry - position.lockedAt, marketUsdoAmount);
+            _penaltyFeesAccrued += usdoPenalty;
+            IERC20(USDO).safeTransfer(from, marketUsdoAmount - usdoPenalty);
+        }
+        delete position.markets;
+        _totalLockedUsdo[from] -= totalUsdo;
+        emit ExitPosition(from, from, bucketId, currentEpoch(), totalUsdo);
+    }
+
+    /// @notice Check if a user can lock with debt.
+    /// Does account for accrued debt in BigBang markets.
+    /// @param user User address
+    /// @param amountToLock USDO amount to lock
+    /// @return canLock If the user can lock with debt
+    /// @return maxLockAmount Maximum USDO the user can lock in this contract
+    /// @return mintedUsdoAmount Minted USDO amount in BigBang markets
+    function canLockWithDebt(address user, uint256 amountToLock)
+        external
+        view
+        returns (bool canLock, uint256 maxLockAmount, uint256 mintedUsdoAmount)
+    {
+        return _canLockWithDebt(user, amountToLock);
+    }
+
+    /// @notice Check if a user can lock with debt. Takes into account past locks.
+    /// @param user User address
+    /// @param amountToLock Amount of USDO to lock
+    /// @return canLock If the user can lock with debt
+    /// @return maxLockAmount Maximum USDO the user can lock in this contract
+    /// @return mintedUsdoAmount Minted USDO amount
+    function _canLockWithDebt(address user, uint256 amountToLock)
+        internal
+        view
+        returns (bool canLock, uint256 maxLockAmount, uint256 mintedUsdoAmount)
+    {
+        mintedUsdoAmount = _getTotalBigBangDebtInUSDO(user);
+
+        maxLockAmount = mintedUsdoAmount + (mintedUsdoAmount * _maxDebtBuffer) / 1e4; // total debt + buffer
+        if (amountToLock + _totalLockedUsdo[user] > maxLockAmount) {
+            return (false, maxLockAmount, mintedUsdoAmount);
+        }
+        return (true, maxLockAmount, mintedUsdoAmount);
+    }
+
+    /**
+     * @notice Get the USDO total debt of a user in the BigBang markets.
+     */
+    function _getTotalBigBangDebtInUSDO(address user) internal view returns (uint256 totalUserUsdoDebt) {
+        address[] memory markets = _penrose.bigBangMarkets();
+
+        // Loop over the markets, get user debt and sum it
+        uint256 len = markets.length;
+        for (uint256 i = 0; i < len; i++) {
+            IBigBang bigBang = IBigBang(markets[i]);
+            (uint128 elastic, uint128 base) = bigBang._totalBorrow();
+            uint256 userBorrowPart = bigBang._userBorrowPart(user);
+            totalUserUsdoDebt += RebaseLibrary.toBase(Rebase(elastic, base), userBorrowPart, false);
+        }
+    }
+
+    /// @notice Get the debt penalty amount for a given lock position. Starts at 10% and goes down to 0.5% linearly.
+    /// @param lockStartTimestamp Lock start timestamp
+    /// @param lockDuration Lock duration
+    /// @param lockAmount Lock amount
+    /// @return debtPenaltyAmount Debt penalty amount
+    function _getDebtPenaltyAmount(uint256 lockStartTimestamp, uint256 lockDuration, uint256 lockAmount)
+        internal
+        view
+        returns (uint256)
+    {
+        uint256 timePassed = block.timestamp - lockStartTimestamp;
+        // If the lock is expired, no penalty
+        if (timePassed >= lockDuration) {
+            return 0;
+        }
+        // @dev make sure timePassed is not greater than lockDuration, else it'll underflow
+        uint256 penalty = _maxDebtPenalty - ((_maxDebtPenalty - _minDebtPenalty) * timePassed) / lockDuration;
+        return (penalty * lockAmount) / 1e4;
     }
 
     /// @notice Exercise an oTAP position
@@ -376,6 +422,13 @@ contract TapiocaOptionBroker is Pausable, Ownable, FullMath, ReentrancyGuard, TW
         emit SetTapOracle(tapOracle, tapOracleData);
     }
 
+    /// @notice Set the Penrose address
+    /// @param penrose The new Penrose address
+    function setPenrose(address penrose) external onlyOwner {
+        _penrose = IPenrose(penrose);
+        emit SetPenrose(penrose);
+    }
+
     /// @notice Activate or deactivate a payment token
     /// @dev set the oracle to address(0) to deactivate, expect the same decimal precision as TAP oracle
     function setPaymentToken(address paymentToken, address oracle, bytes calldata oracleData) external onlyOwner {
@@ -430,6 +483,12 @@ contract TapiocaOptionBroker is Pausable, Ownable, FullMath, ReentrancyGuard, TW
         emit SetCluster(cluster);
     }
 
+    function collectPenaltyFees() external onlyOwner {
+        uint256 penaltyFees = _penaltyFeesAccrued;
+        _penaltyFeesAccrued = 0;
+        IERC20(USDO).safeTransfer(owner(), penaltyFees);
+    }
+
     /**
      * @notice Un/Pauses this contract.
      */
@@ -474,7 +533,7 @@ contract TapiocaOptionBroker is Pausable, Ownable, FullMath, ReentrancyGuard, TW
      * @notice Add a new bucket
      * @param bucket Bucket to add into the system
      */
-    function addBucket(Bucket memory bucket) external override onlyOwner {
+    function addBucket(Bucket memory bucket) external override(ITapiocaOptionBroker, TWLBase) onlyOwner {
         _addBucket(bucket);
     }
 
@@ -484,7 +543,11 @@ contract TapiocaOptionBroker is Pausable, Ownable, FullMath, ReentrancyGuard, TW
      * @param bucket Bucket to add into the system
      * @dev Ignores the lockEpochDuration field.
      */
-    function updateBucket(uint8 index, Bucket memory bucket) external override onlyOwner {
+    function updateBucket(uint8 index, Bucket memory bucket)
+        external
+        override(ITapiocaOptionBroker, TWLBase)
+        onlyOwner
+    {
         _updateBucket(index, bucket);
     }
 
