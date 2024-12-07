@@ -1,41 +1,97 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.18;
 
-import {Test} from "forge-std/Test.sol";
+import {TOBTestBase} from "../TOBTestBase.t.sol";
 
-contract TapiocaOptionBroker_advanceWeektree is Test {
-    function test_WhenLastEpochEqualsCurrentEpoch() external {
-        // it should revert with NotValid
-        vm.skip(true);
+contract TapiocaOptionBrokerAdvanceWeekTest is TOBTestBase {
+    function setUp() public override {
+        super.setUp();
     }
 
-    modifier whenLastEpochIsNotCurrentEpoch() {
-        _;
+    function test_revertWhen_lastEpochEqualsCurrentEpoch() public {
+        // Mock TAP oracle
+        uint256 tapPrice = 100e18;
+        vm.mockCall(address(tapOracle), abi.encodeWithSignature("get(bytes)"), abi.encode(true, tapPrice));
+
+        // Mock emitForWeek
+        vm.mockCall(address(tapToken), abi.encodeWithSignature("emitForWeek()"), abi.encode());
+
+        // Mock cluster and penrose
+        vm.mockCall(address(cluster), abi.encodeWithSignature("getActiveMarkets()"), abi.encode(new address[](0)));
+        vm.mockCall(
+            address(report.penrose),
+            abi.encodeWithSignature("singularityBigBangMarkets()"),
+            abi.encode(new address[](0))
+        );
+
+        vm.startPrank(owner);
+        vm.expectRevert("NotValid()");
+        tob.advanceWeek();
+        vm.stopPrank();
     }
 
-    function test_WhenLastEpochIsNotCurrentEpoch() external whenLastEpochIsNotCurrentEpoch {
-        // it should sync TWL buckets
-        // it should extract TAP from TAP_TOKEN
-        // it should emit TAP to gauges
-        // it should update lastEpoch
-        // it should emit NewEpoch event with
-        //     lastEpoch
-        //     epochTAP
-        //     _epochTAPValuation
-        vm.skip(true);
+    function test_advanceWeek_validConditions() public {
+        // Store initial values
+        uint256 initialTapBalance = tapToken.balanceOf(address(tob));
+
+        // Mock TAP oracle
+        uint256 tapPrice = 100e18;
+        vm.mockCall(address(tapOracle), abi.encodeWithSignature("get(bytes)"), abi.encode(true, tapPrice));
+
+        // Mock emitForWeek
+        vm.mockCall(address(tapToken), abi.encodeWithSignature("emitForWeek()"), abi.encode());
+
+        // Mock cluster and penrose
+        vm.mockCall(address(cluster), abi.encodeWithSignature("getActiveMarkets()"), abi.encode(new address[](0)));
+        vm.mockCall(
+            address(report.penrose),
+            abi.encodeWithSignature("singularityBigBangMarkets()"),
+            abi.encode(new address[](0))
+        );
+
+        // Advance time to next epoch
+        vm.warp(block.timestamp + EPOCH_DURATION);
+
+        // Get current epoch
+        uint256 epoch = tob.currentEpoch();
+
+        // Expect NewEpoch event
+        vm.expectEmit(true, true, true, true);
+        emit NewEpoch(epoch, tapPrice);
+
+        // Advance week
+        vm.startPrank(owner);
+        tob.advanceWeek();
+        vm.stopPrank();
+
+        // Verify lastEpoch updated
+        assertEq(tob.lastEpoch(), epoch, "Last epoch should be updated");
+
+        // Verify TAP valuation updated
+        assertEq(tob._epochTAPValuation(), tapPrice, "TAP valuation should be updated");
     }
 
-    modifier whenGettingTAPValuation() {
-        _;
+    function test_revertWhen_tapOracleCallFails() public {
+        // Mock TAP oracle to fail
+        vm.mockCall(address(tapOracle), abi.encodeWithSignature("get(bytes)"), abi.encode(false, 0));
+
+        // Mock cluster and penrose
+        vm.mockCall(address(cluster), abi.encodeWithSignature("getActiveMarkets()"), abi.encode(new address[](0)));
+        vm.mockCall(
+            address(report.penrose),
+            abi.encodeWithSignature("singularityBigBangMarkets()"),
+            abi.encode(new address[](0))
+        );
+
+        // Advance time to next epoch
+        vm.warp(block.timestamp + EPOCH_DURATION);
+
+        // Try to advance week
+        vm.startPrank(owner);
+        vm.expectRevert("Failed()");
+        tob.advanceWeek();
+        vm.stopPrank();
     }
 
-    function test_WhenTapOracleCallSucceeds() external whenLastEpochIsNotCurrentEpoch whenGettingTAPValuation {
-        // it should set _epochTAPValuation
-        vm.skip(true);
-    }
-
-    function test_WhenTapOracleCallFails() external whenLastEpochIsNotCurrentEpoch whenGettingTAPValuation {
-        // it should revert with Failed
-        vm.skip(true);
-    }
+    event NewEpoch(uint256 indexed epoch, uint256 epochTAPValuation);
 }

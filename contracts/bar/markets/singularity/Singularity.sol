@@ -19,7 +19,7 @@ import {SGLLeverage} from "./SGLLeverage.sol";
 import {SGLStorage} from "./SGLStorage.sol";
 import {SGLCommon} from "./SGLCommon.sol";
 import {SGLBorrow} from "./SGLBorrow.sol";
-
+import "forge-std/console.sol";
 // solhint-disable max-line-length
 
 /*
@@ -139,6 +139,8 @@ contract Singularity is MarketStateView, SGLCommon {
         returns (uint256 fraction)
     {
         uint256 _amount = yieldBox.toAmount(assetId, share, false);
+        console.log("minLendAmount", minLendAmount);
+        console.log("_amount", _amount);
         if (_amount <= minLendAmount) revert MinLendAmountNotMet();
 
         _accrue();

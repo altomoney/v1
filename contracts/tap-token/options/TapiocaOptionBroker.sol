@@ -169,6 +169,11 @@ contract TapiocaOptionBroker is ITapiocaOptionBroker, Pausable, Ownable, FullMat
         if (_lastEmergencySweep != 0) revert EmergencySweepActivated();
         if (!_activeMarkets[market]) revert MarketNotActive();
 
+        (bool canLock,,) = _canLockWithDebt(to, usdoAmount);
+        if (!canLock) {
+            revert NotAuthorized();
+        }
+
         _supplyInBucket(bucketId, usdoAmount);
 
         // Create the participation position
