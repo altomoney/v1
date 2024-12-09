@@ -20,25 +20,12 @@ import {IRemoveAndRepay, IMintData} from "../oft/IUsdo.sol";
 */
 
 struct MagnetarWithdrawData {
-    address yieldBox;
-    uint256 assetId;
+    address asset;
     address receiver;
     uint256 amount;
     bool unwrap;
     bool withdraw;
     bool extractFromSender;
-}
-
-/**
- * @dev MagnetarYieldBoxModule `depositAsset` calldata
- */
-struct YieldBoxDepositData {
-    address yieldBox;
-    uint256 assetId;
-    address from;
-    address to;
-    uint256 amount;
-    uint256 share;
 }
 
 /**
@@ -92,7 +79,6 @@ struct MintFromBBAndLendOnSGLData {
 struct LockAndParticipateData {
     address user;
     address tSglToken;
-    address yieldBox;
     address magnetar;
     IOptionsLockData lockData;
     IOptionsParticipateData participateData;
@@ -119,7 +105,6 @@ enum MagnetarAction {
     CollateralModule, // 7 Collateral Singular related operations.
     MintModule, // 8 BigBang Singular related operations.
     OptionModule, // 9 Market Module related operations.
-    YieldBoxModule, // 10 YieldBox module related operations.
     // External operations
     WethWrap // 11
 
@@ -150,10 +135,6 @@ interface IMagnetarCollateralModule {
     function depositRepayAndRemoveCollateralFromMarket(DepositRepayAndRemoveCollateralFromMarketData memory data)
         external
         payable;
-}
-
-interface IMagnetarYieldBoxModule {
-    function withdrawHere(MagnetarWithdrawData memory data) external payable;
 }
 
 interface IMagnetarOptionModule {

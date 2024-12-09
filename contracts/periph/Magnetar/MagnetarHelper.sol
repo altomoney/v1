@@ -34,9 +34,7 @@ contract MagnetarHelper {
 
     struct MarketInfo {
         address collateral;
-        uint256 collateralId;
         address asset;
-        uint256 assetId;
         ITapiocaOracle oracle;
         bytes oracleData;
         uint256 totalCollateralShare;
@@ -46,19 +44,8 @@ contract MagnetarHelper {
         uint256 currentExchangeRate;
         uint256 spotExchangeRate;
         uint256 oracleExchangeRate;
-        uint256 totalBorrowCap;
-        uint256 totalYieldBoxCollateralShare;
-        uint256 totalYieldBoxCollateralAmount;
-        uint256 totalYieldBoxAssetShare;
-        uint256 totalYieldBoxAssetAmount;
-        IYieldBoxTokenType yieldBoxCollateralTokenType;
-        address yieldBoxCollateralContractAddress;
-        address yieldBoxCollateralStrategyAddress;
-        uint256 yieldBoxCollateralTokenId;
-        IYieldBoxTokenType yieldBoxAssetTokenType;
-        address yieldBoxAssetContractAddress;
-        address yieldBoxAssetStrategyAddress;
-        uint256 yieldBoxAssetTokenId;
+        uint256 totalBorrowCap; // TODO Check all the YieldBox related fields removed
+        uint256 totalCollateralAmount;
         uint256 collateralizationRate;
         uint256 liquidationCollateralizationRate;
         uint256 minLiquidatorReward;
@@ -126,8 +113,7 @@ contract MagnetarHelper {
      * @return amount The amount.
      */
     function getCollateralAmountForShare(IMarket market, uint256 share) external view returns (uint256 amount) {
-        IYieldBox yieldBox = IYieldBox(market._yieldBox());
-        return yieldBox.toAmount(market._collateralId(), share, false);
+        return market.convertToAssets(share);
     }
 
     /**
@@ -149,12 +135,11 @@ contract MagnetarHelper {
         (uint128 totalBorrowElastic, uint128 totalBorrowBase) = market._totalBorrow();
         _totalBorrowed = Rebase(totalBorrowElastic, totalBorrowBase);
 
-        IYieldBox yieldBox = IYieldBox(market._yieldBox());
         uint256 borrowAmount = _totalBorrowed.toElastic(borrowPart, roundAmounUp);
 
         uint256 val = (borrowAmount * collateralizationRatePrecision * market._exchangeRate())
             / (market._collateralizationRate() * exchangeRatePrecision);
-        return yieldBox.toShare(market._collateralId(), val, roundSharesUp);
+        return market.convertToShares(val);
     }
 
     /**
@@ -210,11 +195,9 @@ contract MagnetarHelper {
         (uint128 totalAssetElastic, uint128 totalAssetBase) = singularity.totalAsset();
         (uint128 totalBorrowElastic,) = singularity._totalBorrow();
 
-        IYieldBox yieldBox = IYieldBox(singularity._yieldBox());
+        uint256 allShare = totalAssetElastic + singularity.convertToShares(totalBorrowElastic);
 
-        uint256 allShare = totalAssetElastic + yieldBox.toShare(singularity._assetId(), totalBorrowElastic, true);
-
-        return yieldBox.toAmount(singularity._assetId(), (fraction * allShare) / totalAssetBase, false);
+        return singularity.convertToAssets((fraction * allShare) / totalAssetBase);
     }
 
     /**
@@ -232,12 +215,9 @@ contract MagnetarHelper {
     {
         (uint128 totalAssetShare, uint128 totalAssetBase) = singularity.totalAsset();
         (uint128 totalBorrowElastic,) = singularity._totalBorrow();
-        uint256 assetId = singularity._assetId();
 
-        IYieldBox yieldBox = IYieldBox(singularity._yieldBox());
-
-        uint256 share = yieldBox.toShare(assetId, amount, roundUp);
-        uint256 allShare = totalAssetShare + yieldBox.toShare(assetId, totalBorrowElastic, false);
+        uint256 share = singularity.convertToShares(amount);
+        uint256 allShare = totalAssetShare + singularity.convertToShares(totalBorrowElastic);
 
         fraction = allShare == 0 ? share : (share * totalAssetBase) / allShare;
     }
@@ -318,7 +298,7 @@ contract MagnetarHelper {
         info.asset = market._asset();
         info.oracle = ITapiocaOracle(market._oracle());
         info.oracleData = market._oracleData();
-        info.totalCollateralShare = market._totalCollateralShare();
+        info.totalCollateralShare = market._totalCollateralShare(); // TODO isn't it market4626.totalSupply()?
         info.userCollateralShare = market._userCollateralShare(who);
 
         (uint128 totalBorrowElastic, uint128 totalBorrowBase) = market._totalBorrow();
@@ -330,8 +310,6 @@ contract MagnetarHelper {
         (, info.oracleExchangeRate) = ITapiocaOracle(market._oracle()).peek(market._oracleData());
         info.spotExchangeRate = ITapiocaOracle(market._oracle()).peekSpot(market._oracleData());
         info.totalBorrowCap = market._totalBorrowCap();
-        info.assetId = market._assetId();
-        info.collateralId = market._collateralId();
         info.collateralizationRate = market._collateralizationRate();
         info.liquidationCollateralizationRate = market._liquidationCollateralizationRate();
         info.minLiquidatorReward = market._minLiquidatorReward();
@@ -339,26 +317,8 @@ contract MagnetarHelper {
         info.liquidationBonusAmount = market._liquidationBonusAmount();
         info.minBorrowAmount = market._minBorrowAmount();
         info.minCollateralAmount = market._minCollateralAmount();
-
-        IYieldBox yieldBox = IYieldBox(market._yieldBox());
-
-        (info.totalYieldBoxCollateralShare, info.totalYieldBoxCollateralAmount) =
-            yieldBox.assetTotals(info.collateralId);
-        (info.totalYieldBoxAssetShare, info.totalYieldBoxAssetAmount) = yieldBox.assetTotals(info.assetId);
-
-        (
-            info.yieldBoxCollateralTokenType,
-            info.yieldBoxCollateralContractAddress,
-            info.yieldBoxCollateralStrategyAddress,
-            info.yieldBoxCollateralTokenId
-        ) = yieldBox.assets(info.collateralId);
-        (
-            info.yieldBoxAssetTokenType,
-            info.yieldBoxAssetContractAddress,
-            info.yieldBoxAssetStrategyAddress,
-            info.yieldBoxAssetTokenId
-        ) = yieldBox.assets(info.assetId);
-
+        info.totalCollateralAmount = market.totalAssets();
+        // (info.totalYieldBoxAssetShare, info.totalYieldBoxAssetAmount) = market.totalAssets(); TODO Check it if it is needed.
         return info;
     }
 }

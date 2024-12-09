@@ -102,7 +102,7 @@ contract BBLiquidation is BBCommon {
             borrowableToken.safeTransfer(receiver, returnedAmount);
         } else {
             uint256 collateralAmount = convertToAssets(collateralShare);
-            IERC20(_collateral()).safeTransfer(receiver, collateralAmount);
+            IERC20(collateral()).safeTransfer(receiver, collateralAmount);
         }
     }
 
@@ -151,15 +151,15 @@ contract BBLiquidation is BBCommon {
         bool checkReturned
     ) private returns (uint256 returnedShare, uint256 returnedAmount) {
         uint256 collateralAmount = convertToAssets(_collateralShare);
-        IERC20(_collateral()).withdraw(collateralAmount, address(this));
+        withdraw(collateralAmount, address(_liquidatorReceiver), address(this)); // TODO Check if this is correct
 
         {
-            uint256 assetBalanceBefore = asset.balanceOf(address(this));
+            uint256 assetBalanceBefore = _borrowableToken().balanceOf(address(this));
             //msg.sender should be validated against `initiator` on IMarketLiquidatorReceiver
             _liquidatorReceiver.onCollateralReceiver(
-                msg.sender, address(collateral), address(asset), collateralAmount, _liquidatorReceiverData
+                msg.sender, collateral(), address(_borrowableToken()), collateralAmount, _liquidatorReceiverData
             );
-            uint256 assetBalanceAfter = asset.balanceOf(address(this));
+            uint256 assetBalanceAfter = _borrowableToken().balanceOf(address(this));
             returnedAmount = assetBalanceAfter - assetBalanceBefore;
 
             if (checkReturned) {
@@ -261,8 +261,7 @@ contract BBLiquidation is BBCommon {
 
         //protocol fees should be kept in the contract as we do a yieldBox.depositAsset when we are extracting the fees using `refreshPenroseFees`
         if (callerShare > 0) {
-            IERC20 borrowableToken = _borrowableToken();
-            borrowableToken.transfer(msg.sender, callerShare); // TODO: check this
+            IERC20(_borrowableToken()).safeTransfer(msg.sender, callerShare); // TODO: check this
         }
     }
 
@@ -289,7 +288,7 @@ contract BBLiquidation is BBCommon {
 
         (uint256 feeShare, uint256 callerShare) = _extractLiquidationFees(returnedShare, borrowShare, callerReward);
 
-        IUsdo(address(asset)).burn(address(this), borrowAmount);
+        IUsdo(address(_borrowableToken())).burn(address(this), borrowAmount);
 
         address[] memory _users = new address[](1);
         _users[0] = user;

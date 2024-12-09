@@ -55,7 +55,7 @@ contract BBLendingCommon is BBCommon {
 
         emit LogRemoveCollateral(from, to, share);
 
-        _collateral().safeTransfer(to, convertToAssets(share));
+        IERC20(collateral()).safeTransfer(to, convertToAssets(share));
     }
 
     /// @dev Concrete implementation of `borrow`.
@@ -73,7 +73,7 @@ contract BBLendingCommon is BBCommon {
         emit LogBorrow(from, to, amount, feeAmount, part);
 
         //mint USDO
-        IUsdo(address(asset)).mint(address(this), amount);
+        IUsdo(address(_borrowableToken())).mint(address(this), amount);
 
         //deposit borrowed amount to user
         _borrowableToken().safeTransfer(to, amount);
@@ -93,7 +93,7 @@ contract BBLendingCommon is BBCommon {
             Rebase memory _totalBorrow = totalBorrow;
             (_totalBorrow, partInAmount) = _totalBorrow.sub(part, true);
             uint256 allowanceShare =
-                _computeAllowanceAmountInAsset(to, exchangeRate, partInAmount, _safeDecimals(asset));
+                _computeAllowanceAmountInAsset(to, exchangeRate, partInAmount, _safeDecimals(_borrowableToken()));
             if (allowanceShare == 0) revert NotEnough();
             _allowedLend(from, allowanceShare);
         }
@@ -108,7 +108,7 @@ contract BBLendingCommon is BBCommon {
         uint256 amountOut = redeem(_share, address(this), address(this));
 
         // @dev burn USDO
-        IUsdo(address(asset)).burn(address(this), amountOut);
+        IUsdo(address(_borrowableToken())).burn(address(this), amountOut);
 
         emit LogRepay(from, to, amount, part);
     }

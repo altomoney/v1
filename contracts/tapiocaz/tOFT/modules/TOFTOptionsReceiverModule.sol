@@ -163,7 +163,6 @@ contract TOFTOptionsReceiverModule is BaseTOFT {
         returns (LockAndParticipateData memory)
     {
         _checkWhitelistStatus(msg_.tSglToken);
-        _checkWhitelistStatus(msg_.yieldBox);
         _checkWhitelistStatus(msg_.magnetar);
         if (msg_.lockData.lock) {
             _checkWhitelistStatus(msg_.lockData.target);

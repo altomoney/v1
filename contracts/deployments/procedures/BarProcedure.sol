@@ -47,23 +47,14 @@ abstract contract BarProcedure {
         if (input.prevPenrose == address(0)) {
             report.penrose = address(
                 new Penrose(
-                    IYieldBox(input.yieldbox),
                     ICluster(input.cluster),
                     IERC20(input.tapToken),
                     IERC20(input.nativeWrappedToken),
-                    IPearlmit(input.pearlmit),
-                    IYieldBox(input.yieldbox).registerAsset(TokenType.ERC20, input.tapToken, report.tapStrat, 0),
-                    IYieldBox(input.yieldbox).registerAsset(
-                        TokenType.ERC20, input.nativeWrappedToken, report.wrappedTokenStrat, 0
-                    ),
                     address(this) // set owner temporarily for setup
                 )
             );
             {
-                Penrose(report.penrose).setUsdoToken(
-                    input.usdoToken,
-                    IYieldBox(input.yieldbox).registerAsset(TokenType.ERC20, input.usdoToken, report.usdoStrat, 0)
-                );
+                Penrose(report.penrose).setUsdoToken(input.usdoToken);
             }
             {
                 Penrose(report.penrose).registerBigBangMasterContract(

@@ -217,7 +217,7 @@ contract Singularity is MarketStateView, SGLCommon {
         if (accrueInfo.feesEarnedFraction > 0) {
             _accrue();
             uint256 _feesEarnedFraction = accrueInfo.feesEarnedFraction;
-            _mint(_feesEarnedFraction, _feeTo); // TODO Check if this is correct (ERC20._mint -no ERC4626-)
+            _mint(_feeTo, _feesEarnedFraction); // TODO Check if this is correct (ERC20._mint -no ERC4626-)
             accrueInfo.feesEarnedFraction = 0;
             emit LogWithdrawFees(_feeTo, _feesEarnedFraction);
         }
@@ -332,7 +332,7 @@ contract Singularity is MarketStateView, SGLCommon {
         }
         totalAsset = _totalAsset.add(share, fraction);
 
-        _mint(fraction, to); // TODO Check if this is correct (ERC20._mint -no ERC4626-)
+        _mint(to, fraction); // TODO Check if this is correct (ERC20._mint -no ERC4626-)
 
         // _addTokens(from, to, assetId, share, totalAssetShare, skim); // TODO Check it if needed
         emit LogAddAsset(from, to, share, fraction);
@@ -352,13 +352,13 @@ contract Singularity is MarketStateView, SGLCommon {
         if (_totalAsset.base < 1000) revert MinLimit();
 
 
-        _burn(fraction, from);
+        _burn(from, fraction);
 
         _totalAsset.elastic -= share.toUint128();
         totalAsset = _totalAsset;
         emit LogRemoveAsset(from, to, share, fraction);
 
-        transfer(address(this), to, share);
+        transfer(to, share);
     }
 
     receive() external payable {}

@@ -131,14 +131,14 @@ contract SGLInit is MarketStateView, SGLCommon {
 
     function _initCoreStorage(
         IERC20 __asset,
-        IERC20 _collateral,
+        IERC20 __collateral,
         ITapiocaOracle _oracle,
         ILeverageExecutor _leverageExecutor
     ) private {
         assembly {
             // Store the values directly into their respective slots
             sstore(_asset.slot, __asset)
-            sstore(collateral.slot, _collateral)
+            sstore(_collateral.slot, __collateral)
             sstore(oracle.slot, _oracle)
             sstore(leverageExecutor.slot, _leverageExecutor)
         }

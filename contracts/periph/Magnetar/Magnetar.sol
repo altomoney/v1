@@ -64,7 +64,6 @@ contract Magnetar is BaseMagnetar, ERC1155Holder {
         address payable _collateralModule,
         address payable _mintModule,
         address payable _optionModule,
-        address payable _yieldBoxModule,
         IPearlmit _pearlmit,
         address _toeHelper,
         IMagnetarHelper _magnetarHelper
@@ -72,7 +71,6 @@ contract Magnetar is BaseMagnetar, ERC1155Holder {
         modules[MagnetarModule.CollateralModule] = _collateralModule;
         modules[MagnetarModule.MintModule] = _mintModule;
         modules[MagnetarModule.OptionModule] = _optionModule;
-        modules[MagnetarModule.YieldBoxModule] = _yieldBoxModule;
 
         helper = _magnetarHelper;
     }
@@ -144,12 +142,6 @@ contract Magnetar is BaseMagnetar, ERC1155Holder {
             /// @dev Modules will not return result data.
             if (_action.id == uint8(MagnetarAction.OptionModule)) {
                 _executeModule(MagnetarModule.OptionModule, _action.call);
-                continue; // skip the rest of the loop
-            }
-
-            /// @dev Modules will not return result data.
-            if (_action.id == uint8(MagnetarAction.YieldBoxModule)) {
-                _executeModule(MagnetarModule.YieldBoxModule, _action.call);
                 continue; // skip the rest of the loop
             }
 

@@ -36,7 +36,7 @@ abstract contract MarketERC4626 is IERC20Permit, ERC4626, IERC1155Receiver {
 
     /// @dev this represents the collateral token (or asset token in ERC4626)
     /// @dev This is used to override ERC4626 asset() function (it is abstract in ERC4626)
-    address internal immutable _collateral;
+    address internal _collateral;
 
     string internal _name;
 
@@ -75,11 +75,11 @@ abstract contract MarketERC4626 is IERC20Permit, ERC4626, IERC1155Receiver {
         _symbol = __symbol;
     }
 
-    function __initialize_MarketERC4626(IERC20 __collateral) internal {
-        if (address(__collateral) != address(0)) {
+    function __initialize_MarketERC4626(address __collateral) internal {
+        if (__collateral != address(0)) {
             revert MarketERC4626__AlreadyInitialized();
         }
-        _collateral = address(__collateral);
+        _collateral = __collateral;
     }
 
     function collateral() public view returns (address) {

@@ -47,52 +47,30 @@ abstract contract MagnetarBaseModule is MagnetarStorage {
     /// =====================
     /// Internal
     /// =====================
-    function _withdrawHere(MagnetarWithdrawData memory data) internal {
-        _checkWhitelisted(data.yieldBox);
-
-        IYieldBox _yb = IYieldBox(data.yieldBox);
-
+    function _withdrawHere(MagnetarWithdrawData memory data, IMarket _market) internal {
         if (data.extractFromSender) {
             // do NOT allow `extractFromSender` for whitelisted addresses
             //    because in this cases funds should be already here
             //    since it comes from an internal flow
             if (cluster.isWhitelisted(0, msg.sender)) revert Magnetar_ExtractTokenFail();
 
-            uint256 _share = _yb.toShare(data.assetId, data.amount, false);
+            uint256 _share = _market.convertToShares(data.amount);
 
             // _yb.transfer(msg.sender, address(this), data.assetId, _share);
-            bool isErr = pearlmit.transferFromERC1155(msg.sender, address(this), data.yieldBox, data.assetId, _share);
-            if (isErr) {
+            uint256 _sharesOut = _market.withdraw(data.amount, address(this), msg.sender);
+            if (_sharesOut == 0) {
                 revert Magnetar_TransferFailed();
             }
         }
 
         if (data.unwrap) {
-            _yb.withdraw(data.assetId, address(this), address(this), data.amount, 0);
+            _market.withdraw(data.amount, address(this), address(this));
 
-            (, address assetAddress,,) = _yb.assets(data.assetId);
+            address assetAddress = _market._asset(); // It is the borrowable token (not the asset in the ERC4626)
             ITOFT(assetAddress).unwrap(data.receiver, data.amount);
         } else {
-            _yb.withdraw(data.assetId, address(this), data.receiver, data.amount, 0);
+            _market.withdraw(data.amount, data.receiver, address(this));
         }
-    }
-
-    function _setApprovalForYieldBox(address _target, IYieldBox _yieldBox) internal {
-        bool isApproved = _yieldBox.isApprovedForAll(address(this), _target);
-        if (!isApproved) {
-            _yieldBox.setApprovalForAll(_target, true);
-        }
-    }
-
-    function _revertYieldBoxApproval(address _target, IYieldBox _yieldBox) internal {
-        bool isApproved = _yieldBox.isApprovedForAll(address(this), _target);
-        if (isApproved) {
-            _yieldBox.setApprovalForAll(_target, false);
-        }
-    }
-
-    function _pearlmitApprove(address _yieldBox, uint256 _tokenId, address _market, uint256 _amount) internal {
-        pearlmit.approve(1155, _yieldBox, _tokenId, _market, _amount.toUint200(), block.timestamp.toUint48());
     }
 
     function _extractTokens(address _from, address _token, uint256 _amount) internal returns (uint256) {
@@ -105,14 +83,14 @@ abstract contract MagnetarBaseModule is MagnetarStorage {
         return balanceAfter - balanceBefore;
     }
 
-    function _depositToYb(IYieldBox _yieldBox, address _user, uint256 _tokenId, uint256 _amount)
+    function _depositToMarket(IMarket _market, address _user, uint256 _amount)
         internal
         returns (uint256 amountOut, uint256 shareOut)
     {
-        (, address assetAddress,,) = _yieldBox.assets(_tokenId);
-        assetAddress.safeApprove(address(_yieldBox), _amount);
-        (amountOut, shareOut) = _yieldBox.depositAsset(_tokenId, address(this), _user, _amount, 0);
-        assetAddress.safeApprove(address(_yieldBox), 0);
+        IERC20 collateral = IERC20(_market._collateral());
+
+        collateral.safeApprove(address(_market), _amount);
+        shareOut = _market.deposit(_amount, _user);
     }
 
     function _marketRepay(IMarket _market, address _marketHelper, uint256 _amount, address _from, address _to)
@@ -169,9 +147,7 @@ abstract contract MagnetarBaseModule is MagnetarStorage {
         internal
         returns (uint256 fraction)
     {
-        IYieldBox _yieldBox = IYieldBox(_singularity._yieldBox());
-        uint256 lendShare = _yieldBox.toShare(_singularity._assetId(), _amount, false);
-
+        uint256 lendShare = _singularity.convertToShares(_amount);
         fraction = _singularity.addAsset(_from, _to, false, lendShare);
     }
 

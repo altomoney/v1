@@ -65,24 +65,27 @@ contract Origins is Ownable, Market, MarketStateView, ReentrancyGuard {
     /// @notice event emitted when an allowed participant status changes
     event UpdateParticipants(address indexed participant, bool indexed status);
 
-    constructor(
-        address __owner,
+    constructor(address __owner) MarketERC4626("Origins", "ORI") {
+        allowedParticipants[__owner] = true;
+        _transferOwnership(__owner);
+    }
+
+    // TODO Check initialization and constructor
+    function init(
         IERC20 __asset,
-        IERC20 __collateral,
+        address __collateral,
         ITapiocaOracle __oracle,
         uint256 __exchangeRatePrecision,
         uint256 __collateralizationRate,
         IPenrose __penrose
-    ) MarketERC4626("Origins", "ORI") {
-        allowedParticipants[__owner] = true;
-
-        if (address(__collateral) == address(0)) revert BadPair();
+    ) external onlyOnce {
+        if (__collateral == address(0)) revert BadPair();
         if (address(__asset) == address(0)) revert BadPair();
         if (address(__oracle) == address(0)) revert BadPair();
         if (__collateralizationRate > FEE_PRECISION) revert NotValid();
 
         _asset = __asset;
-        collateral = __collateral;
+        _collateral = __collateral;
         oracle = __oracle;
         _penrose = __penrose;
         updateExchangeRate();
@@ -94,8 +97,6 @@ contract Origins is Ownable, Market, MarketStateView, ReentrancyGuard {
 
         rateValidDuration = 24 hours;
         minBorrowAmount = 1e15;
-
-        _transferOwnership(__owner);
     }
 
     // ************************* //
@@ -114,10 +115,7 @@ contract Origins is Ownable, Market, MarketStateView, ReentrancyGuard {
     /// @dev can only be called by the conservator
     /// @param val the new value
     function updatePause(PauseType _type, bool val) external {
-        require(
-            _cluster().hasRole(msg.sender, keccak256("PAUSABLE")) || msg.sender == owner(),
-            "Market: unauthorized"
-        );
+        require(_cluster().hasRole(msg.sender, keccak256("PAUSABLE")) || msg.sender == owner(), "Market: unauthorized");
         require(val != pauseOptions[_type], "Market: same state");
         emit PausedUpdated(_type, pauseOptions[_type], val);
         pauseOptions[_type] = val;
@@ -126,10 +124,7 @@ contract Origins is Ownable, Market, MarketStateView, ReentrancyGuard {
     /// @notice updates the pause state of the contract for all types
     /// @param val the new val
     function updatePauseAll(bool val) external {
-        require(
-            _cluster().hasRole(msg.sender, keccak256("PAUSABLE")) || msg.sender == owner(),
-            "Market: unauthorized"
-        );
+        require(_cluster().hasRole(msg.sender, keccak256("PAUSABLE")) || msg.sender == owner(), "Market: unauthorized");
 
         pauseOptions[PauseType.Borrow] = val;
         pauseOptions[PauseType.Repay] = val;
@@ -238,7 +233,7 @@ contract Origins is Ownable, Market, MarketStateView, ReentrancyGuard {
         withdraw(amount, address(this), from);
 
         //burn USDO
-        IUsdo(address(asset)).burn(address(this), amount);
+        IUsdo(address(_borrowableToken())).burn(address(this), amount);
 
         emit LogRepay(from, to, amountOut, part);
     }
@@ -257,7 +252,7 @@ contract Origins is Ownable, Market, MarketStateView, ReentrancyGuard {
         IUsdo(address(_borrowableToken())).mint(address(this), amount);
 
         //deposit borrowed amount to user TODO why it says borrowed amount and use collateralId in the depositAsset?
-        _borrowableToken().transfer(to, amount); // TODO check if this is correct
+        IERC20(_borrowableToken()).safeTransfer(to, amount); // TODO check if this is correct
     }
 
     function _addCollateral(address from, address to, uint256 amount, uint256 share) internal {
@@ -265,7 +260,7 @@ contract Origins is Ownable, Market, MarketStateView, ReentrancyGuard {
         if (share == 0) {
             share = convertToShares(amount);
         }
-        mint(to, share);
+        mint(share, to);
         emit LogAddCollateral(from, to, share);
     }
 

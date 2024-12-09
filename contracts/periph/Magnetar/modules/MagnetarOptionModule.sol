@@ -84,7 +84,7 @@ contract MagnetarOptionModule is MagnetarBaseModule {
     }
 
     function _lock(LockAndParticipateData memory data) private returns (uint256 tOLPTokenId) {
-        IYieldBox _yieldBox = IYieldBox(data.yieldBox);
+        IMarket _market = IMarket(address(0x0)); // TODO Check this.
         uint256 _fraction = data.lockData.fraction;
 
         // use requested value
@@ -95,10 +95,7 @@ contract MagnetarOptionModule is MagnetarBaseModule {
             ITapiocaOptionLiquidityProvision(data.lockData.target).activeSingularities(data.tSglToken);
 
         _fraction = _extractTokens(data.user, data.tSglToken, _fraction);
-        (, uint256 _shareOut) = _depositToYb(_yieldBox, address(this), tOLPSglAssetId, _fraction);
-
-        _pearlmitApprove(address(_yieldBox), tOLPSglAssetId, data.lockData.target, _shareOut);
-        _yieldBox.setApprovalForAll(address(pearlmit), true);
+        uint256 _shareOut = _market.convertToShares(_fraction);
 
         tOLPTokenId = ITapiocaOptionLiquidityProvision(data.lockData.target).lock(
             data.participateData.participate ? address(this) : data.user,
@@ -107,8 +104,6 @@ contract MagnetarOptionModule is MagnetarBaseModule {
             _shareOut.toUint128(),
             msg.sender
         );
-
-        _yieldBox.setApprovalForAll(address(pearlmit), false);
     }
 
     function _participate(LockAndParticipateData memory data, uint256 tOLPTokenId) private {
@@ -159,11 +154,6 @@ contract MagnetarOptionModule is MagnetarBaseModule {
         _validateExitPositionAndRemoveCollateral(data);
 
         /**
-         * @dev YieldBox approvals
-         */
-        _processYieldBoxApprovals(data.externalData.bigBang, data.externalData.singularity, true);
-
-        /**
          * @dev if `removeAndRepayData.exitData.exit` the following operations are performed
          *          - if ownerOfTapTokenId is user, transfers the oTAP token id to this contract
          *          - tOB.exitPosition
@@ -199,7 +189,7 @@ contract MagnetarOptionModule is MagnetarBaseModule {
 
             //withdraw
             if (data.removeAndRepayData.assetWithdrawData.withdraw) {
-                _withdrawHere(data.removeAndRepayData.assetWithdrawData);
+                _withdrawHere(data.removeAndRepayData.assetWithdrawData, _singularity);
             }
         }
 
@@ -221,45 +211,20 @@ contract MagnetarOptionModule is MagnetarBaseModule {
          */
         if (data.removeAndRepayData.removeCollateralFromBB) {
             IMarket _bigBang = IMarket(data.externalData.bigBang);
-            IYieldBox _yieldBox = IYieldBox(_bigBang._yieldBox());
 
             // remove collateral
             _marketRemoveCollateral(
                 _bigBang,
                 data.externalData.marketHelper,
-                _yieldBox.toShare(_bigBang._collateralId(), data.removeAndRepayData.collateralAmount, true),
+                _bigBang.convertToShares(data.removeAndRepayData.collateralAmount),
                 data.user,
                 data.removeAndRepayData.collateralWithdrawData.withdraw ? address(this) : data.user
             );
 
             //withdraw
             if (data.removeAndRepayData.collateralWithdrawData.withdraw) {
-                _withdrawHere(data.removeAndRepayData.collateralWithdrawData);
+                _withdrawHere(data.removeAndRepayData.collateralWithdrawData, _bigBang);
             }
-        }
-
-        /**
-         * @dev YieldBox reverts
-         */
-        _processYieldBoxApprovals(data.externalData.bigBang, data.externalData.singularity, false);
-    }
-
-    function _processYieldBoxApprovals(address bigBang, address singularity, bool approve) private {
-        if (bigBang == address(0) && singularity == address(0)) return;
-
-        // YieldBox should be the same for all markets
-        IYieldBox _yieldBox = bigBang != address(0)
-            ? IYieldBox(IMarket(bigBang)._yieldBox())
-            : IYieldBox(IMarket(singularity)._yieldBox());
-
-        if (approve) {
-            if (bigBang != address(0)) _setApprovalForYieldBox(bigBang, _yieldBox);
-            if (singularity != address(0)) _setApprovalForYieldBox(singularity, _yieldBox);
-            _setApprovalForYieldBox(address(pearlmit), _yieldBox);
-        } else {
-            if (bigBang != address(0)) _revertYieldBoxApproval(bigBang, _yieldBox);
-            if (singularity != address(0)) _revertYieldBoxApproval(singularity, _yieldBox);
-            _revertYieldBoxApproval(address(pearlmit), _yieldBox);
         }
     }
 
@@ -268,7 +233,6 @@ contract MagnetarOptionModule is MagnetarBaseModule {
         _checkSender(data.user);
 
         // Check provided addresses
-        _checkWhitelisted(data.yieldBox);
         _checkWhitelisted(data.tSglToken);
         _checkWhitelisted(data.magnetar);
         if (data.lockData.lock) {

@@ -69,30 +69,22 @@ contract MagnetarCollateralModule is MagnetarBaseModule {
         _validateDepositAddCollateralAndBorrowFromMarket(data);
 
         IMarket _market = IMarket(data.market);
-        IYieldBox _yieldBox = IYieldBox(_market._yieldBox());
 
-        /**
-         * @dev YieldBox approvals
-         */
-        _processYieldBoxApprovals(_yieldBox, data.market, true);
-
-        uint256 collateralId = _market._collateralId();
-        uint256 _share = _yieldBox.toShare(collateralId, data.collateralAmount, false);
+        uint256 _share = _market.convertToShares(data.collateralAmount);
 
         /**
          * @dev deposit to YieldBox
          */
         if (data.deposit && data.collateralAmount > 0) {
-            (, address collateralAddress,,) = _yieldBox.assets(collateralId);
+            address collateralAddress = _market._collateral();
             data.collateralAmount = _extractTokens(data.user, collateralAddress, data.collateralAmount);
-            _depositToYb(_yieldBox, data.user, collateralId, data.collateralAmount);
+            _depositToMarket(_market, data.user, data.collateralAmount);
         }
 
         /**
          * @dev performs .addCollateral on data.market
          */
         if (data.collateralAmount > 0) {
-            _pearlmitApprove(address(_yieldBox), collateralId, address(_market), _share);
             _marketAddCollateral(_market, data.marketHelper, _share, data.user, data.user);
         }
 
@@ -101,8 +93,7 @@ contract MagnetarCollateralModule is MagnetarBaseModule {
          *      if `withdraw` it uses `_withdrawHere` to withdraw assets on the same chain
          */
         if (data.borrowAmount > 0) {
-            uint256 borrowShare = _yieldBox.toShare(_market._assetId(), data.borrowAmount, false);
-            _pearlmitApprove(address(_yieldBox), _market._assetId(), address(_market), borrowShare);
+            uint256 borrowShare = _market.convertToShares(data.borrowAmount);
             _marketBorrow(
                 _market,
                 data.marketHelper,
@@ -112,13 +103,8 @@ contract MagnetarCollateralModule is MagnetarBaseModule {
             );
 
             // data validated in `_validateDepositAddCollateralAndBorrowFromMarket`
-            if (data.withdrawParams.withdraw) _withdrawHere(data.withdrawParams);
+            if (data.withdrawParams.withdraw) _withdrawHere(data.withdrawParams, _market);
         }
-
-        /**
-         * @dev YieldBox reverts
-         */
-        _processYieldBoxApprovals(_yieldBox, data.market, false);
     }
 
     /**
@@ -144,21 +130,14 @@ contract MagnetarCollateralModule is MagnetarBaseModule {
         _validateDepositRepayAndRemoveCollateralFromMarketData(data);
 
         IMarket _market = IMarket(data.market);
-        IYieldBox _yieldBox = IYieldBox(_market._yieldBox());
-
-        /**
-         * @dev YieldBox approvals
-         */
-        _processYieldBoxApprovals(_yieldBox, data.market, true);
 
         /**
          * @dev deposit `market._assetId()` to YieldBox
          */
         if (data.depositAmount > 0) {
-            uint256 assetId = _market._assetId();
-            (, address assetAddress,,) = _yieldBox.assets(assetId);
+            address assetAddress = _market._asset(); // It is the borrowable token (not the asset in the ERC4626)
             data.depositAmount = _extractTokens(data.user, assetAddress, data.depositAmount);
-            _depositToYb(_yieldBox, data.user, assetId, data.depositAmount);
+            _depositToMarket(_market, data.user, data.depositAmount);
         }
 
         /**
@@ -173,8 +152,7 @@ contract MagnetarCollateralModule is MagnetarBaseModule {
          *       also withdraws if requested.
          */
         if (data.collateralAmount > 0) {
-            uint256 collateralShare = _yieldBox.toShare(_market._collateralId(), data.collateralAmount, true);
-            _pearlmitApprove(address(_yieldBox), _market._collateralId(), address(_market), collateralShare);
+            uint256 collateralShare = _market.convertToShares(data.collateralAmount);
             _marketRemoveCollateral(
                 _market,
                 data.marketHelper,
@@ -188,34 +166,18 @@ contract MagnetarCollateralModule is MagnetarBaseModule {
                  * @dev re-calculate amount after `removeCollateral` operation
                  */
                 if (collateralShare > 0) {
-                    uint256 computedCollateral = _yieldBox.toAmount(_market._collateralId(), collateralShare, false);
+                    uint256 computedCollateral = _market.convertToAssets(collateralShare);
                     if (computedCollateral == 0) revert Magnetar_WithdrawParamsMismatch();
 
-                    _withdrawHere(data.withdrawCollateralParams);
+                    _withdrawHere(data.withdrawCollateralParams, _market);
                 }
             }
         }
-
-        /**
-         * @dev YieldBox reverts
-         */
-        _processYieldBoxApprovals(_yieldBox, data.market, false);
     }
 
     /// =====================
     /// Private
     /// =====================
-    function _processYieldBoxApprovals(IYieldBox _yieldBox, address market, bool approve) private {
-        if (market == address(0)) return;
-
-        if (approve) {
-            _setApprovalForYieldBox(market, _yieldBox);
-            _setApprovalForYieldBox(address(pearlmit), _yieldBox);
-        } else {
-            _revertYieldBoxApproval(market, _yieldBox);
-            _revertYieldBoxApproval(address(pearlmit), _yieldBox);
-        }
-    }
 
     function _validateDepositAddCollateralAndBorrowFromMarket(DepositAddCollateralAndBorrowFromMarketData memory data)
         private
@@ -235,7 +197,7 @@ contract MagnetarCollateralModule is MagnetarBaseModule {
         if (data.withdraw) {
             // USDO doesn't have unwrap
             if (data.unwrap) revert MagnetarCollateralModule_UnwrapNotAllowed();
-            if (data.assetId != IMarket(market)._assetId()) revert Magnetar_WithdrawParamsMismatch();
+            if (data.asset != IMarket(market)._asset()) revert Magnetar_WithdrawParamsMismatch();
             if (data.amount == 0) revert Magnetar_WithdrawParamsMismatch();
         }
     }
@@ -263,7 +225,7 @@ contract MagnetarCollateralModule is MagnetarBaseModule {
         address market
     ) private view {
         if (data.withdraw) {
-            if (data.assetId != IMarket(market)._collateralId()) revert Magnetar_WithdrawParamsMismatch();
+            if (data.asset != IMarket(market)._collateral()) revert Magnetar_WithdrawParamsMismatch();
             if (data.amount == 0) revert Magnetar_WithdrawParamsMismatch();
         }
     }

@@ -49,7 +49,7 @@ contract BBCommon is BBStorage {
         return IBigBangDebtRateHelper(debtRateHelper).getDebtRate(
             IBigBangDebtRateHelper.DebtRateCall({
                 isMainMarket: isMainMarket,
-                penrose: address(_penrose),
+                penrose: _penrose,
                 elastic: totalBorrow.elastic,
                 debtRateAgainstEthMarket: debtRateAgainstEthMarket,
                 maxDebtRate: maxDebtRate,

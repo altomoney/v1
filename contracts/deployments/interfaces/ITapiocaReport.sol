@@ -7,7 +7,6 @@ struct TapiocaReport {
     address magnetarMintModule;
     address magnetarOptionModule;
     address magnetarAssetModule;
-    address magnetarYieldboxModule;
     address magnetarHelper;
     address simpleLeverageExecutor;
     address toftHelper;
@@ -16,8 +15,6 @@ struct TapiocaReport {
     address cluster;
     address pearlmit;
     address adbTapOptionOracle;
-    address yieldbox;
-    address yieldboxUri;
     address tapiocaMulticall;
     address extExec;
     address liquidatorReceiver;
@@ -62,7 +59,6 @@ struct MagnetarDepsReport {
     address magnetarCollateralModule;
     address magnetarMintModule;
     address magnetarOptionModule;
-    address magnetarYieldboxModule;
 }
 
 struct UtilitiesReport {

@@ -98,8 +98,8 @@ contract BBLeverage is BBLendingCommon {
 
             amountOut = leverageExecutor.getCollateral(
                 from,
-                address(asset),
-                address(collateral),
+                address(_borrowableToken()),
+                collateral(),
                 memoryData.supplyShareToAmount + memoryData.borrowShareToAmount,
                 calldata_.data
             );
@@ -146,7 +146,7 @@ contract BBLeverage is BBLendingCommon {
 
         memoryData.leverageAmount = redeem(share, address(leverageExecutor), address(this));
         amountOut =
-            leverageExecutor.getAsset(from, address(collateral), address(asset), memoryData.leverageAmount, data);
+            leverageExecutor.getAsset(from, collateral(), address(_borrowableToken()), memoryData.leverageAmount, data);
         
         
         memoryData.shareOut = convertToShares(amountOut);

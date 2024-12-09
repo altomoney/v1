@@ -24,7 +24,6 @@ import {TapiocaOmnichainExtExec} from "tap-utils/tapiocaOmnichainEngine/extensio
 import {TapiocaOmnichainEngineCodec} from "tap-utils/tapiocaOmnichainEngine/TapiocaOmnichainEngineCodec.sol";
 import {MagnetarCollateralModule} from "tapioca-periph/Magnetar/modules/MagnetarCollateralModule.sol";
 import {ITapiocaOmnichainEngine} from "tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
-import {MagnetarYieldBoxModule} from "tapioca-periph/Magnetar/modules/MagnetarYieldBoxModule.sol";
 import {MagnetarOptionModule} from "tapioca-periph/Magnetar/modules/MagnetarOptionModule.sol";
 import {MagnetarMintModule} from "tapioca-periph/Magnetar/modules/MagnetarMintModule.sol";
 import {MagnetarBaseModule} from "tapioca-periph/Magnetar/modules/MagnetarBaseModule.sol";
@@ -164,8 +163,6 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
             new MagnetarCollateralModule(IPearlmit(address(pearlmit)), address(toeHelper));
         MagnetarMintModule mintModule = new MagnetarMintModule(IPearlmit(address(pearlmit)), address(toeHelper));
         MagnetarOptionModule optionModule = new MagnetarOptionModule(IPearlmit(address(pearlmit)), address(toeHelper));
-        MagnetarYieldBoxModule yieldBoxModule =
-            new MagnetarYieldBoxModule(IPearlmit(address(pearlmit)), address(toeHelper));
 
         magnetar = new Magnetar(
             ICluster(address(cluster)),
@@ -173,7 +170,6 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
             payable(collateralModule),
             payable(mintModule),
             payable(optionModule),
-            payable(yieldBoxModule),
             IPearlmit(address(pearlmit)),
             address(toeHelper),
             IMagnetarHelper(address(new MagnetarHelper()))
@@ -352,47 +348,6 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
         assertEq(response[0].market.collateralizationRate, 75_000);
     }
 
-    function test_yieldBox_deposit() public {
-        (Singularity sgl,, YieldBox yieldBox) = _setupSgl(address(oracle));
-        cluster.updateContract(0, address(sgl), true);
-        cluster.updateContract(0, address(yieldBox), true);
-        vm.label(address(sgl), "Singularity");
-        vm.label(address(yieldBox), "YieldBox");
-
-        uint256 tokenAmount_ = 1 ether;
-        {
-            deal(address(asset), address(this), tokenAmount_);
-        }
-
-        {
-            asset.approve(address(yieldBox), type(uint256).max);
-            yieldBox.setApprovalForAll(address(magnetar), true);
-        }
-
-        {
-            uint256 assetShare = yieldBox.toShare(assetId, tokenAmount_, false);
-            bytes memory depositToYbData = abi.encodeWithSelector(
-                MagnetarYieldBoxModule.depositAsset.selector,
-                address(yieldBox),
-                assetId,
-                address(this),
-                address(this),
-                0,
-                assetShare
-            );
-            MagnetarCall[] memory calls = new MagnetarCall[](1);
-            calls[0] = MagnetarCall({
-                id: uint8(MagnetarAction.YieldBoxModule),
-                target: address(yieldBox),
-                value: 0,
-                call: depositToYbData
-            });
-            magnetar.burst(calls);
-
-            assertGt(yieldBox.balanceOf(address(this), assetId), 0);
-        }
-    }
-
     function test_lend() public {
         vm.skip(true);
         (Singularity sgl,, YieldBox yieldBox) = _setupSgl(address(oracle));
@@ -419,26 +374,11 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
 
         {
             uint256 assetShare = yieldBox.toShare(assetId, tokenAmount_, false);
-            bytes memory depositToYbData = abi.encodeWithSelector(
-                MagnetarYieldBoxModule.depositAsset.selector,
-                address(yieldBox),
-                assetId,
-                address(this),
-                address(this),
-                0,
-                assetShare
-            );
             bytes memory lendData =
                 abi.encodeWithSelector(Singularity.addAsset.selector, address(this), address(this), false, assetShare);
 
-            MagnetarCall[] memory calls = new MagnetarCall[](2);
-            calls[0] = MagnetarCall({
-                id: uint8(MagnetarAction.YieldBoxModule),
-                target: address(yieldBox),
-                value: 0,
-                call: depositToYbData
-            });
-            calls[1] = MagnetarCall({id: uint8(MagnetarAction.Market), target: address(sgl), value: 0, call: lendData});
+            MagnetarCall[] memory calls = new MagnetarCall[](1);
+            calls[0] = MagnetarCall({id: uint8(MagnetarAction.Market), target: address(sgl), value: 0, call: lendData});
 
             magnetar.burst(calls);
 
@@ -490,26 +430,11 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
         }
         {
             uint256 assetShare = yieldBox.toShare(assetId, tokenAmount_, false);
-            bytes memory depositToYbData = abi.encodeWithSelector(
-                MagnetarYieldBoxModule.depositAsset.selector,
-                address(yieldBox),
-                assetId,
-                address(this),
-                address(this),
-                tokenAmount_,
-                0
-            );
             bytes memory lendData =
                 abi.encodeWithSelector(Singularity.addAsset.selector, address(this), address(this), false, assetShare);
 
-            MagnetarCall[] memory calls = new MagnetarCall[](2);
-            calls[0] = MagnetarCall({
-                id: uint8(MagnetarAction.YieldBoxModule),
-                target: address(yieldBox),
-                value: 0,
-                call: depositToYbData
-            });
-            calls[1] = MagnetarCall({id: uint8(MagnetarAction.Market), target: address(sgl), value: 0, call: lendData});
+            MagnetarCall[] memory calls = new MagnetarCall[](1);
+            calls[0] = MagnetarCall({id: uint8(MagnetarAction.Market), target: address(sgl), value: 0, call: lendData});
 
             magnetar.burst(calls);
 
@@ -647,26 +572,11 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
 
         {
             uint256 assetShare = yieldBox.toShare(assetId, tokenAmount_, false);
-            bytes memory depositToYbData = abi.encodeWithSelector(
-                MagnetarYieldBoxModule.depositAsset.selector,
-                address(yieldBox),
-                assetId,
-                address(this),
-                address(this),
-                0,
-                assetShare
-            );
             bytes memory lendData =
                 abi.encodeWithSelector(Singularity.addAsset.selector, address(this), address(this), false, assetShare);
 
-            MagnetarCall[] memory calls = new MagnetarCall[](2);
-            calls[0] = MagnetarCall({
-                id: uint8(MagnetarAction.YieldBoxModule),
-                target: address(yieldBox),
-                value: 0,
-                call: depositToYbData
-            });
-            calls[1] = MagnetarCall({id: uint8(MagnetarAction.Market), target: address(sgl), value: 0, call: lendData});
+            MagnetarCall[] memory calls = new MagnetarCall[](1);
+            calls[0] = MagnetarCall({id: uint8(MagnetarAction.Market), target: address(sgl), value: 0, call: lendData});
 
             magnetar.burst(calls);
 
@@ -734,13 +644,7 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
                 unwrap: true,
                 extractFromSender: false
             });
-            MagnetarCall[] memory calls = new MagnetarCall[](1);
-            calls[0] = MagnetarCall({
-                id: uint8(MagnetarAction.YieldBoxModule),
-                target: address(yieldBox),
-                value: 0,
-                call: abi.encodeWithSelector(MagnetarYieldBoxModule.withdrawHere.selector, withdrawData)
-            });
+            MagnetarCall[] memory calls = new MagnetarCall[](0);
 
             vm.expectRevert(); //fails with Magnetar_UserMismatch
             magnetar.burst(calls);
@@ -792,26 +696,11 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
 
         {
             uint256 assetShare = yieldBox.toShare(assetId, tokenAmount_, false);
-            bytes memory depositToYbData = abi.encodeWithSelector(
-                MagnetarYieldBoxModule.depositAsset.selector,
-                address(yieldBox),
-                assetId,
-                address(this),
-                address(this),
-                0,
-                assetShare
-            );
             bytes memory lendData =
                 abi.encodeWithSelector(Singularity.addAsset.selector, address(this), address(this), false, assetShare);
 
-            MagnetarCall[] memory calls = new MagnetarCall[](2);
-            calls[0] = MagnetarCall({
-                id: uint8(MagnetarAction.YieldBoxModule),
-                target: address(yieldBox),
-                value: 0,
-                call: depositToYbData
-            });
-            calls[1] = MagnetarCall({id: uint8(MagnetarAction.Market), target: address(sgl), value: 0, call: lendData});
+            MagnetarCall[] memory calls = new MagnetarCall[](1);
+            calls[0] = MagnetarCall({id: uint8(MagnetarAction.Market), target: address(sgl), value: 0, call: lendData});
 
             magnetar.burst(calls);
 
@@ -879,13 +768,7 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
                 unwrap: false,
                 extractFromSender: false
             });
-            MagnetarCall[] memory calls = new MagnetarCall[](1);
-            calls[0] = MagnetarCall({
-                id: uint8(MagnetarAction.YieldBoxModule),
-                target: address(yieldBox),
-                value: 0,
-                call: abi.encodeWithSelector(MagnetarYieldBoxModule.withdrawHere.selector, withdrawData)
-            });
+            MagnetarCall[] memory calls = new MagnetarCall[](0);
 
             magnetar.burst(calls);
 
@@ -928,23 +811,6 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
             //deposit approvals
             yieldBox.setApprovalForAll(address(magnetar), true);
             collateral.approve(address(yieldBox), type(uint256).max); //for yb deposit
-
-            uint256 collateralShare = yieldBox.toShare(collateralId, tokenAmount_, false);
-            bytes memory depositToYbData = abi.encodeWithSelector(
-                MagnetarYieldBoxModule.depositAsset.selector,
-                address(yieldBox),
-                collateralId,
-                address(this),
-                address(this),
-                0,
-                collateralShare
-            );
-            magnetarCalls[0] = MagnetarCall({
-                id: uint8(MagnetarAction.YieldBoxModule),
-                target: address(yieldBox),
-                value: 0,
-                call: depositToYbData
-            });
 
             Module[] memory modules;
             bytes[] memory calls;
@@ -1129,16 +995,6 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
             deal(address(asset), address(this), repayAmount_); //deal more asset to be able to fully repay
             uint256 assetShare = yieldBox.toShare(bb._assetId(), repayAmount_, false);
 
-            bytes memory depositToYbData = abi.encodeWithSelector(
-                MagnetarYieldBoxModule.depositAsset.selector,
-                address(yieldBox),
-                bb._assetId(),
-                address(this),
-                address(this),
-                0,
-                assetShare
-            );
-
             bytes memory removeData = abi.encodeWithSelector(
                 MagnetarOptionModule.exitPositionAndRemoveCollateral.selector,
                 ExitPositionAndRemoveCollateralData({
@@ -1180,14 +1036,8 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
                 })
             );
 
-            MagnetarCall[] memory calls = new MagnetarCall[](2);
+            MagnetarCall[] memory calls = new MagnetarCall[](1);
             calls[0] = MagnetarCall({
-                id: uint8(MagnetarAction.YieldBoxModule),
-                target: address(yieldBox),
-                value: 0,
-                call: depositToYbData
-            });
-            calls[1] = MagnetarCall({
                 id: uint8(MagnetarAction.OptionModule),
                 target: address(yieldBox), //this is ignored
                 value: 0,
@@ -1226,16 +1076,6 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
 
         {
             uint256 assetShare = yieldBox.toShare(assetId, tokenAmount_, false);
-            bytes memory depositToYbData = abi.encodeWithSelector(
-                MagnetarYieldBoxModule.depositAsset.selector,
-                address(yieldBox),
-                assetId,
-                address(this),
-                address(this),
-                0,
-                assetShare
-            );
-
             bytes memory mintData = abi.encodeWithSelector(
                 MagnetarMintModule.mintBBLendSGLLockTOLP.selector,
                 MintFromBBAndLendOnSGLData({
@@ -1266,14 +1106,8 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
                 })
             );
 
-            MagnetarCall[] memory calls = new MagnetarCall[](2);
+            MagnetarCall[] memory calls = new MagnetarCall[](1);
             calls[0] = MagnetarCall({
-                id: uint8(MagnetarAction.YieldBoxModule),
-                target: address(yieldBox),
-                value: 0,
-                call: depositToYbData
-            });
-            calls[1] = MagnetarCall({
                 id: uint8(MagnetarAction.MintModule),
                 target: address(yieldBox), //this is ignored
                 value: 0,

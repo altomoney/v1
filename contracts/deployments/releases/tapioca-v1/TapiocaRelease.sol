@@ -266,13 +266,9 @@ library TapiocaRelease {
         report.tapiocaMulticall = reports.utilitiesReport.tapiocaMulticall;
         report.toeHelper = reports.utilitiesReport.toeHelper;
 
-        report.yieldbox = reports.yieldboxReport.yieldbox;
-        report.yieldboxUri = reports.yieldboxReport.yieldboxUri;
-
         report.magnetarCollateralModule = reports.magnetarDepsReport.magnetarCollateralModule;
         report.magnetarMintModule = reports.magnetarDepsReport.magnetarMintModule;
         report.magnetarOptionModule = reports.magnetarDepsReport.magnetarOptionModule;
-        report.magnetarYieldboxModule = reports.magnetarDepsReport.magnetarYieldboxModule;
         report.simpleLeverageExecutor = reports.magnetarReport.simpleLeverageExecutor;
         report.magnetar = reports.magnetarReport.magnetar;
         report.magnetarHelper = reports.magnetarReport.magnetarHelper;

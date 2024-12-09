@@ -102,7 +102,6 @@ contract BigBang is MarketStateView, BBCommon {
         _initCoreStorage(
             initMemoryData._penrose,
             initMemoryData._collateral,
-            initMemoryData._collateralId,
             initMemoryData._oracle,
             initMemoryData._exchangeRatePrecision,
             initMemoryData._collateralizationRate,
@@ -125,7 +124,7 @@ contract BigBang is MarketStateView, BBCommon {
     }
 
     function _initDebtStorage(uint256 _debtRateAgainstEth, uint256 _debtRateMin, uint256 _debtRateMax) private {
-        isMainMarket = address(_collateral()) == _penrose.mainToken();
+        isMainMarket = address(collateral()) == _penrose.mainToken();
         if (!isMainMarket) {
             if (_debtRateMin != 0 && _debtRateMax != 0) {
                 if (_debtRateMin >= _debtRateMax) revert DebtRatesNotValid();
@@ -157,7 +156,7 @@ contract BigBang is MarketStateView, BBCommon {
             revert NotValid();
         }
 
-        __initialize_MarketERC4626(IERC20(__asset));
+        __initialize_MarketERC4626(__asset);
         _collateral = address(__collateral);
         oracle = __oracle;
         updateExchangeRate();
@@ -339,7 +338,7 @@ contract BigBang is MarketStateView, BBCommon {
             _cluster().hasRole(msg.sender, keccak256("FEES_EXTRACTOR")) || msg.sender == owner(),
             "Ownable: caller is not the owner"
         );
-        uint256 fees = asset.balanceOf(address(this));
+        uint256 fees = IERC20(_borrowableToken()).balanceOf(address(this));
         if (fees > 0) {
             withdraw(fees, msg.sender, address(this)); // TODO: check if this is correct
         }
@@ -357,7 +356,7 @@ contract BigBang is MarketStateView, BBCommon {
         uint256 _debtRateAgainstEthMarket,
         uint256 _liquidationMultiplier
     ) external onlyOwner {
-        isMainMarket = collateral == _penrose.mainToken();
+        isMainMarket = collateral() == _penrose.mainToken();
 
         if (_liquidationMultiplier > 0) {
             if (_liquidationMultiplier >= FEE_PRECISION) revert NotValid();

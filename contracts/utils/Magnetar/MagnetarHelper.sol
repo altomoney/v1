@@ -34,9 +34,7 @@ contract MagnetarHelper {
 
     struct MarketInfo {
         address collateral;
-        uint256 collateralId;
         address asset;
-        uint256 assetId;
         ITapiocaOracle oracle;
         bytes oracleData;
         uint256 totalCollateralShare;
@@ -119,8 +117,7 @@ contract MagnetarHelper {
      * @return amount The amount.
      */
     function getCollateralAmountForShare(IMarket market, uint256 share) external view returns (uint256 amount) {
-        IYieldBox yieldBox = IYieldBox(market._yieldBox());
-        return yieldBox.toAmount(market._collateralId(), share, false);
+        return market.convertToAssets(share);
     }
 
     /**
@@ -142,12 +139,11 @@ contract MagnetarHelper {
         (uint128 totalBorrowElastic, uint128 totalBorrowBase) = market._totalBorrow();
         _totalBorrowed = Rebase(totalBorrowElastic, totalBorrowBase);
 
-        IYieldBox yieldBox = IYieldBox(market._yieldBox());
         uint256 borrowAmount = _totalBorrowed.toElastic(borrowPart, roundAmounUp);
 
         uint256 val = (borrowAmount * collateralizationRatePrecision * market._exchangeRate())
             / (market._collateralizationRate() * exchangeRatePrecision);
-        return yieldBox.toShare(market._collateralId(), val, roundSharesUp);
+        return market.convertToShares(val);
     }
 
     /**
@@ -203,11 +199,9 @@ contract MagnetarHelper {
         (uint128 totalAssetElastic, uint128 totalAssetBase) = singularity.totalAsset();
         (uint128 totalBorrowElastic,) = singularity._totalBorrow();
 
-        IYieldBox yieldBox = IYieldBox(singularity._yieldBox());
+        uint256 allShare = totalAssetElastic + singularity.convertToShares(totalBorrowElastic);
 
-        uint256 allShare = totalAssetElastic + yieldBox.toShare(singularity._assetId(), totalBorrowElastic, true);
-
-        return yieldBox.toAmount(singularity._assetId(), (fraction * allShare) / totalAssetBase, false);
+        return singularity.convertToAssets((fraction * allShare) / totalAssetBase);
     }
 
     /**
@@ -225,12 +219,9 @@ contract MagnetarHelper {
     {
         (uint128 totalAssetShare, uint128 totalAssetBase) = singularity.totalAsset();
         (uint128 totalBorrowElastic,) = singularity._totalBorrow();
-        uint256 assetId = singularity._assetId();
 
-        IYieldBox yieldBox = IYieldBox(singularity._yieldBox());
-
-        uint256 share = yieldBox.toShare(assetId, amount, roundUp);
-        uint256 allShare = totalAssetShare + yieldBox.toShare(assetId, totalBorrowElastic, false);
+        uint256 share = singularity.convertToShares(amount);
+        uint256 allShare = totalAssetShare + singularity.convertToShares(totalBorrowElastic);
 
         fraction = allShare == 0 ? share : (share * totalAssetBase) / allShare;
     }

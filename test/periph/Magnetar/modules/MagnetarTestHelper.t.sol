@@ -26,7 +26,6 @@ import {BBDebtRateHelper} from "tapioca-bar/markets/bigBang/BBDebtRateHelper.sol
 
 import {MagnetarCollateralModule} from "tapioca-periph/Magnetar/modules/MagnetarCollateralModule.sol";
 import {ITapiocaOmnichainEngine} from "tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
-import {MagnetarYieldBoxModule} from "tapioca-periph/Magnetar/modules/MagnetarYieldBoxModule.sol";
 import {MagnetarOptionModule} from "tapioca-periph/Magnetar/modules/MagnetarOptionModule.sol";
 import {MagnetarMintModule} from "tapioca-periph/Magnetar/modules/MagnetarMintModule.sol";
 import {MagnetarBaseModule} from "tapioca-periph/Magnetar/modules/MagnetarBaseModule.sol";
@@ -120,7 +119,6 @@ struct MagnetarSetupData {
     MagnetarCollateralModule collateralModule;
     MagnetarMintModule mintModule;
     MagnetarOptionModule optionModule;
-    MagnetarYieldBoxModule yieldBoxModule;
 }
 
 contract MagnetarTestHelper is TestHelper {
@@ -437,7 +435,6 @@ contract MagnetarTestHelper is TestHelper {
         setup.collateralModule = new MagnetarCollateralModule(IPearlmit(_pearlmit), address(toeHelper));
         setup.mintModule = new MagnetarMintModule(IPearlmit(_pearlmit), address(toeHelper));
         setup.optionModule = new MagnetarOptionModule(IPearlmit(_pearlmit), address(toeHelper));
-        setup.yieldBoxModule = new MagnetarYieldBoxModule(IPearlmit(_pearlmit), address(toeHelper));
 
         magnetar = new Magnetar(
             ICluster(_cluster),
@@ -445,7 +442,6 @@ contract MagnetarTestHelper is TestHelper {
             payable(setup.collateralModule),
             payable(setup.mintModule),
             payable(setup.optionModule),
-            payable(setup.yieldBoxModule),
             IPearlmit(_pearlmit),
             address(toeHelper),
             IMagnetarHelper(address(new MagnetarHelper()))

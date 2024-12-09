@@ -70,13 +70,6 @@ contract MagnetarMintModule is MagnetarBaseModule {
         _validatemintBBLendSGLLockTOLPData(data);
 
         /**
-         * @dev YieldBox approvals
-         */
-        _processYieldBoxApprovals(
-            data.externalContracts.bigBang, data.externalContracts.singularity, data.lockData.target, true
-        );
-
-        /**
          * @dev if `mint` was requested the following actions are performed:
          *      - extracts & deposits collateral to YB
          *      - performs bigBang_.addCollateral
@@ -93,13 +86,11 @@ contract MagnetarMintModule is MagnetarBaseModule {
          */
         if (data.depositData.deposit) {
             IMarket _singularity = IMarket(data.externalContracts.singularity);
-            IYieldBox _yieldBox = IYieldBox(_singularity._yieldBox());
 
-            uint256 sglAssetId = _singularity._assetId();
-            (, address sglAssetAddress,,) = _yieldBox.assets(sglAssetId);
+            address sglAssetAddress = _singularity._asset(); // This is the borrowable token (not the asset in the ERC4626)
 
             data.depositData.amount = _extractTokens(data.user, sglAssetAddress, data.depositData.amount);
-            _depositToYb(_yieldBox, data.user, sglAssetId, data.depositData.amount);
+            _depositToMarket(_singularity, data.user, data.depositData.amount);
         }
 
         /**
@@ -133,41 +124,11 @@ contract MagnetarMintModule is MagnetarBaseModule {
         if (data.participateData.participate) {
             _participate(data, tOLPTokenId, data.lockData.lock);
         }
-
-        /**
-         * @dev YieldBox reverts
-         */
-        _processYieldBoxApprovals(
-            data.externalContracts.bigBang, data.externalContracts.singularity, data.lockData.target, false
-        );
     }
 
     /// =====================
     /// Private
     /// =====================
-    function _processYieldBoxApprovals(address bigBang, address singularity, address lockTarget, bool approve)
-        private
-    {
-        if (bigBang == address(0) && singularity == address(0)) return;
-
-        // YieldBox should be the same for all markets
-        IYieldBox _yieldBox = bigBang != address(0)
-            ? IYieldBox(IMarket(bigBang)._yieldBox())
-            : IYieldBox(IMarket(singularity)._yieldBox());
-
-        if (approve) {
-            if (bigBang != address(0)) _setApprovalForYieldBox(bigBang, _yieldBox);
-            if (singularity != address(0)) _setApprovalForYieldBox(singularity, _yieldBox);
-            if (lockTarget != address(0)) _setApprovalForYieldBox(lockTarget, _yieldBox);
-            _setApprovalForYieldBox(address(pearlmit), _yieldBox);
-        } else {
-            if (bigBang != address(0)) _revertYieldBoxApproval(bigBang, _yieldBox);
-            if (singularity != address(0)) _revertYieldBoxApproval(singularity, _yieldBox);
-            if (lockTarget != address(0)) _revertYieldBoxApproval(lockTarget, _yieldBox);
-            _revertYieldBoxApproval(address(pearlmit), _yieldBox);
-        }
-    }
-
     function _validatemintBBLendSGLLockTOLPData(MintFromBBAndLendOnSGLData memory data) private view {
         // Check sender
         _checkSender(data.user);
@@ -184,20 +145,16 @@ contract MagnetarMintModule is MagnetarBaseModule {
 
     function _depositAddCollateralAndMintFromBigBang(MintFromBBAndLendOnSGLData memory data) private {
         IMarket _bigBang = IMarket(data.externalContracts.bigBang);
-        IYieldBox _yieldBox = IYieldBox(_bigBang._yieldBox());
-
-        uint256 bbCollateralId = _bigBang._collateralId();
-        uint256 _share = _yieldBox.toShare(bbCollateralId, data.mintData.collateralDepositData.amount, false);
+        uint256 _share = _bigBang.convertToShares(data.mintData.collateralDepositData.amount);
 
         /**
          * @dev try deposit to YieldBox
          */
         if (data.mintData.collateralDepositData.deposit) {
-            (, address bbCollateralAddress,,) = _yieldBox.assets(bbCollateralId);
-
+            address bbCollateralAddress = _bigBang._collateral();
             data.mintData.collateralDepositData.amount =
                 _extractTokens(data.user, bbCollateralAddress, data.mintData.collateralDepositData.amount);
-            _depositToYb(_yieldBox, data.user, bbCollateralId, data.mintData.collateralDepositData.amount);
+            _depositToMarket(_bigBang, data.user, data.mintData.collateralDepositData.amount);
         }
 
         /**
@@ -213,10 +170,7 @@ contract MagnetarMintModule is MagnetarBaseModule {
          * @dev try borrow from BigBang
          */
         if (data.mintData.mintAmount > 0) {
-            uint256 _assetId = _bigBang._assetId();
-            _share = _yieldBox.toShare(_assetId, data.mintData.mintAmount, false);
-
-            _pearlmitApprove(address(_yieldBox), _assetId, address(_bigBang), _share);
+            _share = _bigBang.convertToShares(data.mintData.mintAmount);
             _marketBorrow(_bigBang, data.externalContracts.marketHelper, data.mintData.mintAmount, data.user, data.user);
         }
     }
