@@ -44,19 +44,8 @@ contract MagnetarHelper {
         uint256 currentExchangeRate;
         uint256 spotExchangeRate;
         uint256 oracleExchangeRate;
-        uint256 totalBorrowCap;
-        uint256 totalYieldBoxCollateralShare;
-        uint256 totalYieldBoxCollateralAmount;
-        uint256 totalYieldBoxAssetShare;
-        uint256 totalYieldBoxAssetAmount;
-        IYieldBoxTokenType yieldBoxCollateralTokenType;
-        address yieldBoxCollateralContractAddress;
-        address yieldBoxCollateralStrategyAddress;
-        uint256 yieldBoxCollateralTokenId;
-        IYieldBoxTokenType yieldBoxAssetTokenType;
-        address yieldBoxAssetContractAddress;
-        address yieldBoxAssetStrategyAddress;
-        uint256 yieldBoxAssetTokenId;
+        uint256 totalBorrowCap; // TODO Check all the YieldBox related fields removed
+        uint256 totalCollateralAmount;
         uint256 collateralizationRate;
     }
 
@@ -301,7 +290,7 @@ contract MagnetarHelper {
         info.asset = market._asset();
         info.oracle = ITapiocaOracle(market._oracle());
         info.oracleData = market._oracleData();
-        info.totalCollateralShare = market._totalCollateralShare();
+        info.totalCollateralShare = market._totalCollateralShare(); // TODO isn't it market4626.totalSupply()?
         info.userCollateralShare = market._userCollateralShare(who);
 
         (uint128 totalBorrowElastic, uint128 totalBorrowBase) = market._totalBorrow();
@@ -313,29 +302,9 @@ contract MagnetarHelper {
         (, info.oracleExchangeRate) = ITapiocaOracle(market._oracle()).peek(market._oracleData());
         info.spotExchangeRate = ITapiocaOracle(market._oracle()).peekSpot(market._oracleData());
         info.totalBorrowCap = market._totalBorrowCap();
-        info.assetId = market._assetId();
-        info.collateralId = market._collateralId();
         info.collateralizationRate = market._collateralizationRate();
-
-        IYieldBox yieldBox = IYieldBox(market._yieldBox());
-
-        (info.totalYieldBoxCollateralShare, info.totalYieldBoxCollateralAmount) =
-            yieldBox.assetTotals(info.collateralId);
-        (info.totalYieldBoxAssetShare, info.totalYieldBoxAssetAmount) = yieldBox.assetTotals(info.assetId);
-
-        (
-            info.yieldBoxCollateralTokenType,
-            info.yieldBoxCollateralContractAddress,
-            info.yieldBoxCollateralStrategyAddress,
-            info.yieldBoxCollateralTokenId
-        ) = yieldBox.assets(info.collateralId);
-        (
-            info.yieldBoxAssetTokenType,
-            info.yieldBoxAssetContractAddress,
-            info.yieldBoxAssetStrategyAddress,
-            info.yieldBoxAssetTokenId
-        ) = yieldBox.assets(info.assetId);
-
+        info.totalCollateralAmount = market.totalAssets();
+        // (info.totalYieldBoxAssetShare, info.totalYieldBoxAssetAmount) = market.totalAssets(); TODO Check it if it is needed.
         return info;
     }
 }
