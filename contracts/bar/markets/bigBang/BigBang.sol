@@ -64,7 +64,6 @@ contract BigBang is MarketStateView, BBCommon {
     struct _InitMemoryData {
         IPenrose _penrose;
         IERC20 _collateral;
-        uint256 _collateralId;
         ITapiocaOracle _oracle;
         uint256 _exchangeRatePrecision;
         uint256 _collateralizationRate;

@@ -63,10 +63,8 @@ interface IUsdo is ITapiocaOmnichainEngine {
 struct UsdoInitStruct {
     address endpoint;
     address delegate;
-    address yieldBox;
     address cluster;
     address extExec;
-    IPearlmit pearlmit;
 }
 
 struct UsdoModulesInitStruct {

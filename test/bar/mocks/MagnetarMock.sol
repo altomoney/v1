@@ -182,9 +182,9 @@ contract MagnetarMock is PearlmitHandler {
         // performs a removeCollateral operation on the market
         // if `withdrawCollateralParams.withdraw` it uses `withdrawTo` to withdraw collateral on the same chain or to another one
         if (_data.collateralAmount > 0) {
+            IMarket market = IMarket(_data.market);
             address collateralWithdrawReceiver = _data.withdrawCollateralParams.withdraw ? address(this) : _data.user;
-            uint256 collateralShare =
-                yieldBox.toShare(IMarket(_data.market)._collateralId(), _data.collateralAmount, false);
+            uint256 collateralShare = market.convertToShares(_data.collateralAmount);
 
             (Module[] memory modules, bytes[] memory calls) = IMarketHelper(_data.marketHelper).removeCollateral(
                 _data.user, collateralWithdrawReceiver, collateralShare

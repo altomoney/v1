@@ -65,20 +65,6 @@ abstract contract Utils is Constants, Test {
         return cluster;
     }
 
-    // Creates real Pearlmit
-    function _createPearlmit(address _owner) internal returns (Pearlmit) {
-        Pearlmit pearlmit = new Pearlmit("Pearlmit Test", "1", _owner, 0);
-        vm.label(address(pearlmit), "Pearlmit Test");
-        return pearlmit;
-    }
-
-    // Creates real YieldBox
-    function _createYieldBox(address _owner, Pearlmit _pearlmit) internal returns (YieldBox) {
-        YieldBoxURIBuilder uriBuilder = new YieldBoxURIBuilder();
-        YieldBox yieldBox = new YieldBox(IWrappedNative(address(0)), uriBuilder, _pearlmit, _owner);
-        return yieldBox;
-    }
-
     // OracleMock; allows changing the current rate to simulate multiple situations
     function _createOracle(string memory _name) internal returns (OracleMock) {
         OracleMock _oracle = new OracleMock(_name, _name, DEFAULT_ORACLE_RATE);

@@ -66,15 +66,6 @@ contract BigBang_repay is BigBang_Unit_Shared {
         whenAssetOracleRateIsBelowMin
         whenCollateralAmountIsValid(collateralAmount)
         givenBorrowCapIsNotReachedYet
-        whenApprovedViaPearlmit(
-            TOKEN_TYPE_ERC1155,
-            address(yieldBox),
-            mainBB._assetId(),
-            address(this),
-            address(mainBB),
-            type(uint200).max,
-            uint48(block.timestamp)
-        )
     {
         // **** Add collateral ****
         _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this), address(this), false);
@@ -109,15 +100,6 @@ contract BigBang_repay is BigBang_Unit_Shared {
         whenAssetOracleRateIsBelowMin
         whenCollateralAmountIsValid(collateralAmount)
         givenBorrowCapIsNotReachedYet
-        whenApprovedViaPearlmit(
-            TOKEN_TYPE_ERC1155,
-            address(yieldBox),
-            mainBB._assetId(),
-            address(this),
-            address(mainBB),
-            type(uint200).max,
-            uint48(block.timestamp)
-        )
     {
         // **** Add collateral ****
         _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this), address(this), false);

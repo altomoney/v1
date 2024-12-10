@@ -53,10 +53,7 @@ contract Origins_removeCollateral is Origins_Unit_Shared {
     function _addCollateral(Origins org) private {
         uint256 amount = 1 ether;
         deal(address(org._collateral()), address(this), amount);
-        mainToken.approve(address(yieldBox), type(uint256).max);
-        yieldBox.setApprovalForAll(address(org), true);
-
-        uint256 share = yieldBox.toShare(org._collateralId(), amount, false);
+        uint256 share = org.convertToShares(amount);
         yieldBox.depositAsset(org._collateralId(), address(this), address(this), 0, share);
         org.addCollateral(0, share);
     }

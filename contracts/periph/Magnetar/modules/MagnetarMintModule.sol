@@ -87,7 +87,7 @@ contract MagnetarMintModule is MagnetarBaseModule {
         if (data.depositData.deposit) {
             IMarket _singularity = IMarket(data.externalContracts.singularity);
 
-            address sglAssetAddress = _singularity._asset(); // This is the borrowable token (not the asset in the ERC4626)
+            address assetAddress = _market._collateral();
 
             data.depositData.amount = _extractTokens(data.user, sglAssetAddress, data.depositData.amount);
             _depositToMarket(_singularity, data.user, data.depositData.amount);
