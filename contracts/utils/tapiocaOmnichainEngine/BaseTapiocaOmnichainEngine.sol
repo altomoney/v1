@@ -15,7 +15,6 @@ import {BytesLib} from "solidity-bytes-utils/contracts/BytesLib.sol";
 
 // Tapioca
 import {ITapiocaOmnichainReceiveExtender} from "src/tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
-import {PearlmitHandler, IPearlmit} from "src/tap-utils/pearlmit/PearlmitHandler.sol";
 import {TapiocaOmnichainExtExec} from "./extension/TapiocaOmnichainExtExec.sol";
 import {ICluster} from "src/tap-utils/interfaces/periph/ICluster.sol";
 import {BaseToeMsgType} from "./BaseToeMsgType.sol";
@@ -31,7 +30,7 @@ import {BaseToeMsgType} from "./BaseToeMsgType.sol";
    
 */
 
-abstract contract BaseTapiocaOmnichainEngine is OFT, PearlmitHandler, BaseToeMsgType {
+abstract contract BaseTapiocaOmnichainEngine is OFT, BaseToeMsgType {
     using BytesLib for bytes;
     using SafeERC20 for IERC20;
     using OFTMsgCodec for bytes;
@@ -55,9 +54,8 @@ abstract contract BaseTapiocaOmnichainEngine is OFT, PearlmitHandler, BaseToeMsg
         address _endpoint,
         address _delegate,
         address _extExec,
-        IPearlmit _pearlmit,
         ICluster _cluster
-    ) OFT(_name, _symbol, _endpoint, _delegate) PearlmitHandler(_pearlmit) {
+    ) OFT(_name, _symbol, _endpoint, _delegate) {
         toeExtExec = TapiocaOmnichainExtExec(_extExec);
 
         StorageSlot.getAddressSlot(CLUSTER_SLOT).value = address(_cluster);

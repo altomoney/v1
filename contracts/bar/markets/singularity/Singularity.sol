@@ -73,9 +73,7 @@ contract Singularity is MarketStateView, SGLCommon {
 
     struct _InitMemoryTokensData {
         IERC20 _asset;
-        uint256 _assetId;
         IERC20 _collateral;
-        uint256 _collateralId;
     }
 
     // ************** //
