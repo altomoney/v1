@@ -175,7 +175,7 @@ contract BigBang_buyCollateral is BigBang_Unit_Shared {
 
         // **** Main BB market ****
         _spawnAsset(supplyAmount, address(this));
-        uint256 share = yieldBox.toShare(mainBB._assetId(), supplyAmount, false);
+        uint256 share = mainBB.convertToShares(supplyAmount);
         _depositToYieldBox(mainBB._asset(), mainBB._assetId(), share, address(this), address(this));
         _leverageUp(
             collateralAmount,
@@ -190,7 +190,7 @@ contract BigBang_buyCollateral is BigBang_Unit_Shared {
 
         // // **** Secondary BB market ****
         _spawnAsset(supplyAmount, address(this));
-        share = yieldBox.toShare(secondaryBB._assetId(), supplyAmount, false);
+        share = secondaryBB.convertToShares(supplyAmount);
         _depositToYieldBox(secondaryBB._asset(), secondaryBB._assetId(), share, address(this), address(this));
         _leverageUp(
             collateralAmount,
@@ -349,7 +349,7 @@ contract BigBang_buyCollateral is BigBang_Unit_Shared {
 
         // **** Main BB market ****
         _spawnAsset(supplyAmount, address(this));
-        uint256 share = yieldBox.toShare(mainBB._assetId(), supplyAmount, false);
+        uint256 share = mainBB.convertToShares(supplyAmount);
         _depositToYieldBox(mainBB._asset(), mainBB._assetId(), share, address(this), address(this));
         mainBB.approveBorrow(address(userA), type(uint256).max);
         _leverageUp(
@@ -359,7 +359,7 @@ contract BigBang_buyCollateral is BigBang_Unit_Shared {
         // **** Secondary BB market ****
         _resetPrank(address(this));
         _spawnAsset(supplyAmount, address(this));
-        share = yieldBox.toShare(secondaryBB._assetId(), supplyAmount, false);
+        share = secondaryBB.convertToShares(supplyAmount);
         _depositToYieldBox(secondaryBB._asset(), secondaryBB._assetId(), share, address(this), address(this));
         secondaryBB.approveBorrow(address(userA), type(uint256).max);
         _leverageUp(

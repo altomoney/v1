@@ -18,13 +18,10 @@ abstract contract Origins_Unit_Shared is Markets_Unit_Shared {
     }
 
     function _registerDefaultOrigins() internal returns (address) {
-        Origins org = new Origins(
-            address(this),
-            address(yieldBox),
+        Origins org = new Origins(address(this));
+        org.init(
             IERC20(address(usdo)),
-            usdoId,
             IERC20(address(mainToken)),
-            mainTokenId,
             ITapiocaOracle(address(oracle)),
             1e18,
             90000,

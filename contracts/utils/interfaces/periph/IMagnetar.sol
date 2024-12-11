@@ -94,7 +94,7 @@ struct MagnetarCall {
 
 enum MagnetarAction {
     // Simple operations
-    Permit, // 0 Permit singular operations.
+    Permit, // 0 Permit singular operations. TODO Check if this is needed
     Wrap, // 1 Wrap/unwrap singular operations.
     Market, // 2 Market singular operations.
     TapLock, // 3 TapLock singular operations.

@@ -55,7 +55,7 @@ abstract contract BaseTapiocaOmnichainEngine is OFT, BaseToeMsgType {
         address _delegate,
         address _extExec,
         ICluster _cluster
-    ) OFT(_name, _symbol, _endpoint, _delegate)  {
+    ) OFT(_name, _symbol, _endpoint, _delegate) {
         toeExtExec = TapiocaOmnichainExtExec(_extExec);
 
         StorageSlot.getAddressSlot(CLUSTER_SLOT).value = address(_cluster);

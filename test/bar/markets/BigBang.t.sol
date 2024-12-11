@@ -225,7 +225,7 @@ contract BigBangTest is UsdoTestHelper {
             1155, address(yieldBox), collateralYieldBoxId, address(bigBang), type(uint200).max, uint48(block.timestamp)
         );
 
-        uint256 share = yieldBox.toShare(collateralYieldBoxId, amount, false);
+        uint256 share = bigBang.convertToShares(amount);
         yieldBox.depositAsset(collateralYieldBoxId, address(this), address(this), 0, share);
 
         (Module[] memory modules, bytes[] memory calls) =
@@ -734,7 +734,7 @@ contract BigBangTest is UsdoTestHelper {
 
         deal(address(asset), address(userA), borrowAmount * 2);
 
-        uint256 share = yieldBox.toShare(assetYieldBoxId, borrowAmount * 2, false);
+        uint256 share = bigBang.convertToShares(borrowAmount * 2);
         vm.prank(userA);
         yieldBox.depositAsset(assetYieldBoxId, address(userA), address(userA), 0, share);
 

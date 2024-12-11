@@ -135,7 +135,7 @@ contract MagnetarCollateralModule is MagnetarBaseModule {
          * @dev deposit `market._assetId()` to YieldBox
          */
         if (data.depositAmount > 0) {
-            address assetAddress = _market._asset(); // It is the borrowable token (not the asset in the ERC4626)
+            address assetAddress = _market._collateral();
             data.depositAmount = _extractTokens(data.user, assetAddress, data.depositAmount);
             _depositToMarket(_market, data.user, data.depositAmount);
         }

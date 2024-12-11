@@ -1222,11 +1222,7 @@ contract UsdoTest is UsdoTestHelper {
          */
         singularity.approve(address(magnetar), type(uint256).max);
 
-        uint256 sh = yieldBox.toShare(bUsdoYieldBoxId, tokenAmount_, false);
-        pearlmit.approve(
-            1155, address(yieldBox), bUsdoYieldBoxId, address(singularity), uint200(sh), uint48(block.timestamp)
-        ); // Atomic approval
-        yieldBox.setApprovalForAll(address(pearlmit), true);
+        uint256 sh = singularity.convertToShares(tokenAmount_);
 
         uint256 tokenAmountSD = usdoHelper.toSD(tokenAmount_, aUsdo.decimalConversionRate());
         MarketLendOrRepayMsg memory marketMsg = MarketLendOrRepayMsg({
@@ -1326,22 +1322,16 @@ contract UsdoTest is UsdoTestHelper {
         uint256 erc20Amount_ = 1 ether;
         uint256 tokenAmount_ = 0.5 ether;
 
-        uint256 sh = yieldBox.toShare(bUsdoYieldBoxId, erc20Amount_, false);
-        uint256 collateralId = singularity._collateralId();
+        uint256 sh = singularity.convertToShares(erc20Amount_);
         // setup
         {
             aUsdo.approve(address(singularity), type(uint256).max);
-            aUsdo.approve(address(yieldBox), type(uint256).max);
             bUsdo.approve(address(singularity), type(uint256).max);
-            bUsdo.approve(address(yieldBox), type(uint256).max);
 
             deal(address(bUsdo), address(this), erc20Amount_);
             yieldBox.depositAsset(bUsdoYieldBoxId, address(this), address(this), erc20Amount_, 0);
 
             yieldBox.setApprovalForAll(address(pearlmit), true);
-            pearlmit.approve(
-                1155, address(yieldBox), bUsdoYieldBoxId, address(singularity), uint200(sh), uint48(block.timestamp)
-            ); // Atomic approval
             singularity.addAsset(address(this), address(this), false, sh);
 
             deal(address(aUsdo), address(this), erc20Amount_);

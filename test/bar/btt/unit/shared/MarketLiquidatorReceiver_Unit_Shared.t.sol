@@ -16,7 +16,6 @@ import {MarketLiquidatorReceiver} from "tapioca-bar/liquidators/MarketLiquidator
 import {IGmxGlpManager} from "tap-utils/interfaces/external/gmx/IGmxGlpManager.sol";
 import {ERC20WithoutStrategy} from "yieldbox/strategies/ERC20WithoutStrategy.sol";
 import {TokenType} from "yieldbox/enums/YieldBoxTokenType.sol";
-import {IPearlmit} from "tap-utils/pearlmit/Pearlmit.sol";
 import {IStrategy} from "yieldbox/interfaces/IStrategy.sol";
 
 // dependencies
@@ -42,13 +41,13 @@ abstract contract MarketLiquidatorReceiver_Unit_Shared is Base_Test {
         sGlp = new ERC20Mock_test("sGlp", "sGlp");
         vm.label(address(sGlp), "sGlp Mock");
 
-        tSglp = new TOFTMock_test(address(sGlp), IPearlmit(address(pearlmit)));
+        tSglp = new TOFTMock_test(address(sGlp));
         vm.label(address(tSglp), "tSglp Mock");
 
         weth = new ERC20Mock_test("Wrapped Ethereum", "WETH");
         vm.label(address(weth), "WETH Mock");
 
-        tWeth = new TOFTMock_test(address(weth), IPearlmit(address(pearlmit)));
+        tWeth = new TOFTMock_test(address(weth));
         vm.label(address(tWeth), "tWETH Mock");
 
         swapperTarget = new ZeroXSwapperMockTarget_test();
@@ -56,9 +55,6 @@ abstract contract MarketLiquidatorReceiver_Unit_Shared is Base_Test {
 
         swapper = new ZeroXSwapper(address(swapperTarget), ICluster(address(cluster)), address(this));
         vm.label(address(swapper), "ZeroXSwapper Test");
-
-        ERC20WithoutStrategy wethStrategy = _createEmptyStrategy(address(yieldBox), address(weth));
-        wethYieldBoxId = yieldBox.registerAsset(TokenType.ERC20, address(weth), IStrategy(address(wethStrategy)), 0);
 
         gmxMock = new GmxMarketMock_test(address(0), address(0), address(0));
         gmxMock.setGlp(address(sGlp));

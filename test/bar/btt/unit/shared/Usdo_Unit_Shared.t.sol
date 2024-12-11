@@ -99,10 +99,8 @@ abstract contract Usdo_Unit_Shared is Base_Test {
         UsdoInitStruct memory usdoInitStruct = UsdoInitStruct({
             endpoint: address(endpoints[aEid]),
             delegate: address(this),
-            yieldBox: address(yieldBox),
             cluster: address(cluster),
-            extExec: address(extExec),
-            pearlmit: IPearlmit(address(pearlmit))
+            extExec: address(extExec)
         });
 
         UsdoModulesInitStruct memory usdoModulesInitStruct = UsdoModulesInitStruct({
@@ -487,12 +485,13 @@ abstract contract Usdo_Unit_Shared is Base_Test {
     // *** PRIVATE *** //
     // *************** //
     function _getYieldBoxDomainSeparator() private view returns (bytes32) {
+        // TODO Check the verifyingContract
         bytes32 typeHash =
-            keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
+            keccak256("EIP712Domain(string name,string version,uint256 chainId)");
         bytes32 hashedName = keccak256(bytes("YieldBox"));
         bytes32 hashedVersion = keccak256(bytes("1"));
         bytes32 domainSeparator =
-            keccak256(abi.encode(typeHash, hashedName, hashedVersion, block.chainid, address(yieldBox)));
+            keccak256(abi.encode(typeHash, hashedName, hashedVersion, block.chainid));
         return domainSeparator;
     }
 }
