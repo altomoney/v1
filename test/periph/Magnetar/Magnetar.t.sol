@@ -30,18 +30,16 @@ import {MagnetarBaseModule} from "tapioca-periph/Magnetar/modules/MagnetarBaseMo
 import {ILeverageExecutor} from "tap-utils/interfaces/bar/ILeverageExecutor.sol";
 import {IMagnetarHelper} from "tap-utils/interfaces/periph/IMagnetarHelper.sol";
 import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
-import {ERC20WithoutStrategy} from "yieldbox/strategies/ERC20WithoutStrategy.sol";
 import {IZeroXSwapper} from "tap-utils/interfaces/periph/IZeroXSwapper.sol";
-import {IPearlmit} from "tap-utils/interfaces/periph/IPearlmit.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {SendParamsMsg} from "tap-utils/interfaces/oft/ITOFT.sol";
 import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
 import {Module} from "tap-utils/interfaces/bar/IMarket.sol";
-import {Pearlmit} from "tap-utils/pearlmit/Pearlmit.sol";
 import {Magnetar} from "tapioca-periph/Magnetar/Magnetar.sol";
 import {Cluster} from "tap-utils/Cluster/Cluster.sol";
 import {Penrose} from "tapioca-bar/Penrose.sol";
 import {BBDebtRateHelper} from "tapioca-bar/markets/bigBang/BBDebtRateHelper.sol";
+import {TapiocaOptionBroker} from "tap-token/options/TapiocaOptionBroker.sol";
 
 import {
     PrepareLzCallData,
@@ -85,16 +83,11 @@ import {BigBang} from "tapioca-bar/markets/bigBang/BigBang.sol";
 import {ZerroXSwapperMockTarget} from "../../utils/ZeroXSwapper/ZerroXSwapperMockTarget.sol";
 import {ZeroXSwapper} from "tap-utils/Swapper/ZeroXSwapper.sol";
 
-import {IWrappedNative} from "yieldbox/interfaces/IWrappedNative.sol";
-import {YieldBoxURIBuilder} from "yieldbox/YieldBoxURIBuilder.sol";
-import {IYieldBox} from "yieldbox/interfaces/IYieldBox.sol";
 import {OracleMock} from "../mocks/OracleMock.sol";
 import {ERC20Mock} from "../mocks/ERC20Mock.sol";
-import {YieldBox} from "yieldbox/YieldBox.sol";
 
 // Tests
 import {ToeTokenReceiverMock} from "../mocks/ToeTokenMock/ToeTokenReceiverMock.sol";
-import {TapiocaOptionsBrokerMock} from "../mocks/TapiocaOptionsBrokerMock.sol";
 import {ToeTokenSenderMock} from "../mocks/ToeTokenMock/ToeTokenSenderMock.sol";
 import {ToeTokenMock} from "../mocks/ToeTokenMock/ToeTokenMock.sol";
 import {ToeTestHelper} from "../../utils/LZSetup/ToeTestHelper.sol";
@@ -105,7 +98,6 @@ import {Weth9Mock} from "../mocks/Weth9Mock.sol";
 
 contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelper {
     Cluster cluster;
-    Pearlmit pearlmit;
     Magnetar magnetar;
     MagnetarTestUtils utils;
     MagnetarHelper magnetarHelper;
@@ -122,9 +114,6 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
 
     ERC20Mock asset;
     ERC20Mock collateral;
-    uint256 assetId;
-    uint256 collateralId;
-    uint256 tapTokenId;
 
     /**
      * DEPLOY setup addresses
@@ -156,13 +145,12 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
         collateral = new ERC20Mock();
 
         cluster = new Cluster(aEid, address(this));
-        pearlmit = new Pearlmit("Test", "1", address(this), 0);
 
         toeHelper = new TapiocaOmnichainEngineHelper();
         MagnetarCollateralModule collateralModule =
-            new MagnetarCollateralModule(IPearlmit(address(pearlmit)), address(toeHelper));
-        MagnetarMintModule mintModule = new MagnetarMintModule(IPearlmit(address(pearlmit)), address(toeHelper));
-        MagnetarOptionModule optionModule = new MagnetarOptionModule(IPearlmit(address(pearlmit)), address(toeHelper));
+            new MagnetarCollateralModule(address(toeHelper));
+        MagnetarMintModule mintModule = new MagnetarMintModule(address(toeHelper));
+        MagnetarOptionModule optionModule = new MagnetarOptionModule(address(toeHelper));
 
         magnetar = new Magnetar(
             ICluster(address(cluster)),
@@ -170,7 +158,6 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
             payable(collateralModule),
             payable(mintModule),
             payable(optionModule),
-            IPearlmit(address(pearlmit)),
             address(toeHelper),
             IMagnetarHelper(address(new MagnetarHelper()))
         );
@@ -183,7 +170,6 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
         cluster.updateContract(0, address(magnetar), true);
         cluster.updateContract(0, address(magnetarHelper), true);
         cluster.updateContract(0, address(oracle), true);
-        cluster.updateContract(0, address(pearlmit), true);
         cluster.updateContract(0, address(asset), true);
         cluster.updateContract(0, address(collateral), true);
         cluster.updateContract(0, address(marketHelper), true);
@@ -197,54 +183,33 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
         vm.label(address(bERC20), "bERC20");
         vm.label(address(marketHelper), "MarketHelper");
 
-        asset.approve(address(pearlmit), type(uint256).max);
-        collateral.approve(address(pearlmit), type(uint256).max);
         asset.approve(address(magnetar), type(uint256).max);
         collateral.approve(address(magnetar), type(uint256).max);
 
         magnetar.setHelper(address(magnetarHelper));
     }
 
-    function _setupSgl(address _oracle) private returns (Singularity, Penrose, YieldBox) {
+    function _setupSgl(address _oracle) private returns (Singularity, Penrose ) {
         // ZerroXSwapperMockTarget swapperTarget = new ZerroXSwapperMockTarget();
         // ZeroXSwapper swapper = new ZeroXSwapper(address(swapperTarget), address(0), ICluster(address(cluster)), address(this));
         // SimpleLeverageExecutor leverageExecutor = new SimpleLeverageExecutor(IZeroXSwapper(address(swapper)), ICluster(address(cluster)));
 
-        YieldBoxURIBuilder ybUri = new YieldBoxURIBuilder();
-        YieldBox yb = new YieldBox(IWrappedNative(address(aERC20)), ybUri, pearlmit, address(this));
-
         Penrose penrose;
         Singularity mc;
         {
-            ERC20WithoutStrategy aERC20Strategy = utils.createYieldBoxEmptyStrategy(address(yb), address(aERC20));
-            uint256 aERC20Id = utils.registerYieldBoxAsset(address(yb), address(aERC20), address(aERC20Strategy));
-
             (penrose, mc,) = utils.createPenrose(
-                address(pearlmit),
-                IYieldBox(address(yb)),
                 ICluster(address(cluster)),
                 address(aERC20),
-                address(aERC20),
-                aERC20Id,
-                aERC20Id
+                address(aERC20)
             );
         }
         Singularity sgl;
         {
-            ERC20WithoutStrategy collateralStrategy =
-                utils.createYieldBoxEmptyStrategy(address(yb), address(collateral));
-            collateralId = utils.registerYieldBoxAsset(address(yb), address(collateral), address(collateralStrategy));
-
-            ERC20WithoutStrategy assetStrategy = utils.createYieldBoxEmptyStrategy(address(yb), address(asset));
-            assetId = utils.registerYieldBoxAsset(address(yb), address(asset), address(assetStrategy));
-
             sgl = utils.createSingularity(
                 TestSingularityData(
                     address(penrose),
                     address(asset),
-                    assetId,
                     address(collateral),
-                    collateralId,
                     ITapiocaOracle(_oracle),
                     ILeverageExecutor(address(0))
                 ),
@@ -252,42 +217,25 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
             );
         }
 
-        return (sgl, penrose, yb);
+        return (sgl, penrose);
     }
 
-    function _setupBb(address _oracle) private returns (BigBang, Penrose, YieldBox) {
-        YieldBoxURIBuilder ybUri = new YieldBoxURIBuilder();
-        YieldBox yb = new YieldBox(IWrappedNative(address(aERC20)), ybUri, pearlmit, address(this));
-
-        ERC20WithoutStrategy collateralStrategy = utils.createYieldBoxEmptyStrategy(address(yb), address(collateral));
-        collateralId = utils.registerYieldBoxAsset(address(yb), address(collateral), address(collateralStrategy));
-
-        ERC20WithoutStrategy aERC20Strategy = utils.createYieldBoxEmptyStrategy(address(yb), address(aERC20));
-        uint256 aERC20Id = utils.registerYieldBoxAsset(address(yb), address(aERC20), address(aERC20Strategy));
-
+    function _setupBb(address _oracle) private returns (BigBang, Penrose) {
         (Penrose penrose,, BigBang bbMediumRiskMC) = utils.createPenrose(
-            address(pearlmit),
-            IYieldBox(address(yb)),
             ICluster(address(cluster)),
             address(aERC20),
-            address(aERC20),
-            aERC20Id,
-            aERC20Id
+            address(aERC20)
         );
 
         {
-            ERC20WithoutStrategy assetStrategy = utils.createYieldBoxEmptyStrategy(address(yb), address(asset));
-            uint256 assetId = utils.registerYieldBoxAsset(address(yb), address(asset), address(assetStrategy));
-
             vm.prank(address(utils));
-            penrose.setUsdoToken(address(asset), assetId);
+            penrose.setUsdoToken(address(asset));
         }
 
         BigBang bb = utils.createBigBang(
             TestBigBangData(
                 address(penrose),
                 address(collateral),
-                collateralId,
                 ITapiocaOracle(_oracle),
                 ILeverageExecutor(address(0)),
                 0,
@@ -306,7 +254,7 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
         marketsData[0] = abi.encodeWithSelector(BigBang.setDebtRateHelper.selector, address(bbRateHelper));
         penrose.executeMarketFn(markets, marketsData, true);
 
-        return (bb, penrose, yb);
+        return (bb, penrose);
     }
 
     function test_weth_wrap_through_burst() public {
@@ -350,51 +298,33 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
 
     function test_lend() public {
         vm.skip(true);
-        (Singularity sgl,, YieldBox yieldBox) = _setupSgl(address(oracle));
+        (Singularity sgl, ) = _setupSgl(address(oracle));
         cluster.updateContract(0, address(sgl), true);
-        cluster.updateContract(0, address(yieldBox), true);
         vm.label(address(sgl), "Singularity");
-        vm.label(address(yieldBox), "YieldBox");
 
         uint256 tokenAmount_ = 1 ether;
         {
             deal(address(asset), address(this), tokenAmount_);
         }
-
+        asset.approve(address(magnetar), type(uint256).max);
         {
-            // deposit to YB approvals
-            asset.approve(address(yieldBox), type(uint256).max);
-            yieldBox.setApprovalForAll(address(magnetar), true);
-
-            // lend approvals
-            pearlmit.approve(1155, address(yieldBox), assetId, address(sgl), type(uint200).max, uint48(block.timestamp)); // Atomic approval
-            yieldBox.setApprovalForAll(address(pearlmit), true);
-            sgl.approve(address(magnetar), type(uint256).max);
-        }
-
-        {
-            uint256 assetShare = yieldBox.toShare(assetId, tokenAmount_, false);
             bytes memory lendData =
-                abi.encodeWithSelector(Singularity.addAsset.selector, address(this), address(this), false, assetShare);
+                abi.encodeWithSelector(Singularity.addAsset.selector, address(this), address(this), false, 100); // todo: replace 100 with assetShare
 
             MagnetarCall[] memory calls = new MagnetarCall[](1);
             calls[0] = MagnetarCall({id: uint8(MagnetarAction.Market), target: address(sgl), value: 0, call: lendData});
 
             magnetar.burst(calls);
 
-            assertEq(yieldBox.balanceOf(address(this), assetId), 0);
-            assertGt(sgl.balanceOf(address(this)), 0);
         }
     }
 
     function test_repay() public {
         vm.skip(true);
 
-        (Singularity sgl,, YieldBox yieldBox) = _setupSgl(address(oracle));
+        (Singularity sgl, ) = _setupSgl(address(oracle));
         cluster.updateContract(0, address(sgl), true);
-        cluster.updateContract(0, address(yieldBox), true);
         vm.label(address(sgl), "Singularity");
-        vm.label(address(yieldBox), "YieldBox");
 
         uint256 tokenAmount_ = 1 ether;
         uint256 borrowAmount_ = 1e17;
@@ -407,29 +337,19 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
         }
 
         {
-            // deposit to YB approvals
-            asset.approve(address(yieldBox), type(uint256).max);
-            yieldBox.setApprovalForAll(address(magnetar), true);
-            yieldBox.setApprovalForAll(address(pearlmit), true);
-
             // lend approvals
-            pearlmit.approve(1155, address(yieldBox), assetId, address(sgl), type(uint200).max, uint48(block.timestamp)); // Atomic approval
+            asset.approve(address(magnetar), type(uint256).max);
             sgl.approve(address(magnetar), type(uint256).max);
 
             // collateral approvals
-            pearlmit.approve(
-                1155, address(yieldBox), collateralId, address(sgl), type(uint200).max, uint48(block.timestamp)
-            ); // Atomic approval
-            sgl.approve(address(magnetar), type(uint256).max);
+            collateral.approve(address(magnetar), type(uint256).max);
 
             // market operations approvals
-            pearlmit.approve(20, address(asset), 0, address(magnetar), type(uint200).max, uint48(block.timestamp)); // Atomic approval
-            pearlmit.approve(20, address(collateral), 0, address(magnetar), type(uint200).max, uint48(block.timestamp)); // Atomic approval
             sgl.approve(address(magnetar), type(uint256).max);
             sgl.approveBorrow(address(magnetar), type(uint256).max);
         }
         {
-            uint256 assetShare = yieldBox.toShare(assetId, tokenAmount_, false);
+            uint256 assetShare = sgl.convertToShares(tokenAmount_);
             bytes memory lendData =
                 abi.encodeWithSelector(Singularity.addAsset.selector, address(this), address(this), false, assetShare);
 
@@ -438,7 +358,6 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
 
             magnetar.burst(calls);
 
-            assertEq(yieldBox.balanceOf(address(this), assetId), 0);
             assertGt(sgl.balanceOf(address(this)), 0);
         }
         //add collateral
@@ -453,8 +372,7 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
                     borrowAmount: borrowAmount_,
                     deposit: true,
                     withdrawParams: MagnetarWithdrawData({
-                        yieldBox: address(yieldBox),
-                        assetId: 0,
+                        asset: address(asset),
                         receiver: address(this),
                         amount: 0,
                         withdraw: false,
@@ -466,7 +384,7 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
             MagnetarCall[] memory calls = new MagnetarCall[](1);
             calls[0] = MagnetarCall({
                 id: uint8(MagnetarAction.CollateralModule),
-                target: address(yieldBox),
+                target: address(sgl), // check
                 value: 0,
                 call: depositAddCollateralAndBorrowFromMarketData
             });
@@ -476,8 +394,8 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
 
         // check collateral
         {
-            uint256 colShare = sgl._userCollateralShare(address(this));
-            uint256 colAmount = yieldBox.toAmount(collateralId, colShare, false);
+            uint256 colShare = sgl.balanceOf(address(this));
+            uint256 colAmount = sgl.convertToAssets(colShare);
             assertEq(colAmount, tokenAmount_);
         }
 
@@ -495,8 +413,7 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
                     repayAmount: repayAmount_,
                     collateralAmount: 0,
                     withdrawCollateralParams: MagnetarWithdrawData({
-                        yieldBox: address(yieldBox),
-                        assetId: 0,
+                        asset: address(asset),
                         receiver: address(this),
                         amount: 0,
                         withdraw: false,
@@ -509,12 +426,11 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
             MagnetarCall[] memory calls = new MagnetarCall[](1);
             calls[0] = MagnetarCall({
                 id: uint8(MagnetarAction.CollateralModule),
-                target: address(yieldBox),
+                target: address(sgl),
                 value: 0,
                 call: repayData
             });
 
-            pearlmit.approve(1155, address(yieldBox), assetId, address(sgl), type(uint200).max, uint48(block.timestamp)); // Atomic approval
             sgl.approve(address(magnetar), type(uint256).max);
 
             magnetar.burst(calls);
@@ -529,37 +445,19 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
 
     function test_withdraw_sanitization() public {
         vm.skip(true);
-        (Singularity sgl,, YieldBox yieldBox) = _setupSgl(address(oracle));
+        (Singularity sgl,) = _setupSgl(address(oracle));
 
         cluster.updateContract(0, address(sgl), true);
-        cluster.updateContract(0, address(yieldBox), true);
         vm.label(address(sgl), "Singularity");
-        vm.label(address(yieldBox), "YieldBox");
 
         uint256 tokenAmount_ = 1 ether;
         uint256 borrowAmount_ = 1e17;
 
-        pearlmit.approve(20, address(asset), 0, address(sgl), type(uint200).max, uint48(block.timestamp)); // Atomic approval
-        pearlmit.approve(20, address(collateral), 0, address(sgl), type(uint200).max, uint48(block.timestamp)); // Atomic approval
-
-        pearlmit.approve(20, address(asset), 0, address(magnetar), type(uint200).max, uint48(block.timestamp)); // Atomic approval
-        pearlmit.approve(20, address(collateral), 0, address(magnetar), type(uint200).max, uint48(block.timestamp)); // Atomic approval
-
-        pearlmit.approve(1155, address(yieldBox), assetId, address(sgl), type(uint200).max, uint48(block.timestamp)); // Atomic approval
-        pearlmit.approve(
-            1155, address(yieldBox), collateralId, address(sgl), type(uint200).max, uint48(block.timestamp)
-        ); // Atomic approval
-
-        yieldBox.setApprovalForAll(address(pearlmit), true);
 
         //approvals
         {
             asset.approve(address(sgl), type(uint256).max);
             collateral.approve(address(sgl), type(uint256).max);
-            asset.approve(address(yieldBox), type(uint256).max);
-            collateral.approve(address(yieldBox), type(uint256).max);
-            yieldBox.setApprovalForAll(address(magnetar), true);
-            yieldBox.setApprovalForAll(address(sgl), true);
             sgl.approve(address(magnetar), type(uint256).max);
             sgl.approveBorrow(address(magnetar), type(uint256).max);
         }
@@ -571,7 +469,7 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
         }
 
         {
-            uint256 assetShare = yieldBox.toShare(assetId, tokenAmount_, false);
+            uint256 assetShare = sgl.convertToShares(tokenAmount_);
             bytes memory lendData =
                 abi.encodeWithSelector(Singularity.addAsset.selector, address(this), address(this), false, assetShare);
 
@@ -580,7 +478,6 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
 
             magnetar.burst(calls);
 
-            assertEq(yieldBox.balanceOf(address(this), assetId), 0);
             assertGt(sgl.balanceOf(address(this)), 0);
         }
 
@@ -596,8 +493,7 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
                     borrowAmount: borrowAmount_,
                     deposit: true,
                     withdrawParams: MagnetarWithdrawData({
-                        yieldBox: address(yieldBox),
-                        assetId: 0,
+                        asset: address(asset),
                         receiver: address(this),
                         amount: 0,
                         withdraw: false,
@@ -609,7 +505,7 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
             MagnetarCall[] memory calls = new MagnetarCall[](1);
             calls[0] = MagnetarCall({
                 id: uint8(MagnetarAction.CollateralModule),
-                target: address(yieldBox),
+                target: address(sgl),
                 value: 0,
                 call: depositAddCollateralAndBorrowFromMarketData
             });
@@ -618,8 +514,7 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
         }
 
         {
-            uint256 colShare = sgl._userCollateralShare(address(this));
-            uint256 colAmount = yieldBox.toAmount(collateralId, colShare, false);
+            uint256 colAmount = sgl.balanceOf(address(this));
             assertEq(colAmount, tokenAmount_);
         }
 
@@ -631,13 +526,11 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
             uint256 borrowPart = sgl._userBorrowPart(address(this));
             assertGt(borrowPart, 0);
 
-            yieldBox.transfer(address(this), address(magnetar), assetId, yieldBox.balanceOf(address(this), assetId));
         }
 
         {
             MagnetarWithdrawData memory withdrawData = MagnetarWithdrawData({
-                yieldBox: address(yieldBox),
-                assetId: assetId,
+                asset: address(asset),
                 receiver: address(this),
                 amount: borrowAmount_,
                 withdraw: true,
@@ -653,37 +546,20 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
 
     function test_withdraw() public {
         vm.skip(true);
-        (Singularity sgl,, YieldBox yieldBox) = _setupSgl(address(oracle));
+        (Singularity sgl,) = _setupSgl(address(oracle));
 
         cluster.updateContract(0, address(sgl), true);
-        cluster.updateContract(0, address(yieldBox), true);
         vm.label(address(sgl), "Singularity");
-        vm.label(address(yieldBox), "YieldBox");
+        
 
         uint256 tokenAmount_ = 1 ether;
         uint256 borrowAmount_ = 1e17;
 
-        pearlmit.approve(20, address(asset), 0, address(sgl), type(uint200).max, uint48(block.timestamp)); // Atomic approval
-        pearlmit.approve(20, address(collateral), 0, address(sgl), type(uint200).max, uint48(block.timestamp)); // Atomic approval
-
-        pearlmit.approve(20, address(asset), 0, address(magnetar), type(uint200).max, uint48(block.timestamp)); // Atomic approval
-        pearlmit.approve(20, address(collateral), 0, address(magnetar), type(uint200).max, uint48(block.timestamp)); // Atomic approval
-
-        pearlmit.approve(1155, address(yieldBox), assetId, address(sgl), type(uint200).max, uint48(block.timestamp)); // Atomic approval
-        pearlmit.approve(
-            1155, address(yieldBox), collateralId, address(sgl), type(uint200).max, uint48(block.timestamp)
-        ); // Atomic approval
-
-        yieldBox.setApprovalForAll(address(pearlmit), true);
 
         //approvals
         {
             asset.approve(address(sgl), type(uint256).max);
             collateral.approve(address(sgl), type(uint256).max);
-            asset.approve(address(yieldBox), type(uint256).max);
-            collateral.approve(address(yieldBox), type(uint256).max);
-            yieldBox.setApprovalForAll(address(magnetar), true);
-            yieldBox.setApprovalForAll(address(sgl), true);
             sgl.approve(address(magnetar), type(uint256).max);
             sgl.approveBorrow(address(magnetar), type(uint256).max);
         }
@@ -695,7 +571,7 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
         }
 
         {
-            uint256 assetShare = yieldBox.toShare(assetId, tokenAmount_, false);
+            uint256 assetShare = sgl.convertToShares(tokenAmount_);
             bytes memory lendData =
                 abi.encodeWithSelector(Singularity.addAsset.selector, address(this), address(this), false, assetShare);
 
@@ -704,7 +580,6 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
 
             magnetar.burst(calls);
 
-            assertEq(yieldBox.balanceOf(address(this), assetId), 0);
             assertGt(sgl.balanceOf(address(this)), 0);
         }
 
@@ -720,8 +595,7 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
                     borrowAmount: borrowAmount_,
                     deposit: true,
                     withdrawParams: MagnetarWithdrawData({
-                        yieldBox: address(yieldBox),
-                        assetId: 0,
+                        asset: address(asset),
                         receiver: address(this),
                         amount: 0,
                         withdraw: false,
@@ -733,7 +607,7 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
             MagnetarCall[] memory calls = new MagnetarCall[](1);
             calls[0] = MagnetarCall({
                 id: uint8(MagnetarAction.CollateralModule),
-                target: address(yieldBox),
+                target: address(sgl),
                 value: 0,
                 call: depositAddCollateralAndBorrowFromMarketData
             });
@@ -742,8 +616,7 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
         }
 
         {
-            uint256 colShare = sgl._userCollateralShare(address(this));
-            uint256 colAmount = yieldBox.toAmount(collateralId, colShare, false);
+            uint256 colAmount = sgl.balanceOf(address(this));
             assertEq(colAmount, tokenAmount_);
         }
 
@@ -755,13 +628,11 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
             uint256 borrowPart = sgl._userBorrowPart(address(this));
             assertGt(borrowPart, 0);
 
-            yieldBox.transfer(address(this), address(magnetar), assetId, yieldBox.balanceOf(address(this), assetId));
         }
 
         {
             MagnetarWithdrawData memory withdrawData = MagnetarWithdrawData({
-                yieldBox: address(yieldBox),
-                assetId: assetId,
+                asset: address(asset),
                 receiver: address(this),
                 amount: borrowAmount_,
                 withdraw: true,
@@ -780,13 +651,13 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
 
     function test_magnetar_execute_decode() public {
         vm.skip(true);
-        (BigBang bb, Penrose penrose, YieldBox yieldBox) = _setupBb(address(oracle));
+        (BigBang bb, Penrose penrose) = _setupBb(address(oracle));
         utils.setBBEthMarket(penrose, address(bb));
 
         cluster.updateContract(0, address(bb), true);
-        cluster.updateContract(0, address(yieldBox), true);
+        
         vm.label(address(bb), "BigBang");
-        vm.label(address(yieldBox), "YieldBox");
+        
 
         uint256 tokenAmount_ = 1 ether;
 
@@ -797,20 +668,7 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
 
         {
             MagnetarCall[] memory magnetarCalls = new MagnetarCall[](2);
-            pearlmit.approve(1155, address(yieldBox), assetId, address(bb), type(uint200).max, uint48(block.timestamp)); // this is needed for Pearlmit.allowance check on market
-
-            pearlmit.approve(
-                1155, address(yieldBox), collateralId, address(bb), type(uint200).max, uint48(block.timestamp)
-            ); // Atomic approval
-            pearlmit.approve(
-                1155, address(yieldBox), collateralId, address(magnetar), type(uint200).max, uint48(block.timestamp)
-            ); // Atomic approval
             collateral.approve(address(magnetar), type(uint256).max);
-            yieldBox.setApprovalForAll(address(pearlmit), true);
-
-            //deposit approvals
-            yieldBox.setApprovalForAll(address(magnetar), true);
-            collateral.approve(address(yieldBox), type(uint256).max); //for yb deposit
 
             Module[] memory modules;
             bytes[] memory calls;
@@ -827,22 +685,17 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
     function test_mint() public {
         vm.skip(true);
 
-        (BigBang bb, Penrose penrose, YieldBox yieldBox) = _setupBb(address(oracle));
+        (BigBang bb, Penrose penrose) = _setupBb(address(oracle));
         utils.setBBEthMarket(penrose, address(bb));
 
         cluster.updateContract(0, address(bb), true);
-        cluster.updateContract(0, address(yieldBox), true);
+        
         vm.label(address(bb), "BigBang");
-        vm.label(address(yieldBox), "YieldBox");
+        
 
         uint256 tokenAmount_ = 1 ether;
         uint256 mintAmount_ = 1e17;
 
-        pearlmit.approve(1155, address(yieldBox), assetId, address(bb), type(uint200).max, uint48(block.timestamp)); // this is needed for Pearlmit.allowance check on market
-        pearlmit.approve(20, address(collateral), 0, address(magnetar), type(uint200).max, uint48(block.timestamp)); // Atomic approval
-        pearlmit.approve(1155, address(yieldBox), collateralId, address(bb), type(uint200).max, uint48(block.timestamp)); // Atomic approval
-        yieldBox.setApprovalForAll(address(magnetar), true);
-        yieldBox.setApprovalForAll(address(pearlmit), true);
         bb.approveBorrow(address(magnetar), type(uint256).max);
 
         //deal
@@ -884,7 +737,7 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
             MagnetarCall[] memory calls = new MagnetarCall[](1);
             calls[0] = MagnetarCall({
                 id: uint8(MagnetarAction.MintModule),
-                target: address(yieldBox), //this is ignored
+                target: address(bb), //this is ignored
                 value: 0,
                 call: mintData
             });
@@ -894,37 +747,28 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
 
         // checks
         {
-            uint256 colShare = bb._userCollateralShare(address(this));
+            uint256 colShare = bb.balanceOf(address(this));
             assertGt(colShare, 0);
         }
     }
 
     function test_exit_and_remove_collateral() public {
         vm.skip(true);
-        (BigBang bb, Penrose penrose, YieldBox yieldBox) = _setupBb(address(oracle));
+        (BigBang bb, Penrose penrose) = _setupBb(address(oracle));
         bb.approve(address(magnetar), type(uint256).max);
         utils.setBBEthMarket(penrose, address(bb));
 
         cluster.updateContract(0, address(bb), true);
-        cluster.updateContract(0, address(yieldBox), true);
+        
         vm.label(address(bb), "BigBang");
-        vm.label(address(yieldBox), "YieldBox");
+        
 
         uint256 tokenAmount_ = 1 ether;
         uint256 mintAmount_ = 1e17;
 
-        pearlmit.approve(20, address(collateral), 0, address(magnetar), type(uint200).max, uint48(block.timestamp)); // Atomic approval
-        pearlmit.approve(20, address(asset), 0, address(magnetar), type(uint200).max, uint48(block.timestamp)); // Atomic approval
-        // pearlmit.approve(20, address(magnetar), 0, address(bb), type(uint200).max, uint48(block.timestamp)); // Atomic approval
-        pearlmit.approve(
-            1155, address(yieldBox), bb._collateralId(), address(bb), type(uint200).max, uint48(block.timestamp)
-        ); // Atomic approval
-        pearlmit.approve(
-            1155, address(yieldBox), bb._assetId(), address(bb), type(uint200).max, uint48(block.timestamp)
-        ); // this is needed for Pearlmit.allowance check on market
+        collateral.approve(address(magnetar), type(uint256).max);
+        asset.approve(address(magnetar), type(uint256).max);
 
-        yieldBox.setApprovalForAll(address(magnetar), true);
-        yieldBox.setApprovalForAll(address(pearlmit), true);
         bb.approveBorrow(address(magnetar), type(uint256).max);
 
         //deal
@@ -967,7 +811,7 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
             MagnetarCall[] memory calls = new MagnetarCall[](1);
             calls[0] = MagnetarCall({
                 id: uint8(MagnetarAction.MintModule),
-                target: address(yieldBox), //this is ignored
+                target: address(bb), //this is ignored
                 value: 0,
                 call: mintData
             });
@@ -975,25 +819,16 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
             magnetar.burst(calls);
         }
 
-        pearlmit.approve(20, address(collateral), 0, address(magnetar), type(uint200).max, uint48(block.timestamp)); // Atomic approval
-        pearlmit.approve(20, address(asset), 0, address(magnetar), type(uint200).max, uint48(block.timestamp)); // Atomic approval
-        // pearlmit.approve(20, address(magnetar), 0, address(bb), type(uint200).max, uint48(block.timestamp)); // Atomic approval
-        pearlmit.approve(1155, address(yieldBox), collateralId, address(bb), type(uint200).max, uint48(block.timestamp)); // Atomic approval
-        pearlmit.approve(
-            1155, address(yieldBox), bb._assetId(), address(bb), type(uint200).max, uint48(block.timestamp)
-        ); // this is needed for Pearlmit.allowance check on market
-
         uint256 colShare = bb._userCollateralShare(address(this));
         assertGt(colShare, 0);
 
         uint256 repayAmount_ = bb._userBorrowPart(address(this));
         // exit and remove
         {
-            IERC20(bb._asset()).approve(address(yieldBox), type(uint256).max); //for yb deposit
-            yieldBox.setApprovalForAll(address(bb), true); //for repay
+            IERC20(bb._asset()).approve(address(magnetar), type(uint256).max); //for yb deposit
 
             deal(address(asset), address(this), repayAmount_); //deal more asset to be able to fully repay
-            uint256 assetShare = yieldBox.toShare(bb._assetId(), repayAmount_, false);
+            uint256 assetShare = bb.convertToShares(repayAmount_);
 
             bytes memory removeData = abi.encodeWithSelector(
                 MagnetarOptionModule.exitPositionAndRemoveCollateral.selector,
@@ -1015,8 +850,7 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
                         exitData: IOptionsExitData({exit: false, target: address(0), oTAPTokenID: 0}),
                         unlockData: IOptionsUnlockData({unlock: false, target: address(0), tokenId: 0}),
                         assetWithdrawData: MagnetarWithdrawData({
-                            yieldBox: address(yieldBox),
-                            assetId: 0,
+                            asset: address(asset),
                             receiver: address(this),
                             amount: 0,
                             withdraw: false,
@@ -1024,8 +858,7 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
                             extractFromSender: false
                         }),
                         collateralWithdrawData: MagnetarWithdrawData({
-                            yieldBox: address(yieldBox),
-                            assetId: 0,
+                            asset: address(address),
                             receiver: address(this),
                             amount: 0,
                             withdraw: false,
@@ -1039,7 +872,7 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
             MagnetarCall[] memory calls = new MagnetarCall[](1);
             calls[0] = MagnetarCall({
                 id: uint8(MagnetarAction.OptionModule),
-                target: address(yieldBox), //this is ignored
+                target: address(bb), //this is ignored
                 value: 0,
                 call: removeData
             });
@@ -1051,23 +884,16 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
     function test_sgl_lend() public {
         vm.skip(true);
 
-        (Singularity sgl,, YieldBox yieldBox) = _setupSgl(address(oracle));
+        (Singularity sgl, ) = _setupSgl(address(oracle));
 
         cluster.updateContract(0, address(sgl), true);
-        cluster.updateContract(0, address(yieldBox), true);
+        
         vm.label(address(sgl), "Singularity");
-        vm.label(address(yieldBox), "YieldBox");
 
         uint256 tokenAmount_ = 1 ether;
 
         // lend approvals
         sgl.approve(address(magnetar), type(uint256).max);
-        pearlmit.approve(1155, address(yieldBox), assetId, address(sgl), type(uint200).max, uint48(block.timestamp)); // Atomic approval
-        yieldBox.setApprovalForAll(address(pearlmit), true);
-
-        //yb deposit approvals
-        yieldBox.setApprovalForAll(address(magnetar), true);
-        asset.approve(address(yieldBox), type(uint256).max); //for yb deposit
 
         //deal
         {
@@ -1075,7 +901,7 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
         }
 
         {
-            uint256 assetShare = yieldBox.toShare(assetId, tokenAmount_, false);
+            uint256 assetShare = sgl.convertToShares(tokenAmount_);
             bytes memory mintData = abi.encodeWithSelector(
                 MagnetarMintModule.mintBBLendSGLLockTOLP.selector,
                 MintFromBBAndLendOnSGLData({
@@ -1109,7 +935,7 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
             MagnetarCall[] memory calls = new MagnetarCall[](1);
             calls[0] = MagnetarCall({
                 id: uint8(MagnetarAction.MintModule),
-                target: address(yieldBox), //this is ignored
+                target: address(sgl), //this is ignored
                 value: 0,
                 call: mintData
             });
@@ -1128,8 +954,7 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
         TapOftMock tapOft = new TapOftMock();
         TapOftMock oTAP = new TapOftMock();
         ERC20Mock paymentToken = new ERC20Mock();
-        TapiocaOptionsBrokerMock tOb =
-            new TapiocaOptionsBrokerMock(address(oTAP), address(tapOft), IPearlmit(address(pearlmit)));
+        TapiocaOptionBroker tOb = address(0); // replace mock with tob
 
         cluster.updateContract(0, address(tOb), true);
         cluster.updateContract(0, address(tapOft), true);
@@ -1137,8 +962,6 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
 
         deal(address(paymentToken), address(this), 1 ether);
 
-        pearlmit.approve(20, address(paymentToken), 0, address(magnetar), uint200(1 ether), uint48(block.timestamp));
-        paymentToken.approve(address(pearlmit), 1 ether);
 
         MagnetarCall[] memory calls = new MagnetarCall[](1);
         calls[0] = MagnetarCall({
@@ -1146,7 +969,7 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
             target: address(tOb),
             value: 0,
             call: abi.encodeWithSelector(
-                TapiocaOptionsBrokerMock.exerciseOption.selector, 0, address(paymentToken), 1 ether
+                TapiocaOptionBroker.exerciseOption.selector, 0, address(paymentToken), 1 ether
             )
         });
         magnetar.burst(calls);
@@ -1202,8 +1025,6 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
             call: sendTokenFromCall
         });
 
-        aToeOFT.approve(address(pearlmit), type(uint256).max);
-        pearlmit.approve(20, address(aToeOFT), 0, address(magnetar), uint200(tokenAmount_), uint48(block.timestamp));
 
         magnetar.burst{value: feeValue}(calls);
 
@@ -1232,7 +1053,6 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
                                 address(endpoints[aEid]),
                                 address(this),
                                 address(0),
-                                IPearlmit(address(pearlmit)),
                                 cluster
                             )
                         ),
@@ -1243,11 +1063,10 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
                                 address(endpoints[aEid]),
                                 address(this),
                                 address(0),
-                                IPearlmit(address(pearlmit)),
                                 cluster
                             )
                         ),
-                        IPearlmit(address(pearlmit)),
+                        
                         cluster
                     )
                 )
@@ -1269,7 +1088,7 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
                                 address(endpoints[bEid]),
                                 address(this),
                                 address(0),
-                                IPearlmit(address(pearlmit)),
+                                
                                 cluster
                             )
                         ),
@@ -1280,11 +1099,11 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
                                 address(endpoints[bEid]),
                                 address(this),
                                 address(0),
-                                IPearlmit(address(pearlmit)),
+                                
                                 cluster
                             )
                         ),
-                        IPearlmit(address(pearlmit)),
+                        
                         cluster
                     )
                 )

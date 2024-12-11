@@ -2,12 +2,12 @@
 pragma solidity ^0.8.22;
 
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
-import {IYieldBox} from "yieldbox/interfaces/IYieldBox.sol";
+
 import {Penrose} from "tapioca-bar/Penrose.sol";
-import {YieldBox} from "yieldbox/YieldBox.sol";
+
 
 import {SimpleLeverageExecutor} from "tapioca-bar/markets/leverage/SimpleLeverageExecutor.sol";
-import {ERC20WithoutStrategy} from "yieldbox/strategies/ERC20WithoutStrategy.sol";
+
 import {SGLLiquidation} from "tapioca-bar/markets/singularity/SGLLiquidation.sol";
 import {SGLCollateral} from "tapioca-bar/markets/singularity/SGLCollateral.sol";
 import {SGLLeverage} from "tapioca-bar/markets/singularity/SGLLeverage.sol";
@@ -27,15 +27,13 @@ import {BigBang} from "tapioca-bar/markets/bigBang/BigBang.sol";
 import {ILeverageExecutor} from "tap-utils/interfaces/bar/ILeverageExecutor.sol";
 import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
 import {IZeroXSwapper} from "tap-utils/interfaces/periph/IZeroXSwapper.sol";
-import {IPearlmit} from "tap-utils/interfaces/periph/IPearlmit.sol";
 import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
 
 import {ZerroXSwapperMockTarget} from "../../utils//ZeroXSwapper/ZerroXSwapperMockTarget.sol";
 import {ZeroXSwapper} from "tap-utils/Swapper/ZeroXSwapper.sol";
 
-import {TokenType} from "yieldbox/enums/YieldBoxTokenType.sol";
-import {IStrategy} from "yieldbox/interfaces/IStrategy.sol";
-import {YieldBox} from "yieldbox/YieldBox.sol";
+
+
 
 import {SingularityMock} from "../mocks/SingularityMock.sol";
 import {SGLInit} from "tapioca-bar/markets/singularity/SGLInit.sol";
@@ -46,9 +44,7 @@ import {IERC20} from "@boringcrypto/boring-solidity/contracts/libraries/BoringER
 struct TestSingularityData {
     address penrose;
     address asset;
-    uint256 assetId;
     address collateral;
-    uint256 collateralId;
     ITapiocaOracle oracle;
     ILeverageExecutor leverageExecutor;
 }
@@ -56,7 +52,6 @@ struct TestSingularityData {
 struct TestBigBangData {
     address penrose;
     address collateral;
-    uint256 collateralId;
     ITapiocaOracle oracle;
     ILeverageExecutor leverageExecutor;
     uint256 debtRateAgainstEth;
@@ -70,22 +65,14 @@ contract MagnetarTestUtils {
     }
 
     function createPenrose(
-        address pearlmit,
-        IYieldBox _yieldBox,
         ICluster _cluster,
         address tapToken_,
-        address mainToken_,
-        uint256 tapTokenId_,
-        uint256 mainTokenId_
+        address mainToken_
     ) external returns (Penrose penrose, Singularity mediumRiskMC, BigBang bbMediumRiskMC) {
         penrose = new Penrose(
-            _yieldBox,
             _cluster,
             IERC20(tapToken_),
             IERC20(mainToken_),
-            IPearlmit(pearlmit),
-            tapTokenId_,
-            mainTokenId_,
             address(this)
         );
         mediumRiskMC = new Singularity();
@@ -105,13 +92,8 @@ contract MagnetarTestUtils {
         penrose.executeMarketFn(markets, marketsData, true);
     }
 
-    function registerYieldBoxAsset(address _yieldBox, address _token, address _strategy) public returns (uint256) {
-        return YieldBox(_yieldBox).registerAsset(TokenType.ERC20, _token, IStrategy(_strategy), 0);
-    }
 
-    function createYieldBoxEmptyStrategy(address _yieldBox, address _erc20) public returns (ERC20WithoutStrategy) {
-        return new ERC20WithoutStrategy(IYieldBox(_yieldBox), IERC20(_erc20));
-    }
+
 
     function createBigBang(TestBigBangData memory _bb, address _mc) public returns (BigBang) {
         BigBang bb = new BigBang();
@@ -204,7 +186,6 @@ contract MagnetarTestUtils {
         data = BigBang._InitMemoryData(
             IPenrose(_bb.penrose),
             IERC20(_bb.collateral),
-            _bb.collateralId,
             ITapiocaOracle(address(_bb.oracle)),
             0,
             75000,
@@ -231,55 +212,12 @@ contract MagnetarTestUtils {
         );
 
         tokensData = Singularity._InitMemoryTokensData(
-            IERC20(_sgl.asset), _sgl.assetId, IERC20(_sgl.collateral), _sgl.collateralId
+            IERC20(_sgl.asset),  IERC20(_sgl.collateral)
         );
 
         data = Singularity._InitMemoryData(
             IPenrose(_sgl.penrose), ITapiocaOracle(address(_sgl.oracle)), 0, 75000, 80000, _sgl.leverageExecutor
         );
     }
-
-    // function createSingularity(
-    //     address _yieldBox,
-    //     uint256 _collateralId,
-    //     uint256 _assetId,
-    //     address _collateral,
-    //     address _asset
-    // ) public returns (SingularityMock) {
-    //     return new SingularityMock(_yieldBox, _collateralId, _assetId, _collateral, _asset);
-    // }
-
-    // function createSingularity(YieldBox yb, Penrose penrose, Cluster cluster, address asset, address collateral, uint256 assetId, uint256 collateralId) external returns (Singularity sgl) {
-    //     SGLLiquidation sglLiquidation = new SGLLiquidation();
-    //     SGLCollateral sglCollateral = new SGLCollateral();
-    //     SGLBorrow sglBorrow = new SGLBorrow();
-    //     SGLLeverage sglLeverage = new SGLLeverage();
-
-    //     ZerroXSwapperMockTarget swapperTarget = new ZerroXSwapperMockTarget();
-    //     ZeroXSwapper swapper = new ZeroXSwapper(address(swapperTarget), address(0), ICluster(address(cluster)), address(this));
-    //     SimpleLeverageExecutor leverageExecutor = new SimpleLeverageExecutor(IZeroXSwapper(address(swapper)), ICluster(address(cluster)));
-
-    //     Singularity._InitMemoryData memory memoryData = Singularity._InitMemoryData({
-    //         penrose_: IPenrose(address(penrose)),
-    //         _oracle: ITapiocaOracle(address(0)),
-    //         _exchangeRatePrecision: 1 ether,
-    //         _collateralizationRate: 75_000,
-    //         _liquidationCollateralizationRate: 80_000,
-    //         _leverageExecutor: ILeverageExecutor(address(leverageExecutor))
-    //     });
-
-    //     Singularity._InitMemoryModulesData memory modulesData = Singularity._InitMemoryModulesData({
-    //         _liquidationModule: address(sglLiquidation),
-    //         _borrowModule: address(sglBorrow),
-    //         _collateralModule: address(sglCollateral),
-    //         _leverageModule: address(sglLeverage)
-    //     });
-
-    //     Singularity._InitMemoryTokensData memory tokensData = Singularity._InitMemoryTokensData({
-    //         _asset: IERC20(asset),
-    //         _assetId: assetId,
-    //         _collateral: IERC20(collateral),
-    //         _collateralId: collateralId
-    //     });
-    // }
+    
 }

@@ -101,7 +101,7 @@ contract UsdoMarketReceiverModule is BaseUsdo {
         /**
          * @dev Pearlmit revokes
          */
-        approve(address(pearlmit), 0);
+        //approve(address(pearlmit), 0);
 
         emit LendOrRepayReceived(msg_.user, srcChainSender, msg_.lendParams.repay, msg_.lendParams.market);
     }

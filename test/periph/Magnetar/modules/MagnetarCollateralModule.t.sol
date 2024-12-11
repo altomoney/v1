@@ -14,7 +14,6 @@ import {
 import {ERC20PermitStruct} from "tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
 import {MagnetarCollateralModule} from "tapioca-periph/Magnetar/modules/MagnetarCollateralModule.sol";
 
-import {IPearlmit} from "tap-utils/interfaces/periph/IPearlmit.sol";
 import {IPermit} from "tap-utils/interfaces/common/IPermit.sol";
 
 import "forge-std/Test.sol";
@@ -133,21 +132,17 @@ abstract contract MagnetarCollateralModuleTest is MagnetarTestHelper {
             call: depositRepayAndRemoveCollateralFromMarketData
         });
 
-        uint256 ybBalanceBefore = yieldBox.balanceOf(address(this), assetAId);
+        uint256 balanceBefore = assetA.balanceOf(address(this));
 
         //aprovals
-        pearlmit.approve(20, address(assetA), 0, address(magnetarA), type(uint200).max, uint48(block.timestamp)); // Atomic approval
-        assetA.approve(address(pearlmit), type(uint256).max);
 
         magnetarA.burst{value: 0}(calls);
-        assetA.approve(address(pearlmit), 0);
 
-        uint256 ybBalanceAfter = yieldBox.balanceOf(address(this), assetAId);
-        assertGt(ybBalanceAfter, ybBalanceBefore);
+        uint256 balanceAfter = assetA.balanceOf(address(this));
+        assertGt(balanceAfter, balanceBefore);
     }
 
     function test_depositRepayAndRemoveCollateralFromMarket_deposit_burst_approvals() public {
-        //TODO: check pearlmit batch
         uint256 tokenAmount_ = 1 ether;
         {
             deal(address(assetA), userA, tokenAmount_);
@@ -161,26 +156,10 @@ abstract contract MagnetarCollateralModuleTest is MagnetarTestHelper {
             abi.encodeWithSelector(MagnetarCollateralModule.depositRepayAndRemoveCollateralFromMarket.selector, _params);
 
         MagnetarCall[] memory calls = new MagnetarCall[](2);
-        (IPearlmit.PermitBatchTransferFrom memory pearlmitBatch, bytes32 hashedData) = _createErc20PearlmitBatchPermit(
-            Erc20PearlmitBatchPermitInternal(
-                address(assetA),
-                0,
-                userA,
-                userAPKey,
-                address(magnetarA),
-                type(uint200).max,
-                uint48(block.timestamp + 10000000)
-            )
-        );
-        calls[0] = MagnetarCall({
-            id: uint8(MagnetarAction.Permit),
-            target: address(pearlmit),
-            value: 0,
-            call: abi.encodeWithSelector(IPearlmit.permitBatchApprove.selector, pearlmitBatch, hashedData)
-        });
-
+      
+  
         (ERC20PermitStruct memory permit, uint8 v_, bytes32 r_, bytes32 s_) =
-            _createErc20Permit(userA, userAPKey, address(pearlmit), type(uint256).max, address(assetA));
+            _createErc20Permit(userA, userAPKey, address(magnetarA), type(uint256).max, address(assetA));
         calls[0] = MagnetarCall({
             id: uint8(MagnetarAction.Permit),
             target: address(assetA),
@@ -197,15 +176,12 @@ abstract contract MagnetarCollateralModuleTest is MagnetarTestHelper {
             call: depositRepayAndRemoveCollateralFromMarketData
         });
 
-        uint256 ybBalanceBefore = yieldBox.balanceOf(userA, assetAId);
-        //aprovals
         vm.startPrank(userA);
-        pearlmit.approve(20, address(assetA), 0, address(magnetarA), type(uint200).max, uint48(block.timestamp)); // Atomic approval
         magnetarA.burst{value: 0}(calls);
         vm.stopPrank();
 
-        uint256 ybBalanceAfter = yieldBox.balanceOf(userA, assetAId);
-        assertGt(ybBalanceAfter, ybBalanceBefore);
+        // check balances
+        assertGt(0, 0);
     }
 
     function test_depositRepayAndRemoveCollateralFromMarket_deposit_and_repay() public {
@@ -241,19 +217,14 @@ abstract contract MagnetarCollateralModuleTest is MagnetarTestHelper {
         uint256 borrowPartBefore = sgl._userBorrowPart(address(this));
 
         //aprovals for deposit
-        pearlmit.approve(20, address(assetA), 0, address(magnetarA), type(uint200).max, uint48(block.timestamp));
-        assetA.approve(address(pearlmit), type(uint256).max);
+        assetA.approve(address(magnetarA), type(uint256).max);
 
         //approvals for repay
-        pearlmit.approve(1155, address(yieldBox), assetAId, address(sgl), type(uint200).max, uint48(block.timestamp));
         sgl.approve(address(magnetarA), type(uint256).max);
-        _setYieldBoxApproval(yieldBox, address(pearlmit));
 
         magnetarA.burst{value: 0}(calls);
 
-        collateralA.approve(address(pearlmit), 0);
-        assetA.approve(address(pearlmit), 0);
-        _setYieldBoxRevoke(yieldBox, address(pearlmit));
+        
 
         uint256 borrowPartAfter = sgl._userBorrowPart(address(this));
         assertGt(borrowPartBefore, borrowPartAfter);
@@ -290,28 +261,18 @@ abstract contract MagnetarCollateralModuleTest is MagnetarTestHelper {
             call: depositRepayAndRemoveCollateralFromMarketData
         });
 
-        uint256 collateralShareBefore = sgl._userCollateralShare(address(this));
+        uint256 collateralShareBefore = sgl.balanceOf(address(this));
 
         //aprovals for deposit
-        pearlmit.approve(20, address(assetA), 0, address(magnetarA), type(uint200).max, uint48(block.timestamp));
-        assetA.approve(address(pearlmit), type(uint256).max);
+        assetA.approve(address(magnetarA), type(uint256).max);
 
-        //approvals for repay
-        pearlmit.approve(1155, address(yieldBox), assetAId, address(sgl), type(uint200).max, uint48(block.timestamp));
-        sgl.approve(address(magnetarA), type(uint256).max);
-        _setYieldBoxApproval(yieldBox, address(pearlmit));
-
-        //approvals for collateral
-        pearlmit.approve(
-            1155, address(yieldBox), collateralAId, address(magnetarA), type(uint200).max, uint48(block.timestamp)
-        );
-
+       
         magnetarA.burst{value: 0}(calls);
 
-        assetA.approve(address(pearlmit), 0);
-        _setYieldBoxRevoke(yieldBox, address(pearlmit));
+        
+        
 
-        uint256 collateralShareAfter = sgl._userCollateralShare(address(this));
+        uint256 collateralShareAfter = sgl.balanceOf(address(this));
         assertGt(collateralShareBefore, collateralShareAfter);
     }
 
@@ -346,24 +307,19 @@ abstract contract MagnetarCollateralModuleTest is MagnetarTestHelper {
             call: depositRepayAndRemoveCollateralFromMarketData
         });
 
-        uint256 collateralShareBefore = sgl._userCollateralShare(address(this));
+        uint256 collateralShareBefore = sgl.balanceOf(address(this));
 
         //aprovals for deposit
-        pearlmit.approve(20, address(assetA), 0, address(magnetarA), type(uint200).max, uint48(block.timestamp));
-        assetA.approve(address(pearlmit), type(uint256).max);
+        assetA.approve(address(magnetarA), type(uint256).max);
 
-        //approvals for collateral
-        pearlmit.approve(
-            1155, address(yieldBox), collateralAId, address(magnetarA), type(uint200).max, uint48(block.timestamp)
-        );
-        _setYieldBoxApproval(yieldBox, address(pearlmit));
+        
 
         magnetarA.burst{value: 0}(calls);
 
-        assetA.approve(address(pearlmit), 0);
-        _setYieldBoxRevoke(yieldBox, address(pearlmit));
+        
+        
 
-        uint256 collateralShareAfter = sgl._userCollateralShare(address(this));
+        uint256 collateralShareAfter = sgl.balanceOf(address(this));
         assertGt(collateralShareBefore, collateralShareAfter);
     }
 
@@ -388,8 +344,7 @@ abstract contract MagnetarCollateralModuleTest is MagnetarTestHelper {
             address(sgl), address(marketHelper), address(this), tokenAmount_, 0, tokenAmount_
         );
         _params.withdrawCollateralParams = MagnetarWithdrawData({
-            yieldBox: address(yieldBox),
-            assetId: collateralAId,
+           asset: address(collateralA),
             receiver: userA,
             amount: tokenAmount_,
             withdraw: true,
@@ -407,25 +362,22 @@ abstract contract MagnetarCollateralModuleTest is MagnetarTestHelper {
             call: depositRepayAndRemoveCollateralFromMarketData
         });
 
-        uint256 collateralShareBefore = sgl._userCollateralShare(address(this));
+        uint256 collateralShareBefore = sgl.balanceOf(address(this));
         uint256 userABalanceBefore = collateralA.balanceOf(userA);
 
         //aprovals for deposit
-        pearlmit.approve(20, address(assetA), 0, address(magnetarA), type(uint200).max, uint48(block.timestamp));
-        assetA.approve(address(pearlmit), type(uint256).max);
+        assetA.approve(address(magnetarA), type(uint256).max);
 
         //approvals for collateral
-        pearlmit.approve(
-            1155, address(yieldBox), collateralAId, address(magnetarA), type(uint200).max, uint48(block.timestamp)
-        );
-        _setYieldBoxApproval(yieldBox, address(pearlmit));
+       
+        
 
         magnetarA.burst{value: 0}(calls);
 
-        assetA.approve(address(pearlmit), 0);
-        _setYieldBoxRevoke(yieldBox, address(pearlmit));
+        
+        
 
-        uint256 collateralShareAfter = sgl._userCollateralShare(address(this));
+        uint256 collateralShareAfter = sgl.balanceOf(address(this));
         assertGt(collateralShareBefore, collateralShareAfter);
 
         uint256 userABalanceAfter = collateralA.balanceOf(userA);
@@ -457,8 +409,7 @@ abstract contract MagnetarCollateralModuleTest is MagnetarTestHelper {
             address(sgl), address(marketHelper), address(this), tokenAmount_, 0, tokenAmount_
         );
         _params.withdrawCollateralParams = MagnetarWithdrawData({
-            yieldBox: address(yieldBox),
-            assetId: collateralAId,
+           asset: address(collateralA),
             receiver: userA,
             amount: tokenAmount_,
             withdraw: true,
@@ -476,25 +427,22 @@ abstract contract MagnetarCollateralModuleTest is MagnetarTestHelper {
             call: depositRepayAndRemoveCollateralFromMarketData
         });
 
-        uint256 collateralShareBefore = sgl._userCollateralShare(address(this));
+        uint256 collateralShareBefore = sgl.balanceOf(address(this));
         uint256 userABalanceBefore = collateralErc20.balanceOf(userA);
 
         //aprovals for deposit
-        pearlmit.approve(20, address(assetA), 0, address(magnetarA), type(uint200).max, uint48(block.timestamp));
-        assetA.approve(address(pearlmit), type(uint256).max);
+        assetA.approve(address(magnetarA), type(uint256).max);
 
         //approvals for collateral
-        pearlmit.approve(
-            1155, address(yieldBox), collateralAId, address(magnetarA), type(uint200).max, uint48(block.timestamp)
-        );
-        _setYieldBoxApproval(yieldBox, address(pearlmit));
+       
+        
 
         magnetarA.burst{value: 0}(calls);
 
-        assetA.approve(address(pearlmit), 0);
-        _setYieldBoxRevoke(yieldBox, address(pearlmit));
+        
+        
 
-        uint256 collateralShareAfter = sgl._userCollateralShare(address(this));
+        uint256 collateralShareAfter = sgl.balanceOf(address(this));
         assertGt(collateralShareBefore, collateralShareAfter);
 
         uint256 userABalanceAfter = collateralErc20.balanceOf(userA);
@@ -524,21 +472,20 @@ abstract contract MagnetarCollateralModuleTest is MagnetarTestHelper {
             call: depositRepayAndRemoveCollateralFromMarketData
         });
 
-        uint256 ybBalanceBefore = yieldBox.balanceOf(userA, assetAId);
+        uint256 ybBalanceBefore = sgl.balanceOf(userA);
 
         //aprovals
         vm.startPrank(userA);
-        pearlmit.approve(20, address(assetA), 0, address(magnetarA), type(uint200).max, uint48(block.timestamp)); // Atomic approval
-        assetA.approve(address(pearlmit), type(uint256).max);
+        assetA.approve(address(magnetarA), type(uint256).max);
         vm.stopPrank();
 
         //authorize user
         clusterA.updateContract(0, address(this), true);
 
         magnetarA.burst{value: 0}(calls);
-        assetA.approve(address(pearlmit), 0);
+        
 
-        uint256 ybBalanceAfter = yieldBox.balanceOf(userA, assetAId);
+        uint256 ybBalanceAfter = sgl.balanceOf(userA);
         assertGt(ybBalanceAfter, ybBalanceBefore);
     }
 
@@ -597,30 +544,20 @@ abstract contract MagnetarCollateralModuleTest is MagnetarTestHelper {
             call: depositAddCollateralAndBorrowFromMarketData
         });
 
-        uint256 colSharesBefore = sgl._userCollateralShare(address(this));
+        uint256 colSharesBefore = sgl.balanceOf(address(this));
 
         // manually deposit asset to YB
-        pearlmit.approve(20, address(collateralA), 0, address(magnetarA), type(uint200).max, uint48(block.timestamp)); // Atomic approval
-        collateralA.approve(address(yieldBox), type(uint256).max);
-        _setYieldBoxApproval(yieldBox, address(pearlmit));
-        yieldBox.depositAsset(collateralAId, address(this), address(this), tokenAmount_, 0);
-        collateralA.approve(address(yieldBox), 0);
+
+        
 
         //approvals for add collateral
-        pearlmit.approve(
-            1155, address(yieldBox), collateralAId, address(magnetarA), type(uint200).max, uint48(block.timestamp)
-        ); // this is needed for Pearlmit.allowance check
-        pearlmit.approve(
-            1155, address(yieldBox), collateralAId, address(sgl), type(uint200).max, uint48(block.timestamp)
-        ); // Atomic approval
 
         magnetarA.burst{value: 0}(calls);
 
-        collateralA.approve(address(pearlmit), 0);
 
-        _setYieldBoxRevoke(yieldBox, address(pearlmit));
+        
 
-        uint256 colSharesAfter = sgl._userCollateralShare(address(this));
+        uint256 colSharesAfter = sgl.balanceOf(address(this));
         assertGt(colSharesAfter, colSharesBefore);
     }
 
@@ -644,25 +581,16 @@ abstract contract MagnetarCollateralModuleTest is MagnetarTestHelper {
             call: depositAddCollateralAndBorrowFromMarketData
         });
 
-        uint256 colSharesBefore = sgl._userCollateralShare(address(this));
+        uint256 colSharesBefore = sgl.balanceOf(address(this));
 
         //approvals for deposit & collateral add
-        pearlmit.approve(20, address(collateralA), 0, address(magnetarA), type(uint200).max, uint48(block.timestamp)); // Atomic approval
-        collateralA.approve(address(pearlmit), type(uint256).max);
-        pearlmit.approve(
-            1155, address(yieldBox), collateralAId, address(magnetarA), type(uint200).max, uint48(block.timestamp)
-        ); // this is needed for Pearlmit.allowance check on market
-        pearlmit.approve(
-            1155, address(yieldBox), collateralAId, address(sgl), type(uint200).max, uint48(block.timestamp)
-        ); // Atomic approval
-        _setYieldBoxApproval(yieldBox, address(pearlmit));
+        collateralA.approve(address(magnetarA), type(uint256).max);
+        
 
         magnetarA.burst{value: 0}(calls);
 
-        collateralA.approve(address(pearlmit), 0);
-        _setYieldBoxRevoke(yieldBox, address(pearlmit));
 
-        uint256 colSharesAfter = sgl._userCollateralShare(address(this));
+        uint256 colSharesAfter = sgl.balanceOf(address(this));
         assertGt(colSharesAfter, colSharesBefore);
     }
 
@@ -691,26 +619,19 @@ abstract contract MagnetarCollateralModuleTest is MagnetarTestHelper {
             call: depositAddCollateralAndBorrowFromMarketData
         });
 
-        uint256 colSharesBefore = sgl._userCollateralShare(address(this));
+        uint256 colSharesBefore = sgl.balanceOf(address(this));
         uint256 borrowPartBefore = sgl._userBorrowPart(address(this));
 
         //approvals for deposit & collateral add
-        pearlmit.approve(20, address(collateralA), 0, address(magnetarA), type(uint200).max, uint48(block.timestamp)); // Atomic approval
-        collateralA.approve(address(pearlmit), type(uint256).max);
-        pearlmit.approve(
-            1155, address(yieldBox), collateralAId, address(magnetarA), type(uint200).max, uint48(block.timestamp)
-        ); // this is needed for Pearlmit.allowance check on market
-        pearlmit.approve(
-            1155, address(yieldBox), collateralAId, address(sgl), type(uint200).max, uint48(block.timestamp)
-        ); // Atomic approval
-        _setYieldBoxApproval(yieldBox, address(pearlmit));
+        collateralA.approve(address(magnetarA), type(uint256).max);
+        
 
         magnetarA.burst{value: 0}(calls);
 
-        collateralA.approve(address(pearlmit), 0);
-        _setYieldBoxRevoke(yieldBox, address(pearlmit));
+        
+        
 
-        uint256 colSharesAfter = sgl._userCollateralShare(address(this));
+        uint256 colSharesAfter = sgl.balanceOf(address(this));
         uint256 borrowPartAfter = sgl._userBorrowPart(address(this));
         assertGt(colSharesAfter, colSharesBefore);
         assertGt(borrowPartAfter, borrowPartBefore);
@@ -731,8 +652,7 @@ abstract contract MagnetarCollateralModuleTest is MagnetarTestHelper {
             address(sgl), address(marketHelper), address(this), tokenAmount_, borrowAmount_, true
         );
         _params.withdrawParams = MagnetarWithdrawData({
-            yieldBox: address(yieldBox),
-            assetId: assetAId,
+            asset: address(assetA),
             receiver: userA,
             amount: borrowAmount_,
             withdraw: true,
@@ -750,27 +670,19 @@ abstract contract MagnetarCollateralModuleTest is MagnetarTestHelper {
             call: depositAddCollateralAndBorrowFromMarketData
         });
 
-        uint256 colSharesBefore = sgl._userCollateralShare(address(this));
+        uint256 colSharesBefore = sgl.balanceOf(address(this));
         uint256 borrowPartBefore = sgl._userBorrowPart(address(this));
         uint256 assetBalanceBefore = assetA.balanceOf(userA);
 
         //approvals for deposit & collateral add
-        pearlmit.approve(20, address(collateralA), 0, address(magnetarA), type(uint200).max, uint48(block.timestamp)); // Atomic approval
-        collateralA.approve(address(pearlmit), type(uint256).max);
-        pearlmit.approve(
-            1155, address(yieldBox), collateralAId, address(magnetarA), type(uint200).max, uint48(block.timestamp)
-        ); // this is needed for Pearlmit.allowance check on market
-        pearlmit.approve(
-            1155, address(yieldBox), collateralAId, address(sgl), type(uint200).max, uint48(block.timestamp)
-        ); // Atomic approval
-        _setYieldBoxApproval(yieldBox, address(pearlmit));
+        collateralA.approve(address(magnetarA), type(uint256).max);
+        // Atomic approval
+        
 
         magnetarA.burst{value: 0}(calls);
 
-        collateralA.approve(address(pearlmit), 0);
-        _setYieldBoxRevoke(yieldBox, address(pearlmit));
 
-        uint256 colSharesAfter = sgl._userCollateralShare(address(this));
+        uint256 colSharesAfter = sgl.balanceOf(address(this));
         uint256 borrowPartAfter = sgl._userBorrowPart(address(this));
         uint256 assetBalanceAfter = assetA.balanceOf(userA);
         assertGt(colSharesAfter, colSharesBefore);

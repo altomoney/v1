@@ -2,7 +2,7 @@
 pragma solidity ^0.8.22;
 
 // External
-import {IYieldBox} from "tap-utils/interfaces/yieldbox/IYieldBox.sol";
+
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
@@ -12,9 +12,7 @@ import {Module} from "tap-utils/interfaces/bar/IMarket.sol";
 contract SingularityMock is EIP712 {
     using SafeERC20 for IERC20;
 
-    IYieldBox public _yieldBox;
-    uint256 public _collateralId;
-    uint256 public _assetId;
+
     IERC20 public _collateral;
     IERC20 public _asset;
 
@@ -50,12 +48,10 @@ contract SingularityMock is EIP712 {
     error SingularityMock_ModuleNotSet();
     error SingularityMock_NotValid();
 
-    constructor(address yieldBox, uint256 collateralId, uint256 assetId, address collateral, address asset)
+    constructor(address collateral, address asset)
         EIP712("Tapioca Singularity", "1")
     {
-        _yieldBox = IYieldBox(yieldBox);
-        _collateralId = collateralId;
-        _assetId = assetId;
+
         _collateral = IERC20(collateral);
         _asset = IERC20(asset);
     }
@@ -101,25 +97,25 @@ contract SingularityMock is EIP712 {
 
         _userBorrowPart[from] += amount;
 
-        share = _yieldBox.toShare(_assetId, amount, true);
 
-        _yieldBox.transfer(address(this), to, _assetId, share);
+
+
     }
 
     function addCollateral(address from, address to, bool skim, uint256 amount, uint256 share) external {
         if (share == 0) {
-            share = _yieldBox.toShare(_collateralId, amount, false);
+
         }
 
         uint256 oldTotalCollateralShare = _totalCollateralShare;
         _userCollateralShare[to] += share;
         _totalCollateralShare = oldTotalCollateralShare + share;
 
-        _addTokens(from, to, _collateralId, share, oldTotalCollateralShare, skim);
+        _addTokens(from, to, _collateral, share, oldTotalCollateralShare, skim);
     }
 
     function removeCollateral(address, address to, uint256 share) external {
-        _yieldBox.transfer(address(this), to, _collateralId, share);
+
     }
 
     struct _BuyCollateralCalldata {
@@ -143,24 +139,23 @@ contract SingularityMock is EIP712 {
         }
 
         // Let this fail first to save gas:
-        uint256 supplyShare = _yieldBox.toShare(_assetId, calldata_.supplyAmount, true);
+
         uint256 supplyShareToAmount;
-        if (supplyShare > 0) {
-            (supplyShareToAmount,) = _yieldBox.withdraw(_assetId, calldata_.from, address(this), 0, supplyShare);
-        }
+        //if (supplyShare > 0) {
+
+        //}
 
         _userBorrowPart[from] += calldata_.borrowAmount;
 
-        (uint256 borrowShareToAmount,) =
-            _yieldBox.withdraw(_assetId, address(this), address(this), calldata_.borrowAmount, 0);
+
 
         //swap 1:1
-        uint256 collateralAmount = borrowShareToAmount;
+        uint256 collateralAmount = 0; // todo: borrowShareToAmount;
 
         // @dev !Contract needs to be prefunded with the right amount of collateral!
-        // _yieldBox.depositAsset(_collateralId, address(this), address(this), collateralAmount, 0);
 
-        uint256 collateralShare = _yieldBox.toShare(_collateralId, collateralAmount, false);
+
+        /*
 
         uint256 oldTotalCollateralShare = _totalCollateralShare;
         _userCollateralShare[from] += collateralShare;
@@ -169,15 +164,16 @@ contract SingularityMock is EIP712 {
         _addTokens(address(this), from, _collateralId, collateralShare, oldTotalCollateralShare, false);
 
         return collateralAmount;
+        */
     }
 
-    function _addTokens(address from, address, uint256 assetId, uint256 share, uint256 total, bool skim) internal {
+    function _addTokens(address from, address, address asset, uint256 share, uint256 total, bool skim) internal {
         if (skim) {
-            if (share > _yieldBox.balanceOf(address(this), assetId) - total) {
-                revert SingularityMock_TooMuch();
-            }
-        } else {
-            _yieldBox.transfer(from, address(this), assetId, share);
+            // if (share > balanceOf(address(this), assetId) - total) {
+            //     revert SingularityMock_TooMuch();
+            // }
+        } else  {
+            // _yieldBox.transfer(from, address(this), assetId, share);
         }
     }
 
