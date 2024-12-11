@@ -21,7 +21,7 @@ abstract contract Origins_Unit_Shared is Markets_Unit_Shared {
         Origins org = new Origins(address(this));
         org.init(
             IERC20(address(usdo)),
-            IERC20(address(mainToken)),
+            address(mainToken),
             ITapiocaOracle(address(oracle)),
             1e18,
             90000,

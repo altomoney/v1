@@ -79,22 +79,13 @@ contract UsdoOptionReceiverModule is BaseUsdo {
         /**
          * @dev call exerciseOption() with address(this) as the payment token
          */
-        // _approve(address(this), _options.target, _options.paymentTokenAmount);
-        pearlmit.approve(
-            20,
-            address(this),
-            0,
-            msg_.optionsData.target,
-            uint200(msg_.optionsData.paymentTokenAmount),
-            block.timestamp.toUint48()
-        ); // Atomic approval
-        _approve(address(this), address(pearlmit), msg_.optionsData.paymentTokenAmount);
+        _approve(address(this), msg_.optionsData.target, msg_.optionsData.paymentTokenAmount);
 
         /**
          * @dev exercise and refund if less paymentToken amount was used
          */
         _exerciseAndRefund(msg_.optionsData);
-        _approve(address(this), address(pearlmit), 0);
+        _approve(address(this), msg_.optionsData.target, 0);
 
         /**
          * @dev retrieve exercised amount
@@ -126,12 +117,11 @@ contract UsdoOptionReceiverModule is BaseUsdo {
         if (oTapOwner != _srcChainSender || oTapOwner != _options.from) {
             revert UsdoOptionReceiverModule_NotAuthorized(_options.from);
         }
+        // TODO: Check if this is correct
+        bool isAllowed = IERC721(oTap).getApproved(_options.oTAPTokenID) == address(this) ||
+            IERC721(oTap).isApprovedForAll(oTapOwner, address(this));
 
-        bool isAllowed = isERC721Approved(oTapOwner, address(this), oTap, _options.oTAPTokenID);
         if (!isAllowed) revert UsdoOptionReceiverModule_NotAuthorized(oTapOwner);
-        /// @dev Clear the allowance once it's used
-        /// usage being the allowance check
-        pearlmit.clearAllowance(oTapOwner, 721, oTap, _options.oTAPTokenID);
     }
 
     function _validateExerciseOptionReceiver(ExerciseOptionsMsg memory msg_)
@@ -165,7 +155,6 @@ contract UsdoOptionReceiverModule is BaseUsdo {
         {
             address oTap = ITapiocaOptionBroker(_options.target).oTAP();
             address oTapOwner = IERC721(oTap).ownerOf(_options.oTAPTokenID);
-            pearlmit.clearAllowance(oTapOwner, 721, oTap, _options.oTAPTokenID);
         }
 
         uint256 bAfter = balanceOf(address(this));

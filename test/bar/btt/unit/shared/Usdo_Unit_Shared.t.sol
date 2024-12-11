@@ -166,8 +166,7 @@ abstract contract Usdo_Unit_Shared is Base_Test {
                 })
             }),
             withdrawParams: MagnetarWithdrawData({
-                yieldBox: address(0),
-                assetId: 0,
+                asset: address(0),
                 unwrap: false,
                 amount: 0,
                 withdraw: false,
@@ -218,8 +217,7 @@ abstract contract Usdo_Unit_Shared is Base_Test {
                 exitData: IOptionsExitData({exit: false, target: address(0), oTAPTokenID: 0}),
                 unlockData: IOptionsUnlockData({unlock: false, target: address(0), tokenId: 0}),
                 assetWithdrawData: MagnetarWithdrawData({
-                    yieldBox: address(0),
-                    assetId: 0,
+                    asset: address(0),
                     unwrap: false,
                     amount: 0,
                     withdraw: false,
@@ -227,8 +225,7 @@ abstract contract Usdo_Unit_Shared is Base_Test {
                     extractFromSender: false
                 }),
                 collateralWithdrawData: MagnetarWithdrawData({
-                    yieldBox: address(0),
-                    assetId: 0,
+                    asset: address(0),
                     unwrap: false,
                     amount: 0,
                     withdraw: false,

@@ -344,7 +344,7 @@ abstract contract Usdo_crossChain is Usdo_Unit_Shared, BigBang_Unit_Shared, Sing
 
         _BorrowInternal memory _borrowData;
         _RemoveCollateralInternal memory _data;
-        _data.userCollateralBefore = mainBB._userCollateralShare(address(this));
+        _data.userCollateralBefore = mainBB.balanceOf(address(this));
         _data.totalCollateralShareBefore = mainBB._totalCollateralShare();
         _borrowData.totalBorrowBefore = mainBB._totalBorrow();
         _borrowData.userBorrowPartBefore = mainBB._userBorrowPart(address(this));
@@ -396,7 +396,7 @@ abstract contract Usdo_crossChain is Usdo_Unit_Shared, BigBang_Unit_Shared, Sing
             usdoHelper.buildMarketLendOrRepayMsg(marketMsg)
         );
 
-        _data.userCollateralAfter = mainBB._userCollateralShare(address(this));
+        _data.userCollateralAfter = mainBB.balanceOf(address(this));
         _data.totalCollateralShareAfter = mainBB._totalCollateralShare();
         _borrowData.totalBorrowAfter = mainBB._totalBorrow();
         _borrowData.userBorrowPartAfter = mainBB._userBorrowPart(address(this));

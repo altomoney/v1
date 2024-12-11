@@ -41,8 +41,6 @@ import {
     UsdoInitStruct,
     UsdoModulesInitStruct,
     ExerciseOptionsMsg,
-    YieldBoxApproveAssetMsg,
-    YieldBoxApproveAllMsg,
     MarketPermitActionMsg,
     MarketRemoveAssetMsg,
     IRemoveAndRepay,
@@ -66,7 +64,6 @@ import {ILeverageExecutor} from "tap-utils/interfaces/bar/ILeverageExecutor.sol"
 import {ERC20WithoutStrategy} from "yieldbox/strategies/ERC20WithoutStrategy.sol";
 import {ICommonData} from "tap-utils/interfaces/common/ICommonData.sol";
 import {Singularity} from "tapioca-bar/markets/singularity/Singularity.sol";
-import {Pearlmit, IPearlmit} from "tap-utils/pearlmit/Pearlmit.sol";
 import {UsdoReceiver} from "tapioca-bar/usdo/modules/UsdoReceiver.sol";
 import {IOracle} from "tap-utils/oracle/interfaces/IOracle.sol";
 import {UsdoHelper} from "tapioca-bar/usdo/extensions/UsdoHelper.sol";
@@ -74,7 +71,6 @@ import {UsdoSender} from "tapioca-bar/usdo/modules/UsdoSender.sol";
 import {Module} from "tap-utils/interfaces/bar/IMarket.sol";
 import {MarketHelper} from "tapioca-bar/markets/MarketHelper.sol";
 import {Cluster} from "tap-utils/Cluster/Cluster.sol";
-import {YieldBox} from "yieldbox/YieldBox.sol";
 import {Penrose} from "tapioca-bar/Penrose.sol";
 
 // Tapioca Tests
@@ -98,9 +94,7 @@ contract UsdoTest is UsdoTestHelper {
     uint32 aEid = 1;
     uint32 bEid = 2;
 
-    Pearlmit pearlmit;
     Cluster cluster;
-    YieldBox yieldBox;
     ERC20Mock tapOFT;
     ERC20Mock weth;
 
@@ -142,12 +136,9 @@ contract UsdoTest is UsdoTestHelper {
 
     uint16 internal constant SEND = 1; // Send LZ message type
     uint16 internal constant PT_APPROVALS = 500; // Use for ERC20Permit approvals
-    uint16 internal constant PT_YB_APPROVE_ASSET = 503; // Use for YieldBox 'setApprovalForAsset(true)' operation
-    uint16 internal constant PT_YB_APPROVE_ALL = 504; // Use for YieldBox 'setApprovalForAll(true)' operation
     uint16 internal constant PT_MARKET_PERMIT = 505; // Use for market.permitLend() operation
     uint16 internal constant PT_REMOTE_TRANSFER = 700; // Use for transferring tokens from the contract from another chain
     uint16 internal constant PT_MARKET_REMOVE_ASSET = 900; // Use for remove asset from a market available on another chain
-    uint16 internal constant PT_YB_SEND_SGL_LEND_OR_REPAY = 901; // Use to YB deposit, lend/repay on a market available on another chain
     uint16 internal constant PT_TAP_EXERCISE = 902; // Use for exercise options on tOB available on another chain
 
     /**
@@ -173,10 +164,8 @@ contract UsdoTest is UsdoTestHelper {
         setUpEndpoints(3, LibraryType.UltraLightNode);
 
         {
-            pearlmit = new Pearlmit("Pearlmit", "1", address(this), 0);
-            yieldBox = createYieldBox(pearlmit, address(this));
             cluster = createCluster(aEid, __owner);
-            magnetar = createMagnetar(address(cluster), IPearlmit(address(pearlmit)));
+            magnetar = createMagnetar(address(cluster));
 
             vm.label(address(endpoints[aEid]), "aEndpoint");
             vm.label(address(endpoints[bEid]), "bEndpoint");
@@ -1337,10 +1326,6 @@ contract UsdoTest is UsdoTestHelper {
             deal(address(aUsdo), address(this), erc20Amount_);
             yieldBox.depositAsset(aUsdoYieldBoxId, address(this), address(this), erc20Amount_, 0);
 
-            pearlmit.approve(
-                1155, address(yieldBox), collateralId, address(singularity), uint200(sh), uint48(block.timestamp)
-            ); // Atomic approval
-
             uint256 collateralShare = yieldBox.toShare(aUsdoYieldBoxId, erc20Amount_, false);
             Module[] memory modules;
             bytes[] memory calls;
@@ -1397,7 +1382,7 @@ contract UsdoTest is UsdoTestHelper {
         ); // Atomic approval
         yieldBox.setApprovalForAll(address(pearlmit), true);
 
-        uint256 userCollateralShareBefore = singularity._userCollateralShare(address(this));
+        uint256 userCollateralShareBefore = singularity.balanceOf(address(this));
         uint256 tokenAmountSD = usdoHelper.toSD(tokenAmount_, aUsdo.decimalConversionRate());
 
         MarketLendOrRepayMsg memory marketMsg = MarketLendOrRepayMsg({
@@ -1485,7 +1470,7 @@ contract UsdoTest is UsdoTestHelper {
         // Check execution
         {
             assertEq(singularity._userBorrowPart(address(this)), 0);
-            assertGt(userCollateralShareBefore, singularity._userCollateralShare(address(this)));
+            assertGt(userCollateralShareBefore, singularity.balanceOf(address(this)));
         }
     }
 

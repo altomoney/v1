@@ -113,8 +113,7 @@ enum MagnetarAction {
 enum MagnetarModule {
     CollateralModule,
     MintModule,
-    OptionModule,
-    YieldBoxModule
+    OptionModule
 }
 
 interface IMagnetar {

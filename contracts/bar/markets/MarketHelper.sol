@@ -35,7 +35,7 @@ contract MarketHelper {
     function isPositionInBadDebt(IMarket market, uint256 _exchangeRate, address _user) external view returns (bool) {
         uint256 borrowPart = market._userBorrowPart(_user);
         if (borrowPart == 0) return false;
-        uint256 collateralShare = market._userCollateralShare(_user);
+        uint256 collateralShare = market.balanceOf(_user);
         if (collateralShare == 0) return false;
 
         uint256 exchangeRatePrecision = market._exchangeRatePrecision();
@@ -122,7 +122,7 @@ contract MarketHelper {
 
         uint256 borrowPart = market._userBorrowPart(_user);
         if (borrowPart == 0) return true;
-        uint256 collateralShare = market._userCollateralShare(_user);
+        uint256 collateralShare = market.balanceOf(_user);
         if (collateralShare == 0) return false;
 
         (uint128 totalBorrowElastic, uint128 totalBorrowBase) = market._totalBorrow();
@@ -185,7 +185,7 @@ contract MarketHelper {
             data.minLiquidationBonus = minLiquidationBonus;
             data.exchangeRate = _exchangeRate;
             data.market = sglAddress;
-            data.userCollateralShare = sgl._userCollateralShare(user);
+            data.userCollateralShare = sgl.balanceOf(user);
             data.userBorrowPart = sgl._userBorrowPart(user);
             data.totalBorrow = Rebase({elastic: totalBorrowElastic, base: totalBorrowBase});
             data.liquidationBonusAmount = IMarket(sglAddress)._liquidationBonusAmount();

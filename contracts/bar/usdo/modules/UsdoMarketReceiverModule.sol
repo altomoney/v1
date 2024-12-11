@@ -78,17 +78,7 @@ contract UsdoMarketReceiverModule is BaseUsdo {
         /**
          * @dev Pearlmit approvals
          */
-        // approve(address(msg_.lendParams.magnetar), msg_.lendParams.depositAmount);
-        approve(address(pearlmit), msg_.lendParams.depositAmount);
-        pearlmit.approve(
-            20,
-            address(this),
-            0,
-            msg_.lendParams.magnetar,
-            uint200(msg_.lendParams.depositAmount),
-            block.timestamp.toUint48()
-        );
-
+        approve(address(msg_.lendParams.magnetar), msg_.lendParams.depositAmount);
         /**
          * @dev Lend or Repay through `magnetar`
          */

@@ -85,7 +85,7 @@ contract BigBang_removeCollateral is BigBang_Unit_Shared {
         _borrow(borrowAmount, mainBB, address(this), address(this), address(this));
 
         // **** Remove collateral ****
-        uint256 removeShare = mainBB._userCollateralShare(address(this));
+        uint256 removeShare = mainBB.balanceOf(address(this));
         (Module[] memory modules, bytes[] memory calls) =
             _getRemoveCollateralData(removeShare, address(this), address(this));
 
@@ -152,7 +152,7 @@ contract BigBang_removeCollateral is BigBang_Unit_Shared {
         _addCollateral(addAmount, mainBB, address(this), address(this), address(this), address(this), false);
 
         // **** Remove collateral ****
-        uint256 removeShare = mainBB._userCollateralShare(address(this));
+        uint256 removeShare = mainBB.balanceOf(address(this));
         (Module[] memory modules, bytes[] memory calls) =
             _getRemoveCollateralData(removeShare, address(this), address(this));
 
@@ -181,7 +181,7 @@ contract BigBang_removeCollateral is BigBang_Unit_Shared {
         borrowAmount = _boundBorrowAmount(borrowAmount, addAmount);
         _borrow(borrowAmount, mainBB, address(this), address(this), address(this));
 
-        uint256 removeShare = mainBB._userCollateralShare(address(this));
+        uint256 removeShare = mainBB.balanceOf(address(this));
         (Module[] memory modules, bytes[] memory calls) =
             _getRemoveCollateralData(removeShare, address(this), address(this));
 

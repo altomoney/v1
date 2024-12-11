@@ -85,8 +85,8 @@ contract UsdoTestHelper is TestHelper, TestUtils {
         return YieldBox(_yieldBox).registerAsset(TokenType.ERC20, _token, IStrategy(_strategy), 0);
     }
 
-    function createMagnetar(address cluster, IPearlmit _pearlmit) public returns (MagnetarMock) {
-        return new MagnetarMock(cluster, _pearlmit);
+    function createMagnetar(address cluster) public returns (MagnetarMock) {
+        return new MagnetarMock(cluster);
     }
 
     function createYieldBox(Pearlmit pearlmit, address owner) public returns (YieldBox) {

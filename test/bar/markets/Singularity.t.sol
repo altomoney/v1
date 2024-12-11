@@ -544,7 +544,7 @@ contract SingularityTest is UsdoTestHelper {
 
         assertEq(info[0].market.collateral, address(collateral));
         assertEq(info[0].market.asset, address(asset));
-        assertEq(info[0].market.userCollateralShare, singularity._userCollateralShare(address(this)));
+        assertEq(info[0].market.userCollateralShare, singularity.balanceOf(address(this)));
         assertEq(info[0].market.userBorrowPart, singularity._userBorrowPart(address(this)));
 
         uint256 share = marketHelper.computeAllowedLendShare(address(singularity), 1, assetYieldBoxId);

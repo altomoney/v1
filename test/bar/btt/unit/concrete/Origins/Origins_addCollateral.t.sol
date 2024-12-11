@@ -34,7 +34,7 @@ contract Origins_addCollateral is Origins_Unit_Shared {
         yieldBox.depositAsset(org._collateralId(), address(this), address(this), 0, share);
         org.addCollateral(0, share);
 
-        uint256 resultedCollateral = org._userCollateralShare(address(this));
+        uint256 resultedCollateral = org.balanceOf(address(this));
         assertEq(resultedCollateral, share);
 
         uint256 totalCollateralShare = org._totalCollateralShare();

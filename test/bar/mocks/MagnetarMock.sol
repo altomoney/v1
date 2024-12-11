@@ -28,20 +28,17 @@ import {
 } from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainEngineHelper.sol";
 import {TapiocaOmnichainEngineHelper} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainEngineHelper.sol";
 import {ITapiocaOmnichainEngine, LZSendParam} from "tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
-import {PearlmitHandler, IPearlmit} from "tap-utils/pearlmit/PearlmitHandler.sol";
 import {IMarketHelper} from "tap-utils/interfaces/bar/IMarketHelper.sol";
 import {ISingularity} from "tap-utils/interfaces/bar/ISingularity.sol";
-import {IYieldBox} from "tap-utils/interfaces/yieldbox/IYieldBox.sol";
 import {IPermitAll} from "tap-utils/interfaces/common/IPermitAll.sol";
 import {IMarket, Module} from "tap-utils/interfaces/bar/IMarket.sol";
 import {IOftSender} from "tap-utils/interfaces/oft/IOftSender.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
-import {IPermit} from "tap-utils/interfaces/common/IPermit.sol";
 
 /*
 * @dev need this because of via-ir: true error on original Magnetar
 **/
-contract MagnetarMock is PearlmitHandler {
+contract MagnetarMock {
     using SafeCast for uint256;
     using SafeERC20 for IERC20;
 
@@ -54,7 +51,7 @@ contract MagnetarMock is PearlmitHandler {
 
     ICluster public cluster;
 
-    constructor(address _cluster, IPearlmit _pearlmit) PearlmitHandler(_pearlmit) {
+    constructor(address _cluster) {
         cluster = ICluster(_cluster);
     }
 
@@ -106,12 +103,6 @@ contract MagnetarMock is PearlmitHandler {
                 _executeModule(MagnetarModule.OptionModule, _action.call);
                 continue; // skip the rest of the loop
             }
-
-            /// @dev Modules will not return result data.
-            if (_action.id == uint8(MagnetarAction.YieldBoxModule)) {
-                _executeModule(MagnetarModule.YieldBoxModule, _action.call);
-                continue; // skip the rest of the loop
-            }
         }
     }
 
@@ -135,7 +126,6 @@ contract MagnetarMock is PearlmitHandler {
         if (
             funcSig == IPermitAll.permitAll.selector || funcSig == IPermitAll.revokeAll.selector
                 || funcSig == IPermit.permit.selector || funcSig == IPermit.revoke.selector
-                || funcSig == IYieldBox.setApprovalForAll.selector || funcSig == IYieldBox.setApprovalForAsset.selector
         ) {
             /// @dev Owner param check. See Warning above.
             _checkSender(abi.decode(_actionCalldata[4:36], (address)));
@@ -154,9 +144,7 @@ contract MagnetarMock is PearlmitHandler {
             revert MagnetarMock_NotAuthorized();
         }
 
-        IYieldBox yieldBox = IYieldBox(IMarket(_data.market)._yieldBox());
-
-        uint256 assetId = IMarket(_data.market)._assetId();
+        IMarket market = IMarket(_data.market);
         (, address assetAddress,,) = yieldBox.assets(assetId);
 
         // deposit to YieldBox

@@ -13,7 +13,6 @@ import {
     ERC721PermitApprovalMsg,
     RemoteTransferMsg
 } from "tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
-import {IPearlmit} from "tap-utils/interfaces/periph/IPearlmit.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 
 /*
@@ -61,7 +60,6 @@ interface ITapToken is ITapiocaOmnichainEngine {
         address tapTokenSenderModule;
         address tapTokenReceiverModule;
         address extExec;
-        IPearlmit pearlmit;
         ICluster cluster;
     }
 }

@@ -43,9 +43,9 @@ contract Origins_removeCollateral is Origins_Unit_Shared {
         _addCollateral(org);
         org.borrow(5e17);
 
-        uint256 collateralShareBefore = org._userCollateralShare(address(this));
+        uint256 collateralShareBefore = org.balanceOf(address(this));
         org.removeCollateral(0.1 ether);
-        uint256 collateralShareAfter = org._userCollateralShare(address(this));
+        uint256 collateralShareAfter = org.balanceOf(address(this));
 
         assertEq(collateralShareBefore - collateralShareAfter, 0.1 ether);
     }
