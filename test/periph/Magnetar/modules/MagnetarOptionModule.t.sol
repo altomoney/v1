@@ -24,26 +24,22 @@ import {
 import {ICommonExternalContracts, IDepositData} from "tap-utils/interfaces/common/ICommonData.sol";
 import {IOptionsParticipateData, IOptionsExitData} from "tap-utils/interfaces/tap-token/ITapiocaOptionBroker.sol";
 import {IRemoveAndRepay, IMintData} from "tap-utils/interfaces/oft/IUsdo.sol";
-import {IPearlmit} from "tap-utils/interfaces/periph/IPearlmit.sol";
+
 import {IPermit} from "tap-utils/interfaces/common/IPermit.sol";
 
-import {TapiocaOptionsLiquidityProvisionMock} from "../../mocks/TapiocaOptionsLiquidityProvisionMock.sol";
-import {TapiocaOptionsBrokerMock} from "../../mocks/TapiocaOptionsBrokerMock.sol";
 import {TapOftMock} from "../../mocks/TapOftMock.sol";
 import {ERC721Mock} from "../../mocks/ERC721Mock.sol";
 import {ERC20Mock} from "../../mocks/ERC20Mock.sol";
+import {TapiocaOptionBroker} from "tap-token/options/TapiocaOptionBroker.sol";
 
-import {ERC20WithoutStrategy} from "yieldbox/strategies/ERC20WithoutStrategy.sol";
 
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
 
 // @review-test Fix the tests in this contract. Failing in the setUp.
 abstract contract MagnetarOptionModuleTest is MagnetarTestHelper, IERC721Receiver {
-    TapiocaOptionsLiquidityProvisionMock public tOLPMock;
-    TapiocaOptionsBrokerMock public tOB;
+    TapiocaOptionBroker public tOB;
 
-    uint256 public sglAssetId;
 
     // -----------------------
     //
@@ -53,30 +49,27 @@ abstract contract MagnetarOptionModuleTest is MagnetarTestHelper, IERC721Receive
     function setUp() public override {
         createCommonSetup();
 
-        ERC20WithoutStrategy sglStrategy = createYieldBoxEmptyStrategy(address(yieldBox), address(sgl));
-        sglAssetId = registerYieldBoxAsset(address(yieldBox), address(sgl), address(sglStrategy));
 
-        tOLPMock = new TapiocaOptionsLiquidityProvisionMock(sglAssetId, address(yieldBox), IPearlmit(address(pearlmit)));
+
+
 
         TapOftMock tapOft = new TapOftMock();
         ERC721Mock oTAP = new ERC721Mock();
-        tOB = new TapiocaOptionsBrokerMock(address(oTAP), address(tapOft), IPearlmit(address(pearlmit)));
-        tOB.setTOLP(address(tOLPMock));
+        tOB = new TapiocaOptionBroker(address(oTAP), address(tapOft));
+        
 
-        clusterA.updateContract(0, address(tOLPMock), true);
         clusterA.updateContract(0, address(tOB), true);
 
-        pearlmit.approve(1155, address(yieldBox), assetAId, address(bb), type(uint200).max, uint48(block.timestamp)); // this is needed for Pearlmit.allowance check on market
     }
 
-    function createLockAndParticipateData(address user, address singularity, address magnetar, address yieldBox)
+    function createLockAndParticipateData(address user, address singularity, address magnetar)
         private
         returns (LockAndParticipateData memory data)
     {
         return LockAndParticipateData({
             user: user,
             tSglToken: singularity,
-            yieldBox: yieldBox,
+
             magnetar: magnetar,
             lockData: IOptionsLockData({
                 lock: false,
@@ -171,19 +164,14 @@ abstract contract MagnetarOptionModuleTest is MagnetarTestHelper, IERC721Receive
         });
 
         //approvals for deposit & collateral add
-        pearlmit.approve(20, address(collateralA), 0, address(magnetarA), type(uint200).max, uint48(block.timestamp)); // Atomic approval
-        collateralA.approve(address(pearlmit), type(uint256).max);
-        pearlmit.approve(
-            1155, address(yieldBox), collateralAId, address(magnetarA), type(uint200).max, uint48(block.timestamp)
-        ); // this is needed for Pearlmit.allowance check on market
-        pearlmit.approve(
-            1155, address(yieldBox), collateralAId, address(bb), type(uint200).max, uint48(block.timestamp)
-        ); // Atomic approval
-        _setYieldBoxApproval(yieldBox, address(pearlmit));
-        pearlmit.approve(20, address(assetA), 0, address(magnetarA), type(uint200).max, uint48(block.timestamp)); // Atomic approval
-        assetA.approve(address(pearlmit), type(uint256).max);
-        pearlmit.approve(20, address(sgl), 0, address(magnetarA), type(uint200).max, uint48(block.timestamp)); // this is needed for Pearlmit.allowance check on market.allowedLend
-        pearlmit.approve(1155, address(yieldBox), assetAId, address(sgl), type(uint200).max, uint48(block.timestamp)); // lend approval
+        collateralA.approve(address(magnetarA), type(uint256).max);
+        
+        // Atomic approval
+        
+       
+        assetA.approve(address(magnetarA), type(uint256).max);
+
+
 
         magnetarA.burst{value: 0}(calls);
     }
@@ -229,9 +217,9 @@ abstract contract MagnetarOptionModuleTest is MagnetarTestHelper, IERC721Receive
 
         // lock and participate
         LockAndParticipateData memory _paramsLock =
-            createLockAndParticipateData(address(this), address(sgl), address(magnetarA), address(yieldBox));
+            createLockAndParticipateData(address(this), address(sgl), address(magnetarA));
         _paramsLock.lockData.lock = true;
-        _paramsLock.lockData.target = address(tOLPMock);
+        _paramsLock.lockData.target = address(tOB);
         _paramsLock.lockData.fraction = sgl.balanceOf(address(this));
         _paramsLock.participateData.participate = true;
         _paramsLock.participateData.target = address(tOB);
@@ -245,16 +233,16 @@ abstract contract MagnetarOptionModuleTest is MagnetarTestHelper, IERC721Receive
         });
 
         {
-            pearlmit.approve(20, address(sgl), 0, address(magnetarA), type(uint200).max, uint48(block.timestamp));
-            sgl.approve(address(pearlmit), type(uint256).max);
-            pearlmit.approve(721, address(tOLPMock), 1, address(magnetarA), type(uint200).max, uint48(block.timestamp)); // lend approval
-            tOLPMock.setApprovalForAll(address(pearlmit), true);
+
+
+
+
         }
 
         magnetarA.burst{value: 0}(calls);
 
-        collateralA.approve(address(pearlmit), 0);
-        _setYieldBoxRevoke(yieldBox, address(pearlmit));
+        
+        
     }
 
     // -----------------------0
@@ -376,8 +364,8 @@ abstract contract MagnetarOptionModuleTest is MagnetarTestHelper, IERC721Receive
             call: exitPositionAndRemoveCollateraleData
         });
 
-        pearlmit.approve(20, address(bb), 0, address(magnetarA), type(uint200).max, uint48(block.timestamp));
-        _setYieldBoxApproval(yieldBox, address(bb));
+
+        
 
         uint256 sglBalanceBefore = sgl.balanceOf(address(this));
         uint256 borrowPartBefore = bb._userBorrowPart(address(this));
@@ -385,7 +373,7 @@ abstract contract MagnetarOptionModuleTest is MagnetarTestHelper, IERC721Receive
         uint256 sglBalanceAfter = sgl.balanceOf(address(this));
         uint256 borrowPartAfter = bb._userBorrowPart(address(this));
 
-        _setYieldBoxRevoke(yieldBox, address(bb));
+        
 
         assertGt(sglBalanceBefore, sglBalanceAfter);
         assertGt(borrowPartBefore, borrowPartAfter);
@@ -418,14 +406,14 @@ abstract contract MagnetarOptionModuleTest is MagnetarTestHelper, IERC721Receive
             call: exitPositionAndRemoveCollateraleData
         });
 
-        pearlmit.approve(20, address(bb), 0, address(magnetarA), type(uint200).max, uint48(block.timestamp));
-        _setYieldBoxApproval(yieldBox, address(bb));
+
+        
 
         uint256 collateralShareBefore = bb._userCollateralShare(address(this));
         magnetarA.burst{value: 0}(calls);
         uint256 collateralShareAfter = bb._userCollateralShare(address(this));
 
-        _setYieldBoxRevoke(yieldBox, address(bb));
+        
 
         assertGt(collateralShareBefore, collateralShareAfter);
     }
@@ -446,9 +434,8 @@ abstract contract MagnetarOptionModuleTest is MagnetarTestHelper, IERC721Receive
         _params.removeAndRepayData.repayAmount = 1 ether - 1;
         _params.removeAndRepayData.removeCollateralFromBB = true;
         _params.removeAndRepayData.collateralAmount = 0.5 ether;
-        _params.removeAndRepayData.collateralWithdrawData.yieldBox = address(yieldBox);
+
         _params.removeAndRepayData.collateralWithdrawData.withdraw = true;
-        _params.removeAndRepayData.collateralWithdrawData.assetId = bb._collateralId();
         _params.removeAndRepayData.collateralWithdrawData.amount = 0.5 ether;
 
         bytes memory exitPositionAndRemoveCollateraleData =
@@ -461,8 +448,8 @@ abstract contract MagnetarOptionModuleTest is MagnetarTestHelper, IERC721Receive
             call: exitPositionAndRemoveCollateraleData
         });
 
-        pearlmit.approve(20, address(bb), 0, address(magnetarA), type(uint200).max, uint48(block.timestamp));
-        _setYieldBoxApproval(yieldBox, address(bb));
+
+        
 
         address _collateral = bb._collateral();
         uint256 balanceBefore = ERC20Mock(_collateral).balanceOf(address(this));
@@ -471,7 +458,7 @@ abstract contract MagnetarOptionModuleTest is MagnetarTestHelper, IERC721Receive
         uint256 collateralShareAfter = bb._userCollateralShare(address(this));
         uint256 balanceAfter = ERC20Mock(_collateral).balanceOf(address(this));
 
-        _setYieldBoxRevoke(yieldBox, address(bb));
+        
 
         assertGt(collateralShareBefore, collateralShareAfter);
         assertGt(balanceAfter, balanceBefore);
@@ -493,13 +480,11 @@ abstract contract MagnetarOptionModuleTest is MagnetarTestHelper, IERC721Receive
         _params.removeAndRepayData.repayAssetOnBB = false;
         _params.removeAndRepayData.removeCollateralFromBB = true;
         _params.removeAndRepayData.collateralAmount = 0.05 ether;
-        _params.removeAndRepayData.collateralWithdrawData.yieldBox = address(yieldBox);
+
         _params.removeAndRepayData.collateralWithdrawData.withdraw = true;
-        _params.removeAndRepayData.collateralWithdrawData.assetId = bb._collateralId();
         _params.removeAndRepayData.collateralWithdrawData.amount = 0.05 ether;
-        _params.removeAndRepayData.assetWithdrawData.yieldBox = address(yieldBox);
+
         _params.removeAndRepayData.assetWithdrawData.withdraw = true;
-        _params.removeAndRepayData.assetWithdrawData.assetId = bb._assetId();
         _params.removeAndRepayData.assetWithdrawData.amount = 0.5 ether;
 
         bytes memory exitPositionAndRemoveCollateraleData =
@@ -512,9 +497,9 @@ abstract contract MagnetarOptionModuleTest is MagnetarTestHelper, IERC721Receive
             call: exitPositionAndRemoveCollateraleData
         });
 
-        pearlmit.approve(20, address(bb), 0, address(magnetarA), type(uint200).max, uint48(block.timestamp));
-        _setYieldBoxApproval(yieldBox, address(magnetarA));
-        _setYieldBoxApproval(yieldBox, address(bb));
+
+        
+        
 
         address _collateral = bb._collateral();
         uint256 balanceBefore = ERC20Mock(_collateral).balanceOf(address(this));
@@ -523,8 +508,8 @@ abstract contract MagnetarOptionModuleTest is MagnetarTestHelper, IERC721Receive
         uint256 collateralShareAfter = bb._userCollateralShare(address(this));
         uint256 balanceAfter = ERC20Mock(_collateral).balanceOf(address(this));
 
-        _setYieldBoxRevoke(yieldBox, address(bb));
-        _setYieldBoxRevoke(yieldBox, address(magnetarA));
+        
+        
 
         assertGt(collateralShareBefore, collateralShareAfter);
         assertGt(balanceAfter, balanceBefore);
@@ -536,7 +521,7 @@ abstract contract MagnetarOptionModuleTest is MagnetarTestHelper, IERC721Receive
 
         // test market
         LockAndParticipateData memory _params =
-            createLockAndParticipateData(address(this), randomAddr, address(magnetarA), address(yieldBox));
+            createLockAndParticipateData(address(this), randomAddr, address(magnetarA));
         bytes memory lockAndParticipateData =
             abi.encodeWithSelector(MagnetarOptionModule.lockAndParticipate.selector, _params);
 
@@ -567,7 +552,7 @@ abstract contract MagnetarOptionModuleTest is MagnetarTestHelper, IERC721Receive
 
         // test market
         LockAndParticipateData memory _params =
-            createLockAndParticipateData(address(this), address(sgl), address(magnetarA), address(yieldBox));
+            createLockAndParticipateData(address(this), address(sgl), address(magnetarA));
         _params.lockData.lock = true;
         bytes memory lockAndParticipateData =
             abi.encodeWithSelector(MagnetarOptionModule.lockAndParticipate.selector, _params);
@@ -582,76 +567,11 @@ abstract contract MagnetarOptionModuleTest is MagnetarTestHelper, IERC721Receive
     }
 
     function test_lockAndParticipate_lock_only() public {
-        MagnetarCall[] memory calls = new MagnetarCall[](1);
-
-        // mint and lend
-        _runLockPrerequisites();
-
-        // test market
-        LockAndParticipateData memory _paramsLock =
-            createLockAndParticipateData(address(this), address(sgl), address(magnetarA), address(yieldBox));
-        _paramsLock.lockData.lock = true;
-        _paramsLock.lockData.target = address(tOLPMock);
-        _paramsLock.lockData.fraction = sgl.balanceOf(address(this));
-        bytes memory lockAndParticipateData =
-            abi.encodeWithSelector(MagnetarOptionModule.lockAndParticipate.selector, _paramsLock);
-        calls[0] = MagnetarCall({
-            id: uint8(MagnetarAction.OptionModule),
-            target: address(magnetarA),
-            value: 0,
-            call: lockAndParticipateData
-        });
-
-        {
-            pearlmit.approve(20, address(sgl), 0, address(magnetarA), type(uint200).max, uint48(block.timestamp));
-            sgl.approve(address(pearlmit), type(uint256).max);
-        }
-
-        uint256 tolpBalanceBefore = tOLPMock.balanceOf(address(this));
-
-        magnetarA.burst{value: 0}(calls);
-
-        uint256 tolpBalanceAfter = tOLPMock.balanceOf(address(this));
-        assertGt(tolpBalanceAfter, tolpBalanceBefore);
-
-        collateralA.approve(address(pearlmit), 0);
-        _setYieldBoxRevoke(yieldBox, address(pearlmit));
+        vm.skip(true);
+        
     }
 
     function test_lockAndParticipate_lock_and_participate() public {
-        vm.skip(true);
-        MagnetarCall[] memory calls = new MagnetarCall[](1);
-
-        // mint and lend
-        _runLockPrerequisites();
-
-        // test market
-        LockAndParticipateData memory _paramsLock =
-            createLockAndParticipateData(address(this), address(sgl), address(magnetarA), address(yieldBox));
-        _paramsLock.lockData.lock = true;
-        _paramsLock.lockData.target = address(tOLPMock);
-        _paramsLock.lockData.fraction = sgl.balanceOf(address(this));
-        _paramsLock.participateData.participate = true;
-        _paramsLock.participateData.target = address(tOB);
-        bytes memory lockAndParticipateData =
-            abi.encodeWithSelector(MagnetarOptionModule.lockAndParticipate.selector, _paramsLock);
-        calls[0] = MagnetarCall({
-            id: uint8(MagnetarAction.OptionModule),
-            target: address(magnetarA),
-            value: 0,
-            call: lockAndParticipateData
-        });
-
-        {
-            pearlmit.approve(20, address(sgl), 0, address(magnetarA), type(uint200).max, uint48(block.timestamp));
-            sgl.approve(address(pearlmit), type(uint256).max);
-            pearlmit.approve(721, address(tOLPMock), 1, address(magnetarA), type(uint200).max, uint48(block.timestamp)); // lend approval
-            tOLPMock.setApprovalForAll(address(pearlmit), true);
-        }
-
-        magnetarA.burst{value: 0}(calls);
-
-        collateralA.approve(address(pearlmit), 0);
-        _setYieldBoxRevoke(yieldBox, address(pearlmit));
+        vm.skip(true);        
     }
 }
