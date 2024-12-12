@@ -8,12 +8,10 @@ import {IERC20, IStrictERC20} from "@boringcrypto/boring-solidity/contracts/libr
 import {Constants} from "./Constants.sol";
 
 // tapioca
-import {ERC20WithoutStrategy} from "yieldbox/strategies/ERC20WithoutStrategy.sol";
 
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
-import {IWrappedNative} from "yieldbox/interfaces/IWrappedNative.sol";
-import {YieldBoxURIBuilder} from "yieldbox/YieldBoxURIBuilder.sol";
-import {IYieldBox} from "yieldbox/interfaces/IYieldBox.sol";
+
+
 import {Cluster} from "tap-utils/Cluster/Cluster.sol";
 
 import {Penrose} from "tapioca-bar/Penrose.sol";

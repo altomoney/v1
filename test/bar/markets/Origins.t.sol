@@ -4,20 +4,18 @@ pragma solidity ^0.8.22;
 import {Origins} from "tapioca-bar/markets/origins/Origins.sol";
 import {Market} from "tapioca-bar/markets/Market.sol";
 
-import {ERC20WithoutStrategy} from "yieldbox/strategies/ERC20WithoutStrategy.sol";
 
 // import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@boringcrypto/boring-solidity/contracts/libraries/BoringERC20.sol";
 import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
-import {IWrappedNative} from "yieldbox/interfaces/IWrappedNative.sol";
 import {IOracle} from "tap-utils/oracle/interfaces/IOracle.sol";
 import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
-import {IYieldBox} from "yieldbox/interfaces/IYieldBox.sol";
-import {IStrategy} from "yieldbox/interfaces/IStrategy.sol";
 
-import {YieldBoxURIBuilder} from "yieldbox/YieldBoxURIBuilder.sol";
-import {TokenType} from "yieldbox/enums/YieldBoxTokenType.sol";
+
+
+
+
 
 
 import {Cluster} from "tap-utils/Cluster/Cluster.sol";
@@ -49,7 +47,7 @@ contract OriginsTest is UsdoTestHelper {
 
     Pearlmit pearlmit;
     Cluster cluster;
-    YieldBox yieldBox;
+    
     ERC20Mock tapOFT;
     ERC20Mock weth;
 
@@ -120,33 +118,23 @@ contract OriginsTest is UsdoTestHelper {
         setUpEndpoints(3, LibraryType.UltraLightNode);
 
         {
-            pearlmit = Pearlmit(report.pearlmit);
-            yieldBox = YieldBox(report.yieldbox);
             cluster = Cluster(report.cluster);
             magnetar = MagnetarMock(report.magnetar);
             penrose = Penrose(report.penrose);
 
             vm.label(address(endpoints[aEid]), "aEndpoint");
             vm.label(address(endpoints[bEid]), "bEndpoint");
-            vm.label(address(yieldBox), "YieldBox");
+            vm.label( "YieldBox");
             vm.label(address(cluster), "Cluster");
             vm.label(address(magnetar), "Magnetar");
             vm.label(address(pearlmit), "Pearlmit");
         }
 
-        {
-            ERC20WithoutStrategy assetStrategy = createYieldBoxEmptyStrategy(address(yieldBox), address(asset));
-            ERC20WithoutStrategy collateralStrategy =
-                createYieldBoxEmptyStrategy(address(yieldBox), address(collateral));
-            assetYieldBoxId = registerYieldBoxAsset(address(yieldBox), address(asset), address(assetStrategy));
-            collateralYieldBoxId =
-                registerYieldBoxAsset(address(yieldBox), address(collateral), address(collateralStrategy));
-        }
 
         oracle = createOracle();
         origins = createOrigins(
             address(this),
-            address(yieldBox),
+            
             address(asset),
             assetYieldBoxId,
             address(collateral),
@@ -164,13 +152,13 @@ contract OriginsTest is UsdoTestHelper {
 
     function depositAsset(uint256 amount) public {
         deal(address(asset), address(this), amount);
-        asset.approve(address(yieldBox), type(uint256).max);
+        asset.approve( type(uint256).max);
         yieldBox.setApprovalForAll(address(origins), true);
     }
 
     function depositCollateral(uint256 amount) public {
         deal(address(collateral), address(this), amount);
-        collateral.approve(address(yieldBox), type(uint256).max);
+        collateral.approve( type(uint256).max);
         yieldBox.setApprovalForAll(address(origins), true);
 
         uint256 share = yieldBox.toShare(collateralYieldBoxId, amount, false);
@@ -304,7 +292,7 @@ contract OriginsTest is UsdoTestHelper {
         uint256 collateralAmount = 1 ether;
 
         deal(address(collateral), address(this), collateralAmount);
-        collateral.approve(address(yieldBox), type(uint256).max);
+        collateral.approve( type(uint256).max);
         yieldBox.setApprovalForAll(address(origins), true);
 
         uint256 share = yieldBox.toShare(collateralYieldBoxId, collateralAmount, false);

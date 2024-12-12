@@ -9,9 +9,7 @@ import {StorageSlot} from "@openzeppelin/contracts/utils/StorageSlot.sol";
 import {
     ERC20PermitApprovalMsg,
     ERC721PermitApprovalMsg,
-    YieldBoxApproveAllMsg,
-    MarketPermitActionMsg,
-    YieldBoxApproveAssetMsg
+    MarketPermitActionMsg
 } from "src/tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
 import {IPermitBorrow} from "src/tap-utils/interfaces/common/IPermitBorrow.sol";
 import {TapiocaOmnichainEngineCodec} from "../TapiocaOmnichainEngineCodec.sol";
@@ -107,59 +105,12 @@ contract TapiocaOmnichainExtExec {
         try IPearlmit(pearlmit).permitBatchApprove(batchApprovals, keccak256(abi.encode(_srcChainSender))) {} catch {}
     }
 
-    /**
-     * @notice Approves YieldBox asset via permit.
-     * @param _data The call data containing info about the approvals.
-     *      - token::address: Address of the YieldBox to approve.
-     *      - owner::address: Address of the owner of the tokens.
-     *      - spender::address: Address of the spender.
-     *      - value::uint256: Amount of tokens to approve.
-     *      - deadline::uint256: Deadline for the approval.
-     *      - v::uint8: v value of the signature.
-     *      - r::bytes32: r value of the signature.
-     *      - s::bytes32: s value of the signature.
-     */
-    function yieldBoxPermitAsset(bytes memory _data) public payable {
-        YieldBoxApproveAssetMsg[] memory approvals =
-            TapiocaOmnichainEngineCodec.decodeArrayOfYieldBoxPermitAssetMsg(_data);
 
-        uint256 approvalsLength = approvals.length;
-        for (uint256 i = 0; i < approvalsLength;) {
-            _sanitizeTarget(approvals[i].target);
-            unchecked {
-                ++i;
-            }
-        }
-
-        _yieldBoxPermitApproveAsset(approvals);
-    }
-
-    /**
-     * @notice Approves all assets on YieldBox.
-     * @param _data The call data containing info about the approval.
-     *      - target::address: Address of the YieldBox contract.
-     *      - owner::address: Address of the owner of the tokens.
-     *      - spender::address: Address of the spender.
-     *      - deadline::uint256: Deadline for the approval.
-     *      - v::uint8: v value of the signature.
-     *      - r::bytes32: r value of the signature.
-     *      - s::bytes32: s value of the signature.
-     */
-    function yieldBoxPermitAll(bytes memory _data) public payable {
-        YieldBoxApproveAllMsg memory approval = TapiocaOmnichainEngineCodec.decodeYieldBoxApproveAllMsg(_data);
-        _sanitizeTarget(approval.target);
-
-        if (approval.permit) {
-            _yieldBoxPermitApproveAll(approval);
-        } else {
-            _yieldBoxPermitRevokeAll(approval);
-        }
-    }
 
     /**
      * @notice Approves Market lend/borrow via permit.
      * @param _data The call data containing info about the approval.
-     *      - token::address: Address of the YieldBox to approve.
+     *      - token::address: Address of the token to approve.
      *      - owner::address: Address of the owner of the tokens.
      *      - spender::address: Address of the spender.
      *      - value::uint256: Amount of tokens to approve.
@@ -179,65 +130,7 @@ contract TapiocaOmnichainExtExec {
         }
     }
 
-    // ********************** //
-    // ****** INTERNAL ****** //
-    // ********************** //
-
-    /**
-     * @notice Executes YieldBox setApprovalForAsset(true) operations.
-     * @dev similar to IERC20Permit
-     * @param _approvals The approvals message.
-     */
-    function _yieldBoxPermitApproveAsset(YieldBoxApproveAssetMsg[] memory _approvals) internal {
-        uint256 approvalsLength = _approvals.length;
-        for (uint256 i = 0; i < approvalsLength;) {
-            // @dev token is YieldBox
-            if (!_approvals[i].permit) {
-                try IPermit(_approvals[i].target).revoke(
-                    _approvals[i].owner,
-                    _approvals[i].spender,
-                    _approvals[i].assetId,
-                    _approvals[i].deadline,
-                    _approvals[i].v,
-                    _approvals[i].r,
-                    _approvals[i].s
-                ) {} catch {}
-            } else {
-                try IPermit(_approvals[i].target).permit(
-                    _approvals[i].owner,
-                    _approvals[i].spender,
-                    _approvals[i].assetId,
-                    _approvals[i].deadline,
-                    _approvals[i].v,
-                    _approvals[i].r,
-                    _approvals[i].s
-                ) {} catch {}
-            }
-            unchecked {
-                ++i;
-            }
-        }
-    }
-
-    /**
-     * @notice Executes YieldBox setApprovalForAll(true) operation.
-     * @param _approval The approval message.
-     */
-    function _yieldBoxPermitApproveAll(YieldBoxApproveAllMsg memory _approval) internal {
-        try IPermitAll(_approval.target).permitAll(
-            _approval.owner, _approval.spender, _approval.deadline, _approval.v, _approval.r, _approval.s
-        ) {} catch {}
-    }
-
-    /**
-     * @notice Executes YieldBox setApprovalForAll(false) operation.
-     * @param _approval The approval message.
-     */
-    function _yieldBoxPermitRevokeAll(YieldBoxApproveAllMsg memory _approval) internal {
-        try IPermitAll(_approval.target).revokeAll(
-            _approval.owner, _approval.spender, _approval.deadline, _approval.v, _approval.r, _approval.s
-        ) {} catch {}
-    }
+   
 
     /**
      * @notice Executes SGL/BB permitLend operation.

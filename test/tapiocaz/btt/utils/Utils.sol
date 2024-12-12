@@ -8,9 +8,8 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Constants} from "./Constants.sol";
 
 // Tapioca
-import {IWrappedNative} from "yieldbox/interfaces/IWrappedNative.sol";
 
-import {YieldBoxURIBuilder} from "yieldbox/YieldBoxURIBuilder.sol";
+
 import {Cluster} from "tap-utils/Cluster/Cluster.sol";
 
 
@@ -61,12 +60,6 @@ abstract contract Utils is Test, Constants {
         return cluster;
     }
 
-    // Creates real YieldBox
-    function _createYieldBox(address _owner, Pearlmit _pearlmit) internal returns (YieldBox) {
-        YieldBoxURIBuilder uriBuilder = new YieldBoxURIBuilder();
-        YieldBox yieldBox = new YieldBox(IWrappedNative(address(0)), uriBuilder, _pearlmit, _owner);
-        return yieldBox;
-    }
 
     // ************************ //
     // *** APPROVAL HELPERS *** //

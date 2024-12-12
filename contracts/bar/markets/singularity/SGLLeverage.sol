@@ -110,7 +110,7 @@ contract SGLLeverage is SGLLendingCommon {
 
     /// @notice Lever down: Sell collateral to repay debt; excess goes to YB
     /// @param from The user who sells
-    /// @param share Collateral YieldBox-shares to sell
+    /// @param share Collateral  to sell
     /// @param data LeverageExecutor data
     /// @return amountOut Actual asset amount received in the sale
     function sellCollateral(address from, uint256 share, bytes calldata data)

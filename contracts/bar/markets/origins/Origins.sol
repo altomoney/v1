@@ -155,7 +155,7 @@ contract Origins is Ownable, Market, MarketStateView, ReentrancyGuard {
     // *** PUBLIC FUNCTIONS *** //
     // ************************ //
     /// @notice Adds `collateral`
-    /// False if tokens from msg.sender in `yieldBox` should be transferred.
+    /// False if tokens from msg.sender  should be transferred.
     /// @param amount The amount to add for `msg.sender`.
     /// @param share The amount of shares to add for `msg.sender`.
     function addCollateral(uint256 amount, uint256 share) external optionNotPaused(PauseType.AddCollateral) {

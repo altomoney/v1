@@ -137,7 +137,7 @@ contract MarketHelper {
 
     /// @notice transforms amount to shares for a market's permit operation
     /// @param amount the amount to transform
-    /// @param tokenId the YieldBox asset id
+    /// @param tokenId the 
     /// @return share amount transformed into shares
     function computeAllowedLendShare(address sglAddress, uint256 amount, uint256 tokenId)
         external
@@ -202,7 +202,7 @@ contract MarketHelper {
     /// @param from Account to transfer shares from.
     /// @param to The receiver of the tokens.
     /// @param skim True if the amount should be skimmed from the deposit balance of msg.sender.
-    /// False if tokens from msg.sender in `yieldBox` should be transferred.
+    /// False if tokens from msg.sender  should be transferred.
     /// @param share The amount of shares to add for `to`.
     function addCollateral(address from, address to, bool skim, uint256 amount, uint256 share)
         external
@@ -254,7 +254,7 @@ contract MarketHelper {
     /// @param from Address to repay from.
     /// @param to Address of the user this payment should go.
     /// @param skim True if the amount should be skimmed from the deposit balance of msg.sender.
-    /// False if tokens from msg.sender in `yieldBox` should be transferred.
+    /// False if tokens from msg.sender  should be transferred.
     /// @param part The amount to repay. See `userBorrowPart`.
     function repay(address from, address to, bool skim, uint256 part)
         external
@@ -274,7 +274,7 @@ contract MarketHelper {
 
     /// @notice Lever down: Sell collateral to repay debt; excess goes to YB
     /// @param from The user who sells
-    /// @param share Collateral YieldBox-shares to sell
+    /// @param share Collateral  to sell
     /// @param data LeverageExecutor data
     function sellCollateral(address from, uint256 share, bytes calldata data)
         external

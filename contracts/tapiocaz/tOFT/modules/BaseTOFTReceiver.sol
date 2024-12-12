@@ -14,9 +14,7 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.
 // Tapioca
 import {ITOFT, TOFTInitStruct} from "tap-utils/interfaces/oft/ITOFT.sol";
 import {
-    YieldBoxApproveAllMsg,
-    MarketPermitActionMsg,
-    YieldBoxApproveAssetMsg
+    MarketPermitActionMsg
 } from "tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
 import {TapiocaOmnichainReceiver} from "tap-utils/tapiocaOmnichainEngine/TapiocaOmnichainReceiver.sol";
 import {TOFTGenericReceiverModule} from "./TOFTGenericReceiverModule.sol";

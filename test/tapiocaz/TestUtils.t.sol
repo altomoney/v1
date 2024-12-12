@@ -4,8 +4,7 @@ pragma solidity ^0.8.22;
 
 // Tapioca
 import {
-    YieldBoxApproveAllMsg,
-    YieldBoxApproveAssetMsg,
+
     MarketPermitActionMsg
 } from "tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
 import {ERC20PermitApprovalMsg, ERC20PermitStruct} from "tap-utils/interfaces/oft/ITOFT.sol";

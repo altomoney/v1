@@ -10,13 +10,11 @@ import {TestHelper} from "./LZSetup/TestHelper.sol";
 
 // Tapioca
 import {TOFTInitStruct, TOFTModulesInitStruct} from "tap-utils/interfaces/oft/ITOFT.sol";
-import {ERC20WithoutStrategy} from "yieldbox/strategies/ERC20WithoutStrategy.sol";
 
-import {IWrappedNative} from "yieldbox/interfaces/IWrappedNative.sol";
-import {YieldBoxURIBuilder} from "yieldbox/YieldBoxURIBuilder.sol";
-import {TokenType} from "yieldbox/enums/YieldBoxTokenType.sol";
-import {IYieldBox} from "yieldbox/interfaces/IYieldBox.sol";
-import {IStrategy} from "yieldbox/interfaces/IStrategy.sol";
+
+
+
+
 import {Cluster} from "tap-utils/Cluster/Cluster.sol";
 import {SingularityMock} from "./SingularityMock.sol";
 import {MagnetarMock} from "./MagnetarMock.sol";
@@ -39,23 +37,11 @@ contract TOFTTestHelper is TestHelper, TestUtils {
         return new SingularityMock(_yieldBox, _collateralId, _assetId, _collateral, _asset);
     }
 
-    function createYieldBoxEmptyStrategy(address _yieldBox, address _erc20) public returns (ERC20WithoutStrategy) {
-        return new ERC20WithoutStrategy(IYieldBox(_yieldBox), IERC20(_erc20));
-    }
-
-    function registerYieldBoxAsset(address _yieldBox, address _token, address _strategy) public returns (uint256) {
-        return YieldBox(_yieldBox).registerAsset(TokenType.ERC20, _token, IStrategy(_strategy), 0);
-    }
 
     function createMagnetar(address cluster, IPearlmit pearlmit) public returns (MagnetarMock) {
         return new MagnetarMock(cluster, pearlmit);
     }
 
-    function createYieldBox(Pearlmit pearlmit, address owner) public returns (YieldBox) {
-        YieldBoxURIBuilder uriBuilder = new YieldBoxURIBuilder();
-
-        return new YieldBox(IWrappedNative(address(0)), uriBuilder, pearlmit, owner);
-    }
 
     function createCluster(uint32 hostEid, address owner) public returns (Cluster) {
         return new Cluster(hostEid, owner);

@@ -44,7 +44,7 @@ abstract contract Base_Test is TestHelper, Utils, Types, Events {
     uint256 public initialBalance = LARGE_AMOUNT;
 
     // common general storage
-    YieldBox yieldBox;
+    
     Pearlmit pearlmit;
     Cluster cluster;
 
@@ -108,7 +108,7 @@ abstract contract Base_Test is TestHelper, Utils, Types, Events {
         // create real Pearlmit
         pearlmit = _createPearlmit(address(this));
         // create real YieldBox
-        yieldBox = _createYieldBox(address(this), pearlmit);
+
 
         // creat TOFT underlyingErc20
         TOFTInitStruct memory toftInitStruct = _createOftInitStruct(address(underlyingErc20), aEid);
@@ -313,7 +313,6 @@ abstract contract Base_Test is TestHelper, Utils, Types, Events {
         _approveViaPearlmit({
             tokenType: _type,
             token: _token,
-            pearlmit: IPearlmit(address(pearlmit)),
             from: _from,
             operator: _operator,
             amount: _amount,
@@ -380,13 +379,13 @@ abstract contract Base_Test is TestHelper, Utils, Types, Events {
             symbol: _underlyingToken == address(0) ? "NATIVE" : IERC20Metadata(_underlyingToken).symbol(),
             endpoint: address(endpoints[_endpoint]),
             delegate: address(this),
-            yieldBox: address(yieldBox),
+            
             cluster: address(cluster),
             erc20: _underlyingToken,
             vault: address(_vault),
             hostEid: _endpoint,
-            extExec: address(_extExec),
-            pearlmit: IPearlmit(address(pearlmit))
+            extExec: address(_extExec)
+            
         });
     }
 

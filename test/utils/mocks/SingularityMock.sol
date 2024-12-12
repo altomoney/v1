@@ -2,7 +2,6 @@
 pragma solidity ^0.8.22;
 
 // External
-import {IYieldBox} from "src/tap-utils/interfaces/yieldbox/IYieldBox.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
@@ -12,7 +11,6 @@ import {Module} from "src/tap-utils/interfaces/bar/IMarket.sol";
 contract SingularityMock is EIP712 {
     using SafeERC20 for IERC20;
 
-    IYieldBox public _yieldBox;
     uint256 public _collateralId;
     uint256 public _assetId;
     IERC20 public _collateral;
@@ -47,7 +45,7 @@ contract SingularityMock is EIP712 {
     constructor(address yieldBox, uint256 collateralId, uint256 assetId, address collateral, address asset)
         EIP712("Tapioca Singularity", "1")
     {
-        _yieldBox = IYieldBox(yieldBox);
+
         _collateralId = collateralId;
         _assetId = assetId;
         _collateral = IERC20(collateral);

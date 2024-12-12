@@ -4,7 +4,7 @@ pragma solidity ^0.8.22;
 import {TapiocaMagnetarBatchOne} from "./batches/TapiocaMagnetarBatchOne.sol";
 import {TapiocaMagnetarBatchTwo} from "./batches/TapiocaMagnetarBatchTwo.sol";
 import {TapiocaUtilitiesBatch} from "./batches/TapiocaUtilitiesBatch.sol";
-import {TapiocaYieldboxBatch} from "./batches/TapiocaYieldboxBatch.sol";
+import {TapiocaExtExBatch} from "./batches/TapiocaExtExBatch.sol";
 import {TapiocaUsdoBatchOne} from "./batches/TapiocaUsdoBatchOne.sol";
 import {TapiocaUsdoBatchTwo} from "./batches/TapiocaUsdoBatchTwo.sol";
 import {TapiocaUsdoBatchThree} from "./batches/TapiocaUsdoBatchThree.sol";
@@ -35,7 +35,7 @@ library TapiocaRelease {
         TapiocaUtilitiesBatch utilitiesBatch;
         (utilitiesBatch, reports.utilitiesReport) = _deployUtilities(input.owner, input.zeroXSwapper, input.lzChainId);
 
-        reports.ExtExReport = _deployYieldBox(
+        reports.ExtExReport = _deployExtEx(
             input.owner,
             input.wrappedNativeToken,
             reports.utilitiesReport.pearlmit,
@@ -59,7 +59,6 @@ library TapiocaRelease {
         (reports.usdoModulesReport, reports.usdoMarketModulesReport, reports.usdoReport) = _deployUSDO(
             input.lzEndpoint,
             input.owner, // delegate
-            reports.ExtExReport.yieldbox,
             reports.utilitiesReport.cluster,
             reports.ExtExReport.extExec,
             reports.utilitiesReport.pearlmit
@@ -70,7 +69,6 @@ library TapiocaRelease {
         reports.bbReport =
             _deployBigBangModules(input.lzEndpoint, input.lzChainId, reports.utilitiesReport.tapiocaMulticall);
         reports.penroseReport = _deployPenrose(
-            reports.ExtExReport.yieldbox,
             reports.utilitiesReport.cluster,
             input.tapToken,
             reports.usdoReport.usdo,
@@ -85,7 +83,6 @@ library TapiocaRelease {
         utilitiesBatch.initializeCluster(
             reports.utilitiesReport.cluster,
             reports.utilitiesReport.zeroXSwapper,
-            reports.ExtExReport.yieldbox,
             reports.magnetarReport.magnetar,
             reports.penroseReport.penrose,
             reports.utilitiesReport.pauser,
@@ -134,20 +131,17 @@ library TapiocaRelease {
         return (utilitiesBatch, utilitiesBatch.getUtilitiesReport());
     }
 
-    function _deployYieldBox(
+    function _deployExtEx(
         address owner,
         address wrappedNativeToken,
-        address pearlmit,
         address cluster,
         address swapper
     ) private returns (ExtExReport memory report) {
-        TapiocaYieldboxBatch yieldboxBatch =
-            new TapiocaYieldboxBatch(owner, wrappedNativeToken, pearlmit, cluster, swapper);
-        return yieldboxBatch.getExtExReport();
+        TapiocaExtExBatch extExBatch = new TapiocaExtExBatch(owner, wrappedNativeToken, cluster, swapper);
+        return extExBatch.getExtExReport();
     }
 
     function _deployPenrose(
-        address yieldbox,
         address cluster,
         address tapToken,
         address usdoToken,
@@ -160,7 +154,6 @@ library TapiocaRelease {
     ) private returns (PenroseReport memory report) {
         TapiocaPenroseBatch penroseBatch = new TapiocaPenroseBatch(
             IPenroseInput(
-                yieldbox,
                 cluster,
                 tapToken,
                 usdoToken,
@@ -189,10 +182,8 @@ library TapiocaRelease {
     function _deployUSDO(
         address endpoint,
         address delegate,
-        address yieldbox,
         address cluster,
-        address extExec,
-        address pearlmit
+        address extExec
     )
         private
         returns (
@@ -202,19 +193,17 @@ library TapiocaRelease {
         )
     {
         TapiocaUsdoBatchOne usdoBatchOne =
-            new TapiocaUsdoBatchOne(endpoint, delegate, yieldbox, cluster, extExec, pearlmit);
+            new TapiocaUsdoBatchOne(endpoint, delegate, cluster, extExec);
         modulesReport = usdoBatchOne.getUsdoModulesReport();
 
         TapiocaUsdoBatchTwo usdoBatchTwo =
-            new TapiocaUsdoBatchTwo(endpoint, delegate, yieldbox, cluster, extExec, pearlmit);
+            new TapiocaUsdoBatchTwo(endpoint, delegate, cluster, extExec);
         marketModulesReport = usdoBatchTwo.getUsdoMarketModulesReport();
         TapiocaUsdoBatchThree usdoBatchThree = new TapiocaUsdoBatchThree(
             endpoint,
             delegate,
-            yieldbox,
             cluster,
             extExec,
-            pearlmit,
             modulesReport.usdoSenderModule,
             modulesReport.usdoReceiverModule,
             marketModulesReport.marketReceiverModule,

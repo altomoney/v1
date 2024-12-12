@@ -25,7 +25,7 @@ contract BBCollateral is BBLendingCommon {
     /// @param from Account to transfer shares from.
     /// @param to The receiver of the tokens.
     /// @param skim True if the amount should be skimmed from the deposit balance of msg.sender.
-    /// False if tokens from msg.sender in `yieldBox` should be transferred.
+    /// False if tokens from msg.sender  should be transferred.
     /// @param amount The amount to add for `to`.
     /// @param share The amount of shares to add for `to`.
     function addCollateral(address from, address to, bool skim, uint256 amount, uint256 share)

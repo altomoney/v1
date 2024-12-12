@@ -50,11 +50,11 @@ contract Origins_repay is Origins_Unit_Shared {
     function _addToYieldBox(address _org, address _asset, uint256 _assetId, uint256 _amount) private {
         deal(_asset, address(this), _amount);
 
-        usdo.approve(address(yieldBox), type(uint256).max);
+        usdo.approve( type(uint256).max);
         usdo.approve(address(pearlmit), type(uint256).max);
         yieldBox.setApprovalForAll(_org, true);
         yieldBox.setApprovalForAll(address(pearlmit), true);
-        pearlmit.approve(1155, address(yieldBox), _assetId, _org, type(uint200).max, uint48(block.timestamp));
+        pearlmit.approve(1155,  _assetId, _org, type(uint200).max, uint48(block.timestamp));
         yieldBox.depositAsset(_assetId, address(this), address(this), _amount, 0);
 
         usdo.setMinterStatus(address(this), true);
@@ -64,7 +64,7 @@ contract Origins_repay is Origins_Unit_Shared {
     function _addCollateral(Origins org) private {
         uint256 amount = 1 ether;
         deal(address(org._collateral()), address(this), amount);
-        mainToken.approve(address(yieldBox), type(uint256).max);
+        mainToken.approve( type(uint256).max);
         yieldBox.setApprovalForAll(address(org), true);
 
         uint256 share = yieldBox.toShare(org._collateralId(), amount, false);

@@ -5,7 +5,7 @@ import "tapiocaz/tOFT/TOFT.sol";
 import "tapiocaz/tOFT/mTOFT.sol";
 import "tapiocaz/tOFT/TOFTVault.sol";
 import {mTOFTReceiver} from "tapiocaz/tOFT/modules/mTOFTReceiver.sol";
-import {ERC20Mock} from "yieldbox/mocks/ERC20Mock.sol";
+import {ERC20Mock} from "tap-token/mocks/ERC20Mock.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
@@ -16,8 +16,6 @@ contract TOFTFactory is Ownable {
     address immutable CLUSTER;
     address immutable ENDPOINT;
     address immutable EXT_EXEC;
-    address immutable PEARLMIT;
-    address immutable YIELD_BOX;
     address immutable DELEGATE;
     uint256 immutable HOST_EID;
 
@@ -32,8 +30,6 @@ contract TOFTFactory is Ownable {
         address endpoint;
         uint256 hostEid;
         address extExec;
-        address pearlmit;
-        address yieldbox;
         address tOFTSenderModule;
         address tOFTReceiverModule;
         address marketReceiverModule;
@@ -47,8 +43,6 @@ contract TOFTFactory is Ownable {
         CLUSTER = params.cluster;
         ENDPOINT = params.endpoint;
         EXT_EXEC = params.extExec;
-        PEARLMIT = params.pearlmit;
-        YIELD_BOX = params.yieldbox;
         DELEGATE = params.delegate;
         HOST_EID = params.hostEid;
         TOFT_SENDER_MODULE = params.tOFTSenderModule;
@@ -72,13 +66,13 @@ contract TOFTFactory is Ownable {
             symbol: symbol,
             endpoint: ENDPOINT,
             delegate: DELEGATE,
-            yieldBox: YIELD_BOX,
+            
             cluster: CLUSTER,
             erc20: erc20Token,
             vault: address(vault),
             hostEid: HOST_EID,
-            extExec: EXT_EXEC,
-            pearlmit: IPearlmit(PEARLMIT)
+            extExec: EXT_EXEC
+            
         });
         TOFTModulesInitStruct memory toftModulesInitStruct = TOFTModulesInitStruct({
             tOFTSenderModule: TOFT_SENDER_MODULE,

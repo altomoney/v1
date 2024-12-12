@@ -57,7 +57,7 @@ contract MagnetarMintModule is MagnetarBaseModule {
      * @param data.user the user to perform the operation for
      * @param data.lendAmount the amount to lend on SGL
      * @param data.mintData the data needed to mint on BB
-     * @param data.depositData the data needed for asset deposit on YieldBox
+     * @param data.depositData the data needed for asset deposit
      * @param data.lockData the data needed to lock on TapiocaOptionLiquidityProvision
      * @param data.participateData the data needed to perform a participate operation on TapiocaOptionsBroker
      * @param data.externalContracts the contracts' addresses used in all the operations performed by the helper
@@ -82,14 +82,13 @@ contract MagnetarMintModule is MagnetarBaseModule {
         /**
          * @dev if `depositData.deposit`:
          *          - deposit SGL asset to YB for `data.user`
-         *      Note: if mint (first step), assets are already in YieldBox
          */
         if (data.depositData.deposit) {
             IMarket _singularity = IMarket(data.externalContracts.singularity);
 
-            address assetAddress = _market._collateral();
+            address assetAddress = _singularity._collateral();
 
-            data.depositData.amount = _extractTokens(data.user, sglAssetAddress, data.depositData.amount);
+            data.depositData.amount = _extractTokens(data.user, assetAddress, data.depositData.amount);
             _depositToMarket(_singularity, data.user, data.depositData.amount);
         }
 
@@ -148,7 +147,7 @@ contract MagnetarMintModule is MagnetarBaseModule {
         uint256 _share = _bigBang.convertToShares(data.mintData.collateralDepositData.amount);
 
         /**
-         * @dev try deposit to YieldBox
+         * @dev try deposit 
          */
         if (data.mintData.collateralDepositData.deposit) {
             address bbCollateralAddress = _bigBang._collateral();
@@ -159,7 +158,7 @@ contract MagnetarMintModule is MagnetarBaseModule {
 
         /**
          * @dev try to add collateral
-         *      `data.mintData.collateralDepositData.deposit` might be false and YieldBox deposit is skipped, but
+         *      `data.mintData.collateralDepositData.deposit` might be false and deposit is skipped, but
          *          `data.mintData.collateralDepositData.amount` can be > 0, which assumes that an `.addCollateral` operation is performed
          */
         if (data.mintData.collateralDepositData.amount > 0) {
@@ -189,7 +188,6 @@ contract MagnetarMintModule is MagnetarBaseModule {
         /*
         LockParams memory params;
         params.singularity = IMarket(data.externalContracts.singularity);
-        params.yieldBox = IYieldBox(params.singularity._yieldBox());
         params.participate = participate;
 
         // use requested value
@@ -226,10 +224,8 @@ contract MagnetarMintModule is MagnetarBaseModule {
         ITapiocaOptionLiquidityProvision tOLP = ITapiocaOptionLiquidityProvision(data.lockData.target);
 
         // deposit YB and revoke approval
-        (, uint256 obtainedShares) = _depositToYb(params.yieldBox, address(this), params.tOLPSglAssetId, wrapped);
         IERC20(address(params.singularity)).approve(address(pearlmit), 0);
         data.lockData.amount = obtainedShares.toUint128();
-        _pearlmitApprove(address(params.yieldBox), params.tOLPSglAssetId, address(tOLP), data.lockData.amount);
         return tOLP.lock(
             params.participate ? address(this) : data.user,
             data.lockData.tAsset,

@@ -11,7 +11,6 @@ import {BBDebtRateHelper} from "tapioca-bar/markets/bigBang/BBDebtRateHelper.sol
 import {MarketHelper} from "tapioca-bar/markets/MarketHelper.sol";
 import {Market} from "tapioca-bar/markets/Market.sol";
 
-import {ERC20WithoutStrategy} from "yieldbox/strategies/ERC20WithoutStrategy.sol";
 import {MagnetarHelper} from "tap-utils/Magnetar/MagnetarHelper.sol";
 
 // import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -24,15 +23,14 @@ import {ISingularity} from "tap-utils/interfaces/bar/ISingularity.sol";
 import {IBigBang} from "tap-utils/interfaces/bar/IBigBang.sol";
 import {IMarket, Module} from "tap-utils/interfaces/bar/IMarket.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
-import {IWrappedNative} from "yieldbox/interfaces/IWrappedNative.sol";
 import {ITWTAPv2} from "tap-token/interfaces/ITWTAPv2.sol";
 import {IOracle} from "tap-utils/oracle/interfaces/IOracle.sol";
 import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
-import {IYieldBox} from "yieldbox/interfaces/IYieldBox.sol";
-import {IStrategy} from "yieldbox/interfaces/IStrategy.sol";
 
-import {YieldBoxURIBuilder} from "yieldbox/YieldBoxURIBuilder.sol";
-import {TokenType} from "yieldbox/enums/YieldBoxTokenType.sol";
+
+
+
+
 
 
 import {Cluster} from "tap-utils/Cluster/Cluster.sol";
@@ -61,7 +59,7 @@ contract BigBangTest is UsdoTestHelper {
 
     Pearlmit pearlmit;
     Cluster cluster;
-    YieldBox yieldBox;
+    
     ERC20Mock tapOFT;
     ERC20Mock weth;
 
@@ -134,7 +132,7 @@ contract BigBangTest is UsdoTestHelper {
 
             vm.label(address(endpoints[aEid]), "aEndpoint");
             vm.label(address(endpoints[bEid]), "bEndpoint");
-            vm.label(address(yieldBox), "YieldBox");
+            vm.label( "YieldBox");
             vm.label(address(cluster), "Cluster");
             vm.label(address(magnetar), "Magnetar");
             vm.label(address(pearlmit), "Pearlmit");
@@ -142,18 +140,14 @@ contract BigBangTest is UsdoTestHelper {
         }
 
         // {
-        //     ERC20WithoutStrategy collateralStrategy =
-        //         createYieldBoxEmptyStrategy(address(yieldBox), address(collateral));
-        //     collateralYieldBoxId =
-        //         registerYieldBoxAsset(address(yieldBox), address(collateral), address(collateralStrategy));
         // }
 
         swapper = createSwapper(yieldBox);
         leverageExecutor =
-            createLeverageExecutor(address(yieldBox), address(swapper), address(cluster), address(pearlmit));
+            createLeverageExecutor( address(swapper), address(cluster), address(pearlmit));
         (penrose,) = createPenrose(
             TestPenroseData(
-                address(yieldBox),
+                
                 address(cluster),
                 address(tapOFT),
                 address(collateral),
@@ -165,8 +159,8 @@ contract BigBangTest is UsdoTestHelper {
         masterContract = new BigBang();
         penrose.registerBigBangMasterContract(address(masterContract), IPenrose.ContractType.mediumRisk);
 
-        address usdoStrat = address(createYieldBoxEmptyStrategy(address(yieldBox), address(asset)));
-        uint256 usdoAssetId = registerYieldBoxAsset(address(yieldBox), address(asset), usdoStrat);
+        address usdoStrat = address(createYieldBoxEmptyStrategy( address(asset)));
+        uint256 usdoAssetId = registerYieldBoxAsset( address(asset), usdoStrat);
         penrose.setUsdoToken(address(asset), usdoAssetId);
 
         collateralYieldBoxId = penrose.mainAssetId();
@@ -205,23 +199,23 @@ contract BigBangTest is UsdoTestHelper {
 
     function depositAsset(uint256 amount) public {
         deal(address(asset), address(this), amount);
-        asset.approve(address(yieldBox), type(uint256).max);
+        asset.approve( type(uint256).max);
         asset.approve(address(pearlmit), type(uint256).max);
         yieldBox.setApprovalForAll(address(bigBang), true);
         yieldBox.setApprovalForAll(address(pearlmit), true);
         pearlmit.approve(
-            1155, address(yieldBox), assetYieldBoxId, address(bigBang), type(uint200).max, uint48(block.timestamp)
+            1155,  assetYieldBoxId, address(bigBang), type(uint200).max, uint48(block.timestamp)
         );
     }
 
     function depositCollateral(uint256 amount) public {
         deal(address(collateral), address(this), amount);
-        collateral.approve(address(yieldBox), type(uint256).max);
+        collateral.approve( type(uint256).max);
         collateral.approve(address(pearlmit), type(uint256).max);
         yieldBox.setApprovalForAll(address(bigBang), true);
         yieldBox.setApprovalForAll(address(pearlmit), true);
         pearlmit.approve(
-            1155, address(yieldBox), collateralYieldBoxId, address(bigBang), type(uint200).max, uint48(block.timestamp)
+            1155,  collateralYieldBoxId, address(bigBang), type(uint200).max, uint48(block.timestamp)
         );
 
         uint256 share = bigBang.convertToShares(amount);
@@ -241,7 +235,7 @@ contract BigBangTest is UsdoTestHelper {
 
     function repay(uint256 part) public {
         pearlmit.approve(
-            1155, address(yieldBox), assetYieldBoxId, address(bigBang), type(uint200).max, uint48(block.timestamp)
+            1155,  assetYieldBoxId, address(bigBang), type(uint200).max, uint48(block.timestamp)
         );
         (Module[] memory modules, bytes[] memory calls) = marketHelper.repay(address(this), address(this), false, part);
         bigBang.execute(modules, calls, true);
@@ -718,12 +712,12 @@ contract BigBangTest is UsdoTestHelper {
         assertGt(borrowPart, 0);
 
         vm.startPrank(userA);
-        asset.approve(address(yieldBox), type(uint256).max);
+        asset.approve( type(uint256).max);
         asset.approve(address(pearlmit), type(uint256).max);
         yieldBox.setApprovalForAll(address(bigBang), true);
         yieldBox.setApprovalForAll(address(pearlmit), true);
         pearlmit.approve(
-            1155, address(yieldBox), assetYieldBoxId, address(bigBang), type(uint200).max, uint48(block.timestamp)
+            1155,  assetYieldBoxId, address(bigBang), type(uint200).max, uint48(block.timestamp)
         );
 
         vm.stopPrank();

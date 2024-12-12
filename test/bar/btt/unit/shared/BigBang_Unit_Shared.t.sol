@@ -18,7 +18,6 @@ import {BBLeverage} from "tapioca-bar/markets/bigBang/BBLeverage.sol";
 import {BBBorrow} from "tapioca-bar/markets/bigBang/BBBorrow.sol";
 import {BigBang} from "tapioca-bar/markets/bigBang/BigBang.sol";
 import {Market} from "tapioca-bar/markets/Market.sol";
-import {YieldBox} from "../../../../../contracts/yieldbox/YieldBox.sol";
 
 import {Module} from "tap-utils/interfaces/bar/IMarket.sol";
 

@@ -6,7 +6,7 @@ import "forge-std/console2.sol";
 import {TapiocaMagnetarBatchOne} from "deployments/releases/tapioca-v1/batches/TapiocaMagnetarBatchOne.sol";
 import {TapiocaMagnetarBatchTwo} from "deployments/releases/tapioca-v1/batches/TapiocaMagnetarBatchTwo.sol";
 import {TapiocaUtilitiesBatch} from "deployments/releases/tapioca-v1/batches/TapiocaUtilitiesBatch.sol";
-import {TapiocaYieldboxBatch} from "deployments/releases/tapioca-v1/batches/TapiocaYieldboxBatch.sol";
+import {TapiocaExtExBatch} from "deployments/releases/tapioca-v1/batches/TapiocaExtExBatch.sol";
 import {TapiocaUsdoBatchOne} from "deployments/releases/tapioca-v1/batches/TapiocaUsdoBatchOne.sol";
 import {TapiocaUsdoBatchTwo} from "deployments/releases/tapioca-v1/batches/TapiocaUsdoBatchTwo.sol";
 import {TapiocaUsdoBatchThree} from "deployments/releases/tapioca-v1/batches/TapiocaUsdoBatchThree.sol";
@@ -25,10 +25,7 @@ import "deployments/interfaces/ITapiocaReport.sol";
 import {LZEndpointMock} from "tapioca-mocks/LZEndpointMock.sol";
 import {TapiocaOmnichainExtExec} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainExtExec.sol";
 import {TapiocaPenroseBatch} from "deployments/releases/tapioca-v1/batches/TapiocaPenroseBatch.sol";
-import {YieldBox} from "tap-yieldbox/YieldBox.sol";
-import "tap-yieldbox/YieldBoxURIBuilder.sol";
 
-import "tap-yieldbox/interfaces/IWrappedNative.sol";
 import {ERC20Mock} from "../bar/mocks/ERC20Mock.sol";
 
 // @dev forge test --match-path test/deployments/ProcedureLimits.t.sol
@@ -60,9 +57,6 @@ contract DeploymentProceduresLimits is Test {
             new TapiocaUsdoBatchTwo(endpointMock, delegate, address(0), address(0), address(0), address(0))
         ).getUsdoMarketModulesReport();
 
-        yieldboxMock = address(
-            new YieldBox(IWrappedNative(address(1)), new YieldBoxURIBuilder(), Pearlmit(address(3)), address(4))
-        );
 
         erc20Mock1 = address(new ERC20Mock("A", "A"));
         erc20Mock2 = address(new ERC20Mock("B", "B"));

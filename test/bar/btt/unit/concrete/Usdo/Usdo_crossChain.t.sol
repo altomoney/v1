@@ -14,8 +14,7 @@ import {UsdoMarketReceiverModule} from "tapioca-bar/usdo/modules/UsdoMarketRecei
 import {
     MarketLendOrRepayMsg,
     MarketRemoveAssetMsg,
-    YieldBoxApproveAllMsg,
-    YieldBoxApproveAssetMsg,
+
     MarketPermitActionMsg
 } from "tap-utils/interfaces/oft/IUsdo.sol";
 
@@ -54,13 +53,13 @@ abstract contract Usdo_crossChain is Usdo_Unit_Shared, BigBang_Unit_Shared, Sing
         override(BigBang_Unit_Shared, Singularity_Unit_Shared)
         resetPrank(txExecutor)
     {
-        _approveViaERC20(mainBB._collateral(), txExecutor, address(yieldBox), type(uint256).max);
+        _approveViaERC20(mainBB._collateral(), txExecutor,  type(uint256).max);
         _approveViaERC20(mainBB._collateral(), txExecutor, address(pearlmit), type(uint256).max);
         _approveYieldBoxForAll(yieldBox, txExecutor, address(mainBB));
         _approveYieldBoxForAll(yieldBox, txExecutor, address(pearlmit));
         _approveViaPearlmit(
             TOKEN_TYPE_ERC1155,
-            address(yieldBox),
+            
             IPearlmit(address(pearlmit)),
             txExecutor,
             address(mainBB),
@@ -69,13 +68,13 @@ abstract contract Usdo_crossChain is Usdo_Unit_Shared, BigBang_Unit_Shared, Sing
             mainBB._collateralId()
         );
 
-        _approveViaERC20(secondaryBB._collateral(), txExecutor, address(yieldBox), type(uint256).max);
+        _approveViaERC20(secondaryBB._collateral(), txExecutor,  type(uint256).max);
         _approveViaERC20(secondaryBB._collateral(), txExecutor, address(pearlmit), type(uint256).max);
         _approveYieldBoxForAll(yieldBox, txExecutor, address(secondaryBB));
         _approveYieldBoxForAll(yieldBox, txExecutor, address(pearlmit));
         _approveViaPearlmit(
             TOKEN_TYPE_ERC1155,
-            address(yieldBox),
+            
             IPearlmit(address(pearlmit)),
             txExecutor,
             address(secondaryBB),
@@ -354,7 +353,7 @@ abstract contract Usdo_crossChain is Usdo_Unit_Shared, BigBang_Unit_Shared, Sing
             mainBB.approveBorrow(address(magnetar), type(uint256).max);
             _approveViaPearlmit(
                 TOKEN_TYPE_ERC1155,
-                address(yieldBox),
+                
                 IPearlmit(address(pearlmit)),
                 address(this),
                 address(mainBB),
@@ -364,7 +363,7 @@ abstract contract Usdo_crossChain is Usdo_Unit_Shared, BigBang_Unit_Shared, Sing
             );
             _approveViaPearlmit(
                 TOKEN_TYPE_ERC1155,
-                address(yieldBox),
+                
                 IPearlmit(address(pearlmit)),
                 address(this),
                 address(magnetar),
@@ -457,7 +456,7 @@ abstract contract Usdo_crossChain is Usdo_Unit_Shared, BigBang_Unit_Shared, Sing
             mainBB.approveBorrow(address(magnetar), type(uint256).max);
             _approveViaPearlmit(
                 TOKEN_TYPE_ERC1155,
-                address(yieldBox),
+                
                 IPearlmit(address(pearlmit)),
                 address(this),
                 address(mainBB),
@@ -467,7 +466,7 @@ abstract contract Usdo_crossChain is Usdo_Unit_Shared, BigBang_Unit_Shared, Sing
             );
             _approveViaPearlmit(
                 TOKEN_TYPE_ERC1155,
-                address(yieldBox),
+                
                 IPearlmit(address(pearlmit)),
                 address(this),
                 address(magnetar),
@@ -489,7 +488,7 @@ abstract contract Usdo_crossChain is Usdo_Unit_Shared, BigBang_Unit_Shared, Sing
 
             _approveViaPearlmit(
                 TOKEN_TYPE_ERC1155,
-                address(yieldBox),
+                
                 IPearlmit(address(pearlmit)),
                 address(this),
                 address(randomSgl),
@@ -576,7 +575,7 @@ abstract contract Usdo_crossChain is Usdo_Unit_Shared, BigBang_Unit_Shared, Sing
 
             bytes32 digest_ = _getYieldBoxPermitAllTypedDataHash(approvalUserB_, approve);
             YieldBoxApproveAllMsg memory permitApproval_ =
-                __getYieldBoxPermitAllData(approvalUserB_, address(yieldBox), approve, digest_, USER_A_PKEY);
+                __getYieldBoxPermitAllData(approvalUserB_,  approve, digest_, USER_A_PKEY);
 
             approvalMsg_ = usdoHelper.buildYieldBoxApproveAllMsg(permitApproval_);
         }
@@ -592,7 +591,7 @@ abstract contract Usdo_crossChain is Usdo_Unit_Shared, BigBang_Unit_Shared, Sing
             ERC20PermitStruct memory approvalUserB_ = _createErc20PermitStruct(userA, userB, usdoId, 0);
             YieldBoxApproveAssetMsg memory permitApprovalB_ = __getYieldBoxPermitAssetData(
                 approvalUserB_,
-                address(yieldBox),
+                
                 approve,
                 _getYieldBoxPermitAssetTypedDataHash(approvalUserB_, approve),
                 USER_A_PKEY

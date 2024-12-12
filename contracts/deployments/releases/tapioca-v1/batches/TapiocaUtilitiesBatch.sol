@@ -17,13 +17,12 @@ contract TapiocaUtilitiesBatch is UtilitiesProcedure, Ownable {
     function initializeCluster(
         address cluster,
         address zeroXSwapper,
-        address yieldbox,
         address magnetar,
         address penrose,
         address pauser,
         address tapiocaMulticall
     ) external onlyOwner {
-        _initCluster(cluster, zeroXSwapper, yieldbox, magnetar, penrose, pauser, tapiocaMulticall);
+        _initCluster(cluster, zeroXSwapper, magnetar, penrose, pauser, tapiocaMulticall);
     }
 
     function getUtilitiesReport() public view returns (UtilitiesReport memory) {
