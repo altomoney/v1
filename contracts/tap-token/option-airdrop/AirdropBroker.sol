@@ -12,7 +12,7 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 // Tapioca
-import {IPearlmit, PearlmitHandler} from "tap-utils/pearlmit/PearlmitHandler.sol";
+
 import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {FullMath} from "tap-token/options/FullMath.sol";
@@ -124,8 +124,8 @@ contract AirdropBroker is Pausable, Ownable, PearlmitHandler, FullMath, Reentran
     error AddressZero();
     error WaitForNewEpoch();
 
-    constructor(address _aoTAP, address _pcnft, address _paymentTokenBeneficiary, IPearlmit _pearlmit, address _owner)
-        PearlmitHandler(_pearlmit)
+    constructor(address _aoTAP, address _pcnft, address _paymentTokenBeneficiary, address _owner)
+        
     {
         if (_aoTAP == address(0)) revert AddressZero();
         if (_pcnft == address(0)) revert AddressZero();

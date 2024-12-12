@@ -4,7 +4,7 @@ pragma solidity ^0.8.22;
 
 // Tapioca
 import {AirdropBroker, ITapiocaOracle} from "tap-token/option-airdrop/AirdropBroker.sol";
-import {IPearlmit, Pearlmit} from "tap-utils/pearlmit/Pearlmit.sol";
+
 import {ERC20Mock} from "tap-token/mocks/ERC20Mock.sol";
 
 import "forge-std/Test.sol";
@@ -30,7 +30,7 @@ contract ADBOracleMock is ITapiocaOracle {
 
 /// @dev We mock the AirdropBroker contract to be able to access internal functions with external ones.
 contract AirdropBrokerTestMock is AirdropBroker {
-    constructor(address _AOTAP, address _PCNFT, address _PAYMENT_TOKEN_BENEFICIARY, IPearlmit _PEARLMIT, address _OWNER)
+    constructor(address _AOTAP, address _PCNFT, address _PAYMENT_TOKEN_BENEFICIARY, address _OWNER)
         AirdropBroker(_AOTAP, _PCNFT, _PAYMENT_TOKEN_BENEFICIARY, _PEARLMIT, _OWNER)
     {}
 }

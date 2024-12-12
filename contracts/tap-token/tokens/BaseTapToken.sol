@@ -3,7 +3,6 @@ pragma solidity ^0.8.22;
 
 // Tapioca
 import {BaseTapiocaOmnichainEngine} from "tap-utils/tapiocaOmnichainEngine/BaseTapiocaOmnichainEngine.sol";
-import {IPearlmit} from "tap-utils/interfaces/periph/IPearlmit.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {BaseTapTokenMsgType} from "./BaseTapTokenMsgType.sol";
 import {ITWTAPv0} from "tap-token/interfaces/ITWTAPv0.sol";

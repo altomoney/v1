@@ -9,7 +9,7 @@ import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 // Tapioca
-import {IPearlmit, PearlmitHandler} from "tap-utils/pearlmit/PearlmitHandler.sol";
+
 import {ERC721Permit} from "tap-utils/utils/ERC721Permit.sol";
 
 /*
@@ -50,7 +50,7 @@ contract AOTAP is
     constructor(IPearlmit _pearlmit, address _owner)
         ERC721("Airdrop Option TAP", "aoTAP")
         ERC721Permit("Airdrop Option TAP")
-        PearlmitHandler(_pearlmit)
+        
     {
         _transferOwnership(_owner);
     }

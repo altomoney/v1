@@ -19,12 +19,12 @@ import {IMagnetarHelper} from "tap-utils/interfaces/periph/IMagnetarHelper.sol";
 import {IERC721Permit} from "tap-utils/interfaces/common/IERC721Permit.sol";
 import {RevertMsgDecoder} from "tap-utils/libraries/RevertMsgDecoder.sol";
 import {ISingularity} from "tap-utils/interfaces/bar/ISingularity.sol";
-import {IYieldBox} from "tap-utils/interfaces/yieldbox/IYieldBox.sol";
+
 import {IPermitAll} from "tap-utils/interfaces/common/IPermitAll.sol";
 import {IWeth9} from "tap-utils/interfaces/external/weth/IWeth9.sol";
 import {IMagnetar} from "tap-utils/interfaces/periph/IMagnetar.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
-import {IPearlmit} from "tap-utils/pearlmit/PearlmitHandler.sol";
+
 import {ITWTAPv2} from "tap-token/interfaces/ITWTAPv2.sol";
 import {IPermit} from "tap-utils/interfaces/common/IPermit.sol";
 import {SafeApprove} from "tap-utils/libraries/SafeApprove.sol";
@@ -64,10 +64,9 @@ contract Magnetar is BaseMagnetar, ERC1155Holder {
         address payable _collateralModule,
         address payable _mintModule,
         address payable _optionModule,
-        IPearlmit _pearlmit,
         address _toeHelper,
         IMagnetarHelper _magnetarHelper
-    ) BaseMagnetar(_cluster, _pearlmit, _toeHelper, _owner) {
+    ) BaseMagnetar(_cluster, _toeHelper, _owner) {
         modules[MagnetarModule.CollateralModule] = _collateralModule;
         modules[MagnetarModule.MintModule] = _mintModule;
         modules[MagnetarModule.OptionModule] = _optionModule;
@@ -213,16 +212,6 @@ contract Magnetar is BaseMagnetar, ERC1155Holder {
             _checkSender(abi.decode(_actionCalldata[4:36], (address)));
         }
 
-        // IPearlmit.permitBatchApprove(IPearlmit.PermitBatchTransferFrom calldata batch)
-        if (funcSig == IPearlmit.permitBatchApprove.selector) {
-            selectorValidated = true;
-            IPearlmit.PermitBatchTransferFrom memory batch =
-                abi.decode(_actionCalldata[4:], (IPearlmit.PermitBatchTransferFrom));
-
-            /// @dev Owner param check. See Warning above.
-            _checkSender(batch.owner);
-        }
-
         if (funcSig == IERC721Permit.permit.selector) {
             // check if `spender` is whitelisted
             _checkWhitelisted(abi.decode(_actionCalldata[4:36], (address)));
@@ -252,6 +241,7 @@ contract Magnetar is BaseMagnetar, ERC1155Holder {
         bool selectorValidated = _validateOFTOperation(_target, _actionCalldata);
         if (selectorValidated) {
             bytes4 funcSig = bytes4(_actionCalldata[:4]);
+            /*
             if (funcSig == ITOFT.unwrap.selector) {
                 (, uint256 _amount) = abi.decode(_actionCalldata[4:], (address, uint256));
                 bool isErr = pearlmit.transferFromERC20(msg.sender, address(this), _target, _amount); //unwrap happens on `msg.sender`
@@ -262,7 +252,7 @@ contract Magnetar is BaseMagnetar, ERC1155Holder {
                 uint256 amount_ = lzSendParam_.sendParam.amountLD;
                 bool isErr = pearlmit.transferFromERC20(msg.sender, address(this), _target, amount_); //sendPacketFrom happens on msg.sender
                 if (isErr) revert Magnetar_PearlmitTransferFailed();
-            }
+            }*/
 
             _executeCall(_target, _actionCalldata, _actionValue);
             return;
@@ -413,71 +403,26 @@ contract Magnetar is BaseMagnetar, ERC1155Holder {
             bytes4 funcSig = bytes4(_actionCalldata[:4]);
 
             // Token is sent to the owner after execute
-            if (funcSig == ITapiocaOptionLiquidityProvision.lock.selector) {
-                /*
-                ITapiocaOptionLiquidityProvision tolp = ITapiocaOptionLiquidityProvision(_target);
-                (, address sgl,, uint128 amount) = abi.decode(_actionCalldata[4:], (address, address, uint128, uint128));
-                (uint256 assetId,,,) = tolp.activeSingularities(sgl);
-                IYieldBox yieldBox = IYieldBox(tolp.yieldBox());
-
-                {
-                    bool isErr = pearlmit.transferFromERC1155(msg.sender, address(this), address(yieldBox), assetId, amount);
-                    if (isErr) {
-                        revert Magnetar_PearlmitTransferFailed();
-                    }
-                }
-                {
-                    pearlmit.approve(1155, address(yieldBox), assetId, _target, amount, block.timestamp.toUint48());
-                }
-                yieldBox.setApprovalForAll(address(pearlmit), true);
-                _executeCall(_target, _actionCalldata, _actionValue);
-                yieldBox.setApprovalForAll(address(pearlmit), false);
-                */
-
-                return;
-            } else if (funcSig == ITapiocaOptionBroker.participate.selector) {
-                (uint256 tokenId) = abi.decode(_actionCalldata[4:], (uint256));
-                ITapiocaOptionLiquidityProvision tOLP =
-                    ITapiocaOptionLiquidityProvision(ITapiocaOptionBroker(_target).tOLP());
-
-                {
-                    // function is executed for `msg.sender`
-                    bool isErr = pearlmit.transferFromERC721(msg.sender, address(this), address(tOLP), tokenId);
-                    if (isErr) {
-                        revert Magnetar_PearlmitTransferFailed();
-                    }
-                }
-
-                pearlmit.approve(721, address(tOLP), tokenId, _target, 1, block.timestamp.toUint48());
-                tOLP.setApprovalForAll(address(pearlmit), true);
-                (bytes memory tokenIdData) = _executeCall(_target, _actionCalldata, _actionValue);
-                tOLP.setApprovalForAll(address(pearlmit), false);
-                return;
-            } else if (funcSig == ITWTAPv2.participate.selector) {
+            if (funcSig == ITWTAPv2.participate.selector) {
                 (address from, uint256 amount, uint256 duration, uint256 minReward) =
                     abi.decode(_actionCalldata[4:], (address, uint256, uint256, uint256));
                 address tapOFT = address(ITWTAPv2(_target).tapOFT());
 
-                {
-                    bool isErr = pearlmit.transferFromERC20(from, address(this), address(tapOFT), amount);
-                    if (isErr) {
-                        revert Magnetar_PearlmitTransferFailed();
-                    }
-                }
-
-                pearlmit.approve(20, tapOFT, 0, _target, amount.toUint200(), block.timestamp.toUint48());
-
-                tapOFT.safeApprove(address(pearlmit), type(uint256).max);
+                tapOFT.transferFrom(from, address(this), amount);
+                
+                tapOFT.safeApprove(address(_target), amount);
                 _executeCallMemory(
                     _target,
                     abi.encodeWithSelector(ITWTAPv2.participate.selector, from, amount, duration, minReward),
                     _actionValue
                 );
-                tapOFT.safeApprove(address(pearlmit), 0);
+                tapOFT.safeApprove(address(_target), 0);
 
                 return;
             }
         }
+        // todo: else if (funcSig == ITapiocaOptionBroker.participate.selector logic
+
 
         revert Magnetar_ActionNotValid(uint8(MagnetarAction.TapLock), _actionCalldata);
     }
@@ -573,28 +518,14 @@ contract Magnetar is BaseMagnetar, ERC1155Holder {
         address tapToken = ITapiocaOptionBroker(_target).tapOFT();
 
         // transfer `paymentToken` here
-        {
-            // executed for `msg.sender`
-            bool isErr = pearlmit.transferFromERC20(msg.sender, address(this), _paymentToken, _paymentTokenAmount);
-            if (isErr) {
-                revert Magnetar_PearlmitTransferFailed();
-            }
-        }
+        IERC20(_paymentToken) .safeTransferFrom(msg.sender, address(this), _paymentTokenAmount);
 
         uint256 tapAmountBefore = IERC20(tapToken).balanceOf(address(this));
 
         // execute
-        pearlmit.approve(20, _paymentToken, 0, _target, _paymentTokenAmount.toUint200(), block.timestamp.toUint48());
-        _paymentToken.safeApprove(address(pearlmit), _paymentTokenAmount);
+        _paymentToken.safeApprove(address(_target), _paymentTokenAmount);
         _executeCall(_target, _actionCalldata, _actionValue);
-        _paymentToken.safeApprove(address(pearlmit), 0);
 
-        // Clear Pearlmit ERC721 allowance post execution
-        {
-            address oTap = ITapiocaOptionBroker(_target).oTAP();
-            address oTapOwner = IERC721(oTap).ownerOf(_oTAPTokenID);
-            pearlmit.clearAllowance(oTapOwner, 721, oTap, _oTAPTokenID);
-        }
 
         uint256 tapAmountAfter = IERC20(tapToken).balanceOf(address(this));
 

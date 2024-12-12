@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.22;
 
-import {IPearlmit, PearlmitHandler} from "src/tap-utils/pearlmit/PearlmitHandler.sol";
+
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ITap} from "src/tap-utils/interfaces/oft/ITap.sol";
@@ -19,8 +19,8 @@ contract TapiocaOptionsLiquidityProvisionMock is PearlmitHandler, ERC721 {
         bool rescue; // If true, the pool will be used to rescue funds in case of emergency
     }
 
-    constructor(uint256 _sglAssetId, address _yb, IPearlmit _pearlmit)
-        PearlmitHandler(_pearlmit)
+    constructor(uint256 _sglAssetId, address _yb)
+        
         ERC721("tOLP Mock", "MOCK")
     {
         sglAssetId = _sglAssetId;

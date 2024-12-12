@@ -9,7 +9,6 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 // Tapioca
 import {IZeroXSwapper} from "tap-utils/interfaces/periph/IZeroXSwapper.sol";
 import {IWeth9} from "tap-utils/interfaces/external/weth/IWeth9.sol";
-import {IPearlmit} from "tap-utils/interfaces/periph/IPearlmit.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {ITOFT} from "tap-utils/interfaces/oft/ITOFT.sol";
 import {SafeApprove} from "../../libraries/SafeApprove.sol";
@@ -46,7 +45,7 @@ abstract contract BaseLeverageExecutor is Ownable {
     // ************ //
 
     IZeroXSwapper public swapper;
-    IPearlmit public pearlmit;
+    
     ICluster public cluster;
     IWeth9 public weth;
 
@@ -66,12 +65,12 @@ abstract contract BaseLeverageExecutor is Ownable {
     error AddressNotValid();
     error NotAuthorized();
 
-    constructor(IZeroXSwapper _swapper, ICluster _cluster, address _weth, IPearlmit _pearlmit) {
+    constructor(IZeroXSwapper _swapper, ICluster _cluster, address _weth) {
         if (address(_cluster) == address(0)) revert AddressNotValid();
         swapper = _swapper;
         cluster = _cluster;
         weth = IWeth9(_weth);
-        pearlmit = _pearlmit;
+
     }
 
     receive() external payable {}
@@ -250,15 +249,10 @@ abstract contract BaseLeverageExecutor is Ownable {
             weth.withdraw(amountOut);
             _amountOut = ITOFT(tokenOut).wrap{value: amountOut}(address(this), wrapsTo, amountOut);
         } else {
-            // If the tOFT is for an ERC20, wrap it.
-            pearlmit.approve(20, toftErc20, 0, tokenOut, amountOut.toUint200(), block.timestamp.toUint48());
-            toftErc20.safeApprove(address(pearlmit), amountOut);
+            toftErc20.safeApprove(address(tokenOut), amountOut);
 
             _amountOut = ITOFT(tokenOut).wrap(address(this), address(this), amountOut);
             IERC20(tokenOut).safeTransfer(wrapsTo, _amountOut);
-
-            toftErc20.safeApprove(address(pearlmit), 0);
-            pearlmit.clearAllowance(address(this), 20, toftErc20, 0);
         }
     }
 }

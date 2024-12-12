@@ -9,8 +9,8 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 // Tapioca
 import {BaseTapiocaOmnichainEngine} from "tap-utils/tapiocaOmnichainEngine/BaseTapiocaOmnichainEngine.sol";
 import {TOFTInitStruct, IToftVault} from "tap-utils/interfaces/oft/ITOFT.sol";
-import {PearlmitHandler} from "tap-utils/pearlmit/PearlmitHandler.sol";
-import {IYieldBox} from "tap-utils/interfaces/yieldbox/IYieldBox.sol";
+
+
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {BaseTOFTTokenMsgType} from "./BaseTOFTTokenMsgType.sol";
 import {ModuleManager} from "./modules/ModuleManager.sol";
@@ -39,7 +39,6 @@ abstract contract BaseTOFT is
 {
     using SafeERC20 for IERC20;
 
-    IYieldBox public immutable yieldBox;
     IToftVault public vault;
     uint256 public immutable hostEid;
     address public erc20;
@@ -61,7 +60,6 @@ abstract contract BaseTOFT is
             ICluster(_data.cluster)
         )
     {
-        yieldBox = IYieldBox(_data.yieldBox);
         hostEid = _data.hostEid;
         erc20 = _data.erc20;
 

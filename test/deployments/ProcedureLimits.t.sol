@@ -27,7 +27,7 @@ import {TapiocaOmnichainExtExec} from "tap-utils/tapiocaOmnichainEngine/extensio
 import {TapiocaPenroseBatch} from "deployments/releases/tapioca-v1/batches/TapiocaPenroseBatch.sol";
 import {YieldBox} from "tap-yieldbox/YieldBox.sol";
 import "tap-yieldbox/YieldBoxURIBuilder.sol";
-import {Pearlmit} from "tap-utils/pearlmit/Pearlmit.sol";
+
 import "tap-yieldbox/interfaces/IWrappedNative.sol";
 import {ERC20Mock} from "../bar/mocks/ERC20Mock.sol";
 

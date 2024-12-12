@@ -13,7 +13,7 @@ import {YieldBox, YieldBoxURIBuilder, IWrappedNative, TokenType, IStrategy} from
 import {IStargateV2Staking} from "tapioca-strategies/interfaces/stargatev2/IStargateV2Staking.sol";
 import {StargateV2Strategy} from "tapioca-strategies/stargatev2/StargateV2Strategy.sol";
 import {IStargateV2Pool} from "tapioca-strategies/interfaces/stargatev2/IStargateV2Pool.sol";
-import {Pearlmit, IPearlmit, PearlmitHash} from "tap-utils/pearlmit/Pearlmit.sol";
+
 import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
 import {IZeroXSwapper} from "tap-utils/interfaces/periph/IZeroXSwapper.sol";
 import {BaseERC20Strategy} from "yieldbox/strategies/BaseStrategy.sol";

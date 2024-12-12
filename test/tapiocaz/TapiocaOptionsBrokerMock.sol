@@ -2,7 +2,7 @@
 pragma solidity ^0.8.22;
 
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {PearlmitHandler, IPearlmit} from "tap-utils/pearlmit/PearlmitHandler.sol";
+
 
 contract OTapMock {
     address public owner;
@@ -30,7 +30,7 @@ contract TapiocaOptionsBrokerMock is PearlmitHandler {
 
     error TapiocaOptionsBrokerMock_NotValid();
 
-    constructor(address _tap, IPearlmit _pearlmit) PearlmitHandler(_pearlmit) {
+    constructor(address _tap)  {
         tapOFT = _tap;
         oTapMock = address(new OTapMock());
     }

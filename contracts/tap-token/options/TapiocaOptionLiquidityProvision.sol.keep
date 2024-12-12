@@ -14,7 +14,7 @@ import {ERC721Permit} from "tap-utils/utils/ERC721Permit.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 // Tapioca
-import {IPearlmit, PearlmitHandler} from "tap-utils/pearlmit/PearlmitHandler.sol";
+
 import {ISingularity} from "tap-utils/interfaces/bar/ISingularity.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {IBigBang} from "tap-utils/interfaces/bar/IBigBang.sol";
@@ -115,10 +115,10 @@ contract TapiocaOptionLiquidityProvision is
     error NotEnoughBigBangLiquidity();
     error EmergencySweepActivated();
 
-    constructor(address _yieldBox, uint256 _epochDuration, IPearlmit _pearlmit, address _penrose, address _owner)
+    constructor(address _yieldBox, uint256 _epochDuration, address _penrose, address _owner)
         ERC721("TapiocaOptionLiquidityProvision", "tOLP")
         ERC721Permit("TapiocaOptionLiquidityProvision")
-        PearlmitHandler(_pearlmit)
+        
     {
         yieldBox = IYieldBox(_yieldBox);
         EPOCH_DURATION = _epochDuration;

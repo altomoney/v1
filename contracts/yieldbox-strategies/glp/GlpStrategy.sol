@@ -13,7 +13,6 @@ import {IGmxRewardTracker} from "tapioca-strategies/interfaces/gmx/IGmxRewardTra
 import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
 import {IGlpManager} from "tapioca-strategies/interfaces/gmx/IGlpManager.sol";
 import {IGmxVester} from "tapioca-strategies/interfaces/gmx/IGmxVester.sol";
-import {IPearlmit} from "tap-utils/interfaces/periph/IPearlmit.sol";
 import {BaseERC20Strategy} from "yieldbox/strategies/BaseStrategy.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {ITOFT} from "tap-utils/interfaces/oft/ITOFT.sol";

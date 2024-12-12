@@ -8,7 +8,6 @@ import {LZEndpointMock} from "tapioca-mocks/LZEndpointMock.sol";
 import {SingularityLauncher} from "deployments/releases/tapioca-v1/actions/SingularityLauncher.sol";
 import {TapiocaRelease} from "deployments/releases/tapioca-v1/TapiocaRelease.sol";
 import {TapToken} from "tap-token/tokens/TapToken.sol";
-import {IPearlmit} from "tap-utils/interfaces/periph/IPearlmit.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {TapTokenSender} from "tap-token/tokens/TapTokenSender.sol";
 import {TapTokenReceiver} from "tap-token/tokens/TapTokenReceiver.sol";

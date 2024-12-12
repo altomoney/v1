@@ -10,10 +10,10 @@ import {
     DepositRepayAndRemoveCollateralFromMarketData,
     MagnetarWithdrawData
 } from "tap-utils/interfaces/periph/IMagnetar.sol";
-import {IYieldBox} from "tap-utils/interfaces/yieldbox/IYieldBox.sol";
+
 import {IMarket, Module} from "tap-utils/interfaces/bar/IMarket.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import {IPearlmit} from "tap-utils/pearlmit/PearlmitHandler.sol";
+
 import {SafeApprove} from "tap-utils/libraries/SafeApprove.sol";
 import {MagnetarBaseModule} from "./MagnetarBaseModule.sol";
 
@@ -41,7 +41,7 @@ contract MagnetarCollateralModule is MagnetarBaseModule {
     error MagnetarCollateralModule_UnwrapNotAllowed();
     error Magnetar_WithdrawParamsMismatch();
 
-    constructor(IPearlmit pearlmit, address _toeHelper) MagnetarBaseModule(pearlmit, _toeHelper) {}
+    constructor(address _toeHelper) MagnetarBaseModule(_toeHelper) {}
 
     /**
      * @notice helper for deposit to YieldBox, add collateral to a market, borrow from the same market and withdraw

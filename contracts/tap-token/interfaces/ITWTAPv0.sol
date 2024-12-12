@@ -53,7 +53,6 @@ interface ITWTAPv0 {
         address indexed participant, uint256 mintedTokenId, uint256 tapAmount, uint256 multiplier, uint256 lockDuration
     );
     event Paused(address account);
-    event PearlmitUpdated(address oldPearlmit, address newPearlmit);
     event RescueMode(bool _rescueMode);
     event SetCluster(address _cluster);
     event SetEmergencySweepCooldown(uint256 emergencySweepCooldown);

@@ -17,10 +17,9 @@ import {GlpStrategyWrapper} from "./GlpStrategyWrapper.sol";
 import {ToftMock} from "tapioca-strategies/mocks/ToftMock.sol";
 import {OracleMock} from "tapioca-mocks/OracleMock.sol";
 import {MockERC20} from "tapioca-strategies/mocks/MockERC20.sol";
-import {Pearlmit} from "tap-utils/pearlmit/Pearlmit.sol";
+
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {Cluster} from "tap-utils/Cluster/Cluster.sol";
-import {IPearlmit} from "tap-utils/interfaces/periph/IPearlmit.sol";
 import "forge-std/Test.sol";
 
 contract GlpStrategyForkTest is Test {

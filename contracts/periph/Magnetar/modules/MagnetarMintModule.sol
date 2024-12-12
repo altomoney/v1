@@ -10,9 +10,9 @@ import {ITapiocaOptionBroker} from "tap-utils/interfaces/tap-token/ITapiocaOptio
 import {MintFromBBAndLendOnSGLData} from "tap-utils/interfaces/periph/IMagnetar.sol";
 import {ITapiocaOption} from "tap-utils/interfaces/tap-token/ITapiocaOption.sol";
 import {ISingularity} from "tap-utils/interfaces/bar/ISingularity.sol";
-import {IYieldBox} from "tap-utils/interfaces/yieldbox/IYieldBox.sol";
+
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import {IPearlmit} from "tap-utils/pearlmit/PearlmitHandler.sol";
+
 import {IMarket} from "tap-utils/interfaces/bar/IMarket.sol";
 import {ITOFT} from "tap-utils/interfaces/oft/ITOFT.sol";
 import {MagnetarBaseModule} from "./MagnetarBaseModule.sol";
@@ -39,7 +39,7 @@ contract MagnetarMintModule is MagnetarBaseModule {
     error MagnetarMintModule_LockTransferFailed();
     error MagnetarMintModule_ParticipateTransferFailed();
 
-    constructor(IPearlmit pearlmit, address _toeHelper) MagnetarBaseModule(pearlmit, _toeHelper) {}
+    constructor(address _toeHelper) MagnetarBaseModule(_toeHelper) {}
     /// =====================
     /// Public
     /// =====================
@@ -177,7 +177,6 @@ contract MagnetarMintModule is MagnetarBaseModule {
 
     struct LockParams {
         IMarket singularity;
-        IYieldBox yieldBox;
         uint256 tOLPSglAssetId;
         uint256 fraction;
         bool participate;

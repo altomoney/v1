@@ -9,8 +9,6 @@ import {IERC20} from "@boringcrypto/boring-solidity/contracts/ERC20.sol";
 // Tapioca
 import {ILeverageExecutor} from "tap-utils/interfaces/bar/ILeverageExecutor.sol";
 import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
-import {IYieldBox} from "tap-utils/interfaces/yieldbox/IYieldBox.sol";
-import {IPearlmit} from "tap-utils/interfaces/periph/IPearlmit.sol";
 import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
 import {Module} from "tap-utils/interfaces/bar/IMarket.sol";
 import {IUsdo} from "tap-utils/interfaces/oft/IUsdo.sol";

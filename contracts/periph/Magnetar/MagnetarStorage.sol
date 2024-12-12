@@ -7,7 +7,6 @@ import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Recei
 // Tapioca
 import {TapiocaOmnichainEngineHelper} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainEngineHelper.sol";
 import {MagnetarModule} from "tap-utils/interfaces/periph/IMagnetar.sol";
-import {PearlmitHandler, IPearlmit} from "tap-utils/pearlmit/PearlmitHandler.sol";
 import {IMagnetarHelper} from "tap-utils/interfaces/periph/IMagnetarHelper.sol";
 import {RevertMsgDecoder} from "tap-utils/libraries/RevertMsgDecoder.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
@@ -28,7 +27,7 @@ import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
  * @author TapiocaDAO
  * @notice Storage contract for Magnetar & modules
  */
-contract MagnetarStorage is IERC721Receiver, PearlmitHandler {
+contract MagnetarStorage is IERC721Receiver {
     ICluster internal cluster;
     IMagnetarHelper public helper;
     TapiocaOmnichainEngineHelper public toeHelper;
@@ -40,7 +39,7 @@ contract MagnetarStorage is IERC721Receiver, PearlmitHandler {
     error Magnetar_UnknownReason(); // Revert reason not recognized
     error Magnetar_TargetNotWhitelisted(address addy); // cluster.isWhitelisted(lzChainId, _addr) => false
 
-    constructor(IPearlmit _pearlmit, address _toeHelper) PearlmitHandler(_pearlmit) {
+    constructor(address _toeHelper) {
         toeHelper = TapiocaOmnichainEngineHelper(_toeHelper);
     }
 

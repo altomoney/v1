@@ -11,9 +11,9 @@ import {ITapiocaOptionBroker} from "tap-utils/interfaces/tap-token/ITapiocaOptio
 import {MagnetarWithdrawData} from "tap-utils/interfaces/periph/IMagnetar.sol";
 import {IMarketHelper} from "tap-utils/interfaces/bar/IMarketHelper.sol";
 import {ISingularity} from "tap-utils/interfaces/bar/ISingularity.sol";
-import {IYieldBox} from "tap-utils/interfaces/yieldbox/IYieldBox.sol";
+
 import {Module, IMarket} from "tap-utils/interfaces/bar/IMarket.sol";
-import {IPearlmit} from "tap-utils/pearlmit/PearlmitHandler.sol";
+
 import {SafeApprove} from "tap-utils/libraries/SafeApprove.sol";
 import {ITOFT} from "tap-utils/interfaces/oft/ITOFT.sol";
 import {MagnetarStorage} from "../MagnetarStorage.sol";
@@ -42,7 +42,7 @@ abstract contract MagnetarBaseModule is MagnetarStorage {
     error Magnetar_tOLPTokenMismatch();
     error Magnetar_TransferFailed();
 
-    constructor(IPearlmit pearlmit, address _toeHelper) MagnetarStorage(pearlmit, _toeHelper) {}
+    constructor(address _toeHelper) MagnetarStorage(_toeHelper) {}
 
     /// =====================
     /// Internal
@@ -75,9 +75,7 @@ abstract contract MagnetarBaseModule is MagnetarStorage {
 
     function _extractTokens(address _from, address _token, uint256 _amount) internal returns (uint256) {
         uint256 balanceBefore = IERC20(_token).balanceOf(address(this));
-        // IERC20(_token).safeTransferFrom(_from, address(this), _amount);
-        bool isErr = pearlmit.transferFromERC20(_from, address(this), address(_token), _amount);
-        if (isErr) revert Magnetar_ExtractTokenFail();
+        IERC20(_token).safeTransferFrom(_from, address(this), _amount);
         uint256 balanceAfter = IERC20(_token).balanceOf(address(this));
         if (balanceAfter <= balanceBefore) revert Magnetar_ExtractTokenFail();
         return balanceAfter - balanceBefore;

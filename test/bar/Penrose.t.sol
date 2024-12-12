@@ -8,9 +8,8 @@ import "forge-std/Test.sol";
 import {IERC20} from "@boringcrypto/boring-solidity/contracts/libraries/BoringERC20.sol";
 
 // Tapioca
-import {Pearlmit} from "tap-utils/pearlmit/Pearlmit.sol";
+
 import {Cluster} from "tap-utils/Cluster/Cluster.sol";
-import {YieldBox} from "yieldbox/YieldBox.sol";
 import {Penrose} from "tapioca-bar/Penrose.sol";
 
 // Tapioca Tests
@@ -19,7 +18,7 @@ import {UsdoTestHelper, TestPenroseData, TestSingularityData} from "./helpers/Us
 import {ILeverageExecutor} from "tap-utils/interfaces/bar/ILeverageExecutor.sol";
 import {ERC20WithoutStrategy} from "yieldbox/strategies/ERC20WithoutStrategy.sol";
 import {Singularity} from "tapioca-bar/markets/singularity/Singularity.sol";
-import {Pearlmit, IPearlmit} from "tap-utils/pearlmit/Pearlmit.sol";
+
 import {TapiocaOptionsBrokerMock} from "./mocks/TapiocaOptionsBrokerMock.sol";
 import {IMarket} from "tap-utils/interfaces/bar/ISingularity.sol";
 import {ITWTAPv2} from "tap-token/interfaces/ITWTAPv2.sol";
@@ -73,7 +72,6 @@ contract PenroseTest is UsdoTestHelper {
     function setUp() public override {
         {
             pearlmit = new Pearlmit("Pearlmit", "1", address(this), 0);
-            yieldBox = createYieldBox(pearlmit, address(this));
             cluster = createCluster(aEid, __owner);
             magnetar = createMagnetar(address(cluster), IPearlmit(address(pearlmit)));
 

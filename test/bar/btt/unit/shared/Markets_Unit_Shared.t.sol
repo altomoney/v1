@@ -17,7 +17,7 @@ import {TokenType} from "yieldbox/enums/YieldBoxTokenType.sol";
 import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {IMarket} from "tap-utils/interfaces/bar/ISingularity.sol";
-import {IPearlmit} from "tap-utils/pearlmit/Pearlmit.sol";
+
 import {IStrategy} from "yieldbox/interfaces/IStrategy.sol";
 
 // tests

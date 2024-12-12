@@ -24,7 +24,7 @@ import {ILeverageExecutor} from "tap-utils/interfaces/bar/ILeverageExecutor.sol"
 import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
 import {IZeroXSwapper} from "tap-utils/interfaces/periph/IZeroXSwapper.sol";
 import {Module as BBModule} from "tap-utils/interfaces/bar/IMarket.sol";
-import {Pearlmit, IPearlmit} from "tap-utils/pearlmit/Pearlmit.sol";
+
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
 import {Cluster} from "tap-utils/Cluster/Cluster.sol";
@@ -220,7 +220,7 @@ contract UnitBaseTest is TestHelper {
         );
     }
 
-    function createTwTap(address payable _tapOft, IPearlmit _pearlmit, address _owner) internal returns (TwTAP) {
+    function createTwTap(address payable _tapOft, address _owner) internal returns (TwTAP) {
         Bucket[] memory buckets = new Bucket[](1);
         buckets[0] = Bucket({
             enabled: true,

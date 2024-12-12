@@ -21,7 +21,7 @@ import {
 } from "tap-utils/interfaces/periph/IMagnetar.sol";
 import {IMagnetarCollateralModule} from "tap-utils/interfaces/periph/IMagnetar.sol";
 import {IMarketHelper} from "tap-utils/interfaces/bar/IMarketHelper.sol";
-import {IYieldBox} from "tap-utils/interfaces/yieldbox/IYieldBox.sol";
+
 import {IMarket, Module} from "tap-utils/interfaces/bar/IMarket.sol";
 import {TOFTMsgCodec} from "../libraries/TOFTMsgCodec.sol";
 import {BaseTOFT} from "../BaseTOFT.sol";

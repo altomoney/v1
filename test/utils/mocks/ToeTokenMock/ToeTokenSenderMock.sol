@@ -7,7 +7,7 @@ import {
 } from "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/interfaces/IOFT.sol";
 // Tapioca
 import {
-    BaseTapiocaOmnichainEngine, IPearlmit
+    BaseTapiocaOmnichainEngine 
 } from "src/tap-utils/tapiocaOmnichainEngine/BaseTapiocaOmnichainEngine.sol";
 import {TapiocaOmnichainSender} from "src/tap-utils/tapiocaOmnichainEngine/TapiocaOmnichainSender.sol";
 import {ICluster} from "src/tap-utils/interfaces/periph/ICluster.sol";
@@ -33,7 +33,6 @@ contract ToeTokenSenderMock is BaseTapiocaOmnichainEngine, TapiocaOmnichainSende
         address _endpoint,
         address _delegate,
         address _extExec,
-        IPearlmit _pearlmit,
         ICluster _cluster
-    ) BaseTapiocaOmnichainEngine(_name, _symbol, _endpoint, _delegate, _extExec, _pearlmit, _cluster) {}
+    ) BaseTapiocaOmnichainEngine(_name, _symbol, _endpoint, _delegate, _extExec, _cluster) {}
 }

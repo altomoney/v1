@@ -17,7 +17,7 @@ import {
     IPenroseInput
 } from "../interfaces/ITapiocaReport.sol";
 import {ERC20WithoutStrategy} from "yieldbox/strategies/ERC20WithoutStrategy.sol";
-import {IPearlmit} from "tap-utils/pearlmit/PearlmitHandler.sol";
+
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {IMagnetarHelper} from "tap-utils/interfaces/periph/IMagnetarHelper.sol";
 import {IYieldBox} from "yieldbox/interfaces/IYieldBox.sol";
@@ -36,7 +36,6 @@ import {BBDebtRateHelper} from "tapioca-bar/markets/bigBang/BBDebtRateHelper.sol
 import {BigBang} from "tapioca-bar/markets/bigBang/BigBang.sol";
 import {BBDebtRateHelper} from "tapioca-bar/markets/bigBang/BBDebtRateHelper.sol";
 import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
-
 abstract contract BarProcedure {
     function _deployPenrose(IPenroseInput memory input) internal returns (PenroseReport memory report) {
         report.tapStrat = address(new ERC20WithoutStrategy(IYieldBox(input.yieldbox), IERC20(input.tapToken)));
@@ -89,7 +88,6 @@ abstract contract BarProcedure {
         initData.yieldBox = yieldbox;
         initData.cluster = cluster;
         initData.extExec = extExec;
-        initData.pearlmit = IPearlmit(pearlmit);
 
         report.usdoSenderModule = address(new UsdoSender(initData));
         report.usdoReceiverModule = address(new UsdoReceiver(initData));
@@ -112,7 +110,6 @@ abstract contract BarProcedure {
         initData.yieldBox = yieldbox;
         initData.cluster = cluster;
         initData.extExec = extExec;
-        initData.pearlmit = IPearlmit(pearlmit);
 
         report.marketReceiverModule = address(new UsdoMarketReceiverModule(initData));
         report.optionReceiverModule = address(new UsdoOptionReceiverModule(initData));
@@ -140,7 +137,6 @@ abstract contract BarProcedure {
         initData.yieldBox = yieldbox;
         initData.cluster = cluster;
         initData.extExec = extExec;
-        initData.pearlmit = IPearlmit(pearlmit);
 
         modulesData.usdoSenderModule = usdoSenderModule;
         modulesData.usdoReceiverModule = usdoReceiverModule;

@@ -9,7 +9,7 @@ import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
 import {IMagnetarModuleExtender} from "tap-utils/interfaces/periph/IMagnetar.sol";
 import {IMagnetarHelper} from "tap-utils/interfaces/periph/IMagnetarHelper.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
-import {MagnetarStorage, IPearlmit} from "./MagnetarStorage.sol";
+import {MagnetarStorage} from "./MagnetarStorage.sol";
 
 /*
 
@@ -38,9 +38,7 @@ contract BaseMagnetar is Ownable, Pausable, MagnetarStorage {
     event ClusterUpdated(ICluster indexed oldCluster, ICluster indexed newCluster);
     event MagnetarModuleExtenderSet(address old, address newMagnetarModuleExtender);
 
-    constructor(ICluster _cluster, IPearlmit _pearlmit, address _toeHelper, address _owner)
-        MagnetarStorage(_pearlmit, _toeHelper)
-    {
+    constructor(ICluster _cluster, address _toeHelper, address _owner) MagnetarStorage(_toeHelper) {
         cluster = _cluster;
         transferOwnership(_owner);
     }

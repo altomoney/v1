@@ -25,7 +25,7 @@ import {
     MagnetarAction
 } from "tap-utils/interfaces/periph/IMagnetar.sol";
 import {ITapiocaOmnichainEngine, LZSendParam} from "tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
-import {PearlmitHandler, IPearlmit} from "tap-utils/pearlmit/PearlmitHandler.sol";
+
 import {IMarketHelper} from "tap-utils/interfaces/bar/IMarketHelper.sol";
 import {IPermitAll} from "tap-utils/interfaces/common/IPermitAll.sol";
 import {IYieldBox} from "tap-utils/interfaces/yieldbox/IYieldBox.sol";
@@ -50,7 +50,7 @@ contract MagnetarMock is PearlmitHandler {
 
     ICluster public cluster;
 
-    constructor(address _cluster, IPearlmit _pearlmit) PearlmitHandler(_pearlmit) {
+    constructor(address _cluster)  {
         cluster = ICluster(_cluster);
     }
 

@@ -33,7 +33,7 @@ import {IStrategy} from "yieldbox/interfaces/IStrategy.sol";
 
 import {YieldBoxURIBuilder} from "yieldbox/YieldBoxURIBuilder.sol";
 import {TokenType} from "yieldbox/enums/YieldBoxTokenType.sol";
-import {YieldBox} from "yieldbox/YieldBox.sol";
+
 
 import {Cluster} from "tap-utils/Cluster/Cluster.sol";
 import {Penrose} from "tapioca-bar/Penrose.sol";
@@ -51,7 +51,7 @@ import {UsdoHelper} from "tapioca-bar/usdo/extensions/UsdoHelper.sol";
 import {UsdoSender} from "tapioca-bar/usdo/modules/UsdoSender.sol";
 
 import {UsdoTestHelper, TestPenroseData, TestSingularityData, TestBigBangData} from "../helpers/UsdoTestHelper.t.sol";
-import {Pearlmit, IPearlmit} from "tap-utils/pearlmit/Pearlmit.sol";
+
 
 import "forge-std/Test.sol";
 
@@ -128,7 +128,6 @@ contract BigBangTest is UsdoTestHelper {
 
         {
             pearlmit = new Pearlmit("Pearlmit", "1", address(this), 0);
-            yieldBox = createYieldBox(pearlmit, address(this));
             cluster = createCluster(aEid, address(this));
             magnetar = createMagnetar(address(cluster), IPearlmit(address(pearlmit)));
             twTap = new TwTapMock(address(asset));

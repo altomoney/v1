@@ -674,19 +674,4 @@ library TapiocaOmnichainEngineCodec {
     {
         return abi.decode(_msg, (ERC721PermitApprovalMsg[]));
     }
-
-    function encodePearlmitApprovalMsg(
-        address pearlmit,
-        IPearlmit.PermitBatchTransferFrom memory _permitBatchTransferFrom
-    ) internal pure returns (bytes memory) {
-        return abi.encode(pearlmit, _permitBatchTransferFrom);
-    }
-
-    function decodePearlmitBatchApprovalMsg(bytes memory _msg)
-        internal
-        pure
-        returns (address pearlmit, IPearlmit.PermitBatchTransferFrom memory _permitBatchTransferFrom)
-    {
-        return abi.decode(_msg, (address, IPearlmit.PermitBatchTransferFrom));
-    }
 }

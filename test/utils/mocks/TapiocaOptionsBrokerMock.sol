@@ -4,18 +4,18 @@ pragma solidity ^0.8.22;
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 
 import {ITap} from "src/tap-utils/interfaces/oft/ITap.sol";
-import {IPearlmit, PearlmitHandler} from "src/tap-utils/pearlmit/PearlmitHandler.sol";
+
 
 import {ERC721Mock} from "./ERC721Mock.sol";
 
-contract TapiocaOptionsBrokerMock is PearlmitHandler {
+contract TapiocaOptionsBrokerMock  {
     address public tapOFT;
     address public oTAP;
     address public tOLP;
 
     error TransferFailed();
 
-    constructor(address _otap, address _tapOft, IPearlmit _pearlmit) PearlmitHandler(_pearlmit) {
+    constructor(address _otap, address _tapOft)  {
         tapOFT = _tapOft;
         oTAP = _otap;
     }

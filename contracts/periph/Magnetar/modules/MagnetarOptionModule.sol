@@ -17,10 +17,10 @@ import {
 import {ITapiocaOptionBroker} from "tap-utils/interfaces/tap-token/ITapiocaOptionBroker.sol";
 import {ITapiocaOption} from "tap-utils/interfaces/tap-token/ITapiocaOption.sol";
 import {ISingularity} from "tap-utils/interfaces/bar/ISingularity.sol";
-import {IYieldBox} from "tap-utils/interfaces/yieldbox/IYieldBox.sol";
+
 import {IMarket, Module} from "tap-utils/interfaces/bar/IMarket.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import {IPearlmit} from "tap-utils/pearlmit/PearlmitHandler.sol";
+
 import {MagnetarBaseModule} from "./MagnetarBaseModule.sol";
 
 /*
@@ -45,7 +45,7 @@ contract MagnetarOptionModule is MagnetarBaseModule {
 
     error Magnetar_ComposeMsgNotAllowed();
 
-    constructor(IPearlmit pearlmit, address _toeHelper) MagnetarBaseModule(pearlmit, _toeHelper) {}
+    constructor(address _toeHelper) MagnetarBaseModule(_toeHelper) {}
 
     /**
      * @notice helper to perform tOLP.lock(...) and tOB.participate(...)
@@ -79,7 +79,8 @@ contract MagnetarOptionModule is MagnetarBaseModule {
          *          - transfer `oTAPTokenId` to data.user
          */
         if (data.participateData.participate) {
-            _participate(data, tOLPTokenId);
+            // todo: implement participate
+            revert Magnetar_ActionParamsMismatch();
         }
     }
 
@@ -106,34 +107,6 @@ contract MagnetarOptionModule is MagnetarBaseModule {
         );
     }
 
-    function _participate(LockAndParticipateData memory data, uint256 tOLPTokenId) private {
-        // validate token ids
-        if (tOLPTokenId == 0 && data.participateData.tOLPTokenId == 0) revert Magnetar_ActionParamsMismatch();
-        if (
-            data.participateData.tOLPTokenId != tOLPTokenId && tOLPTokenId != 0 && data.participateData.tOLPTokenId != 0
-        ) {
-            revert Magnetar_tOLPTokenMismatch();
-        }
-
-        if (data.participateData.tOLPTokenId != 0) tOLPTokenId = data.participateData.tOLPTokenId;
-
-        // transfer NFT here in case `_lock` wasn't called
-        // otherwise NFT should be already in Magnetar
-        if (!data.lockData.lock) {
-            bool isErr = pearlmit.transferFromERC721(data.user, address(this), data.lockData.target, tOLPTokenId);
-            if (isErr) revert Magnetar_ExtractTokenFail();
-        }
-
-        pearlmit.approve(
-            721, data.lockData.target, tOLPTokenId, data.participateData.target, 1, block.timestamp.toUint48()
-        );
-        IERC721(data.lockData.target).approve(address(pearlmit), tOLPTokenId);
-        uint256 oTAPTokenId = ITapiocaOptionBroker(data.participateData.target).participate(tOLPTokenId, 0);
-
-        address oTapAddress = ITapiocaOptionBroker(data.participateData.target).oTAP();
-
-        IERC721(oTapAddress).safeTransferFrom(address(this), data.user, oTAPTokenId, "");
-    }
 
     /**
      * @notice helper to exit from  tOB, unlock from tOLP, remove from SGL, repay on BB, remove collateral from BB and withdraw
@@ -335,9 +308,8 @@ contract MagnetarOptionModule is MagnetarBaseModule {
         // in case owner is `address(this)`
         //    transfer unlocked position to the user
         if (ownerOfTOLP == address(this)) {
-            IYieldBox _yieldBox =
-                IYieldBox(ITapiocaOptionLiquidityProvision(data.removeAndRepayData.unlockData.target).yieldBox());
-            _yieldBox.transfer(address(this), data.user, sglAssetId, ybShares);
+            // todo: implement transfer of tOLP to the user
+            revert Magnetar_ActionParamsMismatch();
         }
     }
 }

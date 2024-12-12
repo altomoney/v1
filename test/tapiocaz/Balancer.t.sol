@@ -7,7 +7,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 // Lz
 import {TestHelper} from "./LZSetup/TestHelper.sol";
 
-import {Pearlmit, IPearlmit} from "tap-utils/pearlmit/Pearlmit.sol";
+
 import {StargateRouterMock, StargateFactoryMock} from "./StargateRouterMock.sol";
 import {Balancer} from "tapiocaz/Balancer.sol";
 import {TestUtils} from "./TestUtils.t.sol";
@@ -23,7 +23,7 @@ import {TOFTMarketReceiverModule} from "tapiocaz/tOFT/modules/TOFTMarketReceiver
 import {IMtoftFeeGetter} from "tap-utils/interfaces/oft/IMToftFeeGetter.sol";
 import {ICluster, Cluster} from "tap-utils/Cluster/Cluster.sol";
 import {TOFTSender} from "tapiocaz/tOFT/modules/TOFTSender.sol";
-import {YieldBox} from "yieldbox/YieldBox.sol";
+
 
 // Tapioca Tests
 import {TapiocaOptionsBrokerMock} from "./TapiocaOptionsBrokerMock.sol";
@@ -96,15 +96,11 @@ contract BalancerTest is TOFTTestHelper {
         balancer = new Balancer(routerEth, address(routerA), address(factory), address(this));
         vm.label(address(balancer), "Balancer");
 
-        pearlmit = new Pearlmit("Pearlmit", "1", address(this), 0);
-        yieldBox = createYieldBox(pearlmit, address(this));
         cluster = createCluster(aEid, __owner);
-        pearlmit = new Pearlmit("Pearlmit", "1", address(this), 0);
 
         {
             vm.label(address(endpoints[aEid]), "aEndpoint");
             vm.label(address(endpoints[bEid]), "bEndpoint");
-            vm.label(address(yieldBox), "YieldBox");
             vm.label(address(cluster), "Cluster");
         }
 

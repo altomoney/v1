@@ -14,7 +14,6 @@ import {IStargateV2Staking} from "tapioca-strategies/interfaces/stargatev2/IStar
 import {IStargateV2Pool} from "tapioca-strategies/interfaces/stargatev2/IStargateV2Pool.sol";
 import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
 import {IZeroXSwapper} from "tap-utils/interfaces/periph/IZeroXSwapper.sol";
-import {IPearlmit} from "tap-utils/interfaces/periph/IPearlmit.sol";
 import {BaseERC20Strategy} from "yieldbox/strategies/BaseStrategy.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {ITOFT} from "tap-utils/interfaces/oft/ITOFT.sol";

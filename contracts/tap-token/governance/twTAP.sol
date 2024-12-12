@@ -9,7 +9,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 // Tapioca
-import {IPearlmit, PearlmitHandler} from "tap-utils/pearlmit/PearlmitHandler.sol";
+
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {TapToken} from "tap-token/tokens/TapToken.sol";
 import {TWLBase, Bucket} from "tap-token/governance/TWLBase.sol";
@@ -68,7 +68,7 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, PearlmitHandler, ReentrancyGuard, 
         address _owner,
         uint256 epochDuration,
         Bucket[] memory _buckets
-    ) PearlmitHandler(_pearlmit) TWLBase(epochDuration, _buckets) {
+    )  TWLBase(epochDuration, _buckets) {
         tapOFT = TapToken(_tapOFT);
         rewardTokens.push(IERC20(address(0x0))); // 0 index is reserved
         maxRewardTokens = 30;

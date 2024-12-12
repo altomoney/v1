@@ -63,7 +63,6 @@ struct MagnetarDepsReport {
 
 struct UtilitiesReport {
     address tapiocaMulticall;
-    address pearlmit;
     address cluster;
     address toeHelper;
     address pauser;
@@ -81,9 +80,7 @@ struct TapiocaInput {
     bool isMetaInstance; // if false, it will deploy a host Tapioca instance (Arbitrum), if not, it will deploy a meta instance deployment (Other networks, like Ethereum)
 }
 
-struct YieldboxReport {
-    address yieldbox;
-    address yieldboxUri;
+struct ExtExReport {
     address extExec;
     address liquidatorReceiver;
 }
@@ -137,7 +134,6 @@ struct IPenroseInput {
     address tapToken;
     address usdoToken;
     address nativeWrappedToken;
-    address pearlmit;
     address owner;
     address singularityMaster;
     address bigbangMaster;
@@ -159,7 +155,7 @@ struct Reports {
     MagnetarReport magnetarReport;
     MagnetarDepsReport magnetarDepsReport;
     UtilitiesReport utilitiesReport;
-    YieldboxReport yieldboxReport;
+    ExtExReport ExtExReport;
     UsdoModulesReport usdoModulesReport;
     UsdoMarketModulesReport usdoMarketModulesReport;
     UsdoReport usdoReport;
