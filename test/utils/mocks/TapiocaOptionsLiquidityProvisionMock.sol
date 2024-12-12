@@ -24,7 +24,7 @@ contract TapiocaOptionsLiquidityProvisionMock is PearlmitHandler, ERC721 {
         ERC721("tOLP Mock", "MOCK")
     {
         sglAssetId = _sglAssetId;
-        yieldBox = _yb;
+
     }
 
     function lock(address _to, IERC20 _singularity, uint128 _lockDuration, uint128 _ybShares)

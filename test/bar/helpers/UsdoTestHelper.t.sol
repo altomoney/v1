@@ -13,7 +13,6 @@ import {SimpleLeverageExecutor} from "tapioca-bar/markets/leverage/SimpleLeverag
 import {ILeverageExecutor} from "tap-utils/interfaces/bar/ILeverageExecutor.sol";
 import {SGLInterestHelper} from "tapioca-bar/markets/singularity/SGLInterestHelper.sol";
 import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
-import {ERC20WithoutStrategy} from "yieldbox/strategies/ERC20WithoutStrategy.sol";
 import {IZeroXSwapper} from "tap-utils/interfaces/periph/IZeroXSwapper.sol";
 import {SGLLiquidation} from "tapioca-bar/markets/singularity/SGLLiquidation.sol";
 import {SGLCollateral} from "tapioca-bar/markets/singularity/SGLCollateral.sol";
@@ -22,14 +21,13 @@ import {Singularity} from "tapioca-bar/markets/singularity/Singularity.sol";
 
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {SGLBorrow} from "tapioca-bar/markets/singularity/SGLBorrow.sol";
-import {IWrappedNative} from "yieldbox/interfaces/IWrappedNative.sol";
 import {IOracle} from "tap-utils/oracle/interfaces/IOracle.sol";
 import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
-import {YieldBoxURIBuilder} from "yieldbox/YieldBoxURIBuilder.sol";
+
 import {SGLInit} from "tapioca-bar/markets/singularity/SGLInit.sol";
-import {TokenType} from "yieldbox/enums/YieldBoxTokenType.sol";
-import {IYieldBox} from "yieldbox/interfaces/IYieldBox.sol";
-import {IStrategy} from "yieldbox/interfaces/IStrategy.sol";
+
+
+
 import {Cluster} from "tap-utils/Cluster/Cluster.sol";
 import {MagnetarMock} from "../mocks/MagnetarMock.sol";
 
@@ -77,23 +75,10 @@ struct TestBigBangData {
 }
 
 contract UsdoTestHelper is TestHelper, TestUtils {
-    function createYieldBoxEmptyStrategy(address _yieldBox, address _erc20) public returns (ERC20WithoutStrategy) {
-        return new ERC20WithoutStrategy(IYieldBox(_yieldBox), IERC20(_erc20));
-    }
-
-    function registerYieldBoxAsset(address _yieldBox, address _token, address _strategy) public returns (uint256) {
-        return YieldBox(_yieldBox).registerAsset(TokenType.ERC20, _token, IStrategy(_strategy), 0);
-    }
-
     function createMagnetar(address cluster) public returns (MagnetarMock) {
         return new MagnetarMock(cluster);
     }
 
-    function createYieldBox(Pearlmit pearlmit, address owner) public returns (YieldBox) {
-        YieldBoxURIBuilder uriBuilder = new YieldBoxURIBuilder();
-
-        return new YieldBox(IWrappedNative(address(0)), uriBuilder, pearlmit, owner);
-    }
 
     function createCluster(uint32 hostEid, address owner) public returns (Cluster) {
         return new Cluster(hostEid, owner);
@@ -115,20 +100,11 @@ contract UsdoTestHelper is TestHelper, TestUtils {
     }
 
     function createPenrose(TestPenroseData memory _data) public returns (Penrose pen, Singularity mediumRiskMC) {
-        address tapStrat = address(createYieldBoxEmptyStrategy(_data.yb, _data.tap));
-        address tokenStrat = address(createYieldBoxEmptyStrategy(_data.yb, _data.token));
-
-        uint256 tapAssetId = IYieldBox(_data.yb).registerAsset(TokenType.ERC20, _data.tap, tapStrat, 0);
-        uint256 tokenAssetId = IYieldBox(_data.yb).registerAsset(TokenType.ERC20, _data.token, tokenStrat, 0);
 
         pen = new Penrose(
-            IYieldBox(_data.yb),
             ICluster(_data.cluster),
             IERC20(_data.tap),
             IERC20(_data.token),
-            _data.pearlmit,
-            tapAssetId,
-            tokenAssetId,
             _data.owner
         );
         mediumRiskMC = new Singularity();

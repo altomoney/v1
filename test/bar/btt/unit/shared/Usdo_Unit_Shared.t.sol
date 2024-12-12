@@ -19,8 +19,6 @@ import {
     MarketRemoveAssetMsg,
     IRemoveAndRepay,
     ILendOrRepayParams,
-    YieldBoxApproveAllMsg,
-    YieldBoxApproveAssetMsg,
     MarketPermitActionMsg,
     IUsdo
 } from "tap-utils/interfaces/oft/IUsdo.sol";

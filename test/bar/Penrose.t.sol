@@ -16,7 +16,6 @@ import {Penrose} from "tapioca-bar/Penrose.sol";
 import {SimpleLeverageExecutor} from "tapioca-bar/markets/leverage/SimpleLeverageExecutor.sol";
 import {UsdoTestHelper, TestPenroseData, TestSingularityData} from "./helpers/UsdoTestHelper.t.sol";
 import {ILeverageExecutor} from "tap-utils/interfaces/bar/ILeverageExecutor.sol";
-import {ERC20WithoutStrategy} from "yieldbox/strategies/ERC20WithoutStrategy.sol";
 import {Singularity} from "tapioca-bar/markets/singularity/Singularity.sol";
 
 import {TapiocaOptionsBrokerMock} from "./mocks/TapiocaOptionsBrokerMock.sol";
@@ -36,7 +35,7 @@ contract PenroseTest is UsdoTestHelper {
 
     Pearlmit pearlmit;
     Cluster cluster;
-    YieldBox yieldBox;
+    
 
     ERC20Mock tapOFT;
     ERC20Mock weth;
@@ -52,9 +51,6 @@ contract PenroseTest is UsdoTestHelper {
     SwapperMock swapper;
     OracleMock oracle;
     Penrose penrose;
-
-    uint256 collateralYieldBoxId;
-    uint256 assetYieldBoxId;
 
     uint256 internal userAPKey = 0x1;
     uint256 internal userBPKey = 0x2;
@@ -79,25 +75,15 @@ contract PenroseTest is UsdoTestHelper {
 
             vm.label(address(endpoints[aEid]), "aEndpoint");
             vm.label(address(endpoints[bEid]), "bEndpoint");
-            vm.label(address(yieldBox), "YieldBox");
             vm.label(address(cluster), "Cluster");
             vm.label(address(magnetar), "Magnetar");
-            vm.label(address(pearlmit), "Pearlmit");
 
-            // Setup YieldBox assets
             asset = new ERC20Mock("Asset", "asset");
             vm.label(address(asset), "asset");
 
             collateral = new ERC20Mock("Collateral", "coll");
             vm.label(address(collateral), "collateral");
 
-            ERC20WithoutStrategy assetStrategy = createYieldBoxEmptyStrategy(address(yieldBox), address(asset));
-            ERC20WithoutStrategy collateralStrategy =
-                createYieldBoxEmptyStrategy(address(yieldBox), address(collateral));
-
-            assetYieldBoxId = registerYieldBoxAsset(address(yieldBox), address(asset), address(assetStrategy));
-            collateralYieldBoxId =
-                registerYieldBoxAsset(address(yieldBox), address(collateral), address(collateralStrategy));
         }
 
         {
@@ -110,7 +96,6 @@ contract PenroseTest is UsdoTestHelper {
 
         (penrose, masterContract) = createPenrose(
             TestPenroseData(
-                address(yieldBox),
                 address(cluster),
                 address(tapOFT),
                 address(weth),
@@ -120,14 +105,12 @@ contract PenroseTest is UsdoTestHelper {
         );
 
         leverageExecutor =
-            createLeverageExecutor(address(yieldBox), address(swapper), address(cluster), address(pearlmit));
+            createLeverageExecutor(address(swapper), address(cluster));
         (penrose, masterContract) = createPenrose(
             TestPenroseData(
-                address(yieldBox),
                 address(cluster),
                 address(tapOFT),
                 address(weth),
-                IPearlmit(address(pearlmit)),
                 __owner
             )
         );
@@ -137,9 +120,7 @@ contract PenroseTest is UsdoTestHelper {
             TestSingularityData(
                 address(penrose),
                 IERC20(address(asset)), //asset
-                assetYieldBoxId,
                 IERC20(address(collateral)), //collateral
-                collateralYieldBoxId,
                 IOracle(address(oracle)),
                 ILeverageExecutor(address(leverageExecutor))
             ),
@@ -147,7 +128,6 @@ contract PenroseTest is UsdoTestHelper {
         );
         vm.label(address(singularity), "Singularity");
 
-        cluster.updateContract(0, address(yieldBox), true);
         cluster.updateContract(0, address(magnetar), true);
         cluster.updateContract(0, address(swapper), true);
         cluster.updateContract(0, address(penrose), true);

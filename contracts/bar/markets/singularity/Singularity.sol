@@ -138,7 +138,7 @@ contract Singularity is MarketStateView, SGLCommon {
     /// @param from Address to add asset from.
     /// @param to The address of the user to receive the assets.
     /// @param skim True if the amount should be skimmed from the deposit balance of msg.sender.
-    /// False if tokens from msg.sender in `yieldBox` should be transferred.
+    /// False if tokens from msg.sender  should be transferred.
     /// @param share The amount of shares to add.
     /// @return fraction Total fractions added.
     function addAsset(address from, address to, bool skim, uint256 share)
@@ -337,7 +337,6 @@ contract Singularity is MarketStateView, SGLCommon {
     }
 
     /// @dev Concrete implementation of `removeAsset`.
-    /// @param from The account to remove from. Should always be msg.sender except for `depositFeesToyieldBox()`.
     function _removeAsset(address from, address to, uint256 fraction) private returns (uint256 share) {
         if (totalAsset.base == 0) {
             return 0;

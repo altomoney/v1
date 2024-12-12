@@ -16,17 +16,14 @@ import {
     BBReport,
     IPenroseInput
 } from "../interfaces/ITapiocaReport.sol";
-import {ERC20WithoutStrategy} from "yieldbox/strategies/ERC20WithoutStrategy.sol";
 
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {IMagnetarHelper} from "tap-utils/interfaces/periph/IMagnetarHelper.sol";
-import {IYieldBox} from "yieldbox/interfaces/IYieldBox.sol";
 import {IERC20} from "@boringcrypto/boring-solidity/contracts/libraries/BoringERC20.sol";
 import {UsdoInitStruct, UsdoModulesInitStruct} from "tap-utils/interfaces/oft/IUsdo.sol";
 import {UsdoHelper} from "tapioca-bar/usdo/extensions/UsdoHelper.sol";
 import {USDOFlashloanHelper} from "tapioca-bar/usdo/USDOFlashloanHelper.sol";
 import {IUsdo} from "tap-utils/interfaces/oft/IUsdo.sol";
-import {TokenType} from "yieldbox/enums/YieldBoxTokenType.sol";
 import {MarketHelper} from "tapioca-bar/markets/MarketHelper.sol";
 import {BBLiquidation} from "tapioca-bar/markets/bigBang/BBLiquidation.sol";
 import {BBBorrow} from "tapioca-bar/markets/bigBang/BBBorrow.sol";
@@ -38,10 +35,6 @@ import {BBDebtRateHelper} from "tapioca-bar/markets/bigBang/BBDebtRateHelper.sol
 import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
 abstract contract BarProcedure {
     function _deployPenrose(IPenroseInput memory input) internal returns (PenroseReport memory report) {
-        report.tapStrat = address(new ERC20WithoutStrategy(IYieldBox(input.yieldbox), IERC20(input.tapToken)));
-        report.wrappedTokenStrat =
-            address(new ERC20WithoutStrategy(IYieldBox(input.yieldbox), IERC20(input.nativeWrappedToken)));
-        report.usdoStrat = address(new ERC20WithoutStrategy(IYieldBox(input.yieldbox), IERC20(input.usdoToken)));
         report.marketHelper = address(new MarketHelper());
         if (input.prevPenrose == address(0)) {
             report.penrose = address(
@@ -76,16 +69,13 @@ abstract contract BarProcedure {
     function _deployUsdoSenderAndReceiver(
         address endpoint,
         address delegate,
-        address yieldbox,
         address cluster,
-        address extExec,
-        address pearlmit
+        address extExec
     ) internal returns (UsdoModulesReport memory report) {
         UsdoInitStruct memory initData;
 
         initData.endpoint = endpoint;
         initData.delegate = delegate;
-        initData.yieldBox = yieldbox;
         initData.cluster = cluster;
         initData.extExec = extExec;
 
@@ -98,16 +88,13 @@ abstract contract BarProcedure {
     function _deployUsdoMarketModules(
         address endpoint,
         address delegate,
-        address yieldbox,
         address cluster,
-        address extExec,
-        address pearlmit
+        address extExec
     ) internal returns (UsdoMarketModulesReport memory report) {
         UsdoInitStruct memory initData;
 
         initData.endpoint = endpoint;
         initData.delegate = delegate;
-        initData.yieldBox = yieldbox;
         initData.cluster = cluster;
         initData.extExec = extExec;
 
@@ -120,10 +107,8 @@ abstract contract BarProcedure {
     function _deployUsdo(
         address endpoint,
         address delegate,
-        address yieldbox,
         address cluster,
         address extExec,
-        address pearlmit,
         address usdoSenderModule,
         address usdoReceiverModule,
         address usdoMarketReceiverModule,
@@ -134,7 +119,6 @@ abstract contract BarProcedure {
 
         initData.endpoint = endpoint;
         initData.delegate = address(this);
-        initData.yieldBox = yieldbox;
         initData.cluster = cluster;
         initData.extExec = extExec;
 

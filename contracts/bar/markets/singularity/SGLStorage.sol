@@ -37,7 +37,7 @@ contract SGLStorage is Ownable, Market, ReentrancyGuard {
     ISingularity.AccrueInfo public accrueInfo;
     /// @notice total assets share & amount
     // TODO Should we remove this because it is managed by ERC4626?
-    Rebase public totalAsset; // elastic = yieldBox shares held by the Singularity, base = Total fractions held by asset suppliers
+    Rebase public totalAsset; 
 
     uint256 public minimumTargetUtilization;
     uint256 public maximumTargetUtilization;

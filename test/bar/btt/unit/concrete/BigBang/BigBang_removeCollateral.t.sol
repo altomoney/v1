@@ -213,7 +213,7 @@ contract BigBang_removeCollateral is BigBang_Unit_Shared {
         // **** Secondary BB market ****
         _approveViaPearlmit(
             TOKEN_TYPE_ERC1155,
-            address(yieldBox),
+            
             IPearlmit(address(pearlmit)),
             address(this),
             address(secondaryBB),
@@ -244,7 +244,7 @@ contract BigBang_removeCollateral is BigBang_Unit_Shared {
         // **** Secondary BB market ****
         _approveViaPearlmit(
             TOKEN_TYPE_ERC1155,
-            address(yieldBox),
+            
             IPearlmit(address(pearlmit)),
             address(this),
             address(secondaryBB),

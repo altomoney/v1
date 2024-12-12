@@ -251,18 +251,7 @@ contract TOFTMarketReceiverModule is BaseTOFT {
     }
 
     function _magnetarWithdraw(MarketRemoveCollateralMsg memory msg_) private {
-        // TODO Review this
-        /*
-        bytes memory call = abi.encodeWithSelector(IMagnetarYieldBoxModule.withdrawHere.selector, msg_.withdrawParams);
-        MagnetarCall[] memory magnetarCall = new MagnetarCall[](1);
-        magnetarCall[0] = MagnetarCall({
-            id: uint8(MagnetarAction.YieldBoxModule),
-            target: address(this),
-            value: msg.value,
-            call: call
-        });
-        IMagnetar(payable(msg_.removeParams.magnetar)).burst{value: msg_.value}(magnetarCall);
-        */
+        revert("TODO");
     }
 
     function _checkWhitelistStatus(address _addr) private view {

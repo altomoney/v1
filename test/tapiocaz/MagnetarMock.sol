@@ -28,7 +28,6 @@ import {ITapiocaOmnichainEngine, LZSendParam} from "tap-utils/interfaces/periph/
 
 import {IMarketHelper} from "tap-utils/interfaces/bar/IMarketHelper.sol";
 import {IPermitAll} from "tap-utils/interfaces/common/IPermitAll.sol";
-import {IYieldBox} from "tap-utils/interfaces/yieldbox/IYieldBox.sol";
 import {IMarket, Module} from "tap-utils/interfaces/bar/IMarket.sol";
 import {IOftSender} from "tap-utils/interfaces/oft/IOftSender.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
@@ -137,7 +136,6 @@ contract MagnetarMock is PearlmitHandler {
         if (
             funcSig == IPermitAll.permitAll.selector || funcSig == IPermitAll.revokeAll.selector
                 || funcSig == IPermit.permit.selector || funcSig == IPermit.revoke.selector
-                || funcSig == IYieldBox.setApprovalForAll.selector || funcSig == IYieldBox.setApprovalForAsset.selector
         ) {
             /// @dev Owner param check. See Warning above.
             _checkSender(abi.decode(_actionCalldata[4:36], (address)));
@@ -154,7 +152,7 @@ contract MagnetarMock is PearlmitHandler {
     {
         if (!cluster.isWhitelisted(cluster.lzChainId(), address(_data.market))) revert MagnetarMock_NotAuthorized();
 
-        IYieldBox yieldBox = IYieldBox(IMarket(_data.market)._yieldBox());
+
 
         uint256 collateralId = IMarket(_data.market)._collateralId();
         (, address collateralAddress,,) = yieldBox.assets(collateralId);
@@ -168,8 +166,8 @@ contract MagnetarMock is PearlmitHandler {
             _share = yieldBox.toShare(collateralId, _data.collateralAmount, false);
 
             // deposit to YieldBox
-            IERC20(collateralAddress).approve(address(yieldBox), 0);
-            IERC20(collateralAddress).approve(address(yieldBox), _data.collateralAmount);
+            IERC20(collateralAddress).approve( 0);
+            IERC20(collateralAddress).approve( _data.collateralAmount);
             yieldBox.depositAsset(collateralId, address(this), address(this), _data.collateralAmount, 0);
         }
 
@@ -230,7 +228,7 @@ contract MagnetarMock is PearlmitHandler {
         if (!cluster.isWhitelisted(0, address(data.yieldBox))) {
             revert MagnetarMock_TargetNotWhitelisted(address(data.yieldBox));
         }
-        IYieldBox _yieldBox = IYieldBox(data.yieldBox);
+
 
         _withdrawHere(_yieldBox, data.assetId, data.receiver, data.amount);
     }
@@ -243,10 +241,6 @@ contract MagnetarMock is PearlmitHandler {
         uint256 balanceAfter = IERC20(_token).balanceOf(address(this));
         if (balanceAfter <= balanceBefore) revert MagnetarMock_Failed();
         return balanceAfter - balanceBefore;
-    }
-
-    function _withdrawHere(IYieldBox _yieldBox, uint256 _assetId, address _to, uint256 _amount) private {
-        _yieldBox.withdraw(_assetId, address(this), _to, _amount, 0);
     }
 
     function _executeModule(MagnetarModule, bytes memory _data) internal returns (bytes memory returnData) {

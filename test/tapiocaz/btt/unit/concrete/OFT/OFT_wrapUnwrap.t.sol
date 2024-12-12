@@ -407,13 +407,13 @@ contract TOFT_wrapUnwrap is OFT_Unit_Shared {
             symbol: "WRONG",
             endpoint: address(endpoints[aEid]),
             delegate: address(this),
-            yieldBox: address(yieldBox),
+            
             cluster: address(cluster),
             erc20: address(underlyingErc20),
             vault: address(_vault),
             hostEid: bEid,
-            extExec: address(_extExec),
-            pearlmit: IPearlmit(address(pearlmit))
+            extExec: address(_extExec)
+            
         });
         TOFTModulesInitStruct memory wrongModuleStruct = _createOftModuleStruct(
             address(toftSender),
@@ -434,13 +434,13 @@ contract TOFT_wrapUnwrap is OFT_Unit_Shared {
             symbol: "WRONG",
             endpoint: address(endpoints[aEid]),
             delegate: address(this),
-            yieldBox: address(yieldBox),
+            
             cluster: address(cluster),
             erc20: address(underlyingErc20),
             vault: address(_vault),
             hostEid: bEid,
-            extExec: address(_extExec),
-            pearlmit: IPearlmit(address(pearlmit))
+            extExec: address(_extExec)
+            
         });
         TOFTModulesInitStruct memory wrongModuleStruct = _createOftModuleStruct(
             address(mtoftSender),

@@ -29,18 +29,6 @@ import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
 import {Cluster} from "tap-utils/Cluster/Cluster.sol";
 
-/**
- * YieldBox
- */
-import {ERC20WithoutStrategy} from "yieldbox/strategies/ERC20WithoutStrategy.sol";
-import {IWrappedNative} from "yieldbox/interfaces/IWrappedNative.sol";
-import {YieldBox, IYieldBox, TokenType} from "yieldbox/YieldBox.sol";
-import {YieldBox1155Mock} from "tapioca-mocks/YieldBox1155Mock.sol";
-import {YieldBoxURIBuilder} from "yieldbox/YieldBoxURIBuilder.sol";
-
-/**
- * Bar
- */
 import {SimpleLeverageExecutor} from "tapioca-bar/markets/leverage/SimpleLeverageExecutor.sol";
 import {SGLInterestHelper} from "tapioca-bar/markets/singularity/SGLInterestHelper.sol";
 import {BBDebtRateHelper} from "tapioca-bar/markets/bigBang/BBDebtRateHelper.sol";
@@ -89,7 +77,6 @@ contract UnitBaseTest is TestHelper {
     /**
      * Peripheral contracts
      */
-    YieldBox1155Mock public yieldBox;
     Pearlmit public pearlmit;
     Cluster public cluster;
 
@@ -132,7 +119,7 @@ contract UnitBaseTest is TestHelper {
 
         // Peripheral contracts
         pearlmit = createPearlmit(adminAddr);
-        yieldBox = createYieldBox1155Mock();
+
         cluster = createCluster(0, adminAddr);
 
         // Mocks tokens
@@ -154,7 +141,7 @@ contract UnitBaseTest is TestHelper {
             ITapiocaOracle(address(OracleMock(address(new OracleMock("ETH_ORACLE", "ETH_ORACLE", 5e14)))));
 
         (penrose, bigBangMasterContract, singularityMasterContract) = createPenrose(
-            address(yieldBox),
+            
             address(cluster),
             tapMockPenrose,
             ethTokenPenrose,
@@ -241,24 +228,13 @@ contract UnitBaseTest is TestHelper {
      * Peripheral contracts
      */
 
-    //  -------  Utils
-    function createPearlmit(address _owner) internal returns (Pearlmit) {
-        return new Pearlmit("Pearlmit", "1", _owner, 0);
-    }
+   
 
-    // -------  YieldBox
-    function createYieldBox(Pearlmit _pearlmit, address _owner) internal returns (YieldBox) {
-        YieldBoxURIBuilder uriBuilder = new YieldBoxURIBuilder();
-        return new YieldBox(IWrappedNative(address(0)), uriBuilder, _pearlmit, _owner);
-    }
+   
 
-    function createYieldBox1155Mock() internal returns (YieldBox1155Mock) {
-        return new YieldBox1155Mock();
-    }
+   
 
-    function createYieldBoxEmptyStrategy(address _yieldBox, address _erc20) internal returns (ERC20WithoutStrategy) {
-        return new ERC20WithoutStrategy(IYieldBox(_yieldBox), BoringIERC20(_erc20));
-    }
+
 
     // -------  Cluster
     function createCluster(uint32 _lzChainId, address _owner) internal returns (Cluster) {
@@ -274,20 +250,11 @@ contract UnitBaseTest is TestHelper {
         IPearlmit _pearlmit,
         address _owner
     ) internal returns (Penrose _penrose, BigBang bbMasterContract, Singularity sglMasterContract) {
-        address tapStrat = address(createYieldBoxEmptyStrategy(_yb, _tap));
-        address mainTokenStrat = address(createYieldBoxEmptyStrategy(_yb, _mainToken));
-
-        uint256 tapAssetId = IYieldBox(_yb).registerAsset(TokenType.ERC20, _tap, tapStrat, 0);
-        uint256 mainTokenAssetId = IYieldBox(_yb).registerAsset(TokenType.ERC20, _mainToken, mainTokenStrat, 0);
 
         _penrose = new Penrose(
-            IYieldBox(_yb),
             ICluster(_cluster),
             BoringIERC20(_tap),
             BoringIERC20(_mainToken),
-            _pearlmit,
-            tapAssetId,
-            mainTokenAssetId,
             _owner
         );
 
@@ -491,13 +458,13 @@ contract UnitBaseTest is TestHelper {
         vm.startPrank(to);
 
         // approvals
-        BoringIERC20(ethTokenPenrose).approve(address(yieldBox), type(uint256).max);
+        BoringIERC20(ethTokenPenrose).approve( type(uint256).max);
         BoringIERC20(ethTokenPenrose).approve(address(pearlmit), type(uint256).max);
         yieldBox.setApprovalForAll(address(bigBangEthMarket), true);
         yieldBox.setApprovalForAll(address(pearlmit), true);
         pearlmit.approve(
             1155,
-            address(yieldBox),
+            
             ethTokenPenroseId,
             address(bigBangEthMarket),
             type(uint200).max,
@@ -526,13 +493,13 @@ contract UnitBaseTest is TestHelper {
     function depositSGLAsset(address to, uint256 amount) public {
         vm.startPrank(to);
         deal(address(usdoMock), to, amount);
-        usdoMock.approve(address(yieldBox), type(uint256).max);
+        usdoMock.approve( type(uint256).max);
         usdoMock.approve(address(pearlmit), type(uint256).max);
         yieldBox.setApprovalForAll(address(singularityEthMarket), true);
         yieldBox.setApprovalForAll(address(pearlmit), true);
         pearlmit.approve(
             1155,
-            address(yieldBox),
+            
             usdoMockTokenId,
             address(singularityEthMarket),
             type(uint200).max,

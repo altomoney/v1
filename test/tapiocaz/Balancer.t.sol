@@ -51,7 +51,7 @@ contract BalancerTest is TOFTTestHelper {
     mTOFT aTOFT;
     mTOFT bTOFT;
     Pearlmit pearlmit;
-    YieldBox yieldBox;
+    
     Cluster cluster;
     TOFTHelper tOFTHelper;
 
@@ -111,13 +111,12 @@ contract BalancerTest is TOFTTestHelper {
             symbol: "TNKA",
             endpoint: address(endpoints[aEid]),
             delegate: __owner,
-            yieldBox: address(yieldBox),
             cluster: address(cluster),
             erc20: address(aERC20),
             vault: address(aTOFTVault),
             hostEid: aEid,
-            extExec: address(toftExtExec),
-            pearlmit: IPearlmit(address(pearlmit))
+            extExec: address(toftExtExec)
+            
         });
         {
             TOFTSender aTOFTSender = new TOFTSender(aTOFTInitStruct);
@@ -150,13 +149,12 @@ contract BalancerTest is TOFTTestHelper {
             symbol: "TNKB",
             endpoint: address(endpoints[bEid]),
             delegate: __owner,
-            yieldBox: address(yieldBox),
             cluster: address(cluster),
             erc20: address(bERC20),
             vault: address(bTOFTVault),
             hostEid: bEid,
-            extExec: address(toftExtExec),
-            pearlmit: IPearlmit(address(pearlmit))
+            extExec: address(toftExtExec)
+            
         });
         {
             TOFTSender bTOFTSender = new TOFTSender(bTOFTInitStruct);

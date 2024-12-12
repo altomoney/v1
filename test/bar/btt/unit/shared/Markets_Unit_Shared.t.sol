@@ -12,13 +12,13 @@ import {TOFTMock_test} from "../../mocks/TOFTMock_test.sol";
 import {MarketLiquidatorReceiver} from "tapioca-bar/liquidators/MarketLiquidatorReceiver.sol";
 import {ZeroXSwapper} from "tap-utils/Swapper/ZeroXSwapper.sol";
 import {MarketHelper} from "tapioca-bar/markets/MarketHelper.sol";
-import {TokenType} from "yieldbox/enums/YieldBoxTokenType.sol";
+
 
 import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {IMarket} from "tap-utils/interfaces/bar/ISingularity.sol";
 
-import {IStrategy} from "yieldbox/interfaces/IStrategy.sol";
+
 
 // tests
 import {Base_Test} from "../../Base_Test.t.sol";

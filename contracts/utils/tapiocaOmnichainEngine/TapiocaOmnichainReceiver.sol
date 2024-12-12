@@ -289,16 +289,6 @@ abstract contract TapiocaOmnichainReceiver is BaseTapiocaOmnichainEngine, IOAppC
         } else if (_msgType == MSG_NFT_APPROVALS) {
             // toeExtExec.erc721PermitApproval(_data);
             signature = "erc721PermitApproval(bytes)";
-        } else if (_msgType == MSG_PEARLMIT_APPROVAL) {
-            // toeExtExec.pearlmitApproval(_srcChainSender,_data);
-            signature = "pearlmitApproval(address,bytes)";
-            sender = _srcChainSender;
-        } else if (_msgType == MSG_YB_APPROVE_ALL) {
-            // toeExtExec.yieldBoxPermitAll(_data);
-            signature = "yieldBoxPermitAll(bytes)";
-        } else if (_msgType == MSG_YB_APPROVE_ASSET) {
-            // toeExtExec.yieldBoxPermitAsset(_data);
-            signature = "yieldBoxPermitAsset(bytes)";
         } else if (_msgType == MSG_MARKET_PERMIT) {
             // toeExtExec.marketPermit(_data);
             signature = "marketPermit(bytes)";

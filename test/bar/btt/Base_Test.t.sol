@@ -4,8 +4,8 @@ pragma solidity ^0.8.22;
 // contracts
 import {UsdoInitStruct, UsdoModulesInitStruct} from "tap-utils/interfaces/oft/IUsdo.sol";
 
-import {TokenType} from "yieldbox/enums/YieldBoxTokenType.sol";
-import {IStrategy} from "yieldbox/interfaces/IStrategy.sol";
+
+
 import {Cluster} from "tap-utils/Cluster/Cluster.sol";
 
 import {Penrose} from "tapioca-bar/Penrose.sol";

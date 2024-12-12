@@ -13,12 +13,10 @@ contract TapiocaUsdoBatchTwo is BarProcedure {
     constructor(
         address endpoint,
         address delegate,
-        address yieldbox,
         address cluster,
-        address extExec,
-        address pearlmit
+        address extExec
     ) {
-        _usdoMarketModulesReport = _deployUsdoMarketModules(endpoint, delegate, yieldbox, cluster, extExec, pearlmit);
+        _usdoMarketModulesReport = _deployUsdoMarketModules(endpoint, delegate, cluster, extExec);
     }
 
     function getUsdoMarketModulesReport() external view returns (UsdoMarketModulesReport memory) {

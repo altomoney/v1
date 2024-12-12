@@ -17,8 +17,6 @@ interface ILeverageExecutor {
 
     function cluster() external view returns (address);
 
-    function yieldBox() external view returns (address);
-
     function getCollateral(
         address refundDustAddress,
         address assetAddress,

@@ -5,7 +5,6 @@ import {UtilitiesReport} from "../interfaces/ITapiocaReport.sol";
 
 import {TapiocaMulticall} from "tap-utils/TapiocaMulticall/TapiocaMulticall.sol";
 import {Cluster} from "tap-utils/Cluster/Cluster.sol";
-import {IWrappedNative} from "tap-yieldbox/interfaces/IWrappedNative.sol";
 import {TapiocaOmnichainEngineHelper} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainEngineHelper.sol";
 import {Pauser} from "tap-utils/Pauser/Pauser.sol";
 import {ZeroXSwapper} from "tap-utils/Swapper/ZeroXSwapper.sol";
@@ -34,7 +33,6 @@ abstract contract UtilitiesProcedure {
     function _initCluster(
         address cluster,
         address zeroXSwapper,
-        address yieldbox,
         address magnetar,
         address penrose,
         address pauser,
@@ -42,7 +40,6 @@ abstract contract UtilitiesProcedure {
     ) internal {
         Cluster(cluster).setRoleForContract(magnetar, keccak256("TOE"), true);
         Cluster(cluster).setRoleForContract(pauser, keccak256("PAUSER"), true);
-        Cluster(cluster).updateContract(0, yieldbox, true);
         Cluster(cluster).updateContract(0, magnetar, true);
         Cluster(cluster).updateContract(0, zeroXSwapper, true);
         Cluster(cluster).updateContract(0, penrose, true);

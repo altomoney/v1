@@ -6,7 +6,6 @@ import {RebaseLibrary, Rebase} from "@boringcrypto/boring-solidity/contracts/lib
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 // Tapioca
-import {IYieldBox, IYieldBoxTokenType} from "tap-utils/interfaces/yieldbox/IYieldBox.sol";
 import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
 import {ISingularity, IMarket} from "tap-utils/interfaces/bar/ISingularity.sol";
 import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
@@ -318,7 +317,6 @@ contract MagnetarHelper {
         info.minBorrowAmount = market._minBorrowAmount();
         info.minCollateralAmount = market._minCollateralAmount();
         info.totalCollateralAmount = market.totalAssets();
-        // (info.totalYieldBoxAssetShare, info.totalYieldBoxAssetAmount) = market.totalAssets(); TODO Check it if it is needed.
         return info;
     }
 }

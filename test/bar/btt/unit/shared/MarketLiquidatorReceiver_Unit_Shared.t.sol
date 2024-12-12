@@ -14,9 +14,8 @@ import {SGlpMarketLiquidatorReceiver} from "tapioca-bar/liquidators/sGlpMarketLi
 import {IGmxRewardRouterV2} from "tap-utils/interfaces/external/gmx/IGmxRewardRouterV2.sol";
 import {MarketLiquidatorReceiver} from "tapioca-bar/liquidators/MarketLiquidatorReceiver.sol";
 import {IGmxGlpManager} from "tap-utils/interfaces/external/gmx/IGmxGlpManager.sol";
-import {ERC20WithoutStrategy} from "yieldbox/strategies/ERC20WithoutStrategy.sol";
-import {TokenType} from "yieldbox/enums/YieldBoxTokenType.sol";
-import {IStrategy} from "yieldbox/interfaces/IStrategy.sol";
+
+
 
 // dependencies
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";

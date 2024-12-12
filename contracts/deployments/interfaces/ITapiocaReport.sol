@@ -13,7 +13,6 @@ struct TapiocaReport {
     address zeroXSwapper;
     address toeHelper;
     address cluster;
-    address pearlmit;
     address adbTapOptionOracle;
     address tapiocaMulticall;
     address extExec;
@@ -129,7 +128,6 @@ struct BBReport {
 }
 
 struct IPenroseInput {
-    address yieldbox;
     address cluster;
     address tapToken;
     address usdoToken;

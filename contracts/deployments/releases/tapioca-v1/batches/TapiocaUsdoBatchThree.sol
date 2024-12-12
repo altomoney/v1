@@ -13,10 +13,8 @@ contract TapiocaUsdoBatchThree is BarProcedure {
     constructor(
         address endpoint,
         address delegate,
-        address yieldbox,
         address cluster,
         address extExec,
-        address pearlmit,
         address usdoSenderModule,
         address usdoReceiverModule,
         address usdoMarketReceiverModule,
@@ -25,10 +23,8 @@ contract TapiocaUsdoBatchThree is BarProcedure {
         _usdoReport = _deployUsdo(
             endpoint,
             delegate,
-            yieldbox,
             cluster,
             extExec,
-            pearlmit,
             usdoSenderModule,
             usdoReceiverModule,
             usdoMarketReceiverModule,

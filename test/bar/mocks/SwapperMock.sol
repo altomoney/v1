@@ -37,7 +37,7 @@ contract SwapperMock {
     YieldBox private immutable yieldBox;
 
     constructor(YieldBox _yieldBox) {
-        yieldBox = _yieldBox;
+
     }
 
     //Add more overloads if needed

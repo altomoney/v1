@@ -11,7 +11,6 @@ import {SGLInit} from "tapioca-bar/markets/singularity/SGLInit.sol";
 import {MarketHelper} from "tapioca-bar/markets/MarketHelper.sol";
 import {Market} from "tapioca-bar/markets/Market.sol";
 
-import {ERC20WithoutStrategy} from "yieldbox/strategies/ERC20WithoutStrategy.sol";
 import {MagnetarHelper} from "tap-utils/Magnetar/MagnetarHelper.sol";
 
 import {IMarketLiquidatorReceiver} from "tap-utils/interfaces/bar/IMarketLiquidatorReceiver.sol";
@@ -22,14 +21,13 @@ import {IZeroXSwapper} from "tap-utils/interfaces/periph/IZeroXSwapper.sol";
 import {ISingularity} from "tap-utils/interfaces/bar/ISingularity.sol";
 import {IMarket, Module} from "tap-utils/interfaces/bar/IMarket.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
-import {IWrappedNative} from "yieldbox/interfaces/IWrappedNative.sol";
 import {IOracle} from "tap-utils/oracle/interfaces/IOracle.sol";
 import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
-import {IYieldBox} from "yieldbox/interfaces/IYieldBox.sol";
-import {IStrategy} from "yieldbox/interfaces/IStrategy.sol";
 
-import {YieldBoxURIBuilder} from "yieldbox/YieldBoxURIBuilder.sol";
-import {TokenType} from "yieldbox/enums/YieldBoxTokenType.sol";
+
+
+
+
 
 
 import {Cluster} from "tap-utils/Cluster/Cluster.sol";
@@ -67,7 +65,7 @@ contract SingularityTest is UsdoTestHelper {
 
     Pearlmit pearlmit;
     Cluster cluster;
-    YieldBox yieldBox;
+    
     ERC20Mock tapOFT;
     ERC20Mock weth;
 
@@ -160,7 +158,7 @@ contract SingularityTest is UsdoTestHelper {
 
         {
             pearlmit = Pearlmit(report.pearlmit);
-            yieldBox = YieldBox(report.yieldbox);
+
             cluster = Cluster(report.cluster);
             magnetar = MagnetarMock(report.magnetar);
             sglInit = SGLInit(report.sglInit);
@@ -169,21 +167,12 @@ contract SingularityTest is UsdoTestHelper {
 
             vm.label(address(endpoints[aEid]), "aEndpoint");
             vm.label(address(endpoints[bEid]), "bEndpoint");
-            vm.label(address(yieldBox), "YieldBox");
+            vm.label( "YieldBox");
             vm.label(address(cluster), "Cluster");
             vm.label(address(magnetar), "Magnetar");
             vm.label(address(pearlmit), "Pearlmit");
         }
 
-        {
-            ERC20WithoutStrategy assetStrategy = createYieldBoxEmptyStrategy(address(yieldBox), address(asset));
-            ERC20WithoutStrategy collateralStrategy =
-                createYieldBoxEmptyStrategy(address(yieldBox), address(collateral));
-
-            assetYieldBoxId = registerYieldBoxAsset(address(yieldBox), address(asset), address(assetStrategy));
-            collateralYieldBoxId =
-                registerYieldBoxAsset(address(yieldBox), address(collateral), address(collateralStrategy));
-        }
         oracle = new OracleMock("Oracle Test", "ORCT", 1 ether);
         singularity = launchSingularity(
             address(asset), assetYieldBoxId, address(collateral), collateralYieldBoxId, address(oracle)
@@ -193,12 +182,12 @@ contract SingularityTest is UsdoTestHelper {
 
     function depositAsset(uint256 amount) public {
         deal(address(asset), address(this), amount);
-        asset.approve(address(yieldBox), type(uint256).max);
+        asset.approve( type(uint256).max);
         asset.approve(address(pearlmit), type(uint256).max);
         yieldBox.setApprovalForAll(address(singularity), true);
         yieldBox.setApprovalForAll(address(pearlmit), true);
         pearlmit.approve(
-            1155, address(yieldBox), assetYieldBoxId, address(singularity), type(uint200).max, uint48(block.timestamp)
+            1155,  assetYieldBoxId, address(singularity), type(uint200).max, uint48(block.timestamp)
         );
 
         uint256 share = yieldBox.toShare(assetYieldBoxId, amount, false);
@@ -208,13 +197,13 @@ contract SingularityTest is UsdoTestHelper {
 
     function depositCollateral(uint256 amount) public {
         deal(address(collateral), address(this), amount);
-        collateral.approve(address(yieldBox), type(uint256).max);
+        collateral.approve( type(uint256).max);
         collateral.approve(address(pearlmit), type(uint256).max);
         yieldBox.setApprovalForAll(address(singularity), true);
         yieldBox.setApprovalForAll(address(pearlmit), true);
         pearlmit.approve(
             1155,
-            address(yieldBox),
+            
             collateralYieldBoxId,
             address(singularity),
             type(uint200).max,
@@ -238,7 +227,7 @@ contract SingularityTest is UsdoTestHelper {
 
     function repay(uint256 part) public {
         pearlmit.approve(
-            1155, address(yieldBox), assetYieldBoxId, address(singularity), type(uint200).max, uint48(block.timestamp)
+            1155,  assetYieldBoxId, address(singularity), type(uint200).max, uint48(block.timestamp)
         );
         (Module[] memory modules, bytes[] memory calls) = marketHelper.repay(address(this), address(this), false, part);
         singularity.execute(modules, calls, true);
@@ -622,12 +611,12 @@ contract SingularityTest is UsdoTestHelper {
         assertGt(borrowPart, 0);
 
         vm.startPrank(userA);
-        asset.approve(address(yieldBox), type(uint256).max);
+        asset.approve( type(uint256).max);
         asset.approve(address(pearlmit), type(uint256).max);
         yieldBox.setApprovalForAll(address(singularity), true);
         yieldBox.setApprovalForAll(address(pearlmit), true);
         pearlmit.approve(
-            1155, address(yieldBox), assetYieldBoxId, address(singularity), type(uint200).max, uint48(block.timestamp)
+            1155,  assetYieldBoxId, address(singularity), type(uint200).max, uint48(block.timestamp)
         );
 
         vm.stopPrank();

@@ -33,9 +33,7 @@ import {
     IToftVault
 } from "tap-utils/interfaces/oft/ITOFT.sol";
 import {
-    YieldBoxApproveAllMsg,
-    MarketPermitActionMsg,
-    YieldBoxApproveAssetMsg
+    MarketPermitActionMsg
 } from "tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
 import {ITapiocaOptionBroker, IExerciseOptionsData} from "tap-utils/interfaces/tap-token/ITapiocaOptionBroker.sol";
 import {
@@ -47,7 +45,6 @@ import {TOFTGenericReceiverModule} from "tapiocaz/tOFT/modules/TOFTGenericReceiv
 import {TOFTOptionsReceiverModule} from "tapiocaz/tOFT/modules/TOFTOptionsReceiverModule.sol";
 import {TOFTMarketReceiverModule} from "tapiocaz/tOFT/modules/TOFTMarketReceiverModule.sol";
 import {MagnetarWithdrawData} from "tap-utils/interfaces/periph/IMagnetar.sol";
-import {ERC20WithoutStrategy} from "yieldbox/strategies/ERC20WithoutStrategy.sol";
 import {IMtoftFeeGetter} from "tap-utils/interfaces/oft/IMToftFeeGetter.sol";
 
 import {Magnetar} from "tapioca-periph/Magnetar/Magnetar.sol";
@@ -81,7 +78,7 @@ contract TOFTTest is TOFTTestHelper, TapiocaZProcedures {
     uint32 bEid = 2;
 
     Pearlmit pearlmit;
-    YieldBox yieldBox;
+    
     Cluster cluster;
     ERC20Mock aERC20;
     ERC20Mock bERC20;
@@ -172,14 +169,14 @@ contract TOFTTest is TOFTTestHelper, TapiocaZProcedures {
         report = TapiocaRelease.deployTapiocaV1(input, emptyReport);
 
         pearlmit = Pearlmit(report.pearlmit);
-        yieldBox = YieldBox(report.yieldbox);
+
         cluster = Cluster(report.cluster);
         magnetar = Magnetar(payable(report.magnetar));
         tOFTHelper = TOFTHelper(report.toftHelper);
         {
             vm.label(address(endpoints[aEid]), "aEndpoint");
             vm.label(address(endpoints[bEid]), "bEndpoint");
-            vm.label(address(yieldBox), "YieldBox");
+            vm.label( "YieldBox");
             vm.label(address(cluster), "Cluster");
             vm.label(address(magnetar), "Magnetar");
         }
@@ -193,7 +190,7 @@ contract TOFTTest is TOFTTestHelper, TapiocaZProcedures {
                 aEid,
                 address(report.extExec),
                 address(report.pearlmit),
-                address(yieldBox),
+                
                 address(report.tOFTSenderModule),
                 address(report.tOFTReceiverModule),
                 address(report.tOFTMarketReceiverModule),
@@ -213,7 +210,7 @@ contract TOFTTest is TOFTTestHelper, TapiocaZProcedures {
                 bEid,
                 address(report.extExec),
                 address(report.pearlmit),
-                address(yieldBox),
+                
                 address(toftModulesBReport.tOFTSenderModule),
                 address(toftModulesBReport.tOFTReceiverModule),
                 address(toftModulesBReport.tOFTMarketReceiverModule),
@@ -239,13 +236,13 @@ contract TOFTTest is TOFTTestHelper, TapiocaZProcedures {
                 symbol: "TNKB",
                 endpoint: address(endpoints[aEid]),
                 delegate: __owner,
-                yieldBox: address(yieldBox),
+                
                 cluster: address(cluster),
                 erc20: address(bERC20),
                 vault: address(new TOFTVault(address(bERC20))),
                 hostEid: bEid,
-                extExec: address(toftExtExec),
-                pearlmit: IPearlmit(address(pearlmit))
+                extExec: address(toftExtExec)
+                
             });
 
             TOFTSender bTOFTSender = new TOFTSender(bTOFTInitStruct);
@@ -280,32 +277,28 @@ contract TOFTTest is TOFTTestHelper, TapiocaZProcedures {
         ofts[1] = address(bTOFT);
         this.wireOApps(ofts);
 
-        // Setup YieldBox assets
-        ERC20WithoutStrategy aTOFTStrategy = createYieldBoxEmptyStrategy(address(yieldBox), address(aTOFT));
-        ERC20WithoutStrategy bTOFTStrategy = createYieldBoxEmptyStrategy(address(yieldBox), address(bTOFT));
-
-        aTOFTYieldBoxId = registerYieldBoxAsset(address(yieldBox), address(aTOFT), address(aTOFTStrategy)); //we assume this is the asset Id
-        bTOFTYieldBoxId = registerYieldBoxAsset(address(yieldBox), address(bTOFT), address(bTOFTStrategy)); //we assume this is the collateral Id
+        aTOFTYieldBoxId = registerYieldBoxAsset( address(aTOFT), address(aTOFTStrategy)); //we assume this is the asset Id
+        bTOFTYieldBoxId = registerYieldBoxAsset( address(bTOFT), address(bTOFTStrategy)); //we assume this is the collateral Id
 
         singularity =
-            createSingularity(address(yieldBox), bTOFTYieldBoxId, aTOFTYieldBoxId, address(bTOFT), address(aTOFT));
+            createSingularity( bTOFTYieldBoxId, aTOFTYieldBoxId, address(bTOFT), address(aTOFT));
         vm.label(address(singularity), "Singularity");
 
         tOB = new TapiocaOptionsBrokerMock(address(tapOFT), IPearlmit(address(pearlmit)));
 
         marketHelper = new MarketHelperMock();
         vm.startPrank(report.tapiocaMulticall);
-        cluster.updateContract(aEid, address(yieldBox), true);
+        cluster.updateContract(aEid,  true);
         cluster.updateContract(aEid, address(singularity), true);
         cluster.updateContract(aEid, address(magnetar), true);
         cluster.updateContract(aEid, address(tOB), true);
         cluster.updateContract(aEid, address(marketHelper), true);
-        cluster.updateContract(bEid, address(yieldBox), true);
+        cluster.updateContract(bEid,  true);
         cluster.updateContract(bEid, address(singularity), true);
         cluster.updateContract(bEid, address(magnetar), true);
         cluster.updateContract(bEid, address(tOB), true);
         cluster.updateContract(bEid, address(marketHelper), true);
-        cluster.updateContract(0, address(yieldBox), true);
+        cluster.updateContract(0,  true);
         cluster.updateContract(0, address(singularity), true);
         cluster.updateContract(0, address(magnetar), true);
         cluster.updateContract(0, address(tOB), true);
@@ -1200,7 +1193,7 @@ contract TOFTTest is TOFTTestHelper, TapiocaZProcedures {
 
             bytes32 digest_ = _getYieldBoxPermitAllTypedDataHash(approvalUserB_, true);
             YieldBoxApproveAllMsg memory permitApproval_ =
-                __getYieldBoxPermitAllData(approvalUserB_, address(yieldBox), true, digest_, userAPKey);
+                __getYieldBoxPermitAllData(approvalUserB_,  true, digest_, userAPKey);
 
             approvalMsg_ = tOFTHelper.buildYieldBoxApproveAllMsg(permitApproval_);
         }
@@ -1263,7 +1256,7 @@ contract TOFTTest is TOFTTestHelper, TapiocaZProcedures {
 
             bytes32 digest_ = _getYieldBoxPermitAllTypedDataHash(approvalUserB_, false);
             YieldBoxApproveAllMsg memory permitApproval_ =
-                __getYieldBoxPermitAllData(approvalUserB_, address(yieldBox), false, digest_, userAPKey);
+                __getYieldBoxPermitAllData(approvalUserB_,  false, digest_, userAPKey);
 
             approvalMsg_ = tOFTHelper.buildYieldBoxApproveAllMsg(permitApproval_);
         }
@@ -1337,7 +1330,7 @@ contract TOFTTest is TOFTTestHelper, TapiocaZProcedures {
 
             permitApprovalB_ = __getYieldBoxPermitAssetData(
                 approvalUserB_,
-                address(yieldBox),
+                
                 true,
                 _getYieldBoxPermitAssetTypedDataHash(approvalUserB_, true),
                 userAPKey
@@ -1345,7 +1338,7 @@ contract TOFTTest is TOFTTestHelper, TapiocaZProcedures {
 
             permitApprovalC_ = __getYieldBoxPermitAssetData(
                 approvalUserC_,
-                address(yieldBox),
+                
                 true,
                 _getYieldBoxPermitAssetTypedDataHash(approvalUserC_, true),
                 userAPKey
@@ -1427,7 +1420,7 @@ contract TOFTTest is TOFTTestHelper, TapiocaZProcedures {
 
             permitApprovalB_ = __getYieldBoxPermitAssetData(
                 approvalUserB_,
-                address(yieldBox),
+                
                 false,
                 _getYieldBoxPermitAssetTypedDataHash(approvalUserB_, false),
                 userAPKey
@@ -1435,7 +1428,7 @@ contract TOFTTest is TOFTTestHelper, TapiocaZProcedures {
 
             permitApprovalC_ = __getYieldBoxPermitAssetData(
                 approvalUserC_,
-                address(yieldBox),
+                
                 false,
                 _getYieldBoxPermitAssetTypedDataHash(approvalUserC_, false),
                 userAPKey

@@ -75,13 +75,11 @@ struct TOFTInitStruct {
     string symbol;
     address endpoint;
     address delegate;
-    address yieldBox;
     address cluster;
     address erc20;
     address vault;
     uint256 hostEid;
     address extExec;
-    IPearlmit pearlmit;
 }
 
 struct TOFTModulesInitStruct {

@@ -144,35 +144,6 @@ struct ERC721PermitApprovalMsg {
 }
 
 /**
- * @notice Encodes the message for the ybPermitAll() operation.
- */
-struct YieldBoxApproveAllMsg {
-    address target;
-    address owner;
-    address spender;
-    uint256 deadline;
-    uint8 v;
-    bytes32 r;
-    bytes32 s;
-    bool permit;
-}
-
-/**
- * @notice Encodes the message for the ybPermitAll() operation.
- */
-struct YieldBoxApproveAssetMsg {
-    address target;
-    address owner;
-    address spender;
-    uint256 assetId;
-    uint256 deadline;
-    uint8 v;
-    bytes32 r;
-    bytes32 s;
-    bool permit;
-}
-
-/**
  * @notice Encodes the message for the market.permitAction() or market.permitBorrow() operations.
  */
 struct MarketPermitActionMsg {

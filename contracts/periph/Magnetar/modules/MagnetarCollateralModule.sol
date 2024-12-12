@@ -44,19 +44,19 @@ contract MagnetarCollateralModule is MagnetarBaseModule {
     constructor(address _toeHelper) MagnetarBaseModule(_toeHelper) {}
 
     /**
-     * @notice helper for deposit to YieldBox, add collateral to a market, borrow from the same market and withdraw
+     * @notice helper for deposit , add collateral to a market, borrow from the same market and withdraw
      * @dev all operations are optional:
-     *         - if `deposit` is false it will skip the deposit to YieldBox step
+     *         - if `deposit` is false it will skip the deposit  step
      *         - if `withdraw` is false it will skip the withdraw step
      *         - if `collateralAmount == 0` it will skip the add collateral step
      *         - if `borrowAmount == 0` it will skip the borrow step
-     *     - the amount deposited to YieldBox is `collateralAmount`
+     *     - the amount deposited  is `collateralAmount`
      *
      * @param data.market the SGL/BigBang market
      * @param data.user the user to perform the action for
      * @param data.collateralAmount the collateral amount to add
      * @param data.borrowAmount the borrow amount
-     * @param data.deposit true/false flag for the deposit to YieldBox step
+     * @param data.deposit true/false flag for the deposit  step
      * @param data.withdrawParams necessary data for the same chain withdrawal
      */
     function depositAddCollateralAndBorrowFromMarket(DepositAddCollateralAndBorrowFromMarketData memory data)
@@ -73,7 +73,7 @@ contract MagnetarCollateralModule is MagnetarBaseModule {
         uint256 _share = _market.convertToShares(data.collateralAmount);
 
         /**
-         * @dev deposit to YieldBox
+         * @dev deposit 
          */
         if (data.deposit && data.collateralAmount > 0) {
             address collateralAddress = _market._collateral();
@@ -108,14 +108,14 @@ contract MagnetarCollateralModule is MagnetarBaseModule {
     }
 
     /**
-     * @notice helper for deposit asset to YieldBox, repay on a market, remove collateral and withdraw
+     * @notice helper for deposit asset , repay on a market, remove collateral and withdraw
      * @dev all steps are optional:
-     *         - if `depositAmount` is 0, the deposit to YieldBox step is skipped
+     *         - if `depositAmount` is 0, the deposit  step is skipped
      *         - if `repayAmount` is 0, the repay step is skipped
      *         - if `collateralAmount` is 0, the add collateral step is skipped
      * @param data.market the SGL/BigBang market
      * @param data.user the user to perform the action for
-     * @param data.depositAmount the amount to deposit to YieldBox
+     * @param data.depositAmount the amount to deposit 
      * @param data.repayAmount the amount to repay to the market
      * @param data.collateralAmount the amount to remove from the market
      * @param data.withdrawCollateralParams necessary data for the same chain withdrawal
@@ -132,7 +132,7 @@ contract MagnetarCollateralModule is MagnetarBaseModule {
         IMarket _market = IMarket(data.market);
 
         /**
-         * @dev deposit `market._assetId()` to YieldBox
+         * @dev deposit `market._assetId()` 
          */
         if (data.depositAmount > 0) {
             address assetAddress = _market._collateral();

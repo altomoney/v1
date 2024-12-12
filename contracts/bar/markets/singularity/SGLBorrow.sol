@@ -48,7 +48,7 @@ contract SGLBorrow is SGLLendingCommon {
     /// @param from Address to repay from.
     /// @param to Address of the user this payment should go.
     /// @param skim True if the amount should be skimmed from the deposit balance of msg.sender.
-    /// False if tokens from msg.sender in `yieldBox` should be transferred.
+    /// False if tokens from msg.sender  should be transferred.
     /// @param part The amount to repay. See `userBorrowPart`.
     /// @return amount The total amount repayed.
     function repay(address from, address to, bool skim, uint256 part)

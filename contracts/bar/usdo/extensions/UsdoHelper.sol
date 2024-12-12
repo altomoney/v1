@@ -4,8 +4,6 @@ pragma solidity ^0.8.22;
 // Tapioca
 import {
     IUsdo,
-    YieldBoxApproveAllMsg,
-    YieldBoxApproveAssetMsg,
     MarketPermitActionMsg,
     ExerciseOptionsMsg,
     MarketRemoveAssetMsg,

@@ -4,7 +4,7 @@ pragma solidity ^0.8.22;
 
 // Tapioca
 import {
-    YieldBoxApproveAllMsg, YieldBoxApproveAssetMsg, MarketPermitActionMsg
+     MarketPermitActionMsg
 } from "tap-utils/interfaces/oft/IUsdo.sol";
 import {ERC20PermitStruct, ERC20PermitApprovalMsg} from "tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
 
@@ -37,48 +37,6 @@ contract TestUtils is Test {
         });
     }
 
-    function __getYieldBoxPermitAllData(
-        ERC20PermitStruct memory _permit,
-        address _target,
-        bool _isPermit,
-        bytes32 _digest,
-        uint256 _pkSigner
-    ) internal pure returns (YieldBoxApproveAllMsg memory permitApproval_) {
-        (uint8 v_, bytes32 r_, bytes32 s_) = vm.sign(_pkSigner, _digest);
-
-        permitApproval_ = YieldBoxApproveAllMsg({
-            target: _target,
-            owner: _permit.owner,
-            spender: _permit.spender,
-            deadline: _permit.deadline,
-            v: v_,
-            r: r_,
-            s: s_,
-            permit: _isPermit
-        });
-    }
-
-    function __getYieldBoxPermitAssetData(
-        ERC20PermitStruct memory _permit,
-        address _target,
-        bool _isPermit,
-        bytes32 _digest,
-        uint256 _pkSigner
-    ) internal pure returns (YieldBoxApproveAssetMsg memory permitApproval_) {
-        (uint8 v_, bytes32 r_, bytes32 s_) = vm.sign(_pkSigner, _digest);
-
-        permitApproval_ = YieldBoxApproveAssetMsg({
-            target: _target,
-            owner: _permit.owner,
-            spender: _permit.spender,
-            assetId: _permit.value,
-            deadline: _permit.deadline,
-            v: v_,
-            r: r_,
-            s: s_,
-            permit: _isPermit
-        });
-    }
 
     function __getMarketPermitData(MarketPermitActionMsg memory _permit, bytes32 _digest, uint256 _pkSigner)
         internal

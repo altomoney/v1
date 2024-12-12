@@ -14,8 +14,6 @@ import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 */
 
 interface ITapiocaOptionLiquidityProvision is IERC721 {
-    function yieldBox() external view returns (address);
-
     function activeSingularities(address singularity)
         external
         view
