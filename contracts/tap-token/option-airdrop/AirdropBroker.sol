@@ -41,7 +41,7 @@ struct Phase2Info {
 /**
  * @notice More details found here https://docs.tapioca.xyz/tapioca/launch/option-airdrop
  */
-contract AirdropBroker is Pausable, Ownable, PearlmitHandler, FullMath, ReentrancyGuard {
+contract AirdropBroker is Pausable, Ownable, FullMath, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     bytes public tapOracleData;
@@ -129,7 +129,6 @@ contract AirdropBroker is Pausable, Ownable, PearlmitHandler, FullMath, Reentran
     {
         if (_aoTAP == address(0)) revert AddressZero();
         if (_pcnft == address(0)) revert AddressZero();
-        if (address(pearlmit) == address(0)) revert AddressZero();
 
         paymentTokenBeneficiary = _paymentTokenBeneficiary;
         aoTAP = AOTAP(_aoTAP);
@@ -271,7 +270,8 @@ contract AirdropBroker is Pausable, Ownable, PearlmitHandler, FullMath, Reentran
         // Check allowance. Make sure to consume it post call
         {
             // aoTAP.isApprovedOrOwner(msg.sender, _aoTAPTokenID)
-            if (owner != msg.sender && !isERC721Approved(owner, msg.sender, address(aoTAP), _aoTAPTokenID)) {
+            // TODO review it && !isERC721Approved(owner, msg.sender, address(aoTAP), _aoTAPTokenID)
+            if (owner != msg.sender) {
                 revert NotAuthorized();
             }
         }
@@ -552,12 +552,8 @@ contract AirdropBroker is Pausable, Ownable, PearlmitHandler, FullMath, Reentran
         if (discountedPaymentAmount == 0) revert PaymentAmountNotValid();
 
         uint256 balBefore = _paymentToken.balanceOf(address(this));
-        // IERC20(address(_paymentToken)).safeTransferFrom(msg.sender, address(this), discountedPaymentAmount);
-        {
-            bool isErr =
-                pearlmit.transferFromERC20(msg.sender, address(this), address(_paymentToken), discountedPaymentAmount);
-            if (isErr) revert Failed();
-        }
+        IERC20(address(_paymentToken)).safeTransferFrom(msg.sender, address(this), discountedPaymentAmount);
+
         uint256 balAfter = _paymentToken.balanceOf(address(this));
         if (balAfter - balBefore != discountedPaymentAmount) revert Failed();
 

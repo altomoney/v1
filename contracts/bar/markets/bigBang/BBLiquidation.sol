@@ -259,7 +259,7 @@ contract BBLiquidation is BBCommon {
         callerShare = (extraShare * callerReward) / FEE_PRECISION; //  y%  of profit goes to caller.
         feeShare = extraShare - callerShare; // rest of the profit goes to fee.
 
-        //protocol fees should be kept in the contract as we do a yieldBox.depositAsset when we are extracting the fees using `refreshPenroseFees`
+        //protocol fees should be kept in the contract as we do a yield box.depositAsset when we are extracting the fees using `refreshPenroseFees`
         if (callerShare > 0) {
             IERC20(_borrowableToken()).safeTransfer(msg.sender, callerShare); // TODO: check this
         }

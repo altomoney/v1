@@ -151,7 +151,7 @@ contract UsdoOptionReceiverModule is BaseUsdo {
             _options.tapAmount
         );
 
-        // Clear Pearlmit ERC721 allowance post execution
+        // Clear ERC721 allowance post execution
         {
             address oTap = ITapiocaOptionBroker(_options.target).oTAP();
             address oTapOwner = IERC721(oTap).ownerOf(_options.oTAPTokenID);

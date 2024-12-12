@@ -204,8 +204,8 @@ contract MagnetarMintModule is MagnetarBaseModule {
         fraction = _extractTokens(data.user, data.externalContracts.singularity, fraction);
 
         // Wrap SGL tokens into tSgl
-        IERC20(address(params.singularity)).approve(address(pearlmit), fraction);
-        pearlmit.approve(
+        IERC20(address(params.singularity)).approve(address(pearl mit), fraction);
+        pear lmit.approve(
             20, address(params.singularity), 0, data.lockData.tAsset, fraction.toUint200(), block.timestamp.toUint48()
         );
 
@@ -224,7 +224,7 @@ contract MagnetarMintModule is MagnetarBaseModule {
         ITapiocaOptionLiquidityProvision tOLP = ITapiocaOptionLiquidityProvision(data.lockData.target);
 
         // deposit YB and revoke approval
-        IERC20(address(params.singularity)).approve(address(pearlmit), 0);
+        IERC20(address(params.singularity)).approve(address(pearl mit), 0);
         data.lockData.amount = obtainedShares.toUint128();
         return tOLP.lock(
             params.participate ? address(this) : data.user,
@@ -250,14 +250,14 @@ contract MagnetarMintModule is MagnetarBaseModule {
 
         // transfer NFT here
         if (!lock) {
-            bool isErr = pearlmit.transferFromERC721(data.user, address(this), data.lockData.target, tOLPTokenId);
+            bool isErr = pearl mit.transferFromERC721(data.user, address(this), data.lockData.target, tOLPTokenId);
             if (isErr) revert Magnetar_ExtractTokenFail();
         }
 
-        pearlmit.approve(
+        pear lmit.approve(
             721, data.lockData.target, tOLPTokenId, data.participateData.target, 1, block.timestamp.toUint48()
         );
-        IERC721(data.lockData.target).approve(address(pearlmit), tOLPTokenId);
+        IERC721(data.lockData.target).approve(address(pear lmit), tOLPTokenId);
         uint256 oTAPTokenId = ITapiocaOptionBroker(data.participateData.target).participate(tOLPTokenId, 0);
 
         address oTapAddress = ITapiocaOptionBroker(data.participateData.target).oTAP();

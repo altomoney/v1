@@ -37,7 +37,7 @@ contract Usdo_OptionReceiverModule is Usdo_Unit_Shared, BigBang_Unit_Shared {
         super.setUp();
 
         _magnetar = address(new MagnetarDecoder_test());
-        tOB = new TapiocaOptionsBrokerMock_test(address(tapToken), IPearlmit(address(pearlmit)));
+        tOB = new TapiocaOptionsBrokerMock_test(address(tapToken));
         cluster.updateContract(0, address(tOB), true);
     }
 
@@ -126,14 +126,6 @@ contract Usdo_OptionReceiverModule is Usdo_Unit_Shared, BigBang_Unit_Shared {
         OTapMock_test(oTapMock).setOwner(address(this));
         ExerciseOptionsMsg memory _msg = _createMinimalExerciseOptionsMsg(_amountSD);
 
-        pearlmit.approve(
-            TOKEN_TYPE_ERC721,
-            tOB.oTAP(),
-            0,
-            address(usdoOptionsReceiverModule),
-            type(uint200).max,
-            uint48(block.timestamp)
-        );
         usdoOptionsReceiverModule.exerciseOptionsReceiver(address(this), abi.encode(_msg));
 
         assertEq(tapToken.balanceOf(address(this)), amount, "TapOFT");
@@ -153,14 +145,6 @@ contract Usdo_OptionReceiverModule is Usdo_Unit_Shared, BigBang_Unit_Shared {
         OTapMock_test(oTapMock).setOwner(address(this));
         ExerciseOptionsMsg memory _msg = _createMinimalExerciseOptionsMsg(_amountSD);
 
-        pearlmit.approve(
-            TOKEN_TYPE_ERC721,
-            tOB.oTAP(),
-            0,
-            address(usdoOptionsReceiverModule),
-            type(uint200).max,
-            uint48(block.timestamp)
-        );
         usdoOptionsReceiverModule.exerciseOptionsReceiver(address(this), abi.encode(_msg));
 
         assertEq(tapToken.balanceOf(address(this)), amount, "TapOFT");

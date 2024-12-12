@@ -33,20 +33,10 @@ contract TapiocaOptionsBrokerMock  {
     }
 
     function exerciseOption(uint256 _bucketId, address _paymentToken, uint256 _tapAmount) external {
-        {
-            bool isErr = pearlmit.transferFromERC20(msg.sender, address(this), _paymentToken, 1 ether);
-            if (isErr) revert TransferFailed();
-        }
-
         ITap(tapOFT).extractTAP(msg.sender, 1 ether);
     }
 
     function participate(uint256 _tOLPTokenID) external returns (uint256 oTAPTokenID) {
-        {
-            bool isErr = pearlmit.transferFromERC721(msg.sender, address(this), tOLP, _tOLPTokenID);
-            if (isErr) revert TransferFailed();
-        }
-
         ERC721Mock(oTAP).mint(msg.sender, 1);
         return 1;
     }

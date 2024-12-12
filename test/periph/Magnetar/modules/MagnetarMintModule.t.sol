@@ -230,7 +230,7 @@ abstract contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver 
             call: mintFromBBAndLendOnSGLData
         });
 
-        uint256 colSharesBefore = bb._userCollateralShare(address(this));
+        uint256 colSharesBefore = bb.balanceOf(address(this));
 
         //approvals for deposit & collateral add
         collateralA.approve(address(magnetarA), type(uint256).max);
@@ -243,7 +243,7 @@ abstract contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver 
         
         
 
-        uint256 colSharesAfter = bb._userCollateralShare(address(this));
+        uint256 colSharesAfter = bb.balanceOf(address(this));
         assertGt(colSharesAfter, colSharesBefore);
     }
 
@@ -275,7 +275,7 @@ abstract contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver 
             call: mintFromBBAndLendOnSGLData
         });
 
-        uint256 colSharesBefore = bb._userCollateralShare(address(this));
+        uint256 colSharesBefore = bb.balanceOf(address(this));
         uint256 borrowPartBefore = bb._userBorrowPart(address(this));
 
         //approvals for deposit & collateral add
@@ -289,7 +289,7 @@ abstract contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver 
         
         
 
-        uint256 colSharesAfter = bb._userCollateralShare(address(this));
+        uint256 colSharesAfter = bb.balanceOf(address(this));
         uint256 borrowPartAfter = bb._userBorrowPart(address(this));
         assertGt(colSharesAfter, colSharesBefore);
         assertGt(borrowPartAfter, borrowPartBefore);
@@ -365,7 +365,7 @@ abstract contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver 
             call: mintFromBBAndLendOnSGLData
         });
 
-        uint256 colSharesBefore = bb._userCollateralShare(address(this));
+        uint256 colSharesBefore = bb.balanceOf(address(this));
         uint256 borrowPartBefore = bb._userBorrowPart(address(this));
         uint256 assetABalanceBefore = sgl.balanceOf(address(this));
 
@@ -382,7 +382,7 @@ abstract contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver 
         
         
 
-        uint256 colSharesAfter = bb._userCollateralShare(address(this));
+        uint256 colSharesAfter = bb.balanceOf(address(this));
         uint256 borrowPartAfter = bb._userBorrowPart(address(this));
         uint256 assetABalanceAfter = sgl.balanceOf(address(this));
         assertGt(assetABalanceAfter, assetABalanceBefore);
@@ -428,7 +428,7 @@ abstract contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver 
             call: mintFromBBAndLendOnSGLData
         });
 
-        uint256 colSharesBefore = bb._userCollateralShare(address(this));
+        uint256 colSharesBefore = bb.balanceOf(address(this));
         uint256 borrowPartBefore = bb._userBorrowPart(address(this));
         uint256 sglBalanceBefore = sgl.balanceOf(address(this));
 
@@ -445,7 +445,7 @@ abstract contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver 
         
         
 
-        uint256 colSharesAfter = bb._userCollateralShare(address(this));
+        uint256 colSharesAfter = bb.balanceOf(address(this));
         uint256 borrowPartAfter = bb._userBorrowPart(address(this));
         uint256 sglBalanceAfter = sgl.balanceOf(address(this));
         assertGt(colSharesAfter, colSharesBefore);

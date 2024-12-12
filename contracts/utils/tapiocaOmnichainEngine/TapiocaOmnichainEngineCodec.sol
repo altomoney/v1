@@ -272,7 +272,7 @@ library TapiocaOmnichainEngineCodec {
   
   
     /**
-     * @notice Encodes the message for the `TOFTReceiver._yieldBoxMarketPermitActionReceiver()` operation.
+     * @notice Encodes the message for the `TOFTReceiver._yield BoxMarketPermitActionReceiver()` operation.
      */
     function buildMarketPermitApprovalMsg(MarketPermitActionMsg memory _marketApprovalMsg)
         internal

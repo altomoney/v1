@@ -44,7 +44,6 @@ contract Penrose_deploy is BigBang_Unit_Shared {
             BigBangInitData(
                 address(penrose),
                 address(mainToken), //asset
-                mainTokenId,
                 ITapiocaOracle(address(rndAddr)),
                 ILeverageExecutor(address(rndAddr)),
                 0,
@@ -68,7 +67,6 @@ contract Penrose_deploy is BigBang_Unit_Shared {
             BigBangInitData(
                 address(penrose),
                 address(mainToken), //asset
-                mainTokenId,
                 ITapiocaOracle(address(rndAddr)),
                 ILeverageExecutor(address(rndAddr)),
                 0,

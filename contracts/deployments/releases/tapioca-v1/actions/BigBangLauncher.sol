@@ -52,7 +52,6 @@ contract BigBangLauncher is IBigBangLauncher {
         BigBang._InitMemoryData memory initData = BigBang._InitMemoryData(
             IPenrose(address(PENROSE)),
             IERC20(riskParams.collateral),
-            riskParams.collateralId,
             ITapiocaOracle(riskParams.oracle),
             riskParams.exchangeRatePrecision,
             riskParams.collateralizationRate,

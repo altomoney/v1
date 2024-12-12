@@ -90,7 +90,6 @@ contract TapTokenTest is TapTestHelper, IERC721Receiver {
     address __airdrop = address(0x35);
     uint256 __governanceEid = bEid;
     address __owner = address(this);
-    Pearlmit pearlmit;
     Cluster cluster;
 
     /**
@@ -122,7 +121,6 @@ contract TapTokenTest is TapTestHelper, IERC721Receiver {
         setUpEndpoints(3, LibraryType.UltraLightNode);
 
         extExec = new TapiocaOmnichainExtExec();
-        pearlmit = new Pearlmit("Pearlmit", "1", address(this), 0);
         cluster = new Cluster(aEid, __owner);
 
         aTapOFT = new TapTokenMock(
@@ -140,7 +138,6 @@ contract TapTokenTest is TapTestHelper, IERC721Receiver {
                 address(new TapTokenSender("", "", address(endpoints[aEid]), address(this), address(0))),
                 address(new TapTokenReceiver("", "", address(endpoints[aEid]), address(this), address(0))),
                 address(extExec),
-                IPearlmit(address(pearlmit)),
                 ICluster(address(cluster))
             )
         );
@@ -161,7 +158,6 @@ contract TapTokenTest is TapTestHelper, IERC721Receiver {
                 address(new TapTokenSender("", "", address(endpoints[bEid]), address(this), address(0))),
                 address(new TapTokenReceiver("", "", address(endpoints[bEid]), address(this), address(0))),
                 address(extExec),
-                IPearlmit(address(pearlmit)),
                 ICluster(address(cluster))
             )
         );
@@ -182,8 +178,7 @@ contract TapTokenTest is TapTestHelper, IERC721Receiver {
         Bucket[] memory buckets = new Bucket[](1);
         buckets[0] = defaultBucket;
 
-        twTap =
-            new TwTAP(payable(address(bTapOFT)), IPearlmit(address(pearlmit)), address(this), EPOCH_DURATION, buckets);
+        twTap = new TwTAP(payable(address(bTapOFT)), address(this), EPOCH_DURATION, buckets);
         twTap.setCluster(cluster);
 
         // Cluster approvals
@@ -588,7 +583,6 @@ contract TapTokenTest is TapTestHelper, IERC721Receiver {
                 address(new TapTokenSender("", "", _endpoint, address(this), address(extExec))),
                 address(new TapTokenReceiver("", "", _endpoint, address(this), address(extExec))),
                 address(extExec),
-                IPearlmit(address(pearlmit)),
                 ICluster(address(cluster))
             )
         );

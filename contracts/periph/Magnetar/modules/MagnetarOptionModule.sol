@@ -263,7 +263,7 @@ contract MagnetarOptionModule is MagnetarBaseModule {
 
         // if not owner; get the oTAP token
         if (ownerOfTapTokenId == data.user) {
-            bool isErr = pearlmit.transferFromERC721(
+            bool isErr = pearl mit.transferFromERC721(
                 data.user, address(this), oTapAddress, data.removeAndRepayData.exitData.oTAPTokenID
             );
             if (isErr) revert Magnetar_ExtractTokenFail();

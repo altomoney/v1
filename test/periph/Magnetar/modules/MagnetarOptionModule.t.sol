@@ -409,9 +409,9 @@ abstract contract MagnetarOptionModuleTest is MagnetarTestHelper, IERC721Receive
 
         
 
-        uint256 collateralShareBefore = bb._userCollateralShare(address(this));
+        uint256 collateralShareBefore = bb.balanceOf(address(this));
         magnetarA.burst{value: 0}(calls);
-        uint256 collateralShareAfter = bb._userCollateralShare(address(this));
+        uint256 collateralShareAfter = bb.balanceOf(address(this));
 
         
 
@@ -453,9 +453,9 @@ abstract contract MagnetarOptionModuleTest is MagnetarTestHelper, IERC721Receive
 
         address _collateral = bb._collateral();
         uint256 balanceBefore = ERC20Mock(_collateral).balanceOf(address(this));
-        uint256 collateralShareBefore = bb._userCollateralShare(address(this));
+        uint256 collateralShareBefore = bb.balanceOf(address(this));
         magnetarA.burst{value: 0}(calls);
-        uint256 collateralShareAfter = bb._userCollateralShare(address(this));
+        uint256 collateralShareAfter = bb.balanceOf(address(this));
         uint256 balanceAfter = ERC20Mock(_collateral).balanceOf(address(this));
 
         
@@ -503,9 +503,9 @@ abstract contract MagnetarOptionModuleTest is MagnetarTestHelper, IERC721Receive
 
         address _collateral = bb._collateral();
         uint256 balanceBefore = ERC20Mock(_collateral).balanceOf(address(this));
-        uint256 collateralShareBefore = bb._userCollateralShare(address(this));
+        uint256 collateralShareBefore = bb.balanceOf(address(this));
         magnetarA.burst{value: 0}(calls);
-        uint256 collateralShareAfter = bb._userCollateralShare(address(this));
+        uint256 collateralShareAfter = bb.balanceOf(address(this));
         uint256 balanceAfter = ERC20Mock(_collateral).balanceOf(address(this));
 
         

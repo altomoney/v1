@@ -3,7 +3,6 @@ pragma solidity ^0.8.22;
 
 // Tapioca
 import {IExerciseOptionsData} from "../tap-token/ITapiocaOptionBroker.sol";
-import {IPearlmit} from "src/tap-utils/interfaces/periph/IPearlmit.sol";
 import {MagnetarWithdrawData} from "../periph/IMagnetar.sol";
 
 import "../periph/ITapiocaOmnichainEngine.sol";
@@ -28,7 +27,6 @@ interface ITOFT is ITapiocaOmnichainEngine {
         TOFTGenericReceiver
     }
 
-    function pearlmit() external view returns (IPearlmit);
     function decimalConversionRate() external view returns (uint256);
     function hostEid() external view returns (uint256);
     function wrap(address fromAddress, address toAddress, uint256 amount) external payable returns (uint256 minted);

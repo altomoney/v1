@@ -32,6 +32,8 @@ import {IMarket} from "tap-utils/interfaces/bar/IMarket.sol";
 import {Module} from "tap-utils/interfaces/bar/IMarket.sol";
 import {ITOFT} from "tap-utils/interfaces/oft/ITOFT.sol";
 import {BaseMagnetar} from "./BaseMagnetar.sol";
+import {TapToken} from "../../tap-token/tokens/TapToken.sol";
+
 /*
 
 ████████╗ █████╗ ██████╗ ██╗ ██████╗  ██████╗ █████╗ 
@@ -55,7 +57,6 @@ contract Magnetar is BaseMagnetar, ERC1155Holder {
 
     error Magnetar_ValueMismatch(uint256 expected, uint256 received); // Value mismatch in the total value asked and the msg.value in burst
     error Magnetar_ActionNotValid(uint8 action, bytes actionCalldata); // Burst did not find what to execute
-    error Magnetar_PearlmitTransferFailed(); // Transfer failed in pearlmit
     error Magnetar_MarketOperationNotAllowed();
 
     constructor(
@@ -244,14 +245,14 @@ contract Magnetar is BaseMagnetar, ERC1155Holder {
             /*
             if (funcSig == ITOFT.unwrap.selector) {
                 (, uint256 _amount) = abi.decode(_actionCalldata[4:], (address, uint256));
-                bool isErr = pearlmit.transferFromERC20(msg.sender, address(this), _target, _amount); //unwrap happens on `msg.sender`
-                if (isErr) revert Magnetar_PearlmitTransferFailed();
+                bool isErr = pearl mit.transferFromERC20(msg.sender, address(this), _target, _amount); //unwrap happens on `msg.sender`
+                if (isErr) revert Magnetar_Pear lmitTransferFailed();
             }
             if (funcSig == ITapiocaOmnichainEngine.sendPacketFrom.selector) {
                 (, LZSendParam memory lzSendParam_,) = abi.decode(_actionCalldata[4:], (address, LZSendParam, bytes));
                 uint256 amount_ = lzSendParam_.sendParam.amountLD;
-                bool isErr = pearlmit.transferFromERC20(msg.sender, address(this), _target, amount_); //sendPacketFrom happens on msg.sender
-                if (isErr) revert Magnetar_PearlmitTransferFailed();
+                bool isErr = pear lmit.transferFromERC20(msg.sender, address(this), _target, amount_); //sendPacketFrom happens on msg.sender
+                if (isErr) revert Magnetar_Pea rlmitTransferFailed();
             }*/
 
             _executeCall(_target, _actionCalldata, _actionValue);
@@ -406,17 +407,17 @@ contract Magnetar is BaseMagnetar, ERC1155Holder {
             if (funcSig == ITWTAPv2.participate.selector) {
                 (address from, uint256 amount, uint256 duration, uint256 minReward) =
                     abi.decode(_actionCalldata[4:], (address, uint256, uint256, uint256));
-                address tapOFT = address(ITWTAPv2(_target).tapOFT());
+                TapToken tapOFT = ITWTAPv2(_target).tapOFT();
 
                 tapOFT.transferFrom(from, address(this), amount);
                 
-                tapOFT.safeApprove(address(_target), amount);
+                IERC20(address(tapOFT)).safeApprove(address(_target), amount);
                 _executeCallMemory(
                     _target,
                     abi.encodeWithSelector(ITWTAPv2.participate.selector, from, amount, duration, minReward),
                     _actionValue
                 );
-                tapOFT.safeApprove(address(_target), 0);
+                IERC20(address(tapOFT)).safeApprove(address(_target), 0);
 
                 return;
             }

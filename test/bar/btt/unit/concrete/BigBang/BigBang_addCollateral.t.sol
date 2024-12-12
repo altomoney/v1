@@ -137,9 +137,8 @@ contract BigBang_addCollateral is BigBang_Unit_Shared {
         // approvals
         _approveForCollateral(address(this));
 
-        // deposit to YieldBox for market
-        uint256 share = yieldBox.toShare(mainBB._collateralId(), collateralAmount, false);
-        _depositToYieldBox(mainBB._collateral(), mainBB._collateralId(), share, address(this), address(this));
+        // deposit to market
+        mainBB.deposit(collateralAmount, address(this), address(this));
 
         (Module[] memory modules, bytes[] memory calls) =
             _getCollateralData(collateralAmount, address(this), address(this), false);
@@ -156,12 +155,12 @@ contract BigBang_addCollateral is BigBang_Unit_Shared {
         whenCollateralAmountIsValid(collateralAmount)
     {
         // **** Main BB market ****
-        uint256 share = yieldBox.toShare(mainBB._collateralId(), collateralAmount, false);
+        uint256 share = secondaryBB.convertToShares(collateralAmount);
         _approveBorrow(mainBB, address(this), userA, share);
         _addCollateral(collateralAmount, mainBB, userA, address(this), address(this), address(this), false);
 
         // **** Secondary BB market ****
-        share = yieldBox.toShare(secondaryBB._collateralId(), collateralAmount, false);
+        share = secondaryBB.convertToShares(collateralAmount);
         _approveBorrow(secondaryBB, address(this), userA, share);
         _addCollateral(collateralAmount, secondaryBB, userA, address(this), address(this), address(this), false);
     }
@@ -172,12 +171,12 @@ contract BigBang_addCollateral is BigBang_Unit_Shared {
         whenCollateralAmountIsValid(collateralAmount)
     {
         // **** Main BB market ****
-        uint256 share = yieldBox.toShare(mainBB._collateralId(), collateralAmount, false);
+        uint256 share = mainBB.convertToShares(collateralAmount);
         _approveBorrow(mainBB, address(this), userA, share);
         _addCollateral(collateralAmount, mainBB, userA, address(this), address(mainBB), address(this), true);
 
         // **** Secondary BB market ****
-        share = yieldBox.toShare(secondaryBB._collateralId(), collateralAmount, false);
+        share = secondaryBB.convertToShares(collateralAmount);
         _approveBorrow(secondaryBB, address(this), userA, share);
         _addCollateral(collateralAmount, secondaryBB, userA, address(this), address(secondaryBB), address(this), true);
     }

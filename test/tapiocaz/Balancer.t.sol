@@ -50,7 +50,6 @@ contract BalancerTest is TOFTTestHelper {
     ERC20Mock bERC20;
     mTOFT aTOFT;
     mTOFT bTOFT;
-    Pearlmit pearlmit;
     
     Cluster cluster;
     TOFTHelper tOFTHelper;
@@ -222,12 +221,10 @@ contract BalancerTest is TOFTTestHelper {
             assertEq(aERC20.balanceOf(address(this)), erc20Amount_);
             assertEq(bERC20.balanceOf(address(this)), erc20Amount_);
 
-            pearlmit.approve(20, address(aERC20), 0, address(aTOFT), uint200(erc20Amount_), uint48(block.timestamp)); // Atomic approval
-            aERC20.approve(address(pearlmit), uint200(erc20Amount_));
+            // pearl mit.approve(20, address(aERC20), 0, address(aTOFT), uint200(erc20Amount_), uint48(block.timestamp)); // Atomic approval
             aTOFT.wrap(address(this), address(this), erc20Amount_);
 
-            pearlmit.approve(20, address(bERC20), 0, address(bTOFT), uint200(erc20Amount_), uint48(block.timestamp)); // Atomic approval
-            bERC20.approve(address(pearlmit), uint200(erc20Amount_));
+            // pearl mit.approve(20, address(bERC20), 0, address(bTOFT), uint200(erc20Amount_), uint48(block.timestamp)); // Atomic approval
             bTOFT.wrap(address(this), address(this), erc20Amount_);
 
             assertEq(aTOFT.balanceOf(address(this)), erc20Amount_);
@@ -294,12 +291,10 @@ contract BalancerTest is TOFTTestHelper {
             assertEq(aERC20.balanceOf(address(this)), erc20Amount_);
             assertEq(bERC20.balanceOf(address(this)), erc20Amount_);
 
-            pearlmit.approve(20, address(aERC20), 0, address(aTOFT), uint200(erc20Amount_), uint48(block.timestamp)); // Atomic approval
-            aERC20.approve(address(pearlmit), uint200(erc20Amount_));
+            // pearl mit.approve(20, address(aERC20), 0, address(aTOFT), uint200(erc20Amount_), uint48(block.timestamp)); // Atomic approval
             aTOFT.wrap(address(this), address(this), erc20Amount_);
 
-            pearlmit.approve(20, address(bERC20), 0, address(bTOFT), uint200(erc20Amount_), uint48(block.timestamp)); // Atomic approval
-            bERC20.approve(address(pearlmit), uint200(erc20Amount_));
+            // pearl mit.approve(20, address(bERC20), 0, address(bTOFT), uint200(erc20Amount_), uint48(block.timestamp)); // Atomic approval
             bTOFT.wrap(address(this), address(this), erc20Amount_);
 
             assertEq(aTOFT.balanceOf(address(this)), erc20Amount_);

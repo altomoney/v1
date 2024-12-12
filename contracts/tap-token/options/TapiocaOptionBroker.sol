@@ -35,7 +35,7 @@ struct Participation {
     uint128 exerciseDiscountRate; // exercise discount rate
     uint8 bucketId;
     address tSglAddress;
-    uint256 sglShares; // amount of YieldBox shares locked
+    uint256 sglShares; // amount of shares locked
     uint256 totalUsdoLent; // amount of usdo lent
     uint256 tapAmountExercised;
     uint256 lastEpochSync;

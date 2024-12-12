@@ -41,8 +41,6 @@ abstract contract BaseTapiocaOmnichainEngine is OFT, BaseToeMsgType {
     /// @dev For future use, to extend the receive() operation.
     ITapiocaOmnichainReceiveExtender public tapiocaOmnichainReceiveExtender;
 
-    error BaseTapiocaOmnichainEngine_PearlmitNotApproved();
-    error BaseTapiocaOmnichainEngine_PearlmitFailed();
     error BaseTapiocaOmnichainEngine__ZeroAddress();
 
     // keccak256("BaseToe.cluster.slot")

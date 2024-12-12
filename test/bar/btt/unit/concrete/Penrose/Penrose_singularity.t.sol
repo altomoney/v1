@@ -49,9 +49,7 @@ contract Penrose_singularity is Singularity_Unit_Shared {
             SingularityInitData(
                 address(penrose),
                 address(mainToken), //asset
-                mainTokenId,
                 address(usdo), //collateral
-                usdoId,
                 ITapiocaOracle(address(rndAddr)),
                 ILeverageExecutor(address(rndAddr))
             )

@@ -13,13 +13,12 @@ contract TapiocaMagnetarBatchTwo is MagnetarProcedure {
     constructor(
         address owner,
         address cluster,
-        address pearlmit,
         address toeHelper,
         address zeroXSwap,
         address nativeTokenWrapper,
         MagnetarDepsReport memory deps
     ) {
-        _magnetarReport = _deployMagnetar(owner, cluster, pearlmit, toeHelper, zeroXSwap, nativeTokenWrapper, deps);
+        _magnetarReport = _deployMagnetar(owner, cluster, toeHelper, zeroXSwap, nativeTokenWrapper, deps);
     }
 
     function getMagnetarReport() external view returns (MagnetarReport memory) {

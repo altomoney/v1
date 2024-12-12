@@ -38,18 +38,16 @@ library TapiocaRelease {
         reports.ExtExReport = _deployExtEx(
             input.owner,
             input.wrappedNativeToken,
-            reports.utilitiesReport.pearlmit,
             reports.utilitiesReport.cluster,
             input.zeroXSwapper
         );
 
         reports.magnetarDepsReport =
-            _deployMagnetarDeps(reports.utilitiesReport.pearlmit, reports.utilitiesReport.toeHelper);
+            _deployMagnetarDeps(reports.utilitiesReport.toeHelper);
 
         reports.magnetarReport = _deployMagnetar(
             input.owner,
             reports.utilitiesReport.cluster,
-            reports.utilitiesReport.pearlmit,
             reports.utilitiesReport.toeHelper,
             input.zeroXSwapper,
             input.wrappedNativeToken,
@@ -60,8 +58,7 @@ library TapiocaRelease {
             input.lzEndpoint,
             input.owner, // delegate
             reports.utilitiesReport.cluster,
-            reports.ExtExReport.extExec,
-            reports.utilitiesReport.pearlmit
+            reports.ExtExReport.extExec
         );
 
         reports.sglReport = _deploySingularity();
@@ -73,7 +70,6 @@ library TapiocaRelease {
             input.tapToken,
             reports.usdoReport.usdo,
             input.wrappedNativeToken,
-            reports.utilitiesReport.pearlmit,
             input.owner,
             reports.sglReport.singularity,
             reports.bbReport.bigbang,
@@ -100,7 +96,7 @@ library TapiocaRelease {
     /// Internal functions for deployment of batch contracts and retrieval of deployment report
     ///
 
-    function _deployMagnetarDeps(address pearlmit, address toeHelper)
+    function _deployMagnetarDeps(address toeHelper)
         private
         returns (MagnetarDepsReport memory report)
     {
@@ -111,14 +107,13 @@ library TapiocaRelease {
     function _deployMagnetar(
         address owner,
         address cluster,
-        address pearlmit,
         address toeHelper,
         address zeroXSwapper,
         address wrappedNativeToken,
         MagnetarDepsReport memory deps
     ) private returns (MagnetarReport memory report) {
         TapiocaMagnetarBatchTwo magnetarBatchTwo =
-            new TapiocaMagnetarBatchTwo(owner, cluster, pearlmit, toeHelper, zeroXSwapper, wrappedNativeToken, deps);
+            new TapiocaMagnetarBatchTwo(owner, cluster, toeHelper, zeroXSwapper, wrappedNativeToken, deps);
         return magnetarBatchTwo.getMagnetarReport();
     }
 
@@ -146,7 +141,6 @@ library TapiocaRelease {
         address tapToken,
         address usdoToken,
         address nativeWrappedToken,
-        address pearlmit,
         address owner,
         address singularityMaster,
         address bigbangMaster,
@@ -158,7 +152,6 @@ library TapiocaRelease {
                 tapToken,
                 usdoToken,
                 nativeWrappedToken,
-                pearlmit,
                 owner,
                 singularityMaster,
                 bigbangMaster,
@@ -251,7 +244,6 @@ library TapiocaRelease {
         TapiocaReport memory report;
 
         report.cluster = reports.utilitiesReport.cluster;
-        report.pearlmit = reports.utilitiesReport.pearlmit;
         report.tapiocaMulticall = reports.utilitiesReport.tapiocaMulticall;
         report.toeHelper = reports.utilitiesReport.toeHelper;
 

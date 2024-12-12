@@ -21,10 +21,6 @@ contract BigBang_constructor is BigBang_Unit_Shared {
         assertEq(address(mainBB._collateral()), address(mainToken));
         // it should have oracle as shared one
         assertEq(address(mainBB._oracle()), address(oracle));
-        // it should have assetId as the Usdo id registered in YieldBox
-        assertEq(mainBB._assetId(), usdoId);
-        // it should have collateralId as the main token id registered in YieldBox
-        assertEq(mainBB._collateralId(), mainTokenId);
         // it should have protocolFee as the default one of 10000
         assertEq(mainBB._protocolFee(), PROTOCOL_FEE);
         // it should have collateralizationRate as the default one of 75000
@@ -120,7 +116,6 @@ contract BigBang_constructor is BigBang_Unit_Shared {
             BigBangInitData(
                 address(penrose),
                 address(randomCollateral),
-                randomCollateralId,
                 ITapiocaOracle(address(oracle)),
                 ILeverageExecutor(makeAddr("rndAddress")),
                 VALUE_ZERO,

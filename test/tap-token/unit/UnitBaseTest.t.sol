@@ -77,7 +77,6 @@ contract UnitBaseTest is TestHelper {
     /**
      * Peripheral contracts
      */
-    Pearlmit public pearlmit;
     Cluster public cluster;
 
     /**
@@ -118,8 +117,6 @@ contract UnitBaseTest is TestHelper {
         vm.label(bobAddr, "Bob");
 
         // Peripheral contracts
-        pearlmit = createPearlmit(adminAddr);
-
         cluster = createCluster(0, adminAddr);
 
         // Mocks tokens
@@ -141,11 +138,9 @@ contract UnitBaseTest is TestHelper {
             ITapiocaOracle(address(OracleMock(address(new OracleMock("ETH_ORACLE", "ETH_ORACLE", 5e14)))));
 
         (penrose, bigBangMasterContract, singularityMasterContract) = createPenrose(
-            
             address(cluster),
             tapMockPenrose,
             ethTokenPenrose,
-            IPearlmit(address(pearlmit)),
             adminAddr
         );
 
@@ -157,12 +152,11 @@ contract UnitBaseTest is TestHelper {
         address payable _tapOFT,
         address _paymentTokenBeneficiary,
         uint256 _epochDuration,
-        IPearlmit _pearlmit,
         address _owner
     ) internal returns (TapiocaOptionBroker) {
         /*
         TapiocaOptionBroker tob =
-            new TapiocaOptionBroker(_tOLP, _oTAP, _tapOFT, _paymentTokenBeneficiary, _epochDuration, _pearlmit, _owner);
+            new TapiocaOptionBroker(_tOLP, _oTAP, _tapOFT, _paymentTokenBeneficiary, _epochDuration, _pearl mit, _owner);
 
         vm.startPrank(_owner);
         tob.setCluster(ICluster(address(new Cluster(0, _owner))));
@@ -201,7 +195,6 @@ contract UnitBaseTest is TestHelper {
                 address(new TapTokenSender("", "", i._endpoint, i._owner, address(0))),
                 address(new TapTokenReceiver("", "", i._endpoint, i._owner, address(0))),
                 address(new TapiocaOmnichainExtExec()),
-                IPearlmit(address(pearlmit)),
                 ICluster(address(cluster))
             )
         );
@@ -221,7 +214,7 @@ contract UnitBaseTest is TestHelper {
             lastEpochInflows: 0,
             growthGoal: 1000
         });
-        return new TwTAP(_tapOft, _pearlmit, _owner, 7 days, buckets);
+        return new TwTAP(_tapOft, _owner, 7 days, buckets);
     }
 
     /**
@@ -247,7 +240,6 @@ contract UnitBaseTest is TestHelper {
         address _cluster,
         address _tap,
         address _mainToken,
-        IPearlmit _pearlmit,
         address _owner
     ) internal returns (Penrose _penrose, BigBang bbMasterContract, Singularity sglMasterContract) {
 
@@ -415,12 +407,12 @@ contract UnitBaseTest is TestHelper {
         );
     }
 
-    function createLeverageExecutor(address _swapper, address _cluster, address _pearlmit)
+    function createLeverageExecutor(address _swapper, address _cluster)
         public
         returns (SimpleLeverageExecutor)
     {
         return new SimpleLeverageExecutor(
-            IZeroXSwapper(address(_swapper)), ICluster(_cluster), address(0), IPearlmit(_pearlmit)
+            IZeroXSwapper(address(_swapper)), ICluster(_cluster), address(0)
         );
     }
 
@@ -431,7 +423,7 @@ contract UnitBaseTest is TestHelper {
     function setUpBigBang() internal {
         ZeroXSwapperMock zeroXSwapper = new ZeroXSwapperMock(cluster, adminAddr);
         SimpleLeverageExecutor leverageExecutor =
-            createLeverageExecutor(address(zeroXSwapper), address(cluster), address(pearlmit));
+            createLeverageExecutor(address(zeroXSwapper), address(cluster));
 
         bigBangEthMarket = createBigBang(
             BigBangInitData({
@@ -458,24 +450,13 @@ contract UnitBaseTest is TestHelper {
         vm.startPrank(to);
 
         // approvals
-        BoringIERC20(ethTokenPenrose).approve( type(uint256).max);
-        BoringIERC20(ethTokenPenrose).approve(address(pearlmit), type(uint256).max);
-        yieldBox.setApprovalForAll(address(bigBangEthMarket), true);
-        yieldBox.setApprovalForAll(address(pearlmit), true);
-        pearlmit.approve(
-            1155,
-            
-            ethTokenPenroseId,
-            address(bigBangEthMarket),
-            type(uint200).max,
-            uint48(block.timestamp)
-        );
+        BoringIERC20(ethTokenPenrose).approve(address(bigBangEthMarket), type(uint256).max);
 
         // Deposit collateral
 
         deal(address(ethTokenPenrose), to, amount);
-        uint256 share = yieldBox.toShare(ethTokenPenroseId, amount, false);
-        yieldBox.depositAsset(ethTokenPenroseId, to, share);
+        uint256 share = bigBangEthMarket.convertToShares(amount);
+        // TODO review it yieldBox.depositAsset(ethTokenPenroseId, to, share);
         (BBModule[] memory modules, bytes[] memory calls) = marketHelper.addCollateral(to, to, false, 0, share);
         bigBangEthMarket.execute(modules, calls, true);
 
@@ -493,21 +474,10 @@ contract UnitBaseTest is TestHelper {
     function depositSGLAsset(address to, uint256 amount) public {
         vm.startPrank(to);
         deal(address(usdoMock), to, amount);
-        usdoMock.approve( type(uint256).max);
-        usdoMock.approve(address(pearlmit), type(uint256).max);
-        yieldBox.setApprovalForAll(address(singularityEthMarket), true);
-        yieldBox.setApprovalForAll(address(pearlmit), true);
-        pearlmit.approve(
-            1155,
-            
-            usdoMockTokenId,
-            address(singularityEthMarket),
-            type(uint200).max,
-            uint48(block.timestamp)
-        );
+        usdoMock.approve(address(singularityEthMarket), type(uint256).max);
 
-        uint256 share = yieldBox.toShare(usdoMockTokenId, amount, false);
-        yieldBox.depositAsset(usdoMockTokenId, to, to, 0, share);
+        uint256 share = singularityEthMarket.convertToShares(amount);
+        // TODO review it yieldBox.depositAsset(usdoMockTokenId, to, to, 0, share);
 
         singularityEthMarket.addAsset(to, to, false, share);
 
@@ -519,7 +489,7 @@ contract UnitBaseTest is TestHelper {
 
         ZeroXSwapperMock zeroXSwapper = new ZeroXSwapperMock(cluster, adminAddr);
         SimpleLeverageExecutor leverageExecutor =
-            createLeverageExecutor(address(zeroXSwapper), address(cluster), address(pearlmit));
+            createLeverageExecutor(address(zeroXSwapper), address(cluster));
 
         singularityEthMarket = createSingularity(
             SingularityInitData({

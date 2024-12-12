@@ -98,7 +98,6 @@ contract TOBTestBase is Test {
                 address(new TapTokenSender("", "",  input.lzEndpoint, owner, address(0))),
                 address(new TapTokenReceiver("", "", input.lzEndpoint, owner, address(0))),
                 address(address(0)),
-                IPearlmit(address(0)),
                 ICluster(address(0))
             )
         );
@@ -121,7 +120,6 @@ contract TOBTestBase is Test {
         );
 
         vm.startPrank(owner);
-        tapToken.setPearlmit(IPearlmit(report.pearlmit));
         tapToken.setCluster(ICluster(report.cluster));
         vm.stopPrank();
     }

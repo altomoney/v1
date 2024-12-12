@@ -12,7 +12,6 @@ struct BigBangRiskParams {
     uint256 exchangeRatePrecision;
     uint256 collateralizationRate;
     uint256 liquidationCollateralizationRate;
-    uint256 collateralId;
     address collateral;
     address oracle;
     bool isEthMarket;

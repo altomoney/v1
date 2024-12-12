@@ -64,7 +64,7 @@ contract twTapBaseTest is UnitBaseTest {
                 adminAddr
             )
         );
-        twTap = createTwTap(payable(tapOFT), IPearlmit(address(pearlmit)), adminAddr);
+        twTap = createTwTap(payable(tapOFT), adminAddr);
 
         /**
          * Set the contract
@@ -117,8 +117,7 @@ contract twTapBaseTest is UnitBaseTest {
     function _participate(uint256 _amount, uint8 _bucketId) internal {
         vm.startPrank(aliceAddr);
         tapOFT.freeMint(aliceAddr, _amount);
-        tapOFT.approve(address(pearlmit), _amount);
-        pearlmit.approve(20, address(tapOFT), 0, address(twTap), uint200(_amount), uint48(block.timestamp + 1));
+        // pearl mit.approve(20, address(tapOFT), 0, address(twTap), uint200(_amount), uint48(block.timestamp + 1));
         twTap.participate(aliceAddr, _amount, _bucketId);
         vm.stopPrank();
     }
@@ -126,8 +125,6 @@ contract twTapBaseTest is UnitBaseTest {
     function _participate(address _to, uint256 _amount, uint8 _bucketId) internal {
         vm.startPrank(_to);
         tapOFT.freeMint(_to, _amount);
-        tapOFT.approve(address(pearlmit), _amount);
-        pearlmit.approve(20, address(tapOFT), 0, address(twTap), uint200(_amount), uint48(block.timestamp + 1));
         twTap.participate(_to, _amount, _bucketId);
         vm.stopPrank();
     }

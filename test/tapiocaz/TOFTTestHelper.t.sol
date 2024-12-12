@@ -11,10 +11,6 @@ import {TestHelper} from "./LZSetup/TestHelper.sol";
 // Tapioca
 import {TOFTInitStruct, TOFTModulesInitStruct} from "tap-utils/interfaces/oft/ITOFT.sol";
 
-
-
-
-
 import {Cluster} from "tap-utils/Cluster/Cluster.sol";
 import {SingularityMock} from "./SingularityMock.sol";
 import {MagnetarMock} from "./MagnetarMock.sol";
@@ -27,21 +23,13 @@ contract TOFTTestHelper is TestHelper, TestUtils {
     //         return new MagnetarV2(cluster, owner, payable(marketModule));
     //     }
 
-    function createSingularity(
-        address _yieldBox,
-        uint256 _collateralId,
-        uint256 _assetId,
-        address _collateral,
-        address _asset
-    ) public returns (SingularityMock) {
-        return new SingularityMock(_yieldBox, _collateralId, _assetId, _collateral, _asset);
+    function createSingularity(address _collateral, address _asset) public returns (SingularityMock) {
+        return new SingularityMock(_collateral, _asset);
     }
 
-
-    function createMagnetar(address cluster, IPearlmit pearlmit) public returns (MagnetarMock) {
-        return new MagnetarMock(cluster, pearlmit);
+    function createMagnetar(address cluster) public returns (MagnetarMock) {
+        return new MagnetarMock(cluster);
     }
-
 
     function createCluster(uint32 hostEid, address owner) public returns (Cluster) {
         return new Cluster(hostEid, owner);

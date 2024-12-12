@@ -13,6 +13,7 @@ contract TapiocaUsdoBatchOne is BarProcedure {
     constructor(
         address endpoint,
         address delegate,
+        address cluster,
         address extExec
     ) {
         _usdoModulesReport = _deployUsdoSenderAndReceiver(endpoint, delegate, cluster, extExec);

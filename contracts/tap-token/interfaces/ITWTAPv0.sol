@@ -175,8 +175,6 @@ interface ITWTAPv0 {
 
     function paused() external view returns (bool);
 
-    function pearlmit() external view returns (address);
-
     function permit(address spender, uint256 tokenId, uint256 deadline, uint8 v, bytes32 r, bytes32 s) external;
 
     function renounceOwnership() external;
@@ -204,8 +202,6 @@ interface ITWTAPv0 {
     function setNftLoader(address _nftLoader) external;
 
     function setPause(bool _pauseState) external;
-
-    function setPearlmit(address _pearlmit) external;
 
     function setRescueMode(bool _rescueMode) external;
 

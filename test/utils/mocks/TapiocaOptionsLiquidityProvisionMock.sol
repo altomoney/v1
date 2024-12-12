@@ -6,7 +6,7 @@ import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ITap} from "src/tap-utils/interfaces/oft/ITap.sol";
 
-contract TapiocaOptionsLiquidityProvisionMock is PearlmitHandler, ERC721 {
+contract TapiocaOptionsLiquidityProvisionMock is ERC721 {
     uint256 public sglAssetId;
     address public yieldBox;
 
@@ -31,11 +31,6 @@ contract TapiocaOptionsLiquidityProvisionMock is PearlmitHandler, ERC721 {
         external
         returns (uint256 tokenId)
     {
-        bool isErr = pearlmit.transferFromERC1155(msg.sender, address(this), yieldBox, sglAssetId, _ybShares);
-        if (isErr) {
-            revert TransferFailed();
-        }
-
         _mint(_to, 1);
 
         return 1;

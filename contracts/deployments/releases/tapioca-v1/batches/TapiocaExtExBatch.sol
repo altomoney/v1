@@ -9,8 +9,8 @@ import {ExtExReport} from "../../../interfaces/ITapiocaReport.sol";
 contract TapiocaExtExBatch is ExtExProcedure {
     ExtExReport internal _ExtExReport;
 
-    constructor(address owner, address wrappedNativeToken, address pearlmit, address cluster, address swapper) {
-        _ExtExReport = _deployExtEx(owner, wrappedNativeToken, pearlmit, cluster, swapper);
+    constructor(address owner, address wrappedNativeToken, address cluster, address swapper) {
+        _ExtExReport = _deployExtEx(owner, wrappedNativeToken, cluster, swapper);
     }
 
     function getExtExReport() public view returns (ExtExReport memory) {

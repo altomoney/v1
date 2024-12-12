@@ -189,16 +189,6 @@ contract BigBang_repay is BigBang_Unit_Shared {
         _repay(collateralAmount, borrowAmount, repayPart, mainBB, userA, address(this), address(this));
 
         // **** Secondary BB ****
-        _approveViaPearlmit(
-            TOKEN_TYPE_ERC1155,
-            
-            IPearlmit(address(pearlmit)),
-            address(this),
-            address(secondaryBB),
-            type(uint200).max,
-            uint48(block.timestamp),
-            secondaryBB._assetId()
-        );
         secondaryBB.approve(userA, type(uint256).max);
         _repay(collateralAmount, borrowAmount, repayPart, secondaryBB, userA, address(this), address(this));
     }

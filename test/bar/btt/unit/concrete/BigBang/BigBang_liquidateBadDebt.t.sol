@@ -114,16 +114,6 @@ contract BigBang_liquidateBadDebt is BigBang_Unit_Shared {
         _liquidateBadDebt(collateralAmount, borrowAmount, mainBB, address(this), rndAddr, false);
 
         // **** Secondary BB market ****
-        _approveViaPearlmit(
-            TOKEN_TYPE_ERC1155,
-            
-            IPearlmit(address(pearlmit)),
-            address(this),
-            address(secondaryBB),
-            type(uint200).max,
-            uint48(block.timestamp),
-            secondaryBB._assetId()
-        );
         _liquidateBadDebt(collateralAmount, borrowAmount, secondaryBB, address(this), rndAddr, false);
     }
 

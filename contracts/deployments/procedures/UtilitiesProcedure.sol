@@ -17,7 +17,6 @@ abstract contract UtilitiesProcedure {
         returns (UtilitiesReport memory report)
     {
         report.tapiocaMulticall = address(new TapiocaMulticall());
-        report.pearlmit = address(new Pearlmit("PEARLMIT", "1", report.tapiocaMulticall, 0));
         report.cluster = address(new Cluster(lzChainId, address(this)));
         report.toeHelper = address(new TapiocaOmnichainEngineHelper());
         report.pauser = address(new Pauser(report.cluster, owner));

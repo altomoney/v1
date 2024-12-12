@@ -82,10 +82,6 @@ contract DeploymentProceduresLimits is Test {
         new TapiocaUtilitiesBatch(owner, zeroXSwapper, 0, true);
     }
 
-    function test_new_YieldboxBatch() public {
-        new TapiocaYieldboxBatch(owner, address(1), address(2), address(3), address(4));
-    }
-
     function test_new_TapiocaUsdoBatchOne() public {
         new TapiocaUsdoBatchOne(endpointMock, delegate, address(1), address(2), address(3), address(4));
     }
@@ -165,12 +161,10 @@ contract DeploymentProceduresLimits is Test {
             uint256 magnetarBatchOneCreationSize = type(TapiocaMagnetarBatchOne).creationCode.length;
             uint256 magnetarBatchTwoCreationSize = type(TapiocaMagnetarBatchTwo).creationCode.length;
             uint256 utilitiesBatchCreationSize = type(TapiocaUtilitiesBatch).creationCode.length;
-            uint256 yieldboxBatchCreationSize = type(TapiocaYieldboxBatch).creationCode.length;
             uint256 usdoBatchCreationSize = type(TapiocaUsdoBatchOne).creationCode.length;
             uint256 usdoBatchTwoCreationSize = type(TapiocaUsdoBatchTwo).creationCode.length;
             uint256 usdoBatchThreeCreationSize = type(TapiocaUsdoBatchThree).creationCode.length;
             console2.log("TapiocaUtilitiesBatch", utilitiesBatchCreationSize);
-            console2.log("TapiocaYieldboxBatch", yieldboxBatchCreationSize);
             console2.log("TapiocaMagnetarBatchOne", magnetarBatchOneCreationSize);
             console2.log("TapiocaMagnetarBatchTwo", magnetarBatchTwoCreationSize);
             console2.log("TapiocaUsdoBatchOne", usdoBatchCreationSize);
@@ -190,9 +184,6 @@ contract DeploymentProceduresLimits is Test {
             );
             assertLe(
                 utilitiesBatchCreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "TapiocaUtilitiesBatch max init code size"
-            );
-            assertLe(
-                yieldboxBatchCreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "TapiocaYieldBoxBatch max init code size"
             );
             assertLe(usdoBatchCreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "TapiocaUsdoBatchOne max init code size");
             assertLe(usdoBatchTwoCreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "TapiocaUsdoBatchTwo max init code size");

@@ -51,7 +51,7 @@ contract Penrose_withdrawAllMarketFees is BigBang_Unit_Shared {
         address rndAddr = makeAddr("rndAddress");
         penrose.registerBigBangMasterContract(address(mc), IPenrose.ContractType.lowRisk);
 
-        penrose.setUsdoToken(address(usdo), usdoId);
+        penrose.setUsdoToken(address(usdo));
 
         (
             BigBang._InitMemoryModulesData memory initModulesData,
@@ -61,7 +61,6 @@ contract Penrose_withdrawAllMarketFees is BigBang_Unit_Shared {
             BigBangInitData(
                 address(penrose),
                 address(mainToken), //asset
-                mainTokenId,
                 ITapiocaOracle(address(oracle)),
                 ILeverageExecutor(address(rndAddr)),
                 0,

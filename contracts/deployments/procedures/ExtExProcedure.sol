@@ -11,7 +11,6 @@ abstract contract ExtExProcedure {
     function _deployExtEx(
         address owner,
         address wrappedNativeToken,
-        address pearlmit,
         address cluster,
         address swapper
     ) internal returns (ExtExReport memory report) {

@@ -44,7 +44,6 @@ contract MOFTFactoryTest is Test {
                 input.lzEndpoint,
                 input.lzChainId,
                 report.extExec,
-                report.pearlmit,
                 report.yieldbox,
                 report.tOFTSenderModule,
                 report.mTOFTReceiverModule,

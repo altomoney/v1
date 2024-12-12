@@ -176,7 +176,7 @@ contract BigBang_buyCollateral is BigBang_Unit_Shared {
         // **** Main BB market ****
         _spawnAsset(supplyAmount, address(this));
         uint256 share = mainBB.convertToShares(supplyAmount);
-        _depositToYieldBox(mainBB._asset(), mainBB._assetId(), share, address(this), address(this));
+        // TODO Deposit borrowable asset? _depositToYieldBox(mainBB._asset(), mainBB._assetId(), share, address(this), address(this));
         _leverageUp(
             collateralAmount,
             borrowAmount,
@@ -191,7 +191,7 @@ contract BigBang_buyCollateral is BigBang_Unit_Shared {
         // // **** Secondary BB market ****
         _spawnAsset(supplyAmount, address(this));
         share = secondaryBB.convertToShares(supplyAmount);
-        _depositToYieldBox(secondaryBB._asset(), secondaryBB._assetId(), share, address(this), address(this));
+        // TODO Deposit borrowable asset? _depositToYieldBox(secondaryBB._asset(), secondaryBB._assetId(), share, address(this), address(this));
         _leverageUp(
             collateralAmount,
             borrowAmount,
@@ -350,7 +350,7 @@ contract BigBang_buyCollateral is BigBang_Unit_Shared {
         // **** Main BB market ****
         _spawnAsset(supplyAmount, address(this));
         uint256 share = mainBB.convertToShares(supplyAmount);
-        _depositToYieldBox(mainBB._asset(), mainBB._assetId(), share, address(this), address(this));
+        // TODO Deposit borrowable asset? _depositToYieldBox(mainBB._asset(), mainBB._assetId(), share, address(this), address(this));
         mainBB.approveBorrow(address(userA), type(uint256).max);
         _leverageUp(
             collateralAmount, borrowAmount, leverageAmount, supplyAmount, mainBB, userA, address(this), address(this)
@@ -360,7 +360,7 @@ contract BigBang_buyCollateral is BigBang_Unit_Shared {
         _resetPrank(address(this));
         _spawnAsset(supplyAmount, address(this));
         share = secondaryBB.convertToShares(supplyAmount);
-        _depositToYieldBox(secondaryBB._asset(), secondaryBB._assetId(), share, address(this), address(this));
+        // TODO Deposit borrowable asset? _depositToYieldBox(secondaryBB._asset(), secondaryBB._assetId(), share, address(this), address(this));
         secondaryBB.approveBorrow(address(userA), type(uint256).max);
         _leverageUp(
             collateralAmount,

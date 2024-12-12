@@ -27,7 +27,6 @@ abstract contract MagnetarProcedure {
     function _deployMagnetar(
         address owner,
         address cluster,
-        address pearlmit,
         address toeHelper,
         address zeroXSwapper,
         address wrappedNativeToken,
@@ -41,7 +40,6 @@ abstract contract MagnetarProcedure {
                 payable(deps.magnetarCollateralModule),
                 payable(deps.magnetarMintModule),
                 payable(deps.magnetarOptionModule),
-                
                 toeHelper,
                 IMagnetarHelper(report.magnetarHelper)
             )

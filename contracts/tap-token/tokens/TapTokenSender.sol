@@ -24,7 +24,7 @@ import {BaseTapToken} from "./BaseTapToken.sol";
 contract TapTokenSender is BaseTapToken, TapiocaOmnichainSender {
     /**
      * @dev Used as a module for `TapToken`. Only delegate calls with `TapToken` state are used.
-     * Set the Pearlmit and Cluster to address(0) because they are not used in this contract.
+     * Set the Cluster to address(0) because it is not used in this contract. TODO ?
      */
     constructor(string memory _name, string memory _symbol, address _endpoint, address _delegate, address _extExec)
         BaseTapToken(_name, _symbol, _endpoint, _delegate, _extExec, ICluster(address(0)))

@@ -44,8 +44,7 @@ abstract contract Base_Test is TestHelper, Utils, Types, Events {
     uint256 public initialBalance = LARGE_AMOUNT;
 
     // common general storage
-    
-    Pearlmit pearlmit;
+
     Cluster cluster;
 
     // tokens
@@ -105,8 +104,6 @@ abstract contract Base_Test is TestHelper, Utils, Types, Events {
 
         // create real Cluster
         cluster = _createCluster(address(this));
-        // create real Pearlmit
-        pearlmit = _createPearlmit(address(this));
         // create real YieldBox
 
 
@@ -300,51 +297,10 @@ abstract contract Base_Test is TestHelper, Utils, Types, Events {
     // ***************** //
     // *** MODIFIERS *** //
     // ***************** //
-    /// @notice Modifier to approve an operator in YB via Pearlmit.
-    modifier whenApprovedViaPearlmit(
-        uint256 _type,
-        address _token,
-        uint256 _tokenId,
-        address _from,
-        address _operator,
-        uint256 _amount,
-        uint256 _expiration
-    ) {
-        _approveViaPearlmit({
-            tokenType: _type,
-            token: _token,
-            from: _from,
-            operator: _operator,
-            amount: _amount,
-            expiration: _expiration,
-            tokenId: _tokenId
-        });
-        _;
-    }
 
     /// @notice Modifier to approve an operator via regular ERC20.
     modifier whenApprovedViaERC20(address _token, address _from, address _operator, uint256 _amount) {
         _approveViaERC20({token: _token, from: _from, operator: _operator, amount: _amount});
-        _;
-    }
-
-    /// @notice Modifier to approve an operator for a specific asset ID via YB.
-    modifier whenYieldBoxApprovedForAssetID(address _from, address _operator, uint256 _assetId) {
-        _approveYieldBoxAssetId({yieldBox: yieldBox, from: _from, operator: _operator, assetId: _assetId});
-        _;
-    }
-
-    /// @notice Modifier to approve an operator for a specific asset ID via YB.
-    modifier whenYieldBoxApprovedForMultipleAssetIDs(address _from, address _operator, uint256 _noOfAssets) {
-        for (uint256 i = 1; i <= _noOfAssets; i++) {
-            _approveYieldBoxAssetId({yieldBox: yieldBox, from: _from, operator: _operator, assetId: i});
-        }
-        _;
-    }
-
-    /// @notice Modifier to approve an operator for all via YB.
-    modifier whenYieldBoxApprovedForAll(address _from, address _operator) {
-        _approveYieldBoxForAll({yieldBox: yieldBox, from: _from, operator: _operator});
         _;
     }
 

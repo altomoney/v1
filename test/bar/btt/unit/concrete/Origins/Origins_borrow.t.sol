@@ -48,10 +48,9 @@ contract Origins_borrow is Origins_Unit_Shared {
         uint256 amount = 1 ether;
         deal(address(org._collateral()), address(this), amount);
         mainToken.approve( type(uint256).max);
-        yieldBox.setApprovalForAll(address(org), true);
 
-        uint256 share = yieldBox.toShare(org._collateralId(), amount, false);
-        yieldBox.depositAsset(org._collateralId(), address(this), address(this), 0, share);
+        uint256 share = org.convertToShares(amount);
+        org.deposit(amount, address(this));
         org.addCollateral(0, share);
     }
 }

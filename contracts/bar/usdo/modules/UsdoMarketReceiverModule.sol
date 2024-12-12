@@ -75,9 +75,6 @@ contract UsdoMarketReceiverModule is BaseUsdo {
          */
         msg_ = _validateLendOrRepayReceiver(msg_);
 
-        /**
-         * @dev Pearlmit approvals
-         */
         approve(address(msg_.lendParams.magnetar), msg_.lendParams.depositAmount);
         /**
          * @dev Lend or Repay through `magnetar`
@@ -88,10 +85,7 @@ contract UsdoMarketReceiverModule is BaseUsdo {
             _lend(msg_, srcChainSender);
         }
 
-        /**
-         * @dev Pearlmit revokes
-         */
-        //approve(address(pearlmit), 0);
+        //approve(address(pearl mit), 0);
 
         emit LendOrRepayReceived(msg_.user, srcChainSender, msg_.lendParams.repay, msg_.lendParams.market);
     }

@@ -49,7 +49,7 @@ contract TapTokenReceiver is BaseTapToken, TapiocaOmnichainReceiver, ReentrancyG
 
     /**
      * @dev Used as a module for `TapToken`. Only delegate calls with `TapToken` state are used.
-     * Set the Pearlmit and Cluster to address(0) because they are not used in this contract.
+     * Set the Cluster to address(0) because it is not used in this contract. TODO ?
      */
     constructor(string memory _name, string memory _symbol, address _endpoint, address _delegate, address _extExec)
         BaseTapToken(_name, _symbol, _endpoint, _delegate, _extExec, ICluster(address(0)))
@@ -121,14 +121,14 @@ contract TapTokenReceiver is BaseTapToken, TapiocaOmnichainReceiver, ReentrancyG
         /// @dev xChain owner needs to have approved dst srcChain `sendPacket()` msg.sender in a previous composedMsg. Or be the same address.
         _internalTransferWithAllowance(lockTwTapPositionMsg_.user, _srcChainSender, lockTwTapPositionMsg_.amount);
 
-        //_approve(address(this), address(pearlmit), lockTwTapPositionMsg_.amount);
-        //pearlmit.approve(
+        //_approve(address(this), address(pearl mit), lockTwTapPositionMsg_.amount);
+        //pearl mit.approve(
         //    20, address(this), 0, address(twTap), uint200(lockTwTapPositionMsg_.amount), uint48(block.timestamp + 1)
         //);
         _approve(address(this), address(twTap), lockTwTapPositionMsg_.amount);
         twTap.participate(lockTwTapPositionMsg_.user, lockTwTapPositionMsg_.amount, lockTwTapPositionMsg_.duration);
         _approve(address(this), address(twTap), 0);
-        // _approve(address(this), address(pearlmit), 0);
+        // _approve(address(this), address(pearl mit), 0);
 
         emit LockTwTapReceived(lockTwTapPositionMsg_.user, lockTwTapPositionMsg_.duration, lockTwTapPositionMsg_.amount);
     }
@@ -162,7 +162,7 @@ contract TapTokenReceiver is BaseTapToken, TapiocaOmnichainReceiver, ReentrancyG
         uint256[] memory claimedAmount_ = twTap.claimRewards(claimTwTapRewardsMsg_.tokenId);
         // address owner = twTap.ownerOf(claimTwTapRewardsMsg_.tokenId);
         // Clear the allowance, claimRewards only does an allowance check.
-        // pearlmit.clearAllowance(owner, 721, address(twTap), claimTwTapRewardsMsg_.tokenId);
+        // pearl mit.clearAllowance(owner, 721, address(twTap), claimTwTapRewardsMsg_.tokenId);
 
         // Check if the claimed amount is equal to the amount of sendParam
         if (

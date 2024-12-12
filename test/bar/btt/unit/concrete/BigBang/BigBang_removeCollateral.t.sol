@@ -211,16 +211,6 @@ contract BigBang_removeCollateral is BigBang_Unit_Shared {
         _removeCollateral(addAmount, removeShare, borrowAmount, mainBB, userA, address(this), address(this));
 
         // **** Secondary BB market ****
-        _approveViaPearlmit(
-            TOKEN_TYPE_ERC1155,
-            
-            IPearlmit(address(pearlmit)),
-            address(this),
-            address(secondaryBB),
-            type(uint200).max,
-            uint48(block.timestamp),
-            secondaryBB._collateralId()
-        );
         secondaryBB.approveBorrow(userA, type(uint256).max);
         _removeCollateral(addAmount, removeShare, borrowAmount, secondaryBB, userA, address(this), address(this));
     }
@@ -242,16 +232,6 @@ contract BigBang_removeCollateral is BigBang_Unit_Shared {
         _removeCollateral(addAmount, removeShare, 0, mainBB, userA, address(this), address(this));
 
         // **** Secondary BB market ****
-        _approveViaPearlmit(
-            TOKEN_TYPE_ERC1155,
-            
-            IPearlmit(address(pearlmit)),
-            address(this),
-            address(secondaryBB),
-            type(uint200).max,
-            uint48(block.timestamp),
-            secondaryBB._collateralId()
-        );
         secondaryBB.approveBorrow(userA, type(uint256).max);
         _removeCollateral(addAmount, removeShare, 0, secondaryBB, userA, address(this), address(this));
     }

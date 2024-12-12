@@ -39,7 +39,6 @@ contract Penrose_executeMarketFn is BigBang_Unit_Shared {
             BigBangInitData(
                 address(penrose),
                 address(mainToken), //asset
-                mainTokenId,
                 ITapiocaOracle(address(rndAddr)),
                 ILeverageExecutor(address(rndAddr)),
                 0,

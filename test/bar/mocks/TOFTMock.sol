@@ -27,8 +27,7 @@ contract TOFTMock is ERC20 {
         if (erc20_ != address(0)) {
             uint256 allowance = allowance(_fromAddress, msg.sender);
             if (allowance < _amount) {
-                bool isErr = pearlmit.transferFromERC20(_fromAddress, address(this), erc20_, _amount);
-                if (isErr) revert TOFT_NotValid();
+                revert TOFT_NotValid();
             } else {
                 IERC20(erc20_).safeTransferFrom(_fromAddress, address(this), _amount);
             }

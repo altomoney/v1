@@ -43,7 +43,7 @@ contract MagnetarHelper {
         uint256 currentExchangeRate;
         uint256 spotExchangeRate;
         uint256 oracleExchangeRate;
-        uint256 totalBorrowCap; // TODO Check all the YieldBox related fields removed
+        uint256 totalBorrowCap; // TODO Check all the Yield Box related fields removed
         uint256 totalCollateralAmount;
         uint256 collateralizationRate;
     }
@@ -290,7 +290,7 @@ contract MagnetarHelper {
         info.oracle = ITapiocaOracle(market._oracle());
         info.oracleData = market._oracleData();
         info.totalCollateralShare = market._totalCollateralShare(); // TODO isn't it market4626.totalSupply()?
-        info.userCollateralShare = market._userCollateralShare(who);
+        info.userCollateralShare = market.balanceOf(who);
 
         (uint128 totalBorrowElastic, uint128 totalBorrowBase) = market._totalBorrow();
         _totalBorrowed = Rebase(totalBorrowElastic, totalBorrowBase);

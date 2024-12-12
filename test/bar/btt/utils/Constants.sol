@@ -19,9 +19,6 @@ abstract contract Constants {
 
     uint256 public constant MAX_ITERATIONS = 10;
 
-    // **************** //
-    // *** PEARLMIT *** //
-    // **************** //
     /// @dev Constant value representing the ERC721 token type for signatures and transfer hooks
     uint256 constant TOKEN_TYPE_ERC721 = 721;
     /// @dev Constant value representing the ERC1155 token type for signatures and transfer hooks
@@ -76,6 +73,5 @@ abstract contract Constants {
     uint16 public constant PT_MARKET_PERMIT = 505; // Use for market.permitLend() operation
     uint16 public constant PT_REMOTE_TRANSFER = 700; // Use for transferring tokens from the contract from another chain
     uint16 public constant PT_MARKET_REMOVE_ASSET = 900; // Use for remove asset from a market available on another chain
-    uint16 public constant PT_YB_SEND_SGL_LEND_OR_REPAY = 901; // Use to YB deposit, lend/repay on a market available on another chain
     uint16 public constant PT_TAP_EXERCISE = 902; // Use for exercise options on tOB available on another chain
 }

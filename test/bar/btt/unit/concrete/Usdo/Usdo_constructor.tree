@@ -5,7 +5,6 @@ Usdo_constructor.t.sol
 │   ├── it should set UsdoReceiver module
 │   ├── it should set UsdoMarketReceiver module
 │   ├── it should set UsdoOptionReceiver module
-│   ├── it should set Pearlmit
 │   ├── it should set YieldBox
 │   ├── it should set the name to 'USDO Stablecoin'
 │   ├── it should set the symbol to 'USDO'

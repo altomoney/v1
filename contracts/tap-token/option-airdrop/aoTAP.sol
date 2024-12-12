@@ -32,7 +32,6 @@ struct AirdropTapOption {
 
 contract AOTAP is
     Ownable,
-    PearlmitHandler,
     ERC721,
     ERC721Permit,
     ERC721Enumerable,
@@ -47,7 +46,7 @@ contract AOTAP is
     mapping(uint256 => AirdropTapOption) public options; // tokenId => Option
     mapping(uint256 => string) public tokenURIs; // tokenId => tokenURI
 
-    constructor(IPearlmit _pearlmit, address _owner)
+    constructor(address _owner)
         ERC721("Airdrop Option TAP", "aoTAP")
         ERC721Permit("Airdrop Option TAP")
         
@@ -75,7 +74,7 @@ contract AOTAP is
 
     function isApprovedOrOwner(address _spender, uint256 _tokenId) external view returns (bool) {
         return _isApprovedOrOwner(_spender, _tokenId)
-            || isERC721Approved(_ownerOf(_tokenId), _spender, address(this), _tokenId);
+            ; // TODO review it || isERC721Approved(_ownerOf(_tokenId), _spender, address(this), _tokenId);
     }
 
     /// @notice Return the owner of the tokenId and the attributes of the option.

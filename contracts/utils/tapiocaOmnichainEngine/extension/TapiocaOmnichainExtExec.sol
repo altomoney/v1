@@ -14,7 +14,6 @@ import {
 import {IPermitBorrow} from "src/tap-utils/interfaces/common/IPermitBorrow.sol";
 import {TapiocaOmnichainEngineCodec} from "../TapiocaOmnichainEngineCodec.sol";
 import {IPermitAll} from "src/tap-utils/interfaces/common/IPermitAll.sol";
-import {IPearlmit} from "src/tap-utils/interfaces/periph/IPearlmit.sol";
 import {ICluster} from "src/tap-utils/interfaces/periph/ICluster.sol";
 import {IPermit} from "src/tap-utils/interfaces/common/IPermit.sol";
 import {ERC721Permit} from "src/tap-utils/utils/ERC721Permit.sol";
@@ -89,23 +88,6 @@ contract TapiocaOmnichainExtExec {
             }
         }
     }
-
-    /**
-     * @notice Executes a permit approval for a batch transfer from a Pearlmit contract.
-     * @param _data The call data containing info about the approval. Expect a tuple of `(address, IPearlmit.PermitBatchTransferFrom)`.
-     */
-    function pearlmitApproval(address _srcChainSender, bytes memory _data) public payable {
-        (address pearlmit, IPearlmit.PermitBatchTransferFrom memory batchApprovals) =
-            TapiocaOmnichainEngineCodec.decodePearlmitBatchApprovalMsg(_data);
-
-        _sanitizeTarget(pearlmit);
-
-        batchApprovals.owner = _srcChainSender; // overwrite the owner with the src chain sender
-        // Redundant security measure, just for the sake of it
-        try IPearlmit(pearlmit).permitBatchApprove(batchApprovals, keccak256(abi.encode(_srcChainSender))) {} catch {}
-    }
-
-
 
     /**
      * @notice Approves Market lend/borrow via permit.

@@ -151,7 +151,6 @@ interface ITWTAPv2 is ITWLBase {
         returns (Participation memory position, uint256[] memory claimables);
 
     /// @notice Participate in twAML voting and mint an twTap position in a lock bucket.
-    /// @dev Requires a Pearlmit approval for the TAP amount
     ///
     /// @param _participant The address of the participant
     /// @param _amount The amount of TAP to participate with

@@ -24,7 +24,7 @@ contract OTapMock {
     }
 }
 
-contract TapiocaOptionsBrokerMock is PearlmitHandler {
+contract TapiocaOptionsBrokerMock {
     using SafeERC20 for IERC20;
 
     address public tapOFT;
@@ -48,10 +48,7 @@ contract TapiocaOptionsBrokerMock is PearlmitHandler {
         // @dev 10% is subtracted to test out payment token refund
         uint256 actualPaymentTokenAmount = paymentTokenAmount - paymentTokenAmount * 1e4 / 1e5;
 
-        // IERC20(address(_paymentToken)).safeTransferFrom(msg.sender, address(this), actualPaymentTokenAmount);
-        bool isErr =
-            pearlmit.transferFromERC20(msg.sender, address(this), address(_paymentToken), actualPaymentTokenAmount);
-        if (isErr) revert TapiocaOptionsBrokerMock_NotValid();
+        IERC20(address(_paymentToken)).safeTransferFrom(msg.sender, address(this), actualPaymentTokenAmount);
         IERC20(tapOFT).safeTransfer(msg.sender, _tapAmount);
     }
 

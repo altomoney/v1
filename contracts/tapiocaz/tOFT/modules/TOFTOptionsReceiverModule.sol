@@ -127,22 +127,13 @@ contract TOFTOptionsReceiverModule is BaseTOFT {
         /**
          * @dev call exerciseOption() with address(this) as the payment token
          */
-        // _approve(address(this), _options.target, _options.paymentTokenAmount);
-        pearlmit.approve(
-            20,
-            address(this),
-            0,
-            msg_.optionsData.target,
-            uint200(msg_.optionsData.paymentTokenAmount),
-            block.timestamp.toUint48()
-        ); // Atomic approval
-        _approve(address(this), address(pearlmit), msg_.optionsData.paymentTokenAmount);
+        _approve(address(this), msg_.optionsData.target, msg_.optionsData.paymentTokenAmount);
 
         /**
          * @dev exercise and refund if less paymentToken amount was used
          */
         _exerciseAndRefund(msg_.optionsData);
-        _approve(address(this), address(pearlmit), 0);
+        // _approve(address(this), address(pearl mit), 0);
 
         /**
          * @dev retrieve exercised amount
@@ -216,11 +207,12 @@ contract TOFTOptionsReceiverModule is BaseTOFT {
             _options.tapAmount
         );
 
-        // Clear Pearlmit ERC721 allowance post execution
+        // Clear ERC721 allowance post execution
         {
             address oTap = ITapiocaOptionBroker(_options.target).oTAP();
             address oTapOwner = IERC721(oTap).ownerOf(_options.oTAPTokenID);
-            pearlmit.clearAllowance(oTapOwner, 721, oTap, _options.oTAPTokenID);
+
+            IERC721(oTap).setApprovalForAll(address(this), false);
         }
 
         uint256 bAfter = balanceOf(address(this));
@@ -244,11 +236,11 @@ contract TOFTOptionsReceiverModule is BaseTOFT {
             revert TOFTOptionsReceiverModule_NotAuthorized(_options.from);
         }
 
-        bool isAllowed = isERC721Approved(oTapOwner, address(this), oTap, _options.oTAPTokenID);
-        if (!isAllowed) revert TOFTOptionsReceiverModule_NotAuthorized(oTapOwner);
+        // TODO Review it bool isAllowed = isERC721Approved(oTapOwner, address(this), oTap, _options.oTAPTokenID);
+        // if (!isAllowed) revert TOFTOptionsReceiverModule_NotAuthorized(oTapOwner);
         /// @dev Clear the allowance once it's used
         /// usage being the allowance check
-        pearlmit.clearAllowance(oTapOwner, 721, oTap, _options.oTAPTokenID);
+        IERC721(oTap).setApprovalForAll(address(this), false);
     }
 
     function _withdrawExercised(ExerciseOptionsMsg memory msg_) private {

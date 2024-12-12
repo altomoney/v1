@@ -30,7 +30,7 @@ import {ITWTAPv2, Participation, Reward, WeekTotals} from "tap-token/interfaces/
  * @title TwTAP
  * @author Tapioca
  */
-contract TwTAP is ITWTAPv2, TWLBase, Ownable, PearlmitHandler, ReentrancyGuard, Pausable {
+contract TwTAP is ITWTAPv2, TWLBase, Ownable, ReentrancyGuard, Pausable {
     using SafeERC20 for IERC20;
 
     TapToken public immutable tapOFT;
@@ -64,7 +64,6 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, PearlmitHandler, ReentrancyGuard, 
 
     constructor(
         address payable _tapOFT,
-        IPearlmit _pearlmit,
         address _owner,
         uint256 epochDuration,
         Bucket[] memory _buckets
@@ -176,7 +175,6 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, PearlmitHandler, ReentrancyGuard, 
     // ===========
 
     /// @notice Participate in twAML voting and mint an twTap position in a lock bucket.
-    /// @dev Requires a Pearlmit approval for the TAP amount
     ///
     /// @param _participant The address of the participant
     /// @param _amount The amount of TAP to participate with
@@ -519,10 +517,10 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, PearlmitHandler, ReentrancyGuard, 
         }
         if (lastProcessedWeek != currentEpoch()) advanceWeek(currentEpoch() - lastProcessedWeek);
 
-        if (_transferFrom) {
-            bool isErr = pearlmit.transferFromERC20(msg.sender, address(this), address(tapOFT), _amount);
-            if (isErr) revert NotAuthorized();
-        }
+        // if (_transferFrom) {
+        //     bool isErr = pearl mit.transferFromERC20(msg.sender, address(this), address(tapOFT), _amount);
+        //     if (isErr) revert NotAuthorized();
+        // }
 
         Participation storage position = participations[_participant][_bucketId];
         Bucket memory bucket = buckets[_bucketId];

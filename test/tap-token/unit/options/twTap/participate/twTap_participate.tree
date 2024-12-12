@@ -20,8 +20,6 @@ TWTAP_participate
                         ├── when week was not advanced
                         │   └── it should revert
                         └── when week was advanced
-                            ├── when pearlmit transfer fails
-                            │   └── it should revert
                             └── when pearlmit transfer succeed
                                 ├── when minReward is not met
                                 │   └── it should revert

@@ -318,17 +318,6 @@ contract BigBang_sellCollateral is BigBang_Unit_Shared {
         _leverageDown(collateralAmount, borrowAmount, leverageAmount, mainBB, userA, address(this), address(this), true);
 
         // **** Secondary BB market ****
-        // re-approve for the secondary market as pearlmit expiration was hit
-        _approveViaPearlmit(
-            TOKEN_TYPE_ERC1155,
-            
-            IPearlmit(address(pearlmit)),
-            address(this),
-            address(secondaryBB),
-            type(uint200).max,
-            uint48(block.timestamp),
-            secondaryBB._assetId()
-        );
         secondaryBB.approveBorrow(address(userA), type(uint256).max);
         _leverageDown(
             collateralAmount, borrowAmount, leverageAmount, secondaryBB, userA, address(this), address(this), true
@@ -356,17 +345,6 @@ contract BigBang_sellCollateral is BigBang_Unit_Shared {
         );
 
         // **** Secondary BB market ****
-        // re-approve for the secondary market as pearlmit expiration was hit
-        _approveViaPearlmit(
-            TOKEN_TYPE_ERC1155,
-            
-            IPearlmit(address(pearlmit)),
-            address(this),
-            address(secondaryBB),
-            type(uint200).max,
-            uint48(block.timestamp),
-            secondaryBB._assetId()
-        );
         secondaryBB.approveBorrow(address(userA), type(uint256).max);
         _leverageDown(
             collateralAmount, borrowAmount, leverageAmount, secondaryBB, userA, address(this), address(this), false

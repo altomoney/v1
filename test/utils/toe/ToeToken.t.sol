@@ -59,7 +59,6 @@ contract TapTokenTest is ToeTestHelper, BaseToeMsgType {
     ToeTokenMock aToeOFT;
     ToeTokenMock bToeOFT;
 
-    Pearlmit pearlmit;
     ICluster cluster;
     ToeTestHelper toeTestHelper;
 
@@ -92,7 +91,6 @@ contract TapTokenTest is ToeTestHelper, BaseToeMsgType {
 
         setUpEndpoints(3, LibraryType.UltraLightNode);
 
-        pearlmit = new Pearlmit("Pearlmit", "1", address(this), 0);
         cluster = ICluster(address(new Cluster(1, address(__owner))));
 
         __extExec = address(new TapiocaOmnichainExtExec());
@@ -111,7 +109,6 @@ contract TapTokenTest is ToeTestHelper, BaseToeMsgType {
                                 address(endpoints[aEid]),
                                 address(this),
                                 address(0),
-                                IPearlmit(address(pearlmit)),
                                 cluster
                             )
                         ),
@@ -122,11 +119,9 @@ contract TapTokenTest is ToeTestHelper, BaseToeMsgType {
                                 address(endpoints[aEid]),
                                 address(this),
                                 address(0),
-                                IPearlmit(address(pearlmit)),
                                 cluster
                             )
                         ),
-                        IPearlmit(address(pearlmit)),
                         cluster
                     )
                 )
@@ -148,7 +143,6 @@ contract TapTokenTest is ToeTestHelper, BaseToeMsgType {
                                 address(endpoints[bEid]),
                                 address(this),
                                 address(0),
-                                IPearlmit(address(pearlmit)),
                                 cluster
                             )
                         ),
@@ -159,11 +153,9 @@ contract TapTokenTest is ToeTestHelper, BaseToeMsgType {
                                 address(endpoints[bEid]),
                                 address(this),
                                 address(0),
-                                IPearlmit(address(pearlmit)),
                                 cluster
                             )
                         ),
-                        IPearlmit(address(pearlmit)),
                         cluster
                     )
                 )

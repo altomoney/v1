@@ -26,7 +26,6 @@ import {
     RemoteTransferMsg
 } from "src/tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
 import {TapiocaOmnichainEngineCodec} from "../TapiocaOmnichainEngineCodec.sol";
-import {IPearlmit} from "src/tap-utils/interfaces/periph/IPearlmit.sol";
 import {BaseToeMsgType} from "../BaseToeMsgType.sol";
 
 /*
@@ -226,14 +225,6 @@ contract TapiocaOmnichainEngineHelper is BaseToeMsgType {
         return TapiocaOmnichainEngineCodec.encodeERC721PermitApprovalMsg(_erc721PermitApprovalMsg);
     }
 
-    function encodePearlmitApprovalMsg(address _pearlmit, IPearlmit.PermitBatchTransferFrom calldata _data)
-        public
-        pure
-        returns (bytes memory msg_)
-    {
-        return TapiocaOmnichainEngineCodec.encodePearlmitApprovalMsg(_pearlmit, _data);
-    }
-
     /**
      * @notice Encodes the message for the `remoteTransfer` operation.
      * @param _remoteTransferMsg The owner + LZ send param to pass on the remote chain. (B->A)
@@ -302,7 +293,7 @@ contract TapiocaOmnichainEngineHelper is BaseToeMsgType {
             // LZ
             // Tapioca msg types
             _msgType == MSG_SEND || _msgType == MSG_APPROVALS || _msgType == MSG_NFT_APPROVALS
-                || _msgType == MSG_PEARLMIT_APPROVAL || _msgType == MSG_REMOTE_TRANSFER || _msgType == MSG_MARKET_PERMIT
+                || _msgType == MSG_REMOTE_TRANSFER || _msgType == MSG_MARKET_PERMIT
         ) {
             return;
         } else if (!_sanitizeMsgTypeExtended(_msgType)) {

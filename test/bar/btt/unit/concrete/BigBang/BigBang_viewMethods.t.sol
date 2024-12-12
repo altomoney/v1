@@ -28,7 +28,6 @@ contract BigBang_viewMethods is BigBang_Unit_Shared {
             BigBangInitData(
                 address(penrose),
                 address(mainToken), //collateral
-                mainTokenId,
                 ITapiocaOracle(address(oracle)),
                 ILeverageExecutor(address(leverageExecutor)),
                 BB_DEBT_RATE_AGAINST_MAIN_MARKET,

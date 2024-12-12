@@ -33,7 +33,6 @@ contract PenroseTest is UsdoTestHelper {
     uint32 aEid = 1;
     uint32 bEid = 2;
 
-    Pearlmit pearlmit;
     Cluster cluster;
     
 
@@ -67,9 +66,8 @@ contract PenroseTest is UsdoTestHelper {
 
     function setUp() public override {
         {
-            pearlmit = new Pearlmit("Pearlmit", "1", address(this), 0);
             cluster = createCluster(aEid, __owner);
-            magnetar = createMagnetar(address(cluster), IPearlmit(address(pearlmit)));
+            magnetar = createMagnetar(address(cluster));
 
             setUpEndpoints(3, LibraryType.UltraLightNode);
 
@@ -99,7 +97,6 @@ contract PenroseTest is UsdoTestHelper {
                 address(cluster),
                 address(tapOFT),
                 address(weth),
-                IPearlmit(address(pearlmit)),
                 __owner
             )
         );

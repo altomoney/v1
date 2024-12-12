@@ -32,7 +32,6 @@ import {ModuleManager} from "./modules/ModuleManager.sol";
  */
 abstract contract BaseTOFT is
     ModuleManager,
-    PearlmitHandler,
     BaseTapiocaOmnichainEngine,
     BaseTOFTTokenMsgType,
     Pausable
@@ -56,7 +55,6 @@ abstract contract BaseTOFT is
             _data.endpoint,
             _data.delegate,
             _data.extExec,
-            _data.pearlmit,
             ICluster(_data.cluster)
         )
     {
@@ -100,9 +98,7 @@ abstract contract BaseTOFT is
             _spendAllowance(_fromAddress, msg.sender, _amount);
         }
         if (_amount == 0) revert TOFT_NotValid();
-        // IERC20(erc20).safeTransferFrom(_fromAddress, address(vault), _amount);
-        bool isErr = pearlmit.transferFromERC20(_fromAddress, address(vault), erc20, _amount);
-        if (isErr) revert TOFT_NotValid();
+        IERC20(erc20).safeTransferFrom(_fromAddress, address(vault), _amount);
         _mint(_toAddress, _amount - _feeAmount);
     }
 

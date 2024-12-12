@@ -33,8 +33,7 @@ abstract contract OFT_Unit_Shared is Base_Test {
     // *************** //
     function _wrapOft(uint256 amount, address token, address payable oft)
         internal
-        whenApprovedViaERC20(token, address(this), address(pearlmit), type(uint256).max)
-        whenApprovedViaPearlmit(TOKEN_TYPE_ERC20, token, 0, address(this), oft, type(uint200).max, uint48(block.timestamp))
+        whenApprovedViaERC20(token, address(this), type(uint256).max)
     {
         __wrap(amount, token, oft);
     }

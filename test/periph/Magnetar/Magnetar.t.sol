@@ -819,7 +819,7 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
             magnetar.burst(calls);
         }
 
-        uint256 colShare = bb._userCollateralShare(address(this));
+        uint256 colShare = bb.balanceOf(address(this));
         assertGt(colShare, 0);
 
         uint256 repayAmount_ = bb._userBorrowPart(address(this));

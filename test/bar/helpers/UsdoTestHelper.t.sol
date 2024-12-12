@@ -41,24 +41,21 @@ import {BBCollateral} from "tapioca-bar/markets/bigBang/BBCollateral.sol";
 import {BBLeverage} from "tapioca-bar/markets/bigBang/BBLeverage.sol";
 import {BBBorrow} from "tapioca-bar/markets/bigBang/BBBorrow.sol";
 import {BigBang} from "tapioca-bar/markets/bigBang/BigBang.sol";
+import {IMarket} from "../../../contracts/utils/interfaces/bar/IMarket.sol";
 
 import {Origins} from "tapioca-bar/markets/origins/Origins.sol";
 
 struct TestPenroseData {
-    address yb;
     address cluster;
     address tap;
     address token;
-    IPearlmit pearlmit;
     address owner;
 }
 
 struct TestSingularityData {
     address penrose;
     IERC20 asset;
-    uint256 assetId;
     IERC20 collateral;
-    uint256 collateralId;
     IOracle oracle;
     ILeverageExecutor leverageExecutor;
 }
@@ -66,7 +63,6 @@ struct TestSingularityData {
 struct TestBigBangData {
     address penrose;
     address collateral;
-    uint256 collateralId;
     ITapiocaOracle oracle;
     ILeverageExecutor leverageExecutor;
     uint256 debtRateAgainstEth;
@@ -84,19 +80,19 @@ contract UsdoTestHelper is TestHelper, TestUtils {
         return new Cluster(hostEid, owner);
     }
 
-    function createSwapper(YieldBox _yb) public returns (SwapperMock) {
-        return new SwapperMock(_yb);
+    function createSwapper(IMarket _market) public returns (SwapperMock) {
+        return new SwapperMock(address(_market));
     }
 
     function createOracle() public returns (OracleMock) {
         return new OracleMock("Oracle Test", "ORCT", 1 ether);
     }
 
-    function createLeverageExecutor(address, address _swapper, address _cluster, address _pearlmit)
+    function createLeverageExecutor(address, address _swapper, address _cluster)
         public
         returns (SimpleLeverageExecutor)
     {
-        return new SimpleLeverageExecutor(IZeroXSwapper(_swapper), ICluster(_cluster), address(0), IPearlmit(_pearlmit));
+        return new SimpleLeverageExecutor(IZeroXSwapper(_swapper), ICluster(_cluster), address(0));
     }
 
     function createPenrose(TestPenroseData memory _data) public returns (Penrose pen, Singularity mediumRiskMC) {
@@ -114,28 +110,23 @@ contract UsdoTestHelper is TestHelper, TestUtils {
 
     function createOrigins(
         address owner,
-        address yb,
         address asset,
-        uint256 assetId,
         address collateral,
-        uint256 collateralId,
         ITapiocaOracle oracle,
         uint256 exchangePrecision,
         uint256 collateralizationRate,
         address penrose
     ) public returns (Origins) {
-        return new Origins(
-            owner,
-            yb,
+        Origins origins = new Origins(owner);
+        origins.init(
             IERC20(asset),
-            assetId,
-            IERC20(collateral),
-            collateralId,
+            collateral,
             oracle,
             exchangePrecision,
             collateralizationRate,
             IPenrose(penrose)
         );
+        return origins;
     }
 
     function createBigBang(TestBigBangData memory _bb, address _mc) public returns (BigBang) {
@@ -179,7 +170,6 @@ contract UsdoTestHelper is TestHelper, TestUtils {
         data = BigBang._InitMemoryData(
             IPenrose(_bb.penrose),
             IERC20(_bb.collateral),
-            _bb.collateralId,
             ITapiocaOracle(address(_bb.oracle)),
             0,
             75000,
@@ -250,7 +240,7 @@ contract UsdoTestHelper is TestHelper, TestUtils {
             address(sglLiq), address(sglBorrow), address(sglCollateral), address(sglLev)
         );
 
-        tokensData = Singularity._InitMemoryTokensData(_sgl.asset, _sgl.assetId, _sgl.collateral, _sgl.collateralId);
+        tokensData = Singularity._InitMemoryTokensData(_sgl.asset, _sgl.collateral);
 
         data = Singularity._InitMemoryData(
             IPenrose(_penrose), ITapiocaOracle(address(_sgl.oracle)), 0, 75000, 80000, _sgl.leverageExecutor

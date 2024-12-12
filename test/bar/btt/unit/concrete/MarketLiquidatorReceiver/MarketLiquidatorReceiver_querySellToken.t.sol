@@ -14,7 +14,7 @@ contract MarketLiquidatorReceiver_querySellToken is MarketLiquidatorReceiver_Uni
     function setUp() public override {
         super.setUp();
 
-        toft = new TOFTMock_test(address(weth), IPearlmit(address(pearlmit)));
+        toft = new TOFTMock_test(address(weth));
     }
 
     function test_WhenQuerySellTokenIsCalled() external {
