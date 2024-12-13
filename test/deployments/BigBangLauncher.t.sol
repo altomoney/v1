@@ -58,7 +58,6 @@ contract BigBangLauncherTests is Test {
         riskParams.exchangeRatePrecision;
         riskParams.collateralizationRate;
         riskParams.liquidationCollateralizationRate;
-        riskParams.collateralId = 1;
         riskParams.collateral = input.wrappedNativeToken;
         riskParams.oracle = address(new OracleMock("Oracle Test", "ORCT", 1 ether));
         riskParams.seedAmount = 1 ether;

@@ -50,13 +50,10 @@ contract DeploymentProceduresLimits is Test {
         endpointMock = address(new LZEndpointMock(1));
         delegate = address(new TapiocaOmnichainExtExec());
 
-        usdoModulesReport = (
-            new TapiocaUsdoBatchOne(endpointMock, delegate, address(0), address(0), address(0), address(0))
-        ).getUsdoModulesReport();
-        usdoMarketModulesReport = (
-            new TapiocaUsdoBatchTwo(endpointMock, delegate, address(0), address(0), address(0), address(0))
-        ).getUsdoMarketModulesReport();
-
+        usdoModulesReport =
+            (new TapiocaUsdoBatchOne(endpointMock, delegate, address(0), address(0))).getUsdoModulesReport();
+        usdoMarketModulesReport =
+            (new TapiocaUsdoBatchTwo(endpointMock, delegate, address(0), address(0))).getUsdoMarketModulesReport();
 
         erc20Mock1 = address(new ERC20Mock("A", "A"));
         erc20Mock2 = address(new ERC20Mock("B", "B"));
@@ -66,12 +63,12 @@ contract DeploymentProceduresLimits is Test {
     }
 
     function test_new_TapiocaMagnetarBatchOne() public {
-        new TapiocaMagnetarBatchOne(address(0), address(0));
+        new TapiocaMagnetarBatchOne(address(0));
     }
 
     function test_new_TapiocaMagnetarBatchTwo() public {
         MagnetarDepsReport memory emptyReport;
-        new TapiocaMagnetarBatchTwo(owner, address(1), address(2), address(3), address(4), address(5), emptyReport);
+        new TapiocaMagnetarBatchTwo(owner, address(1), address(3), address(4), address(5), emptyReport);
     }
 
     function test_new_UtilityBatch_isTestnet_false() public {
@@ -83,11 +80,11 @@ contract DeploymentProceduresLimits is Test {
     }
 
     function test_new_TapiocaUsdoBatchOne() public {
-        new TapiocaUsdoBatchOne(endpointMock, delegate, address(1), address(2), address(3), address(4));
+        new TapiocaUsdoBatchOne(endpointMock, delegate, address(3), address(4));
     }
 
     function test_new_TapiocaUsdoBatchTwo() public {
-        new TapiocaUsdoBatchTwo(endpointMock, delegate, address(1), address(2), address(3), address(4));
+        new TapiocaUsdoBatchTwo(endpointMock, delegate, address(3), address(4));
     }
 
     function test_new_TapiocaBBBatchOne() public {
@@ -109,8 +106,6 @@ contract DeploymentProceduresLimits is Test {
             endpointMock,
             delegate,
             address(1),
-            address(2),
-            address(3),
             address(4),
             usdoModulesReport.usdoSenderModule,
             usdoModulesReport.usdoReceiverModule,
@@ -126,16 +121,7 @@ contract DeploymentProceduresLimits is Test {
     function test_new_PenroseBatch() public {
         new TapiocaPenroseBatch(
             IPenroseInput(
-                yieldboxMock,
-                address(3),
-                erc20Mock1,
-                erc20Mock2,
-                erc20Mock3,
-                address(7),
-                address(8),
-                address(1),
-                address(1),
-                address(0)
+                yieldboxMock, erc20Mock1, erc20Mock2, erc20Mock3, address(7), address(8), address(1), address(0)
             )
         );
     }
