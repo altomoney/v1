@@ -23,13 +23,12 @@ abstract contract TapiocaZProcedures {
             symbol: "TOFT_MODULE",
             endpoint: endpoint,
             delegate: delegate,
-            
             cluster: address(1),
             erc20: address(1),
             vault: address(new TOFTVault(address(1))),
             hostEid: hostEid,
             extExec: address(1)
-                    });
+        });
 
         report.tOFTSenderModule = address(new TOFTSender(toftModulesInitStruct));
         report.toftHelper = address(new TOFTHelper());
@@ -43,13 +42,11 @@ abstract contract TapiocaZProcedures {
             symbol: "TOFT_MODULE",
             endpoint: address(TOFTSender(report.tOFTSenderModule).endpoint()),
             delegate: TOFTSender(report.tOFTSenderModule).owner(),
-            
             cluster: address(1),
             erc20: TOFTSender(report.tOFTSenderModule).erc20(),
             vault: address(TOFTSender(report.tOFTSenderModule).vault()),
             hostEid: TOFTSender(report.tOFTSenderModule).hostEid(),
             extExec: address(1)
-            
         });
 
         report.tOFTReceiverModule = address(new TOFTReceiver(toftModulesInitStruct));
@@ -64,13 +61,11 @@ abstract contract TapiocaZProcedures {
             symbol: "TOFT_MODULE",
             endpoint: address(TOFTSender(report.tOFTSenderModule).endpoint()),
             delegate: TOFTSender(report.tOFTSenderModule).owner(),
-            
             cluster: address(1),
             erc20: TOFTSender(report.tOFTSenderModule).erc20(),
             vault: address(TOFTSender(report.tOFTSenderModule).vault()),
             hostEid: TOFTSender(report.tOFTSenderModule).hostEid(),
             extExec: address(1)
-            
         });
 
         report.mTOFTReceiverModule = address(new mTOFTReceiver(toftModulesInitStruct));
@@ -85,13 +80,11 @@ abstract contract TapiocaZProcedures {
             symbol: "TOFT_MODULE",
             endpoint: address(TOFTSender(report.tOFTSenderModule).endpoint()),
             delegate: TOFTSender(report.tOFTSenderModule).owner(),
-            
             cluster: address(1),
             erc20: TOFTSender(report.tOFTSenderModule).erc20(),
             vault: address(TOFTSender(report.tOFTSenderModule).vault()),
             hostEid: TOFTSender(report.tOFTSenderModule).hostEid(),
             extExec: address(1)
-            
         });
 
         report.tOFTGenericReceiverModule = address(new TOFTGenericReceiverModule(toftModulesInitStruct));

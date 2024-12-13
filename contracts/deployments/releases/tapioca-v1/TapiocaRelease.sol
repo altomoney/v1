@@ -35,15 +35,10 @@ library TapiocaRelease {
         TapiocaUtilitiesBatch utilitiesBatch;
         (utilitiesBatch, reports.utilitiesReport) = _deployUtilities(input.owner, input.zeroXSwapper, input.lzChainId);
 
-        reports.ExtExReport = _deployExtEx(
-            input.owner,
-            input.wrappedNativeToken,
-            reports.utilitiesReport.cluster,
-            input.zeroXSwapper
-        );
+        reports.ExtExReport =
+            _deployExtEx(input.owner, input.wrappedNativeToken, reports.utilitiesReport.cluster, input.zeroXSwapper);
 
-        reports.magnetarDepsReport =
-            _deployMagnetarDeps(reports.utilitiesReport.toeHelper);
+        reports.magnetarDepsReport = _deployMagnetarDeps(reports.utilitiesReport.toeHelper);
 
         reports.magnetarReport = _deployMagnetar(
             input.owner,
@@ -96,10 +91,7 @@ library TapiocaRelease {
     /// Internal functions for deployment of batch contracts and retrieval of deployment report
     ///
 
-    function _deployMagnetarDeps(address toeHelper)
-        private
-        returns (MagnetarDepsReport memory report)
-    {
+    function _deployMagnetarDeps(address toeHelper) private returns (MagnetarDepsReport memory report) {
         TapiocaMagnetarBatchOne magnetarDepsBatch = new TapiocaMagnetarBatchOne(toeHelper);
         return magnetarDepsBatch.getMagnetarDepsReport();
     }
@@ -126,12 +118,10 @@ library TapiocaRelease {
         return (utilitiesBatch, utilitiesBatch.getUtilitiesReport());
     }
 
-    function _deployExtEx(
-        address owner,
-        address wrappedNativeToken,
-        address cluster,
-        address swapper
-    ) private returns (ExtExReport memory report) {
+    function _deployExtEx(address owner, address wrappedNativeToken, address cluster, address swapper)
+        private
+        returns (ExtExReport memory report)
+    {
         TapiocaExtExBatch extExBatch = new TapiocaExtExBatch(owner, wrappedNativeToken, cluster, swapper);
         return extExBatch.getExtExReport();
     }
@@ -148,14 +138,7 @@ library TapiocaRelease {
     ) private returns (PenroseReport memory report) {
         TapiocaPenroseBatch penroseBatch = new TapiocaPenroseBatch(
             IPenroseInput(
-                cluster,
-                tapToken,
-                usdoToken,
-                nativeWrappedToken,
-                owner,
-                singularityMaster,
-                bigbangMaster,
-                prevPenrose
+                cluster, tapToken, usdoToken, nativeWrappedToken, owner, singularityMaster, bigbangMaster, prevPenrose
             )
         );
         return penroseBatch.getPenroseReport();
@@ -172,12 +155,7 @@ library TapiocaRelease {
         return bbBatchThree.getBBReport();
     }
 
-    function _deployUSDO(
-        address endpoint,
-        address delegate,
-        address cluster,
-        address extExec
-    )
+    function _deployUSDO(address endpoint, address delegate, address cluster, address extExec)
         private
         returns (
             UsdoModulesReport memory modulesReport,
@@ -185,12 +163,10 @@ library TapiocaRelease {
             UsdoReport memory usdoReport
         )
     {
-        TapiocaUsdoBatchOne usdoBatchOne =
-            new TapiocaUsdoBatchOne(endpoint, delegate, cluster, extExec);
+        TapiocaUsdoBatchOne usdoBatchOne = new TapiocaUsdoBatchOne(endpoint, delegate, cluster, extExec);
         modulesReport = usdoBatchOne.getUsdoModulesReport();
 
-        TapiocaUsdoBatchTwo usdoBatchTwo =
-            new TapiocaUsdoBatchTwo(endpoint, delegate, cluster, extExec);
+        TapiocaUsdoBatchTwo usdoBatchTwo = new TapiocaUsdoBatchTwo(endpoint, delegate, cluster, extExec);
         marketModulesReport = usdoBatchTwo.getUsdoMarketModulesReport();
         TapiocaUsdoBatchThree usdoBatchThree = new TapiocaUsdoBatchThree(
             endpoint,

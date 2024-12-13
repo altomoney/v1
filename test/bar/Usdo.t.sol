@@ -114,8 +114,7 @@ contract UsdoTest is UsdoTestHelper {
     MarketHelper marketHelper;
     OracleMock oracle;
 
-
-     uint256 internal userAPKey = 0x1;
+    uint256 internal userAPKey = 0x1;
     uint256 internal userBPKey = 0x2;
     address public userA = vm.addr(userAPKey);
     address public userB = vm.addr(userBPKey);
@@ -173,10 +172,8 @@ contract UsdoTest is UsdoTestHelper {
         UsdoInitStruct memory aUsdoInitStruct = UsdoInitStruct({
             endpoint: address(endpoints[aEid]),
             delegate: __owner,
-            
             cluster: address(cluster),
             extExec: address(extExec)
-            
         });
         UsdoSender aUsdoSender = new UsdoSender(aUsdoInitStruct);
         UsdoReceiver aUsdoReceiver = new UsdoReceiver(aUsdoInitStruct);
@@ -201,10 +198,8 @@ contract UsdoTest is UsdoTestHelper {
         UsdoInitStruct memory bUsdoInitStruct = UsdoInitStruct({
             endpoint: address(endpoints[bEid]),
             delegate: __owner,
-            
             cluster: address(cluster),
             extExec: address(extExec)
-            
         });
         UsdoSender bUsdoSender = new UsdoSender(bUsdoInitStruct);
         UsdoReceiver bUsdoReceiver = new UsdoReceiver(bUsdoInitStruct);
@@ -235,20 +230,12 @@ contract UsdoTest is UsdoTestHelper {
         ofts[1] = address(bUsdo);
         this.wireOApps(ofts);
 
-
         tOB = new TapiocaOptionsBrokerMock(address(tapOFT));
 
         swapper = createSwapper();
-        leverageExecutor =
-            createLeverageExecutor( address(swapper), address(cluster));
-        (penrose, masterContract) = createPenrose(
-            TestPenroseData(
-                address(cluster),
-                address(tapOFT),
-                address(weth),
-                __owner
-            )
-        );
+        leverageExecutor = createLeverageExecutor(address(swapper), address(cluster));
+        (penrose, masterContract) =
+            createPenrose(TestPenroseData(address(cluster), address(tapOFT), address(weth), __owner));
         oracle = createOracle();
         singularity = createSingularity(
             penrose,
@@ -263,7 +250,7 @@ contract UsdoTest is UsdoTestHelper {
         );
         vm.label(address(singularity), "Singularity");
 
-        cluster.updateContract(aEid,  true);
+        cluster.updateContract(aEid, true);
         cluster.updateContract(aEid, address(magnetar), true);
         cluster.updateContract(aEid, address(tOB), true);
         cluster.updateContract(aEid, address(swapper), true);
@@ -273,7 +260,7 @@ contract UsdoTest is UsdoTestHelper {
         cluster.updateContract(aEid, address(singularity), true);
         cluster.updateContract(aEid, address(marketHelper), true);
 
-        cluster.updateContract(bEid,  true);
+        cluster.updateContract(bEid, true);
         cluster.updateContract(bEid, address(magnetar), true);
         cluster.updateContract(bEid, address(tOB), true);
         cluster.updateContract(bEid, address(swapper), true);

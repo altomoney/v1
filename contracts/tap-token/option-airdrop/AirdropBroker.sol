@@ -124,9 +124,7 @@ contract AirdropBroker is Pausable, Ownable, FullMath, ReentrancyGuard {
     error AddressZero();
     error WaitForNewEpoch();
 
-    constructor(address _aoTAP, address _pcnft, address _paymentTokenBeneficiary, address _owner)
-        
-    {
+    constructor(address _aoTAP, address _pcnft, address _paymentTokenBeneficiary, address _owner) {
         if (_aoTAP == address(0)) revert AddressZero();
         if (_pcnft == address(0)) revert AddressZero();
 

@@ -9,9 +9,7 @@ import {Constants} from "./Constants.sol";
 
 // Tapioca
 
-
 import {Cluster} from "tap-utils/Cluster/Cluster.sol";
-
 
 // tests
 import {ERC20Mock_test} from "../mocks/ERC20Mock_test.sol";
@@ -52,7 +50,6 @@ abstract contract Utils is Test, Constants {
         vm.label(address(cluster), "Cluster Test");
         return cluster;
     }
-
 
     // ************************ //
     // *** APPROVAL HELPERS *** //

@@ -157,7 +157,6 @@ contract MagnetarMock {
 
         // performs a repay operation for the specified market
         if (_data.repayAmount > 0) {
-
             (Module[] memory modules, bytes[] memory calls) = IMarketHelper(_data.marketHelper).repay(
                 _data.depositAmount > 0 ? address(this) : _data.user, _data.user, false, _data.repayAmount
             );

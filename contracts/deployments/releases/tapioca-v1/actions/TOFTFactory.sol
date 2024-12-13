@@ -66,13 +66,11 @@ contract TOFTFactory is Ownable {
             symbol: symbol,
             endpoint: ENDPOINT,
             delegate: DELEGATE,
-            
             cluster: CLUSTER,
             erc20: erc20Token,
             vault: address(vault),
             hostEid: HOST_EID,
             extExec: EXT_EXEC
-            
         });
         TOFTModulesInitStruct memory toftModulesInitStruct = TOFTModulesInitStruct({
             tOFTSenderModule: TOFT_SENDER_MODULE,

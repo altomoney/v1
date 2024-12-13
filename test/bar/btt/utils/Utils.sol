@@ -11,7 +11,6 @@ import {Constants} from "./Constants.sol";
 
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 
-
 import {Cluster} from "tap-utils/Cluster/Cluster.sol";
 
 import {Penrose} from "tapioca-bar/Penrose.sol";
@@ -67,18 +66,11 @@ abstract contract Utils is Test, Constants {
     }
 
     // Creates real Penrose
-    function _createPenrose(
-        address _cluster,
-        address _tapToken,
-        address _mainToken,
-        address _owner
-    ) internal returns (Penrose) {
-        Penrose penrose = new Penrose(
-            ICluster(_cluster),
-            IERC20(_tapToken),
-            IERC20(_mainToken),
-            _owner
-        );
+    function _createPenrose(address _cluster, address _tapToken, address _mainToken, address _owner)
+        internal
+        returns (Penrose)
+    {
+        Penrose penrose = new Penrose(ICluster(_cluster), IERC20(_tapToken), IERC20(_mainToken), _owner);
         vm.label(address(penrose), "Penrose");
         return penrose;
     }

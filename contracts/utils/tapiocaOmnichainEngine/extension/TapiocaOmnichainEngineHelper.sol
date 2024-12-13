@@ -12,8 +12,7 @@ import {
 import {OptionsBuilder} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/libs/OptionsBuilder.sol";
 
 // Tapioca
-import {
-    MarketPermitActionMsg} from "src/tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
+import {MarketPermitActionMsg} from "src/tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
 import {
     ITapiocaOmnichainEngine,
     ERC20PermitApprovalMsg,
@@ -244,7 +243,6 @@ contract TapiocaOmnichainEngineHelper is BaseToeMsgType {
     {
         msg_ = TapiocaOmnichainEngineCodec.buildMarketPermitApprovalMsg(_marketPermitActionMsg);
     }
-
 
     /// =======================
     /// Compose builder functions

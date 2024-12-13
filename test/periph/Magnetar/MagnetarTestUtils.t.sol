@@ -5,7 +5,6 @@ import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 
 import {Penrose} from "tapioca-bar/Penrose.sol";
 
-
 import {SimpleLeverageExecutor} from "tapioca-bar/markets/leverage/SimpleLeverageExecutor.sol";
 
 import {SGLLiquidation} from "tapioca-bar/markets/singularity/SGLLiquidation.sol";
@@ -31,9 +30,6 @@ import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
 
 import {ZerroXSwapperMockTarget} from "../../utils//ZeroXSwapper/ZerroXSwapperMockTarget.sol";
 import {ZeroXSwapper} from "tap-utils/Swapper/ZeroXSwapper.sol";
-
-
-
 
 import {SingularityMock} from "../mocks/SingularityMock.sol";
 import {SGLInit} from "tapioca-bar/markets/singularity/SGLInit.sol";
@@ -64,17 +60,11 @@ contract MagnetarTestUtils {
         penrose.setBigBangEthMarket(market);
     }
 
-    function createPenrose(
-        ICluster _cluster,
-        address tapToken_,
-        address mainToken_
-    ) external returns (Penrose penrose, Singularity mediumRiskMC, BigBang bbMediumRiskMC) {
-        penrose = new Penrose(
-            _cluster,
-            IERC20(tapToken_),
-            IERC20(mainToken_),
-            address(this)
-        );
+    function createPenrose(ICluster _cluster, address tapToken_, address mainToken_)
+        external
+        returns (Penrose penrose, Singularity mediumRiskMC, BigBang bbMediumRiskMC)
+    {
+        penrose = new Penrose(_cluster, IERC20(tapToken_), IERC20(mainToken_), address(this));
         mediumRiskMC = new Singularity();
         bbMediumRiskMC = new BigBang();
 
@@ -91,9 +81,6 @@ contract MagnetarTestUtils {
 
         penrose.executeMarketFn(markets, marketsData, true);
     }
-
-
-
 
     function createBigBang(TestBigBangData memory _bb, address _mc) public returns (BigBang) {
         BigBang bb = new BigBang();
@@ -211,13 +198,10 @@ contract MagnetarTestUtils {
             address(sglLiq), address(sglBorrow), address(sglCollateral), address(sglLev)
         );
 
-        tokensData = Singularity._InitMemoryTokensData(
-            IERC20(_sgl.asset),  IERC20(_sgl.collateral)
-        );
+        tokensData = Singularity._InitMemoryTokensData(IERC20(_sgl.asset), IERC20(_sgl.collateral));
 
         data = Singularity._InitMemoryData(
             IPenrose(_sgl.penrose), ITapiocaOracle(address(_sgl.oracle)), 0, 75000, 80000, _sgl.leverageExecutor
         );
     }
-    
 }

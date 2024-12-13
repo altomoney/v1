@@ -45,7 +45,7 @@ abstract contract BaseLeverageExecutor is Ownable {
     // ************ //
 
     IZeroXSwapper public swapper;
-    
+
     ICluster public cluster;
     IWeth9 public weth;
 
@@ -70,7 +70,6 @@ abstract contract BaseLeverageExecutor is Ownable {
         swapper = _swapper;
         cluster = _cluster;
         weth = IWeth9(_weth);
-
     }
 
     receive() external payable {}

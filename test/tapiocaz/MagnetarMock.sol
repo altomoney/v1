@@ -49,7 +49,7 @@ contract MagnetarMock {
 
     ICluster public cluster;
 
-    constructor(address _cluster)  {
+    constructor(address _cluster) {
         cluster = ICluster(_cluster);
     }
 
@@ -152,7 +152,6 @@ contract MagnetarMock {
     {
         if (!cluster.isWhitelisted(cluster.lzChainId(), address(_data.market))) revert MagnetarMock_NotAuthorized();
 
-
         IMarket market = IMarket(_data.market);
         address collateralAddress = market.collateral();
 
@@ -165,8 +164,8 @@ contract MagnetarMock {
             _share = market.convertToShares(_data.collateralAmount);
 
             // deposit to YieldBox
-            IERC20(collateralAddress).approve( 0);
-            IERC20(collateralAddress).approve( _data.collateralAmount);
+            IERC20(collateralAddress).approve(0);
+            IERC20(collateralAddress).approve(_data.collateralAmount);
             // TODO review it yieldBox.depositAsset(collateralId, address(this), address(this), _data.collateralAmount, 0);
         }
 
@@ -232,7 +231,7 @@ contract MagnetarMock {
     function _extractTokens(address _from, address _token, uint256 _amount) private returns (uint256) {
         uint256 balanceBefore = IERC20(_token).balanceOf(address(this));
         // IERC20(_token).safeTransferFrom(_from, address(this), _amount);
-        
+
         uint256 balanceAfter = IERC20(_token).balanceOf(address(this));
         if (balanceAfter <= balanceBefore) revert MagnetarMock_Failed();
         return balanceAfter - balanceBefore;

@@ -4,7 +4,6 @@ pragma solidity ^0.8.22;
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IMarket} from "../../../contracts/utils/interfaces/bar/IMarket.sol";
 
-
 /// @notice Always gives out the minimum requested amount, if it has it.
 /// @notice Do not use the other functions.
 contract SwapperMock {

@@ -10,7 +10,6 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {BaseTapiocaOmnichainEngine} from "tap-utils/tapiocaOmnichainEngine/BaseTapiocaOmnichainEngine.sol";
 import {TOFTInitStruct, IToftVault} from "tap-utils/interfaces/oft/ITOFT.sol";
 
-
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {BaseTOFTTokenMsgType} from "./BaseTOFTTokenMsgType.sol";
 import {ModuleManager} from "./modules/ModuleManager.sol";
@@ -30,12 +29,7 @@ import {ModuleManager} from "./modules/ModuleManager.sol";
  * @author TapiocaDAO
  * @notice Base TOFT contract for LZ V2
  */
-abstract contract BaseTOFT is
-    ModuleManager,
-    BaseTapiocaOmnichainEngine,
-    BaseTOFTTokenMsgType,
-    Pausable
-{
+abstract contract BaseTOFT is ModuleManager, BaseTapiocaOmnichainEngine, BaseTOFTTokenMsgType, Pausable {
     using SafeERC20 for IERC20;
 
     IToftVault public vault;

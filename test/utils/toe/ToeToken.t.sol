@@ -103,23 +103,11 @@ contract TapTokenTest is ToeTestHelper, BaseToeMsgType {
                         __owner,
                         __extExec,
                         address(
-                            new ToeTokenSenderMock(
-                                "",
-                                "",
-                                address(endpoints[aEid]),
-                                address(this),
-                                address(0),
-                                cluster
-                            )
+                            new ToeTokenSenderMock("", "", address(endpoints[aEid]), address(this), address(0), cluster)
                         ),
                         address(
                             new ToeTokenReceiverMock(
-                                "",
-                                "",
-                                address(endpoints[aEid]),
-                                address(this),
-                                address(0),
-                                cluster
+                                "", "", address(endpoints[aEid]), address(this), address(0), cluster
                             )
                         ),
                         cluster
@@ -137,23 +125,11 @@ contract TapTokenTest is ToeTestHelper, BaseToeMsgType {
                         __owner,
                         address(__extExec),
                         address(
-                            new ToeTokenSenderMock(
-                                "",
-                                "",
-                                address(endpoints[bEid]),
-                                address(this),
-                                address(0),
-                                cluster
-                            )
+                            new ToeTokenSenderMock("", "", address(endpoints[bEid]), address(this), address(0), cluster)
                         ),
                         address(
                             new ToeTokenReceiverMock(
-                                "",
-                                "",
-                                address(endpoints[bEid]),
-                                address(this),
-                                address(0),
-                                cluster
+                                "", "", address(endpoints[bEid]), address(this), address(0), cluster
                             )
                         ),
                         cluster

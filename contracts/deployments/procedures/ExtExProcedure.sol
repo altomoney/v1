@@ -8,12 +8,10 @@ import {MarketLiquidatorReceiver} from "tapioca-bar/liquidators/MarketLiquidator
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 
 abstract contract ExtExProcedure {
-    function _deployExtEx(
-        address owner,
-        address wrappedNativeToken,
-        address cluster,
-        address swapper
-    ) internal returns (ExtExReport memory report) {
+    function _deployExtEx(address owner, address wrappedNativeToken, address cluster, address swapper)
+        internal
+        returns (ExtExReport memory report)
+    {
         report.extExec = address(new TapiocaOmnichainExtExec());
 
         report.liquidatorReceiver =

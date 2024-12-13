@@ -5,17 +5,16 @@ import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 
 import {ITap} from "src/tap-utils/interfaces/oft/ITap.sol";
 
-
 import {ERC721Mock} from "./ERC721Mock.sol";
 
-contract TapiocaOptionsBrokerMock  {
+contract TapiocaOptionsBrokerMock {
     address public tapOFT;
     address public oTAP;
     address public tOLP;
 
     error TransferFailed();
 
-    constructor(address _otap, address _tapOft)  {
+    constructor(address _otap, address _tapOft) {
         tapOFT = _tapOft;
         oTAP = _otap;
     }

@@ -40,9 +40,7 @@ contract SingularityMock is EIP712 {
     error SingularityMock_ModuleNotSet();
     error SingularityMock_NotValid();
 
-    constructor(address collateral, address asset)
-        EIP712("Tapioca Singularity", "1")
-    {
+    constructor(address collateral, address asset) EIP712("Tapioca Singularity", "1") {
         _collateral = IERC20(collateral);
         _asset = IERC20(asset);
     }

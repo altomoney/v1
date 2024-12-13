@@ -32,14 +32,12 @@ import {ERC721Mock} from "../../mocks/ERC721Mock.sol";
 import {ERC20Mock} from "../../mocks/ERC20Mock.sol";
 import {TapiocaOptionBroker} from "tap-token/options/TapiocaOptionBroker.sol";
 
-
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
 
 // @review-test Fix the tests in this contract. Failing in the setUp.
 abstract contract MagnetarOptionModuleTest is MagnetarTestHelper, IERC721Receiver {
     TapiocaOptionBroker public tOB;
-
 
     // -----------------------
     //
@@ -49,17 +47,11 @@ abstract contract MagnetarOptionModuleTest is MagnetarTestHelper, IERC721Receive
     function setUp() public override {
         createCommonSetup();
 
-
-
-
-
         TapOftMock tapOft = new TapOftMock();
         ERC721Mock oTAP = new ERC721Mock();
         tOB = new TapiocaOptionBroker(address(oTAP), address(tapOft));
-        
 
         clusterA.updateContract(0, address(tOB), true);
-
     }
 
     function createLockAndParticipateData(address user, address singularity, address magnetar)
@@ -69,7 +61,6 @@ abstract contract MagnetarOptionModuleTest is MagnetarTestHelper, IERC721Receive
         return LockAndParticipateData({
             user: user,
             tSglToken: singularity,
-
             magnetar: magnetar,
             lockData: IOptionsLockData({
                 lock: false,
@@ -165,13 +156,10 @@ abstract contract MagnetarOptionModuleTest is MagnetarTestHelper, IERC721Receive
 
         //approvals for deposit & collateral add
         collateralA.approve(address(magnetarA), type(uint256).max);
-        
+
         // Atomic approval
-        
-       
+
         assetA.approve(address(magnetarA), type(uint256).max);
-
-
 
         magnetarA.burst{value: 0}(calls);
     }
@@ -232,17 +220,9 @@ abstract contract MagnetarOptionModuleTest is MagnetarTestHelper, IERC721Receive
             call: lockAndParticipateData
         });
 
-        {
-
-
-
-
-        }
+        {}
 
         magnetarA.burst{value: 0}(calls);
-
-        
-        
     }
 
     // -----------------------0
@@ -364,16 +344,11 @@ abstract contract MagnetarOptionModuleTest is MagnetarTestHelper, IERC721Receive
             call: exitPositionAndRemoveCollateraleData
         });
 
-
-        
-
         uint256 sglBalanceBefore = sgl.balanceOf(address(this));
         uint256 borrowPartBefore = bb._userBorrowPart(address(this));
         magnetarA.burst{value: 0}(calls);
         uint256 sglBalanceAfter = sgl.balanceOf(address(this));
         uint256 borrowPartAfter = bb._userBorrowPart(address(this));
-
-        
 
         assertGt(sglBalanceBefore, sglBalanceAfter);
         assertGt(borrowPartBefore, borrowPartAfter);
@@ -406,14 +381,9 @@ abstract contract MagnetarOptionModuleTest is MagnetarTestHelper, IERC721Receive
             call: exitPositionAndRemoveCollateraleData
         });
 
-
-        
-
         uint256 collateralShareBefore = bb.balanceOf(address(this));
         magnetarA.burst{value: 0}(calls);
         uint256 collateralShareAfter = bb.balanceOf(address(this));
-
-        
 
         assertGt(collateralShareBefore, collateralShareAfter);
     }
@@ -448,17 +418,12 @@ abstract contract MagnetarOptionModuleTest is MagnetarTestHelper, IERC721Receive
             call: exitPositionAndRemoveCollateraleData
         });
 
-
-        
-
         address _collateral = bb._collateral();
         uint256 balanceBefore = ERC20Mock(_collateral).balanceOf(address(this));
         uint256 collateralShareBefore = bb.balanceOf(address(this));
         magnetarA.burst{value: 0}(calls);
         uint256 collateralShareAfter = bb.balanceOf(address(this));
         uint256 balanceAfter = ERC20Mock(_collateral).balanceOf(address(this));
-
-        
 
         assertGt(collateralShareBefore, collateralShareAfter);
         assertGt(balanceAfter, balanceBefore);
@@ -497,19 +462,12 @@ abstract contract MagnetarOptionModuleTest is MagnetarTestHelper, IERC721Receive
             call: exitPositionAndRemoveCollateraleData
         });
 
-
-        
-        
-
         address _collateral = bb._collateral();
         uint256 balanceBefore = ERC20Mock(_collateral).balanceOf(address(this));
         uint256 collateralShareBefore = bb.balanceOf(address(this));
         magnetarA.burst{value: 0}(calls);
         uint256 collateralShareAfter = bb.balanceOf(address(this));
         uint256 balanceAfter = ERC20Mock(_collateral).balanceOf(address(this));
-
-        
-        
 
         assertGt(collateralShareBefore, collateralShareAfter);
         assertGt(balanceAfter, balanceBefore);
@@ -568,10 +526,9 @@ abstract contract MagnetarOptionModuleTest is MagnetarTestHelper, IERC721Receive
 
     function test_lockAndParticipate_lock_only() public {
         vm.skip(true);
-        
     }
 
     function test_lockAndParticipate_lock_and_participate() public {
-        vm.skip(true);        
+        vm.skip(true);
     }
 }

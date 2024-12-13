@@ -112,8 +112,6 @@ contract TapiocaOmnichainExtExec {
         }
     }
 
-   
-
     /**
      * @notice Executes SGL/BB permitLend operation.
      * @param _approval The approval message.

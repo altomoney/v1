@@ -155,7 +155,11 @@ contract SGLLiquidation is SGLCommon {
             uint256 assetBalanceBefore = _borrowableToken().balanceOf(address(this));
             //msg.sender should be validated against `initiator` on IMarketLiquidatorReceiver
             _liquidatorReceiver.onCollateralReceiver(
-                msg.sender, address(collateral()), address(_borrowableToken()), collateralAmount, _liquidatorReceiverData
+                msg.sender,
+                address(collateral()),
+                address(_borrowableToken()),
+                collateralAmount,
+                _liquidatorReceiverData
             );
             uint256 assetBalanceAfter = _borrowableToken().balanceOf(address(this));
             returnedAmount = assetBalanceAfter - assetBalanceBefore;

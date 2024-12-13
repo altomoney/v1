@@ -410,7 +410,7 @@ contract Magnetar is BaseMagnetar, ERC1155Holder {
                 TapToken tapOFT = ITWTAPv2(_target).tapOFT();
 
                 tapOFT.transferFrom(from, address(this), amount);
-                
+
                 IERC20(address(tapOFT)).safeApprove(address(_target), amount);
                 _executeCallMemory(
                     _target,
@@ -423,7 +423,6 @@ contract Magnetar is BaseMagnetar, ERC1155Holder {
             }
         }
         // todo: else if (funcSig == ITapiocaOptionBroker.participate.selector logic
-
 
         revert Magnetar_ActionNotValid(uint8(MagnetarAction.TapLock), _actionCalldata);
     }
@@ -519,14 +518,13 @@ contract Magnetar is BaseMagnetar, ERC1155Holder {
         address tapToken = ITapiocaOptionBroker(_target).tapOFT();
 
         // transfer `paymentToken` here
-        IERC20(_paymentToken) .safeTransferFrom(msg.sender, address(this), _paymentTokenAmount);
+        IERC20(_paymentToken).safeTransferFrom(msg.sender, address(this), _paymentTokenAmount);
 
         uint256 tapAmountBefore = IERC20(tapToken).balanceOf(address(this));
 
         // execute
         _paymentToken.safeApprove(address(_target), _paymentTokenAmount);
         _executeCall(_target, _actionCalldata, _actionValue);
-
 
         uint256 tapAmountAfter = IERC20(tapToken).balanceOf(address(this));
 

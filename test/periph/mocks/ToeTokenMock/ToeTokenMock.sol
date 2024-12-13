@@ -41,13 +41,8 @@ contract ToeTokenMock is BaseTapiocaOmnichainEngine, ModuleManager, ERC20Permit 
         address _extExec,
         address _senderModule,
         address _receiverModule,
-
         ICluster _cluster
-    )
-
-        ERC20Permit("TOEM")
-        BaseTapiocaOmnichainEngine(_endpoint, _owner, _extExec, _cluster)
-    {
+    ) ERC20Permit("TOEM") BaseTapiocaOmnichainEngine(_endpoint, _owner, _extExec, _cluster) {
         _setModule(uint8(Module.ToeTokenSender), _senderModule);
         _setModule(uint8(Module.ToeTokenReceiver), _receiverModule);
     }

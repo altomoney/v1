@@ -137,12 +137,8 @@ contract UnitBaseTest is TestHelper {
         bigBangEthOracle =
             ITapiocaOracle(address(OracleMock(address(new OracleMock("ETH_ORACLE", "ETH_ORACLE", 5e14)))));
 
-        (penrose, bigBangMasterContract, singularityMasterContract) = createPenrose(
-            address(cluster),
-            tapMockPenrose,
-            ethTokenPenrose,
-            adminAddr
-        );
+        (penrose, bigBangMasterContract, singularityMasterContract) =
+            createPenrose(address(cluster), tapMockPenrose, ethTokenPenrose, adminAddr);
 
         setUpBigBang();
         setUpSingularity();
@@ -221,34 +217,17 @@ contract UnitBaseTest is TestHelper {
      * Peripheral contracts
      */
 
-   
-
-   
-
-   
-
-
-
     // -------  Cluster
     function createCluster(uint32 _lzChainId, address _owner) internal returns (Cluster) {
         return new Cluster(_lzChainId, _owner);
     }
 
     // -------  Bar
-    function createPenrose(
-        address _yb,
-        address _cluster,
-        address _tap,
-        address _mainToken,
-        address _owner
-    ) internal returns (Penrose _penrose, BigBang bbMasterContract, Singularity sglMasterContract) {
-
-        _penrose = new Penrose(
-            ICluster(_cluster),
-            BoringIERC20(_tap),
-            BoringIERC20(_mainToken),
-            _owner
-        );
+    function createPenrose(address _yb, address _cluster, address _tap, address _mainToken, address _owner)
+        internal
+        returns (Penrose _penrose, BigBang bbMasterContract, Singularity sglMasterContract)
+    {
+        _penrose = new Penrose(ICluster(_cluster), BoringIERC20(_tap), BoringIERC20(_mainToken), _owner);
 
         bbMasterContract = new BigBang();
         sglMasterContract = new Singularity();
@@ -407,13 +386,8 @@ contract UnitBaseTest is TestHelper {
         );
     }
 
-    function createLeverageExecutor(address _swapper, address _cluster)
-        public
-        returns (SimpleLeverageExecutor)
-    {
-        return new SimpleLeverageExecutor(
-            IZeroXSwapper(address(_swapper)), ICluster(_cluster), address(0)
-        );
+    function createLeverageExecutor(address _swapper, address _cluster) public returns (SimpleLeverageExecutor) {
+        return new SimpleLeverageExecutor(IZeroXSwapper(address(_swapper)), ICluster(_cluster), address(0));
     }
 
     /**
@@ -422,8 +396,7 @@ contract UnitBaseTest is TestHelper {
      */
     function setUpBigBang() internal {
         ZeroXSwapperMock zeroXSwapper = new ZeroXSwapperMock(cluster, adminAddr);
-        SimpleLeverageExecutor leverageExecutor =
-            createLeverageExecutor(address(zeroXSwapper), address(cluster));
+        SimpleLeverageExecutor leverageExecutor = createLeverageExecutor(address(zeroXSwapper), address(cluster));
 
         bigBangEthMarket = createBigBang(
             BigBangInitData({
@@ -488,8 +461,7 @@ contract UnitBaseTest is TestHelper {
         // Register tokens in YieldBox
 
         ZeroXSwapperMock zeroXSwapper = new ZeroXSwapperMock(cluster, adminAddr);
-        SimpleLeverageExecutor leverageExecutor =
-            createLeverageExecutor(address(zeroXSwapper), address(cluster));
+        SimpleLeverageExecutor leverageExecutor = createLeverageExecutor(address(zeroXSwapper), address(cluster));
 
         singularityEthMarket = createSingularity(
             SingularityInitData({

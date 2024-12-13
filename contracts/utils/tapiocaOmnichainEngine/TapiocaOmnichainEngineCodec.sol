@@ -269,8 +269,6 @@ library TapiocaOmnichainEngineCodec {
         uint8 sOffset;
     }
 
-  
-  
     /**
      * @notice Encodes the message for the `TOFTReceiver._yield BoxMarketPermitActionReceiver()` operation.
      */
@@ -381,7 +379,6 @@ library TapiocaOmnichainEngineCodec {
         uint8 sOffset;
     }
 
-   
     // /**
     //  * @notice Decodes the next message of extra options, if any.
     //  */

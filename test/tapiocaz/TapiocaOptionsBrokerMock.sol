@@ -3,7 +3,6 @@ pragma solidity ^0.8.22;
 
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-
 contract OTapMock {
     address public owner;
 
@@ -30,7 +29,7 @@ contract TapiocaOptionsBrokerMock {
 
     error TapiocaOptionsBrokerMock_NotValid();
 
-    constructor(address _tap)  {
+    constructor(address _tap) {
         tapOFT = _tap;
         oTapMock = address(new OTapMock());
     }

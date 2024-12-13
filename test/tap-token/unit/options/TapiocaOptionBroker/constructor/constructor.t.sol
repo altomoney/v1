@@ -1,20 +1,14 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-import {TOBTestBase, TapiocaOptionBroker, Bucket } from "../TOBTestBase.t.sol";
+import {TOBTestBase, TapiocaOptionBroker, Bucket} from "../TOBTestBase.t.sol";
 import {ITWLBase} from "tap-token/interfaces/ITWLBase.sol";
 
 contract TapiocaOptionBroker_constructortree is TOBTestBase {
     function test_RevertWhen_EpochDurationIsZero() external {
         // it should revert
         vm.expectRevert(abi.encodeWithSelector(ITWLBase.EPOCH_DURATION_ZERO.selector));
-         new TapiocaOptionBroker(
-            payable(0),
-            dao,
-            0,
-            new Bucket[](0),
-            owner
-        );
+        new TapiocaOptionBroker(payable(0), dao, 0, new Bucket[](0), owner);
     }
 
     function test_WhenAllParametersAreValid() external {
@@ -23,7 +17,7 @@ contract TapiocaOptionBroker_constructortree is TOBTestBase {
         // it should initialize TWLBase
         // it should transfer ownership to admin
         Bucket[] memory buckets = new Bucket[](1);
-        buckets[0] = Bucket ({
+        buckets[0] = Bucket({
             enabled: true,
             epochGrowthRate: 1,
             epochDecayRate: 1,
@@ -36,13 +30,8 @@ contract TapiocaOptionBroker_constructortree is TOBTestBase {
             growthGoal: 0
         });
 
-        TapiocaOptionBroker optionBroker = new TapiocaOptionBroker(
-            payable(tapToken),
-            dao,
-            EPOCH_DURATION,
-            buckets,
-            owner
-        );
+        TapiocaOptionBroker optionBroker =
+            new TapiocaOptionBroker(payable(tapToken), dao, EPOCH_DURATION, buckets, owner);
 
         assertEq(optionBroker.owner(), owner);
         assertEq(address(optionBroker.TAP_TOKEN()), address(tapToken));

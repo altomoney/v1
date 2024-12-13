@@ -348,7 +348,6 @@ contract Singularity is MarketStateView, SGLCommon {
         _totalAsset.base -= fraction.toUint128();
         if (_totalAsset.base < 1000) revert MinLimit();
 
-
         _burn(from, fraction);
 
         _totalAsset.elastic -= share.toUint128();

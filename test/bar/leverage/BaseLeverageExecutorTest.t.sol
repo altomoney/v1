@@ -5,5 +5,4 @@ import {IERC20} from "@boringcrypto/boring-solidity/contracts/libraries/BoringER
 
 import "forge-std/Test.sol";
 
-contract BaseLeverageExecutorTest is Test {
-}
+contract BaseLeverageExecutorTest is Test {}

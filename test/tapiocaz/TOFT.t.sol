@@ -32,9 +32,7 @@ import {
     LeverageUpActionMsg,
     IToftVault
 } from "tap-utils/interfaces/oft/ITOFT.sol";
-import {
-    MarketPermitActionMsg
-} from "tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
+import {MarketPermitActionMsg} from "tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
 import {ITapiocaOptionBroker, IExerciseOptionsData} from "tap-utils/interfaces/tap-token/ITapiocaOptionBroker.sol";
 import {
     TOFTHelper, PrepareLzCallData, PrepareLzCallReturn, ComposeMsgData
@@ -76,7 +74,7 @@ contract TOFTTest is TOFTTestHelper, TapiocaZProcedures {
 
     uint32 aEid = 1;
     uint32 bEid = 2;
-    
+
     Cluster cluster;
     ERC20Mock aERC20;
     ERC20Mock bERC20;
@@ -266,25 +264,24 @@ contract TOFTTest is TOFTTestHelper, TapiocaZProcedures {
         ofts[1] = address(bTOFT);
         this.wireOApps(ofts);
 
-        singularity =
-            createSingularity( address(bTOFT), address(aTOFT));
+        singularity = createSingularity(address(bTOFT), address(aTOFT));
         vm.label(address(singularity), "Singularity");
 
         tOB = new TapiocaOptionsBrokerMock(address(tapOFT));
 
         marketHelper = new MarketHelperMock();
         vm.startPrank(report.tapiocaMulticall);
-        cluster.updateContract(aEid,  true);
+        cluster.updateContract(aEid, true);
         cluster.updateContract(aEid, address(singularity), true);
         cluster.updateContract(aEid, address(magnetar), true);
         cluster.updateContract(aEid, address(tOB), true);
         cluster.updateContract(aEid, address(marketHelper), true);
-        cluster.updateContract(bEid,  true);
+        cluster.updateContract(bEid, true);
         cluster.updateContract(bEid, address(singularity), true);
         cluster.updateContract(bEid, address(magnetar), true);
         cluster.updateContract(bEid, address(tOB), true);
         cluster.updateContract(bEid, address(marketHelper), true);
-        cluster.updateContract(0,  true);
+        cluster.updateContract(0, true);
         cluster.updateContract(0, address(singularity), true);
         cluster.updateContract(0, address(magnetar), true);
         cluster.updateContract(0, address(tOB), true);
@@ -1370,12 +1367,10 @@ contract TOFTTest is TOFTTestHelper, TapiocaZProcedures {
 
     function _getYieldBoxDomainSeparator() private view returns (bytes32) {
         // TODO Review it yield box was removed.
-        bytes32 typeHash =
-            keccak256("EIP712Domain(string name,string version,uint256 chainId)");
+        bytes32 typeHash = keccak256("EIP712Domain(string name,string version,uint256 chainId)");
         bytes32 hashedName = keccak256(bytes("YieldBox"));
         bytes32 hashedVersion = keccak256(bytes("1"));
-        bytes32 domainSeparator =
-            keccak256(abi.encode(typeHash, hashedName, hashedVersion, block.chainid));
+        bytes32 domainSeparator = keccak256(abi.encode(typeHash, hashedName, hashedVersion, block.chainid));
         return domainSeparator;
     }
 }

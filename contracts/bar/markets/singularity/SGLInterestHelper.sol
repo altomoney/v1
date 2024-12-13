@@ -47,8 +47,7 @@ contract SGLInterestHelper is ISGLInterestHelper {
         extraAmount = 0;
         feeFraction = 0;
 
-        uint256 fullAssetAmount =
-            data.market.convertToAssets(_totalAsset.elastic) + _totalBorrow.elastic;
+        uint256 fullAssetAmount = data.market.convertToAssets(_totalAsset.elastic) + _totalBorrow.elastic;
 
         utilization =
             fullAssetAmount == 0 ? 0 : (uint256(_totalBorrow.elastic) * UTILIZATION_PRECISION) / fullAssetAmount;

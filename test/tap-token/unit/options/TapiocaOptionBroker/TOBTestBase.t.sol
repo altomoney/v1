@@ -42,27 +42,22 @@ contract TOBTestBase is Test {
     function setUp() public {
         deployDependencies();
 
-        buckets.push(Bucket({
-            enabled: true,
-            epochGrowthRate: 1, 
-            epochDecayRate: 1,
-            epochCeiling: 10,
-            epochFloor: 1,
-            rewardsMultiplier: 5000,
-            lockEpochDuration: 1,
-            currentEpochInflows: 0,
-            lastEpochInflows: 0,
-            growthGoal: 1000e18
-        }));
-
-
-        tob = new TapiocaOptionBroker(
-            payable(tapToken),
-            dao,
-            EPOCH_DURATION,
-            new Bucket[](0),
-            owner
+        buckets.push(
+            Bucket({
+                enabled: true,
+                epochGrowthRate: 1,
+                epochDecayRate: 1,
+                epochCeiling: 10,
+                epochFloor: 1,
+                rewardsMultiplier: 5000,
+                lockEpochDuration: 1,
+                currentEpochInflows: 0,
+                lastEpochInflows: 0,
+                growthGoal: 1000e18
+            })
         );
+
+        tob = new TapiocaOptionBroker(payable(tapToken), dao, EPOCH_DURATION, new Bucket[](0), owner);
     }
 
     function deployDependencies() internal {
@@ -95,16 +90,15 @@ contract TOBTestBase is Test {
                 airdrop,
                 0,
                 owner,
-                address(new TapTokenSender("", "",  input.lzEndpoint, owner, address(0))),
+                address(new TapTokenSender("", "", input.lzEndpoint, owner, address(0))),
                 address(new TapTokenReceiver("", "", input.lzEndpoint, owner, address(0))),
                 address(address(0)),
                 ICluster(address(0))
             )
         );
         vm.label(address(tapToken), "TapToken");
-        
-        input.tapToken = address(tapToken);
 
+        input.tapToken = address(tapToken);
 
         report = TapiocaRelease.deployTapiocaV1(input, emptyReport);
         singularityLauncher = new SingularityLauncher(
@@ -124,7 +118,5 @@ contract TOBTestBase is Test {
         vm.stopPrank();
     }
 
-    function registerSingularities() internal {
-        
-    }
+    function registerSingularities() internal {}
 }

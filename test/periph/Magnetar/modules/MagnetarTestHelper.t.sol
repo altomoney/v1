@@ -119,7 +119,6 @@ contract MagnetarTestHelper is TestHelper {
     OracleMock oracle;
     MarketHelper marketHelper;
 
-
     Penrose penrose;
     Singularity sglMC;
     BigBang bbMC;
@@ -182,41 +181,15 @@ contract MagnetarTestHelper is TestHelper {
         magnetarA.setHelper(address(magnetarHelper));
         magnetarB.setHelper(address(magnetarHelper));
         sglInit = new SGLInit();
-        (penrose, sglMC, bbMC) = createPenrose(
-
-
-            address(clusterA),
-            address(tap),
-            address(weth),
-            tapId,
-            wethId,
-            address(this)
-        );
+        (penrose, sglMC, bbMC) =
+            createPenrose(address(clusterA), address(tap), address(weth), tapId, wethId, address(this));
 
         // crete USDO
         TapiocaOmnichainExtExec extExec = new TapiocaOmnichainExtExec();
 
-
-
         // create TOFT
-        collateralA = createTOFT(
-
-            address(clusterA),
-            address(collateralErc20),
-            address(extExec),
-
-            aEid,
-            aEid
-        );
-        collateralB = createTOFT(
-
-            address(clusterB),
-            address(collateralErc20),
-            address(extExec),
-
-            bEid,
-            aEid
-        );
+        collateralA = createTOFT(address(clusterA), address(collateralErc20), address(extExec), aEid, aEid);
+        collateralB = createTOFT(address(clusterB), address(collateralErc20), address(extExec), bEid, aEid);
         penrose.setUsdoToken(address(assetA));
 
         sgl = createSingularity(
@@ -308,28 +281,21 @@ contract MagnetarTestHelper is TestHelper {
     //
     // -----------------------
 
-    function createTOFT(
-
-        address cluster,
-        address erc20,
-        address extExec,
-
-        uint32 endointId,
-        uint32 hostEid
-    ) public returns (TOFT toft) {
+    function createTOFT(address cluster, address erc20, address extExec, uint32 endointId, uint32 hostEid)
+        public
+        returns (TOFT toft)
+    {
         TOFTVault toftVault = new TOFTVault(address(erc20));
         TOFTInitStruct memory toftInitStruct = TOFTInitStruct({
             name: "Token TOFT",
             symbol: "TOFTTKN",
             endpoint: address(endpoints[endointId]),
             delegate: address(this), // owner
-
             cluster: cluster,
             erc20: erc20,
             vault: address(toftVault),
             hostEid: hostEid,
             extExec: extExec
-
         });
 
         {
@@ -381,7 +347,6 @@ contract MagnetarTestHelper is TestHelper {
         });
         usdo = Usdo(payable(_deployOApp(type(Usdo).creationCode, abi.encode(usdoInitStruct, usdoModulesInitStruct))));
     }
-    
 
     function setBBEthMarket(Penrose penrose, address market) external {
         penrose.setBigBangEthMarket(market);
@@ -392,24 +357,18 @@ contract MagnetarTestHelper is TestHelper {
 
         MagnetarSetupData memory setup;
 
-
-
-
         magnetar = new Magnetar(
             ICluster(_cluster),
             address(this),
             payable(setup.collateralModule),
             payable(setup.mintModule),
             payable(setup.optionModule),
-
             address(toeHelper),
             IMagnetarHelper(address(new MagnetarHelper()))
         );
     }
 
     function createPenrose(
-
-
         address _cluster,
         address tapToken_,
         address mainToken_,
@@ -417,16 +376,8 @@ contract MagnetarTestHelper is TestHelper {
         uint256 mainTokenId_,
         address owner
     ) public returns (Penrose penrose, Singularity mediumRiskMC, BigBang bbMediumRiskMC) {
-        penrose = new Penrose(
-
-            ICluster(_cluster),
-            IERC20(tapToken_),
-            IERC20(mainToken_),
-
-            tapTokenId_,
-            mainTokenId_,
-            owner
-        );
+        penrose =
+            new Penrose(ICluster(_cluster), IERC20(tapToken_), IERC20(mainToken_), tapTokenId_, mainTokenId_, owner);
         mediumRiskMC = new Singularity();
         bbMediumRiskMC = new BigBang();
 
@@ -443,7 +394,6 @@ contract MagnetarTestHelper is TestHelper {
 
         penrose.executeMarketFn(markets, marketsData, true);
     }
-
 
     function createBigBang(TestBigBangData memory _bb, address _mc) public returns (BigBang) {
         BigBang bb = new BigBang();
@@ -562,9 +512,7 @@ contract MagnetarTestHelper is TestHelper {
             address(sglLiq), address(sglBorrow), address(sglCollateral), address(sglLev)
         );
 
-        tokensData = Singularity._InitMemoryTokensData(
-            IERC20(_sgl.asset),  IERC20(_sgl.collateral)
-        );
+        tokensData = Singularity._InitMemoryTokensData(IERC20(_sgl.asset), IERC20(_sgl.collateral));
 
         data = Singularity._InitMemoryData(
             IPenrose(_sgl.penrose), ITapiocaOracle(address(_sgl.oracle)), 0, 75000, 80000, _sgl.leverageExecutor
@@ -589,7 +537,7 @@ contract MagnetarTestHelper is TestHelper {
 
     function depositAsset(Usdo _asset, Singularity _sgl, uint256 amount) public {
         deal(address(_asset), address(this), amount);
-        
+
         _sgl.addAsset(address(this), address(this), false, 100); // todo: replace 100 with share
     }
 
@@ -599,8 +547,6 @@ contract MagnetarTestHelper is TestHelper {
         (Module[] memory modules, bytes[] memory calls) =
             marketHelper.addCollateral(address(this), address(this), false, 0, 100); // todo: replace 100 with share
         _sgl.execute(modules, calls, true);
-        
-        
     }
 
     function borrow(Singularity _sgl, uint256 amount, bool expectRevert) public {
@@ -615,7 +561,6 @@ contract MagnetarTestHelper is TestHelper {
         _sgl.execute(modules, calls, true);
     }
 
-
     // -----------------------
     //
     // Approval helpers
@@ -629,5 +574,4 @@ contract MagnetarTestHelper is TestHelper {
         bytes32 digest_ = ITOFT(_asset).getTypedDataHash(permitStruct);
         (v_, r_, s_) = vm.sign(_pkSigner, digest_);
     }
-
 }

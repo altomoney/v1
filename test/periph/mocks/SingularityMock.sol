@@ -12,7 +12,6 @@ import {Module} from "tap-utils/interfaces/bar/IMarket.sol";
 contract SingularityMock is EIP712 {
     using SafeERC20 for IERC20;
 
-
     IERC20 public _collateral;
     IERC20 public _asset;
 
@@ -48,10 +47,7 @@ contract SingularityMock is EIP712 {
     error SingularityMock_ModuleNotSet();
     error SingularityMock_NotValid();
 
-    constructor(address collateral, address asset)
-        EIP712("Tapioca Singularity", "1")
-    {
-
+    constructor(address collateral, address asset) EIP712("Tapioca Singularity", "1") {
         _collateral = IERC20(collateral);
         _asset = IERC20(asset);
     }
@@ -96,16 +92,10 @@ contract SingularityMock is EIP712 {
         if (amount == 0) return (0, 0);
 
         _userBorrowPart[from] += amount;
-
-
-
-
     }
 
     function addCollateral(address from, address to, bool skim, uint256 amount, uint256 share) external {
-        if (share == 0) {
-
-        }
+        if (share == 0) {}
 
         uint256 oldTotalCollateralShare = _totalCollateralShare;
         _userCollateralShare[to] += share;
@@ -114,9 +104,7 @@ contract SingularityMock is EIP712 {
         _addTokens(from, to, _collateral, share, oldTotalCollateralShare, skim);
     }
 
-    function removeCollateral(address, address to, uint256 share) external {
-
-    }
+    function removeCollateral(address, address to, uint256 share) external {}
 
     struct _BuyCollateralCalldata {
         address from;
@@ -147,13 +135,10 @@ contract SingularityMock is EIP712 {
 
         _userBorrowPart[from] += calldata_.borrowAmount;
 
-
-
         //swap 1:1
         uint256 collateralAmount = 0; // todo: borrowShareToAmount;
 
         // @dev !Contract needs to be prefunded with the right amount of collateral!
-
 
         /*
 
@@ -172,7 +157,7 @@ contract SingularityMock is EIP712 {
             // if (share > balanceOf(address(this), assetId) - total) {
             //     revert SingularityMock_TooMuch();
             // }
-        } else  {
+        } else {
             // _yieldBox.transfer(from, address(this), assetId, share);
         }
     }

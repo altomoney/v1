@@ -15,8 +15,6 @@ import {IGmxRewardRouterV2} from "tap-utils/interfaces/external/gmx/IGmxRewardRo
 import {MarketLiquidatorReceiver} from "tapioca-bar/liquidators/MarketLiquidatorReceiver.sol";
 import {IGmxGlpManager} from "tap-utils/interfaces/external/gmx/IGmxGlpManager.sol";
 
-
-
 // dependencies
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {ZeroXSwapper} from "tap-utils/Swapper/ZeroXSwapper.sol";

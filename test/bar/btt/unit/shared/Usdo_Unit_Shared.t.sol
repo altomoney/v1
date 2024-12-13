@@ -40,7 +40,6 @@ import {
 } from "tap-utils/interfaces/tap-token/ITapiocaOptionBroker.sol";
 import {MagnetarWithdrawData} from "tap-utils/interfaces/periph/IMagnetar.sol";
 
-
 import {
     TapiocaOmnichainEngineHelper,
     PrepareLzCallData,
@@ -438,12 +437,10 @@ abstract contract Usdo_Unit_Shared is Base_Test {
     // *************** //
     function _getYieldBoxDomainSeparator() private view returns (bytes32) {
         // TODO Check the verifyingContract
-        bytes32 typeHash =
-            keccak256("EIP712Domain(string name,string version,uint256 chainId)");
+        bytes32 typeHash = keccak256("EIP712Domain(string name,string version,uint256 chainId)");
         bytes32 hashedName = keccak256(bytes("YieldBox"));
         bytes32 hashedVersion = keccak256(bytes("1"));
-        bytes32 domainSeparator =
-            keccak256(abi.encode(typeHash, hashedName, hashedVersion, block.chainid));
+        bytes32 domainSeparator = keccak256(abi.encode(typeHash, hashedName, hashedVersion, block.chainid));
         return domainSeparator;
     }
 }

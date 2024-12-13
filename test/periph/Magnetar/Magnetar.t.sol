@@ -147,8 +147,7 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
         cluster = new Cluster(aEid, address(this));
 
         toeHelper = new TapiocaOmnichainEngineHelper();
-        MagnetarCollateralModule collateralModule =
-            new MagnetarCollateralModule(address(toeHelper));
+        MagnetarCollateralModule collateralModule = new MagnetarCollateralModule(address(toeHelper));
         MagnetarMintModule mintModule = new MagnetarMintModule(address(toeHelper));
         MagnetarOptionModule optionModule = new MagnetarOptionModule(address(toeHelper));
 
@@ -189,7 +188,7 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
         magnetar.setHelper(address(magnetarHelper));
     }
 
-    function _setupSgl(address _oracle) private returns (Singularity, Penrose ) {
+    function _setupSgl(address _oracle) private returns (Singularity, Penrose) {
         // ZerroXSwapperMockTarget swapperTarget = new ZerroXSwapperMockTarget();
         // ZeroXSwapper swapper = new ZeroXSwapper(address(swapperTarget), address(0), ICluster(address(cluster)), address(this));
         // SimpleLeverageExecutor leverageExecutor = new SimpleLeverageExecutor(IZeroXSwapper(address(swapper)), ICluster(address(cluster)));
@@ -197,11 +196,7 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
         Penrose penrose;
         Singularity mc;
         {
-            (penrose, mc,) = utils.createPenrose(
-                ICluster(address(cluster)),
-                address(aERC20),
-                address(aERC20)
-            );
+            (penrose, mc,) = utils.createPenrose(ICluster(address(cluster)), address(aERC20), address(aERC20));
         }
         Singularity sgl;
         {
@@ -221,11 +216,8 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
     }
 
     function _setupBb(address _oracle) private returns (BigBang, Penrose) {
-        (Penrose penrose,, BigBang bbMediumRiskMC) = utils.createPenrose(
-            ICluster(address(cluster)),
-            address(aERC20),
-            address(aERC20)
-        );
+        (Penrose penrose,, BigBang bbMediumRiskMC) =
+            utils.createPenrose(ICluster(address(cluster)), address(aERC20), address(aERC20));
 
         {
             vm.prank(address(utils));
@@ -234,13 +226,7 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
 
         BigBang bb = utils.createBigBang(
             TestBigBangData(
-                address(penrose),
-                address(collateral),
-                ITapiocaOracle(_oracle),
-                ILeverageExecutor(address(0)),
-                0,
-                0,
-                0
+                address(penrose), address(collateral), ITapiocaOracle(_oracle), ILeverageExecutor(address(0)), 0, 0, 0
             ),
             address(bbMediumRiskMC)
         );
@@ -298,7 +284,7 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
 
     function test_lend() public {
         vm.skip(true);
-        (Singularity sgl, ) = _setupSgl(address(oracle));
+        (Singularity sgl,) = _setupSgl(address(oracle));
         cluster.updateContract(0, address(sgl), true);
         vm.label(address(sgl), "Singularity");
 
@@ -315,14 +301,13 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
             calls[0] = MagnetarCall({id: uint8(MagnetarAction.Market), target: address(sgl), value: 0, call: lendData});
 
             magnetar.burst(calls);
-
         }
     }
 
     function test_repay() public {
         vm.skip(true);
 
-        (Singularity sgl, ) = _setupSgl(address(oracle));
+        (Singularity sgl,) = _setupSgl(address(oracle));
         cluster.updateContract(0, address(sgl), true);
         vm.label(address(sgl), "Singularity");
 
@@ -453,7 +438,6 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
         uint256 tokenAmount_ = 1 ether;
         uint256 borrowAmount_ = 1e17;
 
-
         //approvals
         {
             asset.approve(address(sgl), type(uint256).max);
@@ -525,7 +509,6 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
 
             uint256 borrowPart = sgl._userBorrowPart(address(this));
             assertGt(borrowPart, 0);
-
         }
 
         {
@@ -550,11 +533,9 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
 
         cluster.updateContract(0, address(sgl), true);
         vm.label(address(sgl), "Singularity");
-        
 
         uint256 tokenAmount_ = 1 ether;
         uint256 borrowAmount_ = 1e17;
-
 
         //approvals
         {
@@ -627,7 +608,6 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
 
             uint256 borrowPart = sgl._userBorrowPart(address(this));
             assertGt(borrowPart, 0);
-
         }
 
         {
@@ -655,9 +635,8 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
         utils.setBBEthMarket(penrose, address(bb));
 
         cluster.updateContract(0, address(bb), true);
-        
+
         vm.label(address(bb), "BigBang");
-        
 
         uint256 tokenAmount_ = 1 ether;
 
@@ -689,9 +668,8 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
         utils.setBBEthMarket(penrose, address(bb));
 
         cluster.updateContract(0, address(bb), true);
-        
+
         vm.label(address(bb), "BigBang");
-        
 
         uint256 tokenAmount_ = 1 ether;
         uint256 mintAmount_ = 1e17;
@@ -759,9 +737,8 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
         utils.setBBEthMarket(penrose, address(bb));
 
         cluster.updateContract(0, address(bb), true);
-        
+
         vm.label(address(bb), "BigBang");
-        
 
         uint256 tokenAmount_ = 1 ether;
         uint256 mintAmount_ = 1e17;
@@ -884,10 +861,10 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
     function test_sgl_lend() public {
         vm.skip(true);
 
-        (Singularity sgl, ) = _setupSgl(address(oracle));
+        (Singularity sgl,) = _setupSgl(address(oracle));
 
         cluster.updateContract(0, address(sgl), true);
-        
+
         vm.label(address(sgl), "Singularity");
 
         uint256 tokenAmount_ = 1 ether;
@@ -962,15 +939,12 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
 
         deal(address(paymentToken), address(this), 1 ether);
 
-
         MagnetarCall[] memory calls = new MagnetarCall[](1);
         calls[0] = MagnetarCall({
             id: uint8(MagnetarAction.ExerciseOption),
             target: address(tOb),
             value: 0,
-            call: abi.encodeWithSelector(
-                TapiocaOptionBroker.exerciseOption.selector, 0, address(paymentToken), 1 ether
-            )
+            call: abi.encodeWithSelector(TapiocaOptionBroker.exerciseOption.selector, 0, address(paymentToken), 1 ether)
         });
         magnetar.burst(calls);
 
@@ -1025,7 +999,6 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
             call: sendTokenFromCall
         });
 
-
         magnetar.burst{value: feeValue}(calls);
 
         assertEq(bToeOFT.balanceOf(address(this)), 0);
@@ -1047,26 +1020,13 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
                         __owner,
                         __extExec,
                         address(
-                            new ToeTokenSenderMock(
-                                "",
-                                "",
-                                address(endpoints[aEid]),
-                                address(this),
-                                address(0),
-                                cluster
-                            )
+                            new ToeTokenSenderMock("", "", address(endpoints[aEid]), address(this), address(0), cluster)
                         ),
                         address(
                             new ToeTokenReceiverMock(
-                                "",
-                                "",
-                                address(endpoints[aEid]),
-                                address(this),
-                                address(0),
-                                cluster
+                                "", "", address(endpoints[aEid]), address(this), address(0), cluster
                             )
                         ),
-                        
                         cluster
                     )
                 )
@@ -1082,28 +1042,13 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
                         __owner,
                         address(__extExec),
                         address(
-                            new ToeTokenSenderMock(
-                                "",
-                                "",
-                                address(endpoints[bEid]),
-                                address(this),
-                                address(0),
-                                
-                                cluster
-                            )
+                            new ToeTokenSenderMock("", "", address(endpoints[bEid]), address(this), address(0), cluster)
                         ),
                         address(
                             new ToeTokenReceiverMock(
-                                "",
-                                "",
-                                address(endpoints[bEid]),
-                                address(this),
-                                address(0),
-                                
-                                cluster
+                                "", "", address(endpoints[bEid]), address(this), address(0), cluster
                             )
                         ),
-                        
                         cluster
                     )
                 )

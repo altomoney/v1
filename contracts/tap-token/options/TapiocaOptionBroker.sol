@@ -113,7 +113,7 @@ contract TapiocaOptionBroker is Pausable, Ownable, FullMath, ReentrancyGuard, TW
         uint256 epochDuration,
         Bucket[] memory buckets,
         address admin
-    )  TWLBase(epochDuration, buckets) {
+    ) TWLBase(epochDuration, buckets) {
         TAP_TOKEN = TapToken(tapOFT);
         _paymentTokenBeneficiary = paymentTokenBeneficiary;
 

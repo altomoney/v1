@@ -112,5 +112,5 @@ abstract contract Singularity_Unit_Shared is Markets_Unit_Shared {
         );
     }
 
-function _approveForCollateral(address txExecutor) internal virtual override resetPrank(txExecutor) {}
+    function _approveForCollateral(address txExecutor) internal virtual override resetPrank(txExecutor) {}
 }

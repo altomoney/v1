@@ -156,8 +156,7 @@ abstract contract MagnetarCollateralModuleTest is MagnetarTestHelper {
             abi.encodeWithSelector(MagnetarCollateralModule.depositRepayAndRemoveCollateralFromMarket.selector, _params);
 
         MagnetarCall[] memory calls = new MagnetarCall[](2);
-      
-  
+
         (ERC20PermitStruct memory permit, uint8 v_, bytes32 r_, bytes32 s_) =
             _createErc20Permit(userA, userAPKey, address(magnetarA), type(uint256).max, address(assetA));
         calls[0] = MagnetarCall({
@@ -224,8 +223,6 @@ abstract contract MagnetarCollateralModuleTest is MagnetarTestHelper {
 
         magnetarA.burst{value: 0}(calls);
 
-        
-
         uint256 borrowPartAfter = sgl._userBorrowPart(address(this));
         assertGt(borrowPartBefore, borrowPartAfter);
     }
@@ -266,11 +263,7 @@ abstract contract MagnetarCollateralModuleTest is MagnetarTestHelper {
         //aprovals for deposit
         assetA.approve(address(magnetarA), type(uint256).max);
 
-       
         magnetarA.burst{value: 0}(calls);
-
-        
-        
 
         uint256 collateralShareAfter = sgl.balanceOf(address(this));
         assertGt(collateralShareBefore, collateralShareAfter);
@@ -312,12 +305,7 @@ abstract contract MagnetarCollateralModuleTest is MagnetarTestHelper {
         //aprovals for deposit
         assetA.approve(address(magnetarA), type(uint256).max);
 
-        
-
         magnetarA.burst{value: 0}(calls);
-
-        
-        
 
         uint256 collateralShareAfter = sgl.balanceOf(address(this));
         assertGt(collateralShareBefore, collateralShareAfter);
@@ -344,7 +332,7 @@ abstract contract MagnetarCollateralModuleTest is MagnetarTestHelper {
             address(sgl), address(marketHelper), address(this), tokenAmount_, 0, tokenAmount_
         );
         _params.withdrawCollateralParams = MagnetarWithdrawData({
-           asset: address(collateralA),
+            asset: address(collateralA),
             receiver: userA,
             amount: tokenAmount_,
             withdraw: true,
@@ -369,13 +357,8 @@ abstract contract MagnetarCollateralModuleTest is MagnetarTestHelper {
         assetA.approve(address(magnetarA), type(uint256).max);
 
         //approvals for collateral
-       
-        
 
         magnetarA.burst{value: 0}(calls);
-
-        
-        
 
         uint256 collateralShareAfter = sgl.balanceOf(address(this));
         assertGt(collateralShareBefore, collateralShareAfter);
@@ -409,7 +392,7 @@ abstract contract MagnetarCollateralModuleTest is MagnetarTestHelper {
             address(sgl), address(marketHelper), address(this), tokenAmount_, 0, tokenAmount_
         );
         _params.withdrawCollateralParams = MagnetarWithdrawData({
-           asset: address(collateralA),
+            asset: address(collateralA),
             receiver: userA,
             amount: tokenAmount_,
             withdraw: true,
@@ -434,13 +417,8 @@ abstract contract MagnetarCollateralModuleTest is MagnetarTestHelper {
         assetA.approve(address(magnetarA), type(uint256).max);
 
         //approvals for collateral
-       
-        
 
         magnetarA.burst{value: 0}(calls);
-
-        
-        
 
         uint256 collateralShareAfter = sgl.balanceOf(address(this));
         assertGt(collateralShareBefore, collateralShareAfter);
@@ -483,7 +461,6 @@ abstract contract MagnetarCollateralModuleTest is MagnetarTestHelper {
         clusterA.updateContract(0, address(this), true);
 
         magnetarA.burst{value: 0}(calls);
-        
 
         uint256 ybBalanceAfter = sgl.balanceOf(userA);
         assertGt(ybBalanceAfter, ybBalanceBefore);
@@ -548,14 +525,9 @@ abstract contract MagnetarCollateralModuleTest is MagnetarTestHelper {
 
         // manually deposit asset to YB
 
-        
-
         //approvals for add collateral
 
         magnetarA.burst{value: 0}(calls);
-
-
-        
 
         uint256 colSharesAfter = sgl.balanceOf(address(this));
         assertGt(colSharesAfter, colSharesBefore);
@@ -585,10 +557,8 @@ abstract contract MagnetarCollateralModuleTest is MagnetarTestHelper {
 
         //approvals for deposit & collateral add
         collateralA.approve(address(magnetarA), type(uint256).max);
-        
 
         magnetarA.burst{value: 0}(calls);
-
 
         uint256 colSharesAfter = sgl.balanceOf(address(this));
         assertGt(colSharesAfter, colSharesBefore);
@@ -624,12 +594,8 @@ abstract contract MagnetarCollateralModuleTest is MagnetarTestHelper {
 
         //approvals for deposit & collateral add
         collateralA.approve(address(magnetarA), type(uint256).max);
-        
 
         magnetarA.burst{value: 0}(calls);
-
-        
-        
 
         uint256 colSharesAfter = sgl.balanceOf(address(this));
         uint256 borrowPartAfter = sgl._userBorrowPart(address(this));
@@ -677,10 +643,8 @@ abstract contract MagnetarCollateralModuleTest is MagnetarTestHelper {
         //approvals for deposit & collateral add
         collateralA.approve(address(magnetarA), type(uint256).max);
         // Atomic approval
-        
 
         magnetarA.burst{value: 0}(calls);
-
 
         uint256 colSharesAfter = sgl.balanceOf(address(this));
         uint256 borrowPartAfter = sgl._userBorrowPart(address(this));

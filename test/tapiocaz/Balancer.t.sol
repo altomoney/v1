@@ -7,7 +7,6 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 // Lz
 import {TestHelper} from "./LZSetup/TestHelper.sol";
 
-
 import {StargateRouterMock, StargateFactoryMock} from "./StargateRouterMock.sol";
 import {Balancer} from "tapiocaz/Balancer.sol";
 import {TestUtils} from "./TestUtils.t.sol";
@@ -23,7 +22,6 @@ import {TOFTMarketReceiverModule} from "tapiocaz/tOFT/modules/TOFTMarketReceiver
 import {IMtoftFeeGetter} from "tap-utils/interfaces/oft/IMToftFeeGetter.sol";
 import {ICluster, Cluster} from "tap-utils/Cluster/Cluster.sol";
 import {TOFTSender} from "tapiocaz/tOFT/modules/TOFTSender.sol";
-
 
 // Tapioca Tests
 import {TapiocaOptionsBrokerMock} from "./TapiocaOptionsBrokerMock.sol";
@@ -50,7 +48,7 @@ contract BalancerTest is TOFTTestHelper {
     ERC20Mock bERC20;
     mTOFT aTOFT;
     mTOFT bTOFT;
-    
+
     Cluster cluster;
     TOFTHelper tOFTHelper;
 
@@ -115,7 +113,6 @@ contract BalancerTest is TOFTTestHelper {
             vault: address(aTOFTVault),
             hostEid: aEid,
             extExec: address(toftExtExec)
-            
         });
         {
             TOFTSender aTOFTSender = new TOFTSender(aTOFTInitStruct);
@@ -153,7 +150,6 @@ contract BalancerTest is TOFTTestHelper {
             vault: address(bTOFTVault),
             hostEid: bEid,
             extExec: address(toftExtExec)
-            
         });
         {
             TOFTSender bTOFTSender = new TOFTSender(bTOFTInitStruct);

@@ -30,14 +30,7 @@ struct AirdropTapOption {
     uint64 phase; // phase of the option
 }
 
-contract AOTAP is
-    Ownable,
-    ERC721,
-    ERC721Permit,
-    ERC721Enumerable,
-    BaseBoringBatchable,
-    ReentrancyGuard
-{
+contract AOTAP is Ownable, ERC721, ERC721Permit, ERC721Enumerable, BaseBoringBatchable, ReentrancyGuard {
     uint256 public mintedAOTAP; // total number of AOTAP minted
     address public broker; // address of the onlyBroker
 
@@ -46,11 +39,7 @@ contract AOTAP is
     mapping(uint256 => AirdropTapOption) public options; // tokenId => Option
     mapping(uint256 => string) public tokenURIs; // tokenId => tokenURI
 
-    constructor(address _owner)
-        ERC721("Airdrop Option TAP", "aoTAP")
-        ERC721Permit("Airdrop Option TAP")
-        
-    {
+    constructor(address _owner) ERC721("Airdrop Option TAP", "aoTAP") ERC721Permit("Airdrop Option TAP") {
         _transferOwnership(_owner);
     }
 
@@ -73,8 +62,7 @@ contract AOTAP is
     }
 
     function isApprovedOrOwner(address _spender, uint256 _tokenId) external view returns (bool) {
-        return _isApprovedOrOwner(_spender, _tokenId)
-            ; // TODO review it || isERC721Approved(_ownerOf(_tokenId), _spender, address(this), _tokenId);
+        return _isApprovedOrOwner(_spender, _tokenId); // TODO review it || isERC721Approved(_ownerOf(_tokenId), _spender, address(this), _tokenId);
     }
 
     /// @notice Return the owner of the tokenId and the attributes of the option.

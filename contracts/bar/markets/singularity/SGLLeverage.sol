@@ -136,7 +136,8 @@ contract SGLLeverage is SGLLendingCommon {
 
         uint256 leverageAmount = redeem(calldata_.share, address(leverageExecutor), address(this));
 
-        amountOut = leverageExecutor.getAsset(from, collateral(), address(_borrowableToken()), leverageAmount, calldata_.data);
+        amountOut =
+            leverageExecutor.getAsset(from, collateral(), address(_borrowableToken()), leverageAmount, calldata_.data);
         uint256 shareOut = convertToShares(amountOut);
         deposit(amountOut, calldata_.from);
 

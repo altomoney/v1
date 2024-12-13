@@ -15,13 +15,10 @@ import {IMagnetarHelper} from "tap-utils/interfaces/periph/IMagnetarHelper.sol";
 import {IZeroXSwapper} from "tap-utils/interfaces/periph/IZeroXSwapper.sol";
 
 abstract contract MagnetarProcedure {
-    function _deployMagnetarDeps(address toeHelper)
-        internal
-        returns (MagnetarDepsReport memory deps)
-    {
-        deps.magnetarCollateralModule = address(new MagnetarCollateralModule( toeHelper));
-        deps.magnetarMintModule = address(new MagnetarMintModule( toeHelper));
-        deps.magnetarOptionModule = address(new MagnetarOptionModule( toeHelper));
+    function _deployMagnetarDeps(address toeHelper) internal returns (MagnetarDepsReport memory deps) {
+        deps.magnetarCollateralModule = address(new MagnetarCollateralModule(toeHelper));
+        deps.magnetarMintModule = address(new MagnetarMintModule(toeHelper));
+        deps.magnetarOptionModule = address(new MagnetarOptionModule(toeHelper));
     }
 
     function _deployMagnetar(
@@ -44,10 +41,7 @@ abstract contract MagnetarProcedure {
                 IMagnetarHelper(report.magnetarHelper)
             )
         );
-        report.simpleLeverageExecutor = address(
-            new SimpleLeverageExecutor(
-                IZeroXSwapper(zeroXSwapper), ICluster(cluster), wrappedNativeToken
-            )
-        );
+        report.simpleLeverageExecutor =
+            address(new SimpleLeverageExecutor(IZeroXSwapper(zeroXSwapper), ICluster(cluster), wrappedNativeToken));
     }
 }

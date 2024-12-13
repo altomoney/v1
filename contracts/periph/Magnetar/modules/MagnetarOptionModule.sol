@@ -107,7 +107,6 @@ contract MagnetarOptionModule is MagnetarBaseModule {
         );
     }
 
-
     /**
      * @notice helper to exit from  tOB, unlock from tOLP, remove from SGL, repay on BB, remove collateral from BB and withdraw
      * @dev all steps are optional:

@@ -40,7 +40,6 @@ import {UsdoSender} from "tapioca-bar/usdo/modules/UsdoSender.sol";
 
 import {UsdoTestHelper, TestPenroseData, TestSingularityData} from "../helpers/UsdoTestHelper.t.sol";
 
-
 import "deployments/interfaces/ITapiocaReport.sol";
 import {TapiocaRelease} from "deployments/releases/tapioca-v1/TapiocaRelease.sol";
 import {SingularityLauncher} from "deployments/releases/tapioca-v1/actions/SingularityLauncher.sol";
@@ -57,7 +56,7 @@ contract SingularityTest is UsdoTestHelper {
     uint32 bEid = 2;
 
     Cluster cluster;
-    
+
     ERC20Mock tapOFT;
     ERC20Mock weth;
 
@@ -157,7 +156,7 @@ contract SingularityTest is UsdoTestHelper {
 
             vm.label(address(endpoints[aEid]), "aEndpoint");
             vm.label(address(endpoints[bEid]), "bEndpoint");
-            vm.label( "YieldBox");
+            vm.label("YieldBox");
             vm.label(address(cluster), "Cluster");
             vm.label(address(magnetar), "Magnetar");
         }
@@ -172,7 +171,7 @@ contract SingularityTest is UsdoTestHelper {
     function depositAsset(uint256 amount) public {
         vm.skip(true);
         deal(address(asset), address(this), amount);
-        asset.approve( type(uint256).max);
+        asset.approve(type(uint256).max);
         // pearl mit.approve(
         //     1155,  assetYieldBoxId, address(singularity), type(uint200).max, uint48(block.timestamp)
         // );
@@ -590,7 +589,7 @@ contract SingularityTest is UsdoTestHelper {
         assertGt(borrowPart, 0);
 
         vm.startPrank(userA);
-        asset.approve( type(uint256).max);
+        asset.approve(type(uint256).max);
         // pearl mit.approve(
         //     1155,  assetYieldBoxId, address(singularity), type(uint200).max, uint48(block.timestamp)
         // );

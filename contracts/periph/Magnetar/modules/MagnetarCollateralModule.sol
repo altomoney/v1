@@ -73,7 +73,7 @@ contract MagnetarCollateralModule is MagnetarBaseModule {
         uint256 _share = _market.convertToShares(data.collateralAmount);
 
         /**
-         * @dev deposit 
+         * @dev deposit
          */
         if (data.deposit && data.collateralAmount > 0) {
             address collateralAddress = _market._collateral();
@@ -115,7 +115,7 @@ contract MagnetarCollateralModule is MagnetarBaseModule {
      *         - if `collateralAmount` is 0, the add collateral step is skipped
      * @param data.market the SGL/BigBang market
      * @param data.user the user to perform the action for
-     * @param data.depositAmount the amount to deposit 
+     * @param data.depositAmount the amount to deposit
      * @param data.repayAmount the amount to repay to the market
      * @param data.collateralAmount the amount to remove from the market
      * @param data.withdrawCollateralParams necessary data for the same chain withdrawal
@@ -132,7 +132,7 @@ contract MagnetarCollateralModule is MagnetarBaseModule {
         IMarket _market = IMarket(data.market);
 
         /**
-         * @dev deposit `market._assetId()` 
+         * @dev deposit `market._assetId()`
          */
         if (data.depositAmount > 0) {
             address assetAddress = _market._collateral();

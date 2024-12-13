@@ -7,7 +7,6 @@ import {TOFTMock_test} from "../../../mocks/TOFTMock_test.sol";
 // contracts
 import {MarketLiquidatorReceiver_Unit_Shared} from "../../shared/MarketLiquidatorReceiver_Unit_Shared.t.sol";
 
-
 contract MarketLiquidatorReceiver_querySellToken is MarketLiquidatorReceiver_Unit_Shared {
     TOFTMock_test toft;
 

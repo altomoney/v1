@@ -34,7 +34,6 @@ contract ToeTokenReceiverMock is BaseTapiocaOmnichainEngine, TapiocaOmnichainRec
         ICluster _cluster
     ) BaseTapiocaOmnichainEngine(_name, _symbol, _endpoint, _delegate, _extExec, _cluster) {}
 
-
     // ********************* //
     // ***** RECEIVERS ***** //
     // ********************* //

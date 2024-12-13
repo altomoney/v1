@@ -246,10 +246,7 @@ contract BigBang is MarketStateView, BBCommon {
     /// @dev can only be called by the conservator
     /// @param val the new value
     function updatePause(PauseType _type, bool val) external {
-        require(
-            _cluster().hasRole(msg.sender, keccak256("PAUSABLE")) || msg.sender == owner(),
-            "Market: unauthorized"
-        );
+        require(_cluster().hasRole(msg.sender, keccak256("PAUSABLE")) || msg.sender == owner(), "Market: unauthorized");
         require(val != pauseOptions[_type], "Market: same state");
         emit PausedUpdated(_type, pauseOptions[_type], val);
         pauseOptions[_type] = val;
@@ -258,10 +255,7 @@ contract BigBang is MarketStateView, BBCommon {
     /// @notice updates the pause state of the contract for all types
     /// @param val the new val
     function updatePauseAll(bool val) external {
-        require(
-            _cluster().hasRole(msg.sender, keccak256("PAUSABLE")) || msg.sender == owner(),
-            "Market: unauthorized"
-        );
+        require(_cluster().hasRole(msg.sender, keccak256("PAUSABLE")) || msg.sender == owner(), "Market: unauthorized");
 
         pauseOptions[PauseType.Borrow] = val;
         pauseOptions[PauseType.Repay] = val;

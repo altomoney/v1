@@ -166,8 +166,7 @@ contract MagnetarMock_test {
         // if `withdrawCollateralParams.withdraw` it uses `withdrawTo` to withdraw collateral on the same chain or to another one
         if (_data.collateralAmount > 0) {
             address collateralWithdrawReceiver = _data.withdrawCollateralParams.withdraw ? address(this) : _data.user;
-            uint256 collateralShare =
-                IMarket(_data.market).convertToShares(_data.collateralAmount);
+            uint256 collateralShare = IMarket(_data.market).convertToShares(_data.collateralAmount);
 
             (Module[] memory modules, bytes[] memory calls) = IMarketHelper(_data.marketHelper).removeCollateral(
                 _data.user, collateralWithdrawReceiver, collateralShare
@@ -198,7 +197,7 @@ contract MagnetarMock_test {
         if (_data.depositData.deposit) {
             _data.depositData.amount = _extractTokens(_data.user, sglAssetAddress, _data.depositData.amount);
 
-            IERC20(sglAssetAddress).approve(address(singularity)    , 0);
+            IERC20(sglAssetAddress).approve(address(singularity), 0);
             IERC20(sglAssetAddress).approve(address(singularity), _data.depositData.amount);
 
             singularity.deposit(_data.depositData.amount, _data.user);

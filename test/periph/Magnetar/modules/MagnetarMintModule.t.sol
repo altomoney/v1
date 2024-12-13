@@ -29,7 +29,6 @@ import {ERC721Mock} from "../../mocks/ERC721Mock.sol";
 import {TOFTMock} from "../../mocks/TOFTMock.sol";
 import {TapiocaOptionBroker} from "tap-token/options/TapiocaOptionBroker.sol";
 
-
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
 
@@ -39,7 +38,6 @@ abstract contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver 
     TapOftMock tapOft;
     TOFTMock tSgl;
 
-
     // -----------------------
     //
     // Setup
@@ -48,10 +46,8 @@ abstract contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver 
     function setUp() public override {
         createCommonSetup();
 
-
         tapOft = new TapOftMock();
         ERC721Mock oTAP = new ERC721Mock();
-        
 
         clusterA.updateContract(0, address(tOB), true);
         clusterA.updateContract(0, address(tapOft), true);
@@ -234,14 +230,10 @@ abstract contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver 
 
         //approvals for deposit & collateral add
         collateralA.approve(address(magnetarA), type(uint256).max);
-        
+
         // Atomic approval
-        
 
         magnetarA.burst{value: 0}(calls);
-
-        
-        
 
         uint256 colSharesAfter = bb.balanceOf(address(this));
         assertGt(colSharesAfter, colSharesBefore);
@@ -280,14 +272,10 @@ abstract contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver 
 
         //approvals for deposit & collateral add
         collateralA.approve(address(magnetarA), type(uint256).max);
-        
+
         // Atomic approval
-        
 
         magnetarA.burst{value: 0}(calls);
-
-        
-        
 
         uint256 colSharesAfter = bb.balanceOf(address(this));
         uint256 borrowPartAfter = bb._userBorrowPart(address(this));
@@ -326,9 +314,6 @@ abstract contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver 
         assetA.approve(address(magnetarA), type(uint256).max);
 
         magnetarA.burst{value: 0}(calls);
-
-        
-        
 
         uint256 assetABalanceAfter = sgl.balanceOf(address(this));
         assertGt(assetABalanceAfter, assetABalanceBefore);
@@ -371,16 +356,12 @@ abstract contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver 
 
         //approvals for deposit & collateral add
         collateralA.approve(address(magnetarA), type(uint256).max);
-        
+
         // Atomic approval
-        
-       
+
         assetA.approve(address(magnetarA), type(uint256).max);
 
         magnetarA.burst{value: 0}(calls);
-
-        
-        
 
         uint256 colSharesAfter = bb.balanceOf(address(this));
         uint256 borrowPartAfter = bb._userBorrowPart(address(this));
@@ -434,16 +415,12 @@ abstract contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver 
 
         //approvals for deposit & collateral add
         collateralA.approve(address(magnetarA), type(uint256).max);
-        
+
         // Atomic approval
-        
-       
+
         assetA.approve(address(magnetarA), type(uint256).max);
 
         magnetarA.burst{value: 0}(calls);
-
-        
-        
 
         uint256 colSharesAfter = bb.balanceOf(address(this));
         uint256 borrowPartAfter = bb._userBorrowPart(address(this));
@@ -459,6 +436,5 @@ abstract contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver 
 
     function test_mintFromBBAndLendOnSGL_addCollateral_mint_depositExtra_lend_lock_and_participate() public {
         vm.skip(true);
-    
     }
 }

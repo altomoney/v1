@@ -11,12 +11,7 @@ import {
 
 // Tapioca
 import {UsdoMarketReceiverModule} from "tapioca-bar/usdo/modules/UsdoMarketReceiverModule.sol";
-import {
-    MarketLendOrRepayMsg,
-    MarketRemoveAssetMsg,
-
-    MarketPermitActionMsg
-} from "tap-utils/interfaces/oft/IUsdo.sol";
+import {MarketLendOrRepayMsg, MarketRemoveAssetMsg, MarketPermitActionMsg} from "tap-utils/interfaces/oft/IUsdo.sol";
 
 import {MarketHelper} from "tapioca-bar/markets/MarketHelper.sol";
 import {BigBang} from "tapioca-bar/markets/bigBang/BigBang.sol";
@@ -30,7 +25,6 @@ import {
     LZSendParam,
     RemoteTransferMsg
 } from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainEngineHelper.sol";
-
 
 // tests
 import {Singularity_Unit_Shared} from "../../shared/Singularity_Unit_Shared.t.sol";
@@ -53,9 +47,9 @@ abstract contract Usdo_crossChain is Usdo_Unit_Shared, BigBang_Unit_Shared, Sing
         override(Markets_Unit_Shared, Singularity_Unit_Shared)
         resetPrank(txExecutor)
     {
-        _approveViaERC20(mainBB._collateral(), txExecutor,  type(uint256).max);
+        _approveViaERC20(mainBB._collateral(), txExecutor, type(uint256).max);
 
-        _approveViaERC20(secondaryBB._collateral(), txExecutor,  type(uint256).max);
+        _approveViaERC20(secondaryBB._collateral(), txExecutor, type(uint256).max);
     }
 
     function test_WhenErc20ApprovalIsPerformedOnCurrentChain(uint256 amount)
@@ -187,17 +181,13 @@ abstract contract Usdo_crossChain is Usdo_Unit_Shared, BigBang_Unit_Shared, Sing
         assertApproxEqRel(usdo.balanceOf(address(this)), amount, 0.0001e18); // to pass over the LD to SD and SD to LD conversion
     }
 
-    function test_whenCrossChainPermitOrRevokeIsTriggered_WhenPermitAllIsCalled()
-        external
-    {
+    function test_whenCrossChainPermitOrRevokeIsTriggered_WhenPermitAllIsCalled() external {
         vm.skip(true);
         // _resetPrank(address(this));
         // _crossChainApproveOrRevokeAll(true);
     }
 
-    function test_whenCrossChainPermitOrRevokeIsTriggered_WhenRevokeAllIsCalled()
-        external
-    {
+    function test_whenCrossChainPermitOrRevokeIsTriggered_WhenRevokeAllIsCalled() external {
         vm.skip(true);
         // _resetPrank(address(this));
         // _crossChainApproveOrRevokeAll(false);

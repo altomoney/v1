@@ -37,7 +37,7 @@ contract SGLStorage is Ownable, Market, ReentrancyGuard {
     ISingularity.AccrueInfo public accrueInfo;
     /// @notice total assets share & amount
     // TODO Should we remove this because it is managed by ERC4626?
-    Rebase public totalAsset; 
+    Rebase public totalAsset;
 
     uint256 public minimumTargetUtilization;
     uint256 public maximumTargetUtilization;
@@ -99,7 +99,7 @@ contract SGLStorage is Ownable, Market, ReentrancyGuard {
 
     // ********************** //
     // *** VIEW FUNCTIONS *** //
-    // ********************** //    
+    // ********************** //
     /// @notice returns market's ERC20 symbol
     function symbol() public view virtual override returns (string memory) {
         return string(abi.encodePacked("tm-", IERC20(collateral()).safeSymbol()));

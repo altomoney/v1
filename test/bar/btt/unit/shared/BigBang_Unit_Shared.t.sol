@@ -28,7 +28,6 @@ import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {IMarket} from "tap-utils/interfaces/bar/ISingularity.sol";
 import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
 
-
 import {TOFTMock_test} from "../../mocks/TOFTMock_test.sol";
 
 // tests
@@ -326,7 +325,6 @@ abstract contract BigBang_Unit_Shared is Markets_Unit_Shared {
         bb.deposit(collateralAmount, depositTo);
         vm.stopPrank();
 
-
         // get `before` state
         uint256 bbYieldBoxBalanceBefore = bb.totalAssets();
         uint256 userYieldBoxBalanceBefore = IERC20(IMarket(address(bb))._collateral()).balanceOf(address(onBehalfOf));
@@ -445,7 +443,10 @@ abstract contract BigBang_Unit_Shared is Markets_Unit_Shared {
         uint256 totalCollateralShareAfter;
     }
 
-    function _createRemoveCollateralInternal(BigBang _bb, address _to) internal returns (_RemoveCollateralInternal memory) {
+    function _createRemoveCollateralInternal(BigBang _bb, address _to)
+        internal
+        returns (_RemoveCollateralInternal memory)
+    {
         _RemoveCollateralInternal memory _data;
         _data.bbYieldBoxBalanceBefore = _bb.totalAssets();
         _data.userYieldBoxBalanceBefore = IERC20(IMarket(address(_bb))._collateral()).balanceOf(address(_to));
@@ -454,20 +455,13 @@ abstract contract BigBang_Unit_Shared is Markets_Unit_Shared {
         return _data;
     }
 
-    function _executeRemoveCollateral(
-        uint256 _removeShare,
-        BigBang _bb,
-        address _executor,
-        address _from,
-        address _to
-    ) internal {
+    function _executeRemoveCollateral(uint256 _removeShare, BigBang _bb, address _executor, address _from, address _to)
+        internal
+    {
         uint256 _removeAmount = 0;
         uint256 removeAmount = _boundRemoveCollateralAmount(_removeAmount, _bb);
         _removeShare = _bb.convertToShares(removeAmount);
-        (
-            Module[] memory _modules,
-            bytes[] memory _calls
-        ) = _getRemoveCollateralData(_removeShare, _from, _to);
+        (Module[] memory _modules, bytes[] memory _calls) = _getRemoveCollateralData(_removeShare, _from, _to);
 
         _resetPrank(_executor);
 
@@ -475,7 +469,6 @@ abstract contract BigBang_Unit_Shared is Markets_Unit_Shared {
         // it should emit 'LogRemoveCollateral'
         emit LogRemoveCollateral(_from, _to, _removeShare);
         _bb.execute(_modules, _calls, true);
-
     }
 
     function _removeCollateral(
@@ -499,13 +492,7 @@ abstract contract BigBang_Unit_Shared is Markets_Unit_Shared {
         // **** Remove collateral ****
         _RemoveCollateralInternal memory _data = _createRemoveCollateralInternal(bb, to);
 
-        _executeRemoveCollateral(
-            removeShare,
-            bb,
-            executor,
-            from,
-            to
-        );
+        _executeRemoveCollateral(removeShare, bb, executor, from, to);
 
         _data.bbYieldBoxBalanceAfter = bb.totalAssets();
         _data.userYieldBoxBalanceAfter = IERC20(IMarket(address(bb))._collateral()).balanceOf(address(to));
@@ -554,12 +541,10 @@ abstract contract BigBang_Unit_Shared is Markets_Unit_Shared {
         return _data;
     }
 
-    function _createRepayData(
-        uint256 _repayPart,
-        BigBang _bb,
-        address _from,
-        address _to
-    ) internal returns (Module[] memory modules, bytes[] memory calls, uint256 repayAmount) {
+    function _createRepayData(uint256 _repayPart, BigBang _bb, address _from, address _to)
+        internal
+        returns (Module[] memory modules, bytes[] memory calls, uint256 repayAmount)
+    {
         _repayPart = _boundRepayAmount(_repayPart, _bb);
         Rebase memory _totalBorrow = _bb._totalBorrow();
         repayAmount = _totalBorrow.toElastic(_repayPart, false);
@@ -575,22 +560,11 @@ abstract contract BigBang_Unit_Shared is Markets_Unit_Shared {
         address from,
         address to
     ) internal {
-        
-        uint256 borrowedAmount = _addCollateralAndBorrow(
-            collateralAmount,
-            borrowAmount,
-            bb,
-            from,
-            to
-        );
+        uint256 borrowedAmount = _addCollateralAndBorrow(collateralAmount, borrowAmount, bb, from, to);
 
         _BorrowInternal memory _data = _createBorrowInternal(bb, to);
 
-        (
-            Module[] memory modules,
-            bytes[] memory calls,
-            uint256 repayAmount
-        ) = _createRepayData(repayPart, bb, from, to);
+        (Module[] memory modules, bytes[] memory calls, uint256 repayAmount) = _createRepayData(repayPart, bb, from, to);
 
         _resetPrank(executor);
 

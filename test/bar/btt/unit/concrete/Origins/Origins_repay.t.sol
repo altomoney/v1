@@ -65,7 +65,7 @@ contract Origins_repay is Origins_Unit_Shared {
     function _addCollateral(Origins org) private {
         uint256 amount = 1 ether;
         deal(address(org._collateral()), address(this), amount);
-        mainToken.approve( type(uint256).max);
+        mainToken.approve(type(uint256).max);
 
         uint256 share = org.convertToShares(amount);
 

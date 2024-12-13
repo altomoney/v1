@@ -184,9 +184,7 @@ contract BBLiquidation is BBCommon {
         if (_exchangeRate == 0) revert ExchangeRateNotValid();
 
         // get collateral amount in asset's value
-        uint256 collateralPartInAsset = (
-            convertToAssets(balanceOf(user)) * EXCHANGE_RATE_PRECISION
-        ) / _exchangeRate;
+        uint256 collateralPartInAsset = (convertToAssets(balanceOf(user)) * EXCHANGE_RATE_PRECISION) / _exchangeRate;
 
         // compute closing factor (liquidatable amount)
         uint256 borrowPartWithBonus = _computeClosingFactor(
@@ -240,8 +238,7 @@ contract BBLiquidation is BBCommon {
             uint256 totalUserBorrowWithBonus =
                 userTotalBorrowAmount + (userTotalBorrowAmount * liquidationBonusAmount) / FEE_PRECISION;
             if (collateralPartInAsset < totalUserBorrowWithBonus) revert BadDebt();
-            collateralShare =
-                convertToShares((borrowPartWithBonus * _exchangeRate) / EXCHANGE_RATE_PRECISION);
+            collateralShare = convertToShares((borrowPartWithBonus * _exchangeRate) / EXCHANGE_RATE_PRECISION);
             if (collateralShare > balanceOf(user)) {
                 revert NotEnoughCollateral();
             }

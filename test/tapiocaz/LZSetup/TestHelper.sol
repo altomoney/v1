@@ -117,7 +117,15 @@ contract TestHelper is Test, OptionsHelper {
         dvn.setWorkerFeeLib(address(dvnLib));
     }
 
-    function _createConfigParams(uint8 _i, uint8 _endpointNum, PriceFeed _priceFeed, Executor _executor, SendUln302 sendUln, ReceiveUln302 receiveUln, DVN dvn)
+    function _createConfigParams(
+        uint8 _i,
+        uint8 _endpointNum,
+        PriceFeed _priceFeed,
+        Executor _executor,
+        SendUln302 sendUln,
+        ReceiveUln302 receiveUln,
+        DVN dvn
+    )
         internal
         returns (IExecutor.DstConfigParam[] memory dstConfigParams, IDVN.DstConfigParam[] memory dvnConfigParams)
     {

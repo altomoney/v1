@@ -10,12 +10,7 @@ import {UsdoMarketModulesReport} from "../../../interfaces/ITapiocaReport.sol";
 contract TapiocaUsdoBatchTwo is BarProcedure {
     UsdoMarketModulesReport internal _usdoMarketModulesReport;
 
-    constructor(
-        address endpoint,
-        address delegate,
-        address cluster,
-        address extExec
-    ) {
+    constructor(address endpoint, address delegate, address cluster, address extExec) {
         _usdoMarketModulesReport = _deployUsdoMarketModules(endpoint, delegate, cluster, extExec);
     }
 

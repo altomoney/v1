@@ -10,7 +10,6 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Cluster} from "tap-utils/Cluster/Cluster.sol";
 import {ITOFT, TOFTInitStruct, TOFTModulesInitStruct} from "tap-utils/interfaces/oft/ITOFT.sol";
 
-
 import {TapiocaOmnichainExtExec} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainExtExec.sol";
 import {TOFTGenericReceiverModule} from "tapiocaz/tOFT/modules/TOFTGenericReceiverModule.sol";
 import {TOFTOptionsReceiverModule} from "tapiocaz/tOFT/modules/TOFTOptionsReceiverModule.sol";
@@ -105,7 +104,6 @@ abstract contract Base_Test is TestHelper, Utils, Types, Events {
         // create real Cluster
         cluster = _createCluster(address(this));
         // create real YieldBox
-
 
         // creat TOFT underlyingErc20
         TOFTInitStruct memory toftInitStruct = _createOftInitStruct(address(underlyingErc20), aEid);
@@ -335,13 +333,11 @@ abstract contract Base_Test is TestHelper, Utils, Types, Events {
             symbol: _underlyingToken == address(0) ? "NATIVE" : IERC20Metadata(_underlyingToken).symbol(),
             endpoint: address(endpoints[_endpoint]),
             delegate: address(this),
-            
             cluster: address(cluster),
             erc20: _underlyingToken,
             vault: address(_vault),
             hostEid: _endpoint,
             extExec: address(_extExec)
-            
         });
     }
 

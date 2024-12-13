@@ -174,7 +174,6 @@ library UsdoMsgCodec {
         uint8 sOffset;
     }
 
-
     /**
      * @notice Encodes the message for the `UsdoOptionReceiverModule.exerciseOptionsReceiver()` operation.
      */

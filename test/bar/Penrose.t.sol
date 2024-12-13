@@ -34,7 +34,6 @@ contract PenroseTest is UsdoTestHelper {
     uint32 bEid = 2;
 
     Cluster cluster;
-    
 
     ERC20Mock tapOFT;
     ERC20Mock weth;
@@ -81,7 +80,6 @@ contract PenroseTest is UsdoTestHelper {
 
             collateral = new ERC20Mock("Collateral", "coll");
             vm.label(address(collateral), "collateral");
-
         }
 
         {
@@ -92,25 +90,12 @@ contract PenroseTest is UsdoTestHelper {
             vm.label(address(weth), "WETH");
         }
 
-        (penrose, masterContract) = createPenrose(
-            TestPenroseData(
-                address(cluster),
-                address(tapOFT),
-                address(weth),
-                __owner
-            )
-        );
+        (penrose, masterContract) =
+            createPenrose(TestPenroseData(address(cluster), address(tapOFT), address(weth), __owner));
 
-        leverageExecutor =
-            createLeverageExecutor(address(swapper), address(cluster));
-        (penrose, masterContract) = createPenrose(
-            TestPenroseData(
-                address(cluster),
-                address(tapOFT),
-                address(weth),
-                __owner
-            )
-        );
+        leverageExecutor = createLeverageExecutor(address(swapper), address(cluster));
+        (penrose, masterContract) =
+            createPenrose(TestPenroseData(address(cluster), address(tapOFT), address(weth), __owner));
         oracle = createOracle();
         singularity = createSingularity(
             penrose,

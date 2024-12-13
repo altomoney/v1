@@ -147,8 +147,7 @@ contract BBLeverage is BBLendingCommon {
         memoryData.leverageAmount = redeem(share, address(leverageExecutor), address(this));
         amountOut =
             leverageExecutor.getAsset(from, collateral(), address(_borrowableToken()), memoryData.leverageAmount, data);
-        
-        
+
         memoryData.shareOut = convertToShares(amountOut);
 
         mint(memoryData.shareOut, from); // TODO Check for rounding attack?

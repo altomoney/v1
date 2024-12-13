@@ -10,12 +10,7 @@ import {UsdoModulesReport} from "../../../interfaces/ITapiocaReport.sol";
 contract TapiocaUsdoBatchOne is BarProcedure {
     UsdoModulesReport internal _usdoModulesReport;
 
-    constructor(
-        address endpoint,
-        address delegate,
-        address cluster,
-        address extExec
-    ) {
+    constructor(address endpoint, address delegate, address cluster, address extExec) {
         _usdoModulesReport = _deployUsdoSenderAndReceiver(endpoint, delegate, cluster, extExec);
     }
 

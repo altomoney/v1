@@ -26,8 +26,6 @@ import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
 
 import {SGLInit} from "tapioca-bar/markets/singularity/SGLInit.sol";
 
-
-
 import {Cluster} from "tap-utils/Cluster/Cluster.sol";
 import {MagnetarMock} from "../mocks/MagnetarMock.sol";
 
@@ -75,7 +73,6 @@ contract UsdoTestHelper is TestHelper, TestUtils {
         return new MagnetarMock(cluster);
     }
 
-
     function createCluster(uint32 hostEid, address owner) public returns (Cluster) {
         return new Cluster(hostEid, owner);
     }
@@ -96,13 +93,7 @@ contract UsdoTestHelper is TestHelper, TestUtils {
     }
 
     function createPenrose(TestPenroseData memory _data) public returns (Penrose pen, Singularity mediumRiskMC) {
-
-        pen = new Penrose(
-            ICluster(_data.cluster),
-            IERC20(_data.tap),
-            IERC20(_data.token),
-            _data.owner
-        );
+        pen = new Penrose(ICluster(_data.cluster), IERC20(_data.tap), IERC20(_data.token), _data.owner);
         mediumRiskMC = new Singularity();
 
         pen.registerSingularityMasterContract(address(mediumRiskMC), IPenrose.ContractType.mediumRisk);
@@ -118,14 +109,7 @@ contract UsdoTestHelper is TestHelper, TestUtils {
         address penrose
     ) public returns (Origins) {
         Origins origins = new Origins(owner);
-        origins.init(
-            IERC20(asset),
-            collateral,
-            oracle,
-            exchangePrecision,
-            collateralizationRate,
-            IPenrose(penrose)
-        );
+        origins.init(IERC20(asset), collateral, oracle, exchangePrecision, collateralizationRate, IPenrose(penrose));
         return origins;
     }
 

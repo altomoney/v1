@@ -6,7 +6,6 @@ import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeE
 
 // Tapioca
 
-
 contract OTapMock_test {
     address public owner;
 
@@ -33,7 +32,7 @@ contract TapiocaOptionsBrokerMock_test {
 
     error TapiocaOptionsBrokerMock_NotValid();
 
-    constructor(address _tap)  {
+    constructor(address _tap) {
         tapOFT = _tap;
         oTapMock = address(new OTapMock_test());
     }

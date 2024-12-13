@@ -33,6 +33,7 @@ import {BBDebtRateHelper} from "tapioca-bar/markets/bigBang/BBDebtRateHelper.sol
 import {BigBang} from "tapioca-bar/markets/bigBang/BigBang.sol";
 import {BBDebtRateHelper} from "tapioca-bar/markets/bigBang/BBDebtRateHelper.sol";
 import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
+
 abstract contract BarProcedure {
     function _deployPenrose(IPenroseInput memory input) internal returns (PenroseReport memory report) {
         report.marketHelper = address(new MarketHelper());
@@ -66,12 +67,10 @@ abstract contract BarProcedure {
         }
     }
 
-    function _deployUsdoSenderAndReceiver(
-        address endpoint,
-        address delegate,
-        address cluster,
-        address extExec
-    ) internal returns (UsdoModulesReport memory report) {
+    function _deployUsdoSenderAndReceiver(address endpoint, address delegate, address cluster, address extExec)
+        internal
+        returns (UsdoModulesReport memory report)
+    {
         UsdoInitStruct memory initData;
 
         initData.endpoint = endpoint;
@@ -85,12 +84,10 @@ abstract contract BarProcedure {
         return report;
     }
 
-    function _deployUsdoMarketModules(
-        address endpoint,
-        address delegate,
-        address cluster,
-        address extExec
-    ) internal returns (UsdoMarketModulesReport memory report) {
+    function _deployUsdoMarketModules(address endpoint, address delegate, address cluster, address extExec)
+        internal
+        returns (UsdoMarketModulesReport memory report)
+    {
         UsdoInitStruct memory initData;
 
         initData.endpoint = endpoint;

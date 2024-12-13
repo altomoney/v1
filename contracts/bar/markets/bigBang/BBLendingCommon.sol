@@ -104,7 +104,7 @@ contract BBLendingCommon is BBCommon {
 
         // @dev amount includes the opening & accrued fees
         uint256 _share = convertToShares(amount);
-        
+
         uint256 amountOut = redeem(_share, address(this), address(this));
 
         // @dev burn USDO

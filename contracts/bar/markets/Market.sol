@@ -483,8 +483,7 @@ abstract contract Market is MarketERC4626, Ownable {
     }
 
     function _getCallerReward(address user, uint256 _exchangeRate) internal view returns (uint256) {
-        (uint256 startTVLInAsset, uint256 maxTVLInAsset) =
-            _computeMaxAndMinLTVInAsset(balanceOf(user), _exchangeRate);
+        (uint256 startTVLInAsset, uint256 maxTVLInAsset) = _computeMaxAndMinLTVInAsset(balanceOf(user), _exchangeRate);
 
         uint256 borrowed = userBorrowPart[user];
         if (borrowed == 0) return 0;

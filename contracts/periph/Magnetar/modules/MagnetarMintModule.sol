@@ -147,7 +147,7 @@ contract MagnetarMintModule is MagnetarBaseModule {
         uint256 _share = _bigBang.convertToShares(data.mintData.collateralDepositData.amount);
 
         /**
-         * @dev try deposit 
+         * @dev try deposit
          */
         if (data.mintData.collateralDepositData.deposit) {
             address bbCollateralAddress = _bigBang._collateral();

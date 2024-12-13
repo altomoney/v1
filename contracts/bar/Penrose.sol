@@ -84,12 +84,7 @@ contract Penrose is Ownable, Pausable {
     /// @param tapToken_ TapOFT contract address
     /// @param mainToken_ WETH contract address
     /// @param _owner owner address
-    constructor(
-        ICluster _cluster,
-        IERC20 tapToken_,
-        IERC20 mainToken_,
-        address _owner
-    ) {
+    constructor(ICluster _cluster, IERC20 tapToken_, IERC20 mainToken_, address _owner) {
         if (address(_cluster) == address(0)) revert AddressNotValid();
         if (address(tapToken_) == address(0)) revert AddressNotValid();
         if (address(_owner) == address(0)) revert AddressNotValid();

@@ -6,7 +6,6 @@ import {Module} from "tap-utils/interfaces/bar/IMarket.sol";
 import {BigBang} from "tapioca-bar/markets/bigBang/BigBang.sol";
 import {Market} from "tapioca-bar/markets/Market.sol";
 
-
 import {IMarket} from "tap-utils/interfaces/bar/ISingularity.sol";
 
 // tests

@@ -44,7 +44,6 @@ import {UsdoSender} from "tapioca-bar/usdo/modules/UsdoSender.sol";
 
 import {UsdoTestHelper, TestPenroseData, TestSingularityData, TestBigBangData} from "../helpers/UsdoTestHelper.t.sol";
 
-
 import "forge-std/Test.sol";
 
 contract BigBangTest is UsdoTestHelper {
@@ -52,7 +51,7 @@ contract BigBangTest is UsdoTestHelper {
     uint32 bEid = 2;
 
     Cluster cluster;
-    
+
     ERC20Mock tapOFT;
     ERC20Mock weth;
 
@@ -120,23 +119,15 @@ contract BigBangTest is UsdoTestHelper {
 
             vm.label(address(endpoints[aEid]), "aEndpoint");
             vm.label(address(endpoints[bEid]), "bEndpoint");
-            vm.label( "YieldBox");
+            vm.label("YieldBox");
             vm.label(address(cluster), "Cluster");
             vm.label(address(magnetar), "Magnetar");
             vm.label(address(twTap), "TwTapMock");
         }
 
-        leverageExecutor =
-            createLeverageExecutor( address(swapper), address(cluster));
-        (penrose,) = createPenrose(
-            TestPenroseData(
-                
-                address(cluster),
-                address(tapOFT),
-                address(collateral),
-                address(this)
-            )
-        );
+        leverageExecutor = createLeverageExecutor(address(swapper), address(cluster));
+        (penrose,) =
+            createPenrose(TestPenroseData(address(cluster), address(tapOFT), address(collateral), address(this)));
 
         masterContract = new BigBang();
         penrose.registerBigBangMasterContract(address(masterContract), IPenrose.ContractType.mediumRisk);
@@ -175,7 +166,7 @@ contract BigBangTest is UsdoTestHelper {
 
     function depositAsset(uint256 amount) public {
         deal(address(asset), address(this), amount);
-        asset.approve( type(uint256).max);
+        asset.approve(type(uint256).max);
         // asset.approve(address(pearl mit), type(uint256).max);
         // pearl mit.approve(
         //     1155,  assetYieldBoxId, address(bigBang), type(uint200).max, uint48(block.timestamp)
@@ -687,7 +678,7 @@ contract BigBangTest is UsdoTestHelper {
         assertGt(borrowPart, 0);
 
         vm.startPrank(userA);
-        asset.approve( type(uint256).max);
+        asset.approve(type(uint256).max);
         // pearl mit.approve(
         //     1155,  assetYieldBoxId, address(bigBang), type(uint200).max, uint48(block.timestamp)
         // );

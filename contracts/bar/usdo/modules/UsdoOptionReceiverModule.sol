@@ -118,8 +118,8 @@ contract UsdoOptionReceiverModule is BaseUsdo {
             revert UsdoOptionReceiverModule_NotAuthorized(_options.from);
         }
         // TODO: Check if this is correct
-        bool isAllowed = IERC721(oTap).getApproved(_options.oTAPTokenID) == address(this) ||
-            IERC721(oTap).isApprovedForAll(oTapOwner, address(this));
+        bool isAllowed = IERC721(oTap).getApproved(_options.oTAPTokenID) == address(this)
+            || IERC721(oTap).isApprovedForAll(oTapOwner, address(this));
 
         if (!isAllowed) revert UsdoOptionReceiverModule_NotAuthorized(oTapOwner);
     }

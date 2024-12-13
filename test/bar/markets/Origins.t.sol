@@ -4,19 +4,12 @@ pragma solidity ^0.8.22;
 import {Origins} from "tapioca-bar/markets/origins/Origins.sol";
 import {Market} from "tapioca-bar/markets/Market.sol";
 
-
 // import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@boringcrypto/boring-solidity/contracts/libraries/BoringERC20.sol";
 import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {IOracle} from "tap-utils/oracle/interfaces/IOracle.sol";
 import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
-
-
-
-
-
-
 
 import {Cluster} from "tap-utils/Cluster/Cluster.sol";
 import {Penrose} from "tapioca-bar/Penrose.sol";
@@ -33,7 +26,6 @@ import {UsdoSender} from "tapioca-bar/usdo/modules/UsdoSender.sol";
 
 import {UsdoTestHelper, TestPenroseData} from "../helpers/UsdoTestHelper.t.sol";
 
-
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {LZEndpointMock} from "tapioca-mocks/LZEndpointMock.sol";
 import {TapiocaRelease} from "deployments/releases/tapioca-v1/TapiocaRelease.sol";
@@ -46,7 +38,7 @@ contract OriginsTest is UsdoTestHelper {
     uint32 bEid = 2;
 
     Cluster cluster;
-    
+
     ERC20Mock tapOFT;
     ERC20Mock weth;
 
@@ -122,16 +114,14 @@ contract OriginsTest is UsdoTestHelper {
 
             vm.label(address(endpoints[aEid]), "aEndpoint");
             vm.label(address(endpoints[bEid]), "bEndpoint");
-            vm.label( "YieldBox");
+            vm.label("YieldBox");
             vm.label(address(cluster), "Cluster");
             vm.label(address(magnetar), "Magnetar");
         }
 
-
         oracle = createOracle();
         origins = createOrigins(
             address(this),
-            
             address(asset),
             assetYieldBoxId,
             address(collateral),
@@ -149,12 +139,12 @@ contract OriginsTest is UsdoTestHelper {
 
     function depositAsset(uint256 amount) public {
         deal(address(asset), address(this), amount);
-        asset.approve( type(uint256).max);
+        asset.approve(type(uint256).max);
     }
 
     function depositCollateral(uint256 amount) public {
         deal(address(collateral), address(this), amount);
-        collateral.approve( type(uint256).max);
+        collateral.approve(type(uint256).max);
 
         uint256 share = origins.convertToShares(amount);
         origins.deposit(amount, address(this));
@@ -288,7 +278,7 @@ contract OriginsTest is UsdoTestHelper {
         uint256 collateralAmount = 1 ether;
 
         deal(address(collateral), address(this), collateralAmount);
-        collateral.approve( type(uint256).max);
+        collateral.approve(type(uint256).max);
 
         uint256 share = origins.convertToShares(collateralAmount);
         // TODO review it yieldBox.depositAsset(collateralYieldBoxId, address(this), address(this), 0, share);
