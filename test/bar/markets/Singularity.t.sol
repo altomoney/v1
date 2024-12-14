@@ -81,9 +81,6 @@ contract SingularityTest is UsdoTestHelper {
     MarketLiquidatorReceiverMock liquidatorMock;
     MagnetarHelper magnetarHelper;
 
-    uint256 assetYieldBoxId;
-    uint256 collateralYieldBoxId;
-
     uint256 internal userAPKey = 0x1;
     uint256 internal userBPKey = 0x2;
     address public userA = vm.addr(userAPKey);
@@ -156,22 +153,18 @@ contract SingularityTest is UsdoTestHelper {
 
             vm.label(address(endpoints[aEid]), "aEndpoint");
             vm.label(address(endpoints[bEid]), "bEndpoint");
-            vm.label("YieldBox");
             vm.label(address(cluster), "Cluster");
             vm.label(address(magnetar), "Magnetar");
         }
 
         oracle = new OracleMock("Oracle Test", "ORCT", 1 ether);
-        singularity = launchSingularity(
-            address(asset), assetYieldBoxId, address(collateral), collateralYieldBoxId, address(oracle)
-        );
+        singularity = launchSingularity(address(asset), address(collateral), address(oracle));
         vm.label(address(singularity), "Singularity");
     }
 
     function depositAsset(uint256 amount) public {
         vm.skip(true);
         deal(address(asset), address(this), amount);
-        asset.approve(type(uint256).max);
         // pearl mit.approve(
         //     1155,  assetYieldBoxId, address(singularity), type(uint200).max, uint48(block.timestamp)
         // );
@@ -512,7 +505,7 @@ contract SingularityTest is UsdoTestHelper {
         assertEq(info[0].market.userCollateralShare, singularity.balanceOf(address(this)));
         assertEq(info[0].market.userBorrowPart, singularity._userBorrowPart(address(this)));
 
-        uint256 share = marketHelper.computeAllowedLendShare(address(singularity), 1, assetYieldBoxId);
+        uint256 share = marketHelper.computeAllowedLendShare(address(singularity), 1);
         assertGe(share, 1);
 
         uint256 borrowAmountFromHelper = magnetarHelper.getAmountForBorrowPart(
@@ -589,7 +582,6 @@ contract SingularityTest is UsdoTestHelper {
         assertGt(borrowPart, 0);
 
         vm.startPrank(userA);
-        asset.approve(type(uint256).max);
         // pearl mit.approve(
         //     1155,  assetYieldBoxId, address(singularity), type(uint200).max, uint48(block.timestamp)
         // );
@@ -647,7 +639,7 @@ contract SingularityTest is UsdoTestHelper {
     //     singularity.execute(modules, calls, true);
     // }
 
-    function launchSingularity(address asset, uint256 assetId, address collateral, uint256 collateralId, address oracle)
+    function launchSingularity(address asset, address collateral, address oracle)
         public
         returns (Singularity singularity)
     {
@@ -655,9 +647,7 @@ contract SingularityTest is UsdoTestHelper {
         RiskParams memory riskParams;
 
         tokensData._asset = IERC20(asset);
-        tokensData._assetId = assetId;
         tokensData._collateral = IERC20(collateral);
-        tokensData._collateralId = collateralId;
 
         riskParams.oracle = oracle;
         riskParams.seedAmount = 1 ether;

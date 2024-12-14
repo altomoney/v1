@@ -205,7 +205,7 @@ contract TOFT_setters is OFT_Unit_Shared {
 
     function _wrap(uint256 amount)
         private
-        whenApprovedViaERC20(address(underlyingErc20), address(this), type(uint256).max)
+        // TODO Review it whenApprovedViaERC20(address(underlyingErc20), address(this), type(uint256).max)
     {
         deal(address(underlyingErc20), address(this), amount);
         mToft.wrap(address(this), address(this), amount);

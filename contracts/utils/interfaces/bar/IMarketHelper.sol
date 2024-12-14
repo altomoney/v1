@@ -17,7 +17,7 @@ import {Module} from "./IMarket.sol";
 */
 
 interface IMarketHelper {
-    function computeAllowedLendShare(address sglAddress, uint256 amount, uint256 tokenId)
+    function computeAllowedLendShare(address sglAddress, uint256 amount)
         external
         view
         returns (uint256 share);

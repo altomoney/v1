@@ -47,9 +47,9 @@ abstract contract Usdo_crossChain is Usdo_Unit_Shared, BigBang_Unit_Shared, Sing
         override(Markets_Unit_Shared, Singularity_Unit_Shared)
         resetPrank(txExecutor)
     {
-        _approveViaERC20(mainBB._collateral(), txExecutor, type(uint256).max);
+        // TODO Review it _approveViaERC20(mainBB.collateral(), txExecutor, type(uint256).max);
 
-        _approveViaERC20(secondaryBB._collateral(), txExecutor, type(uint256).max);
+        // TODO Review it _approveViaERC20(secondaryBB.collateral(), txExecutor, type(uint256).max);
     }
 
     function test_WhenErc20ApprovalIsPerformedOnCurrentChain(uint256 amount)
@@ -370,7 +370,7 @@ abstract contract Usdo_crossChain is Usdo_Unit_Shared, BigBang_Unit_Shared, Sing
 
         uint256 balanceBefore = randomSgl.balanceOf(address(this));
         uint256 supplyBefore = randomSgl.totalSupply();
-        uint256 userSupplyBefore = randomSgl.balanceOf(address(this), mainBB._collateralId());
+        uint256 userSupplyBefore = randomSgl.balanceOf(address(this));
 
         _prepareAndExecuteComposedCrossChainPackets(
             address(usdo),
@@ -386,7 +386,7 @@ abstract contract Usdo_crossChain is Usdo_Unit_Shared, BigBang_Unit_Shared, Sing
         TODO review it
         uint256 balanceAfter = randomSgl.balanceOf(address(this));
         uint256 supplyAfter = randomSgl.totalSupply();
-        uint256 userSupplyAfter = yieldBox.balanceOf(address(this), mainBB._collateralId());
+        uint256 userSupplyAfter = yieldBox.balanceOf(address(this));
 
         // it should remove asset from market
         assertGt(balanceBefore, balanceAfter);

@@ -131,9 +131,6 @@ contract MagnetarCollateralModule is MagnetarBaseModule {
 
         IMarket _market = IMarket(data.market);
 
-        /**
-         * @dev deposit `market._assetId()`
-         */
         if (data.depositAmount > 0) {
             address assetAddress = _market._collateral();
             data.depositAmount = _extractTokens(data.user, assetAddress, data.depositAmount);

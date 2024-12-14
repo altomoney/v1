@@ -18,7 +18,7 @@ contract BigBang_constructor is BigBang_Unit_Shared {
         // it should have asset as Usdo
         assertEq(address(mainBB._asset()), address(usdo));
         // it should have collateral as the main token
-        assertEq(address(mainBB._collateral()), address(mainToken));
+        assertEq(address(mainBB.collateral()), address(mainToken));
         // it should have oracle as shared one
         assertEq(address(mainBB._oracle()), address(oracle));
         // it should have protocolFee as the default one of 10000

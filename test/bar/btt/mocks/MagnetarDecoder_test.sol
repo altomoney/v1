@@ -23,7 +23,8 @@ contract MagnetarDecoder_test {
     function burst(MagnetarCall[] calldata calls) external payable {
         for (uint256 i; i < calls.length; i++) {
             MagnetarCall calldata _action = calls[i];
-            address(this).delegatecall(_action.call);
+            (bool success, ) = address(this).delegatecall(_action.call);
+            if (!success) revert MagnetarDecoder_test_Fail();
         }
     }
 

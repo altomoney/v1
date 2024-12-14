@@ -232,7 +232,6 @@ contract UsdoTest is UsdoTestHelper {
 
         tOB = new TapiocaOptionsBrokerMock(address(tapOFT));
 
-        swapper = createSwapper();
         leverageExecutor = createLeverageExecutor(address(swapper), address(cluster));
         (penrose, masterContract) =
             createPenrose(TestPenroseData(address(cluster), address(tapOFT), address(weth), __owner));
@@ -248,9 +247,9 @@ contract UsdoTest is UsdoTestHelper {
             ),
             address(masterContract)
         );
+        swapper = createSwapper(address(singularity));
         vm.label(address(singularity), "Singularity");
 
-        cluster.updateContract(aEid, true);
         cluster.updateContract(aEid, address(magnetar), true);
         cluster.updateContract(aEid, address(tOB), true);
         cluster.updateContract(aEid, address(swapper), true);
@@ -260,7 +259,6 @@ contract UsdoTest is UsdoTestHelper {
         cluster.updateContract(aEid, address(singularity), true);
         cluster.updateContract(aEid, address(marketHelper), true);
 
-        cluster.updateContract(bEid, true);
         cluster.updateContract(bEid, address(magnetar), true);
         cluster.updateContract(bEid, address(tOB), true);
         cluster.updateContract(bEid, address(swapper), true);
@@ -892,9 +890,7 @@ contract UsdoTest is UsdoTestHelper {
                 }),
                 participateData: IOptionsParticipateData({participate: false, target: address(0), tOLPTokenId: 0})
             }),
-            withdrawParams: MagnetarWithdrawData({
-                
-                assetId: 0,
+            withdrawParams: MagnetarWithdrawData({                
                 unwrap: false,
                 amount: 0,
                 withdraw: false,
@@ -1061,8 +1057,6 @@ contract UsdoTest is UsdoTestHelper {
                 participateData: IOptionsParticipateData({participate: false, target: address(0), tOLPTokenId: 0})
             }),
             withdrawParams: MagnetarWithdrawData({
-                
-                assetId: 0,
                 unwrap: false,
                 amount: 0,
                 withdraw: false,
@@ -1204,8 +1198,6 @@ contract UsdoTest is UsdoTestHelper {
                 exitData: IOptionsExitData({exit: false, target: address(0), oTAPTokenID: 0}),
                 unlockData: IOptionsUnlockData({unlock: false, target: address(0), tokenId: 0}),
                 assetWithdrawData: MagnetarWithdrawData({
-                    
-                    assetId: 0,
                     unwrap: false,
                     amount: 0,
                     withdraw: false,
@@ -1213,8 +1205,6 @@ contract UsdoTest is UsdoTestHelper {
                     extractFromSender: false
                 }),
                 collateralWithdrawData: MagnetarWithdrawData({
-                    
-                    assetId: 0,
                     unwrap: false,
                     amount: 0,
                     withdraw: false,

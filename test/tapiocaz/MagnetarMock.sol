@@ -107,12 +107,6 @@ contract MagnetarMock {
                 _executeModule(MagnetarModule.OptionModule, _action.call);
                 continue; // skip the rest of the loop
             }
-
-            /// @dev Modules will not return result data.
-            if (_action.id == uint8(MagnetarAction.YieldBoxModule)) {
-                _executeModule(MagnetarModule.YieldBoxModule, _action.call);
-                continue; // skip the rest of the loop
-            }
         }
     }
 
@@ -153,7 +147,7 @@ contract MagnetarMock {
         if (!cluster.isWhitelisted(cluster.lzChainId(), address(_data.market))) revert MagnetarMock_NotAuthorized();
 
         IMarket market = IMarket(_data.market);
-        address collateralAddress = market.collateral();
+        address collateralAddress = market._collateral();
 
         uint256 _share = market.convertToShares(_data.collateralAmount);
 
@@ -164,8 +158,6 @@ contract MagnetarMock {
             _share = market.convertToShares(_data.collateralAmount);
 
             // deposit to YieldBox
-            IERC20(collateralAddress).approve(0);
-            IERC20(collateralAddress).approve(_data.collateralAmount);
             // TODO review it yieldBox.depositAsset(collateralId, address(this), address(this), _data.collateralAmount, 0);
         }
 

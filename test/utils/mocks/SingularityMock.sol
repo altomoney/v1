@@ -156,13 +156,13 @@ contract SingularityMock is EIP712 {
         _userCollateralShare[from] += collateralShare;
         _totalCollateralShare = oldTotalCollateralShare + collateralShare;
 
-        _addTokens(address(this), from, _collateralId, collateralShare, oldTotalCollateralShare, false);
+        _addTokens(address(this), from, collateralShare, oldTotalCollateralShare, false);
 
         return collateralAmount;
         */
     }
 
-    function _addTokens(address from, address, uint256 assetId, uint256 share, uint256 total, bool skim) internal {
+    function _addTokens(address from, address, uint256 share, uint256 total, bool skim) internal {
         /* // TODO Review it 
         if (skim) {
             if (share > _yieldBox.balanceOf(address(this), assetId) - total) {

@@ -87,7 +87,7 @@ contract SingularityMock is EIP712 {
         _userBorrowPart[from] += amount;
 
         // TODO review it share = _yieldBox.toShare(_assetId, amount, true);
-        uint256 share = amount;
+        share = amount;
         _asset.safeTransfer(to, share);
     }
 
@@ -159,7 +159,7 @@ contract SingularityMock is EIP712 {
         */
     }
 
-    function _addTokens(address from, address, uint256 assetId, uint256 share, uint256 total, bool skim) internal {
+    function _addTokens(address from, address, uint256 share, uint256 total, bool skim) internal {
         /* TODO Review it
         if (skim) {
             if (share > _yieldBox.balanceOf(address(this), assetId) - total) {

@@ -270,7 +270,7 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
 
     function test_get_sgl_info() public {
         vm.skip(true);
-        (Singularity sgl,,) = _setupSgl(address(oracle));
+        (Singularity sgl,) = _setupSgl(address(oracle));
 
         ISingularity[] memory arr = new ISingularity[](1);
         arr[0] = ISingularity(address(sgl));
@@ -802,7 +802,7 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
         uint256 repayAmount_ = bb._userBorrowPart(address(this));
         // exit and remove
         {
-            IERC20(bb._asset()).approve(address(magnetar), type(uint256).max); //for yb deposit
+            bb._asset().approve(address(magnetar), type(uint256).max); //for yb deposit
 
             deal(address(asset), address(this), repayAmount_); //deal more asset to be able to fully repay
             uint256 assetShare = bb.convertToShares(repayAmount_);
@@ -835,7 +835,7 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
                             extractFromSender: false
                         }),
                         collateralWithdrawData: MagnetarWithdrawData({
-                            asset: address(address),
+                            asset: address(collateral),
                             receiver: address(this),
                             amount: 0,
                             withdraw: false,
@@ -931,7 +931,7 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
         TapOftMock tapOft = new TapOftMock();
         TapOftMock oTAP = new TapOftMock();
         ERC20Mock paymentToken = new ERC20Mock();
-        TapiocaOptionBroker tOb = address(0); // replace mock with tob
+        TapiocaOptionBroker tOb = TapiocaOptionBroker(address(0)); // replace mock with tob
 
         cluster.updateContract(0, address(tOb), true);
         cluster.updateContract(0, address(tapOft), true);

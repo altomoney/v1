@@ -9,7 +9,7 @@ contract Penrose_setters is Markets_Unit_Shared {
     function test_RevertWhen_SetMainTokensIsCalledFromNon_owner() external {
         vm.startPrank(userA);
         vm.expectRevert();
-        penrose.setMainTokens(address(0), 0, address(0), 0);
+        penrose.setMainTokens(address(0), address(0));
         vm.stopPrank();
     }
 
@@ -18,19 +18,13 @@ contract Penrose_setters is Markets_Unit_Shared {
 
         vm.expectEmit();
         emit Penrose.MainTokensUpdated();
-        penrose.setMainTokens(rndAddr, 1, rndAddr, 1);
+        penrose.setMainTokens(rndAddr, rndAddr);
 
         address assignedMainToken = address(penrose.mainToken());
         assertEq(assignedMainToken, rndAddr);
 
         address assignedTapToken = address(penrose.tapToken());
         assertEq(assignedTapToken, rndAddr);
-
-        uint256 assignedMainAssetId = penrose.mainAssetId();
-        assertEq(assignedMainAssetId, 1);
-
-        uint256 assignedTapAssetId = penrose.tapAssetId();
-        assertEq(assignedTapAssetId, 1);
     }
 
     function test_RevertWhen_SetClusterIsCalledFromNon_owner() external {
@@ -92,28 +86,27 @@ contract Penrose_setters is Markets_Unit_Shared {
         address rndAddr = makeAddr("rndAddress");
         vm.startPrank(userA);
         vm.expectRevert();
-        penrose.setUsdoToken(rndAddr, 1);
+        penrose.setUsdoToken(rndAddr);
         vm.stopPrank();
     }
 
     function test_RevertWhen_SetUsdoTokenIsCalledFromOwnerWithAddress0() external {
         vm.expectRevert();
-        penrose.setUsdoToken(address(0), 1);
+        penrose.setUsdoToken(address(0));
     }
 
     function test_RevertWhen_SetUsdoTokenIsCalledFromOwnerWithAsset0() external {
         address rndAddr = makeAddr("rndAddress");
         vm.expectRevert();
-        penrose.setUsdoToken(rndAddr, 0);
+        penrose.setUsdoToken(rndAddr);
     }
 
     function test_WhenSetUsdoTokenIsCalledFromOwner() external {
         address rndAddr = makeAddr("rndAddress");
         vm.expectEmit();
-        emit Penrose.UsdoTokenUpdated(rndAddr, 10);
-        penrose.setUsdoToken(rndAddr, 10);
+        emit Penrose.UsdoTokenUpdated(rndAddr);
+        penrose.setUsdoToken(rndAddr);
         assertEq(address(penrose.usdoToken()), rndAddr);
-        assertEq(penrose.usdoAssetId(), 10);
     }
 
     function test_RevertWhen_SetPauseIsCalledFromNon_ownerAndNon_pauser() external {

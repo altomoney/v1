@@ -11,7 +11,7 @@ contract Origins_constructor is Origins_Unit_Shared {
         Origins org = Origins(payable(_registerDefaultOrigins()));
 
         assertEq(address(org._asset()), address(usdo));
-        assertEq(address(org._collateral()), address(mainToken));
+        assertEq(address(org.collateral()), address(mainToken));
         assertEq(address(org._oracle()), address(oracle));
         assertEq(org._collateralizationRate(), 90000);
         assertEq(org._exchangeRatePrecision(), 1 ether);

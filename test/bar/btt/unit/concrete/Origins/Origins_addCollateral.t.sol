@@ -26,8 +26,8 @@ contract Origins_addCollateral is Origins_Unit_Shared {
         Origins org = Origins(payable(_registerDefaultOrigins()));
 
         uint256 amount = 1 ether;
-        deal(address(org._collateral()), address(this), amount);
-        mainToken.approve(type(uint256).max);
+        deal(address(org.collateral()), address(this), amount);
+        mainToken.approve(address(org), type(uint256).max);
 
         uint256 share = org.convertToShares(amount);
         org.deposit(amount, address(this));

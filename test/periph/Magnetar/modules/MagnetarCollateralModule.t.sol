@@ -180,7 +180,6 @@ abstract contract MagnetarCollateralModuleTest is MagnetarTestHelper {
         vm.stopPrank();
 
         // check balances
-        assertGt(0, 0);
     }
 
     function test_depositRepayAndRemoveCollateralFromMarket_deposit_and_repay() public {
@@ -191,7 +190,7 @@ abstract contract MagnetarCollateralModuleTest is MagnetarTestHelper {
         // ---- add collateral
         // ---- borrow
         deal(address(assetA), address(this), tokenAmount_ * 2);
-        depositAsset(assetA, assetAId, sgl, tokenAmount_ * 2);
+        depositAsset(assetA, sgl, tokenAmount_ * 2);
         deal(address(collateralA), address(this), tokenAmount_ * 10);
         depositCollateral(collateralA, collateralAId, sgl, tokenAmount_ * 10);
         borrow(sgl, tokenAmount_, false);
@@ -235,7 +234,7 @@ abstract contract MagnetarCollateralModuleTest is MagnetarTestHelper {
         // ---- add collateral
         // ---- borrow
         deal(address(assetA), address(this), tokenAmount_ * 2);
-        depositAsset(assetA, assetAId, sgl, tokenAmount_ * 2);
+        depositAsset(assetA, sgl, tokenAmount_ * 2);
         deal(address(collateralA), address(this), tokenAmount_ * 10);
         depositCollateral(collateralA, collateralAId, sgl, tokenAmount_ * 10);
         borrow(sgl, tokenAmount_, false);
@@ -277,7 +276,7 @@ abstract contract MagnetarCollateralModuleTest is MagnetarTestHelper {
         // ---- add collateral
         // ---- borrow
         deal(address(assetA), address(this), tokenAmount_ * 2);
-        depositAsset(assetA, assetAId, sgl, tokenAmount_ * 2);
+        depositAsset(assetA, sgl, tokenAmount_ * 2);
         deal(address(collateralA), address(this), tokenAmount_ * 10);
         depositCollateral(collateralA, collateralAId, sgl, tokenAmount_ * 10);
         borrow(sgl, tokenAmount_, false);
@@ -319,7 +318,7 @@ abstract contract MagnetarCollateralModuleTest is MagnetarTestHelper {
         // ---- add collateral
         // ---- borrow
         deal(address(assetA), address(this), tokenAmount_ * 2);
-        depositAsset(assetA, assetAId, sgl, tokenAmount_ * 2);
+        depositAsset(assetA, sgl, tokenAmount_ * 2);
         deal(address(collateralA), address(this), tokenAmount_ * 10);
         depositCollateral(collateralA, collateralAId, sgl, tokenAmount_ * 10);
         borrow(sgl, tokenAmount_, false);
@@ -376,7 +375,7 @@ abstract contract MagnetarCollateralModuleTest is MagnetarTestHelper {
         // ---- add collateral
         // ---- borrow
         deal(address(assetA), address(this), tokenAmount_ * 2);
-        depositAsset(assetA, assetAId, sgl, tokenAmount_ * 2);
+        depositAsset(assetA, sgl, tokenAmount_ * 2);
         deal(address(collateralA), address(this), tokenAmount_ * 10);
         depositCollateral(collateralA, collateralAId, sgl, tokenAmount_ * 10);
         borrow(sgl, tokenAmount_, false);
@@ -572,7 +571,7 @@ abstract contract MagnetarCollateralModuleTest is MagnetarTestHelper {
             deal(address(collateralA), address(this), tokenAmount_);
             deal(address(assetA), address(this), tokenAmount_);
 
-            depositAsset(assetA, assetAId, sgl, tokenAmount_);
+            depositAsset(assetA, sgl, tokenAmount_);
         }
 
         DepositAddCollateralAndBorrowFromMarketData memory _params = _createDepositAddCollateralAndBorrowFromMarketData(
@@ -611,7 +610,7 @@ abstract contract MagnetarCollateralModuleTest is MagnetarTestHelper {
             deal(address(collateralA), address(this), tokenAmount_);
             deal(address(assetA), address(this), tokenAmount_);
 
-            depositAsset(assetA, assetAId, sgl, tokenAmount_);
+            depositAsset(assetA, sgl, tokenAmount_);
         }
 
         DepositAddCollateralAndBorrowFromMarketData memory _params = _createDepositAddCollateralAndBorrowFromMarketData(

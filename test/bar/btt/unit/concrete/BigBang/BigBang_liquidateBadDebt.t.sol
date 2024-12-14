@@ -162,10 +162,10 @@ contract BigBang_liquidateBadDebt is BigBang_Unit_Shared {
 
         // compute asset amount
         SZeroXSwapData memory szeroXSwapData = SZeroXSwapData({
-            sellToken: TOFTMock_test(payable(mainBB._collateral())).erc20(),
-            buyToken: mainBB._asset(),
+            sellToken: TOFTMock_test(payable(mainBB.collateral())).erc20(),
+            buyToken: address(mainBB._asset()),
             swapTarget: payable(swapperTarget),
-            swapCallData: abi.encodeWithSelector(ZeroXSwapperMockTarget_test.transferTokens.selector, mainBB._asset(), 0)
+            swapCallData: abi.encodeWithSelector(ZeroXSwapperMockTarget_test.transferTokens.selector, address(mainBB._asset()), 0)
         });
         SSwapData memory sswapData = SSwapData({minAmountOut: 0, data: szeroXSwapData});
         bytes memory swapData = abi.encode(sswapData);

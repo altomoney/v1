@@ -138,7 +138,7 @@ contract BigBang_addCollateral is BigBang_Unit_Shared {
         _approveForCollateral(address(this));
 
         // deposit to market
-        mainBB.deposit(collateralAmount, address(this), address(this));
+        mainBB.deposit(collateralAmount, address(this));
 
         (Module[] memory modules, bytes[] memory calls) =
             _getCollateralData(collateralAmount, address(this), address(this), false);

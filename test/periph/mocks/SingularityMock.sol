@@ -101,7 +101,7 @@ contract SingularityMock is EIP712 {
         _userCollateralShare[to] += share;
         _totalCollateralShare = oldTotalCollateralShare + share;
 
-        _addTokens(from, to, _collateral, share, oldTotalCollateralShare, skim);
+        _addTokens(from, to, address(_collateral), share, oldTotalCollateralShare, skim);
     }
 
     function removeCollateral(address, address to, uint256 share) external {}

@@ -659,10 +659,10 @@ abstract contract BigBang_Unit_Shared is Markets_Unit_Shared {
         // compute asset amount
         SZeroXSwapData memory szeroXSwapData = SZeroXSwapData({
             sellToken: TOFTMock_test(payable(IMarket(address(bb))._collateral())).erc20(),
-            buyToken: IMarket(address(bb))._asset(),
+            buyToken: address(IMarket(address(bb))._asset()),
             swapTarget: payable(swapperTarget),
             swapCallData: abi.encodeWithSelector(
-                ZeroXSwapperMockTarget_test.transferTokens.selector, IMarket(address(bb))._asset(), swapAmount
+                ZeroXSwapperMockTarget_test.transferTokens.selector, address(IMarket(address(bb))._asset()), swapAmount
             )
         });
         SSwapData memory sswapData = SSwapData({minAmountOut: 0, data: szeroXSwapData});
@@ -766,10 +766,10 @@ abstract contract BigBang_Unit_Shared is Markets_Unit_Shared {
 
             SZeroXSwapData memory szeroXSwapData = SZeroXSwapData({
                 sellToken: TOFTMock_test(payable(IMarket(address(bb))._collateral())).erc20(),
-                buyToken: IMarket(address(bb))._asset(),
+                buyToken: address(IMarket(address(bb))._asset()),
                 swapTarget: payable(swapperTarget),
                 swapCallData: abi.encodeWithSelector(
-                    ZeroXSwapperMockTarget_test.transferTokens.selector, IMarket(address(bb))._asset(), inAssetAmount
+                    ZeroXSwapperMockTarget_test.transferTokens.selector, address(IMarket(address(bb))._asset()), inAssetAmount
                 )
             });
             SSwapData memory sswapData = SSwapData({minAmountOut: 0, data: szeroXSwapData});

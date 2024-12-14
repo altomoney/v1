@@ -95,7 +95,6 @@ struct TestSingularityData {
 struct TestBigBangData {
     address penrose;
     address collateral;
-    uint256 collateralId;
     ITapiocaOracle oracle;
     ILeverageExecutor leverageExecutor;
     uint256 debtRateAgainstEth;
@@ -182,7 +181,7 @@ contract MagnetarTestHelper is TestHelper {
         magnetarB.setHelper(address(magnetarHelper));
         sglInit = new SGLInit();
         (penrose, sglMC, bbMC) =
-            createPenrose(address(clusterA), address(tap), address(weth), tapId, wethId, address(this));
+            createPenrose(address(clusterA), address(tap), address(weth), address(this));
 
         // crete USDO
         TapiocaOmnichainExtExec extExec = new TapiocaOmnichainExtExec();
@@ -196,9 +195,7 @@ contract MagnetarTestHelper is TestHelper {
             TestSingularityData(
                 address(penrose),
                 address(assetA),
-                assetAId,
                 address(collateralA),
-                collateralAId,
                 ITapiocaOracle(address(oracle)),
                 ILeverageExecutor(address(0))
             ),
@@ -208,7 +205,6 @@ contract MagnetarTestHelper is TestHelper {
             TestBigBangData(
                 address(penrose),
                 address(collateralA),
-                collateralAId,
                 ITapiocaOracle(address(oracle)),
                 ILeverageExecutor(address(0)),
                 0,
@@ -240,7 +236,6 @@ contract MagnetarTestHelper is TestHelper {
         clusterA.updateContract(bEid, address(assetB), true);
         clusterA.updateContract(bEid, address(collateralB), true);
         clusterA.updateContract(0, address(penrose), true);
-        clusterA.updateContract(0, true);
         clusterA.updateContract(0, address(sgl), true);
         clusterA.updateContract(0, address(bb), true);
 
@@ -254,7 +249,6 @@ contract MagnetarTestHelper is TestHelper {
         clusterB.updateContract(aEid, address(assetA), true);
         clusterB.updateContract(aEid, address(collateralA), true);
         clusterB.updateContract(0, address(penrose), true);
-        clusterB.updateContract(0, true);
         clusterB.updateContract(0, address(sgl), true);
         clusterB.updateContract(0, address(bb), true);
 
@@ -372,12 +366,10 @@ contract MagnetarTestHelper is TestHelper {
         address _cluster,
         address tapToken_,
         address mainToken_,
-        uint256 tapTokenId_,
-        uint256 mainTokenId_,
         address owner
     ) public returns (Penrose penrose, Singularity mediumRiskMC, BigBang bbMediumRiskMC) {
         penrose =
-            new Penrose(ICluster(_cluster), IERC20(tapToken_), IERC20(mainToken_), tapTokenId_, mainTokenId_, owner);
+            new Penrose(ICluster(_cluster), IERC20(tapToken_), IERC20(mainToken_), owner);
         mediumRiskMC = new Singularity();
         bbMediumRiskMC = new BigBang();
 
@@ -486,7 +478,6 @@ contract MagnetarTestHelper is TestHelper {
         data = BigBang._InitMemoryData(
             IPenrose(_bb.penrose),
             IERC20(_bb.collateral),
-            _bb.collateralId,
             ITapiocaOracle(address(_bb.oracle)),
             0,
             75000,

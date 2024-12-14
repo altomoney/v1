@@ -49,7 +49,7 @@ interface ISingularity is IMarket {
 
     function liquidationQueue() external view returns (address payable);
 
-    function computeAllowedLendShare(uint256 amount, uint256 tokenId) external view returns (uint256 share);
+    function computeAllowedLendShare(uint256 amount) external view returns (uint256 share);
 
     function getInterestDetails() external view returns (AccrueInfo memory _accrueInfo, uint256 utilization);
 

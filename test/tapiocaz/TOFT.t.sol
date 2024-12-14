@@ -271,17 +271,14 @@ contract TOFTTest is TOFTTestHelper, TapiocaZProcedures {
 
         marketHelper = new MarketHelperMock();
         vm.startPrank(report.tapiocaMulticall);
-        cluster.updateContract(aEid, true);
         cluster.updateContract(aEid, address(singularity), true);
         cluster.updateContract(aEid, address(magnetar), true);
         cluster.updateContract(aEid, address(tOB), true);
         cluster.updateContract(aEid, address(marketHelper), true);
-        cluster.updateContract(bEid, true);
         cluster.updateContract(bEid, address(singularity), true);
         cluster.updateContract(bEid, address(magnetar), true);
         cluster.updateContract(bEid, address(tOB), true);
         cluster.updateContract(bEid, address(marketHelper), true);
-        cluster.updateContract(0, true);
         cluster.updateContract(0, address(singularity), true);
         cluster.updateContract(0, address(magnetar), true);
         cluster.updateContract(0, address(tOB), true);

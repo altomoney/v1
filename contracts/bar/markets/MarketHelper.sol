@@ -137,9 +137,8 @@ contract MarketHelper {
 
     /// @notice transforms amount to shares for a market's permit operation
     /// @param amount the amount to transform
-    /// @param tokenId the
     /// @return share amount transformed into shares
-    function computeAllowedLendShare(address sglAddress, uint256 amount, uint256 tokenId)
+    function computeAllowedLendShare(address sglAddress, uint256 amount)
         external
         view
         returns (uint256 share)

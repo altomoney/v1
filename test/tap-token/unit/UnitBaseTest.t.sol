@@ -223,7 +223,7 @@ contract UnitBaseTest is TestHelper {
     }
 
     // -------  Bar
-    function createPenrose(address _yb, address _cluster, address _tap, address _mainToken, address _owner)
+    function createPenrose(address _cluster, address _tap, address _mainToken, address _owner)
         internal
         returns (Penrose _penrose, BigBang bbMasterContract, Singularity sglMasterContract)
     {
@@ -234,14 +234,13 @@ contract UnitBaseTest is TestHelper {
         vm.startPrank(adminAddr);
         _penrose.registerBigBangMasterContract(address(bbMasterContract), IPenrose.ContractType.mediumRisk);
         _penrose.registerSingularityMasterContract(address(sglMasterContract), IPenrose.ContractType.mediumRisk);
-        _penrose.setUsdoToken(address(usdoMock), usdoMockTokenId);
+        _penrose.setUsdoToken(address(usdoMock));
         vm.stopPrank();
     }
 
     struct BigBangInitData {
         address penrose;
         address collateral;
-        uint256 collateralId;
         ITapiocaOracle oracle;
         ILeverageExecutor leverageExecutor;
         uint256 debtRateAgainstEth;
@@ -291,7 +290,6 @@ contract UnitBaseTest is TestHelper {
         data = BigBang._InitMemoryData(
             IPenrose(_bbInitData.penrose),
             BoringIERC20(_bbInitData.collateral),
-            _bbInitData.collateralId,
             ITapiocaOracle(address(_bbInitData.oracle)),
             0,
             75000,
@@ -309,9 +307,7 @@ contract UnitBaseTest is TestHelper {
     struct SingularityInitData {
         address penrose;
         BoringIERC20 asset;
-        uint256 assetId;
         BoringIERC20 collateral;
-        uint256 collateralId;
         ITapiocaOracle oracle;
         ILeverageExecutor leverageExecutor;
     }
@@ -372,9 +368,7 @@ contract UnitBaseTest is TestHelper {
             address(sglLiq), address(sglBorrow), address(sglCollateral), address(sglLev)
         );
 
-        tokensData = Singularity._InitMemoryTokensData(
-            _sglInitData.asset, _sglInitData.assetId, _sglInitData.collateral, _sglInitData.collateralId
-        );
+        tokensData = Singularity._InitMemoryTokensData(_sglInitData.asset, _sglInitData.collateral);
 
         data = Singularity._InitMemoryData(
             IPenrose(_sglInitData.penrose),
@@ -402,7 +396,6 @@ contract UnitBaseTest is TestHelper {
             BigBangInitData({
                 penrose: address(penrose),
                 collateral: ethTokenPenrose,
-                collateralId: ethTokenPenroseId,
                 oracle: bigBangEthOracle,
                 leverageExecutor: ILeverageExecutor(address(leverageExecutor)),
                 debtRateAgainstEth: 0,
@@ -467,9 +460,7 @@ contract UnitBaseTest is TestHelper {
             SingularityInitData({
                 penrose: address(penrose),
                 asset: BoringIERC20(address(usdoMock)),
-                assetId: usdoMockTokenId,
                 collateral: BoringIERC20(ethTokenPenrose),
-                collateralId: ethTokenPenroseId,
                 oracle: bigBangEthOracle,
                 leverageExecutor: ILeverageExecutor(address(leverageExecutor))
             }),

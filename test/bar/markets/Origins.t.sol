@@ -114,7 +114,6 @@ contract OriginsTest is UsdoTestHelper {
 
             vm.label(address(endpoints[aEid]), "aEndpoint");
             vm.label(address(endpoints[bEid]), "bEndpoint");
-            vm.label("YieldBox");
             vm.label(address(cluster), "Cluster");
             vm.label(address(magnetar), "Magnetar");
         }
@@ -123,9 +122,7 @@ contract OriginsTest is UsdoTestHelper {
         origins = createOrigins(
             address(this),
             address(asset),
-            assetYieldBoxId,
             address(collateral),
-            collateralYieldBoxId,
             ITapiocaOracle(address(oracle)),
             0,
             99999,
@@ -139,12 +136,10 @@ contract OriginsTest is UsdoTestHelper {
 
     function depositAsset(uint256 amount) public {
         deal(address(asset), address(this), amount);
-        asset.approve(type(uint256).max);
     }
 
     function depositCollateral(uint256 amount) public {
         deal(address(collateral), address(this), amount);
-        collateral.approve(type(uint256).max);
 
         uint256 share = origins.convertToShares(amount);
         origins.deposit(amount, address(this));
@@ -278,7 +273,6 @@ contract OriginsTest is UsdoTestHelper {
         uint256 collateralAmount = 1 ether;
 
         deal(address(collateral), address(this), collateralAmount);
-        collateral.approve(type(uint256).max);
 
         uint256 share = origins.convertToShares(collateralAmount);
         // TODO review it yieldBox.depositAsset(collateralYieldBoxId, address(this), address(this), 0, share);

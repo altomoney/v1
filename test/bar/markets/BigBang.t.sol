@@ -119,7 +119,6 @@ contract BigBangTest is UsdoTestHelper {
 
             vm.label(address(endpoints[aEid]), "aEndpoint");
             vm.label(address(endpoints[bEid]), "bEndpoint");
-            vm.label("YieldBox");
             vm.label(address(cluster), "Cluster");
             vm.label(address(magnetar), "Magnetar");
             vm.label(address(twTap), "TwTapMock");
@@ -148,7 +147,7 @@ contract BigBangTest is UsdoTestHelper {
             address(masterContract)
         );
         vm.label(address(bigBang), "BigBang");
-        swapper = createSwapper(IMarket(address(bigBang)));
+        swapper = createSwapper(address(bigBang));
 
         // set asset oracle
         address[] memory markets = new address[](1);
@@ -166,7 +165,6 @@ contract BigBangTest is UsdoTestHelper {
 
     function depositAsset(uint256 amount) public {
         deal(address(asset), address(this), amount);
-        asset.approve(type(uint256).max);
         // asset.approve(address(pearl mit), type(uint256).max);
         // pearl mit.approve(
         //     1155,  assetYieldBoxId, address(bigBang), type(uint200).max, uint48(block.timestamp)
@@ -678,7 +676,6 @@ contract BigBangTest is UsdoTestHelper {
         assertGt(borrowPart, 0);
 
         vm.startPrank(userA);
-        asset.approve(type(uint256).max);
         // pearl mit.approve(
         //     1155,  assetYieldBoxId, address(bigBang), type(uint200).max, uint48(block.timestamp)
         // );

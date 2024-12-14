@@ -52,7 +52,7 @@ contract Origins_removeCollateral is Origins_Unit_Shared {
 
     function _addCollateral(Origins org) private {
         uint256 amount = 1 ether;
-        deal(address(org._collateral()), address(this), amount);
+        deal(address(org.collateral()), address(this), amount);
         uint256 share = org.convertToShares(amount);
 
         org.deposit(amount, address(this));

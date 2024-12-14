@@ -49,7 +49,7 @@ abstract contract MagnetarOptionModuleTest is MagnetarTestHelper, IERC721Receive
 
         TapOftMock tapOft = new TapOftMock();
         ERC721Mock oTAP = new ERC721Mock();
-        tOB = new TapiocaOptionBroker(address(oTAP), address(tapOft));
+        // TODO Review it tOB = new TapiocaOptionBroker(address(oTAP), address(tapOft));
 
         clusterA.updateContract(0, address(tOB), true);
     }
@@ -418,7 +418,7 @@ abstract contract MagnetarOptionModuleTest is MagnetarTestHelper, IERC721Receive
             call: exitPositionAndRemoveCollateraleData
         });
 
-        address _collateral = bb._collateral();
+        address _collateral = bb.collateral();
         uint256 balanceBefore = ERC20Mock(_collateral).balanceOf(address(this));
         uint256 collateralShareBefore = bb.balanceOf(address(this));
         magnetarA.burst{value: 0}(calls);
@@ -462,7 +462,7 @@ abstract contract MagnetarOptionModuleTest is MagnetarTestHelper, IERC721Receive
             call: exitPositionAndRemoveCollateraleData
         });
 
-        address _collateral = bb._collateral();
+        address _collateral = bb.collateral();
         uint256 balanceBefore = ERC20Mock(_collateral).balanceOf(address(this));
         uint256 collateralShareBefore = bb.balanceOf(address(this));
         magnetarA.burst{value: 0}(calls);

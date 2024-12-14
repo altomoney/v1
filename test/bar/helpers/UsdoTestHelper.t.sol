@@ -77,15 +77,15 @@ contract UsdoTestHelper is TestHelper, TestUtils {
         return new Cluster(hostEid, owner);
     }
 
-    function createSwapper(IMarket _market) public returns (SwapperMock) {
-        return new SwapperMock(address(_market));
+    function createSwapper(address _market) public returns (SwapperMock) {
+        return new SwapperMock(_market);
     }
 
     function createOracle() public returns (OracleMock) {
         return new OracleMock("Oracle Test", "ORCT", 1 ether);
     }
 
-    function createLeverageExecutor(address, address _swapper, address _cluster)
+    function createLeverageExecutor(address _swapper, address _cluster)
         public
         returns (SimpleLeverageExecutor)
     {

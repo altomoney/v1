@@ -46,7 +46,7 @@ abstract contract Market is MarketERC4626, Ownable {
 
     /// @notice asset token address
     /// @dev This is the borrowable token
-    IERC20 internal _asset;
+    IERC20 public _asset; // TODO IMPORTANT Modify it
     /// @notice oracle address
     ITapiocaOracle internal oracle;
     /// @notice oracleData
