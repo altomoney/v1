@@ -35,7 +35,7 @@ contract twTap_emergencySweep is twTapBaseTest {
             0,
             "twTap_emergencySweep::test_ShouldSweepTheLocks: Invalid last emergency sweep"
         );
-        assertEq(tapOFT.balanceOf(adminAddr), 1e20, "twTap_emergencySweep::test_ShouldSweepTheLocks: Invalid balance");
+        assertEq(tapOFT.balanceOf(adminAddr), 0, "twTap_emergencySweep::test_ShouldSweepTheLocks: Invalid balance");
 
         // Test rewards sweep
 

@@ -134,25 +134,34 @@ contract OriginsTest is UsdoTestHelper {
         penrose.addOriginsMarket(address(origins));
     }
 
-    function depositAsset(uint256 amount) public {
-        deal(address(asset), address(this), amount);
+    function depositAsset(address user, uint256 amount) public {
+        // TODO Check if this is needed
+        deal(address(asset), user, amount);
     }
 
-    function depositCollateral(uint256 amount) public {
-        deal(address(collateral), address(this), amount);
-
-        uint256 share = origins.convertToShares(amount);
-        origins.deposit(amount, address(this));
-        origins.addCollateral(0, share);
+    function depositCollateral(address user, uint256 amount) public returns (uint256) {
+        deal(address(collateral), user, amount);
+        vm.startPrank(user);
+        IERC20 _asset = IERC20(origins.collateral());
+        _asset.approve(address(origins), amount);
+        uint256 share = origins.deposit(amount, address(this));
+        vm.stopPrank();
+        return share;
     }
 
-    function borrow(uint256 amount, bool expectRevert) public {
+    function borrow(address user, uint256 amount, bool expectRevert) public returns (uint256 part, uint256 share) {
+        vm.startPrank(user);
         if (expectRevert) vm.expectRevert();
-        origins.borrow(amount);
+        (part, share) = origins.borrow(amount);
+        vm.stopPrank();
     }
 
-    function repay(uint256 part) public {
+    function repay(address user, uint256 part) public {
+        IERC20 _asset = IERC20(origins._asset());
+        vm.startPrank(user);
+        _asset.approve(address(origins), part);
         origins.repay(part);
+        vm.stopPrank();
     }
 
     function test_setMarketConfig() public {
@@ -217,9 +226,9 @@ contract OriginsTest is UsdoTestHelper {
 
         deal(address(collateral), address(this), collateralAmount);
 
-        depositCollateral(collateralAmount);
+        depositCollateral(address(this), collateralAmount);
 
-        borrow(borrowAmount, false);
+        borrow(address(this),borrowAmount, false);
     }
 
     function test_origin_should_borrow_max_2000_ether() public {
@@ -231,11 +240,11 @@ contract OriginsTest is UsdoTestHelper {
 
         deal(address(collateral), address(this), collateralAmount);
 
-        depositCollateral(collateralAmount);
+        depositCollateral(address(this), collateralAmount);
 
-        borrow(borrowAmount, false);
+        borrow(address(this), borrowAmount, false);
 
-        borrow(100e18, true);
+        borrow(address(this), 100e18, true);
     }
 
     function test_should_borrow_without_lenders() public {
@@ -244,9 +253,9 @@ contract OriginsTest is UsdoTestHelper {
 
         deal(address(collateral), address(this), collateralAmount);
 
-        depositCollateral(collateralAmount);
+        depositCollateral(address(this), collateralAmount);
 
-        borrow(borrowAmount, false);
+        borrow(address(this), borrowAmount, false);
     }
 
     function test_should_borrow_and_repay() public {
@@ -256,13 +265,13 @@ contract OriginsTest is UsdoTestHelper {
         deal(address(asset), address(this), borrowAmount);
         deal(address(collateral), address(this), collateralAmount);
 
-        depositCollateral(collateralAmount);
+        depositCollateral(address(this), collateralAmount);
 
-        borrow(borrowAmount, false);
+        borrow(address(this), borrowAmount, false);
 
-        depositAsset(borrowAmount);
+        // depositAsset(address(this), borrowAmount);
 
-        repay(borrowAmount);
+        repay(address(this), borrowAmount);
 
         uint256 borrowPart = origins._userBorrowPart(address(this));
         assertEq(borrowPart, 0);
@@ -286,23 +295,23 @@ contract OriginsTest is UsdoTestHelper {
     function test_time_updates() public {
         uint256 collateralAmount = 1 ether;
         uint256 borrowAmount = 5e17;
+        address user = address(this);
+        uint256 part;
+        uint256 share;
 
-        deal(address(asset), address(this), borrowAmount);
-        deal(address(collateral), address(this), collateralAmount);
+        deal(address(collateral), user, collateralAmount);
 
-        depositCollateral(collateralAmount);
+        share = depositCollateral(user, collateralAmount);
 
-        borrow(borrowAmount, false);
+        (part, share) = borrow(user, borrowAmount, false);
 
         skip(86400 * 1000);
 
-        uint256 borrowPart = origins._userBorrowPart(address(this));
+        uint256 borrowPart = origins._userBorrowPart(user);
         assertEq(borrowPart, borrowAmount);
 
-        depositAsset(borrowAmount);
-
-        repay(borrowAmount);
-        borrowPart = origins._userBorrowPart(address(this));
+        repay(user, borrowAmount);
+        borrowPart = origins._userBorrowPart(user);
         assertEq(borrowPart, 0);
     }
 }

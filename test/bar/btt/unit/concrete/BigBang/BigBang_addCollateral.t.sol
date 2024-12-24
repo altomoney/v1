@@ -114,14 +114,14 @@ contract BigBang_addCollateral is BigBang_Unit_Shared {
         // **** Main BB market ****
         // already does the necessary checks
         for (uint256 i; i < iterations; i++) {
-            _addCollateral(collateralAmount, mainBB, address(this), address(this), address(mainBB), address(this), true);
+            _addCollateral(collateralAmount, mainBB, address(this), address(this), address(mainBB), address(this), false);
         }
 
         // **** Secondary BB market ****
         // already does the necessary checks
         for (uint256 i; i < iterations; i++) {
             _addCollateral(
-                collateralAmount, secondaryBB, address(this), address(this), address(secondaryBB), address(this), true
+                collateralAmount, secondaryBB, address(this), address(this), address(secondaryBB), address(this), false
             );
         }
     }
@@ -133,9 +133,6 @@ contract BigBang_addCollateral is BigBang_Unit_Shared {
     {
         // deal collateral
         _spawnCollateral(collateralAmount, address(this));
-
-        // approvals
-        _approveForCollateral(address(this));
 
         // deposit to market
         mainBB.deposit(collateralAmount, address(this));

@@ -378,6 +378,11 @@ abstract contract Market is MarketERC4626, Ownable {
         return IERC20(_asset);
     }
 
+    // TODO Important modify this.
+    function borrowableToken() public view returns (address) {
+        return address(_asset);
+    }
+
     // ************************** //
     // *** INTERNAL FUNCTIONS *** //
     // ************************** //
