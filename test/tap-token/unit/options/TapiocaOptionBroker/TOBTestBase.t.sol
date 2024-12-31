@@ -27,6 +27,7 @@ import {Events} from "test/bar/btt/utils/Events.sol";
 import {MarketHelper} from "tapioca-bar/markets/MarketHelper.sol";
 import {Utils} from "test/bar/btt/utils/Utils.sol";
 import {Usdo} from "tapioca-bar/usdo/Usdo.sol";
+import "forge-std/console.sol";
 
 contract TOBTestBase is Test, Events, Utils {
     using RebaseLibrary for Rebase;
@@ -124,6 +125,14 @@ contract TOBTestBase is Test, Events, Utils {
         (bigBangInstance, sWETH_bigBang_id) = createBigBangMarket(address(sWETH));
         bigBang = address(bigBangInstance);
         marketHelper = MarketHelper(report.marketHelper);
+
+        vm.startPrank(tapToken.owner());
+        tapToken.setMinter(address(tob));
+        vm.stopPrank();
+
+        vm.startPrank(tob.owner());
+        tob.enableTapTokenRewards();
+        vm.stopPrank();
     }
 
     function _mintTapToken(address to, uint256 amount) internal {
@@ -151,7 +160,7 @@ contract TOBTestBase is Test, Events, Utils {
         input.lzChainId = 0;
         input.wrappedNativeToken = address(new ERC20Mock("A", "A"));
 
-        input.lzEndpoint = address(new LZEndpointMock(1));
+        input.lzEndpoint = address(new LZEndpointMock(uint16(block.chainid)));
         input.zeroXSwapper = address(1);
 
         tapToken = new TapToken(
@@ -164,7 +173,7 @@ contract TOBTestBase is Test, Events, Utils {
                 lbp,
                 dao,
                 airdrop,
-                0,
+                block.chainid,
                 owner,
                 address(new TapTokenSender("", "", input.lzEndpoint, owner, address(0))),
                 address(new TapTokenReceiver("", "", input.lzEndpoint, owner, address(0))),
@@ -307,13 +316,13 @@ contract TOBTestBase is Test, Events, Utils {
         // get `before` state
         uint256 bbBalanceBefore = IERC20(bb.collateral()).balanceOf(address(bb));
         uint256 userBalanceBefore = IERC20(bb.collateral()).balanceOf(address(onBehalfOf));
-        uint256 userCollateralBefore = bb.balanceOf(onBehalfOf);
+        uint256 userCollateralBefore = bb.balanceOf(depositTo);
         uint256 totalCollateralShareBefore = bb._totalCollateralShare();
 
         {
             vm.startPrank(from);
             // deposit to bigbang market
-            bb.deposit(collateralAmount, from);
+            share = bb.deposit(collateralAmount, depositTo);
             vm.stopPrank();
         }
 
@@ -356,6 +365,7 @@ contract TOBTestBase is Test, Events, Utils {
         uint256 feeAmount = bb.computeVariableOpeningFee(borrowAmount);
         (Module[] memory modules, bytes[] memory calls) = _getBorrowData(borrowAmount, from, to);
 
+        console.log(address(bb._asset()));
         // it should emit LogBorrow
         vm.expectEmit(true, true, true, false);
         emit LogBorrow(from, to, borrowAmount, feeAmount, borrowAmount + feeAmount);

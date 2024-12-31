@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.18;
 
-import {TOBTestBase} from "../TOBTestBase.t.sol";
+import {TOBTestBase, ITapiocaOptionBroker} from "../TOBTestBase.t.sol";
 import {Test, stdError, StdStorage, stdStorage} from "forge-std/Test.sol";
 
 contract TapiocaOptionBrokerExerciseOptionTest is TOBTestBase {
@@ -80,7 +80,7 @@ contract TapiocaOptionBrokerExerciseOptionTest is TOBTestBase {
         _setupValidPosition();
 
         vm.startPrank(testUser);
-        vm.expectRevert("AmountTooHigh()");
+        vm.expectRevert(ITapiocaOptionBroker.TooHigh.selector);
         tob.exerciseOption(0, address(paymentToken), lockAmount + 1);
         vm.stopPrank();
     }

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.18;
 
-import {TOBTestBase} from "../TOBTestBase.t.sol";
+import {TOBTestBase, ITapiocaOptionBroker} from "../TOBTestBase.t.sol";
 
 contract TapiocaOptionBrokerCanLockWithDebtTest is TOBTestBase {
     address testUser;
@@ -29,7 +29,7 @@ contract TapiocaOptionBrokerCanLockWithDebtTest is TOBTestBase {
 
     function test_revertWhen_clusterNotSet() public {
         vm.startPrank(owner);
-        vm.expectRevert(bytes("NotValid"));
+        vm.expectRevert(ITapiocaOptionBroker.NotValid.selector);
         tob.setCluster(address(0));
         vm.stopPrank();
     }

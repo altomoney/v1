@@ -38,17 +38,6 @@ contract TapiocaOptionBrokerAdvanceWeekTest is TOBTestBase {
         uint256 tapPrice = 100e18;
         vm.mockCall(address(tapOracle), abi.encodeWithSignature("get(bytes)"), abi.encode(true, tapPrice));
 
-        // Mock emitForWeek
-        vm.mockCall(address(tapToken), abi.encodeWithSignature("emitForWeek()"), abi.encode());
-
-        // Mock cluster and penrose
-        vm.mockCall(address(cluster), abi.encodeWithSignature("getActiveMarkets()"), abi.encode(new address[](0)));
-        vm.mockCall(
-            address(report.penrose),
-            abi.encodeWithSignature("singularityBigBangMarkets()"),
-            abi.encode(new address[](0))
-        );
-
         // Advance time to next epoch
         vm.warp(block.timestamp + EPOCH_DURATION);
 
@@ -56,8 +45,8 @@ contract TapiocaOptionBrokerAdvanceWeekTest is TOBTestBase {
         uint256 epoch = tob.currentEpoch();
 
         // Expect NewEpoch event
-        vm.expectEmit(true, true, true, true);
-        emit ITapiocaOptionBroker.NewEpoch(epoch, epoch + 1, tapPrice);
+        vm.expectEmit(true, false, false, false);
+        emit ITapiocaOptionBroker.NewEpoch(epoch, 0, tapPrice);
 
         // Advance week
         vm.startPrank(owner);

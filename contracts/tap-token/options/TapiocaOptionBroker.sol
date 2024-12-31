@@ -302,7 +302,7 @@ contract TapiocaOptionBroker is ITapiocaOptionBroker, Pausable, Ownable, FullMat
         mintedUsdoAmount = _getTotalBigBangDebtInUSDO(user);
 
         maxLockAmount = mintedUsdoAmount + (mintedUsdoAmount * _maxDebtBuffer) / 1e4; // total debt + buffer
-        if (amountToLock + _totalLockedUsdo[user] > maxLockAmount) {
+        if (amountToLock + _totalLockedUsdo[user] >= maxLockAmount) {
             return (false, maxLockAmount, mintedUsdoAmount);
         }
         return (true, maxLockAmount, mintedUsdoAmount);
@@ -512,6 +512,10 @@ contract TapiocaOptionBroker is ITapiocaOptionBroker, Pausable, Ownable, FullMat
     function setEmergencySweepCooldown(uint256 _emergencySweepCooldown) external onlyOwner {
         _emergencySweepCooldown = _emergencySweepCooldown;
         emit SetEmergencySweepCooldown(_emergencySweepCooldown);
+    }
+
+    function enableTapTokenRewards() external onlyOwner {
+        TAP_TOKEN.initEmissions();
     }
 
     /**
