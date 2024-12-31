@@ -138,11 +138,7 @@ contract MarketHelper {
     /// @notice transforms amount to shares for a market's permit operation
     /// @param amount the amount to transform
     /// @return share amount transformed into shares
-    function computeAllowedLendShare(address sglAddress, uint256 amount)
-        external
-        view
-        returns (uint256 share)
-    {
+    function computeAllowedLendShare(address sglAddress, uint256 amount) external view returns (uint256 share) {
         ISingularity sgl = ISingularity(sglAddress);
 
         (uint128 totalAssetElastic, uint128 totalAssetBase) = sgl.totalAsset();

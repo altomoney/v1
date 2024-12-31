@@ -1,17 +1,30 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.18;
 
-import {Test} from "forge-std/Test.sol";
+import {TOBTestBase} from "../TOBTestBase.t.sol";
 
-contract TapiocaOptionBroker_setPaymentTokenBeneficiarytree is Test {
-    function test_RevertWhen_CallerIsNotOwner() external {
-        // it should revert
-        vm.skip(true);
+contract TapiocaOptionBrokerSetPaymentTokenBeneficiaryTest is TOBTestBase {
+    function setUp() public override {
+        super.setUp();
     }
 
-    function test_WhenCallerIsOwner() external {
-        // it should set _paymentTokenBeneficiary
-        // it should emit SetPaymentTokenBeneficiary event
-        vm.skip(true);
+    function test_revertWhen_callerIsNotOwner() public {
+        address notOwner = makeAddr("notOwner");
+        vm.startPrank(notOwner);
+        vm.expectRevert("Ownable: caller is not the owner");
+        tob.setPaymentTokenBeneficiary(address(1));
+        vm.stopPrank();
+    }
+
+    function test_setPaymentTokenBeneficiary_validConditions() public {
+        address newBeneficiary = makeAddr("newBeneficiary");
+
+        // Set payment token beneficiary
+        vm.startPrank(owner);
+        tob.setPaymentTokenBeneficiary(newBeneficiary);
+        vm.stopPrank();
+
+        // Verify beneficiary updated
+        assertEq(tob._paymentTokenBeneficiary(), newBeneficiary, "Beneficiary should be updated");
     }
 }

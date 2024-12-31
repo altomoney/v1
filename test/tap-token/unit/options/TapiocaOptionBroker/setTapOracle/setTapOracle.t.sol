@@ -1,18 +1,33 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.18;
 
-import {Test} from "forge-std/Test.sol";
+import {TOBTestBase} from "../TOBTestBase.t.sol";
+import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
 
-contract TapiocaOptionBroker_setTapOracletree is Test {
-    function test_RevertWhen_CallerIsNotOwner() external {
-        // it should revert
-        vm.skip(true);
+contract TapiocaOptionBrokerSetTapOracleTest is TOBTestBase {
+    function setUp() public override {
+        super.setUp();
     }
 
-    function test_WhenCallerIsOwner() external {
-        // it should set _tapOracle
-        // it should set _tapOracleData
-        // it should emit SetTapOracle event
-        vm.skip(true);
+    function test_revertWhen_callerIsNotOwner() public {
+        address notOwner = makeAddr("notOwner");
+        vm.startPrank(notOwner);
+        vm.expectRevert("Ownable: caller is not the owner");
+        tob.setTapOracle(tapOracle, "");
+        vm.stopPrank();
+    }
+
+    function test_setTapOracle_validConditions() public {
+        address newOracle = makeAddr("newOracle");
+        bytes memory oracleData = "test_data";
+
+        // Set TAP oracle
+        vm.startPrank(owner);
+        tob.setTapOracle(newOracle, oracleData);
+        vm.stopPrank();
+
+        // Verify oracle updated
+        assertEq(address(tob._tapOracle()), newOracle, "Oracle should be updated");
+        assertEq(tob._tapOracleData(), oracleData, "Oracle data should be updated");
     }
 }

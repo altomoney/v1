@@ -203,9 +203,8 @@ contract TOFT_setters is OFT_Unit_Shared {
         mToft.setOwnerState(owState);
     }
 
-    function _wrap(uint256 amount)
-        private
-        // TODO Review it whenApprovedViaERC20(address(underlyingErc20), address(this), type(uint256).max)
+    function _wrap(uint256 amount) private 
+    // TODO Review it whenApprovedViaERC20(address(underlyingErc20), address(this), type(uint256).max)
     {
         deal(address(underlyingErc20), address(this), amount);
         mToft.wrap(address(this), address(this), amount);

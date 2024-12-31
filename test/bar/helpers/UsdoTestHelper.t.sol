@@ -85,10 +85,7 @@ contract UsdoTestHelper is TestHelper, TestUtils {
         return new OracleMock("Oracle Test", "ORCT", 1 ether);
     }
 
-    function createLeverageExecutor(address _swapper, address _cluster)
-        public
-        returns (SimpleLeverageExecutor)
-    {
+    function createLeverageExecutor(address _swapper, address _cluster) public returns (SimpleLeverageExecutor) {
         return new SimpleLeverageExecutor(IZeroXSwapper(_swapper), ICluster(_cluster), address(0));
     }
 

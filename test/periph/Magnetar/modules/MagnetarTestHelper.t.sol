@@ -180,8 +180,7 @@ contract MagnetarTestHelper is TestHelper {
         magnetarA.setHelper(address(magnetarHelper));
         magnetarB.setHelper(address(magnetarHelper));
         sglInit = new SGLInit();
-        (penrose, sglMC, bbMC) =
-            createPenrose(address(clusterA), address(tap), address(weth), address(this));
+        (penrose, sglMC, bbMC) = createPenrose(address(clusterA), address(tap), address(weth), address(this));
 
         // crete USDO
         TapiocaOmnichainExtExec extExec = new TapiocaOmnichainExtExec();
@@ -362,14 +361,11 @@ contract MagnetarTestHelper is TestHelper {
         );
     }
 
-    function createPenrose(
-        address _cluster,
-        address tapToken_,
-        address mainToken_,
-        address owner
-    ) public returns (Penrose penrose, Singularity mediumRiskMC, BigBang bbMediumRiskMC) {
-        penrose =
-            new Penrose(ICluster(_cluster), IERC20(tapToken_), IERC20(mainToken_), owner);
+    function createPenrose(address _cluster, address tapToken_, address mainToken_, address owner)
+        public
+        returns (Penrose penrose, Singularity mediumRiskMC, BigBang bbMediumRiskMC)
+    {
+        penrose = new Penrose(ICluster(_cluster), IERC20(tapToken_), IERC20(mainToken_), owner);
         mediumRiskMC = new Singularity();
         bbMediumRiskMC = new BigBang();
 
