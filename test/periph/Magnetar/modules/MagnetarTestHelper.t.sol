@@ -532,7 +532,7 @@ contract MagnetarTestHelper is TestHelper {
         deal(address(_collateral), address(this), amount);
 
         (Module[] memory modules, bytes[] memory calls) =
-            marketHelper.addCollateral(address(this), address(this), false, 0, 100); // todo: replace 100 with share
+            marketHelper.addCollateral(address(this), address(this), 0, 100); // todo: replace 100 with share
         _sgl.execute(modules, calls, true);
     }
 

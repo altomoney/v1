@@ -14,7 +14,7 @@ contract TapiocaOptionBrokerLockTest is TOBTestBase {
     }
 
     function _setupValidPosition(uint256 collateralAmount, uint256 borrowAmount) internal {
-        _addCollateralBigBang(collateralAmount, bigBangInstance, testUser, testUser, testUser, testUser, false);
+        _addCollateralBigBang(collateralAmount, bigBangInstance, testUser, testUser, testUser, testUser);
         _borrowBigBang(lockAmount, bigBangInstance, testUser, testUser, testUser);
     }
 

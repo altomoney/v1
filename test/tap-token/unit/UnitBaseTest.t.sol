@@ -423,7 +423,7 @@ contract UnitBaseTest is TestHelper {
         deal(address(ethTokenPenrose), to, amount);
         uint256 share = bigBangEthMarket.convertToShares(amount);
         // TODO review it yieldBox.depositAsset(ethTokenPenroseId, to, share);
-        (BBModule[] memory modules, bytes[] memory calls) = marketHelper.addCollateral(to, to, false, 0, share);
+        (BBModule[] memory modules, bytes[] memory calls) = marketHelper.addCollateral(to, to, 0, share);
         bigBangEthMarket.execute(modules, calls, true);
 
         // Borrow

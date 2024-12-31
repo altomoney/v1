@@ -18,7 +18,6 @@ import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {TapToken} from "tap-token/tokens/TapToken.sol";
 import {TWLBase, Bucket} from "tap-token/governance/TWLBase.sol";
-import {IYieldBox} from "../interfaces/IYieldBox.sol";
 import {ISingularity} from "tap-utils/interfaces/bar/ISingularity.sol";
 import {IMarket} from "tap-utils/interfaces/bar/IMarket.sol";
 import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.18;
 
-import {TOBTestBase} from "../TOBTestBase.t.sol";
+import {TOBTestBase, ITapiocaOptionBroker} from "../TOBTestBase.t.sol";
 
 contract TapiocaOptionBrokerAdvanceWeekTest is TOBTestBase {
     function setUp() public override {
@@ -25,7 +25,7 @@ contract TapiocaOptionBrokerAdvanceWeekTest is TOBTestBase {
         );
 
         vm.startPrank(owner);
-        vm.expectRevert("NotValid()");
+        vm.expectRevert(abi.encodeWithSelector(ITapiocaOptionBroker.NotValid.selector));
         tob.advanceWeek();
         vm.stopPrank();
     }
@@ -57,7 +57,7 @@ contract TapiocaOptionBrokerAdvanceWeekTest is TOBTestBase {
 
         // Expect NewEpoch event
         vm.expectEmit(true, true, true, true);
-        emit NewEpoch(epoch, tapPrice);
+        emit ITapiocaOptionBroker.NewEpoch(epoch, epoch + 1, tapPrice);
 
         // Advance week
         vm.startPrank(owner);
@@ -88,7 +88,7 @@ contract TapiocaOptionBrokerAdvanceWeekTest is TOBTestBase {
 
         // Try to advance week
         vm.startPrank(owner);
-        vm.expectRevert("Failed()");
+        vm.expectRevert(abi.encodeWithSelector(ITapiocaOptionBroker.Failed.selector));
         tob.advanceWeek();
         vm.stopPrank();
     }

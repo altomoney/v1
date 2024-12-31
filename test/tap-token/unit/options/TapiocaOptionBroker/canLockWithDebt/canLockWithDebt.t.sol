@@ -12,7 +12,7 @@ contract TapiocaOptionBrokerCanLockWithDebtTest is TOBTestBase {
     modifier whenValidConditions() {
         _collateralAmount = 3e18;
         _borrowAmount = 1e18;
-        _addCollateralBigBang(_collateralAmount, bigBangInstance, testUser, testUser, testUser, testUser, false);
+        _addCollateralBigBang(_collateralAmount, bigBangInstance, testUser, testUser, testUser, testUser);
         _borrowBigBang(_borrowAmount, bigBangInstance, testUser, testUser, testUser);
         _;
     }

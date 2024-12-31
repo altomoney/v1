@@ -154,18 +154,4 @@ contract BBCommon is BBStorage {
         }
         return 0;
     }
-
-    /// @dev Helper function to move tokens.xc
-    /// @param from Account to debit tokens from, .
-    /// @param share The amount in shares to add.
-    /// @param total Grand total amount to deduct from this contract's balance. Only applicable if `skim` is True.
-    /// Only used for accounting checks.
-    /// @param skim If True, only does a balance check on this contract.
-    /// False if tokens from msg.sender  should be transferred.
-    function _addTokens(address from, uint256 share, uint256 total, bool skim) internal {
-        // TODO: check if this is needed
-        if (skim) {
-            require(share <= balanceOf(address(this)) - total, "BB: too much");
-        }
-    }
 }

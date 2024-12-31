@@ -183,7 +183,7 @@ contract SingularityTest is UsdoTestHelper {
         // TODO review it yieldBox.depositAsset(collateralYieldBoxId, address(this), address(this), 0, share);
 
         (Module[] memory modules, bytes[] memory calls) =
-            marketHelper.addCollateral(address(this), address(this), false, 0, share);
+            marketHelper.addCollateral(address(this), address(this), share, 0);
         singularity.execute(modules, calls, true);
     }
 
@@ -318,7 +318,7 @@ contract SingularityTest is UsdoTestHelper {
 
         Module[] memory modules;
         bytes[] memory calls;
-        (modules, calls) = marketHelper.addCollateral(address(this), address(this), false, 1, 0);
+        (modules, calls) = marketHelper.addCollateral(address(this), address(this), 1, 0);
         vm.expectRevert("Market: paused");
         singularity.execute(modules, calls, true);
 

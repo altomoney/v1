@@ -18,7 +18,7 @@ contract TapiocaOptionBrokerForceUnlockTest is TOBTestBase {
     }
 
     function _setupValidPosition() internal {
-        _addCollateralBigBang(_collateralAmount, bigBangInstance, testUser, testUser, testUser, testUser, false);
+        _addCollateralBigBang(_collateralAmount, bigBangInstance, testUser, testUser, testUser, testUser);
         _borrowBigBang(_borrowAmount, bigBangInstance, testUser, testUser, testUser);
         tapToken.approve(address(tob), _lockAmount);
         usdo.approve(address(tob), _lockAmount);

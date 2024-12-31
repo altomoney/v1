@@ -20,7 +20,7 @@ contract TapiocaOptionBrokerUnlockTest is TOBTestBase {
     }
 
     function _setupValidPosition(address user) internal {
-        _addCollateralBigBang(collateralAmount, bigBangInstance, user, user, user, user, false);
+        _addCollateralBigBang(collateralAmount, bigBangInstance, user, user, user, user);
         _borrowBigBang(lockAmount, bigBangInstance, user, user, user);
 
         vm.startPrank(user);

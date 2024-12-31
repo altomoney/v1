@@ -214,7 +214,7 @@ abstract contract BigBang_Unit_Shared is Markets_Unit_Shared {
         view
         returns (Module[] memory modules, bytes[] memory calls)
     {
-        (modules, calls) = marketHelper.addCollateral(_from, _to, _skim, _collateralAmount, 0);
+        (modules, calls) = marketHelper.addCollateral(_from, _to, _collateralAmount, 0);
     }
 
     function _getRemoveCollateralData(uint256 _collateralShare, address _from, address _to)

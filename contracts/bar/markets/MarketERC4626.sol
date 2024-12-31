@@ -76,7 +76,7 @@ abstract contract MarketERC4626 is IERC20Permit, ERC4626, IERC1155Receiver {
     }
 
     function __initialize_MarketERC4626(address __collateral) internal {
-        if (__collateral != address(0)) {
+        if (_collateral != address(0)) {
             revert MarketERC4626__AlreadyInitialized();
         }
         _collateral = __collateral;
