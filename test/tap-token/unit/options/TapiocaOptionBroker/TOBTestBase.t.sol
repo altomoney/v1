@@ -365,10 +365,10 @@ contract TOBTestBase is Test, Events, Utils {
         uint256 feeAmount = bb.computeVariableOpeningFee(borrowAmount);
         (Module[] memory modules, bytes[] memory calls) = _getBorrowData(borrowAmount, from, to);
 
-        console.log(address(bb._asset()));
         // it should emit LogBorrow
         vm.expectEmit(true, true, true, false);
         emit LogBorrow(from, to, borrowAmount, feeAmount, borrowAmount + feeAmount);
+
         bb.execute(modules, calls, true);
 
         {

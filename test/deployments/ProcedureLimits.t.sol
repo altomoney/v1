@@ -38,7 +38,6 @@ contract DeploymentProceduresLimits is Test {
     UsdoModulesReport usdoModulesReport;
     UsdoMarketModulesReport usdoMarketModulesReport;
     TOFTModulesReport toftModulesReport;
-    address yieldboxMock;
 
     address erc20Mock1;
     address erc20Mock2;
@@ -121,7 +120,7 @@ contract DeploymentProceduresLimits is Test {
     function test_new_PenroseBatch() public {
         new TapiocaPenroseBatch(
             IPenroseInput(
-                yieldboxMock, erc20Mock1, erc20Mock2, erc20Mock3, address(7), address(8), address(1), address(0)
+                address(1), erc20Mock1, erc20Mock2, erc20Mock3, address(7), address(8), address(1), address(0)
             )
         );
     }

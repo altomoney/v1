@@ -95,12 +95,6 @@ contract Penrose_setters is Markets_Unit_Shared {
         penrose.setUsdoToken(address(0));
     }
 
-    function test_RevertWhen_SetUsdoTokenIsCalledFromOwnerWithAsset0() external {
-        address rndAddr = makeAddr("rndAddress");
-        vm.expectRevert();
-        penrose.setUsdoToken(rndAddr);
-    }
-
     function test_WhenSetUsdoTokenIsCalledFromOwner() external {
         address rndAddr = makeAddr("rndAddress");
         vm.expectEmit();

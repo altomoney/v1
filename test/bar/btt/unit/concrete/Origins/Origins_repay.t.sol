@@ -2,6 +2,7 @@
 pragma solidity ^0.8.22;
 
 // dependencies
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {Origins} from "tapioca-bar/markets/origins/Origins.sol";
 import {Market} from "tapioca-bar/markets/Market.sol";
@@ -38,38 +39,21 @@ contract Origins_repay is Origins_Unit_Shared {
         _addCollateral(org);
         org.borrow(5e17);
 
-        _addToYieldBox(address(org), address(usdo), 5e17);
-
+        uint256 amountToRepay = 5e17;
+        usdo.approve(address(org), amountToRepay);
         uint256 borrowPartBefore = org._userBorrowPart(address(this));
-        org.repay(5e17);
+        org.repay(amountToRepay);
         uint256 borrowPartAfter = org._userBorrowPart(address(this));
 
         assertGt(borrowPartBefore, borrowPartAfter);
     }
 
-    function _addToYieldBox(address _org, address _asset, uint256 _amount) private {
-        vm.skip(true);
-        /*
-        deal(_asset, address(this), _amount);
-
-        usdo.approve( type(uint256).max);
-        usdo.approve(address(pearl mit), type(uint256).max);
-        
-        yieldBox.depositAsset(_assetId, address(this), address(this), _amount, 0);
-
-        usdo.setMinterStatus(address(this), true);
-        usdo.mint(address(this), _amount);
-        */
-    }
-
     function _addCollateral(Origins org) private {
         uint256 amount = 1 ether;
-        deal(address(org.collateral()), address(this), amount);
-        mainToken.approve(address(org), type(uint256).max);
+        IERC20 collateral = IERC20(address(org.collateral()));
+        deal(address(collateral), address(this), amount);
 
-        uint256 share = org.convertToShares(amount);
-
+        collateral.approve(address(org), amount);
         org.deposit(amount, address(this));
-        org.addCollateral(0, share);
     }
 }

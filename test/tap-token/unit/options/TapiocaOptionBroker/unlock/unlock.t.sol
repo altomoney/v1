@@ -32,8 +32,9 @@ contract TapiocaOptionBrokerUnlockTest is TOBTestBase {
     function test_revertWhen_positionNotExpired() public {
         _setupValidPosition(user1);
 
-        vm.startPrank(user1);
         vm.expectRevert(ITapiocaOptionBroker.LockNotExpired.selector);
+
+        vm.startPrank(user1);
         tob.unlock(bucketId, user1);
         vm.stopPrank();
     }

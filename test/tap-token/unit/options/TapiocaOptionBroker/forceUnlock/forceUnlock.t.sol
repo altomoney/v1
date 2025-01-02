@@ -13,16 +13,19 @@ contract TapiocaOptionBrokerForceUnlockTest is TOBTestBase {
         super.setUp();
         testUser = makeAddr("testUser");
         _lockAmount = 1e18;
-        _collateralAmount = 3e18;
-        _borrowAmount = 1e18;
+        _collateralAmount = 6e18;
+        _borrowAmount = 2e18;
     }
 
     function _setupValidPosition() internal {
         _addCollateralBigBang(_collateralAmount, bigBangInstance, testUser, testUser, testUser, testUser);
         _borrowBigBang(_borrowAmount, bigBangInstance, testUser, testUser, testUser);
+
+        vm.startPrank(testUser);
         tapToken.approve(address(tob), _lockAmount);
         usdo.approve(address(tob), _lockAmount);
         tob.lock(testUser, 0, _lockAmount, market);
+        vm.stopPrank();
     }
 
     function test_revertWhen_positionExpired() public {

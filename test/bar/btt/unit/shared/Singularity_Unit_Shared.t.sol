@@ -111,6 +111,4 @@ abstract contract Singularity_Unit_Shared is Markets_Unit_Shared {
             IPenrose(_sgl.penrose), ITapiocaOracle(address(_sgl.oracle)), 0, CR_RATE, LQ_CR_RATE, _sgl.leverageExecutor
         );
     }
-
-    function _approveForCollateral(address txExecutor) internal virtual override resetPrank(txExecutor) {}
 }

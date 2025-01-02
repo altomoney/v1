@@ -31,6 +31,9 @@ interface IMarket is IERC4626 {
 
     function _borrowableToken() external view returns (address);
 
+    // TODO Remove this
+    function borrowableToken() external view returns (address);
+
     function _totalBorrowCap() external view returns (uint256);
 
     function _totalCollateralShare() external view returns (uint256);

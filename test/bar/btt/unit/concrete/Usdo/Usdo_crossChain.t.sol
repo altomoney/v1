@@ -42,15 +42,7 @@ abstract contract Usdo_crossChain is Usdo_Unit_Shared, BigBang_Unit_Shared, Sing
         super.setUp();
     }
 
-    function _approveForCollateral(address txExecutor)
-        internal
-        override(Markets_Unit_Shared, Singularity_Unit_Shared)
-        resetPrank(txExecutor)
-    {
-        // TODO Review it _approveViaERC20(mainBB.collateral(), txExecutor, type(uint256).max);
-
-        // TODO Review it _approveViaERC20(secondaryBB.collateral(), txExecutor, type(uint256).max);
-    }
+    function _approveForCollateral(address txExecutor) internal resetPrank(txExecutor) {}
 
     function test_WhenErc20ApprovalIsPerformedOnCurrentChain(uint256 amount)
         external

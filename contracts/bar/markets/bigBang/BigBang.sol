@@ -153,8 +153,8 @@ contract BigBang is MarketStateView, BBCommon {
             revert NotValid();
         }
 
-        __initialize_MarketERC4626(__asset);
-        _collateral = address(__collateral);
+        __initialize_MarketERC4626(address(__collateral));
+        _asset = IERC20(__asset);
         oracle = __oracle;
         updateExchangeRate();
         protocolFee = 10000; // 10%; used for accrual

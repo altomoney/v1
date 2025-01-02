@@ -83,7 +83,6 @@ abstract contract Markets_Unit_Shared is Base_Test {
     // **************** //
     // *** INTERNAL *** //
     // **************** //
-    function _approveForCollateral(address) internal virtual {}
 
     function _computeMaxBorrowAmount(uint256 collateralAmount, IMarket market)
         internal
