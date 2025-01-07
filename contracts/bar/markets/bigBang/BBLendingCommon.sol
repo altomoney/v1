@@ -87,28 +87,14 @@ contract BBLendingCommon is BBCommon {
         }
         if (part == 0) revert NothingToRepay();
 
-        // @dev check allowance
-        if (checkAllowance && msg.sender != from) {
-            uint256 partInAmount;
-            Rebase memory _totalBorrow = totalBorrow;
-            (_totalBorrow, partInAmount) = _totalBorrow.sub(part, true);
-            uint256 allowanceShare =
-                _computeAllowanceAmountInAsset(to, exchangeRate, partInAmount, _safeDecimals(_borrowableToken()));
-            if (allowanceShare == 0) revert NotEnough();
-            _allowedLend(from, allowanceShare);
-        }
-
         // @dev sub `part` of totalBorrow
         (totalBorrow, amount) = totalBorrow.sub(part, true);
         userBorrowPart[to] -= part;
 
-        // @dev amount includes the opening & accrued fees
-        uint256 _share = convertToShares(amount);
-
-        uint256 amountOut = redeem(_share, address(this), address(this));
+        IERC20(address(_borrowableToken())).safeTransferFrom(from, address(this), amount);
 
         // @dev burn USDO
-        IUsdo(address(_borrowableToken())).burn(address(this), amountOut);
+        IUsdo(address(_borrowableToken())).burn(address(this), amount);
 
         emit LogRepay(from, to, amount, part);
     }
