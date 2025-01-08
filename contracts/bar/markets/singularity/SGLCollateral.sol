@@ -41,8 +41,6 @@ contract SGLCollateral is SGLLendingCommon {
         }
         if (amount <= minCollateralAmount) revert MinCollateralAmountNotMet();
 
-        _allowedBorrow(from, share);
-
         _addCollateral(from, to, skim, amount, share, true);
     }
 
@@ -54,7 +52,6 @@ contract SGLCollateral is SGLLendingCommon {
         external
         optionNotPaused(PauseType.RemoveCollateral)
         solvent(from)
-        allowedBorrow(from, share)
         notSelf(to)
     {
         _removeCollateral(from, to, share);

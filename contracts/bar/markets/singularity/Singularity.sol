@@ -144,7 +144,6 @@ contract Singularity is MarketStateView, SGLCommon {
     function addAsset(address from, address to, bool skim, uint256 share)
         external
         optionNotPaused(PauseType.AddAsset)
-        allowedLend(from, share)
         returns (uint256 fraction)
     {
         uint256 _amount = convertToAssets(share);
@@ -166,7 +165,6 @@ contract Singularity is MarketStateView, SGLCommon {
     {
         _accrue();
         share = _removeAsset(from, to, fraction);
-        _allowedLend(from, share);
     }
 
     // *********************** //

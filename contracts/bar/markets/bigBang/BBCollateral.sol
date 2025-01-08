@@ -42,8 +42,6 @@ contract BBCollateral is BBLendingCommon {
         }
         if (amount <= minCollateralAmount) revert MinCollateralAmountNotMet();
 
-        _allowedBorrow(from, share);
-
         _addCollateral(from, to, skim, amount, share, true);
     }
 
@@ -56,7 +54,6 @@ contract BBCollateral is BBLendingCommon {
         optionNotPaused(PauseType.RemoveCollateral)
         solvent(from)
         notSelf(to)
-        allowedBorrow(from, share)
     {
         _removeCollateral(from, to, share);
     }

@@ -55,18 +55,6 @@ contract MarketERC20 is IERC20, IERC20Permit, IERC1155Receiver, EIP712 {
     // *** MODIFIERS *** //
     // ***************** //
 
-    /// Check if msg.sender has right to execute Lend operations
-    modifier allowedLend(address from, uint256 share) virtual {
-        _allowedLend(from, share);
-        _;
-    }
-    /// Check if msg.sender has right to execute borrow operations
-
-    modifier allowedBorrow(address from, uint256 share) virtual {
-        _allowedBorrow(from, share);
-        _;
-    }
-
     /**
      * @dev Initializes the {EIP712} domain separator using the `name` parameter, and setting `version` to `"1"`.
      *
@@ -182,16 +170,6 @@ contract MarketERC20 is IERC20, IERC20Permit, IERC1155Receiver, EIP712 {
     // ************************* //
     // *** PRIVATE FUNCTIONS *** //
     // ************************* //
-
-    /**
-     * @notice Checks if the caller is allowed to lend `share` from `from`.
-     */
-    function _allowedLend(address from, uint256 share) internal virtual {}
-
-    /**
-     * @notice Checks if the caller is allowed to borrow `share` from `from`.
-     */
-    function _allowedBorrow(address from, uint256 share) internal virtual {}
 
     /**
      * @dev "Consume a nonce": return the current value and increment.
