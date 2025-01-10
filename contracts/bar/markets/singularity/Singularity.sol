@@ -5,6 +5,7 @@ pragma solidity ^0.8.22;
 import {RebaseLibrary, Rebase} from "@boringcrypto/boring-solidity/contracts/libraries/BoringRebase.sol";
 import {IERC20} from "@boringcrypto/boring-solidity/contracts/libraries/BoringERC20.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {BoringERC20} from "@boringcrypto/boring-solidity/contracts/libraries/BoringERC20.sol";
 
 // Tapioca
 import {ILeverageExecutor} from "tap-utils/interfaces/bar/ILeverageExecutor.sol";
@@ -20,7 +21,6 @@ import {SGLStorage} from "./SGLStorage.sol";
 import {SGLCommon} from "./SGLCommon.sol";
 import {SGLBorrow} from "./SGLBorrow.sol";
 import {MarketERC4626} from "../MarketERC4626.sol";
-import {ERC20} from "solady/tokens/ERC20.sol";
 
 // solhint-disable max-line-length
 
@@ -39,6 +39,7 @@ import {ERC20} from "solady/tokens/ERC20.sol";
 contract Singularity is MarketStateView, SGLCommon {
     using SafeCast for uint256;
     using RebaseLibrary for Rebase;
+    using BoringERC20 for IERC20;
 
     // ************ //
     // *** VARS *** //
@@ -85,8 +86,7 @@ contract Singularity is MarketStateView, SGLCommon {
     error SameState();
     error MinLendAmountNotMet();
 
-    // TODO Do we need this?
-    function totalSupply() public view override(ERC20, SGLStorage) returns (uint256) {
+    function totalAssetSupply() public view returns (uint256) {
         return totalAsset.base;
     }
 
@@ -134,23 +134,20 @@ contract Singularity is MarketStateView, SGLCommon {
         }
     }
 
-    /// @notice Adds assets to the lending pair.
-    /// @param from Address to add asset from.
+    /// @notice Add liquidity to the lending pair.
+    /// @param from Address to add liquidity from.
     /// @param to The address of the user to receive the assets.
-    /// @param skim True if the amount should be skimmed from the deposit balance of msg.sender.
-    /// False if tokens from msg.sender  should be transferred.
-    /// @param share The amount of shares to add.
+    /// @param amount The amount of liquidity to supply
     /// @return fraction Total fractions added.
-    function addAsset(address from, address to, bool skim, uint256 share)
+    function addAsset(address from, address to, uint256 amount)
         external
         optionNotPaused(PauseType.AddAsset)
         returns (uint256 fraction)
     {
-        uint256 _amount = convertToAssets(share);
-        if (_amount <= minLendAmount) revert MinLendAmountNotMet();
+        if (amount <= minLendAmount) revert MinLendAmountNotMet();
 
         _accrue();
-        fraction = _addAsset(from, to, skim, share);
+        fraction = _addAsset(from, to, amount);
     }
 
     /// @notice Removes an asset from `from` and transfers it to `to`.
@@ -318,20 +315,20 @@ contract Singularity is MarketStateView, SGLCommon {
     }
 
     /// @dev Concrete implementation of `addAsset`.
-    function _addAsset(address from, address to, bool skim, uint256 share) private returns (uint256 fraction) {
+    function _addAsset(address from, address to, uint256 amount) private returns (uint256 fraction) {
+        IERC20(_asset).safeTransferFrom(from, address(this), amount);
+
         Rebase memory _totalAsset = totalAsset;
-        uint256 totalAssetShare = _totalAsset.elastic;
-        uint256 allShare = _totalAsset.elastic + convertToShares(totalBorrow.elastic);
-        fraction = allShare == 0 ? share : (share * _totalAsset.base) / allShare;
+        uint256 allShare = _totalAsset.elastic + totalBorrow.elastic;
+        fraction = allShare == 0 ? amount : (amount * _totalAsset.base) / allShare;
         if (_totalAsset.base + fraction.toUint128() < 1000) {
             return 0;
         }
-        totalAsset = _totalAsset.add(share, fraction);
+        totalAsset = _totalAsset.add(amount, fraction);
 
-        _mint(to, fraction); // TODO Check if this is correct (ERC20._mint -no ERC4626-)
+        liquidityBalance[from] += fraction;
 
-        // _addTokens(from, to, assetId, share, totalAssetShare, skim); // TODO Check it if needed
-        emit LogAddAsset(from, to, share, fraction);
+        emit LogAddAsset(from, to, amount, fraction);
     }
 
     /// @dev Concrete implementation of `removeAsset`.
@@ -340,19 +337,19 @@ contract Singularity is MarketStateView, SGLCommon {
             return 0;
         }
         Rebase memory _totalAsset = totalAsset;
-        uint256 allShare = _totalAsset.elastic + convertToShares(totalBorrow.elastic);
+        uint256 allShare = _totalAsset.elastic + totalBorrow.elastic;
         share = (fraction * allShare) / _totalAsset.base;
 
         _totalAsset.base -= fraction.toUint128();
-        if (_totalAsset.base < 1000) revert MinLimit();
+        liquidityBalance[from] -= fraction;
 
-        _burn(from, fraction);
+        if (_totalAsset.base < 1000) revert MinLimit();
 
         _totalAsset.elastic -= share.toUint128();
         totalAsset = _totalAsset;
         emit LogRemoveAsset(from, to, share, fraction);
 
-        transfer(to, share);
+        IERC20(_asset).safeTransfer(to, share);
     }
 
     receive() external payable {}

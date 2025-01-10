@@ -211,7 +211,7 @@ contract MagnetarMock_test {
         }
         if (_data.lendAmount > 0) {
             uint256 lendShare = singularity.convertToShares(_data.lendAmount);
-            fraction = singularity.addAsset(_data.user, _data.user, false, lendShare);
+            fraction = singularity.addAsset(_data.user, _data.user, lendShare);
         }
     }
 

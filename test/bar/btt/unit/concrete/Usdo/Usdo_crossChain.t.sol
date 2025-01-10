@@ -42,11 +42,7 @@ abstract contract Usdo_crossChain is Usdo_Unit_Shared, BigBang_Unit_Shared, Sing
         super.setUp();
     }
 
-    function _approveForCollateral(address txExecutor)
-        internal
-        resetPrank(txExecutor)
-    {
-    }
+    function _approveForCollateral(address txExecutor) internal resetPrank(txExecutor) {}
 
     function test_WhenErc20ApprovalIsPerformedOnCurrentChain(uint256 amount)
         external
@@ -362,7 +358,7 @@ abstract contract Usdo_crossChain is Usdo_Unit_Shared, BigBang_Unit_Shared, Sing
 
         // add asset
         uint256 lendShare = randomSgl.convertToShares(lendAmount);
-        randomSgl.addAsset(address(this), address(this), false, lendShare);
+        randomSgl.addAsset(address(this), address(this), lendShare);
 
         uint256 balanceBefore = randomSgl.balanceOf(address(this));
         uint256 supplyBefore = randomSgl.totalSupply();

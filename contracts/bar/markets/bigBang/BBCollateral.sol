@@ -24,11 +24,10 @@ contract BBCollateral is BBLendingCommon {
     /// @notice Adds `collateral` from msg.sender to the account `to`.
     /// @param from Account to transfer shares from.
     /// @param to The receiver of the tokens.
-    /// @param skim True if the amount should be skimmed from the deposit balance of msg.sender.
     /// False if tokens from msg.sender  should be transferred.
     /// @param amount The amount to add for `to`.
     /// @param share The amount of shares to add for `to`.
-    function addCollateral(address from, address to, bool skim, uint256 amount, uint256 share)
+    function addCollateral(address from, address to, uint256 amount, uint256 share)
         external
         notSelf(to)
         optionNotPaused(PauseType.AddCollateral)
@@ -42,7 +41,7 @@ contract BBCollateral is BBLendingCommon {
         }
         if (amount <= minCollateralAmount) revert MinCollateralAmountNotMet();
 
-        _addCollateral(from, to, skim, amount, share, true);
+        _addCollateral(from, to, amount, share);
     }
 
     /// @notice Removes `share` amount of collateral and transfers it to `to`.

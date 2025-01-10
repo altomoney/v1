@@ -114,7 +114,9 @@ contract BigBang_addCollateral is BigBang_Unit_Shared {
         // **** Main BB market ****
         // already does the necessary checks
         for (uint256 i; i < iterations; i++) {
-            _addCollateral(collateralAmount, mainBB, address(this), address(this), address(mainBB), address(this), false);
+            _addCollateral(
+                collateralAmount, mainBB, address(this), address(this), address(mainBB), address(this), false
+            );
         }
 
         // **** Secondary BB market ****

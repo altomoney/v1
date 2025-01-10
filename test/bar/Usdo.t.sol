@@ -974,7 +974,7 @@ contract UsdoTest is UsdoTestHelper {
             deal(address(bUsdo), address(this), erc20Amount_);
             // TODO Add borrowable token? yieldBox.depositAsset(bUsdoYieldBoxId, address(this), address(this), erc20Amount_, 0);
 
-            singularity.addAsset(address(this), address(this), false, sh);
+            singularity.addAsset(address(this), address(this), sh);
 
             deal(address(aUsdo), address(this), erc20Amount_);
 
@@ -1138,7 +1138,7 @@ contract UsdoTest is UsdoTestHelper {
             pearl mit.approve(
                 1155,  bUsdoYieldBoxId, address(singularity), uint200(sh), uint48(block.timestamp)
             );
-            singularity.addAsset(address(this), address(this), false, sh);
+            singularity.addAsset(address(this), address(this), sh);
         }
 
         //useful in case of withdraw after borrow
@@ -1289,7 +1289,7 @@ contract UsdoTest is UsdoTestHelper {
             // TODO Add borrowable token?
             (, uint256 shares) = yieldBox.depositAsset(bUsdoYieldBoxId, alice, alice, erc20Amount_, 0);
 
-            singularity.addAsset(alice, alice, false, shares);
+            singularity.addAsset(alice, alice, shares);
 
             vm.stopPrank();
         }

@@ -1,0 +1,20 @@
+TapiocaOptionBroker_lock.tree
+├── when the contract is paused
+│   └── it should revert
+├── when amount is 0
+│   └── it should revert with SharesNotValid
+├── when emergency sweep is active
+│   └── it should revert with EmergencySweepActivated
+├── when market is not active
+│   └── it should revert with MarketNotActive
+├── when user has existing position
+│   ├── given position is not expired
+│   │   └── it should update net deposits for previous expiry epoch
+│   └── given position is expired
+│       └── it should reset tapAmountExercised
+└── when all conditions are valid
+    ├── it should create/update participation position correctly
+    ├── it should update market shares
+    ├── it should update net deposits for current and expiry epochs
+    ├── it should update total locked USDO
+    └── it should transfer USDO from sender to contract

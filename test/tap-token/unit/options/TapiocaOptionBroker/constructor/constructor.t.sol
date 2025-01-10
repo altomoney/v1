@@ -8,7 +8,7 @@ contract TapiocaOptionBroker_constructortree is TOBTestBase {
     function test_RevertWhen_EpochDurationIsZero() external {
         // it should revert
         vm.expectRevert(abi.encodeWithSelector(ITWLBase.EPOCH_DURATION_ZERO.selector));
-        new TapiocaOptionBroker(payable(0), dao, 0, new Bucket[](0), owner);
+        new TapiocaOptionBroker(payable(0), address(usdo), dao, 0, new Bucket[](0), address(0), owner);
     }
 
     function test_WhenAllParametersAreValid() external {
@@ -30,11 +30,13 @@ contract TapiocaOptionBroker_constructortree is TOBTestBase {
             growthGoal: 0
         });
 
-        TapiocaOptionBroker optionBroker =
-            new TapiocaOptionBroker(payable(tapToken), dao, EPOCH_DURATION, buckets, owner);
+        TapiocaOptionBroker optionBroker = new TapiocaOptionBroker(
+            payable(tapToken), address(usdo), dao, EPOCH_DURATION, buckets, report.penrose, owner
+        );
 
         assertEq(optionBroker.owner(), owner);
         assertEq(address(optionBroker.TAP_TOKEN()), address(tapToken));
+        assertEq(address(optionBroker.USDO()), address(usdo));
         assertEq(optionBroker._paymentTokenBeneficiary(), dao);
         assertEq(optionBroker.EPOCH_DURATION(), EPOCH_DURATION);
         assertEq(optionBroker.getBuckets().length, 1);

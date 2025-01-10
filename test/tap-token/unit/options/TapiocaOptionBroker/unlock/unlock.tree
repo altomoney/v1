@@ -1,0 +1,9 @@
+TapiocaOptionBroker_unlock.tree
+├── when position is not expired
+│   └── it should revert with LockNotExpired
+└── when position is expired
+    ├── it should reset position total USDO
+    ├── it should remove all market shares
+    ├── it should clear position markets array
+    ├── it should update total locked USDO
+    └── it should emit ExitPosition event

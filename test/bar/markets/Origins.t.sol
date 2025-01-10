@@ -228,7 +228,7 @@ contract OriginsTest is UsdoTestHelper {
 
         depositCollateral(address(this), collateralAmount);
 
-        borrow(address(this),borrowAmount, false);
+        borrow(address(this), borrowAmount, false);
     }
 
     function test_origin_should_borrow_max_2000_ether() public {

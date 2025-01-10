@@ -108,7 +108,7 @@ contract BBLeverage is BBLendingCommon {
 
         mint(collateralShare, address(this));
 
-        _addCollateral(calldata_.from, calldata_.from, false, 0, collateralShare, false);
+        _addCollateral(calldata_.from, calldata_.from, 0, collateralShare);
         if (amountOut == 0) revert AmountNotValid();
     }
 

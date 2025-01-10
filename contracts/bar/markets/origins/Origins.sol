@@ -159,7 +159,7 @@ contract Origins is Ownable, Market, MarketStateView, ReentrancyGuard {
     /// @param amount The amount to add for `msg.sender`.
     /// @param share The amount of shares to add for `msg.sender`.
     function addCollateral(uint256 amount, uint256 share) external optionNotPaused(PauseType.AddCollateral) {
-        // TODO Check if we need this function. Does it represent erc4626.deposit ? 
+        // TODO Check if we need this function. Does it represent erc4626.deposit ?
         // TODO What about removeCollateral/etc? and allowedParticipants?
         if (!allowedParticipants[msg.sender]) revert NotAuthorized();
 

@@ -9,7 +9,7 @@ contract twTap_emergencySweep is twTapBaseTest {
         // it should revert
         vm.startPrank(adminAddr);
         vm.expectRevert(ITWTAPv2.EmergencySweepCooldownNotReached.selector);
-        twTap.emergencySweep();
+        twTap.emergencySweep(address(tapOFT));
     }
 
     function test_RevertWhen_NotOwner() external {
@@ -19,7 +19,7 @@ contract twTap_emergencySweep is twTapBaseTest {
         twTap.activateEmergencySweep();
         vm.stopPrank();
         vm.expectRevert("Ownable: caller is not the owner");
-        twTap.emergencySweep();
+        twTap.emergencySweep(address(tapOFT));
     }
 
     function test_ShouldSweepTheLocks() external participate(1e20, 0) skipWeeks(1) advanceWeeks(1) distributeRewards {
@@ -27,25 +27,9 @@ contract twTap_emergencySweep is twTapBaseTest {
         vm.startPrank(adminAddr);
         twTap.setEmergencySweepCooldown(0);
         twTap.activateEmergencySweep();
-        twTap.emergencySweep();
 
-        // Test lock sweep
-        assertEq(
-            twTap.lastEmergencySweep(),
-            0,
-            "twTap_emergencySweep::test_ShouldSweepTheLocks: Invalid last emergency sweep"
-        );
-        assertEq(tapOFT.balanceOf(adminAddr), 0, "twTap_emergencySweep::test_ShouldSweepTheLocks: Invalid balance");
+        twTap.emergencySweep(address(tapOFT));
 
-        // Test rewards sweep
-
-        assertEq(
-            daiMock.balanceOf(adminAddr), 1e25, "twTap_emergencySweepRewards::test_ShouldSweepTheLocks: Invalid balance"
-        );
-        assertEq(
-            usdcMock.balanceOf(adminAddr),
-            1e13,
-            "twTap_emergencySweepRewards::test_ShouldSweepTheLocks: Invalid balance"
-        );
+        assertEq(tapOFT.balanceOf(adminAddr), 1e20, "twTap_emergencySweep::test_ShouldSweepTheLocks: Invalid balance");
     }
 }

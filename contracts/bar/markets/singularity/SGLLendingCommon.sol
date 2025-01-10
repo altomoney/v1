@@ -36,14 +36,15 @@ contract SGLLendingCommon is SGLCommon {
     // *** PRIVATE FUNCTIONS *** //
     // ************************* //
     /// @dev Concrete implementation of `addCollateral`.
-    // TODO Do we need skim and addTokens?
-    function _addCollateral(address from, address to, bool _skim, uint256 amount, uint256 share, bool addTokens)
-        internal
-    {
+    function _addCollateral(address from, address to, uint256 amount, uint256 share, bool addTokens) internal {
         if (share == 0) {
             share = convertToShares(amount);
         }
         uint256 oldTotalCollateralShare = totalSupply();
+
+        if (addTokens) {
+            IERC20(collateral()).safeTransferFrom(from, address(this), amount);
+        }
 
         _mint(to, share);
 
