@@ -46,9 +46,7 @@ contract BBBorrow is BBLendingCommon {
         _penrose.reAccrueBigBangMarkets();
 
         uint256 feeAmount = _computeVariableOpeningFee(amount);
-        uint256 allowanceShare =
-            _computeAllowanceAmountInAsset(from, exchangeRate, amount + feeAmount, _borrowableToken().safeDecimals());
-        _allowedBorrow(from, allowanceShare);
+
         (part, share) = _borrow(from, to, amount, feeAmount);
     }
 

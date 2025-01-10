@@ -53,18 +53,6 @@ abstract contract MarketERC4626 is IERC20Permit, ERC4626, IERC1155Receiver {
 
     error MarketERC4626__AlreadyInitialized();
 
-    /// Check if msg.sender has right to execute Lend operations
-    modifier allowedLend(address from, uint256 share) virtual {
-        _allowedLend(from, share);
-        _;
-    }
-
-    /// Check if msg.sender has right to execute borrow operations
-    modifier allowedBorrow(address from, uint256 share) virtual {
-        _allowedBorrow(from, share);
-        _;
-    }
-
     /**
      * @dev Initializes the {EIP712} domain separator using the `name` parameter, and setting `version` to `"1"`.
      *
@@ -140,16 +128,6 @@ abstract contract MarketERC4626 is IERC20Permit, ERC4626, IERC1155Receiver {
     ) external virtual {
         _permit(_IS_BORROW, owner, spender, value, deadline, v, r, s);
     }
-
-    /**
-     * @notice Checks if the caller is allowed to lend `share` from `from`.
-     */
-    function _allowedLend(address from, uint256 share) internal virtual {}
-
-    /**
-     * @notice Checks if the caller is allowed to borrow `share` from `from`.
-     */
-    function _allowedBorrow(address from, uint256 share) internal virtual {}
 
     function _permit(
         bool isAsset, // true = asset, false = collateral

@@ -142,7 +142,6 @@ contract Singularity is MarketStateView, SGLCommon {
     function addAsset(address from, address to, uint256 amount)
         external
         optionNotPaused(PauseType.AddAsset)
-        allowedLend(from, amount)
         returns (uint256 fraction)
     {
         if (amount <= minLendAmount) revert MinLendAmountNotMet();
@@ -163,7 +162,6 @@ contract Singularity is MarketStateView, SGLCommon {
     {
         _accrue();
         share = _removeAsset(from, to, fraction);
-        _allowedLend(from, share);
     }
 
     // *********************** //

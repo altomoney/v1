@@ -97,16 +97,6 @@ contract SGLLendingCommon is SGLCommon {
         }
         if (part == 0) revert NothingToRepay();
 
-        if (checkAllowance && msg.sender != from) {
-            uint256 partInAmount;
-            Rebase memory _totalBorrow = totalBorrow;
-            (_totalBorrow, partInAmount) = _totalBorrow.sub(part, true);
-
-            uint256 allowanceShare =
-                _computeAllowanceAmountInAsset(to, exchangeRate, partInAmount, _safeDecimals(_borrowableToken()));
-            if (allowanceShare == 0) revert NotEnough();
-            _allowedLend(from, allowanceShare);
-        }
         (totalBorrow, amount) = totalBorrow.sub(part, true);
 
         userBorrowPart[to] -= part;
