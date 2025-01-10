@@ -35,6 +35,7 @@ contract BBLendingCommon is BBCommon {
     // ************************** //
     // *** PRIVATE FUNCTIONS *** //
     // ************************* //
+
     function _addCollateral(address from, address to, uint256 amount, uint256 share, bool pullTokens) internal {
         if (share == 0) {
             share = convertToShares(amount);
@@ -46,6 +47,14 @@ contract BBLendingCommon is BBCommon {
         _mint(to, share);
 
         emit LogAddCollateral(from, to, share);
+    }
+
+    function _depositCollateral(address from, address to, uint256 assets) internal returns (uint256 shares) {
+        _allowedCollateral(from, assets);
+
+        shares = super.deposit(assets, to);
+
+        emit LogAddCollateral(from, to, shares);
     }
 
     /// @dev Concrete implementation of `removeCollateral`.
