@@ -461,6 +461,6 @@ contract TOBTestBase is Test, Events, Utils {
         view
         returns (Module[] memory modules, bytes[] memory calls)
     {
-        (modules, calls) = marketHelper.repay(_from, _to, false, _repayPart);
+        (modules, calls) = marketHelper.repay(_from, _to, _repayPart);
     }
 }

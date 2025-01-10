@@ -82,9 +82,6 @@ contract SGLLiquidation is SGLCommon {
         totalBorrow.elastic -= borrowAmount.toUint128();
         totalBorrow.base -= userBorrowPart[user].toUint128();
 
-        // burn collateral shares from user.
-        _burn(user, collateralShare);
-
         // User collateral shares is now 0.
         // Set user borrow part to 0
         userBorrowPart[user] = 0;
@@ -103,6 +100,9 @@ contract SGLLiquidation is SGLCommon {
             uint256 collateralAmount = convertToAssets(collateralShare);
             withdraw(collateralAmount, receiver, address(this));
         }
+
+        // burn collateral s  hares from user.
+        _burn(user, collateralShare);
     }
 
     // ************************ //

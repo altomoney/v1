@@ -94,6 +94,7 @@ contract BBLeverage is BBLendingCommon {
             uint256 assetPartInCollateral = (memoryData.supplyShareToAmount + memoryData.borrowShareToAmount)
                 * exchangeRate / EXCHANGE_RATE_PRECISION;
             uint256 _share = convertToShares(assetPartInCollateral);
+            _allowedBorrow(calldata_.from, _share);
 
             amountOut = leverageExecutor.getCollateral(
                 from,
@@ -108,7 +109,7 @@ contract BBLeverage is BBLendingCommon {
 
         mint(collateralShare, address(this));
 
-        _addCollateral(calldata_.from, calldata_.from, 0, collateralShare);
+        _addCollateral(calldata_.from, calldata_.from, 0, collateralShare, false);
         if (amountOut == 0) revert AmountNotValid();
     }
 
@@ -138,6 +139,7 @@ contract BBLeverage is BBLendingCommon {
         }
         _penrose.reAccrueBigBangMarkets();
 
+        _allowedBorrow(from, share);
         _removeCollateral(from, address(this), share);
 
         _SellCollateralMemoryData memory memoryData;

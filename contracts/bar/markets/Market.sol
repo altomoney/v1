@@ -96,6 +96,7 @@ abstract contract Market is MarketERC4626, Ownable {
     uint256 internal constant FEE_PRECISION_DECIMALS = 5;
 
     error ExchangeRateNotValid();
+    error AllowanceNotValid();
     error MinBorrowAmountNotMet();
     error MinCollateralAmountNotMet();
 
@@ -388,6 +389,42 @@ abstract contract Market is MarketERC4626, Ownable {
     function _accrue() internal virtual;
 
     function _accrueView() internal view virtual returns (Rebase memory);
+
+    /// @inheritdoc MarketERC4626
+    function _allowedLend(address from, uint256 amount) internal virtual override {
+        if (from != msg.sender) {
+            if (amount == 0) revert AllowanceNotValid();
+            uint256 currentAllowance = allowanceLiquidity[from][msg.sender];
+            require(currentAllowance >= amount, "Market: not approved");
+            if (currentAllowance != type(uint256).max) {
+                allowanceLiquidity[from][msg.sender] -= amount;
+            }
+        }
+    }
+
+    /// @inheritdoc MarketERC4626
+    function _allowedCollateral(address from, uint256 amount) internal virtual override {
+        if (from != msg.sender) {
+            if (amount == 0) revert AllowanceNotValid();
+            uint256 currentAllowance = allowanceCollateral[from][msg.sender];
+            require(currentAllowance >= amount, "Market: not approved");
+            if (currentAllowance != type(uint256).max) {
+                allowanceCollateral[from][msg.sender] -= amount;
+            }
+        }
+    }
+
+    /// @inheritdoc MarketERC4626
+    function _allowedBorrow(address from, uint256 amount) internal virtual override {
+        if (from != msg.sender) {
+            if (amount == 0) revert AllowanceNotValid();
+            uint256 currentAllowance = allowanceBorrow[from][msg.sender];
+            require(currentAllowance >= amount, "Market: not approved");
+            if (currentAllowance != type(uint256).max) {
+                allowanceBorrow[from][msg.sender] -= amount;
+            }
+        }
+    }
 
     function _tryUpdateExchangeRate() internal {
         try oracle.get(oracleData) returns (bool _updated, uint256 _exchangeRate) {

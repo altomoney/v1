@@ -88,22 +88,23 @@ contract BBLiquidation is BBCommon {
         totalBorrow.base -= userBorrowPart[user].toUint128();
 
         // set user share & part to 0
-        _burn(user, collateralShare);
         userBorrowPart[user] = 0;
-
-        // burn debt amount from `from`
-        IERC20 borrowableToken = _borrowableToken();
-        IUsdo(address(borrowableToken)).burn(from, borrowAmount);
 
         // swap collateral with asset and send it to `owner`
         if (swapCollateral) {
-            (, uint256 returnedAmount) =
+            uint256 returnedAmount =
                 _swapCollateralWithAsset(collateralShare, liquidatorReceiver, liquidatorReceiverData, 0, false);
-            borrowableToken.safeTransfer(receiver, returnedAmount);
+            IERC20(address(_borrowableToken())).safeTransfer(receiver, returnedAmount);
         } else {
             uint256 collateralAmount = convertToAssets(collateralShare);
             IERC20(collateral()).safeTransfer(receiver, collateralAmount);
         }
+
+        _burn(user, collateralShare);
+
+        // burn debt amount from `from`
+        IERC20 borrowableToken = _borrowableToken();
+        IUsdo(address(borrowableToken)).burn(from, borrowAmount);
     }
 
     // ************************ //
@@ -149,7 +150,7 @@ contract BBLiquidation is BBCommon {
         bytes memory _liquidatorReceiverData,
         uint256 _exchangeRate,
         bool checkReturned
-    ) private returns (uint256 returnedShare, uint256 returnedAmount) {
+    ) private returns (uint256 returnedAmount) {
         uint256 collateralAmount = convertToAssets(_collateralShare);
         withdraw(collateralAmount, address(_liquidatorReceiver), address(this)); // TODO Check if this is correct
 
@@ -172,7 +173,6 @@ contract BBLiquidation is BBCommon {
             }
         }
         if (returnedAmount == 0) revert OnCollateralReceiverFailed(0, 0);
-        returnedShare = convertToShares(returnedAmount);
     }
 
     function _updateBorrowAndCollateralShare(
@@ -277,13 +277,11 @@ contract BBLiquidation is BBCommon {
         totalBorrow.elastic -= borrowAmount.toUint128();
         totalBorrow.base -= borrowPart.toUint128();
 
-        uint256 borrowShare = convertToShares(borrowAmount);
-
-        (uint256 returnedShare,) =
+        uint256 returnedAmount =
             _swapCollateralWithAsset(collateralShare, _liquidatorReceiver, _liquidatorReceiverData, _exchangeRate, true);
-        if (returnedShare < borrowShare) revert AmountNotValid();
+        if (returnedAmount < borrowAmount) revert AmountNotValid();
 
-        (uint256 feeShare, uint256 callerShare) = _extractLiquidationFees(returnedShare, borrowShare, callerReward);
+        (uint256 feeShare, uint256 callerShare) = _extractLiquidationFees(returnedAmount, borrowAmount, callerReward);
 
         IUsdo(address(_borrowableToken())).burn(address(this), borrowAmount);
 

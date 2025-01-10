@@ -247,10 +247,8 @@ contract MarketHelper {
     /// @notice Repays a loan.
     /// @param from Address to repay from.
     /// @param to Address of the user this payment should go.
-    /// @param skim True if the amount should be skimmed from the deposit balance of msg.sender.
-    /// False if tokens from msg.sender  should be transferred.
     /// @param part The amount to repay. See `userBorrowPart`.
-    function repay(address from, address to, bool skim, uint256 part)
+    function repay(address from, address to, uint256 part)
         external
         pure
         returns (Module[] memory modules, bytes[] memory calls)
@@ -258,7 +256,7 @@ contract MarketHelper {
         modules = new Module[](1);
         calls = new bytes[](1);
         modules[0] = Module.Borrow;
-        calls[0] = abi.encodeWithSelector(SGLBorrow.repay.selector, from, to, skim, part);
+        calls[0] = abi.encodeWithSelector(SGLBorrow.repay.selector, from, to, part);
     }
 
     /// @notice view the result of a repay operation.

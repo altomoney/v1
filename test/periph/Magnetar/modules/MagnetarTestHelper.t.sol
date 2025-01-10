@@ -544,7 +544,7 @@ contract MagnetarTestHelper is TestHelper {
     }
 
     function repay(uint256 part, Singularity _sgl) public {
-        (Module[] memory modules, bytes[] memory calls) = marketHelper.repay(address(this), address(this), false, part);
+        (Module[] memory modules, bytes[] memory calls) = marketHelper.repay(address(this), address(this), part);
         _sgl.execute(modules, calls, true);
     }
 

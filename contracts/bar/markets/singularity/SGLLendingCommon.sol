@@ -91,16 +91,19 @@ contract SGLLendingCommon is SGLCommon {
     }
 
     /// @dev Concrete implementation of `repay`.
-    // TODO Do we need skim?
-    function _repay(address from, address to, bool skim, uint256 part, bool checkAllowance)
-        internal
-        returns (uint256 amount)
-    {
+    function _repay(address from, address to, uint256 part, bool checkAllowance) internal returns (uint256 amount) {
         if (part > userBorrowPart[to]) {
             part = userBorrowPart[to];
         }
         if (part == 0) revert NothingToRepay();
 
+        if (checkAllowance && msg.sender != from) {
+            uint256 partInAmount;
+            Rebase memory _totalBorrow = totalBorrow;
+            (_totalBorrow, partInAmount) = _totalBorrow.sub(part, true);
+
+            _allowedLend(from, partInAmount);
+        }
         (totalBorrow, amount) = totalBorrow.sub(part, true);
 
         userBorrowPart[to] -= part;
@@ -109,6 +112,8 @@ contract SGLLendingCommon is SGLCommon {
         uint128 totalShare = totalAsset.elastic;
 
         totalAsset.elastic = totalShare + share.toUint128();
+
+        _borrowableToken().safeTransferFrom(from, address(this), amount);
 
         emit LogRepay(from, to, amount, part);
     }
