@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.18;
 
-import {TOBTestBase} from "../TOBTestBase.t.sol";
+import {TOBTestBase, ITapiocaOptionBroker} from "../TOBTestBase.t.sol";
+import {Bucket} from "tap-token/interfaces/ITapiocaOptionBroker.sol";
 
 contract TapiocaOptionBrokerForceUnlockTest is TOBTestBase {
     address testUser;
@@ -17,56 +18,51 @@ contract TapiocaOptionBrokerForceUnlockTest is TOBTestBase {
         _borrowAmount = 2e18;
     }
 
-    function _setupValidPosition() internal {
-        _addCollateralBigBang(_collateralAmount, bigBangInstance, testUser, testUser, testUser, testUser);
-        _borrowBigBang(_borrowAmount, bigBangInstance, testUser, testUser, testUser);
-
-        vm.startPrank(testUser);
-        tapToken.approve(address(tob), _lockAmount);
-        usdo.approve(address(tob), _lockAmount);
-        tob.lock(testUser, 0, _lockAmount, market);
-        vm.stopPrank();
-    }
-
     function test_revertWhen_positionExpired() public {
-        _setupValidPosition();
+        _setupValidPosition(testUser, _collateralAmount, _borrowAmount, _lockAmount);
 
         // Advance time past lock duration
-        vm.warp(block.timestamp + 1 weeks + 1);
+        vm.warp(block.timestamp + (10 * EPOCH_DURATION) + 1);
 
         vm.startPrank(testUser);
-        vm.expectRevert("PositionExpired()");
+        vm.expectRevert(ITapiocaOptionBroker.LockExpired.selector);
         tob.forceUnlock(0, testUser);
         vm.stopPrank();
     }
 
     function test_revertWhen_canStillLockWithDebt() public {
-        _setupValidPosition();
+        _setupValidPosition(testUser, _collateralAmount, _borrowAmount, _lockAmount);
 
         vm.startPrank(testUser);
-        vm.expectRevert("CanStillLockWithDebt()");
+        vm.expectRevert(ITapiocaOptionBroker.NotAuthorized.selector);
         tob.forceUnlock(0, testUser);
         vm.stopPrank();
     }
 
     function test_forceUnlock_validConditions() public {
-        _setupValidPosition();
+        _setupValidPosition(testUser, _collateralAmount, _borrowAmount, _lockAmount);
+        uint256 repaymentAmount = _borrowAmount;
+
+        Bucket memory bucket = buckets[0];
+        uint256 expiry = block.timestamp + (bucket.lockEpochDuration * EPOCH_DURATION);
 
         uint256 initialTotalUSDO = tob._totalLockedUsdo(testUser);
-        int256 initialCurrentEpochDeposits = tob._netDepositsPerEpoch(block.timestamp);
-        int256 initialExpiryEpochDeposits = tob._netDepositsPerEpoch(block.timestamp + 1 weeks);
+        int256 initialCurrentEpochDeposits = tob._netDepositsPerEpoch(tob.lastEpoch() + 1);
+        int256 initialExpiryEpochDeposits = tob._netDepositsPerEpoch(tob.timestampToEpoch(expiry) + 1);
+
+        _repayBigBang(repaymentAmount, bigBangInstance, testUser, testUser, testUser);
 
         vm.startPrank(testUser);
         tob.forceUnlock(0, testUser);
 
         assertEq(tob._totalLockedUsdo(testUser), initialTotalUSDO - _lockAmount, "Total locked USDO should decrease");
         assertEq(
-            tob._netDepositsPerEpoch(block.timestamp),
+            tob._netDepositsPerEpoch(tob.lastEpoch() + 1),
             initialCurrentEpochDeposits,
-            "Current epoch deposits should not change"
+            "Current epoch deposits should remain unchanged"
         );
         assertEq(
-            tob._netDepositsPerEpoch(block.timestamp + 1 weeks),
+            tob._netDepositsPerEpoch(tob.timestampToEpoch(expiry) + 1),
             initialExpiryEpochDeposits,
             "Expiry epoch deposits should not change"
         );

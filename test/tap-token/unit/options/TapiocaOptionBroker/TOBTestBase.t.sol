@@ -5,7 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {RebaseLibrary, Rebase} from "@boringcrypto/boring-solidity/contracts/libraries/BoringRebase.sol";
 import {TapiocaReport, TapiocaInput} from "deployments/interfaces/ITapiocaReport.sol";
 import {ERC20Mock} from "tap-token/mocks/ERC20Mock.sol";
-import {OracleMock} from "tapioca-mocks/OracleMock.sol";
+import {OracleMock} from "test/utils/mocks/OracleMock.sol";
 import {LZEndpointMock} from "tapioca-mocks/LZEndpointMock.sol";
 import {SingularityLauncher, RiskParams} from "deployments/releases/tapioca-v1/actions/SingularityLauncher.sol";
 import {BigBangLauncher, BigBangRiskParams} from "deployments/releases/tapioca-v1/actions/BigBangLauncher.sol";
@@ -27,7 +27,6 @@ import {Events} from "test/bar/btt/utils/Events.sol";
 import {MarketHelper} from "tapioca-bar/markets/MarketHelper.sol";
 import {Utils} from "test/bar/btt/utils/Utils.sol";
 import {Usdo} from "tapioca-bar/usdo/Usdo.sol";
-import "forge-std/console.sol";
 
 contract TOBTestBase is Test, Events, Utils {
     using RebaseLibrary for Rebase;
@@ -97,7 +96,7 @@ contract TOBTestBase is Test, Events, Utils {
                 epochCeiling: 10,
                 epochFloor: 1,
                 rewardsMultiplier: 5000,
-                lockEpochDuration: 1,
+                lockEpochDuration: 5,
                 currentEpochInflows: 0,
                 lastEpochInflows: 0,
                 growthGoal: 1000e18
@@ -155,6 +154,9 @@ contract TOBTestBase is Test, Events, Utils {
         sUSDX = new ERC20Mock("sUSDX", "sUSDX");
         sWETH = new ERC20Mock("sWETH", "sWETH");
         TapiocaReport memory emptyReport;
+
+        tapOracle = address(new OracleMock("TapOracle", "TORC", 1 ether));
+        paymentTokenOracle = address(new OracleMock("PaymentTokenOracle", "PORC", 1 ether));
 
         input.owner = owner;
         input.lzChainId = 0;
@@ -244,6 +246,13 @@ contract TOBTestBase is Test, Events, Utils {
 
         vm.startPrank(owner);
         tob.setMarket(marketAddress, true);
+        vm.stopPrank();
+
+        // add liquidity to the market
+        deal(address(usdo), owner, 10000 ether);
+        vm.startPrank(owner);
+        usdo.approve(marketAddress, 10000 ether);
+        Singularity(payable(marketAddress)).addAsset(owner, owner, 10000 ether);
         vm.stopPrank();
 
         return (Singularity(payable(marketAddress)), collateralId, assetId);
@@ -422,5 +431,36 @@ contract TOBTestBase is Test, Events, Utils {
         _data.userBalanceBefore = IERC20(_bb.collateral()).balanceOf(_to);
         _data.usdoSupplyBefore = usdo.totalSupply();
         return _data;
+    }
+
+    function _setupValidPosition(address user, uint256 collateralAmount, uint256 borrowAmount, uint256 lockAmount)
+        internal
+    {
+        _addCollateralBigBang(collateralAmount, bigBangInstance, user, user, user, user);
+        _borrowBigBang(borrowAmount, bigBangInstance, user, user, user);
+
+        vm.startPrank(user);
+        tapToken.approve(address(tob), lockAmount);
+        usdo.approve(address(tob), lockAmount);
+        tob.lock(user, 0, lockAmount, market);
+        vm.stopPrank();
+    }
+
+    function _repayBigBang(uint256 repayAmount, BigBang bb, address executor, address from, address to)
+        internal
+        resetPrank(executor)
+    {
+        deal(address(bb.borrowableToken()), from, repayAmount);
+        IERC20(bb.borrowableToken()).approve(address(bb), repayAmount);
+        (Module[] memory modules, bytes[] memory calls) = _getRepayData(repayAmount, from, to);
+        bb.execute(modules, calls, true);
+    }
+
+    function _getRepayData(uint256 _repayPart, address _from, address _to)
+        internal
+        view
+        returns (Module[] memory modules, bytes[] memory calls)
+    {
+        (modules, calls) = marketHelper.repay(_from, _to, false, _repayPart);
     }
 }

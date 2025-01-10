@@ -36,7 +36,6 @@ contract SGLStorage is Ownable, Market, ReentrancyGuard {
     /// @notice information about the accrual info
     ISingularity.AccrueInfo public accrueInfo;
     /// @notice total assets share & amount
-    // TODO Should we remove this because it is managed by ERC4626?
     Rebase public totalAsset;
 
     uint256 public minimumTargetUtilization;
@@ -54,10 +53,12 @@ contract SGLStorage is Ownable, Market, ReentrancyGuard {
 
     uint256 public minLendAmount;
 
+    mapping(address => uint256) public liquidityBalance;
     // ************** //
     // *** EVENTS *** //
     // ************** //
     /// @notice event emitted when borrow opening fee is updated
+
     event LogBorrowingFee(uint256 indexed _oldVal, uint256 indexed _newVal);
     /// @notice event emitted when accrual happens
     event LogAccrue(
@@ -108,13 +109,6 @@ contract SGLStorage is Ownable, Market, ReentrancyGuard {
     /// @notice returns market's ERC20 name
     function name() public view virtual override returns (string memory) {
         return string(abi.encodePacked("Tapioca Singularity-", IERC20(collateral()).safeName()));
-    }
-
-    /// @notice returns market's ERC20 totalSupply
-    /// @dev totalSupply for ERC20 compatibility
-    ///      BalanceOf[user] represent a fraction
-    function totalSupply() public view virtual override returns (uint256) {
-        return totalAsset.base; // TODO Check overriding ERC4626 totalSupply?
     }
 
     function _accrue() internal virtual override {}

@@ -171,7 +171,7 @@ contract SingularityTest is UsdoTestHelper {
 
         uint256 share = singularity.convertToShares(amount);
         // TODO review it yieldBox.depositAsset(assetYieldBoxId, address(this), address(this), 0, share);
-        singularity.addAsset(address(this), address(this), false, share);
+        singularity.addAsset(address(this), address(this), share);
     }
 
     function depositCollateral(uint256 amount) public {

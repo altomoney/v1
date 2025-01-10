@@ -525,7 +525,7 @@ contract MagnetarTestHelper is TestHelper {
     function depositAsset(Usdo _asset, Singularity _sgl, uint256 amount) public {
         deal(address(_asset), address(this), amount);
 
-        _sgl.addAsset(address(this), address(this), false, 100); // todo: replace 100 with share
+        _sgl.addAsset(address(this), address(this), amount); // todo: replace 100 with share
     }
 
     function depositCollateral(TOFT _collateral, uint256 _collateralId, Singularity _sgl, uint256 amount) public {

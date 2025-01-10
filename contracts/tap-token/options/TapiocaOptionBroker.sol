@@ -23,6 +23,7 @@ import {IMarket} from "tap-utils/interfaces/bar/IMarket.sol";
 import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
 import {IBigBang} from "tap-utils/interfaces/bar/IBigBang.sol";
 import {ITapiocaOptionBroker, Participation, PaymentTokenOracle} from "tap-token/interfaces/ITapiocaOptionBroker.sol";
+import {console} from "forge-std/console.sol";
 /*
 
 ████████╗ █████╗ ██████╗ ██╗ ██████╗  ██████╗ █████╗ 
@@ -198,16 +199,15 @@ contract TapiocaOptionBroker is ITapiocaOptionBroker, Pausable, Ownable, FullMat
         if (_marketShares[to][market] == 0) {
             position.markets.push(market);
         }
-        USDO.safeApprove(market, usdoAmount);
-
-        // Important: Pending to check interface AND token amount after Yieldbox removal task, next line may need to be changed
-        _marketShares[to][market] += ISingularity(market).addAsset(address(this), address(this), false, usdoAmount);
-        USDO.safeApprove(market, 0);
 
         _netDepositsPerEpoch[currentEpoch() + 1] += int256(usdoAmount);
         _netDepositsPerEpoch[_timestampToEpoch(expiry) + 1] -= int256(position.totalUsdo);
         _totalLockedUsdo[to] += usdoAmount;
+
         IERC20(USDO).safeTransferFrom(msg.sender, address(this), usdoAmount);
+        USDO.safeApprove(market, usdoAmount);
+        _marketShares[to][market] += ISingularity(market).addAsset(address(this), address(this), usdoAmount);
+        USDO.safeApprove(market, 0);
 
         emit Participate(to, bucketId, currentEpoch(), usdoAmount);
     }
@@ -302,10 +302,12 @@ contract TapiocaOptionBroker is ITapiocaOptionBroker, Pausable, Ownable, FullMat
         mintedUsdoAmount = _getTotalBigBangDebtInUSDO(user);
 
         maxLockAmount = mintedUsdoAmount + (mintedUsdoAmount * _maxDebtBuffer) / 1e4; // total debt + buffer
-        if (amountToLock + _totalLockedUsdo[user] >= maxLockAmount) {
-            return (false, maxLockAmount, mintedUsdoAmount);
+
+        if (maxLockAmount > 0 && amountToLock + _totalLockedUsdo[user] <= maxLockAmount) {
+            return (true, maxLockAmount, mintedUsdoAmount);
         }
-        return (true, maxLockAmount, mintedUsdoAmount);
+
+        return (false, maxLockAmount, mintedUsdoAmount);
     }
 
     /**
@@ -364,7 +366,7 @@ contract TapiocaOptionBroker is ITapiocaOptionBroker, Pausable, Ownable, FullMat
             revert PaymentTokenNotSupported();
         }
 
-        if (_timestampToEpoch(block.timestamp) > cachedEpoch) revert AdvanceEpochFirst();
+        if (lastEpoch < cachedEpoch) revert AdvanceEpochFirst();
 
         if (block.timestamp < position.lockedAt + EPOCH_DURATION) {
             revert OneEpochCooldown();
@@ -530,6 +532,7 @@ contract TapiocaOptionBroker is ITapiocaOptionBroker, Pausable, Ownable, FullMat
      * @notice Emergency sweep tokens in case of a critical issue, after a cooldown period.
      */
     function emergencySweep(address token) external onlyOwner {
+        console.log("emergencySweep", block.timestamp, _lastEmergencySweep, _emergencySweepCooldown);
         if (_lastEmergencySweep == 0 || block.timestamp < _lastEmergencySweep + _emergencySweepCooldown) {
             revert EmergencySweepCooldownNotReached();
         }

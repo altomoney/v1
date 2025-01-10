@@ -3,6 +3,7 @@ pragma solidity ^0.8.18;
 
 import {TOBTestBase} from "../TOBTestBase.t.sol";
 import {ITapiocaOptionBroker} from "tap-token/interfaces/ITapiocaOptionBroker.sol";
+import "forge-std/console.sol";
 
 contract TapiocaOptionBrokerUnlockTest is TOBTestBase {
     uint8 bucketId;
@@ -23,6 +24,7 @@ contract TapiocaOptionBrokerUnlockTest is TOBTestBase {
         _addCollateralBigBang(collateralAmount, bigBangInstance, user, user, user, user);
         _borrowBigBang(lockAmount, bigBangInstance, user, user, user);
 
+        console.log("user balance", usdo.balanceOf(user));
         vm.startPrank(user);
         usdo.approve(address(tob), lockAmount);
         tob.lock(user, bucketId, lockAmount, address(market));
@@ -47,8 +49,10 @@ contract TapiocaOptionBrokerUnlockTest is TOBTestBase {
         int256 initialCurrentEpochDeposits = tob._netDepositsPerEpoch(block.timestamp);
         int256 initialExpiryEpochDeposits = tob._netDepositsPerEpoch(block.timestamp + lockDuration);
 
+        uint256 blockTimestamp = block.timestamp;
+
         // Advance time past lock duration
-        vm.warp(block.timestamp + lockDuration + 1);
+        vm.warp(block.timestamp + (lockDuration * 10) + 1);
 
         vm.startPrank(user1);
         tob.unlock(bucketId, user1);
@@ -56,14 +60,14 @@ contract TapiocaOptionBrokerUnlockTest is TOBTestBase {
         // Verify position is cleared
         assertEq(tob._totalLockedUsdo(user1), initialTotalUSDO - lockAmount, "Total USDO should be updated");
 
-        // Verify net deposits updated
+        // Verify net deposits remain unchanged
         assertEq(
-            tob._netDepositsPerEpoch(block.timestamp),
+            tob._netDepositsPerEpoch(blockTimestamp),
             initialCurrentEpochDeposits,
             "Current epoch deposits should not change"
         );
         assertEq(
-            tob._netDepositsPerEpoch(block.timestamp + lockDuration),
+            tob._netDepositsPerEpoch(blockTimestamp + lockDuration),
             initialExpiryEpochDeposits,
             "Expiry epoch deposits should not change"
         );

@@ -445,7 +445,7 @@ contract UnitBaseTest is TestHelper {
         uint256 share = singularityEthMarket.convertToShares(amount);
         // TODO review it yieldBox.depositAsset(usdoMockTokenId, to, to, 0, share);
 
-        singularityEthMarket.addAsset(to, to, false, share);
+        singularityEthMarket.addAsset(to, to, share);
 
         vm.stopPrank();
     }
