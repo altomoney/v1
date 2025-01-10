@@ -500,10 +500,9 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, ReentrancyGuard, Pausable {
         }
         if (lastProcessedWeek != currentEpoch()) advanceWeek(currentEpoch() - lastProcessedWeek);
 
-        // if (_transferFrom) {
-        //     bool isErr = pearl mit.transferFromERC20(msg.sender, address(this), address(tapOFT), _amount);
-        //     if (isErr) revert NotAuthorized();
-        // }
+        if (_transferFrom) {
+            IERC20(address(tapOFT)).safeTransferFrom(_participant, address(this), _amount);
+        }
 
         Participation storage position = participations[_participant][_bucketId];
         Bucket memory bucket = buckets[_bucketId];

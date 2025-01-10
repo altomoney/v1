@@ -117,7 +117,7 @@ contract twTapBaseTest is UnitBaseTest {
     function _participate(uint256 _amount, uint8 _bucketId) internal {
         vm.startPrank(aliceAddr);
         tapOFT.freeMint(aliceAddr, _amount);
-        // pearl mit.approve(20, address(tapOFT), 0, address(twTap), uint200(_amount), uint48(block.timestamp + 1));
+        IERC20(address(tapOFT)).approve(address(twTap), _amount);
         twTap.participate(aliceAddr, _amount, _bucketId);
         vm.stopPrank();
     }

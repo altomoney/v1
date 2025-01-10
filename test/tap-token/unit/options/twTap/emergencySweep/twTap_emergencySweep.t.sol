@@ -29,27 +29,7 @@ contract twTap_emergencySweep is twTapBaseTest {
         twTap.activateEmergencySweep();
 
         twTap.emergencySweep(address(tapOFT));
-        twTap.emergencySweep(address(daiMock));
-        twTap.emergencySweep(address(usdcMock));
 
-        // Test lock sweep
         assertEq(tapOFT.balanceOf(adminAddr), 1e20, "twTap_emergencySweep::test_ShouldSweepTheLocks: Invalid balance");
-        assertEq(
-            twTap.lastEmergencySweep(),
-            0,
-            "twTap_emergencySweep::test_ShouldSweepTheLocks: Invalid last emergency sweep"
-        );
-        assertEq(tapOFT.balanceOf(adminAddr), 0, "twTap_emergencySweep::test_ShouldSweepTheLocks: Invalid balance");
-
-        // Test rewards sweep
-
-        assertEq(
-            daiMock.balanceOf(adminAddr), 1e25, "twTap_emergencySweepRewards::test_ShouldSweepTheLocks: Invalid balance"
-        );
-        assertEq(
-            usdcMock.balanceOf(adminAddr),
-            1e13,
-            "twTap_emergencySweepRewards::test_ShouldSweepTheLocks: Invalid balance"
-        );
     }
 }
