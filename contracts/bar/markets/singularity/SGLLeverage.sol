@@ -79,6 +79,9 @@ contract SGLLeverage is SGLLendingCommon {
         {
             memoryData.borrowShareToAmount = redeem(borrowShare, address(leverageExecutor), address(this));
             updateExchangeRate();
+            uint256 assetPartInCollateral = (memoryData.supplyShareToAmount + memoryData.borrowShareToAmount)
+                * exchangeRate / EXCHANGE_RATE_PRECISION;
+            _allowedBorrow(calldata_.from, convertToShares(assetPartInCollateral));
 
             amountOut = leverageExecutor.getCollateral(
                 from,
@@ -128,6 +131,7 @@ contract SGLLeverage is SGLLendingCommon {
             calldata_.data = data;
         }
 
+        _allowedBorrow(calldata_.from, calldata_.share);
         _removeCollateral(calldata_.from, address(this), calldata_.share);
 
         uint256 leverageAmount = redeem(calldata_.share, address(leverageExecutor), address(this));
@@ -141,11 +145,11 @@ contract SGLLeverage is SGLLendingCommon {
         uint256 amountOwed = totalBorrow.toElastic(partOwed, true);
         uint256 shareOwed = convertToShares(amountOwed);
         if (shareOwed <= shareOut) {
-            _repay(calldata_.from, calldata_.from, false, partOwed, false);
+            _repay(calldata_.from, calldata_.from, partOwed, false);
         } else {
             //repay as much as we can
             uint256 partOut = totalBorrow.toBase(amountOut, false);
-            _repay(calldata_.from, calldata_.from, false, partOut, false);
+            _repay(calldata_.from, calldata_.from, partOut, false);
         }
         if (amountOut == 0) revert AmountNotValid();
     }

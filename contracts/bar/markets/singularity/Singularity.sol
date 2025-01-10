@@ -15,7 +15,6 @@ import {Module} from "tap-utils/interfaces/bar/IMarket.sol";
 import {MarketStateView} from "../MarketStateView.sol";
 import {SGLLiquidation} from "./SGLLiquidation.sol";
 import {SGLCollateral} from "./SGLCollateral.sol";
-import {MarketERC20} from "../MarketERC20.sol";
 import {SGLLeverage} from "./SGLLeverage.sol";
 import {SGLStorage} from "./SGLStorage.sol";
 import {SGLCommon} from "./SGLCommon.sol";
@@ -142,6 +141,7 @@ contract Singularity is MarketStateView, SGLCommon {
     function addAsset(address from, address to, uint256 amount)
         external
         optionNotPaused(PauseType.AddAsset)
+        allowedLend(from, amount)
         returns (uint256 fraction)
     {
         if (amount <= minLendAmount) revert MinLendAmountNotMet();
@@ -162,6 +162,7 @@ contract Singularity is MarketStateView, SGLCommon {
     {
         _accrue();
         share = _removeAsset(from, to, fraction);
+        _allowedLend(from, share);
     }
 
     // *********************** //

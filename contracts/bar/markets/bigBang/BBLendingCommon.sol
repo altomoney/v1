@@ -35,12 +35,14 @@ contract BBLendingCommon is BBCommon {
     // ************************** //
     // *** PRIVATE FUNCTIONS *** //
     // ************************* //
-    function _addCollateral(address from, address to, uint256 amount, uint256 share) internal {
+    function _addCollateral(address from, address to, uint256 amount, uint256 share, bool pullTokens) internal {
         if (share == 0) {
             share = convertToShares(amount);
         }
 
-        IERC20(collateral()).safeTransferFrom(from, address(this), amount);
+        if (pullTokens) {
+            IERC20(collateral()).safeTransferFrom(from, address(this), amount);
+        }
         _mint(to, share);
 
         emit LogAddCollateral(from, to, share);
@@ -83,6 +85,10 @@ contract BBLendingCommon is BBCommon {
         }
         if (part == 0) revert NothingToRepay();
 
+        if (checkAllowance && msg.sender != from) {
+            uint256 partInAmount = convertToAssets(part);
+            _allowedBorrow(from, partInAmount);
+        }
         // @dev sub `part` of totalBorrow
         (totalBorrow, amount) = totalBorrow.sub(part, true);
         userBorrowPart[to] -= part;

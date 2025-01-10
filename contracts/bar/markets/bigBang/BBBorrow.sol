@@ -42,11 +42,11 @@ contract BBBorrow is BBLendingCommon {
         returns (uint256 part, uint256 share)
     {
         if (amount <= minBorrowAmount) revert MinBorrowAmountNotMet();
+        _allowedBorrow(from, amount);
 
         _penrose.reAccrueBigBangMarkets();
 
         uint256 feeAmount = _computeVariableOpeningFee(amount);
-
         (part, share) = _borrow(from, to, amount, feeAmount);
     }
 
@@ -56,7 +56,7 @@ contract BBBorrow is BBLendingCommon {
     /// @param to Address of the user this payment should go.
     /// @param part The amount to repay. See `userBorrowPart`.
     /// @return amount The total amount repayed.
-    function repay(address from, address to, bool, uint256 part)
+    function repay(address from, address to, uint256 part)
         external
         optionNotPaused(PauseType.Repay)
         notSelf(to)
