@@ -553,13 +553,12 @@ abstract contract BigBang_Unit_Shared is Markets_Unit_Shared {
         address from,
         address to
     ) internal {
+        vm.startPrank(executor);
         uint256 borrowedAmount = _addCollateralAndBorrow(collateralAmount, borrowAmount, bb, from, to);
 
         _BorrowInternal memory _data = _createBorrowInternal(bb, to);
 
         (Module[] memory modules, bytes[] memory calls, uint256 repayAmount) = _createRepayData(repayPart, bb, from, to);
-
-        _resetPrank(executor);
 
         // it should emit 'LogAccrue'
         // it should emit 'ReaccruedMarkets'
@@ -568,14 +567,17 @@ abstract contract BigBang_Unit_Shared is Markets_Unit_Shared {
         // │   │   │   │   │   └─ ← [Return]
         // │   │   │   │   ├─ emit ReaccruedMarkets(mainMarketIncluded: false)
         // it should emit 'LogRepay'
+        usdo.approve(address(bb), type(uint256).max);
         vm.expectEmit(true, true, false, false);
         emit LogRepay(from, to, repayAmount, repayPart);
         bb.execute(modules, calls, true);
 
+        vm.stopPrank();
+
         // get `after` state
         _data.totalBorrowAfter = bb._totalBorrow();
         _data.userBorrowPartAfter = bb._userBorrowPart(to);
-        _data.userYieldBoxBalanceAfter = IERC20(IMarket(address(bb))._borrowableToken()).balanceOf(address(to));
+        _data.userYieldBoxBalanceAfter = IERC20(bb.borrowableToken()).balanceOf(address(to));
         _data.usdoSupplyAfter = usdo.totalSupply();
 
         // it should decrease 'userBorrowPart'

@@ -78,6 +78,8 @@ contract BigBang_repay is BigBang_Unit_Shared {
 
         oracle.setSuccess(false);
 
+        usdo.approve(address(mainBB), type(uint256).max);
+
         uint256 userBorrowPartBefore = mainBB._userBorrowPart(address(this));
         // it should use the cached rates
         // it should continue with the repayment
@@ -166,7 +168,7 @@ contract BigBang_repay is BigBang_Unit_Shared {
         repayPart = _boundRepayAmount(repayPart, mainBB);
         (Module[] memory modules, bytes[] memory calls) = _getRepayData(repayPart, address(this), address(this));
         _resetPrank(userA);
-        vm.expectRevert("Market: not approved");
+        vm.expectRevert("BoringERC20: TransferFrom failed");
         mainBB.execute(modules, calls, true);
     }
 
