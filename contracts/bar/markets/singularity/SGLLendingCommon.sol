@@ -42,6 +42,10 @@ contract SGLLendingCommon is SGLCommon {
         }
         uint256 oldTotalCollateralShare = totalSupply();
 
+        if (addTokens) {
+            IERC20(collateral()).safeTransferFrom(from, address(this), amount);
+        }
+
         _mint(to, share);
 
         emit LogAddCollateral(from, to, share);

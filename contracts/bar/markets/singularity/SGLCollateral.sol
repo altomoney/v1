@@ -40,7 +40,7 @@ contract SGLCollateral is SGLLendingCommon {
         }
         if (amount <= minCollateralAmount) revert MinCollateralAmountNotMet();
 
-        _addCollateral(from, to, skim, amount, share, true);
+        _addCollateral(from, to, amount, share, true);
     }
 
     /// @notice Removes `share` amount of collateral and transfers it to `to`.
