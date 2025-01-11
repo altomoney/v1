@@ -11,9 +11,8 @@ import {BBDebtRateHelper} from "tapioca-bar/markets/bigBang/BBDebtRateHelper.sol
 import {MarketHelper} from "tapioca-bar/markets/MarketHelper.sol";
 import {Market} from "tapioca-bar/markets/Market.sol";
 
-import {MagnetarHelper} from "tap-utils/Magnetar/MagnetarHelper.sol";
+import {MagnetarHelper} from "tapioca-periph/Magnetar/MagnetarHelper.sol";
 
-// import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IMarketLiquidatorReceiver} from "tap-utils/interfaces/bar/IMarketLiquidatorReceiver.sol";
 import {IERC20} from "@boringcrypto/boring-solidity/contracts/libraries/BoringERC20.sol";
 import {ILeverageExecutor} from "tap-utils/interfaces/bar/ILeverageExecutor.sol";
@@ -521,7 +520,7 @@ contract BigBangTest is UsdoTestHelper {
         receivers[0] = IMarketLiquidatorReceiver(address(liquidatorMock));
 
         bytes[] memory receiverData = new bytes[](1);
-        receiverData[0] = abi.encode(borrowAmount / 2);
+        receiverData[0] = abi.encode(266124401913875596);
 
         uint256 borrowPartBefore = bigBang._userBorrowPart(address(this));
         (Module[] memory modules, bytes[] memory calls) =

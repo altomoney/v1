@@ -85,7 +85,6 @@ abstract contract MarketERC4626 is IERC20Permit, ERC4626, IERC1155Receiver {
         _allowedBorrow(from, share);
         _;
     }
-    
 
     /// Check if msg.sender has right to execute collateral  operations
     modifier allowedCollateral(address from, uint256 amount) virtual {
@@ -217,7 +216,8 @@ abstract contract MarketERC4626 is IERC20Permit, ERC4626, IERC1155Receiver {
         } else if (action == PermitActions.BORROW) {
             actionId = _PERMIT_TYPEHASH_BORROW;
         }
-        bytes32 structHash = keccak256(abi.encode(actionId, owner, spender, value, nonces(owner), deadline, block.chainid));
+        bytes32 structHash =
+            keccak256(abi.encode(actionId, owner, spender, value, nonces(owner), deadline, block.chainid));
         _incrementNonce(owner);
 
         bytes32 hash = _hashTypedDataV4(structHash);

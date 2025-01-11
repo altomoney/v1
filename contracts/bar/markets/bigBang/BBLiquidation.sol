@@ -152,7 +152,7 @@ contract BBLiquidation is BBCommon {
         bool checkReturned
     ) private returns (uint256 returnedAmount) {
         uint256 collateralAmount = convertToAssets(_collateralShare);
-        withdraw(collateralAmount, address(_liquidatorReceiver), address(this)); // TODO Check if this is correct
+        IERC20(collateral()).safeTransfer(address(_liquidatorReceiver), collateralAmount);
 
         {
             uint256 assetBalanceBefore = _borrowableToken().balanceOf(address(this));
@@ -312,7 +312,7 @@ contract BBLiquidation is BBCommon {
 
         __ClosedLiquidationCalldata memory calldata_; // Stack too deep fix
 
-        for (uint256 i; i < arrLength;) {
+        for (uint256 i; i < arrLength; ++i) {
             calldata_.user = users[i];
             calldata_.maxBorrowPart = maxBorrowParts[i];
             calldata_.minLiquidationBonus = minLiquidationBonuses[i];
@@ -328,9 +328,6 @@ contract BBLiquidation is BBCommon {
                     _exchangeRate,
                     calldata_.minLiquidationBonus
                 );
-            }
-            unchecked {
-                ++i;
             }
         }
 

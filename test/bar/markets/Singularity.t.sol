@@ -11,7 +11,7 @@ import {SGLInit} from "tapioca-bar/markets/singularity/SGLInit.sol";
 import {MarketHelper} from "tapioca-bar/markets/MarketHelper.sol";
 import {Market} from "tapioca-bar/markets/Market.sol";
 
-import {MagnetarHelper} from "tap-utils/Magnetar/MagnetarHelper.sol";
+import {MagnetarHelper} from "tapioca-periph/Magnetar/MagnetarHelper.sol";
 
 import {IMarketLiquidatorReceiver} from "tap-utils/interfaces/bar/IMarketLiquidatorReceiver.sol";
 import {IERC20} from "@boringcrypto/boring-solidity/contracts/libraries/BoringERC20.sol";
