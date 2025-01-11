@@ -107,7 +107,7 @@ contract BBLeverage is BBLendingCommon {
         uint256 collateralShare = convertToShares(amountOut);
         if (collateralShare == 0) revert CollateralShareNotValid();
 
-        mint(collateralShare, address(this));
+        mint(collateralShare, address(this)); // TODO Minting tokens before _addCollateral (it mints tokens too)?
 
         _addCollateral(calldata_.from, calldata_.from, 0, collateralShare, false);
         if (amountOut == 0) revert AmountNotValid();
