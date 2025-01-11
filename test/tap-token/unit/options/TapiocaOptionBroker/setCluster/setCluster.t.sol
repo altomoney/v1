@@ -1,22 +1,37 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.18;
 
-import {Test} from "forge-std/Test.sol";
+import {TOBTestBase} from "../TOBTestBase.t.sol";
 
-contract TapiocaOptionBroker_setClustertree is Test {
-    function test_RevertWhen_CallerIsNotOwner() external {
-        // it should revert
-        vm.skip(true);
+contract TapiocaOptionBrokerSetClusterTest is TOBTestBase {
+    function setUp() public override {
+        super.setUp();
     }
 
-    function test_WhenClusterAddressIsZero() external {
-        // it should revert with NotValid
-        vm.skip(true);
+    function test_revertWhen_callerIsNotOwner() public {
+        address notOwner = makeAddr("notOwner");
+        vm.startPrank(notOwner);
+        vm.expectRevert("Ownable: caller is not the owner");
+        tob.setCluster(address(cluster));
+        vm.stopPrank();
     }
 
-    function test_WhenConditionsAreMet() external {
-        // it should set _cluster
-        // it should emit SetCluster event
-        vm.skip(true);
+    function test_revertWhen_clusterAddressIsZero() public {
+        vm.startPrank(owner);
+        vm.expectRevert(abi.encodeWithSignature("NotValid()"));
+        tob.setCluster(address(0));
+        vm.stopPrank();
+    }
+
+    function test_setCluster_validConditions() public {
+        address newCluster = makeAddr("newCluster");
+
+        // Set cluster
+        vm.startPrank(owner);
+        tob.setCluster(newCluster);
+        vm.stopPrank();
+
+        // Verify cluster updated
+        assertEq(address(tob._cluster()), newCluster, "Cluster should be updated");
     }
 }

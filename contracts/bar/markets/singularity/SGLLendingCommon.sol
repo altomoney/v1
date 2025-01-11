@@ -36,14 +36,15 @@ contract SGLLendingCommon is SGLCommon {
     // *** PRIVATE FUNCTIONS *** //
     // ************************* //
     /// @dev Concrete implementation of `addCollateral`.
-    // TODO Do we need skim and addTokens?
-    function _addCollateral(address from, address to, bool _skim, uint256 amount, uint256 share, bool addTokens)
-        internal
-    {
+    function _addCollateral(address from, address to, uint256 amount, uint256 share, bool addTokens) internal {
         if (share == 0) {
             share = convertToShares(amount);
         }
         uint256 oldTotalCollateralShare = totalSupply();
+
+        if (addTokens) {
+            IERC20(collateral()).safeTransferFrom(from, address(this), amount);
+        }
 
         _mint(to, share);
 
@@ -90,11 +91,7 @@ contract SGLLendingCommon is SGLCommon {
     }
 
     /// @dev Concrete implementation of `repay`.
-    // TODO Do we need skim?
-    function _repay(address from, address to, bool skim, uint256 part, bool checkAllowance)
-        internal
-        returns (uint256 amount)
-    {
+    function _repay(address from, address to, uint256 part, bool checkAllowance) internal returns (uint256 amount) {
         if (part > userBorrowPart[to]) {
             part = userBorrowPart[to];
         }
@@ -105,10 +102,7 @@ contract SGLLendingCommon is SGLCommon {
             Rebase memory _totalBorrow = totalBorrow;
             (_totalBorrow, partInAmount) = _totalBorrow.sub(part, true);
 
-            uint256 allowanceShare =
-                _computeAllowanceAmountInAsset(to, exchangeRate, partInAmount, _safeDecimals(_borrowableToken()));
-            if (allowanceShare == 0) revert NotEnough();
-            _allowedLend(from, allowanceShare);
+            _allowedLend(from, partInAmount);
         }
         (totalBorrow, amount) = totalBorrow.sub(part, true);
 
@@ -118,6 +112,8 @@ contract SGLLendingCommon is SGLCommon {
         uint128 totalShare = totalAsset.elastic;
 
         totalAsset.elastic = totalShare + share.toUint128();
+
+        _borrowableToken().safeTransferFrom(from, address(this), amount);
 
         emit LogRepay(from, to, amount, part);
     }

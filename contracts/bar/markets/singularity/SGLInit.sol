@@ -61,10 +61,6 @@ contract SGLInit is MarketStateView, SGLCommon {
         IERC20 _collateral;
     }
 
-    function totalSupply() public view override(ERC20, SGLStorage) returns (uint256) {
-        return totalAsset.base;
-    }
-
     function name() public view override(MarketERC4626, SGLStorage) returns (string memory) {
         return SGLStorage.name();
     }

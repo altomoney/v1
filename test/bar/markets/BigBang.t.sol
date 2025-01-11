@@ -164,26 +164,18 @@ contract BigBangTest is UsdoTestHelper {
     }
 
     function depositAsset(uint256 amount) public {
-        deal(address(asset), address(this), amount);
-        // asset.approve(address(pearl mit), type(uint256).max);
-        // pearl mit.approve(
-        //     1155,  assetYieldBoxId, address(bigBang), type(uint200).max, uint48(block.timestamp)
-        // );
+        deal(address(bigBang.borrowableToken()), address(this), amount);
+        IERC20(bigBang.borrowableToken()).approve(address(bigBang), amount);
     }
 
     function depositCollateral(uint256 amount) public {
-        vm.skip(true);
         deal(address(collateral), address(this), amount);
         collateral.approve(address(bigBang), type(uint256).max);
-        // pearl mit.approve(
-        //     1155,  collateralYieldBoxId, address(bigBang), type(uint200).max, uint48(block.timestamp)
-        // );
 
         uint256 share = bigBang.convertToShares(amount);
-        // TODO review it yieldBox.depositAsset(collateralYieldBoxId, address(this), address(this), 0, share);
 
         (Module[] memory modules, bytes[] memory calls) =
-            marketHelper.addCollateral(address(this), address(this), false, 0, share);
+            marketHelper.addCollateral(address(this), address(this), share, 0);
         bigBang.execute(modules, calls, true);
     }
 
@@ -195,10 +187,8 @@ contract BigBangTest is UsdoTestHelper {
     }
 
     function repay(uint256 part) public {
-        // pearl mit.approve(
-        //     1155,  assetYieldBoxId, address(bigBang), type(uint200).max, uint48(block.timestamp)
-        // );
-        (Module[] memory modules, bytes[] memory calls) = marketHelper.repay(address(this), address(this), false, part);
+        (Module[] memory modules, bytes[] memory calls) = marketHelper.repay(address(this), address(this), part);
+        IERC20(bigBang.borrowableToken()).approve(address(bigBang), type(uint256).max);
         bigBang.execute(modules, calls, true);
     }
 
@@ -209,7 +199,6 @@ contract BigBangTest is UsdoTestHelper {
         // console.log ("=======SCENARIO 1:====== ");
         // console.log ("      borrow - repay all - borrow - repay all - borrow - repay all ");
         // console.log ("======================== ");
-        vm.skip(true);
 
         uint256 collateralAmount = 10 ether;
         uint256 borrowAmount = 1 ether;
@@ -240,6 +229,7 @@ contract BigBangTest is UsdoTestHelper {
             // TODO review it yieldBox.depositAsset(assetYieldBoxId, address(this), address(this), borrowAmount * 2, 0);
             userBorrowPart = bigBang._userBorrowPart(address(this));
 
+            deal(address(bigBang.borrowableToken()), address(this), borrowAmount * 2);
             // console.log ("=======BEFORE REPAY ");
             repay(bigBang._userBorrowPart(address(this)));
             // console.log ("=======AFTER REPAY ");
@@ -261,11 +251,10 @@ contract BigBangTest is UsdoTestHelper {
             skip(86400 * 10);
             // prepare for repay
             penrose.mintOpenInterestDebt(address(twTap));
-            // TODO review it yieldBox.depositAsset(assetYieldBoxId, address(this), address(this), borrowAmount * 2, 0);
             userBorrowPart = bigBang._userBorrowPart(address(this));
 
             // console.log ("=======BEFORE REPAY ");
-            repay(bigBang._userBorrowPart(address(this)));
+            repay(userBorrowPart);
             // console.log ("=======AFTER REPAY ");
             penrose.mintOpenInterestDebt(address(twTap));
         }
@@ -459,7 +448,7 @@ contract BigBangTest is UsdoTestHelper {
 
         Module[] memory modules;
         bytes[] memory calls;
-        (modules, calls) = marketHelper.addCollateral(address(this), address(this), false, 1, 0);
+        (modules, calls) = marketHelper.addCollateral(address(this), address(this), 1, 0);
         vm.expectRevert("Market: paused");
         bigBang.execute(modules, calls, true);
 
@@ -564,7 +553,7 @@ contract BigBangTest is UsdoTestHelper {
         oracle.set(oracleRate * 100);
 
         liquidatorMock = new MarketLiquidatorReceiverMock(IERC20(address(asset)));
-        // deal(address(asset), address(liquidatorMock), borrowAmount * 2);
+        deal(address(asset), address(liquidatorMock), borrowAmount * 2);
 
         //cannot liquidate
         {
@@ -589,7 +578,7 @@ contract BigBangTest is UsdoTestHelper {
             vm.expectRevert();
             bigBang.execute(modules, calls, true);
             uint256 borrowPartAfter = bigBang._userBorrowPart(address(this));
-            assertEq(borrowPartBefore, borrowPartAfter);
+            assertEq(borrowPartBefore, borrowPartAfter, "borrowPartBefore != borrowPartAfter liquidate");
         }
 
         //use liquidateBadDebt
@@ -605,8 +594,8 @@ contract BigBangTest is UsdoTestHelper {
             );
 
             cluster.updateContract(0, address(this), true);
-            deal(address(asset), address(this), borrowAmount * 2);
-            asset.approve(address(bigBang), type(uint256).max);
+            deal(address(bigBang.borrowableToken()), address(this), 1e36);
+            IERC20(address(bigBang.borrowableToken())).approve(address(bigBang), type(uint256).max);
             bytes memory badDebtCall = abi.encodeWithSelector(BigBang.execute.selector, modules, calls, true);
 
             address[] memory mc = new address[](1);
@@ -616,7 +605,7 @@ contract BigBangTest is UsdoTestHelper {
             data[0] = badDebtCall;
             penrose.executeMarketFn(mc, data, false);
             uint256 borrowPartAfter = bigBang._userBorrowPart(address(this));
-            assertGt(borrowPartBefore, borrowPartAfter);
+            assertGt(borrowPartBefore, borrowPartAfter, "borrowPartBefore <= borrowPartAfter liquidateBadDebt");
         }
     }
 
@@ -628,7 +617,7 @@ contract BigBangTest is UsdoTestHelper {
 
         {
             deal(address(collateral), address(this), collateralAmount);
-            deal(address(asset), address(this), borrowAmount * 2);
+            deal(address(bigBang.borrowableToken()), address(this), borrowAmount * 2);
         }
 
         {
@@ -691,8 +680,7 @@ contract BigBangTest is UsdoTestHelper {
         vm.prank(userA);
         // TODO review it yieldBox.depositAsset(assetYieldBoxId, address(userA), address(userA), 0, share);
 
-        (Module[] memory modules, bytes[] memory calls) =
-            marketHelper.repay(address(userA), address(this), false, borrowPart);
+        (Module[] memory modules, bytes[] memory calls) = marketHelper.repay(address(userA), address(this), borrowPart);
         vm.prank(userA);
         bigBang.execute(modules, calls, true);
 

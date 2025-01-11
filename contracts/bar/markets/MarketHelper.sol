@@ -138,11 +138,7 @@ contract MarketHelper {
     /// @notice transforms amount to shares for a market's permit operation
     /// @param amount the amount to transform
     /// @return share amount transformed into shares
-    function computeAllowedLendShare(address sglAddress, uint256 amount)
-        external
-        view
-        returns (uint256 share)
-    {
+    function computeAllowedLendShare(address sglAddress, uint256 amount) external view returns (uint256 share) {
         ISingularity sgl = ISingularity(sglAddress);
 
         (uint128 totalAssetElastic, uint128 totalAssetBase) = sgl.totalAsset();
@@ -200,10 +196,9 @@ contract MarketHelper {
     /// @notice Adds `collateral` from msg.sender to the account `to`.
     /// @param from Account to transfer shares from.
     /// @param to The receiver of the tokens.
-    /// @param skim True if the amount should be skimmed from the deposit balance of msg.sender.
     /// False if tokens from msg.sender  should be transferred.
     /// @param share The amount of shares to add for `to`.
-    function addCollateral(address from, address to, bool skim, uint256 amount, uint256 share)
+    function addCollateral(address from, address to, uint256 amount, uint256 share)
         external
         pure
         returns (Module[] memory modules, bytes[] memory calls)
@@ -211,7 +206,7 @@ contract MarketHelper {
         modules = new Module[](1);
         calls = new bytes[](1);
         modules[0] = Module.Collateral;
-        calls[0] = abi.encodeWithSelector(SGLCollateral.addCollateral.selector, from, to, skim, amount, share);
+        calls[0] = abi.encodeWithSelector(SGLCollateral.addCollateral.selector, from, to, amount, share);
     }
 
     /// @notice Removes `share` amount of collateral and transfers it to `to`.
@@ -252,10 +247,8 @@ contract MarketHelper {
     /// @notice Repays a loan.
     /// @param from Address to repay from.
     /// @param to Address of the user this payment should go.
-    /// @param skim True if the amount should be skimmed from the deposit balance of msg.sender.
-    /// False if tokens from msg.sender  should be transferred.
     /// @param part The amount to repay. See `userBorrowPart`.
-    function repay(address from, address to, bool skim, uint256 part)
+    function repay(address from, address to, uint256 part)
         external
         pure
         returns (Module[] memory modules, bytes[] memory calls)
@@ -263,7 +256,7 @@ contract MarketHelper {
         modules = new Module[](1);
         calls = new bytes[](1);
         modules[0] = Module.Borrow;
-        calls[0] = abi.encodeWithSelector(SGLBorrow.repay.selector, from, to, skim, part);
+        calls[0] = abi.encodeWithSelector(SGLBorrow.repay.selector, from, to, part);
     }
 
     /// @notice view the result of a repay operation.

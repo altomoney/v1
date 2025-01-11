@@ -651,7 +651,7 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
 
             Module[] memory modules;
             bytes[] memory calls;
-            (modules, calls) = marketHelper.addCollateral(address(this), address(this), false, tokenAmount_, 0);
+            (modules, calls) = marketHelper.addCollateral(address(this), address(this), tokenAmount_, 0);
             bytes memory data = abi.encodeWithSelector(Singularity.execute.selector, modules, calls, true);
 
             magnetarCalls[1] =

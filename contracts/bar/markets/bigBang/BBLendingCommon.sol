@@ -35,27 +35,34 @@ contract BBLendingCommon is BBCommon {
     // ************************** //
     // *** PRIVATE FUNCTIONS *** //
     // ************************* //
-    function _addCollateral(address from, address to, bool skim, uint256 amount, uint256 share, bool addTokens)
-        internal
-    {
+
+    function _addCollateral(address from, address to, uint256 amount, uint256 share, bool pullTokens) internal {
         if (share == 0) {
             share = convertToShares(amount);
         }
 
-        uint256 oldTotalCollateralShare = totalSupply();
+        if (pullTokens) {
+            IERC20(collateral()).safeTransferFrom(from, address(this), amount);
+        }
         _mint(to, share);
 
-        if (addTokens) _addTokens(from, share, oldTotalCollateralShare, skim);
         emit LogAddCollateral(from, to, share);
+    }
+
+    function _depositCollateral(address from, address to, uint256 assets) internal returns (uint256 shares) {
+        _allowedCollateral(from, assets);
+
+        shares = super.deposit(assets, to);
+
+        emit LogAddCollateral(from, to, shares);
     }
 
     /// @dev Concrete implementation of `removeCollateral`.
     function _removeCollateral(address from, address to, uint256 share) internal {
         _burn(from, share);
+        IERC20(collateral()).safeTransfer(to, convertToAssets(share));
 
         emit LogRemoveCollateral(from, to, share);
-
-        IERC20(collateral()).safeTransfer(to, convertToAssets(share));
     }
 
     /// @dev Concrete implementation of `borrow`.
@@ -87,28 +94,18 @@ contract BBLendingCommon is BBCommon {
         }
         if (part == 0) revert NothingToRepay();
 
-        // @dev check allowance
         if (checkAllowance && msg.sender != from) {
-            uint256 partInAmount;
-            Rebase memory _totalBorrow = totalBorrow;
-            (_totalBorrow, partInAmount) = _totalBorrow.sub(part, true);
-            uint256 allowanceShare =
-                _computeAllowanceAmountInAsset(to, exchangeRate, partInAmount, _safeDecimals(_borrowableToken()));
-            if (allowanceShare == 0) revert NotEnough();
-            _allowedLend(from, allowanceShare);
+            uint256 partInAmount = convertToAssets(part);
+            _allowedBorrow(from, partInAmount);
         }
-
         // @dev sub `part` of totalBorrow
         (totalBorrow, amount) = totalBorrow.sub(part, true);
         userBorrowPart[to] -= part;
 
-        // @dev amount includes the opening & accrued fees
-        uint256 _share = convertToShares(amount);
-
-        uint256 amountOut = redeem(_share, address(this), address(this));
+        IERC20(address(_borrowableToken())).safeTransferFrom(from, address(this), amount);
 
         // @dev burn USDO
-        IUsdo(address(_borrowableToken())).burn(address(this), amountOut);
+        IUsdo(address(_borrowableToken())).burn(address(this), amount);
 
         emit LogRepay(from, to, amount, part);
     }

@@ -171,11 +171,10 @@ contract SingularityTest is UsdoTestHelper {
 
         uint256 share = singularity.convertToShares(amount);
         // TODO review it yieldBox.depositAsset(assetYieldBoxId, address(this), address(this), 0, share);
-        singularity.addAsset(address(this), address(this), false, share);
+        singularity.addAsset(address(this), address(this), share);
     }
 
     function depositCollateral(uint256 amount) public {
-        vm.skip(true);
         deal(address(collateral), address(this), amount);
         collateral.approve(address(singularity), type(uint256).max);
 
@@ -183,7 +182,7 @@ contract SingularityTest is UsdoTestHelper {
         // TODO review it yieldBox.depositAsset(collateralYieldBoxId, address(this), address(this), 0, share);
 
         (Module[] memory modules, bytes[] memory calls) =
-            marketHelper.addCollateral(address(this), address(this), false, 0, share);
+            marketHelper.addCollateral(address(this), address(this), share, 0);
         singularity.execute(modules, calls, true);
     }
 
@@ -198,7 +197,7 @@ contract SingularityTest is UsdoTestHelper {
         // pearl mit.approve(
         //     1155,  assetYieldBoxId, address(singularity), type(uint200).max, uint48(block.timestamp)
         // );
-        (Module[] memory modules, bytes[] memory calls) = marketHelper.repay(address(this), address(this), false, part);
+        (Module[] memory modules, bytes[] memory calls) = marketHelper.repay(address(this), address(this), part);
         singularity.execute(modules, calls, true);
     }
 
@@ -318,7 +317,7 @@ contract SingularityTest is UsdoTestHelper {
 
         Module[] memory modules;
         bytes[] memory calls;
-        (modules, calls) = marketHelper.addCollateral(address(this), address(this), false, 1, 0);
+        (modules, calls) = marketHelper.addCollateral(address(this), address(this), 1, 0);
         vm.expectRevert("Market: paused");
         singularity.execute(modules, calls, true);
 
@@ -561,7 +560,6 @@ contract SingularityTest is UsdoTestHelper {
     }
 
     function test_borrow_repay_different_users() public {
-        vm.skip(true);
         uint256 collateralAmount = 1 ether;
         uint256 borrowAmount = 5e17;
 
@@ -597,8 +595,7 @@ contract SingularityTest is UsdoTestHelper {
         vm.prank(userA);
         // TODO review it yieldBox.depositAsset(assetYieldBoxId, address(userA), address(userA), 0, share);
 
-        (Module[] memory modules, bytes[] memory calls) =
-            marketHelper.repay(address(userA), address(this), false, borrowPart);
+        (Module[] memory modules, bytes[] memory calls) = marketHelper.repay(address(userA), address(this), borrowPart);
         vm.prank(userA);
         singularity.execute(modules, calls, true);
 

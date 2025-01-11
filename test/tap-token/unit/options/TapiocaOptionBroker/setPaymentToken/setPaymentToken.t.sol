@@ -1,18 +1,36 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.18;
 
-import {Test} from "forge-std/Test.sol";
+import {TOBTestBase} from "../TOBTestBase.t.sol";
+import {PaymentTokenOracle} from "tap-token/interfaces/ITapiocaOptionBroker.sol";
+import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
 
-contract TapiocaOptionBroker_setPaymentTokentree is Test {
-    function test_RevertWhen_CallerIsNotOwner() external {
-        // it should revert
-        vm.skip(true);
+contract TapiocaOptionBrokerSetPaymentTokenTest is TOBTestBase {
+    function setUp() public override {
+        super.setUp();
     }
 
-    function test_WhenCallerIsOwner() external {
-        // it should set payment token oracle
-        // it should set payment token oracle data
-        // it should emit SetPaymentToken event
-        vm.skip(true);
+    function test_revertWhen_callerIsNotOwner() public {
+        address notOwner = makeAddr("notOwner");
+        vm.startPrank(notOwner);
+        vm.expectRevert("Ownable: caller is not the owner");
+        tob.setPaymentToken(address(paymentToken), paymentTokenOracle, "");
+        vm.stopPrank();
+    }
+
+    function test_setPaymentToken_validConditions() public {
+        address newPaymentToken = makeAddr("newPaymentToken");
+        address newOracle = makeAddr("newOracle");
+        bytes memory oracleData = "test_data";
+
+        // Set payment token
+        vm.startPrank(owner);
+        tob.setPaymentToken(newPaymentToken, newOracle, oracleData);
+        vm.stopPrank();
+
+        // Verify payment token updated
+        (ITapiocaOracle oracle, bytes memory storedData) = tob._paymentTokens(newPaymentToken);
+        assertEq(address(oracle), newOracle, "Oracle should be updated");
+        assertEq(storedData, oracleData, "Oracle data should be updated");
     }
 }

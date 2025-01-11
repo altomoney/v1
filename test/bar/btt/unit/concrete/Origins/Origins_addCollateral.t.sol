@@ -31,7 +31,6 @@ contract Origins_addCollateral is Origins_Unit_Shared {
 
         uint256 share = org.convertToShares(amount);
         org.deposit(amount, address(this));
-        org.addCollateral(0, share);
 
         uint256 resultedCollateral = org.balanceOf(address(this));
         assertEq(resultedCollateral, share);

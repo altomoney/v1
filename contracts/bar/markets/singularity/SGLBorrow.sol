@@ -35,11 +35,7 @@ contract SGLBorrow is SGLLendingCommon {
     {
         if (amount <= minBorrowAmount) revert MinBorrowAmountNotMet();
 
-        uint256 feeAmount = (amount * borrowOpeningFee) / FEE_PRECISION;
-        uint256 allowanceShare =
-            _computeAllowanceAmountInAsset(from, exchangeRate, amount + feeAmount, _safeDecimals(_borrowableToken()));
-
-        _allowedBorrow(from, allowanceShare);
+        _allowedBorrow(from, amount);
 
         (part, share) = _borrow(from, to, amount);
     }
@@ -47,11 +43,9 @@ contract SGLBorrow is SGLLendingCommon {
     /// @notice Repays a loan.
     /// @param from Address to repay from.
     /// @param to Address of the user this payment should go.
-    /// @param skim True if the amount should be skimmed from the deposit balance of msg.sender.
-    /// False if tokens from msg.sender  should be transferred.
     /// @param part The amount to repay. See `userBorrowPart`.
     /// @return amount The total amount repayed.
-    function repay(address from, address to, bool skim, uint256 part)
+    function repay(address from, address to, uint256 part)
         external
         optionNotPaused(PauseType.Repay)
         notSelf(to)
@@ -61,6 +55,6 @@ contract SGLBorrow is SGLLendingCommon {
 
         _accrue();
 
-        amount = _repay(from, to, skim, part, true);
+        amount = _repay(from, to, part, true);
     }
 }

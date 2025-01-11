@@ -180,8 +180,7 @@ contract MagnetarTestHelper is TestHelper {
         magnetarA.setHelper(address(magnetarHelper));
         magnetarB.setHelper(address(magnetarHelper));
         sglInit = new SGLInit();
-        (penrose, sglMC, bbMC) =
-            createPenrose(address(clusterA), address(tap), address(weth), address(this));
+        (penrose, sglMC, bbMC) = createPenrose(address(clusterA), address(tap), address(weth), address(this));
 
         // crete USDO
         TapiocaOmnichainExtExec extExec = new TapiocaOmnichainExtExec();
@@ -362,14 +361,11 @@ contract MagnetarTestHelper is TestHelper {
         );
     }
 
-    function createPenrose(
-        address _cluster,
-        address tapToken_,
-        address mainToken_,
-        address owner
-    ) public returns (Penrose penrose, Singularity mediumRiskMC, BigBang bbMediumRiskMC) {
-        penrose =
-            new Penrose(ICluster(_cluster), IERC20(tapToken_), IERC20(mainToken_), owner);
+    function createPenrose(address _cluster, address tapToken_, address mainToken_, address owner)
+        public
+        returns (Penrose penrose, Singularity mediumRiskMC, BigBang bbMediumRiskMC)
+    {
+        penrose = new Penrose(ICluster(_cluster), IERC20(tapToken_), IERC20(mainToken_), owner);
         mediumRiskMC = new Singularity();
         bbMediumRiskMC = new BigBang();
 
@@ -529,14 +525,14 @@ contract MagnetarTestHelper is TestHelper {
     function depositAsset(Usdo _asset, Singularity _sgl, uint256 amount) public {
         deal(address(_asset), address(this), amount);
 
-        _sgl.addAsset(address(this), address(this), false, 100); // todo: replace 100 with share
+        _sgl.addAsset(address(this), address(this), amount); // todo: replace 100 with share
     }
 
     function depositCollateral(TOFT _collateral, uint256 _collateralId, Singularity _sgl, uint256 amount) public {
         deal(address(_collateral), address(this), amount);
 
         (Module[] memory modules, bytes[] memory calls) =
-            marketHelper.addCollateral(address(this), address(this), false, 0, 100); // todo: replace 100 with share
+            marketHelper.addCollateral(address(this), address(this), 0, 100); // todo: replace 100 with share
         _sgl.execute(modules, calls, true);
     }
 
@@ -548,7 +544,7 @@ contract MagnetarTestHelper is TestHelper {
     }
 
     function repay(uint256 part, Singularity _sgl) public {
-        (Module[] memory modules, bytes[] memory calls) = marketHelper.repay(address(this), address(this), false, part);
+        (Module[] memory modules, bytes[] memory calls) = marketHelper.repay(address(this), address(this), part);
         _sgl.execute(modules, calls, true);
     }
 

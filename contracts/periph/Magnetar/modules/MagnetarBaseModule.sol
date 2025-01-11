@@ -146,7 +146,7 @@ abstract contract MagnetarBaseModule is MagnetarStorage {
         returns (uint256 fraction)
     {
         uint256 lendShare = _singularity.convertToShares(_amount);
-        fraction = _singularity.addAsset(_from, _to, false, lendShare);
+        fraction = _singularity.addAsset(_from, _to, lendShare);
     }
 
     function _singularityRemoveAsset(ISingularity _singularity, uint256 _amount, address _from, address _to)

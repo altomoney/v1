@@ -378,6 +378,11 @@ abstract contract Market is MarketERC4626, Ownable {
         return IERC20(_asset);
     }
 
+    // TODO Important modify this.
+    function borrowableToken() public view returns (address) {
+        return address(_asset);
+    }
+
     // ************************** //
     // *** INTERNAL FUNCTIONS *** //
     // ************************** //
@@ -385,31 +390,38 @@ abstract contract Market is MarketERC4626, Ownable {
 
     function _accrueView() internal view virtual returns (Rebase memory);
 
-    /**
-     * @inheritdoc MarketERC4626
-     */
-    function _allowedLend(address from, uint256 share) internal virtual override {
+    /// @inheritdoc MarketERC4626
+    function _allowedLend(address from, uint256 amount) internal virtual override {
         if (from != msg.sender) {
-            if (share == 0) revert AllowanceNotValid();
-            uint256 currentAllowance = allowance(from, msg.sender);
-            require(currentAllowance >= share, "Market: not approved");
+            if (amount == 0) revert AllowanceNotValid();
+            uint256 currentAllowance = allowanceLiquidity[from][msg.sender];
+            require(currentAllowance >= amount, "Market: not approved");
             if (currentAllowance != type(uint256).max) {
-                _approve(from, msg.sender, currentAllowance - share);
+                allowanceLiquidity[from][msg.sender] -= amount;
             }
         }
     }
 
-    /**
-     * @inheritdoc MarketERC4626
-     */
-    function _allowedBorrow(address from, uint256 share) internal virtual override {
+    /// @inheritdoc MarketERC4626
+    function _allowedCollateral(address from, uint256 amount) internal virtual override {
         if (from != msg.sender) {
-            // TODO Should we check the allowance for the borrowable token instead of collateral shares?
-            if (share == 0) revert AllowanceNotValid();
-            uint256 currentAllowance = allowance(from, msg.sender);
-            require(currentAllowance >= share, "Market: not approved");
+            if (amount == 0) revert AllowanceNotValid();
+            uint256 currentAllowance = allowanceCollateral[from][msg.sender];
+            require(currentAllowance >= amount, "Market: not approved");
             if (currentAllowance != type(uint256).max) {
-                _approve(from, msg.sender, currentAllowance - share);
+                allowanceCollateral[from][msg.sender] -= amount;
+            }
+        }
+    }
+
+    /// @inheritdoc MarketERC4626
+    function _allowedBorrow(address from, uint256 amount) internal virtual override {
+        if (from != msg.sender) {
+            if (amount == 0) revert AllowanceNotValid();
+            uint256 currentAllowance = allowanceBorrow[from][msg.sender];
+            require(currentAllowance >= amount, "Market: not approved");
+            if (currentAllowance != type(uint256).max) {
+                allowanceBorrow[from][msg.sender] -= amount;
             }
         }
     }
@@ -504,18 +516,6 @@ abstract contract Market is MarketERC4626, Ownable {
         }
 
         return uint256(reward);
-    }
-
-    function _computeAllowanceAmountInAsset(
-        address user,
-        uint256 _exchangeRate,
-        uint256 borrowAmount,
-        uint256 assetDecimals
-    ) internal view returns (uint256) {
-        uint256 maxBorrowable = _computeMaxBorrowableAmount(user, _exchangeRate);
-
-        uint256 shareRatio = _getRatio(borrowAmount, maxBorrowable, assetDecimals);
-        return (shareRatio * balanceOf(user)) / (10 ** assetDecimals);
     }
 
     function _getRatio(uint256 numerator, uint256 denominator, uint256 precision) internal pure returns (uint256) {

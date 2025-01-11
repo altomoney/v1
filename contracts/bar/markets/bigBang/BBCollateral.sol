@@ -21,14 +21,40 @@ contract BBCollateral is BBLendingCommon {
     // ************************ //
     // *** PUBLIC FUNCTIONS *** //
     // ************************ //
+
+    function deposit(uint256 assets, address to)
+        public
+        override
+        notSelf(to)
+        optionNotPaused(PauseType.AddCollateral)
+        returns (uint256 shares)
+    {
+        if (assets < minCollateralAmount) revert MinCollateralAmountNotMet();
+
+        shares = _depositCollateral(msg.sender, to, assets);
+    }
+
+    function mint(uint256 shares, address to)
+        public
+        override
+        notSelf(to)
+        optionNotPaused(PauseType.AddCollateral)
+        returns (uint256 assets)
+    {
+        assets = convertToAssets(shares);
+
+        if (assets < minCollateralAmount) revert MinCollateralAmountNotMet();
+
+        shares = _depositCollateral(msg.sender, to, assets);
+    }
+
     /// @notice Adds `collateral` from msg.sender to the account `to`.
     /// @param from Account to transfer shares from.
     /// @param to The receiver of the tokens.
-    /// @param skim True if the amount should be skimmed from the deposit balance of msg.sender.
     /// False if tokens from msg.sender  should be transferred.
     /// @param amount The amount to add for `to`.
     /// @param share The amount of shares to add for `to`.
-    function addCollateral(address from, address to, bool skim, uint256 amount, uint256 share)
+    function addCollateral(address from, address to, uint256 amount, uint256 share)
         external
         notSelf(to)
         optionNotPaused(PauseType.AddCollateral)
@@ -42,9 +68,33 @@ contract BBCollateral is BBLendingCommon {
         }
         if (amount <= minCollateralAmount) revert MinCollateralAmountNotMet();
 
-        _allowedBorrow(from, share);
+        _depositCollateral(from, to, amount);
+    }
 
-        _addCollateral(from, to, skim, amount, share, true);
+    function withdraw(uint256 _assets, address _to, address _owner)
+        public
+        override
+        optionNotPaused(PauseType.RemoveCollateral)
+        solvent(_owner)
+        notSelf(_to)
+        returns (uint256 shares)
+    {
+        shares = super.withdraw(_assets, _to, _owner);
+
+        emit LogRemoveCollateral(_owner, _to, shares);
+    }
+
+    function redeem(uint256 _shares, address _to, address _owner)
+        public
+        override
+        optionNotPaused(PauseType.RemoveCollateral)
+        solvent(_owner)
+        notSelf(_to)
+        returns (uint256 assets)
+    {
+        assets = super.redeem(_shares, _to, _owner);
+
+        emit LogRemoveCollateral(_owner, _to, _shares);
     }
 
     /// @notice Removes `share` amount of collateral and transfers it to `to`.

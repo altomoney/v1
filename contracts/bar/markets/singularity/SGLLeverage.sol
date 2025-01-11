@@ -96,7 +96,7 @@ contract SGLLeverage is SGLLendingCommon {
             uint256 collateralShare = deposit(amountOut, address(this));
             if (collateralShare == 0) revert CollateralShareNotValid();
 
-            _addCollateral(calldata_.from, calldata_.from, false, 0, collateralShare, false);
+            _addCollateral(calldata_.from, calldata_.from, 0, collateralShare, false);
         }
 
         if (amountOut == 0) revert AmountNotValid();
@@ -145,11 +145,11 @@ contract SGLLeverage is SGLLendingCommon {
         uint256 amountOwed = totalBorrow.toElastic(partOwed, true);
         uint256 shareOwed = convertToShares(amountOwed);
         if (shareOwed <= shareOut) {
-            _repay(calldata_.from, calldata_.from, false, partOwed, false);
+            _repay(calldata_.from, calldata_.from, partOwed, false);
         } else {
             //repay as much as we can
             uint256 partOut = totalBorrow.toBase(amountOut, false);
-            _repay(calldata_.from, calldata_.from, false, partOut, false);
+            _repay(calldata_.from, calldata_.from, partOut, false);
         }
         if (amountOut == 0) revert AmountNotValid();
     }
