@@ -442,7 +442,7 @@ abstract contract BigBang_Unit_Shared is Markets_Unit_Shared {
     {
         _RemoveCollateralInternal memory _data;
         _data.bbYieldBoxBalanceBefore = _bb.totalAssets();
-        _data.userYieldBoxBalanceBefore = IERC20(IMarket(address(_bb))._collateral()).balanceOf(address(_to));
+        _data.userYieldBoxBalanceBefore = IERC20(IMarket(address(_bb)).collateral()).balanceOf(address(_to));
         _data.userCollateralBefore = _bb.balanceOf(_to);
         _data.totalCollateralShareBefore = _bb._totalCollateralShare();
         return _data;
@@ -638,9 +638,9 @@ abstract contract BigBang_Unit_Shared is Markets_Unit_Shared {
 
         _LiquidateInternal memory _data;
         // get `before` state
-        _data.bbYieldBoxAssetBalanceBefore = IERC20(IMarket(address(bb))._borrowableToken()).balanceOf(address(bb));
+        _data.bbYieldBoxAssetBalanceBefore = IERC20(IMarket(address(bb)).borrowableToken()).balanceOf(address(bb));
         _data.bbYieldBoxCollateralBalanceBefore = bb.totalAssets();
-        _data.userAssetYieldBoxBalanceBefore = IERC20(IMarket(address(bb))._borrowableToken()).balanceOf(address(this));
+        _data.userAssetYieldBoxBalanceBefore = IERC20(IMarket(address(bb)).borrowableToken()).balanceOf(address(this));
         _data.userCollateralYieldBoxBalanceBefore = IERC20(bb.collateral()).balanceOf(address(this));
         _data.userCollateralBefore = bb.balanceOf(address(this));
         _data.totalCollateralShareBefore = bb._totalCollateralShare();
@@ -653,7 +653,7 @@ abstract contract BigBang_Unit_Shared is Markets_Unit_Shared {
 
         // compute asset amount
         SZeroXSwapData memory szeroXSwapData = SZeroXSwapData({
-            sellToken: TOFTMock_test(payable(IMarket(address(bb))._collateral())).erc20(),
+            sellToken: TOFTMock_test(payable(IMarket(address(bb)).collateral())).erc20(),
             buyToken: address(IMarket(address(bb))._asset()),
             swapTarget: payable(swapperTarget),
             swapCallData: abi.encodeWithSelector(
@@ -670,9 +670,9 @@ abstract contract BigBang_Unit_Shared is Markets_Unit_Shared {
         emit Liquidated(address(this), new address[](0), 0, 0, 0, 0);
         bb.execute(modules, calls, true);
 
-        _data.bbYieldBoxAssetBalanceAfter = IERC20(IMarket(address(bb))._borrowableToken()).balanceOf(address(bb));
+        _data.bbYieldBoxAssetBalanceAfter = IERC20(IMarket(address(bb)).borrowableToken()).balanceOf(address(bb));
         _data.bbYieldBoxCollateralBalanceAfter = bb.totalAssets();
-        _data.userAssetYieldBoxBalanceAfter = IERC20(IMarket(address(bb))._borrowableToken()).balanceOf(address(this));
+        _data.userAssetYieldBoxBalanceAfter = IERC20(IMarket(address(bb)).borrowableToken()).balanceOf(address(this));
         _data.userCollateralYieldBoxBalanceAfter = IERC20(bb.collateral()).balanceOf(address(this));
         _data.userCollateralAfter = bb.balanceOf(address(this));
         _data.totalCollateralShareAfter = bb._totalCollateralShare();
@@ -730,9 +730,9 @@ abstract contract BigBang_Unit_Shared is Markets_Unit_Shared {
 
         _LiquidateInternal memory _data;
         // get `before` state
-        _data.bbYieldBoxAssetBalanceBefore = IERC20(IMarket(address(bb))._borrowableToken()).balanceOf(address(bb));
+        _data.bbYieldBoxAssetBalanceBefore = IERC20(IMarket(address(bb)).borrowableToken()).balanceOf(address(bb));
         _data.bbYieldBoxCollateralBalanceBefore = bb.totalAssets();
-        _data.userAssetYieldBoxBalanceBefore = IERC20(IMarket(address(bb))._borrowableToken()).balanceOf(address(this));
+        _data.userAssetYieldBoxBalanceBefore = IERC20(IMarket(address(bb)).borrowableToken()).balanceOf(address(this));
         _data.userCollateralYieldBoxBalanceBefore = IERC20(bb.collateral()).balanceOf(address(this));
         _data.userCollateralBefore = bb.balanceOf(address(this));
         _data.totalCollateralShareBefore = bb._totalCollateralShare();
@@ -760,7 +760,7 @@ abstract contract BigBang_Unit_Shared is Markets_Unit_Shared {
             inAssetAmount = (_collateralAmount * (bb._exchangeRatePrecision() / FEE_PRECISION)) / rate;
 
             SZeroXSwapData memory szeroXSwapData = SZeroXSwapData({
-                sellToken: TOFTMock_test(payable(IMarket(address(bb))._collateral())).erc20(),
+                sellToken: TOFTMock_test(payable(IMarket(address(bb)).collateral())).erc20(),
                 buyToken: address(IMarket(address(bb))._asset()),
                 swapTarget: payable(swapperTarget),
                 swapCallData: abi.encodeWithSelector(
@@ -777,9 +777,9 @@ abstract contract BigBang_Unit_Shared is Markets_Unit_Shared {
             _getLiquidateBadDebtData(address(this), from, to, swapData, swapCollateral);
         bb.execute(modules, calls, true);
 
-        _data.bbYieldBoxAssetBalanceAfter = IERC20(IMarket(address(bb))._borrowableToken()).balanceOf(address(bb));
+        _data.bbYieldBoxAssetBalanceAfter = IERC20(IMarket(address(bb)).borrowableToken()).balanceOf(address(bb));
         _data.bbYieldBoxCollateralBalanceAfter = bb.totalAssets();
-        _data.userAssetYieldBoxBalanceAfter = IERC20(IMarket(address(bb))._borrowableToken()).balanceOf(address(this));
+        _data.userAssetYieldBoxBalanceAfter = IERC20(IMarket(address(bb)).borrowableToken()).balanceOf(address(this));
         _data.userCollateralYieldBoxBalanceAfter = IERC20(bb.collateral()).balanceOf(address(this));
         _data.userCollateralAfter = bb.balanceOf(address(this));
         _data.totalCollateralShareAfter = bb._totalCollateralShare();
@@ -862,7 +862,7 @@ abstract contract BigBang_Unit_Shared is Markets_Unit_Shared {
 
         _data.totalBorrowBefore = bb._totalBorrow();
         _data.userBorrowPartBefore = bb._userBorrowPart(to);
-        _data.userYieldBoxBalanceBefore = IERC20(IMarket(address(bb))._borrowableToken()).balanceOf(address(to));
+        _data.userYieldBoxBalanceBefore = IERC20(IMarket(address(bb)).borrowableToken()).balanceOf(address(to));
         _data.usdoSupplyBefore = usdo.totalSupply();
 
         // leverage
@@ -877,7 +877,7 @@ abstract contract BigBang_Unit_Shared is Markets_Unit_Shared {
         _data.bbYieldBoxBalanceAfter = bb.totalAssets();
         _data.totalBorrowAfter = bb._totalBorrow();
         _data.userBorrowPartAfter = bb._userBorrowPart(to);
-        _data.userYieldBoxBalanceAfter = IERC20(IMarket(address(bb))._borrowableToken()).balanceOf(address(to));
+        _data.userYieldBoxBalanceAfter = IERC20(IMarket(address(bb)).borrowableToken()).balanceOf(address(to));
         _data.usdoSupplyAfter = usdo.totalSupply();
 
         // it should decrease 'userCollateralShare'
@@ -933,7 +933,7 @@ abstract contract BigBang_Unit_Shared is Markets_Unit_Shared {
 
         _data.totalBorrowBefore = bb._totalBorrow();
         _data.userBorrowPartBefore = bb._userBorrowPart(to);
-        _data.userYieldBoxBalanceBefore = IERC20(IMarket(address(bb))._borrowableToken()).balanceOf(address(to));
+        _data.userYieldBoxBalanceBefore = IERC20(IMarket(address(bb)).borrowableToken()).balanceOf(address(to));
         _data.usdoSupplyBefore = usdo.totalSupply();
 
         // leverage
@@ -948,7 +948,7 @@ abstract contract BigBang_Unit_Shared is Markets_Unit_Shared {
         _data.bbYieldBoxBalanceAfter = bb.totalAssets();
         _data.totalBorrowAfter = bb._totalBorrow();
         _data.userBorrowPartAfter = bb._userBorrowPart(to);
-        _data.userYieldBoxBalanceAfter = IERC20(IMarket(address(bb))._borrowableToken()).balanceOf(address(to));
+        _data.userYieldBoxBalanceAfter = IERC20(IMarket(address(bb)).borrowableToken()).balanceOf(address(to));
         _data.usdoSupplyAfter = usdo.totalSupply();
 
         // it should increase asset supply

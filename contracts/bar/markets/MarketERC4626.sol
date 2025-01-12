@@ -265,6 +265,10 @@ abstract contract MarketERC4626 is IERC20Permit, ERC4626, IERC1155Receiver {
         return ICluster(_penrose.cluster());
     }
 
+    function penrose() external view returns (address) {
+        return address(_penrose);
+    }
+
     function onERC1155Received(address, address, uint256, uint256, bytes calldata)
         external
         pure

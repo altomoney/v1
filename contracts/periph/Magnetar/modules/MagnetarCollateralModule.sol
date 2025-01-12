@@ -76,7 +76,7 @@ contract MagnetarCollateralModule is MagnetarBaseModule {
          * @dev deposit
          */
         if (data.deposit && data.collateralAmount > 0) {
-            address collateralAddress = _market._collateral();
+            address collateralAddress = _market.collateral();
             data.collateralAmount = _extractTokens(data.user, collateralAddress, data.collateralAmount);
             _depositToMarket(_market, data.user, data.collateralAmount);
         }
@@ -132,7 +132,7 @@ contract MagnetarCollateralModule is MagnetarBaseModule {
         IMarket _market = IMarket(data.market);
 
         if (data.depositAmount > 0) {
-            address assetAddress = _market._collateral();
+            address assetAddress = _market.collateral();
             data.depositAmount = _extractTokens(data.user, assetAddress, data.depositAmount);
             _depositToMarket(_market, data.user, data.depositAmount);
         }
@@ -222,7 +222,7 @@ contract MagnetarCollateralModule is MagnetarBaseModule {
         address market
     ) private view {
         if (data.withdraw) {
-            if (data.asset != IMarket(market)._collateral()) revert Magnetar_WithdrawParamsMismatch();
+            if (data.asset != IMarket(market).collateral()) revert Magnetar_WithdrawParamsMismatch();
             if (data.amount == 0) revert Magnetar_WithdrawParamsMismatch();
         }
     }

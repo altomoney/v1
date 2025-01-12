@@ -142,7 +142,7 @@ contract MagnetarMock_test {
             revert MagnetarMock_NotAuthorized();
         }
 
-        address assetAddress = IMarket(_data.market)._collateral();
+        address assetAddress = IMarket(_data.market).collateral();
 
         // deposit to YieldBox
         if (_data.depositAmount > 0) {
@@ -193,7 +193,7 @@ contract MagnetarMock_test {
 
         // if `depositData.deposit`:
         //      - deposit SGL asset to YB for `_data.user`
-        address sglAssetAddress = singularity._collateral();
+        address sglAssetAddress = singularity.collateral();
         if (_data.depositData.deposit) {
             _data.depositData.amount = _extractTokens(_data.user, sglAssetAddress, _data.depositData.amount);
 
@@ -281,7 +281,7 @@ contract MagnetarMock_test {
     {
         if (!cluster.isWhitelisted(cluster.lzChainId(), address(_data.market))) revert MagnetarMock_NotAuthorized();
 
-        address collateralAddress = IMarket(_data.market)._collateral();
+        address collateralAddress = IMarket(_data.market).collateral();
 
         uint256 _share = IMarket(_data.market).convertToShares(_data.collateralAmount);
 

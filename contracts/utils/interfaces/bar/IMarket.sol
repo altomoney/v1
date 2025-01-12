@@ -25,13 +25,13 @@ enum Module {
 }
 
 interface IMarket is IERC4626 {
+
+    // Alias for the borrowable token
     function _asset() external view returns (address);
 
-    function _collateral() external view returns (address);
+    // Alias for the asset in the ERC4626
+    function collateral() external view returns (address);
 
-    function _borrowableToken() external view returns (address);
-
-    // TODO Remove this
     function borrowableToken() external view returns (address);
 
     function _totalBorrowCap() external view returns (uint256);
@@ -50,7 +50,7 @@ interface IMarket is IERC4626 {
 
     function _liquidationMultiplier() external view returns (uint256);
 
-    function _penrose() external view returns (address);
+    function penrose() external view returns (address);
 
     function _collateralizationRate() external view returns (uint256);
 

@@ -85,7 +85,7 @@ abstract contract MagnetarBaseModule is MagnetarStorage {
         internal
         returns (uint256 amountOut, uint256 shareOut)
     {
-        IERC20 collateral = IERC20(_market._collateral());
+        IERC20 collateral = IERC20(_market.collateral());
 
         collateral.safeApprove(address(_market), _amount);
         shareOut = _market.deposit(_amount, _user);
