@@ -281,7 +281,7 @@ contract MagnetarHelper {
             result[i].debtRateAgainstEthMarket = bigBang.debtRateAgainstEthMarket();
             result[i].currentDebtRate = bigBang.getDebtRate();
 
-            IPenrose penrose = IPenrose(bigBang._penrose());
+            IPenrose penrose = IPenrose(bigBang.penrose());
             result[i].mainBBMarket = penrose.bigBangEthMarket();
             result[i].mainBBDebtRate = penrose.bigBangEthDebtRate();
         }
@@ -293,8 +293,8 @@ contract MagnetarHelper {
         Rebase memory _totalBorrowed;
         MarketInfo memory info;
 
-        info.collateral = market._collateral();
-        info.asset = market._asset();
+        info.collateral = market.collateral();
+        info.asset = market.borrowableToken();
         info.oracle = ITapiocaOracle(market._oracle());
         info.oracleData = market._oracleData();
         info.totalCollateralShare = market._totalCollateralShare(); // TODO isn't it market4626.totalSupply()?

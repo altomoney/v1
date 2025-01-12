@@ -86,7 +86,7 @@ contract MagnetarMintModule is MagnetarBaseModule {
         if (data.depositData.deposit) {
             IMarket _singularity = IMarket(data.externalContracts.singularity);
 
-            address assetAddress = _singularity._collateral();
+            address assetAddress = _singularity.collateral();
 
             data.depositData.amount = _extractTokens(data.user, assetAddress, data.depositData.amount);
             _depositToMarket(_singularity, data.user, data.depositData.amount);
@@ -150,7 +150,7 @@ contract MagnetarMintModule is MagnetarBaseModule {
          * @dev try deposit
          */
         if (data.mintData.collateralDepositData.deposit) {
-            address bbCollateralAddress = _bigBang._collateral();
+            address bbCollateralAddress = _bigBang.collateral();
             data.mintData.collateralDepositData.amount =
                 _extractTokens(data.user, bbCollateralAddress, data.mintData.collateralDepositData.amount);
             _depositToMarket(_bigBang, data.user, data.mintData.collateralDepositData.amount);

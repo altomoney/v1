@@ -147,7 +147,7 @@ contract MagnetarMock {
         if (!cluster.isWhitelisted(cluster.lzChainId(), address(_data.market))) revert MagnetarMock_NotAuthorized();
 
         IMarket market = IMarket(_data.market);
-        address collateralAddress = market._collateral();
+        address collateralAddress = market.collateral();
 
         uint256 _share = market.convertToShares(_data.collateralAmount);
 
