@@ -33,6 +33,8 @@ import {TOFTMock_test} from "../../mocks/TOFTMock_test.sol";
 // tests
 import {Markets_Unit_Shared} from "./Markets_Unit_Shared.t.sol";
 
+import "forge-std/console.sol";
+
 abstract contract BigBang_Unit_Shared is Markets_Unit_Shared {
     using RebaseLibrary for Rebase;
 
@@ -446,18 +448,22 @@ abstract contract BigBang_Unit_Shared is Markets_Unit_Shared {
 
     function _executeRemoveCollateral(uint256 _removeShare, BigBang _bb, address _executor, address _from, address _to)
         internal
+        returns (uint256 finalRemoveShares, uint256 removeAmount)
     {
         uint256 _removeAmount = 0;
         uint256 removeAmount = _boundRemoveCollateralAmount(_removeAmount, _bb);
         _removeShare = _bb.convertToShares(removeAmount);
         (Module[] memory _modules, bytes[] memory _calls) = _getRemoveCollateralData(_removeShare, _from, _to);
 
-        _resetPrank(_executor);
-
         vm.expectEmit(true, true, true, false);
         // it should emit 'LogRemoveCollateral'
         emit LogRemoveCollateral(_from, _to, _removeShare);
+
+        _resetPrank(_executor);
+
         _bb.execute(_modules, _calls, true);
+
+        return (_removeShare, _removeAmount);
     }
 
     function _removeCollateral(
@@ -481,7 +487,8 @@ abstract contract BigBang_Unit_Shared is Markets_Unit_Shared {
         // **** Remove collateral ****
         _RemoveCollateralInternal memory _data = _createRemoveCollateralInternal(bb, to);
 
-        _executeRemoveCollateral(removeShare, bb, executor, from, to);
+        (uint256 boundedRemoveShares, uint256 removeAmount) =
+            _executeRemoveCollateral(removeShare, bb, executor, from, to);
 
         _data.bbYieldBoxBalanceAfter = bb.totalAssets();
         _data.userYieldBoxBalanceAfter = IERC20(bb.collateral()).balanceOf(address(to));
@@ -489,19 +496,24 @@ abstract contract BigBang_Unit_Shared is Markets_Unit_Shared {
         _data.totalCollateralShareAfter = bb._totalCollateralShare();
 
         // it should decrease 'userCollateralShare'
-        assertEq(_data.userCollateralBefore - removeShare, _data.userCollateralAfter, "userCollateral check");
+        assertEq(_data.userCollateralBefore - boundedRemoveShares, _data.userCollateralAfter, "userCollateral check");
 
         // it should decrease 'totalCollateralShare'
         assertEq(
-            _data.totalCollateralShareBefore - removeShare, _data.totalCollateralShareAfter, "totalCollateral check"
+            _data.totalCollateralShareBefore - boundedRemoveShares,
+            _data.totalCollateralShareAfter,
+            "totalCollateral check"
         );
 
         // it should decrease market's YieldBox balance
-        assertEq(_data.bbYieldBoxBalanceBefore - removeShare, _data.bbYieldBoxBalanceAfter, "bbYieldBoxBalance check");
+        assertApproxEqAbs(
+            _data.bbYieldBoxBalanceBefore - removeAmount, _data.bbYieldBoxBalanceAfter, 1, "bb internal balance check"
+        );
 
+        console.log(_data.userYieldBoxBalanceBefore, removeAmount, _data.userYieldBoxBalanceAfter);
         // it should increase user's YieldBox balance
-        assertEq(
-            _data.userYieldBoxBalanceBefore + removeShare, _data.userYieldBoxBalanceAfter, "userYieldBoxBalance check"
+        assertApproxEqAbs(
+            _data.userYieldBoxBalanceBefore + removeAmount, _data.userYieldBoxBalanceAfter, 1, "user balance check"
         );
     }
 

@@ -10,6 +10,8 @@ import {Market} from "tapioca-bar/markets/Market.sol";
 import {BigBang_Unit_Shared} from "../../shared/BigBang_Unit_Shared.t.sol";
 
 contract BigBang_removeCollateral is BigBang_Unit_Shared {
+    error InsufficientAllowance();
+
     function test_removeCollateral_WhenContractIsPaused(uint256 collateralAmount)
         external
         whenContractIsPaused
@@ -153,10 +155,10 @@ contract BigBang_removeCollateral is BigBang_Unit_Shared {
             _getRemoveCollateralData(removeShare, address(this), address(this));
 
         _resetPrank(userA);
-        vm.expectRevert("Market: not approved");
+        vm.expectRevert();
         mainBB.execute(modules, calls, true);
 
-        // it should revert with 'Market: not approved'
+        // it should revert with 'InsufficientAllowance()' from ERC4626, and 2 empty reverts due execute
     }
 
     function test_whenItsCalledFromAnotherUser_whenUserHasBorrowed_whenUserHasBeenGivenAllowance_RevertWhen_NotSolventPosition(
@@ -181,7 +183,10 @@ contract BigBang_removeCollateral is BigBang_Unit_Shared {
         (Module[] memory modules, bytes[] memory calls) =
             _getRemoveCollateralData(removeShare, address(this), address(this));
 
-        mainBB.approveBorrow(userA, type(uint256).max);
+        _resetPrank(address(this));
+
+        _approveViaERC20(address(mainBB), address(this), address(userA), removeShare);
+
         _resetPrank(userA);
         vm.expectRevert("Market: insolvent");
         mainBB.execute(modules, calls, true);
@@ -202,11 +207,15 @@ contract BigBang_removeCollateral is BigBang_Unit_Shared {
         borrowAmount = _boundBorrowAmount(borrowAmount, addAmount);
 
         // **** Main BB market ****
+        _resetPrank(address(this));
         mainBB.approveBorrow(userA, type(uint256).max);
+        _approveViaERC20(address(mainBB), address(this), address(userA), type(uint256).max);
         _removeCollateral(addAmount, removeShare, borrowAmount, mainBB, userA, address(this), address(this));
 
         // **** Secondary BB market ****
+        _resetPrank(address(this));
         secondaryBB.approveBorrow(userA, type(uint256).max);
+        _approveViaERC20(address(secondaryBB), address(this), address(userA), type(uint256).max);
         _removeCollateral(addAmount, removeShare, borrowAmount, secondaryBB, userA, address(this), address(this));
     }
 
@@ -222,11 +231,13 @@ contract BigBang_removeCollateral is BigBang_Unit_Shared {
         givenBorrowCapIsNotReachedYet
     {
         // **** Main BB market ****
-        mainBB.approveBorrow(userA, type(uint256).max);
+        _resetPrank(address(this));
+        mainBB.approveCollateral(userA, type(uint256).max);
         _removeCollateral(addAmount, removeShare, 0, mainBB, userA, address(this), address(this));
 
         // **** Secondary BB market ****
-        secondaryBB.approveBorrow(userA, type(uint256).max);
+        _resetPrank(address(this));
+        secondaryBB.approveCollateral(userA, type(uint256).max);
         _removeCollateral(addAmount, removeShare, 0, secondaryBB, userA, address(this), address(this));
     }
 }
