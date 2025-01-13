@@ -163,26 +163,17 @@ contract SingularityTest is UsdoTestHelper {
     }
 
     function depositAsset(uint256 amount) public {
-        vm.skip(true);
         deal(address(asset), address(this), amount);
-        // pearl mit.approve(
-        //     1155,  assetYieldBoxId, address(singularity), type(uint200).max, uint48(block.timestamp)
-        // );
-
-        uint256 share = singularity.convertToShares(amount);
-        // TODO review it yieldBox.depositAsset(assetYieldBoxId, address(this), address(this), 0, share);
-        singularity.addAsset(address(this), address(this), share);
+        asset.approve(address(singularity), amount);
+        singularity.addAsset(address(this), address(this), amount);
     }
 
     function depositCollateral(uint256 amount) public {
         deal(address(collateral), address(this), amount);
-        collateral.approve(address(singularity), type(uint256).max);
-
-        uint256 share = singularity.convertToShares(amount);
-        // TODO review it yieldBox.depositAsset(collateralYieldBoxId, address(this), address(this), 0, share);
+        collateral.approve(address(singularity), amount);
 
         (Module[] memory modules, bytes[] memory calls) =
-            marketHelper.addCollateral(address(this), address(this), share, 0);
+            marketHelper.addCollateral(address(this), address(this), amount, 0);
         singularity.execute(modules, calls, true);
     }
 
@@ -194,9 +185,7 @@ contract SingularityTest is UsdoTestHelper {
     }
 
     function repay(uint256 part) public {
-        // pearl mit.approve(
-        //     1155,  assetYieldBoxId, address(singularity), type(uint200).max, uint48(block.timestamp)
-        // );
+        asset.approve(address(singularity), type(uint256).max);
         (Module[] memory modules, bytes[] memory calls) = marketHelper.repay(address(this), address(this), part);
         singularity.execute(modules, calls, true);
     }
@@ -290,7 +279,7 @@ contract SingularityTest is UsdoTestHelper {
     function test_remove_everything() public {
         uint256 tokenAmount_ = 1 ether;
         depositAsset(tokenAmount_);
-        assertGt(singularity.balanceOf(address(this)), 0);
+        assertGt(singularity.liquidityBalance(address(this)), 0);
 
         uint256 share = singularity.convertToShares(tokenAmount_);
         vm.expectRevert();
@@ -447,7 +436,7 @@ contract SingularityTest is UsdoTestHelper {
             vm.expectRevert();
             singularity.execute(modules, calls, true);
             uint256 borrowPartAfter = singularity._userBorrowPart(address(this));
-            assertEq(borrowPartBefore, borrowPartAfter);
+            assertEq(borrowPartBefore, borrowPartAfter, "Liquidate: borrowPartBefore should be equal to borrowPartAfter");
         }
 
         //use liquidateBadDebt
@@ -472,9 +461,9 @@ contract SingularityTest is UsdoTestHelper {
 
             bytes[] memory data = new bytes[](1);
             data[0] = badDebtCall;
-            penrose.executeMarketFn(mc, data, false);
+            penrose.executeMarketFn(mc, data, true);
             uint256 borrowPartAfter = singularity._userBorrowPart(address(this));
-            assertGt(borrowPartBefore, borrowPartAfter);
+            assertGt(borrowPartBefore, borrowPartAfter, "LiquidateBadDebt: borrowPartBefore should be greater than borrowPartAfter");
         }
     }
 
@@ -514,7 +503,6 @@ contract SingularityTest is UsdoTestHelper {
     }
 
     function test_fees() public {
-        vm.skip(true);
         uint256 collateralAmount = 1 ether;
         uint256 borrowAmount = 5e17;
 
@@ -535,7 +523,7 @@ contract SingularityTest is UsdoTestHelper {
             skip(86400 * 10);
             // prepare for repay
             deal(address(asset), address(this), borrowAmount * 2);
-            // TODO review it yieldBox.depositAsset(assetYieldBoxId, address(this), address(this), borrowAmount * 2, 0);
+
             userBorrowPart = singularity._userBorrowPart(address(this));
 
             repay(singularity._userBorrowPart(address(this)));
@@ -553,6 +541,7 @@ contract SingularityTest is UsdoTestHelper {
         TwTapMock twTapMock = new TwTapMock(address(asset));
 
         uint256 twTapBalanceBefore = asset.balanceOf(address(twTapMock));
+        // WIP Fails here
         penrose.withdrawAllMarketFees(markets, ITWTAPv2(address(twTapMock)));
         uint256 twTapBalanceAfter = asset.balanceOf(address(twTapMock));
         assertGe(twTapBalanceAfter, twTapBalanceBefore);
@@ -579,12 +568,6 @@ contract SingularityTest is UsdoTestHelper {
         uint256 borrowPart = singularity._userBorrowPart(address(this));
         assertGt(borrowPart, 0);
 
-        vm.startPrank(userA);
-        // pearl mit.approve(
-        //     1155,  assetYieldBoxId, address(singularity), type(uint200).max, uint48(block.timestamp)
-        // );
-
-        vm.stopPrank();
 
         singularity.approveBorrow(address(userA), type(uint256).max);
         singularity.approve(address(userA), type(uint256).max);
@@ -593,7 +576,8 @@ contract SingularityTest is UsdoTestHelper {
 
         uint256 share = singularity.convertToShares(borrowAmount * 2);
         vm.prank(userA);
-        // TODO review it yieldBox.depositAsset(assetYieldBoxId, address(userA), address(userA), 0, share);
+
+        asset.approve(address(singularity), type(uint256).max);
 
         (Module[] memory modules, bytes[] memory calls) = marketHelper.repay(address(userA), address(this), borrowPart);
         vm.prank(userA);
