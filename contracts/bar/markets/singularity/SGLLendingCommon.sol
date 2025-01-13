@@ -62,11 +62,14 @@ contract SGLLendingCommon is SGLCommon {
 
     /// @dev Concrete implementation of `borrow`.
     function _borrow(address from, address to, uint256 amount) internal returns (uint256 part, uint256 share) {
-        share = convertToShares(amount);
         Rebase memory _totalAsset = totalAsset;
         if (_totalAsset.base < 1000) revert MinLimit();
 
-        uint256 fullAssetAmountBefore = convertToAssets(_totalAsset.elastic) + totalBorrow.elastic;
+        uint256 allShare = _totalAsset.elastic + totalBorrow.elastic;
+        share = allShare == 0 ? amount : (amount * _totalAsset.base) / allShare;
+
+        uint256 totalAssetElasticInAssets = (_totalAsset.elastic * allShare) / _totalAsset.base;
+        uint256 fullAssetAmountBefore = totalAssetElasticInAssets + totalBorrow.elastic;
 
         _totalAsset.elastic -= share.toUint128();
 
