@@ -376,8 +376,13 @@ abstract contract BigBang_Unit_Shared is Markets_Unit_Shared {
 
     function _borrow(uint256 borrowAmount, BigBang bb, address executor, address from, address to)
         internal
-        resetPrank(executor)
     {
+        vm.startPrank(from);
+        bb.approveBorrow(executor, type(uint256).max);
+        vm.stopPrank();
+
+        vm.startPrank(executor);
+        
         _BorrowInternal memory _data = _createBorrowInternal(bb, to);
 
         uint256 feeAmount = bb.computeVariableOpeningFee(borrowAmount);
@@ -387,7 +392,7 @@ abstract contract BigBang_Unit_Shared is Markets_Unit_Shared {
         vm.expectEmit(true, true, true, false);
         emit LogBorrow(from, to, borrowAmount, feeAmount, borrowAmount + feeAmount);
         bb.execute(modules, calls, true);
-
+        vm.stopPrank();
         {
             // get `after` state
             _data.totalBorrowAfter = bb._totalBorrow();
@@ -454,6 +459,10 @@ abstract contract BigBang_Unit_Shared is Markets_Unit_Shared {
         uint256 removeAmount = _boundRemoveCollateralAmount(_removeAmount, _bb);
         _removeShare = _bb.convertToShares(removeAmount);
         (Module[] memory _modules, bytes[] memory _calls) = _getRemoveCollateralData(_removeShare, _from, _to);
+
+        vm.startPrank(_from);
+        _bb.approve(_executor, type(uint256).max);
+        vm.stopPrank();
 
         vm.expectEmit(true, true, true, false);
         // it should emit 'LogRemoveCollateral'
@@ -639,13 +648,12 @@ abstract contract BigBang_Unit_Shared is Markets_Unit_Shared {
         uint256 liquidationBonus
     ) internal whenOracleRateIsEth {
         // **** Add collateral ****
-        _resetPrank(address(this));
         _addCollateral(collateralAmount, bb, address(this), address(this), address(this));
 
         // **** Borrow ****
         uint256 maxBorrowAmount = _computeMaxBorrowAmount(collateralAmount, IMarket(address(bb)));
         maxBorrowAmount = maxBorrowAmount - (maxBorrowAmount * 2e4 / 1e5);
-        _resetPrank(address(this));
+
         _borrow(maxBorrowAmount, bb, address(this), address(this), address(this));
 
         _LiquidateInternal memory _data;
@@ -723,13 +731,11 @@ abstract contract BigBang_Unit_Shared is Markets_Unit_Shared {
         uint256 liquidationBonus
     ) internal whenOracleRateIsEth {
         // **** Add collateral ****
-        _resetPrank(address(this));
         _addCollateral(collateralAmount, bb, address(this), address(this), address(this));
 
         // **** Borrow ****
         uint256 maxBorrowAmount = _computeMaxBorrowAmount(collateralAmount, IMarket(address(bb)));
         maxBorrowAmount = maxBorrowAmount - (maxBorrowAmount * 2e4 / 1e5);
-        _resetPrank(address(this));
         _borrow(maxBorrowAmount, bb, address(this), address(this), address(this));
 
         _LiquidateInternal memory _data;
@@ -775,7 +781,6 @@ abstract contract BigBang_Unit_Shared is Markets_Unit_Shared {
         bool swapCollateral
     ) internal whenOracleRateIsEth {
         // **** Add collateral ****
-        _resetPrank(address(this));
         _addCollateral(collateralAmount, bb, address(this), address(this), address(this));
 
         // **** Borrow ****
@@ -783,7 +788,6 @@ abstract contract BigBang_Unit_Shared is Markets_Unit_Shared {
         // assure a 20% threshold for insolvency
         maxBorrowAmount = maxBorrowAmount - (maxBorrowAmount * 2e4 / 1e5);
         borrowAmount = maxBorrowAmount;
-        _resetPrank(address(this));
         _borrow(borrowAmount, bb, address(this), address(this), address(this));
 
         _LiquidateInternal memory _data;
