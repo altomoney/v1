@@ -82,7 +82,7 @@ contract BigBang_buyCollateral is BigBang_Unit_Shared {
         borrowAmount = _boundBorrowAmount(borrowAmount, collateralAmount);
 
         // add collateral
-        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this), address(this), false);
+        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this));
 
         // borrow
         _borrow(borrowAmount, mainBB, address(this), address(this), address(this));
@@ -115,7 +115,7 @@ contract BigBang_buyCollateral is BigBang_Unit_Shared {
         borrowAmount = _boundBorrowAmount(borrowAmount, collateralAmount);
 
         // add collateral
-        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this), address(this), false);
+        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this));
 
         // borrow
         _borrow(borrowAmount, mainBB, address(this), address(this), address(this));
@@ -218,7 +218,7 @@ contract BigBang_buyCollateral is BigBang_Unit_Shared {
         uint256 supplyAmount = 0;
 
         // add collateral
-        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this), address(this), false);
+        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this));
 
         // borrow
         _borrow(borrowAmount, mainBB, address(this), address(this), address(this));
@@ -251,7 +251,7 @@ contract BigBang_buyCollateral is BigBang_Unit_Shared {
         uint256 supplyAmount = 0;
 
         // add collateral
-        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this), address(this), false);
+        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this));
 
         // borrow
         _borrow(borrowAmount, mainBB, address(this), address(this), address(this));
@@ -287,7 +287,7 @@ contract BigBang_buyCollateral is BigBang_Unit_Shared {
         uint256 supplyAmount = 0;
 
         // add collateral
-        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this), address(this), false);
+        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this));
 
         // borrow
         _borrow(borrowAmount, mainBB, address(this), address(this), address(this));
@@ -390,7 +390,7 @@ contract BigBang_buyCollateral is BigBang_Unit_Shared {
         vm.assume(supplyAmount > 0 && supplyAmount < SMALL_AMOUNT);
 
         // add collateral
-        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this), address(this), false);
+        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this));
 
         // borrow
         _borrow(borrowAmount, mainBB, address(this), address(this), address(this));

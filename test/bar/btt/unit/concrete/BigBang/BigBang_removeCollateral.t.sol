@@ -76,7 +76,7 @@ contract BigBang_removeCollateral is BigBang_Unit_Shared {
         givenBorrowCapIsNotReachedYet
     {
         // **** Add collateral ****
-        _addCollateral(addAmount, mainBB, address(this), address(this), address(this), address(this), false);
+        _addCollateral(addAmount, mainBB, address(this), address(this), address(this));
 
         // **** Borrow ****
         borrowAmount = _boundBorrowAmount(borrowAmount, addAmount);
@@ -145,7 +145,7 @@ contract BigBang_removeCollateral is BigBang_Unit_Shared {
         givenBorrowCapIsNotReachedYet
     {
         // **** Add collateral ****
-        _addCollateral(addAmount, mainBB, address(this), address(this), address(this), address(this), false);
+        _addCollateral(addAmount, mainBB, address(this), address(this), address(this));
 
         // **** Remove collateral ****
         uint256 removeShare = mainBB.balanceOf(address(this));
@@ -171,7 +171,7 @@ contract BigBang_removeCollateral is BigBang_Unit_Shared {
         givenBorrowCapIsNotReachedYet
     {
         // add collateral
-        _addCollateral(addAmount, mainBB, address(this), address(this), address(this), address(this), false);
+        _addCollateral(addAmount, mainBB, address(this), address(this), address(this));
 
         // borrow
         borrowAmount = _boundBorrowAmount(borrowAmount, addAmount);

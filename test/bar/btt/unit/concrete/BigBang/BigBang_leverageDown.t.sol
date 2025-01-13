@@ -103,7 +103,7 @@ contract BigBang_sellCollateral is BigBang_Unit_Shared {
 
         // **** Main BB market ****
         // add collateral
-        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this), address(this), false);
+        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this));
 
         // borrow
         // already does the necessary checks
@@ -121,7 +121,7 @@ contract BigBang_sellCollateral is BigBang_Unit_Shared {
 
         // **** SecondaryBB BB market ****
         // add collateral
-        _addCollateral(collateralAmount, secondaryBB, address(this), address(this), address(this), address(this), false);
+        _addCollateral(collateralAmount, secondaryBB, address(this), address(this), address(this));
 
         // borrow
         // already does the necessary checks
@@ -156,7 +156,7 @@ contract BigBang_sellCollateral is BigBang_Unit_Shared {
 
         // **** Main BB market ****
         // add collateral
-        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this), address(this), false);
+        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this));
 
         // borrow
         // already does the necessary checks
@@ -249,7 +249,7 @@ contract BigBang_sellCollateral is BigBang_Unit_Shared {
 
         // **** Main BB market ****
         // add collateral
-        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this), address(this), false);
+        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this));
 
         // borrow
         // already does the necessary checks
@@ -280,7 +280,7 @@ contract BigBang_sellCollateral is BigBang_Unit_Shared {
 
         // **** Main BB market ****
         // add collateral
-        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this), address(this), false);
+        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this));
 
         // borrow
         // already does the necessary checks

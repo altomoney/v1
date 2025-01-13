@@ -68,7 +68,7 @@ contract BBCollateral is BBLendingCommon {
         }
         if (amount <= minCollateralAmount) revert MinCollateralAmountNotMet();
 
-        _depositCollateral(from, to, amount);
+        _addCollateral(from, to, amount, share, true);
     }
 
     function withdraw(uint256 _assets, address _to, address _owner)

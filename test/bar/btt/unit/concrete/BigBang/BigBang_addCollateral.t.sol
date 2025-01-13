@@ -21,7 +21,7 @@ contract BigBang_addCollateral is BigBang_Unit_Shared {
         whenCollateralAmountIsValid(collateralAmount)
     {
         (Module[] memory modules, bytes[] memory calls) =
-            _getCollateralData(collateralAmount, address(this), address(this), false);
+            _getCollateralData(collateralAmount, address(this), address(this));
         // it should revert with 'Market: paused'
         vm.expectRevert("Market: paused");
         mainBB.execute(modules, calls, true);
@@ -30,7 +30,7 @@ contract BigBang_addCollateral is BigBang_Unit_Shared {
         vm.expectRevert("Market: paused");
         secondaryBB.execute(modules, calls, true);
 
-        (modules, calls) = _getCollateralData(collateralAmount, address(this), address(this), true);
+        (modules, calls) = _getCollateralData(collateralAmount, address(this), address(this));
         // it should revert with 'Market: paused'
         vm.expectRevert("Market: paused");
         mainBB.execute(modules, calls, true);
@@ -46,24 +46,24 @@ contract BigBang_addCollateral is BigBang_Unit_Shared {
         whenCollateralAmountIsValid(collateralAmount)
     {
         (Module[] memory modules, bytes[] memory calls) =
-            _getCollateralData(collateralAmount, address(mainBB), address(mainBB), false);
+            _getCollateralData(collateralAmount, address(mainBB), address(mainBB));
 
         // it should revert with 'Market: cannot execute on itself'
         vm.expectRevert("Market: cannot execute on itself");
         mainBB.execute(modules, calls, true);
 
         // it should revert with 'Market: cannot execute on itself'
-        (modules, calls) = _getCollateralData(collateralAmount, address(secondaryBB), address(secondaryBB), false);
+        (modules, calls) = _getCollateralData(collateralAmount, address(secondaryBB), address(secondaryBB));
         vm.expectRevert("Market: cannot execute on itself");
         secondaryBB.execute(modules, calls, true);
 
         // it should revert with 'Market: cannot execute on itself'
-        (modules, calls) = _getCollateralData(collateralAmount, address(mainBB), address(mainBB), true);
+        (modules, calls) = _getCollateralData(collateralAmount, address(mainBB), address(mainBB));
         vm.expectRevert("Market: cannot execute on itself");
         mainBB.execute(modules, calls, true);
 
         // it should revert with 'Market: cannot execute on itself'
-        (modules, calls) = _getCollateralData(collateralAmount, address(secondaryBB), address(secondaryBB), true);
+        (modules, calls) = _getCollateralData(collateralAmount, address(secondaryBB), address(secondaryBB));
         vm.expectRevert("Market: cannot execute on itself");
         secondaryBB.execute(modules, calls, true);
     }
@@ -73,7 +73,7 @@ contract BigBang_addCollateral is BigBang_Unit_Shared {
         vm.assume(collateralAmount > 0 && collateralAmount < minCollateralAmount);
 
         (Module[] memory modules, bytes[] memory calls) =
-            _getCollateralData(collateralAmount, address(this), address(this), false);
+            _getCollateralData(collateralAmount, address(this), address(this));
 
         // min amount revert
         vm.expectRevert();
@@ -84,7 +84,7 @@ contract BigBang_addCollateral is BigBang_Unit_Shared {
         secondaryBB.execute(modules, calls, true);
     }
 
-    function test_givenCalledForAValidSenderByItself_WhenCollateralIsNotSkimmed(uint256 collateralAmount)
+    function test_givenCalledForAValidSenderByItself(uint256 collateralAmount)
         external
         whenContractIsNotPaused
         whenCollateralAmountIsValid(collateralAmount)
@@ -93,38 +93,13 @@ contract BigBang_addCollateral is BigBang_Unit_Shared {
         // **** Main BB market ****
         for (uint256 i; i < iterations; i++) {
             // already does the necessary checks
-            _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this), address(this), false);
+            _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this));
         }
 
         // **** Secondary BB market ****
         for (uint256 i; i < iterations; i++) {
             // already does the necessary checks
-            _addCollateral(
-                collateralAmount, secondaryBB, address(this), address(this), address(this), address(this), false
-            );
-        }
-    }
-
-    function test_givenCalledForAValidSenderByItself_WhenCollateralIsSkimmed(uint256 collateralAmount)
-        external
-        whenContractIsNotPaused
-        whenCollateralAmountIsValid(collateralAmount)
-    {
-        uint256 iterations = 25;
-        // **** Main BB market ****
-        // already does the necessary checks
-        for (uint256 i; i < iterations; i++) {
-            _addCollateral(
-                collateralAmount, mainBB, address(this), address(this), address(mainBB), address(this), false
-            );
-        }
-
-        // **** Secondary BB market ****
-        // already does the necessary checks
-        for (uint256 i; i < iterations; i++) {
-            _addCollateral(
-                collateralAmount, secondaryBB, address(this), address(this), address(secondaryBB), address(this), false
-            );
+            _addCollateral(collateralAmount, secondaryBB, address(this), address(this), address(this));
         }
     }
 
@@ -134,49 +109,34 @@ contract BigBang_addCollateral is BigBang_Unit_Shared {
         whenCollateralAmountIsValid(collateralAmount)
     {
         // deal collateral
-        _spawnCollateral(collateralAmount, address(this));
+        _spawnCollateral(collateralAmount, userB);
 
-        // deposit to market
-        mainBB.deposit(collateralAmount, address(this));
+        _approveViaERC20(address(mainBB.collateral()), userB, address(mainBB), type(uint256).max);
 
-        (Module[] memory modules, bytes[] memory calls) =
-            _getCollateralData(collateralAmount, address(this), address(this), false);
+        (Module[] memory modules, bytes[] memory calls) = _getCollateralData(collateralAmount, userB, userB);
 
         // it should revert with 'Market: not approved'
-        _resetPrank(userA);
         vm.expectRevert("Market: not approved");
+
+        _resetPrank(userA);
         mainBB.execute(modules, calls, true);
     }
 
-    function test_givenCalledFromAnotherUser_GivenCollateralIsNotSkimmed(uint256 collateralAmount)
+    function test_givenCalledFromAnotherUser(uint256 collateralAmount)
         external
         whenContractIsNotPaused
         whenCollateralAmountIsValid(collateralAmount)
     {
         // **** Main BB market ****
-        uint256 share = secondaryBB.convertToShares(collateralAmount);
-        _approveBorrow(mainBB, address(this), userA, share);
-        _addCollateral(collateralAmount, mainBB, userA, address(this), address(this), address(this), false);
+        _resetPrank(userB);
+        _approveViaERC20(mainBB.collateral(), userB, address(mainBB), collateralAmount);
+        mainBB.approveCollateral(userA, collateralAmount);
+        _addCollateral(collateralAmount, mainBB, userA, userB, userB);
 
         // **** Secondary BB market ****
-        share = secondaryBB.convertToShares(collateralAmount);
-        _approveBorrow(secondaryBB, address(this), userA, share);
-        _addCollateral(collateralAmount, secondaryBB, userA, address(this), address(this), address(this), false);
-    }
-
-    function test_givenCalledFromAnotherUser_GivenCollateralIsSkimmed(uint256 collateralAmount)
-        external
-        whenContractIsNotPaused
-        whenCollateralAmountIsValid(collateralAmount)
-    {
-        // **** Main BB market ****
-        uint256 share = mainBB.convertToShares(collateralAmount);
-        _approveBorrow(mainBB, address(this), userA, share);
-        _addCollateral(collateralAmount, mainBB, userA, address(this), address(mainBB), address(this), true);
-
-        // **** Secondary BB market ****
-        share = secondaryBB.convertToShares(collateralAmount);
-        _approveBorrow(secondaryBB, address(this), userA, share);
-        _addCollateral(collateralAmount, secondaryBB, userA, address(this), address(secondaryBB), address(this), true);
+        _resetPrank(address(this));
+        _approveViaERC20(secondaryBB.collateral(), userB, address(secondaryBB), collateralAmount);
+        secondaryBB.approveCollateral(userA, collateralAmount);
+        _addCollateral(collateralAmount, secondaryBB, userA, userB, userB);
     }
 }

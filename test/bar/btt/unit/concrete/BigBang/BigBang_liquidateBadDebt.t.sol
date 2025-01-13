@@ -67,7 +67,7 @@ contract BigBang_liquidateBadDebt is BigBang_Unit_Shared {
 
         // **** Main BB market ****
         // add collateral
-        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this), address(this), false);
+        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this));
 
         // borrow
         // already does the necessary checks
@@ -84,7 +84,7 @@ contract BigBang_liquidateBadDebt is BigBang_Unit_Shared {
 
         // **** Secondary BB market ****
         // add collateral
-        _addCollateral(collateralAmount, secondaryBB, address(this), address(this), address(this), address(this), false);
+        _addCollateral(collateralAmount, secondaryBB, address(this), address(this), address(this));
 
         // borrow
         // already does the necessary checks
@@ -150,7 +150,7 @@ contract BigBang_liquidateBadDebt is BigBang_Unit_Shared {
         whenWhitelisted(address(liquidatorReceiver))
     {
         // it should revert
-        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this), address(this), false);
+        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this));
 
         uint256 maxBorrowAmount = _computeMaxBorrowAmount(collateralAmount, IMarket(address(mainBB)));
         maxBorrowAmount = maxBorrowAmount - (maxBorrowAmount * 2e4 / 1e5);

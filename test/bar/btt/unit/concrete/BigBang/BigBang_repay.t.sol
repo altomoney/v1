@@ -66,7 +66,7 @@ contract BigBang_repay is BigBang_Unit_Shared {
         givenBorrowCapIsNotReachedYet
     {
         // **** Add collateral ****
-        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this), address(this), false);
+        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this));
 
         // **** Borrow ****
         borrowAmount = _boundBorrowAmount(borrowAmount, collateralAmount);
@@ -102,7 +102,7 @@ contract BigBang_repay is BigBang_Unit_Shared {
         givenBorrowCapIsNotReachedYet
     {
         // **** Add collateral ****
-        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this), address(this), false);
+        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this));
 
         // **** Borrow ****
         borrowAmount = _boundBorrowAmount(borrowAmount, collateralAmount);
@@ -158,7 +158,7 @@ contract BigBang_repay is BigBang_Unit_Shared {
         givenBorrowCapIsNotReachedYet
     {
         // **** Add collateral ****
-        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this), address(this), false);
+        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this));
 
         // **** Borrow ****
         borrowAmount = _boundBorrowAmount(borrowAmount, collateralAmount);
@@ -167,6 +167,8 @@ contract BigBang_repay is BigBang_Unit_Shared {
         // it should revert with 'Market: not approved'
         repayPart = _boundRepayAmount(repayPart, mainBB);
         (Module[] memory modules, bytes[] memory calls) = _getRepayData(repayPart, address(this), address(this));
+        _resetPrank(address(this));
+        mainBB.approveBorrow(userA, repayPart);
         _resetPrank(userA);
         vm.expectRevert("BoringERC20: TransferFrom failed");
         mainBB.execute(modules, calls, true);

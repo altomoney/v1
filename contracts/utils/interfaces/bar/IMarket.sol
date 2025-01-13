@@ -25,7 +25,6 @@ enum Module {
 }
 
 interface IMarket is IERC4626 {
-
     // Alias for the borrowable token
     function _asset() external view returns (address);
 

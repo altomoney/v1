@@ -328,7 +328,7 @@ abstract contract Usdo_crossChain is Usdo_Unit_Shared, BigBang_Unit_Shared, Sing
         {
             uint256 minLendAmount = randomSgl.minLendAmount() + 1;
             // **** Add collateral ****
-            _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this), address(this), false);
+            _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this));
 
             uint256 borrowAmount = minLendAmount * 2;
             repayPart = minLendAmount;
