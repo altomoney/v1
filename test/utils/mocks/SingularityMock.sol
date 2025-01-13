@@ -86,9 +86,6 @@ contract SingularityMock is EIP712 {
 
         _userBorrowPart[from] += amount;
 
-        // TODO Review it
-        // share = _yieldBox.toShare(_assetId, amount, true);
-
         share = amount;
 
         _asset.transfer(to, share);

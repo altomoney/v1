@@ -163,15 +163,9 @@ contract SingularityTest is UsdoTestHelper {
     }
 
     function depositAsset(uint256 amount) public {
-        vm.skip(true);
         deal(address(asset), address(this), amount);
-        // pearl mit.approve(
-        //     1155,  assetYieldBoxId, address(singularity), type(uint200).max, uint48(block.timestamp)
-        // );
-
-        uint256 share = singularity.convertToShares(amount);
-        // TODO review it yieldBox.depositAsset(assetYieldBoxId, address(this), address(this), 0, share);
-        singularity.addAsset(address(this), address(this), share);
+        IERC20(singularity.borrowableToken()).approve(address(singularity), amount);
+        singularity.addAsset(address(this), address(this), amount);
     }
 
     function depositCollateral(uint256 amount) public {
@@ -179,10 +173,8 @@ contract SingularityTest is UsdoTestHelper {
         collateral.approve(address(singularity), type(uint256).max);
 
         uint256 share = singularity.convertToShares(amount);
-        // TODO review it yieldBox.depositAsset(collateralYieldBoxId, address(this), address(this), 0, share);
-
         (Module[] memory modules, bytes[] memory calls) =
-            marketHelper.addCollateral(address(this), address(this), share, 0);
+            marketHelper.addCollateral(address(this), address(this), amount, 0);
         singularity.execute(modules, calls, true);
     }
 
@@ -579,24 +571,15 @@ contract SingularityTest is UsdoTestHelper {
         uint256 borrowPart = singularity._userBorrowPart(address(this));
         assertGt(borrowPart, 0);
 
-        vm.startPrank(userA);
-        // pearl mit.approve(
-        //     1155,  assetYieldBoxId, address(singularity), type(uint200).max, uint48(block.timestamp)
-        // );
-
-        vm.stopPrank();
-
         singularity.approveBorrow(address(userA), type(uint256).max);
         singularity.approve(address(userA), type(uint256).max);
 
         deal(address(asset), address(userA), borrowAmount * 2);
 
+        vm.startPrank(userA);
         uint256 share = singularity.convertToShares(borrowAmount * 2);
-        vm.prank(userA);
-        // TODO review it yieldBox.depositAsset(assetYieldBoxId, address(userA), address(userA), 0, share);
-
+        IERC20(singularity.borrowableToken()).approve(address(singularity), share);
         (Module[] memory modules, bytes[] memory calls) = marketHelper.repay(address(userA), address(this), borrowPart);
-        vm.prank(userA);
         singularity.execute(modules, calls, true);
 
         uint256 borrowPartAfter = singularity._userBorrowPart(address(this));
