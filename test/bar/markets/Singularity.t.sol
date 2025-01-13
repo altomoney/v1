@@ -164,14 +164,15 @@ contract SingularityTest is UsdoTestHelper {
 
     function depositAsset(uint256 amount) public {
         deal(address(asset), address(this), amount);
-        asset.approve(address(singularity), amount);
+        IERC20(singularity.borrowableToken()).approve(address(singularity), amount);
         singularity.addAsset(address(this), address(this), amount);
     }
 
     function depositCollateral(uint256 amount) public {
         deal(address(collateral), address(this), amount);
-        collateral.approve(address(singularity), amount);
+        collateral.approve(address(singularity), type(uint256).max);
 
+        uint256 share = singularity.convertToShares(amount);
         (Module[] memory modules, bytes[] memory calls) =
             marketHelper.addCollateral(address(this), address(this), amount, 0);
         singularity.execute(modules, calls, true);
@@ -574,13 +575,12 @@ contract SingularityTest is UsdoTestHelper {
 
         deal(address(asset), address(userA), borrowAmount * 2);
 
+        vm.startPrank(userA);
         uint256 share = singularity.convertToShares(borrowAmount * 2);
-        vm.prank(userA);
 
-        asset.approve(address(singularity), type(uint256).max);
+        IERC20(singularity.borrowableToken()).approve(address(singularity), share);
 
         (Module[] memory modules, bytes[] memory calls) = marketHelper.repay(address(userA), address(this), borrowPart);
-        vm.prank(userA);
         singularity.execute(modules, calls, true);
 
         uint256 borrowPartAfter = singularity._userBorrowPart(address(this));

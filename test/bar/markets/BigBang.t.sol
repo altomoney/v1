@@ -284,7 +284,6 @@ contract BigBangTest is UsdoTestHelper {
     }
 
     function test_open_interest_borrow_borrow_repay() public {
-        vm.skip(true);
         // console.log ("");
         // console.log ("");
         // console.log ("");
@@ -643,7 +642,6 @@ contract BigBangTest is UsdoTestHelper {
     }
 
     function test_borrow_repay_different_users() public {
-        vm.skip(true);
         uint256 collateralAmount = 1 ether;
         uint256 borrowAmount = 5e17;
 
@@ -663,24 +661,17 @@ contract BigBangTest is UsdoTestHelper {
         uint256 borrowPart = bigBang._userBorrowPart(address(this));
         assertGt(borrowPart, 0);
 
-        vm.startPrank(userA);
-        // pearl mit.approve(
-        //     1155,  assetYieldBoxId, address(bigBang), type(uint200).max, uint48(block.timestamp)
-        // );
-
-        vm.stopPrank();
-
         bigBang.approveBorrow(address(userA), type(uint256).max);
         bigBang.approve(address(userA), type(uint256).max);
 
         deal(address(asset), address(userA), borrowAmount * 2);
 
         uint256 share = bigBang.convertToShares(borrowAmount * 2);
-        vm.prank(userA);
-        // TODO review it yieldBox.depositAsset(assetYieldBoxId, address(userA), address(userA), 0, share);
+        vm.startPrank(userA);
+
+        IERC20(bigBang.borrowableToken()).approve(address(bigBang), type(uint256).max);
 
         (Module[] memory modules, bytes[] memory calls) = marketHelper.repay(address(userA), address(this), borrowPart);
-        vm.prank(userA);
         bigBang.execute(modules, calls, true);
 
         uint256 borrowPartAfter = bigBang._userBorrowPart(address(this));
