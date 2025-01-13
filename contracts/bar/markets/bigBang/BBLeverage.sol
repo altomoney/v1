@@ -10,8 +10,6 @@ import {IERC20} from "@boringcrypto/boring-solidity/contracts/ERC20.sol";
 import {SafeApprove} from "../../libraries/SafeApprove.sol";
 import {BBLendingCommon} from "./BBLendingCommon.sol";
 
-import "forge-std/console.sol";
-
 /*
 
 ████████╗ █████╗ ██████╗ ██╗ ██████╗  ██████╗ █████╗ 
@@ -69,12 +67,10 @@ contract BBLeverage is BBLendingCommon {
             _allowedCollateral(from, supplyAmount);
             IERC20(borrowableToken()).safeTransferFrom(from, address(leverageExecutor), supplyAmount);
         }
-        console.log("1");
 
         {
             _borrow(from, address(leverageExecutor), borrowAmount, _computeVariableOpeningFee(borrowAmount));
         }
-        console.log("2");
 
         {
             updateExchangeRate();
@@ -84,7 +80,6 @@ contract BBLeverage is BBLendingCommon {
             amountOut = leverageExecutor.getCollateral(
                 from, address(_borrowableToken()), collateral(), borrowAmount + supplyAmount, data
             );
-            console.log("4", amountOut);
 
             if (amountOut == 0) revert AmountNotValid();
         }

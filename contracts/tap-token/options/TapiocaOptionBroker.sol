@@ -23,7 +23,6 @@ import {IMarket} from "tap-utils/interfaces/bar/IMarket.sol";
 import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
 import {IBigBang} from "tap-utils/interfaces/bar/IBigBang.sol";
 import {ITapiocaOptionBroker, Participation, PaymentTokenOracle} from "tap-token/interfaces/ITapiocaOptionBroker.sol";
-import {console} from "forge-std/console.sol";
 /*
 
 ████████╗ █████╗ ██████╗ ██╗ ██████╗  ██████╗ █████╗ 
@@ -532,7 +531,6 @@ contract TapiocaOptionBroker is ITapiocaOptionBroker, Pausable, Ownable, FullMat
      * @notice Emergency sweep tokens in case of a critical issue, after a cooldown period.
      */
     function emergencySweep(address token) external onlyOwner {
-        console.log("emergencySweep", block.timestamp, _lastEmergencySweep, _emergencySweepCooldown);
         if (_lastEmergencySweep == 0 || block.timestamp < _lastEmergencySweep + _emergencySweepCooldown) {
             revert EmergencySweepCooldownNotReached();
         }
