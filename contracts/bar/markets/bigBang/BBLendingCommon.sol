@@ -67,10 +67,7 @@ contract BBLendingCommon is BBCommon {
     }
 
     /// @dev Concrete implementation of `borrow`.
-    function _borrow(address from, address to, uint256 amount, uint256 feeAmount)
-        internal
-        returns (uint256 part, uint256 share)
-    {
+    function _borrow(address from, address to, uint256 amount, uint256 feeAmount) internal returns (uint256 part) {
         (totalBorrow, part) = totalBorrow.add(amount + feeAmount, true);
 
         if (totalBorrowCap > 0) {
@@ -85,7 +82,6 @@ contract BBLendingCommon is BBCommon {
 
         //deposit borrowed amount to user
         _borrowableToken().safeTransfer(to, amount);
-        share = convertToShares(amount); // TODO Check it
     }
 
     /// @dev Concrete implementation of `repay`.

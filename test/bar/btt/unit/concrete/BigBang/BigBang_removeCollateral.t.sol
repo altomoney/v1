@@ -232,12 +232,12 @@ contract BigBang_removeCollateral is BigBang_Unit_Shared {
     {
         // **** Main BB market ****
         _resetPrank(address(this));
-        mainBB.approveCollateral(userA, type(uint256).max);
+        _approveViaERC20(address(mainBB), address(address(this)), address(userA), type(uint256).max);
         _removeCollateral(addAmount, removeShare, 0, mainBB, userA, address(this), address(this));
 
         // **** Secondary BB market ****
         _resetPrank(address(this));
-        secondaryBB.approveCollateral(userA, type(uint256).max);
+        _approveViaERC20(address(secondaryBB), address(address(this)), address(userA), type(uint256).max);
         _removeCollateral(addAmount, removeShare, 0, secondaryBB, userA, address(this), address(this));
     }
 }

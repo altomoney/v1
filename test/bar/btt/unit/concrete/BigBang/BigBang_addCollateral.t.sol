@@ -134,7 +134,7 @@ contract BigBang_addCollateral is BigBang_Unit_Shared {
         _addCollateral(collateralAmount, mainBB, userA, userB, userB);
 
         // **** Secondary BB market ****
-        _resetPrank(address(this));
+        _resetPrank(userB);
         _approveViaERC20(secondaryBB.collateral(), userB, address(secondaryBB), collateralAmount);
         secondaryBB.approveCollateral(userA, collateralAmount);
         _addCollateral(collateralAmount, secondaryBB, userA, userB, userB);

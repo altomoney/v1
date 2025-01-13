@@ -33,13 +33,12 @@ contract BBBorrow is BBLendingCommon {
     /// @param to The receiver of borrowed tokens.
     /// @param amount Amount to borrow.
     /// @return part Total part of the debt held by borrowers.
-    /// @return share Total amount in shares borrowed.
     function borrow(address from, address to, uint256 amount)
         external
         optionNotPaused(PauseType.Borrow)
         notSelf(to)
         solvent(from)
-        returns (uint256 part, uint256 share)
+        returns (uint256 part)
     {
         if (amount <= minBorrowAmount) revert MinBorrowAmountNotMet();
         _allowedBorrow(from, amount);
@@ -47,7 +46,7 @@ contract BBBorrow is BBLendingCommon {
         _penrose.reAccrueBigBangMarkets();
 
         uint256 feeAmount = _computeVariableOpeningFee(amount);
-        (part, share) = _borrow(from, to, amount, feeAmount);
+        part = _borrow(from, to, amount, feeAmount);
     }
 
     /// @notice Repays a loan.

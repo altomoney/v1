@@ -73,6 +73,9 @@ abstract contract BigBang_Unit_Shared is Markets_Unit_Shared {
         // create another BB market
         // it handles after deployment set-up
         secondaryBB = BigBang(payable(_registerBBMarket(address(randomCollateral), false)));
+
+        vm.label(address(mainBB), "mainBB");
+        vm.label(address(secondaryBB), "secondaryBB");
     }
 
     // ***************** //
@@ -481,6 +484,10 @@ abstract contract BigBang_Unit_Shared is Markets_Unit_Shared {
         // **** Borrow ****
         borrowAmount = _boundBorrowAmount(borrowAmount, addAmount);
         if (borrowAmount > 0) {
+            if (executor != from) {
+                _resetPrank(from);
+                bb.approveBorrow(executor, borrowAmount);
+            }
             _borrow(borrowAmount, bb, executor, from, to);
         }
 
@@ -911,6 +918,8 @@ abstract contract BigBang_Unit_Shared is Markets_Unit_Shared {
         // borrow
         _borrow(borrowAmount, bb, from, from, to);
 
+        _approveViaERC20(address(bb.borrowableToken()), from, address(bb), type(uint256).max);
+
         leverageAmount = full ? collateralAmount : _boundLeverageDownAmount(leverageAmount, bb);
 
         _LeverageInternal memory _data;
@@ -939,31 +948,45 @@ abstract contract BigBang_Unit_Shared is Markets_Unit_Shared {
         _data.usdoSupplyAfter = usdo.totalSupply();
 
         // it should decrease 'userCollateralShare'
-        assertEq(_data.userCollateralBefore - share, _data.userCollateralAfter);
+        assertEq(
+            _data.userCollateralBefore - share, _data.userCollateralAfter, "it should decrease 'userCollateralShare'"
+        );
 
         // it should decrease 'totalCollateralShare'
-        assertEq(_data.totalCollateralShareBefore - share, _data.totalCollateralShareAfter);
+        assertEq(
+            _data.totalCollateralShareBefore - share,
+            _data.totalCollateralShareAfter,
+            "it should decrease 'totalCollateralShare'"
+        );
 
         // it should decrease asset's supply
-        assertGt(_data.usdoSupplyBefore, _data.usdoSupplyAfter);
+        assertGt(_data.usdoSupplyBefore, _data.usdoSupplyAfter, "it should decrease 'usdoSupply'");
 
         if (full) {
             // it should empty 'userBorrowPart'
             assertEq(_data.userBorrowPartAfter, 0);
-            assertGt(_data.userYieldBoxBalanceAfter, _data.userYieldBoxBalanceBefore);
+            assertGt(
+                _data.userYieldBoxBalanceAfter,
+                _data.userYieldBoxBalanceBefore,
+                "it should increase 'userYieldBoxBalance'"
+            );
         }
 
         // it should decrease 'userBorrowPart'
-        assertGt(_data.userBorrowPartBefore, _data.userBorrowPartAfter);
+        assertGt(_data.userBorrowPartBefore, _data.userBorrowPartAfter, "it should decrease 'userBorrowPart'");
 
         // it should decrease 'totalBorrow.base'
         // it should decrease 'totalBorrow.elastic'
-        assertGt(_data.totalBorrowBefore.base, _data.totalBorrowAfter.base);
-        assertGt(_data.totalBorrowBefore.elastic, _data.totalBorrowAfter.elastic);
+        assertGt(_data.totalBorrowBefore.base, _data.totalBorrowAfter.base, "it should decrease 'totalBorrow.base'");
+        assertGt(
+            _data.totalBorrowBefore.elastic, _data.totalBorrowAfter.elastic, "it should decrease 'totalBorrow.elastic'"
+        );
 
         uint256 amount = _data.usdoSupplyBefore - _data.usdoSupplyAfter;
-        assertEq(_data.totalBorrowBefore.base - _data.totalBorrowAfter.base, amount);
-        assertEq(_data.userBorrowPartBefore - _data.userBorrowPartAfter, amount);
+        assertEq(
+            _data.totalBorrowBefore.base - _data.totalBorrowAfter.base, amount, "it should match 'totalBorrow.base'"
+        );
+        assertEq(_data.userBorrowPartBefore - _data.userBorrowPartAfter, amount, "it should match 'userBorrowPart'");
     }
 
     function _leverageUp(
@@ -983,7 +1006,15 @@ abstract contract BigBang_Unit_Shared is Markets_Unit_Shared {
         _borrow(borrowAmount, bb, from, from, to);
 
         leverageAmount = _boundLeverageUpAmount(leverageAmount, bb);
-
+        if (supplyAmount > 0) {
+            _resetPrank(from);
+            IERC20(bb.collateral()).approve(address(bb), supplyAmount);
+        }
+        if (executor != from) {
+            _resetPrank(from);
+            bb.approveCollateral(executor, type(uint256).max);
+            bb.approveBorrow(executor, type(uint256).max);
+        }
         _LeverageInternal memory _data;
         _data.userCollateralBefore = bb.balanceOf(to);
         _data.totalCollateralShareBefore = bb._totalCollateralShare();

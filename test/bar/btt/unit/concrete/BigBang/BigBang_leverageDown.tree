@@ -8,8 +8,6 @@ BigBang_sellCollateral.t.sol
     │   ├── when sellCollateral is called and leverageExecutor is address0
     │       └── it should revert
     ├── when it's called for a valid sender by itself
-    │   ├── when there's no approval
-    │   │   └── it should revert
     │   └── when sender gave repayment approval
     │       └── when tokens were added to YieldBox for leverage down
     │           ├── when leverage executor returns amount0

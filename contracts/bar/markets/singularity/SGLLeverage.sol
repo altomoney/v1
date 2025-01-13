@@ -131,10 +131,7 @@ contract SGLLeverage is SGLLendingCommon {
             calldata_.data = data;
         }
 
-        _allowedBorrow(calldata_.from, calldata_.share);
-        _removeCollateral(calldata_.from, address(this), calldata_.share);
-
-        uint256 leverageAmount = redeem(calldata_.share, address(leverageExecutor), address(this));
+        uint256 leverageAmount = super.redeem(calldata_.share, address(leverageExecutor), from);
 
         amountOut =
             leverageExecutor.getAsset(from, collateral(), address(_borrowableToken()), leverageAmount, calldata_.data);

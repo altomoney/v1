@@ -10,6 +10,8 @@ import {IERC20} from "@boringcrypto/boring-solidity/contracts/ERC20.sol";
 import {SafeApprove} from "../../libraries/SafeApprove.sol";
 import {BBLendingCommon} from "./BBLendingCommon.sol";
 
+import "forge-std/console.sol";
+
 /*
 
 ████████╗ █████╗ ██████╗ ██╗ ██████╗  ██████╗ █████╗ 
@@ -63,54 +65,50 @@ contract BBLeverage is BBLendingCommon {
         }
         _penrose.reAccrueBigBangMarkets();
 
-        // Stack too deep fix
-        _BuyCollateralCalldata memory calldata_;
-        _BuyCollateralMemoryData memory memoryData;
-        {
-            calldata_.from = from;
-            calldata_.borrowAmount = borrowAmount;
-            calldata_.supplyAmount = supplyAmount;
-            calldata_.data = data;
+        if (supplyAmount > 0) {
+            _allowedCollateral(from, supplyAmount);
+            IERC20(borrowableToken()).safeTransferFrom(from, address(leverageExecutor), supplyAmount);
         }
+        console.log("1");
 
         {
-            uint256 supplyShare = convertToShares(calldata_.supplyAmount);
-            if (supplyShare > 0) {
-                memoryData.supplyShareToAmount = redeem(supplyShare, address(leverageExecutor), calldata_.from);
-            }
+            _borrow(from, address(leverageExecutor), borrowAmount, _computeVariableOpeningFee(borrowAmount));
         }
+        console.log("2");
 
-        {
-            (, uint256 borrowShare) = _borrow(
-                calldata_.from,
-                address(this),
-                calldata_.borrowAmount,
-                _computeVariableOpeningFee(calldata_.borrowAmount)
-            );
-            memoryData.borrowShareToAmount = redeem(borrowShare, address(leverageExecutor), address(this));
-        }
         {
             updateExchangeRate();
-            uint256 assetPartInCollateral = (memoryData.supplyShareToAmount + memoryData.borrowShareToAmount)
-                * exchangeRate / EXCHANGE_RATE_PRECISION;
-            uint256 _share = convertToShares(assetPartInCollateral);
-            _allowedBorrow(calldata_.from, _share);
+            uint256 assetPartInCollateral = (supplyAmount + borrowAmount) * exchangeRate / EXCHANGE_RATE_PRECISION;
+            _allowedBorrow(from, convertToShares(assetPartInCollateral));
 
             amountOut = leverageExecutor.getCollateral(
-                from,
-                address(_borrowableToken()),
-                collateral(),
-                memoryData.supplyShareToAmount + memoryData.borrowShareToAmount,
-                calldata_.data
+                from, address(_borrowableToken()), collateral(), borrowAmount + supplyAmount, data
             );
+            console.log("4", amountOut);
+
+            if (amountOut == 0) revert AmountNotValid();
         }
-        uint256 collateralShare = convertToShares(amountOut);
-        if (collateralShare == 0) revert CollateralShareNotValid();
+        // Mint shares via erc4626 "deposit()" function logic, skipping transferFrom
+        uint256 sharesOutput = previewDeposit(amountOut);
+        _mint(from, sharesOutput);
+        address thisAddress = address(this);
+        /// @solidity memory-safe-assembly
+        assembly {
+            // Emit the {Deposit} event.
+            mstore(0x00, amountOut)
+            mstore(0x20, sharesOutput)
+            let m := shr(96, not(0))
+            log3(
+                0x00,
+                0x40,
+                0xdcbc1c05240f31ff3ad067ef1ee35ce4997762752e3a095284754544f4c709d7, // _DEPOSIT_EVENT_SIGNATURE
+                and(m, address()),
+                and(m, from)
+            )
+        }
+        _afterDeposit(amountOut, sharesOutput);
 
-        mint(collateralShare, address(this)); // TODO Minting tokens before _addCollateral (it mints tokens too)?
-
-        _addCollateral(calldata_.from, calldata_.from, 0, collateralShare, false);
-        if (amountOut == 0) revert AmountNotValid();
+        emit LogAddCollateral(address(this), from, sharesOutput);
     }
 
     struct _SellCollateralMemoryData {
@@ -139,18 +137,15 @@ contract BBLeverage is BBLendingCommon {
         }
         _penrose.reAccrueBigBangMarkets();
 
-        _allowedBorrow(from, share);
-        _removeCollateral(from, address(this), share);
-
         _SellCollateralMemoryData memory memoryData;
 
-        memoryData.leverageAmount = redeem(share, address(leverageExecutor), address(this));
+        memoryData.leverageAmount = super.redeem(share, address(leverageExecutor), from);
         amountOut =
             leverageExecutor.getAsset(from, collateral(), address(_borrowableToken()), memoryData.leverageAmount, data);
 
-        memoryData.shareOut = convertToShares(amountOut);
+        IERC20(_borrowableToken()).safeTransfer(from, amountOut);
 
-        mint(memoryData.shareOut, from); // TODO Check for rounding attack?
+        memoryData.shareOut = convertToShares(amountOut);
 
         memoryData.partOwed = userBorrowPart[from];
         memoryData.amountOwed = totalBorrow.toElastic(memoryData.partOwed, true);

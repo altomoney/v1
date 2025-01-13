@@ -174,8 +174,7 @@ contract BigBang_buyCollateral is BigBang_Unit_Shared {
 
         // **** Main BB market ****
         _spawnAsset(supplyAmount, address(this));
-        uint256 share = mainBB.convertToShares(supplyAmount);
-        // TODO Deposit borrowable asset? _depositToYieldBox(mainBB._asset(), mainBB._assetId(), share, address(this), address(this));
+        _approveViaERC20(mainBB.borrowableToken(), address(this), address(mainBB), type(uint256).max);
         _leverageUp(
             collateralAmount,
             borrowAmount,
@@ -189,8 +188,7 @@ contract BigBang_buyCollateral is BigBang_Unit_Shared {
 
         // // **** Secondary BB market ****
         _spawnAsset(supplyAmount, address(this));
-        share = secondaryBB.convertToShares(supplyAmount);
-        // TODO Deposit borrowable asset? _depositToYieldBox(secondaryBB._asset(), secondaryBB._assetId(), share, address(this), address(this));
+        _approveViaERC20(secondaryBB.borrowableToken(), address(this), address(secondaryBB), type(uint256).max);
         _leverageUp(
             collateralAmount,
             borrowAmount,
@@ -297,7 +295,7 @@ contract BigBang_buyCollateral is BigBang_Unit_Shared {
         (Module[] memory modules, bytes[] memory calls) =
             _getLeverageUpData(leverageAmount, supplyAmount, address(this));
 
-        mainBB.approveBorrow(address(userA), type(uint256).max);
+        _approveViaERC20(address(mainBB), address(address(this)), address(userA), type(uint256).max);
         _resetPrank(userA);
         //         │   │   │   └─ ← [Revert] CollateralShareNotValid()
         // │   │   └─ ← [Revert] EvmError: Revert
@@ -321,12 +319,12 @@ contract BigBang_buyCollateral is BigBang_Unit_Shared {
         borrowAmount = _boundBorrowAmount(borrowAmount, collateralAmount);
 
         // **** Main BB market ****
-        mainBB.approveBorrow(address(userA), type(uint256).max);
+        _approveViaERC20(address(mainBB), address(address(this)), address(userA), type(uint256).max);
         _leverageUp(collateralAmount, borrowAmount, leverageAmount, 0, mainBB, userA, address(this), address(this));
 
         // **** Secondary BB market ****
         _resetPrank(address(this));
-        secondaryBB.approveBorrow(address(userA), type(uint256).max);
+        _approveViaERC20(address(secondaryBB), address(address(this)), address(userA), type(uint256).max);
         _leverageUp(collateralAmount, borrowAmount, leverageAmount, 0, secondaryBB, userA, address(this), address(this));
     }
 
@@ -349,8 +347,12 @@ contract BigBang_buyCollateral is BigBang_Unit_Shared {
         // **** Main BB market ****
         _spawnAsset(supplyAmount, address(this));
         uint256 share = mainBB.convertToShares(supplyAmount);
-        // TODO Deposit borrowable asset? _depositToYieldBox(mainBB._asset(), mainBB._assetId(), share, address(this), address(this));
+
+        _approveViaERC20(mainBB.borrowableToken(), address(this), address(mainBB), type(uint256).max);
+        _resetPrank(address(this));
+        mainBB.approveCollateral(address(userA), type(uint256).max);
         mainBB.approveBorrow(address(userA), type(uint256).max);
+
         _leverageUp(
             collateralAmount, borrowAmount, leverageAmount, supplyAmount, mainBB, userA, address(this), address(this)
         );
@@ -358,9 +360,12 @@ contract BigBang_buyCollateral is BigBang_Unit_Shared {
         // **** Secondary BB market ****
         _resetPrank(address(this));
         _spawnAsset(supplyAmount, address(this));
-        share = secondaryBB.convertToShares(supplyAmount);
-        // TODO Deposit borrowable asset? _depositToYieldBox(secondaryBB._asset(), secondaryBB._assetId(), share, address(this), address(this));
+
+        _approveViaERC20(secondaryBB.borrowableToken(), address(this), address(secondaryBB), type(uint256).max);
+        _resetPrank(address(this));
+        secondaryBB.approveCollateral(address(userA), type(uint256).max);
         secondaryBB.approveBorrow(address(userA), type(uint256).max);
+
         _leverageUp(
             collateralAmount,
             borrowAmount,

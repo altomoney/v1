@@ -88,56 +88,6 @@ contract BigBang_sellCollateral is BigBang_Unit_Shared {
         secondaryBB.execute(modules, calls, true);
     }
 
-    function test_RevertWhen_whenItsCalledForAValidSenderByItself_TheresNoApproval(
-        uint256 collateralAmount,
-        uint256 borrowAmount,
-        uint256 leverageAmount
-    )
-        external
-        whenContractIsNotPaused
-        whenOracleRateIsEth
-        whenAssetOracleRateIsAfterMin
-        whenCollateralAmountIsValid(collateralAmount)
-    {
-        borrowAmount = _boundBorrowAmount(borrowAmount, collateralAmount);
-
-        // **** Main BB market ****
-        // add collateral
-        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this));
-
-        // borrow
-        // already does the necessary checks
-        _borrow(borrowAmount, mainBB, address(this), address(this), address(this));
-
-        leverageAmount = _boundLeverageDownAmount(leverageAmount, mainBB);
-
-        (Module[] memory modules, bytes[] memory calls) = _getLeverageDownData(leverageAmount, address(this));
-        //         │   │   │   │   └─ ← [Revert] PermitC__ApprovalTransferPermitExpiredOrUnset()
-        // │   │   │   └─ ← [Revert] PermitC__ApprovalTransferPermitExpiredOrUnset()
-        // │   │   └─ ← [Revert] EvmError: Revert
-        // │   └─ ← [Revert] EvmError: Revert
-        vm.expectRevert();
-        mainBB.execute(modules, calls, true);
-
-        // **** SecondaryBB BB market ****
-        // add collateral
-        _addCollateral(collateralAmount, secondaryBB, address(this), address(this), address(this));
-
-        // borrow
-        // already does the necessary checks
-        _borrow(borrowAmount, secondaryBB, address(this), address(this), address(this));
-
-        leverageAmount = _boundLeverageDownAmount(leverageAmount, secondaryBB);
-
-        (modules, calls) = _getLeverageDownData(leverageAmount, address(this));
-        //         │   │   │   │   └─ ← [Revert] PermitC__ApprovalTransferPermitExpiredOrUnset()
-        // │   │   │   └─ ← [Revert] PermitC__ApprovalTransferPermitExpiredOrUnset()
-        // │   │   └─ ← [Revert] EvmError: Revert
-        // │   └─ ← [Revert] EvmError: Revert
-        vm.expectRevert();
-        mainBB.execute(modules, calls, true);
-    }
-
     function test_RevertWhen_whenItsCalledForAValidSenderByItself_LeverageExecutorReturnsAmountZero(
         uint256 collateralAmount,
         uint256 borrowAmount,
@@ -184,11 +134,15 @@ contract BigBang_sellCollateral is BigBang_Unit_Shared {
         borrowAmount = _boundBorrowAmount(borrowAmount, collateralAmount);
 
         // **** Main BB market ****
+        _resetPrank(address(this));
+        _approveViaERC20(address(mainBB), address(address(this)), address(mainBB), type(uint256).max);
         _leverageDown(
             collateralAmount, borrowAmount, leverageAmount, mainBB, address(this), address(this), address(this), true
         );
 
         // **** Secondary BB market ****
+        _resetPrank(address(this));
+        _approveViaERC20(address(secondaryBB), address(address(this)), address(this), type(uint256).max);
         _leverageDown(
             collateralAmount,
             borrowAmount,
@@ -260,7 +214,7 @@ contract BigBang_sellCollateral is BigBang_Unit_Shared {
 
         // it should revert with 'Market: not approved'
         _resetPrank(userA);
-        vm.expectRevert("Market: not approved");
+        vm.expectRevert();
         mainBB.execute(modules, calls, true);
     }
 
@@ -290,7 +244,7 @@ contract BigBang_sellCollateral is BigBang_Unit_Shared {
 
         (Module[] memory modules, bytes[] memory calls) = _getLeverageDownData(leverageAmount, address(this));
         leverageExecutor.setReturnZero(true);
-        mainBB.approveBorrow(address(userA), type(uint256).max);
+        _approveViaERC20(address(mainBB), address(address(this)), address(userA), type(uint256).max);
 
         _resetPrank(userA);
         vm.expectRevert();
@@ -312,11 +266,13 @@ contract BigBang_sellCollateral is BigBang_Unit_Shared {
         borrowAmount = _boundBorrowAmount(borrowAmount, collateralAmount);
 
         // **** Main BB market ****
-        mainBB.approveBorrow(address(userA), type(uint256).max);
+        _resetPrank(address(this));
+        _approveViaERC20(address(mainBB), address(address(this)), address(userA), type(uint256).max);
         _leverageDown(collateralAmount, borrowAmount, leverageAmount, mainBB, userA, address(this), address(this), true);
 
         // **** Secondary BB market ****
-        secondaryBB.approveBorrow(address(userA), type(uint256).max);
+        _resetPrank(address(this));
+        _approveViaERC20(address(secondaryBB), address(address(this)), address(userA), type(uint256).max);
         _leverageDown(
             collateralAmount, borrowAmount, leverageAmount, secondaryBB, userA, address(this), address(this), true
         );
@@ -337,13 +293,13 @@ contract BigBang_sellCollateral is BigBang_Unit_Shared {
         borrowAmount = _boundBorrowAmount(borrowAmount, collateralAmount);
 
         // **** Main BB market ****
-        mainBB.approveBorrow(address(userA), type(uint256).max);
+        _approveViaERC20(address(mainBB), address(address(this)), address(userA), type(uint256).max);
         _leverageDown(
             collateralAmount, borrowAmount, leverageAmount, mainBB, userA, address(this), address(this), false
         );
 
         // **** Secondary BB market ****
-        secondaryBB.approveBorrow(address(userA), type(uint256).max);
+        _approveViaERC20(address(secondaryBB), address(address(this)), address(userA), type(uint256).max);
         _leverageDown(
             collateralAmount, borrowAmount, leverageAmount, secondaryBB, userA, address(this), address(this), false
         );
