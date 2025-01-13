@@ -35,29 +35,36 @@ contract SGLLendingCommon is SGLCommon {
     // ************************** //
     // *** PRIVATE FUNCTIONS *** //
     // ************************* //
+
     /// @dev Concrete implementation of `addCollateral`.
-    function _addCollateral(address from, address to, uint256 amount, uint256 share, bool addTokens) internal {
+    function _addCollateral(address from, address to, uint256 amount, uint256 share, bool pullTokens) internal {
+        _allowedCollateral(from, amount);
+
         if (share == 0) {
             share = convertToShares(amount);
         }
-        uint256 oldTotalCollateralShare = totalSupply();
 
-        if (addTokens) {
+        if (pullTokens) {
             IERC20(collateral()).safeTransferFrom(from, address(this), amount);
         }
-
         _mint(to, share);
 
         emit LogAddCollateral(from, to, share);
     }
 
+    function _depositCollateral(address from, address to, uint256 assets) internal returns (uint256 shares) {
+        _allowedCollateral(from, assets);
+
+        shares = super.deposit(assets, to);
+
+        emit LogAddCollateral(from, to, shares);
+    }
+
     /// @dev Concrete implementation of `removeCollateral`.
     function _removeCollateral(address from, address to, uint256 share) internal {
-        _burn(from, share);
+        uint256 assets = super.redeem(share, to, from);
 
-        emit LogRemoveCollateral(from, to, share);
-        uint256 amount = convertToAssets(share);
-        IERC20(collateral()).safeTransfer(to, amount);
+        emit LogRemoveCollateral(from, to, assets);
     }
 
     /// @dev Concrete implementation of `borrow`.
