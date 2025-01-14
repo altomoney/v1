@@ -391,6 +391,31 @@ contract SingularityTest is UsdoTestHelper {
         assertGt(borrowPartBefore, borrowPartAfter);
     }
 
+    function _liquidateUser(address user, uint256 borrowAmount, address liquidator) internal {
+        address[] memory users = new address[](1);
+        users[0] = user;
+
+        uint256[] memory borrowParts = new uint256[](1);
+        borrowParts[0] = borrowAmount / 2;
+
+        uint256[] memory minLiquidationBonuses = new uint256[](1);
+        minLiquidationBonuses[0] = 1e4;
+
+        IMarketLiquidatorReceiver[] memory receivers = new IMarketLiquidatorReceiver[](1);
+        receivers[0] = IMarketLiquidatorReceiver(liquidator);
+
+        bytes[] memory receiverData = new bytes[](1);
+        receiverData[0] = abi.encode(borrowAmount / 2);
+
+        uint256 borrowPartBefore = singularity._userBorrowPart(user);
+        (Module[] memory modules, bytes[] memory calls) =
+            marketHelper.liquidate(users, borrowParts, minLiquidationBonuses, receivers, receiverData);
+        vm.expectRevert();
+        singularity.execute(modules, calls, true);
+        uint256 borrowPartAfter = singularity._userBorrowPart(user);
+        assertEq(borrowPartBefore, borrowPartAfter, "Liquidate: borrowPartBefore should be equal to borrowPartAfter");
+    }
+
     function test_borrow_and_liquidate_bad_debt() public {
         uint256 collateralAmount = 1 ether;
         uint256 borrowAmount = 5e17;
@@ -412,60 +437,52 @@ contract SingularityTest is UsdoTestHelper {
         oracle.set(oracleRate * 100);
 
         liquidatorMock = new MarketLiquidatorReceiverMock(IERC20(address(asset)));
-        // deal(address(asset), address(liquidatorMock), borrowAmount * 2);
 
         //cannot liquidate
-        {
-            address[] memory users = new address[](1);
-            users[0] = address(this);
-
-            uint256[] memory borrowParts = new uint256[](1);
-            borrowParts[0] = borrowAmount / 2;
-
-            uint256[] memory minLiquidationBonuses = new uint256[](1);
-            minLiquidationBonuses[0] = 1e4;
-
-            IMarketLiquidatorReceiver[] memory receivers = new IMarketLiquidatorReceiver[](1);
-            receivers[0] = IMarketLiquidatorReceiver(address(liquidatorMock));
-
-            bytes[] memory receiverData = new bytes[](1);
-            receiverData[0] = abi.encode(borrowAmount / 2);
-
-            uint256 borrowPartBefore = singularity._userBorrowPart(address(this));
-            (Module[] memory modules, bytes[] memory calls) =
-                marketHelper.liquidate(users, borrowParts, minLiquidationBonuses, receivers, receiverData);
-            vm.expectRevert();
-            singularity.execute(modules, calls, true);
-            uint256 borrowPartAfter = singularity._userBorrowPart(address(this));
-            assertEq(borrowPartBefore, borrowPartAfter, "Liquidate: borrowPartBefore should be equal to borrowPartAfter");
-        }
+        _liquidateUser(address(this), borrowAmount, address(liquidatorMock));
 
         //use liquidateBadDebt
-        {
-            uint256 borrowPartBefore = singularity._userBorrowPart(address(this));
-            (Module[] memory modules, bytes[] memory calls) = marketHelper.liquidateBadDebt(
-                address(this),
-                address(this),
-                address(this),
-                IMarketLiquidatorReceiver(address(liquidatorMock)),
-                "",
-                false
-            );
-            vm.prank(cluster.owner());
-            cluster.updateContract(0, address(this), true);
-            deal(address(asset), address(this), borrowAmount * 2);
-            asset.approve(address(singularity), type(uint256).max);
-            bytes memory badDebtCall = abi.encodeWithSelector(IMarket.execute.selector, modules, calls, true);
+        _liquidateUserBadDebt(address(this), address(liquidatorMock), borrowAmount);
+    }
 
-            address[] memory mc = new address[](1);
-            mc[0] = address(singularity);
+    function _getBadDebtCall(uint256 borrowAmount, Module[] memory modules, bytes[] memory calls)
+        internal
+        returns (bytes memory)
+    {
+        vm.prank(cluster.owner());
+        cluster.updateContract(0, address(this), true);
+        deal(address(asset), address(this), borrowAmount * 2);
+        asset.approve(address(singularity), type(uint256).max);
+        bytes memory badDebtCall = abi.encodeWithSelector(IMarket.execute.selector, modules, calls, true);
+        return badDebtCall;
+    }
 
-            bytes[] memory data = new bytes[](1);
-            data[0] = badDebtCall;
-            penrose.executeMarketFn(mc, data, true);
-            uint256 borrowPartAfter = singularity._userBorrowPart(address(this));
-            assertGt(borrowPartBefore, borrowPartAfter, "LiquidateBadDebt: borrowPartBefore should be greater than borrowPartAfter");
-        }
+    function _getMarkets(address _market) internal returns (address[] memory) {
+        address[] memory markets = new address[](1);
+        markets[0] = _market;
+        return markets;
+    }
+
+    function _getDataCalls(bytes memory dataCall) internal returns (bytes[] memory) {
+        bytes[] memory data = new bytes[](1);
+        data[0] = dataCall;
+        return data;
+    }
+
+    function _liquidateUserBadDebt(address user, address liquidator, uint256 borrowAmount) internal {
+        uint256 borrowPartBefore = singularity._userBorrowPart(user);
+        (Module[] memory modules, bytes[] memory calls) =
+            marketHelper.liquidateBadDebt(user, user, user, IMarketLiquidatorReceiver(liquidator), "", false);
+
+        bytes memory badDebtCall = _getBadDebtCall(borrowAmount, modules, calls);
+
+        penrose.executeMarketFn(
+            _getMarkets(address(singularity)),
+            _getDataCalls(badDebtCall),
+            true
+        );
+        uint256 borrowPartAfter = singularity._userBorrowPart(user);
+        assertGt(borrowPartBefore, borrowPartAfter, "LiquidateBadDebt: borrowPartBefore should be greater than borrowPartAfter");
     }
 
     function test_magnetar_helper_info() public {
@@ -568,7 +585,6 @@ contract SingularityTest is UsdoTestHelper {
 
         uint256 borrowPart = singularity._userBorrowPart(address(this));
         assertGt(borrowPart, 0);
-
 
         singularity.approveBorrow(address(userA), type(uint256).max);
         singularity.approve(address(userA), type(uint256).max);

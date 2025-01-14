@@ -539,7 +539,7 @@ contract Penrose is Ownable, Pausable {
             if (address(mc[i]).code.length == 0) revert NotValid();
             (success[i], result[i]) = mc[i].call(data[i]);
             if (forceSuccess) {
-                require(success[i], RevertMsgDecoder._getRevertMsg(result[i]));
+                require(success[i], ">> RevertMsgDecoder._getRevertMsg(result[i]) <<<"); // TODO
             }
             ++i;
         }

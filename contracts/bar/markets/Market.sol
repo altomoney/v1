@@ -419,10 +419,11 @@ abstract contract Market is MarketERC4626, Ownable, ReentrancyGuard {
             (bool success, bytes memory result) = _extractModule(modules[i]).delegatecall(calls[i]);
 
             if (!success && revertOnFail) {
-                revert(abi.decode(_getRevertMsg(result), (string)));
+                // revert(abi.decode(_getRevertMsg(result), (string)));
+                revert("Market: execute revertOnFail");
             }
             successes[i] = success;
-            results[i] = !success ? _getRevertMsg(result) : result;
+            results[i] = !success ? bytes(">> RevertMsg (result) <<<") : result;
         }
     }
 
