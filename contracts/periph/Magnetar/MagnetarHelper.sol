@@ -236,7 +236,6 @@ contract MagnetarHelper {
             _totalAsset = sgl.totalAsset();
             result[i].totalAsset = _totalAsset;
             result[i].userAssetFraction = sgl.balanceOf(who);
-            result[i].userAssetFraction = sgl.balanceOf(who);
             //
             (ISingularity.AccrueInfo memory _accrueInfo, uint256 _utilization) = sgl.getInterestDetails();
 
