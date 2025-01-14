@@ -327,7 +327,6 @@ contract SGLLiquidation is SGLCommon {
         data.borrowShare = convertToShares(data.borrowAmount);
 
         {
-            uint256 totalCollateralShare = balanceOf(address(this)); // TODO Check it
             totalBorrow.elastic -= data.borrowAmount.toUint128();
             totalBorrow.base -= data.borrowPart.toUint128();
         }
