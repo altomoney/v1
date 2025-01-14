@@ -8,6 +8,7 @@ import {BoringERC20, IERC20} from "@boringcrypto/boring-solidity/contracts/libra
 // Tapioca
 import {SafeApprove} from "../../libraries/SafeApprove.sol";
 import {SGLLendingCommon} from "./SGLLendingCommon.sol";
+import {PauseType} from "tap-utils/interfaces/bar/IMarket.sol";
 
 /*
 

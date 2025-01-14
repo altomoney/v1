@@ -11,6 +11,8 @@ import {ILeverageExecutor} from "tap-utils/interfaces/bar/ILeverageExecutor.sol"
 import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
 import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
 import {MarketERC4626} from "./MarketERC4626.sol";
+import {Module, PauseType} from "tap-utils/interfaces/bar/IMarket.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 /*
 
@@ -23,23 +25,12 @@ import {MarketERC4626} from "./MarketERC4626.sol";
    
 */
 
-abstract contract Market is MarketERC4626, Ownable {
+abstract contract Market is MarketERC4626, Ownable, ReentrancyGuard {
     using RebaseLibrary for Rebase;
 
     // ************ //
     // *** VARS *** //
     // ************ //
-    enum PauseType {
-        Borrow,
-        Repay,
-        AddCollateral,
-        RemoveCollateral,
-        Liquidation,
-        LeverageBuy,
-        LeverageSell,
-        AddAsset,
-        RemoveAsset
-    }
 
     /// @notice pause options
     mapping(PauseType pauseProp => bool pauseStatus) internal pauseOptions;
@@ -99,6 +90,8 @@ abstract contract Market is MarketERC4626, Ownable {
     error AllowanceNotValid();
     error MinBorrowAmountNotMet();
     error MinCollateralAmountNotMet();
+    error NotValid();
+    error TransferFailed();
 
     // ************** //
     // *** EVENTS *** //
@@ -281,6 +274,46 @@ abstract contract Market is MarketERC4626, Ownable {
         }
     }
 
+    /// @notice updates the pause state of the contract
+    /// @dev can only be called by the conservator
+    /// @param val the new value
+    function updatePause(PauseType _type, bool val) external {
+        require(_cluster().hasRole(msg.sender, keccak256("PAUSABLE")) || msg.sender == owner(), "Market: unauthorized");
+        require(val != pauseOptions[_type], "Market: same state");
+        emit PausedUpdated(_type, pauseOptions[_type], val);
+        pauseOptions[_type] = val;
+    }
+
+    /// @notice updates the pause state of the contract for all types
+    /// @param val the new val
+    function updatePauseAll(bool val) external {
+        require(_cluster().hasRole(msg.sender, keccak256("PAUSABLE")) || msg.sender == owner(), "Market: unauthorized");
+
+        pauseOptions[PauseType.Borrow] = val;
+        pauseOptions[PauseType.Repay] = val;
+        pauseOptions[PauseType.AddCollateral] = val;
+        pauseOptions[PauseType.RemoveCollateral] = val;
+        pauseOptions[PauseType.Liquidation] = val;
+        pauseOptions[PauseType.LeverageBuy] = val;
+        pauseOptions[PauseType.LeverageSell] = val;
+
+        emit PausedUpdated(PauseType.Borrow, pauseOptions[PauseType.Borrow], val);
+        emit PausedUpdated(PauseType.Repay, pauseOptions[PauseType.Repay], val);
+        emit PausedUpdated(PauseType.AddCollateral, pauseOptions[PauseType.AddCollateral], val);
+        emit PausedUpdated(PauseType.RemoveCollateral, pauseOptions[PauseType.RemoveCollateral], val);
+        emit PausedUpdated(PauseType.Liquidation, pauseOptions[PauseType.Liquidation], val);
+        emit PausedUpdated(PauseType.LeverageBuy, pauseOptions[PauseType.LeverageBuy], val);
+        emit PausedUpdated(PauseType.LeverageSell, pauseOptions[PauseType.LeverageSell], val);
+    }
+
+    /// @notice rescues unused ETH from the contract
+    /// @param amount the amount to rescue
+    /// @param to the recipient
+    function rescueEth(uint256 amount, address to) external onlyOwner {
+        (bool success,) = to.call{value: amount}("");
+        if (!success) revert TransferFailed();
+    }
+
     // ********************** //
     // *** VIEW FUNCTIONS *** //
     // ********************** //
@@ -367,6 +400,38 @@ abstract contract Market is MarketERC4626, Ownable {
     /// @param _exchangeRate the exchange rate asset/collateral to use for internal computations
     function computeLiquidatorReward(address user, uint256 _exchangeRate) external view returns (uint256) {
         return _getCallerReward(user, _exchangeRate);
+    }
+
+    /// @notice Allows batched calls to a market.
+    /// @param calls An array encoded call data.
+    /// @param revertOnFail If True then reverts after a failed call and stops doing further calls.
+    /// @return successes count of successful operations
+    /// @return results array of revert messages
+    function execute(Module[] calldata modules, bytes[] calldata calls, bool revertOnFail)
+        external
+        nonReentrant
+        returns (bool[] memory successes, bytes[] memory results)
+    {
+        successes = new bool[](calls.length);
+        results = new bytes[](calls.length);
+        if (modules.length != calls.length) revert NotValid();
+        for (uint256 i; i < calls.length; i++) {
+            (bool success, bytes memory result) = _extractModule(modules[i]).delegatecall(calls[i]);
+
+            if (!success && revertOnFail) {
+                revert(abi.decode(_getRevertMsg(result), (string)));
+            }
+            successes[i] = success;
+            results[i] = !success ? _getRevertMsg(result) : result;
+        }
+    }
+
+    function _extractModule(Module module) internal virtual returns (address) {
+        revert("Market: execute modules not implemented");
+    }
+
+    function accrue() external virtual {
+        revert("Market: accrue not implemented");
     }
 
     /**
@@ -525,5 +590,93 @@ abstract contract Market is MarketERC4626, Ownable {
         uint256 _numerator = numerator * 10 ** (precision + 1);
         uint256 _quotient = ((_numerator / denominator) + 5) / 10;
         return (_quotient);
+    }
+
+    function _pauseOptions(PauseType _pauseProp) external view returns (bool) {
+        return pauseOptions[_pauseProp];
+    }
+
+    function _oracle() external view returns (address) {
+        return address(oracle);
+    }
+
+    function _oracleData() external view returns (bytes memory) {
+        return oracleData;
+    }
+
+    function _exchangeRate() external view returns (uint256) {
+        return exchangeRate;
+    }
+
+    function _rateValidDuration() external view returns (uint256) {
+        return rateValidDuration;
+    }
+
+    function _rateTimestamp() external view returns (uint256) {
+        return rateTimestamp;
+    }
+
+    function _totalBorrow() external view returns (Rebase memory) {
+        return totalBorrow;
+    }
+
+    function _totalCollateralShare() external view returns (uint256) {
+        return totalSupply();
+    }
+
+    function _totalBorrowCap() external view returns (uint256) {
+        return totalBorrowCap;
+    }
+
+    function _userBorrowPart(address _user) external view returns (uint256) {
+        return userBorrowPart[_user];
+    }
+
+    function _protocolFee() external view returns (uint256) {
+        return protocolFee;
+    }
+
+    function _minLiquidatorReward() external view returns (uint256) {
+        return minLiquidatorReward;
+    }
+
+    function _maxLiquidatorReward() external view returns (uint256) {
+        return maxLiquidatorReward;
+    }
+
+    function _liquidationBonusAmount() external view returns (uint256) {
+        return liquidationBonusAmount;
+    }
+
+    function _collateralizationRate() external view returns (uint256) {
+        return collateralizationRate;
+    }
+
+    function _liquidationCollateralizationRate() external view returns (uint256) {
+        return liquidationCollateralizationRate;
+    }
+
+    function _liquidationMultiplier() external view returns (uint256) {
+        return liquidationMultiplier;
+    }
+
+    function _leverageExecutor() external view returns (address) {
+        return address(leverageExecutor);
+    }
+
+    function _maxLiquidationSlippage() external view returns (uint256) {
+        return maxLiquidationSlippage;
+    }
+
+    function _exchangeRatePrecision() external view returns (uint256) {
+        return EXCHANGE_RATE_PRECISION;
+    }
+
+    function _minBorrowAmount() external view returns (uint256) {
+        return minBorrowAmount;
+    }
+
+    function _minCollateralAmount() external view returns (uint256) {
+        return minCollateralAmount;
     }
 }

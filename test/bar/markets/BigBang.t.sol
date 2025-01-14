@@ -9,8 +9,8 @@ import {BigBang} from "tapioca-bar/markets/bigBang/BigBang.sol";
 import {BBBorrow} from "tapioca-bar/markets/bigBang/BBBorrow.sol";
 import {BBDebtRateHelper} from "tapioca-bar/markets/bigBang/BBDebtRateHelper.sol";
 import {MarketHelper} from "tapioca-bar/markets/MarketHelper.sol";
-import {Market} from "tapioca-bar/markets/Market.sol";
-
+import {Market, PauseType} from "tapioca-bar/markets/Market.sol";
+import {IMarket} from "tap-utils/interfaces/bar/IMarket.sol";
 import {MagnetarHelper} from "tapioca-periph/Magnetar/MagnetarHelper.sol";
 
 import {IMarketLiquidatorReceiver} from "tap-utils/interfaces/bar/IMarketLiquidatorReceiver.sol";
@@ -442,7 +442,7 @@ contract BigBangTest is UsdoTestHelper {
         }
 
         //add collateral
-        bigBang.updatePause(Market.PauseType.AddCollateral, true);
+        bigBang.updatePause(PauseType.AddCollateral, true);
 
         Module[] memory modules;
         bytes[] memory calls;
@@ -451,12 +451,12 @@ contract BigBangTest is UsdoTestHelper {
         bigBang.execute(modules, calls, true);
 
         //add collateral
-        bigBang.updatePause(Market.PauseType.RemoveCollateral, true);
+        bigBang.updatePause(PauseType.RemoveCollateral, true);
         (modules, calls) = marketHelper.removeCollateral(address(this), address(this), 1);
         vm.expectRevert("Market: paused");
         bigBang.execute(modules, calls, true);
 
-        bigBang.updatePause(Market.PauseType.Borrow, true);
+        bigBang.updatePause(PauseType.Borrow, true);
         (modules, calls) = marketHelper.borrow(address(this), address(this), 1);
         vm.expectRevert("Market: paused");
         bigBang.execute(modules, calls, true);
@@ -594,7 +594,7 @@ contract BigBangTest is UsdoTestHelper {
             cluster.updateContract(0, address(this), true);
             deal(address(bigBang.borrowableToken()), address(this), 1e36);
             IERC20(address(bigBang.borrowableToken())).approve(address(bigBang), type(uint256).max);
-            bytes memory badDebtCall = abi.encodeWithSelector(BigBang.execute.selector, modules, calls, true);
+            bytes memory badDebtCall = abi.encodeWithSelector(IMarket.execute.selector, modules, calls, true);
 
             address[] memory mc = new address[](1);
             mc[0] = address(bigBang);

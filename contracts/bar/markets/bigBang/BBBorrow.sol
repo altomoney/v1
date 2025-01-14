@@ -5,6 +5,7 @@ pragma solidity ^0.8.22;
 import {RebaseLibrary, Rebase} from "@boringcrypto/boring-solidity/contracts/libraries/BoringRebase.sol";
 import {BoringERC20} from "@boringcrypto/boring-solidity/contracts/libraries/BoringERC20.sol";
 import {IERC20} from "@boringcrypto/boring-solidity/contracts/ERC20.sol";
+import {PauseType} from "tap-utils/interfaces/bar/IMarket.sol";
 
 // Tapioca
 import {BBLendingCommon} from "./BBLendingCommon.sol";

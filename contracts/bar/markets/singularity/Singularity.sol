@@ -11,8 +11,8 @@ import {BoringERC20} from "@boringcrypto/boring-solidity/contracts/libraries/Bor
 import {ILeverageExecutor} from "tap-utils/interfaces/bar/ILeverageExecutor.sol";
 import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
 import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
-import {Module} from "tap-utils/interfaces/bar/IMarket.sol";
-import {MarketStateView} from "../MarketStateView.sol";
+import {Module, PauseType} from "tap-utils/interfaces/bar/IMarket.sol";
+import {Market} from "../Market.sol";
 import {SGLLiquidation} from "./SGLLiquidation.sol";
 import {SGLCollateral} from "./SGLCollateral.sol";
 import {SGLLeverage} from "./SGLLeverage.sol";
@@ -35,7 +35,7 @@ import {MarketERC4626} from "../MarketERC4626.sol";
 */
 
 /// @title Tapioca market
-contract Singularity is MarketStateView, SGLCommon {
+contract Singularity is Market, SGLCommon {
     using SafeCast for uint256;
     using RebaseLibrary for Rebase;
     using BoringERC20 for IERC20;
@@ -79,7 +79,6 @@ contract Singularity is MarketStateView, SGLCommon {
     // ************** //
     // *** ERRORS *** //
     // ************** //
-    error NotValid();
     error ModuleNotSet();
     error NotAuthorized();
     error SameState();
@@ -109,28 +108,10 @@ contract Singularity is MarketStateView, SGLCommon {
     // *** PUBLIC FUNCTIONS *** //
     // ************************ //
 
-    /// @notice Allows batched call to Singularity.
-    /// @param calls An array encoded call data.
-    /// @param revertOnFail If True then reverts after a failed call and stops doing further calls.
-    /// @return successes count of successful operations
-    /// @return results array of revert messages
-    function execute(Module[] calldata modules, bytes[] calldata calls, bool revertOnFail)
-        external
-        nonReentrant
-        returns (bool[] memory successes, bytes[] memory results)
-    {
-        successes = new bool[](calls.length);
-        results = new bytes[](calls.length);
-        if (modules.length != calls.length) revert NotValid();
-        for (uint256 i; i < calls.length; i++) {
-            (bool success, bytes memory result) = _extractModule(modules[i]).delegatecall(calls[i]);
-
-            if (!success && revertOnFail) {
-                revert(abi.decode(_getRevertMsg(result), (string)));
-            }
-            successes[i] = success;
-            results[i] = !success ? _getRevertMsg(result) : result;
-        }
+    /// @notice Accrues the interest on the borrowed tokens and handles the accumulation of fees.
+    function accrue() external override {
+        if (pauseOptions[PauseType.AddCollateral] || pauseOptions[PauseType.RemoveCollateral]) revert AccruePaused();
+        _accrue();
     }
 
     /// @notice Add liquidity to the lending pair.
@@ -168,35 +149,6 @@ contract Singularity is MarketStateView, SGLCommon {
     // *********************** //
     // *** OWNER FUNCTIONS *** //
     // *********************** //
-    /// @notice updates the pause state of the contract
-    /// @dev can only be called by the conservator
-    /// @param val the new value
-    function updatePause(PauseType _type, bool val, bool resetAccrueTimestmap) external {
-        if (!_cluster().hasRole(msg.sender, keccak256("PAUSABLE")) && msg.sender != owner()) {
-            revert NotAuthorized();
-        }
-        if (val == pauseOptions[_type]) revert SameState();
-        emit PausedUpdated(_type, pauseOptions[_type], val);
-        pauseOptions[_type] = val;
-
-        if (val) {
-            _accrue();
-        }
-
-        // In case of 'unpause', `lastAccrued` is set to block.timestamp
-        // Valid for all action types that has an impact on debt or supply
-        if (!val && (_type != PauseType.AddCollateral && _type != PauseType.RemoveCollateral)) {
-            accrueInfo.lastAccrued = resetAccrueTimestmap ? block.timestamp.toUint64() : accrueInfo.lastAccrued;
-        }
-    }
-
-    /// @notice rescues unused ETH from the contract
-    /// @param amount the amount to rescue
-    /// @param to the recipient
-    function rescueEth(uint256 amount, address to) external onlyOwner {
-        (bool success,) = to.call{value: amount}("");
-        if (!success) revert TransferFailed();
-    }
 
     /// @notice Transfers fees to penrose
     /// @dev can only be called by the owner or FEES_EXTRACTOR role
@@ -297,7 +249,7 @@ contract Singularity is MarketStateView, SGLCommon {
     // ************************* //
     // *** PRIVATE FUNCTIONS *** //
     // ************************* //
-    function _extractModule(Module _module) private view returns (address) {
+    function _extractModule(Module _module) internal view override returns (address) {
         address module;
         if (_module == Module.Base) {
             return address(this);

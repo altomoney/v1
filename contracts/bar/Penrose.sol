@@ -598,7 +598,7 @@ contract Penrose is Ownable, Pausable {
     function _depositFeesToTwTap(IMarket market, ITWTAPv2 twTap) private {
         if (!isMarketRegistered[address(market)]) revert NotValid();
 
-        uint256 feeShares = market.refreshPenroseFees();
+        uint256 feeShares = IBigBang(address(market)).refreshPenroseFees();
         if (feeShares == 0) return;
 
         address _asset = market._asset();

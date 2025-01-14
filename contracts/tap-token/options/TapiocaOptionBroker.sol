@@ -319,9 +319,9 @@ contract TapiocaOptionBroker is ITapiocaOptionBroker, Pausable, Ownable, FullMat
         uint256 len = markets.length;
         for (uint256 i = 0; i < len; i++) {
             IBigBang bigBang = IBigBang(markets[i]);
-            (uint128 elastic, uint128 base) = bigBang._totalBorrow();
+            Rebase memory totalBorrow = bigBang._totalBorrow();
             uint256 userBorrowPart = bigBang._userBorrowPart(user);
-            totalUserUsdoDebt += RebaseLibrary.toBase(Rebase(elastic, base), userBorrowPart, false);
+            totalUserUsdoDebt += RebaseLibrary.toBase(totalBorrow, userBorrowPart, false);
         }
     }
 

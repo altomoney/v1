@@ -30,17 +30,11 @@ contract SGLCommon is SGLStorage {
     // *** ERRORS *** //
     // ************** //
     error MinLimit();
-    error TransferFailed();
     error AccruePaused();
 
     // ************************ //
     // *** PUBLIC FUNCTIONS *** //
     // ************************ //
-    /// @notice Accrues the interest on the borrowed tokens and handles the accumulation of fees.
-    function accrue() external {
-        if (pauseOptions[PauseType.AddCollateral] || pauseOptions[PauseType.RemoveCollateral]) revert AccruePaused();
-        _accrue();
-    }
 
     function getInterestDetails()
         external

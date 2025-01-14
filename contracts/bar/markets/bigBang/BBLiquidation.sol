@@ -13,6 +13,7 @@ import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {IUsdo} from "tap-utils/interfaces/oft/IUsdo.sol";
 import {SafeApprove} from "../../libraries/SafeApprove.sol";
 import {BBCommon} from "./BBCommon.sol";
+import {PauseType} from "tap-utils/interfaces/bar/IMarket.sol";
 
 // solhint-disable max-line-length
 

@@ -24,7 +24,7 @@ import {MarketERC4626} from "../MarketERC4626.sol";
    
 */
 
-contract BBStorage is Ownable, Market, ReentrancyGuard {
+contract BBStorage is Ownable, Market {
     // ************ //
     // *** VARS *** //
     // ************ //

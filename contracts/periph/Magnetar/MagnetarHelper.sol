@@ -130,9 +130,7 @@ contract MagnetarHelper {
         bool roundAmounUp,
         bool roundSharesUp
     ) external view returns (uint256 collateralShares) {
-        Rebase memory _totalBorrowed;
-        (uint128 totalBorrowElastic, uint128 totalBorrowBase) = market._totalBorrow();
-        _totalBorrowed = Rebase(totalBorrowElastic, totalBorrowBase);
+        Rebase memory _totalBorrowed = market._totalBorrow();
 
         uint256 borrowAmount = _totalBorrowed.toElastic(borrowPart, roundAmounUp);
 
@@ -153,9 +151,7 @@ contract MagnetarHelper {
         view
         returns (uint256 amount)
     {
-        Rebase memory _totalBorrowed;
-        (uint128 totalBorrowElastic, uint128 totalBorrowBase) = market._totalBorrow();
-        _totalBorrowed = Rebase(totalBorrowElastic, totalBorrowBase);
+        Rebase memory _totalBorrowed = market._totalBorrow();
 
         return _totalBorrowed.toElastic(borrowPart, roundUp);
     }
@@ -172,9 +168,7 @@ contract MagnetarHelper {
         view
         returns (uint256 part)
     {
-        Rebase memory _totalBorrowed;
-        (uint128 totalBorrowElastic, uint128 totalBorrowBase) = market._totalBorrow();
-        _totalBorrowed = Rebase(totalBorrowElastic, totalBorrowBase);
+        Rebase memory _totalBorrowed = market._totalBorrow();
 
         return _totalBorrowed.toBase(amount, roundUp);
     }
@@ -191,12 +185,12 @@ contract MagnetarHelper {
         view
         returns (uint256 amount)
     {
-        (uint128 totalAssetElastic, uint128 totalAssetBase) = singularity.totalAsset();
-        (uint128 totalBorrowElastic,) = singularity._totalBorrow();
+        Rebase memory _totalAsset = singularity.totalAsset();
+        Rebase memory _totalBorrow = singularity._totalBorrow();
 
-        uint256 allShare = totalAssetElastic + singularity.convertToShares(totalBorrowElastic);
+        uint256 allShare = _totalAsset.elastic + singularity.convertToShares(_totalBorrow.elastic);
 
-        return singularity.convertToAssets((fraction * allShare) / totalAssetBase);
+        return singularity.convertToAssets((fraction * allShare) / _totalAsset.base);
     }
 
     /**
@@ -212,13 +206,13 @@ contract MagnetarHelper {
         view
         returns (uint256 fraction)
     {
-        (uint128 totalAssetShare, uint128 totalAssetBase) = singularity.totalAsset();
-        (uint128 totalBorrowElastic,) = singularity._totalBorrow();
+        Rebase memory _totalAsset = singularity.totalAsset();
+        Rebase memory _totalBorrow = singularity._totalBorrow();
 
         uint256 share = singularity.convertToShares(amount);
-        uint256 allShare = totalAssetShare + singularity.convertToShares(totalBorrowElastic);
+        uint256 allShare = _totalAsset.elastic + singularity.convertToShares(_totalBorrow.elastic);
 
-        fraction = allShare == 0 ? share : (share * totalAssetBase) / allShare;
+        fraction = allShare == 0 ? share : (share * _totalAsset.base) / allShare;
     }
 
     /// =====================
@@ -239,13 +233,9 @@ contract MagnetarHelper {
 
             result[i].market = _commonInfo(who, IMarket(address(sgl)));
 
-            (uint128 totalAssetElastic, uint128 totalAssetBase) = sgl //
-                .totalAsset();
-            //
-            _totalAsset = Rebase(totalAssetElastic, totalAssetBase);
-            //
+            _totalAsset = sgl.totalAsset();
             result[i].totalAsset = _totalAsset;
-            //
+            result[i].userAssetFraction = sgl.balanceOf(who);
             result[i].userAssetFraction = sgl.balanceOf(who);
             //
             (ISingularity.AccrueInfo memory _accrueInfo, uint256 _utilization) = sgl.getInterestDetails();
@@ -300,9 +290,7 @@ contract MagnetarHelper {
         info.totalCollateralShare = market._totalCollateralShare(); // TODO isn't it market4626.totalSupply()?
         info.userCollateralShare = market.balanceOf(who);
 
-        (uint128 totalBorrowElastic, uint128 totalBorrowBase) = market._totalBorrow();
-        _totalBorrowed = Rebase(totalBorrowElastic, totalBorrowBase);
-        info.totalBorrow = _totalBorrowed;
+        info.totalBorrow = market._totalBorrow();
         info.userBorrowPart = market._userBorrowPart(who);
 
         info.currentExchangeRate = market._exchangeRate();
