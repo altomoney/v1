@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.22;
 
-import {IMarket} from "./IMarket.sol";
+import {IMarket, Rebase} from "./IMarket.sol";
 
 /*
 
@@ -28,7 +28,7 @@ interface ISingularity is IMarket {
         view
         returns (uint64 interestPerSecond, uint64 lastBlockAccrued, uint128 feesEarnedFraction);
 
-    function totalAsset() external view returns (uint128 elastic, uint128 base);
+    function totalAsset() external view returns (Rebase memory);
 
     function addAsset(address from, address to, uint256 share) external returns (uint256 fraction);
 

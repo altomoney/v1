@@ -10,10 +10,10 @@ import {IERC20} from "@boringcrypto/boring-solidity/contracts/ERC20.sol";
 import {ILeverageExecutor} from "tap-utils/interfaces/bar/ILeverageExecutor.sol";
 import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
 import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
-import {Module} from "tap-utils/interfaces/bar/IMarket.sol";
+import {Module, PauseType} from "tap-utils/interfaces/bar/IMarket.sol";
 import {IUsdo} from "tap-utils/interfaces/oft/IUsdo.sol";
 import {SafeApprove} from "../../libraries/SafeApprove.sol";
-import {MarketStateView} from "../MarketStateView.sol";
+import {Market} from "../Market.sol";
 import {BBLiquidation} from "./BBLiquidation.sol";
 import {BBCollateral} from "./BBCollateral.sol";
 import {BBLeverage} from "./BBLeverage.sol";
@@ -32,7 +32,7 @@ import {BBBorrow} from "./BBBorrow.sol";
    
 */
 
-contract BigBang is MarketStateView, BBCommon {
+contract BigBang is Market, BBCommon {
     using RebaseLibrary for Rebase;
     using BoringERC20 for IERC20;
     using SafeApprove for address;
@@ -43,7 +43,7 @@ contract BigBang is MarketStateView, BBCommon {
     error BadPair();
     error DebtRatesNotValid();
     error MaxDebtRateNotValid();
-    error NotValid();
+
     error ModuleNotSet();
 
     // ************ //
@@ -186,6 +186,12 @@ contract BigBang is MarketStateView, BBCommon {
         _transferOwnership(address(__penrose));
     }
 
+    /// @notice Accrues the interest on the borrowed tokens and handles the accumulation of fees.
+    function accrue() external override {
+        if (pauseOptions[PauseType.AddCollateral] || pauseOptions[PauseType.RemoveCollateral]) revert AccruePaused();
+        _accrue();
+    }
+
     // ************************ //
     // *** VIEW FUNCTIONS ***** //
     // ************************ //
@@ -196,34 +202,6 @@ contract BigBang is MarketStateView, BBCommon {
         (bool updated, uint256 _exchangeRate) = assetOracle.peek(oracleData);
         if (!updated) revert OracleCallFailed();
         return _computeVariableOpeningFeeView(amount, _exchangeRate);
-    }
-
-    // ************************ //
-    // *** PUBLIC FUNCTIONS *** //
-    // ************************ //
-
-    /// @notice Allows batched call to BingBang.
-    /// @param calls An array encoded call data.
-    /// @param revertOnFail If True then reverts after a failed call and stops doing further calls.
-    function execute(Module[] calldata modules, bytes[] calldata calls, bool revertOnFail)
-        external
-        nonReentrant
-        returns (bool[] memory successes, bytes[] memory results)
-    {
-        successes = new bool[](calls.length);
-        results = new bytes[](calls.length);
-        if (modules.length != calls.length) revert NotValid();
-        unchecked {
-            for (uint256 i; i < calls.length; i++) {
-                (bool success, bytes memory result) = _extractModule(modules[i]).delegatecall(calls[i]);
-
-                if (!success && revertOnFail) {
-                    revert(abi.decode(_getRevertMsg(result), (string)));
-                }
-                successes[i] = success;
-                results[i] = !success ? _getRevertMsg(result) : result;
-            }
-        }
     }
 
     // ************************* //
@@ -240,38 +218,6 @@ contract BigBang is MarketStateView, BBCommon {
         uint256 _openInterestDebt = openInterestDebt;
         openInterestDebt = 0;
         return _openInterestDebt;
-    }
-
-    /// @notice updates the pause state of the contract
-    /// @dev can only be called by the conservator
-    /// @param val the new value
-    function updatePause(PauseType _type, bool val) external {
-        require(_cluster().hasRole(msg.sender, keccak256("PAUSABLE")) || msg.sender == owner(), "Market: unauthorized");
-        require(val != pauseOptions[_type], "Market: same state");
-        emit PausedUpdated(_type, pauseOptions[_type], val);
-        pauseOptions[_type] = val;
-    }
-
-    /// @notice updates the pause state of the contract for all types
-    /// @param val the new val
-    function updatePauseAll(bool val) external {
-        require(_cluster().hasRole(msg.sender, keccak256("PAUSABLE")) || msg.sender == owner(), "Market: unauthorized");
-
-        pauseOptions[PauseType.Borrow] = val;
-        pauseOptions[PauseType.Repay] = val;
-        pauseOptions[PauseType.AddCollateral] = val;
-        pauseOptions[PauseType.RemoveCollateral] = val;
-        pauseOptions[PauseType.Liquidation] = val;
-        pauseOptions[PauseType.LeverageBuy] = val;
-        pauseOptions[PauseType.LeverageSell] = val;
-
-        emit PausedUpdated(PauseType.Borrow, pauseOptions[PauseType.Borrow], val);
-        emit PausedUpdated(PauseType.Repay, pauseOptions[PauseType.Repay], val);
-        emit PausedUpdated(PauseType.AddCollateral, pauseOptions[PauseType.AddCollateral], val);
-        emit PausedUpdated(PauseType.RemoveCollateral, pauseOptions[PauseType.RemoveCollateral], val);
-        emit PausedUpdated(PauseType.Liquidation, pauseOptions[PauseType.Liquidation], val);
-        emit PausedUpdated(PauseType.LeverageBuy, pauseOptions[PauseType.LeverageBuy], val);
-        emit PausedUpdated(PauseType.LeverageSell, pauseOptions[PauseType.LeverageSell], val);
     }
 
     /// @notice sets min and max mint range
@@ -311,14 +257,6 @@ contract BigBang is MarketStateView, BBCommon {
             assetOracleData = _oracleData;
             emit AssetOracleDataUpdated();
         }
-    }
-
-    /// @notice rescues unused ETH from the contract
-    /// @param amount the amount to rescue
-    /// @param to the recipient
-    function rescueEth(uint256 amount, address to) external onlyOwner {
-        (bool success,) = to.call{value: amount}("");
-        if (!success) revert TransferFailed();
     }
 
     /// @notice Transfers fees to penrose
@@ -380,7 +318,7 @@ contract BigBang is MarketStateView, BBCommon {
     // ************************* //
     // *** PRIVATE FUNCTIONS *** //
     // ************************* //
-    function _extractModule(Module _module) private view returns (address) {
+    function _extractModule(Module _module) internal view override returns (address) {
         address module;
         if (_module == Module.Base) {
             module = address(this);

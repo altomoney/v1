@@ -2,6 +2,7 @@
 pragma solidity ^0.8.22;
 
 import "./BBLendingCommon.sol";
+import {PauseType} from "tap-utils/interfaces/bar/IMarket.sol";
 
 /*
 

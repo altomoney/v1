@@ -9,7 +9,7 @@ import {BigBang} from "tapioca-bar/markets/bigBang/BigBang.sol";
 
 import {ILeverageExecutor} from "tap-utils/interfaces/bar/ILeverageExecutor.sol";
 import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
-
+import {IMarket} from "tap-utils/interfaces/bar/IMarket.sol";
 // tests
 import {BigBang_Unit_Shared} from "../../shared/BigBang_Unit_Shared.t.sol";
 
@@ -76,18 +76,18 @@ contract BigBang_constructor is BigBang_Unit_Shared {
         // CR
         initMemoryData._oracle = ITapiocaOracle(address(oracle));
         initMemoryData._collateralizationRate = FEE_PRECISION + 1;
-        vm.expectRevert(BigBang.NotValid.selector);
+        vm.expectRevert(IMarket.NotValid.selector);
         penrose.registerBigBang(address(bbMc), abi.encode(initModulesData, initDebtData, initMemoryData), true);
 
         // LCR
         initMemoryData._collateralizationRate = COLLATERALIZATION_RATE;
         initMemoryData._liquidationCollateralizationRate = FEE_PRECISION + 1;
-        vm.expectRevert(BigBang.NotValid.selector);
+        vm.expectRevert(IMarket.NotValid.selector);
         penrose.registerBigBang(address(bbMc), abi.encode(initModulesData, initDebtData, initMemoryData), true);
 
         // LCR < CR
         initMemoryData._liquidationCollateralizationRate = COLLATERALIZATION_RATE - 1;
-        vm.expectRevert(BigBang.NotValid.selector);
+        vm.expectRevert(IMarket.NotValid.selector);
         penrose.registerBigBang(address(bbMc), abi.encode(initModulesData, initDebtData, initMemoryData), true);
 
         // Debt rate > max

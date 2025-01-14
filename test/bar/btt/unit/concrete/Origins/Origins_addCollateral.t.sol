@@ -4,7 +4,7 @@ pragma solidity ^0.8.22;
 // dependencies
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {Origins} from "tapioca-bar/markets/origins/Origins.sol";
-import {Market} from "tapioca-bar/markets/Market.sol";
+import {Market, PauseType} from "tapioca-bar/markets/Market.sol";
 
 import {Origins_Unit_Shared} from "../../shared/Origins_Unit_Shared.t.sol";
 
@@ -15,8 +15,8 @@ contract Origins_addCollateral is Origins_Unit_Shared {
         ICluster _cl = penrose.cluster();
         _cl.setRoleForContract(address(this), keccak256("PAUSABLE"), true);
 
-        org.updatePause(Market.PauseType.AddCollateral, true);
-        assertTrue(org._pauseOptions(Market.PauseType.AddCollateral));
+        org.updatePause(PauseType.AddCollateral, true);
+        assertTrue(org._pauseOptions(PauseType.AddCollateral));
 
         vm.expectRevert("Market: paused");
         org.addCollateral(100, 0);

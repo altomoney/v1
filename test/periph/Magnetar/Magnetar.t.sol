@@ -244,8 +244,6 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
     }
 
     function test_weth_wrap_through_burst() public {
-        vm.skip(true);
-
         Weth9Mock weth9 = new Weth9Mock();
         cluster.updateContract(0, address(weth9), true);
 
@@ -269,7 +267,6 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
     }
 
     function test_get_sgl_info() public {
-        vm.skip(true);
         (Singularity sgl,) = _setupSgl(address(oracle));
 
         ISingularity[] memory arr = new ISingularity[](1);
@@ -283,7 +280,6 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
     }
 
     function test_lend() public {
-        vm.skip(true);
         (Singularity sgl,) = _setupSgl(address(oracle));
         cluster.updateContract(0, address(sgl), true);
         vm.label(address(sgl), "Singularity");
@@ -305,8 +301,6 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
     }
 
     function test_repay() public {
-        vm.skip(true);
-
         (Singularity sgl,) = _setupSgl(address(oracle));
         cluster.updateContract(0, address(sgl), true);
         vm.label(address(sgl), "Singularity");
@@ -429,7 +423,6 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
     }
 
     function test_withdraw_sanitization() public {
-        vm.skip(true);
         (Singularity sgl,) = _setupSgl(address(oracle));
 
         cluster.updateContract(0, address(sgl), true);
@@ -528,7 +521,6 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
     }
 
     function test_withdraw() public {
-        vm.skip(true);
         (Singularity sgl,) = _setupSgl(address(oracle));
 
         cluster.updateContract(0, address(sgl), true);
@@ -630,7 +622,6 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
     }
 
     function test_magnetar_execute_decode() public {
-        vm.skip(true);
         (BigBang bb, Penrose penrose) = _setupBb(address(oracle));
         utils.setBBEthMarket(penrose, address(bb));
 
@@ -652,7 +643,7 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
             Module[] memory modules;
             bytes[] memory calls;
             (modules, calls) = marketHelper.addCollateral(address(this), address(this), tokenAmount_, 0);
-            bytes memory data = abi.encodeWithSelector(Singularity.execute.selector, modules, calls, true);
+            bytes memory data = abi.encodeWithSelector(IMarket.execute.selector, modules, calls, true);
 
             magnetarCalls[1] =
                 MagnetarCall({id: uint8(MagnetarAction.Market), target: address(bb), value: 0, call: data});
@@ -662,8 +653,6 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
     }
 
     function test_mint() public {
-        vm.skip(true);
-
         (BigBang bb, Penrose penrose) = _setupBb(address(oracle));
         utils.setBBEthMarket(penrose, address(bb));
 
@@ -731,7 +720,6 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
     }
 
     function test_exit_and_remove_collateral() public {
-        vm.skip(true);
         (BigBang bb, Penrose penrose) = _setupBb(address(oracle));
         bb.approve(address(magnetar), type(uint256).max);
         utils.setBBEthMarket(penrose, address(bb));
@@ -859,8 +847,6 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
     }
 
     function test_sgl_lend() public {
-        vm.skip(true);
-
         (Singularity sgl,) = _setupSgl(address(oracle));
 
         cluster.updateContract(0, address(sgl), true);
@@ -953,7 +939,6 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
     }
 
     function test_toe_sendPacketFrom() public {
-        vm.skip(true);
         uint256 tokenAmount_ = 1 ether;
 
         (ToeTokenMock aToeOFT, ToeTokenMock bToeOFT) = _getToeMock();

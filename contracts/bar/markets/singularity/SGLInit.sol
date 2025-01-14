@@ -12,7 +12,7 @@ import {ILeverageExecutor} from "tap-utils/interfaces/bar/ILeverageExecutor.sol"
 import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
 import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
 import {Module} from "tap-utils/interfaces/bar/IMarket.sol";
-import {MarketStateView} from "../MarketStateView.sol";
+import {Market} from "../Market.sol";
 import {SGLLiquidation} from "./SGLLiquidation.sol";
 import {SGLCollateral} from "./SGLCollateral.sol";
 import {SGLLeverage} from "./SGLLeverage.sol";
@@ -21,7 +21,7 @@ import {SGLCommon} from "./SGLCommon.sol";
 import {SGLBorrow} from "./SGLBorrow.sol";
 import {MarketERC4626} from "../MarketERC4626.sol";
 
-contract SGLInit is MarketStateView, SGLCommon {
+contract SGLInit is Market, SGLCommon {
     using SafeCast for uint256;
     using RebaseLibrary for Rebase;
 
@@ -37,8 +37,6 @@ contract SGLInit is MarketStateView, SGLCommon {
     // ************ //
     // *** VARS *** //
     // ************ //
-
-    error NotValid();
 
     struct _InitMemoryData {
         IPenrose penrose_;

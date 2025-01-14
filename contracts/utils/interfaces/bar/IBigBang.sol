@@ -20,6 +20,8 @@ interface IBigBang is IMarket {
         uint64 lastAccrued;
     }
 
+    function accrue() external;
+
     function accrueInfo() external view returns (uint64 debtRate, uint64 lastAccrued);
 
     function minDebtRate() external view returns (uint256);
@@ -37,4 +39,6 @@ interface IBigBang is IMarket {
     function consumeMintableOpenInterestDebt() external returns (uint256);
 
     function openInterestDebt() external view returns (uint256);
+
+    function refreshPenroseFees() external returns (uint256 feeShares);
 }

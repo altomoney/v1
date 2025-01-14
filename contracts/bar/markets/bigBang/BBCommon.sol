@@ -32,7 +32,6 @@ contract BBCommon is BBStorage {
     // *** ERRORS *** //
     // ************** //
     error NotEnough();
-    error TransferFailed();
     error AccruePaused();
     error OracleCallFailed();
 
@@ -61,11 +60,6 @@ contract BBCommon is BBStorage {
     // ************************ //
     // *** PUBLIC FUNCTIONS *** //
     // ************************ //
-    /// @notice Accrues the interest on the borrowed tokens and handles the accumulation of fees.
-    function accrue() external {
-        if (pauseOptions[PauseType.AddCollateral] || pauseOptions[PauseType.RemoveCollateral]) revert AccruePaused();
-        _accrue();
-    }
 
     function _accrueView() internal view override returns (Rebase memory _totalBorrow) {
         uint256 elapsedTime = block.timestamp - accrueInfo.lastAccrued;

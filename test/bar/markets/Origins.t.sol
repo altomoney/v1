@@ -2,7 +2,7 @@
 pragma solidity ^0.8.22;
 
 import {Origins} from "tapioca-bar/markets/origins/Origins.sol";
-import {Market} from "tapioca-bar/markets/Market.sol";
+import {Market, PauseType} from "tapioca-bar/markets/Market.sol";
 
 // import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@boringcrypto/boring-solidity/contracts/libraries/BoringERC20.sol";
@@ -205,17 +205,17 @@ contract OriginsTest is UsdoTestHelper {
         }
 
         //add collateral
-        origins.updatePause(Market.PauseType.AddCollateral, true);
+        origins.updatePause(PauseType.AddCollateral, true);
 
         vm.expectRevert("Market: paused");
         origins.addCollateral(1, 0);
 
         //add collateral
-        origins.updatePause(Market.PauseType.RemoveCollateral, true);
+        origins.updatePause(PauseType.RemoveCollateral, true);
         vm.expectRevert("Market: paused");
         origins.removeCollateral(1);
 
-        origins.updatePause(Market.PauseType.Borrow, true);
+        origins.updatePause(PauseType.Borrow, true);
         vm.expectRevert("Market: paused");
         origins.borrow(1);
     }

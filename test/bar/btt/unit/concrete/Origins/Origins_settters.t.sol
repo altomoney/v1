@@ -5,7 +5,7 @@ pragma solidity ^0.8.22;
 import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {Origins} from "tapioca-bar/markets/origins/Origins.sol";
-import {Market} from "tapioca-bar/markets/Market.sol";
+import {Market, PauseType} from "tapioca-bar/markets/Market.sol";
 
 import {Origins_Unit_Shared} from "../../shared/Origins_Unit_Shared.t.sol";
 
@@ -82,16 +82,16 @@ contract Origins_setters is Origins_Unit_Shared {
         ICluster _cl = penrose.cluster();
         _cl.setRoleForContract(address(this), keccak256("PAUSABLE"), true);
 
-        assertFalse(org._pauseOptions(Market.PauseType.AddCollateral));
+        assertFalse(org._pauseOptions(PauseType.AddCollateral));
         org.updatePauseAll(true);
-        assertTrue(org._pauseOptions(Market.PauseType.AddCollateral));
+        assertTrue(org._pauseOptions(PauseType.AddCollateral));
     }
 
     function test_WhenUpdatePauseAllIsCalledFromOwner() external {
         Origins org = Origins(payable(_registerDefaultOrigins()));
-        assertFalse(org._pauseOptions(Market.PauseType.AddCollateral));
+        assertFalse(org._pauseOptions(PauseType.AddCollateral));
         org.updatePauseAll(true);
-        assertTrue(org._pauseOptions(Market.PauseType.AddCollateral));
+        assertTrue(org._pauseOptions(PauseType.AddCollateral));
     }
 
     function test_RevertWhen_UpdatePauseIsCalledFromNon_ownerAndNon_pauser() external {
@@ -99,7 +99,7 @@ contract Origins_setters is Origins_Unit_Shared {
 
         vm.startPrank(userA);
         vm.expectRevert("Market: unauthorized");
-        org.updatePause(Market.PauseType.Borrow, true);
+        org.updatePause(PauseType.Borrow, true);
         vm.stopPrank();
     }
 
@@ -109,15 +109,15 @@ contract Origins_setters is Origins_Unit_Shared {
         ICluster _cl = penrose.cluster();
         _cl.setRoleForContract(address(this), keccak256("PAUSABLE"), true);
 
-        assertFalse(org._pauseOptions(Market.PauseType.AddCollateral));
-        org.updatePause(Market.PauseType.AddCollateral, true);
-        assertTrue(org._pauseOptions(Market.PauseType.AddCollateral));
+        assertFalse(org._pauseOptions(PauseType.AddCollateral));
+        org.updatePause(PauseType.AddCollateral, true);
+        assertTrue(org._pauseOptions(PauseType.AddCollateral));
     }
 
     function test_WhenUpdatePauseIsCalledFromOwner() external {
         Origins org = Origins(payable(_registerDefaultOrigins()));
-        assertFalse(org._pauseOptions(Market.PauseType.AddCollateral));
-        org.updatePause(Market.PauseType.AddCollateral, true);
-        assertTrue(org._pauseOptions(Market.PauseType.AddCollateral));
+        assertFalse(org._pauseOptions(PauseType.AddCollateral));
+        org.updatePause(PauseType.AddCollateral, true);
+        assertTrue(org._pauseOptions(PauseType.AddCollateral));
     }
 }

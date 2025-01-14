@@ -4,7 +4,6 @@ pragma solidity ^0.8.22;
 // External
 import {RebaseLibrary, Rebase} from "@boringcrypto/boring-solidity/contracts/libraries/BoringRebase.sol";
 import {BoringERC20} from "@boringcrypto/boring-solidity/contracts/libraries/BoringERC20.sol";
-import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {IERC20} from "@boringcrypto/boring-solidity/contracts/ERC20.sol";
@@ -15,9 +14,9 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
 import {IUsdo} from "tap-utils/interfaces/oft/IUsdo.sol";
 import {SafeApprove} from "../../libraries/SafeApprove.sol";
-import {MarketStateView} from "../MarketStateView.sol";
 import {Market} from "../Market.sol";
 import {MarketERC4626} from "../MarketERC4626.sol";
+import {PauseType} from "tap-utils/interfaces/bar/IMarket.sol";
 
 // solhint-disable max-line-length
 
@@ -33,7 +32,7 @@ import {MarketERC4626} from "../MarketERC4626.sol";
 */
 
 /// @notice used for initial USDO mint
-contract Origins is Ownable, Market, MarketStateView, ReentrancyGuard {
+contract Origins is Ownable, Market {
     using RebaseLibrary for Rebase;
     using BoringERC20 for IERC20;
     using SafeCast for uint256;
@@ -45,10 +44,8 @@ contract Origins is Ownable, Market, MarketStateView, ReentrancyGuard {
     mapping(address => bool) allowedParticipants;
 
     error NotAuthorized();
-    error TransferFailed();
     error BorrowCapReached();
     error NothingToRepay();
-    error NotValid();
     error BadPair();
 
     // ************** //
@@ -109,46 +106,6 @@ contract Origins is Ownable, Market, MarketStateView, ReentrancyGuard {
     function updateAllowedParticipants(address _participant, bool _val) external onlyOwner {
         allowedParticipants[_participant] = _val;
         emit UpdateParticipants(_participant, _val);
-    }
-
-    /// @notice updates the pause state of the contract
-    /// @dev can only be called by the conservator
-    /// @param val the new value
-    function updatePause(PauseType _type, bool val) external {
-        require(_cluster().hasRole(msg.sender, keccak256("PAUSABLE")) || msg.sender == owner(), "Market: unauthorized");
-        require(val != pauseOptions[_type], "Market: same state");
-        emit PausedUpdated(_type, pauseOptions[_type], val);
-        pauseOptions[_type] = val;
-    }
-
-    /// @notice updates the pause state of the contract for all types
-    /// @param val the new val
-    function updatePauseAll(bool val) external {
-        require(_cluster().hasRole(msg.sender, keccak256("PAUSABLE")) || msg.sender == owner(), "Market: unauthorized");
-
-        pauseOptions[PauseType.Borrow] = val;
-        pauseOptions[PauseType.Repay] = val;
-        pauseOptions[PauseType.AddCollateral] = val;
-        pauseOptions[PauseType.RemoveCollateral] = val;
-        pauseOptions[PauseType.Liquidation] = val;
-        pauseOptions[PauseType.LeverageBuy] = val;
-        pauseOptions[PauseType.LeverageSell] = val;
-
-        emit PausedUpdated(PauseType.Borrow, pauseOptions[PauseType.Borrow], val);
-        emit PausedUpdated(PauseType.Repay, pauseOptions[PauseType.Repay], val);
-        emit PausedUpdated(PauseType.AddCollateral, pauseOptions[PauseType.AddCollateral], val);
-        emit PausedUpdated(PauseType.RemoveCollateral, pauseOptions[PauseType.RemoveCollateral], val);
-        emit PausedUpdated(PauseType.Liquidation, pauseOptions[PauseType.Liquidation], val);
-        emit PausedUpdated(PauseType.LeverageBuy, pauseOptions[PauseType.LeverageBuy], val);
-        emit PausedUpdated(PauseType.LeverageSell, pauseOptions[PauseType.LeverageSell], val);
-    }
-
-    /// @notice rescues unused ETH from the contract
-    /// @param amount the amount to rescue
-    /// @param to the recipient
-    function rescueEth(uint256 amount, address to) external onlyOwner {
-        (bool success,) = to.call{value: amount}("");
-        if (!success) revert TransferFailed();
     }
 
     // ************************ //

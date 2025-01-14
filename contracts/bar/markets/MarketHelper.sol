@@ -48,8 +48,7 @@ contract MarketHelper {
         uint256 borrowPartWithBonus = computeClosingFactor(market, borrowPart, collateralPartInAsset);
 
         // limit liquidable amount before bonus to the current debt
-        (uint128 totalBorrowElastic, uint128 totalBorrowBase) = market._totalBorrow();
-        Rebase memory _totalBorrow = Rebase({elastic: totalBorrowElastic, base: totalBorrowBase});
+        Rebase memory _totalBorrow = market._totalBorrow();
         uint256 userTotalBorrowAmount = _totalBorrow.toElastic(borrowPart, true);
         borrowPartWithBonus = borrowPartWithBonus > userTotalBorrowAmount ? userTotalBorrowAmount : borrowPartWithBonus;
 
@@ -65,8 +64,7 @@ contract MarketHelper {
         view
         returns (uint256)
     {
-        (uint128 totalBorrowElastic, uint128 totalBorrowBase) = market._totalBorrow();
-        Rebase memory _totalBorrow = Rebase({elastic: totalBorrowElastic, base: totalBorrowBase});
+        Rebase memory _totalBorrow = market._totalBorrow();
         return _computeClosingFactor(
             borrowPart,
             collateralPartInAsset,
@@ -125,8 +123,7 @@ contract MarketHelper {
         uint256 collateralShare = market.balanceOf(_user);
         if (collateralShare == 0) return false;
 
-        (uint128 totalBorrowElastic, uint128 totalBorrowBase) = market._totalBorrow();
-        Rebase memory _totalBorrow = Rebase({elastic: totalBorrowElastic, base: totalBorrowBase});
+        Rebase memory _totalBorrow = market._totalBorrow();
 
         uint256 collateralAmount = market.convertToAssets(collateralShare);
         return collateralAmount * (market._exchangeRatePrecision() / FEE_PRECISION)
@@ -141,11 +138,11 @@ contract MarketHelper {
     function computeAllowedLendShare(address sglAddress, uint256 amount) external view returns (uint256 share) {
         ISingularity sgl = ISingularity(sglAddress);
 
-        (uint128 totalAssetElastic, uint128 totalAssetBase) = sgl.totalAsset();
-        (uint128 totalBorrowElastic,) = sgl._totalBorrow();
+        Rebase memory _totalAsset = sgl.totalAsset();
+        Rebase memory _totalBorrow = sgl._totalBorrow();
 
-        uint256 allShare = totalAssetElastic + sgl.convertToShares(totalBorrowElastic);
-        share = (amount * allShare) / totalAssetBase;
+        uint256 allShare = _totalAsset.elastic + sgl.convertToShares(_totalBorrow.elastic);
+        share = (amount * allShare) / _totalAsset.base;
     }
 
     /// @notice returns the collateral amount used in a liquidation
@@ -171,8 +168,6 @@ contract MarketHelper {
         }
         if (_exchangeRate == 0) revert ExchangeRateNotValid();
 
-        (uint128 totalBorrowElastic, uint128 totalBorrowBase) = sgl._totalBorrow();
-
         _ViewLiquidationStruct memory data;
         {
             data.user = user;
@@ -182,7 +177,7 @@ contract MarketHelper {
             data.market = sglAddress;
             data.userCollateralShare = sgl.balanceOf(user);
             data.userBorrowPart = sgl._userBorrowPart(user);
-            data.totalBorrow = Rebase({elastic: totalBorrowElastic, base: totalBorrowBase});
+            data.totalBorrow = sgl._totalBorrow();
             data.liquidationBonusAmount = IMarket(sglAddress)._liquidationBonusAmount();
             data.liquidationCollateralizationRate = sgl._liquidationCollateralizationRate();
             data.liquidationMultiplier = sgl._liquidationMultiplier();

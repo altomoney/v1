@@ -4,7 +4,6 @@ pragma solidity ^0.8.22;
 // External
 import {RebaseLibrary, Rebase} from "@boringcrypto/boring-solidity/contracts/libraries/BoringRebase.sol";
 import {BoringERC20} from "@boringcrypto/boring-solidity/contracts/libraries/BoringERC20.sol";
-import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {IERC20} from "@boringcrypto/boring-solidity/contracts/ERC20.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
@@ -25,7 +24,7 @@ import {MarketERC4626} from "../MarketERC4626.sol";
    
 */
 
-contract SGLStorage is Ownable, Market, ReentrancyGuard {
+contract SGLStorage is Ownable, Market {
     using RebaseLibrary for Rebase;
     using BoringERC20 for IERC20;
     using SafeCast for uint256;
