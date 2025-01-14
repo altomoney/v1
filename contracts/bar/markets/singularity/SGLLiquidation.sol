@@ -99,7 +99,7 @@ contract SGLLiquidation is SGLCommon {
             _borrowableToken().safeTransfer(receiver, returnedAmount);
         } else {
             uint256 collateralAmount = convertToAssets(collateralShare);
-            withdraw(collateralAmount, receiver, address(this));
+            IERC20(collateral()).safeTransfer(receiver, collateralAmount);
         }
 
         // burn collateral s  hares from user.
@@ -150,7 +150,7 @@ contract SGLLiquidation is SGLCommon {
         bool checkReturned
     ) private returns (uint256 returnedShare, uint256 returnedAmount) {
         uint256 collateralAmount = convertToAssets(_collateralShare);
-        withdraw(collateralAmount, address(_liquidatorReceiver), address(this));
+        IERC20(collateral()).safeTransfer(address(_liquidatorReceiver), collateralAmount);
 
         {
             uint256 assetBalanceBefore = _borrowableToken().balanceOf(address(this));
