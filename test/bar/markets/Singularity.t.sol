@@ -380,7 +380,7 @@ contract SingularityTest is UsdoTestHelper {
         receivers[0] = IMarketLiquidatorReceiver(address(liquidatorMock));
 
         bytes[] memory receiverData = new bytes[](1);
-        receiverData[0] = abi.encode(borrowAmount / 2);
+        receiverData[0] = abi.encode(borrowAmount);
 
         uint256 borrowPartBefore = singularity._userBorrowPart(address(this));
         (Module[] memory modules, bytes[] memory calls) =
@@ -547,11 +547,8 @@ contract SingularityTest is UsdoTestHelper {
             repay(singularity._userBorrowPart(address(this)));
         }
         (,, uint128 feesEarnedFraction) = singularity.accrueInfo();
-        uint256 feesAmount =
-            magnetarHelper.getAmountForAssetFraction(ISingularity(address(singularity)), feesEarnedFraction);
         assertGe(userBorrowPart, borrowAmount);
         assertGe(feesEarnedFraction, 0);
-        assertGe(feesAmount, 0);
 
         IMarket[] memory markets = new IMarket[](1);
         markets[0] = IMarket(address(singularity));
@@ -562,8 +559,8 @@ contract SingularityTest is UsdoTestHelper {
         // WIP Fails here
         penrose.withdrawAllMarketFees(markets, ITWTAPv2(address(twTapMock)));
         uint256 twTapBalanceAfter = asset.balanceOf(address(twTapMock));
-        assertGe(twTapBalanceAfter, twTapBalanceBefore);
-        assertGe(twTapBalanceAfter, feesAmount);
+        assertGe(twTapBalanceAfter, twTapBalanceBefore, "TwTap balance should be greater than before");
+        assertGe(twTapBalanceAfter, feesEarnedFraction, "TwTap balance should be greater than feesEarnedFraction");
     }
 
     function test_borrow_repay_different_users() public {

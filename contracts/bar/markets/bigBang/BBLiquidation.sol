@@ -101,7 +101,7 @@ contract BBLiquidation is BBCommon {
             IERC20(collateral()).safeTransfer(receiver, collateralAmount);
         }
 
-        _burn(user, collateralShare);
+        _burn(user, collateralShare); // TODO: Should it be only when the collateral is transferred (previous else condition?
 
         // burn debt amount from `from`
         IERC20 borrowableToken = _borrowableToken();

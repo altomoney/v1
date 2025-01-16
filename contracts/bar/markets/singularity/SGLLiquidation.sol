@@ -281,21 +281,9 @@ contract SGLLiquidation is SGLCommon {
         callerShare = (extraShare * callerReward) / FEE_PRECISION; //  y%  of profit goes to caller.
         feeShare = extraShare - callerShare; // rest goes to the fee
 
-        if (feeShare > 0) {
-            uint256 feeAmount = convertToAssets(feeShare);
-
-            uint256 fullAssetAmount = convertToAssets(totalAsset.elastic) + totalBorrow.elastic;
-            uint256 feeFraction = (feeAmount * totalAsset.base) / fullAssetAmount;
-            // balanceOf[address(penrose)] += feeFraction; TODO Check it
-            _mint(address(_penrose), feeFraction);
-            totalAsset.base += feeFraction.toUint128();
-            totalAsset.elastic += feeShare.toUint128();
-
-            deposit(convertToAssets(feeShare), address(this)); // TODO Check it
-        }
         if (callerShare > 0) {
-            uint256 callerAmount = convertToAssets(callerShare);
-            deposit(callerAmount, msg.sender);
+            //protocol fees should be kept in the contract as we do a yield box.depositAsset when we are extracting the fees using `refreshPenroseFees`
+            IERC20(_borrowableToken()).safeTransfer(msg.sender, callerShare);
         }
     }
 
@@ -339,7 +327,8 @@ contract SGLLiquidation is SGLCommon {
 
             data.extraShare = data.returnedShare > data.borrowShare ? data.returnedShare - data.borrowShare : 0;
 
-            deposit(convertToAssets(data.returnedShare - data.extraShare), address(this));
+            // addAsset(data.returnedShare - data.extraShare); TODO Should it be a add asset here? Not sure because BBLiquidation is not doing this.
+            // deposit(convertToAssets(data.returnedShare - data.extraShare), address(this));
 
             totalAsset.elastic += (data.returnedShare - data.extraShare).toUint128();
             emit LogAddAsset(address(this), address(this), (data.returnedShare - data.extraShare), 0);

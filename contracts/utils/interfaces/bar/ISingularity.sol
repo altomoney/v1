@@ -64,4 +64,6 @@ interface ISingularity is IMarket {
     function interestElasticity() external view returns (uint256);
 
     function startingInterestPerSecond() external view returns (uint256);
+
+    function refreshPenroseFees() external returns (uint256 feeAmount);
 }
