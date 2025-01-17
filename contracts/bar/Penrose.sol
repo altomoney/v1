@@ -542,7 +542,7 @@ contract Penrose is Ownable, Pausable {
                 // The CALL opcode returns the returned data in the function call.
                 // Only when it reverts, the returned data is the revert message.
                 if (!success[i]) {
-                    require(success[i], RevertMsgDecoder._getRevertMsg(result[i]));
+                    revert RevertMsgDecoder._getRevertMsg(result[i]);
                 }
             }
             ++i;
