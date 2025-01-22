@@ -186,7 +186,7 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, ReentrancyGuard, Pausable {
     /// @param _bucketId The new lock bucket id to migrate the position from the expired participation in a new participation
     function reuseParticipation(address _participant, uint8 _bucketId) external whenNotPaused nonReentrant {
         Participation memory position = participations[_participant][_bucketId];
-        if (_participant != msg.sender || position.delegatee != msg.sender) revert NotAuthorized();
+        if (_participant != msg.sender && position.delegatee != msg.sender) revert NotAuthorized();
         if (position.tapReleased) revert NotValid();
         if (position.tapAmount == 0) revert NotValid();
 
@@ -207,7 +207,7 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, ReentrancyGuard, Pausable {
         returns (uint256[] memory amounts_)
     {
         Participation memory position = participations[_participant][_bucketId];
-        if (_participant != msg.sender || position.delegatee != msg.sender) revert NotAuthorized();
+        if (_participant != msg.sender && position.delegatee != msg.sender) revert NotAuthorized();
         amounts_ = _claimBucketRewards(_participant, _bucketId, true);
     }
 
@@ -255,7 +255,7 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, ReentrancyGuard, Pausable {
         returns (uint256 releasedAmount)
     {
         Participation memory position = participations[_participant][_bucketId];
-        if (_participant != msg.sender || position.delegatee != msg.sender) revert NotAuthorized();
+        if (_participant != msg.sender && position.delegatee != msg.sender) revert NotAuthorized();
 
         // If in rescue mode, allow the release of the TAP even if the lock has not expired.
         if (!rescueMode) {
