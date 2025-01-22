@@ -7,6 +7,9 @@ TapiocaOptionBroker_lock.tree
 │   └── it should revert with EmergencySweepActivated
 ├── when market is not active
 │   └── it should revert with MarketNotActive
+├── when market is active
+│   └── given add assets returns zero shares
+│       └── it should revert with InvalidShares
 ├── when user has existing position
 │   ├── given position is not expired
 │   │   └── it should update net deposits for previous expiry epoch
