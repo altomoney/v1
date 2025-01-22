@@ -23,7 +23,7 @@ contract TapiocaOptionBrokerLockTest is TOBTestBase {
 
     function test_revertWhen_amountZero() public {
         vm.startPrank(testUser);
-        vm.expectRevert(ITapiocaOptionBroker.SharesNotValid.selector);
+        vm.expectRevert(ITapiocaOptionBroker.AmountNotValid.selector);
         tob.lock(testUser, 0, 0, market);
         vm.stopPrank();
     }
@@ -136,6 +136,24 @@ contract TapiocaOptionBrokerLockTest is TOBTestBase {
 
         vm.expectRevert(ITapiocaOptionBroker.NotAuthorized.selector);
         tob.lock(testUser, 0, lockAmount * 2, market);
+
+        vm.stopPrank();
+    }
+
+    function test_givenAddAssetsReturnsZeroShares_revertWithInvalidShares() public {
+        _setupValidPosition(6e18, lockAmount * 3);
+
+        vm.mockCall(
+            address(market),
+            abi.encodeWithSignature("addAsset(address,address,uint256)"),
+            abi.encode(0)
+        );
+
+        vm.startPrank(testUser);
+        usdo.approve(address(tob), lockAmount * 2);
+
+        vm.expectRevert(ITapiocaOptionBroker.SharesNotValid.selector);
+        tob.lock(testUser, 0, lockAmount, market);
 
         vm.stopPrank();
     }
