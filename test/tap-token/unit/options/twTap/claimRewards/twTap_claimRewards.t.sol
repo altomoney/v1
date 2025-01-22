@@ -2,6 +2,7 @@
 pragma solidity ^0.8.22;
 
 import {twTapBaseTest, TwTAP} from "../twTapBaseTest.sol";
+import {ITWTAPv2} from "tap-token/interfaces/ITWTAPv2.sol";
 
 contract twTap_claimRewards is twTapBaseTest {
     function test_RevertWhen_Paused() external {
@@ -20,9 +21,23 @@ contract twTap_claimRewards is twTapBaseTest {
         advanceWeeks(1)
         distributeRewards
     {
-        vm.skip(true);
-        // it should return the claimable rewards
         vm.startPrank(aliceAddr);
         twTap.claimRewards(aliceAddr, 1);
+        vm.stopPrank();
+    }
+
+    function test_ShouldReturnTheClaimableRewards_notAuthorized(address _participant)
+        external
+        participate(100, 0)
+        skipWeeks(1)
+        advanceWeeks(1)
+        distributeRewards
+    {
+        vm.assume(_participant != aliceAddr);
+
+        vm.startPrank(_participant);
+        vm.expectRevert(ITWTAPv2.NotAuthorized.selector);
+        twTap.claimRewards(aliceAddr, 1);
+        vm.stopPrank();
     }
 }

@@ -207,7 +207,7 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, ReentrancyGuard, Pausable {
         returns (uint256[] memory amounts_)
     {
         Participation memory position = participations[_participant][_bucketId];
-        if (_participant != msg.sender || position.delegatee != msg.sender) revert NotAuthorized();
+        if (_participant != msg.sender && position.delegatee != msg.sender) revert NotAuthorized();
         amounts_ = _claimBucketRewards(_participant, _bucketId, true);
     }
 
