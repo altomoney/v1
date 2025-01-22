@@ -8,23 +8,23 @@ contract TapiocaOptionBrokerSetEmergencySweepCooldownTest is TOBTestBase {
         super.setUp();
     }
 
-    function test_revertWhen_callerIsNotOwner() public {
-        address notOwner = makeAddr("notOwner");
-        vm.startPrank(notOwner);
+    function test_revertWhen_callerIsNotOwner(address _notOwner, uint256 _newCooldown) public {
+        vm.assume(_notOwner != owner);
+
+        vm.startPrank(_notOwner);
         vm.expectRevert("Ownable: caller is not the owner");
-        tob.setEmergencySweepCooldown(1 days);
+        tob.setEmergencySweepCooldown(_newCooldown);
         vm.stopPrank();
     }
 
-    function test_setEmergencySweepCooldown_validConditions() public {
-        uint256 newCooldown = 2 days;
+    function test_setEmergencySweepCooldown_validConditions(uint256 _newCooldown) external {
 
         // Set emergency sweep cooldown
         vm.startPrank(owner);
-        tob.setEmergencySweepCooldown(newCooldown);
+        tob.setEmergencySweepCooldown(_newCooldown);
         vm.stopPrank();
 
         // Verify cooldown updated
-        assertEq(tob._emergencySweepCooldown(), newCooldown, "Emergency sweep cooldown should be updated");
+        assertEq(tob._emergencySweepCooldown(), _newCooldown, "Emergency sweep cooldown should be updated");
     }
 }
