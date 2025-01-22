@@ -523,9 +523,9 @@ contract TapiocaOptionBroker is ITapiocaOptionBroker, Pausable, Ownable, FullMat
     /**
      * @notice Set the emergency sweep cooldown
      */
-    function setEmergencySweepCooldown(uint256 _emergencySweepCooldown) external onlyOwner {
-        _emergencySweepCooldown = _emergencySweepCooldown;
-        emit SetEmergencySweepCooldown(_emergencySweepCooldown);
+    function setEmergencySweepCooldown(uint256 emergencySweepCooldown) external onlyOwner {
+        _emergencySweepCooldown = emergencySweepCooldown;
+        emit SetEmergencySweepCooldown(emergencySweepCooldown);
     }
 
     function enableTapTokenRewards() external onlyOwner {
