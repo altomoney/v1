@@ -270,6 +270,9 @@ contract TapiocaOptionBroker is ITapiocaOptionBroker, Pausable, Ownable, FullMat
             _penaltyFeesAccrued += usdoPenalty;
             IERC20(USDO).safeTransfer(from, marketUsdoAmount - usdoPenalty);
         }
+
+        _netDepositsPerEpoch[currentEpoch() + 1] -= int256(totalUsdo);
+        _netDepositsPerEpoch[_timestampToEpoch(position.expiry) + 1] += int256(totalUsdo);
         delete position.markets;
         _totalLockedUsdo[from] -= totalUsdo;
         emit ExitPosition(from, from, bucketId, currentEpoch(), totalUsdo);
