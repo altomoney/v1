@@ -96,10 +96,8 @@ contract TapiocaOptionBrokerExerciseOptionTest is TOBTestBase {
         uint256 initialPaymentTokenBalance = paymentToken.balanceOf(testUser);
         uint256 initialTapBalance = tapToken.balanceOf(testUser);
 
-        for (uint256 i = 0; i < 9; i++) {
-            vm.warp(block.timestamp + EPOCH_DURATION);
-            tob.advanceWeek();
-        }
+        vm.warp(block.timestamp + EPOCH_DURATION * 9);
+        tob.advanceWeek();
 
         tob.exerciseOption(0, address(paymentToken), exerciseAmount);
 
