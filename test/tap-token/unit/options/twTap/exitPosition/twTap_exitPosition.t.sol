@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.22;
 
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {twTapBaseTest, TwTAP} from "../twTapBaseTest.sol";
 import {ITWTAPv2} from "tap-token/interfaces/ITWTAPv2.sol";
 
@@ -40,10 +41,48 @@ contract twTap_exitPosition is twTapBaseTest {
         twTap.claimRewards(aliceAddr, 0);
         vm.stopPrank();
 
-
         vm.startPrank(_participant);
         vm.expectRevert(ITWTAPv2.NotAuthorized.selector);
         twTap.exitPosition(aliceAddr, aliceAddr, 0);
         vm.stopPrank();
+    }
+
+    function test_exitPosition_valid_claim_rewards()
+        external
+        participate(100, 0)
+        advanceTime(EPOCH_DURATION * 2)
+        advanceWeeks(2)
+        distributeRewards
+    {
+        uint256[] memory claimable = twTap.claimable(aliceAddr, 0);
+        uint256 totalClaimable = 0;
+        for (uint256 i = 0; i < claimable.length; i++) {
+            totalClaimable += claimable[i];
+        }
+        assertGt(totalClaimable, 0, "totalClaimable must be greater than 0");
+        (,,,, uint88 tapAmountBefore,,,,) = twTap.participations(aliceAddr, 0);
+        assertGt(tapAmountBefore, 0, "tapAmount must be greater than 0");
+
+        vm.startPrank(aliceAddr);
+        twTap.exitPosition(aliceAddr, aliceAddr, 0);
+        vm.stopPrank();
+
+        (,,,, uint88 tapAmountAfter,,,,) = twTap.participations(aliceAddr, 0);
+        assertEq(tapAmountAfter, 0, "tapAmount must be 0");
+
+        IERC20[] memory rewardTokens = twTap.getRewardTokens();
+
+        // Reward tokens are at index 1 and above
+        for (uint256 i = 1; i < rewardTokens.length; i++) {
+            uint256 balanceAfter = rewardTokens[i].balanceOf(aliceAddr);
+            assertEq(balanceAfter, claimable[i], "Reward token balance must be equal to claimable amount");
+        }
+
+        uint256[] memory claimableAfter = twTap.claimable(aliceAddr, 0);
+        uint256 totalClaimableAfter = 0;
+        for (uint256 i = 0; i < claimableAfter.length; i++) {
+            totalClaimableAfter += claimableAfter[i];
+        }
+        assertEq(totalClaimableAfter, 0, "totalClaimableAfter must be equal to totalClaimable");
     }
 }
