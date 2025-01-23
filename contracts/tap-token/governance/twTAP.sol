@@ -484,6 +484,8 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, ReentrancyGuard, Pausable {
             IERC20(address(tapOFT)).safeTransferFrom(_participant, address(this), _amount);
         }
 
+        _supplyInBucket(_bucketId, _amount);
+
         Participation storage position = participations[_participant][_bucketId];
         Bucket memory bucket = buckets[_bucketId];
         uint256 expiry = block.timestamp + (bucket.lockEpochDuration * EPOCH_DURATION);
