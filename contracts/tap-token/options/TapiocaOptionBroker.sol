@@ -193,7 +193,7 @@ contract TapiocaOptionBroker is ITapiocaOptionBroker, Pausable, Ownable, FullMat
 
         if (position.expiry > 0 && block.timestamp < position.expiry) {
             // Clear the expected votes at the past expected expiration date
-            _netDepositsPerEpoch[_timestampToEpoch(position.expiry) + 1] -= int256(position.totalUsdo);
+            _netDepositsPerEpoch[_timestampToEpoch(position.expiry) + 1] += int256(position.totalUsdo);
         }
 
         if (block.timestamp > position.expiry) {
