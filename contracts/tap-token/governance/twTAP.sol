@@ -292,7 +292,7 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, ReentrancyGuard, Pausable {
     /// @param _rewardTokenId index of the reward in `rewardTokens`
     /// @param _amount amount of reward token to distribute.
     function distributeReward(uint256 _rewardTokenId, uint256 _amount) external nonReentrant {
-        if (lastProcessedWeek != currentEpoch()) revert AdvanceWeekFirst();
+        if (lastProcessedWeek == currentEpoch() + 1) revert AdvanceWeekFirst();
         if (_amount == 0) revert NotValid();
         if (_rewardTokenId == 0) revert NotValid(); // @dev rewardTokens[0] is 0x0
 
