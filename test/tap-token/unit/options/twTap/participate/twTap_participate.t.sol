@@ -1,0 +1,30 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.22;
+
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {twTapBaseTest, TwTAP} from "../twTapBaseTest.sol";
+import {ITWTAPv2} from "tap-token/interfaces/ITWTAPv2.sol";
+
+
+contract twTap_participate is twTapBaseTest {
+    function setUp() public override {
+        super.setUp();
+    }
+
+    function test_participate_invalid_not_authorized(uint256 _lockAmount) external addRewardTokens {
+        vm.assume(_lockAmount > 0);
+        vm.assume(_lockAmount < type(uint64).max);
+
+        // Setup Bob with TAP tokens and approval
+        vm.startPrank(bobAddr);
+        tapOFT.freeMint(bobAddr, _lockAmount);
+        IERC20(address(tapOFT)).approve(address(twTap), _lockAmount);
+        vm.stopPrank();
+
+        // Try to participate on behalf of Alice (should fail)
+        vm.startPrank(bobAddr);
+        vm.expectRevert(ITWTAPv2.NotAuthorized.selector);
+        twTap.participate(aliceAddr, _lockAmount, 1);
+        vm.stopPrank();
+    }
+}

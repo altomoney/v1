@@ -111,6 +111,22 @@ contract TapiocaOptionBrokerLockTest is TOBTestBase {
         vm.stopPrank();
     }
 
+    function test_revertWhen_lockToAnotherParticipantWithoutDelegation(address _participant) public {
+        vm.assume(_participant != testUser);
+        vm.assume(_participant != address(0));
+
+        _setupValidPosition(6e18, lockAmount * 3);
+
+        vm.startPrank(_participant);
+        usdo.approve(address(tob), lockAmount * 2);
+
+        // First lock
+        vm.expectRevert(ITapiocaOptionBroker.NotAuthorized.selector);
+        tob.lock(testUser, 0, lockAmount, market);
+
+        vm.stopPrank();
+    }
+
     function test_lock_withExistingPosition_expired() public {
         _setupValidPosition(6e18, lockAmount * 3);
 
