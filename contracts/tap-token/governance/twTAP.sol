@@ -177,6 +177,8 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, ReentrancyGuard, Pausable {
     /// @param _amount The amount of TAP to participate with
     /// @param _bucketId The lock bucket id
     function participate(address _participant, uint256 _amount, uint8 _bucketId) external whenNotPaused nonReentrant {
+        Participation memory position = participations[_participant][_bucketId];
+        if (_participant != msg.sender && position.delegatee != msg.sender) revert NotAuthorized();
         _participate(_participant, _amount, _bucketId, true);
     }
 
