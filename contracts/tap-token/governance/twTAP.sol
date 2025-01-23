@@ -447,7 +447,7 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, ReentrancyGuard, Pausable {
     {
         amounts_ = claimable(_account, _bucketId);
         Participation storage position = participations[_account][_bucketId];
-        position.lastInactive = uint40(currentEpoch());
+        position.lastInactive = currentEpoch() < position.lastActive ? uint40(currentEpoch()) : position.lastActive;
 
         uint256 len = amounts_.length;
         for (uint256 i; i < len; ++i) {
