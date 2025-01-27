@@ -512,7 +512,7 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, ReentrancyGuard, Pausable {
         position.lastInactive = w0;
         position.lastActive = w1;
 
-        weekTotals[w0 + 1].netActiveVotes += int256(uint256(position.tapAmount + _amount) * bucket.rewardsMultiplier);
+        weekTotals[w0 + 1].netActiveVotes += int256(uint256(position.tapAmount) * bucket.rewardsMultiplier);
         weekTotals[w1 + 1].netActiveVotes -= int256(uint256(position.tapAmount) * bucket.rewardsMultiplier);
 
         emit Participate(_participant, _bucketId, _amount, bucket.rewardsMultiplier, expiry, _bucketId);
