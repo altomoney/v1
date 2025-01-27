@@ -513,9 +513,9 @@ contract TapiocaOptionBroker is ITapiocaOptionBroker, Pausable, Ownable, FullMat
     /**
      * @notice Set the emergency sweep cooldown
      */
-    function setEmergencySweepCooldown(uint256 _emergencySweepCooldown) external onlyOwner {
-        _emergencySweepCooldown = _emergencySweepCooldown;
-        emit SetEmergencySweepCooldown(_emergencySweepCooldown);
+    function setEmergencySweepCooldown(uint256 emergencySweepCooldown) external onlyOwner {
+        _emergencySweepCooldown = emergencySweepCooldown;
+        emit SetEmergencySweepCooldown(emergencySweepCooldown);
     }
 
     function enableTapTokenRewards() external onlyOwner {
@@ -611,7 +611,7 @@ contract TapiocaOptionBroker is ITapiocaOptionBroker, Pausable, Ownable, FullMat
         discountedPaymentAmount =
             _getDiscountedPaymentAmount(otcAmountInUSD, paymentTokenValuation, discount, ERC20(paymentToken).decimals());
 
-        IERC20(paymentToken).transferFrom(msg.sender, address(this), discountedPaymentAmount);
+        IERC20(paymentToken).safeTransferFrom(msg.sender, address(this), discountedPaymentAmount);
 
         TAP_TOKEN.extractTAP(msg.sender, tapAmount);
 
