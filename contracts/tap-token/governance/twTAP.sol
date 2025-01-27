@@ -502,9 +502,6 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, ReentrancyGuard, Pausable {
 
         if (position.tapAmount > 0) {
             _claimBucketRewards(_participant, _bucketId, false);
-            if (position.tapReleased) {
-                position.tapAmount = 0;
-            }
         }
         position.bucketId = _bucketId;
         position.tapReleased = false;
