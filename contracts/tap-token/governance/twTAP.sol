@@ -518,8 +518,8 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, ReentrancyGuard, Pausable {
 
         if (position.expiry > 0 && block.timestamp < position.expiry) {
             // Clear the expected votes at the past expected expiration date
-            weekTotals[_timestampToEpoch(position.expiry) + 1].netActiveVotes -=
-                int256(uint256(position.tapAmount) * position.multiplier);
+            weekTotals[currentEpoch() + 1].netActiveVotes -= int256(uint256(position.tapAmount) * position.multiplier);
+            weekTotals[_timestampToEpoch(position.expiry) + 1].netActiveVotes += int256(uint256(position.tapAmount) * position.multiplier);
         }
 
         if (position.tapAmount > 0) {
@@ -534,7 +534,7 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, ReentrancyGuard, Pausable {
         position.lastInactive = w0;
         position.lastActive = w1;
 
-        weekTotals[w0 + 1].netActiveVotes += int256(_amount * bucket.rewardsMultiplier);
+        weekTotals[w0 + 1].netActiveVotes += int256(uint256(position.tapAmount) * bucket.rewardsMultiplier);
         weekTotals[w1 + 1].netActiveVotes -= int256(uint256(position.tapAmount) * bucket.rewardsMultiplier);
 
         emit Participate(_participant, _bucketId, _amount, bucket.rewardsMultiplier, expiry, _bucketId);
