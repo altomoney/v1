@@ -264,6 +264,8 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, ReentrancyGuard, Pausable {
             return 0;
         }
 
+        _claimBucketRewards(_participant, _bucketId, true);
+
         releasedAmount = position.tapAmount;
 
         participations[_participant][_bucketId].tapReleased = true;
@@ -516,7 +518,7 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, ReentrancyGuard, Pausable {
                 int256(uint256(position.tapAmount) * position.multiplier);
         }
 
-        if (position.tapAmount > 0 && position.tapReleased == false) {
+        if (position.tapAmount > 0) {
             _claimBucketRewards(_participant, _bucketId, false);
         }
         position.bucketId = _bucketId;
