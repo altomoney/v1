@@ -164,7 +164,7 @@ contract TapiocaOptionBroker is ITapiocaOptionBroker, Pausable, Ownable, FullMat
     /// @param market The singularity market to lend USDO to
     function lock(address to, uint8 bucketId, uint256 usdoAmount, address market) external whenNotPaused nonReentrant {
         if (lastEpoch != currentEpoch()) advanceWeek();
-        if (usdoAmount == 0) revert SharesNotValid();
+        if (usdoAmount == 0) revert AmountNotValid();
         if (_lastEmergencySweep != 0) revert EmergencySweepActivated();
         if (!_activeMarkets[market]) revert MarketNotActive();
 
@@ -205,7 +205,10 @@ contract TapiocaOptionBroker is ITapiocaOptionBroker, Pausable, Ownable, FullMat
 
         IERC20(USDO).safeTransferFrom(msg.sender, address(this), usdoAmount);
         USDO.safeApprove(market, usdoAmount);
-        _marketShares[to][market] += ISingularity(market).addAsset(address(this), address(this), usdoAmount);
+
+        uint256 shares = ISingularity(market).addAsset(address(this), address(this), usdoAmount);
+        if (shares == 0) revert SharesNotValid();
+        _marketShares[to][market] += shares;
         USDO.safeApprove(market, 0);
 
         emit Participate(to, bucketId, currentEpoch(), usdoAmount);
