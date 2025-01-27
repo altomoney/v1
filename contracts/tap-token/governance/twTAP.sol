@@ -323,14 +323,14 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, ReentrancyGuard, Pausable {
         if (_amount == 0) revert NotValid();
         if (_rewardTokenId == 0) revert NotValid(); // @dev rewardTokens[0] is 0x0
 
-        WeekTotals storage totals = weekTotals[lastProcessedWeek];
+        WeekTotals storage totals = weekTotals[currentEpoch() + 1];
         IERC20 rewardToken = rewardTokens[_rewardTokenId];
         // If this is a DBZ then there are no positions to give the reward to.
         // Since reward eligibility starts in the week after locking, there is
         // no way to give out rewards THIS week.
         // Cast is safe: `netActiveVotes` is at most zero by construction of
         // weekly totals and the requirement that they are up to date.
-        totals.totalDistPerVote[_rewardTokenId] += (_amount * DIST_PRECISION) / uint256(totals.netActiveVotes);
+        totals.totalDistPerVote[_rewardTokenId] += totals.netActiveVotes == 0 ? 0 : (_amount * DIST_PRECISION) / uint256(totals.netActiveVotes);
 
         rewardToken.safeTransferFrom(msg.sender, address(this), _amount);
 
