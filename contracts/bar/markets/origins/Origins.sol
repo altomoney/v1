@@ -116,12 +116,10 @@ contract Origins is Ownable, Market {
     /// @param amount The amount to add for `msg.sender`.
     /// @param share The amount of shares to add for `msg.sender`.
     function addCollateral(uint256 amount, uint256 share) external optionNotPaused(PauseType.AddCollateral) {
-        // TODO Check if we need this function. Does it represent erc4626.deposit ?
-        // TODO What about removeCollateral/etc? and allowedParticipants?
         if (!allowedParticipants[msg.sender]) revert NotAuthorized();
 
         if (share == 0) {
-            share = convertToShares(amount);
+            share = previewDeposit(amount);
         }
 
         _addCollateral(msg.sender, msg.sender, amount, share);
@@ -211,14 +209,13 @@ contract Origins is Ownable, Market {
         //mint USDO
         IUsdo(address(_borrowableToken())).mint(address(this), amount);
 
-        //deposit borrowed amount to user TODO why it says borrowed amount and use collateralId in the depositAsset?
-        IERC20(_borrowableToken()).safeTransfer(to, amount); // TODO check if this is correct
+        //deposit borrowed amount to user
+        IERC20(_borrowableToken()).safeTransfer(to, amount);
     }
 
     function _addCollateral(address from, address to, uint256 amount, uint256 share) internal {
-        // TODO What if amount is 0?
         if (share == 0) {
-            share = convertToShares(amount);
+            share = previewDeposit(amount);
         }
         mint(share, to);
         emit LogAddCollateral(from, to, share);

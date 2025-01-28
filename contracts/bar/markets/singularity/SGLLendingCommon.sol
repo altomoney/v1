@@ -41,7 +41,7 @@ contract SGLLendingCommon is SGLCommon {
         _allowedCollateral(from, amount);
 
         if (share == 0) {
-            share = convertToShares(amount);
+            share = previewDeposit(amount);
         }
 
         if (pullTokens) {
@@ -118,7 +118,7 @@ contract SGLLendingCommon is SGLCommon {
 
         userBorrowPart[to] -= part;
 
-        uint256 share = convertToShares(amount);
+        uint256 share = previewDeposit(amount);
         uint128 totalShare = totalAsset.elastic;
 
         totalAsset.elastic = totalShare + share.toUint128();

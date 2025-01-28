@@ -330,38 +330,33 @@ abstract contract BigBang_Unit_Shared is Markets_Unit_Shared {
         uint256 userCollateralSharesBefore = bb.balanceOf(to);
         uint256 totalCollateralShareBefore = bb.totalSupply();
 
-        {
-            (Module[] memory modules, bytes[] memory calls) = _getCollateralData(collateralAmount, from, to);
-
-            _resetPrank(executor);
-            // it should emit 'LogAddCollateral'
-            vm.expectEmit(true, true, true, false);
-            emit LogAddCollateral(from, to, share);
-            bb.execute(modules, calls, true);
-        }
+        _getCollateralDataAndExecute(collateralAmount, bb, executor, from, to, share);
 
         // checks
         {
-            // get `after` state
-            uint256 bbTotalAssetsAfter = bb.totalAssets();
-            uint256 userCollateralBalanceAfter = IERC20(bb.collateral()).balanceOf(address(from));
             // it should increase 'userCollateralShare'
-            uint256 resultedCollateral = bb.balanceOf(to);
-            assertEq(resultedCollateral, userCollateralSharesBefore + share, "User collateral share invalid");
-
+            assertEq(bb.balanceOf(to), userCollateralSharesBefore + share, "User collateral share invalid");
             // it should increase 'totalCollateralShare'
-            uint256 totalSupplyShareAfter = bb.totalSupply();
-            assertEq(totalSupplyShareAfter, totalCollateralShareBefore + share, "Total supply invalid");
-
+            assertEq(bb.totalSupply(), totalCollateralShareBefore + share, "Total supply invalid");
             // it should increase market's balance
-            assertEq(bbTotalAssetsBefore + collateralAmount, bbTotalAssetsAfter, "Total assets invalid");
+            assertEq(bbTotalAssetsBefore + collateralAmount, bb.totalAssets(), "Total assets invalid");
             // it should decrease user's balance for collateral token
             assertEq(
                 userCollateralBalanceBefore - collateralAmount,
-                userCollateralBalanceAfter,
+                IERC20(bb.collateral()).balanceOf(address(from)),
                 "User collateral balance invalid"
             );
         }
+    }
+
+    function _getCollateralDataAndExecute(uint256 collateralAmount, BigBang bb, address executor, address from, address to, uint256 share) internal {
+        (Module[] memory modules, bytes[] memory calls) = _getCollateralData(collateralAmount, from, to);
+
+        _resetPrank(executor);
+        // it should emit 'LogAddCollateral'
+        vm.expectEmit(true, true, true, false);
+        emit LogAddCollateral(from, to, share);
+        bb.execute(modules, calls, true);
     }
 
     // to avoid stack too deep

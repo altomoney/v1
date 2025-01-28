@@ -42,7 +42,7 @@ contract BBCollateral is BBLendingCommon {
         optionNotPaused(PauseType.AddCollateral)
         returns (uint256 assets)
     {
-        assets = convertToAssets(shares);
+        assets = previewMint(shares);
 
         if (assets < minCollateralAmount) revert MinCollateralAmountNotMet();
 
@@ -61,11 +61,11 @@ contract BBCollateral is BBLendingCommon {
         optionNotPaused(PauseType.AddCollateral)
     {
         if (share == 0) {
-            share = convertToShares(amount);
+            share = previewDeposit(amount);
         }
 
         if (amount == 0) {
-            amount = convertToAssets(share);
+            amount = previewMint(share);
         }
         if (amount <= minCollateralAmount) revert MinCollateralAmountNotMet();
 

@@ -72,7 +72,7 @@ contract SGLLiquidation is SGLCommon {
         // compute borrow amount with bonus
         uint256 elasticPart = totalBorrow.toElastic(userBorrowPart[user], false);
         uint256 borrowAmountWithBonus = elasticPart + (elasticPart * liquidationMultiplier) / FEE_PRECISION;
-        uint256 requiredCollateral = convertToShares((borrowAmountWithBonus * exchangeRate) / EXCHANGE_RATE_PRECISION);
+        uint256 requiredCollateral = previewRedeem((borrowAmountWithBonus * exchangeRate) / EXCHANGE_RATE_PRECISION);
 
         uint256 collateralShare = balanceOf(user);
 
@@ -89,7 +89,7 @@ contract SGLLiquidation is SGLCommon {
 
         // transfer asset from `from`
         _borrowableToken().safeTransferFrom(from, address(this), borrowAmount);
-        uint256 borrowShare = convertToShares(borrowAmount);
+        uint256 borrowShare = previewDeposit(borrowAmount);
         totalAsset.elastic += borrowShare.toUint128();
 
         // swap collateral with asset and send it to `receiver`
@@ -98,7 +98,7 @@ contract SGLLiquidation is SGLCommon {
                 _swapCollateralWithAsset(collateralShare, liquidatorReceiver, liquidatorReceiverData, 0, false);
             _borrowableToken().safeTransfer(receiver, returnedAmount);
         } else {
-            uint256 collateralAmount = convertToAssets(collateralShare);
+            uint256 collateralAmount = previewRedeem(collateralShare);
             IERC20(collateral()).safeTransfer(receiver, collateralAmount);
         }
 
@@ -149,7 +149,7 @@ contract SGLLiquidation is SGLCommon {
         uint256 _exchangeRate,
         bool checkReturned
     ) private returns (uint256 returnedShare, uint256 returnedAmount) {
-        uint256 collateralAmount = convertToAssets(_collateralShare);
+        uint256 collateralAmount = previewRedeem(_collateralShare);
         IERC20(collateral()).safeTransfer(address(_liquidatorReceiver), collateralAmount);
 
         {
