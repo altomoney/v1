@@ -281,7 +281,7 @@ contract Singularity is Market, SGLCommon {
         }
         totalAsset = _totalAsset.add(amount, fraction);
 
-        liquidityBalance[from] += fraction;
+        liquidityBalance[to] += fraction;
 
         emit LogAddAsset(from, to, amount, fraction);
     }
