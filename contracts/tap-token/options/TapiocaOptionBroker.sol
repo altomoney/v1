@@ -402,6 +402,7 @@ contract TapiocaOptionBroker is ITapiocaOptionBroker, Pausable, Ownable, FullMat
         if (lastEpoch == currentEpoch()) revert NotValid();
         uint256 epoch = currentEpoch();
 
+        uint256 previousEpoch = lastEpoch;
         _syncTWLBuckets(epoch - lastEpoch);
 
         // Get epoch TAP valuation
@@ -414,7 +415,11 @@ contract TapiocaOptionBroker is ITapiocaOptionBroker, Pausable, Ownable, FullMat
         _tapPerEpoch[epoch] += epochTAP;
 
         // Pass previous epoch net USDO amount to the next epoch
-        _netDepositsPerEpoch[epoch] += _netDepositsPerEpoch[epoch - 1];
+        while (previousEpoch < epoch) {
+            uint40 nextEpoch = uint40(previousEpoch) + 1;
+            _netDepositsPerEpoch[nextEpoch] += _netDepositsPerEpoch[previousEpoch];
+            ++previousEpoch;
+        }
 
         lastEpoch = epoch;
         emit NewEpoch(lastEpoch, epochTAP, _epochTAPValuation);
