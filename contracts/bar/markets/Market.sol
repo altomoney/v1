@@ -556,7 +556,7 @@ abstract contract Market is MarketERC4626, Ownable, ReentrancyGuard {
         uint256 collateralAmount = convertToAssets(collateralShare);
 
         max = (collateralAmount * EXCHANGE_RATE_PRECISION) / _exchangeRate;
-        min = (max * collateralizationRate) / FEE_PRECISION;
+        min = (max * liquidationCollateralizationRate) / FEE_PRECISION;
     }
 
     function _getCallerReward(address user, uint256 _exchangeRate) internal view returns (uint256) {
