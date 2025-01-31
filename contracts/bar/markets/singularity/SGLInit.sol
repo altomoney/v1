@@ -159,20 +159,6 @@ contract SGLInit is Market, SGLCommon {
         startingInterestPerSecond = minimumInterestPerSecond;
         accrueInfo.interestPerSecond = startingInterestPerSecond; // 1% APR, with 1e18 being 100%
         updateExchangeRate();
-        assembly {
-            //default fees
-            sstore(protocolFee.slot, 10000) // 10%; used for accrual
-            sstore(borrowOpeningFee.slot, 50) // 0.05%
-
-            //liquidation
-            sstore(liquidationMultiplier.slot, 12000) //12%
-            sstore(minLiquidatorReward.slot, 88000) // 88e3
-            sstore(maxLiquidatorReward.slot, 92500) // 925e2
-            sstore(liquidationBonusAmount.slot, 10000) //1e4
-            sstore(minimumTargetUtilization.slot, 600000000000000000) // 60%
-            sstore(maximumTargetUtilization.slot, 700000000000000000) // 70%
-            sstore(rateValidDuration.slot, 86400) //24 hours
-        }
 
         EXCHANGE_RATE_PRECISION = _exchangeRatePrecision > 0 ? _exchangeRatePrecision : 1e18;
     }

@@ -87,21 +87,7 @@ contract BBLeverage is BBLendingCommon {
         // Mint shares via erc4626 "deposit()" function logic, skipping transferFrom
         uint256 sharesOutput = previewDeposit(amountOut);
         _mint(from, sharesOutput);
-        address thisAddress = address(this);
-        /// @solidity memory-safe-assembly
-        assembly {
-            // Emit the {Deposit} event.
-            mstore(0x00, amountOut)
-            mstore(0x20, sharesOutput)
-            let m := shr(96, not(0))
-            log3(
-                0x00,
-                0x40,
-                0xdcbc1c05240f31ff3ad067ef1ee35ce4997762752e3a095284754544f4c709d7, // _DEPOSIT_EVENT_SIGNATURE
-                and(m, address()),
-                and(m, from)
-            )
-        }
+
         _afterDeposit(amountOut, sharesOutput);
 
         emit LogAddCollateral(address(this), from, sharesOutput);
