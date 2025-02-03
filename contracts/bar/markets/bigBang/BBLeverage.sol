@@ -70,6 +70,7 @@ contract BBLeverage is BBLendingCommon {
         }
 
         {
+            _allowedBorrow(from, borrowAmount + _computeVariableOpeningFee(borrowAmount));
             _borrow(from, address(leverageExecutor), borrowAmount, _computeVariableOpeningFee(borrowAmount));
         }
 
