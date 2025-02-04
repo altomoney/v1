@@ -9,7 +9,9 @@ import {
     LZSendParam
 } from "../periph/ITapiocaOmnichainEngine.sol";
 import {ICommonExternalContracts} from "../common/ICommonData.sol";
-import {MagnetarWithdrawData} from "../periph/IMagnetar.sol";
+import {
+    MagnetarWithdrawData, IOptionsLockData, IOptionsUnlockData, IExerciseOptionsData
+} from "../periph/IMagnetar.sol";
 import {IDepositData} from "../common/ICommonData.sol";
 
 /*
@@ -105,7 +107,6 @@ struct IRemoveAndRepay {
     uint256 repayAmount; // on BB
     bool removeCollateralFromBB;
     uint256 collateralAmount; // from BB
-    IOptionsExitData exitData;
     IOptionsUnlockData unlockData;
     MagnetarWithdrawData assetWithdrawData;
     MagnetarWithdrawData collateralWithdrawData;

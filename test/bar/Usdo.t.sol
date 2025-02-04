@@ -1184,7 +1184,6 @@ contract UsdoTest is UsdoTestHelper {
                 repayAmount: 0,
                 removeCollateralFromBB: false,
                 collateralAmount: 0,
-                exitData: IOptionsExitData({exit: false, target: address(0), oTAPTokenID: 0}),
                 unlockData: IOptionsUnlockData({unlock: false, target: address(0), tokenId: 0}),
                 assetWithdrawData: MagnetarWithdrawData({
                     unwrap: false,

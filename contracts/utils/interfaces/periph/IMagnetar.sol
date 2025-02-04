@@ -3,7 +3,6 @@ pragma solidity ^0.8.22;
 
 // Tapioca
 import {ICommonExternalContracts, IDepositData} from "../common/ICommonData.sol";
-import {IOptionsLockData} from "../tap-token/ITapiocaOptionBroker.sol";
 import {LZSendParam} from "../periph/ITapiocaOmnichainEngine.sol";
 import {IRemoveAndRepay, IMintData} from "../oft/IUsdo.sol";
 
@@ -17,6 +16,30 @@ import {IRemoveAndRepay, IMintData} from "../oft/IUsdo.sol";
    ╚═╝   ╚═╝  ╚═╝╚═╝     ╚═╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝
    
 */
+
+struct IExerciseOptionsData {
+    address from;
+    address target;
+    address paymentToken;
+    uint256 bucketId;
+    uint256 tapAmount;
+}
+
+struct IOptionsUnlockData {
+    bool unlock;
+    address target;
+    uint256 bucketId;
+    address to;
+    uint256 amount;
+}
+
+struct IOptionsLockData {
+    bool lock;
+    address target;
+    address to;
+    uint256 usdoAmount;
+    uint256 bucketId;
+}
 
 struct MagnetarWithdrawData {
     address asset;
@@ -70,7 +93,7 @@ struct MintFromBBAndLendOnSGLData {
     uint256 lendAmount;
     IMintData mintData;
     IDepositData depositData;
-    IOptionsLockData participateData;
+    IOptionsLockData lockData;
     ICommonExternalContracts externalContracts;
 }
 
@@ -79,7 +102,6 @@ struct LockAndParticipateData {
     address tSglToken;
     address magnetar;
     IOptionsLockData lockData;
-    IOptionsLockData participateData;
     uint256 value;
 }
 

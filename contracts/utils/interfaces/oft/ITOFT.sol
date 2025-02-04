@@ -2,8 +2,7 @@
 pragma solidity ^0.8.22;
 
 // Tapioca
-import {IExerciseOptionsData} from "../tap-token/ITapiocaOptionBroker.sol";
-import {MagnetarWithdrawData} from "../periph/IMagnetar.sol";
+import {MagnetarWithdrawData, IExerciseOptionsData, IOptionsUnlockData} from "../periph/IMagnetar.sol";
 
 import "../periph/ITapiocaOmnichainEngine.sol";
 /*

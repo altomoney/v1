@@ -58,8 +58,6 @@ import {
     DepositRepayAndRemoveCollateralFromMarketData,
     IMintData,
     IDepositData,
-    IOptionsLockData,
-    IOptionsLockData,
     ICommonExternalContracts,
     MintFromBBAndLendOnSGLData,
     IRemoveAndRepay,
@@ -714,7 +712,6 @@ contract MagnetarTest is MagnetarTestUtils {
                         repayAmount: repayAmount_,
                         removeCollateralFromBB: true,
                         collateralAmount: tokenAmount_ / 2,
-                        exitData: IOptionsExitData({exit: false, target: address(0), oTAPTokenID: 0}),
                         unlockData: IOptionsUnlockData({unlock: false, target: address(0), tokenId: 0}),
                         assetWithdrawData: MagnetarWithdrawData({
                             asset: address(asset),

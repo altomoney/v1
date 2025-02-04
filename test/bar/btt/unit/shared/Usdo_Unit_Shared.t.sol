@@ -200,7 +200,6 @@ abstract contract Usdo_Unit_Shared is Base_Test {
                 repayAmount: _repayAmountSD,
                 removeCollateralFromBB: data.removeCollateralAmount > 0,
                 collateralAmount: _removeCollateralAmountSD,
-                exitData: IOptionsExitData({exit: false, target: address(0), oTAPTokenID: 0}),
                 unlockData: IOptionsUnlockData({unlock: false, target: address(0), tokenId: 0}),
                 assetWithdrawData: MagnetarWithdrawData({
                     asset: address(0),
