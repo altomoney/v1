@@ -37,18 +37,12 @@ import {BaseTapToken} from "./BaseTapToken.sol";
    ╚═╝   ╚═╝  ╚═╝╚═╝     ╚═╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝
    
 */
-// TODO: add older TWAP interface and mark as DEPRECATED
 
 /// @title Tapioca OFTv2 token
 /// @notice OFT compatible TAP token
-/// @dev Emissions E(x)= E(x-1) - E(x-1) * D with E being total supply a x week, and D the initial decay rate
 contract TapToken is BaseTapToken, ModuleManager, ERC20Permit, Pausable {
     uint256 public constant INITIAL_SUPPLY = 47_500_000 * 1e18; // Everything minus DSO
     uint256 public dso_supply = 52_500_000 * 1e18; // Emission supply for DSO
-
-    /// @notice the a parameter used in the emission function;
-    uint256 constant decay_rate = 8800000000000000; // 0.88%
-    uint256 constant DECAY_RATE_DECIMAL = 1e18;
 
     /// @notice seconds in a week
     uint256 public immutable EPOCH_DURATION;
@@ -71,6 +65,9 @@ contract TapToken is BaseTapToken, ModuleManager, ERC20Permit, Pausable {
     /// @notice LayerZero governance chain identifier
     uint256 public governanceEid;
 
+    /// @notice the weekly emission rate cap, the maximum amount of TAP that can be minted in a week
+    uint256 public weeklyEmissionCap = 251_712 * 1e18;
+
     // ==========
     // *EVENTS*
     // ==========
@@ -82,6 +79,8 @@ contract TapToken is BaseTapToken, ModuleManager, ERC20Permit, Pausable {
     event Minted(address indexed _by, address indexed _to, uint256 _amount);
     /// @notice event emitted when new TAP is burned
     event Burned(address indexed _from, uint256 _amount);
+    /// @notice event emitted when the weekly emission rate is set
+    event WeeklyEmissionSet(uint256 _weeklyEmission);
 
     error OnlyHostChain();
 
@@ -98,6 +97,7 @@ contract TapToken is BaseTapToken, ModuleManager, ERC20Permit, Pausable {
     error InitNotStarted();
     error InsufficientEmissions();
     error NotAuthorized();
+    error EmissionHigherThanMaxEmission();
 
     // ===========
     // *MODIFIERS*
@@ -438,6 +438,7 @@ contract TapToken is BaseTapToken, ModuleManager, ERC20Permit, Pausable {
                     _mint(_to, availableTap);
                     mintedInWeek[week] += availableTap;
                     _amount -= availableTap;
+                    dso_supply -= availableTap;
                 }
 
                 // And transfer from the boosted TAP.
@@ -450,6 +451,7 @@ contract TapToken is BaseTapToken, ModuleManager, ERC20Permit, Pausable {
         // Mint the requested amount if there are enough emissions.
         _mint(_to, _amount);
         mintedInWeek[week] += _amount;
+        dso_supply -= _amount;
         emit Minted(msg.sender, _to, _amount);
     }
 
@@ -467,10 +469,7 @@ contract TapToken is BaseTapToken, ModuleManager, ERC20Permit, Pausable {
     /// =====================
 
     /**
-     * @notice Emit the TAP for the current week. Follow the emission function.
-     * If there are unclaimed emissions from the previous week, they are added to the current week.
-     * If there are some TAP in the contract, use it as boosted TAP.
-     *
+     * @notice Emit the maximun TAP emission to be minted for the current week
      * @return the emitted amount.
      */
     function emitForWeek() external onlyMinter onlyHostChain whenNotPaused returns (uint256) {
@@ -479,17 +478,11 @@ contract TapToken is BaseTapToken, ModuleManager, ERC20Permit, Pausable {
         uint256 week = _timestampToWeek(block.timestamp);
         if (emissionForWeek[week] > 0) return 0;
 
-        // Compute unclaimed emission from last week and add it to the current week emission
-        uint256 unclaimed;
-        if (week > 0) {
-            // Update DSO supply from last minted emissions
-            dso_supply -= mintedInWeek[week - 1];
+        uint256 emission = weeklyEmissionCap;
 
-            // Push unclaimed emission from last week to the current week
-            unclaimed = emissionForWeek[week - 1] - mintedInWeek[week - 1];
+        if (emission > dso_supply) {
+            revert EmissionHigherThanMaxEmission();
         }
-        uint256 emission = _computeEmission();
-        emission += unclaimed;
 
         emissionForWeek[week] = emission;
         emit Emitted(week, emission);
@@ -533,6 +526,22 @@ contract TapToken is BaseTapToken, ModuleManager, ERC20Permit, Pausable {
         }
     }
 
+    /**
+     * @notice set the weekly emission rate for the next week
+     * @param _weeklyEmissionCap the new weekly emission rate cap for next week
+     */
+    function setEmissionRate(uint256 _weeklyEmissionCap) external onlyOwner onlyHostChain {
+        weeklyEmissionCap = _weeklyEmissionCap;
+        emit WeeklyEmissionSet(_weeklyEmissionCap);
+    }
+
+    /**
+     * @notice get the weekly emission rate that will be computed for the next week
+     */
+    function getWeeklyEmissionCap() external view returns (uint256) {
+        return weeklyEmissionCap;
+    }
+
     /// =====================
     /// Internal
     /// =====================
@@ -543,13 +552,6 @@ contract TapToken is BaseTapToken, ModuleManager, ERC20Permit, Pausable {
      */
     function _timestampToWeek(uint256 timestamp) internal view returns (uint256) {
         return ((timestamp - emissionsStartTime) / EPOCH_DURATION);
-    }
-
-    /**
-     *  @notice returns the available emissions for a given supply
-     */
-    function _computeEmission() internal view returns (uint256 result) {
-        result = (dso_supply * decay_rate) / DECAY_RATE_DECIMAL;
     }
 
     /**
