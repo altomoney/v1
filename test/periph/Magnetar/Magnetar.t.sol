@@ -1,10 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.22;
 
-import "forge-std/StdCheats.sol";
-import "forge-std/StdAssertions.sol";
-import "forge-std/StdUtils.sol";
-import {TestBase} from "forge-std/Base.sol";
+import "forge-std/Test.sol";
 
 import "forge-std/console2.sol";
 
@@ -40,6 +37,9 @@ import {Cluster} from "tap-utils/Cluster/Cluster.sol";
 import {Penrose} from "tapioca-bar/Penrose.sol";
 import {BBDebtRateHelper} from "tapioca-bar/markets/bigBang/BBDebtRateHelper.sol";
 import {TapiocaOptionBroker} from "tap-token/options/TapiocaOptionBroker.sol";
+import "deployments/interfaces/ITapiocaReport.sol";
+import {TapiocaRelease} from "deployments/releases/tapioca-v1/TapiocaRelease.sol";
+import {LZEndpointMock} from "tapioca-mocks/LZEndpointMock.sol";
 
 import {
     PrepareLzCallData,
@@ -59,16 +59,14 @@ import {
     IMintData,
     IDepositData,
     IOptionsLockData,
-    IOptionsParticipateData,
+    IOptionsLockData,
     ICommonExternalContracts,
     MintFromBBAndLendOnSGLData,
     IRemoveAndRepay,
     ExitPositionAndRemoveCollateralData
 } from "tap-utils/interfaces/periph/IMagnetar.sol";
-import {IOptionsUnlockData} from "tap-utils/interfaces/tap-token/ITapiocaOptionLiquidityProvision.sol";
 import {MagnetarTestUtils, TestSingularityData, TestBigBangData} from "./MagnetarTestUtils.t.sol";
 import {SimpleLeverageExecutor} from "tapioca-bar/markets/leverage/SimpleLeverageExecutor.sol";
-import {IOptionsExitData} from "tap-utils/interfaces/tap-token/ITapiocaOptionBroker.sol";
 import {ISingularity, IMarket} from "tap-utils/interfaces/bar/ISingularity.sol";
 import {SGLLiquidation} from "tapioca-bar/markets/singularity/SGLLiquidation.sol";
 import {SGLCollateral} from "tapioca-bar/markets/singularity/SGLCollateral.sol";
@@ -91,23 +89,21 @@ import {ToeTokenReceiverMock} from "../mocks/ToeTokenMock/ToeTokenReceiverMock.s
 import {ToeTokenSenderMock} from "../mocks/ToeTokenMock/ToeTokenSenderMock.sol";
 import {ToeTokenMock} from "../mocks/ToeTokenMock/ToeTokenMock.sol";
 import {ToeTestHelper} from "../../utils/LZSetup/ToeTestHelper.sol";
-import {TestHelper} from "../../utils/LZSetup/TestHelper.sol";
 import {ERC1155Mock} from "../mocks/ERC1155Mock.sol";
 import {TapOftMock} from "../mocks/TapOftMock.sol";
 import {Weth9Mock} from "../mocks/Weth9Mock.sol";
+import {ISingularity} from "tap-utils/interfaces/bar/ISingularity.sol";
+import {IBigBang} from "tap-utils/interfaces/bar/IBigBang.sol";
 
-contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelper {
+contract MagnetarTest is MagnetarTestUtils {
     Cluster cluster;
     Magnetar magnetar;
-    MagnetarTestUtils utils;
     MagnetarHelper magnetarHelper;
+    Penrose penrose;
     OracleMock oracle;
     MarketHelper marketHelper;
     TapiocaOmnichainEngineHelper toeHelper;
-
-    uint32 aEid = 1;
-    uint32 bEid = 2;
-
+    IBigBang bb;
     ERC20Mock aERC20;
     ERC20Mock bERC20;
     ERC20Mock tapToken;
@@ -118,10 +114,6 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
     /**
      * DEPLOY setup addresses
      */
-    address __endpoint;
-    uint256 __hostEid = aEid;
-    address __owner = address(this);
-
     uint256 internal userAPKey = 0x1;
     uint256 internal userBPKey = 0x2;
     uint256 internal userCPKey = 0x3;
@@ -129,50 +121,45 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
     address public userB = vm.addr(userBPKey);
     address public userC = vm.addr(userCPKey);
 
+    ISingularity sgl;
+
     error Magnetar_UserMismatch();
 
     function setUp() public override {
+        super.setUp();
         vm.deal(userA, 1000 ether);
         vm.deal(userB, 1000 ether);
         vm.label(userA, "userA");
         vm.label(userB, "userB");
-        setUpEndpoints(3, LibraryType.UltraLightNode);
+
+        cluster = Cluster(report.cluster);
+        magnetar = Magnetar(payable(report.magnetar));
+        penrose = Penrose(report.penrose);
 
         aERC20 = new ERC20Mock();
         bERC20 = new ERC20Mock();
-        tapToken = new ERC20Mock();
+        tapToken = ERC20Mock(input.tapToken);
         asset = new ERC20Mock();
-        collateral = new ERC20Mock();
+        collateral = ERC20Mock(input.wrappedNativeToken);
 
-        cluster = new Cluster(aEid, address(this));
-
-        toeHelper = new TapiocaOmnichainEngineHelper();
-        MagnetarCollateralModule collateralModule = new MagnetarCollateralModule(address(toeHelper));
-        MagnetarMintModule mintModule = new MagnetarMintModule(address(toeHelper));
-        MagnetarOptionModule optionModule = new MagnetarOptionModule(address(toeHelper));
-
-        magnetar = new Magnetar(
-            ICluster(address(cluster)),
-            address(this),
-            payable(collateralModule),
-            payable(mintModule),
-            payable(optionModule),
-            address(toeHelper),
-            IMagnetarHelper(address(new MagnetarHelper()))
-        );
-
-        utils = new MagnetarTestUtils();
-        magnetarHelper = new MagnetarHelper();
+        magnetarHelper = MagnetarHelper(report.magnetarHelper);
         oracle = new OracleMock("Test", "TT", 1 ether);
-        marketHelper = new MarketHelper();
+        marketHelper = MarketHelper(report.marketHelper);
 
+        sgl = ISingularity(address(launchSingularity(report, address(asset), address(collateral), address(oracle))));
+        bb = IBigBang(address(launchBigBang(report, address(collateral))));
+
+        vm.startPrank(report.tapiocaMulticall);
         cluster.updateContract(0, address(magnetar), true);
         cluster.updateContract(0, address(magnetarHelper), true);
         cluster.updateContract(0, address(oracle), true);
         cluster.updateContract(0, address(asset), true);
         cluster.updateContract(0, address(collateral), true);
         cluster.updateContract(0, address(marketHelper), true);
+        cluster.updateContract(0, address(sgl), true);
+        vm.stopPrank();
 
+        vm.label(address(sgl), "Singularity");
         vm.label(address(magnetar), "Magnetar");
         vm.label(address(magnetarHelper), "MagnetarHelper");
         vm.label(address(oracle), "Oracle");
@@ -182,65 +169,12 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
         vm.label(address(bERC20), "bERC20");
         vm.label(address(marketHelper), "MarketHelper");
 
+        vm.startPrank(address(this));
+        magnetar.setHelper(address(magnetarHelper));
         asset.approve(address(magnetar), type(uint256).max);
         collateral.approve(address(magnetar), type(uint256).max);
 
-        magnetar.setHelper(address(magnetarHelper));
-    }
-
-    function _setupSgl(address _oracle) private returns (Singularity, Penrose) {
-        // ZerroXSwapperMockTarget swapperTarget = new ZerroXSwapperMockTarget();
-        // ZeroXSwapper swapper = new ZeroXSwapper(address(swapperTarget), address(0), ICluster(address(cluster)), address(this));
-        // SimpleLeverageExecutor leverageExecutor = new SimpleLeverageExecutor(IZeroXSwapper(address(swapper)), ICluster(address(cluster)));
-
-        Penrose penrose;
-        Singularity mc;
-        {
-            (penrose, mc,) = utils.createPenrose(ICluster(address(cluster)), address(aERC20), address(aERC20));
-        }
-        Singularity sgl;
-        {
-            sgl = utils.createSingularity(
-                TestSingularityData(
-                    address(penrose),
-                    address(asset),
-                    address(collateral),
-                    ITapiocaOracle(_oracle),
-                    ILeverageExecutor(address(0))
-                ),
-                address(mc)
-            );
-        }
-
-        return (sgl, penrose);
-    }
-
-    function _setupBb(address _oracle) private returns (BigBang, Penrose) {
-        (Penrose penrose,, BigBang bbMediumRiskMC) =
-            utils.createPenrose(ICluster(address(cluster)), address(aERC20), address(aERC20));
-
-        {
-            vm.prank(address(utils));
-            penrose.setUsdoToken(address(asset));
-        }
-
-        BigBang bb = utils.createBigBang(
-            TestBigBangData(
-                address(penrose), address(collateral), ITapiocaOracle(_oracle), ILeverageExecutor(address(0)), 0, 0, 0
-            ),
-            address(bbMediumRiskMC)
-        );
-
-        utils.setAssetOracle(penrose, bb, _oracle);
-
-        address[] memory markets = new address[](1);
-        markets[0] = address(bb);
-        bytes[] memory marketsData = new bytes[](1);
-        BBDebtRateHelper bbRateHelper = new BBDebtRateHelper();
-        marketsData[0] = abi.encodeWithSelector(BigBang.setDebtRateHelper.selector, address(bbRateHelper));
-        penrose.executeMarketFn(markets, marketsData, true);
-
-        return (bb, penrose);
+        vm.stopPrank();
     }
 
     function test_weth_wrap_through_burst() public {
@@ -267,8 +201,6 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
     }
 
     function test_get_sgl_info() public {
-        (Singularity sgl,) = _setupSgl(address(oracle));
-
         ISingularity[] memory arr = new ISingularity[](1);
         arr[0] = ISingularity(address(sgl));
 
@@ -280,31 +212,30 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
     }
 
     function test_lend() public {
-        (Singularity sgl,) = _setupSgl(address(oracle));
-        cluster.updateContract(0, address(sgl), true);
-        vm.label(address(sgl), "Singularity");
-
         uint256 tokenAmount_ = 1 ether;
-        {
-            deal(address(asset), address(this), tokenAmount_);
-        }
-        asset.approve(address(magnetar), type(uint256).max);
+
+        deal(address(asset), userA, tokenAmount_);
+
+        vm.startPrank(userA);
+
+        asset.approve(address(magnetar), tokenAmount_);
         {
             bytes memory lendData =
-                abi.encodeWithSelector(Singularity.addAsset.selector, address(this), address(this), false, 100); // todo: replace 100 with assetShare
+                abi.encodeWithSelector(Singularity.addAsset.selector, address(userA), address(userA), tokenAmount_);
 
             MagnetarCall[] memory calls = new MagnetarCall[](1);
             calls[0] = MagnetarCall({id: uint8(MagnetarAction.Market), target: address(sgl), value: 0, call: lendData});
 
             magnetar.burst(calls);
         }
+        assertEq(asset.balanceOf(userA), 0, "asset balance of this");
+        assertEq(asset.balanceOf(address(sgl)), tokenAmount_, "asset balance of sgl");
+        assertEq(asset.balanceOf(address(magnetar)), 0, "asset balance of magnetar");
+        assertEq(asset.allowance(address(sgl), address(magnetar)), 0, "asset allowance of sgl in magnetar");
+        assertEq(sgl.liquidityBalance(userA), tokenAmount_, "sgl liquidity balance of user");
     }
 
     function test_repay() public {
-        (Singularity sgl,) = _setupSgl(address(oracle));
-        cluster.updateContract(0, address(sgl), true);
-        vm.label(address(sgl), "Singularity");
-
         uint256 tokenAmount_ = 1 ether;
         uint256 borrowAmount_ = 1e17;
         uint256 repayDepositAmount_ = 1 ether;
@@ -423,11 +354,6 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
     }
 
     function test_withdraw_sanitization() public {
-        (Singularity sgl,) = _setupSgl(address(oracle));
-
-        cluster.updateContract(0, address(sgl), true);
-        vm.label(address(sgl), "Singularity");
-
         uint256 tokenAmount_ = 1 ether;
         uint256 borrowAmount_ = 1e17;
 
@@ -521,10 +447,7 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
     }
 
     function test_withdraw() public {
-        (Singularity sgl,) = _setupSgl(address(oracle));
-
-        cluster.updateContract(0, address(sgl), true);
-        vm.label(address(sgl), "Singularity");
+        test_lend();
 
         uint256 tokenAmount_ = 1 ether;
         uint256 borrowAmount_ = 1e17;
@@ -622,13 +545,6 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
     }
 
     function test_magnetar_execute_decode() public {
-        (BigBang bb, Penrose penrose) = _setupBb(address(oracle));
-        utils.setBBEthMarket(penrose, address(bb));
-
-        cluster.updateContract(0, address(bb), true);
-
-        vm.label(address(bb), "BigBang");
-
         uint256 tokenAmount_ = 1 ether;
 
         //deal
@@ -653,26 +569,18 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
     }
 
     function test_mint() public {
-        (BigBang bb, Penrose penrose) = _setupBb(address(oracle));
-        utils.setBBEthMarket(penrose, address(bb));
-
-        cluster.updateContract(0, address(bb), true);
-
-        vm.label(address(bb), "BigBang");
-
         uint256 tokenAmount_ = 1 ether;
         uint256 mintAmount_ = 1e17;
 
         bb.approveBorrow(address(magnetar), type(uint256).max);
 
-        //deal
         {
             deal(address(collateral), address(this), tokenAmount_);
         }
 
         {
             bytes memory mintData = abi.encodeWithSelector(
-                MagnetarMintModule.mintBBLendSGLLockTOLP.selector,
+                MagnetarMintModule.mintBBAndLock.selector,
                 MintFromBBAndLendOnSGLData({
                     user: address(this),
                     lendAmount: 0,
@@ -691,7 +599,7 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
                         fraction: 0,
                         minDiscountOut: 0
                     }),
-                    participateData: IOptionsParticipateData({participate: false, target: address(0), tOLPTokenId: 0}),
+                    participateData: IOptionsLockData({participate: false, target: address(0), tOLPTokenId: 0}),
                     externalContracts: ICommonExternalContracts({
                         singularity: address(0),
                         magnetar: address(magnetar),
@@ -720,13 +628,7 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
     }
 
     function test_exit_and_remove_collateral() public {
-        (BigBang bb, Penrose penrose) = _setupBb(address(oracle));
         bb.approve(address(magnetar), type(uint256).max);
-        utils.setBBEthMarket(penrose, address(bb));
-
-        cluster.updateContract(0, address(bb), true);
-
-        vm.label(address(bb), "BigBang");
 
         uint256 tokenAmount_ = 1 ether;
         uint256 mintAmount_ = 1e17;
@@ -744,7 +646,7 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
         //mint
         {
             bytes memory mintData = abi.encodeWithSelector(
-                MagnetarMintModule.mintBBLendSGLLockTOLP.selector,
+                MagnetarMintModule.mintBBAndLock.selector,
                 MintFromBBAndLendOnSGLData({
                     user: address(this),
                     lendAmount: 0,
@@ -763,7 +665,7 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
                         fraction: 0,
                         minDiscountOut: 0
                     }),
-                    participateData: IOptionsParticipateData({participate: false, target: address(0), tOLPTokenId: 0}),
+                    participateData: IOptionsLockData({participate: false, target: address(0), tOLPTokenId: 0}),
                     externalContracts: ICommonExternalContracts({
                         singularity: address(0),
                         magnetar: address(magnetar),
@@ -790,7 +692,7 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
         uint256 repayAmount_ = bb._userBorrowPart(address(this));
         // exit and remove
         {
-            bb._asset().approve(address(magnetar), type(uint256).max); //for yb deposit
+            IERC20(bb._asset()).approve(address(magnetar), type(uint256).max);
 
             deal(address(asset), address(this), repayAmount_); //deal more asset to be able to fully repay
             uint256 assetShare = bb.convertToShares(repayAmount_);
@@ -847,12 +749,6 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
     }
 
     function test_sgl_lend() public {
-        (Singularity sgl,) = _setupSgl(address(oracle));
-
-        cluster.updateContract(0, address(sgl), true);
-
-        vm.label(address(sgl), "Singularity");
-
         uint256 tokenAmount_ = 1 ether;
 
         // lend approvals
@@ -866,7 +762,7 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
         {
             uint256 assetShare = sgl.convertToShares(tokenAmount_);
             bytes memory mintData = abi.encodeWithSelector(
-                MagnetarMintModule.mintBBLendSGLLockTOLP.selector,
+                MagnetarMintModule.mintBBAndLock.selector,
                 MintFromBBAndLendOnSGLData({
                     user: address(this),
                     lendAmount: tokenAmount_,
@@ -885,7 +781,7 @@ contract MagnetarTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelpe
                         fraction: 0,
                         minDiscountOut: 0
                     }),
-                    participateData: IOptionsParticipateData({participate: false, target: address(0), tOLPTokenId: 0}),
+                    participateData: IOptionsLockData({participate: false, target: address(0), tOLPTokenId: 0}),
                     externalContracts: ICommonExternalContracts({
                         singularity: address(sgl),
                         magnetar: address(magnetar),

@@ -8,14 +8,7 @@ import {
     ERC20PermitStruct,
     LZSendParam
 } from "../periph/ITapiocaOmnichainEngine.sol";
-import {
-    IOptionsParticipateData,
-    ITapiocaOptionBroker,
-    IExerciseOptionsData,
-    IOptionsExitData
-} from "../tap-token/ITapiocaOptionBroker.sol";
-import {IOptionsUnlockData, IOptionsLockData} from "../tap-token/ITapiocaOptionLiquidityProvision.sol";
-import {ICommonData, ICommonExternalContracts} from "../common/ICommonData.sol";
+import {ICommonExternalContracts} from "../common/ICommonData.sol";
 import {MagnetarWithdrawData} from "../periph/IMagnetar.sol";
 import {IDepositData} from "../common/ICommonData.sol";
 
@@ -129,7 +122,7 @@ struct ILendOrRepayParams {
     bool removeCollateral;
     uint256 removeCollateralAmount;
     IOptionsLockData lockData;
-    IOptionsParticipateData participateData;
+    IOptionsLockData participateData;
 }
 
 struct IMintData {

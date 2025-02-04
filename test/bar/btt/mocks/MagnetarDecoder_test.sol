@@ -37,7 +37,7 @@ contract MagnetarDecoder_test {
         removeAmount = _data.collateralAmount;
     }
 
-    function mintBBLendSGLLockTOLP(MintFromBBAndLendOnSGLData memory _data) external payable {
+    function mintBBAndLock(MintFromBBAndLendOnSGLData memory _data) external payable {
         depositAmount = _data.lendAmount;
     }
 

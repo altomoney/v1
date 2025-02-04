@@ -26,18 +26,7 @@ import {TapiocaOmnichainExtExec} from "tap-utils/tapiocaOmnichainEngine/extensio
 import {UsdoHelper} from "tapioca-bar/usdo/extensions/UsdoHelper.sol";
 import {Usdo} from "tapioca-bar/usdo/Usdo.sol";
 
-import {IOptionsExitData} from "tap-utils/interfaces/tap-token/ITapiocaOptionBroker.sol";
 import {ICommonExternalContracts} from "tap-utils/interfaces/common/ICommonData.sol";
-import {
-    ITapiocaOptionLiquidityProvision,
-    IOptionsLockData,
-    IOptionsUnlockData
-} from "tap-utils/interfaces/tap-token/ITapiocaOptionLiquidityProvision.sol";
-import {
-    ITapiocaOptionBroker,
-    IExerciseOptionsData,
-    IOptionsParticipateData
-} from "tap-utils/interfaces/tap-token/ITapiocaOptionBroker.sol";
 import {MagnetarWithdrawData} from "tap-utils/interfaces/periph/IMagnetar.sol";
 
 import {
@@ -156,7 +145,7 @@ abstract contract Usdo_Unit_Shared is Base_Test {
                     fraction: 0,
                     minDiscountOut: 0
                 }),
-                participateData: IOptionsParticipateData({
+                participateData: IOptionsLockData({
                     participate: data.participate,
                     target: data.participateDataTarget,
                     tOLPTokenId: 0

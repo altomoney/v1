@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.22;
 
+import "forge-std/Test.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 
 import {Penrose} from "tapioca-bar/Penrose.sol";
@@ -22,20 +23,29 @@ import {BBCollateral} from "tapioca-bar/markets/bigBang/BBCollateral.sol";
 import {BBLeverage} from "tapioca-bar/markets/bigBang/BBLeverage.sol";
 import {BBBorrow} from "tapioca-bar/markets/bigBang/BBBorrow.sol";
 import {BigBang} from "tapioca-bar/markets/bigBang/BigBang.sol";
-
 import {ILeverageExecutor} from "tap-utils/interfaces/bar/ILeverageExecutor.sol";
 import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
 import {IZeroXSwapper} from "tap-utils/interfaces/periph/IZeroXSwapper.sol";
 import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
-
 import {ZerroXSwapperMockTarget} from "../../utils//ZeroXSwapper/ZerroXSwapperMockTarget.sol";
 import {ZeroXSwapper} from "tap-utils/Swapper/ZeroXSwapper.sol";
-
 import {SingularityMock} from "../mocks/SingularityMock.sol";
 import {SGLInit} from "tapioca-bar/markets/singularity/SGLInit.sol";
-
-// External
+import {ISingularity} from "tap-utils/interfaces/bar/ISingularity.sol";
 import {IERC20} from "@boringcrypto/boring-solidity/contracts/libraries/BoringERC20.sol";
+import {SingularityLauncher} from "deployments/releases/tapioca-v1/actions/SingularityLauncher.sol";
+import "deployments/interfaces/ITapiocaReport.sol";
+import {TapiocaRelease} from "deployments/releases/tapioca-v1/TapiocaRelease.sol";
+import {RiskParams} from "deployments/interfaces/ISingularityLauncher.sol";
+import {ERC20Mock} from "../mocks/ERC20Mock.sol";
+import {TestHelper} from "test/bar/LZSetup/TestHelper.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {TapiocaMulticall} from "tap-utils/TapiocaMulticall/TapiocaMulticall.sol";
+import {BigBangLauncher, BigBangRiskParams} from "deployments/releases/tapioca-v1/actions/BigBangLauncher.sol";
+import {OracleMock} from "test/utils/mocks/OracleMock.sol";
+import {Usdo} from "tapioca-bar/usdo/Usdo.sol";
+import {Penrose} from "tapioca-bar/Penrose.sol";
+import {IBigBang} from "tap-utils/interfaces/bar/IBigBang.sol";
 
 struct TestSingularityData {
     address penrose;
@@ -55,7 +65,123 @@ struct TestBigBangData {
     uint256 debtRateMax;
 }
 
-contract MagnetarTestUtils {
+contract MagnetarTestUtils is TestHelper {
+    TapiocaInput internal input;
+    TapiocaReport internal report;
+    SingularityLauncher internal singularityLauncher;
+    BigBangLauncher internal bigBangLauncher;
+
+    uint32 aEid = 1;
+    uint32 bEid = 2;
+
+    address __endpoint;
+    uint256 __hostEid = aEid;
+    address __owner = address(this);
+
+    function setUp() public virtual override {
+        setUpEndpoints(3, LibraryType.UltraLightNode);
+
+        input.owner = __owner;
+        input.lzChainId = uint16(aEid);
+
+        input.wrappedNativeToken = address(new ERC20Mock());
+        input.tapToken = address(new ERC20Mock());
+        input.zeroXSwapper = address(1);
+        input.lzEndpoint = address(endpoints[aEid]);
+        __endpoint = address(endpoints[aEid]);
+
+        TapiocaReport memory emptyReport;
+        report = TapiocaRelease.deployTapiocaV1(input, emptyReport);
+    }
+
+    function launchSingularity(TapiocaReport memory reportOut, address asset, address collateral, address oracle)
+        public
+        returns (ISingularity singularity)
+    {
+        Singularity._InitMemoryTokensData memory tokensData;
+        RiskParams memory riskParams;
+
+        tokensData._asset = IERC20(asset);
+        tokensData._collateral = IERC20(collateral);
+
+        riskParams.oracle = oracle;
+        riskParams.seedAmount = 1 ether;
+
+        singularityLauncher = new SingularityLauncher(
+            reportOut.sglLiquidationModule,
+            reportOut.sglBorrowModule,
+            reportOut.sglCollateralModule,
+            reportOut.sglLeverageModule,
+            reportOut.sglInit,
+            reportOut.penrose,
+            reportOut.simpleLeverageExecutor,
+            reportOut.sglInterestHelper,
+            reportOut.singularity
+        );
+        address admin = Ownable(reportOut.tapiocaMulticall).owner();
+
+        deal(collateral, admin, 1 ether);
+
+        bytes memory payload =
+            abi.encodeWithSelector(singularityLauncher.createSingularity.selector, tokensData, riskParams);
+
+        vm.startPrank(admin);
+        bytes memory returnData =
+            TapiocaMulticall(reportOut.tapiocaMulticall).performDelegateCall(address(singularityLauncher), payload);
+        vm.stopPrank();
+
+        address marketAddress = abi.decode(returnData, (address));
+        assertTrue(marketAddress != address(0), "Singularity market address should not be zero");
+        return ISingularity(marketAddress);
+    }
+
+    function launchBigBang(TapiocaReport memory reportOut, address collateral) internal returns (IBigBang) {
+        bigBangLauncher = new BigBangLauncher(
+            reportOut.bbLiquidation,
+            reportOut.bbBorrow,
+            reportOut.bbCollateral,
+            reportOut.bbLeverage,
+            reportOut.penrose,
+            reportOut.simpleLeverageExecutor,
+            reportOut.bigbang,
+            reportOut.bbDebtRateHelper
+        );
+
+        BigBangRiskParams memory riskParams;
+        riskParams.debtRateAgainstEth = 0;
+        riskParams.debtRateMin = 0;
+        riskParams.debtRateMax = 0;
+        riskParams.exchangeRatePrecision = 1e18;
+        riskParams.collateralizationRate = 75000;
+        riskParams.liquidationCollateralizationRate = 80000;
+        riskParams.collateral = collateral;
+        riskParams.oracle = address(new OracleMock("Oracle Test", "ORCT", 1 ether));
+        riskParams.seedAmount = 1 ether;
+        riskParams.isEthMarket = true;
+
+        address admin = Ownable(reportOut.tapiocaMulticall).owner();
+
+        deal(collateral, admin, 1 ether);
+        bytes memory payload = abi.encodeWithSelector(bigBangLauncher.createBigBang.selector, riskParams);
+
+        vm.startPrank(admin);
+        bytes memory returnData =
+            TapiocaMulticall(reportOut.tapiocaMulticall).performDelegateCall(address(bigBangLauncher), payload);
+        vm.stopPrank();
+
+        address marketAddress = abi.decode(returnData, (address));
+        assertTrue(marketAddress != address(0), "BigBang market address should not be zero");
+
+        Usdo usdo = Usdo(payable(report.usdo));
+
+        vm.startPrank(admin);
+        usdo.setMinterStatus(marketAddress, true);
+        usdo.setBurnerStatus(marketAddress, true);
+        vm.stopPrank();
+
+        return IBigBang(payable(marketAddress));
+    }
+
     function setBBEthMarket(Penrose penrose, address market) external {
         penrose.setBigBangEthMarket(market);
     }
@@ -108,48 +234,6 @@ contract MagnetarTestUtils {
         Penrose(_bb.penrose).executeMarketFn(markets, marketsData, true);
 
         return bb;
-    }
-
-    function createSingularity(TestSingularityData memory _sgl, address _mc) public returns (Singularity) {
-        Singularity sgl = new Singularity();
-        SGLInit sglInit = new SGLInit();
-
-        (
-            Singularity._InitMemoryModulesData memory _modulesData,
-            Singularity._InitMemoryTokensData memory _tokensData,
-            Singularity._InitMemoryData memory _data
-        ) = _getSingularityInitData(_sgl);
-        {
-            sgl.init(address(sglInit), abi.encode(_modulesData, _tokensData, _data));
-        }
-
-        {
-            Penrose(_sgl.penrose).addSingularity(_mc, address(sgl));
-        }
-
-        {
-            SGLInterestHelper sglInterestHelper = new SGLInterestHelper();
-
-            bytes memory payload = abi.encodeWithSelector(
-                Singularity.setSingularityConfig.selector,
-                sgl.borrowOpeningFee(),
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                address(sglInterestHelper),
-                0
-            );
-            address[] memory mc = new address[](1);
-            mc[0] = address(sgl);
-
-            bytes[] memory data = new bytes[](1);
-            data[0] = payload;
-            Penrose(_sgl.penrose).executeMarketFn(mc, data, false);
-        }
-        return sgl;
     }
 
     function _getBigBangInitData(TestBigBangData memory _bb)

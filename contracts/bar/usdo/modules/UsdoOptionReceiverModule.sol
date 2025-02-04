@@ -15,7 +15,6 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 // Tapioca
 import {MagnetarCall, MagnetarAction, IMagnetar} from "tap-utils/interfaces/periph/IMagnetar.sol";
-import {ITapiocaOptionBroker, IExerciseOptionsData} from "tap-utils/interfaces/tap-token/ITapiocaOptionBroker.sol";
 import {UsdoInitStruct, ExerciseOptionsMsg, LZSendParam} from "tap-utils/interfaces/oft/IUsdo.sol";
 import {ITapiocaOmnichainEngine} from "tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
 import {SafeApprove} from "tap-utils/libraries/SafeApprove.sol";

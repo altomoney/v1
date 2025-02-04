@@ -7,17 +7,14 @@ import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 // Tapioca
-import {ITapiocaOptionLiquidityProvision} from "tap-utils/interfaces/tap-token/ITapiocaOptionLiquidityProvision.sol";
 import {
     ExitPositionAndRemoveCollateralData,
     ICommonExternalContracts,
     IRemoveAndRepay,
     LockAndParticipateData
 } from "tap-utils/interfaces/periph/IMagnetar.sol";
-import {ITapiocaOptionBroker} from "tap-utils/interfaces/tap-token/ITapiocaOptionBroker.sol";
-import {ITapiocaOption} from "tap-utils/interfaces/tap-token/ITapiocaOption.sol";
 import {ISingularity} from "tap-utils/interfaces/bar/ISingularity.sol";
-
+import {ITapiocaOptionBroker} from "tap-token/interfaces/ITapiocaOptionBroker.sol";
 import {IMarket, Module} from "tap-utils/interfaces/bar/IMarket.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 

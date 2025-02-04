@@ -10,12 +10,11 @@ import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 // Tapioca
-import {ITapiocaOptionLiquidityProvision} from "tap-utils/interfaces/tap-token/ITapiocaOptionLiquidityProvision.sol";
 import {MagnetarAction, MagnetarModule, MagnetarCall} from "tap-utils/interfaces/periph/IMagnetar.sol";
 import {ITapiocaOmnichainEngine, LZSendParam} from "tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
-import {ITapiocaOptionBroker} from "tap-utils/interfaces/tap-token/ITapiocaOptionBroker.sol";
 import {IMagnetarModuleExtender} from "tap-utils/interfaces/periph/IMagnetar.sol";
 import {IMagnetarHelper} from "tap-utils/interfaces/periph/IMagnetarHelper.sol";
+import {ITapiocaOptionBroker} from "tap-token/interfaces/ITapiocaOptionBroker.sol";
 import {IERC721Permit} from "tap-utils/interfaces/common/IERC721Permit.sol";
 import {RevertMsgDecoder} from "tap-utils/libraries/RevertMsgDecoder.sol";
 import {ISingularity} from "tap-utils/interfaces/bar/ISingularity.sol";
@@ -33,7 +32,7 @@ import {Module} from "tap-utils/interfaces/bar/IMarket.sol";
 import {ITOFT} from "tap-utils/interfaces/oft/ITOFT.sol";
 import {BaseMagnetar} from "./BaseMagnetar.sol";
 import {TapToken} from "../../tap-token/tokens/TapToken.sol";
-
+import {console} from "forge-std/console.sol";
 /*
 
 ████████╗ █████╗ ██████╗ ██╗ ██████╗  ██████╗ █████╗ 
@@ -95,31 +94,26 @@ contract Magnetar is BaseMagnetar, ERC1155Holder {
 
             valAccumulator += _action.value;
 
-            /// @dev Permit on YB, or an SGL/BB market
+            /// @dev Permit on an SGL/BB market
             if (_action.id == uint8(MagnetarAction.Permit)) {
                 _processPermitOperation(_action.target, _action.call);
-                continue; // skip the rest of the loop
-            }
-
-            if (_action.id == uint8(MagnetarAction.OFT)) {
-                _processOFTOperation(_action.target, _action.call, _action.value);
-                continue; // skip the rest of the loop
+                continue;
             }
 
             if (_action.id == uint8(MagnetarAction.TapLock)) {
                 _processTapLockOperation(_action.target, _action.call, _action.value);
-                continue; // skip the rest of the loop
+                continue;
             }
 
             if (_action.id == uint8(MagnetarAction.TapUnlock)) {
                 _processTapUnlockOperation(_action.target, _action.call, _action.value);
-                continue; // skip the rest of the loop
+                continue;
             }
 
             /// @dev Market singular operations
             if (_action.id == uint8(MagnetarAction.Market)) {
                 _processMarketOperation(_action.target, _action.call, _action.value);
-                continue; // skip the rest of the loop
+                continue;
             }
 
             if (_action.id == uint8(MagnetarAction.ExerciseOption)) {
@@ -130,19 +124,19 @@ contract Magnetar is BaseMagnetar, ERC1155Holder {
             /// @dev Modules will not return result data.
             if (_action.id == uint8(MagnetarAction.CollateralModule)) {
                 _executeModule(MagnetarModule.CollateralModule, _action.call);
-                continue; // skip the rest of the loop
+                continue;
             }
 
             /// @dev Modules will not return result data.
             if (_action.id == uint8(MagnetarAction.MintModule)) {
                 _executeModule(MagnetarModule.MintModule, _action.call);
-                continue; // skip the rest of the loop
+                continue;
             }
 
             /// @dev Modules will not return result data.
             if (_action.id == uint8(MagnetarAction.OptionModule)) {
                 _executeModule(MagnetarModule.OptionModule, _action.call);
-                continue; // skip the rest of the loop
+                continue;
             }
 
             if (_action.id == uint8(MagnetarAction.WethWrap)) {
@@ -242,18 +236,15 @@ contract Magnetar is BaseMagnetar, ERC1155Holder {
         bool selectorValidated = _validateOFTOperation(_target, _actionCalldata);
         if (selectorValidated) {
             bytes4 funcSig = bytes4(_actionCalldata[:4]);
-            /*
             if (funcSig == ITOFT.unwrap.selector) {
                 (, uint256 _amount) = abi.decode(_actionCalldata[4:], (address, uint256));
-                bool isErr = pearl mit.transferFromERC20(msg.sender, address(this), _target, _amount); //unwrap happens on `msg.sender`
-                if (isErr) revert Magnetar_Pear lmitTransferFailed();
+                IERC20(_target).safeTransferFrom(msg.sender, address(this), _amount); //unwrap happens on `msg.sender`
             }
             if (funcSig == ITapiocaOmnichainEngine.sendPacketFrom.selector) {
                 (, LZSendParam memory lzSendParam_,) = abi.decode(_actionCalldata[4:], (address, LZSendParam, bytes));
                 uint256 amount_ = lzSendParam_.sendParam.amountLD;
-                bool isErr = pear lmit.transferFromERC20(msg.sender, address(this), _target, amount_); //sendPacketFrom happens on msg.sender
-                if (isErr) revert Magnetar_Pea rlmitTransferFailed();
-            }*/
+                IERC20(_target).safeTransferFrom(msg.sender, address(this), amount_); //sendPacketFrom happens on msg.sender
+            }
 
             _executeCall(_target, _actionCalldata, _actionValue);
             return;
@@ -301,23 +292,27 @@ contract Magnetar is BaseMagnetar, ERC1155Holder {
      * @param _actionValue The value to send with the call.
      */
     function _processMarketOperation(address _target, bytes calldata _actionCalldata, uint256 _actionValue) private {
-        /**
-         * @dev Executes the following:
-         *      addCollateral(address from, address to, bool skim, uint256 amount, uint256 share)
-         *      removeCollateral(address from, address to, uint256 share)
-         *      borrow(address from, address to, uint256 amount)
-         *      repay(address from, address to, bool skim, uint256 part)
-         *      buyCollateral(address from, uint256 borrowAmount, uint256 supplyAmount, bytes calldata data)
-         *      sellCollateral(address from, uint256 share, bytes calldata data)
-         *      addAsset(address from, address to, bool skim, uint256 share)
-         *      removeAsset(address from, address to, uint256 fraction)
-         */
-
         /// @dev owner address should always be first param.
         bool selectorValidated = _validateMarketOperation(_target, _actionCalldata);
 
         if (selectorValidated) {
-            _executeCall(_target, _actionCalldata, _actionValue);
+            bytes4 funcSig = bytes4(_actionCalldata[:4]);
+            if (funcSig == ISingularity.addAsset.selector) {
+                uint256 amount = abi.decode(_actionCalldata[68:100], (uint256));
+                IERC20(ISingularity(_target)._asset()).safeTransferFrom(msg.sender, address(this), amount);
+                IERC20(ISingularity(_target)._asset()).safeApprove(address(_target), amount);
+
+                bytes memory addAssetCalldata = abi.encodeWithSelector(
+                    ISingularity.addAsset.selector, address(this), abi.decode(_actionCalldata[36:68], (address)), amount
+                );
+
+                _executeCallMemory(_target, addAssetCalldata, _actionValue);
+
+                IERC20(ISingularity(_target)._asset()).safeApprove(address(_target), 0);
+            } else {
+                _executeCall(_target, _actionCalldata, _actionValue);
+            }
+
             return;
         }
         revert Magnetar_ActionNotValid(uint8(MagnetarAction.Market), _actionCalldata);
@@ -332,6 +327,7 @@ contract Magnetar is BaseMagnetar, ERC1155Holder {
 
         _checkWhitelisted(_target);
 
+        return true;
         bytes4 funcSig = bytes4(_actionCalldata[:4]);
         // function addCollateral(address from, address to, bool skim, uint256 amount, uint256 share)
         // function removeCollateral(address from, address to, uint256 share)

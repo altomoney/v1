@@ -23,11 +23,7 @@ import {
     DepositAddCollateralAndBorrowFromMarketData,
     MagnetarWithdrawData
 } from "tap-utils/interfaces/periph/IMagnetar.sol";
-import {
-    ITapiocaOptionBroker,
-    IExerciseOptionsData,
-    IOptionsParticipateData
-} from "tap-utils/interfaces/tap-token/ITapiocaOptionBroker.sol";
+import {ITapiocaOptionBroker} from "tap-token/interfaces/ITapiocaOptionBroker.sol";
 import {
     TapiocaOmnichainEngineHelper,
     PrepareLzCallData,
@@ -48,20 +44,13 @@ import {
     IRemoveAndRepay,
     ILendOrRepayParams
 } from "tap-utils/interfaces/oft/IUsdo.sol";
-import {
-    ITapiocaOptionLiquidityProvision,
-    IOptionsLockData,
-    IOptionsUnlockData
-} from "tap-utils/interfaces/tap-token/ITapiocaOptionLiquidityProvision.sol";
 import {ERC20PermitStruct, ERC20PermitApprovalMsg} from "tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
 import {TapiocaOmnichainExtExec} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainExtExec.sol";
-import {IOptionsExitData} from "tap-utils/interfaces/tap-token/ITapiocaOptionBroker.sol";
 import {UsdoMarketReceiverModule} from "tapioca-bar/usdo/modules/UsdoMarketReceiverModule.sol";
 import {UsdoOptionReceiverModule} from "tapioca-bar/usdo/modules/UsdoOptionReceiverModule.sol";
 import {SimpleLeverageExecutor} from "tapioca-bar/markets/leverage/SimpleLeverageExecutor.sol";
 import {ICommonExternalContracts} from "tap-utils/interfaces/common/ICommonData.sol";
 import {ILeverageExecutor} from "tap-utils/interfaces/bar/ILeverageExecutor.sol";
-import {ICommonData} from "tap-utils/interfaces/common/ICommonData.sol";
 import {Singularity} from "tapioca-bar/markets/singularity/Singularity.sol";
 import {UsdoReceiver} from "tapioca-bar/usdo/modules/UsdoReceiver.sol";
 import {IOracle} from "tap-utils/oracle/interfaces/IOracle.sol";
@@ -888,7 +877,7 @@ contract UsdoTest is UsdoTestHelper {
                     fraction: 0,
                     minDiscountOut: 0
                 }),
-                participateData: IOptionsParticipateData({participate: false, target: address(0), tOLPTokenId: 0})
+                participateData: IOptionsLockData({participate: false, target: address(0), tOLPTokenId: 0})
             }),
             withdrawParams: MagnetarWithdrawData({                
                 unwrap: false,
@@ -1054,7 +1043,7 @@ contract UsdoTest is UsdoTestHelper {
                     fraction: 0,
                     minDiscountOut: 0
                 }),
-                participateData: IOptionsParticipateData({participate: false, target: address(0), tOLPTokenId: 0})
+                participateData: IOptionsLockData({participate: false, target: address(0), tOLPTokenId: 0})
             }),
             withdrawParams: MagnetarWithdrawData({
                 unwrap: false,

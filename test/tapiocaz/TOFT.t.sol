@@ -33,7 +33,6 @@ import {
     IToftVault
 } from "tap-utils/interfaces/oft/ITOFT.sol";
 import {MarketPermitActionMsg} from "tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
-import {ITapiocaOptionBroker, IExerciseOptionsData} from "tap-utils/interfaces/tap-token/ITapiocaOptionBroker.sol";
 import {
     TOFTHelper, PrepareLzCallData, PrepareLzCallReturn, ComposeMsgData
 } from "tapiocaz/tOFT/extensions/TOFTHelper.sol";

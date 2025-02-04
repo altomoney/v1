@@ -198,7 +198,6 @@ contract UsdoMarketReceiverModule is BaseUsdo {
                 collateralDepositData: IDepositData({deposit: false, amount: 0})
             }),
             depositData: IDepositData({deposit: true, amount: msg_.lendParams.depositAmount}),
-            lockData: msg_.lendParams.lockData,
             participateData: msg_.lendParams.participateData,
             externalContracts: ICommonExternalContracts({
                 magnetar: msg_.lendParams.magnetar,
@@ -207,7 +206,7 @@ contract UsdoMarketReceiverModule is BaseUsdo {
                 marketHelper: msg_.lendParams.marketHelper
             })
         });
-        bytes memory call = abi.encodeWithSelector(IMagnetarMintModule.mintBBLendSGLLockTOLP.selector, _lendData);
+        bytes memory call = abi.encodeWithSelector(IMagnetarMintModule.mintBBAndLock.selector, _lendData);
         MagnetarCall[] memory magnetarCall = new MagnetarCall[](1);
         magnetarCall[0] = MagnetarCall({
             id: uint8(MagnetarAction.MintModule),

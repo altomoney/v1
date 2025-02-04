@@ -18,11 +18,7 @@ import {MagnetarOptionModule} from "tapioca-periph/Magnetar/modules/MagnetarOpti
 import {MagnetarMintModule} from "tapioca-periph/Magnetar/modules/MagnetarMintModule.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 
-import {
-    IOptionsLockData, IOptionsUnlockData
-} from "tap-utils/interfaces/tap-token/ITapiocaOptionLiquidityProvision.sol";
 import {ICommonExternalContracts, IDepositData} from "tap-utils/interfaces/common/ICommonData.sol";
-import {IOptionsParticipateData, IOptionsExitData} from "tap-utils/interfaces/tap-token/ITapiocaOptionBroker.sol";
 import {IRemoveAndRepay, IMintData} from "tap-utils/interfaces/oft/IUsdo.sol";
 
 import {IPermit} from "tap-utils/interfaces/common/IPermit.sol";
@@ -71,7 +67,7 @@ abstract contract MagnetarOptionModuleTest is MagnetarTestHelper, IERC721Receive
                 fraction: 0,
                 minDiscountOut: 0
             }),
-            participateData: IOptionsParticipateData({participate: false, target: address(0), tOLPTokenId: 0}),
+            participateData: IOptionsLockData({participate: false, target: address(0), tOLPTokenId: 0}),
             value: 0
         });
     }
@@ -105,7 +101,7 @@ abstract contract MagnetarOptionModuleTest is MagnetarTestHelper, IERC721Receive
                 fraction: 0,
                 minDiscountOut: 0
             }),
-            participateData: IOptionsParticipateData({participate: false, target: address(0), tOLPTokenId: 0}),
+            participateData: IOptionsLockData({participate: false, target: address(0), tOLPTokenId: 0}),
             externalContracts: ICommonExternalContracts({
                 magnetar: _magnetar,
                 singularity: _singularity,
@@ -145,7 +141,7 @@ abstract contract MagnetarOptionModuleTest is MagnetarTestHelper, IERC721Receive
         _params.depositData.amount = tokenAmount_;
 
         bytes memory mintFromBBAndLendOnSGLData =
-            abi.encodeWithSelector(MagnetarMintModule.mintBBLendSGLLockTOLP.selector, _params);
+            abi.encodeWithSelector(MagnetarMintModule.mintBBAndLock.selector, _params);
 
         calls[0] = MagnetarCall({
             id: uint8(MagnetarAction.MintModule),

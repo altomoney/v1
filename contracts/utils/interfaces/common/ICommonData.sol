@@ -23,5 +23,3 @@ struct IDepositData {
     bool deposit;
     uint256 amount;
 }
-
-interface ICommonData {}

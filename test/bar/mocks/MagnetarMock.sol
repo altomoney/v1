@@ -176,7 +176,7 @@ contract MagnetarMock {
         }
     }
 
-    function mintBBLendSGLLockTOLP(MintFromBBAndLendOnSGLData memory _data) external payable {
+    function mintBBAndLock(MintFromBBAndLendOnSGLData memory _data) external payable {
         // Check targets
         if (_data.externalContracts.bigBang != address(0)) {
             if (!cluster.isWhitelisted(cluster.lzChainId(), _data.externalContracts.bigBang)) {

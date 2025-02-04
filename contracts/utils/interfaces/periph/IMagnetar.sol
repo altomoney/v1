@@ -2,9 +2,8 @@
 pragma solidity ^0.8.22;
 
 // Tapioca
-import {IOptionsLockData} from "../tap-token/ITapiocaOptionLiquidityProvision.sol";
 import {ICommonExternalContracts, IDepositData} from "../common/ICommonData.sol";
-import {IOptionsParticipateData} from "../tap-token/ITapiocaOptionBroker.sol";
+import {IOptionsLockData} from "../tap-token/ITapiocaOptionBroker.sol";
 import {LZSendParam} from "../periph/ITapiocaOmnichainEngine.sol";
 import {IRemoveAndRepay, IMintData} from "../oft/IUsdo.sol";
 
@@ -64,15 +63,14 @@ struct DepositAddCollateralAndBorrowFromMarketData {
 }
 
 /**
- * @dev `mintBBLendSGLLockTOLP` calldata
+ * @dev `MintFromBBAndLendOnSGLData` calldata
  */
 struct MintFromBBAndLendOnSGLData {
     address user;
     uint256 lendAmount;
     IMintData mintData;
     IDepositData depositData;
-    IOptionsLockData lockData;
-    IOptionsParticipateData participateData;
+    IOptionsLockData participateData;
     ICommonExternalContracts externalContracts;
 }
 
@@ -81,7 +79,7 @@ struct LockAndParticipateData {
     address tSglToken;
     address magnetar;
     IOptionsLockData lockData;
-    IOptionsParticipateData participateData;
+    IOptionsLockData participateData;
     uint256 value;
 }
 
@@ -142,5 +140,5 @@ interface IMagnetarOptionModule {
 }
 
 interface IMagnetarMintModule {
-    function mintBBLendSGLLockTOLP(MintFromBBAndLendOnSGLData memory data) external payable;
+    function mintBBAndLock(MintFromBBAndLendOnSGLData memory data) external payable;
 }
