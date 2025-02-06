@@ -123,7 +123,6 @@ struct ILendOrRepayParams {
     bool removeCollateral;
     uint256 removeCollateralAmount;
     IOptionsLockData lockData;
-    IOptionsLockData participateData;
 }
 
 struct IMintData {

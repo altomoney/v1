@@ -594,13 +594,11 @@ contract MagnetarTest is MagnetarTestUtils {
                     lockData: IOptionsLockData({
                         lock: false,
                         target: address(0),
-                        tAsset: address(0),
-                        lockDuration: 0,
-                        amount: 0,
-                        fraction: 0,
-                        minDiscountOut: 0
+                        bucketId: 0,
+                        to: address(this),
+                        sglMarket: address(0),
+                        usdoAmount: 0
                     }),
-                    participateData: IOptionsLockData({participate: false, target: address(0), tOLPTokenId: 0}),
                     externalContracts: ICommonExternalContracts({
                         singularity: address(0),
                         magnetar: address(magnetar),
@@ -660,13 +658,11 @@ contract MagnetarTest is MagnetarTestUtils {
                     lockData: IOptionsLockData({
                         lock: false,
                         target: address(0),
-                        tAsset: address(0),
-                        lockDuration: 0,
-                        amount: 0,
-                        fraction: 0,
-                        minDiscountOut: 0
+                        bucketId: 0,
+                        to: address(this),
+                        sglMarket: address(0),
+                        usdoAmount: 0
                     }),
-                    participateData: IOptionsLockData({participate: false, target: address(0), tOLPTokenId: 0}),
                     externalContracts: ICommonExternalContracts({
                         singularity: address(0),
                         magnetar: address(magnetar),
@@ -715,7 +711,13 @@ contract MagnetarTest is MagnetarTestUtils {
                         repayAmount: repayAmount_,
                         removeCollateralFromBB: true,
                         collateralAmount: tokenAmount_ / 2,
-                        unlockData: IOptionsUnlockData({unlock: false, target: address(0), tokenId: 0}),
+                        unlockData: IOptionsUnlockData({
+                            unlock: false,
+                            target: address(0),
+                            bucketId: 0,
+                            to: address(this),
+                            amount: 0
+                        }),
                         assetWithdrawData: MagnetarWithdrawData({
                             asset: address(asset),
                             receiver: address(this),
@@ -775,13 +777,11 @@ contract MagnetarTest is MagnetarTestUtils {
                     lockData: IOptionsLockData({
                         lock: false,
                         target: address(0),
-                        tAsset: address(0),
-                        lockDuration: 0,
-                        amount: 0,
-                        fraction: 0,
-                        minDiscountOut: 0
+                        bucketId: 0,
+                        to: address(this),
+                        sglMarket: address(0),
+                        usdoAmount: 0
                     }),
-                    participateData: IOptionsLockData({participate: false, target: address(0), tOLPTokenId: 0}),
                     externalContracts: ICommonExternalContracts({
                         singularity: address(sgl),
                         magnetar: address(magnetar),

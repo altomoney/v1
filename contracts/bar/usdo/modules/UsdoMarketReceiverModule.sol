@@ -123,7 +123,6 @@ contract UsdoMarketReceiverModule is BaseUsdo {
         _checkWhitelistStatus(msg_.lendParams.marketHelper);
         _checkWhitelistStatus(msg_.lendParams.market);
         _checkWhitelistStatus(msg_.lendParams.lockData.target);
-        _checkWhitelistStatus(msg_.lendParams.participateData.target);
 
         {
             if (msg_.lendParams.depositAmount > 0) {

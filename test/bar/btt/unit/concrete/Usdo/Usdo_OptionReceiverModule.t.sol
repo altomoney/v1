@@ -45,8 +45,9 @@ contract Usdo_OptionReceiverModule is Usdo_Unit_Shared, BigBang_Unit_Shared {
             optionsData: IExerciseOptionsData({
                 from: address(this),
                 target: address(tOB),
+                paymentToken: address(tapToken),
                 paymentTokenAmount: amount,
-                oTAPTokenID: 0, // @dev ignored in TapiocaOptionsBrokerMock
+                bucketId: 0,
                 tapAmount: 0
             }),
             withdrawOnOtherChain: false,

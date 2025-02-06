@@ -594,8 +594,9 @@ contract UsdoTest is UsdoTestHelper {
                 from: address(this),
                 target: address(tOB),
                 paymentTokenAmount: tokenAmountSD,
-                oTAPTokenID: 0, // @dev ignored in TapiocaOptionsBrokerMock
-                tapAmount: tokenAmountSD
+                paymentToken: address(aUsdo),
+                tapAmount: tokenAmountSD,
+                bucketId: 0
             }),
             withdrawOnOtherChain: false,
             lzSendParams: LZSendParam({
@@ -878,7 +879,6 @@ contract UsdoTest is UsdoTestHelper {
                     fraction: 0,
                     minDiscountOut: 0
                 }),
-                participateData: IOptionsLockData({participate: false, target: address(0), tOLPTokenId: 0})
             }),
             withdrawParams: MagnetarWithdrawData({                
                 unwrap: false,
@@ -1044,7 +1044,6 @@ contract UsdoTest is UsdoTestHelper {
                     fraction: 0,
                     minDiscountOut: 0
                 }),
-                participateData: IOptionsLockData({participate: false, target: address(0), tOLPTokenId: 0})
             }),
             withdrawParams: MagnetarWithdrawData({
                 unwrap: false,

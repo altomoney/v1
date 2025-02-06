@@ -144,16 +144,10 @@ abstract contract Usdo_Unit_Shared is Base_Test {
                 lockData: IOptionsLockData({
                     lock: data.lock,
                     target: data.lockDataTarget,
-                    tAsset: address(0),
-                    lockDuration: 0,
-                    amount: 0,
-                    fraction: 0,
-                    minDiscountOut: 0
-                }),
-                participateData: IOptionsLockData({
-                    participate: data.participate,
-                    target: data.participateDataTarget,
-                    tOLPTokenId: 0
+                    to: address(this),
+                    sglMarket: address(0),
+                    usdoAmount: 0,
+                    bucketId: 0
                 })
             }),
             withdrawParams: MagnetarWithdrawData({
@@ -205,7 +199,7 @@ abstract contract Usdo_Unit_Shared is Base_Test {
                 repayAmount: _repayAmountSD,
                 removeCollateralFromBB: data.removeCollateralAmount > 0,
                 collateralAmount: _removeCollateralAmountSD,
-                unlockData: IOptionsUnlockData({unlock: false, target: address(0), tokenId: 0}),
+                unlockData: IOptionsUnlockData({unlock: false, target: address(0), bucketId: 0, to: address(this), amount: 0}),
                 assetWithdrawData: MagnetarWithdrawData({
                     asset: address(0),
                     unwrap: false,

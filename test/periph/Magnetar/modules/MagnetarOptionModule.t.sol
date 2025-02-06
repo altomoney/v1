@@ -59,19 +59,15 @@ abstract contract MagnetarOptionModuleTest is MagnetarTestHelper, IERC721Receive
     {
         return LockData({
             user: user,
-            tSglToken: singularity,
             magnetar: magnetar,
             lockData: IOptionsLockData({
                 lock: false,
+                bucketId: 0,
                 target: address(0),
-                tAsset: address(0),
-                lockDuration: 0,
-                amount: 0,
-                fraction: 0,
-                minDiscountOut: 0
-            }),
-            participateData: IOptionsLockData({participate: false, target: address(0), tOLPTokenId: 0}),
-            value: 0
+                to: address(this),
+                sglMarket: address(0),
+                usdoAmount: 0
+            })
         });
     }
 
@@ -98,13 +94,11 @@ abstract contract MagnetarOptionModuleTest is MagnetarTestHelper, IERC721Receive
             lockData: IOptionsLockData({
                 lock: false,
                 target: address(0),
-                tAsset: address(0),
-                lockDuration: 0,
-                amount: 0,
-                fraction: 0,
-                minDiscountOut: 0
+                bucketId: 0,
+                to: address(this),
+                sglMarket: address(0),
+                usdoAmount: 0
             }),
-            participateData: IOptionsLockData({participate: false, target: address(0), tOLPTokenId: 0}),
             externalContracts: ICommonExternalContracts({
                 magnetar: _magnetar,
                 singularity: _singularity,
@@ -189,7 +183,7 @@ abstract contract MagnetarOptionModuleTest is MagnetarTestHelper, IERC721Receive
                 repayAmount: 0,
                 removeCollateralFromBB: false,
                 collateralAmount: 0,
-                unlockData: IOptionsUnlockData({unlock: false, target: address(0), tokenId: 0}),
+                unlockData: IOptionsUnlockData({unlock: false, target: address(0), bucketId: 0, to: address(this), amount: 0}),
                 assetWithdrawData: createEmptyWithdrawData(),
                 collateralWithdrawData: createEmptyWithdrawData()
             })

@@ -76,14 +76,12 @@ abstract contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver 
             depositData: IDepositData({deposit: false, amount: depositAmount}),
             lockData: IOptionsLockData({
                 lock: false,
+                bucketId: 0,
                 target: address(0),
-                tAsset: address(0),
-                lockDuration: 0,
-                amount: 0,
-                fraction: 0,
-                minDiscountOut: 0
+                to: address(this),
+                sglMarket: address(0),
+                usdoAmount: 0
             }),
-            participateData: IOptionsLockData({participate: false, target: address(0), tOLPTokenId: 0}),
             externalContracts: ICommonExternalContracts({
                 magnetar: _magnetar,
                 singularity: _singularity,
