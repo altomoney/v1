@@ -21,7 +21,7 @@ import {ISingularity} from "tap-utils/interfaces/bar/ISingularity.sol";
 
 import {IPermitAll} from "tap-utils/interfaces/common/IPermitAll.sol";
 import {IWeth9} from "tap-utils/interfaces/external/weth/IWeth9.sol";
-import {IMagnetar} from "tap-utils/interfaces/periph/IMagnetar.sol";
+import {IMagnetar, IExerciseOptionsData} from "tap-utils/interfaces/periph/IMagnetar.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 
 import {ITWTAPv2} from "tap-token/interfaces/ITWTAPv2.sol";
@@ -433,15 +433,10 @@ contract Magnetar is BaseMagnetar, ERC1155Holder {
         _checkWhitelisted(_target);
 
         bytes4 funcSig = bytes4(_actionCalldata[:4]);
-        if (
-            funcSig == ITapiocaOptionLiquidityProvision.lock.selector
-                || funcSig == ITapiocaOptionBroker.participate.selector || funcSig == ITWTAPv2.participate.selector
-        ) {
-            /// @dev Owner param check. See Warning above.
+        if (funcSig == ITapiocaOptionBroker.lock.selector || funcSig == ITWTAPv2.participate.selector) {
             _checkSender(abi.decode(_actionCalldata[4:36], (address)));
             selectorValidated = true;
         }
-        if (funcSig == ITapiocaOptionBroker.participate.selector) selectorValidated = true;
     }
 
     /**
@@ -479,9 +474,8 @@ contract Magnetar is BaseMagnetar, ERC1155Holder {
         _checkWhitelisted(_target);
 
         bytes4 funcSig = bytes4(_actionCalldata[:4]);
-        selectorValidated = funcSig == ITWTAPv2.exitPosition.selector
-            || funcSig == ITapiocaOptionBroker.exitPosition.selector
-            || funcSig == ITapiocaOptionLiquidityProvision.unlock.selector;
+        selectorValidated = funcSig == ITWTAPv2.exitPosition.selector || funcSig == ITapiocaOptionBroker.unlock.selector;
+        revert("unlock missing delegation in twtap and tob, check from address is msg.sender at magnetar");
     }
 
     /**
@@ -503,28 +497,25 @@ contract Magnetar is BaseMagnetar, ERC1155Holder {
             }
         }
 
-        /// @dev No need to check owner as anyone can unlock twTap/tOB/tOLP positions by design.
-        /// Owner of the token receives the unlocked tokens.
-        (uint256 _oTAPTokenID, address _paymentToken, uint256 _tapAmount) =
-            abi.decode(_actionCalldata[4:], (uint256, address, uint256));
+        IExerciseOptionsData memory data = abi.decode(_actionCalldata, (IExerciseOptionsData));
 
-        // compute `paymentToken` amount
-        (, uint256 _paymentTokenAmount,) =
-            ITapiocaOptionBroker(_target).getOTCDealDetails(_oTAPTokenID, _paymentToken, _tapAmount);
-        address tapToken = ITapiocaOptionBroker(_target).tapOFT();
+        address tapToken = ITapiocaOptionBroker(_target).getTapToken();
 
         // transfer `paymentToken` here
-        IERC20(_paymentToken).safeTransferFrom(msg.sender, address(this), _paymentTokenAmount);
+        IERC20(data.paymentToken).safeTransferFrom(msg.sender, address(this), data.paymentTokenAmount);
 
         uint256 tapAmountBefore = IERC20(tapToken).balanceOf(address(this));
 
         // execute
-        _paymentToken.safeApprove(address(_target), _paymentTokenAmount);
+        IERC20(data.paymentToken).safeApprove(address(_target), data.paymentTokenAmount);
         _executeCall(_target, _actionCalldata, _actionValue);
 
         uint256 tapAmountAfter = IERC20(tapToken).balanceOf(address(this));
 
-        // @dev we can also use `_eligibleTapAmount` here, but just in case
+        if (tapAmountAfter - tapAmountBefore == 0) {
+            revert("exerciseOption failed");
+        }
+
         IERC20(tapToken).safeTransfer(msg.sender, tapAmountAfter - tapAmountBefore);
     }
 

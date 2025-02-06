@@ -135,12 +135,16 @@ contract UsdoMarketReceiverModule is BaseUsdo {
             if (msg_.lendParams.removeCollateralAmount > 0) {
                 msg_.lendParams.removeCollateralAmount = _toLD(msg_.lendParams.removeCollateralAmount.toUint64());
             }
-            if (msg_.lendParams.lockData.amount > 0) {
-                msg_.lendParams.lockData.amount = _toLD(uint256(msg_.lendParams.lockData.amount).toUint64()).toUint128();
+            if (msg_.lendParams.lockData.usdoAmount > 0) {
+                msg_.lendParams.lockData.usdoAmount =
+                    _toLD(uint256(msg_.lendParams.lockData.usdoAmount).toUint64()).toUint128();
             }
-            if (msg_.lendParams.lockData.fraction > 0) {
-                msg_.lendParams.lockData.fraction = _toLD(msg_.lendParams.lockData.fraction.toUint64());
-            }
+            /**
+             * wip: check if this is needed
+             *         if (msg_.lendParams.lockData.fraction > 0) {
+             *             msg_.lendParams.lockData.fraction = _toLD(msg_.lendParams.lockData.fraction.toUint64());
+             *         }
+             */
         }
         return msg_;
     }
@@ -185,7 +189,7 @@ contract UsdoMarketReceiverModule is BaseUsdo {
 
     function _lend(MarketLendOrRepayMsg memory msg_, address srcChainSender) private {
         if (msg_.user != srcChainSender) {
-            uint256 allowanceAmont = msg_.lendParams.depositAmount + msg_.lendParams.lockData.amount;
+            uint256 allowanceAmont = msg_.lendParams.depositAmount + msg_.lendParams.lockData.usdoAmount;
             _spendAllowance(msg_.user, srcChainSender, allowanceAmont);
         }
 
@@ -198,7 +202,7 @@ contract UsdoMarketReceiverModule is BaseUsdo {
                 collateralDepositData: IDepositData({deposit: false, amount: 0})
             }),
             depositData: IDepositData({deposit: true, amount: msg_.lendParams.depositAmount}),
-            participateData: msg_.lendParams.participateData,
+            lockData: msg_.lendParams.lockData,
             externalContracts: ICommonExternalContracts({
                 magnetar: msg_.lendParams.magnetar,
                 singularity: msg_.lendParams.market,

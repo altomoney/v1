@@ -14,6 +14,7 @@ import {OFTMsgCodec} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/libs/OFTM
 // Tapioca
 import {UsdoOptionReceiverModule} from "tapioca-bar/usdo/modules/UsdoOptionReceiverModule.sol";
 import {ExerciseOptionsMsg} from "tap-utils/interfaces/oft/IUsdo.sol";
+import {IExerciseOptionsData, IOptionsLockData, IOptionsUnlockData} from "tap-utils/interfaces/periph/IMagnetar.sol";
 import {LZSendParam} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainEngineHelper.sol";
 
 // tests

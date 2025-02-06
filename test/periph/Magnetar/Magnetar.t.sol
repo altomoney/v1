@@ -61,7 +61,10 @@ import {
     ICommonExternalContracts,
     MintFromBBAndLendOnSGLData,
     IRemoveAndRepay,
-    ExitPositionAndRemoveCollateralData
+    ExitPositionAndRemoveCollateralData,
+    IExerciseOptionsData,
+    IOptionsLockData,
+    IOptionsUnlockData
 } from "tap-utils/interfaces/periph/IMagnetar.sol";
 import {MagnetarTestUtils, TestSingularityData, TestBigBangData} from "./MagnetarTestUtils.t.sol";
 import {SimpleLeverageExecutor} from "tapioca-bar/markets/leverage/SimpleLeverageExecutor.sol";

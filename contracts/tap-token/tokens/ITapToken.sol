@@ -76,17 +76,14 @@ interface ITapToken is ITapiocaOmnichainEngine {
  */
 struct LockTwTapPositionMsg {
     address user;
-    uint96 duration;
+    uint8 bucketId;
     uint256 amount;
 }
 
-/**
- * @param user The user address to unlock the tokens.
- * @param tokenId The tokenId of the TwTap position to unlock.
- * @dev DEPRECATED, do not use TWTAPv0 related operations
- */
 struct UnlockTwTapPositionMsg {
-    uint256 tokenId;
+    uint8 bucketId;
+    address participant;
+    address to;
 }
 
 /**
@@ -95,6 +92,8 @@ struct UnlockTwTapPositionMsg {
  * @dev DEPRECATED, do not use TWTAPv0 related operations
  */
 struct ClaimTwTapRewardsMsg {
-    uint256 tokenId;
+    uint256 bucketId;
+    address participant;
+    address user;
     LZSendParam[] sendParam;
 }

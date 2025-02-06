@@ -27,7 +27,12 @@ import {UsdoHelper} from "tapioca-bar/usdo/extensions/UsdoHelper.sol";
 import {Usdo} from "tapioca-bar/usdo/Usdo.sol";
 
 import {ICommonExternalContracts} from "tap-utils/interfaces/common/ICommonData.sol";
-import {MagnetarWithdrawData} from "tap-utils/interfaces/periph/IMagnetar.sol";
+import {
+    MagnetarWithdrawData,
+    IExerciseOptionsData,
+    IOptionsLockData,
+    IOptionsUnlockData
+} from "tap-utils/interfaces/periph/IMagnetar.sol";
 
 import {
     TapiocaOmnichainEngineHelper,

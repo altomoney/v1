@@ -75,9 +75,12 @@ interface ITapiocaOptionBroker is ITWLBase {
     event SetPenrose(address penrose);
     // ==========
     //    READ
-    // ==========
-    /// @notice Returns the current epoch given a timestamp
+    // ==========o
 
+    function getTapToken() external view returns (address);
+    function getUSDO() external view returns (address);
+
+    /// @notice Returns the current epoch given a timestamp
     function timestampToEpoch(uint256 timestamp) external view returns (uint256);
 
     /// @dev Keep compatibility with previous interface

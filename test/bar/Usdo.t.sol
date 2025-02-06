@@ -21,7 +21,8 @@ import {
     MintFromBBAndLendOnSGLData,
     ExitPositionAndRemoveCollateralData,
     DepositAddCollateralAndBorrowFromMarketData,
-    MagnetarWithdrawData
+    MagnetarWithdrawData,
+    IExerciseOptionsData
 } from "tap-utils/interfaces/periph/IMagnetar.sol";
 import {ITapiocaOptionBroker} from "tap-token/interfaces/ITapiocaOptionBroker.sol";
 import {

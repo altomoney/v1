@@ -21,24 +21,26 @@ struct IExerciseOptionsData {
     address from;
     address target;
     address paymentToken;
-    uint256 bucketId;
+    uint256 paymentTokenAmount;
+    uint8 bucketId;
     uint256 tapAmount;
 }
 
 struct IOptionsUnlockData {
     bool unlock;
     address target;
-    uint256 bucketId;
+    uint8 bucketId;
     address to;
     uint256 amount;
 }
 
 struct IOptionsLockData {
     bool lock;
+    uint8 bucketId;
     address target;
     address to;
+    address sglMarket;
     uint256 usdoAmount;
-    uint256 bucketId;
 }
 
 struct MagnetarWithdrawData {
@@ -97,12 +99,10 @@ struct MintFromBBAndLendOnSGLData {
     ICommonExternalContracts externalContracts;
 }
 
-struct LockAndParticipateData {
+struct LockData {
     address user;
-    address tSglToken;
     address magnetar;
     IOptionsLockData lockData;
-    uint256 value;
 }
 
 struct MagnetarCall {
@@ -157,7 +157,7 @@ interface IMagnetarCollateralModule {
 }
 
 interface IMagnetarOptionModule {
-    function lockAndParticipate(LockAndParticipateData memory data) external payable;
+    function lockAndParticipate(LockData memory data) external payable;
     function exitPositionAndRemoveCollateral(ExitPositionAndRemoveCollateralData memory data) external payable;
 }
 

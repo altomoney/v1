@@ -11,7 +11,7 @@ import {
     ExitPositionAndRemoveCollateralData,
     ICommonExternalContracts,
     IRemoveAndRepay,
-    LockAndParticipateData
+    LockData
 } from "tap-utils/interfaces/periph/IMagnetar.sol";
 import {ISingularity} from "tap-utils/interfaces/bar/ISingularity.sol";
 import {ITapiocaOptionBroker} from "tap-token/interfaces/ITapiocaOptionBroker.sol";
@@ -52,11 +52,11 @@ contract MagnetarOptionModule is MagnetarBaseModule {
      * @param data.lockData the data needed to lock on tOB
      * @param data.participateData the data needed to participate on tOLP
      */
-    function lockAndParticipate(LockAndParticipateData memory data) public payable {
+    function lock(LockData memory data) public payable {
         /**
          * @dev validate data
          */
-        _validateLockAndParticipate(data);
+        _validateLock(data);
 
         /**
          * @dev if `lockData.lock`:
@@ -64,44 +64,19 @@ contract MagnetarOptionModule is MagnetarBaseModule {
          *          - deposits `fraction` to YB for `address(this)`
          *          - performs tOLP.lock
          */
-        uint256 tOLPTokenId;
         if (data.lockData.lock) {
-            tOLPTokenId = _lock(data);
-        }
-
-        /**
-         * @dev if `participateData.participate`:
-         *          - verify tOLPTokenId
-         *          - performs tOB.participate
-         *          - transfer `oTAPTokenId` to data.user
-         */
-        if (data.participateData.participate) {
-            // todo: implement participate
-            revert Magnetar_ActionParamsMismatch();
+            _lock(data);
         }
     }
 
-    function _lock(LockAndParticipateData memory data) private returns (uint256 tOLPTokenId) {
-        IMarket _market = IMarket(address(0x0)); // TODO Check this.
-        uint256 _fraction = data.lockData.fraction;
-
-        // use requested value
-        if (_fraction == 0) revert Magnetar_ActionParamsMismatch();
-
-        // retrieve and deposit SGLAssetId registered in tOLP
-        (uint256 tOLPSglAssetId,,,) =
-            ITapiocaOptionLiquidityProvision(data.lockData.target).activeSingularities(data.tSglToken);
-
-        _fraction = _extractTokens(data.user, data.tSglToken, _fraction);
-        uint256 _shareOut = _market.convertToShares(_fraction);
-
-        tOLPTokenId = ITapiocaOptionLiquidityProvision(data.lockData.target).lock(
-            data.participateData.participate ? address(this) : data.user,
-            data.tSglToken,
-            data.lockData.lockDuration,
-            _shareOut.toUint128(),
-            msg.sender
+    function _lock(LockData memory data) private {
+        address usdo = ITapiocaOptionBroker(data.lockData.target).getUSDO();
+        _extractTokens(data.user, usdo, data.lockData.usdoAmount);
+        IERC20(usdo).approve(data.lockData.target, data.lockData.usdoAmount);
+        ITapiocaOptionBroker(data.lockData.target).lock(
+            data.lockData.to, data.lockData.bucketId, data.lockData.usdoAmount, data.lockData.sglMarket
         );
+        IERC20(usdo).approve(data.lockData.target, 0);
     }
 
     /**
@@ -123,21 +98,10 @@ contract MagnetarOptionModule is MagnetarBaseModule {
         _validateExitPositionAndRemoveCollateral(data);
 
         /**
-         * @dev if `removeAndRepayData.exitData.exit` the following operations are performed
-         *          - if ownerOfTapTokenId is user, transfers the oTAP token id to this contract
-         *          - tOB.exitPosition
-         *          - if `!removeAndRepayData.unlockData.unlock`, transfer the obtained tokenId to the user
-         */
-        uint256 tOLPId = 0;
-        if (data.removeAndRepayData.exitData.exit) {
-            tOLPId = _exit(data);
-        }
-
-        /**
          * @dev performs a tOLP.unlock operation
          */
         if (data.removeAndRepayData.unlockData.unlock) {
-            _unlock(data, tOLPId);
+            _unlock(data);
         }
 
         /**
@@ -197,19 +161,18 @@ contract MagnetarOptionModule is MagnetarBaseModule {
         }
     }
 
-    function _validateLockAndParticipate(LockAndParticipateData memory data) private view {
+    function _validateLock(LockData memory data) private view {
         // Check sender
         _checkSender(data.user);
 
         // Check provided addresses
-        _checkWhitelisted(data.tSglToken);
         _checkWhitelisted(data.magnetar);
         if (data.lockData.lock) {
             _checkWhitelisted(data.lockData.target);
-            _checkWhitelisted(data.lockData.tAsset);
-        }
-        if (data.participateData.participate) {
-            _checkWhitelisted(data.participateData.target);
+            _checkWhitelisted(data.lockData.sglMarket);
+            if (data.lockData.usdoAmount == 0) revert Magnetar_ActionParamsMismatch();
+            if (data.lockData.to == address(0)) revert Magnetar_ActionParamsMismatch();
+            if (data.lockData.to == address(this)) revert Magnetar_ActionParamsMismatch();
         }
     }
 
@@ -230,82 +193,19 @@ contract MagnetarOptionModule is MagnetarBaseModule {
     }
 
     function _checkRemoveAndRepayData(IRemoveAndRepay memory data) private view {
-        _checkWhitelisted(data.exitData.target);
         _checkWhitelisted(data.unlockData.target);
-
-        if (data.exitData.exit) {
-            if (data.exitData.oTAPTokenID == 0) revert Magnetar_ActionParamsMismatch();
-        }
-
-        if (data.assetWithdrawData.withdraw) {
-            // assure unwrap is false because asset is not a TOFT
-            if (data.assetWithdrawData.unwrap) revert Magnetar_ComposeMsgNotAllowed();
-        }
     }
 
-    function _exit(ExitPositionAndRemoveCollateralData memory data) private returns (uint256 tOLPId) {
-        /*
-        address oTapAddress = ITapiocaOptionBroker(data.removeAndRepayData.exitData.target).oTAP();
-        (, ITapiocaOption.TapOption memory oTAPPosition) =
-            ITapiocaOption(oTapAddress).attributes(data.removeAndRepayData.exitData.oTAPTokenID);
-
-        tOLPId = oTAPPosition.tOLP;
-
-        // check ownership
-        address ownerOfTapTokenId = IERC721(oTapAddress).ownerOf(data.removeAndRepayData.exitData.oTAPTokenID);
-        if (ownerOfTapTokenId != data.user && ownerOfTapTokenId != address(this)) {
-            revert Magnetar_ActionParamsMismatch();
-        }
-
-        // if not owner; get the oTAP token
-        if (ownerOfTapTokenId == data.user) {
-            bool isErr = pearl mit.transferFromERC721(
-                data.user, address(this), oTapAddress, data.removeAndRepayData.exitData.oTAPTokenID
-            );
-            if (isErr) revert Magnetar_ExtractTokenFail();
-        }
-
-        // exit position
-        _tOBExit(oTapAddress, data.removeAndRepayData.exitData.target, data.removeAndRepayData.exitData.oTAPTokenID);
-
-        // if not unlock, trasfer tOLP to the user
-        if (!data.removeAndRepayData.unlockData.unlock) {
-            address tOLPContract = ITapiocaOptionBroker(data.removeAndRepayData.exitData.target).tOLP();
-
-            //transfer tOLP to the data.user
-            IERC721(tOLPContract).safeTransferFrom(address(this), data.user, tOLPId, "0x");
-        }
-        */
-    }
-
-    function _unlock(ExitPositionAndRemoveCollateralData memory data, uint256 tOLPId) private {
-        if (tOLPId == 0 && data.removeAndRepayData.unlockData.tokenId == 0) revert Magnetar_tOLPTokenMismatch();
-        if (
-            data.removeAndRepayData.unlockData.tokenId != 0 && tOLPId != 0
-                && tOLPId != data.removeAndRepayData.unlockData.tokenId
-        ) {
-            revert Magnetar_tOLPTokenMismatch();
-        }
-
-        if (data.removeAndRepayData.unlockData.tokenId != 0) tOLPId = data.removeAndRepayData.unlockData.tokenId;
-
-        // check ownership
-        address ownerOfTOLP = IERC721(data.removeAndRepayData.unlockData.target).ownerOf(tOLPId);
-        if (ownerOfTOLP != data.user && ownerOfTOLP != address(this)) revert Magnetar_ActionParamsMismatch();
-
-        (uint128 sglAssetId, uint128 ybShares,,) =
-            ITapiocaOptionLiquidityProvision(data.removeAndRepayData.unlockData.target).lockPositions(tOLPId);
-
+    function _unlock(ExitPositionAndRemoveCollateralData memory data) private {
         // will be sent to `data.user` or `address(this)`
-        ITapiocaOptionLiquidityProvision(data.removeAndRepayData.unlockData.target).unlock(
-            tOLPId, data.externalData.singularity
+        address usdo = ITapiocaOptionBroker(data.removeAndRepayData.unlockData.target).getUSDO();
+        uint256 usdoBefore = IERC20(usdo).balanceOf(address(this));
+        ITapiocaOptionBroker(data.removeAndRepayData.unlockData.target).unlock(
+            // from, # wip support unlock delegation at tob
+            data.removeAndRepayData.unlockData.bucketId,
+            data.removeAndRepayData.unlockData.to
         );
-
-        // in case owner is `address(this)`
-        //    transfer unlocked position to the user
-        if (ownerOfTOLP == address(this)) {
-            // todo: implement transfer of tOLP to the user
-            revert Magnetar_ActionParamsMismatch();
-        }
+        uint256 usdoAfter = IERC20(usdo).balanceOf(address(this));
+        if (usdoAfter - usdoBefore < data.removeAndRepayData.unlockData.amount) revert Magnetar_ActionParamsMismatch();
     }
 }

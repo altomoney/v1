@@ -5,7 +5,7 @@ pragma solidity ^0.8.22;
 import {BaseTapiocaOmnichainEngine} from "tap-utils/tapiocaOmnichainEngine/BaseTapiocaOmnichainEngine.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {BaseTapTokenMsgType} from "./BaseTapTokenMsgType.sol";
-import {ITWTAPv0} from "tap-token/interfaces/ITWTAPv0.sol";
+import {ITWTAPv2} from "tap-token/interfaces/ITWTAPv2.sol";
 
 /*
 
@@ -23,8 +23,7 @@ abstract contract BaseTapToken is BaseTapiocaOmnichainEngine, BaseTapTokenMsgTyp
     uint16 internal constant PT_UNLOCK_TWTAP = 871;
     uint16 internal constant PT_CLAIM_REWARDS = 872;
 
-    /// @dev Can't be set as constructor params because TwTAP is deployed after TapToken. TwTAP constructor needs TapOFT as param.
-    ITWTAPv0 public twTap;
+    ITWTAPv2 public twTap;
 
     constructor(
         string memory _name,

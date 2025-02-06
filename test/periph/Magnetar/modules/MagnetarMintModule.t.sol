@@ -10,7 +10,10 @@ import {
     MagnetarWithdrawData,
     DepositRepayAndRemoveCollateralFromMarketData,
     DepositAddCollateralAndBorrowFromMarketData,
-    MintFromBBAndLendOnSGLData
+    MintFromBBAndLendOnSGLData,
+    IExerciseOptionsData,
+    IOptionsLockData,
+    IOptionsUnlockData
 } from "tap-utils/interfaces/periph/IMagnetar.sol";
 
 import {ERC20PermitStruct} from "tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
@@ -185,7 +188,6 @@ abstract contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver 
         magnetarA.burst{value: 0}(calls);
 
         _params.lockData.target = address(magnetarA);
-        _params.participateData.target = randomAddr;
         mintFromBBAndLendOnSGLData = abi.encodeWithSelector(MagnetarMintModule.mintBBAndLock.selector, _params);
 
         calls[0] = MagnetarCall({

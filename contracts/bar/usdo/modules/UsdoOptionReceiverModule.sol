@@ -21,6 +21,7 @@ import {
     IExerciseOptionsData,
     IOptionsUnlockData
 } from "tap-utils/interfaces/periph/IMagnetar.sol";
+import {ITapiocaOptionBroker} from "tap-token/interfaces/ITapiocaOptionBroker.sol";
 import {UsdoInitStruct, ExerciseOptionsMsg, LZSendParam} from "tap-utils/interfaces/oft/IUsdo.sol";
 import {ITapiocaOmnichainEngine} from "tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
 import {SafeApprove} from "tap-utils/libraries/SafeApprove.sol";
@@ -51,7 +52,11 @@ contract UsdoOptionReceiverModule is BaseUsdo {
     error UsdoOptionReceiverModule_NotAuthorized(address invalidAddress);
 
     event ExerciseOptionsReceived(
-        address indexed user, address indexed target, uint256 indexed oTapTokenId, uint256 paymentTokenAmount
+        address indexed user,
+        address indexed target,
+        uint256 indexed bucketId,
+        uint256 paymentTokenAmount,
+        address paymentTokenAddress
     );
 
     constructor(UsdoInitStruct memory _data) BaseUsdo(_data) {}
@@ -100,8 +105,9 @@ contract UsdoOptionReceiverModule is BaseUsdo {
         emit ExerciseOptionsReceived(
             msg_.optionsData.from,
             msg_.optionsData.target,
-            msg_.optionsData.oTAPTokenID,
-            msg_.optionsData.paymentTokenAmount
+            msg_.optionsData.bucketId,
+            msg_.optionsData.paymentTokenAmount,
+            msg_.optionsData.paymentToken
         );
     }
 
@@ -117,16 +123,7 @@ contract UsdoOptionReceiverModule is BaseUsdo {
      *   @notice checks that the caller is allowed by the owner of the token
      */
     function _validateExerciseOptionCaller(IExerciseOptionsData memory _options, address _srcChainSender) internal {
-        address oTap = ITapiocaOptionBroker(_options.target).oTAP();
-        address oTapOwner = IERC721(oTap).ownerOf(_options.oTAPTokenID);
-        if (oTapOwner != _srcChainSender || oTapOwner != _options.from) {
-            revert UsdoOptionReceiverModule_NotAuthorized(_options.from);
-        }
-        // TODO: Check if this is correct
-        bool isAllowed = IERC721(oTap).getApproved(_options.oTAPTokenID) == address(this)
-            || IERC721(oTap).isApprovedForAll(oTapOwner, address(this));
-
-        if (!isAllowed) revert UsdoOptionReceiverModule_NotAuthorized(oTapOwner);
+        if (_options.from != _srcChainSender) revert UsdoOptionReceiverModule_NotAuthorized(_srcChainSender);
     }
 
     function _validateExerciseOptionReceiver(ExerciseOptionsMsg memory msg_)
@@ -148,27 +145,22 @@ contract UsdoOptionReceiverModule is BaseUsdo {
     }
 
     function _exerciseAndRefund(IExerciseOptionsData memory _options) private {
-        uint256 bBefore = balanceOf(address(this));
-
+        uint256 bBefore = IERC20(_options.paymentToken).balanceOf(address(this));
+        revert("delegate exercise missing in TOB");
         ITapiocaOptionBroker(_options.target).exerciseOption(
-            _options.oTAPTokenID,
-            address(this), //payment token
+            // WIP: from, delegate exercise missing in TOB
+            _options.bucketId,
+            _options.paymentToken,
             _options.tapAmount
         );
 
-        // Clear ERC721 allowance post execution
-        {
-            address oTap = ITapiocaOptionBroker(_options.target).oTAP();
-            address oTapOwner = IERC721(oTap).ownerOf(_options.oTAPTokenID);
-        }
-
-        uint256 bAfter = balanceOf(address(this));
+        uint256 bAfter = IERC20(_options.paymentToken).balanceOf(address(this));
 
         // Refund if less was used.
         if (bBefore >= bAfter) {
             uint256 diff = bBefore - bAfter;
             if (diff < _options.paymentTokenAmount) {
-                IERC20(address(this)).safeTransfer(_options.from, _options.paymentTokenAmount - diff);
+                IERC20(_options.paymentToken).safeTransfer(_options.from, _options.paymentTokenAmount - diff);
             }
         }
     }
@@ -176,7 +168,7 @@ contract UsdoOptionReceiverModule is BaseUsdo {
     function _withdrawExercised(ExerciseOptionsMsg memory msg_) private {
         SendParam memory _send = msg_.lzSendParams.sendParam;
 
-        address tapOft = ITapiocaOptionBroker(msg_.optionsData.target).tapOFT();
+        address tapOft = ITapiocaOptionBroker(msg_.optionsData.target).getTapToken();
         uint256 tapBalance = IERC20(tapOft).balanceOf(address(this));
         if (msg_.withdrawOnOtherChain) {
             /// @dev determine the right amount to send back to source

@@ -53,7 +53,7 @@ library TapTokenCodec {
         returns (bytes memory)
     {
         return
-            abi.encodePacked(_lockTwTapPositionMsg.user, _lockTwTapPositionMsg.duration, _lockTwTapPositionMsg.amount);
+            abi.encodePacked(_lockTwTapPositionMsg.user, _lockTwTapPositionMsg.bucketId, _lockTwTapPositionMsg.amount);
     }
 
     /**
@@ -73,15 +73,15 @@ library TapTokenCodec {
         // TODO bitwise operators
         // Offsets
         uint8 userOffset_ = 20;
-        uint8 durationOffset_ = 32;
+        uint8 bucketIdOffset_ = 21;
 
         // Decoded data
         address user = BytesLib.toAddress(BytesLib.slice(_msg, 0, userOffset_), 0);
-        uint96 duration = BytesLib.toUint96(BytesLib.slice(_msg, userOffset_, 12), 0);
-        uint256 amount = BytesLib.toUint256(BytesLib.slice(_msg, durationOffset_, 32), 0);
+        uint8 bucketId = BytesLib.toUint8(BytesLib.slice(_msg, userOffset_, 1), 0);
+        uint256 amount = BytesLib.toUint256(BytesLib.slice(_msg, bucketIdOffset_, 32), 0);
 
         // Return structured data
-        lockTwTapPositionMsg_ = LockTwTapPositionMsg(user, duration, amount);
+        lockTwTapPositionMsg_ = LockTwTapPositionMsg(user, bucketId, amount);
     }
 
     /**
@@ -89,7 +89,7 @@ library TapTokenCodec {
      *
      */
     function buildUnlockTwTapPositionMsg(UnlockTwTapPositionMsg memory _msg) internal pure returns (bytes memory) {
-        return abi.encodePacked(_msg.tokenId);
+        return abi.encodePacked(_msg.bucketId);
     }
 
     /**
@@ -100,13 +100,8 @@ library TapTokenCodec {
      *          - tokenId::uint256: The tokenId of the TwTap position to unlock.
      * @return unlockTwTapPositionMsg_ The needed data.
      */
-    function decodeUnlockTwTapPositionMsg(bytes memory _msg)
-        internal
-        pure
-        returns (UnlockTwTapPositionMsg memory unlockTwTapPositionMsg_)
-    {
-        // Return structured data
-        unlockTwTapPositionMsg_ = UnlockTwTapPositionMsg(abi.decode(_msg, (uint256)));
+    function decodeUnlockTwTapPositionMsg(bytes memory _msg) internal pure returns (UnlockTwTapPositionMsg memory) {
+        return abi.decode(_msg, (UnlockTwTapPositionMsg));
     }
 
     /**

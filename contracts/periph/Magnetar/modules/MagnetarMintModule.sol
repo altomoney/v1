@@ -78,13 +78,7 @@ contract MagnetarMintModule is MagnetarBaseModule {
             _depositAddCollateralAndMintFromBigBang(data);
         }
 
-        /**
-         * @dev if `participateData.participate`:
-         *          - verify tOLPTokenId
-         *          - performs tOB.participate
-         *          - transfer `oTAPTokenId` to data.user
-         */
-        if (data.participateData.participate) {
+        if (data.lockData.lock) {
             _lock(data);
         }
     }
@@ -101,7 +95,7 @@ contract MagnetarMintModule is MagnetarBaseModule {
         _checkWhitelisted(data.externalContracts.singularity);
         _checkWhitelisted(data.externalContracts.bigBang);
         _checkWhitelisted(data.externalContracts.marketHelper);
-        _checkWhitelisted(data.participateData.target);
+        _checkWhitelisted(data.lockData.target);
     }
 
     function _depositAddCollateralAndMintFromBigBang(MintFromBBAndLendOnSGLData memory data) private {

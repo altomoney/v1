@@ -128,8 +128,7 @@ abstract contract MagnetarBaseModule is MagnetarStorage {
         share = _singularity.removeAsset(_from, _to, fraction);
     }
 
-    function _tOBExit(address oTapAddress, address tOB, uint256 id) internal {
-        IERC721(oTapAddress).approve(tOB, id);
-        ITapiocaOptionBroker(tOB).exitPosition(id);
+    function _tOBExit(address tOB, uint8 bucketId, address to) internal {
+        ITapiocaOptionBroker(tOB).unlock(bucketId, to);
     }
 }

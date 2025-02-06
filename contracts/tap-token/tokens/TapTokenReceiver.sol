@@ -56,7 +56,7 @@ contract TapTokenReceiver is BaseTapToken, TapiocaOmnichainReceiver, ReentrancyG
     {}
 
     /// @dev twTAP lock operation received.
-    event LockTwTapReceived(address indexed user, uint96 duration, uint256 amount);
+    event LockTwTapReceived(address indexed user, uint8 bucketId, uint256 amount);
     /// @dev twTAP unlock operation received.
     event UnlockTwTapReceived(uint256 tokenId, uint256 amount);
     event ClaimRewardReceived(address indexed token, address indexed to, uint256 amount);
@@ -121,16 +121,11 @@ contract TapTokenReceiver is BaseTapToken, TapiocaOmnichainReceiver, ReentrancyG
         /// @dev xChain owner needs to have approved dst srcChain `sendPacket()` msg.sender in a previous composedMsg. Or be the same address.
         _internalTransferWithAllowance(lockTwTapPositionMsg_.user, _srcChainSender, lockTwTapPositionMsg_.amount);
 
-        //_approve(address(this), address(pearl mit), lockTwTapPositionMsg_.amount);
-        //pearl mit.approve(
-        //    20, address(this), 0, address(twTap), uint200(lockTwTapPositionMsg_.amount), uint48(block.timestamp + 1)
-        //);
         _approve(address(this), address(twTap), lockTwTapPositionMsg_.amount);
-        twTap.participate(lockTwTapPositionMsg_.user, lockTwTapPositionMsg_.amount, lockTwTapPositionMsg_.duration);
+        twTap.participate(lockTwTapPositionMsg_.user, lockTwTapPositionMsg_.amount, lockTwTapPositionMsg_.bucketId);
         _approve(address(this), address(twTap), 0);
-        // _approve(address(this), address(pearl mit), 0);
 
-        emit LockTwTapReceived(lockTwTapPositionMsg_.user, lockTwTapPositionMsg_.duration, lockTwTapPositionMsg_.amount);
+        emit LockTwTapReceived(lockTwTapPositionMsg_.user, lockTwTapPositionMsg_.bucketId, lockTwTapPositionMsg_.amount);
     }
 
     /**
@@ -144,9 +139,11 @@ contract TapTokenReceiver is BaseTapToken, TapiocaOmnichainReceiver, ReentrancyG
         UnlockTwTapPositionMsg memory unlockTwTapPositionMsg_ = TapTokenCodec.decodeUnlockTwTapPositionMsg(_data);
 
         // Send TAP to the user address.
-        uint256 tapAmount_ = twTap.exitPosition(unlockTwTapPositionMsg_.tokenId);
+        uint256 tapAmount_ = twTap.exitPosition(
+            unlockTwTapPositionMsg_.participant, unlockTwTapPositionMsg_.to, unlockTwTapPositionMsg_.bucketId
+        );
 
-        emit UnlockTwTapReceived(unlockTwTapPositionMsg_.tokenId, tapAmount_);
+        emit UnlockTwTapReceived(unlockTwTapPositionMsg_.bucketId, tapAmount_);
     }
 
     /**
@@ -159,7 +156,8 @@ contract TapTokenReceiver is BaseTapToken, TapiocaOmnichainReceiver, ReentrancyG
         ClaimTwTapRewardsMsg memory claimTwTapRewardsMsg_ = TapTokenCodec.decodeClaimTwTapRewardsMsg(_data);
 
         // Claim rewards, make sure to have approved this contract on TwTap.
-        uint256[] memory claimedAmount_ = twTap.claimRewards(claimTwTapRewardsMsg_.tokenId);
+        uint256[] memory claimedAmount_ =
+            twTap.claimRewards(claimTwTapRewardsMsg_.participant, claimTwTapRewardsMsg_.bucketId);
         // address owner = twTap.ownerOf(claimTwTapRewardsMsg_.tokenId);
         // Clear the allowance, claimRewards only does an allowance check.
         // pearl mit.clearAllowance(owner, 721, address(twTap), claimTwTapRewardsMsg_.tokenId);

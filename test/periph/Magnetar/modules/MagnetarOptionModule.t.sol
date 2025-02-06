@@ -8,9 +8,12 @@ import {
     MagnetarModule,
     MagnetarCall,
     MagnetarWithdrawData,
-    LockAndParticipateData,
+    LockData,
     MintFromBBAndLendOnSGLData,
-    ExitPositionAndRemoveCollateralData
+    ExitPositionAndRemoveCollateralData,
+    IExerciseOptionsData,
+    IOptionsLockData,
+    IOptionsUnlockData
 } from "tap-utils/interfaces/periph/IMagnetar.sol";
 
 import {ERC20PermitStruct} from "tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
@@ -52,9 +55,9 @@ abstract contract MagnetarOptionModuleTest is MagnetarTestHelper, IERC721Receive
 
     function createLockAndParticipateData(address user, address singularity, address magnetar)
         private
-        returns (LockAndParticipateData memory data)
+        returns (LockData memory data)
     {
-        return LockAndParticipateData({
+        return LockData({
             user: user,
             tSglToken: singularity,
             magnetar: magnetar,
@@ -199,15 +202,11 @@ abstract contract MagnetarOptionModuleTest is MagnetarTestHelper, IERC721Receive
         MagnetarCall[] memory calls = new MagnetarCall[](1);
 
         // lock and participate
-        LockAndParticipateData memory _paramsLock =
-            createLockAndParticipateData(address(this), address(sgl), address(magnetarA));
+        LockData memory _paramsLock = createLockAndParticipateData(address(this), address(sgl), address(magnetarA));
         _paramsLock.lockData.lock = true;
         _paramsLock.lockData.target = address(tOB);
-        _paramsLock.lockData.fraction = sgl.balanceOf(address(this));
-        _paramsLock.participateData.participate = true;
-        _paramsLock.participateData.target = address(tOB);
-        bytes memory lockAndParticipateData =
-            abi.encodeWithSelector(MagnetarOptionModule.lockAndParticipate.selector, _paramsLock);
+        _paramsLock.lockData.usdoAmount = assetA.balanceOf(address(this));
+        bytes memory lockAndParticipateData = abi.encodeWithSelector(MagnetarOptionModule.lock.selector, _paramsLock);
         calls[0] = MagnetarCall({
             id: uint8(MagnetarAction.OptionModule),
             target: address(magnetarA),
@@ -473,10 +472,8 @@ abstract contract MagnetarOptionModuleTest is MagnetarTestHelper, IERC721Receive
         MagnetarCall[] memory calls = new MagnetarCall[](1);
 
         // test market
-        LockAndParticipateData memory _params =
-            createLockAndParticipateData(address(this), randomAddr, address(magnetarA));
-        bytes memory lockAndParticipateData =
-            abi.encodeWithSelector(MagnetarOptionModule.lockAndParticipate.selector, _params);
+        LockData memory _params = createLockAndParticipateData(address(this), randomAddr, address(magnetarA));
+        bytes memory lockAndParticipateData = abi.encodeWithSelector(MagnetarOptionModule.lock.selector, _params);
 
         calls[0] = MagnetarCall({
             id: uint8(MagnetarAction.OptionModule),
@@ -487,9 +484,8 @@ abstract contract MagnetarOptionModuleTest is MagnetarTestHelper, IERC721Receive
         vm.expectRevert();
         magnetarA.burst{value: 0}(calls);
 
-        _params.tSglToken = address(sgl);
         _params.magnetar = randomAddr;
-        lockAndParticipateData = abi.encodeWithSelector(MagnetarOptionModule.lockAndParticipate.selector, _params);
+        lockAndParticipateData = abi.encodeWithSelector(MagnetarOptionModule.lock.selector, _params);
         calls[0] = MagnetarCall({
             id: uint8(MagnetarAction.OptionModule),
             target: address(magnetarA),
@@ -504,11 +500,9 @@ abstract contract MagnetarOptionModuleTest is MagnetarTestHelper, IERC721Receive
         MagnetarCall[] memory calls = new MagnetarCall[](1);
 
         // test market
-        LockAndParticipateData memory _params =
-            createLockAndParticipateData(address(this), address(sgl), address(magnetarA));
+        LockData memory _params = createLockAndParticipateData(address(this), address(sgl), address(magnetarA));
         _params.lockData.lock = true;
-        bytes memory lockAndParticipateData =
-            abi.encodeWithSelector(MagnetarOptionModule.lockAndParticipate.selector, _params);
+        bytes memory lockAndParticipateData = abi.encodeWithSelector(MagnetarOptionModule.lock.selector, _params);
         calls[0] = MagnetarCall({
             id: uint8(MagnetarAction.OptionModule),
             target: address(magnetarA),
