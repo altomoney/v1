@@ -46,6 +46,16 @@ import {OracleMock} from "test/utils/mocks/OracleMock.sol";
 import {Usdo} from "tapioca-bar/usdo/Usdo.sol";
 import {Penrose} from "tapioca-bar/Penrose.sol";
 import {IBigBang} from "tap-utils/interfaces/bar/IBigBang.sol";
+import {TapToken} from "../../../contracts/tap-token/tokens/TapToken.sol";
+import {TwTAP} from "../../../contracts/tap-token/governance/TwTAP.sol";
+import {TapTokenMock} from "../../tap-token/TapTokenMock.sol";
+import {ITapToken} from "../../../contracts/tap-token/tokens/ITapToken.sol";
+import {Bucket} from "../../../contracts/tap-token/interfaces/ITWLBase.sol";
+import {TapTokenSender} from "../../../contracts/tap-token/tokens/TapTokenSender.sol";
+import {TapTokenReceiver} from "../../../contracts/tap-token/tokens/TapTokenReceiver.sol";
+import {UnitBaseTest} from "../../tap-token/unit/UnitBaseTest.t.sol";
+import {TapiocaOmnichainExtExec} from
+    "../../../contracts/utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainExtExec.sol";
 
 struct TestSingularityData {
     address penrose;
@@ -66,10 +76,21 @@ struct TestBigBangData {
 }
 
 contract MagnetarTestUtils is TestHelper {
+    uint256 internal constant EPOCH_DURATION = 7 days;
+    address internal constant TAP_CONTRIBUTOR = address(bytes20(keccak256("TAP_CONTRIBUTOR")));
+    address internal constant TAP_EARLY_SUPPORTERS = address(bytes20(keccak256("TAP_EARLY_SUPPORTERS")));
+    address internal constant TAP_SUPPORTERS = address(bytes20(keccak256("TAP_SUPPORTERS")));
+    address internal constant TAP_LBP = address(bytes20(keccak256("TAP_LBP")));
+    address internal constant TAP_DAO = address(bytes20(keccak256("TAP_DAO")));
+    address internal constant TAP_AIRDROP = address(bytes20(keccak256("TAP_AIRDROP")));
+    uint32 public EID_A = 1;
+    address public ENDPOINT_A;
+
     TapiocaInput internal input;
     TapiocaReport internal report;
     SingularityLauncher internal singularityLauncher;
     BigBangLauncher internal bigBangLauncher;
+    TwTAP internal twTap;
 
     uint32 aEid = 1;
     uint32 bEid = 2;
@@ -77,21 +98,98 @@ contract MagnetarTestUtils is TestHelper {
     address __endpoint;
     uint256 __hostEid = aEid;
     address __owner = address(this);
+    address __admin = vm.addr(12345678901234567890);
 
     function setUp() public virtual override {
         setUpEndpoints(3, LibraryType.UltraLightNode);
+        ENDPOINT_A = address(endpoints[EID_A]);
 
         input.owner = __owner;
         input.lzChainId = uint16(aEid);
 
         input.wrappedNativeToken = address(new ERC20Mock());
-        input.tapToken = address(new ERC20Mock());
+        input.tapToken = _createTapToken(
+            UnitBaseTest.TapOftInput(
+                EPOCH_DURATION,
+                ENDPOINT_A,
+                TAP_CONTRIBUTOR,
+                TAP_EARLY_SUPPORTERS,
+                TAP_SUPPORTERS,
+                TAP_LBP,
+                TAP_DAO,
+                TAP_AIRDROP,
+                EID_A,
+                __admin
+            )
+        );
         input.zeroXSwapper = address(1);
         input.lzEndpoint = address(endpoints[aEid]);
         __endpoint = address(endpoints[aEid]);
 
         TapiocaReport memory emptyReport;
         report = TapiocaRelease.deployTapiocaV1(input, emptyReport);
+
+        vm.startPrank(__admin);
+        TapTokenMock(payable(input.tapToken)).setCluster(ICluster(report.cluster));
+        vm.stopPrank();
+
+        twTap = _createTwTap(payable(input.tapToken), __admin);
+        vm.prank(__admin);
+        TapToken(payable(input.tapToken)).setTwTAP(address(twTap));
+
+        TapiocaMulticall.Call[] memory clusterUpdateTwTapCalls = new TapiocaMulticall.Call[](1);
+        clusterUpdateTwTapCalls[0] = TapiocaMulticall.Call({
+            target: address(report.cluster),
+            allowFailure: false,
+            callData: abi.encodeWithSelector(ICluster.updateContract.selector, aEid, address(twTap), true)
+        });
+
+        vm.startPrank(TapiocaMulticall(report.tapiocaMulticall).owner());
+        TapiocaMulticall multicall = TapiocaMulticall(report.tapiocaMulticall);
+        multicall.multicall(clusterUpdateTwTapCalls);
+        vm.stopPrank();
+    }
+
+    function _createTapToken(UnitBaseTest.TapOftInput memory _input) internal returns (address) {
+        TapTokenMock tapToken = new TapTokenMock(
+            ITapToken.TapTokenConstructorData(
+                _input._epochDuration,
+                _input._endpoint,
+                _input._contributor,
+                _input._earlySupporters,
+                _input._supporters,
+                _input._lbp,
+                _input._dao,
+                _input._airdrop,
+                _input._governanceEid,
+                _input._owner,
+                address(new TapTokenSender("", "", _input._endpoint, _input._owner, address(0))),
+                address(new TapTokenReceiver("", "", _input._endpoint, _input._owner, address(0))),
+                address(new TapiocaOmnichainExtExec()),
+                ICluster(address(0x0))
+            )
+        );
+        vm.label(address(tapToken), "tapToken");
+        return address(tapToken);
+    }
+
+    function _createTwTap(address payable _tapOft, address _owner) internal returns (TwTAP) {
+        Bucket[] memory buckets = new Bucket[](1);
+        buckets[0] = Bucket({
+            enabled: true,
+            lockEpochDuration: 2,
+            epochGrowthRate: 1,
+            epochDecayRate: 1,
+            epochCeiling: 100,
+            epochFloor: 1,
+            rewardsMultiplier: 50_00,
+            currentEpochInflows: 0,
+            lastEpochInflows: 0,
+            growthGoal: 1000
+        });
+        TwTAP _twTap = new TwTAP(_tapOft, _owner, 7 days, buckets);
+        vm.label(address(_twTap), "twTap");
+        return _twTap;
     }
 
     function launchSingularity(TapiocaReport memory reportOut, address asset, address collateral, address oracle)

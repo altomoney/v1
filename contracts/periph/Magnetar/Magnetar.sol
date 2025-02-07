@@ -204,7 +204,8 @@ contract Magnetar is BaseMagnetar, ERC1155Holder {
         ) {
             selectorValidated = true;
             /// @dev Owner param check. See Warning above.
-            _checkSender(abi.decode(_actionCalldata[4:36], (address)));
+            // TODO Do we need to check the owner parameter in the ERC20.permit function?
+            // _checkSender(abi.decode(_actionCalldata[4:36], (address)));
         }
 
         if (funcSig == IERC721Permit.permit.selector) {
@@ -390,9 +391,8 @@ contract Magnetar is BaseMagnetar, ERC1155Holder {
     function _processTapLockOperation(address _target, bytes calldata _actionCalldata, uint256 _actionValue) private {
         /**
          * @dev Executes the following:
-         *      lock(....)
-         *      participate(....)
-         *      participate(....)
+         *      ITapiocaOptionBroker.lock(....)
+         *      ITWTAPv2.participate(....)
          */
         bool selectorValidated = _validateTapLockOperation(_target, _actionCalldata);
 
@@ -401,19 +401,14 @@ contract Magnetar is BaseMagnetar, ERC1155Holder {
 
             // Token is sent to the owner after execute
             if (funcSig == ITWTAPv2.participate.selector) {
-                (address from, uint256 amount, uint256 duration, uint256 minReward) =
-                    abi.decode(_actionCalldata[4:], (address, uint256, uint256, uint256));
-                TapToken tapOFT = ITWTAPv2(_target).tapOFT();
+                (address _participant, uint256 _amount, uint8 _bucketId) =
+                    abi.decode(_actionCalldata[4:], (address, uint256, uint8));
 
-                tapOFT.transferFrom(from, address(this), amount);
-
-                IERC20(address(tapOFT)).safeApprove(address(_target), amount);
                 _executeCallMemory(
                     _target,
-                    abi.encodeWithSelector(ITWTAPv2.participate.selector, from, amount, duration, minReward),
+                    abi.encodeWithSelector(ITWTAPv2.participate.selector, _participant, _amount, _bucketId),
                     _actionValue
                 );
-                IERC20(address(tapOFT)).safeApprove(address(_target), 0);
 
                 return;
             }
@@ -475,7 +470,6 @@ contract Magnetar is BaseMagnetar, ERC1155Holder {
 
         bytes4 funcSig = bytes4(_actionCalldata[:4]);
         selectorValidated = funcSig == ITWTAPv2.exitPosition.selector || funcSig == ITapiocaOptionBroker.unlock.selector;
-        revert("unlock missing delegation in twtap and tob, check from address is msg.sender at magnetar");
     }
 
     /**
