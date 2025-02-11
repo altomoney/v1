@@ -110,6 +110,16 @@ contract Magnetar is BaseMagnetar, ERC1155Holder {
                 continue;
             }
 
+            if (_action.id == uint8(MagnetarAction.TapBatchClaimRewards)) {
+                _processTapBatchClaimRewardsOperation(_action.target, _action.call, _action.value);
+                continue;
+            }
+
+            if (_action.id == uint8(MagnetarAction.TapExtendLock)) {
+                _processTapExtendLockOperation(_action.target, _action.call, _action.value);
+                continue;
+            }
+
             /// @dev Market singular operations
             if (_action.id == uint8(MagnetarAction.Market)) {
                 _processMarketOperation(_action.target, _action.call, _action.value);
@@ -160,6 +170,62 @@ contract Magnetar is BaseMagnetar, ERC1155Holder {
         if (msg.value != valAccumulator) revert Magnetar_ValueMismatch(msg.value, valAccumulator);
     }
 
+    function _processTapExtendLockOperation(address _target, bytes calldata _actionCalldata, uint256 _actionValue) private {
+        /**
+         * @dev Executes the following:
+         *      twTap.reuseParticipation(....)
+         */
+        bool selectorValidated = _validateTapExtendLockOperation(_target, _actionCalldata, _actionValue);
+        if (selectorValidated) {
+            _executeCall(_target, _actionCalldata, _actionValue);
+            return;
+        }
+        revert Magnetar_ActionNotValid(uint8(MagnetarAction.TapExtendLock), _actionCalldata);
+    }
+
+    function _validateTapExtendLockOperation(address _target, bytes calldata _actionCalldata, uint256 _actionValue)
+        private
+        view
+        returns (bool selectorValidated)
+    {
+        _checkWhitelisted(_target);
+
+        bytes4 funcSig = bytes4(_actionCalldata[:4]);
+        if (funcSig == ITWTAPv2.reuseParticipation.selector) {
+            selectorValidated = true;
+        }
+    }
+
+    function _processTapBatchClaimRewardsOperation(address _target, bytes calldata _actionCalldata, uint256 _actionValue) private {
+        /**
+         * @dev Executes the following:
+         *      twTap.batchClaimRewards(....)
+         */
+        bool selectorValidated = _validateTapBatchClaimRewardsOperation(_target, _actionCalldata, _actionValue);
+        if (selectorValidated) {
+            _executeCall(_target, _actionCalldata, _actionValue);
+            return;
+        }
+        revert Magnetar_ActionNotValid(uint8(MagnetarAction.TapBatchClaimRewards), _actionCalldata);
+    }
+
+    function _validateTapBatchClaimRewardsOperation(address _target, bytes calldata _actionCalldata, uint256 _actionValue)
+        private
+        view
+        returns (bool selectorValidated)
+    {
+        _checkWhitelisted(_target);
+
+        bytes4 funcSig = bytes4(_actionCalldata[:4]);
+        if (funcSig == ITWTAPv2.batchClaimRewards.selector) {
+            /// @dev Owner param check. See Warning above.
+            _checkSender(abi.decode(_actionCalldata[4:36], (address)));
+            selectorValidated = true;
+        }
+
+        return selectorValidated;
+    }
+
     /// =====================
     /// Private
     /// =====================
@@ -204,8 +270,7 @@ contract Magnetar is BaseMagnetar, ERC1155Holder {
         ) {
             selectorValidated = true;
             /// @dev Owner param check. See Warning above.
-            // TODO Do we need to check the owner parameter in the ERC20.permit function?
-            // _checkSender(abi.decode(_actionCalldata[4:36], (address)));
+            _checkSender(abi.decode(_actionCalldata[4:36], (address)));
         }
 
         if (funcSig == IERC721Permit.permit.selector) {
@@ -218,6 +283,7 @@ contract Magnetar is BaseMagnetar, ERC1155Holder {
             selectorValidated = IERC721(_target).ownerOf(tokenId) == msg.sender;
         }
     }
+
     /**
      * @dev Process a TOFT operation, will only execute if the selector is allowed.
      * @dev !!! WARNING !!! Make sure to check the Owner param and check that function definition didn't change.

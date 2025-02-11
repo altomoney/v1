@@ -184,7 +184,7 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, ReentrancyGuard, Pausable {
     /// @param _bucketId The new lock bucket id to migrate the position from the expired participation in a new participation
     function reuseParticipation(address _participant, uint8 _bucketId) external whenNotPaused nonReentrant {
         Participation memory position = participations[_participant][_bucketId];
-        if (_participant != msg.sender || position.delegatee != msg.sender) revert NotAuthorized();
+        if (_participant != msg.sender && position.delegatee != msg.sender) revert NotAuthorized();
         if (position.tapReleased) revert NotValid();
         if (position.tapAmount == 0) revert NotValid();
 
@@ -253,7 +253,7 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, ReentrancyGuard, Pausable {
         returns (uint256 releasedAmount)
     {
         Participation memory position = participations[_participant][_bucketId];
-        if (_participant != msg.sender || position.delegatee != msg.sender) revert NotAuthorized();
+        if (_participant != msg.sender && position.delegatee != msg.sender) revert NotAuthorized();
 
         // If in rescue mode, allow the release of the TAP even if the lock has not expired.
         if (!rescueMode) {
@@ -278,34 +278,7 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, ReentrancyGuard, Pausable {
     /// @notice Reverts if called in week 0. Let it.
     /// @param _limit Maximum number of weeks to process in one call
     function advanceWeek(uint256 _limit) public nonReentrant {
-        if (_limit == 0) revert NotValid();
-        if (lastProcessedWeek == currentEpoch()) revert NotValid();
-
-        uint256 week = lastProcessedWeek;
-        uint256 goal = currentEpoch();
-
-        if (goal - week > _limit) {
-            goal = week + _limit;
-        }
-        uint256 pendingEpochs = goal - week;
-
-        uint256 len = rewardTokens.length;
-        while (week < goal) {
-            WeekTotals storage prev = weekTotals[week];
-            WeekTotals storage next = weekTotals[++week];
-
-            next.netActiveVotes += prev.netActiveVotes;
-            for (uint256 i; i < len; i++) {
-                next.totalDistPerVote[i] += prev.totalDistPerVote[i];
-            }
-        }
-
-        // Sync TWL Buckets
-        _syncTWLBuckets(_limit);
-
-        lastProcessedWeek = goal;
-
-        emit AdvanceEpoch(goal, lastProcessedWeek);
+        _advanceWeek(_limit);
     }
 
     /// @notice distributes a reward among all tokens, weighted by voting power
@@ -326,6 +299,9 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, ReentrancyGuard, Pausable {
         // no way to give out rewards THIS week.
         // Cast is safe: `netActiveVotes` is at most zero by construction of
         // weekly totals and the requirement that they are up to date.
+        if (totals.netActiveVotes == 0) {
+            return;
+        }
         totals.totalDistPerVote[_rewardTokenId] += (_amount * DIST_PRECISION) / uint256(totals.netActiveVotes);
 
         rewardToken.safeTransferFrom(msg.sender, address(this), _amount);
@@ -365,8 +341,10 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, ReentrancyGuard, Pausable {
     /**
      * @notice Add a reward token to the list of reward tokens.
      * @param _token The address of the reward token.
+     * TODO Cannot remove a reward token?
      */
     function addRewardToken(IERC20 _token) external onlyOwner returns (uint256) {
+        if (address(_token) == address(0)) revert NotValid();
         if (rewardTokenIndex[_token] != 0) revert Registered();
         if (rewardTokens.length + 1 > maxRewardTokens) {
             revert TokenLimitReached();
@@ -498,7 +476,7 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, ReentrancyGuard, Pausable {
         if (_amount > type(uint88).max) {
             revert SafeCastOverflowedUintDowncast(88, _amount);
         }
-        if (lastProcessedWeek != currentEpoch()) advanceWeek(currentEpoch() - lastProcessedWeek);
+        if (lastProcessedWeek != currentEpoch()) _advanceWeek(currentEpoch() - lastProcessedWeek);
 
         if (_transferFrom) {
             IERC20(address(tapOFT)).safeTransferFrom(_participant, address(this), _amount);
@@ -532,5 +510,36 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, ReentrancyGuard, Pausable {
         weekTotals[w1 + 1].netActiveVotes -= int256(uint256(position.tapAmount) * bucket.rewardsMultiplier);
 
         emit Participate(_participant, _bucketId, _amount, bucket.rewardsMultiplier, expiry, _bucketId);
+    }
+
+    function _advanceWeek(uint256 _limit) internal {
+        if (_limit == 0) revert NotValid();
+        if (lastProcessedWeek == currentEpoch()) revert NotValid();
+
+        uint256 week = lastProcessedWeek;
+        uint256 goal = currentEpoch();
+
+        if (goal - week > _limit) {
+            goal = week + _limit;
+        }
+        uint256 pendingEpochs = goal - week;
+
+        uint256 len = rewardTokens.length;
+        while (week < goal) {
+            WeekTotals storage prev = weekTotals[week];
+            WeekTotals storage next = weekTotals[++week];
+
+            next.netActiveVotes += prev.netActiveVotes;
+            for (uint256 i; i < len; i++) {
+                next.totalDistPerVote[i] += prev.totalDistPerVote[i];
+            }
+        }
+
+        // Sync TWL Buckets
+        _syncTWLBuckets(_limit);
+
+        lastProcessedWeek = goal;
+
+        emit AdvanceEpoch(goal, lastProcessedWeek);
     }
 }
