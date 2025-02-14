@@ -141,6 +141,12 @@ contract MagnetarTest is MagnetarTestUtils {
         _;
     }
 
+    modifier withValidAmount(uint256 _amount) {
+        vm.assume(_amount > 0);
+        vm.assume(_amount < type(uint64).max);
+        _;
+    }
+
     function setUp() public override {
         super.setUp();
         vm.deal(userA, 1000 ether);
@@ -982,11 +988,12 @@ contract MagnetarTest is MagnetarTestUtils {
         (,,,,,, uint24 bucketLockEpochDuration,,,) = twTap.buckets(_bucketId);
 
         vm.startPrank(_participant);
+        twTap.setDelegatee(_bucketId, address(magnetar));
         uint56 expiry = uint56(block.timestamp + (bucketLockEpochDuration * EPOCH_DURATION));
         magnetar.burst(calls);
         vm.stopPrank();
 
-        _assertTwTapParticipation(twTap, _participant, _bucketId, _amount, expiry, 0, address(0x0));
+        _assertTwTapParticipation(twTap, _participant, _bucketId, _amount, expiry, 0, address(magnetar));
     }
 
     function test_burst_tapUnlock_valid(uint160 _participantPk, uint256 _amount) external withValidAmount(_amount) {
@@ -1049,11 +1056,12 @@ contract MagnetarTest is MagnetarTestUtils {
         (,,,,,, uint24 bucketLockEpochDuration,,,) = twTap.buckets(_bucketId);
 
         vm.startPrank(_participant);
+        twTap.setDelegatee(_bucketId, address(magnetar));
         uint56 expiry = uint56(block.timestamp + EPOCH_DURATION);
         magnetar.burst(calls);
         vm.stopPrank();
 
-        _assertTwTapParticipation(twTap, _participant, _bucketId, _amount, expiry, _skipEpochs, address(0x0));
+        _assertTwTapParticipation(twTap, _participant, _bucketId, _amount, expiry, _skipEpochs, address(magnetar));
     }
 
     function test_burst_tapBatchClaimRewards_valid(uint160 _participantPk, uint256 _amount, uint256 _rewardAmount)
@@ -1087,7 +1095,7 @@ contract MagnetarTest is MagnetarTestUtils {
         IERC20[] memory rewardTokens = twTap.getRewardTokens();
         assertGe(rewardTokens.length, 1, "No reward tokens");
         for (uint256 i = 1; i < rewardTokens.length; i++) {
-            // assertGt(rewardTokens[i].balanceOf(_participant), 0, "Invalid reward token balance");
+            // TODO assertGt(rewardTokens[i].balanceOf(_participant), 0, "Invalid reward token balance");
         }
     }
 
@@ -1193,8 +1201,10 @@ contract MagnetarTest is MagnetarTestUtils {
         (,,,,,, uint24 bucketLockEpochDuration,,,) = twTap.buckets(_bucketId);
 
         vm.startPrank(_participant);
+        twTap.setDelegatee(_bucketId, address(magnetar));
         uint56 expiry = uint56(block.timestamp + (bucketLockEpochDuration * EPOCH_DURATION));
         magnetar.burst(calls);
+        twTap.setDelegatee(_bucketId, address(0x0));
         vm.stopPrank();
         _assertTwTapParticipation(twTap, _participant, _bucketId, _amount, expiry, 0, address(0x0));
     }
@@ -1209,12 +1219,6 @@ contract MagnetarTest is MagnetarTestUtils {
         vm.assume(_address != address(__owner));
         vm.label(_address, _label);
         return _address;
-    }
-
-    modifier withValidAmount(uint256 _amount) {
-        vm.assume(_amount > 0);
-        vm.assume(_amount < type(uint64).max);
-        _;
     }
 
     function _withTapTokenBalance(address _participant, uint256 _amount) internal {
