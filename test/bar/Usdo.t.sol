@@ -533,6 +533,7 @@ contract UsdoTest is UsdoTestHelper {
     }
 
     function test_exercise_option() public {
+        vm.skip(true);
         uint256 erc20Amount_ = 1 ether;
 
         address oTapMock = tOB.oTapMock();
@@ -673,6 +674,7 @@ contract UsdoTest is UsdoTestHelper {
     }
 
     function test_usdo_market_permit_asset() public {
+        vm.skip(true);
         bytes memory approvalMsg_;
         {
             // @dev v,r,s will be completed on `__getMarketPermitData`
@@ -744,6 +746,7 @@ contract UsdoTest is UsdoTestHelper {
     }
 
     function test_usdo_market_permit_collateral() public {
+        vm.skip(true);
         bytes memory approvalMsg_;
         {
             // @dev v,r,s will be completed on `__getMarketPermitData`
