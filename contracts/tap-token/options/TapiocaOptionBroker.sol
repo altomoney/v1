@@ -174,9 +174,10 @@ contract TapiocaOptionBroker is ITapiocaOptionBroker, Pausable, Ownable, FullMat
     /// @param market The singularity market to lend USDO to
     function lock(address to, uint8 bucketId, uint256 usdoAmount, address market) external whenNotPaused nonReentrant {
         if (lastEpoch != currentEpoch()) advanceWeek();
-        if (usdoAmount == 0) revert SharesNotValid();
+        if (usdoAmount == 0) revert AmountNotValid();
         if (_lastEmergencySweep != 0) revert EmergencySweepActivated();
         if (!_activeMarkets[market]) revert MarketNotActive();
+        if (to != msg.sender) revert NotAuthorized();
 
         (bool canLock,,) = _canLockWithDebt(to, usdoAmount);
         if (!canLock) {
@@ -192,7 +193,7 @@ contract TapiocaOptionBroker is ITapiocaOptionBroker, Pausable, Ownable, FullMat
 
         if (position.expiry > 0 && block.timestamp < position.expiry) {
             // Clear the expected votes at the past expected expiration date
-            _netDepositsPerEpoch[_timestampToEpoch(position.expiry) + 1] -= int256(position.totalUsdo);
+            _netDepositsPerEpoch[_timestampToEpoch(position.expiry) + 1] += int256(position.totalUsdo);
         }
 
         if (block.timestamp > position.expiry) {
@@ -215,7 +216,10 @@ contract TapiocaOptionBroker is ITapiocaOptionBroker, Pausable, Ownable, FullMat
 
         IERC20(USDO).safeTransferFrom(msg.sender, address(this), usdoAmount);
         USDO.safeApprove(market, usdoAmount);
-        _marketShares[to][market] += ISingularity(market).addAsset(address(this), address(this), usdoAmount);
+
+        uint256 shares = ISingularity(market).addAsset(address(this), address(this), usdoAmount);
+        if (shares == 0) revert SharesNotValid();
+        _marketShares[to][market] += shares;
         USDO.safeApprove(market, 0);
 
         emit Participate(to, bucketId, currentEpoch(), usdoAmount);
@@ -277,6 +281,9 @@ contract TapiocaOptionBroker is ITapiocaOptionBroker, Pausable, Ownable, FullMat
             _penaltyFeesAccrued += usdoPenalty;
             IERC20(USDO).safeTransfer(from, marketUsdoAmount - usdoPenalty);
         }
+
+        _netDepositsPerEpoch[currentEpoch() + 1] -= int256(totalUsdo);
+        _netDepositsPerEpoch[_timestampToEpoch(position.expiry) + 1] += int256(totalUsdo);
         delete position.markets;
         _totalLockedUsdo[from] -= totalUsdo;
         emit ExitPosition(from, from, bucketId, currentEpoch(), totalUsdo);
@@ -331,7 +338,7 @@ contract TapiocaOptionBroker is ITapiocaOptionBroker, Pausable, Ownable, FullMat
             IBigBang bigBang = IBigBang(markets[i]);
             Rebase memory totalBorrow = bigBang._totalBorrow();
             uint256 userBorrowPart = bigBang._userBorrowPart(user);
-            totalUserUsdoDebt += RebaseLibrary.toBase(totalBorrow, userBorrowPart, false);
+            totalUserUsdoDebt += RebaseLibrary.toElastic(totalBorrow, userBorrowPart, false);
         }
     }
 
@@ -405,6 +412,7 @@ contract TapiocaOptionBroker is ITapiocaOptionBroker, Pausable, Ownable, FullMat
         if (lastEpoch == currentEpoch()) revert NotValid();
         uint256 epoch = currentEpoch();
 
+        uint256 previousEpoch = lastEpoch;
         _syncTWLBuckets(epoch - lastEpoch);
 
         // Get epoch TAP valuation
@@ -417,7 +425,11 @@ contract TapiocaOptionBroker is ITapiocaOptionBroker, Pausable, Ownable, FullMat
         _tapPerEpoch[epoch] += epochTAP;
 
         // Pass previous epoch net USDO amount to the next epoch
-        _netDepositsPerEpoch[epoch] += _netDepositsPerEpoch[epoch - 1];
+        while (previousEpoch < epoch) {
+            uint40 nextEpoch = uint40(previousEpoch) + 1;
+            _netDepositsPerEpoch[nextEpoch] += _netDepositsPerEpoch[previousEpoch];
+            ++previousEpoch;
+        }
 
         lastEpoch = epoch;
         emit NewEpoch(lastEpoch, epochTAP, _epochTAPValuation);
@@ -520,9 +532,9 @@ contract TapiocaOptionBroker is ITapiocaOptionBroker, Pausable, Ownable, FullMat
     /**
      * @notice Set the emergency sweep cooldown
      */
-    function setEmergencySweepCooldown(uint256 _emergencySweepCooldown) external onlyOwner {
-        _emergencySweepCooldown = _emergencySweepCooldown;
-        emit SetEmergencySweepCooldown(_emergencySweepCooldown);
+    function setEmergencySweepCooldown(uint256 emergencySweepCooldown) external onlyOwner {
+        _emergencySweepCooldown = emergencySweepCooldown;
+        emit SetEmergencySweepCooldown(emergencySweepCooldown);
     }
 
     function enableTapTokenRewards() external onlyOwner {
@@ -618,7 +630,7 @@ contract TapiocaOptionBroker is ITapiocaOptionBroker, Pausable, Ownable, FullMat
         discountedPaymentAmount =
             _getDiscountedPaymentAmount(otcAmountInUSD, paymentTokenValuation, discount, ERC20(paymentToken).decimals());
 
-        IERC20(paymentToken).transferFrom(msg.sender, address(this), discountedPaymentAmount);
+        IERC20(paymentToken).safeTransferFrom(msg.sender, address(this), discountedPaymentAmount);
 
         TAP_TOKEN.extractTAP(msg.sender, tapAmount);
 
