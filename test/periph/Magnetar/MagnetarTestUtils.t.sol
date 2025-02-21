@@ -56,6 +56,7 @@ import {TapTokenReceiver} from "../../../contracts/tap-token/tokens/TapTokenRece
 import {UnitBaseTest} from "../../tap-token/unit/UnitBaseTest.t.sol";
 import {TapiocaOmnichainExtExec} from
     "../../../contracts/utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainExtExec.sol";
+import {IMarket} from "../../../contracts/utils/interfaces/bar/IMarket.sol";
 
 struct TestSingularityData {
     address penrose;
@@ -75,7 +76,7 @@ struct TestBigBangData {
     uint256 debtRateMax;
 }
 
-contract MagnetarTestUtils is TestHelper {
+abstract contract MagnetarTestUtils is TestHelper {
     uint256 internal constant EPOCH_DURATION = 7 days;
     address internal constant TAP_CONTRIBUTOR = address(bytes20(keccak256("TAP_CONTRIBUTOR")));
     address internal constant TAP_EARLY_SUPPORTERS = address(bytes20(keccak256("TAP_EARLY_SUPPORTERS")));
@@ -385,5 +386,11 @@ contract MagnetarTestUtils is TestHelper {
         data = Singularity._InitMemoryData(
             IPenrose(_sgl.penrose), ITapiocaOracle(address(_sgl.oracle)), 0, 75000, 80000, _sgl.leverageExecutor
         );
+    }
+
+    function _assertSingularityLiquidityBalance(address payable _market, address _user, uint256 _amount) internal {
+        IERC20 _asset = IERC20(IMarket(_market)._asset());
+        assertEq(Singularity(_market).liquidityBalance(_user), _amount, "Invalid user liquidity balance");
+        assertEq(_asset.balanceOf(address(_market)), _amount, "Invalid market asset balance");
     }
 }

@@ -76,7 +76,7 @@ abstract contract MagnetarBaseModule is MagnetarStorage {
         _market.accrue();
         uint256 repayPart = helper.getBorrowPartForAmount(address(_market), _amount, false); // RoundUp happen in market repay
         (Module[] memory modules, bytes[] memory calls) =
-            IMarketHelper(_marketHelper).repay(_from, _to, false, repayPart);
+            IMarketHelper(_marketHelper).repay(_from, _to, repayPart);
 
         (bool[] memory successes, bytes[] memory results) = _market.execute(modules, calls, true);
         if (!successes[0]) revert Magnetar_MarketCallFailed(calls[0]);
@@ -101,7 +101,7 @@ abstract contract MagnetarBaseModule is MagnetarStorage {
         address _to
     ) internal {
         (Module[] memory modules, bytes[] memory calls) =
-            IMarketHelper(_marketHelper).addCollateral(_from, _to, false, 0, _collateralShare);
+            IMarketHelper(_marketHelper).addCollateral(_from, _to, 0, _collateralShare);
         (bool[] memory successes,) = _market.execute(modules, calls, true);
         if (!successes[0]) revert Magnetar_MarketCallFailed(calls[0]);
     }
