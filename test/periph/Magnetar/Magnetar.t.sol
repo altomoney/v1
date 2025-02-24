@@ -13,8 +13,9 @@ import {
     OFTReceipt
 } from "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/interfaces/IOFT.sol";
 import {OFTMsgCodec} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/libs/OFTMsgCodec.sol";
-
+import {MarketERC4626} from "tapioca-bar/markets/MarketERC4626.sol";
 // External
+import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
 import {TapiocaOmnichainEngineHelper} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainEngineHelper.sol";
@@ -103,8 +104,9 @@ import {TapOftMock} from "../mocks/TapOftMock.sol";
 import {Weth9Mock} from "../mocks/Weth9Mock.sol";
 import {ISingularity} from "tap-utils/interfaces/bar/ISingularity.sol";
 import {IBigBang} from "tap-utils/interfaces/bar/IBigBang.sol";
+import {MagnetarCallFactoryUtil} from "./utils/MagnetarCallFactoryUtil.sol";
 
-contract MagnetarTest is MagnetarTestUtils {
+contract MagnetarTest is MagnetarTestUtils, MagnetarCallFactoryUtil {
     Cluster cluster;
     Magnetar magnetar;
     MagnetarHelper magnetarHelper;
@@ -147,7 +149,13 @@ contract MagnetarTest is MagnetarTestUtils {
         _;
     }
 
-    function setUp() public override {
+    modifier withValidAmount128(uint256 _amount) {
+        vm.assume(_amount > 0);
+        vm.assume(_amount < type(uint128).max);
+        _;
+    }
+
+    function setUp() public virtual override {
         super.setUp();
         vm.deal(userA, 1000 ether);
         vm.deal(userB, 1000 ether);
@@ -219,6 +227,8 @@ contract MagnetarTest is MagnetarTestUtils {
     }
 
     function test_receive_erc1155() public {
+        // TODO Check we do not user ERC1155 anymore
+        vm.skip(true);
         ERC1155Mock erc1155 = new ERC1155Mock();
         erc1155.mint(address(magnetar), 1, 1);
         assertEq(erc1155.balanceOf(address(magnetar), 1), 1);
@@ -982,8 +992,9 @@ contract MagnetarTest is MagnetarTestUtils {
         uint8 _bucketId = 0;
 
         MagnetarCall[] memory calls = new MagnetarCall[](2);
-        calls[0] = _getTapTokenPermitMagnetarCall(_participantPk, address(twTap), _amount, 1 days);
-        calls[1] = _getTwTapParticipateMagnetarCall(_participant, _amount, _bucketId);
+        calls[0] =
+            _getTapTokenPermitMagnetarCall(payable(address(tapToken)), _participantPk, address(twTap), _amount, 1 days);
+        calls[1] = _getTwTapParticipateMagnetarCall(payable(address(twTap)), _participant, _amount, _bucketId);
 
         (,,,,,, uint24 bucketLockEpochDuration,,,) = twTap.buckets(_bucketId);
 
@@ -1007,8 +1018,9 @@ contract MagnetarTest is MagnetarTestUtils {
         vm.warp(block.timestamp + (bucketLockEpochDuration * EPOCH_DURATION));
 
         MagnetarCall[] memory calls = new MagnetarCall[](2);
-        calls[0] = _getTapTokenPermitMagnetarCall(_participantPk, address(twTap), _amount, 1 days);
-        calls[1] = _getTwTapExitPositionMagnetarCall(_participant, _bucketId);
+        calls[0] =
+            _getTapTokenPermitMagnetarCall(payable(address(tapToken)), _participantPk, address(twTap), _amount, 1 days);
+        calls[1] = _getTwTapExitPositionMagnetarCall(payable(address(twTap)), _participant, _bucketId);
 
         vm.startPrank(_participant);
         twTap.setDelegatee(_bucketId, address(magnetar));
@@ -1016,7 +1028,10 @@ contract MagnetarTest is MagnetarTestUtils {
         vm.stopPrank();
     }
 
-    function test_burst_tapReuseParticipation_valid(uint160 _participantPk, uint256 _amount) external withValidAmount(_amount) {
+    function test_burst_tapReuseParticipation_valid(uint160 _participantPk, uint256 _amount)
+        external
+        withValidAmount(_amount)
+    {
         address _participant = _assumeValidAddress(_participantPk, "participant");
         _withTapTokenBalance(_participant, _amount);
         uint8 _bucketId = 0;
@@ -1027,8 +1042,9 @@ contract MagnetarTest is MagnetarTestUtils {
         console.log("bucketLockEpochDuration:   ", bucketLockEpochDuration);
 
         MagnetarCall[] memory calls = new MagnetarCall[](2);
-        calls[0] = _getTapTokenPermitMagnetarCall(_participantPk, address(twTap), _amount, 1 days);
-        calls[1] = _getTwTapReuseParticipationMagnetarCall(_participant, _bucketId);
+        calls[0] =
+            _getTapTokenPermitMagnetarCall(payable(address(tapToken)), _participantPk, address(twTap), _amount, 1 days);
+        calls[1] = _getTwTapReuseParticipationMagnetarCall(payable(address(twTap)), _participant, _bucketId);
 
         vm.startPrank(_participant);
         twTap.setDelegatee(_bucketId, address(magnetar));
@@ -1039,10 +1055,10 @@ contract MagnetarTest is MagnetarTestUtils {
         _assertTwTapParticipation(twTap, _participant, _bucketId, _amount * 2, expiry, 0, address(magnetar));
     }
 
-    function test_burst_skipEpochsAndparticipate_valid_nonReentrantShouldNotHappen(uint160 _participantPk, uint256 _amount)
-        external
-        withValidAmount(_amount)
-    {
+    function test_burst_skipEpochsAndparticipate_valid_nonReentrantShouldNotHappen(
+        uint160 _participantPk,
+        uint256 _amount
+    ) external withValidAmount(_amount) {
         address _participant = _assumeValidAddress(_participantPk, "participant");
         _withTapTokenBalance(_participant, _amount);
         uint8 _bucketId = 0;
@@ -1050,8 +1066,9 @@ contract MagnetarTest is MagnetarTestUtils {
         skip(EPOCH_DURATION * _skipEpochs);
 
         MagnetarCall[] memory calls = new MagnetarCall[](2);
-        calls[0] = _getTapTokenPermitMagnetarCall(_participantPk, address(twTap), _amount, 1 days);
-        calls[1] = _getTwTapParticipateMagnetarCall(_participant, _amount, _bucketId);
+        calls[0] =
+            _getTapTokenPermitMagnetarCall(payable(address(tapToken)), _participantPk, address(twTap), _amount, 1 days);
+        calls[1] = _getTwTapParticipateMagnetarCall(payable(address(twTap)), _participant, _amount, _bucketId);
 
         (,,,,,, uint24 bucketLockEpochDuration,,,) = twTap.buckets(_bucketId);
 
@@ -1068,7 +1085,7 @@ contract MagnetarTest is MagnetarTestUtils {
         external
         withValidAmount(_amount)
         withValidAmount(_rewardAmount)
-        addRewardToken()
+        addRewardToken
     {
         address _participant = _assumeValidAddress(_participantPk, "participant");
         _withTapTokenBalance(_participant, _amount);
@@ -1083,8 +1100,9 @@ contract MagnetarTest is MagnetarTestUtils {
         _distributeRewards(_rewardAmount);
 
         MagnetarCall[] memory calls = new MagnetarCall[](2);
-        calls[0] = _getTapTokenPermitMagnetarCall(_participantPk, address(twTap), _amount, 1 days);
-        calls[1] = _getTwTapBatchClaimRewardsMagnetarCall(_participant, _bucketId);
+        calls[0] =
+            _getTapTokenPermitMagnetarCall(payable(address(tapToken)), _participantPk, address(twTap), _amount, 1 days);
+        calls[1] = _getTwTapBatchClaimRewardsMagnetarCall(payable(address(twTap)), _participant, _bucketId);
 
         vm.startPrank(_participant);
         twTap.setDelegatee(_bucketId, address(magnetar));
@@ -1099,6 +1117,148 @@ contract MagnetarTest is MagnetarTestUtils {
         }
     }
 
+    function test_burst_marketAddAsset_valid(uint160 _userPk, uint256 _amount) external withValidAmount(_amount) {
+        address _user = _assumeValidAddress(_userPk, "user");
+        vm.assume(_amount > sgl.minLendAmount());
+
+        _withTokenBalance(address(asset), _user, _amount);
+
+        MagnetarCall[] memory calls = new MagnetarCall[](2);
+        calls[0] = _getERC20PermitMagnetarCall(payable(address(asset)), _userPk, address(magnetar), _amount, 1 days);
+        calls[1] = _getMarketAddAssetMagnetarCall(address(sgl), address(magnetar), _user, _amount);
+
+        vm.startPrank(_user);
+        magnetar.burst(calls);
+        vm.stopPrank();
+
+        _assertSingularityLiquidityBalance(payable(address(sgl)), _user, _amount);
+    }
+
+    function test_burst_marketRemoveAsset_valid(uint160 _userPk, uint256 _addAmount, uint256 _removeAmount)
+        external
+        withValidAmount(_addAmount)
+    {
+        address _user = _assumeValidAddress(_userPk, "user");
+        vm.assume(_addAmount > sgl.minLendAmount());
+        vm.assume(_removeAmount > 0);
+        vm.assume(_removeAmount <= _addAmount / 2);
+
+        _withMarketAddAsset(_userPk, _addAmount);
+        uint256 _nonce = sgl.nonces(_user);
+
+        MagnetarCall[] memory calls = new MagnetarCall[](2);
+        calls[0] = _getMarketPermitLiquidityMagnetarCall(address(sgl), _userPk, address(magnetar), _removeAmount, 1 days, _nonce);
+        calls[1] = _getMarketRemoveAssetMagnetarCall(address(sgl), address(_user), _user, _removeAmount);
+
+        vm.startPrank(_user);
+        magnetar.burst(calls);
+        vm.stopPrank();
+
+        _assertSingularityLiquidityBalance(payable(address(sgl)), _user, _addAmount - _removeAmount);
+    }
+
+    function test_burst_marketAddCollateral_valid(uint160 _userPk, uint256 _collateralAmount)
+        external
+        withValidAmount(_collateralAmount)
+    {
+        vm.skip(true);
+        address _user = _assumeValidAddress(_userPk, "user");
+        vm.assume(_collateralAmount > sgl._minCollateralAmount());
+
+        _withTokenBalance(address(collateral), _user, _collateralAmount);
+
+        MagnetarCall[] memory calls = new MagnetarCall[](2);
+        calls[0] =
+            _getERC20PermitMagnetarCall(payable(address(collateral)), _userPk, address(sgl), _collateralAmount, 1 days);
+        calls[1] = _getMarketAddCollateralMagnetarCall(address(sgl), address(magnetar), _user, _collateralAmount);
+
+        vm.startPrank(_user);
+        magnetar.burst(calls);
+        vm.stopPrank();
+
+        _assertSingularityLiquidityBalance(payable(address(sgl)), _user, _collateralAmount);
+    }
+
+    function test_permitAction_valid_liquidity(uint128 _userPk, uint128 _spenderPk) external {
+        vm.assume(_userPk != 0);
+        vm.assume(_spenderPk != 0);
+        vm.assume(_userPk != _spenderPk);
+        address _user = vm.addr(_userPk);
+        address _spender = vm.addr(_spenderPk);
+        MarketERC4626.PermitActions action = MarketERC4626.PermitActions.LIQUIDITY;
+        uint256 value = 1e18;
+        uint256 deadline = block.timestamp + 1 days;
+        uint256 nonce = sgl.nonces(_user);
+
+        (uint8 v, bytes32 r, bytes32 s) = _signMarketPermitAction(address(sgl), _userPk, _spender, action, value, deadline, nonce);
+
+        vm.startPrank(address(magnetar));
+        sgl.permitAction(uint8(action), _user, _spender, value, deadline, v, r, s);
+        vm.stopPrank();
+
+        assertEq(sgl.allowanceLiquidity(_user, _spender), value);
+    }
+
+    function test_permitAction_valid_borrow(uint128 _userPk, uint128 _spenderPk) external {
+        vm.assume(_userPk != 0);
+        vm.assume(_spenderPk != 0);
+        vm.assume(_userPk != _spenderPk);
+        address _user = vm.addr(_userPk);
+        address _spender = vm.addr(_spenderPk);
+        MarketERC4626.PermitActions action = MarketERC4626.PermitActions.BORROW;
+        uint256 value = 1e18;
+        uint256 deadline = block.timestamp + 1 days;
+        uint256 nonce = sgl.nonces(_user);
+
+        (uint8 v, bytes32 r, bytes32 s) = _signMarketPermitAction(address(sgl), _userPk, _spender, action, value, deadline, nonce);
+
+        vm.startPrank(address(magnetar));
+        sgl.permitAction(uint8(action), _user, _spender, value, deadline, v, r, s);
+        vm.stopPrank();
+
+        assertEq(sgl.allowanceBorrow(_user, _spender), value);
+    }
+
+    function test_permitAction_valid_collateral(uint128 _userPk, uint128 _spenderPk) external {
+        vm.assume(_userPk != 0);
+        vm.assume(_spenderPk != 0);
+        vm.assume(_userPk != _spenderPk);
+        address _user = vm.addr(_userPk);
+        address _spender = vm.addr(_spenderPk);
+        MarketERC4626.PermitActions action = MarketERC4626.PermitActions.COLLATERAL;
+        uint256 value = 1e18;
+        uint256 deadline = block.timestamp + 1 days;
+        uint256 nonce = sgl.nonces(_user);
+
+        (uint8 v, bytes32 r, bytes32 s) = _signMarketPermitAction(address(sgl), _userPk, _spender, action, value, deadline, nonce);
+
+        vm.startPrank(address(magnetar));
+        sgl.permitAction(uint8(action), _user, _spender, value, deadline, v, r, s);
+        vm.stopPrank();
+
+        assertEq(sgl.allowanceCollateral(_user, _spender), value);
+    }
+
+    function test_permitAction_valid_transfer(uint128 _userPk, uint128 _spenderPk) external {
+        vm.assume(_userPk != 0);
+        vm.assume(_spenderPk != 0);
+        vm.assume(_userPk != _spenderPk);
+        address _user = vm.addr(_userPk);
+        address _spender = vm.addr(_spenderPk);
+        MarketERC4626.PermitActions action = MarketERC4626.PermitActions.VAULT_ERC4626_TRANSFER;
+        uint256 value = 1e18;
+        uint256 deadline = block.timestamp + 1 days;
+        uint256 nonce = sgl.nonces(_user);
+
+        (uint8 v, bytes32 r, bytes32 s) = _signMarketPermitAction(address(sgl), _userPk, _spender, action, value, deadline, nonce);
+
+        vm.startPrank(address(magnetar));
+        sgl.permitAction(uint8(action), _user, _spender, value, deadline, v, r, s);
+        vm.stopPrank();
+
+        assertEq(sgl.allowance(_user, _spender), value);
+    }
+
     function _distributeRewards(uint256 _amount) internal {
         vm.startPrank(__admin);
         IERC20[] memory rewardTokens = twTap.getRewardTokens();
@@ -1111,92 +1271,13 @@ contract MagnetarTest is MagnetarTestUtils {
         vm.stopPrank();
     }
 
-    function _getTwTapBatchClaimRewardsMagnetarCall(address _participant, uint8 _bucketId)
-        internal
-        view
-        returns (MagnetarCall memory)
-    {
-        uint256[] memory _bucketIds = new uint256[](1);
-        _bucketIds[0] = _bucketId;
-        bytes memory twTapCallData = abi.encodeWithSelector(TwTAP.batchClaimRewards.selector, _participant, _bucketIds);
-        return MagnetarCall({
-            id: uint8(MagnetarAction.TapBatchClaimRewards),
-            target: address(twTap),
-            value: 0,
-            call: twTapCallData
-        });
-    }
-
-    function _getTwTapReuseParticipationMagnetarCall(address _participant, uint8 _bucketId)
-        internal
-        view
-        returns (MagnetarCall memory)
-    {
-        bytes memory twTapCallData = abi.encodeWithSelector(TwTAP.reuseParticipation.selector, _participant, _bucketId);
-        return MagnetarCall({id: uint8(MagnetarAction.TapExtendLock), target: address(twTap), value: 0, call: twTapCallData});
-    }
-
-    function _getTwTapExitPositionMagnetarCall(address _participant, uint8 _bucketId)
-        internal
-        view
-        returns (MagnetarCall memory)
-    {
-        bytes memory twTapCallData =
-            abi.encodeWithSelector(TwTAP.exitPosition.selector, _participant, _participant, _bucketId);
-        return
-            MagnetarCall({id: uint8(MagnetarAction.TapUnlock), target: address(twTap), value: 0, call: twTapCallData});
-    }
-
-    function _getTwTapParticipateMagnetarCall(address _participant, uint256 _amount, uint8 _bucketId)
-        internal
-        view
-        returns (MagnetarCall memory)
-    {
-        bytes memory twTapCallData =
-            abi.encodeWithSelector(TwTAP.participate.selector, _participant, _amount, _bucketId);
-        return MagnetarCall({id: uint8(MagnetarAction.TapLock), target: address(twTap), value: 0, call: twTapCallData});
-    }
-
-    function _getTapTokenPermitMagnetarCall(
-        uint256 _ownerPk,
-        address _spender,
-        uint256 _amount,
-        uint256 _deadlineOffset
-    ) internal view returns (MagnetarCall memory) {
-        address _owner = vm.addr(_ownerPk);
-        ERC20PermitStruct memory _permitStruct = ERC20PermitStruct({
-            owner: _owner,
-            spender: _spender,
-            value: _amount,
-            nonce: tapToken.nonces(_owner),
-            deadline: block.timestamp + _deadlineOffset
-        });
-        bytes32 _digest = tapToken.getTypedDataHash(_permitStruct);
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(_ownerPk, _digest);
-        bytes memory tapTokenPermitCallData = abi.encodeWithSelector(
-            IERC20Permit.permit.selector,
-            _permitStruct.owner,
-            _permitStruct.spender,
-            _permitStruct.value,
-            _permitStruct.deadline,
-            v,
-            r,
-            s
-        );
-        return MagnetarCall({
-            id: uint8(MagnetarAction.Permit),
-            target: address(tapToken),
-            value: 0,
-            call: tapTokenPermitCallData
-        });
-    }
-
     function _withTwTapParticipation(uint160 _participantPk, uint256 _amount, uint8 _bucketId) internal {
         address _participant = vm.addr(_participantPk);
 
         MagnetarCall[] memory calls = new MagnetarCall[](2);
-        calls[0] = _getTapTokenPermitMagnetarCall(_participantPk, address(twTap), _amount, 1 days);
-        calls[1] = _getTwTapParticipateMagnetarCall(_participant, _amount, _bucketId);
+        calls[0] =
+            _getTapTokenPermitMagnetarCall(payable(address(tapToken)), _participantPk, address(twTap), _amount, 1 days);
+        calls[1] = _getTwTapParticipateMagnetarCall(payable(address(twTap)), _participant, _amount, _bucketId);
 
         (,,,,,, uint24 bucketLockEpochDuration,,,) = twTap.buckets(_bucketId);
 
@@ -1207,6 +1288,23 @@ contract MagnetarTest is MagnetarTestUtils {
         twTap.setDelegatee(_bucketId, address(0x0));
         vm.stopPrank();
         _assertTwTapParticipation(twTap, _participant, _bucketId, _amount, expiry, 0, address(0x0));
+    }
+
+    function _withMarketAddAsset(uint160 _userPk, uint256 _amount) internal {
+        address _user = _assumeValidAddress(_userPk, "user");
+        vm.assume(_amount > sgl.minLendAmount());
+
+        _withTokenBalance(address(asset), _user, _amount);
+
+        MagnetarCall[] memory calls = new MagnetarCall[](2);
+        calls[0] = _getERC20PermitMagnetarCall(payable(address(asset)), _userPk, address(magnetar), _amount, 1 days);
+        calls[1] = _getMarketAddAssetMagnetarCall(address(sgl), address(magnetar), _user, _amount);
+
+        vm.startPrank(_user);
+        magnetar.burst(calls);
+        vm.stopPrank();
+
+        _assertSingularityLiquidityBalance(payable(address(sgl)), _user, _amount);
     }
 
     function _assumeValidAddress(uint160 _addressPk, string memory _label) internal returns (address _address) {
@@ -1228,6 +1326,13 @@ contract MagnetarTest is MagnetarTestUtils {
         _tapToken.freeMint(_participant, _amount);
     }
 
+    function _withTokenBalance(address _token, address _user, uint256 _amount) internal {
+        assertNotEq(_token, address(0), "token is not set");
+        assertNotEq(_user, address(0), "user is not set");
+        ERC20Mock _token = ERC20Mock(_token);
+        _token.mint(_user, _amount);
+    }
+
     function _assertTwTapParticipation(
         TwTAP _twTap,
         address _participant,
@@ -1240,10 +1345,12 @@ contract MagnetarTest is MagnetarTestUtils {
         (
             uint8 bucketId,
             bool tapReleased,
-            /*uint240 lockedAt*/,
+            /*uint240 lockedAt*/
+            ,
             uint56 expiry,
             uint88 tapAmount,
-            /*uint24 multiplier*/,
+            /*uint24 multiplier*/
+            ,
             uint40 lastInactive,
             uint40 lastActive,
             address delegatee

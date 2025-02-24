@@ -16,10 +16,10 @@ import {
 import {IMarketLiquidatorReceiver} from "tap-utils/interfaces/bar/IMarketLiquidatorReceiver.sol";
 import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
 import {ISingularity} from "tap-utils/interfaces/bar/ISingularity.sol";
-
+import {IMarketHelper} from "tap-utils/interfaces/bar/IMarketHelper.sol";
 import {IMarket, Module} from "tap-utils/interfaces/bar/IMarket.sol";
 
-contract MarketHelper {
+contract MarketHelper is IMarketHelper {
     using RebaseLibrary for Rebase;
 
     uint256 internal constant FEE_PRECISION = 1e5;

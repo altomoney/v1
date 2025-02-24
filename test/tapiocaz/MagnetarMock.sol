@@ -164,7 +164,7 @@ contract MagnetarMock {
         // performs .addCollateral on market
         if (_data.collateralAmount > 0) {
             (Module[] memory modules, bytes[] memory calls) = IMarketHelper(_data.marketHelper).addCollateral(
-                _data.deposit ? address(this) : _data.user, _data.user, false, _data.collateralAmount, _share
+                _data.deposit ? address(this) : _data.user, _data.user, _data.collateralAmount, _share
             );
             IMarket(_data.market).execute(modules, calls, true);
         }
