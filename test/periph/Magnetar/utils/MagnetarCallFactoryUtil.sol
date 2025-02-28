@@ -8,6 +8,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
 import {ERC20PermitStruct} from "tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
 import {MagnetarCollateralModule} from "../../../../contracts/periph/Magnetar/modules/MagnetarCollateralModule.sol";
+import {MagnetarLeverageModule, BuyCollateralData, SellCollateralData} from "../../../../contracts/periph/Magnetar/modules/MagnetarLeverageModule.sol";
 import {
     MagnetarAction,
     MagnetarCall,
@@ -16,6 +17,7 @@ import {
 } from "../../../../contracts/utils/interfaces/periph/IMagnetar.sol";
 import {Singularity} from "../../../../contracts/bar/markets/singularity/Singularity.sol";
 import {SGLCollateral} from "../../../../contracts/bar/markets/singularity/SGLCollateral.sol";
+import {SGLLeverage} from "../../../../contracts/bar/markets/singularity/SGLLeverage.sol";
 import {TwTAP} from "../../../../contracts/tap-token/governance/TwTAP.sol";
 import {TapToken} from "../../../../contracts/tap-token/tokens/TapToken.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
@@ -23,6 +25,7 @@ import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import {ERC20Mock} from "../../mocks/ERC20Mock.sol";
 import {Market4626PermitUtils} from "./Market4626PermitUtils.t.sol";
 import {MarketERC4626} from "../../../../contracts/bar/markets/MarketERC4626.sol";
+import {SLeverageSwapData, SToftInfo} from "../../../../contracts/bar/markets/leverage/BaseLeverageExecutor.sol";
 
 abstract contract MagnetarCallFactoryUtil is Market4626PermitUtils {
     function _getTwTapBatchClaimRewardsMagnetarCall(address _twTap, address _participant, uint8 _bucketId)
@@ -208,6 +211,19 @@ abstract contract MagnetarCallFactoryUtil is Market4626PermitUtils {
         return MagnetarCall({id: uint8(MagnetarAction.Permit), target: _permitToken, value: 0, call: permitCallData});
     }
 
+    function _getMarketPermitMarketSharesMagnetarCall(
+        address _market,
+        uint160 _ownerPk,
+        address _spender,
+        uint256 _amount,
+        uint256 _deadlineOffset,
+        uint256 _nonce
+    ) internal returns (MagnetarCall memory) {
+        MarketERC4626.PermitActions _action = MarketERC4626.PermitActions.VAULT_ERC4626_TRANSFER;
+        return
+            _getMarketPermitActionMagnetarCall(_market, _action, _ownerPk, _spender, _amount, _deadlineOffset, _nonce);
+    }
+
     function _getMarketPermitLiquidityMagnetarCall(
         address _market,
         uint160 _ownerPk,
@@ -217,7 +233,8 @@ abstract contract MagnetarCallFactoryUtil is Market4626PermitUtils {
         uint256 _nonce
     ) internal returns (MagnetarCall memory) {
         MarketERC4626.PermitActions _action = MarketERC4626.PermitActions.LIQUIDITY;
-        return _getMarketPermitActionMagnetarCall(_market, _action, _ownerPk, _spender, _amount, _deadlineOffset, _nonce);
+        return
+            _getMarketPermitActionMagnetarCall(_market, _action, _ownerPk, _spender, _amount, _deadlineOffset, _nonce);
     }
 
     function _getMarketPermitBorrowMagnetarCall(
@@ -229,7 +246,8 @@ abstract contract MagnetarCallFactoryUtil is Market4626PermitUtils {
         uint256 _nonce
     ) internal returns (MagnetarCall memory) {
         MarketERC4626.PermitActions _action = MarketERC4626.PermitActions.BORROW;
-        return _getMarketPermitActionMagnetarCall(_market, _action, _ownerPk, _spender, _amount, _deadlineOffset, _nonce);
+        return
+            _getMarketPermitActionMagnetarCall(_market, _action, _ownerPk, _spender, _amount, _deadlineOffset, _nonce);
     }
 
     function _getMarketPermitCollateralMagnetarCall(
@@ -241,7 +259,8 @@ abstract contract MagnetarCallFactoryUtil is Market4626PermitUtils {
         uint256 _nonce
     ) internal returns (MagnetarCall memory) {
         MarketERC4626.PermitActions _action = MarketERC4626.PermitActions.COLLATERAL;
-        return _getMarketPermitActionMagnetarCall(_market, _action, _ownerPk, _spender, _amount, _deadlineOffset, _nonce);
+        return
+            _getMarketPermitActionMagnetarCall(_market, _action, _ownerPk, _spender, _amount, _deadlineOffset, _nonce);
     }
 
     function _getMarketPermitActionMagnetarCall(
@@ -255,18 +274,11 @@ abstract contract MagnetarCallFactoryUtil is Market4626PermitUtils {
     ) private returns (MagnetarCall memory) {
         address _owner = vm.addr(_ownerPk);
         uint256 _deadline = block.timestamp + _deadlineOffset;
-        (uint8 v, bytes32 r, bytes32 s) = _signMarketPermitAction(_market, _ownerPk, _spender, _action, _amount, _deadline, _nonce);
+        (uint8 v, bytes32 r, bytes32 s) =
+            _signMarketPermitAction(_market, _ownerPk, _spender, _action, _amount, _deadline, _nonce);
 
         bytes memory permitActionCallData = abi.encodeWithSelector(
-            MarketERC4626.permitAction.selector,
-            _action,
-            _owner,
-            _spender,
-            _amount,
-            _deadline,
-            v,
-            r,
-            s
+            MarketERC4626.permitAction.selector, _action, _owner, _spender, _amount, _deadline, v, r, s
         );
         return MagnetarCall({id: uint8(MagnetarAction.Permit), target: _market, value: 0, call: permitActionCallData});
     }
@@ -322,6 +334,67 @@ abstract contract MagnetarCallFactoryUtil is Market4626PermitUtils {
             target: address(0x0),
             value: 0,
             call: depositAddCollateralAndBorrowFromMarketCallData
+        });
+    }
+
+    function _getMagnetarLeverageModuleBuyCollateralMagnetarCall(
+        address _market,
+        address _marketHelper,
+        address _user,
+        uint256 _borrowAmount,
+        uint256 _collateralAmount,
+        bytes memory _data
+    ) internal pure returns (MagnetarCall memory) {
+
+        BuyCollateralData memory _params;
+        _params.market = _market;
+        _params.marketHelper = _marketHelper;
+        _params.user = _user;
+        _params.borrowAmount = _borrowAmount;
+        _params.collateralAmount = _collateralAmount;
+        _params.data = _data;
+
+        bytes memory buyCollateralCallData =
+            abi.encodeWithSelector(MagnetarLeverageModule.buyCollateral.selector, _params);
+        return MagnetarCall({
+            id: uint8(MagnetarAction.LeverageModule),
+            target: address(0x0),
+            value: 0,
+            call: buyCollateralCallData
+        });
+    }
+
+    function _getMagnetarLeverageModuleSellCollateralMagnetarCall(
+        address _market,
+        address _marketHelper,
+        address _user,
+        uint256 _collateralShares,
+        bytes memory _data
+    ) internal pure returns (MagnetarCall memory) {
+
+        SellCollateralData memory _params;
+        _params.market = _market;
+        _params.marketHelper = _marketHelper;
+        _params.user = _user;
+        _params.collateralShares = _collateralShares;
+
+
+        SLeverageSwapData memory _swapData;
+        _swapData.minAmountOut = 0;
+        _swapData.toftInfo = SToftInfo({
+            isTokenInToft: false,
+            isTokenOutToft: false
+        });
+        _swapData.swapperData = "";
+        _params.data = abi.encode(_swapData);
+
+        bytes memory sellCollateralCallData =
+            abi.encodeWithSelector(MagnetarLeverageModule.sellCollateral.selector, _params);
+        return MagnetarCall({
+            id: uint8(MagnetarAction.LeverageModule),
+            target: address(0x0),
+            value: 0,
+            call: sellCollateralCallData
         });
     }
 }

@@ -80,7 +80,8 @@ contract SGLLeverage is SGLLendingCommon {
         (, uint256 borrowShare) = _borrow(calldata_.from, address(this), calldata_.borrowAmount);
 
         {
-            memoryData.borrowShareToAmount = redeem(borrowShare, address(leverageExecutor), address(this));
+            // TODO borrowShare => We are mixing borrow shares and collateral shares here.
+            memoryData.borrowShareToAmount = redeem(borrowShare, address(leverageExecutor), calldata_.from);
             updateExchangeRate();
             uint256 assetPartInCollateral = (memoryData.supplyShareToAmount + memoryData.borrowShareToAmount)
                 * exchangeRate / EXCHANGE_RATE_PRECISION;

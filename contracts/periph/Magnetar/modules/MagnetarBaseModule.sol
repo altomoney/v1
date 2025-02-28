@@ -75,8 +75,7 @@ abstract contract MagnetarBaseModule is MagnetarStorage {
     {
         _market.accrue();
         uint256 repayPart = helper.getBorrowPartForAmount(address(_market), _amount, false); // RoundUp happen in market repay
-        (Module[] memory modules, bytes[] memory calls) =
-            IMarketHelper(_marketHelper).repay(_from, _to, repayPart);
+        (Module[] memory modules, bytes[] memory calls) = IMarketHelper(_marketHelper).repay(_from, _to, repayPart);
 
         (bool[] memory successes, bytes[] memory results) = _market.execute(modules, calls, true);
         if (!successes[0]) revert Magnetar_MarketCallFailed(calls[0]);
@@ -91,6 +90,36 @@ abstract contract MagnetarBaseModule is MagnetarStorage {
 
         (bool[] memory successes,) = _market.execute(modules, calls, true);
         if (!successes[0]) revert Magnetar_MarketCallFailed(calls[0]);
+    }
+
+    function _marketBuyCollateral(
+        IMarket _market,
+        address _marketHelper,
+        address _from,
+        address _to,
+        uint256 _borrowAmount,
+        uint256 _collateralAmount,
+        bytes memory _data
+    ) internal {
+        (Module[] memory _modules, bytes[] memory _calls) =
+            IMarketHelper(_marketHelper).buyCollateral(_from, _borrowAmount, _collateralAmount, _data);
+
+        (bool[] memory _successes,) = _market.execute(_modules, _calls, true);
+        if (!_successes[0]) revert Magnetar_MarketCallFailed(_calls[0]);
+    }
+
+    function _marketSellCollateral(
+        IMarket _market,
+        address _marketHelper,
+        address _from,
+        uint256 _collateralShares,
+        bytes memory _data
+    ) internal {
+        (Module[] memory _modules, bytes[] memory _calls) =
+            IMarketHelper(_marketHelper).sellCollateral(_from, _collateralShares, _data);
+
+        (bool[] memory _successes,) = _market.execute(_modules, _calls, true);
+        if (!_successes[0]) revert Magnetar_MarketCallFailed(_calls[0]);
     }
 
     function _marketAddCollateral(

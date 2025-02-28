@@ -1147,7 +1147,9 @@ contract MagnetarTest is MagnetarTestUtils, MagnetarCallFactoryUtil {
         uint256 _nonce = sgl.nonces(_user);
 
         MagnetarCall[] memory calls = new MagnetarCall[](2);
-        calls[0] = _getMarketPermitLiquidityMagnetarCall(address(sgl), _userPk, address(magnetar), _removeAmount, 1 days, _nonce);
+        calls[0] = _getMarketPermitLiquidityMagnetarCall(
+            address(sgl), _userPk, address(magnetar), _removeAmount, 1 days, _nonce
+        );
         calls[1] = _getMarketRemoveAssetMagnetarCall(address(sgl), address(_user), _user, _removeAmount);
 
         vm.startPrank(_user);
@@ -1190,7 +1192,8 @@ contract MagnetarTest is MagnetarTestUtils, MagnetarCallFactoryUtil {
         uint256 deadline = block.timestamp + 1 days;
         uint256 nonce = sgl.nonces(_user);
 
-        (uint8 v, bytes32 r, bytes32 s) = _signMarketPermitAction(address(sgl), _userPk, _spender, action, value, deadline, nonce);
+        (uint8 v, bytes32 r, bytes32 s) =
+            _signMarketPermitAction(address(sgl), _userPk, _spender, action, value, deadline, nonce);
 
         vm.startPrank(address(magnetar));
         sgl.permitAction(uint8(action), _user, _spender, value, deadline, v, r, s);
@@ -1210,7 +1213,8 @@ contract MagnetarTest is MagnetarTestUtils, MagnetarCallFactoryUtil {
         uint256 deadline = block.timestamp + 1 days;
         uint256 nonce = sgl.nonces(_user);
 
-        (uint8 v, bytes32 r, bytes32 s) = _signMarketPermitAction(address(sgl), _userPk, _spender, action, value, deadline, nonce);
+        (uint8 v, bytes32 r, bytes32 s) =
+            _signMarketPermitAction(address(sgl), _userPk, _spender, action, value, deadline, nonce);
 
         vm.startPrank(address(magnetar));
         sgl.permitAction(uint8(action), _user, _spender, value, deadline, v, r, s);
@@ -1230,7 +1234,8 @@ contract MagnetarTest is MagnetarTestUtils, MagnetarCallFactoryUtil {
         uint256 deadline = block.timestamp + 1 days;
         uint256 nonce = sgl.nonces(_user);
 
-        (uint8 v, bytes32 r, bytes32 s) = _signMarketPermitAction(address(sgl), _userPk, _spender, action, value, deadline, nonce);
+        (uint8 v, bytes32 r, bytes32 s) =
+            _signMarketPermitAction(address(sgl), _userPk, _spender, action, value, deadline, nonce);
 
         vm.startPrank(address(magnetar));
         sgl.permitAction(uint8(action), _user, _spender, value, deadline, v, r, s);
@@ -1250,13 +1255,92 @@ contract MagnetarTest is MagnetarTestUtils, MagnetarCallFactoryUtil {
         uint256 deadline = block.timestamp + 1 days;
         uint256 nonce = sgl.nonces(_user);
 
-        (uint8 v, bytes32 r, bytes32 s) = _signMarketPermitAction(address(sgl), _userPk, _spender, action, value, deadline, nonce);
+        (uint8 v, bytes32 r, bytes32 s) =
+            _signMarketPermitAction(address(sgl), _userPk, _spender, action, value, deadline, nonce);
 
         vm.startPrank(address(magnetar));
         sgl.permitAction(uint8(action), _user, _spender, value, deadline, v, r, s);
         vm.stopPrank();
 
         assertEq(sgl.allowance(_user, _spender), value);
+    }
+
+    function test_burst_buyCollateral_valid(uint160 _userLpPk, uint128 _addAssets, uint160 _userPk, uint256 _collateralAmount, uint256 _borrowAmount)
+        external
+        withValidAmount128(_addAssets)
+        withValidAmount128(_collateralAmount)
+        withValidAmount128(_borrowAmount)
+    {
+        address _userLp = _assumeValidAddress(_userLpPk, "userLp");
+        address _user = _assumeValidAddress(_userPk, "user");
+        vm.assume(_collateralAmount > sgl._minCollateralAmount());
+
+        _borrowAmount = sgl._minBorrowAmount() + 1;
+        vm.assume(_addAssets > sgl.minLendAmount());
+        vm.assume(_addAssets > _borrowAmount * 3);
+        _collateralAmount *= 4;
+
+        _withMarketAddAsset(_userLpPk, _addAssets);
+
+        uint256 supplyCollateral = 0;
+
+        _withTokenBalance(address(collateral), _user, _collateralAmount);
+        uint256 _nonce = sgl.nonces(_user);
+
+        MagnetarCall[] memory calls = new MagnetarCall[](6);
+        calls[0] = _getERC20PermitMagnetarCall(payable(address(collateral)), _userPk, address(sgl), _collateralAmount, 1 days);
+        calls[1] = _getMarketPermitCollateralMagnetarCall(address(sgl), _userPk, address(magnetar), _collateralAmount, 1 days, _nonce++);
+        calls[2] = _getMarketAddCollateralMagnetarCall(address(sgl), address(marketHelper), _user, _collateralAmount);
+        calls[3] = _getMarketPermitBorrowMagnetarCall(address(sgl), _userPk, address(magnetar), type(uint256).max, 1 days, _nonce++);
+        calls[4] = _getMarketPermitMarketSharesMagnetarCall(address(sgl), _userPk, address(magnetar), type(uint256).max, 1 days, _nonce++);
+        calls[5] = _getMagnetarLeverageModuleBuyCollateralMagnetarCall(
+            address(sgl), address(marketHelper), address(_user), _borrowAmount, supplyCollateral, ""
+        );
+
+        vm.startPrank(_user);
+        magnetar.burst(calls);
+        vm.stopPrank();
+
+        // _assertSingularityLiquidityBalance(payable(address(sgl)), _user, _collateralAmount);
+    }
+
+    function test_burst_sellCollateral_valid(uint160 _userLpPk, uint128 _addAssets, uint160 _userPk, uint256 _collateralAmount, uint256 _borrowAmount)
+        external
+        withValidAmount128(_addAssets)
+        withValidAmount128(_collateralAmount)
+        withValidAmount128(_borrowAmount)
+    {
+        address _userLp = _assumeValidAddress(_userLpPk, "userLp");
+        address _user = _assumeValidAddress(_userPk, "user");
+        _collateralAmount *= 3;
+        vm.assume(_collateralAmount > sgl._minCollateralAmount());
+        vm.assume(_borrowAmount > sgl._minBorrowAmount());
+        vm.assume(_addAssets > sgl.minLendAmount());
+        vm.assume(_addAssets > _borrowAmount * 3);
+
+        _withMarketAddAsset(_userLpPk, _addAssets);
+
+        uint256 supplyCollateral = 0;
+
+        _withTokenBalance(address(collateral), _user, _collateralAmount * 4);
+        uint256 _nonce = sgl.nonces(_user);
+        uint256 _collateralShares = sgl.convertToShares(_collateralAmount);
+
+
+        MagnetarCall[] memory calls = new MagnetarCall[](5);
+        calls[0] = _getERC20PermitMagnetarCall(payable(address(collateral)), _userPk, address(sgl), _collateralAmount, 1 days);
+        calls[1] = _getMarketPermitCollateralMagnetarCall(address(sgl), _userPk, address(magnetar), _collateralAmount, 1 days, _nonce++);
+        calls[2] = _getMarketAddCollateralMagnetarCall(address(sgl), address(marketHelper), _user, _collateralAmount);
+        calls[3] = _getMarketPermitMarketSharesMagnetarCall(address(sgl), _userPk, address(magnetar), _collateralShares, 1 days, _nonce++);
+        calls[4] = _getMagnetarLeverageModuleSellCollateralMagnetarCall(
+            address(sgl), address(marketHelper), address(_user), _collateralShares, ""
+        );
+
+        vm.startPrank(_user);
+        magnetar.burst(calls);
+        vm.stopPrank();
+
+        // _assertSingularityLiquidityBalance(payable(address(sgl)), _user, _collateralAmount);
     }
 
     function _distributeRewards(uint256 _amount) internal {
