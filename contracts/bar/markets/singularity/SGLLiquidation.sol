@@ -105,11 +105,7 @@ contract SGLLiquidation is SGLCommon {
         _burn(user, collateralShare);
     }
 
-    function _computeRequiredCollateralWithBonus(address _user)
-        private
-        view
-        returns (uint256)
-    {
+    function _computeRequiredCollateralWithBonus(address _user) private view returns (uint256) {
         // compute borrow amount with bonus
         uint256 elasticPart = totalBorrow.toElastic(userBorrowPart[_user], false);
         uint256 borrowAmountWithBonus = elasticPart + (elasticPart * liquidationMultiplier) / FEE_PRECISION;
@@ -160,8 +156,7 @@ contract SGLLiquidation is SGLCommon {
         uint256 _exchangeRate,
         bool checkReturned
     ) private returns (uint256 returnedShare, uint256 returnedAmount) {
-        uint256 collateralAmount = previewRedeem(_collateralShare);
-        IERC20(collateral()).safeTransfer(address(_liquidatorReceiver), collateralAmount);
+        IERC20(collateral()).safeTransfer(address(_liquidatorReceiver), _collateralAmount);
 
         {
             uint256 assetBalanceBefore = _borrowableToken().balanceOf(address(this));
