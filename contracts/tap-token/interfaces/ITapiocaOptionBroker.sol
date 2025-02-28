@@ -48,6 +48,7 @@ interface ITapiocaOptionBroker is ITWLBase {
     error TooLow();
     error ExpiredCall();
     error MarketNotActive();
+    error AmountNotValid();
 
     event Participate(address indexed user, uint256 indexed bucketId, uint256 epoch, uint256 usdoAmount);
     event ExerciseOption(

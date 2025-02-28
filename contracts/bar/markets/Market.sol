@@ -525,7 +525,7 @@ abstract contract Market is MarketERC4626, Ownable, ReentrancyGuard {
         require(_exchangeRate > 0, "Market: exchangeRate not valid");
         uint256 userCollateralAmount = balanceOf(user);
         collateralAmountInAsset =
-            (userCollateralAmount * (EXCHANGE_RATE_PRECISION / FEE_PRECISION) * collateralizationRate) / _exchangeRate;
+            (userCollateralAmount * EXCHANGE_RATE_PRECISION * collateralizationRate) / (FEE_PRECISION * _exchangeRate);
     }
 
     /// @notice Concrete implementation of `isSolvent`. Includes a parameter to allow caching `exchangeRate`.
@@ -540,7 +540,7 @@ abstract contract Market is MarketERC4626, Ownable, ReentrancyGuard {
         Rebase memory _totalBorrow = totalBorrow;
 
         uint256 collateralAmount = maxWithdraw(user);
-        return collateralAmount * (EXCHANGE_RATE_PRECISION / FEE_PRECISION)
+        return (collateralAmount * EXCHANGE_RATE_PRECISION / FEE_PRECISION)
             * (_liquidation ? liquidationCollateralizationRate : collateralizationRate)
         // Moved exchangeRate here instead of dividing the other side to preserve more precision
         >= (borrowPart * _totalBorrow.elastic * _exchangeRate) / _totalBorrow.base;
@@ -556,7 +556,7 @@ abstract contract Market is MarketERC4626, Ownable, ReentrancyGuard {
         uint256 collateralAmount = convertToAssets(collateralShare);
 
         max = (collateralAmount * EXCHANGE_RATE_PRECISION) / _exchangeRate;
-        min = (max * collateralizationRate) / FEE_PRECISION;
+        min = (max * liquidationCollateralizationRate) / FEE_PRECISION;
     }
 
     function _getCallerReward(address user, uint256 _exchangeRate) internal view returns (uint256) {
@@ -581,15 +581,6 @@ abstract contract Market is MarketERC4626, Ownable, ReentrancyGuard {
         }
 
         return uint256(reward);
-    }
-
-    function _getRatio(uint256 numerator, uint256 denominator, uint256 precision) internal pure returns (uint256) {
-        if (numerator == 0 || denominator == 0) {
-            return 0;
-        }
-        uint256 _numerator = numerator * 10 ** (precision + 1);
-        uint256 _quotient = ((_numerator / denominator) + 5) / 10;
-        return (_quotient);
     }
 
     function _pauseOptions(PauseType _pauseProp) external view returns (bool) {

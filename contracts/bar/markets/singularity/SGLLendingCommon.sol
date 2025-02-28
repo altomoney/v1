@@ -78,7 +78,7 @@ contract SGLLendingCommon is SGLCommon {
         uint256 totalAssetElasticInAssets = (_totalAsset.elastic * allShare) / _totalAsset.base;
         uint256 fullAssetAmountBefore = totalAssetElasticInAssets + totalBorrow.elastic;
 
-        _totalAsset.elastic -= share.toUint128();
+        _totalAsset.elastic -= amount.toUint128();
 
         uint256 feeAmount = (amount * borrowOpeningFee) / FEE_PRECISION; // A flat % fee is charged for any borrow
 
@@ -92,10 +92,10 @@ contract SGLLendingCommon is SGLCommon {
         if (feeAmount > 0) {
             uint256 feeFraction = (feeAmount * _totalAsset.base) / fullAssetAmountBefore;
             _totalAsset.base += feeFraction.toUint128();
-            _mint(address(_penrose), feeFraction);
+            liquidityBalance[address(_penrose)] += feeFraction;
         }
 
-        totalAsset = _totalAsset; // TODO Check it
+        totalAsset = _totalAsset;
 
         _borrowableToken().safeTransfer(to, amount);
     }

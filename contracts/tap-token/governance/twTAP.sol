@@ -177,6 +177,8 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, ReentrancyGuard, Pausable {
     /// @param _amount The amount of TAP to participate with
     /// @param _bucketId The lock bucket id
     function participate(address _participant, uint256 _amount, uint8 _bucketId) external whenNotPaused nonReentrant {
+        Participation memory position = participations[_participant][_bucketId];
+        if (_participant != msg.sender && position.delegatee != msg.sender) revert NotAuthorized();
         _participate(_participant, _amount, _bucketId, true);
     }
 
@@ -184,7 +186,7 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, ReentrancyGuard, Pausable {
     /// @param _bucketId The new lock bucket id to migrate the position from the expired participation in a new participation
     function reuseParticipation(address _participant, uint8 _bucketId) external whenNotPaused nonReentrant {
         Participation memory position = participations[_participant][_bucketId];
-        if (_participant != msg.sender || position.delegatee != msg.sender) revert NotAuthorized();
+        if (_participant != msg.sender && position.delegatee != msg.sender) revert NotAuthorized();
         if (position.tapReleased) revert NotValid();
         if (position.tapAmount == 0) revert NotValid();
 
@@ -205,7 +207,7 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, ReentrancyGuard, Pausable {
         returns (uint256[] memory amounts_)
     {
         Participation memory position = participations[_participant][_bucketId];
-        if (_participant != msg.sender || position.delegatee != msg.sender) revert NotAuthorized();
+        if (_participant != msg.sender && position.delegatee != msg.sender) revert NotAuthorized();
         amounts_ = _claimBucketRewards(_participant, _bucketId, true);
     }
 
@@ -253,7 +255,7 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, ReentrancyGuard, Pausable {
         returns (uint256 releasedAmount)
     {
         Participation memory position = participations[_participant][_bucketId];
-        if (_participant != msg.sender || position.delegatee != msg.sender) revert NotAuthorized();
+        if (_participant != msg.sender && position.delegatee != msg.sender) revert NotAuthorized();
 
         // If in rescue mode, allow the release of the TAP even if the lock has not expired.
         if (!rescueMode) {
@@ -263,6 +265,8 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, ReentrancyGuard, Pausable {
         if (position.tapReleased) {
             return 0;
         }
+
+        _claimBucketRewards(_participant, _bucketId, true);
 
         releasedAmount = position.tapAmount;
 
@@ -319,14 +323,14 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, ReentrancyGuard, Pausable {
         if (_amount == 0) revert NotValid();
         if (_rewardTokenId == 0) revert NotValid(); // @dev rewardTokens[0] is 0x0
 
-        WeekTotals storage totals = weekTotals[lastProcessedWeek];
+        WeekTotals storage totals = weekTotals[currentEpoch() + 1];
         IERC20 rewardToken = rewardTokens[_rewardTokenId];
         // If this is a DBZ then there are no positions to give the reward to.
         // Since reward eligibility starts in the week after locking, there is
         // no way to give out rewards THIS week.
         // Cast is safe: `netActiveVotes` is at most zero by construction of
         // weekly totals and the requirement that they are up to date.
-        totals.totalDistPerVote[_rewardTokenId] += (_amount * DIST_PRECISION) / uint256(totals.netActiveVotes);
+        totals.totalDistPerVote[_rewardTokenId] += totals.netActiveVotes == 0 ? 0 : (_amount * DIST_PRECISION) / uint256(totals.netActiveVotes);
 
         rewardToken.safeTransferFrom(msg.sender, address(this), _amount);
 
@@ -469,7 +473,7 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, ReentrancyGuard, Pausable {
     {
         amounts_ = claimable(_account, _bucketId);
         Participation storage position = participations[_account][_bucketId];
-        position.lastInactive = uint40(currentEpoch());
+        position.lastInactive = currentEpoch() < position.lastActive ? uint40(currentEpoch()) : position.lastActive;
 
         uint256 len = amounts_.length;
         for (uint256 i; i < len; ++i) {
@@ -504,6 +508,8 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, ReentrancyGuard, Pausable {
             IERC20(address(tapOFT)).safeTransferFrom(_participant, address(this), _amount);
         }
 
+        _supplyInBucket(_bucketId, _amount);
+
         Participation storage position = participations[_participant][_bucketId];
         Bucket memory bucket = buckets[_bucketId];
         uint256 expiry = block.timestamp + (bucket.lockEpochDuration * EPOCH_DURATION);
@@ -512,11 +518,11 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, ReentrancyGuard, Pausable {
 
         if (position.expiry > 0 && block.timestamp < position.expiry) {
             // Clear the expected votes at the past expected expiration date
-            weekTotals[_timestampToEpoch(position.expiry) + 1].netActiveVotes -=
-                int256(uint256(position.tapAmount) * position.multiplier);
+            weekTotals[currentEpoch() + 1].netActiveVotes -= int256(uint256(position.tapAmount) * position.multiplier);
+            weekTotals[_timestampToEpoch(position.expiry) + 1].netActiveVotes += int256(uint256(position.tapAmount) * position.multiplier);
         }
 
-        if (position.tapAmount > 0 && position.tapReleased == false) {
+        if (position.tapAmount > 0) {
             _claimBucketRewards(_participant, _bucketId, false);
         }
         position.bucketId = _bucketId;
@@ -528,7 +534,7 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, ReentrancyGuard, Pausable {
         position.lastInactive = w0;
         position.lastActive = w1;
 
-        weekTotals[w0 + 1].netActiveVotes += int256(_amount * bucket.rewardsMultiplier);
+        weekTotals[w0 + 1].netActiveVotes += int256(uint256(position.tapAmount) * bucket.rewardsMultiplier);
         weekTotals[w1 + 1].netActiveVotes -= int256(uint256(position.tapAmount) * bucket.rewardsMultiplier);
 
         emit Participate(_participant, _bucketId, _amount, bucket.rewardsMultiplier, expiry, _bucketId);
