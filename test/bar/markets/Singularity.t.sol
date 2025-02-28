@@ -163,10 +163,10 @@ contract SingularityTest is UsdoTestHelper {
         vm.label(address(singularity), "Singularity");
     }
 
-    function depositAsset(uint256 amount) public {
+    function depositAsset(uint256 amount) public returns (uint256 fraction) {
         deal(address(asset), address(this), amount);
         IERC20(singularity.borrowableToken()).approve(address(singularity), amount);
-        singularity.addAsset(address(this), address(this), amount);
+        fraction = singularity.addAsset(address(this), address(this), amount);
     }
 
     function depositCollateral(uint256 amount) public {
@@ -333,6 +333,24 @@ contract SingularityTest is UsdoTestHelper {
         depositCollateral(collateralAmount);
 
         borrow(borrowAmount, true);
+    }
+
+    function test_addAsset_valid(address _from, address _to, uint256 _amount) public {
+        vm.assume(_from != address(0));
+        vm.assume(_to != address(0));
+        vm.assume(_from != _to);
+        vm.assume(_amount > singularity.minLendAmount());
+        vm.assume(_amount < type(uint64).max);
+
+        deal(address(singularity._asset()), _from, _amount);
+        
+        vm.startPrank(_from);
+        IERC20(singularity._asset()).approve(address(singularity), _amount);
+        uint256 fraction = singularity.addAsset(_from, _to, _amount);
+        vm.stopPrank();
+
+        assertEq(fraction, singularity.liquidityBalance(_to), "Liquidity balance of _to should be fraction");
+        assertEq(0, singularity.liquidityBalance(_from), "Liquidity balance of _from should be 0");
     }
 
     function test_borrow_and_liquidate() public {
