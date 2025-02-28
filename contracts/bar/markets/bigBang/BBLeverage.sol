@@ -65,7 +65,7 @@ contract BBLeverage is BBLendingCommon {
         _penrose.reAccrueBigBangMarkets();
 
         if (supplyAmount > 0) {
-            _allowedCollateral(from, supplyAmount);
+            _allowedBorrow(from, supplyAmount);
             IERC20(borrowableToken()).safeTransferFrom(from, address(leverageExecutor), supplyAmount);
         }
 
