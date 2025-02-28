@@ -41,7 +41,7 @@ contract BBLendingCommon is BBCommon {
         _allowedCollateral(from, amount);
 
         if (share == 0) {
-            share = convertToShares(amount);
+            share = previewDeposit(amount);
         }
 
         if (pullTokens) {
