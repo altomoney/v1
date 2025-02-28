@@ -40,5 +40,5 @@ interface IBigBang is IMarket {
 
     function openInterestDebt() external view returns (uint256);
 
-    function refreshPenroseFees() external returns (uint256 feeShares);
+    function refreshPenroseFees() external returns (uint256 feeAmount);
 }

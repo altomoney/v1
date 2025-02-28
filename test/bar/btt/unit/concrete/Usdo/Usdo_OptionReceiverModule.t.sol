@@ -13,8 +13,8 @@ import {OFTMsgCodec} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/libs/OFTM
 
 // Tapioca
 import {UsdoOptionReceiverModule} from "tapioca-bar/usdo/modules/UsdoOptionReceiverModule.sol";
-import {IExerciseOptionsData} from "tap-utils/interfaces/tap-token/ITapiocaOptionBroker.sol";
 import {ExerciseOptionsMsg} from "tap-utils/interfaces/oft/IUsdo.sol";
+import {IExerciseOptionsData, IOptionsLockData, IOptionsUnlockData} from "tap-utils/interfaces/periph/IMagnetar.sol";
 import {LZSendParam} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainEngineHelper.sol";
 
 // tests
@@ -45,8 +45,9 @@ contract Usdo_OptionReceiverModule is Usdo_Unit_Shared, BigBang_Unit_Shared {
             optionsData: IExerciseOptionsData({
                 from: address(this),
                 target: address(tOB),
+                paymentToken: address(tapToken),
                 paymentTokenAmount: amount,
-                oTAPTokenID: 0, // @dev ignored in TapiocaOptionsBrokerMock
+                bucketId: 0,
                 tapAmount: 0
             }),
             withdrawOnOtherChain: false,

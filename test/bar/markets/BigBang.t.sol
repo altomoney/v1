@@ -677,4 +677,92 @@ contract BigBangTest is UsdoTestHelper {
         uint256 borrowPartAfter = bigBang._userBorrowPart(address(this));
         assertEq(borrowPartAfter, 0);
     }
+
+    function test_addCollateral_valid(address _user, uint256 _amount) public {
+        vm.assume(_user != address(0));
+        vm.assume(_amount >= bigBang._minCollateralAmount());
+        vm.assume(_amount <= type(uint128).max);
+
+        deal(address(collateral), _user, _amount);
+        uint256 previewDepositAmount = bigBang.previewDeposit(_amount);
+
+        vm.startPrank(_user);
+        collateral.approve(address(bigBang), _amount);
+        (Module[] memory modules, bytes[] memory calls) =
+            marketHelper.addCollateral(_user, _user, _amount, 0);
+        bigBang.execute(modules, calls, true);
+        vm.stopPrank();
+
+        uint256 userCollateralShare = bigBang.balanceOf(_user);
+
+        assertGt(userCollateralShare, 0, "User collateral share should be greater than 0");
+        assertEq(collateral.balanceOf(address(bigBang)), _amount, "Collateral balance of bigBang should be equal to _amount");
+        assertEq(collateral.balanceOf(_user), 0, "Collateral balance of user should be 0");
+        assertEq(userCollateralShare, previewDepositAmount, "User collateral share should be equal to previewDepositAmount");
+    }
+
+    function test_addCollateral_valid_provide_both_values(address _user, uint256 _amount, uint256 _shares) public {
+        vm.assume(_user != address(0));
+        vm.assume(_amount >= bigBang._minCollateralAmount());
+        vm.assume(_amount <= type(uint128).max);
+        vm.assume(_shares <= type(uint128).max);
+        vm.assume(_shares > 1e18);
+
+        uint256 previewMintAmount = bigBang.previewMint(_shares);
+        deal(address(collateral), _user, previewMintAmount);
+
+        vm.startPrank(_user);
+        collateral.approve(address(bigBang), previewMintAmount);
+        (Module[] memory modules, bytes[] memory calls) =
+            marketHelper.addCollateral(_user, _user, previewMintAmount, _shares);
+        bigBang.execute(modules, calls, true);
+        vm.stopPrank();
+
+        uint256 userCollateralShare = bigBang.balanceOf(_user);
+        assertGt(userCollateralShare, 0, "User collateral share should be greater than 0");
+        assertEq(collateral.balanceOf(address(bigBang)), previewMintAmount, "Collateral balance of bigBang should be equal to _amount");
+        assertEq(collateral.balanceOf(_user), 0, "Collateral balance of user should be 0");
+        assertEq(userCollateralShare, previewMintAmount, "User collateral share should be equal to previewMintAmount");
+    }
+
+    function test_addCollateral_valid_provide_both_amount_and_shares(address _user, uint256 _amount) public {
+        vm.assume(_user != address(0));
+        vm.assume(_amount >= bigBang._minCollateralAmount());
+        vm.assume(_amount <= type(uint128).max);
+        uint256 _shares = 1e18;
+
+        uint256 previewMintAmount = bigBang.previewMint(_shares);
+        deal(address(collateral), _user, _shares + _amount); // To ensure enough collateral when it is lt shares (1e18)
+
+        vm.startPrank(_user);
+        collateral.approve(address(bigBang), type(uint256).max);
+        (Module[] memory modules, bytes[] memory calls) =
+            marketHelper.addCollateral(_user, _user, _amount, _shares);
+        bigBang.execute(modules, calls, true);
+        vm.stopPrank();
+
+        uint256 userCollateralShare = bigBang.balanceOf(_user);
+        assertEq(userCollateralShare, _shares, "User collateral share should be equal to _shares");
+        assertEq(collateral.balanceOf(address(bigBang)), previewMintAmount, "Collateral balance of bigBang should be equal to _amount");
+    }
+
+    function test_addCollateral_invalid_both_zero(address _user) public {
+        vm.assume(_user != address(0));
+        uint256 _amount = 0;
+        uint256 _shares = 0;
+
+        vm.startPrank(_user);
+        (Module[] memory modules, bytes[] memory calls) =
+            marketHelper.addCollateral(_user, _user, _amount, _shares);
+        vm.expectRevert();
+        bigBang.execute(modules, calls, true);
+        vm.stopPrank();
+
+        uint256 userCollateralShare = bigBang.balanceOf(_user);
+
+        assertEq(userCollateralShare, 0, "User collateral share should be 0");
+        assertEq(collateral.balanceOf(address(bigBang)), 0, "Collateral balance of bigBang should be 0");
+        assertEq(collateral.balanceOf(_user), 0, "Collateral balance of user should be 0");
+        assertEq(userCollateralShare, _shares, "User collateral share should be equal to _shares");
+    }
 }

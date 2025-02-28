@@ -16,10 +16,10 @@ import {
 import {IMarketLiquidatorReceiver} from "tap-utils/interfaces/bar/IMarketLiquidatorReceiver.sol";
 import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
 import {ISingularity} from "tap-utils/interfaces/bar/ISingularity.sol";
-
+import {IMarketHelper} from "tap-utils/interfaces/bar/IMarketHelper.sol";
 import {IMarket, Module} from "tap-utils/interfaces/bar/IMarket.sol";
 
-contract MarketHelper {
+contract MarketHelper is IMarketHelper {
     using RebaseLibrary for Rebase;
 
     uint256 internal constant FEE_PRECISION = 1e5;
@@ -44,15 +44,11 @@ contract MarketHelper {
         uint256 collateralPartInAsset =
             (market.convertToAssets(collateralShare) * exchangeRatePrecision) / _exchangeRate;
 
-        // get closing factor
-        uint256 borrowPartWithBonus = computeClosingFactor(market, borrowPart, collateralPartInAsset);
-
         // limit liquidable amount before bonus to the current debt
         Rebase memory _totalBorrow = market._totalBorrow();
         uint256 userTotalBorrowAmount = _totalBorrow.toElastic(borrowPart, true);
-        borrowPartWithBonus = borrowPartWithBonus > userTotalBorrowAmount ? userTotalBorrowAmount : borrowPartWithBonus;
 
-        return collateralPartInAsset < borrowPartWithBonus;
+        return collateralPartInAsset < userTotalBorrowAmount;
     }
 
     /// @notice returns the maximum liquidatable amount for user

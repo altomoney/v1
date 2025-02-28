@@ -42,18 +42,16 @@ contract SGLCollateral is SGLLendingCommon {
         optionNotPaused(PauseType.AddCollateral)
         returns (uint256 assets)
     {
-        assets = convertToAssets(shares);
+        assets = previewMint(shares);
 
         if (assets < minCollateralAmount) revert MinCollateralAmountNotMet();
 
         shares = _depositCollateral(msg.sender, to, assets);
     }
 
-
     /// @notice Adds `collateral` from msg.sender to the account `to`.
     /// @param from Account to transfer shares from.
     /// @param to The receiver of the tokens.
-    /// False if tokens from msg.sender  should be transferred. TODO Remove skim?
     /// @param amount The amount to add for `to`.
     /// @param share The amount of shares to add for `to`.
     function addCollateral(address from, address to, uint256 amount, uint256 share)
@@ -62,11 +60,9 @@ contract SGLCollateral is SGLLendingCommon {
         notSelf(to)
     {
         if (share == 0) {
-            share = convertToShares(amount);
-        }
-
-        if (amount == 0) {
-            amount = convertToAssets(share);
+            share = previewDeposit(amount);
+        } else {
+            amount = previewMint(share);
         }
         if (amount <= minCollateralAmount) revert MinCollateralAmountNotMet();
 

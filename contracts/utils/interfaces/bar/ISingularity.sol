@@ -30,7 +30,7 @@ interface ISingularity is IMarket {
 
     function totalAsset() external view returns (Rebase memory);
 
-    function addAsset(address from, address to, uint256 share) external returns (uint256 fraction);
+    function addAsset(address from, address to, uint256 amount) external returns (uint256 fraction);
 
     function removeAsset(address from, address to, uint256 fraction) external returns (uint256 share);
 
@@ -64,4 +64,8 @@ interface ISingularity is IMarket {
     function interestElasticity() external view returns (uint256);
 
     function startingInterestPerSecond() external view returns (uint256);
+
+    function refreshPenroseFees() external returns (uint256 feeAmount);
+
+    function liquidityBalance(address) external view returns (uint256);
 }

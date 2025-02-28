@@ -17,7 +17,7 @@ import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
 import {IBigBang} from "tap-utils/interfaces/bar/IBigBang.sol";
 import {IUsdo} from "tap-utils/interfaces/oft/IUsdo.sol";
 import {SafeApprove} from "./libraries/SafeApprove.sol";
-
+import {ISingularity} from "../utils/interfaces/bar/ISingularity.sol";
 /*
 
 ████████╗ █████╗ ██████╗ ██╗ ██████╗  ██████╗ █████╗ 
@@ -539,7 +539,11 @@ contract Penrose is Ownable, Pausable {
             if (address(mc[i]).code.length == 0) revert NotValid();
             (success[i], result[i]) = mc[i].call(data[i]);
             if (forceSuccess) {
-                require(success[i], RevertMsgDecoder._getRevertMsg(result[i]));
+                // The CALL opcode returns the returned data in the function call.
+                // Only when it reverts, the returned data is the revert message.
+                if (!success[i]) {
+                    revert(RevertMsgDecoder._getRevertMsg(result[i]));
+                }
             }
             ++i;
         }
@@ -598,15 +602,10 @@ contract Penrose is Ownable, Pausable {
     function _depositFeesToTwTap(IMarket market, ITWTAPv2 twTap) private {
         if (!isMarketRegistered[address(market)]) revert NotValid();
 
-        uint256 feeShares = IBigBang(address(market)).refreshPenroseFees();
-        if (feeShares == 0) return;
+        uint256 feeAmount = ISingularity(address(market)).refreshPenroseFees();
+        if (feeAmount == 0) return;
 
         address _asset = market._asset();
-
-        uint256 feeAmount = market.convertToAssets(feeShares);
-
-        market.withdraw(feeAmount, address(this), address(this));
-
         uint256 rewardTokenId = twTap.rewardTokenIndex(IERC20_OZ(_asset));
         _distributeOnTwTap(feeAmount, rewardTokenId, _asset, twTap);
     }

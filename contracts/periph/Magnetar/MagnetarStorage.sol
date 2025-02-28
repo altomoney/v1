@@ -1,10 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.22;
 
-// External
-import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
-
-// Tapioca
+import {IMagnetarModuleExtender} from "tap-utils/interfaces/periph/IMagnetar.sol";
 import {TapiocaOmnichainEngineHelper} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainEngineHelper.sol";
 import {MagnetarModule} from "tap-utils/interfaces/periph/IMagnetar.sol";
 import {IMagnetarHelper} from "tap-utils/interfaces/periph/IMagnetarHelper.sol";
@@ -27,12 +24,14 @@ import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
  * @author TapiocaDAO
  * @notice Storage contract for Magnetar & modules
  */
-contract MagnetarStorage is IERC721Receiver {
+abstract contract MagnetarStorage {
     ICluster internal cluster;
     IMagnetarHelper public helper;
     TapiocaOmnichainEngineHelper public toeHelper;
 
     mapping(MagnetarModule moduleId => address moduleAddress) internal modules;
+
+    IMagnetarModuleExtender public magnetarModuleExtender; // For future implementations
 
     error Magnetar_NotAuthorized(address caller, address expectedCaller); // msg.send is neither the owner nor whitelisted by Cluster
     error Magnetar_ModuleNotFound(MagnetarModule module); // Module not found
@@ -45,20 +44,6 @@ contract MagnetarStorage is IERC721Receiver {
 
     receive() external payable virtual {}
 
-    /// =====================
-    /// Public
-    /// =====================
-
-    /**
-     * @dev Receiver for `MagnetarMintModule._participateOnTOLP()`
-     */
-    function onERC721Received(address, address, uint256, bytes memory) public virtual override returns (bytes4) {
-        return this.onERC721Received.selector;
-    }
-
-    /// =====================
-    /// Private
-    /// =====================
     function _executeModule(MagnetarModule _module, bytes memory _data) internal returns (bytes memory returnData) {
         bool success = true;
         address module = modules[_module];

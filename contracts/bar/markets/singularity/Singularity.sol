@@ -3,7 +3,7 @@ pragma solidity ^0.8.22;
 
 // External
 import {RebaseLibrary, Rebase} from "@boringcrypto/boring-solidity/contracts/libraries/BoringRebase.sol";
-import {IERC20} from "@boringcrypto/boring-solidity/contracts/libraries/BoringERC20.sol";
+import {IERC20} from "@boringcrypto/boring-solidity/contracts/interfaces/IERC20.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {BoringERC20} from "@boringcrypto/boring-solidity/contracts/libraries/BoringERC20.sol";
 
@@ -123,6 +123,7 @@ contract Singularity is Market, SGLCommon {
         external
         optionNotPaused(PauseType.AddAsset)
         allowedLend(from, amount)
+        nonReentrant
         returns (uint256 fraction)
     {
         if (amount <= minLendAmount) revert MinLendAmountNotMet();
@@ -139,6 +140,7 @@ contract Singularity is Market, SGLCommon {
     function removeAsset(address from, address to, uint256 fraction)
         external
         optionNotPaused(PauseType.RemoveAsset)
+        nonReentrant
         returns (uint256 share)
     {
         _accrue();
@@ -152,8 +154,8 @@ contract Singularity is Market, SGLCommon {
 
     /// @notice Transfers fees to penrose
     /// @dev can only be called by the owner or FEES_EXTRACTOR role
-    /// @return feeShares the amount of fees in shares withdrawn under Penrose
-    function refreshPenroseFees() external returns (uint256 feeShares) {
+    /// @return feeAmount the amount of fees withdrawn under Penrose
+    function refreshPenroseFees() external returns (uint256 feeAmount) {
         require(
             _cluster().hasRole(msg.sender, keccak256("FEES_EXTRACTOR")) || msg.sender == owner(),
             "Ownable: caller is not the owner"
@@ -162,13 +164,15 @@ contract Singularity is Market, SGLCommon {
         // withdraw the fees accumulated in `accrueInfo.feesEarnedFraction` to the balance of `feeTo`.
         if (accrueInfo.feesEarnedFraction > 0) {
             _accrue();
+            // Fees are in assets (asset liquidity), not shares.
             uint256 _feesEarnedFraction = accrueInfo.feesEarnedFraction;
-            _mint(_feeTo, _feesEarnedFraction); // TODO Check if this is correct (ERC20._mint -no ERC4626-)
+            liquidityBalance[_feeTo] += _feesEarnedFraction;
+            emit Transfer(address(0), _feeTo, _feesEarnedFraction);
             accrueInfo.feesEarnedFraction = 0;
             emit LogWithdrawFees(_feeTo, _feesEarnedFraction);
         }
-
-        feeShares = _removeAsset(_feeTo, msg.sender, balanceOf(_feeTo));
+        feeAmount = liquidityBalance[_feeTo];
+        _removeAsset(_feeTo, msg.sender, liquidityBalance[_feeTo]);
     }
 
     /// @notice sets Singularity specific configuration
@@ -279,7 +283,7 @@ contract Singularity is Market, SGLCommon {
         }
         totalAsset = _totalAsset.add(amount, fraction);
 
-        liquidityBalance[from] += fraction;
+        liquidityBalance[to] += fraction;
 
         emit LogAddAsset(from, to, amount, fraction);
     }
@@ -297,7 +301,6 @@ contract Singularity is Market, SGLCommon {
         liquidityBalance[from] -= fraction;
 
         if (_totalAsset.base < 1000) revert MinLimit();
-
         _totalAsset.elastic -= share.toUint128();
         totalAsset = _totalAsset;
         emit LogRemoveAsset(from, to, share, fraction);

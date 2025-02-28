@@ -4,7 +4,7 @@ pragma solidity ^0.8.22;
 // External
 import {RebaseLibrary, Rebase} from "@boringcrypto/boring-solidity/contracts/libraries/BoringRebase.sol";
 import {BoringERC20} from "@boringcrypto/boring-solidity/contracts/libraries/BoringERC20.sol";
-import {IERC20} from "@boringcrypto/boring-solidity/contracts/ERC20.sol";
+import {IERC20} from "@boringcrypto/boring-solidity/contracts/interfaces/IERC20.sol";
 
 // Tapioca
 import {ILeverageExecutor} from "tap-utils/interfaces/bar/ILeverageExecutor.sol";
@@ -261,15 +261,15 @@ contract BigBang is Market, BBCommon {
 
     /// @notice Transfers fees to penrose
     /// @dev can only be called by the owner or FEES_EXTRACTOR role
-    /// @return feeShares the amount of fees in shares withdrawn under Penrose
-    function refreshPenroseFees() external returns (uint256 feeShares) {
+    /// @return feeAmount the amount of fees in shares withdrawn under Penrose
+    function refreshPenroseFees() external returns (uint256 feeAmount) {
         require(
             _cluster().hasRole(msg.sender, keccak256("FEES_EXTRACTOR")) || msg.sender == owner(),
             "Ownable: caller is not the owner"
         );
-        uint256 fees = IERC20(_borrowableToken()).balanceOf(address(this));
-        if (fees > 0) {
-            withdraw(fees, msg.sender, address(this)); // TODO: check if this is correct
+        feeAmount = IERC20(_borrowableToken()).balanceOf(address(this));
+        if (feeAmount > 0) {
+            IERC20(_borrowableToken()).safeTransfer(msg.sender, feeAmount);
         }
     }
 

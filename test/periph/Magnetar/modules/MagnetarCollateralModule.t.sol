@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.22;
 
-import {MagnetarTestHelper, MagnetarSetupData, TestBigBangData, TestSingularityData} from "./MagnetarTestHelper.t.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {MagnetarTestUtils} from "../MagnetarTestUtils.t.sol";
+import {MagnetarCallFactoryUtil} from "../utils/MagnetarCallFactoryUtil.sol";
+import {MagnetarTest} from "../Magnetar.t.sol";
 import {
     MagnetarAction,
     MagnetarModule,
@@ -20,16 +23,12 @@ import "forge-std/Test.sol";
 import "forge-std/console.sol";
 
 // @review-test: This test is failing in the setup (check MagnetarTestHelper.createUsdo).
-abstract contract MagnetarCollateralModuleTest is MagnetarTestHelper {
-    // -----------------------
-    //
-    // Setup
-    //
-    // -----------------------
-    function setUp() public override {
-        createCommonSetup();
+//MagnetarTestUtils, MagnetarCallFactoryUtil
+contract MagnetarCollateralModuleTest is MagnetarTest {
+    function setUp() public virtual override {
+        super.setUp();
     }
-
+    /*
     function _createDepositRepayAndRemoveCollateralFromMarketData(
         address market,
         address marketHelper,
@@ -69,12 +68,9 @@ abstract contract MagnetarCollateralModuleTest is MagnetarTestHelper {
             withdrawParams: _withdrawData
         });
     }
+    */
 
-    // -----------------------0
-    //
-    // Tests
-    //
-    // -----------------------
+    /*
     function test_depositRepayAndRemoveCollateralFromMarket_validation() public {
         address randomAddr = makeAddr("not_whitelisted");
         MagnetarCall[] memory calls = new MagnetarCall[](1);
@@ -651,5 +647,136 @@ abstract contract MagnetarCollateralModuleTest is MagnetarTestHelper {
         assertGt(colSharesAfter, colSharesBefore);
         assertGt(borrowPartAfter, borrowPartBefore);
         assertGt(assetBalanceAfter, assetBalanceBefore);
+    }
+    */
+
+    function test_burst_addCollateral_valid_with_permits(
+        uint160 _userPk,
+        uint256 _tokenAmount,
+        uint256 _collateralAmount
+    ) external withValidAmount(_tokenAmount) withValidAmount128(_collateralAmount) {
+        vm.assume(sgl._minCollateralAmount() < _collateralAmount);
+        address _user = _assumeValidAddress(_userPk, "user");
+
+        deal(address(collateral), _user, _collateralAmount);
+
+        _withMarketAddAsset(_userPk, _tokenAmount);
+        uint256 _nonce = sgl.nonces(_user);
+
+        MagnetarCall[] memory calls = new MagnetarCall[](3);
+        calls[0] = _getERC20PermitMagnetarCall(payable(address(collateral)), _userPk, address(sgl), _collateralAmount, 1 days);
+        calls[1] = _getMarketPermitCollateralMagnetarCall(address(sgl), _userPk, address(magnetar), _collateralAmount, 1 days, _nonce++);
+        calls[2] = _getMarketAddCollateralMagnetarCall(address(sgl), address(marketHelper), _user, _collateralAmount);
+
+        vm.startPrank(_user);
+        magnetar.burst(calls);
+        vm.stopPrank();
+
+        assertGt(sgl.balanceOf(_user), 0, "user should have collateral shares");
+        assertEq(sgl.balanceOf(address(magnetar)), 0, "magnetar should not have collateral shares");
+        assertEq(collateral.balanceOf(address(sgl)), _collateralAmount, "Market should have collateral");
+        assertEq(sgl.totalSupply(), sgl.balanceOf(_user), "total supply should be equal to user balance");
+    }
+
+    function test_burst_addCollateral_valid_with_permit(
+        uint160 _userPk,
+        uint256 _tokenAmount,
+        uint256 _collateralAmount
+    ) external withValidAmount(_tokenAmount) withValidAmount128(_collateralAmount) {
+        vm.assume(sgl._minCollateralAmount() < _collateralAmount);
+        address _user = _assumeValidAddress(_userPk, "user");
+
+        deal(address(collateral), _user, _collateralAmount);
+
+        _withMarketAddAsset(_userPk, _tokenAmount);
+        uint256 _nonce = sgl.nonces(_user);
+
+        MagnetarCall[] memory calls = new MagnetarCall[](3);
+        calls[0] = _getERC20PermitMagnetarCall(payable(address(collateral)), _userPk, address(sgl), _collateralAmount, 1 days);
+        calls[1] = _getMarketPermitCollateralMagnetarCall(address(sgl), _userPk, address(magnetar), _collateralAmount, 1 days, _nonce++);
+        calls[2] = _getMarketAddCollateralMagnetarCall(address(sgl), address(marketHelper), _user, _collateralAmount);
+
+        vm.startPrank(_user);
+        magnetar.burst(calls);
+        vm.stopPrank();
+
+        assertGt(sgl.balanceOf(_user), 0, "user should have collateral shares");
+        assertEq(sgl.balanceOf(address(magnetar)), 0, "magnetar should not have collateral shares");
+        assertEq(collateral.balanceOf(address(sgl)), _collateralAmount, "Market should have collateral");
+        assertEq(sgl.totalSupply(), sgl.balanceOf(_user), "total supply should be equal to user balance");
+    }
+
+    function test_burst_addAsset_addCollateral_borrow_valid_with_permit(
+        uint160 _userPk,
+        uint256 _tokenAmount,
+        uint256 _collateralAmount
+    ) external withValidAmount(_tokenAmount) withValidAmount128(_collateralAmount) {
+        uint256 _borrowAmount = sgl._minBorrowAmount() * 3;
+        vm.assume(sgl._minCollateralAmount() * 4 < _collateralAmount);
+        vm.assume(sgl._minBorrowAmount() < _borrowAmount);
+        vm.assume(_borrowAmount < _tokenAmount);
+        vm.assume(_borrowAmount * 3 < _collateralAmount);
+        address _user = _assumeValidAddress(_userPk, "user");
+
+        deal(address(collateral), _user, _collateralAmount);
+
+        _withMarketAddAsset(_userPk, _tokenAmount);
+        uint256 _nonce = sgl.nonces(_user);
+
+        MagnetarCall[] memory calls = new MagnetarCall[](4);
+        calls[0] = _getERC20PermitMagnetarCall(payable(address(collateral)), _userPk, address(sgl), _collateralAmount, 1 days);
+        calls[1] = _getMarketPermitCollateralMagnetarCall(address(sgl), _userPk, address(magnetar), _collateralAmount, 1 days, _nonce++);
+        calls[2] = _getMarketPermitBorrowMagnetarCall(address(sgl), _userPk, address(magnetar), _borrowAmount, 1 days, _nonce++);
+        calls[3] = _getMarketAddCollateral_BorrowMagnetarCall(address(sgl), address(marketHelper), _user, _collateralAmount, _borrowAmount);
+
+        vm.startPrank(_user);
+        magnetar.burst(calls);
+        vm.stopPrank();
+
+        assertGt(sgl.balanceOf(_user), 0, "user should have collateral shares");
+        assertEq(sgl.balanceOf(address(magnetar)), 0, "magnetar should not have collateral shares");
+        assertEq(collateral.balanceOf(address(sgl)), _collateralAmount, "Market should have collateral");
+        assertEq(sgl.totalSupply(), sgl.balanceOf(_user), "total supply should be equal to user balance");
+        assertEq(sgl._userBorrowPart(_user), _borrowAmount, "user borrow part should be equal to borrow amount");
+    }
+
+    function test_burst_addAsset_addCollateral_borrow_repay_valid_with_permit(
+        uint160 _userPk,
+        uint256 _tokenAmount,
+        uint256 _collateralAmount
+    ) external withValidAmount(_tokenAmount) withValidAmount128(_collateralAmount) {
+        uint256 _borrowAmount = sgl._minBorrowAmount() * 3;
+        vm.assume(sgl._minCollateralAmount() * 4 < _collateralAmount);
+        vm.assume(sgl._minBorrowAmount() < _borrowAmount);
+        vm.assume(_borrowAmount < _tokenAmount);
+        vm.assume(_borrowAmount * 3 < _collateralAmount);
+        address _user = _assumeValidAddress(_userPk, "user");
+
+        deal(address(collateral), _user, _collateralAmount);
+        address _borrowableToken = sgl._asset();
+        deal(_borrowableToken, _user, _borrowAmount);
+        console.log("borrowableToken", _borrowableToken);
+        console.log("borrowAmount", _borrowAmount);
+        _withMarketAddAsset(_userPk, _tokenAmount);
+        uint256 _nonce = sgl.nonces(_user);
+
+        MagnetarCall[] memory calls = new MagnetarCall[](7);
+        calls[0] = _getERC20PermitMagnetarCall(payable(address(collateral)), _userPk, address(sgl), _collateralAmount, 1 days);
+        calls[1] = _getMarketPermitCollateralMagnetarCall(address(sgl), _userPk, address(magnetar), _collateralAmount, 1 days, _nonce++);
+        calls[2] = _getMarketPermitBorrowMagnetarCall(address(sgl), _userPk, address(magnetar), _borrowAmount, 1 days, _nonce++);
+        calls[3] = _getMarketAddCollateral_BorrowMagnetarCall(address(sgl), address(marketHelper), _user, _collateralAmount, _borrowAmount);
+        calls[4] = _getERC20PermitMagnetarCall(payable(address(_borrowableToken)), _userPk, address(sgl), _borrowAmount, 1 days);
+        calls[5] = _getMarketPermitLiquidityMagnetarCall(address(sgl), _userPk, address(magnetar), _borrowAmount, 1 days, _nonce++);
+        calls[6] = _getMarketRepayMagnetarCall(address(sgl), address(marketHelper), _user, _borrowAmount);
+
+        vm.startPrank(_user);
+        magnetar.burst(calls);
+        vm.stopPrank();
+
+        assertGt(sgl.balanceOf(_user), 0, "user should have collateral shares");
+        assertEq(sgl.balanceOf(address(magnetar)), 0, "magnetar should not have collateral shares");
+        assertEq(collateral.balanceOf(address(sgl)), _collateralAmount, "Market should have collateral");
+        assertEq(sgl.totalSupply(), sgl.balanceOf(_user), "total supply should be equal to user balance");
+        assertEq(sgl._userBorrowPart(_user), 0, "user borrow part should be equal to borrow amount");
     }
 }

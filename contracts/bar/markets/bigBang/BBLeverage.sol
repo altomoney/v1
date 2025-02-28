@@ -65,18 +65,19 @@ contract BBLeverage is BBLendingCommon {
         _penrose.reAccrueBigBangMarkets();
 
         if (supplyAmount > 0) {
-            _allowedCollateral(from, supplyAmount);
+            _allowedBorrow(from, supplyAmount);
             IERC20(borrowableToken()).safeTransferFrom(from, address(leverageExecutor), supplyAmount);
         }
 
         {
+            _allowedBorrow(from, borrowAmount + _computeVariableOpeningFee(borrowAmount));
             _borrow(from, address(leverageExecutor), borrowAmount, _computeVariableOpeningFee(borrowAmount));
         }
 
         {
             updateExchangeRate();
             uint256 assetPartInCollateral = (supplyAmount + borrowAmount) * exchangeRate / EXCHANGE_RATE_PRECISION;
-            _allowedBorrow(from, convertToShares(assetPartInCollateral));
+            _allowedBorrow(from, previewDeposit(assetPartInCollateral));
 
             amountOut = leverageExecutor.getCollateral(
                 from, address(_borrowableToken()), collateral(), borrowAmount + supplyAmount, data
@@ -141,11 +142,11 @@ contract BBLeverage is BBLendingCommon {
 
         IERC20(_borrowableToken()).safeTransfer(from, amountOut);
 
-        memoryData.shareOut = convertToShares(amountOut);
+        memoryData.shareOut = previewWithdraw(amountOut);
 
         memoryData.partOwed = userBorrowPart[from];
         memoryData.amountOwed = totalBorrow.toElastic(memoryData.partOwed, true);
-        memoryData.shareOwed = convertToShares(memoryData.amountOwed);
+        memoryData.shareOwed = previewWithdraw(memoryData.amountOwed);
         if (memoryData.shareOwed <= memoryData.shareOut) {
             _repay(from, from, memoryData.partOwed, false);
         } else {

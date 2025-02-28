@@ -4,6 +4,7 @@ pragma solidity ^0.8.22;
 // Tapioca
 import {IMarketLiquidatorReceiver} from "./IMarketLiquidatorReceiver.sol";
 import {Module} from "./IMarket.sol";
+import {IMarket} from "./IMarket.sol";
 
 /*
 
@@ -17,6 +18,18 @@ import {Module} from "./IMarket.sol";
 */
 
 interface IMarketHelper {
+    function isPositionInBadDebt(IMarket market, uint256 _exchangeRate, address _user) external view returns (bool);
+
+    function computeClosingFactor(IMarket market, uint256 borrowPart, uint256 collateralPartInAsset)
+        external
+        view
+        returns (uint256);
+
+    function isPositionSolvent(address _market, address _user, uint256 _exchangeRate, bool _forLiquidation)
+        external
+        view
+        returns (bool);
+
     function computeAllowedLendShare(address sglAddress, uint256 amount) external view returns (uint256 share);
 
     function getLiquidationCollateralAmount(
@@ -26,11 +39,9 @@ interface IMarketHelper {
         uint256 minLiquidationBonus,
         uint256 exchangeRatePrecision,
         uint256 feeDecimalsPrecision
-    ) external view returns (Module[] memory modules, bytes[] memory calls);
+    ) external view returns (uint256 collateralShare);
 
-    function getLiquidationCollateralAmountView(bytes calldata result) external pure returns (uint256 amount);
-
-    function addCollateral(address from, address to, bool skim, uint256 amount, uint256 share)
+    function addCollateral(address from, address to, uint256 amount, uint256 share)
         external
         pure
         returns (Module[] memory modules, bytes[] memory calls);
@@ -44,9 +55,10 @@ interface IMarketHelper {
         external
         pure
         returns (Module[] memory modules, bytes[] memory calls);
+
     function borrowView(bytes calldata result) external pure returns (uint256 part, uint256 share);
 
-    function repay(address from, address to, bool skim, uint256 part)
+    function repay(address from, address to, uint256 part)
         external
         pure
         returns (Module[] memory modules, bytes[] memory calls);
@@ -64,6 +76,7 @@ interface IMarketHelper {
         external
         pure
         returns (Module[] memory modules, bytes[] memory calls);
+
     function buyCollateralView(bytes calldata result) external pure returns (uint256 amountOut);
 
     function liquidateBadDebt(

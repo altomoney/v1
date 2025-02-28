@@ -27,6 +27,7 @@ import {Cluster} from "tap-utils/Cluster/Cluster.sol";
 import {Penrose} from "tapioca-bar/Penrose.sol";
 
 import {MarketLiquidatorReceiverMock} from "../mocks/MarketLiquidatorReceiverMock.sol";
+import {MarketLiquidatorReceiverAddAssetReentrancy} from "../mocks/liquidatorReceivers/MarketLiquidatorReceiverAddAssetReentrancy.sol";
 import {MagnetarMock} from "../mocks/MagnetarMock.sol";
 import {SwapperMock} from "../mocks/SwapperMock.sol";
 import {OracleMock} from "../mocks/OracleMock.sol";
@@ -162,10 +163,10 @@ contract SingularityTest is UsdoTestHelper {
         vm.label(address(singularity), "Singularity");
     }
 
-    function depositAsset(uint256 amount) public {
+    function depositAsset(uint256 amount) public returns (uint256 fraction) {
         deal(address(asset), address(this), amount);
         IERC20(singularity.borrowableToken()).approve(address(singularity), amount);
-        singularity.addAsset(address(this), address(this), amount);
+        fraction = singularity.addAsset(address(this), address(this), amount);
     }
 
     function depositCollateral(uint256 amount) public {
@@ -334,6 +335,24 @@ contract SingularityTest is UsdoTestHelper {
         borrow(borrowAmount, true);
     }
 
+    function test_addAsset_valid(address _from, address _to, uint256 _amount) public {
+        vm.assume(_from != address(0));
+        vm.assume(_to != address(0));
+        vm.assume(_from != _to);
+        vm.assume(_amount > singularity.minLendAmount());
+        vm.assume(_amount < type(uint64).max);
+
+        deal(address(singularity._asset()), _from, _amount);
+        
+        vm.startPrank(_from);
+        IERC20(singularity._asset()).approve(address(singularity), _amount);
+        uint256 fraction = singularity.addAsset(_from, _to, _amount);
+        vm.stopPrank();
+
+        assertEq(fraction, singularity.liquidityBalance(_to), "Liquidity balance of _to should be fraction");
+        assertEq(0, singularity.liquidityBalance(_from), "Liquidity balance of _from should be 0");
+    }
+
     function test_borrow_and_liquidate() public {
         uint256 collateralAmount = 1 ether;
         uint256 borrowAmount = 5e17;
@@ -380,7 +399,7 @@ contract SingularityTest is UsdoTestHelper {
         receivers[0] = IMarketLiquidatorReceiver(address(liquidatorMock));
 
         bytes[] memory receiverData = new bytes[](1);
-        receiverData[0] = abi.encode(borrowAmount / 2);
+        receiverData[0] = abi.encode(borrowAmount);
 
         uint256 borrowPartBefore = singularity._userBorrowPart(address(this));
         (Module[] memory modules, bytes[] memory calls) =
@@ -389,6 +408,31 @@ contract SingularityTest is UsdoTestHelper {
         uint256 borrowPartAfter = singularity._userBorrowPart(address(this));
 
         assertGt(borrowPartBefore, borrowPartAfter);
+    }
+
+    function _liquidateUser(address user, uint256 borrowAmount, address liquidator) internal {
+        address[] memory users = new address[](1);
+        users[0] = user;
+
+        uint256[] memory borrowParts = new uint256[](1);
+        borrowParts[0] = borrowAmount / 2;
+
+        uint256[] memory minLiquidationBonuses = new uint256[](1);
+        minLiquidationBonuses[0] = 1e4;
+
+        IMarketLiquidatorReceiver[] memory receivers = new IMarketLiquidatorReceiver[](1);
+        receivers[0] = IMarketLiquidatorReceiver(liquidator);
+
+        bytes[] memory receiverData = new bytes[](1);
+        receiverData[0] = abi.encode(borrowAmount / 2);
+
+        uint256 borrowPartBefore = singularity._userBorrowPart(user);
+        (Module[] memory modules, bytes[] memory calls) =
+            marketHelper.liquidate(users, borrowParts, minLiquidationBonuses, receivers, receiverData);
+        vm.expectRevert();
+        singularity.execute(modules, calls, true);
+        uint256 borrowPartAfter = singularity._userBorrowPart(user);
+        assertEq(borrowPartBefore, borrowPartAfter, "Liquidate: borrowPartBefore should be equal to borrowPartAfter");
     }
 
     function test_borrow_and_liquidate_bad_debt() public {
@@ -412,60 +456,52 @@ contract SingularityTest is UsdoTestHelper {
         oracle.set(oracleRate * 100);
 
         liquidatorMock = new MarketLiquidatorReceiverMock(IERC20(address(asset)));
-        // deal(address(asset), address(liquidatorMock), borrowAmount * 2);
 
         //cannot liquidate
-        {
-            address[] memory users = new address[](1);
-            users[0] = address(this);
-
-            uint256[] memory borrowParts = new uint256[](1);
-            borrowParts[0] = borrowAmount / 2;
-
-            uint256[] memory minLiquidationBonuses = new uint256[](1);
-            minLiquidationBonuses[0] = 1e4;
-
-            IMarketLiquidatorReceiver[] memory receivers = new IMarketLiquidatorReceiver[](1);
-            receivers[0] = IMarketLiquidatorReceiver(address(liquidatorMock));
-
-            bytes[] memory receiverData = new bytes[](1);
-            receiverData[0] = abi.encode(borrowAmount / 2);
-
-            uint256 borrowPartBefore = singularity._userBorrowPart(address(this));
-            (Module[] memory modules, bytes[] memory calls) =
-                marketHelper.liquidate(users, borrowParts, minLiquidationBonuses, receivers, receiverData);
-            vm.expectRevert();
-            singularity.execute(modules, calls, true);
-            uint256 borrowPartAfter = singularity._userBorrowPart(address(this));
-            assertEq(borrowPartBefore, borrowPartAfter, "Liquidate: borrowPartBefore should be equal to borrowPartAfter");
-        }
+        _liquidateUser(address(this), borrowAmount, address(liquidatorMock));
 
         //use liquidateBadDebt
-        {
-            uint256 borrowPartBefore = singularity._userBorrowPart(address(this));
-            (Module[] memory modules, bytes[] memory calls) = marketHelper.liquidateBadDebt(
-                address(this),
-                address(this),
-                address(this),
-                IMarketLiquidatorReceiver(address(liquidatorMock)),
-                "",
-                false
-            );
-            vm.prank(cluster.owner());
-            cluster.updateContract(0, address(this), true);
-            deal(address(asset), address(this), borrowAmount * 2);
-            asset.approve(address(singularity), type(uint256).max);
-            bytes memory badDebtCall = abi.encodeWithSelector(IMarket.execute.selector, modules, calls, true);
+        _liquidateUserBadDebt(address(this), address(liquidatorMock), borrowAmount);
+    }
 
-            address[] memory mc = new address[](1);
-            mc[0] = address(singularity);
+    function _getBadDebtCall(uint256 borrowAmount, Module[] memory modules, bytes[] memory calls)
+        internal
+        returns (bytes memory)
+    {
+        vm.prank(cluster.owner());
+        cluster.updateContract(0, address(this), true);
+        deal(address(asset), address(this), borrowAmount * 2);
+        asset.approve(address(singularity), type(uint256).max);
+        bytes memory badDebtCall = abi.encodeWithSelector(IMarket.execute.selector, modules, calls, true);
+        return badDebtCall;
+    }
 
-            bytes[] memory data = new bytes[](1);
-            data[0] = badDebtCall;
-            penrose.executeMarketFn(mc, data, true);
-            uint256 borrowPartAfter = singularity._userBorrowPart(address(this));
-            assertGt(borrowPartBefore, borrowPartAfter, "LiquidateBadDebt: borrowPartBefore should be greater than borrowPartAfter");
-        }
+    function _getMarkets(address _market) internal returns (address[] memory) {
+        address[] memory markets = new address[](1);
+        markets[0] = _market;
+        return markets;
+    }
+
+    function _getDataCalls(bytes memory dataCall) internal returns (bytes[] memory) {
+        bytes[] memory data = new bytes[](1);
+        data[0] = dataCall;
+        return data;
+    }
+
+    function _liquidateUserBadDebt(address user, address liquidator, uint256 borrowAmount) internal {
+        uint256 borrowPartBefore = singularity._userBorrowPart(user);
+        (Module[] memory modules, bytes[] memory calls) =
+            marketHelper.liquidateBadDebt(user, user, user, IMarketLiquidatorReceiver(liquidator), "", false);
+
+        bytes memory badDebtCall = _getBadDebtCall(borrowAmount, modules, calls);
+
+        penrose.executeMarketFn(_getMarkets(address(singularity)), _getDataCalls(badDebtCall), true);
+        uint256 borrowPartAfter = singularity._userBorrowPart(user);
+        assertGt(
+            borrowPartBefore,
+            borrowPartAfter,
+            "LiquidateBadDebt: borrowPartBefore should be greater than borrowPartAfter"
+        );
     }
 
     function test_magnetar_helper_info() public {
@@ -530,11 +566,8 @@ contract SingularityTest is UsdoTestHelper {
             repay(singularity._userBorrowPart(address(this)));
         }
         (,, uint128 feesEarnedFraction) = singularity.accrueInfo();
-        uint256 feesAmount =
-            magnetarHelper.getAmountForAssetFraction(ISingularity(address(singularity)), feesEarnedFraction);
         assertGe(userBorrowPart, borrowAmount);
         assertGe(feesEarnedFraction, 0);
-        assertGe(feesAmount, 0);
 
         IMarket[] memory markets = new IMarket[](1);
         markets[0] = IMarket(address(singularity));
@@ -545,8 +578,8 @@ contract SingularityTest is UsdoTestHelper {
         // WIP Fails here
         penrose.withdrawAllMarketFees(markets, ITWTAPv2(address(twTapMock)));
         uint256 twTapBalanceAfter = asset.balanceOf(address(twTapMock));
-        assertGe(twTapBalanceAfter, twTapBalanceBefore);
-        assertGe(twTapBalanceAfter, feesAmount);
+        assertGe(twTapBalanceAfter, twTapBalanceBefore, "TwTap balance should be greater than before");
+        assertGe(twTapBalanceAfter, feesEarnedFraction, "TwTap balance should be greater than feesEarnedFraction");
     }
 
     function test_borrow_repay_different_users() public {
@@ -569,7 +602,6 @@ contract SingularityTest is UsdoTestHelper {
         uint256 borrowPart = singularity._userBorrowPart(address(this));
         assertGt(borrowPart, 0);
 
-
         singularity.approveBorrow(address(userA), type(uint256).max);
         singularity.approve(address(userA), type(uint256).max);
 
@@ -585,6 +617,151 @@ contract SingularityTest is UsdoTestHelper {
 
         uint256 borrowPartAfter = singularity._userBorrowPart(address(this));
         assertEq(borrowPartAfter, 0);
+    }
+
+    function test_addCollateral_valid(address _user, uint256 _amount) public {
+        vm.assume(_user != address(0));
+        vm.assume(_amount >= singularity._minCollateralAmount());
+        vm.assume(_amount <= type(uint128).max);
+
+        deal(address(collateral), _user, _amount);
+        uint256 previewDepositAmount = singularity.previewDeposit(_amount);
+
+        vm.startPrank(_user);
+        collateral.approve(address(singularity), _amount);
+        (Module[] memory modules, bytes[] memory calls) =
+            marketHelper.addCollateral(_user, _user, _amount, 0);
+        singularity.execute(modules, calls, true);
+        vm.stopPrank();
+
+        uint256 userCollateralShare = singularity.balanceOf(_user);
+
+        assertGt(userCollateralShare, 0, "User collateral share should be greater than 0");
+        assertEq(collateral.balanceOf(address(singularity)), _amount, "Collateral balance of singularity should be equal to _amount");
+        assertEq(collateral.balanceOf(_user), 0, "Collateral balance of user should be 0");
+        assertEq(userCollateralShare, previewDepositAmount, "User collateral share should be equal to previewDepositAmount");
+    }
+
+    function test_addCollateral_valid_provide_both_values(address _user, uint256 _amount, uint256 _shares) public {
+        vm.assume(_user != address(0));
+        vm.assume(_amount >= singularity._minCollateralAmount());
+        vm.assume(_amount <= type(uint128).max);
+        vm.assume(_shares <= type(uint128).max);
+        vm.assume(_shares > 1e18);
+
+        uint256 previewMintAmount = singularity.previewMint(_shares);
+        deal(address(collateral), _user, previewMintAmount);
+
+        vm.startPrank(_user);
+        collateral.approve(address(singularity), previewMintAmount);
+        (Module[] memory modules, bytes[] memory calls) =
+            marketHelper.addCollateral(_user, _user, previewMintAmount, _shares);
+        singularity.execute(modules, calls, true);
+        vm.stopPrank();
+
+        uint256 userCollateralShare = singularity.balanceOf(_user);
+        assertGt(userCollateralShare, 0, "User collateral share should be greater than 0");
+        assertEq(collateral.balanceOf(address(singularity)), previewMintAmount, "Collateral balance of singularity should be equal to _amount");
+        assertEq(collateral.balanceOf(_user), 0, "Collateral balance of user should be 0");
+        assertEq(userCollateralShare, previewMintAmount, "User collateral share should be equal to previewMintAmount");
+    }
+
+    function test_addCollateral_valid_provide_both_amount_and_shares(address _user, uint256 _amount) public {
+        vm.assume(_user != address(0));
+        vm.assume(_amount >= singularity._minCollateralAmount());
+        vm.assume(_amount <= type(uint128).max);
+        uint256 _shares = 1e18;
+
+        uint256 previewMintAmount = singularity.previewMint(_shares);
+        deal(address(collateral), _user, _shares + _amount); // To ensure enough collateral when it is lt shares (1e18)
+
+        vm.startPrank(_user);
+        collateral.approve(address(singularity), type(uint256).max);
+        (Module[] memory modules, bytes[] memory calls) =
+            marketHelper.addCollateral(_user, _user, _amount, _shares);
+        singularity.execute(modules, calls, true);
+        vm.stopPrank();
+
+        uint256 userCollateralShare = singularity.balanceOf(_user);
+        assertEq(userCollateralShare, _shares, "User collateral share should be equal to _shares");
+        assertEq(collateral.balanceOf(address(singularity)), previewMintAmount, "Collateral balance of singularity should be equal to _amount");
+    }
+
+    function test_addCollateral_invalid_both_zero(address _user) public {
+        vm.assume(_user != address(0));
+        uint256 _amount = 0;
+        uint256 _shares = 0;
+
+        vm.startPrank(_user);
+        (Module[] memory modules, bytes[] memory calls) =
+            marketHelper.addCollateral(_user, _user, _amount, _shares);
+        vm.expectRevert();
+        singularity.execute(modules, calls, true);
+        vm.stopPrank();
+
+        uint256 userCollateralShare = singularity.balanceOf(_user);
+
+        assertEq(userCollateralShare, 0, "User collateral share should be 0");
+        assertEq(collateral.balanceOf(address(singularity)), 0, "Collateral balance of singularity should be 0");
+        assertEq(collateral.balanceOf(_user), 0, "Collateral balance of user should be 0");
+        assertEq(userCollateralShare, _shares, "User collateral share should be equal to _shares");
+    }
+
+    function test_borrow_and_liquidate_add_asset_reentrancy_invalid() public {
+        uint256 collateralAmount = 1 ether;
+        uint256 borrowAmount = 5e17;
+
+        deal(address(collateral), address(this), collateralAmount);
+        deal(address(asset), address(this), borrowAmount * 2);
+        depositAsset(borrowAmount * 2);
+
+        depositCollateral(collateralAmount);
+
+        borrow(borrowAmount, false);
+
+        bytes memory setLiquidationMaxSlippageCall =
+            abi.encodeWithSelector(Market.setLiquidationMaxSlippage.selector, 1e4); //10%
+
+        address[] memory mc = new address[](1);
+        mc[0] = address(singularity);
+
+        bytes[] memory data = new bytes[](1);
+        data[0] = setLiquidationMaxSlippageCall;
+        penrose.executeMarketFn(mc, data, false);
+
+        uint256 oracleRate = oracle.rate();
+        oracle.set((oracleRate * 10) / 6);
+
+        address attacker = address(0x1337);
+        MarketLiquidatorReceiverAddAssetReentrancy liquidatorReentrancy = new MarketLiquidatorReceiverAddAssetReentrancy(IERC20(address(asset)), attacker);
+        deal(address(asset), address(liquidatorReentrancy), borrowAmount * 2);
+
+        address[] memory users = new address[](1);
+        users[0] = address(this);
+        uint256[] memory borrowParts = new uint256[](1);
+        borrowParts[0] = borrowAmount / 2;
+        uint256[] memory minLiquidationBonuses = new uint256[](1);
+        minLiquidationBonuses[0] = 1e4;
+
+        IMarketLiquidatorReceiver[] memory receivers = new IMarketLiquidatorReceiver[](1);
+        receivers[0] = IMarketLiquidatorReceiver(address(liquidatorReentrancy));
+
+        bytes[] memory receiverData = new bytes[](1);
+        receiverData[0] = abi.encode(borrowAmount);
+
+        uint256 borrowPartBefore = singularity._userBorrowPart(address(this));
+        (Module[] memory modules, bytes[] memory calls) =
+            marketHelper.liquidate(users, borrowParts, minLiquidationBonuses, receivers, receiverData);
+        
+        vm.expectRevert("ReentrancyGuard: reentrant call");
+        singularity.execute(modules, calls, true);
+
+        vm.startPrank(attacker);
+        (uint256 liquidityBalance, uint256 liquidityShares) = liquidatorReentrancy.removeAsset(address(singularity), 51e16);
+        vm.stopPrank();
+
+        assertEq(liquidityBalance, 0, "Liquidity balance should be 0");
+        assertEq(liquidityShares, 0, "Liquidity shares should be 0");
     }
 
     //TODO: complete after audit fixes

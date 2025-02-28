@@ -7,10 +7,10 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
 // Tapioca
-import {ITapiocaOptionBroker} from "tap-utils/interfaces/tap-token/ITapiocaOptionBroker.sol";
 import {MagnetarWithdrawData} from "tap-utils/interfaces/periph/IMagnetar.sol";
 import {IMarketHelper} from "tap-utils/interfaces/bar/IMarketHelper.sol";
 import {ISingularity} from "tap-utils/interfaces/bar/ISingularity.sol";
+import {ITapiocaOptionBroker} from "tap-token/interfaces/ITapiocaOptionBroker.sol";
 
 import {Module, IMarket} from "tap-utils/interfaces/bar/IMarket.sol";
 
@@ -48,29 +48,7 @@ abstract contract MagnetarBaseModule is MagnetarStorage {
     /// Internal
     /// =====================
     function _withdrawHere(MagnetarWithdrawData memory data, IMarket _market) internal {
-        if (data.extractFromSender) {
-            // do NOT allow `extractFromSender` for whitelisted addresses
-            //    because in this cases funds should be already here
-            //    since it comes from an internal flow
-            if (cluster.isWhitelisted(0, msg.sender)) revert Magnetar_ExtractTokenFail();
-
-            uint256 _share = _market.convertToShares(data.amount);
-
-            // _yb.transfer(msg.sender, address(this), data.assetId, _share);
-            uint256 _sharesOut = _market.withdraw(data.amount, address(this), msg.sender);
-            if (_sharesOut == 0) {
-                revert Magnetar_TransferFailed();
-            }
-        }
-
-        if (data.unwrap) {
-            _market.withdraw(data.amount, address(this), address(this));
-
-            address assetAddress = _market._asset(); // It is the borrowable token (not the asset in the ERC4626)
-            ITOFT(assetAddress).unwrap(data.receiver, data.amount);
-        } else {
-            _market.withdraw(data.amount, data.receiver, address(this));
-        }
+        _market.withdraw(data.amount, address(this), address(this));
     }
 
     function _extractTokens(address _from, address _token, uint256 _amount) internal returns (uint256) {
@@ -98,7 +76,7 @@ abstract contract MagnetarBaseModule is MagnetarStorage {
         _market.accrue();
         uint256 repayPart = helper.getBorrowPartForAmount(address(_market), _amount, false); // RoundUp happen in market repay
         (Module[] memory modules, bytes[] memory calls) =
-            IMarketHelper(_marketHelper).repay(_from, _to, false, repayPart);
+            IMarketHelper(_marketHelper).repay(_from, _to, repayPart);
 
         (bool[] memory successes, bytes[] memory results) = _market.execute(modules, calls, true);
         if (!successes[0]) revert Magnetar_MarketCallFailed(calls[0]);
@@ -123,7 +101,7 @@ abstract contract MagnetarBaseModule is MagnetarStorage {
         address _to
     ) internal {
         (Module[] memory modules, bytes[] memory calls) =
-            IMarketHelper(_marketHelper).addCollateral(_from, _to, false, 0, _collateralShare);
+            IMarketHelper(_marketHelper).addCollateral(_from, _to, 0, _collateralShare);
         (bool[] memory successes,) = _market.execute(modules, calls, true);
         if (!successes[0]) revert Magnetar_MarketCallFailed(calls[0]);
     }
@@ -141,14 +119,6 @@ abstract contract MagnetarBaseModule is MagnetarStorage {
         if (!successes[0]) revert Magnetar_MarketCallFailed(calls[0]);
     }
 
-    function _singularityAddAsset(ISingularity _singularity, uint256 _amount, address _from, address _to)
-        internal
-        returns (uint256 fraction)
-    {
-        uint256 lendShare = _singularity.convertToShares(_amount);
-        fraction = _singularity.addAsset(_from, _to, lendShare);
-    }
-
     function _singularityRemoveAsset(ISingularity _singularity, uint256 _amount, address _from, address _to)
         internal
         returns (uint256 share)
@@ -158,8 +128,7 @@ abstract contract MagnetarBaseModule is MagnetarStorage {
         share = _singularity.removeAsset(_from, _to, fraction);
     }
 
-    function _tOBExit(address oTapAddress, address tOB, uint256 id) internal {
-        IERC721(oTapAddress).approve(tOB, id);
-        ITapiocaOptionBroker(tOB).exitPosition(id);
+    function _tOBExit(address tOB, uint8 bucketId, address to) internal {
+        ITapiocaOptionBroker(tOB).unlock(bucketId, to);
     }
 }

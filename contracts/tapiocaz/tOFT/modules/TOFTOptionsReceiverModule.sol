@@ -12,10 +12,14 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 // Tapioca
 import {
-    LockAndParticipateData, IMagnetar, MagnetarCall, MagnetarAction
+    LockData,
+    IMagnetar,
+    MagnetarCall,
+    MagnetarAction,
+    IExerciseOptionsData
 } from "tap-utils/interfaces/periph/IMagnetar.sol";
 import {IMagnetarOptionModule} from "tap-utils/interfaces/periph/IMagnetar.sol";
-import {ITapiocaOptionBroker, IExerciseOptionsData} from "tap-utils/interfaces/tap-token/ITapiocaOptionBroker.sol";
+import {ITapiocaOptionBroker} from "tap-token/interfaces/ITapiocaOptionBroker.sol";
 import {TOFTInitStruct, ExerciseOptionsMsg, LZSendParam} from "tap-utils/interfaces/oft/ITOFT.sol";
 import {ITapiocaOmnichainEngine} from "tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
 import {SafeApprove} from "tap-utils/libraries/SafeApprove.sol";
@@ -47,16 +51,14 @@ contract TOFTOptionsReceiverModule is BaseTOFT {
     error TOFTOptionsReceiverModule_Reentrancy();
 
     event ExerciseOptionsReceived(
-        address indexed user, address indexed target, uint256 indexed oTapTokenId, uint256 paymentTokenAmount
-    );
-    event LockAndParticipateReceived(
         address indexed user,
-        address indexed srcChainSender,
-        bool lock,
-        address indexed lockTarget,
-        uint256 fraction,
-        bool participate,
-        address participateTarget
+        address indexed target,
+        uint256 indexed bucketId,
+        uint256 paymentTokenAmount,
+        address paymentTokenAddress
+    );
+    event LockReceived(
+        address indexed user, address indexed srcChainSender, bool lock, address indexed lockTarget, uint256 usdoAmount
     );
 
     constructor(TOFTInitStruct memory _data) BaseTOFT(_data) {}
@@ -74,27 +76,19 @@ contract TOFTOptionsReceiverModule is BaseTOFT {
      */
     function lockAndParticipateReceiver(address srcChainSender, bytes memory _data) public payable {
         // Decode receive message
-        LockAndParticipateData memory msg_ = TOFTMsgCodec.decodeLockAndParticipateMsg(_data);
+        LockData memory msg_ = TOFTMsgCodec.decodeLockAndParticipateMsg(_data);
 
         /**
          * @dev validate data
          */
-        msg_ = _validateLockAndParticipate(msg_, srcChainSender);
+        msg_ = _validateLock(msg_, srcChainSender);
 
         /**
          * @dev execute through `Magnetar`
          */
         _lockAndParticipate(msg_);
 
-        emit LockAndParticipateReceived(
-            msg_.user,
-            srcChainSender,
-            msg_.lockData.lock,
-            msg_.lockData.target,
-            msg_.lockData.fraction,
-            msg_.participateData.participate,
-            msg_.participateData.target
-        );
+        emit LockReceived(msg_.user, srcChainSender, msg_.lockData.lock, msg_.lockData.target, msg_.lockData.usdoAmount);
     }
 
     /**
@@ -143,41 +137,31 @@ contract TOFTOptionsReceiverModule is BaseTOFT {
         emit ExerciseOptionsReceived(
             msg_.optionsData.from,
             msg_.optionsData.target,
-            msg_.optionsData.oTAPTokenID,
-            msg_.optionsData.paymentTokenAmount
+            msg_.optionsData.bucketId,
+            msg_.optionsData.paymentTokenAmount,
+            msg_.optionsData.paymentToken
         );
     }
 
-    function _validateLockAndParticipate(LockAndParticipateData memory msg_, address srcChainSender)
-        private
-        returns (LockAndParticipateData memory)
-    {
-        _checkWhitelistStatus(msg_.tSglToken);
+    function _validateLock(LockData memory msg_, address srcChainSender) private returns (LockData memory) {
         _checkWhitelistStatus(msg_.magnetar);
         if (msg_.lockData.lock) {
             _checkWhitelistStatus(msg_.lockData.target);
-            if (msg_.lockData.amount > 0) {
-                msg_.lockData.amount = _toLD(uint256(msg_.lockData.amount).toUint64()).toUint128();
+            if (msg_.lockData.usdoAmount > 0) {
+                msg_.lockData.usdoAmount = _toLD(msg_.lockData.usdoAmount.toUint64());
+                _validateAndSpendAllowance(msg_.user, srcChainSender, msg_.lockData.usdoAmount);
             }
-            if (msg_.lockData.fraction > 0) {
-                msg_.lockData.fraction = _toLD(msg_.lockData.fraction.toUint64());
-                _validateAndSpendAllowance(msg_.user, srcChainSender, msg_.lockData.fraction);
-            }
-        }
-
-        if (msg_.participateData.participate) {
-            _checkWhitelistStatus(msg_.participateData.target);
         }
 
         return msg_;
     }
 
-    function _lockAndParticipate(LockAndParticipateData memory msg_) private {
+    function _lockAndParticipate(LockData memory msg_) private {
         bytes memory call = abi.encodeWithSelector(IMagnetarOptionModule.lockAndParticipate.selector, msg_);
         MagnetarCall[] memory magnetarCall = new MagnetarCall[](1);
         magnetarCall[0] =
             MagnetarCall({id: uint8(MagnetarAction.OptionModule), target: msg_.magnetar, value: msg.value, call: call});
-        IMagnetar(payable(msg_.magnetar)).burst{value: msg_.value}(magnetarCall);
+        IMagnetar(payable(msg_.magnetar)).burst(magnetarCall);
     }
 
     function _validateExerciseOptionReceiver(ExerciseOptionsMsg memory msg_)
@@ -199,29 +183,22 @@ contract TOFTOptionsReceiverModule is BaseTOFT {
     }
 
     function _exerciseAndRefund(IExerciseOptionsData memory _options) private {
-        uint256 bBefore = balanceOf(address(this));
+        address paymentToken = _options.paymentToken;
+        uint256 bBefore = IERC20(paymentToken).balanceOf(address(this));
 
         ITapiocaOptionBroker(_options.target).exerciseOption(
-            _options.oTAPTokenID,
-            address(this), //payment token
+            _options.bucketId,
+            _options.paymentToken, //payment token
             _options.tapAmount
         );
 
-        // Clear ERC721 allowance post execution
-        {
-            address oTap = ITapiocaOptionBroker(_options.target).oTAP();
-            address oTapOwner = IERC721(oTap).ownerOf(_options.oTAPTokenID);
-
-            IERC721(oTap).setApprovalForAll(address(this), false);
-        }
-
-        uint256 bAfter = balanceOf(address(this));
+        uint256 bAfter = IERC20(paymentToken).balanceOf(address(this));
 
         // Refund if less was used.
         if (bBefore >= bAfter) {
             uint256 diff = bBefore - bAfter;
             if (diff < _options.paymentTokenAmount) {
-                IERC20(address(this)).safeTransfer(_options.from, _options.paymentTokenAmount - diff);
+                IERC20(paymentToken).safeTransfer(_options.from, _options.paymentTokenAmount - diff);
             }
         }
     }
@@ -230,23 +207,15 @@ contract TOFTOptionsReceiverModule is BaseTOFT {
      *   @notice checks that the caller is allowed by the owner of the token
      */
     function _validateExerciseOptionCaller(IExerciseOptionsData memory _options, address _srcChainSender) internal {
-        address oTap = ITapiocaOptionBroker(_options.target).oTAP();
-        address oTapOwner = IERC721(oTap).ownerOf(_options.oTAPTokenID);
-        if (oTapOwner != _srcChainSender || oTapOwner != _options.from) {
+        if (_options.from != _srcChainSender) {
             revert TOFTOptionsReceiverModule_NotAuthorized(_options.from);
         }
-
-        // TODO Review it bool isAllowed = isERC721Approved(oTapOwner, address(this), oTap, _options.oTAPTokenID);
-        // if (!isAllowed) revert TOFTOptionsReceiverModule_NotAuthorized(oTapOwner);
-        /// @dev Clear the allowance once it's used
-        /// usage being the allowance check
-        IERC721(oTap).setApprovalForAll(address(this), false);
     }
 
     function _withdrawExercised(ExerciseOptionsMsg memory msg_) private {
         SendParam memory _send = msg_.lzSendParams.sendParam;
 
-        address tapOft = ITapiocaOptionBroker(msg_.optionsData.target).tapOFT();
+        address tapOft = ITapiocaOptionBroker(msg_.optionsData.target).getTapToken();
         uint256 tapBalance = IERC20(tapOft).balanceOf(address(this));
         if (msg_.withdrawOnOtherChain) {
             /// @dev determine the right amount to send back to source

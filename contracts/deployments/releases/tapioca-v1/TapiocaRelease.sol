@@ -65,7 +65,7 @@ library TapiocaRelease {
             input.tapToken,
             reports.usdoReport.usdo,
             input.wrappedNativeToken,
-            input.owner,
+            reports.utilitiesReport.tapiocaMulticall,
             reports.sglReport.singularity,
             reports.bbReport.bigbang,
             prevReport.penrose
