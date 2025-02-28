@@ -195,18 +195,20 @@ abstract contract MagnetarTestUtils is TestHelper {
     }
 
     function _createTwTap(address payable _tapOft, address _owner) internal returns (TwTAP) {
-        buckets.push(Bucket({
-            enabled: true,
-            lockEpochDuration: 2,
-            epochGrowthRate: 1,
-            epochDecayRate: 1,
-            epochCeiling: 100,
-            epochFloor: 1,
-            rewardsMultiplier: 50_00,
-            currentEpochInflows: 0,
-            lastEpochInflows: 0,
-            growthGoal: 1000
-        }));
+        buckets.push(
+            Bucket({
+                enabled: true,
+                lockEpochDuration: 2,
+                epochGrowthRate: 1,
+                epochDecayRate: 1,
+                epochCeiling: 100,
+                epochFloor: 1,
+                rewardsMultiplier: 50_00,
+                currentEpochInflows: 0,
+                lastEpochInflows: 0,
+                growthGoal: 1000
+            })
+        );
         TwTAP _twTap = new TwTAP(_tapOft, _owner, 7 days, buckets);
         vm.label(address(_twTap), "twTap");
         return _twTap;
@@ -410,17 +412,16 @@ abstract contract MagnetarTestUtils is TestHelper {
     function _assertSingularityLiquidityBalanceUser(address payable _market, address _user, uint256 _amount) internal {
         IERC20 _asset = IERC20(IMarket(_market)._asset());
         assertEq(Singularity(_market).liquidityBalance(_user), _amount, "Invalid user liquidity balance");
-<<<<<<< HEAD
-=======
     }
 
     function _assertSingularityLiquidityBalanceMarket(address payable _market, uint256 _amount) internal {
         IERC20 _asset = IERC20(IMarket(_market)._asset());
         assertEq(_asset.balanceOf(address(_market)), _amount, "Invalid market asset balance");
->>>>>>> de59fe4 (feat: add tob actions to magnetar)
     }
 
-    function _assertBigBangUser(address _market, address _user, uint256 _collateralAmount, uint256 _borrowAmount) internal {
+    function _assertBigBangUser(address _market, address _user, uint256 _collateralAmount, uint256 _borrowAmount)
+        internal
+    {
         IERC20 _collateral = IERC20(IMarket(_market).asset());
         BigBang _bb = BigBang(payable(_market));
 
@@ -429,7 +430,11 @@ abstract contract MagnetarTestUtils is TestHelper {
         assertEq(_bb._totalCollateralShare(), _collateralAmount, "Invalid total collateral share");
     }
 
-    function _assertBigBangMarket(address _market, uint256 _marketCollateralBalance, uint256 _marketTotalColalteralShare) internal {
+    function _assertBigBangMarket(
+        address _market,
+        uint256 _marketCollateralBalance,
+        uint256 _marketTotalColalteralShare
+    ) internal {
         IERC20 _collateral = IERC20(IMarket(_market).asset());
         BigBang _bb = BigBang(payable(_market));
 

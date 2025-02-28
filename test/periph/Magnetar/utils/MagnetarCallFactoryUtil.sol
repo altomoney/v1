@@ -24,6 +24,7 @@ import {Singularity} from "../../../../contracts/bar/markets/singularity/Singula
 import {SGLCollateral} from "../../../../contracts/bar/markets/singularity/SGLCollateral.sol";
 import {SGLLeverage} from "../../../../contracts/bar/markets/singularity/SGLLeverage.sol";
 import {TwTAP} from "tap-token/governance/twTAP.sol";
+import {SGLLeverage} from "../../../../contracts/bar/markets/singularity/SGLLeverage.sol";
 import {TapToken} from "../../../../contracts/tap-token/tokens/TapToken.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
@@ -32,6 +33,7 @@ import {Market4626PermitUtils} from "./Market4626PermitUtils.t.sol";
 import {MarketERC4626} from "../../../../contracts/bar/markets/MarketERC4626.sol";
 import {SLeverageSwapData, SToftInfo} from "../../../../contracts/bar/markets/leverage/BaseLeverageExecutor.sol";
 import {TapiocaOptionBroker} from "../../../../contracts/tap-token/options/TapiocaOptionBroker.sol";
+import {SLeverageSwapData, SToftInfo} from "../../../../contracts/bar/markets/leverage/BaseLeverageExecutor.sol";
 
 abstract contract MagnetarCallFactoryUtil is Market4626PermitUtils {
     function _getTwTapBatchClaimRewardsMagnetarCall(address _twTap, address _participant, uint8 _bucketId)
@@ -467,7 +469,12 @@ abstract contract MagnetarCallFactoryUtil is Market4626PermitUtils {
         _params.marketHelper = _marketHelper;
         _params.user = _user;
         _params.collateralShares = _collateralShares;
-        _params.data = _data;
+
+        SLeverageSwapData memory _swapData;
+        _swapData.minAmountOut = 0;
+        _swapData.toftInfo = SToftInfo({isTokenInToft: false, isTokenOutToft: false});
+        _swapData.swapperData = "";
+        _params.data = abi.encode(_swapData);
 
         bytes memory sellCollateralCallData =
             abi.encodeWithSelector(MagnetarLeverageModule.sellCollateral.selector, _params);

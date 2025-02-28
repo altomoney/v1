@@ -33,7 +33,6 @@ contract SGLLeverage is SGLLendingCommon {
     error CollateralShareNotValid();
     error AmountNotValid();
 
-
     /// @notice Lever up: Borrow more and buy collateral with it.
     /// @param from The user who buys
     /// @param borrowAmount Amount of extra asset borrowed
@@ -64,18 +63,14 @@ contract SGLLeverage is SGLLendingCommon {
 
         {
             updateExchangeRate();
-            
+
             uint256 assetPartInCollateral = (supplyAmount + borrowAmount) * exchangeRate / EXCHANGE_RATE_PRECISION;
-            
+
             _allowedBorrow(from, previewDeposit(assetPartInCollateral));
             borrowableToken().safeApprove(address(leverageExecutor), supplyAmount + borrowAmount);
 
             amountOut = leverageExecutor.getCollateral(
-                address(this),
-                address(_borrowableToken()),
-                collateral(),
-                supplyAmount + borrowAmount,
-                data
+                address(this), address(_borrowableToken()), collateral(), supplyAmount + borrowAmount, data
             );
         }
 
@@ -83,7 +78,7 @@ contract SGLLeverage is SGLLendingCommon {
             // Mint shares via erc4626 "deposit()" function logic, skipping transferFrom
             uint256 sharesOutput = previewDeposit(amountOut);
             _mint(from, sharesOutput);
-            
+
             if (sharesOutput == 0) revert CollateralShareNotValid();
 
             address thisAddress = address(this);
@@ -143,7 +138,7 @@ contract SGLLeverage is SGLLendingCommon {
 
         amountOut =
             leverageExecutor.getAsset(from, collateral(), address(_borrowableToken()), leverageAmount, calldata_.data);
-        
+
         IERC20(_borrowableToken()).safeTransfer(from, amountOut);
 
         uint256 shareOut = previewWithdraw(amountOut);
