@@ -27,6 +27,7 @@ import {Cluster} from "tap-utils/Cluster/Cluster.sol";
 import {Penrose} from "tapioca-bar/Penrose.sol";
 
 import {MarketLiquidatorReceiverMock} from "../mocks/MarketLiquidatorReceiverMock.sol";
+import {MarketLiquidatorReceiverAddAssetReentrancy} from "../mocks/liquidatorReceivers/MarketLiquidatorReceiverAddAssetReentrancy.sol";
 import {MagnetarMock} from "../mocks/MagnetarMock.sol";
 import {SwapperMock} from "../mocks/SwapperMock.sol";
 import {OracleMock} from "../mocks/OracleMock.sol";
@@ -598,6 +599,63 @@ contract SingularityTest is UsdoTestHelper {
 
         uint256 borrowPartAfter = singularity._userBorrowPart(address(this));
         assertEq(borrowPartAfter, 0);
+    }
+
+    function test_borrow_and_liquidate_add_asset_reentrancy_invalid() public {
+        uint256 collateralAmount = 1 ether;
+        uint256 borrowAmount = 5e17;
+
+        deal(address(collateral), address(this), collateralAmount);
+        deal(address(asset), address(this), borrowAmount * 2);
+        depositAsset(borrowAmount * 2);
+
+        depositCollateral(collateralAmount);
+
+        borrow(borrowAmount, false);
+
+        bytes memory setLiquidationMaxSlippageCall =
+            abi.encodeWithSelector(Market.setLiquidationMaxSlippage.selector, 1e4); //10%
+
+        address[] memory mc = new address[](1);
+        mc[0] = address(singularity);
+
+        bytes[] memory data = new bytes[](1);
+        data[0] = setLiquidationMaxSlippageCall;
+        penrose.executeMarketFn(mc, data, false);
+
+        uint256 oracleRate = oracle.rate();
+        oracle.set((oracleRate * 10) / 6);
+
+        address attacker = address(0x1337);
+        MarketLiquidatorReceiverAddAssetReentrancy liquidatorReentrancy = new MarketLiquidatorReceiverAddAssetReentrancy(IERC20(address(asset)), attacker);
+        deal(address(asset), address(liquidatorReentrancy), borrowAmount * 2);
+
+        address[] memory users = new address[](1);
+        users[0] = address(this);
+        uint256[] memory borrowParts = new uint256[](1);
+        borrowParts[0] = borrowAmount / 2;
+        uint256[] memory minLiquidationBonuses = new uint256[](1);
+        minLiquidationBonuses[0] = 1e4;
+
+        IMarketLiquidatorReceiver[] memory receivers = new IMarketLiquidatorReceiver[](1);
+        receivers[0] = IMarketLiquidatorReceiver(address(liquidatorReentrancy));
+
+        bytes[] memory receiverData = new bytes[](1);
+        receiverData[0] = abi.encode(borrowAmount);
+
+        uint256 borrowPartBefore = singularity._userBorrowPart(address(this));
+        (Module[] memory modules, bytes[] memory calls) =
+            marketHelper.liquidate(users, borrowParts, minLiquidationBonuses, receivers, receiverData);
+        
+        vm.expectRevert("ReentrancyGuard: reentrant call");
+        singularity.execute(modules, calls, true);
+
+        vm.startPrank(attacker);
+        (uint256 liquidityBalance, uint256 liquidityShares) = liquidatorReentrancy.removeAsset(address(singularity), 51e16);
+        vm.stopPrank();
+
+        assertEq(liquidityBalance, 0, "Liquidity balance should be 0");
+        assertEq(liquidityShares, 0, "Liquidity shares should be 0");
     }
 
     //TODO: complete after audit fixes
