@@ -92,10 +92,10 @@ contract SGLLendingCommon is SGLCommon {
         if (feeAmount > 0) {
             uint256 feeFraction = (feeAmount * _totalAsset.base) / fullAssetAmountBefore;
             _totalAsset.base += feeFraction.toUint128();
-            _mint(address(_penrose), feeFraction);
+            liquidityBalance[address(_penrose)] += feeFraction;
         }
 
-        totalAsset = _totalAsset; // TODO Check it
+        totalAsset = _totalAsset;
 
         _borrowableToken().safeTransfer(to, amount);
     }
