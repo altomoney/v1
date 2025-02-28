@@ -3,8 +3,6 @@ pragma solidity ^0.8.22;
 
 import {Origins} from "tapioca-bar/markets/origins/Origins.sol";
 import {Market, PauseType} from "tapioca-bar/markets/Market.sol";
-
-// import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@boringcrypto/boring-solidity/contracts/libraries/BoringERC20.sol";
 import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
@@ -134,11 +132,6 @@ contract OriginsTest is UsdoTestHelper {
         penrose.addOriginsMarket(address(origins));
     }
 
-    function depositAsset(address user, uint256 amount) public {
-        // TODO Check if this is needed
-        deal(address(asset), user, amount);
-    }
-
     function depositCollateral(address user, uint256 amount) public returns (uint256) {
         deal(address(collateral), user, amount);
         vm.startPrank(user);
@@ -265,30 +258,27 @@ contract OriginsTest is UsdoTestHelper {
         deal(address(asset), address(this), borrowAmount);
         deal(address(collateral), address(this), collateralAmount);
 
-        depositCollateral(address(this), collateralAmount);
+        uint256 collateralSharesBalanceBefore = depositCollateral(address(this), collateralAmount);
 
         borrow(address(this), borrowAmount, false);
-
-        // depositAsset(address(this), borrowAmount);
 
         repay(address(this), borrowAmount);
 
         uint256 borrowPart = origins._userBorrowPart(address(this));
         assertEq(borrowPart, 0);
+
+        uint256 collateralSharesBalanceAfter = origins.balanceOf(address(this));
+        assertEq(collateralSharesBalanceBefore, collateralSharesBalanceAfter);
     }
 
     function test_only_allowed_users() public {
-        vm.skip(true);
         uint256 collateralAmount = 1 ether;
 
         deal(address(collateral), address(this), collateralAmount);
 
-        uint256 share = origins.convertToShares(collateralAmount);
-        // TODO review it yieldBox.depositAsset(collateralYieldBoxId, address(this), address(this), 0, share);
-
         vm.startPrank(userA);
         vm.expectRevert(Origins.NotAuthorized.selector);
-        origins.addCollateral(0, share);
+        origins.addCollateral(collateralAmount, 0);
         vm.stopPrank();
     }
 
