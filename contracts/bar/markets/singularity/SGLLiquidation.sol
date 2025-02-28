@@ -70,13 +70,12 @@ contract SGLLiquidation is SGLCommon {
         _accrue();
 
         // compute borrow amount with bonus
-        uint256 elasticPart = totalBorrow.toElastic(userBorrowPart[user], false);
-        uint256 borrowAmountWithBonus = elasticPart + (elasticPart * liquidationMultiplier) / FEE_PRECISION;
-        uint256 requiredCollateral = convertToShares((borrowAmountWithBonus * exchangeRate) / EXCHANGE_RATE_PRECISION);
+        uint256 requiredCollateral = _computeRequiredCollateralWithBonus(user);
 
         uint256 collateralShare = balanceOf(user);
+        uint256 collateralAmount = previewRedeem(collateralShare);
 
-        if (requiredCollateral < collateralShare) revert NotAuthorized();
+        if (requiredCollateral < collateralAmount) revert NotAuthorized();
 
         // update totalBorrow
         uint256 borrowAmount = totalBorrow.toElastic(userBorrowPart[user], true);
@@ -104,6 +103,18 @@ contract SGLLiquidation is SGLCommon {
 
         // burn collateral s  hares from user.
         _burn(user, collateralShare);
+    }
+
+    function _computeRequiredCollateralWithBonus(address _user)
+        private
+        view
+        returns (uint256)
+    {
+        // compute borrow amount with bonus
+        uint256 elasticPart = totalBorrow.toElastic(userBorrowPart[_user], false);
+        uint256 borrowAmountWithBonus = elasticPart + (elasticPart * liquidationMultiplier) / FEE_PRECISION;
+        uint256 requiredCollateral = (borrowAmountWithBonus * exchangeRate) / EXCHANGE_RATE_PRECISION;
+        return requiredCollateral;
     }
 
     // ************************ //
@@ -176,26 +187,6 @@ contract SGLLiquidation is SGLCommon {
         }
         if (returnedAmount == 0) revert OnCollateralReceiverFailed(0, 0);
         returnedShare = convertToShares(returnedAmount);
-    }
-
-    function _computeAssetAmountToSolvency(address user, uint256 _exchangeRate) private view returns (uint256) {
-        // accrue must have already been called!
-        uint256 borrowPart = userBorrowPart[user];
-        if (borrowPart == 0) return 0;
-
-        if (_exchangeRate == 0) revert ExchangeRateNotValid();
-
-        Rebase memory _totalBorrow = totalBorrow;
-
-        uint256 assetAmount = convertToAssets(
-            (balanceOf(user) * (EXCHANGE_RATE_PRECISION / FEE_PRECISION) * liquidationCollateralizationRate)
-        );
-
-        uint256 collateralAmountInAsset = assetAmount / _exchangeRate;
-        // Obviously it's not `borrowPart` anymore but `borrowAmount`
-        borrowPart = (borrowPart * _totalBorrow.elastic) / _totalBorrow.base;
-
-        return borrowPart >= collateralAmountInAsset ? borrowPart - collateralAmountInAsset : 0;
     }
 
     function _updateBorrowAndCollateralShare(
