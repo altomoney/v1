@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // External
 import {RebaseLibrary, Rebase} from "@boringcrypto/boring-solidity/contracts/libraries/BoringRebase.sol";
@@ -8,6 +8,7 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 // Tapioca
 import {ISGLInterestHelper} from "tap-utils/interfaces/bar/ISGLInterestHelper.sol";
 import {ISingularity} from "tap-utils/interfaces/bar/ISingularity.sol";
+import {IERC4626} from "../../../utils/interfaces/common/IERC4626.sol";
 import {SGLStorage} from "./SGLStorage.sol";
 
 /*
@@ -29,17 +30,11 @@ contract SGLCommon is SGLStorage {
     // *** ERRORS *** //
     // ************** //
     error MinLimit();
-    error TransferFailed();
     error AccruePaused();
 
     // ************************ //
     // *** PUBLIC FUNCTIONS *** //
     // ************************ //
-    /// @notice Accrues the interest on the borrowed tokens and handles the accumulation of fees.
-    function accrue() external {
-        if (pauseOptions[PauseType.AddCollateral] || pauseOptions[PauseType.RemoveCollateral]) revert AccruePaused();
-        _accrue();
-    }
 
     function getInterestDetails()
         external
@@ -68,9 +63,8 @@ contract SGLCommon is SGLStorage {
             interestHelper
         ).getInterestRate(
             ISGLInterestHelper.InterestRateCall(
-                yieldBox,
+                IERC4626(address(this)),
                 accrueInfo,
-                assetId,
                 totalAsset,
                 totalBorrow,
                 protocolFee,
@@ -102,27 +96,5 @@ contract SGLCommon is SGLStorage {
         accrueInfo = _accrueInfo;
         totalBorrow = _totalBorrow;
         totalAsset = _totalAsset;
-    }
-
-    /// @dev Helper function to move tokens.
-    /// @param from Account to debit tokens from, in `yieldBox`.
-    /// @param _assetId The ERC-20 token asset ID in yieldBox.
-    /// @param share The amount in shares to add.
-    /// @param total Grand total amount to deduct from this contract's balance. Only applicable if `skim` is True.
-    /// Only used for accounting checks.
-    /// @param skim If True, only does a balance check on this contract.
-    /// False if tokens from msg.sender in `yieldBox` should be transferred.
-    function _addTokens(address from, address, uint256 _assetId, uint256 share, uint256 total, bool skim) internal {
-        if (skim) {
-            if (share > yieldBox.balanceOf(address(this), _assetId) - total) {
-                revert TransferFailed();
-            }
-        } else {
-            // yieldBox.transfer(from, address(this), _assetId, share);
-            bool isErr = pearlmit.transferFromERC1155(from, address(this), address(yieldBox), _assetId, share);
-            if (isErr) {
-                revert TransferFailed();
-            }
-        }
     }
 }

@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // External
-import {IYieldBox} from "tap-utils/interfaces/yieldbox/IYieldBox.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
@@ -12,9 +11,6 @@ import {Module} from "tap-utils/interfaces/bar/IMarket.sol";
 contract SingularityMock is EIP712 {
     using SafeERC20 for IERC20;
 
-    IYieldBox public _yieldBox;
-    uint256 public _collateralId;
-    uint256 public _assetId;
     IERC20 public _collateral;
     IERC20 public _asset;
 
@@ -44,12 +40,7 @@ contract SingularityMock is EIP712 {
     error SingularityMock_ModuleNotSet();
     error SingularityMock_NotValid();
 
-    constructor(address yieldBox, uint256 collateralId, uint256 assetId, address collateral, address asset)
-        EIP712("Tapioca Singularity", "1")
-    {
-        _yieldBox = IYieldBox(yieldBox);
-        _collateralId = collateralId;
-        _assetId = assetId;
+    constructor(address collateral, address asset) EIP712("Tapioca Singularity", "1") {
         _collateral = IERC20(collateral);
         _asset = IERC20(asset);
     }
@@ -95,25 +86,26 @@ contract SingularityMock is EIP712 {
 
         _userBorrowPart[from] += amount;
 
-        share = _yieldBox.toShare(_assetId, amount, true);
-
-        _yieldBox.transfer(address(this), to, _assetId, share);
+        // TODO review it share = _yieldBox.toShare(_assetId, amount, true);
+        share = amount;
+        _asset.safeTransfer(to, share);
     }
 
     function addCollateral(address from, address to, bool skim, uint256 amount, uint256 share) external {
         if (share == 0) {
-            share = _yieldBox.toShare(_collateralId, amount, false);
+            // TODO Review it share = _yieldBox.toShare(_collateralId, amount, false);
+            share = amount == 0 ? share : amount;
         }
 
         uint256 oldTotalCollateralShare = _totalCollateralShare;
         _userCollateralShare[to] += share;
         _totalCollateralShare = oldTotalCollateralShare + share;
 
-        _addTokens(from, to, _collateralId, share, oldTotalCollateralShare, skim);
+        _addTokens(from, to, share, oldTotalCollateralShare, skim);
     }
 
     function removeCollateral(address, address to, uint256 share) external {
-        _yieldBox.transfer(address(this), to, _collateralId, share);
+        // TODO Review it _yieldBox.transfer(address(this), to, _collateralId, share);
     }
 
     struct _BuyCollateralCalldata {
@@ -127,6 +119,7 @@ contract SingularityMock is EIP712 {
         public
         returns (uint256 amountOut)
     {
+        /* TODO Review it
         // Stack too deep fix
         _BuyCollateralCalldata memory calldata_;
         {
@@ -163,9 +156,11 @@ contract SingularityMock is EIP712 {
         _addTokens(address(this), from, _collateralId, collateralShare, oldTotalCollateralShare, false);
 
         return collateralAmount;
+        */
     }
 
-    function _addTokens(address from, address, uint256 assetId, uint256 share, uint256 total, bool skim) internal {
+    function _addTokens(address from, address, uint256 share, uint256 total, bool skim) internal {
+        /* TODO Review it
         if (skim) {
             if (share > _yieldBox.balanceOf(address(this), assetId) - total) {
                 revert SingularityMock_TooMuch();
@@ -173,6 +168,7 @@ contract SingularityMock is EIP712 {
         } else {
             _yieldBox.transfer(from, address(this), assetId, share);
         }
+        */
     }
 
     function _useNonce(address owner) internal virtual returns (uint256 current) {

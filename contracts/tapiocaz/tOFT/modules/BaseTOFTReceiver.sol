@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // LZ
 import {OFTMsgCodec} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/libs/OFTMsgCodec.sol";
@@ -13,11 +13,7 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.
 
 // Tapioca
 import {ITOFT, TOFTInitStruct} from "tap-utils/interfaces/oft/ITOFT.sol";
-import {
-    YieldBoxApproveAllMsg,
-    MarketPermitActionMsg,
-    YieldBoxApproveAssetMsg
-} from "tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
+import {MarketPermitActionMsg} from "tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
 import {TapiocaOmnichainReceiver} from "tap-utils/tapiocaOmnichainEngine/TapiocaOmnichainReceiver.sol";
 import {TOFTGenericReceiverModule} from "./TOFTGenericReceiverModule.sol";
 import {TOFTOptionsReceiverModule} from "./TOFTOptionsReceiverModule.sol";

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 import {BigBang} from "tapioca-bar/markets/bigBang/BigBang.sol";
 
@@ -12,7 +12,6 @@ struct BigBangRiskParams {
     uint256 exchangeRatePrecision;
     uint256 collateralizationRate;
     uint256 liquidationCollateralizationRate;
-    uint256 collateralId;
     address collateral;
     address oracle;
     bool isEthMarket;

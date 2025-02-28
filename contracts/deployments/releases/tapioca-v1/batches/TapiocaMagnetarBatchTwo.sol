@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 import {MagnetarProcedure} from "../../../procedures/MagnetarProcedure.sol";
 import {MagnetarReport, MagnetarDepsReport} from "../../../interfaces/ITapiocaReport.sol";
@@ -13,13 +13,12 @@ contract TapiocaMagnetarBatchTwo is MagnetarProcedure {
     constructor(
         address owner,
         address cluster,
-        address pearlmit,
         address toeHelper,
         address zeroXSwap,
         address nativeTokenWrapper,
         MagnetarDepsReport memory deps
     ) {
-        _magnetarReport = _deployMagnetar(owner, cluster, pearlmit, toeHelper, zeroXSwap, nativeTokenWrapper, deps);
+        _magnetarReport = _deployMagnetar(owner, cluster, toeHelper, zeroXSwap, nativeTokenWrapper, deps);
     }
 
     function getMagnetarReport() external view returns (MagnetarReport memory) {

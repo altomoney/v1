@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 import {ILayerZeroEndpoint} from "../../../layerzero/v1/interfaces/ILayerZeroEndpoint.sol";
 

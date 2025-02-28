@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
+import "forge-std/Test.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
-import {IYieldBox} from "yieldbox/interfaces/IYieldBox.sol";
+
 import {Penrose} from "tapioca-bar/Penrose.sol";
-import {YieldBox} from "yieldbox/YieldBox.sol";
 
 import {SimpleLeverageExecutor} from "tapioca-bar/markets/leverage/SimpleLeverageExecutor.sol";
-import {ERC20WithoutStrategy} from "yieldbox/strategies/ERC20WithoutStrategy.sol";
+
 import {SGLLiquidation} from "tapioca-bar/markets/singularity/SGLLiquidation.sol";
 import {SGLCollateral} from "tapioca-bar/markets/singularity/SGLCollateral.sol";
 import {SGLLeverage} from "tapioca-bar/markets/singularity/SGLLeverage.sol";
@@ -23,32 +23,45 @@ import {BBCollateral} from "tapioca-bar/markets/bigBang/BBCollateral.sol";
 import {BBLeverage} from "tapioca-bar/markets/bigBang/BBLeverage.sol";
 import {BBBorrow} from "tapioca-bar/markets/bigBang/BBBorrow.sol";
 import {BigBang} from "tapioca-bar/markets/bigBang/BigBang.sol";
-
 import {ILeverageExecutor} from "tap-utils/interfaces/bar/ILeverageExecutor.sol";
 import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
 import {IZeroXSwapper} from "tap-utils/interfaces/periph/IZeroXSwapper.sol";
-import {IPearlmit} from "tap-utils/interfaces/periph/IPearlmit.sol";
 import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
-
 import {ZerroXSwapperMockTarget} from "../../utils//ZeroXSwapper/ZerroXSwapperMockTarget.sol";
 import {ZeroXSwapper} from "tap-utils/Swapper/ZeroXSwapper.sol";
-
-import {TokenType} from "yieldbox/enums/YieldBoxTokenType.sol";
-import {IStrategy} from "yieldbox/interfaces/IStrategy.sol";
-import {YieldBox} from "yieldbox/YieldBox.sol";
-
 import {SingularityMock} from "../mocks/SingularityMock.sol";
 import {SGLInit} from "tapioca-bar/markets/singularity/SGLInit.sol";
-
-// External
+import {ISingularity} from "tap-utils/interfaces/bar/ISingularity.sol";
 import {IERC20} from "@boringcrypto/boring-solidity/contracts/libraries/BoringERC20.sol";
+import {SingularityLauncher} from "deployments/releases/tapioca-v1/actions/SingularityLauncher.sol";
+import "deployments/interfaces/ITapiocaReport.sol";
+import {TapiocaRelease} from "deployments/releases/tapioca-v1/TapiocaRelease.sol";
+import {RiskParams} from "deployments/interfaces/ISingularityLauncher.sol";
+import {ERC20Mock} from "../mocks/ERC20Mock.sol";
+import {TestHelper} from "test/bar/LZSetup/TestHelper.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {TapiocaMulticall} from "tap-utils/TapiocaMulticall/TapiocaMulticall.sol";
+import {BigBangLauncher, BigBangRiskParams} from "deployments/releases/tapioca-v1/actions/BigBangLauncher.sol";
+import {OracleMock} from "test/utils/mocks/OracleMock.sol";
+import {Usdo} from "tapioca-bar/usdo/Usdo.sol";
+import {Penrose} from "tapioca-bar/Penrose.sol";
+import {IBigBang} from "tap-utils/interfaces/bar/IBigBang.sol";
+import {TapToken} from "../../../contracts/tap-token/tokens/TapToken.sol";
+import {TwTAP} from "../../../contracts/tap-token/governance/TwTAP.sol";
+import {TapTokenMock} from "../../tap-token/TapTokenMock.sol";
+import {ITapToken} from "../../../contracts/tap-token/tokens/ITapToken.sol";
+import {Bucket} from "../../../contracts/tap-token/interfaces/ITWLBase.sol";
+import {TapTokenSender} from "../../../contracts/tap-token/tokens/TapTokenSender.sol";
+import {TapTokenReceiver} from "../../../contracts/tap-token/tokens/TapTokenReceiver.sol";
+import {UnitBaseTest} from "../../tap-token/unit/UnitBaseTest.t.sol";
+import {TapiocaOmnichainExtExec} from
+    "../../../contracts/utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainExtExec.sol";
+import {IMarket} from "../../../contracts/utils/interfaces/bar/IMarket.sol";
 
 struct TestSingularityData {
     address penrose;
     address asset;
-    uint256 assetId;
     address collateral;
-    uint256 collateralId;
     ITapiocaOracle oracle;
     ILeverageExecutor leverageExecutor;
 }
@@ -56,7 +69,6 @@ struct TestSingularityData {
 struct TestBigBangData {
     address penrose;
     address collateral;
-    uint256 collateralId;
     ITapiocaOracle oracle;
     ILeverageExecutor leverageExecutor;
     uint256 debtRateAgainstEth;
@@ -64,30 +76,220 @@ struct TestBigBangData {
     uint256 debtRateMax;
 }
 
-contract MagnetarTestUtils {
+abstract contract MagnetarTestUtils is TestHelper {
+    uint256 internal constant EPOCH_DURATION = 7 days;
+    address internal constant TAP_CONTRIBUTOR = address(bytes20(keccak256("TAP_CONTRIBUTOR")));
+    address internal constant TAP_EARLY_SUPPORTERS = address(bytes20(keccak256("TAP_EARLY_SUPPORTERS")));
+    address internal constant TAP_SUPPORTERS = address(bytes20(keccak256("TAP_SUPPORTERS")));
+    address internal constant TAP_LBP = address(bytes20(keccak256("TAP_LBP")));
+    address internal constant TAP_DAO = address(bytes20(keccak256("TAP_DAO")));
+    address internal constant TAP_AIRDROP = address(bytes20(keccak256("TAP_AIRDROP")));
+    uint32 public EID_A = 1;
+    address public ENDPOINT_A;
+
+    TapiocaInput internal input;
+    TapiocaReport internal report;
+    SingularityLauncher internal singularityLauncher;
+    BigBangLauncher internal bigBangLauncher;
+    TwTAP internal twTap;
+
+    uint32 aEid = 1;
+    uint32 bEid = 2;
+
+    address __endpoint;
+    uint256 __hostEid = aEid;
+    address __owner = address(this);
+    address __admin = vm.addr(12345678901234567890);
+
+    function setUp() public virtual override {
+        setUpEndpoints(3, LibraryType.UltraLightNode);
+        ENDPOINT_A = address(endpoints[EID_A]);
+
+        input.owner = __owner;
+        input.lzChainId = uint16(aEid);
+
+        input.wrappedNativeToken = address(new ERC20Mock());
+        input.tapToken = _createTapToken(
+            UnitBaseTest.TapOftInput(
+                EPOCH_DURATION,
+                ENDPOINT_A,
+                TAP_CONTRIBUTOR,
+                TAP_EARLY_SUPPORTERS,
+                TAP_SUPPORTERS,
+                TAP_LBP,
+                TAP_DAO,
+                TAP_AIRDROP,
+                EID_A,
+                __admin
+            )
+        );
+        input.zeroXSwapper = address(1);
+        input.lzEndpoint = address(endpoints[aEid]);
+        __endpoint = address(endpoints[aEid]);
+
+        TapiocaReport memory emptyReport;
+        report = TapiocaRelease.deployTapiocaV1(input, emptyReport);
+
+        vm.startPrank(__admin);
+        TapTokenMock(payable(input.tapToken)).setCluster(ICluster(report.cluster));
+        vm.stopPrank();
+
+        twTap = _createTwTap(payable(input.tapToken), __admin);
+        vm.prank(__admin);
+        TapToken(payable(input.tapToken)).setTwTAP(address(twTap));
+
+        TapiocaMulticall.Call[] memory clusterUpdateTwTapCalls = new TapiocaMulticall.Call[](1);
+        clusterUpdateTwTapCalls[0] = TapiocaMulticall.Call({
+            target: address(report.cluster),
+            allowFailure: false,
+            callData: abi.encodeWithSelector(ICluster.updateContract.selector, aEid, address(twTap), true)
+        });
+
+        vm.startPrank(TapiocaMulticall(report.tapiocaMulticall).owner());
+        TapiocaMulticall multicall = TapiocaMulticall(report.tapiocaMulticall);
+        multicall.multicall(clusterUpdateTwTapCalls);
+        vm.stopPrank();
+    }
+
+    function _createTapToken(UnitBaseTest.TapOftInput memory _input) internal returns (address) {
+        TapTokenMock tapToken = new TapTokenMock(
+            ITapToken.TapTokenConstructorData(
+                _input._epochDuration,
+                _input._endpoint,
+                _input._contributor,
+                _input._earlySupporters,
+                _input._supporters,
+                _input._lbp,
+                _input._dao,
+                _input._airdrop,
+                _input._governanceEid,
+                _input._owner,
+                address(new TapTokenSender("", "", _input._endpoint, _input._owner, address(0))),
+                address(new TapTokenReceiver("", "", _input._endpoint, _input._owner, address(0))),
+                address(new TapiocaOmnichainExtExec()),
+                ICluster(address(0x0))
+            )
+        );
+        vm.label(address(tapToken), "tapToken");
+        return address(tapToken);
+    }
+
+    function _createTwTap(address payable _tapOft, address _owner) internal returns (TwTAP) {
+        Bucket[] memory buckets = new Bucket[](1);
+        buckets[0] = Bucket({
+            enabled: true,
+            lockEpochDuration: 2,
+            epochGrowthRate: 1,
+            epochDecayRate: 1,
+            epochCeiling: 100,
+            epochFloor: 1,
+            rewardsMultiplier: 50_00,
+            currentEpochInflows: 0,
+            lastEpochInflows: 0,
+            growthGoal: 1000
+        });
+        TwTAP _twTap = new TwTAP(_tapOft, _owner, 7 days, buckets);
+        vm.label(address(_twTap), "twTap");
+        return _twTap;
+    }
+
+    function launchSingularity(TapiocaReport memory reportOut, address asset, address collateral, address oracle)
+        public
+        returns (ISingularity singularity)
+    {
+        Singularity._InitMemoryTokensData memory tokensData;
+        RiskParams memory riskParams;
+
+        tokensData._asset = IERC20(asset);
+        tokensData._collateral = IERC20(collateral);
+
+        riskParams.oracle = oracle;
+        riskParams.seedAmount = 1 ether;
+
+        singularityLauncher = new SingularityLauncher(
+            reportOut.sglLiquidationModule,
+            reportOut.sglBorrowModule,
+            reportOut.sglCollateralModule,
+            reportOut.sglLeverageModule,
+            reportOut.sglInit,
+            reportOut.penrose,
+            reportOut.simpleLeverageExecutor,
+            reportOut.sglInterestHelper,
+            reportOut.singularity
+        );
+        address admin = Ownable(reportOut.tapiocaMulticall).owner();
+
+        deal(collateral, admin, 1 ether);
+
+        bytes memory payload =
+            abi.encodeWithSelector(singularityLauncher.createSingularity.selector, tokensData, riskParams);
+
+        vm.startPrank(admin);
+        bytes memory returnData =
+            TapiocaMulticall(reportOut.tapiocaMulticall).performDelegateCall(address(singularityLauncher), payload);
+        vm.stopPrank();
+
+        address marketAddress = abi.decode(returnData, (address));
+        assertTrue(marketAddress != address(0), "Singularity market address should not be zero");
+        return ISingularity(marketAddress);
+    }
+
+    function launchBigBang(TapiocaReport memory reportOut, address collateral) internal returns (IBigBang) {
+        bigBangLauncher = new BigBangLauncher(
+            reportOut.bbLiquidation,
+            reportOut.bbBorrow,
+            reportOut.bbCollateral,
+            reportOut.bbLeverage,
+            reportOut.penrose,
+            reportOut.simpleLeverageExecutor,
+            reportOut.bigbang,
+            reportOut.bbDebtRateHelper
+        );
+
+        BigBangRiskParams memory riskParams;
+        riskParams.debtRateAgainstEth = 0;
+        riskParams.debtRateMin = 0;
+        riskParams.debtRateMax = 0;
+        riskParams.exchangeRatePrecision = 1e18;
+        riskParams.collateralizationRate = 75000;
+        riskParams.liquidationCollateralizationRate = 80000;
+        riskParams.collateral = collateral;
+        riskParams.oracle = address(new OracleMock("Oracle Test", "ORCT", 1 ether));
+        riskParams.seedAmount = 1 ether;
+        riskParams.isEthMarket = true;
+
+        address admin = Ownable(reportOut.tapiocaMulticall).owner();
+
+        deal(collateral, admin, 1 ether);
+        bytes memory payload = abi.encodeWithSelector(bigBangLauncher.createBigBang.selector, riskParams);
+
+        vm.startPrank(admin);
+        bytes memory returnData =
+            TapiocaMulticall(reportOut.tapiocaMulticall).performDelegateCall(address(bigBangLauncher), payload);
+        vm.stopPrank();
+
+        address marketAddress = abi.decode(returnData, (address));
+        assertTrue(marketAddress != address(0), "BigBang market address should not be zero");
+
+        Usdo usdo = Usdo(payable(report.usdo));
+
+        vm.startPrank(admin);
+        usdo.setMinterStatus(marketAddress, true);
+        usdo.setBurnerStatus(marketAddress, true);
+        vm.stopPrank();
+
+        return IBigBang(payable(marketAddress));
+    }
+
     function setBBEthMarket(Penrose penrose, address market) external {
         penrose.setBigBangEthMarket(market);
     }
 
-    function createPenrose(
-        address pearlmit,
-        IYieldBox _yieldBox,
-        ICluster _cluster,
-        address tapToken_,
-        address mainToken_,
-        uint256 tapTokenId_,
-        uint256 mainTokenId_
-    ) external returns (Penrose penrose, Singularity mediumRiskMC, BigBang bbMediumRiskMC) {
-        penrose = new Penrose(
-            _yieldBox,
-            _cluster,
-            IERC20(tapToken_),
-            IERC20(mainToken_),
-            IPearlmit(pearlmit),
-            tapTokenId_,
-            mainTokenId_,
-            address(this)
-        );
+    function createPenrose(ICluster _cluster, address tapToken_, address mainToken_)
+        external
+        returns (Penrose penrose, Singularity mediumRiskMC, BigBang bbMediumRiskMC)
+    {
+        penrose = new Penrose(_cluster, IERC20(tapToken_), IERC20(mainToken_), address(this));
         mediumRiskMC = new Singularity();
         bbMediumRiskMC = new BigBang();
 
@@ -103,14 +305,6 @@ contract MagnetarTestUtils {
         marketsData[0] = abi.encodeWithSelector(BigBang.setAssetOracle.selector, oracle, "0x");
 
         penrose.executeMarketFn(markets, marketsData, true);
-    }
-
-    function registerYieldBoxAsset(address _yieldBox, address _token, address _strategy) public returns (uint256) {
-        return YieldBox(_yieldBox).registerAsset(TokenType.ERC20, _token, IStrategy(_strategy), 0);
-    }
-
-    function createYieldBoxEmptyStrategy(address _yieldBox, address _erc20) public returns (ERC20WithoutStrategy) {
-        return new ERC20WithoutStrategy(IYieldBox(_yieldBox), IERC20(_erc20));
     }
 
     function createBigBang(TestBigBangData memory _bb, address _mc) public returns (BigBang) {
@@ -141,48 +335,6 @@ contract MagnetarTestUtils {
         return bb;
     }
 
-    function createSingularity(TestSingularityData memory _sgl, address _mc) public returns (Singularity) {
-        Singularity sgl = new Singularity();
-        SGLInit sglInit = new SGLInit();
-
-        (
-            Singularity._InitMemoryModulesData memory _modulesData,
-            Singularity._InitMemoryTokensData memory _tokensData,
-            Singularity._InitMemoryData memory _data
-        ) = _getSingularityInitData(_sgl);
-        {
-            sgl.init(address(sglInit), abi.encode(_modulesData, _tokensData, _data));
-        }
-
-        {
-            Penrose(_sgl.penrose).addSingularity(_mc, address(sgl));
-        }
-
-        {
-            SGLInterestHelper sglInterestHelper = new SGLInterestHelper();
-
-            bytes memory payload = abi.encodeWithSelector(
-                Singularity.setSingularityConfig.selector,
-                sgl.borrowOpeningFee(),
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                address(sglInterestHelper),
-                0
-            );
-            address[] memory mc = new address[](1);
-            mc[0] = address(sgl);
-
-            bytes[] memory data = new bytes[](1);
-            data[0] = payload;
-            Penrose(_sgl.penrose).executeMarketFn(mc, data, false);
-        }
-        return sgl;
-    }
-
     function _getBigBangInitData(TestBigBangData memory _bb)
         private
         returns (
@@ -204,7 +356,6 @@ contract MagnetarTestUtils {
         data = BigBang._InitMemoryData(
             IPenrose(_bb.penrose),
             IERC20(_bb.collateral),
-            _bb.collateralId,
             ITapiocaOracle(address(_bb.oracle)),
             0,
             75000,
@@ -230,56 +381,16 @@ contract MagnetarTestUtils {
             address(sglLiq), address(sglBorrow), address(sglCollateral), address(sglLev)
         );
 
-        tokensData = Singularity._InitMemoryTokensData(
-            IERC20(_sgl.asset), _sgl.assetId, IERC20(_sgl.collateral), _sgl.collateralId
-        );
+        tokensData = Singularity._InitMemoryTokensData(IERC20(_sgl.asset), IERC20(_sgl.collateral));
 
         data = Singularity._InitMemoryData(
             IPenrose(_sgl.penrose), ITapiocaOracle(address(_sgl.oracle)), 0, 75000, 80000, _sgl.leverageExecutor
         );
     }
 
-    // function createSingularity(
-    //     address _yieldBox,
-    //     uint256 _collateralId,
-    //     uint256 _assetId,
-    //     address _collateral,
-    //     address _asset
-    // ) public returns (SingularityMock) {
-    //     return new SingularityMock(_yieldBox, _collateralId, _assetId, _collateral, _asset);
-    // }
-
-    // function createSingularity(YieldBox yb, Penrose penrose, Cluster cluster, address asset, address collateral, uint256 assetId, uint256 collateralId) external returns (Singularity sgl) {
-    //     SGLLiquidation sglLiquidation = new SGLLiquidation();
-    //     SGLCollateral sglCollateral = new SGLCollateral();
-    //     SGLBorrow sglBorrow = new SGLBorrow();
-    //     SGLLeverage sglLeverage = new SGLLeverage();
-
-    //     ZerroXSwapperMockTarget swapperTarget = new ZerroXSwapperMockTarget();
-    //     ZeroXSwapper swapper = new ZeroXSwapper(address(swapperTarget), address(0), ICluster(address(cluster)), address(this));
-    //     SimpleLeverageExecutor leverageExecutor = new SimpleLeverageExecutor(IZeroXSwapper(address(swapper)), ICluster(address(cluster)));
-
-    //     Singularity._InitMemoryData memory memoryData = Singularity._InitMemoryData({
-    //         penrose_: IPenrose(address(penrose)),
-    //         _oracle: ITapiocaOracle(address(0)),
-    //         _exchangeRatePrecision: 1 ether,
-    //         _collateralizationRate: 75_000,
-    //         _liquidationCollateralizationRate: 80_000,
-    //         _leverageExecutor: ILeverageExecutor(address(leverageExecutor))
-    //     });
-
-    //     Singularity._InitMemoryModulesData memory modulesData = Singularity._InitMemoryModulesData({
-    //         _liquidationModule: address(sglLiquidation),
-    //         _borrowModule: address(sglBorrow),
-    //         _collateralModule: address(sglCollateral),
-    //         _leverageModule: address(sglLeverage)
-    //     });
-
-    //     Singularity._InitMemoryTokensData memory tokensData = Singularity._InitMemoryTokensData({
-    //         _asset: IERC20(asset),
-    //         _assetId: assetId,
-    //         _collateral: IERC20(collateral),
-    //         _collateralId: collateralId
-    //     });
-    // }
+    function _assertSingularityLiquidityBalance(address payable _market, address _user, uint256 _amount) internal {
+        IERC20 _asset = IERC20(IMarket(_market)._asset());
+        assertEq(Singularity(_market).liquidityBalance(_user), _amount, "Invalid user liquidity balance");
+        assertEq(_asset.balanceOf(address(_market)), _amount, "Invalid market asset balance");
+    }
 }

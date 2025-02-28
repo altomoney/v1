@@ -1,0 +1,5 @@
+TWLBase_getBucket
+├── given a valid bucket index
+│   └── it should return the correct bucket
+└── given an invalid bucket index
+    └── it should revert

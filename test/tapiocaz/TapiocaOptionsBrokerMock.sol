@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {PearlmitHandler, IPearlmit} from "tap-utils/pearlmit/PearlmitHandler.sol";
 
 contract OTapMock {
     address public owner;
@@ -21,7 +20,7 @@ contract OTapMock {
     }
 }
 
-contract TapiocaOptionsBrokerMock is PearlmitHandler {
+contract TapiocaOptionsBrokerMock {
     using SafeERC20 for IERC20;
 
     address public tapOFT;
@@ -30,7 +29,7 @@ contract TapiocaOptionsBrokerMock is PearlmitHandler {
 
     error TapiocaOptionsBrokerMock_NotValid();
 
-    constructor(address _tap, IPearlmit _pearlmit) PearlmitHandler(_pearlmit) {
+    constructor(address _tap) {
         tapOFT = _tap;
         oTapMock = address(new OTapMock());
     }
@@ -45,10 +44,7 @@ contract TapiocaOptionsBrokerMock is PearlmitHandler {
         // @dev 10% is subtracted to test out payment token refund
         uint256 actualPaymentTokenAmount = paymentTokenAmount - paymentTokenAmount * 1e4 / 1e5;
 
-        // IERC20(address(_paymentToken)).safeTransferFrom(msg.sender, address(this), actualPaymentTokenAmount);
-        bool isErr =
-            pearlmit.transferFromERC20(msg.sender, address(this), address(_paymentToken), actualPaymentTokenAmount);
-        if (isErr) revert TapiocaOptionsBrokerMock_NotValid();
+        IERC20(address(_paymentToken)).safeTransferFrom(msg.sender, address(this), actualPaymentTokenAmount);
         IERC20(tapOFT).safeTransfer(msg.sender, _tapAmount);
     }
 

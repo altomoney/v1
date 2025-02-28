@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 import {MarketLendOrRepayMsg, MarketRemoveAssetMsg, ExerciseOptionsMsg} from "src/tap-utils/interfaces/oft/IUsdo.sol";
 import {MarketBorrowMsg, MarketRemoveCollateralMsg, LeverageUpActionMsg} from "src/tap-utils/interfaces/oft/ITOFT.sol";

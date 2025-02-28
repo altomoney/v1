@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 import {Markets_Unit_Shared} from "../../shared/Markets_Unit_Shared.t.sol";
 

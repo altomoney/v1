@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 import {BarProcedure} from "../../../procedures/BarProcedure.sol";
 import {UsdoReport} from "../../../interfaces/ITapiocaReport.sol";
@@ -13,10 +13,8 @@ contract TapiocaUsdoBatchThree is BarProcedure {
     constructor(
         address endpoint,
         address delegate,
-        address yieldbox,
         address cluster,
         address extExec,
-        address pearlmit,
         address usdoSenderModule,
         address usdoReceiverModule,
         address usdoMarketReceiverModule,
@@ -25,10 +23,8 @@ contract TapiocaUsdoBatchThree is BarProcedure {
         _usdoReport = _deployUsdo(
             endpoint,
             delegate,
-            yieldbox,
             cluster,
             extExec,
-            pearlmit,
             usdoSenderModule,
             usdoReceiverModule,
             usdoMarketReceiverModule,

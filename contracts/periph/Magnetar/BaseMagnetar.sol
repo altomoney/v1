@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // External
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
@@ -9,7 +9,7 @@ import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
 import {IMagnetarModuleExtender} from "tap-utils/interfaces/periph/IMagnetar.sol";
 import {IMagnetarHelper} from "tap-utils/interfaces/periph/IMagnetarHelper.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
-import {MagnetarStorage, IPearlmit} from "./MagnetarStorage.sol";
+import {MagnetarStorage} from "./MagnetarStorage.sol";
 
 /*
 
@@ -26,9 +26,11 @@ import {MagnetarStorage, IPearlmit} from "./MagnetarStorage.sol";
  * @title BaseMagnetar
  * @author TapiocaDAO
  * @notice Base contract for Magnetar
+ * @dev This contract is abstract and cannot be deployed directly
+ * @dev This contract inherits from `MagnetarStorage`.
+ * @dev Since `Magnetar` uses `delegatecall`, in case of changes in the storage variables, make it carefully.
  */
-contract BaseMagnetar is Ownable, Pausable, MagnetarStorage {
-    IMagnetarModuleExtender public magnetarModuleExtender; // For future implementations
+abstract contract BaseMagnetar is MagnetarStorage, Ownable, Pausable {
 
     error Magnetar_FailRescueEth();
     error Magnetar_EmptyAddress();
@@ -38,9 +40,7 @@ contract BaseMagnetar is Ownable, Pausable, MagnetarStorage {
     event ClusterUpdated(ICluster indexed oldCluster, ICluster indexed newCluster);
     event MagnetarModuleExtenderSet(address old, address newMagnetarModuleExtender);
 
-    constructor(ICluster _cluster, IPearlmit _pearlmit, address _toeHelper, address _owner)
-        MagnetarStorage(_pearlmit, _toeHelper)
-    {
+    constructor(ICluster _cluster, address _toeHelper, address _owner) MagnetarStorage(_toeHelper) {
         cluster = _cluster;
         transferOwnership(_owner);
     }

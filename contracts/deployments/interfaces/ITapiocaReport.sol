@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 struct TapiocaReport {
     address magnetar;
@@ -7,7 +7,6 @@ struct TapiocaReport {
     address magnetarMintModule;
     address magnetarOptionModule;
     address magnetarAssetModule;
-    address magnetarYieldboxModule;
     address magnetarHelper;
     address simpleLeverageExecutor;
     address toftHelper;
@@ -15,10 +14,7 @@ struct TapiocaReport {
     address multiTokenSender;
     address toeHelper;
     address cluster;
-    address pearlmit;
     address adbTapOptionOracle;
-    address yieldbox;
-    address yieldboxUri;
     address tapiocaMulticall;
     address extExec;
     address liquidatorReceiver;
@@ -63,12 +59,10 @@ struct MagnetarDepsReport {
     address magnetarCollateralModule;
     address magnetarMintModule;
     address magnetarOptionModule;
-    address magnetarYieldboxModule;
 }
 
 struct UtilitiesReport {
     address tapiocaMulticall;
-    address pearlmit;
     address cluster;
     address toeHelper;
     address pauser;
@@ -87,9 +81,7 @@ struct TapiocaInput {
     bool isMetaInstance; // if false, it will deploy a host Tapioca instance (Arbitrum), if not, it will deploy a meta instance deployment (Other networks, like Ethereum)
 }
 
-struct YieldboxReport {
-    address yieldbox;
-    address yieldboxUri;
+struct ExtExReport {
     address extExec;
     address liquidatorReceiver;
 }
@@ -138,12 +130,10 @@ struct BBReport {
 }
 
 struct IPenroseInput {
-    address yieldbox;
     address cluster;
     address tapToken;
     address usdoToken;
     address nativeWrappedToken;
-    address pearlmit;
     address owner;
     address singularityMaster;
     address bigbangMaster;
@@ -165,7 +155,7 @@ struct Reports {
     MagnetarReport magnetarReport;
     MagnetarDepsReport magnetarDepsReport;
     UtilitiesReport utilitiesReport;
-    YieldboxReport yieldboxReport;
+    ExtExReport ExtExReport;
     UsdoModulesReport usdoModulesReport;
     UsdoMarketModulesReport usdoMarketModulesReport;
     UsdoReport usdoReport;

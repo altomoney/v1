@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 //LZ
 import {
@@ -23,7 +23,7 @@ import {TapiocaOmnichainSender} from "tap-utils/tapiocaOmnichainEngine/TapiocaOm
 import {ERC20PermitStruct, ITapToken, LZSendParam} from "tap-token/tokens/ITapToken.sol";
 import {ModuleManager} from "./module/ModuleManager.sol";
 import {TapTokenReceiver} from "./TapTokenReceiver.sol";
-import {TwTAP} from "tap-token/governance/twTAP.sol";
+import {ITWTAPv2} from "tap-token/interfaces/ITWTAPv2.sol";
 import {TapTokenSender} from "./TapTokenSender.sol";
 import {BaseTapToken} from "./BaseTapToken.sol";
 
@@ -37,6 +37,7 @@ import {BaseTapToken} from "./BaseTapToken.sol";
    ╚═╝   ╚═╝  ╚═╝╚═╝     ╚═╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝
    
 */
+// TODO: add older TWAP interface and mark as DEPRECATED
 
 /// @title Tapioca OFTv2 token
 /// @notice OFT compatible TAP token
@@ -142,7 +143,7 @@ contract TapToken is BaseTapToken, ModuleManager, ERC20Permit, Pausable {
      * @param _data.extExec Address of the external executor.
      */
     constructor(ITapToken.TapTokenConstructorData memory _data)
-        BaseTapToken("TapToken", "TAP", _data.endpoint, _data.owner, _data.extExec, _data.pearlmit, _data.cluster)
+        BaseTapToken("TapToken", "TAP", _data.endpoint, _data.owner, _data.extExec, _data.cluster)
         ERC20Permit("TAP")
     {
         if (_data.endpoint == address(0)) revert AddressWrong();
@@ -517,7 +518,7 @@ contract TapToken is BaseTapToken, ModuleManager, ERC20Permit, Pausable {
         if (address(twTap) != address(0)) {
             revert TwTapAlreadySet();
         }
-        twTap = TwTAP(_twTap);
+        twTap = ITWTAPv2(_twTap);
     }
 
     /**

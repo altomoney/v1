@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // Tapioca
 import {Module} from "tap-utils/interfaces/bar/IMarket.sol";
@@ -86,7 +86,7 @@ contract BigBang_borrow is BigBang_Unit_Shared {
 
         // **** Main BB market ****
         // add collateral
-        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this), address(this), false);
+        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this));
 
         // borrow
         // already does the necessary checks
@@ -94,7 +94,7 @@ contract BigBang_borrow is BigBang_Unit_Shared {
 
         // **** Secondary BB market ****
         // add collateral
-        _addCollateral(collateralAmount, secondaryBB, address(this), address(this), address(this), address(this), false);
+        _addCollateral(collateralAmount, secondaryBB, address(this), address(this), address(this));
 
         // borrow
         // already does the necessary checks
@@ -116,7 +116,7 @@ contract BigBang_borrow is BigBang_Unit_Shared {
 
         // **** Main BB market ****
         // add collateral
-        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this), address(this), false);
+        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this));
 
         // borrow
         // already does the necessary checks
@@ -124,7 +124,7 @@ contract BigBang_borrow is BigBang_Unit_Shared {
 
         // **** Secondary BB market ****
         // add collateral
-        _addCollateral(collateralAmount, secondaryBB, address(this), address(this), address(this), address(this), false);
+        _addCollateral(collateralAmount, secondaryBB, address(this), address(this), address(this));
 
         // borrow
         // already does the necessary checks
@@ -143,7 +143,7 @@ contract BigBang_borrow is BigBang_Unit_Shared {
         _setBorrowCap(borrowAmount - 1, mainBB);
 
         // add collateral
-        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this), address(this), false);
+        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this));
 
         (Module[] memory modules, bytes[] memory calls) = _getBorrowData(borrowAmount, address(this), address(this));
         //BorrowCapReached
@@ -165,7 +165,7 @@ contract BigBang_borrow is BigBang_Unit_Shared {
         uint256 maxBorrowAmount = _computeMaxBorrowAmount(collateralAmount, IMarket(address(mainBB)));
 
         // add collateral
-        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this), address(this), false);
+        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this));
 
         (Module[] memory modules, bytes[] memory calls) =
             _getBorrowData(maxBorrowAmount * 2, address(this), address(this));
@@ -185,7 +185,7 @@ contract BigBang_borrow is BigBang_Unit_Shared {
         givenBorrowCapIsNotReachedYet
     {
         // add collateral
-        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this), address(this), false);
+        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this));
 
         borrowAmount = _boundBorrowAmount(borrowAmount, collateralAmount);
         (Module[] memory modules, bytes[] memory calls) = _getBorrowData(borrowAmount, address(this), address(this));
@@ -211,7 +211,7 @@ contract BigBang_borrow is BigBang_Unit_Shared {
 
         // **** Main BB market ****
         // add collateral
-        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this), address(this), false);
+        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this));
 
         // borrow
         mainBB.approveBorrow(address(userA), type(uint256).max);
@@ -219,7 +219,7 @@ contract BigBang_borrow is BigBang_Unit_Shared {
 
         // **** Secondary BB market ****
         // add collateral
-        _addCollateral(collateralAmount, secondaryBB, address(this), address(this), address(this), address(this), false);
+        _addCollateral(collateralAmount, secondaryBB, address(this), address(this), address(this));
 
         // borrow
         secondaryBB.approveBorrow(address(userA), type(uint256).max);
@@ -241,7 +241,7 @@ contract BigBang_borrow is BigBang_Unit_Shared {
 
         // **** Main BB market ****
         // add collateral
-        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this), address(this), false);
+        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this));
 
         // borrow
         mainBB.approveBorrow(address(userA), type(uint256).max);
@@ -249,7 +249,7 @@ contract BigBang_borrow is BigBang_Unit_Shared {
 
         // **** Secondary BB market ****
         // add collateral
-        _addCollateral(collateralAmount, secondaryBB, address(this), address(this), address(this), address(this), false);
+        _addCollateral(collateralAmount, secondaryBB, address(this), address(this), address(this));
 
         // borrow
         secondaryBB.approveBorrow(address(userA), type(uint256).max);
@@ -271,7 +271,7 @@ contract BigBang_borrow is BigBang_Unit_Shared {
         _setBorrowCap(borrowAmount - 1, mainBB);
 
         // add collateral
-        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this), address(this), false);
+        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this));
 
         (Module[] memory modules, bytes[] memory calls) = _getBorrowData(borrowAmount, address(this), address(this));
         mainBB.approveBorrow(address(userA), type(uint256).max);

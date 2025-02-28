@@ -1,18 +1,16 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // External
 import {RebaseLibrary, Rebase} from "@boringcrypto/boring-solidity/contracts/libraries/BoringRebase.sol";
 import {BoringERC20} from "@boringcrypto/boring-solidity/contracts/libraries/BoringERC20.sol";
-import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {IERC20} from "@boringcrypto/boring-solidity/contracts/ERC20.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-
 // Tapioca
 import {ISingularity} from "tap-utils/interfaces/bar/ISingularity.sol";
-import {Market, MarketERC20} from "../Market.sol";
-
+import {Market} from "../Market.sol";
+import {MarketERC4626} from "../MarketERC4626.sol";
 // solhint-disable max-line-length
 
 /*
@@ -26,7 +24,7 @@ import {Market, MarketERC20} from "../Market.sol";
    
 */
 
-contract SGLStorage is Ownable, Market, ReentrancyGuard {
+contract SGLStorage is Ownable, Market {
     using RebaseLibrary for Rebase;
     using BoringERC20 for IERC20;
     using SafeCast for uint256;
@@ -37,7 +35,7 @@ contract SGLStorage is Ownable, Market, ReentrancyGuard {
     /// @notice information about the accrual info
     ISingularity.AccrueInfo public accrueInfo;
     /// @notice total assets share & amount
-    Rebase public totalAsset; // elastic = yieldBox shares held by the Singularity, base = Total fractions held by asset suppliers
+    Rebase public totalAsset;
 
     uint256 public minimumTargetUtilization;
     uint256 public maximumTargetUtilization;
@@ -54,10 +52,12 @@ contract SGLStorage is Ownable, Market, ReentrancyGuard {
 
     uint256 public minLendAmount;
 
+    mapping(address => uint256) public liquidityBalance;
     // ************** //
     // *** EVENTS *** //
     // ************** //
     /// @notice event emitted when borrow opening fee is updated
+
     event LogBorrowingFee(uint256 indexed _oldVal, uint256 indexed _newVal);
     /// @notice event emitted when accrual happens
     event LogAccrue(
@@ -95,31 +95,19 @@ contract SGLStorage is Ownable, Market, ReentrancyGuard {
     // ***************** //
     // *** CONSTANTS *** //
     // ***************** //
-    constructor() MarketERC20("Tapioca Singularity") {}
+    constructor() MarketERC4626("Tapioca Singularity", "SGL") {}
 
     // ********************** //
     // *** VIEW FUNCTIONS *** //
     // ********************** //
     /// @notice returns market's ERC20 symbol
-    function symbol() external view returns (string memory) {
-        return string(abi.encodePacked("tm-", collateral.safeSymbol()));
+    function symbol() public view virtual override returns (string memory) {
+        return string(abi.encodePacked("tm-", IERC20(collateral()).safeSymbol()));
     }
 
     /// @notice returns market's ERC20 name
-    function name() external view returns (string memory) {
-        return string(abi.encodePacked("Tapioca Singularity-", collateral.safeName()));
-    }
-
-    /// @notice returns market's ERC20 decimals
-    function decimals() external view returns (uint8) {
-        return asset.safeDecimals();
-    }
-
-    /// @notice returns market's ERC20 totalSupply
-    /// @dev totalSupply for ERC20 compatibility
-    ///      BalanceOf[user] represent a fraction
-    function totalSupply() public view virtual override returns (uint256) {
-        return totalAsset.base;
+    function name() public view virtual override returns (string memory) {
+        return string(abi.encodePacked("Tapioca Singularity-", IERC20(collateral()).safeName()));
     }
 
     function _accrue() internal virtual override {}

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // external
 import {BigBang} from "tapioca-bar/markets/bigBang/BigBang.sol";
@@ -33,7 +33,6 @@ contract Penrose_unregisterContract is BigBang_Unit_Shared {
             BigBangInitData(
                 address(penrose),
                 address(mainToken), //asset
-                mainTokenId,
                 ITapiocaOracle(address(rndAddr)),
                 ILeverageExecutor(address(rndAddr)),
                 0,

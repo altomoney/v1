@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // Tapioca
 import {Module} from "tap-utils/interfaces/bar/IMarket.sol";
@@ -7,7 +7,6 @@ import {BigBang} from "tapioca-bar/markets/bigBang/BigBang.sol";
 import {Market} from "tapioca-bar/markets/Market.sol";
 
 import {IMarket} from "tap-utils/interfaces/bar/ISingularity.sol";
-import {IPearlmit} from "tap-utils/pearlmit/Pearlmit.sol";
 
 import {ZeroXSwapperMockTarget_test} from "../../../mocks/ZeroXSwapperMockTarget_test.sol";
 import {TOFTMock_test} from "../../../mocks/TOFTMock_test.sol";
@@ -68,7 +67,7 @@ contract BigBang_liquidateBadDebt is BigBang_Unit_Shared {
 
         // **** Main BB market ****
         // add collateral
-        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this), address(this), false);
+        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this));
 
         // borrow
         // already does the necessary checks
@@ -85,7 +84,7 @@ contract BigBang_liquidateBadDebt is BigBang_Unit_Shared {
 
         // **** Secondary BB market ****
         // add collateral
-        _addCollateral(collateralAmount, secondaryBB, address(this), address(this), address(this), address(this), false);
+        _addCollateral(collateralAmount, secondaryBB, address(this), address(this), address(this));
 
         // borrow
         // already does the necessary checks
@@ -114,16 +113,6 @@ contract BigBang_liquidateBadDebt is BigBang_Unit_Shared {
         _liquidateBadDebt(collateralAmount, borrowAmount, mainBB, address(this), rndAddr, false);
 
         // **** Secondary BB market ****
-        _approveViaPearlmit(
-            TOKEN_TYPE_ERC1155,
-            address(yieldBox),
-            IPearlmit(address(pearlmit)),
-            address(this),
-            address(secondaryBB),
-            type(uint200).max,
-            uint48(block.timestamp),
-            secondaryBB._assetId()
-        );
         _liquidateBadDebt(collateralAmount, borrowAmount, secondaryBB, address(this), rndAddr, false);
     }
 
@@ -161,7 +150,7 @@ contract BigBang_liquidateBadDebt is BigBang_Unit_Shared {
         whenWhitelisted(address(liquidatorReceiver))
     {
         // it should revert
-        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this), address(this), false);
+        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this));
 
         uint256 maxBorrowAmount = _computeMaxBorrowAmount(collateralAmount, IMarket(address(mainBB)));
         maxBorrowAmount = maxBorrowAmount - (maxBorrowAmount * 2e4 / 1e5);
@@ -173,10 +162,12 @@ contract BigBang_liquidateBadDebt is BigBang_Unit_Shared {
 
         // compute asset amount
         SZeroXSwapData memory szeroXSwapData = SZeroXSwapData({
-            sellToken: TOFTMock_test(payable(mainBB._collateral())).erc20(),
-            buyToken: mainBB._asset(),
+            sellToken: TOFTMock_test(payable(mainBB.collateral())).erc20(),
+            buyToken: address(mainBB._asset()),
             swapTarget: payable(swapperTarget),
-            swapCallData: abi.encodeWithSelector(ZeroXSwapperMockTarget_test.transferTokens.selector, mainBB._asset(), 0)
+            swapCallData: abi.encodeWithSelector(
+                ZeroXSwapperMockTarget_test.transferTokens.selector, address(mainBB._asset()), 0
+            )
         });
         SSwapData memory sswapData = SSwapData({minAmountOut: 0, data: szeroXSwapData});
         bytes memory swapData = abi.encode(sswapData);

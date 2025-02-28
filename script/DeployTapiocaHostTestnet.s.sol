@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 import {TapiocaRelease} from "deployments/releases/tapioca-v1/TapiocaRelease.sol";
 import {TapiocaReport, TapiocaInput} from "deployments/interfaces/ITapiocaReport.sol";

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // Tapioca
 import {IToftVault} from "tap-utils/interfaces/oft/ITOFT.sol";
@@ -203,20 +203,9 @@ contract TOFT_setters is OFT_Unit_Shared {
         mToft.setOwnerState(owState);
     }
 
-    function _wrap(uint256 amount)
-        private
-        whenApprovedViaERC20(address(underlyingErc20), address(this), address(pearlmit), type(uint256).max)
-        whenApprovedViaPearlmit(
-            TOKEN_TYPE_ERC20,
-            address(underlyingErc20),
-            0,
-            address(this),
-            address(mToft),
-            type(uint200).max,
-            uint48(block.timestamp)
-        )
-    {
+    function _wrap(uint256 amount) private {
         deal(address(underlyingErc20), address(this), amount);
+        underlyingErc20.approve(address(mToft), amount);
         mToft.wrap(address(this), address(this), amount);
         assertTrue(mToft.totalSupply() > 0);
     }

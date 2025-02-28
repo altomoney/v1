@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // external
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 // contracts
-import {IPearlmit, Pearlmit} from "tap-utils/pearlmit/Pearlmit.sol";
+
 import {Cluster} from "tap-utils/Cluster/Cluster.sol";
 import {ITOFT, TOFTInitStruct, TOFTModulesInitStruct} from "tap-utils/interfaces/oft/ITOFT.sol";
-import {YieldBox} from "yieldbox/YieldBox.sol";
 
 import {TapiocaOmnichainExtExec} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainExtExec.sol";
 import {TOFTGenericReceiverModule} from "tapiocaz/tOFT/modules/TOFTGenericReceiverModule.sol";
@@ -44,8 +43,7 @@ abstract contract Base_Test is TestHelper, Utils, Types, Events {
     uint256 public initialBalance = LARGE_AMOUNT;
 
     // common general storage
-    YieldBox yieldBox;
-    Pearlmit pearlmit;
+
     Cluster cluster;
 
     // tokens
@@ -105,10 +103,7 @@ abstract contract Base_Test is TestHelper, Utils, Types, Events {
 
         // create real Cluster
         cluster = _createCluster(address(this));
-        // create real Pearlmit
-        pearlmit = _createPearlmit(address(this));
         // create real YieldBox
-        yieldBox = _createYieldBox(address(this), pearlmit);
 
         // creat TOFT underlyingErc20
         TOFTInitStruct memory toftInitStruct = _createOftInitStruct(address(underlyingErc20), aEid);
@@ -300,52 +295,10 @@ abstract contract Base_Test is TestHelper, Utils, Types, Events {
     // ***************** //
     // *** MODIFIERS *** //
     // ***************** //
-    /// @notice Modifier to approve an operator in YB via Pearlmit.
-    modifier whenApprovedViaPearlmit(
-        uint256 _type,
-        address _token,
-        uint256 _tokenId,
-        address _from,
-        address _operator,
-        uint256 _amount,
-        uint256 _expiration
-    ) {
-        _approveViaPearlmit({
-            tokenType: _type,
-            token: _token,
-            pearlmit: IPearlmit(address(pearlmit)),
-            from: _from,
-            operator: _operator,
-            amount: _amount,
-            expiration: _expiration,
-            tokenId: _tokenId
-        });
-        _;
-    }
 
     /// @notice Modifier to approve an operator via regular ERC20.
     modifier whenApprovedViaERC20(address _token, address _from, address _operator, uint256 _amount) {
         _approveViaERC20({token: _token, from: _from, operator: _operator, amount: _amount});
-        _;
-    }
-
-    /// @notice Modifier to approve an operator for a specific asset ID via YB.
-    modifier whenYieldBoxApprovedForAssetID(address _from, address _operator, uint256 _assetId) {
-        _approveYieldBoxAssetId({yieldBox: yieldBox, from: _from, operator: _operator, assetId: _assetId});
-        _;
-    }
-
-    /// @notice Modifier to approve an operator for a specific asset ID via YB.
-    modifier whenYieldBoxApprovedForMultipleAssetIDs(address _from, address _operator, uint256 _noOfAssets) {
-        for (uint256 i = 1; i <= _noOfAssets; i++) {
-            _approveYieldBoxAssetId({yieldBox: yieldBox, from: _from, operator: _operator, assetId: i});
-        }
-        _;
-    }
-
-    /// @notice Modifier to approve an operator for all via YB.
-    modifier whenYieldBoxApprovedForAll(address _from, address _operator) {
-        _approveYieldBoxForAll({yieldBox: yieldBox, from: _from, operator: _operator});
         _;
     }
 
@@ -380,13 +333,11 @@ abstract contract Base_Test is TestHelper, Utils, Types, Events {
             symbol: _underlyingToken == address(0) ? "NATIVE" : IERC20Metadata(_underlyingToken).symbol(),
             endpoint: address(endpoints[_endpoint]),
             delegate: address(this),
-            yieldBox: address(yieldBox),
             cluster: address(cluster),
             erc20: _underlyingToken,
             vault: address(_vault),
             hostEid: _endpoint,
-            extExec: address(_extExec),
-            pearlmit: IPearlmit(address(pearlmit))
+            extExec: address(_extExec)
         });
     }
 

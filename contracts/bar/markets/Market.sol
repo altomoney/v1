@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // External
 import {RebaseLibrary, Rebase} from "@boringcrypto/boring-solidity/contracts/libraries/BoringRebase.sol";
@@ -9,10 +9,10 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 // Tapioca
 import {ILeverageExecutor} from "tap-utils/interfaces/bar/ILeverageExecutor.sol";
 import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
-import {IYieldBox} from "tap-utils/interfaces/yieldbox/IYieldBox.sol";
-import {IPearlmit} from "tap-utils/interfaces/periph/IPearlmit.sol";
 import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
-import {MarketERC20} from "./MarketERC20.sol";
+import {MarketERC4626} from "./MarketERC4626.sol";
+import {Module, PauseType} from "tap-utils/interfaces/bar/IMarket.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 /*
 
@@ -25,40 +25,19 @@ import {MarketERC20} from "./MarketERC20.sol";
    
 */
 
-abstract contract Market is MarketERC20, Ownable {
+abstract contract Market is MarketERC4626, Ownable, ReentrancyGuard {
     using RebaseLibrary for Rebase;
 
     // ************ //
     // *** VARS *** //
     // ************ //
-    enum PauseType {
-        Borrow,
-        Repay,
-        AddCollateral,
-        RemoveCollateral,
-        Liquidation,
-        LeverageBuy,
-        LeverageSell,
-        AddAsset,
-        RemoveAsset
-    }
 
     /// @notice pause options
     mapping(PauseType pauseProp => bool pauseStatus) internal pauseOptions;
 
-    /// @notice returns YieldBox address
-    IYieldBox internal yieldBox;
-
-    IPearlmit internal pearlmit;
-
-    /// @notice collateral token address
-    IERC20 internal collateral;
-    /// @notice collateral token YieldBox id
-    uint256 internal collateralId;
     /// @notice asset token address
-    IERC20 internal asset;
-    /// @notice asset token YieldBox id
-    uint256 internal assetId;
+    /// @dev This is the borrowable token
+    IERC20 public _asset; // TODO IMPORTANT Modify it
     /// @notice oracle address
     ITapiocaOracle internal oracle;
     /// @notice oracleData
@@ -71,19 +50,13 @@ abstract contract Market is MarketERC20, Ownable {
     uint256 internal rateValidDuration;
     /// @notice latest timestamp when `exchangeRate` was updated
     uint256 internal rateTimestamp;
-
     /// @notice total amount borrowed
     /// @dev elastic = Total token amount to be repayed by borrowers, base = Total parts of the debt held by borrowers
     Rebase internal totalBorrow;
-    /// @notice total collateral supplied
-    uint256 internal totalCollateralShare;
     /// @notice max borrow cap
     uint256 internal totalBorrowCap;
     /// @notice borrow amount per user
     mapping(address => uint256) internal userBorrowPart;
-    /// @notice collateral share per user
-    mapping(address => uint256) internal userCollateralShare;
-
     /// @notice accrual protocol rewards
     uint256 internal protocolFee; // 10%
     /// @notice min % a liquidator can receive in rewards
@@ -117,6 +90,8 @@ abstract contract Market is MarketERC20, Ownable {
     error AllowanceNotValid();
     error MinBorrowAmountNotMet();
     error MinCollateralAmountNotMet();
+    error NotValid();
+    error TransferFailed();
 
     // ************** //
     // *** EVENTS *** //
@@ -299,6 +274,46 @@ abstract contract Market is MarketERC20, Ownable {
         }
     }
 
+    /// @notice updates the pause state of the contract
+    /// @dev can only be called by the conservator
+    /// @param val the new value
+    function updatePause(PauseType _type, bool val) external {
+        require(_cluster().hasRole(msg.sender, keccak256("PAUSABLE")) || msg.sender == owner(), "Market: unauthorized");
+        require(val != pauseOptions[_type], "Market: same state");
+        emit PausedUpdated(_type, pauseOptions[_type], val);
+        pauseOptions[_type] = val;
+    }
+
+    /// @notice updates the pause state of the contract for all types
+    /// @param val the new val
+    function updatePauseAll(bool val) external {
+        require(_cluster().hasRole(msg.sender, keccak256("PAUSABLE")) || msg.sender == owner(), "Market: unauthorized");
+
+        pauseOptions[PauseType.Borrow] = val;
+        pauseOptions[PauseType.Repay] = val;
+        pauseOptions[PauseType.AddCollateral] = val;
+        pauseOptions[PauseType.RemoveCollateral] = val;
+        pauseOptions[PauseType.Liquidation] = val;
+        pauseOptions[PauseType.LeverageBuy] = val;
+        pauseOptions[PauseType.LeverageSell] = val;
+
+        emit PausedUpdated(PauseType.Borrow, pauseOptions[PauseType.Borrow], val);
+        emit PausedUpdated(PauseType.Repay, pauseOptions[PauseType.Repay], val);
+        emit PausedUpdated(PauseType.AddCollateral, pauseOptions[PauseType.AddCollateral], val);
+        emit PausedUpdated(PauseType.RemoveCollateral, pauseOptions[PauseType.RemoveCollateral], val);
+        emit PausedUpdated(PauseType.Liquidation, pauseOptions[PauseType.Liquidation], val);
+        emit PausedUpdated(PauseType.LeverageBuy, pauseOptions[PauseType.LeverageBuy], val);
+        emit PausedUpdated(PauseType.LeverageSell, pauseOptions[PauseType.LeverageSell], val);
+    }
+
+    /// @notice rescues unused ETH from the contract
+    /// @param amount the amount to rescue
+    /// @param to the recipient
+    function rescueEth(uint256 amount, address to) external onlyOwner {
+        (bool success,) = to.call{value: amount}("");
+        if (!success) revert TransferFailed();
+    }
+
     // ********************** //
     // *** VIEW FUNCTIONS *** //
     // ********************** //
@@ -361,7 +376,7 @@ abstract contract Market is MarketERC20, Ownable {
         unchecked {
             amountToSolvency = borrowPart >= collateralAmountInAsset ? borrowPart - collateralAmountInAsset : 0;
         }
-        (minTVL, maxTVL) = _computeMaxAndMinLTVInAsset(userCollateralShare[user], _exchangeRate);
+        (minTVL, maxTVL) = _computeMaxAndMinLTVInAsset(balanceOf(user), _exchangeRate);
     }
 
     /// @notice Gets the exchange rate. I.e how much collateral to buy 1e18 asset.
@@ -387,6 +402,52 @@ abstract contract Market is MarketERC20, Ownable {
         return _getCallerReward(user, _exchangeRate);
     }
 
+    /// @notice Allows batched calls to a market.
+    /// @param calls An array encoded call data.
+    /// @param revertOnFail If True then reverts after a failed call and stops doing further calls.
+    /// @return successes count of successful operations
+    /// @return results array of revert messages
+    function execute(Module[] calldata modules, bytes[] calldata calls, bool revertOnFail)
+        external
+        nonReentrant
+        returns (bool[] memory successes, bytes[] memory results)
+    {
+        successes = new bool[](calls.length);
+        results = new bytes[](calls.length);
+        if (modules.length != calls.length) revert NotValid();
+        for (uint256 i; i < calls.length; i++) {
+            (bool success, bytes memory result) = _extractModule(modules[i]).delegatecall(calls[i]);
+
+            if (!success && revertOnFail) {
+                revert(abi.decode(_getRevertMsg(result), (string)));
+            }
+            successes[i] = success;
+            results[i] = !success ? _getRevertMsg(result) : result;
+        }
+    }
+
+    function _extractModule(Module module) internal virtual returns (address) {
+        revert("Market: execute modules not implemented");
+    }
+
+    function accrue() external virtual {
+        revert("Market: accrue not implemented");
+    }
+
+    /**
+     * @notice Returns the borrowable token.
+     * @dev This is not the same as the asset token in the ERC4626.
+     * @return The borrowable token.
+     */
+    function _borrowableToken() internal view returns (IERC20) {
+        return IERC20(_asset);
+    }
+
+    // TODO Important modify this.
+    function borrowableToken() public view returns (address) {
+        return address(_asset);
+    }
+
     // ************************** //
     // *** INTERNAL FUNCTIONS *** //
     // ************************** //
@@ -394,43 +455,40 @@ abstract contract Market is MarketERC20, Ownable {
 
     function _accrueView() internal view virtual returns (Rebase memory);
 
-    /**
-     * @inheritdoc MarketERC20
-     */
-    function _allowedLend(address from, uint256 share) internal virtual override {
+    /// @inheritdoc MarketERC4626
+    function _allowedLend(address from, uint256 amount) internal virtual override {
         if (from != msg.sender) {
-            if (share == 0) revert AllowanceNotValid();
-
-            uint256 pearlmitAllowed;
-            // Here we approve the market token, because it is unique to the market
-            if (penrose.cluster().isWhitelisted(0, msg.sender)) {
-                (pearlmitAllowed,) = penrose.pearlmit().allowance(from, msg.sender, 20, address(this), 0);
-            }
-            require(allowance[from][msg.sender] >= share || pearlmitAllowed >= share, "Market: not approved");
-            if (pearlmitAllowed >= share) return;
-            if (allowance[from][msg.sender] != type(uint256).max) {
-                allowance[from][msg.sender] -= share;
+            if (amount == 0) revert AllowanceNotValid();
+            uint256 currentAllowance = allowanceLiquidity[from][msg.sender];
+            require(currentAllowance >= amount, "Market: not approved");
+            if (currentAllowance != type(uint256).max) {
+                // TODO: We don't decrease allowance when it is max.
+                allowanceLiquidity[from][msg.sender] -= amount;
             }
         }
     }
 
-    /**
-     * @inheritdoc MarketERC20
-     */
-    function _allowedBorrow(address from, uint256 share) internal virtual override {
+    /// @inheritdoc MarketERC4626
+    function _allowedCollateral(address from, uint256 amount) internal virtual override {
         if (from != msg.sender) {
-            if (share == 0) revert AllowanceNotValid();
-
-            uint256 pearlmitAllowed;
-            // Here we approve the YB collateral token, because market token is already used in `_allowedLend`
-            if (penrose.cluster().isWhitelisted(0, msg.sender)) {
-                (pearlmitAllowed,) =
-                    penrose.pearlmit().allowance(from, msg.sender, 1155, address(yieldBox), collateralId);
+            if (amount == 0) revert AllowanceNotValid();
+            uint256 currentAllowance = allowanceCollateral[from][msg.sender];
+            require(currentAllowance >= amount, "Market: not approved");
+            if (currentAllowance != type(uint256).max) {
+                // TODO: We don't decrease allowance when it is max.
+                allowanceCollateral[from][msg.sender] -= amount;
             }
-            require(allowanceBorrow[from][msg.sender] >= share || pearlmitAllowed >= share, "Market: not approved");
-            if (pearlmitAllowed >= share) return;
-            if (allowanceBorrow[from][msg.sender] != type(uint256).max) {
-                allowanceBorrow[from][msg.sender] -= share;
+        }
+    }
+
+    /// @inheritdoc MarketERC4626
+    function _allowedBorrow(address from, uint256 amount) internal virtual override {
+        if (from != msg.sender) {
+            if (amount == 0) revert AllowanceNotValid();
+            uint256 currentAllowance = allowanceBorrow[from][msg.sender];
+            require(currentAllowance >= amount, "Market: not approved");
+            if (currentAllowance != type(uint256).max) {
+                allowanceBorrow[from][msg.sender] -= amount;
             }
         }
     }
@@ -467,9 +525,9 @@ abstract contract Market is MarketERC20, Ownable {
         returns (uint256 collateralAmountInAsset)
     {
         require(_exchangeRate > 0, "Market: exchangeRate not valid");
-        uint256 userCollateralAmount = yieldBox.toAmount(collateralId, userCollateralShare[user], false);
+        uint256 userCollateralAmount = balanceOf(user);
         collateralAmountInAsset =
-            (userCollateralAmount * (EXCHANGE_RATE_PRECISION / FEE_PRECISION) * collateralizationRate) / _exchangeRate;
+            (userCollateralAmount * EXCHANGE_RATE_PRECISION * collateralizationRate) / (FEE_PRECISION * _exchangeRate);
     }
 
     /// @notice Concrete implementation of `isSolvent`. Includes a parameter to allow caching `exchangeRate`.
@@ -478,13 +536,13 @@ abstract contract Market is MarketERC20, Ownable {
         // accrue must have already been called!
         uint256 borrowPart = userBorrowPart[user];
         if (borrowPart == 0) return true;
-        uint256 collateralShare = userCollateralShare[user];
+        uint256 collateralShare = balanceOf(user);
         if (collateralShare == 0) return false;
 
         Rebase memory _totalBorrow = totalBorrow;
 
-        uint256 collateralAmount = yieldBox.toAmount(collateralId, collateralShare, false);
-        return collateralAmount * (EXCHANGE_RATE_PRECISION / FEE_PRECISION)
+        uint256 collateralAmount = maxWithdraw(user);
+        return (collateralAmount * EXCHANGE_RATE_PRECISION / FEE_PRECISION)
             * (_liquidation ? liquidationCollateralizationRate : collateralizationRate)
         // Moved exchangeRate here instead of dividing the other side to preserve more precision
         >= (borrowPart * _totalBorrow.elastic * _exchangeRate) / _totalBorrow.base;
@@ -497,15 +555,14 @@ abstract contract Market is MarketERC20, Ownable {
         returns (uint256 min, uint256 max)
     {
         require(_exchangeRate > 0, "Market: exchangeRate not valid");
-        uint256 collateralAmount = yieldBox.toAmount(collateralId, collateralShare, false);
+        uint256 collateralAmount = convertToAssets(collateralShare);
 
         max = (collateralAmount * EXCHANGE_RATE_PRECISION) / _exchangeRate;
-        min = (max * collateralizationRate) / FEE_PRECISION;
+        min = (max * liquidationCollateralizationRate) / FEE_PRECISION;
     }
 
     function _getCallerReward(address user, uint256 _exchangeRate) internal view returns (uint256) {
-        (uint256 startTVLInAsset, uint256 maxTVLInAsset) =
-            _computeMaxAndMinLTVInAsset(userCollateralShare[user], _exchangeRate);
+        (uint256 startTVLInAsset, uint256 maxTVLInAsset) = _computeMaxAndMinLTVInAsset(balanceOf(user), _exchangeRate);
 
         uint256 borrowed = userBorrowPart[user];
         if (borrowed == 0) return 0;
@@ -528,24 +585,91 @@ abstract contract Market is MarketERC20, Ownable {
         return uint256(reward);
     }
 
-    function _computeAllowanceAmountInAsset(
-        address user,
-        uint256 _exchangeRate,
-        uint256 borrowAmount,
-        uint256 assetDecimals
-    ) internal view returns (uint256) {
-        uint256 maxBorrowable = _computeMaxBorrowableAmount(user, _exchangeRate);
-
-        uint256 shareRatio = _getRatio(borrowAmount, maxBorrowable, assetDecimals);
-        return (shareRatio * userCollateralShare[user]) / (10 ** assetDecimals);
+    function _pauseOptions(PauseType _pauseProp) external view returns (bool) {
+        return pauseOptions[_pauseProp];
     }
 
-    function _getRatio(uint256 numerator, uint256 denominator, uint256 precision) internal pure returns (uint256) {
-        if (numerator == 0 || denominator == 0) {
-            return 0;
-        }
-        uint256 _numerator = numerator * 10 ** (precision + 1);
-        uint256 _quotient = ((_numerator / denominator) + 5) / 10;
-        return (_quotient);
+    function _oracle() external view returns (address) {
+        return address(oracle);
+    }
+
+    function _oracleData() external view returns (bytes memory) {
+        return oracleData;
+    }
+
+    function _exchangeRate() external view returns (uint256) {
+        return exchangeRate;
+    }
+
+    function _rateValidDuration() external view returns (uint256) {
+        return rateValidDuration;
+    }
+
+    function _rateTimestamp() external view returns (uint256) {
+        return rateTimestamp;
+    }
+
+    function _totalBorrow() external view returns (Rebase memory) {
+        return totalBorrow;
+    }
+
+    function _totalCollateralShare() external view returns (uint256) {
+        return totalSupply();
+    }
+
+    function _totalBorrowCap() external view returns (uint256) {
+        return totalBorrowCap;
+    }
+
+    function _userBorrowPart(address _user) external view returns (uint256) {
+        return userBorrowPart[_user];
+    }
+
+    function _protocolFee() external view returns (uint256) {
+        return protocolFee;
+    }
+
+    function _minLiquidatorReward() external view returns (uint256) {
+        return minLiquidatorReward;
+    }
+
+    function _maxLiquidatorReward() external view returns (uint256) {
+        return maxLiquidatorReward;
+    }
+
+    function _liquidationBonusAmount() external view returns (uint256) {
+        return liquidationBonusAmount;
+    }
+
+    function _collateralizationRate() external view returns (uint256) {
+        return collateralizationRate;
+    }
+
+    function _liquidationCollateralizationRate() external view returns (uint256) {
+        return liquidationCollateralizationRate;
+    }
+
+    function _liquidationMultiplier() external view returns (uint256) {
+        return liquidationMultiplier;
+    }
+
+    function _leverageExecutor() external view returns (address) {
+        return address(leverageExecutor);
+    }
+
+    function _maxLiquidationSlippage() external view returns (uint256) {
+        return maxLiquidationSlippage;
+    }
+
+    function _exchangeRatePrecision() external view returns (uint256) {
+        return EXCHANGE_RATE_PRECISION;
+    }
+
+    function _minBorrowAmount() external view returns (uint256) {
+        return minBorrowAmount;
+    }
+
+    function _minCollateralAmount() external view returns (uint256) {
+        return minCollateralAmount;
     }
 }

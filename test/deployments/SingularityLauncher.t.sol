@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 import "forge-std/Test.sol";
 import "deployments/interfaces/ITapiocaReport.sol";
@@ -54,9 +54,7 @@ contract TapiocaReleaseTest is Test {
         RiskParams memory riskParams;
 
         tokensData._collateral = IERC20(input.wrappedNativeToken);
-        tokensData._collateralId = 1;
         tokensData._asset = IERC20(address(usda));
-        tokensData._assetId = 2;
 
         riskParams.borrowOpeningFee = 0;
         riskParams.liquidationMultiplier = 0;

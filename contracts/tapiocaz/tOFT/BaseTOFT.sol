@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // External
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -9,8 +9,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 // Tapioca
 import {BaseTapiocaOmnichainEngine} from "tap-utils/tapiocaOmnichainEngine/BaseTapiocaOmnichainEngine.sol";
 import {TOFTInitStruct, IToftVault} from "tap-utils/interfaces/oft/ITOFT.sol";
-import {PearlmitHandler} from "tap-utils/pearlmit/PearlmitHandler.sol";
-import {IYieldBox} from "tap-utils/interfaces/yieldbox/IYieldBox.sol";
+
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {BaseTOFTTokenMsgType} from "./BaseTOFTTokenMsgType.sol";
 import {ModuleManager} from "./modules/ModuleManager.sol";
@@ -30,16 +29,9 @@ import {ModuleManager} from "./modules/ModuleManager.sol";
  * @author TapiocaDAO
  * @notice Base TOFT contract for LZ V2
  */
-abstract contract BaseTOFT is
-    ModuleManager,
-    PearlmitHandler,
-    BaseTapiocaOmnichainEngine,
-    BaseTOFTTokenMsgType,
-    Pausable
-{
+abstract contract BaseTOFT is ModuleManager, BaseTapiocaOmnichainEngine, BaseTOFTTokenMsgType, Pausable {
     using SafeERC20 for IERC20;
 
-    IYieldBox public immutable yieldBox;
     IToftVault public vault;
     uint256 public immutable hostEid;
     address public erc20;
@@ -57,11 +49,9 @@ abstract contract BaseTOFT is
             _data.endpoint,
             _data.delegate,
             _data.extExec,
-            _data.pearlmit,
             ICluster(_data.cluster)
         )
     {
-        yieldBox = IYieldBox(_data.yieldBox);
         hostEid = _data.hostEid;
         erc20 = _data.erc20;
 
@@ -102,9 +92,7 @@ abstract contract BaseTOFT is
             _spendAllowance(_fromAddress, msg.sender, _amount);
         }
         if (_amount == 0) revert TOFT_NotValid();
-        // IERC20(erc20).safeTransferFrom(_fromAddress, address(vault), _amount);
-        bool isErr = pearlmit.transferFromERC20(_fromAddress, address(vault), erc20, _amount);
-        if (isErr) revert TOFT_NotValid();
+        IERC20(erc20).safeTransferFrom(_fromAddress, address(vault), _amount);
         _mint(_toAddress, _amount - _feeAmount);
     }
 

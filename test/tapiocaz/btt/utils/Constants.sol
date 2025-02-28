@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 /// @notice Helper contract containing constants for testing.
 abstract contract Constants {
@@ -20,9 +20,6 @@ abstract contract Constants {
     address public constant ADDRESS_ZERO = address(0);
     uint256 public constant VALUE_ZERO = 0;
 
-    // **************** //
-    // *** PEARLMIT *** //
-    // **************** //
     /// @dev Constant value representing the ERC721 token type for signatures and transfer hooks
     uint256 constant TOKEN_TYPE_ERC721 = 721;
     /// @dev Constant value representing the ERC1155 token type for signatures and transfer hooks

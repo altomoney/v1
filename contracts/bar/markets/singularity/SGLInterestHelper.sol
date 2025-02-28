@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // External
 import {RebaseLibrary, Rebase} from "@boringcrypto/boring-solidity/contracts/libraries/BoringRebase.sol";
@@ -47,8 +47,7 @@ contract SGLInterestHelper is ISGLInterestHelper {
         extraAmount = 0;
         feeFraction = 0;
 
-        uint256 fullAssetAmount =
-            data.yieldBox.toAmount(data.assetId, _totalAsset.elastic, false) + _totalBorrow.elastic;
+        uint256 fullAssetAmount = data.market.convertToAssets(_totalAsset.elastic) + _totalBorrow.elastic;
 
         utilization =
             fullAssetAmount == 0 ? 0 : (uint256(_totalBorrow.elastic) * UTILIZATION_PRECISION) / fullAssetAmount;
@@ -73,7 +72,7 @@ contract SGLInterestHelper is ISGLInterestHelper {
         _totalBorrow.elastic += extraAmount.toUint128();
 
         //take accrued values into account
-        fullAssetAmount = data.yieldBox.toAmount(data.assetId, _totalAsset.elastic, false) + _totalBorrow.elastic;
+        fullAssetAmount = data.market.convertToAssets(_totalAsset.elastic) + _totalBorrow.elastic;
 
         uint256 feeAmount = (extraAmount * data.protocolFee) / FEE_PRECISION; // % of interest paid goes to fee
         feeFraction = (feeAmount * _totalAsset.base) / (fullAssetAmount - feeAmount);

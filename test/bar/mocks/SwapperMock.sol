@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {YieldBox} from "yieldbox/YieldBox.sol";
+import {IMarket} from "../../../contracts/utils/interfaces/bar/IMarket.sol";
 
 /// @notice Always gives out the minimum requested amount, if it has it.
 /// @notice Do not use the other functions.
@@ -11,9 +11,7 @@ contract SwapperMock {
 
     struct SwapTokensData {
         address tokenIn;
-        uint256 tokenInId;
         address tokenOut;
-        uint256 tokenOutId;
     }
 
     struct SwapAmountData {
@@ -24,8 +22,8 @@ contract SwapperMock {
     }
 
     struct YieldBoxData {
-        bool withdrawFromYb;
-        bool depositToYb;
+        bool withdrawFrom;
+        bool depositTo;
     }
 
     struct SwapData {
@@ -34,10 +32,10 @@ contract SwapperMock {
         YieldBoxData yieldBoxData;
     }
 
-    YieldBox private immutable yieldBox;
+    IMarket public market;
 
-    constructor(YieldBox _yieldBox) {
-        yieldBox = _yieldBox;
+    constructor(address _market) {
+        market = IMarket(_market);
     }
 
     //Add more overloads if needed
@@ -57,9 +55,9 @@ contract SwapperMock {
     {
         amountOut = amountOutMin;
 
-        if (swapData.tokensData.tokenOutId > 0) {
-            shareOut = yieldBox.toShare(swapData.tokensData.tokenOutId, amountOutMin, true);
-            yieldBox.transfer(address(this), to, swapData.tokensData.tokenOutId, shareOut);
+        if (swapData.tokensData.tokenOut != address(0)) {
+            shareOut = market.convertToShares(amountOutMin);
+            market.transfer(to, shareOut);
         } else {
             shareOut = amountOut * 1e8;
             if (swapData.tokensData.tokenOut != address(0)) {
@@ -99,8 +97,8 @@ contract SwapperMock {
         uint256 tokenOutId,
         uint256 amountIn,
         uint256 shareIn,
-        bool withdrawFromYb,
-        bool depositToYb
+        bool withdrawFrom,
+        bool depositTo
     ) internal pure returns (SwapData memory swapData) {
         SwapAmountData memory swapAmountData;
         swapAmountData.amountIn = amountIn;
@@ -109,12 +107,10 @@ contract SwapperMock {
         SwapTokensData memory swapTokenData;
         swapTokenData.tokenIn = tokenIn;
         swapTokenData.tokenOut = tokenOut;
-        swapTokenData.tokenInId = tokenInId;
-        swapTokenData.tokenOutId = tokenOutId;
 
         YieldBoxData memory swapYBData;
-        swapYBData.withdrawFromYb = withdrawFromYb;
-        swapYBData.depositToYb = depositToYb;
+        swapYBData.withdrawFrom = withdrawFrom;
+        swapYBData.depositTo = depositTo;
 
         swapData.tokensData = swapTokenData;
         swapData.amountData = swapAmountData;

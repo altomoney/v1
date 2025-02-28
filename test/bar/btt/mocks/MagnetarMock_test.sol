@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // External
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -25,10 +25,8 @@ import {
 } from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainEngineHelper.sol";
 import {TapiocaOmnichainEngineHelper} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainEngineHelper.sol";
 import {ITapiocaOmnichainEngine, LZSendParam} from "tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
-import {PearlmitHandler, IPearlmit} from "tap-utils/pearlmit/PearlmitHandler.sol";
 import {IMarketHelper} from "tap-utils/interfaces/bar/IMarketHelper.sol";
 import {ISingularity} from "tap-utils/interfaces/bar/ISingularity.sol";
-import {IYieldBox} from "tap-utils/interfaces/yieldbox/IYieldBox.sol";
 import {IPermitAll} from "tap-utils/interfaces/common/IPermitAll.sol";
 import {IMarket, Module} from "tap-utils/interfaces/bar/IMarket.sol";
 import {IOftSender} from "tap-utils/interfaces/oft/IOftSender.sol";
@@ -37,7 +35,7 @@ import {IPermit} from "tap-utils/interfaces/common/IPermit.sol";
 
 import "forge-std/console.sol";
 
-contract MagnetarMock_test is PearlmitHandler {
+contract MagnetarMock_test {
     using SafeCast for uint256;
     using SafeERC20 for IERC20;
 
@@ -51,7 +49,7 @@ contract MagnetarMock_test is PearlmitHandler {
 
     ICluster public cluster;
 
-    constructor(address _cluster, IPearlmit _pearlmit) PearlmitHandler(_pearlmit) {
+    constructor(address _cluster) {
         cluster = ICluster(_cluster);
     }
 
@@ -103,12 +101,6 @@ contract MagnetarMock_test is PearlmitHandler {
                 _executeModule(MagnetarModule.OptionModule, _action.call);
                 continue; // skip the rest of the loop
             }
-
-            /// @dev Modules will not return result data.
-            if (_action.id == uint8(MagnetarAction.YieldBoxModule)) {
-                _executeModule(MagnetarModule.YieldBoxModule, _action.call);
-                continue; // skip the rest of the loop
-            }
         }
     }
 
@@ -132,7 +124,6 @@ contract MagnetarMock_test is PearlmitHandler {
         if (
             funcSig == IPermitAll.permitAll.selector || funcSig == IPermitAll.revokeAll.selector
                 || funcSig == IPermit.permit.selector || funcSig == IPermit.revoke.selector
-                || funcSig == IYieldBox.setApprovalForAll.selector || funcSig == IYieldBox.setApprovalForAsset.selector
         ) {
             /// @dev Owner param check. See Warning above.
             _checkSender(abi.decode(_actionCalldata[4:36], (address)));
@@ -151,30 +142,23 @@ contract MagnetarMock_test is PearlmitHandler {
             revert MagnetarMock_NotAuthorized();
         }
 
-        IYieldBox yieldBox = IYieldBox(IMarket(_data.market)._yieldBox());
-
-        uint256 assetId = IMarket(_data.market)._assetId();
-        (, address assetAddress,,) = yieldBox.assets(assetId);
+        address assetAddress = IMarket(_data.market).collateral();
 
         // deposit to YieldBox
         if (_data.depositAmount > 0) {
             _data.depositAmount = _extractTokens(msg.sender, assetAddress, _data.depositAmount);
-            IERC20(assetAddress).approve(address(yieldBox), 0);
-            IERC20(assetAddress).approve(address(yieldBox), _data.depositAmount);
-            yieldBox.depositAsset(assetId, address(this), address(this), _data.depositAmount, 0);
+            IERC20(assetAddress).approve(_data.market, 0);
+            IERC20(assetAddress).approve(_data.market, _data.depositAmount);
+            IMarket(_data.market).deposit(_data.depositAmount, address(this));
         }
 
         console.log("------------ _data.repayAmount %s", _data.repayAmount);
         // performs a repay operation for the specified market
         if (_data.repayAmount > 0) {
-            yieldBox.setApprovalForAll(address(_data.market), true);
-
             (Module[] memory modules, bytes[] memory calls) = IMarketHelper(_data.marketHelper).repay(
-                _data.depositAmount > 0 ? address(this) : _data.user, _data.user, false, _data.repayAmount
+                _data.depositAmount > 0 ? address(this) : _data.user, _data.user, _data.repayAmount
             );
             IMarket(_data.market).execute(modules, calls, true);
-
-            yieldBox.setApprovalForAll(address(_data.market), false);
         }
 
         console.log("------------ _data.collateralAmount %s", _data.collateralAmount);
@@ -182,8 +166,7 @@ contract MagnetarMock_test is PearlmitHandler {
         // if `withdrawCollateralParams.withdraw` it uses `withdrawTo` to withdraw collateral on the same chain or to another one
         if (_data.collateralAmount > 0) {
             address collateralWithdrawReceiver = _data.withdrawCollateralParams.withdraw ? address(this) : _data.user;
-            uint256 collateralShare =
-                yieldBox.toShare(IMarket(_data.market)._collateralId(), _data.collateralAmount, false);
+            uint256 collateralShare = IMarket(_data.market).convertToShares(_data.collateralAmount);
 
             (Module[] memory modules, bytes[] memory calls) = IMarketHelper(_data.marketHelper).removeCollateral(
                 _data.user, collateralWithdrawReceiver, collateralShare
@@ -192,7 +175,7 @@ contract MagnetarMock_test is PearlmitHandler {
         }
     }
 
-    function mintBBLendSGLLockTOLP(MintFromBBAndLendOnSGLData memory _data) external payable {
+    function mintBBAndLock(MintFromBBAndLendOnSGLData memory _data) external payable {
         // Check targets
         if (_data.externalContracts.bigBang != address(0)) {
             if (!cluster.isWhitelisted(cluster.lzChainId(), _data.externalContracts.bigBang)) {
@@ -207,25 +190,17 @@ contract MagnetarMock_test is PearlmitHandler {
 
         IMarket bigBang = IMarket(_data.externalContracts.bigBang);
         ISingularity singularity = ISingularity(_data.externalContracts.singularity);
-        IYieldBox yieldBox = IYieldBox(singularity._yieldBox());
-
-        if (address(singularity) != address(0)) {
-            yieldBox.setApprovalForAll(address(singularity), true);
-        }
-        if (address(bigBang) != address(0)) {
-            yieldBox.setApprovalForAll(address(bigBang), true);
-        }
 
         // if `depositData.deposit`:
         //      - deposit SGL asset to YB for `_data.user`
-        uint256 sglAssetId = singularity._assetId();
-        (, address sglAssetAddress,,) = yieldBox.assets(sglAssetId);
+        address sglAssetAddress = singularity.collateral();
         if (_data.depositData.deposit) {
             _data.depositData.amount = _extractTokens(_data.user, sglAssetAddress, _data.depositData.amount);
 
-            IERC20(sglAssetAddress).approve(address(yieldBox), 0);
-            IERC20(sglAssetAddress).approve(address(yieldBox), _data.depositData.amount);
-            yieldBox.depositAsset(sglAssetId, address(this), _data.user, _data.depositData.amount, 0);
+            IERC20(sglAssetAddress).approve(address(singularity), 0);
+            IERC20(sglAssetAddress).approve(address(singularity), _data.depositData.amount);
+
+            singularity.deposit(_data.depositData.amount, _data.user);
         }
 
         // if `lendAmount` > 0:
@@ -235,15 +210,8 @@ contract MagnetarMock_test is PearlmitHandler {
             _data.lendAmount = _data.depositData.amount;
         }
         if (_data.lendAmount > 0) {
-            uint256 lendShare = yieldBox.toShare(sglAssetId, _data.lendAmount, false);
-            fraction = singularity.addAsset(_data.user, _data.user, false, lendShare);
-        }
-
-        if (address(singularity) != address(0)) {
-            yieldBox.setApprovalForAll(address(singularity), false);
-        }
-        if (address(bigBang) != address(0)) {
-            yieldBox.setApprovalForAll(address(bigBang), false);
+            uint256 lendShare = singularity.convertToShares(_data.lendAmount);
+            fraction = singularity.addAsset(_data.user, _data.user, lendShare);
         }
     }
 
@@ -262,12 +230,10 @@ contract MagnetarMock_test is PearlmitHandler {
 
         IMarket bigBang = IMarket(_data.externalData.bigBang);
         ISingularity singularity = ISingularity(_data.externalData.singularity);
-        IYieldBox yieldBox = IYieldBox(singularity._yieldBox());
 
         uint256 _removeAmount = _data.removeAndRepayData.removeAmount;
         if (_data.removeAndRepayData.removeAssetFromSGL) {
-            uint256 _assetId = singularity._assetId();
-            uint256 share = yieldBox.toShare(_assetId, _removeAmount, false);
+            uint256 share = singularity.convertToShares(_removeAmount);
 
             address removeAssetTo = _data.removeAndRepayData.assetWithdrawData.withdraw
                 || _data.removeAndRepayData.repayAssetOnBB ? address(this) : _data.user;
@@ -284,8 +250,7 @@ contract MagnetarMock_test is PearlmitHandler {
             );
         }
         if (_data.removeAndRepayData.removeCollateralFromBB) {
-            uint256 _collateralId = bigBang._collateralId();
-            uint256 collateralShare = yieldBox.toShare(_collateralId, _data.removeAndRepayData.collateralAmount, false);
+            uint256 collateralShare = bigBang.convertToShares(_data.removeAndRepayData.collateralAmount);
             address removeCollateralTo =
                 _data.removeAndRepayData.collateralWithdrawData.withdraw ? address(this) : _data.user;
 
@@ -293,8 +258,6 @@ contract MagnetarMock_test is PearlmitHandler {
                 .removeCollateral(_data.user, removeCollateralTo, collateralShare);
             bigBang.execute(modules, calls, true);
         }
-
-        yieldBox.setApprovalForAll(_data.externalData.singularity, false);
     }
 
     function _marketRepay(IMarket _market, address _marketHelper, uint256 _amount, address _from, address _to)
@@ -304,7 +267,7 @@ contract MagnetarMock_test is PearlmitHandler {
         _market.accrue();
         uint256 repayPart = _amount;
         (Module[] memory modules, bytes[] memory calls) =
-            IMarketHelper(_marketHelper).repay(_from, _to, false, repayPart);
+            IMarketHelper(_marketHelper).repay(_from, _to, repayPart);
 
         (bool[] memory successes, bytes[] memory results) = _market.execute(modules, calls, true);
         if (!successes[0]) revert Magnetar_MarketCallFailed(calls[0]);
@@ -318,31 +281,26 @@ contract MagnetarMock_test is PearlmitHandler {
     {
         if (!cluster.isWhitelisted(cluster.lzChainId(), address(_data.market))) revert MagnetarMock_NotAuthorized();
 
-        IYieldBox yieldBox = IYieldBox(IMarket(_data.market)._yieldBox());
+        address collateralAddress = IMarket(_data.market).collateral();
 
-        uint256 collateralId = IMarket(_data.market)._collateralId();
-        (, address collateralAddress,,) = yieldBox.assets(collateralId);
-
-        uint256 _share = yieldBox.toShare(collateralId, _data.collateralAmount, false);
+        uint256 _share = IMarket(_data.market).convertToShares(_data.collateralAmount);
 
         //deposit to YieldBox
         if (_data.deposit) {
             // transfers tokens from sender or from the user to this contract
             _data.collateralAmount = _extractTokens(msg.sender, collateralAddress, _data.collateralAmount);
-            _share = yieldBox.toShare(collateralId, _data.collateralAmount, false);
+            _share = IMarket(_data.market).convertToShares(_data.collateralAmount);
 
             // deposit to YieldBox
-            IERC20(collateralAddress).approve(address(yieldBox), 0);
-            IERC20(collateralAddress).approve(address(yieldBox), _data.collateralAmount);
-            yieldBox.depositAsset(collateralId, address(this), address(this), _data.collateralAmount, 0);
+            IERC20(collateralAddress).approve(_data.market, 0);
+            IERC20(collateralAddress).approve(_data.market, _data.collateralAmount);
+            IMarket(_data.market).deposit(_data.collateralAmount, address(this));
         }
 
         // performs .addCollateral on market
         if (_data.collateralAmount > 0) {
-            yieldBox.setApprovalForAll(address(_data.market), true);
-
             (Module[] memory modules, bytes[] memory calls) = IMarketHelper(_data.marketHelper).addCollateral(
-                _data.deposit ? address(this) : _data.user, _data.user, false, _data.collateralAmount, _share
+                _data.deposit ? address(this) : _data.user, _data.user, _data.collateralAmount, _share
             );
             IMarket(_data.market).execute(modules, calls, true);
         }
@@ -358,13 +316,11 @@ contract MagnetarMock_test is PearlmitHandler {
 
             //TODO: add withdraw?!
         }
-
-        yieldBox.setApprovalForAll(address(_data.market), false);
     }
     //TODO: add withdraw
 
-    function withdrawToChain(MagnetarWithdrawData memory data) external payable {
-        _withdrawToChain(data);
+    function withdrawToChain(IMarket _market, MagnetarWithdrawData memory data) external payable {
+        _withdrawToChain(_market, data);
     }
 
     /**
@@ -391,27 +347,24 @@ contract MagnetarMock_test is PearlmitHandler {
         }
     }
 
-    function _withdrawToChain(MagnetarWithdrawData memory data) private {
-        if (!cluster.isWhitelisted(0, address(data.yieldBox))) {
-            revert MagnetarMock_TargetNotWhitelisted(address(data.yieldBox));
+    function _withdrawToChain(IMarket _market, MagnetarWithdrawData memory data) private {
+        if (!cluster.isWhitelisted(0, address(_market))) {
+            revert MagnetarMock_TargetNotWhitelisted(address(_market));
         }
-        IYieldBox _yieldBox = IYieldBox(data.yieldBox);
 
-        _withdrawHere(_yieldBox, data.assetId, data.receiver, data.amount);
+        _withdrawFromMarket(_market, data.receiver, data.amount);
     }
 
     function _extractTokens(address _from, address _token, uint256 _amount) private returns (uint256) {
         uint256 balanceBefore = IERC20(_token).balanceOf(address(this));
-        // IERC20(_token).safeTransferFrom(_from, address(this), _amount);
-        bool isErr = pearlmit.transferFromERC20(_from, address(this), _token, _amount);
-        if (isErr) revert MagnetarMock_NotAuthorized();
+        IERC20(_token).safeTransferFrom(_from, address(this), _amount);
         uint256 balanceAfter = IERC20(_token).balanceOf(address(this));
         if (balanceAfter <= balanceBefore) revert MagnetarMock_Failed();
         return balanceAfter - balanceBefore;
     }
 
-    function _withdrawHere(IYieldBox _yieldBox, uint256 _assetId, address _to, uint256 _amount) private {
-        _yieldBox.withdraw(_assetId, address(this), _to, _amount, 0);
+    function _withdrawFromMarket(IMarket _market, address _to, uint256 _amount) private {
+        _market.withdraw(_amount, _to, address(this));
     }
 
     function _lzWithdraw(address _asset, LZSendParam memory _lzSendParam, uint128 _lzSendGas, uint128 _lzSendVal)

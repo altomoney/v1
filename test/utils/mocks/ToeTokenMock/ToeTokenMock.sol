@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // External
 import {
@@ -12,7 +12,6 @@ import {BaseTapiocaOmnichainEngine} from "src/tap-utils/tapiocaOmnichainEngine/B
 import {TapiocaOmnichainSender} from "src/tap-utils/tapiocaOmnichainEngine/TapiocaOmnichainSender.sol";
 import {ERC20PermitStruct} from "src/tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
 import {LZSendParam} from "src/tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
-import {IPearlmit} from "src/tap-utils/interfaces/periph/IPearlmit.sol";
 import {ICluster} from "src/tap-utils/interfaces/periph/ICluster.sol";
 import {ModuleManager} from "src/tap-utils/utils/ModuleManager.sol";
 
@@ -41,12 +40,8 @@ contract ToeTokenMock is BaseTapiocaOmnichainEngine, ModuleManager, ERC20Permit 
         address _extExec,
         address _senderModule,
         address _receiverModule,
-        IPearlmit _pearlmit,
         ICluster _cluster
-    )
-        BaseTapiocaOmnichainEngine("ToeTokenMock", "TOEM", _endpoint, _owner, _extExec, _pearlmit, _cluster)
-        ERC20Permit("TOEM")
-    {
+    ) BaseTapiocaOmnichainEngine("ToeTokenMock", "TOEM", _endpoint, _owner, _extExec, _cluster) ERC20Permit("TOEM") {
         _setModule(uint8(Module.ToeTokenSender), _senderModule);
         _setModule(uint8(Module.ToeTokenReceiver), _receiverModule);
     }

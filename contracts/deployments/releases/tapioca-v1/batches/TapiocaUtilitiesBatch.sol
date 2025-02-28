@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 import {UtilitiesProcedure} from "../../../procedures/UtilitiesProcedure.sol";
 import {UtilitiesReport} from "../../../interfaces/ITapiocaReport.sol";
@@ -17,13 +17,12 @@ contract TapiocaUtilitiesBatch is UtilitiesProcedure, Ownable {
     function initializeCluster(
         address cluster,
         address zeroXSwapper,
-        address yieldbox,
         address magnetar,
         address penrose,
         address pauser,
         address tapiocaMulticall
     ) external onlyOwner {
-        _initCluster(cluster, zeroXSwapper, yieldbox, magnetar, penrose, pauser, tapiocaMulticall);
+        _initCluster(cluster, zeroXSwapper, magnetar, penrose, pauser, tapiocaMulticall);
     }
 
     function getUtilitiesReport() public view returns (UtilitiesReport memory) {

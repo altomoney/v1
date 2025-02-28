@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // mocks
 import {ZeroXSwapperMockTarget_test} from "../../mocks/ZeroXSwapperMockTarget_test.sol";
@@ -12,13 +12,10 @@ import {TOFTMock_test} from "../../mocks/TOFTMock_test.sol";
 import {MarketLiquidatorReceiver} from "tapioca-bar/liquidators/MarketLiquidatorReceiver.sol";
 import {ZeroXSwapper} from "tap-utils/Swapper/ZeroXSwapper.sol";
 import {MarketHelper} from "tapioca-bar/markets/MarketHelper.sol";
-import {TokenType} from "yieldbox/enums/YieldBoxTokenType.sol";
 
 import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {IMarket} from "tap-utils/interfaces/bar/ISingularity.sol";
-import {IPearlmit} from "tap-utils/pearlmit/Pearlmit.sol";
-import {IStrategy} from "yieldbox/interfaces/IStrategy.sol";
 
 // tests
 import {Base_Test} from "../../Base_Test.t.sol";
@@ -29,7 +26,6 @@ abstract contract Markets_Unit_Shared is Base_Test {
     // ************ //
     ERC20Mock_test randomCollateralErc20;
     TOFTMock_test randomCollateral;
-    uint256 randomCollateralId;
 
     OracleMock_test oracle; // main markets oracle
 
@@ -60,16 +56,8 @@ abstract contract Markets_Unit_Shared is Base_Test {
         // create random collateral token
         randomCollateralErc20 = _createToken("RandomCollateral");
 
-        randomCollateral = new TOFTMock_test(address(randomCollateralErc20), IPearlmit(address(pearlmit)));
+        randomCollateral = new TOFTMock_test(address(randomCollateralErc20));
         vm.label(address(randomCollateral), "RandomCollateral TOFT");
-
-        // create YieldBox id for random token mock
-        randomCollateralId = yieldBox.registerAsset(
-            TokenType.ERC20,
-            address(randomCollateral),
-            IStrategy(address(_createEmptyStrategy(address(yieldBox), address(randomCollateral)))),
-            0
-        );
 
         swapperTarget = new ZeroXSwapperMockTarget_test();
         vm.label(address(swapperTarget), "ZeroXSwapperTarget Test");
@@ -95,18 +83,6 @@ abstract contract Markets_Unit_Shared is Base_Test {
     // **************** //
     // *** INTERNAL *** //
     // **************** //
-    function _approveForCollateral(address) internal virtual {}
-
-    function _depositToYieldBox(address asset, uint256 id, uint256 share, address from, address to)
-        internal
-        resetPrank(from)
-    {
-        _approveViaERC20(asset, from, address(yieldBox), type(uint256).max);
-        _approveViaERC20(asset, from, address(pearlmit), type(uint256).max);
-        _approveYieldBoxForAll(yieldBox, from, address(pearlmit));
-
-        yieldBox.depositAsset(id, from, to, 0, share);
-    }
 
     function _computeMaxBorrowAmount(uint256 collateralAmount, IMarket market)
         internal

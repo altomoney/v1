@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // LZ
 import {
@@ -38,7 +38,7 @@ import {BaseToeMsgType} from "src/tap-utils/tapiocaOmnichainEngine/BaseToeMsgTyp
 import {ToeTestHelper} from "../LZSetup/ToeTestHelper.sol";
 import {ToeTokenReceiverMock} from "../mocks/ToeTokenMock/ToeTokenReceiverMock.sol";
 import {ToeTokenSenderMock} from "../mocks/ToeTokenMock/ToeTokenSenderMock.sol";
-import {Pearlmit, IPearlmit} from "src/tap-utils/pearlmit/Pearlmit.sol";
+
 import {ICluster} from "src/tap-utils/interfaces/periph/ICluster.sol";
 import {ToeTokenMock} from "../mocks/ToeTokenMock/ToeTokenMock.sol";
 import {Cluster} from "src/tap-utils/Cluster/Cluster.sol";
@@ -59,7 +59,6 @@ contract TapTokenTest is ToeTestHelper, BaseToeMsgType {
     ToeTokenMock aToeOFT;
     ToeTokenMock bToeOFT;
 
-    Pearlmit pearlmit;
     ICluster cluster;
     ToeTestHelper toeTestHelper;
 
@@ -92,7 +91,6 @@ contract TapTokenTest is ToeTestHelper, BaseToeMsgType {
 
         setUpEndpoints(3, LibraryType.UltraLightNode);
 
-        pearlmit = new Pearlmit("Pearlmit", "1", address(this), 0);
         cluster = ICluster(address(new Cluster(1, address(__owner))));
 
         __extExec = address(new TapiocaOmnichainExtExec());
@@ -105,28 +103,13 @@ contract TapTokenTest is ToeTestHelper, BaseToeMsgType {
                         __owner,
                         __extExec,
                         address(
-                            new ToeTokenSenderMock(
-                                "",
-                                "",
-                                address(endpoints[aEid]),
-                                address(this),
-                                address(0),
-                                IPearlmit(address(pearlmit)),
-                                cluster
-                            )
+                            new ToeTokenSenderMock("", "", address(endpoints[aEid]), address(this), address(0), cluster)
                         ),
                         address(
                             new ToeTokenReceiverMock(
-                                "",
-                                "",
-                                address(endpoints[aEid]),
-                                address(this),
-                                address(0),
-                                IPearlmit(address(pearlmit)),
-                                cluster
+                                "", "", address(endpoints[aEid]), address(this), address(0), cluster
                             )
                         ),
-                        IPearlmit(address(pearlmit)),
                         cluster
                     )
                 )
@@ -142,28 +125,13 @@ contract TapTokenTest is ToeTestHelper, BaseToeMsgType {
                         __owner,
                         address(__extExec),
                         address(
-                            new ToeTokenSenderMock(
-                                "",
-                                "",
-                                address(endpoints[bEid]),
-                                address(this),
-                                address(0),
-                                IPearlmit(address(pearlmit)),
-                                cluster
-                            )
+                            new ToeTokenSenderMock("", "", address(endpoints[bEid]), address(this), address(0), cluster)
                         ),
                         address(
                             new ToeTokenReceiverMock(
-                                "",
-                                "",
-                                address(endpoints[bEid]),
-                                address(this),
-                                address(0),
-                                IPearlmit(address(pearlmit)),
-                                cluster
+                                "", "", address(endpoints[bEid]), address(this), address(0), cluster
                             )
                         ),
-                        IPearlmit(address(pearlmit)),
                         cluster
                     )
                 )

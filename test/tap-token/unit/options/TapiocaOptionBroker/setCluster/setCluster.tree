@@ -1,0 +1,8 @@
+TapiocaOptionBroker_setCluster.tree
+├── when caller is not owner
+│   └── it should revert
+├── when cluster address is zero
+│   └── it should revert with NotValid
+└── when conditions are met
+    ├── it should set _cluster
+    └── it should emit SetCluster event

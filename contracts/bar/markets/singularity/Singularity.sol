@@ -1,24 +1,25 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // External
 import {RebaseLibrary, Rebase} from "@boringcrypto/boring-solidity/contracts/libraries/BoringRebase.sol";
-import {IERC20} from "@boringcrypto/boring-solidity/contracts/libraries/BoringERC20.sol";
+import {IERC20} from "@boringcrypto/boring-solidity/contracts/interfaces/IERC20.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {BoringERC20} from "@boringcrypto/boring-solidity/contracts/libraries/BoringERC20.sol";
 
 // Tapioca
 import {ILeverageExecutor} from "tap-utils/interfaces/bar/ILeverageExecutor.sol";
 import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
 import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
-import {Module} from "tap-utils/interfaces/bar/IMarket.sol";
-import {MarketStateView} from "../MarketStateView.sol";
+import {Module, PauseType} from "tap-utils/interfaces/bar/IMarket.sol";
+import {Market} from "../Market.sol";
 import {SGLLiquidation} from "./SGLLiquidation.sol";
 import {SGLCollateral} from "./SGLCollateral.sol";
-import {MarketERC20} from "../MarketERC20.sol";
 import {SGLLeverage} from "./SGLLeverage.sol";
 import {SGLStorage} from "./SGLStorage.sol";
 import {SGLCommon} from "./SGLCommon.sol";
 import {SGLBorrow} from "./SGLBorrow.sol";
+import {MarketERC4626} from "../MarketERC4626.sol";
 
 // solhint-disable max-line-length
 
@@ -34,9 +35,10 @@ import {SGLBorrow} from "./SGLBorrow.sol";
 */
 
 /// @title Tapioca market
-contract Singularity is MarketStateView, SGLCommon {
+contract Singularity is Market, SGLCommon {
     using SafeCast for uint256;
     using RebaseLibrary for Rebase;
+    using BoringERC20 for IERC20;
 
     // ************ //
     // *** VARS *** //
@@ -71,22 +73,27 @@ contract Singularity is MarketStateView, SGLCommon {
 
     struct _InitMemoryTokensData {
         IERC20 _asset;
-        uint256 _assetId;
         IERC20 _collateral;
-        uint256 _collateralId;
     }
 
     // ************** //
     // *** ERRORS *** //
     // ************** //
-    error NotValid();
     error ModuleNotSet();
     error NotAuthorized();
     error SameState();
     error MinLendAmountNotMet();
 
-    function totalSupply() public view override(MarketERC20, SGLStorage) returns (uint256) {
+    function totalAssetSupply() public view returns (uint256) {
         return totalAsset.base;
+    }
+
+    function name() public view override(MarketERC4626, SGLStorage) returns (string memory) {
+        return SGLStorage.name();
+    }
+
+    function symbol() public view override(MarketERC4626, SGLStorage) returns (string memory) {
+        return SGLStorage.symbol();
     }
 
     /**
@@ -101,48 +108,28 @@ contract Singularity is MarketStateView, SGLCommon {
     // *** PUBLIC FUNCTIONS *** //
     // ************************ //
 
-    /// @notice Allows batched call to Singularity.
-    /// @param calls An array encoded call data.
-    /// @param revertOnFail If True then reverts after a failed call and stops doing further calls.
-    /// @return successes count of successful operations
-    /// @return results array of revert messages
-    function execute(Module[] calldata modules, bytes[] calldata calls, bool revertOnFail)
-        external
-        nonReentrant
-        returns (bool[] memory successes, bytes[] memory results)
-    {
-        successes = new bool[](calls.length);
-        results = new bytes[](calls.length);
-        if (modules.length != calls.length) revert NotValid();
-        for (uint256 i; i < calls.length; i++) {
-            (bool success, bytes memory result) = _extractModule(modules[i]).delegatecall(calls[i]);
-
-            if (!success && revertOnFail) {
-                revert(abi.decode(_getRevertMsg(result), (string)));
-            }
-            successes[i] = success;
-            results[i] = !success ? _getRevertMsg(result) : result;
-        }
+    /// @notice Accrues the interest on the borrowed tokens and handles the accumulation of fees.
+    function accrue() external override {
+        if (pauseOptions[PauseType.AddCollateral] || pauseOptions[PauseType.RemoveCollateral]) revert AccruePaused();
+        _accrue();
     }
 
-    /// @notice Adds assets to the lending pair.
-    /// @param from Address to add asset from.
+    /// @notice Add liquidity to the lending pair.
+    /// @param from Address to add liquidity from.
     /// @param to The address of the user to receive the assets.
-    /// @param skim True if the amount should be skimmed from the deposit balance of msg.sender.
-    /// False if tokens from msg.sender in `yieldBox` should be transferred.
-    /// @param share The amount of shares to add.
+    /// @param amount The amount of liquidity to supply
     /// @return fraction Total fractions added.
-    function addAsset(address from, address to, bool skim, uint256 share)
+    function addAsset(address from, address to, uint256 amount)
         external
         optionNotPaused(PauseType.AddAsset)
-        allowedLend(from, share)
+        allowedLend(from, amount)
+        nonReentrant
         returns (uint256 fraction)
     {
-        uint256 _amount = yieldBox.toAmount(assetId, share, false);
-        if (_amount <= minLendAmount) revert MinLendAmountNotMet();
+        if (amount <= minLendAmount) revert MinLendAmountNotMet();
 
         _accrue();
-        fraction = _addAsset(from, to, skim, share);
+        fraction = _addAsset(from, to, amount);
     }
 
     /// @notice Removes an asset from `from` and transfers it to `to`.
@@ -153,6 +140,7 @@ contract Singularity is MarketStateView, SGLCommon {
     function removeAsset(address from, address to, uint256 fraction)
         external
         optionNotPaused(PauseType.RemoveAsset)
+        nonReentrant
         returns (uint256 share)
     {
         _accrue();
@@ -163,56 +151,28 @@ contract Singularity is MarketStateView, SGLCommon {
     // *********************** //
     // *** OWNER FUNCTIONS *** //
     // *********************** //
-    /// @notice updates the pause state of the contract
-    /// @dev can only be called by the conservator
-    /// @param val the new value
-    function updatePause(PauseType _type, bool val, bool resetAccrueTimestmap) external {
-        if (!penrose.cluster().hasRole(msg.sender, keccak256("PAUSABLE")) && msg.sender != owner()) {
-            revert NotAuthorized();
-        }
-        if (val == pauseOptions[_type]) revert SameState();
-        emit PausedUpdated(_type, pauseOptions[_type], val);
-        pauseOptions[_type] = val;
-
-        if (val) {
-            _accrue();
-        }
-
-        // In case of 'unpause', `lastAccrued` is set to block.timestamp
-        // Valid for all action types that has an impact on debt or supply
-        if (!val && (_type != PauseType.AddCollateral && _type != PauseType.RemoveCollateral)) {
-            accrueInfo.lastAccrued = resetAccrueTimestmap ? block.timestamp.toUint64() : accrueInfo.lastAccrued;
-        }
-    }
-
-    /// @notice rescues unused ETH from the contract
-    /// @param amount the amount to rescue
-    /// @param to the recipient
-    function rescueEth(uint256 amount, address to) external onlyOwner {
-        (bool success,) = to.call{value: amount}("");
-        if (!success) revert TransferFailed();
-    }
 
     /// @notice Transfers fees to penrose
     /// @dev can only be called by the owner or FEES_EXTRACTOR role
-    /// @return feeShares the amount of fees in shares withdrawn under Penrose
-    function refreshPenroseFees() external returns (uint256 feeShares) {
+    /// @return feeAmount the amount of fees withdrawn under Penrose
+    function refreshPenroseFees() external returns (uint256 feeAmount) {
         require(
-            penrose.cluster().hasRole(msg.sender, keccak256("FEES_EXTRACTOR")) || msg.sender == owner(),
+            _cluster().hasRole(msg.sender, keccak256("FEES_EXTRACTOR")) || msg.sender == owner(),
             "Ownable: caller is not the owner"
         );
-        address _feeTo = address(penrose);
+        address _feeTo = address(_penrose);
         // withdraw the fees accumulated in `accrueInfo.feesEarnedFraction` to the balance of `feeTo`.
         if (accrueInfo.feesEarnedFraction > 0) {
             _accrue();
+            // Fees are in assets (asset liquidity), not shares.
             uint256 _feesEarnedFraction = accrueInfo.feesEarnedFraction;
-            balanceOf[_feeTo] += _feesEarnedFraction;
+            liquidityBalance[_feeTo] += _feesEarnedFraction;
             emit Transfer(address(0), _feeTo, _feesEarnedFraction);
             accrueInfo.feesEarnedFraction = 0;
             emit LogWithdrawFees(_feeTo, _feesEarnedFraction);
         }
-
-        feeShares = _removeAsset(_feeTo, msg.sender, balanceOf[_feeTo]);
+        feeAmount = liquidityBalance[_feeTo];
+        _removeAsset(_feeTo, msg.sender, liquidityBalance[_feeTo]);
     }
 
     /// @notice sets Singularity specific configuration
@@ -293,7 +253,7 @@ contract Singularity is MarketStateView, SGLCommon {
     // ************************* //
     // *** PRIVATE FUNCTIONS *** //
     // ************************* //
-    function _extractModule(Module _module) private view returns (address) {
+    function _extractModule(Module _module) internal view override returns (address) {
         address module;
         if (_module == Module.Base) {
             return address(this);
@@ -312,42 +272,40 @@ contract Singularity is MarketStateView, SGLCommon {
     }
 
     /// @dev Concrete implementation of `addAsset`.
-    function _addAsset(address from, address to, bool skim, uint256 share) private returns (uint256 fraction) {
+    function _addAsset(address from, address to, uint256 amount) private returns (uint256 fraction) {
+        IERC20(_asset).safeTransferFrom(from, address(this), amount);
+
         Rebase memory _totalAsset = totalAsset;
-        uint256 totalAssetShare = _totalAsset.elastic;
-        uint256 allShare = _totalAsset.elastic + yieldBox.toShare(assetId, totalBorrow.elastic, true);
-        fraction = allShare == 0 ? share : (share * _totalAsset.base) / allShare;
+        uint256 allShare = _totalAsset.elastic + totalBorrow.elastic;
+        fraction = allShare == 0 ? amount : (amount * _totalAsset.base) / allShare;
         if (_totalAsset.base + fraction.toUint128() < 1000) {
             return 0;
         }
-        totalAsset = _totalAsset.add(share, fraction);
+        totalAsset = _totalAsset.add(amount, fraction);
 
-        balanceOf[to] += fraction;
-        emit Transfer(address(0), to, fraction);
+        liquidityBalance[to] += fraction;
 
-        _addTokens(from, to, assetId, share, totalAssetShare, skim);
-        emit LogAddAsset(skim ? address(yieldBox) : from, to, share, fraction);
+        emit LogAddAsset(from, to, amount, fraction);
     }
 
     /// @dev Concrete implementation of `removeAsset`.
-    /// @param from The account to remove from. Should always be msg.sender except for `depositFeesToyieldBox()`.
     function _removeAsset(address from, address to, uint256 fraction) private returns (uint256 share) {
         if (totalAsset.base == 0) {
             return 0;
         }
         Rebase memory _totalAsset = totalAsset;
-        uint256 allShare = _totalAsset.elastic + yieldBox.toShare(assetId, totalBorrow.elastic, false);
+        uint256 allShare = _totalAsset.elastic + totalBorrow.elastic;
         share = (fraction * allShare) / _totalAsset.base;
 
         _totalAsset.base -= fraction.toUint128();
-        if (_totalAsset.base < 1000) revert MinLimit();
+        liquidityBalance[from] -= fraction;
 
-        balanceOf[from] -= fraction;
-        emit Transfer(from, address(0), fraction);
+        if (_totalAsset.base < 1000) revert MinLimit();
         _totalAsset.elastic -= share.toUint128();
         totalAsset = _totalAsset;
         emit LogRemoveAsset(from, to, share, fraction);
-        yieldBox.transfer(address(this), to, assetId, share);
+
+        IERC20(_asset).safeTransfer(to, share);
     }
 
     receive() external payable {}

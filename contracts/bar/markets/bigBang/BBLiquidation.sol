@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // External
 import {RebaseLibrary, Rebase} from "@boringcrypto/boring-solidity/contracts/libraries/BoringRebase.sol";
@@ -13,6 +13,7 @@ import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {IUsdo} from "tap-utils/interfaces/oft/IUsdo.sol";
 import {SafeApprove} from "../../libraries/SafeApprove.sol";
 import {BBCommon} from "./BBCommon.sol";
+import {PauseType} from "tap-utils/interfaces/bar/IMarket.sol";
 
 // solhint-disable max-line-length
 
@@ -60,54 +61,62 @@ contract BBLiquidation is BBCommon {
         bool swapCollateral
     ) external {
         require(
-            penrose.cluster().hasRole(msg.sender, keccak256("LIQUIDATOR")) || msg.sender == owner(),
-            "Market: unauthorized"
+            _cluster().hasRole(msg.sender, keccak256("LIQUIDATOR")) || msg.sender == owner(), "Market: unauthorized"
         );
         _tryUpdateExchangeRate();
 
         //check from whitelist status
         {
-            bool isWhitelisted = ICluster(penrose.cluster()).isWhitelisted(0, from);
+            bool isWhitelisted = _cluster().isWhitelisted(0, from);
             if (!isWhitelisted) revert NotAuthorized();
         }
 
         // accrue before liquidation
         _accrue();
-        penrose.reAccrueBigBangMarkets();
+        _penrose.reAccrueBigBangMarkets();
 
         // compute borrow amount with bonus
-        uint256 elasticPart = totalBorrow.toElastic(userBorrowPart[user], false);
-        uint256 borrowAmountWithBonus = elasticPart + (elasticPart * liquidationMultiplier) / FEE_PRECISION;
-        uint256 requiredCollateral =
-            yieldBox.toShare(collateralId, (borrowAmountWithBonus * exchangeRate) / EXCHANGE_RATE_PRECISION, false);
+        uint256 requiredCollateral = _computeRequiredCollateralWithBonus(user);
 
-        uint256 collateralShare = userCollateralShare[user];
-        if (requiredCollateral < collateralShare) revert ForbiddenAction();
+        uint256 collateralShare = balanceOf(user);
+        uint256 collateralAmount = previewRedeem(collateralShare);
+        if (requiredCollateral < collateralAmount) revert NotAuthorized();
 
         // update totalBorrow
         uint256 borrowAmount = totalBorrow.toElastic(userBorrowPart[user], true);
         totalBorrow.elastic -= borrowAmount.toUint128();
         totalBorrow.base -= userBorrowPart[user].toUint128();
 
-        // update totalCollateralShare
-        totalCollateralShare -= collateralShare;
-
         // set user share & part to 0
-        userCollateralShare[user] = 0;
         userBorrowPart[user] = 0;
-
-        // burn debt amount from `from`
-        IUsdo(address(asset)).burn(from, borrowAmount);
 
         // swap collateral with asset and send it to `owner`
         if (swapCollateral) {
-            (, uint256 returnedAmount) =
+            uint256 returnedAmount =
                 _swapCollateralWithAsset(collateralShare, liquidatorReceiver, liquidatorReceiverData, 0, false);
-            asset.safeTransfer(receiver, returnedAmount);
+            IERC20(address(_borrowableToken())).safeTransfer(receiver, returnedAmount);
         } else {
-            uint256 collateralAmount = yieldBox.toAmount(collateralId, collateralShare, false);
-            yieldBox.withdraw(collateralId, address(this), receiver, collateralAmount, 0);
+            uint256 collateralAmount = previewRedeem(collateralShare);
+            IERC20(collateral()).safeTransfer(receiver, collateralAmount);
         }
+
+        _burn(user, collateralShare);
+
+        // burn debt amount from `from`
+        IERC20 borrowableToken = _borrowableToken();
+        IUsdo(address(borrowableToken)).burn(from, borrowAmount);
+    }
+
+    function _computeRequiredCollateralWithBonus(address _user)
+        private
+        view
+        returns (uint256)
+    {
+        // compute borrow amount with bonus
+        uint256 elasticPart = totalBorrow.toElastic(userBorrowPart[_user], false);
+        uint256 borrowAmountWithBonus = elasticPart + (elasticPart * liquidationMultiplier) / FEE_PRECISION;
+        uint256 requiredCollateral = (borrowAmountWithBonus * exchangeRate) / EXCHANGE_RATE_PRECISION;
+        return requiredCollateral;
     }
 
     // ************************ //
@@ -137,7 +146,7 @@ contract BBLiquidation is BBCommon {
         _tryUpdateExchangeRate();
 
         _accrue();
-        penrose.reAccrueBigBangMarkets();
+        _penrose.reAccrueBigBangMarkets();
 
         _closedLiquidation(
             users, maxBorrowParts, minLiquidationBonuses, liquidatorReceivers, liquidatorReceiverDatas, exchangeRate
@@ -153,17 +162,17 @@ contract BBLiquidation is BBCommon {
         bytes memory _liquidatorReceiverData,
         uint256 _exchangeRate,
         bool checkReturned
-    ) private returns (uint256 returnedShare, uint256 returnedAmount) {
-        uint256 collateralAmount = yieldBox.toAmount(collateralId, _collateralShare, false);
-        yieldBox.withdraw(collateralId, address(this), address(_liquidatorReceiver), collateralAmount, 0);
+    ) private returns (uint256 returnedAmount) {
+        uint256 collateralAmount = previewRedeem(_collateralShare);
+        IERC20(collateral()).safeTransfer(address(_liquidatorReceiver), collateralAmount);
 
         {
-            uint256 assetBalanceBefore = asset.balanceOf(address(this));
+            uint256 assetBalanceBefore = _borrowableToken().balanceOf(address(this));
             //msg.sender should be validated against `initiator` on IMarketLiquidatorReceiver
             _liquidatorReceiver.onCollateralReceiver(
-                msg.sender, address(collateral), address(asset), collateralAmount, _liquidatorReceiverData
+                msg.sender, collateral(), address(_borrowableToken()), collateralAmount, _liquidatorReceiverData
             );
-            uint256 assetBalanceAfter = asset.balanceOf(address(this));
+            uint256 assetBalanceAfter = _borrowableToken().balanceOf(address(this));
             returnedAmount = assetBalanceAfter - assetBalanceBefore;
 
             if (checkReturned) {
@@ -176,7 +185,6 @@ contract BBLiquidation is BBCommon {
             }
         }
         if (returnedAmount == 0) revert OnCollateralReceiverFailed(0, 0);
-        returnedShare = yieldBox.toShare(assetId, returnedAmount, false);
     }
 
     function _updateBorrowAndCollateralShare(
@@ -188,9 +196,7 @@ contract BBLiquidation is BBCommon {
         if (_exchangeRate == 0) revert ExchangeRateNotValid();
 
         // get collateral amount in asset's value
-        uint256 collateralPartInAsset = (
-            yieldBox.toAmount(collateralId, userCollateralShare[user], false) * EXCHANGE_RATE_PRECISION
-        ) / _exchangeRate;
+        uint256 collateralPartInAsset = (convertToAssets(balanceOf(user)) * EXCHANGE_RATE_PRECISION) / _exchangeRate;
 
         // compute closing factor (liquidatable amount)
         uint256 borrowPartWithBonus = _computeClosingFactor(
@@ -236,7 +242,7 @@ contract BBLiquidation is BBCommon {
                 if (effectiveBonus < minLiquidationBonus) {
                     revert InsufficientLiquidationBonus();
                 }
-                collateralShare = userCollateralShare[user];
+                collateralShare = balanceOf(user);
             } else {
                 revert InsufficientLiquidationBonus();
             }
@@ -244,15 +250,14 @@ contract BBLiquidation is BBCommon {
             uint256 totalUserBorrowWithBonus =
                 userTotalBorrowAmount + (userTotalBorrowAmount * liquidationBonusAmount) / FEE_PRECISION;
             if (collateralPartInAsset < totalUserBorrowWithBonus) revert BadDebt();
-            collateralShare =
-                yieldBox.toShare(collateralId, (borrowPartWithBonus * _exchangeRate) / EXCHANGE_RATE_PRECISION, false);
-            if (collateralShare > userCollateralShare[user]) {
+            collateralShare = previewWithdraw((borrowPartWithBonus * _exchangeRate) / EXCHANGE_RATE_PRECISION);
+            if (collateralShare > balanceOf(user)) {
                 revert NotEnoughCollateral();
             }
         }
 
         userBorrowPart[user] -= borrowPart;
-        userCollateralShare[user] -= collateralShare;
+        _burn(user, collateralShare);
     }
 
     function _extractLiquidationFees(uint256 returnedShare, uint256 borrowShare, uint256 callerReward)
@@ -263,12 +268,10 @@ contract BBLiquidation is BBCommon {
         callerShare = (extraShare * callerReward) / FEE_PRECISION; //  y%  of profit goes to caller.
         feeShare = extraShare - callerShare; // rest of the profit goes to fee.
 
-        //protocol fees should be kept in the contract as we do a yieldBox.depositAsset when we are extracting the fees using `refreshPenroseFees`
+        //protocol fees should be kept in the contract as we do a yield box.depositAsset when we are extracting the fees using `refreshPenroseFees`
         if (callerShare > 0) {
-            address(asset).safeApprove(address(yieldBox), type(uint256).max);
-            yieldBox.depositAsset(assetId, address(this), msg.sender, 0, callerShare);
+            IERC20(_borrowableToken()).safeTransfer(msg.sender, callerShare); // TODO: check this
         }
-        address(asset).safeApprove(address(yieldBox), 0);
     }
 
     function _liquidateUser(
@@ -283,19 +286,16 @@ contract BBLiquidation is BBCommon {
 
         (uint256 borrowAmount, uint256 borrowPart, uint256 collateralShare) =
             _updateBorrowAndCollateralShare(user, maxBorrowPart, minLiquidationBonus, _exchangeRate);
-        totalCollateralShare = totalCollateralShare > collateralShare ? totalCollateralShare - collateralShare : 0;
         totalBorrow.elastic -= borrowAmount.toUint128();
         totalBorrow.base -= borrowPart.toUint128();
 
-        uint256 borrowShare = yieldBox.toShare(assetId, borrowAmount, true);
-
-        (uint256 returnedShare,) =
+        uint256 returnedAmount =
             _swapCollateralWithAsset(collateralShare, _liquidatorReceiver, _liquidatorReceiverData, _exchangeRate, true);
-        if (returnedShare < borrowShare) revert AmountNotValid();
+        if (returnedAmount < borrowAmount) revert AmountNotValid();
 
-        (uint256 feeShare, uint256 callerShare) = _extractLiquidationFees(returnedShare, borrowShare, callerReward);
+        (uint256 feeShare, uint256 callerShare) = _extractLiquidationFees(returnedAmount, borrowAmount, callerReward);
 
-        IUsdo(address(asset)).burn(address(this), borrowAmount);
+        IUsdo(address(_borrowableToken())).burn(address(this), borrowAmount);
 
         address[] memory _users = new address[](1);
         _users[0] = user;
@@ -324,7 +324,7 @@ contract BBLiquidation is BBCommon {
 
         __ClosedLiquidationCalldata memory calldata_; // Stack too deep fix
 
-        for (uint256 i; i < arrLength;) {
+        for (uint256 i; i < arrLength; ++i) {
             calldata_.user = users[i];
             calldata_.maxBorrowPart = maxBorrowParts[i];
             calldata_.minLiquidationBonus = minLiquidationBonuses[i];
@@ -340,9 +340,6 @@ contract BBLiquidation is BBCommon {
                     _exchangeRate,
                     calldata_.minLiquidationBonus
                 );
-            }
-            unchecked {
-                ++i;
             }
         }
 

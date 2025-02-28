@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // Tapioca
-import {IOptionsLockData} from "../tap-token/ITapiocaOptionLiquidityProvision.sol";
 import {ICommonExternalContracts, IDepositData} from "../common/ICommonData.sol";
-import {IOptionsParticipateData} from "../tap-token/ITapiocaOptionBroker.sol";
 import {LZSendParam} from "../periph/ITapiocaOmnichainEngine.sol";
 import {IRemoveAndRepay, IMintData} from "../oft/IUsdo.sol";
 
@@ -19,26 +17,39 @@ import {IRemoveAndRepay, IMintData} from "../oft/IUsdo.sol";
    
 */
 
+struct IExerciseOptionsData {
+    address from;
+    address target;
+    address paymentToken;
+    uint256 paymentTokenAmount;
+    uint8 bucketId;
+    uint256 tapAmount;
+}
+
+struct IOptionsUnlockData {
+    bool unlock;
+    address target;
+    uint8 bucketId;
+    address to;
+    uint256 amount;
+}
+
+struct IOptionsLockData {
+    bool lock;
+    uint8 bucketId;
+    address target;
+    address to;
+    address sglMarket;
+    uint256 usdoAmount;
+}
+
 struct MagnetarWithdrawData {
-    address yieldBox;
-    uint256 assetId;
+    address asset;
     address receiver;
     uint256 amount;
     bool unwrap;
     bool withdraw;
     bool extractFromSender;
-}
-
-/**
- * @dev MagnetarYieldBoxModule `depositAsset` calldata
- */
-struct YieldBoxDepositData {
-    address yieldBox;
-    uint256 assetId;
-    address from;
-    address to;
-    uint256 amount;
-    uint256 share;
 }
 
 /**
@@ -77,7 +88,7 @@ struct DepositAddCollateralAndBorrowFromMarketData {
 }
 
 /**
- * @dev `mintBBLendSGLLockTOLP` calldata
+ * @dev `MintFromBBAndLendOnSGLData` calldata
  */
 struct MintFromBBAndLendOnSGLData {
     address user;
@@ -85,18 +96,13 @@ struct MintFromBBAndLendOnSGLData {
     IMintData mintData;
     IDepositData depositData;
     IOptionsLockData lockData;
-    IOptionsParticipateData participateData;
     ICommonExternalContracts externalContracts;
 }
 
-struct LockAndParticipateData {
+struct LockData {
     address user;
-    address tSglToken;
-    address yieldBox;
     address magnetar;
     IOptionsLockData lockData;
-    IOptionsParticipateData participateData;
-    uint256 value;
 }
 
 struct MagnetarCall {
@@ -113,23 +119,22 @@ enum MagnetarAction {
     Market, // 2 Market singular operations.
     TapLock, // 3 TapLock singular operations.
     TapUnlock, // 4 TapLock singular operations.
-    OFT, // 5 LZ OFT singular operations.
-    ExerciseOption, // 6 tOB singular operation
+    TapBatchClaimRewards, // 5 TapBatchClaimRewards singular operations.
+    TapExtendLock, // 6 TapExtendLock singular operations.
+    OFT, // 7 LZ OFT singular operations.
+    ExerciseOption, // 8 tOB singular operation
     // Complex operations
-    CollateralModule, // 7 Collateral Singular related operations.
-    MintModule, // 8 BigBang Singular related operations.
-    OptionModule, // 9 Market Module related operations.
-    YieldBoxModule, // 10 YieldBox module related operations.
+    CollateralModule, // 9 Collateral Singular related operations.
+    MintModule, // 10 BigBang Singular related operations.
+    OptionModule, // 11 Market Module related operations.
     // External operations
-    WethWrap // 11
-
+    WethWrap // 12
 }
 
 enum MagnetarModule {
     CollateralModule,
     MintModule,
-    OptionModule,
-    YieldBoxModule
+    OptionModule
 }
 
 interface IMagnetar {
@@ -152,15 +157,11 @@ interface IMagnetarCollateralModule {
         payable;
 }
 
-interface IMagnetarYieldBoxModule {
-    function withdrawHere(MagnetarWithdrawData memory data) external payable;
-}
-
 interface IMagnetarOptionModule {
-    function lockAndParticipate(LockAndParticipateData memory data) external payable;
+    function lockAndParticipate(LockData memory data) external payable;
     function exitPositionAndRemoveCollateral(ExitPositionAndRemoveCollateralData memory data) external payable;
 }
 
 interface IMagnetarMintModule {
-    function mintBBLendSGLLockTOLP(MintFromBBAndLendOnSGLData memory data) external payable;
+    function mintBBAndLock(MintFromBBAndLendOnSGLData memory data) external payable;
 }

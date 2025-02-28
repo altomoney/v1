@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // External
 import {IERC20} from "@boringcrypto/boring-solidity/contracts/libraries/BoringERC20.sol";
@@ -42,17 +42,14 @@ abstract contract Singularity_Unit_Shared is Markets_Unit_Shared {
 
         // create main BB market
         // it handles after deployment set-up
-        randomSgl = Singularity(payable(_registerSGLMarket(address(mainToken), mainTokenId, address(usdo), usdoId)));
+        randomSgl = Singularity(payable(_registerSGLMarket(address(mainToken), address(usdo))));
     }
 
     // **************** //
     // *** INTERNAL *** //
     // **************** //
 
-    function _registerSGLMarket(address _collateral, uint256 _collateralId, address _asset, uint256 _assetId)
-        internal
-        returns (address)
-    {
+    function _registerSGLMarket(address _collateral, address _asset) internal returns (address) {
         (
             Singularity._InitMemoryModulesData memory modulesData,
             Singularity._InitMemoryTokensData memory tokensData,
@@ -61,9 +58,7 @@ abstract contract Singularity_Unit_Shared is Markets_Unit_Shared {
             SingularityInitData(
                 address(penrose),
                 _asset,
-                _assetId,
                 _collateral, //collateral
-                _collateralId,
                 ITapiocaOracle(address(oracle)),
                 ILeverageExecutor(address(leverageExecutor))
             )
@@ -110,14 +105,10 @@ abstract contract Singularity_Unit_Shared is Markets_Unit_Shared {
             address(sglLiq), address(sglBorrow), address(sglCollateral), address(sglLev)
         );
 
-        tokensData = Singularity._InitMemoryTokensData(
-            IERC20(_sgl.asset), _sgl.assetId, IERC20(_sgl.collateral), _sgl.collateralId
-        );
+        tokensData = Singularity._InitMemoryTokensData(IERC20(_sgl.asset), IERC20(_sgl.collateral));
 
         data = Singularity._InitMemoryData(
             IPenrose(_sgl.penrose), ITapiocaOracle(address(_sgl.oracle)), 0, CR_RATE, LQ_CR_RATE, _sgl.leverageExecutor
         );
     }
-
-    function _approveForCollateral(address txExecutor) internal virtual override resetPrank(txExecutor) {}
 }

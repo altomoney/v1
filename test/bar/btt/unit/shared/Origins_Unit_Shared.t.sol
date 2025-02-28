@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // external
 import {IERC20} from "@boringcrypto/boring-solidity/contracts/libraries/BoringERC20.sol";
@@ -18,13 +18,10 @@ abstract contract Origins_Unit_Shared is Markets_Unit_Shared {
     }
 
     function _registerDefaultOrigins() internal returns (address) {
-        Origins org = new Origins(
-            address(this),
-            address(yieldBox),
+        Origins org = new Origins(address(this));
+        org.init(
             IERC20(address(usdo)),
-            usdoId,
-            IERC20(address(mainToken)),
-            mainTokenId,
+            address(mainToken),
             ITapiocaOracle(address(oracle)),
             1e18,
             90000,

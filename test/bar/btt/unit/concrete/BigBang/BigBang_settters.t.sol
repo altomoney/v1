@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // Tapioca
 import {BigBang} from "tapioca-bar/markets/bigBang/BigBang.sol";
 import {Market} from "tapioca-bar/markets/Market.sol";
-
+import {IMarket, PauseType} from "tap-utils/interfaces/bar/IMarket.sol";
 import {ILeverageExecutor} from "tap-utils/interfaces/bar/ILeverageExecutor.sol";
 import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
@@ -254,14 +254,14 @@ contract BigBang_setters is BigBang_Unit_Shared {
         // **** Main BB market ****
         vm.deal(address(mainBB), SMALL_AMOUNT);
         // it should not revert
-        _executeFromPenrose(address(mainBB), abi.encodeWithSelector(BigBang.rescueEth.selector, SMALL_AMOUNT, rndAddr));
+        _executeFromPenrose(address(mainBB), abi.encodeWithSelector(IMarket.rescueEth.selector, SMALL_AMOUNT, rndAddr));
         assertEq(rndAddr.balance, SMALL_AMOUNT);
 
         // **** Secondary BB market ****
         vm.deal(address(secondaryBB), SMALL_AMOUNT);
         // it should not revert
         _executeFromPenrose(
-            address(secondaryBB), abi.encodeWithSelector(BigBang.rescueEth.selector, SMALL_AMOUNT, rndAddr)
+            address(secondaryBB), abi.encodeWithSelector(IMarket.rescueEth.selector, SMALL_AMOUNT, rndAddr)
         );
         assertEq(rndAddr.balance, SMALL_AMOUNT * 2);
     }
@@ -329,30 +329,30 @@ contract BigBang_setters is BigBang_Unit_Shared {
         // **** Main BB market ****
         // it should not revert
         mainBB.updatePauseAll(true);
-        assertTrue(mainBB._pauseOptions(Market.PauseType.AddCollateral));
+        assertTrue(mainBB._pauseOptions(PauseType.AddCollateral));
 
         // **** Secondary BB market ****
         // it should not revert
         secondaryBB.updatePauseAll(true);
-        assertTrue(secondaryBB._pauseOptions(Market.PauseType.AddCollateral));
+        assertTrue(secondaryBB._pauseOptions(PauseType.AddCollateral));
     }
 
     function test_WhenUpdatePauseAllIsCalledFromOwner() external {
         // **** Main BB market ****
         // it should not revert
-        _executeFromPenrose(address(mainBB), abi.encodeWithSelector(BigBang.updatePauseAll.selector, true));
-        assertTrue(mainBB._pauseOptions(Market.PauseType.AddCollateral));
+        _executeFromPenrose(address(mainBB), abi.encodeWithSelector(IMarket.updatePauseAll.selector, true));
+        assertTrue(mainBB._pauseOptions(PauseType.AddCollateral));
 
         // **** Secondary BB market ****
         // it should not revert
-        _executeFromPenrose(address(secondaryBB), abi.encodeWithSelector(BigBang.updatePauseAll.selector, true));
-        assertTrue(secondaryBB._pauseOptions(Market.PauseType.AddCollateral));
+        _executeFromPenrose(address(secondaryBB), abi.encodeWithSelector(IMarket.updatePauseAll.selector, true));
+        assertTrue(secondaryBB._pauseOptions(PauseType.AddCollateral));
     }
 
     function test_RevertWhen_UpdatePauseIsCalledFromNon_ownerAndNon_pauser() external {
         // it should revert
         vm.expectRevert("Market: unauthorized");
-        mainBB.updatePause(Market.PauseType.Borrow, true);
+        mainBB.updatePause(PauseType.Borrow, true);
     }
 
     function test_WhenUpdatePauseIsCalledFromPauser() external {
@@ -361,28 +361,28 @@ contract BigBang_setters is BigBang_Unit_Shared {
 
         // **** Main BB market ****
         // it should not revert
-        mainBB.updatePause(Market.PauseType.Borrow, true);
-        assertTrue(mainBB._pauseOptions(Market.PauseType.Borrow));
+        mainBB.updatePause(PauseType.Borrow, true);
+        assertTrue(mainBB._pauseOptions(PauseType.Borrow));
 
         // **** Secondary BB market ****
         // it should not revert
-        secondaryBB.updatePause(Market.PauseType.Borrow, true);
-        assertTrue(secondaryBB._pauseOptions(Market.PauseType.Borrow));
+        secondaryBB.updatePause(PauseType.Borrow, true);
+        assertTrue(secondaryBB._pauseOptions(PauseType.Borrow));
     }
 
     function test_WhenUpdatePauseIsCalledFromOwner() external {
         // **** Main BB market ****
         // it should not revert
         _executeFromPenrose(
-            address(mainBB), abi.encodeWithSelector(BigBang.updatePause.selector, Market.PauseType.Borrow, true)
+            address(mainBB), abi.encodeWithSelector(IMarket.updatePause.selector, PauseType.Borrow, true)
         );
-        assertTrue(mainBB._pauseOptions(Market.PauseType.Borrow));
+        assertTrue(mainBB._pauseOptions(PauseType.Borrow));
 
         // **** Secondary BB market ****
         // it should not revert
         _executeFromPenrose(
-            address(secondaryBB), abi.encodeWithSelector(BigBang.updatePause.selector, Market.PauseType.Borrow, true)
+            address(secondaryBB), abi.encodeWithSelector(IMarket.updatePause.selector, PauseType.Borrow, true)
         );
-        assertTrue(secondaryBB._pauseOptions(Market.PauseType.Borrow));
+        assertTrue(secondaryBB._pauseOptions(PauseType.Borrow));
     }
 }

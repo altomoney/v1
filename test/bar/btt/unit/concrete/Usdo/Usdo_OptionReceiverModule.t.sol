@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // LZ
 import {
@@ -13,10 +13,9 @@ import {OFTMsgCodec} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/libs/OFTM
 
 // Tapioca
 import {UsdoOptionReceiverModule} from "tapioca-bar/usdo/modules/UsdoOptionReceiverModule.sol";
-import {IExerciseOptionsData} from "tap-utils/interfaces/tap-token/ITapiocaOptionBroker.sol";
 import {ExerciseOptionsMsg} from "tap-utils/interfaces/oft/IUsdo.sol";
+import {IExerciseOptionsData, IOptionsLockData, IOptionsUnlockData} from "tap-utils/interfaces/periph/IMagnetar.sol";
 import {LZSendParam} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainEngineHelper.sol";
-import {IPearlmit} from "tap-utils/pearlmit/Pearlmit.sol";
 
 // tests
 import {Usdo_Unit_Shared} from "../../shared/Usdo_Unit_Shared.t.sol";
@@ -37,7 +36,7 @@ contract Usdo_OptionReceiverModule is Usdo_Unit_Shared, BigBang_Unit_Shared {
         super.setUp();
 
         _magnetar = address(new MagnetarDecoder_test());
-        tOB = new TapiocaOptionsBrokerMock_test(address(tapToken), IPearlmit(address(pearlmit)));
+        tOB = new TapiocaOptionsBrokerMock_test(address(tapToken));
         cluster.updateContract(0, address(tOB), true);
     }
 
@@ -46,8 +45,9 @@ contract Usdo_OptionReceiverModule is Usdo_Unit_Shared, BigBang_Unit_Shared {
             optionsData: IExerciseOptionsData({
                 from: address(this),
                 target: address(tOB),
+                paymentToken: address(tapToken),
                 paymentTokenAmount: amount,
-                oTAPTokenID: 0, // @dev ignored in TapiocaOptionsBrokerMock
+                bucketId: 0,
                 tapAmount: 0
             }),
             withdrawOnOtherChain: false,
@@ -126,14 +126,6 @@ contract Usdo_OptionReceiverModule is Usdo_Unit_Shared, BigBang_Unit_Shared {
         OTapMock_test(oTapMock).setOwner(address(this));
         ExerciseOptionsMsg memory _msg = _createMinimalExerciseOptionsMsg(_amountSD);
 
-        pearlmit.approve(
-            TOKEN_TYPE_ERC721,
-            tOB.oTAP(),
-            0,
-            address(usdoOptionsReceiverModule),
-            type(uint200).max,
-            uint48(block.timestamp)
-        );
         usdoOptionsReceiverModule.exerciseOptionsReceiver(address(this), abi.encode(_msg));
 
         assertEq(tapToken.balanceOf(address(this)), amount, "TapOFT");
@@ -153,14 +145,6 @@ contract Usdo_OptionReceiverModule is Usdo_Unit_Shared, BigBang_Unit_Shared {
         OTapMock_test(oTapMock).setOwner(address(this));
         ExerciseOptionsMsg memory _msg = _createMinimalExerciseOptionsMsg(_amountSD);
 
-        pearlmit.approve(
-            TOKEN_TYPE_ERC721,
-            tOB.oTAP(),
-            0,
-            address(usdoOptionsReceiverModule),
-            type(uint200).max,
-            uint48(block.timestamp)
-        );
         usdoOptionsReceiverModule.exerciseOptionsReceiver(address(this), abi.encode(_msg));
 
         assertEq(tapToken.balanceOf(address(this)), amount, "TapOFT");

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // Tapioca
 import {IToftVault} from "tap-utils/interfaces/oft/ITOFT.sol";
@@ -44,9 +44,6 @@ contract OFT_constructor is OFT_Unit_Shared {
 
         // it should return 18 decimals
         assertEq(toft.decimals(), 18);
-
-        // it should set YieldBox
-        assertEq(address(toft.yieldBox()), address(yieldBox));
     }
 
     function test_whenTOFTCreatedWithWrongParameters_RevertWhen_WhenEmptyAddressIsUsedForTOFT() external {
@@ -159,11 +156,6 @@ contract OFT_constructor is OFT_Unit_Shared {
 
         // it should return 18 decimals
         assertEq(mToft.decimals(), 18);
-
-        // it should set YieldBox
-        assertEq(address(mToft.yieldBox()), address(yieldBox));
-
-        // it should set Stargate router
 
         // it should set a default mint cap
         assertEq(mToft.mintCap(), DEFAULT_MINT_CAP);

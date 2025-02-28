@@ -1,21 +1,19 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // External
 import {RebaseLibrary, Rebase} from "@boringcrypto/boring-solidity/contracts/libraries/BoringRebase.sol";
 import {BoringERC20} from "@boringcrypto/boring-solidity/contracts/libraries/BoringERC20.sol";
-import {IERC20} from "@boringcrypto/boring-solidity/contracts/ERC20.sol";
+import {IERC20} from "@boringcrypto/boring-solidity/contracts/interfaces/IERC20.sol";
 
 // Tapioca
 import {ILeverageExecutor} from "tap-utils/interfaces/bar/ILeverageExecutor.sol";
 import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
-import {IYieldBox} from "tap-utils/interfaces/yieldbox/IYieldBox.sol";
-import {IPearlmit} from "tap-utils/interfaces/periph/IPearlmit.sol";
 import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
-import {Module} from "tap-utils/interfaces/bar/IMarket.sol";
+import {Module, PauseType} from "tap-utils/interfaces/bar/IMarket.sol";
 import {IUsdo} from "tap-utils/interfaces/oft/IUsdo.sol";
 import {SafeApprove} from "../../libraries/SafeApprove.sol";
-import {MarketStateView} from "../MarketStateView.sol";
+import {Market} from "../Market.sol";
 import {BBLiquidation} from "./BBLiquidation.sol";
 import {BBCollateral} from "./BBCollateral.sol";
 import {BBLeverage} from "./BBLeverage.sol";
@@ -34,7 +32,7 @@ import {BBBorrow} from "./BBBorrow.sol";
    
 */
 
-contract BigBang is MarketStateView, BBCommon {
+contract BigBang is Market, BBCommon {
     using RebaseLibrary for Rebase;
     using BoringERC20 for IERC20;
     using SafeApprove for address;
@@ -45,7 +43,7 @@ contract BigBang is MarketStateView, BBCommon {
     error BadPair();
     error DebtRatesNotValid();
     error MaxDebtRateNotValid();
-    error NotValid();
+
     error ModuleNotSet();
 
     // ************ //
@@ -64,7 +62,6 @@ contract BigBang is MarketStateView, BBCommon {
     struct _InitMemoryData {
         IPenrose _penrose;
         IERC20 _collateral;
-        uint256 _collateralId;
         ITapiocaOracle _oracle;
         uint256 _exchangeRatePrecision;
         uint256 _collateralizationRate;
@@ -102,7 +99,6 @@ contract BigBang is MarketStateView, BBCommon {
         _initCoreStorage(
             initMemoryData._penrose,
             initMemoryData._collateral,
-            initMemoryData._collateralId,
             initMemoryData._oracle,
             initMemoryData._exchangeRatePrecision,
             initMemoryData._collateralizationRate,
@@ -125,7 +121,7 @@ contract BigBang is MarketStateView, BBCommon {
     }
 
     function _initDebtStorage(uint256 _debtRateAgainstEth, uint256 _debtRateMin, uint256 _debtRateMax) private {
-        isMainMarket = collateralId == penrose.mainAssetId();
+        isMainMarket = address(collateral()) == _penrose.mainToken();
         if (!isMainMarket) {
             if (_debtRateMin != 0 && _debtRateMax != 0) {
                 if (_debtRateMin >= _debtRateMax) revert DebtRatesNotValid();
@@ -138,45 +134,39 @@ contract BigBang is MarketStateView, BBCommon {
     }
 
     function _initCoreStorage(
-        IPenrose _penrose,
-        IERC20 _collateral,
-        uint256 _collateralId,
-        ITapiocaOracle _oracle,
-        uint256 _exchangeRatePrecision,
-        uint256 _collateralizationRate,
-        uint256 _liquidationCollateralizationRate,
-        ILeverageExecutor _leverageExecutor
+        IPenrose __penrose,
+        IERC20 __collateral,
+        ITapiocaOracle __oracle,
+        uint256 __exchangeRatePrecision,
+        uint256 __collateralizationRate,
+        uint256 __liquidationCollateralizationRate,
+        ILeverageExecutor __leverageExecutor
     ) private {
-        penrose = _penrose;
-        pearlmit = IPearlmit(_penrose.pearlmit());
-        yieldBox = IYieldBox(_penrose.yieldBox());
+        _penrose = __penrose;
+        address __asset = __penrose.usdoToken();
 
-        address _asset = penrose.usdoToken();
-
-        if (address(_collateral) == address(0)) revert BadPair();
-        if (address(_asset) == address(0)) revert BadPair();
-        if (address(_oracle) == address(0)) revert BadPair();
-        if (_collateralizationRate > FEE_PRECISION) revert NotValid();
-        if (_liquidationCollateralizationRate > FEE_PRECISION) {
+        if (address(__collateral) == address(0)) revert BadPair();
+        if (__asset == address(0)) revert BadPair();
+        if (address(__oracle) == address(0)) revert BadPair();
+        if (__collateralizationRate > FEE_PRECISION) revert NotValid();
+        if (__liquidationCollateralizationRate > FEE_PRECISION) {
             revert NotValid();
         }
 
-        asset = IERC20(_asset);
-        assetId = penrose.usdoAssetId();
-        collateral = _collateral;
-        collateralId = _collateralId;
-        oracle = _oracle;
+        __initialize_MarketERC4626(address(__collateral));
+        _asset = IERC20(__asset);
+        oracle = __oracle;
         updateExchangeRate();
         protocolFee = 10000; // 10%; used for accrual
-        collateralizationRate = _collateralizationRate > 0 ? _collateralizationRate : 75000;
+        collateralizationRate = __collateralizationRate > 0 ? __collateralizationRate : 75000;
         liquidationCollateralizationRate =
-            _liquidationCollateralizationRate > 0 ? _liquidationCollateralizationRate : 80000;
+            __liquidationCollateralizationRate > 0 ? __liquidationCollateralizationRate : 80000;
 
         if (liquidationCollateralizationRate < collateralizationRate) {
             revert NotValid();
         }
 
-        EXCHANGE_RATE_PRECISION = _exchangeRatePrecision > 0 ? _exchangeRatePrecision : 1e18;
+        EXCHANGE_RATE_PRECISION = __exchangeRatePrecision > 0 ? __exchangeRatePrecision : 1e18;
 
         minLiquidatorReward = 88e3;
         maxLiquidatorReward = 925e2;
@@ -189,11 +179,17 @@ contract BigBang is MarketStateView, BBCommon {
         maxMintFeeStart = 980000000000000000; // 0.98 *1e18
         minMintFeeStart = 1000000000000000000; // 1*1e18
 
-        leverageExecutor = _leverageExecutor;
+        leverageExecutor = __leverageExecutor;
         minBorrowAmount = 1e15;
         minCollateralAmount = 1e15;
 
-        _transferOwnership(address(penrose));
+        _transferOwnership(address(__penrose));
+    }
+
+    /// @notice Accrues the interest on the borrowed tokens and handles the accumulation of fees.
+    function accrue() external override {
+        if (pauseOptions[PauseType.AddCollateral] || pauseOptions[PauseType.RemoveCollateral]) revert AccruePaused();
+        _accrue();
     }
 
     // ************************ //
@@ -206,34 +202,6 @@ contract BigBang is MarketStateView, BBCommon {
         (bool updated, uint256 _exchangeRate) = assetOracle.peek(oracleData);
         if (!updated) revert OracleCallFailed();
         return _computeVariableOpeningFeeView(amount, _exchangeRate);
-    }
-
-    // ************************ //
-    // *** PUBLIC FUNCTIONS *** //
-    // ************************ //
-
-    /// @notice Allows batched call to BingBang.
-    /// @param calls An array encoded call data.
-    /// @param revertOnFail If True then reverts after a failed call and stops doing further calls.
-    function execute(Module[] calldata modules, bytes[] calldata calls, bool revertOnFail)
-        external
-        nonReentrant
-        returns (bool[] memory successes, bytes[] memory results)
-    {
-        successes = new bool[](calls.length);
-        results = new bytes[](calls.length);
-        if (modules.length != calls.length) revert NotValid();
-        unchecked {
-            for (uint256 i; i < calls.length; i++) {
-                (bool success, bytes memory result) = _extractModule(modules[i]).delegatecall(calls[i]);
-
-                if (!success && revertOnFail) {
-                    revert(abi.decode(_getRevertMsg(result), (string)));
-                }
-                successes[i] = success;
-                results[i] = !success ? _getRevertMsg(result) : result;
-            }
-        }
     }
 
     // ************************* //
@@ -250,44 +218,6 @@ contract BigBang is MarketStateView, BBCommon {
         uint256 _openInterestDebt = openInterestDebt;
         openInterestDebt = 0;
         return _openInterestDebt;
-    }
-
-    /// @notice updates the pause state of the contract
-    /// @dev can only be called by the conservator
-    /// @param val the new value
-    function updatePause(PauseType _type, bool val) external {
-        require(
-            penrose.cluster().hasRole(msg.sender, keccak256("PAUSABLE")) || msg.sender == owner(),
-            "Market: unauthorized"
-        );
-        require(val != pauseOptions[_type], "Market: same state");
-        emit PausedUpdated(_type, pauseOptions[_type], val);
-        pauseOptions[_type] = val;
-    }
-
-    /// @notice updates the pause state of the contract for all types
-    /// @param val the new val
-    function updatePauseAll(bool val) external {
-        require(
-            penrose.cluster().hasRole(msg.sender, keccak256("PAUSABLE")) || msg.sender == owner(),
-            "Market: unauthorized"
-        );
-
-        pauseOptions[PauseType.Borrow] = val;
-        pauseOptions[PauseType.Repay] = val;
-        pauseOptions[PauseType.AddCollateral] = val;
-        pauseOptions[PauseType.RemoveCollateral] = val;
-        pauseOptions[PauseType.Liquidation] = val;
-        pauseOptions[PauseType.LeverageBuy] = val;
-        pauseOptions[PauseType.LeverageSell] = val;
-
-        emit PausedUpdated(PauseType.Borrow, pauseOptions[PauseType.Borrow], val);
-        emit PausedUpdated(PauseType.Repay, pauseOptions[PauseType.Repay], val);
-        emit PausedUpdated(PauseType.AddCollateral, pauseOptions[PauseType.AddCollateral], val);
-        emit PausedUpdated(PauseType.RemoveCollateral, pauseOptions[PauseType.RemoveCollateral], val);
-        emit PausedUpdated(PauseType.Liquidation, pauseOptions[PauseType.Liquidation], val);
-        emit PausedUpdated(PauseType.LeverageBuy, pauseOptions[PauseType.LeverageBuy], val);
-        emit PausedUpdated(PauseType.LeverageSell, pauseOptions[PauseType.LeverageSell], val);
     }
 
     /// @notice sets min and max mint range
@@ -329,27 +259,17 @@ contract BigBang is MarketStateView, BBCommon {
         }
     }
 
-    /// @notice rescues unused ETH from the contract
-    /// @param amount the amount to rescue
-    /// @param to the recipient
-    function rescueEth(uint256 amount, address to) external onlyOwner {
-        (bool success,) = to.call{value: amount}("");
-        if (!success) revert TransferFailed();
-    }
-
     /// @notice Transfers fees to penrose
     /// @dev can only be called by the owner or FEES_EXTRACTOR role
-    /// @return feeShares the amount of fees in shares withdrawn under Penrose
-    function refreshPenroseFees() external returns (uint256 feeShares) {
+    /// @return feeAmount the amount of fees in shares withdrawn under Penrose
+    function refreshPenroseFees() external returns (uint256 feeAmount) {
         require(
-            penrose.cluster().hasRole(msg.sender, keccak256("FEES_EXTRACTOR")) || msg.sender == owner(),
+            _cluster().hasRole(msg.sender, keccak256("FEES_EXTRACTOR")) || msg.sender == owner(),
             "Ownable: caller is not the owner"
         );
-        uint256 fees = asset.balanceOf(address(this));
-        feeShares = yieldBox.toShare(assetId, fees, false);
-        if (feeShares > 0) {
-            address(asset).safeApprove(address(yieldBox), fees);
-            yieldBox.depositAsset(assetId, address(this), msg.sender, 0, feeShares);
+        feeAmount = IERC20(_borrowableToken()).balanceOf(address(this));
+        if (feeAmount > 0) {
+            IERC20(_borrowableToken()).safeTransfer(msg.sender, feeAmount);
         }
     }
 
@@ -365,7 +285,7 @@ contract BigBang is MarketStateView, BBCommon {
         uint256 _debtRateAgainstEthMarket,
         uint256 _liquidationMultiplier
     ) external onlyOwner {
-        isMainMarket = collateralId == penrose.mainAssetId();
+        isMainMarket = collateral() == _penrose.mainToken();
 
         if (_liquidationMultiplier > 0) {
             if (_liquidationMultiplier >= FEE_PRECISION) revert NotValid();
@@ -398,7 +318,7 @@ contract BigBang is MarketStateView, BBCommon {
     // ************************* //
     // *** PRIVATE FUNCTIONS *** //
     // ************************* //
-    function _extractModule(Module _module) private view returns (address) {
+    function _extractModule(Module _module) internal view override returns (address) {
         address module;
         if (_module == Module.Base) {
             module = address(this);

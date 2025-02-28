@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // External
 import {RebaseLibrary, Rebase} from "@boringcrypto/boring-solidity/contracts/libraries/BoringRebase.sol";
 
 // Tapioca
-import {IYieldBox} from "src/tap-utils/interfaces/yieldbox/IYieldBox.sol";
 import {ISingularity, IMarket} from "src/tap-utils/interfaces/bar/ISingularity.sol";
+import {IERC4626} from "../../../utils/interfaces/common/IERC4626.sol";
 
 /*
 
@@ -21,9 +21,8 @@ import {ISingularity, IMarket} from "src/tap-utils/interfaces/bar/ISingularity.s
 
 interface ISGLInterestHelper {
     struct InterestRateCall {
-        IYieldBox yieldBox;
+        IERC4626 market;
         ISingularity.AccrueInfo accrueInfo;
-        uint256 assetId;
         Rebase totalAsset;
         Rebase totalBorrow;
         uint256 protocolFee;

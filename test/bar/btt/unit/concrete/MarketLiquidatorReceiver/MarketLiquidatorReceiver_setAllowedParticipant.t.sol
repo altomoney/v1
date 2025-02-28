@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // contracts
 import {MarketLiquidatorReceiver} from "tapioca-bar/liquidators/MarketLiquidatorReceiver.sol";

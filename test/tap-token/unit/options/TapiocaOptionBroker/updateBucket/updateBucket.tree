@@ -1,0 +1,6 @@
+TapiocaOptionBroker_updateBucket.tree
+├── when caller is not owner
+│   └── it should revert
+└── when caller is owner
+    ├── it should update the bucket
+    └── it should emit BucketUpdated event

@@ -1,28 +1,27 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // External
 import {RebaseLibrary, Rebase} from "@boringcrypto/boring-solidity/contracts/libraries/BoringRebase.sol";
 import {IERC20} from "@boringcrypto/boring-solidity/contracts/libraries/BoringERC20.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {ERC20} from "solady/tokens/ERC20.sol";
 
 // Tapioca
 import {ILeverageExecutor} from "tap-utils/interfaces/bar/ILeverageExecutor.sol";
 import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
-import {IYieldBox} from "tap-utils/interfaces/yieldbox/IYieldBox.sol";
-import {IPearlmit} from "tap-utils/interfaces/periph/IPearlmit.sol";
 import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
 import {Module} from "tap-utils/interfaces/bar/IMarket.sol";
-import {MarketStateView} from "../MarketStateView.sol";
+import {Market} from "../Market.sol";
 import {SGLLiquidation} from "./SGLLiquidation.sol";
 import {SGLCollateral} from "./SGLCollateral.sol";
-import {MarketERC20} from "../MarketERC20.sol";
 import {SGLLeverage} from "./SGLLeverage.sol";
 import {SGLStorage} from "./SGLStorage.sol";
 import {SGLCommon} from "./SGLCommon.sol";
 import {SGLBorrow} from "./SGLBorrow.sol";
+import {MarketERC4626} from "../MarketERC4626.sol";
 
-contract SGLInit is MarketStateView, SGLCommon {
+contract SGLInit is Market, SGLCommon {
     using SafeCast for uint256;
     using RebaseLibrary for Rebase;
 
@@ -38,8 +37,6 @@ contract SGLInit is MarketStateView, SGLCommon {
     // ************ //
     // *** VARS *** //
     // ************ //
-
-    error NotValid();
 
     struct _InitMemoryData {
         IPenrose penrose_;
@@ -59,13 +56,15 @@ contract SGLInit is MarketStateView, SGLCommon {
 
     struct _InitMemoryTokensData {
         IERC20 _asset;
-        uint256 _assetId;
         IERC20 _collateral;
-        uint256 _collateralId;
     }
 
-    function totalSupply() public view override(MarketERC20, SGLStorage) returns (uint256) {
-        return totalAsset.base;
+    function name() public view override(MarketERC4626, SGLStorage) returns (string memory) {
+        return SGLStorage.name();
+    }
+
+    function symbol() public view override(MarketERC4626, SGLStorage) returns (string memory) {
+        return SGLStorage.symbol();
     }
 
     /// @notice The init function that acts as a constructor
@@ -76,10 +75,8 @@ contract SGLInit is MarketStateView, SGLCommon {
             _InitMemoryData memory _initMemoryData
         ) = abi.decode(initData, (_InitMemoryModulesData, _InitMemoryTokensData, _InitMemoryData));
 
-        penrose = _initMemoryData.penrose_;
-        pearlmit = IPearlmit(_initMemoryData.penrose_.pearlmit());
-        yieldBox = IYieldBox(_initMemoryData.penrose_.yieldBox());
-        _transferOwnership(address(penrose));
+        _penrose = _initMemoryData.penrose_;
+        _transferOwnership(address(_penrose));
 
         if (address(_initMemoryTokensData._collateral) == address(0)) {
             revert NotValid();
@@ -97,9 +94,7 @@ contract SGLInit is MarketStateView, SGLCommon {
         );
         _initCoreStorage(
             _initMemoryTokensData._asset,
-            _initMemoryTokensData._assetId,
             _initMemoryTokensData._collateral,
-            _initMemoryTokensData._collateralId,
             _initMemoryData._oracle,
             _initMemoryData._leverageExecutor
         );
@@ -129,19 +124,15 @@ contract SGLInit is MarketStateView, SGLCommon {
     }
 
     function _initCoreStorage(
-        IERC20 _asset,
-        uint256 _assetId,
-        IERC20 _collateral,
-        uint256 _collateralId,
+        IERC20 __asset,
+        IERC20 __collateral,
         ITapiocaOracle _oracle,
         ILeverageExecutor _leverageExecutor
     ) private {
         assembly {
             // Store the values directly into their respective slots
-            sstore(asset.slot, _asset)
-            sstore(collateral.slot, _collateral)
-            sstore(assetId.slot, _assetId)
-            sstore(collateralId.slot, _collateralId)
+            sstore(_asset.slot, __asset)
+            sstore(_collateral.slot, __collateral)
             sstore(oracle.slot, _oracle)
             sstore(leverageExecutor.slot, _leverageExecutor)
         }

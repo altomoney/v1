@@ -1,0 +1,19 @@
+name: "Forge Build"
+
+on: "workflow_call"
+
+jobs:
+  forge-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+
+      - name: Run forge build
+        uses: devcontainers/ci@v0.3
+        with:
+          cacheFrom: "mcr.microsoft.com/devcontainers/rust:1-1-bullseye"
+          push: never
+          runCmd: forge build
+
+    

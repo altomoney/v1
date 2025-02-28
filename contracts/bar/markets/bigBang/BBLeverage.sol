@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // External
 import {RebaseLibrary, Rebase} from "@boringcrypto/boring-solidity/contracts/libraries/BoringRebase.sol";
@@ -9,6 +9,7 @@ import {IERC20} from "@boringcrypto/boring-solidity/contracts/ERC20.sol";
 // Tapioca
 import {SafeApprove} from "../../libraries/SafeApprove.sol";
 import {BBLendingCommon} from "./BBLendingCommon.sol";
+import {PauseType} from "tap-utils/interfaces/bar/IMarket.sol";
 
 /*
 
@@ -61,60 +62,50 @@ contract BBLeverage is BBLendingCommon {
         if (address(leverageExecutor) == address(0)) {
             revert LeverageExecutorNotValid();
         }
-        penrose.reAccrueBigBangMarkets();
+        _penrose.reAccrueBigBangMarkets();
 
-        // Stack too deep fix
-        _BuyCollateralCalldata memory calldata_;
-        _BuyCollateralMemoryData memory memoryData;
-        {
-            calldata_.from = from;
-            calldata_.borrowAmount = borrowAmount;
-            calldata_.supplyAmount = supplyAmount;
-            calldata_.data = data;
+        if (supplyAmount > 0) {
+            _allowedBorrow(from, supplyAmount);
+            IERC20(borrowableToken()).safeTransferFrom(from, address(leverageExecutor), supplyAmount);
         }
 
         {
-            uint256 supplyShare = yieldBox.toShare(assetId, calldata_.supplyAmount, true);
-            if (supplyShare > 0) {
-                (memoryData.supplyShareToAmount,) =
-                    yieldBox.withdraw(assetId, calldata_.from, address(leverageExecutor), 0, supplyShare);
-            }
+            _allowedBorrow(from, borrowAmount + _computeVariableOpeningFee(borrowAmount));
+            _borrow(from, address(leverageExecutor), borrowAmount, _computeVariableOpeningFee(borrowAmount));
         }
 
-        {
-            (, uint256 borrowShare) = _borrow(
-                calldata_.from,
-                address(this),
-                calldata_.borrowAmount,
-                _computeVariableOpeningFee(calldata_.borrowAmount)
-            );
-            (memoryData.borrowShareToAmount,) =
-                yieldBox.withdraw(assetId, address(this), address(leverageExecutor), 0, borrowShare);
-        }
         {
             updateExchangeRate();
-            uint256 assetPartInCollateral = (memoryData.supplyShareToAmount + memoryData.borrowShareToAmount)
-                * exchangeRate / EXCHANGE_RATE_PRECISION;
-            uint256 _share = yieldBox.toShare(collateralId, assetPartInCollateral, false);
-            _allowedBorrow(calldata_.from, _share);
+            uint256 assetPartInCollateral = (supplyAmount + borrowAmount) * exchangeRate / EXCHANGE_RATE_PRECISION;
+            _allowedBorrow(from, previewDeposit(assetPartInCollateral));
 
             amountOut = leverageExecutor.getCollateral(
-                from,
-                address(asset),
-                address(collateral),
-                memoryData.supplyShareToAmount + memoryData.borrowShareToAmount,
-                calldata_.data
+                from, address(_borrowableToken()), collateral(), borrowAmount + supplyAmount, data
             );
+
+            if (amountOut == 0) revert AmountNotValid();
         }
-        uint256 collateralShare = yieldBox.toShare(collateralId, amountOut, false);
-        if (collateralShare == 0) revert CollateralShareNotValid();
+        // Mint shares via erc4626 "deposit()" function logic, skipping transferFrom
+        uint256 sharesOutput = previewDeposit(amountOut);
+        _mint(from, sharesOutput);
+        address thisAddress = address(this);
+        /// @solidity memory-safe-assembly
+        assembly {
+            // Emit the {Deposit} event.
+            mstore(0x00, amountOut)
+            mstore(0x20, sharesOutput)
+            let m := shr(96, not(0))
+            log3(
+                0x00,
+                0x40,
+                0xdcbc1c05240f31ff3ad067ef1ee35ce4997762752e3a095284754544f4c709d7, // _DEPOSIT_EVENT_SIGNATURE
+                and(m, address()),
+                and(m, from)
+            )
+        }
+        _afterDeposit(amountOut, sharesOutput);
 
-        address(collateral).safeApprove(address(yieldBox), type(uint256).max);
-        yieldBox.depositAsset(collateralId, address(this), address(this), 0, collateralShare);
-        address(collateral).safeApprove(address(yieldBox), 0);
-
-        _addCollateral(calldata_.from, calldata_.from, false, 0, collateralShare, false);
-        if (amountOut == 0) revert AmountNotValid();
+        emit LogAddCollateral(address(this), from, sharesOutput);
     }
 
     struct _SellCollateralMemoryData {
@@ -128,7 +119,7 @@ contract BBLeverage is BBLendingCommon {
 
     /// @notice Lever down: Sell collateral to repay debt; excess goes to YB
     /// @param from The user who sells
-    /// @param share Collateral YieldBox-shares to sell
+    /// @param share Collateral  to sell
     /// @param data LeverageExecutor data
     /// @return amountOut Actual asset amount received in the sale
     function sellCollateral(address from, uint256 share, bytes calldata data)
@@ -141,25 +132,21 @@ contract BBLeverage is BBLendingCommon {
         if (address(leverageExecutor) == address(0)) {
             revert LeverageExecutorNotValid();
         }
-        penrose.reAccrueBigBangMarkets();
-
-        _allowedBorrow(from, share);
-        _removeCollateral(from, address(this), share);
+        _penrose.reAccrueBigBangMarkets();
 
         _SellCollateralMemoryData memory memoryData;
 
-        (memoryData.leverageAmount,) =
-            yieldBox.withdraw(collateralId, address(this), address(leverageExecutor), 0, share);
+        memoryData.leverageAmount = super.redeem(share, address(leverageExecutor), from);
         amountOut =
-            leverageExecutor.getAsset(from, address(collateral), address(asset), memoryData.leverageAmount, data);
-        memoryData.shareOut = yieldBox.toShare(assetId, amountOut, false);
-        address(asset).safeApprove(address(yieldBox), type(uint256).max);
-        yieldBox.depositAsset(assetId, address(this), from, 0, memoryData.shareOut); // TODO Check for rounding attack?
-        address(asset).safeApprove(address(yieldBox), 0);
+            leverageExecutor.getAsset(from, collateral(), address(_borrowableToken()), memoryData.leverageAmount, data);
+
+        IERC20(_borrowableToken()).safeTransfer(from, amountOut);
+
+        memoryData.shareOut = previewWithdraw(amountOut);
 
         memoryData.partOwed = userBorrowPart[from];
         memoryData.amountOwed = totalBorrow.toElastic(memoryData.partOwed, true);
-        memoryData.shareOwed = yieldBox.toShare(assetId, memoryData.amountOwed, true);
+        memoryData.shareOwed = previewWithdraw(memoryData.amountOwed);
         if (memoryData.shareOwed <= memoryData.shareOut) {
             _repay(from, from, memoryData.partOwed, false);
         } else {

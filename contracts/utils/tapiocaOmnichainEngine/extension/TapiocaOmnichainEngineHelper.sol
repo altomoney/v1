@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // LZ
 import {
@@ -12,11 +12,7 @@ import {
 import {OptionsBuilder} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/libs/OptionsBuilder.sol";
 
 // Tapioca
-import {
-    YieldBoxApproveAllMsg,
-    MarketPermitActionMsg,
-    YieldBoxApproveAssetMsg
-} from "src/tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
+import {MarketPermitActionMsg} from "src/tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
 import {
     ITapiocaOmnichainEngine,
     ERC20PermitApprovalMsg,
@@ -29,7 +25,6 @@ import {
     RemoteTransferMsg
 } from "src/tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
 import {TapiocaOmnichainEngineCodec} from "../TapiocaOmnichainEngineCodec.sol";
-import {IPearlmit} from "src/tap-utils/interfaces/periph/IPearlmit.sol";
 import {BaseToeMsgType} from "../BaseToeMsgType.sol";
 
 /*
@@ -229,14 +224,6 @@ contract TapiocaOmnichainEngineHelper is BaseToeMsgType {
         return TapiocaOmnichainEngineCodec.encodeERC721PermitApprovalMsg(_erc721PermitApprovalMsg);
     }
 
-    function encodePearlmitApprovalMsg(address _pearlmit, IPearlmit.PermitBatchTransferFrom calldata _data)
-        public
-        pure
-        returns (bytes memory msg_)
-    {
-        return TapiocaOmnichainEngineCodec.encodePearlmitApprovalMsg(_pearlmit, _data);
-    }
-
     /**
      * @notice Encodes the message for the `remoteTransfer` operation.
      * @param _remoteTransferMsg The owner + LZ send param to pass on the remote chain. (B->A)
@@ -255,37 +242,6 @@ contract TapiocaOmnichainEngineHelper is BaseToeMsgType {
         returns (bytes memory msg_)
     {
         msg_ = TapiocaOmnichainEngineCodec.buildMarketPermitApprovalMsg(_marketPermitActionMsg);
-    }
-
-    /**
-     * @notice Encode the message for the _yieldBoxPermitAllReceiver() & _yieldBoxRevokeAllReceiver operations.
-     * @param _yieldBoxApprovalAllMsg The YieldBox permit/revoke approval message.
-     */
-    function buildYieldBoxApproveAllMsg(YieldBoxApproveAllMsg memory _yieldBoxApprovalAllMsg)
-        public
-        pure
-        returns (bytes memory msg_)
-    {
-        msg_ = TapiocaOmnichainEngineCodec.buildYieldBoxApproveAllMsg(_yieldBoxApprovalAllMsg);
-    }
-
-    /**
-     * @notice Encode the message for the `PT_YB_APPROVE_ASSET` operation,
-     *   _yieldBoxRevokeAssetReceiver() & _yieldBoxApproveAssetReceiver operations.
-     * @param _approvalMsg The YieldBoxApproveAssetMsg messages.
-     */
-    function buildYieldBoxApproveAssetMsg(YieldBoxApproveAssetMsg[] memory _approvalMsg)
-        public
-        pure
-        returns (bytes memory msg_)
-    {
-        uint256 approvalsLength = _approvalMsg.length;
-        for (uint256 i; i < approvalsLength;) {
-            msg_ = abi.encodePacked(msg_, TapiocaOmnichainEngineCodec.buildYieldBoxPermitAssetMsg(_approvalMsg[i]));
-            unchecked {
-                ++i;
-            }
-        }
     }
 
     /// =======================
@@ -335,8 +291,7 @@ contract TapiocaOmnichainEngineHelper is BaseToeMsgType {
             // LZ
             // Tapioca msg types
             _msgType == MSG_SEND || _msgType == MSG_APPROVALS || _msgType == MSG_NFT_APPROVALS
-                || _msgType == MSG_PEARLMIT_APPROVAL || _msgType == MSG_REMOTE_TRANSFER || _msgType == MSG_YB_APPROVE_ASSET
-                || _msgType == MSG_YB_APPROVE_ALL || _msgType == MSG_MARKET_PERMIT
+                || _msgType == MSG_REMOTE_TRANSFER || _msgType == MSG_MARKET_PERMIT
         ) {
             return;
         } else if (!_sanitizeMsgTypeExtended(_msgType)) {

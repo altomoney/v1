@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // Tapioca
 import {Module} from "tap-utils/interfaces/bar/IMarket.sol";
 import {BigBang} from "tapioca-bar/markets/bigBang/BigBang.sol";
 import {Market} from "tapioca-bar/markets/Market.sol";
 
-import {IPearlmit} from "tap-utils/pearlmit/Pearlmit.sol";
 import {IMarket} from "tap-utils/interfaces/bar/ISingularity.sol";
 
 // tests
@@ -83,7 +82,7 @@ contract BigBang_buyCollateral is BigBang_Unit_Shared {
         borrowAmount = _boundBorrowAmount(borrowAmount, collateralAmount);
 
         // add collateral
-        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this), address(this), false);
+        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this));
 
         // borrow
         _borrow(borrowAmount, mainBB, address(this), address(this), address(this));
@@ -116,7 +115,7 @@ contract BigBang_buyCollateral is BigBang_Unit_Shared {
         borrowAmount = _boundBorrowAmount(borrowAmount, collateralAmount);
 
         // add collateral
-        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this), address(this), false);
+        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this));
 
         // borrow
         _borrow(borrowAmount, mainBB, address(this), address(this), address(this));
@@ -175,8 +174,7 @@ contract BigBang_buyCollateral is BigBang_Unit_Shared {
 
         // **** Main BB market ****
         _spawnAsset(supplyAmount, address(this));
-        uint256 share = yieldBox.toShare(mainBB._assetId(), supplyAmount, false);
-        _depositToYieldBox(mainBB._asset(), mainBB._assetId(), share, address(this), address(this));
+        _approveViaERC20(mainBB.borrowableToken(), address(this), address(mainBB), type(uint256).max);
         _leverageUp(
             collateralAmount,
             borrowAmount,
@@ -190,8 +188,7 @@ contract BigBang_buyCollateral is BigBang_Unit_Shared {
 
         // // **** Secondary BB market ****
         _spawnAsset(supplyAmount, address(this));
-        share = yieldBox.toShare(secondaryBB._assetId(), supplyAmount, false);
-        _depositToYieldBox(secondaryBB._asset(), secondaryBB._assetId(), share, address(this), address(this));
+        _approveViaERC20(secondaryBB.borrowableToken(), address(this), address(secondaryBB), type(uint256).max);
         _leverageUp(
             collateralAmount,
             borrowAmount,
@@ -219,7 +216,7 @@ contract BigBang_buyCollateral is BigBang_Unit_Shared {
         uint256 supplyAmount = 0;
 
         // add collateral
-        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this), address(this), false);
+        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this));
 
         // borrow
         _borrow(borrowAmount, mainBB, address(this), address(this), address(this));
@@ -252,7 +249,7 @@ contract BigBang_buyCollateral is BigBang_Unit_Shared {
         uint256 supplyAmount = 0;
 
         // add collateral
-        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this), address(this), false);
+        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this));
 
         // borrow
         _borrow(borrowAmount, mainBB, address(this), address(this), address(this));
@@ -288,7 +285,7 @@ contract BigBang_buyCollateral is BigBang_Unit_Shared {
         uint256 supplyAmount = 0;
 
         // add collateral
-        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this), address(this), false);
+        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this));
 
         // borrow
         _borrow(borrowAmount, mainBB, address(this), address(this), address(this));
@@ -298,7 +295,7 @@ contract BigBang_buyCollateral is BigBang_Unit_Shared {
         (Module[] memory modules, bytes[] memory calls) =
             _getLeverageUpData(leverageAmount, supplyAmount, address(this));
 
-        mainBB.approveBorrow(address(userA), type(uint256).max);
+        _approveViaERC20(address(mainBB), address(address(this)), address(userA), type(uint256).max);
         _resetPrank(userA);
         //         │   │   │   └─ ← [Revert] CollateralShareNotValid()
         // │   │   └─ ← [Revert] EvmError: Revert
@@ -322,12 +319,12 @@ contract BigBang_buyCollateral is BigBang_Unit_Shared {
         borrowAmount = _boundBorrowAmount(borrowAmount, collateralAmount);
 
         // **** Main BB market ****
-        mainBB.approveBorrow(address(userA), type(uint256).max);
+        _approveViaERC20(address(mainBB), address(address(this)), address(userA), type(uint256).max);
         _leverageUp(collateralAmount, borrowAmount, leverageAmount, 0, mainBB, userA, address(this), address(this));
 
         // **** Secondary BB market ****
         _resetPrank(address(this));
-        secondaryBB.approveBorrow(address(userA), type(uint256).max);
+        _approveViaERC20(address(secondaryBB), address(address(this)), address(userA), type(uint256).max);
         _leverageUp(collateralAmount, borrowAmount, leverageAmount, 0, secondaryBB, userA, address(this), address(this));
     }
 
@@ -349,9 +346,13 @@ contract BigBang_buyCollateral is BigBang_Unit_Shared {
 
         // **** Main BB market ****
         _spawnAsset(supplyAmount, address(this));
-        uint256 share = yieldBox.toShare(mainBB._assetId(), supplyAmount, false);
-        _depositToYieldBox(mainBB._asset(), mainBB._assetId(), share, address(this), address(this));
+        uint256 share = mainBB.convertToShares(supplyAmount);
+
+        _approveViaERC20(mainBB.borrowableToken(), address(this), address(mainBB), type(uint256).max);
+        _resetPrank(address(this));
+        mainBB.approveCollateral(address(userA), type(uint256).max);
         mainBB.approveBorrow(address(userA), type(uint256).max);
+
         _leverageUp(
             collateralAmount, borrowAmount, leverageAmount, supplyAmount, mainBB, userA, address(this), address(this)
         );
@@ -359,9 +360,12 @@ contract BigBang_buyCollateral is BigBang_Unit_Shared {
         // **** Secondary BB market ****
         _resetPrank(address(this));
         _spawnAsset(supplyAmount, address(this));
-        share = yieldBox.toShare(secondaryBB._assetId(), supplyAmount, false);
-        _depositToYieldBox(secondaryBB._asset(), secondaryBB._assetId(), share, address(this), address(this));
+
+        _approveViaERC20(secondaryBB.borrowableToken(), address(this), address(secondaryBB), type(uint256).max);
+        _resetPrank(address(this));
+        secondaryBB.approveCollateral(address(userA), type(uint256).max);
         secondaryBB.approveBorrow(address(userA), type(uint256).max);
+
         _leverageUp(
             collateralAmount,
             borrowAmount,
@@ -391,7 +395,7 @@ contract BigBang_buyCollateral is BigBang_Unit_Shared {
         vm.assume(supplyAmount > 0 && supplyAmount < SMALL_AMOUNT);
 
         // add collateral
-        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this), address(this), false);
+        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this));
 
         // borrow
         _borrow(borrowAmount, mainBB, address(this), address(this), address(this));

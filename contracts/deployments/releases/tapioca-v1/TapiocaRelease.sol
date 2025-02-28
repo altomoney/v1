@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 import {TapiocaMagnetarBatchOne} from "./batches/TapiocaMagnetarBatchOne.sol";
 import {TapiocaMagnetarBatchTwo} from "./batches/TapiocaMagnetarBatchTwo.sol";
 import {TapiocaUtilitiesBatch} from "./batches/TapiocaUtilitiesBatch.sol";
-import {TapiocaYieldboxBatch} from "./batches/TapiocaYieldboxBatch.sol";
+import {TapiocaExtExBatch} from "./batches/TapiocaExtExBatch.sol";
 import {TapiocaUsdoBatchOne} from "./batches/TapiocaUsdoBatchOne.sol";
 import {TapiocaUsdoBatchTwo} from "./batches/TapiocaUsdoBatchTwo.sol";
 import {TapiocaUsdoBatchThree} from "./batches/TapiocaUsdoBatchThree.sol";
@@ -35,21 +35,14 @@ library TapiocaRelease {
         TapiocaUtilitiesBatch utilitiesBatch;
         (utilitiesBatch, reports.utilitiesReport) = _deployUtilities(input.owner, input.zeroXSwapper, input.lzChainId);
 
-        reports.yieldboxReport = _deployYieldBox(
-            input.owner,
-            input.wrappedNativeToken,
-            reports.utilitiesReport.pearlmit,
-            reports.utilitiesReport.cluster,
-            input.zeroXSwapper
-        );
+        reports.ExtExReport =
+            _deployExtEx(input.owner, input.wrappedNativeToken, reports.utilitiesReport.cluster, input.zeroXSwapper);
 
-        reports.magnetarDepsReport =
-            _deployMagnetarDeps(reports.utilitiesReport.pearlmit, reports.utilitiesReport.toeHelper);
+        reports.magnetarDepsReport = _deployMagnetarDeps(reports.utilitiesReport.toeHelper);
 
         reports.magnetarReport = _deployMagnetar(
             input.owner,
             reports.utilitiesReport.cluster,
-            reports.utilitiesReport.pearlmit,
             reports.utilitiesReport.toeHelper,
             input.zeroXSwapper,
             input.wrappedNativeToken,
@@ -59,10 +52,8 @@ library TapiocaRelease {
         (reports.usdoModulesReport, reports.usdoMarketModulesReport, reports.usdoReport) = _deployUSDO(
             input.lzEndpoint,
             input.owner, // delegate
-            reports.yieldboxReport.yieldbox,
             reports.utilitiesReport.cluster,
-            reports.yieldboxReport.extExec,
-            reports.utilitiesReport.pearlmit
+            reports.ExtExReport.extExec
         );
 
         reports.sglReport = _deploySingularity();
@@ -70,13 +61,11 @@ library TapiocaRelease {
         reports.bbReport =
             _deployBigBangModules(input.lzEndpoint, input.lzChainId, reports.utilitiesReport.tapiocaMulticall);
         reports.penroseReport = _deployPenrose(
-            reports.yieldboxReport.yieldbox,
             reports.utilitiesReport.cluster,
             input.tapToken,
             reports.usdoReport.usdo,
             input.wrappedNativeToken,
-            reports.utilitiesReport.pearlmit,
-            input.owner,
+            reports.utilitiesReport.tapiocaMulticall,
             reports.sglReport.singularity,
             reports.bbReport.bigbang,
             prevReport.penrose
@@ -85,7 +74,6 @@ library TapiocaRelease {
         utilitiesBatch.initializeCluster(
             reports.utilitiesReport.cluster,
             reports.utilitiesReport.zeroXSwapper,
-            reports.yieldboxReport.yieldbox,
             reports.magnetarReport.magnetar,
             reports.penroseReport.penrose,
             reports.utilitiesReport.pauser,
@@ -103,25 +91,21 @@ library TapiocaRelease {
     /// Internal functions for deployment of batch contracts and retrieval of deployment report
     ///
 
-    function _deployMagnetarDeps(address pearlmit, address toeHelper)
-        private
-        returns (MagnetarDepsReport memory report)
-    {
-        TapiocaMagnetarBatchOne magnetarDepsBatch = new TapiocaMagnetarBatchOne(pearlmit, toeHelper);
+    function _deployMagnetarDeps(address toeHelper) private returns (MagnetarDepsReport memory report) {
+        TapiocaMagnetarBatchOne magnetarDepsBatch = new TapiocaMagnetarBatchOne(toeHelper);
         return magnetarDepsBatch.getMagnetarDepsReport();
     }
 
     function _deployMagnetar(
         address owner,
         address cluster,
-        address pearlmit,
         address toeHelper,
         address zeroXSwapper,
         address wrappedNativeToken,
         MagnetarDepsReport memory deps
     ) private returns (MagnetarReport memory report) {
         TapiocaMagnetarBatchTwo magnetarBatchTwo =
-            new TapiocaMagnetarBatchTwo(owner, cluster, pearlmit, toeHelper, zeroXSwapper, wrappedNativeToken, deps);
+            new TapiocaMagnetarBatchTwo(owner, cluster, toeHelper, zeroXSwapper, wrappedNativeToken, deps);
         return magnetarBatchTwo.getMagnetarReport();
     }
 
@@ -134,25 +118,19 @@ library TapiocaRelease {
         return (utilitiesBatch, utilitiesBatch.getUtilitiesReport());
     }
 
-    function _deployYieldBox(
-        address owner,
-        address wrappedNativeToken,
-        address pearlmit,
-        address cluster,
-        address swapper
-    ) private returns (YieldboxReport memory report) {
-        TapiocaYieldboxBatch yieldboxBatch =
-            new TapiocaYieldboxBatch(owner, wrappedNativeToken, pearlmit, cluster, swapper);
-        return yieldboxBatch.getYieldboxReport();
+    function _deployExtEx(address owner, address wrappedNativeToken, address cluster, address swapper)
+        private
+        returns (ExtExReport memory report)
+    {
+        TapiocaExtExBatch extExBatch = new TapiocaExtExBatch(owner, wrappedNativeToken, cluster, swapper);
+        return extExBatch.getExtExReport();
     }
 
     function _deployPenrose(
-        address yieldbox,
         address cluster,
         address tapToken,
         address usdoToken,
         address nativeWrappedToken,
-        address pearlmit,
         address owner,
         address singularityMaster,
         address bigbangMaster,
@@ -160,16 +138,7 @@ library TapiocaRelease {
     ) private returns (PenroseReport memory report) {
         TapiocaPenroseBatch penroseBatch = new TapiocaPenroseBatch(
             IPenroseInput(
-                yieldbox,
-                cluster,
-                tapToken,
-                usdoToken,
-                nativeWrappedToken,
-                pearlmit,
-                owner,
-                singularityMaster,
-                bigbangMaster,
-                prevPenrose
+                cluster, tapToken, usdoToken, nativeWrappedToken, owner, singularityMaster, bigbangMaster, prevPenrose
             )
         );
         return penroseBatch.getPenroseReport();
@@ -186,14 +155,7 @@ library TapiocaRelease {
         return bbBatchThree.getBBReport();
     }
 
-    function _deployUSDO(
-        address endpoint,
-        address delegate,
-        address yieldbox,
-        address cluster,
-        address extExec,
-        address pearlmit
-    )
+    function _deployUSDO(address endpoint, address delegate, address cluster, address extExec)
         private
         returns (
             UsdoModulesReport memory modulesReport,
@@ -201,20 +163,16 @@ library TapiocaRelease {
             UsdoReport memory usdoReport
         )
     {
-        TapiocaUsdoBatchOne usdoBatchOne =
-            new TapiocaUsdoBatchOne(endpoint, delegate, yieldbox, cluster, extExec, pearlmit);
+        TapiocaUsdoBatchOne usdoBatchOne = new TapiocaUsdoBatchOne(endpoint, delegate, cluster, extExec);
         modulesReport = usdoBatchOne.getUsdoModulesReport();
 
-        TapiocaUsdoBatchTwo usdoBatchTwo =
-            new TapiocaUsdoBatchTwo(endpoint, delegate, yieldbox, cluster, extExec, pearlmit);
+        TapiocaUsdoBatchTwo usdoBatchTwo = new TapiocaUsdoBatchTwo(endpoint, delegate, cluster, extExec);
         marketModulesReport = usdoBatchTwo.getUsdoMarketModulesReport();
         TapiocaUsdoBatchThree usdoBatchThree = new TapiocaUsdoBatchThree(
             endpoint,
             delegate,
-            yieldbox,
             cluster,
             extExec,
-            pearlmit,
             modulesReport.usdoSenderModule,
             modulesReport.usdoReceiverModule,
             marketModulesReport.marketReceiverModule,
@@ -262,24 +220,19 @@ library TapiocaRelease {
         TapiocaReport memory report;
 
         report.cluster = reports.utilitiesReport.cluster;
-        report.pearlmit = reports.utilitiesReport.pearlmit;
         report.tapiocaMulticall = reports.utilitiesReport.tapiocaMulticall;
         report.toeHelper = reports.utilitiesReport.toeHelper;
         report.multiTokenSender = reports.utilitiesReport.multiTokenSender;
         report.zeroXSwapper = reports.utilitiesReport.zeroXSwapper;
 
-        report.yieldbox = reports.yieldboxReport.yieldbox;
-        report.yieldboxUri = reports.yieldboxReport.yieldboxUri;
-
         report.magnetarCollateralModule = reports.magnetarDepsReport.magnetarCollateralModule;
         report.magnetarMintModule = reports.magnetarDepsReport.magnetarMintModule;
         report.magnetarOptionModule = reports.magnetarDepsReport.magnetarOptionModule;
-        report.magnetarYieldboxModule = reports.magnetarDepsReport.magnetarYieldboxModule;
         report.simpleLeverageExecutor = reports.magnetarReport.simpleLeverageExecutor;
         report.magnetar = reports.magnetarReport.magnetar;
         report.magnetarHelper = reports.magnetarReport.magnetarHelper;
-        report.liquidatorReceiver = reports.yieldboxReport.liquidatorReceiver;
-        report.extExec = reports.yieldboxReport.extExec;
+        report.liquidatorReceiver = reports.ExtExReport.liquidatorReceiver;
+        report.extExec = reports.ExtExReport.extExec;
         report.usdoSenderModule = reports.usdoModulesReport.usdoSenderModule;
         report.usdoReceiverModule = reports.usdoModulesReport.usdoReceiverModule;
         report.marketReceiverModule = reports.usdoMarketModulesReport.marketReceiverModule;

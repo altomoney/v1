@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // External
 import {RebaseLibrary, Rebase} from "@boringcrypto/boring-solidity/contracts/libraries/BoringRebase.sol";
@@ -9,6 +9,7 @@ import {IERC20} from "@boringcrypto/boring-solidity/contracts/ERC20.sol";
 // Tapioca
 import {IUsdo} from "tap-utils/interfaces/oft/IUsdo.sol";
 import {BBCommon} from "./BBCommon.sol";
+import {PauseType} from "tap-utils/interfaces/bar/IMarket.sol";
 
 /*
 
@@ -35,32 +36,39 @@ contract BBLendingCommon is BBCommon {
     // ************************** //
     // *** PRIVATE FUNCTIONS *** //
     // ************************* //
-    function _addCollateral(address from, address to, bool skim, uint256 amount, uint256 share, bool addTokens)
-        internal
-    {
+
+    function _addCollateral(address from, address to, uint256 amount, uint256 share, bool pullTokens) internal {
+        _allowedCollateral(from, amount);
+
         if (share == 0) {
-            share = yieldBox.toShare(collateralId, amount, false);
+            share = previewDeposit(amount);
         }
-        userCollateralShare[to] += share;
-        uint256 oldTotalCollateralShare = totalCollateralShare;
-        totalCollateralShare = oldTotalCollateralShare + share;
-        if (addTokens) _addTokens(from, collateralId, share, oldTotalCollateralShare, skim);
-        emit LogAddCollateral(skim ? address(yieldBox) : from, to, share);
+
+        if (pullTokens) {
+            IERC20(collateral()).safeTransferFrom(from, address(this), amount);
+        }
+        _mint(to, share);
+
+        emit LogAddCollateral(from, to, share);
+    }
+
+    function _depositCollateral(address from, address to, uint256 assets) internal returns (uint256 shares) {
+        _allowedCollateral(from, assets);
+
+        shares = super.deposit(assets, to);
+
+        emit LogAddCollateral(from, to, shares);
     }
 
     /// @dev Concrete implementation of `removeCollateral`.
     function _removeCollateral(address from, address to, uint256 share) internal {
-        userCollateralShare[from] -= share;
-        totalCollateralShare -= share;
-        emit LogRemoveCollateral(from, to, share);
-        yieldBox.transfer(address(this), to, collateralId, share);
+        uint256 assets = super.redeem(share, to, from);
+
+        emit LogRemoveCollateral(from, to, assets);
     }
 
     /// @dev Concrete implementation of `borrow`.
-    function _borrow(address from, address to, uint256 amount, uint256 feeAmount)
-        internal
-        returns (uint256 part, uint256 share)
-    {
+    function _borrow(address from, address to, uint256 amount, uint256 feeAmount) internal returns (uint256 part) {
         (totalBorrow, part) = totalBorrow.add(amount + feeAmount, true);
 
         if (totalBorrowCap > 0) {
@@ -71,10 +79,10 @@ contract BBLendingCommon is BBCommon {
         emit LogBorrow(from, to, amount, feeAmount, part);
 
         //mint USDO
-        IUsdo(address(asset)).mint(address(this), amount);
+        IUsdo(address(_borrowableToken())).mint(address(this), amount);
 
         //deposit borrowed amount to user
-        share = _depositAmountToYb(asset, to, assetId, amount);
+        _borrowableToken().safeTransfer(to, amount);
     }
 
     /// @dev Concrete implementation of `repay`.
@@ -84,31 +92,18 @@ contract BBLendingCommon is BBCommon {
         }
         if (part == 0) revert NothingToRepay();
 
-        // @dev check allowance
         if (checkAllowance && msg.sender != from) {
-            uint256 partInAmount;
-            Rebase memory _totalBorrow = totalBorrow;
-            (_totalBorrow, partInAmount) = _totalBorrow.sub(part, true);
-            uint256 allowanceShare =
-                _computeAllowanceAmountInAsset(to, exchangeRate, partInAmount, _safeDecimals(asset));
-            if (allowanceShare == 0) revert NotEnough();
-            _allowedLend(from, allowanceShare);
+            uint256 partInAmount = convertToAssets(part);
+            _allowedBorrow(from, partInAmount);
         }
-
         // @dev sub `part` of totalBorrow
         (totalBorrow, amount) = totalBorrow.sub(part, true);
         userBorrowPart[to] -= part;
 
-        // @dev amount includes the opening & accrued fees
-        uint256 _share = yieldBox.toShare(assetId, amount, false);
-        bool isErr = pearlmit.transferFromERC1155(from, address(this), address(yieldBox), assetId, _share);
-        if (isErr) {
-            revert TransferFailed();
-        }
-        (uint256 amountOut,) = yieldBox.withdraw(assetId, address(this), address(this), 0, _share);
+        IERC20(address(_borrowableToken())).safeTransferFrom(from, address(this), amount);
 
         // @dev burn USDO
-        IUsdo(address(asset)).burn(address(this), amountOut);
+        IUsdo(address(_borrowableToken())).burn(address(this), amount);
 
         emit LogRepay(from, to, amount, part);
     }

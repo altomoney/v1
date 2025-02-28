@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // Tapioca
 import {TapiocaOmnichainExtExec} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainExtExec.sol";
 import {TOFTVault} from "tapiocaz/tOFT/TOFTVault.sol";
 import {BaseTOFT} from "tapiocaz/tOFT/BaseTOFT.sol";
 import {mTOFT} from "tapiocaz/tOFT/mTOFT.sol";
-import {IPearlmit} from "tap-utils/pearlmit/Pearlmit.sol";
+
 import {TOFT} from "tapiocaz/tOFT/TOFT.sol";
 import {ITOFT, TOFTInitStruct, TOFTModulesInitStruct} from "tap-utils/interfaces/oft/ITOFT.sol";
 
@@ -407,13 +407,11 @@ contract TOFT_wrapUnwrap is OFT_Unit_Shared {
             symbol: "WRONG",
             endpoint: address(endpoints[aEid]),
             delegate: address(this),
-            yieldBox: address(yieldBox),
             cluster: address(cluster),
             erc20: address(underlyingErc20),
             vault: address(_vault),
             hostEid: bEid,
-            extExec: address(_extExec),
-            pearlmit: IPearlmit(address(pearlmit))
+            extExec: address(_extExec)
         });
         TOFTModulesInitStruct memory wrongModuleStruct = _createOftModuleStruct(
             address(toftSender),
@@ -434,13 +432,11 @@ contract TOFT_wrapUnwrap is OFT_Unit_Shared {
             symbol: "WRONG",
             endpoint: address(endpoints[aEid]),
             delegate: address(this),
-            yieldBox: address(yieldBox),
             cluster: address(cluster),
             erc20: address(underlyingErc20),
             vault: address(_vault),
             hostEid: bEid,
-            extExec: address(_extExec),
-            pearlmit: IPearlmit(address(pearlmit))
+            extExec: address(_extExec)
         });
         TOFTModulesInitStruct memory wrongModuleStruct = _createOftModuleStruct(
             address(mtoftSender),

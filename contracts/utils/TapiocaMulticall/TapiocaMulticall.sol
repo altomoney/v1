@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 
@@ -50,6 +50,19 @@ contract TapiocaMulticall is Ownable {
                 ++i;
             }
         }
+    }
+
+    function performDelegateCall(address target, bytes memory data)
+        public
+        payable
+        onlyOwner
+        returns (bytes memory returnData)
+    {
+        (bool success, bytes memory result) = target.delegatecall(data);
+        if (!success) {
+            _getRevertMsg(target, result);
+        }
+        return result;
     }
 
     function multicallValue(CallValue[] calldata calls) public payable onlyOwner returns (Result[] memory returnData) {

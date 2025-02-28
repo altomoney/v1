@@ -11,7 +11,7 @@ import {
     SendParamsMsg,
     LeverageUpActionMsg
 } from "tap-utils/interfaces/oft/ITOFT.sol";
-import {LockAndParticipateData} from "tap-utils/interfaces/periph/IMagnetar.sol";
+import {LockData} from "tap-utils/interfaces/periph/IMagnetar.sol";
 import {ITOFT} from "tap-utils/interfaces/oft/ITOFT.sol";
 
 /*
@@ -97,23 +97,15 @@ library TOFTMsgCodec {
     /**
      * @notice Encodes the message for the `TOFTOptionsReceiverModule.lockAndParticipateReceiver()` operation.
      */
-    function buildLockAndParticipateMsg(LockAndParticipateData memory _marketMsg)
-        internal
-        pure
-        returns (bytes memory)
-    {
+    function buildLockAndParticipateMsg(LockData memory _marketMsg) internal pure returns (bytes memory) {
         return abi.encode(_marketMsg);
     }
 
     /**
      * @notice Decodes an encoded message for the `TOFTOptionsReceiverModule.lockAndParticipateReceiver()` operation.
      */
-    function decodeLockAndParticipateMsg(bytes memory _msg)
-        internal
-        pure
-        returns (LockAndParticipateData memory marketMsg_)
-    {
-        return abi.decode(_msg, (LockAndParticipateData));
+    function decodeLockAndParticipateMsg(bytes memory _msg) internal pure returns (LockData memory marketMsg_) {
+        return abi.decode(_msg, (LockData));
     }
 
     /**

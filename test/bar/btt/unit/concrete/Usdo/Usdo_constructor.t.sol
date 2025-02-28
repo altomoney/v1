@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // tests
 import {Usdo_Unit_Shared} from "../../shared/Usdo_Unit_Shared.t.sol";
@@ -20,12 +20,6 @@ contract Usdo_constructor is Usdo_Unit_Shared {
 
         // it should set UsdoOptionReceiver module
         assertFalse(address(usdoOptionsReceiverModule) == address(0));
-
-        // it should set Pearlmit
-        assertEq(address(usdo.pearlmit()), address(pearlmit));
-
-        // it should set YieldBox
-        assertEq(address(usdo.yieldBox()), address(yieldBox));
 
         // it should set the name to 'USDO Stablecoin'
         assertEq(usdo.name(), "USDO Stablecoin");

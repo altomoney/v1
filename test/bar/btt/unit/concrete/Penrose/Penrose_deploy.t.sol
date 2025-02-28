@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // external
 import {IERC20} from "@boringcrypto/boring-solidity/contracts/ERC20.sol";
@@ -44,7 +44,6 @@ contract Penrose_deploy is BigBang_Unit_Shared {
             BigBangInitData(
                 address(penrose),
                 address(mainToken), //asset
-                mainTokenId,
                 ITapiocaOracle(address(rndAddr)),
                 ILeverageExecutor(address(rndAddr)),
                 0,
@@ -68,7 +67,6 @@ contract Penrose_deploy is BigBang_Unit_Shared {
             BigBangInitData(
                 address(penrose),
                 address(mainToken), //asset
-                mainTokenId,
                 ITapiocaOracle(address(rndAddr)),
                 ILeverageExecutor(address(rndAddr)),
                 0,

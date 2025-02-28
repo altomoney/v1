@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // External
 import {RebaseLibrary, Rebase} from "@boringcrypto/boring-solidity/contracts/libraries/BoringRebase.sol";
@@ -8,6 +8,7 @@ import {BoringERC20, IERC20} from "@boringcrypto/boring-solidity/contracts/libra
 // Tapioca
 import {SafeApprove} from "../../libraries/SafeApprove.sol";
 import {SGLLendingCommon} from "./SGLLendingCommon.sol";
+import {PauseType} from "tap-utils/interfaces/bar/IMarket.sol";
 
 /*
 
@@ -71,40 +72,34 @@ contract SGLLeverage is SGLLendingCommon {
         }
 
         // Let this fail first to save gas:
-        uint256 supplyShare = yieldBox.toShare(assetId, calldata_.supplyAmount, true);
-        if (supplyShare > 0) {
-            (memoryData.supplyShareToAmount,) =
-                yieldBox.withdraw(assetId, calldata_.from, address(leverageExecutor), 0, supplyShare);
+        if (calldata_.supplyAmount > 0) {
+            memoryData.supplyShareToAmount = withdraw(calldata_.supplyAmount, address(leverageExecutor), calldata_.from);
         }
+
+        _allowedBorrow(calldata_.from, calldata_.borrowAmount);
         (, uint256 borrowShare) = _borrow(calldata_.from, address(this), calldata_.borrowAmount);
 
         {
-            (memoryData.borrowShareToAmount,) =
-                yieldBox.withdraw(assetId, address(this), address(leverageExecutor), 0, borrowShare);
-
+            memoryData.borrowShareToAmount = redeem(borrowShare, address(leverageExecutor), address(this));
             updateExchangeRate();
             uint256 assetPartInCollateral = (memoryData.supplyShareToAmount + memoryData.borrowShareToAmount)
                 * exchangeRate / EXCHANGE_RATE_PRECISION;
-            _allowedBorrow(calldata_.from, yieldBox.toShare(collateralId, assetPartInCollateral, false));
+            _allowedBorrow(calldata_.from, convertToShares(assetPartInCollateral));
 
             amountOut = leverageExecutor.getCollateral(
                 from,
-                address(asset),
-                address(collateral),
+                address(_borrowableToken()),
+                collateral(),
                 memoryData.supplyShareToAmount + memoryData.borrowShareToAmount,
                 calldata_.data
             );
         }
 
         {
-            uint256 collateralShare = yieldBox.toShare(collateralId, amountOut, false);
+            uint256 collateralShare = deposit(amountOut, address(this));
             if (collateralShare == 0) revert CollateralShareNotValid();
 
-            address(collateral).safeApprove(address(yieldBox), type(uint256).max);
-            yieldBox.depositAsset(collateralId, address(this), address(this), 0, collateralShare);
-            address(collateral).safeApprove(address(yieldBox), 0);
-
-            _addCollateral(calldata_.from, calldata_.from, false, 0, collateralShare, false);
+            _addCollateral(calldata_.from, calldata_.from, 0, collateralShare, false);
         }
 
         if (amountOut == 0) revert AmountNotValid();
@@ -118,7 +113,7 @@ contract SGLLeverage is SGLLendingCommon {
 
     /// @notice Lever down: Sell collateral to repay debt; excess goes to YB
     /// @param from The user who sells
-    /// @param share Collateral YieldBox-shares to sell
+    /// @param share Collateral  to sell
     /// @param data LeverageExecutor data
     /// @return amountOut Actual asset amount received in the sale
     function sellCollateral(address from, uint256 share, bytes calldata data)
@@ -139,28 +134,21 @@ contract SGLLeverage is SGLLendingCommon {
             calldata_.data = data;
         }
 
-        _allowedBorrow(calldata_.from, calldata_.share);
-        _removeCollateral(calldata_.from, address(this), calldata_.share);
+        uint256 leverageAmount = super.redeem(calldata_.share, address(leverageExecutor), from);
 
-        (uint256 leverageAmount,) =
-            yieldBox.withdraw(collateralId, address(this), address(leverageExecutor), 0, calldata_.share);
-
-        amountOut = leverageExecutor.getAsset(from, address(collateral), address(asset), leverageAmount, calldata_.data);
-        uint256 shareOut = yieldBox.toShare(assetId, amountOut, false);
-
-        address(asset).safeApprove(address(yieldBox), type(uint256).max);
-        yieldBox.depositAsset(assetId, address(this), calldata_.from, 0, shareOut);
-        address(asset).safeApprove(address(yieldBox), 0);
+        amountOut =
+            leverageExecutor.getAsset(from, collateral(), address(_borrowableToken()), leverageAmount, calldata_.data);
+        uint256 shareOut = deposit(amountOut, calldata_.from);
 
         uint256 partOwed = userBorrowPart[calldata_.from];
         uint256 amountOwed = totalBorrow.toElastic(partOwed, true);
-        uint256 shareOwed = yieldBox.toShare(assetId, amountOwed, true);
+        uint256 shareOwed = previewWithdraw(amountOwed);
         if (shareOwed <= shareOut) {
-            _repay(calldata_.from, calldata_.from, false, partOwed, false);
+            _repay(calldata_.from, calldata_.from, partOwed, false);
         } else {
             //repay as much as we can
             uint256 partOut = totalBorrow.toBase(amountOut, false);
-            _repay(calldata_.from, calldata_.from, false, partOut, false);
+            _repay(calldata_.from, calldata_.from, partOut, false);
         }
         if (amountOut == 0) revert AmountNotValid();
     }

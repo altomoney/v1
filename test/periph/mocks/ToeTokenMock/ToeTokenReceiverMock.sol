@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // LZ
 import {OFTCore} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/OFTCore.sol";
 import {Origin} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/OApp.sol";
 
 // Tapioca
-import {BaseTapiocaOmnichainEngine, IPearlmit} from "tap-utils/tapiocaOmnichainEngine/BaseTapiocaOmnichainEngine.sol";
+import {BaseTapiocaOmnichainEngine} from "tap-utils/tapiocaOmnichainEngine/BaseTapiocaOmnichainEngine.sol";
 import {TapiocaOmnichainReceiver} from "tap-utils/tapiocaOmnichainEngine/TapiocaOmnichainReceiver.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 
@@ -31,9 +31,8 @@ contract ToeTokenReceiverMock is BaseTapiocaOmnichainEngine, TapiocaOmnichainRec
         address _endpoint,
         address _delegate,
         address _extExec,
-        IPearlmit _pearlmit,
         ICluster _cluster
-    ) BaseTapiocaOmnichainEngine(_name, _symbol, _endpoint, _delegate, _extExec, _pearlmit, _cluster) {}
+    ) BaseTapiocaOmnichainEngine(_name, _symbol, _endpoint, _delegate, _extExec, _cluster) {}
 
     // ********************* //
     // ***** RECEIVERS ***** //

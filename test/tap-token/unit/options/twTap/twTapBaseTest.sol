@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 /**
  * External
@@ -15,16 +15,10 @@ import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 /**
  * Tests
  */
-import {
-    UnitBaseTest,
-    TapiocaOptionLiquidityProvision,
-    YieldBox1155Mock,
-    Pearlmit,
-    IPearlmit,
-    TwTAP
-} from "../../UnitBaseTest.sol";
+import {UnitBaseTest, TwTAP, ITWLBase} from "../../UnitBaseTest.t.sol";
 import {ERC20Mock} from "tapioca-mocks/ERC20Mock.sol";
-import {TapTokenMock} from "test/tap-token/TapTokenMock.sol";
+import {TapTokenMock} from "../../../TapTokenMock.sol";
+import {ITWTAPv2} from "tap-token/interfaces/ITWTAPv2.sol";
 
 contract twTapBaseTest is UnitBaseTest {
     TapTokenMock public tapOFT;
@@ -57,18 +51,20 @@ contract twTapBaseTest is UnitBaseTest {
         usdcMock = new ERC20Mock("USDC", "USDC", 100e6, 6, adminAddr);
 
         tapOFT = createTapOftInstance(
-            EPOCH_DURATION,
-            ENDPOINT_A,
-            TAP_CONTRIBUTOR,
-            TAP_EARLY_SUPPORTERS,
-            TAP_SUPPORTERS,
-            TAP_LBP,
-            TAP_DAO,
-            TAP_AIRDROP,
-            EID_A,
-            adminAddr
+            TapOftInput(
+                EPOCH_DURATION,
+                ENDPOINT_A,
+                TAP_CONTRIBUTOR,
+                TAP_EARLY_SUPPORTERS,
+                TAP_SUPPORTERS,
+                TAP_LBP,
+                TAP_DAO,
+                TAP_AIRDROP,
+                EID_A,
+                adminAddr
+            )
         );
-        twTap = createTwTap(payable(tapOFT), IPearlmit(address(pearlmit)), adminAddr);
+        twTap = createTwTap(payable(tapOFT), adminAddr);
 
         /**
          * Set the contract
@@ -113,33 +109,30 @@ contract twTapBaseTest is UnitBaseTest {
         _;
     }
 
-    modifier participate(uint256 _amount, uint256 _duration) {
-        _participate(_amount, _duration);
+    modifier participate(uint256 _amount, uint8 _bucketId) {
+        _participate(_amount, _bucketId);
         _;
     }
 
-    function _participate(uint256 _amount, uint256 _duration) internal {
+    function _participate(uint256 _amount, uint8 _bucketId) internal {
         vm.startPrank(aliceAddr);
         tapOFT.freeMint(aliceAddr, _amount);
-        tapOFT.approve(address(pearlmit), _amount);
-        pearlmit.approve(20, address(tapOFT), 0, address(twTap), uint200(_amount), uint48(block.timestamp + 1));
-        twTap.participate(aliceAddr, _amount, _duration * twTap.EPOCH_DURATION(), 0);
+        IERC20(address(tapOFT)).approve(address(twTap), _amount);
+        twTap.participate(aliceAddr, _amount, _bucketId);
         vm.stopPrank();
     }
 
-    function _participate(address _to, uint256 _amount, uint256 _duration) internal {
+    function _participate(address _to, uint256 _amount, uint8 _bucketId) internal {
         vm.startPrank(_to);
         tapOFT.freeMint(_to, _amount);
-        tapOFT.approve(address(pearlmit), _amount);
-        pearlmit.approve(20, address(tapOFT), 0, address(twTap), uint200(_amount), uint48(block.timestamp + 1));
-        twTap.participate(_to, _amount, _duration * twTap.EPOCH_DURATION(), 0);
+        twTap.participate(_to, _amount, _bucketId);
         vm.stopPrank();
     }
 
-    function _boundValues(uint256 _lockAmount, uint256 _lockDuration) internal returns (uint256, uint256) {
+    function _boundValues(uint256 _lockAmount, uint8 _bucketId) internal returns (uint256, uint8) {
         _lockAmount = bound(_lockAmount, 1, type(uint88).max);
-        _lockDuration = bound(_lockDuration, MIN_LOCK_DURATION, MAX_LOCK_DURATION);
-        return (_lockAmount, _lockDuration);
+        _bucketId = uint8(bound(_bucketId, 0, 0)); // update with bucket length
+        return (_lockAmount, _bucketId);
     }
 
     function _toWeek(uint256 _timestamp) internal returns (uint256) {

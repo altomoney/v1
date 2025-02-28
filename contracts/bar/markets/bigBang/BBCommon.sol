@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // External
 import {RebaseLibrary, Rebase} from "@boringcrypto/boring-solidity/contracts/libraries/BoringRebase.sol";
@@ -32,7 +32,6 @@ contract BBCommon is BBStorage {
     // *** ERRORS *** //
     // ************** //
     error NotEnough();
-    error TransferFailed();
     error AccruePaused();
     error OracleCallFailed();
 
@@ -49,7 +48,7 @@ contract BBCommon is BBStorage {
         return IBigBangDebtRateHelper(debtRateHelper).getDebtRate(
             IBigBangDebtRateHelper.DebtRateCall({
                 isMainMarket: isMainMarket,
-                penrose: penrose,
+                penrose: _penrose,
                 elastic: totalBorrow.elastic,
                 debtRateAgainstEthMarket: debtRateAgainstEthMarket,
                 maxDebtRate: maxDebtRate,
@@ -61,11 +60,6 @@ contract BBCommon is BBStorage {
     // ************************ //
     // *** PUBLIC FUNCTIONS *** //
     // ************************ //
-    /// @notice Accrues the interest on the borrowed tokens and handles the accumulation of fees.
-    function accrue() external {
-        if (pauseOptions[PauseType.AddCollateral] || pauseOptions[PauseType.RemoveCollateral]) revert AccruePaused();
-        _accrue();
-    }
 
     function _accrueView() internal view override returns (Rebase memory _totalBorrow) {
         uint256 elapsedTime = block.timestamp - accrueInfo.lastAccrued;
@@ -87,7 +81,7 @@ contract BBCommon is BBStorage {
     function _accrue() internal override {
         // accrue ETH market first
         {
-            address ethMarket = penrose.bigBangEthMarket();
+            address ethMarket = _penrose.bigBangEthMarket();
             if (ethMarket != address(this) && ethMarket != address(0)) {
                 IBigBang(ethMarket).accrue();
             }
@@ -153,39 +147,5 @@ contract BBCommon is BBStorage {
             return (amount * fee) / FEE_PRECISION;
         }
         return 0;
-    }
-
-    /// @dev Helper function to move tokens.xc
-    /// @param from Account to debit tokens from, in `yieldBox`.
-    /// @param _tokenId The ERC-20 token asset ID in yieldBox.
-    /// @param share The amount in shares to add.
-    /// @param total Grand total amount to deduct from this contract's balance. Only applicable if `skim` is True.
-    /// Only used for accounting checks.
-    /// @param skim If True, only does a balance check on this contract.
-    /// False if tokens from msg.sender in `yieldBox` should be transferred.
-    function _addTokens(address from, uint256 _tokenId, uint256 share, uint256 total, bool skim) internal {
-        if (skim) {
-            require(share <= yieldBox.balanceOf(address(this), _tokenId) - total, "BB: too much");
-        } else {
-            // yieldBox.transfer(from, address(this), _tokenId, share);
-            bool isErr = pearlmit.transferFromERC1155(from, address(this), address(yieldBox), _tokenId, share);
-            if (isErr) {
-                revert TransferFailed();
-            }
-        }
-    }
-
-    /// @notice deposits an amount to YieldBox
-    /// @param token the IERC20 token to deposit
-    /// @param to the shares receiver
-    /// @param id the IERC20 YieldBox asset id
-    /// @param amount the amount to deposit
-    function _depositAmountToYb(IERC20 token, address to, uint256 id, uint256 amount)
-        internal
-        returns (uint256 share)
-    {
-        address(token).safeApprove(address(yieldBox), amount);
-        (, share) = yieldBox.depositAsset(id, address(this), to, amount, 0);
-        address(token).safeApprove(address(yieldBox), 0);
     }
 }

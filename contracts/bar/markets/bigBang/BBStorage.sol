@@ -1,21 +1,18 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // External
-import {RebaseLibrary, Rebase} from "@boringcrypto/boring-solidity/contracts/libraries/BoringRebase.sol";
-import {BoringERC20} from "@boringcrypto/boring-solidity/contracts/libraries/BoringERC20.sol";
+import {Rebase} from "@boringcrypto/boring-solidity/contracts/libraries/BoringRebase.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import {IERC20} from "@boringcrypto/boring-solidity/contracts/ERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 // Tapioca
 import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
 import {IBigBang} from "tap-utils/interfaces/bar/IBigBang.sol";
-import {MarketERC20, Market} from "../Market.sol";
+import {Market} from "../Market.sol";
+import {MarketERC4626} from "../MarketERC4626.sol";
 
 // solhint-disable max-line-length
-
 /*
 
 ████████╗ █████╗ ██████╗ ██╗ ██████╗  ██████╗ █████╗ 
@@ -27,11 +24,7 @@ import {MarketERC20, Market} from "../Market.sol";
    
 */
 
-contract BBStorage is Ownable, Market, ReentrancyGuard {
-    using RebaseLibrary for Rebase;
-    using BoringERC20 for IERC20;
-    using SafeCast for uint256;
-
+contract BBStorage is Ownable, Market {
     // ************ //
     // *** VARS *** //
     // ************ //
@@ -87,7 +80,7 @@ contract BBStorage is Ownable, Market, ReentrancyGuard {
     /// @notice event emitted when debt rate helper is updated
     event DebtRateHelperUpdated(address indexed oldVal, address indexed newVal);
 
-    constructor() MarketERC20("Tapioca BigBang") {}
+    constructor() MarketERC4626("Tapioca BigBang", "BB") {}
 
     function _accrue() internal virtual override {}
 

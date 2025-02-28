@@ -1,0 +1,19 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.22;
+
+import {ExtExProcedure} from "../../../procedures/ExtExProcedure.sol";
+import {ExtExReport} from "../../../interfaces/ITapiocaReport.sol";
+
+/// @title TapiocaExtExBatch
+/// @dev Batches performs 1-tx deployments via constructor deployment pattern and contains on-chain reports of deployed contracts
+contract TapiocaExtExBatch is ExtExProcedure {
+    ExtExReport internal _ExtExReport;
+
+    constructor(address owner, address wrappedNativeToken, address cluster, address swapper) {
+        _ExtExReport = _deployExtEx(owner, wrappedNativeToken, cluster, swapper);
+    }
+
+    function getExtExReport() public view returns (ExtExReport memory) {
+        return _ExtExReport;
+    }
+}

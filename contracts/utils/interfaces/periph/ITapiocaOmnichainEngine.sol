@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // LZ
 import {
@@ -141,35 +141,6 @@ struct ERC721PermitApprovalMsg {
     uint8 v;
     bytes32 r;
     bytes32 s;
-}
-
-/**
- * @notice Encodes the message for the ybPermitAll() operation.
- */
-struct YieldBoxApproveAllMsg {
-    address target;
-    address owner;
-    address spender;
-    uint256 deadline;
-    uint8 v;
-    bytes32 r;
-    bytes32 s;
-    bool permit;
-}
-
-/**
- * @notice Encodes the message for the ybPermitAll() operation.
- */
-struct YieldBoxApproveAssetMsg {
-    address target;
-    address owner;
-    address spender;
-    uint256 assetId;
-    uint256 deadline;
-    uint8 v;
-    bytes32 r;
-    bytes32 s;
-    bool permit;
 }
 
 /**

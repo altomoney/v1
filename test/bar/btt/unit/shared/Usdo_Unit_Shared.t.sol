@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // LZ
 import {
@@ -19,8 +19,6 @@ import {
     MarketRemoveAssetMsg,
     IRemoveAndRepay,
     ILendOrRepayParams,
-    YieldBoxApproveAllMsg,
-    YieldBoxApproveAssetMsg,
     MarketPermitActionMsg,
     IUsdo
 } from "tap-utils/interfaces/oft/IUsdo.sol";
@@ -28,20 +26,13 @@ import {TapiocaOmnichainExtExec} from "tap-utils/tapiocaOmnichainEngine/extensio
 import {UsdoHelper} from "tapioca-bar/usdo/extensions/UsdoHelper.sol";
 import {Usdo} from "tapioca-bar/usdo/Usdo.sol";
 
-import {IOptionsExitData} from "tap-utils/interfaces/tap-token/ITapiocaOptionBroker.sol";
 import {ICommonExternalContracts} from "tap-utils/interfaces/common/ICommonData.sol";
 import {
-    ITapiocaOptionLiquidityProvision,
+    MagnetarWithdrawData,
+    IExerciseOptionsData,
     IOptionsLockData,
     IOptionsUnlockData
-} from "tap-utils/interfaces/tap-token/ITapiocaOptionLiquidityProvision.sol";
-import {
-    ITapiocaOptionBroker,
-    IExerciseOptionsData,
-    IOptionsParticipateData
-} from "tap-utils/interfaces/tap-token/ITapiocaOptionBroker.sol";
-import {MagnetarWithdrawData} from "tap-utils/interfaces/periph/IMagnetar.sol";
-import {IPearlmit} from "tap-utils/pearlmit/Pearlmit.sol";
+} from "tap-utils/interfaces/periph/IMagnetar.sol";
 
 import {
     TapiocaOmnichainEngineHelper,
@@ -99,10 +90,8 @@ abstract contract Usdo_Unit_Shared is Base_Test {
         UsdoInitStruct memory usdoInitStruct = UsdoInitStruct({
             endpoint: address(endpoints[aEid]),
             delegate: address(this),
-            yieldBox: address(yieldBox),
             cluster: address(cluster),
-            extExec: address(extExec),
-            pearlmit: IPearlmit(address(pearlmit))
+            extExec: address(extExec)
         });
 
         UsdoModulesInitStruct memory usdoModulesInitStruct = UsdoModulesInitStruct({
@@ -155,21 +144,14 @@ abstract contract Usdo_Unit_Shared is Base_Test {
                 lockData: IOptionsLockData({
                     lock: data.lock,
                     target: data.lockDataTarget,
-                    tAsset: address(0),
-                    lockDuration: 0,
-                    amount: 0,
-                    fraction: 0,
-                    minDiscountOut: 0
-                }),
-                participateData: IOptionsParticipateData({
-                    participate: data.participate,
-                    target: data.participateDataTarget,
-                    tOLPTokenId: 0
+                    to: address(this),
+                    sglMarket: address(0),
+                    usdoAmount: 0,
+                    bucketId: 0
                 })
             }),
             withdrawParams: MagnetarWithdrawData({
-                yieldBox: address(0),
-                assetId: 0,
+                asset: address(0),
                 unwrap: false,
                 amount: 0,
                 withdraw: false,
@@ -217,11 +199,9 @@ abstract contract Usdo_Unit_Shared is Base_Test {
                 repayAmount: _repayAmountSD,
                 removeCollateralFromBB: data.removeCollateralAmount > 0,
                 collateralAmount: _removeCollateralAmountSD,
-                exitData: IOptionsExitData({exit: false, target: address(0), oTAPTokenID: 0}),
-                unlockData: IOptionsUnlockData({unlock: false, target: address(0), tokenId: 0}),
+                unlockData: IOptionsUnlockData({unlock: false, target: address(0), bucketId: 0, to: address(this), amount: 0}),
                 assetWithdrawData: MagnetarWithdrawData({
-                    yieldBox: address(0),
-                    assetId: 0,
+                    asset: address(0),
                     unwrap: false,
                     amount: 0,
                     withdraw: false,
@@ -229,8 +209,7 @@ abstract contract Usdo_Unit_Shared is Base_Test {
                     extractFromSender: false
                 }),
                 collateralWithdrawData: MagnetarWithdrawData({
-                    yieldBox: address(0),
-                    assetId: 0,
+                    asset: address(0),
                     unwrap: false,
                     amount: 0,
                     withdraw: false,
@@ -279,49 +258,6 @@ abstract contract Usdo_Unit_Shared is Base_Test {
         );
 
         return keccak256(abi.encodePacked("\x19\x01", _getYieldBoxDomainSeparator(), structHash_));
-    }
-
-    function __getYieldBoxPermitAssetData(
-        ERC20PermitStruct memory _permit,
-        address _target,
-        bool _isPermit,
-        bytes32 _digest,
-        uint256 _pkSigner
-    ) internal pure returns (YieldBoxApproveAssetMsg memory permitApproval_) {
-        (uint8 v_, bytes32 r_, bytes32 s_) = vm.sign(_pkSigner, _digest);
-
-        permitApproval_ = YieldBoxApproveAssetMsg({
-            target: _target,
-            owner: _permit.owner,
-            spender: _permit.spender,
-            assetId: _permit.value,
-            deadline: _permit.deadline,
-            v: v_,
-            r: r_,
-            s: s_,
-            permit: _isPermit
-        });
-    }
-
-    function __getYieldBoxPermitAllData(
-        ERC20PermitStruct memory _permit,
-        address _target,
-        bool _isPermit,
-        bytes32 _digest,
-        uint256 _pkSigner
-    ) internal pure returns (YieldBoxApproveAllMsg memory permitApproval_) {
-        (uint8 v_, bytes32 r_, bytes32 s_) = vm.sign(_pkSigner, _digest);
-
-        permitApproval_ = YieldBoxApproveAllMsg({
-            target: _target,
-            owner: _permit.owner,
-            spender: _permit.spender,
-            deadline: _permit.deadline,
-            v: v_,
-            r: r_,
-            s: s_,
-            permit: _isPermit
-        });
     }
 
     function _getMarketPermitTypedDataHash(
@@ -487,12 +423,11 @@ abstract contract Usdo_Unit_Shared is Base_Test {
     // *** PRIVATE *** //
     // *************** //
     function _getYieldBoxDomainSeparator() private view returns (bytes32) {
-        bytes32 typeHash =
-            keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
+        // TODO Check the verifyingContract
+        bytes32 typeHash = keccak256("EIP712Domain(string name,string version,uint256 chainId)");
         bytes32 hashedName = keccak256(bytes("YieldBox"));
         bytes32 hashedVersion = keccak256(bytes("1"));
-        bytes32 domainSeparator =
-            keccak256(abi.encode(typeHash, hashedName, hashedVersion, block.chainid, address(yieldBox)));
+        bytes32 domainSeparator = keccak256(abi.encode(typeHash, hashedName, hashedVersion, block.chainid));
         return domainSeparator;
     }
 }

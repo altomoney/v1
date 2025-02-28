@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 /*
 
@@ -16,8 +16,6 @@ interface ILeverageExecutor {
     function swapper() external view returns (address);
 
     function cluster() external view returns (address);
-
-    function yieldBox() external view returns (address);
 
     function getCollateral(
         address refundDustAddress,

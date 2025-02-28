@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // External
 import {AggregatorV3Interface} from "src/tap-utils/interfaces/external/chainlink/IAggregatorV3Interface.sol";

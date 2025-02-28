@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // External
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
@@ -7,7 +7,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 // Tapioca
 import {IPausable} from "src/tap-utils/interfaces/periph/IPausable.sol";
 import {ICluster} from "src/tap-utils/interfaces/periph/ICluster.sol";
-import {IMarket} from "src/tap-utils/interfaces/bar/IMarket.sol";
+import {IMarket, PauseType} from "src/tap-utils/interfaces/bar/IMarket.sol";
 
 /*
 
@@ -22,19 +22,6 @@ import {IMarket} from "src/tap-utils/interfaces/bar/IMarket.sol";
 
 contract Pauser is Ownable {
     ICluster public cluster;
-
-    //Markets pause type
-    enum MarketPauseType {
-        Borrow,
-        Repay,
-        AddCollateral,
-        RemoveCollateral,
-        Liquidation,
-        LeverageBuy,
-        LeverageSell,
-        AddAsset,
-        RemoveAsset
-    }
 
     enum SpecialStrategyType {
         Deposit,
@@ -149,15 +136,15 @@ contract Pauser is Ownable {
         if (!cluster.isWhitelisted(0, address(this))) revert Pauser_NotWhitelisted(address(this));
         if (!cluster.isWhitelisted(0, address(_singularity))) revert Pauser_NotWhitelisted(address(_singularity));
 
-        _singularity.updatePause(uint256(MarketPauseType.Borrow), _pause);
-        _singularity.updatePause(uint256(MarketPauseType.Repay), _pause);
-        _singularity.updatePause(uint256(MarketPauseType.AddCollateral), _pause);
-        _singularity.updatePause(uint256(MarketPauseType.RemoveCollateral), _pause);
-        _singularity.updatePause(uint256(MarketPauseType.Liquidation), _pause);
-        _singularity.updatePause(uint256(MarketPauseType.LeverageBuy), _pause);
-        _singularity.updatePause(uint256(MarketPauseType.LeverageSell), _pause);
-        _singularity.updatePause(uint256(MarketPauseType.AddAsset), _pause);
-        _singularity.updatePause(uint256(MarketPauseType.RemoveAsset), _pause);
+        _singularity.updatePause(PauseType.Borrow, _pause);
+        _singularity.updatePause(PauseType.Repay, _pause);
+        _singularity.updatePause(PauseType.AddCollateral, _pause);
+        _singularity.updatePause(PauseType.RemoveCollateral, _pause);
+        _singularity.updatePause(PauseType.Liquidation, _pause);
+        _singularity.updatePause(PauseType.LeverageBuy, _pause);
+        _singularity.updatePause(PauseType.LeverageSell, _pause);
+        _singularity.updatePause(PauseType.AddAsset, _pause);
+        _singularity.updatePause(PauseType.RemoveAsset, _pause);
         emit PauseToggledFor(address(_singularity), _pause);
     }
 

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 import {BigBang} from "tapioca-bar/markets/bigBang/BigBang.sol";
 import {Penrose} from "tapioca-bar/Penrose.sol";
@@ -52,7 +52,6 @@ contract BigBangLauncher is IBigBangLauncher {
         BigBang._InitMemoryData memory initData = BigBang._InitMemoryData(
             IPenrose(address(PENROSE)),
             IERC20(riskParams.collateral),
-            riskParams.collateralId,
             ITapiocaOracle(riskParams.oracle),
             riskParams.exchangeRatePrecision,
             riskParams.collateralizationRate,

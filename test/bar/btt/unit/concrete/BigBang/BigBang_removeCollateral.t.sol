@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // Tapioca
 import {Module} from "tap-utils/interfaces/bar/IMarket.sol";
 import {BigBang} from "tapioca-bar/markets/bigBang/BigBang.sol";
 import {Market} from "tapioca-bar/markets/Market.sol";
 
-import {IPearlmit} from "tap-utils/pearlmit/Pearlmit.sol";
-
 // tests
 import {BigBang_Unit_Shared} from "../../shared/BigBang_Unit_Shared.t.sol";
 
 contract BigBang_removeCollateral is BigBang_Unit_Shared {
+    error InsufficientAllowance();
+
     function test_removeCollateral_WhenContractIsPaused(uint256 collateralAmount)
         external
         whenContractIsPaused
@@ -78,14 +78,14 @@ contract BigBang_removeCollateral is BigBang_Unit_Shared {
         givenBorrowCapIsNotReachedYet
     {
         // **** Add collateral ****
-        _addCollateral(addAmount, mainBB, address(this), address(this), address(this), address(this), false);
+        _addCollateral(addAmount, mainBB, address(this), address(this), address(this));
 
         // **** Borrow ****
         borrowAmount = _boundBorrowAmount(borrowAmount, addAmount);
         _borrow(borrowAmount, mainBB, address(this), address(this), address(this));
 
         // **** Remove collateral ****
-        uint256 removeShare = mainBB._userCollateralShare(address(this));
+        uint256 removeShare = mainBB.balanceOf(address(this));
         (Module[] memory modules, bytes[] memory calls) =
             _getRemoveCollateralData(removeShare, address(this), address(this));
 
@@ -147,18 +147,18 @@ contract BigBang_removeCollateral is BigBang_Unit_Shared {
         givenBorrowCapIsNotReachedYet
     {
         // **** Add collateral ****
-        _addCollateral(addAmount, mainBB, address(this), address(this), address(this), address(this), false);
+        _addCollateral(addAmount, mainBB, address(this), address(this), address(this));
 
         // **** Remove collateral ****
-        uint256 removeShare = mainBB._userCollateralShare(address(this));
+        uint256 removeShare = mainBB.balanceOf(address(this));
         (Module[] memory modules, bytes[] memory calls) =
             _getRemoveCollateralData(removeShare, address(this), address(this));
 
         _resetPrank(userA);
-        vm.expectRevert("Market: not approved");
+        vm.expectRevert();
         mainBB.execute(modules, calls, true);
 
-        // it should revert with 'Market: not approved'
+        // it should revert with 'InsufficientAllowance()' from ERC4626, and 2 empty reverts due execute
     }
 
     function test_whenItsCalledFromAnotherUser_whenUserHasBorrowed_whenUserHasBeenGivenAllowance_RevertWhen_NotSolventPosition(
@@ -173,17 +173,20 @@ contract BigBang_removeCollateral is BigBang_Unit_Shared {
         givenBorrowCapIsNotReachedYet
     {
         // add collateral
-        _addCollateral(addAmount, mainBB, address(this), address(this), address(this), address(this), false);
+        _addCollateral(addAmount, mainBB, address(this), address(this), address(this));
 
         // borrow
         borrowAmount = _boundBorrowAmount(borrowAmount, addAmount);
         _borrow(borrowAmount, mainBB, address(this), address(this), address(this));
 
-        uint256 removeShare = mainBB._userCollateralShare(address(this));
+        uint256 removeShare = mainBB.balanceOf(address(this));
         (Module[] memory modules, bytes[] memory calls) =
             _getRemoveCollateralData(removeShare, address(this), address(this));
 
-        mainBB.approveBorrow(userA, type(uint256).max);
+        _resetPrank(address(this));
+
+        _approveViaERC20(address(mainBB), address(this), address(userA), removeShare);
+
         _resetPrank(userA);
         vm.expectRevert("Market: insolvent");
         mainBB.execute(modules, calls, true);
@@ -204,21 +207,15 @@ contract BigBang_removeCollateral is BigBang_Unit_Shared {
         borrowAmount = _boundBorrowAmount(borrowAmount, addAmount);
 
         // **** Main BB market ****
+        _resetPrank(address(this));
         mainBB.approveBorrow(userA, type(uint256).max);
+        _approveViaERC20(address(mainBB), address(this), address(userA), type(uint256).max);
         _removeCollateral(addAmount, removeShare, borrowAmount, mainBB, userA, address(this), address(this));
 
         // **** Secondary BB market ****
-        _approveViaPearlmit(
-            TOKEN_TYPE_ERC1155,
-            address(yieldBox),
-            IPearlmit(address(pearlmit)),
-            address(this),
-            address(secondaryBB),
-            type(uint200).max,
-            uint48(block.timestamp),
-            secondaryBB._collateralId()
-        );
+        _resetPrank(address(this));
         secondaryBB.approveBorrow(userA, type(uint256).max);
+        _approveViaERC20(address(secondaryBB), address(this), address(userA), type(uint256).max);
         _removeCollateral(addAmount, removeShare, borrowAmount, secondaryBB, userA, address(this), address(this));
     }
 
@@ -234,21 +231,13 @@ contract BigBang_removeCollateral is BigBang_Unit_Shared {
         givenBorrowCapIsNotReachedYet
     {
         // **** Main BB market ****
-        mainBB.approveBorrow(userA, type(uint256).max);
+        _resetPrank(address(this));
+        _approveViaERC20(address(mainBB), address(address(this)), address(userA), type(uint256).max);
         _removeCollateral(addAmount, removeShare, 0, mainBB, userA, address(this), address(this));
 
         // **** Secondary BB market ****
-        _approveViaPearlmit(
-            TOKEN_TYPE_ERC1155,
-            address(yieldBox),
-            IPearlmit(address(pearlmit)),
-            address(this),
-            address(secondaryBB),
-            type(uint200).max,
-            uint48(block.timestamp),
-            secondaryBB._collateralId()
-        );
-        secondaryBB.approveBorrow(userA, type(uint256).max);
+        _resetPrank(address(this));
+        _approveViaERC20(address(secondaryBB), address(address(this)), address(userA), type(uint256).max);
         _removeCollateral(addAmount, removeShare, 0, secondaryBB, userA, address(this), address(this));
     }
 }

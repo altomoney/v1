@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // external
 import {IERC20} from "@boringcrypto/boring-solidity/contracts/libraries/BoringERC20.sol";
@@ -9,7 +9,7 @@ import {BigBang} from "tapioca-bar/markets/bigBang/BigBang.sol";
 
 import {ILeverageExecutor} from "tap-utils/interfaces/bar/ILeverageExecutor.sol";
 import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
-
+import {IMarket} from "tap-utils/interfaces/bar/IMarket.sol";
 // tests
 import {BigBang_Unit_Shared} from "../../shared/BigBang_Unit_Shared.t.sol";
 
@@ -18,13 +18,9 @@ contract BigBang_constructor is BigBang_Unit_Shared {
         // it should have asset as Usdo
         assertEq(address(mainBB._asset()), address(usdo));
         // it should have collateral as the main token
-        assertEq(address(mainBB._collateral()), address(mainToken));
+        assertEq(address(mainBB.collateral()), address(mainToken));
         // it should have oracle as shared one
         assertEq(address(mainBB._oracle()), address(oracle));
-        // it should have assetId as the Usdo id registered in YieldBox
-        assertEq(mainBB._assetId(), usdoId);
-        // it should have collateralId as the main token id registered in YieldBox
-        assertEq(mainBB._collateralId(), mainTokenId);
         // it should have protocolFee as the default one of 10000
         assertEq(mainBB._protocolFee(), PROTOCOL_FEE);
         // it should have collateralizationRate as the default one of 75000
@@ -80,18 +76,18 @@ contract BigBang_constructor is BigBang_Unit_Shared {
         // CR
         initMemoryData._oracle = ITapiocaOracle(address(oracle));
         initMemoryData._collateralizationRate = FEE_PRECISION + 1;
-        vm.expectRevert(BigBang.NotValid.selector);
+        vm.expectRevert(IMarket.NotValid.selector);
         penrose.registerBigBang(address(bbMc), abi.encode(initModulesData, initDebtData, initMemoryData), true);
 
         // LCR
         initMemoryData._collateralizationRate = COLLATERALIZATION_RATE;
         initMemoryData._liquidationCollateralizationRate = FEE_PRECISION + 1;
-        vm.expectRevert(BigBang.NotValid.selector);
+        vm.expectRevert(IMarket.NotValid.selector);
         penrose.registerBigBang(address(bbMc), abi.encode(initModulesData, initDebtData, initMemoryData), true);
 
         // LCR < CR
         initMemoryData._liquidationCollateralizationRate = COLLATERALIZATION_RATE - 1;
-        vm.expectRevert(BigBang.NotValid.selector);
+        vm.expectRevert(IMarket.NotValid.selector);
         penrose.registerBigBang(address(bbMc), abi.encode(initModulesData, initDebtData, initMemoryData), true);
 
         // Debt rate > max
@@ -120,7 +116,6 @@ contract BigBang_constructor is BigBang_Unit_Shared {
             BigBangInitData(
                 address(penrose),
                 address(randomCollateral),
-                randomCollateralId,
                 ITapiocaOracle(address(oracle)),
                 ILeverageExecutor(makeAddr("rndAddress")),
                 VALUE_ZERO,

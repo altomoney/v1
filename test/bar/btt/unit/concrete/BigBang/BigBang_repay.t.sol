@@ -1,12 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // Tapioca
 import {Module} from "tap-utils/interfaces/bar/IMarket.sol";
 import {BigBang} from "tapioca-bar/markets/bigBang/BigBang.sol";
 import {Market} from "tapioca-bar/markets/Market.sol";
-
-import {IPearlmit} from "tap-utils/pearlmit/Pearlmit.sol";
 
 // tests
 import {BigBang_Unit_Shared} from "../../shared/BigBang_Unit_Shared.t.sol";
@@ -66,18 +64,9 @@ contract BigBang_repay is BigBang_Unit_Shared {
         whenAssetOracleRateIsBelowMin
         whenCollateralAmountIsValid(collateralAmount)
         givenBorrowCapIsNotReachedYet
-        whenApprovedViaPearlmit(
-            TOKEN_TYPE_ERC1155,
-            address(yieldBox),
-            mainBB._assetId(),
-            address(this),
-            address(mainBB),
-            type(uint200).max,
-            uint48(block.timestamp)
-        )
     {
         // **** Add collateral ****
-        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this), address(this), false);
+        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this));
 
         // **** Borrow ****
         borrowAmount = _boundBorrowAmount(borrowAmount, collateralAmount);
@@ -88,6 +77,8 @@ contract BigBang_repay is BigBang_Unit_Shared {
         (Module[] memory modules, bytes[] memory calls) = _getRepayData(repayPart, address(this), address(this));
 
         oracle.setSuccess(false);
+
+        usdo.approve(address(mainBB), type(uint256).max);
 
         uint256 userBorrowPartBefore = mainBB._userBorrowPart(address(this));
         // it should use the cached rates
@@ -109,18 +100,9 @@ contract BigBang_repay is BigBang_Unit_Shared {
         whenAssetOracleRateIsBelowMin
         whenCollateralAmountIsValid(collateralAmount)
         givenBorrowCapIsNotReachedYet
-        whenApprovedViaPearlmit(
-            TOKEN_TYPE_ERC1155,
-            address(yieldBox),
-            mainBB._assetId(),
-            address(this),
-            address(mainBB),
-            type(uint200).max,
-            uint48(block.timestamp)
-        )
     {
         // **** Add collateral ****
-        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this), address(this), false);
+        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this));
 
         // **** Borrow ****
         borrowAmount = _boundBorrowAmount(borrowAmount, collateralAmount);
@@ -176,7 +158,7 @@ contract BigBang_repay is BigBang_Unit_Shared {
         givenBorrowCapIsNotReachedYet
     {
         // **** Add collateral ****
-        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this), address(this), false);
+        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this));
 
         // **** Borrow ****
         borrowAmount = _boundBorrowAmount(borrowAmount, collateralAmount);
@@ -185,8 +167,10 @@ contract BigBang_repay is BigBang_Unit_Shared {
         // it should revert with 'Market: not approved'
         repayPart = _boundRepayAmount(repayPart, mainBB);
         (Module[] memory modules, bytes[] memory calls) = _getRepayData(repayPart, address(this), address(this));
+        _resetPrank(address(this));
+        mainBB.approveBorrow(userA, repayPart);
         _resetPrank(userA);
-        vm.expectRevert("Market: not approved");
+        vm.expectRevert("BoringERC20: TransferFrom failed");
         mainBB.execute(modules, calls, true);
     }
 
@@ -207,16 +191,6 @@ contract BigBang_repay is BigBang_Unit_Shared {
         _repay(collateralAmount, borrowAmount, repayPart, mainBB, userA, address(this), address(this));
 
         // **** Secondary BB ****
-        _approveViaPearlmit(
-            TOKEN_TYPE_ERC1155,
-            address(yieldBox),
-            IPearlmit(address(pearlmit)),
-            address(this),
-            address(secondaryBB),
-            type(uint200).max,
-            uint48(block.timestamp),
-            secondaryBB._assetId()
-        );
         secondaryBB.approve(userA, type(uint256).max);
         _repay(collateralAmount, borrowAmount, repayPart, secondaryBB, userA, address(this), address(this));
     }

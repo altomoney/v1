@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 import {LZSendParam} from "tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
 import {MagnetarTestHelper, MagnetarSetupData, TestBigBangData, TestSingularityData} from "./MagnetarTestHelper.t.sol";
@@ -10,38 +10,34 @@ import {
     MagnetarWithdrawData,
     DepositRepayAndRemoveCollateralFromMarketData,
     DepositAddCollateralAndBorrowFromMarketData,
-    MintFromBBAndLendOnSGLData
+    MintFromBBAndLendOnSGLData,
+    IExerciseOptionsData,
+    IOptionsLockData,
+    IOptionsUnlockData
 } from "tap-utils/interfaces/periph/IMagnetar.sol";
 
 import {ERC20PermitStruct} from "tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
 import {MagnetarMintModule} from "tapioca-periph/Magnetar/modules/MagnetarMintModule.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 
-import {IOptionsLockData} from "tap-utils/interfaces/tap-token/ITapiocaOptionLiquidityProvision.sol";
 import {ICommonExternalContracts, IDepositData} from "tap-utils/interfaces/common/ICommonData.sol";
-import {IOptionsParticipateData} from "tap-utils/interfaces/tap-token/ITapiocaOptionBroker.sol";
-import {IPearlmit} from "tap-utils/interfaces/periph/IPearlmit.sol";
+
 import {IPermit} from "tap-utils/interfaces/common/IPermit.sol";
 import {IMintData} from "tap-utils/interfaces/oft/IUsdo.sol";
 
-import {TapiocaOptionsLiquidityProvisionMock} from "../../mocks/TapiocaOptionsLiquidityProvisionMock.sol";
-import {TapiocaOptionsBrokerMock} from "../../mocks/TapiocaOptionsBrokerMock.sol";
 import {TapOftMock} from "../../mocks/TapOftMock.sol";
 import {ERC721Mock} from "../../mocks/ERC721Mock.sol";
 import {TOFTMock} from "../../mocks/TOFTMock.sol";
-
-import {ERC20WithoutStrategy} from "yieldbox/strategies/ERC20WithoutStrategy.sol";
+import {TapiocaOptionBroker} from "tap-token/options/TapiocaOptionBroker.sol";
 
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
 
-contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver {
-    TapiocaOptionsLiquidityProvisionMock public tOLPMock;
-    TapiocaOptionsBrokerMock public tOB;
+// @review-test Fix the tests in this contract. Failing in the setUp.
+abstract contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver {
+    TapiocaOptionBroker public tOB;
     TapOftMock tapOft;
     TOFTMock tSgl;
-
-    uint256 public sglAssetId;
 
     // -----------------------
     //
@@ -51,17 +47,9 @@ contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver {
     function setUp() public override {
         createCommonSetup();
 
-        ERC20WithoutStrategy sglStrategy = createYieldBoxEmptyStrategy(address(yieldBox), address(sgl));
-        sglAssetId = registerYieldBoxAsset(address(yieldBox), address(sgl), address(sglStrategy));
-
-        tOLPMock = new TapiocaOptionsLiquidityProvisionMock(sglAssetId, address(yieldBox), IPearlmit(address(pearlmit)));
-
         tapOft = new TapOftMock();
         ERC721Mock oTAP = new ERC721Mock();
-        tOB = new TapiocaOptionsBrokerMock(address(oTAP), address(tapOft), IPearlmit(address(pearlmit)));
-        tOB.setTOLP(address(tOLPMock));
 
-        clusterA.updateContract(0, address(tOLPMock), true);
         clusterA.updateContract(0, address(tOB), true);
         clusterA.updateContract(0, address(tapOft), true);
     }
@@ -88,14 +76,12 @@ contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver {
             depositData: IDepositData({deposit: false, amount: depositAmount}),
             lockData: IOptionsLockData({
                 lock: false,
+                bucketId: 0,
                 target: address(0),
-                tAsset: address(0),
-                lockDuration: 0,
-                amount: 0,
-                fraction: 0,
-                minDiscountOut: 0
+                to: address(this),
+                sglMarket: address(0),
+                usdoAmount: 0
             }),
-            participateData: IOptionsParticipateData({participate: false, target: address(0), tOLPTokenId: 0}),
             externalContracts: ICommonExternalContracts({
                 magnetar: _magnetar,
                 singularity: _singularity,
@@ -123,7 +109,7 @@ contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver {
             address(this), 0, 0, 0, randomAddr, address(sgl), address(bb), address(marketHelper)
         );
         bytes memory mintFromBBAndLendOnSGLData =
-            abi.encodeWithSelector(MagnetarMintModule.mintBBLendSGLLockTOLP.selector, _params);
+            abi.encodeWithSelector(MagnetarMintModule.mintBBAndLock.selector, _params);
 
         calls[0] = MagnetarCall({
             id: uint8(MagnetarAction.MintModule),
@@ -136,7 +122,7 @@ contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver {
 
         _params.externalContracts.magnetar = address(magnetarA);
         _params.externalContracts.singularity = randomAddr;
-        mintFromBBAndLendOnSGLData = abi.encodeWithSelector(MagnetarMintModule.mintBBLendSGLLockTOLP.selector, _params);
+        mintFromBBAndLendOnSGLData = abi.encodeWithSelector(MagnetarMintModule.mintBBAndLock.selector, _params);
 
         calls[0] = MagnetarCall({
             id: uint8(MagnetarAction.MintModule),
@@ -149,7 +135,7 @@ contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver {
 
         _params.externalContracts.singularity = address(magnetarA);
         _params.externalContracts.bigBang = randomAddr;
-        mintFromBBAndLendOnSGLData = abi.encodeWithSelector(MagnetarMintModule.mintBBLendSGLLockTOLP.selector, _params);
+        mintFromBBAndLendOnSGLData = abi.encodeWithSelector(MagnetarMintModule.mintBBAndLock.selector, _params);
 
         calls[0] = MagnetarCall({
             id: uint8(MagnetarAction.MintModule),
@@ -162,7 +148,7 @@ contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver {
 
         _params.externalContracts.bigBang = address(magnetarA);
         _params.externalContracts.marketHelper = randomAddr;
-        mintFromBBAndLendOnSGLData = abi.encodeWithSelector(MagnetarMintModule.mintBBLendSGLLockTOLP.selector, _params);
+        mintFromBBAndLendOnSGLData = abi.encodeWithSelector(MagnetarMintModule.mintBBAndLock.selector, _params);
 
         calls[0] = MagnetarCall({
             id: uint8(MagnetarAction.MintModule),
@@ -175,7 +161,7 @@ contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver {
 
         _params.externalContracts.bigBang = address(magnetarA);
         _params.externalContracts.marketHelper = randomAddr;
-        mintFromBBAndLendOnSGLData = abi.encodeWithSelector(MagnetarMintModule.mintBBLendSGLLockTOLP.selector, _params);
+        mintFromBBAndLendOnSGLData = abi.encodeWithSelector(MagnetarMintModule.mintBBAndLock.selector, _params);
 
         calls[0] = MagnetarCall({
             id: uint8(MagnetarAction.MintModule),
@@ -188,7 +174,7 @@ contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver {
 
         _params.externalContracts.marketHelper = address(magnetarA);
         _params.lockData.target = randomAddr;
-        mintFromBBAndLendOnSGLData = abi.encodeWithSelector(MagnetarMintModule.mintBBLendSGLLockTOLP.selector, _params);
+        mintFromBBAndLendOnSGLData = abi.encodeWithSelector(MagnetarMintModule.mintBBAndLock.selector, _params);
 
         calls[0] = MagnetarCall({
             id: uint8(MagnetarAction.MintModule),
@@ -200,8 +186,7 @@ contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver {
         magnetarA.burst{value: 0}(calls);
 
         _params.lockData.target = address(magnetarA);
-        _params.participateData.target = randomAddr;
-        mintFromBBAndLendOnSGLData = abi.encodeWithSelector(MagnetarMintModule.mintBBLendSGLLockTOLP.selector, _params);
+        mintFromBBAndLendOnSGLData = abi.encodeWithSelector(MagnetarMintModule.mintBBAndLock.selector, _params);
 
         calls[0] = MagnetarCall({
             id: uint8(MagnetarAction.MintModule),
@@ -230,7 +215,7 @@ contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver {
         _params.mintData.collateralDepositData.amount = tokenAmount_;
 
         bytes memory mintFromBBAndLendOnSGLData =
-            abi.encodeWithSelector(MagnetarMintModule.mintBBLendSGLLockTOLP.selector, _params);
+            abi.encodeWithSelector(MagnetarMintModule.mintBBAndLock.selector, _params);
 
         calls[0] = MagnetarCall({
             id: uint8(MagnetarAction.MintModule),
@@ -239,25 +224,16 @@ contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver {
             call: mintFromBBAndLendOnSGLData
         });
 
-        uint256 colSharesBefore = bb._userCollateralShare(address(this));
+        uint256 colSharesBefore = bb.balanceOf(address(this));
 
         //approvals for deposit & collateral add
-        pearlmit.approve(20, address(collateralA), 0, address(magnetarA), type(uint200).max, uint48(block.timestamp)); // Atomic approval
-        collateralA.approve(address(pearlmit), type(uint256).max);
-        pearlmit.approve(
-            1155, address(yieldBox), collateralAId, address(magnetarA), type(uint200).max, uint48(block.timestamp)
-        ); // this is needed for Pearlmit.allowance check on market
-        pearlmit.approve(
-            1155, address(yieldBox), collateralAId, address(bb), type(uint200).max, uint48(block.timestamp)
-        ); // Atomic approval
-        _setYieldBoxApproval(yieldBox, address(pearlmit));
+        collateralA.approve(address(magnetarA), type(uint256).max);
+
+        // Atomic approval
 
         magnetarA.burst{value: 0}(calls);
 
-        collateralA.approve(address(pearlmit), 0);
-        _setYieldBoxRevoke(yieldBox, address(pearlmit));
-
-        uint256 colSharesAfter = bb._userCollateralShare(address(this));
+        uint256 colSharesAfter = bb.balanceOf(address(this));
         assertGt(colSharesAfter, colSharesBefore);
     }
 
@@ -280,7 +256,7 @@ contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver {
         _params.mintData.collateralDepositData.amount = tokenAmount_;
 
         bytes memory mintFromBBAndLendOnSGLData =
-            abi.encodeWithSelector(MagnetarMintModule.mintBBLendSGLLockTOLP.selector, _params);
+            abi.encodeWithSelector(MagnetarMintModule.mintBBAndLock.selector, _params);
 
         calls[0] = MagnetarCall({
             id: uint8(MagnetarAction.MintModule),
@@ -289,26 +265,17 @@ contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver {
             call: mintFromBBAndLendOnSGLData
         });
 
-        uint256 colSharesBefore = bb._userCollateralShare(address(this));
+        uint256 colSharesBefore = bb.balanceOf(address(this));
         uint256 borrowPartBefore = bb._userBorrowPart(address(this));
 
         //approvals for deposit & collateral add
-        pearlmit.approve(20, address(collateralA), 0, address(magnetarA), type(uint200).max, uint48(block.timestamp)); // Atomic approval
-        collateralA.approve(address(pearlmit), type(uint256).max);
-        pearlmit.approve(
-            1155, address(yieldBox), collateralAId, address(magnetarA), type(uint200).max, uint48(block.timestamp)
-        ); // this is needed for Pearlmit.allowance check on market
-        pearlmit.approve(
-            1155, address(yieldBox), collateralAId, address(bb), type(uint200).max, uint48(block.timestamp)
-        ); // Atomic approval
-        _setYieldBoxApproval(yieldBox, address(pearlmit));
+        collateralA.approve(address(magnetarA), type(uint256).max);
+
+        // Atomic approval
 
         magnetarA.burst{value: 0}(calls);
 
-        collateralA.approve(address(pearlmit), 0);
-        _setYieldBoxRevoke(yieldBox, address(pearlmit));
-
-        uint256 colSharesAfter = bb._userCollateralShare(address(this));
+        uint256 colSharesAfter = bb.balanceOf(address(this));
         uint256 borrowPartAfter = bb._userBorrowPart(address(this));
         assertGt(colSharesAfter, colSharesBefore);
         assertGt(borrowPartAfter, borrowPartBefore);
@@ -330,7 +297,7 @@ contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver {
         _params.depositData.amount = tokenAmount_;
 
         bytes memory mintFromBBAndLendOnSGLData =
-            abi.encodeWithSelector(MagnetarMintModule.mintBBLendSGLLockTOLP.selector, _params);
+            abi.encodeWithSelector(MagnetarMintModule.mintBBAndLock.selector, _params);
 
         calls[0] = MagnetarCall({
             id: uint8(MagnetarAction.MintModule),
@@ -339,18 +306,14 @@ contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver {
             call: mintFromBBAndLendOnSGLData
         });
 
-        uint256 assetABalanceBefore = yieldBox.balanceOf(address(this), assetAId);
+        uint256 assetABalanceBefore = sgl.balanceOf(address(this));
 
         // manually deposit asset to YB
-        pearlmit.approve(20, address(assetA), 0, address(magnetarA), type(uint200).max, uint48(block.timestamp)); // Atomic approval
-        assetA.approve(address(pearlmit), type(uint256).max);
+        assetA.approve(address(magnetarA), type(uint256).max);
 
         magnetarA.burst{value: 0}(calls);
 
-        collateralA.approve(address(pearlmit), 0);
-        _setYieldBoxRevoke(yieldBox, address(pearlmit));
-
-        uint256 assetABalanceAfter = yieldBox.balanceOf(address(this), assetAId);
+        uint256 assetABalanceAfter = sgl.balanceOf(address(this));
         assertGt(assetABalanceAfter, assetABalanceBefore);
     }
 
@@ -376,7 +339,7 @@ contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver {
         _params.depositData.amount = tokenAmount_;
 
         bytes memory mintFromBBAndLendOnSGLData =
-            abi.encodeWithSelector(MagnetarMintModule.mintBBLendSGLLockTOLP.selector, _params);
+            abi.encodeWithSelector(MagnetarMintModule.mintBBAndLock.selector, _params);
 
         calls[0] = MagnetarCall({
             id: uint8(MagnetarAction.MintModule),
@@ -385,31 +348,22 @@ contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver {
             call: mintFromBBAndLendOnSGLData
         });
 
-        uint256 colSharesBefore = bb._userCollateralShare(address(this));
+        uint256 colSharesBefore = bb.balanceOf(address(this));
         uint256 borrowPartBefore = bb._userBorrowPart(address(this));
-        uint256 assetABalanceBefore = yieldBox.balanceOf(address(this), assetAId);
+        uint256 assetABalanceBefore = sgl.balanceOf(address(this));
 
         //approvals for deposit & collateral add
-        pearlmit.approve(20, address(collateralA), 0, address(magnetarA), type(uint200).max, uint48(block.timestamp)); // Atomic approval
-        collateralA.approve(address(pearlmit), type(uint256).max);
-        pearlmit.approve(
-            1155, address(yieldBox), collateralAId, address(magnetarA), type(uint200).max, uint48(block.timestamp)
-        ); // this is needed for Pearlmit.allowance check on market
-        pearlmit.approve(
-            1155, address(yieldBox), collateralAId, address(bb), type(uint200).max, uint48(block.timestamp)
-        ); // Atomic approval
-        _setYieldBoxApproval(yieldBox, address(pearlmit));
-        pearlmit.approve(20, address(assetA), 0, address(magnetarA), type(uint200).max, uint48(block.timestamp)); // Atomic approval
-        assetA.approve(address(pearlmit), type(uint256).max);
+        collateralA.approve(address(magnetarA), type(uint256).max);
+
+        // Atomic approval
+
+        assetA.approve(address(magnetarA), type(uint256).max);
 
         magnetarA.burst{value: 0}(calls);
 
-        collateralA.approve(address(pearlmit), 0);
-        _setYieldBoxRevoke(yieldBox, address(pearlmit));
-
-        uint256 colSharesAfter = bb._userCollateralShare(address(this));
+        uint256 colSharesAfter = bb.balanceOf(address(this));
         uint256 borrowPartAfter = bb._userBorrowPart(address(this));
-        uint256 assetABalanceAfter = yieldBox.balanceOf(address(this), assetAId);
+        uint256 assetABalanceAfter = sgl.balanceOf(address(this));
         assertGt(assetABalanceAfter, assetABalanceBefore);
         assertGt(colSharesAfter, colSharesBefore);
         assertGt(borrowPartAfter, borrowPartBefore);
@@ -444,7 +398,7 @@ contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver {
         _params.depositData.amount = tokenAmount_;
 
         bytes memory mintFromBBAndLendOnSGLData =
-            abi.encodeWithSelector(MagnetarMintModule.mintBBLendSGLLockTOLP.selector, _params);
+            abi.encodeWithSelector(MagnetarMintModule.mintBBAndLock.selector, _params);
 
         calls[0] = MagnetarCall({
             id: uint8(MagnetarAction.MintModule),
@@ -453,31 +407,20 @@ contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver {
             call: mintFromBBAndLendOnSGLData
         });
 
-        uint256 colSharesBefore = bb._userCollateralShare(address(this));
+        uint256 colSharesBefore = bb.balanceOf(address(this));
         uint256 borrowPartBefore = bb._userBorrowPart(address(this));
         uint256 sglBalanceBefore = sgl.balanceOf(address(this));
 
         //approvals for deposit & collateral add
-        pearlmit.approve(20, address(collateralA), 0, address(magnetarA), type(uint200).max, uint48(block.timestamp)); // Atomic approval
-        collateralA.approve(address(pearlmit), type(uint256).max);
-        pearlmit.approve(
-            1155, address(yieldBox), collateralAId, address(magnetarA), type(uint200).max, uint48(block.timestamp)
-        ); // this is needed for Pearlmit.allowance check on market
-        pearlmit.approve(
-            1155, address(yieldBox), collateralAId, address(bb), type(uint200).max, uint48(block.timestamp)
-        ); // Atomic approval
-        _setYieldBoxApproval(yieldBox, address(pearlmit));
-        pearlmit.approve(20, address(assetA), 0, address(magnetarA), type(uint200).max, uint48(block.timestamp)); // Atomic approval
-        assetA.approve(address(pearlmit), type(uint256).max);
-        pearlmit.approve(20, address(sgl), 0, address(magnetarA), type(uint200).max, uint48(block.timestamp)); // this is needed for Pearlmit.allowance check on market.allowedLend
-        pearlmit.approve(1155, address(yieldBox), assetAId, address(sgl), type(uint200).max, uint48(block.timestamp)); // lend approval
+        collateralA.approve(address(magnetarA), type(uint256).max);
+
+        // Atomic approval
+
+        assetA.approve(address(magnetarA), type(uint256).max);
 
         magnetarA.burst{value: 0}(calls);
 
-        collateralA.approve(address(pearlmit), 0);
-        _setYieldBoxRevoke(yieldBox, address(pearlmit));
-
-        uint256 colSharesAfter = bb._userCollateralShare(address(this));
+        uint256 colSharesAfter = bb.balanceOf(address(this));
         uint256 borrowPartAfter = bb._userBorrowPart(address(this));
         uint256 sglBalanceAfter = sgl.balanceOf(address(this));
         assertGt(colSharesAfter, colSharesBefore);
@@ -487,172 +430,9 @@ contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver {
 
     function test_mintFromBBAndLendOnSGL_addCollateral_mint_depositExtra_lend_and_lock() public {
         vm.skip(true);
-        uint256 tokenAmount_ = 1 ether;
-        uint256 mintAmount_ = 0.5 ether;
-        {
-            deal(address(collateralA), address(this), tokenAmount_);
-            deal(address(assetA), address(this), tokenAmount_);
-        }
-
-        MagnetarCall[] memory calls = new MagnetarCall[](1);
-
-        // test market
-        MintFromBBAndLendOnSGLData memory _params = _createMintFromBBAndLendOnSGLData(
-            address(this),
-            tokenAmount_ + mintAmount_,
-            0,
-            tokenAmount_,
-            address(magnetarA),
-            address(sgl),
-            address(bb),
-            address(marketHelper)
-        );
-
-        tSgl = new TOFTMock(address(sgl), IPearlmit(address(pearlmit)));
-        clusterA.updateContract(0, address(tSgl), true);
-
-        _params.mintData.mint = true;
-        _params.mintData.mintAmount = mintAmount_;
-        _params.mintData.collateralDepositData.deposit = true;
-        _params.mintData.collateralDepositData.amount = tokenAmount_;
-        _params.depositData.deposit = true;
-        _params.depositData.amount = tokenAmount_;
-        _params.lockData.lock = true;
-        _params.lockData.tAsset = address(tSgl);
-        _params.lockData.target = address(tOLPMock);
-
-        bytes memory mintFromBBAndLendOnSGLData =
-            abi.encodeWithSelector(MagnetarMintModule.mintBBLendSGLLockTOLP.selector, _params);
-
-        calls[0] = MagnetarCall({
-            id: uint8(MagnetarAction.MintModule),
-            target: address(magnetarA),
-            value: 0,
-            call: mintFromBBAndLendOnSGLData
-        });
-
-        uint256 colSharesBefore = bb._userCollateralShare(address(this));
-        uint256 borrowPartBefore = bb._userBorrowPart(address(this));
-        uint256 tolpBalanceBefore = tOLPMock.balanceOf(address(this));
-
-        //approvals for deposit & collateral add
-        pearlmit.approve(20, address(collateralA), 0, address(magnetarA), type(uint200).max, uint48(block.timestamp)); // Atomic approval
-        collateralA.approve(address(pearlmit), type(uint256).max);
-        pearlmit.approve(
-            1155, address(yieldBox), collateralAId, address(magnetarA), type(uint200).max, uint48(block.timestamp)
-        ); // this is needed for Pearlmit.allowance check on market
-        pearlmit.approve(
-            1155, address(yieldBox), collateralAId, address(bb), type(uint200).max, uint48(block.timestamp)
-        ); // Atomic approval
-        _setYieldBoxApproval(yieldBox, address(pearlmit));
-        pearlmit.approve(20, address(assetA), 0, address(magnetarA), type(uint200).max, uint48(block.timestamp)); // Atomic approval
-        assetA.approve(address(pearlmit), type(uint256).max);
-        pearlmit.approve(20, address(sgl), 0, address(magnetarA), type(uint200).max, uint48(block.timestamp)); // this is needed for Pearlmit.allowance check on market.allowedLend
-        pearlmit.approve(1155, address(yieldBox), assetAId, address(sgl), type(uint200).max, uint48(block.timestamp)); // lend approval
-        sgl.approve(address(pearlmit), type(uint256).max);
-        pearlmit.approve(
-            1155, address(yieldBox), sglAssetId, address(magnetarA), type(uint200).max, uint48(block.timestamp)
-        ); // lend approval
-
-        deal(address(sgl), address(magnetarA), 99999999999999 ether);
-
-        magnetarA.burst{value: 0}(calls);
-
-        sgl.approve(address(pearlmit), 0);
-        collateralA.approve(address(pearlmit), 0);
-        _setYieldBoxRevoke(yieldBox, address(pearlmit));
-
-        uint256 colSharesAfter = bb._userCollateralShare(address(this));
-        uint256 borrowPartAfter = bb._userBorrowPart(address(this));
-        uint256 tolpBalanceAfter = tOLPMock.balanceOf(address(this));
-        assertGt(colSharesAfter, colSharesBefore);
-        assertGt(borrowPartAfter, borrowPartBefore);
-        assertGt(tolpBalanceAfter, tolpBalanceBefore);
     }
 
     function test_mintFromBBAndLendOnSGL_addCollateral_mint_depositExtra_lend_lock_and_participate() public {
         vm.skip(true);
-        uint256 tokenAmount_ = 1 ether;
-        uint256 mintAmount_ = 0.5 ether;
-        {
-            deal(address(collateralA), address(this), tokenAmount_);
-            deal(address(assetA), address(this), tokenAmount_);
-        }
-
-        MagnetarCall[] memory calls = new MagnetarCall[](1);
-
-        // test market
-        MintFromBBAndLendOnSGLData memory _params = _createMintFromBBAndLendOnSGLData(
-            address(this),
-            tokenAmount_ + mintAmount_,
-            0,
-            tokenAmount_,
-            address(magnetarA),
-            address(sgl),
-            address(bb),
-            address(marketHelper)
-        );
-
-        tSgl = new TOFTMock(address(sgl), IPearlmit(address(pearlmit)));
-        clusterA.updateContract(0, address(tSgl), true);
-
-        _params.mintData.mint = true;
-        _params.mintData.mintAmount = mintAmount_;
-        _params.mintData.collateralDepositData.deposit = true;
-        _params.mintData.collateralDepositData.amount = tokenAmount_;
-        _params.depositData.deposit = true;
-        _params.depositData.amount = tokenAmount_;
-        _params.lockData.lock = true;
-        _params.lockData.target = address(tOLPMock);
-        _params.lockData.tAsset = address(tSgl);
-        _params.participateData.participate = true;
-        _params.participateData.target = address(tOB);
-
-        bytes memory mintFromBBAndLendOnSGLData =
-            abi.encodeWithSelector(MagnetarMintModule.mintBBLendSGLLockTOLP.selector, _params);
-
-        calls[0] = MagnetarCall({
-            id: uint8(MagnetarAction.MintModule),
-            target: address(magnetarA),
-            value: 0,
-            call: mintFromBBAndLendOnSGLData
-        });
-
-        uint256 colSharesBefore = bb._userCollateralShare(address(this));
-        uint256 borrowPartBefore = bb._userBorrowPart(address(this));
-
-        //approvals for deposit & collateral add
-        pearlmit.approve(20, address(collateralA), 0, address(magnetarA), type(uint200).max, uint48(block.timestamp)); // Atomic approval
-        collateralA.approve(address(pearlmit), type(uint256).max);
-        pearlmit.approve(
-            1155, address(yieldBox), collateralAId, address(magnetarA), type(uint200).max, uint48(block.timestamp)
-        ); // this is needed for Pearlmit.allowance check on market
-        pearlmit.approve(
-            1155, address(yieldBox), collateralAId, address(bb), type(uint200).max, uint48(block.timestamp)
-        ); // Atomic approval
-        _setYieldBoxApproval(yieldBox, address(pearlmit));
-        pearlmit.approve(20, address(assetA), 0, address(magnetarA), type(uint200).max, uint48(block.timestamp)); // Atomic approval
-        assetA.approve(address(pearlmit), type(uint256).max);
-        pearlmit.approve(20, address(sgl), 0, address(magnetarA), type(uint200).max, uint48(block.timestamp)); // this is needed for Pearlmit.allowance check on market.allowedLend
-        pearlmit.approve(1155, address(yieldBox), assetAId, address(sgl), type(uint200).max, uint48(block.timestamp)); // lend approval
-        sgl.approve(address(pearlmit), type(uint256).max);
-        pearlmit.approve(
-            1155, address(yieldBox), sglAssetId, address(magnetarA), type(uint200).max, uint48(block.timestamp)
-        ); // lend approval
-        pearlmit.approve(721, address(tOLPMock), 1, address(magnetarA), type(uint200).max, uint48(block.timestamp)); // lend approval
-        tOLPMock.setApprovalForAll(address(pearlmit), true);
-
-        deal(address(sgl), address(magnetarA), 99999999999999 ether);
-
-        magnetarA.burst{value: 0}(calls);
-
-        sgl.approve(address(pearlmit), 0);
-        collateralA.approve(address(pearlmit), 0);
-        _setYieldBoxRevoke(yieldBox, address(pearlmit));
-
-        uint256 colSharesAfter = bb._userCollateralShare(address(this));
-        uint256 borrowPartAfter = bb._userBorrowPart(address(this));
-        assertGt(colSharesAfter, colSharesBefore);
-        assertGt(borrowPartAfter, borrowPartBefore);
     }
 }

@@ -1,0 +1,17 @@
+TapiocaOptionBroker_advanceWeek.tree
+├── when lastEpoch equals currentEpoch
+│   └── it should revert with NotValid
+└── when lastEpoch is not currentEpoch
+    ├── it should sync TWL buckets
+    ├── when getting TAP valuation
+    │   ├── when tapOracle call succeeds
+    │   │   └── it should set _epochTAPValuation
+    │   └── when tapOracle call fails
+    │       └── it should revert with Failed
+    ├── it should extract TAP from TAP_TOKEN
+    ├── it should emit TAP to gauges
+    ├── it should update lastEpoch
+    └── it should emit NewEpoch event with
+        ├── lastEpoch
+        ├── epochTAP
+        └── _epochTAPValuation

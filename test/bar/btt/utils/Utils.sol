@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // external
 import {IERC20, IStrictERC20} from "@boringcrypto/boring-solidity/contracts/libraries/BoringERC20.sol";
@@ -8,14 +8,11 @@ import {IERC20, IStrictERC20} from "@boringcrypto/boring-solidity/contracts/libr
 import {Constants} from "./Constants.sol";
 
 // tapioca
-import {ERC20WithoutStrategy} from "yieldbox/strategies/ERC20WithoutStrategy.sol";
-import {IPearlmit, Pearlmit} from "tap-utils/pearlmit/Pearlmit.sol";
+
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
-import {IWrappedNative} from "yieldbox/interfaces/IWrappedNative.sol";
-import {YieldBoxURIBuilder} from "yieldbox/YieldBoxURIBuilder.sol";
-import {IYieldBox} from "yieldbox/interfaces/IYieldBox.sol";
+
 import {Cluster} from "tap-utils/Cluster/Cluster.sol";
-import {YieldBox} from "yieldbox/YieldBox.sol";
+
 import {Penrose} from "tapioca-bar/Penrose.sol";
 
 import {ERC20PermitStruct, ERC20PermitApprovalMsg} from "tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
@@ -61,27 +58,6 @@ abstract contract Utils is Test, Constants {
         return _user;
     }
 
-    // Creates YieldBox ERC20WithoutStrategy
-    function _createEmptyStrategy(address yb, address asset) internal returns (ERC20WithoutStrategy) {
-        ERC20WithoutStrategy strat = new ERC20WithoutStrategy(IYieldBox(yb), IERC20(asset));
-        vm.label(address(strat), string.concat("ERC20WithoutStrategy_", IStrictERC20(asset).name()));
-        return strat;
-    }
-
-    // Creates real Pearlmit
-    function _createPearlmit(address _owner) internal returns (Pearlmit) {
-        Pearlmit pearlmit = new Pearlmit("Pearlmit Test", "1", _owner, 0);
-        vm.label(address(pearlmit), "Pearlmit Test");
-        return pearlmit;
-    }
-
-    // Creates real YieldBox
-    function _createYieldBox(address _owner, Pearlmit _pearlmit) internal returns (YieldBox) {
-        YieldBoxURIBuilder uriBuilder = new YieldBoxURIBuilder();
-        YieldBox yieldBox = new YieldBox(IWrappedNative(address(0)), uriBuilder, _pearlmit, _owner);
-        return yieldBox;
-    }
-
     // Creates real Cluster
     function _createCluster(address _owner) internal returns (Cluster) {
         Cluster cluster = new Cluster(0, _owner);
@@ -90,26 +66,11 @@ abstract contract Utils is Test, Constants {
     }
 
     // Creates real Penrose
-    function _createPenrose(
-        address _yieldBox,
-        address _cluster,
-        address _tapToken,
-        uint256 _tapId,
-        address _mainToken,
-        uint256 _mainTokenId,
-        address _pearlmit,
-        address _owner
-    ) internal returns (Penrose) {
-        Penrose penrose = new Penrose(
-            IYieldBox(_yieldBox),
-            ICluster(_cluster),
-            IERC20(_tapToken),
-            IERC20(_mainToken),
-            IPearlmit(_pearlmit),
-            _tapId,
-            _mainTokenId,
-            _owner
-        );
+    function _createPenrose(address _cluster, address _tapToken, address _mainToken, address _owner)
+        internal
+        returns (Penrose)
+    {
+        Penrose penrose = new Penrose(ICluster(_cluster), IERC20(_tapToken), IERC20(_mainToken), _owner);
         vm.label(address(penrose), "Penrose");
         return penrose;
     }
@@ -120,33 +81,6 @@ abstract contract Utils is Test, Constants {
     function _approveViaERC20(address token, address from, address operator, uint256 amount) internal {
         _resetPrank({msgSender: from});
         IERC20(token).approve(address(operator), amount);
-    }
-
-    function _approveViaPearlmit(
-        uint256 tokenType,
-        address token,
-        IPearlmit pearlmit,
-        address from,
-        address operator,
-        uint256 amount,
-        uint256 expiration,
-        uint256 tokenId
-    ) internal {
-        // Reset prank
-        _resetPrank({msgSender: from});
-
-        // Approve via pearlmit
-        pearlmit.approve(tokenType, token, tokenId, operator, uint200(amount), uint48(expiration));
-    }
-
-    function _approveYieldBoxAssetId(YieldBox yieldBox, address from, address operator, uint256 assetId) internal {
-        _resetPrank({msgSender: from});
-        yieldBox.setApprovalForAsset(operator, assetId, true);
-    }
-
-    function _approveYieldBoxForAll(YieldBox yieldBox, address from, address operator) internal {
-        _resetPrank({msgSender: from});
-        yieldBox.setApprovalForAll(operator, true);
     }
 
     // ******************** //

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 import {SGLReport} from "../interfaces/ITapiocaReport.sol";
 import {SGLInit} from "tapioca-bar/markets/singularity/SGLInit.sol";

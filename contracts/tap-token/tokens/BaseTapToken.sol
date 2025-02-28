@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // Tapioca
 import {BaseTapiocaOmnichainEngine} from "tap-utils/tapiocaOmnichainEngine/BaseTapiocaOmnichainEngine.sol";
-import {IPearlmit} from "tap-utils/interfaces/periph/IPearlmit.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {BaseTapTokenMsgType} from "./BaseTapTokenMsgType.sol";
-import {TwTAP} from "tap-token/governance/twTAP.sol";
+import {ITWTAPv2} from "tap-token/interfaces/ITWTAPv2.sol";
 
 /*
 
@@ -24,8 +23,7 @@ abstract contract BaseTapToken is BaseTapiocaOmnichainEngine, BaseTapTokenMsgTyp
     uint16 internal constant PT_UNLOCK_TWTAP = 871;
     uint16 internal constant PT_CLAIM_REWARDS = 872;
 
-    /// @dev Can't be set as constructor params because TwTAP is deployed after TapToken. TwTAP constructor needs TapOFT as param.
-    TwTAP public twTap;
+    ITWTAPv2 public twTap;
 
     constructor(
         string memory _name,
@@ -33,9 +31,8 @@ abstract contract BaseTapToken is BaseTapiocaOmnichainEngine, BaseTapTokenMsgTyp
         address _endpoint,
         address _delegate,
         address _extExec,
-        IPearlmit _pearlmit,
         ICluster _cluster
-    ) BaseTapiocaOmnichainEngine(_name, _symbol, _endpoint, _delegate, _extExec, _pearlmit, _cluster) {}
+    ) BaseTapiocaOmnichainEngine(_name, _symbol, _endpoint, _delegate, _extExec, _cluster) {}
 
     error twTapNotSet();
 

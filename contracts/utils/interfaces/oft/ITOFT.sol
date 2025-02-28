@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // Tapioca
-import {IExerciseOptionsData} from "../tap-token/ITapiocaOptionBroker.sol";
-import {IPearlmit} from "src/tap-utils/interfaces/periph/IPearlmit.sol";
-import {MagnetarWithdrawData} from "../periph/IMagnetar.sol";
+import {MagnetarWithdrawData, IExerciseOptionsData, IOptionsUnlockData} from "../periph/IMagnetar.sol";
 
 import "../periph/ITapiocaOmnichainEngine.sol";
 /*
@@ -28,7 +26,6 @@ interface ITOFT is ITapiocaOmnichainEngine {
         TOFTGenericReceiver
     }
 
-    function pearlmit() external view returns (IPearlmit);
     function decimalConversionRate() external view returns (uint256);
     function hostEid() external view returns (uint256);
     function wrap(address fromAddress, address toAddress, uint256 amount) external payable returns (uint256 minted);
@@ -75,13 +72,11 @@ struct TOFTInitStruct {
     string symbol;
     address endpoint;
     address delegate;
-    address yieldBox;
     address cluster;
     address erc20;
     address vault;
     uint256 hostEid;
     address extExec;
-    IPearlmit pearlmit;
 }
 
 struct TOFTModulesInitStruct {

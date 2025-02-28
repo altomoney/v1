@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // External
 import {RebaseLibrary, Rebase} from "@boringcrypto/boring-solidity/contracts/libraries/BoringRebase.sol";
@@ -16,10 +16,10 @@ import {
 import {IMarketLiquidatorReceiver} from "tap-utils/interfaces/bar/IMarketLiquidatorReceiver.sol";
 import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
 import {ISingularity} from "tap-utils/interfaces/bar/ISingularity.sol";
-import {IYieldBox} from "tap-utils/interfaces/yieldbox/IYieldBox.sol";
+import {IMarketHelper} from "tap-utils/interfaces/bar/IMarketHelper.sol";
 import {IMarket, Module} from "tap-utils/interfaces/bar/IMarket.sol";
 
-contract MarketHelper {
+contract MarketHelper is IMarketHelper {
     using RebaseLibrary for Rebase;
 
     uint256 internal constant FEE_PRECISION = 1e5;
@@ -35,28 +35,20 @@ contract MarketHelper {
     function isPositionInBadDebt(IMarket market, uint256 _exchangeRate, address _user) external view returns (bool) {
         uint256 borrowPart = market._userBorrowPart(_user);
         if (borrowPart == 0) return false;
-        uint256 collateralShare = market._userCollateralShare(_user);
+        uint256 collateralShare = market.balanceOf(_user);
         if (collateralShare == 0) return false;
 
-        IYieldBox yieldBox = IYieldBox(market._yieldBox());
-
-        uint256 collateralId = market._collateralId();
         uint256 exchangeRatePrecision = market._exchangeRatePrecision();
 
         // get collateral amount for total share
         uint256 collateralPartInAsset =
-            (yieldBox.toAmount(collateralId, collateralShare, false) * exchangeRatePrecision) / _exchangeRate;
-
-        // get closing factor
-        uint256 borrowPartWithBonus = computeClosingFactor(market, borrowPart, collateralPartInAsset);
+            (market.convertToAssets(collateralShare) * exchangeRatePrecision) / _exchangeRate;
 
         // limit liquidable amount before bonus to the current debt
-        (uint128 totalBorrowElastic, uint128 totalBorrowBase) = market._totalBorrow();
-        Rebase memory _totalBorrow = Rebase({elastic: totalBorrowElastic, base: totalBorrowBase});
+        Rebase memory _totalBorrow = market._totalBorrow();
         uint256 userTotalBorrowAmount = _totalBorrow.toElastic(borrowPart, true);
-        borrowPartWithBonus = borrowPartWithBonus > userTotalBorrowAmount ? userTotalBorrowAmount : borrowPartWithBonus;
 
-        return collateralPartInAsset < borrowPartWithBonus;
+        return collateralPartInAsset < userTotalBorrowAmount;
     }
 
     /// @notice returns the maximum liquidatable amount for user
@@ -68,8 +60,7 @@ contract MarketHelper {
         view
         returns (uint256)
     {
-        (uint128 totalBorrowElastic, uint128 totalBorrowBase) = market._totalBorrow();
-        Rebase memory _totalBorrow = Rebase({elastic: totalBorrowElastic, base: totalBorrowBase});
+        Rebase memory _totalBorrow = market._totalBorrow();
         return _computeClosingFactor(
             borrowPart,
             collateralPartInAsset,
@@ -125,15 +116,12 @@ contract MarketHelper {
 
         uint256 borrowPart = market._userBorrowPart(_user);
         if (borrowPart == 0) return true;
-        uint256 collateralShare = market._userCollateralShare(_user);
+        uint256 collateralShare = market.balanceOf(_user);
         if (collateralShare == 0) return false;
 
-        IYieldBox yieldBox = IYieldBox(market._yieldBox());
+        Rebase memory _totalBorrow = market._totalBorrow();
 
-        (uint128 totalBorrowElastic, uint128 totalBorrowBase) = market._totalBorrow();
-        Rebase memory _totalBorrow = Rebase({elastic: totalBorrowElastic, base: totalBorrowBase});
-
-        uint256 collateralAmount = yieldBox.toAmount(market._collateralId(), collateralShare, false);
+        uint256 collateralAmount = market.convertToAssets(collateralShare);
         return collateralAmount * (market._exchangeRatePrecision() / FEE_PRECISION)
             * (_forLiquidation ? market._liquidationCollateralizationRate() : market._collateralizationRate())
         // Moved exchangeRate here instead of dividing the other side to preserve more precision
@@ -142,21 +130,15 @@ contract MarketHelper {
 
     /// @notice transforms amount to shares for a market's permit operation
     /// @param amount the amount to transform
-    /// @param tokenId the YieldBox asset id
     /// @return share amount transformed into shares
-    function computeAllowedLendShare(address sglAddress, uint256 amount, uint256 tokenId)
-        external
-        view
-        returns (uint256 share)
-    {
+    function computeAllowedLendShare(address sglAddress, uint256 amount) external view returns (uint256 share) {
         ISingularity sgl = ISingularity(sglAddress);
 
-        IYieldBox yieldBox = IYieldBox(sgl._yieldBox());
-        (uint128 totalAssetElastic, uint128 totalAssetBase) = sgl.totalAsset();
-        (uint128 totalBorrowElastic,) = sgl._totalBorrow();
+        Rebase memory _totalAsset = sgl.totalAsset();
+        Rebase memory _totalBorrow = sgl._totalBorrow();
 
-        uint256 allShare = totalAssetElastic + yieldBox.toShare(tokenId, totalBorrowElastic, true);
-        share = (amount * allShare) / totalAssetBase;
+        uint256 allShare = _totalAsset.elastic + sgl.convertToShares(_totalBorrow.elastic);
+        share = (amount * allShare) / _totalAsset.base;
     }
 
     /// @notice returns the collateral amount used in a liquidation
@@ -182,19 +164,16 @@ contract MarketHelper {
         }
         if (_exchangeRate == 0) revert ExchangeRateNotValid();
 
-        (uint128 totalBorrowElastic, uint128 totalBorrowBase) = sgl._totalBorrow();
-
         _ViewLiquidationStruct memory data;
         {
             data.user = user;
             data.maxBorrowPart = maxBorrowPart;
             data.minLiquidationBonus = minLiquidationBonus;
             data.exchangeRate = _exchangeRate;
-            data.yieldBox = IYieldBox(sgl._yieldBox());
-            data.collateralId = sgl._collateralId();
-            data.userCollateralShare = sgl._userCollateralShare(user);
+            data.market = sglAddress;
+            data.userCollateralShare = sgl.balanceOf(user);
             data.userBorrowPart = sgl._userBorrowPart(user);
-            data.totalBorrow = Rebase({elastic: totalBorrowElastic, base: totalBorrowBase});
+            data.totalBorrow = sgl._totalBorrow();
             data.liquidationBonusAmount = IMarket(sglAddress)._liquidationBonusAmount();
             data.liquidationCollateralizationRate = sgl._liquidationCollateralizationRate();
             data.liquidationMultiplier = sgl._liquidationMultiplier();
@@ -208,10 +187,9 @@ contract MarketHelper {
     /// @notice Adds `collateral` from msg.sender to the account `to`.
     /// @param from Account to transfer shares from.
     /// @param to The receiver of the tokens.
-    /// @param skim True if the amount should be skimmed from the deposit balance of msg.sender.
-    /// False if tokens from msg.sender in `yieldBox` should be transferred.
+    /// False if tokens from msg.sender  should be transferred.
     /// @param share The amount of shares to add for `to`.
-    function addCollateral(address from, address to, bool skim, uint256 amount, uint256 share)
+    function addCollateral(address from, address to, uint256 amount, uint256 share)
         external
         pure
         returns (Module[] memory modules, bytes[] memory calls)
@@ -219,7 +197,7 @@ contract MarketHelper {
         modules = new Module[](1);
         calls = new bytes[](1);
         modules[0] = Module.Collateral;
-        calls[0] = abi.encodeWithSelector(SGLCollateral.addCollateral.selector, from, to, skim, amount, share);
+        calls[0] = abi.encodeWithSelector(SGLCollateral.addCollateral.selector, from, to, amount, share);
     }
 
     /// @notice Removes `share` amount of collateral and transfers it to `to`.
@@ -260,10 +238,8 @@ contract MarketHelper {
     /// @notice Repays a loan.
     /// @param from Address to repay from.
     /// @param to Address of the user this payment should go.
-    /// @param skim True if the amount should be skimmed from the deposit balance of msg.sender.
-    /// False if tokens from msg.sender in `yieldBox` should be transferred.
     /// @param part The amount to repay. See `userBorrowPart`.
-    function repay(address from, address to, bool skim, uint256 part)
+    function repay(address from, address to, uint256 part)
         external
         pure
         returns (Module[] memory modules, bytes[] memory calls)
@@ -271,7 +247,7 @@ contract MarketHelper {
         modules = new Module[](1);
         calls = new bytes[](1);
         modules[0] = Module.Borrow;
-        calls[0] = abi.encodeWithSelector(SGLBorrow.repay.selector, from, to, skim, part);
+        calls[0] = abi.encodeWithSelector(SGLBorrow.repay.selector, from, to, part);
     }
 
     /// @notice view the result of a repay operation.
@@ -281,7 +257,7 @@ contract MarketHelper {
 
     /// @notice Lever down: Sell collateral to repay debt; excess goes to YB
     /// @param from The user who sells
-    /// @param share Collateral YieldBox-shares to sell
+    /// @param share Collateral  to sell
     /// @param data LeverageExecutor data
     function sellCollateral(address from, uint256 share, bytes calldata data)
         external
@@ -379,11 +355,10 @@ contract MarketHelper {
 
     struct _ViewLiquidationStruct {
         address user;
+        address market;
         uint256 maxBorrowPart;
         uint256 minLiquidationBonus;
         uint256 exchangeRate;
-        IYieldBox yieldBox;
-        uint256 collateralId;
         uint256 userCollateralShare;
         uint256 userBorrowPart;
         Rebase totalBorrow;
@@ -404,7 +379,7 @@ contract MarketHelper {
 
         // get collateral amount in asset's value
         uint256 collateralPartInAsset = (
-            _data.yieldBox.toAmount(_data.collateralId, _data.userCollateralShare, false) * _data.exchangeRatePrecision
+            IMarket(_data.market).convertToAssets(_data.userCollateralShare) * _data.exchangeRatePrecision
         ) / _data.exchangeRate;
 
         // compute closing factor (liquidatable amount)
@@ -450,8 +425,8 @@ contract MarketHelper {
                 revert InsufficientLiquidationBonus();
             }
         } else {
-            collateralShare = _data.yieldBox.toShare(
-                _data.collateralId, (borrowPartWithBonus * _data.exchangeRate) / _data.exchangeRatePrecision, false
+            collateralShare = IMarket(_data.market).convertToShares(
+                (borrowPartWithBonus * _data.exchangeRate) / _data.exchangeRatePrecision
             );
             if (collateralShare > _data.userCollateralShare) {
                 revert NotEnoughCollateral();

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // Tapioca
 import {
@@ -13,7 +13,6 @@ import {
     ERC721PermitApprovalMsg,
     RemoteTransferMsg
 } from "tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
-import {IPearlmit} from "tap-utils/interfaces/periph/IPearlmit.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 
 /*
@@ -31,7 +30,7 @@ interface ITapToken is ITapiocaOmnichainEngine {
     /**
      * EVENTS
      */
-    event LockTwTapReceived(address indexed user, uint96 duration, uint256 amount);
+    event LockTwTapReceived(address indexed user, uint8 bucketId, uint256 amount);
     /// @dev twTAP unlock operation received.
     event UnlockTwTapReceived(uint256 tokenId, uint256 amount);
 
@@ -61,7 +60,6 @@ interface ITapToken is ITapiocaOmnichainEngine {
         address tapTokenSenderModule;
         address tapTokenReceiverModule;
         address extExec;
-        IPearlmit pearlmit;
         ICluster cluster;
     }
 }
@@ -74,26 +72,28 @@ interface ITapToken is ITapiocaOmnichainEngine {
  * @param user The user address to lock in the tokens.
  * @param duration The duration of the lock.
  * @param amount The amount of TAP to lock.
+ * @dev DEPRECATED, do not use TWTAPv0 related operations
  */
 struct LockTwTapPositionMsg {
     address user;
-    uint96 duration;
+    uint8 bucketId;
     uint256 amount;
 }
 
-/**
- * @param user The user address to unlock the tokens.
- * @param tokenId The tokenId of the TwTap position to unlock.
- */
 struct UnlockTwTapPositionMsg {
-    uint256 tokenId;
+    uint8 bucketId;
+    address participant;
+    address to;
 }
 
 /**
  * @param tokenId The tokenId of the TwTap position to claim rewards from.
  * @param sendParam The parameter for the send operation.
+ * @dev DEPRECATED, do not use TWTAPv0 related operations
  */
 struct ClaimTwTapRewardsMsg {
-    uint256 tokenId;
+    uint256 bucketId;
+    address participant;
+    address user;
     LZSendParam[] sendParam;
 }

@@ -1,28 +1,23 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // External
 import {IMasterContract} from "@boringcrypto/boring-solidity/contracts/interfaces/IMasterContract.sol";
 import {IERC20} from "@boringcrypto/boring-solidity/contracts/libraries/BoringERC20.sol";
+import {IERC20 as IERC20_OZ} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 // Tapioca
-import {
-    ERC20WithoutStrategy, IStrategy, IYieldBox as IBoringYieldBox
-} from "yieldbox/strategies/ERC20WithoutStrategy.sol";
-import {PearlmitHandler, IPearlmit} from "tap-utils/pearlmit/PearlmitHandler.sol";
 import {RevertMsgDecoder} from "./usdo/libraries/RevertMsgDecoder.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {IMarket} from "tap-utils/interfaces/bar/ISingularity.sol";
-import {ITwTap} from "tap-utils/interfaces/tap-token/ITwTap.sol";
+import {ITWTAPv2} from "tap-token/interfaces/ITWTAPv2.sol";
 import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
 import {IBigBang} from "tap-utils/interfaces/bar/IBigBang.sol";
-import {TokenType} from "yieldbox/enums/YieldBoxTokenType.sol";
 import {IUsdo} from "tap-utils/interfaces/oft/IUsdo.sol";
-import {IYieldBox} from "yieldbox/interfaces/IYieldBox.sol";
 import {SafeApprove} from "./libraries/SafeApprove.sol";
-
+import {ISingularity} from "../utils/interfaces/bar/ISingularity.sol";
 /*
 
 ████████╗ █████╗ ██████╗ ██╗ ██████╗  ██████╗ █████╗ 
@@ -36,7 +31,7 @@ import {SafeApprove} from "./libraries/SafeApprove.sol";
 
 /// @title Global market registry
 /// @notice Singularity management
-contract Penrose is Ownable, Pausable, PearlmitHandler {
+contract Penrose is Ownable, Pausable {
     using SafeApprove for address;
 
     error AddressNotValid();
@@ -47,20 +42,12 @@ contract Penrose is Ownable, Pausable, PearlmitHandler {
     /// @notice returns the Cluster contract
     ICluster public cluster;
 
-    /// @notice returns the YieldBox contract
-    IYieldBox public immutable yieldBox;
     /// @notice returns the TAP contract
     IERC20 public tapToken;
-    /// @notice returns TAP asset id registered in the YieldBox contract
-    uint256 public tapAssetId;
     /// @notice returns USDO contract
     IERC20 public usdoToken;
-    /// @notice returns USDO asset id registered in the YieldBox contract
-    uint256 public usdoAssetId;
     /// @notice returns the WETH/main contract
     IERC20 public mainToken;
-    /// @notice returns WETH/main asset id registered in the YieldBox contract
-    uint256 public mainAssetId;
 
     /// @notice Singularity master contracts
     IPenrose.MasterContract[] public singularityMasterContracts;
@@ -93,37 +80,18 @@ contract Penrose is Ownable, Pausable, PearlmitHandler {
     mapping(address => address[]) public clonesOf;
 
     /// @notice creates a Penrose contract
-    /// @param _yieldBox YieldBox contract address
     /// @param _cluster Cluster contract address
     /// @param tapToken_ TapOFT contract address
     /// @param mainToken_ WETH contract address
     /// @param _owner owner address
-    constructor(
-        IYieldBox _yieldBox,
-        ICluster _cluster,
-        IERC20 tapToken_,
-        IERC20 mainToken_,
-        IPearlmit _pearlmit,
-        uint256 _tapAssetId,
-        uint256 _mainAssetId,
-        address _owner
-    ) PearlmitHandler(_pearlmit) {
-        if (address(_yieldBox) == address(0)) revert AddressNotValid();
+    constructor(ICluster _cluster, IERC20 tapToken_, IERC20 mainToken_, address _owner) {
         if (address(_cluster) == address(0)) revert AddressNotValid();
         if (address(tapToken_) == address(0)) revert AddressNotValid();
-        if (address(_pearlmit) == address(0)) revert AddressNotValid();
         if (address(_owner) == address(0)) revert AddressNotValid();
-        if (_tapAssetId == 0) revert NotValid();
-        if (_mainAssetId == 0) revert NotValid();
 
-        yieldBox = _yieldBox;
         cluster = _cluster;
         tapToken = tapToken_;
         mainToken = mainToken_;
-
-        tapAssetId = _tapAssetId;
-        mainAssetId = _mainAssetId;
-
         bigBangEthDebtRate = 8e16;
 
         _transferOwnership(_owner);
@@ -145,7 +113,7 @@ contract Penrose is Ownable, Pausable, PearlmitHandler {
     /// @notice event emitted when Origins is registered
     event RegisterOrigins(address indexed location);
     /// @notice event emitted when USDO address is updated
-    event UsdoTokenUpdated(address indexed usdoToken, uint256 indexed assetId);
+    event UsdoTokenUpdated(address indexed usdoToken);
     /// @notice event emitted when conservator is updated
     event ConservatorUpdated(address indexed old, address indexed _new);
     /// @notice event emitted when BigBang ETH market address is updated
@@ -288,7 +256,7 @@ contract Penrose is Ownable, Pausable, PearlmitHandler {
     /// @notice Loop through the master contracts and call `_depositFeesToTwTap()` to each one of their clones.
     /// @param markets_ Singularity &/ BigBang markets array
     /// @param twTap the TwTap contract
-    function withdrawAllMarketFees(IMarket[] calldata markets_, ITwTap twTap) external onlyOwner whenNotPaused {
+    function withdrawAllMarketFees(IMarket[] calldata markets_, ITWTAPv2 twTap) external onlyOwner whenNotPaused {
         if (address(twTap) == address(0)) revert ZeroAddress();
 
         uint256 length = markets_.length;
@@ -322,29 +290,20 @@ contract Penrose is Ownable, Pausable, PearlmitHandler {
             IUsdo(address(usdoToken)).mint(address(this), sum);
 
             //send it to twTap
-            uint256 rewardTokenId = ITwTap(twTap).rewardTokenIndex(address(usdoToken));
-            _distributeOnTwTap(sum, rewardTokenId, address(usdoToken), ITwTap(twTap));
+            uint256 rewardTokenId = ITWTAPv2(twTap).rewardTokenIndex(IERC20_OZ(address(usdoToken)));
+            _distributeOnTwTap(sum, rewardTokenId, address(usdoToken), ITWTAPv2(twTap));
         }
     }
 
     /**
      * @notice Set the main token addresses and IDs
      */
-    function setMainTokens(address _mainToken, uint256 _mainAssetId, address _tapToken, uint256 _tapTokenAssetId)
-        external
-        onlyOwner
-    {
+    function setMainTokens(address _mainToken, address _tapToken) external onlyOwner {
         if (_mainToken != address(0)) {
             mainToken = IERC20(_mainToken);
         }
-        if (_mainAssetId != 0) {
-            mainAssetId = _mainAssetId;
-        }
         if (_tapToken != address(0)) {
             tapToken = IERC20(_tapToken);
-        }
-        if (_tapTokenAssetId != 0) {
-            tapAssetId = _tapTokenAssetId;
         }
         emit MainTokensUpdated();
     }
@@ -406,15 +365,12 @@ contract Penrose is Ownable, Pausable, PearlmitHandler {
     /// @dev sets usdoToken and usdoAssetId
     ///      can only by called by the owner
     /// @param _usdoToken the USDO token address
-    /// @param _usdoAssetId the USDO asset id
-    function setUsdoToken(address _usdoToken, uint256 _usdoAssetId) external onlyOwner {
+    function setUsdoToken(address _usdoToken) external onlyOwner {
         if (_usdoToken == address(0)) revert ZeroAddress();
-        if (_usdoAssetId == 0) revert NotValid();
 
         usdoToken = IERC20(_usdoToken);
-        usdoAssetId = _usdoAssetId;
 
-        emit UsdoTokenUpdated(_usdoToken, _usdoAssetId);
+        emit UsdoTokenUpdated(_usdoToken);
     }
 
     /// @notice Register a Singularity master contract
@@ -583,7 +539,11 @@ contract Penrose is Ownable, Pausable, PearlmitHandler {
             if (address(mc[i]).code.length == 0) revert NotValid();
             (success[i], result[i]) = mc[i].call(data[i]);
             if (forceSuccess) {
-                require(success[i], RevertMsgDecoder._getRevertMsg(result[i]));
+                // The CALL opcode returns the returned data in the function call.
+                // Only when it reverts, the returned data is the revert message.
+                if (!success[i]) {
+                    revert(RevertMsgDecoder._getRevertMsg(result[i]));
+                }
             }
             ++i;
         }
@@ -639,24 +599,18 @@ contract Penrose is Ownable, Pausable, PearlmitHandler {
         emit ReaccruedMarkets(includeMainMarket);
     }
 
-    function _depositFeesToTwTap(IMarket market, ITwTap twTap) private {
+    function _depositFeesToTwTap(IMarket market, ITWTAPv2 twTap) private {
         if (!isMarketRegistered[address(market)]) revert NotValid();
 
-        uint256 feeShares = market.refreshPenroseFees();
-        if (feeShares == 0) return;
+        uint256 feeAmount = ISingularity(address(market)).refreshPenroseFees();
+        if (feeAmount == 0) return;
 
         address _asset = market._asset();
-        uint256 _assetId = market._assetId();
-
-        uint256 feeAmount = yieldBox.toAmount(_assetId, feeShares, false);
-
-        yieldBox.withdraw(_assetId, address(this), address(this), 0, feeShares);
-
-        uint256 rewardTokenId = twTap.rewardTokenIndex(_asset);
+        uint256 rewardTokenId = twTap.rewardTokenIndex(IERC20_OZ(_asset));
         _distributeOnTwTap(feeAmount, rewardTokenId, _asset, twTap);
     }
 
-    function _distributeOnTwTap(uint256 amount, uint256 rewardTokenId, address _asset, ITwTap twTap) private {
+    function _distributeOnTwTap(uint256 amount, uint256 rewardTokenId, address _asset, ITWTAPv2 twTap) private {
         _asset.safeApprove(address(twTap), amount);
         twTap.distributeReward(rewardTokenId, amount);
         _asset.safeApprove(address(twTap), 0);

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // External
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -19,9 +19,9 @@ import {
     DepositAddCollateralAndBorrowFromMarketData,
     MagnetarAction
 } from "tap-utils/interfaces/periph/IMagnetar.sol";
-import {IMagnetarCollateralModule, IMagnetarYieldBoxModule} from "tap-utils/interfaces/periph/IMagnetar.sol";
+import {IMagnetarCollateralModule} from "tap-utils/interfaces/periph/IMagnetar.sol";
 import {IMarketHelper} from "tap-utils/interfaces/bar/IMarketHelper.sol";
-import {IYieldBox} from "tap-utils/interfaces/yieldbox/IYieldBox.sol";
+
 import {IMarket, Module} from "tap-utils/interfaces/bar/IMarket.sol";
 import {TOFTMsgCodec} from "../libraries/TOFTMsgCodec.sol";
 import {BaseTOFT} from "../BaseTOFT.sol";
@@ -176,8 +176,8 @@ contract TOFTMarketReceiverModule is BaseTOFT {
             msg_.user, msg_.borrowAmount, msg_.supplyAmount, msg_.executorData
         );
         if (msg_.supplyAmount > 0) {
-            IYieldBox yb = IYieldBox(IMarket(msg_.market)._yieldBox());
-            yb.depositAsset(IMarket(msg_.market)._assetId(), msg_.user, msg_.user, msg_.supplyAmount, 0);
+            IMarket market = IMarket(msg_.market);
+            market.deposit(msg_.supplyAmount, msg_.user);
         }
         IMarket(msg_.market).execute(modules, calls, true);
     }
@@ -240,10 +240,9 @@ contract TOFTMarketReceiverModule is BaseTOFT {
     }
 
     function _marketRemoveCollateral(MarketRemoveCollateralMsg memory msg_) private {
-        address ybAddress = IMarket(msg_.removeParams.market)._yieldBox();
-        uint256 assetId = IMarket(msg_.removeParams.market)._collateralId();
+        IMarket market = IMarket(msg_.removeParams.market);
 
-        uint256 share = IYieldBox(ybAddress).toShare(assetId, msg_.removeParams.amount, false);
+        uint256 share = market.convertToShares(msg_.removeParams.amount);
 
         (Module[] memory modules, bytes[] memory calls) = IMarketHelper(msg_.removeParams.marketHelper).removeCollateral(
             msg_.user, msg_.withdrawParams.withdraw ? msg_.removeParams.magnetar : msg_.user, share
@@ -252,15 +251,7 @@ contract TOFTMarketReceiverModule is BaseTOFT {
     }
 
     function _magnetarWithdraw(MarketRemoveCollateralMsg memory msg_) private {
-        bytes memory call = abi.encodeWithSelector(IMagnetarYieldBoxModule.withdrawHere.selector, msg_.withdrawParams);
-        MagnetarCall[] memory magnetarCall = new MagnetarCall[](1);
-        magnetarCall[0] = MagnetarCall({
-            id: uint8(MagnetarAction.YieldBoxModule),
-            target: address(this),
-            value: msg.value,
-            call: call
-        });
-        IMagnetar(payable(msg_.removeParams.magnetar)).burst{value: msg_.value}(magnetarCall);
+        revert("TODO");
     }
 
     function _checkWhitelistStatus(address _addr) private view {

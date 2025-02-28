@@ -1,25 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 import {Origins} from "tapioca-bar/markets/origins/Origins.sol";
-import {Market} from "tapioca-bar/markets/Market.sol";
-
-import {ERC20WithoutStrategy} from "yieldbox/strategies/ERC20WithoutStrategy.sol";
-
-// import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {Market, PauseType} from "tapioca-bar/markets/Market.sol";
 import {IERC20} from "@boringcrypto/boring-solidity/contracts/libraries/BoringERC20.sol";
 import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
-import {IWrappedNative} from "yieldbox/interfaces/IWrappedNative.sol";
-import {ITwTap} from "tap-utils/interfaces/tap-token/ITwTap.sol";
 import {IOracle} from "tap-utils/oracle/interfaces/IOracle.sol";
 import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
-import {IYieldBox} from "yieldbox/interfaces/IYieldBox.sol";
-import {IStrategy} from "yieldbox/interfaces/IStrategy.sol";
-
-import {YieldBoxURIBuilder} from "yieldbox/YieldBoxURIBuilder.sol";
-import {TokenType} from "yieldbox/enums/YieldBoxTokenType.sol";
-import {YieldBox} from "yieldbox/YieldBox.sol";
 
 import {Cluster} from "tap-utils/Cluster/Cluster.sol";
 import {Penrose} from "tapioca-bar/Penrose.sol";
@@ -35,7 +23,6 @@ import {UsdoHelper} from "tapioca-bar/usdo/extensions/UsdoHelper.sol";
 import {UsdoSender} from "tapioca-bar/usdo/modules/UsdoSender.sol";
 
 import {UsdoTestHelper, TestPenroseData} from "../helpers/UsdoTestHelper.t.sol";
-import {Pearlmit, IPearlmit} from "tap-utils/pearlmit/Pearlmit.sol";
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {LZEndpointMock} from "tapioca-mocks/LZEndpointMock.sol";
@@ -48,9 +35,8 @@ contract OriginsTest is UsdoTestHelper {
     uint32 aEid = 1;
     uint32 bEid = 2;
 
-    Pearlmit pearlmit;
     Cluster cluster;
-    YieldBox yieldBox;
+
     ERC20Mock tapOFT;
     ERC20Mock weth;
 
@@ -97,7 +83,6 @@ contract OriginsTest is UsdoTestHelper {
 
         report = TapiocaRelease.deployTapiocaV1(input, emptyReport);
 
-        pearlmit = Pearlmit(report.pearlmit);
         {
             tapOFT = new ERC20Mock("Tapioca OFT", "TAP");
             vm.label(address(tapOFT), "tapOFT");
@@ -111,47 +96,31 @@ contract OriginsTest is UsdoTestHelper {
             collateralErc20 = new ERC20Mock("CERC", "CERC");
             vm.label(address(collateralErc20), "collateralErc20");
 
-            asset = new TOFTMock(address(assetErc20), IPearlmit(address(pearlmit)));
+            asset = new TOFTMock(address(assetErc20));
             vm.label(address(asset), "asset");
 
-            collateral = new TOFTMock(address(collateralErc20), IPearlmit(address(pearlmit)));
+            collateral = new TOFTMock(address(collateralErc20));
             vm.label(address(collateral), "collateral");
         }
 
         setUpEndpoints(3, LibraryType.UltraLightNode);
 
         {
-            pearlmit = Pearlmit(report.pearlmit);
-            yieldBox = YieldBox(report.yieldbox);
             cluster = Cluster(report.cluster);
             magnetar = MagnetarMock(report.magnetar);
             penrose = Penrose(report.penrose);
 
             vm.label(address(endpoints[aEid]), "aEndpoint");
             vm.label(address(endpoints[bEid]), "bEndpoint");
-            vm.label(address(yieldBox), "YieldBox");
             vm.label(address(cluster), "Cluster");
             vm.label(address(magnetar), "Magnetar");
-            vm.label(address(pearlmit), "Pearlmit");
-        }
-
-        {
-            ERC20WithoutStrategy assetStrategy = createYieldBoxEmptyStrategy(address(yieldBox), address(asset));
-            ERC20WithoutStrategy collateralStrategy =
-                createYieldBoxEmptyStrategy(address(yieldBox), address(collateral));
-            assetYieldBoxId = registerYieldBoxAsset(address(yieldBox), address(asset), address(assetStrategy));
-            collateralYieldBoxId =
-                registerYieldBoxAsset(address(yieldBox), address(collateral), address(collateralStrategy));
         }
 
         oracle = createOracle();
         origins = createOrigins(
             address(this),
-            address(yieldBox),
             address(asset),
-            assetYieldBoxId,
             address(collateral),
-            collateralYieldBoxId,
             ITapiocaOracle(address(oracle)),
             0,
             99999,
@@ -163,29 +132,29 @@ contract OriginsTest is UsdoTestHelper {
         penrose.addOriginsMarket(address(origins));
     }
 
-    function depositAsset(uint256 amount) public {
-        deal(address(asset), address(this), amount);
-        asset.approve(address(yieldBox), type(uint256).max);
-        yieldBox.setApprovalForAll(address(origins), true);
+    function depositCollateral(address user, uint256 amount) public returns (uint256) {
+        deal(address(collateral), user, amount);
+        vm.startPrank(user);
+        IERC20 _asset = IERC20(origins.collateral());
+        _asset.approve(address(origins), amount);
+        uint256 share = origins.deposit(amount, address(this));
+        vm.stopPrank();
+        return share;
     }
 
-    function depositCollateral(uint256 amount) public {
-        deal(address(collateral), address(this), amount);
-        collateral.approve(address(yieldBox), type(uint256).max);
-        yieldBox.setApprovalForAll(address(origins), true);
-
-        uint256 share = yieldBox.toShare(collateralYieldBoxId, amount, false);
-        yieldBox.depositAsset(collateralYieldBoxId, address(this), address(this), 0, share);
-        origins.addCollateral(0, share);
-    }
-
-    function borrow(uint256 amount, bool expectRevert) public {
+    function borrow(address user, uint256 amount, bool expectRevert) public returns (uint256 part, uint256 share) {
+        vm.startPrank(user);
         if (expectRevert) vm.expectRevert();
-        origins.borrow(amount);
+        (part, share) = origins.borrow(amount);
+        vm.stopPrank();
     }
 
-    function repay(uint256 part) public {
+    function repay(address user, uint256 part) public {
+        IERC20 _asset = IERC20(origins._asset());
+        vm.startPrank(user);
+        _asset.approve(address(origins), part);
         origins.repay(part);
+        vm.stopPrank();
     }
 
     function test_setMarketConfig() public {
@@ -229,17 +198,17 @@ contract OriginsTest is UsdoTestHelper {
         }
 
         //add collateral
-        origins.updatePause(Market.PauseType.AddCollateral, true);
+        origins.updatePause(PauseType.AddCollateral, true);
 
         vm.expectRevert("Market: paused");
         origins.addCollateral(1, 0);
 
         //add collateral
-        origins.updatePause(Market.PauseType.RemoveCollateral, true);
+        origins.updatePause(PauseType.RemoveCollateral, true);
         vm.expectRevert("Market: paused");
         origins.removeCollateral(1);
 
-        origins.updatePause(Market.PauseType.Borrow, true);
+        origins.updatePause(PauseType.Borrow, true);
         vm.expectRevert("Market: paused");
         origins.borrow(1);
     }
@@ -250,9 +219,9 @@ contract OriginsTest is UsdoTestHelper {
 
         deal(address(collateral), address(this), collateralAmount);
 
-        depositCollateral(collateralAmount);
+        depositCollateral(address(this), collateralAmount);
 
-        borrow(borrowAmount, false);
+        borrow(address(this), borrowAmount, false);
     }
 
     function test_origin_should_borrow_max_2000_ether() public {
@@ -264,11 +233,11 @@ contract OriginsTest is UsdoTestHelper {
 
         deal(address(collateral), address(this), collateralAmount);
 
-        depositCollateral(collateralAmount);
+        depositCollateral(address(this), collateralAmount);
 
-        borrow(borrowAmount, false);
+        borrow(address(this), borrowAmount, false);
 
-        borrow(100e18, true);
+        borrow(address(this), 100e18, true);
     }
 
     function test_should_borrow_without_lenders() public {
@@ -277,9 +246,9 @@ contract OriginsTest is UsdoTestHelper {
 
         deal(address(collateral), address(this), collateralAmount);
 
-        depositCollateral(collateralAmount);
+        depositCollateral(address(this), collateralAmount);
 
-        borrow(borrowAmount, false);
+        borrow(address(this), borrowAmount, false);
     }
 
     function test_should_borrow_and_repay() public {
@@ -289,54 +258,50 @@ contract OriginsTest is UsdoTestHelper {
         deal(address(asset), address(this), borrowAmount);
         deal(address(collateral), address(this), collateralAmount);
 
-        depositCollateral(collateralAmount);
+        uint256 collateralSharesBalanceBefore = depositCollateral(address(this), collateralAmount);
 
-        borrow(borrowAmount, false);
+        borrow(address(this), borrowAmount, false);
 
-        depositAsset(borrowAmount);
-
-        repay(borrowAmount);
+        repay(address(this), borrowAmount);
 
         uint256 borrowPart = origins._userBorrowPart(address(this));
         assertEq(borrowPart, 0);
+
+        uint256 collateralSharesBalanceAfter = origins.balanceOf(address(this));
+        assertEq(collateralSharesBalanceBefore, collateralSharesBalanceAfter);
     }
 
     function test_only_allowed_users() public {
         uint256 collateralAmount = 1 ether;
 
         deal(address(collateral), address(this), collateralAmount);
-        collateral.approve(address(yieldBox), type(uint256).max);
-        yieldBox.setApprovalForAll(address(origins), true);
-
-        uint256 share = yieldBox.toShare(collateralYieldBoxId, collateralAmount, false);
-        yieldBox.depositAsset(collateralYieldBoxId, address(this), address(this), 0, share);
 
         vm.startPrank(userA);
         vm.expectRevert(Origins.NotAuthorized.selector);
-        origins.addCollateral(0, share);
+        origins.addCollateral(collateralAmount, 0);
         vm.stopPrank();
     }
 
     function test_time_updates() public {
         uint256 collateralAmount = 1 ether;
         uint256 borrowAmount = 5e17;
+        address user = address(this);
+        uint256 part;
+        uint256 share;
 
-        deal(address(asset), address(this), borrowAmount);
-        deal(address(collateral), address(this), collateralAmount);
+        deal(address(collateral), user, collateralAmount);
 
-        depositCollateral(collateralAmount);
+        share = depositCollateral(user, collateralAmount);
 
-        borrow(borrowAmount, false);
+        (part, share) = borrow(user, borrowAmount, false);
 
         skip(86400 * 1000);
 
-        uint256 borrowPart = origins._userBorrowPart(address(this));
+        uint256 borrowPart = origins._userBorrowPart(user);
         assertEq(borrowPart, borrowAmount);
 
-        depositAsset(borrowAmount);
-
-        repay(borrowAmount);
-        borrowPart = origins._userBorrowPart(address(this));
+        repay(user, borrowAmount);
+        borrowPart = origins._userBorrowPart(user);
         assertEq(borrowPart, 0);
     }
 }

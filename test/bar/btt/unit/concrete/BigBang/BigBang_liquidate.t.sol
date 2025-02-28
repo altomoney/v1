@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // Tapioca
 import {Module} from "tap-utils/interfaces/bar/IMarket.sol";
@@ -8,13 +8,12 @@ import {Market} from "tapioca-bar/markets/Market.sol";
 
 import {IMarketLiquidatorReceiver} from "tap-utils/interfaces/bar/IMarketLiquidatorReceiver.sol";
 import {IMarket} from "tap-utils/interfaces/bar/ISingularity.sol";
-import {IPearlmit} from "tap-utils/pearlmit/Pearlmit.sol";
 
 import {ZeroXSwapperMockTarget_test} from "../../../mocks/ZeroXSwapperMockTarget_test.sol";
 import {TOFTMock_test} from "../../../mocks/TOFTMock_test.sol";
 
 // tests
-import {BigBang_Unit_Shared} from "../../shared/BigBang_Unit_Shared.t.sol";
+import {BigBang_Unit_Shared, BBLiquidation} from "../../shared/BigBang_Unit_Shared.t.sol";
 
 contract BigBang_liquidate is BigBang_Unit_Shared {
     function test_liquidate_WhenContractIsPaused() external whenContractIsPaused {
@@ -113,7 +112,7 @@ contract BigBang_liquidate is BigBang_Unit_Shared {
         givenBorrowCapIsNotReachedYet
     {
         // **** Add collateral ****
-        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this), address(this), false);
+        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this));
 
         // **** Borrow ****
         borrowAmount = _boundBorrowAmount(borrowAmount, collateralAmount);
@@ -141,10 +140,10 @@ contract BigBang_liquidate is BigBang_Unit_Shared {
         uint256 maxBorrowAmount = _computeMaxBorrowAmount(collateralAmount, IMarket(address(mainBB)));
         maxBorrowAmount = maxBorrowAmount - (maxBorrowAmount * 6e4 / 1e5);
         // **** Main BB market ****
-        _liquidate(collateralAmount, 7e14, maxBorrowAmount, mainBB, MIN_LIQUIDATION_BONUS);
+        _liquidateFailsCollateral(collateralAmount, 7e14, maxBorrowAmount, mainBB, MIN_LIQUIDATION_BONUS);
 
         // **** Secondary BB market ****
-        _liquidate(collateralAmount, 7e14, maxBorrowAmount, secondaryBB, MIN_LIQUIDATION_BONUS);
+        _liquidateFailsCollateral(collateralAmount, 7e14, maxBorrowAmount, secondaryBB, MIN_LIQUIDATION_BONUS);
     }
 
     function test_whenParametersAreValid_WhenCollateralDoesNotCoverBorrowAmount(uint256 collateralAmount)
@@ -156,7 +155,7 @@ contract BigBang_liquidate is BigBang_Unit_Shared {
         givenBorrowCapIsNotReachedYet
     {
         // **** Add collateral ****
-        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this), address(this), false);
+        _addCollateral(collateralAmount, mainBB, address(this), address(this), address(this));
 
         // **** Borrow ****
         uint256 maxBorrowAmount = _computeMaxBorrowAmount(collateralAmount, IMarket(address(mainBB)));
@@ -168,11 +167,11 @@ contract BigBang_liquidate is BigBang_Unit_Shared {
 
         // compute asset amount
         SZeroXSwapData memory szeroXSwapData = SZeroXSwapData({
-            sellToken: TOFTMock_test(payable(mainBB._collateral())).erc20(),
-            buyToken: mainBB._asset(),
+            sellToken: TOFTMock_test(payable(mainBB.collateral())).erc20(),
+            buyToken: address(mainBB._asset()),
             swapTarget: payable(swapperTarget),
             swapCallData: abi.encodeWithSelector(
-                ZeroXSwapperMockTarget_test.transferTokens.selector, mainBB._asset(), maxBorrowAmount / 2
+                ZeroXSwapperMockTarget_test.transferTokens.selector, address(mainBB._asset()), maxBorrowAmount / 2
             )
         });
         SSwapData memory sswapData = SSwapData({minAmountOut: 0, data: szeroXSwapData});
@@ -180,10 +179,6 @@ contract BigBang_liquidate is BigBang_Unit_Shared {
 
         (Module[] memory modules, bytes[] memory calls) =
             _getLiquidationData(address(this), swapData, maxBorrowAmount, MIN_LIQUIDATION_BONUS);
-        //         │   │   │   └─ ← [Revert] BadDebt()
-        // │   │   └─ ← [Revert] EvmError: Revert
-        // │   └─ ← [Revert] EvmError: Revert
-        // └─ ← [Revert] EvmError: Revert
         vm.expectRevert();
         mainBB.execute(modules, calls, true);
     }

@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // mocks
 import {TOFTMock_test} from "../../../mocks/TOFTMock_test.sol";
 
 // contracts
 import {MarketLiquidatorReceiver_Unit_Shared} from "../../shared/MarketLiquidatorReceiver_Unit_Shared.t.sol";
-import {Pearlmit, IPearlmit} from "tap-utils/pearlmit/Pearlmit.sol";
 
 contract MarketLiquidatorReceiver_querySellToken is MarketLiquidatorReceiver_Unit_Shared {
     TOFTMock_test toft;
@@ -14,7 +13,7 @@ contract MarketLiquidatorReceiver_querySellToken is MarketLiquidatorReceiver_Uni
     function setUp() public override {
         super.setUp();
 
-        toft = new TOFTMock_test(address(weth), IPearlmit(address(pearlmit)));
+        toft = new TOFTMock_test(address(weth));
     }
 
     function test_WhenQuerySellTokenIsCalled() external {

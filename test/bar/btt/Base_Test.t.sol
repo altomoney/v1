@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // contracts
 import {UsdoInitStruct, UsdoModulesInitStruct} from "tap-utils/interfaces/oft/IUsdo.sol";
-import {IPearlmit, Pearlmit} from "tap-utils/pearlmit/Pearlmit.sol";
-import {TokenType} from "yieldbox/enums/YieldBoxTokenType.sol";
-import {IStrategy} from "yieldbox/interfaces/IStrategy.sol";
+
 import {Cluster} from "tap-utils/Cluster/Cluster.sol";
-import {YieldBox} from "yieldbox/YieldBox.sol";
+
 import {Penrose} from "tapioca-bar/Penrose.sol";
 
 import {TapiocaOmnichainExtExec} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainExtExec.sol";
@@ -43,8 +41,6 @@ abstract contract Base_Test is TestHelper, Utils, Types, Events {
     uint256 public initialBalance = LARGE_AMOUNT;
 
     // common general storage
-    YieldBox yieldBox;
-    Pearlmit pearlmit;
     Cluster cluster;
     Penrose penrose;
     MagnetarMock_test magnetar; // same as the original; avoids a new foundry reference
@@ -52,13 +48,10 @@ abstract contract Base_Test is TestHelper, Utils, Types, Events {
     // tokens
     ERC20Mock_test mainTokenErc20; // used as the main token underlying erc20
     TOFTMock_test mainToken; // used as the main token in Penrose
-    uint256 mainTokenId; // used as the main token Id in Penrose
 
     ERC20Mock_test tapToken; // no need for real TAP; used only to simulate fees
-    uint256 tapTokenId;
 
     Usdo usdo;
-    uint256 usdoId;
 
     UsdoSender usdoSender;
     UsdoReceiver usdoReceiver;
@@ -66,7 +59,6 @@ abstract contract Base_Test is TestHelper, Utils, Types, Events {
     UsdoOptionReceiverModule usdoOptionsReceiverModule;
 
     Usdo secondaryUsdo;
-    uint256 secondaryUsdoId;
 
     // ************* //
     // *** SETUP *** //
@@ -87,42 +79,18 @@ abstract contract Base_Test is TestHelper, Utils, Types, Events {
 
         // create real Cluster
         cluster = _createCluster(address(this));
-        // create real Pearlmit
-        pearlmit = _createPearlmit(address(this));
-        // create real YieldBox
-        yieldBox = _createYieldBox(address(this), pearlmit);
 
-        mainToken = new TOFTMock_test(address(mainTokenErc20), IPearlmit(address(pearlmit)));
+        mainToken = new TOFTMock_test(address(mainTokenErc20));
         vm.label(address(mainToken), "MainToken TOFT");
 
-        magnetar = new MagnetarMock_test(address(cluster), IPearlmit(address(pearlmit)));
+        magnetar = new MagnetarMock_test(address(cluster));
         vm.label(address(magnetar), "MagnetarMock_test");
-
-        // create YieldBox id for main token mock
-        mainTokenId = yieldBox.registerAsset(
-            TokenType.ERC20,
-            address(mainToken),
-            IStrategy(address(_createEmptyStrategy(address(yieldBox), address(mainToken)))),
-            0
-        );
-
-        // create YieldBox id for tap token mock
-        tapTokenId = yieldBox.registerAsset(
-            TokenType.ERC20,
-            address(tapToken),
-            IStrategy(address(_createEmptyStrategy(address(yieldBox), address(tapToken)))),
-            0
-        );
 
         // create real Penrose
         penrose = _createPenrose({
-            _yieldBox: address(yieldBox),
             _cluster: address(cluster),
             _tapToken: address(tapToken),
-            _tapId: tapTokenId,
             _mainToken: address(mainToken),
-            _mainTokenId: mainTokenId,
-            _pearlmit: address(pearlmit),
             _owner: address(this)
         });
 
@@ -133,10 +101,8 @@ abstract contract Base_Test is TestHelper, Utils, Types, Events {
         UsdoInitStruct memory usdoInitStruct = UsdoInitStruct({
             endpoint: address(endpoints[aEid]),
             delegate: address(this),
-            yieldBox: address(yieldBox),
             cluster: address(cluster),
-            extExec: address(extExec),
-            pearlmit: IPearlmit(address(pearlmit))
+            extExec: address(extExec)
         });
         usdoSender = new UsdoSender(usdoInitStruct);
         usdoReceiver = new UsdoReceiver(usdoInitStruct);
@@ -156,22 +122,12 @@ abstract contract Base_Test is TestHelper, Utils, Types, Events {
         usdo = Usdo(payable(_deployOApp(type(Usdo).creationCode, abi.encode(usdoInitStruct, usdoModulesInitStruct))));
         vm.label(address(usdo), "Usdo");
 
-        // create YieldBox id for Usdo
-        usdoId = yieldBox.registerAsset(
-            TokenType.ERC20,
-            address(usdo),
-            IStrategy(address(_createEmptyStrategy(address(yieldBox), address(usdo)))),
-            0
-        );
-
         // create secondary real Usdo
         usdoInitStruct = UsdoInitStruct({
             endpoint: address(endpoints[bEid]),
             delegate: address(this),
-            yieldBox: address(yieldBox),
             cluster: address(cluster),
-            extExec: address(extExec),
-            pearlmit: IPearlmit(address(pearlmit))
+            extExec: address(extExec)
         });
         UsdoSender secondaryUsdoSender = new UsdoSender(usdoInitStruct);
         UsdoReceiver secondaryUsdoReceiver = new UsdoReceiver(usdoInitStruct);
@@ -191,14 +147,6 @@ abstract contract Base_Test is TestHelper, Utils, Types, Events {
             Usdo(payable(_deployOApp(type(Usdo).creationCode, abi.encode(usdoInitStruct, usdoModulesInitStruct))));
         vm.label(address(secondaryUsdo), "Secondary Usdo");
 
-        // create YieldBox id for the secondary Usdo
-        secondaryUsdoId = yieldBox.registerAsset(
-            TokenType.ERC20,
-            address(secondaryUsdo),
-            IStrategy(address(_createEmptyStrategy(address(yieldBox), address(secondaryUsdo)))),
-            0
-        );
-
         // *** AFTER DEPLOYMENT *** //
 
         // config and wire the ofts
@@ -208,7 +156,7 @@ abstract contract Base_Test is TestHelper, Utils, Types, Events {
         this.wireOApps(ofts);
 
         // set Usdo token on Penrose
-        penrose.setUsdoToken(address(usdo), usdoId);
+        penrose.setUsdoToken(address(usdo));
         // set BB default debt rate
         penrose.setBigBangEthMarketDebtRate(DEFAULT_PENROSE_DEBT_RATE);
 
@@ -220,52 +168,10 @@ abstract contract Base_Test is TestHelper, Utils, Types, Events {
     // ***************** //
     // *** MODIFIERS *** //
     // ***************** //
-    /// @notice Modifier to approve an operator in YB via Pearlmit.
-    modifier whenApprovedViaPearlmit(
-        uint256 _type,
-        address _token,
-        uint256 _tokenId,
-        address _from,
-        address _operator,
-        uint256 _amount,
-        uint256 _expiration
-    ) {
-        _approveViaPearlmit({
-            tokenType: _type,
-            token: _token,
-            pearlmit: IPearlmit(address(pearlmit)),
-            from: _from,
-            operator: _operator,
-            amount: _amount,
-            expiration: _expiration,
-            tokenId: _tokenId
-        });
-        _;
-    }
 
     /// @notice Modifier to approve an operator via regular ERC20.
     modifier whenApprovedViaERC20(address _token, address _from, address _operator, uint256 _amount) {
         _approveViaERC20({token: _token, from: _from, operator: _operator, amount: _amount});
-        _;
-    }
-
-    /// @notice Modifier to approve an operator for a specific asset ID via YB.
-    modifier whenYieldBoxApprovedForAssetID(address _from, address _operator, uint256 _assetId) {
-        _approveYieldBoxAssetId({yieldBox: yieldBox, from: _from, operator: _operator, assetId: _assetId});
-        _;
-    }
-
-    /// @notice Modifier to approve an operator for a specific asset ID via YB.
-    modifier whenYieldBoxApprovedForMultipleAssetIDs(address _from, address _operator, uint256 _noOfAssets) {
-        for (uint256 i = 1; i <= _noOfAssets; i++) {
-            _approveYieldBoxAssetId({yieldBox: yieldBox, from: _from, operator: _operator, assetId: i});
-        }
-        _;
-    }
-
-    /// @notice Modifier to approve an operator for all via YB.
-    modifier whenYieldBoxApprovedForAll(address _from, address _operator) {
-        _approveYieldBoxForAll({yieldBox: yieldBox, from: _from, operator: _operator});
         _;
     }
 

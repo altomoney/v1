@@ -1,0 +1,7 @@
+TapiocaOptionBroker_setPaymentToken.tree\
+├── when caller is not owner
+│   └── it should revert
+└── when caller is owner
+    ├── it should set payment token oracle
+    ├── it should set payment token oracle data
+    └── it should emit SetPaymentToken event

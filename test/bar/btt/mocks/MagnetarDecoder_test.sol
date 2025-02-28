@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 import {
     IMagnetar,
@@ -23,7 +23,8 @@ contract MagnetarDecoder_test {
     function burst(MagnetarCall[] calldata calls) external payable {
         for (uint256 i; i < calls.length; i++) {
             MagnetarCall calldata _action = calls[i];
-            address(this).delegatecall(_action.call);
+            (bool success,) = address(this).delegatecall(_action.call);
+            if (!success) revert MagnetarDecoder_test_Fail();
         }
     }
 
@@ -36,7 +37,7 @@ contract MagnetarDecoder_test {
         removeAmount = _data.collateralAmount;
     }
 
-    function mintBBLendSGLLockTOLP(MintFromBBAndLendOnSGLData memory _data) external payable {
+    function mintBBAndLock(MintFromBBAndLendOnSGLData memory _data) external payable {
         depositAmount = _data.lendAmount;
     }
 

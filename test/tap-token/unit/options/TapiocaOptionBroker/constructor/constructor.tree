@@ -1,0 +1,8 @@
+TapiocaOptionBroker_constructor.tree
+├── when epochDuration is zero
+│   └── it should revert
+└── when all parameters are valid
+    ├── it should set TAP_TOKEN
+    ├── it should set _paymentTokenBeneficiary
+    ├── it should initialize TWLBase
+    └── it should transfer ownership to admin

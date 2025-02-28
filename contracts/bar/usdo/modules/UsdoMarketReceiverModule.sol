@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // External
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -75,20 +75,7 @@ contract UsdoMarketReceiverModule is BaseUsdo {
          */
         msg_ = _validateLendOrRepayReceiver(msg_);
 
-        /**
-         * @dev Pearlmit approvals
-         */
-        // approve(address(msg_.lendParams.magnetar), msg_.lendParams.depositAmount);
-        approve(address(pearlmit), msg_.lendParams.depositAmount);
-        pearlmit.approve(
-            20,
-            address(this),
-            0,
-            msg_.lendParams.magnetar,
-            uint200(msg_.lendParams.depositAmount),
-            block.timestamp.toUint48()
-        );
-
+        approve(address(msg_.lendParams.magnetar), msg_.lendParams.depositAmount);
         /**
          * @dev Lend or Repay through `magnetar`
          */
@@ -98,10 +85,7 @@ contract UsdoMarketReceiverModule is BaseUsdo {
             _lend(msg_, srcChainSender);
         }
 
-        /**
-         * @dev Pearlmit revokes
-         */
-        approve(address(pearlmit), 0);
+        //approve(address(pearl mit), 0);
 
         emit LendOrRepayReceived(msg_.user, srcChainSender, msg_.lendParams.repay, msg_.lendParams.market);
     }
@@ -139,7 +123,6 @@ contract UsdoMarketReceiverModule is BaseUsdo {
         _checkWhitelistStatus(msg_.lendParams.marketHelper);
         _checkWhitelistStatus(msg_.lendParams.market);
         _checkWhitelistStatus(msg_.lendParams.lockData.target);
-        _checkWhitelistStatus(msg_.lendParams.participateData.target);
 
         {
             if (msg_.lendParams.depositAmount > 0) {
@@ -151,12 +134,16 @@ contract UsdoMarketReceiverModule is BaseUsdo {
             if (msg_.lendParams.removeCollateralAmount > 0) {
                 msg_.lendParams.removeCollateralAmount = _toLD(msg_.lendParams.removeCollateralAmount.toUint64());
             }
-            if (msg_.lendParams.lockData.amount > 0) {
-                msg_.lendParams.lockData.amount = _toLD(uint256(msg_.lendParams.lockData.amount).toUint64()).toUint128();
+            if (msg_.lendParams.lockData.usdoAmount > 0) {
+                msg_.lendParams.lockData.usdoAmount =
+                    _toLD(uint256(msg_.lendParams.lockData.usdoAmount).toUint64()).toUint128();
             }
-            if (msg_.lendParams.lockData.fraction > 0) {
-                msg_.lendParams.lockData.fraction = _toLD(msg_.lendParams.lockData.fraction.toUint64());
-            }
+            /**
+             * wip: check if this is needed
+             *         if (msg_.lendParams.lockData.fraction > 0) {
+             *             msg_.lendParams.lockData.fraction = _toLD(msg_.lendParams.lockData.fraction.toUint64());
+             *         }
+             */
         }
         return msg_;
     }
@@ -201,7 +188,7 @@ contract UsdoMarketReceiverModule is BaseUsdo {
 
     function _lend(MarketLendOrRepayMsg memory msg_, address srcChainSender) private {
         if (msg_.user != srcChainSender) {
-            uint256 allowanceAmont = msg_.lendParams.depositAmount + msg_.lendParams.lockData.amount;
+            uint256 allowanceAmont = msg_.lendParams.depositAmount + msg_.lendParams.lockData.usdoAmount;
             _spendAllowance(msg_.user, srcChainSender, allowanceAmont);
         }
 
@@ -215,7 +202,6 @@ contract UsdoMarketReceiverModule is BaseUsdo {
             }),
             depositData: IDepositData({deposit: true, amount: msg_.lendParams.depositAmount}),
             lockData: msg_.lendParams.lockData,
-            participateData: msg_.lendParams.participateData,
             externalContracts: ICommonExternalContracts({
                 magnetar: msg_.lendParams.magnetar,
                 singularity: msg_.lendParams.market,
@@ -223,7 +209,7 @@ contract UsdoMarketReceiverModule is BaseUsdo {
                 marketHelper: msg_.lendParams.marketHelper
             })
         });
-        bytes memory call = abi.encodeWithSelector(IMagnetarMintModule.mintBBLendSGLLockTOLP.selector, _lendData);
+        bytes memory call = abi.encodeWithSelector(IMagnetarMintModule.mintBBAndLock.selector, _lendData);
         MagnetarCall[] memory magnetarCall = new MagnetarCall[](1);
         magnetarCall[0] = MagnetarCall({
             id: uint8(MagnetarAction.MintModule),

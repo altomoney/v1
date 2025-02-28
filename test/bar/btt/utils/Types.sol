@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // external
 import {IERC20} from "@boringcrypto/boring-solidity/contracts/libraries/BoringERC20.sol";
@@ -14,12 +14,8 @@ abstract contract Types {
         address penrose;
         // borrow asset
         address asset;
-        // borrow asset YieldBox id
-        uint256 assetId;
         // collateral token
         address collateral;
-        // collateral token YieldBox id
-        uint256 collateralId;
         // default market's oracle for collateral <> asset
         ITapiocaOracle oracle;
         // leverage executor
@@ -32,8 +28,6 @@ abstract contract Types {
         address penrose;
         // collateral token
         address collateral;
-        // collateral token YieldBox id
-        uint256 collateralId;
         // default market's oracle for collateral <> asset
         ITapiocaOracle oracle;
         // leverage executor

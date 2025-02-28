@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.22;
+pragma solidity ^0.8.22;
 
 // import {ChainlinkUtils, AggregatorV3Interface, AccessControlDefaultAdminRules} from "../../utils/ChainlinkUtils.sol";
 // import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
