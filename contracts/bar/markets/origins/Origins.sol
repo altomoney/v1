@@ -119,7 +119,7 @@ contract Origins is Ownable, Market {
         if (!allowedParticipants[msg.sender]) revert NotAuthorized();
 
         if (share == 0) {
-            share = convertToShares(amount);
+            share = previewDeposit(amount);
         }
 
         _addCollateral(msg.sender, msg.sender, amount, share);
@@ -213,7 +213,7 @@ contract Origins is Ownable, Market {
 
     function _addCollateral(address from, address to, uint256 amount, uint256 share) internal {
         if (share == 0) {
-            share = convertToShares(amount);
+            share = previewDeposit(amount);
         }
         mint(share, to);
         emit LogAddCollateral(from, to, share);

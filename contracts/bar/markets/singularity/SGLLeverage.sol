@@ -138,12 +138,11 @@ contract SGLLeverage is SGLLendingCommon {
 
         amountOut =
             leverageExecutor.getAsset(from, collateral(), address(_borrowableToken()), leverageAmount, calldata_.data);
-        uint256 shareOut = convertToShares(amountOut);
-        deposit(amountOut, calldata_.from);
+        uint256 shareOut = deposit(amountOut, calldata_.from);
 
         uint256 partOwed = userBorrowPart[calldata_.from];
         uint256 amountOwed = totalBorrow.toElastic(partOwed, true);
-        uint256 shareOwed = convertToShares(amountOwed);
+        uint256 shareOwed = previewWithdraw(amountOwed);
         if (shareOwed <= shareOut) {
             _repay(calldata_.from, calldata_.from, partOwed, false);
         } else {

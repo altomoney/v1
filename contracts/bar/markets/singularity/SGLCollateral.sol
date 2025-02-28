@@ -42,7 +42,7 @@ contract SGLCollateral is SGLLendingCommon {
         optionNotPaused(PauseType.AddCollateral)
         returns (uint256 assets)
     {
-        assets = convertToAssets(shares);
+        assets = previewMint(shares);
 
         if (assets < minCollateralAmount) revert MinCollateralAmountNotMet();
 

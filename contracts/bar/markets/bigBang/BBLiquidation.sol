@@ -96,7 +96,7 @@ contract BBLiquidation is BBCommon {
                 _swapCollateralWithAsset(collateralShare, liquidatorReceiver, liquidatorReceiverData, 0, false);
             IERC20(address(_borrowableToken())).safeTransfer(receiver, returnedAmount);
         } else {
-            uint256 collateralAmount = convertToAssets(collateralShare);
+            uint256 collateralAmount = previewRedeem(collateralShare);
             IERC20(collateral()).safeTransfer(receiver, collateralAmount);
         }
 
@@ -163,7 +163,7 @@ contract BBLiquidation is BBCommon {
         uint256 _exchangeRate,
         bool checkReturned
     ) private returns (uint256 returnedAmount) {
-        uint256 collateralAmount = convertToAssets(_collateralShare);
+        uint256 collateralAmount = previewRedeem(_collateralShare);
         IERC20(collateral()).safeTransfer(address(_liquidatorReceiver), collateralAmount);
 
         {
@@ -250,7 +250,7 @@ contract BBLiquidation is BBCommon {
             uint256 totalUserBorrowWithBonus =
                 userTotalBorrowAmount + (userTotalBorrowAmount * liquidationBonusAmount) / FEE_PRECISION;
             if (collateralPartInAsset < totalUserBorrowWithBonus) revert BadDebt();
-            collateralShare = convertToShares((borrowPartWithBonus * _exchangeRate) / EXCHANGE_RATE_PRECISION);
+            collateralShare = previewWithdraw((borrowPartWithBonus * _exchangeRate) / EXCHANGE_RATE_PRECISION);
             if (collateralShare > balanceOf(user)) {
                 revert NotEnoughCollateral();
             }
