@@ -75,6 +75,8 @@ contract SGLLeverage is SGLLendingCommon {
         if (calldata_.supplyAmount > 0) {
             memoryData.supplyShareToAmount = withdraw(calldata_.supplyAmount, address(leverageExecutor), calldata_.from);
         }
+
+        _allowedBorrow(calldata_.from, calldata_.borrowAmount);
         (, uint256 borrowShare) = _borrow(calldata_.from, address(this), calldata_.borrowAmount);
 
         {

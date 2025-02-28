@@ -58,13 +58,13 @@ contract TapiocaOptionBrokerForceUnlockTest is TOBTestBase {
         assertEq(tob._totalLockedUsdo(testUser), initialTotalUSDO - _lockAmount, "Total locked USDO should decrease");
         assertEq(
             tob._netDepositsPerEpoch(tob.lastEpoch() + 1),
-            initialCurrentEpochDeposits,
-            "Current epoch deposits should remain unchanged"
+            initialCurrentEpochDeposits - int256(_lockAmount),
+            "Current epoch deposits should be updated"
         );
         assertEq(
             tob._netDepositsPerEpoch(tob.timestampToEpoch(expiry) + 1),
-            initialExpiryEpochDeposits,
-            "Expiry epoch deposits should not change"
+            initialExpiryEpochDeposits + int256(_lockAmount),
+            "Expiry epoch deposits should be updated"
         );
 
         vm.stopPrank();

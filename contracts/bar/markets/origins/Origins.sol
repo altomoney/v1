@@ -187,7 +187,6 @@ contract Origins is Ownable, Market {
 
         // amount includes the opening & accrued fees
         amountOut = amount;
-        withdraw(amount, address(this), from);
 
         //burn USDO
         _borrowableToken().safeTransferFrom(from, address(this), amount);
@@ -209,7 +208,6 @@ contract Origins is Ownable, Market {
         //mint USDO
         IUsdo(address(_borrowableToken())).mint(address(this), amount);
 
-        //deposit borrowed amount to user
         IERC20(_borrowableToken()).safeTransfer(to, amount);
     }
 

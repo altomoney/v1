@@ -123,6 +123,7 @@ contract Singularity is Market, SGLCommon {
         external
         optionNotPaused(PauseType.AddAsset)
         allowedLend(from, amount)
+        nonReentrant
         returns (uint256 fraction)
     {
         if (amount <= minLendAmount) revert MinLendAmountNotMet();
@@ -139,6 +140,7 @@ contract Singularity is Market, SGLCommon {
     function removeAsset(address from, address to, uint256 fraction)
         external
         optionNotPaused(PauseType.RemoveAsset)
+        nonReentrant
         returns (uint256 share)
     {
         _accrue();
@@ -281,7 +283,7 @@ contract Singularity is Market, SGLCommon {
         }
         totalAsset = _totalAsset.add(amount, fraction);
 
-        liquidityBalance[from] += fraction;
+        liquidityBalance[to] += fraction;
 
         emit LogAddAsset(from, to, amount, fraction);
     }

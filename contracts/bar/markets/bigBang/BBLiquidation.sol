@@ -76,12 +76,11 @@ contract BBLiquidation is BBCommon {
         _penrose.reAccrueBigBangMarkets();
 
         // compute borrow amount with bonus
-        uint256 elasticPart = totalBorrow.toElastic(userBorrowPart[user], false);
-        uint256 borrowAmountWithBonus = elasticPart + (elasticPart * liquidationMultiplier) / FEE_PRECISION;
-        uint256 requiredCollateral = previewWithdraw((borrowAmountWithBonus * exchangeRate) / EXCHANGE_RATE_PRECISION);
+        uint256 requiredCollateral = _computeRequiredCollateralWithBonus(user);
 
         uint256 collateralShare = balanceOf(user);
-        if (requiredCollateral < collateralShare) revert ForbiddenAction();
+        uint256 collateralAmount = previewRedeem(collateralShare);
+        if (requiredCollateral < collateralAmount) revert NotAuthorized();
 
         // update totalBorrow
         uint256 borrowAmount = totalBorrow.toElastic(userBorrowPart[user], true);
@@ -106,6 +105,18 @@ contract BBLiquidation is BBCommon {
         // burn debt amount from `from`
         IERC20 borrowableToken = _borrowableToken();
         IUsdo(address(borrowableToken)).burn(from, borrowAmount);
+    }
+
+    function _computeRequiredCollateralWithBonus(address _user)
+        private
+        view
+        returns (uint256)
+    {
+        // compute borrow amount with bonus
+        uint256 elasticPart = totalBorrow.toElastic(userBorrowPart[_user], false);
+        uint256 borrowAmountWithBonus = elasticPart + (elasticPart * liquidationMultiplier) / FEE_PRECISION;
+        uint256 requiredCollateral = (borrowAmountWithBonus * exchangeRate) / EXCHANGE_RATE_PRECISION;
+        return requiredCollateral;
     }
 
     // ************************ //
