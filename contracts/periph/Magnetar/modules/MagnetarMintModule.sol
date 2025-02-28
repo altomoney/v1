@@ -6,7 +6,7 @@ import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 // Tapioca
-import {ITapiocaOptionBroker} from "tap-utils/interfaces/tap-token/ITapiocaOptionBroker.sol";
+import {ITapiocaOptionBroker} from "tap-token/interfaces/ITapiocaOptionBroker.sol";
 import {MintFromBBAndLendOnSGLData} from "tap-utils/interfaces/periph/IMagnetar.sol";
 import {ITapiocaOption} from "tap-utils/interfaces/tap-token/ITapiocaOption.sol";
 import {ISingularity} from "tap-utils/interfaces/bar/ISingularity.sol";
@@ -58,16 +58,15 @@ contract MagnetarMintModule is MagnetarBaseModule {
      * @param data.lendAmount the amount to lend on SGL
      * @param data.mintData the data needed to mint on BB
      * @param data.depositData the data needed for asset deposit
-     * @param data.lockData the data needed to lock on TapiocaOptionLiquidityProvision
      * @param data.participateData the data needed to perform a participate operation on TapiocaOptionsBroker
      * @param data.externalContracts the contracts' addresses used in all the operations performed by the helper
      */
 
-    function mintBBLendSGLLockTOLP(MintFromBBAndLendOnSGLData memory data) public payable {
+    function mintBBAndLock(MintFromBBAndLendOnSGLData memory data) public payable {
         /**
          * @dev validate data
          */
-        _validatemintBBLendSGLLockTOLPData(data);
+        _validateMintBBAndLock(data);
 
         /**
          * @dev if `mint` was requested the following actions are performed:
@@ -75,60 +74,19 @@ contract MagnetarMintModule is MagnetarBaseModule {
          *      - performs bigBang_.addCollateral
          *      - performs bigBang_.borrow
          */
-        if (data.mintData.mint && data.externalContracts.bigBang != address(0)) {
+        if (data.mintData.mint) {
             _depositAddCollateralAndMintFromBigBang(data);
         }
 
-        /**
-         * @dev if `depositData.deposit`:
-         *          - deposit SGL asset to YB for `data.user`
-         */
-        if (data.depositData.deposit) {
-            IMarket _singularity = IMarket(data.externalContracts.singularity);
-
-            address assetAddress = _singularity.collateral();
-
-            data.depositData.amount = _extractTokens(data.user, assetAddress, data.depositData.amount);
-            _depositToMarket(_singularity, data.user, data.depositData.amount);
-        }
-
-        /**
-         * @dev if `lendAmount` > 0:
-         *          - add asset to SGL
-         */
-        uint256 fraction;
-        if (data.lendAmount > 0) {
-            fraction = _singularityAddAsset(
-                ISingularity(data.externalContracts.singularity), data.lendAmount, data.user, data.user
-            );
-        }
-
-        /**
-         * @dev if `lockData.lock`:
-         *          - transfer `fraction` from data.user to `address(this)
-         *          - deposits `fraction` to YB for `address(this)`
-         *          - performs tOLP.lock
-         */
-        uint256 tOLPTokenId;
         if (data.lockData.lock) {
-            tOLPTokenId = _lock(data, fraction, data.participateData.participate);
-        }
-
-        /**
-         * @dev if `participateData.participate`:
-         *          - verify tOLPTokenId
-         *          - performs tOB.participate
-         *          - transfer `oTAPTokenId` to data.user
-         */
-        if (data.participateData.participate) {
-            _participate(data, tOLPTokenId, data.lockData.lock);
+            _lock(data);
         }
     }
 
     /// =====================
     /// Private
     /// =====================
-    function _validatemintBBLendSGLLockTOLPData(MintFromBBAndLendOnSGLData memory data) private view {
+    function _validateMintBBAndLock(MintFromBBAndLendOnSGLData memory data) private view {
         // Check sender
         _checkSender(data.user);
 
@@ -138,8 +96,6 @@ contract MagnetarMintModule is MagnetarBaseModule {
         _checkWhitelisted(data.externalContracts.bigBang);
         _checkWhitelisted(data.externalContracts.marketHelper);
         _checkWhitelisted(data.lockData.target);
-        _checkWhitelisted(data.lockData.tAsset);
-        _checkWhitelisted(data.participateData.target);
     }
 
     function _depositAddCollateralAndMintFromBigBang(MintFromBBAndLendOnSGLData memory data) private {
@@ -174,17 +130,7 @@ contract MagnetarMintModule is MagnetarBaseModule {
         }
     }
 
-    struct LockParams {
-        IMarket singularity;
-        uint256 tOLPSglAssetId;
-        uint256 fraction;
-        bool participate;
-    }
-
-    function _lock(MintFromBBAndLendOnSGLData memory data, uint256 fraction, bool participate)
-        private
-        returns (uint256 tOLPTokenId)
-    {
+    function _lock(MintFromBBAndLendOnSGLData memory data) private {
         /*
         LockParams memory params;
         params.singularity = IMarket(data.externalContracts.singularity);
@@ -212,57 +158,6 @@ contract MagnetarMintModule is MagnetarBaseModule {
         params.fraction = fraction;
 
         return _wrapAndLock(data, params);
-        */
-    }
-
-    function _wrapAndLock(MintFromBBAndLendOnSGLData memory data, LockParams memory params)
-        private
-        returns (uint256 tOLPTokenId)
-    {
-        /*
-        uint256 wrapped = ITOFT(data.lockData.tAsset).wrap(address(this), address(this), params.fraction);
-        ITapiocaOptionLiquidityProvision tOLP = ITapiocaOptionLiquidityProvision(data.lockData.target);
-
-        // deposit YB and revoke approval
-        IERC20(address(params.singularity)).approve(address(pearl mit), 0);
-        data.lockData.amount = obtainedShares.toUint128();
-        return tOLP.lock(
-            params.participate ? address(this) : data.user,
-            data.lockData.tAsset,
-            data.lockData.lockDuration,
-            data.lockData.amount,
-            msg.sender
-        );
-        */
-    }
-
-    function _participate(MintFromBBAndLendOnSGLData memory data, uint256 tOLPTokenId, bool lock) private {
-        // validate token ids
-        /*
-        if (tOLPTokenId == 0 && data.participateData.tOLPTokenId == 0) revert Magnetar_ActionParamsMismatch();
-        if (
-            data.participateData.tOLPTokenId != tOLPTokenId && tOLPTokenId != 0 && data.participateData.tOLPTokenId != 0
-        ) {
-            revert Magnetar_tOLPTokenMismatch();
-        }
-
-        if (data.participateData.tOLPTokenId != 0) tOLPTokenId = data.participateData.tOLPTokenId;
-
-        // transfer NFT here
-        if (!lock) {
-            bool isErr = pearl mit.transferFromERC721(data.user, address(this), data.lockData.target, tOLPTokenId);
-            if (isErr) revert Magnetar_ExtractTokenFail();
-        }
-
-        pear lmit.approve(
-            721, data.lockData.target, tOLPTokenId, data.participateData.target, 1, block.timestamp.toUint48()
-        );
-        IERC721(data.lockData.target).approve(address(pear lmit), tOLPTokenId);
-        uint256 oTAPTokenId = ITapiocaOptionBroker(data.participateData.target).participate(tOLPTokenId, 0);
-
-        address oTapAddress = ITapiocaOptionBroker(data.participateData.target).oTAP();
-        IERC721(oTapAddress).safeTransferFrom(address(this), data.user, oTAPTokenId);
-        }
         */
     }
 }

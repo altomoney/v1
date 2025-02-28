@@ -158,7 +158,7 @@ contract MagnetarMock {
         // performs a repay operation for the specified market
         if (_data.repayAmount > 0) {
             (Module[] memory modules, bytes[] memory calls) = IMarketHelper(_data.marketHelper).repay(
-                _data.depositAmount > 0 ? address(this) : _data.user, _data.user, false, _data.repayAmount
+                _data.depositAmount > 0 ? address(this) : _data.user, _data.user, _data.repayAmount
             );
             IMarket(_data.market).execute(modules, calls, true);
         }
@@ -176,7 +176,7 @@ contract MagnetarMock {
         }
     }
 
-    function mintBBLendSGLLockTOLP(MintFromBBAndLendOnSGLData memory _data) external payable {
+    function mintBBAndLock(MintFromBBAndLendOnSGLData memory _data) external payable {
         // Check targets
         if (_data.externalContracts.bigBang != address(0)) {
             if (!cluster.isWhitelisted(cluster.lzChainId(), _data.externalContracts.bigBang)) {
@@ -280,7 +280,7 @@ contract MagnetarMock {
         // performs .addCollateral on market
         if (_data.collateralAmount > 0) {
             (Module[] memory modules, bytes[] memory calls) = IMarketHelper(_data.marketHelper).addCollateral(
-                _data.deposit ? address(this) : _data.user, _data.user, false, _data.collateralAmount, _share
+                _data.deposit ? address(this) : _data.user, _data.user, _data.collateralAmount, _share
             );
             IMarket(_data.market).execute(modules, calls, true);
         }

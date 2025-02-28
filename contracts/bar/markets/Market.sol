@@ -462,6 +462,7 @@ abstract contract Market is MarketERC4626, Ownable, ReentrancyGuard {
             uint256 currentAllowance = allowanceLiquidity[from][msg.sender];
             require(currentAllowance >= amount, "Market: not approved");
             if (currentAllowance != type(uint256).max) {
+                // TODO: We don't decrease allowance when it is max.
                 allowanceLiquidity[from][msg.sender] -= amount;
             }
         }
@@ -474,6 +475,7 @@ abstract contract Market is MarketERC4626, Ownable, ReentrancyGuard {
             uint256 currentAllowance = allowanceCollateral[from][msg.sender];
             require(currentAllowance >= amount, "Market: not approved");
             if (currentAllowance != type(uint256).max) {
+                // TODO: We don't decrease allowance when it is max.
                 allowanceCollateral[from][msg.sender] -= amount;
             }
         }

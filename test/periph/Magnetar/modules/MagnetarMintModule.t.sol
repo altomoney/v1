@@ -10,16 +10,17 @@ import {
     MagnetarWithdrawData,
     DepositRepayAndRemoveCollateralFromMarketData,
     DepositAddCollateralAndBorrowFromMarketData,
-    MintFromBBAndLendOnSGLData
+    MintFromBBAndLendOnSGLData,
+    IExerciseOptionsData,
+    IOptionsLockData,
+    IOptionsUnlockData
 } from "tap-utils/interfaces/periph/IMagnetar.sol";
 
 import {ERC20PermitStruct} from "tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
 import {MagnetarMintModule} from "tapioca-periph/Magnetar/modules/MagnetarMintModule.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 
-import {IOptionsLockData} from "tap-utils/interfaces/tap-token/ITapiocaOptionLiquidityProvision.sol";
 import {ICommonExternalContracts, IDepositData} from "tap-utils/interfaces/common/ICommonData.sol";
-import {IOptionsParticipateData} from "tap-utils/interfaces/tap-token/ITapiocaOptionBroker.sol";
 
 import {IPermit} from "tap-utils/interfaces/common/IPermit.sol";
 import {IMintData} from "tap-utils/interfaces/oft/IUsdo.sol";
@@ -75,14 +76,12 @@ abstract contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver 
             depositData: IDepositData({deposit: false, amount: depositAmount}),
             lockData: IOptionsLockData({
                 lock: false,
+                bucketId: 0,
                 target: address(0),
-                tAsset: address(0),
-                lockDuration: 0,
-                amount: 0,
-                fraction: 0,
-                minDiscountOut: 0
+                to: address(this),
+                sglMarket: address(0),
+                usdoAmount: 0
             }),
-            participateData: IOptionsParticipateData({participate: false, target: address(0), tOLPTokenId: 0}),
             externalContracts: ICommonExternalContracts({
                 magnetar: _magnetar,
                 singularity: _singularity,
@@ -110,7 +109,7 @@ abstract contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver 
             address(this), 0, 0, 0, randomAddr, address(sgl), address(bb), address(marketHelper)
         );
         bytes memory mintFromBBAndLendOnSGLData =
-            abi.encodeWithSelector(MagnetarMintModule.mintBBLendSGLLockTOLP.selector, _params);
+            abi.encodeWithSelector(MagnetarMintModule.mintBBAndLock.selector, _params);
 
         calls[0] = MagnetarCall({
             id: uint8(MagnetarAction.MintModule),
@@ -123,7 +122,7 @@ abstract contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver 
 
         _params.externalContracts.magnetar = address(magnetarA);
         _params.externalContracts.singularity = randomAddr;
-        mintFromBBAndLendOnSGLData = abi.encodeWithSelector(MagnetarMintModule.mintBBLendSGLLockTOLP.selector, _params);
+        mintFromBBAndLendOnSGLData = abi.encodeWithSelector(MagnetarMintModule.mintBBAndLock.selector, _params);
 
         calls[0] = MagnetarCall({
             id: uint8(MagnetarAction.MintModule),
@@ -136,7 +135,7 @@ abstract contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver 
 
         _params.externalContracts.singularity = address(magnetarA);
         _params.externalContracts.bigBang = randomAddr;
-        mintFromBBAndLendOnSGLData = abi.encodeWithSelector(MagnetarMintModule.mintBBLendSGLLockTOLP.selector, _params);
+        mintFromBBAndLendOnSGLData = abi.encodeWithSelector(MagnetarMintModule.mintBBAndLock.selector, _params);
 
         calls[0] = MagnetarCall({
             id: uint8(MagnetarAction.MintModule),
@@ -149,7 +148,7 @@ abstract contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver 
 
         _params.externalContracts.bigBang = address(magnetarA);
         _params.externalContracts.marketHelper = randomAddr;
-        mintFromBBAndLendOnSGLData = abi.encodeWithSelector(MagnetarMintModule.mintBBLendSGLLockTOLP.selector, _params);
+        mintFromBBAndLendOnSGLData = abi.encodeWithSelector(MagnetarMintModule.mintBBAndLock.selector, _params);
 
         calls[0] = MagnetarCall({
             id: uint8(MagnetarAction.MintModule),
@@ -162,7 +161,7 @@ abstract contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver 
 
         _params.externalContracts.bigBang = address(magnetarA);
         _params.externalContracts.marketHelper = randomAddr;
-        mintFromBBAndLendOnSGLData = abi.encodeWithSelector(MagnetarMintModule.mintBBLendSGLLockTOLP.selector, _params);
+        mintFromBBAndLendOnSGLData = abi.encodeWithSelector(MagnetarMintModule.mintBBAndLock.selector, _params);
 
         calls[0] = MagnetarCall({
             id: uint8(MagnetarAction.MintModule),
@@ -175,7 +174,7 @@ abstract contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver 
 
         _params.externalContracts.marketHelper = address(magnetarA);
         _params.lockData.target = randomAddr;
-        mintFromBBAndLendOnSGLData = abi.encodeWithSelector(MagnetarMintModule.mintBBLendSGLLockTOLP.selector, _params);
+        mintFromBBAndLendOnSGLData = abi.encodeWithSelector(MagnetarMintModule.mintBBAndLock.selector, _params);
 
         calls[0] = MagnetarCall({
             id: uint8(MagnetarAction.MintModule),
@@ -187,8 +186,7 @@ abstract contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver 
         magnetarA.burst{value: 0}(calls);
 
         _params.lockData.target = address(magnetarA);
-        _params.participateData.target = randomAddr;
-        mintFromBBAndLendOnSGLData = abi.encodeWithSelector(MagnetarMintModule.mintBBLendSGLLockTOLP.selector, _params);
+        mintFromBBAndLendOnSGLData = abi.encodeWithSelector(MagnetarMintModule.mintBBAndLock.selector, _params);
 
         calls[0] = MagnetarCall({
             id: uint8(MagnetarAction.MintModule),
@@ -217,7 +215,7 @@ abstract contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver 
         _params.mintData.collateralDepositData.amount = tokenAmount_;
 
         bytes memory mintFromBBAndLendOnSGLData =
-            abi.encodeWithSelector(MagnetarMintModule.mintBBLendSGLLockTOLP.selector, _params);
+            abi.encodeWithSelector(MagnetarMintModule.mintBBAndLock.selector, _params);
 
         calls[0] = MagnetarCall({
             id: uint8(MagnetarAction.MintModule),
@@ -258,7 +256,7 @@ abstract contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver 
         _params.mintData.collateralDepositData.amount = tokenAmount_;
 
         bytes memory mintFromBBAndLendOnSGLData =
-            abi.encodeWithSelector(MagnetarMintModule.mintBBLendSGLLockTOLP.selector, _params);
+            abi.encodeWithSelector(MagnetarMintModule.mintBBAndLock.selector, _params);
 
         calls[0] = MagnetarCall({
             id: uint8(MagnetarAction.MintModule),
@@ -299,7 +297,7 @@ abstract contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver 
         _params.depositData.amount = tokenAmount_;
 
         bytes memory mintFromBBAndLendOnSGLData =
-            abi.encodeWithSelector(MagnetarMintModule.mintBBLendSGLLockTOLP.selector, _params);
+            abi.encodeWithSelector(MagnetarMintModule.mintBBAndLock.selector, _params);
 
         calls[0] = MagnetarCall({
             id: uint8(MagnetarAction.MintModule),
@@ -341,7 +339,7 @@ abstract contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver 
         _params.depositData.amount = tokenAmount_;
 
         bytes memory mintFromBBAndLendOnSGLData =
-            abi.encodeWithSelector(MagnetarMintModule.mintBBLendSGLLockTOLP.selector, _params);
+            abi.encodeWithSelector(MagnetarMintModule.mintBBAndLock.selector, _params);
 
         calls[0] = MagnetarCall({
             id: uint8(MagnetarAction.MintModule),
@@ -400,7 +398,7 @@ abstract contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver 
         _params.depositData.amount = tokenAmount_;
 
         bytes memory mintFromBBAndLendOnSGLData =
-            abi.encodeWithSelector(MagnetarMintModule.mintBBLendSGLLockTOLP.selector, _params);
+            abi.encodeWithSelector(MagnetarMintModule.mintBBAndLock.selector, _params);
 
         calls[0] = MagnetarCall({
             id: uint8(MagnetarAction.MintModule),

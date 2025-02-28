@@ -59,7 +59,7 @@ import {UsdoMock} from "tapioca-mocks/UsdoMock.sol";
 /**
  * Tests
  */
-import {TestHelper} from "../LZSetup/TestHelper.sol";
+import {TestHelper} from "test/bar/LZSetup/TestHelper.sol";
 import {TapTokenMock} from "../TapTokenMock.sol";
 import "forge-std/Test.sol";
 

@@ -18,6 +18,4 @@ import {Market} from "./Market.sol";
    
 */
 
-abstract contract MarketStateView is Market {
-    
-}
+abstract contract MarketStateView is Market {}

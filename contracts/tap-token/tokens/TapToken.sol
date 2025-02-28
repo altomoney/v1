@@ -23,7 +23,7 @@ import {TapiocaOmnichainSender} from "tap-utils/tapiocaOmnichainEngine/TapiocaOm
 import {ERC20PermitStruct, ITapToken, LZSendParam} from "tap-token/tokens/ITapToken.sol";
 import {ModuleManager} from "./module/ModuleManager.sol";
 import {TapTokenReceiver} from "./TapTokenReceiver.sol";
-import {ITWTAPv0} from "tap-token/interfaces/ITWTAPv0.sol";
+import {ITWTAPv2} from "tap-token/interfaces/ITWTAPv2.sol";
 import {TapTokenSender} from "./TapTokenSender.sol";
 import {BaseTapToken} from "./BaseTapToken.sol";
 
@@ -518,7 +518,7 @@ contract TapToken is BaseTapToken, ModuleManager, ERC20Permit, Pausable {
         if (address(twTap) != address(0)) {
             revert TwTapAlreadySet();
         }
-        twTap = ITWTAPv0(_twTap);
+        twTap = ITWTAPv2(_twTap);
     }
 
     /**

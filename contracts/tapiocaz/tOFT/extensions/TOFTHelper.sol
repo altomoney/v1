@@ -17,7 +17,7 @@ import {
     ComposeMsgData
 } from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainEngineHelper.sol";
 import {MarketPermitActionMsg} from "tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
-import {LockAndParticipateData} from "tap-utils/interfaces/periph/IMagnetar.sol";
+import {LockData} from "tap-utils/interfaces/periph/IMagnetar.sol";
 import {TOFTMsgCodec} from "tapiocaz/tOFT/libraries/TOFTMsgCodec.sol";
 import {BaseTOFTTokenMsgType} from "../BaseTOFTTokenMsgType.sol";
 
@@ -40,7 +40,7 @@ contract TOFTHelper is TapiocaOmnichainEngineHelper, BaseTOFTTokenMsgType {
      * @notice Encodes the message for the PT_LOCK_AND_PARTICIPATE operation.
      *
      */
-    function buildLockAndParticipateMsg(LockAndParticipateData calldata _msg) public pure returns (bytes memory) {
+    function buildLockAndParticipateMsg(LockData calldata _msg) public pure returns (bytes memory) {
         return TOFTMsgCodec.buildLockAndParticipateMsg(_msg);
     }
 

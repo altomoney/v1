@@ -100,6 +100,16 @@ contract TapiocaOptionBroker is ITapiocaOptionBroker, Pausable, Ownable, FullMat
         return currentEpoch();
     }
 
+    /// @notice Returns the address of the TAP token
+    function getTapToken() external view returns (address) {
+        return address(TAP_TOKEN);
+    }
+
+    /// @notice Returns the address of the USDO token
+    function getUSDO() external view returns (address) {
+        return address(USDO);
+    }
+
     /// @notice Returns the details of an oTAP position
     /// @param user User address
     /// @param bucketId Bucket ID to check the participation

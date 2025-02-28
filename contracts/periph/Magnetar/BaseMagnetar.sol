@@ -26,9 +26,11 @@ import {MagnetarStorage} from "./MagnetarStorage.sol";
  * @title BaseMagnetar
  * @author TapiocaDAO
  * @notice Base contract for Magnetar
+ * @dev This contract is abstract and cannot be deployed directly
+ * @dev This contract inherits from `MagnetarStorage`.
+ * @dev Since `Magnetar` uses `delegatecall`, in case of changes in the storage variables, make it carefully.
  */
-contract BaseMagnetar is Ownable, Pausable, MagnetarStorage {
-    IMagnetarModuleExtender public magnetarModuleExtender; // For future implementations
+abstract contract BaseMagnetar is MagnetarStorage, Ownable, Pausable {
 
     error Magnetar_FailRescueEth();
     error Magnetar_EmptyAddress();

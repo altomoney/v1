@@ -74,6 +74,7 @@ contract MagnetarCollateralModule is MagnetarBaseModule {
 
         /**
          * @dev deposit
+         * TODO Should not be addAssets instead of addCollateral? We are adding collateral in the next if.
          */
         if (data.deposit && data.collateralAmount > 0) {
             address collateralAddress = _market.collateral();
@@ -93,7 +94,6 @@ contract MagnetarCollateralModule is MagnetarBaseModule {
          *      if `withdraw` it uses `_withdrawHere` to withdraw assets on the same chain
          */
         if (data.borrowAmount > 0) {
-            uint256 borrowShare = _market.convertToShares(data.borrowAmount);
             _marketBorrow(
                 _market,
                 data.marketHelper,

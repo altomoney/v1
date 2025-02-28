@@ -33,7 +33,6 @@ import {
     IToftVault
 } from "tap-utils/interfaces/oft/ITOFT.sol";
 import {MarketPermitActionMsg} from "tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
-import {ITapiocaOptionBroker, IExerciseOptionsData} from "tap-utils/interfaces/tap-token/ITapiocaOptionBroker.sol";
 import {
     TOFTHelper, PrepareLzCallData, PrepareLzCallReturn, ComposeMsgData
 } from "tapiocaz/tOFT/extensions/TOFTHelper.sol";
@@ -42,7 +41,12 @@ import {TapiocaOmnichainExtExec} from "tap-utils/tapiocaOmnichainEngine/extensio
 import {TOFTGenericReceiverModule} from "tapiocaz/tOFT/modules/TOFTGenericReceiverModule.sol";
 import {TOFTOptionsReceiverModule} from "tapiocaz/tOFT/modules/TOFTOptionsReceiverModule.sol";
 import {TOFTMarketReceiverModule} from "tapiocaz/tOFT/modules/TOFTMarketReceiverModule.sol";
-import {MagnetarWithdrawData} from "tap-utils/interfaces/periph/IMagnetar.sol";
+import {
+    MagnetarWithdrawData,
+    IExerciseOptionsData,
+    IOptionsLockData,
+    IOptionsUnlockData
+} from "tap-utils/interfaces/periph/IMagnetar.sol";
 import {IMtoftFeeGetter} from "tap-utils/interfaces/oft/IMToftFeeGetter.sol";
 
 import {Magnetar} from "tapioca-periph/Magnetar/Magnetar.sol";
@@ -1079,8 +1083,9 @@ contract TOFTTest is TOFTTestHelper, TapiocaZProcedures {
                 from: address(this),
                 target: address(tOB),
                 paymentTokenAmount: tokenAmountSD,
-                oTAPTokenID: 0, // @dev ignored in TapiocaOptionsBrokerMock
-                tapAmount: tokenAmountSD
+                paymentToken: address(0), // wip setup correct payment token
+                tapAmount: tokenAmountSD,
+                bucketId: 0
             }),
             withdrawOnOtherChain: false,
             lzSendParams: LZSendParam({

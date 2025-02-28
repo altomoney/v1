@@ -49,7 +49,6 @@ contract SGLCollateral is SGLLendingCommon {
         shares = _depositCollateral(msg.sender, to, assets);
     }
 
-
     /// @notice Adds `collateral` from msg.sender to the account `to`.
     /// @param from Account to transfer shares from.
     /// @param to The receiver of the tokens.

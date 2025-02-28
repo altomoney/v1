@@ -495,13 +495,13 @@ contract SingularityTest is UsdoTestHelper {
 
         bytes memory badDebtCall = _getBadDebtCall(borrowAmount, modules, calls);
 
-        penrose.executeMarketFn(
-            _getMarkets(address(singularity)),
-            _getDataCalls(badDebtCall),
-            true
-        );
+        penrose.executeMarketFn(_getMarkets(address(singularity)), _getDataCalls(badDebtCall), true);
         uint256 borrowPartAfter = singularity._userBorrowPart(user);
-        assertGt(borrowPartBefore, borrowPartAfter, "LiquidateBadDebt: borrowPartBefore should be greater than borrowPartAfter");
+        assertGt(
+            borrowPartBefore,
+            borrowPartAfter,
+            "LiquidateBadDebt: borrowPartBefore should be greater than borrowPartAfter"
+        );
     }
 
     function test_magnetar_helper_info() public {
