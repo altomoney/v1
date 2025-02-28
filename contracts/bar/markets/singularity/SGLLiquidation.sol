@@ -94,7 +94,7 @@ contract SGLLiquidation is SGLCommon {
         // swap collateral with asset and send it to `receiver`
         if (swapCollateral) {
             (, uint256 returnedAmount) =
-                _swapCollateralWithAsset(collateralShare, liquidatorReceiver, liquidatorReceiverData, 0, false);
+                _swapCollateralWithAsset(requiredCollateral, liquidatorReceiver, liquidatorReceiverData, 0, false);
             _borrowableToken().safeTransfer(receiver, returnedAmount);
         } else {
             uint256 collateralAmount = convertToAssets(collateralShare);
@@ -154,14 +154,13 @@ contract SGLLiquidation is SGLCommon {
     // *** PRIVATE FUNCTIONS *** //
     // ************************* //
     function _swapCollateralWithAsset(
-        uint256 _collateralShare,
+        uint256 _collateralAmount,
         IMarketLiquidatorReceiver _liquidatorReceiver,
         bytes memory _liquidatorReceiverData,
         uint256 _exchangeRate,
         bool checkReturned
     ) private returns (uint256 returnedShare, uint256 returnedAmount) {
-        uint256 collateralAmount = convertToAssets(_collateralShare);
-        IERC20(collateral()).safeTransfer(address(_liquidatorReceiver), collateralAmount);
+        IERC20(collateral()).safeTransfer(address(_liquidatorReceiver), _collateralAmount);
 
         {
             uint256 assetBalanceBefore = _borrowableToken().balanceOf(address(this));
@@ -170,14 +169,14 @@ contract SGLLiquidation is SGLCommon {
                 msg.sender,
                 address(collateral()),
                 address(_borrowableToken()),
-                collateralAmount,
+                _collateralAmount,
                 _liquidatorReceiverData
             );
             uint256 assetBalanceAfter = _borrowableToken().balanceOf(address(this));
             returnedAmount = assetBalanceAfter - assetBalanceBefore;
 
             if (checkReturned) {
-                uint256 receivableAsset = collateralAmount * EXCHANGE_RATE_PRECISION / _exchangeRate;
+                uint256 receivableAsset = _collateralAmount * EXCHANGE_RATE_PRECISION / _exchangeRate;
                 uint256 minReceivableAsset =
                     receivableAsset - (receivableAsset * maxLiquidationSlippage / FEE_PRECISION); //1% slippage
                 if (returnedAmount < minReceivableAsset) {
@@ -194,7 +193,7 @@ contract SGLLiquidation is SGLCommon {
         uint256 maxBorrowPart,
         uint256 minLiquidationBonus, // min liquidation bonus to accept (default 0)
         uint256 _exchangeRate
-    ) private returns (uint256 borrowAmount, uint256 borrowPart, uint256 collateralShare) {
+    ) private returns (uint256 borrowAmount, uint256 borrowPart, uint256 collateralAmount, uint256 collateralShare) {
         if (_exchangeRate == 0) revert ExchangeRateNotValid();
 
         uint256 _userBorrowPart = userBorrowPart[user];
@@ -248,6 +247,7 @@ contract SGLLiquidation is SGLCommon {
                     revert InsufficientLiquidationBonus();
                 }
                 collateralShare = _userCollateralShare;
+                collateralAmount = convertToAssets(collateralShare);
             } else {
                 revert InsufficientLiquidationBonus();
             }
@@ -255,7 +255,8 @@ contract SGLLiquidation is SGLCommon {
             uint256 totalUserBorrowWithBonus =
                 userTotalBorrowAmount + (userTotalBorrowAmount * liquidationBonusAmount) / FEE_PRECISION;
             if (collateralPartInAsset < totalUserBorrowWithBonus) revert BadDebt();
-            collateralShare = convertToShares((borrowPartWithBonus * _exchangeRate) / EXCHANGE_RATE_PRECISION);
+            collateralAmount = (borrowPartWithBonus * _exchangeRate) / EXCHANGE_RATE_PRECISION;
+            collateralShare = convertToShares(collateralAmount);
             if (collateralShare > _userCollateralShare) {
                 revert NotEnoughCollateral();
             }
@@ -283,6 +284,7 @@ contract SGLLiquidation is SGLCommon {
         uint256 borrowAmount;
         uint256 borrowPart;
         uint256 collateralShare;
+        uint256 collateralAmount;
         uint256 borrowShare;
         uint256 returnedShare;
         uint256 extraShare;
@@ -301,7 +303,7 @@ contract SGLLiquidation is SGLCommon {
         __LiquidateUserData memory data;
 
         data.callerReward = _getCallerReward(user, _exchangeRate);
-        (data.borrowAmount, data.borrowPart, data.collateralShare) =
+        (data.borrowAmount, data.borrowPart, data.collateralAmount, data.collateralShare) =
             _updateBorrowAndCollateralShare(user, maxBorrowPart, minLiquidationBonus, _exchangeRate);
         data.borrowShare = convertToShares(data.borrowAmount);
 
@@ -312,14 +314,11 @@ contract SGLLiquidation is SGLCommon {
 
         {
             (data.returnedShare,) = _swapCollateralWithAsset(
-                data.collateralShare, _liquidatorReceiver, _liquidatorReceiverData, _exchangeRate, true
+                data.collateralAmount, _liquidatorReceiver, _liquidatorReceiverData, _exchangeRate, true
             );
             if (data.returnedShare < data.borrowShare) revert AmountNotValid();
 
             data.extraShare = data.returnedShare > data.borrowShare ? data.returnedShare - data.borrowShare : 0;
-
-            // addAsset(data.returnedShare - data.extraShare); TODO Should it be a add asset here? Not sure because BBLiquidation is not doing this.
-            // deposit(convertToAssets(data.returnedShare - data.extraShare), address(this));
 
             totalAsset.elastic += (data.returnedShare - data.extraShare).toUint128();
             emit LogAddAsset(address(this), address(this), (data.returnedShare - data.extraShare), 0);
