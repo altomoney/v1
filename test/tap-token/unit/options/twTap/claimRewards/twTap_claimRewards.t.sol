@@ -14,13 +14,7 @@ contract twTap_claimRewards is twTapBaseTest {
         twTap.claimRewards(adminAddr, 1);
     }
 
-    function test_ShouldReturnTheClaimableRewards()
-        external
-        participate(100, 0)
-        skipWeeks(1)
-        advanceWeeks(1)
-        distributeRewards
-    {
+    function test_ShouldReturnTheClaimableRewards() external participate(100, 0) advanceWeeks(1) distributeRewards {
         vm.startPrank(aliceAddr);
         twTap.claimRewards(aliceAddr, 1);
         vm.stopPrank();
@@ -29,7 +23,6 @@ contract twTap_claimRewards is twTapBaseTest {
     function test_ShouldReturnTheClaimableRewards_notAuthorized(address _participant)
         external
         participate(100, 0)
-        skipWeeks(1)
         advanceWeeks(1)
         distributeRewards
     {
