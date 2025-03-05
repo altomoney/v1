@@ -15,10 +15,11 @@ import {TapiocaPenroseBatch} from "./batches/TapiocaPenroseBatch.sol";
 import {TapiocaBBBatch1} from "./batches/TapiocaBBBatch1.sol";
 import {TapiocaBBBatch2} from "./batches/TapiocaBBBatch2.sol";
 import {TapiocaBBBatch3} from "./batches/TapiocaBBBatch3.sol";
-import {TapiocaTOFTModulesBatchOne} from "./batches/TapiocaTOFTModulesBatchOne.sol";
-import {TapiocaTOFTModulesBatchTwo} from "./batches/TapiocaTOFTModulesBatchTwo.sol";
-import {TapiocaTOFTMetaModulesBatchTwo} from "./batches/TapiocaTOFTMetaModulesBatchTwo.sol";
-import {TapiocaTOFTModulesBatchThree} from "./batches/TapiocaTOFTModulesBatchThree.sol";
+
+// Temp imports due codesize limit in batches
+import {SGLBorrow} from "tapioca-bar/markets/singularity/SGLBorrow.sol";
+import {SGLCollateral} from "tapioca-bar/markets/singularity/SGLCollateral.sol";
+import {BBDebtRateHelper} from "tapioca-bar/markets/bigBang/BBDebtRateHelper.sol";
 
 import "../../interfaces/ITapiocaReport.sol";
 
@@ -78,10 +79,6 @@ library TapiocaRelease {
             reports.penroseReport.penrose,
             reports.utilitiesReport.pauser,
             reports.utilitiesReport.tapiocaMulticall
-        );
-
-        reports.toftModulesReport = _deployTOFTModules(
-            input.lzEndpoint, input.lzChainId, reports.utilitiesReport.tapiocaMulticall, input.isMetaInstance
         );
 
         return _generateMarketReport(reports);
@@ -152,7 +149,10 @@ library TapiocaRelease {
         TapiocaBBBatch2 bbBatchTwo = new TapiocaBBBatch2(bbBatchOne.getBBReport());
         TapiocaBBBatch3 bbBatchThree = new TapiocaBBBatch3(bbBatchTwo.getBBReport());
 
-        return bbBatchThree.getBBReport();
+        report = bbBatchThree.getBBReport();
+        report.bbDebtRateHelper = address(new BBDebtRateHelper());
+
+        return report;
     }
 
     function _deployUSDO(address endpoint, address delegate, address cluster, address extExec)
@@ -190,28 +190,9 @@ library TapiocaRelease {
 
         TapiocaSingularityBatch3 singularityBatch3 = new TapiocaSingularityBatch3(singularityBatch2.getSGLReport());
 
-        return singularityBatch3.getSGLReport();
-    }
-
-    function _deployTOFTModules(address endpoint, uint256 hostEid, address delegate, bool isMetaInstance)
-        private
-        returns (TOFTModulesReport memory report)
-    {
-        TapiocaTOFTModulesBatchOne toftModulesBatchOne = new TapiocaTOFTModulesBatchOne(endpoint, hostEid, delegate);
-        if (isMetaInstance) {
-            TapiocaTOFTMetaModulesBatchTwo toftModulesMetaBatchTwo =
-                new TapiocaTOFTMetaModulesBatchTwo(toftModulesBatchOne.getTOFTModulesFirstReport());
-            report = toftModulesMetaBatchTwo.getTOFTModulesSecondReport();
-        } else {
-            TapiocaTOFTModulesBatchTwo toftModulesBatchTwo =
-                new TapiocaTOFTModulesBatchTwo(toftModulesBatchOne.getTOFTModulesFirstReport());
-
-            report = toftModulesBatchTwo.getTOFTModulesSecondReport();
-        }
-
-        TapiocaTOFTModulesBatchThree toftModulesBatchThree = new TapiocaTOFTModulesBatchThree(report);
-
-        report = toftModulesBatchThree.getTOFTModulesFinalReport();
+        SGLReport memory report = singularityBatch3.getSGLReport();
+        report.sglBorrowModule = address(new SGLBorrow());
+        report.sglCollateralModule = address(new SGLCollateral());
 
         return report;
     }
@@ -258,14 +239,6 @@ library TapiocaRelease {
         report.bbLeverage = reports.bbReport.bbLeverage;
         report.bbDebtRateHelper = reports.bbReport.bbDebtRateHelper;
         report.bigbang = reports.bbReport.bigbang;
-
-        report.tOFTSenderModule = reports.toftModulesReport.tOFTSenderModule;
-        report.mTOFTReceiverModule = reports.toftModulesReport.mTOFTReceiverModule;
-        report.tOFTReceiverModule = reports.toftModulesReport.tOFTReceiverModule;
-        report.tOFTMarketReceiverModule = reports.toftModulesReport.tOFTMarketReceiverModule;
-        report.tOFTOptionsReceiverModule = reports.toftModulesReport.tOFTOptionsReceiverModule;
-        report.tOFTGenericReceiverModule = reports.toftModulesReport.tOFTGenericReceiverModule;
-        report.toftHelper = reports.toftModulesReport.toftHelper;
 
         return report;
     }

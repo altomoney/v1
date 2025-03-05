@@ -46,7 +46,6 @@ struct TapiocaReport {
     address tOFTMarketReceiverModule;
     address tOFTOptionsReceiverModule;
     address tOFTGenericReceiverModule;
-    address mTOFTReceiverModule;
 }
 
 struct MagnetarReport {
@@ -140,16 +139,6 @@ struct IPenroseInput {
     address prevPenrose;
 }
 
-struct TOFTModulesReport {
-    address tOFTSenderModule;
-    address tOFTReceiverModule;
-    address mTOFTReceiverModule;
-    address tOFTMarketReceiverModule;
-    address tOFTOptionsReceiverModule;
-    address tOFTGenericReceiverModule;
-    address toftHelper;
-}
-
 struct Reports {
     TapiocaReport tapiocaReport;
     MagnetarReport magnetarReport;
@@ -162,5 +151,4 @@ struct Reports {
     SGLReport sglReport;
     PenroseReport penroseReport;
     BBReport bbReport;
-    TOFTModulesReport toftModulesReport;
 }

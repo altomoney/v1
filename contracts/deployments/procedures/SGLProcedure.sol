@@ -12,7 +12,6 @@ import {Singularity} from "tapioca-bar/markets/singularity/Singularity.sol";
 
 abstract contract SGLProcedure {
     function _deploySglModulesOne() internal returns (SGLReport memory report) {
-        report.sglBorrowModule = address(new SGLBorrow());
         report.sglInterestHelper = address(new SGLInterestHelper());
         report.sglLeverageModule = address(new SGLLeverage());
         return report;
@@ -20,7 +19,6 @@ abstract contract SGLProcedure {
 
     function _deploySglModulesTwo(SGLReport memory report) internal returns (SGLReport memory) {
         report.sglLiquidationModule = address(new SGLLiquidation());
-        report.sglCollateralModule = address(new SGLCollateral());
         return report;
     }
 
