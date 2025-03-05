@@ -43,7 +43,7 @@ import "deployments/interfaces/ITapiocaReport.sol";
 import {TapiocaRelease} from "deployments/releases/tapioca-v1/TapiocaRelease.sol";
 import {LZEndpointMock} from "tapioca-mocks/LZEndpointMock.sol";
 import {TapToken} from "../../../contracts/tap-token/tokens/TapToken.sol";
-import {TwTAP} from "../../../contracts/tap-token/governance/TwTAP.sol";
+import {TwTAP} from "tap-token/governance/twTAP.sol";
 import {TapTokenMock} from "../../tap-token/TapTokenMock.sol";
 import {ITapToken} from "../../../contracts/tap-token/tokens/ITapToken.sol";
 import {Bucket} from "../../../contracts/tap-token/interfaces/ITWLBase.sol";
@@ -1147,7 +1147,9 @@ contract MagnetarTest is MagnetarTestUtils, MagnetarCallFactoryUtil {
         uint256 _nonce = sgl.nonces(_user);
 
         MagnetarCall[] memory calls = new MagnetarCall[](2);
-        calls[0] = _getMarketPermitLiquidityMagnetarCall(address(sgl), _userPk, address(magnetar), _removeAmount, 1 days, _nonce);
+        calls[0] = _getMarketPermitLiquidityMagnetarCall(
+            address(sgl), _userPk, address(magnetar), _removeAmount, 1 days, _nonce
+        );
         calls[1] = _getMarketRemoveAssetMagnetarCall(address(sgl), address(_user), _user, _removeAmount);
 
         vm.startPrank(_user);
@@ -1190,7 +1192,8 @@ contract MagnetarTest is MagnetarTestUtils, MagnetarCallFactoryUtil {
         uint256 deadline = block.timestamp + 1 days;
         uint256 nonce = sgl.nonces(_user);
 
-        (uint8 v, bytes32 r, bytes32 s) = _signMarketPermitAction(address(sgl), _userPk, _spender, action, value, deadline, nonce);
+        (uint8 v, bytes32 r, bytes32 s) =
+            _signMarketPermitAction(address(sgl), _userPk, _spender, action, value, deadline, nonce);
 
         vm.startPrank(address(magnetar));
         sgl.permitAction(uint8(action), _user, _spender, value, deadline, v, r, s);
@@ -1210,7 +1213,8 @@ contract MagnetarTest is MagnetarTestUtils, MagnetarCallFactoryUtil {
         uint256 deadline = block.timestamp + 1 days;
         uint256 nonce = sgl.nonces(_user);
 
-        (uint8 v, bytes32 r, bytes32 s) = _signMarketPermitAction(address(sgl), _userPk, _spender, action, value, deadline, nonce);
+        (uint8 v, bytes32 r, bytes32 s) =
+            _signMarketPermitAction(address(sgl), _userPk, _spender, action, value, deadline, nonce);
 
         vm.startPrank(address(magnetar));
         sgl.permitAction(uint8(action), _user, _spender, value, deadline, v, r, s);
@@ -1230,7 +1234,8 @@ contract MagnetarTest is MagnetarTestUtils, MagnetarCallFactoryUtil {
         uint256 deadline = block.timestamp + 1 days;
         uint256 nonce = sgl.nonces(_user);
 
-        (uint8 v, bytes32 r, bytes32 s) = _signMarketPermitAction(address(sgl), _userPk, _spender, action, value, deadline, nonce);
+        (uint8 v, bytes32 r, bytes32 s) =
+            _signMarketPermitAction(address(sgl), _userPk, _spender, action, value, deadline, nonce);
 
         vm.startPrank(address(magnetar));
         sgl.permitAction(uint8(action), _user, _spender, value, deadline, v, r, s);
@@ -1250,7 +1255,8 @@ contract MagnetarTest is MagnetarTestUtils, MagnetarCallFactoryUtil {
         uint256 deadline = block.timestamp + 1 days;
         uint256 nonce = sgl.nonces(_user);
 
-        (uint8 v, bytes32 r, bytes32 s) = _signMarketPermitAction(address(sgl), _userPk, _spender, action, value, deadline, nonce);
+        (uint8 v, bytes32 r, bytes32 s) =
+            _signMarketPermitAction(address(sgl), _userPk, _spender, action, value, deadline, nonce);
 
         vm.startPrank(address(magnetar));
         sgl.permitAction(uint8(action), _user, _spender, value, deadline, v, r, s);

@@ -13,6 +13,7 @@ import {OracleMock} from "../bar/mocks/OracleMock.sol";
 import {UsdoTestHelper, TestPenroseData, TestSingularityData} from "../bar/helpers/UsdoTestHelper.t.sol";
 import {IERC20} from "@boringcrypto/boring-solidity/contracts/libraries/BoringERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {TapiocaMulticall} from "contracts/utils/TapiocaMulticall/TapiocaMulticall.sol";
 
 contract TapiocaReleaseTest is Test {
     address owner;
@@ -74,8 +75,9 @@ contract TapiocaReleaseTest is Test {
         bytes memory payload =
             abi.encodeWithSelector(singularityLauncher.createSingularity.selector, tokensData, riskParams);
 
-        (bool success, bytes memory returnData) = address(singularityLauncher).delegatecall(payload);
-        assertTrue(success, "Singularity market creation failed");
+        vm.prank(owner);
+        bytes memory returnData =
+            TapiocaMulticall(report.tapiocaMulticall).performDelegateCall(address(singularityLauncher), payload);
         address marketAddress = abi.decode(returnData, (address));
         assertTrue(marketAddress != address(0), "Singularity market address should not be zero");
     }
