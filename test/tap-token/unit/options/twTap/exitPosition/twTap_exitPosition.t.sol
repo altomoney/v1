@@ -15,13 +15,7 @@ contract twTap_exitPosition is twTapBaseTest {
         _;
     }
 
-    function test_exitPosition_valid()
-        external
-        participate(100, 0)
-        advanceTime(EPOCH_DURATION * 2)
-        advanceWeeks(2)
-        distributeRewards
-    {
+    function test_exitPosition_valid() external participate(100, 0) advanceWeeks(2) distributeRewards {
         vm.startPrank(aliceAddr);
         twTap.claimRewards(aliceAddr, 0);
         twTap.exitPosition(aliceAddr, aliceAddr, 0);
@@ -31,7 +25,6 @@ contract twTap_exitPosition is twTapBaseTest {
     function test_exitPosition_invalid_notAuthorized(address _participant)
         external
         participate(100, 0)
-        advanceTime(EPOCH_DURATION * 2)
         advanceWeeks(2)
         distributeRewards
     {
@@ -47,13 +40,7 @@ contract twTap_exitPosition is twTapBaseTest {
         vm.stopPrank();
     }
 
-    function test_exitPosition_valid_claim_rewards()
-        external
-        participate(100, 0)
-        advanceTime(EPOCH_DURATION * 2)
-        advanceWeeks(2)
-        distributeRewards
-    {
+    function test_exitPosition_valid_claim_rewards() external participate(100, 0) distributeRewards advanceWeeks(2) {
         uint256[] memory claimable = twTap.claimable(aliceAddr, 0);
         uint256 totalClaimable = 0;
         for (uint256 i = 0; i < claimable.length; i++) {

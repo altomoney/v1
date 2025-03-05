@@ -64,6 +64,10 @@ contract twTapBaseTest is UnitBaseTest {
                 adminAddr
             )
         );
+        vm.startPrank(adminAddr);
+        tapOFT.setMinter(adminAddr);
+        tapOFT.initEmissions();
+        vm.stopPrank();
         twTap = createTwTap(payable(tapOFT), adminAddr);
 
         /**
@@ -76,8 +80,11 @@ contract twTapBaseTest is UnitBaseTest {
     }
 
     modifier advanceWeeks(uint256 _num) {
-        vm.prank(adminAddr);
-        twTap.advanceWeek(_num);
+        for (uint256 x; x < _num; x++) {
+            vm.warp(block.timestamp + EPOCH_DURATION);
+            vm.prank(adminAddr);
+            twTap.advanceWeek(_num);
+        }
         _;
     }
 
@@ -125,6 +132,7 @@ contract twTapBaseTest is UnitBaseTest {
     function _participate(address _to, uint256 _amount, uint8 _bucketId) internal {
         vm.startPrank(_to);
         tapOFT.freeMint(_to, _amount);
+        IERC20(address(tapOFT)).approve(address(twTap), _amount);
         twTap.participate(_to, _amount, _bucketId);
         vm.stopPrank();
     }
