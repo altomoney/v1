@@ -27,6 +27,7 @@ import {Events} from "test/bar/btt/utils/Events.sol";
 import {MarketHelper} from "tapioca-bar/markets/MarketHelper.sol";
 import {Utils} from "test/bar/btt/utils/Utils.sol";
 import {Usdo} from "tapioca-bar/usdo/Usdo.sol";
+import {TapiocaMulticall} from "tap-utils/TapiocaMulticall/TapiocaMulticall.sol";
 
 contract TOBTestBase is Test, Events, Utils {
     using RebaseLibrary for Rebase;
@@ -239,7 +240,10 @@ contract TOBTestBase is Test, Events, Utils {
         bytes memory payload =
             abi.encodeWithSelector(singularityLauncher.createSingularity.selector, tokensData, riskParams);
 
-        bytes memory returnData = ownerInstance.delegateCall(address(singularityLauncher), payload);
+        vm.startPrank(owner);
+        bytes memory returnData =
+            TapiocaMulticall(report.tapiocaMulticall).performDelegateCall(address(singularityLauncher), payload);
+        vm.stopPrank();
 
         address marketAddress = abi.decode(returnData, (address));
         assertTrue(marketAddress != address(0), "Singularity market address should not be zero");
@@ -287,7 +291,11 @@ contract TOBTestBase is Test, Events, Utils {
         deal(collateral, address(this), 1 ether);
         bytes memory payload = abi.encodeWithSelector(bigBangLauncher.createBigBang.selector, riskParams);
 
-        bytes memory returnData = ownerInstance.delegateCall(address(bigBangLauncher), payload);
+        vm.startPrank(owner);
+
+        bytes memory returnData =
+            TapiocaMulticall(report.tapiocaMulticall).performDelegateCall(address(bigBangLauncher), payload);
+        vm.stopPrank();
 
         address marketAddress = abi.decode(returnData, (address));
         assertTrue(marketAddress != address(0), "BigBang market address should not be zero");
