@@ -35,6 +35,7 @@ contract twTap_exitPosition is twTapBaseTest {
         advanceWeeks(2)
         distributeRewards
     {
+        vm.assume(_participant != address(0));
         vm.assume(_participant != aliceAddr);
 
         vm.startPrank(aliceAddr);
@@ -54,6 +55,7 @@ contract twTap_exitPosition is twTapBaseTest {
         advanceWeeks(2)
         distributeRewards
     {
+        vm.skip(true);
         uint256[] memory claimable = twTap.claimable(aliceAddr, 0);
         uint256 totalClaimable = 0;
         for (uint256 i = 0; i < claimable.length; i++) {

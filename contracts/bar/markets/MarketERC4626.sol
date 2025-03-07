@@ -216,6 +216,7 @@ abstract contract MarketERC4626 is IERC20Permit, ERC4626, IERC1155Receiver {
         } else if (action == PermitActions.BORROW) {
             actionId = _PERMIT_TYPEHASH_BORROW;
         }
+        // TODO What if I use the same data for BigBang and Singularity?
         bytes32 structHash =
             keccak256(abi.encode(actionId, owner, spender, value, nonces(owner), deadline, block.chainid));
         _incrementNonce(owner);

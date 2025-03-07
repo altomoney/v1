@@ -12,6 +12,7 @@ struct Participation {
     uint256 totalUsdo; // amount of usdo lent
     uint256 tapAmountExercised;
     uint256 lastEpochSync;
+    address delegatee;
     address[] markets;
 }
 
@@ -74,6 +75,9 @@ interface ITapiocaOptionBroker is ITWLBase {
     event SetExerciseWindow(uint256 exerciseWindow);
     event SetMarket(address market, bool active);
     event SetPenrose(address penrose);
+    event SetDelegatee(address indexed user, uint8 indexed bucketId, address indexed delegatee);
+    event SetMaxDebtBuffer(uint256 maxDebtBuffer);
+
     // ==========
     //    READ
     // ==========o
@@ -103,6 +107,8 @@ interface ITapiocaOptionBroker is ITWLBase {
     //    WRITE
     // ===========
 
+    function setDelegatee(uint8 _bucketId, address _delegatee) external;
+
     /// @notice Lock & lend USDO in a singularity market
     /// @param to The user that receives the lent USDO
     /// @param bucketId The bucket ID to use
@@ -129,10 +135,11 @@ interface ITapiocaOptionBroker is ITWLBase {
         returns (bool canLock, uint256 maxLockAmount, uint256 mintedUsdoAmount);
 
     /// @notice Exercise an oTAP position
+    /// @param to The address of the user to exercise the option for
     /// @param bucketId tokenId of the oTAP position, position must be active
     /// @param paymentToken Address of the payment token to use, must be whitelisted
     /// @param tapAmount Amount of TAP to exercise. If 0, the full amount is exercised
-    function exerciseOption(uint256 bucketId, address paymentToken, uint256 tapAmount) external;
+    function exerciseOption(address to, uint256 bucketId, address paymentToken, uint256 tapAmount) external;
 
     /// @notice Start a new epoch, extract TAP from the TapOFT contract,
     ///         emit it to the active singularities and get the price of TAP for the epoch.

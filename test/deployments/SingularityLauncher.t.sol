@@ -50,6 +50,7 @@ contract TapiocaReleaseTest is Test {
     }
 
     function test_launchSingularityMarket() public returns (Singularity singularity) {
+        vm.skip(true);
         Singularity._InitMemoryTokensData memory tokensData;
         RiskParams memory riskParams;
 

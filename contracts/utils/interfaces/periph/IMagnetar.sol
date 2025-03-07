@@ -22,8 +22,8 @@ struct IExerciseOptionsData {
     address target;
     address paymentToken;
     uint256 paymentTokenAmount;
-    uint8 bucketId;
     uint256 tapAmount;
+    uint8 bucketId;
 }
 
 struct IOptionsUnlockData {
