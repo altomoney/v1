@@ -30,7 +30,7 @@ contract TapiocaOptionBrokerExerciseOptionTest is TOBTestBase {
 
         vm.startPrank(testUser);
         vm.expectRevert(ITapiocaOptionBroker.OneEpochCooldown.selector);
-        tob.exerciseOption(0, address(paymentToken), exerciseAmount);
+        tob.exerciseOption(testUser, 0, address(paymentToken), exerciseAmount);
         vm.stopPrank();
     }
 
@@ -45,7 +45,7 @@ contract TapiocaOptionBrokerExerciseOptionTest is TOBTestBase {
         // Try to exercise without advancing epoch
         vm.startPrank(testUser);
         vm.expectRevert(ITapiocaOptionBroker.AdvanceEpochFirst.selector);
-        tob.exerciseOption(0, address(paymentToken), exerciseAmount);
+        tob.exerciseOption(testUser, 0, address(paymentToken), exerciseAmount);
         vm.stopPrank();
     }
 
@@ -56,7 +56,7 @@ contract TapiocaOptionBrokerExerciseOptionTest is TOBTestBase {
 
         vm.startPrank(testUser);
         vm.expectRevert(ITapiocaOptionBroker.PaymentTokenNotSupported.selector);
-        tob.exerciseOption(0, address(0), exerciseAmount);
+        tob.exerciseOption(testUser, 0, address(0), exerciseAmount);
         vm.stopPrank();
     }
 
@@ -68,7 +68,7 @@ contract TapiocaOptionBrokerExerciseOptionTest is TOBTestBase {
 
         vm.startPrank(testUser);
         vm.expectRevert(ITapiocaOptionBroker.TooLow.selector);
-        tob.exerciseOption(0, address(paymentToken), 1);
+        tob.exerciseOption(testUser, 0, address(paymentToken), 1);
         vm.stopPrank();
     }
 
@@ -79,7 +79,7 @@ contract TapiocaOptionBrokerExerciseOptionTest is TOBTestBase {
         tob.advanceWeek();
         vm.startPrank(testUser);
         vm.expectRevert(ITapiocaOptionBroker.TooHigh.selector);
-        tob.exerciseOption(0, address(paymentToken), 999999999e18);
+        tob.exerciseOption(testUser, 0, address(paymentToken), 999999999e18);
         vm.stopPrank();
     }
 
@@ -99,7 +99,7 @@ contract TapiocaOptionBrokerExerciseOptionTest is TOBTestBase {
         vm.warp(block.timestamp + EPOCH_DURATION * 9);
         tob.advanceWeek();
 
-        tob.exerciseOption(0, address(paymentToken), exerciseAmount);
+        tob.exerciseOption(testUser, 0, address(paymentToken), exerciseAmount);
 
         assertLt(paymentToken.balanceOf(testUser), initialPaymentTokenBalance, "Payment token balance should decrease");
         assertEq(tapToken.balanceOf(testUser), initialTapBalance + exerciseAmount, "TAP balance should increase");

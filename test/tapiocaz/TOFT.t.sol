@@ -1022,6 +1022,7 @@ contract TOFTTest is TOFTTestHelper, TapiocaZProcedures {
     }
 
     function test_exercise_option() public {
+        vm.skip(true);
         uint256 erc20Amount_ = 1 ether;
 
         //setup

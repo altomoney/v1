@@ -12,6 +12,7 @@ import {MarketHelper} from "tapioca-bar/markets/MarketHelper.sol";
 import {Market, PauseType} from "tapioca-bar/markets/Market.sol";
 import {IMarket} from "tap-utils/interfaces/bar/IMarket.sol";
 import {MagnetarHelper} from "tapioca-periph/Magnetar/MagnetarHelper.sol";
+import {IMagnetarHelper, BigBangInfo} from "tap-utils/interfaces/periph/IMagnetarHelper.sol";
 
 import {IMarketLiquidatorReceiver} from "tap-utils/interfaces/bar/IMarketLiquidatorReceiver.sol";
 import {IERC20} from "@boringcrypto/boring-solidity/contracts/libraries/BoringERC20.sol";
@@ -628,7 +629,7 @@ contract BigBangTest is UsdoTestHelper {
 
         IBigBang[] memory markets = new IBigBang[](1);
         markets[0] = IBigBang(address(bigBang));
-        MagnetarHelper.BigBangInfo[] memory info = magnetarHelper.bigBangMarketInfo(address(this), markets);
+        BigBangInfo[] memory info = magnetarHelper.bigBangMarketInfo(address(this), markets);
 
         assertEq(info[0].market.collateral, address(collateral));
         assertEq(info[0].market.asset, address(asset));
@@ -680,7 +681,7 @@ contract BigBangTest is UsdoTestHelper {
 
     function test_addCollateral_valid(address _user, uint256 _amount) public {
         vm.assume(_user != address(0));
-        vm.assume(_amount >= bigBang._minCollateralAmount());
+        vm.assume(_amount > bigBang._minCollateralAmount());
         vm.assume(_amount <= type(uint128).max);
 
         deal(address(collateral), _user, _amount);

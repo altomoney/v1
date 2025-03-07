@@ -483,12 +483,11 @@ contract Magnetar is BaseMagnetar {
          *      ITWTAPv2.participate(....)
          */
         bool selectorValidated = _validateTapLockOperation(_target, _actionCalldata);
+        bytes4 funcSig = bytes4(_actionCalldata[:4]);
 
         if (selectorValidated) {
-            bytes4 funcSig = bytes4(_actionCalldata[:4]);
-
             // Token is sent to the owner after execute
-            if (funcSig == ITWTAPv2.participate.selector || funcSig == ITapiocaOptionBroker.lock.selector) {
+            if (funcSig == ITWTAPv2.participate.selector) {
                 (address _participant, uint256 _amount, uint8 _bucketId) =
                     abi.decode(_actionCalldata[4:], (address, uint256, uint8));
 
@@ -501,7 +500,22 @@ contract Magnetar is BaseMagnetar {
                 return;
             }
         }
-        // todo: else if (funcSig == ITapiocaOptionBroker.participate.selector logic
+        if (funcSig == ITapiocaOptionBroker.lock.selector) {
+            (address _to, uint8 _bucketId, uint256 _usdoAmount, address _market) =
+                abi.decode(_actionCalldata[4:], (address, uint8, uint256, address));
+            
+            address usdo = ITapiocaOptionBroker(_target).getUSDO();
+            IERC20(usdo).safeTransferFrom(msg.sender, address(this), _usdoAmount);
+            IERC20(usdo).safeApprove(address(_target), _usdoAmount);
+
+            _executeCallMemory(
+                _target,
+                abi.encodeWithSelector(ITapiocaOptionBroker.lock.selector, _to, _bucketId, _usdoAmount, _market),
+                _actionValue
+            );
+
+            return;
+        }
 
         revert Magnetar_ActionNotValid(uint8(MagnetarAction.TapLock), _actionCalldata);
     }
@@ -578,8 +592,8 @@ contract Magnetar is BaseMagnetar {
                 revert Magnetar_ActionNotValid(uint8(MagnetarAction.Market), _actionCalldata);
             }
         }
-
-        IExerciseOptionsData memory data = abi.decode(_actionCalldata, (IExerciseOptionsData));
+        // Skip the first 4 bytes (function selector) and decode the parameters
+        IExerciseOptionsData memory data = abi.decode(_actionCalldata[4:], (IExerciseOptionsData));
 
         address tapToken = ITapiocaOptionBroker(_target).getTapToken();
 
@@ -588,9 +602,17 @@ contract Magnetar is BaseMagnetar {
 
         uint256 tapAmountBefore = IERC20(tapToken).balanceOf(address(this));
 
+        bytes memory exerciseOptionCalldata = abi.encodeWithSelector(
+            ITapiocaOptionBroker.exerciseOption.selector,
+            data.from,
+            uint256(data.bucketId),
+            data.paymentToken,
+            data.tapAmount
+        );
+
         // execute
         IERC20(data.paymentToken).safeApprove(address(_target), data.paymentTokenAmount);
-        _executeCall(_target, _actionCalldata, _actionValue);
+        _executeCall(_target, exerciseOptionCalldata, _actionValue);
 
         uint256 tapAmountAfter = IERC20(tapToken).balanceOf(address(this));
 
@@ -644,7 +666,7 @@ contract Magnetar is BaseMagnetar {
     /**
      * @dev Executes a call to an address, optionally reverting on failure. Make sure to sanitize prior to calling.
      */
-    function _executeCall(address _target, bytes calldata _actionCalldata, uint256 _actionValue)
+    function _executeCall(address _target, bytes memory _actionCalldata, uint256 _actionValue)
         private
         returns (bytes memory returnData)
     {

@@ -74,7 +74,7 @@ abstract contract MagnetarBaseModule is MagnetarStorage {
         returns (uint256 repayed)
     {
         _market.accrue();
-        uint256 repayPart = helper.getBorrowPartForAmount(address(_market), _amount, false); // RoundUp happen in market repay
+        uint256 repayPart = helper.getBorrowPartForAmount(_market, _amount, false); // RoundUp happen in market repay
         (Module[] memory modules, bytes[] memory calls) =
             IMarketHelper(_marketHelper).repay(_from, _to, repayPart);
 

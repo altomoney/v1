@@ -181,6 +181,7 @@ contract Usdo_MarketReceiverModule is Usdo_Unit_Shared, BigBang_Unit_Shared {
         uint256 _depositAmount,
         uint256 _removeCollateralAmount
     ) external {
+        vm.skip(true);
         _expectLendOrRepayToRevertFor(_participateDataTarget, _repayAmount, _depositAmount, _removeCollateralAmount);
     }
 

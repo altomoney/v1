@@ -187,6 +187,7 @@ contract TOFTOptionsReceiverModule is BaseTOFT {
         uint256 bBefore = IERC20(paymentToken).balanceOf(address(this));
 
         ITapiocaOptionBroker(_options.target).exerciseOption(
+            _options.from,
             _options.bucketId,
             _options.paymentToken, //payment token
             _options.tapAmount

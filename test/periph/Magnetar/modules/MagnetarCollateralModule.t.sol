@@ -660,7 +660,7 @@ contract MagnetarCollateralModuleTest is MagnetarTest {
 
         deal(address(collateral), _user, _collateralAmount);
 
-        _withMarketAddAsset(_userPk, _tokenAmount);
+        _withMarketAddAsset(address(sgl), _userPk, _tokenAmount);
         uint256 _nonce = sgl.nonces(_user);
 
         MagnetarCall[] memory calls = new MagnetarCall[](3);
@@ -688,7 +688,7 @@ contract MagnetarCollateralModuleTest is MagnetarTest {
 
         deal(address(collateral), _user, _collateralAmount);
 
-        _withMarketAddAsset(_userPk, _tokenAmount);
+        _withMarketAddAsset(address(sgl), _userPk, _tokenAmount);
         uint256 _nonce = sgl.nonces(_user);
 
         MagnetarCall[] memory calls = new MagnetarCall[](3);
@@ -720,7 +720,7 @@ contract MagnetarCollateralModuleTest is MagnetarTest {
 
         deal(address(collateral), _user, _collateralAmount);
 
-        _withMarketAddAsset(_userPk, _tokenAmount);
+        _withMarketAddAsset(address(sgl), _userPk, _tokenAmount);
         uint256 _nonce = sgl.nonces(_user);
 
         MagnetarCall[] memory calls = new MagnetarCall[](4);
@@ -757,7 +757,7 @@ contract MagnetarCollateralModuleTest is MagnetarTest {
         deal(_borrowableToken, _user, _borrowAmount);
         console.log("borrowableToken", _borrowableToken);
         console.log("borrowAmount", _borrowAmount);
-        _withMarketAddAsset(_userPk, _tokenAmount);
+        _withMarketAddAsset(address(sgl), _userPk, _tokenAmount);
         uint256 _nonce = sgl.nonces(_user);
 
         MagnetarCall[] memory calls = new MagnetarCall[](7);

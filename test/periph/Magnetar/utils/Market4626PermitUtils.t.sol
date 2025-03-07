@@ -46,7 +46,6 @@ abstract contract Market4626PermitUtils is Test {
     ) internal returns (uint8 v, bytes32 r, bytes32 s) {
         bytes32 actionId = _getActionId(_action);
         address _user = vm.addr(_userPk);
-        // uint256 nonce = IMarket(_market).nonces(_user);
         bytes32 structHash = keccak256(abi.encode(actionId, _user, _spender, _value, _nonce, _deadline, block.chainid));
         bytes32 digest = ECDSA.toTypedDataHash(IMarket(_market).DOMAIN_SEPARATOR(), structHash);
         (v, r, s) = vm.sign(_userPk, digest);
