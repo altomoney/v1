@@ -6,12 +6,17 @@ import {TapiocaReport, TapiocaInput} from "deployments/interfaces/ITapiocaReport
 import {SingularityLauncher, RiskParams} from "deployments/releases/tapioca-v1/actions/SingularityLauncher.sol";
 import {BigBangLauncher, BigBangRiskParams} from "deployments/releases/tapioca-v1/actions/BigBangLauncher.sol";
 import {Script} from "forge-std/Script.sol";
+<<<<<<< HEAD
 import {TapToken, ITapToken} from "contracts/tap-token/tokens/TapToken.sol";
+=======
+import {TapToken} from "contracts/tap-token/tokens/TapToken.sol";
+>>>>>>> refs/remotes/origin/feat/remove-toft-and-deployment-scripts
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {WETH} from "solady/tokens/WETH.sol";
 import {TapTokenSender} from "contracts/tap-token/tokens/TapTokenSender.sol";
 import {TapTokenReceiver} from "contracts/tap-token/tokens/TapTokenReceiver.sol";
 import {TapiocaOptionBroker} from "tap-token/options/TapiocaOptionBroker.sol";
+<<<<<<< HEAD
 import {TwTAP} from "tap-token/governance/twTAP.sol";
 import {TapiocaMulticall} from "contracts/utils/TapiocaMulticall/TapiocaMulticall.sol";
 import {Singularity} from "tapioca-bar/markets/singularity/Singularity.sol";
@@ -20,6 +25,12 @@ import {Bucket} from "tap-token/interfaces/ITWLBase.sol";
 import {SeerCLSolo} from "contracts/utils/oracle/SeerCLSolo.sol";
 import {OracleChainlinkSingleConstructorData} from "contracts/utils/oracle/OracleChainlinkSingle.sol";
 import {TestnetOracle} from "test/utils/mocks/TestnetOracle.sol";
+=======
+import {TwTAP} from "tap-token/governance/twTap.sol";
+import {TapiocaMulticall} from "contracts/utils/TapiocaMulticall/TapiocaMulticall.sol";
+import {Singularity} from "tapioca-bar/markets/singularity/Singularity.sol";
+import {BigBang} from "tapioca-bar/markets/bigBang/BigBang.sol";
+>>>>>>> refs/remotes/origin/feat/remove-toft-and-deployment-scripts
 
 contract DeployTapiocaHostTestnet is Script {
     uint256 public constant EPOCH_DURATION = 1 minutes;
