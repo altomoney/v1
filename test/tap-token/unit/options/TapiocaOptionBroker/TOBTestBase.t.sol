@@ -241,8 +241,9 @@ contract TOBTestBase is Test, Events, Utils {
             abi.encodeWithSelector(singularityLauncher.createSingularity.selector, tokensData, riskParams);
 
         vm.startPrank(owner);
-        bytes memory returnData =
-            TapiocaMulticall(report.tapiocaMulticall).performDelegateCall(address(singularityLauncher), payload);
+        bytes memory returnData = TapiocaMulticall(payable(report.tapiocaMulticall)).performDelegateCall(
+            address(singularityLauncher), payload
+        );
         vm.stopPrank();
 
         address marketAddress = abi.decode(returnData, (address));
@@ -294,7 +295,7 @@ contract TOBTestBase is Test, Events, Utils {
         vm.startPrank(owner);
 
         bytes memory returnData =
-            TapiocaMulticall(report.tapiocaMulticall).performDelegateCall(address(bigBangLauncher), payload);
+            TapiocaMulticall(payable(report.tapiocaMulticall)).performDelegateCall(address(bigBangLauncher), payload);
         vm.stopPrank();
 
         address marketAddress = abi.decode(returnData, (address));

@@ -838,8 +838,9 @@ contract SingularityTest is UsdoTestHelper {
         bytes memory payload =
             abi.encodeWithSelector(singularityLauncher.createSingularity.selector, tokensData, riskParams);
 
-        bytes memory returnData =
-            TapiocaMulticall(report.tapiocaMulticall).performDelegateCall(address(singularityLauncher), payload);
+        bytes memory returnData = TapiocaMulticall(payable(report.tapiocaMulticall)).performDelegateCall(
+            address(singularityLauncher), payload
+        );
 
         address marketAddress = abi.decode(returnData, (address));
         assertTrue(marketAddress != address(0), "Singularity market address should not be zero");

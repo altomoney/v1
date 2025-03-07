@@ -145,8 +145,8 @@ abstract contract MagnetarTestUtils is TestHelper {
             callData: abi.encodeWithSelector(ICluster.updateContract.selector, aEid, address(twTap), true)
         });
 
-        vm.startPrank(TapiocaMulticall(report.tapiocaMulticall).owner());
-        TapiocaMulticall multicall = TapiocaMulticall(report.tapiocaMulticall);
+        vm.startPrank(TapiocaMulticall(payable(report.tapiocaMulticall)).owner());
+        TapiocaMulticall multicall = TapiocaMulticall(payable(report.tapiocaMulticall));
         multicall.multicall(clusterUpdateTwTapCalls);
         vm.stopPrank();
     }
@@ -225,8 +225,9 @@ abstract contract MagnetarTestUtils is TestHelper {
             abi.encodeWithSelector(singularityLauncher.createSingularity.selector, tokensData, riskParams);
 
         vm.startPrank(admin);
-        bytes memory returnData =
-            TapiocaMulticall(reportOut.tapiocaMulticall).performDelegateCall(address(singularityLauncher), payload);
+        bytes memory returnData = TapiocaMulticall(payable(reportOut.tapiocaMulticall)).performDelegateCall(
+            address(singularityLauncher), payload
+        );
         vm.stopPrank();
 
         address marketAddress = abi.decode(returnData, (address));
@@ -265,7 +266,7 @@ abstract contract MagnetarTestUtils is TestHelper {
 
         vm.startPrank(admin);
         bytes memory returnData =
-            TapiocaMulticall(reportOut.tapiocaMulticall).performDelegateCall(address(bigBangLauncher), payload);
+            TapiocaMulticall(payable(reportOut.tapiocaMulticall)).performDelegateCall(address(bigBangLauncher), payload);
         vm.stopPrank();
 
         address marketAddress = abi.decode(returnData, (address));

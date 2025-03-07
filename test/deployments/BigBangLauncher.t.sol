@@ -71,7 +71,7 @@ contract BigBangLauncherTests is Test {
 
         vm.prank(owner);
         bytes memory returnData =
-            TapiocaMulticall(report.tapiocaMulticall).performDelegateCall(address(bigBangLauncher), payload);
+            TapiocaMulticall(payable(report.tapiocaMulticall)).performDelegateCall(address(bigBangLauncher), payload);
         address payable marketAddress = abi.decode(returnData, (address));
         assertTrue(marketAddress != address(0), "Big Bang market address should not be zero");
         bigbang = BigBang(marketAddress);

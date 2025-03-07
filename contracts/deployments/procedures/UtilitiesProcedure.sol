@@ -27,7 +27,7 @@ abstract contract UtilitiesProcedure {
         } else {
             report.zeroXSwapper = address(new ZeroXSwapper(zeroXProxy, ICluster(report.cluster), owner));
         }
-        TapiocaMulticall(report.tapiocaMulticall).transferOwnership(owner);
+        TapiocaMulticall(payable(report.tapiocaMulticall)).transferOwnership(owner);
         return report;
     }
 
