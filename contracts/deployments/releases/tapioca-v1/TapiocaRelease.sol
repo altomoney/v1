@@ -15,6 +15,8 @@ import {TapiocaPenroseBatch} from "./batches/TapiocaPenroseBatch.sol";
 import {TapiocaBBBatch1} from "./batches/TapiocaBBBatch1.sol";
 import {TapiocaBBBatch2} from "./batches/TapiocaBBBatch2.sol";
 import {TapiocaBBBatch3} from "./batches/TapiocaBBBatch3.sol";
+import {SingularityLauncher} from "./actions/SingularityLauncher.sol";
+import {BigBangLauncher} from "./actions/BigBangLauncher.sol";
 
 // Temp imports due codesize limit in batches
 import {SGLBorrow} from "tapioca-bar/markets/singularity/SGLBorrow.sol";
@@ -70,6 +72,12 @@ library TapiocaRelease {
             reports.sglReport.singularity,
             reports.bbReport.bigbang,
             prevReport.penrose
+        );
+        reports.launcherReport = _deployMarketLaunchers(
+            reports.sglReport,
+            reports.bbReport,
+            reports.penroseReport.penrose,
+            reports.magnetarReport.simpleLeverageExecutor
         );
 
         utilitiesBatch.initializeCluster(
@@ -151,6 +159,40 @@ library TapiocaRelease {
 
         report = bbBatchThree.getBBReport();
         report.bbDebtRateHelper = address(new BBDebtRateHelper());
+
+        return report;
+    }
+
+    function _deployMarketLaunchers(
+        SGLReport memory sglReport,
+        BBReport memory bbReport,
+        address penrose,
+        address leverageExecutor
+    ) private returns (LauncherReport memory report) {
+        SingularityLauncher singularityLauncher = new SingularityLauncher(
+            sglReport.sglLiquidationModule,
+            sglReport.sglBorrowModule,
+            sglReport.sglCollateralModule,
+            sglReport.sglLeverageModule,
+            sglReport.sglInit,
+            penrose,
+            leverageExecutor,
+            sglReport.sglInterestHelper,
+            sglReport.singularity
+        );
+
+        BigBangLauncher bigBangLauncher = new BigBangLauncher(
+            bbReport.bbLiquidation,
+            bbReport.bbBorrow,
+            bbReport.bbCollateral,
+            bbReport.bbLeverage,
+            penrose,
+            leverageExecutor,
+            bbReport.bigbang,
+            bbReport.bbDebtRateHelper
+        );
+        report.singularityLauncher = address(singularityLauncher);
+        report.bigBangLauncher = address(bigBangLauncher);
 
         return report;
     }
@@ -239,6 +281,9 @@ library TapiocaRelease {
         report.bbLeverage = reports.bbReport.bbLeverage;
         report.bbDebtRateHelper = reports.bbReport.bbDebtRateHelper;
         report.bigbang = reports.bbReport.bigbang;
+
+        report.singularityLauncher = reports.launcherReport.singularityLauncher;
+        report.bigBangLauncher = reports.launcherReport.bigBangLauncher;
 
         return report;
     }

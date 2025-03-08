@@ -25,6 +25,8 @@ import {SGLInterestHelper} from "tapioca-bar/markets/singularity/SGLInterestHelp
 import {SGLLeverage} from "tapioca-bar/markets/singularity/SGLLeverage.sol";
 import {SGLLiquidation} from "tapioca-bar/markets/singularity/SGLLiquidation.sol";
 import {Singularity} from "tapioca-bar/markets/singularity/Singularity.sol";
+import {SingularityLauncher} from "deployments/releases/tapioca-v1/actions/SingularityLauncher.sol";
+import {BigBangLauncher} from "deployments/releases/tapioca-v1/actions/BigBangLauncher.sol";
 
 // @dev forge test --match-path test/deployments/ProcedureLimits.t.sol
 contract DeploymentProceduresLimits is Test {
@@ -152,12 +154,16 @@ contract DeploymentProceduresLimits is Test {
             uint256 usdoBatchCreationSize = type(TapiocaUsdoBatchOne).creationCode.length;
             uint256 usdoBatchTwoCreationSize = type(TapiocaUsdoBatchTwo).creationCode.length;
             uint256 usdoBatchThreeCreationSize = type(TapiocaUsdoBatchThree).creationCode.length;
+            uint256 singularityLauncherCreationSize = type(SingularityLauncher).creationCode.length;
+            uint256 bigBangLauncherCreationSize = type(BigBangLauncher).creationCode.length;
             console2.log("TapiocaUtilitiesBatch", utilitiesBatchCreationSize);
             console2.log("TapiocaMagnetarBatchOne", magnetarBatchOneCreationSize);
             console2.log("TapiocaMagnetarBatchTwo", magnetarBatchTwoCreationSize);
             console2.log("TapiocaUsdoBatchOne", usdoBatchCreationSize);
             console2.log("TapiocaUsdoBatchTwo", usdoBatchTwoCreationSize);
             console2.log("TapiocaUsdoBatchThree", usdoBatchThreeCreationSize);
+            console2.log("SingularityLauncher", singularityLauncherCreationSize);
+            console2.log("BigBangLauncher", bigBangLauncherCreationSize);
             assertLe(
                 magnetarBatchOneCreationSize,
                 MAX_INIT_CONSTRUCTOR_CODE_SIZE,

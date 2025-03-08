@@ -6,17 +6,12 @@ import {TapiocaReport, TapiocaInput} from "deployments/interfaces/ITapiocaReport
 import {SingularityLauncher, RiskParams} from "deployments/releases/tapioca-v1/actions/SingularityLauncher.sol";
 import {BigBangLauncher, BigBangRiskParams} from "deployments/releases/tapioca-v1/actions/BigBangLauncher.sol";
 import {Script} from "forge-std/Script.sol";
-<<<<<<< HEAD
 import {TapToken, ITapToken} from "contracts/tap-token/tokens/TapToken.sol";
-=======
-import {TapToken} from "contracts/tap-token/tokens/TapToken.sol";
->>>>>>> refs/remotes/origin/feat/remove-toft-and-deployment-scripts
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {WETH} from "solady/tokens/WETH.sol";
 import {TapTokenSender} from "contracts/tap-token/tokens/TapTokenSender.sol";
 import {TapTokenReceiver} from "contracts/tap-token/tokens/TapTokenReceiver.sol";
 import {TapiocaOptionBroker} from "tap-token/options/TapiocaOptionBroker.sol";
-<<<<<<< HEAD
 import {TwTAP} from "tap-token/governance/twTAP.sol";
 import {TapiocaMulticall} from "contracts/utils/TapiocaMulticall/TapiocaMulticall.sol";
 import {Singularity} from "tapioca-bar/markets/singularity/Singularity.sol";
@@ -25,25 +20,26 @@ import {Bucket} from "tap-token/interfaces/ITWLBase.sol";
 import {SeerCLSolo} from "contracts/utils/oracle/SeerCLSolo.sol";
 import {OracleChainlinkSingleConstructorData} from "contracts/utils/oracle/OracleChainlinkSingle.sol";
 import {TestnetOracle} from "test/utils/mocks/TestnetOracle.sol";
-=======
-import {TwTAP} from "tap-token/governance/twTap.sol";
-import {TapiocaMulticall} from "contracts/utils/TapiocaMulticall/TapiocaMulticall.sol";
-import {Singularity} from "tapioca-bar/markets/singularity/Singularity.sol";
-import {BigBang} from "tapioca-bar/markets/bigBang/BigBang.sol";
->>>>>>> refs/remotes/origin/feat/remove-toft-and-deployment-scripts
+import {ERC20Testnet} from "test/utils/mocks/ERC20Testnet.sol";
 
 contract DeployTapiocaHostTestnet is Script {
     uint256 public constant EPOCH_DURATION = 1 minutes;
 
+    struct TestnetOracles {
+        address stETHOracle;
+        address usdoOracle;
+        address usdcOracle;
+        address tapOracle;
+    }
+
     function run() public {
         TapiocaInput memory input;
         TapiocaReport memory report;
-        TapiocaReport memory prevReport;
 
         // TapiocaRelease input params
         input.owner = msg.sender;
-        input.lzChainId = 1;
-        input.wrappedNativeToken = address(new WETH());
+        input.lzChainId = 40245;
+        input.lzEndpoint = 0x6EDCE65403992e310A62460808c4b910D972f10f;
         input.isTestnet = true;
 
         // Singularity risk params
@@ -53,27 +49,10 @@ contract DeployTapiocaHostTestnet is Script {
         BigBangRiskParams memory bigBangRiskParams;
 
         vm.startBroadcast();
-        // create ARB to USD and USDC to USD oracles
-        address[] memory guardians = new address[](1);
-        guardians[0] = input.owner;
+        input.wrappedNativeToken = address(new WETH());
 
-        SeerCLSolo stETHOracle = new SeerCLSolo(
-            "CL stETH/USD",
-            "stETH/USD",
-            8,
-            OracleChainlinkSingleConstructorData({
-                _poolChainlink: 0x694AA1769357215DE4FAC081bf1f309aDC325306, // ETH/USD Pool
-                _isChainlinkMultiplied: uint8(1), // Multiply/divide Uni
-                _inBase: 1e8,
-                stalePeriod: uint32(86400),
-                guardians: guardians,
-                _description: bytes32("ETH/USD"),
-                _sequencerUptimeFeed: address(0),
-                _admin: input.owner
-            })
-        );
-        TestnetOracle tapOracle = new TestnetOracle("TAP/USD", "TAP/USD", 10e8, input.owner);
-        TestnetOracle usdoOracle = new TestnetOracle("USDO/USD", "USDO/USD", 1e8, input.owner);
+        ERC20Testnet stETH = new ERC20Testnet("stETH", 18, input.owner);
+        ERC20Testnet usdc = new ERC20Testnet("USDC", 6, input.owner);
 
         input.tapToken = address(
             new TapToken(
@@ -90,43 +69,54 @@ contract DeployTapiocaHostTestnet is Script {
                     input.owner,
                     address(new TapTokenSender("", "", input.lzEndpoint, input.owner, address(0))),
                     address(new TapTokenReceiver("", "", input.lzEndpoint, input.owner, address(0))),
-                    address(0),
+                    address(1),
                     ICluster(address(1))
                 )
             )
         );
 
-        report = TapiocaRelease.deployTapiocaV1(input, prevReport);
+        TestnetOracles memory oracles = deployTestnetOracles(input);
 
-        TapToken(payable(input.tapToken)).setCluster(ICluster(report.cluster));
-        TapToken(payable(input.tapToken)).setToeExtExec(report.extExec);
+        report = TapiocaRelease.deployTapiocaV1(input, report);
+
+        {
+            TapToken(payable(input.tapToken)).setCluster(ICluster(report.cluster));
+            TapToken(payable(input.tapToken)).setToeExtExec(report.extExec);
+        }
 
         // Markets
-        address singularityOne = createSingularityMarket(
-            report.tapiocaMulticall,
-            address(0), /*report.singularityLauncher,*/
-            input.wrappedNativeToken,
-            report.usdo,
-            singularityRiskParams
-        );
-        address bigBangOne = createBigBangMarket(
-            report.tapiocaMulticall, address(0), /*report.bigBangLauncher,*/ input.wrappedNativeToken, bigBangRiskParams
-        );
+        {
+            createSingularityMarket(
+                report.tapiocaMulticall, report.singularityLauncher, address(usdc), report.usdo, singularityRiskParams
+            );
+            createSingularityMarket(
+                report.tapiocaMulticall, report.singularityLauncher, address(usdc), report.usdo, singularityRiskParams
+            );
+            createBigBangMarket(
+                report.tapiocaMulticall, report.bigBangLauncher, input.wrappedNativeToken, bigBangRiskParams
+            );
+        }
 
-        address tob = createTapiocaOptionBroker(
-            report,
-            input.tapToken,
-            report.usdo,
-            report.tapiocaMulticall,
-            input.owner,
-            input.wrappedNativeToken,
-            address(tapOracle),
-            EPOCH_DURATION
-        );
-        createTwTap(payable(input.tapToken), input.owner);
+        {
+            address tob = createTapiocaOptionBroker(
+                report,
+                input.tapToken,
+                report.usdo,
+                report.tapiocaMulticall,
+                input.owner,
+                input.wrappedNativeToken,
+                oracles.tapOracle,
+                EPOCH_DURATION
+            );
 
-        TapToken(payable(input.tapToken)).setMinter(address(tob));
+            createTwTap(payable(input.tapToken), input.owner);
 
+            TapToken(payable(input.tapToken)).setMinter(address(tob));
+
+            TapToken(payable(input.tapToken)).transfer(report.multiTokenSender, 1000000 ether);
+            usdc.mint(report.multiTokenSender, 1000000 ether);
+            stETH.mint(report.multiTokenSender, 1000000 ether);
+        }
         vm.stopBroadcast();
     }
 
@@ -215,5 +205,36 @@ contract DeployTapiocaHostTestnet is Script {
         tob.enableTapTokenRewards();
 
         return address(tob);
+    }
+
+    function deployTestnetOracles(TapiocaInput memory input) internal returns (TestnetOracles memory oracles) {
+        address[] memory guardians = new address[](1);
+        guardians[0] = input.owner;
+
+        SeerCLSolo stETHOracle = new SeerCLSolo(
+            "CL stETH/USD",
+            "stETH/USD",
+            8,
+            OracleChainlinkSingleConstructorData({
+                _poolChainlink: 0x694AA1769357215DE4FAC081bf1f309aDC325306, // ETH/USD Pool
+                _isChainlinkMultiplied: uint8(1), // Multiply/divide Uni
+                _inBase: 1e8,
+                stalePeriod: uint32(86400),
+                guardians: guardians,
+                _description: bytes32("ETH/USD"),
+                _sequencerUptimeFeed: address(0),
+                _admin: input.owner
+            })
+        );
+        TestnetOracle tapOracle = new TestnetOracle("TAP/USD", "TAP/USD", 10e8, input.owner);
+        TestnetOracle usdoOracle = new TestnetOracle("USDO/USD", "USDO/USD", 1e8, input.owner);
+        TestnetOracle usdcOracle = new TestnetOracle("USDC/USD", "USDO/USD", 1e8, input.owner);
+
+        return TestnetOracles({
+            stETHOracle: address(stETHOracle),
+            usdoOracle: address(usdoOracle),
+            usdcOracle: address(usdcOracle),
+            tapOracle: address(tapOracle)
+        });
     }
 }
