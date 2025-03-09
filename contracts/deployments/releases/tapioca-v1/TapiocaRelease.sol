@@ -36,10 +36,12 @@ library TapiocaRelease {
     {
         Reports memory reports;
         TapiocaUtilitiesBatch utilitiesBatch;
-        (utilitiesBatch, reports.utilitiesReport) = _deployUtilities(input.owner, input.zeroXSwapper, input.lzChainId);
+        (utilitiesBatch, reports.utilitiesReport) =
+            _deployUtilities(input.owner, input.zeroXSwapper, input.lzChainId, input.isTestnet);
 
-        reports.ExtExReport =
-            _deployExtEx(input.owner, input.wrappedNativeToken, reports.utilitiesReport.cluster, input.zeroXSwapper);
+        reports.ExtExReport = _deployExtEx(
+            input.owner, input.wrappedNativeToken, reports.utilitiesReport.cluster, reports.utilitiesReport.zeroXSwapper
+        );
 
         reports.magnetarDepsReport = _deployMagnetarDeps(reports.utilitiesReport.toeHelper);
 
@@ -114,11 +116,11 @@ library TapiocaRelease {
         return magnetarBatchTwo.getMagnetarReport();
     }
 
-    function _deployUtilities(address owner, address zeroXSwapper, uint16 lzChainId)
+    function _deployUtilities(address owner, address zeroXSwapper, uint16 lzChainId, bool isTestnet)
         private
         returns (TapiocaUtilitiesBatch utilitiesBatch, UtilitiesReport memory report)
     {
-        utilitiesBatch = new TapiocaUtilitiesBatch(owner, zeroXSwapper, lzChainId, false);
+        utilitiesBatch = new TapiocaUtilitiesBatch(owner, zeroXSwapper, lzChainId, isTestnet);
 
         return (utilitiesBatch, utilitiesBatch.getUtilitiesReport());
     }
