@@ -197,7 +197,7 @@ abstract contract MagnetarTestUtils is TestHelper {
         public
         returns (ISingularity singularity)
     {
-        Singularity._InitMemoryTokensData memory tokensData;
+        SGLInit._InitMemoryTokensData memory tokensData;
         RiskParams memory riskParams;
 
         tokensData._asset = IERC20(asset);
@@ -367,9 +367,9 @@ abstract contract MagnetarTestUtils is TestHelper {
     function _getSingularityInitData(TestSingularityData memory _sgl)
         private
         returns (
-            Singularity._InitMemoryModulesData memory modulesData,
-            Singularity._InitMemoryTokensData memory tokensData,
-            Singularity._InitMemoryData memory data
+            SGLInit._InitMemoryModulesData memory modulesData,
+            SGLInit._InitMemoryTokensData memory tokensData,
+            SGLInit._InitMemoryData memory data
         )
     {
         SGLLiquidation sglLiq = new SGLLiquidation();
@@ -377,13 +377,12 @@ abstract contract MagnetarTestUtils is TestHelper {
         SGLCollateral sglCollateral = new SGLCollateral();
         SGLLeverage sglLev = new SGLLeverage();
 
-        modulesData = Singularity._InitMemoryModulesData(
-            address(sglLiq), address(sglBorrow), address(sglCollateral), address(sglLev)
-        );
+        modulesData =
+            SGLInit._InitMemoryModulesData(address(sglLiq), address(sglBorrow), address(sglCollateral), address(sglLev));
 
-        tokensData = Singularity._InitMemoryTokensData(IERC20(_sgl.asset), IERC20(_sgl.collateral));
+        tokensData = SGLInit._InitMemoryTokensData(IERC20(_sgl.asset), IERC20(_sgl.collateral));
 
-        data = Singularity._InitMemoryData(
+        data = SGLInit._InitMemoryData(
             IPenrose(_sgl.penrose), ITapiocaOracle(address(_sgl.oracle)), 0, 75000, 80000, _sgl.leverageExecutor
         );
     }

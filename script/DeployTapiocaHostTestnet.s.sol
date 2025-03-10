@@ -23,7 +23,7 @@ import {TestnetOracle} from "test/utils/mocks/TestnetOracle.sol";
 import {ERC20Testnet} from "test/utils/mocks/ERC20Testnet.sol";
 import {IERC20} from "@boringcrypto/boring-solidity/contracts/interfaces/IERC20.sol";
 import {Usdo} from "tapioca-bar/usdo/Usdo.sol";
-
+import {SGLInit} from "tapioca-bar/markets/singularity/SGLInit.sol";
 import "forge-std/console.sol";
 
 contract DeployTapiocaHostTestnet is Script {
@@ -174,7 +174,7 @@ contract DeployTapiocaHostTestnet is Script {
         address tokenOracle,
         RiskParams memory riskParams
     ) internal returns (address) {
-        Singularity._InitMemoryTokensData memory tokensData;
+        SGLInit._InitMemoryTokensData memory tokensData;
 
         tokensData._asset = IERC20(usdo);
         tokensData._collateral = IERC20(token);

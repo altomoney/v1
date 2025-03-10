@@ -37,10 +37,10 @@ contract BBBorrow is BBLendingCommon {
     function borrow(address from, address to, uint256 amount)
         external
         optionNotPaused(PauseType.Borrow)
-        notSelf(to)
         solvent(from)
         returns (uint256 part)
     {
+        _notSelf(to);
         if (amount <= minBorrowAmount) revert MinBorrowAmountNotMet();
         _allowedBorrow(from, amount);
 
@@ -59,9 +59,9 @@ contract BBBorrow is BBLendingCommon {
     function repay(address from, address to, uint256 part)
         external
         optionNotPaused(PauseType.Repay)
-        notSelf(to)
         returns (uint256 amount)
     {
+        _notSelf(to);
         _tryUpdateExchangeRate();
 
         _accrue();

@@ -31,9 +31,9 @@ contract SGLBorrow is SGLLendingCommon {
         external
         optionNotPaused(PauseType.Borrow)
         solvent(from)
-        notSelf(to)
         returns (uint256 part, uint256 share)
     {
+        _notSelf(to);
         if (amount <= minBorrowAmount) revert MinBorrowAmountNotMet();
 
         _allowedBorrow(from, amount);
@@ -49,9 +49,9 @@ contract SGLBorrow is SGLLendingCommon {
     function repay(address from, address to, uint256 part)
         external
         optionNotPaused(PauseType.Repay)
-        notSelf(to)
         returns (uint256 amount)
     {
+        _notSelf(to);
         _tryUpdateExchangeRate();
 
         _accrue();

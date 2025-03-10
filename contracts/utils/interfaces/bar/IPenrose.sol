@@ -58,4 +58,12 @@ interface IPenrose {
     function cluster() external view returns (ICluster);
 
     function reAccrueBigBangMarkets() external;
+
+    function addSingularity(address, address) external;
+
+    function addBigBang(address, address) external;
+
+    function executeMarketFn(address[] calldata mc, bytes[] memory data, bool forceSuccess)
+        external
+        returns (bool[] memory success, bytes[] memory result);
 }

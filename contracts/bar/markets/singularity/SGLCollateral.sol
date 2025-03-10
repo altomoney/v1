@@ -26,10 +26,10 @@ contract SGLCollateral is SGLLendingCommon {
     function deposit(uint256 assets, address to)
         public
         override
-        notSelf(to)
         optionNotPaused(PauseType.AddCollateral)
         returns (uint256 shares)
     {
+        _notSelf(to);
         if (assets < minCollateralAmount) revert MinCollateralAmountNotMet();
 
         shares = _depositCollateral(msg.sender, to, assets);
@@ -38,10 +38,10 @@ contract SGLCollateral is SGLLendingCommon {
     function mint(uint256 shares, address to)
         public
         override
-        notSelf(to)
         optionNotPaused(PauseType.AddCollateral)
         returns (uint256 assets)
     {
+        _notSelf(to);
         assets = previewMint(shares);
 
         if (assets < minCollateralAmount) revert MinCollateralAmountNotMet();
@@ -57,8 +57,8 @@ contract SGLCollateral is SGLLendingCommon {
     function addCollateral(address from, address to, uint256 amount, uint256 share)
         external
         optionNotPaused(PauseType.AddCollateral)
-        notSelf(to)
     {
+        _notSelf(to);
         if (share == 0) {
             share = previewDeposit(amount);
         } else {
@@ -74,9 +74,9 @@ contract SGLCollateral is SGLLendingCommon {
         override
         optionNotPaused(PauseType.RemoveCollateral)
         solvent(_owner)
-        notSelf(_to)
         returns (uint256 shares)
     {
+        _notSelf(_to);
         shares = super.withdraw(_assets, _to, _owner);
 
         emit LogRemoveCollateral(_owner, _to, shares);
@@ -87,9 +87,9 @@ contract SGLCollateral is SGLLendingCommon {
         override
         optionNotPaused(PauseType.RemoveCollateral)
         solvent(_owner)
-        notSelf(_to)
         returns (uint256 assets)
     {
+        _notSelf(_to);
         assets = super.redeem(_shares, _to, _owner);
 
         emit LogRemoveCollateral(_owner, _to, _shares);
@@ -104,8 +104,8 @@ contract SGLCollateral is SGLLendingCommon {
         optionNotPaused(PauseType.RemoveCollateral)
         solvent(from)
         allowedBorrow(from, share)
-        notSelf(to)
     {
+        _notSelf(to);
         _removeCollateral(from, to, share);
     }
 }

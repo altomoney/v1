@@ -183,18 +183,7 @@ library TapiocaRelease {
             sglReport.singularity
         );
 
-        BigBangLauncher bigBangLauncher = new BigBangLauncher(
-            bbReport.bbLiquidation,
-            bbReport.bbBorrow,
-            bbReport.bbCollateral,
-            bbReport.bbLeverage,
-            penrose,
-            leverageExecutor,
-            bbReport.bigbang,
-            bbReport.bbDebtRateHelper
-        );
         report.singularityLauncher = address(singularityLauncher);
-        report.bigBangLauncher = address(bigBangLauncher);
 
         return report;
     }

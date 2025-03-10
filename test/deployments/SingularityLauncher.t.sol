@@ -14,6 +14,7 @@ import {UsdoTestHelper, TestPenroseData, TestSingularityData} from "../bar/helpe
 import {IERC20} from "@boringcrypto/boring-solidity/contracts/libraries/BoringERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {TapiocaMulticall} from "contracts/utils/TapiocaMulticall/TapiocaMulticall.sol";
+import {SGLInit} from "tapioca-bar/markets/singularity/SGLInit.sol";
 
 contract TapiocaReleaseTest is Test {
     address owner;
@@ -51,7 +52,7 @@ contract TapiocaReleaseTest is Test {
     }
 
     function test_launchSingularityMarket() public returns (Singularity singularity) {
-        Singularity._InitMemoryTokensData memory tokensData;
+        SGLInit._InitMemoryTokensData memory tokensData;
         RiskParams memory riskParams;
 
         tokensData._collateral = IERC20(input.wrappedNativeToken);

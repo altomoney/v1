@@ -80,7 +80,7 @@ contract BBStorage is Ownable, Market {
     /// @notice event emitted when debt rate helper is updated
     event DebtRateHelperUpdated(address indexed oldVal, address indexed newVal);
 
-    constructor() MarketERC4626("Tapioca BigBang", "BB") {}
+    constructor() Market("Tapioca BigBang", "BB") {}
 
     function _accrue() internal virtual override {}
 

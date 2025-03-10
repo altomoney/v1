@@ -415,9 +415,9 @@ contract MagnetarTestHelper is TestHelper {
         Singularity sgl = new Singularity();
         SGLInit sglInit = new SGLInit();
         (
-            Singularity._InitMemoryModulesData memory _modulesData,
-            Singularity._InitMemoryTokensData memory _tokensData,
-            Singularity._InitMemoryData memory _data
+            SGLInit._InitMemoryModulesData memory _modulesData,
+            SGLInit._InitMemoryTokensData memory _tokensData,
+            SGLInit._InitMemoryData memory _data
         ) = _getSingularityInitData(_sgl);
         {
             sgl.init(address(sglInit), abi.encode(_modulesData, _tokensData, _data));
@@ -485,9 +485,9 @@ contract MagnetarTestHelper is TestHelper {
     function _getSingularityInitData(TestSingularityData memory _sgl)
         private
         returns (
-            Singularity._InitMemoryModulesData memory modulesData,
-            Singularity._InitMemoryTokensData memory tokensData,
-            Singularity._InitMemoryData memory data
+            SGLInit._InitMemoryModulesData memory modulesData,
+            SGLInit._InitMemoryTokensData memory tokensData,
+            SGLInit._InitMemoryData memory data
         )
     {
         SGLLiquidation sglLiq = new SGLLiquidation();
@@ -495,13 +495,12 @@ contract MagnetarTestHelper is TestHelper {
         SGLCollateral sglCollateral = new SGLCollateral();
         SGLLeverage sglLev = new SGLLeverage();
 
-        modulesData = Singularity._InitMemoryModulesData(
-            address(sglLiq), address(sglBorrow), address(sglCollateral), address(sglLev)
-        );
+        modulesData =
+            SGLInit._InitMemoryModulesData(address(sglLiq), address(sglBorrow), address(sglCollateral), address(sglLev));
 
-        tokensData = Singularity._InitMemoryTokensData(IERC20(_sgl.asset), IERC20(_sgl.collateral));
+        tokensData = SGLInit._InitMemoryTokensData(IERC20(_sgl.asset), IERC20(_sgl.collateral));
 
-        data = Singularity._InitMemoryData(
+        data = SGLInit._InitMemoryData(
             IPenrose(_sgl.penrose), ITapiocaOracle(address(_sgl.oracle)), 0, 75000, 80000, _sgl.leverageExecutor
         );
     }

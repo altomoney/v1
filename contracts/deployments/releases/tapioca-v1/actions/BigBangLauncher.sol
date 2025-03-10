@@ -19,28 +19,32 @@ contract BigBangLauncher is IBigBangLauncher {
     Penrose public immutable PENROSE;
     address public immutable BB_MASTER;
     address public immutable BB_DEBT_RATE_HELPER;
+    address public immutable BB_INSTANCE;
 
-    constructor(
-        address liquidationModule,
-        address borrowModule,
-        address collateralModule,
-        address leverageModule,
-        address penrose,
-        address leverageExecutor,
-        address bigbangMaster,
-        address debtRateHelper
-    ) {
-        BB_LIQUIDATION = liquidationModule;
-        BB_BORROW = borrowModule;
-        BB_COLLATERAL = collateralModule;
-        BB_LEVERAGE = leverageModule;
-        PENROSE = Penrose(penrose);
-        LEVERAGE_EXECUTOR = ILeverageExecutor(leverageExecutor);
-        BB_MASTER = bigbangMaster;
-        BB_DEBT_RATE_HELPER = debtRateHelper;
+    struct BigBangConstructor {
+        address liquidationModule;
+        address borrowModule;
+        address collateralModule;
+        address leverageModule;
+        address leverageExecutor;
+        address bigbangMaster;
+        address debtRateHelper;
+        address penrose;
+        BigBangRiskParams riskParams;
     }
 
-    function createBigBang(BigBangRiskParams memory riskParams) external returns (BigBang) {
+    constructor(BigBangConstructor memory params) {
+        BB_LIQUIDATION = params.liquidationModule;
+        BB_BORROW = params.borrowModule;
+        BB_COLLATERAL = params.collateralModule;
+        BB_LEVERAGE = params.leverageModule;
+        PENROSE = Penrose(params.penrose);
+        LEVERAGE_EXECUTOR = ILeverageExecutor(params.leverageExecutor);
+        BB_MASTER = params.bigbangMaster;
+        BB_DEBT_RATE_HELPER = params.debtRateHelper;
+
+        BigBangRiskParams memory riskParams = params.riskParams;
+
         BigBang bigBangInstance = new BigBang();
 
         BigBang._InitMemoryModulesData memory modulesData =
@@ -82,6 +86,6 @@ contract BigBangLauncher is IBigBangLauncher {
             revert MarketCreationFailed();
         }
 
-        return bigBangInstance;
+        BB_INSTANCE = address(bigBangInstance);
     }
 }

@@ -28,6 +28,7 @@ import {MarketHelper} from "tapioca-bar/markets/MarketHelper.sol";
 import {Utils} from "test/bar/btt/utils/Utils.sol";
 import {Usdo} from "tapioca-bar/usdo/Usdo.sol";
 import {TapiocaMulticall} from "tap-utils/TapiocaMulticall/TapiocaMulticall.sol";
+import {SGLInit} from "tapioca-bar/markets/singularity/SGLInit.sol";
 
 contract TOBTestBase is Test, Events, Utils {
     using RebaseLibrary for Rebase;
@@ -216,7 +217,7 @@ contract TOBTestBase is Test, Events, Utils {
             );
         }
 
-        Singularity._InitMemoryTokensData memory tokensData;
+        SGLInit._InitMemoryTokensData memory tokensData;
         RiskParams memory riskParams;
 
         tokensData._collateral = IERC20(collateral);

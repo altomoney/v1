@@ -823,7 +823,7 @@ contract SingularityTest is UsdoTestHelper {
         public
         returns (Singularity singularity)
     {
-        Singularity._InitMemoryTokensData memory tokensData;
+        SGLInit._InitMemoryTokensData memory tokensData;
         RiskParams memory riskParams;
 
         tokensData._asset = IERC20(asset);

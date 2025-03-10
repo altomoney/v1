@@ -22,7 +22,7 @@ import {SGLStorage} from "./SGLStorage.sol";
    
 */
 
-contract SGLCommon is SGLStorage {
+abstract contract SGLCommon is SGLStorage {
     using RebaseLibrary for Rebase;
     using SafeCast for uint256;
 

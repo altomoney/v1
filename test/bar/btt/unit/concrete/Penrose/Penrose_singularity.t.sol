@@ -12,6 +12,7 @@ import {Singularity} from "tapioca-bar/markets/singularity/Singularity.sol";
 
 import {Singularity_Unit_Shared} from "../../shared/Singularity_Unit_Shared.t.sol";
 import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
+import {SGLInit} from "tapioca-bar/markets/singularity/SGLInit.sol";
 
 contract Penrose_singularity is Singularity_Unit_Shared {
     function test_RevertWhen_RegisterSingularityIsCalledFromNon_owner() external {
@@ -42,9 +43,9 @@ contract Penrose_singularity is Singularity_Unit_Shared {
         penrose.registerSingularityMasterContract(rndAddr, IPenrose.ContractType.lowRisk);
 
         (
-            Singularity._InitMemoryModulesData memory modulesData,
-            Singularity._InitMemoryTokensData memory tokensData,
-            Singularity._InitMemoryData memory data
+            SGLInit._InitMemoryModulesData memory modulesData,
+            SGLInit._InitMemoryTokensData memory tokensData,
+            SGLInit._InitMemoryData memory data
         ) = _getSingularityInitData(
             SingularityInitData(
                 address(penrose),

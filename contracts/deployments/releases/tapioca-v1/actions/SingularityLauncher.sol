@@ -2,20 +2,20 @@
 pragma solidity ^0.8.22;
 
 import {Singularity} from "tapioca-bar/markets/singularity/Singularity.sol";
-import {Penrose} from "tapioca-bar/Penrose.sol";
 import {ILeverageExecutor} from "tap-utils/interfaces/bar/ILeverageExecutor.sol";
 import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
 import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
 import {ISingularityLauncher, RiskParams} from "deployments/interfaces/ISingularityLauncher.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SGLInit} from "tapioca-bar/markets/singularity/SGLInit.sol";
+/// @notice Contract to create Singularity markets via delegatecall  from admin of Penrose
 
-/// @notice Contract to create Singularity markets via delegatecall from admin of Penrose
 contract SingularityLauncher is ISingularityLauncher {
     address public immutable SGL_INIT;
     address public immutable SGL_MASTER;
     address public immutable SGL_INTEREST_HELPER;
     ILeverageExecutor public immutable LEVERAGE_EXECUTOR;
-    Penrose public immutable PENROSE;
+    IPenrose public immutable PENROSE;
     address public immutable SGL_LIQUIDATION_MODULE;
     address public immutable SGL_BORROW_MODULE;
     address public immutable SGL_COLLATERAL_MODULE;
@@ -37,22 +37,22 @@ contract SingularityLauncher is ISingularityLauncher {
         SGL_COLLATERAL_MODULE = collateralModule;
         SGL_LEVERAGE_MODULE = leverageModule;
         SGL_INIT = sglInit;
-        PENROSE = Penrose(penrose);
+        PENROSE = IPenrose(penrose);
         LEVERAGE_EXECUTOR = ILeverageExecutor(leverageExecutor);
         SGL_INTEREST_HELPER = sglInterestHelper;
         SGL_MASTER = singularityMaster;
     }
 
-    function createSingularity(Singularity._InitMemoryTokensData memory tokensData, RiskParams memory riskParams)
+    function createSingularity(SGLInit._InitMemoryTokensData memory tokensData, RiskParams memory riskParams)
         external
         returns (Singularity)
     {
-        Singularity._InitMemoryModulesData memory sglModules = Singularity._InitMemoryModulesData(
+        SGLInit._InitMemoryModulesData memory sglModules = SGLInit._InitMemoryModulesData(
             SGL_LIQUIDATION_MODULE, SGL_BORROW_MODULE, SGL_COLLATERAL_MODULE, SGL_LEVERAGE_MODULE
         );
         Singularity singularityInstance = new Singularity();
 
-        Singularity._InitMemoryData memory initData = Singularity._InitMemoryData(
+        SGLInit._InitMemoryData memory initData = SGLInit._InitMemoryData(
             IPenrose(address(PENROSE)),
             ITapiocaOracle(riskParams.oracle),
             riskParams.exchangeRatePrecision,
