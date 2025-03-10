@@ -256,7 +256,6 @@ abstract contract MagnetarTestUtils is TestHelper {
         riskParams.liquidationCollateralizationRate = 80000;
         riskParams.collateral = collateral;
         riskParams.oracle = address(new OracleMock("Oracle Test", "ORCT", 1 ether));
-        riskParams.seedAmount = 1 ether;
         riskParams.isEthMarket = true;
 
         address admin = Ownable(reportOut.tapiocaMulticall).owner();

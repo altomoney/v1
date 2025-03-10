@@ -286,7 +286,6 @@ contract TOBTestBase is Test, Events, Utils {
         riskParams.liquidationCollateralizationRate = 80000;
         riskParams.collateral = collateral;
         riskParams.oracle = address(new OracleMock("Oracle Test", "ORCT", 1 ether));
-        riskParams.seedAmount = 1 ether;
         riskParams.isEthMarket = true;
 
         deal(collateral, address(this), 1 ether);

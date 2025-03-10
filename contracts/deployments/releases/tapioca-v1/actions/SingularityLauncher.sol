@@ -7,6 +7,7 @@ import {ILeverageExecutor} from "tap-utils/interfaces/bar/ILeverageExecutor.sol"
 import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
 import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
 import {ISingularityLauncher, RiskParams} from "deployments/interfaces/ISingularityLauncher.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /// @notice Contract to create Singularity markets via delegatecall from admin of Penrose
 contract SingularityLauncher is ISingularityLauncher {
@@ -87,6 +88,11 @@ contract SingularityLauncher is ISingularityLauncher {
         if (success[0] == false) {
             revert MarketCreationFailed();
         }
+
+        // Add seed amount to owner
+        IERC20(address(tokensData._asset)).transferFrom(riskParams.seedOwner, address(this), riskParams.seedAmount);
+        tokensData._asset.approve(address(singularityInstance), riskParams.seedAmount);
+        singularityInstance.addAsset(address(this), riskParams.seedOwner, riskParams.seedAmount);
 
         return singularityInstance;
     }

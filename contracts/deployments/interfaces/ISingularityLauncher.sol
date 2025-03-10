@@ -17,6 +17,7 @@ struct RiskParams {
     uint256 collateralizationRate;
     uint256 liquidationCollateralizationRate;
     uint256 seedAmount;
+    address seedOwner;
     address oracle;
 }
 

@@ -22,6 +22,7 @@ import {OracleChainlinkSingleConstructorData} from "contracts/utils/oracle/Oracl
 import {TestnetOracle} from "test/utils/mocks/TestnetOracle.sol";
 import {ERC20Testnet} from "test/utils/mocks/ERC20Testnet.sol";
 import {IERC20} from "@boringcrypto/boring-solidity/contracts/interfaces/IERC20.sol";
+import {Usdo} from "tapioca-bar/usdo/Usdo.sol";
 
 import "forge-std/console.sol";
 
@@ -39,16 +40,16 @@ contract DeployTapiocaHostTestnet is Script {
         TapiocaInput memory input;
         TapiocaReport memory report;
 
+        vm.startBroadcast();
         // TapiocaRelease input params
-        input.owner = msg.sender;
-        input.lzChainId = 40161;
+        input.lzChainId = 40217;
         input.lzEndpoint = 0x6EDCE65403992e310A62460808c4b910D972f10f;
         input.isTestnet = true;
+        input.owner = msg.sender;
 
         // BigBang risk params
         BigBangRiskParams memory bigBangRiskParams;
 
-        vm.startBroadcast();
         input.wrappedNativeToken = address(new WETH());
 
         ERC20Testnet stETH = new ERC20Testnet("stETH", 18, input.owner);
@@ -82,24 +83,26 @@ contract DeployTapiocaHostTestnet is Script {
         {
             TapToken(payable(input.tapToken)).setCluster(ICluster(report.cluster));
             TapToken(payable(input.tapToken)).setToeExtExec(report.extExec);
+            Usdo(payable(report.usdo)).setMinterStatus(address(input.owner), true);
+            Usdo(payable(report.usdo)).mint(input.owner, 1000000 ether);
         }
 
         {
             RiskParams memory singularityRiskParams;
-
-            singularityRiskParams.borrowOpeningFee = 0;
-            singularityRiskParams.liquidationMultiplier = 0;
-            singularityRiskParams.minimumTargetUtilization = 0;
-            singularityRiskParams.maximumTargetUtilization = 0;
-            singularityRiskParams.minimumInterestPerSecond = 0;
-            singularityRiskParams.maximumInterestPerSecond = 0;
-            singularityRiskParams.interestElasticity = 0;
+            singularityRiskParams.borrowOpeningFee = 50;
+            singularityRiskParams.liquidationMultiplier = 12000;
+            singularityRiskParams.minimumTargetUtilization = 600000000000000000;
+            singularityRiskParams.maximumTargetUtilization = 700000000000000000;
+            singularityRiskParams.minimumInterestPerSecond = 951293760;
+            singularityRiskParams.maximumInterestPerSecond = 15854896000;
+            singularityRiskParams.interestElasticity = 3600e36;
             singularityRiskParams.minLendAmount = 1e6;
-            singularityRiskParams.exchangeRatePrecision = 0;
+            singularityRiskParams.exchangeRatePrecision = 1e8; // oracles are in 8 decimals (Chainlink USD, 8 decimals)
             singularityRiskParams.collateralizationRate = 75000;
             singularityRiskParams.liquidationCollateralizationRate = 80000;
-            singularityRiskParams.oracle = oracles.usdoOracle;
-            singularityRiskParams.seedAmount = 1 ether;
+            singularityRiskParams.oracle = oracles.stETHOracle;
+            singularityRiskParams.seedAmount = 100 ether;
+            singularityRiskParams.seedOwner = input.owner;
 
             createSingularityMarket(
                 report.tapiocaMulticall,
@@ -110,9 +113,30 @@ contract DeployTapiocaHostTestnet is Script {
                 singularityRiskParams
             );
 
-            //createBigBangMarket(
-            //    report.tapiocaMulticall, report.bigBangLauncher, input.wrappedNativeToken, bigBangRiskParams
-            //);
+            singularityRiskParams.oracle = oracles.usdcOracle;
+
+            createSingularityMarket(
+                report.tapiocaMulticall,
+                report.singularityLauncher,
+                address(usdc),
+                report.usdo,
+                oracles.usdcOracle,
+                singularityRiskParams
+            );
+        }
+        {
+            BigBangRiskParams memory bigBangRiskParams;
+            bigBangRiskParams.debtRateAgainstEth = 5000000000000000;
+            bigBangRiskParams.debtRateMin = 5000000000000000;
+            bigBangRiskParams.debtRateMax = 50000000000000000;
+            bigBangRiskParams.exchangeRatePrecision = 1e8;
+            bigBangRiskParams.collateralizationRate = 75000;
+            bigBangRiskParams.liquidationCollateralizationRate = 80000;
+            bigBangRiskParams.oracle = oracles.stETHOracle;
+            bigBangRiskParams.isEthMarket = true;
+            bigBangRiskParams.collateral = address(stETH);
+
+            createBigBangMarket(report.tapiocaMulticall, report.bigBangLauncher, bigBangRiskParams);
         }
 
         {
@@ -155,22 +179,21 @@ contract DeployTapiocaHostTestnet is Script {
         tokensData._asset = IERC20(usdo);
         tokensData._collateral = IERC20(token);
 
+        IERC20(usdo).approve(multicall, riskParams.seedAmount);
+
         bytes memory payload =
             abi.encodeWithSelector(SingularityLauncher.createSingularity.selector, tokensData, riskParams);
-
         bytes memory returnData = TapiocaMulticall(payable(multicall)).performDelegateCall(launcher, payload);
 
         address marketAddress = abi.decode(returnData, (address));
         return marketAddress;
     }
 
-    function createBigBangMarket(
-        address multicall,
-        address launcher,
-        address token,
-        BigBangRiskParams memory riskParams
-    ) internal returns (address) {
-        bytes memory payload = abi.encodeWithSelector(BigBangLauncher.createBigBang.selector, token);
+    function createBigBangMarket(address multicall, address launcher, BigBangRiskParams memory riskParams)
+        internal
+        returns (address)
+    {
+        bytes memory payload = abi.encodeWithSelector(BigBangLauncher.createBigBang.selector, riskParams);
         bytes memory returnData = TapiocaMulticall(payable(multicall)).performDelegateCall(launcher, payload);
 
         address bigBangAddress = abi.decode(returnData, (address));
