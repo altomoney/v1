@@ -830,11 +830,8 @@ contract SingularityTest is UsdoTestHelper {
         tokensData._collateral = IERC20(collateral);
 
         riskParams.oracle = oracle;
-        riskParams.seedAmount = 1 ether;
 
         vm.startPrank(owner);
-        deal(collateral, address(this), 1 ether);
-
         bytes memory payload =
             abi.encodeWithSelector(singularityLauncher.createSingularity.selector, tokensData, riskParams);
 

@@ -197,6 +197,7 @@ abstract contract MagnetarTestUtils is TestHelper {
         public
         returns (ISingularity singularity)
     {
+        address admin = Ownable(reportOut.tapiocaMulticall).owner();
         SGLInit._InitMemoryTokensData memory tokensData;
         RiskParams memory riskParams;
 
@@ -204,7 +205,8 @@ abstract contract MagnetarTestUtils is TestHelper {
         tokensData._collateral = IERC20(collateral);
 
         riskParams.oracle = oracle;
-        riskParams.seedAmount = 1 ether;
+        riskParams.seedAmount = 0 ether;
+        riskParams.seedOwner = admin;
 
         singularityLauncher = new SingularityLauncher(
             reportOut.sglLiquidationModule,
@@ -217,9 +219,6 @@ abstract contract MagnetarTestUtils is TestHelper {
             reportOut.sglInterestHelper,
             reportOut.singularity
         );
-        address admin = Ownable(reportOut.tapiocaMulticall).owner();
-
-        deal(collateral, admin, 1 ether);
 
         bytes memory payload =
             abi.encodeWithSelector(singularityLauncher.createSingularity.selector, tokensData, riskParams);

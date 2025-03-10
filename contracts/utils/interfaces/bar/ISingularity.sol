@@ -68,4 +68,6 @@ interface ISingularity is IMarket {
     function refreshPenroseFees() external returns (uint256 feeAmount);
 
     function liquidityBalance(address) external view returns (uint256);
+
+    function init(address sglInit, bytes calldata initData) external;
 }

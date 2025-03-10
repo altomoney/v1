@@ -236,12 +236,14 @@ contract TOBTestBase is Test, Events, Utils {
         riskParams.liquidationCollateralizationRate = 80000;
         riskParams.oracle = address(new OracleMock("Oracle Test", "ORCT", 1 ether));
         riskParams.seedAmount = 1 ether;
+        riskParams.seedOwner = owner;
 
-        deal(collateral, address(this), 1 ether);
         bytes memory payload =
             abi.encodeWithSelector(singularityLauncher.createSingularity.selector, tokensData, riskParams);
 
         vm.startPrank(owner);
+        deal(asset, owner, 1 ether);
+        IERC20(asset).approve(address(report.tapiocaMulticall), 1 ether);
         bytes memory returnData = TapiocaMulticall(payable(report.tapiocaMulticall)).performDelegateCall(
             address(singularityLauncher), payload
         );

@@ -63,9 +63,6 @@ contract BigBangLauncherTests is Test {
         riskParams.oracle = address(new OracleMock("Oracle Test", "ORCT", 1 ether));
         riskParams.isEthMarket = true;
 
-        // fund deployer
-        deal(input.wrappedNativeToken, address(this), 1 ether);
-
         bytes memory payload = abi.encodeWithSelector(bigBangLauncher.createBigBang.selector, riskParams);
 
         vm.prank(owner);

@@ -27,7 +27,7 @@ contract TapiocaReleaseTest is Test {
     ERC20Mock usda;
 
     function setUp() public {
-        owner = address(this);
+        owner = makeAddr("owner");
         TapiocaReport memory emptyReport;
         input.owner = owner;
         input.lzChainId = 0;
@@ -71,15 +71,19 @@ contract TapiocaReleaseTest is Test {
         riskParams.liquidationCollateralizationRate = 0;
         riskParams.oracle = address(new OracleMock("Oracle Test", "ORCT", 1 ether));
         riskParams.seedAmount = 1 ether;
+        riskParams.seedOwner = owner;
 
-        deal(input.wrappedNativeToken, address(this), 1 ether);
         bytes memory payload =
             abi.encodeWithSelector(singularityLauncher.createSingularity.selector, tokensData, riskParams);
 
-        vm.prank(owner);
+        vm.startPrank(owner);
+        deal(address(usda), owner, 1 ether);
+        usda.approve(address(report.tapiocaMulticall), 1 ether);
         bytes memory returnData = TapiocaMulticall(payable(report.tapiocaMulticall)).performDelegateCall(
             address(singularityLauncher), payload
         );
+        vm.stopPrank();
+
         address marketAddress = abi.decode(returnData, (address));
         assertTrue(marketAddress != address(0), "Singularity market address should not be zero");
     }

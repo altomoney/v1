@@ -51,7 +51,8 @@ contract Penrose_deploy is BigBang_Unit_Shared {
                 0
             )
         );
-        address cloneAddress = penrose.deploy(rndAddr, abi.encode(initModulesData, initDebtData, initMemoryData), false);
+        address cloneAddress =
+            penrose.deploy(rndAddr, abi.encode(abi.encode(initModulesData, initDebtData, initMemoryData)), false);
         assertEq(penrose.masterContractOf(cloneAddress), rndAddr);
         assertEq(penrose.clonesOf(rndAddr, 0), cloneAddress);
     }
@@ -74,7 +75,8 @@ contract Penrose_deploy is BigBang_Unit_Shared {
                 0
             )
         );
-        address cloneAddress = penrose.deploy(rndAddr, abi.encode(initModulesData, initDebtData, initMemoryData), true);
+        address cloneAddress =
+            penrose.deploy(rndAddr, abi.encode(abi.encode(initModulesData, initDebtData, initMemoryData)), true);
         assertEq(penrose.masterContractOf(cloneAddress), rndAddr);
         assertEq(penrose.clonesOf(rndAddr, 0), cloneAddress);
     }

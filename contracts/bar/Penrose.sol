@@ -18,6 +18,8 @@ import {IBigBang} from "tap-utils/interfaces/bar/IBigBang.sol";
 import {IUsdo} from "tap-utils/interfaces/oft/IUsdo.sol";
 import {SafeApprove} from "./libraries/SafeApprove.sol";
 import {ISingularity} from "../utils/interfaces/bar/ISingularity.sol";
+
+import "forge-std/console2.sol";
 /*
 
 ████████╗ █████╗ ██████╗ ██╗ ██████╗  ██████╗ █████╗ 
@@ -212,10 +214,9 @@ contract Penrose is Ownable, Pausable {
     /// Any ETH transferred with this call is forwarded to the new clone.
     /// Emits `LogDeploy`.
     /// @param masterContract The address of the contract to clone.
-    /// @param data Additional abi encoded calldata that is passed to the new clone via `IMasterContract.init`.
     /// @param useCreate2 Creates the clone by using the CREATE2 opcode, in this case `data` will be used as salt.
     /// @return cloneAddress Address of the created clone contract.
-    function deploy(address masterContract, bytes calldata data, bool useCreate2)
+    function deploy(address masterContract, bytes4 initSelector, bytes memory data, bool useCreate2)
         public
         payable
         onlyOwner
@@ -248,9 +249,37 @@ contract Penrose is Ownable, Pausable {
         masterContractOf[cloneAddress] = masterContract;
         clonesOf[masterContract].push(cloneAddress);
 
-        IMasterContract(cloneAddress).init{value: msg.value}(data);
+        (bool success, bytes memory returnData) =
+            cloneAddress.call{value: msg.value}(abi.encodePacked(initSelector, data));
+
+        if (!success) {
+            if (returnData.length > 0) {
+                assembly {
+                    let revertStringLength := mload(returnData)
+                    let revertStringPtr := add(returnData, 0x20)
+                    revert(revertStringPtr, revertStringLength)
+                }
+            } else {
+                revert Failed();
+            }
+        }
 
         emit LogDeploy(masterContract, data, cloneAddress);
+    }
+
+    /// @notice Deploys a given master Contract as a clone using the `IMasterContract.init` selector.
+    /// Any ETH transferred with this call is forwarded to the new clone.
+    /// Emits `LogDeploy`.
+    /// @param masterContract The address of the contract to clone.
+    /// @param useCreate2 Creates the clone by using the CREATE2 opcode, in this case `data` will be used as salt.
+    /// @return cloneAddress Address of the created clone contract.
+    function deploy(address masterContract, bytes memory data, bool useCreate2)
+        public
+        payable
+        onlyOwner
+        returns (address cloneAddress)
+    {
+        return deploy(masterContract, IMasterContract.init.selector, data, useCreate2);
     }
 
     /// @notice Loop through the master contracts and call `_depositFeesToTwTap()` to each one of their clones.
@@ -458,7 +487,7 @@ contract Penrose is Ownable, Pausable {
         registeredSingularityMasterContract(mc)
         returns (address _contract)
     {
-        _contract = deploy(mc, data, useCreate2);
+        _contract = deploy(mc, ISingularity.init.selector, data, useCreate2);
         if (_contract == address(0)) revert ZeroAddress();
         if (_contract.code.length == 0) revert Failed();
         isMarketRegistered[_contract] = true;
@@ -490,7 +519,7 @@ contract Penrose is Ownable, Pausable {
         registeredBigBangMasterContract(mc)
         returns (address _contract)
     {
-        _contract = deploy(mc, data, useCreate2);
+        _contract = deploy(mc, IBigBang.init.selector, data, useCreate2);
         if (_contract == address(0)) revert ZeroAddress();
         if (_contract.code.length == 0) revert Failed();
         isMarketRegistered[_contract] = true;

@@ -68,8 +68,9 @@ contract Penrose_withdrawAllMarketFees is BigBang_Unit_Shared {
                 0
             )
         );
-        address _contract =
-            penrose.registerBigBang(address(mc), abi.encode(initModulesData, initDebtData, initMemoryData), true);
+        address _contract = penrose.registerBigBang(
+            address(mc), abi.encode(abi.encode(initModulesData, initDebtData, initMemoryData)), true
+        );
         assertTrue(penrose.isMarketRegistered(_contract));
 
         IMarket[] memory markets = new IMarket[](1);

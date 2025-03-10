@@ -171,6 +171,16 @@ library TapiocaRelease {
         address penrose,
         address leverageExecutor
     ) private returns (LauncherReport memory report) {
+        BigBangLauncher bigBangLauncher = new BigBangLauncher(
+            bbReport.bbLiquidation,
+            bbReport.bbBorrow,
+            bbReport.bbCollateral,
+            bbReport.bbLeverage,
+            penrose,
+            leverageExecutor,
+            bbReport.bigbang,
+            bbReport.bbDebtRateHelper
+        );
         SingularityLauncher singularityLauncher = new SingularityLauncher(
             sglReport.sglLiquidationModule,
             sglReport.sglBorrowModule,
@@ -182,8 +192,8 @@ library TapiocaRelease {
             sglReport.sglInterestHelper,
             sglReport.singularity
         );
-
         report.singularityLauncher = address(singularityLauncher);
+        report.bigBangLauncher = address(bigBangLauncher);
 
         return report;
     }
