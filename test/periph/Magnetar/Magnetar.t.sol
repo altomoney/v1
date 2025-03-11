@@ -43,7 +43,7 @@ import "../../../contracts/deployments/interfaces/ITapiocaReport.sol";
 import {TapiocaRelease} from "deployments/releases/tapioca-v1/TapiocaRelease.sol";
 import {LZEndpointMock} from "tapioca-mocks/LZEndpointMock.sol";
 import {TapToken} from "../../../contracts/tap-token/tokens/TapToken.sol";
-import {TwTAP} from "tap-token/governance/TwTAP.sol";
+import {TwTAP} from "tap-token/governance/twTAP.sol";
 import {TapTokenMock} from "../../tap-token/TapTokenMock.sol";
 import {ITapToken} from "../../../contracts/tap-token/tokens/ITapToken.sol";
 import {Bucket} from "../../../contracts/tap-token/interfaces/ITWLBase.sol";
