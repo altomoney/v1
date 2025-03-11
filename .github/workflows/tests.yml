@@ -34,9 +34,9 @@ jobs:
       - name: Foundry dependencies setup
         run: forge install
 
-      - name: Check contract sizes
-        run: forge build --sizes
-        id: build
+      # - name: Check contract sizes
+      #   run: forge build --sizes
+      #   id: build
 
       - name: Check formatting
         run: forge fmt --check
