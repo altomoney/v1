@@ -27,7 +27,7 @@ jobs:
         run: yarn install
 
       - name: Foundry setup
-        uses: foundry-rs/foundry-toolchain@v1
+        uses: foundry-rs/foundry-toolchain@v1.3.1
         with:
           version: nightly
 
