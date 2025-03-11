@@ -23,7 +23,7 @@ import {
 import {Singularity} from "../../../../contracts/bar/markets/singularity/Singularity.sol";
 import {SGLCollateral} from "../../../../contracts/bar/markets/singularity/SGLCollateral.sol";
 import {SGLLeverage} from "../../../../contracts/bar/markets/singularity/SGLLeverage.sol";
-import {TwTAP} from "../../../../contracts/tap-token/governance/TwTAP.sol";
+import {TwTAP} from "../../../../contracts/tap-token/governance/twTAP.sol";
 import {TapToken} from "../../../../contracts/tap-token/tokens/TapToken.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";

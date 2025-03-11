@@ -47,7 +47,7 @@ import {Usdo} from "tapioca-bar/usdo/Usdo.sol";
 import {Penrose} from "tapioca-bar/Penrose.sol";
 import {IBigBang} from "tap-utils/interfaces/bar/IBigBang.sol";
 import {TapToken} from "../../../contracts/tap-token/tokens/TapToken.sol";
-import {TwTAP} from "../../../contracts/tap-token/governance/TwTAP.sol";
+import {TwTAP} from "tap-token/governance/TwTAP.sol";
 import {TapTokenMock} from "../../tap-token/TapTokenMock.sol";
 import {ITapToken} from "../../../contracts/tap-token/tokens/ITapToken.sol";
 import {Bucket} from "../../../contracts/tap-token/interfaces/ITWLBase.sol";
