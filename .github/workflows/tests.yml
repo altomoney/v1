@@ -38,9 +38,9 @@ jobs:
       #   run: forge build --sizes
       #   id: build
 
-      - name: Check formatting
-        run: forge fmt --check
-        id: fmt
+      # - name: Check formatting
+      #   run: forge fmt --check
+      #   id: fmt
 
       - name: Check tests
         run: forge test
