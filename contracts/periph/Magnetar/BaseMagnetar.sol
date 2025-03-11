@@ -31,7 +31,6 @@ import {MagnetarStorage} from "./MagnetarStorage.sol";
  * @dev Since `Magnetar` uses `delegatecall`, in case of changes in the storage variables, make it carefully.
  */
 abstract contract BaseMagnetar is MagnetarStorage, Ownable, Pausable {
-
     error Magnetar_FailRescueEth();
     error Magnetar_EmptyAddress();
     error Magnetar_PauserNotAuthorized();

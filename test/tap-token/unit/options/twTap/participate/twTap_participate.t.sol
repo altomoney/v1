@@ -5,7 +5,6 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {twTapBaseTest, TwTAP} from "../twTapBaseTest.sol";
 import {ITWTAPv2} from "tap-token/interfaces/ITWTAPv2.sol";
 
-
 contract twTap_participate is twTapBaseTest {
     function setUp() public override {
         super.setUp();

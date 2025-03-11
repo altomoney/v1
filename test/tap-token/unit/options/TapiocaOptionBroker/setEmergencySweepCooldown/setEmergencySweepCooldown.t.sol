@@ -18,7 +18,6 @@ contract TapiocaOptionBrokerSetEmergencySweepCooldownTest is TOBTestBase {
     }
 
     function test_setEmergencySweepCooldown_validConditions(uint256 _newCooldown) external {
-
         // Set emergency sweep cooldown
         vm.startPrank(owner);
         tob.setEmergencySweepCooldown(_newCooldown);

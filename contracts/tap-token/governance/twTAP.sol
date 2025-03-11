@@ -303,7 +303,8 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, ReentrancyGuard, Pausable {
         // no way to give out rewards THIS week.
         // Cast is safe: `netActiveVotes` is at most zero by construction of
         // weekly totals and the requirement that they are up to date.
-        totals.totalDistPerVote[_rewardTokenId] += totals.netActiveVotes == 0 ? 0 : (_amount * DIST_PRECISION) / uint256(totals.netActiveVotes);
+        totals.totalDistPerVote[_rewardTokenId] +=
+            totals.netActiveVotes == 0 ? 0 : (_amount * DIST_PRECISION) / uint256(totals.netActiveVotes);
 
         rewardToken.safeTransferFrom(msg.sender, address(this), _amount);
 
@@ -494,7 +495,8 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, ReentrancyGuard, Pausable {
         if (position.expiry > 0 && block.timestamp < position.expiry) {
             // Clear the expected votes at the past expected expiration date
             weekTotals[currentEpoch() + 1].netActiveVotes -= int256(uint256(position.tapAmount) * position.multiplier);
-            weekTotals[_timestampToEpoch(position.expiry) + 1].netActiveVotes += int256(uint256(position.tapAmount) * position.multiplier);
+            weekTotals[_timestampToEpoch(position.expiry) + 1].netActiveVotes +=
+                int256(uint256(position.tapAmount) * position.multiplier);
         }
 
         if (position.tapAmount > 0) {

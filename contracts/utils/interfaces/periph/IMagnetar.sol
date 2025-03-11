@@ -129,6 +129,7 @@ enum MagnetarAction {
     OptionModule, // 11 Market Module related operations.
     // External operations
     WethWrap // 12
+
 }
 
 enum MagnetarModule {
