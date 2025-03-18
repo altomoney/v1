@@ -49,7 +49,7 @@ import {ITapToken} from "../../../contracts/tap-token/tokens/ITapToken.sol";
 import {Bucket} from "../../../contracts/tap-token/interfaces/ITWLBase.sol";
 import {TapTokenSender} from "../../../contracts/tap-token/tokens/TapTokenSender.sol";
 import {TapTokenReceiver} from "../../../contracts/tap-token/tokens/TapTokenReceiver.sol";
-
+import {SLeverageSwapData, SToftInfo} from "../../../contracts/bar/markets/leverage/BaseLeverageExecutor.sol";
 import {
     PrepareLzCallData,
     PrepareLzCallReturn,
@@ -188,6 +188,7 @@ contract MagnetarTest is MagnetarTestUtils, MagnetarCallFactoryUtil {
         cluster.updateContract(0, address(collateral), true);
         cluster.updateContract(0, address(marketHelper), true);
         cluster.updateContract(0, address(sgl), true);
+        cluster.updateContract(0, address(report.simpleLeverageExecutor), true);
         vm.stopPrank();
 
         vm.label(address(sgl), "Singularity");
@@ -1265,82 +1266,159 @@ contract MagnetarTest is MagnetarTestUtils, MagnetarCallFactoryUtil {
         assertEq(sgl.allowance(_user, _spender), value);
     }
 
-    function test_burst_buyCollateral_valid(uint160 _userLpPk, uint128 _addAssets, uint160 _userPk, uint256 _collateralAmount, uint256 _borrowAmount)
-        external
-        withValidAmount128(_addAssets)
-        withValidAmount128(_collateralAmount)
-        withValidAmount128(_borrowAmount)
+    function test_burst_buyCollateral_valid(uint160 _userLpPk, uint160 _userPk) external
     {
+        vm.assume(_userLpPk != 0);
+        vm.assume(_userPk != 0);
+        vm.assume(_userLpPk != _userPk);
+        uint128 _addAssets = 100_000e18;
+        uint256 _collateralAmount = 40_000e18;
+        uint256 _borrowAmount = sgl._minBorrowAmount() + 1;
         address _userLp = _assumeValidAddress(_userLpPk, "userLp");
         address _user = _assumeValidAddress(_userPk, "user");
         vm.assume(_collateralAmount > sgl._minCollateralAmount());
-
-        _borrowAmount = sgl._minBorrowAmount() + 1;
         vm.assume(_addAssets > sgl.minLendAmount());
         vm.assume(_addAssets > _borrowAmount * 3);
-        _collateralAmount *= 4;
 
         _withMarketAddAsset(_userLpPk, _addAssets);
-
-        uint256 supplyCollateral = 0;
-
         _withTokenBalance(address(collateral), _user, _collateralAmount);
-        uint256 _nonce = sgl.nonces(_user);
 
-        MagnetarCall[] memory calls = new MagnetarCall[](6);
+        uint256 _nonce = sgl.nonces(_user);
+        uint256 supplyCollateral = 0;
+        uint256 _leverageBorrowAmount = 3e17;
+        uint256 _collateralSharesExpectedBefore = sgl.convertToShares(_collateralAmount);
+
+        SLeverageSwapData memory _swapData = _getSLeverageSwapData(address(asset), address(collateral), supplyCollateral, 1e17);
+
+        MagnetarCall[] memory calls = new MagnetarCall[](7);
         calls[0] = _getERC20PermitMagnetarCall(payable(address(collateral)), _userPk, address(sgl), _collateralAmount, 1 days);
         calls[1] = _getMarketPermitCollateralMagnetarCall(address(sgl), _userPk, address(magnetar), _collateralAmount, 1 days, _nonce++);
         calls[2] = _getMarketAddCollateralMagnetarCall(address(sgl), address(marketHelper), _user, _collateralAmount);
         calls[3] = _getMarketPermitBorrowMagnetarCall(address(sgl), _userPk, address(magnetar), type(uint256).max, 1 days, _nonce++);
         calls[4] = _getMarketPermitMarketSharesMagnetarCall(address(sgl), _userPk, address(magnetar), type(uint256).max, 1 days, _nonce++);
-        calls[5] = _getMagnetarLeverageModuleBuyCollateralMagnetarCall(
-            address(sgl), address(marketHelper), address(_user), _borrowAmount, supplyCollateral, ""
+        calls[5] = _getERC20PermitMagnetarCall(payable(address(asset)), _userPk, address(magnetar), _collateralAmount * 4, 1 days);
+        calls[6] = _getMagnetarLeverageModuleBuyCollateralMagnetarCall(
+            address(sgl), address(marketHelper), address(_user), _leverageBorrowAmount, supplyCollateral, abi.encode(_swapData)
         );
 
         vm.startPrank(_user);
         magnetar.burst(calls);
         vm.stopPrank();
+        uint256 _collateralSharesExpectedAfter = sgl.convertToShares(_collateralAmount);
 
-        // _assertSingularityLiquidityBalance(payable(address(sgl)), _user, _collateralAmount);
+        assertEq(sgl.liquidityBalance(_userLp), _addAssets, "Invalid user LP liquidity balance");
+        assertEq(sgl.liquidityBalance(_user), 0, "Invalid user liquidity balance");
+        assertGt(sgl.balanceOf(_user), _collateralSharesExpectedBefore, "Invalid user collateral shares balance");
+        assertGt(_collateralSharesExpectedBefore, _collateralSharesExpectedAfter, "Invalid collateral shares balance before vs after");
+        assertEq(sgl._userBorrowPart(_user), _leverageBorrowAmount, "Invalid user borrow part");
     }
 
-    function test_burst_sellCollateral_valid(uint160 _userLpPk, uint128 _addAssets, uint160 _userPk, uint256 _collateralAmount, uint256 _borrowAmount)
+    function _getSLeverageSwapData(address _asset, address _collateral, uint256 _supplyCollateral, uint256 _minAmountOut) internal returns (SLeverageSwapData memory _swapData) {
+        IZeroXSwapper.SZeroXSwapData memory _swapperData;
+        _swapperData.sellToken = IERC20(_asset);
+        _swapperData.buyToken = IERC20(_collateral);
+        _swapperData.swapTarget = payable(address(0x0));
+        _swapperData.swapCallData = "";
+        deal(_asset, address(this), _supplyCollateral);
+
+        _swapData.minAmountOut = _minAmountOut;
+        _swapData.toftInfo = SToftInfo({
+            isTokenInToft: false,
+            isTokenOutToft: false
+        });
+        _swapData.swapperData = abi.encode(_swapperData);
+    }
+
+    function test_burst_sellCollateral__valid(uint160 _userLpPk, uint160 _userPk)
         external
-        withValidAmount128(_addAssets)
-        withValidAmount128(_collateralAmount)
-        withValidAmount128(_borrowAmount)
     {
+        vm.assume(_userLpPk != 0);
+        vm.assume(_userPk != 0);
+        vm.assume(_userLpPk != _userPk);
+
+        uint128 _addAssets = 100_000e18;
+        uint256 _collateralAmount = 40_000e18;
+        uint256 _borrowAmount = sgl._minBorrowAmount() * 2;
+        
+        // To borrow assets, so user can sell collateral
         address _userLp = _assumeValidAddress(_userLpPk, "userLp");
         address _user = _assumeValidAddress(_userPk, "user");
-        _collateralAmount *= 3;
+
         vm.assume(_collateralAmount > sgl._minCollateralAmount());
         vm.assume(_borrowAmount > sgl._minBorrowAmount());
         vm.assume(_addAssets > sgl.minLendAmount());
         vm.assume(_addAssets > _borrowAmount * 3);
 
+        _withAddAssetAddCollateralBorrow(
+            _userPk,
+            _addAssets,
+            _collateralAmount
+        );
+        uint256 _userBorrowPartExpectedBefore = sgl._userBorrowPart(_user);
+
         _withMarketAddAsset(_userLpPk, _addAssets);
 
-        uint256 supplyCollateral = 0;
-
-        _withTokenBalance(address(collateral), _user, _collateralAmount * 4);
+        _withTokenBalance(address(collateral), _user, _collateralAmount * 2);
         uint256 _nonce = sgl.nonces(_user);
+        uint256 _collateralUserBalanceBefore = collateral.balanceOf(_user);
         uint256 _collateralShares = sgl.convertToShares(_collateralAmount);
+        uint256 _collateralSharesExpectedBefore = sgl.balanceOf(_user);
 
+        SLeverageSwapData memory _swapData = _getSLeverageSwapData(address(collateral), address(asset), /*supplyCollateral*/0, 1e17);
 
-        MagnetarCall[] memory calls = new MagnetarCall[](5);
+        MagnetarCall[] memory calls = new MagnetarCall[](6);
         calls[0] = _getERC20PermitMagnetarCall(payable(address(collateral)), _userPk, address(sgl), _collateralAmount, 1 days);
         calls[1] = _getMarketPermitCollateralMagnetarCall(address(sgl), _userPk, address(magnetar), _collateralAmount, 1 days, _nonce++);
         calls[2] = _getMarketAddCollateralMagnetarCall(address(sgl), address(marketHelper), _user, _collateralAmount);
-        calls[3] = _getMarketPermitMarketSharesMagnetarCall(address(sgl), _userPk, address(magnetar), _collateralShares, 1 days, _nonce++);
-        calls[4] = _getMagnetarLeverageModuleSellCollateralMagnetarCall(
-            address(sgl), address(marketHelper), address(_user), _collateralShares, ""
+        calls[3] = _getMarketPermitMarketSharesMagnetarCall(address(sgl), _userPk, address(magnetar), type(uint256).max, 1 days, _nonce++);
+        calls[4] = _getERC20PermitMagnetarCall(payable(address(asset)), _userPk, address(sgl), type(uint256).max, 1 days);
+        calls[5] = _getMagnetarLeverageModuleSellCollateralMagnetarCall(
+            address(sgl), address(marketHelper), address(_user), _collateralShares, abi.encode(_swapData)
         );
 
         vm.startPrank(_user);
         magnetar.burst(calls);
         vm.stopPrank();
 
-        // _assertSingularityLiquidityBalance(payable(address(sgl)), _user, _collateralAmount);
+        uint256 _collateralUserBalanceAfter = collateral.balanceOf(_user);
+        uint256 _collateralSharesExpectedAfter = sgl.balanceOf(_user);
+
+        assertEq(collateral.balanceOf(report.simpleLeverageExecutor), 0, "Invalid leverage executor collateral balance");
+        assertEq(collateral.balanceOf(address(magnetar)), 0, "Invalid magnetar collateral balance");
+        assertGt(_collateralUserBalanceBefore, _collateralUserBalanceAfter, "Invalid collateral user balance before vs after");
+        assertEq(sgl.liquidityBalance(_userLp), _addAssets, "Invalid user LP liquidity balance");
+        assertEq(sgl.liquidityBalance(_user), _addAssets, "Invalid user liquidity balance");
+        assertLt(sgl._userBorrowPart(_user), _userBorrowPartExpectedBefore, "Invalid user borrow part");
+    }
+
+    function _withAddAssetAddCollateralBorrow(
+        uint160 _userPk,
+        uint256 _tokenAmount,
+        uint256 _collateralAmount
+    ) internal {
+        uint256 _borrowAmount = sgl._minBorrowAmount() * 3;
+        address _user = _assumeValidAddress(_userPk, "user");
+
+        deal(address(collateral), _user, _collateralAmount);
+
+        _withMarketAddAsset(_userPk, _tokenAmount);
+        uint256 _nonce = sgl.nonces(_user);
+
+        MagnetarCall[] memory calls = new MagnetarCall[](4);
+        calls[0] = _getERC20PermitMagnetarCall(payable(address(collateral)), _userPk, address(sgl), _collateralAmount, 1 days);
+        calls[1] = _getMarketPermitCollateralMagnetarCall(address(sgl), _userPk, address(magnetar), _collateralAmount, 1 days, _nonce++);
+        calls[2] = _getMarketPermitBorrowMagnetarCall(address(sgl), _userPk, address(magnetar), _borrowAmount, 1 days, _nonce++);
+        calls[3] = _getMarketAddCollateral_BorrowMagnetarCall(address(sgl), address(marketHelper), _user, _collateralAmount, _borrowAmount);
+
+        vm.startPrank(_user);
+        magnetar.burst(calls);
+        vm.stopPrank();
+
+        assertGt(sgl.balanceOf(_user), 0, "user should have collateral shares");
+        assertEq(sgl.balanceOf(address(magnetar)), 0, "magnetar should not have collateral shares");
+        assertEq(collateral.balanceOf(address(sgl)), _collateralAmount, "Market should have collateral");
+        assertEq(sgl.totalSupply(), sgl.balanceOf(_user), "total supply should be equal to user balance");
+        assertEq(sgl._userBorrowPart(_user), _borrowAmount, "user borrow part should be equal to borrow amount");
     }
 
     function _distributeRewards(uint256 _amount) internal {

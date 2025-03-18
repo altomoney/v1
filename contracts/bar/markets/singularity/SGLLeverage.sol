@@ -33,17 +33,6 @@ contract SGLLeverage is SGLLendingCommon {
     error CollateralShareNotValid();
     error AmountNotValid();
 
-    struct _BuyCollateralCalldata {
-        address from;
-        uint256 borrowAmount;
-        uint256 supplyAmount;
-        bytes data;
-    }
-
-    struct _BuyCollateralMemoryData {
-        uint256 supplyShareToAmount;
-        uint256 borrowShareToAmount;
-    }
 
     /// @notice Lever up: Borrow more and buy collateral with it.
     /// @param from The user who buys
@@ -61,46 +50,60 @@ contract SGLLeverage is SGLLendingCommon {
         if (address(leverageExecutor) == address(0)) {
             revert LeverageExecutorNotValid();
         }
-        // Stack too deep fix
-        _BuyCollateralCalldata memory calldata_;
-        _BuyCollateralMemoryData memory memoryData;
-        {
-            calldata_.from = from;
-            calldata_.borrowAmount = borrowAmount;
-            calldata_.supplyAmount = supplyAmount;
-            calldata_.data = data;
-        }
 
         // Let this fail first to save gas:
-        if (calldata_.supplyAmount > 0) {
-            memoryData.supplyShareToAmount = withdraw(calldata_.supplyAmount, address(leverageExecutor), calldata_.from);
+        if (supplyAmount > 0) {
+            _allowedBorrow(from, supplyAmount);
+            IERC20(borrowableToken()).safeTransferFrom(from, address(leverageExecutor), supplyAmount);
         }
 
-        _allowedBorrow(calldata_.from, calldata_.borrowAmount);
-        (, uint256 borrowShare) = _borrow(calldata_.from, address(this), calldata_.borrowAmount);
+        {
+            _allowedBorrow(from, borrowAmount);
+            _borrow(from, address(this), borrowAmount);
+        }
 
         {
-            // TODO borrowShare => We are mixing borrow shares and collateral shares here.
-            memoryData.borrowShareToAmount = redeem(borrowShare, address(leverageExecutor), calldata_.from);
             updateExchangeRate();
-            uint256 assetPartInCollateral = (memoryData.supplyShareToAmount + memoryData.borrowShareToAmount)
-                * exchangeRate / EXCHANGE_RATE_PRECISION;
-            _allowedBorrow(calldata_.from, convertToShares(assetPartInCollateral));
+            
+            uint256 assetPartInCollateral = (supplyAmount + borrowAmount) * exchangeRate / EXCHANGE_RATE_PRECISION;
+            
+            _allowedBorrow(from, previewDeposit(assetPartInCollateral));
+            borrowableToken().safeApprove(address(leverageExecutor), supplyAmount + borrowAmount);
 
             amountOut = leverageExecutor.getCollateral(
-                from,
+                address(this),
                 address(_borrowableToken()),
                 collateral(),
-                memoryData.supplyShareToAmount + memoryData.borrowShareToAmount,
-                calldata_.data
+                supplyAmount + borrowAmount,
+                data
             );
         }
 
         {
-            uint256 collateralShare = deposit(amountOut, address(this));
-            if (collateralShare == 0) revert CollateralShareNotValid();
+            // Mint shares via erc4626 "deposit()" function logic, skipping transferFrom
+            uint256 sharesOutput = previewDeposit(amountOut);
+            _mint(from, sharesOutput);
+            
+            if (sharesOutput == 0) revert CollateralShareNotValid();
 
-            _addCollateral(calldata_.from, calldata_.from, 0, collateralShare, false);
+            address thisAddress = address(this);
+            /// @solidity memory-safe-assembly
+            assembly {
+                // Emit the {Deposit} event.
+                mstore(0x00, amountOut)
+                mstore(0x20, sharesOutput)
+                let m := shr(96, not(0))
+                log3(
+                    0x00,
+                    0x40,
+                    0xdcbc1c05240f31ff3ad067ef1ee35ce4997762752e3a095284754544f4c709d7, // _DEPOSIT_EVENT_SIGNATURE
+                    and(m, address()),
+                    and(m, from)
+                )
+            }
+            _afterDeposit(amountOut, sharesOutput);
+
+            emit LogAddCollateral(address(this), from, sharesOutput);
         }
 
         if (amountOut == 0) revert AmountNotValid();
@@ -134,22 +137,27 @@ contract SGLLeverage is SGLLendingCommon {
             calldata_.share = share;
             calldata_.data = data;
         }
+        uint256 leverageAmount = super.redeem(calldata_.share, address(this), from);
 
-        uint256 leverageAmount = super.redeem(calldata_.share, address(leverageExecutor), from);
+        collateral().safeApprove(address(leverageExecutor), leverageAmount);
 
         amountOut =
             leverageExecutor.getAsset(from, collateral(), address(_borrowableToken()), leverageAmount, calldata_.data);
-        uint256 shareOut = deposit(amountOut, calldata_.from);
+        
+        IERC20(_borrowableToken()).safeTransfer(from, amountOut);
 
-        uint256 partOwed = userBorrowPart[calldata_.from];
+        uint256 shareOut = previewWithdraw(amountOut);
+        uint256 partOwed = userBorrowPart[from];
         uint256 amountOwed = totalBorrow.toElastic(partOwed, true);
         uint256 shareOwed = previewWithdraw(amountOwed);
         if (shareOwed <= shareOut) {
             _repay(calldata_.from, calldata_.from, partOwed, false);
+            // TODO Should we check returned value?
         } else {
             //repay as much as we can
             uint256 partOut = totalBorrow.toBase(amountOut, false);
             _repay(calldata_.from, calldata_.from, partOut, false);
+            // TODO Should we check returned value?
         }
         if (amountOut == 0) revert AmountNotValid();
     }

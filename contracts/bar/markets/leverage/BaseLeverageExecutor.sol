@@ -179,9 +179,11 @@ abstract contract BaseLeverageExecutor is Ownable {
         uint256 amountInBefore = IERC20(tokenIn).balanceOf(address(this));
         uint256 _amountInBeforeSwap = amountOut;
 
+        IERC20(tokenIn).safeTransferFrom(msg.sender, address(this), amountIn);
+
         // Approve the swapper to spend the tokenIn, and perform the swap.
-        tokenIn.safeApprove(address(swapper), amountOut);
-        amountOut = swapper.swap(swapperData, amountOut, swapData.minAmountOut);
+        tokenIn.safeApprove(address(swapper), amountIn);
+        amountOut = swapper.swap(swapperData, amountIn, swapData.minAmountOut);
         if (amountOut < swapData.minAmountOut) revert MinAmountNotValid(swapData.minAmountOut, amountOut);
         tokenIn.safeApprove(address(swapper), 0);
 

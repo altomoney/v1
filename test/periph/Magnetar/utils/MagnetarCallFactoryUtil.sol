@@ -377,16 +377,7 @@ abstract contract MagnetarCallFactoryUtil is Market4626PermitUtils {
         _params.marketHelper = _marketHelper;
         _params.user = _user;
         _params.collateralShares = _collateralShares;
-
-
-        SLeverageSwapData memory _swapData;
-        _swapData.minAmountOut = 0;
-        _swapData.toftInfo = SToftInfo({
-            isTokenInToft: false,
-            isTokenOutToft: false
-        });
-        _swapData.swapperData = "";
-        _params.data = abi.encode(_swapData);
+        _params.data = _data;
 
         bytes memory sellCollateralCallData =
             abi.encodeWithSelector(MagnetarLeverageModule.sellCollateral.selector, _params);

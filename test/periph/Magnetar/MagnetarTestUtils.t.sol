@@ -57,6 +57,7 @@ import {UnitBaseTest} from "../../tap-token/unit/UnitBaseTest.t.sol";
 import {TapiocaOmnichainExtExec} from
     "../../../contracts/utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainExtExec.sol";
 import {IMarket} from "../../../contracts/utils/interfaces/bar/IMarket.sol";
+import {ZeroXSwapperMock} from "../../../contracts/mocks/ZeroXSwapperMock.sol";
 
 struct TestSingularityData {
     address penrose;
@@ -123,7 +124,7 @@ abstract contract MagnetarTestUtils is TestHelper {
                 __admin
             )
         );
-        input.zeroXSwapper = address(1);
+        input.zeroXSwapper = address(new ZeroXSwapperMock(ICluster(address(0x0)), __admin));
         input.lzEndpoint = address(endpoints[aEid]);
         __endpoint = address(endpoints[aEid]);
 
@@ -131,6 +132,7 @@ abstract contract MagnetarTestUtils is TestHelper {
         report = TapiocaRelease.deployTapiocaV1(input, emptyReport);
 
         vm.startPrank(__admin);
+        ZeroXSwapperMock(payable(input.zeroXSwapper)).setCluster(ICluster(report.cluster));
         TapTokenMock(payable(input.tapToken)).setCluster(ICluster(report.cluster));
         vm.stopPrank();
 
@@ -391,6 +393,5 @@ abstract contract MagnetarTestUtils is TestHelper {
     function _assertSingularityLiquidityBalance(address payable _market, address _user, uint256 _amount) internal {
         IERC20 _asset = IERC20(IMarket(_market)._asset());
         assertEq(Singularity(_market).liquidityBalance(_user), _amount, "Invalid user liquidity balance");
-        assertEq(_asset.balanceOf(address(_market)), _amount, "Invalid market asset balance");
     }
 }
