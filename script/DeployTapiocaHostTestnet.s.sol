@@ -137,7 +137,7 @@ contract DeployTapiocaHostTestnet is Script {
         }
 
         {
-            address tob = createTapiocaOptionBroker(
+            TapiocaTestnetTobSetter tobSetter = new TapiocaTestnetTobSetter(
                 report,
                 input.tapToken,
                 report.tapiocaMulticall,
@@ -147,6 +147,11 @@ contract DeployTapiocaHostTestnet is Script {
                 oracles.tapOracle,
                 EPOCH_DURATION
             );
+            TapiocaOptionBroker tob = tobSetter.tob();
+
+            TapToken(payable(input.tapToken)).setMinter(address(tob));
+
+            tob.enableTapTokenRewards();
 
             createTwTap(payable(input.tapToken), input.owner);
 
@@ -214,7 +219,17 @@ contract DeployTapiocaHostTestnet is Script {
         return address(new TwTAP(_tapOft, _owner, 7 days, buckets));
     }
 
-    function createTapiocaOptionBroker(
+    function deployTestnetOracles(TapiocaInput memory input) internal returns (TestnetOracles memory oracles) {
+        TestnetOraclesBatch oraclesBatch = new TestnetOraclesBatch();
+
+        return oraclesBatch.getOraclesReport();
+    }
+}
+
+contract TapiocaTestnetTobSetter {
+    TapiocaOptionBroker public tob;
+
+    constructor(
         TapiocaReport memory report,
         address tapToken,
         address feeCollector,
@@ -223,7 +238,22 @@ contract DeployTapiocaHostTestnet is Script {
         address paymentTokenOracle,
         address tapOracle,
         uint256 epochDuration
-    ) internal returns (address) {
+    ) {
+        _createTapiocaOptionBroker(
+            report, tapToken, feeCollector, owner, paymentToken, paymentTokenOracle, tapOracle, epochDuration
+        );
+    }
+
+    function _createTapiocaOptionBroker(
+        TapiocaReport memory report,
+        address tapToken,
+        address feeCollector,
+        address owner,
+        address paymentToken,
+        address paymentTokenOracle,
+        address tapOracle,
+        uint256 epochDuration
+    ) internal {
         Bucket[] memory buckets = new Bucket[](1);
 
         buckets[0] = Bucket({
@@ -240,7 +270,7 @@ contract DeployTapiocaHostTestnet is Script {
         });
 
         TapiocaOptionBroker tob = new TapiocaOptionBroker(
-            payable(tapToken), address(report.usdo), feeCollector, epochDuration, buckets, report.penrose, msg.sender
+            payable(tapToken), address(report.usdo), feeCollector, epochDuration, buckets, report.penrose, address(this)
         );
 
         tob.setPaymentToken(address(paymentToken), paymentTokenOracle, "");
@@ -249,18 +279,6 @@ contract DeployTapiocaHostTestnet is Script {
         tob.setCluster(report.cluster);
         tob.setPenrose(report.penrose);
 
-        TapToken(payable(tapToken)).setMinter(address(tob));
-
-        tob.enableTapTokenRewards();
-
         tob.transferOwnership(owner);
-
-        return address(tob);
-    }
-
-    function deployTestnetOracles(TapiocaInput memory input) internal returns (TestnetOracles memory oracles) {
-        TestnetOraclesBatch oraclesBatch = new TestnetOraclesBatch();
-
-        return oraclesBatch.getOraclesReport();
     }
 }
