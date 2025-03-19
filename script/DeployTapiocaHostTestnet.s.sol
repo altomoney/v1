@@ -24,17 +24,14 @@ import {ERC20Testnet} from "test/utils/mocks/ERC20Testnet.sol";
 import {IERC20} from "@boringcrypto/boring-solidity/contracts/interfaces/IERC20.sol";
 import {Usdo} from "tapioca-bar/usdo/Usdo.sol";
 import {SGLInit} from "tapioca-bar/markets/singularity/SGLInit.sol";
+import {
+    TestnetOracles,
+    TestnetOraclesBatch
+} from "contracts/deployments/releases/tapioca-v1/batches/testnet/TestnetOraclesBatch.sol";
 import "forge-std/console.sol";
 
 contract DeployTapiocaHostTestnet is Script {
     uint256 public constant EPOCH_DURATION = 1 minutes;
-
-    struct TestnetOracles {
-        address stETHOracle;
-        address usdoOracle;
-        address usdcOracle;
-        address tapOracle;
-    }
 
     function run() public {
         TapiocaInput memory input;
@@ -262,16 +259,8 @@ contract DeployTapiocaHostTestnet is Script {
     }
 
     function deployTestnetOracles(TapiocaInput memory input) internal returns (TestnetOracles memory oracles) {
-        TestnetOracle stETHOracle = new TestnetOracle("stETH/USD", "TAP/USD", 2000e8, input.owner);
-        TestnetOracle tapOracle = new TestnetOracle("TAP/USD", "TAP/USD", 10e8, input.owner);
-        TestnetOracle usdoOracle = new TestnetOracle("USDO/USD", "USDO/USD", 1e8, input.owner);
-        TestnetOracle usdcOracle = new TestnetOracle("USDC/USD", "USDO/USD", 1e8, input.owner);
+        TestnetOraclesBatch oraclesBatch = new TestnetOraclesBatch();
 
-        return TestnetOracles({
-            stETHOracle: address(stETHOracle),
-            usdoOracle: address(usdoOracle),
-            usdcOracle: address(usdcOracle),
-            tapOracle: address(tapOracle)
-        });
+        return oraclesBatch.getOraclesReport();
     }
 }

@@ -9,18 +9,19 @@ contract TestnetOracle is ITapiocaOracle, Ownable {
     bool public success;
     string public __name;
     string public __symbol;
+    uint8 public __decimals;
 
-    constructor(string memory _name, string memory _symbol, uint256 _rate, address owner) {
+    constructor(string memory _name, string memory _symbol, uint256 _rate, address owner, uint256 _decimals) {
         success = true;
         rate = _rate;
         __name = _name;
         __symbol = _symbol;
-
+        __decimals = uint8(_decimals);
         _transferOwnership(owner);
     }
 
-    function decimals() external pure override returns (uint8) {
-        return 18;
+    function decimals() external view override returns (uint8) {
+        return __decimals;
     }
 
     function set(uint256 rate_) public onlyOwner {
