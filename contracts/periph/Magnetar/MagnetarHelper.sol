@@ -209,10 +209,9 @@ contract MagnetarHelper {
         Rebase memory _totalAsset = singularity.totalAsset();
         Rebase memory _totalBorrow = singularity._totalBorrow();
 
-        uint256 share = singularity.convertToShares(amount);
         uint256 allShare = _totalAsset.elastic + singularity.convertToShares(_totalBorrow.elastic);
 
-        fraction = allShare == 0 ? share : (share * _totalAsset.base) / allShare;
+        fraction = allShare == 0 ? amount : (amount * _totalAsset.base) / allShare;
     }
 
     /// =====================

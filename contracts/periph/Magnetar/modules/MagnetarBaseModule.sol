@@ -123,7 +123,8 @@ abstract contract MagnetarBaseModule is MagnetarStorage {
         returns (uint256 share)
     {
         _singularity.accrue();
-        share = _singularity.removeAsset(_from, _to, _amount);
+        uint256 fraction = _marketHelper.getFractionForAmount(_singularity, _amount, false);
+        share = _singularity.removeAsset(_from, _to, fraction);
     }
 
     function _tOBExit(address tOB, uint8 bucketId, address to) internal {
