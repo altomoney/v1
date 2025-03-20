@@ -635,9 +635,8 @@ contract BigBangTest is UsdoTestHelper {
         assertEq(info[0].market.userCollateralShare, bigBang.balanceOf(address(this)));
         assertEq(info[0].market.userBorrowPart, bigBang._userBorrowPart(address(this)));
 
-        uint256 borrowAmountFromHelper = magnetarHelper.getAmountForBorrowPart(
-            IMarket(address(bigBang)), bigBang._userBorrowPart(address(this)), false
-        );
+        uint256 borrowAmountFromHelper =
+            magnetarHelper.getAmountForBorrowPart(address(bigBang), bigBang._userBorrowPart(address(this)), false);
         assertGe(borrowAmountFromHelper, borrowAmount);
     }
 
