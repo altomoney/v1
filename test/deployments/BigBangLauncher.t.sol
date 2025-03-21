@@ -50,7 +50,6 @@ contract BigBangLauncherTests is Test {
     }
 
     function test_launchBigBangMarket() public returns (BigBang bigbang) {
-        vm.skip(true);
         BigBangRiskParams memory riskParams;
 
         riskParams.debtRateAgainstEth;
