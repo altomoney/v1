@@ -67,7 +67,6 @@ contract OriginsTest is UsdoTestHelper {
     TapiocaReport report;
 
     function setUp() public override {
-        vm.skip(true);
         TapiocaReport memory emptyReport;
 
         vm.deal(userA, 1000 ether);
