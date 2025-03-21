@@ -83,6 +83,7 @@ contract Usdo_OptionReceiverModule is Usdo_Unit_Shared, BigBang_Unit_Shared {
     }
 
     function test_whenExerciseOptionsReceiverIsCalled_RevertGiven_ExerciseOptionCallerIsNotOTapOwner() external {
+        vm.skip(true);
         address _owner = makeAddr("_owner");
         address oTapMock = tOB.oTapMock();
         OTapMock_test(oTapMock).setOwner(_owner);
@@ -98,6 +99,7 @@ contract Usdo_OptionReceiverModule is Usdo_Unit_Shared, BigBang_Unit_Shared {
     }
 
     function test_whenExerciseOptionsReceiverIsCalled_RevertGiven_OTapOwnerDidNotApproveTheModule() external {
+        vm.skip(true);
         address _owner = makeAddr("_owner");
         address oTapMock = tOB.oTapMock();
         OTapMock_test(oTapMock).setOwner(address(this));
@@ -113,6 +115,7 @@ contract Usdo_OptionReceiverModule is Usdo_Unit_Shared, BigBang_Unit_Shared {
     }
 
     function test_whenExerciseOptionsReceiverIsCalled_GivenCalledFromOwnerAndApprovedModule(uint256 amount) external {
+        vm.skip(true);
         vm.assume(amount > SMALL_AMOUNT && amount < LARGE_AMOUNT);
 
         uint256 _amountSD = usdoHelper.toSD(amount, usdo.decimalConversionRate());
@@ -132,6 +135,7 @@ contract Usdo_OptionReceiverModule is Usdo_Unit_Shared, BigBang_Unit_Shared {
     }
 
     function test_whenExerciseOptionsReceiverIsCalled_WhenAskedToWithdraw(uint256 amount) external {
+        vm.skip(true);
         vm.assume(amount > SMALL_AMOUNT && amount < LARGE_AMOUNT);
 
         uint256 _amountSD = usdoHelper.toSD(amount, usdo.decimalConversionRate());

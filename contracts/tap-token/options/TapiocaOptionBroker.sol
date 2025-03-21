@@ -167,6 +167,15 @@ contract TapiocaOptionBroker is ITapiocaOptionBroker, Pausable, Ownable, FullMat
     //    WRITE
     // ===========
 
+    /// @notice Set the delegatee of a participation.
+    /// @param _bucketId The bucketId of the twTAP position.
+    /// @param _delegatee The address of the delegatee.
+    function setDelegatee(uint8 _bucketId, address _delegatee) external {
+        _participations[msg.sender][_bucketId].delegatee = _delegatee;
+
+        emit SetDelegatee(msg.sender, _bucketId, _delegatee);
+    }
+
     /// @notice Lock & lend USDO in a singularity market
     /// @param to The user that receives the lent USDO
     /// @param bucketId The bucket ID to use
@@ -177,7 +186,7 @@ contract TapiocaOptionBroker is ITapiocaOptionBroker, Pausable, Ownable, FullMat
         if (usdoAmount == 0) revert AmountNotValid();
         if (_lastEmergencySweep != 0) revert EmergencySweepActivated();
         if (!_activeMarkets[market]) revert MarketNotActive();
-        if (to != msg.sender) revert NotAuthorized();
+        if (to != msg.sender && _participations[to][bucketId].delegatee != msg.sender) revert NotAuthorized();
 
         (bool canLock,,) = _canLockWithDebt(to, usdoAmount);
         if (!canLock) {
@@ -227,7 +236,9 @@ contract TapiocaOptionBroker is ITapiocaOptionBroker, Pausable, Ownable, FullMat
 
     /// @notice Exit and unlock lent USDO in all markets if lock is expired
     function unlock(uint8 bucketId, address to) external whenNotPaused {
-        Participation storage position = _participations[msg.sender][bucketId];
+        if (to != msg.sender && _participations[to][bucketId].delegatee != msg.sender) revert NotAuthorized();
+
+        Participation storage position = _participations[to][bucketId];
 
         if (block.timestamp < position.expiry) {
             revert LockNotExpired();
@@ -239,20 +250,21 @@ contract TapiocaOptionBroker is ITapiocaOptionBroker, Pausable, Ownable, FullMat
 
         for (uint256 i; i < position.markets.length; ++i) {
             address market = position.markets[i];
-            uint256 shares = _marketShares[msg.sender][market];
-            delete _marketShares[msg.sender][market];
+            uint256 shares = _marketShares[to][market];
+            delete _marketShares[to][market];
 
             IERC20(market).safeApprove(market, shares);
             ISingularity(market).removeAsset(address(this), to, shares);
             IERC20(market).safeApprove(market, 0);
         }
         delete position.markets;
-        _totalLockedUsdo[msg.sender] -= totalUsdo;
-        emit ExitPosition(msg.sender, to, bucketId, currentEpoch(), totalUsdo);
+        _totalLockedUsdo[to] -= totalUsdo;
+        emit ExitPosition(to, to, bucketId, currentEpoch(), totalUsdo);
     }
 
     /// @notice Exit and unlock lent USDO in all markets if user can't lock with debt
     function forceUnlock(uint8 bucketId, address from) external whenNotPaused {
+        // TODO: Add delegate
         Participation storage position = _participations[from][bucketId];
 
         if (block.timestamp >= position.expiry) {
@@ -363,11 +375,13 @@ contract TapiocaOptionBroker is ITapiocaOptionBroker, Pausable, Ownable, FullMat
     }
 
     /// @notice Exercise an oTAP position
+    /// @param to The address of the user to exercise the option for
     /// @param bucketId tokenId of the oTAP position, position must be active
     /// @param paymentToken Address of the payment token to use, must be whitelisted
     /// @param tapAmount Amount of TAP to exercise. If 0, the full amount is exercised
-    function exerciseOption(uint256 bucketId, address paymentToken, uint256 tapAmount) external whenNotPaused {
-        Participation storage position = _participations[msg.sender][bucketId];
+    function exerciseOption(address to, uint256 bucketId, address paymentToken, uint256 tapAmount) external whenNotPaused {
+        if (to != msg.sender && _participations[to][bucketId].delegatee != msg.sender) revert NotAuthorized();
+        Participation storage position = _participations[to][bucketId];
 
         uint256 cachedEpoch = currentEpoch();
 
@@ -447,6 +461,14 @@ contract TapiocaOptionBroker is ITapiocaOptionBroker, Pausable, Ownable, FullMat
         _tapOracleData = tapOracleData;
 
         emit SetTapOracle(tapOracle, tapOracleData);
+    }
+
+    /// @notice Set the max debt buffer
+    /// @param maxDebtBuffer The new max debt buffer
+    function setMaxDebtBuffer(uint256 maxDebtBuffer) external onlyOwner {
+        _maxDebtBuffer = maxDebtBuffer;
+
+        emit SetMaxDebtBuffer(maxDebtBuffer);
     }
 
     /// @notice Set the Penrose address

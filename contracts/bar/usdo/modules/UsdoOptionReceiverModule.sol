@@ -147,11 +147,13 @@ contract UsdoOptionReceiverModule is BaseUsdo {
     function _exerciseAndRefund(IExerciseOptionsData memory _options) private {
         uint256 bBefore = IERC20(_options.paymentToken).balanceOf(address(this));
         revert("delegate exercise missing in TOB");
-        ITapiocaOptionBroker(_options.target).exerciseOption(
-            // WIP: from, delegate exercise missing in TOB
-            _options.bucketId,
-            _options.paymentToken,
-            _options.tapAmount
+        ITapiocaOptionBroker(_options.target)
+            .exerciseOption(
+                _options.from,
+                // WIP: from, delegate exercise missing in TOB
+                _options.bucketId,
+                _options.paymentToken,
+                _options.tapAmount
         );
 
         uint256 bAfter = IERC20(_options.paymentToken).balanceOf(address(this));

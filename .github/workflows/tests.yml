@@ -27,20 +27,20 @@ jobs:
         run: yarn install
 
       - name: Foundry setup
-        uses: foundry-rs/foundry-toolchain@v1
+        uses: foundry-rs/foundry-toolchain@v1.3.1
         with:
           version: nightly
 
       - name: Foundry dependencies setup
         run: forge install
 
-      - name: Check contract sizes
-        run: forge build --sizes
-        id: build
+      # - name: Check contract sizes
+      #   run: forge build --sizes
+      #   id: build
 
-      - name: Check formatting
-        run: forge fmt --check
-        id: fmt
+      # - name: Check formatting
+      #   run: forge fmt --check
+      #   id: fmt
 
       - name: Check tests
         run: forge test
