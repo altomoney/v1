@@ -93,7 +93,6 @@ contract SingularityTest is UsdoTestHelper {
     TapiocaReport report;
 
     function setUp() public override {
-        vm.skip(true);
         vm.deal(userA, 1000 ether);
         vm.deal(userB, 1000 ether);
         vm.label(userA, "userA");
