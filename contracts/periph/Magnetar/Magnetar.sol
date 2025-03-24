@@ -64,13 +64,14 @@ contract Magnetar is BaseMagnetar {
         address payable _collateralModule,
         address payable _mintModule,
         address payable _optionModule,
+        address payable _leverageModule,
         address _toeHelper,
         IMagnetarHelper _magnetarHelper
     ) BaseMagnetar(_cluster, _toeHelper, _owner) {
         modules[MagnetarModule.CollateralModule] = _collateralModule;
         modules[MagnetarModule.MintModule] = _mintModule;
         modules[MagnetarModule.OptionModule] = _optionModule;
-
+        modules[MagnetarModule.LeverageModule] = _leverageModule;
         helper = _magnetarHelper;
     }
 
@@ -134,6 +135,12 @@ contract Magnetar is BaseMagnetar {
             /// @dev Modules will not return result data.
             if (_action.id == uint8(MagnetarAction.CollateralModule)) {
                 _executeModule(MagnetarModule.CollateralModule, _action.call);
+                continue;
+            }
+
+            /// @dev Modules will not return result data.
+            if (_action.id == uint8(MagnetarAction.LeverageModule)) {
+                _executeModule(MagnetarModule.LeverageModule, _action.call);
                 continue;
             }
 

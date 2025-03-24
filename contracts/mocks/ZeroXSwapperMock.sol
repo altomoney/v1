@@ -7,6 +7,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 interface IERC20Mock {
     function freeMint(uint256 _val) external;
+    function mint(address to, uint256 amount) external;
 }
 
 contract ZeroXSwapperMock is IZeroXSwapper, Ownable {
@@ -35,7 +36,7 @@ contract ZeroXSwapperMock is IZeroXSwapper, Ownable {
         swapData.sellToken.transferFrom(msg.sender, address(this), amountIn);
 
         // Get tokens
-        IERC20Mock(address(swapData.buyToken)).freeMint(minAmountOut);
+        IERC20Mock(address(swapData.buyToken)).mint(address(this), minAmountOut);
         amountOut = minAmountOut;
 
         // Transfer the bought tokens to the sender

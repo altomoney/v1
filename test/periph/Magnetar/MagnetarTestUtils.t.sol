@@ -58,6 +58,7 @@ import {TapiocaOptionBroker} from "../../../contracts/tap-token/options/TapiocaO
 import {TapiocaOmnichainExtExec} from
     "../../../contracts/utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainExtExec.sol";
 import {IMarket} from "../../../contracts/utils/interfaces/bar/IMarket.sol";
+import {ZeroXSwapperMock} from "../../../contracts/mocks/ZeroXSwapperMock.sol";
 
 struct TestSingularityData {
     address penrose;
@@ -126,8 +127,7 @@ abstract contract MagnetarTestUtils is TestHelper {
                 __admin
             )
         );
-
-        input.zeroXSwapper = address(1);
+        input.zeroXSwapper = address(new ZeroXSwapperMock(ICluster(address(0x0)), __admin));
         input.lzEndpoint = address(endpoints[aEid]);
         __endpoint = address(endpoints[aEid]);
 
@@ -135,6 +135,7 @@ abstract contract MagnetarTestUtils is TestHelper {
         report = TapiocaRelease.deployTapiocaV1(input, emptyReport);
 
         vm.startPrank(__admin);
+        ZeroXSwapperMock(payable(input.zeroXSwapper)).setCluster(ICluster(report.cluster));
         TapTokenMock(payable(input.tapToken)).setCluster(ICluster(report.cluster));
         vm.stopPrank();
 
@@ -194,18 +195,21 @@ abstract contract MagnetarTestUtils is TestHelper {
     }
 
     function _createTwTap(address payable _tapOft, address _owner) internal returns (TwTAP) {
-        buckets.push(Bucket({
-            enabled: true,
-            lockEpochDuration: 2,
-            epochGrowthRate: 1,
-            epochDecayRate: 1,
-            epochCeiling: 100,
-            epochFloor: 1,
-            rewardsMultiplier: 50_00,
-            currentEpochInflows: 0,
-            lastEpochInflows: 0,
-            growthGoal: 1000
-        }));
+        buckets.push(
+            Bucket({
+                enabled: true,
+                lockEpochDuration: 2,
+                epochGrowthRate: 1,
+                epochDecayRate: 1,
+                epochCeiling: 100,
+                epochFloor: 1,
+                rewardsMultiplier: 50_00,
+                currentEpochInflows: 0,
+                lastEpochInflows: 0,
+                growthGoal: 1000
+            })
+        );
+
         TwTAP _twTap = new TwTAP(_tapOft, _owner, 7 days, buckets);
         vm.label(address(_twTap), "twTap");
         return _twTap;
@@ -416,7 +420,9 @@ abstract contract MagnetarTestUtils is TestHelper {
         assertEq(_asset.balanceOf(address(_market)), _amount, "Invalid market asset balance");
     }
 
-    function _assertBigBangUser(address _market, address _user, uint256 _collateralAmount, uint256 _borrowAmount) internal {
+    function _assertBigBangUser(address _market, address _user, uint256 _collateralAmount, uint256 _borrowAmount)
+        internal
+    {
         IERC20 _collateral = IERC20(IMarket(_market).asset());
         BigBang _bb = BigBang(payable(_market));
 
@@ -425,7 +431,11 @@ abstract contract MagnetarTestUtils is TestHelper {
         assertEq(_bb._totalCollateralShare(), _collateralAmount, "Invalid total collateral share");
     }
 
-    function _assertBigBangMarket(address _market, uint256 _marketCollateralBalance, uint256 _marketTotalColalteralShare) internal {
+    function _assertBigBangMarket(
+        address _market,
+        uint256 _marketCollateralBalance,
+        uint256 _marketTotalColalteralShare
+    ) internal {
         IERC20 _collateral = IERC20(IMarket(_market).asset());
         BigBang _bb = BigBang(payable(_market));
 

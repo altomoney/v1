@@ -28,6 +28,7 @@ import {MagnetarCollateralModule} from "tapioca-periph/Magnetar/modules/Magnetar
 import {ITapiocaOmnichainEngine} from "tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
 import {MagnetarOptionModule} from "tapioca-periph/Magnetar/modules/MagnetarOptionModule.sol";
 import {MagnetarMintModule} from "tapioca-periph/Magnetar/modules/MagnetarMintModule.sol";
+import {MagnetarLeverageModule} from "tapioca-periph/Magnetar/modules/MagnetarLeverageModule.sol";
 import {MagnetarBaseModule} from "tapioca-periph/Magnetar/modules/MagnetarBaseModule.sol";
 import {Magnetar} from "tapioca-periph/Magnetar/Magnetar.sol";
 
@@ -106,6 +107,7 @@ struct MagnetarSetupData {
     MagnetarCollateralModule collateralModule;
     MagnetarMintModule mintModule;
     MagnetarOptionModule optionModule;
+    MagnetarLeverageModule leverageModule;
 }
 
 contract MagnetarTestHelper is TestHelper {
@@ -356,6 +358,7 @@ contract MagnetarTestHelper is TestHelper {
             payable(setup.collateralModule),
             payable(setup.mintModule),
             payable(setup.optionModule),
+            payable(setup.leverageModule),
             address(toeHelper),
             IMagnetarHelper(address(new MagnetarHelper()))
         );
