@@ -1271,8 +1271,7 @@ contract MagnetarTest is MagnetarTestUtils, MagnetarCallFactoryUtil {
         uint256 _collateralShares = sgl.convertToShares(_collateralAmount);
         uint256 _collateralSharesExpectedBefore = sgl.balanceOf(_user);
 
-        SLeverageSwapData memory _swapData =
-            _getSLeverageSwapData(address(collateral), address(asset), _collateralAmount, 1e17);
+        SLeverageSwapData memory _swapData = _getSLeverageSwapData(address(collateral), address(asset), 0, 1e17);
 
         MagnetarCall[] memory calls = new MagnetarCall[](6);
         calls[0] =
