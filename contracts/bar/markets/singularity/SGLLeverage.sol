@@ -33,10 +33,6 @@ contract SGLLeverage is SGLLendingCommon {
     error CollateralShareNotValid();
     error AmountNotValid();
 
-<<<<<<< HEAD
-=======
-
->>>>>>> 7a28e2e (feat: add de/leverage tests for magnetar)
     /// @notice Lever up: Borrow more and buy collateral with it.
     /// @param from The user who buys
     /// @param borrowAmount Amount of extra asset borrowed
