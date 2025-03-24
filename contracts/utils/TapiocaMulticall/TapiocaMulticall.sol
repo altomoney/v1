@@ -2,7 +2,7 @@
 pragma solidity ^0.8.22;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 /*
 
 ████████╗ █████╗ ██████╗ ██╗ ██████╗  ██████╗ █████╗ 
@@ -108,4 +108,18 @@ contract TapiocaMulticall is Ownable {
             )
         ); // All that remains is the revert string
     }
+
+    function transferERC20(address token, address to, uint256 amount) public payable onlyOwner {
+        IERC20(token).transfer(to, amount);
+    }
+
+    function transferNative(address to, uint256 amount) public payable onlyOwner {
+        payable(to).transfer(amount);
+    }
+
+    function approveERC20(address token, address spender, uint256 amount) public payable onlyOwner {
+        IERC20(token).approve(spender, amount);
+    }
+
+    receive() external payable {}
 }

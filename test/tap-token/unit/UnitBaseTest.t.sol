@@ -321,9 +321,9 @@ contract UnitBaseTest is TestHelper {
         Penrose(_sglInitData.penrose).addSingularity(_mc, address(sgl));
 
         (
-            Singularity._InitMemoryModulesData memory _modulesData,
-            Singularity._InitMemoryTokensData memory _tokensData,
-            Singularity._InitMemoryData memory _data
+            SGLInit._InitMemoryModulesData memory _modulesData,
+            SGLInit._InitMemoryTokensData memory _tokensData,
+            SGLInit._InitMemoryData memory _data
         ) = _getSingularityInitData(_sglInitData);
 
         sgl.init(address(sglInit), abi.encode(_modulesData, _tokensData, _data));
@@ -354,9 +354,9 @@ contract UnitBaseTest is TestHelper {
     function _getSingularityInitData(SingularityInitData memory _sglInitData)
         private
         returns (
-            Singularity._InitMemoryModulesData memory modulesData,
-            Singularity._InitMemoryTokensData memory tokensData,
-            Singularity._InitMemoryData memory data
+            SGLInit._InitMemoryModulesData memory modulesData,
+            SGLInit._InitMemoryTokensData memory tokensData,
+            SGLInit._InitMemoryData memory data
         )
     {
         SGLLiquidation sglLiq = new SGLLiquidation();
@@ -364,13 +364,12 @@ contract UnitBaseTest is TestHelper {
         SGLCollateral sglCollateral = new SGLCollateral();
         SGLLeverage sglLev = new SGLLeverage();
 
-        modulesData = Singularity._InitMemoryModulesData(
-            address(sglLiq), address(sglBorrow), address(sglCollateral), address(sglLev)
-        );
+        modulesData =
+            SGLInit._InitMemoryModulesData(address(sglLiq), address(sglBorrow), address(sglCollateral), address(sglLev));
 
-        tokensData = Singularity._InitMemoryTokensData(_sglInitData.asset, _sglInitData.collateral);
+        tokensData = SGLInit._InitMemoryTokensData(_sglInitData.asset, _sglInitData.collateral);
 
-        data = Singularity._InitMemoryData(
+        data = SGLInit._InitMemoryData(
             IPenrose(_sglInitData.penrose),
             ITapiocaOracle(address(_sglInitData.oracle)),
             0,

@@ -636,9 +636,8 @@ contract BigBangTest is UsdoTestHelper {
         assertEq(info[0].market.userCollateralShare, bigBang.balanceOf(address(this)));
         assertEq(info[0].market.userBorrowPart, bigBang._userBorrowPart(address(this)));
 
-        uint256 borrowAmountFromHelper = magnetarHelper.getAmountForBorrowPart(
-            IMarket(address(bigBang)), bigBang._userBorrowPart(address(this)), false
-        );
+        uint256 borrowAmountFromHelper =
+            magnetarHelper.getAmountForBorrowPart(address(bigBang), bigBang._userBorrowPart(address(this)), false);
         assertGe(borrowAmountFromHelper, borrowAmount);
     }
 
@@ -689,17 +688,20 @@ contract BigBangTest is UsdoTestHelper {
 
         vm.startPrank(_user);
         collateral.approve(address(bigBang), _amount);
-        (Module[] memory modules, bytes[] memory calls) =
-            marketHelper.addCollateral(_user, _user, _amount, 0);
+        (Module[] memory modules, bytes[] memory calls) = marketHelper.addCollateral(_user, _user, _amount, 0);
         bigBang.execute(modules, calls, true);
         vm.stopPrank();
 
         uint256 userCollateralShare = bigBang.balanceOf(_user);
 
         assertGt(userCollateralShare, 0, "User collateral share should be greater than 0");
-        assertEq(collateral.balanceOf(address(bigBang)), _amount, "Collateral balance of bigBang should be equal to _amount");
+        assertEq(
+            collateral.balanceOf(address(bigBang)), _amount, "Collateral balance of bigBang should be equal to _amount"
+        );
         assertEq(collateral.balanceOf(_user), 0, "Collateral balance of user should be 0");
-        assertEq(userCollateralShare, previewDepositAmount, "User collateral share should be equal to previewDepositAmount");
+        assertEq(
+            userCollateralShare, previewDepositAmount, "User collateral share should be equal to previewDepositAmount"
+        );
     }
 
     function test_addCollateral_valid_provide_both_values(address _user, uint256 _amount, uint256 _shares) public {
@@ -721,7 +723,11 @@ contract BigBangTest is UsdoTestHelper {
 
         uint256 userCollateralShare = bigBang.balanceOf(_user);
         assertGt(userCollateralShare, 0, "User collateral share should be greater than 0");
-        assertEq(collateral.balanceOf(address(bigBang)), previewMintAmount, "Collateral balance of bigBang should be equal to _amount");
+        assertEq(
+            collateral.balanceOf(address(bigBang)),
+            previewMintAmount,
+            "Collateral balance of bigBang should be equal to _amount"
+        );
         assertEq(collateral.balanceOf(_user), 0, "Collateral balance of user should be 0");
         assertEq(userCollateralShare, previewMintAmount, "User collateral share should be equal to previewMintAmount");
     }
@@ -737,14 +743,17 @@ contract BigBangTest is UsdoTestHelper {
 
         vm.startPrank(_user);
         collateral.approve(address(bigBang), type(uint256).max);
-        (Module[] memory modules, bytes[] memory calls) =
-            marketHelper.addCollateral(_user, _user, _amount, _shares);
+        (Module[] memory modules, bytes[] memory calls) = marketHelper.addCollateral(_user, _user, _amount, _shares);
         bigBang.execute(modules, calls, true);
         vm.stopPrank();
 
         uint256 userCollateralShare = bigBang.balanceOf(_user);
         assertEq(userCollateralShare, _shares, "User collateral share should be equal to _shares");
-        assertEq(collateral.balanceOf(address(bigBang)), previewMintAmount, "Collateral balance of bigBang should be equal to _amount");
+        assertEq(
+            collateral.balanceOf(address(bigBang)),
+            previewMintAmount,
+            "Collateral balance of bigBang should be equal to _amount"
+        );
     }
 
     function test_addCollateral_invalid_both_zero(address _user) public {
@@ -753,8 +762,7 @@ contract BigBangTest is UsdoTestHelper {
         uint256 _shares = 0;
 
         vm.startPrank(_user);
-        (Module[] memory modules, bytes[] memory calls) =
-            marketHelper.addCollateral(_user, _user, _amount, _shares);
+        (Module[] memory modules, bytes[] memory calls) = marketHelper.addCollateral(_user, _user, _amount, _shares);
         vm.expectRevert();
         bigBang.execute(modules, calls, true);
         vm.stopPrank();

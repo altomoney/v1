@@ -95,7 +95,7 @@ contract SGLStorage is Ownable, Market {
     // ***************** //
     // *** CONSTANTS *** //
     // ***************** //
-    constructor() MarketERC4626("Tapioca Singularity", "SGL") {}
+    constructor() Market("Tapioca Singularity", "SGL") {}
 
     // ********************** //
     // *** VIEW FUNCTIONS *** //

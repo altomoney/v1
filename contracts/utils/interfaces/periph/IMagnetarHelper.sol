@@ -68,7 +68,6 @@ struct BigBangInfo {
 }
 
 interface IMagnetarHelper {
-
     /**
      * @notice returns Singularity markets' information.
      * @param who user to return for.
@@ -92,7 +91,7 @@ interface IMagnetarHelper {
      * @param share The shares.
      * @return amount The amount.
      */
-    function getCollateralAmountForShare(IMarket market, uint256 share) external view returns (uint256 amount);
+    function getCollateralAmountForShare(address market, uint256 share) external view returns (uint256 amount);
 
     /**
      * @notice Calculate the collateral shares that are needed for `borrowPart,
@@ -117,7 +116,7 @@ interface IMagnetarHelper {
      * @param roundUp If true, the result is rounded up.
      * @return amount The equivalent of borrow part in asset amount.
      */
-    function getAmountForBorrowPart(IMarket market, uint256 borrowPart, bool roundUp)
+    function getAmountForBorrowPart(address market, uint256 borrowPart, bool roundUp)
         external
         view
         returns (uint256 amount);
@@ -129,7 +128,7 @@ interface IMagnetarHelper {
      * @param roundUp If true, the result is rounded up.
      * @return part The equivalent of amount in borrow part.
      */
-    function getBorrowPartForAmount(IMarket market, uint256 amount, bool roundUp)
+    function getBorrowPartForAmount(address market, uint256 amount, bool roundUp)
         external
         view
         returns (uint256 part);

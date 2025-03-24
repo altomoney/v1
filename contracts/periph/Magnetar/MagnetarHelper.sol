@@ -10,7 +10,9 @@ import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
 import {ISingularity, IMarket} from "tap-utils/interfaces/bar/ISingularity.sol";
 import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
 import {IBigBang} from "tap-utils/interfaces/bar/IBigBang.sol";
-import {IMagnetarHelper, MarketInfo, SingularityInfo, BigBangInfo} from "tap-utils/interfaces/periph/IMagnetarHelper.sol";
+import {
+    IMagnetarHelper, MarketInfo, SingularityInfo, BigBangInfo
+} from "tap-utils/interfaces/periph/IMagnetarHelper.sol";
 
 /*
 
@@ -62,8 +64,8 @@ contract MagnetarHelper is IMagnetarHelper {
      * @param share The shares.
      * @return amount The amount.
      */
-    function getCollateralAmountForShare(IMarket market, uint256 share) external view returns (uint256 amount) {
-        return market.convertToAssets(share);
+    function getCollateralAmountForShare(address market, uint256 share) external view returns (uint256 amount) {
+        return IMarket(market).convertToAssets(share);
     }
 
     /**
@@ -97,12 +99,12 @@ contract MagnetarHelper is IMagnetarHelper {
      * @param roundUp If true, the result is rounded up.
      * @return amount The equivalent of borrow part in asset amount.
      */
-    function getAmountForBorrowPart(IMarket market, uint256 borrowPart, bool roundUp)
+    function getAmountForBorrowPart(address market, uint256 borrowPart, bool roundUp)
         external
         view
         returns (uint256 amount)
     {
-        Rebase memory _totalBorrowed = market._totalBorrow();
+        Rebase memory _totalBorrowed = IMarket(market)._totalBorrow();
 
         return _totalBorrowed.toElastic(borrowPart, roundUp);
     }
@@ -114,12 +116,12 @@ contract MagnetarHelper is IMagnetarHelper {
      * @param roundUp If true, the result is rounded up.
      * @return part The equivalent of amount in borrow part.
      */
-    function getBorrowPartForAmount(IMarket market, uint256 amount, bool roundUp)
+    function getBorrowPartForAmount(address market, uint256 amount, bool roundUp)
         external
         view
         returns (uint256 part)
     {
-        Rebase memory _totalBorrowed = market._totalBorrow();
+        Rebase memory _totalBorrowed = IMarket(market)._totalBorrow();
 
         return _totalBorrowed.toBase(amount, roundUp);
     }
@@ -160,10 +162,9 @@ contract MagnetarHelper is IMagnetarHelper {
         Rebase memory _totalAsset = singularity.totalAsset();
         Rebase memory _totalBorrow = singularity._totalBorrow();
 
-        uint256 share = singularity.convertToShares(amount);
         uint256 allShare = _totalAsset.elastic + singularity.convertToShares(_totalBorrow.elastic);
 
-        fraction = allShare == 0 ? share : (share * _totalAsset.base) / allShare;
+        fraction = allShare == 0 ? amount : (amount * _totalAsset.base) / allShare;
     }
 
     /// =====================

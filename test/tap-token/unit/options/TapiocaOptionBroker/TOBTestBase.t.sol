@@ -27,6 +27,8 @@ import {Events} from "test/bar/btt/utils/Events.sol";
 import {MarketHelper} from "tapioca-bar/markets/MarketHelper.sol";
 import {Utils} from "test/bar/btt/utils/Utils.sol";
 import {Usdo} from "tapioca-bar/usdo/Usdo.sol";
+import {TapiocaMulticall} from "tap-utils/TapiocaMulticall/TapiocaMulticall.sol";
+import {SGLInit} from "tapioca-bar/markets/singularity/SGLInit.sol";
 
 contract TOBTestBase is Test, Events, Utils {
     using RebaseLibrary for Rebase;
@@ -215,7 +217,7 @@ contract TOBTestBase is Test, Events, Utils {
             );
         }
 
-        Singularity._InitMemoryTokensData memory tokensData;
+        SGLInit._InitMemoryTokensData memory tokensData;
         RiskParams memory riskParams;
 
         tokensData._collateral = IERC20(collateral);
@@ -234,12 +236,18 @@ contract TOBTestBase is Test, Events, Utils {
         riskParams.liquidationCollateralizationRate = 80000;
         riskParams.oracle = address(new OracleMock("Oracle Test", "ORCT", 1 ether));
         riskParams.seedAmount = 1 ether;
+        riskParams.seedOwner = owner;
 
-        deal(collateral, address(this), 1 ether);
         bytes memory payload =
             abi.encodeWithSelector(singularityLauncher.createSingularity.selector, tokensData, riskParams);
 
-        bytes memory returnData = ownerInstance.delegateCall(address(singularityLauncher), payload);
+        vm.startPrank(owner);
+        deal(asset, owner, 1 ether);
+        IERC20(asset).approve(address(report.tapiocaMulticall), 1 ether);
+        bytes memory returnData = TapiocaMulticall(payable(report.tapiocaMulticall)).performDelegateCall(
+            address(singularityLauncher), payload
+        );
+        vm.stopPrank();
 
         address marketAddress = abi.decode(returnData, (address));
         assertTrue(marketAddress != address(0), "Singularity market address should not be zero");
@@ -281,13 +289,16 @@ contract TOBTestBase is Test, Events, Utils {
         riskParams.liquidationCollateralizationRate = 80000;
         riskParams.collateral = collateral;
         riskParams.oracle = address(new OracleMock("Oracle Test", "ORCT", 1 ether));
-        riskParams.seedAmount = 1 ether;
         riskParams.isEthMarket = true;
 
         deal(collateral, address(this), 1 ether);
         bytes memory payload = abi.encodeWithSelector(bigBangLauncher.createBigBang.selector, riskParams);
 
-        bytes memory returnData = ownerInstance.delegateCall(address(bigBangLauncher), payload);
+        vm.startPrank(owner);
+
+        bytes memory returnData =
+            TapiocaMulticall(payable(report.tapiocaMulticall)).performDelegateCall(address(bigBangLauncher), payload);
+        vm.stopPrank();
 
         address marketAddress = abi.decode(returnData, (address));
         assertTrue(marketAddress != address(0), "BigBang market address should not be zero");

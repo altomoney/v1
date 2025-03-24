@@ -182,7 +182,8 @@ contract MagnetarTest is MagnetarTestUtils, MagnetarCallFactoryUtil {
         marketHelper = MarketHelper(report.marketHelper);
 
         sgl = ISingularity(address(launchSingularity(report, address(asset), address(collateral), address(oracle))));
-        sglUsdo = ISingularity(address(launchSingularity(report, address(tob.USDO()), address(collateral), address(oracle))));
+        sglUsdo =
+            ISingularity(address(launchSingularity(report, address(tob.USDO()), address(collateral), address(oracle))));
         bb = IBigBang(address(launchBigBang(report, address(collateral))));
         paymentToken = new ERC20Mock();
 
@@ -1077,8 +1078,11 @@ contract MagnetarTest is MagnetarTestUtils, MagnetarCallFactoryUtil {
         uint256 nonce = sgl.nonces(_user);
 
         MagnetarCall[] memory calls = new MagnetarCall[](3);
-        calls[0] = _getERC20PermitMagnetarCall(payable(address(collateral)), _userPk, address(sgl), _collateralAmount, 1 days);
-        calls[1] = _getMarketPermitCollateralMagnetarCall(address(sgl), _userPk, address(magnetar), _collateralAmount, 1 days, nonce);
+        calls[0] =
+            _getERC20PermitMagnetarCall(payable(address(collateral)), _userPk, address(sgl), _collateralAmount, 1 days);
+        calls[1] = _getMarketPermitCollateralMagnetarCall(
+            address(sgl), _userPk, address(magnetar), _collateralAmount, 1 days, nonce
+        );
         calls[2] = _getMarketAddCollateralMagnetarCall(address(sgl), address(marketHelper), _user, _collateralAmount);
 
         vm.startPrank(_user);
@@ -1195,8 +1199,7 @@ contract MagnetarTest is MagnetarTestUtils, MagnetarCallFactoryUtil {
         uint256 _collateralSharesExpectedBefore = sgl.convertToShares(_collateralAmount);
 
         SLeverageSwapData memory _swapData =
-            
-            (address(asset), address(collateral), supplyCollateral, 1e17);
+            _getSLeverageSwapData(address(asset), address(collateral), supplyCollateral, 1e17);
 
         MagnetarCall[] memory calls = new MagnetarCall[](7);
         calls[0] =
@@ -1268,8 +1271,7 @@ contract MagnetarTest is MagnetarTestUtils, MagnetarCallFactoryUtil {
         uint256 _collateralShares = sgl.convertToShares(_collateralAmount);
         uint256 _collateralSharesExpectedBefore = sgl.balanceOf(_user);
 
-        SLeverageSwapData memory _swapData =
-            _getSLeverageSwapData(address(collateral), address(asset), /*supplyCollateral*/ 0, 1e17);
+        SLeverageSwapData memory _swapData = _getSLeverageSwapData(address(collateral), address(asset), 0, 1e17);
 
         MagnetarCall[] memory calls = new MagnetarCall[](6);
         calls[0] =
@@ -1327,9 +1329,8 @@ contract MagnetarTest is MagnetarTestUtils, MagnetarCallFactoryUtil {
         calls[1] = _getMarketPermitCollateralMagnetarCall(
             address(bb), _userPk, address(magnetar), _collateralAmount, 1 days, _nonce++
         );
-        calls[2] = _getMarketPermitBorrowMagnetarCall(
-            address(bb), _userPk, address(magnetar), _borrowAmount, 1 days, _nonce++
-        );
+        calls[2] =
+            _getMarketPermitBorrowMagnetarCall(address(bb), _userPk, address(magnetar), _borrowAmount, 1 days, _nonce++);
         calls[3] = _getMarketAddCollateral_BorrowMagnetarCall(
             address(bb), address(marketHelper), _user, _collateralAmount, _borrowAmount
         );
@@ -1343,11 +1344,10 @@ contract MagnetarTest is MagnetarTestUtils, MagnetarCallFactoryUtil {
         _assertBigBangMarket(address(bb), _collateralAmount, _collateralAmount);
     }
 
-    function test_burst_bigBang_addCollateral_borrow_tob_lock_singularity_addAsset_valid(uint160 _userPk, uint256 _tokenAmount)
-        external
-        withValidAmount(_tokenAmount)
-    {
-
+    function test_burst_bigBang_addCollateral_borrow_tob_lock_singularity_addAsset_valid(
+        uint160 _userPk,
+        uint256 _tokenAmount
+    ) external withValidAmount(_tokenAmount) {
         uint256 _borrowAmount = bb._minBorrowAmount() * 3;
         vm.assume(bb._minCollateralAmount() < _borrowAmount);
         vm.assume(bb._minBorrowAmount() < _borrowAmount);
@@ -1369,13 +1369,13 @@ contract MagnetarTest is MagnetarTestUtils, MagnetarCallFactoryUtil {
             address(bb), _userPk, address(magnetar), _collateralAmount, 1 days, _nonce++
         );
 
-        calls[2] = _getMarketPermitBorrowMagnetarCall(
-            address(bb), _userPk, address(magnetar), _borrowAmount, 1 days, _nonce++
-        );
+        calls[2] =
+            _getMarketPermitBorrowMagnetarCall(address(bb), _userPk, address(magnetar), _borrowAmount, 1 days, _nonce++);
         calls[3] = _getMarketAddCollateral_BorrowMagnetarCall(
             address(bb), address(marketHelper), _user, _collateralAmount, _borrowAmount
         );
-        calls[4] = _getERC20PermitMagnetarCall(payable(address(tob.USDO())), _userPk, address(magnetar), _usdoAmount, 1 days);
+        calls[4] =
+            _getERC20PermitMagnetarCall(payable(address(tob.USDO())), _userPk, address(magnetar), _usdoAmount, 1 days);
         calls[5] = _getTOBLockMagnetarCall(address(tob), _user, 0, _usdoAmount, address(sglUsdo));
 
         Bucket memory bucket = buckets[0];
@@ -1438,7 +1438,6 @@ contract MagnetarTest is MagnetarTestUtils, MagnetarCallFactoryUtil {
 
         vm.startPrank(_user);
 
-        
         magnetar.burst(calls);
         vm.stopPrank();
 
@@ -1472,7 +1471,8 @@ contract MagnetarTest is MagnetarTestUtils, MagnetarCallFactoryUtil {
 
         MagnetarCall[] memory calls = new MagnetarCall[](2);
 
-        calls[0] = _getERC20PermitMagnetarCall(payable(address(tob.USDO())), _userPk, address(magnetar), _usdoAmount, 1 days);
+        calls[0] =
+            _getERC20PermitMagnetarCall(payable(address(tob.USDO())), _userPk, address(magnetar), _usdoAmount, 1 days);
         calls[1] = _getTOBLockMagnetarCall(address(tob), _user, 0, _usdoAmount, address(sglUsdo));
 
         vm.startPrank(_user);
@@ -1482,10 +1482,11 @@ contract MagnetarTest is MagnetarTestUtils, MagnetarCallFactoryUtil {
         assertEq(tob._totalLockedUsdo(_user), _usdoAmount * 2, "Total USDO should be updated");
     }
 
-    function test_burst_bigBang_tob_unlock_repay_withdrawCollateral_valid(uint160 _userPk, uint160 _userPk2, uint256 _tokenAmount)
-        external
-        withValidAmount(_tokenAmount)
-    {
+    function test_burst_bigBang_tob_unlock_repay_withdrawCollateral_valid(
+        uint160 _userPk,
+        uint160 _userPk2,
+        uint256 _tokenAmount
+    ) external withValidAmount(_tokenAmount) {
         vm.assume(_userPk != _userPk2);
         _assumeValidAddress(_userPk2, "user2");
         uint256 _borrowAmount = bb._minBorrowAmount() * 3;
@@ -1569,7 +1570,6 @@ contract MagnetarTest is MagnetarTestUtils, MagnetarCallFactoryUtil {
             address(sgl), address(marketHelper), _user, _collateralAmount, _borrowAmount
         );
 
-
         vm.startPrank(_user);
         magnetar.burst(calls);
         vm.stopPrank();
@@ -1579,7 +1579,6 @@ contract MagnetarTest is MagnetarTestUtils, MagnetarCallFactoryUtil {
         assertEq(collateral.balanceOf(address(sgl)), _collateralAmount, "Market should have collateral");
         assertEq(sgl.totalSupply(), sgl.balanceOf(_user), "total supply should be equal to user balance");
         assertEq(sgl._userBorrowPart(_user), _borrowAmount, "user borrow part should be equal to borrow amount");
-
     }
 
     function test_burst_bigBang_tob_exercise_option_valid(uint160 _userPk, uint160 _userPk2, uint256 _tokenAmount)

@@ -46,8 +46,9 @@ contract Penrose_executeMarketFn is BigBang_Unit_Shared {
                 0
             )
         );
-        address _contract =
-            penrose.registerBigBang(rndAddr, abi.encode(initModulesData, initDebtData, initMemoryData), true);
+        address _contract = penrose.registerBigBang(
+            rndAddr, abi.encode(abi.encode(initModulesData, initDebtData, initMemoryData)), true
+        );
         assertTrue(penrose.isMarketRegistered(_contract));
 
         address[] memory mc = new address[](1);

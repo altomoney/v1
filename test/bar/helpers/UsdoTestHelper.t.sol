@@ -40,7 +40,6 @@ import {BBLeverage} from "tapioca-bar/markets/bigBang/BBLeverage.sol";
 import {BBBorrow} from "tapioca-bar/markets/bigBang/BBBorrow.sol";
 import {BigBang} from "tapioca-bar/markets/bigBang/BigBang.sol";
 import {IMarket} from "../../../contracts/utils/interfaces/bar/IMarket.sol";
-
 import {Origins} from "tapioca-bar/markets/origins/Origins.sol";
 
 struct TestPenroseData {
@@ -166,9 +165,9 @@ contract UsdoTestHelper is TestHelper, TestUtils {
         Singularity sgl = new Singularity();
         SGLInit sglInit = new SGLInit();
         (
-            Singularity._InitMemoryModulesData memory _modulesData,
-            Singularity._InitMemoryTokensData memory _tokensData,
-            Singularity._InitMemoryData memory _data
+            SGLInit._InitMemoryModulesData memory _modulesData,
+            SGLInit._InitMemoryTokensData memory _tokensData,
+            SGLInit._InitMemoryData memory _data
         ) = _getSingularityInitData(_sgl, address(_penrose));
         {
             sgl.init(address(sglInit), abi.encode(_modulesData, _tokensData, _data));
@@ -207,9 +206,9 @@ contract UsdoTestHelper is TestHelper, TestUtils {
     function _getSingularityInitData(TestSingularityData memory _sgl, address _penrose)
         private
         returns (
-            Singularity._InitMemoryModulesData memory modulesData,
-            Singularity._InitMemoryTokensData memory tokensData,
-            Singularity._InitMemoryData memory data
+            SGLInit._InitMemoryModulesData memory modulesData,
+            SGLInit._InitMemoryTokensData memory tokensData,
+            SGLInit._InitMemoryData memory data
         )
     {
         SGLLiquidation sglLiq = new SGLLiquidation();
@@ -217,13 +216,12 @@ contract UsdoTestHelper is TestHelper, TestUtils {
         SGLCollateral sglCollateral = new SGLCollateral();
         SGLLeverage sglLev = new SGLLeverage();
 
-        modulesData = Singularity._InitMemoryModulesData(
-            address(sglLiq), address(sglBorrow), address(sglCollateral), address(sglLev)
-        );
+        modulesData =
+            SGLInit._InitMemoryModulesData(address(sglLiq), address(sglBorrow), address(sglCollateral), address(sglLev));
 
-        tokensData = Singularity._InitMemoryTokensData(_sgl.asset, _sgl.collateral);
+        tokensData = SGLInit._InitMemoryTokensData(_sgl.asset, _sgl.collateral);
 
-        data = Singularity._InitMemoryData(
+        data = SGLInit._InitMemoryData(
             IPenrose(_penrose), ITapiocaOracle(address(_sgl.oracle)), 0, 75000, 80000, _sgl.leverageExecutor
         );
     }

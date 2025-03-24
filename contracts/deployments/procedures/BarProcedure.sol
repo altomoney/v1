@@ -141,7 +141,6 @@ abstract contract BarProcedure {
     function _deployBBModulesOne() internal returns (BBReport memory report) {
         report.bbLiquidation = address(new BBLiquidation());
         report.bbBorrow = address(new BBBorrow());
-        report.bbDebtRateHelper = address(new BBDebtRateHelper());
 
         return report;
     }

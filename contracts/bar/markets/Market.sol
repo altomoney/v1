@@ -25,7 +25,7 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.
    
 */
 
-abstract contract Market is MarketERC4626, Ownable, ReentrancyGuard {
+contract Market is MarketERC4626, Ownable, ReentrancyGuard {
     using RebaseLibrary for Rebase;
 
     // ************ //
@@ -128,14 +128,19 @@ abstract contract Market is MarketERC4626, Ownable, ReentrancyGuard {
     /// @notice event emitted when then liquidation max slippage is updated
     event LiquidationMaxSlippageUpdated(uint256 oldVal, uint256 newVal);
 
+    constructor(string memory __name, string memory __symbol) MarketERC4626(__name, __symbol) {}
+
     modifier optionNotPaused(PauseType _type) {
         require(!pauseOptions[_type], "Market: paused");
         _;
     }
 
-    modifier notSelf(address destination) {
+    function _optionNotPaused(PauseType _type) internal {
+        require(!pauseOptions[_type], "Market: paused");
+    }
+
+    function _notSelf(address destination) internal {
         require(destination != address(this), "Market: cannot execute on itself");
-        _;
     }
 
     /// @dev Checks if the user is solvent in the closed liquidation case at the end of the function body.
@@ -177,8 +182,8 @@ abstract contract Market is MarketERC4626, Ownable, ReentrancyGuard {
 
     /// @notice sets common market configuration
     /// @dev values are updated only if > 0 or not address(0)
-    /// @param _oracle oracle address
-    /// @param _oracleData oracle data
+    /// @param _oracleAddress oracle address
+    /// @param _oracleDataInput oracle data
     /// @param _protocolFee protocol fee percentage
     /// @param _liquidationBonusAmount extra amount factored in the closing factor computation
     /// @param _minLiquidatorReward minimum reward percentage a liquidator can receive
@@ -189,8 +194,8 @@ abstract contract Market is MarketERC4626, Ownable, ReentrancyGuard {
     /// @param _minBorrowAmount the new minimum borrow amount
     /// @param _minCollateralAmount the new minimum collateral amount
     function setMarketConfig(
-        ITapiocaOracle _oracle,
-        bytes calldata _oracleData,
+        ITapiocaOracle _oracleAddress,
+        bytes calldata _oracleDataInput,
         uint256 _protocolFee,
         uint256 _liquidationBonusAmount,
         uint256 _minLiquidatorReward,
@@ -201,12 +206,12 @@ abstract contract Market is MarketERC4626, Ownable, ReentrancyGuard {
         uint256 _minBorrowAmount,
         uint256 _minCollateralAmount
     ) external onlyOwner {
-        if (address(_oracle) != address(0)) {
-            oracle = _oracle;
-            emit OracleUpdated(address(_oracle));
+        if (address(_oracleAddress) != address(0)) {
+            oracle = _oracleAddress;
+            emit OracleUpdated(address(_oracleAddress));
         }
-        if (_oracleData.length > 0) {
-            oracleData = _oracleData;
+        if (_oracleDataInput.length > 0) {
+            oracleData = _oracleDataInput;
             emit OracleDataUpdated();
         }
 
@@ -451,9 +456,9 @@ abstract contract Market is MarketERC4626, Ownable, ReentrancyGuard {
     // ************************** //
     // *** INTERNAL FUNCTIONS *** //
     // ************************** //
-    function _accrue() internal virtual;
+    function _accrue() internal virtual {}
 
-    function _accrueView() internal view virtual returns (Rebase memory);
+    function _accrueView() internal view virtual returns (Rebase memory) {}
 
     /// @inheritdoc MarketERC4626
     function _allowedLend(address from, uint256 amount) internal virtual override {

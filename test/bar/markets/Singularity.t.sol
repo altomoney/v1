@@ -26,9 +26,10 @@ import {IOracle} from "tap-utils/oracle/interfaces/IOracle.sol";
 import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
 import {Cluster} from "tap-utils/Cluster/Cluster.sol";
 import {Penrose} from "tapioca-bar/Penrose.sol";
-
+import {TapiocaMulticall} from "tap-utils/TapiocaMulticall/TapiocaMulticall.sol";
 import {MarketLiquidatorReceiverMock} from "../mocks/MarketLiquidatorReceiverMock.sol";
-import {MarketLiquidatorReceiverAddAssetReentrancy} from "../mocks/liquidatorReceivers/MarketLiquidatorReceiverAddAssetReentrancy.sol";
+import {MarketLiquidatorReceiverAddAssetReentrancy} from
+    "../mocks/liquidatorReceivers/MarketLiquidatorReceiverAddAssetReentrancy.sol";
 import {MagnetarMock} from "../mocks/MagnetarMock.sol";
 import {SwapperMock} from "../mocks/SwapperMock.sol";
 import {OracleMock} from "../mocks/OracleMock.sol";
@@ -210,6 +211,7 @@ contract SingularityTest is UsdoTestHelper {
 
         bytes[] memory data = new bytes[](1);
         data[0] = payload;
+        vm.prank(penrose.owner());
         penrose.executeMarketFn(mc, data, false);
 
         {
@@ -229,6 +231,7 @@ contract SingularityTest is UsdoTestHelper {
             );
             data = new bytes[](1);
             data[0] = payload;
+            vm.prank(penrose.owner());
             penrose.executeMarketFn(mc, data, false);
         }
         assertEq(singularity.borrowOpeningFee(), toSetValue);
@@ -258,6 +261,7 @@ contract SingularityTest is UsdoTestHelper {
 
             bytes[] memory data = new bytes[](1);
             data[0] = payload;
+            vm.prank(penrose.owner());
             penrose.executeMarketFn(mc, data, false);
         }
 
@@ -301,6 +305,7 @@ contract SingularityTest is UsdoTestHelper {
 
             bytes[] memory data = new bytes[](1);
             data[0] = payload;
+            vm.prank(penrose.owner());
             penrose.executeMarketFn(mc, data, false);
         }
 
@@ -344,7 +349,7 @@ contract SingularityTest is UsdoTestHelper {
         vm.assume(_amount < type(uint64).max);
 
         deal(address(singularity._asset()), _from, _amount);
-        
+
         vm.startPrank(_from);
         IERC20(singularity._asset()).approve(address(singularity), _amount);
         uint256 fraction = singularity.addAsset(_from, _to, _amount);
@@ -379,6 +384,7 @@ contract SingularityTest is UsdoTestHelper {
 
         bytes[] memory data = new bytes[](1);
         data[0] = setLiquidationMaxSlippageCall;
+        vm.prank(penrose.owner());
         penrose.executeMarketFn(mc, data, false);
 
         uint256 oracleRate = oracle.rate();
@@ -496,7 +502,9 @@ contract SingularityTest is UsdoTestHelper {
 
         bytes memory badDebtCall = _getBadDebtCall(borrowAmount, modules, calls);
 
+        vm.startPrank(penrose.owner());
         penrose.executeMarketFn(_getMarkets(address(singularity)), _getDataCalls(badDebtCall), true);
+        vm.stopPrank();
         uint256 borrowPartAfter = singularity._userBorrowPart(user);
         assertGt(
             borrowPartBefore,
@@ -535,7 +543,7 @@ contract SingularityTest is UsdoTestHelper {
         assertGe(share, 1);
 
         uint256 borrowAmountFromHelper = magnetarHelper.getAmountForBorrowPart(
-            IMarket(address(singularity)), singularity._userBorrowPart(address(this)), false
+            address(singularity), singularity._userBorrowPart(address(this)), false
         );
         assertGe(borrowAmountFromHelper, borrowAmount);
     }
@@ -576,7 +584,7 @@ contract SingularityTest is UsdoTestHelper {
         TwTapMock twTapMock = new TwTapMock(address(asset));
 
         uint256 twTapBalanceBefore = asset.balanceOf(address(twTapMock));
-        // WIP Fails here
+        vm.prank(penrose.owner());
         penrose.withdrawAllMarketFees(markets, ITWTAPv2(address(twTapMock)));
         uint256 twTapBalanceAfter = asset.balanceOf(address(twTapMock));
         assertGe(twTapBalanceAfter, twTapBalanceBefore, "TwTap balance should be greater than before");
@@ -630,17 +638,22 @@ contract SingularityTest is UsdoTestHelper {
 
         vm.startPrank(_user);
         collateral.approve(address(singularity), _amount);
-        (Module[] memory modules, bytes[] memory calls) =
-            marketHelper.addCollateral(_user, _user, _amount, 0);
+        (Module[] memory modules, bytes[] memory calls) = marketHelper.addCollateral(_user, _user, _amount, 0);
         singularity.execute(modules, calls, true);
         vm.stopPrank();
 
         uint256 userCollateralShare = singularity.balanceOf(_user);
 
         assertGt(userCollateralShare, 0, "User collateral share should be greater than 0");
-        assertEq(collateral.balanceOf(address(singularity)), _amount, "Collateral balance of singularity should be equal to _amount");
+        assertEq(
+            collateral.balanceOf(address(singularity)),
+            _amount,
+            "Collateral balance of singularity should be equal to _amount"
+        );
         assertEq(collateral.balanceOf(_user), 0, "Collateral balance of user should be 0");
-        assertEq(userCollateralShare, previewDepositAmount, "User collateral share should be equal to previewDepositAmount");
+        assertEq(
+            userCollateralShare, previewDepositAmount, "User collateral share should be equal to previewDepositAmount"
+        );
     }
 
     function test_addCollateral_valid_provide_both_values(address _user, uint256 _amount, uint256 _shares) public {
@@ -662,7 +675,11 @@ contract SingularityTest is UsdoTestHelper {
 
         uint256 userCollateralShare = singularity.balanceOf(_user);
         assertGt(userCollateralShare, 0, "User collateral share should be greater than 0");
-        assertEq(collateral.balanceOf(address(singularity)), previewMintAmount, "Collateral balance of singularity should be equal to _amount");
+        assertEq(
+            collateral.balanceOf(address(singularity)),
+            previewMintAmount,
+            "Collateral balance of singularity should be equal to _amount"
+        );
         assertEq(collateral.balanceOf(_user), 0, "Collateral balance of user should be 0");
         assertEq(userCollateralShare, previewMintAmount, "User collateral share should be equal to previewMintAmount");
     }
@@ -678,14 +695,17 @@ contract SingularityTest is UsdoTestHelper {
 
         vm.startPrank(_user);
         collateral.approve(address(singularity), type(uint256).max);
-        (Module[] memory modules, bytes[] memory calls) =
-            marketHelper.addCollateral(_user, _user, _amount, _shares);
+        (Module[] memory modules, bytes[] memory calls) = marketHelper.addCollateral(_user, _user, _amount, _shares);
         singularity.execute(modules, calls, true);
         vm.stopPrank();
 
         uint256 userCollateralShare = singularity.balanceOf(_user);
         assertEq(userCollateralShare, _shares, "User collateral share should be equal to _shares");
-        assertEq(collateral.balanceOf(address(singularity)), previewMintAmount, "Collateral balance of singularity should be equal to _amount");
+        assertEq(
+            collateral.balanceOf(address(singularity)),
+            previewMintAmount,
+            "Collateral balance of singularity should be equal to _amount"
+        );
     }
 
     function test_addCollateral_invalid_both_zero(address _user) public {
@@ -694,8 +714,7 @@ contract SingularityTest is UsdoTestHelper {
         uint256 _shares = 0;
 
         vm.startPrank(_user);
-        (Module[] memory modules, bytes[] memory calls) =
-            marketHelper.addCollateral(_user, _user, _amount, _shares);
+        (Module[] memory modules, bytes[] memory calls) = marketHelper.addCollateral(_user, _user, _amount, _shares);
         vm.expectRevert();
         singularity.execute(modules, calls, true);
         vm.stopPrank();
@@ -728,13 +747,15 @@ contract SingularityTest is UsdoTestHelper {
 
         bytes[] memory data = new bytes[](1);
         data[0] = setLiquidationMaxSlippageCall;
+        vm.startPrank(penrose.owner());
         penrose.executeMarketFn(mc, data, false);
 
         uint256 oracleRate = oracle.rate();
         oracle.set((oracleRate * 10) / 6);
 
         address attacker = address(0x1337);
-        MarketLiquidatorReceiverAddAssetReentrancy liquidatorReentrancy = new MarketLiquidatorReceiverAddAssetReentrancy(IERC20(address(asset)), attacker);
+        MarketLiquidatorReceiverAddAssetReentrancy liquidatorReentrancy =
+            new MarketLiquidatorReceiverAddAssetReentrancy(IERC20(address(asset)), attacker);
         deal(address(asset), address(liquidatorReentrancy), borrowAmount * 2);
 
         address[] memory users = new address[](1);
@@ -753,12 +774,13 @@ contract SingularityTest is UsdoTestHelper {
         uint256 borrowPartBefore = singularity._userBorrowPart(address(this));
         (Module[] memory modules, bytes[] memory calls) =
             marketHelper.liquidate(users, borrowParts, minLiquidationBonuses, receivers, receiverData);
-        
+
         vm.expectRevert("ReentrancyGuard: reentrant call");
         singularity.execute(modules, calls, true);
 
         vm.startPrank(attacker);
-        (uint256 liquidityBalance, uint256 liquidityShares) = liquidatorReentrancy.removeAsset(address(singularity), 51e16);
+        (uint256 liquidityBalance, uint256 liquidityShares) =
+            liquidatorReentrancy.removeAsset(address(singularity), 51e16);
         vm.stopPrank();
 
         assertEq(liquidityBalance, 0, "Liquidity balance should be 0");
@@ -802,23 +824,25 @@ contract SingularityTest is UsdoTestHelper {
         public
         returns (Singularity singularity)
     {
-        Singularity._InitMemoryTokensData memory tokensData;
+        SGLInit._InitMemoryTokensData memory tokensData;
         RiskParams memory riskParams;
 
         tokensData._asset = IERC20(asset);
         tokensData._collateral = IERC20(collateral);
 
         riskParams.oracle = oracle;
-        riskParams.seedAmount = 1 ether;
 
-        deal(collateral, address(this), 1 ether);
+        vm.startPrank(owner);
         bytes memory payload =
             abi.encodeWithSelector(singularityLauncher.createSingularity.selector, tokensData, riskParams);
 
-        (bool success, bytes memory returnData) = address(singularityLauncher).delegatecall(payload);
-        assertTrue(success, "Singularity market creation failed");
+        bytes memory returnData = TapiocaMulticall(payable(report.tapiocaMulticall)).performDelegateCall(
+            address(singularityLauncher), payload
+        );
+
         address marketAddress = abi.decode(returnData, (address));
         assertTrue(marketAddress != address(0), "Singularity market address should not be zero");
+        vm.stopPrank();
         return Singularity(payable(marketAddress));
     }
 }

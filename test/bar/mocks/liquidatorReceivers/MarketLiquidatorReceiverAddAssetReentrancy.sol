@@ -28,7 +28,6 @@ contract MarketLiquidatorReceiverAddAssetReentrancy is IMarketLiquidatorReceiver
         attacker = _attacker;
     }
 
-
     function onCollateralReceiver(
         address initiator,
         address tokenIn,
@@ -44,7 +43,10 @@ contract MarketLiquidatorReceiverAddAssetReentrancy is IMarketLiquidatorReceiver
         return true;
     }
 
-    function removeAsset(address market, uint256 amountToRemove) external returns (uint256 liquidityBalance, uint256 liquidityShares) {
+    function removeAsset(address market, uint256 amountToRemove)
+        external
+        returns (uint256 liquidityBalance, uint256 liquidityShares)
+    {
         require(msg.sender == attacker, "Not authorized");
         Singularity singularity = Singularity(payable(market));
         liquidityBalance = singularity.liquidityBalance(address(this));
@@ -53,4 +55,3 @@ contract MarketLiquidatorReceiverAddAssetReentrancy is IMarketLiquidatorReceiver
         }
     }
 }
-

@@ -8,7 +8,6 @@ struct BigBangRiskParams {
     uint256 debtRateAgainstEth;
     uint256 debtRateMin;
     uint256 debtRateMax;
-    uint256 seedAmount;
     uint256 exchangeRatePrecision;
     uint256 collateralizationRate;
     uint256 liquidationCollateralizationRate;

@@ -349,7 +349,14 @@ abstract contract BigBang_Unit_Shared is Markets_Unit_Shared {
         }
     }
 
-    function _getCollateralDataAndExecute(uint256 collateralAmount, BigBang bb, address executor, address from, address to, uint256 share) internal {
+    function _getCollateralDataAndExecute(
+        uint256 collateralAmount,
+        BigBang bb,
+        address executor,
+        address from,
+        address to,
+        uint256 share
+    ) internal {
         (Module[] memory modules, bytes[] memory calls) = _getCollateralData(collateralAmount, from, to);
 
         _resetPrank(executor);
@@ -1112,8 +1119,9 @@ abstract contract BigBang_Unit_Shared is Markets_Unit_Shared {
             )
         );
 
-        address _contract =
-            penrose.registerBigBang(address(bbMc), abi.encode(initModulesData, initDebtData, initMemoryData), true);
+        address _contract = penrose.registerBigBang(
+            address(bbMc), abi.encode(abi.encode(initModulesData, initDebtData, initMemoryData)), true
+        );
 
         // *** AFTER DEPLOYMENT *** //
         address[] memory mc = new address[](1);

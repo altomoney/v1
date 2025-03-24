@@ -4,7 +4,7 @@ pragma solidity ^0.8.22;
 import {twTapBaseTest, TwTAP} from "../twTapBaseTest.sol";
 
 contract twTap_batchClaimRewards is twTapBaseTest {
-    function test_RevertWhen_Paused() external participate(100, 0) skipWeeks(1) advanceWeeks(1) distributeRewards {
+    function test_RevertWhen_Paused() external participate(100, 0) advanceWeeks(1) distributeRewards {
         // it should revert
         vm.prank(adminAddr);
         twTap.setPause(true);
@@ -21,7 +21,6 @@ contract twTap_batchClaimRewards is twTapBaseTest {
         external
         participate(100, 0)
         participate(100, 0)
-        skipWeeks(1)
         advanceWeeks(1)
         distributeRewards
     {

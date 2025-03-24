@@ -13,6 +13,7 @@ import {OracleMock} from "../bar/mocks/OracleMock.sol";
 import {UsdoTestHelper, TestPenroseData, TestSingularityData} from "../bar/helpers/UsdoTestHelper.t.sol";
 import {IERC20} from "@boringcrypto/boring-solidity/contracts/libraries/BoringERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {TapiocaMulticall} from "contracts/utils/TapiocaMulticall/TapiocaMulticall.sol";
 
 contract BigBangLauncherTests is Test {
     address owner;
@@ -60,16 +61,13 @@ contract BigBangLauncherTests is Test {
         riskParams.liquidationCollateralizationRate;
         riskParams.collateral = input.wrappedNativeToken;
         riskParams.oracle = address(new OracleMock("Oracle Test", "ORCT", 1 ether));
-        riskParams.seedAmount = 1 ether;
         riskParams.isEthMarket = true;
-
-        // fund deployer
-        deal(input.wrappedNativeToken, address(this), 1 ether);
 
         bytes memory payload = abi.encodeWithSelector(bigBangLauncher.createBigBang.selector, riskParams);
 
-        (bool success, bytes memory returnData) = address(bigBangLauncher).delegatecall(payload);
-        assertTrue(success, "Big Bang market creation failed");
+        vm.prank(owner);
+        bytes memory returnData =
+            TapiocaMulticall(payable(report.tapiocaMulticall)).performDelegateCall(address(bigBangLauncher), payload);
         address payable marketAddress = abi.decode(returnData, (address));
         assertTrue(marketAddress != address(0), "Big Bang market address should not be zero");
         bigbang = BigBang(marketAddress);

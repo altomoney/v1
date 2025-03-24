@@ -129,6 +129,7 @@ contract OriginsTest is UsdoTestHelper {
 
         vm.label(address(origins), "Origins");
 
+        vm.prank(penrose.owner());
         penrose.addOriginsMarket(address(origins));
     }
 

@@ -11,7 +11,7 @@ import {IMarketLiquidatorReceiver} from "tap-utils/interfaces/bar/IMarketLiquida
 
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {SafeApprove} from "../../libraries/SafeApprove.sol";
-import {SGLCommon} from "./SGLCommon.sol";
+import {SGLStorage} from "./SGLStorage.sol";
 import {PauseType} from "tap-utils/interfaces/bar/IMarket.sol";
 
 // solhint-disable max-line-length
@@ -27,7 +27,7 @@ import {PauseType} from "tap-utils/interfaces/bar/IMarket.sol";
    
 */
 
-contract SGLLiquidation is SGLCommon {
+contract SGLLiquidation is SGLStorage {
     using RebaseLibrary for Rebase;
     using BoringERC20 for IERC20;
     using SafeCast for uint256;

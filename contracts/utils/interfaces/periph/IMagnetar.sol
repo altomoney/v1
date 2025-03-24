@@ -147,6 +147,7 @@ enum MagnetarAction {
     LeverageModule, // 12 Leverage Singular related operations.
     // External operations
     WethWrap // 13
+
 }
 
 enum MagnetarModule {

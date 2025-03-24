@@ -3,6 +3,7 @@ pragma solidity ^0.8.18;
 
 import {TOBTestBase, ITapiocaOptionBroker} from "../TOBTestBase.t.sol";
 import {Test, stdError, StdStorage, stdStorage} from "forge-std/Test.sol";
+import {console} from "forge-std/console.sol";
 import {Participation} from "tap-token/interfaces/ITapiocaOptionBroker.sol";
 
 contract TapiocaOptionBrokerExerciseOptionTest is TOBTestBase {
@@ -96,8 +97,16 @@ contract TapiocaOptionBrokerExerciseOptionTest is TOBTestBase {
         uint256 initialPaymentTokenBalance = paymentToken.balanceOf(testUser);
         uint256 initialTapBalance = tapToken.balanceOf(testUser);
 
-        vm.warp(block.timestamp + EPOCH_DURATION * 9);
-        tob.advanceWeek();
+        for (uint256 i = 0; i < 2; i++) {
+            vm.warp(block.timestamp + EPOCH_DURATION);
+            tob.advanceWeek();
+        }
+
+        (uint256 eligibleTapAmount, uint256 paymentTokenAmount, uint256 tapAmount) =
+            tob.getOTCDealDetails(testUser, 0, address(paymentToken), exerciseAmount);
+
+        assertGt(eligibleTapAmount, exerciseAmount, "eligibleTapAmount should be greater than exerciseAmount");
+        assertGt(paymentTokenAmount, 0, "paymentTokenAmount should be greater than 0");
 
         tob.exerciseOption(testUser, 0, address(paymentToken), exerciseAmount);
 

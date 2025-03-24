@@ -15,10 +15,13 @@ import {TapiocaPenroseBatch} from "./batches/TapiocaPenroseBatch.sol";
 import {TapiocaBBBatch1} from "./batches/TapiocaBBBatch1.sol";
 import {TapiocaBBBatch2} from "./batches/TapiocaBBBatch2.sol";
 import {TapiocaBBBatch3} from "./batches/TapiocaBBBatch3.sol";
-import {TapiocaTOFTModulesBatchOne} from "./batches/TapiocaTOFTModulesBatchOne.sol";
-import {TapiocaTOFTModulesBatchTwo} from "./batches/TapiocaTOFTModulesBatchTwo.sol";
-import {TapiocaTOFTMetaModulesBatchTwo} from "./batches/TapiocaTOFTMetaModulesBatchTwo.sol";
-import {TapiocaTOFTModulesBatchThree} from "./batches/TapiocaTOFTModulesBatchThree.sol";
+import {SingularityLauncher} from "./actions/SingularityLauncher.sol";
+import {BigBangLauncher} from "./actions/BigBangLauncher.sol";
+
+// Temp imports due codesize limit in batches
+import {SGLBorrow} from "tapioca-bar/markets/singularity/SGLBorrow.sol";
+import {SGLCollateral} from "tapioca-bar/markets/singularity/SGLCollateral.sol";
+import {BBDebtRateHelper} from "tapioca-bar/markets/bigBang/BBDebtRateHelper.sol";
 
 import "../../interfaces/ITapiocaReport.sol";
 
@@ -33,10 +36,12 @@ library TapiocaRelease {
     {
         Reports memory reports;
         TapiocaUtilitiesBatch utilitiesBatch;
-        (utilitiesBatch, reports.utilitiesReport) = _deployUtilities(input.owner, input.zeroXSwapper, input.lzChainId);
+        (utilitiesBatch, reports.utilitiesReport) =
+            _deployUtilities(input.owner, input.zeroXSwapper, input.lzChainId, input.isTestnet);
 
-        reports.ExtExReport =
-            _deployExtEx(input.owner, input.wrappedNativeToken, reports.utilitiesReport.cluster, input.zeroXSwapper);
+        reports.ExtExReport = _deployExtEx(
+            input.owner, input.wrappedNativeToken, reports.utilitiesReport.cluster, reports.utilitiesReport.zeroXSwapper
+        );
 
         reports.magnetarDepsReport = _deployMagnetarDeps(reports.utilitiesReport.toeHelper);
 
@@ -70,6 +75,12 @@ library TapiocaRelease {
             reports.bbReport.bigbang,
             prevReport.penrose
         );
+        reports.launcherReport = _deployMarketLaunchers(
+            reports.sglReport,
+            reports.bbReport,
+            reports.penroseReport.penrose,
+            reports.magnetarReport.simpleLeverageExecutor
+        );
 
         utilitiesBatch.initializeCluster(
             reports.utilitiesReport.cluster,
@@ -78,10 +89,6 @@ library TapiocaRelease {
             reports.penroseReport.penrose,
             reports.utilitiesReport.pauser,
             reports.utilitiesReport.tapiocaMulticall
-        );
-
-        reports.toftModulesReport = _deployTOFTModules(
-            input.lzEndpoint, input.lzChainId, reports.utilitiesReport.tapiocaMulticall, input.isMetaInstance
         );
 
         return _generateMarketReport(reports);
@@ -109,11 +116,11 @@ library TapiocaRelease {
         return magnetarBatchTwo.getMagnetarReport();
     }
 
-    function _deployUtilities(address owner, address zeroXSwapper, uint16 lzChainId)
+    function _deployUtilities(address owner, address zeroXSwapper, uint16 lzChainId, bool isTestnet)
         private
         returns (TapiocaUtilitiesBatch utilitiesBatch, UtilitiesReport memory report)
     {
-        utilitiesBatch = new TapiocaUtilitiesBatch(owner, zeroXSwapper, lzChainId, false);
+        utilitiesBatch = new TapiocaUtilitiesBatch(owner, zeroXSwapper, lzChainId, isTestnet);
 
         return (utilitiesBatch, utilitiesBatch.getUtilitiesReport());
     }
@@ -152,7 +159,43 @@ library TapiocaRelease {
         TapiocaBBBatch2 bbBatchTwo = new TapiocaBBBatch2(bbBatchOne.getBBReport());
         TapiocaBBBatch3 bbBatchThree = new TapiocaBBBatch3(bbBatchTwo.getBBReport());
 
-        return bbBatchThree.getBBReport();
+        report = bbBatchThree.getBBReport();
+        report.bbDebtRateHelper = address(new BBDebtRateHelper());
+
+        return report;
+    }
+
+    function _deployMarketLaunchers(
+        SGLReport memory sglReport,
+        BBReport memory bbReport,
+        address penrose,
+        address leverageExecutor
+    ) private returns (LauncherReport memory report) {
+        BigBangLauncher bigBangLauncher = new BigBangLauncher(
+            bbReport.bbLiquidation,
+            bbReport.bbBorrow,
+            bbReport.bbCollateral,
+            bbReport.bbLeverage,
+            penrose,
+            leverageExecutor,
+            bbReport.bigbang,
+            bbReport.bbDebtRateHelper
+        );
+        SingularityLauncher singularityLauncher = new SingularityLauncher(
+            sglReport.sglLiquidationModule,
+            sglReport.sglBorrowModule,
+            sglReport.sglCollateralModule,
+            sglReport.sglLeverageModule,
+            sglReport.sglInit,
+            penrose,
+            leverageExecutor,
+            sglReport.sglInterestHelper,
+            sglReport.singularity
+        );
+        report.singularityLauncher = address(singularityLauncher);
+        report.bigBangLauncher = address(bigBangLauncher);
+
+        return report;
     }
 
     function _deployUSDO(address endpoint, address delegate, address cluster, address extExec)
@@ -190,28 +233,9 @@ library TapiocaRelease {
 
         TapiocaSingularityBatch3 singularityBatch3 = new TapiocaSingularityBatch3(singularityBatch2.getSGLReport());
 
-        return singularityBatch3.getSGLReport();
-    }
-
-    function _deployTOFTModules(address endpoint, uint256 hostEid, address delegate, bool isMetaInstance)
-        private
-        returns (TOFTModulesReport memory report)
-    {
-        TapiocaTOFTModulesBatchOne toftModulesBatchOne = new TapiocaTOFTModulesBatchOne(endpoint, hostEid, delegate);
-        if (isMetaInstance) {
-            TapiocaTOFTMetaModulesBatchTwo toftModulesMetaBatchTwo =
-                new TapiocaTOFTMetaModulesBatchTwo(toftModulesBatchOne.getTOFTModulesFirstReport());
-            report = toftModulesMetaBatchTwo.getTOFTModulesSecondReport();
-        } else {
-            TapiocaTOFTModulesBatchTwo toftModulesBatchTwo =
-                new TapiocaTOFTModulesBatchTwo(toftModulesBatchOne.getTOFTModulesFirstReport());
-
-            report = toftModulesBatchTwo.getTOFTModulesSecondReport();
-        }
-
-        TapiocaTOFTModulesBatchThree toftModulesBatchThree = new TapiocaTOFTModulesBatchThree(report);
-
-        report = toftModulesBatchThree.getTOFTModulesFinalReport();
+        SGLReport memory report = singularityBatch3.getSGLReport();
+        report.sglBorrowModule = address(new SGLBorrow());
+        report.sglCollateralModule = address(new SGLCollateral());
 
         return report;
     }
@@ -259,13 +283,8 @@ library TapiocaRelease {
         report.bbDebtRateHelper = reports.bbReport.bbDebtRateHelper;
         report.bigbang = reports.bbReport.bigbang;
 
-        report.tOFTSenderModule = reports.toftModulesReport.tOFTSenderModule;
-        report.mTOFTReceiverModule = reports.toftModulesReport.mTOFTReceiverModule;
-        report.tOFTReceiverModule = reports.toftModulesReport.tOFTReceiverModule;
-        report.tOFTMarketReceiverModule = reports.toftModulesReport.tOFTMarketReceiverModule;
-        report.tOFTOptionsReceiverModule = reports.toftModulesReport.tOFTOptionsReceiverModule;
-        report.tOFTGenericReceiverModule = reports.toftModulesReport.tOFTGenericReceiverModule;
-        report.toftHelper = reports.toftModulesReport.toftHelper;
+        report.singularityLauncher = reports.launcherReport.singularityLauncher;
+        report.bigBangLauncher = reports.launcherReport.bigBangLauncher;
 
         return report;
     }

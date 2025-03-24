@@ -62,7 +62,7 @@ contract Origins is Ownable, Market {
     /// @notice event emitted when an allowed participant status changes
     event UpdateParticipants(address indexed participant, bool indexed status);
 
-    constructor(address __owner) MarketERC4626("Origins", "ORI") {
+    constructor(address __owner) Market("Origins", "ORI") {
         allowedParticipants[__owner] = true;
         _transferOwnership(__owner);
     }

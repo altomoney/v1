@@ -41,7 +41,7 @@ contract BigBangLauncher is IBigBangLauncher {
     }
 
     function createBigBang(BigBangRiskParams memory riskParams) external returns (BigBang) {
-        BigBang bigBangInstance = new BigBang();
+        //BigBang bigBangInstance = new BigBang();
 
         BigBang._InitMemoryModulesData memory modulesData =
             BigBang._InitMemoryModulesData(BB_LIQUIDATION, BB_BORROW, BB_COLLATERAL, BB_LEVERAGE);
@@ -59,9 +59,8 @@ contract BigBangLauncher is IBigBangLauncher {
             LEVERAGE_EXECUTOR
         );
 
-        bigBangInstance.init(abi.encode(modulesData, debtData, initData));
-
-        PENROSE.addBigBang(BB_MASTER, address(bigBangInstance));
+        bytes memory initPayload = abi.encode(abi.encode(modulesData, debtData, initData));
+        BigBang bigBangInstance = BigBang(payable(PENROSE.registerBigBang(BB_MASTER, initPayload, true)));
 
         address[] memory markets = new address[](2);
         bytes[] memory settersData = new bytes[](2);

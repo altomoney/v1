@@ -16,17 +16,17 @@ import {TapiocaSingularityBatch3} from "deployments/releases/tapioca-v1/batches/
 import {TapiocaBBBatch1} from "deployments/releases/tapioca-v1/batches/TapiocaBBBatch1.sol";
 import {TapiocaBBBatch2} from "deployments/releases/tapioca-v1/batches/TapiocaBBBatch2.sol";
 import {TapiocaBBBatch3} from "deployments/releases/tapioca-v1/batches/TapiocaBBBatch3.sol";
-import {TapiocaTOFTModulesBatchOne} from "deployments/releases/tapioca-v1/batches/TapiocaTOFTModulesBatchOne.sol";
-import {TapiocaTOFTModulesBatchTwo} from "deployments/releases/tapioca-v1/batches/TapiocaTOFTModulesBatchTwo.sol";
-import {TapiocaTOFTMetaModulesBatchTwo} from
-    "deployments/releases/tapioca-v1/batches/TapiocaTOFTMetaModulesBatchTwo.sol";
-import {TapiocaTOFTModulesBatchThree} from "deployments/releases/tapioca-v1/batches/TapiocaTOFTModulesBatchThree.sol";
 import "deployments/interfaces/ITapiocaReport.sol";
 import {LZEndpointMock} from "tapioca-mocks/LZEndpointMock.sol";
 import {TapiocaOmnichainExtExec} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainExtExec.sol";
 import {TapiocaPenroseBatch} from "deployments/releases/tapioca-v1/batches/TapiocaPenroseBatch.sol";
-
 import {ERC20Mock} from "../bar/mocks/ERC20Mock.sol";
+import {SGLInterestHelper} from "tapioca-bar/markets/singularity/SGLInterestHelper.sol";
+import {SGLLeverage} from "tapioca-bar/markets/singularity/SGLLeverage.sol";
+import {SGLLiquidation} from "tapioca-bar/markets/singularity/SGLLiquidation.sol";
+import {Singularity} from "tapioca-bar/markets/singularity/Singularity.sol";
+import {SingularityLauncher} from "deployments/releases/tapioca-v1/actions/SingularityLauncher.sol";
+import {BigBangLauncher} from "deployments/releases/tapioca-v1/actions/BigBangLauncher.sol";
 
 // @dev forge test --match-path test/deployments/ProcedureLimits.t.sol
 contract DeploymentProceduresLimits is Test {
@@ -37,7 +37,6 @@ contract DeploymentProceduresLimits is Test {
     uint256 constant MAX_INIT_CONSTRUCTOR_CODE_SIZE = 49152;
     UsdoModulesReport usdoModulesReport;
     UsdoMarketModulesReport usdoMarketModulesReport;
-    TOFTModulesReport toftModulesReport;
 
     address erc20Mock1;
     address erc20Mock2;
@@ -57,8 +56,6 @@ contract DeploymentProceduresLimits is Test {
         erc20Mock1 = address(new ERC20Mock("A", "A"));
         erc20Mock2 = address(new ERC20Mock("B", "B"));
         erc20Mock3 = address(new ERC20Mock("C", "C"));
-
-        toftModulesReport = (new TapiocaTOFTModulesBatchOne(endpointMock, 1, delegate)).getTOFTModulesFirstReport();
     }
 
     function test_new_TapiocaMagnetarBatchOne() public {
@@ -128,6 +125,16 @@ contract DeploymentProceduresLimits is Test {
     }
 
     function test_new_SingularityBatch() public {
+        uint256 sglInterestHelperCodeSize = type(SGLInterestHelper).creationCode.length;
+        uint256 sglLeverageCodeSize = type(SGLLeverage).creationCode.length;
+        uint256 sglLiquidationCodeSize = type(SGLLiquidation).creationCode.length;
+        uint256 singularityCodeSize = type(Singularity).creationCode.length;
+
+        console2.log("SGLInterestHelper", sglInterestHelperCodeSize);
+        console2.log("SGLLeverage", sglLeverageCodeSize);
+        console2.log("SGLLiquidation", sglLiquidationCodeSize);
+        console2.log("Singularity", singularityCodeSize);
+
         new TapiocaSingularityBatch1();
     }
 
@@ -139,22 +146,6 @@ contract DeploymentProceduresLimits is Test {
         );
     }
 
-    function test_new_TOFTModulesBatchOne() public {
-        new TapiocaTOFTModulesBatchOne(endpointMock, 1, delegate);
-    }
-
-    function test_new_TOFTModulesBatchTwo() public {
-        new TapiocaTOFTModulesBatchTwo(toftModulesReport);
-    }
-
-    function test_new_TOFTMetaModulesBatchTwo() public {
-        new TapiocaTOFTMetaModulesBatchTwo(toftModulesReport);
-    }
-
-    function test_new_TOFTModulesBatchThree() public {
-        new TapiocaTOFTModulesBatchThree(toftModulesReport);
-    }
-
     function test_codesizes() public pure {
         {
             uint256 magnetarBatchOneCreationSize = type(TapiocaMagnetarBatchOne).creationCode.length;
@@ -163,14 +154,16 @@ contract DeploymentProceduresLimits is Test {
             uint256 usdoBatchCreationSize = type(TapiocaUsdoBatchOne).creationCode.length;
             uint256 usdoBatchTwoCreationSize = type(TapiocaUsdoBatchTwo).creationCode.length;
             uint256 usdoBatchThreeCreationSize = type(TapiocaUsdoBatchThree).creationCode.length;
+            uint256 singularityLauncherCreationSize = type(SingularityLauncher).creationCode.length;
+            uint256 bigBangLauncherCreationSize = type(BigBangLauncher).creationCode.length;
             console2.log("TapiocaUtilitiesBatch", utilitiesBatchCreationSize);
             console2.log("TapiocaMagnetarBatchOne", magnetarBatchOneCreationSize);
             console2.log("TapiocaMagnetarBatchTwo", magnetarBatchTwoCreationSize);
             console2.log("TapiocaUsdoBatchOne", usdoBatchCreationSize);
             console2.log("TapiocaUsdoBatchTwo", usdoBatchTwoCreationSize);
             console2.log("TapiocaUsdoBatchThree", usdoBatchThreeCreationSize);
-            /*
-            @review-test: These asserts are failing.
+            console2.log("SingularityLauncher", singularityLauncherCreationSize);
+            console2.log("BigBangLauncher", bigBangLauncherCreationSize);
             assertLe(
                 magnetarBatchOneCreationSize,
                 MAX_INIT_CONSTRUCTOR_CODE_SIZE,
@@ -189,7 +182,6 @@ contract DeploymentProceduresLimits is Test {
             assertLe(
                 usdoBatchThreeCreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "TapiocaUsdoBatchThree max init code size"
             );
-            */
         }
         uint256 singularityBatch1CreationSize = type(TapiocaSingularityBatch1).creationCode.length;
         uint256 singularityBatch2CreationSize = type(TapiocaSingularityBatch2).creationCode.length;
@@ -198,10 +190,6 @@ contract DeploymentProceduresLimits is Test {
         uint256 bbBatchOneCreationSize = type(TapiocaBBBatch1).creationCode.length;
         uint256 bbBatchTwoCreationSize = type(TapiocaBBBatch2).creationCode.length;
         uint256 bbBatchThreeCreationSize = type(TapiocaBBBatch3).creationCode.length;
-        uint256 toftModulesBatchOneCreationSize = type(TapiocaTOFTModulesBatchOne).creationCode.length;
-        uint256 toftModulesBatchTwoCreationSize = type(TapiocaTOFTModulesBatchTwo).creationCode.length;
-        uint256 toftMetaModulesBatchTwoCreationSize = type(TapiocaTOFTMetaModulesBatchTwo).creationCode.length;
-        uint256 toftModulesBatchThreeCreationSize = type(TapiocaTOFTModulesBatchThree).creationCode.length;
 
         console2.log("TapiocaSigularityBatch1", singularityBatch1CreationSize);
         console2.log("TapiocaSigularityBatch2", singularityBatch2CreationSize);
@@ -210,34 +198,13 @@ contract DeploymentProceduresLimits is Test {
         console2.log("TapiocaBBBatch1", bbBatchOneCreationSize);
         console2.log("TapiocaBBBatch2", bbBatchTwoCreationSize);
         console2.log("TapiocaBBBatch3", bbBatchThreeCreationSize);
-        console2.log("TapiocaTOFTModulesBatchOne", toftModulesBatchOneCreationSize);
-        console2.log("TapiocaTOFTModulesBatchTwo", toftModulesBatchTwoCreationSize);
-        console2.log("TapiocaTOFTMetaModulesBatchTwo", toftMetaModulesBatchTwoCreationSize);
-        console2.log("TapiocaTOFTModulesBatchThree", toftModulesBatchThreeCreationSize);
 
-        /*
-        @review-test: These asserts are failing.
         assertLe(singularityBatch1CreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "singularityBatch1 max init code size");
         assertLe(singularityBatch2CreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "singularityBatch2 max init code size");
         assertLe(singularityBatch3CreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "singularityBatch3 max init code size");
         assertLe(penroseBatchCreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "penroseBatch max init code size");
         assertLe(bbBatchOneCreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "bbBatchOne max init code size");
         assertLe(bbBatchTwoCreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "bbBatchTwo max init code size");
-        */
         assertLe(bbBatchThreeCreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "bbBatchThree max init code size");
-        /*
-        @review-test: These asserts are failing.
-        assertLe(
-            toftModulesBatchOneCreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "toftModulesBatchOne max init code size"
-        );
-        assertLe(
-            toftModulesBatchTwoCreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "toftModulesBatchTwo max init code size"
-        );
-        assertLe(
-            toftModulesBatchThreeCreationSize,
-            MAX_INIT_CONSTRUCTOR_CODE_SIZE,
-            "toftModulesBatchThree max init code size"
-        );
-        */
     }
 }

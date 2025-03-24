@@ -15,13 +15,7 @@ contract twTap_exitPosition is twTapBaseTest {
         _;
     }
 
-    function test_exitPosition_valid()
-        external
-        participate(100, 0)
-        advanceTime(EPOCH_DURATION * 2)
-        advanceWeeks(2)
-        distributeRewards
-    {
+    function test_exitPosition_valid() external participate(100, 0) advanceWeeks(2) distributeRewards {
         vm.startPrank(aliceAddr);
         twTap.claimRewards(aliceAddr, 0);
         twTap.exitPosition(aliceAddr, aliceAddr, 0);
@@ -31,7 +25,6 @@ contract twTap_exitPosition is twTapBaseTest {
     function test_exitPosition_invalid_notAuthorized(address _participant)
         external
         participate(100, 0)
-        advanceTime(EPOCH_DURATION * 2)
         advanceWeeks(2)
         distributeRewards
     {

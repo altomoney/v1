@@ -32,7 +32,7 @@ import {BBBorrow} from "./BBBorrow.sol";
    
 */
 
-contract BigBang is Market, BBCommon {
+contract BigBang is BBCommon {
     using RebaseLibrary for Rebase;
     using BoringERC20 for IERC20;
     using SafeApprove for address;

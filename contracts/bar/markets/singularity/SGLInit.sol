@@ -21,7 +21,7 @@ import {SGLCommon} from "./SGLCommon.sol";
 import {SGLBorrow} from "./SGLBorrow.sol";
 import {MarketERC4626} from "../MarketERC4626.sol";
 
-contract SGLInit is Market, SGLCommon {
+contract SGLInit is SGLCommon {
     using SafeCast for uint256;
     using RebaseLibrary for Rebase;
 
@@ -37,7 +37,6 @@ contract SGLInit is Market, SGLCommon {
     // ************ //
     // *** VARS *** //
     // ************ //
-
     struct _InitMemoryData {
         IPenrose penrose_;
         ITapiocaOracle _oracle;
@@ -59,11 +58,11 @@ contract SGLInit is Market, SGLCommon {
         IERC20 _collateral;
     }
 
-    function name() public view override(MarketERC4626, SGLStorage) returns (string memory) {
+    function name() public view override(SGLStorage) returns (string memory) {
         return SGLStorage.name();
     }
 
-    function symbol() public view override(MarketERC4626, SGLStorage) returns (string memory) {
+    function symbol() public view override(SGLStorage) returns (string memory) {
         return SGLStorage.symbol();
     }
 

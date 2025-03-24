@@ -107,11 +107,7 @@ contract BBLiquidation is BBCommon {
         IUsdo(address(borrowableToken)).burn(from, borrowAmount);
     }
 
-    function _computeRequiredCollateralWithBonus(address _user)
-        private
-        view
-        returns (uint256)
-    {
+    function _computeRequiredCollateralWithBonus(address _user) private view returns (uint256) {
         // compute borrow amount with bonus
         uint256 elasticPart = totalBorrow.toElastic(userBorrowPart[_user], false);
         uint256 borrowAmountWithBonus = elasticPart + (elasticPart * liquidationMultiplier) / FEE_PRECISION;

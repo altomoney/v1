@@ -35,7 +35,7 @@ import {MarketERC4626} from "../MarketERC4626.sol";
 */
 
 /// @title Tapioca market
-contract Singularity is Market, SGLCommon {
+contract Singularity is SGLCommon {
     using SafeCast for uint256;
     using RebaseLibrary for Rebase;
     using BoringERC20 for IERC20;
@@ -51,25 +51,6 @@ contract Singularity is Market, SGLCommon {
     SGLCollateral public collateralModule;
     /// @notice returns the leverage module
     SGLLeverage public leverageModule;
-
-    /**
-     * Struct are used in SGLInit.sol
-     */
-    struct _InitMemoryData {
-        IPenrose penrose_;
-        ITapiocaOracle _oracle;
-        uint256 _exchangeRatePrecision;
-        uint256 _collateralizationRate;
-        uint256 _liquidationCollateralizationRate;
-        ILeverageExecutor _leverageExecutor;
-    }
-
-    struct _InitMemoryModulesData {
-        address _liquidationModule;
-        address _borrowModule;
-        address _collateralModule;
-        address _leverageModule;
-    }
 
     struct _InitMemoryTokensData {
         IERC20 _asset;
@@ -88,11 +69,11 @@ contract Singularity is Market, SGLCommon {
         return totalAsset.base;
     }
 
-    function name() public view override(MarketERC4626, SGLStorage) returns (string memory) {
+    function name() public view override(SGLStorage) returns (string memory) {
         return SGLStorage.name();
     }
 
-    function symbol() public view override(MarketERC4626, SGLStorage) returns (string memory) {
+    function symbol() public view override(SGLStorage) returns (string memory) {
         return SGLStorage.symbol();
     }
 
@@ -119,17 +100,26 @@ contract Singularity is Market, SGLCommon {
     /// @param to The address of the user to receive the assets.
     /// @param amount The amount of liquidity to supply
     /// @return fraction Total fractions added.
-    function addAsset(address from, address to, uint256 amount)
-        external
-        optionNotPaused(PauseType.AddAsset)
-        allowedLend(from, amount)
-        nonReentrant
-        returns (uint256 fraction)
-    {
+    function addAsset(address from, address to, uint256 amount) external nonReentrant returns (uint256 fraction) {
+        _allowedLend(from, amount);
+        _optionNotPaused(PauseType.AddAsset);
         if (amount <= minLendAmount) revert MinLendAmountNotMet();
 
         _accrue();
-        fraction = _addAsset(from, to, amount);
+
+        IERC20(_asset).safeTransferFrom(from, address(this), amount);
+
+        Rebase memory _totalAsset = totalAsset;
+        uint256 allShare = _totalAsset.elastic + totalBorrow.elastic;
+        fraction = allShare == 0 ? amount : (amount * _totalAsset.base) / allShare;
+        if (_totalAsset.base + fraction.toUint128() < 1000) {
+            return 0;
+        }
+        totalAsset = _totalAsset.add(amount, fraction);
+
+        liquidityBalance[to] += fraction;
+
+        emit LogAddAsset(from, to, amount, fraction);
     }
 
     /// @notice Removes an asset from `from` and transfers it to `to`.
@@ -137,12 +127,8 @@ contract Singularity is Market, SGLCommon {
     /// @param to The user that receives the removed assets.
     /// @param fraction The amount/fraction of assets held to remove.
     /// @return share The amount of shares transferred to `to`.
-    function removeAsset(address from, address to, uint256 fraction)
-        external
-        optionNotPaused(PauseType.RemoveAsset)
-        nonReentrant
-        returns (uint256 share)
-    {
+    function removeAsset(address from, address to, uint256 fraction) external nonReentrant returns (uint256 share) {
+        _optionNotPaused(PauseType.RemoveAsset);
         _accrue();
         share = _removeAsset(from, to, fraction);
         _allowedLend(from, share);
@@ -269,23 +255,6 @@ contract Singularity is Market, SGLCommon {
         if (module == address(0)) revert ModuleNotSet();
 
         return module;
-    }
-
-    /// @dev Concrete implementation of `addAsset`.
-    function _addAsset(address from, address to, uint256 amount) private returns (uint256 fraction) {
-        IERC20(_asset).safeTransferFrom(from, address(this), amount);
-
-        Rebase memory _totalAsset = totalAsset;
-        uint256 allShare = _totalAsset.elastic + totalBorrow.elastic;
-        fraction = allShare == 0 ? amount : (amount * _totalAsset.base) / allShare;
-        if (_totalAsset.base + fraction.toUint128() < 1000) {
-            return 0;
-        }
-        totalAsset = _totalAsset.add(amount, fraction);
-
-        liquidityBalance[to] += fraction;
-
-        emit LogAddAsset(from, to, amount, fraction);
     }
 
     /// @dev Concrete implementation of `removeAsset`.

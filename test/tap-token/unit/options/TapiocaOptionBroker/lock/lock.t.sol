@@ -159,11 +159,7 @@ contract TapiocaOptionBrokerLockTest is TOBTestBase {
     function test_givenAddAssetsReturnsZeroShares_revertWithInvalidShares() public {
         _setupValidPosition(6e18, lockAmount * 3);
 
-        vm.mockCall(
-            address(market),
-            abi.encodeWithSignature("addAsset(address,address,uint256)"),
-            abi.encode(0)
-        );
+        vm.mockCall(address(market), abi.encodeWithSignature("addAsset(address,address,uint256)"), abi.encode(0));
 
         vm.startPrank(testUser);
         usdo.approve(address(tob), lockAmount * 2);

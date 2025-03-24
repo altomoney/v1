@@ -35,8 +35,9 @@ contract BigBang_viewMethods is BigBang_Unit_Shared {
                 BB_MAX_DEBT_RATE
             )
         );
-        address _contract =
-            penrose.registerBigBang(address(_mc), abi.encode(initModulesData, initDebtData, initMemoryData), true);
+        address _contract = penrose.registerBigBang(
+            address(_mc), abi.encode(abi.encode(initModulesData, initDebtData, initMemoryData)), true
+        );
 
         //        │   │   ├─ [0] 0x0000000000000000000000000000000000000000::peek(0x) [staticcall]
         // │   │   │   └─ ← [Stop]

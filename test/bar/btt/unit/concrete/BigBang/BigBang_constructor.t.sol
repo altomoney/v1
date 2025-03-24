@@ -65,43 +65,57 @@ contract BigBang_constructor is BigBang_Unit_Shared {
         // it should revert for collateral
         initMemoryData._collateral = IERC20(ADDRESS_ZERO);
         vm.expectRevert(BigBang.BadPair.selector);
-        penrose.registerBigBang(address(bbMc), abi.encode(initModulesData, initDebtData, initMemoryData), true);
+        penrose.registerBigBang(
+            address(bbMc), abi.encode(abi.encode(initModulesData, initDebtData, initMemoryData)), true
+        );
 
         // it should revert for oracle
         initMemoryData._collateral = IERC20(address(randomCollateral));
         initMemoryData._oracle = ITapiocaOracle(ADDRESS_ZERO);
         vm.expectRevert(BigBang.BadPair.selector);
-        penrose.registerBigBang(address(bbMc), abi.encode(initModulesData, initDebtData, initMemoryData), true);
+        penrose.registerBigBang(
+            address(bbMc), abi.encode(abi.encode(initModulesData, initDebtData, initMemoryData)), true
+        );
 
         // CR
         initMemoryData._oracle = ITapiocaOracle(address(oracle));
         initMemoryData._collateralizationRate = FEE_PRECISION + 1;
         vm.expectRevert(IMarket.NotValid.selector);
-        penrose.registerBigBang(address(bbMc), abi.encode(initModulesData, initDebtData, initMemoryData), true);
+        penrose.registerBigBang(
+            address(bbMc), abi.encode(abi.encode(initModulesData, initDebtData, initMemoryData)), true
+        );
 
         // LCR
         initMemoryData._collateralizationRate = COLLATERALIZATION_RATE;
         initMemoryData._liquidationCollateralizationRate = FEE_PRECISION + 1;
         vm.expectRevert(IMarket.NotValid.selector);
-        penrose.registerBigBang(address(bbMc), abi.encode(initModulesData, initDebtData, initMemoryData), true);
+        penrose.registerBigBang(
+            address(bbMc), abi.encode(abi.encode(initModulesData, initDebtData, initMemoryData)), true
+        );
 
         // LCR < CR
         initMemoryData._liquidationCollateralizationRate = COLLATERALIZATION_RATE - 1;
         vm.expectRevert(IMarket.NotValid.selector);
-        penrose.registerBigBang(address(bbMc), abi.encode(initModulesData, initDebtData, initMemoryData), true);
+        penrose.registerBigBang(
+            address(bbMc), abi.encode(abi.encode(initModulesData, initDebtData, initMemoryData)), true
+        );
 
         // Debt rate > max
         initMemoryData._liquidationCollateralizationRate = LIQUIDATION_COLLATERALIZATION_RATE;
         initDebtData._debtRateMin = 1;
         initDebtData._debtRateMax = 1e18 + 1;
         vm.expectRevert(BigBang.MaxDebtRateNotValid.selector);
-        penrose.registerBigBang(address(bbMc), abi.encode(initModulesData, initDebtData, initMemoryData), true);
+        penrose.registerBigBang(
+            address(bbMc), abi.encode(abi.encode(initModulesData, initDebtData, initMemoryData)), true
+        );
 
         // Debt rate Max < Debt rate Min
         initDebtData._debtRateMin = 1;
         initDebtData._debtRateMax = initDebtData._debtRateMin;
         vm.expectRevert(BigBang.DebtRatesNotValid.selector);
-        penrose.registerBigBang(address(bbMc), abi.encode(initModulesData, initDebtData, initMemoryData), true);
+        penrose.registerBigBang(
+            address(bbMc), abi.encode(abi.encode(initModulesData, initDebtData, initMemoryData)), true
+        );
     }
 
     function _getDefaultInitData()

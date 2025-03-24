@@ -266,8 +266,7 @@ contract MagnetarMock_test {
     {
         _market.accrue();
         uint256 repayPart = _amount;
-        (Module[] memory modules, bytes[] memory calls) =
-            IMarketHelper(_marketHelper).repay(_from, _to, repayPart);
+        (Module[] memory modules, bytes[] memory calls) = IMarketHelper(_marketHelper).repay(_from, _to, repayPart);
 
         (bool[] memory successes, bytes[] memory results) = _market.execute(modules, calls, true);
         if (!successes[0]) revert Magnetar_MarketCallFailed(calls[0]);

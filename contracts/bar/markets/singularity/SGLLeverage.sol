@@ -43,9 +43,9 @@ contract SGLLeverage is SGLLendingCommon {
         external
         optionNotPaused(PauseType.LeverageBuy)
         solvent(from)
-        notSelf(from)
         returns (uint256 amountOut)
     {
+        _notSelf(from);
         if (address(leverageExecutor) == address(0)) {
             revert LeverageExecutorNotValid();
         }
@@ -119,9 +119,9 @@ contract SGLLeverage is SGLLendingCommon {
         external
         optionNotPaused(PauseType.LeverageSell)
         solvent(from)
-        notSelf(from)
         returns (uint256 amountOut)
     {
+        _notSelf(from);
         if (address(leverageExecutor) == address(0)) {
             revert LeverageExecutorNotValid();
         }

@@ -5,25 +5,19 @@ import {twTapBaseTest, TwTAP} from "../twTapBaseTest.sol";
 import {ITWTAPv2} from "tap-token/interfaces/ITWTAPv2.sol";
 
 contract twTap_distributeReward is twTapBaseTest {
-    function test_RevertWhen_AmountIsZero() external skipWeeks(1) advanceWeeks(1) {
+    function test_RevertWhen_AmountIsZero() external advanceWeeks(1) {
         // it should revert
         vm.expectRevert(ITWTAPv2.NotValid.selector);
         twTap.distributeReward(1, 0);
     }
 
-    function test_RevertWhen_RewardTokenIsZero() external skipWeeks(1) advanceWeeks(1) {
+    function test_RevertWhen_RewardTokenIsZero() external advanceWeeks(1) {
         // it should revert
         vm.expectRevert(ITWTAPv2.NotValid.selector);
         twTap.distributeReward(0, 1e18);
     }
 
-    function test_ShouldDistributeTheReward()
-        external
-        addRewardTokens
-        participate(100, 0)
-        skipWeeks(1)
-        advanceWeeks(1)
-    {
+    function test_ShouldDistributeTheReward() external addRewardTokens participate(100, 0) advanceWeeks(1) {
         // it should distribute the reward
         vm.startPrank(adminAddr);
         daiMock.mintTo(adminAddr, 1e18);

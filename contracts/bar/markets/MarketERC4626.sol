@@ -74,12 +74,6 @@ abstract contract MarketERC4626 is IERC20Permit, ERC4626, IERC1155Receiver {
         BORROW
     }
 
-    /// Check if msg.sender has right to execute Lend operations
-    modifier allowedLend(address from, uint256 share) virtual {
-        _allowedLend(from, share);
-        _;
-    }
-
     /// Check if msg.sender has right to execute borrow operations
     modifier allowedBorrow(address from, uint256 share) virtual {
         _allowedBorrow(from, share);
@@ -94,8 +88,6 @@ abstract contract MarketERC4626 is IERC20Permit, ERC4626, IERC1155Receiver {
 
     /**
      * @dev Initializes the {EIP712} domain separator using the `name` parameter, and setting `version` to `"1"`.
-     *
-     * It's a good idea to use the same `name` that is defined as the ERC20 token name.
      */
     constructor(string memory __name, string memory __symbol) {
         _name = __name;

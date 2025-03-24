@@ -2,6 +2,7 @@
 pragma solidity ^0.8.22;
 
 import {Singularity} from "tapioca-bar/markets/singularity/Singularity.sol";
+import {SGLInit} from "tapioca-bar/markets/singularity/SGLInit.sol";
 
 /// @dev Singularity Risk params
 struct RiskParams {
@@ -17,6 +18,7 @@ struct RiskParams {
     uint256 collateralizationRate;
     uint256 liquidationCollateralizationRate;
     uint256 seedAmount;
+    address seedOwner;
     address oracle;
 }
 
@@ -24,7 +26,7 @@ struct RiskParams {
 interface ISingularityLauncher {
     error MarketCreationFailed();
 
-    function createSingularity(Singularity._InitMemoryTokensData memory tokensData, RiskParams memory riskParams)
+    function createSingularity(SGLInit._InitMemoryTokensData memory tokensData, RiskParams memory riskParams)
         external
         returns (Singularity);
 }

@@ -151,8 +151,8 @@ abstract contract MagnetarTestUtils is TestHelper {
             callData: abi.encodeWithSelector(ICluster.updateContract.selector, aEid, address(twTap), true)
         });
 
-        vm.startPrank(TapiocaMulticall(report.tapiocaMulticall).owner());
-        TapiocaMulticall multicall = TapiocaMulticall(report.tapiocaMulticall);
+        vm.startPrank(TapiocaMulticall(payable(report.tapiocaMulticall)).owner());
+        TapiocaMulticall multicall = TapiocaMulticall(payable(report.tapiocaMulticall));
         multicall.multicall(clusterUpdateTwTapCalls);
         vm.stopPrank();
     }
@@ -219,14 +219,16 @@ abstract contract MagnetarTestUtils is TestHelper {
         public
         returns (ISingularity singularity)
     {
-        Singularity._InitMemoryTokensData memory tokensData;
+        address admin = Ownable(reportOut.tapiocaMulticall).owner();
+        SGLInit._InitMemoryTokensData memory tokensData;
         RiskParams memory riskParams;
 
         tokensData._asset = IERC20(asset);
         tokensData._collateral = IERC20(collateral);
 
         riskParams.oracle = oracle;
-        riskParams.seedAmount = 1 ether;
+        riskParams.seedAmount = 0 ether;
+        riskParams.seedOwner = admin;
 
         singularityLauncher = new SingularityLauncher(
             reportOut.sglLiquidationModule,
@@ -239,16 +241,14 @@ abstract contract MagnetarTestUtils is TestHelper {
             reportOut.sglInterestHelper,
             reportOut.singularity
         );
-        address admin = Ownable(reportOut.tapiocaMulticall).owner();
-
-        deal(collateral, admin, 1 ether);
 
         bytes memory payload =
             abi.encodeWithSelector(singularityLauncher.createSingularity.selector, tokensData, riskParams);
 
         vm.startPrank(admin);
-        bytes memory returnData =
-            TapiocaMulticall(reportOut.tapiocaMulticall).performDelegateCall(address(singularityLauncher), payload);
+        bytes memory returnData = TapiocaMulticall(payable(reportOut.tapiocaMulticall)).performDelegateCall(
+            address(singularityLauncher), payload
+        );
         vm.stopPrank();
 
         address marketAddress = abi.decode(returnData, (address));
@@ -277,7 +277,6 @@ abstract contract MagnetarTestUtils is TestHelper {
         riskParams.liquidationCollateralizationRate = 80000;
         riskParams.collateral = collateral;
         riskParams.oracle = address(new OracleMock("Oracle Test", "ORCT", 1 ether));
-        riskParams.seedAmount = 1 ether;
         riskParams.isEthMarket = true;
 
         address admin = Ownable(reportOut.tapiocaMulticall).owner();
@@ -287,7 +286,7 @@ abstract contract MagnetarTestUtils is TestHelper {
 
         vm.startPrank(admin);
         bytes memory returnData =
-            TapiocaMulticall(reportOut.tapiocaMulticall).performDelegateCall(address(bigBangLauncher), payload);
+            TapiocaMulticall(payable(reportOut.tapiocaMulticall)).performDelegateCall(address(bigBangLauncher), payload);
         vm.stopPrank();
 
         address marketAddress = abi.decode(returnData, (address));
@@ -389,9 +388,9 @@ abstract contract MagnetarTestUtils is TestHelper {
     function _getSingularityInitData(TestSingularityData memory _sgl)
         private
         returns (
-            Singularity._InitMemoryModulesData memory modulesData,
-            Singularity._InitMemoryTokensData memory tokensData,
-            Singularity._InitMemoryData memory data
+            SGLInit._InitMemoryModulesData memory modulesData,
+            SGLInit._InitMemoryTokensData memory tokensData,
+            SGLInit._InitMemoryData memory data
         )
     {
         SGLLiquidation sglLiq = new SGLLiquidation();
@@ -399,13 +398,12 @@ abstract contract MagnetarTestUtils is TestHelper {
         SGLCollateral sglCollateral = new SGLCollateral();
         SGLLeverage sglLev = new SGLLeverage();
 
-        modulesData = Singularity._InitMemoryModulesData(
-            address(sglLiq), address(sglBorrow), address(sglCollateral), address(sglLev)
-        );
+        modulesData =
+            SGLInit._InitMemoryModulesData(address(sglLiq), address(sglBorrow), address(sglCollateral), address(sglLev));
 
-        tokensData = Singularity._InitMemoryTokensData(IERC20(_sgl.asset), IERC20(_sgl.collateral));
+        tokensData = SGLInit._InitMemoryTokensData(IERC20(_sgl.asset), IERC20(_sgl.collateral));
 
-        data = Singularity._InitMemoryData(
+        data = SGLInit._InitMemoryData(
             IPenrose(_sgl.penrose), ITapiocaOracle(address(_sgl.oracle)), 0, 75000, 80000, _sgl.leverageExecutor
         );
     }
