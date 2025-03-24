@@ -209,6 +209,7 @@ abstract contract MagnetarTestUtils is TestHelper {
                 growthGoal: 1000
             })
         );
+
         TwTAP _twTap = new TwTAP(_tapOft, _owner, 7 days, buckets);
         vm.label(address(_twTap), "twTap");
         return _twTap;

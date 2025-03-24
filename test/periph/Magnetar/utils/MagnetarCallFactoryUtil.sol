@@ -24,7 +24,6 @@ import {Singularity} from "../../../../contracts/bar/markets/singularity/Singula
 import {SGLCollateral} from "../../../../contracts/bar/markets/singularity/SGLCollateral.sol";
 import {SGLLeverage} from "../../../../contracts/bar/markets/singularity/SGLLeverage.sol";
 import {TwTAP} from "tap-token/governance/twTAP.sol";
-import {SGLLeverage} from "../../../../contracts/bar/markets/singularity/SGLLeverage.sol";
 import {TapToken} from "../../../../contracts/tap-token/tokens/TapToken.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
@@ -34,6 +33,8 @@ import {MarketERC4626} from "../../../../contracts/bar/markets/MarketERC4626.sol
 import {SLeverageSwapData, SToftInfo} from "../../../../contracts/bar/markets/leverage/BaseLeverageExecutor.sol";
 import {TapiocaOptionBroker} from "../../../../contracts/tap-token/options/TapiocaOptionBroker.sol";
 import {SLeverageSwapData, SToftInfo} from "../../../../contracts/bar/markets/leverage/BaseLeverageExecutor.sol";
+import {TapiocaOptionBroker} from "../../../../contracts/tap-token/options/TapiocaOptionBroker.sol";
+
 
 abstract contract MagnetarCallFactoryUtil is Market4626PermitUtils {
     function _getTwTapBatchClaimRewardsMagnetarCall(address _twTap, address _participant, uint8 _bucketId)
@@ -129,9 +130,9 @@ abstract contract MagnetarCallFactoryUtil is Market4626PermitUtils {
         _params.paymentTokenAmount = _paymentTokenAmount;
         _params.bucketId = _bucketId;
         _params.tapAmount = _tapAmount;
-        bytes memory tobCallData = abi.encodeWithSelector(TapiocaOptionBroker.exerciseOption.selector, _params);
-        return
-            MagnetarCall({id: uint8(MagnetarAction.ExerciseOption), target: address(_tob), value: 0, call: tobCallData});
+        bytes memory tobCallData =
+            abi.encodeWithSelector(TapiocaOptionBroker.exerciseOption.selector, _params);
+        return MagnetarCall({id: uint8(MagnetarAction.ExerciseOption), target: address(_tob), value: 0, call: tobCallData});
     }
 
     function _getMarketAddAssetMagnetarCall(address _market, address _from, address _to, uint256 _amount)
@@ -329,6 +330,18 @@ abstract contract MagnetarCallFactoryUtil is Market4626PermitUtils {
         MarketERC4626.PermitActions _action = MarketERC4626.PermitActions.VAULT_ERC4626_TRANSFER;
         return
             _getMarketPermitActionMagnetarCall(_market, _action, _ownerPk, _spender, _amount, _deadlineOffset, _nonce);
+    }
+
+    function _getMarketPermitSharesMagnetarCall(
+        address _market,
+        uint160 _ownerPk,
+        address _spender,
+        uint256 _amount,
+        uint256 _deadlineOffset,
+        uint256 _nonce
+    ) internal returns (MagnetarCall memory) {
+        MarketERC4626.PermitActions _action = MarketERC4626.PermitActions.VAULT_ERC4626_TRANSFER;
+        return _getMarketPermitActionMagnetarCall(_market, _action, _ownerPk, _spender, _amount, _deadlineOffset, _nonce);
     }
 
     function _getMarketPermitBorrowMagnetarCall(
