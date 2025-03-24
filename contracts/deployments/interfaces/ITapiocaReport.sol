@@ -55,6 +55,7 @@ struct MagnetarDepsReport {
     address magnetarCollateralModule;
     address magnetarMintModule;
     address magnetarOptionModule;
+    address magnetarLeverageModule;
 }
 
 struct UtilitiesReport {

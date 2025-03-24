@@ -22,8 +22,8 @@ struct IExerciseOptionsData {
     address target;
     address paymentToken;
     uint256 paymentTokenAmount;
-    uint8 bucketId;
     uint256 tapAmount;
+    uint8 bucketId;
 }
 
 struct IOptionsUnlockData {
@@ -87,6 +87,23 @@ struct DepositAddCollateralAndBorrowFromMarketData {
     MagnetarWithdrawData withdrawParams;
 }
 
+struct BuyCollateralData {
+    address market;
+    address marketHelper;
+    address user;
+    uint256 collateralAmount;
+    uint256 borrowAmount;
+    bytes data;
+}
+
+struct SellCollateralData {
+    address market;
+    address marketHelper;
+    address user;
+    uint256 collateralShares;
+    bytes data;
+}
+
 /**
  * @dev `MintFromBBAndLendOnSGLData` calldata
  */
@@ -127,15 +144,17 @@ enum MagnetarAction {
     CollateralModule, // 9 Collateral Singular related operations.
     MintModule, // 10 BigBang Singular related operations.
     OptionModule, // 11 Market Module related operations.
+    LeverageModule, // 12 Leverage Singular related operations.
     // External operations
-    WethWrap // 12
+    WethWrap // 13
 
 }
 
 enum MagnetarModule {
     CollateralModule,
     MintModule,
-    OptionModule
+    OptionModule,
+    LeverageModule
 }
 
 interface IMagnetar {

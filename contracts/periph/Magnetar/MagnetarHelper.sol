@@ -3,14 +3,17 @@ pragma solidity ^0.8.22;
 
 // External
 import {RebaseLibrary, Rebase} from "@boringcrypto/boring-solidity/contracts/libraries/BoringRebase.sol";
-import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 // Tapioca
 import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
 import {ISingularity, IMarket} from "tap-utils/interfaces/bar/ISingularity.sol";
 import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
 import {IBigBang} from "tap-utils/interfaces/bar/IBigBang.sol";
-import {IMagnetarHelper} from "tap-utils/interfaces/periph/IMagnetarHelper.sol";
+import {
+    IMagnetarHelper, MarketInfo, SingularityInfo, BigBangInfo
+} from "tap-utils/interfaces/periph/IMagnetarHelper.sol";
+
 /*
 
 ████████╗ █████╗ ██████╗ ██╗ ██████╗  ██████╗ █████╗ 
@@ -28,57 +31,7 @@ import {IMagnetarHelper} from "tap-utils/interfaces/periph/IMagnetarHelper.sol";
  * @notice View helper methods
  */
 contract MagnetarHelper is IMagnetarHelper {
-    using SafeERC20 for IERC20;
     using RebaseLibrary for Rebase;
-
-    struct MarketInfo {
-        address collateral;
-        address asset;
-        ITapiocaOracle oracle;
-        bytes oracleData;
-        uint256 totalCollateralShare;
-        uint256 userCollateralShare;
-        Rebase totalBorrow;
-        uint256 userBorrowPart;
-        uint256 currentExchangeRate;
-        uint256 spotExchangeRate;
-        uint256 oracleExchangeRate;
-        uint256 totalBorrowCap; // TODO Check all the Yield box related fields removed
-        uint256 totalCollateralAmount;
-        uint256 collateralizationRate;
-        uint256 liquidationCollateralizationRate;
-        uint256 minLiquidatorReward;
-        uint256 maxLiquidatorReward;
-        uint256 liquidationBonusAmount;
-        uint256 minBorrowAmount;
-        uint256 minCollateralAmount;
-    }
-
-    struct SingularityInfo {
-        MarketInfo market;
-        Rebase totalAsset;
-        uint256 userAssetFraction;
-        ISingularity.AccrueInfo accrueInfo;
-        uint256 utilization;
-        uint256 minimumTargetUtilization;
-        uint256 maximumTargetUtilization;
-        uint256 minimumInterestPerSecond;
-        uint256 maximumInterestPerSecond;
-        uint256 interestElasticity;
-        uint256 startingInterestPerSecond;
-        uint256 minLendAmount;
-    }
-
-    struct BigBangInfo {
-        MarketInfo market;
-        IBigBang.AccrueInfo accrueInfo;
-        uint256 minDebtRate;
-        uint256 maxDebtRate;
-        uint256 debtRateAgainstEthMarket;
-        address mainBBMarket;
-        uint256 mainBBDebtRate;
-        uint256 currentDebtRate;
-    }
 
     /// =====================
     /// View

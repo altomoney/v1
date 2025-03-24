@@ -110,6 +110,7 @@ contract SGLLendingCommon is SGLCommon {
         if (checkAllowance && msg.sender != from) {
             uint256 partInAmount;
             Rebase memory _totalBorrow = totalBorrow;
+            // TODO Do we need to assign _totalBorrow in the next line ?
             (_totalBorrow, partInAmount) = _totalBorrow.sub(part, true);
 
             _allowedLend(from, partInAmount);

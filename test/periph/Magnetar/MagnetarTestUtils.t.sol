@@ -47,16 +47,18 @@ import {Usdo} from "tapioca-bar/usdo/Usdo.sol";
 import {Penrose} from "tapioca-bar/Penrose.sol";
 import {IBigBang} from "tap-utils/interfaces/bar/IBigBang.sol";
 import {TapToken} from "../../../contracts/tap-token/tokens/TapToken.sol";
-import {TwTAP} from "../../../contracts/tap-token/governance/twTAP.sol";
+import {TwTAP} from "tap-token/governance/twTAP.sol";
 import {TapTokenMock} from "../../tap-token/TapTokenMock.sol";
 import {ITapToken} from "../../../contracts/tap-token/tokens/ITapToken.sol";
 import {Bucket} from "../../../contracts/tap-token/interfaces/ITWLBase.sol";
 import {TapTokenSender} from "../../../contracts/tap-token/tokens/TapTokenSender.sol";
 import {TapTokenReceiver} from "../../../contracts/tap-token/tokens/TapTokenReceiver.sol";
 import {UnitBaseTest} from "../../tap-token/unit/UnitBaseTest.t.sol";
+import {TapiocaOptionBroker} from "../../../contracts/tap-token/options/TapiocaOptionBroker.sol";
 import {TapiocaOmnichainExtExec} from
     "../../../contracts/utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainExtExec.sol";
 import {IMarket} from "../../../contracts/utils/interfaces/bar/IMarket.sol";
+import {ZeroXSwapperMock} from "../../../contracts/mocks/ZeroXSwapperMock.sol";
 
 struct TestSingularityData {
     address penrose;
@@ -92,6 +94,8 @@ abstract contract MagnetarTestUtils is TestHelper {
     SingularityLauncher internal singularityLauncher;
     BigBangLauncher internal bigBangLauncher;
     TwTAP internal twTap;
+    TapiocaOptionBroker internal tob;
+    Bucket[] internal buckets;
 
     uint32 aEid = 1;
     uint32 bEid = 2;
@@ -123,7 +127,7 @@ abstract contract MagnetarTestUtils is TestHelper {
                 __admin
             )
         );
-        input.zeroXSwapper = address(1);
+        input.zeroXSwapper = address(new ZeroXSwapperMock(ICluster(address(0x0)), __admin));
         input.lzEndpoint = address(endpoints[aEid]);
         __endpoint = address(endpoints[aEid]);
 
@@ -131,10 +135,12 @@ abstract contract MagnetarTestUtils is TestHelper {
         report = TapiocaRelease.deployTapiocaV1(input, emptyReport);
 
         vm.startPrank(__admin);
+        ZeroXSwapperMock(payable(input.zeroXSwapper)).setCluster(ICluster(report.cluster));
         TapTokenMock(payable(input.tapToken)).setCluster(ICluster(report.cluster));
         vm.stopPrank();
 
         twTap = _createTwTap(payable(input.tapToken), __admin);
+        tob = _createTapiocaOptionBroker(input.tapToken, address(report.usdo), report.penrose, __admin, TAP_DAO);
         vm.prank(__admin);
         TapToken(payable(input.tapToken)).setTwTAP(address(twTap));
 
@@ -174,20 +180,36 @@ abstract contract MagnetarTestUtils is TestHelper {
         return address(tapToken);
     }
 
+    function _createTapiocaOptionBroker(
+        address _tapToken,
+        address _usdo,
+        address _penrose,
+        address _owner,
+        address _dao
+    ) internal returns (TapiocaOptionBroker) {
+        TapiocaOptionBroker _tob =
+            new TapiocaOptionBroker(payable(_tapToken), _usdo, _dao, EPOCH_DURATION, buckets, _penrose, _owner);
+
+        vm.label(address(_tob), "tob");
+        return _tob;
+    }
+
     function _createTwTap(address payable _tapOft, address _owner) internal returns (TwTAP) {
-        Bucket[] memory buckets = new Bucket[](1);
-        buckets[0] = Bucket({
-            enabled: true,
-            lockEpochDuration: 2,
-            epochGrowthRate: 1,
-            epochDecayRate: 1,
-            epochCeiling: 100,
-            epochFloor: 1,
-            rewardsMultiplier: 50_00,
-            currentEpochInflows: 0,
-            lastEpochInflows: 0,
-            growthGoal: 1000
-        });
+        buckets.push(
+            Bucket({
+                enabled: true,
+                lockEpochDuration: 2,
+                epochGrowthRate: 1,
+                epochDecayRate: 1,
+                epochCeiling: 100,
+                epochFloor: 1,
+                rewardsMultiplier: 50_00,
+                currentEpochInflows: 0,
+                lastEpochInflows: 0,
+                growthGoal: 1000
+            })
+        );
+
         TwTAP _twTap = new TwTAP(_tapOft, _owner, 7 days, buckets);
         vm.label(address(_twTap), "twTap");
         return _twTap;
@@ -386,9 +408,36 @@ abstract contract MagnetarTestUtils is TestHelper {
         );
     }
 
-    function _assertSingularityLiquidityBalance(address payable _market, address _user, uint256 _amount) internal {
+    function _assertSingularityLiquidityBalanceUser(address payable _market, address _user, uint256 _amount) internal {
         IERC20 _asset = IERC20(IMarket(_market)._asset());
         assertEq(Singularity(_market).liquidityBalance(_user), _amount, "Invalid user liquidity balance");
+    }
+
+    function _assertSingularityLiquidityBalanceMarket(address payable _market, uint256 _amount) internal {
+        IERC20 _asset = IERC20(IMarket(_market)._asset());
         assertEq(_asset.balanceOf(address(_market)), _amount, "Invalid market asset balance");
+    }
+
+    function _assertBigBangUser(address _market, address _user, uint256 _collateralAmount, uint256 _borrowAmount)
+        internal
+    {
+        IERC20 _collateral = IERC20(IMarket(_market).asset());
+        BigBang _bb = BigBang(payable(_market));
+
+        assertEq(_bb.balanceOf(_user), _collateralAmount, "Invalid user market shares balance");
+        assertEq(_bb._userBorrowPart(_user), _borrowAmount, "Invalid user borrow part");
+        assertEq(_bb._totalCollateralShare(), _collateralAmount, "Invalid total collateral share");
+    }
+
+    function _assertBigBangMarket(
+        address _market,
+        uint256 _marketCollateralBalance,
+        uint256 _marketTotalColalteralShare
+    ) internal {
+        IERC20 _collateral = IERC20(IMarket(_market).asset());
+        BigBang _bb = BigBang(payable(_market));
+
+        assertEq(_collateral.balanceOf(address(_market)), _marketCollateralBalance, "Invalid market collateral balance");
+        assertEq(_bb._totalCollateralShare(), _marketTotalColalteralShare, "Invalid market total collateral share");
     }
 }

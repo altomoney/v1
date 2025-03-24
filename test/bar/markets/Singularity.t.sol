@@ -12,6 +12,7 @@ import {MarketHelper} from "tapioca-bar/markets/MarketHelper.sol";
 import {Market, PauseType} from "tapioca-bar/markets/Market.sol";
 import {IMarket} from "tap-utils/interfaces/bar/IMarket.sol";
 import {MagnetarHelper} from "tapioca-periph/Magnetar/MagnetarHelper.sol";
+import {IMagnetarHelper, SingularityInfo} from "tap-utils/interfaces/periph/IMagnetarHelper.sol";
 
 import {IMarketLiquidatorReceiver} from "tap-utils/interfaces/bar/IMarketLiquidatorReceiver.sol";
 import {IERC20} from "@boringcrypto/boring-solidity/contracts/libraries/BoringERC20.sol";
@@ -531,7 +532,7 @@ contract SingularityTest is UsdoTestHelper {
 
         ISingularity[] memory markets = new ISingularity[](1);
         markets[0] = ISingularity(address(singularity));
-        MagnetarHelper.SingularityInfo[] memory info = magnetarHelper.singularityMarketInfo(address(this), markets);
+        SingularityInfo[] memory info = magnetarHelper.singularityMarketInfo(address(this), markets);
 
         assertEq(info[0].market.collateral, address(collateral));
         assertEq(info[0].market.asset, address(asset));

@@ -5,6 +5,7 @@ import {Magnetar} from "tapioca-periph/Magnetar/Magnetar.sol";
 import {MagnetarCollateralModule} from "tapioca-periph/Magnetar/modules/MagnetarCollateralModule.sol";
 import {MagnetarOptionModule} from "tapioca-periph/Magnetar/modules/MagnetarOptionModule.sol";
 import {MagnetarMintModule} from "tapioca-periph/Magnetar/modules/MagnetarMintModule.sol";
+import {MagnetarLeverageModule} from "tapioca-periph/Magnetar/modules/MagnetarLeverageModule.sol";
 import {MagnetarHelper} from "tapioca-periph/Magnetar/MagnetarHelper.sol";
 import {MagnetarReport, MagnetarDepsReport} from "../interfaces/ITapiocaReport.sol";
 import {SimpleLeverageExecutor} from "tapioca-bar/markets/leverage/SimpleLeverageExecutor.sol";
@@ -19,6 +20,7 @@ abstract contract MagnetarProcedure {
         deps.magnetarCollateralModule = address(new MagnetarCollateralModule(toeHelper));
         deps.magnetarMintModule = address(new MagnetarMintModule(toeHelper));
         deps.magnetarOptionModule = address(new MagnetarOptionModule(toeHelper));
+        deps.magnetarLeverageModule = address(new MagnetarLeverageModule(toeHelper));
     }
 
     function _deployMagnetar(
@@ -37,6 +39,7 @@ abstract contract MagnetarProcedure {
                 payable(deps.magnetarCollateralModule),
                 payable(deps.magnetarMintModule),
                 payable(deps.magnetarOptionModule),
+                payable(deps.magnetarLeverageModule),
                 toeHelper,
                 IMagnetarHelper(report.magnetarHelper)
             )
