@@ -1,0 +1,86 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.22;
+
+import {TapiocaRelease} from "deployments/releases/tapioca-v1/TapiocaRelease.sol";
+import {TapiocaReport, TapiocaInput} from "deployments/interfaces/ITapiocaReport.sol";
+import {SingularityLauncher, RiskParams} from "deployments/releases/tapioca-v1/actions/SingularityLauncher.sol";
+import {BigBangLauncher, BigBangRiskParams} from "deployments/releases/tapioca-v1/actions/BigBangLauncher.sol";
+import {TapToken, ITapToken} from "contracts/tap-token/tokens/TapToken.sol";
+import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
+import {WETH} from "solady/tokens/WETH.sol";
+import {TapTokenSender} from "contracts/tap-token/tokens/TapTokenSender.sol";
+import {TapTokenReceiver} from "contracts/tap-token/tokens/TapTokenReceiver.sol";
+import {TapiocaOptionBroker} from "tap-token/options/TapiocaOptionBroker.sol";
+import {TwTAP} from "tap-token/governance/twTAP.sol";
+import {TapiocaMulticall} from "contracts/utils/TapiocaMulticall/TapiocaMulticall.sol";
+import {Singularity} from "tapioca-bar/markets/singularity/Singularity.sol";
+import {BigBang} from "tapioca-bar/markets/bigBang/BigBang.sol";
+import {Bucket} from "tap-token/interfaces/ITWLBase.sol";
+import {SeerCLSolo} from "contracts/utils/oracle/SeerCLSolo.sol";
+import {OracleChainlinkSingleConstructorData} from "contracts/utils/oracle/OracleChainlinkSingle.sol";
+import {TestnetOracle} from "test/utils/mocks/TestnetOracle.sol";
+import {ERC20Testnet} from "test/utils/mocks/ERC20Testnet.sol";
+import {IERC20} from "@boringcrypto/boring-solidity/contracts/interfaces/IERC20.sol";
+import {Usdo} from "tapioca-bar/usdo/Usdo.sol";
+import {SGLInit} from "tapioca-bar/markets/singularity/SGLInit.sol";
+import {
+    TestnetOracles,
+    TestnetOraclesBatch
+} from "contracts/deployments/releases/tapioca-v1/batches/testnet/TestnetOraclesBatch.sol";
+
+contract TapiocaTestnetTobSetter {
+    TapiocaOptionBroker public tob;
+
+    constructor(
+        TapiocaReport memory report,
+        address tapToken,
+        address feeCollector,
+        address owner,
+        address paymentToken,
+        address paymentTokenOracle,
+        address tapOracle,
+        uint256 epochDuration
+    ) {
+        _createTapiocaOptionBroker(
+            report, tapToken, feeCollector, owner, paymentToken, paymentTokenOracle, tapOracle, epochDuration
+        );
+    }
+
+    function _createTapiocaOptionBroker(
+        TapiocaReport memory report,
+        address tapToken,
+        address feeCollector,
+        address owner,
+        address paymentToken,
+        address paymentTokenOracle,
+        address tapOracle,
+        uint256 epochDuration
+    ) internal {
+        Bucket[] memory buckets = new Bucket[](1);
+
+        buckets[0] = Bucket({
+            enabled: true,
+            lockEpochDuration: 4,
+            epochGrowthRate: 1,
+            epochDecayRate: 1,
+            epochCeiling: 100,
+            epochFloor: 1,
+            rewardsMultiplier: 50_00,
+            currentEpochInflows: 0,
+            lastEpochInflows: 0,
+            growthGoal: 10 ether
+        });
+
+        tob = new TapiocaOptionBroker(
+            payable(tapToken), address(report.usdo), feeCollector, epochDuration, buckets, report.penrose, address(this)
+        );
+
+        tob.setPaymentToken(address(paymentToken), paymentTokenOracle, "");
+        tob.setPaymentTokenBeneficiary(feeCollector);
+        tob.setTapOracle(tapOracle, "");
+        tob.setCluster(report.cluster);
+        tob.setPenrose(report.penrose);
+
+        tob.transferOwnership(owner);
+    }
+}

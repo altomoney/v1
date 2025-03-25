@@ -28,6 +28,7 @@ import {
     TestnetOracles,
     TestnetOraclesBatch
 } from "contracts/deployments/releases/tapioca-v1/batches/testnet/TestnetOraclesBatch.sol";
+import {TapiocaTestnetTobSetter} from "contracts/deployments/releases/tapioca-v1/actions/TobLauncher.sol";
 import "forge-std/console.sol";
 
 contract DeployTapiocaHostTestnet is Script {
@@ -141,7 +142,7 @@ contract DeployTapiocaHostTestnet is Script {
                 report,
                 input.tapToken,
                 report.tapiocaMulticall,
-                report.tapiocaMulticall,
+                input.owner,
                 address(usdc),
                 oracles.usdcOracle,
                 oracles.tapOracle,
@@ -152,6 +153,7 @@ contract DeployTapiocaHostTestnet is Script {
             TapToken(payable(input.tapToken)).setMinter(address(tob));
 
             tob.enableTapTokenRewards();
+            tob.transferOwnership(report.tapiocaMulticall);
 
             createTwTap(payable(input.tapToken), input.owner);
 
@@ -223,62 +225,5 @@ contract DeployTapiocaHostTestnet is Script {
         TestnetOraclesBatch oraclesBatch = new TestnetOraclesBatch();
 
         return oraclesBatch.getOraclesReport();
-    }
-}
-
-contract TapiocaTestnetTobSetter {
-    TapiocaOptionBroker public tob;
-
-    constructor(
-        TapiocaReport memory report,
-        address tapToken,
-        address feeCollector,
-        address owner,
-        address paymentToken,
-        address paymentTokenOracle,
-        address tapOracle,
-        uint256 epochDuration
-    ) {
-        _createTapiocaOptionBroker(
-            report, tapToken, feeCollector, owner, paymentToken, paymentTokenOracle, tapOracle, epochDuration
-        );
-    }
-
-    function _createTapiocaOptionBroker(
-        TapiocaReport memory report,
-        address tapToken,
-        address feeCollector,
-        address owner,
-        address paymentToken,
-        address paymentTokenOracle,
-        address tapOracle,
-        uint256 epochDuration
-    ) internal {
-        Bucket[] memory buckets = new Bucket[](1);
-
-        buckets[0] = Bucket({
-            enabled: true,
-            lockEpochDuration: 4,
-            epochGrowthRate: 1,
-            epochDecayRate: 1,
-            epochCeiling: 100,
-            epochFloor: 1,
-            rewardsMultiplier: 50_00,
-            currentEpochInflows: 0,
-            lastEpochInflows: 0,
-            growthGoal: 10 ether
-        });
-
-        TapiocaOptionBroker tob = new TapiocaOptionBroker(
-            payable(tapToken), address(report.usdo), feeCollector, epochDuration, buckets, report.penrose, address(this)
-        );
-
-        tob.setPaymentToken(address(paymentToken), paymentTokenOracle, "");
-        tob.setPaymentTokenBeneficiary(feeCollector);
-        tob.setTapOracle(tapOracle, "");
-        tob.setCluster(report.cluster);
-        tob.setPenrose(report.penrose);
-
-        tob.transferOwnership(owner);
     }
 }
