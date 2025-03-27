@@ -487,8 +487,9 @@ abstract contract BigBang_Unit_Shared is Markets_Unit_Shared {
         borrowAmount = _boundBorrowAmount(borrowAmount, addAmount);
         if (borrowAmount > 0) {
             if (executor != from) {
+                uint256 feeAmount = bb.computeVariableOpeningFee(borrowAmount);
                 _resetPrank(from);
-                bb.approveBorrow(executor, borrowAmount);
+                bb.approveBorrow(executor, borrowAmount + feeAmount);
             }
             _borrow(borrowAmount, bb, executor, from, to);
         }

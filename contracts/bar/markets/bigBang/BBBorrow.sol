@@ -42,11 +42,13 @@ contract BBBorrow is BBLendingCommon {
     {
         _notSelf(to);
         if (amount <= minBorrowAmount) revert MinBorrowAmountNotMet();
-        _allowedBorrow(from, amount);
 
         _penrose.reAccrueBigBangMarkets();
 
         uint256 feeAmount = _computeVariableOpeningFee(amount);
+
+        _allowedBorrow(from, amount + feeAmount);
+
         part = _borrow(from, to, amount, feeAmount);
     }
 
