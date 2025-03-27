@@ -4,6 +4,7 @@ pragma solidity ^0.8.22;
 import {UtilitiesReport} from "../interfaces/ITapiocaReport.sol";
 
 import {TapiocaMulticall} from "tap-utils/TapiocaMulticall/TapiocaMulticall.sol";
+import {TapiocaMulticallTestnet} from "tap-utils/TapiocaMulticall/TapiocaMulticallTestnet.sol";
 import {Cluster} from "tap-utils/Cluster/Cluster.sol";
 import {TapiocaOmnichainEngineHelper} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainEngineHelper.sol";
 import {Pauser} from "tap-utils/Pauser/Pauser.sol";
@@ -17,7 +18,11 @@ abstract contract UtilitiesProcedure {
         internal
         returns (UtilitiesReport memory report)
     {
-        report.tapiocaMulticall = address(new TapiocaMulticall());
+        if (isTestnet) {
+            report.tapiocaMulticall = address(new TapiocaMulticallTestnet());
+        } else {
+            report.tapiocaMulticall = address(new TapiocaMulticall());
+        }
         report.cluster = address(new Cluster(lzChainId, address(this)));
         report.toeHelper = address(new TapiocaOmnichainEngineHelper());
         report.pauser = address(new Pauser(report.cluster, owner));
@@ -27,7 +32,12 @@ abstract contract UtilitiesProcedure {
         } else {
             report.zeroXSwapper = address(new ZeroXSwapper(zeroXProxy, ICluster(report.cluster), owner));
         }
-        TapiocaMulticall(payable(report.tapiocaMulticall)).transferOwnership(owner);
+        if (isTestnet) {
+            TapiocaMulticallTestnet(payable(report.tapiocaMulticall)).setOwner(owner, true);
+            TapiocaMulticallTestnet(payable(report.tapiocaMulticall)).setOwner(address(this), false);
+        } else {
+            TapiocaMulticall(payable(report.tapiocaMulticall)).transferOwnership(owner);
+        }
         return report;
     }
 

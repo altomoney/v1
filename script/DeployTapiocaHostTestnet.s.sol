@@ -30,6 +30,7 @@ import {
 } from "contracts/deployments/releases/tapioca-v1/batches/testnet/TestnetOraclesBatch.sol";
 import {TapiocaTestnetTobSetter} from "contracts/deployments/releases/tapioca-v1/actions/TobLauncher.sol";
 import "forge-std/console.sol";
+import {TapiocaMulticallTestnet} from "contracts/utils/TapiocaMulticall/TapiocaMulticallTestnet.sol";
 
 contract DeployTapiocaHostTestnet is Script {
     uint256 public constant EPOCH_DURATION = 1 minutes;
@@ -165,6 +166,11 @@ contract DeployTapiocaHostTestnet is Script {
             stETH.mint(report.multiTokenSender, 1000000 ether);
             TapToken(payable(input.tapToken)).transfer(
                 report.tapiocaMulticall, TapToken(payable(input.tapToken)).balanceOf(msg.sender) - 100000e18
+            );
+
+            // Add extra admins to the multicall contract
+            TapiocaMulticallTestnet(payable(report.tapiocaMulticall)).setOwner(
+                0xd7F6Fa30BC8c0E5003689C332bd2b9400Ed87367, true
             );
         }
         vm.stopBroadcast();
