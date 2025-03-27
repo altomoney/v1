@@ -153,7 +153,7 @@ contract Singularity is SGLCommon {
             // Fees are in assets (asset liquidity), not shares.
             uint256 _feesEarnedFraction = accrueInfo.feesEarnedFraction;
             liquidityBalance[_feeTo] += _feesEarnedFraction;
-            emit Transfer(address(0), _feeTo, _feesEarnedFraction);
+            emit LogAddAsset(msg.sender, _feeTo, 0, _feesEarnedFraction);
             accrueInfo.feesEarnedFraction = 0;
             emit LogWithdrawFees(_feeTo, _feesEarnedFraction);
         }

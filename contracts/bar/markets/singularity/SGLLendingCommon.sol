@@ -61,10 +61,12 @@ contract SGLLendingCommon is SGLCommon {
     }
 
     /// @dev Concrete implementation of `removeCollateral`.
-    function _removeCollateral(address from, address to, uint256 share) internal {
+    function _removeCollateral(address from, address to, uint256 share) internal returns (uint256 assets) {
         uint256 assets = super.redeem(share, to, from);
 
-        emit LogRemoveCollateral(from, to, assets);
+        emit LogRemoveCollateral(from, to, share);
+
+        return assets;
     }
 
     /// @dev Concrete implementation of `borrow`.
