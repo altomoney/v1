@@ -24,11 +24,6 @@ import {MarketERC4626} from "../MarketERC4626.sol";
    
 */
 
-interface IERC20Metadata {
-    function name() external view returns (string memory);
-    function symbol() external view returns (string memory);
-}
-
 contract BBStorage is Ownable, Market {
     // ************ //
     // *** VARS *** //
@@ -90,14 +85,4 @@ contract BBStorage is Ownable, Market {
     function _accrue() internal virtual override {}
 
     function _accrueView() internal view virtual override returns (Rebase memory) {}
-
-    /// @notice returns market's ERC20 symbol
-    function symbol() public view virtual override returns (string memory) {
-        return string(abi.encodePacked("tbb-", IERC20Metadata(collateral()).symbol()));
-    }
-
-    /// @notice returns market's ERC20 name
-    function name() public view virtual override returns (string memory) {
-        return string(abi.encodePacked("Tapioca BigBang-", IERC20Metadata(collateral()).name()));
-    }
 }

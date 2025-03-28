@@ -52,7 +52,7 @@ contract DeployTapiocaHostTestnet is Script {
         input.wrappedNativeToken = address(new WETH());
 
         ERC20Testnet stETH = new ERC20Testnet("stETH", 18, input.owner);
-        ERC20Testnet usdc = new ERC20Testnet("USDC", 6, input.owner);
+        ERC20Testnet usdc = new ERC20Testnet("USDC", 18, input.owner);
 
         input.tapToken = address(
             new TapToken(
@@ -102,16 +102,6 @@ contract DeployTapiocaHostTestnet is Script {
             singularityRiskParams.oracle = oracles.stETHOracle;
             singularityRiskParams.seedAmount = 100 ether;
             singularityRiskParams.seedOwner = input.owner;
-
-            createSingularityMarket(
-                report.tapiocaMulticall,
-                report.singularityLauncher,
-                address(stETH),
-                report.usdo,
-                oracles.stETHOracle,
-                singularityRiskParams
-            );
-
             singularityRiskParams.oracle = oracles.usdcOracle;
 
             createSingularityMarket(
