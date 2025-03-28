@@ -172,6 +172,12 @@ contract DeployTapiocaHostTestnet is Script {
             TapiocaMulticallTestnet(payable(report.tapiocaMulticall)).setOwner(
                 0xd7F6Fa30BC8c0E5003689C332bd2b9400Ed87367, true
             );
+            TapiocaMulticallTestnet(payable(report.tapiocaMulticall)).setOwner(
+                0xB0ae5BCc7fE0848Ae9984e12ae57edFfCcc2F630, true
+            );
+            TapiocaMulticallTestnet(payable(report.tapiocaMulticall)).setOwner(
+                0x4778c2AA94a8D05D63e4C07eb68021528985304C, true
+            );
         }
         vm.stopBroadcast();
     }
