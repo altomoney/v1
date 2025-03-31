@@ -37,7 +37,6 @@ contract BBLiquidation is BBCommon {
     // ************** //
     error NothingToLiquidate();
     error LengthMismatch();
-    error ForbiddenAction();
     error OnCollateralReceiverFailed(uint256 returned, uint256 minAccepted);
     error BadDebt();
     error NotEnoughCollateral();
@@ -65,8 +64,7 @@ contract BBLiquidation is BBCommon {
 
         //check from whitelist status
         {
-            bool isWhitelisted = _cluster().isWhitelisted(0, from);
-            if (!isWhitelisted) revert NotAuthorized();
+            if (!_cluster().isWhitelisted(0, from)) revert NotAuthorized();
         }
 
         // accrue before liquidation
@@ -77,8 +75,7 @@ contract BBLiquidation is BBCommon {
         uint256 requiredCollateral = _computeRequiredCollateralWithBonus(user);
 
         uint256 collateralShare = balanceOf(user);
-        uint256 collateralAmount = previewRedeem(collateralShare);
-        if (requiredCollateral < collateralAmount) revert NotAuthorized();
+        if (requiredCollateral < previewRedeem(collateralShare)) revert NotAuthorized();
 
         // update totalBorrow
         uint256 borrowAmount = totalBorrow.toElastic(userBorrowPart[user], true);
@@ -94,23 +91,20 @@ contract BBLiquidation is BBCommon {
                 _swapCollateralWithAsset(collateralShare, liquidatorReceiver, liquidatorReceiverData, 0, false);
             IERC20(address(_borrowableToken())).safeTransfer(receiver, returnedAmount);
         } else {
-            uint256 collateralAmount = previewRedeem(collateralShare);
-            IERC20(collateral()).safeTransfer(receiver, collateralAmount);
+            IERC20(collateral()).safeTransfer(receiver, previewRedeem(collateralShare));
         }
 
         _burn(user, collateralShare);
 
         // burn debt amount from `from`
-        IERC20 borrowableToken = _borrowableToken();
-        IUsdo(address(borrowableToken)).burn(from, borrowAmount);
+        IUsdo(address(_borrowableToken())).burn(from, borrowAmount);
     }
 
     function _computeRequiredCollateralWithBonus(address _user) private view returns (uint256) {
         // compute borrow amount with bonus
         uint256 elasticPart = totalBorrow.toElastic(userBorrowPart[_user], false);
         uint256 borrowAmountWithBonus = elasticPart + (elasticPart * liquidationMultiplier) / FEE_PRECISION;
-        uint256 requiredCollateral = (borrowAmountWithBonus * exchangeRate) / EXCHANGE_RATE_PRECISION;
-        return requiredCollateral;
+        return (borrowAmountWithBonus * exchangeRate) / EXCHANGE_RATE_PRECISION;
     }
 
     // ************************ //
@@ -131,11 +125,10 @@ contract BBLiquidation is BBCommon {
         bytes[] calldata liquidatorReceiverDatas
     ) external optionNotPaused(PauseType.Liquidation) {
         if (users.length == 0) revert NothingToLiquidate();
-        if (users.length != maxBorrowParts.length) revert LengthMismatch();
-        if (users.length != liquidatorReceivers.length) revert LengthMismatch();
-        if (liquidatorReceiverDatas.length != liquidatorReceivers.length) {
-            revert LengthMismatch();
-        }
+        if (
+            users.length != maxBorrowParts.length || users.length != liquidatorReceivers.length
+                || liquidatorReceiverDatas.length != liquidatorReceivers.length
+        ) revert LengthMismatch();
 
         _tryUpdateExchangeRate();
 
@@ -166,8 +159,7 @@ contract BBLiquidation is BBCommon {
             _liquidatorReceiver.onCollateralReceiver(
                 msg.sender, collateral(), address(_borrowableToken()), collateralAmount, _liquidatorReceiverData
             );
-            uint256 assetBalanceAfter = _borrowableToken().balanceOf(address(this));
-            returnedAmount = assetBalanceAfter - assetBalanceBefore;
+            returnedAmount = _borrowableToken().balanceOf(address(this)) - assetBalanceBefore;
 
             if (checkReturned) {
                 uint256 receivableAsset = collateralAmount * EXCHANGE_RATE_PRECISION / _exchangeRate;
@@ -296,12 +288,6 @@ contract BBLiquidation is BBCommon {
         emit Liquidated(msg.sender, _users, callerShare, feeShare, borrowAmount, collateralShare);
     }
 
-    struct __ClosedLiquidationCalldata {
-        address user;
-        uint256 maxBorrowPart;
-        uint256 minLiquidationBonus;
-        IMarketLiquidatorReceiver liquidatorReceiver;
-    }
     /// @notice Handles the liquidation of users' balances, once the users' amount of collateral is too low.
     /// @dev Closed liquidations Only, 90% of extra shares goes to caller and 10% to protocol
 
@@ -314,29 +300,21 @@ contract BBLiquidation is BBCommon {
         uint256 _exchangeRate
     ) private {
         uint256 liquidatedCount = 0;
-        uint256 arrLength = users.length;
-
-        __ClosedLiquidationCalldata memory calldata_; // Stack too deep fix
-
-        for (uint256 i; i < arrLength; ++i) {
-            calldata_.user = users[i];
-            calldata_.maxBorrowPart = maxBorrowParts[i];
-            calldata_.minLiquidationBonus = minLiquidationBonuses[i];
-            calldata_.liquidatorReceiver = liquidatorReceivers[i];
-
-            if (!_isSolvent(calldata_.user, _exchangeRate, true)) {
-                liquidatedCount++;
-                _liquidateUser(
-                    calldata_.user,
-                    calldata_.maxBorrowPart,
-                    calldata_.liquidatorReceiver,
-                    liquidatorReceiverDatas[i],
-                    _exchangeRate,
-                    calldata_.minLiquidationBonus
-                );
+        unchecked {
+            for (uint256 i; i < users.length; ++i) {
+                if (!_isSolvent(users[i], _exchangeRate, true)) {
+                    liquidatedCount++;
+                    _liquidateUser(
+                        users[i],
+                        maxBorrowParts[i],
+                        liquidatorReceivers[i],
+                        liquidatorReceiverDatas[i],
+                        _exchangeRate,
+                        minLiquidationBonuses[i]
+                    );
+                }
             }
+            require(liquidatedCount != 0, "BB: no users found");
         }
-
-        require(liquidatedCount != 0, "BB: no users found");
     }
 }

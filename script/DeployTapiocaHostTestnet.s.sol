@@ -24,6 +24,7 @@ import {ERC20Testnet} from "test/utils/mocks/ERC20Testnet.sol";
 import {IERC20} from "@boringcrypto/boring-solidity/contracts/interfaces/IERC20.sol";
 import {Usdo} from "tapioca-bar/usdo/Usdo.sol";
 import {SGLInit} from "tapioca-bar/markets/singularity/SGLInit.sol";
+import {MultiTokenSender} from "../contracts/mocks/MultiTokenSender.sol";
 import {
     TestnetOracles,
     TestnetOraclesBatch
@@ -34,6 +35,7 @@ import {TapiocaMulticallTestnet} from "contracts/utils/TapiocaMulticall/TapiocaM
 
 contract DeployTapiocaHostTestnet is Script {
     uint256 public constant EPOCH_DURATION = 1 minutes;
+    address public constant BACKEND_TESTNET_ADDRESS = 0x81E1c5EbA8c723e167E1C046AAF217B8eb7b8AC2;
 
     function run() public {
         TapiocaInput memory input;
@@ -125,7 +127,9 @@ contract DeployTapiocaHostTestnet is Script {
             bigBangRiskParams.isEthMarket = true;
             bigBangRiskParams.collateral = address(stETH);
 
-            createBigBangMarket(report.tapiocaMulticall, report.bigBangLauncher, bigBangRiskParams);
+            address bigBang = createBigBangMarket(report.tapiocaMulticall, report.bigBangLauncher, bigBangRiskParams);
+            Usdo(payable(report.usdo)).setMinterStatus(bigBang, true);
+            Usdo(payable(report.usdo)).setBurnerStatus(bigBang, true);
         }
 
         {
@@ -151,6 +155,7 @@ contract DeployTapiocaHostTestnet is Script {
             TapToken(payable(input.tapToken)).setMinter(address(tob));
 
             // Mint and transfer mock tokens to multitokensender and deployer
+            MultiTokenSender(report.multiTokenSender).updateWhitelist(BACKEND_TESTNET_ADDRESS, true);
             TapToken(payable(input.tapToken)).transfer(report.multiTokenSender, 1000000 ether);
             usdc.mint(report.multiTokenSender, 1000000 ether);
             stETH.mint(report.multiTokenSender, 1000000 ether);
@@ -169,6 +174,7 @@ contract DeployTapiocaHostTestnet is Script {
                 0x4778c2AA94a8D05D63e4C07eb68021528985304C, true
             );
         }
+        Usdo(payable(report.usdo)).transferOwnership(report.tapiocaMulticall);
         vm.stopBroadcast();
     }
 
