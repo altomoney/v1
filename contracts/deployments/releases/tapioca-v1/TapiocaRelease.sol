@@ -22,6 +22,8 @@ import {BigBangLauncher} from "./actions/BigBangLauncher.sol";
 import {SGLBorrow} from "tapioca-bar/markets/singularity/SGLBorrow.sol";
 import {SGLCollateral} from "tapioca-bar/markets/singularity/SGLCollateral.sol";
 import {BBDebtRateHelper} from "tapioca-bar/markets/bigBang/BBDebtRateHelper.sol";
+import {BBLiquidation} from "tapioca-bar/markets/bigBang/BBLiquidation.sol";
+import {BBBorrow} from "tapioca-bar/markets/bigBang/BBBorrow.sol";
 
 import "../../interfaces/ITapiocaReport.sol";
 
@@ -155,8 +157,13 @@ library TapiocaRelease {
         private
         returns (BBReport memory report)
     {
-        TapiocaBBBatch1 bbBatchOne = new TapiocaBBBatch1();
-        TapiocaBBBatch2 bbBatchTwo = new TapiocaBBBatch2(bbBatchOne.getBBReport());
+        BBReport memory batchReportOne;
+
+        // TapiocaBBBatch1 bbBatchOne = new TapiocaBBBatch1(); Due code size limit skipped, using direct deployment
+        batchReportOne.bbLiquidation = address(new BBLiquidation());
+        batchReportOne.bbBorrow = address(new BBBorrow());
+
+        TapiocaBBBatch2 bbBatchTwo = new TapiocaBBBatch2(batchReportOne);
         TapiocaBBBatch3 bbBatchThree = new TapiocaBBBatch3(bbBatchTwo.getBBReport());
 
         report = bbBatchThree.getBBReport();
