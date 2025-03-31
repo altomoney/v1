@@ -35,7 +35,7 @@ abstract contract MarketERC4626 is IERC20Permit, ERC4626, IERC1155Receiver {
         0xe9685ff6d48c617fe4f692c50e602cce27cbad0290beb93cfa77eac43968d58c;
     // keccak256("PermitCollateral(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)")
     bytes32 private constant _PERMIT_TYPEHASH_COLLATERAL =
-        0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9;
+        0xfeec9fa3489db68a4f9d4df8b97195b797a67db501fb9d6e83f40d93c523d6d2;
     // keccak256("PermitLiquidity(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)")
     bytes32 private constant _PERMIT_TYPEHASH_LIQUIDITY =
         0x05ec39b1dbfea40ef9a702d0520c523a29ab686fe4626bd51466caaff3a1d483;
@@ -208,9 +208,7 @@ abstract contract MarketERC4626 is IERC20Permit, ERC4626, IERC1155Receiver {
         } else if (action == PermitActions.BORROW) {
             actionId = _PERMIT_TYPEHASH_BORROW;
         }
-        // TODO What if I use the same data for BigBang and Singularity?
-        bytes32 structHash =
-            keccak256(abi.encode(actionId, owner, spender, value, nonces(owner), deadline, block.chainid));
+        bytes32 structHash = keccak256(abi.encode(actionId, owner, spender, value, nonces(owner), deadline));
         _incrementNonce(owner);
 
         bytes32 hash = _hashTypedDataV4(structHash);
