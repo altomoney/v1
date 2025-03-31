@@ -11,7 +11,6 @@ import {IERC20} from "@boringcrypto/boring-solidity/contracts/ERC20.sol";
 import {IMarketLiquidatorReceiver} from "tap-utils/interfaces/bar/IMarketLiquidatorReceiver.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {IUsdo} from "tap-utils/interfaces/oft/IUsdo.sol";
-import {SafeApprove} from "../../libraries/SafeApprove.sol";
 import {BBCommon} from "./BBCommon.sol";
 import {PauseType} from "tap-utils/interfaces/bar/IMarket.sol";
 
@@ -32,7 +31,6 @@ contract BBLiquidation is BBCommon {
     using RebaseLibrary for Rebase;
     using BoringERC20 for IERC20;
     using SafeCast for uint256;
-    using SafeApprove for address;
 
     // ************** //
     // *** ERRORS *** //

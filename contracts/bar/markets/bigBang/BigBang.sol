@@ -32,6 +32,11 @@ import {BBBorrow} from "./BBBorrow.sol";
    
 */
 
+interface IERC20Metadata {
+    function name() external view returns (string memory);
+    function symbol() external view returns (string memory);
+}
+
 contract BigBang is BBCommon {
     using RebaseLibrary for Rebase;
     using BoringERC20 for IERC20;
@@ -347,4 +352,14 @@ contract BigBang is BBCommon {
     }
 
     receive() external payable {}
+
+    /// @notice returns market's ERC20 symbol
+    function symbol() public view virtual override returns (string memory) {
+        return string(abi.encodePacked("tbb-", IERC20Metadata(collateral()).symbol()));
+    }
+
+    /// @notice returns market's ERC20 name
+    function name() public view virtual override returns (string memory) {
+        return string(abi.encodePacked("Tapioca BigBang-", IERC20Metadata(collateral()).name()));
+    }
 }
