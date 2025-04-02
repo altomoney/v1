@@ -88,6 +88,7 @@ contract DeployTapiocaHostTestnet is Script {
             Usdo(payable(report.usdo)).mint(input.owner, 1000000 ether);
         }
 
+        address singularity;
         {
             RiskParams memory singularityRiskParams;
             singularityRiskParams.borrowOpeningFee = 50;
@@ -106,7 +107,7 @@ contract DeployTapiocaHostTestnet is Script {
             singularityRiskParams.seedOwner = input.owner;
             singularityRiskParams.oracle = oracles.usdcOracle;
 
-            createSingularityMarket(
+            singularity = createSingularityMarket(
                 report.tapiocaMulticall,
                 report.singularityLauncher,
                 address(usdc),
@@ -115,6 +116,8 @@ contract DeployTapiocaHostTestnet is Script {
                 singularityRiskParams
             );
         }
+
+        address bigBang;
         {
             BigBangRiskParams memory bigBangRiskParams;
             bigBangRiskParams.debtRateAgainstEth = 5000000000000000;
@@ -127,7 +130,7 @@ contract DeployTapiocaHostTestnet is Script {
             bigBangRiskParams.isEthMarket = true;
             bigBangRiskParams.collateral = address(stETH);
 
-            address bigBang = createBigBangMarket(report.tapiocaMulticall, report.bigBangLauncher, bigBangRiskParams);
+            bigBang = createBigBangMarket(report.tapiocaMulticall, report.bigBangLauncher, bigBangRiskParams);
             Usdo(payable(report.usdo)).setMinterStatus(bigBang, true);
             Usdo(payable(report.usdo)).setBurnerStatus(bigBang, true);
         }
@@ -175,7 +178,28 @@ contract DeployTapiocaHostTestnet is Script {
             );
         }
         Usdo(payable(report.usdo)).transferOwnership(report.tapiocaMulticall);
+
+        address[] memory contracts = new address[](4);
+        contracts[0] = bigBang;
+        contracts[1] = singularity;
+        contracts[2] = report.marketHelper;
+        contracts[3] = report.usdo;
+        _clusterUpdateContracts(report.tapiocaMulticall, report.cluster, contracts, true);
         vm.stopBroadcast();
+    }
+
+    function _clusterUpdateContracts(address multicall, address cluster, address[] memory contracts, bool isUpdate) internal {
+        TapiocaMulticall.Call[] memory calls = new TapiocaMulticall.Call[](contracts.length);
+        uint256 totalCalls = contracts.length;
+        for (uint256 i = 0; i < totalCalls; i++) {
+            calls[i] = TapiocaMulticall.Call({
+                target: cluster,
+                allowFailure: false,
+                callData: abi.encodeWithSelector(ICluster.updateContract.selector, 0, contracts[i], isUpdate)
+            });
+        }
+
+        TapiocaMulticall(payable(multicall)).multicall(calls);
     }
 
     function createSingularityMarket(
