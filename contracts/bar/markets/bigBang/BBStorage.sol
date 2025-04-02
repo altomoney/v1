@@ -87,7 +87,9 @@ contract BBStorage is Ownable, Market {
 
     constructor() Market("Tapioca BigBang", "BB") {}
 
-    function _accrue() internal virtual override {}
+    function _accrue() internal virtual override returns (IBigBang.AccrueInfo memory _accrueInfo, uint256 elapsedTime) {}
+
+    function _updateInterestRate(uint256 elapsedTime) internal virtual override {}
 
     function _accrueView() internal view virtual override returns (Rebase memory) {}
 

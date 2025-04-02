@@ -11,6 +11,8 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ISingularity} from "tap-utils/interfaces/bar/ISingularity.sol";
 import {Market} from "../Market.sol";
 import {MarketERC4626} from "../MarketERC4626.sol";
+import {IBigBang} from "tap-utils/interfaces/bar/IBigBang.sol";
+
 // solhint-disable max-line-length
 
 /*
@@ -110,7 +112,9 @@ contract SGLStorage is Ownable, Market {
         return string(abi.encodePacked("Tapioca Singularity-", IERC20(collateral()).safeName()));
     }
 
-    function _accrue() internal virtual override {}
+    function _accrue() internal virtual override returns (IBigBang.AccrueInfo memory _accrueInfo, uint256 elapsedTime) {}
+
+    function _updateInterestRate(uint256 elapsedTime) internal virtual override {}
 
     function _accrueView() internal view virtual override returns (Rebase memory) {}
 }

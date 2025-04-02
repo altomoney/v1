@@ -17,6 +17,7 @@ import {SafeApprove} from "../../libraries/SafeApprove.sol";
 import {Market} from "../Market.sol";
 import {MarketERC4626} from "../MarketERC4626.sol";
 import {PauseType} from "tap-utils/interfaces/bar/IMarket.sol";
+import {IBigBang} from "tap-utils/interfaces/bar/IBigBang.sol";
 
 // solhint-disable max-line-length
 
@@ -160,12 +161,16 @@ contract Origins is Ownable, Market {
         amount = _repay(msg.sender, msg.sender, part);
     }
 
-    function _accrue() internal pure override {
-        // does nothign on this market
+    function _accrue() internal pure override returns (IBigBang.AccrueInfo memory _accrueInfo, uint256 elapsedTime) {
+        // does nothing on this market
+    }
+
+    function _updateInterestRate(uint256 elapsedTime) internal override {
+        // does nothing on this market
     }
 
     function _accrueView() internal pure override returns (Rebase memory) {
-        // does nothign on this market
+        // does nothing on this market
         Rebase memory rb = Rebase({elastic: 0, base: 0});
         return rb;
     }

@@ -78,7 +78,7 @@ contract BBCommon is BBStorage {
         _totalBorrow.elastic += extraAmount.toUint128();
     }
 
-    function _accrue() internal override {
+    function _accrue() internal override returns (IBigBang.AccrueInfo memory _accrueInfo, uint256 elapsedTime) {
         // accrue ETH market first
         {
             address ethMarket = _penrose.bigBangEthMarket();
@@ -87,11 +87,11 @@ contract BBCommon is BBStorage {
             }
         }
 
-        IBigBang.AccrueInfo memory _accrueInfo = accrueInfo;
+        _accrueInfo = accrueInfo;
         // Number of seconds since accrue was called
-        uint256 elapsedTime = block.timestamp - _accrueInfo.lastAccrued;
+        elapsedTime = block.timestamp - _accrueInfo.lastAccrued;
         if (elapsedTime == 0) {
-            return;
+            return (_accrueInfo, elapsedTime);
         }
 
         //update debt rate
@@ -99,11 +99,14 @@ contract BBCommon is BBStorage {
         _accrueInfo.debtRate = (annumDebtRate / 31557600).toUint64(); //per second; account for leap years
         _accrueInfo.lastAccrued = block.timestamp.toUint64();
 
-        Rebase memory _totalBorrow = totalBorrow;
+        accrueInfo = _accrueInfo;
+    }
+
+    function _updateInterestRate(uint256 elapsedTime) internal override {
+        Rebase memory __totalBorrow = totalBorrow;
 
         // Calculate fees
-        uint256 extraAmount = 0;
-        extraAmount = (uint256(_totalBorrow.elastic) * _accrueInfo.debtRate * elapsedTime) / 1e18;
+        uint256 extraAmount = (uint256(__totalBorrow.elastic) * accrueInfo.debtRate * elapsedTime) / 1e18;
 
         // cap `extraAmount` to avoid overflow risk when converting it from uint256 to uint128
         uint256 max = type(uint128).max - totalBorrow.elastic;
@@ -111,13 +114,12 @@ contract BBCommon is BBStorage {
         if (extraAmount > max) {
             extraAmount = max;
         }
-        _totalBorrow.elastic += extraAmount.toUint128();
+        __totalBorrow.elastic += extraAmount.toUint128();
         openInterestDebt += extraAmount;
 
-        totalBorrow = _totalBorrow;
-        accrueInfo = _accrueInfo;
+        totalBorrow = __totalBorrow;
 
-        emit LogAccrue(extraAmount, _accrueInfo.debtRate);
+        emit LogAccrue(extraAmount, accrueInfo.debtRate);
     }
 
     function _computeVariableOpeningFee(uint256 amount) internal returns (uint256) {

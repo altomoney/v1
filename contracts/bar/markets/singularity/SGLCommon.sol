@@ -10,6 +10,7 @@ import {ISGLInterestHelper} from "tap-utils/interfaces/bar/ISGLInterestHelper.so
 import {ISingularity} from "tap-utils/interfaces/bar/ISingularity.sol";
 import {IERC4626} from "../../../utils/interfaces/common/IERC4626.sol";
 import {SGLStorage} from "./SGLStorage.sol";
+import {IBigBang} from "tap-utils/interfaces/bar/IBigBang.sol";
 
 /*
 
@@ -82,11 +83,11 @@ abstract contract SGLCommon is SGLStorage {
         (, _totalBorrow,,,,) = _getInterestRate();
     }
 
-    function _accrue() internal override {
+    function _accrue() internal override returns (IBigBang.AccrueInfo memory _accrueInfo, uint256 elapsedTime) {
         (
             ISingularity.AccrueInfo memory _accrueInfo,
-            Rebase memory _totalBorrow,
-            Rebase memory _totalAsset,
+            ,
+            ,
             uint256 extraAmount,
             uint256 feeFraction,
             uint256 utilization
@@ -94,7 +95,18 @@ abstract contract SGLCommon is SGLStorage {
 
         emit LogAccrue(extraAmount, feeFraction, _accrueInfo.interestPerSecond, utilization);
         accrueInfo = _accrueInfo;
-        totalBorrow = _totalBorrow;
+    }
+
+    function _updateInterestRate(uint256 elapsedTime) internal override {
+        (
+            ,
+            Rebase memory __totalBorrow,
+            Rebase memory _totalAsset,
+            ,
+            ,
+        ) = _getInterestRate();
+
+        totalBorrow = __totalBorrow;
         totalAsset = _totalAsset;
     }
 }

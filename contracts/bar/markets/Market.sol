@@ -13,6 +13,7 @@ import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
 import {MarketERC4626} from "./MarketERC4626.sol";
 import {Module, PauseType} from "tap-utils/interfaces/bar/IMarket.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import {IBigBang} from "tap-utils/interfaces/bar/IBigBang.sol";
 
 /*
 
@@ -146,9 +147,13 @@ contract Market is MarketERC4626, Ownable, ReentrancyGuard {
     /// @dev Checks if the user is solvent in the closed liquidation case at the end of the function body.
     modifier solvent(address from) {
         updateExchangeRate();
-        _accrue();
+        // Accrue interest 
+        (, uint256 elapsedTime) = _accrue();
 
         _;
+
+        // Update interest rate according to latest utilization of the market.
+        _updateInterestRate(elapsedTime);
 
         require(_isSolvent(from, exchangeRate, false), "Market: insolvent");
     }
@@ -456,7 +461,9 @@ contract Market is MarketERC4626, Ownable, ReentrancyGuard {
     // ************************** //
     // *** INTERNAL FUNCTIONS *** //
     // ************************** //
-    function _accrue() internal virtual {}
+    function _accrue() internal virtual returns (IBigBang.AccrueInfo memory _accrueInfo, uint256 elapsedTime) {}
+
+    function _updateInterestRate(uint256 elapsedTime) internal virtual {}
 
     function _accrueView() internal view virtual returns (Rebase memory) {}
 
