@@ -13,6 +13,7 @@ import {TapiocaUsdoBatchThree} from "deployments/releases/tapioca-v1/batches/Tap
 import {TapiocaSingularityBatch1} from "deployments/releases/tapioca-v1/batches/TapiocaSingularityBatch1.sol";
 import {TapiocaSingularityBatch2} from "deployments/releases/tapioca-v1/batches/TapiocaSingularityBatch2.sol";
 import {TapiocaSingularityBatch3} from "deployments/releases/tapioca-v1/batches/TapiocaSingularityBatch3.sol";
+import {TapiocaSingularityBatch4} from "deployments/releases/tapioca-v1/batches/TapiocaSingularityBatch4.sol";
 import {TapiocaBBBatch1} from "deployments/releases/tapioca-v1/batches/TapiocaBBBatch1.sol";
 import {TapiocaBBBatch2} from "deployments/releases/tapioca-v1/batches/TapiocaBBBatch2.sol";
 import {TapiocaBBBatch3} from "deployments/releases/tapioca-v1/batches/TapiocaBBBatch3.sol";
@@ -186,6 +187,7 @@ contract DeploymentProceduresLimits is Test {
         uint256 singularityBatch1CreationSize = type(TapiocaSingularityBatch1).creationCode.length;
         uint256 singularityBatch2CreationSize = type(TapiocaSingularityBatch2).creationCode.length;
         uint256 singularityBatch3CreationSize = type(TapiocaSingularityBatch3).creationCode.length;
+        uint256 singularityBatch4CreationSize = type(TapiocaSingularityBatch4).creationCode.length;
         uint256 penroseBatchCreationSize = type(TapiocaPenroseBatch).creationCode.length;
         uint256 bbBatchOneCreationSize = type(TapiocaBBBatch1).creationCode.length;
         uint256 bbBatchTwoCreationSize = type(TapiocaBBBatch2).creationCode.length;
@@ -194,6 +196,7 @@ contract DeploymentProceduresLimits is Test {
         console2.log("TapiocaSigularityBatch1", singularityBatch1CreationSize);
         console2.log("TapiocaSigularityBatch2", singularityBatch2CreationSize);
         console2.log("TapiocaSigularityBatch3", singularityBatch3CreationSize);
+        console2.log("TapiocaSigularityBatch4", singularityBatch4CreationSize);
         console2.log("TapiocaPenroseBatch", penroseBatchCreationSize);
         console2.log("TapiocaBBBatch1", bbBatchOneCreationSize);
         console2.log("TapiocaBBBatch2", bbBatchTwoCreationSize);
@@ -202,6 +205,7 @@ contract DeploymentProceduresLimits is Test {
         assertLe(singularityBatch1CreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "singularityBatch1 max init code size");
         assertLe(singularityBatch2CreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "singularityBatch2 max init code size");
         assertLe(singularityBatch3CreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "singularityBatch3 max init code size");
+        assertLe(singularityBatch4CreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "singularityBatch4 max init code size");
         assertLe(penroseBatchCreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "penroseBatch max init code size");
         assertLe(bbBatchOneCreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "bbBatchOne max init code size");
         assertLe(bbBatchTwoCreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "bbBatchTwo max init code size");
