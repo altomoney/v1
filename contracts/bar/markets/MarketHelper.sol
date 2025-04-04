@@ -137,7 +137,7 @@ contract MarketHelper is IMarketHelper {
         Rebase memory _totalAsset = sgl.totalAsset();
         Rebase memory _totalBorrow = sgl._totalBorrow();
 
-        uint256 allShare = _totalAsset.elastic + sgl.convertToShares(_totalBorrow.elastic);
+        uint256 allShare = _totalAsset.elastic + _totalBorrow.elastic;
         share = (amount * allShare) / _totalAsset.base;
     }
 
