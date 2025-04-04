@@ -571,20 +571,26 @@ contract MagnetarTest is MagnetarTestUtils, MagnetarCallFactoryUtil {
     }
 
     function test_exit_and_remove_collateral() public {
-        vm.skip(true);
+        vm.label(address(bb), "BigBang");
+        vm.label(address(magnetar), "Magnetar");
+        vm.label(address(sgl), "Singularity");
+        vm.label(address(marketHelper), "MarketHelper");
         bb.approve(address(magnetar), type(uint256).max);
 
         uint256 tokenAmount_ = 1 ether;
         uint256 mintAmount_ = 1e17;
 
         collateral.approve(address(magnetar), type(uint256).max);
-        asset.approve(address(magnetar), type(uint256).max);
+        collateral.approve(address(bb), type(uint256).max);
+        IERC20(bb.borrowableToken()).approve(address(magnetar), type(uint256).max);
+        IERC20(bb.borrowableToken()).approve(address(bb), type(uint256).max);
 
         bb.approveBorrow(address(magnetar), type(uint256).max);
+        bb.approveCollateral(address(magnetar), type(uint256).max);
 
         //deal
         {
-            deal(address(collateral), address(this), tokenAmount_);
+            deal(address(collateral), address(this), tokenAmount_ * 2);
         }
 
         //mint
