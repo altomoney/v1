@@ -119,7 +119,7 @@ contract SGLLendingCommon is SGLCommon {
 
         userBorrowPart[to] -= part;
 
-        uint256 share = previewDeposit(amount);
+        uint256 share = _totalBorrow.toBase(amount, true);
         uint128 totalShare = totalAsset.elastic;
 
         totalAsset.elastic = totalShare + share.toUint128();
