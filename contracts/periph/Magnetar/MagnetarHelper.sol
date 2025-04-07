@@ -141,9 +141,9 @@ contract MagnetarHelper is IMagnetarHelper {
         Rebase memory _totalAsset = singularity.totalAsset();
         Rebase memory _totalBorrow = singularity._totalBorrow();
 
-        uint256 allShare = _totalAsset.elastic + singularity.convertToShares(_totalBorrow.elastic);
+        uint256 allShare = _totalAsset.elastic + _totalBorrow.elastic;
 
-        return singularity.convertToAssets((fraction * allShare) / _totalAsset.base);
+        return (fraction * allShare) / _totalAsset.base;
     }
 
     /**
@@ -162,7 +162,7 @@ contract MagnetarHelper is IMagnetarHelper {
         Rebase memory _totalAsset = singularity.totalAsset();
         Rebase memory _totalBorrow = singularity._totalBorrow();
 
-        uint256 allShare = _totalAsset.elastic + singularity.convertToShares(_totalBorrow.elastic);
+        uint256 allShare = _totalAsset.elastic + _totalBorrow.elastic;
 
         fraction = allShare == 0 ? amount : (amount * _totalAsset.base) / allShare;
     }

@@ -570,21 +570,165 @@ contract MagnetarTest is MagnetarTestUtils, MagnetarCallFactoryUtil {
         }
     }
 
-    function test_exit_and_remove_collateral() public {
-        vm.skip(true);
+    function test_burst_remove_collateral() public {
+        vm.label(address(bb), "BigBang");
+        vm.label(address(magnetar), "Magnetar");
+        vm.label(address(sgl), "Singularity");
+        vm.label(address(marketHelper), "MarketHelper");
         bb.approve(address(magnetar), type(uint256).max);
 
         uint256 tokenAmount_ = 1 ether;
         uint256 mintAmount_ = 1e17;
 
         collateral.approve(address(magnetar), type(uint256).max);
-        asset.approve(address(magnetar), type(uint256).max);
-
+        collateral.approve(address(bb), type(uint256).max);
+        IERC20(bb.borrowableToken()).approve(address(magnetar), type(uint256).max);
+        IERC20(bb.borrowableToken()).approve(address(bb), type(uint256).max);
         bb.approveBorrow(address(magnetar), type(uint256).max);
+        bb.approveCollateral(address(magnetar), type(uint256).max);
+        sgl.approveLiquidity(address(magnetar), type(uint256).max);
 
         //deal
         {
-            deal(address(collateral), address(this), tokenAmount_);
+            deal(address(collateral), address(this), tokenAmount_ * 2);
+            deal(address(asset), address(this), tokenAmount_);
+        }
+
+        IERC20(sgl.borrowableToken()).approve(address(sgl), type(uint256).max);
+        sgl.addAsset(address(this), address(this), tokenAmount_);
+
+        //mint
+        {
+            bytes memory mintData = abi.encodeWithSelector(
+                MagnetarMintModule.mintBBAndLock.selector,
+                MintFromBBAndLendOnSGLData({
+                    user: address(this),
+                    lendAmount: 0,
+                    mintData: IMintData({
+                        mint: true,
+                        mintAmount: mintAmount_,
+                        collateralDepositData: IDepositData({deposit: true, amount: tokenAmount_})
+                    }),
+                    depositData: IDepositData({deposit: false, amount: 0}),
+                    lockData: IOptionsLockData({
+                        lock: false,
+                        target: address(0),
+                        bucketId: 0,
+                        to: address(this),
+                        sglMarket: address(0),
+                        usdoAmount: 0
+                    }),
+                    externalContracts: ICommonExternalContracts({
+                        singularity: address(0),
+                        magnetar: address(magnetar),
+                        bigBang: address(bb),
+                        marketHelper: address(marketHelper)
+                    })
+                })
+            );
+
+            MagnetarCall[] memory calls = new MagnetarCall[](1);
+            calls[0] = MagnetarCall({
+                id: uint8(MagnetarAction.MintModule),
+                target: address(bb), //this is ignored
+                value: 0,
+                call: mintData
+            });
+
+            magnetar.burst(calls);
+        }
+
+        uint256 colShare = bb.balanceOf(address(this));
+        assertGt(colShare, 0);
+
+        // Withdraw only 1/3
+        uint256 collateralToWithdraw = tokenAmount_ / 3;
+
+        uint256 repayAmount_ = bb._userBorrowPart(address(this));
+        // exit and remove
+        {
+            IERC20(bb._asset()).approve(address(magnetar), type(uint256).max);
+
+            deal(address(asset), address(this), repayAmount_); //deal more asset to be able to fully repay
+            uint256 assetShare = bb.convertToShares(repayAmount_);
+
+            bytes memory removeData = abi.encodeWithSelector(
+                MagnetarOptionModule.exitPositionAndRemoveCollateral.selector,
+                ExitPositionAndRemoveCollateralData({
+                    user: address(this),
+                    externalData: ICommonExternalContracts({
+                        magnetar: address(magnetar),
+                        singularity: address(sgl),
+                        bigBang: address(bb),
+                        marketHelper: address(marketHelper)
+                    }),
+                    removeAndRepayData: IRemoveAndRepay({
+                        removeAssetFromSGL: true,
+                        removeAmount: collateralToWithdraw,
+                        repayAssetOnBB: false,
+                        repayAmount: 0,
+                        removeCollateralFromBB: false,
+                        collateralAmount: 0,
+                        unlockData: IOptionsUnlockData({
+                            unlock: false,
+                            target: address(0),
+                            bucketId: 0,
+                            to: address(0),
+                            amount: 0
+                        }),
+                        assetWithdrawData: MagnetarWithdrawData({
+                            asset: address(0),
+                            receiver: address(0),
+                            amount: collateralToWithdraw,
+                            withdraw: false,
+                            unwrap: false,
+                            extractFromSender: false
+                        }),
+                        collateralWithdrawData: MagnetarWithdrawData({
+                            asset: address(collateral),
+                            receiver: address(this),
+                            amount: 0,
+                            withdraw: false,
+                            unwrap: false,
+                            extractFromSender: false
+                        })
+                    })
+                })
+            );
+
+            MagnetarCall[] memory calls = new MagnetarCall[](1);
+            calls[0] = MagnetarCall({
+                id: uint8(MagnetarAction.OptionModule),
+                target: address(bb), //this is ignored
+                value: 0,
+                call: removeData
+            });
+
+            magnetar.burst(calls);
+        }
+    }
+
+    function test_burst_exit_and_remove_collateral() public {
+        vm.label(address(bb), "BigBang");
+        vm.label(address(magnetar), "Magnetar");
+        vm.label(address(sgl), "Singularity");
+        vm.label(address(marketHelper), "MarketHelper");
+        bb.approve(address(magnetar), type(uint256).max);
+
+        uint256 tokenAmount_ = 1 ether;
+        uint256 mintAmount_ = 1e17;
+
+        collateral.approve(address(magnetar), type(uint256).max);
+        collateral.approve(address(bb), type(uint256).max);
+        IERC20(bb.borrowableToken()).approve(address(magnetar), type(uint256).max);
+        IERC20(bb.borrowableToken()).approve(address(bb), type(uint256).max);
+
+        bb.approveBorrow(address(magnetar), type(uint256).max);
+        bb.approveCollateral(address(magnetar), type(uint256).max);
+
+        //deal
+        {
+            deal(address(collateral), address(this), tokenAmount_ * 2);
         }
 
         //mint
