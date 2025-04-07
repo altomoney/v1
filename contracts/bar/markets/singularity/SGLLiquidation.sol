@@ -119,19 +119,19 @@ contract SGLLiquidation is SGLStorage {
     /// @notice Entry point for liquidations.
     /// @dev Will call `closedLiquidation()` if not LQ exists or no LQ bid avail exists. Otherwise use LQ.
     /// @param users An array of user addresses.
-    /// @param maxBorrowParts A one-to-one mapping to `users`, contains maximum (partial) borrow amounts (to liquidate) of the respective user
+    /// @param maxBorrowAmounts A one-to-one mapping to `users`, contains maximum (partial) borrow amounts (to liquidate) of the respective user
     /// @param minLiquidationBonuses minimum liquidation bonus acceptable
     /// @param liquidatorReceivers IMarketLiquidatorReceiver array
     /// @param liquidatorReceiverDatas IMarketLiquidatorReceiver datas
     function liquidate(
         address[] calldata users,
-        uint256[] calldata maxBorrowParts,
+        uint256[] calldata maxBorrowAmounts,
         uint256[] calldata minLiquidationBonuses,
         IMarketLiquidatorReceiver[] calldata liquidatorReceivers,
         bytes[] calldata liquidatorReceiverDatas
     ) external optionNotPaused(PauseType.Liquidation) {
         if (users.length == 0) revert NothingToLiquidate();
-        if (users.length != maxBorrowParts.length) revert LengthMismatch();
+        if (users.length != maxBorrowAmounts.length) revert LengthMismatch();
         if (users.length != liquidatorReceivers.length) revert LengthMismatch();
         if (liquidatorReceiverDatas.length != liquidatorReceivers.length) {
             revert LengthMismatch();
@@ -142,7 +142,7 @@ contract SGLLiquidation is SGLStorage {
         _accrue();
 
         _closedLiquidation(
-            users, maxBorrowParts, minLiquidationBonuses, liquidatorReceivers, liquidatorReceiverDatas, exchangeRate
+            users, maxBorrowAmounts, minLiquidationBonuses, liquidatorReceivers, liquidatorReceiverDatas, exchangeRate
         );
     }
 
@@ -186,7 +186,7 @@ contract SGLLiquidation is SGLStorage {
 
     function _updateBorrowAndCollateralShare(
         address user,
-        uint256 maxBorrowPart,
+        uint256 maxBorrowAmount,
         uint256 minLiquidationBonus, // min liquidation bonus to accept (default 0)
         uint256 _exchangeRate
     ) private returns (uint256 borrowAmount, uint256 borrowPart, uint256 collateralAmount, uint256 collateralShare) {
@@ -217,7 +217,7 @@ contract SGLLiquidation is SGLStorage {
         if (collateralPartInAsset < borrowPartWithBonus) revert BadDebt();
 
         // check the amount to be repaid versus liquidator supplied limit
-        borrowPartWithBonus = borrowPartWithBonus > maxBorrowPart ? maxBorrowPart : borrowPartWithBonus;
+        borrowPartWithBonus = borrowPartWithBonus > maxBorrowAmount ? maxBorrowAmount : borrowPartWithBonus;
         borrowAmount = borrowPartWithBonus;
 
         // compute part units, preventing rounding dust when liquidation is full
@@ -290,7 +290,7 @@ contract SGLLiquidation is SGLStorage {
 
     function _liquidateUser(
         address user,
-        uint256 maxBorrowPart,
+        uint256 maxBorrowAmount,
         IMarketLiquidatorReceiver _liquidatorReceiver,
         bytes calldata _liquidatorReceiverData,
         uint256 _exchangeRate,
@@ -300,7 +300,7 @@ contract SGLLiquidation is SGLStorage {
 
         data.callerReward = _getCallerReward(user, _exchangeRate);
         (data.borrowAmount, data.borrowPart, data.collateralAmount, data.collateralShare) =
-            _updateBorrowAndCollateralShare(user, maxBorrowPart, minLiquidationBonus, _exchangeRate);
+            _updateBorrowAndCollateralShare(user, maxBorrowAmount, minLiquidationBonus, _exchangeRate);
         data.borrowShare = convertToShares(data.borrowAmount);
 
         {
@@ -331,14 +331,14 @@ contract SGLLiquidation is SGLStorage {
 
     struct __ClosedLiquidationCalldata {
         address user;
-        uint256 maxBorrowPart;
+        uint256 maxBorrowAmount;
         uint256 minLiquidationBonus;
         IMarketLiquidatorReceiver liquidatorReceiver;
     }
 
     function _closedLiquidation(
         address[] calldata users,
-        uint256[] calldata maxBorrowParts,
+        uint256[] calldata maxBorrowAmounts,
         uint256[] calldata minLiquidationBonuses,
         IMarketLiquidatorReceiver[] calldata liquidatorReceivers,
         bytes[] calldata liquidatorReceiverDatas,
@@ -351,7 +351,7 @@ contract SGLLiquidation is SGLStorage {
 
         for (uint256 i; i < arrLength;) {
             calldata_.user = users[i];
-            calldata_.maxBorrowPart = maxBorrowParts[i];
+            calldata_.maxBorrowAmount = maxBorrowAmounts[i];
             calldata_.minLiquidationBonus = minLiquidationBonuses[i];
             calldata_.liquidatorReceiver = liquidatorReceivers[i];
 
@@ -359,7 +359,7 @@ contract SGLLiquidation is SGLStorage {
                 liquidatedCount++;
                 _liquidateUser(
                     calldata_.user,
-                    calldata_.maxBorrowPart,
+                    calldata_.maxBorrowAmount,
                     calldata_.liquidatorReceiver,
                     liquidatorReceiverDatas[i],
                     _exchangeRate,

@@ -175,7 +175,7 @@ contract BBLiquidation is BBCommon {
 
     function _updateBorrowAndCollateralShare(
         address user,
-        uint256 maxBorrowPart,
+        uint256 maxBorrowAmount,
         uint256 minLiquidationBonus, // min liquidation bonus to accept (default 0)
         uint256 _exchangeRate
     ) private returns (uint256 borrowAmount, uint256 borrowPart, uint256 collateralShare) {
@@ -185,7 +185,7 @@ contract BBLiquidation is BBCommon {
         uint256 collateralPartInAsset = (convertToAssets(balanceOf(user)) * EXCHANGE_RATE_PRECISION) / _exchangeRate;
 
         // compute closing factor (liquidatable amount)
-        uint256 borrowPartWithBonus = _computeClosingFactor(
+        uint256 borrowAmountToClose = _computeClosingFactor(
             userBorrowPart[user],
             collateralPartInAsset,
             FEE_PRECISION_DECIMALS,
@@ -196,26 +196,26 @@ contract BBLiquidation is BBCommon {
 
         // limit liquidable amount before bonus to the current debt
         uint256 userTotalBorrowAmount = totalBorrow.toElastic(userBorrowPart[user], true);
-        borrowPartWithBonus = borrowPartWithBonus > userTotalBorrowAmount ? userTotalBorrowAmount : borrowPartWithBonus;
+        borrowAmountToClose = borrowAmountToClose > userTotalBorrowAmount ? userTotalBorrowAmount : borrowAmountToClose;
 
         // make sure liquidator cannot bypass bad debt handling
-        if (collateralPartInAsset < borrowPartWithBonus) revert BadDebt();
+        if (collateralPartInAsset < borrowAmountToClose) revert BadDebt();
 
         // check the amount to be repaid versus liquidator supplied limit
-        borrowPartWithBonus = borrowPartWithBonus > maxBorrowPart ? maxBorrowPart : borrowPartWithBonus;
-        borrowAmount = borrowPartWithBonus;
+        borrowAmountToClose = borrowAmountToClose > maxBorrowAmount ? maxBorrowAmount : borrowAmountToClose;
+        borrowAmount = borrowAmountToClose;
 
         // compute part units, preventing rounding dust when liquidation is full
         borrowPart = borrowAmount == userTotalBorrowAmount
             ? userBorrowPart[user]
-            : totalBorrow.toBase(borrowPartWithBonus, false);
+            : totalBorrow.toBase(borrowAmountToClose, false);
         if (borrowPart == 0) revert Solvent();
 
         if (liquidationBonusAmount > 0) {
-            borrowPartWithBonus = borrowPartWithBonus + (borrowPartWithBonus * liquidationBonusAmount) / FEE_PRECISION;
+            borrowAmountToClose = borrowAmountToClose + (borrowAmountToClose * liquidationBonusAmount) / FEE_PRECISION;
         }
 
-        if (collateralPartInAsset < borrowPartWithBonus) {
+        if (collateralPartInAsset < borrowAmountToClose) {
             if (collateralPartInAsset <= userTotalBorrowAmount) {
                 revert BadDebt();
             }
@@ -236,7 +236,7 @@ contract BBLiquidation is BBCommon {
             uint256 totalUserBorrowWithBonus =
                 userTotalBorrowAmount + (userTotalBorrowAmount * liquidationBonusAmount) / FEE_PRECISION;
             if (collateralPartInAsset < totalUserBorrowWithBonus) revert BadDebt();
-            collateralShare = previewWithdraw((borrowPartWithBonus * _exchangeRate) / EXCHANGE_RATE_PRECISION);
+            collateralShare = previewWithdraw((borrowAmountToClose * _exchangeRate) / EXCHANGE_RATE_PRECISION);
             if (collateralShare > balanceOf(user)) {
                 revert NotEnoughCollateral();
             }
@@ -262,7 +262,7 @@ contract BBLiquidation is BBCommon {
 
     function _liquidateUser(
         address user,
-        uint256 maxBorrowPart,
+        uint256 maxBorrowAmount,
         IMarketLiquidatorReceiver _liquidatorReceiver,
         bytes calldata _liquidatorReceiverData,
         uint256 _exchangeRate,
@@ -271,7 +271,7 @@ contract BBLiquidation is BBCommon {
         uint256 callerReward = _getCallerReward(user, _exchangeRate);
 
         (uint256 borrowAmount, uint256 borrowPart, uint256 collateralShare) =
-            _updateBorrowAndCollateralShare(user, maxBorrowPart, minLiquidationBonus, _exchangeRate);
+            _updateBorrowAndCollateralShare(user, maxBorrowAmount, minLiquidationBonus, _exchangeRate);
         totalBorrow.elastic -= borrowAmount.toUint128();
         totalBorrow.base -= borrowPart.toUint128();
 
