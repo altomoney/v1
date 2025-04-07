@@ -75,8 +75,7 @@ contract SGLLendingCommon is SGLCommon {
         uint256 allShare = _totalAsset.elastic + totalBorrow.elastic;
         share = allShare == 0 ? amount : (amount * _totalAsset.base) / allShare;
 
-        uint256 totalAssetElasticInAssets = (_totalAsset.elastic * allShare) / _totalAsset.base;
-        uint256 fullAssetAmountBefore = totalAssetElasticInAssets + totalBorrow.elastic;
+        uint256 fullAssetAmountBefore = _totalAsset.elastic + totalBorrow.elastic;
 
         _totalAsset.elastic -= amount.toUint128();
 
