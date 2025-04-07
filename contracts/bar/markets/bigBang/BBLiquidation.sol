@@ -181,6 +181,7 @@ contract BBLiquidation is BBCommon {
         uint256 collateralPartInAsset = (convertToAssets(balanceOf(user)) * EXCHANGE_RATE_PRECISION) / _exchangeRate;
 
         // compute closing factor (liquidatable amount)
+
         uint256 borrowAmountToClose = computeClosingFactor(
             userBorrowPart[user],
             collateralPartInAsset
