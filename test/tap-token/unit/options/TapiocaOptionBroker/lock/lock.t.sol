@@ -140,6 +140,7 @@ contract TapiocaOptionBrokerLockTest is TOBTestBase {
         vm.warp(block.timestamp + (10 * EPOCH_DURATION) + 1);
 
         // Second lock should succeed
+        vm.expectRevert(ITapiocaOptionBroker.AdvanceEpochFirst.selector);
         tob.lock(testUser, 0, lockAmount, market);
         vm.stopPrank();
     }

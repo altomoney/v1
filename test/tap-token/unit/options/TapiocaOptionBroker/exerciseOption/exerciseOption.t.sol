@@ -39,7 +39,9 @@ contract TapiocaOptionBrokerExerciseOptionTest is TOBTestBase {
         _setupValidPosition();
 
         vm.warp(block.timestamp + EPOCH_DURATION);
+        vm.startPrank(owner);
         tob.advanceWeek();
+        vm.stopPrank();
 
         vm.warp(block.timestamp + EPOCH_DURATION * 3);
 
@@ -53,7 +55,9 @@ contract TapiocaOptionBrokerExerciseOptionTest is TOBTestBase {
     function test_revertWhen_invalidPaymentToken() public {
         _setupValidPosition();
         vm.warp(block.timestamp + EPOCH_DURATION);
+        vm.startPrank(owner);
         tob.advanceWeek();
+        vm.stopPrank();
 
         vm.startPrank(testUser);
         vm.expectRevert(ITapiocaOptionBroker.PaymentTokenNotSupported.selector);
@@ -65,7 +69,9 @@ contract TapiocaOptionBrokerExerciseOptionTest is TOBTestBase {
         _setupValidPosition();
 
         vm.warp(block.timestamp + EPOCH_DURATION);
+        vm.startPrank(owner);
         tob.advanceWeek();
+        vm.stopPrank();
 
         vm.startPrank(testUser);
         vm.expectRevert(ITapiocaOptionBroker.TooLow.selector);
@@ -77,7 +83,10 @@ contract TapiocaOptionBrokerExerciseOptionTest is TOBTestBase {
         _setupValidPosition();
 
         vm.warp(block.timestamp + EPOCH_DURATION);
+        vm.startPrank(owner);
         tob.advanceWeek();
+        vm.stopPrank();
+
         vm.startPrank(testUser);
         vm.expectRevert(ITapiocaOptionBroker.TooHigh.selector);
         tob.exerciseOption(testUser, 0, address(paymentToken), 999999999e18);
@@ -93,14 +102,17 @@ contract TapiocaOptionBrokerExerciseOptionTest is TOBTestBase {
 
         vm.startPrank(testUser);
         paymentToken.approve(address(tob), exerciseAmount);
+        vm.stopPrank();
 
         uint256 initialPaymentTokenBalance = paymentToken.balanceOf(testUser);
         uint256 initialTapBalance = tapToken.balanceOf(testUser);
 
+        vm.startPrank(owner);
         for (uint256 i = 0; i < 2; i++) {
             vm.warp(block.timestamp + EPOCH_DURATION);
             tob.advanceWeek();
         }
+        vm.stopPrank();
 
         (uint256 eligibleTapAmount, uint256 paymentTokenAmount, uint256 tapAmount) =
             tob.getOTCDealDetails(testUser, 0, address(paymentToken), exerciseAmount);
@@ -108,11 +120,11 @@ contract TapiocaOptionBrokerExerciseOptionTest is TOBTestBase {
         assertGt(eligibleTapAmount, exerciseAmount, "eligibleTapAmount should be greater than exerciseAmount");
         assertGt(paymentTokenAmount, 0, "paymentTokenAmount should be greater than 0");
 
+        vm.startPrank(testUser);
         tob.exerciseOption(testUser, 0, address(paymentToken), exerciseAmount);
+        vm.stopPrank();
 
         assertLt(paymentToken.balanceOf(testUser), initialPaymentTokenBalance, "Payment token balance should decrease");
         assertEq(tapToken.balanceOf(testUser), initialTapBalance + exerciseAmount, "TAP balance should increase");
-
-        vm.stopPrank();
     }
 }
