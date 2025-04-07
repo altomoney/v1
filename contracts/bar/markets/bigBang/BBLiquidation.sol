@@ -38,11 +38,7 @@ contract BBLiquidation is BBCommon {
     error NothingToLiquidate();
     error LengthMismatch();
     error OnCollateralReceiverFailed(uint256 returned, uint256 minAccepted);
-    error BadDebt();
-    error NotEnoughCollateral();
-    error Solvent();
     error AmountNotValid();
-    error InsufficientLiquidationBonus();
     error NotAuthorized();
 
     // *********************** //
@@ -185,13 +181,10 @@ contract BBLiquidation is BBCommon {
         uint256 collateralPartInAsset = (convertToAssets(balanceOf(user)) * EXCHANGE_RATE_PRECISION) / _exchangeRate;
 
         // compute closing factor (liquidatable amount)
-        uint256 borrowAmountToClose = _computeClosingFactor(
+
+        uint256 borrowAmountToClose = computeClosingFactor(
             userBorrowPart[user],
-            collateralPartInAsset,
-            FEE_PRECISION_DECIMALS,
-            liquidationCollateralizationRate,
-            liquidationMultiplier,
-            totalBorrow
+            collateralPartInAsset
         );
 
         // limit liquidable amount before bonus to the current debt

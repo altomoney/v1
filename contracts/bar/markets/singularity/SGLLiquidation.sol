@@ -40,10 +40,6 @@ contract SGLLiquidation is SGLStorage {
     error NothingToLiquidate();
     error LengthMismatch();
     error OnCollateralReceiverFailed(uint256 returned, uint256 minAccepted);
-    error BadDebt();
-    error NotEnoughCollateral();
-    error Solvent();
-    error InsufficientLiquidationBonus();
     error NotAuthorized();
 
     // *********************** //
@@ -200,13 +196,9 @@ contract SGLLiquidation is SGLStorage {
             (convertToAssets(_userCollateralShare) * EXCHANGE_RATE_PRECISION) / _exchangeRate;
 
         // compute closing factor (liquidatable amount)
-        uint256 borrowPartWithBonus = _computeClosingFactor(
+        uint256 borrowPartWithBonus = computeClosingFactor(
             _userBorrowPart,
-            collateralPartInAsset,
-            FEE_PRECISION_DECIMALS,
-            liquidationCollateralizationRate,
-            liquidationMultiplier,
-            totalBorrow
+            collateralPartInAsset
         );
 
         // limit liquidable amount before bonus to the current debt

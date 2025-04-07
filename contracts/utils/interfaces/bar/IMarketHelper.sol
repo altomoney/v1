@@ -20,11 +20,6 @@ import {IMarket} from "./IMarket.sol";
 interface IMarketHelper {
     function isPositionInBadDebt(IMarket market, uint256 _exchangeRate, address _user) external view returns (bool);
 
-    function computeClosingFactor(IMarket market, uint256 borrowPart, uint256 collateralPartInAsset)
-        external
-        view
-        returns (uint256);
-
     function isPositionSolvent(address _market, address _user, uint256 _exchangeRate, bool _forLiquidation)
         external
         view
