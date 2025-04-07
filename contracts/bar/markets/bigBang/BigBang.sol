@@ -204,9 +204,9 @@ contract BigBang is BBCommon {
     /// @param amount the borrow amount to compute for
     function computeVariableOpeningFee(uint256 amount) external view returns (uint256) {
         //get asset <> USDC price ( USDO <> USDC )
-        (bool updated, uint256 _exchangeRate) = assetOracle.peek(oracleData);
+        (bool updated, uint256 __exchangeRate) = assetOracle.peek(assetOracleData);
         if (!updated) revert OracleCallFailed();
-        return _computeVariableOpeningFeeView(amount, _exchangeRate);
+        return _computeVariableOpeningFeeView(amount, __exchangeRate);
     }
 
     // ************************* //
