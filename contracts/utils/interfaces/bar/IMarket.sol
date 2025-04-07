@@ -211,6 +211,20 @@ interface IMarket {
 
     function rescueEth(uint256 amount, address to) external;
 
+    function computeClosingFactor(
+        uint256 borrowPart,
+        uint256 collateralPartInAsset
+    ) external pure returns (uint256);
+
+    function viewLiquidationBorrowAndCollateralShare(
+        address _user,
+        uint256 _maxBorrowPart,
+        uint256 _minLiquidationBonus,
+        uint256 _exchangeRatePrecision,
+        uint256 _exchangeRate,
+        uint256 _feeDecimalsPrecision
+    ) external view returns (uint256 borrowAmount, uint256 borrowPart, uint256 collateralShare);
+
     event Approval(address indexed owner, address indexed spender, uint256 amount);
     event ApprovalBorrow(address indexed owner, address indexed spender, uint256 indexed value);
     event ApprovalCollateral(address indexed owner, address indexed spender, uint256 indexed value);

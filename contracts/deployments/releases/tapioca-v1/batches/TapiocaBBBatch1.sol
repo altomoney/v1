@@ -14,6 +14,12 @@ contract TapiocaBBBatch1 is BarProcedure {
         _bbReport = _deployBBModulesOne();
     }
 
+    function _deployBBModulesOne() internal returns (BBReport memory report) {
+        // report.bbLiquidation = address(new BBLiquidation());
+        // report.bbBorrow = address(new BBBorrow());
+        return report;
+    }
+
     function getBBReport() external view returns (BBReport memory) {
         return _bbReport;
     }

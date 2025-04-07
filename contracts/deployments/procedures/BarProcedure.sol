@@ -25,9 +25,6 @@ import {UsdoHelper} from "tapioca-bar/usdo/extensions/UsdoHelper.sol";
 import {USDOFlashloanHelper} from "tapioca-bar/usdo/USDOFlashloanHelper.sol";
 import {IUsdo} from "tap-utils/interfaces/oft/IUsdo.sol";
 import {MarketHelper} from "tapioca-bar/markets/MarketHelper.sol";
-import {BBLiquidation} from "tapioca-bar/markets/bigBang/BBLiquidation.sol";
-import {BBBorrow} from "tapioca-bar/markets/bigBang/BBBorrow.sol";
-import {BBCollateral} from "tapioca-bar/markets/bigBang/BBCollateral.sol";
 import {BBLeverage} from "tapioca-bar/markets/bigBang/BBLeverage.sol";
 import {BBDebtRateHelper} from "tapioca-bar/markets/bigBang/BBDebtRateHelper.sol";
 import {BigBang} from "tapioca-bar/markets/bigBang/BigBang.sol";
@@ -134,20 +131,6 @@ abstract contract BarProcedure {
         // Transfer ownership to the delegate
         Usdo(payable(report.usdo)).setDelegate(delegate);
         Usdo(payable(report.usdo)).transferOwnership(delegate);
-
-        return report;
-    }
-
-    function _deployBBModulesOne() internal returns (BBReport memory report) {
-        report.bbLiquidation = address(new BBLiquidation());
-        report.bbBorrow = address(new BBBorrow());
-
-        return report;
-    }
-
-    function _deployBBModulesTwo(BBReport memory report) internal returns (BBReport memory) {
-        report.bbCollateral = address(new BBCollateral());
-        report.bbLeverage = address(new BBLeverage());
 
         return report;
     }

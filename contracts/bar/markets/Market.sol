@@ -92,6 +92,10 @@ contract Market is MarketERC4626, Ownable, ReentrancyGuard {
     error MinCollateralAmountNotMet();
     error NotValid();
     error TransferFailed();
+    error Solvent();
+    error BadDebt();
+    error InsufficientLiquidationBonus();
+    error NotEnoughCollateral();
 
     // ************** //
     // *** EVENTS *** //
@@ -322,6 +326,22 @@ contract Market is MarketERC4626, Ownable, ReentrancyGuard {
     // ********************** //
     // *** VIEW FUNCTIONS *** //
     // ********************** //
+
+    function computeClosingFactor(uint256 borrowPart, uint256 collateralPartInAsset)
+        public
+        view
+        returns (uint256)
+    {
+        return _computeClosingFactor(
+            borrowPart,
+            collateralPartInAsset,
+            FEE_PRECISION_DECIMALS,
+            liquidationCollateralizationRate,
+            liquidationMultiplier,
+            totalBorrow
+        );
+    }
+
     function _computeClosingFactor(
         uint256 borrowPart,
         uint256 collateralPartInAsset,
@@ -354,6 +374,109 @@ contract Market is MarketERC4626, Ownable, ReentrancyGuard {
         if (uint256(xPos) > borrowPart) return borrowPart;
 
         return uint256(xPos);
+    }
+
+    struct ViewLiquidation {
+        address user;
+        uint256 maxBorrowPart;
+        uint256 minLiquidationBonus;
+        uint256 exchangeRate;
+        uint256 userCollateralShare;
+        uint256 userBorrowPart;
+        Rebase totalBorrow;
+        uint256 liquidationBonusAmount;
+        uint256 liquidationCollateralizationRate;
+        uint256 liquidationMultiplier;
+        uint256 exchangeRatePrecision;
+        uint256 feeDecimalsPrecision;
+    }
+
+    function viewLiquidationBorrowAndCollateralShare(
+        address _user,
+        uint256 _maxBorrowPart,
+        uint256 _minLiquidationBonus,
+        uint256 _exchangeRatePrecision,
+        uint256 _exchangeRate,
+        uint256 _feeDecimalsPrecision
+    ) external view returns (uint256 borrowAmount, uint256 borrowPart, uint256 collateralShare) {
+        ViewLiquidation memory data;
+        data.user = _user;
+        data.maxBorrowPart = _maxBorrowPart;
+        data.minLiquidationBonus = _minLiquidationBonus;
+        data.exchangeRate = _exchangeRate;
+        data.exchangeRatePrecision = _exchangeRatePrecision;
+        data.feeDecimalsPrecision = _feeDecimalsPrecision;
+        data.userCollateralShare = balanceOf(_user);
+        data.userBorrowPart = userBorrowPart[_user];
+        data.totalBorrow = totalBorrow;
+        data.liquidationBonusAmount = liquidationBonusAmount;
+        data.liquidationCollateralizationRate = liquidationCollateralizationRate;
+        data.liquidationMultiplier = liquidationMultiplier;
+        return _viewLiquidationBorrowAndCollateralShare(data);
+    }
+
+    function _viewLiquidationBorrowAndCollateralShare(ViewLiquidation memory _data)
+        internal
+        view
+        returns (uint256 borrowAmount, uint256 borrowPart, uint256 collateralShare)
+    {
+        if (_data.exchangeRate == 0) revert ExchangeRateNotValid();
+
+        // get collateral amount in asset's value
+        uint256 collateralPartInAsset = (
+            convertToAssets(_data.userCollateralShare) * _data.exchangeRatePrecision
+        ) / _data.exchangeRate;
+
+        // compute closing factor (liquidatable amount)
+        uint256 borrowPartWithBonus = computeClosingFactor(_data.userBorrowPart, collateralPartInAsset);
+
+        // limit liquidable amount before bonus to the current debt
+        uint256 userTotalBorrowAmount = _data.totalBorrow.toElastic(_data.userBorrowPart, true);
+        borrowPartWithBonus = borrowPartWithBonus > userTotalBorrowAmount ? userTotalBorrowAmount : borrowPartWithBonus;
+
+        // make sure liquidator cannot bypass bad debt handling
+        if (collateralPartInAsset < borrowPartWithBonus) revert BadDebt();
+
+        // check the amount to be repaid versus liquidator supplied limit
+        borrowPartWithBonus = borrowPartWithBonus > _data.maxBorrowPart ? _data.maxBorrowPart : borrowPartWithBonus;
+        borrowAmount = borrowPartWithBonus;
+
+        // compute part units, preventing rounding dust when liquidation is full
+        borrowPart = borrowAmount == userTotalBorrowAmount
+            ? _data.userBorrowPart
+            : _data.totalBorrow.toBase(borrowPartWithBonus, false);
+        if (borrowPart == 0) revert Solvent();
+
+        if (_data.liquidationBonusAmount > 0) {
+            borrowPartWithBonus =
+                borrowPartWithBonus + (borrowPartWithBonus * _data.liquidationBonusAmount) / FEE_PRECISION;
+        }
+
+        if (collateralPartInAsset < borrowPartWithBonus) {
+            if (collateralPartInAsset <= userTotalBorrowAmount) {
+                revert BadDebt();
+            }
+            // If current debt is covered by collateral fully
+            // then there is some liquidation bonus,
+            // so liquidation can proceed if liquidator's minimum is met
+            if (_data.minLiquidationBonus > 0) {
+                // `collateralPartInAsset > borrowAmount` as `borrowAmount <= userTotalBorrowAmount`
+                uint256 effectiveBonus = ((collateralPartInAsset - borrowAmount) * FEE_PRECISION) / borrowAmount;
+                if (effectiveBonus < _data.minLiquidationBonus) {
+                    revert InsufficientLiquidationBonus();
+                }
+                collateralShare = _data.userCollateralShare;
+            } else {
+                revert InsufficientLiquidationBonus();
+            }
+        } else {
+            collateralShare = convertToShares(
+                (borrowPartWithBonus * _data.exchangeRate) / _data.exchangeRatePrecision
+            );
+            if (collateralShare > _data.userCollateralShare) {
+                revert NotEnoughCollateral();
+            }
+        }
     }
 
     /// @notice return the amount of collateral for a `user` to be solvent, min TVL and max TVL. Returns 0 if user already solvent.

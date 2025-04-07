@@ -11,6 +11,7 @@ import {TapiocaUsdoBatchThree} from "./batches/TapiocaUsdoBatchThree.sol";
 import {TapiocaSingularityBatch1} from "./batches/TapiocaSingularityBatch1.sol";
 import {TapiocaSingularityBatch2} from "./batches/TapiocaSingularityBatch2.sol";
 import {TapiocaSingularityBatch3} from "./batches/TapiocaSingularityBatch3.sol";
+import {TapiocaSingularityBatch4} from "./batches/TapiocaSingularityBatch4.sol";
 import {TapiocaPenroseBatch} from "./batches/TapiocaPenroseBatch.sol";
 import {TapiocaBBBatch1} from "./batches/TapiocaBBBatch1.sol";
 import {TapiocaBBBatch2} from "./batches/TapiocaBBBatch2.sol";
@@ -24,7 +25,7 @@ import {SGLCollateral} from "tapioca-bar/markets/singularity/SGLCollateral.sol";
 import {BBDebtRateHelper} from "tapioca-bar/markets/bigBang/BBDebtRateHelper.sol";
 import {BBLiquidation} from "tapioca-bar/markets/bigBang/BBLiquidation.sol";
 import {BBBorrow} from "tapioca-bar/markets/bigBang/BBBorrow.sol";
-
+import {BBLeverage} from "tapioca-bar/markets/bigBang/BBLeverage.sol";
 import "../../interfaces/ITapiocaReport.sol";
 
 /// @title TapiocaRelease
@@ -162,6 +163,7 @@ library TapiocaRelease {
         // TapiocaBBBatch1 bbBatchOne = new TapiocaBBBatch1(); Due code size limit skipped, using direct deployment
         batchReportOne.bbLiquidation = address(new BBLiquidation());
         batchReportOne.bbBorrow = address(new BBBorrow());
+        batchReportOne.bbLeverage = address(new BBLeverage());
 
         TapiocaBBBatch2 bbBatchTwo = new TapiocaBBBatch2(batchReportOne);
         TapiocaBBBatch3 bbBatchThree = new TapiocaBBBatch3(bbBatchTwo.getBBReport());
@@ -240,7 +242,9 @@ library TapiocaRelease {
 
         TapiocaSingularityBatch3 singularityBatch3 = new TapiocaSingularityBatch3(singularityBatch2.getSGLReport());
 
-        SGLReport memory report = singularityBatch3.getSGLReport();
+        TapiocaSingularityBatch4 singularityBatch4 = new TapiocaSingularityBatch4(singularityBatch3.getSGLReport());
+
+        SGLReport memory report = singularityBatch4.getSGLReport();
         report.sglBorrowModule = address(new SGLBorrow());
         report.sglCollateralModule = address(new SGLCollateral());
 

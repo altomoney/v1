@@ -2,7 +2,6 @@
 pragma solidity ^0.8.22;
 
 import {SGLReport} from "../interfaces/ITapiocaReport.sol";
-import {SGLInit} from "tapioca-bar/markets/singularity/SGLInit.sol";
 import {SGLBorrow} from "tapioca-bar/markets/singularity/SGLBorrow.sol";
 import {SGLCollateral} from "tapioca-bar/markets/singularity/SGLCollateral.sol";
 import {SGLLiquidation} from "tapioca-bar/markets/singularity/SGLLiquidation.sol";
@@ -23,7 +22,6 @@ abstract contract SGLProcedure {
     }
 
     function _deploySglModulesThree(SGLReport memory report) internal returns (SGLReport memory) {
-        report.sglInit = address(new SGLInit());
         report.singularity = address(new Singularity());
         return report;
     }
