@@ -59,7 +59,7 @@ contract TapiocaOptionBroker is ITapiocaOptionBroker, Pausable, Ownable, FullMat
     mapping(uint256 => uint256) public _tapPerEpoch; // epoch => availableTAP
     mapping(address => PaymentTokenOracle) public _paymentTokens; // Token address => PaymentTokenOracle
     mapping(uint256 => int256) public _netDepositsPerEpoch; // epoch => total deposited
-    mapping(address account => mapping(address marketAddress => uint256 shares)) public _marketShares; // accountAddress => marketAddress => shares
+    mapping(address account => mapping(uint256 bucketId => mapping(address marketAddress => uint256 shares))) internal _marketShares; // accountAddress => bucketId => marketAddress => shares
     mapping(address => uint256) public _totalLockedUsdo; // accountAddress => total locked USDO across all markets and buckets
 
     bytes public _tapOracleData;
@@ -84,6 +84,10 @@ contract TapiocaOptionBroker is ITapiocaOptionBroker, Pausable, Ownable, FullMat
     // ==========
     //    READ
     // ==========
+
+    function getMarketShares(address account, uint256 bucketId, address market) external view returns (uint256) {
+        return _marketShares[account][bucketId][market];
+    }
 
     /// @notice Returns the current epoch given a timestamp
     function timestampToEpoch(uint256 timestamp) external view returns (uint256) {
@@ -215,7 +219,7 @@ contract TapiocaOptionBroker is ITapiocaOptionBroker, Pausable, Ownable, FullMat
         position.lockedAt = uint56(block.timestamp);
         position.expiry = uint56(expiry);
 
-        if (_marketShares[to][market] == 0) {
+        if (_marketShares[to][bucketId][market] == 0) {
             position.markets.push(market);
         }
 
@@ -228,7 +232,7 @@ contract TapiocaOptionBroker is ITapiocaOptionBroker, Pausable, Ownable, FullMat
 
         uint256 shares = ISingularity(market).addAsset(address(this), address(this), usdoAmount);
         if (shares == 0) revert SharesNotValid();
-        _marketShares[to][market] += shares;
+        _marketShares[to][bucketId][market] += shares;
         USDO.safeApprove(market, 0);
 
         emit Participate(to, bucketId, currentEpoch(), usdoAmount);
@@ -250,8 +254,8 @@ contract TapiocaOptionBroker is ITapiocaOptionBroker, Pausable, Ownable, FullMat
 
         for (uint256 i; i < position.markets.length; ++i) {
             address market = position.markets[i];
-            uint256 shares = _marketShares[to][market];
-            delete _marketShares[to][market];
+            uint256 shares = _marketShares[to][bucketId][market];
+            delete _marketShares[to][bucketId][market];
 
             IERC20(market).safeApprove(market, shares);
             ISingularity(market).removeAsset(address(this), to, shares);
@@ -281,8 +285,8 @@ contract TapiocaOptionBroker is ITapiocaOptionBroker, Pausable, Ownable, FullMat
 
         for (uint256 i; i < position.markets.length; ++i) {
             address market = position.markets[i];
-            uint256 shares = _marketShares[from][market];
-            delete _marketShares[from][market];
+            uint256 shares = _marketShares[from][bucketId][market];
+            delete _marketShares[from][bucketId][market];
 
             IERC20(market).safeApprove(market, shares);
             uint256 marketUsdoAmount = ISingularity(market).removeAsset(address(this), address(this), shares);
