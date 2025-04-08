@@ -182,7 +182,7 @@ contract TapiocaOptionBroker is ITapiocaOptionBroker, Pausable, Ownable, FullMat
     /// @param usdoAmount The amount of USDO to lend
     /// @param market The singularity market to lend USDO to
     function lock(address to, uint8 bucketId, uint256 usdoAmount, address market) external whenNotPaused nonReentrant {
-        if (lastEpoch != currentEpoch()) advanceWeek();
+        if (lastEpoch != currentEpoch()) revert AdvanceEpochFirst();
         if (usdoAmount == 0) revert AmountNotValid();
         if (_lastEmergencySweep != 0) revert EmergencySweepActivated();
         if (!_activeMarkets[market]) revert MarketNotActive();
@@ -422,7 +422,7 @@ contract TapiocaOptionBroker is ITapiocaOptionBroker, Pausable, Ownable, FullMat
 
     /// @notice Start a new epoch, extract TAP from the TapOFT contract,
     ///         emit it to the active singularities and get the price of TAP for the epoch.
-    function advanceWeek() public {
+    function advanceWeek() external onlyOwner {
         if (lastEpoch == currentEpoch()) revert NotValid();
         uint256 epoch = currentEpoch();
 

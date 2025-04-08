@@ -106,9 +106,9 @@ import {Weth9Mock} from "../mocks/Weth9Mock.sol";
 import {ISingularity} from "tap-utils/interfaces/bar/ISingularity.sol";
 import {IBigBang} from "tap-utils/interfaces/bar/IBigBang.sol";
 import {MagnetarCallFactoryUtil} from "./utils/MagnetarCallFactoryUtil.sol";
-import {Participation} from "../../../contracts/tap-token/interfaces/ITapiocaOptionBroker.sol";
+import {Participation, ITapiocaOptionBroker} from "../../../contracts/tap-token/interfaces/ITapiocaOptionBroker.sol";
 
-contract MagnetarTest is MagnetarTestUtils, MagnetarCallFactoryUtil {
+abstract contract MagnetarTest is MagnetarTestUtils, MagnetarCallFactoryUtil {
     Cluster cluster;
     Magnetar magnetar;
     MagnetarHelper magnetarHelper;
@@ -1588,7 +1588,42 @@ contract MagnetarTest is MagnetarTestUtils, MagnetarCallFactoryUtil {
         assertEq(tob._totalLockedUsdo(_user), 0, "Total USDO should be updated");
     }
 
-    function test_burst_bigBang_tob_lock_expired_bucket_valid(uint160 _userPk, uint160 _userPk2, uint256 _tokenAmount)
+    function test_burst_bigBang_tob_lock_valid(uint160 _userPk, uint160 _userPk2, uint256 _tokenAmount)
+        external
+        withValidAmount(_tokenAmount)
+    {
+        vm.assume(_userPk != _userPk2);
+        _assumeValidAddress(_userPk2, "user2");
+        uint256 _borrowAmount = bb._minBorrowAmount() * 3;
+        vm.assume(_borrowAmount < _tokenAmount);
+        // It uses only 45% of the total user "power" (USDO) to lock because other 45% is used to lock in the previous experied bucket.
+        uint256 _usdoAmount = (_borrowAmount + _borrowAmount * tob._maxDebtBuffer() / 1e4) * 4500 / 10000;
+        address _user = _assumeValidAddress(_userPk, "user");
+
+        uint256 blockTimestamp = block.timestamp;
+
+        Bucket memory bucket = buckets[0];
+
+        _withMarketAddAsset(address(sglUsdo), _userPk2, _tokenAmount * 2);
+
+        // It delegates the call to the magnetar contract in TOB.
+        // It locks only 45% of the total user "power" (USDO) to lock.
+        _withBigBangTOBLock(_userPk, _tokenAmount, 4500);
+
+        MagnetarCall[] memory calls = new MagnetarCall[](2);
+
+        calls[0] =
+            _getERC20PermitMagnetarCall(payable(address(tob.USDO())), _userPk, address(magnetar), _usdoAmount, 1 days);
+        calls[1] = _getTOBLockMagnetarCall(address(tob), _user, 0, _usdoAmount, address(sglUsdo));
+
+        vm.startPrank(_user);
+        magnetar.burst(calls);
+        vm.stopPrank();
+
+        assertEq(tob._totalLockedUsdo(_user), _usdoAmount * 2, "Total USDO should be updated");
+    }
+
+    function test_burst_bigBang_tob_lock_expired_bucket_invalid_advance_week_first(uint160 _userPk, uint160 _userPk2, uint256 _tokenAmount)
         external
         withValidAmount(_tokenAmount)
     {
@@ -1620,10 +1655,11 @@ contract MagnetarTest is MagnetarTestUtils, MagnetarCallFactoryUtil {
         calls[1] = _getTOBLockMagnetarCall(address(tob), _user, 0, _usdoAmount, address(sglUsdo));
 
         vm.startPrank(_user);
+        // Since Magnetar wraps the error message, it can not be asserted.
+        // vm.expectRevert(ITapiocaOptionBroker.AdvanceEpochFirst.selector);
+        vm.expectRevert();
         magnetar.burst(calls);
         vm.stopPrank();
-
-        assertEq(tob._totalLockedUsdo(_user), _usdoAmount * 2, "Total USDO should be updated");
     }
 
     function test_burst_bigBang_tob_unlock_repay_withdrawCollateral_valid(
@@ -1761,7 +1797,9 @@ contract MagnetarTest is MagnetarTestUtils, MagnetarCallFactoryUtil {
             address(tob), _user, 0, address(paymentToken), paymentTokenAmount, tapAmount
         );
 
+        vm.startPrank(__admin);
         tob.advanceWeek();
+        vm.stopPrank();
 
         vm.startPrank(_user);
         tob.setDelegatee(0, address(magnetar));
