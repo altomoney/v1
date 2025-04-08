@@ -34,8 +34,10 @@ import "forge-std/console.sol";
 import {TapiocaMulticallTestnet} from "contracts/utils/TapiocaMulticall/TapiocaMulticallTestnet.sol";
 
 contract DeployTapiocaHostTestnet is Script {
-    uint256 public constant EPOCH_DURATION = 1 minutes;
+    uint256 public constant EPOCH_DURATION_INTERNAL_TESTING = 10 minutes;
+    uint256 public constant EPOCH_DURATION_PUBLIC_TESTING = 2 days;
     address public constant BACKEND_TESTNET_ADDRESS = 0x81E1c5EbA8c723e167E1C046AAF217B8eb7b8AC2;
+    uint256 public constant DEFAULT_MAX_DEBT_BUFFER = 1e4;
 
     function run() public {
         TapiocaInput memory input;
@@ -59,7 +61,7 @@ contract DeployTapiocaHostTestnet is Script {
         input.tapToken = address(
             new TapToken(
                 ITapToken.TapTokenConstructorData(
-                    EPOCH_DURATION,
+                    EPOCH_DURATION_INTERNAL_TESTING,
                     input.lzEndpoint,
                     input.owner,
                     input.owner,
@@ -144,7 +146,8 @@ contract DeployTapiocaHostTestnet is Script {
                 address(usdc),
                 oracles.usdcOracle,
                 oracles.tapOracle,
-                EPOCH_DURATION
+                EPOCH_DURATION_INTERNAL_TESTING,
+                DEFAULT_MAX_DEBT_BUFFER
             );
             TapiocaOptionBroker tob = tobSetter.tob();
 
