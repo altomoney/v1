@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.22;
 
+import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
 import {TapiocaRelease} from "deployments/releases/tapioca-v1/TapiocaRelease.sol";
 import {TapiocaReport, TapiocaInput} from "deployments/interfaces/ITapiocaReport.sol";
 import {SingularityLauncher, RiskParams} from "deployments/releases/tapioca-v1/actions/SingularityLauncher.sol";
@@ -176,6 +177,12 @@ contract DeployTapiocaHostTestnet is Script {
             TapiocaMulticallTestnet(payable(report.tapiocaMulticall)).setOwner(
                 0x4778c2AA94a8D05D63e4C07eb68021528985304C, true
             );
+
+            (ITapiocaOracle oracle, bytes memory oracleData) = tob._paymentTokens(address(usdc));
+            console.log("TOB payment oracle: ", address(oracle));
+            console.log("TOB payment oracle data (might be empty): ");
+            console.logBytes(oracleData);
+            require(address(oracle) != address(0), "TOB payment oracle is not set");
         }
         Usdo(payable(report.usdo)).transferOwnership(report.tapiocaMulticall);
 
