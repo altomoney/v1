@@ -31,20 +31,7 @@ contract BBLeverage is BBLendingCommon {
     // *** ERRORS *** //
     // ************** //
     error LeverageExecutorNotValid();
-    error CollateralShareNotValid();
     error AmountNotValid();
-
-    struct _BuyCollateralCalldata {
-        address from;
-        uint256 borrowAmount;
-        uint256 supplyAmount;
-        bytes data;
-    }
-
-    struct _BuyCollateralMemoryData {
-        uint256 supplyShareToAmount;
-        uint256 borrowShareToAmount;
-    }
 
     /// @notice Lever up: Borrow more and buy collateral with it.
     /// @param from The user who buys
@@ -69,10 +56,8 @@ contract BBLeverage is BBLendingCommon {
             IERC20(borrowableToken()).safeTransferFrom(from, address(leverageExecutor), supplyAmount);
         }
 
-        {
-            _allowedBorrow(from, borrowAmount + _computeVariableOpeningFee(borrowAmount));
-            _borrow(from, address(leverageExecutor), borrowAmount, _computeVariableOpeningFee(borrowAmount));
-        }
+        _allowedBorrow(from, borrowAmount + _computeVariableOpeningFee(borrowAmount));
+        _borrow(from, address(leverageExecutor), borrowAmount, _computeVariableOpeningFee(borrowAmount));
 
         {
             updateExchangeRate();
@@ -88,7 +73,6 @@ contract BBLeverage is BBLendingCommon {
         // Mint shares via erc4626 "deposit()" function logic, skipping transferFrom
         uint256 sharesOutput = previewDeposit(amountOut);
         _mint(from, sharesOutput);
-        address thisAddress = address(this);
         /// @solidity memory-safe-assembly
         assembly {
             // Emit the {Deposit} event.
@@ -108,15 +92,6 @@ contract BBLeverage is BBLendingCommon {
         emit LogAddCollateral(address(this), from, sharesOutput);
     }
 
-    struct _SellCollateralMemoryData {
-        uint256 obtainedShare;
-        uint256 leverageAmount;
-        uint256 shareOut;
-        uint256 partOwed;
-        uint256 amountOwed;
-        uint256 shareOwed;
-    }
-
     /// @notice Lever down: Sell collateral to repay debt; excess goes to YB
     /// @param from The user who sells
     /// @param share Collateral  to sell
@@ -134,21 +109,19 @@ contract BBLeverage is BBLendingCommon {
         }
         _penrose.reAccrueBigBangMarkets();
 
-        _SellCollateralMemoryData memory memoryData;
-
-        memoryData.leverageAmount = super.redeem(share, address(leverageExecutor), from);
+        uint256 leverageAmount = super.redeem(share, address(leverageExecutor), from);
         amountOut =
-            leverageExecutor.getAsset(from, collateral(), address(_borrowableToken()), memoryData.leverageAmount, data);
+            leverageExecutor.getAsset(from, collateral(), address(_borrowableToken()), leverageAmount, data);
 
         IERC20(_borrowableToken()).safeTransfer(from, amountOut);
 
-        memoryData.shareOut = previewWithdraw(amountOut);
+        uint256 shareOut = previewWithdraw(amountOut);
 
-        memoryData.partOwed = userBorrowPart[from];
-        memoryData.amountOwed = totalBorrow.toElastic(memoryData.partOwed, true);
-        memoryData.shareOwed = previewWithdraw(memoryData.amountOwed);
-        if (memoryData.shareOwed <= memoryData.shareOut) {
-            _repay(from, from, memoryData.partOwed, false);
+        uint256 partOwed = userBorrowPart[from];
+        uint256 amountOwed = totalBorrow.toElastic(partOwed, true);
+        uint256 shareOwed = previewWithdraw(amountOwed);
+        if (shareOwed <= shareOut) {
+            _repay(from, from, partOwed, false);
         } else {
             //repay as much as we can
             uint256 partOut = totalBorrow.toBase(amountOut, false);

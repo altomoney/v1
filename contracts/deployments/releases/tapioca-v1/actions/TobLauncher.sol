@@ -33,34 +33,74 @@ contract TapiocaTestnetTobSetter {
 
     constructor(
         TapiocaReport memory report,
+        address singularityMarket,
         address tapToken,
         address feeCollector,
         address owner,
         address paymentToken,
         address paymentTokenOracle,
         address tapOracle,
-        uint256 epochDuration
+        uint256 epochDuration,
+        uint256 maxDebtBuffer
     ) {
         _createTapiocaOptionBroker(
-            report, tapToken, feeCollector, owner, paymentToken, paymentTokenOracle, tapOracle, epochDuration
+            report, singularityMarket, tapToken, feeCollector, owner, paymentToken, paymentTokenOracle, tapOracle, epochDuration, maxDebtBuffer
         );
     }
 
     function _createTapiocaOptionBroker(
         TapiocaReport memory report,
+        address singularityMarket,
         address tapToken,
         address feeCollector,
         address owner,
         address paymentToken,
         address paymentTokenOracle,
         address tapOracle,
-        uint256 epochDuration
+        uint256 epochDuration,
+        uint256 maxDebtBuffer
     ) internal {
-        Bucket[] memory buckets = new Bucket[](1);
+        Bucket[] memory buckets = new Bucket[](4);
 
         buckets[0] = Bucket({
             enabled: true,
-            lockEpochDuration: 4,
+            lockEpochDuration: 1, // 1 Epoch
+            epochGrowthRate: 1,
+            epochDecayRate: 1,
+            epochCeiling: 100,
+            epochFloor: 1,
+            rewardsMultiplier: 10_00,
+            currentEpochInflows: 0,
+            lastEpochInflows: 0,
+            growthGoal: 10 ether
+        });
+        buckets[1] = Bucket({
+            enabled: true,
+            lockEpochDuration: 2, // 2 Epochs
+            epochGrowthRate: 1,
+            epochDecayRate: 1,
+            epochCeiling: 100,
+            epochFloor: 1,
+            rewardsMultiplier: 20_00,
+            currentEpochInflows: 0,
+            lastEpochInflows: 0,
+            growthGoal: 20 ether
+        });
+        buckets[2] = Bucket({
+            enabled: true,
+            lockEpochDuration: 3, // 3 Epochs
+            epochGrowthRate: 1,
+            epochDecayRate: 1,
+            epochCeiling: 100,
+            epochFloor: 1,
+            rewardsMultiplier: 35_00,
+            currentEpochInflows: 0,
+            lastEpochInflows: 0,
+            growthGoal: 30 ether
+        });
+        buckets[3] = Bucket({
+            enabled: true,
+            lockEpochDuration: 4, // 4 Epochs
             epochGrowthRate: 1,
             epochDecayRate: 1,
             epochCeiling: 100,
@@ -68,7 +108,7 @@ contract TapiocaTestnetTobSetter {
             rewardsMultiplier: 50_00,
             currentEpochInflows: 0,
             lastEpochInflows: 0,
-            growthGoal: 10 ether
+            growthGoal: 40 ether
         });
 
         tob = new TapiocaOptionBroker(
@@ -80,6 +120,8 @@ contract TapiocaTestnetTobSetter {
         tob.setTapOracle(tapOracle, "");
         tob.setCluster(report.cluster);
         tob.setPenrose(report.penrose);
+        tob.setMaxDebtBuffer(maxDebtBuffer);
+        tob.setMarket(singularityMarket, true);
 
         tob.transferOwnership(owner);
     }

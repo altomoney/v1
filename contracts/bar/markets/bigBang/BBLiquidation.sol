@@ -68,10 +68,8 @@ contract BBLiquidation is BBCommon {
         _penrose.reAccrueBigBangMarkets();
 
         // compute borrow amount with bonus
-        uint256 requiredCollateral = _computeRequiredCollateralWithBonus(user);
-
         uint256 collateralShare = balanceOf(user);
-        if (requiredCollateral < previewRedeem(collateralShare)) revert NotAuthorized();
+        if (_computeRequiredCollateralWithBonus(user) < previewRedeem(collateralShare)) revert NotAuthorized();
 
         // update totalBorrow
         uint256 borrowAmount = totalBorrow.toElastic(userBorrowPart[user], true);

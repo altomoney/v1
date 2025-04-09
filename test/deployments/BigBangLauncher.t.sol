@@ -32,6 +32,7 @@ contract BigBangLauncherTests is Test {
         input.lzChainId = 0;
         input.wrappedNativeToken = address(new ERC20Mock("A", "A"));
         input.tapToken = address(new ERC20Mock("B", "B"));
+        input.bbMarketBorrowCap = 3_000_000e18;
 
         input.lzEndpoint = address(new LZEndpointMock(1));
         input.zeroXSwapper = address(1);
@@ -46,7 +47,8 @@ contract BigBangLauncherTests is Test {
             report.penrose,
             report.simpleLeverageExecutor,
             report.bigbang,
-            report.bbDebtRateHelper
+            report.bbDebtRateHelper,
+            input.bbMarketBorrowCap
         );
     }
 

@@ -31,7 +31,6 @@ contract BBCommon is BBStorage {
     // ************** //
     // *** ERRORS *** //
     // ************** //
-    error NotEnough();
     error AccruePaused();
     error OracleCallFailed();
 

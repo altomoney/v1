@@ -52,17 +52,10 @@ contract Singularity is SGLCommon {
     /// @notice returns the leverage module
     SGLLeverage public leverageModule;
 
-    struct _InitMemoryTokensData {
-        IERC20 _asset;
-        IERC20 _collateral;
-    }
-
     // ************** //
     // *** ERRORS *** //
     // ************** //
     error ModuleNotSet();
-    error NotAuthorized();
-    error SameState();
     error MinLendAmountNotMet();
 
     function totalAssetSupply() public view returns (uint256) {

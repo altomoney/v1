@@ -12,6 +12,8 @@ import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
 import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
 import {MarketERC4626} from "./MarketERC4626.sol";
 import {Module, PauseType} from "tap-utils/interfaces/bar/IMarket.sol";
+import {MarketLib} from "../../utils/markets/MarketLib.sol";
+import {IMarket} from "../../utils/interfaces/bar/IMarket.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 /*
@@ -27,6 +29,7 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.
 
 contract Market is MarketERC4626, Ownable, ReentrancyGuard {
     using RebaseLibrary for Rebase;
+    using MarketLib for IMarket;
 
     // ************ //
     // *** VARS *** //
@@ -102,10 +105,6 @@ contract Market is MarketERC4626, Ownable, ReentrancyGuard {
     // ************** //
     /// @notice event emitted when `leverageExecutor` is updated
     event LeverageExecutorSet(address oldVal, address newVal);
-    /// @notice event emitted when `exchangeRate` validation duration is updated
-    event ExchangeRateDurationUpdated(uint256 _oldVal, uint256 _newVal);
-    /// @notice event emitted when conservator is updated
-    event ConservatorUpdated(address old, address _new);
     /// @notice event emitted when pause state is changed
     event PausedUpdated(PauseType indexed _type, bool oldState, bool newState);
     /// @notice event emitted when cached exchange rate is updated
@@ -135,11 +134,11 @@ contract Market is MarketERC4626, Ownable, ReentrancyGuard {
     constructor(string memory __name, string memory __symbol) MarketERC4626(__name, __symbol) {}
 
     modifier optionNotPaused(PauseType _type) {
-        require(!pauseOptions[_type], "Market: paused");
+        _optionNotPaused(_type);
         _;
     }
 
-    function _optionNotPaused(PauseType _type) internal {
+    function _optionNotPaused(PauseType _type) internal view {
         require(!pauseOptions[_type], "Market: paused");
     }
 
@@ -160,9 +159,13 @@ contract Market is MarketERC4626, Ownable, ReentrancyGuard {
     bool internal initialized;
 
     modifier onlyOnce() {
-        require(!initialized, "Market: initialized");
+        _onlyOnce();
         _;
         initialized = true;
+    }
+
+    function _onlyOnce() private view {
+        require(!initialized, "Market: initialized");
     }
 
     // *********************** //
@@ -332,7 +335,7 @@ contract Market is MarketERC4626, Ownable, ReentrancyGuard {
         view
         returns (uint256)
     {
-        return _computeClosingFactor(
+        return IMarket(address(this)).computeClosingFactor(
             borrowPart,
             collateralPartInAsset,
             FEE_PRECISION_DECIMALS,
@@ -340,55 +343,6 @@ contract Market is MarketERC4626, Ownable, ReentrancyGuard {
             liquidationMultiplier,
             totalBorrow
         );
-    }
-
-    function _computeClosingFactor(
-        uint256 borrowPart,
-        uint256 collateralPartInAsset,
-        uint256 ratesPrecision,
-        uint256 _liquidationCollateralizationRate,
-        uint256 _liquidationMultiplier,
-        Rebase memory _totalBorrow
-    ) internal pure returns (uint256) {
-        // Obviously it's not `borrowPart` anymore but `borrowAmount`
-        borrowPart = (borrowPart * _totalBorrow.elastic) / _totalBorrow.base;
-
-        //borrowPart and collateralPartInAsset should already be scaled due to the exchange rate computation
-        uint256 liquidationStartsAt =
-            (collateralPartInAsset * _liquidationCollateralizationRate) / (10 ** ratesPrecision);
-
-        if (borrowPart < liquidationStartsAt) return 0;
-
-        //compute numerator
-        uint256 numerator = borrowPart - liquidationStartsAt;
-        //compute denominator
-        uint256 diff = (_liquidationCollateralizationRate * ((10 ** ratesPrecision) + _liquidationMultiplier))
-            / (10 ** ratesPrecision);
-        int256 denominator = (int256(10 ** ratesPrecision) - int256(diff)) * int256(1e13);
-
-        //compute closing factor
-        int256 x = (int256(numerator) * int256(1e18)) / denominator;
-        int256 xPos = x < 0 ? -x : x;
-
-        //assure closing factor validity
-        if (uint256(xPos) > borrowPart) return borrowPart;
-
-        return uint256(xPos);
-    }
-
-    struct ViewLiquidation {
-        address user;
-        uint256 maxBorrowPart;
-        uint256 minLiquidationBonus;
-        uint256 exchangeRate;
-        uint256 userCollateralShare;
-        uint256 userBorrowPart;
-        Rebase totalBorrow;
-        uint256 liquidationBonusAmount;
-        uint256 liquidationCollateralizationRate;
-        uint256 liquidationMultiplier;
-        uint256 exchangeRatePrecision;
-        uint256 feeDecimalsPrecision;
     }
 
     function viewLiquidationBorrowAndCollateralShare(
@@ -399,84 +353,15 @@ contract Market is MarketERC4626, Ownable, ReentrancyGuard {
         uint256 _exchangeRate,
         uint256 _feeDecimalsPrecision
     ) external view returns (uint256 borrowAmount, uint256 borrowPart, uint256 collateralShare) {
-        ViewLiquidation memory data;
-        data.user = _user;
-        data.maxBorrowPart = _maxBorrowPart;
-        data.minLiquidationBonus = _minLiquidationBonus;
-        data.exchangeRate = _exchangeRate;
-        data.exchangeRatePrecision = _exchangeRatePrecision;
-        data.feeDecimalsPrecision = _feeDecimalsPrecision;
-        data.userCollateralShare = balanceOf(_user);
-        data.userBorrowPart = userBorrowPart[_user];
-        data.totalBorrow = totalBorrow;
-        data.liquidationBonusAmount = liquidationBonusAmount;
-        data.liquidationCollateralizationRate = liquidationCollateralizationRate;
-        data.liquidationMultiplier = liquidationMultiplier;
-        return _viewLiquidationBorrowAndCollateralShare(data);
-    }
-
-    function _viewLiquidationBorrowAndCollateralShare(ViewLiquidation memory _data)
-        internal
-        view
-        returns (uint256 borrowAmount, uint256 borrowPart, uint256 collateralShare)
-    {
-        if (_data.exchangeRate == 0) revert ExchangeRateNotValid();
-
-        // get collateral amount in asset's value
-        uint256 collateralPartInAsset = (
-            convertToAssets(_data.userCollateralShare) * _data.exchangeRatePrecision
-        ) / _data.exchangeRate;
-
-        // compute closing factor (liquidatable amount)
-        uint256 borrowPartWithBonus = computeClosingFactor(_data.userBorrowPart, collateralPartInAsset);
-
-        // limit liquidable amount before bonus to the current debt
-        uint256 userTotalBorrowAmount = _data.totalBorrow.toElastic(_data.userBorrowPart, true);
-        borrowPartWithBonus = borrowPartWithBonus > userTotalBorrowAmount ? userTotalBorrowAmount : borrowPartWithBonus;
-
-        // make sure liquidator cannot bypass bad debt handling
-        if (collateralPartInAsset < borrowPartWithBonus) revert BadDebt();
-
-        // check the amount to be repaid versus liquidator supplied limit
-        borrowPartWithBonus = borrowPartWithBonus > _data.maxBorrowPart ? _data.maxBorrowPart : borrowPartWithBonus;
-        borrowAmount = borrowPartWithBonus;
-
-        // compute part units, preventing rounding dust when liquidation is full
-        borrowPart = borrowAmount == userTotalBorrowAmount
-            ? _data.userBorrowPart
-            : _data.totalBorrow.toBase(borrowPartWithBonus, false);
-        if (borrowPart == 0) revert Solvent();
-
-        if (_data.liquidationBonusAmount > 0) {
-            borrowPartWithBonus =
-                borrowPartWithBonus + (borrowPartWithBonus * _data.liquidationBonusAmount) / FEE_PRECISION;
-        }
-
-        if (collateralPartInAsset < borrowPartWithBonus) {
-            if (collateralPartInAsset <= userTotalBorrowAmount) {
-                revert BadDebt();
-            }
-            // If current debt is covered by collateral fully
-            // then there is some liquidation bonus,
-            // so liquidation can proceed if liquidator's minimum is met
-            if (_data.minLiquidationBonus > 0) {
-                // `collateralPartInAsset > borrowAmount` as `borrowAmount <= userTotalBorrowAmount`
-                uint256 effectiveBonus = ((collateralPartInAsset - borrowAmount) * FEE_PRECISION) / borrowAmount;
-                if (effectiveBonus < _data.minLiquidationBonus) {
-                    revert InsufficientLiquidationBonus();
-                }
-                collateralShare = _data.userCollateralShare;
-            } else {
-                revert InsufficientLiquidationBonus();
-            }
-        } else {
-            collateralShare = convertToShares(
-                (borrowPartWithBonus * _data.exchangeRate) / _data.exchangeRatePrecision
-            );
-            if (collateralShare > _data.userCollateralShare) {
-                revert NotEnoughCollateral();
-            }
-        }
+        return IMarket(address(this)).viewLiquidationBorrowAndCollateralShare(
+            _user,
+            _maxBorrowPart,
+            _minLiquidationBonus,
+            _exchangeRatePrecision,
+            _exchangeRate,
+            _feeDecimalsPrecision,
+            FEE_PRECISION
+        );
     }
 
     /// @notice return the amount of collateral for a `user` to be solvent, min TVL and max TVL. Returns 0 if user already solvent.
@@ -493,18 +378,7 @@ contract Market is MarketERC4626, Ownable, ReentrancyGuard {
         returns (uint256 amountToSolvency, uint256 minTVL, uint256 maxTVL)
     {
         uint256 borrowPart = userBorrowPart[user];
-        if (borrowPart == 0) return (0, 0, 0);
-
-        Rebase memory _totalBorrow = _accrueView();
-
-        uint256 collateralAmountInAsset = _computeMaxBorrowableAmount(user, _exchangeRate);
-
-        borrowPart = (borrowPart * _totalBorrow.elastic) / _totalBorrow.base;
-
-        unchecked {
-            amountToSolvency = borrowPart >= collateralAmountInAsset ? borrowPart - collateralAmountInAsset : 0;
-        }
-        (minTVL, maxTVL) = _computeMaxAndMinLTVInAsset(balanceOf(user), _exchangeRate);
+        return IMarket(address(this)).computeTVLInfo(borrowPart, _accrueView(), user, _exchangeRate, FEE_PRECISION);
     }
 
     /// @notice Gets the exchange rate. I.e how much collateral to buy 1e18 asset.
@@ -647,70 +521,15 @@ contract Market is MarketERC4626, Ownable, ReentrancyGuard {
         return _returnData; // All that remains is the revert string
     }
 
-    function _computeMaxBorrowableAmount(address user, uint256 _exchangeRate)
-        internal
-        view
-        returns (uint256 collateralAmountInAsset)
-    {
-        require(_exchangeRate > 0, "Market: exchangeRate not valid");
-        uint256 userCollateralAmount = balanceOf(user);
-        collateralAmountInAsset =
-            (userCollateralAmount * EXCHANGE_RATE_PRECISION * collateralizationRate) / (FEE_PRECISION * _exchangeRate);
-    }
-
     /// @notice Concrete implementation of `isSolvent`. Includes a parameter to allow caching `exchangeRate`.
     /// @param _exchangeRate The exchange rate. Used to cache the `exchangeRate` between calls.
     function _isSolvent(address user, uint256 _exchangeRate, bool _liquidation) internal view returns (bool) {
-        // accrue must have already been called!
-        uint256 borrowPart = userBorrowPart[user];
-        if (borrowPart == 0) return true;
-        uint256 collateralShare = balanceOf(user);
-        if (collateralShare == 0) return false;
-
-        Rebase memory _totalBorrow = totalBorrow;
-
-        uint256 collateralAmount = maxWithdraw(user);
-        return (collateralAmount * EXCHANGE_RATE_PRECISION / FEE_PRECISION)
-            * (_liquidation ? liquidationCollateralizationRate : collateralizationRate)
-        // Moved exchangeRate here instead of dividing the other side to preserve more precision
-        >= (borrowPart * _totalBorrow.elastic * _exchangeRate) / _totalBorrow.base;
+        return IMarket(address(this)).isSolvent(user, _exchangeRate, _liquidation, FEE_PRECISION);
     }
 
-    /// @notice Returns the min and max LTV for user in asset price
-    function _computeMaxAndMinLTVInAsset(uint256 collateralShare, uint256 _exchangeRate)
-        internal
-        view
-        returns (uint256 min, uint256 max)
-    {
-        require(_exchangeRate > 0, "Market: exchangeRate not valid");
-        uint256 collateralAmount = convertToAssets(collateralShare);
 
-        max = (collateralAmount * EXCHANGE_RATE_PRECISION) / _exchangeRate;
-        min = (max * liquidationCollateralizationRate) / FEE_PRECISION;
-    }
-
-    function _getCallerReward(address user, uint256 _exchangeRate) internal view returns (uint256) {
-        (uint256 startTVLInAsset, uint256 maxTVLInAsset) = _computeMaxAndMinLTVInAsset(balanceOf(user), _exchangeRate);
-
-        uint256 borrowed = userBorrowPart[user];
-        if (borrowed == 0) return 0;
-        if (startTVLInAsset == 0) return 0;
-
-        borrowed = (borrowed * totalBorrow.elastic) / totalBorrow.base;
-
-        if (borrowed < startTVLInAsset) return 0;
-        if (borrowed >= maxTVLInAsset) return minLiquidatorReward;
-
-        uint256 rewardPercentage = ((borrowed - startTVLInAsset) * FEE_PRECISION) / (maxTVLInAsset - startTVLInAsset);
-
-        int256 diff = int256(minLiquidatorReward) - int256(maxLiquidatorReward);
-        int256 reward = (diff * int256(rewardPercentage)) / int256(FEE_PRECISION) + int256(maxLiquidatorReward);
-
-        if (reward < int256(minLiquidatorReward)) {
-            reward = int256(minLiquidatorReward);
-        }
-
-        return uint256(reward);
+    function _getCallerReward(address _user, uint256 _exchangeRate) internal view returns (uint256) {
+        return IMarket(address(this)).getCallerReward(_user, _exchangeRate, FEE_PRECISION);
     }
 
     function _pauseOptions(PauseType _pauseProp) external view returns (bool) {

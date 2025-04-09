@@ -9,7 +9,6 @@ import {IERC20} from "@boringcrypto/boring-solidity/contracts/ERC20.sol";
 // Tapioca
 import {IUsdo} from "tap-utils/interfaces/oft/IUsdo.sol";
 import {BBCommon} from "./BBCommon.sol";
-import {PauseType} from "tap-utils/interfaces/bar/IMarket.sol";
 
 /*
 
@@ -106,10 +105,5 @@ contract BBLendingCommon is BBCommon {
         IUsdo(address(_borrowableToken())).burn(address(this), amount);
 
         emit LogRepay(from, to, amount, part);
-    }
-
-    function _safeDecimals(IERC20 token) internal view returns (uint8) {
-        (bool success, bytes memory data) = address(token).staticcall(abi.encodeWithSelector(0x313ce567)); //decimals() selector
-        return success && data.length == 32 ? abi.decode(data, (uint8)) : 18;
     }
 }

@@ -3,8 +3,6 @@ pragma solidity ^0.8.22;
 
 // External
 import {RebaseLibrary, Rebase} from "@boringcrypto/boring-solidity/contracts/libraries/BoringRebase.sol";
-import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-
 // Tapioca
 import {ISGLInterestHelper} from "tap-utils/interfaces/bar/ISGLInterestHelper.sol";
 import {ISingularity} from "tap-utils/interfaces/bar/ISingularity.sol";
@@ -24,7 +22,6 @@ import {SGLStorage} from "./SGLStorage.sol";
 
 abstract contract SGLCommon is SGLStorage {
     using RebaseLibrary for Rebase;
-    using SafeCast for uint256;
 
     // ************** //
     // *** ERRORS *** //

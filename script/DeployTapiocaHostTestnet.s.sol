@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.22;
 
+import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
 import {TapiocaRelease} from "deployments/releases/tapioca-v1/TapiocaRelease.sol";
 import {TapiocaReport, TapiocaInput} from "deployments/interfaces/ITapiocaReport.sol";
 import {SingularityLauncher, RiskParams} from "deployments/releases/tapioca-v1/actions/SingularityLauncher.sol";
@@ -32,10 +33,16 @@ import {
 import {TapiocaTestnetTobSetter} from "contracts/deployments/releases/tapioca-v1/actions/TobLauncher.sol";
 import "forge-std/console.sol";
 import {TapiocaMulticallTestnet} from "contracts/utils/TapiocaMulticall/TapiocaMulticallTestnet.sol";
+import {IMarket} from "../contracts/utils/interfaces/bar/IMarket.sol";
+import {console} from "forge-std/console.sol";
 
 contract DeployTapiocaHostTestnet is Script {
-    uint256 public constant EPOCH_DURATION = 1 minutes;
+    uint128 public constant MULTI_TOKEN_SENDER_MINT_TOKENS = type(uint128).max;
+    uint256 public constant EPOCH_DURATION_INTERNAL_TESTING = 10 minutes;
+    uint256 public constant EPOCH_DURATION_PUBLIC_TESTING = 2 days;
     address public constant BACKEND_TESTNET_ADDRESS = 0x81E1c5EbA8c723e167E1C046AAF217B8eb7b8AC2;
+    uint256 public constant DEFAULT_MAX_DEBT_BUFFER = 1e4;
+    uint256 public constant DEFAULT_BB_MARKET_BORROW_CAP = 3_000_000e18;
 
     function run() public {
         TapiocaInput memory input;
@@ -47,6 +54,7 @@ contract DeployTapiocaHostTestnet is Script {
         input.lzEndpoint = 0x6EDCE65403992e310A62460808c4b910D972f10f;
         input.isTestnet = true;
         input.owner = msg.sender;
+        input.bbMarketBorrowCap = DEFAULT_BB_MARKET_BORROW_CAP;
 
         // BigBang risk params
         BigBangRiskParams memory bigBangRiskParams;
@@ -59,7 +67,7 @@ contract DeployTapiocaHostTestnet is Script {
         input.tapToken = address(
             new TapToken(
                 ITapToken.TapTokenConstructorData(
-                    EPOCH_DURATION,
+                    EPOCH_DURATION_INTERNAL_TESTING,
                     input.lzEndpoint,
                     input.owner,
                     input.owner,
@@ -80,6 +88,12 @@ contract DeployTapiocaHostTestnet is Script {
         TestnetOracles memory oracles = deployTestnetOracles(input);
 
         report = TapiocaRelease.deployTapiocaV1(input, report);
+        console.log("Penrose:           ", address(report.penrose));
+        console.log("Cluster:           ", address(report.cluster));
+        console.log("Usdo:              ", address(report.usdo));
+        console.log("TapToken:          ", address(input.tapToken));
+        console.log("TapiocaMulticall:  ", address(report.tapiocaMulticall));
+        console.log("MarketHelper:      ", address(report.marketHelper));
 
         {
             TapToken(payable(input.tapToken)).setCluster(ICluster(report.cluster));
@@ -115,6 +129,7 @@ contract DeployTapiocaHostTestnet is Script {
                 oracles.usdcOracle,
                 singularityRiskParams
             );
+            console.log("Singularity: ", singularity);
         }
 
         address bigBang;
@@ -131,6 +146,7 @@ contract DeployTapiocaHostTestnet is Script {
             bigBangRiskParams.collateral = address(stETH);
 
             bigBang = createBigBangMarket(report.tapiocaMulticall, report.bigBangLauncher, bigBangRiskParams);
+            console.log("BigBang:   ", bigBang);
             Usdo(payable(report.usdo)).setMinterStatus(bigBang, true);
             Usdo(payable(report.usdo)).setBurnerStatus(bigBang, true);
         }
@@ -138,30 +154,35 @@ contract DeployTapiocaHostTestnet is Script {
         {
             TapiocaTestnetTobSetter tobSetter = new TapiocaTestnetTobSetter(
                 report,
+                singularity,
                 input.tapToken,
                 report.tapiocaMulticall,
                 input.owner,
                 address(usdc),
                 oracles.usdcOracle,
                 oracles.tapOracle,
-                EPOCH_DURATION
+                EPOCH_DURATION_INTERNAL_TESTING,
+                DEFAULT_MAX_DEBT_BUFFER
             );
             TapiocaOptionBroker tob = tobSetter.tob();
+            console.log("TapiocaOptionBroker:   ", address(tob));
 
             TapToken(payable(input.tapToken)).setMinter(address(tob));
 
             tob.enableTapTokenRewards();
             tob.transferOwnership(report.tapiocaMulticall);
 
-            createTwTap(payable(input.tapToken), input.owner);
-
+            address twTap = createTwTap(payable(input.tapToken), input.owner);
+            console.log("TwTap:   ", address(twTap));
+            
             TapToken(payable(input.tapToken)).setMinter(address(tob));
 
             // Mint and transfer mock tokens to multitokensender and deployer
             MultiTokenSender(report.multiTokenSender).updateWhitelist(BACKEND_TESTNET_ADDRESS, true);
-            TapToken(payable(input.tapToken)).transfer(report.multiTokenSender, 1000000 ether);
-            usdc.mint(report.multiTokenSender, 1000000 ether);
-            stETH.mint(report.multiTokenSender, 1000000 ether);
+            TapToken(payable(input.tapToken)).transfer(report.multiTokenSender, 20_000_000 ether);
+            usdc.mint(report.multiTokenSender, MULTI_TOKEN_SENDER_MINT_TOKENS);
+            stETH.mint(report.multiTokenSender, MULTI_TOKEN_SENDER_MINT_TOKENS);
+            Usdo(payable(report.usdo)).mint(report.multiTokenSender, MULTI_TOKEN_SENDER_MINT_TOKENS);
             TapToken(payable(input.tapToken)).transfer(
                 report.tapiocaMulticall, TapToken(payable(input.tapToken)).balanceOf(msg.sender) - 100000e18
             );
@@ -176,6 +197,12 @@ contract DeployTapiocaHostTestnet is Script {
             TapiocaMulticallTestnet(payable(report.tapiocaMulticall)).setOwner(
                 0x4778c2AA94a8D05D63e4C07eb68021528985304C, true
             );
+
+            (ITapiocaOracle oracle, bytes memory oracleData) = tob._paymentTokens(address(usdc));
+            console.log("TOB payment oracle: ", address(oracle));
+            console.log("TOB payment oracle data (might be empty): ");
+            console.logBytes(oracleData);
+            require(address(oracle) != address(0), "TOB payment oracle is not set");
         }
         Usdo(payable(report.usdo)).transferOwnership(report.tapiocaMulticall);
 
