@@ -82,7 +82,8 @@ library TapiocaRelease {
             reports.sglReport,
             reports.bbReport,
             reports.penroseReport.penrose,
-            reports.magnetarReport.simpleLeverageExecutor
+            reports.magnetarReport.simpleLeverageExecutor,
+            input.bbMarketBorrowCap
         );
 
         utilitiesBatch.initializeCluster(
@@ -178,7 +179,8 @@ library TapiocaRelease {
         SGLReport memory sglReport,
         BBReport memory bbReport,
         address penrose,
-        address leverageExecutor
+        address leverageExecutor,
+        uint256 bbMarketBorrowCap
     ) private returns (LauncherReport memory report) {
         BigBangLauncher bigBangLauncher = new BigBangLauncher(
             bbReport.bbLiquidation,
@@ -188,7 +190,8 @@ library TapiocaRelease {
             penrose,
             leverageExecutor,
             bbReport.bigbang,
-            bbReport.bbDebtRateHelper
+            bbReport.bbDebtRateHelper,
+            bbMarketBorrowCap
         );
         SingularityLauncher singularityLauncher = new SingularityLauncher(
             sglReport.sglLiquidationModule,

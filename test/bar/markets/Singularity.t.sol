@@ -106,6 +106,7 @@ contract SingularityTest is UsdoTestHelper {
         input.lzChainId = 0;
         input.wrappedNativeToken = address(new ERC20Mock("A", "A"));
         input.tapToken = address(new ERC20Mock("B", "B"));
+        input.bbMarketBorrowCap = 3_000_000e18;
 
         input.lzEndpoint = address(new LZEndpointMock(1));
         input.zeroXSwapper = address(1);

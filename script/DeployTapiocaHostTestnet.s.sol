@@ -32,12 +32,16 @@ import {
 import {TapiocaTestnetTobSetter} from "contracts/deployments/releases/tapioca-v1/actions/TobLauncher.sol";
 import "forge-std/console.sol";
 import {TapiocaMulticallTestnet} from "contracts/utils/TapiocaMulticall/TapiocaMulticallTestnet.sol";
+import {IMarket} from "../contracts/utils/interfaces/bar/IMarket.sol";
+import {console} from "forge-std/console.sol";
 
 contract DeployTapiocaHostTestnet is Script {
+    uint128 public constant MULTI_TOKEN_SENDER_MINT_TOKENS = type(uint128).max;
     uint256 public constant EPOCH_DURATION_INTERNAL_TESTING = 10 minutes;
     uint256 public constant EPOCH_DURATION_PUBLIC_TESTING = 2 days;
     address public constant BACKEND_TESTNET_ADDRESS = 0x81E1c5EbA8c723e167E1C046AAF217B8eb7b8AC2;
     uint256 public constant DEFAULT_MAX_DEBT_BUFFER = 1e4;
+    uint256 public constant DEFAULT_BB_MARKET_BORROW_CAP = 3_000_000e18;
 
     function run() public {
         TapiocaInput memory input;
@@ -49,6 +53,7 @@ contract DeployTapiocaHostTestnet is Script {
         input.lzEndpoint = 0x6EDCE65403992e310A62460808c4b910D972f10f;
         input.isTestnet = true;
         input.owner = msg.sender;
+        input.bbMarketBorrowCap = DEFAULT_BB_MARKET_BORROW_CAP;
 
         // BigBang risk params
         BigBangRiskParams memory bigBangRiskParams;
@@ -82,6 +87,12 @@ contract DeployTapiocaHostTestnet is Script {
         TestnetOracles memory oracles = deployTestnetOracles(input);
 
         report = TapiocaRelease.deployTapiocaV1(input, report);
+        console.log("Penrose:           ", address(report.penrose));
+        console.log("Cluster:           ", address(report.cluster));
+        console.log("Usdo:              ", address(report.usdo));
+        console.log("TapToken:          ", address(input.tapToken));
+        console.log("TapiocaMulticall:  ", address(report.tapiocaMulticall));
+        console.log("MarketHelper:      ", address(report.marketHelper));
 
         {
             TapToken(payable(input.tapToken)).setCluster(ICluster(report.cluster));
@@ -117,6 +128,7 @@ contract DeployTapiocaHostTestnet is Script {
                 oracles.usdcOracle,
                 singularityRiskParams
             );
+            console.log("Singularity: ", singularity);
         }
 
         address bigBang;
@@ -133,6 +145,7 @@ contract DeployTapiocaHostTestnet is Script {
             bigBangRiskParams.collateral = address(stETH);
 
             bigBang = createBigBangMarket(report.tapiocaMulticall, report.bigBangLauncher, bigBangRiskParams);
+            console.log("BigBang:   ", bigBang);
             Usdo(payable(report.usdo)).setMinterStatus(bigBang, true);
             Usdo(payable(report.usdo)).setBurnerStatus(bigBang, true);
         }
@@ -150,21 +163,24 @@ contract DeployTapiocaHostTestnet is Script {
                 DEFAULT_MAX_DEBT_BUFFER
             );
             TapiocaOptionBroker tob = tobSetter.tob();
+            console.log("TapiocaOptionBroker:   ", address(tob));
 
             TapToken(payable(input.tapToken)).setMinter(address(tob));
 
             tob.enableTapTokenRewards();
             tob.transferOwnership(report.tapiocaMulticall);
 
-            createTwTap(payable(input.tapToken), input.owner);
+            address twTap = createTwTap(payable(input.tapToken), input.owner);
+            console.log("TwTap:   ", address(twTap));
 
             TapToken(payable(input.tapToken)).setMinter(address(tob));
 
             // Mint and transfer mock tokens to multitokensender and deployer
             MultiTokenSender(report.multiTokenSender).updateWhitelist(BACKEND_TESTNET_ADDRESS, true);
             TapToken(payable(input.tapToken)).transfer(report.multiTokenSender, 1000000 ether);
-            usdc.mint(report.multiTokenSender, 1000000 ether);
-            stETH.mint(report.multiTokenSender, 1000000 ether);
+            usdc.mint(report.multiTokenSender, MULTI_TOKEN_SENDER_MINT_TOKENS);
+            stETH.mint(report.multiTokenSender, MULTI_TOKEN_SENDER_MINT_TOKENS);
+            Usdo(payable(report.usdo)).mint(report.multiTokenSender, MULTI_TOKEN_SENDER_MINT_TOKENS);
             TapToken(payable(input.tapToken)).transfer(
                 report.tapiocaMulticall, TapToken(payable(input.tapToken)).balanceOf(msg.sender) - 100000e18
             );

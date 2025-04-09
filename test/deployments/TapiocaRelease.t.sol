@@ -23,6 +23,7 @@ contract TapiocaReleaseTest is Test {
         input.zeroXSwapper = address(1);
         input.wrappedNativeToken = address(new ERC20Mock("A", "A"));
         input.tapToken = address(new ERC20Mock("B", "B"));
+        input.bbMarketBorrowCap = 3_000_000e18;
 
         TapiocaRelease.deployTapiocaV1(input, emptyReport);
     }

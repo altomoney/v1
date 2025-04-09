@@ -163,6 +163,7 @@ contract TOBTestBase is Test, Events, Utils {
         input.owner = owner;
         input.lzChainId = 0;
         input.wrappedNativeToken = address(new ERC20Mock("A", "A"));
+        input.bbMarketBorrowCap = 3_000_000e18;
 
         input.lzEndpoint = address(new LZEndpointMock(uint16(block.chainid)));
         input.zeroXSwapper = address(1);
@@ -276,7 +277,8 @@ contract TOBTestBase is Test, Events, Utils {
                 report.penrose,
                 report.simpleLeverageExecutor,
                 report.bigbang,
-                report.bbDebtRateHelper
+                report.bbDebtRateHelper,
+                input.bbMarketBorrowCap
             );
         }
 

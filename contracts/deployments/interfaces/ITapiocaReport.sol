@@ -73,6 +73,7 @@ struct TapiocaInput {
     address zeroXSwapper;
     address tapToken;
     address lzEndpoint;
+    uint256 bbMarketBorrowCap;
     uint16 lzChainId;
     bool isTestnet;
     bool isMetaInstance; // if false, it will deploy a host Tapioca instance (Arbitrum), if not, it will deploy a meta instance deployment (Other networks, like Ethereum)

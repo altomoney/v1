@@ -111,6 +111,7 @@ abstract contract MagnetarTestUtils is TestHelper {
 
         input.owner = __owner;
         input.lzChainId = uint16(aEid);
+        input.bbMarketBorrowCap = 3_000_000e18;
 
         input.wrappedNativeToken = address(new ERC20Mock());
         input.tapToken = _createTapToken(
@@ -265,7 +266,8 @@ abstract contract MagnetarTestUtils is TestHelper {
             reportOut.penrose,
             reportOut.simpleLeverageExecutor,
             reportOut.bigbang,
-            reportOut.bbDebtRateHelper
+            reportOut.bbDebtRateHelper,
+            input.bbMarketBorrowCap
         );
 
         BigBangRiskParams memory riskParams;

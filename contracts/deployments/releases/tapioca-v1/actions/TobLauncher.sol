@@ -67,7 +67,7 @@ contract TapiocaTestnetTobSetter {
             epochDecayRate: 1,
             epochCeiling: 100,
             epochFloor: 1,
-            rewardsMultiplier: 50_00,
+            rewardsMultiplier: 10_00,
             currentEpochInflows: 0,
             lastEpochInflows: 0,
             growthGoal: 10 ether
@@ -79,7 +79,7 @@ contract TapiocaTestnetTobSetter {
             epochDecayRate: 1,
             epochCeiling: 100,
             epochFloor: 1,
-            rewardsMultiplier: 50_00,
+            rewardsMultiplier: 20_00,
             currentEpochInflows: 0,
             lastEpochInflows: 0,
             growthGoal: 20 ether
@@ -91,7 +91,7 @@ contract TapiocaTestnetTobSetter {
             epochDecayRate: 1,
             epochCeiling: 100,
             epochFloor: 1,
-            rewardsMultiplier: 50_00,
+            rewardsMultiplier: 35_00,
             currentEpochInflows: 0,
             lastEpochInflows: 0,
             growthGoal: 30 ether
