@@ -173,12 +173,12 @@ contract DeployTapiocaHostTestnet is Script {
 
             address twTap = createTwTap(payable(input.tapToken), input.owner);
             console.log("TwTap:   ", address(twTap));
-
+            
             TapToken(payable(input.tapToken)).setMinter(address(tob));
 
             // Mint and transfer mock tokens to multitokensender and deployer
             MultiTokenSender(report.multiTokenSender).updateWhitelist(BACKEND_TESTNET_ADDRESS, true);
-            TapToken(payable(input.tapToken)).transfer(report.multiTokenSender, 1000000 ether);
+            TapToken(payable(input.tapToken)).transfer(report.multiTokenSender, 20_000_000 ether);
             usdc.mint(report.multiTokenSender, MULTI_TOKEN_SENDER_MINT_TOKENS);
             stETH.mint(report.multiTokenSender, MULTI_TOKEN_SENDER_MINT_TOKENS);
             Usdo(payable(report.usdo)).mint(report.multiTokenSender, MULTI_TOKEN_SENDER_MINT_TOKENS);
