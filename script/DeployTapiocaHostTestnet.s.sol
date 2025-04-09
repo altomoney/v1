@@ -153,6 +153,7 @@ contract DeployTapiocaHostTestnet is Script {
         {
             TapiocaTestnetTobSetter tobSetter = new TapiocaTestnetTobSetter(
                 report,
+                singularity,
                 input.tapToken,
                 report.tapiocaMulticall,
                 input.owner,

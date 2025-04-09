@@ -33,6 +33,7 @@ contract TapiocaTestnetTobSetter {
 
     constructor(
         TapiocaReport memory report,
+        address singularityMarket,
         address tapToken,
         address feeCollector,
         address owner,
@@ -43,12 +44,13 @@ contract TapiocaTestnetTobSetter {
         uint256 maxDebtBuffer
     ) {
         _createTapiocaOptionBroker(
-            report, tapToken, feeCollector, owner, paymentToken, paymentTokenOracle, tapOracle, epochDuration, maxDebtBuffer
+            report, singularityMarket, tapToken, feeCollector, owner, paymentToken, paymentTokenOracle, tapOracle, epochDuration, maxDebtBuffer
         );
     }
 
     function _createTapiocaOptionBroker(
         TapiocaReport memory report,
+        address singularityMarket,
         address tapToken,
         address feeCollector,
         address owner,
@@ -119,6 +121,7 @@ contract TapiocaTestnetTobSetter {
         tob.setCluster(report.cluster);
         tob.setPenrose(report.penrose);
         tob.setMaxDebtBuffer(maxDebtBuffer);
+        tob.setMarket(singularityMarket, true);
 
         tob.transferOwnership(owner);
     }
