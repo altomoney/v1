@@ -86,6 +86,7 @@ contract DeployTapiocaHostTestnet is Script {
         );
 
         TestnetOracles memory oracles = deployTestnetOracles(input);
+        console.log("TapToken:          ", input.tapToken);
         console.log("stETH Oracle:      ", oracles.stETHOracle);
         console.log("USDO Oracle:       ", oracles.usdoOracle);
         console.log("USDC Oracle:       ", oracles.usdcOracle);
