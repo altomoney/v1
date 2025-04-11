@@ -55,6 +55,7 @@ contract DeployTapiocaHostTestnet is Script {
         input.isTestnet = true;
         input.owner = msg.sender;
         input.bbMarketBorrowCap = DEFAULT_BB_MARKET_BORROW_CAP;
+        input.zeroXProxy = address(0); // Not used in testnet
 
         // BigBang risk params
         BigBangRiskParams memory bigBangRiskParams;
@@ -86,11 +87,17 @@ contract DeployTapiocaHostTestnet is Script {
         );
 
         TestnetOracles memory oracles = deployTestnetOracles(input);
-        console.log("TapToken:          ", input.tapToken);
-        console.log("stETH Oracle:      ", oracles.stETHOracle);
-        console.log("USDO Oracle:       ", oracles.usdoOracle);
-        console.log("USDC Oracle:       ", oracles.usdcOracle);
-        console.log("Tap Oracle:        ", oracles.tapOracle);
+
+        console.log("WrappedNativeToken: ", input.wrappedNativeToken);
+        console.log("IsTestnet: ", input.isTestnet);
+        console.log("ZeroXProxy: ", input.zeroXProxy);
+        console.log("Deployer:", msg.sender);
+        console.log("LzChainId:", vm.toString(input.lzChainId));
+        console.log("TapToken: ", input.tapToken);
+        console.log("stETH Oracle: ", oracles.stETHOracle);
+        console.log("USDO Oracle: ", oracles.usdoOracle);
+        console.log("USDC Oracle: ", oracles.usdcOracle);
+        console.log("Tap Oracle: ", oracles.tapOracle);
 
         report = TapiocaRelease.deployTapiocaV1(input, report);
         console.log("Magnetar: ", report.magnetar);
@@ -98,6 +105,7 @@ contract DeployTapiocaHostTestnet is Script {
         console.log("MagnetarMintModule: ", report.magnetarMintModule);
         console.log("MagnetarOptionModule: ", report.magnetarOptionModule);
         console.log("MagnetarAssetModule: ", report.magnetarAssetModule);
+        console.log("MagnetarLeverageModule: ", report.magnetarLeverageModule);
         console.log("MagnetarHelper: ", report.magnetarHelper);
         console.log("SimpleLeverageExecutor: ", report.simpleLeverageExecutor);
         console.log("ToftHelper: ", report.toftHelper);
@@ -115,11 +123,11 @@ contract DeployTapiocaHostTestnet is Script {
         console.log("OptionReceiverModule: ", report.optionReceiverModule);
         console.log("Usdo: ", report.usdo);
         console.log("SglInit: ", report.sglInit);
-        console.log("SglInterestHelper: ", report.sglInterestHelper);
-        console.log("SglLiquidationModule: ", report.sglLiquidationModule);
-        console.log("SglBorrowModule: ", report.sglBorrowModule);
-        console.log("SglCollateralModule: ", report.sglCollateralModule);
-        console.log("SglLeverageModule: ", report.sglLeverageModule);
+        console.log("SGLInterestHelper: ", report.sglInterestHelper);
+        console.log("SGLLiquidation: ", report.sglLiquidationModule);
+        console.log("SGLBorrow: ", report.sglBorrowModule);
+        console.log("SGLCollateral: ", report.sglCollateralModule);
+        console.log("SGLLeverage: ", report.sglLeverageModule);
         console.log("Singularity: ", report.singularity);
         console.log("Penrose: ", report.penrose);
         console.log("TapStrat: ", report.tapStrat);

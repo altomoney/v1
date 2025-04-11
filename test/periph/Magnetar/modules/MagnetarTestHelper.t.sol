@@ -360,7 +360,7 @@ contract MagnetarTestHelper is TestHelper {
             payable(setup.optionModule),
             payable(setup.leverageModule),
             address(toeHelper),
-            IMagnetarHelper(address(new MagnetarHelper()))
+            address(new MagnetarHelper())
         );
     }
 

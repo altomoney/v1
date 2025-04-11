@@ -38,8 +38,9 @@ abstract contract MagnetarStorage {
     error Magnetar_UnknownReason(); // Revert reason not recognized
     error Magnetar_TargetNotWhitelisted(address addy); // cluster.isWhitelisted(lzChainId, _addr) => false
 
-    constructor(address _toeHelper) {
+    constructor(address _toeHelper, address _magnetarHelper) {
         toeHelper = TapiocaOmnichainEngineHelper(_toeHelper);
+        helper = IMagnetarHelper(_magnetarHelper);
     }
 
     receive() external payable virtual {}

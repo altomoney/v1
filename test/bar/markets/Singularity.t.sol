@@ -109,7 +109,7 @@ contract SingularityTest is UsdoTestHelper {
         input.bbMarketBorrowCap = 3_000_000e18;
 
         input.lzEndpoint = address(new LZEndpointMock(1));
-        input.zeroXSwapper = address(1);
+        input.zeroXProxy = address(1);
         report = TapiocaRelease.deployTapiocaV1(input, emptyReport);
         singularityLauncher = new SingularityLauncher(
             report.sglLiquidationModule,

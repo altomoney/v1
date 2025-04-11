@@ -19,7 +19,7 @@ contract DeployTapiocaHost is Script {
         input.owner = msg.sender;
         input.lzChainId = 0;
         input.wrappedNativeToken = address(0);
-        input.zeroXSwapper = address(1);
+        input.zeroXProxy = address(1);
         input.bbMarketBorrowCap = 3_000_000e18;
 
         vm.startBroadcast();

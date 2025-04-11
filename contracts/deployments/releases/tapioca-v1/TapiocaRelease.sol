@@ -27,6 +27,7 @@ import {BBLiquidation} from "tapioca-bar/markets/bigBang/BBLiquidation.sol";
 import {BBBorrow} from "tapioca-bar/markets/bigBang/BBBorrow.sol";
 import {BBLeverage} from "tapioca-bar/markets/bigBang/BBLeverage.sol";
 import "../../interfaces/ITapiocaReport.sol";
+import "forge-std/console.sol";
 
 /// @title TapiocaRelease
 /// @dev To be imported by Foundry scripts to deploy Tapioca V1.
@@ -40,7 +41,7 @@ library TapiocaRelease {
         Reports memory reports;
         TapiocaUtilitiesBatch utilitiesBatch;
         (utilitiesBatch, reports.utilitiesReport) =
-            _deployUtilities(input.owner, input.zeroXSwapper, input.lzChainId, input.isTestnet);
+            _deployUtilities(input.owner, input.zeroXProxy, input.lzChainId, input.isTestnet);
 
         reports.ExtExReport = _deployExtEx(
             input.owner, input.wrappedNativeToken, reports.utilitiesReport.cluster, reports.utilitiesReport.zeroXSwapper
@@ -52,7 +53,7 @@ library TapiocaRelease {
             input.owner,
             reports.utilitiesReport.cluster,
             reports.utilitiesReport.toeHelper,
-            input.zeroXSwapper,
+            reports.utilitiesReport.zeroXSwapper,
             input.wrappedNativeToken,
             reports.magnetarDepsReport
         );
@@ -266,9 +267,10 @@ library TapiocaRelease {
         report.magnetarCollateralModule = reports.magnetarDepsReport.magnetarCollateralModule;
         report.magnetarMintModule = reports.magnetarDepsReport.magnetarMintModule;
         report.magnetarOptionModule = reports.magnetarDepsReport.magnetarOptionModule;
+        report.magnetarLeverageModule = reports.magnetarDepsReport.magnetarLeverageModule;
         report.simpleLeverageExecutor = reports.magnetarReport.simpleLeverageExecutor;
         report.magnetar = reports.magnetarReport.magnetar;
-        report.magnetarHelper = reports.magnetarReport.magnetarHelper;
+        report.magnetarHelper = reports.magnetarDepsReport.magnetarHelper;
         report.liquidatorReceiver = reports.ExtExReport.liquidatorReceiver;
         report.extExec = reports.ExtExReport.extExec;
         report.usdoSenderModule = reports.usdoModulesReport.usdoSenderModule;
