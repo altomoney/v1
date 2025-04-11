@@ -27,10 +27,10 @@ abstract contract UtilitiesProcedure {
         report.toeHelper = address(new TapiocaOmnichainEngineHelper());
         report.pauser = address(new Pauser(report.cluster, owner));
         if (isTestnet) {
-            report.zeroXSwapper = address(new ZeroXSwapperMock(ICluster(report.cluster), owner));
+            report.zeroXSwapper = zeroXProxy != address(0) ? zeroXProxy : address(new ZeroXSwapperMock(ICluster(report.cluster), owner));
             report.multiTokenSender = address(new MultiTokenSender(owner));
         } else {
-            report.zeroXSwapper = address(new ZeroXSwapper(zeroXProxy, ICluster(report.cluster), owner));
+            report.zeroXSwapper = zeroXProxy != address(0) ? zeroXProxy : address(new ZeroXSwapper(zeroXProxy, ICluster(report.cluster), owner));
         }
         if (isTestnet) {
             TapiocaMulticallTestnet(payable(report.tapiocaMulticall)).setOwner(owner, true);
