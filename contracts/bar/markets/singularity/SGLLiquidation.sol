@@ -312,6 +312,8 @@ contract SGLLiquidation is SGLStorage {
             emit LogAddAsset(address(this), address(this), (data.returnedShare - data.extraShare), 0);
 
             (data.feeShare, data.callerShare) = _extractLiquidationFees(data.extraShare, data.callerReward);
+            liquidityBalance[address(_penrose)] += data.feeShare;
+            emit LogAddAsset(address(this), address(_penrose), data.feeShare, 0);
 
             address[] memory _users = new address[](1);
             _users[0] = user;
