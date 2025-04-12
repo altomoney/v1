@@ -88,16 +88,17 @@ contract DeployTapiocaHostTestnet is Script {
 
         TestnetOracles memory oracles = deployTestnetOracles(input);
 
+        console.log("MarketLib: check address in broadcast/run-latest.json");
         console.log("WrappedNativeToken: ", input.wrappedNativeToken);
         console.log("IsTestnet: ", input.isTestnet);
         console.log("ZeroXProxy: ", input.zeroXProxy);
         console.log("Deployer:", msg.sender);
         console.log("LzChainId:", vm.toString(input.lzChainId));
         console.log("TapToken: ", input.tapToken);
-        console.log("stETH Oracle: ", oracles.stETHOracle);
-        console.log("USDO Oracle: ", oracles.usdoOracle);
-        console.log("USDC Oracle: ", oracles.usdcOracle);
-        console.log("Tap Oracle: ", oracles.tapOracle);
+        console.log("stETHOracle: ", oracles.stETHOracle);
+        console.log("USDOOracle: ", oracles.usdoOracle);
+        console.log("USDCOracle: ", oracles.usdcOracle);
+        console.log("TapOracle: ", oracles.tapOracle);
 
         report = TapiocaRelease.deployTapiocaV1(input, report);
         console.log("Magnetar: ", report.magnetar);
@@ -122,24 +123,24 @@ contract DeployTapiocaHostTestnet is Script {
         console.log("MarketReceiverModule: ", report.marketReceiverModule);
         console.log("OptionReceiverModule: ", report.optionReceiverModule);
         console.log("Usdo: ", report.usdo);
-        console.log("SglInit: ", report.sglInit);
+        console.log("SGLInit: ", report.sglInit);
         console.log("SGLInterestHelper: ", report.sglInterestHelper);
         console.log("SGLLiquidation: ", report.sglLiquidationModule);
         console.log("SGLBorrow: ", report.sglBorrowModule);
         console.log("SGLCollateral: ", report.sglCollateralModule);
         console.log("SGLLeverage: ", report.sglLeverageModule);
-        console.log("Singularity: ", report.singularity);
+        console.log("SingularityMaster: ", report.singularity);
         console.log("Penrose: ", report.penrose);
         console.log("TapStrat: ", report.tapStrat);
         console.log("WrappedTokenStrat: ", report.wrappedTokenStrat);
         console.log("UsdoStrat: ", report.usdoStrat);
         console.log("MarketHelper: ", report.marketHelper);
-        console.log("BbLiquidation: ", report.bbLiquidation);
-        console.log("BbBorrow: ", report.bbBorrow);
-        console.log("BbCollateral: ", report.bbCollateral);
-        console.log("BbLeverage: ", report.bbLeverage);
-        console.log("BbDebtRateHelper: ", report.bbDebtRateHelper);
-        console.log("Bigbang: ", report.bigbang);
+        console.log("BBLiquidation: ", report.bbLiquidation);
+        console.log("BBBorrow: ", report.bbBorrow);
+        console.log("BBCollateral: ", report.bbCollateral);
+        console.log("BBLeverage: ", report.bbLeverage);
+        console.log("BBDebtRateHelper: ", report.bbDebtRateHelper);
+        console.log("BigBangMaster: ", report.bigbang);
         console.log("SingularityLauncher: ", report.singularityLauncher);
         console.log("BigBangLauncher: ", report.bigBangLauncher);
 
@@ -213,7 +214,7 @@ contract DeployTapiocaHostTestnet is Script {
                 DEFAULT_MAX_DEBT_BUFFER
             );
             TapiocaOptionBroker tob = tobSetter.tob();
-            console.log("TapiocaOptionBroker:   ", address(tob));
+            console.log("TapiocaOptionBroker:", address(tob));
 
             TapToken(payable(input.tapToken)).setMinter(address(tob));
 
@@ -221,7 +222,7 @@ contract DeployTapiocaHostTestnet is Script {
             tob.transferOwnership(report.tapiocaMulticall);
 
             address twTap = createTwTap(payable(input.tapToken), input.owner);
-            console.log("TwTap:   ", address(twTap));
+            console.log("twTAP:", address(twTap));
             
             TapToken(payable(input.tapToken)).setMinter(address(tob));
 

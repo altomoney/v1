@@ -21,6 +21,7 @@ echo 'WATCH_FLAG: '$WATCH_FLAG
 echo 'COMPILER_VERSION: '$COMPILER_VERSION
 echo 'CHAIN_ID: '$CHAIN_ID
 echo 'IsTestnet: '$IsTestnet
+echo 'MarketLib: '$MarketLib
 echo 'Deployer: '$Deployer
 echo 'LzChainId: '$LzChainId
 echo 'MagnetarCollateralModule: '$MagnetarCollateralModule
@@ -43,10 +44,24 @@ echo 'SGLInterestHelper: '$SGLInterestHelper
 echo 'SGLLiquidation: '$SGLLiquidation
 echo 'SGLBorrow: '$SGLBorrow
 echo 'SGLCollateral: '$SGLCollateral
+echo 'SGLLeverage: '$SGLLeverage
+echo 'Singularity: '$Singularity
+echo 'SingularityMaster: '$SingularityMaster
+echo 'MarketHelper: '$MarketHelper
+echo 'MultiTokenSender: '$MultiTokenSender
+echo 'TapiocaMulticall: '$TapiocaMulticall
+echo 'twTAP: '$twTAP
+echo 'TapiocaOptionBroker: '$TapiocaOptionBroker
+echo 'BBLiquidation: '$BBLiquidation
+echo 'BBBorrow: '$BBBorrow
+echo 'BBCollateral: '$BBCollateral
+echo 'BBLeverage: '$BBLeverage
+echo 'BBDebtRateHelper: '$BBDebtRateHelper
 
 export COMPILER_VERSION=$COMPILER_VERSION
 export CHAIN_ID=$CHAIN_ID
 export IsTestnet=$IsTestnet
+export MarketLib=$MarketLib
 export Deployer=$Deployer
 export LzChainId=$LzChainId
 export MagnetarCollateralModule=$MagnetarCollateralModule
@@ -69,6 +84,19 @@ export SGLInterestHelper=$SGLInterestHelper
 export SGLLiquidation=$SGLLiquidation
 export SGLBorrow=$SGLBorrow
 export SGLCollateral=$SGLCollateral
+export SGLLeverage=$SGLLeverage
+export Singularity=$Singularity
+export SingularityMaster=$SingularityMaster
+export MarketHelper=$MarketHelper
+export MultiTokenSender=$MultiTokenSender
+export TapiocaMulticall=$TapiocaMulticall
+export TapiocaOptionBroker=$TapiocaOptionBroker
+export twTAP=$twTAP
+export BBLiquidation=$BBLiquidation
+export BBBorrow=$BBBorrow
+export BBCollateral=$BBCollateral
+export BBLeverage=$BBLeverage
+export BBDebtRateHelper=$BBDebtRateHelper
 
 ## Magnetar modules
 
@@ -188,8 +216,16 @@ echo "Etherscan URL for Usdo: $USDO_EXPLORER_URL"
 
 echo -e $SEPARATOR
 
+# MarketLib
+forge verify-contract --chain-id $CHAIN_ID --compiler-version $COMPILER_VERSION --verifier etherscan $WATCH_FLAG $MarketLib ./contracts/utils/markets/MarketLib.sol:MarketLib
+
+MARKET_LIB_EXPLORER_URL=$(get_explorer_url $MarketLib)
+echo "Etherscan URL for MarketLib: $MARKET_LIB_EXPLORER_URL"
+
+echo -e $SEPARATOR
+
 # SGLInit
-forge verify-contract --chain-id $CHAIN_ID --compiler-version $COMPILER_VERSION --verifier etherscan $WATCH_FLAG $SGLInit ./contracts/bar/markets/singularity/SGLInit.sol:SGLInit
+forge verify-contract --chain-id $CHAIN_ID --compiler-version $COMPILER_VERSION --verifier etherscan $WATCH_FLAG $SGLInit ./contracts/bar/markets/singularity/SGLInit.sol:SGLInit --libraries ./contracts/utils/markets/MarketLib.sol:MarketLib:$MarketLib
 
 SGL_INIT_EXPLORER_URL=$(get_explorer_url $SGLInit)
 echo "Etherscan URL for SGLInit: $SGL_INIT_EXPLORER_URL"
@@ -204,26 +240,148 @@ echo "Etherscan URL for SGLInterestHelper: $SGL_INTEREST_HELPER_EXPLORER_URL"
 
 echo -e $SEPARATOR
 
-# SGLLiquidation No Working
-forge verify-contract --chain-id $CHAIN_ID --compiler-version $COMPILER_VERSION --verifier etherscan $WATCH_FLAG $SGLLiquidation ./contracts/bar/markets/singularity/SGLLiquidation.sol:SGLLiquidation
+# SGLLiquidation
+forge verify-contract --chain-id $CHAIN_ID --compiler-version $COMPILER_VERSION --verifier etherscan $WATCH_FLAG $SGLLiquidation ./contracts/bar/markets/singularity/SGLLiquidation.sol:SGLLiquidation --libraries ./contracts/utils/markets/MarketLib.sol:MarketLib:$MarketLib
 
 SGL_LIQUIDATION_EXPLORER_URL=$(get_explorer_url $SGLLiquidation)
 echo "Etherscan URL for SGLLiquidation: $SGL_LIQUIDATION_EXPLORER_URL"
 
 echo -e $SEPARATOR
 
-# SGLBorrow No Working
-forge verify-contract --chain-id $CHAIN_ID --compiler-version $COMPILER_VERSION --verifier etherscan $WATCH_FLAG $SGLBorrow ./contracts/bar/markets/singularity/SGLBorrow.sol:SGLBorrow
+# SGLBorrow
+forge verify-contract --chain-id $CHAIN_ID --compiler-version $COMPILER_VERSION --verifier etherscan $WATCH_FLAG $SGLBorrow ./contracts/bar/markets/singularity/SGLBorrow.sol:SGLBorrow --libraries ./contracts/utils/markets/MarketLib.sol:MarketLib:$MarketLib
 
 SGL_BORROW_EXPLORER_URL=$(get_explorer_url $SGLBorrow)
 echo "Etherscan URL for SGLBorrow: $SGL_BORROW_EXPLORER_URL"
 
 echo -e $SEPARATOR
 
-# SGLCollateral No Working
-forge verify-contract --chain-id $CHAIN_ID --compiler-version $COMPILER_VERSION --verifier etherscan $WATCH_FLAG $SGLCollateral ./contracts/bar/markets/singularity/SGLCollateral.sol:SGLCollateral
+# SGLCollateral
+forge verify-contract --chain-id $CHAIN_ID --compiler-version $COMPILER_VERSION --verifier etherscan $WATCH_FLAG $SGLCollateral ./contracts/bar/markets/singularity/SGLCollateral.sol:SGLCollateral --libraries ./contracts/utils/markets/MarketLib.sol:MarketLib:$MarketLib
 
 SGL_COLLATERAL_EXPLORER_URL=$(get_explorer_url $SGLCollateral)
 echo "Etherscan URL for SGLCollateral: $SGL_COLLATERAL_EXPLORER_URL"
+
+echo -e $SEPARATOR
+
+# SGLLeverage
+forge verify-contract --chain-id $CHAIN_ID --compiler-version $COMPILER_VERSION --verifier etherscan $WATCH_FLAG $SGLLeverage ./contracts/bar/markets/singularity/SGLLeverage.sol:SGLLeverage --libraries ./contracts/utils/markets/MarketLib.sol:MarketLib:$MarketLib
+
+SGL_LEVERAGE_EXPLORER_URL=$(get_explorer_url $SGLCollateral)
+echo "Etherscan URL for SGLCollateral: $SGL_LEVERAGE_EXPLORER_URL"
+
+echo -e $SEPARATOR
+
+# Singularity
+forge verify-contract --chain-id $CHAIN_ID --compiler-version $COMPILER_VERSION --verifier etherscan $WATCH_FLAG $Singularity ./contracts/bar/markets/singularity/Singularity.sol:Singularity --libraries ./contracts/utils/markets/MarketLib.sol:MarketLib:$MarketLib
+
+SINGULARITY_EXPLORER_URL=$(get_explorer_url $Singularity)
+echo "Etherscan URL for Singularity: $SINGULARITY_EXPLORER_URL"
+
+echo -e $SEPARATOR
+
+# SingularityMaster
+forge verify-contract --chain-id $CHAIN_ID --compiler-version $COMPILER_VERSION --verifier etherscan $WATCH_FLAG $SingularityMaster ./contracts/bar/markets/singularity/Singularity.sol:Singularity --libraries ./contracts/utils/markets/MarketLib.sol:MarketLib:$MarketLib
+
+SINGULARITY_MASTER_EXPLORER_URL=$(get_explorer_url $SingularityMaster)
+echo "Etherscan URL for Singularity: $SINGULARITY_MASTER_EXPLORER_URL"
+
+echo -e $SEPARATOR
+
+# MarketHelper
+forge verify-contract --chain-id $CHAIN_ID --compiler-version $COMPILER_VERSION --verifier etherscan $WATCH_FLAG $MarketHelper ./contracts/bar/markets/MarketHelper.sol:MarketHelper
+
+MARKET_HELPER_EXPLORER_URL=$(get_explorer_url $MarketHelper)
+echo "Etherscan URL for MarketHelper: $MARKET_HELPER_EXPLORER_URL"
+
+echo -e $SEPARATOR
+
+# MultiTokenSender
+forge verify-contract --chain-id $CHAIN_ID --compiler-version $COMPILER_VERSION --verifier etherscan $WATCH_FLAG $MultiTokenSender ./contracts/mocks/MultiTokenSender.sol:MultiTokenSender --constructor-args $(cast abi-encode "constructor(address _owner)" $Deployer)
+
+MULTI_TOKEN_SENDER_EXPLORER_URL=$(get_explorer_url $MultiTokenSender)
+echo "Etherscan URL for MultiTokenSender: $MULTI_TOKEN_SENDER_EXPLORER_URL"
+
+echo -e $SEPARATOR
+
+# TapiocaMulticall
+forge verify-contract --chain-id $CHAIN_ID --compiler-version $COMPILER_VERSION --verifier etherscan $WATCH_FLAG $TapiocaMulticall ./contracts/utils/TapiocaMulticall/TapiocaMulticall.sol:TapiocaMulticall
+
+TAPI_MULTICALL_EXPLORER_URL=$(get_explorer_url $TapiocaMulticall)
+echo "Etherscan URL for TapiocaMulticall: $TAPI_MULTICALL_EXPLORER_URL"
+
+echo -e $SEPARATOR
+
+# TapiocaOptionBroker
+forge verify-contract --chain-id $CHAIN_ID --compiler-version $COMPILER_VERSION --verifier etherscan $WATCH_FLAG $TapiocaOptionBroker ./contracts/tap-token/options/TapiocaOptionBroker.sol:TapiocaOptionBroker
+# --constructor-args $(cast abi-encode "constructor(address _tapOFT, address _usdo, address _paymentTokenBeneficiary, uint256 _epochDuration, Bucket[] memory _buckets, address _penrose, address _admin)" $TapToken $Usdo $BarProcedure $Cluster $Penrose $Deployer)
+
+TAPI_OPTION_BROKER_EXPLORER_URL=$(get_explorer_url $TapiocaOptionBroker)
+echo "Etherscan URL for TapiocaOptionBroker: $TAPI_OPTION_BROKER_EXPLORER_URL"
+
+echo -e $SEPARATOR
+
+# TwTAP
+forge verify-contract --chain-id $CHAIN_ID --compiler-version $COMPILER_VERSION --verifier etherscan $WATCH_FLAG $twTAP ./contracts/tap-token/governance/twTAP.sol:TwTAP
+# --constructor-args $(cast abi-encode "constructor(address _tapOFT, address _usdo, address _paymentTokenBeneficiary, uint256 _epochDuration, Bucket[] memory _buckets, address _penrose, address _admin)" $TapToken $Usdo $BarProcedure $Cluster $Penrose $Deployer)
+
+TW_TAP_EXPLORER_URL=$(get_explorer_url $twTAP)
+echo "Etherscan URL for twTAP: $TW_TAP_EXPLORER_URL"
+
+echo -e $SEPARATOR
+
+# BBLiquidation
+forge verify-contract --chain-id $CHAIN_ID --compiler-version $COMPILER_VERSION --verifier etherscan $WATCH_FLAG $BBLiquidation ./contracts/bar/markets/bigBang/BBLiquidation.sol:BBLiquidation --libraries ./contracts/utils/markets/MarketLib.sol:MarketLib:$MarketLib
+
+BB_LIQUIDATION_EXPLORER_URL=$(get_explorer_url $BBLiquidation)
+echo "Etherscan URL for BBCollateral: $BB_LIQUIDATION_EXPLORER_URL"
+
+echo -e $SEPARATOR
+
+# BBBorrow
+forge verify-contract --chain-id $CHAIN_ID --compiler-version $COMPILER_VERSION --verifier etherscan $WATCH_FLAG $BBBorrow ./contracts/bar/markets/bigBang/BBBorrow.sol:BBBorrow --libraries ./contracts/utils/markets/MarketLib.sol:MarketLib:$MarketLib
+
+BB_BORROW_EXPLORER_URL=$(get_explorer_url $BBBorrow)
+echo "Etherscan URL for BBCollateral: $BB_BORROW_EXPLORER_URL"
+
+echo -e $SEPARATOR
+
+# BBCollateral
+forge verify-contract --chain-id $CHAIN_ID --compiler-version $COMPILER_VERSION --verifier etherscan $WATCH_FLAG $BBCollateral ./contracts/bar/markets/bigBang/BBCollateral.sol:BBCollateral --libraries ./contracts/utils/markets/MarketLib.sol:MarketLib:$MarketLib
+
+BB_COLLATERAL_EXPLORER_URL=$(get_explorer_url $BBCollateral)
+echo "Etherscan URL for BBCollateral: $BB_COLLATERAL_EXPLORER_URL"
+
+echo -e $SEPARATOR
+
+# BBLeverage
+forge verify-contract --chain-id $CHAIN_ID --compiler-version $COMPILER_VERSION --verifier etherscan $WATCH_FLAG $BBLeverage ./contracts/bar/markets/bigBang/BBLeverage.sol:BBLeverage --libraries ./contracts/utils/markets/MarketLib.sol:MarketLib:$MarketLib
+
+BB_LEVERAGE_EXPLORER_URL=$(get_explorer_url $BBLeverage)
+echo "Etherscan URL for BBCollateral: $BB_LEVERAGE_EXPLORER_URL"
+
+echo -e $SEPARATOR
+
+# BBDebtRateHelper
+forge verify-contract --chain-id $CHAIN_ID --compiler-version $COMPILER_VERSION --verifier etherscan $WATCH_FLAG $BBDebtRateHelper ./contracts/bar/markets/bigBang/BBDebtRateHelper.sol:BBDebtRateHelper
+
+BB_DEBT_RATE_HELPER_EXPLORER_URL=$(get_explorer_url $BBDebtRateHelper)
+echo "Etherscan URL for BBDebtRateHelper: $BB_DEBT_RATE_HELPER_EXPLORER_URL"
+
+echo -e $SEPARATOR
+
+# BigBangMaster
+forge verify-contract --chain-id $CHAIN_ID --compiler-version $COMPILER_VERSION --verifier etherscan $WATCH_FLAG $BigBangMaster ./contracts/bar/markets/bigBang/BigBang.sol:BigBang --libraries ./contracts/utils/markets/MarketLib.sol:MarketLib:$MarketLib
+
+BIG_BANG_MASTER_EXPLORER_URL=$(get_explorer_url $BigBangMaster)
+echo "Etherscan URL for BigBangMaster: $BIG_BANG_MASTER_EXPLORER_URL"
+
+echo -e $SEPARATOR
+
+# BigBang
+forge verify-contract --chain-id $CHAIN_ID --compiler-version $COMPILER_VERSION --verifier etherscan $WATCH_FLAG $BigBang ./contracts/bar/markets/bigBang/BigBang.sol:BigBang --libraries ./contracts/utils/markets/MarketLib.sol:MarketLib:$MarketLib
+
+BIG_BANG_EXPLORER_URL=$(get_explorer_url $BigBang)
+echo "Etherscan URL for BigBang: $BIG_BANG_EXPLORER_URL"
 
 echo -e $SEPARATOR
