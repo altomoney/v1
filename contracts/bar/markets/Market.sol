@@ -461,6 +461,9 @@ contract Market is MarketERC4626, Ownable, ReentrancyGuard {
     function _allowedLend(address from, uint256 amount) internal virtual override {
         if (from != msg.sender) {
             if (amount == 0) revert AllowanceNotValid();
+            if (_penrose.isMarketApprovalBypassContract(msg.sender)) {
+                return;
+            }
             uint256 currentAllowance = allowanceLiquidity[from][msg.sender];
             require(currentAllowance >= amount, "Market: not approved");
             if (currentAllowance != type(uint256).max) {
@@ -474,6 +477,9 @@ contract Market is MarketERC4626, Ownable, ReentrancyGuard {
     function _allowedCollateral(address from, uint256 amount) internal virtual override {
         if (from != msg.sender) {
             if (amount == 0) revert AllowanceNotValid();
+            if (_penrose.isMarketApprovalBypassContract(msg.sender)) {
+                return;
+            }
             uint256 currentAllowance = allowanceCollateral[from][msg.sender];
             require(currentAllowance >= amount, "Market: not approved");
             if (currentAllowance != type(uint256).max) {
@@ -487,6 +493,9 @@ contract Market is MarketERC4626, Ownable, ReentrancyGuard {
     function _allowedBorrow(address from, uint256 amount) internal virtual override {
         if (from != msg.sender) {
             if (amount == 0) revert AllowanceNotValid();
+            if (_penrose.isMarketApprovalBypassContract(msg.sender)) {
+                return;
+            }
             uint256 currentAllowance = allowanceBorrow[from][msg.sender];
             require(currentAllowance >= amount, "Market: not approved");
             if (currentAllowance != type(uint256).max) {

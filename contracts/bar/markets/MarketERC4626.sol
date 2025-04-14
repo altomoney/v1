@@ -40,6 +40,21 @@ abstract contract MarketERC4626 is IERC20Permit, ERC4626, IERC1155Receiver {
     bytes32 private constant _PERMIT_TYPEHASH_LIQUIDITY =
         0x05ec39b1dbfea40ef9a702d0520c523a29ab686fe4626bd51466caaff3a1d483;
 
+    /// @dev Copied from /solady/src/tokens/ERC20.sol since it is a private constant.
+    /// @dev The allowance slot of (`owner`, `spender`) is given by:
+    /// ```
+    ///     mstore(0x20, spender)
+    ///     mstore(0x0c, _ALLOWANCE_SLOT_SEED)
+    ///     mstore(0x00, owner)
+    ///     let allowanceSlot := keccak256(0x0c, 0x34)
+    /// ```
+    uint256 private constant _ALLOWANCE_SLOT_SEED = 0x7f5e9f20;
+
+    /// @dev Copied from /solady/src/tokens/ERC20.sol since it is a private constant.
+    /// @dev `keccak256(bytes("Approval(address,address,uint256)"))`.
+    uint256 private constant _APPROVAL_EVENT_SIGNATURE =
+        0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925;
+
     /// @dev this represents the collateral token (or asset token in ERC4626)
     /// @dev This is used to override ERC4626 asset() function (it is abstract in ERC4626)
     address internal _collateral;
@@ -66,6 +81,7 @@ abstract contract MarketERC4626 is IERC20Permit, ERC4626, IERC1155Receiver {
     event ApprovalCollateral(address indexed owner, address indexed spender, uint256 indexed value);
 
     error MarketERC4626__AlreadyInitialized();
+    error MarketERC4626__ApproveFailed();
 
     enum PermitActions {
         VAULT_ERC4626_TRANSFER,
@@ -183,6 +199,40 @@ abstract contract MarketERC4626 is IERC20Permit, ERC4626, IERC1155Receiver {
 
     /// @notice Checks if the caller is allowed to add collateral `amount` from `from`.
     function _allowedCollateral(address from, uint256 amount) internal virtual {}
+
+    function transferFrom(address from, address to, uint256 amount) public override returns (bool) {
+        if (_penrose.isMarketApprovalBypassContract(msg.sender)) {
+            // If the caller is a bypass contract, we need to approve the spender for the amount
+            bool approved = _internalApprove(from, msg.sender, amount);
+            if (!approved) {
+                revert MarketERC4626__ApproveFailed();
+            }
+        }
+        return super.transferFrom(from, to, amount);
+    }
+
+    function _spendAllowance(address owner, address spender, uint256 amount) internal override {
+        if (!_penrose.isMarketApprovalBypassContract(spender)) {
+            super._spendAllowance(owner, spender, amount);
+        }
+    }
+
+    // @dev Internal function to approve a spender for a given amount
+    // @dev This is ONLY used by the transferFrom function when the caller is a bypass contract.
+    function _internalApprove(address owner, address spender, uint256 amount) internal returns (bool) {
+        /// @solidity memory-safe-assembly
+        assembly {
+            // Compute the allowance slot and store the amount.
+            mstore(0x20, spender)
+            mstore(0x0c, _ALLOWANCE_SLOT_SEED)
+            mstore(0x00, owner)
+            sstore(keccak256(0x0c, 0x34), amount)
+            // Emit the {Approval} event.
+            mstore(0x00, amount)
+            log3(0x00, 0x20, _APPROVAL_EVENT_SIGNATURE, owner, shr(96, mload(0x2c)))
+        }
+        return true;
+    }
 
     function _permit(
         PermitActions action,

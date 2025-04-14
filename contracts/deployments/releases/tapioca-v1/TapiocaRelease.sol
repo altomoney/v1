@@ -77,6 +77,7 @@ library TapiocaRelease {
             reports.utilitiesReport.tapiocaMulticall,
             reports.sglReport.singularity,
             reports.bbReport.bigbang,
+            reports.magnetarReport.magnetar,
             prevReport.penrose
         );
         reports.launcherReport = _deployMarketLaunchers(
@@ -146,11 +147,12 @@ library TapiocaRelease {
         address owner,
         address singularityMaster,
         address bigbangMaster,
+        address magnetar,
         address prevPenrose
     ) private returns (PenroseReport memory report) {
         TapiocaPenroseBatch penroseBatch = new TapiocaPenroseBatch(
             IPenroseInput(
-                cluster, tapToken, usdoToken, nativeWrappedToken, owner, singularityMaster, bigbangMaster, prevPenrose
+                cluster, tapToken, usdoToken, nativeWrappedToken, owner, singularityMaster, bigbangMaster, magnetar, prevPenrose
             )
         );
         return penroseBatch.getPenroseReport();

@@ -66,4 +66,8 @@ interface IPenrose {
     function executeMarketFn(address[] calldata mc, bytes[] memory data, bool forceSuccess)
         external
         returns (bool[] memory success, bytes[] memory result);
+
+    function isMarketApprovalBypassContract(address _contract) external view returns (bool);
+
+    function setMarketApprovalBypassContract(address _contract, bool _isApprovalLess) external;
 }
