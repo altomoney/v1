@@ -2,8 +2,12 @@
 pragma solidity ^0.8.22;
 
 import {RebaseLibrary, Rebase} from "@boringcrypto/boring-solidity/contracts/libraries/BoringRebase.sol";
+import {BoringERC20} from "@boringcrypto/boring-solidity/contracts/libraries/BoringERC20.sol";
+import {IERC20} from "@boringcrypto/boring-solidity/contracts/interfaces/IERC20.sol";
 import {IERC4626} from "../../utils/interfaces/common/IERC4626.sol";
 import {IMarket} from "../interfaces/bar/IMarket.sol";
+import {MarketERC4626} from "../../bar/markets/MarketERC4626.sol";
+import {ICluster} from "../../utils/interfaces/periph/ICluster.sol";
 
 /*
 
@@ -38,6 +42,7 @@ struct ViewLiquidation {
 
 library MarketLib {
     using RebaseLibrary for Rebase;
+    using BoringERC20 for IERC20;
 
     function getCallerReward(
         IMarket _market,
@@ -176,7 +181,7 @@ library MarketLib {
         data.totalBorrow = market._totalBorrow();
         data.liquidationBonusAmount = market._liquidationBonusAmount();
         data.liquidationCollateralizationRate = market._liquidationCollateralizationRate();
-        data.liquidationMultiplier = market._liquidationMultiplier();
+        data.liquidationMultiplier = market.liquidationMultiplier();
         return _viewLiquidationBorrowAndCollateralShare(market, data, _feePrecision);
     }
 
@@ -282,5 +287,29 @@ library MarketLib {
         uint256 userCollateralAmount = IERC4626(address(_market)).balanceOf(_user);
         collateralAmountInAsset =
             (userCollateralAmount * _market._exchangeRatePrecision() * _market._collateralizationRate()) / (_feePrecision * _exchangeRate);
+    }
+
+    /// @notice Transfers fees to penrose
+    /// @dev can only be called by the owner or FEES_EXTRACTOR role
+    /// @return feeAmount the amount of fees in shares withdrawn under Penrose
+    function refreshPenroseFees(IMarket _market, ICluster _cluster, address _owner) external returns (uint256 feeAmount) {
+        MarketERC4626 market = MarketERC4626(address(_market));
+        require(
+            _cluster.hasRole(msg.sender, keccak256("FEES_EXTRACTOR")) || msg.sender == _owner,
+            "Ownable: caller is not the owner"
+        );
+        feeAmount = IERC20(_market.borrowableToken()).balanceOf(address(this));
+        if (feeAmount > 0) {
+            IERC20(_market.borrowableToken()).safeTransfer(msg.sender, feeAmount);
+        }
+    }
+
+    function requireCollateralizationRate(IMarket _market, uint256 _collateralizationRate, uint256 _feePrecision) external view {
+        require(_collateralizationRate <= _feePrecision, "Market: not valid");
+        require(_collateralizationRate <= _market._liquidationCollateralizationRate(), "Market: collateralizationRate too big");
+        require(
+            _collateralizationRate * (_feePrecision + _market.liquidationMultiplier()) < _feePrecision * _feePrecision,
+            "Market: CR * (1 + LM) >= 1"
+        );
     }
 }

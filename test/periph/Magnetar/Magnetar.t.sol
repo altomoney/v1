@@ -1213,7 +1213,7 @@ abstract contract MagnetarTest is MagnetarTestUtils, MagnetarCallFactoryUtil {
         withValidAmount(_collateralAmount)
     {
         address _user = _assumeValidAddress(_userPk, "user");
-        vm.assume(_collateralAmount > sgl._minCollateralAmount());
+        vm.assume(_collateralAmount > sgl.minCollateralAmount());
 
         _withTokenBalance(address(collateral), _user, _collateralAmount);
         uint256 nonce = sgl.nonces(_user);
@@ -1321,10 +1321,10 @@ abstract contract MagnetarTest is MagnetarTestUtils, MagnetarCallFactoryUtil {
         vm.assume(_userLpPk != _userPk);
         uint128 _addAssets = 100_000e18;
         uint256 _collateralAmount = 40_000e18;
-        uint256 _borrowAmount = sgl._minBorrowAmount() + 1;
+        uint256 _borrowAmount = sgl.minBorrowAmount() + 1;
         address _userLp = _assumeValidAddress(_userLpPk, "userLp");
         address _user = _assumeValidAddress(_userPk, "user");
-        vm.assume(_collateralAmount > sgl._minCollateralAmount());
+        vm.assume(_collateralAmount > sgl.minCollateralAmount());
         vm.assume(_addAssets > sgl.minLendAmount());
         vm.assume(_addAssets > _borrowAmount * 3);
 
@@ -1378,14 +1378,14 @@ abstract contract MagnetarTest is MagnetarTestUtils, MagnetarCallFactoryUtil {
 
         uint128 _addAssets = 100_000e18;
         uint256 _collateralAmount = 40_000e18;
-        uint256 _borrowAmount = sgl._minBorrowAmount() * 2;
+        uint256 _borrowAmount = sgl.minBorrowAmount() * 2;
 
         // To borrow assets, so user can sell collateral
         address _userLp = _assumeValidAddress(_userLpPk, "userLp");
         address _user = _assumeValidAddress(_userPk, "user");
 
-        vm.assume(_collateralAmount > sgl._minCollateralAmount());
-        vm.assume(_borrowAmount > sgl._minBorrowAmount());
+        vm.assume(_collateralAmount > sgl.minCollateralAmount());
+        vm.assume(_borrowAmount > sgl.minBorrowAmount());
         vm.assume(_addAssets > sgl.minLendAmount());
         vm.assume(_addAssets > _borrowAmount * 3);
 
@@ -1436,9 +1436,9 @@ abstract contract MagnetarTest is MagnetarTestUtils, MagnetarCallFactoryUtil {
         external
         withValidAmount(_tokenAmount)
     {
-        uint256 _borrowAmount = bb._minBorrowAmount() * 3;
-        vm.assume(bb._minCollateralAmount() < _borrowAmount);
-        vm.assume(bb._minBorrowAmount() < _borrowAmount);
+        uint256 _borrowAmount = bb.minBorrowAmount() * 3;
+        vm.assume(bb.minCollateralAmount() < _borrowAmount);
+        vm.assume(bb.minBorrowAmount() < _borrowAmount);
         vm.assume(_borrowAmount < _tokenAmount);
         uint256 _usdoAmount = _borrowAmount + _borrowAmount * tob._maxDebtBuffer() / 1e4;
         uint256 _collateralAmount = _borrowAmount * 2;
@@ -1469,9 +1469,9 @@ abstract contract MagnetarTest is MagnetarTestUtils, MagnetarCallFactoryUtil {
         uint160 _userPk,
         uint256 _tokenAmount
     ) external withValidAmount(_tokenAmount) {
-        uint256 _borrowAmount = bb._minBorrowAmount() * 3;
-        vm.assume(bb._minCollateralAmount() < _borrowAmount);
-        vm.assume(bb._minBorrowAmount() < _borrowAmount);
+        uint256 _borrowAmount = bb.minBorrowAmount() * 3;
+        vm.assume(bb.minCollateralAmount() < _borrowAmount);
+        vm.assume(bb.minBorrowAmount() < _borrowAmount);
         vm.assume(_borrowAmount < _tokenAmount);
         uint256 _usdoAmount = _borrowAmount + _borrowAmount * tob._maxDebtBuffer() / 1e4;
         uint256 _collateralAmount = _borrowAmount * 2;
@@ -1530,7 +1530,7 @@ abstract contract MagnetarTest is MagnetarTestUtils, MagnetarCallFactoryUtil {
     {
         vm.assume(_userPk != _userPk2);
         _assumeValidAddress(_userPk2, "user2");
-        uint256 _borrowAmount = bb._minBorrowAmount() * 3;
+        uint256 _borrowAmount = bb.minBorrowAmount() * 3;
         vm.assume(_borrowAmount < _tokenAmount);
         address _user = _assumeValidAddress(_userPk, "user");
 
@@ -1565,7 +1565,7 @@ abstract contract MagnetarTest is MagnetarTestUtils, MagnetarCallFactoryUtil {
     {
         vm.assume(_userPk != _userPk2);
         _assumeValidAddress(_userPk2, "user2");
-        uint256 _borrowAmount = bb._minBorrowAmount() * 3;
+        uint256 _borrowAmount = bb.minBorrowAmount() * 3;
         vm.assume(_borrowAmount < _tokenAmount);
         // It uses only 45% of the total user "power" (USDO) to lock because other 45% is used to lock in the previous experied bucket.
         uint256 _usdoAmount = (_borrowAmount + _borrowAmount * tob._maxDebtBuffer() / 1e4) * 4500 / 10000;
@@ -1600,7 +1600,7 @@ abstract contract MagnetarTest is MagnetarTestUtils, MagnetarCallFactoryUtil {
     {
         vm.assume(_userPk != _userPk2);
         _assumeValidAddress(_userPk2, "user2");
-        uint256 _borrowAmount = bb._minBorrowAmount() * 3;
+        uint256 _borrowAmount = bb.minBorrowAmount() * 3;
         vm.assume(_borrowAmount < _tokenAmount);
         // It uses only 45% of the total user "power" (USDO) to lock because other 45% is used to lock in the previous experied bucket.
         uint256 _usdoAmount = (_borrowAmount + _borrowAmount * tob._maxDebtBuffer() / 1e4) * 4500 / 10000;
@@ -1640,7 +1640,7 @@ abstract contract MagnetarTest is MagnetarTestUtils, MagnetarCallFactoryUtil {
     ) external withValidAmount(_tokenAmount) {
         vm.assume(_userPk != _userPk2);
         _assumeValidAddress(_userPk2, "user2");
-        uint256 _borrowAmount = bb._minBorrowAmount() * 3;
+        uint256 _borrowAmount = bb.minBorrowAmount() * 3;
         uint256 _collateralAmount = _borrowAmount * 2;
         vm.assume(_borrowAmount < _tokenAmount);
         address _user = _assumeValidAddress(_userPk, "user");
@@ -1697,7 +1697,7 @@ abstract contract MagnetarTest is MagnetarTestUtils, MagnetarCallFactoryUtil {
     function _withAddAssetAddCollateralBorrow(uint160 _userPk, uint256 _tokenAmount, uint256 _collateralAmount)
         internal
     {
-        uint256 _borrowAmount = sgl._minBorrowAmount() * 3;
+        uint256 _borrowAmount = sgl.minBorrowAmount() * 3;
         address _user = _assumeValidAddress(_userPk, "user");
 
         deal(address(collateral), _user, _collateralAmount);
@@ -1778,7 +1778,7 @@ abstract contract MagnetarTest is MagnetarTestUtils, MagnetarCallFactoryUtil {
     }
 
     function _withBigBangTOBLock(uint160 _userPk, uint256 _tokenAmount, uint256 _usdoAmountBps) internal {
-        uint256 _borrowAmount = bb._minBorrowAmount() * 3;
+        uint256 _borrowAmount = bb.minBorrowAmount() * 3;
         uint256 _usdoAmount = (_borrowAmount + _borrowAmount * tob._maxDebtBuffer() / 1e4) * _usdoAmountBps / 10000;
         uint256 _collateralAmount = _borrowAmount * 2;
         address _user = _assumeValidAddress(_userPk, "user");

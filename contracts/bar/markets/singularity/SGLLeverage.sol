@@ -104,12 +104,6 @@ contract SGLLeverage is SGLLendingCommon {
         if (amountOut == 0) revert AmountNotValid();
     }
 
-    struct _SellCollateralCalldata {
-        address from;
-        uint256 share;
-        bytes data;
-    }
-
     /// @notice Lever down: Sell collateral to repay debt; excess goes to YB
     /// @param from The user who sells
     /// @param share Collateral  to sell
@@ -125,19 +119,12 @@ contract SGLLeverage is SGLLendingCommon {
         if (address(leverageExecutor) == address(0)) {
             revert LeverageExecutorNotValid();
         }
-        // Stack too deep fix
-        _SellCollateralCalldata memory calldata_;
-        {
-            calldata_.from = from;
-            calldata_.share = share;
-            calldata_.data = data;
-        }
-        uint256 leverageAmount = super.redeem(calldata_.share, address(this), from);
+        uint256 leverageAmount = super.redeem(share, address(this), from);
 
         collateral().safeApprove(address(leverageExecutor), leverageAmount);
 
         amountOut =
-            leverageExecutor.getAsset(from, collateral(), address(_borrowableToken()), leverageAmount, calldata_.data);
+            leverageExecutor.getAsset(from, collateral(), address(_borrowableToken()), leverageAmount, data);
 
         IERC20(_borrowableToken()).safeTransfer(from, amountOut);
 
@@ -146,12 +133,12 @@ contract SGLLeverage is SGLLendingCommon {
         uint256 amountOwed = totalBorrow.toElastic(partOwed, true);
         uint256 shareOwed = previewWithdraw(amountOwed);
         if (shareOwed <= shareOut) {
-            _repay(calldata_.from, calldata_.from, partOwed, false);
+            _repay(from, from, partOwed, false);
             // TODO Should we check returned value?
         } else {
             //repay as much as we can
             uint256 partOut = totalBorrow.toBase(amountOut, false);
-            _repay(calldata_.from, calldata_.from, partOut, false);
+            _repay(from, from, partOut, false);
             // TODO Should we check returned value?
         }
         if (amountOut == 0) revert AmountNotValid();

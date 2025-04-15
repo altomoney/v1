@@ -15,7 +15,7 @@ contract Origins_constructor is Origins_Unit_Shared {
         assertEq(address(org._oracle()), address(oracle));
         assertEq(org._collateralizationRate(), 90000);
         assertEq(org._exchangeRatePrecision(), 1 ether);
-        assertEq(org._minBorrowAmount(), 1e15);
+        assertEq(org.minBorrowAmount(), 1e15);
         assertEq(org._rateValidDuration(), 24 hours);
     }
 }

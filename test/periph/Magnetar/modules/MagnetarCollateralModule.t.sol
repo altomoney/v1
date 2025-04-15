@@ -655,7 +655,7 @@ contract MagnetarCollateralModuleTest is MagnetarTest {
         uint256 _tokenAmount,
         uint256 _collateralAmount
     ) external withValidAmount(_tokenAmount) withValidAmount128(_collateralAmount) {
-        vm.assume(sgl._minCollateralAmount() < _collateralAmount);
+        vm.assume(sgl.minCollateralAmount() < _collateralAmount);
         address _user = _assumeValidAddress(_userPk, "user");
 
         deal(address(collateral), _user, _collateralAmount);
@@ -683,7 +683,7 @@ contract MagnetarCollateralModuleTest is MagnetarTest {
         uint256 _tokenAmount,
         uint256 _collateralAmount
     ) external withValidAmount(_tokenAmount) withValidAmount128(_collateralAmount) {
-        vm.assume(sgl._minCollateralAmount() < _collateralAmount);
+        vm.assume(sgl.minCollateralAmount() < _collateralAmount);
         address _user = _assumeValidAddress(_userPk, "user");
 
         deal(address(collateral), _user, _collateralAmount);
@@ -711,9 +711,9 @@ contract MagnetarCollateralModuleTest is MagnetarTest {
         uint256 _tokenAmount,
         uint256 _collateralAmount
     ) external withValidAmount(_tokenAmount) withValidAmount128(_collateralAmount) {
-        uint256 _borrowAmount = sgl._minBorrowAmount() * 3;
-        vm.assume(sgl._minCollateralAmount() * 4 < _collateralAmount);
-        vm.assume(sgl._minBorrowAmount() < _borrowAmount);
+        uint256 _borrowAmount = sgl.minBorrowAmount() * 3;
+        vm.assume(sgl.minCollateralAmount() * 4 < _collateralAmount);
+        vm.assume(sgl.minBorrowAmount() < _borrowAmount);
         vm.assume(_borrowAmount < _tokenAmount);
         vm.assume(_borrowAmount * 3 < _collateralAmount);
         address _user = _assumeValidAddress(_userPk, "user");
@@ -746,9 +746,9 @@ contract MagnetarCollateralModuleTest is MagnetarTest {
         uint256 _tokenAmount,
         uint256 _collateralAmount
     ) external withValidAmount(_tokenAmount) withValidAmount128(_collateralAmount) {
-        uint256 _borrowAmount = sgl._minBorrowAmount() * 3;
-        vm.assume(sgl._minCollateralAmount() * 4 < _collateralAmount);
-        vm.assume(sgl._minBorrowAmount() < _borrowAmount);
+        uint256 _borrowAmount = sgl.minBorrowAmount() * 3;
+        vm.assume(sgl.minCollateralAmount() * 4 < _collateralAmount);
+        vm.assume(sgl.minBorrowAmount() < _borrowAmount);
         vm.assume(_borrowAmount < _tokenAmount);
         vm.assume(_borrowAmount * 3 < _collateralAmount);
         address _user = _assumeValidAddress(_userPk, "user");

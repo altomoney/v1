@@ -45,8 +45,8 @@ contract Origins_setters is Origins_Unit_Shared {
         assertEq(org._totalBorrowCap(), 104);
         assertEq(org._collateralizationRate(), 105);
         assertEq(org._liquidationCollateralizationRate(), 106);
-        assertEq(org._minBorrowAmount(), 107);
-        assertEq(org._minCollateralAmount(), 108);
+        assertEq(org.minBorrowAmount(), 107);
+        assertEq(org.minCollateralAmount(), 108);
     }
 
     function test_RevertWhen_RescueEthIsCalledFromNon_owner() external {

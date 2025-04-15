@@ -3,6 +3,7 @@ pragma solidity ^0.8.22;
 
 import {BarProcedure} from "../../../procedures/BarProcedure.sol";
 import {PenroseReport, IPenroseInput} from "../../../interfaces/ITapiocaReport.sol";
+import {console} from "forge-std/console.sol";
 
 /// @title TapiocaPenroseBatch
 /// @notice Deploy Penrose
@@ -12,6 +13,7 @@ contract TapiocaPenroseBatch is BarProcedure {
 
     constructor(IPenroseInput memory input) {
         _penroseReport = _deployPenrose(input);
+        console.log("TapiocaPenroseBatch: ", address(this));
     }
 
     function getPenroseReport() external view returns (PenroseReport memory) {

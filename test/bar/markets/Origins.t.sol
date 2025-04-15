@@ -187,7 +187,7 @@ contract OriginsTest is UsdoTestHelper {
             assertEq(origins._totalBorrowCap(), toSetValue);
             assertEq(origins._collateralizationRate(), toSetValue);
             assertEq(origins._liquidationCollateralizationRate(), toSetMaxValue);
-            assertEq(origins._minBorrowAmount(), toSetValue);
+            assertEq(origins.minBorrowAmount(), toSetValue);
         }
     }
 

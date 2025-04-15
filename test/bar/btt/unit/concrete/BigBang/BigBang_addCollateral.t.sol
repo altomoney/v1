@@ -69,7 +69,7 @@ contract BigBang_addCollateral is BigBang_Unit_Shared {
     }
 
     function test_RevertGiven_AmountIsTooLow(uint256 collateralAmount) external whenContractIsNotPaused {
-        uint256 minCollateralAmount = mainBB._minCollateralAmount();
+        uint256 minCollateralAmount = mainBB.minCollateralAmount();
         vm.assume(collateralAmount > 0 && collateralAmount < minCollateralAmount);
 
         (Module[] memory modules, bytes[] memory calls) =

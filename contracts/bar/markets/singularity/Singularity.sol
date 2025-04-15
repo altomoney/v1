@@ -20,6 +20,8 @@ import {SGLStorage} from "./SGLStorage.sol";
 import {SGLCommon} from "./SGLCommon.sol";
 import {SGLBorrow} from "./SGLBorrow.sol";
 import {MarketERC4626} from "../MarketERC4626.sol";
+import {ISingularity} from "../../../utils/interfaces/bar/ISingularity.sol";
+import {SingularityLib} from "../../../utils/markets/SingularityLib.sol";
 
 // solhint-disable max-line-length
 
@@ -39,6 +41,7 @@ contract Singularity is SGLCommon {
     using SafeCast for uint256;
     using RebaseLibrary for Rebase;
     using BoringERC20 for IERC20;
+    using SingularityLib for ISingularity;
 
     // ************ //
     // *** VARS *** //
@@ -233,21 +236,7 @@ contract Singularity is SGLCommon {
     // *** PRIVATE FUNCTIONS *** //
     // ************************* //
     function _extractModule(Module _module) internal view override returns (address) {
-        address module;
-        if (_module == Module.Base) {
-            return address(this);
-        } else if (_module == Module.Borrow) {
-            module = address(borrowModule);
-        } else if (_module == Module.Collateral) {
-            module = address(collateralModule);
-        } else if (_module == Module.Liquidation) {
-            module = address(liquidationModule);
-        } else if (_module == Module.Leverage) {
-            module = address(leverageModule);
-        }
-        if (module == address(0)) revert ModuleNotSet();
-
-        return module;
+        return ISingularity(address(this)).extractModule(_module);
     }
 
     /// @dev Concrete implementation of `removeAsset`.

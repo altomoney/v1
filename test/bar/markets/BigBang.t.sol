@@ -418,7 +418,7 @@ contract BigBangTest is UsdoTestHelper {
             assertEq(bigBang._totalBorrowCap(), toSetValue);
             assertEq(bigBang._collateralizationRate(), toSetValue);
             assertEq(bigBang._liquidationCollateralizationRate(), toSetMaxValue);
-            assertEq(bigBang._minBorrowAmount(), toSetValue);
+            assertEq(bigBang.minBorrowAmount(), toSetValue);
         }
     }
 
@@ -680,7 +680,7 @@ contract BigBangTest is UsdoTestHelper {
 
     function test_addCollateral_valid(address _user, uint256 _amount) public {
         vm.assume(_user != address(0));
-        vm.assume(_amount > bigBang._minCollateralAmount());
+        vm.assume(_amount > bigBang.minCollateralAmount());
         vm.assume(_amount <= type(uint128).max);
 
         deal(address(collateral), _user, _amount);
@@ -706,7 +706,7 @@ contract BigBangTest is UsdoTestHelper {
 
     function test_addCollateral_valid_provide_both_values(address _user, uint256 _amount, uint256 _shares) public {
         vm.assume(_user != address(0));
-        vm.assume(_amount >= bigBang._minCollateralAmount());
+        vm.assume(_amount >= bigBang.minCollateralAmount());
         vm.assume(_amount <= type(uint128).max);
         vm.assume(_shares <= type(uint128).max);
         vm.assume(_shares > 1e18);
@@ -734,7 +734,7 @@ contract BigBangTest is UsdoTestHelper {
 
     function test_addCollateral_valid_provide_both_amount_and_shares(address _user, uint256 _amount) public {
         vm.assume(_user != address(0));
-        vm.assume(_amount >= bigBang._minCollateralAmount());
+        vm.assume(_amount >= bigBang.minCollateralAmount());
         vm.assume(_amount <= type(uint128).max);
         uint256 _shares = 1e18;
 

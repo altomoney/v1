@@ -253,8 +253,8 @@ contract MagnetarHelper is IMagnetarHelper {
         info.minLiquidatorReward = market._minLiquidatorReward();
         info.maxLiquidatorReward = market._maxLiquidatorReward();
         info.liquidationBonusAmount = market._liquidationBonusAmount();
-        info.minBorrowAmount = market._minBorrowAmount();
-        info.minCollateralAmount = market._minCollateralAmount();
+        info.minBorrowAmount = market.minBorrowAmount();
+        info.minCollateralAmount = market.minCollateralAmount();
         info.totalCollateralAmount = market.totalAssets();
         return info;
     }

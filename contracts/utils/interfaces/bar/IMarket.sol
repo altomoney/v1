@@ -41,15 +41,15 @@ interface IMarket {
 
     function _liquidationCollateralizationRate() external view returns (uint256);
 
-    function _liquidationMultiplier() external view returns (uint256);
+    function liquidationMultiplier() external view returns (uint256);
 
-    function _maxLiquidationSlippage() external view returns (uint256);
+    function maxLiquidationSlippage() external view returns (uint256);
 
     function _maxLiquidatorReward() external view returns (uint256);
 
-    function _minBorrowAmount() external view returns (uint256);
+    function minBorrowAmount() external view returns (uint256);
 
-    function _minCollateralAmount() external view returns (uint256);
+    function minCollateralAmount() external view returns (uint256);
 
     function _minLiquidatorReward() external view returns (uint256);
 
