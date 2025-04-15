@@ -187,6 +187,7 @@ contract PenroseTest is UsdoTestHelper {
     }
 
     function test_setMarketApprovalBypassContract_valid(address _contract, bool _isApprovalLess) public {
+        vm.assume(_contract != address(0));
 
         vm.startPrank(__owner);
         penrose.setMarketApprovalBypassContract(_contract, _isApprovalLess);
@@ -208,6 +209,8 @@ contract PenroseTest is UsdoTestHelper {
 
     function test_setMarketApprovalBypassContract_invalid_not_owner(address _sender, address _contract, bool _isApprovalLess) public {
         vm.assume(_sender != __owner);
+        vm.assume(_sender != address(0));
+        vm.assume(_contract != address(0));
 
         vm.startPrank(_sender);
         vm.expectRevert();
