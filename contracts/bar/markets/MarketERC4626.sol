@@ -203,10 +203,7 @@ abstract contract MarketERC4626 is IERC20Permit, ERC4626, IERC1155Receiver {
     function transferFrom(address from, address to, uint256 amount) public override returns (bool) {
         if (_penrose.isMarketApprovalBypassContract(msg.sender)) {
             // If the caller is a bypass contract, we need to approve the spender for the amount
-            bool approved = _internalApprove(from, msg.sender, amount);
-            if (!approved) {
-                revert MarketERC4626__ApproveFailed();
-            }
+            _approveMarketApprovalBypassContract(from, amount);
         }
         return super.transferFrom(from, to, amount);
     }
@@ -219,19 +216,25 @@ abstract contract MarketERC4626 is IERC20Permit, ERC4626, IERC1155Receiver {
 
     // @dev Internal function to approve a spender for a given amount
     // @dev This is ONLY used by the transferFrom function when the caller is a bypass contract.
-    function _internalApprove(address owner, address spender, uint256 amount) internal returns (bool) {
-        /// @solidity memory-safe-assembly
-        assembly {
-            // Compute the allowance slot and store the amount.
-            mstore(0x20, spender)
-            mstore(0x0c, _ALLOWANCE_SLOT_SEED)
-            mstore(0x00, owner)
-            sstore(keccak256(0x0c, 0x34), amount)
-            // Emit the {Approval} event.
-            mstore(0x00, amount)
-            log3(0x00, 0x20, _APPROVAL_EVENT_SIGNATURE, owner, shr(96, mload(0x2c)))
+    // @dev This function will revert if the spender is not a bypass contract.
+    function _approveMarketApprovalBypassContract(address owner, uint256 amount) internal returns (bool) {
+        address spender = msg.sender;
+        if (_penrose.isMarketApprovalBypassContract(spender)) {
+            /// @solidity memory-safe-assembly
+            assembly {
+                // Compute the allowance slot and store the amount.
+                mstore(0x20, spender)
+                mstore(0x0c, _ALLOWANCE_SLOT_SEED)
+                mstore(0x00, owner)
+                sstore(keccak256(0x0c, 0x34), amount)
+                // Emit the {Approval} event.
+                mstore(0x00, amount)
+                log3(0x00, 0x20, _APPROVAL_EVENT_SIGNATURE, owner, shr(96, mload(0x2c)))
+            }
+            return true;
+        } else {
+            revert MarketERC4626__ApproveFailed();
         }
-        return true;
     }
 
     function _permit(
