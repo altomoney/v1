@@ -30,7 +30,6 @@ contract SGLLendingCommon is SGLCommon {
     // ************** //
     error BorrowCapReached();
     error NothingToRepay();
-    error NotEnough();
 
     // ************************** //
     // *** PRIVATE FUNCTIONS *** //
@@ -128,10 +127,5 @@ contract SGLLendingCommon is SGLCommon {
         _borrowableToken().safeTransferFrom(from, address(this), amount);
 
         emit LogRepay(from, to, amount, part);
-    }
-
-    function _safeDecimals(IERC20 token) internal view returns (uint8) {
-        (bool success, bytes memory data) = address(token).staticcall(abi.encodeWithSelector(0x313ce567)); //decimals() selector
-        return success && data.length == 32 ? abi.decode(data, (uint8)) : 18;
     }
 }

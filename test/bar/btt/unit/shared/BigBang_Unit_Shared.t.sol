@@ -100,7 +100,7 @@ abstract contract BigBang_Unit_Shared is Markets_Unit_Shared {
     }
 
     modifier whenCollateralAmountIsValid(uint256 collateralAmount) {
-        uint256 minCollateralAmount = mainBB._minCollateralAmount();
+        uint256 minCollateralAmount = mainBB.minCollateralAmount();
         vm.assume(collateralAmount > minCollateralAmount && collateralAmount < LARGE_AMOUNT);
         _;
     }
@@ -139,7 +139,7 @@ abstract contract BigBang_Unit_Shared is Markets_Unit_Shared {
     // **************** //
     // // Takes `mainBB` CR rate into account
     function _boundBorrowAmount(uint256 borrowAmount, uint256 collateralAmount) internal view returns (uint256) {
-        uint256 minBorrowAmount = mainBB._minBorrowAmount();
+        uint256 minBorrowAmount = mainBB.minBorrowAmount();
         uint256 maxBorrowAmount = _computeMaxBorrowAmount(collateralAmount, IMarket(address(mainBB)));
         if (minBorrowAmount > maxBorrowAmount) revert Test_Error_Invalid_Amount();
         // assure a 10% threshold for insolvency
@@ -163,7 +163,7 @@ abstract contract BigBang_Unit_Shared is Markets_Unit_Shared {
         Rebase memory _totalBorrowed = bb._totalBorrow();
         uint256 borrowAmount = _totalBorrowed.toElastic(borrowPart, true);
         uint256 maxBorrowAmount = _computeMaxBorrowAmount(collateralAmount, IMarket(address(mainBB)));
-        uint256 minBorrowAmount = bb._minBorrowAmount();
+        uint256 minBorrowAmount = bb.minBorrowAmount();
 
         leverageAmount = bound(leverageAmount, minBorrowAmount, maxBorrowAmount - borrowAmount);
         return leverageAmount;

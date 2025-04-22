@@ -42,7 +42,7 @@ contract MagnetarOptionModule is MagnetarBaseModule {
 
     error Magnetar_ComposeMsgNotAllowed();
 
-    constructor(address _toeHelper) MagnetarBaseModule(_toeHelper) {}
+    constructor(address _toeHelper, address _magnetarHelper) MagnetarBaseModule(_toeHelper, _magnetarHelper) {}
 
     /**
      * @notice helper to perform tOLP.lock(...) and tOB.participate(...)

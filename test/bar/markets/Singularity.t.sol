@@ -109,7 +109,7 @@ contract SingularityTest is UsdoTestHelper {
         input.bbMarketBorrowCap = 3_000_000e18;
 
         input.lzEndpoint = address(new LZEndpointMock(1));
-        input.zeroXSwapper = address(1);
+        input.zeroXProxy = address(1);
         report = TapiocaRelease.deployTapiocaV1(input, emptyReport);
         singularityLauncher = new SingularityLauncher(
             report.sglLiquidationModule,
@@ -197,7 +197,7 @@ contract SingularityTest is UsdoTestHelper {
 
     function test_setSingularityConfig() public {
         uint256 borrowingOpeningFee = singularity.borrowOpeningFee();
-        uint256 liquidationMultiplier = singularity._liquidationMultiplier();
+        uint256 liquidationMultiplier = singularity.liquidationMultiplier();
         uint256 minimumTargetUtilization = singularity.minimumTargetUtilization();
         uint256 maximumTargetUtilization = singularity.maximumTargetUtilization();
         uint256 minimumInterestPerSecond = singularity.minimumInterestPerSecond();
@@ -217,7 +217,7 @@ contract SingularityTest is UsdoTestHelper {
 
         {
             assertEq(singularity.borrowOpeningFee(), borrowingOpeningFee);
-            assertEq(singularity._liquidationMultiplier(), liquidationMultiplier);
+            assertEq(singularity.liquidationMultiplier(), liquidationMultiplier);
             assertEq(singularity.minimumTargetUtilization(), minimumTargetUtilization);
             assertEq(singularity.maximumTargetUtilization(), maximumTargetUtilization);
             assertEq(singularity.minimumInterestPerSecond(), minimumInterestPerSecond);
@@ -274,7 +274,7 @@ contract SingularityTest is UsdoTestHelper {
             assertEq(singularity._totalBorrowCap(), toSetValue);
             assertEq(singularity._collateralizationRate(), toSetValue);
             assertEq(singularity._liquidationCollateralizationRate(), toSetMaxValue);
-            assertEq(singularity._minBorrowAmount(), toSetValue);
+            assertEq(singularity.minBorrowAmount(), toSetValue);
         }
     }
 
@@ -631,7 +631,7 @@ contract SingularityTest is UsdoTestHelper {
 
     function test_addCollateral_valid(address _user, uint256 _amount) public {
         vm.assume(_user != address(0));
-        vm.assume(_amount >= singularity._minCollateralAmount());
+        vm.assume(_amount >= singularity.minCollateralAmount());
         vm.assume(_amount <= type(uint128).max);
 
         deal(address(collateral), _user, _amount);
@@ -659,7 +659,7 @@ contract SingularityTest is UsdoTestHelper {
 
     function test_addCollateral_valid_provide_both_values(address _user, uint256 _amount, uint256 _shares) public {
         vm.assume(_user != address(0));
-        vm.assume(_amount >= singularity._minCollateralAmount());
+        vm.assume(_amount >= singularity.minCollateralAmount());
         vm.assume(_amount <= type(uint128).max);
         vm.assume(_shares <= type(uint128).max);
         vm.assume(_shares > 1e18);
@@ -687,7 +687,7 @@ contract SingularityTest is UsdoTestHelper {
 
     function test_addCollateral_valid_provide_both_amount_and_shares(address _user, uint256 _amount) public {
         vm.assume(_user != address(0));
-        vm.assume(_amount >= singularity._minCollateralAmount());
+        vm.assume(_amount >= singularity.minCollateralAmount());
         vm.assume(_amount <= type(uint128).max);
         uint256 _shares = 1e18;
 

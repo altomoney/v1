@@ -6,6 +6,7 @@ struct TapiocaReport {
     address magnetarCollateralModule;
     address magnetarMintModule;
     address magnetarOptionModule;
+    address magnetarLeverageModule;
     address magnetarAssetModule;
     address magnetarHelper;
     address simpleLeverageExecutor;
@@ -47,11 +48,11 @@ struct TapiocaReport {
 
 struct MagnetarReport {
     address magnetar;
-    address magnetarHelper;
     address simpleLeverageExecutor;
 }
 
 struct MagnetarDepsReport {
+    address magnetarHelper;
     address magnetarCollateralModule;
     address magnetarMintModule;
     address magnetarOptionModule;
@@ -70,7 +71,7 @@ struct UtilitiesReport {
 struct TapiocaInput {
     address owner;
     address wrappedNativeToken;
-    address zeroXSwapper;
+    address zeroXProxy;
     address tapToken;
     address lzEndpoint;
     uint256 bbMarketBorrowCap;
@@ -135,6 +136,7 @@ struct IPenroseInput {
     address owner;
     address singularityMaster;
     address bigbangMaster;
+    address magnetar;
     address prevPenrose;
 }
 

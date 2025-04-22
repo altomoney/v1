@@ -128,7 +128,7 @@ abstract contract MagnetarTestUtils is TestHelper {
                 __admin
             )
         );
-        input.zeroXSwapper = address(new ZeroXSwapperMock(ICluster(address(0x0)), __admin));
+        input.zeroXProxy = address(new ZeroXSwapperMock(ICluster(address(0x0)), __admin));
         input.lzEndpoint = address(endpoints[aEid]);
         __endpoint = address(endpoints[aEid]);
 
@@ -136,7 +136,7 @@ abstract contract MagnetarTestUtils is TestHelper {
         report = TapiocaRelease.deployTapiocaV1(input, emptyReport);
 
         vm.startPrank(__admin);
-        ZeroXSwapperMock(payable(input.zeroXSwapper)).setCluster(ICluster(report.cluster));
+        ZeroXSwapperMock(payable(input.zeroXProxy)).setCluster(ICluster(report.cluster));
         TapTokenMock(payable(input.tapToken)).setCluster(ICluster(report.cluster));
         vm.stopPrank();
 

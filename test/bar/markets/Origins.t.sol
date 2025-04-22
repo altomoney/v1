@@ -79,7 +79,7 @@ contract OriginsTest is UsdoTestHelper {
         input.wrappedNativeToken = address(new ERC20Mock("A", "A"));
         input.tapToken = address(new ERC20Mock("B", "B"));
         input.lzEndpoint = address(new LZEndpointMock(1));
-        input.zeroXSwapper = address(1);
+        input.zeroXProxy = address(1);
         input.bbMarketBorrowCap = 3_000_000e18;
 
         report = TapiocaRelease.deployTapiocaV1(input, emptyReport);
@@ -187,7 +187,7 @@ contract OriginsTest is UsdoTestHelper {
             assertEq(origins._totalBorrowCap(), toSetValue);
             assertEq(origins._collateralizationRate(), toSetValue);
             assertEq(origins._liquidationCollateralizationRate(), toSetMaxValue);
-            assertEq(origins._minBorrowAmount(), toSetValue);
+            assertEq(origins.minBorrowAmount(), toSetValue);
         }
     }
 

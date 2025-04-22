@@ -5,7 +5,7 @@ pragma solidity ^0.8.22;
 import {RebaseLibrary, Rebase} from "@boringcrypto/boring-solidity/contracts/libraries/BoringRebase.sol";
 import {BoringERC20} from "@boringcrypto/boring-solidity/contracts/libraries/BoringERC20.sol";
 import {IERC20} from "@boringcrypto/boring-solidity/contracts/interfaces/IERC20.sol";
-
+import {IMarket} from "tap-utils/interfaces/bar/IMarket.sol";
 // Tapioca
 import {ILeverageExecutor} from "tap-utils/interfaces/bar/ILeverageExecutor.sol";
 import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
@@ -19,6 +19,8 @@ import {BBCollateral} from "./BBCollateral.sol";
 import {BBLeverage} from "./BBLeverage.sol";
 import {BBCommon} from "./BBCommon.sol";
 import {BBBorrow} from "./BBBorrow.sol";
+import {ErrorDecoderLib} from "../../../utils/markets/ErrorDecoderLib.sol";
+import {MarketLib} from "../../../utils/markets/MarketLib.sol";
 
 // solhint-disable max-line-length
 /*
@@ -41,6 +43,8 @@ contract BigBang is BBCommon {
     using RebaseLibrary for Rebase;
     using BoringERC20 for IERC20;
     using SafeApprove for address;
+    using ErrorDecoderLib for bytes;
+    using MarketLib for IMarket;
 
     // ************** //
     // *** ERRORS *** //
@@ -268,14 +272,7 @@ contract BigBang is BBCommon {
     /// @dev can only be called by the owner or FEES_EXTRACTOR role
     /// @return feeAmount the amount of fees in shares withdrawn under Penrose
     function refreshPenroseFees() external returns (uint256 feeAmount) {
-        require(
-            _cluster().hasRole(msg.sender, keccak256("FEES_EXTRACTOR")) || msg.sender == owner(),
-            "Ownable: caller is not the owner"
-        );
-        feeAmount = IERC20(_borrowableToken()).balanceOf(address(this));
-        if (feeAmount > 0) {
-            IERC20(_borrowableToken()).safeTransfer(msg.sender, feeAmount);
-        }
+        return IMarket(address(this)).refreshPenroseFees(_cluster(), owner());
     }
 
     /// @notice sets BigBang specific configuration
@@ -347,7 +344,7 @@ contract BigBang is BBCommon {
 
         (success, returnData) = _extractModule(_module).delegatecall(_data);
         if (!success) {
-            revert(abi.decode(_getRevertMsg(returnData), (string)));
+            revert(abi.decode(returnData.getRevertMsg(), (string)));
         }
     }
 

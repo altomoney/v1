@@ -57,14 +57,14 @@ contract BigBang_borrow is BigBang_Unit_Shared {
         whenOracleRateIsEth
         whenCollateralAmountIsValid(collateralAmount)
     {
-        borrowAmount = bound(borrowAmount, 1, mainBB._minBorrowAmount());
+        borrowAmount = bound(borrowAmount, 1, mainBB.minBorrowAmount());
         (Module[] memory modules, bytes[] memory calls) = _getBorrowData(borrowAmount, address(this), address(this));
 
         // min amount revert
         vm.expectRevert();
         mainBB.execute(modules, calls, true);
 
-        borrowAmount = bound(borrowAmount, 1, secondaryBB._minBorrowAmount());
+        borrowAmount = bound(borrowAmount, 1, secondaryBB.minBorrowAmount());
         (modules, calls) = _getBorrowData(borrowAmount, address(this), address(this));
 
         // min amount revert

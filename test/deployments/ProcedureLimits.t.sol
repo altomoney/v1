@@ -142,7 +142,7 @@ contract DeploymentProceduresLimits is Test {
     function test_new_PenroseBatch() public {
         new TapiocaPenroseBatch(
             IPenroseInput(
-                address(1), erc20Mock1, erc20Mock2, erc20Mock3, address(7), address(8), address(1), address(0)
+                address(1), erc20Mock1, erc20Mock2, erc20Mock3, address(7), address(8), address(9), address(10), address(0)
             )
         );
     }

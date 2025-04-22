@@ -27,6 +27,7 @@ import {BBLiquidation} from "tapioca-bar/markets/bigBang/BBLiquidation.sol";
 import {BBBorrow} from "tapioca-bar/markets/bigBang/BBBorrow.sol";
 import {BBLeverage} from "tapioca-bar/markets/bigBang/BBLeverage.sol";
 import "../../interfaces/ITapiocaReport.sol";
+import "forge-std/console.sol";
 
 /// @title TapiocaRelease
 /// @dev To be imported by Foundry scripts to deploy Tapioca V1.
@@ -40,7 +41,7 @@ library TapiocaRelease {
         Reports memory reports;
         TapiocaUtilitiesBatch utilitiesBatch;
         (utilitiesBatch, reports.utilitiesReport) =
-            _deployUtilities(input.owner, input.zeroXSwapper, input.lzChainId, input.isTestnet);
+            _deployUtilities(input.owner, input.zeroXProxy, input.lzChainId, input.isTestnet);
 
         reports.ExtExReport = _deployExtEx(
             input.owner, input.wrappedNativeToken, reports.utilitiesReport.cluster, reports.utilitiesReport.zeroXSwapper
@@ -52,7 +53,7 @@ library TapiocaRelease {
             input.owner,
             reports.utilitiesReport.cluster,
             reports.utilitiesReport.toeHelper,
-            input.zeroXSwapper,
+            reports.utilitiesReport.zeroXSwapper,
             input.wrappedNativeToken,
             reports.magnetarDepsReport
         );
@@ -76,6 +77,7 @@ library TapiocaRelease {
             reports.utilitiesReport.tapiocaMulticall,
             reports.sglReport.singularity,
             reports.bbReport.bigbang,
+            reports.magnetarReport.magnetar,
             prevReport.penrose
         );
         reports.launcherReport = _deployMarketLaunchers(
@@ -145,11 +147,12 @@ library TapiocaRelease {
         address owner,
         address singularityMaster,
         address bigbangMaster,
+        address magnetar,
         address prevPenrose
     ) private returns (PenroseReport memory report) {
         TapiocaPenroseBatch penroseBatch = new TapiocaPenroseBatch(
             IPenroseInput(
-                cluster, tapToken, usdoToken, nativeWrappedToken, owner, singularityMaster, bigbangMaster, prevPenrose
+                cluster, tapToken, usdoToken, nativeWrappedToken, owner, singularityMaster, bigbangMaster, magnetar, prevPenrose
             )
         );
         return penroseBatch.getPenroseReport();
@@ -266,9 +269,10 @@ library TapiocaRelease {
         report.magnetarCollateralModule = reports.magnetarDepsReport.magnetarCollateralModule;
         report.magnetarMintModule = reports.magnetarDepsReport.magnetarMintModule;
         report.magnetarOptionModule = reports.magnetarDepsReport.magnetarOptionModule;
+        report.magnetarLeverageModule = reports.magnetarDepsReport.magnetarLeverageModule;
         report.simpleLeverageExecutor = reports.magnetarReport.simpleLeverageExecutor;
         report.magnetar = reports.magnetarReport.magnetar;
-        report.magnetarHelper = reports.magnetarReport.magnetarHelper;
+        report.magnetarHelper = reports.magnetarDepsReport.magnetarHelper;
         report.liquidatorReceiver = reports.ExtExReport.liquidatorReceiver;
         report.extExec = reports.ExtExReport.extExec;
         report.usdoSenderModule = reports.usdoModulesReport.usdoSenderModule;

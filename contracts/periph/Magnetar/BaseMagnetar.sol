@@ -39,7 +39,9 @@ abstract contract BaseMagnetar is MagnetarStorage, Ownable, Pausable {
     event ClusterUpdated(ICluster indexed oldCluster, ICluster indexed newCluster);
     event MagnetarModuleExtenderSet(address old, address newMagnetarModuleExtender);
 
-    constructor(ICluster _cluster, address _toeHelper, address _owner) MagnetarStorage(_toeHelper) {
+    constructor(ICluster _cluster, address _toeHelper, address _owner, address _magnetarHelper)
+        MagnetarStorage(_toeHelper, _magnetarHelper)
+    {
         cluster = _cluster;
         transferOwnership(_owner);
     }

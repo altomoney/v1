@@ -62,6 +62,10 @@ contract Penrose is Ownable, Pausable {
     mapping(address => bool) public isBigBangMasterContractRegistered;
     /// @notice Used to check if a SGL/BB is a real market
     mapping(address => bool) public isMarketRegistered;
+    // @notice Contracts set to true can bypass all allowance checks on market contracts when they are msg.sender.
+    // @notice This can bypass allowanceBorrow, allowanceCollateral, allowanceLiquidity and allowance (on ERC4626).
+    // @notice This is useful for trusted periphery contracts like Magnetar.
+    mapping(address => bool) public isMarketApprovalBypassContract;
 
     /// @notice BigBang ETH market address
     address public bigBangEthMarket;
@@ -133,6 +137,7 @@ contract Penrose is Ownable, Pausable {
     event LogDeploy(address indexed masterContract, bytes data, address indexed cloneAddress);
     event UnregisterContract(address indexed bb);
     event MainTokensUpdated();
+    event MarketApprovalBypassContractSet(address indexed target, bool indexed isApprovalLess);
 
     // ************** //
     // *** ERRORS *** //
@@ -344,6 +349,12 @@ contract Penrose is Ownable, Pausable {
         if (_newCluster == address(0)) revert ZeroAddress();
         emit ClusterSet(address(cluster), _newCluster);
         cluster = ICluster(_newCluster);
+    }
+
+    function setMarketApprovalBypassContract(address _contract, bool _isMarketApprovalBypass) external onlyOwner {
+        if (_contract == address(0)) revert ZeroAddress();
+        isMarketApprovalBypassContract[_contract] = _isMarketApprovalBypass;
+        emit MarketApprovalBypassContractSet(_contract, _isMarketApprovalBypass);
     }
 
     /// @notice sets the main BigBang market debt rate

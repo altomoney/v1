@@ -42,7 +42,7 @@ abstract contract MagnetarBaseModule is MagnetarStorage {
     error Magnetar_tOLPTokenMismatch();
     error Magnetar_TransferFailed();
 
-    constructor(address _toeHelper) MagnetarStorage(_toeHelper) {}
+    constructor(address _toeHelper, address _magnetarHelper) MagnetarStorage(_toeHelper, _magnetarHelper) {}
 
     /// =====================
     /// Internal

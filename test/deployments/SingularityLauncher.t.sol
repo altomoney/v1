@@ -36,7 +36,7 @@ contract TapiocaReleaseTest is Test {
         input.bbMarketBorrowCap = 3_000_000e18;
 
         input.lzEndpoint = address(new LZEndpointMock(1));
-        input.zeroXSwapper = address(1);
+        input.zeroXProxy = address(1);
         usda = new ERC20Mock("USDA", "USDA");
         report = TapiocaRelease.deployTapiocaV1(input, emptyReport);
         singularityLauncher = new SingularityLauncher(

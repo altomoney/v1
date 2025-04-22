@@ -15,6 +15,7 @@ import {Module, PauseType} from "tap-utils/interfaces/bar/IMarket.sol";
 import {MarketLib} from "../../utils/markets/MarketLib.sol";
 import {IMarket} from "../../utils/interfaces/bar/IMarket.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import {ErrorDecoderLib} from "../../utils/markets/ErrorDecoderLib.sol";
 
 /*
 
@@ -30,6 +31,7 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.
 contract Market is MarketERC4626, Ownable, ReentrancyGuard {
     using RebaseLibrary for Rebase;
     using MarketLib for IMarket;
+    using ErrorDecoderLib for bytes;
 
     // ************ //
     // *** VARS *** //
@@ -74,14 +76,14 @@ contract Market is MarketERC4626, Ownable, ReentrancyGuard {
     /// @notice liquidation collateralization rate
     uint256 internal liquidationCollateralizationRate; //80%
     /// @notice liquidation multiplier used to compute liquidator rewards
-    uint256 internal liquidationMultiplier = 12000; //12%
+    uint256 public liquidationMultiplier = 12000; //12%
     /// @notice returns the leverage executor
     ILeverageExecutor internal leverageExecutor;
     /// @notice returns the maximum accepted slippage for liquidation
-    uint256 internal maxLiquidationSlippage = 1000; //1%
+    uint256 public maxLiquidationSlippage = 1000; //1%
 
-    uint256 internal minBorrowAmount;
-    uint256 internal minCollateralAmount;
+    uint256 public minBorrowAmount;
+    uint256 public minCollateralAmount;
     // ***************** //
     // *** CONSTANTS *** //
     // ***************** //
@@ -142,7 +144,7 @@ contract Market is MarketERC4626, Ownable, ReentrancyGuard {
         require(!pauseOptions[_type], "Market: paused");
     }
 
-    function _notSelf(address destination) internal {
+    function _notSelf(address destination) internal view {
         require(destination != address(this), "Market: cannot execute on itself");
     }
 
@@ -255,12 +257,7 @@ contract Market is MarketERC4626, Ownable, ReentrancyGuard {
         }
 
         if (_collateralizationRate > 0) {
-            require(_collateralizationRate <= FEE_PRECISION, "Market: not valid");
-            require(_collateralizationRate <= liquidationCollateralizationRate, "Market: collateralizationRate too big");
-            require(
-                _collateralizationRate * (FEE_PRECISION + liquidationMultiplier) < FEE_PRECISION * FEE_PRECISION,
-                "Market: CR * (1 + LM) >= 1"
-            );
+            IMarket(address(this)).requireCollateralizationRate(_collateralizationRate, FEE_PRECISION);
             collateralizationRate = _collateralizationRate;
             emit ValueUpdated(7, _collateralizationRate);
         }
@@ -300,7 +297,7 @@ contract Market is MarketERC4626, Ownable, ReentrancyGuard {
     /// @param val the new val
     function updatePauseAll(bool val) external {
         require(_cluster().hasRole(msg.sender, keccak256("PAUSABLE")) || msg.sender == owner(), "Market: unauthorized");
-
+        
         pauseOptions[PauseType.Borrow] = val;
         pauseOptions[PauseType.Repay] = val;
         pauseOptions[PauseType.AddCollateral] = val;
@@ -377,8 +374,7 @@ contract Market is MarketERC4626, Ownable, ReentrancyGuard {
         view
         returns (uint256 amountToSolvency, uint256 minTVL, uint256 maxTVL)
     {
-        uint256 borrowPart = userBorrowPart[user];
-        return IMarket(address(this)).computeTVLInfo(borrowPart, _accrueView(), user, _exchangeRate, FEE_PRECISION);
+        return IMarket(address(this)).computeTVLInfo(userBorrowPart[user], _accrueView(), user, _exchangeRate, FEE_PRECISION);
     }
 
     /// @notice Gets the exchange rate. I.e how much collateral to buy 1e18 asset.
@@ -461,6 +457,9 @@ contract Market is MarketERC4626, Ownable, ReentrancyGuard {
     function _allowedLend(address from, uint256 amount) internal virtual override {
         if (from != msg.sender) {
             if (amount == 0) revert AllowanceNotValid();
+            if (_penrose.isMarketApprovalBypassContract(msg.sender)) {
+                return;
+            }
             uint256 currentAllowance = allowanceLiquidity[from][msg.sender];
             require(currentAllowance >= amount, "Market: not approved");
             if (currentAllowance != type(uint256).max) {
@@ -474,6 +473,9 @@ contract Market is MarketERC4626, Ownable, ReentrancyGuard {
     function _allowedCollateral(address from, uint256 amount) internal virtual override {
         if (from != msg.sender) {
             if (amount == 0) revert AllowanceNotValid();
+            if (_penrose.isMarketApprovalBypassContract(msg.sender)) {
+                return;
+            }
             uint256 currentAllowance = allowanceCollateral[from][msg.sender];
             require(currentAllowance >= amount, "Market: not approved");
             if (currentAllowance != type(uint256).max) {
@@ -487,6 +489,9 @@ contract Market is MarketERC4626, Ownable, ReentrancyGuard {
     function _allowedBorrow(address from, uint256 amount) internal virtual override {
         if (from != msg.sender) {
             if (amount == 0) revert AllowanceNotValid();
+            if (_penrose.isMarketApprovalBypassContract(msg.sender)) {
+                return;
+            }
             uint256 currentAllowance = allowanceBorrow[from][msg.sender];
             require(currentAllowance >= amount, "Market: not approved");
             if (currentAllowance != type(uint256).max) {
@@ -596,27 +601,11 @@ contract Market is MarketERC4626, Ownable, ReentrancyGuard {
         return liquidationCollateralizationRate;
     }
 
-    function _liquidationMultiplier() external view returns (uint256) {
-        return liquidationMultiplier;
-    }
-
     function _leverageExecutor() external view returns (address) {
         return address(leverageExecutor);
     }
 
-    function _maxLiquidationSlippage() external view returns (uint256) {
-        return maxLiquidationSlippage;
-    }
-
     function _exchangeRatePrecision() external view returns (uint256) {
         return EXCHANGE_RATE_PRECISION;
-    }
-
-    function _minBorrowAmount() external view returns (uint256) {
-        return minBorrowAmount;
-    }
-
-    function _minCollateralAmount() external view returns (uint256) {
-        return minCollateralAmount;
     }
 }

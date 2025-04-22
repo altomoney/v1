@@ -166,7 +166,7 @@ contract TOBTestBase is Test, Events, Utils {
         input.bbMarketBorrowCap = 3_000_000e18;
 
         input.lzEndpoint = address(new LZEndpointMock(uint16(block.chainid)));
-        input.zeroXSwapper = address(1);
+        input.zeroXProxy = address(1);
 
         tapToken = new TapToken(
             ITapToken.TapTokenConstructorData(
