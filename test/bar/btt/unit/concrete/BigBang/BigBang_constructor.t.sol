@@ -36,7 +36,7 @@ contract BigBang_constructor is BigBang_Unit_Shared {
         // it should have liquidationBonusAmount as the default one of 3e3
         assertEq(mainBB._liquidationBonusAmount(), LIQUIDATION_BONUS_AMOUNT);
         // it should have liquidationMultiplier as the default one of 12000
-        assertEq(mainBB._liquidationMultiplier(), LIQUIDATION_MULTIPLIER);
+        assertEq(mainBB.liquidationMultiplier(), LIQUIDATION_MULTIPLIER);
         // it should have rateValidDuration as the default one of 24 hours
         assertEq(mainBB._rateValidDuration(), RATE_VALID_DURATION);
         // it should have minMintFee as the default one of 0
@@ -48,9 +48,9 @@ contract BigBang_constructor is BigBang_Unit_Shared {
         // it should have minMintFeeStart as the default one of 1000000000000000000
         assertEq(mainBB.minMintFeeStart(), MIN_MINT_FEE_START);
         // it should have minBorrowAmount as the default one of 1e15
-        assertEq(mainBB._minBorrowAmount(), MIN_BORROW_AMOUNT);
+        assertEq(mainBB.minBorrowAmount(), MIN_BORROW_AMOUNT);
         // it should have minCollateralAmount as the default one of 1e15
-        assertEq(mainBB._minCollateralAmount(), MIN_COLLATERAL_AMOUNT);
+        assertEq(mainBB.minCollateralAmount(), MIN_COLLATERAL_AMOUNT);
         // it should transfer ownership to 'Penrose'
         assertEq(mainBB.owner(), address(penrose));
     }

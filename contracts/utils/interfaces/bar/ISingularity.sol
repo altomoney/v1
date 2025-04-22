@@ -23,6 +23,8 @@ interface ISingularity is IMarket {
 
     function minLendAmount() external view returns (uint256);
 
+    function interestHelper() external view returns (address);
+
     function accrueInfo()
         external
         view
@@ -57,17 +59,25 @@ interface ISingularity is IMarket {
 
     function maximumTargetUtilization() external view returns (uint256);
 
-    function minimumInterestPerSecond() external view returns (uint256);
+    function minimumInterestPerSecond() external view returns (uint64);
 
-    function maximumInterestPerSecond() external view returns (uint256);
+    function maximumInterestPerSecond() external view returns (uint64);
 
     function interestElasticity() external view returns (uint256);
 
-    function startingInterestPerSecond() external view returns (uint256);
+    function startingInterestPerSecond() external view returns (uint64);
 
     function refreshPenroseFees() external returns (uint256 feeAmount);
 
     function liquidityBalance(address) external view returns (uint256);
 
     function init(address sglInit, bytes calldata initData) external;
+
+    function liquidationModule() external view returns (address);
+
+    function borrowModule() external view returns (address);
+
+    function collateralModule() external view returns (address);
+
+    function leverageModule() external view returns (address);
 }

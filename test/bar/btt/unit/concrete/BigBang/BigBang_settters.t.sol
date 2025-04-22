@@ -51,14 +51,14 @@ contract BigBang_setters is BigBang_Unit_Shared {
         _executeFromPenrose(
             address(mainBB), abi.encodeWithSelector(Market.setLiquidationMaxSlippage.selector, MAX_MINT_FEE)
         );
-        assertEq(mainBB._maxLiquidationSlippage(), MAX_MINT_FEE);
+        assertEq(mainBB.maxLiquidationSlippage(), MAX_MINT_FEE);
 
         // **** Secondary BB market ****
         // it should not revert
         _executeFromPenrose(
             address(secondaryBB), abi.encodeWithSelector(Market.setLiquidationMaxSlippage.selector, MAX_MINT_FEE)
         );
-        assertEq(secondaryBB._maxLiquidationSlippage(), MAX_MINT_FEE);
+        assertEq(secondaryBB.maxLiquidationSlippage(), MAX_MINT_FEE);
     }
 
     function test_RevertWhen_SetMarketConfigIsCalledFromNon_owner() external {
@@ -97,8 +97,8 @@ contract BigBang_setters is BigBang_Unit_Shared {
         assertEq(mainBB._totalBorrowCap(), 104);
         assertEq(mainBB._collateralizationRate(), 105);
         assertEq(mainBB._liquidationCollateralizationRate(), 106);
-        assertEq(mainBB._minBorrowAmount(), 107);
-        assertEq(mainBB._minCollateralAmount(), 108);
+        assertEq(mainBB.minBorrowAmount(), 107);
+        assertEq(mainBB.minCollateralAmount(), 108);
 
         // **** Secondary BB market ****
         // it should not revert
@@ -126,8 +126,8 @@ contract BigBang_setters is BigBang_Unit_Shared {
         assertEq(secondaryBB._totalBorrowCap(), 104);
         assertEq(secondaryBB._collateralizationRate(), 105);
         assertEq(secondaryBB._liquidationCollateralizationRate(), 106);
-        assertEq(secondaryBB._minBorrowAmount(), 107);
-        assertEq(secondaryBB._minCollateralAmount(), 108);
+        assertEq(secondaryBB.minBorrowAmount(), 107);
+        assertEq(secondaryBB.minCollateralAmount(), 108);
     }
 
     function test_RevertWhen_SetDebtRateHelperIsCalledFromNon_owner() external {
@@ -294,7 +294,7 @@ contract BigBang_setters is BigBang_Unit_Shared {
         _executeFromPenrose(
             address(mainBB), abi.encodeWithSelector(BigBang.setBigBangConfig.selector, 0, 0, 0, FEE_PRECISION - 1)
         );
-        assertEq(mainBB._liquidationMultiplier(), FEE_PRECISION - 1);
+        assertEq(mainBB.liquidationMultiplier(), FEE_PRECISION - 1);
     }
 
     function test_WhenSetBigBangConfigIsCalledFromOwnerForNonMainMarket() external {
@@ -310,7 +310,7 @@ contract BigBang_setters is BigBang_Unit_Shared {
                 FEE_PRECISION - 1
             )
         );
-        assertEq(secondaryBB._liquidationMultiplier(), FEE_PRECISION - 1);
+        assertEq(secondaryBB.liquidationMultiplier(), FEE_PRECISION - 1);
         assertEq(secondaryBB.minDebtRate(), BB_MIN_DEBT_RATE + 1);
         assertEq(secondaryBB.maxDebtRate(), BB_MAX_DEBT_RATE + 1);
         assertEq(secondaryBB.debtRateAgainstEthMarket(), BB_DEBT_RATE_AGAINST_MAIN_MARKET + 1);

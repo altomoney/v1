@@ -136,6 +136,7 @@ struct IPenroseInput {
     address owner;
     address singularityMaster;
     address bigbangMaster;
+    address magnetar;
     address prevPenrose;
 }
 

@@ -22,8 +22,11 @@ echo 'COMPILER_VERSION: '$COMPILER_VERSION
 echo 'CHAIN_ID: '$CHAIN_ID
 echo 'IsTestnet: '$IsTestnet
 echo 'MarketLib: '$MarketLib
+echo 'SingularityLib: '$SingularityLib
 echo 'Deployer: '$Deployer
 echo 'LzChainId: '$LzChainId
+echo 'TapiocaPenroseBatch: '$TapiocaPenroseBatch
+echo 'Magnetar: '$Magnetar
 echo 'MagnetarCollateralModule: '$MagnetarCollateralModule
 echo 'MagnetarMintModule: '$MagnetarMintModule
 echo 'MagnetarOptionModule: '$MagnetarOptionModule
@@ -33,11 +36,9 @@ echo 'Cluster: '$Cluster
 echo 'MagnetarHelper: '$MagnetarHelper
 echo 'TapToken: '$TapToken
 echo 'WrappedNativeToken: '$WrappedNativeToken
-echo 'BarProcedure: '$BarProcedure
 echo 'Penrose: '$Penrose
 echo 'ZeroXSwapper: '$ZeroXSwapper
 echo 'SimpleLeverageExecutor: '$SimpleLeverageExecutor
-echo 'Magnetar: '$Magnetar
 echo 'Usdo: '$Usdo
 echo 'SGLInit: '$SGLInit
 echo 'SGLInterestHelper: '$SGLInterestHelper
@@ -62,6 +63,7 @@ export COMPILER_VERSION=$COMPILER_VERSION
 export CHAIN_ID=$CHAIN_ID
 export IsTestnet=$IsTestnet
 export MarketLib=$MarketLib
+export SingularityLib=$SingularityLib
 export Deployer=$Deployer
 export LzChainId=$LzChainId
 export MagnetarCollateralModule=$MagnetarCollateralModule
@@ -167,8 +169,7 @@ echo "Etherscan URL for ToeHelper: $TOE_HELPER_EXPLORER_URL"
 echo -e $SEPARATOR
 
 # Penrose
-forge verify-contract --chain-id $CHAIN_ID --compiler-version $COMPILER_VERSION --verifier etherscan $WATCH_FLAG $Penrose ./contracts/bar/Penrose.sol:Penrose
-#--constructor-args $(cast abi-encode "constructor(address _cluster, address tapToken_, address mainToken_, address _owner)" $Cluster $TapToken $WrappedNativeToken $BarProcedure)
+forge verify-contract --chain-id $CHAIN_ID --compiler-version $COMPILER_VERSION --verifier etherscan $WATCH_FLAG $Penrose ./contracts/bar/Penrose.sol:Penrose --constructor-args $(cast abi-encode "constructor(address _cluster, address tapToken_, address mainToken_, address _owner)" $Cluster $TapToken $WrappedNativeToken $TapiocaPenroseBatch)
 
 PENROSE_EXPLORER_URL=$(get_explorer_url $Penrose)
 echo "Etherscan URL for Penrose: $PENROSE_EXPLORER_URL"
@@ -207,7 +208,7 @@ echo "Etherscan URL for Magnetar: $MAGNETAR_EXPLORER_URL"
 
 echo -e $SEPARATOR
 
-# Usdo
+# Usdo - Not working due to constructor arguments (struct)
 forge verify-contract --chain-id $CHAIN_ID --compiler-version $COMPILER_VERSION --verifier etherscan $WATCH_FLAG $Usdo ./contracts/bar/usdo/Usdo.sol:Usdo 
 # --constructor-args $(cast abi-encode "constructor(UsdoInitStruct memory _initData, UsdoModulesInitStruct memory _modulesData)" $UsdoInitStruct $UsdoModulesInitStruct)
 
@@ -224,8 +225,16 @@ echo "Etherscan URL for MarketLib: $MARKET_LIB_EXPLORER_URL"
 
 echo -e $SEPARATOR
 
+# SingularityLib
+forge verify-contract --chain-id $CHAIN_ID --compiler-version $COMPILER_VERSION --verifier etherscan $WATCH_FLAG $SingularityLib ./contracts/utils/markets/SingularityLib.sol:SingularityLib
+
+SINGULARITY_LIB_EXPLORER_URL=$(get_explorer_url $SingularityLib)
+echo "Etherscan URL for SingularityLib: $SINGULARITY_LIB_EXPLORER_URL"
+
+echo -e $SEPARATOR
+
 # SGLInit
-forge verify-contract --chain-id $CHAIN_ID --compiler-version $COMPILER_VERSION --verifier etherscan $WATCH_FLAG $SGLInit ./contracts/bar/markets/singularity/SGLInit.sol:SGLInit --libraries ./contracts/utils/markets/MarketLib.sol:MarketLib:$MarketLib
+forge verify-contract --chain-id $CHAIN_ID --compiler-version $COMPILER_VERSION --verifier etherscan $WATCH_FLAG $SGLInit ./contracts/bar/markets/singularity/SGLInit.sol:SGLInit --libraries ./contracts/utils/markets/MarketLib.sol:MarketLib:$MarketLib --libraries ./contracts/utils/markets/SingularityLib.sol:SingularityLib:$SingularityLib
 
 SGL_INIT_EXPLORER_URL=$(get_explorer_url $SGLInit)
 echo "Etherscan URL for SGLInit: $SGL_INIT_EXPLORER_URL"
@@ -249,7 +258,7 @@ echo "Etherscan URL for SGLLiquidation: $SGL_LIQUIDATION_EXPLORER_URL"
 echo -e $SEPARATOR
 
 # SGLBorrow
-forge verify-contract --chain-id $CHAIN_ID --compiler-version $COMPILER_VERSION --verifier etherscan $WATCH_FLAG $SGLBorrow ./contracts/bar/markets/singularity/SGLBorrow.sol:SGLBorrow --libraries ./contracts/utils/markets/MarketLib.sol:MarketLib:$MarketLib
+forge verify-contract --chain-id $CHAIN_ID --compiler-version $COMPILER_VERSION --verifier etherscan $WATCH_FLAG $SGLBorrow ./contracts/bar/markets/singularity/SGLBorrow.sol:SGLBorrow --libraries ./contracts/utils/markets/MarketLib.sol:MarketLib:$MarketLib --libraries ./contracts/utils/markets/SingularityLib.sol:SingularityLib:$SingularityLib
 
 SGL_BORROW_EXPLORER_URL=$(get_explorer_url $SGLBorrow)
 echo "Etherscan URL for SGLBorrow: $SGL_BORROW_EXPLORER_URL"
@@ -257,7 +266,7 @@ echo "Etherscan URL for SGLBorrow: $SGL_BORROW_EXPLORER_URL"
 echo -e $SEPARATOR
 
 # SGLCollateral
-forge verify-contract --chain-id $CHAIN_ID --compiler-version $COMPILER_VERSION --verifier etherscan $WATCH_FLAG $SGLCollateral ./contracts/bar/markets/singularity/SGLCollateral.sol:SGLCollateral --libraries ./contracts/utils/markets/MarketLib.sol:MarketLib:$MarketLib
+forge verify-contract --chain-id $CHAIN_ID --compiler-version $COMPILER_VERSION --verifier etherscan $WATCH_FLAG $SGLCollateral ./contracts/bar/markets/singularity/SGLCollateral.sol:SGLCollateral --libraries ./contracts/utils/markets/MarketLib.sol:MarketLib:$MarketLib --libraries ./contracts/utils/markets/SingularityLib.sol:SingularityLib:$SingularityLib
 
 SGL_COLLATERAL_EXPLORER_URL=$(get_explorer_url $SGLCollateral)
 echo "Etherscan URL for SGLCollateral: $SGL_COLLATERAL_EXPLORER_URL"
@@ -265,7 +274,7 @@ echo "Etherscan URL for SGLCollateral: $SGL_COLLATERAL_EXPLORER_URL"
 echo -e $SEPARATOR
 
 # SGLLeverage
-forge verify-contract --chain-id $CHAIN_ID --compiler-version $COMPILER_VERSION --verifier etherscan $WATCH_FLAG $SGLLeverage ./contracts/bar/markets/singularity/SGLLeverage.sol:SGLLeverage --libraries ./contracts/utils/markets/MarketLib.sol:MarketLib:$MarketLib
+forge verify-contract --chain-id $CHAIN_ID --compiler-version $COMPILER_VERSION --verifier etherscan $WATCH_FLAG $SGLLeverage ./contracts/bar/markets/singularity/SGLLeverage.sol:SGLLeverage --libraries ./contracts/utils/markets/MarketLib.sol:MarketLib:$MarketLib --libraries ./contracts/utils/markets/SingularityLib.sol:SingularityLib:$SingularityLib
 
 SGL_LEVERAGE_EXPLORER_URL=$(get_explorer_url $SGLCollateral)
 echo "Etherscan URL for SGLCollateral: $SGL_LEVERAGE_EXPLORER_URL"
@@ -273,7 +282,7 @@ echo "Etherscan URL for SGLCollateral: $SGL_LEVERAGE_EXPLORER_URL"
 echo -e $SEPARATOR
 
 # Singularity
-forge verify-contract --chain-id $CHAIN_ID --compiler-version $COMPILER_VERSION --verifier etherscan $WATCH_FLAG $Singularity ./contracts/bar/markets/singularity/Singularity.sol:Singularity --libraries ./contracts/utils/markets/MarketLib.sol:MarketLib:$MarketLib
+forge verify-contract --chain-id $CHAIN_ID --compiler-version $COMPILER_VERSION --verifier etherscan $WATCH_FLAG $Singularity ./contracts/bar/markets/singularity/Singularity.sol:Singularity --libraries ./contracts/utils/markets/MarketLib.sol:MarketLib:$MarketLib --libraries ./contracts/utils/markets/SingularityLib.sol:SingularityLib:$SingularityLib
 
 SINGULARITY_EXPLORER_URL=$(get_explorer_url $Singularity)
 echo "Etherscan URL for Singularity: $SINGULARITY_EXPLORER_URL"
@@ -281,7 +290,7 @@ echo "Etherscan URL for Singularity: $SINGULARITY_EXPLORER_URL"
 echo -e $SEPARATOR
 
 # SingularityMaster
-forge verify-contract --chain-id $CHAIN_ID --compiler-version $COMPILER_VERSION --verifier etherscan $WATCH_FLAG $SingularityMaster ./contracts/bar/markets/singularity/Singularity.sol:Singularity --libraries ./contracts/utils/markets/MarketLib.sol:MarketLib:$MarketLib
+forge verify-contract --chain-id $CHAIN_ID --compiler-version $COMPILER_VERSION --verifier etherscan $WATCH_FLAG $SingularityMaster ./contracts/bar/markets/singularity/Singularity.sol:Singularity --libraries ./contracts/utils/markets/MarketLib.sol:MarketLib:$MarketLib --libraries ./contracts/utils/markets/SingularityLib.sol:SingularityLib:$SingularityLib
 
 SINGULARITY_MASTER_EXPLORER_URL=$(get_explorer_url $SingularityMaster)
 echo "Etherscan URL for Singularity: $SINGULARITY_MASTER_EXPLORER_URL"
@@ -312,7 +321,7 @@ echo "Etherscan URL for TapiocaMulticall: $TAPI_MULTICALL_EXPLORER_URL"
 
 echo -e $SEPARATOR
 
-# TapiocaOptionBroker
+# TapiocaOptionBroker - Not working due to constructor arguments (struct)
 forge verify-contract --chain-id $CHAIN_ID --compiler-version $COMPILER_VERSION --verifier etherscan $WATCH_FLAG $TapiocaOptionBroker ./contracts/tap-token/options/TapiocaOptionBroker.sol:TapiocaOptionBroker
 # --constructor-args $(cast abi-encode "constructor(address _tapOFT, address _usdo, address _paymentTokenBeneficiary, uint256 _epochDuration, Bucket[] memory _buckets, address _penrose, address _admin)" $TapToken $Usdo $BarProcedure $Cluster $Penrose $Deployer)
 

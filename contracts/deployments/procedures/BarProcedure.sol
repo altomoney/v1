@@ -43,22 +43,15 @@ abstract contract BarProcedure {
                     address(this) // set owner temporarily for setup
                 )
             );
-            {
-                Penrose(report.penrose).setUsdoToken(input.usdoToken);
-            }
-            {
-                Penrose(report.penrose).registerBigBangMasterContract(
-                    input.bigbangMaster, IPenrose.ContractType.mediumRisk
-                );
-            }
-            {
-                Penrose(report.penrose).registerSingularityMasterContract(
-                    input.singularityMaster, IPenrose.ContractType.mediumRisk
-                );
-            }
-            {
-                Penrose(report.penrose).transferOwnership(input.owner);
-            }
+            Penrose(report.penrose).setUsdoToken(input.usdoToken);
+            Penrose(report.penrose).registerBigBangMasterContract(
+                input.bigbangMaster, IPenrose.ContractType.mediumRisk
+            );
+            Penrose(report.penrose).registerSingularityMasterContract(
+                input.singularityMaster, IPenrose.ContractType.mediumRisk
+            );
+            Penrose(report.penrose).setMarketApprovalBypassContract(input.magnetar, true);
+            Penrose(report.penrose).transferOwnership(input.owner);
         } else {
             report.penrose = input.prevPenrose;
         }

@@ -185,4 +185,38 @@ contract PenroseTest is UsdoTestHelper {
         uint256 mcLengthAfter = penrose.singularityMasterContractLength();
         assertGt(mcLengthAfter, mcLengthBefore);
     }
+
+    function test_setMarketApprovalBypassContract_valid(address _contract, bool _isApprovalLess) public {
+        vm.assume(_contract != address(0));
+
+        vm.startPrank(__owner);
+        penrose.setMarketApprovalBypassContract(_contract, _isApprovalLess);
+        vm.stopPrank();
+
+        assertEq(penrose.isMarketApprovalBypassContract(_contract), _isApprovalLess);
+    }
+
+    function test_setMarketApprovalBypassContract_invalid_empty_contract(bool _isApprovalLess) public {
+        address _contract = address(0);
+
+        vm.startPrank(__owner);
+        vm.expectRevert(Penrose.ZeroAddress.selector);
+        penrose.setMarketApprovalBypassContract(_contract, _isApprovalLess);
+        vm.stopPrank();
+
+        assertEq(penrose.isMarketApprovalBypassContract(_contract), false);
+    }
+
+    function test_setMarketApprovalBypassContract_invalid_not_owner(address _sender, address _contract, bool _isApprovalLess) public {
+        vm.assume(_sender != __owner);
+        vm.assume(_sender != address(0));
+        vm.assume(_contract != address(0));
+
+        vm.startPrank(_sender);
+        vm.expectRevert();
+        penrose.setMarketApprovalBypassContract(_contract, _isApprovalLess);
+        vm.stopPrank();
+
+        assertEq(penrose.isMarketApprovalBypassContract(_contract), false);
+    }
 }

@@ -3,11 +3,10 @@ pragma solidity ^0.8.22;
 
 // External
 import {RebaseLibrary, Rebase} from "@boringcrypto/boring-solidity/contracts/libraries/BoringRebase.sol";
-// Tapioca
-import {ISGLInterestHelper} from "tap-utils/interfaces/bar/ISGLInterestHelper.sol";
 import {ISingularity} from "tap-utils/interfaces/bar/ISingularity.sol";
 import {IERC4626} from "../../../utils/interfaces/common/IERC4626.sol";
 import {SGLStorage} from "./SGLStorage.sol";
+import {SingularityLib} from "../../../utils/markets/SingularityLib.sol";
 
 /*
 
@@ -22,6 +21,7 @@ import {SGLStorage} from "./SGLStorage.sol";
 
 abstract contract SGLCommon is SGLStorage {
     using RebaseLibrary for Rebase;
+    using SingularityLib for ISingularity;
 
     // ************** //
     // *** ERRORS *** //
@@ -56,22 +56,10 @@ abstract contract SGLCommon is SGLStorage {
             uint256 utilization
         )
     {
-        (_accrueInfo, _totalBorrow, _totalAsset, extraAmount, feeFraction, utilization) = ISGLInterestHelper(
-            interestHelper
-        ).getInterestRate(
-            ISGLInterestHelper.InterestRateCall(
-                IERC4626(address(this)),
-                accrueInfo,
-                totalAsset,
-                totalBorrow,
-                protocolFee,
-                interestElasticity,
-                minimumTargetUtilization,
-                maximumTargetUtilization,
-                minimumInterestPerSecond,
-                maximumInterestPerSecond,
-                startingInterestPerSecond
-            )
+        return ISingularity(address(this)).getInterestRate(
+            accrueInfo,
+            totalAsset,
+            totalBorrow
         );
     }
 

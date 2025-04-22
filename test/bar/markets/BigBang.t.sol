@@ -418,7 +418,7 @@ contract BigBangTest is UsdoTestHelper {
             assertEq(bigBang._totalBorrowCap(), toSetValue);
             assertEq(bigBang._collateralizationRate(), toSetValue);
             assertEq(bigBang._liquidationCollateralizationRate(), toSetMaxValue);
-            assertEq(bigBang._minBorrowAmount(), toSetValue);
+            assertEq(bigBang.minBorrowAmount(), toSetValue);
         }
     }
 
@@ -680,7 +680,7 @@ contract BigBangTest is UsdoTestHelper {
 
     function test_addCollateral_valid(address _user, uint256 _amount) public {
         vm.assume(_user != address(0));
-        vm.assume(_amount > bigBang._minCollateralAmount());
+        vm.assume(_amount > bigBang.minCollateralAmount());
         vm.assume(_amount <= type(uint128).max);
 
         deal(address(collateral), _user, _amount);
@@ -706,7 +706,7 @@ contract BigBangTest is UsdoTestHelper {
 
     function test_addCollateral_valid_provide_both_values(address _user, uint256 _amount, uint256 _shares) public {
         vm.assume(_user != address(0));
-        vm.assume(_amount >= bigBang._minCollateralAmount());
+        vm.assume(_amount >= bigBang.minCollateralAmount());
         vm.assume(_amount <= type(uint128).max);
         vm.assume(_shares <= type(uint128).max);
         vm.assume(_shares > 1e18);
@@ -734,7 +734,7 @@ contract BigBangTest is UsdoTestHelper {
 
     function test_addCollateral_valid_provide_both_amount_and_shares(address _user, uint256 _amount) public {
         vm.assume(_user != address(0));
-        vm.assume(_amount >= bigBang._minCollateralAmount());
+        vm.assume(_amount >= bigBang.minCollateralAmount());
         vm.assume(_amount <= type(uint128).max);
         uint256 _shares = 1e18;
 
@@ -773,5 +773,74 @@ contract BigBangTest is UsdoTestHelper {
         assertEq(collateral.balanceOf(address(bigBang)), 0, "Collateral balance of bigBang should be 0");
         assertEq(collateral.balanceOf(_user), 0, "Collateral balance of user should be 0");
         assertEq(userCollateralShare, _shares, "User collateral share should be equal to _shares");
+    }
+
+    function test_transferFrom_valid_with_approval_bypass(address _owner, address _spender, address _receiver, uint256 _amount) public {
+        vm.assume(_owner != address(0));
+        vm.assume(_spender != address(0));
+        vm.assume(_receiver != address(0));
+        vm.assume(_owner != _spender);
+        vm.assume(_owner != _receiver);
+        vm.assume(_spender != _receiver);
+        vm.assume(_amount > 0);
+        vm.assume(_amount <= type(uint128).max);
+        deal(address(bigBang), _owner, _amount);
+
+        Penrose(bigBang.penrose()).setMarketApprovalBypassContract(_spender, true);
+
+        vm.startPrank(_spender);
+        bigBang.transferFrom(_owner, _receiver, _amount);
+        vm.stopPrank();
+
+        assertEq(bigBang.balanceOf(_owner), 0, "BigBang balance of owner should be 0");
+        assertEq(bigBang.balanceOf(_receiver), _amount, "BigBang balance of receiver should be equal to _amount");
+        assertEq(bigBang.allowance(_owner, _spender), 0, "BigBang allowance of spender should be equal to zero");
+    }
+
+    function test_transferFrom_invalid_without_approval_bypass(address _owner, address _spender, address _receiver, uint256 _amount) public {
+        vm.assume(_owner != address(0));
+        vm.assume(_spender != address(0));
+        vm.assume(_receiver != address(0));
+        vm.assume(_owner != _spender);
+        vm.assume(_owner != _receiver);
+        vm.assume(_spender != _receiver);
+        vm.assume(_amount > 0);
+        vm.assume(_amount <= type(uint128).max);
+        deal(address(bigBang), _owner, _amount);
+
+        Penrose(bigBang.penrose()).setMarketApprovalBypassContract(_spender, false);
+
+        vm.startPrank(_spender);
+        vm.expectRevert();
+        bigBang.transferFrom(_owner, _receiver, _amount);
+        vm.stopPrank();
+
+        assertEq(bigBang.balanceOf(_owner), _amount, "BigBang balance of owner should be 0");
+        assertEq(bigBang.balanceOf(_receiver), 0, "BigBang balance of receiver should be equal to _amount");
+        assertEq(bigBang.allowance(_owner, _spender), 0, "BigBang allowance of spender should be equal to zero");
+    }
+
+    function test_transferFrom_valid_without_approval_bypass_but_approve(address _owner, address _spender, address _receiver, uint256 _amount) public {
+        vm.assume(_owner != address(0));
+        vm.assume(_spender != address(0));
+        vm.assume(_receiver != address(0));
+        vm.assume(_owner != _spender);
+        vm.assume(_owner != _receiver);
+        vm.assume(_spender != _receiver);
+        vm.assume(_amount > 0);
+        vm.assume(_amount <= type(uint128).max);
+        deal(address(bigBang), _owner, _amount);
+
+        vm.startPrank(_owner);
+        bigBang.approve(_spender, _amount);
+        vm.stopPrank();
+
+        vm.startPrank(_spender);
+        bigBang.transferFrom(_owner, _receiver, _amount);
+        vm.stopPrank();
+
+        assertEq(bigBang.balanceOf(_owner), 0, "BigBang balance of owner should be 0");
+        assertEq(bigBang.balanceOf(_receiver), _amount, "BigBang balance of receiver should be equal to _amount");
+        assertEq(bigBang.allowance(_owner, _spender), 0, "BigBang allowance of spender should be equal to zero");
     }
 }
