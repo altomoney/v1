@@ -33,6 +33,7 @@ echo 'MagnetarOptionModule: '$MagnetarOptionModule
 echo 'MagnetarLeverageModule: '$MagnetarLeverageModule
 echo 'ToeHelper: '$ToeHelper
 echo 'Cluster: '$Cluster
+echo 'AltoAdaptiveCurveIrm: '$AltoAdaptiveCurveIrm
 echo 'MagnetarHelper: '$MagnetarHelper
 echo 'TapToken: '$TapToken
 echo 'WrappedNativeToken: '$WrappedNativeToken
@@ -72,6 +73,7 @@ export MagnetarOptionModule=$MagnetarOptionModule
 export MagnetarLeverageModule=$MagnetarLeverageModule
 export ToeHelper=$ToeHelper
 export Cluster=$Cluster
+export AltoAdaptiveCurveIrm=$AltoAdaptiveCurveIrm
 export MagnetarHelper=$MagnetarHelper
 export TapToken=$TapToken
 export WrappedNativeToken=$WrappedNativeToken
@@ -141,6 +143,14 @@ forge verify-contract --chain-id $CHAIN_ID --compiler-version $COMPILER_VERSION 
 
 CLUSTER_EXPLORER_URL=$(get_explorer_url $Cluster)
 echo "Etherscan URL for Cluster: $CLUSTER_EXPLORER_URL"
+
+echo -e $SEPARATOR
+
+# AltoAdaptiveCurveIrm
+forge verify-contract --chain-id $CHAIN_ID --compiler-version $COMPILER_VERSION --verifier etherscan $WATCH_FLAG $AltoAdaptiveCurveIrm ./contracts/bar/irm/AltoAdaptiveCurveIrm.sol:AltoAdaptiveCurveIrm
+
+ALTO_ADAPTIVE_CURVE_IRM_EXPLORER_URL=$(get_explorer_url $AltoAdaptiveCurveIrm)
+echo "Etherscan URL for AltoAdaptiveCurveIrm: $ALTO_ADAPTIVE_CURVE_IRM_EXPLORER_URL"
 
 echo -e $SEPARATOR
 
