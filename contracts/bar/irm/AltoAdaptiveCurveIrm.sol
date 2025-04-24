@@ -1,22 +1,15 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
-// Tapioca
-import {WAD_INT, MathLib} from "../libraries/MathLib.sol";
-import {WAD, MorphoMathLib} from "../libraries/MorphoMathLib.sol";
-import {ExpLib} from "../libraries/ExpLib.sol";
-import {UtilsLib} from "../libraries/UtilsLib.sol";
+import {WAD_INT, MathLib} from "./MathLib.sol";
+import {WAD, MorphoMathLib} from "./MorphoMathLib.sol";
+import {ExpLib} from "./ExpLib.sol";
+import {UtilsLib} from "./UtilsLib.sol";
 
-/*
-
-████████╗ █████╗ ██████╗ ██╗ ██████╗  ██████╗ █████╗ 
-╚══██╔══╝██╔══██╗██╔══██╗██║██╔═══██╗██╔════╝██╔══██╗
-   ██║   ███████║██████╔╝██║██║   ██║██║     ███████║
-   ██║   ██╔══██║██╔═══╝ ██║██║   ██║██║     ██╔══██║
-   ██║   ██║  ██║██║     ██║╚██████╔╝╚██████╗██║  ██║
-   ╚═╝   ╚═╝  ╚═╝╚═╝     ╚═╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝
-   
-*/
+/// @title AltoAdaptiveCurveIrm
+/// @author Alto Labs
+/// @author Adapted from Morpho Labs (https://github.com/morpho-org/morpho-blue-irm/).
+/// @custom:contact security@alto.money
 contract AltoAdaptiveCurveIrm {
     using MathLib for int256;
     using MorphoMathLib for uint256;
@@ -58,7 +51,6 @@ contract AltoAdaptiveCurveIrm {
         returns (uint256 interest, uint256 feeAmount, uint256 avgRate, int256 endRateAtTarget)
     {
         uint256 elapsed = block.timestamp - market.lastUpdate;
-        if (elapsed == 0) return (0, 0, 0, 0);
         (avgRate, endRateAtTarget) = _getBorrowRate(market, irmConfiguration);
         interest = market.totalBorrowAssets.wMulDown(avgRate.wTaylorCompounded(elapsed));
         feeAmount = interest.wMulDown(fee);
