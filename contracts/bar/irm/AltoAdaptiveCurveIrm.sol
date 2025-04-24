@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
-import {WAD_INT, MathLib} from "./MathLib.sol";
-import {WAD, MorphoMathLib} from "./MorphoMathLib.sol";
-import {ExpLib} from "./ExpLib.sol";
-import {UtilsLib} from "./UtilsLib.sol";
+import {WAD_INT, MathLib} from "./libraries/MathLib.sol";
+import {WAD, MorphoMathLib} from "./libraries/MorphoMathLib.sol";
+import {ExpLib} from "./libraries/ExpLib.sol";
+import {UtilsLib} from "./libraries/UtilsLib.sol";
 
 /// @title AltoAdaptiveCurveIrm
 /// @author Alto Labs
