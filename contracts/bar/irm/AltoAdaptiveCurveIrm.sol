@@ -18,7 +18,7 @@ contract AltoAdaptiveCurveIrm {
     struct IrmMarketData {
         uint256 totalSupplyAssets;
         uint256 totalBorrowAssets;
-        uint256 lastUpdate;
+        uint256 elapsedSeconds;
         int256 currentRateAtTarget;
     }
 
@@ -47,12 +47,11 @@ contract AltoAdaptiveCurveIrm {
 
     function getAccruedInterest(IrmMarketData memory market, IrmConfiguration memory irmConfiguration, uint256 fee)
         public
-        view
+        pure
         returns (uint256 interest, uint256 feeAmount, uint256 avgRate, int256 endRateAtTarget)
     {
-        uint256 elapsed = block.timestamp - market.lastUpdate;
         (avgRate, endRateAtTarget) = _getBorrowRate(market, irmConfiguration);
-        interest = market.totalBorrowAssets.wMulDown(avgRate.wTaylorCompounded(elapsed));
+        interest = market.totalBorrowAssets.wMulDown(avgRate.wTaylorCompounded(market.elapsedSeconds));
         feeAmount = interest.wMulDown(fee);
         return (interest, feeAmount, avgRate, endRateAtTarget);
     }
@@ -60,7 +59,7 @@ contract AltoAdaptiveCurveIrm {
     /// @dev Returns avgRate and endRateAtTarget.
     function getBorrowRate(IrmMarketData memory market, IrmConfiguration memory irmConfiguration)
         external
-        view
+        pure
         returns (uint256, int256)
     {
         return _getBorrowRate(market, irmConfiguration);
@@ -68,7 +67,7 @@ contract AltoAdaptiveCurveIrm {
 
     function _getBorrowRate(IrmMarketData memory market, IrmConfiguration memory irmConfiguration)
         internal
-        view
+        pure
         returns (uint256, int256)
     {
         // Safe "unchecked" cast because the utilization is smaller than 1 (scaled by WAD).
@@ -95,7 +94,7 @@ contract AltoAdaptiveCurveIrm {
             int256 speed = irmConfiguration.adjustmentSpeed.wMulToZero(err);
             // market.lastUpdate != 0 because it is not the first interaction with this market.
             // Safe "unchecked" cast because block.timestamp - market.lastUpdate <= block.timestamp <= type(int256).max.
-            int256 elapsed = int256(block.timestamp - market.lastUpdate);
+            int256 elapsed = int256(market.elapsedSeconds);
             int256 linearAdaptation = speed * elapsed;
 
             if (linearAdaptation == 0) {
