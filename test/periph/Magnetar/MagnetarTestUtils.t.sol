@@ -51,8 +51,6 @@ import {TwTAP} from "tap-token/governance/twTAP.sol";
 import {TapTokenMock} from "../../tap-token/TapTokenMock.sol";
 import {ITapToken} from "../../../contracts/tap-token/tokens/ITapToken.sol";
 import {Bucket} from "../../../contracts/tap-token/interfaces/ITWLBase.sol";
-import {TapTokenSender} from "../../../contracts/tap-token/tokens/TapTokenSender.sol";
-import {TapTokenReceiver} from "../../../contracts/tap-token/tokens/TapTokenReceiver.sol";
 import {UnitBaseTest} from "../../tap-token/unit/UnitBaseTest.t.sol";
 import {TapiocaOptionBroker} from "../../../contracts/tap-token/options/TapiocaOptionBroker.sol";
 import {TapiocaOmnichainExtExec} from
@@ -137,7 +135,7 @@ abstract contract MagnetarTestUtils is TestHelper {
 
         vm.startPrank(__admin);
         ZeroXSwapperMock(payable(input.zeroXProxy)).setCluster(ICluster(report.cluster));
-        TapTokenMock(payable(input.tapToken)).setCluster(ICluster(report.cluster));
+        TapTokenMock(input.tapToken).setCluster(report.cluster);
         vm.stopPrank();
 
         twTap = _createTwTap(payable(input.tapToken), __admin);
@@ -169,12 +167,8 @@ abstract contract MagnetarTestUtils is TestHelper {
                 _input._lbp,
                 _input._dao,
                 _input._airdrop,
-                _input._governanceEid,
                 _input._owner,
-                address(new TapTokenSender("", "", _input._endpoint, _input._owner, address(0))),
-                address(new TapTokenReceiver("", "", _input._endpoint, _input._owner, address(0))),
-                address(new TapiocaOmnichainExtExec()),
-                ICluster(address(0x0))
+                report.cluster
             )
         );
         vm.label(address(tapToken), "tapToken");

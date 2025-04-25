@@ -65,7 +65,7 @@ contract TapiocaOptionBroker is ITapiocaOptionBroker, Pausable, Ownable, FullMat
     bytes public _tapOracleData;
 
     constructor(
-        address payable tapOFT,
+        address tapOFT,
         address usdo,
         address paymentTokenBeneficiary,
         uint256 epochDuration,

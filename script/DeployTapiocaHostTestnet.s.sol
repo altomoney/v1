@@ -10,8 +10,6 @@ import {Script} from "forge-std/Script.sol";
 import {TapToken, ITapToken} from "contracts/tap-token/tokens/TapToken.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {WETH} from "solady/tokens/WETH.sol";
-import {TapTokenSender} from "contracts/tap-token/tokens/TapTokenSender.sol";
-import {TapTokenReceiver} from "contracts/tap-token/tokens/TapTokenReceiver.sol";
 import {TapiocaOptionBroker} from "tap-token/options/TapiocaOptionBroker.sol";
 import {TwTAP} from "tap-token/governance/twTAP.sol";
 import {TapiocaMulticall} from "contracts/utils/TapiocaMulticall/TapiocaMulticall.sol";
@@ -76,12 +74,8 @@ contract DeployTapiocaHostTestnet is Script {
                     input.owner,
                     input.owner,
                     input.owner,
-                    input.lzChainId, // set gov chain same as testnet
                     input.owner,
-                    address(new TapTokenSender("", "", input.lzEndpoint, input.owner, address(0))),
-                    address(new TapTokenReceiver("", "", input.lzEndpoint, input.owner, address(0))),
-                    address(address(0)),
-                    ICluster(address(0))
+                    address(1)
                 )
             )
         );
@@ -146,8 +140,7 @@ contract DeployTapiocaHostTestnet is Script {
         console.log("BigBangLauncher: ", report.bigBangLauncher);
 
         {
-            TapToken(payable(input.tapToken)).setCluster(ICluster(report.cluster));
-            TapToken(payable(input.tapToken)).setToeExtExec(report.extExec);
+            TapToken(payable(input.tapToken)).setCluster(report.cluster);
             Usdo(payable(report.usdo)).setMinterStatus(address(input.owner), true);
             Usdo(payable(report.usdo)).mint(input.owner, 1000000 ether);
         }
@@ -313,7 +306,7 @@ contract DeployTapiocaHostTestnet is Script {
         return bigBangAddress;
     }
 
-    function createTwTap(address payable _tapOft, address _owner) internal returns (address) {
+    function createTwTap(address _tapOft, address _owner) internal returns (address) {
         Bucket[] memory buckets = new Bucket[](1);
         buckets[0] = Bucket({
             enabled: true,

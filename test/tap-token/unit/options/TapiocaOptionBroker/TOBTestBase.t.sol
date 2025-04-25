@@ -12,8 +12,6 @@ import {BigBangLauncher, BigBangRiskParams} from "deployments/releases/tapioca-v
 import {TapiocaRelease} from "deployments/releases/tapioca-v1/TapiocaRelease.sol";
 import {TapToken} from "tap-token/tokens/TapToken.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
-import {TapTokenSender} from "tap-token/tokens/TapTokenSender.sol";
-import {TapTokenReceiver} from "tap-token/tokens/TapTokenReceiver.sol";
 import {TapiocaOptionBroker, ITapiocaOptionBroker} from "tap-token/options/TapiocaOptionBroker.sol";
 import {Cluster} from "tap-utils/Cluster/Cluster.sol";
 import {Singularity} from "tapioca-bar/markets/singularity/Singularity.sol";
@@ -106,7 +104,7 @@ contract TOBTestBase is Test, Events, Utils {
         );
 
         tob = new TapiocaOptionBroker(
-            payable(tapToken), address(report.usdo), dao, EPOCH_DURATION, buckets, report.penrose, owner
+            address(tapToken), address(report.usdo), dao, EPOCH_DURATION, buckets, report.penrose, owner
         );
 
         vm.startPrank(owner);
@@ -178,12 +176,8 @@ contract TOBTestBase is Test, Events, Utils {
                 lbp,
                 dao,
                 airdrop,
-                block.chainid,
                 owner,
-                address(new TapTokenSender("", "", input.lzEndpoint, owner, address(0))),
-                address(new TapTokenReceiver("", "", input.lzEndpoint, owner, address(0))),
-                address(address(0)),
-                ICluster(address(0))
+                address(1)
             )
         );
         vm.label(address(tapToken), "TapToken");
@@ -193,7 +187,7 @@ contract TOBTestBase is Test, Events, Utils {
         report = TapiocaRelease.deployTapiocaV1(input, emptyReport);
 
         vm.startPrank(owner);
-        tapToken.setCluster(ICluster(report.cluster));
+        tapToken.setCluster(report.cluster);
         vm.stopPrank();
 
         usdo = Usdo(payable(report.usdo));

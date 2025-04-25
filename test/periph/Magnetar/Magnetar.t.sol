@@ -45,8 +45,6 @@ import {TwTAP} from "tap-token/governance/twTAP.sol";
 import {TapTokenMock} from "../../tap-token/TapTokenMock.sol";
 import {ITapToken} from "../../../contracts/tap-token/tokens/ITapToken.sol";
 import {Bucket} from "../../../contracts/tap-token/interfaces/ITWLBase.sol";
-import {TapTokenSender} from "../../../contracts/tap-token/tokens/TapTokenSender.sol";
-import {TapTokenReceiver} from "../../../contracts/tap-token/tokens/TapTokenReceiver.sol";
 import {SLeverageSwapData, SToftInfo} from "../../../contracts/bar/markets/leverage/BaseLeverageExecutor.sol";
 import {
     PrepareLzCallData,

@@ -1,20 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.22;
 
-// Tapioca
-import {
-    ITapiocaOmnichainEngine,
-    ERC20PermitApprovalMsg,
-    ERC721PermitApprovalMsg,
-    LZSendParam,
-    ERC20PermitStruct,
-    ERC721PermitStruct,
-    ERC20PermitApprovalMsg,
-    ERC721PermitApprovalMsg,
-    RemoteTransferMsg
-} from "tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
-import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
-
 /*
 
 ████████╗ █████╗ ██████╗ ██╗ ██████╗  ██████╗ █████╗ 
@@ -26,25 +12,8 @@ import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
    
 */
 
-interface ITapToken is ITapiocaOmnichainEngine {
-    /**
-     * EVENTS
-     */
-    event LockTwTapReceived(address indexed user, uint8 bucketId, uint256 amount);
-    /// @dev twTAP unlock operation received.
-    event UnlockTwTapReceived(uint256 tokenId, uint256 amount);
-
-    /**
-     * ERRORS
-     */
+interface ITapToken {
     error TwTapAlreadySet();
-    error OnlyHostChain(); // Can execute an action only on host chain
-
-    enum Module {
-        NonModule, //0
-        TapTokenSender,
-        TapTokenReceiver
-    }
 
     struct TapTokenConstructorData {
         uint256 epochDuration;
@@ -55,45 +24,7 @@ interface ITapToken is ITapiocaOmnichainEngine {
         address lTap;
         address dao;
         address airdrop;
-        uint256 governanceEid;
         address owner;
-        address tapTokenSenderModule;
-        address tapTokenReceiverModule;
-        address extExec;
-        ICluster cluster;
+        address cluster;
     }
-}
-
-/// ================================
-/// ========= TAP COMPOSE ==========
-/// ================================
-
-/**
- * @param user The user address to lock in the tokens.
- * @param duration The duration of the lock.
- * @param amount The amount of TAP to lock.
- * @dev DEPRECATED, do not use TWTAPv0 related operations
- */
-struct LockTwTapPositionMsg {
-    address user;
-    uint8 bucketId;
-    uint256 amount;
-}
-
-struct UnlockTwTapPositionMsg {
-    uint8 bucketId;
-    address participant;
-    address to;
-}
-
-/**
- * @param tokenId The tokenId of the TwTap position to claim rewards from.
- * @param sendParam The parameter for the send operation.
- * @dev DEPRECATED, do not use TWTAPv0 related operations
- */
-struct ClaimTwTapRewardsMsg {
-    uint256 bucketId;
-    address participant;
-    address user;
-    LZSendParam[] sendParam;
 }
