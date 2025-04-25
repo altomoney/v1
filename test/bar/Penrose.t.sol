@@ -27,7 +27,7 @@ import {MagnetarMock} from "./mocks/MagnetarMock.sol";
 import {SwapperMock} from "./mocks/SwapperMock.sol";
 import {OracleMock} from "./mocks/OracleMock.sol";
 import {ERC20Mock} from "./mocks/ERC20Mock.sol";
-import {UsdoMock} from "./mocks/UsdoMock.sol";
+import {Usdo} from "tapioca-bar/usdo/Usdo.sol";
 
 contract PenroseTest is UsdoTestHelper {
     uint32 aEid = 1;

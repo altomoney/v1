@@ -8,22 +8,11 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 // Tapioca
 import {IERC3156FlashBorrower} from "tap-utils/interfaces/bar/IERC3156FlashBorrower.sol";
 import {IERC3156FlashLender} from "tap-utils/interfaces/bar/IERC3156FlashLender.sol";
-import {IUsdo} from "tap-utils/interfaces/oft/IUsdo.sol";
-
-/*
-
-████████╗ █████╗ ██████╗ ██╗ ██████╗  ██████╗ █████╗ 
-╚══██╔══╝██╔══██╗██╔══██╗██║██╔═══██╗██╔════╝██╔══██╗
-   ██║   ███████║██████╔╝██║██║   ██║██║     ███████║
-   ██║   ██╔══██║██╔═══╝ ██║██║   ██║██║     ██╔══██║
-   ██║   ██║  ██║██║     ██║╚██████╔╝╚██████╗██║  ██║
-   ╚═╝   ╚═╝  ╚═╝╚═╝     ╚═╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝
-   
-*/
+import {IUsdo} from "./IUsdo.sol";
 
 /**
  * @title USDOFlashloanHelper
- * @author TapiocaDAO
+ * @author Alto
  * @notice The Usdo token flashloan capabilities
  */
 contract USDOFlashloanHelper is IERC3156FlashLender, Ownable {

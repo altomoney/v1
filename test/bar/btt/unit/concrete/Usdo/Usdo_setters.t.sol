@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.22;
 
-// Tapioca
 import {Usdo} from "tapioca-bar/usdo/Usdo.sol";
-
-// tests
+import {IUsdo} from "tapioca-bar/usdo/IUsdo.sol";
 import {Usdo_Unit_Shared} from "../../shared/Usdo_Unit_Shared.t.sol";
 
 contract Usdo_setters is Usdo_Unit_Shared {
@@ -75,10 +73,7 @@ contract Usdo_setters is Usdo_Unit_Shared {
         usdo.setMinterStatus(rndAddr, true);
 
         // it should update allowedMinter for the current chain
-        assertTrue(usdo.allowedMinter(aEid, rndAddr));
-
-        // it should NOT update allowedMinter for other chain
-        assertFalse(usdo.allowedMinter(bEid, rndAddr));
+        assertTrue(usdo.allowedMinter(rndAddr));
     }
 
     function test_RevertWhen_SetBurnerStatusIsCalledFromNon_owner() external resetPrank(userA) {
@@ -101,19 +96,16 @@ contract Usdo_setters is Usdo_Unit_Shared {
         usdo.setBurnerStatus(rndAddr, true);
 
         // it should update allowedMinter for the current chain
-        assertTrue(usdo.allowedBurner(aEid, rndAddr));
-
-        // it should NOT update allowedMinter for other chain
-        assertFalse(usdo.allowedBurner(bEid, rndAddr));
+        assertTrue(usdo.allowedBurner(rndAddr));
     }
 
     function test_RevertWhen_SetPauseIsCalledFromNon_ownerAndNon_pauser() external resetPrank(userA) {
         // it should revert
-        vm.expectRevert(Usdo.Usdo_NotAuthorized.selector);
+        vm.expectRevert(IUsdo.Usdo_NotAuthorized.selector);
         usdo.setPause(true);
 
         // it should revert
-        vm.expectRevert(Usdo.Usdo_NotAuthorized.selector);
+        vm.expectRevert(IUsdo.Usdo_NotAuthorized.selector);
         usdo.setPause(false);
     }
 
@@ -141,7 +133,7 @@ contract Usdo_setters is Usdo_Unit_Shared {
 
     function test_RevertWhen_AddFlashloanFeeIsCalledFromNon_flashLoanHelper() external resetPrank(userA) {
         // it should revert
-        vm.expectRevert(Usdo.Usdo_NotAuthorized.selector);
+        vm.expectRevert(IUsdo.Usdo_NotAuthorized.selector);
         usdo.addFlashloanFee(SMALL_AMOUNT);
     }
 }

@@ -3,8 +3,7 @@
 pragma solidity ^0.8.22;
 
 // Tapioca
-import {MarketPermitActionMsg} from "tap-utils/interfaces/oft/IUsdo.sol";
-import {ERC20PermitStruct, ERC20PermitApprovalMsg} from "tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
+import {ERC20PermitStruct, ERC20PermitApprovalMsg, MarketPermitActionMsg} from "tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
 
 import "forge-std/Test.sol";
 
@@ -35,6 +34,7 @@ contract TestUtils is Test {
         });
     }
 
+    // Add import for MarketPermitActionMsg at the top of the file
     function __getMarketPermitData(MarketPermitActionMsg memory _permit, bytes32 _digest, uint256 _pkSigner)
         internal
         pure

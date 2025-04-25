@@ -36,12 +36,7 @@ import {IMagnetarHelper} from "tap-utils/interfaces/periph/IMagnetarHelper.sol";
 import {MagnetarHelper} from "tapioca-periph/Magnetar/MagnetarHelper.sol";
 import {MarketHelper} from "tapioca-bar/markets/MarketHelper.sol";
 
-import {UsdoInitStruct, UsdoModulesInitStruct, IUsdo} from "tap-utils/interfaces/oft/IUsdo.sol";
-import {UsdoMarketReceiverModule} from "tapioca-bar/usdo/modules/UsdoMarketReceiverModule.sol";
-import {UsdoOptionReceiverModule} from "tapioca-bar/usdo/modules/UsdoOptionReceiverModule.sol";
-import {UsdoReceiver} from "tapioca-bar/usdo/modules/UsdoReceiver.sol";
-import {UsdoSender} from "tapioca-bar/usdo/modules/UsdoSender.sol";
-import {Usdo, BaseUsdo} from "tapioca-bar/usdo/Usdo.sol";
+import {Usdo} from "tapioca-bar/usdo/Usdo.sol";
 
 import {ITOFT, TOFTInitStruct, TOFTModulesInitStruct} from "tap-utils/interfaces/oft/ITOFT.sol";
 import {TOFTOptionsReceiverModule} from "tapiocaz/tOFT/modules/TOFTOptionsReceiverModule.sol";
@@ -320,27 +315,7 @@ contract MagnetarTestHelper is TestHelper {
         public
         returns (Usdo usdo)
     {
-        UsdoInitStruct memory usdoInitStruct = UsdoInitStruct({
-            endpoint: address(endpoints[endointId]),
-            delegate: __owner,
-            cluster: cluster,
-            extExec: extExec
-        });
-        UsdoSender usdoSender = new UsdoSender(usdoInitStruct);
-        UsdoReceiver usdoReceiver = new UsdoReceiver(usdoInitStruct);
-        UsdoMarketReceiverModule usdoMarketReceiverModule = new UsdoMarketReceiverModule(usdoInitStruct);
-        UsdoOptionReceiverModule usdoOptionsReceiverModule = new UsdoOptionReceiverModule(usdoInitStruct);
-        vm.label(address(usdoSender), "usdoSender");
-        vm.label(address(usdoReceiver), "usdoReceiver");
-        vm.label(address(usdoMarketReceiverModule), "usdoMarketReceiverModule");
-        vm.label(address(usdoOptionsReceiverModule), "usdoOptionsReceiverModule");
-        UsdoModulesInitStruct memory usdoModulesInitStruct = UsdoModulesInitStruct({
-            usdoSenderModule: address(usdoSender),
-            usdoReceiverModule: address(usdoReceiver),
-            marketReceiverModule: address(usdoMarketReceiverModule),
-            optionReceiverModule: address(usdoOptionsReceiverModule)
-        });
-        usdo = Usdo(payable(_deployOApp(type(Usdo).creationCode, abi.encode(usdoInitStruct, usdoModulesInitStruct))));
+        usdo = new Usdo(address(endpoints[endointId]), __owner, address(cluster));
     }
 
     function setBBEthMarket(Penrose penrose, address market) external {

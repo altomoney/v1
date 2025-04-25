@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.22;
 
-// Tapioca
 import {Usdo} from "tapioca-bar/usdo/Usdo.sol";
-
-// tests
+import {IUsdo} from "tapioca-bar/usdo/IUsdo.sol";
 import {Usdo_Unit_Shared} from "../../shared/Usdo_Unit_Shared.t.sol";
 
-contract Usdo_minters_buners is Usdo_Unit_Shared {
+contract Usdo_minters_burners is Usdo_Unit_Shared {
     modifier whenPaused() {
         if (!usdo.paused()) {
             usdo.setPause(true);
@@ -49,7 +47,7 @@ contract Usdo_minters_buners is Usdo_Unit_Shared {
     {
         vm.assume(amount > 0 && amount < LARGE_AMOUNT);
         // it should revert
-        vm.expectRevert(Usdo.Usdo_NotAuthorized.selector);
+        vm.expectRevert(IUsdo.Usdo_NotAuthorized.selector);
         usdo.mint(address(this), amount);
     }
 
@@ -60,7 +58,7 @@ contract Usdo_minters_buners is Usdo_Unit_Shared {
     {
         vm.assume(amount > 0 && amount < LARGE_AMOUNT);
         // it should revert
-        vm.expectRevert(Usdo.Usdo_NotAuthorized.selector);
+        vm.expectRevert(IUsdo.Usdo_NotAuthorized.selector);
         usdo.burn(address(this), amount);
     }
 

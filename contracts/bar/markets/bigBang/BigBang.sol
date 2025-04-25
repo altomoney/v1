@@ -11,7 +11,7 @@ import {ILeverageExecutor} from "tap-utils/interfaces/bar/ILeverageExecutor.sol"
 import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
 import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
 import {Module, PauseType} from "tap-utils/interfaces/bar/IMarket.sol";
-import {IUsdo} from "tap-utils/interfaces/oft/IUsdo.sol";
+import {IUsdo} from "tapioca-bar/usdo/IUsdo.sol";
 import {SafeApprove} from "../../libraries/SafeApprove.sol";
 import {Market} from "../Market.sol";
 import {BBLiquidation} from "./BBLiquidation.sol";

@@ -13,7 +13,9 @@ import {
     MintFromBBAndLendOnSGLData,
     IExerciseOptionsData,
     IOptionsLockData,
-    IOptionsUnlockData
+    IOptionsUnlockData,
+    IMintData,
+    IRemoveAndRepay
 } from "tap-utils/interfaces/periph/IMagnetar.sol";
 
 import {ERC20PermitStruct} from "tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
@@ -23,7 +25,6 @@ import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Recei
 import {ICommonExternalContracts, IDepositData} from "tap-utils/interfaces/common/ICommonData.sol";
 
 import {IPermit} from "tap-utils/interfaces/common/IPermit.sol";
-import {IMintData} from "tap-utils/interfaces/oft/IUsdo.sol";
 
 import {TapOftMock} from "../../mocks/TapOftMock.sol";
 import {ERC721Mock} from "../../mocks/ERC721Mock.sol";
