@@ -45,7 +45,7 @@ contract AltoAdaptiveCurveIrm {
         int256 maxRateAtTarget;
     }
 
-    function getAccruedInterest(IrmMarketData memory market, IrmConfiguration memory irmConfiguration, uint256 fee)
+    function getAccruedInterest(IrmMarketData calldata market, IrmConfiguration calldata irmConfiguration, uint256 fee)
         public
         pure
         returns (uint256 interest, uint256 feeAmount, uint256 avgRate, int256 endRateAtTarget)
@@ -57,7 +57,7 @@ contract AltoAdaptiveCurveIrm {
     }
 
     /// @dev Returns avgRate and endRateAtTarget.
-    function getBorrowRate(IrmMarketData memory market, IrmConfiguration memory irmConfiguration)
+    function getBorrowRate(IrmMarketData calldata market, IrmConfiguration calldata irmConfiguration)
         external
         pure
         returns (uint256, int256)
@@ -65,10 +65,10 @@ contract AltoAdaptiveCurveIrm {
         return _getBorrowRate(market, irmConfiguration);
     }
 
-    function _getBorrowRate(IrmMarketData memory market, IrmConfiguration memory irmConfiguration)
+    function _getBorrowRate(IrmMarketData calldata market, IrmConfiguration calldata irmConfiguration)
         internal
         pure
-        returns (uint256, int256)
+        returns (uint256, int256) 
     {
         // Safe "unchecked" cast because the utilization is smaller than 1 (scaled by WAD).
         int256 utilization =
