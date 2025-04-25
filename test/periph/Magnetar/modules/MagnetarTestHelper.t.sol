@@ -38,20 +38,6 @@ import {MarketHelper} from "tapioca-bar/markets/MarketHelper.sol";
 
 import {Usdo} from "tapioca-bar/usdo/Usdo.sol";
 
-import {ITOFT, TOFTInitStruct, TOFTModulesInitStruct} from "tap-utils/interfaces/oft/ITOFT.sol";
-import {TOFTOptionsReceiverModule} from "tapiocaz/tOFT/modules/TOFTOptionsReceiverModule.sol";
-import {TOFTMarketReceiverModule} from "tapiocaz/tOFT/modules/TOFTMarketReceiverModule.sol";
-import {TOFTGenericReceiverModule} from "tapiocaz/tOFT/modules/TOFTGenericReceiverModule.sol";
-import {BaseTOFTReceiver} from "tapiocaz/tOFT/modules/BaseTOFTReceiver.sol";
-import {mTOFTReceiver} from "tapiocaz/tOFT/modules/mTOFTReceiver.sol";
-import {TOFTMsgCodec} from "tapiocaz/tOFT/libraries/TOFTMsgCodec.sol";
-import {TOFTReceiver} from "tapiocaz/tOFT/modules/TOFTReceiver.sol";
-import {TOFTSender} from "tapiocaz/tOFT/modules/TOFTSender.sol";
-import {TOFTVault} from "tapiocaz/tOFT/TOFTVault.sol";
-import {BaseTOFT} from "tapiocaz/tOFT/BaseTOFT.sol";
-import {mTOFT} from "tapiocaz/tOFT/mTOFT.sol";
-import {TOFT} from "tapiocaz/tOFT/TOFT.sol";
-
 import {ILeverageExecutor} from "tap-utils/interfaces/bar/ILeverageExecutor.sol";
 import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
 import {IZeroXSwapper} from "tap-utils/interfaces/periph/IZeroXSwapper.sol";
@@ -133,14 +119,9 @@ contract MagnetarTestHelper is TestHelper {
     ERC20Mock tap;
 
     Usdo assetA;
-    TOFT collateralA;
     uint256 assetAId;
-    uint256 collateralAId;
-
     Usdo assetB;
-    TOFT collateralB;
     uint256 assetBId;
-    uint256 collateralBId;
 
     uint256 wethId;
     uint256 tapId;
@@ -180,18 +161,14 @@ contract MagnetarTestHelper is TestHelper {
         (penrose, sglMC, bbMC) = createPenrose(address(clusterA), address(tap), address(weth), address(this));
 
         // crete USDO
-        TapiocaOmnichainExtExec extExec = new TapiocaOmnichainExtExec();
 
-        // create TOFT
-        collateralA = createTOFT(address(clusterA), address(collateralErc20), address(extExec), aEid, aEid);
-        collateralB = createTOFT(address(clusterB), address(collateralErc20), address(extExec), bEid, aEid);
         penrose.setUsdoToken(address(assetA));
 
         sgl = createSingularity(
             TestSingularityData(
                 address(penrose),
                 address(assetA),
-                address(collateralA),
+                address(aERC20),
                 ITapiocaOracle(address(oracle)),
                 ILeverageExecutor(address(0))
             ),
@@ -200,7 +177,7 @@ contract MagnetarTestHelper is TestHelper {
         bb = createBigBang(
             TestBigBangData(
                 address(penrose),
-                address(collateralA),
+                address(aERC20),
                 ITapiocaOracle(address(oracle)),
                 ILeverageExecutor(address(0)),
                 0,
@@ -227,10 +204,8 @@ contract MagnetarTestHelper is TestHelper {
         clusterA.updateContract(0, address(oracle), true);
 
         clusterA.updateContract(0, address(assetA), true);
-        clusterA.updateContract(0, address(collateralA), true);
         clusterA.updateContract(0, address(marketHelper), true);
         clusterA.updateContract(bEid, address(assetB), true);
-        clusterA.updateContract(bEid, address(collateralB), true);
         clusterA.updateContract(0, address(penrose), true);
         clusterA.updateContract(0, address(sgl), true);
         clusterA.updateContract(0, address(bb), true);
@@ -240,10 +215,8 @@ contract MagnetarTestHelper is TestHelper {
         clusterB.updateContract(0, address(oracle), true);
 
         clusterB.updateContract(0, address(assetB), true);
-        clusterB.updateContract(0, address(collateralB), true);
         clusterB.updateContract(0, address(marketHelper), true);
         clusterB.updateContract(aEid, address(assetA), true);
-        clusterB.updateContract(aEid, address(collateralA), true);
         clusterB.updateContract(0, address(penrose), true);
         clusterB.updateContract(0, address(sgl), true);
         clusterB.updateContract(0, address(bb), true);
@@ -253,9 +226,7 @@ contract MagnetarTestHelper is TestHelper {
         vm.label(address(magnetarHelper), "MagnetarHelper");
         vm.label(address(oracle), "Oracle");
         vm.label(address(assetA), "Usdo (asset) A");
-        vm.label(address(collateralA), "Collateral (TOFT) A");
         vm.label(address(assetB), "Usdo (asset) B");
-        vm.label(address(collateralB), "Collateral (TOFT) B");
         vm.label(address(aERC20), "aERC20");
         vm.label(address(bERC20), "bERC20");
         vm.label(address(collateralErc20), "collateralErc20");
@@ -271,45 +242,6 @@ contract MagnetarTestHelper is TestHelper {
     //
     // -----------------------
 
-    function createTOFT(address cluster, address erc20, address extExec, uint32 endointId, uint32 hostEid)
-        public
-        returns (TOFT toft)
-    {
-        TOFTVault toftVault = new TOFTVault(address(erc20));
-        TOFTInitStruct memory toftInitStruct = TOFTInitStruct({
-            name: "Token TOFT",
-            symbol: "TOFTTKN",
-            endpoint: address(endpoints[endointId]),
-            delegate: address(this), // owner
-            cluster: cluster,
-            erc20: erc20,
-            vault: address(toftVault),
-            hostEid: hostEid,
-            extExec: extExec
-        });
-
-        {
-            TOFTSender toftSender = new TOFTSender(toftInitStruct);
-            mTOFTReceiver toftReceiver = new mTOFTReceiver(toftInitStruct);
-            TOFTMarketReceiverModule toftMarketReceiverModule = new TOFTMarketReceiverModule(toftInitStruct);
-            TOFTOptionsReceiverModule toftOptionsReceiverModule = new TOFTOptionsReceiverModule(toftInitStruct);
-            TOFTGenericReceiverModule toftGenericReceiverModule = new TOFTGenericReceiverModule(toftInitStruct);
-            vm.label(address(toftSender), "toftSender");
-            vm.label(address(toftReceiver), "toftReceiver");
-            vm.label(address(toftMarketReceiverModule), "toftMarketReceiverModule");
-            vm.label(address(toftOptionsReceiverModule), "toftOptionsReceiverModule");
-            vm.label(address(toftGenericReceiverModule), "toftGenericReceiverModule");
-            TOFTModulesInitStruct memory toftModulesInitStruct = TOFTModulesInitStruct({
-                tOFTSenderModule: address(toftSender),
-                tOFTReceiverModule: address(toftReceiver),
-                marketReceiverModule: address(toftMarketReceiverModule),
-                optionsReceiverModule: address(toftOptionsReceiverModule),
-                genericReceiverModule: address(toftGenericReceiverModule)
-            });
-            toft =
-                TOFT(payable(_deployOApp(type(TOFT).creationCode, abi.encode(toftInitStruct, toftModulesInitStruct))));
-        }
-    }
 
     function createUsdo(address yieldBox, address cluster, address extExec, uint32 endointId)
         public
@@ -505,8 +437,8 @@ contract MagnetarTestHelper is TestHelper {
         _sgl.addAsset(address(this), address(this), amount); // todo: replace 100 with share
     }
 
-    function depositCollateral(TOFT _collateral, uint256 _collateralId, Singularity _sgl, uint256 amount) public {
-        deal(address(_collateral), address(this), amount);
+    function depositCollateral(address _collateral, Singularity _sgl, uint256 amount) public {
+        deal(_collateral, address(this), amount);
 
         (Module[] memory modules, bytes[] memory calls) =
             marketHelper.addCollateral(address(this), address(this), 0, 100); // todo: replace 100 with share
@@ -535,7 +467,7 @@ contract MagnetarTestHelper is TestHelper {
         returns (ERC20PermitStruct memory permitStruct, uint8 v_, bytes32 r_, bytes32 s_)
     {
         permitStruct = ERC20PermitStruct({owner: _owner, spender: _spender, value: _amount, nonce: 0, deadline: 1 days});
-        bytes32 digest_ = ITOFT(_asset).getTypedDataHash(permitStruct);
+        bytes32 digest_ = ERC20Mock(_asset).getTypedDataHash(permitStruct);
         (v_, r_, s_) = vm.sign(_pkSigner, digest_);
     }
 }

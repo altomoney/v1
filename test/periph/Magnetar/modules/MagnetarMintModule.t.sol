@@ -202,7 +202,7 @@ abstract contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver 
     function test_mintFromBBAndLendOnSGL_addCollateral() public {
         uint256 tokenAmount_ = 1 ether;
         {
-            deal(address(collateralA), address(this), tokenAmount_);
+            deal(address(aERC20), address(this), tokenAmount_);
         }
 
         MagnetarCall[] memory calls = new MagnetarCall[](1);
@@ -228,7 +228,7 @@ abstract contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver 
         uint256 colSharesBefore = bb.balanceOf(address(this));
 
         //approvals for deposit & collateral add
-        collateralA.approve(address(magnetarA), type(uint256).max);
+        aERC20.approve(address(magnetarA), type(uint256).max);
 
         // Atomic approval
 
@@ -242,7 +242,7 @@ abstract contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver 
         uint256 tokenAmount_ = 1 ether;
         uint256 mintAmount_ = 0.5 ether;
         {
-            deal(address(collateralA), address(this), tokenAmount_);
+            deal(address(aERC20), address(this), tokenAmount_);
         }
 
         MagnetarCall[] memory calls = new MagnetarCall[](1);
@@ -270,7 +270,7 @@ abstract contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver 
         uint256 borrowPartBefore = bb._userBorrowPart(address(this));
 
         //approvals for deposit & collateral add
-        collateralA.approve(address(magnetarA), type(uint256).max);
+        aERC20.approve(address(magnetarA), type(uint256).max);
 
         // Atomic approval
 
@@ -322,7 +322,7 @@ abstract contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver 
         uint256 tokenAmount_ = 1 ether;
         uint256 mintAmount_ = 0.5 ether;
         {
-            deal(address(collateralA), address(this), tokenAmount_);
+            deal(address(aERC20), address(this), tokenAmount_);
             deal(address(assetA), address(this), tokenAmount_);
         }
 
@@ -354,7 +354,7 @@ abstract contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver 
         uint256 assetABalanceBefore = sgl.balanceOf(address(this));
 
         //approvals for deposit & collateral add
-        collateralA.approve(address(magnetarA), type(uint256).max);
+        aERC20.approve(address(magnetarA), type(uint256).max);
 
         // Atomic approval
 
@@ -374,7 +374,7 @@ abstract contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver 
         uint256 tokenAmount_ = 1 ether;
         uint256 mintAmount_ = 0.5 ether;
         {
-            deal(address(collateralA), address(this), tokenAmount_);
+            deal(address(aERC20), address(this), tokenAmount_);
             deal(address(assetA), address(this), tokenAmount_);
         }
 
@@ -413,7 +413,7 @@ abstract contract MagnetarMintModuleTest is MagnetarTestHelper, IERC721Receiver 
         uint256 sglBalanceBefore = sgl.balanceOf(address(this));
 
         //approvals for deposit & collateral add
-        collateralA.approve(address(magnetarA), type(uint256).max);
+        aERC20.approve(address(magnetarA), type(uint256).max);
 
         // Atomic approval
 
