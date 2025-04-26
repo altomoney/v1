@@ -7,3 +7,6 @@
 [submodule "lib/solady"]
 	path = lib/solady
 	url = https://github.com/vectorized/solady
+[submodule "lib/BoringSolidity"]
+	path = lib/BoringSolidity
+	url = https://github.com/boringcrypto/BoringSolidity
