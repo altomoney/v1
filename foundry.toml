@@ -1,13 +1,13 @@
 [profile.default]
 solc_version = "0.8.28"
 src = 'contracts'
-libs = ['node_modules']
+libs = ["node_modules"]
 test = 'test'
 script = 'script'
-no-match-path = 'contracts/mocks/research/*'
+no-match-path = 'playground/*'
 no-match-contract = "(Fork|Stargate)"
 
-evm_version='shanghai'
+evm_version = 'shanghai'
 optimizer = true
 optimizer_runs = 1
 
@@ -22,9 +22,10 @@ remappings = [
 	'tapioca-bar/=contracts/bar/',
 	'tapioca-mocks/=contracts/mocks/',
 	'deployments/=contracts/deployments/',
-	
+
 	'forge-std/=node_modules/forge-std/src/',
 	'solady/=node_modules/solady/src/',
+	'@morpho-blue/=node_modules/@morpho-org/morpho-blue/src/',
 ]
 
 [etherscan]
@@ -38,6 +39,6 @@ no-match-contract = "zzz"
 src = "contracts/tap-token/governance"
 test = "test/tap-token/unit/options/"
 
-[profile.usdo]
-src = "contracts/bar/usdo"
-test = "test/bar"
+[profile.market]
+src = "contracts/lending"
+test = "test/lending"
