@@ -7,6 +7,8 @@
   },
   "npm.exclude": "**/lib/**",
   "solidity.formatter": "forge",
-  "solidity.packageDefaultDependenciesContractsDirectory": "src",
-  "solidity.packageDefaultDependenciesDirectory": "lib"
+  "solidity.packageDefaultDependenciesContractsDirectory": "contracts",
+  "solidity.packageDefaultDependenciesDirectory": "lib",
+  "git.detectSubmodules": false,
+  "git.detectSubmodulesLimit": 0,
 }

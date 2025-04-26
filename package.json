@@ -17,13 +17,9 @@
     "test:twtap": "FOUNDRY_PROFILE=twTap forge test --match-path 'test/tap-token/unit/options/TWLBase/**/*.sol'"
   },
   "devDependencies": {
-    "@boringcrypto/boring-solidity": "https://github.com/boringcrypto/BoringSolidity",
     "@layerzerolabs/lz-evm-messagelib-v2": "2.3.6",
     "@layerzerolabs/lz-evm-oapp-v2": "^2.3.6",
     "@layerzerolabs/lz-evm-protocol-v2": "2.3.6",
-    "@layerzerolabs/lz-evm-v1-0.7": "2.3.6",
-    "@layerzerolabs/solidity-bytes-utils": "^0.8.0",
-    "@openzeppelin/contracts": "^4.9.5",
     "@swc/core": "^1.5.24",
     "dotenv": "^10.0.0",
     "eslint": "^7.32.0",
@@ -38,10 +34,7 @@
   },
   "dependencies": {
     "@layerzerolabs/lz-v2-utilities": "2.3.6",
-    "@openzeppelin/contracts-upgradeable": "^4.8.1",
     "@uniswap/v3-core": "^1.0.1",
-    "@uniswap/v3-periphery": "^1.4.3",
-    "husky": "^8.0.1",
-    "tapioca-sdk": "^1.8.28"
+    "husky": "^8.0.1"
   }
 }
