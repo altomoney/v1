@@ -1,0 +1,27 @@
+// SPDX-License-Identifier: MIT
+
+pragma solidity >=0.8.0;
+
+interface IIrm {
+    error Alto_IrmUnauthorized();
+
+    /// @notice Sets the market for the IRM
+    /// @param _market The market to set
+    /// @dev This function has to be called first time by the market to set up the IRM
+    function setMarket(address _market) external;
+
+    /// @notice Updates interest rate the the latest value
+    /// @param totalSupply Total amount of assets supplied to the markets
+    /// @param totalBorrowed Total amount of assets borrowed from the markets
+    /// @return new interest rate in second percent yield (SPY), new interest since last update
+    function updateInterestRate(uint256 totalSupply, uint256 totalBorrowed) external returns (uint256, uint256);
+
+    /// @notice Performs compuutation of the interest rate without mutating state
+    /// @param totalSupply Total amount of assets supplied to the markets
+    /// @param totalBorrowed Total amount of assets borrowed from the markets
+    /// @return new interest rate in second percent yield (SPY), new interest since last update
+    function updateInterestRateView(uint256 totalSupply, uint256 totalBorrowed)
+        external
+        view
+        returns (uint256, uint256);
+}
