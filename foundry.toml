@@ -1,7 +1,7 @@
 [profile.default]
 solc_version = "0.8.28"
 src = 'contracts'
-libs = ['lib', 'node_modules']
+libs = ['node_modules']
 test = 'test'
 script = 'script'
 no-match-path = 'contracts/mocks/research/*'
@@ -16,18 +16,15 @@ proptest_max_shrink_iters = 500
 remappings = [
 	"tap-utils/=contracts/utils/",
 	"src/tap-utils/=contracts/utils/",
-	"tapioca-strategies/=contracts/yieldbox-strategies/",
-	"yieldbox/=contracts/yieldbox/",
 	'tapiocaz/=contracts/tapiocaz/',
-	"permitc/=lib/PermitC/src/",
 	'tapioca-periph/=contracts/periph/',
 	'tap-token/=contracts/tap-token',
-	'tap-yieldbox/=contracts/yieldbox/',
 	'tapioca-bar/=contracts/bar/',
 	'tapioca-mocks/=contracts/mocks/',
 	'deployments/=contracts/deployments/',
-	"@openzeppelin/=lib/openzeppelin-contracts/",
-	"@boringcrypto/boring-solidity/=lib/BoringSolidity/"
+	
+	'forge-std/=node_modules/forge-std/src/',
+	'solady/=node_modules/solady/src/',
 ]
 
 [etherscan]
