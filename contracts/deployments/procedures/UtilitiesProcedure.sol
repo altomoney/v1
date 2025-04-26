@@ -12,6 +12,7 @@ import {ZeroXSwapper} from "tap-utils/Swapper/ZeroXSwapper.sol";
 import {ZeroXSwapperMock} from "tapioca-mocks/ZeroXSwapperMock.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {MultiTokenSender} from "tapioca-mocks/MultiTokenSender.sol";
+import {AltoAdaptiveCurveIrm} from "../../bar/irm/AltoAdaptiveCurveIrm.sol";
 
 abstract contract UtilitiesProcedure {
     function _deployUtilities(address owner, address zeroXProxy, uint32 lzChainId, bool isTestnet)
@@ -26,6 +27,7 @@ abstract contract UtilitiesProcedure {
         report.cluster = address(new Cluster(lzChainId, address(this)));
         report.toeHelper = address(new TapiocaOmnichainEngineHelper());
         report.pauser = address(new Pauser(report.cluster, owner));
+        report.altoAdaptiveCurveIrm = address(new AltoAdaptiveCurveIrm());
         if (isTestnet) {
             report.zeroXSwapper = zeroXProxy != address(0) ? zeroXProxy : address(new ZeroXSwapperMock(ICluster(report.cluster), owner));
             report.multiTokenSender = address(new MultiTokenSender(owner));

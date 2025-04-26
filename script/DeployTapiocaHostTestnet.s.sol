@@ -114,6 +114,7 @@ contract DeployTapiocaHostTestnet is Script {
         console.log("MultiTokenSender: ", report.multiTokenSender);
         console.log("ToeHelper: ", report.toeHelper);
         console.log("Cluster: ", report.cluster);
+        console.log("AltoAdaptiveCurveIrm: ", report.altoAdaptiveCurveIrm);
         console.log("AdbTapOptionOracle: ", report.adbTapOptionOracle);
         console.log("TapiocaMulticall: ", report.tapiocaMulticall);
         console.log("ExtExec: ", report.extExec);

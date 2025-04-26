@@ -261,6 +261,7 @@ library TapiocaRelease {
         TapiocaReport memory report;
 
         report.cluster = reports.utilitiesReport.cluster;
+        report.altoAdaptiveCurveIrm = reports.utilitiesReport.altoAdaptiveCurveIrm;
         report.tapiocaMulticall = reports.utilitiesReport.tapiocaMulticall;
         report.toeHelper = reports.utilitiesReport.toeHelper;
         report.multiTokenSender = reports.utilitiesReport.multiTokenSender;
