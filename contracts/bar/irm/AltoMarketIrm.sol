@@ -20,17 +20,35 @@ abstract contract AltoMarketIrm is Ownable {
     constructor(IrmConfiguration memory _irmConfiguration) {
         irmLastUpdateTimestamp = uint128(block.timestamp);
         irmConfiguration = _irmConfiguration;
-        // accrueInterest(); TODO: To be redefined in the task.
+        accrueInterest(0, 0);
     }
 
     function accrueMarket(uint256 interest, uint256 feeAmount, uint256 borrowRate) public virtual;
 
     function getIrm() public view virtual returns (address);
 
-    function setIrmConfiguration(IrmConfiguration calldata _irmConfiguration) external onlyOwner {
-        irmConfiguration = _irmConfiguration;
+    function setIrmConfiguration(IrmConfiguration calldata _irmConfiguration) external onlyOwner {        
+        if (_irmConfiguration.curveSteepness > 0) {
+            irmConfiguration.curveSteepness = _irmConfiguration.curveSteepness;
+        }
+        if (_irmConfiguration.adjustmentSpeed > 0) {
+            irmConfiguration.adjustmentSpeed = _irmConfiguration.adjustmentSpeed;
+        }
+        if (_irmConfiguration.targetUtilization > 0) {
+            irmConfiguration.targetUtilization = _irmConfiguration.targetUtilization;
+        }
+        if (_irmConfiguration.initialRateAtTarget > 0) {
+            irmConfiguration.initialRateAtTarget = _irmConfiguration.initialRateAtTarget;
+        }
+        if (_irmConfiguration.minRateAtTarget > 0) {
+            irmConfiguration.minRateAtTarget = _irmConfiguration.minRateAtTarget;
+        }
+        if (_irmConfiguration.maxRateAtTarget > 0) {
+            irmConfiguration.maxRateAtTarget = _irmConfiguration.maxRateAtTarget;
+        }
+
         emit IrmConfigurationUpdated(_irmConfiguration);
-        // accrueInterest(); TODO: To be redefined in the task.
+        accrueInterest(0, 0);
     }
 
     function accrueInterest(uint256 _totalSupplyAssets, uint256 _totalBorrowAssets) public {

@@ -91,4 +91,154 @@ contract AltoMarketIrmTest is Test {
         );
         assertEq(altoMarketIrm.irmLastUpdateTimestamp(), block.timestamp, "irmLastUpdateTimestamp should be updated");
     }
+
+    function test_setIrmConfiguration_curveSteepness_valid() external {
+        IrmConfiguration memory defaultIrmConfiguration = _getDefaultIrmConfiguration();
+        IrmConfiguration memory newIrmConfiguration;
+        newIrmConfiguration.curveSteepness = 10 ether;
+        altoMarketIrm.setIrmConfiguration(newIrmConfiguration);
+
+        _assertIrmConfiguration(
+            altoMarketIrm,
+            newIrmConfiguration.curveSteepness,
+            defaultIrmConfiguration.adjustmentSpeed,
+            defaultIrmConfiguration.targetUtilization,
+            defaultIrmConfiguration.initialRateAtTarget,
+            defaultIrmConfiguration.minRateAtTarget,
+            defaultIrmConfiguration.maxRateAtTarget
+        );
+    }
+
+    function test_setIrmConfiguration_adjustmentSpeed_valid() external {
+        IrmConfiguration memory defaultIrmConfiguration = _getDefaultIrmConfiguration();
+        IrmConfiguration memory newIrmConfiguration;
+        newIrmConfiguration.adjustmentSpeed = 10 ether / int256(365 days);
+        altoMarketIrm.setIrmConfiguration(newIrmConfiguration);
+
+        _assertIrmConfiguration(
+            altoMarketIrm,
+            defaultIrmConfiguration.curveSteepness,
+            newIrmConfiguration.adjustmentSpeed,
+            defaultIrmConfiguration.targetUtilization,
+            defaultIrmConfiguration.initialRateAtTarget,
+            defaultIrmConfiguration.minRateAtTarget,
+            defaultIrmConfiguration.maxRateAtTarget
+        );
+    }
+
+    function test_setIrmConfiguration_targetUtilization_valid() external {
+        IrmConfiguration memory defaultIrmConfiguration = _getDefaultIrmConfiguration();
+        IrmConfiguration memory newIrmConfiguration;
+        newIrmConfiguration.targetUtilization = 0.8 ether;
+        altoMarketIrm.setIrmConfiguration(newIrmConfiguration);
+
+        _assertIrmConfiguration(
+            altoMarketIrm,
+            defaultIrmConfiguration.curveSteepness,
+            defaultIrmConfiguration.adjustmentSpeed,
+            newIrmConfiguration.targetUtilization,
+            defaultIrmConfiguration.initialRateAtTarget,
+            defaultIrmConfiguration.minRateAtTarget,
+            defaultIrmConfiguration.maxRateAtTarget
+        );
+    }
+
+    function test_setIrmConfiguration_initialRateAtTarget_valid() external {
+        IrmConfiguration memory defaultIrmConfiguration = _getDefaultIrmConfiguration();
+        IrmConfiguration memory newIrmConfiguration;
+        newIrmConfiguration.initialRateAtTarget = 0.02 ether / int256(365 days);
+        altoMarketIrm.setIrmConfiguration(newIrmConfiguration);
+
+        _assertIrmConfiguration(
+            altoMarketIrm,
+            defaultIrmConfiguration.curveSteepness,
+            defaultIrmConfiguration.adjustmentSpeed,
+            defaultIrmConfiguration.targetUtilization,
+            newIrmConfiguration.initialRateAtTarget,
+            defaultIrmConfiguration.minRateAtTarget,
+            defaultIrmConfiguration.maxRateAtTarget
+        );
+    }
+
+    function test_setIrmConfiguration_minRateAtTarget_valid() external {
+        IrmConfiguration memory defaultIrmConfiguration = _getDefaultIrmConfiguration();
+        IrmConfiguration memory newIrmConfiguration;
+        newIrmConfiguration.minRateAtTarget = 0.001 ether / int256(365 days);
+        altoMarketIrm.setIrmConfiguration(newIrmConfiguration);
+
+        _assertIrmConfiguration(
+            altoMarketIrm,
+            defaultIrmConfiguration.curveSteepness,
+            defaultIrmConfiguration.adjustmentSpeed,
+            defaultIrmConfiguration.targetUtilization,
+            defaultIrmConfiguration.initialRateAtTarget,
+            newIrmConfiguration.minRateAtTarget,
+            defaultIrmConfiguration.maxRateAtTarget
+        );
+    }
+
+    function test_setIrmConfiguration_maxRateAtTarget_valid() external {
+        IrmConfiguration memory defaultIrmConfiguration = _getDefaultIrmConfiguration();
+        IrmConfiguration memory newIrmConfiguration;
+        newIrmConfiguration.maxRateAtTarget = 2.0 ether / int256(365 days);
+        altoMarketIrm.setIrmConfiguration(newIrmConfiguration);
+
+        _assertIrmConfiguration(
+            altoMarketIrm,
+            defaultIrmConfiguration.curveSteepness,
+            defaultIrmConfiguration.adjustmentSpeed,
+            defaultIrmConfiguration.targetUtilization,
+            defaultIrmConfiguration.initialRateAtTarget,
+            defaultIrmConfiguration.minRateAtTarget,
+            newIrmConfiguration.maxRateAtTarget
+        );
+    }
+
+    function test_setIrmConfiguration_invalid_not_owner(address _notOwner) external {
+        vm.assume(_notOwner != altoMarketIrm.owner());
+
+        IrmConfiguration memory defaultIrmConfiguration = _getDefaultIrmConfiguration();
+        IrmConfiguration memory newIrmConfiguration;
+        newIrmConfiguration.targetUtilization = 0.8 ether;
+
+        vm.startPrank(_notOwner);
+        vm.expectRevert("Ownable: caller is not the owner");
+        altoMarketIrm.setIrmConfiguration(newIrmConfiguration);
+        vm.stopPrank();
+
+        _assertIrmConfiguration(
+            altoMarketIrm,
+            defaultIrmConfiguration.curveSteepness,
+            defaultIrmConfiguration.adjustmentSpeed,
+            defaultIrmConfiguration.targetUtilization,
+            defaultIrmConfiguration.initialRateAtTarget,
+            defaultIrmConfiguration.minRateAtTarget,
+            defaultIrmConfiguration.maxRateAtTarget
+        );
+    }
+
+    function _assertIrmConfiguration(
+        AltoMarketIrm _altoMarketIrm,
+        int256 _curveSteepness,
+        int256 _adjustmentSpeed,
+        int256 _targetUtilization,
+        int256 _initialRateAtTarget,
+        int256 _minRateAtTarget,
+        int256 _maxRateAtTarget
+    ) internal view {
+        (
+            int256 curveSteepness,
+            int256 adjustmentSpeed,
+            int256 targetUtilization,
+            int256 initialRateAtTarget,
+            int256 minRateAtTarget,
+            int256 maxRateAtTarget
+        ) = _altoMarketIrm.irmConfiguration();
+        assertEq(curveSteepness, _curveSteepness, "curveSteepness should be updated");
+        assertEq(adjustmentSpeed, _adjustmentSpeed, "adjustmentSpeed should be updated");
+        assertEq(targetUtilization, _targetUtilization, "targetUtilization should be updated");
+        assertEq(initialRateAtTarget, _initialRateAtTarget, "initialRateAtTarget should be updated");
+        assertEq(minRateAtTarget, _minRateAtTarget, "minRateAtTarget should be updated");
+        assertEq(maxRateAtTarget, _maxRateAtTarget, "maxRateAtTarget should be updated");
+    }
 }
