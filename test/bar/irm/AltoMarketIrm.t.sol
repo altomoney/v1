@@ -45,6 +45,17 @@ contract AltoMarketIrmTest is Test {
         });
     }
 
+    function _getNewIrmConfiguration() internal pure returns (IrmConfiguration memory) {
+        return IrmConfiguration({
+            targetUtilization: type(int256).max,
+            initialRateAtTarget: type(int256).max,
+            adjustmentSpeed: type(int256).max,
+            minRateAtTarget: type(int256).max,
+            maxRateAtTarget: type(int256).max,
+            curveSteepness: type(int256).max
+        });
+    }
+
     function test_constructor() external {
         new AltoMarketIrmMock(_getDefaultIrmConfiguration());
     }
@@ -94,7 +105,7 @@ contract AltoMarketIrmTest is Test {
 
     function test_setIrmConfiguration_curveSteepness_valid() external {
         IrmConfiguration memory defaultIrmConfiguration = _getDefaultIrmConfiguration();
-        IrmConfiguration memory newIrmConfiguration;
+        IrmConfiguration memory newIrmConfiguration = _getNewIrmConfiguration();
         newIrmConfiguration.curveSteepness = 10 ether;
         altoMarketIrm.setIrmConfiguration(newIrmConfiguration);
 
@@ -111,7 +122,7 @@ contract AltoMarketIrmTest is Test {
 
     function test_setIrmConfiguration_adjustmentSpeed_valid() external {
         IrmConfiguration memory defaultIrmConfiguration = _getDefaultIrmConfiguration();
-        IrmConfiguration memory newIrmConfiguration;
+        IrmConfiguration memory newIrmConfiguration = _getNewIrmConfiguration();
         newIrmConfiguration.adjustmentSpeed = 10 ether / int256(365 days);
         altoMarketIrm.setIrmConfiguration(newIrmConfiguration);
 
@@ -128,7 +139,7 @@ contract AltoMarketIrmTest is Test {
 
     function test_setIrmConfiguration_targetUtilization_valid() external {
         IrmConfiguration memory defaultIrmConfiguration = _getDefaultIrmConfiguration();
-        IrmConfiguration memory newIrmConfiguration;
+        IrmConfiguration memory newIrmConfiguration = _getNewIrmConfiguration();
         newIrmConfiguration.targetUtilization = 0.8 ether;
         altoMarketIrm.setIrmConfiguration(newIrmConfiguration);
 
@@ -145,7 +156,7 @@ contract AltoMarketIrmTest is Test {
 
     function test_setIrmConfiguration_initialRateAtTarget_valid() external {
         IrmConfiguration memory defaultIrmConfiguration = _getDefaultIrmConfiguration();
-        IrmConfiguration memory newIrmConfiguration;
+        IrmConfiguration memory newIrmConfiguration = _getNewIrmConfiguration();
         newIrmConfiguration.initialRateAtTarget = 0.02 ether / int256(365 days);
         altoMarketIrm.setIrmConfiguration(newIrmConfiguration);
 
@@ -162,7 +173,7 @@ contract AltoMarketIrmTest is Test {
 
     function test_setIrmConfiguration_minRateAtTarget_valid() external {
         IrmConfiguration memory defaultIrmConfiguration = _getDefaultIrmConfiguration();
-        IrmConfiguration memory newIrmConfiguration;
+        IrmConfiguration memory newIrmConfiguration = _getNewIrmConfiguration();
         newIrmConfiguration.minRateAtTarget = 0.001 ether / int256(365 days);
         altoMarketIrm.setIrmConfiguration(newIrmConfiguration);
 
@@ -179,7 +190,7 @@ contract AltoMarketIrmTest is Test {
 
     function test_setIrmConfiguration_maxRateAtTarget_valid() external {
         IrmConfiguration memory defaultIrmConfiguration = _getDefaultIrmConfiguration();
-        IrmConfiguration memory newIrmConfiguration;
+        IrmConfiguration memory newIrmConfiguration = _getNewIrmConfiguration();
         newIrmConfiguration.maxRateAtTarget = 2.0 ether / int256(365 days);
         altoMarketIrm.setIrmConfiguration(newIrmConfiguration);
 
@@ -198,7 +209,7 @@ contract AltoMarketIrmTest is Test {
         vm.assume(_notOwner != altoMarketIrm.owner());
 
         IrmConfiguration memory defaultIrmConfiguration = _getDefaultIrmConfiguration();
-        IrmConfiguration memory newIrmConfiguration;
+        IrmConfiguration memory newIrmConfiguration = _getNewIrmConfiguration();
         newIrmConfiguration.targetUtilization = 0.8 ether;
 
         vm.startPrank(_notOwner);

@@ -28,22 +28,22 @@ abstract contract AltoMarketIrm is Ownable {
     function getIrm() public view virtual returns (address);
 
     function setIrmConfiguration(IrmConfiguration calldata _irmConfiguration) external onlyOwner {        
-        if (_irmConfiguration.curveSteepness > 0) {
+        if (_irmConfiguration.curveSteepness != type(int256).max) {
             irmConfiguration.curveSteepness = _irmConfiguration.curveSteepness;
         }
-        if (_irmConfiguration.adjustmentSpeed > 0) {
+        if (_irmConfiguration.adjustmentSpeed != type(int256).max) {
             irmConfiguration.adjustmentSpeed = _irmConfiguration.adjustmentSpeed;
         }
-        if (_irmConfiguration.targetUtilization > 0) {
+        if (_irmConfiguration.targetUtilization != type(int256).max) {
             irmConfiguration.targetUtilization = _irmConfiguration.targetUtilization;
         }
-        if (_irmConfiguration.initialRateAtTarget > 0) {
+        if (_irmConfiguration.initialRateAtTarget != type(int256).max) {
             irmConfiguration.initialRateAtTarget = _irmConfiguration.initialRateAtTarget;
         }
-        if (_irmConfiguration.minRateAtTarget > 0) {
+        if (_irmConfiguration.minRateAtTarget != type(int256).max) {
             irmConfiguration.minRateAtTarget = _irmConfiguration.minRateAtTarget;
         }
-        if (_irmConfiguration.maxRateAtTarget > 0) {
+        if (_irmConfiguration.maxRateAtTarget != type(int256).max) {
             irmConfiguration.maxRateAtTarget = _irmConfiguration.maxRateAtTarget;
         }
 
