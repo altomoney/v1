@@ -5,49 +5,21 @@ import {WAD_INT, MathLib} from "./libraries/MathLib.sol";
 import {WAD, MorphoMathLib} from "./libraries/MorphoMathLib.sol";
 import {ExpLib} from "./libraries/ExpLib.sol";
 import {UtilsLib} from "./libraries/UtilsLib.sol";
+import {IAltoAdaptiveCurveIrm, IrmMarketData, IrmConfiguration} from "./IAltoAdaptiveCurveIrm.sol";
 
 /// @title AltoAdaptiveCurveIrm
 /// @author Alto Labs
 /// @author Adapted from Morpho Labs (https://github.com/morpho-org/morpho-blue-irm/).
 /// @custom:contact security@alto.money
-contract AltoAdaptiveCurveIrm {
+contract AltoAdaptiveCurveIrm is IAltoAdaptiveCurveIrm {
     using MathLib for int256;
     using MorphoMathLib for uint256;
     using UtilsLib for int256;
 
-    struct IrmMarketData {
-        uint256 totalSupplyAssets;
-        uint256 totalBorrowAssets;
-        uint256 elapsedSeconds;
-        int256 currentRateAtTarget;
-    }
-
-    struct IrmConfiguration {
-        /// @notice Curve steepness (scaled by WAD).
-        /// @dev Curve steepness = 4.
-        int256 curveSteepness;
-        /// @notice Adjustment speed per second (scaled by WAD).
-        /// @dev The speed is per second, so the rate moves at a speed of ADJUSTMENT_SPEED * err each second (while being
-        /// continuously compounded).
-        /// @dev Adjustment speed = 50/year.
-        int256 adjustmentSpeed;
-        /// @notice Target utilization (scaled by WAD).
-        /// @dev Target utilization = 90%.
-        int256 targetUtilization;
-        /// @notice Initial rate at target per second (scaled by WAD).
-        /// @dev Initial rate at target = 4% (rate between 1% and 16%).
-        int256 initialRateAtTarget;
-        /// @notice Minimum rate at target per second (scaled by WAD).
-        /// @dev Minimum rate at target = 0.1% (minimum rate = 0.025%).
-        int256 minRateAtTarget;
-        /// @notice Maximum rate at target per second (scaled by WAD).
-        /// @dev Maximum rate at target = 200% (maximum rate = 800%).
-        int256 maxRateAtTarget;
-    }
-
     function getAccruedInterest(IrmMarketData calldata market, IrmConfiguration calldata irmConfiguration, uint256 fee)
         public
         pure
+        override
         returns (uint256 interest, uint256 feeAmount, uint256 avgRate, int256 endRateAtTarget)
     {
         (avgRate, endRateAtTarget) = _getBorrowRate(market, irmConfiguration);
@@ -60,6 +32,7 @@ contract AltoAdaptiveCurveIrm {
     function getBorrowRate(IrmMarketData calldata market, IrmConfiguration calldata irmConfiguration)
         external
         pure
+        override
         returns (uint256, int256)
     {
         return _getBorrowRate(market, irmConfiguration);
@@ -68,7 +41,7 @@ contract AltoAdaptiveCurveIrm {
     function _getBorrowRate(IrmMarketData calldata market, IrmConfiguration calldata irmConfiguration)
         internal
         pure
-        returns (uint256, int256) 
+        returns (uint256, int256)
     {
         // Safe "unchecked" cast because the utilization is smaller than 1 (scaled by WAD).
         int256 utilization =

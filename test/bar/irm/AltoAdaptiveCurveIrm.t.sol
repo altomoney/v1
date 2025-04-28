@@ -5,6 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {AltoAdaptiveCurveIrm} from "../../../contracts/bar/irm/AltoAdaptiveCurveIrm.sol";
 import {WAD_INT, MathLib} from "../../../contracts/bar/irm/libraries/MathLib.sol";
 import {console} from "forge-std/console.sol";
+import {IrmConfiguration, IrmMarketData} from "../../../contracts/bar/irm/IAltoAdaptiveCurveIrm.sol";
 
 contract AltoAdaptiveCurveIrmTest is Test {
     using MathLib for int256;
@@ -19,9 +20,9 @@ contract AltoAdaptiveCurveIrmTest is Test {
         new AltoAdaptiveCurveIrm();
     }
 
-    function _getDefaultIrmConfiguration(int256 _initialRateAtTarget) internal pure returns (AltoAdaptiveCurveIrm.IrmConfiguration memory) {
+    function _getDefaultIrmConfiguration(int256 _initialRateAtTarget) internal pure returns (IrmConfiguration memory) {
         // Default values from ConstantsLib: https://github.com/morpho-org/morpho-blue-irm/blob/0e99e647c9bd6d3207f450144b6053cf807fa8c4/src/adaptive-curve-irm/libraries/ConstantsLib.sol#L7
-        return AltoAdaptiveCurveIrm.IrmConfiguration({
+        return IrmConfiguration({
             targetUtilization: 0.9 ether,
             initialRateAtTarget: _initialRateAtTarget / int256(365 days),
             adjustmentSpeed: 50 ether / int256(365 days),
@@ -31,11 +32,11 @@ contract AltoAdaptiveCurveIrmTest is Test {
         });
     }
 
-    function test_getBorrowRate_valid(int256 _initialRateAtTarget) external {
+    function test_getBorrowRate_valid(int256 _initialRateAtTarget) external view {
         int256 initialRateAtTarget = bound(_initialRateAtTarget, 0.000001 ether, type(int128).max);
-        AltoAdaptiveCurveIrm.IrmConfiguration memory irmConfiguration = _getDefaultIrmConfiguration(initialRateAtTarget);
+        IrmConfiguration memory irmConfiguration = _getDefaultIrmConfiguration(initialRateAtTarget);
 
-        AltoAdaptiveCurveIrm.IrmMarketData memory irmMarketData = AltoAdaptiveCurveIrm.IrmMarketData({
+        IrmMarketData memory irmMarketData = IrmMarketData({
             totalSupplyAssets: 1 ether,
             totalBorrowAssets: 1 ether,
             elapsedSeconds: 0,
@@ -44,7 +45,7 @@ contract AltoAdaptiveCurveIrmTest is Test {
 
         (uint256 avgRate, int256 endRateAtTarget) = altoAdaptiveCurveIrm.getBorrowRate(irmMarketData, irmConfiguration);
 
-        assertEq(avgRate, uint256(initialRateAtTarget / int256(365 days) * 4));
-        assertEq(endRateAtTarget, initialRateAtTarget / int256(365 days));
+        assertEq(avgRate, uint256(initialRateAtTarget / int256(365 days) * 4), "avgRate should be valid");
+        assertEq(endRateAtTarget, initialRateAtTarget / int256(365 days), "endRateAtTarget should be valid");
     }
 }
