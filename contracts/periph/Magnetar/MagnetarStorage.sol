@@ -2,7 +2,6 @@
 pragma solidity ^0.8.22;
 
 import {IMagnetarModuleExtender} from "tap-utils/interfaces/periph/IMagnetar.sol";
-import {TapiocaOmnichainEngineHelper} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainEngineHelper.sol";
 import {MagnetarModule} from "tap-utils/interfaces/periph/IMagnetar.sol";
 import {IMagnetarHelper} from "tap-utils/interfaces/periph/IMagnetarHelper.sol";
 import {RevertMsgDecoder} from "tap-utils/libraries/RevertMsgDecoder.sol";
@@ -27,7 +26,6 @@ import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 abstract contract MagnetarStorage {
     ICluster internal cluster;
     IMagnetarHelper public helper;
-    TapiocaOmnichainEngineHelper public toeHelper;
 
     mapping(MagnetarModule moduleId => address moduleAddress) internal modules;
 
@@ -38,8 +36,7 @@ abstract contract MagnetarStorage {
     error Magnetar_UnknownReason(); // Revert reason not recognized
     error Magnetar_TargetNotWhitelisted(address addy); // cluster.isWhitelisted(lzChainId, _addr) => false
 
-    constructor(address _toeHelper, address _magnetarHelper) {
-        toeHelper = TapiocaOmnichainEngineHelper(_toeHelper);
+    constructor(address _magnetarHelper) {
         helper = IMagnetarHelper(_magnetarHelper);
     }
 

@@ -13,7 +13,6 @@ struct TapiocaReport {
     address toftHelper;
     address zeroXSwapper;
     address multiTokenSender;
-    address toeHelper;
     address cluster;
     address altoAdaptiveCurveIrm;
     address adbTapOptionOracle;
@@ -63,7 +62,6 @@ struct MagnetarDepsReport {
 struct UtilitiesReport {
     address tapiocaMulticall;
     address cluster;
-    address toeHelper;
     address pauser;
     address zeroXSwapper;
     address multiTokenSender;
@@ -99,7 +97,6 @@ struct UsdoMarketModulesReport {
 
 struct UsdoReport {
     address usdo;
-    address tapiocaOmnichainEngineHelper;
     address usdoFlashloanHelper;
 }
 

@@ -39,7 +39,7 @@ contract MagnetarMintModule is MagnetarBaseModule {
     error MagnetarMintModule_LockTransferFailed();
     error MagnetarMintModule_ParticipateTransferFailed();
 
-    constructor(address _toeHelper, address _magnetarHelper) MagnetarBaseModule(_toeHelper, _magnetarHelper) {}
+    constructor( address _magnetarHelper) MagnetarBaseModule(_magnetarHelper) {}
     /// =====================
     /// Public
     /// =====================

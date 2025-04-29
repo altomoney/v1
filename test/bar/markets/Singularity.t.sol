@@ -49,7 +49,6 @@ import {LZEndpointMock} from "tapioca-mocks/LZEndpointMock.sol";
 import {Singularity} from "tapioca-bar/markets/singularity/Singularity.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ITWTAPv2} from "tap-token/interfaces/ITWTAPv2.sol";
-import {TapiocaOmnichainEngineHelper} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainEngineHelper.sol";
 
 import "forge-std/Test.sol";
 
@@ -68,8 +67,6 @@ contract SingularityTest is UsdoTestHelper {
     TOFTMock collateral;
 
     MagnetarMock magnetar;
-
-    TapiocaOmnichainEngineHelper tapiocaOmnichainEngineHelper;
 
     SwapperMock swapper;
     Penrose penrose;

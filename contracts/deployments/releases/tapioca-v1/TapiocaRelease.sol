@@ -45,12 +45,11 @@ library TapiocaRelease {
             input.owner, input.wrappedNativeToken, reports.utilitiesReport.cluster, reports.utilitiesReport.zeroXSwapper
         );
 
-        reports.magnetarDepsReport = _deployMagnetarDeps(reports.utilitiesReport.toeHelper);
+        reports.magnetarDepsReport = _deployMagnetarDeps();
 
         reports.magnetarReport = _deployMagnetar(
             input.owner,
             reports.utilitiesReport.cluster,
-            reports.utilitiesReport.toeHelper,
             reports.utilitiesReport.zeroXSwapper,
             input.wrappedNativeToken,
             reports.magnetarDepsReport
@@ -101,21 +100,20 @@ library TapiocaRelease {
     /// Internal functions for deployment of batch contracts and retrieval of deployment report
     ///
 
-    function _deployMagnetarDeps(address toeHelper) private returns (MagnetarDepsReport memory report) {
-        TapiocaMagnetarBatchOne magnetarDepsBatch = new TapiocaMagnetarBatchOne(toeHelper);
+    function _deployMagnetarDeps() private returns (MagnetarDepsReport memory report) {
+        TapiocaMagnetarBatchOne magnetarDepsBatch = new TapiocaMagnetarBatchOne();
         return magnetarDepsBatch.getMagnetarDepsReport();
     }
 
     function _deployMagnetar(
         address owner,
         address cluster,
-        address toeHelper,
         address zeroXSwapper,
         address wrappedNativeToken,
         MagnetarDepsReport memory deps
     ) private returns (MagnetarReport memory report) {
         TapiocaMagnetarBatchTwo magnetarBatchTwo =
-            new TapiocaMagnetarBatchTwo(owner, cluster, toeHelper, zeroXSwapper, wrappedNativeToken, deps);
+            new TapiocaMagnetarBatchTwo(owner, cluster, zeroXSwapper, wrappedNativeToken, deps);
         return magnetarBatchTwo.getMagnetarReport();
     }
 
@@ -248,7 +246,6 @@ library TapiocaRelease {
         report.cluster = reports.utilitiesReport.cluster;
         report.altoAdaptiveCurveIrm = reports.utilitiesReport.altoAdaptiveCurveIrm;
         report.tapiocaMulticall = reports.utilitiesReport.tapiocaMulticall;
-        report.toeHelper = reports.utilitiesReport.toeHelper;
         report.multiTokenSender = reports.utilitiesReport.multiTokenSender;
         report.zeroXSwapper = reports.utilitiesReport.zeroXSwapper;
 

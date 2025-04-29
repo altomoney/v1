@@ -3,7 +3,6 @@ pragma solidity ^0.8.22;
 
 import {ExtExReport} from "../interfaces/ITapiocaReport.sol";
 
-import {TapiocaOmnichainExtExec} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainExtExec.sol";
 import {MarketLiquidatorReceiver} from "tapioca-bar/liquidators/MarketLiquidatorReceiver.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 
@@ -12,7 +11,6 @@ abstract contract ExtExProcedure {
         internal
         returns (ExtExReport memory report)
     {
-        report.extExec = address(new TapiocaOmnichainExtExec());
 
         report.liquidatorReceiver =
             address(new MarketLiquidatorReceiver(wrappedNativeToken, ICluster(cluster), swapper, owner));

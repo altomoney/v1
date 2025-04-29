@@ -11,14 +11,12 @@ import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
 
 import {Cluster} from "tap-utils/Cluster/Cluster.sol";
 import {Penrose} from "tapioca-bar/Penrose.sol";
-
 import {MagnetarMock} from "../mocks/MagnetarMock.sol";
 import {OracleMock} from "../mocks/OracleMock.sol";
 import {ERC20Mock} from "../mocks/ERC20Mock.sol";
 import {TwTapMock} from "../mocks/TwTapMock.sol";
 import {Usdo} from "tapioca-bar/usdo/Usdo.sol";
 import {TOFTMock} from "../mocks/TOFTMock.sol";
-import {TapiocaOmnichainEngineHelper} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainEngineHelper.sol";
 
 
 import {UsdoTestHelper, TestPenroseData} from "../helpers/UsdoTestHelper.t.sol";
@@ -45,8 +43,6 @@ contract OriginsTest is UsdoTestHelper {
     TOFTMock collateral;
 
     MagnetarMock magnetar;
-
-    TapiocaOmnichainEngineHelper tapiocaOmnichainEngineHelper;
 
     Penrose penrose;
     OracleMock oracle;

@@ -10,8 +10,8 @@ import {MagnetarDepsReport} from "../../../interfaces/ITapiocaReport.sol";
 contract TapiocaMagnetarBatchOne is MagnetarProcedure {
     MagnetarDepsReport internal _magnetarDepsReport;
 
-    constructor(address toeHelper) {
-        _magnetarDepsReport = _deployMagnetarDeps(toeHelper);
+    constructor() {
+        _magnetarDepsReport = _deployMagnetarDeps();
     }
 
     function getMagnetarDepsReport() external view returns (MagnetarDepsReport memory) {

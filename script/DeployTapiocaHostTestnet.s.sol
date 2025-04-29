@@ -106,7 +106,6 @@ contract DeployTapiocaHostTestnet is Script {
         console.log("ToftHelper: ", report.toftHelper);
         console.log("ZeroXSwapper: ", report.zeroXSwapper);
         console.log("MultiTokenSender: ", report.multiTokenSender);
-        console.log("ToeHelper: ", report.toeHelper);
         console.log("Cluster: ", report.cluster);
         console.log("AltoAdaptiveCurveIrm: ", report.altoAdaptiveCurveIrm);
         console.log("AdbTapOptionOracle: ", report.adbTapOptionOracle);

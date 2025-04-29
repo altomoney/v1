@@ -65,9 +65,8 @@ contract Magnetar is BaseMagnetar {
         address payable _mintModule,
         address payable _optionModule,
         address payable _leverageModule,
-        address _toeHelper,
         address _magnetarHelper
-    ) BaseMagnetar(_cluster, _toeHelper, _owner, _magnetarHelper) {
+    ) BaseMagnetar(_cluster,  _owner, _magnetarHelper) {
         modules[MagnetarModule.CollateralModule] = _collateralModule;
         modules[MagnetarModule.MintModule] = _mintModule;
         modules[MagnetarModule.OptionModule] = _optionModule;

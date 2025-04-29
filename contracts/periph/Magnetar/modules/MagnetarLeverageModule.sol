@@ -35,7 +35,7 @@ contract MagnetarLeverageModule is MagnetarBaseModule {
     using SafeCast for uint256;
     using SafeApprove for address;
 
-    constructor(address _toeHelper, address _magnetarHelper) MagnetarBaseModule(_toeHelper, _magnetarHelper) {}
+    constructor( address _magnetarHelper) MagnetarBaseModule(_magnetarHelper) {}
 
     function buyCollateral(BuyCollateralData memory data) public payable {
         /**

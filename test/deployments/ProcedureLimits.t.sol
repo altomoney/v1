@@ -17,7 +17,6 @@ import {TapiocaBBBatch2} from "deployments/releases/tapioca-v1/batches/TapiocaBB
 import {TapiocaBBBatch3} from "deployments/releases/tapioca-v1/batches/TapiocaBBBatch3.sol";
 import "deployments/interfaces/ITapiocaReport.sol";
 import {LZEndpointMock} from "tapioca-mocks/LZEndpointMock.sol";
-import {TapiocaOmnichainExtExec} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainExtExec.sol";
 import {TapiocaPenroseBatch} from "deployments/releases/tapioca-v1/batches/TapiocaPenroseBatch.sol";
 import {ERC20Mock} from "../bar/mocks/ERC20Mock.sol";
 import {SGLInterestHelper} from "tapioca-bar/markets/singularity/SGLInterestHelper.sol";
@@ -44,7 +43,7 @@ contract DeploymentProceduresLimits is Test {
         owner = makeAddr("owner");
         zeroXSwapper = makeAddr("zeroXSwapper");
         endpointMock = address(new LZEndpointMock(1));
-        delegate = address(new TapiocaOmnichainExtExec());
+        delegate = owner;
 
         usdoReport =
             (new TapiocaUsdoBatch(endpointMock, delegate, address(1))).getUsdoReport();
@@ -55,12 +54,12 @@ contract DeploymentProceduresLimits is Test {
     }
 
     function test_new_TapiocaMagnetarBatchOne() public {
-        new TapiocaMagnetarBatchOne(address(0));
+        new TapiocaMagnetarBatchOne();
     }
 
     function test_new_TapiocaMagnetarBatchTwo() public {
         MagnetarDepsReport memory emptyReport;
-        new TapiocaMagnetarBatchTwo(owner, address(1), address(3), address(4), address(5), emptyReport);
+        new TapiocaMagnetarBatchTwo(owner, address(1), address(3), address(5), emptyReport);
     }
 
     function test_new_UtilityBatch_isTestnet_false() public {
@@ -70,7 +69,6 @@ contract DeploymentProceduresLimits is Test {
         assertTrue(report.zeroXSwapper != address(0), "zeroXSwapper should not be address(0)");
         assertTrue(report.tapiocaMulticall != address(0), "tapiocaMulticall should not be address(0)");
         assertTrue(report.cluster != address(0), "cluster should not be address(0)");
-        assertTrue(report.toeHelper != address(0), "toeHelper should not be address(0)");
         assertTrue(report.pauser != address(0), "pauser should not be address(0)");
     }
 
@@ -81,7 +79,6 @@ contract DeploymentProceduresLimits is Test {
         assertTrue(report.zeroXSwapper != address(0), "zeroXSwapper should not be address(0)");
         assertTrue(report.tapiocaMulticall != address(0), "tapiocaMulticall should not be address(0)");
         assertTrue(report.cluster != address(0), "cluster should not be address(0)");
-        assertTrue(report.toeHelper != address(0), "toeHelper should not be address(0)");
         assertTrue(report.pauser != address(0), "pauser should not be address(0)");
     }
     
