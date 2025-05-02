@@ -11,7 +11,7 @@ import "forge-std/console.sol";
 import {Cluster} from "src/tap-utils/Cluster/Cluster.sol";
 
 // Lz
-import {TestHelper} from "../LZSetup/TestHelper.sol";
+import {TestHelper} from "../../bar/LZSetup/TestHelper.sol";
 
 contract ClusterTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelper {
     Cluster cluster;

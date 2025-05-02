@@ -16,9 +16,6 @@ import {MarketERC4626} from "tapioca-bar/markets/MarketERC4626.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
-import {TapiocaOmnichainEngineHelper} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainEngineHelper.sol";
-import {TapiocaOmnichainExtExec} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainExtExec.sol";
-import {TapiocaOmnichainEngineCodec} from "tap-utils/tapiocaOmnichainEngine/TapiocaOmnichainEngineCodec.sol";
 import {MagnetarCollateralModule} from "tapioca-periph/Magnetar/modules/MagnetarCollateralModule.sol";
 import {ITapiocaOmnichainEngine, ERC20PermitStruct} from "tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
 import {MagnetarOptionModule} from "tapioca-periph/Magnetar/modules/MagnetarOptionModule.sol";
@@ -46,14 +43,6 @@ import {TapTokenMock} from "../../tap-token/TapTokenMock.sol";
 import {ITapToken} from "../../../contracts/tap-token/tokens/ITapToken.sol";
 import {Bucket} from "../../../contracts/tap-token/interfaces/ITWLBase.sol";
 import {SLeverageSwapData, SToftInfo} from "../../../contracts/bar/markets/leverage/BaseLeverageExecutor.sol";
-import {
-    PrepareLzCallData,
-    PrepareLzCallReturn,
-    ComposeMsgData,
-    LZSendParam,
-    RemoteTransferMsg,
-    TapiocaOmnichainEngineHelper
-} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainEngineHelper.sol";
 import {
     MagnetarAction,
     MagnetarModule,
@@ -92,10 +81,6 @@ import {OracleMock} from "../mocks/OracleMock.sol";
 import {ERC20Mock} from "../mocks/ERC20Mock.sol";
 
 // Tests
-import {ToeTokenReceiverMock} from "../mocks/ToeTokenMock/ToeTokenReceiverMock.sol";
-import {ToeTokenSenderMock} from "../mocks/ToeTokenMock/ToeTokenSenderMock.sol";
-import {ToeTokenMock} from "../mocks/ToeTokenMock/ToeTokenMock.sol";
-import {ToeTestHelper} from "../../utils/LZSetup/ToeTestHelper.sol";
 import {ERC1155Mock} from "../mocks/ERC1155Mock.sol";
 import {TapOftMock} from "../mocks/TapOftMock.sol";
 import {Weth9Mock} from "../mocks/Weth9Mock.sol";
@@ -111,7 +96,6 @@ abstract contract MagnetarTest is MagnetarTestUtils, MagnetarCallFactoryUtil {
     Penrose penrose;
     OracleMock oracle;
     MarketHelper marketHelper;
-    TapiocaOmnichainEngineHelper toeHelper;
     IBigBang bb;
     ERC20Mock aERC20;
     ERC20Mock bERC20;
@@ -921,116 +905,6 @@ abstract contract MagnetarTest is MagnetarTestUtils, MagnetarCallFactoryUtil {
         assertEq(balanceOfTap, 1 ether);
     }
 
-    function test_toe_sendPacketFrom() public {
-        vm.skip(true);
-        uint256 tokenAmount_ = 1 ether;
-
-        (ToeTokenMock aToeOFT, ToeTokenMock bToeOFT) = _getToeMock();
-
-        {
-            deal(address(aToeOFT), address(this), tokenAmount_);
-        }
-        cluster.updateContract(0, address(aToeOFT), true);
-        cluster.setRoleForContract(address(magnetar), keccak256("TOE"), true);
-
-        PrepareLzCallReturn memory prepareLzCallReturn_ = toeHelper.prepareLzCall(
-            ITapiocaOmnichainEngine(address(aToeOFT)),
-            PrepareLzCallData({
-                dstEid: bEid,
-                recipient: OFTMsgCodec.addressToBytes32(address(this)),
-                amountToSendLD: tokenAmount_,
-                minAmountToCreditLD: tokenAmount_,
-                msgType: 1,
-                composeMsgData: ComposeMsgData({
-                    index: 0,
-                    gas: 1_000_000,
-                    value: 0,
-                    data: bytes(""),
-                    prevData: bytes(""),
-                    prevOptionsData: bytes("")
-                }),
-                lzReceiveGas: 1_000_000,
-                lzReceiveValue: 0,
-                refundAddress: address(this)
-            })
-        );
-
-        bytes memory sendTokenFromCall = abi.encodeWithSelector(
-            ITapiocaOmnichainEngine.sendPacketFrom.selector, address(this), prepareLzCallReturn_.lzSendParam, "0x"
-        );
-        uint256 feeValue = prepareLzCallReturn_.msgFee.nativeFee * 2;
-
-        MagnetarCall[] memory calls = new MagnetarCall[](1);
-        calls[0] = MagnetarCall({
-            id: uint8(MagnetarAction.OFT),
-            target: address(aToeOFT),
-            value: feeValue,
-            call: sendTokenFromCall
-        });
-
-        magnetar.burst{value: feeValue}(calls);
-
-        assertEq(bToeOFT.balanceOf(address(this)), 0);
-        verifyPackets(uint32(bEid), address(bToeOFT));
-
-        assertEq(bToeOFT.balanceOf(address(this)), tokenAmount_);
-    }
-
-    function _getToeMock() private returns (ToeTokenMock aToeOFT, ToeTokenMock bToeOFT) {
-        setUpEndpoints(3, LibraryType.UltraLightNode);
-        address __extExec = address(new TapiocaOmnichainExtExec());
-
-        aToeOFT = ToeTokenMock(
-            payable(
-                _deployOApp(
-                    type(ToeTokenMock).creationCode,
-                    abi.encode(
-                        address(endpoints[aEid]),
-                        __owner,
-                        __extExec,
-                        address(
-                            new ToeTokenSenderMock("", "", address(endpoints[aEid]), address(this), address(0), cluster)
-                        ),
-                        address(
-                            new ToeTokenReceiverMock(
-                                "", "", address(endpoints[aEid]), address(this), address(0), cluster
-                            )
-                        ),
-                        cluster
-                    )
-                )
-            )
-        );
-        vm.label(address(aToeOFT), "aToeOFT");
-        bToeOFT = ToeTokenMock(
-            payable(
-                _deployOApp(
-                    type(ToeTokenMock).creationCode,
-                    abi.encode(
-                        address(endpoints[bEid]),
-                        __owner,
-                        address(__extExec),
-                        address(
-                            new ToeTokenSenderMock("", "", address(endpoints[bEid]), address(this), address(0), cluster)
-                        ),
-                        address(
-                            new ToeTokenReceiverMock(
-                                "", "", address(endpoints[bEid]), address(this), address(0), cluster
-                            )
-                        ),
-                        cluster
-                    )
-                )
-            )
-        );
-        vm.label(address(bToeOFT), "bToeOFT");
-
-        // config and wire the ofts
-        address[] memory ofts = new address[](2);
-        ofts[0] = address(aToeOFT);
-        ofts[1] = address(bToeOFT);
-        this.wireOApps(ofts);
-    }
 
     function test_burst_tapLock_valid(uint160 _participantPk, uint256 _amount) external withValidAmount(_amount) {
         address _participant = _assumeValidAddress(_participantPk, "participant");

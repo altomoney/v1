@@ -2,11 +2,10 @@
 pragma solidity ^0.8.22;
 
 // Lz
-import {TestHelper} from "../../../utils/LZSetup/TestHelper.sol";
+import {TestHelper} from "../../../bar/LZSetup/TestHelper.sol";
 
 // External
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import {TapiocaOmnichainEngineHelper} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainEngineHelper.sol";
 import {SimpleLeverageExecutor} from "tapioca-bar/markets/leverage/SimpleLeverageExecutor.sol";
 import {SGLInterestHelper} from "tapioca-bar/markets/singularity/SGLInterestHelper.sol";
 
@@ -54,8 +53,6 @@ import {Cluster} from "tap-utils/Cluster/Cluster.sol";
 
 import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
 import {Penrose} from "tapioca-bar/Penrose.sol";
-
-import {TapiocaOmnichainExtExec} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainExtExec.sol";
 
 import {IMarket, Module} from "tap-utils/interfaces/bar/IMarket.sol";
 
@@ -255,8 +252,6 @@ contract MagnetarTestHelper is TestHelper {
     }
 
     function createMagnetar(address _cluster) public returns (Magnetar magnetar) {
-        TapiocaOmnichainEngineHelper toeHelper = new TapiocaOmnichainEngineHelper();
-
         MagnetarSetupData memory setup;
 
         magnetar = new Magnetar(
@@ -266,7 +261,6 @@ contract MagnetarTestHelper is TestHelper {
             payable(setup.mintModule),
             payable(setup.optionModule),
             payable(setup.leverageModule),
-            address(toeHelper),
             address(new MagnetarHelper())
         );
     }

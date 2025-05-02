@@ -6,7 +6,6 @@ import {UtilitiesReport} from "../interfaces/ITapiocaReport.sol";
 import {TapiocaMulticall} from "tap-utils/TapiocaMulticall/TapiocaMulticall.sol";
 import {TapiocaMulticallTestnet} from "tap-utils/TapiocaMulticall/TapiocaMulticallTestnet.sol";
 import {Cluster} from "tap-utils/Cluster/Cluster.sol";
-import {TapiocaOmnichainEngineHelper} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainEngineHelper.sol";
 import {Pauser} from "tap-utils/Pauser/Pauser.sol";
 import {ZeroXSwapper} from "tap-utils/Swapper/ZeroXSwapper.sol";
 import {ZeroXSwapperMock} from "tapioca-mocks/ZeroXSwapperMock.sol";
@@ -25,7 +24,6 @@ abstract contract UtilitiesProcedure {
             report.tapiocaMulticall = address(new TapiocaMulticall());
         }
         report.cluster = address(new Cluster(lzChainId, address(this)));
-        report.toeHelper = address(new TapiocaOmnichainEngineHelper());
         report.pauser = address(new Pauser(report.cluster, owner));
         report.altoAdaptiveCurveIrm = address(new AltoAdaptiveCurveIrm());
         if (isTestnet) {

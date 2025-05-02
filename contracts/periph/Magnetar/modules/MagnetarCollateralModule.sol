@@ -41,7 +41,7 @@ contract MagnetarCollateralModule is MagnetarBaseModule {
     error MagnetarCollateralModule_UnwrapNotAllowed();
     error Magnetar_WithdrawParamsMismatch();
 
-    constructor(address _toeHelper, address _magnetarHelper) MagnetarBaseModule(_toeHelper, _magnetarHelper) {}
+    constructor(address _magnetarHelper) MagnetarBaseModule(_magnetarHelper) {}
 
     /**
      * @notice helper for deposit , add collateral to a market, borrow from the same market and withdraw

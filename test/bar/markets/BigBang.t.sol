@@ -40,7 +40,6 @@ import {Usdo} from "tapioca-bar/usdo/Usdo.sol";
 import {TOFTMock} from "../mocks/TOFTMock.sol";
 
 import {UsdoTestHelper, TestPenroseData, TestSingularityData, TestBigBangData} from "../helpers/UsdoTestHelper.t.sol";
-import {TapiocaOmnichainEngineHelper} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainEngineHelper.sol";
 import "forge-std/Test.sol";
 
 contract BigBangTest is UsdoTestHelper {
@@ -58,8 +57,6 @@ contract BigBangTest is UsdoTestHelper {
     TOFTMock collateral;
 
     MagnetarMock magnetar;
-
-    TapiocaOmnichainEngineHelper tapiocaOmnichainEngineHelper;
 
     SwapperMock swapper;
     Penrose penrose;

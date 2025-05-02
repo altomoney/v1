@@ -64,7 +64,7 @@ contract SGLCollateral is SGLLendingCommon {
         } else {
             amount = previewMint(share);
         }
-        if (amount <= minCollateralAmount) revert MinCollateralAmountNotMet();
+        if (amount < minCollateralAmount) revert MinCollateralAmountNotMet();
 
         _addCollateral(from, to, amount, share, true);
     }

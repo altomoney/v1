@@ -26,14 +26,7 @@ import {
     ILendOrRepayParams
 } from "tap-utils/interfaces/periph/IMagnetar.sol";
 
-import {
-    TapiocaOmnichainEngineHelper,
-    PrepareLzCallData,
-    PrepareLzCallReturn,
-    ComposeMsgData,
-    LZSendParam,
-    RemoteTransferMsg
-} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainEngineHelper.sol";
+
 import {ERC20PermitStruct, ERC20PermitApprovalMsg, MarketPermitActionMsg} from "tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
 
 // tests
@@ -45,7 +38,6 @@ abstract contract Usdo_Unit_Shared is Base_Test {
     // ************ //
     // *** VARS *** //
     // ************ //
-    TapiocaOmnichainEngineHelper tapiocaOmnichainEngineHelper;
 
     struct LzOFTComposedData {
         uint16 msgType;
@@ -64,8 +56,6 @@ abstract contract Usdo_Unit_Shared is Base_Test {
     function setUp() public virtual override {
         super.setUp();
 
-        tapiocaOmnichainEngineHelper = new TapiocaOmnichainEngineHelper();
-        vm.label(address(tapiocaOmnichainEngineHelper), "tapiocaOmnichainEngineHelper");
     }
 
     // **************** //
@@ -104,9 +94,9 @@ abstract contract Usdo_Unit_Shared is Base_Test {
         view
         returns (MarketLendOrRepayMsg memory marketMsg)
     {
-        uint256 _depositAmountSD = tapiocaOmnichainEngineHelper.toSD(data.depositAmount, usdo.decimalConversionRate());
-        uint256 _repayAmountSD = tapiocaOmnichainEngineHelper.toSD(data.repayAmount, usdo.decimalConversionRate());
-        uint256 _removeCollateralAmountSD = tapiocaOmnichainEngineHelper.toSD(data.removeCollateralAmount, usdo.decimalConversionRate());
+        uint256 _depositAmountSD = data.depositAmount;
+        uint256 _repayAmountSD = data.repayAmount;
+        uint256 _removeCollateralAmountSD = data.removeCollateralAmount;
 
         marketMsg = MarketLendOrRepayMsg({
             user: address(this),
@@ -155,13 +145,13 @@ abstract contract Usdo_Unit_Shared is Base_Test {
         view
         returns (MarketRemoveAssetMsg memory marketMsg)
     {
-        uint256 _removeAmountSD = tapiocaOmnichainEngineHelper.toSD(data.removeAmount, usdo.decimalConversionRate());
-        uint256 _repayAmountSD = tapiocaOmnichainEngineHelper.toSD(data.repayAmount, usdo.decimalConversionRate());
-        uint256 _removeCollateralAmountSD = tapiocaOmnichainEngineHelper.toSD(data.removeCollateralAmount, usdo.decimalConversionRate());
+        uint256 _removeAmountSD = data.removeAmount;
+        uint256 _repayAmountSD = data.repayAmount;
+        uint256 _removeCollateralAmountSD = data.removeCollateralAmount;
 
-        console.log("-------- _removeAmountSD            %s", _removeAmountSD);
-        console.log("-------- _repayAmountSD             %s", _repayAmountSD);
-        console.log("-------- _removeCollateralAmountSD  %s", _removeCollateralAmountSD);
+        console.log("-------- _removeAmount            %s", _removeAmountSD);
+        console.log("-------- _repayAmount             %s", _repayAmountSD);
+        console.log("-------- _removeCollateralAmount  %s", _removeCollateralAmountSD);
         marketMsg = MarketRemoveAssetMsg({
             user: address(this),
             externalData: ICommonExternalContracts({

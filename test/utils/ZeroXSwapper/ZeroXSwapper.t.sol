@@ -16,7 +16,7 @@ import {Cluster} from "src/tap-utils/Cluster/Cluster.sol";
 import {ERC20Mock} from "../mocks/ERC20Mock.sol";
 
 // Lz
-import {TestHelper} from "../LZSetup/TestHelper.sol";
+import {TestHelper} from "../../bar/LZSetup/TestHelper.sol";
 
 // External
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";

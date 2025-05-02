@@ -26,7 +26,6 @@ import {
 } from "tap-utils/interfaces/periph/IMagnetar.sol";
 import {ITapiocaOptionBroker} from "tap-token/interfaces/ITapiocaOptionBroker.sol";
 import {IUsdo} from "tapioca-bar/usdo/IUsdo.sol";
-import {PrepareLzCallReturn, PrepareLzCallData, ComposeMsgData, MarketPermitActionMsg, TapiocaOmnichainEngineHelper} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainEngineHelper.sol";
 import {LZSendParam, RemoteTransferMsg} from "tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
 import {ERC20PermitStruct, ERC20PermitApprovalMsg} from "tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
 import {SimpleLeverageExecutor} from "tapioca-bar/markets/leverage/SimpleLeverageExecutor.sol";
@@ -46,7 +45,6 @@ import {OracleMock} from "./mocks/OracleMock.sol";
 import {ERC20Mock} from "./mocks/ERC20Mock.sol";
 import {Usdo} from "tapioca-bar/usdo/Usdo.sol";
 import {ExerciseOptionsMsg} from "tap-utils/interfaces/periph/IMagnetar.sol";
-import {TapiocaOmnichainEngineCodec} from "tap-utils/tapiocaOmnichainEngine/TapiocaOmnichainEngineCodec.sol";
 
 import "forge-std/Test.sol";
 
@@ -64,8 +62,6 @@ contract UsdoTest is UsdoTestHelper {
 
     Usdo aUsdo; //collateral
     Usdo bUsdo; //asset
-
-    TapiocaOmnichainEngineHelper tapiocaOmnichainEngineHelper;
 
     MagnetarMock magnetar;
 
@@ -111,7 +107,6 @@ contract UsdoTest is UsdoTestHelper {
         vm.label(userA, "userA");
         vm.label(userB, "userB");
 
-        tapiocaOmnichainEngineHelper = new TapiocaOmnichainEngineHelper();
         tapOFT = new ERC20Mock("Tapioca OFT", "TAP");
         vm.label(address(tapOFT), "tapOFT");
 
