@@ -42,14 +42,10 @@ contract AltoMintMarket is AltoBorrowMarket {
     using MarketParamsLib for MarketParams;
 
     address public immutable usdo;
-    uint256 public globalDebtCeiling;
-
-    event SetGlobalDebtCeiling(uint256 newDebtCeiling);
 
     constructor(address newOwner, address usdoToken, uint256 debtCeiling) AltoBorrowMarket(newOwner) {
         require(usdoToken != address(0), ErrorsLib.ZERO_ADDRESS);
         usdo = usdoToken;
-        globalDebtCeiling = debtCeiling;
     }
 
     
@@ -67,12 +63,6 @@ contract AltoMintMarket is AltoBorrowMarket {
 
         // Call to initialize the IRM in case it is stateful.
         if (marketParams.irm != address(0)) IIrm(marketParams.irm).borrowRate(marketParams, market[id]);
-    }
-
-    function setGlobalDebtCeiling(uint256 newDebtCeiling) external onlyOwner {
-        globalDebtCeiling = newDebtCeiling;
-
-        emit SetGlobalDebtCeiling(newDebtCeiling);
     }
 
 
@@ -127,7 +117,6 @@ contract AltoMintMarket is AltoBorrowMarket {
         market[id].totalBorrowAssets += assets.toUint128();
 
         require(_isHealthy(marketParams, id, onBehalf), ErrorsLib.INSUFFICIENT_COLLATERAL);
-        require(market[id].totalBorrowAssets <= globalDebtCeiling, ErrorsLib.INSUFFICIENT_LIQUIDITY);
 
         emit EventsLib.Borrow(id, msg.sender, onBehalf, receiver, assets, shares);
 
