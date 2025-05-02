@@ -1,4 +1,4 @@
-pragma solidity ^0.8.22;
+pragma solidity ^0.8.19;
 
 import {IOFT} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/OFTCore.sol";
 import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";

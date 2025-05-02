@@ -1,5 +1,4 @@
 [profile.default]
-solc_version = "0.8.28"
 src = 'contracts'
 libs = ['node_modules', 'lib']
 test = 'test'
@@ -29,6 +28,7 @@ remappings = [
 	'tapioca-mocks/=contracts/mocks/',
 	'deployments/=contracts/deployments/',
 	'solady/=lib/solady/src/',
+	'morpho-blue/=lib/morpho-blue/src/'
 ]
 
 [etherscan]
