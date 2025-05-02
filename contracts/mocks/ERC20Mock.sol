@@ -24,12 +24,12 @@ contract ERC20Mock is ERC20Permit, Ownable {
     constructor(string memory _name, string memory _symbol, uint256 _initialAmount, uint8 decimals_, address _owner)
         ERC20(_name, _symbol)
         ERC20Permit(_name)
+        Ownable()
     {
         _decimals = decimals_;
         mintLimit = 1000 * (10 ** _decimals);
 
         transferOwnership(_owner);
-
         _mint(address(this), _initialAmount);
 
         hasMintRestrictions = true;

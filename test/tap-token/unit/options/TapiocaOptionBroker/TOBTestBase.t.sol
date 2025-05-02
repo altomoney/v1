@@ -4,7 +4,7 @@ pragma solidity ^0.8.18;
 import {Test} from "forge-std/Test.sol";
 import {RebaseLibrary, Rebase} from "@boringcrypto/boring-solidity/contracts/libraries/BoringRebase.sol";
 import {TapiocaReport, TapiocaInput} from "deployments/interfaces/ITapiocaReport.sol";
-import {ERC20Mock} from "tap-token/mocks/ERC20Mock.sol";
+import {ERC20Mock} from "tapioca-mocks/ERC20Mock.sol";
 import {OracleMock} from "test/utils/mocks/OracleMock.sol";
 import {LZEndpointMock} from "tapioca-mocks/LZEndpointMock.sol";
 import {SingularityLauncher, RiskParams} from "deployments/releases/tapioca-v1/actions/SingularityLauncher.sol";
@@ -86,6 +86,8 @@ contract TOBTestBase is Test, Events, Utils {
     }
 
     function setUp() public virtual {
+        owner = makeAddr("owner");
+        
         deployDependencies();
 
         buckets.push(
@@ -142,7 +144,7 @@ contract TOBTestBase is Test, Events, Utils {
         user1 = makeAddr("user1");
         tapOracle = makeAddr("tapOracle");
         paymentTokenOracle = makeAddr("paymentTokenOracle");
-        paymentToken = new ERC20Mock("PaymentToken", "PT");
+        paymentToken = new ERC20Mock("PaymentToken", "PT", 0, 18, owner);
         contributors = makeAddr("contributors");
         earlySupporters = makeAddr("earlySupporters");
         supporters = makeAddr("supporters");
@@ -151,8 +153,8 @@ contract TOBTestBase is Test, Events, Utils {
         airdrop = makeAddr("airdrop");
         owner = address(new OwnerContract());
         ownerInstance = OwnerContract(owner);
-        sUSDX = new ERC20Mock("sUSDX", "sUSDX");
-        sWETH = new ERC20Mock("sWETH", "sWETH");
+        sUSDX = new ERC20Mock("sUSDX", "sUSDX", 0, 18, owner);
+        sWETH = new ERC20Mock("sWETH", "sWETH", 0, 18, owner);
         TapiocaReport memory emptyReport;
 
         tapOracle = address(new OracleMock("TapOracle", "TORC", 1 ether));
@@ -160,7 +162,7 @@ contract TOBTestBase is Test, Events, Utils {
 
         input.owner = owner;
         input.lzChainId = 0;
-        input.wrappedNativeToken = address(new ERC20Mock("A", "A"));
+        input.wrappedNativeToken = address(new ERC20Mock("A", "A", 0, 18, owner));
         input.bbMarketBorrowCap = 3_000_000e18;
 
         input.lzEndpoint = address(new LZEndpointMock(uint16(block.chainid)));
