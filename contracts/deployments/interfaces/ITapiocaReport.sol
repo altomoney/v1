@@ -99,7 +99,7 @@ struct UsdoMarketModulesReport {
 
 struct UsdoReport {
     address usdo;
-    address usdoHelper;
+    address tapiocaOmnichainEngineHelper;
     address usdoFlashloanHelper;
 }
 
@@ -153,8 +153,6 @@ struct Reports {
     MagnetarDepsReport magnetarDepsReport;
     UtilitiesReport utilitiesReport;
     ExtExReport ExtExReport;
-    UsdoModulesReport usdoModulesReport;
-    UsdoMarketModulesReport usdoMarketModulesReport;
     UsdoReport usdoReport;
     SGLReport sglReport;
     PenroseReport penroseReport;

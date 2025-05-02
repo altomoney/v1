@@ -12,7 +12,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 // Tapioca
 
 import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
-import {IUsdo} from "tap-utils/interfaces/oft/IUsdo.sol";
+import {IUsdo} from "tapioca-bar/usdo/IUsdo.sol";
 import {SafeApprove} from "../../libraries/SafeApprove.sol";
 import {Market} from "../Market.sol";
 import {MarketERC4626} from "../MarketERC4626.sol";

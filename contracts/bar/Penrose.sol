@@ -9,17 +9,16 @@ import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 // Tapioca
-import {RevertMsgDecoder} from "./usdo/libraries/RevertMsgDecoder.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {IMarket} from "tap-utils/interfaces/bar/ISingularity.sol";
 import {ITWTAPv2} from "tap-token/interfaces/ITWTAPv2.sol";
 import {IPenrose} from "tap-utils/interfaces/bar/IPenrose.sol";
 import {IBigBang} from "tap-utils/interfaces/bar/IBigBang.sol";
-import {IUsdo} from "tap-utils/interfaces/oft/IUsdo.sol";
+import {IUsdo} from "tapioca-bar/usdo/IUsdo.sol";
 import {SafeApprove} from "./libraries/SafeApprove.sol";
 import {ISingularity} from "../utils/interfaces/bar/ISingularity.sol";
+import {RevertMsgDecoder} from "../utils/libraries/RevertMsgDecoder.sol";
 
-import "forge-std/console2.sol";
 /*
 
 ████████╗ █████╗ ██████╗ ██╗ ██████╗  ██████╗ █████╗ 

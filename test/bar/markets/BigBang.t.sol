@@ -36,14 +36,11 @@ import {SwapperMock} from "../mocks/SwapperMock.sol";
 import {OracleMock} from "../mocks/OracleMock.sol";
 import {ERC20Mock} from "../mocks/ERC20Mock.sol";
 import {TwTapMock} from "../mocks/TwTapMock.sol";
-import {UsdoMock} from "../mocks/UsdoMock.sol";
+import {Usdo} from "tapioca-bar/usdo/Usdo.sol";
 import {TOFTMock} from "../mocks/TOFTMock.sol";
 
-import {UsdoHelper} from "tapioca-bar/usdo/extensions/UsdoHelper.sol";
-import {UsdoSender} from "tapioca-bar/usdo/modules/UsdoSender.sol";
-
 import {UsdoTestHelper, TestPenroseData, TestSingularityData, TestBigBangData} from "../helpers/UsdoTestHelper.t.sol";
-
+import {TapiocaOmnichainEngineHelper} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainEngineHelper.sol";
 import "forge-std/Test.sol";
 
 contract BigBangTest is UsdoTestHelper {
@@ -62,7 +59,7 @@ contract BigBangTest is UsdoTestHelper {
 
     MagnetarMock magnetar;
 
-    UsdoHelper usdoHelper;
+    TapiocaOmnichainEngineHelper tapiocaOmnichainEngineHelper;
 
     SwapperMock swapper;
     Penrose penrose;

@@ -3,8 +3,6 @@ pragma solidity ^0.8.22;
 
 import "forge-std/Test.sol";
 
-import "forge-std/console2.sol";
-
 // Lz
 import {
     SendParam,
@@ -65,15 +63,15 @@ import {
     DepositAddCollateralAndBorrowFromMarketData,
     MagnetarWithdrawData,
     DepositRepayAndRemoveCollateralFromMarketData,
-    IMintData,
     IDepositData,
     ICommonExternalContracts,
     MintFromBBAndLendOnSGLData,
-    IRemoveAndRepay,
     ExitPositionAndRemoveCollateralData,
     IExerciseOptionsData,
     IOptionsLockData,
-    IOptionsUnlockData
+    IOptionsUnlockData,
+    IRemoveAndRepay,
+    IMintData
 } from "tap-utils/interfaces/periph/IMagnetar.sol";
 import {MagnetarTestUtils, TestSingularityData, TestBigBangData} from "./MagnetarTestUtils.t.sol";
 import {SimpleLeverageExecutor} from "tapioca-bar/markets/leverage/SimpleLeverageExecutor.sol";

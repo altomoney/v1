@@ -5,9 +5,7 @@ import {TapiocaMagnetarBatchOne} from "./batches/TapiocaMagnetarBatchOne.sol";
 import {TapiocaMagnetarBatchTwo} from "./batches/TapiocaMagnetarBatchTwo.sol";
 import {TapiocaUtilitiesBatch} from "./batches/TapiocaUtilitiesBatch.sol";
 import {TapiocaExtExBatch} from "./batches/TapiocaExtExBatch.sol";
-import {TapiocaUsdoBatchOne} from "./batches/TapiocaUsdoBatchOne.sol";
-import {TapiocaUsdoBatchTwo} from "./batches/TapiocaUsdoBatchTwo.sol";
-import {TapiocaUsdoBatchThree} from "./batches/TapiocaUsdoBatchThree.sol";
+import {TapiocaUsdoBatch} from "./batches/TapiocaUsdoBatch.sol";
 import {TapiocaSingularityBatch1} from "./batches/TapiocaSingularityBatch1.sol";
 import {TapiocaSingularityBatch2} from "./batches/TapiocaSingularityBatch2.sol";
 import {TapiocaSingularityBatch3} from "./batches/TapiocaSingularityBatch3.sol";
@@ -58,11 +56,10 @@ library TapiocaRelease {
             reports.magnetarDepsReport
         );
 
-        (reports.usdoModulesReport, reports.usdoMarketModulesReport, reports.usdoReport) = _deployUSDO(
+        reports.usdoReport = _deployUSDO(
             input.lzEndpoint,
             input.owner, // delegate
-            reports.utilitiesReport.cluster,
-            reports.ExtExReport.extExec
+            reports.utilitiesReport.cluster
         );
 
         reports.sglReport = _deploySingularity();
@@ -213,31 +210,19 @@ library TapiocaRelease {
         return report;
     }
 
-    function _deployUSDO(address endpoint, address delegate, address cluster, address extExec)
+    function _deployUSDO(address endpoint, address delegate, address cluster)
         private
         returns (
-            UsdoModulesReport memory modulesReport,
-            UsdoMarketModulesReport memory marketModulesReport,
             UsdoReport memory usdoReport
         )
     {
-        TapiocaUsdoBatchOne usdoBatchOne = new TapiocaUsdoBatchOne(endpoint, delegate, cluster, extExec);
-        modulesReport = usdoBatchOne.getUsdoModulesReport();
-
-        TapiocaUsdoBatchTwo usdoBatchTwo = new TapiocaUsdoBatchTwo(endpoint, delegate, cluster, extExec);
-        marketModulesReport = usdoBatchTwo.getUsdoMarketModulesReport();
-        TapiocaUsdoBatchThree usdoBatchThree = new TapiocaUsdoBatchThree(
+        TapiocaUsdoBatch usdoBatch = new TapiocaUsdoBatch(
             endpoint,
             delegate,
-            cluster,
-            extExec,
-            modulesReport.usdoSenderModule,
-            modulesReport.usdoReceiverModule,
-            marketModulesReport.marketReceiverModule,
-            marketModulesReport.optionReceiverModule
+            cluster
         );
-        usdoReport = usdoBatchThree.getUsdoReport();
-        return (modulesReport, marketModulesReport, usdoReport);
+        usdoReport = usdoBatch.getUsdoReport();
+        return (usdoReport);
     }
 
     /// @dev deploy singularity batches
@@ -276,10 +261,6 @@ library TapiocaRelease {
         report.magnetarHelper = reports.magnetarDepsReport.magnetarHelper;
         report.liquidatorReceiver = reports.ExtExReport.liquidatorReceiver;
         report.extExec = reports.ExtExReport.extExec;
-        report.usdoSenderModule = reports.usdoModulesReport.usdoSenderModule;
-        report.usdoReceiverModule = reports.usdoModulesReport.usdoReceiverModule;
-        report.marketReceiverModule = reports.usdoMarketModulesReport.marketReceiverModule;
-        report.optionReceiverModule = reports.usdoMarketModulesReport.optionReceiverModule;
         report.usdo = reports.usdoReport.usdo;
 
         report.sglInit = reports.sglReport.sglInit;

@@ -54,7 +54,7 @@ import {Bucket} from "tap-token/interfaces/ITWLBase.sol";
 import {ZeroXSwapperMock} from "tapioca-mocks/ZeroXSwapperMock.sol";
 import {OracleMock} from "tapioca-mocks/OracleMock.sol";
 import {ERC20Mock} from "tapioca-mocks/ERC20Mock.sol";
-import {UsdoMock} from "tapioca-mocks/UsdoMock.sol";
+import {Usdo} from "tapioca-bar/usdo/Usdo.sol";
 
 /**
  * Tests
@@ -86,7 +86,7 @@ contract UnitBaseTest is TestHelper {
     address public tapMockPenrose;
     address public ethTokenPenrose;
     address public ethTokenPenroseStrat;
-    UsdoMock public usdoMock;
+    Usdo public usdoMock;
 
     // main contracts
     Penrose public penrose;
@@ -122,7 +122,6 @@ contract UnitBaseTest is TestHelper {
         // Mocks tokens
         tapMockPenrose = address(new ERC20Mock("TAP_MOCK_PENROSE", "TAP_MOCK_PENROSE", 100e18, 18, adminAddr));
         ethTokenPenrose = address(new ERC20Mock("ETH_MOCK_PENROSE", "ETH_MOCK_PENROSE", 100e18, 18, adminAddr));
-        usdoMock = new UsdoMock("USDO_MOCK", "USDO_MOCK", 18, adminAddr);
 
         // Misc
         vm.warp(10000 weeks); // Set it to a big number
@@ -130,6 +129,7 @@ contract UnitBaseTest is TestHelper {
         setUpEndpoints(3, LibraryType.UltraLightNode);
         ENDPOINT_A = address(endpoints[EID_A]);
         ENDPOINT_B = address(endpoints[EID_B]);
+        usdoMock = new Usdo(ENDPOINT_A, adminAddr, address(cluster));
 
         // Bar contracts
         marketHelper = new MarketHelper();
@@ -407,7 +407,6 @@ contract UnitBaseTest is TestHelper {
 
         vm.startPrank(adminAddr);
         cluster.updateContract(0, address(bigBangEthMarket), true);
-        usdoMock.setWhitelist(address(bigBangEthMarket), true);
         vm.stopPrank();
     }
 

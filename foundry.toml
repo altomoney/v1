@@ -41,3 +41,7 @@ no-match-contract = "zzz"
 [profile.twtap]
 src = "contracts/tap-token/governance"
 test = "test/tap-token/unit/options/"
+
+[profile.usdo]
+src = "contracts/bar/usdo"
+test = "test/bar"

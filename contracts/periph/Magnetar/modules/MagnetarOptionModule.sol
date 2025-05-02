@@ -10,8 +10,8 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {
     ExitPositionAndRemoveCollateralData,
     ICommonExternalContracts,
-    IRemoveAndRepay,
-    LockData
+    LockData,
+    IRemoveAndRepay
 } from "tap-utils/interfaces/periph/IMagnetar.sol";
 import {ISingularity} from "tap-utils/interfaces/bar/ISingularity.sol";
 import {ITapiocaOptionBroker} from "tap-token/interfaces/ITapiocaOptionBroker.sol";

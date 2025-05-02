@@ -2,18 +2,10 @@
 pragma solidity ^0.8.22;
 
 // contracts
-import {UsdoInitStruct, UsdoModulesInitStruct} from "tap-utils/interfaces/oft/IUsdo.sol";
-
 import {Cluster} from "tap-utils/Cluster/Cluster.sol";
 
 import {Penrose} from "tapioca-bar/Penrose.sol";
 
-import {TapiocaOmnichainExtExec} from "tap-utils/tapiocaOmnichainEngine/extension/TapiocaOmnichainExtExec.sol";
-import {IUsdo, UsdoInitStruct, UsdoModulesInitStruct} from "tap-utils/interfaces/oft/IUsdo.sol";
-import {UsdoMarketReceiverModule} from "tapioca-bar/usdo/modules/UsdoMarketReceiverModule.sol";
-import {UsdoOptionReceiverModule} from "tapioca-bar/usdo/modules/UsdoOptionReceiverModule.sol";
-import {UsdoReceiver} from "tapioca-bar/usdo/modules/UsdoReceiver.sol";
-import {UsdoSender} from "tapioca-bar/usdo/modules/UsdoSender.sol";
 import {Usdo} from "tapioca-bar/usdo/Usdo.sol";
 
 // tests
@@ -52,12 +44,6 @@ abstract contract Base_Test is TestHelper, Utils, Types, Events {
     ERC20Mock_test tapToken; // no need for real TAP; used only to simulate fees
 
     Usdo usdo;
-
-    UsdoSender usdoSender;
-    UsdoReceiver usdoReceiver;
-    UsdoMarketReceiverModule usdoMarketReceiverModule;
-    UsdoOptionReceiverModule usdoOptionsReceiverModule;
-
     Usdo secondaryUsdo;
 
     // ************* //
@@ -94,57 +80,10 @@ abstract contract Base_Test is TestHelper, Utils, Types, Events {
             _owner: address(this)
         });
 
-        // create real USDO
-        TapiocaOmnichainExtExec extExec = new TapiocaOmnichainExtExec();
-        vm.label(address(extExec), "TapiocaOmnichainExtExec");
-
-        UsdoInitStruct memory usdoInitStruct = UsdoInitStruct({
-            endpoint: address(endpoints[aEid]),
-            delegate: address(this),
-            cluster: address(cluster),
-            extExec: address(extExec)
-        });
-        usdoSender = new UsdoSender(usdoInitStruct);
-        usdoReceiver = new UsdoReceiver(usdoInitStruct);
-        usdoMarketReceiverModule = new UsdoMarketReceiverModule(usdoInitStruct);
-        usdoOptionsReceiverModule = new UsdoOptionReceiverModule(usdoInitStruct);
-        vm.label(address(usdoSender), "Usdo Sender");
-        vm.label(address(usdoReceiver), "Usdo Receiver");
-        vm.label(address(usdoMarketReceiverModule), "Usdo Market Receiver Module");
-        vm.label(address(usdoOptionsReceiverModule), "Usdo Options Receiver Module");
-
-        UsdoModulesInitStruct memory usdoModulesInitStruct = UsdoModulesInitStruct({
-            usdoSenderModule: address(usdoSender),
-            usdoReceiverModule: address(usdoReceiver),
-            marketReceiverModule: address(usdoMarketReceiverModule),
-            optionReceiverModule: address(usdoOptionsReceiverModule)
-        });
-        usdo = Usdo(payable(_deployOApp(type(Usdo).creationCode, abi.encode(usdoInitStruct, usdoModulesInitStruct))));
+        usdo = new Usdo(address(endpoints[aEid]), address(this), address(cluster));
         vm.label(address(usdo), "Usdo");
 
-        // create secondary real Usdo
-        usdoInitStruct = UsdoInitStruct({
-            endpoint: address(endpoints[bEid]),
-            delegate: address(this),
-            cluster: address(cluster),
-            extExec: address(extExec)
-        });
-        UsdoSender secondaryUsdoSender = new UsdoSender(usdoInitStruct);
-        UsdoReceiver secondaryUsdoReceiver = new UsdoReceiver(usdoInitStruct);
-        UsdoMarketReceiverModule secondaryUsdoMarketReceiverModule = new UsdoMarketReceiverModule(usdoInitStruct);
-        UsdoOptionReceiverModule secondaryUsdoOptionsReceiverModule = new UsdoOptionReceiverModule(usdoInitStruct);
-        vm.label(address(secondaryUsdoSender), "Secondary Usdo Sender");
-        vm.label(address(secondaryUsdoReceiver), "Secondary Usdo Receiver");
-        vm.label(address(secondaryUsdoMarketReceiverModule), "Secondary Usdo Market Receiver");
-        vm.label(address(secondaryUsdoOptionsReceiverModule), "Secondary Usdo Options Receiver");
-        usdoModulesInitStruct = UsdoModulesInitStruct({
-            usdoSenderModule: address(secondaryUsdoSender),
-            usdoReceiverModule: address(secondaryUsdoReceiver),
-            marketReceiverModule: address(secondaryUsdoMarketReceiverModule),
-            optionReceiverModule: address(secondaryUsdoOptionsReceiverModule)
-        });
-        secondaryUsdo =
-            Usdo(payable(_deployOApp(type(Usdo).creationCode, abi.encode(usdoInitStruct, usdoModulesInitStruct))));
+        secondaryUsdo = new Usdo(address(endpoints[bEid]), address(this), address(cluster));
         vm.label(address(secondaryUsdo), "Secondary Usdo");
 
         // *** AFTER DEPLOYMENT *** //

@@ -10,7 +10,7 @@ import {IERC20} from "@boringcrypto/boring-solidity/contracts/ERC20.sol";
 // Tapioca
 import {IMarketLiquidatorReceiver} from "tap-utils/interfaces/bar/IMarketLiquidatorReceiver.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
-import {IUsdo} from "tap-utils/interfaces/oft/IUsdo.sol";
+import {IUsdo} from "tapioca-bar/usdo/IUsdo.sol";
 import {BBCommon} from "./BBCommon.sol";
 import {PauseType} from "tap-utils/interfaces/bar/IMarket.sol";
 
@@ -129,9 +129,14 @@ contract BBLiquidation is BBCommon {
         _accrue();
         _penrose.reAccrueBigBangMarkets();
 
-        _closedLiquidation(
-            users, maxBorrowParts, minLiquidationBonuses, liquidatorReceivers, liquidatorReceiverDatas, exchangeRate
-        );
+        ClosedLiquidationParams memory params = ClosedLiquidationParams({   
+            users: users,
+            maxBorrowParts: maxBorrowParts,
+            minLiquidationBonuses: minLiquidationBonuses,
+            liquidatorReceivers: liquidatorReceivers,
+            exchangeRate: exchangeRate
+        });
+        _closedLiquidation(params, liquidatorReceiverDatas);
     }
 
     // ************************* //
@@ -278,29 +283,29 @@ contract BBLiquidation is BBCommon {
         emit Liquidated(msg.sender, _users, callerShare, feeShare, borrowAmount, collateralShare);
     }
 
+
+    struct ClosedLiquidationParams {
+        address[] users;
+        uint256[] maxBorrowParts;
+        uint256[] minLiquidationBonuses;
+        IMarketLiquidatorReceiver[] liquidatorReceivers;
+        uint256 exchangeRate;
+    }
     /// @notice Handles the liquidation of users' balances, once the users' amount of collateral is too low.
     /// @dev Closed liquidations Only, 90% of extra shares goes to caller and 10% to protocol
-
-    function _closedLiquidation(
-        address[] calldata users,
-        uint256[] calldata maxBorrowParts,
-        uint256[] calldata minLiquidationBonuses,
-        IMarketLiquidatorReceiver[] calldata liquidatorReceivers,
-        bytes[] calldata liquidatorReceiverDatas,
-        uint256 _exchangeRate
-    ) private {
+    function _closedLiquidation(ClosedLiquidationParams memory params, bytes[] calldata liquidatorReceiverDatas) private {
         uint256 liquidatedCount = 0;
         unchecked {
-            for (uint256 i; i < users.length; ++i) {
-                if (!_isSolvent(users[i], _exchangeRate, true)) {
+            for (uint256 i; i < params.users.length; ++i) {
+                if (!_isSolvent(params.users[i], params.exchangeRate, true)) {
                     liquidatedCount++;
                     _liquidateUser(
-                        users[i],
-                        maxBorrowParts[i],
-                        liquidatorReceivers[i],
+                        params.users[i],
+                        params.maxBorrowParts[i],
+                        params.liquidatorReceivers[i],
                         liquidatorReceiverDatas[i],
-                        _exchangeRate,
-                        minLiquidationBonuses[i]
+                        params.exchangeRate,
+                        params.minLiquidationBonuses[i]
                     );
                 }
             }
