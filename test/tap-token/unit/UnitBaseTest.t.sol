@@ -10,8 +10,6 @@ import {IERC20 as BoringIERC20} from "@boringcrypto/boring-solidity/contracts/li
  * Tap Token core contracts
  */
 import {TapiocaOptionBroker} from "tap-token/options/TapiocaOptionBroker.sol";
-import {TapTokenReceiver} from "tap-token/tokens/TapTokenReceiver.sol";
-import {TapTokenSender} from "tap-token/tokens/TapTokenSender.sol";
 import {ITapToken} from "tap-token/tokens/ITapToken.sol";
 import {TwTAP} from "tap-token/governance/twTAP.sol";
 import {ITWLBase} from "tap-token/interfaces/ITWLBase.sol";
@@ -186,17 +184,13 @@ contract UnitBaseTest is TestHelper {
                 i._lbp,
                 i._dao,
                 i._airdrop,
-                i._governanceEid,
                 i._owner,
-                address(new TapTokenSender("", "", i._endpoint, i._owner, address(0))),
-                address(new TapTokenReceiver("", "", i._endpoint, i._owner, address(0))),
-                address(new TapiocaOmnichainExtExec()),
-                ICluster(address(cluster))
+                address(cluster)
             )
         );
     }
 
-    function createTwTap(address payable _tapOft, address _owner) internal returns (TwTAP) {
+    function createTwTap(address _tapOft, address _owner) internal returns (TwTAP) {
         Bucket[] memory buckets = new Bucket[](1);
         buckets[0] = Bucket({
             enabled: true,

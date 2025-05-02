@@ -68,7 +68,7 @@ contract twTapBaseTest is UnitBaseTest {
         tapOFT.setMinter(adminAddr);
         tapOFT.initEmissions();
         vm.stopPrank();
-        twTap = createTwTap(payable(tapOFT), adminAddr);
+        twTap = createTwTap(address(tapOFT), adminAddr);
 
         /**
          * Set the contract

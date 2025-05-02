@@ -62,7 +62,7 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, ReentrancyGuard, Pausable {
 
     uint256 constant MULTIPLIER_PRECISION = 1e18;
 
-    constructor(address payable _tapOFT, address _owner, uint256 epochDuration, Bucket[] memory _buckets)
+    constructor(address _tapOFT, address _owner, uint256 epochDuration, Bucket[] memory _buckets)
         TWLBase(epochDuration, _buckets)
     {
         tapOFT = TapToken(_tapOFT);

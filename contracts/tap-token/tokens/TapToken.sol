@@ -12,20 +12,17 @@ import {IMessagingChannel} from "@layerzerolabs/lz-evm-protocol-v2/contracts/int
 import {OAppReceiver} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/OAppReceiver.sol";
 import {Origin} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/OApp.sol";
 import {OFTCore} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/OFT.sol";
+import {OFT} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/OFT.sol";
 
 // External
 import {ERC20Permit, ERC20} from "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
 import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
+import {ERC20PermitStruct} from "tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
 
 // Tapioca
-import {BaseTapiocaOmnichainEngine} from "tap-utils/tapiocaOmnichainEngine/BaseTapiocaOmnichainEngine.sol";
-import {TapiocaOmnichainSender} from "tap-utils/tapiocaOmnichainEngine/TapiocaOmnichainSender.sol";
-import {ERC20PermitStruct, ITapToken, LZSendParam} from "tap-token/tokens/ITapToken.sol";
-import {ModuleManager} from "./module/ModuleManager.sol";
-import {TapTokenReceiver} from "./TapTokenReceiver.sol";
+import {ITapToken} from "tap-token/tokens/ITapToken.sol";
 import {ITWTAPv2} from "tap-token/interfaces/ITWTAPv2.sol";
-import {TapTokenSender} from "./TapTokenSender.sol";
-import {BaseTapToken} from "./BaseTapToken.sol";
+import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 
 /*
 
@@ -37,12 +34,11 @@ import {BaseTapToken} from "./BaseTapToken.sol";
    ╚═╝   ╚═╝  ╚═╝╚═╝     ╚═╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝
    
 */
-// TODO: add older TWAP interface and mark as DEPRECATED
 
 /// @title Tapioca OFTv2 token
 /// @notice OFT compatible TAP token
 /// @dev Emissions E(x)= E(x-1) - E(x-1) * D with E being total supply a x week, and D the initial decay rate
-contract TapToken is BaseTapToken, ModuleManager, ERC20Permit, Pausable {
+contract TapToken is OFT, ERC20Permit, Pausable {
     uint256 public constant INITIAL_SUPPLY = 47_500_000 * 1e18; // Everything minus DSO
     uint256 public dso_supply = 52_500_000 * 1e18; // Emission supply for DSO
 
@@ -68,8 +64,9 @@ contract TapToken is BaseTapToken, ModuleManager, ERC20Permit, Pausable {
     /// @notice returns the minter address
     address public minter;
 
-    /// @notice LayerZero governance chain identifier
-    uint256 public governanceEid;
+    ITWTAPv2 public twTap;
+
+    ICluster public cluster;
 
     // ==========
     // *EVENTS*
@@ -82,8 +79,6 @@ contract TapToken is BaseTapToken, ModuleManager, ERC20Permit, Pausable {
     event Minted(address indexed _by, address indexed _to, uint256 _amount);
     /// @notice event emitted when new TAP is burned
     event Burned(address indexed _from, uint256 _amount);
-
-    error OnlyHostChain();
 
     // ==========
     // *ERRORS*
@@ -98,19 +93,22 @@ contract TapToken is BaseTapToken, ModuleManager, ERC20Permit, Pausable {
     error InitNotStarted();
     error InsufficientEmissions();
     error NotAuthorized();
+    error twTapNotSet();
 
     // ===========
     // *MODIFIERS*
     // ===========
+
+    modifier twTapExists() {
+        if (address(twTap) == address(0)) revert twTapNotSet();
+        _;
+    }
+
     modifier onlyMinter() {
         if (msg.sender != minter) revert OnlyMinter();
         _;
     }
 
-    modifier onlyHostChain() {
-        if (_getChainId() != governanceEid) revert OnlyHostChain();
-        _;
-    }
 
     /**
      * @notice Creates a new TAP OFT type token
@@ -136,182 +134,30 @@ contract TapToken is BaseTapToken, ModuleManager, ERC20Permit, Pausable {
      * @param _data.lTap Address of the LBP redemption token, lTap.
      * @param _data.dao Address of the DAO.
      * @param _data.airdrop Address of the airdrop contract.
-     * @param _data.governanceEid Governance chain endpoint ID. Should be EID of the twTAP chain.
      * @param _data.owner Address of the conservator/owner.
-     * @param _data.tapTokenSenderModule Address of the TapTokenSenderModule.
-     * @param _data.tapTokenReceiverModule Address of the TapTokenReceiverModule.
-     * @param _data.extExec Address of the external executor.
      */
     constructor(ITapToken.TapTokenConstructorData memory _data)
-        BaseTapToken("Alto", "ALTO", _data.endpoint, _data.owner, _data.extExec, _data.cluster)
         ERC20Permit("ALTO")
+        OFT("ALTO", "ALTO", _data.endpoint, _data.owner)
     {
+        cluster = ICluster(_data.cluster);
         if (_data.endpoint == address(0)) revert AddressWrong();
-        governanceEid = _data.governanceEid;
-
-        // Initialize modules
-        if (_data.tapTokenSenderModule == address(0)) revert NotValid();
-        if (_data.tapTokenReceiverModule == address(0)) revert NotValid();
-
-        _setModule(uint8(ITapToken.Module.TapTokenSender), _data.tapTokenSenderModule);
-        _setModule(uint8(ITapToken.Module.TapTokenReceiver), _data.tapTokenReceiverModule);
 
         if (_data.epochDuration == 0) revert NotValid();
         EPOCH_DURATION = _data.epochDuration;
 
-        // Mint only on the governance chain
-        if (_getChainId() == _data.governanceEid) {
-            uint256 lbpSold = 3989472714402321147960046; // LBP sold 3.9m
-            uint256 lbpRemaining = (1e18 * 5_000_000) - lbpSold; // Remaining of the  LBP goes to the DAO
+        uint256 lbpSold = 3989472714402321147960046; // LBP sold 3.9m
+        uint256 lbpRemaining = (1e18 * 5_000_000) - lbpSold; // Remaining of the  LBP goes to the DAO
 
-            _mint(_data.contributors, 1e18 * 15_000_000);
-            _mint(_data.earlySupporters, 1e18 * 3_500_001);
-            _mint(_data.supporters, 1e18 * 14_938_030.34);
-            _mint(_data.lTap, lbpSold);
-            _mint(_data.dao, (1e18 * 6_561_968.66) + lbpRemaining);
-            _mint(_data.airdrop, 1e18 * 2_500_000);
-            if (totalSupply() != INITIAL_SUPPLY) revert SupplyNotValid();
-        }
+        _mint(_data.contributors, 1e18 * 15_000_000);
+        _mint(_data.earlySupporters, 1e18 * 3_500_001);
+        _mint(_data.supporters, 1e18 * 14_938_030.34);
+        _mint(_data.lTap, lbpSold);
+        _mint(_data.dao, (1e18 * 6_561_968.66) + lbpRemaining);
+        _mint(_data.airdrop, 1e18 * 2_500_000);
+        if (totalSupply() != INITIAL_SUPPLY) revert SupplyNotValid();
 
         _transferOwnership(_data.owner);
-    }
-
-    /// =====================
-    /// Module setup
-    /// =====================
-
-    /**
-     * @dev Fallback function should handle calls made by endpoint, which should go to the receiver module.
-     */
-    fallback() external payable {
-        /// @dev Call the receiver module on fallback, assume it's gonna be called by endpoint.
-        _executeModule(uint8(ITapToken.Module.TapTokenReceiver), msg.data, false);
-    }
-
-    receive() external payable {}
-
-    /**
-     * @dev Slightly modified version of the OFT _lzReceive() operation.
-     * The composed message is sent to `address(this)` instead of `toAddress`.
-     * @dev Internal function to handle the receive on the LayerZero endpoint.
-     * @param _origin The origin information.
-     *  - srcEid: The source chain endpoint ID.
-     *  - sender: The sender address from the src chain.
-     *  - nonce: The nonce of the LayerZero message.
-     * @param _guid The unique identifier for the received LayerZero message.
-     * @param _message The encoded message.
-     * @dev _executor The address of the executor.
-     * @dev _extraData Additional data.
-     */
-    function lzReceive(
-        Origin calldata _origin,
-        bytes32 _guid,
-        bytes calldata _message,
-        address _executor, // @dev unused in the default implementation.
-        bytes calldata _extraData // @dev unused in the default implementation.
-    ) public payable override {
-        // Call the internal OApp implementation of lzReceive.
-        _executeModule(
-            uint8(ITapToken.Module.TapTokenReceiver),
-            abi.encodeWithSelector(OAppReceiver.lzReceive.selector, _origin, _guid, _message, _executor, _extraData),
-            false
-        );
-    }
-
-    /**
-     * @notice Execute a call to a module.
-     * @dev Example on how `_data` should be encoded:
-     *      - abi.encodeCall(IERC20.transfer, (to, amount));
-     * @dev Use abi.encodeCall to encode the function call and its parameters with type safety.
-     *
-     * @param _module The module to execute.
-     * @param _data The data to execute. Should be ABI encoded with the selector.
-     * @param _forwardRevert If true, forward the revert message from the module.
-     *
-     * @return returnData The return data from the module execution, if any.
-     */
-    function executeModule(ITapToken.Module _module, bytes memory _data, bool _forwardRevert)
-        external
-        payable
-        returns (bytes memory returnData)
-    {
-        return _executeModule(uint8(_module), _data, _forwardRevert);
-    }
-
-    /// ========================
-    /// Frequently used modules
-    /// ========================
-
-    /**
-     * @dev Slightly modified version of the OFT send() operation. Includes a `_msgType` parameter.
-     * The `_buildMsgAndOptionsByType()` appends the packet type to the message.
-     * @dev Executes the send operation.
-     * @param _lzSendParam The parameters for the send operation.
-     *      - _sendParam: The parameters for the send operation.
-     *          - dstEid::uint32: Destination endpoint ID.
-     *          - to::bytes32: Recipient address.
-     *          - amountToSendLD::uint256: Amount to send in local decimals.
-     *          - minAmountToCreditLD::uint256: Minimum amount to credit in local decimals.
-     *      - _fee: The calculated fee for the send() operation.
-     *          - nativeFee::uint256: The native fee.
-     *          - lzTokenFee::uint256: The lzToken fee.
-     *      - _extraOptions::bytes: Additional options for the send() operation.
-     *      - refundAddress::address: The address to refund the native fee to.
-     * @param _composeMsg The composed message for the send() operation. Is a combination of 1 or more TAP specific messages.
-     *
-     * @return msgReceipt The receipt for the send operation.
-     *      - guid::bytes32: The unique identifier for the sent message.
-     *      - nonce::uint64: The nonce of the sent message.
-     *      - fee: The LayerZero fee incurred for the message.
-     *          - nativeFee::uint256: The native fee.
-     *          - lzTokenFee::uint256: The lzToken fee.
-     * @return oftReceipt The OFT receipt information.
-     *      - amountDebitLD::uint256: Amount of tokens ACTUALLY debited in local decimals.
-     *      - amountCreditLD::uint256: Amount of tokens to be credited on the remote side.
-     */
-    function sendPacket(LZSendParam calldata _lzSendParam, bytes calldata _composeMsg)
-        public
-        payable
-        whenNotPaused
-        returns (
-            MessagingReceipt memory msgReceipt,
-            OFTReceipt memory oftReceipt,
-            bytes memory message,
-            bytes memory options
-        )
-    {
-        (msgReceipt, oftReceipt, message, options) = abi.decode(
-            _executeModule(
-                uint8(ITapToken.Module.TapTokenSender),
-                abi.encodeCall(TapiocaOmnichainSender.sendPacket, (_lzSendParam, _composeMsg)),
-                false
-            ),
-            (MessagingReceipt, OFTReceipt, bytes, bytes)
-        );
-    }
-
-    /**
-     * @dev see `TapiocaOmniChainSender.sendPacketFrom`
-     */
-    function sendPacketFrom(address _from, LZSendParam calldata _lzSendParam, bytes calldata _composeMsg)
-        public
-        payable
-        whenNotPaused
-        returns (
-            MessagingReceipt memory msgReceipt,
-            OFTReceipt memory oftReceipt,
-            bytes memory message,
-            bytes memory options
-        )
-    {
-        (msgReceipt, oftReceipt, message, options) = abi.decode(
-            _executeModule(
-                uint8(ITapToken.Module.TapTokenSender),
-                abi.encodeCall(TapiocaOmnichainSender.sendPacketFrom, (_from, _lzSendParam, _composeMsg)),
-                false
-            ),
-            (MessagingReceipt, OFTReceipt, bytes, bytes)
-        );
     }
 
     /**
@@ -473,7 +319,7 @@ contract TapToken is BaseTapToken, ModuleManager, ERC20Permit, Pausable {
      *
      * @return the emitted amount.
      */
-    function emitForWeek() external onlyMinter onlyHostChain whenNotPaused returns (uint256) {
+    function emitForWeek() external onlyMinter whenNotPaused returns (uint256) {
         if (emissionsStartTime == 0) revert InitNotStarted();
 
         uint256 week = _timestampToWeek(block.timestamp);
@@ -514,7 +360,7 @@ contract TapToken is BaseTapToken, ModuleManager, ERC20Permit, Pausable {
     /**
      * @notice set the twTAP address, can be done only once.
      */
-    function setTwTAP(address _twTap) external override onlyOwner onlyHostChain {
+    function setTwTAP(address _twTap) external onlyOwner {
         if (address(twTap) != address(0)) {
             revert TwTapAlreadySet();
         }
@@ -525,12 +371,20 @@ contract TapToken is BaseTapToken, ModuleManager, ERC20Permit, Pausable {
      * @notice Un/Pauses this contract.
      */
     function setPause(bool _pauseState) external {
-        if (!getCluster().hasRole(msg.sender, keccak256("PAUSABLE")) && msg.sender != owner()) revert NotAuthorized();
+        if (!cluster.hasRole(msg.sender, keccak256("PAUSABLE")) && msg.sender != owner()) revert NotAuthorized();
         if (_pauseState) {
             _pause();
         } else {
             _unpause();
         }
+    }
+
+    /**
+     * @notice Sets the cluster address.
+     * @param _cluster The address of the cluster.
+     */
+    function setCluster(address _cluster) external onlyOwner {
+        cluster = ICluster(_cluster);
     }
 
     /// =====================
@@ -550,12 +404,5 @@ contract TapToken is BaseTapToken, ModuleManager, ERC20Permit, Pausable {
      */
     function _computeEmission() internal view returns (uint256 result) {
         result = (dso_supply * decay_rate) / DECAY_RATE_DECIMAL;
-    }
-
-    /**
-     * @notice Return the current chain EID.
-     */
-    function _getChainId() internal view override returns (uint32) {
-        return IMessagingChannel(endpoint).eid();
     }
 }

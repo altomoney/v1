@@ -8,8 +8,6 @@ import {BigBangLauncher, BigBangRiskParams} from "deployments/releases/tapioca-v
 import {TapToken, ITapToken} from "contracts/tap-token/tokens/TapToken.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {WETH} from "solady/tokens/WETH.sol";
-import {TapTokenSender} from "contracts/tap-token/tokens/TapTokenSender.sol";
-import {TapTokenReceiver} from "contracts/tap-token/tokens/TapTokenReceiver.sol";
 import {TapiocaOptionBroker} from "tap-token/options/TapiocaOptionBroker.sol";
 import {TwTAP} from "tap-token/governance/twTAP.sol";
 import {TapiocaMulticall} from "contracts/utils/TapiocaMulticall/TapiocaMulticall.sol";

@@ -321,7 +321,7 @@ contract AirdropBroker is Pausable, Ownable, FullMath, ReentrancyGuard {
     //   OWNER
     // =========
 
-    function setTapToken(address payable _tapToken) external onlyOwner {
+    function setTapToken(address _tapToken) external onlyOwner {
         if (address(tapToken) != address(0)) revert NotValid();
         tapToken = TapToken(_tapToken);
     }
