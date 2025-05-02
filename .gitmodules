@@ -8,3 +8,6 @@
 	path = lib/solady
 	url = https://github.com/vectorized/solady
 	branch = v0.0.267
+[submodule "lib/morpho-blue"]
+	path = lib/morpho-blue
+	url = https://github.com/morpho-org/morpho-blue
