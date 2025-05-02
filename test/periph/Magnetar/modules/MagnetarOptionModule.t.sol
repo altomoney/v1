@@ -115,7 +115,7 @@ abstract contract MagnetarOptionModuleTest is MagnetarTestHelper, IERC721Receive
         uint256 tokenAmount_ = 1 ether;
         uint256 mintAmount_ = 0.5 ether;
         {
-            deal(address(collateralA), address(this), tokenAmount_);
+            deal(address(aERC20), address(this), tokenAmount_);
             deal(address(assetA), address(this), tokenAmount_);
         }
 
@@ -148,7 +148,7 @@ abstract contract MagnetarOptionModuleTest is MagnetarTestHelper, IERC721Receive
         });
 
         //approvals for deposit & collateral add
-        collateralA.approve(address(magnetarA), type(uint256).max);
+        aERC20.approve(address(magnetarA), type(uint256).max);
 
         // Atomic approval
 

@@ -187,8 +187,8 @@ contract MagnetarCollateralModuleTest is MagnetarTest {
         // ---- borrow
         deal(address(assetA), address(this), tokenAmount_ * 2);
         depositAsset(assetA, sgl, tokenAmount_ * 2);
-        deal(address(collateralA), address(this), tokenAmount_ * 10);
-        depositCollateral(collateralA, collateralAId, sgl, tokenAmount_ * 10);
+        deal(address(aERC20), address(this), tokenAmount_ * 10);
+        depositCollateral(aERC20, collateralAId, sgl, tokenAmount_ * 10);
         borrow(sgl, tokenAmount_, false);
 
         // use magnetar to `depositRepayAndRemoveCollateralFromMarket`
@@ -231,8 +231,8 @@ contract MagnetarCollateralModuleTest is MagnetarTest {
         // ---- borrow
         deal(address(assetA), address(this), tokenAmount_ * 2);
         depositAsset(assetA, sgl, tokenAmount_ * 2);
-        deal(address(collateralA), address(this), tokenAmount_ * 10);
-        depositCollateral(collateralA, collateralAId, sgl, tokenAmount_ * 10);
+        deal(address(aERC20), address(this), tokenAmount_ * 10);
+        depositCollateral(aERC20, collateralAId, sgl, tokenAmount_ * 10);
         borrow(sgl, tokenAmount_, false);
 
         // use magnetar to `depositRepayAndRemoveCollateralFromMarket`
@@ -273,8 +273,8 @@ contract MagnetarCollateralModuleTest is MagnetarTest {
         // ---- borrow
         deal(address(assetA), address(this), tokenAmount_ * 2);
         depositAsset(assetA, sgl, tokenAmount_ * 2);
-        deal(address(collateralA), address(this), tokenAmount_ * 10);
-        depositCollateral(collateralA, collateralAId, sgl, tokenAmount_ * 10);
+        deal(address(aERC20), address(this), tokenAmount_ * 10);
+        depositCollateral(aERC20, collateralAId, sgl, tokenAmount_ * 10);
         borrow(sgl, tokenAmount_, false);
 
         // use magnetar to `depositRepayAndRemoveCollateralFromMarket`
@@ -315,8 +315,8 @@ contract MagnetarCollateralModuleTest is MagnetarTest {
         // ---- borrow
         deal(address(assetA), address(this), tokenAmount_ * 2);
         depositAsset(assetA, sgl, tokenAmount_ * 2);
-        deal(address(collateralA), address(this), tokenAmount_ * 10);
-        depositCollateral(collateralA, collateralAId, sgl, tokenAmount_ * 10);
+        deal(address(aERC20), address(this), tokenAmount_ * 10);
+        depositCollateral(aERC20, collateralAId, sgl, tokenAmount_ * 10);
         borrow(sgl, tokenAmount_, false);
 
         // use magnetar to `depositRepayAndRemoveCollateralFromMarket`
@@ -327,7 +327,7 @@ contract MagnetarCollateralModuleTest is MagnetarTest {
             address(sgl), address(marketHelper), address(this), tokenAmount_, 0, tokenAmount_
         );
         _params.withdrawCollateralParams = MagnetarWithdrawData({
-            asset: address(collateralA),
+            asset: address(aERC20),
             receiver: userA,
             amount: tokenAmount_,
             withdraw: true,
@@ -346,7 +346,7 @@ contract MagnetarCollateralModuleTest is MagnetarTest {
         });
 
         uint256 collateralShareBefore = sgl.balanceOf(address(this));
-        uint256 userABalanceBefore = collateralA.balanceOf(userA);
+        uint256 userABalanceBefore = aERC20.balanceOf(userA);
 
         //aprovals for deposit
         assetA.approve(address(magnetarA), type(uint256).max);
@@ -358,7 +358,7 @@ contract MagnetarCollateralModuleTest is MagnetarTest {
         uint256 collateralShareAfter = sgl.balanceOf(address(this));
         assertGt(collateralShareBefore, collateralShareAfter);
 
-        uint256 userABalanceAfter = collateralA.balanceOf(userA);
+        uint256 userABalanceAfter = aERC20.balanceOf(userA);
         assertGt(userABalanceAfter, userABalanceBefore);
         assertEq(userABalanceAfter, tokenAmount_);
     }
@@ -372,22 +372,22 @@ contract MagnetarCollateralModuleTest is MagnetarTest {
         // ---- borrow
         deal(address(assetA), address(this), tokenAmount_ * 2);
         depositAsset(assetA, sgl, tokenAmount_ * 2);
-        deal(address(collateralA), address(this), tokenAmount_ * 10);
-        depositCollateral(collateralA, collateralAId, sgl, tokenAmount_ * 10);
+        deal(address(aERC20), address(this), tokenAmount_ * 10);
+        depositCollateral(aERC20, collateralAId, sgl, tokenAmount_ * 10);
         borrow(sgl, tokenAmount_, false);
 
         // use magnetar to `depositRepayAndRemoveCollateralFromMarket`
         deal(address(assetA), address(this), tokenAmount_);
 
         // deal collateralErc20 for unwrap operation
-        deal(address(collateralErc20), address(collateralA.vault()), tokenAmount_);
+        deal(address(collateralErc20), address(aERC20.vault()), tokenAmount_);
 
         DepositRepayAndRemoveCollateralFromMarketData memory _params =
         _createDepositRepayAndRemoveCollateralFromMarketData(
             address(sgl), address(marketHelper), address(this), tokenAmount_, 0, tokenAmount_
         );
         _params.withdrawCollateralParams = MagnetarWithdrawData({
-            asset: address(collateralA),
+            asset: address(aERC20),
             receiver: userA,
             amount: tokenAmount_,
             withdraw: true,
@@ -499,7 +499,7 @@ contract MagnetarCollateralModuleTest is MagnetarTest {
     function test_depositAddCollateralAndBorrowFromMarket_add_collateral_without_deposit_external_approvals() public {
         uint256 tokenAmount_ = 1 ether;
         {
-            deal(address(collateralA), address(this), tokenAmount_);
+            deal(address(aERC20), address(this), tokenAmount_);
         }
 
         DepositAddCollateralAndBorrowFromMarketData memory _params = _createDepositAddCollateralAndBorrowFromMarketData(
@@ -531,7 +531,7 @@ contract MagnetarCollateralModuleTest is MagnetarTest {
     function test_depositAddCollateralAndBorrowFromMarket_deposit_and_add_collateral() public {
         uint256 tokenAmount_ = 1 ether;
         {
-            deal(address(collateralA), address(this), tokenAmount_);
+            deal(address(aERC20), address(this), tokenAmount_);
         }
 
         DepositAddCollateralAndBorrowFromMarketData memory _params = _createDepositAddCollateralAndBorrowFromMarketData(
@@ -551,7 +551,7 @@ contract MagnetarCollateralModuleTest is MagnetarTest {
         uint256 colSharesBefore = sgl.balanceOf(address(this));
 
         //approvals for deposit & collateral add
-        collateralA.approve(address(magnetarA), type(uint256).max);
+        aERC20.approve(address(magnetarA), type(uint256).max);
 
         magnetarA.burst{value: 0}(calls);
 
@@ -564,7 +564,7 @@ contract MagnetarCollateralModuleTest is MagnetarTest {
         uint256 borrowAmount_ = 0.2 ether;
 
         {
-            deal(address(collateralA), address(this), tokenAmount_);
+            deal(address(aERC20), address(this), tokenAmount_);
             deal(address(assetA), address(this), tokenAmount_);
 
             depositAsset(assetA, sgl, tokenAmount_);
@@ -588,7 +588,7 @@ contract MagnetarCollateralModuleTest is MagnetarTest {
         uint256 borrowPartBefore = sgl._userBorrowPart(address(this));
 
         //approvals for deposit & collateral add
-        collateralA.approve(address(magnetarA), type(uint256).max);
+        aERC20.approve(address(magnetarA), type(uint256).max);
 
         magnetarA.burst{value: 0}(calls);
 
@@ -603,7 +603,7 @@ contract MagnetarCollateralModuleTest is MagnetarTest {
         uint256 borrowAmount_ = 0.2 ether;
 
         {
-            deal(address(collateralA), address(this), tokenAmount_);
+            deal(address(aERC20), address(this), tokenAmount_);
             deal(address(assetA), address(this), tokenAmount_);
 
             depositAsset(assetA, sgl, tokenAmount_);
@@ -636,7 +636,7 @@ contract MagnetarCollateralModuleTest is MagnetarTest {
         uint256 assetBalanceBefore = assetA.balanceOf(userA);
 
         //approvals for deposit & collateral add
-        collateralA.approve(address(magnetarA), type(uint256).max);
+        aERC20.approve(address(magnetarA), type(uint256).max);
         // Atomic approval
 
         magnetarA.burst{value: 0}(calls);

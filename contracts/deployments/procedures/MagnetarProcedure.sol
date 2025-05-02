@@ -9,7 +9,6 @@ import {MagnetarLeverageModule} from "tapioca-periph/Magnetar/modules/MagnetarLe
 import {MagnetarHelper} from "tapioca-periph/Magnetar/MagnetarHelper.sol";
 import {MagnetarReport, MagnetarDepsReport} from "../interfaces/ITapiocaReport.sol";
 import {SimpleLeverageExecutor} from "tapioca-bar/markets/leverage/SimpleLeverageExecutor.sol";
-import {TOFTHelper} from "tapiocaz/tOFT/extensions/TOFTHelper.sol";
 
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {IMagnetarHelper} from "tap-utils/interfaces/periph/IMagnetarHelper.sol";
