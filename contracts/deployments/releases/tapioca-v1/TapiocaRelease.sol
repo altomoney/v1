@@ -244,7 +244,6 @@ library TapiocaRelease {
         TapiocaReport memory report;
 
         report.cluster = reports.utilitiesReport.cluster;
-        report.altoAdaptiveCurveIrm = reports.utilitiesReport.altoAdaptiveCurveIrm;
         report.tapiocaMulticall = reports.utilitiesReport.tapiocaMulticall;
         report.multiTokenSender = reports.utilitiesReport.multiTokenSender;
         report.zeroXSwapper = reports.utilitiesReport.zeroXSwapper;
