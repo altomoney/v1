@@ -14,7 +14,6 @@ struct TapiocaReport {
     address zeroXSwapper;
     address multiTokenSender;
     address cluster;
-    address altoAdaptiveCurveIrm;
     address adbTapOptionOracle;
     address tapiocaMulticall;
     address extExec;
@@ -65,7 +64,6 @@ struct UtilitiesReport {
     address pauser;
     address zeroXSwapper;
     address multiTokenSender;
-    address altoAdaptiveCurveIrm;
 }
 
 struct TapiocaInput {
