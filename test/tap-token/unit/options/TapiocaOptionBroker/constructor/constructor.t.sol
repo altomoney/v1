@@ -31,7 +31,7 @@ contract TapiocaOptionBroker_constructortree is TOBTestBase {
         });
 
         TapiocaOptionBroker optionBroker = new TapiocaOptionBroker(
-            address(tapToken), address(usdo), dao, EPOCH_DURATION, buckets, report.penrose, owner
+            address(tapToken), address(usdo), dao, EPOCH_DURATION, buckets, address(1), owner
         );
 
         assertEq(optionBroker.owner(), owner);

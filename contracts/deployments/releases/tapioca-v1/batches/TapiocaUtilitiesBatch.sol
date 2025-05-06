@@ -2,7 +2,7 @@
 pragma solidity ^0.8.22;
 
 import {UtilitiesProcedure} from "../../../procedures/UtilitiesProcedure.sol";
-import {UtilitiesReport} from "../../../interfaces/ITapiocaReport.sol";
+import {UtilitiesReport} from "../../../interfaces/IAltoReport.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 /// @title TapiocaUtiltiiesBatch
@@ -10,19 +10,10 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 contract TapiocaUtilitiesBatch is UtilitiesProcedure, Ownable {
     UtilitiesReport internal _utilitiesReport;
 
-    constructor(address owner, address zeroXSwapper, uint16 lzChainId, bool isTestnet) Ownable() {
-        _utilitiesReport = _deployUtilities(owner, zeroXSwapper, lzChainId, isTestnet);
-    }
-
-    function initializeCluster(
-        address cluster,
-        address zeroXSwapper,
-        address magnetar,
-        address penrose,
-        address pauser,
-        address tapiocaMulticall
-    ) external onlyOwner {
-        _initCluster(cluster, zeroXSwapper, magnetar, penrose, pauser, tapiocaMulticall);
+    constructor(address owner, address zeroXSwapper, uint16 lzChainId, bool isTestnet, address wrappedNativeToken)
+        Ownable()
+    {
+        _utilitiesReport = _deployUtilities(owner, zeroXSwapper, lzChainId, isTestnet, wrappedNativeToken);
     }
 
     function getUtilitiesReport() public view returns (UtilitiesReport memory) {
