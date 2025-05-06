@@ -22,14 +22,14 @@ import {ExpLib, MATH_PRECISION_INT} from "./libraries/ExpLib.sol";
 import {AssetShareConversionMath} from "./libraries/AssetShareConversionMath.sol";
 import {FixedPointMath, MATH_PRECISION} from "./libraries/FixedPointMath.sol";
 import {Utils} from "./libraries/Utils.sol";
+import {IMarkeStaticTypes} from "./interfaces/IMarket.sol";
 
-contract AltoBorrowMarket is Ownable, Auth, IMarket {
+contract AltoBorrowMarket is Ownable, Auth, IMarkeStaticTypes {
     using FixedPointMath for uint256;
     using AssetShareConversionMath for uint256;
     using Utils for uint256;
-    using SafeERC20 for IERC20;
 
-    bytes32 public immutable DOMAIN_SEPARATOR;
+    using SafeERC20 for IERC20;
 
     address public borrowToken;
     address public collateralToken;
@@ -247,7 +247,7 @@ contract AltoBorrowMarket is Ownable, Auth, IMarket {
     }
 
     function _accrueInterest() internal virtual {
-        (uint256 borrowRate, uint256 interest) = IIrm(irm).updateInterestRate(totalSupply.assets, totalBorrowed.assets);
+        (uint256 interest, uint256 borrowRate) = IIrm(irm).updateInterestRate(totalSupply.assets, totalBorrowed.assets);
 
         totalSupply.assets += interest.toUint128();
         totalBorrowed.assets += interest.toUint128();
