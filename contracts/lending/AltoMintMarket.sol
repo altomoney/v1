@@ -45,11 +45,11 @@ contract AltoMintMarket is AltoBorrowMarket {
         totalSupply.assets = _debtCeiling.toUint128();
     }
 
-    function addSupply(uint256 assets, uint256 shares) external override returns (uint256, uint256) {
+    function addSupply(uint256, uint256, address) external override returns (uint256, uint256) {
         revert Alto_MintMarket_NotImplemented();
     }
 
-    function removeSupply(uint256 assets, uint256 shares) external override returns (uint256, uint256) {
+    function removeSupply(uint256, uint256, address, address) external override returns (uint256, uint256) {
         revert Alto_MintMarket_NotImplemented();
     }
 

@@ -14,6 +14,7 @@ import {
     LiquidationResult,
     LiquidationCalculation
 } from "./interfaces/IMarket.sol";
+import {Auth} from "tap-utils/utils/Auth.sol";
 import {IIrm} from "./interfaces/IIrm.sol";
 
 import {ExpLib, WAD_INT} from "./libraries/ExpLib.sol";
@@ -21,12 +22,15 @@ import {ExpLib, WAD_INT} from "./libraries/ExpLib.sol";
 import {MathLib, WAD} from "@morpho-blue/libraries/MathLib.sol";
 import {SharesMathLib} from "@morpho-blue/libraries/SharesMathLib.sol";
 import {UtilsLib} from "@morpho-blue/libraries/UtilsLib.sol";
+import {DOMAIN_TYPEHASH} from "tap-utils/utils/Constants.sol";
 
-contract AltoBorrowMarket is Ownable {
+contract AltoBorrowMarket is Ownable, Auth {
     using MathLib for uint256;
     using SharesMathLib for uint256;
     using UtilsLib for uint256;
     using SafeERC20 for IERC20;
+
+    bytes32 public immutable DOMAIN_SEPARATOR;
 
     address public borrowToken;
     address public collateralToken;
@@ -53,6 +57,7 @@ contract AltoBorrowMarket is Ownable {
         uint256 _maxLtv,
         LiquidationConfiguration memory _liquidationConfiguration
     ) {
+        DOMAIN_SEPARATOR = keccak256(abi.encode(DOMAIN_TYPEHASH, block.chainid, address(this)));
         borrowToken = _borrowToken;
         collateralToken = _collateralToken;
         irm = _irm;
@@ -85,8 +90,9 @@ contract AltoBorrowMarket is Ownable {
         liquidationConfiguration = _liquidationConfiguration;
     }
 
-    function addSupply(uint256 assets, uint256 shares) external virtual returns (uint256, uint256) {
+    function addSupply(uint256 assets, uint256 shares, address onBehalf) external virtual returns (uint256, uint256) {
         require(UtilsLib.exactlyOneZero(assets, shares), ErrorsLib.INCONSISTENT_INPUT);
+        require(onBehalf != address(0), ErrorsLib.ZERO_ADDRESS);
 
         _accrueInterest();
 
@@ -99,17 +105,22 @@ contract AltoBorrowMarket is Ownable {
         totalSupply.assets += assets.toUint128();
         totalSupply.shares += shares.toUint128();
 
-        //IERC20(borrowToken).safeTransferFrom(msg.sender, address(this), assets);
         _sendBorrowToken(msg.sender, address(this), assets);
-        position[msg.sender].supplyShares += shares.toUint128();
+        position[onBehalf].supplyShares += shares.toUint128();
 
-        emit EventsLib.AddSupply(msg.sender, assets, shares);
+        emit EventsLib.AddSupply(msg.sender, onBehalf, assets, shares);
 
         return (assets, shares);
     }
 
-    function removeSupply(uint256 assets, uint256 shares) external virtual returns (uint256, uint256) {
+    function removeSupply(uint256 assets, uint256 shares, address onBehalf, address receiver)
+        external
+        virtual
+        returns (uint256, uint256)
+    {
         require(UtilsLib.exactlyOneZero(assets, shares), ErrorsLib.INCONSISTENT_INPUT);
+        require(receiver != address(0), ErrorsLib.ZERO_ADDRESS);
+        require(_isSenderAuthorized(onBehalf), ErrorsLib.UNAUTHORIZED);
 
         _accrueInterest();
 
@@ -122,40 +133,51 @@ contract AltoBorrowMarket is Ownable {
         totalSupply.assets -= assets.toUint128();
         totalSupply.shares -= shares.toUint128();
 
-        //IERC20(borrowToken).safeTransfer(msg.sender, assets);
-        _sendBorrowToken(address(this), msg.sender, assets);
-        position[msg.sender].supplyShares -= shares.toUint128();
+        _sendBorrowToken(address(this), receiver, assets);
+        position[onBehalf].supplyShares -= shares.toUint128();
 
-        emit EventsLib.RemoveSupply(msg.sender, assets, shares);
+        emit EventsLib.RemoveSupply(msg.sender, onBehalf, receiver, assets, shares);
 
         return (assets, shares);
     }
 
-    function addCollateral(uint256 assets) external returns (uint256) {
-        position[msg.sender].collateralAssets += assets.toUint128();
+    function addCollateral(uint256 assets, address onBehalf) external returns (uint256) {
+        require(assets != 0, ErrorsLib.ZERO_ASSETS);
+        require(onBehalf != address(0), ErrorsLib.ZERO_ADDRESS);
+
+        position[onBehalf].collateralAssets += assets.toUint128();
 
         IERC20(collateralToken).safeTransferFrom(msg.sender, address(this), assets);
 
-        emit EventsLib.AddCollateral(msg.sender, assets);
+        emit EventsLib.AddCollateral(msg.sender, onBehalf, assets);
 
         return (assets);
     }
 
-    function removeCollateral(uint256 assets) external returns (uint256) {
+    function removeCollateral(uint256 assets, address onBehalf, address receiver) external returns (uint256) {
+        require(assets != 0, ErrorsLib.ZERO_ASSETS);
+        require(receiver != address(0), ErrorsLib.ZERO_ADDRESS);
+        require(_isSenderAuthorized(onBehalf), ErrorsLib.UNAUTHORIZED);
+
         _accrueInterest();
 
-        position[msg.sender].collateralAssets -= assets.toUint128();
+        position[onBehalf].collateralAssets -= assets.toUint128();
 
-        require(_isSolvent(msg.sender, false), ErrorsLib.INSUFFICIENT_COLLATERAL);
-        IERC20(collateralToken).safeTransfer(msg.sender, assets);
+        require(_isSolvent(onBehalf, false), ErrorsLib.INSUFFICIENT_COLLATERAL);
+        IERC20(collateralToken).safeTransfer(receiver, assets);
 
-        emit EventsLib.RemoveCollateral(msg.sender, assets);
+        emit EventsLib.RemoveCollateral(msg.sender, onBehalf, receiver, assets);
 
         return (assets);
     }
 
-    function borrow(uint256 assets, uint256 shares) external returns (uint256, uint256) {
+    function borrow(uint256 assets, uint256 shares, address onBehalf, address receiver)
+        external
+        returns (uint256, uint256)
+    {
         require(UtilsLib.exactlyOneZero(assets, shares), ErrorsLib.INCONSISTENT_INPUT);
+        require(receiver != address(0), ErrorsLib.ZERO_ADDRESS);
+        require(_isSenderAuthorized(onBehalf), ErrorsLib.UNAUTHORIZED);
 
         _accrueInterest();
 
@@ -169,18 +191,18 @@ contract AltoBorrowMarket is Ownable {
         totalBorrowed.shares += shares.toUint128();
         require(totalBorrowed.assets <= totalSupply.assets, ErrorsLib.INSUFFICIENT_LIQUIDITY);
 
-        position[msg.sender].borrowShares += shares.toUint128();
-        require(_isSolvent(msg.sender, false), ErrorsLib.INSUFFICIENT_COLLATERAL);
-        //IERC20(borrowToken).safeTransferFrom(msg.sender, address(this), assets);
-        _sendBorrowToken(msg.sender, address(this), assets);
+        position[onBehalf].borrowShares += shares.toUint128();
+        require(_isSolvent(onBehalf, false), ErrorsLib.INSUFFICIENT_COLLATERAL);
+        _sendBorrowToken(address(this), receiver, assets);
 
-        emit EventsLib.Borrow(msg.sender, assets, shares);
+        emit EventsLib.Borrow(msg.sender, onBehalf, receiver, assets, shares);
 
         return (assets, shares);
     }
 
-    function repay(uint256 assets, uint256 shares) external returns (uint256, uint256) {
+    function repay(uint256 assets, uint256 shares, address onBehalf) external returns (uint256, uint256) {
         require(UtilsLib.exactlyOneZero(assets, shares), ErrorsLib.INCONSISTENT_INPUT);
+        require(onBehalf != address(0), ErrorsLib.ZERO_ADDRESS);
 
         _accrueInterest();
 
@@ -193,11 +215,10 @@ contract AltoBorrowMarket is Ownable {
         totalBorrowed.assets -= assets.toUint128();
         totalBorrowed.shares -= shares.toUint128();
 
-        //IERC20(borrowToken).safeTransfer(msg.sender, assets);
-        _sendBorrowToken(address(this), msg.sender, assets);
-        position[msg.sender].borrowShares -= shares.toUint128();
+        _sendBorrowToken(msg.sender, address(this), assets);
+        position[onBehalf].borrowShares -= shares.toUint128();
 
-        emit EventsLib.Repay(msg.sender, assets, shares);
+        emit EventsLib.Repay(msg.sender, onBehalf, assets, shares);
 
         return (assets, shares);
     }
@@ -342,5 +363,9 @@ contract AltoBorrowMarket is Ownable {
         } else {
             IERC20(borrowToken).safeTransferFrom(from, to, amount);
         }
+    }
+
+    function _getDomainSeparator() internal view override returns (bytes32) {
+        return DOMAIN_SEPARATOR;
     }
 }

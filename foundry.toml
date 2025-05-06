@@ -22,7 +22,7 @@ remappings = [
 	'tapioca-bar/=contracts/bar/',
 	'tapioca-mocks/=contracts/mocks/',
 	'deployments/=contracts/deployments/',
-
+	'tap-lending/=contracts/lending/',
 	'forge-std/=node_modules/forge-std/src/',
 	'solady/=node_modules/solady/src/',
 	'@morpho-blue/=node_modules/@morpho-org/morpho-blue/src/',

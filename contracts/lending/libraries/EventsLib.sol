@@ -6,38 +6,51 @@ pragma solidity ^0.8.0;
 /// @notice Library exposing events for the lending protocol.
 library EventsLib {
     /// @notice Emitted when a user supplies tokens to the lending market
-    /// @param user The address of the user who supplied tokens
+    /// @param caller The address of the caller who is supplying tokens
+    /// @param onBehalf The address of the user who is receiving the ownership of supplied tokens
     /// @param assets The amount of assets supplied
     /// @param shares The amount of shares minted
-    event AddSupply(address indexed user, uint256 assets, uint256 shares);
+    event AddSupply(address indexed caller, address indexed onBehalf, uint256 assets, uint256 shares);
 
     /// @notice Emitted when a user withdraws tokens from the lending market
-    /// @param user The address of the user who withdrew tokens
+    /// @param caller The address of the caller who is withdrawing tokens on behalf
+    /// @param onBehalf The address of the user who is the owner of withdrawn tokens
+    /// @param receiver The address of the user who is receiving the withdrawn tokens
     /// @param assets The amount of assets withdrawn
     /// @param shares The amount of shares burned
-    event RemoveSupply(address indexed user, uint256 assets, uint256 shares);
+    event RemoveSupply(
+        address indexed caller, address indexed onBehalf, address indexed receiver, uint256 assets, uint256 shares
+    );
 
     /// @notice Emitted when a user borrows tokens from the lending market
-    /// @param user The address of the user who borrowed tokens
+    /// @param caller The address of the caller who is borrowing tokens
+    /// @param onBehalf The address of the user who is the owner of borrowed tokens
+    /// @param receiver The address of the user who is receiving the borrowed tokens
     /// @param assets The amount of assets borrowed
     /// @param shares The amount of shares minted
-    event Borrow(address indexed user, uint256 assets, uint256 shares);
+    event Borrow(
+        address indexed caller, address indexed onBehalf, address indexed receiver, uint256 assets, uint256 shares
+    );
 
     /// @notice Emitted when a user repays borrowed tokens
-    /// @param user The address of the user who repaid tokens
+    /// @param caller The address of the caller who is repaying tokens
+    /// @param onBehalf The address of the user who is the owner of the borrow position
     /// @param assets The amount of assets repaid
     /// @param shares The amount of shares burned
-    event Repay(address indexed user, uint256 assets, uint256 shares);
+    event Repay(address indexed caller, address indexed onBehalf, uint256 assets, uint256 shares);
 
     /// @notice Emitted when a user deposits collateral
-    /// @param user The address of the user who deposited collateral
-    /// @param amount The amount of collateral deposited
-    event AddCollateral(address indexed user, uint256 amount);
+    /// @param caller The address of the caller who is supplying collateral
+    /// @param onBehalf The address of the user who is the owner of supplied collateral
+    /// @param amount The amount of collateral supplied
+    event AddCollateral(address indexed caller, address indexed onBehalf, uint256 amount);
 
     /// @notice Emitted when a user withdraws collateral
-    /// @param user The address of the user who withdrew collateral
+    /// @param caller The address of the caller who is withdrawing collateral
+    /// @param onBehalf The address of the owner of collateral being withdrawn
+    /// @param receiver The address of the user who is receiving the withdrawn collateral
     /// @param amount The amount of collateral withdrawn
-    event RemoveCollateral(address indexed user, uint256 amount);
+    event RemoveCollateral(address indexed caller, address indexed onBehalf, address indexed receiver, uint256 amount);
 
     /// @notice Emitted when interest is accrued
     /// @param borrowRate The average rate

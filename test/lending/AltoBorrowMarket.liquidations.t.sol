@@ -104,7 +104,7 @@ contract AltoBorrowMarketTest is Test {
         vm.startPrank(alice);
         borrowToken.approve(address(market), type(uint256).max);
         collateralToken.approve(address(market), type(uint256).max);
-        market.addSupply(100 ether, 0);
+        market.addSupply(100 ether, 0, alice);
         vm.stopPrank();
 
         vm.startPrank(bob);
@@ -149,8 +149,8 @@ contract AltoBorrowMarketTest is Test {
         );
 
         vm.startPrank(bob);
-        market.addCollateral(10 ether);
-        market.borrow(0.5 ether, 0);
+        market.addCollateral(10 ether, bob);
+        market.borrow(0.5 ether, 0, bob, bob);
         market.accrueInterest();
         vm.stopPrank();
 
@@ -186,8 +186,8 @@ contract AltoBorrowMarketTest is Test {
         );
 
         vm.startPrank(bob);
-        market.addCollateral(1 ether);
-        market.borrow(1 ether, 0);
+        market.addCollateral(1 ether, bob);
+        market.borrow(1 ether, 0, bob, bob);
         market.accrueInterest();
         vm.stopPrank();
 
@@ -233,8 +233,8 @@ contract AltoBorrowMarketTest is Test {
         );
 
         vm.startPrank(bob);
-        market.addCollateral(1 ether);
-        market.borrow(0.5 ether, 0);
+        market.addCollateral(1 ether, bob);
+        market.borrow(0.5 ether, 0, bob, bob);
         market.accrueInterest();
         vm.stopPrank();
 
@@ -270,8 +270,8 @@ contract AltoBorrowMarketTest is Test {
         );
 
         vm.startPrank(bob);
-        market.addCollateral(1 ether);
-        market.borrow(0.5 ether, 0);
+        market.addCollateral(1 ether, bob);
+        market.borrow(0.5 ether, 0, bob, bob);
         market.accrueInterest();
         vm.stopPrank();
 
