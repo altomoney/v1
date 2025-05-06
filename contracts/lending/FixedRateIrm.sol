@@ -83,7 +83,7 @@ contract FixedRateIrm is Ownable, IIrm {
         uint256 interest =
             _totalBorrowed.wMulDown(irState.borrowRate.wTaylorCompounded(block.timestamp - irState.lastUpdate));
 
-        return (irState.borrowRate, interest);
+        return (interest, irState.borrowRate);
     }
 
     function _updateInterestRate(uint256 _totalSupply, uint256 _totalBorrowed) internal returns (uint256, uint256) {

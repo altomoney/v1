@@ -23,8 +23,9 @@ import {MathLib, WAD} from "@morpho-blue/libraries/MathLib.sol";
 import {SharesMathLib} from "@morpho-blue/libraries/SharesMathLib.sol";
 import {UtilsLib} from "@morpho-blue/libraries/UtilsLib.sol";
 import {DOMAIN_TYPEHASH} from "tap-utils/utils/Constants.sol";
+import {IMarkeStaticTypes} from "./interfaces/IMarket.sol";
 
-contract AltoBorrowMarket is Ownable, Auth {
+contract AltoBorrowMarket is Ownable, Auth, IMarkeStaticTypes {
     using MathLib for uint256;
     using SharesMathLib for uint256;
     using UtilsLib for uint256;
@@ -228,7 +229,7 @@ contract AltoBorrowMarket is Ownable, Auth {
     }
 
     function _accrueInterest() internal virtual {
-        (uint256 borrowRate, uint256 interest) = IIrm(irm).updateInterestRate(totalSupply.assets, totalBorrowed.assets);
+        (uint256 interest, uint256 borrowRate) = IIrm(irm).updateInterestRate(totalSupply.assets, totalBorrowed.assets);
 
         totalSupply.assets += interest.toUint128();
         totalBorrowed.assets += interest.toUint128();

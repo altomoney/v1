@@ -1,13 +1,13 @@
 [profile.default]
 solc_version = "0.8.28"
 src = 'contracts'
-libs = ["node_modules"]
+libs = ["node_modules", "lib"]
 test = 'test'
 script = 'script'
 no-match-path = 'playground/*'
 no-match-contract = "(Fork|Stargate)"
 
-evm_version = 'shanghai'
+evm_version = 'cancun'
 optimizer = true
 optimizer_runs = 1
 
@@ -26,6 +26,8 @@ remappings = [
 	'forge-std/=node_modules/forge-std/src/',
 	'solady/=node_modules/solady/src/',
 	'@morpho-blue/=node_modules/@morpho-org/morpho-blue/src/',
+	'@morpho-org/bundler3/=lib/bundler3/src/',
+	'@alto-monorepo/=contracts/',
 ]
 
 [etherscan]
@@ -42,3 +44,7 @@ test = "test/tap-token/unit/options/"
 [profile.market]
 src = "contracts/lending"
 test = "test/lending"
+
+[profile.bundler]
+src = "contracts/bundler"
+test = "test/bundler"
