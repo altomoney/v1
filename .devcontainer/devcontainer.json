@@ -10,8 +10,11 @@
     ],
 	"customizations": {
 		"vscode": {
+			"settings": {
+				"solidity.formatter": "forge"
+			},
 			"extensions": [
-				"JuanBlanco.solidity",
+				"NomicFoundation.hardhat-solidity",
 				"Graphite.gti-vscode",
 				"tamasfe.even-better-toml"
 			]
