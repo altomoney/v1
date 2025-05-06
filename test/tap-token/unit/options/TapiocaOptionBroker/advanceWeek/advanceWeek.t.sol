@@ -19,7 +19,7 @@ contract TapiocaOptionBrokerAdvanceWeekTest is TOBTestBase {
         // Mock cluster and penrose
         vm.mockCall(address(cluster), abi.encodeWithSignature("getActiveMarkets()"), abi.encode(new address[](0)));
         vm.mockCall(
-            address(report.penrose),
+            address(1),
             abi.encodeWithSignature("singularityBigBangMarkets()"),
             abi.encode(new address[](0))
         );
@@ -67,7 +67,7 @@ contract TapiocaOptionBrokerAdvanceWeekTest is TOBTestBase {
         // Mock cluster and penrose
         vm.mockCall(address(cluster), abi.encodeWithSignature("getActiveMarkets()"), abi.encode(new address[](0)));
         vm.mockCall(
-            address(report.penrose),
+            address(1),
             abi.encodeWithSignature("singularityBigBangMarkets()"),
             abi.encode(new address[](0))
         );

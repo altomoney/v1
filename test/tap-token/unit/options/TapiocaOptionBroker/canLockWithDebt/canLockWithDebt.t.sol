@@ -23,7 +23,7 @@ contract TapiocaOptionBrokerCanLockWithDebtTest is TOBTestBase {
 
         // Set up cluster
         vm.startPrank(owner);
-        tob.setCluster(address(cluster));
+        tob.setCluster(address(1));
         vm.stopPrank();
     }
 
@@ -36,7 +36,7 @@ contract TapiocaOptionBrokerCanLockWithDebtTest is TOBTestBase {
 
     function test_revertWhen_bigBangNotSet() public {
         // Mock empty bigBang markets array
-        vm.mockCall(address(report.penrose), abi.encodeWithSignature("bigBangMarkets()"), abi.encode(new address[](0)));
+        vm.mockCall(address(1), abi.encodeWithSignature("bigBangMarkets()"), abi.encode(new address[](0)));
 
         (bool canLock,,) = tob.canLockWithDebt(testUser, 0);
         assertFalse(canLock, "Should not be able to lock");
