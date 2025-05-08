@@ -6,7 +6,7 @@ import {IERC20} from "@boringcrypto/boring-solidity/contracts/libraries/BoringER
 
 // Tapioca
 import {ILeverageExecutor} from "tap-utils/interfaces/bar/ILeverageExecutor.sol";
-import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
+import {ITapiocaOracle} from "tap-utils/interfaces/common/ITapiocaOracle.sol";
 
 abstract contract Types {
     struct SingularityInitData {

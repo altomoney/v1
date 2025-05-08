@@ -3,7 +3,7 @@
 pragma solidity ^0.8.22;
 
 import "forge-std/Test.sol";
-import {ERC20PermitApprovalMsg, ERC20PermitStruct} from "tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
+import {ERC20PermitApprovalMsg, ERC20PermitStruct} from "tap-utils/interfaces/common/ICommonData.sol";
 
 contract TestUtils is Test {
     /**

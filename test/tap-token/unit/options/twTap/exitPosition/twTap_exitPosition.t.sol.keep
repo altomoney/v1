@@ -1,103 +1,83 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.22;
 
-import {twTapBaseTest, TwTAP} from "./twTapBaseTest.sol";
-import {TWAML} from "tap-token/options/twAML.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {twTapBaseTest, TwTAP} from "../twTapBaseTest.sol";
+import {ITWTAPv2} from "tap-token/interfaces/ITWTAPv2.sol";
 
-contract twTap_exitPosition is twTapBaseTest, TWAML {
-    uint256 constant TWTAP_TOKEN_ID = 1;
-    uint256 LOCK_TIME;
-
+contract twTap_exitPosition is twTapBaseTest {
     function setUp() public virtual override {
         super.setUp();
-        LOCK_TIME = twTap.EPOCH_DURATION() * 4;
     }
 
-    function test_RevertWhen_Paused() external {
-        vm.prank(adminAddr);
-        twTap.setPause(true);
-        // it should revert
-        vm.expectRevert("Pausable: paused");
-        twTap.exitPosition(TWTAP_TOKEN_ID);
-    }
-
-    modifier whenNotPaused() {
+    modifier advanceTime(uint256 _time) {
+        vm.warp(block.timestamp + _time);
         _;
     }
 
-    modifier whenLockNotExpired() {
-        _;
+    function test_exitPosition_valid() external participate(100, 0) advanceWeeks(2) distributeRewards {
+        vm.startPrank(aliceAddr);
+        twTap.claimRewards(aliceAddr, 0);
+        twTap.exitPosition(aliceAddr, aliceAddr, 0);
+        vm.stopPrank();
     }
 
-    modifier whenParticipating(uint256 _lockAmount, uint8 _bucketId) {
-        (_lockAmount, _bucketId) = _boundValues(_lockAmount, _bucketId);
-        _participate(_lockAmount, _bucketId);
-        _;
-    }
-
-    function test_RevertWhen_NotInRescueMode(uint256 _lockAmount, uint256 _lockDuration)
+    function test_exitPosition_invalid_notAuthorized(address _participant)
         external
-        whenNotPaused
-        whenLockNotExpired
-        whenParticipating(_lockAmount, _lockDuration)
+        participate(100, 0)
+        advanceWeeks(2)
+        distributeRewards
     {
-        // it should revert
-        vm.expectRevert(TwTAP.LockNotExpired.selector);
-        twTap.exitPosition(TWTAP_TOKEN_ID);
+        vm.assume(_participant != address(0));
+        vm.assume(_participant != aliceAddr);
+
+        vm.startPrank(aliceAddr);
+        twTap.claimRewards(aliceAddr, 0);
+        vm.stopPrank();
+
+        vm.startPrank(_participant);
+        vm.expectRevert(ITWTAPv2.NotAuthorized.selector);
+        twTap.exitPosition(aliceAddr, aliceAddr, 0);
+        vm.stopPrank();
     }
 
-    function test_WhenInRescueMode(uint256 _lockAmount, uint256 _lockDuration)
+    function test_exitPosition_valid_claim_rewards()
         external
-        whenNotPaused
-        whenLockNotExpired
-        whenParticipating(_lockAmount, _lockDuration)
+        participate(100, 0)
+        advanceTime(EPOCH_DURATION * 2)
+        advanceWeeks(2)
+        distributeRewards
     {
-        vm.prank(adminAddr);
-        twTap.setRescueMode(true);
-        // it should continue
-        twTap.exitPosition(TWTAP_TOKEN_ID);
-    }
+        vm.skip(true);
+        uint256[] memory claimable = twTap.claimable(aliceAddr, 0);
+        uint256 totalClaimable = 0;
+        for (uint256 i = 0; i < claimable.length; i++) {
+            totalClaimable += claimable[i];
+        }
+        assertGt(totalClaimable, 0, "totalClaimable must be greater than 0");
+        (,,,, uint88 tapAmountBefore,,,,) = twTap.participations(aliceAddr, 0);
+        assertGt(tapAmountBefore, 0, "tapAmount must be greater than 0");
 
-    modifier whenLockExpired(uint256 _lockDuration) {
-        _whenLockExpired(_lockDuration);
-        _;
-    }
+        vm.startPrank(aliceAddr);
+        twTap.exitPosition(aliceAddr, aliceAddr, 0);
+        vm.stopPrank();
 
-    function _whenLockExpired(uint256 _lockDuration) internal {
-        (, _lockDuration) = _boundValues(0, _lockDuration);
-        skip(_lockDuration * twTap.EPOCH_DURATION());
-        vm.prank(adminAddr);
-        twTap.advanceWeek(_lockDuration);
-    }
+        (,,,, uint88 tapAmountAfter,,,,) = twTap.participations(aliceAddr, 0);
+        assertEq(tapAmountAfter, 0, "tapAmount must be 0");
 
-    function test_WhenTapReleased(uint256 _lockAmount, uint256 _lockDuration)
-        external
-        whenNotPaused
-        whenParticipating(_lockAmount, _lockDuration)
-        whenLockExpired(_lockDuration)
-    {
-        // it should stop execution and return 0
-        twTap.exitPosition(TWTAP_TOKEN_ID);
-        assertEq(twTap.exitPosition(TWTAP_TOKEN_ID), 0, "twTap_exitPosition::test_WhenTapReleased: Invalid tapReleased");
-    }
+        IERC20[] memory rewardTokens = twTap.getRewardTokens();
 
-    modifier whenTapWasNotReleased() {
-        _;
-    }
+        // Reward tokens are at index 1 and above
+        for (uint256 i = 1; i < rewardTokens.length; i++) {
+            uint256 balanceAfter = rewardTokens[i].balanceOf(aliceAddr);
+            assertEq(balanceAfter, claimable[i], "Reward token balance must be equal to claimable amount");
+        }
 
-    function test_WhenItShouldContinue(uint256 _lockAmount, uint256 _lockDuration) internal {
-        // it should emit ExitPosition
-        vm.expectEmit(true, true, true, true);
-        emit TwTAP.ExitPosition(TWTAP_TOKEN_ID, aliceAddr, _lockAmount);
-        twTap.exitPosition(TWTAP_TOKEN_ID);
-
-        // it should mark the participant tap as released
-        (,,, bool tapReleased,,,,,,) = twTap.participants(TWTAP_TOKEN_ID);
-        assertEq(tapReleased, true, "twTap_exitPosition::test_WhenItShouldContinue: Invalid tapReleased");
-
-        // it should transfer the Tap tokens to the owner of the lock
-        assertEq(
-            tapOFT.balanceOf(aliceAddr), _lockAmount, "twTap_exitPosition::test_WhenItShouldContinue: Invalid balance"
-        );
+        uint256[] memory claimableAfter = twTap.claimable(aliceAddr, 0);
+        uint256 totalClaimableAfter = 0;
+        for (uint256 i = 0; i < claimableAfter.length; i++) {
+            totalClaimableAfter += claimableAfter[i];
+        }
+        assertEq(totalClaimableAfter, 0, "totalClaimableAfter must be equal to totalClaimable");
     }
 }

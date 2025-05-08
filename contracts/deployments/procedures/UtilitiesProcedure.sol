@@ -9,7 +9,7 @@ import {Cluster} from "tap-utils/Cluster/Cluster.sol";
 import {Pauser} from "tap-utils/Pauser/Pauser.sol";
 import {ZeroXSwapper} from "tap-utils/Swapper/ZeroXSwapper.sol";
 import {ZeroXSwapperMock} from "tapioca-mocks/ZeroXSwapperMock.sol";
-import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
+import {ICluster} from "tap-utils/interfaces/common/ICluster.sol";
 import {MultiTokenSender} from "tapioca-mocks/MultiTokenSender.sol";
 import {Bundler3} from "@morpho-org/bundler3/Bundler3.sol";
 import {AltoAdapter} from "@alto-monorepo/bundler/AltoAdapter.sol";

@@ -6,7 +6,7 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.
 
 // Tapioca
 import {AggregatorInterface} from "src/tap-utils/interfaces/external/chainlink/AggregatorInterface.sol";
-import {ITapiocaOracle} from "src/tap-utils/interfaces/periph/ITapiocaOracle.sol";
+import {ITapiocaOracle} from "tap-utils/interfaces/common/ITapiocaOracle.sol";
 
 contract SDaiOracle is ITapiocaOracle, ReentrancyGuard {
     AggregatorInterface private immutable sDaiOracle;

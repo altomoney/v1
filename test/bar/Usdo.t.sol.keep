@@ -1,0 +1,241 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.22;
+
+// LZ
+import {
+    SendParam,
+    MessagingFee,
+    MessagingReceipt,
+    OFTReceipt
+} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/interfaces/IOFT.sol";
+import {OptionsBuilder} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/libs/OptionsBuilder.sol";
+import {OFTMsgCodec} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/libs/OFTMsgCodec.sol";
+
+// External
+import {IERC20} from "@boringcrypto/boring-solidity/contracts/libraries/BoringERC20.sol";
+
+// Tapioca
+import {ITapiocaOptionBroker} from "tap-token/interfaces/ITapiocaOptionBroker.sol";
+import {IUsdo} from "tapioca-bar/usdo/IUsdo.sol";
+import {SimpleLeverageExecutor} from "tapioca-bar/leverage/SimpleLeverageExecutor.sol";
+import {ILeverageExecutor} from "tap-utils/interfaces/bar/ILeverageExecutor.sol";
+import {IOracle} from "tap-utils/oracle/interfaces/IOracle.sol";
+import {Cluster} from "tap-utils/Cluster/Cluster.sol";
+
+// Tapioca Tests
+import {UsdoTestHelper, TestPenroseData, TestSingularityData} from "./helpers/UsdoTestHelper.t.sol";
+import {MagnetarMock} from "./mocks/MagnetarMock.sol";
+import {SwapperMock} from "./mocks/SwapperMock.sol";
+import {OracleMock} from "./mocks/OracleMock.sol";
+import {ERC20Mock} from "./mocks/ERC20Mock.sol";
+import {Usdo} from "tapioca-bar/usdo/Usdo.sol";
+
+import "forge-std/Test.sol";
+
+contract UsdoTest is UsdoTestHelper {
+    using OptionsBuilder for bytes;
+    using OFTMsgCodec for bytes32;
+    using OFTMsgCodec for bytes;
+
+    uint32 aEid = 1;
+    uint32 bEid = 2;
+
+    Cluster cluster;
+    ERC20Mock tapOFT;
+    ERC20Mock weth;
+
+    Usdo aUsdo; //collateral
+    Usdo bUsdo; //asset
+
+    MagnetarMock magnetar;
+
+
+    SwapperMock swapper;
+    SimpleLeverageExecutor leverageExecutor;
+    MarketHelper marketHelper;
+    OracleMock oracle;
+
+    uint256 internal userAPKey = 0x1;
+    uint256 internal userBPKey = 0x2;
+    address public userA = vm.addr(userAPKey);
+    address public userB = vm.addr(userBPKey);
+    uint256 public initialBalance = 100 ether;
+
+    /**
+     * DEPLOY setup addresses
+     */
+    address __endpoint;
+    uint256 __hostEid = aEid;
+    address __owner = address(this);
+
+    uint16 internal constant SEND = 1; // Send LZ message type
+    uint16 internal constant PT_APPROVALS = 500; // Use for ERC20Permit approvals
+    uint16 internal constant PT_MARKET_PERMIT = 505; // Use for market.permitLend() operation
+    uint16 internal constant PT_REMOTE_TRANSFER = 700; // Use for transferring tokens from the contract from another chain
+    uint16 internal constant PT_MARKET_REMOVE_ASSET = 900; // Use for remove asset from a market available on another chain
+    uint16 internal constant PT_TAP_EXERCISE = 902; // Use for exercise options on tOB available on another chain
+
+    /**
+     * @dev TOFT global event checks
+     */
+    event OFTReceived(bytes32, address, uint256, uint256);
+    event ComposeReceived(uint16 indexed msgType, bytes32 indexed guid, bytes composeMsg);
+
+    function setUp() public override {
+        vm.deal(userA, 1000 ether);
+        vm.deal(userB, 1000 ether);
+        vm.label(userA, "userA");
+        vm.label(userB, "userB");
+
+        tapOFT = new ERC20Mock("Tapioca OFT", "TAP");
+        vm.label(address(tapOFT), "tapOFT");
+
+        weth = new ERC20Mock("Wrapped Ethereum", "WETH");
+        vm.label(address(weth), "WETH");
+
+        marketHelper = new MarketHelper();
+
+        setUpEndpoints(3, LibraryType.UltraLightNode);
+
+        {
+            cluster = createCluster(aEid, __owner);
+            magnetar = createMagnetar(address(cluster));
+
+            vm.label(address(endpoints[aEid]), "aEndpoint");
+            vm.label(address(endpoints[bEid]), "bEndpoint");
+            vm.label(address(cluster), "Cluster");
+            vm.label(address(magnetar), "Magnetar");
+        }
+
+        aUsdo = new Usdo(endpoints[aEid], __owner, address(cluster));
+        vm.label(address(aUsdo), "aUsdo");
+
+        bUsdo = new Usdo(endpoints[bEid], __owner, address(cluster));
+        vm.label(address(bUsdo), "bUsdo");
+
+        // config and wire the ofts
+        address[] memory ofts = new address[](2);
+        ofts[0] = address(aUsdo);
+        ofts[1] = address(bUsdo);
+        this.wireOApps(ofts);
+
+
+        leverageExecutor = createLeverageExecutor(address(swapper), address(cluster));
+        (penrose, masterContract) =
+            createPenrose(TestPenroseData(address(cluster), address(tapOFT), address(weth), __owner));
+        oracle = createOracle();
+        singularity = createSingularity(
+            penrose,
+            TestSingularityData(
+                address(penrose),
+                IERC20(address(bUsdo)), //asset
+                IERC20(address(aUsdo)), //collateral
+                IOracle(address(oracle)),
+                ILeverageExecutor(address(leverageExecutor))
+            ),
+            address(masterContract)
+        );
+        swapper = createSwapper(address(singularity));
+        vm.label(address(singularity), "Singularity");
+
+        cluster.updateContract(aEid, address(magnetar), true);
+        cluster.updateContract(aEid, address(swapper), true);
+        cluster.updateContract(aEid, address(penrose), true);
+        cluster.updateContract(aEid, address(masterContract), true);
+        cluster.updateContract(aEid, address(oracle), true);
+        cluster.updateContract(aEid, address(singularity), true);
+        cluster.updateContract(aEid, address(marketHelper), true);
+
+        cluster.updateContract(bEid, address(magnetar), true);
+        cluster.updateContract(bEid, address(swapper), true);
+        cluster.updateContract(bEid, address(penrose), true);
+        cluster.updateContract(bEid, address(masterContract), true);
+        cluster.updateContract(bEid, address(oracle), true);
+        cluster.updateContract(bEid, address(singularity), true);
+        cluster.updateContract(bEid, address(marketHelper), true);
+    }
+
+    /**
+     * =================
+     *      HELPERS
+     * =================
+     */
+
+    /**
+     * @dev Used to bypass stack too deep
+     *
+     * @param msgType The message type of the lz Compose.
+     * @param guid The message GUID.
+     * @param composeMsg The source raw OApp compose message. If compose msg is composed with other msgs,
+     * the msg should contain only the compose msg at its index and forward. I.E composeMsg[currentIndex:]
+     * @param dstEid The destination EID.
+     * @param from The address initiating the composition, typically the OApp where the lzReceive was called.
+     * @param to The address of the lzCompose receiver.
+     * @param srcMsgSender The address of src EID OFT `msg.sender` call initiator .
+     * @param extraOptions The options passed in the source OFT call. Only restriction is to have it contain the actual compose option for the index,
+     * whether there are other composed calls or not.
+     */
+    struct LzOFTComposedData {
+        uint16 msgType;
+        bytes32 guid;
+        bytes composeMsg;
+        uint32 dstEid;
+        address from;
+        address to;
+        address srcMsgSender;
+        bytes extraOptions;
+    }
+
+    /**
+     * @notice Call lzCompose on the destination OApp.
+     *
+     * @dev Be sure to verify the message by calling `TestHelper.verifyPackets()`.
+     * @dev Will internally verify the emission of the `ComposeReceived` event with
+     * the right msgType, GUID and lzReceive composer message.
+     *
+     * @param _lzOFTComposedData The data to pass to the lzCompose call.
+     */
+    function __callLzCompose(LzOFTComposedData memory _lzOFTComposedData) internal {
+        vm.expectEmit(true, true, true, false);
+        emit ComposeReceived(_lzOFTComposedData.msgType, _lzOFTComposedData.guid, _lzOFTComposedData.composeMsg);
+
+        this.lzCompose(
+            _lzOFTComposedData.dstEid,
+            _lzOFTComposedData.from,
+            _lzOFTComposedData.extraOptions,
+            _lzOFTComposedData.guid,
+            _lzOFTComposedData.to,
+            _lzOFTComposedData.composeMsg
+        );
+    }
+
+    function test_constructor() public {
+        assertEq(address(aUsdo.getCluster()), address(cluster));
+    }
+
+    function test_erc20_permit() public {
+        ERC20PermitStruct memory permit_ =
+            ERC20PermitStruct({owner: userA, spender: userB, value: 1e18, nonce: 0, deadline: 1 days});
+
+        bytes32 digest_ = aUsdo.getTypedDataHash(permit_);
+        ERC20PermitApprovalMsg memory permitApproval_ =
+            __getERC20PermitData(permit_, digest_, address(aUsdo), userAPKey);
+
+        aUsdo.permit(
+            permit_.owner,
+            permit_.spender,
+            permit_.value,
+            permit_.deadline,
+            permitApproval_.v,
+            permitApproval_.r,
+            permitApproval_.s
+        );
+        assertEq(aUsdo.allowance(userA, userB), 1e18);
+        assertEq(aUsdo.nonces(userA), 1);
+    }
+
+
+ 
+
+    
+}

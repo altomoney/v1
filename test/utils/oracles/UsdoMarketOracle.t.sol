@@ -4,7 +4,7 @@ pragma solidity ^0.8.22;
 import "forge-std/Test.sol";
 
 // External
-import {ITapiocaOracle} from "src/tap-utils/interfaces/periph/ITapiocaOracle.sol";
+import {ITapiocaOracle} from "tap-utils/interfaces/common/ITapiocaOracle.sol";
 import {UsdoMarketOracle} from "src/tap-utils/oracle/UsdoMarketOracle.sol";
 
 // Tests
