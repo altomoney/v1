@@ -9,13 +9,11 @@ import {Constants} from "./Constants.sol";
 
 // tapioca
 
-import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
+import {ICluster} from "tap-utils/interfaces/common/ICluster.sol";
 
 import {Cluster} from "tap-utils/Cluster/Cluster.sol";
 
-import {Penrose} from "tapioca-bar/Penrose.sol";
-
-import {ERC20PermitStruct, ERC20PermitApprovalMsg} from "tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
+import {ERC20PermitStruct, ERC20PermitApprovalMsg} from "tap-utils/interfaces/common/ICommonData.sol";
 
 // tests
 import {OracleMock_test} from "../mocks/OracleMock_test.sol";
@@ -65,17 +63,6 @@ abstract contract Utils is Test, Constants {
         return cluster;
     }
 
-    // Creates real Penrose
-    function _createPenrose(address _cluster, address _tapToken, address _mainToken, address _owner)
-        internal
-        returns (Penrose)
-    {
-        Penrose penrose = new Penrose(ICluster(_cluster), IERC20(_tapToken), IERC20(_mainToken), _owner);
-        vm.label(address(penrose), "Penrose");
-        return penrose;
-    }
-
-    // ************************ //
     // *** APPROVAL HELPERS *** //
     // ************************ //
     function _approveViaERC20(address token, address from, address operator, uint256 amount) internal {

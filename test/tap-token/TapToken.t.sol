@@ -12,18 +12,15 @@ import {
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 // Tapioca
-import {
-    ITapToken
-} from "tap-token/tokens/ITapToken.sol";
-import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
+import {ITapToken} from "tap-token/tokens/ITapToken.sol";
+import {ICluster} from "tap-utils/interfaces/common/ICluster.sol";
 import {TwTAP, Participation} from "tap-token/governance/twTAP.sol";
 import {Cluster} from "tap-utils/Cluster/Cluster.sol";
 import {Bucket} from "tap-token/interfaces/ITWLBase.sol";
 // Tapioca Tests
 import {TapTestHelper} from "./TapTestHelper.t.sol";
 import {TapTokenMock} from "./TapTokenMock.sol";
-import {ERC20PermitStruct} from "tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
-import {ERC20PermitApprovalMsg} from "tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
+import {ERC20PermitStruct, ERC20PermitApprovalMsg} from "tap-utils/interfaces/common/ICommonData.sol";
 
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
@@ -102,7 +99,6 @@ contract TapTokenTest is TapTestHelper {
             )
         );
         vm.label(address(aTapOFT), "aTapOFT");
-
 
         defaultBucket = Bucket({
             enabled: true,
@@ -192,7 +188,6 @@ contract TapTokenTest is TapTestHelper {
         assertEq(aTapOFT.allowance(userA, userB), 1e18);
         assertEq(aTapOFT.nonces(userA), 1);
     }
-
 
     /**
      * =================

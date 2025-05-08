@@ -5,9 +5,8 @@ pragma solidity ^0.8.22;
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 // Tapioca
-import {IPausable} from "src/tap-utils/interfaces/periph/IPausable.sol";
-import {ICluster} from "src/tap-utils/interfaces/periph/ICluster.sol";
-import {IMarket, PauseType} from "src/tap-utils/interfaces/bar/IMarket.sol";
+import {IPausable} from "src/tap-utils/interfaces/common/IPausable.sol";
+import {ICluster} from "src/tap-utils/interfaces/common/ICluster.sol";
 
 /*
 
@@ -121,39 +120,11 @@ contract Pauser is Ownable {
     // *** PRIVATE FUNCTIONS ***** //
     // *************************** //
     function _togglePauseHelper(PausableContract memory _pausable, bool _pause) private {
-        if (_pausable._contractType == PausableContractType.Singularity) {
-            _toggleSingularityPause(IMarket(_pausable._contract), _pause);
-        } else if (_pausable._contractType == PausableContractType.NonSingularityMarket) {
-            _toggleNonSingularityMarketPause(IMarket(_pausable._contract), _pause);
-        } else if (_pausable._contractType == PausableContractType.SpecialStrategy) {
+        if (_pausable._contractType == PausableContractType.SpecialStrategy) {
             _toggleSpecialStrategy(IPausable(_pausable._contract), _pause);
         } else if (_pausable._contractType == PausableContractType.Generic) {
             _toggleGenericPause(IPausable(_pausable._contract), _pause);
         }
-    }
-
-    function _toggleSingularityPause(IMarket _singularity, bool _pause) private {
-        if (!cluster.isWhitelisted(0, address(this))) revert Pauser_NotWhitelisted(address(this));
-        if (!cluster.isWhitelisted(0, address(_singularity))) revert Pauser_NotWhitelisted(address(_singularity));
-
-        _singularity.updatePause(PauseType.Borrow, _pause);
-        _singularity.updatePause(PauseType.Repay, _pause);
-        _singularity.updatePause(PauseType.AddCollateral, _pause);
-        _singularity.updatePause(PauseType.RemoveCollateral, _pause);
-        _singularity.updatePause(PauseType.Liquidation, _pause);
-        _singularity.updatePause(PauseType.LeverageBuy, _pause);
-        _singularity.updatePause(PauseType.LeverageSell, _pause);
-        _singularity.updatePause(PauseType.AddAsset, _pause);
-        _singularity.updatePause(PauseType.RemoveAsset, _pause);
-        emit PauseToggledFor(address(_singularity), _pause);
-    }
-
-    function _toggleNonSingularityMarketPause(IMarket _market, bool _pause) private {
-        if (!cluster.isWhitelisted(0, address(this))) revert Pauser_NotWhitelisted(address(this));
-        if (!cluster.isWhitelisted(0, address(_market))) revert Pauser_NotWhitelisted(address(_market));
-
-        _market.updatePauseAll(_pause);
-        emit PauseToggledFor(address(_market), _pause);
     }
 
     function _toggleGenericPause(IPausable _pausable, bool _pause) private {

@@ -3,7 +3,7 @@ pragma solidity ^0.8.22;
 import {IOFT} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/OFTCore.sol";
 import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {ERC20PermitStruct} from "tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
+import {ERC20PermitStruct} from "tap-utils/interfaces/common/ICommonData.sol";
 
 /**
  * @title IUsdo Interface
@@ -11,7 +11,6 @@ import {ERC20PermitStruct} from "tap-utils/interfaces/periph/ITapiocaOmnichainEn
  */
 interface IUsdo is IOFT, IERC20, IERC20Permit {
     error Usdo_NotAuthorized();
-
 
     /// =====================
     /// Events
