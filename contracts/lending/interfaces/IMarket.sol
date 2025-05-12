@@ -142,6 +142,10 @@ interface IMarketBase is IMarketErrors, IMarketEvents, IAuth {
         returns (uint256, uint256);
 
     function repay(uint256 assets, uint256 shares, address onBehalf) external returns (uint256, uint256);
+
+    function accrueInterest() external;
+
+    function setIrm(address irm) external;
 }
 
 interface IMarket is IMarketBase {
