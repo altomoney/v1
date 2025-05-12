@@ -114,7 +114,7 @@ contract DeployAltoTestnet is Script {
         console.log("Usdo: ", report.usdo);
         {
             //TapToken(payable(input.tapToken)).setCluster(report.cluster);
-            Usdo(payable(report.usdo)).setMinterStatus(address(input.owner), true);
+            Usdo(payable(report.usdo)).setMinterCeiling(address(input.owner), 1000000 ether);
             Usdo(payable(report.usdo)).mint(input.owner, 1000000 ether);
         }
 

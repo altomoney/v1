@@ -5,6 +5,11 @@ import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC2
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC20PermitStruct} from "tap-utils/interfaces/common/ICommonData.sol";
 
+struct UsdoMinter {
+    uint256 mintCeiling;
+    uint256 minted;
+}
+
 /**
  * @title IUsdo Interface
  * @notice Interface for the USDO stablecoin contract
@@ -15,27 +20,18 @@ interface IUsdo is IOFT, IERC20, IERC20Permit {
     /// =====================
     /// Events
     /// =====================
-    event SetMinterStatus(address indexed _for, bool _status);
-    event SetBurnerStatus(address indexed _for, bool _status);
+    event SetMinterCeiling(address indexed _for, uint256 _mintCeiling);
 
     /// =====================
     /// View Functions
     /// =====================
-    function fees() external view returns (uint256);
-    function flashLoanHelper() external view returns (address);
-    function allowedMinter(address minter) external view returns (bool);
-    function allowedBurner(address burner) external view returns (bool);
-    function getTypedDataHash(ERC20PermitStruct calldata _permitData) external view returns (bytes32);
+    function minterCeiling(address minter) external view returns (uint256 mintCeiling, uint256 minted);
 
     /// =====================
     /// External Functions
     /// =====================
     function mint(address _to, uint256 _amount) external;
     function burn(address _from, uint256 _amount) external;
-    function addFlashloanFee(uint256 _fee) external;
     function setPause(bool _pauseState) external;
-    function setFlashloanHelper(address _helper) external;
-    function extractFees() external;
-    function setMinterStatus(address _for, bool _status) external;
-    function setBurnerStatus(address _for, bool _status) external;
+    function setMinterCeiling(address _for, uint256 _mintCeiling) external;
 }

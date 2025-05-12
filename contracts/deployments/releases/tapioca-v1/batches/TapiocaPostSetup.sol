@@ -25,9 +25,8 @@ contract TapiocaPostSetup is Ownable {
         address mintMarket,
         address multiTokenSender
     ) external onlyOwner {
-        Usdo(payable(usdo)).setMinterStatus(address(mintMarket), true);
-        Usdo(payable(usdo)).setMinterStatus(address(this), true);
-        Usdo(payable(usdo)).setBurnerStatus(address(mintMarket), true);
+        Usdo(payable(usdo)).setMinterCeiling(address(mintMarket), 5_000_000 ether);
+        Usdo(payable(usdo)).setMinterCeiling(address(this), MULTI_TOKEN_SENDER_MINT_TOKENS);
 
         MultiTokenSender(multiTokenSender).updateWhitelist(BACKEND_TESTNET_ADDRESS, true);
 
@@ -37,7 +36,7 @@ contract TapiocaPostSetup is Ownable {
 
         Usdo(payable(usdo)).mint(multiTokenSender, MULTI_TOKEN_SENDER_MINT_TOKENS);
 
-        Usdo(payable(usdo)).setMinterStatus(address(this), false);
+        Usdo(payable(usdo)).setMinterCeiling(address(this), 0);
         // Transfer ownership to the delegate
         Usdo(payable(usdo)).setDelegate(multicall);
         Usdo(payable(usdo)).transferOwnership(multicall);
