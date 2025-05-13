@@ -11,37 +11,19 @@ import {Erc20Mock} from "../../helpers/Erc20Mock.sol";
 import {OracleMock} from "@alto-monorepo/lending/mocks/OracleMock.sol";
 import {ORACLE_PRICE_PRECISION} from "@alto-monorepo/lending/interfaces/IOracle.sol";
 import {IMarket, LiquidationConfiguration} from "@alto-monorepo/lending/interfaces/IMarket.sol";
+import {IrmCommon} from "./IrmCommon.t.sol";
 
 uint256 constant MIN_AMOUNT = 1000;
 uint256 constant MAX_AMOUNT = 2 ** 64;
 
-contract FixedRateIrmUpdateTest is Test {
+contract FixedRateIrmUpdateTest is IrmCommon {
     using FixedPointMath for uint256;
-
-    Erc20Mock internal borrowToken;
-    Erc20Mock internal collateralToken;
-
-    address internal immutable USER = makeAddr("User");
-
-    uint256 constant INITIAL_AMOUNT = 1000000 ether;
 
     uint256 MAX_BORROW_RATE = new FixedRateIrm(0.01 ether / uint256(365 days), address(1)).MAX_BORROW_RATE();
 
-    uint256 internal constant LTV = 0.75 ether;
-
-    function setUp() public {
-        borrowToken = new Erc20Mock("borrow", "B");
-        vm.label(address(borrowToken), "borrowToken");
-        collateralToken = new Erc20Mock("collateral", "C");
-        vm.label(address(collateralToken), "collateralToken");
-
-        deal(address(borrowToken), address(this), INITIAL_AMOUNT);
-        deal(address(collateralToken), address(this), INITIAL_AMOUNT);
-    }
-
     function _getAccruedInterest(uint256 borrowedAmount, uint256 borrowRate, uint256 time)
         internal
-        view
+        pure
         returns (uint256)
     {
         return uint256(borrowedAmount).multiplyWithPrecision(borrowRate.calculateCompoundInterest(time));
