@@ -14,7 +14,7 @@ abstract contract Events {
     // *** MARKET *** //
     // ************** //
     /// @notice event emitted when `leverageExecutor` is updated
-    event LeverageExecutorSet(address oldVal, address newVal);
+    event AltoLeverageSet(address oldVal, address newVal);
     /// @notice event emitted when `exchangeRate` validation duration is updated
     event ExchangeRateDurationUpdated(uint256 _oldVal, uint256 _newVal);
     /// @notice event emitted when conservator is updated

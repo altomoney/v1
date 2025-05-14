@@ -22,9 +22,10 @@ import {ExpLib, MATH_PRECISION_INT} from "./libraries/ExpLib.sol";
 import {AssetShareConversionMath} from "./libraries/AssetShareConversionMath.sol";
 import {FixedPointMath, MATH_PRECISION} from "./libraries/FixedPointMath.sol";
 import {Utils} from "./libraries/Utils.sol";
-import {IMarkeStaticTypes} from "./interfaces/IMarket.sol";
+import {IMarketStaticTypes} from "./interfaces/IMarket.sol";
+import {IBorrowCallback, IRemoveCollateralCallback} from "./interfaces/IMarketCallbacks.sol";
 
-contract AltoBorrowMarket is Ownable, Auth, IMarkeStaticTypes {
+contract AltoBorrowMarket is Ownable, Auth, IMarketStaticTypes {
     using FixedPointMath for uint256;
     using AssetShareConversionMath for uint256;
     using Utils for uint256;
@@ -38,6 +39,8 @@ contract AltoBorrowMarket is Ownable, Auth, IMarkeStaticTypes {
     Balance public totalBorrowed;
 
     mapping(address => Position) public position;
+
+    mapping(address => bool) public authorizedCallbacks;
 
     address public irm;
 
@@ -173,7 +176,10 @@ contract AltoBorrowMarket is Ownable, Auth, IMarkeStaticTypes {
         return (assets);
     }
 
-    function removeCollateral(uint256 assets, address onBehalf, address receiver) external returns (uint256) {
+    function removeCollateral(uint256 assets, address onBehalf, address receiver, bytes calldata data)
+        external
+        returns (uint256)
+    {
         if (assets == 0 || onBehalf == address(0)) {
             revert AltoBorrowMarketInvalidInput();
         }
@@ -186,18 +192,24 @@ contract AltoBorrowMarket is Ownable, Auth, IMarkeStaticTypes {
 
         position[onBehalf].collateralAssets -= assets.toUint128();
 
+        IERC20(collateralToken).safeTransfer(receiver, assets);
+
+        if (authorizedCallbacks[receiver] && data.length > 0) {
+            IRemoveCollateralCallback(receiver).onRemoveCollateralCallback(assets, data);
+        } else if (data.length > 0) {
+            revert AltoBorrowMarketUnauthorized();
+        }
+
         if (!_isSolvent(onBehalf, false)) {
             revert AltoBorrowMarketInsufficientUserCollateral();
         }
-
-        IERC20(collateralToken).safeTransfer(receiver, assets);
 
         emit RemoveCollateral(msg.sender, onBehalf, receiver, assets);
 
         return (assets);
     }
 
-    function borrow(uint256 assets, uint256 shares, address onBehalf, address receiver)
+    function borrow(uint256 assets, uint256 shares, address onBehalf, address receiver, bytes calldata data)
         external
         returns (uint256, uint256, uint256)
     {
@@ -212,18 +224,16 @@ contract AltoBorrowMarket is Ownable, Auth, IMarkeStaticTypes {
 
         uint256 openingFeeAssets;
 
-        uint256 openingFee = _getBorrowOpeningFee();
-
         if (assets == 0) {
             // calculate opening fee from shares
-            uint256 openingFeeShares = shares.multiplyWithPrecision(openingFee);
+            uint256 openingFeeShares = shares.multiplyWithPrecision(borrowOpeningFee);
             openingFeeAssets = openingFeeShares.convertToAssetsDown(totalBorrowed.assets, totalBorrowed.shares);
             shares += openingFeeShares;
 
             assets = shares.convertToAssetsDown(totalBorrowed.assets, totalBorrowed.shares);
         } else {
             // calculate opening fee from assets
-            openingFeeAssets = assets.multiplyWithPrecision(openingFee);
+            openingFeeAssets = assets.multiplyWithPrecision(borrowOpeningFee);
             assets += openingFeeAssets;
 
             shares = assets.convertToSharesUp(totalBorrowed.assets, totalBorrowed.shares);
@@ -238,9 +248,6 @@ contract AltoBorrowMarket is Ownable, Auth, IMarkeStaticTypes {
 
         position[onBehalf].borrowShares += shares.toUint128();
 
-        if (!_isSolvent(onBehalf, false)) {
-            revert AltoBorrowMarketBorrowingTooMuch();
-        }
         // send assets to the receiver minus the opening fee as now `assets` includes the opening fee
         uint256 assetsToSend = assets - openingFeeAssets;
         _sendBorrowToken(address(this), receiver, assetsToSend);
@@ -248,6 +255,16 @@ contract AltoBorrowMarket is Ownable, Auth, IMarkeStaticTypes {
         uint256 feeSupplyShares;
         if (openingFeeAssets > 0) {
             feeSupplyShares = _applyBorrowOpeningFee(openingFeeAssets);
+        }
+
+        if (authorizedCallbacks[receiver] && data.length > 0) {
+            IBorrowCallback(receiver).onBorrowCallback(assetsToSend, data);
+        } else if (data.length > 0) {
+            revert AltoBorrowMarketUnauthorized();
+        }
+
+        if (!_isSolvent(onBehalf, false)) {
+            revert AltoBorrowMarketBorrowingTooMuch();
         }
 
         emit Borrow(msg.sender, onBehalf, receiver, assetsToSend, shares, openingFeeAssets, feeSupplyShares);
@@ -312,10 +329,6 @@ contract AltoBorrowMarket is Ownable, Auth, IMarkeStaticTypes {
             uint256(position[_user].borrowShares).convertToAssetsUp(totalBorrowed.assets, totalBorrowed.shares);
 
         return _isLiquidation ? maxBorrowValue > borrowValue : maxBorrowValue >= borrowValue;
-    }
-
-    function _getBorrowOpeningFee() internal view virtual returns (uint256) {
-        return borrowOpeningFee;
     }
 
     function _calculateLiquidationPercentage(uint256 currentLtv) internal view returns (uint256) {
@@ -440,5 +453,9 @@ contract AltoBorrowMarket is Ownable, Auth, IMarkeStaticTypes {
         } else {
             IERC20(borrowToken).safeTransferFrom(from, to, amount);
         }
+    }
+
+    function setAuthorizedCallback(address callback, bool value) external onlyOwner {
+        authorizedCallbacks[callback] = value;
     }
 }

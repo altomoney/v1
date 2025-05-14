@@ -8,16 +8,19 @@ import {TapiocaMulticallTestnet} from "tap-utils/TapiocaMulticall/TapiocaMultica
 import {Cluster} from "tap-utils/Cluster/Cluster.sol";
 import {Pauser} from "tap-utils/Pauser/Pauser.sol";
 import {ZeroXSwapper} from "tap-utils/Swapper/ZeroXSwapper.sol";
-import {ZeroXSwapperMock} from "tapioca-mocks/ZeroXSwapperMock.sol";
+import {SwapperSimpleMock} from "tapioca-mocks/SwapperSimpleMock.sol";
 import {ICluster} from "tap-utils/interfaces/common/ICluster.sol";
 import {MultiTokenSender} from "tapioca-mocks/MultiTokenSender.sol";
 import {Bundler3} from "@morpho-org/bundler3/Bundler3.sol";
 import {AltoAdapter} from "@alto-monorepo/bundler/AltoAdapter.sol";
-import {FixedRateIrm} from "@alto-monorepo/lending/FixedRateIrm.sol";
+import {AdaptiveCurveIrm} from "@alto-monorepo/lending/AdaptiveCurveIrm.sol";
 import {OracleMock} from "@alto-monorepo/lending/mocks/OracleMock.sol";
 import {ORACLE_PRICE_PRECISION} from "@alto-monorepo/lending/interfaces/IOracle.sol";
+import {AltoLeverage} from "contracts/bar/leverage/AltoLeverage.sol";
 
 abstract contract UtilitiesProcedure {
+    int256 internal constant YEAR = int256(365 days);
+
     function _deployUtilities(
         address owner,
         address zeroXProxy,
@@ -34,8 +37,7 @@ abstract contract UtilitiesProcedure {
         }
         report.pauser = address(new Pauser(address(1), owner));
         if (isTestnet) {
-            report.zeroXSwapper =
-                zeroXProxy != address(0) ? zeroXProxy : address(new ZeroXSwapperMock(ICluster(address(1)), owner));
+            report.zeroXSwapper = zeroXProxy != address(0) ? zeroXProxy : address(new SwapperSimpleMock(owner));
             report.multiTokenSender = address(new MultiTokenSender(owner));
         } else {
             report.zeroXSwapper = zeroXProxy != address(0)
@@ -48,22 +50,19 @@ abstract contract UtilitiesProcedure {
         } else {
             TapiocaMulticall(payable(report.tapiocaMulticall)).transferOwnership(owner);
         }
+        AdaptiveCurveIrm.AdaptiveCurveIrmConfig memory config = AdaptiveCurveIrm.AdaptiveCurveIrmConfig({
+            curveSteepness: 4 ether,
+            adjustmentSpeed: 50 ether / YEAR,
+            targetUtilization: 0.8 ether,
+            initialRateAtTarget: 0.04 ether / YEAR,
+            minRateAtTarget: 0.001e18 / YEAR,
+            maxRateAtTarget: 2 ether / YEAR
+        });
 
-        report.borrowIrm = address(new FixedRateIrm(0.04 ether / uint256(365 days), address(this)));
-        report.mintIrm = address(new FixedRateIrm(0.04 ether / uint256(365 days), address(this)));
+        report.borrowIrm = address(new AdaptiveCurveIrm(config, owner));
+        report.mintIrm = address(new AdaptiveCurveIrm(config, owner));
+        report.altoLeverage = address(new AltoLeverage(report.zeroXSwapper, owner));
 
         return report;
-    }
-
-    function _initCluster(
-        address cluster,
-        address zeroXSwapper,
-        address penrose,
-        address pauser,
-        address tapiocaMulticall
-    ) internal {
-        Cluster(cluster).setRoleForContract(pauser, keccak256("PAUSER"), true);
-        Cluster(cluster).updateContract(0, zeroXSwapper, true);
-        Cluster(cluster).transferOwnership(tapiocaMulticall);
     }
 }

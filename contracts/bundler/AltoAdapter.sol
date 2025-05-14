@@ -80,14 +80,14 @@ contract AltoAdapter is CoreAdapter {
         if (assets == type(uint256).max) assets = market.position(initiator()).collateralAssets;
         require(assets != 0, ErrorsLib.ZeroAmount());
 
-        market.removeCollateral(assets, initiator(), receiver);
+        market.removeCollateral(assets, initiator(), receiver, "");
     }
 
     function marketBorrow(IMarket market, uint256 assets, uint256 shares, uint256 minSharePriceE27, address receiver)
         external
         onlyBundler3
     {
-        (uint256 borrowedAssets, uint256 borrowedShares,) = market.borrow(assets, shares, initiator(), receiver);
+        (uint256 borrowedAssets, uint256 borrowedShares,) = market.borrow(assets, shares, initiator(), receiver, "");
 
         require(borrowedAssets.rDivDown(borrowedShares) >= minSharePriceE27, ErrorsLib.SlippageExceeded());
     }

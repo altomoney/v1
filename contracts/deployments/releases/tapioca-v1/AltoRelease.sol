@@ -42,7 +42,8 @@ library AltoRelease {
             reports.usdoReport.usdo,
             reports.lendingReport.borrowMarket,
             reports.lendingReport.mintMarket,
-            reports.utilitiesReport.multiTokenSender
+            reports.utilitiesReport.multiTokenSender,
+            reports.utilitiesReport.altoLeverage
         );
 
         return _generateMarketReport(reports);
@@ -102,6 +103,7 @@ library AltoRelease {
         report.mintIrm = reports.utilitiesReport.mintIrm;
         report.bundler3 = reports.utilitiesReport.bundler3;
         report.altoAdapter = reports.utilitiesReport.altoAdapter;
+        report.altoLeverage = reports.utilitiesReport.altoLeverage;
 
         return report;
     }

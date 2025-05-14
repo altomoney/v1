@@ -49,9 +49,7 @@ contract SwapperMock {
         amountOut = amountOutMin;
 
         if (swapData.tokensData.tokenOut != address(0)) {
-            revert("MockSwapper: new markets not implemented");
-            // shareOut = market.convertToShares(amountOutMin);
-            // market.transfer(to, shareOut);
+            IERC20(swapData.tokensData.tokenOut).safeTransfer(to, amountOut);
         } else {
             shareOut = amountOut * 1e8;
             if (swapData.tokensData.tokenOut != address(0)) {

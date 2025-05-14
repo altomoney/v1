@@ -74,16 +74,18 @@ contract DeployAltoTestnet is Script {
 
         TestnetOracles memory oracles = deployTestnetOracles(input);
 
-        input.borrowOracle = oracles.stETHOracle;
+        input.borrowOracle = oracles.usdcOracle;
         input.mintOracle = oracles.stETHOracle;
 
         report = AltoRelease.deployAltoV1(input, report);
 
         TapToken(payable(input.tapToken)).transfer(report.multiTokenSender, 20_000_000 ether);
         ERC20Testnet(usdc).mint(report.multiTokenSender, MULTI_TOKEN_SENDER_MINT_TOKENS);
+        ERC20Testnet(usdc).mint(report.altoLeverage, MULTI_TOKEN_SENDER_MINT_TOKENS);
         ERC20Testnet(stETH).mint(report.multiTokenSender, MULTI_TOKEN_SENDER_MINT_TOKENS);
+        ERC20Testnet(stETH).mint(report.altoLeverage, MULTI_TOKEN_SENDER_MINT_TOKENS);
 
-        console.log("SimpleLeverageExecutor: ", report.simpleLeverageExecutor);
+        console.log("AltoLeverage: ", report.altoLeverage);
         console.log("ZeroXSwapper: ", report.zeroXSwapper);
         console.log("MultiTokenSender: ", report.multiTokenSender);
         console.log("TapiocaMulticall: ", report.tapiocaMulticall);
@@ -107,15 +109,12 @@ contract DeployAltoTestnet is Script {
         console.log("Bundler3: ", address(report.bundler3));
         console.log("AltoAdapter: ", address(report.altoAdapter));
 
-        console.log("SimpleLeverageExecutor: ", report.simpleLeverageExecutor);
         console.log("ZeroXSwapper: ", report.zeroXSwapper);
         console.log("MultiTokenSender: ", report.multiTokenSender);
         console.log("TapiocaMulticall: ", report.tapiocaMulticall);
         console.log("Usdo: ", report.usdo);
         {
             //TapToken(payable(input.tapToken)).setCluster(report.cluster);
-            Usdo(payable(report.usdo)).setMinterStatus(address(input.owner), true);
-            Usdo(payable(report.usdo)).mint(input.owner, 1000000 ether);
         }
 
         {
@@ -147,21 +146,11 @@ contract DeployAltoTestnet is Script {
             //TapToken(payable(input.tapToken)).setMinter(address(tob));
 
             // Mint and transfer mock tokens to multitokensender and deployer
-            MultiTokenSender(report.multiTokenSender).updateWhitelist(BACKEND_TESTNET_ADDRESS, true);
             TapToken(payable(input.tapToken)).transfer(report.multiTokenSender, 20_000_000 ether);
             usdc.mint(report.multiTokenSender, MULTI_TOKEN_SENDER_MINT_TOKENS);
             stETH.mint(report.multiTokenSender, MULTI_TOKEN_SENDER_MINT_TOKENS);
-            Usdo(payable(report.usdo)).mint(report.multiTokenSender, MULTI_TOKEN_SENDER_MINT_TOKENS);
             TapToken(payable(input.tapToken)).transfer(
                 report.tapiocaMulticall, TapToken(payable(input.tapToken)).balanceOf(msg.sender) - 100000e18
-            );
-
-            // Add extra admins to the multicall contract
-            TapiocaMulticallTestnet(payable(report.tapiocaMulticall)).setOwner(
-                0xd7F6Fa30BC8c0E5003689C332bd2b9400Ed87367, true
-            );
-            TapiocaMulticallTestnet(payable(report.tapiocaMulticall)).setOwner(
-                0x4778c2AA94a8D05D63e4C07eb68021528985304C, true
             );
 
             // (ITapiocaOracle oracle, bytes memory oracleData) = tob._paymentTokens(address(usdc));
@@ -170,7 +159,6 @@ contract DeployAltoTestnet is Script {
             // console.logBytes(oracleData);
             // require(address(oracle) != address(0), "TOB payment oracle is not set");
         }
-        Usdo(payable(report.usdo)).transferOwnership(report.tapiocaMulticall);
 
         vm.stopBroadcast();
     }

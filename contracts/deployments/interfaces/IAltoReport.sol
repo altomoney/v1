@@ -10,7 +10,7 @@ struct AltoReport {
     address mintMarket;
     address mintIrm;
     address mintOracle;
-    address simpleLeverageExecutor;
+    address altoLeverage;
     address zeroXSwapper;
     address multiTokenSender;
     address tapiocaMulticall;
@@ -25,6 +25,7 @@ struct UtilitiesReport {
     address bundler3;
     address altoAdapter;
     address borrowIrm;
+    address altoLeverage;
     address mintIrm;
 }
 

@@ -75,7 +75,7 @@ contract FixedRateIrmUpdateTest is IrmCommon {
 
         market.addSupply(borrowedAmount, 0, USER);
         market.addCollateral(100 ether, USER);
-        market.borrow(borrowedAmount, 0, USER, USER);
+        market.borrow(borrowedAmount, 0, USER, USER, "");
 
         uint256 expectedInterest = _getAccruedInterest(borrowedAmount, borrowRate, 10 minutes);
 
@@ -110,7 +110,7 @@ contract FixedRateIrmUpdateTest is IrmCommon {
 
         market.addSupply(borrowedAmount, 0, USER);
         market.addCollateral(collateralAmount, USER);
-        market.borrow(borrowedAmount, 0, USER, USER);
+        market.borrow(borrowedAmount, 0, USER, USER, "");
 
         assertEq(market.totalBorrowed().assets, borrowedAmount);
         uint256 expectedInterest = _getAccruedInterest(borrowedAmount, borrowRate, elapsedTime);
