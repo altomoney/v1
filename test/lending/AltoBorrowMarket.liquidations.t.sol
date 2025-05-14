@@ -41,8 +41,22 @@ contract MockMarket is AltoBorrowMarket {
         address _owner,
         address _oracle,
         uint256 _maxLtv,
+        uint256 _borrowOpeningFee,
+        address _feeRecipient,
         LiquidationConfiguration memory _liquidationConfiguration
-    ) AltoBorrowMarket(_borrowToken, _collateralToken, _irm, _owner, _oracle, _maxLtv, _liquidationConfiguration) {}
+    )
+        AltoBorrowMarket(
+            _borrowToken,
+            _collateralToken,
+            _irm,
+            _owner,
+            _oracle,
+            _maxLtv,
+            _borrowOpeningFee,
+            _feeRecipient,
+            _liquidationConfiguration
+        )
+    {}
 
     function addInterest(uint256 amount) external {
         totalSupply.assets += uint128(amount);
@@ -89,6 +103,8 @@ contract AltoBorrowMarketTest is Test {
             address(this),
             address(oracle),
             maxLtv,
+            0,
+            address(this),
             liquidationConfiguration
         );
 

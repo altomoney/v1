@@ -26,6 +26,8 @@ abstract contract LendingProcedure {
                 owner,
                 address(borrowOracle),
                 0.75 ether,
+                0.005 ether,
+                owner,
                 LiquidationConfiguration({
                     maxLiquidationLtv: 0.8 ether,
                     dynamicBonusFeeStart: 0.03 ether,
@@ -46,6 +48,7 @@ abstract contract LendingProcedure {
                 0.75 ether,
                 3_000_000 ether,
                 owner,
+                0.005 ether,
                 LiquidationConfiguration({
                     maxLiquidationLtv: 0.8 ether,
                     dynamicBonusFeeStart: 0.03 ether,

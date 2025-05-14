@@ -12,8 +12,22 @@ contract MarketInstance is AltoBorrowMarket {
         address _owner,
         address _oracle,
         uint256 _maxLtv,
+        uint256 _openingFee,
+        address _feeRecipient,
         LiquidationConfiguration memory _liquidationConfiguration
-    ) AltoBorrowMarket(_borrowToken, _collateralToken, _irm, _owner, _oracle, _maxLtv, _liquidationConfiguration) {}
+    )
+        AltoBorrowMarket(
+            _borrowToken,
+            _collateralToken,
+            _irm,
+            _owner,
+            _oracle,
+            _maxLtv,
+            _openingFee,
+            _feeRecipient,
+            _liquidationConfiguration
+        )
+    {}
 
     function domainSeparator() public view returns (bytes32) {
         return _domainSeparatorV4();

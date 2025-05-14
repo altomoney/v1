@@ -15,8 +15,7 @@ contract AltoMintMarket is AltoBorrowMarket {
 
     error Alto_MintMarket_NotImplemented();
 
-    uint128 public claimableAccruedDebt;
-    address public interestReceiver;
+    uint128 public claimableFeesAssets;
 
     constructor(
         address _borrowToken,
@@ -26,15 +25,23 @@ contract AltoMintMarket is AltoBorrowMarket {
         address _oracle,
         uint256 _maxLtv,
         uint256 _debtCeiling,
-        address _interestReceiver,
+        address _feeRecipient,
+        uint256 _borrowOpeningFee,
         LiquidationConfiguration memory _liquidationConfiguration
-    ) AltoBorrowMarket(_borrowToken, _collateralToken, _irm, _owner, _oracle, _maxLtv, _liquidationConfiguration) {
+    )
+        AltoBorrowMarket(
+            _borrowToken,
+            _collateralToken,
+            _irm,
+            _owner,
+            _oracle,
+            _maxLtv,
+            _borrowOpeningFee,
+            _feeRecipient,
+            _liquidationConfiguration
+        )
+    {
         totalSupply.assets = _debtCeiling.toUint128();
-        interestReceiver = _interestReceiver;
-    }
-
-    function setInterestReceiver(address _interestReceiver) external onlyOwner {
-        interestReceiver = _interestReceiver;
     }
 
     function setDebtCeiling(uint256 _debtCeiling) external onlyOwner {
@@ -57,9 +64,15 @@ contract AltoMintMarket is AltoBorrowMarket {
         (uint256 borrowRate, uint256 interest) = IIrm(irm).updateInterestRate(totalSupply.assets, totalBorrowed.assets);
 
         totalBorrowed.assets += interest.toUint128();
-        claimableAccruedDebt += interest.toUint128();
+        claimableFeesAssets += interest.toUint128();
 
         emit AccrueInterest(borrowRate, interest, totalBorrowed.assets, totalSupply.assets);
+    }
+
+    function _applyBorrowOpeningFee(uint256 openingFeeAssets) internal override returns (uint256) {
+        claimableFeesAssets += openingFeeAssets.toUint128();
+
+        return 0;
     }
 
     function _sendBorrowToken(address from, address to, uint256 amount) internal override {
@@ -71,8 +84,8 @@ contract AltoMintMarket is AltoBorrowMarket {
     }
 
     function claimInterest() external {
-        uint256 interest = claimableAccruedDebt;
-        IUsdo(borrowToken).mint(interestReceiver, interest);
-        claimableAccruedDebt = 0;
+        uint256 interest = claimableFeesAssets;
+        IUsdo(borrowToken).mint(feeRecipient, interest);
+        claimableFeesAssets = 0;
     }
 }
