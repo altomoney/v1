@@ -6,7 +6,6 @@ import {RebaseLibrary, Rebase} from "@boringcrypto/boring-solidity/contracts/lib
 import {AltoReport, TapiocaInput} from "deployments/interfaces/IAltoReport.sol";
 import {ERC20Mock} from "tapioca-mocks/ERC20Mock.sol";
 import {OracleMock} from "test/utils/mocks/OracleMock.sol";
-import {LZEndpointMock} from "tapioca-mocks/LZEndpointMock.sol";
 import {AltoRelease} from "deployments/releases/tapioca-v1/AltoRelease.sol";
 import {TapToken} from "tap-token/tokens/TapToken.sol";
 import {ICluster} from "tap-utils/interfaces/common/ICluster.sol";
@@ -20,8 +19,10 @@ import {Events} from "test/bar/btt/utils/Events.sol";
 import {Utils} from "test/bar/btt/utils/Utils.sol";
 import {Usdo} from "tapioca-bar/usdo/Usdo.sol";
 import {TapiocaMulticall} from "tap-utils/TapiocaMulticall/TapiocaMulticall.sol";
+import {TestHelperOz5} from "@layerzerolabs/test-devtools-evm-foundry/contracts/TestHelperOz5.sol";
 
-contract TOBTestBase is Test, Events, Utils {
+
+contract TOBTestBase is Test, Events, Utils, TestHelperOz5 {
     using RebaseLibrary for Rebase;
 
     address owner;
@@ -73,7 +74,10 @@ contract TOBTestBase is Test, Events, Utils {
         Rebase totalBorrowAfter;
     }
 
-    function setUp() public virtual {
+    function setUp() public virtual override {
+        super.setUp();
+        setUpEndpoints(1, LibraryType.UltraLightNode);
+
         vm.skip(true);
         owner = makeAddr("owner");
 
@@ -149,7 +153,7 @@ contract TOBTestBase is Test, Events, Utils {
         input.wrappedNativeToken = address(new ERC20Mock("A", "A", 0, 18, owner));
         input.bbMarketBorrowCap = 3_000_000e18;
 
-        input.lzEndpoint = address(new LZEndpointMock(uint16(block.chainid)));
+        input.lzEndpoint = address(endpoints[1]);
         input.zeroXProxy = address(1);
 
         tapToken = new TapToken(

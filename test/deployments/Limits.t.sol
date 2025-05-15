@@ -8,10 +8,10 @@ import "deployments/interfaces/IAltoReport.sol";
 import {TapiocaUsdoBatch} from "deployments/releases/tapioca-v1/batches/TapiocaUsdoBatch.sol";
 import {TapiocaUtilitiesBatch} from "deployments/releases/tapioca-v1/batches/TapiocaUtilitiesBatch.sol";
 import {TapiocaPostSetup} from "deployments/releases/tapioca-v1/batches/TapiocaPostSetup.sol";
-import {LZEndpointMock} from "tapioca-mocks/LZEndpointMock.sol";
 import {ERC20Mock} from "../bar/mocks/ERC20Mock.sol";
+import {TestHelperOz5} from "@layerzerolabs/test-devtools-evm-foundry/contracts/TestHelperOz5.sol";
 
-contract LimitsTest is Test {
+contract LimitsTest is Test, TestHelperOz5 {
     address owner;
     address zeroXSwapper;
     address endpointMock;
@@ -22,10 +22,13 @@ contract LimitsTest is Test {
     address erc20Mock2;
     address erc20Mock3;
 
-    function setUp() public {
+    function setUp() public override {
+        super.setUp();
+        setUpEndpoints(1, LibraryType.UltraLightNode);
+
         owner = makeAddr("owner");
         zeroXSwapper = makeAddr("zeroXSwapper");
-        endpointMock = address(new LZEndpointMock(1));
+        endpointMock = address(endpoints[1]);
         delegate = owner;
 
         erc20Mock1 = address(new ERC20Mock("A", "A"));
