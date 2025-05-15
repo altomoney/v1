@@ -12,7 +12,6 @@ import {TapiocaMulticall} from "contracts/utils/TapiocaMulticall/TapiocaMultical
 import {Bucket} from "tap-token/interfaces/ITWLBase.sol";
 import {SeerCLSolo} from "contracts/utils/oracle/SeerCLSolo.sol";
 import {OracleChainlinkSingleConstructorData} from "contracts/utils/oracle/OracleChainlinkSingle.sol";
-import {TestnetOracle} from "test/utils/mocks/TestnetOracle.sol";
 import {ERC20Testnet} from "test/utils/mocks/ERC20Testnet.sol";
 import {IERC20} from "@boringcrypto/boring-solidity/contracts/interfaces/IERC20.sol";
 import {Usdo} from "tapioca-bar/usdo/Usdo.sol";

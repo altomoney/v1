@@ -2,7 +2,7 @@
 pragma solidity ^0.8.18;
 
 import {TOBTestBase, ITapiocaOptionBroker} from "../TOBTestBase.t.sol";
-import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
 import {Participation, Bucket} from "tap-token/interfaces/ITapiocaOptionBroker.sol";
 

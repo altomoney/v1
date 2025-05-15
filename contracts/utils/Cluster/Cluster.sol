@@ -47,10 +47,9 @@ contract Cluster is Ownable, ICluster {
     // ************** //
     error NotAuthorized();
 
-    constructor(uint32 _lzChainId, address _owner) {
+    constructor(uint32 _lzChainId, address _owner) Ownable(_owner) {
         emit LzChainUpdate(0, _lzChainId);
         lzChainId = _lzChainId;
-        transferOwnership(_owner);
     }
 
     modifier isAuthorized() {

@@ -26,14 +26,14 @@
     "solady": "https://github.com/vectorized/solady#v0.0.267",
     "@boringcrypto/boring-solidity": "https://github.com/boringcrypto/BoringSolidity#78f4817d9c0d95fe9c45cd42e307ccd22cf5f4fc",
     "@uniswap/v3-core": "1.0.1",
-    "@openzeppelin/contracts": "4.9.6",
-    "@openzeppelin/contracts-v5": "npm:@openzeppelin/contracts@5.3.0",
-    "@openzeppelin/contracts-upgradeable": "4.9.6",
-    "@layerzerolabs/solidity-bytes-utils": "0.8.0",
-    "@layerzerolabs/lz-evm-messagelib-v2": "2.3.6",
-    "@layerzerolabs/lz-evm-oapp-v2": "2.3.6",
-    "@layerzerolabs/lz-evm-protocol-v2": "2.3.6",
-    "@layerzerolabs/lz-evm-v1-0.7": "2.3.6",
-    "@layerzerolabs/lz-v2-utilities": "2.3.6"
+    "@openzeppelin/contracts": "5.3.0",
+    "@openzeppelin/contracts-upgradeable": "5.3.0",
+    "@layerzerolabs/oft-evm": "3.1.4",
+    "@layerzerolabs/oapp-evm": "0.3.2",
+    "@layerzerolabs/lz-evm-protocol-v2": "3.0.94",
+    "@layerzerolabs/test-devtools-evm-foundry": "6.0.3",
+    "@layerzerolabs/lz-evm-messagelib-v2": "3.0.94",
+    "@layerzerolabs/lz-evm-v1-0.7": "3.0.94",
+    "solidity-bytes-utils": "0.8.3"
   }
 }

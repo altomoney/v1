@@ -33,6 +33,8 @@ contract TapiocaMulticall is Ownable {
         bytes returnData;
     }
 
+    constructor() Ownable(msg.sender) {}
+
     function multicall(Call[] calldata calls) public payable onlyOwner returns (Result[] memory returnData) {
         uint256 length = calls.length;
         returnData = new Result[](length);

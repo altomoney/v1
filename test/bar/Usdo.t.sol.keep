@@ -16,7 +16,6 @@ import {IERC20} from "@boringcrypto/boring-solidity/contracts/libraries/BoringER
 
 // Tapioca
 import {ITapiocaOptionBroker} from "tap-token/interfaces/ITapiocaOptionBroker.sol";
-import {IUsdo} from "tapioca-bar/usdo/IUsdo.sol";
 import {SimpleLeverageExecutor} from "tapioca-bar/leverage/SimpleLeverageExecutor.sol";
 import {ILeverageExecutor} from "tap-utils/interfaces/bar/ILeverageExecutor.sol";
 import {IOracle} from "tap-utils/oracle/interfaces/IOracle.sol";

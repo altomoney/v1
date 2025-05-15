@@ -2,13 +2,6 @@
 pragma solidity ^0.8.22;
 
 // LZ
-import {
-    SendParam,
-    MessagingFee,
-    MessagingReceipt,
-    OFTReceipt
-} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/interfaces/IOFT.sol";
-
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 // Tapioca
@@ -25,7 +18,10 @@ import {ERC20PermitStruct, ERC20PermitApprovalMsg} from "tap-utils/interfaces/co
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
 
-contract TapTokenTest is TapTestHelper {
+// DevTools imports
+import {TestHelperOz5} from "@layerzerolabs/test-devtools-evm-foundry/contracts/TestHelperOz5.sol";
+
+contract TapTokenTest is TapTestHelper, TestHelperOz5 {
     uint32 aEid = 1;
     uint32 bEid = 2;
 
@@ -80,9 +76,9 @@ contract TapTokenTest is TapTestHelper {
         vm.label(userA, "userA");
         vm.label(userB, "userB");
 
-        setUpEndpoints(3, LibraryType.UltraLightNode);
-
         cluster = new Cluster(aEid, __owner);
+
+        setUpEndpoints(2, LibraryType.UltraLightNode);
 
         aTapOFT = new TapTokenMock(
             ITapToken.TapTokenConstructorData(

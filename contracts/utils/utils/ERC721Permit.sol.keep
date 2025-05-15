@@ -2,10 +2,9 @@
 
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts-v4/utils/cryptography/EIP712.sol";
+import "@openzeppelin/contracts-v4/utils/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts-v4/token/ERC721/ERC721.sol";
 
 /**
  * Modification of the OpenZeppelin ERC20Permit contract to support ERC721 tokens.
@@ -19,9 +18,7 @@ import "@openzeppelin/contracts/utils/Counters.sol";
  * need to send a transaction, and thus is not required to hold Ether at all.
  */
 abstract contract ERC721Permit is ERC721, EIP712 {
-    using Counters for Counters.Counter;
-
-    mapping(uint256 => Counters.Counter) private _nonces;
+    mapping(uint256 => uint256) private _nonces;
 
     // solhint-disable-next-line var-name-mixedcase
     bytes32 private constant _PERMIT_TYPEHASH =
@@ -60,7 +57,7 @@ abstract contract ERC721Permit is ERC721, EIP712 {
      * @dev See {IERC20Permit-nonces}.
      */
     function nonces(uint256 _tokenId) public view virtual returns (uint256) {
-        return _nonces[_tokenId].current();
+        return _nonces[_tokenId];
     }
 
     /**
@@ -76,9 +73,8 @@ abstract contract ERC721Permit is ERC721, EIP712 {
      *
      */
     function _useNonce(uint256 _tokenId) internal virtual returns (uint256 current) {
-        Counters.Counter storage nonce = _nonces[_tokenId];
-        current = nonce.current();
-        nonce.increment();
+        current = _nonces[_tokenId];
+        _nonces[_tokenId]++;
     }
 
     function _afterTokenTransfer(address from, address to, uint256 firstTokenId, uint256 batchSize)

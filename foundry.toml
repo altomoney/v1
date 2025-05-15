@@ -28,11 +28,11 @@ remappings = [
 	'@morpho-org/bundler3/=lib/bundler3/src/',
 	'@morpho-org/irm/=lib/morpho-blue-irm/src/',
 	'@alto-monorepo/=contracts/',
+	# '@openzeppelin/contracts-upgradeable/security/=node_modules/@openzeppelin/contracts-upgradeable/utils/',
+	# '@openzeppelin/contracts/security/=node_modules/@openzeppelin/contracts/utils/',
 	'@openzeppelin/contracts/=node_modules/@openzeppelin/contracts/',
-	'@openzeppelin/contracts-v5/=node_modules/@openzeppelin/contracts-v5/',
+	'@openzeppelin/contracts-v4/=node_modules/@openzeppelin/contracts-v4/',
 	'@openzeppelin/contracts-upgradeable/=node_modules/@openzeppelin/contracts-upgradeable/',
-
-
 ]
 
 [etherscan]

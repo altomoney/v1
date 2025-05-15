@@ -5,6 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {AuthInstance} from "./AuthInstance.sol";
 import {IAuth, Authorization, Signature} from "tap-utils/interfaces/common/IAuth.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {SigUtils} from "../../helpers/SigUtils.sol";
 
 contract AuthTest is Test {
     AuthInstance public auth;
@@ -192,18 +193,6 @@ contract AuthTest is Test {
         view
         returns (bytes32)
     {
-        return ECDSA.toTypedDataHash(
-            domainSeparator,
-            keccak256(
-                abi.encode(
-                    AUTHORIZATION_TYPEHASH,
-                    authorization.owner,
-                    authorization.spender,
-                    authorization.isAuthorizedStatus,
-                    authorization.nonce,
-                    authorization.deadline
-                )
-            )
-        );
+        return SigUtils.toTypedDataHash(AUTHORIZATION_TYPEHASH, domainSeparator, authorization);
     }
 }

@@ -11,7 +11,7 @@ contract TapiocaUtilitiesBatch is UtilitiesProcedure, Ownable {
     UtilitiesReport internal _utilitiesReport;
 
     constructor(address owner, address zeroXSwapper, uint16 lzChainId, bool isTestnet, address wrappedNativeToken)
-        Ownable()
+        Ownable(msg.sender)
     {
         _utilitiesReport = _deployUtilities(owner, zeroXSwapper, lzChainId, isTestnet, wrappedNativeToken);
     }

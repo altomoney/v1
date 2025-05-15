@@ -1,24 +1,18 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.22;
 
-import {OFT} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/OFT.sol";
-import {OFTCore, IOFT} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/OFTCore.sol";
-import {
-    MessagingReceipt,
-    OFTReceipt,
-    SendParam,
-    MessagingFee
-} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/interfaces/IOFT.sol";
-import {ERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
-import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
-import {IUsdo, ERC20PermitStruct} from "./IUsdo.sol";
+import {OFT} from "@alto-monorepo/utils/layerzero/OFT.sol";
+import {IUsdo} from "./IUsdo.sol";
 import {ICluster} from "tap-utils/interfaces/common/ICluster.sol";
+
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
  * @title USDO Stablecoin
  * @author Alto
  */
-contract Usdo is OFT, Pausable, ERC20Permit, IUsdo {
+contract Usdo is Ownable, Pausable, OFT, IUsdo {
     uint256 public fees;
 
     address public flashLoanHelper;
@@ -29,11 +23,10 @@ contract Usdo is OFT, Pausable, ERC20Permit, IUsdo {
     mapping(address => bool) public allowedBurner;
 
     constructor(address endpoint, address owner, address clusterAddress)
-        ERC20Permit("USDO Stablecoin")
         OFT("USDO Stablecoin", "USDO", endpoint, owner)
+        Ownable(owner)
     {
         cluster = ICluster(clusterAddress);
-        _transferOwnership(owner);
     }
 
     /// =====================
@@ -41,27 +34,6 @@ contract Usdo is OFT, Pausable, ERC20Permit, IUsdo {
     /// =====================
     function getCluster() public view returns (ICluster) {
         return cluster;
-    }
-
-    /**
-     * @dev Returns the hash of the struct used by the permit function.
-     * @param _permitData Struct containing permit data.
-     */
-    function getTypedDataHash(ERC20PermitStruct calldata _permitData) public view returns (bytes32) {
-        bytes32 permitTypeHash_ =
-            keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
-
-        bytes32 structHash_ = keccak256(
-            abi.encode(
-                permitTypeHash_,
-                _permitData.owner,
-                _permitData.spender,
-                _permitData.value,
-                _permitData.nonce,
-                _permitData.deadline
-            )
-        );
-        return _hashTypedDataV4(structHash_);
     }
 
     /// =====================

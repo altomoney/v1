@@ -42,11 +42,10 @@ contract ZeroXSwapper is IAltoLeverageSwapper, Ownable {
     error SenderNotValid(address sender);
     error TargetNotValid(address target);
 
-    constructor(address _zeroXProxy, ICluster _cluster, address _owner) {
+    constructor(address _zeroXProxy, ICluster _cluster, address _owner) Ownable(_owner) {
         if (_zeroXProxy == address(0)) revert ZeroAddress();
         zeroXProxy = _zeroXProxy;
         cluster = _cluster;
-        transferOwnership(_owner);
     }
 
     /// **********************

@@ -16,9 +16,7 @@ contract TapiocaPostSetup is Ownable {
     address public constant BACKEND_TESTNET_ADDRESS = 0x81E1c5EbA8c723e167E1C046AAF217B8eb7b8AC2;
     uint128 public constant MULTI_TOKEN_SENDER_MINT_TOKENS = type(uint128).max;
 
-    constructor() {
-        transferOwnership(msg.sender);
-    }
+    constructor() Ownable(msg.sender) {}
 
     function postSetup(
         address multicall,

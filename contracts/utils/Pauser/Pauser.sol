@@ -50,9 +50,8 @@ contract Pauser is Ownable {
     event PauseToggledFor(address indexed _contract, bool _pause);
     event EmergencyTogglePause(bool _pause);
 
-    constructor(address _cluster, address _owner) {
+    constructor(address _cluster, address _owner) Ownable(_owner) {
         cluster = ICluster(_cluster);
-        _transferOwnership(_owner);
     }
 
     modifier onlyAllowed() {

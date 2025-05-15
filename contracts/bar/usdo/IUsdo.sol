@@ -1,15 +1,13 @@
 pragma solidity ^0.8.22;
 
-import {IOFT} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/OFTCore.sol";
-import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
+import {IOFT} from "@layerzerolabs/oft-evm/contracts/interfaces/IOFT.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {ERC20PermitStruct} from "tap-utils/interfaces/common/ICommonData.sol";
 
 /**
  * @title IUsdo Interface
  * @notice Interface for the USDO stablecoin contract
  */
-interface IUsdo is IOFT, IERC20, IERC20Permit {
+interface IUsdo is IOFT, IERC20 {
     error Usdo_NotAuthorized();
 
     /// =====================
@@ -25,7 +23,6 @@ interface IUsdo is IOFT, IERC20, IERC20Permit {
     function flashLoanHelper() external view returns (address);
     function allowedMinter(address minter) external view returns (bool);
     function allowedBurner(address burner) external view returns (bool);
-    function getTypedDataHash(ERC20PermitStruct calldata _permitData) external view returns (bytes32);
 
     /// =====================
     /// External Functions

@@ -4,7 +4,7 @@ pragma solidity ^0.8.22;
 // External
 import {ERC721Enumerable} from "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import {BaseBoringBatchable} from "@boringcrypto/boring-solidity/contracts/BoringBatchable.sol";
-import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
@@ -39,9 +39,11 @@ contract AOTAP is Ownable, ERC721, ERC721Permit, ERC721Enumerable, BaseBoringBat
     mapping(uint256 => AirdropTapOption) public options; // tokenId => Option
     mapping(uint256 => string) public tokenURIs; // tokenId => tokenURI
 
-    constructor(address _owner) ERC721("Airdrop Option TAP", "aoTAP") ERC721Permit("Airdrop Option TAP") {
-        _transferOwnership(_owner);
-    }
+    constructor(address _owner)
+        ERC721("Airdrop Option TAP", "aoTAP")
+        ERC721Permit("Airdrop Option TAP")
+        Ownable(_owner)
+    {}
 
     // ==========
     //   EVENTS
@@ -62,7 +64,7 @@ contract AOTAP is Ownable, ERC721, ERC721Permit, ERC721Enumerable, BaseBoringBat
     }
 
     function isApprovedOrOwner(address _spender, uint256 _tokenId) external view returns (bool) {
-        return _isApprovedOrOwner(_spender, _tokenId); // TODO review it || isERC721Approved(_ownerOf(_tokenId), _spender, address(this), _tokenId);
+        return _isAuthorized(_ownerOf(_tokenId), _spender, _tokenId); // TODO review it || isERC721Approved(_ownerOf(_tokenId), _spender, address(this), _tokenId);
     }
 
     /// @notice Return the owner of the tokenId and the attributes of the option.
@@ -72,7 +74,7 @@ contract AOTAP is Ownable, ERC721, ERC721Permit, ERC721Enumerable, BaseBoringBat
 
     /// @notice Check if a token exists
     function exists(uint256 _tokenId) external view returns (bool) {
-        return _exists(_tokenId);
+        return _ownerOf(_tokenId) != address(0);
     }
 
     // ==========
@@ -80,7 +82,7 @@ contract AOTAP is Ownable, ERC721, ERC721Permit, ERC721Enumerable, BaseBoringBat
     // ==========
 
     function setTokenURI(uint256 _tokenId, string calldata _tokenURI) external {
-        if (!_isApprovedOrOwner(msg.sender, _tokenId)) revert NotAuthorized();
+        if (!_isAuthorized(_ownerOf(_tokenId), msg.sender, _tokenId)) revert NotAuthorized();
         tokenURIs[_tokenId] = _tokenURI;
     }
 
@@ -109,7 +111,7 @@ contract AOTAP is Ownable, ERC721, ERC721Permit, ERC721Enumerable, BaseBoringBat
     /// @notice burns an AOTAP
     /// @param _tokenId tokenId to burn
     function burn(uint256 _tokenId) external {
-        if (!_isApprovedOrOwner(msg.sender, _tokenId)) revert NotAuthorized();
+        if (!_isAuthorized(_ownerOf(_tokenId), msg.sender, _tokenId)) revert NotAuthorized();
         _burn(_tokenId);
 
         emit Burn(msg.sender, _tokenId, options[_tokenId]);

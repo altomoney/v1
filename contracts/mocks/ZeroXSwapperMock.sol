@@ -16,9 +16,8 @@ contract ZeroXSwapperMock is IAltoLeverageSwapper, Ownable {
 
     error SenderNotValid(address sender);
 
-    constructor(ICluster _cluster, address _owner) {
+    constructor(ICluster _cluster, address _owner) Ownable(_owner) {
         cluster = _cluster;
-        transferOwnership(_owner);
     }
 
     function setCluster(ICluster _cluster) external onlyOwner {
