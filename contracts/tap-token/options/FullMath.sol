@@ -1,17 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.22;
 
-/*
-
-████████╗ █████╗ ██████╗ ██╗ ██████╗  ██████╗ █████╗ 
-╚══██╔══╝██╔══██╗██╔══██╗██║██╔═══██╗██╔════╝██╔══██╗
-   ██║   ███████║██████╔╝██║██║   ██║██║     ███████║
-   ██║   ██╔══██║██╔═══╝ ██║██║   ██║██║     ██╔══██║
-   ██║   ██║  ██║██║     ██║╚██████╔╝╚██████╗██║  ██║
-   ╚═╝   ╚═╝  ╚═╝╚═╝     ╚═╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝
-   
-*/
-
 abstract contract FullMath {
     // https://xn--2-umb.com/21/muldiv/
     function muldiv(uint256 a, uint256 b, uint256 denominator) internal pure returns (uint256 result) {

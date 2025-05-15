@@ -3,7 +3,7 @@ pragma solidity ^0.8.22;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {twTapBaseTest, TwTAP} from "../twTapBaseTest.sol";
-import {ITWTAPv2} from "tap-token/interfaces/ITWTAPv2.sol";
+import {ITWTAPv2} from "@alto-monorepo/tap-token/interfaces/ITWTAPv2.sol";
 
 contract twTap_exitPosition is twTapBaseTest {
     function setUp() public virtual override {

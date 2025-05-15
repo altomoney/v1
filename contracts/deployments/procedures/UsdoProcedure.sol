@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.22;
 
-import {Usdo} from "tapioca-bar/usdo/Usdo.sol";
+import {Usdo} from "@alto-monorepo/bar/usdo/Usdo.sol";
 import {UsdoReport} from "../interfaces/IAltoReport.sol";
-import {USDOFlashloanHelper} from "tapioca-bar/usdo/USDOFlashloanHelper.sol";
-import {IUsdo} from "tapioca-bar/usdo/IUsdo.sol";
+import {USDOFlashloanHelper} from "@alto-monorepo/bar/usdo/USDOFlashloanHelper.sol";
+import {IUsdo} from "@alto-monorepo/bar/usdo/IUsdo.sol";
 
 abstract contract UsdoProcedure {
     function _deployUsdo(address endpoint, address delegate) internal returns (UsdoReport memory report) {

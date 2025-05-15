@@ -3,10 +3,11 @@ pragma solidity ^0.8.22;
 
 import {UsdoReport, LendingReport} from "../../../interfaces/IAltoReport.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {Usdo} from "tapioca-bar/usdo/Usdo.sol";
-import {MultiTokenSender} from "tapioca-mocks/MultiTokenSender.sol";
-import {TapiocaMulticallTestnet} from "tap-utils/TapiocaMulticall/TapiocaMulticallTestnet.sol";
-import {AltoLeverage} from "contracts/bar/leverage/AltoLeverage.sol";
+
+import {Usdo} from "@alto-monorepo/bar/usdo/Usdo.sol";
+import {MultiTokenSender} from "@alto-monorepo/mocks/MultiTokenSender.sol";
+import {TapiocaMulticallTestnet} from "@alto-monorepo/utils/TapiocaMulticall/TapiocaMulticallTestnet.sol";
+import {AltoLeverage} from "@alto-monorepo/bar/leverage/AltoLeverage.sol";
 import {IMarket} from "@alto-monorepo/lending/interfaces/IMarket.sol";
 
 /// @title TapiocaPostSetup

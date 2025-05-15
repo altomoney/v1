@@ -3,20 +3,21 @@ pragma solidity ^0.8.22;
 
 import {UtilitiesReport} from "../interfaces/IAltoReport.sol";
 
-import {TapiocaMulticall} from "tap-utils/TapiocaMulticall/TapiocaMulticall.sol";
-import {TapiocaMulticallTestnet} from "tap-utils/TapiocaMulticall/TapiocaMulticallTestnet.sol";
-import {Cluster} from "tap-utils/Cluster/Cluster.sol";
-import {Pauser} from "tap-utils/Pauser/Pauser.sol";
-import {ZeroXSwapper} from "tap-utils/Swapper/ZeroXSwapper.sol";
-import {SwapperSimpleMock} from "tapioca-mocks/SwapperSimpleMock.sol";
-import {ICluster} from "tap-utils/interfaces/common/ICluster.sol";
-import {MultiTokenSender} from "tapioca-mocks/MultiTokenSender.sol";
+import {TapiocaMulticall} from "@alto-monorepo/utils/TapiocaMulticall/TapiocaMulticall.sol";
+import {TapiocaMulticallTestnet} from "@alto-monorepo/utils/TapiocaMulticall/TapiocaMulticallTestnet.sol";
+import {Cluster} from "@alto-monorepo/utils/Cluster/Cluster.sol";
+import {Pauser} from "@alto-monorepo/utils/Pauser/Pauser.sol";
+import {ZeroXSwapper} from "@alto-monorepo/utils/Swapper/ZeroXSwapper.sol";
+import {ZeroXSwapperMock} from "@alto-monorepo/mocks/ZeroXSwapperMock.sol";
+import {ICluster} from "@alto-monorepo/utils/interfaces/common/ICluster.sol";
+import {MultiTokenSender} from "@alto-monorepo/mocks/MultiTokenSender.sol";
 import {Bundler3} from "@morpho-org/bundler3/Bundler3.sol";
 import {AltoAdapter} from "@alto-monorepo/bundler/AltoAdapter.sol";
 import {AdaptiveCurveIrm} from "@alto-monorepo/lending/AdaptiveCurveIrm.sol";
 import {OracleMock} from "@alto-monorepo/lending/mocks/OracleMock.sol";
 import {ORACLE_PRICE_PRECISION} from "@alto-monorepo/lending/interfaces/IOracle.sol";
-import {AltoLeverage} from "contracts/bar/leverage/AltoLeverage.sol";
+import {AltoLeverage} from "@alto-monorepo/bar/leverage/AltoLeverage.sol";
+import {SwapperSimpleMock} from "@alto-monorepo/mocks/SwapperSimpleMock.sol";
 
 abstract contract UtilitiesProcedure {
     int256 internal constant YEAR = int256(365 days);

@@ -5,19 +5,8 @@ pragma solidity ^0.8.22;
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 // Tapioca
-import {IPausable} from "src/tap-utils/interfaces/common/IPausable.sol";
-import {ICluster} from "src/tap-utils/interfaces/common/ICluster.sol";
-
-/*
-
-████████╗ █████╗ ██████╗ ██╗ ██████╗  ██████╗ █████╗ 
-╚══██╔══╝██╔══██╗██╔══██╗██║██╔═══██╗██╔════╝██╔══██╗
-   ██║   ███████║██████╔╝██║██║   ██║██║     ███████║
-   ██║   ██╔══██║██╔═══╝ ██║██║   ██║██║     ██╔══██║
-   ██║   ██║  ██║██║     ██║╚██████╔╝╚██████╗██║  ██║
-   ╚═╝   ╚═╝  ╚═╝╚═╝     ╚═╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝
-   
-*/
+import {IPausable} from "@alto-monorepo/utils/interfaces/common/IPausable.sol";
+import {ICluster} from "@alto-monorepo/utils/interfaces/common/ICluster.sol";
 
 contract Pauser is Ownable {
     ICluster public cluster;

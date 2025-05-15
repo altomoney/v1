@@ -7,20 +7,9 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 // Tapioca
 
-import {ICluster} from "tap-utils/interfaces/common/ICluster.sol";
-import {TapToken} from "tap-token/tokens/TapToken.sol";
-import {ITWLBase, Bucket} from "tap-token/interfaces/ITWLBase.sol";
-
-/*
-
-████████╗ █████╗ ██████╗ ██╗ ██████╗  ██████╗ █████╗ 
-╚══██╔══╝██╔══██╗██╔══██╗██║██╔═══██╗██╔════╝██╔══██╗
-   ██║   ███████║██████╔╝██║██║   ██║██║     ███████║
-   ██║   ██╔══██║██╔═══╝ ██║██║   ██║██║     ██╔══██║
-   ██║   ██║  ██║██║     ██║╚██████╔╝╚██████╗██║  ██║
-   ╚═╝   ╚═╝  ╚═╝╚═╝     ╚═╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝
-   
-*/
+import {ICluster} from "@alto-monorepo/utils/interfaces/common/ICluster.sol";
+import {TapToken} from "@alto-monorepo/tap-token/tokens/TapToken.sol";
+import {ITWLBase, Bucket} from "@alto-monorepo/tap-token/interfaces/ITWLBase.sol";
 
 struct Participation {
     // 1 slot

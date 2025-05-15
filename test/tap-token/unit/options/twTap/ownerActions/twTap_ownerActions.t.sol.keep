@@ -2,9 +2,9 @@
 pragma solidity ^0.8.22;
 
 import {twTapBaseTest, TwTAP, ITWLBase} from "../twTapBaseTest.sol";
-import {ICluster} from "tap-utils/interfaces/common/ICluster.sol";
+import {ICluster} from "@alto-monorepo/utils/interfaces/common/ICluster.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {ITWTAPv2} from "tap-token/interfaces/ITWTAPv2.sol";
+import {ITWTAPv2} from "@alto-monorepo/tap-token/interfaces/ITWTAPv2.sol";
 
 contract twTap_ownerActions is twTapBaseTest {
     function test_RevertWhen_SetRescueModeAndNotOwner() external {

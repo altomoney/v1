@@ -10,26 +10,11 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 // Tapioca
 
-import {ICluster} from "tap-utils/interfaces/common/ICluster.sol";
-import {TapToken} from "tap-token/tokens/TapToken.sol";
-import {TWLBase, Bucket} from "tap-token/governance/TWLBase.sol";
-import {ITWTAPv2, Participation, Reward, WeekTotals} from "tap-token/interfaces/ITWTAPv2.sol";
+import {ICluster} from "@alto-monorepo/utils/interfaces/common/ICluster.sol";
+import {TapToken} from "@alto-monorepo/tap-token/tokens/TapToken.sol";
+import {TWLBase, Bucket} from "@alto-monorepo/tap-token/governance/TWLBase.sol";
+import {ITWTAPv2, Participation, Reward, WeekTotals} from "@alto-monorepo/tap-token/interfaces/ITWTAPv2.sol";
 
-/*
-
-████████╗ █████╗ ██████╗ ██╗ ██████╗  ██████╗ █████╗ 
-╚══██╔══╝██╔══██╗██╔══██╗██║██╔═══██╗██╔════╝██╔══██╗
-   ██║   ███████║██████╔╝██║██║   ██║██║     ███████║
-   ██║   ██╔══██║██╔═══╝ ██║██║   ██║██║     ██╔══██║
-   ██║   ██║  ██║██║     ██║╚██████╔╝╚██████╗██║  ██║
-   ╚═╝   ╚═╝  ╚═╝╚═╝     ╚═╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝
-   
-*/
-
-/**
- * @title TwTAP
- * @author Tapioca
- */
 contract TwTAP is ITWTAPv2, TWLBase, Ownable, ReentrancyGuard, Pausable {
     using SafeERC20 for IERC20;
 

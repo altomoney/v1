@@ -13,7 +13,6 @@ import {FixedPointMath} from "@alto-monorepo/lending/libraries/FixedPointMath.so
 
 import {AltoLeverage} from "@alto-monorepo/bar/leverage/AltoLeverage.sol";
 import {SwapperSimpleMock} from "@alto-monorepo/mocks/SwapperSimpleMock.sol";
-import {SZeroXSwapData} from "tap-utils/interfaces/external/IZeroX.sol";
 import {FlashBorrowLeverageData} from "@alto-monorepo/bar/leverage/AltoLeverage.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -104,22 +103,9 @@ abstract contract AdapterCommonSetup is AdapterCommon {
         bytes memory swapData,
         bool isBuyCollateral
     ) internal view returns (bytes memory) {
-        bytes memory swapCallData = abi.encode(
-            SZeroXSwapData({
-                sellToken: isBuyCollateral
-                    ? IERC20(address(market.borrowToken()))
-                    : IERC20(address(market.collateralToken())),
-                buyToken: isBuyCollateral
-                    ? IERC20(address(market.collateralToken()))
-                    : IERC20(address(market.borrowToken())),
-                swapTarget: payable(address(swapper)),
-                swapCallData: swapData
-            })
-        );
-
         // Prepare FlashBorrowLeverageData
         FlashBorrowLeverageData memory leverageData =
-            FlashBorrowLeverageData({onBehalf: receiver, minAmountOut: minAmountOut, swapData: swapCallData});
+            FlashBorrowLeverageData({onBehalf: receiver, minAmountOut: minAmountOut, swapData: hex""});
         return abi.encode(leverageData);
     }
 }

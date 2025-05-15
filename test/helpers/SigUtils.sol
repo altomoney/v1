@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity ^0.8.0;
 
-import {Authorization} from "tap-utils/interfaces/common/IAuth.sol";
+import {Authorization} from "@alto-monorepo/utils/interfaces/common/IAuth.sol";
 
 // TODO v5 here is temporary, can remove once we update our main openzeppelin version to v5
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";

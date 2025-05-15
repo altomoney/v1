@@ -2,7 +2,7 @@
 pragma solidity ^0.8.18;
 
 import {TOBTestBase} from "../TOBTestBase.t.sol";
-import {ITapiocaOptionBroker} from "tap-token/interfaces/ITapiocaOptionBroker.sol";
+import {ITapiocaOptionBroker} from "@alto-monorepo/tap-token/interfaces/ITapiocaOptionBroker.sol";
 
 contract TapiocaOptionBrokerSetPauseTest is TOBTestBase {
     function setUp() public override {

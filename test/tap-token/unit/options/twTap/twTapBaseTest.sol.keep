@@ -10,11 +10,11 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
  * Tests
  */
 import {UnitBaseTest, TwTAP, ITWLBase} from "../../UnitBaseTest.t.sol";
-import {ERC20Mock} from "tapioca-mocks/ERC20Mock.sol";
-import {ITWTAPv2} from "tap-token/interfaces/ITWTAPv2.sol";
+import {ERC20Mock} from "@alto-monorepo/mocks/ERC20Mock.sol";
+import {ITWTAPv2} from "@alto-monorepo/tap-token/interfaces/ITWTAPv2.sol";
 
-import {ITapToken} from "tap-token/tokens/ITapToken.sol";
-import {TapToken} from "tap-token/tokens/TapToken.sol";
+import {ITapToken} from "@alto-monorepo/tap-token/tokens/ITapToken.sol";
+import {TapToken} from "@alto-monorepo/tap-token/tokens/TapToken.sol";
 
 
 contract TapTokenMock is TapToken {

@@ -5,7 +5,6 @@ libs = ["node_modules", "lib"]
 test = 'test'
 script = 'script'
 no-match-path = 'playground/*'
-no-match-contract = "(Fork|Stargate)"
 
 evm_version = 'cancun'
 optimizer = true
@@ -14,25 +13,13 @@ optimizer_runs = 1
 proptest_max_shrink_iters = 500
 
 remappings = [
-	"tap-utils/=contracts/utils/",
-	"src/tap-utils/=contracts/utils/",
-	'tapiocaz/=contracts/tapiocaz/',
-	'tapioca-periph/=contracts/periph/',
-	'tap-token/=contracts/tap-token',
-	'tapioca-bar/=contracts/bar/',
-	'tapioca-mocks/=contracts/mocks/',
 	'deployments/=contracts/deployments/',
-	'tap-lending/=contracts/lending/',
 	'forge-std/=node_modules/forge-std/src/',
-	'solady/=node_modules/solady/src/',
 	'@morpho-org/bundler3/=lib/bundler3/src/',
 	'@morpho-org/irm/=lib/morpho-blue-irm/src/',
 	'@alto-monorepo-test/=test/',
 	'@alto-monorepo/=contracts/',
-	# '@openzeppelin/contracts-upgradeable/security/=node_modules/@openzeppelin/contracts-upgradeable/utils/',
-	# '@openzeppelin/contracts/security/=node_modules/@openzeppelin/contracts/utils/',
 	'@openzeppelin/contracts/=node_modules/@openzeppelin/contracts/',
-	'@openzeppelin/contracts-v4/=node_modules/@openzeppelin/contracts-v4/',
 	'@openzeppelin/contracts-upgradeable/=node_modules/@openzeppelin/contracts-upgradeable/',
 ]
 

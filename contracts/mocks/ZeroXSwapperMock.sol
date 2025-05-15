@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.22;
 
-import {IAltoLeverageSwapper} from "tapioca-bar/leverage/IAltoLeverageSwapper.sol";
-import {ICluster} from "tap-utils/interfaces/common/ICluster.sol";
+import {IAltoLeverageSwapper} from "@alto-monorepo/bar/leverage/IAltoLeverageSwapper.sol";
+import {ICluster} from "@alto-monorepo/utils/interfaces/common/ICluster.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {SZeroXSwapData} from "tap-utils/interfaces/external/IZeroX.sol";
+import {SZeroXSwapData} from "@alto-monorepo/utils/interfaces/external/IZeroX.sol";
 
 interface IERC20Mock {
     function freeMint(uint256 _val) external;

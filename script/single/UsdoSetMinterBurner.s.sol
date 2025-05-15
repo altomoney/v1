@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {Script} from "forge-std/Script.sol";
-import {TapiocaMulticall} from "tap-utils/TapiocaMulticall/TapiocaMulticall.sol";
+import {TapiocaMulticall} from "@alto-monorepo/utils/TapiocaMulticall/TapiocaMulticall.sol";
 import {Usdo} from "../../contracts/bar/usdo/Usdo.sol";
 
 // catapulta script script/single/UsdoSetMinterBurner.s.sol:UsdoSetMinterBurner --rpc-url <network-rpc-url> -vvvv --sender <sender_address>
