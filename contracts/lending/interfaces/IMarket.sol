@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity ^0.8.0;
 
-import {IAuth} from "@alto-monorepo/utils/interfaces/common/IAuth.sol";
+import {IAuth} from "@alto/utils/interfaces/common/IAuth.sol";
 
 struct Balance {
     uint128 assets;

@@ -15,7 +15,7 @@ import {
     LiquidationCalculation,
     IMarket
 } from "./interfaces/IMarket.sol";
-import {Auth} from "@alto-monorepo/utils/utils/Auth.sol";
+import {Auth} from "@alto/utils/utils/Auth.sol";
 import {IIrm} from "./interfaces/IIrm.sol";
 
 import {ExpLib, MATH_PRECISION_INT} from "./libraries/ExpLib.sol";

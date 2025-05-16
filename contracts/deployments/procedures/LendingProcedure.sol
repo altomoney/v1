@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.22;
 
-import {AltoBorrowMarket} from "@alto-monorepo/lending/AltoBorrowMarket.sol";
-import {AltoMintMarket} from "@alto-monorepo/lending/AltoMintMarket.sol";
+import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";
+import {AltoMintMarket} from "@alto/lending/AltoMintMarket.sol";
 import {LendingReport} from "../interfaces/IAltoReport.sol";
-import {ORACLE_PRICE_PRECISION} from "@alto-monorepo/lending/interfaces/IOracle.sol";
-import {LiquidationConfiguration} from "@alto-monorepo/lending/AltoBorrowMarket.sol";
+import {ORACLE_PRICE_PRECISION} from "@alto/lending/interfaces/IOracle.sol";
+import {LiquidationConfiguration} from "@alto/lending/AltoBorrowMarket.sol";
 
 abstract contract LendingProcedure {
     function _deployLending(

@@ -2,7 +2,7 @@
 pragma solidity ^0.8.22;
 
 import {twTapBaseTest, TwTAP, ITWLBase} from "../twTapBaseTest.sol";
-import {WeekTotals, Participation} from "@alto-monorepo/tap-token/governance/twTAP.sol";
+import {WeekTotals, Participation} from "@alto/tap-token/governance/twTAP.sol";
 
 contract twTap_advanceWeek is twTapBaseTest {
     uint256 constant PARTICIPATION_ID = 1;

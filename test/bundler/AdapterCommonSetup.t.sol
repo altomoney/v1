@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity ^0.8.28;
 
-import {AltoAdapter} from "@alto-monorepo/bundler/AltoAdapter.sol";
-import {IMarket, LiquidationConfiguration} from "@alto-monorepo/lending/interfaces/IMarket.sol";
-import {FixedRateIrm} from "@alto-monorepo/lending/FixedRateIrm.sol";
+import {AltoAdapter} from "@alto/bundler/AltoAdapter.sol";
+import {IMarket, LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
+import {FixedRateIrm} from "@alto/lending/FixedRateIrm.sol";
 
 import {AdapterCommon} from "./AdapterCommon.t.sol";
 import {Erc20Mock} from "../helpers/Erc20Mock.sol";
 
-import {AssetShareConversionMath} from "@alto-monorepo/lending/libraries/AssetShareConversionMath.sol";
-import {FixedPointMath} from "@alto-monorepo/lending/libraries/FixedPointMath.sol";
+import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
+import {FixedPointMath} from "@alto/lending/libraries/FixedPointMath.sol";
 
-import {AltoLeverage} from "@alto-monorepo/bar/leverage/AltoLeverage.sol";
-import {SwapperSimpleMock} from "@alto-monorepo/mocks/SwapperSimpleMock.sol";
-import {FlashBorrowLeverageData} from "@alto-monorepo/bar/leverage/AltoLeverage.sol";
+import {AltoLeverage} from "@alto/bar/leverage/AltoLeverage.sol";
+import {SwapperSimpleMock} from "@alto/mocks/SwapperSimpleMock.sol";
+import {FlashBorrowLeverageData} from "@alto/bar/leverage/AltoLeverage.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 // needed for deployCode (and Test)

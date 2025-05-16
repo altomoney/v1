@@ -3,9 +3,9 @@ pragma solidity ^0.8.22;
 
 import {Test} from "forge-std/Test.sol";
 
-import {FixedPointMath} from "@alto-monorepo/lending/libraries/FixedPointMath.sol";
+import {FixedPointMath} from "@alto/lending/libraries/FixedPointMath.sol";
 
-import {AdaptiveCurveIrm} from "@alto-monorepo/lending/AdaptiveCurveIrm.sol";
+import {AdaptiveCurveIrm} from "@alto/lending/AdaptiveCurveIrm.sol";
 import {Erc20Mock} from "../../helpers/Erc20Mock.sol";
 
 contract IrmCommon is Test {

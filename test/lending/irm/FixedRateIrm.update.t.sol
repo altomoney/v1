@@ -4,13 +4,13 @@ pragma solidity ^0.8.22;
 // needed for deployCode (and Test)
 import "forge-std/Test.sol";
 
-import {FixedPointMath} from "@alto-monorepo/lending/libraries/FixedPointMath.sol";
+import {FixedPointMath} from "@alto/lending/libraries/FixedPointMath.sol";
 
-import {FixedRateIrm} from "@alto-monorepo/lending/FixedRateIrm.sol";
+import {FixedRateIrm} from "@alto/lending/FixedRateIrm.sol";
 import {Erc20Mock} from "../../helpers/Erc20Mock.sol";
-import {OracleMock} from "@alto-monorepo/lending/mocks/OracleMock.sol";
-import {ORACLE_PRICE_PRECISION} from "@alto-monorepo/lending/interfaces/IOracle.sol";
-import {IMarket, LiquidationConfiguration} from "@alto-monorepo/lending/interfaces/IMarket.sol";
+import {OracleMock} from "@alto/lending/mocks/OracleMock.sol";
+import {ORACLE_PRICE_PRECISION} from "@alto/lending/interfaces/IOracle.sol";
+import {IMarket, LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
 import {IrmCommon} from "./IrmCommon.t.sol";
 
 uint256 constant MIN_AMOUNT = 1000;

@@ -17,8 +17,8 @@ remappings = [
 	'forge-std/=node_modules/forge-std/src/',
 	'@morpho-org/bundler3/=lib/bundler3/src/',
 	'@morpho-org/irm/=lib/morpho-blue-irm/src/',
-	'@alto-monorepo-test/=test/',
-	'@alto-monorepo/=contracts/',
+	'@alto-test/=test/',
+	'@alto/=contracts/',
 	'@openzeppelin/contracts/=node_modules/@openzeppelin/contracts/',
 	'@openzeppelin/contracts-upgradeable/=node_modules/@openzeppelin/contracts-upgradeable/',
 ]

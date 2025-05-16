@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {TOBTestBase, TapiocaOptionBroker, Bucket} from "../TOBTestBase.t.sol";
-import {ITWLBase} from "@alto-monorepo/tap-token/interfaces/ITWLBase.sol";
+import {ITWLBase} from "@alto/tap-token/interfaces/ITWLBase.sol";
 
 contract TapiocaOptionBroker_constructortree is TOBTestBase {
     function test_RevertWhen_EpochDurationIsZero() external {

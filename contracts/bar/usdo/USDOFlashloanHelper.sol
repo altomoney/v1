@@ -5,8 +5,8 @@ pragma solidity ^0.8.22;
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
-import {IERC3156FlashBorrower} from "@alto-monorepo/utils/interfaces/bar/IERC3156FlashBorrower.sol";
-import {IERC3156FlashLender} from "@alto-monorepo/utils/interfaces/bar/IERC3156FlashLender.sol";
+import {IERC3156FlashBorrower} from "@alto/utils/interfaces/bar/IERC3156FlashBorrower.sol";
+import {IERC3156FlashLender} from "@alto/utils/interfaces/bar/IERC3156FlashLender.sol";
 import {IUsdo} from "./IUsdo.sol";
 
 /**

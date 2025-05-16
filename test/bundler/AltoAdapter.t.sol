@@ -3,15 +3,15 @@ pragma solidity ^0.8.0;
 
 import "./AdapterCommonSetup.t.sol";
 
-import {Position} from "@alto-monorepo/lending/interfaces/IMarket.sol";
-import {IAuth} from "@alto-monorepo/utils/interfaces/common/IAuth.sol";
+import {Position} from "@alto/lending/interfaces/IMarket.sol";
+import {IAuth} from "@alto/utils/interfaces/common/IAuth.sol";
 
 import {ErrorsLib} from "@morpho-org/bundler3/libraries/ErrorsLib.sol";
 import {MathRayLib} from "@morpho-org/bundler3/libraries/MathRayLib.sol";
 
-import {AssetShareConversionMath} from "@alto-monorepo/lending/libraries/AssetShareConversionMath.sol";
-import {FixedPointMath, MATH_PRECISION} from "@alto-monorepo/lending/libraries/FixedPointMath.sol";
-import {Utils} from "@alto-monorepo/lending/libraries/Utils.sol";
+import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
+import {FixedPointMath, MATH_PRECISION} from "@alto/lending/libraries/FixedPointMath.sol";
+import {Utils} from "@alto/lending/libraries/Utils.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 contract AltoAdapterTest is AdapterCommonSetup {
