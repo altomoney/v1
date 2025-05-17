@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import {Utils} from "./libraries/Utils.sol";
 
-import {IUsdo} from "@alto/bar/usdo/IUsdo.sol";
+import {IUsdo} from "@alto/tokens/interfaces/IUsdo.sol";
 
 import {IIrm} from "./interfaces/IIrm.sol";
 import {Balance, Position, LiquidationConfiguration, LiquidationResult} from "./interfaces/IMarket.sol";

@@ -11,7 +11,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 // Tapioca
 
 import {ICluster} from "@alto/utils/interfaces/common/ICluster.sol";
-import {TapToken} from "@alto/tap-token/tokens/TapToken.sol";
+import {TapToken} from "@alto/tokens/TapToken.sol";
 import {TWLBase, Bucket} from "@alto/tap-token/governance/TWLBase.sol";
 import {ITWTAPv2, Participation, Reward, WeekTotals} from "@alto/tap-token/interfaces/ITWTAPv2.sol";
 

@@ -5,7 +5,7 @@ pragma solidity ^0.8.22;
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
-import {IAltoLeverageSwapper} from "@alto/bar/leverage/IAltoLeverageSwapper.sol";
+import {IAltoLeverageSwapper} from "@alto/lending/interfaces/IAltoLeverageSwapper.sol";
 import {SZeroXSwapData} from "@alto/utils/interfaces/external/IZeroX.sol";
 import {ICluster} from "@alto/utils/interfaces/common/ICluster.sol";
 

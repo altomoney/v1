@@ -8,16 +8,15 @@ import {TapiocaMulticallTestnet} from "@alto/utils/TapiocaMulticall/TapiocaMulti
 import {Cluster} from "@alto/utils/Cluster/Cluster.sol";
 import {Pauser} from "@alto/utils/Pauser/Pauser.sol";
 import {ZeroXSwapper} from "@alto/utils/Swapper/ZeroXSwapper.sol";
-import {ZeroXSwapperMock} from "@alto/mocks/ZeroXSwapperMock.sol";
 import {ICluster} from "@alto/utils/interfaces/common/ICluster.sol";
-import {MultiTokenSender} from "@alto/mocks/MultiTokenSender.sol";
+import {MultiTokenSender} from "@alto/deployments/testnet/MultiTokenSender.sol";
 import {Bundler3} from "@morpho-org/bundler3/Bundler3.sol";
-import {AltoAdapter} from "@alto/bundler/AltoAdapter.sol";
-import {AdaptiveCurveIrm} from "@alto/lending/AdaptiveCurveIrm.sol";
-import {OracleMock} from "@alto/lending/mocks/OracleMock.sol";
-import {ORACLE_PRICE_PRECISION} from "@alto/lending/interfaces/IOracle.sol";
-import {AltoLeverage} from "@alto/bar/leverage/AltoLeverage.sol";
-import {SwapperSimpleMock} from "@alto/mocks/SwapperSimpleMock.sol";
+import {AltoAdapter} from "@alto/utils/AltoAdapter.sol";
+import {AdaptiveCurveIrm} from "@alto/lending/irm/AdaptiveCurveIrm.sol";
+import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
+import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
+import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
+import {SwapperSimpleMock} from "@alto/lending/mocks/SwapperSimpleMock.sol";
 
 abstract contract UtilitiesProcedure {
     int256 internal constant YEAR = int256(365 days);
@@ -63,7 +62,10 @@ abstract contract UtilitiesProcedure {
         report.borrowIrm = address(new AdaptiveCurveIrm(config, owner));
         report.mintIrm = address(new AdaptiveCurveIrm(config, owner));
         report.altoLeverage = address(new AltoLeverage(report.zeroXSwapper, owner));
-
+        if (isTestnet && zeroXProxy == address(0)) {
+            SwapperSimpleMock(payable(report.zeroXSwapper)).setWhitelisted(address(report.altoLeverage), true);
+            SwapperSimpleMock(payable(report.zeroXSwapper)).transferOwnership(owner);
+        }
         return report;
     }
 }

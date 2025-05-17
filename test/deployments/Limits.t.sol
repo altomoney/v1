@@ -8,7 +8,7 @@ import "deployments/interfaces/IAltoReport.sol";
 import {TapiocaUsdoBatch} from "deployments/releases/tapioca-v1/batches/TapiocaUsdoBatch.sol";
 import {TapiocaUtilitiesBatch} from "deployments/releases/tapioca-v1/batches/TapiocaUtilitiesBatch.sol";
 import {TapiocaPostSetup} from "deployments/releases/tapioca-v1/batches/TapiocaPostSetup.sol";
-import {ERC20Mock} from "../bar/mocks/ERC20Mock.sol";
+import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
 import {TestHelperOz5} from "@layerzerolabs/test-devtools-evm-foundry/contracts/TestHelperOz5.sol";
 
 contract LimitsTest is Test, TestHelperOz5 {

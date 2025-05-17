@@ -7,10 +7,10 @@ import {MathLib as MathLibInt, WAD_INT} from "@morpho-org/irm/adaptive-curve-irm
 import {UtilsLib} from "@morpho-org/irm/adaptive-curve-irm/libraries/UtilsLib.sol";
 import {MathLib} from "@morpho-org/irm/adaptive-curve-irm/libraries/MathLib.sol";
 
-import {IIrm} from "./interfaces/IIrm.sol";
-import {IMarket} from "./interfaces/IMarket.sol";
-import {ExpLib} from "./libraries/ExpLib.sol";
-import {FixedPointMath} from "./libraries/FixedPointMath.sol";
+import {IIrm} from "../interfaces/IIrm.sol";
+import {IMarket} from "../interfaces/IMarket.sol";
+import {ExpLib} from "../libraries/ExpLib.sol";
+import {FixedPointMath} from "../libraries/FixedPointMath.sol";
 
 /// @title Adaptive Curve Interest Rate Model
 /// @author Tapioca Foundation

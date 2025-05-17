@@ -8,7 +8,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 // Tapioca
 
 import {ICluster} from "@alto/utils/interfaces/common/ICluster.sol";
-import {TapToken} from "@alto/tap-token/tokens/TapToken.sol";
+import {TapToken} from "@alto/tokens/TapToken.sol";
 import {ITWLBase, Bucket} from "@alto/tap-token/interfaces/ITWLBase.sol";
 
 struct Participation {

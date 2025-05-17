@@ -3,7 +3,7 @@ pragma solidity ^0.8.22;
 
 import {Signature} from "@alto/utils/interfaces/common/IAuth.sol";
 import {Cluster} from "@alto/utils/Cluster/Cluster.sol";
-import {Usdo} from "@alto/bar/usdo/Usdo.sol";
+import {Usdo} from "@alto/tokens/Usdo.sol";
 
 import {TestHelperOz5} from "@layerzerolabs/test-devtools-evm-foundry/contracts/TestHelperOz5.sol";
 import {TestHelpers} from "@alto-test/helpers/TestHelpers.sol";

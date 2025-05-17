@@ -7,7 +7,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 import {IERC3156FlashBorrower} from "@alto/utils/interfaces/bar/IERC3156FlashBorrower.sol";
 import {IERC3156FlashLender} from "@alto/utils/interfaces/bar/IERC3156FlashLender.sol";
-import {IUsdo} from "./IUsdo.sol";
+import {IUsdo} from "@alto/tokens/interfaces/IUsdo.sol";
 
 /**
  * @title USDOFlashloanHelper

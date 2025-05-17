@@ -3,13 +3,13 @@ pragma solidity ^0.8.22;
 
 import {Test} from "forge-std/Test.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {AltoBorrowMarket, LiquidationConfiguration} from "../../contracts/lending/AltoBorrowMarket.sol";
-import {FixedRateIrm} from "../../contracts/lending/FixedRateIrm.sol";
+import {AltoBorrowMarket, LiquidationConfiguration} from "@alto/lending/AltoBorrowMarket.sol";
+import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {OracleMock} from "../../contracts/lending/mocks/OracleMock.sol";
-import {ORACLE_PRICE_PRECISION} from "../../contracts/lending/interfaces/IOracle.sol";
-import {IMarketErrors} from "../../contracts/lending/interfaces/IMarket.sol";
-import {AssetShareConversionMath} from "../../contracts/lending/libraries/AssetShareConversionMath.sol";
+import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
+import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
+import {IMarketErrors} from "@alto/lending/interfaces/IMarket.sol";
+import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
 
 import {console2} from "forge-std/console2.sol";
 

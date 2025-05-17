@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.22;
 
-import {OracleMock} from "@alto/lending/mocks/OracleMock.sol";
-import {ORACLE_PRICE_PRECISION} from "@alto/lending/interfaces/IOracle.sol";
+import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
+import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 
 struct TestnetOracles {
     address stETHOracle;

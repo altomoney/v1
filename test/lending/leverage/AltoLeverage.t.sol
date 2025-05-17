@@ -3,23 +3,24 @@ pragma solidity ^0.8.22;
 
 import {Test} from "forge-std/Test.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {AltoBorrowMarket, LiquidationConfiguration} from "../../contracts/lending/AltoBorrowMarket.sol";
-import {FixedRateIrm} from "../../contracts/lending/FixedRateIrm.sol";
-import {OracleMock} from "../../contracts/lending/mocks/OracleMock.sol";
-import {ORACLE_PRICE_PRECISION} from "../../contracts/lending/interfaces/IOracle.sol";
+import {AltoBorrowMarket, LiquidationConfiguration} from "@alto/lending/AltoBorrowMarket.sol";
+import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
+import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
+import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {
     AltoLeverage,
     FlashBorrowLeverageData,
     FlashRemoveCollateralLeverageData
-} from "../../contracts/bar/leverage/AltoLeverage.sol";
-import {IAltoLeverageSwapper} from "../../contracts/bar/leverage/IAltoLeverageSwapper.sol";
-import {IMarket, Position, IMarketErrors} from "../../contracts/lending/interfaces/IMarket.sol";
+} from "@alto/lending/leverage/AltoLeverage.sol";
+import {IAltoLeverageSwapper} from "@alto/lending/interfaces/IAltoLeverageSwapper.sol";
+import {IMarket, Position, IMarketErrors} from "@alto/lending/interfaces/IMarket.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SwapperSimpleMock} from "../../contracts/mocks/SwapperSimpleMock.sol";
+import {SwapperSimpleMock} from "@alto/lending/mocks/SwapperSimpleMock.sol";
 import {console} from "forge-std/console.sol";
-import {ERC20Mock} from "./mocks/ERC20Mock.sol";
-import {FixedPointMath} from "../../contracts/lending/libraries/FixedPointMath.sol";
-import {AssetShareConversionMath} from "../../contracts/lending/libraries/AssetShareConversionMath.sol";
+
+import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
+import {FixedPointMath} from "@alto/lending/libraries/FixedPointMath.sol";
+import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
 
 contract AltoLeverageTest is Test {
     using FixedPointMath for uint256;
@@ -70,10 +71,10 @@ contract AltoLeverageTest is Test {
 
         swapper.setWhitelisted(address(leverage), true);
         // Setup initial balances for test accounts
-        borrowToken.mint(alice, INITIAL_AMOUNT);
-        collateralToken.mint(alice, INITIAL_AMOUNT);
-        borrowToken.mint(address(swapper), type(uint128).max);
-        collateralToken.mint(address(swapper), type(uint128).max);
+        deal(address(borrowToken), alice, INITIAL_AMOUNT);
+        deal(address(collateralToken), alice, INITIAL_AMOUNT);
+        deal(address(borrowToken), address(swapper), type(uint128).max);
+        deal(address(collateralToken), address(swapper), type(uint128).max);
         vm.startPrank(alice);
         borrowToken.approve(address(market), type(uint256).max);
         collateralToken.approve(address(market), type(uint256).max);
@@ -187,7 +188,7 @@ contract AltoLeverageTest is Test {
     function testSendExtraBorrowTokensToSender(uint256 leverageRandomBalance) public {
         vm.assume(leverageRandomBalance < type(uint128).max);
         vm.assume(leverageRandomBalance > 0);
-        borrowToken.mint(address(leverage), leverageRandomBalance);
+        deal(address(borrowToken), address(leverage), leverageRandomBalance);
         uint256 leverageBalance = borrowToken.balanceOf(address(leverage));
 
         uint256 borrowAmount = 4000 ether;

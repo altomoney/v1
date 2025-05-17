@@ -1,16 +1,17 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity ^0.8.28;
 
-import {AltoAdapter} from "@alto/bundler/AltoAdapter.sol";
+import {AltoAdapter} from "@alto/utils/AltoAdapter.sol";
 import {Test} from "forge-std/Test.sol";
-import {OracleMock} from "@alto/lending/mocks/OracleMock.sol";
+import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
 import {Authorization, Signature} from "@alto/utils/interfaces/common/IAuth.sol";
 import {Bundler3, Call} from "@morpho-org/bundler3/Bundler3.sol";
 import {CoreAdapter} from "@morpho-org/bundler3/adapters/CoreAdapter.sol";
 import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
-import {ORACLE_PRICE_PRECISION} from "@alto/lending/interfaces/IOracle.sol";
-import {SigUtils, Permit} from "../helpers/SigUtils.sol";
+
+import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
+import {SigUtils, Permit} from "@alto-test/helpers/SigUtils.sol";
 import {MarketInstance} from "./MarketInstance.sol";
 
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";

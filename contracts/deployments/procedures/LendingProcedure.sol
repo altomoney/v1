@@ -4,7 +4,7 @@ pragma solidity ^0.8.22;
 import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";
 import {AltoMintMarket} from "@alto/lending/AltoMintMarket.sol";
 import {LendingReport} from "../interfaces/IAltoReport.sol";
-import {ORACLE_PRICE_PRECISION} from "@alto/lending/interfaces/IOracle.sol";
+import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {LiquidationConfiguration} from "@alto/lending/AltoBorrowMarket.sol";
 
 abstract contract LendingProcedure {

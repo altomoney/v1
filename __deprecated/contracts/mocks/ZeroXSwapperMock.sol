@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.22;
 
-import {IAltoLeverageSwapper} from "@alto/bar/leverage/IAltoLeverageSwapper.sol";
+import {IAltoLeverageSwapper} from "@alto/lending/interfaces/IAltoLeverageSwapper.sol";
 import {ICluster} from "@alto/utils/interfaces/common/ICluster.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {SZeroXSwapData} from "@alto/utils/interfaces/external/IZeroX.sol";

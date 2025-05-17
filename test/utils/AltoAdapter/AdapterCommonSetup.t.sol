@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity ^0.8.28;
 
-import {AltoAdapter} from "@alto/bundler/AltoAdapter.sol";
+import {AltoAdapter} from "@alto/utils/AltoAdapter.sol";
 import {IMarket, LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
-import {FixedRateIrm} from "@alto/lending/FixedRateIrm.sol";
+import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 
 import {AdapterCommon} from "./AdapterCommon.t.sol";
-import {Erc20Mock} from "../helpers/Erc20Mock.sol";
+import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
 
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
 import {FixedPointMath} from "@alto/lending/libraries/FixedPointMath.sol";
 
-import {AltoLeverage} from "@alto/bar/leverage/AltoLeverage.sol";
-import {SwapperSimpleMock} from "@alto/mocks/SwapperSimpleMock.sol";
-import {FlashBorrowLeverageData} from "@alto/bar/leverage/AltoLeverage.sol";
+import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
+import {SwapperSimpleMock} from "@alto/lending/mocks/SwapperSimpleMock.sol";
+import {FlashBorrowLeverageData} from "@alto/lending/leverage/AltoLeverage.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 // needed for deployCode (and Test)
@@ -28,8 +28,8 @@ abstract contract AdapterCommonSetup is AdapterCommon {
     using AssetShareConversionMath for uint256;
     //using stdStorage for StdStorage;
 
-    Erc20Mock internal borrowToken;
-    Erc20Mock internal collateralToken;
+    ERC20Mock internal borrowToken;
+    ERC20Mock internal collateralToken;
 
     IMarket internal market;
     SwapperSimpleMock swapper;
@@ -40,9 +40,9 @@ abstract contract AdapterCommonSetup is AdapterCommon {
     function setUp() public virtual override {
         super.setUp();
 
-        borrowToken = new Erc20Mock("borrow", "B");
+        borrowToken = new ERC20Mock("borrow", "B");
         vm.label(address(borrowToken), "borrowToken");
-        collateralToken = new Erc20Mock("collateral", "C");
+        collateralToken = new ERC20Mock("collateral", "C");
         vm.label(address(collateralToken), "collateralToken");
 
         vm.startPrank(OWNER);

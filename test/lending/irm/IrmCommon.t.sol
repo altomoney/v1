@@ -5,14 +5,14 @@ import {Test} from "forge-std/Test.sol";
 
 import {FixedPointMath} from "@alto/lending/libraries/FixedPointMath.sol";
 
-import {AdaptiveCurveIrm} from "@alto/lending/AdaptiveCurveIrm.sol";
-import {Erc20Mock} from "../../helpers/Erc20Mock.sol";
+import {AdaptiveCurveIrm} from "@alto/lending/irm/AdaptiveCurveIrm.sol";
+import {ERC20Mock} from "../../helpers/ERC20Mock.sol";
 
 contract IrmCommon is Test {
     using FixedPointMath for uint256;
 
-    Erc20Mock internal borrowToken;
-    Erc20Mock internal collateralToken;
+    ERC20Mock internal borrowToken;
+    ERC20Mock internal collateralToken;
 
     address internal immutable USER = makeAddr("User");
 
@@ -24,8 +24,8 @@ contract IrmCommon is Test {
     uint256 constant MAX_AMOUNT = 2 ** 64;
 
     function setUp() public {
-        borrowToken = new Erc20Mock("borrow", "B");
-        collateralToken = new Erc20Mock("collateral", "C");
+        borrowToken = new ERC20Mock("borrow", "B");
+        collateralToken = new ERC20Mock("collateral", "C");
 
         deal(address(borrowToken), address(this), type(uint256).max);
         deal(address(collateralToken), address(this), type(uint256).max);
