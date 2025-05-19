@@ -14,7 +14,7 @@ import {
     LiquidationConfiguration,
     LiquidationResult,
     LiquidationCalculation,
-    IMarket
+    LiquidablePosition
 } from "./interfaces/IMarket.sol";
 import {Auth} from "@alto/utils/utils/Auth.sol";
 import {IIrm} from "./interfaces/IIrm.sol";
@@ -42,6 +42,10 @@ contract AltoBorrowMarket is Ownable, Auth, IMarketStaticTypes {
     mapping(address => Position) public position;
 
     mapping(address => bool) public authorizedCallbacks;
+
+    mapping(address => bool) public priorityLiquidators;
+
+    mapping(address => LiquidablePosition) public liquidablePositions;
 
     address public irm;
 
@@ -360,12 +364,44 @@ contract AltoBorrowMarket is Ownable, Auth, IMarketStaticTypes {
         return maxLtv.multiplyWithPrecision(MATH_PRECISION - liquidationPercentageAppliedPenalty);
     }
 
+    /// @notice Liquidate a position
+    /// @param borrower The address of the user to liquidate
+    /// @return The result of the liquidation
+    /// @dev The liquidator must be an external liquidator which tagged the position or any liquidator that waited for the grace period or a priority liquidator
     function liquidate(address borrower) external returns (LiquidationResult memory) {
         _accrueInterest();
 
         // Check if the position is underwater
         if (_isSolvent(borrower, true)) {
             revert AltoBorrowMarketLiquidatingHealthyPosition();
+        }
+
+        if (!priorityLiquidators[msg.sender] && !liquidablePositions[borrower].tagged) {
+            revert AltoBorrowMarketLiquidationUnauthorized();
+        }
+
+        if (
+            !priorityLiquidators[msg.sender] && liquidablePositions[borrower].tagged
+                && liquidablePositions[borrower].tagger == msg.sender
+        ) {
+            if (
+                block.timestamp - liquidablePositions[borrower].timestamp
+                    <= liquidationConfiguration.priorityLiquidationGracePeriod
+            ) {
+                revert AltoBorrowMarketLiquidationUnauthorized();
+            }
+        }
+        if (
+            !priorityLiquidators[msg.sender] && liquidablePositions[borrower].tagged
+                && liquidablePositions[borrower].tagger != msg.sender
+        ) {
+            if (
+                block.timestamp - liquidablePositions[borrower].timestamp
+                    <= liquidationConfiguration.priorityLiquidationGracePeriod
+                        + liquidationConfiguration.taggerLiquidationGracePeriod
+            ) {
+                revert AltoBorrowMarketLiquidationUnauthorized();
+            }
         }
 
         Position memory _position = position[borrower];
@@ -431,6 +467,8 @@ contract AltoBorrowMarket is Ownable, Auth, IMarketStaticTypes {
             totalBorrowed.assets > calc.expectedRepayAmount ? totalBorrowed.assets - calc.expectedRepayAmount : 0
         ).toUint128();
 
+        delete liquidablePositions[borrower];
+
         // TODO: handle bad debt
 
         // transfer collateral and borrow tokens
@@ -438,6 +476,8 @@ contract AltoBorrowMarket is Ownable, Auth, IMarketStaticTypes {
         // TODO: add a callback for the liqduidator to process received collateral and generate repay tokens
         //IERC20(borrowToken).safeTransferFrom(msg.sender, address(this), calc.expectedRepayAmount);
         _sendBorrowToken(msg.sender, address(this), calc.expectedRepayAmount);
+
+        emit Liquidation(borrower, collateralToken, borrowToken, msg.sender, collateralAmount, calc.expectedRepayAmount);
 
         return LiquidationResult({
             currentLtv: calc.currentLtv,
@@ -457,5 +497,33 @@ contract AltoBorrowMarket is Ownable, Auth, IMarketStaticTypes {
 
     function setAuthorizedCallback(address callback, bool value) external onlyOwner {
         authorizedCallbacks[callback] = value;
+    }
+
+    /// @notice Set an address as a priority liquidator
+    /// @param liquidator The address of the liquidator with priority liquidation rights
+    function setPriorityLiquidator(address liquidator, bool status) external onlyOwner {
+        priorityLiquidators[liquidator] = status;
+        emit PriorityLiquidatorUpdated(liquidator, status);
+    }
+
+    /// @notice Tag a position for liquidation
+    /// @param user The address of the user to tag
+    /// @param liquidator The address of the liquidator to tag the position for
+    /// @dev The external liquidator must NOT be a priority liquidator
+    function tagLiquidablePosition(address user, address liquidator) external {
+        if (_isSolvent(user, true)) {
+            revert AltoBorrowMarketLiquidatingHealthyPosition();
+        }
+        if (priorityLiquidators[liquidator]) {
+            revert AltoBorrowMarketLiquidationUnauthorized();
+        }
+        if (liquidablePositions[user].timestamp > 0) {
+            if (liquidablePositions[user].timestamp + liquidationConfiguration.liquidationWindowTag >= block.timestamp)
+            {
+                revert AltoBorrowMarketLiquidationAlreadyTagged();
+            }
+        }
+        liquidablePositions[user] = LiquidablePosition({tagged: true, tagger: liquidator, timestamp: block.timestamp});
+        emit PositionTagged(user, liquidator, block.timestamp);
     }
 }

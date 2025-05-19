@@ -4,17 +4,21 @@ pragma solidity ^0.8.22;
 import {Test} from "forge-std/Test.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {
-    AltoBorrowMarket, LiquidationConfiguration, LiquidationResult, Balance
+    AltoBorrowMarket,
+    LiquidablePosition,
+    LiquidationConfiguration,
+    LiquidationResult,
+    Balance
 } from "@alto/lending/AltoBorrowMarket.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
-
+import {IMarketBase, IMarket, IMarketErrors, IMarketEvents} from "@alto/lending/interfaces/IMarket.sol";
 import {console2} from "forge-std/console2.sol";
-
 // Create mock implementation for testing
+
 contract MockERC20 is ERC20 {
     constructor(string memory name_, string memory symbol_) ERC20(name_, symbol_) {}
 
@@ -72,6 +76,8 @@ contract AltoBorrowMarketTest is Test {
     address alice = address(0xA11CE);
     address bob = address(0xB0B);
     address charlie = address(0xC0C);
+    address taggerLiquidator = address(0xD0D);
+    address externalLiquidator = address(0xE0E);
     uint256 constant INITIAL_AMOUNT = 1000 ether;
 
     function createMarket(
@@ -108,9 +114,14 @@ contract AltoBorrowMarketTest is Test {
         borrowToken.mint(alice, INITIAL_AMOUNT);
         borrowToken.mint(bob, INITIAL_AMOUNT);
         borrowToken.mint(charlie, INITIAL_AMOUNT);
+        borrowToken.mint(taggerLiquidator, INITIAL_AMOUNT);
+        borrowToken.mint(externalLiquidator, INITIAL_AMOUNT);
+
         collateralToken.mint(alice, INITIAL_AMOUNT);
         collateralToken.mint(bob, INITIAL_AMOUNT);
         collateralToken.mint(charlie, INITIAL_AMOUNT);
+        collateralToken.mint(taggerLiquidator, INITIAL_AMOUNT);
+        collateralToken.mint(externalLiquidator, INITIAL_AMOUNT);
 
         // Approve market to spend tokens
         vm.startPrank(alice);
@@ -127,6 +138,21 @@ contract AltoBorrowMarketTest is Test {
         vm.startPrank(charlie);
         borrowToken.approve(address(market), type(uint256).max);
         collateralToken.approve(address(market), type(uint256).max);
+        vm.stopPrank();
+
+        vm.startPrank(taggerLiquidator);
+        borrowToken.approve(address(market), type(uint256).max);
+        collateralToken.approve(address(market), type(uint256).max);
+        vm.stopPrank();
+
+        vm.startPrank(externalLiquidator);
+        borrowToken.approve(address(market), type(uint256).max);
+        collateralToken.approve(address(market), type(uint256).max);
+        vm.stopPrank();
+
+        vm.startPrank(market.owner());
+        market.setPriorityLiquidator(bob, true);
+        market.setPriorityLiquidator(charlie, true);
         vm.stopPrank();
     }
 
@@ -154,7 +180,10 @@ contract AltoBorrowMarketTest is Test {
                 ltvForCompleteLiquidation: 0.9 ether,
                 dynamicBonusFeeDecaySteepness: 5 ether,
                 liquidationBaseFee: 0.05 ether,
-                minPenaltyPercentage: 0.01 ether
+                minPenaltyPercentage: 0.01 ether,
+                priorityLiquidationGracePeriod: 5 minutes,
+                taggerLiquidationGracePeriod: 2 minutes,
+                liquidationWindowTag: 3 days
             }),
             1e35,
             0.75 ether
@@ -191,7 +220,10 @@ contract AltoBorrowMarketTest is Test {
                 ltvForCompleteLiquidation: 0.9 ether,
                 dynamicBonusFeeDecaySteepness: 5 ether,
                 liquidationBaseFee: 0.05 ether,
-                minPenaltyPercentage: 0.01 ether
+                minPenaltyPercentage: 0.01 ether,
+                priorityLiquidationGracePeriod: 5 minutes,
+                taggerLiquidationGracePeriod: 2 minutes,
+                liquidationWindowTag: 3 days
             }),
             2 * ORACLE_PRICE_PRECISION,
             0.75 ether
@@ -238,7 +270,10 @@ contract AltoBorrowMarketTest is Test {
                 ltvForCompleteLiquidation: 0.9 ether,
                 dynamicBonusFeeDecaySteepness: 5 ether,
                 liquidationBaseFee: 0.05 ether,
-                minPenaltyPercentage: 0.05 ether
+                minPenaltyPercentage: 0.05 ether,
+                priorityLiquidationGracePeriod: 5 minutes,
+                taggerLiquidationGracePeriod: 2 minutes,
+                liquidationWindowTag: 3 days
             }),
             ORACLE_PRICE_PRECISION,
             0.75 ether
@@ -275,7 +310,10 @@ contract AltoBorrowMarketTest is Test {
                 ltvForCompleteLiquidation: 0.9 ether,
                 dynamicBonusFeeDecaySteepness: 5 ether,
                 liquidationBaseFee: 0.05 ether,
-                minPenaltyPercentage: 0.05 ether
+                minPenaltyPercentage: 0.05 ether,
+                priorityLiquidationGracePeriod: 5 minutes,
+                taggerLiquidationGracePeriod: 2 minutes,
+                liquidationWindowTag: 3 days
             }),
             ORACLE_PRICE_PRECISION,
             0.75 ether
@@ -301,6 +339,432 @@ contract AltoBorrowMarketTest is Test {
         assertEq(liquidationResult.collateralAmount, 0.95 ether);
         assertEq(liquidationResult.optimalRepayAmount, 0.9 ether);
 
+        vm.stopPrank();
+    }
+
+    function testTagPosition() public {
+        createMarket(
+            LiquidationConfiguration({
+                maxLiquidationLtv: 0.8 ether,
+                dynamicBonusFeeStart: 0.01 ether,
+                ltvForCompleteLiquidation: 0.9 ether,
+                dynamicBonusFeeDecaySteepness: 5 ether,
+                liquidationBaseFee: 0.05 ether,
+                minPenaltyPercentage: 0.05 ether,
+                priorityLiquidationGracePeriod: 5 minutes,
+                taggerLiquidationGracePeriod: 2 minutes,
+                liquidationWindowTag: 3 days
+            }),
+            ORACLE_PRICE_PRECISION,
+            0.75 ether
+        );
+
+        vm.startPrank(bob);
+        market.addCollateral(1 ether, bob);
+        market.borrow(0.5 ether, 0, bob, bob, "");
+        market.accrueInterest();
+        vm.stopPrank();
+
+        vm.startPrank(bob);
+        (uint128 supplyShares, uint128 borrowShares, uint128 collateralAssets) = market.position(bob);
+        assertEq(market.borrowSharesToAmount(borrowShares), 0.5 ether);
+        market.addInterest(0.4 ether);
+
+        (supplyShares, borrowShares, collateralAssets) = market.position(bob);
+        assertEq(market.borrowSharesToAmount(borrowShares), 0.9 ether);
+        vm.stopPrank();
+
+        vm.startPrank(taggerLiquidator);
+        vm.expectEmit();
+        emit IMarketEvents.PositionTagged(bob, taggerLiquidator, block.timestamp);
+        market.tagLiquidablePosition(bob, taggerLiquidator);
+        vm.stopPrank();
+
+        (bool tagged, address tagger, uint256 timestamp) = market.liquidablePositions(bob);
+        assertTrue(tagged);
+        assertEq(tagger, taggerLiquidator);
+        assertEq(timestamp, block.timestamp);
+    }
+
+    function testLiquidateTaggedPositionAsTagger() public {
+        createMarket(
+            LiquidationConfiguration({
+                maxLiquidationLtv: 0.8 ether,
+                dynamicBonusFeeStart: 0.01 ether,
+                ltvForCompleteLiquidation: 0.9 ether,
+                dynamicBonusFeeDecaySteepness: 5 ether,
+                liquidationBaseFee: 0.05 ether,
+                minPenaltyPercentage: 0.05 ether,
+                priorityLiquidationGracePeriod: 5 minutes,
+                taggerLiquidationGracePeriod: 2 minutes,
+                liquidationWindowTag: 3 days
+            }),
+            ORACLE_PRICE_PRECISION,
+            0.75 ether
+        );
+
+        vm.startPrank(bob);
+        market.addCollateral(1 ether, bob);
+        market.borrow(0.5 ether, 0, bob, bob, "");
+        market.accrueInterest();
+        vm.stopPrank();
+
+        vm.startPrank(bob);
+        (uint128 supplyShares, uint128 borrowShares, uint128 collateralAssets) = market.position(bob);
+        assertEq(market.borrowSharesToAmount(borrowShares), 0.5 ether);
+        market.addInterest(0.4 ether);
+
+        (supplyShares, borrowShares, collateralAssets) = market.position(bob);
+        assertEq(market.borrowSharesToAmount(borrowShares), 0.9 ether);
+        vm.stopPrank();
+
+        vm.startPrank(taggerLiquidator);
+        vm.expectEmit();
+        emit IMarketEvents.PositionTagged(bob, taggerLiquidator, block.timestamp);
+        market.tagLiquidablePosition(bob, taggerLiquidator);
+        vm.stopPrank();
+
+        LiquidationConfiguration memory liquidationConfiguration = IMarket(address(market)).liquidationConfiguration();
+
+        vm.warp(block.timestamp + liquidationConfiguration.priorityLiquidationGracePeriod + 1);
+        vm.startPrank(taggerLiquidator);
+        vm.expectEmit();
+        emit IMarketEvents.Liquidation(
+            bob,
+            address(collateralToken),
+            address(borrowToken),
+            taggerLiquidator,
+            950000343607371433,
+            900000343607371433
+        );
+        market.liquidate(bob);
+        vm.stopPrank();
+
+        (bool tagged, address tagger, uint256 timestamp) = market.liquidablePositions(bob);
+        assertFalse(tagged);
+        assertEq(tagger, address(0));
+        assertEq(timestamp, 0);
+    }
+
+    function testLiquidateTaggedPositionAsExternalLiquidator() public {
+        createMarket(
+            LiquidationConfiguration({
+                maxLiquidationLtv: 0.8 ether,
+                dynamicBonusFeeStart: 0.01 ether,
+                ltvForCompleteLiquidation: 0.9 ether,
+                dynamicBonusFeeDecaySteepness: 5 ether,
+                liquidationBaseFee: 0.05 ether,
+                minPenaltyPercentage: 0.05 ether,
+                priorityLiquidationGracePeriod: 5 minutes,
+                taggerLiquidationGracePeriod: 2 minutes,
+                liquidationWindowTag: 3 days
+            }),
+            ORACLE_PRICE_PRECISION,
+            0.75 ether
+        );
+
+        vm.startPrank(bob);
+        market.addCollateral(1 ether, bob);
+        market.borrow(0.5 ether, 0, bob, bob, "");
+        market.accrueInterest();
+        vm.stopPrank();
+
+        vm.startPrank(bob);
+        (uint128 supplyShares, uint128 borrowShares, uint128 collateralAssets) = market.position(bob);
+        assertEq(market.borrowSharesToAmount(borrowShares), 0.5 ether);
+        market.addInterest(0.4 ether);
+
+        (supplyShares, borrowShares, collateralAssets) = market.position(bob);
+        assertEq(market.borrowSharesToAmount(borrowShares), 0.9 ether);
+        vm.stopPrank();
+
+        vm.startPrank(taggerLiquidator);
+        vm.expectEmit();
+        emit IMarketEvents.PositionTagged(bob, taggerLiquidator, block.timestamp);
+        market.tagLiquidablePosition(bob, taggerLiquidator);
+        vm.stopPrank();
+
+        LiquidationConfiguration memory liquidationConfiguration = IMarket(address(market)).liquidationConfiguration();
+
+        vm.warp(
+            block.timestamp + liquidationConfiguration.priorityLiquidationGracePeriod
+                + liquidationConfiguration.taggerLiquidationGracePeriod + 1
+        );
+        vm.startPrank(externalLiquidator);
+        vm.expectEmit();
+        emit IMarketEvents.Liquidation(
+            bob,
+            address(collateralToken),
+            address(borrowToken),
+            externalLiquidator,
+            950000480593735489,
+            900000480593735489
+        );
+        market.liquidate(bob);
+        vm.stopPrank();
+
+        (bool tagged, address tagger, uint256 timestamp) = market.liquidablePositions(bob);
+        assertFalse(tagged);
+        assertEq(tagger, address(0));
+        assertEq(timestamp, 0);
+    }
+
+    function testLiquidateAsPriorityLiquidator() public {
+        createMarket(
+            LiquidationConfiguration({
+                maxLiquidationLtv: 0.8 ether,
+                dynamicBonusFeeStart: 0.01 ether,
+                ltvForCompleteLiquidation: 0.9 ether,
+                dynamicBonusFeeDecaySteepness: 5 ether,
+                liquidationBaseFee: 0.05 ether,
+                minPenaltyPercentage: 0.05 ether,
+                priorityLiquidationGracePeriod: 5 minutes,
+                taggerLiquidationGracePeriod: 2 minutes,
+                liquidationWindowTag: 3 days
+            }),
+            ORACLE_PRICE_PRECISION,
+            0.75 ether
+        );
+
+        vm.startPrank(bob);
+        market.addCollateral(1 ether, bob);
+        market.borrow(0.5 ether, 0, bob, bob, "");
+        market.accrueInterest();
+        vm.stopPrank();
+
+        vm.startPrank(bob);
+        (uint128 supplyShares, uint128 borrowShares, uint128 collateralAssets) = market.position(bob);
+        assertEq(market.borrowSharesToAmount(borrowShares), 0.5 ether);
+        market.addInterest(0.4 ether);
+
+        (supplyShares, borrowShares, collateralAssets) = market.position(bob);
+        assertEq(market.borrowSharesToAmount(borrowShares), 0.9 ether);
+        vm.stopPrank();
+
+        vm.startPrank(charlie);
+        vm.expectEmit();
+        emit IMarketEvents.Liquidation(
+            bob, address(collateralToken), address(borrowToken), charlie, 950000000000000000, 900000000000000000
+        );
+        market.liquidate(bob);
+        vm.stopPrank();
+    }
+
+    function testLiquidateHealthyPositionShouldRevert() public {
+        createMarket(
+            LiquidationConfiguration({
+                maxLiquidationLtv: 0.8 ether,
+                dynamicBonusFeeStart: 0.01 ether,
+                ltvForCompleteLiquidation: 0.9 ether,
+                dynamicBonusFeeDecaySteepness: 5 ether,
+                liquidationBaseFee: 0.05 ether,
+                minPenaltyPercentage: 0.05 ether,
+                priorityLiquidationGracePeriod: 5 minutes,
+                taggerLiquidationGracePeriod: 2 minutes,
+                liquidationWindowTag: 3 days
+            }),
+            ORACLE_PRICE_PRECISION,
+            0.75 ether
+        );
+
+        // Setup healthy position (low LTV)
+        vm.startPrank(bob);
+        market.addCollateral(1 ether, bob);
+        market.borrow(0.3 ether, 0, bob, bob, ""); // Low LTV position
+        vm.stopPrank();
+
+        // Try to liquidate as priority liquidator
+        vm.startPrank(charlie);
+        vm.expectRevert(IMarketErrors.AltoBorrowMarketLiquidatingHealthyPosition.selector);
+        market.liquidate(bob);
+        vm.stopPrank();
+    }
+
+    function testLiquidateUntaggedPositionAsNonPriorityShouldRevert() public {
+        createMarket(
+            LiquidationConfiguration({
+                maxLiquidationLtv: 0.8 ether,
+                dynamicBonusFeeStart: 0.01 ether,
+                ltvForCompleteLiquidation: 0.9 ether,
+                dynamicBonusFeeDecaySteepness: 5 ether,
+                liquidationBaseFee: 0.05 ether,
+                minPenaltyPercentage: 0.05 ether,
+                priorityLiquidationGracePeriod: 5 minutes,
+                taggerLiquidationGracePeriod: 2 minutes,
+                liquidationWindowTag: 3 days
+            }),
+            ORACLE_PRICE_PRECISION,
+            0.75 ether
+        );
+
+        // Setup underwater position
+        vm.startPrank(bob);
+        market.addCollateral(1 ether, bob);
+        market.borrow(0.5 ether, 0, bob, bob, "");
+        market.accrueInterest();
+        market.addInterest(0.4 ether); // Make position underwater
+        vm.stopPrank();
+
+        // Try to liquidate as non-priority liquidator
+        vm.startPrank(externalLiquidator);
+        vm.expectRevert(IMarketErrors.AltoBorrowMarketLiquidationUnauthorized.selector);
+        market.liquidate(bob);
+        vm.stopPrank();
+    }
+
+    function testLiquidateBeforeGracePeriodAsTaggerShouldRevert() public {
+        createMarket(
+            LiquidationConfiguration({
+                maxLiquidationLtv: 0.8 ether,
+                dynamicBonusFeeStart: 0.01 ether,
+                ltvForCompleteLiquidation: 0.9 ether,
+                dynamicBonusFeeDecaySteepness: 5 ether,
+                liquidationBaseFee: 0.05 ether,
+                minPenaltyPercentage: 0.05 ether,
+                priorityLiquidationGracePeriod: 5 minutes,
+                taggerLiquidationGracePeriod: 2 minutes,
+                liquidationWindowTag: 3 days
+            }),
+            ORACLE_PRICE_PRECISION,
+            0.75 ether
+        );
+
+        // Setup underwater position
+        vm.startPrank(bob);
+        market.addCollateral(1 ether, bob);
+        market.borrow(0.5 ether, 0, bob, bob, "");
+        market.accrueInterest();
+        market.addInterest(0.4 ether);
+        vm.stopPrank();
+
+        // Tag position
+        vm.startPrank(taggerLiquidator);
+        vm.expectEmit();
+        emit IMarketEvents.PositionTagged(bob, taggerLiquidator, block.timestamp);
+        market.tagLiquidablePosition(bob, taggerLiquidator);
+
+        // Try to liquidate immediately (before grace period)
+        vm.expectRevert(IMarketErrors.AltoBorrowMarketLiquidationUnauthorized.selector);
+        market.liquidate(bob);
+        vm.stopPrank();
+    }
+
+    function testLiquidateBeforeGracePeriodAsExternalShouldRevert() public {
+        createMarket(
+            LiquidationConfiguration({
+                maxLiquidationLtv: 0.8 ether,
+                dynamicBonusFeeStart: 0.01 ether,
+                ltvForCompleteLiquidation: 0.9 ether,
+                dynamicBonusFeeDecaySteepness: 5 ether,
+                liquidationBaseFee: 0.05 ether,
+                minPenaltyPercentage: 0.05 ether,
+                priorityLiquidationGracePeriod: 5 minutes,
+                taggerLiquidationGracePeriod: 2 minutes,
+                liquidationWindowTag: 3 days
+            }),
+            ORACLE_PRICE_PRECISION,
+            0.75 ether
+        );
+
+        // Setup underwater position
+        vm.startPrank(bob);
+        market.addCollateral(1 ether, bob);
+        market.borrow(0.5 ether, 0, bob, bob, "");
+        market.accrueInterest();
+        market.addInterest(0.4 ether);
+        vm.stopPrank();
+
+        // Tag position
+        vm.startPrank(taggerLiquidator);
+        vm.expectEmit();
+        emit IMarketEvents.PositionTagged(bob, taggerLiquidator, block.timestamp);
+        market.tagLiquidablePosition(bob, taggerLiquidator);
+        vm.stopPrank();
+
+        // Warp past priority grace period but before tagger grace period
+        vm.warp(block.timestamp + 6 minutes); // 5 minutes priority + 1 minute (before 2 minutes tagger period)
+
+        // Try to liquidate as external liquidator
+        vm.startPrank(externalLiquidator);
+        vm.expectRevert(IMarketErrors.AltoBorrowMarketLiquidationUnauthorized.selector);
+        market.liquidate(bob);
+        vm.stopPrank();
+    }
+
+    function testReTagPositionShouldBePossibleAfterTagWindow() public {
+        createMarket(
+            LiquidationConfiguration({
+                maxLiquidationLtv: 0.8 ether,
+                dynamicBonusFeeStart: 0.01 ether,
+                ltvForCompleteLiquidation: 0.9 ether,
+                dynamicBonusFeeDecaySteepness: 5 ether,
+                liquidationBaseFee: 0.05 ether,
+                minPenaltyPercentage: 0.05 ether,
+                priorityLiquidationGracePeriod: 5 minutes,
+                taggerLiquidationGracePeriod: 2 minutes,
+                liquidationWindowTag: 3 days
+            }),
+            ORACLE_PRICE_PRECISION,
+            0.75 ether
+        );
+
+        vm.startPrank(bob);
+        market.addCollateral(1 ether, bob);
+        market.borrow(0.5 ether, 0, bob, bob, "");
+        market.accrueInterest();
+        vm.stopPrank();
+
+        market.addInterest(0.4 ether);
+
+        vm.startPrank(taggerLiquidator);
+        vm.expectEmit();
+        emit IMarketEvents.PositionTagged(bob, taggerLiquidator, block.timestamp);
+        market.tagLiquidablePosition(bob, taggerLiquidator);
+        vm.stopPrank();
+
+        vm.warp(block.timestamp + IMarket(address(market)).liquidationConfiguration().liquidationWindowTag + 1);
+
+        vm.startPrank(alice);
+        vm.expectEmit();
+        emit IMarketEvents.PositionTagged(bob, alice, block.timestamp);
+        market.tagLiquidablePosition(bob, alice);
+        vm.stopPrank();
+    }
+
+    function testReTagPositionShouldRevert() public {
+        createMarket(
+            LiquidationConfiguration({
+                maxLiquidationLtv: 0.8 ether,
+                dynamicBonusFeeStart: 0.01 ether,
+                ltvForCompleteLiquidation: 0.9 ether,
+                dynamicBonusFeeDecaySteepness: 5 ether,
+                liquidationBaseFee: 0.05 ether,
+                minPenaltyPercentage: 0.05 ether,
+                priorityLiquidationGracePeriod: 5 minutes,
+                taggerLiquidationGracePeriod: 2 minutes,
+                liquidationWindowTag: 3 days
+            }),
+            ORACLE_PRICE_PRECISION,
+            0.75 ether
+        );
+
+        vm.startPrank(bob);
+        market.addCollateral(1 ether, bob);
+        market.borrow(0.5 ether, 0, bob, bob, "");
+        market.accrueInterest();
+        vm.stopPrank();
+
+        market.addInterest(0.4 ether);
+
+        vm.startPrank(taggerLiquidator);
+        vm.expectEmit();
+        emit IMarketEvents.PositionTagged(bob, taggerLiquidator, block.timestamp);
+        market.tagLiquidablePosition(bob, taggerLiquidator);
+        vm.stopPrank();
+
+        vm.startPrank(alice);
+        vm.expectRevert(IMarketErrors.AltoBorrowMarketLiquidationAlreadyTagged.selector);
+        market.tagLiquidablePosition(bob, alice);
         vm.stopPrank();
     }
 }
