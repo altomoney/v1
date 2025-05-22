@@ -6,7 +6,6 @@ import {UtilitiesReport} from "../interfaces/IAltoReport.sol";
 import {TapiocaMulticall} from "@alto/utils/TapiocaMulticall/TapiocaMulticall.sol";
 import {TapiocaMulticallTestnet} from "@alto/utils/TapiocaMulticall/TapiocaMulticallTestnet.sol";
 import {Cluster} from "@alto/utils/Cluster/Cluster.sol";
-import {Pauser} from "@alto/utils/Pauser/Pauser.sol";
 import {ZeroXSwapper} from "@alto/utils/Swapper/ZeroXSwapper.sol";
 import {ICluster} from "@alto/utils/interfaces/common/ICluster.sol";
 import {MultiTokenSender} from "@alto/deployments/testnet/MultiTokenSender.sol";
@@ -35,9 +34,8 @@ abstract contract UtilitiesProcedure {
         } else {
             report.tapiocaMulticall = address(new TapiocaMulticall());
         }
-        report.pauser = address(new Pauser(address(1), owner));
         if (isTestnet) {
-            report.zeroXSwapper = zeroXProxy != address(0) ? zeroXProxy : address(new SwapperSimpleMock(owner));
+            report.zeroXSwapper = zeroXProxy != address(0) ? zeroXProxy : address(new SwapperSimpleMock(address(this)));
             report.multiTokenSender = address(new MultiTokenSender(owner));
         } else {
             report.zeroXSwapper = zeroXProxy != address(0)
