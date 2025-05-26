@@ -6,7 +6,6 @@ import {UtilitiesReport} from "../interfaces/IAltoReport.sol";
 import {TapiocaMulticall} from "@alto/utils/TapiocaMulticall/TapiocaMulticall.sol";
 import {TapiocaMulticallTestnet} from "@alto/utils/TapiocaMulticall/TapiocaMulticallTestnet.sol";
 import {Cluster} from "@alto/utils/Cluster/Cluster.sol";
-import {ZeroXSwapper} from "@alto/utils/Swapper/ZeroXSwapper.sol";
 import {ICluster} from "@alto/utils/interfaces/common/ICluster.sol";
 import {MultiTokenSender} from "@alto/deployments/testnet/MultiTokenSender.sol";
 import {Bundler3} from "@morpho-org/bundler3/Bundler3.sol";
@@ -20,13 +19,10 @@ import {SwapperSimpleMock} from "@alto/lending/mocks/SwapperSimpleMock.sol";
 abstract contract UtilitiesProcedure {
     int256 internal constant YEAR = int256(365 days);
 
-    function _deployUtilities(
-        address owner,
-        address zeroXProxy,
-        uint32 lzChainId,
-        bool isTestnet,
-        address wrappedNativeToken
-    ) internal returns (UtilitiesReport memory report) {
+    function _deployUtilities(address owner, uint32 lzChainId, bool isTestnet, address wrappedNativeToken)
+        internal
+        returns (UtilitiesReport memory report)
+    {
         report.bundler3 = address(new Bundler3());
         report.altoAdapter = address(new AltoAdapter(report.bundler3, wrappedNativeToken));
         if (isTestnet) {
@@ -35,12 +31,11 @@ abstract contract UtilitiesProcedure {
             report.tapiocaMulticall = address(new TapiocaMulticall());
         }
         if (isTestnet) {
-            report.zeroXSwapper = zeroXProxy != address(0) ? zeroXProxy : address(new SwapperSimpleMock(address(this)));
+            report.leverageSwapper = address(new SwapperSimpleMock(address(this)));
             report.multiTokenSender = address(new MultiTokenSender(owner));
         } else {
-            report.zeroXSwapper = zeroXProxy != address(0)
-                ? zeroXProxy
-                : address(new ZeroXSwapper(zeroXProxy, ICluster(address(1)), owner));
+            // TODO: Implement mainnet swpper deployment once we have it
+            revert("NOT_IMPLEMENTED");
         }
         if (isTestnet) {
             TapiocaMulticallTestnet(payable(report.tapiocaMulticall)).setOwner(owner, true);
@@ -59,10 +54,10 @@ abstract contract UtilitiesProcedure {
 
         report.borrowIrm = address(new AdaptiveCurveIrm(config, owner));
         report.mintIrm = address(new AdaptiveCurveIrm(config, owner));
-        report.altoLeverage = address(new AltoLeverage(report.zeroXSwapper, owner));
-        if (isTestnet && zeroXProxy == address(0)) {
-            SwapperSimpleMock(payable(report.zeroXSwapper)).setWhitelisted(address(report.altoLeverage), true);
-            SwapperSimpleMock(payable(report.zeroXSwapper)).transferOwnership(owner);
+        report.altoLeverage = address(new AltoLeverage(report.leverageSwapper, owner));
+        if (isTestnet) {
+            SwapperSimpleMock(payable(report.leverageSwapper)).setWhitelisted(address(report.altoLeverage), true);
+            SwapperSimpleMock(payable(report.leverageSwapper)).transferOwnership(owner);
         }
         return report;
     }

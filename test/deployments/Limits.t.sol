@@ -13,7 +13,7 @@ import {TestHelperOz5} from "@layerzerolabs/test-devtools-evm-foundry/contracts/
 
 contract LimitsTest is Test, TestHelperOz5 {
     address owner;
-    address zeroXSwapper;
+    address leverageSwapper;
     address endpointMock;
     address delegate;
     uint256 constant MAX_INIT_CONSTRUCTOR_CODE_SIZE = 49152;
@@ -27,7 +27,7 @@ contract LimitsTest is Test, TestHelperOz5 {
         setUpEndpoints(1, LibraryType.UltraLightNode);
 
         owner = makeAddr("owner");
-        zeroXSwapper = makeAddr("zeroXSwapper");
+        leverageSwapper = makeAddr("leverageSwapper");
         endpointMock = address(endpoints[1]);
         delegate = owner;
 

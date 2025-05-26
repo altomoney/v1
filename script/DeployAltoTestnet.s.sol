@@ -38,7 +38,6 @@ contract DeployAltoTestnet is Script {
         input.isTestnet = true;
         input.owner = msg.sender;
         input.bbMarketBorrowCap = DEFAULT_BB_MARKET_BORROW_CAP;
-        input.zeroXProxy = address(0); // Not used in testnet
         input.wrappedNativeToken = address(1);
 
         ERC20Testnet stETH = new ERC20Testnet("stETH", 18, input.owner);
@@ -73,22 +72,21 @@ contract DeployAltoTestnet is Script {
         TapToken(payable(input.tapToken)).transfer(report.multiTokenSender, 20_000_000 ether);
         ERC20Testnet(usdc).mint(report.multiTokenSender, MULTI_TOKEN_SENDER_MINT_TOKENS);
         ERC20Testnet(stETH).mint(report.multiTokenSender, MULTI_TOKEN_SENDER_MINT_TOKENS);
-        ERC20Testnet(stETH).mint(report.zeroXSwapper, MULTI_TOKEN_SENDER_MINT_TOKENS);
-        ERC20Testnet(usdc).mint(report.zeroXSwapper, MULTI_TOKEN_SENDER_MINT_TOKENS);
+        ERC20Testnet(stETH).mint(report.leverageSwapper, MULTI_TOKEN_SENDER_MINT_TOKENS);
+        ERC20Testnet(usdc).mint(report.leverageSwapper, MULTI_TOKEN_SENDER_MINT_TOKENS);
         TapToken(payable(input.tapToken)).transfer(report.multiTokenSender, 20_000_000 ether);
         TapToken(payable(input.tapToken)).transfer(
             report.tapiocaMulticall, TapToken(payable(input.tapToken)).balanceOf(msg.sender) - 100000e18
         );
 
         console.log("AltoLeverage: ", report.altoLeverage);
-        console.log("ZeroXSwapper: ", report.zeroXSwapper);
+        console.log("LeverageSwapper: ", report.leverageSwapper);
         console.log("MultiTokenSender: ", report.multiTokenSender);
         console.log("TapiocaMulticall: ", report.tapiocaMulticall);
         console.log("Usdo: ", report.usdo);
         console.log("MarketLib: check address in broadcast/run-latest.json");
         console.log("WrappedNativeToken: ", input.wrappedNativeToken);
         console.log("IsTestnet: ", input.isTestnet);
-        console.log("ZeroXProxy: ", input.zeroXProxy);
         console.log("Deployer:", msg.sender);
         console.log("LzChainId:", vm.toString(input.lzChainId));
         console.log("TapToken: ", input.tapToken);
@@ -104,7 +102,6 @@ contract DeployAltoTestnet is Script {
         console.log("Bundler3: ", address(report.bundler3));
         console.log("AltoAdapter: ", address(report.altoAdapter));
 
-        console.log("ZeroXSwapper: ", report.zeroXSwapper);
         console.log("MultiTokenSender: ", report.multiTokenSender);
         console.log("TapiocaMulticall: ", report.tapiocaMulticall);
         console.log("Usdo: ", report.usdo);

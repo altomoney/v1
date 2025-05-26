@@ -29,7 +29,7 @@ import {TestHelperOz5} from "@layerzerolabs/test-devtools-evm-foundry/contracts/
 // @dev forge test --match-path test/deployments/ProcedureLimits.t.sol
 contract DeploymentProceduresLimits is Test, TestHelperOz5 {
     address owner;
-    address zeroXSwapper;
+    address leverageSwapper;
     address endpointMock;
     address delegate;
     uint256 constant MAX_INIT_CONSTRUCTOR_CODE_SIZE = 49152;
@@ -44,7 +44,7 @@ contract DeploymentProceduresLimits is Test, TestHelperOz5 {
         setUpEndpoints(1, LibraryType.UltraLightNode);
 
         owner = makeAddr("owner");
-        zeroXSwapper = makeAddr("zeroXSwapper");
+        leverageSwapper = makeAddr("leverageSwapper");
         endpointMock = address(endpoints[1]);
         delegate = owner;
 
@@ -66,20 +66,20 @@ contract DeploymentProceduresLimits is Test, TestHelperOz5 {
     }
 
     function test_new_UtilityBatch_isTestnet_false() public {
-        TapiocaUtilitiesBatch batch = new TapiocaUtilitiesBatch(owner, zeroXSwapper, 0, false);
+        TapiocaUtilitiesBatch batch = new TapiocaUtilitiesBatch(owner, leverageSwapper, 0, false);
         UtilitiesReport memory report = batch.getUtilitiesReport();
         assertEq(report.multiTokenSender, address(0), "multiTokenSender should be address(0)");
-        assertTrue(report.zeroXSwapper != address(0), "zeroXSwapper should not be address(0)");
+        assertTrue(report.leverageSwapper != address(0), "leverageSwapper should not be address(0)");
         assertTrue(report.tapiocaMulticall != address(0), "tapiocaMulticall should not be address(0)");
         assertTrue(report.cluster != address(0), "cluster should not be address(0)");
         assertTrue(report.pauser != address(0), "pauser should not be address(0)");
     }
 
     function test_new_UtilityBatch_isTestnet_true() public {
-        TapiocaUtilitiesBatch batch = new TapiocaUtilitiesBatch(owner, zeroXSwapper, 0, true);
+        TapiocaUtilitiesBatch batch = new TapiocaUtilitiesBatch(owner, leverageSwapper, 0, true);
         UtilitiesReport memory report = batch.getUtilitiesReport();
         assertTrue(report.multiTokenSender != address(0), "multiTokenSender should not be address(0)");
-        assertTrue(report.zeroXSwapper != address(0), "zeroXSwapper should not be address(0)");
+        assertTrue(report.leverageSwapper != address(0), "leverageSwapper should not be address(0)");
         assertTrue(report.tapiocaMulticall != address(0), "tapiocaMulticall should not be address(0)");
         assertTrue(report.cluster != address(0), "cluster should not be address(0)");
         assertTrue(report.pauser != address(0), "pauser should not be address(0)");
