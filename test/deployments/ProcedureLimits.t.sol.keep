@@ -72,7 +72,6 @@ contract DeploymentProceduresLimits is Test, TestHelperOz5 {
         assertTrue(report.leverageSwapper != address(0), "leverageSwapper should not be address(0)");
         assertTrue(report.tapiocaMulticall != address(0), "tapiocaMulticall should not be address(0)");
         assertTrue(report.cluster != address(0), "cluster should not be address(0)");
-        assertTrue(report.pauser != address(0), "pauser should not be address(0)");
     }
 
     function test_new_UtilityBatch_isTestnet_true() public {
@@ -82,7 +81,6 @@ contract DeploymentProceduresLimits is Test, TestHelperOz5 {
         assertTrue(report.leverageSwapper != address(0), "leverageSwapper should not be address(0)");
         assertTrue(report.tapiocaMulticall != address(0), "tapiocaMulticall should not be address(0)");
         assertTrue(report.cluster != address(0), "cluster should not be address(0)");
-        assertTrue(report.pauser != address(0), "pauser should not be address(0)");
     }
     
     function test_new_TapiocaBBBatchOne() public {
