@@ -6,7 +6,7 @@ import {Utils} from "./libraries/Utils.sol";
 import {IUsdo} from "@alto/tokens/interfaces/IUsdo.sol";
 
 import {IIrm} from "./interfaces/IIrm.sol";
-import {Balance, Position, LiquidationConfiguration, LiquidationResult} from "./interfaces/IMarket.sol";
+import {Balance, Position, LiquidationConfiguration} from "./interfaces/IMarket.sol";
 
 import {AltoBorrowMarket} from "./AltoBorrowMarket.sol";
 
@@ -73,6 +73,13 @@ contract AltoMintMarket is AltoBorrowMarket {
         claimableFeesAssets += openingFeeAssets.toUint128();
 
         return 0;
+    }
+
+    function _applyLiquidationBadDebt(Balance memory badDebt, address borrower) internal override {
+        totalBorrowed.shares -= badDebt.shares;
+        totalBorrowed.assets -= badDebt.assets;
+
+        position[borrower].borrowShares = 0;
     }
 
     function _sendBorrowToken(address from, address to, uint256 amount) internal override {

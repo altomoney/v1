@@ -8,3 +8,7 @@ interface IBorrowCallback {
 interface IRemoveCollateralCallback {
     function onRemoveCollateralCallback(uint256 assets, bytes calldata data) external;
 }
+
+interface ILiquidateCallback {
+    function onLiquidateCallback(uint256 assets, bytes calldata data) external;
+}

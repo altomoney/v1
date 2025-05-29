@@ -32,26 +32,18 @@ struct LiquidationConfiguration {
     uint32 liquidationWindowTag;
 }
 
-struct LiquidationResult {
-    uint256 currentLtv;
-    uint256 newLtv;
-    uint256 optimalRepayAmount;
-    uint256 collateralAmount;
-}
-
 struct LiquidationCalculation {
     uint256 collateralPrice;
     uint256 positionCollateralValue;
     uint256 positionBorrowedAssets;
-    uint256 currentLtv;
     uint256 liquidationPercentage;
     uint256 liquidationFee;
     uint256 newLtv;
     uint256 liquidatorBonusFee;
-    uint256 remainingCollateralValue;
-    uint256 collateralToSell;
-    uint256 expectedRepayAmount;
+    uint256 remainingCollateralAfterFeeInBorrowAssets;
 }
+//uint256 collateralToSell;
+// uint256 expectedRepayAmount;
 
 interface IMarketErrors {
     error AltoBorrowMarketInvalidInput();
@@ -160,13 +152,19 @@ interface IMarketEvents {
     /// @param liquidator The address of the liquidator
     /// @param liquidatedCollateral The amount of collateral that was liquidated
     /// @param repaidBorrow The amount of borrow tokens that were repaid
+    /// @param repaidBorrowShares The amount of borrow shares that were repaid
+    /// @param badDebtClearedAssets The amount of bad debt cleared
+    /// @param badDebtClearedShares The amount of bad debt shares cleared
     event Liquidation(
         address indexed user,
         address collateralToken,
         address borrowToken,
         address liquidator,
         uint256 liquidatedCollateral,
-        uint256 repaidBorrow
+        uint256 repaidBorrow,
+        uint256 repaidBorrowShares,
+        uint256 badDebtClearedAssets,
+        uint256 badDebtClearedShares
     );
 }
 

@@ -4,11 +4,7 @@ pragma solidity ^0.8.22;
 import {Test} from "forge-std/Test.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {
-    AltoBorrowMarket,
-    LiquidablePosition,
-    LiquidationConfiguration,
-    LiquidationResult,
-    Balance
+    AltoBorrowMarket, LiquidablePosition, LiquidationConfiguration, Balance
 } from "@alto/lending/AltoBorrowMarket.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -212,7 +208,7 @@ contract AltoBorrowMarketPauseTest is Test {
         market.repay(1 ether, 0, bob);
 
         vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, PAUSED_MARKET));
-        market.liquidate(alice);
+        market.liquidate(alice, hex"");
 
         vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, PAUSED_MARKET));
         market.tagLiquidablePosition(alice, bob);
@@ -258,7 +254,7 @@ contract AltoBorrowMarketPauseTest is Test {
         vm.stopPrank();
 
         vm.startPrank(alice);
-        market.liquidate(bob);
+        market.liquidate(bob, hex"");
         vm.stopPrank();
     }
 
