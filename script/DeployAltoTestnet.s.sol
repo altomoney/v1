@@ -5,7 +5,6 @@ import {AltoRelease} from "deployments/releases/tapioca-v1/AltoRelease.sol";
 import {AltoReport, TapiocaInput} from "deployments/interfaces/IAltoReport.sol";
 import {Script} from "forge-std/Script.sol";
 import {TapToken, ITapToken} from "@alto/tokens/TapToken.sol";
-import {ICluster} from "@alto/utils/interfaces/common/ICluster.sol";
 // import {TapiocaOptionBroker} from "@alto/tap-token/options/TapiocaOptionBroker.sol";
 import {TapiocaMulticall} from "@alto/utils/TapiocaMulticall/TapiocaMulticall.sol";
 import {ERC20Testnet} from "@alto/deployments/testnet/ERC20Testnet.sol";
@@ -56,8 +55,7 @@ contract DeployAltoTestnet is Script {
                     input.owner,
                     input.owner,
                     input.owner,
-                    input.owner,
-                    address(1)
+                    input.owner
                 )
             )
         );
@@ -105,9 +103,6 @@ contract DeployAltoTestnet is Script {
         console.log("MultiTokenSender: ", report.multiTokenSender);
         console.log("TapiocaMulticall: ", report.tapiocaMulticall);
         console.log("Usdo: ", report.usdo);
-        {
-            //TapToken(payable(input.tapToken)).setCluster(report.cluster);
-        }
 
         {
             /*

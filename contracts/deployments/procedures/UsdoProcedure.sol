@@ -7,7 +7,7 @@ import {IUsdo} from "@alto/tokens/interfaces/IUsdo.sol";
 
 abstract contract UsdoProcedure {
     function _deployUsdo(address endpoint, address delegate) internal returns (UsdoReport memory report) {
-        report.usdo = (address(new Usdo(endpoint, address(this), address(1))));
+        report.usdo = (address(new Usdo(endpoint, address(this))));
         //report.usdoFlashloanHelper = address(new USDOFlashloanHelper(IUsdo(report.usdo), delegate));
 
         // Usdo(payable(report.usdo)).setFlashloanHelper(report.usdoFlashloanHelper);

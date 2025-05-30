@@ -31,7 +31,6 @@ interface IUsdo is IOFT, IERC20 {
     function mint(address _to, uint256 _amount) external;
     function burn(address _from, uint256 _amount) external;
     function addFlashloanFee(uint256 _fee) external;
-    function setPause(bool _pauseState) external;
     function setFlashloanHelper(address _helper) external;
     function extractFees() external;
     function setMinterStatus(address _for, bool _status) external;

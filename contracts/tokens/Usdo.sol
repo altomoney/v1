@@ -3,38 +3,24 @@ pragma solidity ^0.8.22;
 
 import {OFT} from "@alto/utils/layerzero/OFT.sol";
 import {IUsdo} from "@alto/tokens/interfaces/IUsdo.sol";
-import {ICluster} from "@alto/utils/interfaces/common/ICluster.sol";
 
-import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+import {Pausable, IPausable} from "@alto/utils/utils/Pausable.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {PAUSED_ROLE} from "@alto/utils/utils/Constants.sol";
 
 /**
  * @title USDO Stablecoin
  * @author Alto
  */
-contract Usdo is Ownable, Pausable, OFT, IUsdo {
+contract Usdo is Pausable, OFT, IUsdo {
     uint256 public fees;
 
     address public flashLoanHelper;
 
-    ICluster public cluster;
-
     mapping(address => bool) public allowedMinter;
     mapping(address => bool) public allowedBurner;
 
-    constructor(address endpoint, address owner, address clusterAddress)
-        OFT("USDO", "USDO", endpoint, owner)
-        Ownable(owner)
-    {
-        cluster = ICluster(clusterAddress);
-    }
-
-    /// =====================
-    /// View
-    /// =====================
-    function getCluster() public view returns (ICluster) {
-        return cluster;
-    }
+    constructor(address endpoint, address owner) OFT("USDO", "USDO", endpoint, owner) Ownable(owner) {}
 
     /// =====================
     /// External
@@ -76,19 +62,6 @@ contract Usdo is Ownable, Pausable, OFT, IUsdo {
     /// =====================
     /// Owner
     /// =====================
-    /**
-     * @notice Un/Pauses this contract.
-     */
-    function setPause(bool _pauseState) external {
-        if (!cluster.hasRole(msg.sender, keccak256("PAUSABLE")) && msg.sender != owner()) {
-            revert Usdo_NotAuthorized();
-        }
-        if (_pauseState) {
-            _pause();
-        } else {
-            _unpause();
-        }
-    }
 
     /**
      * @notice sets `FlashloanHelper` contract
@@ -133,11 +106,10 @@ contract Usdo is Ownable, Pausable, OFT, IUsdo {
         emit SetBurnerStatus(_for, _status);
     }
 
-    /**
-     * @notice Sets the cluster address.
-     * @param _cluster The address of the cluster.
-     */
-    function setCluster(address _cluster) external onlyOwner {
-        cluster = ICluster(_cluster);
+    modifier whenNotPaused() {
+        if (paused[PAUSED_ROLE]) {
+            revert IPausable.IsPaused(PAUSED_ROLE);
+        }
+        _;
     }
 }

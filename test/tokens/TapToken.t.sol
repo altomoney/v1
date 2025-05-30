@@ -2,7 +2,6 @@
 pragma solidity ^0.8.22;
 
 import {Signature} from "@alto/utils/interfaces/common/IAuth.sol";
-import {Cluster} from "@alto/utils/Cluster/Cluster.sol";
 import {TapToken} from "@alto/tokens/TapToken.sol";
 import {ITapToken} from "@alto/tokens/interfaces/ITapToken.sol";
 import "forge-std/Test.sol";
@@ -12,7 +11,6 @@ import {TestHelpers} from "@alto-test/helpers/TestHelpers.sol";
 
 contract AltoTokenTest is TestHelpers, TestHelperOz5 {
     TapToken tapToken;
-    Cluster cluster = new Cluster(1, address(this));
 
     address internal immutable USER = makeAddr("User");
 
@@ -29,16 +27,13 @@ contract AltoTokenTest is TestHelpers, TestHelperOz5 {
                 lTap: address(4),
                 dao: address(5),
                 airdrop: address(6),
-                owner: address(this),
-                cluster: address(cluster)
+                owner: address(this)
             })
         );
         vm.label(address(tapToken), "tapToken");
     }
 
-    function test_constructor() public {
-        assertEq(address(tapToken.cluster()), address(cluster));
-    }
+    function test_constructor() public {}
 
     function test_erc20_permit(uint256 privateKey, uint32 deadline, uint256 amount) public {
         address user;
