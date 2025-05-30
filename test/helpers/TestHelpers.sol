@@ -3,7 +3,7 @@ pragma solidity ^0.8.22;
 
 import {Test} from "forge-std/Test.sol";
 import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
-import {Signature} from "@alto/utils/interfaces/common/IAuth.sol";
+import {Signature} from "@alto/utils/interfaces/IAuth.sol";
 import {SigUtils, Permit} from "@alto-test/helpers/SigUtils.sol";
 
 uint256 constant SIGNATURE_DEADLINE = type(uint32).max;

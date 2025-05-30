@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity ^0.8.0;
 
-import {Authorization} from "@alto/utils/interfaces/common/IAuth.sol";
+import {Authorization} from "@alto/utils/interfaces/IAuth.sol";
 
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 

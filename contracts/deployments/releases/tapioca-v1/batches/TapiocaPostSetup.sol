@@ -5,8 +5,8 @@ import {UsdoReport, LendingReport} from "../../../interfaces/IAltoReport.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 import {Usdo} from "@alto/tokens/Usdo.sol";
-import {MultiTokenSender} from "@alto/deployments/testnet/MultiTokenSender.sol";
-import {TapiocaMulticallTestnet} from "@alto/utils/TapiocaMulticall/TapiocaMulticallTestnet.sol";
+import {MultiTokenSender} from "@alto/deployments/contracts/testnet/MultiTokenSender.sol";
+import {TapiocaMulticallTestnet} from "@alto/deployments/contracts/TapiocaMulticall/TapiocaMulticallTestnet.sol";
 import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
 import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
 

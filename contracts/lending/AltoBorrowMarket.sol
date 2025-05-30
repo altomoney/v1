@@ -15,16 +15,17 @@ import {
     LiquidationCalculation,
     LiquidablePosition
 } from "./interfaces/IMarket.sol";
-import {Auth} from "@alto/utils/utils/Auth.sol";
+import {Auth} from "@alto/utils/Auth.sol";
 import {IIrm} from "./interfaces/IIrm.sol";
 
 import {ExpLib, MATH_PRECISION_INT} from "./libraries/ExpLib.sol";
 import {FixedPointMath, MATH_PRECISION} from "./libraries/FixedPointMath.sol";
 import {Utils} from "./libraries/Utils.sol";
+
+import {PAUSED_MARKET, FROZEN_MARKET} from "@alto/utils/Constants.sol";
 import {IMarketStaticTypes} from "./interfaces/IMarket.sol";
-import {Pausable, IPausable} from "@alto/utils/utils/Pausable.sol";
+import {Pausable, IPausable} from "@alto/utils/Pausable.sol";
 import {AssetShareConversionMath} from "./libraries/AssetShareConversionMath.sol";
-import {PAUSED_MARKET, FROZEN_MARKET} from "@alto/utils/utils/Constants.sol";
 import {IBorrowCallback, IRemoveCollateralCallback, ILiquidateCallback} from "./interfaces/IMarketCallbacks.sol";
 
 contract AltoBorrowMarket is Auth, Pausable, IMarketStaticTypes {

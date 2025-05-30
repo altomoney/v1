@@ -11,8 +11,8 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {IMarketBase, IMarket} from "@alto/lending/interfaces/IMarket.sol";
-import {PAUSED_MARKET, FROZEN_MARKET} from "@alto/utils/utils/Constants.sol";
-import {IPausable} from "@alto/utils/utils/Pausable.sol";
+import {PAUSED_MARKET, FROZEN_MARKET} from "@alto/utils/Constants.sol";
+import {IPausable} from "@alto/utils/Pausable.sol";
 
 // Create mock implementation for testing
 contract MockERC20 is ERC20 {

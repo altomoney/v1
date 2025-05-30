@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.22;
 
-import {OFT} from "@alto/utils/layerzero/OFT.sol";
+import {OFT} from "@alto/utils/OFT.sol";
 import {IUsdo} from "@alto/tokens/interfaces/IUsdo.sol";
 
-import {Pausable, IPausable} from "@alto/utils/utils/Pausable.sol";
+import {Pausable, IPausable} from "@alto/utils/Pausable.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {PAUSED_ROLE} from "@alto/utils/utils/Constants.sol";
+import {PAUSED_ROLE} from "@alto/utils/Constants.sol";
 
 /**
  * @title USDO Stablecoin
