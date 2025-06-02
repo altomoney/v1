@@ -1,10 +1,10 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
 import {UsdoReport, LendingReport} from "../../../interfaces/IAltoReport.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
-import {Usdo} from "@alto/tokens/Usdo.sol";
+import {USDO} from "@alto/tokens/USDO.sol";
 import {MultiTokenSender} from "@alto/deployments/contracts/testnet/MultiTokenSender.sol";
 import {AltoMulticallTestnet} from "@alto/deployments/contracts/multicall/AltoMulticallTestnet.sol";
 import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
@@ -27,9 +27,9 @@ contract AltoPostSetup is Ownable {
         address altoLeverage,
         address leverageSwapper
     ) external onlyOwner {
-        Usdo(payable(usdo)).setMinterStatus(address(mintMarket), true);
-        Usdo(payable(usdo)).setMinterStatus(address(this), true);
-        Usdo(payable(usdo)).setBurnerStatus(address(mintMarket), true);
+        USDO(payable(usdo)).setMinterStatus(address(mintMarket), true);
+        USDO(payable(usdo)).setMinterStatus(address(this), true);
+        USDO(payable(usdo)).setBurnerStatus(address(mintMarket), true);
 
         MultiTokenSender(multiTokenSender).updateWhitelist(BACKEND_TESTNET_ADDRESS, true);
 
@@ -37,17 +37,17 @@ contract AltoPostSetup is Ownable {
         AltoMulticallTestnet(payable(multicall)).setOwner(0xd7F6Fa30BC8c0E5003689C332bd2b9400Ed87367, true);
         AltoMulticallTestnet(payable(multicall)).setOwner(0x4778c2AA94a8D05D63e4C07eb68021528985304C, true);
 
-        Usdo(payable(usdo)).mint(multiTokenSender, MULTI_TOKEN_SENDER_MINT_TOKENS);
-        Usdo(payable(usdo)).mint(leverageSwapper, MULTI_TOKEN_SENDER_MINT_TOKENS);
+        USDO(payable(usdo)).mint(multiTokenSender, MULTI_TOKEN_SENDER_MINT_TOKENS);
+        USDO(payable(usdo)).mint(leverageSwapper, MULTI_TOKEN_SENDER_MINT_TOKENS);
         AltoLeverage(payable(altoLeverage)).setMarket(address(borrowMarket), true);
         AltoLeverage(payable(altoLeverage)).setMarket(address(mintMarket), true);
         IMarket(borrowMarket).setAuthorizedCallback(address(altoLeverage), true);
         IMarket(mintMarket).setAuthorizedCallback(address(altoLeverage), true);
 
-        Usdo(payable(usdo)).setMinterStatus(address(this), false);
+        USDO(payable(usdo)).setMinterStatus(address(this), false);
         // Transfer ownership to the delegate
-        Usdo(payable(usdo)).setDelegate(multicall);
-        Usdo(payable(usdo)).transferOwnership(multicall);
+        USDO(payable(usdo)).setDelegate(multicall);
+        USDO(payable(usdo)).transferOwnership(multicall);
         MultiTokenSender(multiTokenSender).transferOwnership(multicall);
         MultiTokenSender(borrowMarket).transferOwnership(multicall);
         MultiTokenSender(mintMarket).transferOwnership(multicall);

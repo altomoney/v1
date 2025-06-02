@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -6,7 +6,7 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IAltoLeverageSwapper} from "@alto/lending/interfaces/IAltoLeverageSwapper.sol";
 import {IMarket, Balance, Position} from "@alto/lending/interfaces/IMarket.sol";
-import {IBorrowCallback} from "../../lending/interfaces/IMarketCallbacks.sol";
+import {IBorrowCallback, IRemoveCollateralCallback} from "../../lending/interfaces/IMarketCallbacks.sol";
 import {AssetShareConversionMath} from "../libraries/AssetShareConversionMath.sol";
 
 struct FlashBorrowLeverageData {
@@ -21,7 +21,14 @@ struct FlashRemoveCollateralLeverageData {
     bytes swapData;
 }
 
-contract AltoLeverage is Ownable, IBorrowCallback {
+/// @title Alto Leverage
+/// @author Alto Foundation
+/// @custom:contact security@alto.xyz
+/// @notice A contract that allows users to leverage and deleverage their collateral by swapping it for a different asset.
+/// @dev This contract is used to leverage and deleverage collateral of a borrow position on behalf of users.
+/// It is used in the AltoLeverageSwapper contract to swap assets.
+/// It is also used in the AltoBorrowMarket contract in `borrow` and `removeCollateral` functions.
+contract AltoLeverage is Ownable, IBorrowCallback, IRemoveCollateralCallback {
     using AssetShareConversionMath for uint256;
     using SafeERC20 for IERC20;
     using SafeCast for uint256;

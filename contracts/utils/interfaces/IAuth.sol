@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
 struct Authorization {
@@ -16,12 +16,29 @@ struct Signature {
 }
 
 interface IAuth {
+    /// @notice Emitted when the authorization is set.
+    /// @param caller The address of the caller.
+    /// @param owner The address of the owner.
+    /// @param spender The address of the spender.
+    /// @param isAuthorized The authorization status.
     event SetAuthorization(address indexed caller, address indexed owner, address indexed spender, bool isAuthorized);
+
+    /// @notice Emitted when the nonce is incremented.
+    /// @param caller The address of the caller.
+    /// @param owner The address of the owner.
+    /// @param nonce The nonce.
     event IncrementNonce(address indexed caller, address indexed owner, uint256 nonce);
 
+    /// @notice Error thrown when the authorization is already set.
     error AuthAuthorizationAlreadySet();
+
+    /// @notice Error thrown when the signature's deadline expired.
     error AuthSignatureExpired();
+
+    /// @notice Error thrown when the nonce is invalid.
     error AuthInvalidNonce();
+
+    /// @notice Error thrown when the signature is invalid because of various reasons.
     error AuthInvalidSignature();
 
     /// @dev Returns whether the sender is authorized to manage `owner`'s positions.

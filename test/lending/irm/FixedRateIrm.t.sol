@@ -49,14 +49,14 @@ contract FixedRateIrmTest is Test {
     }
 
     function testSetBorrowRateViaConstuctorZero() external {
-        vm.expectRevert(IIrm.Alto_IrmInvalidParams.selector);
+        vm.expectRevert(IIrm.IrmInvalidParams.selector);
         new FixedRateIrmMock(0, address(this));
     }
 
     function testSetBorrowRateViaConstuctorOverMaxBorrowRate(uint256 borrowRate) external {
         borrowRate = bound(borrowRate, fixedRateIrm.MAX_BORROW_RATE() + 1, type(uint256).max);
 
-        vm.expectRevert(IIrm.Alto_IrmInvalidParams.selector);
+        vm.expectRevert(IIrm.IrmInvalidParams.selector);
         new FixedRateIrmMock(borrowRate, address(this));
     }
 
@@ -73,7 +73,7 @@ contract FixedRateIrmTest is Test {
         FixedRateIrmMock irmMock = new FixedRateIrmMock(INITIAL_BORROW_RATE, address(this));
 
         irmMock.setMarket(address(1));
-        vm.expectRevert(IIrm.Alto_IrmMarketAlreadySet.selector);
+        vm.expectRevert(IIrm.IrmMarketAlreadySet.selector);
         irmMock.setMarket(address(2));
     }
 
@@ -96,19 +96,19 @@ contract FixedRateIrmTest is Test {
     function testSetBorrowRateMarketUnset(uint256 borrowRate) external {
         FixedRateIrmMock irmMock = new FixedRateIrmMock(INITIAL_BORROW_RATE, address(this));
 
-        vm.expectRevert(IIrm.Alto_IrmMarketNotSet.selector);
+        vm.expectRevert(IIrm.IrmMarketNotSet.selector);
         irmMock.setBorrowRate(borrowRate);
     }
 
     function testSetBorrowRateZero() external {
-        vm.expectRevert(IIrm.Alto_IrmInvalidParams.selector);
+        vm.expectRevert(IIrm.IrmInvalidParams.selector);
         fixedRateIrm.setBorrowRate(0);
     }
 
     function testSetBorrowRateOverMaxBorrowRate(uint256 borrowRate) external {
         borrowRate = bound(borrowRate, fixedRateIrm.MAX_BORROW_RATE() + 1, type(uint256).max);
 
-        vm.expectRevert(IIrm.Alto_IrmInvalidParams.selector);
+        vm.expectRevert(IIrm.IrmInvalidParams.selector);
         fixedRateIrm.setBorrowRate(borrowRate);
     }
 
@@ -126,7 +126,7 @@ contract FixedRateIrmTest is Test {
     function testUnsetMarketInterestRateViewRevert() external {
         FixedRateIrmMock irmMock = new FixedRateIrmMock(INITIAL_BORROW_RATE, address(this));
 
-        vm.expectRevert(IIrm.Alto_IrmMarketNotSet.selector);
+        vm.expectRevert(IIrm.IrmMarketNotSet.selector);
         irmMock.updateInterestRateView(0, 0);
     }
 
@@ -155,12 +155,12 @@ contract FixedRateIrmTest is Test {
         FixedRateIrmMock irmMock = new FixedRateIrmMock(INITIAL_BORROW_RATE, address(this));
 
         vm.prank(address(fixedRateIrm.market()));
-        vm.expectRevert(IIrm.Alto_IrmUnauthorized.selector);
+        vm.expectRevert(IIrm.IrmUnauthorized.selector);
         irmMock.updateInterestRate(0, 0);
     }
 
     function testNonMarketInterestRateRevert() external {
-        vm.expectRevert(IIrm.Alto_IrmUnauthorized.selector);
+        vm.expectRevert(IIrm.IrmUnauthorized.selector);
         fixedRateIrm.updateInterestRate(0, 0);
     }
 }

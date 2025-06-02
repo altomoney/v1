@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import {Script} from "forge-std/Script.sol";
 import {AltoMulticall} from "@alto/deployments/contracts/multicall/AltoMulticall.sol";
-import {Usdo} from "@alto/tokens/Usdo.sol";
+import {USDO} from "@alto/tokens/USDO.sol";
 
 // catapulta script script/single/UsdoSetMinterBurner.s.sol:UsdoSetMinterBurner --rpc-url <network-rpc-url> -vvvv --sender <sender_address>
 contract UsdoSetMinterBurner is Script {
@@ -18,12 +18,12 @@ contract UsdoSetMinterBurner is Script {
         calls[0] = AltoMulticall.Call({
             target: usdo,
             allowFailure: false,
-            callData: abi.encodeWithSelector(Usdo.setMinterStatus.selector, target, status)
+            callData: abi.encodeWithSelector(USDO.setMinterStatus.selector, target, status)
         });
         calls[1] = AltoMulticall.Call({
             target: usdo,
             allowFailure: false,
-            callData: abi.encodeWithSelector(Usdo.setBurnerStatus.selector, target, status)
+            callData: abi.encodeWithSelector(USDO.setBurnerStatus.selector, target, status)
         });
         AltoMulticall(payable(multicall)).multicall(calls);
 

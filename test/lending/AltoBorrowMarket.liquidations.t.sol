@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
 import {Test} from "forge-std/Test.sol";
@@ -657,7 +657,7 @@ contract AltoBorrowMarketTest is Test {
 
         // Try to liquidate as priority liquidator
         vm.startPrank(liquidator);
-        vm.expectRevert(IMarketErrors.AltoBorrowMarketLiquidatingHealthyPosition.selector);
+        vm.expectRevert(IMarketErrors.AltoBorrowMarketLiquidatingSolventPosition.selector);
         market.liquidate(bob, hex"");
         vm.stopPrank();
     }

@@ -7,7 +7,7 @@ import {Script} from "forge-std/Script.sol";
 import {AltoToken, IAltoToken} from "@alto/tokens/AltoToken.sol";
 import {AltoMulticall} from "@alto/deployments/contracts/multicall/AltoMulticall.sol";
 import {ERC20Testnet} from "@alto/deployments/contracts/testnet/ERC20Testnet.sol";
-import {Usdo} from "@alto/tokens/Usdo.sol";
+import {USDO} from "@alto/tokens/USDO.sol";
 import {
     TestnetOracles,
     TestnetOraclesBatch
@@ -65,7 +65,7 @@ contract DeployAltoTestnet is Script {
         console.log("LeverageSwapper: ", report.leverageSwapper);
         console.log("MultiTokenSender: ", report.multiTokenSender);
         console.log("AltoMulticall: ", report.altoMulticall);
-        console.log("Usdo: ", report.usdo);
+        console.log("USDO: ", report.usdo);
         console.log("MarketLib: check address in broadcast/run-latest.json");
         console.log("WrappedNativeToken: ", input.wrappedNativeToken);
         console.log("IsTestnet: ", input.isTestnet);
@@ -86,7 +86,7 @@ contract DeployAltoTestnet is Script {
 
         console.log("MultiTokenSender: ", report.multiTokenSender);
         console.log("AltoMulticall: ", report.altoMulticall);
-        console.log("Usdo: ", report.usdo);
+        console.log("USDO: ", report.usdo);
 
         vm.stopBroadcast();
     }

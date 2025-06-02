@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.22;
 
 import {OFT} from "@alto/utils/OFT.sol";
@@ -12,7 +12,10 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IAltoToken} from "@alto/tokens/interfaces/IAltoToken.sol";
 import {PAUSED_ROLE} from "@alto/utils/Constants.sol";
 
-/// @title AltoToken
+/// @title Alto Token
+/// @author Alto Foundation
+/// @custom:contact security@alto.xyz
+/// @notice The Alto Token is the native token of the Alto Protocol.
 contract AltoToken is Pausable, OFT, IAltoToken {
     mapping(address => bool) public allowedMinter;
     mapping(address => bool) public allowedBurner;

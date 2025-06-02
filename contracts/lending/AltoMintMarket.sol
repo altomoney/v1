@@ -1,19 +1,22 @@
-// SPDX-License-Identifier: GPL-2.0-or-later
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.0;
 
-import {Utils} from "./libraries/Utils.sol";
-
-import {IUsdo} from "@alto/tokens/interfaces/IUsdo.sol";
+import {Uint128Converter} from "./libraries/Uint128Converter.sol";
 
 import {IIrm} from "./interfaces/IIrm.sol";
 import {Balance, Position, LiquidationConfiguration} from "./interfaces/IMarket.sol";
+import {IMintableERC20} from "./interfaces/IMintableERC20.sol";
 
 import {AltoBorrowMarket} from "./AltoBorrowMarket.sol";
 
+/// @title Alto Mint Market
+/// @author Alto Foundation
+/// @custom:contact security@alto.xyz
+/// @notice An Isolated Mint Market
 contract AltoMintMarket is AltoBorrowMarket {
-    using Utils for uint256;
+    using Uint128Converter for uint256;
 
-    error Alto_MintMarket_NotImplemented();
+    error AltoMintMarketNotImplemented();
 
     uint128 public claimableFeesAssets;
 
@@ -52,15 +55,21 @@ contract AltoMintMarket is AltoBorrowMarket {
         totalSupply.assets = _debtCeiling.toUint128();
     }
 
+    /// @dev Disabled on mint market
     function addSupply(uint256, uint256, address) external override returns (uint256, uint256) {
-        revert Alto_MintMarket_NotImplemented();
+        revert AltoMintMarketNotImplemented();
     }
 
+    /// @dev Disabled on mint market
     function removeSupply(uint256, uint256, address, address) external override returns (uint256, uint256) {
-        revert Alto_MintMarket_NotImplemented();
+        revert AltoMintMarketNotImplemented();
     }
 
     function _accrueInterest() internal override {
+        if (irm == address(0)) {
+            return;
+        }
+
         (uint256 borrowRate, uint256 interest) = IIrm(irm).updateInterestRate(totalSupply.assets, totalBorrowed.assets);
 
         totalBorrowed.assets += interest.toUint128();
@@ -84,15 +93,15 @@ contract AltoMintMarket is AltoBorrowMarket {
 
     function _sendBorrowToken(address from, address to, uint256 amount) internal override {
         if (from == address(this)) {
-            IUsdo(borrowToken).mint(to, amount);
+            IMintableERC20(borrowToken).mint(to, amount);
         } else {
-            IUsdo(borrowToken).burn(from, amount);
+            IMintableERC20(borrowToken).burn(from, amount);
         }
     }
 
     function claimInterest() external {
         uint256 interest = claimableFeesAssets;
-        IUsdo(borrowToken).mint(feeRecipient, interest);
+        IMintableERC20(borrowToken).mint(feeRecipient, interest);
         claimableFeesAssets = 0;
     }
 }

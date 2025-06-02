@@ -4,7 +4,9 @@ pragma solidity ^0.8.0;
 import {FixedPointMath} from "./FixedPointMath.sol";
 
 /// @title AssetShareConversionMath
-/// @notice Library for converting between asset amounts and share amounts with precision control
+/// @author Alto Foundation
+/// @custom:contact security@alto.xyz
+/// @notice Library for converting between asset amounts and share amounts with precision control.
 library AssetShareConversionMath {
     using FixedPointMath for uint256;
 
@@ -17,33 +19,27 @@ library AssetShareConversionMath {
     /// @param totalAssetSupply The total supply of assets
     /// @param totalShareSupply The total supply of shares
     /// @return The equivalent amount in shares, rounded up
-    function convertToSharesUp(
-        uint256 assetAmount,
-        uint256 totalAssetSupply,
-        uint256 totalShareSupply
-    ) internal pure returns (uint256) {
-        return assetAmount.divideWithRounding(
-            totalShareSupply + VIRTUAL_SHARES,
-            totalAssetSupply + VIRTUAL_ASSETS,
-            true
-        );
+    function convertToSharesUp(uint256 assetAmount, uint256 totalAssetSupply, uint256 totalShareSupply)
+        internal
+        pure
+        returns (uint256)
+    {
+        return
+            assetAmount.divideWithRounding(totalShareSupply + VIRTUAL_SHARES, totalAssetSupply + VIRTUAL_ASSETS, true);
     }
 
-        /// @notice Converts assets to shares with floor rounding
+    /// @notice Converts assets to shares with floor rounding
     /// @param assetAmount The amount of assets to convert
     /// @param totalAssetSupply The total supply of assets
     /// @param totalShareSupply The total supply of shares
     /// @return The equivalent amount in shares, rounded down
-    function convertToSharesDown(
-        uint256 assetAmount,
-        uint256 totalAssetSupply,
-        uint256 totalShareSupply
-    ) internal pure returns (uint256) {
-        return assetAmount.divideWithRounding(
-            totalShareSupply + VIRTUAL_SHARES,
-            totalAssetSupply + VIRTUAL_ASSETS,
-            false
-        );
+    function convertToSharesDown(uint256 assetAmount, uint256 totalAssetSupply, uint256 totalShareSupply)
+        internal
+        pure
+        returns (uint256)
+    {
+        return
+            assetAmount.divideWithRounding(totalShareSupply + VIRTUAL_SHARES, totalAssetSupply + VIRTUAL_ASSETS, false);
     }
 
     /// @notice Converts shares to assets with ceiling rounding
@@ -51,16 +47,13 @@ library AssetShareConversionMath {
     /// @param totalAssetSupply The total supply of assets
     /// @param totalShareSupply The total supply of shares
     /// @return The equivalent amount in assets, rounded up
-    function convertToAssetsUp(
-        uint256 shareAmount,
-        uint256 totalAssetSupply,
-        uint256 totalShareSupply
-    ) internal pure returns (uint256) {
-        return shareAmount.divideWithRounding(
-            totalAssetSupply + VIRTUAL_ASSETS,
-            totalShareSupply + VIRTUAL_SHARES,
-            true
-        );
+    function convertToAssetsUp(uint256 shareAmount, uint256 totalAssetSupply, uint256 totalShareSupply)
+        internal
+        pure
+        returns (uint256)
+    {
+        return
+            shareAmount.divideWithRounding(totalAssetSupply + VIRTUAL_ASSETS, totalShareSupply + VIRTUAL_SHARES, true);
     }
 
     /// @notice Converts shares to assets with floor rounding
@@ -68,15 +61,12 @@ library AssetShareConversionMath {
     /// @param totalAssetSupply The total supply of assets
     /// @param totalShareSupply The total supply of shares
     /// @return The equivalent amount in assets, rounded down
-    function convertToAssetsDown(
-        uint256 shareAmount,
-        uint256 totalAssetSupply,
-        uint256 totalShareSupply
-    ) internal pure returns (uint256) {
-        return shareAmount.divideWithRounding(
-            totalAssetSupply + VIRTUAL_ASSETS,
-            totalShareSupply + VIRTUAL_SHARES,
-            false
-        );
+    function convertToAssetsDown(uint256 shareAmount, uint256 totalAssetSupply, uint256 totalShareSupply)
+        internal
+        pure
+        returns (uint256)
+    {
+        return
+            shareAmount.divideWithRounding(totalAssetSupply + VIRTUAL_ASSETS, totalShareSupply + VIRTUAL_SHARES, false);
     }
 }

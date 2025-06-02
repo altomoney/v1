@@ -15,10 +15,11 @@ import {FixedPointMath} from "../libraries/FixedPointMath.sol";
 /// @title Adaptive Curve Interest Rate Model
 /// @author Alto Foundation
 /// @author Adapted from Morpho Labs (https://github.com/morpho-org/morpho-blue-irm/).
+/// @author Inspired by Euler's (https://github.com/euler-xyz/evk-periphery) implementation.
 /// @custom:contact security@alto.xyz
 /// @notice A Adaptive Curve IRM that adjusts the rate at target utilization based on time spent above/below it.
-///         This IRM has adjustable parameters post deployment.
 /// @dev This implementation intentionally leaves variables names, units and ExpLib unchanged from original.
+/// @dev This IRM has adjustable parameters post deployment.
 contract AdaptiveCurveIrm is Ownable, IIrm {
     using FixedPointMath for uint256;
     using MathLib for uint256;
@@ -63,7 +64,7 @@ contract AdaptiveCurveIrm is Ownable, IIrm {
     /// @param _market The market to set
     /// @dev Used for the first time by the market to set itself to the IRM
     function setMarket(address _market) external {
-        if (market != address(0)) revert Alto_IrmMarketAlreadySet();
+        if (market != address(0)) revert IrmMarketAlreadySet();
         market = _market;
 
         // set the IRM up
@@ -76,7 +77,7 @@ contract AdaptiveCurveIrm is Ownable, IIrm {
     /// @param _irmConfig The new config of the IRM
     /// @dev Reverts on not set market, so the rate has to be set before the market creation.
     function setIrmConfig(AdaptiveCurveIrmConfig memory _irmConfig) external onlyOwner {
-        if (market == address(0)) revert Alto_IrmMarketNotSet();
+        if (market == address(0)) revert IrmMarketNotSet();
 
         IMarket(market).accrueInterest();
 
@@ -93,25 +94,25 @@ contract AdaptiveCurveIrm is Ownable, IIrm {
 
     function _validateConfig(AdaptiveCurveIrmConfig memory _irmConfig) internal pure {
         if (_irmConfig.curveSteepness < 1.01e18 || _irmConfig.curveSteepness > 100e18) {
-            revert Alto_IrmInvalidParams();
+            revert IrmInvalidParams();
         }
         if (_irmConfig.adjustmentSpeed < 2e18 / YEAR || _irmConfig.adjustmentSpeed > 1000e18 / YEAR) {
-            revert Alto_IrmInvalidParams();
+            revert IrmInvalidParams();
         }
         if (_irmConfig.targetUtilization <= 0 || _irmConfig.targetUtilization > 1e18) {
-            revert Alto_IrmInvalidParams();
+            revert IrmInvalidParams();
         }
         if (
             _irmConfig.initialRateAtTarget < _irmConfig.minRateAtTarget
                 || _irmConfig.initialRateAtTarget > _irmConfig.maxRateAtTarget
         ) {
-            revert Alto_IrmInvalidParams();
+            revert IrmInvalidParams();
         }
         if (_irmConfig.minRateAtTarget < 0.001e18 / YEAR || _irmConfig.minRateAtTarget > 10e18 / YEAR) {
-            revert Alto_IrmInvalidParams();
+            revert IrmInvalidParams();
         }
         if (_irmConfig.maxRateAtTarget < 0.001e18 / YEAR || _irmConfig.maxRateAtTarget > 10e18 / YEAR) {
-            revert Alto_IrmInvalidParams();
+            revert IrmInvalidParams();
         }
     }
 
@@ -128,7 +129,7 @@ contract AdaptiveCurveIrm is Ownable, IIrm {
 
     /// @inheritdoc IIrm
     function updateInterestRate(uint256 _totalSupply, uint256 _totalBorrowed) external returns (uint256, uint256) {
-        if (msg.sender != market) revert Alto_IrmUnauthorized();
+        if (msg.sender != market) revert IrmUnauthorized();
 
         (uint256 interest, uint256 newBorrowRate, int256 rateAtTarget) =
             _updateInterestRate(_totalSupply, _totalBorrowed);
@@ -142,7 +143,7 @@ contract AdaptiveCurveIrm is Ownable, IIrm {
         returns (uint256, uint256, int256)
     {
         // If the market is not set, the lastUpdate is not set, so we revert.
-        if (market == address(0)) revert Alto_IrmMarketNotSet();
+        if (market == address(0)) revert IrmMarketNotSet();
 
         (uint256 avgRate, int256 rateAtTarget) = _computeInterestRate(_totalSupply, _totalBorrowed);
 
