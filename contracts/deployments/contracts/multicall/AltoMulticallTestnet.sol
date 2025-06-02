@@ -4,7 +4,14 @@ pragma solidity ^0.8.22;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-contract TapiocaMulticall is Ownable {
+// @dev This is a testnet version of the AltoMulticall contract for multiple owners.
+contract AltoMulticallTestnet {
+    mapping(address => bool) public _owners;
+
+    constructor() {
+        _owners[msg.sender] = true;
+    }
+
     struct Call {
         address target;
         bool allowFailure;
@@ -22,8 +29,6 @@ contract TapiocaMulticall is Ownable {
         bool success;
         bytes returnData;
     }
-
-    constructor() Ownable(msg.sender) {}
 
     function multicall(Call[] calldata calls) public payable onlyOwner returns (Result[] memory returnData) {
         uint256 length = calls.length;
@@ -114,4 +119,17 @@ contract TapiocaMulticall is Ownable {
     }
 
     receive() external payable {}
+
+    function setOwner(address owner, bool status) public onlyOwner {
+        _owners[owner] = status;
+    }
+
+    function isOwner(address owner) public view returns (bool) {
+        return _owners[owner];
+    }
+
+    modifier onlyOwner() {
+        require(_owners[msg.sender], "Not an owner");
+        _;
+    }
 }

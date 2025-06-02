@@ -5,9 +5,9 @@ import {UtilitiesProcedure} from "../../../procedures/UtilitiesProcedure.sol";
 import {UtilitiesReport} from "../../../interfaces/IAltoReport.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
-/// @title TapiocaUtiltiiesBatch
+/// @title AltoUtilitiesBatch
 /// @dev Batches performs 1-tx deployments via constructor deployment pattern and contains on-chain reports of deployed contracts
-contract TapiocaUtilitiesBatch is UtilitiesProcedure, Ownable {
+contract AltoUtilitiesBatch is UtilitiesProcedure, Ownable {
     UtilitiesReport internal _utilitiesReport;
 
     constructor(address owner, uint16 lzChainId, bool isTestnet, address wrappedNativeToken) Ownable(msg.sender) {

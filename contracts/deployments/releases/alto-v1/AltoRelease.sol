@@ -1,27 +1,31 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.22;
 
-import {TapiocaUtilitiesBatch} from "./batches/TapiocaUtilitiesBatch.sol";
-import {TapiocaUsdoBatch} from "./batches/TapiocaUsdoBatch.sol";
+import {AltoUtilitiesBatch} from "./batches/AltoUtilitiesBatch.sol";
+import {AltoUsdoBatch} from "./batches/AltoUsdoBatch.sol";
 import {AltoMarketsBatch} from "./batches/AltoMarketsBatch.sol";
-import {TapiocaPostSetup} from "./batches/TapiocaPostSetup.sol";
+import {AltoPostSetup} from "./batches/AltoPostSetup.sol";
 
-import "../../interfaces/IAltoReport.sol";
+import {
+    AltoInput,
+    AltoReport,
+    UtilitiesReport,
+    UsdoReport,
+    LendingReport,
+    Reports
+} from "../../interfaces/IAltoReport.sol";
 import "forge-std/console.sol";
 
 /// @title AltoRelease
-/// @dev To be imported by Foundry scripts to deploy Tapioca V1.
+/// @dev To be imported by Foundry scripts to deploy Alto V1.
 library AltoRelease {
-    /// @notice Deploy TapiocaV1 following input parameters and previous deployment report
-    /// @dev Main entry point for deployment of Tapioca V1
-    function deployAltoV1(TapiocaInput memory input, AltoReport memory prevReport)
-        internal
-        returns (AltoReport memory)
-    {
+    /// @notice Deploy Alto V1 following input parameters and previous deployment report
+    /// @dev Main entry point for deployment of Alto V1
+    function deployAltoV1(AltoInput memory input, AltoReport memory prevReport) internal returns (AltoReport memory) {
         Reports memory reports;
-        TapiocaPostSetup postSetupBatch = new TapiocaPostSetup();
+        AltoPostSetup postSetupBatch = new AltoPostSetup();
 
-        TapiocaUtilitiesBatch utilitiesBatch;
+        AltoUtilitiesBatch utilitiesBatch;
         (utilitiesBatch, reports.utilitiesReport) =
             _deployUtilities(address(postSetupBatch), input.lzChainId, input.isTestnet, input.wrappedNativeToken);
 
@@ -37,7 +41,7 @@ library AltoRelease {
         );
 
         postSetupBatch.postSetup(
-            reports.utilitiesReport.tapiocaMulticall,
+            reports.utilitiesReport.altoMulticall,
             reports.usdoReport.usdo,
             reports.lendingReport.borrowMarket,
             reports.lendingReport.mintMarket,
@@ -51,9 +55,9 @@ library AltoRelease {
 
     function _deployUtilities(address owner, uint16 lzChainId, bool isTestnet, address wrappedNativeToken)
         private
-        returns (TapiocaUtilitiesBatch utilitiesBatch, UtilitiesReport memory report)
+        returns (AltoUtilitiesBatch utilitiesBatch, UtilitiesReport memory report)
     {
-        utilitiesBatch = new TapiocaUtilitiesBatch(owner, lzChainId, isTestnet, wrappedNativeToken);
+        utilitiesBatch = new AltoUtilitiesBatch(owner, lzChainId, isTestnet, wrappedNativeToken);
 
         return (utilitiesBatch, utilitiesBatch.getUtilitiesReport());
     }
@@ -68,7 +72,7 @@ library AltoRelease {
         address mintIrm,
         address mintOracle
     ) private returns (UsdoReport memory usdoReport, LendingReport memory lendingReport) {
-        TapiocaUsdoBatch usdoBatch = new TapiocaUsdoBatch(endpoint, delegate);
+        AltoUsdoBatch usdoBatch = new AltoUsdoBatch(endpoint, delegate);
         usdoReport = usdoBatch.getUsdoReport();
 
         AltoMarketsBatch marketsBatch = new AltoMarketsBatch(
@@ -88,7 +92,7 @@ library AltoRelease {
     function _generateMarketReport(Reports memory reports) private pure returns (AltoReport memory) {
         AltoReport memory report;
 
-        report.tapiocaMulticall = reports.utilitiesReport.tapiocaMulticall;
+        report.altoMulticall = reports.utilitiesReport.altoMulticall;
         report.multiTokenSender = reports.utilitiesReport.multiTokenSender;
         report.leverageSwapper = reports.utilitiesReport.leverageSwapper;
 

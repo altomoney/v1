@@ -3,8 +3,8 @@ pragma solidity ^0.8.22;
 
 import {UtilitiesReport} from "../interfaces/IAltoReport.sol";
 
-import {TapiocaMulticall} from "@alto/deployments/contracts/TapiocaMulticall/TapiocaMulticall.sol";
-import {TapiocaMulticallTestnet} from "@alto/deployments/contracts/TapiocaMulticall/TapiocaMulticallTestnet.sol";
+import {AltoMulticall} from "@alto/deployments/contracts/multicall/AltoMulticall.sol";
+import {AltoMulticallTestnet} from "@alto/deployments/contracts/multicall/AltoMulticallTestnet.sol";
 import {MultiTokenSender} from "@alto/deployments/contracts/testnet/MultiTokenSender.sol";
 import {Bundler3} from "@morpho-org/bundler3/Bundler3.sol";
 import {AltoAdapter} from "@alto/utils/AltoAdapter.sol";
@@ -24,9 +24,9 @@ abstract contract UtilitiesProcedure {
         report.bundler3 = address(new Bundler3());
         report.altoAdapter = address(new AltoAdapter(report.bundler3, wrappedNativeToken));
         if (isTestnet) {
-            report.tapiocaMulticall = address(new TapiocaMulticallTestnet());
+            report.altoMulticall = address(new AltoMulticallTestnet());
         } else {
-            report.tapiocaMulticall = address(new TapiocaMulticall());
+            report.altoMulticall = address(new AltoMulticall());
         }
         if (isTestnet) {
             report.leverageSwapper = address(new SwapperSimpleMock(address(this)));
@@ -36,10 +36,10 @@ abstract contract UtilitiesProcedure {
             revert("NOT_IMPLEMENTED");
         }
         if (isTestnet) {
-            TapiocaMulticallTestnet(payable(report.tapiocaMulticall)).setOwner(owner, true);
-            TapiocaMulticallTestnet(payable(report.tapiocaMulticall)).setOwner(address(this), false);
+            AltoMulticallTestnet(payable(report.altoMulticall)).setOwner(owner, true);
+            AltoMulticallTestnet(payable(report.altoMulticall)).setOwner(address(this), false);
         } else {
-            TapiocaMulticall(payable(report.tapiocaMulticall)).transferOwnership(owner);
+            AltoMulticall(payable(report.altoMulticall)).transferOwnership(owner);
         }
         AdaptiveCurveIrm.AdaptiveCurveIrmConfig memory config = AdaptiveCurveIrm.AdaptiveCurveIrmConfig({
             curveSteepness: 4 ether,

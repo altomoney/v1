@@ -8,7 +8,7 @@ struct TestnetOracles {
     address stETHOracle;
     address usdoOracle;
     address usdcOracle;
-    address tapOracle;
+    address altoOracle;
 }
 
 /// @title TestnetOraclesBatch
@@ -20,13 +20,13 @@ contract TestnetOraclesBatch {
     constructor() {
         oracles = TestnetOracles({
             stETHOracle: address(new OracleMock()),
-            tapOracle: address(new OracleMock()),
+            altoOracle: address(new OracleMock()),
             usdoOracle: address(new OracleMock()),
             usdcOracle: address(new OracleMock())
         });
 
         OracleMock(oracles.stETHOracle).setPrice(1800 * ORACLE_PRICE_PRECISION);
-        OracleMock(oracles.tapOracle).setPrice(3 * ORACLE_PRICE_PRECISION);
+        OracleMock(oracles.altoOracle).setPrice(3 * ORACLE_PRICE_PRECISION);
         OracleMock(oracles.usdoOracle).setPrice(ORACLE_PRICE_PRECISION);
         OracleMock(oracles.usdcOracle).setPrice(1 * 1e48);
     }

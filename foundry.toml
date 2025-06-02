@@ -23,21 +23,6 @@ remappings = [
 	'@openzeppelin/contracts-upgradeable/=node_modules/@openzeppelin/contracts-upgradeable/',
 ]
 
-[etherscan]
-
-[profile.fork]
-# replace no-match-contract from profile.default
-no-match-contract = "zzz"
-
-[rpc_endpoints]
-[profile.twtap]
-src = "@alto/tap-token/governance"
-test = "test/tap-token/unit/options/"
-
 [profile.market]
 src = "@alto/lending"
 test = "test/lending"
-
-[profile.bundler]
-src = "@alto/bundler"
-test = "test/bundler"

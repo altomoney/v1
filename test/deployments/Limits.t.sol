@@ -5,9 +5,9 @@ import {Test} from "forge-std/Test.sol";
 import {console2} from "forge-std/console2.sol";
 
 import "deployments/interfaces/IAltoReport.sol";
-import {TapiocaUsdoBatch} from "deployments/releases/tapioca-v1/batches/TapiocaUsdoBatch.sol";
-import {TapiocaUtilitiesBatch} from "deployments/releases/tapioca-v1/batches/TapiocaUtilitiesBatch.sol";
-import {TapiocaPostSetup} from "deployments/releases/tapioca-v1/batches/TapiocaPostSetup.sol";
+import {AltoUsdoBatch} from "deployments/releases/alto-v1/batches/AltoUsdoBatch.sol";
+import {AltoUtilitiesBatch} from "deployments/releases/alto-v1/batches/AltoUtilitiesBatch.sol";
+import {AltoPostSetup} from "deployments/releases/alto-v1/batches/AltoPostSetup.sol";
 import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
 import {TestHelperOz5} from "@layerzerolabs/test-devtools-evm-foundry/contracts/TestHelperOz5.sol";
 
@@ -37,14 +37,14 @@ contract LimitsTest is Test, TestHelperOz5 {
     }
 
     function test_codesizes() public pure {
-        uint256 utilitiesBatchCreationSize = type(TapiocaUtilitiesBatch).creationCode.length;
-        uint256 usdoBatchCreationSize = type(TapiocaUsdoBatch).creationCode.length;
-        uint256 postSetupBatchCreationSize = type(TapiocaPostSetup).creationCode.length;
-        console2.log("TapiocaUtilitiesBatch", utilitiesBatchCreationSize);
-        console2.log("TapiocaUsdoBatch", usdoBatchCreationSize);
-        console2.log("TapiocaPostSetup", postSetupBatchCreationSize);
-        assertLe(utilitiesBatchCreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "TapiocaUtilitiesBatch max init code size");
-        assertLe(usdoBatchCreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "TapiocaUsdoBatch max init code size");
-        assertLe(postSetupBatchCreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "TapiocaPostSetup max init code size");
+        uint256 utilitiesBatchCreationSize = type(AltoUtilitiesBatch).creationCode.length;
+        uint256 usdoBatchCreationSize = type(AltoUsdoBatch).creationCode.length;
+        uint256 postSetupBatchCreationSize = type(AltoPostSetup).creationCode.length;
+        console2.log("AltoUtilitiesBatch", utilitiesBatchCreationSize);
+        console2.log("AltoUsdoBatch", usdoBatchCreationSize);
+        console2.log("AltoPostSetup", postSetupBatchCreationSize);
+        assertLe(utilitiesBatchCreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "AltoUtilitiesBatch max init code size");
+        assertLe(usdoBatchCreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "AltoUsdoBatch max init code size");
+        assertLe(postSetupBatchCreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "AltoPostSetup max init code size");
     }
 }
