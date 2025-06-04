@@ -2,9 +2,9 @@
 pragma solidity ^0.8.22;
 
 // External
-import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
@@ -64,12 +64,11 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, ReentrancyGuard, Pausable {
 
     constructor(address _tapOFT, address _owner, uint256 epochDuration, Bucket[] memory _buckets)
         TWLBase(epochDuration, _buckets)
+        Ownable(_owner)
     {
         tapOFT = TapToken(_tapOFT);
         rewardTokens.push(IERC20(address(0x0))); // 0 index is reserved
         maxRewardTokens = 30;
-
-        _transferOwnership(_owner);
     }
 
     // ==========

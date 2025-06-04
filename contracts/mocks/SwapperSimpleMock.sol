@@ -13,9 +13,7 @@ contract SwapperSimpleMock is IAltoLeverageSwapper, Ownable {
     uint256 public defaultAmountOut;
     uint256 public returnLeftoverTokens;
 
-    constructor(address _owner) {
-        transferOwnership(_owner);
-    }
+    constructor(address _owner) Ownable(_owner) {}
 
     function setWhitelisted(address _address, bool _isWhitelisted) external onlyOwner {
         isWhitelisted[_address] = _isWhitelisted;

@@ -35,9 +35,8 @@ contract AltoLeverage is Ownable, IBorrowCallback {
     error MinAmountNotValid(uint256 expected, uint256 received);
     error NotAuthorized();
 
-    constructor(address _swapper, address _owner) {
+    constructor(address _swapper, address _owner) Ownable(_owner) {
         swapper = IAltoLeverageSwapper(_swapper);
-        transferOwnership(_owner);
     }
 
     /// @notice sets swapper

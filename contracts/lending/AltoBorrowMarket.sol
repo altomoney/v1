@@ -64,7 +64,7 @@ contract AltoBorrowMarket is Ownable, Auth, IMarketStaticTypes {
         uint256 _borrowOpeningFee,
         address _feeRecipient,
         LiquidationConfiguration memory _liquidationConfiguration
-    ) {
+    ) Ownable(_owner) {
         borrowToken = _borrowToken;
         collateralToken = _collateralToken;
         irm = _irm;
@@ -74,7 +74,6 @@ contract AltoBorrowMarket is Ownable, Auth, IMarketStaticTypes {
         borrowOpeningFee = _borrowOpeningFee;
         feeRecipient = _feeRecipient;
 
-        _transferOwnership(_owner);
         IIrm(irm).setMarket(address(this));
     }
 

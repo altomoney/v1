@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 
 contract ERC20Mock is ERC20Permit, Ownable {
     mapping(address => bool) public whitelist;
@@ -24,12 +24,11 @@ contract ERC20Mock is ERC20Permit, Ownable {
     constructor(string memory _name, string memory _symbol, uint256 _initialAmount, uint8 decimals_, address _owner)
         ERC20(_name, _symbol)
         ERC20Permit(_name)
-        Ownable()
+        Ownable(_owner)
     {
         _decimals = decimals_;
         mintLimit = 1000 * (10 ** _decimals);
 
-        transferOwnership(_owner);
         _mint(address(this), _initialAmount);
 
         hasMintRestrictions = true;

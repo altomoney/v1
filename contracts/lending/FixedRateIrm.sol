@@ -32,12 +32,10 @@ contract FixedRateIrm is Ownable, IIrm {
     /// @notice Constructor
     /// @param _borrowRate The fixed borrow rate in second percent yield (SPY)
     /// @param _owner The owner of the IRM - shouldn't be market
-    constructor(uint256 _borrowRate, address _owner) {
+    constructor(uint256 _borrowRate, address _owner) Ownable(_owner) {
         if (_borrowRate == 0 || _borrowRate > MAX_BORROW_RATE) revert Alto_IrmInvalidParams();
 
         irState.borrowRate = _borrowRate;
-
-        _transferOwnership(_owner);
     }
 
     /// @notice Sets the market address

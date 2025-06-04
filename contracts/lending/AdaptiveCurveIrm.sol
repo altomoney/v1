@@ -54,11 +54,9 @@ contract AdaptiveCurveIrm is Ownable, IIrm {
     /// @notice Constructor
     /// @param _irmConfig The config of the IRM
     /// @param _owner The owner of the IRM - shouldn't be market
-    constructor(AdaptiveCurveIrmConfig memory _irmConfig, address _owner) {
+    constructor(AdaptiveCurveIrmConfig memory _irmConfig, address _owner) Ownable(_owner) {
         _validateConfig(_irmConfig);
         irmConfig = _irmConfig;
-
-        _transferOwnership(_owner);
     }
 
     /// @notice Sets the market address

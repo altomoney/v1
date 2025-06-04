@@ -2,7 +2,7 @@
 pragma solidity ^0.8.22;
 // External
 
-import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 // Tapioca
 import {AggregatorInterface} from "src/tap-utils/interfaces/external/chainlink/AggregatorInterface.sol";

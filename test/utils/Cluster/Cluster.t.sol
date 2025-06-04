@@ -10,10 +10,7 @@ import "forge-std/console.sol";
 
 import {Cluster} from "src/tap-utils/Cluster/Cluster.sol";
 
-// Lz
-import {TestHelper} from "../../bar/LZSetup/TestHelper.sol";
-
-contract ClusterTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelper {
+contract ClusterTest is TestBase, StdAssertions, StdCheats, StdUtils {
     Cluster cluster;
 
     uint32 aEid = 1;
@@ -33,12 +30,11 @@ contract ClusterTest is TestBase, StdAssertions, StdCheats, StdUtils, TestHelper
     address public userB = vm.addr(userBPKey);
     address public userC = vm.addr(userCPKey);
 
-    function setUp() public override {
+    function setUp() public {
         vm.deal(userA, 1000 ether);
         vm.deal(userB, 1000 ether);
         vm.label(userA, "userA");
         vm.label(userB, "userB");
-        setUpEndpoints(3, LibraryType.UltraLightNode);
 
         cluster = new Cluster(aEid, address(this));
     }

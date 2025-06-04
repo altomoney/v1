@@ -3,7 +3,7 @@
 pragma solidity ^0.8.22;
 
 // External
-import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 // Tapioca
 import {OracleChainlinkMulti, OracleChainlinkMultiConstructorData} from "./OracleChainlinkMulti.sol";
