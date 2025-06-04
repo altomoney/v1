@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
-import {Signature} from "@alto/utils/interfaces/common/IAuth.sol";
+import {Signature} from "@alto/utils/interfaces/IAuth.sol";
 import {Usdo} from "@alto/tokens/Usdo.sol";
 
 import {TestHelperOz5} from "@layerzerolabs/test-devtools-evm-foundry/contracts/TestHelperOz5.sol";

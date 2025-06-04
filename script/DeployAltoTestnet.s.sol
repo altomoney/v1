@@ -6,15 +6,15 @@ import {AltoReport, TapiocaInput} from "deployments/interfaces/IAltoReport.sol";
 import {Script} from "forge-std/Script.sol";
 import {TapToken, ITapToken} from "@alto/tokens/TapToken.sol";
 // import {TapiocaOptionBroker} from "@alto/tap-token/options/TapiocaOptionBroker.sol";
-import {TapiocaMulticall} from "@alto/utils/TapiocaMulticall/TapiocaMulticall.sol";
-import {ERC20Testnet} from "@alto/deployments/testnet/ERC20Testnet.sol";
+import {TapiocaMulticall} from "@alto/deployments/contracts/TapiocaMulticall/TapiocaMulticall.sol";
+import {ERC20Testnet} from "@alto/deployments/contracts/testnet/ERC20Testnet.sol";
 import {Usdo} from "@alto/tokens/Usdo.sol";
 import {
     TestnetOracles,
     TestnetOraclesBatch
 } from "@alto/deployments/releases/tapioca-v1/batches/testnet/TestnetOraclesBatch.sol";
 import "forge-std/console.sol";
-import {TapiocaMulticallTestnet} from "@alto/utils/TapiocaMulticall/TapiocaMulticallTestnet.sol";
+import {TapiocaMulticallTestnet} from "@alto/deployments/contracts/TapiocaMulticall/TapiocaMulticallTestnet.sol";
 import {console} from "forge-std/console.sol";
 // import {TapiocaTestnetTobSetter} from "@alto/deployments/releases/tapioca-v1/actions/TobLauncher.sol";
 

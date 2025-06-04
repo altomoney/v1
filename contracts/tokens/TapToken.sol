@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.22;
 
-import {OFT} from "@alto/utils/layerzero/OFT.sol";
+import {OFT} from "@alto/utils/OFT.sol";
 import {OFTCore} from "@layerzerolabs/oft-evm/contracts/OFTCore.sol";
 
 // External
 import {ERC20Permit, ERC20} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
-import {Pausable, IPausable} from "@alto/utils/utils/Pausable.sol";
+import {Pausable, IPausable} from "@alto/utils/Pausable.sol";
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ITapToken} from "@alto/tokens/interfaces/ITapToken.sol";
-import {PAUSED_ROLE} from "@alto/utils/utils/Constants.sol";
+import {PAUSED_ROLE} from "@alto/utils/Constants.sol";
 
 /// @title Tapioca OFTv2 token
 /// @notice OFT compatible TAP token

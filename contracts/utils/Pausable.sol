@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {IPausable} from "../interfaces/common/IPausable.sol";
+import {IPausable} from "./interfaces/IPausable.sol";
 
 abstract contract Pausable is IPausable, Ownable {
     mapping(bytes32 => bool) public paused;

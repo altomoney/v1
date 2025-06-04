@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import "./AdapterCommonSetup.t.sol";
 
 import {Position} from "@alto/lending/interfaces/IMarket.sol";
-import {IAuth} from "@alto/utils/interfaces/common/IAuth.sol";
+import {IAuth} from "@alto/utils/interfaces/IAuth.sol";
 
 import {ErrorsLib} from "@morpho-org/bundler3/libraries/ErrorsLib.sol";
 import {MathRayLib} from "@morpho-org/bundler3/libraries/MathRayLib.sol";
