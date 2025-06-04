@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.22;
 
-import {TapiocaRelease} from "deployments/releases/tapioca-v1/TapiocaRelease.sol";
-import {TapiocaReport, TapiocaInput} from "deployments/interfaces/ITapiocaReport.sol";
-import {SingularityLauncher, RiskParams} from "deployments/releases/tapioca-v1/actions/SingularityLauncher.sol";
-import {BigBangLauncher, BigBangRiskParams} from "deployments/releases/tapioca-v1/actions/BigBangLauncher.sol";
+import {AltoRelease} from "deployments/releases/tapioca-v1/AltoRelease.sol";
+import {AltoReport, TapiocaInput} from "deployments/interfaces/IAltoReport.sol";
 import {TapToken, ITapToken} from "contracts/tap-token/tokens/TapToken.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {WETH} from "solady/tokens/WETH.sol";
@@ -30,7 +28,7 @@ contract TapiocaTestnetTobSetter {
     TapiocaOptionBroker public tob;
 
     constructor(
-        TapiocaReport memory report,
+        AltoReport memory report,
         address singularityMarket,
         address tapToken,
         address feeCollector,
@@ -42,12 +40,21 @@ contract TapiocaTestnetTobSetter {
         uint256 maxDebtBuffer
     ) {
         _createTapiocaOptionBroker(
-            report, singularityMarket, tapToken, feeCollector, owner, paymentToken, paymentTokenOracle, tapOracle, epochDuration, maxDebtBuffer
+            report,
+            singularityMarket,
+            tapToken,
+            feeCollector,
+            owner,
+            paymentToken,
+            paymentTokenOracle,
+            tapOracle,
+            epochDuration,
+            maxDebtBuffer
         );
     }
 
     function _createTapiocaOptionBroker(
-        TapiocaReport memory report,
+        AltoReport memory report,
         address singularityMarket,
         address tapToken,
         address feeCollector,
@@ -110,14 +117,14 @@ contract TapiocaTestnetTobSetter {
         });
 
         tob = new TapiocaOptionBroker(
-            payable(tapToken), address(report.usdo), feeCollector, epochDuration, buckets, report.penrose, address(this)
+            payable(tapToken), address(report.usdo), feeCollector, epochDuration, buckets, address(2), address(this)
         );
 
         tob.setPaymentToken(address(paymentToken), paymentTokenOracle, "");
         tob.setPaymentTokenBeneficiary(feeCollector);
         tob.setTapOracle(tapOracle, "");
-        tob.setCluster(report.cluster);
-        tob.setPenrose(report.penrose);
+        tob.setCluster(address(1));
+        tob.setPenrose(address(2));
         tob.setMaxDebtBuffer(maxDebtBuffer);
         tob.setMarket(singularityMarket, true);
 

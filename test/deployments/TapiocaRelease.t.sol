@@ -2,22 +2,23 @@
 pragma solidity ^0.8.22;
 
 import "forge-std/Test.sol";
-import "deployments/interfaces/ITapiocaReport.sol";
-import {TapiocaRelease} from "deployments/releases/tapioca-v1/TapiocaRelease.sol";
+import "deployments/interfaces/IAltoReport.sol";
+import {AltoRelease} from "deployments/releases/tapioca-v1/AltoRelease.sol";
 import {LZEndpointMock} from "tapioca-mocks/LZEndpointMock.sol";
 import {ERC20Mock} from "../bar/mocks/ERC20Mock.sol";
 
-contract TapiocaReleaseTest is Test {
+contract AltoReleaseTest is Test {
     address owner;
 
     function setUp() public {
         owner = makeAddr("owner");
     }
 
-    function test_deployTapiocaV1_default() public {
-        TapiocaReport memory emptyReport;
+    function test_deployAltoV1_default() public {
+        AltoReport memory emptyReport;
         TapiocaInput memory input;
         input.owner = owner;
+        input.isTestnet = true;
         input.lzChainId = 0;
         input.lzEndpoint = address(new LZEndpointMock(1));
         input.zeroXProxy = address(1);
@@ -25,6 +26,6 @@ contract TapiocaReleaseTest is Test {
         input.tapToken = address(new ERC20Mock("B", "B"));
         input.bbMarketBorrowCap = 3_000_000e18;
 
-        TapiocaRelease.deployTapiocaV1(input, emptyReport);
+        AltoRelease.deployAltoV1(input, emptyReport);
     }
 }

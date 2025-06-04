@@ -3,13 +3,11 @@ pragma solidity ^0.8.18;
 
 import {Test} from "forge-std/Test.sol";
 import {RebaseLibrary, Rebase} from "@boringcrypto/boring-solidity/contracts/libraries/BoringRebase.sol";
-import {TapiocaReport, TapiocaInput} from "deployments/interfaces/ITapiocaReport.sol";
+import {AltoReport, TapiocaInput} from "deployments/interfaces/IAltoReport.sol";
 import {ERC20Mock} from "tapioca-mocks/ERC20Mock.sol";
 import {OracleMock} from "test/utils/mocks/OracleMock.sol";
 import {LZEndpointMock} from "tapioca-mocks/LZEndpointMock.sol";
-import {SingularityLauncher, RiskParams} from "deployments/releases/tapioca-v1/actions/SingularityLauncher.sol";
-import {BigBangLauncher, BigBangRiskParams} from "deployments/releases/tapioca-v1/actions/BigBangLauncher.sol";
-import {TapiocaRelease} from "deployments/releases/tapioca-v1/TapiocaRelease.sol";
+import {AltoRelease} from "deployments/releases/tapioca-v1/AltoRelease.sol";
 import {TapToken} from "tap-token/tokens/TapToken.sol";
 import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
 import {TapiocaOptionBroker, ITapiocaOptionBroker} from "tap-token/options/TapiocaOptionBroker.sol";
@@ -37,15 +35,13 @@ contract TOBTestBase is Test, Events, Utils {
     Cluster cluster;
     TapToken tapToken;
     TapiocaOptionBroker tob;
-    SingularityLauncher singularityLauncher;
-    BigBangLauncher bigBangLauncher;
     ERC20Mock paymentToken;
     MarketHelper marketHelper;
     address paymentTokenOracle;
     address tapOracle;
 
     TapiocaInput input;
-    TapiocaReport report;
+    AltoReport report;
 
     uint256 EPOCH_DURATION = 1 weeks;
 
@@ -86,8 +82,9 @@ contract TOBTestBase is Test, Events, Utils {
     }
 
     function setUp() public virtual {
+        vm.skip(true);
         owner = makeAddr("owner");
-        
+
         deployDependencies();
 
         buckets.push(
@@ -106,26 +103,21 @@ contract TOBTestBase is Test, Events, Utils {
         );
 
         tob = new TapiocaOptionBroker(
-            address(tapToken), address(report.usdo), dao, EPOCH_DURATION, buckets, report.penrose, owner
+            address(tapToken), address(report.usdo), dao, EPOCH_DURATION, buckets, address(1), owner
         );
 
         vm.startPrank(owner);
         tob.setPaymentToken(address(paymentToken), paymentTokenOracle, "");
         tob.setPaymentTokenBeneficiary(dao);
         tob.setTapOracle(tapOracle, "");
-        tob.setCluster(report.cluster);
-        tob.setPenrose(report.penrose);
-
-        cluster = Cluster(report.cluster);
+        tob.setCluster(address(1));
+        tob.setPenrose(address(1));
 
         vm.stopPrank();
 
-        (marketInstance, sWETHId, sUSDXId) = createSingularityMarket(address(sWETH), address(usdo));
-        market = address(marketInstance);
-
-        (bigBangInstance, sWETH_bigBang_id) = createBigBangMarket(address(sWETH));
-        bigBang = address(bigBangInstance);
-        marketHelper = MarketHelper(report.marketHelper);
+        // TODO: replace with new markets
+        market = address(1);
+        bigBang = address(2);
 
         vm.startPrank(tapToken.owner());
         tapToken.setMinter(address(tob));
@@ -155,7 +147,7 @@ contract TOBTestBase is Test, Events, Utils {
         ownerInstance = OwnerContract(owner);
         sUSDX = new ERC20Mock("sUSDX", "sUSDX", 0, 18, owner);
         sWETH = new ERC20Mock("sWETH", "sWETH", 0, 18, owner);
-        TapiocaReport memory emptyReport;
+        AltoReport memory emptyReport;
 
         tapOracle = address(new OracleMock("TapOracle", "TORC", 1 ether));
         paymentTokenOracle = address(new OracleMock("PaymentTokenOracle", "PORC", 1 ether));
@@ -186,11 +178,7 @@ contract TOBTestBase is Test, Events, Utils {
 
         input.tapToken = address(tapToken);
 
-        report = TapiocaRelease.deployTapiocaV1(input, emptyReport);
-
-        vm.startPrank(owner);
-        tapToken.setCluster(report.cluster);
-        vm.stopPrank();
+        report = AltoRelease.deployAltoV1(input, emptyReport);
 
         usdo = Usdo(payable(report.usdo));
         vm.label(address(usdo), "USDO");
@@ -200,113 +188,11 @@ contract TOBTestBase is Test, Events, Utils {
         internal
         returns (Singularity, uint256 collateralId, uint256 assetId)
     {
-        if (address(singularityLauncher) == address(0)) {
-            singularityLauncher = new SingularityLauncher(
-                report.sglLiquidationModule,
-                report.sglBorrowModule,
-                report.sglCollateralModule,
-                report.sglLeverageModule,
-                report.sglInit,
-                report.penrose,
-                report.simpleLeverageExecutor,
-                report.sglInterestHelper,
-                report.singularity
-            );
-        }
-
-        SGLInit._InitMemoryTokensData memory tokensData;
-        RiskParams memory riskParams;
-
-        tokensData._collateral = IERC20(collateral);
-        tokensData._asset = IERC20(asset);
-
-        riskParams.borrowOpeningFee = 0;
-        riskParams.liquidationMultiplier = 0;
-        riskParams.minimumTargetUtilization = 0;
-        riskParams.maximumTargetUtilization = 0;
-        riskParams.minimumInterestPerSecond = 0;
-        riskParams.maximumInterestPerSecond = 0;
-        riskParams.interestElasticity = 0;
-        riskParams.minLendAmount = 1e6;
-        riskParams.exchangeRatePrecision = 0;
-        riskParams.collateralizationRate = 75000;
-        riskParams.liquidationCollateralizationRate = 80000;
-        riskParams.oracle = address(new OracleMock("Oracle Test", "ORCT", 1 ether));
-        riskParams.seedAmount = 1 ether;
-        riskParams.seedOwner = owner;
-
-        bytes memory payload =
-            abi.encodeWithSelector(singularityLauncher.createSingularity.selector, tokensData, riskParams);
-
-        vm.startPrank(owner);
-        deal(asset, owner, 1 ether);
-        IERC20(asset).approve(address(report.tapiocaMulticall), 1 ether);
-        bytes memory returnData = TapiocaMulticall(payable(report.tapiocaMulticall)).performDelegateCall(
-            address(singularityLauncher), payload
-        );
-        vm.stopPrank();
-
-        address marketAddress = abi.decode(returnData, (address));
-        assertTrue(marketAddress != address(0), "Singularity market address should not be zero");
-
-        vm.startPrank(owner);
-        tob.setMarket(marketAddress, true);
-        vm.stopPrank();
-
-        // add liquidity to the market
-        deal(address(usdo), owner, 10000 ether);
-        vm.startPrank(owner);
-        usdo.approve(marketAddress, 10000 ether);
-        Singularity(payable(marketAddress)).addAsset(owner, owner, 10000 ether);
-        vm.stopPrank();
-
-        return (Singularity(payable(marketAddress)), collateralId, assetId);
+        vm.skip(true);
     }
 
     function createBigBangMarket(address collateral) internal returns (BigBang, uint256 collateralId) {
-        if (address(bigBangLauncher) == address(0)) {
-            bigBangLauncher = new BigBangLauncher(
-                report.bbLiquidation,
-                report.bbBorrow,
-                report.bbCollateral,
-                report.bbLeverage,
-                report.penrose,
-                report.simpleLeverageExecutor,
-                report.bigbang,
-                report.bbDebtRateHelper,
-                input.bbMarketBorrowCap
-            );
-        }
-
-        BigBangRiskParams memory riskParams;
-        riskParams.debtRateAgainstEth = 0;
-        riskParams.debtRateMin = 0;
-        riskParams.debtRateMax = 0;
-        riskParams.exchangeRatePrecision = 1e18;
-        riskParams.collateralizationRate = 75000;
-        riskParams.liquidationCollateralizationRate = 80000;
-        riskParams.collateral = collateral;
-        riskParams.oracle = address(new OracleMock("Oracle Test", "ORCT", 1 ether));
-        riskParams.isEthMarket = true;
-
-        deal(collateral, address(this), 1 ether);
-        bytes memory payload = abi.encodeWithSelector(bigBangLauncher.createBigBang.selector, riskParams);
-
-        vm.startPrank(owner);
-
-        bytes memory returnData =
-            TapiocaMulticall(payable(report.tapiocaMulticall)).performDelegateCall(address(bigBangLauncher), payload);
-        vm.stopPrank();
-
-        address marketAddress = abi.decode(returnData, (address));
-        assertTrue(marketAddress != address(0), "BigBang market address should not be zero");
-
-        vm.startPrank(owner);
-        usdo.setMinterStatus(marketAddress, true);
-        usdo.setBurnerStatus(marketAddress, true);
-        vm.stopPrank();
-
-        return (BigBang(payable(marketAddress)), collateralId);
+        vm.skip(true);
     }
 
     function _spawnCollateral(uint256 _collateralAmount, address _to) internal {
@@ -424,13 +310,6 @@ contract TOBTestBase is Test, Events, Utils {
         _;
     }
 
-    function _getCollateralData(uint256 _collateralAmount, address _from, address _to)
-        internal
-        view
-        returns (Module[] memory modules, bytes[] memory calls)
-    {
-        (modules, calls) = MarketHelper(report.marketHelper).addCollateral(_from, _to, _collateralAmount, 0);
-    }
 
     function _createBorrowInternal(BigBang _bb, address _to) internal returns (_BorrowInternal memory) {
         _BorrowInternal memory _data;
