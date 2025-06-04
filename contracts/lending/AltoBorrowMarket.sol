@@ -12,7 +12,6 @@ import {
     Balance,
     Position,
     LiquidationConfiguration,
-    LiquidationResult,
     LiquidationCalculation,
     LiquidablePosition
 } from "./interfaces/IMarket.sol";
@@ -23,10 +22,10 @@ import {ExpLib, MATH_PRECISION_INT} from "./libraries/ExpLib.sol";
 import {FixedPointMath, MATH_PRECISION} from "./libraries/FixedPointMath.sol";
 import {Utils} from "./libraries/Utils.sol";
 import {IMarketStaticTypes} from "./interfaces/IMarket.sol";
-import {IBorrowCallback, IRemoveCollateralCallback} from "./interfaces/IMarketCallbacks.sol";
 import {Pausable, IPausable} from "@alto/utils/utils/Pausable.sol";
 import {AssetShareConversionMath} from "./libraries/AssetShareConversionMath.sol";
 import {PAUSED_MARKET, FROZEN_MARKET} from "@alto/utils/utils/Constants.sol";
+import {IBorrowCallback, IRemoveCollateralCallback, ILiquidateCallback} from "./interfaces/IMarketCallbacks.sol";
 
 contract AltoBorrowMarket is Auth, Pausable, IMarketStaticTypes {
     using FixedPointMath for uint256;
@@ -384,7 +383,7 @@ contract AltoBorrowMarket is Auth, Pausable, IMarketStaticTypes {
     /// @param borrower The address of the user to liquidate
     /// @return The result of the liquidation
     /// @dev The liquidator must be an external liquidator which tagged the position or any liquidator that waited for the grace period or a priority liquidator
-    function liquidate(address borrower) external whenNotPaused returns (LiquidationResult memory) {
+    function liquidate(address borrower, bytes calldata data) external whenNotPaused returns (uint256, uint256) {
         _accrueInterest();
 
         // Check if the position is underwater
@@ -425,82 +424,115 @@ contract AltoBorrowMarket is Auth, Pausable, IMarketStaticTypes {
 
         // Initial calculations
         calc.collateralPrice = IOracle(oracle).getPrice();
+
         calc.positionCollateralValue =
             uint256(_position.collateralAssets).divideWithRounding(calc.collateralPrice, ORACLE_PRICE_PRECISION, false);
         calc.positionBorrowedAssets =
             uint256(_position.borrowShares).convertToAssetsUp(totalBorrowed.assets, totalBorrowed.shares);
-        calc.currentLtv = calc.positionBorrowedAssets.divideWithPrecisionUp(calc.positionCollateralValue);
 
-        calc.liquidationPercentage = _calculateLiquidationPercentage(calc.currentLtv);
-        calc.liquidationFee =
-            _calculateBonusFee(calc.liquidationPercentage) + liquidationConfiguration.liquidationBaseFee;
+        // calculate liquidation percentage - how far are we between LTV and LLTV from current LTV
+        calc.liquidationPercentage = _calculateLiquidationPercentage(
+            calc.positionBorrowedAssets.divideWithPrecisionUp(calc.positionCollateralValue)
+        );
+
+        // apply above to calculate liquidation fee (priority liquidators don't get a bonus fee only base fee)
+        calc.liquidationFee = (!priorityLiquidators[msg.sender] ? _calculateBonusFee(calc.liquidationPercentage) : 0)
+            + liquidationConfiguration.liquidationBaseFee;
+
+        // calculate new LTV - how much LTV are we aiming for after liquidation
         calc.newLtv = _calculateNewLtv(calc.liquidationPercentage);
 
-        // Calculate collateral amounts
+        // Calculate fee in collateral
         calc.liquidatorBonusFee = uint256(_position.collateralAssets).multiplyWithPrecision(calc.liquidationFee);
-        uint256 remainingCollateral = _position.collateralAssets - calc.liquidatorBonusFee;
-        calc.remainingCollateralValue =
-            remainingCollateral.divideWithRounding(calc.collateralPrice, ORACLE_PRICE_PRECISION, false);
+        uint256 remainingCollateralAfterFee = _position.collateralAssets - calc.liquidatorBonusFee;
+        calc.remainingCollateralAfterFeeInBorrowAssets =
+            remainingCollateralAfterFee.divideWithRounding(calc.collateralPrice, ORACLE_PRICE_PRECISION, false);
 
-        uint256 _collateralToSell = calc.remainingCollateralValue.multiplyWithPrecision(calc.newLtv);
-        uint256 collateralToSell =
-            _collateralToSell > calc.positionBorrowedAssets ? calc.positionBorrowedAssets : _collateralToSell;
+        uint256 collateralToSellInBorrowAssets = (
+            calc.positionBorrowedAssets
+                - calc.remainingCollateralAfterFeeInBorrowAssets.multiplyWithPrecision(calc.newLtv)
+        ).divideWithPrecisionUp(MATH_PRECISION - calc.newLtv);
+        collateralToSellInBorrowAssets =
+            Math.min(collateralToSellInBorrowAssets, calc.remainingCollateralAfterFeeInBorrowAssets);
+        collateralToSellInBorrowAssets = Math.min(collateralToSellInBorrowAssets, calc.positionBorrowedAssets);
 
         // Calculate final amounts
-        uint256 collateralToSellInBorrowAssets =
-            (calc.positionBorrowedAssets - collateralToSell).divideWithPrecisionUp(MATH_PRECISION - calc.newLtv);
-
-        calc.collateralToSell =
-            collateralToSellInBorrowAssets.divideWithRounding(ORACLE_PRICE_PRECISION, calc.collateralPrice, true);
-        uint256 totalCollateralToTake = calc.collateralToSell + calc.liquidatorBonusFee;
-        uint256 collateralAmount =
+        uint256 totalCollateralToTake = collateralToSellInBorrowAssets.divideWithRounding(
+            ORACLE_PRICE_PRECISION, calc.collateralPrice, true
+        ) + calc.liquidatorBonusFee;
+        uint256 f_collateralAmount =
             totalCollateralToTake > _position.collateralAssets ? _position.collateralAssets : totalCollateralToTake;
 
-        calc.expectedRepayAmount =
-            calc.collateralToSell.divideWithRounding(calc.collateralPrice, ORACLE_PRICE_PRECISION, true);
-        calc.expectedRepayAmount = calc.expectedRepayAmount > calc.positionBorrowedAssets
+        uint256 f_repayAmount = collateralToSellInBorrowAssets > calc.positionBorrowedAssets
             ? calc.positionBorrowedAssets
-            : calc.expectedRepayAmount;
+            : collateralToSellInBorrowAssets;
 
-        uint256 repayShares = calc.expectedRepayAmount.convertToSharesDown(totalBorrowed.assets, totalBorrowed.shares);
+        uint256 f_repayShares = f_repayAmount.convertToSharesDown(totalBorrowed.assets, totalBorrowed.shares);
 
         // Ensure we don't try to repay more shares than the user has which can happen since we are using virtual shares
         // we check whether substracting 1e6 from the repay shares is still greater than the user's borrow shares
         // as other values are not valid.
         if (
-            repayShares.toUint128() > _position.borrowShares
-                && repayShares - AssetShareConversionMath.VIRTUAL_SHARES < _position.borrowShares
+            f_repayShares.toUint128() > _position.borrowShares
+                && f_repayShares - AssetShareConversionMath.VIRTUAL_SHARES < _position.borrowShares
         ) {
-            repayShares = uint256(_position.borrowShares);
+            f_repayShares = uint256(_position.borrowShares);
         }
 
         // apply liquidation
-        position[borrower].collateralAssets -= collateralAmount.toUint128();
-        position[borrower].borrowShares -= repayShares.toUint128();
+        position[borrower].collateralAssets -= f_collateralAmount.toUint128();
+        position[borrower].borrowShares -= f_repayShares.toUint128();
 
-        totalBorrowed.shares -= repayShares.toUint128();
-        totalBorrowed.assets = (
-            totalBorrowed.assets > calc.expectedRepayAmount ? totalBorrowed.assets - calc.expectedRepayAmount : 0
-        ).toUint128();
+        totalBorrowed.shares -= f_repayShares.toUint128();
+        totalBorrowed.assets =
+            (totalBorrowed.assets > f_repayAmount ? totalBorrowed.assets - f_repayAmount : 0).toUint128();
 
         delete liquidablePositions[borrower];
 
-        // TODO: handle bad debt
+        Balance memory badDebt;
+        if (position[borrower].collateralAssets == 0) {
+            badDebt.shares = position[borrower].borrowShares;
+            badDebt.assets = uint128(
+                Math.min(
+                    totalBorrowed.assets,
+                    uint256(badDebt.shares).convertToAssetsUp(totalBorrowed.assets, totalBorrowed.shares)
+                )
+            );
+
+            _applyLiquidationBadDebt(badDebt, borrower);
+        }
 
         // transfer collateral and borrow tokens
-        IERC20(collateralToken).safeTransfer(msg.sender, collateralAmount);
-        // TODO: add a callback for the liqduidator to process received collateral and generate repay tokens
-        //IERC20(borrowToken).safeTransferFrom(msg.sender, address(this), calc.expectedRepayAmount);
-        _sendBorrowToken(msg.sender, address(this), calc.expectedRepayAmount);
+        IERC20(collateralToken).safeTransfer(msg.sender, f_collateralAmount);
 
-        emit Liquidation(borrower, collateralToken, borrowToken, msg.sender, collateralAmount, calc.expectedRepayAmount);
+        if (data.length > 0) {
+            ILiquidateCallback(msg.sender).onLiquidateCallback(f_collateralAmount, data);
+        }
 
-        return LiquidationResult({
-            currentLtv: calc.currentLtv,
-            newLtv: calc.newLtv,
-            optimalRepayAmount: calc.expectedRepayAmount,
-            collateralAmount: collateralAmount
-        });
+        _sendBorrowToken(msg.sender, address(this), f_repayAmount);
+
+        emit Liquidation(
+            borrower,
+            collateralToken,
+            borrowToken,
+            msg.sender,
+            f_collateralAmount,
+            f_repayAmount,
+            f_repayShares,
+            badDebt.assets,
+            badDebt.shares
+        );
+
+        return (f_collateralAmount, f_repayAmount);
+    }
+
+    function _applyLiquidationBadDebt(Balance memory badDebt, address borrower) internal virtual {
+        totalBorrowed.shares -= badDebt.shares;
+        totalBorrowed.assets -= badDebt.assets;
+
+        totalSupply.assets -= badDebt.assets;
+
+        position[borrower].borrowShares = 0;
     }
 
     function _sendBorrowToken(address from, address to, uint256 amount) internal virtual {
