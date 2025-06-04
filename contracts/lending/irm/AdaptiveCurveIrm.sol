@@ -13,9 +13,9 @@ import {ExpLib} from "../libraries/ExpLib.sol";
 import {FixedPointMath} from "../libraries/FixedPointMath.sol";
 
 /// @title Adaptive Curve Interest Rate Model
-/// @author Tapioca Foundation
+/// @author Alto Foundation
 /// @author Adapted from Morpho Labs (https://github.com/morpho-org/morpho-blue-irm/).
-/// @custom:contact security@tapioca.xyz
+/// @custom:contact security@alto.xyz
 /// @notice A Adaptive Curve IRM that adjusts the rate at target utilization based on time spent above/below it.
 ///         This IRM has adjustable parameters post deployment.
 /// @dev This implementation intentionally leaves variables names, units and ExpLib unchanged from original.

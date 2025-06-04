@@ -1,26 +1,15 @@
 {
-  "name": "alto-protocol",
-  "license": "MIT",
+  "name": "alto-v1",
+  "license": "BUSL-1.1",
   "scripts": {
-    "lint:sol": "prettier --write \"./contracts/**/*.sol\" && solhint \"./contracts/**/*.sol\" --fix",
-    "lint": "npm run lint:ts && npm run lint:sol",
-    "clean": "rm -rf ./cache && rm -rf ./out",
-    "test:deployments": "forge test --match-path  'test/deployments/*' -vvv",
-    "prepare": "husky install",
-    "coverage:twtap": "FOUNDRY_PROFILE=twTap forge coverage --match-path 'test/tap-token/unit/options/TWLBase/**/*.sol' --ir-minimum  --report lcov && genhtml lcov.info -o report --branch-coverage",
-    "coverage:usdo": "FOUNDRY_PROFILE=usdo forge coverage --match-path 'test/bar/**/*.sol' --ir-minimum  --report lcov && genhtml lcov.info -o report --branch-coverage",
-    "coverage:market": "FOUNDRY_PROFILE=market forge coverage --match-path 'test/lending/**/*.sol'  --report lcov && genhtml lcov.info -o report --branch-coverage",
-    "coverage": "forge coverage --ir-minimum --report lcov && genhtml lcov.info -o report --branch-coverage",
-    "test:twtap": "FOUNDRY_PROFILE=twTap forge test --match-path 'test/tap-token/unit/options/TWLBase/**/*.sol'",
-    "test:market": "FOUNDRY_PROFILE=market forge test --match-path 'test/lending/**/*.sol'",
-    "test:bundler": "FOUNDRY_PROFILE=bundler forge test --match-path 'test/bundler/**/*.sol'"
+    "prepare": "husky install && forge install",
+    "lint": "forge fmt --check",
+    "clean": "forge clean",
+    "test": "forge test",
+    "coverage:not_working": "forge coverage --ir-minimum --report lcov && genhtml lcov.info -o report --branch-coverage"
   },
   "devDependencies": {
-    "solhint": "^3.3.6",
-    "husky": "^8.0.1",
-    "hardhat-deploy": "^0.12.4"
-  },
-  "dependencies": {
+    "husky": "8.0.3",
     "forge-std": "github:foundry-rs/forge-std#v1.9.1",
     "@openzeppelin/contracts": "5.3.0",
     "@openzeppelin/contracts-upgradeable": "5.3.0",

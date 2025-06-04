@@ -1,22 +1,20 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.22;
 
-import {AltoRelease} from "deployments/releases/tapioca-v1/AltoRelease.sol";
-import {AltoReport, TapiocaInput} from "deployments/interfaces/IAltoReport.sol";
+import {AltoRelease} from "deployments/releases/alto-v1/AltoRelease.sol";
+import {AltoReport, AltoInput} from "deployments/interfaces/IAltoReport.sol";
 import {Script} from "forge-std/Script.sol";
-import {TapToken, ITapToken} from "@alto/tokens/TapToken.sol";
-// import {TapiocaOptionBroker} from "@alto/tap-token/options/TapiocaOptionBroker.sol";
-import {TapiocaMulticall} from "@alto/deployments/contracts/TapiocaMulticall/TapiocaMulticall.sol";
+import {AltoToken, IAltoToken} from "@alto/tokens/AltoToken.sol";
+import {AltoMulticall} from "@alto/deployments/contracts/multicall/AltoMulticall.sol";
 import {ERC20Testnet} from "@alto/deployments/contracts/testnet/ERC20Testnet.sol";
 import {Usdo} from "@alto/tokens/Usdo.sol";
 import {
     TestnetOracles,
     TestnetOraclesBatch
-} from "@alto/deployments/releases/tapioca-v1/batches/testnet/TestnetOraclesBatch.sol";
+} from "@alto/deployments/releases/alto-v1/batches/testnet/TestnetOraclesBatch.sol";
 import "forge-std/console.sol";
-import {TapiocaMulticallTestnet} from "@alto/deployments/contracts/TapiocaMulticall/TapiocaMulticallTestnet.sol";
+import {AltoMulticallTestnet} from "@alto/deployments/contracts/multicall/AltoMulticallTestnet.sol";
 import {console} from "forge-std/console.sol";
-// import {TapiocaTestnetTobSetter} from "@alto/deployments/releases/tapioca-v1/actions/TobLauncher.sol";
 
 contract DeployAltoTestnet is Script {
     uint128 public constant MULTI_TOKEN_SENDER_MINT_TOKENS = type(uint128).max;
@@ -27,7 +25,7 @@ contract DeployAltoTestnet is Script {
     uint256 public constant DEFAULT_BB_MARKET_BORROW_CAP = 3_000_000e18;
 
     function run() public {
-        TapiocaInput memory input;
+        AltoInput memory input;
         AltoReport memory report;
 
         vm.startBroadcast();
@@ -44,21 +42,7 @@ contract DeployAltoTestnet is Script {
 
         input.collateralTokenMintMarket = address(stETH);
         input.collateralTokenBorrowMarket = address(usdc);
-        input.tapToken = address(
-            new TapToken(
-                ITapToken.TapTokenConstructorData(
-                    EPOCH_DURATION_INTERNAL_TESTING,
-                    input.lzEndpoint,
-                    input.owner,
-                    input.owner,
-                    input.owner,
-                    input.owner,
-                    input.owner,
-                    input.owner,
-                    input.owner
-                )
-            )
-        );
+        input.altoToken = address(new AltoToken(input.lzEndpoint, input.owner));
 
         TestnetOracles memory oracles = deployTestnetOracles(input);
 
@@ -67,31 +51,31 @@ contract DeployAltoTestnet is Script {
 
         report = AltoRelease.deployAltoV1(input, report);
 
-        TapToken(payable(input.tapToken)).transfer(report.multiTokenSender, 20_000_000 ether);
+        AltoToken(payable(input.altoToken)).transfer(report.multiTokenSender, 20_000_000 ether);
         ERC20Testnet(usdc).mint(report.multiTokenSender, MULTI_TOKEN_SENDER_MINT_TOKENS);
         ERC20Testnet(stETH).mint(report.multiTokenSender, MULTI_TOKEN_SENDER_MINT_TOKENS);
         ERC20Testnet(stETH).mint(report.leverageSwapper, MULTI_TOKEN_SENDER_MINT_TOKENS);
         ERC20Testnet(usdc).mint(report.leverageSwapper, MULTI_TOKEN_SENDER_MINT_TOKENS);
-        TapToken(payable(input.tapToken)).transfer(report.multiTokenSender, 20_000_000 ether);
-        TapToken(payable(input.tapToken)).transfer(
-            report.tapiocaMulticall, TapToken(payable(input.tapToken)).balanceOf(msg.sender) - 100000e18
+        AltoToken(payable(input.altoToken)).transfer(report.multiTokenSender, 20_000_000 ether);
+        AltoToken(payable(input.altoToken)).transfer(
+            report.altoMulticall, AltoToken(payable(input.altoToken)).balanceOf(msg.sender) - 100000e18
         );
 
         console.log("AltoLeverage: ", report.altoLeverage);
         console.log("LeverageSwapper: ", report.leverageSwapper);
         console.log("MultiTokenSender: ", report.multiTokenSender);
-        console.log("TapiocaMulticall: ", report.tapiocaMulticall);
+        console.log("AltoMulticall: ", report.altoMulticall);
         console.log("Usdo: ", report.usdo);
         console.log("MarketLib: check address in broadcast/run-latest.json");
         console.log("WrappedNativeToken: ", input.wrappedNativeToken);
         console.log("IsTestnet: ", input.isTestnet);
         console.log("Deployer:", msg.sender);
         console.log("LzChainId:", vm.toString(input.lzChainId));
-        console.log("TapToken: ", input.tapToken);
+        console.log("AltoToken: ", input.altoToken);
         console.log("stETHOracle: ", oracles.stETHOracle);
         console.log("USDOOracle: ", oracles.usdoOracle);
         console.log("USDCOracle: ", oracles.usdcOracle);
-        console.log("TapOracle: ", oracles.tapOracle);
+        console.log("AltoOracle: ", oracles.altoOracle);
 
         console.log("BorrowMarket: ", address(report.borrowMarket));
         console.log("MintMarket: ", address(report.mintMarket));
@@ -101,50 +85,13 @@ contract DeployAltoTestnet is Script {
         console.log("AltoAdapter: ", address(report.altoAdapter));
 
         console.log("MultiTokenSender: ", report.multiTokenSender);
-        console.log("TapiocaMulticall: ", report.tapiocaMulticall);
+        console.log("AltoMulticall: ", report.altoMulticall);
         console.log("Usdo: ", report.usdo);
-
-        {
-            /*
-            TapiocaTestnetTobSetter tobSetter = new TapiocaTestnetTobSetter(
-                report,
-                address(1), // singularityMarket
-                input.tapToken,
-                report.tapiocaMulticall,
-                input.owner,
-                address(usdc),
-                oracles.usdcOracle,
-                oracles.tapOracle,
-                EPOCH_DURATION_INTERNAL_TESTING,
-                DEFAULT_MAX_DEBT_BUFFER
-            );
-            TapiocaOptionBroker tob = tobSetter.tob();
-            console.log("TapiocaOptionBroker:", address(tob));
-
-            TapToken(payable(input.tapToken)).setMinter(address(tob));
-
-            tob.enableTapTokenRewards();
-            tob.transferOwnership(report.tapiocaMulticall);
-            */
-
-            //address twTap = createTwTap(payable(input.tapToken), input.owner);
-            //console.log("twTAP:", address(twTap));
-
-            //TapToken(payable(input.tapToken)).setMinter(address(tob));
-
-            // Mint and transfer mock tokens to multitokensender and deployer
-
-            // (ITapiocaOracle oracle, bytes memory oracleData) = tob._paymentTokens(address(usdc));
-            // console.log("TOB payment oracle: ", address(oracle));
-            // console.log("TOB payment oracle data (might be empty): ");
-            // console.logBytes(oracleData);
-            // require(address(oracle) != address(0), "TOB payment oracle is not set");
-        }
 
         vm.stopBroadcast();
     }
 
-    function deployTestnetOracles(TapiocaInput memory input) internal returns (TestnetOracles memory oracles) {
+    function deployTestnetOracles(AltoInput memory input) internal returns (TestnetOracles memory oracles) {
         TestnetOraclesBatch oraclesBatch = new TestnetOraclesBatch();
 
         return oraclesBatch.getOraclesReport();

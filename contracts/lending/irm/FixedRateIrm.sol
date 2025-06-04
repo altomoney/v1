@@ -6,9 +6,9 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IMarket} from "../interfaces/IMarket.sol";
 import {FixedPointMath} from "../libraries/FixedPointMath.sol";
 
-/// @title FixedRateIrm
+/// @title Fixed Rate Interest Rate Model
 /// @author Alto Foundation
-/// @custom:contact security@alto.money
+/// @custom:contact security@alto.xyz
 contract FixedRateIrm is Ownable, IIrm {
     using FixedPointMath for uint256;
 

@@ -1,34 +1,15 @@
-# Tapioca Protocol V1 Monorepo
+# Alto v1
 
-### Getting started
+## Setup
+### Devcontainer
+You may use prepared VS Code devcontainer that will set up all tools necessary.
+### Fully Local Environment
+Install following tools
+- `foundry` tools
+- `yarn`
+- `lcov` (optional for code coverage)
 
-Install dependencies via forge and yarn
-
-```
-forge install
+and install dependencies
+```bash
 yarn
 ```
-
-Compile contracts
-
-```
-forge build
-```
-
-Run tests locally (skip some fork tests for speed)
-
-```
-forge test
-```
-
-Run tests in fork mode
-
-```
-FORGE_PROFILE=fork forge test
-```
-
-# How-to deploy with gitmodules
-
-1. Copy paste `.env.example/` to `.env/` and fill in the values. This is the `.env/` that'll be copied into each repo. It is needed for the Hardhat execution
-2. Give `init.bash` execution rights with `chmod +x init.bash`
-3. Run `./init.bash` to initialize the repos, and hardhat compilation

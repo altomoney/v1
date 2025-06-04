@@ -13,12 +13,12 @@ struct AltoReport {
     address altoLeverage;
     address leverageSwapper;
     address multiTokenSender;
-    address tapiocaMulticall;
+    address altoMulticall;
     address usdo;
 }
 
 struct UtilitiesReport {
-    address tapiocaMulticall;
+    address altoMulticall;
     address leverageSwapper;
     address multiTokenSender;
     address bundler3;
@@ -37,15 +37,14 @@ struct LendingReport {
     address mintOracle;
 }
 
-struct TapiocaInput {
+struct AltoInput {
     address owner;
     address wrappedNativeToken;
-    address tapToken;
+    address altoToken;
     address lzEndpoint;
     uint256 bbMarketBorrowCap;
     uint16 lzChainId;
     bool isTestnet;
-    bool isMetaInstance; // if false, it will deploy a host Tapioca instance (Arbitrum), if not, it will deploy a meta instance deployment (Other networks, like Ethereum)
     address collateralTokenBorrowMarket;
     address collateralTokenMintMarket;
     address borrowOracle;

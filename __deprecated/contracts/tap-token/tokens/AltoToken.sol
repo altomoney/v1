@@ -9,13 +9,11 @@ import {ERC20Permit, ERC20} from "@openzeppelin/contracts/token/ERC20/extensions
 import {Pausable, IPausable} from "@alto/utils/Pausable.sol";
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {ITapToken} from "@alto/tokens/interfaces/ITapToken.sol";
+import {IAltoToken} from "@alto/tokens/interfaces/IAltoToken.sol";
 import {PAUSED_ROLE} from "@alto/utils/Constants.sol";
 
-/// @title Tapioca OFTv2 token
-/// @notice OFT compatible TAP token
-/// @dev Emissions E(x)= E(x-1) - E(x-1) * D with E being total supply a x week, and D the initial decay rate
-contract TapToken is Pausable, OFT {
+/// @title AltoToken
+contract AltoToken is Pausable, OFT {
     uint256 public constant INITIAL_SUPPLY = 47_500_000 * 1e18; // Everything minus DSO
     uint256 public dso_supply = 52_500_000 * 1e18; // Emission supply for DSO
 
@@ -110,7 +108,7 @@ contract TapToken is Pausable, OFT {
      * @param _data.airdrop Address of the airdrop contract.
      * @param _data.owner Address of the conservator/owner.
      */
-    constructor(ITapToken.TapTokenConstructorData memory _data)
+    constructor(IAltoToken.AltoTokenConstructorData memory _data)
         OFT("ALTO", "ALTO", _data.endpoint, _data.owner)
         Ownable(_data.owner)
     {
