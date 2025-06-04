@@ -1,20 +1,20 @@
+// See https://containers.dev/implementors/json_reference/ for configuration reference
 {
-    "image": "mcr.microsoft.com/devcontainers/rust:1-1-bullseye",
-    "features": {
-        "ghcr.io/devcontainers/features/node:1": {}
-    },
-    "customizations": {
-        "vscode": {
-            "extensions": [
-                "JuanBlanco.solidity"
-            ],
-            "settings": {
-                "solidity.formatter": "forge"
-            }
-        }
-    },
-    "postCreateCommand": [
+	"name": "alto-protocol",
+	"build": {
+		"dockerfile": "Dockerfile"
+	},
+	"postStartCommand": [
         "/bin/bash",
-        ".devcontainer/postCreateInstall.sh"
-    ]
+        ".devcontainer/post_install.sh"
+    ],
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"JuanBlanco.solidity",
+				"Graphite.gti-vscode",
+				"tamasfe.even-better-toml"
+			]
+		}
+	}
 }
