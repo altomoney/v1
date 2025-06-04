@@ -22,9 +22,8 @@ library AltoRelease {
         TapiocaPostSetup postSetupBatch = new TapiocaPostSetup();
 
         TapiocaUtilitiesBatch utilitiesBatch;
-        (utilitiesBatch, reports.utilitiesReport) = _deployUtilities(
-            address(postSetupBatch), input.zeroXProxy, input.lzChainId, input.isTestnet, input.wrappedNativeToken
-        );
+        (utilitiesBatch, reports.utilitiesReport) =
+            _deployUtilities(address(postSetupBatch), input.lzChainId, input.isTestnet, input.wrappedNativeToken);
 
         (reports.usdoReport, reports.lendingReport) = _deployUsdoAndMarkets(
             input.lzEndpoint,
@@ -44,20 +43,17 @@ library AltoRelease {
             reports.lendingReport.mintMarket,
             reports.utilitiesReport.multiTokenSender,
             reports.utilitiesReport.altoLeverage,
-            reports.utilitiesReport.zeroXSwapper
+            reports.utilitiesReport.leverageSwapper
         );
 
         return _generateMarketReport(reports);
     }
 
-    function _deployUtilities(
-        address owner,
-        address zeroXSwapper,
-        uint16 lzChainId,
-        bool isTestnet,
-        address wrappedNativeToken
-    ) private returns (TapiocaUtilitiesBatch utilitiesBatch, UtilitiesReport memory report) {
-        utilitiesBatch = new TapiocaUtilitiesBatch(owner, zeroXSwapper, lzChainId, isTestnet, wrappedNativeToken);
+    function _deployUtilities(address owner, uint16 lzChainId, bool isTestnet, address wrappedNativeToken)
+        private
+        returns (TapiocaUtilitiesBatch utilitiesBatch, UtilitiesReport memory report)
+    {
+        utilitiesBatch = new TapiocaUtilitiesBatch(owner, lzChainId, isTestnet, wrappedNativeToken);
 
         return (utilitiesBatch, utilitiesBatch.getUtilitiesReport());
     }
@@ -94,7 +90,7 @@ library AltoRelease {
 
         report.tapiocaMulticall = reports.utilitiesReport.tapiocaMulticall;
         report.multiTokenSender = reports.utilitiesReport.multiTokenSender;
-        report.zeroXSwapper = reports.utilitiesReport.zeroXSwapper;
+        report.leverageSwapper = reports.utilitiesReport.leverageSwapper;
 
         report.usdo = reports.usdoReport.usdo;
 

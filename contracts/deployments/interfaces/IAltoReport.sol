@@ -11,7 +11,7 @@ struct AltoReport {
     address mintIrm;
     address mintOracle;
     address altoLeverage;
-    address zeroXSwapper;
+    address leverageSwapper;
     address multiTokenSender;
     address tapiocaMulticall;
     address usdo;
@@ -20,7 +20,7 @@ struct AltoReport {
 struct UtilitiesReport {
     address tapiocaMulticall;
     address pauser;
-    address zeroXSwapper;
+    address leverageSwapper;
     address multiTokenSender;
     address bundler3;
     address altoAdapter;
@@ -41,7 +41,6 @@ struct LendingReport {
 struct TapiocaInput {
     address owner;
     address wrappedNativeToken;
-    address zeroXProxy;
     address tapToken;
     address lzEndpoint;
     uint256 bbMarketBorrowCap;
