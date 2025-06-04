@@ -141,7 +141,7 @@ contract AltoBorrowMarketFeeTest is Test {
         borrowAmount = borrowAmount.divideWithPrecisionDown(MATH_PRECISION + openingFee);
         uint256 feeAssets = borrowAmount.multiplyWithPrecision(openingFee);
 
-        market.borrow(borrowAmount, 0, USER, USER);
+        market.borrow(borrowAmount, 0, USER, USER, "");
 
         uint256 supplyFeeAssets = uint256(imarket.position(FEE_RECIPIENT).supplyShares).convertToAssetsDown(
             imarket.totalSupply().assets, imarket.totalSupply().shares
@@ -178,7 +178,7 @@ contract AltoBorrowMarketFeeTest is Test {
         borrowAmount = borrowAmount.divideWithPrecisionDown(MATH_PRECISION + openingFee);
         uint256 feeAssets = borrowAmount.multiplyWithPrecision(openingFee);
 
-        market.borrow(borrowAmount, 0, USER, USER);
+        market.borrow(borrowAmount, 0, USER, USER, "");
 
         uint256 supplyFeeAssets = uint256(imarket.position(FEE_RECIPIENT).supplyShares).convertToAssetsDown(
             imarket.totalSupply().assets, imarket.totalSupply().shares
@@ -217,7 +217,7 @@ contract AltoBorrowMarketFeeTest is Test {
         uint256 borrowShares =
             borrowAmount.convertToSharesUp(imarket.totalBorrowed().assets, imarket.totalBorrowed().shares);
 
-        market.borrow(0, borrowShares, USER, USER);
+        market.borrow(0, borrowShares, USER, USER, "");
 
         uint256 supplyFeeAssets = uint256(imarket.position(FEE_RECIPIENT).supplyShares).convertToAssetsDown(
             imarket.totalSupply().assets, imarket.totalSupply().shares
@@ -253,7 +253,7 @@ contract AltoBorrowMarketFeeTest is Test {
         borrowAmount = borrowAmount.divideWithPrecisionDown(MATH_PRECISION + openingFee);
         uint256 feeAssets = borrowAmount.multiplyWithPrecision(openingFee);
 
-        market.borrow(borrowAmount, 0, user, user);
+        market.borrow(borrowAmount, 0, user, user, "");
 
         return feeAssets;
     }

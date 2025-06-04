@@ -8,12 +8,13 @@ import {TestBase} from "forge-std/Base.sol";
 
 import "forge-std/console.sol";
 
-import {IZeroXSwapper} from "tap-utils/interfaces/external/IZeroXSwapper.sol";
+import {IAltoLeverageSwapper} from "tapioca-bar/leverage/IAltoLeverageSwapper.sol";
 import {ICluster} from "tap-utils/interfaces/common/ICluster.sol";
 import {ZerroXSwapperMockTarget} from "./ZerroXSwapperMockTarget.sol";
 import {ZeroXSwapper} from "tap-utils/Swapper/ZeroXSwapper.sol";
 import {Cluster} from "src/tap-utils/Cluster/Cluster.sol";
 import {ERC20Mock} from "../mocks/ERC20Mock.sol";
+import {SZeroXSwapData} from "tap-utils/interfaces/external/IZeroX.sol";
 
 // Lz
 import {TestHelper} from "../../bar/LZSetup/TestHelper.sol";
@@ -82,17 +83,19 @@ contract ZeroXSwapperTest is TestBase, StdAssertions, StdCheats, StdUtils, TestH
             assertEq(bERC20.balanceOf(address(swapper)), amount);
         }
 
-        IZeroXSwapper.SZeroXSwapData memory swapData = IZeroXSwapper.SZeroXSwapData({
-            sellToken: IERC20(address(aERC20)),
-            buyToken: IERC20(address(bERC20)),
-            swapTarget: payable(swapperTarget),
-            swapCallData: abi.encodeWithSelector(ZerroXSwapperMockTarget.toggleState.selector)
-        });
+        bytes memory swapData = abi.encode(
+            SZeroXSwapData({
+                sellToken: IERC20(address(aERC20)),
+                buyToken: IERC20(address(bERC20)),
+                swapTarget: payable(swapperTarget),
+                swapCallData: abi.encodeWithSelector(ZerroXSwapperMockTarget.toggleState.selector)
+            })
+        );
 
         cluster.updateContract(0, address(this), true);
 
         aERC20.approve(address(swapper), type(uint256).max);
-        swapper.swap(swapData, amount, amount);
+        swapper.swap(swapData, address(aERC20), address(bERC20), amount, amount);
 
         assertEq(bERC20.balanceOf(address(this)), amount);
         assertEq(bERC20.balanceOf(address(swapper)), 0);

@@ -1,16 +1,17 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.22;
 
-import {IZeroXSwapper} from "tap-utils/interfaces/external/IZeroXSwapper.sol";
+import {IAltoLeverageSwapper} from "tapioca-bar/leverage/IAltoLeverageSwapper.sol";
 import {ICluster} from "tap-utils/interfaces/common/ICluster.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {SZeroXSwapData} from "tap-utils/interfaces/external/IZeroX.sol";
 
 interface IERC20Mock {
     function freeMint(uint256 _val) external;
     function mint(address to, uint256 amount) external;
 }
 
-contract ZeroXSwapperMock is IZeroXSwapper, Ownable {
+contract ZeroXSwapperMock is IAltoLeverageSwapper, Ownable {
     ICluster public cluster;
 
     error SenderNotValid(address sender);
@@ -24,15 +25,18 @@ contract ZeroXSwapperMock is IZeroXSwapper, Ownable {
         cluster = _cluster;
     }
 
-    function swap(SZeroXSwapData calldata swapData, uint256 amountIn, uint256 minAmountOut)
-        public
-        payable
-        returns (uint256 amountOut)
-    {
+    function swap(
+        bytes calldata swapDataBytes,
+        address sellToken,
+        address buyToken,
+        uint256 amountIn,
+        uint256 minAmountOut
+    ) public payable returns (uint256 amountOut) {
         if (!cluster.isWhitelisted(0, msg.sender)) {
             revert SenderNotValid(msg.sender);
         }
         // Transfer tokens to this contract
+        SZeroXSwapData memory swapData = abi.decode(swapDataBytes, (SZeroXSwapData));
         swapData.sellToken.transferFrom(msg.sender, address(this), amountIn);
 
         // Get tokens

@@ -143,9 +143,11 @@ interface IMarketBase is IMarketErrors, IMarketEvents, IAuth {
 
     function addCollateral(uint256 assets, address onBehalf) external returns (uint256);
 
-    function removeCollateral(uint256 assets, address onBehalf, address receiver) external returns (uint256);
+    function removeCollateral(uint256 assets, address onBehalf, address receiver, bytes calldata data)
+        external
+        returns (uint256);
 
-    function borrow(uint256 assets, uint256 shares, address onBehalf, address receiver)
+    function borrow(uint256 assets, uint256 shares, address onBehalf, address receiver, bytes calldata data)
         external
         returns (uint256, uint256, uint256);
 
@@ -154,6 +156,12 @@ interface IMarketBase is IMarketErrors, IMarketEvents, IAuth {
     function accrueInterest() external;
 
     function setIrm(address irm) external;
+
+    function borrowOpeningFee() external view returns (uint256);
+
+    function maxLtv() external view returns (uint256);
+
+    function setAuthorizedCallback(address callback, bool isAuthorized) external;
 }
 
 interface IMarket is IMarketBase {
@@ -164,7 +172,7 @@ interface IMarket is IMarketBase {
     function totalBorrowed() external view returns (Balance memory);
 }
 
-interface IMarkeStaticTypes is IMarketBase {
+interface IMarketStaticTypes is IMarketBase {
     function position(address user)
         external
         view

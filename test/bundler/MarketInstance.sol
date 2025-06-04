@@ -12,7 +12,7 @@ contract MarketInstance is AltoBorrowMarket {
         address _owner,
         address _oracle,
         uint256 _maxLtv,
-        uint256 _openingFee,
+        uint256 _borrowOpeningFee,
         address _feeRecipient,
         LiquidationConfiguration memory _liquidationConfiguration
     )
@@ -23,7 +23,7 @@ contract MarketInstance is AltoBorrowMarket {
             _owner,
             _oracle,
             _maxLtv,
-            _openingFee,
+            _borrowOpeningFee,
             _feeRecipient,
             _liquidationConfiguration
         )

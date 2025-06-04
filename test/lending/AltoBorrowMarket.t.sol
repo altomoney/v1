@@ -282,7 +282,7 @@ contract AltoBorrowMarketTest is Test {
         vm.stopPrank();
 
         vm.startPrank(alice);
-        uint256 removedAssets = market.removeCollateral(50 ether, alice, alice);
+        uint256 removedAssets = market.removeCollateral(50 ether, alice, alice, "");
         vm.stopPrank();
 
         assertEq(collateralToken.balanceOf(alice), INITIAL_AMOUNT - 50 ether);
@@ -293,7 +293,7 @@ contract AltoBorrowMarketTest is Test {
     function testRevertWhenAddingCollateralWithInsufficientLiquidity() public {
         vm.startPrank(alice);
         vm.expectRevert(IMarketErrors.AltoBorrowMarketInsufficientMarketLiquidity.selector);
-        market.borrow(100 ether, 0, alice, alice);
+        market.borrow(100 ether, 0, alice, alice, "");
         vm.stopPrank();
     }
 
@@ -301,7 +301,7 @@ contract AltoBorrowMarketTest is Test {
         vm.startPrank(alice);
         market.addSupply(100 ether, 0, alice);
         vm.expectRevert(IMarketErrors.AltoBorrowMarketBorrowingTooMuch.selector);
-        market.borrow(100 ether, 0, alice, alice);
+        market.borrow(100 ether, 0, alice, alice, "");
         vm.stopPrank();
     }
 
@@ -312,7 +312,7 @@ contract AltoBorrowMarketTest is Test {
 
         vm.startPrank(alice);
         market.addCollateral(100 ether, alice);
-        market.borrow(30 ether, 0, alice, alice);
+        market.borrow(30 ether, 0, alice, alice, "");
         vm.stopPrank();
     }
 
@@ -323,7 +323,7 @@ contract AltoBorrowMarketTest is Test {
 
         vm.startPrank(alice);
         market.addCollateral(10 ether, alice);
-        market.borrow(3 ether, 0, alice, alice);
+        market.borrow(3 ether, 0, alice, alice, "");
         market.addInterest(1 ether);
         (uint128 assets, uint128 shares) = market.totalBorrowed();
 
@@ -348,7 +348,7 @@ contract AltoBorrowMarketTest is Test {
 
         vm.startPrank(bob);
         market.addCollateral(1000 ether, bob);
-        market.borrow(100 ether, 0, bob, bob);
+        market.borrow(100 ether, 0, bob, bob, "");
         market.accrueInterest();
         vm.stopPrank();
 

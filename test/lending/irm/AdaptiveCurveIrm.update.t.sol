@@ -130,7 +130,7 @@ contract AdaptiveCurveIrmUpdateTest is IrmCommon {
         market.addCollateral(amount, USER);
 
         uint256 borrowAmount = amount.multiplyWithPrecision(targetLtv);
-        market.borrow(borrowAmount, 0, USER, USER);
+        market.borrow(borrowAmount, 0, USER, USER, "");
 
         (uint256 expectedInterest,) = irm.updateInterestRateViewTimeElapsed(amount, borrowAmount, elapsedTime);
 
@@ -167,7 +167,7 @@ contract AdaptiveCurveIrmUpdateTest is IrmCommon {
 
         market.addSupply(amount, 0, USER);
         market.addCollateral(amount, USER);
-        market.borrow(toBorrowAmount, 0, USER, USER);
+        market.borrow(toBorrowAmount, 0, USER, USER, "");
 
         vm.warp(block.timestamp + elapsedTime);
         market.accrueInterest();

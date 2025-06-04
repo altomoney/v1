@@ -6,9 +6,9 @@ import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeE
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 // Tapioca
-import {IZeroXSwapper} from "src/tap-utils/interfaces/external/IZeroXSwapper.sol";
-import {ICluster} from "src/tap-utils/interfaces/common/ICluster.sol";
-
+import {IAltoLeverageSwapper} from "tapioca-bar/leverage/IAltoLeverageSwapper.sol";
+import {ICluster} from "tap-utils/interfaces/common/ICluster.sol";
+import {SZeroXSwapData} from "tap-utils/interfaces/external/IZeroX.sol";
 /*
 
 ████████╗ █████╗ ██████╗ ██╗ ██████╗  ██████╗ █████╗ 
@@ -21,7 +21,7 @@ import {ICluster} from "src/tap-utils/interfaces/common/ICluster.sol";
 */
 
 /// @title ZeroX swapper
-contract ZeroXSwapper is IZeroXSwapper, Ownable {
+contract ZeroXSwapper is IAltoLeverageSwapper, Ownable {
     using SafeERC20 for IERC20;
 
     /// ************
@@ -55,16 +55,19 @@ contract ZeroXSwapper is IZeroXSwapper, Ownable {
 
     /// @notice swaps a token for another, using 0x as a swap aggregator
     /// @dev All of the parameters below are provided by the API response.
-    /// @param swapData the swap data. 0x
+    /// @param swapDataBytes the swap data. 0x or 1inch
     /// @param amountIn the amount of sellToken to sell
     /// @param minAmountOut the minimum amount of buyToken bought
     /// @return amountOut the amount of buyToken bought
-    function swap(SZeroXSwapData calldata swapData, uint256 amountIn, uint256 minAmountOut)
-        public
-        payable
-        returns (uint256 amountOut)
-    {
+    function swap(
+        bytes calldata swapDataBytes,
+        address sellToken,
+        address buyToken,
+        uint256 amountIn,
+        uint256 minAmountOut
+    ) public payable returns (uint256 amountOut) {
         if (!cluster.isWhitelisted(0, msg.sender)) revert SenderNotValid(msg.sender);
+        SZeroXSwapData memory swapData = abi.decode(swapDataBytes, (SZeroXSwapData));
         if (!cluster.isWhitelisted(0, swapData.swapTarget) && swapData.swapTarget != zeroXProxy) {
             revert TargetNotValid(swapData.swapTarget);
         }
@@ -74,10 +77,10 @@ contract ZeroXSwapper is IZeroXSwapper, Ownable {
 
         uint256 amountInBefore = swapData.sellToken.balanceOf(address(this));
         // Approve the 0x proxy to spend the sell token, and call the swap function
-        swapData.sellToken.safeApprove(swapData.swapTarget, amountIn);
+        swapData.sellToken.forceApprove(swapData.swapTarget, amountIn);
         (bool success,) = swapData.swapTarget.call(swapData.swapCallData);
         if (!success) revert SwapFailed();
-        swapData.sellToken.safeApprove(swapData.swapTarget, 0);
+        swapData.sellToken.forceApprove(swapData.swapTarget, 0);
         uint256 amountInAfter = swapData.sellToken.balanceOf(address(this));
 
         // @dev should never be the case otherwise

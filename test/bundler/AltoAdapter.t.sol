@@ -442,7 +442,7 @@ contract AltoAdapterTest is AdapterCommonSetup {
         deal(address(collateralToken), user, collateralAmount);
         vm.startPrank(user);
         market.addCollateral(collateralAmount, user);
-        market.borrow(amount, 0, user, user);
+        market.borrow(amount, 0, user, user, "");
         vm.stopPrank();
 
         bundle.push(_erc20TransferFrom(address(borrowToken), amount));
@@ -472,7 +472,7 @@ contract AltoAdapterTest is AdapterCommonSetup {
         deal(address(collateralToken), user, collateralAmount);
         vm.startPrank(user);
         market.addCollateral(collateralAmount, user);
-        market.borrow(amount, 0, user, user);
+        market.borrow(amount, 0, user, user, "");
         vm.stopPrank();
 
         bundle.push(_erc20TransferFrom(address(borrowToken), amount));
@@ -526,7 +526,7 @@ contract AltoAdapterTest is AdapterCommonSetup {
         deal(address(collateralToken), onBehalf, collateralAmount);
         vm.startPrank(onBehalf);
         market.addCollateral(collateralAmount, onBehalf);
-        market.borrow(amount, 0, onBehalf, address(altoAdapter));
+        market.borrow(amount, 0, onBehalf, address(altoAdapter), "");
         vm.stopPrank();
 
         bundle.push(_marketRepay(market, 0, type(uint256).max, type(uint256).max, onBehalf));
@@ -830,7 +830,7 @@ contract AltoAdapterTest is AdapterCommonSetup {
         deal(address(collateralToken), address(this), collateral);
         market.addSupply(assets, 0, address(this));
         market.addCollateral(collateral, address(this));
-        market.borrow(assets, 0, address(this), address(altoAdapter));
+        market.borrow(assets, 0, address(this), address(altoAdapter), "");
 
         bundle.push(_marketRepay(market, assets, 0, sharePriceE27, address(this)));
         bundler3.multicall(bundle);
@@ -846,7 +846,7 @@ contract AltoAdapterTest is AdapterCommonSetup {
         deal(address(collateralToken), address(this), collateral);
         market.addSupply(assets, 0, address(this));
         market.addCollateral(collateral, address(this));
-        market.borrow(assets, 0, address(this), address(altoAdapter));
+        market.borrow(assets, 0, address(this), address(altoAdapter), "");
 
         vm.expectRevert(ErrorsLib.SlippageExceeded.selector);
         bundle.push(_marketRepay(market, assets, 0, sharePriceE27, address(this)));
