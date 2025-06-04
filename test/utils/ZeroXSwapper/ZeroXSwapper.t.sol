@@ -13,9 +13,8 @@ import {ICluster} from "tap-utils/interfaces/common/ICluster.sol";
 import {ZerroXSwapperMockTarget} from "./ZerroXSwapperMockTarget.sol";
 import {ZeroXSwapper} from "tap-utils/Swapper/ZeroXSwapper.sol";
 import {Cluster} from "src/tap-utils/Cluster/Cluster.sol";
-import {ERC20Mock} from "../mocks/ERC20Mock.sol";
-import {SZeroXSwapData} from "tap-utils/interfaces/external/IZeroX.sol";
-
+import {ERC20Mock} from "@alto-monorepo-test/bar/mocks/ERC20Mock.sol";
+import {SZeroXSwapData} from "@alto-monorepo/utils/interfaces/external/IZeroX.sol";
 // External
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
@@ -55,8 +54,8 @@ contract ZeroXSwapperTest is TestBase, StdAssertions, StdCheats, StdUtils {
         vm.label(userA, "userA");
         vm.label(userB, "userB");
 
-        aERC20 = new ERC20Mock();
-        bERC20 = new ERC20Mock();
+        aERC20 = new ERC20Mock("aERC20", "aERC20");
+        bERC20 = new ERC20Mock("bERC20", "bERC20");
 
         cluster = new Cluster(aEid, address(this));
         swapperTarget = new ZerroXSwapperMockTarget();

@@ -11,7 +11,6 @@ import {
 } from "../../contracts/lending/AltoBorrowMarket.sol";
 import {FixedRateIrm} from "../../contracts/lending/FixedRateIrm.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {OracleMock} from "../../contracts/lending/mocks/OracleMock.sol";
 import {ORACLE_PRICE_PRECISION} from "../../contracts/lending/interfaces/IOracle.sol";
 import {AssetShareConversionMath} from "../../contracts/lending/libraries/AssetShareConversionMath.sol";

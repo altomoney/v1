@@ -27,6 +27,7 @@ remappings = [
 	'solady/=node_modules/solady/src/',
 	'@morpho-org/bundler3/=lib/bundler3/src/',
 	'@morpho-org/irm/=lib/morpho-blue-irm/src/',
+	'@alto-monorepo-test/=test/',
 	'@alto-monorepo/=contracts/',
 	# '@openzeppelin/contracts-upgradeable/security/=node_modules/@openzeppelin/contracts-upgradeable/utils/',
 	# '@openzeppelin/contracts/security/=node_modules/@openzeppelin/contracts/utils/',

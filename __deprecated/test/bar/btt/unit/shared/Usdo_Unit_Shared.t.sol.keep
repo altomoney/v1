@@ -14,7 +14,6 @@ import {OFTMsgCodec} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/libs/OFTM
 import {Usdo} from "tapioca-bar/usdo/Usdo.sol";
 
 import {ICommonExternalContracts} from "tap-utils/interfaces/common/ICommonData.sol";
-import {ERC20PermitStruct, ERC20PermitApprovalMsg, MarketPermitActionMsg} from "tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
 
 // tests
 import {Base_Test} from "../../Base_Test.t.sol";

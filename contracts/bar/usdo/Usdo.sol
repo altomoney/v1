@@ -23,7 +23,7 @@ contract Usdo is Ownable, Pausable, OFT, IUsdo {
     mapping(address => bool) public allowedBurner;
 
     constructor(address endpoint, address owner, address clusterAddress)
-        OFT("USDO Stablecoin", "USDO", endpoint, owner)
+        OFT("USDO", "USDO", endpoint, owner)
         Ownable(owner)
     {
         cluster = ICluster(clusterAddress);

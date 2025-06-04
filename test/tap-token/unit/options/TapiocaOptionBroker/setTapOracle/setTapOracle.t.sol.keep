@@ -2,7 +2,6 @@
 pragma solidity ^0.8.18;
 
 import {TOBTestBase} from "../TOBTestBase.t.sol";
-import {ERC20PermitStruct} from "tap-utils/interfaces/common/ICommonData.sol";
 
 contract TapiocaOptionBrokerSetTapOracleTest is TOBTestBase {
     function setUp() public override {

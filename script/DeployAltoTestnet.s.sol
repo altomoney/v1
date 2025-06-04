@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.22;
 
-import {ITapiocaOracle} from "tap-utils/interfaces/common/ITapiocaOracle.sol";
 import {AltoRelease} from "deployments/releases/tapioca-v1/AltoRelease.sol";
 import {AltoReport, TapiocaInput} from "deployments/interfaces/IAltoReport.sol";
 import {Script} from "forge-std/Script.sol";
@@ -12,8 +11,6 @@ import {WETH} from "solady/tokens/WETH.sol";
 import {TwTAP} from "tap-token/governance/twTAP.sol";
 import {TapiocaMulticall} from "contracts/utils/TapiocaMulticall/TapiocaMulticall.sol";
 import {Bucket} from "tap-token/interfaces/ITWLBase.sol";
-import {SeerCLSolo} from "contracts/utils/oracle/SeerCLSolo.sol";
-import {OracleChainlinkSingleConstructorData} from "contracts/utils/oracle/OracleChainlinkSingle.sol";
 import {ERC20Testnet} from "test/utils/mocks/ERC20Testnet.sol";
 import {IERC20} from "@boringcrypto/boring-solidity/contracts/interfaces/IERC20.sol";
 import {Usdo} from "tapioca-bar/usdo/Usdo.sol";

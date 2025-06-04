@@ -7,17 +7,23 @@ pragma solidity ^0.8.22;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
- * Core
- */
-import {ERC20PermitStruct} from "tap-utils/interfaces/common/ICommonData.sol";import {ICluster} from "tap-utils/interfaces/common/ICluster.sol";
-
-/**
  * Tests
  */
 import {UnitBaseTest, TwTAP, ITWLBase} from "../../UnitBaseTest.t.sol";
 import {ERC20Mock} from "tapioca-mocks/ERC20Mock.sol";
-import {TapTokenMock} from "../../../TapTokenMock.sol";
 import {ITWTAPv2} from "tap-token/interfaces/ITWTAPv2.sol";
+
+import {ITapToken} from "tap-token/tokens/ITapToken.sol";
+import {TapToken} from "tap-token/tokens/TapToken.sol";
+
+
+contract TapTokenMock is TapToken {
+    constructor(ITapToken.TapTokenConstructorData memory _data) TapToken(_data) {}
+
+    function freeMint(address _to, uint256 _amount) external virtual {
+        _mint(_to, _amount);
+    }
+}
 
 contract twTapBaseTest is UnitBaseTest {
     TapTokenMock public tapOFT;

@@ -6,7 +6,6 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Usdo} from "tapioca-bar/usdo/Usdo.sol";
 import {MultiTokenSender} from "tapioca-mocks/MultiTokenSender.sol";
 import {TapiocaMulticallTestnet} from "tap-utils/TapiocaMulticall/TapiocaMulticallTestnet.sol";
-import {ERC20Testnet} from "test/utils/mocks/ERC20Testnet.sol";
 import {AltoLeverage} from "contracts/bar/leverage/AltoLeverage.sol";
 import {IMarket} from "@alto-monorepo/lending/interfaces/IMarket.sol";
 
