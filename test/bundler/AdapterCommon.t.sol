@@ -226,23 +226,30 @@ abstract contract AdapterCommon is Test {
             _call(altoAdapter, abi.encodeCall(AltoAdapter.marketAddCollateral, (market, assets, onBehalf)), bytes32(0));
     }
 
-    function _marketRemoveCollateral(IMarket market, uint256 assets, address receiver)
+    function _marketRemoveCollateral(IMarket market, uint256 assets, address receiver, bytes memory data)
         internal
         view
         returns (Call memory)
     {
         return _call(
-            altoAdapter, abi.encodeCall(AltoAdapter.marketRemoveCollateral, (market, assets, receiver)), bytes32(0)
+            altoAdapter,
+            abi.encodeCall(AltoAdapter.marketRemoveCollateral, (market, assets, receiver, data)),
+            bytes32(0)
         );
     }
 
-    function _marketBorrow(IMarket market, uint256 assets, uint256 shares, uint256 minSharePriceE27, address receiver)
-        internal
-        view
-        returns (Call memory)
-    {
+    function _marketBorrow(
+        IMarket market,
+        uint256 assets,
+        uint256 shares,
+        uint256 minSharePriceE27,
+        address receiver,
+        bytes memory data
+    ) internal view returns (Call memory) {
         return _call(
-            altoAdapter, abi.encodeCall(AltoAdapter.marketBorrow, (market, assets, shares, minSharePriceE27, receiver))
+            altoAdapter,
+            abi.encodeCall(AltoAdapter.marketBorrow, (market, assets, shares, minSharePriceE27, receiver, data)),
+            bytes32(0)
         );
     }
 

@@ -46,6 +46,8 @@ contract AltoAdapterTest is AdapterCommonSetup {
         vm.assume(onBehalf != address(0));
         vm.assume(onBehalf != address(market));
         vm.assume(onBehalf != address(altoAdapter));
+        vm.assume(onBehalf != address(leverage));
+        vm.assume(onBehalf != address(swapper));
     }
 
     function testSetAuthorizationWithSig(uint256 privateKey, uint32 deadline) public {
@@ -316,7 +318,7 @@ contract AltoAdapterTest is AdapterCommonSetup {
     }
 
     function testWithdrawCollateralZero() public {
-        bundle.push(_marketRemoveCollateral(market, 0, RECEIVER));
+        bundle.push(_marketRemoveCollateral(market, 0, RECEIVER, hex""));
 
         vm.expectRevert(ErrorsLib.ZeroAmount.selector);
         bundler3.multicall(bundle);
@@ -352,7 +354,7 @@ contract AltoAdapterTest is AdapterCommonSetup {
 
     function testBorrowUnauthorized(uint256 borrowedAssets) public {
         vm.expectRevert(ErrorsLib.UnauthorizedSender.selector);
-        altoAdapter.marketBorrow(market, borrowedAssets, 0, 0, RECEIVER);
+        altoAdapter.marketBorrow(market, borrowedAssets, 0, 0, RECEIVER, hex"");
     }
 
     function _testSupplyCollateralBorrow(address user, uint256 amount, uint256 collateralAmount) internal view {
@@ -393,7 +395,7 @@ contract AltoAdapterTest is AdapterCommonSetup {
         bundle.push(_erc20TransferFrom(address(collateralToken), collateralAmount));
         bundle.push(_marketSetAuthorizationWithSig(market, privateKey, true, 0, false));
         bundle.push(_marketAddCollateral(market, collateralAmount, user));
-        bundle.push(_marketBorrow(market, amount, 0, 0, RECEIVER));
+        bundle.push(_marketBorrow(market, amount, 0, 0, RECEIVER, hex""));
 
         deal(address(collateralToken), user, collateralAmount);
 
@@ -403,13 +405,60 @@ contract AltoAdapterTest is AdapterCommonSetup {
         _testSupplyCollateralBorrow(user, amount, collateralAmount);
     }
 
+    function _testSupplyCollateralBorrowLeverage(address user, uint256 amount, uint256 collateralAmount)
+        internal
+        view
+    {
+        assertEq(collateralToken.balanceOf(user), 0, "collateral.balanceOf(user)");
+        assertEq(borrowToken.balanceOf(user), 0, "borrowToken.balanceOf(user)");
+
+        assertEq(market.position(user).collateralAssets, collateralAmount, "market.position(user).collateralAssets");
+        assertEq(market.position(user).supplyShares, 0, "market.position(user).supplyShares");
+        assertEq(
+            market.position(user).borrowShares,
+            amount * AssetShareConversionMath.VIRTUAL_SHARES,
+            "market.position(user).borrowShares"
+        );
+    }
+
+    function testSupplyCollateralBorrowLeverage(uint256 privateKey, uint256 amount) public {
+        address user;
+        privateKey = _boundPrivateKey(privateKey);
+        user = vm.addr(privateKey);
+        approveERC20ToMarketAndAdapter(user);
+
+        amount = bound(amount, MIN_AMOUNT, MAX_AMOUNT);
+
+        deal(address(borrowToken), address(this), amount);
+        market.addSupply(amount, 0, SUPPLIER);
+
+        uint256 maxMultiplier = MATH_PRECISION.divideWithPrecisionDown(MATH_PRECISION - LTV);
+        uint256 targetCollateralAmount = amount.divideWithPrecisionUp(LTV);
+        uint256 initialCollateralAmount = targetCollateralAmount.divideWithPrecisionDown(maxMultiplier);
+        uint256 collateralAmountToAdd = targetCollateralAmount - initialCollateralAmount;
+
+        bytes memory leverageData = _marketPrepareLeverageData(collateralAmountToAdd, user, hex"", true);
+
+        bundle.push(_erc20TransferFrom(address(collateralToken), initialCollateralAmount));
+        bundle.push(_marketSetAuthorizationWithSig(market, privateKey, true, 0, false));
+        bundle.push(_marketAddCollateral(market, initialCollateralAmount, user));
+        bundle.push(_marketBorrow(market, amount, 0, 0, address(leverage), leverageData));
+
+        deal(address(collateralToken), user, initialCollateralAmount);
+
+        vm.prank(user);
+        bundler3.multicall(bundle);
+
+        _testSupplyCollateralBorrowLeverage(user, amount, targetCollateralAmount);
+    }
+
     function testWithdrawCollateralUnauthorized(uint256 collateralAmount) public {
         vm.expectRevert(ErrorsLib.UnauthorizedSender.selector);
-        altoAdapter.marketRemoveCollateral(market, collateralAmount, RECEIVER);
+        altoAdapter.marketRemoveCollateral(market, collateralAmount, RECEIVER, hex"");
     }
 
     function _testRepayWithdrawCollateral(address user, uint256 collateralAmount) internal view {
-        assertEq(collateralToken.balanceOf(RECEIVER), collateralAmount, "collateral.balanceOf(RECEIVER)");
+        assertEq(collateralToken.balanceOf(RECEIVER), collateralAmount, "collateralToken.balanceOf(RECEIVER)");
         assertEq(borrowToken.balanceOf(RECEIVER), 0, "borrowToken.balanceOf(RECEIVER)");
 
         assertEq(market.position(user).collateralAssets, 0, "market.position(user).collateralAssets");
@@ -421,7 +470,7 @@ contract AltoAdapterTest is AdapterCommonSetup {
             assertEq(market.position(RECEIVER).supplyShares, 0, "market.position(RECEIVER).supplyShares");
             assertEq(market.position(RECEIVER).borrowShares, 0, "market.position(RECEIVER).borrowShares");
 
-            assertEq(collateralToken.balanceOf(user), 0, "collateral.balanceOf(user)");
+            assertEq(collateralToken.balanceOf(user), 0, "collateralToken.balanceOf(user)");
             assertEq(borrowToken.balanceOf(user), 0, "borrowToken.balanceOf(user)");
         }
     }
@@ -448,12 +497,57 @@ contract AltoAdapterTest is AdapterCommonSetup {
         bundle.push(_erc20TransferFrom(address(borrowToken), amount));
         bundle.push(_marketSetAuthorizationWithSig(market, privateKey, true, 0, false));
         bundle.push(_marketRepay(market, amount, 0, type(uint256).max, user));
-        bundle.push(_marketRemoveCollateral(market, collateralAmount, RECEIVER));
+        bundle.push(_marketRemoveCollateral(market, collateralAmount, RECEIVER, hex""));
 
         vm.prank(user);
         bundler3.multicall(bundle);
 
         _testRepayWithdrawCollateral(user, collateralAmount);
+    }
+
+    function _testRepayWithdrawCollateralDeleverage(address user, uint256 collateralAmount, uint256 borrowBalanceBefore)
+        internal
+        view
+    {
+        assertEq(collateralToken.balanceOf(user), collateralAmount, "collateralToken.balanceOf(user)");
+        assertEq(borrowToken.balanceOf(user), borrowBalanceBefore, "borrowToken.balanceOf(user)");
+
+        assertEq(market.position(user).collateralAssets, 0, "market.position(user).collateralAssets");
+        assertEq(market.position(user).supplyShares, 0, "market.position(user).supplyShares");
+        assertEq(market.position(user).borrowShares, 0, "market.position(user).borrowShares");
+    }
+
+    function testRepayWithdrawCollateralDeleverage(uint256 privateKey, uint256 amount) public {
+        address user;
+        privateKey = _boundPrivateKey(privateKey);
+        user = vm.addr(privateKey);
+        approveERC20ToMarketAndAdapter(user);
+
+        amount = bound(amount, MIN_AMOUNT, MAX_AMOUNT);
+
+        deal(address(borrowToken), address(this), amount);
+        market.addSupply(amount, 0, SUPPLIER);
+
+        uint256 collateralAmount = amount.divideWithPrecisionUp(LTV);
+
+        deal(address(collateralToken), user, collateralAmount);
+        vm.startPrank(user);
+        market.addCollateral(collateralAmount, user);
+        market.borrow(amount, 0, user, user, "");
+        vm.stopPrank();
+
+        bytes memory leverageData = _marketPrepareLeverageData(amount, user, hex"", false);
+
+        bundle.push(_marketSetAuthorizationWithSig(market, privateKey, true, 0, false));
+        bundle.push(_marketRemoveCollateral(market, amount, address(leverage), leverageData));
+        bundle.push(_marketRemoveCollateral(market, collateralAmount - amount, user, hex""));
+
+        uint256 borrowBalanceBefore = borrowToken.balanceOf(user);
+
+        vm.prank(user);
+        bundler3.multicall(bundle);
+
+        _testRepayWithdrawCollateralDeleverage(user, collateralAmount - amount, borrowBalanceBefore);
     }
 
     function testRepayMaxAndWithdrawCollateral(uint256 privateKey, uint256 amount) public {
@@ -478,7 +572,7 @@ contract AltoAdapterTest is AdapterCommonSetup {
         bundle.push(_erc20TransferFrom(address(borrowToken), amount));
         bundle.push(_marketSetAuthorizationWithSig(market, privateKey, true, 0, false));
         bundle.push(_marketRepay(market, type(uint256).max, 0, type(uint256).max, user));
-        bundle.push(_marketRemoveCollateral(market, collateralAmount, RECEIVER));
+        bundle.push(_marketRemoveCollateral(market, collateralAmount, RECEIVER, hex""));
 
         vm.prank(user);
         bundler3.multicall(bundle);
@@ -499,7 +593,7 @@ contract AltoAdapterTest is AdapterCommonSetup {
         market.addCollateral(collateralAmount, user);
 
         bundle.push(_marketSetAuthorizationWithSig(market, privateKey, true, 0, false));
-        bundle.push(_marketRemoveCollateral(market, type(uint256).max, RECEIVER));
+        bundle.push(_marketRemoveCollateral(market, type(uint256).max, RECEIVER, hex""));
 
         vm.prank(user);
         bundler3.multicall(bundle);
@@ -674,7 +768,7 @@ contract AltoAdapterTest is AdapterCommonSetup {
         if (maxShares < MIN_AMOUNT) return;
         shares = bound(shares % maxShares, MIN_AMOUNT, maxShares);
 
-        bundle.push(_marketBorrow(market, 0, shares, 0, address(altoAdapter)));
+        bundle.push(_marketBorrow(market, 0, shares, 0, address(altoAdapter), hex""));
         uint256 expectedBorrowedAmount = shares.convertToAssetsDown(vars.expectedTotalBorrow, vars.expectedBorrowShares);
         vars.expectedAdapterLoanBalance += expectedBorrowedAmount;
 
@@ -713,7 +807,7 @@ contract AltoAdapterTest is AdapterCommonSetup {
 
         amount = bound(amount % withdrawableCollateral, 1, withdrawableCollateral);
 
-        bundle.push(_marketRemoveCollateral(market, amount, address(altoAdapter)));
+        bundle.push(_marketRemoveCollateral(market, amount, address(altoAdapter), hex""));
         vars.expectedAdapterCollateralBalance += amount;
 
         vars.expectedCollateral -= amount;
@@ -799,7 +893,7 @@ contract AltoAdapterTest is AdapterCommonSetup {
         market.addCollateral(collateral, address(this));
         market.setAuthorization(address(altoAdapter), true);
 
-        bundle.push(_marketBorrow(market, assets, 0, sharePriceE27, address(this)));
+        bundle.push(_marketBorrow(market, assets, 0, sharePriceE27, address(this), hex""));
         bundler3.multicall(bundle);
     }
 
@@ -816,7 +910,7 @@ contract AltoAdapterTest is AdapterCommonSetup {
         market.setAuthorization(address(altoAdapter), true);
 
         vm.expectRevert(ErrorsLib.SlippageExceeded.selector);
-        bundle.push(_marketBorrow(market, assets, 0, sharePriceE27, address(this)));
+        bundle.push(_marketBorrow(market, assets, 0, sharePriceE27, address(this), hex""));
         bundler3.multicall(bundle);
     }
 
