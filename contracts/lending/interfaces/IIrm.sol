@@ -4,6 +4,9 @@ pragma solidity >=0.8.0;
 
 interface IIrm {
     error Alto_IrmUnauthorized();
+    error Alto_IrmMarketAlreadySet();
+    error Alto_IrmMarketNotSet();
+    error Alto_IrmInvalidParams();
 
     /// @notice Sets the market for the IRM
     /// @param _market The market to set
