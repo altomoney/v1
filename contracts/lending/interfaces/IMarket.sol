@@ -14,6 +14,12 @@ struct Position {
     uint128 collateralAssets;
 }
 
+struct LiquidablePosition {
+    bool tagged;
+    address tagger;
+    uint256 timestamp;
+}
+
 struct LiquidationConfiguration {
     uint256 maxLiquidationLtv;
     uint256 dynamicBonusFeeStart;
@@ -21,6 +27,9 @@ struct LiquidationConfiguration {
     uint256 dynamicBonusFeeDecaySteepness;
     uint256 liquidationBaseFee;
     uint256 minPenaltyPercentage;
+    uint32 priorityLiquidationGracePeriod;
+    uint32 taggerLiquidationGracePeriod;
+    uint32 liquidationWindowTag;
 }
 
 struct LiquidationResult {
@@ -51,6 +60,8 @@ interface IMarketErrors {
     error AltoBorrowMarketInsufficientMarketLiquidity();
     error AltoBorrowMarketLiquidatingHealthyPosition();
     error AltoBorrowMarketUnauthorized();
+    error AltoBorrowMarketLiquidationUnauthorized();
+    error AltoBorrowMarketLiquidationAlreadyTagged();
 }
 
 interface IMarketEvents {
@@ -129,6 +140,34 @@ interface IMarketEvents {
         uint256 repayShares,
         uint256 seizedCollateralAmount
     );
+
+    /// @notice Emitted when a position is tagged for liquidation
+    /// @param user The address of the user whose position was tagged
+    /// @param tagger The address of the liquidator who tagged the position
+    /// @param timestamp The timestamp when the position was tagged
+    event PositionTagged(address indexed user, address indexed tagger, uint256 timestamp);
+
+    /// @notice Emitted when a priority liquidator's status is updated
+    /// @param liquidator The address of the liquidator
+    /// @param status The new status of the liquidator
+    event PriorityLiquidatorUpdated(address indexed liquidator, bool status);
+
+    // add liquidation event
+    /// @notice Emitted when a liquidation occurs
+    /// @param user The address of the user whose position was liquidated
+    /// @param collateralToken The address of the collateral token
+    /// @param borrowToken The address of the borrow token
+    /// @param liquidator The address of the liquidator
+    /// @param liquidatedCollateral The amount of collateral that was liquidated
+    /// @param repaidBorrow The amount of borrow tokens that were repaid
+    event Liquidation(
+        address indexed user,
+        address collateralToken,
+        address borrowToken,
+        address liquidator,
+        uint256 liquidatedCollateral,
+        uint256 repaidBorrow
+    );
 }
 
 interface IMarketBase is IMarketErrors, IMarketEvents, IAuth {
@@ -162,6 +201,12 @@ interface IMarketBase is IMarketErrors, IMarketEvents, IAuth {
     function maxLtv() external view returns (uint256);
 
     function setAuthorizedCallback(address callback, bool isAuthorized) external;
+
+    function setPriorityLiquidator(address liquidator, bool status) external;
+
+    function tagLiquidablePosition(address user, address liquidator) external;
+
+    function setLiquidationConfiguration(LiquidationConfiguration memory _liquidationConfiguration) external;
 }
 
 interface IMarket is IMarketBase {
@@ -170,6 +215,10 @@ interface IMarket is IMarketBase {
     function totalSupply() external view returns (Balance memory);
 
     function totalBorrowed() external view returns (Balance memory);
+
+    function liquidablePositions(address user) external view returns (LiquidablePosition memory);
+
+    function liquidationConfiguration() external view returns (LiquidationConfiguration memory);
 }
 
 interface IMarketStaticTypes is IMarketBase {
@@ -181,4 +230,21 @@ interface IMarketStaticTypes is IMarketBase {
     function totalSupply() external view returns (uint128 assets, uint128 shares);
 
     function totalBorrowed() external view returns (uint128 assets, uint128 shares);
+
+    function liquidablePositions(address user) external view returns (bool tagged, address tagger, uint256 timestamp);
+
+    function liquidationConfiguration()
+        external
+        view
+        returns (
+            uint256 maxLiquidationLtv,
+            uint256 dynamicBonusFeeStart,
+            uint256 ltvForCompleteLiquidation,
+            uint256 dynamicBonusFeeDecaySteepness,
+            uint256 liquidationBaseFee,
+            uint256 minPenaltyPercentage,
+            uint32 priorityLiquidationGracePeriod,
+            uint32 taggerLiquidationGracePeriod,
+            uint32 liquidationWindowTag
+        );
 }
