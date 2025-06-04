@@ -87,7 +87,7 @@ contract AltoAdapter is CoreAdapter {
         external
         onlyBundler3
     {
-        (uint256 borrowedAssets, uint256 borrowedShares) = market.borrow(assets, shares, initiator(), receiver);
+        (uint256 borrowedAssets, uint256 borrowedShares,) = market.borrow(assets, shares, initiator(), receiver);
 
         require(borrowedAssets.rDivDown(borrowedShares) >= minSharePriceE27, ErrorsLib.SlippageExceeded());
     }

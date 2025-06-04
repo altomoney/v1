@@ -43,6 +43,8 @@ contract FixedRateIrmUpdateTest is IrmCommon {
                     address(this),
                     address(oracle),
                     LTV,
+                    0,
+                    address(this),
                     LiquidationConfiguration({
                         maxLiquidationLtv: 0.8 ether,
                         dynamicBonusFeeStart: 0.03 ether,

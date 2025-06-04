@@ -50,8 +50,22 @@ contract AltoBorrowMarketMock is AltoBorrowMarket {
         address _owner,
         address _oracle,
         uint256 _maxLtv,
+        uint256 _borrowOpeningFee,
+        address _feeRecipient,
         LiquidationConfiguration memory _liquidationConfiguration
-    ) AltoBorrowMarket(_borrowToken, _collateralToken, _irm, _owner, _oracle, _maxLtv, _liquidationConfiguration) {}
+    )
+        AltoBorrowMarket(
+            _borrowToken,
+            _collateralToken,
+            _irm,
+            _owner,
+            _oracle,
+            _maxLtv,
+            _borrowOpeningFee,
+            _feeRecipient,
+            _liquidationConfiguration
+        )
+    {}
 
     function modifyTotalBorrowed(uint256 amount) external {
         totalBorrowed.assets += uint128(amount);
@@ -76,6 +90,8 @@ contract AdaptiveCurveIrmUpdateTest is IrmCommon {
             address(this),
             address(oracle),
             LTV,
+            0,
+            address(this),
             LiquidationConfiguration({
                 maxLiquidationLtv: 0.8 ether,
                 dynamicBonusFeeStart: 0.03 ether,

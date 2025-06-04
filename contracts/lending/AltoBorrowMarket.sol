@@ -47,6 +47,10 @@ contract AltoBorrowMarket is Ownable, Auth, IMarkeStaticTypes {
 
     LiquidationConfiguration public liquidationConfiguration;
 
+    uint256 public borrowOpeningFee;
+
+    address public feeRecipient;
+
     constructor(
         address _borrowToken,
         address _collateralToken,
@@ -54,6 +58,8 @@ contract AltoBorrowMarket is Ownable, Auth, IMarkeStaticTypes {
         address _owner,
         address _oracle,
         uint256 _maxLtv,
+        uint256 _borrowOpeningFee,
+        address _feeRecipient,
         LiquidationConfiguration memory _liquidationConfiguration
     ) {
         borrowToken = _borrowToken;
@@ -62,6 +68,8 @@ contract AltoBorrowMarket is Ownable, Auth, IMarkeStaticTypes {
         oracle = _oracle;
         maxLtv = _maxLtv;
         liquidationConfiguration = _liquidationConfiguration;
+        borrowOpeningFee = _borrowOpeningFee;
+        feeRecipient = _feeRecipient;
 
         _transferOwnership(_owner);
         IIrm(irm).setMarket(address(this));
@@ -86,6 +94,14 @@ contract AltoBorrowMarket is Ownable, Auth, IMarkeStaticTypes {
         onlyOwner
     {
         liquidationConfiguration = _liquidationConfiguration;
+    }
+
+    function setBorrowOpeningFee(uint256 _borrowOpeningFee) external onlyOwner {
+        borrowOpeningFee = _borrowOpeningFee;
+    }
+
+    function setFeeRecipient(address _feeRecipient) external onlyOwner {
+        feeRecipient = _feeRecipient;
     }
 
     function addSupply(uint256 assets, uint256 shares, address onBehalf) external virtual returns (uint256, uint256) {
@@ -183,7 +199,7 @@ contract AltoBorrowMarket is Ownable, Auth, IMarkeStaticTypes {
 
     function borrow(uint256 assets, uint256 shares, address onBehalf, address receiver)
         external
-        returns (uint256, uint256)
+        returns (uint256, uint256, uint256)
     {
         if (!Utils.onlyOneZero(assets, shares) || receiver == address(0)) {
             revert AltoBorrowMarketInvalidInput();
@@ -194,9 +210,22 @@ contract AltoBorrowMarket is Ownable, Auth, IMarkeStaticTypes {
 
         _accrueInterest();
 
+        uint256 openingFeeAssets;
+
+        uint256 openingFee = _getBorrowOpeningFee();
+
         if (assets == 0) {
+            // calculate opening fee from shares
+            uint256 openingFeeShares = shares.multiplyWithPrecision(openingFee);
+            openingFeeAssets = openingFeeShares.convertToAssetsDown(totalBorrowed.assets, totalBorrowed.shares);
+            shares += openingFeeShares;
+
             assets = shares.convertToAssetsDown(totalBorrowed.assets, totalBorrowed.shares);
         } else {
+            // calculate opening fee from assets
+            openingFeeAssets = assets.multiplyWithPrecision(openingFee);
+            assets += openingFeeAssets;
+
             shares = assets.convertToSharesUp(totalBorrowed.assets, totalBorrowed.shares);
         }
 
@@ -208,14 +237,32 @@ contract AltoBorrowMarket is Ownable, Auth, IMarkeStaticTypes {
         }
 
         position[onBehalf].borrowShares += shares.toUint128();
+
         if (!_isSolvent(onBehalf, false)) {
             revert AltoBorrowMarketBorrowingTooMuch();
         }
-        _sendBorrowToken(address(this), receiver, assets);
+        // send assets to the receiver minus the opening fee as now `assets` includes the opening fee
+        uint256 assetsToSend = assets - openingFeeAssets;
+        _sendBorrowToken(address(this), receiver, assetsToSend);
 
-        emit Borrow(msg.sender, onBehalf, receiver, assets, shares);
+        uint256 feeSupplyShares;
+        if (openingFeeAssets > 0) {
+            feeSupplyShares = _applyBorrowOpeningFee(openingFeeAssets);
+        }
 
-        return (assets, shares);
+        emit Borrow(msg.sender, onBehalf, receiver, assetsToSend, shares, openingFeeAssets, feeSupplyShares);
+
+        return (assets, shares, openingFeeAssets);
+    }
+
+    function _applyBorrowOpeningFee(uint256 openingFeeAssets) internal virtual returns (uint256) {
+        // add opening fee to the fee recipient's supply position
+        uint256 feeSupplyShares = openingFeeAssets.convertToSharesDown(totalSupply.assets, totalSupply.shares);
+        totalSupply.shares += feeSupplyShares.toUint128();
+        totalSupply.assets += openingFeeAssets.toUint128();
+        position[feeRecipient].supplyShares += feeSupplyShares.toUint128();
+
+        return feeSupplyShares;
     }
 
     function repay(uint256 assets, uint256 shares, address onBehalf) external returns (uint256, uint256) {
@@ -265,6 +312,10 @@ contract AltoBorrowMarket is Ownable, Auth, IMarkeStaticTypes {
             uint256(position[_user].borrowShares).convertToAssetsUp(totalBorrowed.assets, totalBorrowed.shares);
 
         return _isLiquidation ? maxBorrowValue > borrowValue : maxBorrowValue >= borrowValue;
+    }
+
+    function _getBorrowOpeningFee() internal view virtual returns (uint256) {
+        return borrowOpeningFee;
     }
 
     function _calculateLiquidationPercentage(uint256 currentLtv) internal view returns (uint256) {

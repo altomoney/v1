@@ -77,8 +77,16 @@ interface IMarketEvents {
     /// @param receiver The address of the user who is receiving the borrowed tokens
     /// @param assets The amount of assets borrowed
     /// @param shares The amount of shares minted
+    /// @param feeAmount The amount of assets paid as opening fee
+    /// @param feeSupplyShares The amount of supply shares given to the fee recipient
     event Borrow(
-        address indexed caller, address indexed onBehalf, address indexed receiver, uint256 assets, uint256 shares
+        address indexed caller,
+        address indexed onBehalf,
+        address indexed receiver,
+        uint256 assets,
+        uint256 shares,
+        uint256 feeAmount,
+        uint256 feeSupplyShares
     );
 
     /// @notice Emitted when a user repays borrowed tokens
@@ -139,7 +147,7 @@ interface IMarketBase is IMarketErrors, IMarketEvents, IAuth {
 
     function borrow(uint256 assets, uint256 shares, address onBehalf, address receiver)
         external
-        returns (uint256, uint256);
+        returns (uint256, uint256, uint256);
 
     function repay(uint256 assets, uint256 shares, address onBehalf) external returns (uint256, uint256);
 
