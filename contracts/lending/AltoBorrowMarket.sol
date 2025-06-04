@@ -15,6 +15,7 @@ import {
     LiquidationCalculation,
     IMarket
 } from "./interfaces/IMarket.sol";
+import {Auth} from "tap-utils/utils/Auth.sol";
 import {IIrm} from "./interfaces/IIrm.sol";
 
 import {ExpLib, MATH_PRECISION_INT} from "./libraries/ExpLib.sol";
@@ -22,11 +23,13 @@ import {AssetShareConversionMath} from "./libraries/AssetShareConversionMath.sol
 import {FixedPointMath, MATH_PRECISION} from "./libraries/FixedPointMath.sol";
 import {Utils} from "./libraries/Utils.sol";
 
-contract AltoBorrowMarket is Ownable, IMarket {
+contract AltoBorrowMarket is Ownable, Auth, IMarket {
     using FixedPointMath for uint256;
     using AssetShareConversionMath for uint256;
     using Utils for uint256;
     using SafeERC20 for IERC20;
+
+    bytes32 public immutable DOMAIN_SEPARATOR;
 
     address public borrowToken;
     address public collateralToken;
@@ -85,8 +88,8 @@ contract AltoBorrowMarket is Ownable, IMarket {
         liquidationConfiguration = _liquidationConfiguration;
     }
 
-    function addSupply(uint256 assets, uint256 shares) external virtual returns (uint256, uint256) {
-        if (!Utils.onlyOneZero(assets, shares)) {
+    function addSupply(uint256 assets, uint256 shares, address onBehalf) external virtual returns (uint256, uint256) {
+        if (!Utils.onlyOneZero(assets, shares) || onBehalf == address(0)) {
             revert AltoBorrowMarketInvalidInput();
         }
 
@@ -101,18 +104,24 @@ contract AltoBorrowMarket is Ownable, IMarket {
         totalSupply.assets += assets.toUint128();
         totalSupply.shares += shares.toUint128();
 
-        //IERC20(borrowToken).safeTransferFrom(msg.sender, address(this), assets);
         _sendBorrowToken(msg.sender, address(this), assets);
-        position[msg.sender].supplyShares += shares.toUint128();
+        position[onBehalf].supplyShares += shares.toUint128();
 
-        emit AddSupply(msg.sender, assets, shares);
+        emit AddSupply(msg.sender, onBehalf, assets, shares);
 
         return (assets, shares);
     }
 
-    function removeSupply(uint256 assets, uint256 shares) external virtual returns (uint256, uint256) {
-        if (!Utils.onlyOneZero(assets, shares)) {
+    function removeSupply(uint256 assets, uint256 shares, address onBehalf, address receiver)
+        external
+        virtual
+        returns (uint256, uint256)
+    {
+        if (!Utils.onlyOneZero(assets, shares) || receiver == address(0)) {
             revert AltoBorrowMarketInvalidInput();
+        }
+        if (!_isSenderAuthorized(onBehalf)) {
+            revert AltoBorrowMarketUnauthorized();
         }
 
         _accrueInterest();
@@ -126,44 +135,61 @@ contract AltoBorrowMarket is Ownable, IMarket {
         totalSupply.assets -= assets.toUint128();
         totalSupply.shares -= shares.toUint128();
 
-        //IERC20(borrowToken).safeTransfer(msg.sender, assets);
-        _sendBorrowToken(address(this), msg.sender, assets);
-        position[msg.sender].supplyShares -= shares.toUint128();
+        _sendBorrowToken(address(this), receiver, assets);
+        position[onBehalf].supplyShares -= shares.toUint128();
 
-        emit RemoveSupply(msg.sender, assets, shares);
+        emit RemoveSupply(msg.sender, onBehalf, receiver, assets, shares);
 
         return (assets, shares);
     }
 
-    function addCollateral(uint256 assets) external returns (uint256) {
-        position[msg.sender].collateralAssets += assets.toUint128();
+    function addCollateral(uint256 assets, address onBehalf) external returns (uint256) {
+        if (assets == 0 || onBehalf == address(0)) {
+            revert AltoBorrowMarketInvalidInput();
+        }
+
+        position[onBehalf].collateralAssets += assets.toUint128();
 
         IERC20(collateralToken).safeTransferFrom(msg.sender, address(this), assets);
 
-        emit AddCollateral(msg.sender, assets);
+        emit AddCollateral(msg.sender, onBehalf, assets);
 
         return (assets);
     }
 
-    function removeCollateral(uint256 assets) external returns (uint256) {
+    function removeCollateral(uint256 assets, address onBehalf, address receiver) external returns (uint256) {
+        if (assets == 0 || onBehalf == address(0)) {
+            revert AltoBorrowMarketInvalidInput();
+        }
+
+        if (!_isSenderAuthorized(onBehalf)) {
+            revert AltoBorrowMarketUnauthorized();
+        }
+
         _accrueInterest();
 
-        position[msg.sender].collateralAssets -= assets.toUint128();
+        position[onBehalf].collateralAssets -= assets.toUint128();
 
-        if (!_isSolvent(msg.sender, false)) {
+        if (!_isSolvent(onBehalf, false)) {
             revert AltoBorrowMarketInsufficientUserCollateral();
         }
 
-        IERC20(collateralToken).safeTransfer(msg.sender, assets);
+        IERC20(collateralToken).safeTransfer(receiver, assets);
 
-        emit RemoveCollateral(msg.sender, assets);
+        emit RemoveCollateral(msg.sender, onBehalf, receiver, assets);
 
         return (assets);
     }
 
-    function borrow(uint256 assets, uint256 shares) external returns (uint256, uint256) {
-        if (!Utils.onlyOneZero(assets, shares)) {
+    function borrow(uint256 assets, uint256 shares, address onBehalf, address receiver)
+        external
+        returns (uint256, uint256)
+    {
+        if (!Utils.onlyOneZero(assets, shares) || receiver == address(0)) {
             revert AltoBorrowMarketInvalidInput();
+        }
+        if (!_isSenderAuthorized(onBehalf)) {
+            revert AltoBorrowMarketUnauthorized();
         }
 
         _accrueInterest();
@@ -181,20 +207,19 @@ contract AltoBorrowMarket is Ownable, IMarket {
             revert AltoBorrowMarketInsufficientMarketLiquidity();
         }
 
-        position[msg.sender].borrowShares += shares.toUint128();
-        if (!_isSolvent(msg.sender, false)) {
+        position[onBehalf].borrowShares += shares.toUint128();
+        if (!_isSolvent(onBehalf, false)) {
             revert AltoBorrowMarketBorrowingTooMuch();
         }
-        //IERC20(borrowToken).safeTransferFrom(msg.sender, address(this), assets);
-        _sendBorrowToken(msg.sender, address(this), assets);
+        _sendBorrowToken(address(this), receiver, assets);
 
-        emit Borrow(msg.sender, assets, shares);
+        emit Borrow(msg.sender, onBehalf, receiver, assets, shares);
 
         return (assets, shares);
     }
 
-    function repay(uint256 assets, uint256 shares) external returns (uint256, uint256) {
-        if (!Utils.onlyOneZero(assets, shares)) {
+    function repay(uint256 assets, uint256 shares, address onBehalf) external returns (uint256, uint256) {
+        if (!Utils.onlyOneZero(assets, shares) || onBehalf == address(0)) {
             revert AltoBorrowMarketInvalidInput();
         }
 
@@ -209,11 +234,10 @@ contract AltoBorrowMarket is Ownable, IMarket {
         totalBorrowed.assets -= assets.toUint128();
         totalBorrowed.shares -= shares.toUint128();
 
-        //IERC20(borrowToken).safeTransfer(msg.sender, assets);
-        _sendBorrowToken(address(this), msg.sender, assets);
-        position[msg.sender].borrowShares -= shares.toUint128();
+        _sendBorrowToken(msg.sender, address(this), assets);
+        position[onBehalf].borrowShares -= shares.toUint128();
 
-        emit Repay(msg.sender, assets, shares);
+        emit Repay(msg.sender, onBehalf, assets, shares);
 
         return (assets, shares);
     }
@@ -255,8 +279,8 @@ contract AltoBorrowMarket is Ownable, IMarket {
 
     function _calculateBonusFee(uint256 liquidationPercentage) internal view returns (uint256) {
         if (liquidationPercentage < MATH_PRECISION) {
-            int256 exponent =
-                -int256(liquidationConfiguration.dynamicBonusFeeDecaySteepness * liquidationPercentage) / MATH_PRECISION_INT;
+            int256 exponent = -int256(liquidationConfiguration.dynamicBonusFeeDecaySteepness * liquidationPercentage)
+                / MATH_PRECISION_INT;
             return liquidationConfiguration.dynamicBonusFeeStart.multiplyWithPrecision(uint256(ExpLib.wExp(exponent)));
         } else {
             return 0;
@@ -299,7 +323,8 @@ contract AltoBorrowMarket is Ownable, IMarket {
         // Calculate collateral amounts
         calc.liquidatorBonusFee = uint256(_position.collateralAssets).multiplyWithPrecision(calc.liquidationFee);
         uint256 remainingCollateral = _position.collateralAssets - calc.liquidatorBonusFee;
-        calc.remainingCollateralValue = remainingCollateral.divideWithRounding(calc.collateralPrice, ORACLE_PRICE_PRECISION, false);
+        calc.remainingCollateralValue =
+            remainingCollateral.divideWithRounding(calc.collateralPrice, ORACLE_PRICE_PRECISION, false);
 
         uint256 _collateralToSell = calc.remainingCollateralValue.multiplyWithPrecision(calc.newLtv);
         uint256 collateralToSell =
@@ -309,12 +334,14 @@ contract AltoBorrowMarket is Ownable, IMarket {
         uint256 collateralToSellInBorrowAssets =
             (calc.positionBorrowedAssets - collateralToSell).divideWithPrecisionUp(MATH_PRECISION - calc.newLtv);
 
-        calc.collateralToSell = collateralToSellInBorrowAssets.divideWithRounding(ORACLE_PRICE_PRECISION, calc.collateralPrice, true);
+        calc.collateralToSell =
+            collateralToSellInBorrowAssets.divideWithRounding(ORACLE_PRICE_PRECISION, calc.collateralPrice, true);
         uint256 totalCollateralToTake = calc.collateralToSell + calc.liquidatorBonusFee;
         uint256 collateralAmount =
             totalCollateralToTake > _position.collateralAssets ? _position.collateralAssets : totalCollateralToTake;
 
-        calc.expectedRepayAmount = calc.collateralToSell.divideWithRounding(calc.collateralPrice, ORACLE_PRICE_PRECISION, true);
+        calc.expectedRepayAmount =
+            calc.collateralToSell.divideWithRounding(calc.collateralPrice, ORACLE_PRICE_PRECISION, true);
         calc.expectedRepayAmount = calc.expectedRepayAmount > calc.positionBorrowedAssets
             ? calc.positionBorrowedAssets
             : calc.expectedRepayAmount;
@@ -336,7 +363,9 @@ contract AltoBorrowMarket is Ownable, IMarket {
         position[borrower].borrowShares -= repayShares.toUint128();
 
         totalBorrowed.shares -= repayShares.toUint128();
-        totalBorrowed.assets = (totalBorrowed.assets > calc.expectedRepayAmount ? totalBorrowed.assets - calc.expectedRepayAmount : 0).toUint128();
+        totalBorrowed.assets = (
+            totalBorrowed.assets > calc.expectedRepayAmount ? totalBorrowed.assets - calc.expectedRepayAmount : 0
+        ).toUint128();
 
         // TODO: handle bad debt
 

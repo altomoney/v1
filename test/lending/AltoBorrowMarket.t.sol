@@ -118,7 +118,7 @@ contract AltoBorrowMarketTest is Test {
         assertEq(borrowToken.balanceOf(address(market)), 0);
 
         // Add supply with assets
-        (uint256 addedAssets, uint256 addedShares) = market.addSupply(supplyAmount, 0);
+        (uint256 addedAssets, uint256 addedShares) = market.addSupply(supplyAmount, 0, alice);
 
         // Verify assets were transferred
         assertEq(borrowToken.balanceOf(alice), INITIAL_AMOUNT - supplyAmount);
@@ -141,7 +141,7 @@ contract AltoBorrowMarketTest is Test {
     function testAddSupplyWithShares() public {
         // First deposit to initialize the exchange rate
         vm.startPrank(alice);
-        market.addSupply(100 ether, 0);
+        market.addSupply(100 ether, 0, alice);
         vm.stopPrank();
 
         uint256 shareAmount = 50 ether;
@@ -152,7 +152,7 @@ contract AltoBorrowMarketTest is Test {
         uint256 initialBalance = borrowToken.balanceOf(bob);
 
         // Add supply with shares
-        (uint256 addedAssets, uint256 addedShares) = market.addSupply(0, shareAmount);
+        (uint256 addedAssets, uint256 addedShares) = market.addSupply(0, shareAmount, bob);
 
         // Verify assets were transferred
         assertEq(borrowToken.balanceOf(bob), initialBalance - addedAssets);
@@ -169,14 +169,14 @@ contract AltoBorrowMarketTest is Test {
     function testRemoveSupply() public {
         // First add supply
         vm.startPrank(alice);
-        (uint256 addedAssets, uint256 addedShares) = market.addSupply(100 ether, 0);
+        (uint256 addedAssets, uint256 addedShares) = market.addSupply(100 ether, 0, alice);
 
         // Verify initial state
         assertEq(borrowToken.balanceOf(alice), INITIAL_AMOUNT - addedAssets);
 
         // Remove part of the supply
         uint256 withdrawAmount = 40 ether;
-        (uint256 removedAssets, uint256 removedShares) = market.removeSupply(withdrawAmount, 0);
+        (uint256 removedAssets, uint256 removedShares) = market.removeSupply(withdrawAmount, 0, alice, alice);
 
         // Verify assets were transferred back
         assertEq(borrowToken.balanceOf(alice), INITIAL_AMOUNT - addedAssets + removedAssets);
@@ -198,11 +198,11 @@ contract AltoBorrowMarketTest is Test {
     function testRemoveSupplyWithShares() public {
         // First add supply
         vm.startPrank(alice);
-        (uint256 addedAssets, uint256 addedShares) = market.addSupply(100 ether, 0);
+        (uint256 addedAssets, uint256 addedShares) = market.addSupply(100 ether, 0, alice);
 
         // Remove part of the supply using shares
         uint256 sharesToWithdraw = 60 ether;
-        (uint256 removedAssets, uint256 removedShares) = market.removeSupply(0, sharesToWithdraw);
+        (uint256 removedAssets, uint256 removedShares) = market.removeSupply(0, sharesToWithdraw, alice, alice);
 
         // Verify assets were transferred back
         assertEq(borrowToken.balanceOf(alice), INITIAL_AMOUNT - addedAssets + removedAssets);
@@ -226,14 +226,14 @@ contract AltoBorrowMarketTest is Test {
 
         // Try to add supply with both assets and shares provided
         vm.expectRevert(IMarketErrors.AltoBorrowMarketInvalidInput.selector);
-        market.addSupply(100 ether, 50 ether);
+        market.addSupply(100 ether, 50 ether, alice);
 
         // First add some supply
-        market.addSupply(100 ether, 0);
+        market.addSupply(100 ether, 0, alice);
 
         // Try to remove supply with both assets and shares provided
         vm.expectRevert(IMarketErrors.AltoBorrowMarketInvalidInput.selector);
-        market.removeSupply(40 ether, 50 ether);
+        market.removeSupply(40 ether, 50 ether, alice, alice);
 
         vm.stopPrank();
     }
@@ -248,7 +248,7 @@ contract AltoBorrowMarketTest is Test {
         assertEq(collateralToken.balanceOf(address(market)), 0);
 
         // Add collateral with assets
-        uint256 addedAssets = market.addCollateral(collateralAmount);
+        uint256 addedAssets = market.addCollateral(collateralAmount, alice);
 
         // Verify assets were transferred
         assertEq(collateralToken.balanceOf(alice), INITIAL_AMOUNT - collateralAmount);
@@ -262,11 +262,11 @@ contract AltoBorrowMarketTest is Test {
 
     function testRemoveCollateralWithAssets() public {
         vm.startPrank(alice);
-        market.addCollateral(100 ether);
+        market.addCollateral(100 ether, alice);
         vm.stopPrank();
 
         vm.startPrank(alice);
-        uint256 removedAssets = market.removeCollateral(50 ether);
+        uint256 removedAssets = market.removeCollateral(50 ether, alice, alice);
         vm.stopPrank();
 
         assertEq(collateralToken.balanceOf(alice), INITIAL_AMOUNT - 50 ether);
@@ -277,37 +277,37 @@ contract AltoBorrowMarketTest is Test {
     function testRevertWhenAddingCollateralWithInsufficientLiquidity() public {
         vm.startPrank(alice);
         vm.expectRevert(IMarketErrors.AltoBorrowMarketInsufficientMarketLiquidity.selector);
-        market.borrow(100 ether, 0);
+        market.borrow(100 ether, 0, alice, alice);
         vm.stopPrank();
     }
 
     function testRevertWhenBorrowingWithInsufficientCollateral() public {
         vm.startPrank(alice);
-        market.addSupply(100 ether, 0);
+        market.addSupply(100 ether, 0, alice);
         vm.expectRevert(IMarketErrors.AltoBorrowMarketBorrowingTooMuch.selector);
-        market.borrow(100 ether, 0);
+        market.borrow(100 ether, 0, alice, alice);
         vm.stopPrank();
     }
 
     function testAddCollateralAndBorrow() public {
         vm.startPrank(bob);
-        market.addSupply(100 ether, 0);
+        market.addSupply(100 ether, 0, bob);
         vm.stopPrank();
 
         vm.startPrank(alice);
-        market.addCollateral(100 ether);
-        market.borrow(30 ether, 0);
+        market.addCollateral(100 ether, alice);
+        market.borrow(30 ether, 0, alice, alice);
         vm.stopPrank();
     }
 
     function testAddCollateralBorrowAndRepay() public {
         vm.startPrank(bob);
-        market.addSupply(100 ether, 0);
+        market.addSupply(100 ether, 0, bob);
         vm.stopPrank();
 
         vm.startPrank(alice);
-        market.addCollateral(10 ether);
-        market.borrow(3 ether, 0);
+        market.addCollateral(10 ether, alice);
+        market.borrow(3 ether, 0, alice, alice);
         market.addInterest(1 ether);
         (uint128 assets, uint128 shares) = market.totalBorrowed();
 
@@ -327,12 +327,12 @@ contract AltoBorrowMarketTest is Test {
 
     function testAccrueInterest() public {
         vm.startPrank(alice);
-        market.addSupply(100 ether, 0);
+        market.addSupply(100 ether, 0, alice);
         vm.stopPrank();
 
         vm.startPrank(bob);
-        market.addCollateral(1000 ether);
-        market.borrow(100 ether, 0);
+        market.addCollateral(1000 ether, bob);
+        market.borrow(100 ether, 0, bob, bob);
         market.accrueInterest();
         vm.stopPrank();
 
