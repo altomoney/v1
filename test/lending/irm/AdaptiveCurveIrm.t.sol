@@ -5,7 +5,7 @@ import {Test} from "forge-std/Test.sol";
 
 import {FixedPointMath} from "@alto/lending/libraries/FixedPointMath.sol";
 
-import {AdaptiveCurveIrm} from "@alto/lending/AdaptiveCurveIrm.sol";
+import {AdaptiveCurveIrm} from "@alto/lending/irm/AdaptiveCurveIrm.sol";
 import {IIrm} from "@alto/lending/interfaces/IIrm.sol";
 import {IrmCommon} from "./IrmCommon.t.sol";
 

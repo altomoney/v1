@@ -43,7 +43,8 @@ library AltoRelease {
             reports.lendingReport.borrowMarket,
             reports.lendingReport.mintMarket,
             reports.utilitiesReport.multiTokenSender,
-            reports.utilitiesReport.altoLeverage
+            reports.utilitiesReport.altoLeverage,
+            reports.utilitiesReport.zeroXSwapper
         );
 
         return _generateMarketReport(reports);

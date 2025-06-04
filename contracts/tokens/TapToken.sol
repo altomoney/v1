@@ -10,7 +10,7 @@ import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 // Tapioca
-import {ITapToken} from "@alto/tap-token/tokens/ITapToken.sol";
+import {ITapToken} from "@alto/tokens/interfaces/ITapToken.sol";
 import {ITWTAPv2} from "@alto/tap-token/interfaces/ITWTAPv2.sol";
 import {ICluster} from "@alto/utils/interfaces/common/ICluster.sol";
 

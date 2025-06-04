@@ -4,7 +4,7 @@ pragma solidity ^0.8.22;
 import "forge-std/Test.sol";
 import "deployments/interfaces/IAltoReport.sol";
 import {AltoRelease} from "deployments/releases/tapioca-v1/AltoRelease.sol";
-import {ERC20Mock} from "../bar/mocks/ERC20Mock.sol";
+import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
 import {TestHelperOz5} from "@layerzerolabs/test-devtools-evm-foundry/contracts/TestHelperOz5.sol";
 
 contract AltoReleaseTest is Test, TestHelperOz5 {

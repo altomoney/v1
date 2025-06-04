@@ -2,7 +2,7 @@
 pragma solidity ^0.8.22;
 
 import {OFT} from "@alto/utils/layerzero/OFT.sol";
-import {IUsdo} from "./IUsdo.sol";
+import {IUsdo} from "@alto/tokens/interfaces/IUsdo.sol";
 import {ICluster} from "@alto/utils/interfaces/common/ICluster.sol";
 
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";

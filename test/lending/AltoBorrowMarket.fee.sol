@@ -3,16 +3,16 @@ pragma solidity ^0.8.22;
 
 import {Test} from "forge-std/Test.sol";
 
-import {AltoBorrowMarket, LiquidationConfiguration} from "../../contracts/lending/AltoBorrowMarket.sol";
-import {FixedRateIrm} from "../../contracts/lending/FixedRateIrm.sol";
+import {AltoBorrowMarket, LiquidationConfiguration} from "@alto/lending/AltoBorrowMarket.sol";
+import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {OracleMock} from "../../contracts/lending/mocks/OracleMock.sol";
-import {ORACLE_PRICE_PRECISION} from "../../contracts/lending/interfaces/IOracle.sol";
-import {AssetShareConversionMath} from "../../contracts/lending/libraries/AssetShareConversionMath.sol";
-import {FixedPointMath, MATH_PRECISION} from "../../contracts/lending/libraries/FixedPointMath.sol";
-import {Erc20Mock} from "../helpers/Erc20Mock.sol";
+import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
+import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
+import {ERC20Mock} from "../helpers/ERC20Mock.sol";
 import {console2} from "forge-std/console2.sol";
 import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
+import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
+import {FixedPointMath, MATH_PRECISION} from "@alto/lending/libraries/FixedPointMath.sol";
 
 contract AltoBorrowMarketMock is AltoBorrowMarket {
     using AssetShareConversionMath for uint256;
@@ -63,8 +63,8 @@ contract AltoBorrowMarketFeeTest is Test {
     using FixedPointMath for uint256;
     using AssetShareConversionMath for uint256;
 
-    Erc20Mock borrowToken;
-    Erc20Mock collateralToken;
+    ERC20Mock borrowToken;
+    ERC20Mock collateralToken;
 
     uint256 internal constant LTV = 0.75 ether;
     uint256 constant MIN_AMOUNT = 1000;
@@ -76,8 +76,8 @@ contract AltoBorrowMarketFeeTest is Test {
     address internal immutable USER2 = makeAddr("User2");
 
     function setUp() public {
-        borrowToken = new Erc20Mock("borrow", "B");
-        collateralToken = new Erc20Mock("collateral", "C");
+        borrowToken = new ERC20Mock("borrow", "B");
+        collateralToken = new ERC20Mock("collateral", "C");
 
         deal(address(borrowToken), address(this), type(uint256).max);
         deal(address(collateralToken), address(this), type(uint256).max);

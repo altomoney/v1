@@ -4,23 +4,22 @@ pragma solidity ^0.8.22;
 import {AltoRelease} from "deployments/releases/tapioca-v1/AltoRelease.sol";
 import {AltoReport, TapiocaInput} from "deployments/interfaces/IAltoReport.sol";
 import {Script} from "forge-std/Script.sol";
-import {TapToken, ITapToken} from "contracts/tap-token/tokens/TapToken.sol";
+import {TapToken, ITapToken} from "@alto/tokens/TapToken.sol";
 import {ICluster} from "@alto/utils/interfaces/common/ICluster.sol";
 // import {TapiocaOptionBroker} from "@alto/tap-token/options/TapiocaOptionBroker.sol";
 import {TwTAP} from "@alto/tap-token/governance/twTAP.sol";
-import {TapiocaMulticall} from "contracts/utils/TapiocaMulticall/TapiocaMulticall.sol";
+import {TapiocaMulticall} from "@alto/utils/TapiocaMulticall/TapiocaMulticall.sol";
 import {Bucket} from "@alto/tap-token/interfaces/ITWLBase.sol";
-import {ERC20Testnet} from "test/utils/mocks/ERC20Testnet.sol";
-import {Usdo} from "@alto/bar/usdo/Usdo.sol";
-import {MultiTokenSender} from "../contracts/mocks/MultiTokenSender.sol";
+import {ERC20Testnet} from "@alto/deployments/testnet/ERC20Testnet.sol";
+import {Usdo} from "@alto/tokens/Usdo.sol";
 import {
     TestnetOracles,
     TestnetOraclesBatch
-} from "contracts/deployments/releases/tapioca-v1/batches/testnet/TestnetOraclesBatch.sol";
+} from "@alto/deployments/releases/tapioca-v1/batches/testnet/TestnetOraclesBatch.sol";
 import "forge-std/console.sol";
-import {TapiocaMulticallTestnet} from "contracts/utils/TapiocaMulticall/TapiocaMulticallTestnet.sol";
+import {TapiocaMulticallTestnet} from "@alto/utils/TapiocaMulticall/TapiocaMulticallTestnet.sol";
 import {console} from "forge-std/console.sol";
-// import {TapiocaTestnetTobSetter} from "contracts/deployments/releases/tapioca-v1/actions/TobLauncher.sol";
+// import {TapiocaTestnetTobSetter} from "@alto/deployments/releases/tapioca-v1/actions/TobLauncher.sol";
 
 contract DeployAltoTestnet is Script {
     uint128 public constant MULTI_TOKEN_SENDER_MINT_TOKENS = type(uint128).max;
@@ -75,9 +74,13 @@ contract DeployAltoTestnet is Script {
 
         TapToken(payable(input.tapToken)).transfer(report.multiTokenSender, 20_000_000 ether);
         ERC20Testnet(usdc).mint(report.multiTokenSender, MULTI_TOKEN_SENDER_MINT_TOKENS);
-        ERC20Testnet(usdc).mint(report.altoLeverage, MULTI_TOKEN_SENDER_MINT_TOKENS);
         ERC20Testnet(stETH).mint(report.multiTokenSender, MULTI_TOKEN_SENDER_MINT_TOKENS);
-        ERC20Testnet(stETH).mint(report.altoLeverage, MULTI_TOKEN_SENDER_MINT_TOKENS);
+        ERC20Testnet(stETH).mint(report.zeroXSwapper, MULTI_TOKEN_SENDER_MINT_TOKENS);
+        ERC20Testnet(usdc).mint(report.zeroXSwapper, MULTI_TOKEN_SENDER_MINT_TOKENS);
+        TapToken(payable(input.tapToken)).transfer(report.multiTokenSender, 20_000_000 ether);
+        TapToken(payable(input.tapToken)).transfer(
+            report.tapiocaMulticall, TapToken(payable(input.tapToken)).balanceOf(msg.sender) - 100000e18
+        );
 
         console.log("AltoLeverage: ", report.altoLeverage);
         console.log("ZeroXSwapper: ", report.zeroXSwapper);
@@ -140,12 +143,6 @@ contract DeployAltoTestnet is Script {
             //TapToken(payable(input.tapToken)).setMinter(address(tob));
 
             // Mint and transfer mock tokens to multitokensender and deployer
-            TapToken(payable(input.tapToken)).transfer(report.multiTokenSender, 20_000_000 ether);
-            usdc.mint(report.multiTokenSender, MULTI_TOKEN_SENDER_MINT_TOKENS);
-            stETH.mint(report.multiTokenSender, MULTI_TOKEN_SENDER_MINT_TOKENS);
-            TapToken(payable(input.tapToken)).transfer(
-                report.tapiocaMulticall, TapToken(payable(input.tapToken)).balanceOf(msg.sender) - 100000e18
-            );
 
             // (ITapiocaOracle oracle, bytes memory oracleData) = tob._paymentTokens(address(usdc));
             // console.log("TOB payment oracle: ", address(oracle));

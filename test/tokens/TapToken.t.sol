@@ -3,8 +3,8 @@ pragma solidity ^0.8.22;
 
 import {Signature} from "@alto/utils/interfaces/common/IAuth.sol";
 import {Cluster} from "@alto/utils/Cluster/Cluster.sol";
-import {TapToken} from "@alto/tap-token/tokens/TapToken.sol";
-import {ITapToken} from "@alto/tap-token/tokens/ITapToken.sol";
+import {TapToken} from "@alto/tokens/TapToken.sol";
+import {ITapToken} from "@alto/tokens/interfaces/ITapToken.sol";
 import "forge-std/Test.sol";
 
 import {TestHelperOz5} from "@layerzerolabs/test-devtools-evm-foundry/contracts/TestHelperOz5.sol";

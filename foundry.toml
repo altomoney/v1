@@ -31,13 +31,13 @@ no-match-contract = "zzz"
 
 [rpc_endpoints]
 [profile.twtap]
-src = "contracts/tap-token/governance"
+src = "@alto/tap-token/governance"
 test = "test/tap-token/unit/options/"
 
 [profile.market]
-src = "contracts/lending"
+src = "@alto/lending"
 test = "test/lending"
 
 [profile.bundler]
-src = "contracts/bundler"
+src = "@alto/bundler"
 test = "test/bundler"

@@ -5,7 +5,7 @@ import {Test} from "forge-std/Test.sol";
 
 import {FixedPointMath} from "@alto/lending/libraries/FixedPointMath.sol";
 
-import {FixedRateIrm} from "@alto/lending/FixedRateIrm.sol";
+import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {IIrm} from "@alto/lending/interfaces/IIrm.sol";
 
 uint256 constant MIN_AMOUNT = 1000;

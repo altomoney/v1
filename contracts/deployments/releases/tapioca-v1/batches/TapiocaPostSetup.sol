@@ -4,10 +4,10 @@ pragma solidity ^0.8.22;
 import {UsdoReport, LendingReport} from "../../../interfaces/IAltoReport.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
-import {Usdo} from "@alto/bar/usdo/Usdo.sol";
-import {MultiTokenSender} from "@alto/mocks/MultiTokenSender.sol";
+import {Usdo} from "@alto/tokens/Usdo.sol";
+import {MultiTokenSender} from "@alto/deployments/testnet/MultiTokenSender.sol";
 import {TapiocaMulticallTestnet} from "@alto/utils/TapiocaMulticall/TapiocaMulticallTestnet.sol";
-import {AltoLeverage} from "@alto/bar/leverage/AltoLeverage.sol";
+import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
 import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
 
 /// @title TapiocaPostSetup
@@ -24,7 +24,8 @@ contract TapiocaPostSetup is Ownable {
         address borrowMarket,
         address mintMarket,
         address multiTokenSender,
-        address altoLeverage
+        address altoLeverage,
+        address zeroXSwapper
     ) external onlyOwner {
         Usdo(payable(usdo)).setMinterStatus(address(mintMarket), true);
         Usdo(payable(usdo)).setMinterStatus(address(this), true);
@@ -37,7 +38,7 @@ contract TapiocaPostSetup is Ownable {
         TapiocaMulticallTestnet(payable(multicall)).setOwner(0x4778c2AA94a8D05D63e4C07eb68021528985304C, true);
 
         Usdo(payable(usdo)).mint(multiTokenSender, MULTI_TOKEN_SENDER_MINT_TOKENS);
-        Usdo(payable(usdo)).mint(altoLeverage, MULTI_TOKEN_SENDER_MINT_TOKENS);
+        Usdo(payable(usdo)).mint(zeroXSwapper, MULTI_TOKEN_SENDER_MINT_TOKENS);
         AltoLeverage(payable(altoLeverage)).setMarket(address(borrowMarket), true);
         AltoLeverage(payable(altoLeverage)).setMarket(address(mintMarket), true);
         IMarket(borrowMarket).setAuthorizedCallback(address(altoLeverage), true);
