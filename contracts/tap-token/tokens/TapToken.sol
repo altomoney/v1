@@ -17,12 +17,12 @@ import {OFT} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/OFT.sol";
 // External
 import {ERC20Permit, ERC20} from "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
 import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
-import {ERC20PermitStruct} from "tap-utils/interfaces/periph/ITapiocaOmnichainEngine.sol";
+import {ERC20PermitStruct} from "tap-utils/interfaces/common/ICommonData.sol";
 
 // Tapioca
 import {ITapToken} from "tap-token/tokens/ITapToken.sol";
 import {ITWTAPv2} from "tap-token/interfaces/ITWTAPv2.sol";
-import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
+import {ICluster} from "tap-utils/interfaces/common/ICluster.sol";
 
 /*
 
@@ -108,7 +108,6 @@ contract TapToken is OFT, ERC20Permit, Pausable {
         if (msg.sender != minter) revert OnlyMinter();
         _;
     }
-
 
     /**
      * @notice Creates a new TAP OFT type token

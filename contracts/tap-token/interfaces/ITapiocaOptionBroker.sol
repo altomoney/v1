@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.22;
 
-import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
+import {ITapiocaOracle} from "tap-utils/interfaces/common/ITapiocaOracle.sol";
 import {ITWLBase, Bucket} from "tap-token/interfaces/ITWLBase.sol";
 
 struct Participation {

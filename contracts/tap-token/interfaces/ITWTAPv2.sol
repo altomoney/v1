@@ -7,7 +7,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 // Tapioca
 
-import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
+import {ICluster} from "tap-utils/interfaces/common/ICluster.sol";
 import {TapToken} from "tap-token/tokens/TapToken.sol";
 import {ITWLBase, Bucket} from "tap-token/interfaces/ITWLBase.sol";
 

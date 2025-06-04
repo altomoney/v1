@@ -13,8 +13,8 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 // Tapioca
 
-import {ITapiocaOracle} from "tap-utils/interfaces/periph/ITapiocaOracle.sol";
-import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
+import {ITapiocaOracle} from "tap-utils/interfaces/common/ITapiocaOracle.sol";
+import {ICluster} from "tap-utils/interfaces/common/ICluster.sol";
 import {FullMath} from "tap-token/options/FullMath.sol";
 import {TapToken} from "tap-token/tokens/TapToken.sol";
 import {AOTAP, AirdropTapOption} from "./aoTAP.sol";

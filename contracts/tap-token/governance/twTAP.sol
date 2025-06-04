@@ -10,7 +10,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 // Tapioca
 
-import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
+import {ICluster} from "tap-utils/interfaces/common/ICluster.sol";
 import {TapToken} from "tap-token/tokens/TapToken.sol";
 import {TWLBase, Bucket} from "tap-token/governance/TWLBase.sol";
 import {ITWTAPv2, Participation, Reward, WeekTotals} from "tap-token/interfaces/ITWTAPv2.sol";

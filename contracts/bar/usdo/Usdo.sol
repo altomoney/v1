@@ -12,7 +12,7 @@ import {
 import {ERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
 import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
 import {IUsdo, ERC20PermitStruct} from "./IUsdo.sol";
-import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
+import {ICluster} from "tap-utils/interfaces/common/ICluster.sol";
 
 /**
  * @title USDO Stablecoin
@@ -27,7 +27,6 @@ contract Usdo is OFT, Pausable, ERC20Permit, IUsdo {
 
     mapping(address => bool) public allowedMinter;
     mapping(address => bool) public allowedBurner;
-
 
     constructor(address endpoint, address owner, address clusterAddress)
         ERC20Permit("USDO Stablecoin")
@@ -108,7 +107,7 @@ contract Usdo is OFT, Pausable, ERC20Permit, IUsdo {
     /**
      * @notice Un/Pauses this contract.
      */
-    function setPause(bool _pauseState) external  {
+    function setPause(bool _pauseState) external {
         if (!cluster.hasRole(msg.sender, keccak256("PAUSABLE")) && msg.sender != owner()) {
             revert Usdo_NotAuthorized();
         }
@@ -168,5 +167,5 @@ contract Usdo is OFT, Pausable, ERC20Permit, IUsdo {
      */
     function setCluster(address _cluster) external onlyOwner {
         cluster = ICluster(_cluster);
-    }   
+    }
 }
