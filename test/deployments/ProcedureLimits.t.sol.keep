@@ -16,7 +16,6 @@ import {TapiocaBBBatch1} from "deployments/releases/tapioca-v1/batches/TapiocaBB
 import {TapiocaBBBatch2} from "deployments/releases/tapioca-v1/batches/TapiocaBBBatch2.sol";
 import {TapiocaBBBatch3} from "deployments/releases/tapioca-v1/batches/TapiocaBBBatch3.sol";
 import "deployments/interfaces/IAltoReport.sol";
-import {LZEndpointMock} from "tapioca-mocks/LZEndpointMock.sol";
 import {TapiocaPenroseBatch} from "deployments/releases/tapioca-v1/batches/TapiocaPenroseBatch.sol";
 import {ERC20Mock} from "../bar/mocks/ERC20Mock.sol";
 import {SGLInterestHelper} from "tapioca-bar/markets/singularity/SGLInterestHelper.sol";
@@ -25,9 +24,10 @@ import {SGLLiquidation} from "tapioca-bar/markets/singularity/SGLLiquidation.sol
 import {Singularity} from "tapioca-bar/markets/singularity/Singularity.sol";
 import {SingularityLauncher} from "deployments/releases/tapioca-v1/actions/SingularityLauncher.sol";
 import {BigBangLauncher} from "deployments/releases/tapioca-v1/actions/BigBangLauncher.sol";
+import {TestHelperOz5} from "@layerzerolabs/test-devtools-evm-foundry/contracts/TestHelperOz5.sol";
 
 // @dev forge test --match-path test/deployments/ProcedureLimits.t.sol
-contract DeploymentProceduresLimits is Test {
+contract DeploymentProceduresLimits is Test, TestHelperOz5 {
     address owner;
     address zeroXSwapper;
     address endpointMock;
@@ -39,10 +39,13 @@ contract DeploymentProceduresLimits is Test {
     address erc20Mock2;
     address erc20Mock3;
 
-    function setUp() public {
+    function setUp() public override {
+        super.setUp()
+        setUpEndpoints(1, LibraryType.UltraLightNode);
+
         owner = makeAddr("owner");
         zeroXSwapper = makeAddr("zeroXSwapper");
-        endpointMock = address(new LZEndpointMock(1));
+        endpointMock = address(endpoints[1]);
         delegate = owner;
 
         usdoReport =

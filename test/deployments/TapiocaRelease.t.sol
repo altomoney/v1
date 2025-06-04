@@ -4,13 +4,15 @@ pragma solidity ^0.8.22;
 import "forge-std/Test.sol";
 import "deployments/interfaces/IAltoReport.sol";
 import {AltoRelease} from "deployments/releases/tapioca-v1/AltoRelease.sol";
-import {LZEndpointMock} from "tapioca-mocks/LZEndpointMock.sol";
 import {ERC20Mock} from "../bar/mocks/ERC20Mock.sol";
+import {TestHelperOz5} from "@layerzerolabs/test-devtools-evm-foundry/contracts/TestHelperOz5.sol";
 
-contract AltoReleaseTest is Test {
+contract AltoReleaseTest is Test, TestHelperOz5 {
     address owner;
 
-    function setUp() public {
+    function setUp() public override {
+        super.setUp();
+        setUpEndpoints(1, LibraryType.UltraLightNode);
         owner = makeAddr("owner");
     }
 
@@ -20,7 +22,7 @@ contract AltoReleaseTest is Test {
         input.owner = owner;
         input.isTestnet = true;
         input.lzChainId = 0;
-        input.lzEndpoint = address(new LZEndpointMock(1));
+        input.lzEndpoint = address(endpoints[1]);
         input.zeroXProxy = address(1);
         input.wrappedNativeToken = address(new ERC20Mock("A", "A"));
         input.tapToken = address(new ERC20Mock("B", "B"));
