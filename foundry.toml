@@ -26,10 +26,11 @@ remappings = [
 	'forge-std/=node_modules/forge-std/src/',
 	'solady/=node_modules/solady/src/',
 	'@morpho-org/bundler3/=lib/bundler3/src/',
+	'@morpho-org/irm/=lib/morpho-blue-irm/src/',
 	'@alto-monorepo/=contracts/',
 	'@openzeppelin/contracts/=node_modules/@openzeppelin/contracts/',
 	'@openzeppelin/contracts-v5/=node_modules/@openzeppelin/contracts-v5/',
-	'@openzeppelin/contracts-upgradeable/=node_modules/@openzeppelin/contracts-upgradeable/'
+	'@openzeppelin/contracts-upgradeable/=node_modules/@openzeppelin/contracts-upgradeable/',
 
 
 ]

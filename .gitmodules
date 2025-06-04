@@ -1,3 +1,6 @@
 [submodule "lib/bundler3"]
 	path = lib/bundler3
 	url = https://github.com/morpho-org/bundler3
+[submodule "lib/morpho-blue-irm"]
+	path = lib/morpho-blue-irm
+	url = https://github.com/morpho-org/morpho-blue-irm
