@@ -19,7 +19,6 @@ struct AltoReport {
 
 struct UtilitiesReport {
     address tapiocaMulticall;
-    address pauser;
     address leverageSwapper;
     address multiTokenSender;
     address bundler3;
