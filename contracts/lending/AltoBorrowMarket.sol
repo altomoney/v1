@@ -20,13 +20,15 @@ import {Auth} from "@alto/utils/utils/Auth.sol";
 import {IIrm} from "./interfaces/IIrm.sol";
 
 import {ExpLib, MATH_PRECISION_INT} from "./libraries/ExpLib.sol";
-import {AssetShareConversionMath} from "./libraries/AssetShareConversionMath.sol";
 import {FixedPointMath, MATH_PRECISION} from "./libraries/FixedPointMath.sol";
 import {Utils} from "./libraries/Utils.sol";
 import {IMarketStaticTypes} from "./interfaces/IMarket.sol";
 import {IBorrowCallback, IRemoveCollateralCallback} from "./interfaces/IMarketCallbacks.sol";
+import {Pausable, IPausable} from "@alto/utils/utils/Pausable.sol";
+import {AssetShareConversionMath} from "./libraries/AssetShareConversionMath.sol";
+import {PAUSED_MARKET, FROZEN_MARKET} from "@alto/utils/utils/Constants.sol";
 
-contract AltoBorrowMarket is Ownable, Auth, IMarketStaticTypes {
+contract AltoBorrowMarket is Auth, Pausable, IMarketStaticTypes {
     using FixedPointMath for uint256;
     using AssetShareConversionMath for uint256;
     using Utils for uint256;
@@ -111,7 +113,13 @@ contract AltoBorrowMarket is Ownable, Auth, IMarketStaticTypes {
         feeRecipient = _feeRecipient;
     }
 
-    function addSupply(uint256 assets, uint256 shares, address onBehalf) external virtual returns (uint256, uint256) {
+    function addSupply(uint256 assets, uint256 shares, address onBehalf)
+        external
+        virtual
+        whenNotPaused
+        whenNotFrozen
+        returns (uint256, uint256)
+    {
         if (!Utils.onlyOneZero(assets, shares) || onBehalf == address(0)) {
             revert AltoBorrowMarketInvalidInput();
         }
@@ -138,6 +146,7 @@ contract AltoBorrowMarket is Ownable, Auth, IMarketStaticTypes {
     function removeSupply(uint256 assets, uint256 shares, address onBehalf, address receiver)
         external
         virtual
+        whenNotPaused
         returns (uint256, uint256)
     {
         if (!Utils.onlyOneZero(assets, shares) || receiver == address(0)) {
@@ -166,7 +175,7 @@ contract AltoBorrowMarket is Ownable, Auth, IMarketStaticTypes {
         return (assets, shares);
     }
 
-    function addCollateral(uint256 assets, address onBehalf) external returns (uint256) {
+    function addCollateral(uint256 assets, address onBehalf) external whenNotPaused whenNotFrozen returns (uint256) {
         if (assets == 0 || onBehalf == address(0)) {
             revert AltoBorrowMarketInvalidInput();
         }
@@ -182,6 +191,7 @@ contract AltoBorrowMarket is Ownable, Auth, IMarketStaticTypes {
 
     function removeCollateral(uint256 assets, address onBehalf, address receiver, bytes calldata data)
         external
+        whenNotPaused
         returns (uint256)
     {
         if (assets == 0 || onBehalf == address(0)) {
@@ -215,6 +225,8 @@ contract AltoBorrowMarket is Ownable, Auth, IMarketStaticTypes {
 
     function borrow(uint256 assets, uint256 shares, address onBehalf, address receiver, bytes calldata data)
         external
+        whenNotPaused
+        whenNotFrozen
         returns (uint256, uint256, uint256)
     {
         if (!Utils.onlyOneZero(assets, shares) || receiver == address(0)) {
@@ -286,7 +298,11 @@ contract AltoBorrowMarket is Ownable, Auth, IMarketStaticTypes {
         return feeSupplyShares;
     }
 
-    function repay(uint256 assets, uint256 shares, address onBehalf) external returns (uint256, uint256) {
+    function repay(uint256 assets, uint256 shares, address onBehalf)
+        external
+        whenNotPaused
+        returns (uint256, uint256)
+    {
         if (!Utils.onlyOneZero(assets, shares) || onBehalf == address(0)) {
             revert AltoBorrowMarketInvalidInput();
         }
@@ -310,7 +326,7 @@ contract AltoBorrowMarket is Ownable, Auth, IMarketStaticTypes {
         return (assets, shares);
     }
 
-    function accrueInterest() external {
+    function accrueInterest() external whenNotPaused {
         _accrueInterest();
     }
 
@@ -368,7 +384,7 @@ contract AltoBorrowMarket is Ownable, Auth, IMarketStaticTypes {
     /// @param borrower The address of the user to liquidate
     /// @return The result of the liquidation
     /// @dev The liquidator must be an external liquidator which tagged the position or any liquidator that waited for the grace period or a priority liquidator
-    function liquidate(address borrower) external returns (LiquidationResult memory) {
+    function liquidate(address borrower) external whenNotPaused returns (LiquidationResult memory) {
         _accrueInterest();
 
         // Check if the position is underwater
@@ -510,7 +526,7 @@ contract AltoBorrowMarket is Ownable, Auth, IMarketStaticTypes {
     /// @param user The address of the user to tag
     /// @param liquidator The address of the liquidator to tag the position for
     /// @dev The external liquidator must NOT be a priority liquidator
-    function tagLiquidablePosition(address user, address liquidator) external {
+    function tagLiquidablePosition(address user, address liquidator) external whenNotPaused {
         if (_isSolvent(user, true)) {
             revert AltoBorrowMarketLiquidatingHealthyPosition();
         }
@@ -525,5 +541,19 @@ contract AltoBorrowMarket is Ownable, Auth, IMarketStaticTypes {
         }
         liquidablePositions[user] = LiquidablePosition({tagged: true, tagger: liquidator, timestamp: block.timestamp});
         emit PositionTagged(user, liquidator, block.timestamp);
+    }
+
+    modifier whenNotPaused() {
+        if (paused[PAUSED_MARKET]) {
+            revert IPausable.IsPaused(PAUSED_MARKET);
+        }
+        _;
+    }
+
+    modifier whenNotFrozen() {
+        if (paused[FROZEN_MARKET]) {
+            revert IPausable.IsPaused(FROZEN_MARKET);
+        }
+        _;
     }
 }
