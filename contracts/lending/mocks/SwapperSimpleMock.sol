@@ -10,7 +10,6 @@ contract SwapperSimpleMock is IAltoLeverageSwapper, Ownable {
 
     error SenderNotValid(address sender);
 
-    uint256 public defaultAmountOut;
     uint256 public returnLeftoverTokens;
 
     constructor(address _owner) Ownable(_owner) {}
@@ -39,24 +38,9 @@ contract SwapperSimpleMock is IAltoLeverageSwapper, Ownable {
             returnLeftoverTokens = 0;
         }
 
-        if (defaultAmountOut > 0) {
-            amountOut = defaultAmountOut;
-        } else {
-            amountOut = minAmountOut;
-        }
+        amountOut = minAmountOut;
 
         // Transfer the bought tokens to the sender
         IERC20(buyToken).transfer(msg.sender, amountOut);
-    }
-
-    /**
-     * @notice Payable fallback to allow this contract to receive protocol fee refunds.
-     * https://0x.org/docs/0x-swap-api/guides/use-0x-api-liquidity-in-your-smart-contracts#payable-fallback
-     */
-    receive() external payable {}
-
-    /// @dev Set the default amount out for the swap. If 0, always returns minAmountOut.
-    function setDefaultAmountOut(uint256 _defaultAmountOut) external onlyOwner {
-        defaultAmountOut = _defaultAmountOut;
     }
 }

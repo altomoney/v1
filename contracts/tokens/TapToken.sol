@@ -11,7 +11,6 @@ import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 // Tapioca
 import {ITapToken} from "@alto/tokens/interfaces/ITapToken.sol";
-import {ITWTAPv2} from "@alto/tap-token/interfaces/ITWTAPv2.sol";
 import {ICluster} from "@alto/utils/interfaces/common/ICluster.sol";
 
 /// @title Tapioca OFTv2 token
@@ -43,7 +42,7 @@ contract TapToken is OFT, Pausable {
     /// @notice returns the minter address
     address public minter;
 
-    ITWTAPv2 public twTap;
+    // ITWTAPv2 public twTap;
 
     ICluster public cluster;
 
@@ -78,10 +77,10 @@ contract TapToken is OFT, Pausable {
     // *MODIFIERS*
     // ===========
 
-    modifier twTapExists() {
-        if (address(twTap) == address(0)) revert twTapNotSet();
-        _;
-    }
+    // modifier twTapExists() {
+    //     if (address(twTap) == address(0)) revert twTapNotSet();
+    //     _;
+    // }
 
     modifier onlyMinter() {
         if (msg.sender != minter) revert OnlyMinter();
@@ -286,15 +285,15 @@ contract TapToken is OFT, Pausable {
         emit MinterUpdated(minter, _minter);
     }
 
-    /**
-     * @notice set the twTAP address, can be done only once.
-     */
-    function setTwTAP(address _twTap) external onlyOwner {
-        if (address(twTap) != address(0)) {
-            revert TwTapAlreadySet();
-        }
-        twTap = ITWTAPv2(_twTap);
-    }
+    // /**
+    //  * @notice set the twTAP address, can be done only once.
+    //  */
+    // function setTwTAP(address _twTap) external onlyOwner {
+    //     if (address(twTap) != address(0)) {
+    //         revert TwTapAlreadySet();
+    //     }
+    //     twTap = ITWTAPv2(_twTap);
+    // }
 
     /**
      * @notice Un/Pauses this contract.
