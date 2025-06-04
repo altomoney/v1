@@ -6,17 +6,16 @@ import {OFTCore} from "@layerzerolabs/oft-evm/contracts/OFTCore.sol";
 
 // External
 import {ERC20Permit, ERC20} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
-import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+import {Pausable, IPausable} from "@alto/utils/utils/Pausable.sol";
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-// Tapioca
 import {ITapToken} from "@alto/tokens/interfaces/ITapToken.sol";
-import {ICluster} from "@alto/utils/interfaces/common/ICluster.sol";
+import {PAUSED_ROLE} from "@alto/utils/utils/Constants.sol";
 
 /// @title Tapioca OFTv2 token
 /// @notice OFT compatible TAP token
 /// @dev Emissions E(x)= E(x-1) - E(x-1) * D with E being total supply a x week, and D the initial decay rate
-contract TapToken is OFT, Pausable {
+contract TapToken is Pausable, OFT {
     uint256 public constant INITIAL_SUPPLY = 47_500_000 * 1e18; // Everything minus DSO
     uint256 public dso_supply = 52_500_000 * 1e18; // Emission supply for DSO
 
@@ -43,8 +42,6 @@ contract TapToken is OFT, Pausable {
     address public minter;
 
     // ITWTAPv2 public twTap;
-
-    ICluster public cluster;
 
     // ==========
     // *EVENTS*
@@ -117,7 +114,6 @@ contract TapToken is OFT, Pausable {
         OFT("ALTO", "ALTO", _data.endpoint, _data.owner)
         Ownable(_data.owner)
     {
-        cluster = ICluster(_data.cluster);
         if (_data.endpoint == address(0)) revert AddressWrong();
 
         if (_data.epochDuration == 0) revert NotValid();
@@ -295,26 +291,6 @@ contract TapToken is OFT, Pausable {
     //     twTap = ITWTAPv2(_twTap);
     // }
 
-    /**
-     * @notice Un/Pauses this contract.
-     */
-    function setPause(bool _pauseState) external {
-        if (!cluster.hasRole(msg.sender, keccak256("PAUSABLE")) && msg.sender != owner()) revert NotAuthorized();
-        if (_pauseState) {
-            _pause();
-        } else {
-            _unpause();
-        }
-    }
-
-    /**
-     * @notice Sets the cluster address.
-     * @param _cluster The address of the cluster.
-     */
-    function setCluster(address _cluster) external onlyOwner {
-        cluster = ICluster(_cluster);
-    }
-
     /// =====================
     /// Internal
     /// =====================
@@ -332,5 +308,12 @@ contract TapToken is OFT, Pausable {
      */
     function _computeEmission() internal view returns (uint256 result) {
         result = (dso_supply * decay_rate) / DECAY_RATE_DECIMAL;
+    }
+
+    modifier whenNotPaused() {
+        if (paused[PAUSED_ROLE]) {
+            revert IPausable.IsPaused(PAUSED_ROLE);
+        }
+        _;
     }
 }

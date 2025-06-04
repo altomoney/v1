@@ -14,6 +14,5 @@ interface ITapToken {
         address dao;
         address airdrop;
         address owner;
-        address cluster;
     }
 }

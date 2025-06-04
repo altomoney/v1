@@ -5,8 +5,6 @@ import {UtilitiesReport} from "../interfaces/IAltoReport.sol";
 
 import {TapiocaMulticall} from "@alto/utils/TapiocaMulticall/TapiocaMulticall.sol";
 import {TapiocaMulticallTestnet} from "@alto/utils/TapiocaMulticall/TapiocaMulticallTestnet.sol";
-import {Cluster} from "@alto/utils/Cluster/Cluster.sol";
-import {ICluster} from "@alto/utils/interfaces/common/ICluster.sol";
 import {MultiTokenSender} from "@alto/deployments/testnet/MultiTokenSender.sol";
 import {Bundler3} from "@morpho-org/bundler3/Bundler3.sol";
 import {AltoAdapter} from "@alto/utils/AltoAdapter.sol";

@@ -2,7 +2,6 @@
 pragma solidity ^0.8.22;
 
 import {Signature} from "@alto/utils/interfaces/common/IAuth.sol";
-import {Cluster} from "@alto/utils/Cluster/Cluster.sol";
 import {Usdo} from "@alto/tokens/Usdo.sol";
 
 import {TestHelperOz5} from "@layerzerolabs/test-devtools-evm-foundry/contracts/TestHelperOz5.sol";
@@ -10,19 +9,14 @@ import {TestHelpers} from "@alto-test/helpers/TestHelpers.sol";
 
 contract UsdoTest is TestHelpers, TestHelperOz5 {
     Usdo usdo;
-    Cluster cluster = new Cluster(1, address(this));
 
     address internal immutable USER = makeAddr("User");
 
     function setUp() public override {
         setUpEndpoints(1, LibraryType.UltraLightNode);
 
-        usdo = new Usdo(endpoints[1], address(this), address(cluster));
+        usdo = new Usdo(endpoints[1], address(this));
         vm.label(address(usdo), "aUsdo");
-    }
-
-    function test_constructor() public {
-        assertEq(address(usdo.getCluster()), address(cluster));
     }
 
     function test_erc20_permit(uint256 privateKey, uint32 deadline, uint256 amount) public {
