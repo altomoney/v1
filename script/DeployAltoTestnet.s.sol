@@ -5,13 +5,13 @@ import {AltoRelease} from "deployments/releases/tapioca-v1/AltoRelease.sol";
 import {AltoReport, TapiocaInput} from "deployments/interfaces/IAltoReport.sol";
 import {Script} from "forge-std/Script.sol";
 import {TapToken, ITapToken} from "contracts/tap-token/tokens/TapToken.sol";
-import {ICluster} from "@alto-monorepo/utils/interfaces/common/ICluster.sol";
-// import {TapiocaOptionBroker} from "@alto-monorepo/tap-token/options/TapiocaOptionBroker.sol";
-import {TwTAP} from "@alto-monorepo/tap-token/governance/twTAP.sol";
+import {ICluster} from "@alto/utils/interfaces/common/ICluster.sol";
+// import {TapiocaOptionBroker} from "@alto/tap-token/options/TapiocaOptionBroker.sol";
+import {TwTAP} from "@alto/tap-token/governance/twTAP.sol";
 import {TapiocaMulticall} from "contracts/utils/TapiocaMulticall/TapiocaMulticall.sol";
-import {Bucket} from "@alto-monorepo/tap-token/interfaces/ITWLBase.sol";
+import {Bucket} from "@alto/tap-token/interfaces/ITWLBase.sol";
 import {ERC20Testnet} from "test/utils/mocks/ERC20Testnet.sol";
-import {Usdo} from "@alto-monorepo/bar/usdo/Usdo.sol";
+import {Usdo} from "@alto/bar/usdo/Usdo.sol";
 import {MultiTokenSender} from "../contracts/mocks/MultiTokenSender.sol";
 import {
     TestnetOracles,

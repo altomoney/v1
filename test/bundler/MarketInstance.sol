@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {AltoBorrowMarket} from "@alto-monorepo/lending/AltoBorrowMarket.sol";
-import {LiquidationConfiguration} from "@alto-monorepo/lending/interfaces/IMarket.sol";
+import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";
+import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
 
 contract MarketInstance is AltoBorrowMarket {
     constructor(

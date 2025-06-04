@@ -7,13 +7,13 @@ import "forge-std/StdUtils.sol";
 import {TestBase} from "forge-std/Base.sol";
 
 import "forge-std/console.sol";
-import {IAltoLeverageSwapper} from "@alto-monorepo/bar/leverage/IAltoLeverageSwapper.sol";
-import {ICluster} from "@alto-monorepo/utils/interfaces/common/ICluster.sol";
+import {IAltoLeverageSwapper} from "@alto/bar/leverage/IAltoLeverageSwapper.sol";
+import {ICluster} from "@alto/utils/interfaces/common/ICluster.sol";
 import {ZerroXSwapperMockTarget} from "./ZerroXSwapperMockTarget.sol";
-import {ZeroXSwapper} from "@alto-monorepo/utils/Swapper/ZeroXSwapper.sol";
-import {Cluster} from "@alto-monorepo/utils/Cluster/Cluster.sol";
-import {ERC20Mock} from "@alto-monorepo-test/bar/mocks/ERC20Mock.sol";
-import {SZeroXSwapData} from "@alto-monorepo/utils/interfaces/external/IZeroX.sol";
+import {ZeroXSwapper} from "@alto/utils/Swapper/ZeroXSwapper.sol";
+import {Cluster} from "@alto/utils/Cluster/Cluster.sol";
+import {ERC20Mock} from "@alto-test/bar/mocks/ERC20Mock.sol";
+import {SZeroXSwapData} from "@alto/utils/interfaces/external/IZeroX.sol";
 // External
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 

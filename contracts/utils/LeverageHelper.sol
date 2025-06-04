@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {
-    FlashRemoveCollateralLeverageData, FlashBorrowLeverageData
-} from "@alto-monorepo/bar/leverage/AltoLeverage.sol";
+import {FlashRemoveCollateralLeverageData, FlashBorrowLeverageData} from "@alto/bar/leverage/AltoLeverage.sol";
 
 /// @title LeverageABIHelper
 /// @notice Helper contract for leverage operations

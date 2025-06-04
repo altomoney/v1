@@ -3,10 +3,10 @@ pragma solidity ^0.8.22;
 
 import {Test} from "forge-std/Test.sol";
 
-import {FixedPointMath} from "@alto-monorepo/lending/libraries/FixedPointMath.sol";
+import {FixedPointMath} from "@alto/lending/libraries/FixedPointMath.sol";
 
-import {FixedRateIrm} from "@alto-monorepo/lending/FixedRateIrm.sol";
-import {IIrm} from "@alto-monorepo/lending/interfaces/IIrm.sol";
+import {FixedRateIrm} from "@alto/lending/FixedRateIrm.sol";
+import {IIrm} from "@alto/lending/interfaces/IIrm.sol";
 
 uint256 constant MIN_AMOUNT = 1000;
 uint256 constant MAX_AMOUNT = 2 ** 64;

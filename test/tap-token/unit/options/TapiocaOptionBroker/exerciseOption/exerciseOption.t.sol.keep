@@ -4,7 +4,7 @@ pragma solidity ^0.8.18;
 import {TOBTestBase, ITapiocaOptionBroker} from "../TOBTestBase.t.sol";
 import {Test, stdError, StdStorage, stdStorage} from "forge-std/Test.sol";
 import {console} from "forge-std/console.sol";
-import {Participation} from "@alto-monorepo/tap-token/interfaces/ITapiocaOptionBroker.sol";
+import {Participation} from "@alto/tap-token/interfaces/ITapiocaOptionBroker.sol";
 
 contract TapiocaOptionBrokerExerciseOptionTest is TOBTestBase {
     address testUser;

@@ -8,7 +8,7 @@ import {TestBase} from "forge-std/Base.sol";
 
 import "forge-std/console.sol";
 
-import {Cluster} from "@alto-monorepo/utils/Cluster/Cluster.sol";
+import {Cluster} from "@alto/utils/Cluster/Cluster.sol";
 
 contract ClusterTest is TestBase, StdAssertions, StdCheats, StdUtils {
     Cluster cluster;

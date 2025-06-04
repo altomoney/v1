@@ -3,8 +3,8 @@ pragma solidity ^0.8.0;
 
 import {Test} from "forge-std/Test.sol";
 import {AuthInstance} from "./AuthInstance.sol";
-import {IAuth, Authorization, Signature} from "@alto-monorepo/utils/interfaces/common/IAuth.sol";
-import {SigUtils} from "../../helpers/SigUtils.sol";
+import {IAuth, Authorization, Signature} from "@alto/utils/interfaces/common/IAuth.sol";
+import {SigUtils} from "@alto-test/helpers/SigUtils.sol";
 
 contract AuthTest is Test {
     AuthInstance public auth;

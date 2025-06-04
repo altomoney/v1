@@ -4,16 +4,16 @@ pragma solidity ^0.8.22;
 import {AltoRelease} from "deployments/releases/tapioca-v1/AltoRelease.sol";
 import {AltoReport, TapiocaInput} from "deployments/interfaces/IAltoReport.sol";
 import {TapToken, ITapToken} from "contracts/tap-token/tokens/TapToken.sol";
-import {ICluster} from "@alto-monorepo/utils/interfaces/common/ICluster.sol";
-import {TapiocaOptionBroker} from "@alto-monorepo/tap-token/options/TapiocaOptionBroker.sol";
-import {TwTAP} from "@alto-monorepo/tap-token/governance/twTAP.sol";
+import {ICluster} from "@alto/utils/interfaces/common/ICluster.sol";
+import {TapiocaOptionBroker} from "@alto/tap-token/options/TapiocaOptionBroker.sol";
+import {TwTAP} from "@alto/tap-token/governance/twTAP.sol";
 import {TapiocaMulticall} from "contracts/utils/TapiocaMulticall/TapiocaMulticall.sol";
-import {Bucket} from "@alto-monorepo/tap-token/interfaces/ITWLBase.sol";
+import {Bucket} from "@alto/tap-token/interfaces/ITWLBase.sol";
 import {SeerCLSolo} from "contracts/utils/oracle/SeerCLSolo.sol";
 import {OracleChainlinkSingleConstructorData} from "contracts/utils/oracle/OracleChainlinkSingle.sol";
 import {ERC20Testnet} from "test/utils/mocks/ERC20Testnet.sol";
 import {IERC20} from "@boringcrypto/boring-solidity/contracts/interfaces/IERC20.sol";
-import {Usdo} from "@alto-monorepo/bar/usdo/Usdo.sol";
+import {Usdo} from "@alto/bar/usdo/Usdo.sol";
 import {
     TestnetOracles,
     TestnetOraclesBatch

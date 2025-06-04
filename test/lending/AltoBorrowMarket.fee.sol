@@ -12,7 +12,7 @@ import {AssetShareConversionMath} from "../../contracts/lending/libraries/AssetS
 import {FixedPointMath, MATH_PRECISION} from "../../contracts/lending/libraries/FixedPointMath.sol";
 import {Erc20Mock} from "../helpers/Erc20Mock.sol";
 import {console2} from "forge-std/console2.sol";
-import {IMarket} from "@alto-monorepo/lending/interfaces/IMarket.sol";
+import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
 
 contract AltoBorrowMarketMock is AltoBorrowMarket {
     using AssetShareConversionMath for uint256;
