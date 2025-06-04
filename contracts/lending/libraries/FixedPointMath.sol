@@ -5,6 +5,10 @@ import "@openzeppelin/contracts/utils/math/Math.sol";
 
 uint256 constant MATH_PRECISION = 1e18;
 
+/// @title FixedPointMath
+/// @author Alto Foundation
+/// @custom:contact security@alto.xyz
+/// @notice Library for fixed point arithmetic.
 library FixedPointMath {
     /// @dev Multiplies two numbers and divides by MATH_PRECISION, rounding down.
     function multiplyWithPrecision(uint256 multiplicand, uint256 multiplier) internal pure returns (uint256) {

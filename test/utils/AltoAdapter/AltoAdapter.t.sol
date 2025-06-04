@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-or-later
+// SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
 import "./AdapterCommonSetup.t.sol";
@@ -11,7 +11,6 @@ import {MathRayLib} from "@morpho-org/bundler3/libraries/MathRayLib.sol";
 
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
 import {FixedPointMath, MATH_PRECISION} from "@alto/lending/libraries/FixedPointMath.sol";
-import {Utils} from "@alto/lending/libraries/Utils.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 contract AltoAdapterTest is AdapterCommonSetup {

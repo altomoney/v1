@@ -31,7 +31,7 @@ contract FixedRateIrm is Ownable, IIrm {
     /// @param _borrowRate The fixed borrow rate in second percent yield (SPY)
     /// @param _owner The owner of the IRM - shouldn't be market
     constructor(uint256 _borrowRate, address _owner) Ownable(_owner) {
-        if (_borrowRate == 0 || _borrowRate > MAX_BORROW_RATE) revert Alto_IrmInvalidParams();
+        if (_borrowRate == 0 || _borrowRate > MAX_BORROW_RATE) revert IrmInvalidParams();
 
         irState.borrowRate = _borrowRate;
     }
@@ -40,7 +40,7 @@ contract FixedRateIrm is Ownable, IIrm {
     /// @param _market The market to set
     /// @dev Used for the first time by the market to set itself to the IRM
     function setMarket(address _market) external {
-        if (market != address(0)) revert Alto_IrmMarketAlreadySet();
+        if (market != address(0)) revert IrmMarketAlreadySet();
         market = _market;
         irState.lastUpdate = uint48(block.timestamp);
     }
@@ -49,8 +49,8 @@ contract FixedRateIrm is Ownable, IIrm {
     /// @param _borrowRate The new borrow rate in second percent yield (SPY)
     /// @dev Reverts on not set market, so the rate has to be set before the market creation.
     function setBorrowRate(uint256 _borrowRate) external onlyOwner {
-        if (market == address(0)) revert Alto_IrmMarketNotSet();
-        if (_borrowRate == 0 || _borrowRate > MAX_BORROW_RATE) revert Alto_IrmInvalidParams();
+        if (market == address(0)) revert IrmMarketNotSet();
+        if (_borrowRate == 0 || _borrowRate > MAX_BORROW_RATE) revert IrmInvalidParams();
 
         IMarket(market).accrueInterest();
         irState.borrowRate = _borrowRate;
@@ -69,14 +69,14 @@ contract FixedRateIrm is Ownable, IIrm {
 
     /// @inheritdoc IIrm
     function updateInterestRate(uint256 _totalSupply, uint256 _totalBorrowed) external returns (uint256, uint256) {
-        if (msg.sender != market) revert Alto_IrmUnauthorized();
+        if (msg.sender != market) revert IrmUnauthorized();
 
         return _updateInterestRate(_totalSupply, _totalBorrowed);
     }
 
     function _accrueInterest(uint256, uint256 _totalBorrowed) internal view returns (uint256, uint256) {
         // If the market is not set, the lastUpdate is not set, so we revert.
-        if (market == address(0)) revert Alto_IrmMarketNotSet();
+        if (market == address(0)) revert IrmMarketNotSet();
 
         uint256 interest = _totalBorrowed.multiplyWithPrecision(
             irState.borrowRate.calculateCompoundInterest(block.timestamp - irState.lastUpdate)

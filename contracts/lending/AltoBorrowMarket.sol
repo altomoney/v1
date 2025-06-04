@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-or-later
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.0;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -14,51 +14,75 @@ import {
     LiquidationConfiguration,
     LiquidationCalculation,
     LiquidablePosition
-} from "./interfaces/IMarket.sol";
+} from "@alto/lending/interfaces/IMarket.sol";
 import {Auth} from "@alto/utils/Auth.sol";
-import {IIrm} from "./interfaces/IIrm.sol";
+import {IIrm} from "@alto/lending/interfaces/IIrm.sol";
 
 import {ExpLib, MATH_PRECISION_INT} from "./libraries/ExpLib.sol";
 import {FixedPointMath, MATH_PRECISION} from "./libraries/FixedPointMath.sol";
-import {Utils} from "./libraries/Utils.sol";
+import {Uint128Converter} from "./libraries/Uint128Converter.sol";
 
 import {PAUSED_MARKET, FROZEN_MARKET} from "@alto/utils/Constants.sol";
-import {IMarketStaticTypes} from "./interfaces/IMarket.sol";
+import {IMarketStaticTypes, IMarketBase} from "@alto/lending/interfaces/IMarket.sol";
 import {Pausable, IPausable} from "@alto/utils/Pausable.sol";
-import {AssetShareConversionMath} from "./libraries/AssetShareConversionMath.sol";
-import {IBorrowCallback, IRemoveCollateralCallback, ILiquidateCallback} from "./interfaces/IMarketCallbacks.sol";
+import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
+import {
+    IBorrowCallback,
+    IRemoveCollateralCallback,
+    ILiquidateCallback
+} from "@alto/lending/interfaces/IMarketCallbacks.sol";
 
+/// @title Alto Borrow Market
+/// @author Alto Foundation
+/// @custom:contact security@alto.xyz
+/// @notice An Isolated Borrow Market
 contract AltoBorrowMarket is Auth, Pausable, IMarketStaticTypes {
     using FixedPointMath for uint256;
     using AssetShareConversionMath for uint256;
-    using Utils for uint256;
+    using Uint128Converter for uint256;
 
     using SafeERC20 for IERC20;
 
+    /// @inheritdoc IMarketBase
     address public borrowToken;
+
+    /// @inheritdoc IMarketBase
     address public collateralToken;
 
+    /// @inheritdoc IMarketStaticTypes
     Balance public totalSupply;
+
+    /// @inheritdoc IMarketStaticTypes
     Balance public totalBorrowed;
 
+    /// @inheritdoc IMarketStaticTypes
     mapping(address => Position) public position;
 
+    /// @inheritdoc IMarketBase
     mapping(address => bool) public authorizedCallbacks;
 
+    /// @inheritdoc IMarketBase
     mapping(address => bool) public priorityLiquidators;
 
+    /// @inheritdoc IMarketStaticTypes
     mapping(address => LiquidablePosition) public liquidablePositions;
 
+    /// @inheritdoc IMarketBase
     address public irm;
 
+    /// @inheritdoc IMarketBase
     address public oracle;
 
+    /// @inheritdoc IMarketBase
     uint256 public maxLtv;
 
+    /// @inheritdoc IMarketStaticTypes
     LiquidationConfiguration public liquidationConfiguration;
 
+    /// @inheritdoc IMarketBase
     uint256 public borrowOpeningFee;
 
+    /// @inheritdoc IMarketBase
     address public feeRecipient;
 
     constructor(
@@ -81,23 +105,31 @@ contract AltoBorrowMarket is Auth, Pausable, IMarketStaticTypes {
         borrowOpeningFee = _borrowOpeningFee;
         feeRecipient = _feeRecipient;
 
-        IIrm(irm).setMarket(address(this));
+        if (irm != address(0)) {
+            IIrm(irm).setMarket(address(this));
+        }
     }
 
+    /// @inheritdoc IMarketBase
     function setIrm(address _irm) external onlyOwner {
         _accrueInterest();
         irm = _irm;
-        IIrm(irm).setMarket(address(this));
+        if (irm != address(0)) {
+            IIrm(irm).setMarket(address(this));
+        }
     }
 
+    /// @inheritdoc IMarketBase
     function setOracle(address _oracle) external onlyOwner {
         oracle = _oracle;
     }
 
+    /// @inheritdoc IMarketBase
     function setMaxLtv(uint256 _maxLtv) external onlyOwner {
         maxLtv = _maxLtv;
     }
 
+    /// @inheritdoc IMarketBase
     function setLiquidationConfiguration(LiquidationConfiguration memory _liquidationConfiguration)
         external
         onlyOwner
@@ -105,14 +137,22 @@ contract AltoBorrowMarket is Auth, Pausable, IMarketStaticTypes {
         liquidationConfiguration = _liquidationConfiguration;
     }
 
+    /// @inheritdoc IMarketBase
     function setBorrowOpeningFee(uint256 _borrowOpeningFee) external onlyOwner {
         borrowOpeningFee = _borrowOpeningFee;
     }
 
+    /// @inheritdoc IMarketBase
     function setFeeRecipient(address _feeRecipient) external onlyOwner {
         feeRecipient = _feeRecipient;
     }
 
+    /// @inheritdoc IMarketBase
+    function setAuthorizedCallback(address callback, bool value) external onlyOwner {
+        authorizedCallbacks[callback] = value;
+    }
+
+    /// @inheritdoc IMarketBase
     function addSupply(uint256 assets, uint256 shares, address onBehalf)
         external
         virtual
@@ -120,7 +160,7 @@ contract AltoBorrowMarket is Auth, Pausable, IMarketStaticTypes {
         whenNotFrozen
         returns (uint256, uint256)
     {
-        if (!Utils.onlyOneZero(assets, shares) || onBehalf == address(0)) {
+        if (!_onlyOneZero(assets, shares) || onBehalf == address(0)) {
             revert AltoBorrowMarketInvalidInput();
         }
 
@@ -143,13 +183,14 @@ contract AltoBorrowMarket is Auth, Pausable, IMarketStaticTypes {
         return (assets, shares);
     }
 
+    /// @inheritdoc IMarketBase
     function removeSupply(uint256 assets, uint256 shares, address onBehalf, address receiver)
         external
         virtual
         whenNotPaused
         returns (uint256, uint256)
     {
-        if (!Utils.onlyOneZero(assets, shares) || receiver == address(0)) {
+        if (!_onlyOneZero(assets, shares) || receiver == address(0)) {
             revert AltoBorrowMarketInvalidInput();
         }
         if (!_isSenderAuthorized(onBehalf)) {
@@ -175,6 +216,7 @@ contract AltoBorrowMarket is Auth, Pausable, IMarketStaticTypes {
         return (assets, shares);
     }
 
+    /// @inheritdoc IMarketBase
     function addCollateral(uint256 assets, address onBehalf) external whenNotPaused whenNotFrozen returns (uint256) {
         if (assets == 0 || onBehalf == address(0)) {
             revert AltoBorrowMarketInvalidInput();
@@ -189,6 +231,7 @@ contract AltoBorrowMarket is Auth, Pausable, IMarketStaticTypes {
         return (assets);
     }
 
+    /// @inheritdoc IMarketBase
     function removeCollateral(uint256 assets, address onBehalf, address receiver, bytes calldata data)
         external
         whenNotPaused
@@ -223,13 +266,14 @@ contract AltoBorrowMarket is Auth, Pausable, IMarketStaticTypes {
         return (assets);
     }
 
+    /// @inheritdoc IMarketBase
     function borrow(uint256 assets, uint256 shares, address onBehalf, address receiver, bytes calldata data)
         external
         whenNotPaused
         whenNotFrozen
         returns (uint256, uint256, uint256)
     {
-        if (!Utils.onlyOneZero(assets, shares) || receiver == address(0)) {
+        if (!_onlyOneZero(assets, shares) || receiver == address(0)) {
             revert AltoBorrowMarketInvalidInput();
         }
         if (!_isSenderAuthorized(onBehalf)) {
@@ -288,6 +332,10 @@ contract AltoBorrowMarket is Auth, Pausable, IMarketStaticTypes {
         return (assets, shares, openingFeeAssets);
     }
 
+    /// @dev Adds opening fee to the fee recipient's supply position and to the market.
+    /// @param openingFeeAssets The amount of opening fee to add.
+    /// @return feeSupplyShares The amount of shares added to the fee recipient's supply position.
+    /// @dev This function is virtual to allow for custom logic in the case of mint market.
     function _applyBorrowOpeningFee(uint256 openingFeeAssets) internal virtual returns (uint256) {
         // add opening fee to the fee recipient's supply position
         uint256 feeSupplyShares = openingFeeAssets.convertToSharesDown(totalSupply.assets, totalSupply.shares);
@@ -298,12 +346,13 @@ contract AltoBorrowMarket is Auth, Pausable, IMarketStaticTypes {
         return feeSupplyShares;
     }
 
+    /// @inheritdoc IMarketBase
     function repay(uint256 assets, uint256 shares, address onBehalf)
         external
         whenNotPaused
         returns (uint256, uint256)
     {
-        if (!Utils.onlyOneZero(assets, shares) || onBehalf == address(0)) {
+        if (!_onlyOneZero(assets, shares) || onBehalf == address(0)) {
             revert AltoBorrowMarketInvalidInput();
         }
 
@@ -326,11 +375,19 @@ contract AltoBorrowMarket is Auth, Pausable, IMarketStaticTypes {
         return (assets, shares);
     }
 
+    /// @inheritdoc IMarketBase
     function accrueInterest() external whenNotPaused {
         _accrueInterest();
     }
 
+    /// @dev Accrues interest for the market.
+    /// @dev If `irm` is set to zero address, this function does nothing.
+    /// @dev This function is virtual to allow for custom logic in the case of mint market.
     function _accrueInterest() internal virtual {
+        if (irm == address(0)) {
+            return;
+        }
+
         (uint256 interest, uint256 borrowRate) = IIrm(irm).updateInterestRate(totalSupply.assets, totalBorrowed.assets);
 
         totalSupply.assets += interest.toUint128();
@@ -339,6 +396,11 @@ contract AltoBorrowMarket is Auth, Pausable, IMarketStaticTypes {
         emit AccrueInterest(borrowRate, interest, totalBorrowed.assets, totalSupply.assets);
     }
 
+    /// @dev Returns true if the user's position is solvent.
+    /// @param _user The address of the user whose position is being checked
+    /// @param _isLiquidation If true, checks if the position is solvent for liquidation.
+    /// If false, checks if the position is solvent for normal operations. In other words,
+    /// uses `maxLtv` instead of `liquidationConfiguration.maxLiquidationLtv` to make a decision.
     function _isSolvent(address _user, bool _isLiquidation) internal view returns (bool) {
         uint256 collateralPrice = IOracle(oracle).getPrice();
         uint256 collateralValue =
@@ -351,45 +413,13 @@ contract AltoBorrowMarket is Auth, Pausable, IMarketStaticTypes {
         return _isLiquidation ? maxBorrowValue > borrowValue : maxBorrowValue >= borrowValue;
     }
 
-    function _calculateLiquidationPercentage(uint256 currentLtv) internal view returns (uint256) {
-        if (currentLtv >= liquidationConfiguration.ltvForCompleteLiquidation) {
-            return MATH_PRECISION;
-        } else {
-            return (currentLtv - liquidationConfiguration.maxLiquidationLtv).divideWithPrecisionUp(
-                liquidationConfiguration.ltvForCompleteLiquidation - liquidationConfiguration.maxLiquidationLtv
-            );
-        }
-    }
-
-    function _calculateBonusFee(uint256 liquidationPercentage) internal view returns (uint256) {
-        if (liquidationPercentage < MATH_PRECISION) {
-            int256 exponent = -int256(liquidationConfiguration.dynamicBonusFeeDecaySteepness * liquidationPercentage)
-                / MATH_PRECISION_INT;
-            return liquidationConfiguration.dynamicBonusFeeStart.multiplyWithPrecision(uint256(ExpLib.wExp(exponent)));
-        } else {
-            return 0;
-        }
-    }
-
-    function _calculateNewLtv(uint256 liquidationPercentage) internal view returns (uint256) {
-        uint256 liquidationPercentageAppliedPenalty = liquidationPercentage
-            < liquidationConfiguration.minPenaltyPercentage
-            ? liquidationConfiguration.minPenaltyPercentage
-            : liquidationPercentage;
-
-        return maxLtv.multiplyWithPrecision(MATH_PRECISION - liquidationPercentageAppliedPenalty);
-    }
-
-    /// @notice Liquidate a position
-    /// @param borrower The address of the user to liquidate
-    /// @return The result of the liquidation
-    /// @dev The liquidator must be an external liquidator which tagged the position or any liquidator that waited for the grace period or a priority liquidator
+    /// @inheritdoc IMarketBase
     function liquidate(address borrower, bytes calldata data) external whenNotPaused returns (uint256, uint256) {
         _accrueInterest();
 
         // Check if the position is underwater
         if (_isSolvent(borrower, true)) {
-            revert AltoBorrowMarketLiquidatingHealthyPosition();
+            revert AltoBorrowMarketLiquidatingSolventPosition();
         }
 
         if (!priorityLiquidators[msg.sender] && !liquidablePositions[borrower].tagged) {
@@ -527,6 +557,48 @@ contract AltoBorrowMarket is Auth, Pausable, IMarketStaticTypes {
         return (f_collateralAmount, f_repayAmount);
     }
 
+    /// @dev Calculates the liquidation percentage - how far are we between LTV and LLTV with position's current LTV.
+    /// @param currentLtv The current LTV of the position to be liquidated.
+    /// @return liquidationPercentage The liquidation percentage.
+    function _calculateLiquidationPercentage(uint256 currentLtv) internal view returns (uint256) {
+        if (currentLtv >= liquidationConfiguration.ltvForCompleteLiquidation) {
+            return MATH_PRECISION;
+        } else {
+            return (currentLtv - liquidationConfiguration.maxLiquidationLtv).divideWithPrecisionUp(
+                liquidationConfiguration.ltvForCompleteLiquidation - liquidationConfiguration.maxLiquidationLtv
+            );
+        }
+    }
+
+    /// @dev Calculates the bonus fee for the liquidation - used to incentivize fast liquidators.
+    /// @param liquidationPercentage The liquidation percentage.
+    /// @return bonusFee The bonus fee.
+    function _calculateBonusFee(uint256 liquidationPercentage) internal view returns (uint256) {
+        if (liquidationPercentage < MATH_PRECISION) {
+            int256 exponent = -int256(liquidationConfiguration.dynamicBonusFeeDecaySteepness * liquidationPercentage)
+                / MATH_PRECISION_INT;
+            return liquidationConfiguration.dynamicBonusFeeStart.multiplyWithPrecision(uint256(ExpLib.wExp(exponent)));
+        } else {
+            return 0;
+        }
+    }
+
+    /// @dev Calculates the new LTV after liquidation - how much LTV are we aiming for after liquidation.
+    /// @param liquidationPercentage The liquidation percentage.
+    /// @return newLtv The new LTV.
+    function _calculateNewLtv(uint256 liquidationPercentage) internal view returns (uint256) {
+        uint256 liquidationPercentageAppliedPenalty = liquidationPercentage
+            < liquidationConfiguration.minPenaltyPercentage
+            ? liquidationConfiguration.minPenaltyPercentage
+            : liquidationPercentage;
+
+        return maxLtv.multiplyWithPrecision(MATH_PRECISION - liquidationPercentageAppliedPenalty);
+    }
+
+    /// @dev Applies the bad debt to the market.
+    /// @param badDebt The bad debt to apply.
+    /// @param borrower The address of the borrower whose position is being liquidated.
+    /// @dev This function is virtual to allow for custom logic in the case of mint market.
     function _applyLiquidationBadDebt(Balance memory badDebt, address borrower) internal virtual {
         totalBorrowed.shares -= badDebt.shares;
         totalBorrowed.assets -= badDebt.assets;
@@ -536,6 +608,11 @@ contract AltoBorrowMarket is Auth, Pausable, IMarketStaticTypes {
         position[borrower].borrowShares = 0;
     }
 
+    /// @dev Sends the borrow token from one address to another.
+    /// @param from The address of the sender.
+    /// @param to The address of the receiver.
+    /// @param amount The amount of borrow token to send.
+    /// @dev This function is virtual to allow for custom logic in the case of mint market.
     function _sendBorrowToken(address from, address to, uint256 amount) internal virtual {
         if (from == address(this)) {
             IERC20(borrowToken).safeTransfer(to, amount);
@@ -544,24 +621,16 @@ contract AltoBorrowMarket is Auth, Pausable, IMarketStaticTypes {
         }
     }
 
-    function setAuthorizedCallback(address callback, bool value) external onlyOwner {
-        authorizedCallbacks[callback] = value;
-    }
-
-    /// @notice Set an address as a priority liquidator
-    /// @param liquidator The address of the liquidator with priority liquidation rights
+    /// @inheritdoc IMarketBase
     function setPriorityLiquidator(address liquidator, bool status) external onlyOwner {
         priorityLiquidators[liquidator] = status;
         emit PriorityLiquidatorUpdated(liquidator, status);
     }
 
-    /// @notice Tag a position for liquidation
-    /// @param user The address of the user to tag
-    /// @param liquidator The address of the liquidator to tag the position for
-    /// @dev The external liquidator must NOT be a priority liquidator
+    /// @inheritdoc IMarketBase
     function tagLiquidablePosition(address user, address liquidator) external whenNotPaused {
         if (_isSolvent(user, true)) {
-            revert AltoBorrowMarketLiquidatingHealthyPosition();
+            revert AltoBorrowMarketLiquidatingSolventPosition();
         }
         if (priorityLiquidators[liquidator]) {
             revert AltoBorrowMarketLiquidationUnauthorized();
@@ -576,6 +645,7 @@ contract AltoBorrowMarket is Auth, Pausable, IMarketStaticTypes {
         emit PositionTagged(user, liquidator, block.timestamp);
     }
 
+    /// @dev Modifier to check if the market is not paused.
     modifier whenNotPaused() {
         if (paused[PAUSED_MARKET]) {
             revert IPausable.IsPaused(PAUSED_MARKET);
@@ -583,10 +653,16 @@ contract AltoBorrowMarket is Auth, Pausable, IMarketStaticTypes {
         _;
     }
 
+    /// @dev Modifier to check if the market is not frozen.
     modifier whenNotFrozen() {
         if (paused[FROZEN_MARKET]) {
             revert IPausable.IsPaused(FROZEN_MARKET);
         }
         _;
+    }
+
+    /// @dev Checks if one of the inputs is zero and the other is not.
+    function _onlyOneZero(uint256 x, uint256 y) internal pure returns (bool) {
+        return (x == 0 && y != 0) || (x != 0 && y == 0);
     }
 }

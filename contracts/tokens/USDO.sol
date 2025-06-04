@@ -1,18 +1,18 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.22;
 
 import {OFT} from "@alto/utils/OFT.sol";
-import {IUsdo} from "@alto/tokens/interfaces/IUsdo.sol";
+import {IUSDO} from "@alto/tokens/interfaces/IUSDO.sol";
 
 import {Pausable, IPausable} from "@alto/utils/Pausable.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {PAUSED_ROLE} from "@alto/utils/Constants.sol";
 
-/**
- * @title USDO Stablecoin
- * @author Alto
- */
-contract Usdo is Pausable, OFT, IUsdo {
+/// @title USDO Token
+/// @author Alto Foundation
+/// @custom:contact security@alto.xyz
+/// @notice The USDO Token is the stablecoin of the Alto Protocol.
+contract USDO is Pausable, OFT, IUSDO {
     uint256 public fees;
 
     address public flashLoanHelper;
@@ -32,7 +32,7 @@ contract Usdo is Pausable, OFT, IUsdo {
      */
     function mint(address _to, uint256 _amount) external whenNotPaused {
         if (!allowedMinter[msg.sender]) {
-            revert Usdo_NotAuthorized();
+            revert UsdoNotAuthorized();
         }
         _mint(_to, _amount);
     }
@@ -44,7 +44,7 @@ contract Usdo is Pausable, OFT, IUsdo {
      */
     function burn(address _from, uint256 _amount) external whenNotPaused {
         if (!allowedBurner[msg.sender]) {
-            revert Usdo_NotAuthorized();
+            revert UsdoNotAuthorized();
         }
         _burn(_from, _amount);
     }
@@ -55,7 +55,7 @@ contract Usdo is Pausable, OFT, IUsdo {
      * @param _fee fees amount
      */
     function addFlashloanFee(uint256 _fee) external {
-        if (msg.sender != flashLoanHelper) revert Usdo_NotAuthorized();
+        if (msg.sender != flashLoanHelper) revert UsdoNotAuthorized();
         fees += _fee;
     }
 

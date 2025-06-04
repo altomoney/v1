@@ -2,20 +2,20 @@
 pragma solidity ^0.8.22;
 
 import {Signature} from "@alto/utils/interfaces/IAuth.sol";
-import {Usdo} from "@alto/tokens/Usdo.sol";
+import {USDO} from "@alto/tokens/USDO.sol";
 
 import {TestHelperOz5} from "@layerzerolabs/test-devtools-evm-foundry/contracts/TestHelperOz5.sol";
 import {TestHelpers} from "@alto-test/helpers/TestHelpers.sol";
 
 contract UsdoTest is TestHelpers, TestHelperOz5 {
-    Usdo usdo;
+    USDO usdo;
 
     address internal immutable USER = makeAddr("User");
 
     function setUp() public override {
         setUpEndpoints(1, LibraryType.UltraLightNode);
 
-        usdo = new Usdo(endpoints[1], address(this));
+        usdo = new USDO(endpoints[1], address(this));
         vm.label(address(usdo), "aUsdo");
     }
 

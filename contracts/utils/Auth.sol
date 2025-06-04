@@ -1,10 +1,16 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.19;
 
 import {IAuth, Authorization, Signature} from "./interfaces/IAuth.sol";
 import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 
+/// @title Auth
+/// @author Alto Foundation
+/// @custom:contact security@alto.xyz
+/// @notice A contract that allows for authorization of addresses.
+/// @dev This is used in several Alto contracts to authorize addresses to manage positions.
+/// The main purpose is to allow for transaction bundling.
 abstract contract Auth is IAuth, EIP712 {
     bytes32 internal constant _AUTHORIZATION_TYPEHASH =
         keccak256("Authorization(address owner,address spender,bool isAuthorized,uint256 nonce,uint256 deadline)");

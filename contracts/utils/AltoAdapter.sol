@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-or-later
+// SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.28;
 
 import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
@@ -11,6 +11,11 @@ import {MathRayLib} from "@morpho-org/bundler3/libraries/MathRayLib.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
+/// @title AltoAdapter
+/// @author Alto Foundation
+/// @author Inspired by Morpho's GeneralAdapter1 (https://github.com/morpho-org/bundler3).
+/// @custom:contact security@alto.xyz
+/// @notice A contract that allows for transaction bundling Alto's contracts via Morpho's Bundler3.
 contract AltoAdapter is CoreAdapter {
     using MathRayLib for uint256;
 
@@ -25,6 +30,14 @@ contract AltoAdapter is CoreAdapter {
         WRAPPED_NATIVE = IWNative(wNative);
     }
 
+    /* MARKET ACTIONS */
+
+    /// @notice Adds supply to the market.
+    /// @param market The address of the market.
+    /// @param assets The amount of assets to add.
+    /// @param shares The amount of shares to add.
+    /// @param maxSharePriceE27 The maximum share price scaled by 1e27 (used for slippage protection).
+    /// @param onBehalf The address of the user whose position is supply being added to.
     function marketAddSupply(IMarket market, uint256 assets, uint256 shares, uint256 maxSharePriceE27, address onBehalf)
         external
         onlyBundler3
@@ -45,6 +58,12 @@ contract AltoAdapter is CoreAdapter {
         require(suppliedAssets.rDivUp(suppliedShares) <= maxSharePriceE27, ErrorsLib.SlippageExceeded());
     }
 
+    /// @notice Removes supply from the market.
+    /// @param market The address of the market.
+    /// @param assets The amount of assets to remove.
+    /// @param shares The amount of shares to remove.
+    /// @param minSharePriceE27 The minimum share price scaled by 1e27 (used for slippage protection).
+    /// @param receiver The address of the receiver of the withdrawn assets.
     function marketRemoveSupply(
         IMarket market,
         uint256 assets,
@@ -62,6 +81,10 @@ contract AltoAdapter is CoreAdapter {
         require(withdrawnAssets.rDivDown(withdrawnShares) >= minSharePriceE27, ErrorsLib.SlippageExceeded());
     }
 
+    /// @notice Adds collateral to the market.
+    /// @param market The address of the market.
+    /// @param assets The amount of assets to add.
+    /// @param onBehalf The address of the user whose position is collateral being added to.
     function marketAddCollateral(IMarket market, uint256 assets, address onBehalf) external onlyBundler3 {
         // Do not check `onBehalf` against the zero address as it's done at AltoBorrowMarket's level.
         require(onBehalf != address(this), ErrorsLib.AdapterAddress());
@@ -76,6 +99,11 @@ contract AltoAdapter is CoreAdapter {
         market.addCollateral(assets, onBehalf);
     }
 
+    /// @notice Removes collateral from the market.
+    /// @param market The address of the market.
+    /// @param assets The amount of assets to remove.
+    /// @param receiver The address of the receiver of the withdrawn assets.
+    /// @param data The data to pass to the AltoBorrowMarket's `removeCollateral` function.
     function marketRemoveCollateral(IMarket market, uint256 assets, address receiver, bytes calldata data)
         external
         onlyBundler3
@@ -86,6 +114,13 @@ contract AltoAdapter is CoreAdapter {
         market.removeCollateral(assets, initiator(), receiver, data);
     }
 
+    /// @notice Borrows assets from the market.
+    /// @param market The address of the market.
+    /// @param assets The amount of assets to borrow.
+    /// @param shares The amount of shares to borrow.
+    /// @param minSharePriceE27 The minimum share price scaled by 1e27 (used for slippage protection).
+    /// @param receiver The address of the receiver of the borrowed assets.
+    /// @param data The data to pass to the AltoBorrowMarket's `borrow` function.
     function marketBorrow(
         IMarket market,
         uint256 assets,
@@ -99,6 +134,12 @@ contract AltoAdapter is CoreAdapter {
         require(borrowedAssets.rDivDown(borrowedShares) >= minSharePriceE27, ErrorsLib.SlippageExceeded());
     }
 
+    /// @notice Repays assets to the market.
+    /// @param market The address of the market.
+    /// @param assets The amount of assets to repay.
+    /// @param shares The amount of shares to repay.
+    /// @param maxSharePriceE27 The maximum share price scaled by 1e27 (used for slippage protection).
+    /// @param onBehalf The address of the user whose position is being repaid.
     function marketRepay(IMarket market, uint256 assets, uint256 shares, uint256 maxSharePriceE27, address onBehalf)
         external
         onlyBundler3
@@ -127,7 +168,7 @@ contract AltoAdapter is CoreAdapter {
     /* TRANSFER ACTIONS */
 
     /// @notice Transfers ERC20 tokens from the initiator.
-    /// @notice Initiator must have given sufficient allowance to the Adapter to spend their tokens.
+    /// @dev Initiator must have given sufficient allowance to the Adapter to spend their tokens.
     /// @param token The address of the ERC20 token to transfer.
     /// @param receiver The address that will receive the tokens.
     /// @param amount The amount of token to transfer. Pass `type(uint).max` to transfer the initiator's balance.
