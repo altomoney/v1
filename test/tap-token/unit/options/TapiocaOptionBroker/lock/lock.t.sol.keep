@@ -4,7 +4,7 @@ pragma solidity ^0.8.18;
 import {TOBTestBase, ITapiocaOptionBroker} from "../TOBTestBase.t.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
-import {Participation, Bucket} from "tap-token/interfaces/ITapiocaOptionBroker.sol";
+import {Participation, Bucket} from "@alto-monorepo/tap-token/interfaces/ITapiocaOptionBroker.sol";
 
 contract TapiocaOptionBrokerLockTest is TOBTestBase {
     address testUser;

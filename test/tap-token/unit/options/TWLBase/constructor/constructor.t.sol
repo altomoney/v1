@@ -2,7 +2,7 @@
 pragma solidity ^0.8.22;
 
 import {Test} from "forge-std/Test.sol";
-import {TWLBase, ITWLBase, Bucket} from "tap-token/governance/TWLBase.sol";
+import {TWLBase, ITWLBase, Bucket} from "@alto-monorepo/tap-token/governance/TWLBase.sol";
 import {TWLBaseMock} from "test/tap-token/mocks/TWLBaseMock.sol";
 
 contract TWLBase_constructor is Test {

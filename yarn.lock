@@ -24,10 +24,6 @@
     chalk "^2.4.2"
     js-tokens "^4.0.0"
 
-"@boringcrypto/boring-solidity@https://github.com/boringcrypto/BoringSolidity#78f4817d9c0d95fe9c45cd42e307ccd22cf5f4fc":
-  version "2.0.3"
-  resolved "https://github.com/boringcrypto/BoringSolidity#78f4817d9c0d95fe9c45cd42e307ccd22cf5f4fc"
-
 "@ethersproject/abi@5.7.0":
   version "5.7.0"
   resolved "https://registry.yarnpkg.com/@ethersproject/abi/-/abi-5.7.0.tgz#b3f3e045bbbeed1af3947335c247ad625a44e449"
@@ -765,11 +761,6 @@
   version "6.9.18"
   resolved "https://registry.yarnpkg.com/@types/qs/-/qs-6.9.18.tgz#877292caa91f7c1b213032b34626505b746624c2"
   integrity sha512-kK7dgTYDyGqS+e2Q4aK9X3D7q234CIZ1Bv0q/7Z5IwRDoADNU81xXJK/YVyLbLTZCoIwUoDoffFeF+p/eIklAA==
-
-"@uniswap/v3-core@1.0.1":
-  version "1.0.1"
-  resolved "https://registry.yarnpkg.com/@uniswap/v3-core/-/v3-core-1.0.1.tgz#b6d2bdc6ba3c3fbd610bdc502395d86cd35264a0"
-  integrity sha512-7pVk4hEm00j9tc71Y9+ssYpO6ytkeI0y7WE9P6UcmNzhxPePwyAxImuhVsTqWK9YFvzgtvzJHi64pBl4jUzKMQ==
 
 aes-js@3.0.0:
   version "3.0.0"
@@ -1609,10 +1600,6 @@ path-type@^4.0.0:
   resolved "https://registry.npmjs.org/path-type/-/path-type-4.0.0.tgz#84ed01c0a7ba380afe09d90a8c180dcd9d03043b"
   integrity sha512-gDKb8aZMDeD/tZWs9P6+q0J9Mwkdl6xMV8TjnGP3qJVJ06bdMgkbBlLU8IdfOsIsFz2BW1rNVT3XuNEl8zPAvw==
 
-"permitc@https://github.com/Tapioca-DAO/PermitC#70531932a22d99dd926d6f01b08f0d6f9217827f":
-  version "0.0.0"
-  resolved "https://github.com/Tapioca-DAO/PermitC#70531932a22d99dd926d6f01b08f0d6f9217827f"
-
 picomatch@^2.0.4, picomatch@^2.2.1:
   version "2.3.1"
   resolved "https://registry.yarnpkg.com/picomatch/-/picomatch-2.3.1.tgz#3ba3833733646d9d3e4995946c1365a67fb07a42"
@@ -1717,10 +1704,6 @@ slice-ansi@^4.0.0:
     ansi-styles "^4.0.0"
     astral-regex "^2.0.0"
     is-fullwidth-code-point "^3.0.0"
-
-"solady@https://github.com/vectorized/solady#v0.0.267":
-  version "0.0.267"
-  resolved "https://github.com/vectorized/solady#4c8be46dbc8d2d319cc6acf058a6aa79c0b78eb1"
 
 solhint@^3.3.6:
   version "3.6.2"

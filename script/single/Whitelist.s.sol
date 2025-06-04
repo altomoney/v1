@@ -2,8 +2,8 @@
 pragma solidity ^0.8.0;
 
 import {Script} from "forge-std/Script.sol";
-import {TapiocaMulticall} from "tap-utils/TapiocaMulticall/TapiocaMulticall.sol";
-import {Cluster} from "tap-utils/Cluster/Cluster.sol";
+import {TapiocaMulticall} from "@alto-monorepo/utils/TapiocaMulticall/TapiocaMulticall.sol";
+import {Cluster} from "@alto-monorepo/utils/Cluster/Cluster.sol";
 
 contract Whitelist is Script {
     function run() public {

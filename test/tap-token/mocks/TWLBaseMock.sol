@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {TWLBase, Bucket} from "tap-token/governance/TWLBase.sol";
+import {TWLBase, Bucket} from "@alto-monorepo/tap-token/governance/TWLBase.sol";
 
 /// @dev Mock contract for testing TWLBase abstract contract functions
 contract TWLBaseMock is TWLBase {

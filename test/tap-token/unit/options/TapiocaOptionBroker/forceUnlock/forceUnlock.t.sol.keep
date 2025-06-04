@@ -2,7 +2,7 @@
 pragma solidity ^0.8.18;
 
 import {TOBTestBase, ITapiocaOptionBroker} from "../TOBTestBase.t.sol";
-import {Bucket} from "tap-token/interfaces/ITapiocaOptionBroker.sol";
+import {Bucket} from "@alto-monorepo/tap-token/interfaces/ITapiocaOptionBroker.sol";
 
 contract TapiocaOptionBrokerForceUnlockTest is TOBTestBase {
     address testUser;

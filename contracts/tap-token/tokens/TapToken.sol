@@ -10,20 +10,9 @@ import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 // Tapioca
-import {ITapToken} from "tap-token/tokens/ITapToken.sol";
-import {ITWTAPv2} from "tap-token/interfaces/ITWTAPv2.sol";
-import {ICluster} from "tap-utils/interfaces/common/ICluster.sol";
-
-/*
-
-████████╗ █████╗ ██████╗ ██╗ ██████╗  ██████╗ █████╗ 
-╚══██╔══╝██╔══██╗██╔══██╗██║██╔═══██╗██╔════╝██╔══██╗
-   ██║   ███████║██████╔╝██║██║   ██║██║     ███████║
-   ██║   ██╔══██║██╔═══╝ ██║██║   ██║██║     ██╔══██║
-   ██║   ██║  ██║██║     ██║╚██████╔╝╚██████╗██║  ██║
-   ╚═╝   ╚═╝  ╚═╝╚═╝     ╚═╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝
-   
-*/
+import {ITapToken} from "@alto-monorepo/tap-token/tokens/ITapToken.sol";
+import {ITWTAPv2} from "@alto-monorepo/tap-token/interfaces/ITWTAPv2.sol";
+import {ICluster} from "@alto-monorepo/utils/interfaces/common/ICluster.sol";
 
 /// @title Tapioca OFTv2 token
 /// @notice OFT compatible TAP token

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {Auth} from "tap-utils/utils/Auth.sol";
+import {Auth} from "@alto-monorepo/utils/utils/Auth.sol";
 
 contract AuthInstance is Auth {
     mapping(address => uint256) public values;

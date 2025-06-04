@@ -3,7 +3,7 @@ pragma solidity ^0.8.22;
 
 import {OFT} from "@alto-monorepo/utils/layerzero/OFT.sol";
 import {IUsdo} from "./IUsdo.sol";
-import {ICluster} from "tap-utils/interfaces/common/ICluster.sol";
+import {ICluster} from "@alto-monorepo/utils/interfaces/common/ICluster.sol";
 
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";

@@ -2,7 +2,7 @@
 pragma solidity ^0.8.22;
 
 import {twTapBaseTest, TwTAP} from "../twTapBaseTest.sol";
-import {ITWTAPv2} from "tap-token/interfaces/ITWTAPv2.sol";
+import {ITWTAPv2} from "@alto-monorepo/tap-token/interfaces/ITWTAPv2.sol";
 
 contract twTap_distributeReward is twTapBaseTest {
     function test_RevertWhen_AmountIsZero() external advanceWeeks(1) {

@@ -22,10 +22,6 @@
   },
   "dependencies": {
     "forge-std": "https://github.com/foundry-rs/forge-std#v1.9.1",
-    "permitc": "https://github.com/Tapioca-DAO/PermitC#70531932a22d99dd926d6f01b08f0d6f9217827f",
-    "solady": "https://github.com/vectorized/solady#v0.0.267",
-    "@boringcrypto/boring-solidity": "https://github.com/boringcrypto/BoringSolidity#78f4817d9c0d95fe9c45cd42e307ccd22cf5f4fc",
-    "@uniswap/v3-core": "1.0.1",
     "@openzeppelin/contracts": "5.3.0",
     "@openzeppelin/contracts-upgradeable": "5.3.0",
     "@layerzerolabs/oft-evm": "3.1.4",

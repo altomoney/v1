@@ -18,10 +18,10 @@ import {TapiocaBBBatch3} from "deployments/releases/tapioca-v1/batches/TapiocaBB
 import "deployments/interfaces/IAltoReport.sol";
 import {TapiocaPenroseBatch} from "deployments/releases/tapioca-v1/batches/TapiocaPenroseBatch.sol";
 import {ERC20Mock} from "../bar/mocks/ERC20Mock.sol";
-import {SGLInterestHelper} from "tapioca-bar/markets/singularity/SGLInterestHelper.sol";
-import {SGLLeverage} from "tapioca-bar/markets/singularity/SGLLeverage.sol";
-import {SGLLiquidation} from "tapioca-bar/markets/singularity/SGLLiquidation.sol";
-import {Singularity} from "tapioca-bar/markets/singularity/Singularity.sol";
+import {SGLInterestHelper} from "@alto-monorepo/bar/markets/singularity/SGLInterestHelper.sol";
+import {SGLLeverage} from "@alto-monorepo/bar/markets/singularity/SGLLeverage.sol";
+import {SGLLiquidation} from "@alto-monorepo/bar/markets/singularity/SGLLiquidation.sol";
+import {Singularity} from "@alto-monorepo/bar/markets/singularity/Singularity.sol";
 import {SingularityLauncher} from "deployments/releases/tapioca-v1/actions/SingularityLauncher.sol";
 import {BigBangLauncher} from "deployments/releases/tapioca-v1/actions/BigBangLauncher.sol";
 import {TestHelperOz5} from "@layerzerolabs/test-devtools-evm-foundry/contracts/TestHelperOz5.sol";

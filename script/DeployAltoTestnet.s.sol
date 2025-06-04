@@ -5,15 +5,13 @@ import {AltoRelease} from "deployments/releases/tapioca-v1/AltoRelease.sol";
 import {AltoReport, TapiocaInput} from "deployments/interfaces/IAltoReport.sol";
 import {Script} from "forge-std/Script.sol";
 import {TapToken, ITapToken} from "contracts/tap-token/tokens/TapToken.sol";
-import {ICluster} from "tap-utils/interfaces/common/ICluster.sol";
-import {WETH} from "solady/tokens/WETH.sol";
-// import {TapiocaOptionBroker} from "tap-token/options/TapiocaOptionBroker.sol";
-import {TwTAP} from "tap-token/governance/twTAP.sol";
+import {ICluster} from "@alto-monorepo/utils/interfaces/common/ICluster.sol";
+// import {TapiocaOptionBroker} from "@alto-monorepo/tap-token/options/TapiocaOptionBroker.sol";
+import {TwTAP} from "@alto-monorepo/tap-token/governance/twTAP.sol";
 import {TapiocaMulticall} from "contracts/utils/TapiocaMulticall/TapiocaMulticall.sol";
-import {Bucket} from "tap-token/interfaces/ITWLBase.sol";
+import {Bucket} from "@alto-monorepo/tap-token/interfaces/ITWLBase.sol";
 import {ERC20Testnet} from "test/utils/mocks/ERC20Testnet.sol";
-import {IERC20} from "@boringcrypto/boring-solidity/contracts/interfaces/IERC20.sol";
-import {Usdo} from "tapioca-bar/usdo/Usdo.sol";
+import {Usdo} from "@alto-monorepo/bar/usdo/Usdo.sol";
 import {MultiTokenSender} from "../contracts/mocks/MultiTokenSender.sol";
 import {
     TestnetOracles,
@@ -44,7 +42,7 @@ contract DeployAltoTestnet is Script {
         input.owner = msg.sender;
         input.bbMarketBorrowCap = DEFAULT_BB_MARKET_BORROW_CAP;
         input.zeroXProxy = address(0); // Not used in testnet
-        input.wrappedNativeToken = address(new WETH());
+        input.wrappedNativeToken = address(1);
 
         ERC20Testnet stETH = new ERC20Testnet("stETH", 18, input.owner);
         ERC20Testnet usdc = new ERC20Testnet("USDC", 6, input.owner);
