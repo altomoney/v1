@@ -97,12 +97,12 @@ contract BorrowTest is Test {
         market.setPauser(owner, FROZEN_MARKET, true);
 
         // Setup initial balances for test accounts
-        borrowToken.mint(alice, INITIAL_AMOUNT);
-        borrowToken.mint(bob, INITIAL_AMOUNT);
-        borrowToken.mint(receiver, INITIAL_AMOUNT);
-        collateralToken.mint(alice, INITIAL_AMOUNT);
-        collateralToken.mint(bob, INITIAL_AMOUNT);
-        collateralToken.mint(receiver, INITIAL_AMOUNT);
+        deal(address(borrowToken), alice, INITIAL_AMOUNT);
+        deal(address(borrowToken), bob, INITIAL_AMOUNT);
+        deal(address(borrowToken), receiver, INITIAL_AMOUNT);
+        deal(address(collateralToken), alice, INITIAL_AMOUNT);
+        deal(address(collateralToken), bob, INITIAL_AMOUNT);
+        deal(address(collateralToken), receiver, INITIAL_AMOUNT);
 
         // Approve market to spend tokens
         vm.startPrank(alice);
@@ -169,14 +169,26 @@ contract BorrowTest is Test {
         vm.stopPrank();
     }
 
-    function test_RevertWhen_AssetsIsZero() public {
+    modifier givenAssetsIsProvided() {
+        _;
+    }
+
+    function test_RevertWhen_AssetsIsZero() public givenAssetsIsProvided {
         vm.startPrank(bob);
         vm.expectRevert(IMarketErrors.AltoBorrowMarketInvalidInput.selector);
         market.borrow(0, 0, bob, bob, "");
         vm.stopPrank();
     }
 
-    function test_RevertWhen_MarketHasInsufficientLiquidity() public {
+    modifier whenAssetsIsGreaterThanZero() {
+        _;
+    }
+
+    function test_RevertWhen_MarketHasInsufficientLiquidity()
+        public
+        givenAssetsIsProvided
+        whenAssetsIsGreaterThanZero
+    {
         vm.startPrank(bob);
         market.addCollateral(10000 ether, bob);
         vm.expectRevert(IMarketErrors.AltoBorrowMarketInsufficientMarketLiquidity.selector);
@@ -184,14 +196,26 @@ contract BorrowTest is Test {
         vm.stopPrank();
     }
 
-    function test_RevertWhen_UserHasInsufficientCollateral() public {
+    function test_RevertWhen_UserHasInsufficientCollateral() public givenAssetsIsProvided whenAssetsIsGreaterThanZero {
         vm.startPrank(bob);
         vm.expectRevert(IMarketErrors.AltoBorrowMarketBorrowingTooMuch.selector);
         market.borrow(100 ether, 0, bob, bob, "");
         vm.stopPrank();
     }
 
-    function test_RevertWhen_ReceiverIsNotAuthorizedCallback_WithData() public {
+    modifier whenUserHasSufficientCollateral() {
+        vm.startPrank(bob);
+        market.addCollateral(1000 ether, bob);
+        vm.stopPrank();
+        _;
+    }
+
+    function test_RevertWhen_ReceiverIsNotAuthorizedCallback_WithData()
+        public
+        givenAssetsIsProvided
+        whenAssetsIsGreaterThanZero
+        whenUserHasSufficientCollateral
+    {
         uint256 collateralAmount = 200 ether;
         uint256 borrowAmount = 100 ether;
 
@@ -267,14 +291,22 @@ contract BorrowTest is Test {
         vm.stopPrank();
     }
 
-    function test_RevertWhen_SharesIsZero() public {
+    modifier givenSharesIsProvided() {
+        _;
+    }
+
+    function test_RevertWhen_SharesIsZero() public givenSharesIsProvided {
         vm.startPrank(bob);
         vm.expectRevert(IMarketErrors.AltoBorrowMarketInvalidInput.selector);
         market.borrow(0, 0, bob, bob, "");
         vm.stopPrank();
     }
 
-    function test_BorrowWithShares_ZeroOpeningFee() public {
+    modifier whenSharesIsGreaterThanZero() {
+        _;
+    }
+
+    function test_BorrowWithShares_ZeroOpeningFee() public givenSharesIsProvided whenSharesIsGreaterThanZero {
         uint256 shareAmount = 100 ether;
         uint256 collateralAmount = 200 ether;
 
@@ -302,7 +334,7 @@ contract BorrowTest is Test {
         vm.stopPrank();
     }
 
-    function test_BorrowWithShares_WithOpeningFee() public {
+    function test_BorrowWithShares_WithOpeningFee() public givenSharesIsProvided whenSharesIsGreaterThanZero {
         // Set a borrow opening fee
         vm.startPrank(owner);
         market.setBorrowOpeningFee(0.01 ether); // 1% fee
@@ -360,14 +392,14 @@ contract BorrowTest is Test {
             address(this),
             config
         );
-        collateralToken.mint(bob, 1 ether);
+        deal(address(collateralToken), bob, 1 ether);
         vm.startPrank(bob);
         collateralToken.approve(address(market), type(uint256).max);
         market.addCollateral(1 ether, bob);
         vm.stopPrank();
 
         // Add supply to the market
-        borrowToken.mint(alice, 10 ether);
+        deal(address(borrowToken), alice, 10 ether);
         vm.startPrank(alice);
         borrowToken.approve(address(market), type(uint256).max);
         market.addSupply(10 ether, 0, alice);
@@ -417,14 +449,14 @@ contract BorrowTest is Test {
             address(this),
             config
         );
-        collateralToken.mint(bob, 1 ether);
+        deal(address(collateralToken), bob, 1 ether);
         vm.startPrank(bob);
         collateralToken.approve(address(market), type(uint256).max);
         market.addCollateral(1 ether, bob);
         vm.stopPrank();
 
         // Add supply to the market
-        borrowToken.mint(alice, 10 ether);
+        deal(address(borrowToken), alice, 10 ether);
         vm.startPrank(alice);
         borrowToken.approve(address(market), type(uint256).max);
         market.addSupply(10 ether, 0, alice);
@@ -474,14 +506,14 @@ contract BorrowTest is Test {
             address(this),
             config
         );
-        collateralToken.mint(bob, 1 ether);
+        deal(address(collateralToken), bob, 1 ether);
         vm.startPrank(bob);
         collateralToken.approve(address(market), type(uint256).max);
         market.addCollateral(1 ether, bob);
         vm.stopPrank();
 
         // Add supply to the market
-        borrowToken.mint(alice, 10 ether);
+        deal(address(borrowToken), alice, 10 ether);
         vm.startPrank(alice);
         borrowToken.approve(address(market), type(uint256).max);
         market.addSupply(10 ether, 0, alice);
@@ -587,10 +619,10 @@ contract BorrowTest is Test {
         borrowToken = new ERC20Mock("Borrow Token", "BTKN");
         collateralToken = new ERC20Mock("Collateral Token", "CTKN");
         // Mint tokens to alice and bob
-        borrowToken.mint(alice, 10 ether);
-        borrowToken.mint(bob, 10 ether);
-        collateralToken.mint(alice, 10 ether);
-        collateralToken.mint(bob, 10 ether);
+        deal(address(borrowToken), alice, 10 ether);
+        deal(address(borrowToken), bob, 10 ether);
+        deal(address(collateralToken), alice, 10 ether);
+        deal(address(collateralToken), bob, 10 ether);
 
         address irm = address(new FixedRateIrm(0.04 ether / uint256(365 days), address(this)));
         address oracle = address(new OracleMock());

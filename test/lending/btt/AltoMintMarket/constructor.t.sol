@@ -132,7 +132,8 @@ contract ConstructorTest is AltoMintMarketTest {
         assertEq(market.claimableFeesAssets(), 0);
 
         // it should call IIrm.setMarket with contract address
-        // Note: This is implicitly tested by the fact that the market was constructed successfully
-        // The MockIrm.setMarket() is called but _market is private so we can't verify it directly
+        // Note: FixedRateIrm doesn't expose the market address, but we can verify
+        // the IRM was set correctly by checking that market.irm() returns the IRM address
+        assertEq(market.irm(), address(irm));
     }
 }

@@ -56,6 +56,7 @@ struct LiquidationCalculation {
     uint256 newLtv;
     uint256 liquidatorBonusFee;
     uint256 remainingCollateralAfterFeeInBorrowAssets;
+    uint256 collateralToSellInBorrowAssets;
 }
 
 interface IMarketErrors {

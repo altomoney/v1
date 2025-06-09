@@ -1,8 +1,8 @@
-setAuthorizedCallback.tree
-├── when caller is not owner
-│   └── it should revert with Ownable: caller is not the owner
-└── when caller is owner
-    ├── when value is true
-    │   └── it should set authorizedCallbacks[callback] to true
-    └── when value is false
-        └── it should set authorizedCallbacks[callback] to false 
+SetAuthorizedCallbackTest
+├── given caller is not owner
+│   └── it should revert
+└── given caller is owner
+    ├── when callback is zero address
+    │   └── it should revert
+    └── when callback is valid address
+        └── it should update authorized callback status 

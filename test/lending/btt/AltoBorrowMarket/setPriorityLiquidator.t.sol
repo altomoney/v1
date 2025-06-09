@@ -8,6 +8,7 @@ import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {IMarketErrors} from "@alto/lending/interfaces/IMarket.sol";
 
 contract SetPriorityLiquidatorTest is Test {
     AltoBorrowMarket market;
@@ -56,15 +57,18 @@ contract SetPriorityLiquidatorTest is Test {
         vm.stopPrank();
     }
 
-    function test_SetPriorityLiquidatorWhen_LiquidatorIsZeroAddress() public {
+    modifier givenCallerIsOwner() {
+        _;
+    }
+
+    function test_SetPriorityLiquidatorWhen_LiquidatorIsZeroAddress() public givenCallerIsOwner {
         vm.startPrank(owner);
-        // Note: setPriorityLiquidator doesn't validate zero address in the current implementation
+        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBorrowMarketInvalidInput.selector));
         market.setPriorityLiquidator(address(0), true);
-        assertTrue(market.priorityLiquidators(address(0)));
         vm.stopPrank();
     }
 
-    function test_SetPriorityLiquidatorWhen_LiquidatorIsValidAddress() public {
+    function test_SetPriorityLiquidatorWhen_LiquidatorIsValidAddress() public givenCallerIsOwner {
         vm.startPrank(owner);
         market.setPriorityLiquidator(liquidator, true);
         assertTrue(market.priorityLiquidators(liquidator));

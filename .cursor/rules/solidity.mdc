@@ -59,10 +59,10 @@ Structure:
 - Target a Solidity function
 - Create a ".tree" file
 - Consider all possible execution paths
-- Consider what contract state leads to what paths
+- Consider what contract state / storage leads to what paths
 - Consider what function params lead to what paths
-- Define "given state is x" nodes
-- Define "when parameter is x" nodes
+- Define "given state is x" nodes if is it a contract state or contract storage that is there before the call
+- Define "when parameter is x" nodes if is it a function parameter defined by user, or a external call or delegatecall
 - Define final "it should" tests
 - File naming: The tree files should be named after the function being tested
 - Test naming conventions:
@@ -72,8 +72,8 @@ Structure:
   - testFuzz_RevertWhen_Foo
 
 Looking at the examples:
-"given" is used for contract state (e.g., "given assets have been fully withdrawn")
-"when" is used for function parameters or conditions (e.g., "when the id references a null stream")
+"given" is used for branches that depends on contract storage or contract state that is prepared before the action (e.g., "given market is paused or given owner is zero address or given user position is unhealthy")
+"when" is used for function parameters or conditions (e.g., "when the value paramiter is greater than 0, or when the user input address is zero")
 "it should" is used for the final expected behavior
 
 Other rules:

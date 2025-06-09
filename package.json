@@ -6,7 +6,7 @@
     "lint": "forge fmt --check",
     "clean": "forge clean",
     "test": "forge test",
-    "coverage:lending": "rm -rf lcov.info coverage && FOUNDRY_PROFILE=market forge coverage --no-match-coverage '(script|test|contracts/deployments)' --report lcov && sleep 2 && genhtml ./lcov.info -o coverage --branch-coverage --rc derive_function_end_line=0 --parallel --ignore-errors inconsistent",
+    "coverage:lending": "rm -rf lcov.info coverage && FOUNDRY_PROFILE=market forge coverage --no-match-coverage '(script|test|contracts/deployments|contracts/lending/mocks|contracts/oracles/mocks|contracts/tokens|contracts/utils/OFT.sol|contracts/utils/LeverageABIHelper.sol)' --report lcov && sleep 2 && genhtml ./lcov.info -o coverage --branch-coverage --rc derive_function_end_line=0 --parallel --ignore-errors inconsistent",
     "coverage:open": "npx -y open-cli coverage/index.html"
   },
   "devDependencies": {

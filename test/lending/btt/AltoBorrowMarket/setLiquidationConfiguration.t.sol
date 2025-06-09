@@ -8,6 +8,7 @@ import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {IMarketErrors} from "@alto/lending/interfaces/IMarket.sol";
 
 contract SetLiquidationConfigurationTest is Test {
     AltoBorrowMarket market;
@@ -67,7 +68,11 @@ contract SetLiquidationConfigurationTest is Test {
         vm.stopPrank();
     }
 
-    function test_SetLiquidationConfigurationWhen_MaxLiquidationLtvIsZero() public {
+    modifier givenCallerIsOwner() {
+        _;
+    }
+
+    function test_SetLiquidationConfigurationWhen_MaxLiquidationLtvIsZero() public givenCallerIsOwner {
         LiquidationConfiguration memory config = LiquidationConfiguration({
             maxLiquidationLtv: 0,
             dynamicBonusFeeStart: 0.03 ether,
@@ -81,12 +86,12 @@ contract SetLiquidationConfigurationTest is Test {
         });
 
         vm.startPrank(owner);
-        // Note: setLiquidationConfiguration doesn't validate maxLiquidationLtv in the current implementation
+        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBorrowMarketInvalidInput.selector));
         market.setLiquidationConfiguration(config);
         vm.stopPrank();
     }
 
-    function test_SetLiquidationConfigurationWhen_MaxLiquidationLtvIsGreaterThanWad() public {
+    function test_SetLiquidationConfigurationWhen_MaxLiquidationLtvIsGreaterThanWad() public givenCallerIsOwner {
         LiquidationConfiguration memory config = LiquidationConfiguration({
             maxLiquidationLtv: 1.1 ether,
             dynamicBonusFeeStart: 0.03 ether,
@@ -100,12 +105,12 @@ contract SetLiquidationConfigurationTest is Test {
         });
 
         vm.startPrank(owner);
-        // Note: setLiquidationConfiguration doesn't validate maxLiquidationLtv in the current implementation
+        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBorrowMarketInvalidInput.selector));
         market.setLiquidationConfiguration(config);
         vm.stopPrank();
     }
 
-    function test_SetLiquidationConfigurationWhen_DynamicBonusFeeStartIsGreaterThanWad() public {
+    function test_SetLiquidationConfigurationWhen_DynamicBonusFeeStartIsGreaterThanWad() public givenCallerIsOwner {
         LiquidationConfiguration memory config = LiquidationConfiguration({
             maxLiquidationLtv: 0.8 ether,
             dynamicBonusFeeStart: 1.1 ether,
@@ -119,12 +124,15 @@ contract SetLiquidationConfigurationTest is Test {
         });
 
         vm.startPrank(owner);
-        // Note: setLiquidationConfiguration doesn't validate parameters in the current implementation
+        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBorrowMarketInvalidInput.selector));
         market.setLiquidationConfiguration(config);
         vm.stopPrank();
     }
 
-    function test_SetLiquidationConfigurationWhen_LtvForCompleteLiquidationIsLessThanMaxLiquidationLtv() public {
+    function test_SetLiquidationConfigurationWhen_LtvForCompleteLiquidationIsLessThanMaxLiquidationLtv()
+        public
+        givenCallerIsOwner
+    {
         LiquidationConfiguration memory config = LiquidationConfiguration({
             maxLiquidationLtv: 0.8 ether,
             dynamicBonusFeeStart: 0.03 ether,
@@ -138,12 +146,15 @@ contract SetLiquidationConfigurationTest is Test {
         });
 
         vm.startPrank(owner);
-        // Note: setLiquidationConfiguration doesn't validate parameters in the current implementation
+        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBorrowMarketInvalidInput.selector));
         market.setLiquidationConfiguration(config);
         vm.stopPrank();
     }
 
-    function test_SetLiquidationConfigurationWhen_LtvForCompleteLiquidationIsGreaterThanWad() public {
+    function test_SetLiquidationConfigurationWhen_LtvForCompleteLiquidationIsGreaterThanWad()
+        public
+        givenCallerIsOwner
+    {
         LiquidationConfiguration memory config = LiquidationConfiguration({
             maxLiquidationLtv: 0.8 ether,
             dynamicBonusFeeStart: 0.03 ether,
@@ -157,12 +168,12 @@ contract SetLiquidationConfigurationTest is Test {
         });
 
         vm.startPrank(owner);
-        // Note: setLiquidationConfiguration doesn't validate parameters in the current implementation
+        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBorrowMarketInvalidInput.selector));
         market.setLiquidationConfiguration(config);
         vm.stopPrank();
     }
 
-    function test_SetLiquidationConfigurationWhen_LiquidationBaseFeeIsGreaterThanWad() public {
+    function test_SetLiquidationConfigurationWhen_LiquidationBaseFeeIsGreaterThanWad() public givenCallerIsOwner {
         LiquidationConfiguration memory config = LiquidationConfiguration({
             maxLiquidationLtv: 0.8 ether,
             dynamicBonusFeeStart: 0.03 ether,
@@ -176,12 +187,12 @@ contract SetLiquidationConfigurationTest is Test {
         });
 
         vm.startPrank(owner);
-        // Note: setLiquidationConfiguration doesn't validate parameters in the current implementation
+        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBorrowMarketInvalidInput.selector));
         market.setLiquidationConfiguration(config);
         vm.stopPrank();
     }
 
-    function test_SetLiquidationConfigurationWhen_MinPenaltyPercentageIsGreaterThanWad() public {
+    function test_SetLiquidationConfigurationWhen_MinPenaltyPercentageIsGreaterThanWad() public givenCallerIsOwner {
         LiquidationConfiguration memory config = LiquidationConfiguration({
             maxLiquidationLtv: 0.8 ether,
             dynamicBonusFeeStart: 0.03 ether,
@@ -195,7 +206,7 @@ contract SetLiquidationConfigurationTest is Test {
         });
 
         vm.startPrank(owner);
-        // Note: setLiquidationConfiguration doesn't validate parameters in the current implementation
+        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBorrowMarketInvalidInput.selector));
         market.setLiquidationConfiguration(config);
         vm.stopPrank();
     }
@@ -210,7 +221,7 @@ contract SetLiquidationConfigurationTest is Test {
             minPenaltyPercentage: 0.02 ether,
             priorityLiquidationGracePeriod: 6 minutes,
             taggerLiquidationGracePeriod: 3 minutes,
-            liquidationWindowTag: 4 days
+            liquidationWindowTag: 3 days
         });
 
         vm.startPrank(owner);

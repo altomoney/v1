@@ -57,8 +57,8 @@ contract AddSupplyTest is Test {
         market.setPauser(owner, FROZEN_MARKET, true);
 
         // Setup initial balances for test accounts
-        borrowToken.mint(alice, INITIAL_AMOUNT);
-        borrowToken.mint(bob, INITIAL_AMOUNT);
+        deal(address(borrowToken), alice, INITIAL_AMOUNT);
+        deal(address(borrowToken), bob, INITIAL_AMOUNT);
 
         // Approve market to spend tokens
         vm.startPrank(alice);

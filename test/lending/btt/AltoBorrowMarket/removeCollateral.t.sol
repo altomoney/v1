@@ -17,10 +17,8 @@ import {PAUSED_MARKET} from "@alto/utils/Constants.sol";
 import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
 import {stdError} from "forge-std/StdError.sol";
 import {Vm} from "forge-std/Vm.sol";
-import {MockERC20} from "../../../mocks/MockERC20.sol";
-import {MockOracle} from "../../../mocks/MockOracle.sol";
-import {MockIrm} from "../../../mocks/MockIrm.sol";
-import {IRemoveCollateralCallback} from "../../../../contracts/lending/interfaces/IMarketCallbacks.sol";
+import {IRemoveCollateralCallback} from "@alto/lending/interfaces/IMarketCallbacks.sol";
+import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 
 contract MockMarket is AltoBorrowMarket {
     using AssetShareConversionMath for uint256;
@@ -61,8 +59,8 @@ contract RemoveCollateralTest is Test {
     MockMarket market;
     ERC20Mock borrowToken;
     ERC20Mock collateralToken;
-    MockOracle oracle;
-    MockIrm irm;
+    OracleMock oracle;
+    FixedRateIrm irm;
 
     address alice = address(0xA11CE);
     address bob = address(0xB0B);
@@ -172,7 +170,19 @@ contract RemoveCollateralTest is Test {
         vm.stopPrank();
     }
 
-    function test_RevertWhen_SenderIsNotAuthorizedForOnBehalf() public {
+    modifier givenAssetsIsGreaterThanZero() {
+        _;
+    }
+
+    modifier givenOnBehalfIsValidAddress() {
+        _;
+    }
+
+    function test_RevertWhen_SenderIsNotAuthorizedForOnBehalf()
+        public
+        givenAssetsIsGreaterThanZero
+        givenOnBehalfIsValidAddress
+    {
         vm.startPrank(bob);
         market.addCollateral(1 ether, bob);
         vm.stopPrank();
@@ -183,7 +193,16 @@ contract RemoveCollateralTest is Test {
         vm.stopPrank();
     }
 
-    function test_RevertWhen_UserHasInsufficientCollateral() public {
+    modifier whenSenderIsAuthorizedForOnBehalf() {
+        _;
+    }
+
+    function test_RevertWhen_UserHasInsufficientCollateral()
+        public
+        givenAssetsIsGreaterThanZero
+        givenOnBehalfIsValidAddress
+        whenSenderIsAuthorizedForOnBehalf
+    {
         vm.startPrank(bob);
         market.addCollateral(1 ether, bob);
         vm.expectRevert(stdError.arithmeticError);
@@ -191,7 +210,17 @@ contract RemoveCollateralTest is Test {
         vm.stopPrank();
     }
 
-    function test_RevertWhen_RemovingCollateralMakesPositionInsolvent() public {
+    modifier whenUserHasSufficientCollateral() {
+        _;
+    }
+
+    function test_RevertWhen_RemovingCollateralMakesPositionInsolvent()
+        public
+        givenAssetsIsGreaterThanZero
+        givenOnBehalfIsValidAddress
+        whenSenderIsAuthorizedForOnBehalf
+        whenUserHasSufficientCollateral
+    {
         vm.startPrank(bob);
         market.addCollateral(1 ether, bob);
         market.borrow(0.5 ether, 0, bob, bob, "");

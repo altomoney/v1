@@ -8,6 +8,7 @@ import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {IMarketErrors} from "@alto/lending/interfaces/IMarket.sol";
 
 contract SetOracleTest is Test {
     AltoBorrowMarket market;
@@ -57,15 +58,18 @@ contract SetOracleTest is Test {
         vm.stopPrank();
     }
 
-    function test_SetOracleWhen_NewOracleIsZeroAddress() public {
+    modifier givenCallerIsOwner() {
+        _;
+    }
+
+    function test_SetOracleWhen_NewOracleIsZeroAddress() public givenCallerIsOwner {
         vm.startPrank(owner);
-        // Note: setOracle doesn't validate zero address in the current implementation
+        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBorrowMarketInvalidInput.selector));
         market.setOracle(address(0));
-        assertEq(market.oracle(), address(0));
         vm.stopPrank();
     }
 
-    function test_SetOracleWhen_NewOracleIsValidAddress() public {
+    function test_SetOracleWhen_NewOracleIsValidAddress() public givenCallerIsOwner {
         vm.startPrank(owner);
         market.setOracle(newOracle);
         assertEq(market.oracle(), newOracle);

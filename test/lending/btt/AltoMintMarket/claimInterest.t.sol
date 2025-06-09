@@ -4,28 +4,21 @@ pragma solidity ^0.8.0;
 import {AltoMintMarketTest} from "./AltoMintMarket.t.sol";
 
 contract ClaimInterestTest is AltoMintMarketTest {
-    modifier givenClaimableFeesAssetsIsZero() {
-        // Default state - no fees accumulated
-        _;
-    }
-
-    function test_GivenClaimableFeesAssetsIsZero() external givenClaimableFeesAssetsIsZero {
+    function test_NotTransferTokensWhen_ClaimableFeesIsZero() external {
         uint256 feeRecipientBalanceBefore = borrowToken.balanceOf(feeRecipient);
 
         market.claimInterest();
 
-        // it should mint zero tokens to feeRecipient
+        // it should not transfer tokens
         uint256 feeRecipientBalanceAfter = borrowToken.balanceOf(feeRecipient);
         assertEq(feeRecipientBalanceAfter, feeRecipientBalanceBefore);
-
-        // it should set claimableFeesAssets to zero
         assertEq(market.claimableFeesAssets(), 0);
     }
 
-    modifier givenClaimableFeesAssetsIsGreaterThanZero() {
-        // Simulate some borrowed assets to generate interest
+    modifier givenClaimableFeesIsGreaterThanZero() {
+        // Setup to generate claimable fees
         vm.startPrank(alice);
-        market.addCollateral(200 ether, alice);
+        market.addCollateral(500 ether, alice);
         market.borrow(100 ether, 0, alice, alice, "");
         vm.stopPrank();
 
@@ -35,17 +28,18 @@ contract ClaimInterestTest is AltoMintMarketTest {
         _;
     }
 
-    function test_GivenClaimableFeesAssetsIsGreaterThanZero() external givenClaimableFeesAssetsIsGreaterThanZero {
+    function test_MintTokensToFeeRecipientWhen_ClaimableFeesIsGreaterThanZero()
+        external
+        givenClaimableFeesIsGreaterThanZero
+    {
         uint256 claimableFeesBeforeAmount = market.claimableFeesAssets();
         uint256 feeRecipientBalanceBefore = borrowToken.balanceOf(feeRecipient);
 
         market.claimInterest();
 
-        // it should mint claimableFeesAssets amount to feeRecipient
+        // it should mint tokens to fee recipient
         uint256 feeRecipientBalanceAfter = borrowToken.balanceOf(feeRecipient);
         assertEq(feeRecipientBalanceAfter, feeRecipientBalanceBefore + claimableFeesBeforeAmount);
-
-        // it should set claimableFeesAssets to zero
         assertEq(market.claimableFeesAssets(), 0);
     }
 }

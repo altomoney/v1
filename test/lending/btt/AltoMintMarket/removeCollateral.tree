@@ -1,27 +1,25 @@
-removeCollateral.tree
-├── when market is paused
-│   └── it should revert with MarketPaused
-└── when market is not paused
-    ├── when assets and shares are both zero
-    │   └── it should revert with AltoBorrowMarketInvalidInput
-    ├── when assets and shares are both non-zero
-    │   └── it should revert with AltoBorrowMarketInvalidInput
-    ├── when receiver is zero address
-    │   └── it should revert with AltoBorrowMarketInvalidInput
-    └── when inputs are valid
-        ├── given user has insufficient collateral
-        │   └── it should revert with AltoBorrowMarketInsufficientCollateral
-        ├── given removal would violate max LTV
-        │   └── it should revert with AltoBorrowMarketMaxLtvExceeded
-        └── given removal is valid
-            ├── when data length is zero
-            │   ├── it should transfer collateral tokens to receiver
-            │   ├── it should decrease position collateralShares
-            │   └── it should emit RemoveCollateral event
-            ├── when data length is greater than zero and receiver is authorized callback
-            │   ├── it should transfer collateral tokens to receiver
-            │   ├── it should decrease position collateralShares
-            │   ├── it should call onRemoveCollateral callback
-            │   └── it should emit RemoveCollateral event
-            └── when data length is greater than zero and receiver is not authorized callback
-                └── it should revert with AltoBorrowMarketUnauthorized 
+RemoveCollateralTest
+├── given market is paused
+│   └── it should revert
+├── given assets is zero
+│   └── it should revert
+├── given onBehalf is zero address
+│   └── it should revert
+├── given sender is not authorized for onBehalf
+│   └── it should revert
+└── given assets is greater than zero
+    ├── when user has insufficient collateral
+    │   └── it should revert
+    ├── when removing collateral makes position insolvent
+    │   └── it should revert
+    └── when user has sufficient collateral
+        ├── when receiver is authorized callback
+        │   ├── when data is provided
+        │   │   └── it should remove collateral and call callback
+        │   └── when no data is provided
+        │       └── it should remove collateral
+        └── when receiver is not authorized callback
+            ├── when data is provided
+            │   └── it should revert
+            └── when no data is provided
+                └── it should remove collateral 

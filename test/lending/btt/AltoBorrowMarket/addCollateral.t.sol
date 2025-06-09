@@ -57,8 +57,8 @@ contract AddCollateralTest is Test {
         market.setPauser(owner, FROZEN_MARKET, true);
 
         // Setup initial balances for test accounts
-        collateralToken.mint(alice, INITIAL_AMOUNT);
-        collateralToken.mint(bob, INITIAL_AMOUNT);
+        deal(address(collateralToken), alice, INITIAL_AMOUNT);
+        deal(address(collateralToken), bob, INITIAL_AMOUNT);
 
         // Approve market to spend tokens
         vm.startPrank(alice);

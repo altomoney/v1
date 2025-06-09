@@ -8,6 +8,7 @@ import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {IMarketErrors} from "@alto/lending/interfaces/IMarket.sol";
 
 contract SetFeeRecipientTest is Test {
     AltoBorrowMarket market;
@@ -56,15 +57,19 @@ contract SetFeeRecipientTest is Test {
         vm.stopPrank();
     }
 
-    function test_SetFeeRecipientWhen_NewFeeRecipientIsZeroAddress() public {
+    modifier givenCallerIsOwner() {
+        _;
+    }
+
+    function test_SetFeeRecipientWhen_NewFeeRecipientIsZeroAddress() public givenCallerIsOwner {
         vm.startPrank(owner);
-        // Note: setFeeRecipient doesn't validate zero address in the current implementation
+        market.setBorrowOpeningFee(0.01 ether);
+        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBorrowMarketInvalidInput.selector));
         market.setFeeRecipient(address(0));
-        assertEq(market.feeRecipient(), address(0));
         vm.stopPrank();
     }
 
-    function test_SetFeeRecipientWhen_NewFeeRecipientIsValidAddress() public {
+    function test_SetFeeRecipientWhen_NewFeeRecipientIsValidAddress() public givenCallerIsOwner {
         vm.startPrank(owner);
         market.setFeeRecipient(newFeeRecipient);
         assertEq(market.feeRecipient(), newFeeRecipient);

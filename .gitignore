@@ -1,6 +1,5 @@
 # node modules
 node_modules
-coverage
 
 # dotenv
 .env
@@ -10,3 +9,6 @@ cache
 out
 broadcast
 
+# coverage
+coverage
+lcov.info

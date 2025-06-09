@@ -1,7 +1,5 @@
 ClaimInterestTest
-├── given claimableFeesAssets is zero
-│   ├── it should mint zero tokens to feeRecipient
-│   └── it should set claimableFeesAssets to zero
-└── given claimableFeesAssets is greater than zero
-    ├── it should mint claimableFeesAssets amount to feeRecipient
-    └── it should set claimableFeesAssets to zero 
+├── given claimable fees is zero
+│   └── it should not transfer tokens
+└── given claimable fees is greater than zero
+    └── it should mint tokens to fee recipient 

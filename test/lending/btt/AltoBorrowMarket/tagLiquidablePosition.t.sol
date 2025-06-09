@@ -168,7 +168,7 @@ contract TagLiquidablePositionTest is Test {
         vm.stopPrank();
     }
 
-    function test_RevertWhen_LiquidatorIsPriorityLiquidator() public {
+    modifier givenPositionIsInsolvent() {
         // Setup underwater position
         vm.startPrank(bob);
         market.addCollateral(1 ether, bob);
@@ -176,32 +176,61 @@ contract TagLiquidablePositionTest is Test {
         market.accrueInterest();
         market.addInterest(0.4 ether);
         vm.stopPrank();
+        _;
+    }
 
+    function test_RevertWhen_LiquidatorIsPriorityLiquidator() public givenPositionIsInsolvent {
         vm.startPrank(priorityLiquidator);
         vm.expectRevert(IMarketErrors.AltoBorrowMarketLiquidationUnauthorized.selector);
         market.tagLiquidablePosition(bob, priorityLiquidator);
         vm.stopPrank();
     }
 
-    function test_RevertWhen_PositionIsAlreadyTaggedWithinWindow() public {
-        // Setup underwater position
-        vm.startPrank(bob);
-        market.addCollateral(1 ether, bob);
-        market.borrow(0.5 ether, 0, bob, bob, "");
-        market.accrueInterest();
-        market.addInterest(0.4 ether);
-        vm.stopPrank();
+    modifier givenLiquidatorIsNotPriorityLiquidator() {
+        _;
+    }
 
+    modifier givenPositionIsAlreadyTagged() {
         // Tag position
         vm.startPrank(liquidator);
         market.tagLiquidablePosition(bob, liquidator);
         vm.stopPrank();
+        _;
+    }
 
+    function test_RevertWhen_PositionIsAlreadyTaggedWithinWindow()
+        public
+        givenPositionIsInsolvent
+        givenLiquidatorIsNotPriorityLiquidator
+        givenPositionIsAlreadyTagged
+    {
         // Try to tag again within window
-        vm.startPrank(alice);
+        address anotherLiquidator = address(0xE0E);
+        vm.startPrank(anotherLiquidator);
         vm.expectRevert(IMarketErrors.AltoBorrowMarketLiquidationAlreadyTagged.selector);
-        market.tagLiquidablePosition(bob, alice);
+        market.tagLiquidablePosition(bob, anotherLiquidator);
         vm.stopPrank();
+    }
+
+    modifier givenPositionIsNotTagged() {
+        _;
+    }
+
+    function test_TagPositionWhen_PositionIsNotTagged()
+        public
+        givenPositionIsInsolvent
+        givenLiquidatorIsNotPriorityLiquidator
+        givenPositionIsNotTagged
+    {
+        vm.startPrank(liquidator);
+        market.tagLiquidablePosition(bob, liquidator);
+        vm.stopPrank();
+
+        // Verify position was tagged
+        (bool isTagged, address tagger, uint256 timestamp) = market.liquidablePositions(bob);
+        assertTrue(isTagged);
+        assertEq(tagger, liquidator);
+        assertEq(timestamp, block.timestamp);
     }
 
     function test_TagPositionWhen_PositionIsAlreadyTaggedAfterWindow() public {
@@ -232,28 +261,6 @@ contract TagLiquidablePositionTest is Test {
         (bool tagged, address tagger, uint256 timestamp) = market.liquidablePositions(bob);
         assertTrue(tagged);
         assertEq(tagger, alice);
-        assertEq(timestamp, block.timestamp);
-    }
-
-    function test_TagPositionWhen_PositionIsNotTagged() public {
-        // Setup underwater position
-        vm.startPrank(bob);
-        market.addCollateral(1 ether, bob);
-        market.borrow(0.5 ether, 0, bob, bob, "");
-        market.accrueInterest();
-        market.addInterest(0.4 ether);
-        vm.stopPrank();
-
-        // Tag position
-        vm.startPrank(liquidator);
-        vm.expectEmit();
-        emit IMarketEvents.PositionTagged(bob, liquidator, block.timestamp);
-        market.tagLiquidablePosition(bob, liquidator);
-        vm.stopPrank();
-
-        (bool tagged, address tagger, uint256 timestamp) = market.liquidablePositions(bob);
-        assertTrue(tagged);
-        assertEq(tagger, liquidator);
         assertEq(timestamp, block.timestamp);
     }
 }

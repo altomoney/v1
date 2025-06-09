@@ -10,21 +10,9 @@ import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {IMarketErrors} from "@alto/lending/interfaces/IMarket.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
+import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
 
 import {console2} from "forge-std/console2.sol";
-
-// Create mock implementation for testing
-contract MockERC20 is ERC20 {
-    constructor(string memory name_, string memory symbol_) ERC20(name_, symbol_) {}
-
-    function mint(address to, uint256 amount) external {
-        _mint(to, amount);
-    }
-
-    function burn(address from, uint256 amount) external {
-        _burn(from, amount);
-    }
-}
 
 contract MockMarket is AltoBorrowMarket {
     using AssetShareConversionMath for uint256;
@@ -69,8 +57,8 @@ contract MockMarket is AltoBorrowMarket {
 
 contract AltoBorrowMarketTest is Test {
     MockMarket market;
-    MockERC20 borrowToken;
-    MockERC20 collateralToken;
+    ERC20Mock borrowToken;
+    ERC20Mock collateralToken;
 
     address alice = address(0xA11CE);
     address bob = address(0xB0B);
@@ -79,8 +67,8 @@ contract AltoBorrowMarketTest is Test {
 
     function setUp() public {
         // Deploy mock contracts
-        borrowToken = new MockERC20("Borrow Token", "BTKN");
-        collateralToken = new MockERC20("Collateral Token", "CTKN");
+        borrowToken = new ERC20Mock("Borrow Token", "BTKN");
+        collateralToken = new ERC20Mock("Collateral Token", "CTKN");
 
         address irm = address(new FixedRateIrm(0.04 ether / uint256(365 days), address(this)));
         address oracle = address(new OracleMock());
@@ -109,10 +97,10 @@ contract AltoBorrowMarketTest is Test {
         );
 
         // Setup initial balances for test accounts
-        borrowToken.mint(alice, INITIAL_AMOUNT);
-        borrowToken.mint(bob, INITIAL_AMOUNT);
-        collateralToken.mint(alice, INITIAL_AMOUNT);
-        collateralToken.mint(bob, INITIAL_AMOUNT);
+        deal(address(borrowToken), alice, INITIAL_AMOUNT);
+        deal(address(borrowToken), bob, INITIAL_AMOUNT);
+        deal(address(collateralToken), alice, INITIAL_AMOUNT);
+        deal(address(collateralToken), bob, INITIAL_AMOUNT);
 
         // Approve market to spend tokens
         vm.startPrank(alice);

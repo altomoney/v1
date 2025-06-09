@@ -57,12 +57,12 @@ contract RepayTest is Test {
         market.setPauser(owner, PAUSED_MARKET, true);
 
         // Setup initial balances for test accounts
-        borrowToken.mint(alice, INITIAL_AMOUNT);
-        borrowToken.mint(bob, INITIAL_AMOUNT);
-        borrowToken.mint(charlie, INITIAL_AMOUNT);
-        collateralToken.mint(alice, INITIAL_AMOUNT);
-        collateralToken.mint(bob, INITIAL_AMOUNT);
-        collateralToken.mint(charlie, INITIAL_AMOUNT);
+        deal(address(borrowToken), alice, INITIAL_AMOUNT);
+        deal(address(borrowToken), bob, INITIAL_AMOUNT);
+        deal(address(borrowToken), charlie, INITIAL_AMOUNT);
+        deal(address(collateralToken), alice, INITIAL_AMOUNT);
+        deal(address(collateralToken), bob, INITIAL_AMOUNT);
+        deal(address(collateralToken), charlie, INITIAL_AMOUNT);
 
         // Approve market to spend tokens
         vm.startPrank(alice);
@@ -116,14 +116,22 @@ contract RepayTest is Test {
         vm.stopPrank();
     }
 
-    function test_RevertWhen_AssetsIsZero() public {
+    modifier givenAssetsIsProvided() {
+        _;
+    }
+
+    function test_RevertWhen_AssetsIsZero() public givenAssetsIsProvided {
         vm.startPrank(bob);
         vm.expectRevert(IMarketErrors.AltoBorrowMarketInvalidInput.selector);
         market.repay(0, 0, bob);
         vm.stopPrank();
     }
 
-    function test_RevertWhen_UserHasInsufficientBalance() public {
+    modifier whenAssetsIsGreaterThanZero() {
+        _;
+    }
+
+    function test_RevertWhen_UserHasInsufficientBalance() public givenAssetsIsProvided whenAssetsIsGreaterThanZero {
         vm.startPrank(charlie);
         borrowToken.transfer(alice, INITIAL_AMOUNT); // Transfer all tokens away
         vm.expectRevert();
@@ -131,21 +139,30 @@ contract RepayTest is Test {
         vm.stopPrank();
     }
 
-    function test_RevertWhen_UserHasNoBorrowPosition() public {
+    function test_RevertWhen_UserHasNoBorrowPosition() public givenAssetsIsProvided whenAssetsIsGreaterThanZero {
         vm.startPrank(charlie);
         vm.expectRevert();
         market.repay(100 ether, 0, charlie);
         vm.stopPrank();
     }
 
-    function test_RevertWhen_RepayingMoreThanBorrowed() public {
+    function test_RevertWhen_RepayingMoreThanBorrowed() public givenAssetsIsProvided whenAssetsIsGreaterThanZero {
         vm.startPrank(bob);
         vm.expectRevert();
         market.repay(500 ether, 0, bob); // More than the 200 ether borrowed
         vm.stopPrank();
     }
 
-    function test_RepayValidAmountWithAssets() public {
+    modifier whenUserHasSufficientBalanceAndBorrowPosition() {
+        _;
+    }
+
+    function test_RepayValidAmountWithAssets()
+        public
+        givenAssetsIsProvided
+        whenAssetsIsGreaterThanZero
+        whenUserHasSufficientBalanceAndBorrowPosition
+    {
         uint256 repayAmount = 50 ether;
 
         vm.startPrank(bob);
@@ -174,14 +191,22 @@ contract RepayTest is Test {
         vm.stopPrank();
     }
 
-    function test_RevertWhen_SharesIsZero() public {
+    modifier givenSharesIsProvided() {
+        _;
+    }
+
+    function test_RevertWhen_SharesIsZero() public givenSharesIsProvided {
         vm.startPrank(bob);
         vm.expectRevert(IMarketErrors.AltoBorrowMarketInvalidInput.selector);
         market.repay(0, 0, bob);
         vm.stopPrank();
     }
 
-    function test_RepayValidAmountWithShares() public {
+    modifier whenSharesIsGreaterThanZero() {
+        _;
+    }
+
+    function test_RepayValidAmountWithShares() public givenSharesIsProvided whenSharesIsGreaterThanZero {
         uint256 shareAmount = 50 ether;
 
         vm.startPrank(bob);

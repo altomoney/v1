@@ -57,21 +57,25 @@ contract SetIrmTest is Test {
         vm.stopPrank();
     }
 
-    function test_RevertWhen_IrmIsInvalidContract() public {
+    modifier givenCallerIsOwner() {
+        _;
+    }
+
+    function test_RevertWhen_IrmIsInvalidContract() public givenCallerIsOwner {
         vm.startPrank(owner);
         vm.expectRevert();
         market.setIrm(address(0x123)); // Invalid contract
         vm.stopPrank();
     }
 
-    function test_SetIrmWhen_IrmIsValidContract() public {
+    function test_SetIrmWhen_IrmIsValidContract() public givenCallerIsOwner {
         vm.startPrank(owner);
         market.setIrm(newIrm);
         assertEq(market.irm(), newIrm);
         vm.stopPrank();
     }
 
-    function test_SetIrmWhen_IrmIsZeroAddress() public {
+    function test_SetIrmWhen_IrmIsZeroAddress() public givenCallerIsOwner {
         vm.startPrank(owner);
         market.setIrm(address(0));
         assertEq(market.irm(), address(0));

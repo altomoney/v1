@@ -8,6 +8,7 @@ import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {IMarketErrors} from "@alto/lending/interfaces/IMarket.sol";
 
 contract SetBorrowOpeningFeeTest is Test {
     AltoBorrowMarket market;
@@ -56,15 +57,18 @@ contract SetBorrowOpeningFeeTest is Test {
         vm.stopPrank();
     }
 
-    function test_SetBorrowOpeningFeeWhen_FeeIsGreaterThanOne() public {
+    modifier givenCallerIsOwner() {
+        _;
+    }
+
+    function test_SetBorrowOpeningFeeWhen_FeeIsGreaterThanOne() public givenCallerIsOwner {
         vm.startPrank(owner);
-        // Note: setBorrowOpeningFee doesn't validate max value in the current implementation
+        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBorrowMarketInvalidInput.selector));
         market.setBorrowOpeningFee(1.1 ether);
-        assertEq(market.borrowOpeningFee(), 1.1 ether);
         vm.stopPrank();
     }
 
-    function test_SetBorrowOpeningFeeWhen_FeeIsValidValue() public {
+    function test_SetBorrowOpeningFeeWhen_FeeIsValidValue() public givenCallerIsOwner {
         vm.startPrank(owner);
         market.setBorrowOpeningFee(newFee);
         assertEq(market.borrowOpeningFee(), newFee);

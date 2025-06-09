@@ -8,23 +8,20 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 contract SetDebtCeilingTest is AltoMintMarketTest {
     function test_RevertWhen_CallerIsNotOwner() external {
-        // it should revert with Ownable: caller is not the owner
         vm.startPrank(alice);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, alice));
         market.setDebtCeiling(500000 ether);
         vm.stopPrank();
     }
 
-    modifier whenCallerIsOwner() {
-        vm.startPrank(owner);
+    modifier givenCallerIsOwner() {
         _;
-        vm.stopPrank();
     }
 
-    function test_RevertWhen_NewDebtCeilingIsLessThanTotalBorrowedAssets() external whenCallerIsOwner {
+    function test_RevertWhen_NewDebtCeilingIsLessThanCurrentTotalBorrowed() external givenCallerIsOwner {
         // First, simulate some borrowed assets
         vm.startPrank(alice);
-        market.addCollateral(200 ether, alice);
+        market.addCollateral(500 ether, alice);
         market.borrow(100 ether, 0, alice, alice, "");
         vm.stopPrank();
 
@@ -35,49 +32,32 @@ contract SetDebtCeilingTest is AltoMintMarketTest {
         vm.stopPrank();
     }
 
-    function test_WhenNewDebtCeilingEqualsTotalBorrowedAssets() external whenCallerIsOwner {
-        // First, simulate some borrowed assets
+    function test_UpdateDebtCeilingAndTotalSupplyWhen_NewDebtCeilingIsValid() external givenCallerIsOwner {
+        // Test with debt ceiling greater than borrowed amount
         vm.startPrank(alice);
-        market.addCollateral(200 ether, alice);
-        market.borrow(100 ether, 0, alice, alice, "");
-        vm.stopPrank();
-
-        // Set debt ceiling equal to borrowed amount
-        uint256 newDebtCeiling = 100 ether;
-        market.setDebtCeiling(newDebtCeiling);
-
-        // it should set totalSupply.assets to new debt ceiling
-        (uint128 totalSupplyAssets,) = market.totalSupply();
-        assertEq(totalSupplyAssets, newDebtCeiling);
-    }
-
-    function test_WhenNewDebtCeilingIsGreaterThanTotalBorrowedAssets() external whenCallerIsOwner {
-        // First, simulate some borrowed assets
-        vm.startPrank(alice);
-        market.addCollateral(200 ether, alice);
+        market.addCollateral(500 ether, alice);
         market.borrow(100 ether, 0, alice, alice, "");
         vm.stopPrank();
 
         // Set debt ceiling greater than borrowed amount
+        vm.startPrank(owner);
         uint256 newDebtCeiling = 500000 ether;
         market.setDebtCeiling(newDebtCeiling);
 
-        // it should set totalSupply.assets to new debt ceiling
+        // it should update debt ceiling and total supply
         (uint128 totalSupplyAssets,) = market.totalSupply();
         assertEq(totalSupplyAssets, newDebtCeiling);
+        vm.stopPrank();
     }
 
-    modifier givenNoOutstandingBorrows() {
-        // Ensure no borrows exist (default state)
-        _;
-    }
-
-    function test_WhenNewDebtCeilingIsZero() external whenCallerIsOwner givenNoOutstandingBorrows {
-        // Set debt ceiling to zero
+    function test_UpdateDebtCeilingAndTotalSupplyWhen_NewDebtCeilingIsValidWithZero() external givenCallerIsOwner {
+        // Test with zero debt ceiling when no borrows exist
+        vm.startPrank(owner);
         market.setDebtCeiling(0);
 
-        // it should set totalSupply.assets to zero
+        // it should update debt ceiling and total supply
         (uint128 totalSupplyAssets,) = market.totalSupply();
         assertEq(totalSupplyAssets, 0);
+        vm.stopPrank();
     }
 }

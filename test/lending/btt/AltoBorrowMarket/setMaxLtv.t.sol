@@ -8,6 +8,7 @@ import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {IMarketErrors} from "@alto/lending/interfaces/IMarket.sol";
 
 contract SetMaxLtvTest is Test {
     AltoBorrowMarket market;
@@ -56,15 +57,18 @@ contract SetMaxLtvTest is Test {
         vm.stopPrank();
     }
 
-    function test_SetMaxLtvWhen_MaxLtvIsGreaterThanOne() public {
+    modifier givenCallerIsOwner() {
+        _;
+    }
+
+    function test_SetMaxLtvWhen_MaxLtvIsGreaterThanOne() public givenCallerIsOwner {
         vm.startPrank(owner);
-        // Note: setMaxLtv doesn't validate max value in the current implementation
+        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBorrowMarketInvalidInput.selector));
         market.setMaxLtv(1.1 ether);
-        assertEq(market.maxLtv(), 1.1 ether);
         vm.stopPrank();
     }
 
-    function test_SetMaxLtvWhen_MaxLtvIsValidValue() public {
+    function test_SetMaxLtvWhen_MaxLtvIsValidValue() public givenCallerIsOwner {
         vm.startPrank(owner);
         market.setMaxLtv(newMaxLtv);
         assertEq(market.maxLtv(), newMaxLtv);

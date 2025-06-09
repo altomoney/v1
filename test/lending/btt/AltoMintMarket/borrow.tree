@@ -1,33 +1,37 @@
-borrow.tree
-├── when market is paused
-│   └── it should revert with MarketPaused
-├── when market is frozen
-│   └── it should revert with MarketFrozen
-└── when market is not paused and not frozen
-    ├── when assets and shares are both zero
-    │   └── it should revert with AltoBorrowMarketInvalidInput
-    ├── when assets and shares are both non-zero
-    │   └── it should revert with AltoBorrowMarketInvalidInput
-    ├── when receiver is zero address
-    │   └── it should revert with AltoBorrowMarketInvalidInput
-    └── when inputs are valid
-        ├── given position would exceed max LTV
-        │   └── it should revert with AltoBorrowMarketBorrowingTooMuch
-        ├── given borrow amount exceeds debt ceiling
-        │   └── it should revert with AltoBorrowMarketInsufficientMarketLiquidity
-        └── given borrow is within limits
-            ├── when data length is zero
-            │   ├── it should mint borrow tokens to receiver
-            │   ├── it should increase totalBorrowed
-            │   ├── it should increase position borrowShares
-            │   ├── it should apply opening fee to claimableFeesAssets
-            │   └── it should emit Borrow event
-            ├── when data length is greater than zero and receiver is authorized callback
-            │   ├── it should mint borrow tokens to receiver
-            │   ├── it should increase totalBorrowed
-            │   ├── it should increase position borrowShares
-            │   ├── it should apply opening fee to claimableFeesAssets
-            │   ├── it should call onBorrow callback
-            │   └── it should emit Borrow event
-            └── when data length is greater than zero and receiver is not authorized callback
-                └── it should revert with AltoBorrowMarketUnauthorized 
+BorrowTest
+├── given market is paused
+│   └── it should revert
+├── given market is frozen
+│   └── it should revert
+├── given both assets and shares are provided
+│   └── it should revert
+├── given receiver is zero address
+│   └── it should revert
+├── given sender is not authorized for onBehalf
+│   └── it should revert
+├── given assets is provided
+│   ├── when assets is zero
+│   │   └── it should revert
+│   └── when assets is greater than zero
+│       ├── when borrow amount exceeds debt ceiling
+│       │   └── it should revert
+│       ├── when user has insufficient collateral
+│       │   └── it should revert
+│       └── when user has sufficient collateral
+│           ├── when borrow opening fee is zero
+│           │   └── it should mint tokens and update position
+│           └── when borrow opening fee is greater than zero
+│               └── it should mint tokens, update position and apply fee
+└── given shares is provided
+    ├── when shares is zero
+    │   └── it should revert
+    └── when shares is greater than zero
+        ├── when borrow amount exceeds debt ceiling
+        │   └── it should revert
+        ├── when user has insufficient collateral
+        │   └── it should revert
+        └── when user has sufficient collateral
+            ├── when borrow opening fee is zero
+            │   └── it should mint tokens and update position
+            └── when borrow opening fee is greater than zero
+                └── it should mint tokens, update position and apply fee 

@@ -60,14 +60,14 @@ contract LiquidateTest is Test {
         market.setPriorityLiquidator(priorityLiquidator, true);
 
         // Setup initial balances for test accounts
-        borrowToken.mint(alice, INITIAL_AMOUNT);
-        borrowToken.mint(bob, INITIAL_AMOUNT);
-        borrowToken.mint(liquidator, INITIAL_AMOUNT);
-        borrowToken.mint(priorityLiquidator, INITIAL_AMOUNT);
-        collateralToken.mint(alice, INITIAL_AMOUNT);
-        collateralToken.mint(bob, INITIAL_AMOUNT);
-        collateralToken.mint(liquidator, INITIAL_AMOUNT);
-        collateralToken.mint(priorityLiquidator, INITIAL_AMOUNT);
+        deal(address(borrowToken), alice, INITIAL_AMOUNT);
+        deal(address(borrowToken), bob, INITIAL_AMOUNT);
+        deal(address(borrowToken), liquidator, INITIAL_AMOUNT);
+        deal(address(borrowToken), priorityLiquidator, INITIAL_AMOUNT);
+        deal(address(collateralToken), alice, INITIAL_AMOUNT);
+        deal(address(collateralToken), bob, INITIAL_AMOUNT);
+        deal(address(collateralToken), liquidator, INITIAL_AMOUNT);
+        deal(address(collateralToken), priorityLiquidator, INITIAL_AMOUNT);
 
         // Approve market to spend tokens
         vm.startPrank(alice);
@@ -119,13 +119,16 @@ contract LiquidateTest is Test {
         vm.stopPrank();
     }
 
-    function test_RevertWhen_CallerIsNotAuthorized() public {
+    modifier givenPositionIsInsolvent() {
         // Make position liquidatable by reducing collateral value
         address oracle = market.oracle();
         vm.startPrank(owner);
         OracleMock(oracle).setPrice(ORACLE_PRICE_PRECISION / 2); // Halve collateral value
         vm.stopPrank();
+        _;
+    }
 
+    function test_RevertWhen_CallerIsNotAuthorized() public givenPositionIsInsolvent {
         // Try to liquidate as a non-priority, non-tagger, non-owner address
         address nonAuthorized = address(0x9999);
         vm.startPrank(nonAuthorized);
@@ -134,15 +137,17 @@ contract LiquidateTest is Test {
         vm.stopPrank();
     }
 
-    function test_LiquidateWhen_CallerIsPriorityLiquidator() public {
+    modifier whenCallerIsPriorityLiquidator() {
+        _;
+    }
+
+    function test_LiquidateWhen_CallerIsPriorityLiquidator()
+        public
+        givenPositionIsInsolvent
+        whenCallerIsPriorityLiquidator
+    {
         // Make position liquidatable by simulating price change/interest
         market.accrueInterest();
-
-        // Update the oracle price to make the position liquidatable
-        address oracle = market.oracle();
-        vm.startPrank(owner);
-        OracleMock(oracle).setPrice(ORACLE_PRICE_PRECISION / 2); // Halve collateral value
-        vm.stopPrank();
 
         vm.startPrank(priorityLiquidator);
         // This should succeed since priorityLiquidator is authorized
@@ -150,35 +155,31 @@ contract LiquidateTest is Test {
         vm.stopPrank();
     }
 
-    function test_LiquidateWhen_PositionIsTaggedAndWithinWindow() public {
-        // Make position liquidatable
-        address oracle = market.oracle();
-        vm.startPrank(owner);
-        OracleMock(oracle).setPrice(ORACLE_PRICE_PRECISION / 2); // Halve collateral value
-        vm.stopPrank();
-
+    modifier whenPositionIsTagged() {
         // Tag the position first
         vm.startPrank(liquidator);
         market.tagLiquidablePosition(bob, liquidator);
+        vm.stopPrank();
+        _;
+    }
 
+    function test_LiquidateWhen_PositionIsTaggedAndWithinWindow()
+        public
+        givenPositionIsInsolvent
+        whenPositionIsTagged
+    {
         // Try to liquidate immediately (should fail due to grace period)
+        vm.startPrank(liquidator);
         vm.expectRevert(IMarketErrors.AltoBorrowMarketLiquidationUnauthorized.selector);
         market.liquidate(bob, "");
         vm.stopPrank();
     }
 
-    function test_LiquidateWhen_PositionIsTaggedAndAfterGracePeriod() public {
-        // Make position liquidatable
-        address oracle = market.oracle();
-        vm.startPrank(owner);
-        OracleMock(oracle).setPrice(ORACLE_PRICE_PRECISION / 2); // Halve collateral value
-        vm.stopPrank();
-
-        // Tag the position first
-        vm.startPrank(liquidator);
-        market.tagLiquidablePosition(bob, liquidator);
-        vm.stopPrank();
-
+    function test_LiquidateWhen_PositionIsTaggedAndAfterGracePeriod()
+        public
+        givenPositionIsInsolvent
+        whenPositionIsTagged
+    {
         // Wait for grace periods to pass
         vm.warp(block.timestamp + 6 minutes + 3 minutes); // Both grace periods
 
