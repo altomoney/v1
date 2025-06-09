@@ -1,0 +1,8 @@
+ClaimInterestTest
+├── given claimable fees is zero
+│   └── it should mint zero tokens to fee recipient
+└── given claimable fees is greater than zero
+    ├── when fee recipient is zero address
+    │   └── it should revert
+    └── when fee recipient is valid address
+        └── it should mint tokens to fee recipient and reset claimable fees 

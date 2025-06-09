@@ -85,6 +85,26 @@ contract AltoBorrowMarket is Auth, Pausable, IMarketStaticTypes {
     /// @inheritdoc IMarketBase
     address public feeRecipient;
 
+    struct LiquidationCalculation {
+        uint256 collateralPrice;
+        uint256 positionCollateralValue;
+        uint256 positionBorrowedAssets;
+        uint256 liquidationPercentage;
+        uint256 liquidationFee;
+        uint256 newLtv;
+        uint256 liquidatorBonusFee;
+        uint256 remainingCollateralAfterFeeInBorrowAssets;
+    }
+
+    struct LiquidationVars {
+        uint256 collateralToSellInBorrowAssets;
+        uint256 totalCollateralToTake;
+        uint256 f_collateralAmount;
+        uint256 f_repayAmount;
+        uint256 f_repayShares;
+        Balance badDebt;
+    }
+
     constructor(
         address _borrowToken,
         address _collateralToken,
@@ -528,6 +548,7 @@ contract AltoBorrowMarket is Auth, Pausable, IMarketStaticTypes {
 
         Position memory _position = position[borrower];
         LiquidationCalculation memory calc;
+        LiquidationVars memory vars;
 
         // Initial calculations
         calc.collateralPrice = IOracle(oracle).getPrice();
@@ -555,82 +576,82 @@ contract AltoBorrowMarket is Auth, Pausable, IMarketStaticTypes {
         calc.remainingCollateralAfterFeeInBorrowAssets =
             remainingCollateralAfterFee.divideWithRounding(calc.collateralPrice, ORACLE_PRICE_PRECISION, false);
 
-        uint256 collateralToSellInBorrowAssets = (
+        vars.collateralToSellInBorrowAssets = (
             calc.positionBorrowedAssets
                 - calc.remainingCollateralAfterFeeInBorrowAssets.multiplyWithPrecision(calc.newLtv)
         ).divideWithPrecisionUp(MATH_PRECISION - calc.newLtv);
-        collateralToSellInBorrowAssets =
-            Math.min(collateralToSellInBorrowAssets, calc.remainingCollateralAfterFeeInBorrowAssets);
-        collateralToSellInBorrowAssets = Math.min(collateralToSellInBorrowAssets, calc.positionBorrowedAssets);
+        vars.collateralToSellInBorrowAssets =
+            Math.min(vars.collateralToSellInBorrowAssets, calc.remainingCollateralAfterFeeInBorrowAssets);
+        vars.collateralToSellInBorrowAssets = Math.min(vars.collateralToSellInBorrowAssets, calc.positionBorrowedAssets);
 
         // Calculate final amounts
-        uint256 totalCollateralToTake = collateralToSellInBorrowAssets.divideWithRounding(
+        vars.totalCollateralToTake = vars.collateralToSellInBorrowAssets.divideWithRounding(
             ORACLE_PRICE_PRECISION, calc.collateralPrice, true
         ) + calc.liquidatorBonusFee;
-        uint256 f_collateralAmount =
-            totalCollateralToTake > _position.collateralAssets ? _position.collateralAssets : totalCollateralToTake;
+        vars.f_collateralAmount = vars.totalCollateralToTake > _position.collateralAssets
+            ? _position.collateralAssets
+            : vars.totalCollateralToTake;
 
-        uint256 f_repayAmount = collateralToSellInBorrowAssets > calc.positionBorrowedAssets
+        vars.f_repayAmount = vars.collateralToSellInBorrowAssets > calc.positionBorrowedAssets
             ? calc.positionBorrowedAssets
-            : collateralToSellInBorrowAssets;
+            : vars.collateralToSellInBorrowAssets;
 
-        uint256 f_repayShares = f_repayAmount.convertToSharesDown(totalBorrowed.assets, totalBorrowed.shares);
+        vars.f_repayShares = vars.f_repayAmount.convertToSharesDown(totalBorrowed.assets, totalBorrowed.shares);
 
         // Ensure we don't try to repay more shares than the user has which can happen since we are using virtual shares
         // we check whether substracting 1e6 from the repay shares is still greater than the user's borrow shares
         // as other values are not valid.
         if (
-            f_repayShares.toUint128() > _position.borrowShares
-                && f_repayShares - AssetShareConversionMath.VIRTUAL_SHARES < _position.borrowShares
+            vars.f_repayShares.toUint128() > _position.borrowShares
+                && vars.f_repayShares - AssetShareConversionMath.VIRTUAL_SHARES < _position.borrowShares
         ) {
-            f_repayShares = uint256(_position.borrowShares);
+            vars.f_repayShares = uint256(_position.borrowShares);
         }
 
         // apply liquidation
-        position[borrower].collateralAssets -= f_collateralAmount.toUint128();
-        position[borrower].borrowShares -= f_repayShares.toUint128();
+        position[borrower].collateralAssets -= vars.f_collateralAmount.toUint128();
+        position[borrower].borrowShares -= vars.f_repayShares.toUint128();
 
-        totalBorrowed.shares -= f_repayShares.toUint128();
+        totalBorrowed.shares -= vars.f_repayShares.toUint128();
         totalBorrowed.assets =
-            (totalBorrowed.assets > f_repayAmount ? totalBorrowed.assets - f_repayAmount : 0).toUint128();
+            (totalBorrowed.assets > vars.f_repayAmount ? totalBorrowed.assets - vars.f_repayAmount : 0).toUint128();
 
         delete liquidablePositions[borrower];
 
-        Balance memory badDebt;
         if (position[borrower].collateralAssets == 0) {
-            badDebt.shares = position[borrower].borrowShares;
-            badDebt.assets = uint128(
+            vars.badDebt.shares = position[borrower].borrowShares;
+            vars.badDebt.assets = uint128(
                 Math.min(
                     totalBorrowed.assets,
-                    uint256(badDebt.shares).convertToAssetsUp(totalBorrowed.assets, totalBorrowed.shares)
+                    uint256(vars.badDebt.shares).convertToAssetsUp(totalBorrowed.assets, totalBorrowed.shares)
                 )
             );
 
-            _applyLiquidationBadDebt(badDebt, borrower);
+            _applyLiquidationBadDebt(vars.badDebt, borrower);
         }
 
         // transfer collateral and borrow tokens
-        IERC20(collateralToken).safeTransfer(msg.sender, f_collateralAmount);
+        IERC20(collateralToken).safeTransfer(msg.sender, vars.f_collateralAmount);
 
         if (data.length > 0) {
-            ILiquidateCallback(msg.sender).onLiquidateCallback(f_collateralAmount, data);
+            ILiquidateCallback(msg.sender).onLiquidateCallback(vars.f_collateralAmount, data);
         }
 
-        _sendBorrowToken(msg.sender, address(this), f_repayAmount);
+        _sendBorrowToken(msg.sender, address(this), vars.f_repayAmount);
 
         emit Liquidation(
             borrower,
             collateralToken,
             borrowToken,
             msg.sender,
-            f_collateralAmount,
-            f_repayAmount,
-            f_repayShares,
-            badDebt.assets,
-            badDebt.shares
+            vars.f_collateralAmount,
+            vars.f_repayAmount,
+            vars.f_repayShares,
+            vars.badDebt.assets,
+            vars.badDebt.shares
         );
 
-        return (f_collateralAmount, f_repayAmount);
+        return (vars.f_collateralAmount, vars.f_repayAmount);
     }
 
     /// @dev Calculates the liquidation percentage - how far are we between LTV and LLTV with position's current LTV.

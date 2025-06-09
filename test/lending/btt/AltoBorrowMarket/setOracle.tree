@@ -1,0 +1,8 @@
+SetOracleTest
+├── given caller is not owner
+│   └── it should revert
+└── given caller is owner
+    ├── when new oracle is zero address
+    │   └── it should revert
+    └── when new oracle is valid address
+        └── it should update oracle address 

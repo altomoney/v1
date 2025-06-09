@@ -1,0 +1,8 @@
+SetFeeRecipientTest
+├── given caller is not owner
+│   └── it should revert
+└── given caller is owner
+    ├── when new fee recipient is zero address
+    │   └── it should revert
+    └── when new fee recipient is valid address
+        └── it should update fee recipient 

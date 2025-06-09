@@ -1,0 +1,8 @@
+SetDebtCeilingTest
+├── given caller is not owner
+│   └── it should revert
+└── given caller is owner
+    ├── when new debt ceiling is less than total borrowed
+    │   └── it should revert
+    └── when new debt ceiling is greater than or equal to total borrowed
+        └── it should update debt ceiling 

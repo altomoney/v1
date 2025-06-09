@@ -1,0 +1,15 @@
+TagLiquidablePositionTest
+├── given market is paused
+│   └── it should revert
+├── given position is solvent
+│   └── it should revert
+├── given liquidator is priority liquidator
+│   └── it should revert
+└── given liquidator is not priority liquidator
+    ├── given position is already tagged
+    │   ├── when within liquidation window
+    │   │   └── it should revert
+    │   └── when after liquidation window
+    │       └── it should tag position
+    └── given position is not tagged
+        └── it should tag position 
