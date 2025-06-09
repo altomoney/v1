@@ -11,14 +11,53 @@ import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {IPausable} from "@alto/utils/Pausable.sol";
 import {IMarketErrors} from "@alto/lending/interfaces/IMarket.sol";
 import {PAUSED_MARKET, FROZEN_MARKET} from "@alto/utils/Constants.sol";
+import {IMarketEvents} from "@alto/lending/interfaces/IMarket.sol";
+import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
+
+contract MockCallback {
+    function onBorrowCallback(uint256 amount, bytes calldata data) external {}
+}
+
+contract MockMarket is AltoBorrowMarket {
+    using AssetShareConversionMath for uint256;
+
+    constructor(
+        address _borrowToken,
+        address _collateralToken,
+        address _irm,
+        address _owner,
+        address _oracle,
+        uint256 _maxLtv,
+        uint256 _borrowOpeningFee,
+        address _feeRecipient,
+        LiquidationConfiguration memory _liquidationConfiguration
+    )
+        AltoBorrowMarket(
+            _borrowToken,
+            _collateralToken,
+            _irm,
+            _owner,
+            _oracle,
+            _maxLtv,
+            _borrowOpeningFee,
+            _feeRecipient,
+            _liquidationConfiguration
+        )
+    {}
+
+    function addInterest(uint256 amount) external {
+        totalSupply.assets += uint128(amount);
+        totalBorrowed.assets += uint128(amount);
+    }
+}
 
 contract BorrowTest is Test {
-    AltoBorrowMarket market;
+    MockMarket market;
     ERC20Mock borrowToken;
     ERC20Mock collateralToken;
     address alice = address(0xA11CE);
     address bob = address(0xB0B);
-    address charlie = address(0xCCC);
+    address receiver = address(0xCCC);
     address owner = address(this);
     uint256 constant INITIAL_AMOUNT = 10000 ether;
 
@@ -31,15 +70,15 @@ contract BorrowTest is Test {
         address oracle = address(new OracleMock());
         OracleMock(oracle).setPrice(ORACLE_PRICE_PRECISION);
 
-        market = new AltoBorrowMarket(
+        market = new MockMarket(
             address(borrowToken),
             address(collateralToken),
             address(irm),
-            owner,
+            address(this),
             address(oracle),
             0.75 ether,
             0,
-            owner,
+            address(this),
             LiquidationConfiguration({
                 maxLiquidationLtv: 0.8 ether,
                 dynamicBonusFeeStart: 0.03 ether,
@@ -60,10 +99,10 @@ contract BorrowTest is Test {
         // Setup initial balances for test accounts
         borrowToken.mint(alice, INITIAL_AMOUNT);
         borrowToken.mint(bob, INITIAL_AMOUNT);
-        borrowToken.mint(charlie, INITIAL_AMOUNT);
+        borrowToken.mint(receiver, INITIAL_AMOUNT);
         collateralToken.mint(alice, INITIAL_AMOUNT);
         collateralToken.mint(bob, INITIAL_AMOUNT);
-        collateralToken.mint(charlie, INITIAL_AMOUNT);
+        collateralToken.mint(receiver, INITIAL_AMOUNT);
 
         // Approve market to spend tokens
         vm.startPrank(alice);
@@ -76,7 +115,7 @@ contract BorrowTest is Test {
         collateralToken.approve(address(market), type(uint256).max);
         vm.stopPrank();
 
-        vm.startPrank(charlie);
+        vm.startPrank(receiver);
         borrowToken.approve(address(market), type(uint256).max);
         collateralToken.approve(address(market), type(uint256).max);
         vm.stopPrank();
@@ -124,9 +163,9 @@ contract BorrowTest is Test {
     }
 
     function test_RevertWhen_SenderIsNotAuthorized() public {
-        vm.startPrank(charlie);
+        vm.startPrank(receiver);
         vm.expectRevert(IMarketErrors.AltoBorrowMarketUnauthorized.selector);
-        market.borrow(100 ether, 0, bob, charlie, "");
+        market.borrow(100 ether, 0, bob, receiver, "");
         vm.stopPrank();
     }
 
@@ -149,6 +188,19 @@ contract BorrowTest is Test {
         vm.startPrank(bob);
         vm.expectRevert(IMarketErrors.AltoBorrowMarketBorrowingTooMuch.selector);
         market.borrow(100 ether, 0, bob, bob, "");
+        vm.stopPrank();
+    }
+
+    function test_RevertWhen_ReceiverIsNotAuthorizedCallback_WithData() public {
+        uint256 collateralAmount = 200 ether;
+        uint256 borrowAmount = 100 ether;
+
+        vm.startPrank(bob);
+        market.addCollateral(collateralAmount, bob);
+
+        // Try to borrow with data but receiver is not an authorized callback
+        vm.expectRevert(IMarketErrors.AltoBorrowMarketUnauthorized.selector);
+        market.borrow(borrowAmount, 0, bob, receiver, "some_data");
         vm.stopPrank();
     }
 
@@ -278,5 +330,322 @@ contract BorrowTest is Test {
         assertGt(borrowedShares, shareAmount); // Total shares includes fee
 
         vm.stopPrank();
+    }
+
+    function test_BorrowWithCallback_WithData() public {
+        LiquidationConfiguration memory config = LiquidationConfiguration({
+            maxLiquidationLtv: 0.8 ether,
+            dynamicBonusFeeStart: 0.01 ether,
+            ltvForCompleteLiquidation: 0.9 ether,
+            dynamicBonusFeeDecaySteepness: 5 ether,
+            liquidationBaseFee: 0.05 ether,
+            minPenaltyPercentage: 0.05 ether,
+            priorityLiquidationGracePeriod: 5 minutes,
+            taggerLiquidationGracePeriod: 2 minutes,
+            liquidationWindowTag: 3 days
+        });
+        borrowToken = new ERC20Mock("Borrow Token", "BTKN");
+        collateralToken = new ERC20Mock("Collateral Token", "CTKN");
+        address irm = address(new FixedRateIrm(0.04 ether / uint256(365 days), address(this)));
+        address oracle = address(new OracleMock());
+        OracleMock(oracle).setPrice(ORACLE_PRICE_PRECISION);
+        market = new MockMarket(
+            address(borrowToken),
+            address(collateralToken),
+            address(irm),
+            address(this),
+            address(oracle),
+            0.75 ether,
+            0,
+            address(this),
+            config
+        );
+        collateralToken.mint(bob, 1 ether);
+        vm.startPrank(bob);
+        collateralToken.approve(address(market), type(uint256).max);
+        market.addCollateral(1 ether, bob);
+        vm.stopPrank();
+
+        // Add supply to the market
+        borrowToken.mint(alice, 10 ether);
+        vm.startPrank(alice);
+        borrowToken.approve(address(market), type(uint256).max);
+        market.addSupply(10 ether, 0, alice);
+        vm.stopPrank();
+
+        // Mock the callback contract
+        MockCallback callback = new MockCallback();
+        // Authorize the callback contract
+        vm.prank(market.owner());
+        market.setAuthorizedCallback(address(callback), true);
+
+        vm.startPrank(bob);
+        vm.expectEmit(true, true, true, true);
+        emit IMarketEvents.Borrow(bob, bob, address(callback), 0.5 ether, 500000000000000000000000, 0, 0);
+        (uint256 assets, uint256 shares, uint256 openingFeeAssets) =
+            market.borrow(0.5 ether, 0, bob, address(callback), "data");
+        vm.stopPrank();
+
+        assertEq(borrowToken.balanceOf(address(callback)), 0.5 ether);
+    }
+
+    function test_BorrowWithCallback_WithoutData() public {
+        LiquidationConfiguration memory config = LiquidationConfiguration({
+            maxLiquidationLtv: 0.8 ether,
+            dynamicBonusFeeStart: 0.01 ether,
+            ltvForCompleteLiquidation: 0.9 ether,
+            dynamicBonusFeeDecaySteepness: 5 ether,
+            liquidationBaseFee: 0.05 ether,
+            minPenaltyPercentage: 0.05 ether,
+            priorityLiquidationGracePeriod: 5 minutes,
+            taggerLiquidationGracePeriod: 2 minutes,
+            liquidationWindowTag: 3 days
+        });
+        borrowToken = new ERC20Mock("Borrow Token", "BTKN");
+        collateralToken = new ERC20Mock("Collateral Token", "CTKN");
+        address irm = address(new FixedRateIrm(0.04 ether / uint256(365 days), address(this)));
+        address oracle = address(new OracleMock());
+        OracleMock(oracle).setPrice(ORACLE_PRICE_PRECISION);
+        market = new MockMarket(
+            address(borrowToken),
+            address(collateralToken),
+            address(irm),
+            address(this),
+            address(oracle),
+            0.75 ether,
+            0,
+            address(this),
+            config
+        );
+        collateralToken.mint(bob, 1 ether);
+        vm.startPrank(bob);
+        collateralToken.approve(address(market), type(uint256).max);
+        market.addCollateral(1 ether, bob);
+        vm.stopPrank();
+
+        // Add supply to the market
+        borrowToken.mint(alice, 10 ether);
+        vm.startPrank(alice);
+        borrowToken.approve(address(market), type(uint256).max);
+        market.addSupply(10 ether, 0, alice);
+        vm.stopPrank();
+
+        // Mock the callback contract
+        MockCallback callback = new MockCallback();
+        // Authorize the callback contract
+        vm.prank(market.owner());
+        market.setAuthorizedCallback(address(callback), true);
+
+        vm.startPrank(bob);
+        vm.expectEmit(true, true, true, true);
+        emit IMarketEvents.Borrow(bob, bob, address(callback), 0.5 ether, 500000000000000000000000, 0, 0);
+        (uint256 assets, uint256 shares, uint256 openingFeeAssets) =
+            market.borrow(0.5 ether, 0, bob, address(callback), "");
+        vm.stopPrank();
+
+        assertEq(borrowToken.balanceOf(address(callback)), 0.5 ether);
+    }
+
+    function test_BorrowWithShares_WithCallback() public {
+        LiquidationConfiguration memory config = LiquidationConfiguration({
+            maxLiquidationLtv: 0.8 ether,
+            dynamicBonusFeeStart: 0.01 ether,
+            ltvForCompleteLiquidation: 0.9 ether,
+            dynamicBonusFeeDecaySteepness: 5 ether,
+            liquidationBaseFee: 0.05 ether,
+            minPenaltyPercentage: 0.05 ether,
+            priorityLiquidationGracePeriod: 5 minutes,
+            taggerLiquidationGracePeriod: 2 minutes,
+            liquidationWindowTag: 3 days
+        });
+        borrowToken = new ERC20Mock("Borrow Token", "BTKN");
+        collateralToken = new ERC20Mock("Collateral Token", "CTKN");
+        address irm = address(new FixedRateIrm(0.04 ether / uint256(365 days), address(this)));
+        address oracle = address(new OracleMock());
+        OracleMock(oracle).setPrice(ORACLE_PRICE_PRECISION);
+        market = new MockMarket(
+            address(borrowToken),
+            address(collateralToken),
+            address(irm),
+            address(this),
+            address(oracle),
+            0.75 ether,
+            0,
+            address(this),
+            config
+        );
+        collateralToken.mint(bob, 1 ether);
+        vm.startPrank(bob);
+        collateralToken.approve(address(market), type(uint256).max);
+        market.addCollateral(1 ether, bob);
+        vm.stopPrank();
+
+        // Add supply to the market
+        borrowToken.mint(alice, 10 ether);
+        vm.startPrank(alice);
+        borrowToken.approve(address(market), type(uint256).max);
+        market.addSupply(10 ether, 0, alice);
+        vm.stopPrank();
+
+        // Mock the callback contract
+        MockCallback callback = new MockCallback();
+        // Authorize the callback contract
+        vm.prank(market.owner());
+        market.setAuthorizedCallback(address(callback), true);
+
+        vm.startPrank(bob);
+        vm.expectEmit(true, true, true, true);
+        emit IMarketEvents.Borrow(bob, bob, address(callback), 500000000000, 0.5 ether, 0, 0);
+        (uint256 assets, uint256 shares, uint256 openingFeeAssets) =
+            market.borrow(0, 0.5 ether, bob, address(callback), "");
+        vm.stopPrank();
+
+        assertEq(borrowToken.balanceOf(address(callback)), 500000000000);
+    }
+
+    function test_BorrowWithZeroOpeningFee() public {
+        // Create market with zero opening fee
+        LiquidationConfiguration memory config = LiquidationConfiguration({
+            maxLiquidationLtv: 0.8 ether,
+            dynamicBonusFeeStart: 0.01 ether,
+            ltvForCompleteLiquidation: 0.9 ether,
+            dynamicBonusFeeDecaySteepness: 5 ether,
+            liquidationBaseFee: 0.05 ether,
+            minPenaltyPercentage: 0.05 ether,
+            priorityLiquidationGracePeriod: 5 minutes,
+            taggerLiquidationGracePeriod: 2 minutes,
+            liquidationWindowTag: 3 days
+        });
+
+        borrowToken = new ERC20Mock("Borrow Token", "BTKN");
+        collateralToken = new ERC20Mock("Collateral Token", "CTKN");
+
+        address irm = address(new FixedRateIrm(0.04 ether / uint256(365 days), address(this)));
+        address oracle = address(new OracleMock());
+        OracleMock(oracle).setPrice(ORACLE_PRICE_PRECISION);
+
+        market = new MockMarket(
+            address(borrowToken),
+            address(collateralToken),
+            address(irm),
+            address(this),
+            address(oracle),
+            0.75 ether,
+            0,
+            address(this),
+            config
+        );
+
+        // Setup initial balances for test accounts
+        deal(address(borrowToken), alice, INITIAL_AMOUNT);
+        deal(address(borrowToken), bob, INITIAL_AMOUNT);
+        deal(address(borrowToken), receiver, INITIAL_AMOUNT);
+
+        deal(address(collateralToken), alice, INITIAL_AMOUNT);
+        deal(address(collateralToken), bob, INITIAL_AMOUNT);
+        deal(address(collateralToken), receiver, INITIAL_AMOUNT);
+
+        // Approve market to spend tokens
+        vm.startPrank(alice);
+        borrowToken.approve(address(market), type(uint256).max);
+        collateralToken.approve(address(market), type(uint256).max);
+        market.addSupply(100 ether, 0, alice);
+        vm.stopPrank();
+
+        vm.startPrank(bob);
+        borrowToken.approve(address(market), type(uint256).max);
+        collateralToken.approve(address(market), type(uint256).max);
+        vm.stopPrank();
+
+        vm.startPrank(receiver);
+        borrowToken.approve(address(market), type(uint256).max);
+        collateralToken.approve(address(market), type(uint256).max);
+        vm.stopPrank();
+
+        vm.startPrank(bob);
+        market.addCollateral(1 ether, bob);
+        vm.expectEmit(true, true, true, true);
+        emit IMarketEvents.Borrow(bob, bob, bob, 0.5 ether, 500000000000000000000000, 0, 0);
+        (uint256 assets, uint256 shares, uint256 openingFeeAssets) = market.borrow(0.5 ether, 0, bob, bob, "");
+        vm.stopPrank();
+
+        assertEq(borrowToken.balanceOf(bob), INITIAL_AMOUNT + 0.5 ether);
+    }
+
+    function test_LiquidateWithZeroBonusFee() public {
+        LiquidationConfiguration memory config = LiquidationConfiguration({
+            maxLiquidationLtv: 0.8 ether,
+            dynamicBonusFeeStart: 0.01 ether,
+            ltvForCompleteLiquidation: 0.9 ether,
+            dynamicBonusFeeDecaySteepness: 5 ether,
+            liquidationBaseFee: 0.05 ether,
+            minPenaltyPercentage: 0.05 ether,
+            priorityLiquidationGracePeriod: 5 minutes,
+            taggerLiquidationGracePeriod: 2 minutes,
+            liquidationWindowTag: 3 days
+        });
+        borrowToken = new ERC20Mock("Borrow Token", "BTKN");
+        collateralToken = new ERC20Mock("Collateral Token", "CTKN");
+        // Mint tokens to alice and bob
+        borrowToken.mint(alice, 10 ether);
+        borrowToken.mint(bob, 10 ether);
+        collateralToken.mint(alice, 10 ether);
+        collateralToken.mint(bob, 10 ether);
+
+        address irm = address(new FixedRateIrm(0.04 ether / uint256(365 days), address(this)));
+        address oracle = address(new OracleMock());
+        OracleMock(oracle).setPrice(ORACLE_PRICE_PRECISION);
+        market = new MockMarket(
+            address(borrowToken),
+            address(collateralToken),
+            address(irm),
+            address(this),
+            address(oracle),
+            0.75 ether,
+            0,
+            address(this),
+            config
+        );
+
+        // Approve market for both users AFTER creating the new market
+        vm.startPrank(alice);
+        borrowToken.approve(address(market), type(uint256).max);
+        collateralToken.approve(address(market), type(uint256).max);
+        market.addSupply(5 ether, 0, alice);
+        vm.stopPrank();
+
+        vm.startPrank(bob);
+        borrowToken.approve(address(market), type(uint256).max);
+        collateralToken.approve(address(market), type(uint256).max);
+        market.addCollateral(2 ether, bob); // Increased collateral to 2 ether to support 0.8 ether borrow with 0.75 LTV
+        market.borrow(0.8 ether, 0, bob, bob, "");
+        vm.stopPrank();
+
+        // Set price to make position liquidable
+        OracleMock(address(market.oracle())).setPrice(ORACLE_PRICE_PRECISION / 2);
+
+        // Tag the position
+        vm.prank(alice);
+        market.tagLiquidablePosition(bob, alice);
+
+        // Wait for BOTH grace periods to pass (priority liquidation + tagger liquidation)
+        (,,,,,,, uint32 taggerGracePeriod, uint32 liquidationWindowTag) = market.liquidationConfiguration();
+        uint32 priorityGracePeriod = 5 minutes;
+        vm.warp(block.timestamp + uint256(priorityGracePeriod) + uint256(taggerGracePeriod) + 1);
+
+        // Liquidate with zero bonus fee
+        vm.startPrank(alice);
+        uint256 aliceCollateralBefore = collateralToken.balanceOf(alice);
+        uint256 aliceBorrowBefore = borrowToken.balanceOf(alice);
+        market.liquidate(bob, bytes(""));
+        vm.stopPrank();
+
+        // Verify liquidation occurred - alice should have received collateral tokens
+        uint256 aliceCollateralAfter = collateralToken.balanceOf(alice);
+        assertGt(aliceCollateralAfter, aliceCollateralBefore); // Alice receives collateral
+
+        // Alice's borrow token balance decreases because she pays to repay bob's debt
+        uint256 aliceBorrowAfter = borrowToken.balanceOf(alice);
+        assertLt(aliceBorrowAfter, aliceBorrowBefore); // Alice pays borrow tokens
     }
 }

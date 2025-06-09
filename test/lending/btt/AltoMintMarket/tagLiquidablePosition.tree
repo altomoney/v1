@@ -1,0 +1,12 @@
+tagLiquidablePosition.tree
+├── when market is paused
+│   └── it should revert with MarketPaused
+└── when market is not paused
+    ├── given user position is healthy
+    │   └── it should revert with AltoBorrowMarketPositionHealthy
+    ├── given user position is already tagged
+    │   └── it should revert with AltoBorrowMarketPositionAlreadyTagged
+    └── given user position is liquidatable and not tagged
+        ├── it should set liquidablePositions[user].tagger to liquidator
+        ├── it should set liquidablePositions[user].timestamp to current timestamp
+        └── it should emit TagLiquidablePosition event 

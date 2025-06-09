@@ -1,2 +1,2 @@
 AddSupplyTest
-└── it should revert with NotImplemented error 
+└── it should revert with AltoMintMarketNotImplemented 

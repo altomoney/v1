@@ -24,5 +24,6 @@ remappings = [
 ]
 
 [profile.market]
-src = "@alto/lending"
+src = 'contracts'
 test = "test/lending"
+

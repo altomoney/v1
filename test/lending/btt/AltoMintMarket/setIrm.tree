@@ -1,0 +1,10 @@
+setIrm.tree
+├── when caller is not owner
+│   └── it should revert with Ownable: caller is not the owner
+└── when caller is owner
+    ├── it should call _accrueInterest first
+    ├── it should set irm to new address
+    ├── when new irm is zero address
+    │   └── it should not call IIrm.setMarket
+    └── when new irm is not zero address
+        └── it should call IIrm.setMarket with contract address 

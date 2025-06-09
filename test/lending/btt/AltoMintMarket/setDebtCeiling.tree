@@ -1,8 +1,13 @@
 SetDebtCeilingTest
-├── given caller is not owner
-│   └── it should revert
-└── given caller is owner
-    ├── when new debt ceiling is less than total borrowed
-    │   └── it should revert
-    └── when new debt ceiling is greater than or equal to total borrowed
-        └── it should update debt ceiling 
+├── when caller is not owner
+│   └── it should revert with Ownable: caller is not the owner
+└── when caller is owner
+    ├── when new debt ceiling is less than total borrowed assets
+    │   └── it should revert with AltoBorrowMarketInsufficientMarketLiquidity
+    ├── when new debt ceiling equals total borrowed assets
+    │   └── it should set totalSupply.assets to new debt ceiling
+    ├── when new debt ceiling is greater than total borrowed assets
+    │   └── it should set totalSupply.assets to new debt ceiling
+    └── when new debt ceiling is zero
+        └── given no outstanding borrows
+            └── it should set totalSupply.assets to zero 

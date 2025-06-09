@@ -5,16 +5,15 @@ import "forge-std/Test.sol";
 import {AltoInput, AltoReport} from "deployments/interfaces/IAltoReport.sol";
 import {AltoRelease} from "deployments/releases/alto-v1/AltoRelease.sol";
 import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
-import {TestHelperOz5} from "@layerzerolabs/test-devtools-evm-foundry/contracts/TestHelperOz5.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 
-contract AltoReleaseTest is Test, TestHelperOz5 {
+contract AltoReleaseTest is Test {
     address owner;
 
-    function setUp() public override {
-        super.setUp();
-        setUpEndpoints(1, LibraryType.UltraLightNode);
+    function setUp() public {
+        //super.setUp();
+        //setUpEndpoints(1, LibraryType.UltraLightNode);
         owner = makeAddr("owner");
     }
 
@@ -24,7 +23,7 @@ contract AltoReleaseTest is Test, TestHelperOz5 {
         input.owner = owner;
         input.isTestnet = true;
         input.lzChainId = 0;
-        input.lzEndpoint = address(endpoints[1]);
+        //input.lzEndpoint = address(endpoints[1]);
         input.wrappedNativeToken = address(new ERC20Mock("A", "A"));
         input.altoToken = address(new ERC20Mock("B", "B"));
         input.bbMarketBorrowCap = 3_000_000e18;

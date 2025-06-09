@@ -1,0 +1,49 @@
+liquidate.tree
+├── when market is paused
+│   └── it should revert with MarketPaused
+└── when market is not paused
+    ├── given borrower has no debt
+    │   └── it should revert with AltoBorrowMarketNothingToLiquidate
+    ├── given borrower position is healthy (LTV below liquidation threshold)
+    │   └── it should revert with AltoBorrowMarketPositionHealthy
+    └── given borrower position is liquidatable
+        ├── given position is not tagged
+        │   ├── when liquidator is priority liquidator
+        │   │   ├── given within priority grace period
+        │   │   │   ├── it should liquidate position
+        │   │   │   ├── it should burn borrow tokens from liquidator
+        │   │   │   ├── it should transfer collateral to liquidator
+        │   │   │   ├── it should reduce borrower debt
+        │   │   │   └── it should emit Liquidate event
+        │   │   └── given after priority grace period
+        │   │       └── it should revert with AltoBorrowMarketLiquidationUnauthorized
+        │   └── when liquidator is not priority liquidator
+        │       └── it should revert with AltoBorrowMarketLiquidationUnauthorized
+        └── given position is tagged
+            ├── when liquidator is priority liquidator
+            │   ├── given within priority grace period
+            │   │   ├── it should liquidate position
+            │   │   ├── it should burn borrow tokens from liquidator
+            │   │   ├── it should transfer collateral to liquidator
+            │   │   ├── it should reduce borrower debt
+            │   │   └── it should emit Liquidate event
+            │   └── given after priority grace period
+            │       └── it should revert with AltoBorrowMarketLiquidationUnauthorized
+            ├── when liquidator is tagger
+            │   ├── given within tagger grace period after priority period
+            │   │   └── it should revert with AltoBorrowMarketLiquidationUnauthorized
+            │   └── given after tagger grace period
+            │       ├── it should liquidate position
+            │       ├── it should burn borrow tokens from liquidator
+            │       ├── it should transfer collateral to liquidator
+            │       ├── it should reduce borrower debt
+            │       └── it should emit Liquidate event
+            └── when liquidator is neither priority nor tagger
+                ├── given within liquidation window
+                │   └── it should revert with AltoBorrowMarketLiquidationUnauthorized
+                └── given after liquidation window
+                    ├── it should liquidate position
+                    ├── it should burn borrow tokens from liquidator
+                    ├── it should transfer collateral to liquidator
+                    ├── it should reduce borrower debt
+                    └── it should emit Liquidate event 

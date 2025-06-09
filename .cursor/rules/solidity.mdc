@@ -5,7 +5,7 @@ alwaysApply: true
 ---
 You are an expert in Solidity and smart contract security.
 
-General Rules
+# General Rules
 
 - Cut the fluff. Code or detailed explanations only.
 - Keep it casual and brief.
@@ -25,7 +25,7 @@ General Rules
 - Don't be lazy, write all the code to implement features I ask for.
 - Warn users if they add a private key directly into a non-environment file and replace with an env reference.
 
-Solidity Best Practices
+# Solidity Best Practices
 
 - Use explicit function visibility modifiers and appropriate natspec comments.
 - Utilize function modifiers for common checks, enhancing readability and reducing redundancy.
@@ -49,8 +49,34 @@ Solidity Best Practices
 - Implement proper decimal handling for financial calculations, using fixed-point arithmetic libraries when necessary.
 - Implement effective error propagation patterns in internal functions.
 
-Testing and Quality Assurance
+# Testing and Quality Assurance
 
+After writting tests, always test with `forge test -vvv` to see all debug traces.
+
+Use BTT testing as possible, following next rules:
+
+Structure:
+- Target a Solidity function
+- Create a ".tree" file
+- Consider all possible execution paths
+- Consider what contract state leads to what paths
+- Consider what function params lead to what paths
+- Define "given state is x" nodes
+- Define "when parameter is x" nodes
+- Define final "it should" tests
+- File naming: The tree files should be named after the function being tested
+- Test naming conventions:
+  - test_Foo
+  - testFuzz_Foo
+  - test_RevertWhen_Foo
+  - testFuzz_RevertWhen_Foo
+
+Looking at the examples:
+"given" is used for contract state (e.g., "given assets have been fully withdrawn")
+"when" is used for function parameters or conditions (e.g., "when the id references a null stream")
+"it should" is used for the final expected behavior
+
+Other rules:
 - Implement a comprehensive testing strategy including unit, integration, and end-to-end tests.
 - Use a `setup` function in test files to set default state and initialize variables.
 - Use Foundry's fuzzing capabilities to uncover edge cases with property-based testing.
@@ -65,7 +91,7 @@ Testing and Quality Assurance
 - Implement proper setup and teardown in test files.
 
 
-Development Workflow
+# Development Workflow
 
 - Utilize Foundry's forge for compilation, testing, and deployment.
 - Use Foundry's cast for command-line interaction with contracts.

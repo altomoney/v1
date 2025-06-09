@@ -1,0 +1,8 @@
+setPriorityLiquidator.tree
+├── when caller is not owner
+│   └── it should revert with Ownable: caller is not the owner
+└── when caller is owner
+    ├── when status is true
+    │   └── it should set priorityLiquidators[liquidator] to true
+    └── when status is false
+        └── it should set priorityLiquidators[liquidator] to false 
