@@ -338,7 +338,7 @@ contract AltoBorrowMarket is Auth, Pausable, IMarketStaticTypes {
     /// @dev This function is virtual to allow for custom logic in the case of mint market.
     function _applyBorrowOpeningFee(uint256 openingFeeAssets) internal virtual returns (uint256) {
         // add opening fee to the fee recipient's supply position
-        uint256 feeSupplyShares = openingFeeAssets.convertToSharesDown(totalSupply.assets, totalSupply.shares);
+        uint256 feeSupplyShares = openingFeeAssets.convertToSharesUp(totalSupply.assets, totalSupply.shares);
         totalSupply.shares += feeSupplyShares.toUint128();
         totalSupply.assets += openingFeeAssets.toUint128();
         position[feeRecipient].supplyShares += feeSupplyShares.toUint128();
