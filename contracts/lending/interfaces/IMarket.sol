@@ -270,7 +270,7 @@ interface IMarketBase is IMarketErrors, IMarketEvents, IAuth {
     /// Providing `assets` will supply exact amount of assets to the market on behalf of `onBehalf`.
     /// Providing `shares` will supply shares to the market on behalf of `onBehalf`. `assets` should be used in majority
     /// of the cases. Specifying `shares` may end up depositing more or less assets than expected because of the
-    /// slippage.
+    /// slippage. See AltoAdapter.sol for an example on how to handle slippage.
     function addSupply(uint256 assets, uint256 shares, address onBehalf) external returns (uint256, uint256);
 
     /// @notice Function to remove the borrow token from the market, make it unavailable for borrowing and remove the shares.
@@ -286,6 +286,7 @@ interface IMarketBase is IMarketErrors, IMarketEvents, IAuth {
     /// Providing `shares` will remove shares from the market on behalf of `onBehalf`. `assets` should be used in majority
     /// of the cases. Specifying `shares` may end up withdrawing more or less assets than expected because of the
     /// slippage. But, in the case of when user wants to withdraw all their assets, `shares` should be used.
+    /// See AltoAdapter.sol for an example on how to handle slippage.
     /// @dev This function will revert if there are currenly not enough assets in the market to remove. This can
     /// happen if utilization is high or trying to withdraw more than globally available for borrow in the market.
     function removeSupply(uint256 assets, uint256 shares, address onBehalf, address receiver)
@@ -329,7 +330,7 @@ interface IMarketBase is IMarketErrors, IMarketEvents, IAuth {
     /// Providing `assets` will borrow exact amount of assets from the market on behalf of `onBehalf`.
     /// Providing `shares` will borrow shares from the market on behalf of `onBehalf`. `assets` should be used in majority
     /// of the cases. Specifying `shares` may end up borrowing more or less assets than expected because of the
-    /// slippage.
+    /// slippage. See AltoAdapter.sol for an example on how to handle slippage.
     /// @dev When `data` is provided `receiver` should be an authorized callback contract implementing `IBorrowCallback`.
     /// This is used to allow for leverage. Authorized callback contracts would be able to perform a swap and
     /// prepare enough collateral to borrow `assets` from the market.
@@ -350,6 +351,7 @@ interface IMarketBase is IMarketErrors, IMarketEvents, IAuth {
     /// Providing `shares` will repay shares from the market on behalf of `onBehalf`. `assets` should be used in majority
     /// of the cases. Specifying `shares` may end up repaying more or less assets than expected because of the
     /// slippage. But in the case of when user wants to repay all of their borrowed assets, `shares` should be used.
+    /// See AltoAdapter.sol for an example on how to handle slippage.
     /// @dev This function will revert if `onBehalf`'s position is not solvent after the repayment.
     function repay(uint256 assets, uint256 shares, address onBehalf) external returns (uint256, uint256);
 
