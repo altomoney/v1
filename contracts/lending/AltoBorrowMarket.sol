@@ -96,6 +96,18 @@ contract AltoBorrowMarket is Auth, Pausable, IMarketStaticTypes {
         address _feeRecipient,
         LiquidationConfiguration memory _liquidationConfiguration
     ) Ownable(_owner) {
+        _validateLiquidationConfiguration(_liquidationConfiguration, _maxLtv);
+
+        if (_borrowToken == address(0) || _collateralToken == address(0) || _oracle == address(0)) {
+            revert AltoBorrowMarketInvalidInput();
+        }
+        if (_maxLtv > MATH_PRECISION || _borrowOpeningFee > MATH_PRECISION) {
+            revert AltoBorrowMarketInvalidInput();
+        }
+        if (_feeRecipient == address(0) && _borrowOpeningFee > 0) {
+            revert AltoBorrowMarketInvalidInput();
+        }
+
         borrowToken = _borrowToken;
         collateralToken = _collateralToken;
         irm = _irm;
@@ -113,7 +125,10 @@ contract AltoBorrowMarket is Auth, Pausable, IMarketStaticTypes {
     /// @inheritdoc IMarketBase
     function setIrm(address _irm) external onlyOwner {
         _accrueInterest();
+
+        emit SetIrm(irm, _irm);
         irm = _irm;
+
         if (irm != address(0)) {
             IIrm(irm).setMarket(address(this));
         }
@@ -121,11 +136,21 @@ contract AltoBorrowMarket is Auth, Pausable, IMarketStaticTypes {
 
     /// @inheritdoc IMarketBase
     function setOracle(address _oracle) external onlyOwner {
+        if (_oracle == address(0)) {
+            revert AltoBorrowMarketInvalidInput();
+        }
+
+        emit SetOracle(oracle, _oracle);
         oracle = _oracle;
     }
 
     /// @inheritdoc IMarketBase
     function setMaxLtv(uint256 _maxLtv) external onlyOwner {
+        if (_maxLtv > MATH_PRECISION || _maxLtv > liquidationConfiguration.maxLiquidationLtv) {
+            revert AltoBorrowMarketInvalidInput();
+        }
+
+        emit SetMaxLtv(maxLtv, _maxLtv);
         maxLtv = _maxLtv;
     }
 
@@ -134,22 +159,85 @@ contract AltoBorrowMarket is Auth, Pausable, IMarketStaticTypes {
         external
         onlyOwner
     {
+        _validateLiquidationConfiguration(_liquidationConfiguration, maxLtv);
+
+        emit SetLiquidationConfiguration(liquidationConfiguration, _liquidationConfiguration);
         liquidationConfiguration = _liquidationConfiguration;
+    }
+
+    function _validateLiquidationConfiguration(
+        LiquidationConfiguration memory _liquidationConfiguration,
+        uint256 _maxLtv
+    ) internal pure {
+        if (_liquidationConfiguration.maxLiquidationLtv < _maxLtv) {
+            revert AltoBorrowMarketInvalidInput();
+        }
+        if (_liquidationConfiguration.ltvForCompleteLiquidation < _liquidationConfiguration.maxLiquidationLtv) {
+            revert AltoBorrowMarketInvalidInput();
+        }
+        if (_liquidationConfiguration.ltvForCompleteLiquidation > MATH_PRECISION) {
+            revert AltoBorrowMarketInvalidInput();
+        }
+        if (
+            _liquidationConfiguration.dynamicBonusFeeDecaySteepness > 100 * MATH_PRECISION
+                || _liquidationConfiguration.dynamicBonusFeeDecaySteepness == 0
+        ) {
+            revert AltoBorrowMarketInvalidInput();
+        }
+        if (
+            _liquidationConfiguration.dynamicBonusFeeStart + _liquidationConfiguration.liquidationBaseFee
+                > MATH_PRECISION
+        ) {
+            revert AltoBorrowMarketInvalidInput();
+        }
+        if (_liquidationConfiguration.minPenaltyPercentage > MATH_PRECISION) {
+            revert AltoBorrowMarketInvalidInput();
+        }
+        if (_liquidationConfiguration.priorityLiquidationGracePeriod > 1 hours) {
+            revert AltoBorrowMarketInvalidInput();
+        }
+        if (_liquidationConfiguration.taggerLiquidationGracePeriod > 30 minutes) {
+            revert AltoBorrowMarketInvalidInput();
+        }
+        if (_liquidationConfiguration.liquidationWindowTag > 3 days) {
+            revert AltoBorrowMarketInvalidInput();
+        }
+        if (
+            _liquidationConfiguration.priorityLiquidationGracePeriod
+                + _liquidationConfiguration.taggerLiquidationGracePeriod > _liquidationConfiguration.liquidationWindowTag
+        ) {
+            revert AltoBorrowMarketInvalidInput();
+        }
     }
 
     /// @inheritdoc IMarketBase
     function setBorrowOpeningFee(uint256 _borrowOpeningFee) external onlyOwner {
+        if (_borrowOpeningFee > MATH_PRECISION) {
+            revert AltoBorrowMarketInvalidInput();
+        }
+
+        emit SetBorrowOpeningFee(borrowOpeningFee, _borrowOpeningFee);
         borrowOpeningFee = _borrowOpeningFee;
     }
 
     /// @inheritdoc IMarketBase
-    function setFeeRecipient(address _feeRecipient) external onlyOwner {
+    function setFeeRecipient(address _feeRecipient) external virtual onlyOwner {
+        if (_feeRecipient == address(0) && borrowOpeningFee > 0) {
+            revert AltoBorrowMarketInvalidInput();
+        }
+
+        emit SetFeeRecipient(feeRecipient, _feeRecipient);
         feeRecipient = _feeRecipient;
     }
 
     /// @inheritdoc IMarketBase
     function setAuthorizedCallback(address callback, bool value) external onlyOwner {
+        if (callback == address(0)) {
+            revert AltoBorrowMarketInvalidInput();
+        }
+
         authorizedCallbacks[callback] = value;
+        emit SetAuthorizedCallback(callback, value);
     }
 
     /// @inheritdoc IMarketBase
@@ -562,7 +650,7 @@ contract AltoBorrowMarket is Auth, Pausable, IMarketStaticTypes {
     /// @param liquidationPercentage The liquidation percentage.
     /// @return bonusFee The bonus fee.
     function _calculateBonusFee(uint256 liquidationPercentage) internal view returns (uint256) {
-        if (liquidationPercentage < MATH_PRECISION) {
+        if (liquidationPercentage < MATH_PRECISION && liquidationConfiguration.dynamicBonusFeeDecaySteepness > 0) {
             int256 exponent = -int256(liquidationConfiguration.dynamicBonusFeeDecaySteepness * liquidationPercentage)
                 / MATH_PRECISION_INT;
             return liquidationConfiguration.dynamicBonusFeeStart.multiplyWithPrecision(uint256(ExpLib.wExp(exponent)));
@@ -611,6 +699,10 @@ contract AltoBorrowMarket is Auth, Pausable, IMarketStaticTypes {
 
     /// @inheritdoc IMarketBase
     function setPriorityLiquidator(address liquidator, bool status) external onlyOwner {
+        if (liquidator == address(0)) {
+            revert AltoBorrowMarketInvalidInput();
+        }
+
         priorityLiquidators[liquidator] = status;
         emit PriorityLiquidatorUpdated(liquidator, status);
     }

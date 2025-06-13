@@ -36,7 +36,7 @@ contract AltoLeverage is Ownable, IBorrowCallback, IRemoveCollateralCallback {
     IAltoLeverageSwapper public swapper;
     mapping(address => bool) public supportedMarkets;
 
-    event AddressUpdated(address indexed oldAddr, address indexed newAddr);
+    event SwapperUpdated(address indexed oldAddr, address indexed newAddr);
     event MarketUpdated(address indexed markerAddr, bool value);
 
     error MinAmountNotValid(uint256 expected, uint256 received);
@@ -49,7 +49,7 @@ contract AltoLeverage is Ownable, IBorrowCallback, IRemoveCollateralCallback {
     /// @notice sets swapper
     /// @param _swapper the new IAltoLeverageSwapper
     function setSwapper(IAltoLeverageSwapper _swapper) external onlyOwner {
-        emit AddressUpdated(address(swapper), address(_swapper));
+        emit SwapperUpdated(address(swapper), address(_swapper));
         swapper = _swapper;
     }
 

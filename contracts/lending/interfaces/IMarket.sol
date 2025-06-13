@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {IAuth} from "@alto/utils/interfaces/IAuth.sol";
+import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
 
 /// @notice Struct that represents the balance of a token
 struct Balance {
@@ -84,6 +85,44 @@ interface IMarketErrors {
 }
 
 interface IMarketEvents {
+    /// @notice Emitted when the IRM contract is set
+    /// @param oldAddr The address of the old IRM contract
+    /// @param newAddr The address of the new IRM contract
+    event SetIrm(address indexed oldAddr, address indexed newAddr);
+
+    /// @notice Emitted when the oracle contract is set
+    /// @param oldAddr The address of the old oracle contract
+    /// @param newAddr The address of the new oracle contract
+    event SetOracle(address indexed oldAddr, address indexed newAddr);
+
+    /// @notice Emitted when the max LTV is set
+    /// @param oldMaxLtv The address of the old max LTV
+    /// @param newMaxLtv The address of the new max LTV
+    event SetMaxLtv(uint256 oldMaxLtv, uint256 newMaxLtv);
+
+    /// @notice Emitted when the liquidation configuration is set
+    /// @param oldLiquidationConfiguration The address of the old liquidation configuration
+    /// @param newLiquidationConfiguration The address of the new liquidation configuration
+    event SetLiquidationConfiguration(
+        LiquidationConfiguration oldLiquidationConfiguration, LiquidationConfiguration newLiquidationConfiguration
+    );
+
+    /// @notice Emitted when the borrow opening fee is set
+    /// @param oldBorrowOpeningFee The address of the old borrow opening fee
+    /// @param newBorrowOpeningFee The address of the new borrow opening fee
+    event SetBorrowOpeningFee(uint256 oldBorrowOpeningFee, uint256 newBorrowOpeningFee);
+
+    /// @notice Emitted when the fee recipient is set
+    /// @param oldAddr The address of the old fee recipient
+    /// @param newAddr The address of the new fee recipient
+    event SetFeeRecipient(address indexed oldAddr, address indexed newAddr);
+
+    /// @notice Emitted when the authorized callback is set
+    /// @param callback The address of the authorized callback
+    /// @param isAuthorized If set to true, the callback contract will be allowed as an authorized callback.
+    /// If set to false, the callback contract will be disallowed as an authorized callback.
+    event SetAuthorizedCallback(address indexed callback, bool isAuthorized);
+
     /// @notice Emitted when a user supplies tokens to the lending market
     /// @param caller The address of the caller who is supplying tokens
     /// @param onBehalf The address of the user who is receiving the ownership of supplied tokens
@@ -195,7 +234,7 @@ interface IMarketEvents {
     );
 }
 
-interface IMarketBase is IMarketErrors, IMarketEvents, IAuth {
+interface IMarketBase is IMarketErrors, IMarketEvents, IAuth, IPausable {
     /// @notice The address of the borrow token.
     function borrowToken() external view returns (address);
 

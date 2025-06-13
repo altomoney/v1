@@ -18,6 +18,8 @@ contract AltoMintMarket is AltoBorrowMarket {
 
     error AltoMintMarketNotImplemented();
 
+    event SetDebtCeiling(uint256 oldDebtCeiling, uint256 newDebtCeiling);
+
     uint128 public claimableFeesAssets;
 
     constructor(
@@ -44,15 +46,33 @@ contract AltoMintMarket is AltoBorrowMarket {
             _liquidationConfiguration
         )
     {
+        if (_feeRecipient == address(0) && irm != address(0)) {
+            revert AltoBorrowMarketInvalidInput();
+        }
         totalSupply.assets = _debtCeiling.toUint128();
     }
 
+    /// @notice Sets the debt ceiling for the mint market
+    /// @param _debtCeiling The new debt ceiling
     function setDebtCeiling(uint256 _debtCeiling) external onlyOwner {
+        _accrueInterest();
+
         if (totalBorrowed.assets > _debtCeiling) {
             revert AltoBorrowMarketInsufficientMarketLiquidity();
         }
 
+        emit SetDebtCeiling(totalSupply.assets, _debtCeiling);
         totalSupply.assets = _debtCeiling.toUint128();
+    }
+
+    /// @inheritdoc AltoBorrowMarket
+    function setFeeRecipient(address _feeRecipient) external override onlyOwner {
+        if (_feeRecipient == address(0) && (borrowOpeningFee > 0 || irm != address(0))) {
+            revert AltoBorrowMarketInvalidInput();
+        }
+
+        emit SetFeeRecipient(feeRecipient, _feeRecipient);
+        feeRecipient = _feeRecipient;
     }
 
     /// @dev Disabled on mint market
@@ -99,7 +119,12 @@ contract AltoMintMarket is AltoBorrowMarket {
         }
     }
 
+    /// @notice Claims the interest from the mint market by minting the borrow token to the fee recipient
     function claimInterest() external {
+        if (feeRecipient == address(0)) {
+            revert AltoBorrowMarketInvalidInput();
+        }
+
         uint256 interest = claimableFeesAssets;
         IMintableERC20(borrowToken).mint(feeRecipient, interest);
         claimableFeesAssets = 0;

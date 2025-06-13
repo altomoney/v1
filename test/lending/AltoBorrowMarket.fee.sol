@@ -161,7 +161,7 @@ contract AltoBorrowMarketFeeTest is Test {
     }
 
     function testFuzz_borrowOpeningFeeAssets(uint256 amount, uint256 targetLtv, uint256 openingFee) public {
-        openingFee = bound(openingFee, 0, 1000 ether);
+        openingFee = bound(openingFee, 0, 1 ether);
         targetLtv = bound(targetLtv, 0.001 ether, LTV);
         amount = bound(amount, 1 ether, MAX_AMOUNT);
 
@@ -198,7 +198,7 @@ contract AltoBorrowMarketFeeTest is Test {
     }
 
     function testFuzz_borrowOpeningFeeShares(uint256 amount, uint256 targetLtv, uint256 openingFee) public {
-        openingFee = bound(openingFee, 0, 1000 ether);
+        openingFee = bound(openingFee, 0, 1 ether);
         targetLtv = bound(targetLtv, 0.001 ether, LTV);
         amount = bound(amount, 1 ether, MAX_AMOUNT);
 
