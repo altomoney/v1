@@ -426,26 +426,14 @@ contract AltoBorrowMarket is Auth, Pausable, IMarketStaticTypes {
             revert AltoBorrowMarketLiquidationUnauthorized();
         }
 
-        if (
-            !priorityLiquidators[msg.sender] && liquidablePositions[borrower].tagged
-                && liquidablePositions[borrower].tagger == msg.sender
-        ) {
-            if (
-                block.timestamp - liquidablePositions[borrower].timestamp
-                    <= liquidationConfiguration.priorityLiquidationGracePeriod
-            ) {
-                revert AltoBorrowMarketLiquidationUnauthorized();
-            }
-        }
-        if (
-            !priorityLiquidators[msg.sender] && liquidablePositions[borrower].tagged
-                && liquidablePositions[borrower].tagger != msg.sender
-        ) {
-            if (
-                block.timestamp - liquidablePositions[borrower].timestamp
-                    <= liquidationConfiguration.priorityLiquidationGracePeriod
-                        + liquidationConfiguration.taggerLiquidationGracePeriod
-            ) {
+        // Skip grace period checks for priority liquidators
+        if (!priorityLiquidators[msg.sender]) {
+            uint256 gracePeriod = liquidablePositions[borrower].tagger == msg.sender
+                ? liquidationConfiguration.priorityLiquidationGracePeriod
+                : liquidationConfiguration.priorityLiquidationGracePeriod
+                    + liquidationConfiguration.taggerLiquidationGracePeriod;
+
+            if (block.timestamp - liquidablePositions[borrower].timestamp <= gracePeriod) {
                 revert AltoBorrowMarketLiquidationUnauthorized();
             }
         }
