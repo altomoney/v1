@@ -5,7 +5,7 @@ import {OFT} from "@alto/utils/OFT.sol";
 import {IUSDO} from "@alto/tokens/interfaces/IUSDO.sol";
 
 import {Pausable, IPausable} from "@alto/utils/Pausable.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {PAUSED_ROLE} from "@alto/utils/Constants.sol";
 
 /// @title USDO Token

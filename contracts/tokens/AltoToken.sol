@@ -8,7 +8,7 @@ import {OFTCore} from "@layerzerolabs/oft-evm/contracts/OFTCore.sol";
 import {ERC20Permit, ERC20} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 import {Pausable, IPausable} from "@alto/utils/Pausable.sol";
 
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {IAltoToken} from "@alto/tokens/interfaces/IAltoToken.sol";
 import {PAUSED_ROLE} from "@alto/utils/Constants.sol";
 
