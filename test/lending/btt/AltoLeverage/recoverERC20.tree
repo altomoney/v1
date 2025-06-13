@@ -1,0 +1,12 @@
+RecoverERC20Test
+├── when caller is not owner
+│   └── it should revert
+└── when caller is owner
+    ├── when token address is zero address
+    │   └── it should transfer tokens to recipient
+    ├── when token amount is zero
+    │   └── it should transfer zero tokens to recipient
+    ├── when recipient is zero address
+    │   └── it should transfer tokens to zero address
+    └── when all parameters are valid
+        └── it should transfer tokens to recipient 

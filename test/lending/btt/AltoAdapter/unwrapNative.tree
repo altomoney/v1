@@ -1,0 +1,17 @@
+UnwrapNativeTest
+├── when amount is max uint256
+│   ├── when adapter has zero wrapped native balance
+│   │   └── it should revert
+│   └── when adapter has wrapped native balance
+│       ├── when receiver is this adapter
+│       │   └── it should unwrap and keep native in adapter
+│       └── when receiver is not this adapter
+│           └── it should unwrap and send native to receiver
+└── when amount is not max uint256
+    ├── when amount is zero
+    │   └── it should revert
+    └── when amount is greater than zero
+        ├── when receiver is this adapter
+        │   └── it should unwrap specified amount and keep native in adapter
+        └── when receiver is not this adapter
+            └── it should unwrap specified amount and send native to receiver 

@@ -1,0 +1,17 @@
+WrapNativeTest
+├── when amount is max uint256
+│   ├── when adapter has zero native balance
+│   │   └── it should revert
+│   └── when adapter has native balance
+│       ├── when receiver is this adapter
+│       │   └── it should wrap and keep tokens in adapter
+│       └── when receiver is not this adapter
+│           └── it should wrap and transfer tokens to receiver
+└── when amount is not max uint256
+    ├── when amount is zero
+    │   └── it should revert
+    └── when amount is greater than zero
+        ├── when receiver is this adapter
+        │   └── it should wrap specified amount and keep tokens in adapter
+        └── when receiver is not this adapter
+            └── it should wrap specified amount and transfer tokens to receiver 

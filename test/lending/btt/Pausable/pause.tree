@@ -1,0 +1,26 @@
+PauseTest
+├── given caller is not pauser for pauseType
+│   └── it should revert with Unauthorized
+├── given caller is pauser for pauseType
+│   ├── when pauseType is zero
+│   │   ├── when _paused is false
+│   │   │   ├── given pauseType is already false
+│   │   │   │   └── it should set paused to false and emit event
+│   │   │   └── given pauseType is currently true
+│   │   │       └── it should set paused to false and emit event
+│   │   └── when _paused is true
+│   │       ├── given pauseType is already true
+│   │       │   └── it should set paused to true and emit event
+│   │       └── given pauseType is currently false
+│   │           └── it should set paused to true and emit event
+│   └── when pauseType is non-zero
+│       ├── when _paused is false
+│       │   ├── given pauseType is already false
+│       │   │   └── it should set paused to false and emit event
+│       │   └── given pauseType is currently true
+│       │       └── it should set paused to false and emit event
+│       └── when _paused is true
+│           ├── given pauseType is already true
+│           │   └── it should set paused to true and emit event
+│           └── given pauseType is currently false
+│               └── it should set paused to true and emit event 

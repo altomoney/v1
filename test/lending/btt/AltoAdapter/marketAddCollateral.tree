@@ -1,0 +1,13 @@
+MarketAddCollateralTest
+├── given onBehalf is this adapter address
+│   └── it should revert
+├── given assets is max uint256
+│   ├── when adapter has zero collateral token balance
+│   │   └── it should revert
+│   └── when adapter has collateral token balance
+│       └── it should add collateral with adapter balance
+└── given assets is not max uint256
+    ├── when assets is zero
+    │   └── it should revert
+    └── when assets is greater than zero
+        └── it should add collateral with specified assets 

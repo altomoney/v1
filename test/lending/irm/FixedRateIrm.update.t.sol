@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
-// needed for deployCode (and Test)
 import "forge-std/Test.sol";
 
 import {FixedPointMath} from "@alto/lending/libraries/FixedPointMath.sol";
+import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";
 
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {ERC20Mock} from "../../helpers/ERC20Mock.sol";
@@ -34,9 +34,8 @@ contract FixedRateIrmUpdateTest is IrmCommon {
         OracleMock(oracle).setPrice(ORACLE_PRICE_PRECISION);
 
         IMarket market = IMarket(
-            deployCode(
-                "AltoBorrowMarket.sol",
-                abi.encode(
+            address(
+                new AltoBorrowMarket(
                     address(borrowToken),
                     address(collateralToken),
                     address(irm),
