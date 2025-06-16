@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {MATH_PRECISION} from "./FixedPointMath.sol";
+import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 
 int256 constant MATH_PRECISION_INT = int256(MATH_PRECISION);
 

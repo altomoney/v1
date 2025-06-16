@@ -15,7 +15,7 @@ import {SigUtils, Permit} from "@alto-test/helpers/SigUtils.sol";
 import {MarketInstance} from "./MarketInstance.sol";
 
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
-import {FixedPointMath} from "@alto/lending/libraries/FixedPointMath.sol";
+import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 
 // Mock WETH contract for testing
 contract WETHMock {

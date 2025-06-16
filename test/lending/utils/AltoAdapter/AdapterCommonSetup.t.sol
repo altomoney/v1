@@ -10,7 +10,7 @@ import {AdapterCommon} from "./AdapterCommon.t.sol";
 import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
 
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
-import {FixedPointMath} from "@alto/lending/libraries/FixedPointMath.sol";
+import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 
 import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
 import {SwapperSimpleMock} from "@alto/lending/mocks/SwapperSimpleMock.sol";

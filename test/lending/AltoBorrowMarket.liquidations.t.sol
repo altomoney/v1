@@ -15,7 +15,7 @@ import {IMarketBase, IMarket, IMarketErrors, IMarketEvents} from "@alto/lending/
 import {ILiquidateCallback} from "@alto/lending/interfaces/IMarketCallbacks.sol";
 import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
 import {IOracle} from "@alto/oracles/interfaces/IOracle.sol";
-import {FixedPointMath} from "@alto/lending/libraries/FixedPointMath.sol";
+import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 
 contract MockMarket is AltoBorrowMarket {
     using AssetShareConversionMath for uint256;
