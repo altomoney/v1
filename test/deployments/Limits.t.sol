@@ -25,9 +25,9 @@ contract LimitsTest is Test {
         leverageSwapper = makeAddr("leverageSwapper");
         delegate = owner;
 
-        erc20Mock1 = address(new ERC20Mock("A", "A"));
-        erc20Mock2 = address(new ERC20Mock("B", "B"));
-        erc20Mock3 = address(new ERC20Mock("C", "C"));
+        erc20Mock1 = address(new ERC20Mock("A", "A", 18));
+        erc20Mock2 = address(new ERC20Mock("B", "B", 18));
+        erc20Mock3 = address(new ERC20Mock("C", "C", 18));
     }
 
     function test_codesizes() public pure {

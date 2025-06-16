@@ -42,9 +42,9 @@ abstract contract AdapterCommonSetup is AdapterCommon {
     function setUp() public virtual override {
         super.setUp();
 
-        borrowToken = new ERC20Mock("borrow", "B");
+        borrowToken = new ERC20Mock("borrow", "B", 18);
         vm.label(address(borrowToken), "borrowToken");
-        collateralToken = new ERC20Mock("collateral", "C");
+        collateralToken = new ERC20Mock("collateral", "C", 18);
         vm.label(address(collateralToken), "collateralToken");
 
         vm.startPrank(OWNER);

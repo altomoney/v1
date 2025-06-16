@@ -5,10 +5,10 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract ERC20Testnet is ERC20, Ownable {
-    uint8 public immutable DECIMALS;
+    uint8 private immutable DECIMALS;
 
-    constructor(string memory symbol, uint8 _decimals, address owner) ERC20(symbol, symbol) Ownable(owner) {
-        DECIMALS = _decimals;
+    constructor(string memory symbol, uint8 tokenDecimals, address owner) ERC20(symbol, symbol) Ownable(owner) {
+        DECIMALS = tokenDecimals;
     }
 
     function mint(address to, uint256 amount) external onlyOwner {

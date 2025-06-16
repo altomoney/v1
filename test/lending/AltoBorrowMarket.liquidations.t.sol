@@ -44,8 +44,8 @@ contract AltoBorrowMarketTest is Test {
         uint256 collateralPrice,
         uint256 maxLtv
     ) public {
-        borrowToken = new ERC20Mock("Borrow Token", "BTKN");
-        collateralToken = new ERC20Mock("Collateral Token", "CTKN");
+        borrowToken = new ERC20Mock("Borrow Token", "BTKN", 18);
+        collateralToken = new ERC20Mock("Collateral Token", "CTKN", 18);
 
         address irm = address(new FixedRateIrm(0.04 ether / uint256(365 days), address(this)));
         address oracle = address(new OracleMock());
