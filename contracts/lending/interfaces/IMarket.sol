@@ -38,6 +38,10 @@ struct LiquidationConfiguration {
     uint256 liquidationBaseFee;
     /// @notice min penalty percentage applied to the user's position LTV after liquidation
     uint256 minPenaltyPercentage;
+    /// @notice if true enables priority liquidation
+    bool isEnabledPriorityLiquidation;
+    /// @notice disable priority liquidation when position LTV is above this LTV
+    uint256 disablePriorityLiquidationAbovePositionLtv;
     /// @notice grace period for the priority liquidator to liquidate a position
     uint32 priorityLiquidationGracePeriod;
     /// @notice grace period for the tagger liquidator to liquidate a position
@@ -49,6 +53,7 @@ struct LiquidationConfiguration {
 /// @notice Struct used for liquidation calculations
 struct LiquidationCalculation {
     uint256 collateralPrice;
+    uint256 currentLtv;
     uint256 positionCollateralValue;
     uint256 positionBorrowedAssets;
     uint256 liquidationPercentage;
@@ -77,6 +82,9 @@ interface IMarketErrors {
 
     /// @notice Error thrown when executor is allowed to perform the action on behalf of another user
     error AltoBorrowMarketUnauthorized();
+
+    /// @notice Error thrown when executor is not allowed to perform liquidation at this time
+    error AltoBorrowMarketPriorityLiquidationDisabled();
 
     /// @notice Error thrown when executor is not allowed to perform liquidation at this time
     error AltoBorrowMarketLiquidationUnauthorized();
@@ -481,6 +489,8 @@ interface IMarketStaticTypes is IMarketBase {
             uint256 dynamicBonusFeeDecaySteepness,
             uint256 liquidationBaseFee,
             uint256 minPenaltyPercentage,
+            bool isEnabledPriorityLiquidation,
+            uint256 disablePriorityLiquidationAbovePositionLtv,
             uint32 priorityLiquidationGracePeriod,
             uint32 taggerLiquidationGracePeriod,
             uint32 liquidationWindowTag

@@ -1,5 +1,0 @@
-ClaimInterestTest
-├── given claimable fees is zero
-│   └── it should not transfer tokens
-└── given claimable fees is greater than zero
-    └── it should mint tokens to fee recipient 

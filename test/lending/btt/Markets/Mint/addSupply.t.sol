@@ -1,0 +1,15 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.28;
+
+import {MarketType, MarketCommon} from "../MarketCommon.t.sol";
+import {AltoMintMarket} from "@alto/lending/AltoMintMarket.sol";
+
+contract AltoMintMarketAddSupply is MarketCommon {
+    constructor() MarketCommon(MarketType.MINT) {}
+
+    function test_ShouldRevert() external {
+        // it should revert
+        vm.expectRevert(AltoMintMarket.AltoMintMarketNotImplemented.selector);
+        market.addSupply(100 ether, 0, USER);
+    }
+}

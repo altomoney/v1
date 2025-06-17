@@ -1,0 +1,8 @@
+AltoMarket::SetOracle
+├── when caller is not owner
+│   └── it should revert
+└── when caller is owner
+    ├── when oracle is zero address
+    │   └── it should revert
+    ├── it should update oracle address
+    └── it should emit SetOracle event 

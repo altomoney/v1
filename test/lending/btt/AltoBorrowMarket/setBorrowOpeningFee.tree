@@ -1,8 +1,0 @@
-SetBorrowOpeningFeeTest
-├── given caller is not owner
-│   └── it should revert
-└── given caller is owner
-    ├── when new fee is greater than WAD
-    │   └── it should revert
-    └── when new fee is valid
-        └── it should update borrow opening fee 

@@ -1,8 +1,0 @@
-SetDebtCeilingTest
-├── given caller is not owner
-│   └── it should revert
-└── given caller is owner
-    ├── when new debt ceiling is less than current total borrowed
-    │   └── it should revert
-    └── when new debt ceiling is valid
-        └── it should update debt ceiling and total supply 

@@ -1,0 +1,2 @@
+AltoBorrowMarket::RemoveSupply()
+└── it should revert

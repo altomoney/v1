@@ -90,7 +90,7 @@ contract AltoMintMarket is AltoBorrowMarket {
             return;
         }
 
-        (uint256 borrowRate, uint256 interest) = IIrm(irm).updateInterestRate(totalSupply.assets, totalBorrowed.assets);
+        (uint256 interest, uint256 borrowRate) = IIrm(irm).updateInterestRate(totalSupply.assets, totalBorrowed.assets);
 
         totalBorrowed.assets += interest.toUint128();
         claimableFeesAssets += interest.toUint128();
@@ -119,8 +119,9 @@ contract AltoMintMarket is AltoBorrowMarket {
         }
     }
 
-    /// @notice Claims the interest from the mint market by minting the borrow token to the fee recipient
-    function claimInterest() external {
+    /// @notice Claims the interest and fees from the mint market by minting the borrow token to the fee recipient
+    /// @return The amount of interest and fees claimed
+    function claimInterest() external whenNotPaused returns (uint256) {
         if (feeRecipient == address(0)) {
             revert AltoBorrowMarketInvalidInput();
         }
@@ -128,5 +129,7 @@ contract AltoMintMarket is AltoBorrowMarket {
         uint256 interest = claimableFeesAssets;
         IMintableERC20(borrowToken).mint(feeRecipient, interest);
         claimableFeesAssets = 0;
+
+        return interest;
     }
 }

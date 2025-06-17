@@ -1,0 +1,32 @@
+AltoMarket::Borrow()
+├── when market is paused
+│   └── it should revert
+├── when market is frozen
+│   └── it should revert
+├── given invalid inputs
+│   ├── when both assets and shares are zero or both nonzero
+│   │   └── it should revert
+│   ├── when receiver is zero address
+│   │   └── it should revert
+│   └── when sender is not authorized for onBehalf
+│       └── it should revert
+└── given valid inputs
+    ├── when totalBorrowed assets is greater than totalSupply assets
+    │   └── it should revert
+    └── when totalBorrowed assets is less than or equal to totalSupply assets
+        ├── when assets is zero
+        │   └── it should calculate assets and opening fee from shares
+        ├── when shares is zero
+        │   └── it should calculate shares and opening fee from assets
+        ├── when opening fee is greater than 0
+        │   └── it should apply borrow opening fee
+        ├── when receiver is authorized callback and data is not empty
+        │   └── it should call onBorrowCallback
+        ├── when receiver is not authorized callback and data is not empty
+        │   └── it should revert
+        ├── when position is not solvent after borrow
+        │   └── it should revert
+        ├── it should emit AccrueInterest event
+        ├── it should update totalBorrowed and position
+        ├── it should emit Borrow event
+        └── it should return assets shares openingFeeAssets
