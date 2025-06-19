@@ -200,6 +200,8 @@ contract AltoBorrowMarketTest is Test {
                 dynamicBonusFeeDecaySteepness: 5 ether,
                 liquidationBaseFee: 0.05 ether,
                 minPenaltyPercentage: 0.01 ether,
+                isEnabledPriorityLiquidation: true,
+                disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
                 priorityLiquidationGracePeriod: 5 minutes,
                 taggerLiquidationGracePeriod: 2 minutes,
                 liquidationWindowTag: 3 days
@@ -240,7 +242,10 @@ contract AltoBorrowMarketTest is Test {
             0
         );
 
-        market.liquidate(bob, hex"");
+        (uint256 collateralAmount, uint256 repayAmount) = market.liquidate(bob, hex"");
+
+        assertEq(collateralAmount, 6.75 ether);
+        assertEq(repayAmount, 0.625 ether);
 
         vm.stopPrank();
     }
@@ -254,6 +259,8 @@ contract AltoBorrowMarketTest is Test {
                 dynamicBonusFeeDecaySteepness: 5 ether,
                 liquidationBaseFee: 0.05 ether,
                 minPenaltyPercentage: 0.01 ether,
+                isEnabledPriorityLiquidation: true,
+                disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
                 priorityLiquidationGracePeriod: 5 minutes,
                 taggerLiquidationGracePeriod: 2 minutes,
                 liquidationWindowTag: 3 days
@@ -299,7 +306,10 @@ contract AltoBorrowMarketTest is Test {
         assertEq(currentLtv, 1.5 ether);
         assertEq(newLtv, 0 ether);
 
-        market.liquidate(bob, hex"");
+        (uint256 collateralAmount, uint256 repayAmount) = market.liquidate(bob, hex"");
+
+        assertEq(collateralAmount, 1 ether);
+        assertEq(repayAmount, 1.9 ether);
 
         (uint128 assets, uint128 shares) = market.totalBorrowed();
         assertEq(assets, 1);
@@ -312,21 +322,21 @@ contract AltoBorrowMarketTest is Test {
     }
 
     function testLiquidateAtLltv() public {
-        createMarket(
-            LiquidationConfiguration({
-                maxLiquidationLtv: 0.8 ether,
-                dynamicBonusFeeStart: 0.01 ether,
-                ltvForCompleteLiquidation: 0.9 ether,
-                dynamicBonusFeeDecaySteepness: 5 ether,
-                liquidationBaseFee: 0.05 ether,
-                minPenaltyPercentage: 0.05 ether,
-                priorityLiquidationGracePeriod: 5 minutes,
-                taggerLiquidationGracePeriod: 2 minutes,
-                liquidationWindowTag: 3 days
-            }),
-            ORACLE_PRICE_PRECISION,
-            0.75 ether
-        );
+        LiquidationConfiguration memory liquidationConfiguration = LiquidationConfiguration({
+            maxLiquidationLtv: 0.8 ether,
+            dynamicBonusFeeStart: 0.01 ether,
+            ltvForCompleteLiquidation: 0.9 ether,
+            dynamicBonusFeeDecaySteepness: 5 ether,
+            liquidationBaseFee: 0.05 ether,
+            minPenaltyPercentage: 0.05 ether,
+            isEnabledPriorityLiquidation: true,
+            disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
+            priorityLiquidationGracePeriod: 5 minutes,
+            taggerLiquidationGracePeriod: 2 minutes,
+            liquidationWindowTag: 3 days
+        });
+
+        createMarket(liquidationConfiguration, ORACLE_PRICE_PRECISION, 0.75 ether);
 
         vm.startPrank(bob);
         market.addCollateral(1 ether, bob);
@@ -341,8 +351,14 @@ contract AltoBorrowMarketTest is Test {
         assertEq(market.borrowSharesToAmount(borrowShares), 0.8 ether);
         vm.stopPrank();
 
-        deal(address(borrowToken), liquidator, 0.428260869565217392 ether);
-        vm.startPrank(liquidator);
+        deal(address(borrowToken), externalLiquidator, 0.453044162158624307 ether);
+        vm.startPrank(externalLiquidator);
+
+        market.tagLiquidablePosition(bob, externalLiquidator);
+
+        vm.warp(
+            block.timestamp + IMarket(address(market)).liquidationConfiguration().priorityLiquidationGracePeriod + 1
+        );
 
         (uint256 currentLtv, uint256 newLtv) = market.calculatePreLiquidationLtv(bob);
 
@@ -354,15 +370,25 @@ contract AltoBorrowMarketTest is Test {
             bob,
             address(collateralToken),
             address(borrowToken),
-            liquidator,
-            0.478260869565217392 ether,
-            0.428260869565217392 ether,
-            market.borrowAmountToShares(0.428260869565217392 ether),
+            externalLiquidator,
+            0.513044009445403087 ether,
+            0.453044162158624307 ether,
+            283152493245491393478263,
             0,
             0
         );
 
-        market.liquidate(bob, hex"");
+        (uint256 collateralAmount, uint256 repayAmount) = market.liquidate(bob, hex"");
+
+        assertEq(collateralAmount, 0.513044009445403087 ether);
+        assertEq(repayAmount, 0.453044162158624307 ether);
+
+        assertApproxEqAbs(
+            collateralAmount - repayAmount,
+            // because we have deposited 1 ether worth of collateral, we dont have apply percentage to it
+            liquidationConfiguration.dynamicBonusFeeStart + liquidationConfiguration.liquidationBaseFee,
+            0.0001 ether
+        );
 
         vm.stopPrank();
     }
@@ -376,6 +402,8 @@ contract AltoBorrowMarketTest is Test {
                 dynamicBonusFeeDecaySteepness: 5 ether,
                 liquidationBaseFee: 0.05 ether,
                 minPenaltyPercentage: 0.05 ether,
+                isEnabledPriorityLiquidation: true,
+                disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
                 priorityLiquidationGracePeriod: 5 minutes,
                 taggerLiquidationGracePeriod: 2 minutes,
                 liquidationWindowTag: 3 days
@@ -409,7 +437,10 @@ contract AltoBorrowMarketTest is Test {
             bob, address(collateralToken), address(borrowToken), liquidator, 0.95 ether, 0.9 ether, 500000 ether, 0, 0
         );
 
-        market.liquidate(bob, hex"");
+        (uint256 collateralAmount, uint256 repayAmount) = market.liquidate(bob, hex"");
+
+        assertEq(collateralAmount, 0.95 ether);
+        assertEq(repayAmount, 0.9 ether);
 
         vm.stopPrank();
     }
@@ -423,6 +454,8 @@ contract AltoBorrowMarketTest is Test {
                 dynamicBonusFeeDecaySteepness: 5 ether,
                 liquidationBaseFee: 0.05 ether,
                 minPenaltyPercentage: 0.05 ether,
+                isEnabledPriorityLiquidation: true,
+                disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
                 priorityLiquidationGracePeriod: 5 minutes,
                 taggerLiquidationGracePeriod: 2 minutes,
                 liquidationWindowTag: 3 days
@@ -467,6 +500,8 @@ contract AltoBorrowMarketTest is Test {
                 dynamicBonusFeeDecaySteepness: 5 ether,
                 liquidationBaseFee: 0.05 ether,
                 minPenaltyPercentage: 0.05 ether,
+                isEnabledPriorityLiquidation: true,
+                disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
                 priorityLiquidationGracePeriod: 5 minutes,
                 taggerLiquidationGracePeriod: 2 minutes,
                 liquidationWindowTag: 3 days
@@ -512,7 +547,11 @@ contract AltoBorrowMarketTest is Test {
             0,
             0
         );
-        market.liquidate(bob, hex"");
+        (uint256 collateralAmount, uint256 repayAmount) = market.liquidate(bob, hex"");
+
+        assertEq(collateralAmount, 950000343607371433);
+        assertEq(repayAmount, 900000343607371433);
+
         vm.stopPrank();
 
         (bool tagged, address tagger, uint256 timestamp) = market.liquidablePositions(bob);
@@ -530,6 +569,8 @@ contract AltoBorrowMarketTest is Test {
                 dynamicBonusFeeDecaySteepness: 5 ether,
                 liquidationBaseFee: 0.05 ether,
                 minPenaltyPercentage: 0.05 ether,
+                isEnabledPriorityLiquidation: true,
+                disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
                 priorityLiquidationGracePeriod: 5 minutes,
                 taggerLiquidationGracePeriod: 2 minutes,
                 liquidationWindowTag: 3 days
@@ -579,7 +620,10 @@ contract AltoBorrowMarketTest is Test {
             0
         );
 
-        market.liquidate(bob, hex"");
+        (uint256 collateralAmount, uint256 repayAmount) = market.liquidate(bob, hex"");
+
+        assertEq(collateralAmount, 950000480593735489);
+        assertEq(repayAmount, 900000480593735489);
 
         vm.stopPrank();
 
@@ -598,6 +642,8 @@ contract AltoBorrowMarketTest is Test {
                 dynamicBonusFeeDecaySteepness: 5 ether,
                 liquidationBaseFee: 0.05 ether,
                 minPenaltyPercentage: 0.05 ether,
+                isEnabledPriorityLiquidation: true,
+                disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
                 priorityLiquidationGracePeriod: 5 minutes,
                 taggerLiquidationGracePeriod: 2 minutes,
                 liquidationWindowTag: 3 days
@@ -627,7 +673,10 @@ contract AltoBorrowMarketTest is Test {
         emit IMarketEvents.Liquidation(
             bob, address(collateralToken), address(borrowToken), liquidator, 0.95 ether, 0.9 ether, borrowShares, 0, 0
         );
-        market.liquidate(bob, hex"");
+        (uint256 collateralAmount, uint256 repayAmount) = market.liquidate(bob, hex"");
+
+        assertEq(collateralAmount, 0.95 ether);
+        assertEq(repayAmount, 0.9 ether);
 
         vm.stopPrank();
     }
@@ -641,6 +690,8 @@ contract AltoBorrowMarketTest is Test {
                 dynamicBonusFeeDecaySteepness: 5 ether,
                 liquidationBaseFee: 0.05 ether,
                 minPenaltyPercentage: 0.05 ether,
+                isEnabledPriorityLiquidation: true,
+                disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
                 priorityLiquidationGracePeriod: 5 minutes,
                 taggerLiquidationGracePeriod: 2 minutes,
                 liquidationWindowTag: 3 days
@@ -671,6 +722,8 @@ contract AltoBorrowMarketTest is Test {
                 dynamicBonusFeeDecaySteepness: 5 ether,
                 liquidationBaseFee: 0.05 ether,
                 minPenaltyPercentage: 0.05 ether,
+                isEnabledPriorityLiquidation: true,
+                disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
                 priorityLiquidationGracePeriod: 5 minutes,
                 taggerLiquidationGracePeriod: 2 minutes,
                 liquidationWindowTag: 3 days
@@ -703,6 +756,8 @@ contract AltoBorrowMarketTest is Test {
                 dynamicBonusFeeDecaySteepness: 5 ether,
                 liquidationBaseFee: 0.05 ether,
                 minPenaltyPercentage: 0.05 ether,
+                isEnabledPriorityLiquidation: true,
+                disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
                 priorityLiquidationGracePeriod: 5 minutes,
                 taggerLiquidationGracePeriod: 2 minutes,
                 liquidationWindowTag: 3 days
@@ -740,6 +795,8 @@ contract AltoBorrowMarketTest is Test {
                 dynamicBonusFeeDecaySteepness: 5 ether,
                 liquidationBaseFee: 0.05 ether,
                 minPenaltyPercentage: 0.05 ether,
+                isEnabledPriorityLiquidation: true,
+                disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
                 priorityLiquidationGracePeriod: 5 minutes,
                 taggerLiquidationGracePeriod: 2 minutes,
                 liquidationWindowTag: 3 days
@@ -782,6 +839,8 @@ contract AltoBorrowMarketTest is Test {
                 dynamicBonusFeeDecaySteepness: 5 ether,
                 liquidationBaseFee: 0.05 ether,
                 minPenaltyPercentage: 0.05 ether,
+                isEnabledPriorityLiquidation: true,
+                disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
                 priorityLiquidationGracePeriod: 5 minutes,
                 taggerLiquidationGracePeriod: 2 minutes,
                 liquidationWindowTag: 3 days
@@ -822,6 +881,8 @@ contract AltoBorrowMarketTest is Test {
                 dynamicBonusFeeDecaySteepness: 5 ether,
                 liquidationBaseFee: 0.05 ether,
                 minPenaltyPercentage: 0.05 ether,
+                isEnabledPriorityLiquidation: true,
+                disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
                 priorityLiquidationGracePeriod: 5 minutes,
                 taggerLiquidationGracePeriod: 2 minutes,
                 liquidationWindowTag: 3 days
@@ -859,6 +920,8 @@ contract AltoBorrowMarketTest is Test {
                 dynamicBonusFeeDecaySteepness: 5 ether,
                 liquidationBaseFee: 0.05 ether,
                 minPenaltyPercentage: 0.01 ether,
+                isEnabledPriorityLiquidation: true,
+                disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
                 priorityLiquidationGracePeriod: 5 minutes,
                 taggerLiquidationGracePeriod: 2 minutes,
                 liquidationWindowTag: 3 days
@@ -904,7 +967,10 @@ contract AltoBorrowMarketTest is Test {
         assertEq(currentLtv, 1.5 ether);
         assertEq(newLtv, 0 ether);
 
-        market.liquidate(bob, hex"");
+        (uint256 collateralAmount, uint256 repayAmount) = market.liquidate(bob, hex"");
+
+        assertEq(collateralAmount, 2 ether);
+        assertEq(repayAmount, 1.9 ether);
 
         (uint128 assets, uint128 shares) = market.totalBorrowed();
         assertEq(assets, 1);
@@ -928,6 +994,8 @@ contract AltoBorrowMarketTest is Test {
                 dynamicBonusFeeDecaySteepness: 5 ether,
                 liquidationBaseFee: 0.05 ether,
                 minPenaltyPercentage: 0.01 ether,
+                isEnabledPriorityLiquidation: true,
+                disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
                 priorityLiquidationGracePeriod: 5 minutes,
                 taggerLiquidationGracePeriod: 2 minutes,
                 liquidationWindowTag: 3 days
@@ -969,7 +1037,11 @@ contract AltoBorrowMarketTest is Test {
             0
         );
 
-        market.liquidate(bob, abi.encode(address(borrowToken), 0.625 ether));
+        (uint256 collateralAmount, uint256 repayAmount) =
+            market.liquidate(bob, abi.encode(address(borrowToken), 0.625 ether));
+
+        assertEq(collateralAmount, 6.75 ether);
+        assertEq(repayAmount, 0.625 ether);
 
         vm.stopPrank();
     }

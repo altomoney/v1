@@ -1,0 +1,21 @@
+AltoMarket::TagLiquidablePosition()
+├── when market is paused
+│   └── it should revert
+├── when priority liquidation is disabled
+│   └── it should revert
+├── given user position is solvent
+│   └── it should revert with AltoBorrowMarketLiquidatingSolventPosition
+└── given user position is not solvent
+    ├── when liquidator is a priority liquidator
+    │   └── it should revert with AltoBorrowMarketLiquidationUnauthorized
+    ├── when user has already been tagged
+    │   ├── when liquidationWindowTag has not expired
+    │   │   └── it should revert with AltoBorrowMarketLiquidationAlreadyTagged
+    │   └── when liquidationWindowTag has expired
+    │       ├── it should emit AccrueInterest event
+    │       ├── it should update liquidablePositions
+    │       └── it should emit PositionTagged event  
+    └── when user has not been tagged
+│       ├── it should emit AccrueInterest event
+│       ├── it should update liquidablePositions
+│       └── it should emit PositionTagged event  

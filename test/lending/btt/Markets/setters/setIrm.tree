@@ -1,0 +1,9 @@
+AltoMarket::SetIrm
+├── when caller is not owner
+│   └── it should revert
+└── when caller is owner
+    ├── it should emit accrue event
+    ├── it should update irm address
+    ├── when irm is not zero address
+    │   └── it should set market on new irm
+    └── it should emit SetIrm event 

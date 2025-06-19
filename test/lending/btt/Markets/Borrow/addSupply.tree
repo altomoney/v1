@@ -1,0 +1,29 @@
+AltoBorrowMarket::AddSupply()
+├── when market is paused
+│   └── it should revert
+├── when market is frozen
+│   └── it should revert
+├── given invalid inputs
+│   ├── when both assets and shares are zero
+│   │   └── it should revert
+│   ├── when both assets and shares are non-zero
+│   │   └── it should revert
+│   └── when onBehalf is zero address
+│       └── it should revert
+└── given valid inputs
+    ├── when user has insufficient balance
+    │   └── it should revert
+    └── when user has sufficient balance
+        ├── when assets is zero
+        │   ├── it should calculate assets from shares
+        │   └── it should add supply shares to position
+        ├── when shares is zero
+        │   ├── it should calculate shares from assets
+        │   └── it should add supply shares to position
+        ├── it should emit AccrueInterest
+        ├── it should update totalSupply
+        ├── it should not update totalBorrowed
+        ├── it should transfer borrow tokens from sender
+        ├── it should emit AddSupply event
+        ├── it should add supply shares to position
+        └── it should return the amount of assets and shares added

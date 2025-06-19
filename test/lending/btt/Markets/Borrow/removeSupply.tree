@@ -1,0 +1,26 @@
+AltoBorrowMarket::RemoveSupply()
+├── when market is paused
+│   └── it should revert
+├── given invalid inputs
+│   ├── when both assets and shares are zero
+│   │   └── it should revert
+│   ├── when both assets and shares are non-zero
+│   │   └── it should revert
+│   ├── when receiver is zero address
+│   │   └── it should revert
+│   └── when sender is not authorized for onBehalf
+│       └── it should revert
+└── given valid inputs
+    ├── when assets is zero
+    │   ├── it should calculate assets from shares
+    │   └── it should remove supply shares from position
+    ├── when shares is zero
+    │   ├── it should calculate shares from assets
+    │   └── it should remove supply shares from position
+    ├── it should emit AccrueInterest
+    ├── it should update totalSupply
+    ├── it should not update totalBorrowed
+    ├── it should transfer borrow tokens to receiver
+    ├── it should emit RemoveSupply event
+    ├── it should remove supply shares from position
+    └── it should return the amount of assets and shares removed

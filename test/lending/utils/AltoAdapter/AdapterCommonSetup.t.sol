@@ -68,6 +68,8 @@ abstract contract AdapterCommonSetup is AdapterCommon {
                         dynamicBonusFeeDecaySteepness: 5 ether,
                         liquidationBaseFee: 0.05 ether,
                         minPenaltyPercentage: 0.01 ether,
+                        isEnabledPriorityLiquidation: true,
+                        disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
                         priorityLiquidationGracePeriod: 5 minutes,
                         taggerLiquidationGracePeriod: 2 minutes,
                         liquidationWindowTag: 3 days

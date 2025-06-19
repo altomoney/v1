@@ -498,7 +498,11 @@ contract AltoBorrowMarket is Auth, Pausable, IMarketStaticTypes {
         uint256 borrowValue =
             uint256(position[_user].borrowShares).convertToAssetsUp(totalBorrowed.assets, totalBorrowed.shares);
 
-        return _isLiquidation ? maxBorrowValue > borrowValue : maxBorrowValue >= borrowValue;
+        if (_isLiquidation) {
+            return borrowValue == 0 || maxBorrowValue > borrowValue;
+        }
+
+        return maxBorrowValue >= borrowValue;
     }
 
     /// @inheritdoc IMarketBase
@@ -508,22 +512,6 @@ contract AltoBorrowMarket is Auth, Pausable, IMarketStaticTypes {
         // Check if the position is underwater
         if (_isSolvent(borrower, true)) {
             revert AltoBorrowMarketLiquidatingSolventPosition();
-        }
-
-        if (!priorityLiquidators[msg.sender] && !liquidablePositions[borrower].tagged) {
-            revert AltoBorrowMarketLiquidationUnauthorized();
-        }
-
-        // Skip grace period checks for priority liquidators
-        if (!priorityLiquidators[msg.sender]) {
-            uint256 gracePeriod = liquidablePositions[borrower].tagger == msg.sender
-                ? liquidationConfiguration.priorityLiquidationGracePeriod
-                : liquidationConfiguration.priorityLiquidationGracePeriod
-                    + liquidationConfiguration.taggerLiquidationGracePeriod;
-
-            if (block.timestamp - liquidablePositions[borrower].timestamp <= gracePeriod) {
-                revert AltoBorrowMarketLiquidationUnauthorized();
-            }
         }
 
         Position memory _position = position[borrower];
@@ -537,10 +525,31 @@ contract AltoBorrowMarket is Auth, Pausable, IMarketStaticTypes {
         calc.positionBorrowedAssets =
             uint256(_position.borrowShares).convertToAssetsUp(totalBorrowed.assets, totalBorrowed.shares);
 
+        calc.currentLtv = calc.positionBorrowedAssets.divideWithPrecisionUp(calc.positionCollateralValue);
+
         // calculate liquidation percentage - how far are we between LTV and LLTV from current LTV
-        calc.liquidationPercentage = _calculateLiquidationPercentage(
-            calc.positionBorrowedAssets.divideWithPrecisionUp(calc.positionCollateralValue)
-        );
+        calc.liquidationPercentage = _calculateLiquidationPercentage(calc.currentLtv);
+
+        if (
+            liquidationConfiguration.isEnabledPriorityLiquidation
+                && calc.currentLtv < liquidationConfiguration.disablePriorityLiquidationAbovePositionLtv
+        ) {
+            if (!priorityLiquidators[msg.sender] && !liquidablePositions[borrower].tagged) {
+                revert AltoBorrowMarketLiquidationUnauthorized();
+            }
+
+            // Skip grace period checks for priority liquidators
+            if (!priorityLiquidators[msg.sender]) {
+                uint256 gracePeriod = liquidablePositions[borrower].tagger == msg.sender
+                    ? liquidationConfiguration.priorityLiquidationGracePeriod
+                    : liquidationConfiguration.priorityLiquidationGracePeriod
+                        + liquidationConfiguration.taggerLiquidationGracePeriod;
+
+                if (block.timestamp - liquidablePositions[borrower].timestamp <= gracePeriod) {
+                    revert AltoBorrowMarketLiquidationUnauthorized();
+                }
+            }
+        }
 
         // apply above to calculate liquidation fee (priority liquidators don't get a bonus fee only base fee)
         calc.liquidationFee = (!priorityLiquidators[msg.sender] ? _calculateBonusFee(calc.liquidationPercentage) : 0)
@@ -594,7 +603,12 @@ contract AltoBorrowMarket is Auth, Pausable, IMarketStaticTypes {
         totalBorrowed.assets =
             (totalBorrowed.assets > f_repayAmount ? totalBorrowed.assets - f_repayAmount : 0).toUint128();
 
-        delete liquidablePositions[borrower];
+        if (
+            liquidationConfiguration.isEnabledPriorityLiquidation
+                && calc.currentLtv < liquidationConfiguration.disablePriorityLiquidationAbovePositionLtv
+        ) {
+            delete liquidablePositions[borrower];
+        }
 
         Balance memory badDebt;
         if (position[borrower].collateralAssets == 0) {
@@ -709,6 +723,12 @@ contract AltoBorrowMarket is Auth, Pausable, IMarketStaticTypes {
 
     /// @inheritdoc IMarketBase
     function tagLiquidablePosition(address user, address liquidator) external whenNotPaused {
+        if (!liquidationConfiguration.isEnabledPriorityLiquidation) {
+            revert AltoBorrowMarketPriorityLiquidationDisabled();
+        }
+
+        _accrueInterest();
+
         if (_isSolvent(user, true)) {
             revert AltoBorrowMarketLiquidatingSolventPosition();
         }

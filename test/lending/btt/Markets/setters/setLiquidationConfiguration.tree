@@ -1,0 +1,26 @@
+AltoMarket::setLiquidationConfiguration
+├── when caller is not owner
+│   └── it should revert
+└── when caller is owner
+    ├── it should update liquidation configuration
+    ├── it should emit SetLiquidationConfiguration event 
+    ├── when maxLiquidationLtv is less than maxLtv
+    │   └── it should revert
+    ├── when ltvForCompleteLiquidation is less than maxLiquidationLtv
+    │   └── it should revert
+    ├── when ltvForCompleteLiquidation is greater than MATH_PRECISION
+    │   └── it should revert
+    ├── when dynamicBonusFeeDecaySteepness is invalid
+    │   └── it should revert
+    ├── when sum of dynamicBonusFeeStart and liquidationBaseFee is greater than MATH_PRECISION
+    │   └── it should revert
+    ├── when minPenaltyPercentage is greater than MATH_PRECISION
+    │   └── it should revert
+    ├── when priorityLiquidationGracePeriod is greater than 1 hour
+    │   └── it should revert
+    ├── when taggerLiquidationGracePeriod is greater than 30 minutes
+    │   └── it should revert
+    ├── when liquidationWindowTag is greater than 3 days
+    │   └── it should revert
+    ├── when grace periods sum is greater than liquidationWindowTag
+    │   └── it should revert
