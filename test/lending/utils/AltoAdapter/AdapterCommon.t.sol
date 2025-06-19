@@ -17,6 +17,72 @@ import {MarketInstance} from "./MarketInstance.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
 import {FixedPointMath} from "@alto/lending/libraries/FixedPointMath.sol";
 
+// Mock WETH contract for testing
+contract WETHMock {
+    string public name = "Wrapped Ether";
+    string public symbol = "WETH";
+    uint8 public decimals = 18;
+
+    mapping(address => uint256) public balanceOf;
+    mapping(address => mapping(address => uint256)) public allowance;
+
+    uint256 public totalSupply;
+
+    event Transfer(address indexed from, address indexed to, uint256 value);
+    event Approval(address indexed owner, address indexed spender, uint256 value);
+    event Deposit(address indexed dst, uint256 wad);
+    event Withdrawal(address indexed src, uint256 wad);
+
+    receive() external payable {
+        deposit();
+    }
+
+    function deposit() public payable {
+        balanceOf[msg.sender] += msg.value;
+        totalSupply += msg.value;
+        emit Deposit(msg.sender, msg.value);
+        emit Transfer(address(0), msg.sender, msg.value);
+    }
+
+    function withdraw(uint256 wad) public {
+        require(balanceOf[msg.sender] >= wad, "insufficient balance");
+        balanceOf[msg.sender] -= wad;
+        totalSupply -= wad;
+        payable(msg.sender).transfer(wad);
+        emit Withdrawal(msg.sender, wad);
+        emit Transfer(msg.sender, address(0), wad);
+    }
+
+    function transfer(address to, uint256 value) public returns (bool) {
+        require(balanceOf[msg.sender] >= value, "insufficient balance");
+        balanceOf[msg.sender] -= value;
+        balanceOf[to] += value;
+        emit Transfer(msg.sender, to, value);
+        return true;
+    }
+
+    function transferFrom(address from, address to, uint256 value) public returns (bool) {
+        require(balanceOf[from] >= value, "insufficient balance");
+        require(allowance[from][msg.sender] >= value, "insufficient allowance");
+
+        balanceOf[from] -= value;
+        balanceOf[to] += value;
+
+        if (allowance[from][msg.sender] != type(uint256).max) {
+            allowance[from][msg.sender] -= value;
+        }
+
+        emit Transfer(from, to, value);
+        return true;
+    }
+
+    function approve(address spender, uint256 value) public returns (bool) {
+        allowance[msg.sender][spender] = value;
+        emit Approval(msg.sender, spender, value);
+        return true;
+    }
+}
+
 uint256 constant MIN_AMOUNT = 1000;
 uint256 constant MAX_AMOUNT = 2 ** 64; // Must be less than or equal to type(uint160).max.
 uint256 constant SIGNATURE_DEADLINE = type(uint32).max;
@@ -32,6 +98,7 @@ abstract contract AdapterCommon is Test {
     address internal immutable LIQUIDATOR = makeAddr("Liquidator");
 
     OracleMock internal oracle;
+    WETHMock internal weth;
 
     Bundler3 internal bundler3;
     AltoAdapter internal altoAdapter;
@@ -41,7 +108,8 @@ abstract contract AdapterCommon is Test {
 
     function setUp() public virtual {
         bundler3 = new Bundler3();
-        altoAdapter = new AltoAdapter(address(bundler3), address(1));
+        weth = new WETHMock();
+        altoAdapter = new AltoAdapter(address(bundler3), address(weth));
         oracle = new OracleMock();
         oracle.setPrice(ORACLE_PRICE_PRECISION);
     }
@@ -147,7 +215,12 @@ abstract contract AdapterCommon is Test {
         return _call(adapter, abi.encodeCall(adapter.erc20Transfer, (token, recipient, amount)));
     }
 
-    function _erc20TransferFrom(address token, address recipient, uint256 amount) internal view returns (Call memory) {
+    function _erc20TransferFrom(address token, address recipient, uint256 amount)
+        internal
+        view
+        virtual
+        returns (Call memory)
+    {
         return _call(altoAdapter, abi.encodeCall(AltoAdapter.erc20TransferFrom, (token, recipient, amount)));
     }
 
@@ -197,7 +270,7 @@ abstract contract AdapterCommon is Test {
         uint256 shares,
         uint256 maxSharePriceE27,
         address onBehalf
-    ) internal view returns (Call memory) {
+    ) internal view virtual returns (Call memory) {
         return _call(
             altoAdapter,
             abi.encodeCall(AltoAdapter.marketAddSupply, (market, assets, shares, maxSharePriceE27, onBehalf)),
@@ -211,7 +284,7 @@ abstract contract AdapterCommon is Test {
         uint256 shares,
         uint256 minSharePriceE27,
         address receiver
-    ) internal view returns (Call memory) {
+    ) internal view virtual returns (Call memory) {
         return _call(
             altoAdapter,
             abi.encodeCall(AltoAdapter.marketRemoveSupply, (market, assets, shares, minSharePriceE27, receiver))

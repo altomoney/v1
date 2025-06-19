@@ -1,0 +1,13 @@
+Erc20TransferFromTest
+├── when receiver is zero address
+│   └── it should revert
+├── when amount is max uint256
+│   ├── when initiator has zero token balance
+│   │   └── it should revert
+│   └── when initiator has token balance
+│       └── it should transfer initiator balance
+└── when amount is not max uint256
+    ├── when amount is zero
+    │   └── it should revert
+    └── when amount is greater than zero
+        └── it should transfer specified amount 

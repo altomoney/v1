@@ -46,9 +46,8 @@ contract AltoLeverageTest is Test {
         OracleMock(oracle).setPrice(1 * ORACLE_PRICE_PRECISION);
 
         market = IMarket(
-            deployCode(
-                "AltoBorrowMarket.sol",
-                abi.encode(
+            address(
+                new AltoBorrowMarket(
                     address(borrowToken),
                     address(collateralToken),
                     address(irm),

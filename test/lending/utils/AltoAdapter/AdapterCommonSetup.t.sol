@@ -4,6 +4,7 @@ pragma solidity ^0.8.28;
 import {AltoAdapter} from "@alto/utils/AltoAdapter.sol";
 import {IMarket, LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
+import {MarketInstance} from "./MarketInstance.sol";
 
 import {AdapterCommon} from "./AdapterCommon.t.sol";
 import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
@@ -16,7 +17,6 @@ import {SwapperSimpleMock} from "@alto/lending/mocks/SwapperSimpleMock.sol";
 import {FlashBorrowLeverageData} from "@alto/lending/leverage/AltoLeverage.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-// needed for deployCode (and Test)
 import "forge-std/Test.sol";
 
 uint256 constant MIN_AMOUNT = 1000;
@@ -51,9 +51,8 @@ abstract contract AdapterCommonSetup is AdapterCommon {
 
         address irm = address(new FixedRateIrm(0.04 ether / uint256(365 days), address(this)));
         market = IMarket(
-            deployCode(
-                "MarketInstance.sol",
-                abi.encode(
+            address(
+                new MarketInstance(
                     address(borrowToken),
                     address(collateralToken),
                     address(irm),

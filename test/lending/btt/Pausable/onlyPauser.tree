@@ -1,0 +1,13 @@
+OnlyPauserTest
+├── given caller is not set as pauser for pauseType
+│   ├── when pauseType is zero
+│   │   └── it should revert with Unauthorized
+│   └── when pauseType is non-zero
+│       └── it should revert with Unauthorized
+├── given caller is set as pauser for pauseType
+│   ├── when pauseType is zero
+│   │   └── it should allow function execution
+│   └── when pauseType is non-zero
+│       └── it should allow function execution
+└── given caller is pauser for different pauseType
+    └── it should revert with Unauthorized 

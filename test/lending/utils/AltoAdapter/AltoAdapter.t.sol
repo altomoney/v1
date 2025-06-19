@@ -8,6 +8,7 @@ import {IAuth} from "@alto/utils/interfaces/IAuth.sol";
 
 import {ErrorsLib} from "@morpho-org/bundler3/libraries/ErrorsLib.sol";
 import {MathRayLib} from "@morpho-org/bundler3/libraries/MathRayLib.sol";
+import {Call} from "@morpho-org/bundler3/Bundler3.sol";
 
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
 import {FixedPointMath, MATH_PRECISION} from "@alto/lending/libraries/FixedPointMath.sol";
@@ -944,5 +945,147 @@ contract AltoAdapterTest is AdapterCommonSetup {
         vm.expectRevert(ErrorsLib.SlippageExceeded.selector);
         bundle.push(_marketRepay(market, assets, 0, sharePriceE27, address(this)));
         bundler3.multicall(bundle);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        UNWRAP NATIVE TESTS
+    //////////////////////////////////////////////////////////////*/
+
+    function testUnwrapNativeRevertWhenAmountMaxAndAdapterHasZeroWrappedBalance() public {
+        vm.startPrank(USER);
+
+        // Ensure adapter has zero wrapped balance
+        assertEq(altoAdapter.WRAPPED_NATIVE().balanceOf(address(altoAdapter)), 0);
+
+        bundle.push(_unwrapNative(type(uint256).max, USER));
+
+        vm.expectRevert(ErrorsLib.ZeroAmount.selector);
+        bundler3.multicall(bundle);
+
+        vm.stopPrank();
+    }
+
+    function testUnwrapNativeRevertWhenAmountIsZero() public {
+        vm.startPrank(USER);
+
+        bundle.push(_unwrapNative(0, USER));
+
+        vm.expectRevert(ErrorsLib.ZeroAmount.selector);
+        bundler3.multicall(bundle);
+
+        vm.stopPrank();
+    }
+
+    function testUnwrapNativeWithSpecifiedAmountAndAdapterReceiver() public {
+        vm.startPrank(USER);
+
+        uint256 amount = 1 ether;
+
+        // Give ETH to USER, deposit to WETH, then transfer WETH to adapter
+        vm.deal(USER, amount);
+        altoAdapter.WRAPPED_NATIVE().deposit{value: amount}();
+        altoAdapter.WRAPPED_NATIVE().transfer(address(altoAdapter), amount);
+
+        uint256 adapterWrappedBalanceBefore = altoAdapter.WRAPPED_NATIVE().balanceOf(address(altoAdapter));
+        uint256 adapterNativeBalanceBefore = address(altoAdapter).balance;
+
+        bundle.push(_unwrapNative(amount, address(altoAdapter)));
+        bundler3.multicall(bundle);
+
+        uint256 adapterWrappedBalanceAfter = altoAdapter.WRAPPED_NATIVE().balanceOf(address(altoAdapter));
+        uint256 adapterNativeBalanceAfter = address(altoAdapter).balance;
+
+        assertEq(adapterWrappedBalanceAfter, adapterWrappedBalanceBefore - amount);
+        assertEq(adapterNativeBalanceAfter, adapterNativeBalanceBefore + amount);
+
+        vm.stopPrank();
+    }
+
+    function testUnwrapNativeWithSpecifiedAmountAndExternalReceiver() public {
+        vm.startPrank(USER);
+
+        uint256 amount = 1 ether;
+
+        // Give ETH to USER, deposit to WETH, then transfer WETH to adapter
+        vm.deal(USER, amount);
+        altoAdapter.WRAPPED_NATIVE().deposit{value: amount}();
+        altoAdapter.WRAPPED_NATIVE().transfer(address(altoAdapter), amount);
+
+        uint256 adapterWrappedBalanceBefore = altoAdapter.WRAPPED_NATIVE().balanceOf(address(altoAdapter));
+        uint256 receiverNativeBalanceBefore = RECEIVER.balance;
+
+        bundle.push(_unwrapNative(amount, RECEIVER));
+        bundler3.multicall(bundle);
+
+        uint256 adapterWrappedBalanceAfter = altoAdapter.WRAPPED_NATIVE().balanceOf(address(altoAdapter));
+        uint256 receiverNativeBalanceAfter = RECEIVER.balance;
+
+        assertEq(adapterWrappedBalanceAfter, adapterWrappedBalanceBefore - amount);
+        assertEq(receiverNativeBalanceAfter, receiverNativeBalanceBefore + amount);
+
+        vm.stopPrank();
+    }
+
+    function testUnwrapNativeWithMaxAmountAndAdapterReceiver() public {
+        vm.startPrank(USER);
+
+        uint256 amount = 2 ether;
+
+        // Give ETH to USER, deposit to WETH, then transfer WETH to adapter
+        vm.deal(USER, amount);
+        altoAdapter.WRAPPED_NATIVE().deposit{value: amount}();
+        altoAdapter.WRAPPED_NATIVE().transfer(address(altoAdapter), amount);
+
+        uint256 adapterWrappedBalanceBefore = altoAdapter.WRAPPED_NATIVE().balanceOf(address(altoAdapter));
+        uint256 adapterNativeBalanceBefore = address(altoAdapter).balance;
+
+        bundle.push(_unwrapNative(type(uint256).max, address(altoAdapter)));
+        bundler3.multicall(bundle);
+
+        uint256 adapterWrappedBalanceAfter = altoAdapter.WRAPPED_NATIVE().balanceOf(address(altoAdapter));
+        uint256 adapterNativeBalanceAfter = address(altoAdapter).balance;
+
+        assertEq(adapterWrappedBalanceAfter, 0);
+        assertEq(adapterNativeBalanceAfter, adapterNativeBalanceBefore + amount);
+
+        vm.stopPrank();
+    }
+
+    function testUnwrapNativeWithMaxAmountAndExternalReceiver() public {
+        vm.startPrank(USER);
+
+        uint256 amount = 2 ether;
+
+        // Give ETH to USER, deposit to WETH, then transfer WETH to adapter
+        vm.deal(USER, amount);
+        altoAdapter.WRAPPED_NATIVE().deposit{value: amount}();
+        altoAdapter.WRAPPED_NATIVE().transfer(address(altoAdapter), amount);
+
+        uint256 adapterWrappedBalanceBefore = altoAdapter.WRAPPED_NATIVE().balanceOf(address(altoAdapter));
+        uint256 receiverNativeBalanceBefore = RECEIVER.balance;
+
+        bundle.push(_unwrapNative(type(uint256).max, RECEIVER));
+        bundler3.multicall(bundle);
+
+        uint256 adapterWrappedBalanceAfter = altoAdapter.WRAPPED_NATIVE().balanceOf(address(altoAdapter));
+        uint256 receiverNativeBalanceAfter = RECEIVER.balance;
+
+        assertEq(adapterWrappedBalanceAfter, 0);
+        assertEq(receiverNativeBalanceAfter, receiverNativeBalanceBefore + amount);
+
+        vm.stopPrank();
+    }
+
+    function _unwrapNative(uint256 amount, address receiver) internal view returns (Call memory) {
+        return _call(altoAdapter, abi.encodeCall(altoAdapter.unwrapNative, (amount, receiver)));
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        CONSTRUCTOR TESTS
+    //////////////////////////////////////////////////////////////*/
+
+    function testConstructorRevertWhenWNativeIsZeroAddress() public {
+        vm.expectRevert(ErrorsLib.ZeroAddress.selector);
+        new AltoAdapter(address(bundler3), address(0));
     }
 }

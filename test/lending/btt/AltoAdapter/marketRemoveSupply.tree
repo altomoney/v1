@@ -1,0 +1,17 @@
+MarketRemoveSupplyTest
+├── given shares is max uint256
+│   ├── when initiator has zero supply shares
+│   │   └── it should revert
+│   └── when initiator has supply shares
+│       ├── when slippage protection fails
+│       │   └── it should revert
+│       └── when slippage protection passes
+│           └── it should remove supply with initiator shares
+└── given shares is not max uint256
+    ├── when shares is zero
+    │   └── it should proceed with zero shares
+    └── when shares is greater than zero
+        ├── when slippage protection fails
+        │   └── it should revert
+        └── when slippage protection passes
+            └── it should remove supply with specified shares 

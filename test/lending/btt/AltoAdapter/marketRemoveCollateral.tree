@@ -1,0 +1,11 @@
+MarketRemoveCollateralTest
+├── given assets is max uint256
+│   ├── when initiator has zero collateral assets
+│   │   └── it should revert
+│   └── when initiator has collateral assets
+│       └── it should remove collateral with initiator assets
+└── given assets is not max uint256
+    ├── when assets is zero
+    │   └── it should revert
+    └── when assets is greater than zero
+        └── it should remove collateral with specified assets 
