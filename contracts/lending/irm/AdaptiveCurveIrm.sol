@@ -10,7 +10,7 @@ import {MathLib} from "@morpho-org/irm/adaptive-curve-irm/libraries/MathLib.sol"
 import {IIrm} from "../interfaces/IIrm.sol";
 import {IMarket} from "../interfaces/IMarket.sol";
 import {ExpLib} from "../libraries/ExpLib.sol";
-import {FixedPointMath} from "../libraries/FixedPointMath.sol";
+import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 
 /// @title Adaptive Curve Interest Rate Model
 /// @author Alto Foundation

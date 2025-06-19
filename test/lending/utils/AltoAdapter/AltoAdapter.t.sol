@@ -11,7 +11,7 @@ import {MathRayLib} from "@morpho-org/bundler3/libraries/MathRayLib.sol";
 import {Call} from "@morpho-org/bundler3/Bundler3.sol";
 
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
-import {FixedPointMath, MATH_PRECISION} from "@alto/lending/libraries/FixedPointMath.sol";
+import {FixedPointMath, MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 contract AltoAdapterTest is AdapterCommonSetup {

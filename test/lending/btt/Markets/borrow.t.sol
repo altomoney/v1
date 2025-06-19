@@ -6,7 +6,7 @@ import {IPausable} from "@alto/utils/Pausable.sol";
 import {PAUSED_MARKET, FROZEN_MARKET} from "@alto/utils/Constants.sol";
 import {IMarketErrors, Position, IMarketEvents, Balance} from "@alto/lending/interfaces/IMarket.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
-import {FixedPointMath} from "@alto/lending/libraries/FixedPointMath.sol";
+import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {IBorrowCallback} from "@alto/lending/interfaces/IMarketCallbacks.sol";
 import {AltoMintMarket} from "@alto/lending/AltoMintMarket.sol";
 

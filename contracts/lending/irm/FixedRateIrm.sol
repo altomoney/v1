@@ -4,7 +4,7 @@ pragma solidity ^0.8.22;
 import {IIrm} from "../interfaces/IIrm.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {IMarket} from "../interfaces/IMarket.sol";
-import {FixedPointMath} from "../libraries/FixedPointMath.sol";
+import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 
 /// @title Fixed Rate Interest Rate Model
 /// @author Alto Foundation

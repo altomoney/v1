@@ -3,7 +3,7 @@ pragma solidity ^0.8.22;
 
 import {Test} from "forge-std/Test.sol";
 
-import {FixedPointMath} from "@alto/lending/libraries/FixedPointMath.sol";
+import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {IIrm} from "@alto/lending/interfaces/IIrm.sol";

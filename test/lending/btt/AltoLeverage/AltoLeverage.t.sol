@@ -18,7 +18,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SwapperSimpleMock} from "@alto/lending/mocks/SwapperSimpleMock.sol";
 
 import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
-import {FixedPointMath} from "@alto/lending/libraries/FixedPointMath.sol";
+import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
 
 contract AltoLeverageBTTTest is Test {

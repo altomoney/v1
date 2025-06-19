@@ -19,7 +19,7 @@ import {SwapperSimpleMock} from "@alto/lending/mocks/SwapperSimpleMock.sol";
 import {console} from "forge-std/console.sol";
 
 import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
-import {FixedPointMath} from "@alto/lending/libraries/FixedPointMath.sol";
+import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
 
 contract AltoLeverageTest is Test {

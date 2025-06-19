@@ -19,9 +19,9 @@ import {Auth} from "@alto/utils/Auth.sol";
 import {IIrm} from "@alto/lending/interfaces/IIrm.sol";
 
 import {ExpLib, MATH_PRECISION_INT} from "./libraries/ExpLib.sol";
-import {FixedPointMath, MATH_PRECISION} from "./libraries/FixedPointMath.sol";
 import {Uint128Converter} from "./libraries/Uint128Converter.sol";
 
+import {FixedPointMath, MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 import {PAUSED_MARKET, FROZEN_MARKET} from "@alto/utils/Constants.sol";
 import {IMarketStaticTypes, IMarketBase} from "@alto/lending/interfaces/IMarket.sol";
 import {Pausable, IPausable} from "@alto/utils/Pausable.sol";

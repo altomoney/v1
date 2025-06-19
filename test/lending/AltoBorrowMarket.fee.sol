@@ -12,7 +12,7 @@ import {ERC20Mock} from "../helpers/ERC20Mock.sol";
 import {console2} from "forge-std/console2.sol";
 import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
-import {FixedPointMath, MATH_PRECISION} from "@alto/lending/libraries/FixedPointMath.sol";
+import {FixedPointMath, MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 
 contract AltoBorrowMarketMock is AltoBorrowMarket {
     using AssetShareConversionMath for uint256;
