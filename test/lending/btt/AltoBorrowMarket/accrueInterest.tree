@@ -1,0 +1,11 @@
+AccrueInterestTest
+├── given market is paused
+│   └── it should revert
+└── given market is not paused
+    ├── when total borrowed is zero
+    │   └── it should not accrue interest
+    └── when total borrowed is greater than zero
+        ├── when borrow rate is zero
+        │   └── it should not accrue interest
+        └── when borrow rate is greater than zero
+            └── it should accrue interest 

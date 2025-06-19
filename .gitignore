@@ -9,3 +9,6 @@ cache
 out
 broadcast
 
+# coverage
+coverage
+lcov.info

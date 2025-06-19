@@ -555,24 +555,24 @@ contract AltoBorrowMarket is Auth, Pausable, IMarketStaticTypes {
         calc.remainingCollateralAfterFeeInBorrowAssets =
             remainingCollateralAfterFee.divideWithRounding(calc.collateralPrice, ORACLE_PRICE_PRECISION, false);
 
-        uint256 collateralToSellInBorrowAssets = (
+        calc.collateralToSellInBorrowAssets = (
             calc.positionBorrowedAssets
                 - calc.remainingCollateralAfterFeeInBorrowAssets.multiplyWithPrecision(calc.newLtv)
         ).divideWithPrecisionUp(MATH_PRECISION - calc.newLtv);
-        collateralToSellInBorrowAssets =
-            Math.min(collateralToSellInBorrowAssets, calc.remainingCollateralAfterFeeInBorrowAssets);
-        collateralToSellInBorrowAssets = Math.min(collateralToSellInBorrowAssets, calc.positionBorrowedAssets);
+        calc.collateralToSellInBorrowAssets =
+            Math.min(calc.collateralToSellInBorrowAssets, calc.remainingCollateralAfterFeeInBorrowAssets);
+        calc.collateralToSellInBorrowAssets = Math.min(calc.collateralToSellInBorrowAssets, calc.positionBorrowedAssets);
 
         // Calculate final amounts
-        uint256 totalCollateralToTake = collateralToSellInBorrowAssets.divideWithRounding(
+        uint256 totalCollateralToTake = calc.collateralToSellInBorrowAssets.divideWithRounding(
             ORACLE_PRICE_PRECISION, calc.collateralPrice, true
         ) + calc.liquidatorBonusFee;
         uint256 f_collateralAmount =
             totalCollateralToTake > _position.collateralAssets ? _position.collateralAssets : totalCollateralToTake;
 
-        uint256 f_repayAmount = collateralToSellInBorrowAssets > calc.positionBorrowedAssets
+        uint256 f_repayAmount = calc.collateralToSellInBorrowAssets > calc.positionBorrowedAssets
             ? calc.positionBorrowedAssets
-            : collateralToSellInBorrowAssets;
+            : calc.collateralToSellInBorrowAssets;
 
         uint256 f_repayShares = f_repayAmount.convertToSharesDown(totalBorrowed.assets, totalBorrowed.shares);
 

@@ -1,0 +1,14 @@
+AddCollateralTest
+├── given market is paused
+│   └── it should revert
+├── given market is frozen
+│   └── it should revert
+├── given assets is zero
+│   └── it should revert
+├── given onBehalf is zero address
+│   └── it should revert
+└── given assets is greater than zero
+    ├── when user has insufficient balance
+    │   └── it should revert
+    └── when user has sufficient balance
+        └── it should add collateral to position 

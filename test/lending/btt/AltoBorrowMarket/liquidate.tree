@@ -1,0 +1,25 @@
+LiquidateTest
+├── given market is paused
+│   └── it should revert
+├── given position is solvent
+│   └── it should revert
+├── given liquidator is not priority liquidator
+│   ├── given position is not tagged
+│   │   └── it should revert
+│   ├── given position is tagged by liquidator
+│   │   ├── when within priority grace period
+│   │   │   └── it should revert
+│   │   └── when after priority grace period
+│   │       └── it should liquidate position
+│   └── given position is tagged by other liquidator
+│       ├── when within tagger grace period
+│       │   └── it should revert
+│       └── when after tagger grace period
+│           └── it should liquidate position
+└── given liquidator is priority liquidator
+    ├── when current LTV is less than max liquidation LTV
+    │   └── it should revert
+    ├── when current LTV is between max liquidation LTV and complete liquidation LTV
+    │   └── it should liquidate partial position
+    └── when current LTV is greater than complete liquidation LTV
+        └── it should liquidate complete position 

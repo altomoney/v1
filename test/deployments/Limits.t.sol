@@ -9,12 +9,10 @@ import {AltoUsdoBatch} from "deployments/releases/alto-v1/batches/AltoUsdoBatch.
 import {AltoUtilitiesBatch} from "deployments/releases/alto-v1/batches/AltoUtilitiesBatch.sol";
 import {AltoPostSetup} from "deployments/releases/alto-v1/batches/AltoPostSetup.sol";
 import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
-import {TestHelperOz5} from "@layerzerolabs/test-devtools-evm-foundry/contracts/TestHelperOz5.sol";
 
-contract LimitsTest is Test, TestHelperOz5 {
+contract LimitsTest is Test {
     address owner;
     address leverageSwapper;
-    address endpointMock;
     address delegate;
     uint256 constant MAX_INIT_CONSTRUCTOR_CODE_SIZE = 49152;
 
@@ -22,13 +20,9 @@ contract LimitsTest is Test, TestHelperOz5 {
     address erc20Mock2;
     address erc20Mock3;
 
-    function setUp() public override {
-        super.setUp();
-        setUpEndpoints(1, LibraryType.UltraLightNode);
-
+    function setUp() public {
         owner = makeAddr("owner");
         leverageSwapper = makeAddr("leverageSwapper");
-        endpointMock = address(endpoints[1]);
         delegate = owner;
 
         erc20Mock1 = address(new ERC20Mock("A", "A"));

@@ -13,19 +13,7 @@ import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {IMarketBase, IMarket} from "@alto/lending/interfaces/IMarket.sol";
 import {PAUSED_MARKET, FROZEN_MARKET} from "@alto/utils/Constants.sol";
 import {IPausable} from "@alto/utils/Pausable.sol";
-
-// Create mock implementation for testing
-contract MockERC20 is ERC20 {
-    constructor(string memory name_, string memory symbol_) ERC20(name_, symbol_) {}
-
-    function mint(address to, uint256 amount) external {
-        _mint(to, amount);
-    }
-
-    function burn(address from, uint256 amount) external {
-        _burn(from, amount);
-    }
-}
+import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
 
 contract MockMarket is AltoBorrowMarket {
     constructor(
@@ -60,8 +48,8 @@ contract MockMarket is AltoBorrowMarket {
 
 contract AltoBorrowMarketPauseTest is Test {
     MockMarket market;
-    MockERC20 borrowToken;
-    MockERC20 collateralToken;
+    ERC20Mock borrowToken;
+    ERC20Mock collateralToken;
 
     address owner = address(this);
     address alice = address(0xA11CE);
@@ -70,8 +58,8 @@ contract AltoBorrowMarketPauseTest is Test {
     uint256 constant INITIAL_AMOUNT = 1000 ether;
 
     function setUp() public {
-        borrowToken = new MockERC20("Borrow Token", "BTKN");
-        collateralToken = new MockERC20("Collateral Token", "CTKN");
+        borrowToken = new ERC20Mock("Borrow Token", "BTKN");
+        collateralToken = new ERC20Mock("Collateral Token", "CTKN");
 
         address irm = address(new FixedRateIrm(0.04 ether / uint256(365 days), address(this)));
         address oracle = address(new OracleMock());
@@ -100,10 +88,10 @@ contract AltoBorrowMarketPauseTest is Test {
         );
 
         // Setup initial balances
-        borrowToken.mint(alice, INITIAL_AMOUNT);
-        borrowToken.mint(bob, INITIAL_AMOUNT);
-        collateralToken.mint(alice, INITIAL_AMOUNT);
-        collateralToken.mint(bob, INITIAL_AMOUNT);
+        deal(address(borrowToken), alice, INITIAL_AMOUNT);
+        deal(address(borrowToken), bob, INITIAL_AMOUNT);
+        deal(address(collateralToken), alice, INITIAL_AMOUNT);
+        deal(address(collateralToken), bob, INITIAL_AMOUNT);
 
         // Setup approvals
         vm.startPrank(alice);
