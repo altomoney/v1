@@ -4,7 +4,7 @@ pragma solidity ^0.8.22;
 import {AltoRelease} from "deployments/releases/alto-v1/AltoRelease.sol";
 import {AltoReport, AltoInput} from "deployments/interfaces/IAltoReport.sol";
 import {Script} from "forge-std/Script.sol";
-import {AltoToken, IAltoToken} from "@alto/tokens/AltoToken.sol";
+import {AltoToken} from "@alto/tokens/AltoToken.sol";
 import {AltoMulticall} from "@alto/deployments/contracts/multicall/AltoMulticall.sol";
 import {ERC20Testnet} from "@alto/deployments/contracts/testnet/ERC20Testnet.sol";
 import {USDO} from "@alto/tokens/USDO.sol";

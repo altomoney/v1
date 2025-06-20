@@ -5,14 +5,14 @@ import {OFT} from "@alto/utils/OFT.sol";
 import {IUSDO} from "@alto/tokens/interfaces/IUSDO.sol";
 
 import {Pausable, IPausable} from "@alto/utils/Pausable.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {PAUSED_ROLE} from "@alto/utils/Constants.sol";
 
 /// @title USDO Token
 /// @author Alto Foundation
 /// @custom:contact security@alto.xyz
 /// @notice The USDO Token is the stablecoin of the Alto Protocol.
-contract USDO is Pausable, OFT, IUSDO {
+contract USDO is Ownable2Step, Pausable, OFT, IUSDO {
     uint256 public fees;
 
     address public flashLoanHelper;
@@ -111,5 +111,15 @@ contract USDO is Pausable, OFT, IUSDO {
             revert IPausable.IsPaused(PAUSED_ROLE);
         }
         _;
+    }
+
+    /// @dev we need to override the _transferOwnership function as inherited contracts use Ownable
+    function _transferOwnership(address newOwner) internal virtual override(Ownable, Ownable2Step) {
+        super._transferOwnership(newOwner);
+    }
+
+    /// @dev we need to override the transferOwnership function as inherited contracts use Ownable
+    function transferOwnership(address newOwner) public virtual override(Ownable, Ownable2Step) {
+        super.transferOwnership(newOwner);
     }
 }
