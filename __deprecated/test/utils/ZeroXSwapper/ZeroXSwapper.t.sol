@@ -53,8 +53,8 @@ contract ZeroXSwapperTest is TestBase, StdAssertions, StdCheats, StdUtils {
         vm.label(userA, "userA");
         vm.label(userB, "userB");
 
-        aERC20 = new ERC20Mock("aERC20", "aERC20", 18);
-        bERC20 = new ERC20Mock("bERC20", "bERC20", 18);
+        aERC20 = new ERC20Mock("aERC20", "aERC20");
+        bERC20 = new ERC20Mock("bERC20", "bERC20");
 
         cluster = new Cluster(aEid, address(this));
         swapperTarget = new ZerroXSwapperMockTarget();

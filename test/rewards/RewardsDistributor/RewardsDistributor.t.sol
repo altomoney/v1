@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
 import {Test} from "forge-std/Test.sol";
@@ -8,26 +8,10 @@ import {RewardErrorsLib} from "@alto/rewards/libraries/RewardErrorsLib.sol";
 import {RewardEventsLib} from "@alto/rewards/libraries/RewardEventsLib.sol";
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
+import {ERC20MockDecimals} from "@alto-test/helpers/ERC20MockDecimals.sol";
 import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
-
-contract MockOracle {
-    int256 public price;
-    uint8 public decimals;
-
-    constructor(int256 _price, uint8 _decimals) {
-        price = _price;
-        decimals = _decimals;
-    }
-
-    function latestAnswer() external view returns (int256) {
-        return price;
-    }
-
-    function setPrice(int256 _price) external {
-        price = _price;
-    }
-}
+import {OracleUsdMock} from "@alto/oracles/mocks/OracleUsdMock.sol";
+import {USD_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IUsdOracle.sol";
 
 contract MockLock {
     mapping(address => uint256) public locked;
@@ -50,11 +34,11 @@ contract MockLock {
 
 contract RewardsDistributorTest is Test {
     RewardsDistributor public distributor;
-    ERC20Mock public rewardToken;
-    ERC20Mock public paymentToken;
-    ERC20Mock public paymentToken2;
-    MockOracle public paymentOracle;
-    MockOracle public paymentOracle2;
+    ERC20MockDecimals public rewardToken;
+    ERC20MockDecimals public paymentToken;
+    ERC20MockDecimals public paymentToken2;
+    OracleUsdMock public paymentOracle;
+    OracleUsdMock public paymentOracle2;
     MockLock public lockContract;
 
     address public owner = address(0x1);
@@ -73,20 +57,26 @@ contract RewardsDistributorTest is Test {
     uint256 public bobAvailable = 2000 * 10 ** 18;
 
     // Pricing constants
-    uint256 public constant REWARD_PRICE = 100 * 10 ** 8; // $100 per token (8 decimals)
-    uint256 public constant PAYMENT_TOKEN_PRICE = 1 * 10 ** 8; // $1 per payment token (8 decimals)
+    uint256 public REWARD_PRICE = _getOraclePriceFromEther(100 ether); // $100 per token
+    uint256 public PAYMENT_TOKEN_PRICE = _getOraclePriceFromEther(1 ether); // $1 per payment token
     uint256 public constant BASE_DISCOUNT = 1000; // 10%
     uint256 public constant LOCK_BONUS_DISCOUNT = 500; // 5% additional
 
+    function _getOraclePriceFromEther(uint256 etherPrice) internal pure returns (uint256) {
+        return etherPrice * USD_ORACLE_PRICE_PRECISION / 1 ether;
+    }
+
     function setUp() public {
         // Deploy tokens
-        rewardToken = new ERC20Mock("Reward Token", "RWD", 18);
-        paymentToken = new ERC20Mock("Payment Token", "PAY", 6);
-        paymentToken2 = new ERC20Mock("Payment Token 2", "PAY2", 18);
+        rewardToken = new ERC20MockDecimals("Reward Token", "RWD", 18);
+        paymentToken = new ERC20MockDecimals("Payment Token", "PAY", 6);
+        paymentToken2 = new ERC20MockDecimals("Payment Token 2", "PAY2", 18);
 
         // Deploy oracles
-        paymentOracle = new MockOracle(int256(PAYMENT_TOKEN_PRICE), 8);
-        paymentOracle2 = new MockOracle(int256(2 * 10 ** 8), 8); // $2 per token
+        paymentOracle = new OracleUsdMock();
+        paymentOracle2 = new OracleUsdMock();
+        paymentOracle.setPrice(PAYMENT_TOKEN_PRICE);
+        paymentOracle2.setPrice(_getOraclePriceFromEther(2 ether)); // $2 per token
 
         // Deploy lock contract
         lockContract = new MockLock(address(rewardToken));
@@ -109,13 +99,13 @@ contract RewardsDistributorTest is Test {
         vm.stopPrank();
 
         // Fund distributor with reward tokens
-        rewardToken.mint(address(distributor), 10000 * 10 ** 18);
+        deal(address(rewardToken), address(distributor), 10000 * 10 ** rewardToken.decimals());
 
         // Fund users with payment tokens
-        paymentToken.mint(alice, 1000000 * 10 ** 6); // 1M tokens with 6 decimals
-        paymentToken.mint(bob, 1000000 * 10 ** 6);
-        paymentToken2.mint(alice, 1000000 * 10 ** 18); // 1M tokens with 18 decimals
-        paymentToken2.mint(bob, 1000000 * 10 ** 18);
+        deal(address(paymentToken), alice, 1000000 * 10 ** paymentToken.decimals()); // 1M tokens with 6 decimals
+        deal(address(paymentToken), bob, 1000000 * 10 ** paymentToken.decimals());
+        deal(address(paymentToken2), alice, 1000000 * 10 ** paymentToken2.decimals()); // 1M tokens with 18 decimals
+        deal(address(paymentToken2), bob, 1000000 * 10 ** paymentToken2.decimals());
     }
 
     function _setupMerkleTree() internal {
@@ -182,8 +172,9 @@ contract RewardsDistributorTest is Test {
     }
 
     function test_SetPaymentToken() public {
-        address newToken = address(new ERC20Mock("New Token", "NEW", 18));
-        address newOracle = address(new MockOracle(int256(100 * 10 ** 8), 8));
+        address newToken = address(new ERC20MockDecimals("New Token", "NEW", 18));
+        address newOracle = address(new OracleUsdMock());
+        OracleUsdMock(newOracle).setPrice(_getOraclePriceFromEther(100 ether));
 
         vm.expectEmit(true, true, false, false);
         emit RewardEventsLib.PaymentTokenSet(newToken, newOracle);
@@ -195,7 +186,7 @@ contract RewardsDistributorTest is Test {
     }
 
     function test_SetRewardPrice() public {
-        uint256 newPrice = 200 * 10 ** 8;
+        uint256 newPrice = _getOraclePriceFromEther(200 ether);
 
         vm.expectEmit(false, false, false, true);
         emit RewardEventsLib.RewardPriceSet(newPrice);
@@ -399,7 +390,7 @@ contract RewardsDistributorTest is Test {
         vm.stopPrank();
 
         // Fund distributor
-        rewardToken.mint(address(newDistributor), 10000 * 10 ** 18);
+        deal(address(rewardToken), address(newDistributor), 10000 * 10 ** rewardToken.decimals());
 
         vm.startPrank(alice);
         paymentToken.approve(address(newDistributor), type(uint256).max);
@@ -487,18 +478,6 @@ contract RewardsDistributorTest is Test {
         assertEq(paymentToken.balanceOf(address(distributor)), 0);
     }
 
-    function test_OracleFailure() public {
-        // Set oracle price to 0
-        paymentOracle.setPrice(0);
-
-        vm.startPrank(alice);
-        paymentToken.approve(address(distributor), type(uint256).max);
-
-        vm.expectRevert(RewardErrorsLib.InvalidOraclePrice.selector);
-        distributor.claimPurchase(aliceAvailable, aliceProof, aliceAvailable, address(paymentToken), false);
-        vm.stopPrank();
-    }
-
     function test_SubmitRoot_WithoutExpiry() public {
         bytes32 newRoot = bytes32(uint256(1));
         bytes32 newIpfsHash = bytes32(uint256(2));
@@ -551,8 +530,8 @@ contract RewardsDistributorTest is Test {
         purchaseAmount = bound(purchaseAmount, 0.01e18, aliceClaim);
 
         (bytes32 root, bytes32[] memory aliceLeafProof,) = _setupMerkleTree(aliceClaim, 100e18);
-        paymentToken.mint(alice, purchaseAmount);
-        rewardToken.mint(address(distributor), aliceClaim);
+        deal(address(paymentToken), alice, purchaseAmount);
+        deal(address(rewardToken), address(distributor), aliceClaim);
 
         vm.prank(owner);
         distributor.submitRoot(root, bytes32(0));
@@ -623,14 +602,15 @@ contract RewardsDistributorTest is Test {
 
     function testFuzz_ClaimPurchase_VariousTokenPrices(uint256 tokenPrice) public {
         // Bound token price to reasonable range (avoid overflow and ensure > 0)
-        tokenPrice = bound(tokenPrice, 0.01e8, 100000e8);
+        tokenPrice = bound(tokenPrice, _getOraclePriceFromEther(0.01 ether), _getOraclePriceFromEther(100000 ether));
 
         // Create new oracle with fuzzed price
-        MockOracle fuzzOracle = new MockOracle(int256(tokenPrice), 8);
+        OracleUsdMock fuzzOracle = new OracleUsdMock();
+        fuzzOracle.setPrice(tokenPrice);
 
         // Set up new payment token with fuzzed oracle
-        ERC20Mock fuzzPaymentToken = new ERC20Mock("Fuzz Token", "FUZZ", 6);
-        fuzzPaymentToken.mint(alice, type(uint128).max);
+        ERC20MockDecimals fuzzPaymentToken = new ERC20MockDecimals("Fuzz Token", "FUZZ", 6);
+        deal(address(fuzzPaymentToken), alice, type(uint128).max);
 
         vm.prank(owner);
         distributor.setPaymentToken(address(fuzzPaymentToken), address(fuzzOracle));
@@ -706,27 +686,28 @@ contract RewardsDistributorTest is Test {
         rewardDecimals = uint8(bound(rewardDecimals, 6, 18));
 
         // Create tokens with fuzzed decimals
-        ERC20Mock fuzzRewardToken = new ERC20Mock("Fuzz Reward", "FRWD", rewardDecimals);
-        ERC20Mock fuzzPaymentToken = new ERC20Mock("Fuzz Payment", "FPAY", paymentDecimals);
+        ERC20MockDecimals fuzzRewardToken = new ERC20MockDecimals("Fuzz Reward", "FRWD", rewardDecimals);
+        ERC20MockDecimals fuzzPaymentToken = new ERC20MockDecimals("Fuzz Payment", "FPAY", paymentDecimals);
 
         // Create new distributor with fuzzed reward token
         RewardsDistributor fuzzDistributor =
             new RewardsDistributor(owner, INITIAL_TIMELOCK, testRoot, INITIAL_IPFS_HASH, address(fuzzRewardToken));
 
         // Setup
-        MockOracle fuzzOracle = new MockOracle(int256(1 * 10 ** 8), 8); // $1
+        OracleUsdMock fuzzOracle = new OracleUsdMock();
+        fuzzOracle.setPrice(_getOraclePriceFromEther(1 ether)); // $1
 
         vm.startPrank(owner);
         fuzzDistributor.setRootUpdater(updater, true);
         fuzzDistributor.setPaymentToken(address(fuzzPaymentToken), address(fuzzOracle));
-        fuzzDistributor.setRewardPrice(100 * 10 ** 8); // $100
+        fuzzDistributor.setRewardPrice(_getOraclePriceFromEther(100 ether)); // $100
         fuzzDistributor.setDiscount(1000); // 10%
         vm.stopPrank();
 
         // Fund
         uint256 scaledAllocation = 1000 * 10 ** rewardDecimals;
-        fuzzRewardToken.mint(address(fuzzDistributor), scaledAllocation * 10);
-        fuzzPaymentToken.mint(alice, type(uint128).max);
+        deal(address(fuzzRewardToken), address(fuzzDistributor), scaledAllocation * 10);
+        deal(address(fuzzPaymentToken), alice, type(uint128).max);
 
         // Create new merkle tree for fuzzed allocation
         bytes32 aliceFuzzLeaf = keccak256(bytes.concat(keccak256(abi.encode(alice, scaledAllocation))));

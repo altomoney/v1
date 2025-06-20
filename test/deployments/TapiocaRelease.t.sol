@@ -26,8 +26,8 @@ contract AltoReleaseTest is Test, TestHelperOz5 {
         input.isTestnet = true;
         input.lzChainId = 0;
         input.lzEndpoint = address(endpoints[1]);
-        input.wrappedNativeToken = address(new ERC20Mock("A", "A", 18));
-        input.altoToken = address(new ERC20Mock("B", "B", 18));
+        input.wrappedNativeToken = address(new ERC20Mock("A", "A"));
+        input.altoToken = address(new ERC20Mock("B", "B"));
         input.bbMarketBorrowCap = 3_000_000e18;
 
         input.collateralTokenBorrowMarket = address(new ERC20Mock("C", "C"));

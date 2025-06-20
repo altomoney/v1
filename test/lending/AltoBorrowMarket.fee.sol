@@ -32,8 +32,8 @@ contract AltoBorrowMarketFeeTest is Test {
     address internal immutable USER2 = makeAddr("User2");
 
     function setUp() public {
-        borrowToken = new ERC20Mock("borrow", "B", 18);
-        collateralToken = new ERC20Mock("collateral", "C", 18);
+        borrowToken = new ERC20Mock("borrow", "B");
+        collateralToken = new ERC20Mock("collateral", "C");
 
         deal(address(borrowToken), address(this), type(uint256).max);
         deal(address(collateralToken), address(this), type(uint256).max);

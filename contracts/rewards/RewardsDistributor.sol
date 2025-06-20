@@ -1,7 +1,7 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.0;
 
-import {IRewardsDistributor, IOracle, ILock} from "@alto/rewards/interfaces/IRewardsDistributor.sol";
+import {IRewardsDistributor, ILock} from "@alto/rewards/interfaces/IRewardsDistributor.sol";
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {PendingRoot} from "@alto/rewards/interfaces/IRewardsDistributor.sol";
@@ -12,11 +12,14 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {Pausable, IPausable} from "@alto/utils/Pausable.sol";
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
+import {IUsdOracle} from "@alto/oracles/interfaces/IUsdOracle.sol";
+import {USD_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IUsdOracle.sol";
 
 bytes32 constant CLAIM_PAUSE_TYPE = keccak256("CLAIM_PAUSE");
 
-/// @title RewardsDistributor
-/// @author Alto
+/// @title Rewards Distributor
+/// @author Pearl Labs
+/// @custom:contact security@tapioca.xyz
 /// @notice A contract for distributing rights to purchase tokens to users determined by a merkle tree.
 contract RewardsDistributor is IRewardsDistributor, Ownable, Pausable {
     using SafeERC20 for IERC20;
@@ -49,7 +52,7 @@ contract RewardsDistributor is IRewardsDistributor, Ownable, Pausable {
     /// @notice Payment token decimals cache (token address => decimals).
     mapping(address token => uint8) public paymentTokenDecimals;
 
-    /// @notice The price per unit of reward token in USD (8 decimals).
+    /// @notice The price per unit of reward token in USD (with {USD_ORACLE_PRICE_PRECISION} precision).
     uint256 public rewardPrice;
 
     /// @notice The discount percentage (basis points, e.g., 1000 = 10%).
@@ -202,16 +205,13 @@ contract RewardsDistributor is IRewardsDistributor, Ownable, Pausable {
     /// @param token The payment token address.
     /// @param oracle The oracle address for the token (0 to remove).
     function setPaymentToken(address token, address oracle) external onlyOwner {
-        if (IOracle(oracle).latestAnswer() <= 0) revert RewardErrorsLib.InvalidOraclePrice();
-        if (IOracle(oracle).decimals() != 8) revert RewardErrorsLib.InvalidOracleDecimals();
-
         paymentTokens[token] = oracle;
         paymentTokenDecimals[token] = IERC20Metadata(token).decimals();
 
         emit RewardEventsLib.PaymentTokenSet(token, oracle);
     }
 
-    /// @notice Sets the reward price in USD (8 decimals).
+    /// @notice Sets the reward price in USD (with {USD_ORACLE_PRICE_PRECISION} precision).
     /// @param newPrice The new price per unit.
     function setRewardPrice(uint256 newPrice) external onlyOwner {
         if (newPrice == 0) revert RewardErrorsLib.InvalidPrice();
@@ -283,15 +283,14 @@ contract RewardsDistributor is IRewardsDistributor, Ownable, Pausable {
         if (paymentTokens[paymentToken] == address(0)) revert RewardErrorsLib.InvalidPaymentToken();
         if (rewardPrice == 0) revert RewardErrorsLib.PriceNotSet();
 
-        // Get payment token price from oracle (always 8 decimals)
-        IOracle oracle = IOracle(paymentTokens[paymentToken]);
-        int256 tokenPrice = oracle.latestAnswer();
-        if (tokenPrice <= 0) revert RewardErrorsLib.InvalidOraclePrice();
+        // Get payment token price from oracle (always {USD_ORACLE_PRICE_PRECISION} precision)
+        IUsdOracle oracle = IUsdOracle(paymentTokens[paymentToken]);
+        uint256 tokenPrice = oracle.getPrice();
 
         // Calculate base cost in USD
         // purchaseAmount is in reward token decimals
-        // rewardPrice has 8 decimals
-        // Result needs to be in USD with 8 decimals
+        // rewardPrice has {USD_ORACLE_PRICE_PRECISION} precision
+        // Result needs to be in USD with {USD_ORACLE_PRICE_PRECISION} precision
         uint256 baseCostUSD = FixedPointMath.divideWithRounding(
             purchaseAmount * rewardPrice,
             1,
@@ -304,13 +303,13 @@ contract RewardsDistributor is IRewardsDistributor, Ownable, Pausable {
         uint256 discountedCostUSD = baseCostUSD * (10000 - appliedDiscount) / 10000;
 
         // Convert to payment token amount
-        // discountedCostUSD has 8 decimals
-        // tokenPrice has 8 decimals (oracle standard)
+        // discountedCostUSD has {USD_ORACLE_PRICE_PRECISION} precision
+        // tokenPrice has {USD_ORACLE_PRICE_PRECISION} precision (oracle standard)
         // Result should have paymentDecimals decimals
         uint256 paymentAmount = FixedPointMath.divideWithRounding(
             discountedCostUSD * (10 ** paymentTokenDecimals[paymentToken]),
             1,
-            uint256(tokenPrice),
+            tokenPrice,
             true // round up to ensure we never underpay
         );
 
@@ -347,5 +346,10 @@ contract RewardsDistributor is IRewardsDistributor, Ownable, Pausable {
     // Getter function for pendingRoot to match interface
     function pendingRoot() external view returns (PendingRoot memory) {
         return _pendingRoot;
+    }
+
+    /// @inheritdoc IPausable
+    function setPauser(address pauser, bytes32 pauseType, bool status) external override(Pausable) onlyOwner {
+        _setPauser(pauser, pauseType, status);
     }
 }

@@ -37,8 +37,8 @@ contract AltoLeverageTest is Test {
     address oracle;
 
     function setUp() public {
-        borrowToken = new ERC20Mock("Borrow Token", "BTKN", 18);
-        collateralToken = new ERC20Mock("Collateral Token", "CTKN", 18);
+        borrowToken = new ERC20Mock("Borrow Token", "BTKN");
+        collateralToken = new ERC20Mock("Collateral Token", "CTKN");
         swapper = new SwapperSimpleMock(address(this));
         leverage = new AltoLeverage(address(swapper), address(this));
 
