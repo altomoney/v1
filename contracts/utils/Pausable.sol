@@ -32,7 +32,17 @@ abstract contract Pausable is IPausable, Ownable {
     /// @notice Pauses or unpauses the market
     /// @param _paused The new paused state
     function pause(bytes32 pauseType, bool _paused) external onlyPauser(pauseType) {
+        _onPause(pauseType, _paused);
+        if (paused[pauseType] == _paused) {
+            revert StateNotChanged(pauseType, paused[pauseType], _paused);
+        }
         paused[pauseType] = _paused;
         emit Paused(msg.sender, pauseType, _paused);
     }
+
+    /// @notice Virtual function to allow for custom logic when pausing/unpausing
+    /// @param pauseType The type of pause
+    /// @param _paused The new paused state
+    /// @dev This function is called before the pause/unpause is applied to the paused state.
+    function _onPause(bytes32 pauseType, bool _paused) internal virtual {}
 }

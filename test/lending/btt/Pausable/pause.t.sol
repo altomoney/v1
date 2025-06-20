@@ -63,13 +63,10 @@ contract PauseTest is Test {
         vm.prank(owner);
         pausable.setPauser(pauser, PAUSE_TYPE_ZERO, true);
 
-        // It should set paused to false and emit event
+        // It it should revert
         vm.prank(pauser);
-        vm.expectEmit(true, true, true, true);
-        emit IPausable.Paused(pauser, PAUSE_TYPE_ZERO, false);
+        vm.expectRevert(abi.encodeWithSelector(IPausable.StateNotChanged.selector, PAUSE_TYPE_ZERO, false, false));
         pausable.pause(PAUSE_TYPE_ZERO, false);
-
-        assertFalse(pausable.paused(PAUSE_TYPE_ZERO));
     }
 
     function test_Pause_WhenPauseTypeIsZero_PausedFalse_CurrentlyTrue() public {
@@ -103,8 +100,7 @@ contract PauseTest is Test {
 
         // It should set paused to true and emit event (even if already true)
         vm.prank(pauser);
-        vm.expectEmit(true, true, true, true);
-        emit IPausable.Paused(pauser, PAUSE_TYPE_ZERO, true);
+        vm.expectRevert(abi.encodeWithSelector(IPausable.StateNotChanged.selector, PAUSE_TYPE_ZERO, true, true));
         pausable.pause(PAUSE_TYPE_ZERO, true);
 
         assertTrue(pausable.paused(PAUSE_TYPE_ZERO));
@@ -129,13 +125,10 @@ contract PauseTest is Test {
         vm.prank(owner);
         pausable.setPauser(pauser, PAUSE_TYPE_ONE, true);
 
-        // It should set paused to false and emit event
+        // It it should revert
         vm.prank(pauser);
-        vm.expectEmit(true, true, true, true);
-        emit IPausable.Paused(pauser, PAUSE_TYPE_ONE, false);
+        vm.expectRevert(abi.encodeWithSelector(IPausable.StateNotChanged.selector, PAUSE_TYPE_ONE, false, false));
         pausable.pause(PAUSE_TYPE_ONE, false);
-
-        assertFalse(pausable.paused(PAUSE_TYPE_ONE));
     }
 
     function test_Pause_WhenPauseTypeIsNonZero_PausedFalse_CurrentlyTrue() public {
@@ -167,13 +160,10 @@ contract PauseTest is Test {
         pausable.pause(PAUSE_TYPE_ONE, true);
         assertTrue(pausable.paused(PAUSE_TYPE_ONE));
 
-        // It should set paused to true and emit event (even if already true)
+        // It it should revert
         vm.prank(pauser);
-        vm.expectEmit(true, true, true, true);
-        emit IPausable.Paused(pauser, PAUSE_TYPE_ONE, true);
+        vm.expectRevert(abi.encodeWithSelector(IPausable.StateNotChanged.selector, PAUSE_TYPE_ONE, true, true));
         pausable.pause(PAUSE_TYPE_ONE, true);
-
-        assertTrue(pausable.paused(PAUSE_TYPE_ONE));
     }
 
     function test_Pause_WhenPauseTypeIsNonZero_PausedTrue_CurrentlyFalse() public {
@@ -200,12 +190,17 @@ contract PauseTest is Test {
         pausable.setPauser(pauser, pauseType, true);
 
         // It should set paused state and emit event
-        vm.prank(pauser);
-        vm.expectEmit(true, true, true, true);
-        emit IPausable.Paused(pauser, pauseType, _paused);
-        pausable.pause(pauseType, _paused);
-
-        assertEq(pausable.paused(pauseType), _paused);
+        vm.startPrank(pauser);
+        if (_paused == pausable.paused(pauseType)) {
+            vm.expectRevert(abi.encodeWithSelector(IPausable.StateNotChanged.selector, pauseType, _paused, _paused));
+            pausable.pause(pauseType, _paused);
+        } else {
+            vm.expectEmit();
+            emit IPausable.Paused(pauser, pauseType, _paused);
+            pausable.pause(pauseType, _paused);
+            assertEq(pausable.paused(pauseType), _paused);
+        }
+        vm.stopPrank();
     }
 
     function testFuzz_Pause_TogglePause(bytes32 pauseType) public {
@@ -271,11 +266,11 @@ contract PauseTest is Test {
         // Pause both types
         vm.startPrank(pauser);
         pausable.pause(pauseType1, true);
-        pausable.pause(pauseType2, false);
+        pausable.pause(pauseType2, true);
         vm.stopPrank();
 
         // Verify states
         assertTrue(pausable.paused(pauseType1));
-        assertFalse(pausable.paused(pauseType2));
+        assertTrue(pausable.paused(pauseType2));
     }
 }

@@ -45,6 +45,14 @@ contract FixedRateIrm is Ownable2Step, IIrm {
         irState.lastUpdate = uint48(block.timestamp);
     }
 
+    /// @inheritdoc IIrm
+    function onMarketPause(bool _paused) external {
+        if (msg.sender != market) revert IrmUnauthorized();
+        if (!_paused) {
+            irState.lastUpdate = uint48(block.timestamp);
+        }
+    }
+
     /// @notice Sets the borrow rate
     /// @param _borrowRate The new borrow rate in second percent yield (SPY)
     /// @dev Reverts on not set market, so the rate has to be set before the market creation.

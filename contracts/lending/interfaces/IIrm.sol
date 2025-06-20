@@ -20,6 +20,12 @@ interface IIrm {
     /// @dev This function has to be called first time by the market to set up the IRM
     function setMarket(address _market) external;
 
+    /// @notice Called when the market is paused
+    /// @param _paused The new paused state
+    /// @dev This function is function is used when market of this IRM is paused/unpaused.
+    /// Pausing market should also pause the accrual of interest.
+    function onMarketPause(bool _paused) external;
+
     /// @notice Updates interest rate the the latest value
     /// @param totalSupply Total amount of assets supplied to the markets
     /// @param totalBorrowed Total amount of assets borrowed from the markets
