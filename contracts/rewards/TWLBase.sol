@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.22;
 
-import {ITWLBase, Bucket} from "../interfaces/ITWLBase.sol";
+import {ITWLBase, Bucket} from "./interfaces/ITWLBase.sol";
 /**
  * @title TWLBase
  * @dev The TWLBase contract is a base contract for managing Time Weighted Locks with different buckets/presets, each one with a locking epoch duration that grows or decays depending on the supply momentum.

@@ -7,9 +7,8 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 // Tapioca
 
-import {ICluster} from "@alto/utils/interfaces/common/ICluster.sol";
-import {TapToken} from "@alto/tokens/TapToken.sol";
-import {ITWLBase, Bucket} from "@alto/tap-token/interfaces/ITWLBase.sol";
+import {AltoToken} from "@alto/tokens/AltoToken.sol";
+import {ITWLBase, Bucket} from "./ITWLBase.sol";
 
 struct Participation {
     // 1 slot
@@ -28,16 +27,6 @@ struct Participation {
 struct Reward {
     uint256 pending;
     uint256 claimed;
-}
-
-struct WeekTotals {
-    // For [0..currentWeek] this is a cumulative total: it consists of the
-    // active votes in the previous week, minus the votes known to expire this
-    // week. For future weeks, it is a negative number corresponding to the
-    // expiring votes.
-    int256 netActiveVotes;
-    // rewardTokens index -> amount
-    mapping(uint256 => uint256) totalDistPerVote;
 }
 
 interface ITWTAPv2 is ITWLBase {
@@ -184,13 +173,6 @@ interface ITWTAPv2 is ITWLBase {
     /// @param _limit Maximum number of weeks to process in one call
     function advanceWeek(uint256 _limit) external;
 
-    /// @notice distributes a reward among all tokens, weighted by voting power
-    /// @notice The reward gets allocated to all positions that have locked in
-    /// @notice the current week. Fails, intentionally, if this number is zero.
-    /// @notice Total rewards cannot exceed 2^128 tokens.
-    /// @param _rewardTokenId index of the reward in `rewardTokens`
-    /// @param _amount amount of reward token to distribute.
-    function distributeReward(uint256 _rewardTokenId, uint256 _amount) external;
     /// @notice Set the delegatee of a participation.
     /// @param _bucketId The bucketId of the twTAP position.
     /// @param _delegatee The address of the delegatee.
@@ -203,25 +185,6 @@ interface ITWTAPv2 is ITWLBase {
      * @notice Set the rescue mode.
      */
     function setRescueMode(bool _rescueMode) external;
-
-    /**
-     * @notice Set the maximum number of reward tokens.
-     * @param _length The new maximum number of reward tokens.
-     */
-    function setMaxRewardTokensLength(uint256 _length) external;
-
-    /**
-     * @notice Add a reward token to the list of reward tokens.
-     * @param _token The address of the reward token.
-     */
-    function addRewardToken(IERC20 _token) external returns (uint256);
-
-    /**
-     * @notice updates the Cluster address.
-     * @dev can only be called by the owner.
-     * @param _cluster the new address.
-     */
-    function setCluster(ICluster _cluster) external;
 
     /**
      * @notice Un/Pauses this contract.
@@ -256,5 +219,5 @@ interface ITWTAPv2 is ITWLBase {
      */
     function updateBucket(uint8 index, Bucket memory bucket) external;
 
-    function tapOFT() external view returns (TapToken);
+    function altoToken() external view returns (AltoToken);
 }

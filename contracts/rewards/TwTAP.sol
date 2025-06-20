@@ -10,10 +10,8 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 // Tapioca
 
-import {ICluster} from "@alto/utils/interfaces/common/ICluster.sol";
-import {TapToken} from "@alto/tokens/TapToken.sol";
-import {TWLBase, Bucket} from "@alto/tap-token/governance/TWLBase.sol";
-import {ITWTAPv2, Participation, Reward, WeekTotals} from "@alto/tap-token/interfaces/ITWTAPv2.sol";
+import {TWLBase, Bucket} from "./TWLBase.sol";
+import {ITWTAPv2, Participation, Reward, WeekTotals} from "./interfaces/ITWTAPv2.sol";
 
 contract TwTAP is ITWTAPv2, TWLBase, Ownable, ReentrancyGuard, Pausable {
     using SafeERC20 for IERC20;
@@ -35,11 +33,8 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, ReentrancyGuard, Pausable {
     // need to be updated weekly. If, for any reason whatsoever, this cannot
     // be done in time, the `lastProcessedWeek` will be behind until this is
     // done.
-    uint256 public mintedTWTap;
     uint256 public lastProcessedWeek;
-    mapping(uint256 => WeekTotals) public weekTotals;
-
-    ICluster public cluster;
+    mapping(uint256 => uint256) public weekTotals;
 
     bool public rescueMode;
     uint256 public emergencySweepCooldown = 2 days;
@@ -52,20 +47,11 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, ReentrancyGuard, Pausable {
         Ownable(_owner)
     {
         tapOFT = TapToken(_tapOFT);
-        rewardTokens.push(IERC20(address(0x0))); // 0 index is reserved
-        maxRewardTokens = 30;
     }
 
     // ==========
     //    READ
     // ==========
-
-    /**
-     * @notice Return the address of reward tokens.
-     */
-    function getRewardTokens() external view returns (IERC20[] memory) {
-        return rewardTokens;
-    }
 
     /// @notice Returns the current epoch number
     /// @dev keeps compatibility with older interface
@@ -99,56 +85,13 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, ReentrancyGuard, Pausable {
         return participations[_account][_bucketId];
     }
 
-    /**
-     * @notice Amount currently claimable for each reward token.
-     * @dev index 0 will ALWAYS return 0, as it's used by address(0x0).
-     * @dev Safe to claim even after position exit.
-     * @return claimable amounts mapped by reward token
-     */
-    function claimable(address _account, uint256 _bucketId) public view returns (uint256[] memory) {
-        uint256 len = rewardTokens.length;
-        uint256[] memory result = new uint256[](len);
-
-        Participation memory position = participations[_account][_bucketId];
-        uint256 votes = uint256(position.tapAmount) * uint256(position.multiplier);
-
-        if (votes == 0) {
-            return result;
-        }
-
-        // If the "last processed week" is behind the actual week, rewards
-        // get processed as if it were earlier.
-        uint256 week = lastProcessedWeek;
-        if (week <= position.lastInactive) {
-            return result;
-        }
-        if (position.lastActive < week) {
-            week = position.lastActive;
-        }
-
-        WeekTotals storage cur = weekTotals[week];
-        WeekTotals storage prev = weekTotals[position.lastInactive];
-
-        for (uint256 i; i < len; i++) {
-            Reward memory reward = rewards[_account][_bucketId][i];
-            uint256 net = cur.totalDistPerVote[i] - prev.totalDistPerVote[i];
-            result[i] = ((votes * net) / DIST_PRECISION) + reward.pending - reward.claimed;
-        }
-        return result;
-    }
-
     /// @notice Return the Participation of a token and the claimable amounts.
     /// @param _account The account of the participant.
     /// @param _bucketId The bucketId of the twTAP position.
     /// @return position The Participation of the token.
     /// @return claimables The claimable amounts of each reward token.
-    function getPosition(address _account, uint256 _bucketId)
-        external
-        view
-        returns (Participation memory position, uint256[] memory claimables)
-    {
+    function getPosition(address _account, uint256 _bucketId) external view returns (Participation memory position) {
         position = participations[_account][_bucketId];
-        claimables = claimable(_account, _bucketId);
     }
 
     // ===========
@@ -178,56 +121,6 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, ReentrancyGuard, Pausable {
     }
 
     /**
-     * @notice claims all rewards distributed since token mint or last claim.
-     *
-     * @param _bucketId bucket Id whose rewards to claim
-     *
-     * @return amounts_ Claimed amount of each reward token.
-     */
-    function claimRewards(address _participant, uint256 _bucketId)
-        external
-        nonReentrant
-        whenNotPaused
-        returns (uint256[] memory amounts_)
-    {
-        Participation memory position = participations[_participant][_bucketId];
-        if (_participant != msg.sender && position.delegatee != msg.sender) revert NotAuthorized();
-        amounts_ = _claimBucketRewards(_participant, _bucketId, true);
-    }
-
-    /**
-     * @notice claims all rewards distributed since token mint or last claim.
-     *
-     * @param _bucketId bucket Id whose rewards to claim
-     *
-     * @return amounts_ Claimed amount of each reward token.
-     */
-    function claimRewards(uint256 _bucketId) external nonReentrant whenNotPaused returns (uint256[] memory amounts_) {
-        amounts_ = _claimBucketRewards(msg.sender, _bucketId, true);
-    }
-
-    /**
-     * @notice batch claims all rewards distributed since token mint or last claim.
-     *
-     * @param _bucketIds The lock bucket ids whose rewards to claim
-     *
-     * @return amounts_ Claimed amountsof each reward token, for each bucketId
-     */
-    function batchClaimRewards(address _participant, uint256[] calldata _bucketIds)
-        external
-        nonReentrant
-        whenNotPaused
-        returns (uint256[][] memory amounts_)
-    {
-        amounts_ = new uint256[][](_bucketIds.length);
-        for (uint256 i; i < _bucketIds.length; i++) {
-            Participation memory position = participations[_participant][_bucketIds[i]];
-            if (_participant != msg.sender && position.delegatee != msg.sender) revert NotAuthorized();
-            amounts_[i] = _claimBucketRewards(_participant, _bucketIds[i], true);
-        }
-    }
-
-    /**
      * @notice Exit a twAML participation, delete the voting power if existing and send the TAP to `_to`.
      * @param _bucketId The bucketId of the twTAP position.
      * @return releasedAmount The amount of TAP released.
@@ -250,8 +143,6 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, ReentrancyGuard, Pausable {
             return 0;
         }
 
-        _claimBucketRewards(_participant, _bucketId, true);
-
         releasedAmount = position.tapAmount;
 
         participations[_participant][_bucketId].tapReleased = true;
@@ -267,32 +158,6 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, ReentrancyGuard, Pausable {
     /// @param _limit Maximum number of weeks to process in one call
     function advanceWeek(uint256 _limit) public nonReentrant {
         _advanceWeek(_limit);
-    }
-
-    /// @notice distributes a reward among all tokens, weighted by voting power
-    /// @notice The reward gets allocated to all positions that have locked in
-    /// @notice the current week. Fails, intentionally, if this number is zero.
-    /// @notice Total rewards cannot exceed 2^128 tokens.
-    /// @param _rewardTokenId index of the reward in `rewardTokens`
-    /// @param _amount amount of reward token to distribute.
-    function distributeReward(uint256 _rewardTokenId, uint256 _amount) external nonReentrant {
-        if (lastProcessedWeek != currentEpoch()) revert AdvanceWeekFirst();
-        if (_amount == 0) revert NotValid();
-        if (_rewardTokenId == 0) revert NotValid(); // @dev rewardTokens[0] is 0x0
-
-        WeekTotals storage totals = weekTotals[currentEpoch() + 1];
-        IERC20 rewardToken = rewardTokens[_rewardTokenId];
-        // If this is a DBZ then there are no positions to give the reward to.
-        // Since reward eligibility starts in the week after locking, there is
-        // no way to give out rewards THIS week.
-        // Cast is safe: `netActiveVotes` is at most zero by construction of
-        // weekly totals and the requirement that they are up to date.
-        totals.totalDistPerVote[_rewardTokenId] +=
-            totals.netActiveVotes == 0 ? 0 : (_amount * DIST_PRECISION) / uint256(totals.netActiveVotes);
-
-        rewardToken.safeTransferFrom(msg.sender, address(this), _amount);
-
-        emit DistributeReward(address(rewardToken), msg.sender, _amount, _rewardTokenId);
     }
 
     /// @notice Set the delegatee of a participation.
@@ -313,47 +178,6 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, ReentrancyGuard, Pausable {
     function setRescueMode(bool _rescueMode) external onlyOwner {
         emit RescueMode(_rescueMode);
         rescueMode = _rescueMode;
-    }
-
-    /**
-     * @notice Set the maximum number of reward tokens.
-     * @param _length The new maximum number of reward tokens.
-     */
-    function setMaxRewardTokensLength(uint256 _length) external onlyOwner {
-        emit LogMaxRewardsLength(maxRewardTokens, _length, rewardTokens.length);
-        maxRewardTokens = _length;
-    }
-
-    /**
-     * @notice Add a reward token to the list of reward tokens.
-     * @param _token The address of the reward token.
-     * TODO Cannot remove a reward token?
-     */
-    function addRewardToken(IERC20 _token) external onlyOwner returns (uint256) {
-        if (address(_token) == address(0)) revert NotValid();
-        if (rewardTokenIndex[_token] != 0) revert Registered();
-        if (rewardTokens.length + 1 > maxRewardTokens) {
-            revert TokenLimitReached();
-        }
-        rewardTokens.push(_token);
-
-        uint256 newTokenIndex = rewardTokens.length - 1;
-        rewardTokenIndex[_token] = newTokenIndex;
-
-        emit AddRewardToken(address(_token), newTokenIndex);
-
-        return newTokenIndex;
-    }
-
-    /**
-     * @notice updates the Cluster address.
-     * @dev can only be called by the owner.
-     * @param _cluster the new address.
-     */
-    function setCluster(ICluster _cluster) external onlyOwner {
-        if (address(_cluster) == address(0)) revert NotValid();
-        cluster = _cluster;
-        emit SetCluster(address(_cluster));
     }
 
     /**
@@ -420,36 +244,6 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, ReentrancyGuard, Pausable {
         return ((timestamp - INIT_TIMESTAMP) / EPOCH_DURATION);
     }
 
-    /**
-     * @dev Claim rewards on a token.
-     * @param _account The account of the participant.
-     * @param _bucketId The bucketId of the twTAP position.
-     * @param transferRewards Whether to transfer the rewards to the account.
-     * @return amounts_ Claimed amount of each reward token.
-     */
-    function _claimBucketRewards(address _account, uint256 _bucketId, bool transferRewards)
-        internal
-        returns (uint256[] memory amounts_)
-    {
-        amounts_ = claimable(_account, _bucketId);
-        Participation storage position = participations[_account][_bucketId];
-        position.lastInactive = currentEpoch() < position.lastActive ? uint40(currentEpoch()) : position.lastActive;
-
-        uint256 len = amounts_.length;
-        for (uint256 i; i < len; ++i) {
-            uint256 amount = amounts_[i];
-            if (amount == 0) continue;
-            if (transferRewards) {
-                rewards[_account][_bucketId][i].claimed += amount;
-                rewards[_account][_bucketId][i].pending = 0;
-                rewardTokens[i].safeTransfer(_account, amount);
-                emit ClaimReward(address(rewardTokens[i]), _account, _bucketId, amount, i);
-            } else {
-                rewards[_account][_bucketId][i].pending += amount;
-            }
-        }
-    }
-
     /// @dev Internal function to participate in twAML voting and mint an twTap position in a lock bucket.
     /// @param _participant The address of the participant
     /// @param _amount The amount of TAP to participate with. Max uint88.
@@ -483,9 +277,6 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, ReentrancyGuard, Pausable {
                 int256(uint256(position.tapAmount) * position.multiplier);
         }
 
-        if (position.tapAmount > 0) {
-            _claimBucketRewards(_participant, _bucketId, false);
-        }
         position.bucketId = _bucketId;
         position.tapReleased = false;
         position.lockedAt = uint56(block.timestamp);
@@ -513,15 +304,11 @@ contract TwTAP is ITWTAPv2, TWLBase, Ownable, ReentrancyGuard, Pausable {
         }
         uint256 pendingEpochs = goal - week;
 
-        uint256 len = rewardTokens.length;
         while (week < goal) {
-            WeekTotals storage prev = weekTotals[week];
-            WeekTotals storage next = weekTotals[++week];
+            uint256 prev = weekTotals[week];
+            uint256 next = weekTotals[++week];
 
-            next.netActiveVotes += prev.netActiveVotes;
-            for (uint256 i; i < len; i++) {
-                next.totalDistPerVote[i] += prev.totalDistPerVote[i];
-            }
+            next += prev;
         }
 
         // Sync TWL Buckets
