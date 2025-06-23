@@ -5,8 +5,8 @@ import {AltoBaseMarket} from "./AltoBaseMarket.sol";
 import {LiquidationConfiguration} from "./interfaces/IMarket.sol";
 
 /// @title Alto Borrow Market
-/// @author Alto Foundation
-/// @custom:contact security@alto.xyz
+/// @author Pearl Labs
+/// @custom:contact security@tapioca.xyz
 /// @notice An Isolated Borrow Market
 contract AltoBorrowMarket is AltoBaseMarket {
     /// @custom:oz-upgrades-unsafe-allow constructor

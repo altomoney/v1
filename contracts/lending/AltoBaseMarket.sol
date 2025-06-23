@@ -39,8 +39,8 @@ import {
 } from "@alto/lending/interfaces/IMarketCallbacks.sol";
 
 /// @title Alto Base Market
-/// @author Alto Foundation
-/// @custom:contact security@alto.xyz
+/// @author Pearl Labs
+/// @custom:contact security@tapioca.xyz
 /// @notice An Isolated Borrow Market
 abstract contract AltoBaseMarket is
     Initializable,

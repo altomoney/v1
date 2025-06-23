@@ -13,10 +13,10 @@ import {ExpLib} from "../libraries/ExpLib.sol";
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 
 /// @title Adaptive Curve Interest Rate Model
-/// @author Alto Foundation
+/// @author Pearl Labs
 /// @author Adapted from Morpho Labs (https://github.com/morpho-org/morpho-blue-irm/).
 /// @author Inspired by Euler's (https://github.com/euler-xyz/evk-periphery) implementation.
-/// @custom:contact security@alto.xyz
+/// @custom:contact security@tapioca.xyz
 /// @notice A Adaptive Curve IRM that adjusts the rate at target utilization based on time spent above/below it.
 /// @dev This implementation intentionally leaves variables names, units and ExpLib unchanged from original.
 /// @dev This IRM has adjustable parameters post deployment.

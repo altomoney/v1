@@ -12,9 +12,9 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /// @title AltoAdapter
-/// @author Alto Foundation
+/// @author Pearl Labs
 /// @author Inspired by Morpho's GeneralAdapter1 (https://github.com/morpho-org/bundler3).
-/// @custom:contact security@alto.xyz
+/// @custom:contact security@tapioca.xyz
 /// @notice A contract that allows for transaction bundling Alto's contracts via Morpho's Bundler3.
 contract AltoAdapter is CoreAdapter {
     using MathRayLib for uint256;
