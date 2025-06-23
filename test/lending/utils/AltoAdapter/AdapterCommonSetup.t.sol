@@ -106,15 +106,14 @@ abstract contract AdapterCommonSetup is AdapterCommon {
         market.setAuthorization(address(this), true);
     }
 
-    function _marketPrepareLeverageData(
-        uint256 minAmountOut,
-        address receiver,
-        bytes memory swapData,
-        bool isBuyCollateral
-    ) internal view returns (bytes memory) {
+    function _marketPrepareLeverageData(uint256 minAmountOut, bytes memory swapData)
+        internal
+        view
+        returns (bytes memory)
+    {
         // Prepare FlashBorrowLeverageData
         FlashBorrowLeverageData memory leverageData =
-            FlashBorrowLeverageData({onBehalf: receiver, minAmountOut: minAmountOut, swapData: hex""});
+            FlashBorrowLeverageData({minAmountOut: minAmountOut, swapData: swapData});
         return abi.encode(leverageData);
     }
 }

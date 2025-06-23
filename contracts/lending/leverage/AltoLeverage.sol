@@ -10,13 +10,11 @@ import {IBorrowCallback, IRemoveCollateralCallback} from "../../lending/interfac
 import {AssetShareConversionMath} from "../libraries/AssetShareConversionMath.sol";
 
 struct FlashBorrowLeverageData {
-    address onBehalf;
     uint256 minAmountOut;
     bytes swapData;
 }
 
 struct FlashRemoveCollateralLeverageData {
-    address onBehalf;
     uint256 minAmountOut;
     bytes swapData;
 }
@@ -64,7 +62,7 @@ contract AltoLeverage is Ownable2Step, IBorrowCallback, IRemoveCollateralCallbac
     /// @notice leverage collateral position on behalf of user, called by the market during a flash borrow
     /// @param amountIn the amount of tokens borrowed
     /// @param data the data encoded in the flash borrow
-    function onBorrowCallback(uint256 amountIn, bytes calldata data) external {
+    function onBorrowCallback(uint256 amountIn, address onBehalf, bytes calldata data) external {
         if (!supportedMarkets[msg.sender]) revert NotAuthorized();
         FlashBorrowLeverageData memory input = abi.decode(data, (FlashBorrowLeverageData));
         address sellToken = IMarket(msg.sender).borrowToken();
@@ -81,16 +79,16 @@ contract AltoLeverage is Ownable2Step, IBorrowCallback, IRemoveCollateralCallbac
         // return any remaining unsold tokens to the user
         uint256 balanceDiff = balanceAfter - balanceBefore;
         if (balanceDiff > 0) {
-            IERC20(sellToken).safeTransfer(input.onBehalf, balanceDiff);
+            IERC20(sellToken).safeTransfer(onBehalf, balanceDiff);
         }
 
-        _addCollateral(buyToken, msg.sender, input.onBehalf, amountOut);
+        _addCollateral(buyToken, msg.sender, onBehalf, amountOut);
     }
 
     /// @notice remove collateral from the market, called by the market during a flash remove collateral
     /// @param amountIn the amount of tokens removed
     /// @param data the data encoded in the flash remove collateral
-    function onRemoveCollateralCallback(uint256 amountIn, bytes calldata data) external {
+    function onRemoveCollateralCallback(uint256 amountIn, address onBehalf, bytes calldata data) external {
         if (!supportedMarkets[msg.sender]) revert NotAuthorized();
         FlashRemoveCollateralLeverageData memory input = abi.decode(data, (FlashRemoveCollateralLeverageData));
         address sellToken = IMarket(msg.sender).collateralToken();
@@ -106,10 +104,10 @@ contract AltoLeverage is Ownable2Step, IBorrowCallback, IRemoveCollateralCallbac
 
         uint256 balanceDiff = balanceAfter - balanceBefore;
         if (balanceDiff > 0) {
-            IERC20(sellToken).safeTransfer(input.onBehalf, balanceDiff);
+            IERC20(sellToken).safeTransfer(onBehalf, balanceDiff);
         }
 
-        _repay(buyToken, msg.sender, input.onBehalf, amountOut);
+        _repay(buyToken, msg.sender, onBehalf, amountOut);
     }
 
     /// @notice recovers ERC20 tokens from the contract
