@@ -1,2 +1,2 @@
-AltoBorrowMarket::AddSupply()
+AltoMintMarket::AddSupply()
 └── it should revert

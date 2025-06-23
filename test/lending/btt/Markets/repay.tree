@@ -1,4 +1,4 @@
-AltoMarket::Repay()
+AltoBaseMarket::Repay()
 ├── when market is paused
 │   └── it should revert
 ├── given invalid input

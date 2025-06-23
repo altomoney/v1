@@ -10,6 +10,7 @@ import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {IPausable} from "@alto/utils/Pausable.sol";
 import {IMarketErrors} from "@alto/lending/interfaces/IMarket.sol";
 import {PAUSED_MARKET} from "@alto/utils/Constants.sol";
+import {MarketDeployer} from "@alto/utils/MarketDeployer.sol";
 
 contract LiquidateTest is Test {
     AltoBorrowMarket market;
@@ -31,28 +32,30 @@ contract LiquidateTest is Test {
         address oracle = address(new OracleMock());
         OracleMock(oracle).setPrice(ORACLE_PRICE_PRECISION);
 
-        market = new AltoBorrowMarket(
-            address(borrowToken),
-            address(collateralToken),
-            address(irm),
-            owner,
-            address(oracle),
-            0.75 ether,
-            0,
-            owner,
-            LiquidationConfiguration({
-                maxLiquidationLtv: 0.8 ether,
-                dynamicBonusFeeStart: 0.03 ether,
-                ltvForCompleteLiquidation: 0.9 ether,
-                dynamicBonusFeeDecaySteepness: 5 ether,
-                liquidationBaseFee: 0.05 ether,
-                minPenaltyPercentage: 0.01 ether,
-                isEnabledPriorityLiquidation: true,
-                disablePriorityLiquidationAbovePositionLtv: type(uint256).max,
-                priorityLiquidationGracePeriod: 5 minutes,
-                taggerLiquidationGracePeriod: 2 minutes,
-                liquidationWindowTag: 3 days
-            })
+        market = AltoBorrowMarket(
+            MarketDeployer.deployBorrowMarket(
+                address(borrowToken),
+                address(collateralToken),
+                address(irm),
+                owner,
+                address(oracle),
+                0.75 ether,
+                0,
+                owner,
+                LiquidationConfiguration({
+                    maxLiquidationLtv: 0.8 ether,
+                    dynamicBonusFeeStart: 0.03 ether,
+                    ltvForCompleteLiquidation: 0.9 ether,
+                    dynamicBonusFeeDecaySteepness: 5 ether,
+                    liquidationBaseFee: 0.05 ether,
+                    minPenaltyPercentage: 0.01 ether,
+                    isEnabledPriorityLiquidation: true,
+                    disablePriorityLiquidationAbovePositionLtv: type(uint256).max,
+                    priorityLiquidationGracePeriod: 5 minutes,
+                    taggerLiquidationGracePeriod: 2 minutes,
+                    liquidationWindowTag: 3 days
+                })
+            )
         );
 
         // Set owner as pauser for PAUSED_MARKET

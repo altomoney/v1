@@ -20,16 +20,10 @@ contract AltoMarketsBatch is LendingProcedure {
         address mintIrm,
         address mintOracle
     ) {
-        _lendingReport = _deployLending(
-            delegate,
-            collateralTokenBorrowMarket,
-            collateralTokenMintMarket,
-            usdo,
-            borrowIrm,
-            borrowOracle,
-            mintIrm,
-            mintOracle
-        );
+        _lendingReport.borrowMarket =
+            _deployBorrowMarket(delegate, collateralTokenBorrowMarket, usdo, borrowIrm, borrowOracle);
+
+        _lendingReport.mintMarket = _deployMintMarket(delegate, collateralTokenMintMarket, usdo, mintIrm, mintOracle);
     }
 
     function getLendingReport() external view returns (LendingReport memory) {

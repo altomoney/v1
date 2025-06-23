@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";
+import {AltoBaseMarket} from "@alto/lending/AltoBaseMarket.sol";
 import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
 
-contract MarketInstance is AltoBorrowMarket {
-    constructor(
+contract MarketInstance is AltoBaseMarket {
+    function initialize(
         address _borrowToken,
         address _collateralToken,
         address _irm,
@@ -15,8 +15,8 @@ contract MarketInstance is AltoBorrowMarket {
         uint256 _borrowOpeningFee,
         address _feeRecipient,
         LiquidationConfiguration memory _liquidationConfiguration
-    )
-        AltoBorrowMarket(
+    ) public initializer {
+        __AltoBaseMarket_init(
             _borrowToken,
             _collateralToken,
             _irm,
@@ -26,8 +26,8 @@ contract MarketInstance is AltoBorrowMarket {
             _borrowOpeningFee,
             _feeRecipient,
             _liquidationConfiguration
-        )
-    {}
+        );
+    }
 
     function domainSeparator() public view returns (bytes32) {
         return _domainSeparatorV4();

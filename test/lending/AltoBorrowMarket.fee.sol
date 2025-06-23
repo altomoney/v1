@@ -3,9 +3,8 @@ pragma solidity ^0.8.22;
 
 import {Test} from "forge-std/Test.sol";
 
-import {AltoBorrowMarket, LiquidationConfiguration} from "@alto/lending/AltoBorrowMarket.sol";
+import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {ERC20Mock} from "../helpers/ERC20Mock.sol";
@@ -13,51 +12,8 @@ import {console2} from "forge-std/console2.sol";
 import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
 import {FixedPointMath, MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
-
-contract AltoBorrowMarketMock is AltoBorrowMarket {
-    using AssetShareConversionMath for uint256;
-
-    constructor(
-        address _borrowToken,
-        address _collateralToken,
-        address _irm,
-        address _owner,
-        address _oracle,
-        uint256 _maxLtv,
-        uint256 _borrowOpeningFee,
-        address _feeRecipient,
-        LiquidationConfiguration memory _liquidationConfiguration
-    )
-        AltoBorrowMarket(
-            _borrowToken,
-            _collateralToken,
-            _irm,
-            _owner,
-            _oracle,
-            _maxLtv,
-            _borrowOpeningFee,
-            _feeRecipient,
-            _liquidationConfiguration
-        )
-    {}
-
-    function addInterest(uint256 amount) external {
-        totalSupply.assets += uint128(amount);
-        totalBorrowed.assets += uint128(amount);
-    }
-
-    function borrowSharesToAmount(uint256 shares) external view returns (uint256) {
-        return shares.convertToAssetsUp(totalBorrowed.assets, totalBorrowed.shares);
-    }
-
-    function borrowAmountToShares(uint256 amount) external view returns (uint256) {
-        return amount.convertToSharesDown(totalBorrowed.assets, totalBorrowed.shares);
-    }
-
-    function supplySharesToAssets(uint256 shares) external view returns (uint256) {
-        return shares.convertToAssetsDown(totalSupply.assets, totalSupply.shares);
-    }
-}
+import {IOracle} from "@alto/oracles/interfaces/IOracle.sol";
+import {MockMarketDeployer, MockMarket} from "@alto-test/helpers/MockMarket.sol";
 
 contract AltoBorrowMarketFeeTest is Test {
     using FixedPointMath for uint256;
@@ -83,12 +39,12 @@ contract AltoBorrowMarketFeeTest is Test {
         deal(address(collateralToken), address(this), type(uint256).max);
     }
 
-    function _createMarketWithOpeningFee(uint256 openingFee) internal returns (AltoBorrowMarketMock) {
+    function _createMarketWithOpeningFee(uint256 openingFee) internal returns (MockMarket) {
         address irm = address(new FixedRateIrm(0.04 ether / uint256(365 days), address(this)));
         address oracle = address(new OracleMock());
         OracleMock(oracle).setPrice(ORACLE_PRICE_PRECISION);
 
-        AltoBorrowMarketMock market = new AltoBorrowMarketMock(
+        MockMarket market = MockMarketDeployer.deployMarket(
             address(borrowToken),
             address(collateralToken),
             address(irm),
@@ -132,7 +88,7 @@ contract AltoBorrowMarketFeeTest is Test {
         uint256 amount = 10 ether;
         uint256 borrowAmount = 5 ether;
 
-        AltoBorrowMarketMock market = _createMarketWithOpeningFee(openingFee);
+        MockMarket market = _createMarketWithOpeningFee(openingFee);
         IMarket imarket = IMarket(address(market));
 
         market.addSupply(amount, 0, SUPPLIER);
@@ -167,7 +123,7 @@ contract AltoBorrowMarketFeeTest is Test {
         targetLtv = bound(targetLtv, 0.001 ether, LTV);
         amount = bound(amount, 1 ether, MAX_AMOUNT);
 
-        AltoBorrowMarketMock market = _createMarketWithOpeningFee(openingFee);
+        MockMarket market = _createMarketWithOpeningFee(openingFee);
         IMarket imarket = IMarket(address(market));
 
         market.addSupply(amount, 0, SUPPLIER);
@@ -204,7 +160,7 @@ contract AltoBorrowMarketFeeTest is Test {
         targetLtv = bound(targetLtv, 0.001 ether, LTV);
         amount = bound(amount, 1 ether, MAX_AMOUNT);
 
-        AltoBorrowMarketMock market = _createMarketWithOpeningFee(openingFee);
+        MockMarket market = _createMarketWithOpeningFee(openingFee);
         IMarket imarket = IMarket(address(market));
 
         market.addSupply(amount, 0, SUPPLIER);
@@ -238,12 +194,10 @@ contract AltoBorrowMarketFeeTest is Test {
         assertEq(amount, supplyAssetsSupplier);
     }
 
-    function _depositCollateralAndBorrow(
-        AltoBorrowMarketMock market,
-        uint256 amount,
-        uint256 borrowAmount,
-        address user
-    ) internal returns (uint256) {
+    function _depositCollateralAndBorrow(MockMarket market, uint256 amount, uint256 borrowAmount, address user)
+        internal
+        returns (uint256)
+    {
         IMarket imarket = IMarket(address(market));
         uint256 openingFee = market.borrowOpeningFee();
 
@@ -265,7 +219,7 @@ contract AltoBorrowMarketFeeTest is Test {
     function test_borrowOpeningFeeAssetsMultipleUsers() public {
         uint256 openingFee = 0.05 ether; // 5%
 
-        AltoBorrowMarketMock market = _createMarketWithOpeningFee(openingFee);
+        MockMarket market = _createMarketWithOpeningFee(openingFee);
         IMarket imarket = IMarket(address(market));
 
         uint256 feeAssets = _depositCollateralAndBorrow(market, 10 ether, 5 ether, USER);

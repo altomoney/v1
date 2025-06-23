@@ -2,49 +2,14 @@
 pragma solidity ^0.8.22;
 
 import {Test} from "forge-std/Test.sol";
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {AltoBaseMarket} from "@alto/lending/AltoBaseMarket.sol";
 import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
-import {IMarketBase, IMarket} from "@alto/lending/interfaces/IMarket.sol";
 import {PAUSED_MARKET, FROZEN_MARKET} from "@alto/utils/Constants.sol";
 import {IPausable} from "@alto/utils/Pausable.sol";
 import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
-import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";
-
-contract MockMarket is AltoBaseMarket {
-    constructor(
-        address _borrowToken,
-        address _collateralToken,
-        address _irm,
-        address _owner,
-        address _oracle,
-        uint256 _maxLtv,
-        uint256 _borrowOpeningFee,
-        address _feeRecipient,
-        LiquidationConfiguration memory _liquidationConfiguration
-    ) {
-        __AltoBaseMarket_init(
-            _borrowToken,
-            _collateralToken,
-            _irm,
-            _owner,
-            _oracle,
-            _maxLtv,
-            _borrowOpeningFee,
-            _feeRecipient,
-            _liquidationConfiguration
-        );
-    }
-
-    function addInterest(uint256 amount) external {
-        totalSupply.assets += uint128(amount);
-        totalBorrowed.assets += uint128(amount);
-    }
-}
+import {MockMarketDeployer, MockMarket} from "@alto-test/helpers/MockMarket.sol";
 
 contract AltoBorrowMarketPauseTest is Test {
     MockMarket market;
@@ -65,7 +30,7 @@ contract AltoBorrowMarketPauseTest is Test {
         address oracle = address(new OracleMock());
         OracleMock(oracle).setPrice(ORACLE_PRICE_PRECISION);
 
-        market = new MockMarket(
+        market = MockMarketDeployer.deployMarket(
             address(borrowToken),
             address(collateralToken),
             address(irm),

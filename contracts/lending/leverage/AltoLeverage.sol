@@ -27,7 +27,7 @@ struct FlashRemoveCollateralLeverageData {
 /// @notice A contract that allows users to leverage and deleverage their collateral by swapping it for a different asset.
 /// @dev This contract is used to leverage and deleverage collateral of a borrow position on behalf of users.
 /// It is used in the AltoLeverageSwapper contract to swap assets.
-/// It is also used in the AltoBorrowMarket contract in `borrow` and `removeCollateral` functions.
+/// It is also used in the AltoBaseMarket contract in `borrow` and `removeCollateral` functions.
 contract AltoLeverage is Ownable2Step, IBorrowCallback, IRemoveCollateralCallback {
     using AssetShareConversionMath for uint256;
     using SafeERC20 for IERC20;

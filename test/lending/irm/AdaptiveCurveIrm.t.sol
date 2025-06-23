@@ -27,7 +27,7 @@ contract AdaptiveCurveIrmMock is AdaptiveCurveIrm {
     }
 }
 
-contract MockMarket {
+contract InterestRateMarket {
     function accrueInterest() external {}
 }
 
@@ -36,7 +36,7 @@ contract AdaptiveCurveIrmTest is IrmCommon {
 
     AdaptiveCurveIrm public adaptiveCurveIrm;
 
-    MockMarket mockMarket = new MockMarket();
+    InterestRateMarket mockMarket = new InterestRateMarket();
 
     function _createAdaptiveCurveIrm(AdaptiveCurveIrm.AdaptiveCurveIrmConfig memory irmConfig)
         internal

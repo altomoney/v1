@@ -1,4 +1,4 @@
-AltoMarket::TagLiquidablePosition()
+AltoBaseMarket::TagLiquidablePosition()
 ├── when market is paused
 │   └── it should revert
 ├── when priority liquidation is disabled

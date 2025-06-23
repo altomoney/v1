@@ -10,8 +10,8 @@ import {ERC20Mock} from "../../helpers/ERC20Mock.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {IMarket, LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
-import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";
 import {IrmCommon} from "./IrmCommon.t.sol";
+import {MockMarketDeployer, MockMarket} from "@alto-test/helpers/MockMarket.sol";
 
 contract MockAdaptiveCurveIrm is AdaptiveCurveIrm {
     constructor(AdaptiveCurveIrm.AdaptiveCurveIrmConfig memory _irmConfig, address _owner)
@@ -41,69 +41,68 @@ interface IMockAdaptiveCurveIrm {
     function irState() external view returns (AdaptiveCurveIrm.IRState memory);
 }
 
-contract AltoBorrowMarketMock is AltoBorrowMarket {
-    constructor(
-        address _borrowToken,
-        address _collateralToken,
-        address _irm,
-        address _owner,
-        address _oracle,
-        uint256 _maxLtv,
-        uint256 _borrowOpeningFee,
-        address _feeRecipient,
-        LiquidationConfiguration memory _liquidationConfiguration
-    )
-        AltoBorrowMarket(
-            _borrowToken,
-            _collateralToken,
-            _irm,
-            _owner,
-            _oracle,
-            _maxLtv,
-            _borrowOpeningFee,
-            _feeRecipient,
-            _liquidationConfiguration
-        )
-    {}
-
-    function modifyTotalBorrowed(uint256 amount) external {
-        totalBorrowed.assets += uint128(amount);
-    }
-
-    function modifyTotalSupply(uint256 amount) external {
-        totalSupply.assets += uint128(amount);
-    }
-}
-
 contract AdaptiveCurveIrmUpdateTest is IrmCommon {
     using FixedPointMath for uint256;
 
-    function _createMarketWithIrm(address irm) internal returns (AltoBorrowMarketMock) {
+    MockMarket market;
+    MockMarket newMarket;
+
+    function setUp() public override {
+        super.setUp();
+
         address oracle = address(new OracleMock());
         OracleMock(oracle).setPrice(ORACLE_PRICE_PRECISION);
 
-        AltoBorrowMarketMock market = new AltoBorrowMarketMock(
-            address(borrowToken),
-            address(collateralToken),
-            address(irm),
-            address(this),
-            address(oracle),
-            LTV,
-            0,
-            address(this),
-            LiquidationConfiguration({
-                maxLiquidationLtv: 0.8 ether,
-                dynamicBonusFeeStart: 0.03 ether,
-                ltvForCompleteLiquidation: 0.9 ether,
-                dynamicBonusFeeDecaySteepness: 5 ether,
-                liquidationBaseFee: 0.05 ether,
-                minPenaltyPercentage: 0.01 ether,
-                isEnabledPriorityLiquidation: true,
-                disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
-                priorityLiquidationGracePeriod: 5 minutes,
-                taggerLiquidationGracePeriod: 2 minutes,
-                liquidationWindowTag: 3 days
-            })
+        market = MockMarket(
+            MockMarketDeployer.deployMarket(
+                address(borrowToken),
+                address(collateralToken),
+                address(0),
+                address(this),
+                address(oracle),
+                LTV,
+                0,
+                address(this),
+                LiquidationConfiguration({
+                    maxLiquidationLtv: 0.8 ether,
+                    dynamicBonusFeeStart: 0.03 ether,
+                    ltvForCompleteLiquidation: 0.9 ether,
+                    dynamicBonusFeeDecaySteepness: 5 ether,
+                    liquidationBaseFee: 0.05 ether,
+                    minPenaltyPercentage: 0.01 ether,
+                    isEnabledPriorityLiquidation: true,
+                    disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
+                    priorityLiquidationGracePeriod: 5 minutes,
+                    taggerLiquidationGracePeriod: 2 minutes,
+                    liquidationWindowTag: 3 days
+                })
+            )
+        );
+
+        newMarket = MockMarket(
+            MockMarketDeployer.deployMarket(
+                address(borrowToken),
+                address(collateralToken),
+                address(0),
+                address(this),
+                address(oracle),
+                LTV,
+                0,
+                address(this),
+                LiquidationConfiguration({
+                    maxLiquidationLtv: 0.8 ether,
+                    dynamicBonusFeeStart: 0.03 ether,
+                    ltvForCompleteLiquidation: 0.9 ether,
+                    dynamicBonusFeeDecaySteepness: 5 ether,
+                    liquidationBaseFee: 0.05 ether,
+                    minPenaltyPercentage: 0.01 ether,
+                    isEnabledPriorityLiquidation: true,
+                    disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
+                    priorityLiquidationGracePeriod: 5 minutes,
+                    taggerLiquidationGracePeriod: 2 minutes,
+                    liquidationWindowTag: 3 days
+                })
+            )
         );
 
         borrowToken.approve(address(market), type(uint256).max);
@@ -111,8 +110,6 @@ contract AdaptiveCurveIrmUpdateTest is IrmCommon {
 
         vm.prank(USER);
         market.setAuthorization(address(this), true);
-
-        return market;
     }
 
     function testAccrueInterest(
@@ -125,7 +122,7 @@ contract AdaptiveCurveIrmUpdateTest is IrmCommon {
         _fuzzAdaptiveCurveConfig(irmConfig);
 
         MockAdaptiveCurveIrm irm = new MockAdaptiveCurveIrm(irmConfig, address(this));
-        AltoBorrowMarketMock market = _createMarketWithIrm(address(irm));
+        market.setIrm(address(irm));
 
         targetLtv = bound(targetLtv, 0.001 ether, LTV);
         amount = bound(amount, MIN_AMOUNT, MAX_AMOUNT);
@@ -167,7 +164,7 @@ contract AdaptiveCurveIrmUpdateTest is IrmCommon {
         _fuzzAdaptiveCurveConfig(newIrmConfig);
 
         MockAdaptiveCurveIrm irm = new MockAdaptiveCurveIrm(irmConfig, address(this));
-        AltoBorrowMarketMock market = _createMarketWithIrm(address(irm));
+        market.setIrm(address(irm));
 
         market.addSupply(amount, 0, USER);
         market.addCollateral(amount, USER);
@@ -179,7 +176,7 @@ contract AdaptiveCurveIrmUpdateTest is IrmCommon {
         uint256 marketSupply = IMarket(address(market)).totalSupply().assets;
 
         MockAdaptiveCurveIrm newIrm = new MockAdaptiveCurveIrm(newIrmConfig, address(this));
-        AltoBorrowMarketMock newMarket = _createMarketWithIrm(address(newIrm));
+        newMarket.setIrm(address(newIrm));
 
         newMarket.modifyTotalBorrowed(IMarket(address(market)).totalBorrowed().assets);
         newMarket.modifyTotalSupply(IMarket(address(market)).totalSupply().assets);

@@ -1,4 +1,4 @@
-AltoMarket::Pause()
+AltoBaseMarket::Pause()
 ├── when market is paused
 │   ├── it should accrue interest
 │   └── it should not accrue any inerest as time passes

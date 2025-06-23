@@ -3,7 +3,6 @@ pragma solidity ^0.8.22;
 
 import {Test} from "forge-std/Test.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {AltoBorrowMarket, LiquidationConfiguration} from "@alto/lending/AltoBorrowMarket.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
@@ -13,13 +12,14 @@ import {
     FlashRemoveCollateralLeverageData
 } from "@alto/lending/leverage/AltoLeverage.sol";
 import {IAltoLeverageSwapper} from "@alto/lending/interfaces/IAltoLeverageSwapper.sol";
-import {IMarket, Position, IMarketErrors} from "@alto/lending/interfaces/IMarket.sol";
+import {IMarket, Position, IMarketErrors, LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SwapperSimpleMock} from "@alto/lending/mocks/SwapperSimpleMock.sol";
 
 import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
+import {MarketDeployer} from "@alto/utils/MarketDeployer.sol";
 
 contract AltoLeverageBTTTest is Test {
     using FixedPointMath for uint256;
@@ -48,30 +48,28 @@ contract AltoLeverageBTTTest is Test {
         OracleMock(oracle).setPrice(1 * ORACLE_PRICE_PRECISION);
 
         market = IMarket(
-            address(
-                new AltoBorrowMarket(
-                    address(borrowToken),
-                    address(collateralToken),
-                    address(irm),
-                    address(this),
-                    address(oracle),
-                    0.8 ether,
-                    0,
-                    address(this),
-                    LiquidationConfiguration({
-                        maxLiquidationLtv: 0.8 ether,
-                        dynamicBonusFeeStart: 0.03 ether,
-                        ltvForCompleteLiquidation: 0.9 ether,
-                        dynamicBonusFeeDecaySteepness: 5 ether,
-                        liquidationBaseFee: 0.05 ether,
-                        minPenaltyPercentage: 0.01 ether,
-                        isEnabledPriorityLiquidation: true,
-                        disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
-                        priorityLiquidationGracePeriod: 5 minutes,
-                        taggerLiquidationGracePeriod: 2 minutes,
-                        liquidationWindowTag: 3 days
-                    })
-                )
+            MarketDeployer.deployBorrowMarket(
+                address(borrowToken),
+                address(collateralToken),
+                address(irm),
+                address(this),
+                address(oracle),
+                0.8 ether,
+                0,
+                address(this),
+                LiquidationConfiguration({
+                    maxLiquidationLtv: 0.8 ether,
+                    dynamicBonusFeeStart: 0.03 ether,
+                    ltvForCompleteLiquidation: 0.9 ether,
+                    dynamicBonusFeeDecaySteepness: 5 ether,
+                    liquidationBaseFee: 0.05 ether,
+                    minPenaltyPercentage: 0.01 ether,
+                    isEnabledPriorityLiquidation: true,
+                    disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
+                    priorityLiquidationGracePeriod: 5 minutes,
+                    taggerLiquidationGracePeriod: 2 minutes,
+                    liquidationWindowTag: 3 days
+                })
             )
         );
 

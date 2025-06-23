@@ -42,7 +42,7 @@ contract AltoAdapter is CoreAdapter {
         external
         onlyBundler3
     {
-        // Do not check `onBehalf` against the zero address as it's done in AltoBorrowMarket.
+        // Do not check `onBehalf` against the zero address as it's done in AltoBaseMarket.
         require(onBehalf != address(this), ErrorsLib.AdapterAddress());
 
         if (assets == type(uint256).max) {
@@ -50,7 +50,7 @@ contract AltoAdapter is CoreAdapter {
             require(assets != 0, ErrorsLib.ZeroAmount());
         }
 
-        // AltoBorrowMarket's allowance is not reset as it is trusted.
+        // AltoBaseMarket's allowance is not reset as it is trusted.
         SafeERC20.forceApprove(IERC20(market.borrowToken()), address(market), type(uint256).max);
 
         (uint256 suppliedAssets, uint256 suppliedShares) = market.addSupply(assets, shares, onBehalf);
@@ -86,14 +86,14 @@ contract AltoAdapter is CoreAdapter {
     /// @param assets The amount of assets to add.
     /// @param onBehalf The address of the user whose position is collateral being added to.
     function marketAddCollateral(IMarket market, uint256 assets, address onBehalf) external onlyBundler3 {
-        // Do not check `onBehalf` against the zero address as it's done at AltoBorrowMarket's level.
+        // Do not check `onBehalf` against the zero address as it's done at AltoBaseMarket's level.
         require(onBehalf != address(this), ErrorsLib.AdapterAddress());
 
         if (assets == type(uint256).max) assets = IERC20(market.collateralToken()).balanceOf(address(this));
 
         require(assets != 0, ErrorsLib.ZeroAmount());
 
-        // AltoBorrowMarket's allowance is not reset as it is trusted.
+        // AltoBaseMarket's allowance is not reset as it is trusted.
         SafeERC20.forceApprove(IERC20(market.collateralToken()), address(market), type(uint256).max);
 
         market.addCollateral(assets, onBehalf);
@@ -103,7 +103,7 @@ contract AltoAdapter is CoreAdapter {
     /// @param market The address of the market.
     /// @param assets The amount of assets to remove.
     /// @param receiver The address of the receiver of the withdrawn assets.
-    /// @param data The data to pass to the AltoBorrowMarket's `removeCollateral` function.
+    /// @param data The data to pass to the AltoBaseMarket's `removeCollateral` function.
     function marketRemoveCollateral(IMarket market, uint256 assets, address receiver, bytes calldata data)
         external
         onlyBundler3
@@ -120,7 +120,7 @@ contract AltoAdapter is CoreAdapter {
     /// @param shares The amount of shares to borrow.
     /// @param minSharePriceE27 The minimum share price scaled by 1e27 (used for slippage protection).
     /// @param receiver The address of the receiver of the borrowed assets.
-    /// @param data The data to pass to the AltoBorrowMarket's `borrow` function.
+    /// @param data The data to pass to the AltoBaseMarket's `borrow` function.
     function marketBorrow(
         IMarket market,
         uint256 assets,
@@ -144,7 +144,7 @@ contract AltoAdapter is CoreAdapter {
         external
         onlyBundler3
     {
-        // Do not check `onBehalf` against the zero address as it's done at AltoBorrowMarket's level.
+        // Do not check `onBehalf` against the zero address as it's done at AltoBaseMarket's level.
         require(onBehalf != address(this), ErrorsLib.AdapterAddress());
 
         if (assets == type(uint256).max) {
@@ -157,7 +157,7 @@ contract AltoAdapter is CoreAdapter {
             require(shares != 0, ErrorsLib.ZeroAmount());
         }
 
-        // AltoBorrowMarket's allowance is not reset as it is trusted.
+        // AltoBaseMarket's allowance is not reset as it is trusted.
         SafeERC20.forceApprove(IERC20(market.borrowToken()), address(market), type(uint256).max);
 
         (uint256 repaidAssets, uint256 repaidShares) = market.repay(assets, shares, onBehalf);
