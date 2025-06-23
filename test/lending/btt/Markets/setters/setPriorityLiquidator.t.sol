@@ -36,7 +36,7 @@ contract AltoMarketSetPriorityLiquidator is MarketCommon {
 
     function test_RevertWhen_LiquidatorIsZeroAddress() external whenCallerIsOwner {
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBorrowMarketInvalidInput.selector));
+        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBaseMarketInvalidInput.selector));
         market.setPriorityLiquidator(address(0), true);
     }
 }

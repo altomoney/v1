@@ -34,7 +34,7 @@ contract AltoMintMarketClaimInterest is MarketCommon {
         vm.stopPrank();
 
         // it should revert
-        vm.expectRevert(IMarketErrors.AltoBorrowMarketInvalidInput.selector);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketInvalidInput.selector);
         mintMarket.claimInterest();
     }
 

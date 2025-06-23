@@ -37,7 +37,7 @@ contract AltoMarketSetBorrowOpeningFee is MarketCommon {
 
     function test_RevertWhen_BorrowOpeningFeeIsGreaterThanMATH_PRECISION() external whenCallerIsOwner {
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBorrowMarketInvalidInput.selector));
+        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBaseMarketInvalidInput.selector));
         market.setBorrowOpeningFee(MATH_PRECISION + 1);
     }
 }

@@ -35,13 +35,13 @@ contract AltoMarketAddCollateral is MarketCommon {
 
     function test_RevertWhen_AssetsIsZero() external givenInvalidInputs {
         // it should revert
-        vm.expectRevert(IMarketErrors.AltoBorrowMarketInvalidInput.selector);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketInvalidInput.selector);
         market.addCollateral(0, USER);
     }
 
     function test_RevertWhen_OnBehalfIsZeroAddress() external givenInvalidInputs {
         // it should revert
-        vm.expectRevert(IMarketErrors.AltoBorrowMarketInvalidInput.selector);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketInvalidInput.selector);
         market.addCollateral(1 ether, address(0));
     }
 

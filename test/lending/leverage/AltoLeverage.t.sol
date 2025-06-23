@@ -261,7 +261,7 @@ contract AltoLeverageTest is Test {
 
         // Borrow using AltoLeverage as recipient
         vm.prank(alice);
-        vm.expectRevert(IMarketErrors.AltoBorrowMarketBorrowingTooMuch.selector);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketBorrowingTooMuch.selector);
         market.borrow(4000.01 ether, 0, alice, address(leverage), data);
     }
 

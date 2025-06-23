@@ -66,31 +66,31 @@ struct LiquidationCalculation {
 
 interface IMarketErrors {
     /// @notice Error thrown when the input is invalid
-    error AltoBorrowMarketInvalidInput();
+    error AltoBaseMarketInvalidInput();
 
     /// @notice Error thrown when the user is trying to remove more collateral then allowed
-    error AltoBorrowMarketInsufficientUserCollateral();
+    error AltoBaseMarketInsufficientUserCollateral();
 
     /// @notice Error thrown when the user is trying to borrow more than they are allowed
-    error AltoBorrowMarketBorrowingTooMuch();
+    error AltoBaseMarketBorrowingTooMuch();
 
     /// @notice Error thrown when the market has insufficient liquidity for the borrow
-    error AltoBorrowMarketInsufficientMarketLiquidity();
+    error AltoBaseMarketInsufficientMarketLiquidity();
 
     /// @notice Error thrown when trying to liquidate a solvent position
-    error AltoBorrowMarketLiquidatingSolventPosition();
+    error AltoBaseMarketLiquidatingSolventPosition();
 
     /// @notice Error thrown when executor is allowed to perform the action on behalf of another user
-    error AltoBorrowMarketUnauthorized();
+    error AltoBaseMarketUnauthorized();
 
     /// @notice Error thrown when executor is not allowed to perform liquidation at this time
-    error AltoBorrowMarketPriorityLiquidationDisabled();
+    error AltoBaseMarketPriorityLiquidationDisabled();
 
     /// @notice Error thrown when executor is not allowed to perform liquidation at this time
-    error AltoBorrowMarketLiquidationUnauthorized();
+    error AltoBaseMarketLiquidationUnauthorized();
 
     /// @notice Error thrown when trying to tag a position that is already tagged
-    error AltoBorrowMarketLiquidationAlreadyTagged();
+    error AltoBaseMarketLiquidationAlreadyTagged();
 }
 
 interface IMarketEvents {

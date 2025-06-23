@@ -41,7 +41,7 @@ contract SetFeeRecipientTestBorrow is MarketCommon {
         market.setBorrowOpeningFee(1);
 
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBorrowMarketInvalidInput.selector));
+        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBaseMarketInvalidInput.selector));
         market.setFeeRecipient(address(0));
     }
 }
