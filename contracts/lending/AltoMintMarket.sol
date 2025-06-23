@@ -7,13 +7,13 @@ import {IIrm} from "./interfaces/IIrm.sol";
 import {Balance, Position, LiquidationConfiguration} from "./interfaces/IMarket.sol";
 import {IMintableERC20} from "./interfaces/IMintableERC20.sol";
 
-import {AltoBorrowMarket} from "./AltoBorrowMarket.sol";
+import {AltoBaseMarket} from "./AltoBaseMarket.sol";
 
 /// @title Alto Mint Market
 /// @author Alto Foundation
 /// @custom:contact security@alto.xyz
 /// @notice An Isolated Mint Market
-contract AltoMintMarket is AltoBorrowMarket {
+contract AltoMintMarket is AltoBaseMarket {
     using Uint128Converter for uint256;
 
     error AltoMintMarketNotImplemented();
@@ -22,7 +22,15 @@ contract AltoMintMarket is AltoBorrowMarket {
 
     uint128 public claimableFeesAssets;
 
-    constructor(
+    /// upgrade gap
+    uint256[50] private __gap_mint;
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(
         address _borrowToken,
         address _collateralToken,
         address _irm,
@@ -33,8 +41,8 @@ contract AltoMintMarket is AltoBorrowMarket {
         address _feeRecipient,
         uint256 _borrowOpeningFee,
         LiquidationConfiguration memory _liquidationConfiguration
-    )
-        AltoBorrowMarket(
+    ) public initializer {
+        __AltoBaseMarket_init(
             _borrowToken,
             _collateralToken,
             _irm,
@@ -44,8 +52,8 @@ contract AltoMintMarket is AltoBorrowMarket {
             _borrowOpeningFee,
             _feeRecipient,
             _liquidationConfiguration
-        )
-    {
+        );
+
         if (_feeRecipient == address(0) && irm != address(0)) {
             revert AltoBorrowMarketInvalidInput();
         }
@@ -65,7 +73,7 @@ contract AltoMintMarket is AltoBorrowMarket {
         totalSupply.assets = _debtCeiling.toUint128();
     }
 
-    /// @inheritdoc AltoBorrowMarket
+    /// @inheritdoc AltoBaseMarket
     function setFeeRecipient(address _feeRecipient) external override onlyOwner {
         if (_feeRecipient == address(0) && (borrowOpeningFee > 0 || irm != address(0))) {
             revert AltoBorrowMarketInvalidInput();

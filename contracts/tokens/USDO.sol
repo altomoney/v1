@@ -20,7 +20,9 @@ contract USDO is Ownable2Step, Pausable, OFT, IUSDO {
     mapping(address => bool) public allowedMinter;
     mapping(address => bool) public allowedBurner;
 
-    constructor(address endpoint, address owner) OFT("USDO", "USDO", endpoint, owner) Ownable(owner) {}
+    constructor(address endpoint, address owner) OFT("USDO", "USDO", endpoint, owner) Ownable(owner) {
+        _setPauser(owner, PAUSED_ROLE, true);
+    }
 
     /// =====================
     /// External
@@ -113,13 +115,18 @@ contract USDO is Ownable2Step, Pausable, OFT, IUSDO {
         _;
     }
 
-    /// @dev we need to override the _transferOwnership function as inherited contracts use Ownable
+    /// @dev we need to override the _transferOwnership function as OFT contract uses Ownable
     function _transferOwnership(address newOwner) internal virtual override(Ownable, Ownable2Step) {
         super._transferOwnership(newOwner);
     }
 
-    /// @dev we need to override the transferOwnership function as inherited contracts use Ownable
+    /// @dev we need to override the transferOwnership function as OFT contract uses Ownable
     function transferOwnership(address newOwner) public virtual override(Ownable, Ownable2Step) {
         super.transferOwnership(newOwner);
+    }
+
+    /// @inheritdoc IPausable
+    function setPauser(address pauser, bytes32 pauseType, bool status) public override(Pausable) onlyOwner {
+        _setPauser(pauser, pauseType, status);
     }
 }
