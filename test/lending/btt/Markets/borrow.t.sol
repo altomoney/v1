@@ -51,24 +51,24 @@ contract AltoMarketBorrow is MarketCommon {
 
     function test_RevertWhen_BothAssetsAndSharesAreZeroOrBothNonzero() external givenInvalidInputs {
         // it should revert
-        vm.expectRevert(IMarketErrors.AltoBorrowMarketInvalidInput.selector);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketInvalidInput.selector);
         market.borrow(0, 0, USER, USER, "");
 
         // it should revert
-        vm.expectRevert(IMarketErrors.AltoBorrowMarketInvalidInput.selector);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketInvalidInput.selector);
         market.borrow(100 ether, 100 ether, USER, USER, "");
     }
 
     function test_RevertWhen_ReceiverIsZeroAddress() external givenInvalidInputs {
         // it should revert
-        vm.expectRevert(IMarketErrors.AltoBorrowMarketInvalidInput.selector);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketInvalidInput.selector);
         market.borrow(100 ether, 0, USER, address(0), "");
     }
 
     function test_RevertWhen_SenderIsNotAuthorizedForOnBehalf() external givenInvalidInputs {
         vm.prank(USER_2);
         // it should revert
-        vm.expectRevert(IMarketErrors.AltoBorrowMarketUnauthorized.selector);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketUnauthorized.selector);
         market.borrow(100 ether, 0, USER, USER_2, "");
     }
 
@@ -90,7 +90,7 @@ contract AltoMarketBorrow is MarketCommon {
 
         uint256 excessiveBorrowAssets = market.totalSupply().assets + 1;
         // it should revert
-        vm.expectRevert(IMarketErrors.AltoBorrowMarketInsufficientMarketLiquidity.selector);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketInsufficientMarketLiquidity.selector);
         market.borrow(excessiveBorrowAssets, 0, USER, USER, "");
     }
 
@@ -379,7 +379,7 @@ contract AltoMarketBorrow is MarketCommon {
 
         vm.startPrank(USER);
         // it should revert
-        vm.expectRevert(IMarketErrors.AltoBorrowMarketUnauthorized.selector);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketUnauthorized.selector);
         market.borrow(INITIAL_BORROWED_ASSETS, 0, USER, address(callback), "some_data");
         vm.stopPrank();
     }
@@ -393,7 +393,7 @@ contract AltoMarketBorrow is MarketCommon {
 
         vm.startPrank(USER);
         // it should revert
-        vm.expectRevert(IMarketErrors.AltoBorrowMarketBorrowingTooMuch.selector);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketBorrowingTooMuch.selector);
         market.borrow(2 ether, 0, USER, USER, "");
         vm.stopPrank();
     }

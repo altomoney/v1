@@ -106,7 +106,7 @@ contract MarketAddSupplyTest is AdapterCommonSetup {
         bundle.push(_marketAddSupply(market, 0, 0, type(uint256).max, USER));
 
         // Zero assets should revert with InvalidInput
-        vm.expectRevert(); // This should fail with AltoBorrowMarketInvalidInput
+        vm.expectRevert(); // This should fail with AltoBaseMarketInvalidInput
         bundler3.multicall(bundle);
 
         vm.stopPrank();

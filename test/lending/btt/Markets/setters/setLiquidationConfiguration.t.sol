@@ -75,7 +75,7 @@ contract AltoMarketSetLiquidationConfiguration is MarketCommon {
         liquidationConfiguration.maxLiquidationLtv = market.maxLtv() - 1;
 
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBorrowMarketInvalidInput.selector));
+        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBaseMarketInvalidInput.selector));
         market.setLiquidationConfiguration(liquidationConfiguration);
     }
 
@@ -84,7 +84,7 @@ contract AltoMarketSetLiquidationConfiguration is MarketCommon {
         liquidationConfiguration.ltvForCompleteLiquidation = liquidationConfiguration.maxLiquidationLtv - 1;
 
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBorrowMarketInvalidInput.selector));
+        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBaseMarketInvalidInput.selector));
         market.setLiquidationConfiguration(liquidationConfiguration);
     }
 
@@ -93,7 +93,7 @@ contract AltoMarketSetLiquidationConfiguration is MarketCommon {
         liquidationConfiguration.ltvForCompleteLiquidation = MATH_PRECISION + 1;
 
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBorrowMarketInvalidInput.selector));
+        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBaseMarketInvalidInput.selector));
         market.setLiquidationConfiguration(liquidationConfiguration);
     }
 
@@ -102,12 +102,12 @@ contract AltoMarketSetLiquidationConfiguration is MarketCommon {
         liquidationConfiguration.dynamicBonusFeeDecaySteepness = 100 * MATH_PRECISION + 1;
 
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBorrowMarketInvalidInput.selector));
+        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBaseMarketInvalidInput.selector));
         market.setLiquidationConfiguration(liquidationConfiguration);
 
         liquidationConfiguration.dynamicBonusFeeDecaySteepness = 0;
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBorrowMarketInvalidInput.selector));
+        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBaseMarketInvalidInput.selector));
         market.setLiquidationConfiguration(liquidationConfiguration);
     }
 
@@ -120,7 +120,7 @@ contract AltoMarketSetLiquidationConfiguration is MarketCommon {
         liquidationConfiguration.liquidationBaseFee = 0.6 ether;
 
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBorrowMarketInvalidInput.selector));
+        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBaseMarketInvalidInput.selector));
         market.setLiquidationConfiguration(liquidationConfiguration);
     }
 
@@ -129,7 +129,7 @@ contract AltoMarketSetLiquidationConfiguration is MarketCommon {
         liquidationConfiguration.minPenaltyPercentage = MATH_PRECISION + 1;
 
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBorrowMarketInvalidInput.selector));
+        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBaseMarketInvalidInput.selector));
         market.setLiquidationConfiguration(liquidationConfiguration);
     }
 
@@ -138,7 +138,7 @@ contract AltoMarketSetLiquidationConfiguration is MarketCommon {
         liquidationConfiguration.priorityLiquidationGracePeriod = 1 hours + 1;
 
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBorrowMarketInvalidInput.selector));
+        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBaseMarketInvalidInput.selector));
         market.setLiquidationConfiguration(liquidationConfiguration);
     }
 
@@ -147,7 +147,7 @@ contract AltoMarketSetLiquidationConfiguration is MarketCommon {
         liquidationConfiguration.taggerLiquidationGracePeriod = 30 minutes + 1;
 
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBorrowMarketInvalidInput.selector));
+        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBaseMarketInvalidInput.selector));
         market.setLiquidationConfiguration(liquidationConfiguration);
     }
 
@@ -156,7 +156,7 @@ contract AltoMarketSetLiquidationConfiguration is MarketCommon {
         liquidationConfiguration.liquidationWindowTag = 3 days + 1;
 
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBorrowMarketInvalidInput.selector));
+        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBaseMarketInvalidInput.selector));
         market.setLiquidationConfiguration(liquidationConfiguration);
     }
 
@@ -167,7 +167,7 @@ contract AltoMarketSetLiquidationConfiguration is MarketCommon {
         liquidationConfiguration.liquidationWindowTag = 1 hours;
 
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBorrowMarketInvalidInput.selector));
+        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBaseMarketInvalidInput.selector));
         market.setLiquidationConfiguration(liquidationConfiguration);
     }
 }

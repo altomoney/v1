@@ -115,13 +115,13 @@ abstract contract AltoBaseMarket is
         _validateLiquidationConfiguration(_liquidationConfiguration, _maxLtv);
 
         if (_borrowToken == address(0) || _collateralToken == address(0) || _oracle == address(0)) {
-            revert AltoBorrowMarketInvalidInput();
+            revert AltoBaseMarketInvalidInput();
         }
         if (_maxLtv > MATH_PRECISION || _borrowOpeningFee > MATH_PRECISION) {
-            revert AltoBorrowMarketInvalidInput();
+            revert AltoBaseMarketInvalidInput();
         }
         if (_feeRecipient == address(0) && _borrowOpeningFee > 0) {
-            revert AltoBorrowMarketInvalidInput();
+            revert AltoBaseMarketInvalidInput();
         }
 
         borrowToken = _borrowToken;
@@ -158,7 +158,7 @@ abstract contract AltoBaseMarket is
     /// @inheritdoc IMarketBase
     function setOracle(address _oracle) external onlyOwner {
         if (_oracle == address(0)) {
-            revert AltoBorrowMarketInvalidInput();
+            revert AltoBaseMarketInvalidInput();
         }
 
         emit SetOracle(oracle, _oracle);
@@ -168,7 +168,7 @@ abstract contract AltoBaseMarket is
     /// @inheritdoc IMarketBase
     function setMaxLtv(uint256 _maxLtv) external onlyOwner {
         if (_maxLtv > MATH_PRECISION || _maxLtv > liquidationConfiguration.maxLiquidationLtv) {
-            revert AltoBorrowMarketInvalidInput();
+            revert AltoBaseMarketInvalidInput();
         }
 
         emit SetMaxLtv(maxLtv, _maxLtv);
@@ -191,50 +191,50 @@ abstract contract AltoBaseMarket is
         uint256 _maxLtv
     ) internal pure {
         if (_liquidationConfiguration.maxLiquidationLtv < _maxLtv) {
-            revert AltoBorrowMarketInvalidInput();
+            revert AltoBaseMarketInvalidInput();
         }
         if (_liquidationConfiguration.ltvForCompleteLiquidation < _liquidationConfiguration.maxLiquidationLtv) {
-            revert AltoBorrowMarketInvalidInput();
+            revert AltoBaseMarketInvalidInput();
         }
         if (_liquidationConfiguration.ltvForCompleteLiquidation > MATH_PRECISION) {
-            revert AltoBorrowMarketInvalidInput();
+            revert AltoBaseMarketInvalidInput();
         }
         if (
             _liquidationConfiguration.dynamicBonusFeeDecaySteepness > 100 * MATH_PRECISION
                 || _liquidationConfiguration.dynamicBonusFeeDecaySteepness == 0
         ) {
-            revert AltoBorrowMarketInvalidInput();
+            revert AltoBaseMarketInvalidInput();
         }
         if (
             _liquidationConfiguration.dynamicBonusFeeStart + _liquidationConfiguration.liquidationBaseFee
                 > MATH_PRECISION
         ) {
-            revert AltoBorrowMarketInvalidInput();
+            revert AltoBaseMarketInvalidInput();
         }
         if (_liquidationConfiguration.minPenaltyPercentage > MATH_PRECISION) {
-            revert AltoBorrowMarketInvalidInput();
+            revert AltoBaseMarketInvalidInput();
         }
         if (_liquidationConfiguration.priorityLiquidationGracePeriod > 1 hours) {
-            revert AltoBorrowMarketInvalidInput();
+            revert AltoBaseMarketInvalidInput();
         }
         if (_liquidationConfiguration.taggerLiquidationGracePeriod > 30 minutes) {
-            revert AltoBorrowMarketInvalidInput();
+            revert AltoBaseMarketInvalidInput();
         }
         if (_liquidationConfiguration.liquidationWindowTag > 3 days) {
-            revert AltoBorrowMarketInvalidInput();
+            revert AltoBaseMarketInvalidInput();
         }
         if (
             _liquidationConfiguration.priorityLiquidationGracePeriod
                 + _liquidationConfiguration.taggerLiquidationGracePeriod > _liquidationConfiguration.liquidationWindowTag
         ) {
-            revert AltoBorrowMarketInvalidInput();
+            revert AltoBaseMarketInvalidInput();
         }
     }
 
     /// @inheritdoc IMarketBase
     function setBorrowOpeningFee(uint256 _borrowOpeningFee) external onlyOwner {
         if (_borrowOpeningFee > MATH_PRECISION) {
-            revert AltoBorrowMarketInvalidInput();
+            revert AltoBaseMarketInvalidInput();
         }
 
         emit SetBorrowOpeningFee(borrowOpeningFee, _borrowOpeningFee);
@@ -244,7 +244,7 @@ abstract contract AltoBaseMarket is
     /// @inheritdoc IMarketBase
     function setFeeRecipient(address _feeRecipient) external virtual onlyOwner {
         if (_feeRecipient == address(0) && borrowOpeningFee > 0) {
-            revert AltoBorrowMarketInvalidInput();
+            revert AltoBaseMarketInvalidInput();
         }
 
         emit SetFeeRecipient(feeRecipient, _feeRecipient);
@@ -254,7 +254,7 @@ abstract contract AltoBaseMarket is
     /// @inheritdoc IMarketBase
     function setAuthorizedCallback(address callback, bool value) external onlyOwner {
         if (callback == address(0)) {
-            revert AltoBorrowMarketInvalidInput();
+            revert AltoBaseMarketInvalidInput();
         }
 
         authorizedCallbacks[callback] = value;
@@ -279,7 +279,7 @@ abstract contract AltoBaseMarket is
         returns (uint256, uint256)
     {
         if (!_onlyOneZero(assets, shares) || onBehalf == address(0)) {
-            revert AltoBorrowMarketInvalidInput();
+            revert AltoBaseMarketInvalidInput();
         }
 
         _accrueInterest();
@@ -309,10 +309,10 @@ abstract contract AltoBaseMarket is
         returns (uint256, uint256)
     {
         if (!_onlyOneZero(assets, shares) || receiver == address(0)) {
-            revert AltoBorrowMarketInvalidInput();
+            revert AltoBaseMarketInvalidInput();
         }
         if (!_isSenderAuthorized(onBehalf)) {
-            revert AltoBorrowMarketUnauthorized();
+            revert AltoBaseMarketUnauthorized();
         }
 
         _accrueInterest();
@@ -337,7 +337,7 @@ abstract contract AltoBaseMarket is
     /// @inheritdoc IMarketBase
     function addCollateral(uint256 assets, address onBehalf) external whenNotPaused whenNotFrozen returns (uint256) {
         if (assets == 0 || onBehalf == address(0)) {
-            revert AltoBorrowMarketInvalidInput();
+            revert AltoBaseMarketInvalidInput();
         }
 
         position[onBehalf].collateralAssets += assets.toUint128();
@@ -356,11 +356,11 @@ abstract contract AltoBaseMarket is
         returns (uint256)
     {
         if (assets == 0 || onBehalf == address(0)) {
-            revert AltoBorrowMarketInvalidInput();
+            revert AltoBaseMarketInvalidInput();
         }
 
         if (!_isSenderAuthorized(onBehalf)) {
-            revert AltoBorrowMarketUnauthorized();
+            revert AltoBaseMarketUnauthorized();
         }
 
         _accrueInterest();
@@ -372,11 +372,11 @@ abstract contract AltoBaseMarket is
         if (authorizedCallbacks[receiver] && data.length > 0) {
             IRemoveCollateralCallback(receiver).onRemoveCollateralCallback(assets, data);
         } else if (data.length > 0) {
-            revert AltoBorrowMarketUnauthorized();
+            revert AltoBaseMarketUnauthorized();
         }
 
         if (!_isSolvent(onBehalf, false)) {
-            revert AltoBorrowMarketInsufficientUserCollateral();
+            revert AltoBaseMarketInsufficientUserCollateral();
         }
 
         emit RemoveCollateral(msg.sender, onBehalf, receiver, assets);
@@ -392,10 +392,10 @@ abstract contract AltoBaseMarket is
         returns (uint256, uint256, uint256)
     {
         if (!_onlyOneZero(assets, shares) || receiver == address(0)) {
-            revert AltoBorrowMarketInvalidInput();
+            revert AltoBaseMarketInvalidInput();
         }
         if (!_isSenderAuthorized(onBehalf)) {
-            revert AltoBorrowMarketUnauthorized();
+            revert AltoBaseMarketUnauthorized();
         }
 
         _accrueInterest();
@@ -421,7 +421,7 @@ abstract contract AltoBaseMarket is
         totalBorrowed.shares += shares.toUint128();
 
         if (totalBorrowed.assets > totalSupply.assets) {
-            revert AltoBorrowMarketInsufficientMarketLiquidity();
+            revert AltoBaseMarketInsufficientMarketLiquidity();
         }
 
         position[onBehalf].borrowShares += shares.toUint128();
@@ -438,11 +438,11 @@ abstract contract AltoBaseMarket is
         if (authorizedCallbacks[receiver] && data.length > 0) {
             IBorrowCallback(receiver).onBorrowCallback(assetsToSend, data);
         } else if (data.length > 0) {
-            revert AltoBorrowMarketUnauthorized();
+            revert AltoBaseMarketUnauthorized();
         }
 
         if (!_isSolvent(onBehalf, false)) {
-            revert AltoBorrowMarketBorrowingTooMuch();
+            revert AltoBaseMarketBorrowingTooMuch();
         }
 
         emit Borrow(msg.sender, onBehalf, receiver, assetsToSend, shares, openingFeeAssets, feeSupplyShares);
@@ -471,7 +471,7 @@ abstract contract AltoBaseMarket is
         returns (uint256, uint256)
     {
         if (!_onlyOneZero(assets, shares) || onBehalf == address(0)) {
-            revert AltoBorrowMarketInvalidInput();
+            revert AltoBaseMarketInvalidInput();
         }
 
         _accrueInterest();
@@ -541,7 +541,7 @@ abstract contract AltoBaseMarket is
 
         // Check if the position is underwater
         if (_isSolvent(borrower, true)) {
-            revert AltoBorrowMarketLiquidatingSolventPosition();
+            revert AltoBaseMarketLiquidatingSolventPosition();
         }
 
         Position memory _position = position[borrower];
@@ -565,7 +565,7 @@ abstract contract AltoBaseMarket is
                 && calc.currentLtv < liquidationConfiguration.disablePriorityLiquidationAbovePositionLtv
         ) {
             if (!priorityLiquidators[msg.sender] && !liquidablePositions[borrower].tagged) {
-                revert AltoBorrowMarketLiquidationUnauthorized();
+                revert AltoBaseMarketLiquidationUnauthorized();
             }
 
             // Skip grace period checks for priority liquidators
@@ -576,7 +576,7 @@ abstract contract AltoBaseMarket is
                         + liquidationConfiguration.taggerLiquidationGracePeriod;
 
                 if (block.timestamp - liquidablePositions[borrower].timestamp <= gracePeriod) {
-                    revert AltoBorrowMarketLiquidationUnauthorized();
+                    revert AltoBaseMarketLiquidationUnauthorized();
                 }
             }
         }
@@ -744,7 +744,7 @@ abstract contract AltoBaseMarket is
     /// @inheritdoc IMarketBase
     function setPriorityLiquidator(address liquidator, bool status) external onlyOwner {
         if (liquidator == address(0)) {
-            revert AltoBorrowMarketInvalidInput();
+            revert AltoBaseMarketInvalidInput();
         }
 
         priorityLiquidators[liquidator] = status;
@@ -754,21 +754,21 @@ abstract contract AltoBaseMarket is
     /// @inheritdoc IMarketBase
     function tagLiquidablePosition(address user, address liquidator) external whenNotPaused {
         if (!liquidationConfiguration.isEnabledPriorityLiquidation) {
-            revert AltoBorrowMarketPriorityLiquidationDisabled();
+            revert AltoBaseMarketPriorityLiquidationDisabled();
         }
 
         _accrueInterest();
 
         if (_isSolvent(user, true)) {
-            revert AltoBorrowMarketLiquidatingSolventPosition();
+            revert AltoBaseMarketLiquidatingSolventPosition();
         }
         if (priorityLiquidators[liquidator]) {
-            revert AltoBorrowMarketLiquidationUnauthorized();
+            revert AltoBaseMarketLiquidationUnauthorized();
         }
         if (liquidablePositions[user].timestamp > 0) {
             if (liquidablePositions[user].timestamp + liquidationConfiguration.liquidationWindowTag >= block.timestamp)
             {
-                revert AltoBorrowMarketLiquidationAlreadyTagged();
+                revert AltoBaseMarketLiquidationAlreadyTagged();
             }
         }
         liquidablePositions[user] = LiquidablePosition({tagged: true, tagger: liquidator, timestamp: block.timestamp});

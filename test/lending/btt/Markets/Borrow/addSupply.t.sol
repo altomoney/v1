@@ -39,19 +39,19 @@ contract AltoBorrowMarketAddSupply is MarketCommon {
 
     function test_RevertWhen_BothAssetsAndSharesAreZero() external givenInvalidInputs {
         // it should revert
-        vm.expectRevert(IMarketErrors.AltoBorrowMarketInvalidInput.selector);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketInvalidInput.selector);
         market.addSupply(0, 0, USER);
     }
 
     function test_RevertWhen_BothAssetsAndSharesAreNon_zero() external givenInvalidInputs {
         // it should revert
-        vm.expectRevert(IMarketErrors.AltoBorrowMarketInvalidInput.selector);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketInvalidInput.selector);
         market.addSupply(1 ether, 1 ether, USER);
     }
 
     function test_RevertWhen_OnBehalfIsZeroAddress() external givenInvalidInputs {
         // it should revert
-        vm.expectRevert(IMarketErrors.AltoBorrowMarketInvalidInput.selector);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketInvalidInput.selector);
         market.addSupply(1 ether, 0, address(0));
     }
 

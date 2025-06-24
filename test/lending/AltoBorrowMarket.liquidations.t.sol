@@ -642,7 +642,7 @@ contract AltoBorrowMarketTest is Test {
 
         // Try to liquidate as priority liquidator
         vm.startPrank(liquidator);
-        vm.expectRevert(IMarketErrors.AltoBorrowMarketLiquidatingSolventPosition.selector);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketLiquidatingSolventPosition.selector);
         market.liquidate(bob, hex"");
         vm.stopPrank();
     }
@@ -676,7 +676,7 @@ contract AltoBorrowMarketTest is Test {
 
         // Try to liquidate as non-priority liquidator
         vm.startPrank(externalLiquidator);
-        vm.expectRevert(IMarketErrors.AltoBorrowMarketLiquidationUnauthorized.selector);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketLiquidationUnauthorized.selector);
         market.liquidate(bob, hex"");
         vm.stopPrank();
     }
@@ -715,7 +715,7 @@ contract AltoBorrowMarketTest is Test {
         market.tagLiquidablePosition(bob, taggerLiquidator);
 
         // Try to liquidate immediately (before grace period)
-        vm.expectRevert(IMarketErrors.AltoBorrowMarketLiquidationUnauthorized.selector);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketLiquidationUnauthorized.selector);
         market.liquidate(bob, hex"");
         vm.stopPrank();
     }
@@ -759,7 +759,7 @@ contract AltoBorrowMarketTest is Test {
 
         // Try to liquidate as external liquidator
         vm.startPrank(externalLiquidator);
-        vm.expectRevert(IMarketErrors.AltoBorrowMarketLiquidationUnauthorized.selector);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketLiquidationUnauthorized.selector);
         market.liquidate(bob, hex"");
         vm.stopPrank();
     }
@@ -840,7 +840,7 @@ contract AltoBorrowMarketTest is Test {
         vm.stopPrank();
 
         vm.startPrank(alice);
-        vm.expectRevert(IMarketErrors.AltoBorrowMarketLiquidationAlreadyTagged.selector);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketLiquidationAlreadyTagged.selector);
         market.tagLiquidablePosition(bob, alice);
         vm.stopPrank();
     }

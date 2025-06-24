@@ -189,14 +189,14 @@ contract AltoBorrowMarketTest is Test {
         vm.startPrank(alice);
 
         // Try to add supply with both assets and shares provided
-        vm.expectRevert(IMarketErrors.AltoBorrowMarketInvalidInput.selector);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketInvalidInput.selector);
         market.addSupply(100 ether, 50 ether, alice);
 
         // First add some supply
         market.addSupply(100 ether, 0, alice);
 
         // Try to remove supply with both assets and shares provided
-        vm.expectRevert(IMarketErrors.AltoBorrowMarketInvalidInput.selector);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketInvalidInput.selector);
         market.removeSupply(40 ether, 50 ether, alice, alice);
 
         vm.stopPrank();
@@ -240,7 +240,7 @@ contract AltoBorrowMarketTest is Test {
 
     function testRevertWhenAddingCollateralWithInsufficientLiquidity() public {
         vm.startPrank(alice);
-        vm.expectRevert(IMarketErrors.AltoBorrowMarketInsufficientMarketLiquidity.selector);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketInsufficientMarketLiquidity.selector);
         market.borrow(100 ether, 0, alice, alice, "");
         vm.stopPrank();
     }
@@ -248,7 +248,7 @@ contract AltoBorrowMarketTest is Test {
     function testRevertWhenBorrowingWithInsufficientCollateral() public {
         vm.startPrank(alice);
         market.addSupply(100 ether, 0, alice);
-        vm.expectRevert(IMarketErrors.AltoBorrowMarketBorrowingTooMuch.selector);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketBorrowingTooMuch.selector);
         market.borrow(100 ether, 0, alice, alice, "");
         vm.stopPrank();
     }

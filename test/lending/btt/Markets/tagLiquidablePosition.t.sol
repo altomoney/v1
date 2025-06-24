@@ -37,7 +37,7 @@ contract AltoMarketTagLiquidablePosition is MarketCommon {
         market.setLiquidationConfiguration(liquidationConfiguration);
 
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBorrowMarketPriorityLiquidationDisabled.selector));
+        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBaseMarketPriorityLiquidationDisabled.selector));
         market.tagLiquidablePosition(USER, USER);
     }
 
@@ -50,8 +50,8 @@ contract AltoMarketTagLiquidablePosition is MarketCommon {
         market.addCollateral(1 ether, USER);
         market.borrow(0.5 ether, 0, USER, USER, hex"");
 
-        // it should revert with AltoBorrowMarketLiquidatingSolventPosition
-        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBorrowMarketLiquidatingSolventPosition.selector));
+        // it should revert with AltoBaseMarketLiquidatingSolventPosition
+        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBaseMarketLiquidatingSolventPosition.selector));
         market.tagLiquidablePosition(USER, address(this));
     }
 
@@ -81,8 +81,8 @@ contract AltoMarketTagLiquidablePosition is MarketCommon {
     }
 
     function test_WhenLiquidatorIsAPriorityLiquidator() external givenUserPositionIsNotSolvent {
-        // it should revert with AltoBorrowMarketLiquidationUnauthorized
-        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBorrowMarketLiquidationUnauthorized.selector));
+        // it should revert with AltoBaseMarketLiquidationUnauthorized
+        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBaseMarketLiquidationUnauthorized.selector));
         market.tagLiquidablePosition(USER, PRIORITY_LIQUIDATOR);
     }
 
@@ -96,8 +96,8 @@ contract AltoMarketTagLiquidablePosition is MarketCommon {
         givenUserPositionIsNotSolvent
         whenUserHasAlreadyBeenTagged
     {
-        // it should revert with AltoBorrowMarketLiquidationAlreadyTagged
-        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBorrowMarketLiquidationAlreadyTagged.selector));
+        // it should revert with AltoBaseMarketLiquidationAlreadyTagged
+        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBaseMarketLiquidationAlreadyTagged.selector));
         market.tagLiquidablePosition(USER, LIQUIDATOR);
     }
 

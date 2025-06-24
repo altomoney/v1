@@ -101,7 +101,7 @@ contract MarketRemoveSupplyTest is AdapterCommonSetup {
         bundle.push(_marketRemoveSupply(market, 0, 0, 0, RECEIVER));
 
         // Zero shares should revert with InvalidInput
-        vm.expectRevert(); // This should fail with AltoBorrowMarketInvalidInput
+        vm.expectRevert(); // This should fail with AltoBaseMarketInvalidInput
         bundler3.multicall(bundle);
 
         vm.stopPrank();

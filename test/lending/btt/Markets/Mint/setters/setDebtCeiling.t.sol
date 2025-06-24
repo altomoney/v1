@@ -55,7 +55,7 @@ contract SetDebtCeilingTestMint is MarketCommon {
     function test_RevertWhen_TotalSupplyAssetsIsGreaterThanDebtCeiling() external whenCallerIsOwner {
         uint256 newDebtCeiling = market.totalBorrowed().assets / 2;
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBorrowMarketInsufficientMarketLiquidity.selector));
+        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBaseMarketInsufficientMarketLiquidity.selector));
         mintMarket.setDebtCeiling(newDebtCeiling);
     }
 }

@@ -74,8 +74,8 @@ contract AltoBorrowMarketliquidate is MarketCommon {
         market.addCollateral(1 ether, USER);
         market.borrow(0.5 ether, 0, USER, USER, "");
 
-        // it should revert with AltoBorrowMarketLiquidatingSolventPosition
-        vm.expectRevert(IMarketErrors.AltoBorrowMarketLiquidatingSolventPosition.selector);
+        // it should revert with AltoBaseMarketLiquidatingSolventPosition
+        vm.expectRevert(IMarketErrors.AltoBaseMarketLiquidatingSolventPosition.selector);
         market.liquidate(USER, "");
     }
 
@@ -124,8 +124,8 @@ contract AltoBorrowMarketliquidate is MarketCommon {
         whenCurrentLTVIsBelowDisablePriorityLiquidationThreshold
         whenLiquidatorIsNotPriorityLiquidator
     {
-        // it should revert with AltoBorrowMarketLiquidationUnauthorized
-        vm.expectRevert(IMarketErrors.AltoBorrowMarketLiquidationUnauthorized.selector);
+        // it should revert with AltoBaseMarketLiquidationUnauthorized
+        vm.expectRevert(IMarketErrors.AltoBaseMarketLiquidationUnauthorized.selector);
         market.liquidate(USER, "");
     }
 
@@ -147,8 +147,8 @@ contract AltoBorrowMarketliquidate is MarketCommon {
         whenPositionIsTagged
         whenLiquidatorIsTheTagger
     {
-        // it should revert with AltoBorrowMarketLiquidationUnauthorized
-        vm.expectRevert(IMarketErrors.AltoBorrowMarketLiquidationUnauthorized.selector);
+        // it should revert with AltoBaseMarketLiquidationUnauthorized
+        vm.expectRevert(IMarketErrors.AltoBaseMarketLiquidationUnauthorized.selector);
         market.liquidate(USER, "");
     }
 
@@ -191,8 +191,8 @@ contract AltoBorrowMarketliquidate is MarketCommon {
         whenPositionIsTagged
         whenLiquidatorIsNotTheTagger
     {
-        // it should revert with AltoBorrowMarketLiquidationUnauthorized
-        vm.expectRevert(IMarketErrors.AltoBorrowMarketLiquidationUnauthorized.selector);
+        // it should revert with AltoBaseMarketLiquidationUnauthorized
+        vm.expectRevert(IMarketErrors.AltoBaseMarketLiquidationUnauthorized.selector);
         market.liquidate(USER, "");
     }
 
@@ -375,7 +375,7 @@ contract AltoBorrowMarketliquidate is MarketCommon {
         vm.startPrank(LIQUIDATOR);
         deal(address(borrowToken), LIQUIDATOR, 1 ether);
         borrowToken.approve(address(market), 1 ether);
-        vm.expectRevert(IMarketErrors.AltoBorrowMarketLiquidationUnauthorized.selector);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketLiquidationUnauthorized.selector);
         market.liquidate(USER, "");
         vm.stopPrank();
 

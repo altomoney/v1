@@ -119,7 +119,7 @@ contract LiquidateTest is Test {
 
     function test_RevertWhen_PositionIsSolvent() public {
         vm.startPrank(liquidator);
-        vm.expectRevert(IMarketErrors.AltoBorrowMarketLiquidatingSolventPosition.selector);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketLiquidatingSolventPosition.selector);
         market.liquidate(bob, "");
         vm.stopPrank();
     }
@@ -137,7 +137,7 @@ contract LiquidateTest is Test {
         // Try to liquidate as a non-priority, non-tagger, non-owner address
         address nonAuthorized = address(0x9999);
         vm.startPrank(nonAuthorized);
-        vm.expectRevert(IMarketErrors.AltoBorrowMarketLiquidationUnauthorized.selector);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketLiquidationUnauthorized.selector);
         market.liquidate(bob, "");
         vm.stopPrank();
     }
@@ -175,7 +175,7 @@ contract LiquidateTest is Test {
     {
         // Try to liquidate immediately (should fail due to grace period)
         vm.startPrank(liquidator);
-        vm.expectRevert(IMarketErrors.AltoBorrowMarketLiquidationUnauthorized.selector);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketLiquidationUnauthorized.selector);
         market.liquidate(bob, "");
         vm.stopPrank();
     }

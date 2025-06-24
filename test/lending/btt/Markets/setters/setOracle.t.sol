@@ -37,7 +37,7 @@ contract AltoMarketSetOracle is MarketCommon {
 
     function test_RevertWhen_OracleIsZeroAddress() external whenCallerIsOwner {
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBorrowMarketInvalidInput.selector));
+        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBaseMarketInvalidInput.selector));
         market.setOracle(address(0));
     }
 }

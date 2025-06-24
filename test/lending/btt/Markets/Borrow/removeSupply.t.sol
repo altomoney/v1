@@ -29,25 +29,25 @@ contract AltoBorrowMarketRemoveSupply is MarketCommon {
 
     function test_RevertWhen_BothAssetsAndSharesAreZero() external givenInvalidInputs {
         // it should revert
-        vm.expectRevert(IMarketErrors.AltoBorrowMarketInvalidInput.selector);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketInvalidInput.selector);
         market.removeSupply(0, 0, USER, USER);
     }
 
     function test_RevertWhen_BothAssetsAndSharesAreNon_zero() external givenInvalidInputs {
         // it should revert
-        vm.expectRevert(IMarketErrors.AltoBorrowMarketInvalidInput.selector);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketInvalidInput.selector);
         market.removeSupply(1 ether, 1 ether, USER, USER);
     }
 
     function test_RevertWhen_ReceiverIsZeroAddress() external givenInvalidInputs {
         // it should revert
-        vm.expectRevert(IMarketErrors.AltoBorrowMarketInvalidInput.selector);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketInvalidInput.selector);
         market.removeSupply(1 ether, 0, USER, address(0));
     }
 
     function test_RevertWhen_SenderIsNotAuthorizedForOnBehalf() external givenInvalidInputs {
         // it should revert
-        vm.expectRevert(IMarketErrors.AltoBorrowMarketUnauthorized.selector);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketUnauthorized.selector);
         market.removeSupply(1 ether, 0, USER_2, USER);
     }
 

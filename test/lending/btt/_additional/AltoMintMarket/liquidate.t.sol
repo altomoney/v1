@@ -137,7 +137,7 @@ contract LiquidateTest is Test {
         vm.startPrank(alice);
         // liquidate function only has whenNotPaused modifier, not whenNotFrozen
         // So it should proceed to liquidation logic and fail on solvency check
-        vm.expectRevert(IMarketErrors.AltoBorrowMarketLiquidatingSolventPosition.selector);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketLiquidatingSolventPosition.selector);
         market.liquidate(bob, "");
         vm.stopPrank();
     }
@@ -149,7 +149,7 @@ contract LiquidateTest is Test {
     function test_RevertWhen_UserIsZeroAddress() external whenMarketIsNotPausedAndNotFrozen {
         vm.startPrank(alice);
         // No explicit zero address validation in liquidate, so it gets to liquidation solvency check
-        vm.expectRevert(IMarketErrors.AltoBorrowMarketLiquidatingSolventPosition.selector);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketLiquidatingSolventPosition.selector);
         market.liquidate(address(0), "");
         vm.stopPrank();
     }
@@ -166,7 +166,7 @@ contract LiquidateTest is Test {
         vm.stopPrank();
 
         vm.startPrank(alice);
-        vm.expectRevert(IMarketErrors.AltoBorrowMarketLiquidatingSolventPosition.selector);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketLiquidatingSolventPosition.selector);
         market.liquidate(bob, "");
         vm.stopPrank();
     }
@@ -206,7 +206,7 @@ contract LiquidateTest is Test {
         givenCallerIsNotPriorityLiquidator
     {
         vm.startPrank(alice);
-        vm.expectRevert(IMarketErrors.AltoBorrowMarketLiquidationUnauthorized.selector);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketLiquidationUnauthorized.selector);
         market.liquidate(bob, "");
         vm.stopPrank();
     }
@@ -268,7 +268,7 @@ contract LiquidateTest is Test {
         // Charlie (tagger) should NOT be able to liquidate during priority grace period
         // Only priority liquidators can liquidate during this time
         vm.startPrank(charlie);
-        vm.expectRevert(IMarketErrors.AltoBorrowMarketLiquidationUnauthorized.selector);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketLiquidationUnauthorized.selector);
         market.liquidate(bob, "");
         vm.stopPrank();
     }

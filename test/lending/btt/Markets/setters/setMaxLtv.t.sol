@@ -36,7 +36,7 @@ contract AltoMarketSetMaxLtv is MarketCommon {
 
     function test_RevertWhen_MaxLtvIsGreaterThanMATH_PRECISION() external whenCallerIsOwner {
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBorrowMarketInvalidInput.selector));
+        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBaseMarketInvalidInput.selector));
         market.setMaxLtv(1.1 ether);
     }
 
@@ -44,7 +44,7 @@ contract AltoMarketSetMaxLtv is MarketCommon {
         uint256 newLtv = market.liquidationConfiguration().maxLiquidationLtv + 1;
 
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBorrowMarketInvalidInput.selector));
+        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBaseMarketInvalidInput.selector));
         market.setMaxLtv(newLtv);
     }
 }

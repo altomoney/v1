@@ -37,13 +37,13 @@ contract AltoMarketRemoveCollateral is MarketCommon {
 
     function test_RevertWhen_AssetsIsZero() external givenInvalidInputs {
         // it should revert
-        vm.expectRevert(IMarketErrors.AltoBorrowMarketInvalidInput.selector);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketInvalidInput.selector);
         market.removeCollateral(0, USER, USER, "");
     }
 
     function test_RevertWhen_OnBehalfIsZeroAddress() external givenInvalidInputs {
         // it should revert
-        vm.expectRevert(IMarketErrors.AltoBorrowMarketInvalidInput.selector);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketInvalidInput.selector);
         market.removeCollateral(COLLATERAL_INPUT, address(0), USER, "");
     }
 
@@ -65,14 +65,14 @@ contract AltoMarketRemoveCollateral is MarketCommon {
     function test_RevertWhen_SenderIsNotAuthorized() external givenValidInputs {
         vm.prank(USER_2);
         // it should revert
-        vm.expectRevert(IMarketErrors.AltoBorrowMarketUnauthorized.selector);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketUnauthorized.selector);
         market.removeCollateral(COLLATERAL_INPUT, USER, USER, "");
     }
 
     function test_RevertWhen_DataIsProvidedButReceiverIsNotAuthorized() external givenValidInputs {
         vm.prank(USER);
         // it should revert
-        vm.expectRevert(IMarketErrors.AltoBorrowMarketUnauthorized.selector);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketUnauthorized.selector);
         market.removeCollateral(COLLATERAL_INPUT, USER, USER, "some_data");
     }
 
@@ -80,7 +80,7 @@ contract AltoMarketRemoveCollateral is MarketCommon {
         vm.startPrank(USER);
         market.borrow(0.5 ether, 0, USER, USER, "");
         // it should revert
-        vm.expectRevert(IMarketErrors.AltoBorrowMarketInsufficientUserCollateral.selector);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketInsufficientUserCollateral.selector);
         market.removeCollateral(COLLATERAL_INPUT - 0.5 ether, USER, USER, "");
         vm.stopPrank();
     }

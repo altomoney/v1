@@ -37,17 +37,17 @@ contract AltoMarketRepay is MarketCommon {
 
     function test_RevertWhen_BothAssetsAndSharesAreZeroOrBothNonzero() external givenInvalidInput {
         // it should revert
-        vm.expectRevert(IMarketErrors.AltoBorrowMarketInvalidInput.selector);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketInvalidInput.selector);
         market.repay(0, 0, USER);
 
         // it should revert
-        vm.expectRevert(IMarketErrors.AltoBorrowMarketInvalidInput.selector);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketInvalidInput.selector);
         market.repay(100 ether, 100 ether, USER);
     }
 
     function test_RevertWhen_OnBehalfIsZeroAddress() external givenInvalidInput {
         // it should revert
-        vm.expectRevert(IMarketErrors.AltoBorrowMarketInvalidInput.selector);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketInvalidInput.selector);
         market.repay(100 ether, 0, address(0));
     }
 

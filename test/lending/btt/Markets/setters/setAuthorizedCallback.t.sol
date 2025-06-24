@@ -37,7 +37,7 @@ contract AltoMarketSetAuthorizedCallback is MarketCommon {
 
     function test_RevertWhen_CallbackIsZeroAddress() external whenCallerIsOwner {
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBorrowMarketInvalidInput.selector));
+        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBaseMarketInvalidInput.selector));
         market.setAuthorizedCallback(address(0), true);
     }
 }

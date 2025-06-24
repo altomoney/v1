@@ -55,7 +55,7 @@ contract AltoMintMarket is AltoBaseMarket {
         );
 
         if (_feeRecipient == address(0) && irm != address(0)) {
-            revert AltoBorrowMarketInvalidInput();
+            revert AltoBaseMarketInvalidInput();
         }
         totalSupply.assets = _debtCeiling.toUint128();
     }
@@ -66,7 +66,7 @@ contract AltoMintMarket is AltoBaseMarket {
         _accrueInterest();
 
         if (totalBorrowed.assets > _debtCeiling) {
-            revert AltoBorrowMarketInsufficientMarketLiquidity();
+            revert AltoBaseMarketInsufficientMarketLiquidity();
         }
 
         emit SetDebtCeiling(totalSupply.assets, _debtCeiling);
@@ -76,7 +76,7 @@ contract AltoMintMarket is AltoBaseMarket {
     /// @inheritdoc AltoBaseMarket
     function setFeeRecipient(address _feeRecipient) external override onlyOwner {
         if (_feeRecipient == address(0) && (borrowOpeningFee > 0 || irm != address(0))) {
-            revert AltoBorrowMarketInvalidInput();
+            revert AltoBaseMarketInvalidInput();
         }
 
         emit SetFeeRecipient(feeRecipient, _feeRecipient);
@@ -131,7 +131,7 @@ contract AltoMintMarket is AltoBaseMarket {
     /// @return The amount of interest and fees claimed
     function claimInterest() external whenNotPaused returns (uint256) {
         if (feeRecipient == address(0)) {
-            revert AltoBorrowMarketInvalidInput();
+            revert AltoBaseMarketInvalidInput();
         }
 
         uint256 interest = claimableFeesAssets;
