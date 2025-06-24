@@ -9,6 +9,9 @@ import {LiquidationConfiguration} from "./interfaces/IMarket.sol";
 /// @custom:contact security@tapioca.xyz
 /// @notice An Isolated Borrow Market
 contract AltoBorrowMarket is AltoBaseMarket {
+    /// upgrade gap
+    uint256[50] private __gap_borrow;
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();

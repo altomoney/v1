@@ -30,8 +30,8 @@ contract AltoMintMarket is AltoBaseMarket {
 
     uint128 public claimableFeesAssets;
 
-    /// upgrade gap
-    uint256[50] private __gap_mint;
+    /// upgrade gap (previous slot has 16 bytes left)
+    uint256[49] private __gap_mint;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {

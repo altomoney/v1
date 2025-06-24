@@ -6,6 +6,9 @@ import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
 
 /// @custom:oz-upgrades-from AltoBorrowMarket
 contract AltoBorrowMarketUpgraded is AltoBaseMarketUpgraded {
+    /// upgrade gap
+    uint256[50] private __gap_borrow;
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();

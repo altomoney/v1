@@ -98,8 +98,8 @@ abstract contract AltoBaseMarket is
     /// @inheritdoc IMarketBase
     address public feeRecipient;
 
-    /// upgrade gap
-    uint256[50] private __gap_base;
+    /// upgrade gap (previous slot has 12 bytes left)
+    uint256[32] private __gap_base;
 
     function __AltoBaseMarket_init(
         address _borrowToken,

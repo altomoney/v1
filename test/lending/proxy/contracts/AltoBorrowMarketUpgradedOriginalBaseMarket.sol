@@ -12,8 +12,8 @@ contract AltoBorrowMarketUpgradedOriginalBaseMarket is AltoBaseMarket {
 
     uint128 public addedProperty3;
 
-    /// upgrade gap
-    uint256[50] private __gap_borrow;
+    /// upgrade gap (previous slot has 16 bytes left)
+    uint256[47] private __gap_borrow;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {

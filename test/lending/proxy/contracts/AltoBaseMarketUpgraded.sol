@@ -101,8 +101,8 @@ abstract contract AltoBaseMarketUpgraded is
 
     address public addedProperty3;
 
-    /// upgrade gap
-    uint256[47] private __gap_base;
+    /// upgrade gap (previous slot has 12 bytes left)
+    uint256[29] private __gap_base;
 
     function __AltoBaseMarket_init(
         address _borrowToken,
