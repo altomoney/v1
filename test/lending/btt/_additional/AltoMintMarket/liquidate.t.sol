@@ -64,6 +64,7 @@ contract LiquidateTest is Test {
             dynamicBonusFeeDecaySteepness: 5 ether,
             liquidationBaseFee: 0.05 ether,
             minPenaltyPercentage: 0.05 ether,
+            protocolFeePercentage: 0 ether,
             isEnabledPriorityLiquidation: true,
             disablePriorityLiquidationAbovePositionLtv: type(uint256).max,
             priorityLiquidationGracePeriod: 5 minutes,

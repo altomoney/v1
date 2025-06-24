@@ -38,6 +38,8 @@ struct LiquidationConfiguration {
     uint256 liquidationBaseFee;
     /// @notice min penalty percentage applied to the user's position LTV after liquidation
     uint256 minPenaltyPercentage;
+    /// @notice protocol fee percentage applied to the liquidator's reward fee (percentage of sum of bonus fee and base fee)
+    uint256 protocolFeePercentage;
     /// @notice if true enables priority liquidation
     bool isEnabledPriorityLiquidation;
     /// @notice disable priority liquidation when position LTV is above this LTV
@@ -60,6 +62,7 @@ struct LiquidationCalculation {
     uint256 liquidationFee;
     uint256 newLtv;
     uint256 liquidatorBonusFee;
+    uint256 protocolFee;
     uint256 remainingCollateralAfterFeeInBorrowAssets;
     uint256 collateralToSellInBorrowAssets;
 }
@@ -194,20 +197,6 @@ interface IMarketEvents {
     /// @param totalSupplyAssets The total supply assets
     event AccrueInterest(uint256 borrowRate, uint256 interest, uint128 totalBorrowAssets, uint128 totalSupplyAssets);
 
-    /// @notice Emitted when a position is liquidated
-    /// @param liquidator The address performing the liquidation
-    /// @param borrower The address of the borrower being liquidated
-    /// @param repayAmount The amount of borrow token repaid
-    /// @param repayShares The amount of borrow shares repaid/burned
-    /// @param seizedCollateralAmount The amount of collateral seized by the liquidator
-    event Liquidate(
-        address indexed liquidator,
-        address indexed borrower,
-        uint256 repayAmount,
-        uint256 repayShares,
-        uint256 seizedCollateralAmount
-    );
-
     /// @notice Emitted when a position is tagged for liquidation
     /// @param user The address of the user whose position was tagged
     /// @param tagger The address of the liquidator who tagged the position
@@ -226,6 +215,8 @@ interface IMarketEvents {
     /// @param borrowToken The address of the borrow token
     /// @param liquidator The address of the liquidator
     /// @param liquidatedCollateral The amount of collateral that was liquidated
+    /// @param protocolFee The amount of protocol fee credited to the fee recipient
+    /// @param liquidatorFee The amount of liquidator fee credited to the liquidator before the protocol fee is deducted
     /// @param repaidBorrow The amount of borrow tokens that were repaid
     /// @param repaidBorrowShares The amount of borrow shares that were repaid
     /// @param badDebtClearedAssets The amount of bad debt cleared
@@ -236,6 +227,8 @@ interface IMarketEvents {
         address borrowToken,
         address liquidator,
         uint256 liquidatedCollateral,
+        uint256 protocolFee,
+        uint256 liquidatorFee,
         uint256 repaidBorrow,
         uint256 repaidBorrowShares,
         uint256 badDebtClearedAssets,
@@ -414,6 +407,7 @@ interface IMarketBase is IMarketErrors, IMarketEvents, IAuth, IPausable {
     /// @param data Additional data for the liquidator contract
     /// @return repaidBorrow The amount of borrow token repaid
     /// @return repaidBorrowShares The amount of borrow shares repaid
+    /// @return protocolFee The amount of protocol credited to the fee recipient
     /// @dev This function will calculate the liquidation amount and fee by itself. Liquidator
     /// can't specify the amount of assets to repay.
     /// @dev This function will revert if `borrower`'s position is not insolvent on not tagged.
@@ -426,7 +420,7 @@ interface IMarketBase is IMarketErrors, IMarketEvents, IAuth, IPausable {
     /// and position is not liquidated, anyone can liquidate it. If position becomes solvent and is not liquidated
     /// after it was tagged, the tag will expire in `liquidationWindowTag` seconds after the tag was set.
     /// @dev The underlying liquidation logic is well described in the docs.
-    function liquidate(address borrower, bytes calldata data) external returns (uint256, uint256);
+    function liquidate(address borrower, bytes calldata data) external returns (uint256, uint256, uint256);
 
     /// @notice Function to set a priority liquidator.
     /// @param liquidator The address of the liquidator
@@ -489,6 +483,7 @@ interface IMarketStaticTypes is IMarketBase {
             uint256 dynamicBonusFeeDecaySteepness,
             uint256 liquidationBaseFee,
             uint256 minPenaltyPercentage,
+            uint256 protocolFeePercentage,
             bool isEnabledPriorityLiquidation,
             uint256 disablePriorityLiquidationAbovePositionLtv,
             uint32 priorityLiquidationGracePeriod,

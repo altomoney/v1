@@ -148,6 +148,7 @@ abstract contract AltoBaseMarketUpgraded is
                 dynamicBonusFeeDecaySteepness: 0,
                 liquidationBaseFee: 0,
                 minPenaltyPercentage: 0,
+                protocolFeePercentage: 0,
                 isEnabledPriorityLiquidation: false,
                 disablePriorityLiquidationAbovePositionLtv: 0,
                 priorityLiquidationGracePeriod: 0,
@@ -243,6 +244,9 @@ abstract contract AltoBaseMarketUpgraded is
             revert AltoBaseMarketInvalidInput();
         }
         if (_liquidationConfiguration.minPenaltyPercentage > MATH_PRECISION) {
+            revert AltoBaseMarketInvalidInput();
+        }
+        if (_liquidationConfiguration.protocolFeePercentage > MATH_PRECISION) {
             revert AltoBaseMarketInvalidInput();
         }
         if (_liquidationConfiguration.priorityLiquidationGracePeriod > 1 hours) {
@@ -567,7 +571,11 @@ abstract contract AltoBaseMarketUpgraded is
     }
 
     /// @inheritdoc IMarketBase
-    function liquidate(address borrower, bytes calldata data) external whenNotPaused returns (uint256, uint256) {
+    function liquidate(address borrower, bytes calldata data)
+        external
+        whenNotPaused
+        returns (uint256, uint256, uint256)
+    {
         _accrueInterest();
 
         // Check if the position is underwater
@@ -621,6 +629,9 @@ abstract contract AltoBaseMarketUpgraded is
 
         // Calculate fee in collateral
         calc.liquidatorBonusFee = uint256(_position.collateralAssets).multiplyWithPrecision(calc.liquidationFee);
+        calc.protocolFee = uint256(calc.liquidatorBonusFee).divideWithRounding(
+            liquidationConfiguration.protocolFeePercentage, MATH_PRECISION, true
+        );
         uint256 remainingCollateralAfterFee = _position.collateralAssets - calc.liquidatorBonusFee;
         calc.remainingCollateralAfterFeeInBorrowAssets =
             remainingCollateralAfterFee.divideWithRounding(calc.collateralPrice, ORACLE_PRICE_PRECISION, false);
@@ -684,11 +695,14 @@ abstract contract AltoBaseMarketUpgraded is
             _applyLiquidationBadDebt(badDebt, borrower);
         }
 
-        // transfer collateral and borrow tokens
-        IERC20(collateralToken).safeTransfer(msg.sender, f_collateralAmount);
+        // apply protocol fee
+        position[feeRecipient].collateralAssets += calc.protocolFee.toUint128();
+
+        // transfer collateral and borrow tokens with applied protocol fee
+        IERC20(collateralToken).safeTransfer(msg.sender, f_collateralAmount - calc.protocolFee);
 
         if (data.length > 0) {
-            ILiquidateCallback(msg.sender).onLiquidateCallback(f_collateralAmount, data);
+            ILiquidateCallback(msg.sender).onLiquidateCallback(f_repayAmount, data);
         }
 
         _sendBorrowToken(msg.sender, address(this), f_repayAmount);
@@ -699,13 +713,15 @@ abstract contract AltoBaseMarketUpgraded is
             borrowToken,
             msg.sender,
             f_collateralAmount,
+            calc.protocolFee,
+            calc.liquidatorBonusFee,
             f_repayAmount,
             f_repayShares,
             badDebt.assets,
             badDebt.shares
         );
 
-        return (f_collateralAmount, f_repayAmount);
+        return (f_collateralAmount, f_repayAmount, calc.protocolFee);
     }
 
     /// @dev Calculates the liquidation percentage - how far are we between LTV and LLTV with position's current LTV.

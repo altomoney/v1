@@ -170,12 +170,15 @@ contract AltoBorrowMarketliquidate is MarketCommon {
 
         // it should proceed with liquidation
         vm.expectEmit(true, false, false, false);
-        emit IMarketEvents.Liquidation(USER, address(collateralToken), address(borrowToken), TAGGER, 0, 0, 0, 0, 0);
-        (uint256 collateralAmount, uint256 repayAmount) = market.liquidate(USER, "");
+        emit IMarketEvents.Liquidation(
+            USER, address(collateralToken), address(borrowToken), TAGGER, 0, 0, 0, 0, 0, 0, 0
+        );
+        (uint256 collateralAmount, uint256 repayAmount, uint256 protocolFee) = market.liquidate(USER, "");
         vm.stopPrank();
 
         assertGt(collateralAmount, 0);
         assertGt(repayAmount, 0);
+        assertGt(protocolFee, 0);
     }
 
     modifier whenLiquidatorIsNotTheTagger() {
@@ -218,13 +221,14 @@ contract AltoBorrowMarketliquidate is MarketCommon {
         // it should proceed with liquidation
         vm.expectEmit(true, false, false, false);
         emit IMarketEvents.Liquidation(
-            USER, address(collateralToken), address(borrowToken), EXTERNAL_LIQUIDATOR, 0, 0, 0, 0, 0
+            USER, address(collateralToken), address(borrowToken), EXTERNAL_LIQUIDATOR, 0, 0, 0, 0, 0, 0, 0
         );
-        (uint256 collateralAmount, uint256 repayAmount) = market.liquidate(USER, "");
+        (uint256 collateralAmount, uint256 repayAmount, uint256 protocolFee) = market.liquidate(USER, "");
         vm.stopPrank();
 
         assertGt(collateralAmount, 0);
         assertGt(repayAmount, 0);
+        assertGt(protocolFee, 0);
     }
 
     function test_WhenLiquidatorIsPriorityLiquidator()
@@ -240,13 +244,14 @@ contract AltoBorrowMarketliquidate is MarketCommon {
         // it should proceed with liquidation
         vm.expectEmit(true, false, false, false);
         emit IMarketEvents.Liquidation(
-            USER, address(collateralToken), address(borrowToken), PRIORITY_LIQUIDATOR, 0, 0, 0, 0, 0
+            USER, address(collateralToken), address(borrowToken), PRIORITY_LIQUIDATOR, 0, 0, 0, 0, 0, 0, 0
         );
-        (uint256 collateralAmount, uint256 repayAmount) = market.liquidate(USER, "");
+        (uint256 collateralAmount, uint256 repayAmount, uint256 protocolFee) = market.liquidate(USER, "");
         vm.stopPrank();
 
         assertGt(collateralAmount, 0);
         assertGt(repayAmount, 0);
+        assertGt(protocolFee, 0);
     }
 
     function test_WhenCurrentLTVIsAboveDisablePriorityLiquidationThreshold()
@@ -270,12 +275,15 @@ contract AltoBorrowMarketliquidate is MarketCommon {
 
         // it should proceed with liquidation
         vm.expectEmit(true, false, false, false);
-        emit IMarketEvents.Liquidation(USER, address(collateralToken), address(borrowToken), LIQUIDATOR, 0, 0, 0, 0, 0);
-        (uint256 collateralAmount, uint256 repayAmount) = market.liquidate(USER, "");
+        emit IMarketEvents.Liquidation(
+            USER, address(collateralToken), address(borrowToken), LIQUIDATOR, 0, 0, 0, 0, 0, 0, 0
+        );
+        (uint256 collateralAmount, uint256 repayAmount, uint256 protocolFee) = market.liquidate(USER, "");
         vm.stopPrank();
 
         assertGt(collateralAmount, 0);
         assertGt(repayAmount, 0);
+        assertGt(protocolFee, 0);
 
         // users position should be empty as we set the disablePriorityLiquidationAbovePositionLtv to 100%
         Position memory position = market.position(USER);
@@ -296,12 +304,15 @@ contract AltoBorrowMarketliquidate is MarketCommon {
 
         // it should proceed with liquidation
         vm.expectEmit(true, false, false, false);
-        emit IMarketEvents.Liquidation(USER, address(collateralToken), address(borrowToken), LIQUIDATOR, 0, 0, 0, 0, 0);
-        (uint256 collateralAmount, uint256 repayAmount) = market.liquidate(USER, "");
+        emit IMarketEvents.Liquidation(
+            USER, address(collateralToken), address(borrowToken), LIQUIDATOR, 0, 0, 0, 0, 0, 0, 0
+        );
+        (uint256 collateralAmount, uint256 repayAmount, uint256 protocolFee) = market.liquidate(USER, "");
         vm.stopPrank();
 
         assertGt(collateralAmount, 0);
         assertGt(repayAmount, 0);
+        assertGt(protocolFee, 0);
     }
 
     /// @dev This test is covered by AltoBorrowMarket.liquidations.sol
@@ -389,8 +400,10 @@ contract AltoBorrowMarketliquidate is MarketCommon {
 
         // it should delete liquidable position
         vm.expectEmit(true, false, false, false);
-        emit IMarketEvents.Liquidation(USER, address(collateralToken), address(borrowToken), TAGGER, 0, 0, 0, 0, 0);
-        (uint256 collateralAmount, uint256 repayAmount) = market.liquidate(USER, "");
+        emit IMarketEvents.Liquidation(
+            USER, address(collateralToken), address(borrowToken), TAGGER, 0, 0, 0, 0, 0, 0, 0
+        );
+        market.liquidate(USER, "");
         vm.stopPrank();
 
         LiquidablePosition memory liquidablePosition = market.liquidablePositions(USER);
