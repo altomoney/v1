@@ -3,7 +3,8 @@ pragma solidity ^0.8.22;
 
 import {Test} from "forge-std/Test.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {AltoBorrowMarket, LiquidationConfiguration} from "@alto/lending/AltoBorrowMarket.sol";
+import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";
+import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
@@ -21,6 +22,7 @@ import {console} from "forge-std/console.sol";
 import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
+import {MarketDeployer} from "@alto/utils/MarketDeployer.sol";
 
 contract AltoLeverageTest is Test {
     using FixedPointMath for uint256;
@@ -46,30 +48,28 @@ contract AltoLeverageTest is Test {
         OracleMock(oracle).setPrice(1 * ORACLE_PRICE_PRECISION);
 
         market = IMarket(
-            address(
-                new AltoBorrowMarket(
-                    address(borrowToken),
-                    address(collateralToken),
-                    address(irm),
-                    address(this),
-                    address(oracle),
-                    0.8 ether,
-                    0,
-                    address(this),
-                    LiquidationConfiguration({
-                        maxLiquidationLtv: 0.8 ether,
-                        dynamicBonusFeeStart: 0.03 ether,
-                        ltvForCompleteLiquidation: 0.9 ether,
-                        dynamicBonusFeeDecaySteepness: 5 ether,
-                        liquidationBaseFee: 0.05 ether,
-                        minPenaltyPercentage: 0.01 ether,
-                        isEnabledPriorityLiquidation: true,
-                        disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
-                        priorityLiquidationGracePeriod: 5 minutes,
-                        taggerLiquidationGracePeriod: 2 minutes,
-                        liquidationWindowTag: 3 days
-                    })
-                )
+            MarketDeployer.deployBorrowMarket(
+                address(borrowToken),
+                address(collateralToken),
+                address(irm),
+                address(this),
+                address(oracle),
+                0.8 ether,
+                0,
+                address(this),
+                LiquidationConfiguration({
+                    maxLiquidationLtv: 0.8 ether,
+                    dynamicBonusFeeStart: 0.03 ether,
+                    ltvForCompleteLiquidation: 0.9 ether,
+                    dynamicBonusFeeDecaySteepness: 5 ether,
+                    liquidationBaseFee: 0.05 ether,
+                    minPenaltyPercentage: 0.01 ether,
+                    isEnabledPriorityLiquidation: true,
+                    disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
+                    priorityLiquidationGracePeriod: 5 minutes,
+                    taggerLiquidationGracePeriod: 2 minutes,
+                    liquidationWindowTag: 3 days
+                })
             )
         );
 
@@ -266,14 +266,14 @@ contract AltoLeverageTest is Test {
         market.borrow(4000.01 ether, 0, alice, address(leverage), data);
     }
 
-    function isSolvent(address user, address market) internal view returns (bool, uint256 max, uint256 current) {
+    function isSolvent(address user, address _market) internal view returns (bool, uint256 max, uint256 current) {
         uint256 collateralPrice = OracleMock(oracle).getPrice();
-        uint256 collateralValue = uint256(IMarket(market).position(user).collateralAssets).divideWithRounding(
+        uint256 collateralValue = uint256(IMarket(_market).position(user).collateralAssets).divideWithRounding(
             collateralPrice, ORACLE_PRICE_PRECISION, false
         );
-        uint256 maxBorrowValue = collateralValue.multiplyWithPrecision(IMarket(market).maxLtv());
-        uint256 borrowValue = uint256(IMarket(market).position(user).borrowShares).convertToAssetsUp(
-            IMarket(market).totalBorrowed().assets, IMarket(market).totalBorrowed().shares
+        uint256 maxBorrowValue = collateralValue.multiplyWithPrecision(IMarket(_market).maxLtv());
+        uint256 borrowValue = uint256(IMarket(_market).position(user).borrowShares).convertToAssetsUp(
+            IMarket(_market).totalBorrowed().assets, IMarket(_market).totalBorrowed().shares
         );
 
         return (maxBorrowValue >= borrowValue, maxBorrowValue, borrowValue);

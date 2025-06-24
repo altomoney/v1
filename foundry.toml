@@ -14,16 +14,19 @@ proptest_max_shrink_iters = 500
 
 remappings = [
 	'deployments/=contracts/deployments/',
-	'forge-std/=node_modules/forge-std/src/',
 	'@morpho-org/bundler3/=lib/bundler3/src/',
 	'@morpho-org/irm/=lib/morpho-blue-irm/src/',
 	'@alto-test/=test/',
 	'@alto/=contracts/',
-	'@openzeppelin/contracts/=node_modules/@openzeppelin/contracts/',
-	'@openzeppelin/contracts-upgradeable/=node_modules/@openzeppelin/contracts-upgradeable/',
+	'@openzeppelin/contracts/=lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/',
+	'@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/',
 ]
+
+ffi = true
+ast = true
+build_info = true
+extra_output = ["storageLayout"]
 
 [profile.market]
 src = 'contracts'
 test = "test/lending"
-

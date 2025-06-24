@@ -3,9 +3,8 @@ pragma solidity ^0.8.22;
 
 import {Test} from "forge-std/Test.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {
-    AltoBorrowMarket, LiquidablePosition, LiquidationConfiguration, Balance
-} from "@alto/lending/AltoBorrowMarket.sol";
+import {AltoBaseMarket} from "@alto/lending/AltoBaseMarket.sol";
+import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
@@ -16,8 +15,10 @@ import {ILiquidateCallback} from "@alto/lending/interfaces/IMarketCallbacks.sol"
 import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
 import {IOracle} from "@alto/oracles/interfaces/IOracle.sol";
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
+import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
+import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";
 
-contract MockMarket is AltoBorrowMarket {
+contract MockMarket is AltoBaseMarket {
     using AssetShareConversionMath for uint256;
     using FixedPointMath for uint256;
 
@@ -31,8 +32,8 @@ contract MockMarket is AltoBorrowMarket {
         uint256 _borrowOpeningFee,
         address _feeRecipient,
         LiquidationConfiguration memory _liquidationConfiguration
-    )
-        AltoBorrowMarket(
+    ) {
+        __AltoBaseMarket_init(
             _borrowToken,
             _collateralToken,
             _irm,
@@ -42,8 +43,8 @@ contract MockMarket is AltoBorrowMarket {
             _borrowOpeningFee,
             _feeRecipient,
             _liquidationConfiguration
-        )
-    {}
+        );
+    }
 
     function addInterest(uint256 amount) external {
         totalSupply.assets += uint128(amount);
@@ -114,17 +115,34 @@ contract AltoBorrowMarketTest is Test {
         address oracle = address(new OracleMock());
         OracleMock(oracle).setPrice(collateralPrice);
 
-        market = new MockMarket(
-            address(borrowToken),
-            address(collateralToken),
-            address(irm),
-            address(this),
-            address(oracle),
-            maxLtv,
-            0,
-            address(this),
-            liquidationConfiguration
+        market = Upgrades.deployUUPSProxy(
+            "MockMarket.sol",
+            abi.encodeCall(
+                AltoBorrowMarket.initialize,
+                (
+                    address(borrowToken),
+                    address(collateralToken),
+                    address(irm),
+                    address(this),
+                    address(oracle),
+                    maxLtv,
+                    0,
+                    address(this),
+                    liquidationConfiguration
+                )
+            )
         );
+        //  new MockMarket(
+        //     address(borrowToken),
+        //     address(collateralToken),
+        //     address(irm),
+        //     address(this),
+        //     address(oracle),
+        //     maxLtv,
+        //     0,
+        //     address(this),
+        //     liquidationConfiguration
+        // );
 
         // Setup initial balances for test accounts
         deal(address(borrowToken), alice, INITIAL_AMOUNT);

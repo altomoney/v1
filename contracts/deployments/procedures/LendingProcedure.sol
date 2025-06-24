@@ -6,6 +6,7 @@ import {AltoMintMarket} from "@alto/lending/AltoMintMarket.sol";
 import {LendingReport} from "../interfaces/IAltoReport.sol";
 import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {LiquidationConfiguration} from "@alto/lending/AltoBorrowMarket.sol";
+import {MarketDeployer} from "@alto/utils/MarketDeployer.sol";
 
 abstract contract LendingProcedure {
     function _deployLending(
@@ -18,56 +19,52 @@ abstract contract LendingProcedure {
         address mintIrm,
         address mintOracle
     ) internal returns (LendingReport memory report) {
-        report.borrowMarket = address(
-            new AltoBorrowMarket(
-                address(borrowToken),
-                address(collateralTokenBorrowMarket),
-                address(borrowIrm),
-                owner,
-                address(borrowOracle),
-                0.75 ether,
-                0.005 ether,
-                owner,
-                LiquidationConfiguration({
-                    maxLiquidationLtv: 0.8 ether,
-                    dynamicBonusFeeStart: 0.03 ether,
-                    ltvForCompleteLiquidation: 0.9 ether,
-                    dynamicBonusFeeDecaySteepness: 5 ether,
-                    liquidationBaseFee: 0.05 ether,
-                    minPenaltyPercentage: 0.01 ether,
-                    isEnabledPriorityLiquidation: true,
-                    disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
-                    priorityLiquidationGracePeriod: 5 minutes,
-                    taggerLiquidationGracePeriod: 2 minutes,
-                    liquidationWindowTag: 3 days
-                })
-            )
+        report.borrowMarket = MarketDeployer.deployBorrowMarket(
+            address(borrowToken),
+            address(collateralTokenBorrowMarket),
+            address(borrowIrm),
+            owner,
+            address(borrowOracle),
+            0.75 ether,
+            0.005 ether,
+            owner,
+            LiquidationConfiguration({
+                maxLiquidationLtv: 0.8 ether,
+                dynamicBonusFeeStart: 0.03 ether,
+                ltvForCompleteLiquidation: 0.9 ether,
+                dynamicBonusFeeDecaySteepness: 5 ether,
+                liquidationBaseFee: 0.05 ether,
+                minPenaltyPercentage: 0.01 ether,
+                isEnabledPriorityLiquidation: true,
+                disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
+                priorityLiquidationGracePeriod: 5 minutes,
+                taggerLiquidationGracePeriod: 2 minutes,
+                liquidationWindowTag: 3 days
+            })
         );
-        report.mintMarket = address(
-            new AltoMintMarket(
-                address(borrowToken),
-                address(collateralTokenMintMarket),
-                address(mintIrm),
-                owner,
-                address(mintOracle),
-                0.75 ether,
-                3_000_000 ether,
-                owner,
-                0.005 ether,
-                LiquidationConfiguration({
-                    maxLiquidationLtv: 0.8 ether,
-                    dynamicBonusFeeStart: 0.03 ether,
-                    ltvForCompleteLiquidation: 0.9 ether,
-                    dynamicBonusFeeDecaySteepness: 5 ether,
-                    liquidationBaseFee: 0.05 ether,
-                    minPenaltyPercentage: 0.01 ether,
-                    isEnabledPriorityLiquidation: true,
-                    disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
-                    priorityLiquidationGracePeriod: 5 minutes,
-                    taggerLiquidationGracePeriod: 2 minutes,
-                    liquidationWindowTag: 3 days
-                })
-            )
+        report.mintMarket = MarketDeployer.deployMintMarket(
+            address(borrowToken),
+            address(collateralTokenMintMarket),
+            address(mintIrm),
+            owner,
+            address(mintOracle),
+            0.75 ether,
+            3_000_000 ether,
+            owner,
+            0.005 ether,
+            LiquidationConfiguration({
+                maxLiquidationLtv: 0.8 ether,
+                dynamicBonusFeeStart: 0.03 ether,
+                ltvForCompleteLiquidation: 0.9 ether,
+                dynamicBonusFeeDecaySteepness: 5 ether,
+                liquidationBaseFee: 0.05 ether,
+                minPenaltyPercentage: 0.01 ether,
+                isEnabledPriorityLiquidation: true,
+                disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
+                priorityLiquidationGracePeriod: 5 minutes,
+                taggerLiquidationGracePeriod: 2 minutes,
+                liquidationWindowTag: 3 days
+            })
         );
     }
 }
