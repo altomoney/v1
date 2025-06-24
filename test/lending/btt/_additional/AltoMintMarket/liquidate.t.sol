@@ -16,6 +16,7 @@ import {AltoMintMarket} from "@alto/lending/AltoMintMarket.sol";
 import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
 import {IMarketErrors} from "@alto/lending/interfaces/IMarket.sol";
 import {IMintableERC20} from "@alto/lending/interfaces/IMintableERC20.sol";
+import {MarketDeployer} from "@alto/utils/MarketDeployer.sol";
 
 contract MintableERC20Mock is ERC20, IMintableERC20 {
     constructor(string memory name, string memory symbol) ERC20(name, symbol) {}
@@ -70,17 +71,19 @@ contract LiquidateTest is Test {
             liquidationWindowTag: 3 days
         });
 
-        market = new AltoMintMarket(
-            address(borrowToken),
-            address(collateralToken),
-            address(irm),
-            owner,
-            address(oracle),
-            MAX_LTV,
-            DEBT_CEILING,
-            feeRecipient,
-            BORROW_OPENING_FEE,
-            config
+        market = AltoMintMarket(
+            MarketDeployer.deployMintMarket(
+                address(borrowToken),
+                address(collateralToken),
+                address(irm),
+                owner,
+                address(oracle),
+                MAX_LTV,
+                DEBT_CEILING,
+                feeRecipient,
+                BORROW_OPENING_FEE,
+                config
+            )
         );
 
         // Mint tokens to test accounts

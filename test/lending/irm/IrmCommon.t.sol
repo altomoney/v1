@@ -23,7 +23,7 @@ contract IrmCommon is Test {
     uint256 constant MIN_AMOUNT = 1000;
     uint256 constant MAX_AMOUNT = 2 ** 64;
 
-    function setUp() public {
+    function setUp() public virtual {
         borrowToken = new ERC20Mock("borrow", "B");
         collateralToken = new ERC20Mock("collateral", "C");
 

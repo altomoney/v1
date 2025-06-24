@@ -1,30 +1,26 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
-import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";
 import {AltoMintMarket} from "@alto/lending/AltoMintMarket.sol";
 import {LendingReport} from "../interfaces/IAltoReport.sol";
 import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
-import {LiquidationConfiguration} from "@alto/lending/AltoBorrowMarket.sol";
+import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
 import {MarketDeployer} from "@alto/utils/MarketDeployer.sol";
 
 abstract contract LendingProcedure {
-    function _deployLending(
+    function _deployBorrowMarket(
         address owner,
-        address collateralTokenBorrowMarket,
-        address collateralTokenMintMarket,
+        address collateralToken,
         address borrowToken,
-        address borrowIrm,
-        address borrowOracle,
-        address mintIrm,
-        address mintOracle
-    ) internal returns (LendingReport memory report) {
-        report.borrowMarket = MarketDeployer.deployBorrowMarket(
+        address irm,
+        address oracle
+    ) internal returns (address) {
+        return MarketDeployer.deployBorrowMarket(
             address(borrowToken),
-            address(collateralTokenBorrowMarket),
-            address(borrowIrm),
+            address(collateralToken),
+            address(irm),
             owner,
-            address(borrowOracle),
+            address(oracle),
             0.75 ether,
             0.005 ether,
             owner,
@@ -42,12 +38,18 @@ abstract contract LendingProcedure {
                 liquidationWindowTag: 3 days
             })
         );
-        report.mintMarket = MarketDeployer.deployMintMarket(
+    }
+
+    function _deployMintMarket(address owner, address collateralToken, address borrowToken, address irm, address oracle)
+        internal
+        returns (address)
+    {
+        return MarketDeployer.deployMintMarket(
             address(borrowToken),
-            address(collateralTokenMintMarket),
-            address(mintIrm),
+            address(collateralToken),
+            address(irm),
             owner,
-            address(mintOracle),
+            address(oracle),
             0.75 ether,
             3_000_000 ether,
             owner,

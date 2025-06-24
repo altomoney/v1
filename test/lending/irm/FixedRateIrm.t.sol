@@ -23,7 +23,7 @@ contract FixedRateIrmMock is FixedRateIrm {
     }
 }
 
-contract MockMarket {
+contract InterestRateMarket {
     function accrueInterest() external {}
 }
 
@@ -35,7 +35,7 @@ contract FixedRateIrmTest is Test {
     uint256 constant INITIAL_BORROW_RATE = 1 ether / uint256(365 days);
 
     function setUp() external {
-        MockMarket mockMarket = new MockMarket();
+        InterestRateMarket mockMarket = new InterestRateMarket();
         fixedRateIrm = new FixedRateIrmMock(INITIAL_BORROW_RATE, address(this));
         fixedRateIrm.setMarket(address(mockMarket));
     }

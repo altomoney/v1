@@ -1,4 +1,4 @@
-AltoBorrowMarket::liquidate()
+AltoBaseMarket::liquidate()
 ├── when market is paused
 │   └── it should revert
 ├── given position is solvent
