@@ -370,7 +370,7 @@ abstract contract AltoBaseMarket is
         IERC20(collateralToken).safeTransfer(receiver, assets);
 
         if (authorizedCallbacks[receiver] && data.length > 0) {
-            IRemoveCollateralCallback(receiver).onRemoveCollateralCallback(assets, data);
+            IRemoveCollateralCallback(receiver).onRemoveCollateralCallback(assets, onBehalf, data);
         } else if (data.length > 0) {
             revert AltoBaseMarketUnauthorized();
         }
@@ -436,7 +436,7 @@ abstract contract AltoBaseMarket is
         }
 
         if (authorizedCallbacks[receiver] && data.length > 0) {
-            IBorrowCallback(receiver).onBorrowCallback(assetsToSend, data);
+            IBorrowCallback(receiver).onBorrowCallback(assetsToSend, onBehalf, data);
         } else if (data.length > 0) {
             revert AltoBaseMarketUnauthorized();
         }

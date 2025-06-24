@@ -437,7 +437,7 @@ contract AltoAdapterTest is AdapterCommonSetup {
         uint256 initialCollateralAmount = targetCollateralAmount.divideWithPrecisionDown(maxMultiplier);
         uint256 collateralAmountToAdd = targetCollateralAmount - initialCollateralAmount;
 
-        bytes memory leverageData = _marketPrepareLeverageData(collateralAmountToAdd, user, hex"", true);
+        bytes memory leverageData = _marketPrepareLeverageData(collateralAmountToAdd, hex"");
 
         bundle.push(_erc20TransferFrom(address(collateralToken), initialCollateralAmount));
         bundle.push(_marketSetAuthorizationWithSig(market, privateKey, true, 0, false));
@@ -536,7 +536,7 @@ contract AltoAdapterTest is AdapterCommonSetup {
         market.borrow(amount, 0, user, user, "");
         vm.stopPrank();
 
-        bytes memory leverageData = _marketPrepareLeverageData(amount, user, hex"", false);
+        bytes memory leverageData = _marketPrepareLeverageData(amount, hex"");
 
         bundle.push(_marketSetAuthorizationWithSig(market, privateKey, true, 0, false));
         bundle.push(_marketRemoveCollateral(market, amount, address(leverage), leverageData));

@@ -12,7 +12,7 @@ import {IRemoveCollateralCallback} from "@alto/lending/interfaces/IMarketCallbac
 contract RemoveCollateralCallback is IRemoveCollateralCallback {
     event RemovedCollateralCallback();
 
-    function onRemoveCollateralCallback(uint256, bytes calldata) external {
+    function onRemoveCollateralCallback(uint256, address, bytes calldata) external {
         emit RemovedCollateralCallback();
     }
 }

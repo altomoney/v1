@@ -13,7 +13,7 @@ import {AltoMintMarket} from "@alto/lending/AltoMintMarket.sol";
 contract BorrowCallback is IBorrowCallback {
     event BorrowCallbackCalled();
 
-    function onBorrowCallback(uint256, bytes calldata) external {
+    function onBorrowCallback(uint256, address, bytes calldata) external {
         emit BorrowCallbackCalled();
     }
 }
