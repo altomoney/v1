@@ -6,8 +6,8 @@ import {EIP712Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/crypt
 import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 
 /// @title AuthUpgradeable
-/// @author Alto Foundation
-/// @custom:contact security@alto.xyz
+/// @author Pearl Labs
+/// @custom:contact security@tapioca.xyz
 /// @notice A contract that allows for authorization of addresses (upgradeable version).
 /// @dev This is used in several Alto contracts to authorize addresses to manage positions.
 /// The main purpose is to allow for transaction bundling.

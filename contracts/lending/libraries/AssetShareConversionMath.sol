@@ -4,8 +4,8 @@ pragma solidity ^0.8.0;
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 
 /// @title AssetShareConversionMath
-/// @author Alto Foundation
-/// @custom:contact security@alto.xyz
+/// @author Pearl Labs
+/// @custom:contact security@tapioca.xyz
 /// @notice Library for converting between asset amounts and share amounts with precision control.
 library AssetShareConversionMath {
     using FixedPointMath for uint256;

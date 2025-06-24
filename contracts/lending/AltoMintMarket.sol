@@ -10,8 +10,8 @@ import {IMintableERC20} from "./interfaces/IMintableERC20.sol";
 import {AltoBaseMarket} from "./AltoBaseMarket.sol";
 
 /// @title Alto Mint Market
-/// @author Alto Foundation
-/// @custom:contact security@alto.xyz
+/// @author Pearl Labs
+/// @custom:contact security@tapioca.xyz
 /// @notice An Isolated Mint Market
 contract AltoMintMarket is AltoBaseMarket {
     using Uint128Converter for uint256;

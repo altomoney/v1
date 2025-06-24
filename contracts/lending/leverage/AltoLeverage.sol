@@ -20,8 +20,8 @@ struct FlashRemoveCollateralLeverageData {
 }
 
 /// @title Alto Leverage
-/// @author Alto Foundation
-/// @custom:contact security@alto.xyz
+/// @author Pearl Labs
+/// @custom:contact security@tapioca.xyz
 /// @notice A contract that allows users to leverage and deleverage their collateral by swapping it for a different asset.
 /// @dev This contract is used to leverage and deleverage collateral of a borrow position on behalf of users.
 /// It is used in the AltoLeverageSwapper contract to swap assets.

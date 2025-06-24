@@ -2,8 +2,8 @@
 pragma solidity ^0.8.0;
 
 /// @title Uint128Converter
-/// @author Alto Foundation
-/// @custom:contact security@alto.xyz
+/// @author Pearl Labs
+/// @custom:contact security@tapioca.xyz
 /// @notice Library for converting uint256 to uint128.
 library Uint128Converter {
     error MathUtilsMaxUint128Overflow();

@@ -7,8 +7,8 @@ import {IMarket} from "../interfaces/IMarket.sol";
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 
 /// @title Fixed Rate Interest Rate Model
-/// @author Alto Foundation
-/// @custom:contact security@alto.xyz
+/// @author Pearl Labs
+/// @custom:contact security@tapioca.xyz
 contract FixedRateIrm is Ownable2Step, IIrm {
     using FixedPointMath for uint256;
 

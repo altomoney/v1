@@ -9,8 +9,8 @@ import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step
 import {PAUSED_ROLE} from "@alto/utils/Constants.sol";
 
 /// @title USDO Token
-/// @author Alto Foundation
-/// @custom:contact security@alto.xyz
+/// @author Pearl Labs
+/// @custom:contact security@tapioca.xyz
 /// @notice The USDO Token is the stablecoin of the Alto Protocol.
 contract USDO is Ownable2Step, Pausable, OFT, IUSDO {
     uint256 public fees;

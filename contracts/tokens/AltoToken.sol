@@ -5,8 +5,8 @@ import {OFT} from "@alto/utils/OFT.sol";
 import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 
 /// @title Alto Token
-/// @author Alto Foundation
-/// @custom:contact security@alto.xyz
+/// @author Pearl Labs
+/// @custom:contact security@tapioca.xyz
 /// @notice The Alto Token is the native token of the Alto Protocol.
 contract AltoToken is Ownable2Step, OFT {
     constructor(address endpoint, address owner) OFT("ALTO", "ALTO", endpoint, owner) Ownable(owner) {

@@ -6,8 +6,8 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /// @title SwapperSimpleMock
-/// @author Alto Foundation
-/// @custom:contact security@alto.xyz
+/// @author Pearl Labs
+/// @custom:contact security@tapioca.xyz
 /// @notice A simple mock for the AltoLeverageSwapper contract.
 /// @dev This contract is used to test the AltoLeverageSwapper contract.
 contract SwapperSimpleMock is IAltoLeverageSwapper, Ownable {
