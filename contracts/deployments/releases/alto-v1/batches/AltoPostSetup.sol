@@ -2,7 +2,7 @@
 pragma solidity ^0.8.22;
 
 import {UsdoReport, LendingReport} from "../../../interfaces/IAltoReport.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 
 import {USDO} from "@alto/tokens/USDO.sol";
 import {MultiTokenSender} from "@alto/deployments/contracts/testnet/MultiTokenSender.sol";
@@ -27,6 +27,8 @@ contract AltoPostSetup is Ownable {
         address altoLeverage,
         address leverageSwapper
     ) external onlyOwner {
+        Ownable2Step(payable(usdo)).acceptOwnership();
+
         USDO(payable(usdo)).setMinterStatus(address(mintMarket), true);
         USDO(payable(usdo)).setMinterStatus(address(this), true);
         USDO(payable(usdo)).setBurnerStatus(address(mintMarket), true);
@@ -47,10 +49,36 @@ contract AltoPostSetup is Ownable {
         USDO(payable(usdo)).setMinterStatus(address(this), false);
         // Transfer ownership to the delegate
         USDO(payable(usdo)).setDelegate(multicall);
-        USDO(payable(usdo)).transferOwnership(multicall);
         MultiTokenSender(multiTokenSender).transferOwnership(multicall);
-        MultiTokenSender(borrowMarket).transferOwnership(multicall);
-        MultiTokenSender(mintMarket).transferOwnership(multicall);
-        AltoLeverage(payable(altoLeverage)).transferOwnership(multicall);
+
+        Ownable2Step(payable(usdo)).transferOwnership(multicall);
+        Ownable2Step(borrowMarket).transferOwnership(multicall);
+        Ownable2Step(mintMarket).transferOwnership(multicall);
+        Ownable2Step(payable(altoLeverage)).transferOwnership(multicall);
+
+        AltoMulticallTestnet.Call[] memory calls = new AltoMulticallTestnet.Call[](4);
+        calls[0] = AltoMulticallTestnet.Call({
+            target: usdo,
+            allowFailure: false,
+            callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector)
+        });
+        calls[1] = AltoMulticallTestnet.Call({
+            target: borrowMarket,
+            allowFailure: false,
+            callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector)
+        });
+
+        calls[2] = AltoMulticallTestnet.Call({
+            target: mintMarket,
+            allowFailure: false,
+            callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector)
+        });
+        calls[3] = AltoMulticallTestnet.Call({
+            target: altoLeverage,
+            allowFailure: false,
+            callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector)
+        });
+
+        AltoMulticallTestnet(payable(multicall)).multicall(calls);
     }
 }

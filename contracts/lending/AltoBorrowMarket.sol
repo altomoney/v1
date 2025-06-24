@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import {IOracle, ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
@@ -36,7 +36,7 @@ import {
 /// @author Alto Foundation
 /// @custom:contact security@alto.xyz
 /// @notice An Isolated Borrow Market
-contract AltoBorrowMarket is Auth, Pausable, IMarketStaticTypes {
+contract AltoBorrowMarket is Auth, Ownable2Step, Pausable, IMarketStaticTypes {
     using FixedPointMath for uint256;
     using AssetShareConversionMath for uint256;
     using Uint128Converter for uint256;
@@ -764,5 +764,15 @@ contract AltoBorrowMarket is Auth, Pausable, IMarketStaticTypes {
     /// @dev Checks if one of the inputs is zero and the other is not.
     function _onlyOneZero(uint256 x, uint256 y) internal pure returns (bool) {
         return (x == 0 && y != 0) || (x != 0 && y == 0);
+    }
+
+    /// @dev we need to override the _transferOwnership function as inherited contracts use Ownable
+    function _transferOwnership(address newOwner) internal virtual override(Ownable, Ownable2Step) {
+        super._transferOwnership(newOwner);
+    }
+
+    /// @dev we need to override the transferOwnership function as inherited contracts use Ownable
+    function transferOwnership(address newOwner) public virtual override(Ownable, Ownable2Step) {
+        super.transferOwnership(newOwner);
     }
 }
