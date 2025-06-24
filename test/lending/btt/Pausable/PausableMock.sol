@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import {Pausable} from "../../../../contracts/utils/Pausable.sol";
+import {Pausable} from "@alto/utils/Pausable.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 /// @title PausableMock

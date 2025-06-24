@@ -775,4 +775,14 @@ contract AltoBorrowMarket is Auth, Ownable2Step, Pausable, IMarketStaticTypes {
     function transferOwnership(address newOwner) public virtual override(Ownable, Ownable2Step) {
         super.transferOwnership(newOwner);
     }
+
+    function _onPause(bytes32 pauseType, bool _paused) internal override {
+        if (pauseType == PAUSED_MARKET) {
+            if (_paused) {
+                _accrueInterest();
+            } else {
+                IIrm(irm).onMarketPause(_paused);
+            }
+        }
+    }
 }
