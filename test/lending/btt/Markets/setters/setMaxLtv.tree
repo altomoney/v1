@@ -1,0 +1,10 @@
+AltoMarket::SetMaxLtv
+├── when caller is not owner
+│   └── it should revert
+└── when caller is owner
+    ├── when maxLtv is greater than MATH_PRECISION
+    │   └── it should revert
+    ├── when maxLtv is greater than maxLiquidationLtv
+    │   └── it should revert
+    ├── it should update maxLtv
+    └── it should emit SetMaxLtv event 

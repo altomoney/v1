@@ -1,0 +1,8 @@
+AltoMarket::setFeeRecipient
+├── when caller is not owner
+│   └── it should revert
+└── when caller is owner
+    ├── it should update feeRecipient
+    ├── it should emit SetFeeRecipient event
+    └── when feeRecipient is zero address and borrowOpeningFee is greater than zero
+        └── it should revert

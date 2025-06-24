@@ -1,0 +1,10 @@
+AltoBaseMarket::Pause()
+├── when market is paused
+│   ├── it should accrue interest
+│   └── it should not accrue any inerest as time passes
+├── when market is unpaused
+│   └── it should restart interest accrual from current time
+├── when market is already paused and paused again
+│   └── it should revert
+└── when market is unpaused and unpaused again
+    └── it should revert

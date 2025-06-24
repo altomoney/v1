@@ -1,0 +1,19 @@
+OnRemoveCollateralCallbackTest
+├── given caller market is not supported
+│   └── it should revert
+└── given caller market is supported
+    ├── when swap fails
+    │   └── it should revert
+    ├── when swap succeeds but amountOut is less than minAmountOut
+    │   └── it should revert
+    └── when swap succeeds and amountOut meets minAmountOut
+        ├── when there are no leftover sell tokens
+        │   ├── when amountOut is less than user borrowed assets
+        │   │   └── it should repay specified amount
+        │   └── when amountOut is greater than user borrowed assets
+        │       └── it should repay full user debt and transfer excess to onBehalf
+        └── when there are leftover sell tokens
+            ├── when amountOut is less than user borrowed assets
+            │   └── it should transfer leftover tokens to onBehalf and repay specified amount
+            └── when amountOut is greater than user borrowed assets
+                └── it should transfer leftover tokens to onBehalf repay full debt and transfer excess 

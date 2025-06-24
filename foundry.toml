@@ -1,47 +1,32 @@
 [profile.default]
 solc_version = "0.8.28"
 src = 'contracts'
-libs = ['node_modules', 'lib']
+libs = ["node_modules", "lib"]
 test = 'test'
 script = 'script'
-no-match-path = 'contracts/mocks/research/*'
-no-match-contract = "(Fork|Stargate)"
+no-match-path = 'playground/*'
 
-evm_version='shanghai'
+evm_version = 'cancun'
 optimizer = true
 optimizer_runs = 1
 
 proptest_max_shrink_iters = 500
 
 remappings = [
-	"solidity-bytes-utils/=node_modules/@layerzerolabs/solidity-bytes-utils/",
-	"tapioca-sdk/=contracts/sdk/",
-	"tap-utils/=contracts/utils/",
-	"src/tap-utils/=contracts/utils/",
-	"tapioca-strategies/=contracts/yieldbox-strategies/",
-	"yieldbox/=contracts/yieldbox/",
-	'tapiocaz/=contracts/tapiocaz/',
-	"permitc/=lib/PermitC/src/",
-	'tapioca-periph/=contracts/periph/',
-	'tap-token/=contracts/tap-token',
-	'tap-yieldbox/=contracts/yieldbox/',
-	'tapioca-bar/=contracts/bar/',
-	'tapioca-mocks/=contracts/mocks/',
 	'deployments/=contracts/deployments/',
-	'solady/=lib/solady/src/',
+	'@morpho-org/bundler3/=lib/bundler3/src/',
+	'@morpho-org/irm/=lib/morpho-blue-irm/src/',
+	'@alto-test/=test/',
+	'@alto/=contracts/',
+	'@openzeppelin/contracts/=lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/',
+	'@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/',
 ]
 
-[etherscan]
+ffi = true
+ast = true
+build_info = true
+extra_output = ["storageLayout"]
 
-[profile.fork]
-# replace no-match-contract from profile.default
-no-match-contract = "zzz"
-
-[rpc_endpoints]
-[profile.twtap]
-src = "contracts/tap-token/governance"
-test = "test/tap-token/unit/options/"
-
-[profile.usdo]
-src = "contracts/bar/usdo"
-test = "test/bar"
+[profile.market]
+src = 'contracts'
+test = "test/lending"

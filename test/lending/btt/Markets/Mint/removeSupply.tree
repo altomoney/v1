@@ -1,0 +1,2 @@
+AltoMintMarket::RemoveSupply()
+└── it should revert

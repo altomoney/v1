@@ -1,0 +1,17 @@
+ToUint128Test
+├── when x is zero
+│   └── it should return zero
+├── when x is within uint128 range
+│   ├── when x equals 1
+│   │   └── it should return 1
+│   ├── when x equals type(uint128).max
+│   │   └── it should return type(uint128).max
+│   └── when x is random value within range
+│       └── it should return the same value as uint128
+└── when x exceeds uint128 range
+    ├── when x equals type(uint128).max + 1
+    │   └── it should revert with MathUtilsMaxUint128Overflow
+    ├── when x equals type(uint256).max
+    │   └── it should revert with MathUtilsMaxUint128Overflow
+    └── when x is random value above range
+        └── it should revert with MathUtilsMaxUint128Overflow 

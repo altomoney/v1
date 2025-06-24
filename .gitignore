@@ -1,22 +1,14 @@
+# node modules
 node_modules
+
+# dotenv
 .env
-coverage
-coverage.json
-typechain
-package-lock.json
-docs
 
-#Hardhat & foundry files
-gen
+# foundry
 cache
-artifacts
 out
-cache_forge
-report
-lcov.info
 broadcast
 
-#Others
-.DS_Store
-.VSCodeCounter
-broadcast
+# coverage
+coverage
+lcov.info

@@ -1,0 +1,8 @@
+AltoMarket::setPriorityLiquidator
+├── when caller is not owner
+│   └── it should revert
+└── when caller is owner
+    ├── it should update priorityLiquidators mapping
+    ├── it should emit PriorityLiquidatorUpdated event
+    └── when liquidator is zero address
+        └── it should revert

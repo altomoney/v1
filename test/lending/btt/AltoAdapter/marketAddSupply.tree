@@ -1,0 +1,19 @@
+MarketAddSupplyTest
+├── given onBehalf is this adapter address
+│   └── it should revert
+├── given assets is max uint256
+│   ├── when adapter has zero token balance
+│   │   └── it should revert
+│   └── when adapter has token balance
+│       ├── when slippage protection fails
+│       │   └── it should revert
+│       └── when slippage protection passes
+│           └── it should add supply with adapter balance
+└── given assets is not max uint256
+    ├── when assets is zero
+    │   └── it should proceed with zero assets
+    └── when assets is greater than zero
+        ├── when slippage protection fails
+        │   └── it should revert
+        └── when slippage protection passes
+            └── it should add supply with specified assets 

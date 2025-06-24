@@ -1,0 +1,8 @@
+SetSwapperTest
+├── when caller is not owner
+│   └── it should revert
+└── when caller is owner
+    ├── when new swapper is zero address
+    │   └── it should set swapper and emit event
+    └── when new swapper is valid address
+        └── it should set swapper and emit event 

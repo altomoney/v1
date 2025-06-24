@@ -1,0 +1,84 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.22;
+
+import {UsdoReport, LendingReport} from "../../../interfaces/IAltoReport.sol";
+import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
+
+import {USDO} from "@alto/tokens/USDO.sol";
+import {MultiTokenSender} from "@alto/deployments/contracts/testnet/MultiTokenSender.sol";
+import {AltoMulticallTestnet} from "@alto/deployments/contracts/multicall/AltoMulticallTestnet.sol";
+import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
+import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
+
+/// @title AltoPostSetup
+/// @dev Batches performs 1-tx deployments via constructor deployment pattern and contains on-chain reports of deployed contracts
+contract AltoPostSetup is Ownable {
+    address public constant BACKEND_TESTNET_ADDRESS = 0x81E1c5EbA8c723e167E1C046AAF217B8eb7b8AC2;
+    uint128 public constant MULTI_TOKEN_SENDER_MINT_TOKENS = type(uint128).max;
+
+    constructor() Ownable(msg.sender) {}
+
+    function postSetup(
+        address multicall,
+        address usdo,
+        address borrowMarket,
+        address mintMarket,
+        address multiTokenSender,
+        address altoLeverage,
+        address leverageSwapper
+    ) external onlyOwner {
+        Ownable2Step(payable(usdo)).acceptOwnership();
+
+        USDO(payable(usdo)).setMinterStatus(address(mintMarket), true);
+        USDO(payable(usdo)).setMinterStatus(address(this), true);
+        USDO(payable(usdo)).setBurnerStatus(address(mintMarket), true);
+
+        MultiTokenSender(multiTokenSender).updateWhitelist(BACKEND_TESTNET_ADDRESS, true);
+
+        // Add extra admins to the multicall contract
+        AltoMulticallTestnet(payable(multicall)).setOwner(0xd7F6Fa30BC8c0E5003689C332bd2b9400Ed87367, true);
+        AltoMulticallTestnet(payable(multicall)).setOwner(0x4778c2AA94a8D05D63e4C07eb68021528985304C, true);
+
+        USDO(payable(usdo)).mint(multiTokenSender, MULTI_TOKEN_SENDER_MINT_TOKENS);
+        USDO(payable(usdo)).mint(leverageSwapper, MULTI_TOKEN_SENDER_MINT_TOKENS);
+        AltoLeverage(payable(altoLeverage)).setMarket(address(borrowMarket), true);
+        AltoLeverage(payable(altoLeverage)).setMarket(address(mintMarket), true);
+        IMarket(borrowMarket).setAuthorizedCallback(address(altoLeverage), true);
+        IMarket(mintMarket).setAuthorizedCallback(address(altoLeverage), true);
+
+        USDO(payable(usdo)).setMinterStatus(address(this), false);
+        // Transfer ownership to the delegate
+        USDO(payable(usdo)).setDelegate(multicall);
+        MultiTokenSender(multiTokenSender).transferOwnership(multicall);
+
+        Ownable2Step(payable(usdo)).transferOwnership(multicall);
+        Ownable2Step(borrowMarket).transferOwnership(multicall);
+        Ownable2Step(mintMarket).transferOwnership(multicall);
+        Ownable2Step(payable(altoLeverage)).transferOwnership(multicall);
+
+        AltoMulticallTestnet.Call[] memory calls = new AltoMulticallTestnet.Call[](4);
+        calls[0] = AltoMulticallTestnet.Call({
+            target: usdo,
+            allowFailure: false,
+            callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector)
+        });
+        calls[1] = AltoMulticallTestnet.Call({
+            target: borrowMarket,
+            allowFailure: false,
+            callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector)
+        });
+
+        calls[2] = AltoMulticallTestnet.Call({
+            target: mintMarket,
+            allowFailure: false,
+            callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector)
+        });
+        calls[3] = AltoMulticallTestnet.Call({
+            target: altoLeverage,
+            allowFailure: false,
+            callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector)
+        });
+
+        AltoMulticallTestnet(payable(multicall)).multicall(calls);
+    }
+}

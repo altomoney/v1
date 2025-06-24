@@ -1,0 +1,37 @@
+MarketRepayTest
+├── given onBehalf is this adapter address
+│   └── it should revert
+├── given assets is max uint256
+│   ├── when adapter has zero borrow token balance
+│   │   └── it should revert
+│   └── when adapter has borrow token balance
+│       ├── given shares is max uint256
+│       │   ├── when onBehalf has zero borrow shares
+│       │   │   └── it should revert
+│       │   └── when onBehalf has borrow shares
+│       │       ├── when slippage protection fails
+│       │       │   └── it should revert
+│       │       └── when slippage protection passes
+│       │           └── it should repay with adapter balance and onBehalf shares
+│       └── given shares is not max uint256
+│           ├── when slippage protection fails
+│           │   └── it should revert
+│           └── when slippage protection passes
+│               └── it should repay with adapter balance and specified shares
+└── given assets is not max uint256
+    ├── when assets is zero
+    │   └── it should proceed with zero assets
+    └── when assets is greater than zero
+        ├── given shares is max uint256
+        │   ├── when onBehalf has zero borrow shares
+        │   │   └── it should revert
+        │   └── when onBehalf has borrow shares
+        │       ├── when slippage protection fails
+        │       │   └── it should revert
+        │       └── when slippage protection passes
+        │           └── it should repay with specified assets and onBehalf shares
+        └── given shares is not max uint256
+            ├── when slippage protection fails
+            │   └── it should revert
+            └── when slippage protection passes
+                └── it should repay with specified assets and shares 

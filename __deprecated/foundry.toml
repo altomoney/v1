@@ -1,0 +1,44 @@
+[profile.default]
+solc_version = "0.8.28"
+src = 'contracts'
+libs = ["node_modules", "lib"]
+test = 'test'
+script = 'script'
+no-match-path = 'playground/*'
+
+evm_version = 'cancun'
+optimizer = true
+optimizer_runs = 1
+
+proptest_max_shrink_iters = 500
+
+remappings = [
+	'deployments/=contracts/deployments/',
+	'forge-std/=node_modules/forge-std/src/',
+	'@morpho-blue/=node_modules/@morpho-org/morpho-blue/src/',
+	'@morpho-org/bundler3/=lib/bundler3/src/',
+	'@morpho-org/irm/=lib/morpho-blue-irm/src/',
+	'@alto-test/=test/',
+	'@alto/=contracts/',
+	'@openzeppelin/contracts/=node_modules/@openzeppelin/contracts/',
+	'@openzeppelin/contracts-upgradeable/=node_modules/@openzeppelin/contracts-upgradeable/',
+]
+
+[etherscan]
+
+[profile.fork]
+# replace no-match-contract from profile.default
+no-match-contract = "zzz"
+
+[rpc_endpoints]
+[profile.twtap]
+src = "@alto/tap-token/governance"
+test = "test/tap-token/unit/options/"
+
+[profile.market]
+src = "@alto/lending"
+test = "test/lending"
+
+[profile.bundler]
+src = "@alto/bundler"
+test = "test/bundler"

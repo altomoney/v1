@@ -1,0 +1,67 @@
+AltoBaseMarket::liquidate()
+├── when market is paused
+│   └── it should revert
+├── given position is solvent
+│   └── it should revert with AltoBaseMarketLiquidatingSolventPosition
+├── given position is insolvent
+│   ├── when priority liquidation is enabled
+│   │   ├── when current LTV is below disable priority liquidation threshold
+│   │   │   ├── when liquidator is not priority liquidator
+│   │   │   │   ├── when position is not tagged
+│   │   │   │   │   └── it should revert with AltoBaseMarketLiquidationUnauthorized
+│   │   │   │   └── when position is tagged
+│   │   │   │       ├── when liquidator is the tagger
+│   │   │   │       │   ├── when priority liquidation grace period has not elapsed
+│   │   │   │       │   │   └── it should revert with AltoBaseMarketLiquidationUnauthorized
+│   │   │   │       │   └── when priority liquidation grace period has elapsed
+│   │   │   │       │       └── it should proceed with liquidation
+│   │   │   │       └── when liquidator is not the tagger
+│   │   │   │           ├── when combined grace periods have not elapsed
+│   │   │   │           │   └── it should revert with AltoBaseMarketLiquidationUnauthorized
+│   │   │   │           └── when combined grace periods have elapsed
+│   │   │   │               └── it should proceed with liquidation
+│   │   │   └── when liquidator is priority liquidator
+│   │   │       └── it should proceed with liquidation
+│   │   └── when current LTV is above disable priority liquidation threshold
+│   │       └── it should proceed with liquidation
+│   └── when priority liquidation is disabled
+│       └── it should proceed with liquidation
+├── given liquidation proceeds
+│   ├── it should calculate liquidation fee based on liquidator type
+│   ├── it should calculate liquidation percentage
+│   ├── it should calculate new LTV target
+│   ├── it should calculate collateral to sell
+│   └── it should calculate final amounts
+├── given share calculations
+│   ├── when repay shares exceed user borrow shares
+│   │   ├── when difference is less than VIRTUAL_SHARES
+│   │   │   └── it should cap repay shares to user borrow shares
+│   │   └── when difference is greater than or equal to VIRTUAL_SHARES
+│   │       └── it should use calculated repay shares
+│   └── when repay shares do not exceed user borrow shares
+│       └── it should use calculated repay shares
+├── given liquidation state updates
+│   ├── it should decrease borrower collateral assets
+│   ├── it should decrease borrower borrow shares
+│   ├── it should decrease total borrowed shares
+│   ├── it should decrease total borrowed assets
+│   └── when priority liquidation is enabled and current LTV is below threshold
+│       └── it should delete liquidable position
+├── given bad debt handling
+│   ├── when borrower has no collateral remaining
+│   │   ├── it should calculate bad debt shares
+│   │   ├── it should calculate bad debt assets
+│   │   ├── it should apply bad debt to market
+│   │   └── it should reset borrower borrow shares to zero
+│   └── when borrower has collateral remaining
+│       └── it should not apply bad debt
+├── given token transfers
+│   ├── it should transfer collateral tokens to liquidator
+│   ├── it should transfer borrow tokens from liquidator to market
+│   └── when callback data is provided
+│       ├── it should call onLiquidateCallback
+│       └── it should pass collateral amount and data
+├── given event emission
+│   └── it should emit Liquidation event with correct parameters
+└── given function completion
+    └── it should return collateral amount and repay amount

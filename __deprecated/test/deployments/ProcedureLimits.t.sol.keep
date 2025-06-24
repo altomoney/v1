@@ -1,0 +1,184 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.22;
+
+import "forge-std/Test.sol";
+import "forge-std/console2.sol";
+import {TapiocaMagnetarBatchOne} from "deployments/releases/tapioca-v1/batches/TapiocaMagnetarBatchOne.sol";
+import {TapiocaMagnetarBatchTwo} from "deployments/releases/tapioca-v1/batches/TapiocaMagnetarBatchTwo.sol";
+import {TapiocaUtilitiesBatch} from "deployments/releases/tapioca-v1/batches/TapiocaUtilitiesBatch.sol";
+import {TapiocaExtExBatch} from "deployments/releases/tapioca-v1/batches/TapiocaExtExBatch.sol";
+import {TapiocaUsdoBatch} from "deployments/releases/tapioca-v1/batches/TapiocaUsdoBatch.sol";
+import {TapiocaSingularityBatch1} from "deployments/releases/tapioca-v1/batches/TapiocaSingularityBatch1.sol";
+import {TapiocaSingularityBatch2} from "deployments/releases/tapioca-v1/batches/TapiocaSingularityBatch2.sol";
+import {TapiocaSingularityBatch3} from "deployments/releases/tapioca-v1/batches/TapiocaSingularityBatch3.sol";
+import {TapiocaSingularityBatch4} from "deployments/releases/tapioca-v1/batches/TapiocaSingularityBatch4.sol";
+import {TapiocaBBBatch1} from "deployments/releases/tapioca-v1/batches/TapiocaBBBatch1.sol";
+import {TapiocaBBBatch2} from "deployments/releases/tapioca-v1/batches/TapiocaBBBatch2.sol";
+import {TapiocaBBBatch3} from "deployments/releases/tapioca-v1/batches/TapiocaBBBatch3.sol";
+import "deployments/interfaces/IAltoReport.sol";
+import {TapiocaPenroseBatch} from "deployments/releases/tapioca-v1/batches/TapiocaPenroseBatch.sol";
+import {ERC20Mock} from "../bar/mocks/ERC20Mock.sol";
+import {SGLInterestHelper} from "@alto/bar/markets/singularity/SGLInterestHelper.sol";
+import {SGLLeverage} from "@alto/bar/markets/singularity/SGLLeverage.sol";
+import {SGLLiquidation} from "@alto/bar/markets/singularity/SGLLiquidation.sol";
+import {Singularity} from "@alto/bar/markets/singularity/Singularity.sol";
+import {SingularityLauncher} from "deployments/releases/tapioca-v1/actions/SingularityLauncher.sol";
+import {BigBangLauncher} from "deployments/releases/tapioca-v1/actions/BigBangLauncher.sol";
+import {TestHelperOz5} from "@layerzerolabs/test-devtools-evm-foundry/contracts/TestHelperOz5.sol";
+
+// @dev forge test --match-path test/deployments/ProcedureLimits.t.sol
+contract DeploymentProceduresLimits is Test, TestHelperOz5 {
+    address owner;
+    address leverageSwapper;
+    address endpointMock;
+    address delegate;
+    uint256 constant MAX_INIT_CONSTRUCTOR_CODE_SIZE = 49152;
+    UsdoReport usdoReport;
+
+    address erc20Mock1;
+    address erc20Mock2;
+    address erc20Mock3;
+
+    function setUp() public override {
+        super.setUp()
+        setUpEndpoints(1, LibraryType.UltraLightNode);
+
+        owner = makeAddr("owner");
+        leverageSwapper = makeAddr("leverageSwapper");
+        endpointMock = address(endpoints[1]);
+        delegate = owner;
+
+        usdoReport =
+            (new TapiocaUsdoBatch(endpointMock, delegate, address(1))).getUsdoReport();
+
+        erc20Mock1 = address(new ERC20Mock("A", "A"));
+        erc20Mock2 = address(new ERC20Mock("B", "B"));
+        erc20Mock3 = address(new ERC20Mock("C", "C"));
+    }
+
+    function test_new_TapiocaMagnetarBatchOne() public {
+        new TapiocaMagnetarBatchOne();
+    }
+
+    function test_new_TapiocaMagnetarBatchTwo() public {
+        MagnetarDepsReport memory emptyReport;
+        new TapiocaMagnetarBatchTwo(owner, address(1), address(3), address(5), emptyReport);
+    }
+
+    function test_new_UtilityBatch_isTestnet_false() public {
+        TapiocaUtilitiesBatch batch = new TapiocaUtilitiesBatch(owner, leverageSwapper, 0, false);
+        UtilitiesReport memory report = batch.getUtilitiesReport();
+        assertEq(report.multiTokenSender, address(0), "multiTokenSender should be address(0)");
+        assertTrue(report.leverageSwapper != address(0), "leverageSwapper should not be address(0)");
+        assertTrue(report.tapiocaMulticall != address(0), "tapiocaMulticall should not be address(0)");
+    }
+
+    function test_new_UtilityBatch_isTestnet_true() public {
+        TapiocaUtilitiesBatch batch = new TapiocaUtilitiesBatch(owner, leverageSwapper, 0, true);
+        UtilitiesReport memory report = batch.getUtilitiesReport();
+        assertTrue(report.multiTokenSender != address(0), "multiTokenSender should not be address(0)");
+        assertTrue(report.leverageSwapper != address(0), "leverageSwapper should not be address(0)");
+        assertTrue(report.tapiocaMulticall != address(0), "tapiocaMulticall should not be address(0)");
+    }
+    
+    function test_new_TapiocaBBBatchOne() public {
+        new TapiocaBBBatch1();
+    }
+
+    function test_new_TapiocaBBBatch2() public {
+        BBReport memory emptyInput;
+        new TapiocaBBBatch2(emptyInput);
+    }
+
+    function test_new_TapiocaBBBatch3() public {
+        BBReport memory emptyInput;
+        new TapiocaBBBatch3(emptyInput);
+    }
+
+    function test_new_TapiocaUsdoBatch() public {
+        new TapiocaUsdoBatch(
+            endpointMock,
+            delegate,
+            address(1)
+        );
+    }
+
+    function test_new_SingularityBatch() public {
+        uint256 sglInterestHelperCodeSize = type(SGLInterestHelper).creationCode.length;
+        uint256 sglLeverageCodeSize = type(SGLLeverage).creationCode.length;
+        uint256 sglLiquidationCodeSize = type(SGLLiquidation).creationCode.length;
+        uint256 singularityCodeSize = type(Singularity).creationCode.length;
+
+        console2.log("SGLInterestHelper", sglInterestHelperCodeSize);
+        console2.log("SGLLeverage", sglLeverageCodeSize);
+        console2.log("SGLLiquidation", sglLiquidationCodeSize);
+        console2.log("Singularity", singularityCodeSize);
+
+        new TapiocaSingularityBatch1();
+    }
+
+    function test_new_PenroseBatch() public {
+        new TapiocaPenroseBatch(
+            IPenroseInput(
+                address(1), erc20Mock1, erc20Mock2, erc20Mock3, address(7), address(8), address(9), address(10), address(0)
+            )
+        );
+    }
+
+    function test_codesizes() public pure {
+        {
+            uint256 magnetarBatchOneCreationSize = type(TapiocaMagnetarBatchOne).creationCode.length;
+            uint256 magnetarBatchTwoCreationSize = type(TapiocaMagnetarBatchTwo).creationCode.length;
+            uint256 utilitiesBatchCreationSize = type(TapiocaUtilitiesBatch).creationCode.length;
+            uint256 usdoBatchCreationSize = type(TapiocaUsdoBatch).creationCode.length;
+            uint256 singularityLauncherCreationSize = type(SingularityLauncher).creationCode.length;
+            uint256 bigBangLauncherCreationSize = type(BigBangLauncher).creationCode.length;
+            console2.log("TapiocaUtilitiesBatch", utilitiesBatchCreationSize);
+            console2.log("TapiocaMagnetarBatchOne", magnetarBatchOneCreationSize);
+            console2.log("TapiocaMagnetarBatchTwo", magnetarBatchTwoCreationSize);
+            console2.log("TapiocaUsdoBatch", usdoBatchCreationSize);
+            console2.log("SingularityLauncher", singularityLauncherCreationSize);
+            console2.log("BigBangLauncher", bigBangLauncherCreationSize);
+            assertLe(
+                magnetarBatchOneCreationSize,
+                MAX_INIT_CONSTRUCTOR_CODE_SIZE,
+                "TapiocaMagnetarBatchOne max init code size"
+            );
+            assertLe(
+                magnetarBatchTwoCreationSize,
+                MAX_INIT_CONSTRUCTOR_CODE_SIZE,
+                "TapiocaMagnetarBatchTwo max init code size"
+            );
+            assertLe(
+                utilitiesBatchCreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "TapiocaUtilitiesBatch max init code size"
+            );
+            assertLe(usdoBatchCreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "TapiocaUsdoBatch max init code size");
+        }
+        uint256 singularityBatch1CreationSize = type(TapiocaSingularityBatch1).creationCode.length;
+        uint256 singularityBatch2CreationSize = type(TapiocaSingularityBatch2).creationCode.length;
+        uint256 singularityBatch3CreationSize = type(TapiocaSingularityBatch3).creationCode.length;
+        uint256 singularityBatch4CreationSize = type(TapiocaSingularityBatch4).creationCode.length;
+        uint256 penroseBatchCreationSize = type(TapiocaPenroseBatch).creationCode.length;
+        uint256 bbBatchOneCreationSize = type(TapiocaBBBatch1).creationCode.length;
+        uint256 bbBatchTwoCreationSize = type(TapiocaBBBatch2).creationCode.length;
+        uint256 bbBatchThreeCreationSize = type(TapiocaBBBatch3).creationCode.length;
+
+        console2.log("TapiocaSigularityBatch1", singularityBatch1CreationSize);
+        console2.log("TapiocaSigularityBatch2", singularityBatch2CreationSize);
+        console2.log("TapiocaSigularityBatch3", singularityBatch3CreationSize);
+        console2.log("TapiocaSigularityBatch4", singularityBatch4CreationSize);
+        console2.log("TapiocaPenroseBatch", penroseBatchCreationSize);
+        console2.log("TapiocaBBBatch1", bbBatchOneCreationSize);
+        console2.log("TapiocaBBBatch2", bbBatchTwoCreationSize);
+        console2.log("TapiocaBBBatch3", bbBatchThreeCreationSize);
+
+        assertLe(singularityBatch1CreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "singularityBatch1 max init code size");
+        assertLe(singularityBatch2CreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "singularityBatch2 max init code size");
+        assertLe(singularityBatch3CreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "singularityBatch3 max init code size");
+        assertLe(singularityBatch4CreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "singularityBatch4 max init code size");
+        assertLe(penroseBatchCreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "penroseBatch max init code size");
+        assertLe(bbBatchOneCreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "bbBatchOne max init code size");
+        assertLe(bbBatchTwoCreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "bbBatchTwo max init code size");
+        assertLe(bbBatchThreeCreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "bbBatchThree max init code size");
+    }
+}

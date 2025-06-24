@@ -1,0 +1,13 @@
+WhenNotTest
+├── given pauseType is paused
+│   ├── when pauseType is zero
+│   │   └── it should revert with IsPaused
+│   └── when pauseType is non-zero
+│       └── it should revert with IsPaused
+├── given pauseType is not paused
+│   ├── when pauseType is zero
+│   │   └── it should allow function execution
+│   └── when pauseType is non-zero
+│       └── it should allow function execution
+└── given pauseType has never been set
+    └── it should allow function execution (default false) 

@@ -1,0 +1,19 @@
+AltoBaseMarket::Repay()
+├── when market is paused
+│   └── it should revert
+├── given invalid input
+│   ├── when both assets and shares are zero or both nonzero
+│   │   └── it should revert
+│   └── when onBehalf is zero address
+│       └── it should revert
+└── given valid input
+    ├── it should accrue interest
+    ├── when assets is zero
+    │   └── it should calculate assets from shares
+    ├── when shares is zero
+    │   └── it should calculate shares from assets
+    ├── it should update totalBorrowed and should not upade totalSupply
+    ├── it should update onBehalf's position borrowShares and nothing else
+    ├── it should transfer assets from msg.sender to contract
+    ├── it should emit Repay event
+    └── it should return assets and shares

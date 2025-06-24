@@ -1,57 +1,62 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
-import {UtilitiesReport} from "../interfaces/ITapiocaReport.sol";
+import {UtilitiesReport} from "../interfaces/IAltoReport.sol";
 
-import {TapiocaMulticall} from "tap-utils/TapiocaMulticall/TapiocaMulticall.sol";
-import {TapiocaMulticallTestnet} from "tap-utils/TapiocaMulticall/TapiocaMulticallTestnet.sol";
-import {Cluster} from "tap-utils/Cluster/Cluster.sol";
-import {Pauser} from "tap-utils/Pauser/Pauser.sol";
-import {ZeroXSwapper} from "tap-utils/Swapper/ZeroXSwapper.sol";
-import {ZeroXSwapperMock} from "tapioca-mocks/ZeroXSwapperMock.sol";
-import {ICluster} from "tap-utils/interfaces/periph/ICluster.sol";
-import {MultiTokenSender} from "tapioca-mocks/MultiTokenSender.sol";
+import {AltoMulticall} from "@alto/deployments/contracts/multicall/AltoMulticall.sol";
+import {AltoMulticallTestnet} from "@alto/deployments/contracts/multicall/AltoMulticallTestnet.sol";
+import {MultiTokenSender} from "@alto/deployments/contracts/testnet/MultiTokenSender.sol";
+import {Bundler3} from "@morpho-org/bundler3/Bundler3.sol";
+import {AltoAdapter} from "@alto/utils/AltoAdapter.sol";
+import {AdaptiveCurveIrm} from "@alto/lending/irm/AdaptiveCurveIrm.sol";
+import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
+import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
+import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
+import {SwapperSimpleMock} from "@alto/lending/mocks/SwapperSimpleMock.sol";
 
 abstract contract UtilitiesProcedure {
-    function _deployUtilities(address owner, address zeroXProxy, uint32 lzChainId, bool isTestnet)
+    int256 internal constant YEAR = int256(365 days);
+
+    function _deployUtilities(address owner, uint32 lzChainId, bool isTestnet, address wrappedNativeToken)
         internal
         returns (UtilitiesReport memory report)
     {
+        report.bundler3 = address(new Bundler3());
+        report.altoAdapter = address(new AltoAdapter(report.bundler3, wrappedNativeToken));
         if (isTestnet) {
-            report.tapiocaMulticall = address(new TapiocaMulticallTestnet());
+            report.altoMulticall = address(new AltoMulticallTestnet());
         } else {
-            report.tapiocaMulticall = address(new TapiocaMulticall());
+            report.altoMulticall = address(new AltoMulticall());
         }
-        report.cluster = address(new Cluster(lzChainId, address(this)));
-        report.pauser = address(new Pauser(report.cluster, owner));
         if (isTestnet) {
-            report.zeroXSwapper = zeroXProxy != address(0) ? zeroXProxy : address(new ZeroXSwapperMock(ICluster(report.cluster), owner));
+            report.leverageSwapper = address(new SwapperSimpleMock(address(this)));
             report.multiTokenSender = address(new MultiTokenSender(owner));
         } else {
-            report.zeroXSwapper = zeroXProxy != address(0) ? zeroXProxy : address(new ZeroXSwapper(zeroXProxy, ICluster(report.cluster), owner));
+            // TODO: Implement mainnet swpper deployment once we have it
+            revert("NOT_IMPLEMENTED");
         }
         if (isTestnet) {
-            TapiocaMulticallTestnet(payable(report.tapiocaMulticall)).setOwner(owner, true);
-            TapiocaMulticallTestnet(payable(report.tapiocaMulticall)).setOwner(address(this), false);
+            AltoMulticallTestnet(payable(report.altoMulticall)).setOwner(owner, true);
+            AltoMulticallTestnet(payable(report.altoMulticall)).setOwner(address(this), false);
         } else {
-            TapiocaMulticall(payable(report.tapiocaMulticall)).transferOwnership(owner);
+            AltoMulticall(payable(report.altoMulticall)).transferOwnership(owner);
+        }
+        AdaptiveCurveIrm.AdaptiveCurveIrmConfig memory config = AdaptiveCurveIrm.AdaptiveCurveIrmConfig({
+            curveSteepness: 4 ether,
+            adjustmentSpeed: 50 ether / YEAR,
+            targetUtilization: 0.8 ether,
+            initialRateAtTarget: 0.04 ether / YEAR,
+            minRateAtTarget: 0.001e18 / YEAR,
+            maxRateAtTarget: 2 ether / YEAR
+        });
+
+        report.borrowIrm = address(new AdaptiveCurveIrm(config, owner));
+        report.mintIrm = address(new AdaptiveCurveIrm(config, owner));
+        report.altoLeverage = address(new AltoLeverage(report.leverageSwapper, owner));
+        if (isTestnet) {
+            SwapperSimpleMock(payable(report.leverageSwapper)).setWhitelisted(address(report.altoLeverage), true);
+            SwapperSimpleMock(payable(report.leverageSwapper)).transferOwnership(owner);
         }
         return report;
-    }
-
-    function _initCluster(
-        address cluster,
-        address zeroXSwapper,
-        address magnetar,
-        address penrose,
-        address pauser,
-        address tapiocaMulticall
-    ) internal {
-        Cluster(cluster).setRoleForContract(magnetar, keccak256("TOE"), true);
-        Cluster(cluster).setRoleForContract(pauser, keccak256("PAUSER"), true);
-        Cluster(cluster).updateContract(0, magnetar, true);
-        Cluster(cluster).updateContract(0, zeroXSwapper, true);
-        Cluster(cluster).updateContract(0, penrose, true);
-        Cluster(cluster).transferOwnership(tapiocaMulticall);
     }
 }

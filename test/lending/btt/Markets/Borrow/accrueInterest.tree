@@ -1,0 +1,9 @@
+AltoBorrowMarket::accrueInterest()
+├── when market is paused
+│   └── it should revert
+└── when market is not paused
+    ├── when irm is zero address
+    │   └── it should do nothing
+    └── when irm is not zero address
+        ├── it should update totalSupply.assets and totalBorrowed.assets
+        └── it should emit AccrueInterest event

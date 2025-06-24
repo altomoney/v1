@@ -1,0 +1,14 @@
+SetMarketTest
+├── when caller is not owner
+│   └── it should revert
+└── when caller is owner
+    ├── when market is zero address
+    │   ├── when isSupported is true
+    │   │   └── it should set market as supported and emit event
+    │   └── when isSupported is false
+    │       └── it should set market as unsupported and emit event
+    └── when market is valid address
+        ├── when isSupported is true
+        │   └── it should set market as supported and emit event
+        └── when isSupported is false
+            └── it should set market as unsupported and emit event 
