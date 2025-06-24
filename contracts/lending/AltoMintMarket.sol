@@ -16,9 +16,17 @@ import {AltoBaseMarket} from "./AltoBaseMarket.sol";
 contract AltoMintMarket is AltoBaseMarket {
     using Uint128Converter for uint256;
 
+    /// @notice Thrown when a function is not implemented for the mint market
     error AltoMintMarketNotImplemented();
 
+    /// @notice Emitted when the debt ceiling is set
+    /// @param oldDebtCeiling The old debt ceiling
+    /// @param newDebtCeiling The new debt ceiling
     event SetDebtCeiling(uint256 oldDebtCeiling, uint256 newDebtCeiling);
+
+    /// @notice Emitted when interest is claimed by the fee recipient
+    /// @param amount The amount of interest claimed
+    event InterestClaimed(uint256 amount);
 
     uint128 public claimableFeesAssets;
 
@@ -58,6 +66,7 @@ contract AltoMintMarket is AltoBaseMarket {
             revert AltoBaseMarketInvalidInput();
         }
         totalSupply.assets = _debtCeiling.toUint128();
+        emit SetDebtCeiling(0, _debtCeiling);
     }
 
     /// @notice Sets the debt ceiling for the mint market
@@ -137,6 +146,8 @@ contract AltoMintMarket is AltoBaseMarket {
         uint256 interest = claimableFeesAssets;
         IMintableERC20(borrowToken).mint(feeRecipient, interest);
         claimableFeesAssets = 0;
+
+        emit InterestClaimed(interest);
 
         return interest;
     }

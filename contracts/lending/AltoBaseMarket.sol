@@ -99,7 +99,7 @@ abstract contract AltoBaseMarket is
     address public feeRecipient;
 
     /// upgrade gap
-    uint256[50] private __gap_borrow;
+    uint256[50] private __gap_base;
 
     function __AltoBaseMarket_init(
         address _borrowToken,
@@ -126,16 +126,44 @@ abstract contract AltoBaseMarket is
 
         borrowToken = _borrowToken;
         collateralToken = _collateralToken;
+
         irm = _irm;
+        emit SetIrm(address(0), _irm);
+
         oracle = _oracle;
+        emit SetOracle(address(0), _oracle);
+
         maxLtv = _maxLtv;
+        emit SetMaxLtv(0, _maxLtv);
+
         liquidationConfiguration = _liquidationConfiguration;
+        emit SetLiquidationConfiguration(
+            LiquidationConfiguration({
+                maxLiquidationLtv: 0,
+                dynamicBonusFeeStart: 0,
+                ltvForCompleteLiquidation: 0,
+                dynamicBonusFeeDecaySteepness: 0,
+                liquidationBaseFee: 0,
+                minPenaltyPercentage: 0,
+                isEnabledPriorityLiquidation: false,
+                disablePriorityLiquidationAbovePositionLtv: 0,
+                priorityLiquidationGracePeriod: 0,
+                taggerLiquidationGracePeriod: 0,
+                liquidationWindowTag: 0
+            }),
+            _liquidationConfiguration
+        );
+
         borrowOpeningFee = _borrowOpeningFee;
+        emit SetBorrowOpeningFee(0, _borrowOpeningFee);
+
         feeRecipient = _feeRecipient;
+        emit SetFeeRecipient(address(0), _feeRecipient);
 
         if (irm != address(0)) {
             IIrm(irm).setMarket(address(this));
         }
+
         _setPauser(_owner, PAUSED_MARKET, true);
         _setPauser(_owner, FROZEN_MARKET, true);
 
