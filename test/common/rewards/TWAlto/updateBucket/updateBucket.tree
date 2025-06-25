@@ -1,0 +1,12 @@
+updateBucket.tree
+├── given caller is not owner
+│   └── it should revert with OwnableUnauthorizedAccount
+└── given caller is owner
+    ├── when bucket index is invalid
+    │   └── it should revert with appropriate error
+    └── when bucket index is valid
+        └── when updating bucket
+            ├── it should call _updateBucket internal function
+            ├── it should update bucket properties except lockEpochDuration
+            ├── it should preserve lockEpochDuration field
+            └── it should emit appropriate bucket events 

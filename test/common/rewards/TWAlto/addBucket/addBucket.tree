@@ -1,0 +1,9 @@
+addBucket.tree
+├── given caller is not owner
+│   └── it should revert with OwnableUnauthorizedAccount
+└── given caller is owner
+    └── when adding new bucket
+        ├── it should call _addBucket internal function
+        ├── it should increase buckets array length
+        ├── it should set bucket properties correctly
+        └── it should emit appropriate bucket events 

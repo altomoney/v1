@@ -1,0 +1,12 @@
+emergencySweep.tree
+├── given caller is not owner
+│   └── it should revert with OwnableUnauthorizedAccount
+└── given caller is owner
+    ├── given lastEmergencySweep is zero
+    │   └── it should revert with EmergencySweepCooldownNotReached
+    ├── given cooldown period has not passed
+    │   └── it should revert with EmergencySweepCooldownNotReached
+    └── given cooldown period has passed
+        └── when sweeping token
+            ├── it should transfer all token balance to owner
+            └── it should use safeTransfer for the transfer

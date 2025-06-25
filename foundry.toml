@@ -30,3 +30,9 @@ extra_output = ["storageLayout"]
 [profile.market]
 src = 'contracts'
 test = "test/lending"
+
+# Tests in test/common are supported by forge coverage and free of stack too deep errors
+# Test in test/lz depends on layerzero utils that causes stack too deep with coverage
+[profile.coverage]
+src = 'contracts'
+test = "test/common/"

@@ -1,0 +1,33 @@
+exitPosition.tree
+├── given contract is paused
+│   └── it should revert with IsPaused
+└── given contract is not paused
+    ├── given reentrancy attempt
+    │   └── it should revert with reentrancy guard
+    └── given no reentrancy
+        ├── given caller is not participant and not delegatee
+        │   └── it should revert with NotAuthorized
+        └── given caller is authorized (participant or delegatee)
+            ├── given rescue mode is inactive
+            │   ├── given position lock has not expired
+            │   │   └── it should revert with LockNotExpired
+            │   └── given position lock has expired
+            │       ├── given position tapReleased is true
+            │       │   └── it should return 0 and not transfer
+            │       └── given position tapReleased is false
+            │           ├── it should return tapAmount
+            │           ├── it should set tapReleased to true
+            │           ├── it should set tapAmount to 0
+            │           ├── it should set expiry to 0
+            │           ├── it should transfer TAP to recipient
+            │           └── it should emit ExitPosition event
+            └── given rescue mode is active
+                ├── given position tapReleased is true
+                │   └── it should return 0 and not transfer
+                └── given position tapReleased is false
+                    ├── it should return tapAmount
+                    ├── it should set tapReleased to true
+                    ├── it should set tapAmount to 0
+                    ├── it should set expiry to 0
+                    ├── it should transfer TAP to recipient
+                    └── it should emit ExitPosition event
