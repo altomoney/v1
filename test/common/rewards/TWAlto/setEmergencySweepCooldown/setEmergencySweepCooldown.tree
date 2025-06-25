@@ -1,0 +1,7 @@
+setEmergencySweepCooldown.tree
+├── given caller is not owner
+│   └── it should revert with OwnableUnauthorizedAccount
+└── given caller is owner
+    └── when setting new cooldown value
+        ├── it should set emergencySweepCooldown to new value
+        └── it should emit SetEmergencySweepCooldown event 

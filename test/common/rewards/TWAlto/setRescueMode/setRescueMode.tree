@@ -1,0 +1,10 @@
+setRescueMode.tree
+├── given caller is not owner
+│   └── it should revert with OwnableUnauthorizedAccount
+└── given caller is owner
+    ├── when setting rescue mode to true
+    │   ├── it should set rescueMode to true
+    │   └── it should emit RescueMode event with true
+    └── when setting rescue mode to false
+        ├── it should set rescueMode to false
+        └── it should emit RescueMode event with false 

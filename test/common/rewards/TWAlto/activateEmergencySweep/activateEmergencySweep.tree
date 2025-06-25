@@ -1,0 +1,7 @@
+activateEmergencySweep.tree
+├── given caller is not owner
+│   └── it should revert with OwnableUnauthorizedAccount
+└── given caller is owner
+    └── when activating emergency sweep
+        ├── it should set lastEmergencySweep to current timestamp
+        └── it should emit ActivateEmergencySweep event 

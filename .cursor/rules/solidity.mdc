@@ -55,7 +55,7 @@ After writting tests, always test with `forge test -vvv` to see all debug traces
 
 Use BTT testing as possible, following next rules:
 
-Structure:
+BTT .tree Structure:
 - Target a Solidity function
 - Create a ".tree" file
 - Consider all possible execution paths
@@ -65,16 +65,20 @@ Structure:
 - Define "when parameter is x" nodes if is it a function parameter defined by user, or a external call or delegatecall
 - Define final "it should" tests
 - File naming: The tree files should be named after the function being tested
+
+BTT .t.sol structure:
 - Test naming conventions:
   - test_Foo
   - testFuzz_Foo
   - test_RevertWhen_Foo
   - testFuzz_RevertWhen_Foo
+- For both "given" or "when" branches, create a modifier (can be empty or explicitly set the given state)
 
 Looking at the examples:
 "given" is used for branches that depends on contract storage or contract state that is prepared before the action (e.g., "given market is paused or given owner is zero address or given user position is unhealthy")
 "when" is used for function parameters or conditions (e.g., "when the value paramiter is greater than 0, or when the user input address is zero")
 "it should" is used for the final expected behavior
+
 
 Other rules:
 - Implement a comprehensive testing strategy including unit, integration, and end-to-end tests.

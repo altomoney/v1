@@ -1,0 +1,4 @@
+setDelegatee.tree
+└── when all conditions are valid
+    ├── it should set delegatee for caller's participation in bucket
+    └── it should emit NewDelegate event 
