@@ -40,16 +40,16 @@ contract TWAltoBaseTest is Test {
         twAlto = new TWAlto(address(alto), admin, EPOCH_DURATION, buckets);
     }
 
-    modifier advanceWeeks(uint256 _num) {
+    modifier advanceEpochs(uint256 _num) {
         for (uint256 x; x < _num; x++) {
             vm.warp(block.timestamp + EPOCH_DURATION);
             vm.prank(admin);
-            twAlto.advanceWeek(_num);
+            twAlto.advanceEpoch(_num);
         }
         _;
     }
 
-    modifier skipWeeks(uint256 _amount) {
+    modifier skipEpochs(uint256 _amount) {
         skip(EPOCH_DURATION * _amount);
         _;
     }
@@ -81,7 +81,7 @@ contract TWAltoBaseTest is Test {
         return (_lockAmount, _bucketId);
     }
 
-    function _toWeek(uint256 _timestamp) internal view returns (uint256) {
+    function _toEpoch(uint256 _timestamp) internal view returns (uint256) {
         return (_timestamp - twAlto.INIT_TIMESTAMP()) / twAlto.EPOCH_DURATION();
     }
 }

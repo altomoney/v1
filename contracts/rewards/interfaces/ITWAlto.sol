@@ -1,32 +1,17 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
-// External
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-// Tapioca
-
-import {AltoToken} from "@alto/tokens/AltoToken.sol";
 import {ITWLBase, Bucket} from "./ITWLBase.sol";
 
 struct Participation {
-    // 1 slot
     uint8 bucketId;
-    bool tapReleased; // allow restaking while rewards may still accumulate
-    uint240 lockedAt; // timestamp when lock was created
-    // 1 slot
-    uint56 expiry; // expiry timestamp.
-    uint88 tapAmount; // amount of TAP locked
-    uint24 multiplier; // Votes = multiplier * tapAmount
-    uint40 lastInactive; // One week BEFORE the staker gets a share of rewards
-    uint40 lastActive; // Last week that the staker shares in rewards
-    address delegatee; // The delegatee of the locker to claim rewards on their behalf
-}
-
-struct Reward {
-    uint256 pending;
-    uint256 claimed;
+    uint64 multiplier; // Votes = multiplier * lockAmount
+    uint256 lockedAt; // timestamp when lock was created
+    uint256 expiry; // expiry timestamp.
+    uint256 lockAmount; // amount of lock token locked
 }
 
 interface ITWAlto is ITWLBase {
@@ -34,58 +19,39 @@ interface ITWAlto is ITWLBase {
     //    READ
     // ==========
 
-    /// @notice Returns the current epoch number
-    /// @dev keeps compatibility with older interface
-    function currentWeek() external view returns (uint256);
-
-    /// @notice Returns the init timestamp
-    /// @dev keeps compatibility with older interface
-    function creation() external view returns (uint256);
-
     /// @notice Return the participation of an account in a bucket.
     /// @param _account The account of the participant.
-    /// @param _bucketId The bucketId of the twTAP position.
+    /// @param _bucketId The bucketId of the twAlto position.
     /// @return participation The Participation of the account in the bucket.
     function getParticipation(address _account, uint256 _bucketId)
         external
         view
         returns (Participation memory participation);
 
-    /// @notice Return the Participation of a token and the claimable amounts.
-    /// @param _account The account of the participant.
-    /// @param _bucketId The bucketId of the twTAP position.
-    /// @return position The Participation of the token.
-    function getPosition(address _account, uint256 _bucketId) external view returns (Participation memory position);
-
-    /// @notice Participate in twAML voting and mint an twTap position in a lock bucket.
+    /// @notice Participate in twAML voting and mint an twAlto position in a lock bucket.
     ///
     /// @param _participant The address of the participant
-    /// @param _amount The amount of TAP to participate with
+    /// @param _amount The amount of lock token to participate with
     /// @param _bucketId The lock bucket id
     function participate(address _participant, uint256 _amount, uint8 _bucketId) external;
 
-    /// @notice Reuse an expired participation to participate again in twAML voting and mint an twTap position in a lock bucket.
+    /// @notice Reuse an expired participation to participate again in twAML voting and mint an twAlto position in a lock bucket.
     /// @param _bucketId The new lock bucket id to migrate the position from the expired participation in a new participation
     function reuseParticipation(address _participant, uint8 _bucketId) external;
 
     /**
-     * @notice Exit a twAML participation, delete the voting power if existing and send the TAP to `_to`.
+     * @notice Exit a twAML participation, delete the voting power if existing and send the lock token to `_to`.
      * @param _participant The address of the participant.
-     * @param _bucketId The bucketId of the twTAP position.
-     * @param _to The address to send the TAP to.
-     * @return tapAmount_ The amount of TAP released.
+     * @param _bucketId The bucketId of the twAlto position.
+     * @param _to The address to send the lock token to.
+     * @return releasedAmount The amount of lock token released.
      */
-    function exitPosition(address _participant, address _to, uint256 _bucketId) external returns (uint256 tapAmount_);
+    function exitPosition(address _participant, address _to, uint256 _bucketId) external returns (uint256);
 
-    /// @notice Indicate that (a) week(s) have passed and update running totals
-    /// @notice Reverts if called in week 0. Let it.
-    /// @param _limit Maximum number of weeks to process in one call
-    function advanceWeek(uint256 _limit) external;
-
-    /// @notice Set the delegatee of a participation.
-    /// @param _bucketId The bucketId of the twTAP position.
-    /// @param _delegatee The address of the delegatee.
-    function setDelegatee(uint256 _bucketId, address _delegatee) external;
+    /// @notice Indicate that (a) epoch(s) have passed and update running totals
+    /// @notice Reverts if called in epoch 0. Let it.
+    /// @param _limit Maximum number of epochs to process in one call
+    function advanceEpoch(uint256 _limit) external;
 
     // =========
     //   OWNER
@@ -123,5 +89,5 @@ interface ITWAlto is ITWLBase {
      */
     function updateBucket(uint8 index, Bucket memory bucket) external;
 
-    function altoToken() external view returns (AltoToken);
+    function lockToken() external view returns (address);
 }

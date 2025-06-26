@@ -5,39 +5,31 @@ reuseParticipation.tree
     ├── given reentrancy attempt
     │   └── it should revert with reentrancy guard
     └── given no reentrancy
-        ├── given caller is not participant and not delegatee
+        ├── given caller is not participant
         │   └── it should revert with NotAuthorized
-        └── given caller is authorized (participant or delegatee)
-            ├── given position tapReleased is true
-            │   └── it should revert with NotValid
-            ├── given position tapAmount is zero
+        └── given caller is authorized
+            ├── given position lockAmount is zero
             │   └── it should revert with NotValid
             ├── when rescue mode is active
             │   └── it should revert with RescueModeActive
             ├── when emergency sweep has been activated
             │   └── it should revert with EmergencySweepActivated
-            ├── when lastProcessedWeek is behind currentEpoch
-            │   └── it should advance week before proceeding
+            ├── when lastProcessedEpoch is behind currentEpoch
+            │   └── it should advance epoch before proceeding
             └── when all conditions are valid
                 ├── it should not transfer TAP (reuse existing)
                 ├── it should update bucket supply
                 ├── given participant has existing unexpired position in target bucket
                 │   ├── it should clear votes at past expected expiration
                 │   ├── it should add new votes at past expected expiration
-                │   ├── it should maintain existing tapAmount
+                │   ├── it should maintain existing lockAmount
                 │   ├── it should update expiry to new bucket lock duration
                 │   ├── it should update lockedAt to current timestamp
                 │   ├── it should update bucketId to new bucket
                 │   ├── it should update multiplier from new bucket
-                │   ├── it should update lastInactive and lastActive
-                │   ├── it should update weekTotals for new period
                 │   └── it should emit Participate event
                 └── given participant has no existing position in target bucket
-                    ├── it should create new participation with existing tapAmount
+                    ├── it should create new participation with existing lockAmount
                     ├── it should set expiry based on new bucket lock duration
                     ├── it should set multiplier from new bucket
-                    ├── it should set lastInactive to current week
-                    ├── it should set lastActive to expiry week
-                    ├── it should increase weekTotals for current week + 1
-                    ├── it should decrease weekTotals for expiry week + 1
                     └── it should emit Participate event 

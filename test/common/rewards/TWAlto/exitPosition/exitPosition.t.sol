@@ -44,13 +44,13 @@ contract TWAlto_exitPosition is TWAltoBaseTest {
         _;
     }
 
-    modifier givenCallerIsNotParticipantAndNotDelegatee() {
+    modifier givenCallerIsNotParticipant() {
         // Setup will be done in test where Bob tries to exit for Alice
         _;
     }
 
     modifier givenCallerIsAuthorized() {
-        // Setup will be done in individual tests (either participant or delegatee)
+        // Setup will be done in individual tests
         _;
     }
 
@@ -76,16 +76,6 @@ contract TWAlto_exitPosition is TWAltoBaseTest {
         _;
     }
 
-    modifier givenPositionTapReleasedIsTrue() {
-        // Position has already been exited
-        _;
-    }
-
-    modifier givenPositionTapReleasedIsFalse() {
-        // Position is still active
-        _;
-    }
-
     // ====================================
     //           TESTS
     // ====================================
@@ -104,11 +94,11 @@ contract TWAlto_exitPosition is TWAltoBaseTest {
         twAlto.exitPosition(alice, alice, BUCKET_ID);
     }
 
-    function test_RevertWhen_CallerIsNotParticipantAndNotDelegatee()
+    function test_RevertWhen_CallerIsNotParticipant()
         public
         givenContractIsNotPaused
         givenNoReentrancy
-        givenCallerIsNotParticipantAndNotDelegatee
+        givenCallerIsNotParticipant
     {
         // Setup: Alice has position, Bob tries to exit for Alice
         _participateHelper(alice, AMOUNT, BUCKET_ID);
@@ -136,176 +126,6 @@ contract TWAlto_exitPosition is TWAltoBaseTest {
         twAlto.exitPosition(alice, alice, BUCKET_ID);
     }
 
-    function test_ReturnZero_WhenPositionTapReleasedIsTrue_ExpiredLock()
-        public
-        givenContractIsNotPaused
-        givenNoReentrancy
-        givenCallerIsAuthorized
-        givenRescueModeIsInactive
-        givenPositionLockHasExpired
-        givenPositionTapReleasedIsTrue
-    {
-        // Setup: Create position, wait for expiry, then exit once to set tapReleased
-        _participateHelper(alice, AMOUNT, BUCKET_ID);
-        skip(EPOCH_DURATION * 2);
-
-        vm.prank(alice);
-        uint256 firstExitAmount = twAlto.exitPosition(alice, alice, BUCKET_ID);
-
-        // Verify first exit worked
-        assertEq(firstExitAmount, AMOUNT);
-
-        // Now position should have tapReleased = true
-        Participation memory position = twAlto.getParticipation(alice, BUCKET_ID);
-        assertTrue(position.tapReleased);
-
-        uint256 aliceBalanceBefore = IERC20(address(alto)).balanceOf(alice);
-
-        // Second exit should return 0 and not transfer
-        vm.prank(alice);
-        uint256 exitAmount = twAlto.exitPosition(alice, alice, BUCKET_ID);
-
-        // It should return 0
-        assertEq(exitAmount, 0);
-
-        // It should not transfer any tokens
-        assertEq(IERC20(address(alto)).balanceOf(alice), aliceBalanceBefore);
-    }
-
-    function test_ReturnZero_WhenPositionTapReleasedIsTrue_RescueMode()
-        public
-        givenContractIsNotPaused
-        givenNoReentrancy
-        givenCallerIsAuthorized
-        givenPositionTapReleasedIsTrue
-    {
-        // Setup: Create position, exit once to set tapReleased, then activate rescue mode
-        _participateHelper(alice, AMOUNT, BUCKET_ID);
-        skip(EPOCH_DURATION * 2);
-
-        vm.prank(alice);
-        twAlto.exitPosition(alice, alice, BUCKET_ID);
-
-        // Now activate rescue mode
-        vm.prank(admin);
-        twAlto.setRescueMode(true);
-
-        // Position should have tapReleased = true
-        Participation memory position = twAlto.getParticipation(alice, BUCKET_ID);
-        assertTrue(position.tapReleased);
-
-        uint256 aliceBalanceBefore = IERC20(address(alto)).balanceOf(alice);
-
-        // Second exit should return 0 and not transfer
-        vm.prank(alice);
-        uint256 exitAmount = twAlto.exitPosition(alice, alice, BUCKET_ID);
-
-        // It should return 0
-        assertEq(exitAmount, 0);
-
-        // It should not transfer any tokens
-        assertEq(IERC20(address(alto)).balanceOf(alice), aliceBalanceBefore);
-    }
-
-    function test_SuccessfulExit_WhenPositionTapReleasedIsFalse_ExpiredLock()
-        public
-        givenContractIsNotPaused
-        givenNoReentrancy
-        givenCallerIsAuthorized
-        givenRescueModeIsInactive
-        givenPositionLockHasExpired
-        givenPositionTapReleasedIsFalse
-    {
-        // Setup: Create position and wait for expiry
-        _participateHelper(alice, AMOUNT, BUCKET_ID);
-        skip(EPOCH_DURATION * 2);
-
-        uint256 aliceBalanceBefore = IERC20(address(alto)).balanceOf(alice);
-
-        // It should emit ExitPosition event
-        vm.expectEmit(true, true, true, true);
-        emit TWAltoEventsLib.ExitPosition(BUCKET_ID, alice, AMOUNT);
-
-        vm.prank(alice);
-        uint256 exitAmount = twAlto.exitPosition(alice, alice, BUCKET_ID);
-
-        // It should return tapAmount
-        assertEq(exitAmount, AMOUNT);
-
-        // It should transfer TAP to recipient
-        assertEq(IERC20(address(alto)).balanceOf(alice), aliceBalanceBefore + AMOUNT);
-
-        // It should update position state
-        Participation memory position = twAlto.getParticipation(alice, BUCKET_ID);
-        assertTrue(position.tapReleased);
-        assertEq(position.tapAmount, 0);
-        assertEq(position.expiry, 0);
-    }
-
-    function test_SuccessfulExit_WhenPositionTapReleasedIsFalse_RescueMode()
-        public
-        givenContractIsNotPaused
-        givenNoReentrancy
-        givenCallerIsAuthorized
-        givenPositionTapReleasedIsFalse
-    {
-        // Setup: Create position (no need to wait for expiry in rescue mode)
-        _participateHelper(alice, AMOUNT, BUCKET_ID);
-
-        // Activate rescue mode after creating position
-        vm.prank(admin);
-        twAlto.setRescueMode(true);
-
-        uint256 aliceBalanceBefore = IERC20(address(alto)).balanceOf(alice);
-
-        // It should emit ExitPosition event
-        vm.expectEmit(true, true, true, true);
-        emit TWAltoEventsLib.ExitPosition(BUCKET_ID, alice, AMOUNT);
-
-        vm.prank(alice);
-        uint256 exitAmount = twAlto.exitPosition(alice, alice, BUCKET_ID);
-
-        // It should return tapAmount
-        assertEq(exitAmount, AMOUNT);
-
-        // It should transfer TAP to recipient
-        assertEq(IERC20(address(alto)).balanceOf(alice), aliceBalanceBefore + AMOUNT);
-
-        // It should update position state
-        Participation memory position = twAlto.getParticipation(alice, BUCKET_ID);
-        assertTrue(position.tapReleased);
-        assertEq(position.tapAmount, 0);
-        assertEq(position.expiry, 0);
-    }
-
-    function test_ExitPosition_WithDelegatee()
-        public
-        givenContractIsNotPaused
-        givenNoReentrancy
-        givenCallerIsAuthorized
-        givenRescueModeIsInactive
-        givenPositionLockHasExpired
-        givenPositionTapReleasedIsFalse
-    {
-        // Setup: Alice has position and sets Bob as delegatee
-        _participateHelper(alice, AMOUNT, BUCKET_ID);
-        vm.prank(alice);
-        twAlto.setDelegatee(BUCKET_ID, bob);
-        skip(EPOCH_DURATION * 2);
-
-        uint256 charlieBalanceBefore = IERC20(address(alto)).balanceOf(address(0x123));
-
-        // Bob (delegatee) exits Alice's position to charlie
-        vm.prank(bob);
-        uint256 exitAmount = twAlto.exitPosition(alice, address(0x123), BUCKET_ID);
-
-        // It should return tapAmount
-        assertEq(exitAmount, AMOUNT);
-
-        // It should transfer TAP to specified recipient (charlie)
-        assertEq(IERC20(address(alto)).balanceOf(address(0x123)), charlieBalanceBefore + AMOUNT);
-    }
-
     function test_ExitPosition_TodifferentRecipient()
         public
         givenContractIsNotPaused
@@ -313,7 +133,6 @@ contract TWAlto_exitPosition is TWAltoBaseTest {
         givenCallerIsAuthorized
         givenRescueModeIsInactive
         givenPositionLockHasExpired
-        givenPositionTapReleasedIsFalse
     {
         // Setup: Create position and wait for expiry
         _participateHelper(alice, AMOUNT, BUCKET_ID);
@@ -325,7 +144,7 @@ contract TWAlto_exitPosition is TWAltoBaseTest {
         vm.prank(alice);
         uint256 exitAmount = twAlto.exitPosition(alice, bob, BUCKET_ID);
 
-        // It should return tapAmount
+        // It should return lockAmount
         assertEq(exitAmount, AMOUNT);
 
         // It should transfer TAP to specified recipient (Bob)

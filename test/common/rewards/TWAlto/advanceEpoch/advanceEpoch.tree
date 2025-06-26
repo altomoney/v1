@@ -1,0 +1,19 @@
+advanceEpoch.tree
+├── given reentrancy attempt
+│   └── it should revert with reentrancy guard
+└── given no reentrancy
+    ├── when limit is zero
+    │   └── it should revert with NotValid
+    ├── when lastProcessedEpoch equals currentEpoch
+    │   └── it should revert with NotValid
+    └── when limit is valid and lastProcessedEpoch is behind
+        ├── when goal minus epoch is greater than limit
+        │   ├── it should process only limit epochs
+        │   ├── it should sync TWL buckets with limit
+        │   ├── it should update lastProcessedEpoch to epoch plus limit
+        │   └── it should emit AdvanceEpoch event
+        └── when goal minus epoch is less than or equal to limit
+            ├── it should process all pending epochs to current epoch
+            ├── it should sync TWL buckets with actual processed count
+            ├── it should update lastProcessedEpoch to currentEpoch
+            └── it should emit AdvanceEpoch event

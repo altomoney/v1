@@ -5,7 +5,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {TWAltoBaseTest} from "../TWAltoBaseTest.sol";
 import {TWAltoErrorsLib} from "@alto/rewards/libraries/TWAltoErrorsLib.sol";
 
-contract TWAlto_advanceWeek is TWAltoBaseTest {
+contract TWAlto_advanceEpoch is TWAltoBaseTest {
     uint256 constant AMOUNT = 1000e18;
     uint8 constant BUCKET_ID = 0;
 
@@ -35,23 +35,23 @@ contract TWAlto_advanceWeek is TWAltoBaseTest {
         _;
     }
 
-    modifier whenLastProcessedWeekEqualsCurrentEpoch() {
-        // Contract starts with lastProcessedWeek = 0 and currentEpoch = 0
+    modifier whenLastProcessedEpochEqualsCurrentEpoch() {
+        // Contract starts with lastProcessedEpoch = 0 and currentEpoch = 0
         _;
     }
 
-    modifier whenLimitIsValidAndLastProcessedWeekIsBehind() {
+    modifier whenLimitIsValidAndLastProcessedEpochIsBehind() {
         // Skip time to create a gap
         skip(EPOCH_DURATION * 3);
         _;
     }
 
-    modifier whenGoalMinusWeekIsGreaterThanLimit() {
+    modifier whenGoalMinusEpochIsGreaterThanLimit() {
         // Will be set up in specific test
         _;
     }
 
-    modifier whenGoalMinusWeekIsLessOrEqualThanLimit() {
+    modifier whenGoalMinusEpochIsLessOrEqualThanLimit() {
         // Will be set up in specific test
         _;
     }
@@ -63,125 +63,105 @@ contract TWAlto_advanceWeek is TWAltoBaseTest {
     function test_RevertWhen_LimitIsZero() public givenNoReentrancy whenLimitIsZero {
         // It should revert with NotValid
         vm.expectRevert(TWAltoErrorsLib.NotValid.selector);
-        twAlto.advanceWeek(0);
+        twAlto.advanceEpoch(0);
     }
 
-    function test_RevertWhen_LastProcessedWeekEqualsCurrentEpoch()
+    function test_RevertWhen_LastProcessedEpochEqualsCurrentEpoch()
         public
         givenNoReentrancy
-        whenLastProcessedWeekEqualsCurrentEpoch
+        whenLastProcessedEpochEqualsCurrentEpoch
     {
         // It should revert with NotValid
         vm.expectRevert(TWAltoErrorsLib.NotValid.selector);
-        twAlto.advanceWeek(1);
+        twAlto.advanceEpoch(1);
     }
 
-    function test_ProcessOnlyLimitWeeks_WhenGoalMinusWeekIsGreaterThanLimit()
+    function test_ProcessOnlyLimitEpochs_WhenGoalMinusEpochIsGreaterThanLimit()
         public
         givenNoReentrancy
-        whenLimitIsValidAndLastProcessedWeekIsBehind
-        whenGoalMinusWeekIsGreaterThanLimit
+        whenLimitIsValidAndLastProcessedEpochIsBehind
+        whenGoalMinusEpochIsGreaterThanLimit
     {
         uint256 limit = 2;
-        uint256 weekBefore = twAlto.lastProcessedWeek();
+        uint256 epochBefore = twAlto.lastProcessedEpoch();
         uint256 currentEpoch = twAlto.currentEpoch();
 
-        // Verify we have more weeks than limit
-        assertGt(currentEpoch - weekBefore, limit);
+        // Verify we have more epochs than limit
+        assertGt(currentEpoch - epochBefore, limit);
 
         // It should emit AdvanceEpoch event
         vm.expectEmit(true, true, false, false);
-        emit AdvanceEpoch(weekBefore + limit, weekBefore + limit);
+        emit AdvanceEpoch(epochBefore + limit, epochBefore + limit);
 
-        twAlto.advanceWeek(limit);
+        twAlto.advanceEpoch(limit);
 
-        // It should update lastProcessedWeek to week plus limit
-        assertEq(twAlto.lastProcessedWeek(), weekBefore + limit);
+        // It should update lastProcessedEpoch to epoch plus limit
+        assertEq(twAlto.lastProcessedEpoch(), epochBefore + limit);
 
         // Should not process all the way to current epoch
-        assertLt(twAlto.lastProcessedWeek(), currentEpoch);
+        assertLt(twAlto.lastProcessedEpoch(), currentEpoch);
     }
 
-    function test_ProcessAllPendingWeeks_WhenGoalMinusWeekIsLessOrEqualThanLimit()
+    function test_ProcessAllPendingEpochs_WhenGoalMinusEpochIsLessOrEqualThanLimit()
         public
         givenNoReentrancy
-        whenLimitIsValidAndLastProcessedWeekIsBehind
-        whenGoalMinusWeekIsLessOrEqualThanLimit
+        whenLimitIsValidAndLastProcessedEpochIsBehind
+        whenGoalMinusEpochIsLessOrEqualThanLimit
     {
         uint256 limit = 10; // Large enough limit
-        uint256 weekBefore = twAlto.lastProcessedWeek();
+        uint256 epochBefore = twAlto.lastProcessedEpoch();
         uint256 currentEpoch = twAlto.currentEpoch();
 
-        // Verify limit is greater than or equal to pending weeks
-        assertGe(limit, currentEpoch - weekBefore);
+        // Verify limit is greater than or equal to pending epochs
+        assertGe(limit, currentEpoch - epochBefore);
 
         // It should emit AdvanceEpoch event
         vm.expectEmit(true, true, false, false);
         emit AdvanceEpoch(currentEpoch, currentEpoch);
 
-        twAlto.advanceWeek(limit);
+        twAlto.advanceEpoch(limit);
 
-        // It should update lastProcessedWeek to currentEpoch
-        assertEq(twAlto.lastProcessedWeek(), currentEpoch);
+        // It should update lastProcessedEpoch to currentEpoch
+        assertEq(twAlto.lastProcessedEpoch(), currentEpoch);
     }
 
-    function test_AdvanceWeek_UpdatesWeekTotals()
+    function test_AdvanceEpoch_CallsInternalAdvanceEpoch()
         public
         givenNoReentrancy
-        whenLimitIsValidAndLastProcessedWeekIsBehind
-    {
-        // Setup: Create some participations to have weekTotals
-        _participateHelper(alice, AMOUNT, BUCKET_ID);
-
-        // Skip more time to create gap
-        skip(EPOCH_DURATION * 2);
-
-        uint256 weekBefore = twAlto.lastProcessedWeek();
-        uint256 currentEpoch = twAlto.currentEpoch();
-
-        twAlto.advanceWeek(10);
-
-        // Verify week was advanced
-        assertEq(twAlto.lastProcessedWeek(), currentEpoch);
-    }
-
-    function test_AdvanceWeek_CallsInternalAdvanceWeek()
-        public
-        givenNoReentrancy
-        whenLimitIsValidAndLastProcessedWeekIsBehind
+        whenLimitIsValidAndLastProcessedEpochIsBehind
     {
         uint256 limit = 2;
-        uint256 weekBefore = twAlto.lastProcessedWeek();
+        uint256 epochBefore = twAlto.lastProcessedEpoch();
 
         // It should emit AdvanceEpoch event indicating internal function was called
         vm.expectEmit(true, true, false, false);
-        emit AdvanceEpoch(weekBefore + limit, weekBefore + limit);
+        emit AdvanceEpoch(epochBefore + limit, epochBefore + limit);
 
-        twAlto.advanceWeek(limit);
+        twAlto.advanceEpoch(limit);
     }
 
     // ====================================
     //         FUZZ TESTS
     // ====================================
 
-    function testFuzz_AdvanceWeek_ValidLimits(uint256 _limit)
+    function testFuzz_AdvanceEpoch_ValidLimits(uint256 _limit)
         public
         givenNoReentrancy
-        whenLimitIsValidAndLastProcessedWeekIsBehind
+        whenLimitIsValidAndLastProcessedEpochIsBehind
     {
         // Bound to valid range
         _limit = bound(_limit, 1, 100);
 
-        uint256 weekBefore = twAlto.lastProcessedWeek();
+        uint256 epochBefore = twAlto.lastProcessedEpoch();
         uint256 currentEpoch = twAlto.currentEpoch();
 
-        twAlto.advanceWeek(_limit);
+        twAlto.advanceEpoch(_limit);
 
-        // Should advance at least some weeks
-        assertGt(twAlto.lastProcessedWeek(), weekBefore);
+        // Should advance at least some epochs
+        assertGt(twAlto.lastProcessedEpoch(), epochBefore);
 
         // Should not exceed current epoch
-        assertLe(twAlto.lastProcessedWeek(), currentEpoch);
+        assertLe(twAlto.lastProcessedEpoch(), currentEpoch);
     }
 
     // ====================================

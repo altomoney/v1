@@ -22,7 +22,6 @@ interface ITWLBase {
     error BUCKET_FLOOR_CEILING_MISMATCH();
     error EPOCH_NOT_FINISHED();
     error EPOCH_DURATION_ZERO();
-    error SafeCastOverflowedUintDowncast(uint256 uintType, uint256 amount);
     error BUCKET_EPOCH_DURATION_CEILING_MISMATCH();
     error BUCKET_EPOCH_DURATION_FLOOR_MISMATCH();
     error LIMIT_IS_ZERO();

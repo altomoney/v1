@@ -36,14 +36,13 @@ abstract contract TWLBase is ITWLBase {
             revert EPOCH_NOT_FINISHED();
         }
 
-        uint256 lastWeek = lastEpoch;
         uint256 goal = currentEpoch();
 
-        if (goal - lastWeek > _limit) {
-            goal = lastWeek + _limit;
+        if (goal - lastEpoch > _limit) {
+            goal = lastEpoch + _limit;
         }
 
-        uint24 missingEpochs = uint24(goal - lastWeek);
+        uint24 missingEpochs = uint24(goal - lastEpoch);
 
         for (uint256 i; i < buckets.length; i++) {
             Bucket storage bucket = buckets[i];
