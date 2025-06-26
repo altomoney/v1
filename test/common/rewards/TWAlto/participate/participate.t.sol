@@ -88,8 +88,8 @@ contract TWAlto_participate is TWAltoBaseTest {
         _;
     }
 
-    modifier whenLastProcessedWeekIsBehindCurrentEpoch() {
-        skip(EPOCH_DURATION * 2); // Skip ahead without advancing weeks
+    modifier whenLastProcessedEpochIsBehindCurrentEpoch() {
+        skip(EPOCH_DURATION * 2); // Skip ahead without advancing epochs
         _;
     }
 
@@ -159,7 +159,7 @@ contract TWAlto_participate is TWAltoBaseTest {
 
         // Verify participation was created
         Participation memory position = twAlto.getParticipation(alice, BUCKET_ID);
-        assertEq(position.tapAmount, AMOUNT);
+        assertEq(position.lockAmount, AMOUNT);
     }
 
     function test_WhenCallerIsDelegatee()
@@ -187,7 +187,7 @@ contract TWAlto_participate is TWAltoBaseTest {
 
         // Verify participation was updated
         Participation memory position = twAlto.getParticipation(alice, BUCKET_ID);
-        assertEq(position.tapAmount, AMOUNT + additionalAmount);
+        assertEq(position.lockAmount, AMOUNT + additionalAmount);
     }
 
     function test_RevertWhen_AmountIsZero()
@@ -264,12 +264,12 @@ contract TWAlto_participate is TWAltoBaseTest {
         twAlto.participate(alice, _amount, BUCKET_ID);
     }
 
-    function test_WhenLastProcessedWeekIsBehindCurrentEpoch()
+    function test_WhenLastProcessedEpochIsBehindCurrentEpoch()
         public
         givenContractIsNotPaused
         givenNoReentrancy
         givenCallerIsAuthorized
-        whenLastProcessedWeekIsBehindCurrentEpoch
+        whenLastProcessedEpochIsBehindCurrentEpoch
         whenAllConditionsAreValid
     {
         // Setup tokens
@@ -277,18 +277,18 @@ contract TWAlto_participate is TWAltoBaseTest {
         vm.prank(alice);
         IERC20(address(alto)).approve(address(twAlto), AMOUNT);
 
-        uint256 weekBefore = twAlto.lastProcessedWeek();
+        uint256 epochBefore = twAlto.lastProcessedEpoch();
         uint256 currentEpoch = twAlto.currentEpoch();
 
         // Verify we're behind
-        assertLt(weekBefore, currentEpoch);
+        assertLt(epochBefore, currentEpoch);
 
-        // It should advance week before proceeding
+        // It should advance epoch before proceeding
         vm.prank(alice);
         twAlto.participate(alice, AMOUNT, BUCKET_ID);
 
-        // Verify week was advanced
-        assertEq(twAlto.lastProcessedWeek(), currentEpoch);
+        // Verify epoch was advanced
+        assertEq(twAlto.lastProcessedEpoch(), currentEpoch);
     }
 
     function test_RevertWhen_ParticipantHasInsufficientTapBalance()
@@ -343,11 +343,10 @@ contract TWAlto_participate is TWAltoBaseTest {
 
         uint256 contractBalanceBefore = IERC20(address(alto)).balanceOf(address(twAlto));
         uint256 aliceBalanceBefore = IERC20(address(alto)).balanceOf(alice);
-        uint256 currentWeek = twAlto.currentEpoch();
 
         // It should emit Participate event
         vm.expectEmit(true, true, true, true);
-        emit TWAltoEventsLib.Participate(alice, BUCKET_ID, AMOUNT, 1, block.timestamp + EPOCH_DURATION, BUCKET_ID);
+        emit TWAltoEventsLib.Participate(alice, BUCKET_ID, AMOUNT, 1, block.timestamp + EPOCH_DURATION);
 
         vm.prank(alice);
         twAlto.participate(alice, AMOUNT, BUCKET_ID);
@@ -361,17 +360,10 @@ contract TWAlto_participate is TWAltoBaseTest {
 
         // It should create new participation with correct values
         assertEq(position.bucketId, BUCKET_ID);
-        assertEq(position.tapAmount, AMOUNT);
+        assertEq(position.lockAmount, AMOUNT);
         assertEq(position.multiplier, 1); // From bucket config
         assertEq(position.lockedAt, block.timestamp);
         assertEq(position.expiry, block.timestamp + EPOCH_DURATION); // lockEpochDuration = 1
-        assertEq(position.lastInactive, currentWeek);
-        assertEq(position.lastActive, currentWeek + 1); // expiry week
-        assertFalse(position.tapReleased);
-
-        // It should update weekTotals correctly
-        assertEq(twAlto.weekTotals(currentWeek + 1), int256(AMOUNT * 1)); // multiplier = 1
-        assertEq(twAlto.weekTotals(currentWeek + 2), -int256(AMOUNT * 1));
     }
 
     function test_WhenAllConditionsAreValid_ExistingUnexpiredPosition()
@@ -388,14 +380,11 @@ contract TWAlto_participate is TWAltoBaseTest {
         vm.prank(alice);
         IERC20(address(alto)).approve(address(twAlto), additionalAmount);
 
-        Participation memory positionBefore = twAlto.getParticipation(alice, BUCKET_ID);
-        uint256 currentWeek = twAlto.currentEpoch();
         uint256 newExpiry = block.timestamp + EPOCH_DURATION;
-        uint256 newExpiryWeek = (newExpiry - twAlto.INIT_TIMESTAMP()) / EPOCH_DURATION;
 
         // It should emit Participate event with updated values
         vm.expectEmit(true, true, true, true);
-        emit TWAltoEventsLib.Participate(alice, BUCKET_ID, additionalAmount, 1, newExpiry, BUCKET_ID);
+        emit TWAltoEventsLib.Participate(alice, BUCKET_ID, additionalAmount, 1, newExpiry);
 
         vm.prank(alice);
         twAlto.participate(alice, additionalAmount, BUCKET_ID);
@@ -403,18 +392,14 @@ contract TWAlto_participate is TWAltoBaseTest {
         // Verify position was updated correctly
         Participation memory positionAfter = twAlto.getParticipation(alice, BUCKET_ID);
 
-        // It should increase tapAmount by additional amount
-        assertEq(positionAfter.tapAmount, AMOUNT + additionalAmount);
+        // It should increase lockAmount by additional amount
+        assertEq(positionAfter.lockAmount, AMOUNT + additionalAmount);
 
         // It should update expiry to new expiry
         assertEq(positionAfter.expiry, newExpiry);
 
         // It should update lockedAt to current timestamp
         assertEq(positionAfter.lockedAt, block.timestamp);
-
-        // It should update lastInactive and lastActive
-        assertEq(positionAfter.lastInactive, currentWeek);
-        assertEq(positionAfter.lastActive, newExpiryWeek);
     }
 
     // ====================================
@@ -442,7 +427,7 @@ contract TWAlto_participate is TWAltoBaseTest {
 
         // Verify participation
         Participation memory position = twAlto.getParticipation(alice, BUCKET_ID);
-        assertEq(position.tapAmount, _amount);
+        assertEq(position.lockAmount, _amount);
     }
 
     // ====================================

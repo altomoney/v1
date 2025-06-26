@@ -12,22 +12,14 @@ exitPosition.tree
             │   ├── given position lock has not expired
             │   │   └── it should revert with LockNotExpired
             │   └── given position lock has expired
-            │       ├── given position tapReleased is true
-            │       │   └── it should return 0 and not transfer
-            │       └── given position tapReleased is false
-            │           ├── it should return tapAmount
-            │           ├── it should set tapReleased to true
-            │           ├── it should set tapAmount to 0
-            │           ├── it should set expiry to 0
-            │           ├── it should transfer TAP to recipient
-            │           └── it should emit ExitPosition event
+            │       ├── it should return lockAmount
+            │       ├── it should set lockAmount to 0
+            │       ├── it should set expiry to 0
+            │       ├── it should transfer TAP to recipient
+            │       └── it should emit ExitPosition event
             └── given rescue mode is active
-                ├── given position tapReleased is true
-                │   └── it should return 0 and not transfer
-                └── given position tapReleased is false
-                    ├── it should return tapAmount
-                    ├── it should set tapReleased to true
-                    ├── it should set tapAmount to 0
-                    ├── it should set expiry to 0
-                    ├── it should transfer TAP to recipient
-                    └── it should emit ExitPosition event
+                ├── it should return lockAmount
+                ├── it should set lockAmount to 0
+                ├── it should set expiry to 0
+                ├── it should transfer TAP to recipient
+                └── it should emit ExitPosition event

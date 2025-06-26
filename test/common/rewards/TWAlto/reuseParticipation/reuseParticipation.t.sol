@@ -55,16 +55,7 @@ contract TWAlto_reuseParticipation is TWAltoBaseTest {
         _;
     }
 
-    modifier givenPositionTapReleasedIsTrue() {
-        _participateHelper(alice, AMOUNT, SOURCE_BUCKET_ID);
-        // Fast forward past expiry and exit the position
-        skip(EPOCH_DURATION * 2);
-        vm.prank(alice);
-        twAlto.exitPosition(alice, alice, SOURCE_BUCKET_ID);
-        _;
-    }
-
-    modifier givenPositionTapAmountIsZero() {
+    modifier givenPositionLockAmountIsZero() {
         // This would be a malformed state, but we can test it
         _;
     }
@@ -79,8 +70,8 @@ contract TWAlto_reuseParticipation is TWAltoBaseTest {
         _;
     }
 
-    modifier whenLastProcessedWeekIsBehindCurrentEpoch() {
-        skip(EPOCH_DURATION * 2); // Skip ahead without advancing weeks
+    modifier whenLastProcessedEpochIsBehindCurrentEpoch() {
+        skip(EPOCH_DURATION * 2); // Skip ahead without advancing epochs
         _;
     }
 
@@ -147,9 +138,9 @@ contract TWAlto_reuseParticipation is TWAltoBaseTest {
         vm.prank(alice);
         twAlto.reuseParticipation(alice, TARGET_BUCKET_ID);
 
-        // Verify reuse worked - tapAmount should be doubled since it adds to existing
+        // Verify reuse worked - lockAmount should be doubled since it adds to existing
         Participation memory position = twAlto.getParticipation(alice, TARGET_BUCKET_ID);
-        assertEq(position.tapAmount, AMOUNT * 2); // Original + reused amount
+        assertEq(position.lockAmount, AMOUNT * 2); // Original + reused amount
     }
 
     function test_WhenCallerIsDelegatee()
@@ -168,30 +159,17 @@ contract TWAlto_reuseParticipation is TWAltoBaseTest {
         vm.prank(bob);
         twAlto.reuseParticipation(alice, TARGET_BUCKET_ID);
 
-        // Verify reuse worked - tapAmount should be doubled
+        // Verify reuse worked - lockAmount should be doubled
         Participation memory position = twAlto.getParticipation(alice, TARGET_BUCKET_ID);
-        assertEq(position.tapAmount, AMOUNT * 2);
+        assertEq(position.lockAmount, AMOUNT * 2);
     }
 
-    function test_RevertWhen_PositionTapReleasedIsTrue()
+    function test_RevertWhen_PositionLockAmountIsZero()
         public
         givenContractIsNotPaused
         givenNoReentrancy
         givenCallerIsAuthorized
-        givenPositionTapReleasedIsTrue
-    {
-        // It should revert with NotValid
-        vm.expectRevert(TWAltoErrorsLib.NotValid.selector);
-        vm.prank(alice);
-        twAlto.reuseParticipation(alice, TARGET_BUCKET_ID);
-    }
-
-    function test_RevertWhen_PositionTapAmountIsZero()
-        public
-        givenContractIsNotPaused
-        givenNoReentrancy
-        givenCallerIsAuthorized
-        givenPositionTapAmountIsZero
+        givenPositionLockAmountIsZero
     {
         // It should revert with NotValid (no position exists)
         vm.expectRevert(TWAltoErrorsLib.NotValid.selector);
@@ -239,32 +217,32 @@ contract TWAlto_reuseParticipation is TWAltoBaseTest {
         twAlto.reuseParticipation(alice, TARGET_BUCKET_ID);
     }
 
-    function test_WhenLastProcessedWeekIsBehindCurrentEpoch()
+    function test_WhenLastProcessedEpochIsBehindCurrentEpoch()
         public
         givenContractIsNotPaused
         givenNoReentrancy
         givenCallerIsAuthorized
-        whenLastProcessedWeekIsBehindCurrentEpoch
+        whenLastProcessedEpochIsBehindCurrentEpoch
         whenAllConditionsAreValid
     {
         // Setup: Create position to reuse
         _participateHelper(alice, AMOUNT, SOURCE_BUCKET_ID);
 
-        // Fast forward time to create gap between lastProcessedWeek and currentEpoch
+        // Fast forward time to create gap between lastProcessedEpoch and currentEpoch
         skip(EPOCH_DURATION * 2);
 
-        uint256 weekBefore = twAlto.lastProcessedWeek();
+        uint256 epochBefore = twAlto.lastProcessedEpoch();
         uint256 currentEpoch = twAlto.currentEpoch();
 
         // Verify we're behind
-        assertLt(weekBefore, currentEpoch);
+        assertLt(epochBefore, currentEpoch);
 
-        // It should advance week before proceeding
+        // It should advance epoch before proceeding
         vm.prank(alice);
         twAlto.reuseParticipation(alice, TARGET_BUCKET_ID);
 
-        // Verify week was advanced
-        assertEq(twAlto.lastProcessedWeek(), currentEpoch);
+        // Verify epoch was advanced
+        assertEq(twAlto.lastProcessedEpoch(), currentEpoch);
     }
 
     function test_WhenAllConditionsAreValid_NewPosition()
@@ -280,13 +258,10 @@ contract TWAlto_reuseParticipation is TWAltoBaseTest {
 
         uint256 contractBalanceBefore = IERC20(address(alto)).balanceOf(address(twAlto));
         uint256 aliceBalanceBefore = IERC20(address(alto)).balanceOf(alice);
-        uint256 currentWeek = twAlto.currentEpoch();
 
         // It should emit Participate event - with AMOUNT (the reused amount)
         vm.expectEmit(true, true, true, true);
-        emit TWAltoEventsLib.Participate(
-            alice, TARGET_BUCKET_ID, AMOUNT, 1, block.timestamp + EPOCH_DURATION, TARGET_BUCKET_ID
-        );
+        emit TWAltoEventsLib.Participate(alice, TARGET_BUCKET_ID, AMOUNT, 1, block.timestamp + EPOCH_DURATION);
 
         vm.prank(alice);
         twAlto.reuseParticipation(alice, TARGET_BUCKET_ID);
@@ -295,16 +270,13 @@ contract TWAlto_reuseParticipation is TWAltoBaseTest {
         assertEq(IERC20(address(alto)).balanceOf(address(twAlto)), contractBalanceBefore);
         assertEq(IERC20(address(alto)).balanceOf(alice), aliceBalanceBefore);
 
-        // Verify new participation was created with doubled tapAmount (original + reused)
+        // Verify new participation was created with doubled lockAmount (original + reused)
         Participation memory position = twAlto.getParticipation(alice, TARGET_BUCKET_ID);
         assertEq(position.bucketId, TARGET_BUCKET_ID);
-        assertEq(position.tapAmount, AMOUNT * 2); // Original amount + reused amount
+        assertEq(position.lockAmount, AMOUNT * 2); // Original amount + reused amount
         assertEq(position.multiplier, 1); // From bucket config
         assertEq(position.lockedAt, block.timestamp);
         assertEq(position.expiry, block.timestamp + EPOCH_DURATION);
-        assertEq(position.lastInactive, currentWeek);
-        assertEq(position.lastActive, currentWeek + 1);
-        assertFalse(position.tapReleased);
     }
 
     function test_WhenAllConditionsAreValid_ExistingUnexpiredPosition()
@@ -318,16 +290,15 @@ contract TWAlto_reuseParticipation is TWAltoBaseTest {
         // Setup: Create another position to reuse
         _participateHelper(alice, AMOUNT, SOURCE_BUCKET_ID);
 
-        uint256 currentWeek = twAlto.currentEpoch();
         uint256 newExpiry = block.timestamp + EPOCH_DURATION;
 
         // Get position before reuse
         Participation memory positionBefore = twAlto.getParticipation(alice, TARGET_BUCKET_ID);
 
-        // It should emit Participate event with total tapAmount (existing + reused)
-        // Note: Contract seems to emit total tapAmount, not just the input amount
+        // It should emit Participate event with total lockAmount (existing + reused)
+        // Note: Contract seems to emit total lockAmount, not just the input amount
         vm.expectEmit(true, true, true, true);
-        emit TWAltoEventsLib.Participate(alice, TARGET_BUCKET_ID, AMOUNT * 2, 1, newExpiry, TARGET_BUCKET_ID);
+        emit TWAltoEventsLib.Participate(alice, TARGET_BUCKET_ID, AMOUNT * 2, 1, newExpiry);
 
         vm.prank(alice);
         twAlto.reuseParticipation(alice, TARGET_BUCKET_ID);
@@ -335,20 +306,17 @@ contract TWAlto_reuseParticipation is TWAltoBaseTest {
         // Verify position was updated correctly
         Participation memory positionAfter = twAlto.getParticipation(alice, TARGET_BUCKET_ID);
 
-        // It should add the reused amount (which is the existing tapAmount) to existing tapAmount
-        // positionBefore.tapAmount = 2000 (from two participations)
-        // reused amount = positionBefore.tapAmount = 2000
+        // It should add the reused amount (which is the existing lockAmount) to existing lockAmount
+        // positionBefore.lockAmount = 2000 (from two participations)
+        // reused amount = positionBefore.lockAmount = 2000
         // final = 2000 + 2000 = 4000
-        assertEq(positionAfter.tapAmount, positionBefore.tapAmount * 2);
+        assertEq(positionAfter.lockAmount, positionBefore.lockAmount * 2);
 
         // It should update expiry to new bucket lock duration
         assertEq(positionAfter.expiry, newExpiry);
 
         // It should update lockedAt to current timestamp
         assertEq(positionAfter.lockedAt, block.timestamp);
-
-        // It should update lastInactive and lastActive
-        assertEq(positionAfter.lastInactive, currentWeek);
     }
 
     // ====================================

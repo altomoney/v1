@@ -16,8 +16,8 @@ participate.tree
             │   └── it should revert with EmergencySweepActivated
             ├── when _amount exceeds uint88 max value
             │   └── it should revert with SafeCastOverflowedUintDowncast
-            ├── when lastProcessedWeek is behind currentEpoch
-            │   └── it should advance week before proceeding
+            ├── when lastProcessedEpoch is behind currentEpoch
+            │   └── it should advance epoch before proceeding
             ├── when participant has insufficient TAP balance
             │   └── it should revert with ERC20 transfer error
             ├── when participant has not approved sufficient TAP
@@ -27,20 +27,14 @@ participate.tree
                 ├── it should update bucket supply
                 ├── given participant has no existing position in bucket
                 │   ├── it should create new participation with correct values
-                │   ├── it should set tapAmount to _amount
+                │   ├── it should set lockAmount to _amount
                 │   ├── it should set expiry based on bucket lock duration
                 │   ├── it should set multiplier from bucket
-                │   ├── it should set lastInactive to current week
-                │   ├── it should set lastActive to expiry week
-                │   ├── it should increase weekTotals for current week + 1
-                │   ├── it should decrease weekTotals for expiry week + 1
                 │   └── it should emit Participate event
                 └── given participant has existing unexpired position in bucket
                     ├── it should clear votes at past expected expiration
                     ├── it should add new votes at past expected expiration
-                    ├── it should increase tapAmount by _amount
+                    ├── it should increase lockAmount by _amount
                     ├── it should update expiry to new expiry
-                    ├── it should update lockedAt to current timestamp
-                    ├── it should update lastInactive and lastActive
-                    ├── it should update weekTotals for new period
+                    └── it should update lockedAt to current timestamp
                     
