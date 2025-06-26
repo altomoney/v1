@@ -17,6 +17,7 @@ import {SwapperSimpleMock} from "@alto/lending/mocks/SwapperSimpleMock.sol";
 import {FlashBorrowLeverageData} from "@alto/lending/leverage/AltoLeverage.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
+import {UnsafeUpgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 
 import "forge-std/Test.sol";
 
@@ -51,38 +52,76 @@ abstract contract AdapterCommonSetup is AdapterCommon {
         leverage = new AltoLeverage(address(swapper), address(OWNER));
 
         address irm = address(new FixedRateIrm(0.04 ether / uint256(365 days), address(this)));
-        market = IMarket(
-            Upgrades.deployUUPSProxy(
-                "MarketInstance.sol",
-                abi.encodeCall(
-                    MarketInstance.initialize,
-                    (
-                        address(borrowToken),
-                        address(collateralToken),
-                        address(irm),
-                        address(OWNER),
-                        address(oracle),
-                        LTV,
-                        0,
-                        address(this),
-                        LiquidationConfiguration({
-                            maxLiquidationLtv: 0.8 ether,
-                            dynamicBonusFeeStart: 0.03 ether,
-                            ltvForCompleteLiquidation: 0.9 ether,
-                            dynamicBonusFeeDecaySteepness: 5 ether,
-                            liquidationBaseFee: 0.05 ether,
-                            minPenaltyPercentage: 0.01 ether,
-                            protocolFeePercentage: 0.075 ether,
-                            isEnabledPriorityLiquidation: true,
-                            disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
-                            priorityLiquidationGracePeriod: 5 minutes,
-                            taggerLiquidationGracePeriod: 2 minutes,
-                            liquidationWindowTag: 3 days
-                        })
+
+        bool shouldUseSafeProxy = vm.envOr("VERIFY_PROXY", false);
+
+        if (shouldUseSafeProxy) {
+            market = IMarket(
+                Upgrades.deployUUPSProxy(
+                    "MarketInstance.sol",
+                    abi.encodeCall(
+                        MarketInstance.initialize,
+                        (
+                            address(borrowToken),
+                            address(collateralToken),
+                            address(irm),
+                            address(OWNER),
+                            address(oracle),
+                            LTV,
+                            0,
+                            address(this),
+                            LiquidationConfiguration({
+                                maxLiquidationLtv: 0.8 ether,
+                                dynamicBonusFeeStart: 0.03 ether,
+                                ltvForCompleteLiquidation: 0.9 ether,
+                                dynamicBonusFeeDecaySteepness: 5 ether,
+                                liquidationBaseFee: 0.05 ether,
+                                minPenaltyPercentage: 0.01 ether,
+                                protocolFeePercentage: 0.075 ether,
+                                isEnabledPriorityLiquidation: true,
+                                disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
+                                priorityLiquidationGracePeriod: 5 minutes,
+                                taggerLiquidationGracePeriod: 2 minutes,
+                                liquidationWindowTag: 3 days
+                            })
+                        )
                     )
                 )
-            )
-        );
+            );
+        } else {
+            market = IMarket(
+                UnsafeUpgrades.deployUUPSProxy(
+                    address(new MarketInstance()),
+                    abi.encodeCall(
+                        MarketInstance.initialize,
+                        (
+                            address(borrowToken),
+                            address(collateralToken),
+                            address(irm),
+                            address(OWNER),
+                            address(oracle),
+                            LTV,
+                            0,
+                            address(this),
+                            LiquidationConfiguration({
+                                maxLiquidationLtv: 0.8 ether,
+                                dynamicBonusFeeStart: 0.03 ether,
+                                ltvForCompleteLiquidation: 0.9 ether,
+                                dynamicBonusFeeDecaySteepness: 5 ether,
+                                liquidationBaseFee: 0.05 ether,
+                                minPenaltyPercentage: 0.01 ether,
+                                protocolFeePercentage: 0.075 ether,
+                                isEnabledPriorityLiquidation: true,
+                                disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
+                                priorityLiquidationGracePeriod: 5 minutes,
+                                taggerLiquidationGracePeriod: 2 minutes,
+                                liquidationWindowTag: 3 days
+                            })
+                        )
+                    )
+                )
+            );
+        }
 
         deal(address(borrowToken), address(swapper), type(uint128).max);
         deal(address(collateralToken), address(swapper), type(uint128).max);
