@@ -6,7 +6,7 @@ import {TWAltoBaseTest} from "../TWAltoBaseTest.sol";
 import {TWAltoErrorsLib} from "@alto/rewards/libraries/TWAltoErrorsLib.sol";
 import {TWAltoEventsLib} from "@alto/rewards/libraries/TWAltoEventsLib.sol";
 import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
-import {Participation} from "@alto/rewards/interfaces/ITWAlto.sol";
+import {Participation, Bucket} from "@alto/rewards/interfaces/ITWAlto.sol";
 
 contract TWAlto_reuseParticipation is TWAltoBaseTest {
     bytes32 constant PAUSE_TYPE = keccak256("PAUSE");
@@ -124,25 +124,6 @@ contract TWAlto_reuseParticipation is TWAltoBaseTest {
         twAlto.reuseParticipation(alice, TARGET_BUCKET_ID);
     }
 
-    function test_WhenCallerIsParticipant()
-        public
-        givenContractIsNotPaused
-        givenNoReentrancy
-        givenCallerIsAuthorized
-        whenAllConditionsAreValid
-    {
-        // Setup: Create position to reuse
-        _participateHelper(alice, AMOUNT, SOURCE_BUCKET_ID);
-
-        // It should succeed when caller is the participant
-        vm.prank(alice);
-        twAlto.reuseParticipation(alice, TARGET_BUCKET_ID);
-
-        // Verify reuse worked - lockAmount should be doubled since it adds to existing
-        Participation memory position = twAlto.getParticipation(alice, TARGET_BUCKET_ID);
-        assertEq(position.lockAmount, AMOUNT * 2); // Original + reused amount
-    }
-
     function test_RevertWhen_PositionLockAmountIsZero()
         public
         givenContractIsNotPaused
@@ -224,40 +205,6 @@ contract TWAlto_reuseParticipation is TWAltoBaseTest {
         assertEq(twAlto.lastProcessedEpoch(), currentEpoch);
     }
 
-    function test_WhenAllConditionsAreValid_NewPosition()
-        public
-        givenContractIsNotPaused
-        givenNoReentrancy
-        givenCallerIsAuthorized
-        givenParticipantHasNoExistingPositionInTargetBucket
-        whenAllConditionsAreValid
-    {
-        // Setup: Create position to reuse
-        _participateHelper(alice, AMOUNT, SOURCE_BUCKET_ID);
-
-        uint256 contractBalanceBefore = IERC20(address(alto)).balanceOf(address(twAlto));
-        uint256 aliceBalanceBefore = IERC20(address(alto)).balanceOf(alice);
-
-        // It should emit Participate event - with AMOUNT (the reused amount)
-        vm.expectEmit(true, true, true, true);
-        emit TWAltoEventsLib.Participate(alice, TARGET_BUCKET_ID, AMOUNT, 1, block.timestamp + EPOCH_DURATION);
-
-        vm.prank(alice);
-        twAlto.reuseParticipation(alice, TARGET_BUCKET_ID);
-
-        // It should not transfer TAP (reuse existing)
-        assertEq(IERC20(address(alto)).balanceOf(address(twAlto)), contractBalanceBefore);
-        assertEq(IERC20(address(alto)).balanceOf(alice), aliceBalanceBefore);
-
-        // Verify new participation was created with doubled lockAmount (original + reused)
-        Participation memory position = twAlto.getParticipation(alice, TARGET_BUCKET_ID);
-        assertEq(position.bucketId, TARGET_BUCKET_ID);
-        assertEq(position.lockAmount, AMOUNT * 2); // Original amount + reused amount
-        assertEq(position.multiplier, 1); // From bucket config
-        assertEq(position.lockedAt, block.timestamp);
-        assertEq(position.expiry, block.timestamp + EPOCH_DURATION);
-    }
-
     function test_WhenAllConditionsAreValid_ExistingUnexpiredPosition()
         public
         givenContractIsNotPaused
@@ -269,15 +216,27 @@ contract TWAlto_reuseParticipation is TWAltoBaseTest {
         // Setup: Create another position to reuse
         _participateHelper(alice, AMOUNT, SOURCE_BUCKET_ID);
 
-        uint256 newExpiry = block.timestamp + EPOCH_DURATION;
-
         // Get position before reuse
         Participation memory positionBefore = twAlto.getParticipation(alice, TARGET_BUCKET_ID);
 
-        // It should emit Participate event with total lockAmount (existing + reused)
-        // Note: Contract seems to emit total lockAmount, not just the input amount
-        vm.expectEmit(true, true, true, true);
-        emit TWAltoEventsLib.Participate(alice, TARGET_BUCKET_ID, AMOUNT * 2, 1, newExpiry);
+        uint256 epochDuration = twAlto.EPOCH_DURATION();
+
+        vm.warp(positionBefore.expiry + 1);
+        // Advance 100000 epochs is just a sanity check
+        twAlto.advanceEpoch(100000);
+
+        assertEq(twAlto.lastProcessedEpoch(), 1);
+        assertEq(twAlto.currentEpoch(), 1);
+
+        uint256 contractBalanceBefore = IERC20(address(alto)).balanceOf(address(twAlto));
+        uint256 aliceBalanceBefore = IERC20(address(alto)).balanceOf(alice);
+
+        Bucket memory bucketAfter = twAlto.getBucket(TARGET_BUCKET_ID);
+        uint256 newExpiry = block.timestamp + (bucketAfter.lockEpochDuration * epochDuration);
+
+        // It should emit Participate event with position lockAmount that it had before the reuse
+        vm.expectEmit();
+        emit TWAltoEventsLib.Participate(alice, positionBefore.bucketId, positionBefore.lockAmount, 1, newExpiry, true);
 
         vm.prank(alice);
         twAlto.reuseParticipation(alice, TARGET_BUCKET_ID);
@@ -285,17 +244,18 @@ contract TWAlto_reuseParticipation is TWAltoBaseTest {
         // Verify position was updated correctly
         Participation memory positionAfter = twAlto.getParticipation(alice, TARGET_BUCKET_ID);
 
-        // It should add the reused amount (which is the existing lockAmount) to existing lockAmount
-        // positionBefore.lockAmount = 2000 (from two participations)
-        // reused amount = positionBefore.lockAmount = 2000
-        // final = 2000 + 2000 = 4000
-        assertEq(positionAfter.lockAmount, positionBefore.lockAmount * 2);
+        // It should reuse the position lockAmount
+        assertEq(positionAfter.lockAmount, positionBefore.lockAmount);
 
         // It should update expiry to new bucket lock duration
         assertEq(positionAfter.expiry, newExpiry);
 
         // It should update lockedAt to current timestamp
         assertEq(positionAfter.lockedAt, block.timestamp);
+
+        // It should not transfer TAP (reuse existing)
+        assertEq(IERC20(address(alto)).balanceOf(address(twAlto)), contractBalanceBefore);
+        assertEq(IERC20(address(alto)).balanceOf(alice), aliceBalanceBefore);
     }
 
     // ====================================

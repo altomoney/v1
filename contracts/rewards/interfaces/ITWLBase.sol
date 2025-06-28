@@ -26,7 +26,6 @@ interface ITWLBase {
     error BUCKET_EPOCH_DURATION_FLOOR_MISMATCH();
     error LIMIT_IS_ZERO();
 
-    event AdvanceEpoch(uint256 indexed newEpoch, uint256 lastEpoch);
     event BucketUpdated(uint256 indexed index);
 
     /**

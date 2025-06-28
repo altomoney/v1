@@ -4,13 +4,11 @@ pragma solidity ^0.8.22;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {TWAltoBaseTest} from "../TWAltoBaseTest.sol";
 import {TWAltoErrorsLib} from "@alto/rewards/libraries/TWAltoErrorsLib.sol";
+import {TWAltoEventsLib} from "@alto/rewards/libraries/TWAltoEventsLib.sol";
 
 contract TWAlto_advanceEpoch is TWAltoBaseTest {
     uint256 constant AMOUNT = 1000e18;
     uint8 constant BUCKET_ID = 0;
-
-    // Event declaration - matching ITWLBase
-    event AdvanceEpoch(uint256 indexed newEpoch, uint256 lastEpoch);
 
     function setUp() public override {
         super.setUp();
@@ -91,7 +89,7 @@ contract TWAlto_advanceEpoch is TWAltoBaseTest {
 
         // It should emit AdvanceEpoch event
         vm.expectEmit(true, true, false, false);
-        emit AdvanceEpoch(epochBefore + limit, epochBefore + limit);
+        emit TWAltoEventsLib.AdvanceEpoch(epochBefore + limit, epochBefore + limit);
 
         twAlto.advanceEpoch(limit);
 
@@ -117,7 +115,7 @@ contract TWAlto_advanceEpoch is TWAltoBaseTest {
 
         // It should emit AdvanceEpoch event
         vm.expectEmit(true, true, false, false);
-        emit AdvanceEpoch(currentEpoch, currentEpoch);
+        emit TWAltoEventsLib.AdvanceEpoch(currentEpoch, currentEpoch);
 
         twAlto.advanceEpoch(limit);
 
@@ -135,7 +133,7 @@ contract TWAlto_advanceEpoch is TWAltoBaseTest {
 
         // It should emit AdvanceEpoch event indicating internal function was called
         vm.expectEmit(true, true, false, false);
-        emit AdvanceEpoch(epochBefore + limit, epochBefore + limit);
+        emit TWAltoEventsLib.AdvanceEpoch(epochBefore + limit, epochBefore + limit);
 
         twAlto.advanceEpoch(limit);
     }

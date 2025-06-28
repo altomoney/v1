@@ -4,7 +4,7 @@ pragma solidity ^0.8.22;
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 
 import {Pausable} from "@alto/utils/Pausable.sol";
 import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
@@ -15,7 +15,7 @@ import {TWAltoEventsLib} from "./libraries/TWAltoEventsLib.sol";
 
 bytes32 constant PAUSE_TYPE = keccak256("PAUSE");
 
-contract TWAlto is ITWAlto, TWLBase, Ownable, ReentrancyGuard, Pausable {
+contract TWAlto is ITWAlto, TWLBase, Ownable2Step, ReentrancyGuard, Pausable {
     using SafeERC20 for IERC20;
 
     address public immutable lockToken;
@@ -78,17 +78,56 @@ contract TWAlto is ITWAlto, TWLBase, Ownable, ReentrancyGuard, Pausable {
     /// @param _bucketId The lock bucket id
     function participate(address _participant, uint256 _amount, uint8 _bucketId) external whenNotPaused nonReentrant {
         if (_participant != msg.sender) revert TWAltoErrorsLib.NotAuthorized();
-        _participate(_participant, _amount, _bucketId, true);
+        if (rescueMode) revert TWAltoErrorsLib.RescueModeActive();
+        if (lastEmergencySweep != 0) revert TWAltoErrorsLib.EmergencySweepActivated();
+        if (lastProcessedEpoch != currentEpoch()) _advanceEpoch(currentEpoch() - lastProcessedEpoch);
+
+        if (_amount == 0) revert TWAltoErrorsLib.NotValid();
+
+        _supplyInBucket(_bucketId, _amount);
+
+        Participation storage position = participations[_participant][_bucketId];
+        Bucket memory bucket = buckets[_bucketId];
+        uint256 expiry = block.timestamp + (bucket.lockEpochDuration * EPOCH_DURATION);
+
+        position.bucketId = _bucketId;
+        position.lockedAt = block.timestamp;
+        position.expiry = expiry;
+        position.lockAmount = position.lockAmount + _amount;
+        position.multiplier = bucket.rewardsMultiplier;
+
+        IERC20(lockToken).safeTransferFrom(_participant, address(this), _amount);
+
+        emit TWAltoEventsLib.Participate(_participant, _bucketId, _amount, bucket.rewardsMultiplier, expiry, false);
     }
 
-    /// @notice Reuse an expired participation to participate again in twAML voting and mint an twTap position in a lock bucket.
+    /// @notice Reuse user's expired participation to participate again in Alto staking.
+    /// @param _participant The address of the participant
     /// @param _bucketId The new lock bucket id to migrate the position from the expired participation in a new participation
-    function reuseParticipation(address _participant, uint8 _bucketId) external whenNotPaused nonReentrant {
-        Participation memory position = participations[_participant][_bucketId];
+    function reuseParticipation(address _participant, uint8 _bucketId) external whenNotPaused {
         if (_participant != msg.sender) revert TWAltoErrorsLib.NotAuthorized();
-        if (position.lockAmount == 0) revert TWAltoErrorsLib.NotValid();
+        if (rescueMode) revert TWAltoErrorsLib.RescueModeActive();
+        if (lastEmergencySweep != 0) revert TWAltoErrorsLib.EmergencySweepActivated();
+        if (lastProcessedEpoch != currentEpoch()) _advanceEpoch(currentEpoch() - lastProcessedEpoch);
 
-        _participate(_participant, position.lockAmount, _bucketId, false);
+        Participation storage position = participations[_participant][_bucketId];
+        if (position.lockAmount == 0) revert TWAltoErrorsLib.NotValid();
+        if (position.expiry > block.timestamp) revert TWAltoErrorsLib.LockNotExpired();
+
+        _supplyInBucket(position.bucketId, position.lockAmount);
+
+        Bucket memory bucket = buckets[position.bucketId];
+        uint256 expiry = block.timestamp + (bucket.lockEpochDuration * EPOCH_DURATION);
+
+        // bucketId remains the same
+        // lockedAmount remains the same
+        position.lockedAt = block.timestamp;
+        position.expiry = expiry;
+        position.multiplier = bucket.rewardsMultiplier;
+
+        emit TWAltoEventsLib.Participate(
+            _participant, position.bucketId, position.lockAmount, bucket.rewardsMultiplier, expiry, true
+        );
     }
 
     /**
@@ -188,36 +227,6 @@ contract TWAlto is ITWAlto, TWLBase, Ownable, ReentrancyGuard, Pausable {
         return ((timestamp - INIT_TIMESTAMP) / EPOCH_DURATION);
     }
 
-    /// @dev Internal function to participate in twAML voting and mint an twTap position in a lock bucket.
-    /// @param _participant The address of the participant
-    /// @param _amount The amount of TAP to participate with.
-    /// @param _bucketId The lock bucket id
-    /// @param _transferFrom Whether to transfer the TAP from the participant to the contract, or not due is a reuse of a participation
-    function _participate(address _participant, uint256 _amount, uint8 _bucketId, bool _transferFrom) internal {
-        if (_amount == 0) revert TWAltoErrorsLib.NotValid();
-        if (rescueMode) revert TWAltoErrorsLib.RescueModeActive();
-        if (lastEmergencySweep != 0) revert TWAltoErrorsLib.EmergencySweepActivated();
-        if (lastProcessedEpoch != currentEpoch()) _advanceEpoch(currentEpoch() - lastProcessedEpoch);
-
-        if (_transferFrom) {
-            IERC20(lockToken).safeTransferFrom(_participant, address(this), _amount);
-        }
-
-        _supplyInBucket(_bucketId, _amount);
-
-        Participation storage position = participations[_participant][_bucketId];
-        Bucket memory bucket = buckets[_bucketId];
-        uint256 expiry = block.timestamp + (bucket.lockEpochDuration * EPOCH_DURATION);
-
-        position.bucketId = _bucketId;
-        position.lockedAt = block.timestamp;
-        position.expiry = expiry;
-        position.lockAmount = position.lockAmount + _amount;
-        position.multiplier = bucket.rewardsMultiplier;
-
-        emit TWAltoEventsLib.Participate(_participant, _bucketId, _amount, bucket.rewardsMultiplier, expiry);
-    }
-
     function _advanceEpoch(uint256 _limit) internal {
         if (_limit == 0) revert TWAltoErrorsLib.NotValid();
         if (lastProcessedEpoch == currentEpoch()) revert TWAltoErrorsLib.NotValid();
@@ -234,6 +243,6 @@ contract TWAlto is ITWAlto, TWLBase, Ownable, ReentrancyGuard, Pausable {
 
         lastProcessedEpoch = goal;
 
-        emit AdvanceEpoch(goal, lastProcessedEpoch);
+        emit TWAltoEventsLib.AdvanceEpoch(goal, lastProcessedEpoch);
     }
 }

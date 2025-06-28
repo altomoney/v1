@@ -292,7 +292,7 @@ contract TWAlto_participate is TWAltoBaseTest {
 
         // It should emit Participate event
         vm.expectEmit(true, true, true, true);
-        emit TWAltoEventsLib.Participate(alice, BUCKET_ID, AMOUNT, 1, block.timestamp + EPOCH_DURATION);
+        emit TWAltoEventsLib.Participate(alice, BUCKET_ID, AMOUNT, 1, block.timestamp + EPOCH_DURATION, false);
 
         vm.prank(alice);
         twAlto.participate(alice, AMOUNT, BUCKET_ID);
@@ -330,7 +330,7 @@ contract TWAlto_participate is TWAltoBaseTest {
 
         // It should emit Participate event with updated values
         vm.expectEmit(true, true, true, true);
-        emit TWAltoEventsLib.Participate(alice, BUCKET_ID, additionalAmount, 1, newExpiry);
+        emit TWAltoEventsLib.Participate(alice, BUCKET_ID, additionalAmount, 1, newExpiry, false);
 
         vm.prank(alice);
         twAlto.participate(alice, additionalAmount, BUCKET_ID);
