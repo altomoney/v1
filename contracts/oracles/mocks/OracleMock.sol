@@ -9,4 +9,8 @@ contract OracleMock is IOracle {
     function setPrice(uint256 newPrice) external {
         getPrice = newPrice;
     }
+
+    function decimals() external view returns (uint8) {
+        return 8;
+    }
 }

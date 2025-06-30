@@ -5,4 +5,6 @@ uint256 constant ORACLE_PRICE_PRECISION = 1e36;
 
 interface IOracle {
     function getPrice() external view returns (uint256);
+
+    function decimals() external view returns (uint8);
 }

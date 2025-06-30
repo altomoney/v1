@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/vscode/devcontainers/base:debian
+FROM debian:bookworm
 
 # Update package list
 RUN apt update

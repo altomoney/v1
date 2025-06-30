@@ -2,6 +2,7 @@
 pragma solidity ^0.8.28;
 
 import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
+import {IRewardsDistributor} from "@alto/rewards/interfaces/IRewardsDistributor.sol";
 
 import {CoreAdapter, Address} from "@morpho-org/bundler3/adapters/CoreAdapter.sol";
 import {IWNative} from "@morpho-org/bundler3/interfaces/IWNative.sol";
@@ -210,5 +211,52 @@ contract AltoAdapter is CoreAdapter {
 
         WRAPPED_NATIVE.withdraw(amount);
         if (receiver != address(this)) Address.sendValue(payable(receiver), amount);
+    }
+
+    /* REWARDS DISTRIBUTOR ACTIONS */
+
+    /// @notice Claims and purchases reward tokens from the RewardsDistributor.
+    /// @param distributor The address of the RewardsDistributor contract.
+    /// @param availableToPurchase The overall available amount of token rewards to purchase.
+    /// @param proof The merkle proof that validates this claim.
+    /// @param purchaseAmount The amount to purchase (must be <= available - purchased).
+    /// @param paymentToken The token to use for payment.
+    /// @param shouldLock Whether to lock the purchased tokens.
+    /// @param onBehalf The address on behalf of whom the claim is being made.
+    function claimPurchase(
+        IRewardsDistributor distributor,
+        uint256 availableToPurchase,
+        bytes32[] calldata proof,
+        uint256 purchaseAmount,
+        address paymentToken,
+        bool shouldLock,
+        address onBehalf
+    ) external onlyBundler3 returns (uint256) {
+        // Do not check `onBehalf` against the zero address as it's done at RewardsDistributor's level.
+        require(onBehalf != address(this), ErrorsLib.AdapterAddress());
+
+        // If payment amount is max, use the balance of payment token
+        if (purchaseAmount == type(uint256).max) {
+            purchaseAmount = distributor.purchased(onBehalf);
+            if (purchaseAmount >= availableToPurchase) {
+                purchaseAmount = 0; // Already purchased full allocation
+            } else {
+                purchaseAmount = availableToPurchase - purchaseAmount;
+            }
+            require(purchaseAmount != 0, ErrorsLib.ZeroAmount());
+        }
+
+        // Approve payment token to RewardsDistributor
+        SafeERC20.forceApprove(IERC20(paymentToken), address(distributor), type(uint256).max);
+
+        // Call claimPurchase on behalf of the initiator
+        return distributor.claimPurchase(
+            availableToPurchase,
+            proof,
+            purchaseAmount,
+            paymentToken,
+            shouldLock,
+            onBehalf == address(0) ? initiator() : onBehalf
+        );
     }
 }
