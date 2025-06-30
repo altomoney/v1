@@ -42,6 +42,15 @@ library FixedPointMath {
         return (numerator * multiplier) / denominator;
     }
 
+    /// @dev Performs division rounding >=0.5 up and <0.5 down.
+    function divideWithRoundingHalfUp(uint256 numerator, uint256 multiplier, uint256 denominator)
+        internal
+        pure
+        returns (uint256)
+    {
+        return (numerator * multiplier + denominator / 2) / denominator;
+    }
+
     /// @dev Calculates compound interest using Taylor series approximation.
     function calculateCompoundInterest(uint256 rate, uint256 periods) internal pure returns (uint256) {
         uint256 linearTerm = rate * periods;
