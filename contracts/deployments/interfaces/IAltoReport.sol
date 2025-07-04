@@ -15,6 +15,9 @@ struct AltoReport {
     address multiTokenSender;
     address altoMulticall;
     address usdo;
+    address altoToken;
+    address rewardsDistributor;
+    address twAltoStaking;
 }
 
 struct UtilitiesReport {
@@ -58,8 +61,14 @@ struct UsdoReport {
     address usdoFlashloanHelper;
 }
 
+struct AltoTokenReport {
+    address rewardsDistributor;
+    address twAltoStaking;
+}
+
 struct Reports {
     UtilitiesReport utilitiesReport;
     UsdoReport usdoReport;
     LendingReport lendingReport;
+    AltoTokenReport altoTokenReport;
 }

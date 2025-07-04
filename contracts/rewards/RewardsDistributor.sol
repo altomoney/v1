@@ -115,6 +115,7 @@ contract RewardsDistributor is IRewardsDistributorStaticTyping, Ownable2Step, Pa
     /// @param paymentToken The token to use for payment.
     /// @param lockTokens Whether to lock the purchased tokens.
     /// @param onBehalf The address on behalf of whom the claim is being made.
+    /// @param lockBucketId The bucket id to lock the purchased tokens in.
     /// @return amount The amount of reward tokens purchased.
     function claimPurchase(
         uint256 availableToPurchase,
@@ -122,7 +123,8 @@ contract RewardsDistributor is IRewardsDistributorStaticTyping, Ownable2Step, Pa
         uint256 purchaseAmount,
         address paymentToken,
         bool lockTokens,
-        address onBehalf
+        address onBehalf,
+        uint8 lockBucketId
     ) external whenNotPaused returns (uint256 amount) {
         if (!_isSenderAuthorized(onBehalf)) revert NotOwner();
         if (root == bytes32(0)) revert RootNotSet();
@@ -148,7 +150,7 @@ contract RewardsDistributor is IRewardsDistributorStaticTyping, Ownable2Step, Pa
         if (lockTokens) {
             if (lockContract == address(0)) revert LockNotSet();
             IERC20(rewardToken).forceApprove(lockContract, purchaseAmount);
-            ILock(lockContract).lock(purchaseAmount, onBehalf);
+            ILock(lockContract).participate(onBehalf, purchaseAmount, lockBucketId);
         } else {
             IERC20(rewardToken).safeTransfer(onBehalf, purchaseAmount);
         }
@@ -362,11 +364,6 @@ contract RewardsDistributor is IRewardsDistributorStaticTyping, Ownable2Step, Pa
         if (rewardOracle == address(0)) return 0;
         int256 price = IOracle(rewardOracle).latestAnswer();
         return price > 0 ? uint256(price) : 0;
-    }
-
-    // Compatibility function for interface - deprecated setRewardPrice
-    function setRewardPrice(uint256) external onlyOwner {
-        revert UnauthorizedRootChange();
     }
 
 

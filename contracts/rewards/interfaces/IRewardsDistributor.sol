@@ -24,7 +24,7 @@ interface IOracle {
 }
 
 interface ILock {
-    function lock(uint256 amount, address to) external;
+    function participate(address participant, uint256 amount, uint8 bucketId) external;
 }
 
 /// @title IRewardsErrors
@@ -156,6 +156,7 @@ interface IRewardsDistributorBase is IRewardsErrors, IRewardsEvents {
     /// @param paymentToken The token to use for payment
     /// @param shouldLock Whether to lock the purchased tokens
     /// @param onBehalf The address on behalf of whom the claim is being made
+    /// @param lockBucketId The bucket id to lock the purchased tokens in.
     /// @return amount The amount of reward tokens purchased
     function claimPurchase(
         uint256 availableToPurchase,
@@ -163,7 +164,8 @@ interface IRewardsDistributorBase is IRewardsErrors, IRewardsEvents {
         uint256 purchaseAmount,
         address paymentToken,
         bool shouldLock,
-        address onBehalf
+        address onBehalf,
+        uint8 lockBucketId
     ) external returns (uint256 amount);
     
     /// @notice Returns the amount of reward tokens already purchased by an account
@@ -252,10 +254,6 @@ interface IRewardsDistributorBase is IRewardsErrors, IRewardsEvents {
     /// @notice Sets the reward price oracle
     /// @param newOracle The new oracle address
     function setRewardOracle(address newOracle) external;
-    
-    /// @notice Sets the reward price in USD (deprecated, use setRewardOracle)
-    /// @param newPrice The new price per unit
-    function setRewardPrice(uint256 newPrice) external;
     
     /// @notice Sets the discount percentage
     /// @param newDiscount The new discount (in MATH_PRECISION)

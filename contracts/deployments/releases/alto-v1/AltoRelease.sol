@@ -5,10 +5,12 @@ import {AltoUtilitiesBatch} from "./batches/AltoUtilitiesBatch.sol";
 import {AltoUsdoBatch} from "./batches/AltoUsdoBatch.sol";
 import {AltoMarketsBatch} from "./batches/AltoMarketsBatch.sol";
 import {AltoPostSetup} from "./batches/AltoPostSetup.sol";
+import {AltoTokenRewardsBatch} from "./batches/AltoTokenRewardsBatch.sol";
 
 import {
     AltoInput,
     AltoReport,
+    AltoTokenReport,
     UtilitiesReport,
     UsdoReport,
     LendingReport,
@@ -39,6 +41,9 @@ library AltoRelease {
             reports.utilitiesReport.mintIrm,
             input.mintOracle
         );
+
+        AltoTokenRewardsBatch tokenRewardsBatch = new AltoTokenRewardsBatch(input.altoToken, address(postSetupBatch));
+        reports.altoTokenReport = tokenRewardsBatch.getAltoTokenReport();
 
         postSetupBatch.postSetup(
             reports.utilitiesReport.altoMulticall,
@@ -86,7 +91,15 @@ library AltoRelease {
             mintOracle
         );
         lendingReport = marketsBatch.getLendingReport();
+
         return (usdoReport, lendingReport);
+    }
+
+    function _deployAltoToken(address altoToken, address admin) private returns (AltoTokenReport memory tokenReport) {
+        AltoTokenRewardsBatch tokenRewardsBatch = new AltoTokenRewardsBatch(altoToken, admin);
+        tokenReport = tokenRewardsBatch.getAltoTokenReport();
+
+        return tokenReport;
     }
 
     function _generateMarketReport(Reports memory reports) private pure returns (AltoReport memory) {
@@ -105,6 +118,8 @@ library AltoRelease {
         report.bundler3 = reports.utilitiesReport.bundler3;
         report.altoAdapter = reports.utilitiesReport.altoAdapter;
         report.altoLeverage = reports.utilitiesReport.altoLeverage;
+        report.rewardsDistributor = reports.altoTokenReport.rewardsDistributor;
+        report.twAltoStaking = reports.altoTokenReport.twAltoStaking;
 
         return report;
     }

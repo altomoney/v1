@@ -51,15 +51,11 @@ contract DeployAltoTestnet is Script {
 
         report = AltoRelease.deployAltoV1(input, report);
 
-        AltoToken(payable(input.altoToken)).transfer(report.multiTokenSender, 20_000_000 ether);
         ERC20Testnet(usdc).mint(report.multiTokenSender, MULTI_TOKEN_SENDER_MINT_TOKENS);
         ERC20Testnet(stETH).mint(report.multiTokenSender, MULTI_TOKEN_SENDER_MINT_TOKENS);
         ERC20Testnet(stETH).mint(report.leverageSwapper, MULTI_TOKEN_SENDER_MINT_TOKENS);
         ERC20Testnet(usdc).mint(report.leverageSwapper, MULTI_TOKEN_SENDER_MINT_TOKENS);
         AltoToken(payable(input.altoToken)).transfer(report.multiTokenSender, 20_000_000 ether);
-        AltoToken(payable(input.altoToken)).transfer(
-            report.altoMulticall, AltoToken(payable(input.altoToken)).balanceOf(msg.sender) - 100000e18
-        );
 
         console.log("AltoLeverage: ", report.altoLeverage);
         console.log("LeverageSwapper: ", report.leverageSwapper);
@@ -87,6 +83,9 @@ contract DeployAltoTestnet is Script {
         console.log("MultiTokenSender: ", report.multiTokenSender);
         console.log("AltoMulticall: ", report.altoMulticall);
         console.log("USDO: ", report.usdo);
+        console.log("AltoToken: ", report.altoToken);
+        console.log("RewardsDistributor: ", report.rewardsDistributor);
+        console.log("TWAltoStaking: ", report.twAltoStaking);
 
         vm.stopBroadcast();
     }

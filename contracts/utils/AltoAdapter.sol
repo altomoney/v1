@@ -230,7 +230,8 @@ contract AltoAdapter is CoreAdapter {
         uint256 purchaseAmount,
         address paymentToken,
         bool shouldLock,
-        address onBehalf
+        address onBehalf,
+        uint8 lockBucketId
     ) external onlyBundler3 returns (uint256) {
         // Do not check `onBehalf` against the zero address as it's done at RewardsDistributor's level.
         require(onBehalf != address(this), ErrorsLib.AdapterAddress());
@@ -256,7 +257,8 @@ contract AltoAdapter is CoreAdapter {
             purchaseAmount,
             paymentToken,
             shouldLock,
-            onBehalf == address(0) ? initiator() : onBehalf
+            onBehalf == address(0) ? initiator() : onBehalf,
+            lockBucketId
         );
     }
 }

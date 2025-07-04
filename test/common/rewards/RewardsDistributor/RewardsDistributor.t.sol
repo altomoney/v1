@@ -16,16 +16,18 @@ contract MockLock {
     mapping(address => uint256) public locked;
     address public lastTo;
     uint256 public lastAmount;
+    uint8 public lastBucketId;
     IERC20 public rewardToken;
 
     constructor(address _rewardToken) {
         rewardToken = IERC20(_rewardToken);
     }
 
-    function lock(uint256 amount, address to) external {
-        locked[to] += amount;
-        lastTo = to;
+    function participate(address participant, uint256 amount, uint8 bucketId) external {
+        locked[participant] += amount;
+        lastTo = participant;
         lastAmount = amount;
+        lastBucketId = bucketId;
         // Pull tokens from caller (RewardsDistributor)
         rewardToken.transferFrom(msg.sender, address(this), amount);
     }
@@ -258,7 +260,7 @@ contract RewardsDistributorTest is Test {
 
         // Purchase full amount
         uint256 purchased =
-            distributor.claimPurchase(aliceAvailable, aliceProof, aliceAvailable, address(paymentToken), false, alice);
+            distributor.claimPurchase(aliceAvailable, aliceProof, aliceAvailable, address(paymentToken), false, alice, 0);
 
         assertEq(purchased, aliceAvailable);
         assertEq(distributor.assigned(alice), 0); // assigned is deprecated
@@ -279,7 +281,7 @@ contract RewardsDistributorTest is Test {
         vm.expectEmit(true, true, true, true);
         emit IRewardsEvents.PurchaseClaimed(alice, alice, address(rewardToken), firstPurchase);
         
-        distributor.claimPurchase(aliceAvailable, aliceProof, firstPurchase, address(paymentToken), false, alice);
+        distributor.claimPurchase(aliceAvailable, aliceProof, firstPurchase, address(paymentToken), false, alice, 0);
 
         assertEq(distributor.assigned(alice), 0); // assigned is deprecated
         assertEq(distributor.purchased(alice), firstPurchase);
@@ -290,7 +292,7 @@ contract RewardsDistributorTest is Test {
         vm.expectEmit(true, true, true, true);
         emit IRewardsEvents.PurchaseClaimed(alice, alice, address(rewardToken), secondPurchase);
         
-        distributor.claimPurchase(aliceAvailable, aliceProof, secondPurchase, address(paymentToken), false, alice);
+        distributor.claimPurchase(aliceAvailable, aliceProof, secondPurchase, address(paymentToken), false, alice, 0);
 
         assertEq(distributor.purchased(alice), firstPurchase + secondPurchase);
 
@@ -300,7 +302,7 @@ contract RewardsDistributorTest is Test {
         vm.expectEmit(true, true, true, true);
         emit IRewardsEvents.PurchaseClaimed(alice, alice, address(rewardToken), remaining);
         
-        distributor.claimPurchase(aliceAvailable, aliceProof, remaining, address(paymentToken), false, alice);
+        distributor.claimPurchase(aliceAvailable, aliceProof, remaining, address(paymentToken), false, alice, 0);
 
         assertEq(distributor.purchased(alice), aliceAvailable);
         vm.stopPrank();
@@ -324,12 +326,13 @@ contract RewardsDistributorTest is Test {
         emit IRewardsEvents.PurchaseClaimed(alice, alice, address(rewardToken), aliceAvailable);
 
         // Purchase with lock
-        distributor.claimPurchase(aliceAvailable, aliceProof, aliceAvailable, address(paymentToken), true, alice);
+        distributor.claimPurchase(aliceAvailable, aliceProof, aliceAvailable, address(paymentToken), true, alice, 1);
 
         assertEq(paymentToken.balanceOf(alice), alicePaymentBefore - expectedPayment);
         assertEq(lockContract.locked(alice), aliceAvailable);
         assertEq(lockContract.lastTo(), alice);
         assertEq(lockContract.lastAmount(), aliceAvailable);
+        assertEq(lockContract.lastBucketId(), 1);
         vm.stopPrank();
     }
 
@@ -351,7 +354,7 @@ contract RewardsDistributorTest is Test {
         vm.expectEmit(true, true, true, true);
         emit IRewardsEvents.PurchaseClaimed(alice, alice, address(rewardToken), aliceAvailable);
 
-        distributor.claimPurchase(aliceAvailable, aliceProof, aliceAvailable, address(paymentToken2), false, alice);
+        distributor.claimPurchase(aliceAvailable, aliceProof, aliceAvailable, address(paymentToken2), false, alice, 0);
 
         assertEq(paymentToken2.balanceOf(alice), alicePaymentBefore - expectedPayment);
         assertEq(distributor.purchased(alice), aliceAvailable);
@@ -366,7 +369,7 @@ contract RewardsDistributorTest is Test {
 
         // Try to purchase more than allocated
         vm.expectRevert(IRewardsErrors.InvalidPurchaseAmount.selector);
-        distributor.claimPurchase(aliceAvailable, aliceProof, aliceAvailable + 1, address(paymentToken), false, alice);
+        distributor.claimPurchase(aliceAvailable, aliceProof, aliceAvailable + 1, address(paymentToken), false, alice, 0);
         vm.stopPrank();
     }
 
@@ -375,11 +378,11 @@ contract RewardsDistributorTest is Test {
         paymentToken.approve(address(distributor), type(uint256).max);
 
         // Purchase full amount
-        distributor.claimPurchase(aliceAvailable, aliceProof, aliceAvailable, address(paymentToken), false, alice);
+        distributor.claimPurchase(aliceAvailable, aliceProof, aliceAvailable, address(paymentToken), false, alice, 0);
 
         // Try to purchase again
         vm.expectRevert(IRewardsErrors.InvalidPurchaseAmount.selector);
-        distributor.claimPurchase(aliceAvailable, aliceProof, 1, address(paymentToken), false, alice);
+        distributor.claimPurchase(aliceAvailable, aliceProof, 1, address(paymentToken), false, alice, 0);
         vm.stopPrank();
     }
 
@@ -388,7 +391,7 @@ contract RewardsDistributorTest is Test {
 
         // Try with unregistered payment token
         vm.expectRevert(IRewardsErrors.InvalidPaymentToken.selector);
-        distributor.claimPurchase(aliceAvailable, aliceProof, aliceAvailable, address(0x999), false, alice);
+        distributor.claimPurchase(aliceAvailable, aliceProof, aliceAvailable, address(0x999), false, alice, 0);
         vm.stopPrank();
     }
 
@@ -404,7 +407,7 @@ contract RewardsDistributorTest is Test {
         paymentToken.approve(address(newDistributor), type(uint256).max);
 
         vm.expectRevert(IRewardsErrors.PriceNotSet.selector);
-        newDistributor.claimPurchase(aliceAvailable, aliceProof, aliceAvailable, address(paymentToken), false, alice);
+        newDistributor.claimPurchase(aliceAvailable, aliceProof, aliceAvailable, address(paymentToken), false, alice, 0);
         vm.stopPrank();
     }
 
@@ -434,7 +437,8 @@ contract RewardsDistributorTest is Test {
             aliceAvailable,
             address(paymentToken),
             true, // try to lock
-            alice
+            alice,
+            1
         );
         vm.stopPrank();
     }
@@ -451,7 +455,7 @@ contract RewardsDistributorTest is Test {
         vm.expectEmit(true, true, true, true);
         emit IRewardsEvents.PurchaseClaimed(alice, alice, address(rewardToken), firstPurchase);
         
-        distributor.claimPurchase(aliceAvailable, aliceProof, firstPurchase, address(paymentToken), false, alice);
+        distributor.claimPurchase(aliceAvailable, aliceProof, firstPurchase, address(paymentToken), false, alice, 0);
 
         assertEq(distributor.assigned(alice), 0); // assigned is deprecated
         assertEq(distributor.purchased(alice), firstPurchase);
@@ -487,7 +491,7 @@ contract RewardsDistributorTest is Test {
         vm.expectEmit(true, true, true, true);
         emit IRewardsEvents.PurchaseClaimed(alice, alice, address(rewardToken), additionalPurchase);
         
-        distributor.claimPurchase(aliceNewAvailable, aliceNewProof, additionalPurchase, address(paymentToken), false, alice);
+        distributor.claimPurchase(aliceNewAvailable, aliceNewProof, additionalPurchase, address(paymentToken), false, alice, 0);
 
         assertEq(distributor.assigned(alice), 0); // assigned is deprecated
         assertEq(distributor.purchased(alice), firstPurchase + additionalPurchase);
@@ -503,7 +507,7 @@ contract RewardsDistributorTest is Test {
         vm.expectEmit(true, true, true, true);
         emit IRewardsEvents.PurchaseClaimed(alice, alice, address(rewardToken), aliceAvailable);
         
-        distributor.claimPurchase(aliceAvailable, aliceProof, aliceAvailable, address(paymentToken), false, alice);
+        distributor.claimPurchase(aliceAvailable, aliceProof, aliceAvailable, address(paymentToken), false, alice, 0);
         vm.stopPrank();
 
         uint256 contractBalance = paymentToken.balanceOf(address(distributor));
@@ -540,7 +544,7 @@ contract RewardsDistributorTest is Test {
         emit IRewardsEvents.PurchaseClaimed(alice, alice, address(rewardToken), aliceAvailable);
 
         // Purchase with 100% discount - should pay 0
-        uint256 purchased = distributor.claimPurchase(aliceAvailable, aliceProof, aliceAvailable, address(paymentToken), false, alice);
+        uint256 purchased = distributor.claimPurchase(aliceAvailable, aliceProof, aliceAvailable, address(paymentToken), false, alice, 0);
 
         // Verify no payment was taken (100% discount)
         assertEq(paymentToken.balanceOf(alice), alicePaymentBefore);
@@ -569,7 +573,7 @@ contract RewardsDistributorTest is Test {
         emit IRewardsEvents.PurchaseClaimed(alice, alice, address(rewardToken), aliceAvailable);
 
         // Purchase with lock and 100% discount - should pay 0
-        distributor.claimPurchase(aliceAvailable, aliceProof, aliceAvailable, address(paymentToken), true, alice);
+        distributor.claimPurchase(aliceAvailable, aliceProof, aliceAvailable, address(paymentToken), true, alice, 1);
 
         // Verify no payment was taken (100% discount)
         assertEq(paymentToken.balanceOf(alice), alicePaymentBefore);
@@ -578,6 +582,7 @@ contract RewardsDistributorTest is Test {
         assertEq(lockContract.locked(alice), aliceAvailable);
         assertEq(lockContract.lastTo(), alice);
         assertEq(lockContract.lastAmount(), aliceAvailable);
+        assertEq(lockContract.lastBucketId(), 1);
         assertEq(distributor.purchased(alice), aliceAvailable);
         
         vm.stopPrank();
@@ -600,7 +605,7 @@ contract RewardsDistributorTest is Test {
         emit IRewardsEvents.PurchaseClaimed(bob, alice, address(rewardToken), aliceAvailable);
 
         // Bob claims on behalf of Alice
-        distributor.claimPurchase(aliceAvailable, aliceProof, aliceAvailable, address(paymentToken), false, alice);
+        distributor.claimPurchase(aliceAvailable, aliceProof, aliceAvailable, address(paymentToken), false, alice, 0);
 
         // Verify Bob paid but Alice received the rewards
         uint256 expectedPayment = 90000 * 10 ** 6; // Same calculation as test_ClaimPurchase_FullAmount_NoLock
@@ -642,7 +647,7 @@ contract RewardsDistributorTest is Test {
         paymentToken.approve(address(distributor), type(uint256).max);
 
         vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, CLAIM_PAUSE_TYPE));
-        distributor.claimPurchase(aliceAvailable, aliceProof, aliceAvailable, address(paymentToken), false, alice);
+        distributor.claimPurchase(aliceAvailable, aliceProof, aliceAvailable, address(paymentToken), false, alice, 0);
         vm.stopPrank();
 
         // Unpause and try again - should work
@@ -657,7 +662,7 @@ contract RewardsDistributorTest is Test {
         emit IRewardsEvents.PurchaseClaimed(alice, alice, address(rewardToken), aliceAvailable);
         
         uint256 purchased =
-            distributor.claimPurchase(aliceAvailable, aliceProof, aliceAvailable, address(paymentToken), false, alice);
+            distributor.claimPurchase(aliceAvailable, aliceProof, aliceAvailable, address(paymentToken), false, alice, 0);
         assertEq(purchased, aliceAvailable);
         vm.stopPrank();
     }
@@ -691,7 +696,7 @@ contract RewardsDistributorTest is Test {
 
         // Purchase tokens
         uint256 purchased =
-            distributor.claimPurchase(aliceClaim, aliceLeafProof, purchaseAmount, address(paymentToken), false, alice);
+            distributor.claimPurchase(aliceClaim, aliceLeafProof, purchaseAmount, address(paymentToken), false, alice, 0);
 
         // Verify results
         assertEq(purchased, purchaseAmount);
@@ -729,7 +734,7 @@ contract RewardsDistributorTest is Test {
         uint256 totalPurchased;
         for (uint256 i = 0; i < 3; i++) {
             if (amounts[i] > 0 && totalPurchased + amounts[i] <= aliceAvailable) {
-                distributor.claimPurchase(aliceAvailable, aliceProof, amounts[i], address(paymentToken), false, alice);
+                distributor.claimPurchase(aliceAvailable, aliceProof, amounts[i], address(paymentToken), false, alice, 0);
                 totalPurchased += amounts[i];
                 assertEq(distributor.purchased(alice), totalPurchased);
             }
@@ -768,7 +773,7 @@ contract RewardsDistributorTest is Test {
         uint256 expectedPayment = (discountedCostUSD * 10 ** 6 + tokenPrice - 1) / tokenPrice;
 
         // Should not revert for valid prices
-        distributor.claimPurchase(aliceAvailable, aliceProof, purchaseAmount, address(fuzzPaymentToken), false, alice);
+        distributor.claimPurchase(aliceAvailable, aliceProof, purchaseAmount, address(fuzzPaymentToken), false, alice, 0);
 
         uint256 actualPayment = alicePaymentBefore - fuzzPaymentToken.balanceOf(alice);
 
@@ -812,7 +817,7 @@ contract RewardsDistributorTest is Test {
         uint256 discountedCostUSD = baseCostUSD * (MATH_PRECISION - appliedDiscount) / MATH_PRECISION;
         uint256 expectedPayment = (discountedCostUSD * 10 ** 6 + PAYMENT_TOKEN_PRICE - 1) / PAYMENT_TOKEN_PRICE;
 
-        distributor.claimPurchase(aliceAvailable, aliceProof, purchaseAmount, address(paymentToken), shouldLock, alice);
+        distributor.claimPurchase(aliceAvailable, aliceProof, purchaseAmount, address(paymentToken), shouldLock, alice, shouldLock ? 1 : 0);
 
         uint256 actualPayment = alicePaymentBefore - paymentToken.balanceOf(alice);
         
@@ -888,7 +893,7 @@ contract RewardsDistributorTest is Test {
         uint256 purchaseAmount = scaledAllocation / 2;
 
         // Should not revert for any valid decimal combination
-        fuzzDistributor.claimPurchase(scaledAllocation, fuzzProof, purchaseAmount, address(fuzzPaymentToken), false, alice);
+        fuzzDistributor.claimPurchase(scaledAllocation, fuzzProof, purchaseAmount, address(fuzzPaymentToken), false, alice, 0);
 
         assertEq(fuzzDistributor.purchased(alice), purchaseAmount);
         assertEq(fuzzRewardToken.balanceOf(alice), purchaseAmount);

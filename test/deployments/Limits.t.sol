@@ -8,6 +8,7 @@ import "deployments/interfaces/IAltoReport.sol";
 import {AltoUsdoBatch} from "deployments/releases/alto-v1/batches/AltoUsdoBatch.sol";
 import {AltoUtilitiesBatch} from "deployments/releases/alto-v1/batches/AltoUtilitiesBatch.sol";
 import {AltoPostSetup} from "deployments/releases/alto-v1/batches/AltoPostSetup.sol";
+import {AltoTokenRewardsBatch} from "deployments/releases/alto-v1/batches/AltoTokenRewardsBatch.sol";
 import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
 
 contract LimitsTest is Test {
@@ -34,11 +35,14 @@ contract LimitsTest is Test {
         uint256 utilitiesBatchCreationSize = type(AltoUtilitiesBatch).creationCode.length;
         uint256 usdoBatchCreationSize = type(AltoUsdoBatch).creationCode.length;
         uint256 postSetupBatchCreationSize = type(AltoPostSetup).creationCode.length;
+        uint256 tokenRewardsBatchCreationSize = type(AltoTokenRewardsBatch).creationCode.length;
         console2.log("AltoUtilitiesBatch", utilitiesBatchCreationSize);
         console2.log("AltoUsdoBatch", usdoBatchCreationSize);
         console2.log("AltoPostSetup", postSetupBatchCreationSize);
+        console2.log("AltoTokenRewardsBatch", tokenRewardsBatchCreationSize);
         assertLe(utilitiesBatchCreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "AltoUtilitiesBatch max init code size");
         assertLe(usdoBatchCreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "AltoUsdoBatch max init code size");
         assertLe(postSetupBatchCreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "AltoPostSetup max init code size");
+        assertLe(tokenRewardsBatchCreationSize, MAX_INIT_CONSTRUCTOR_CODE_SIZE, "AltoTokenRewardsBatch max init code size");
     }
 }

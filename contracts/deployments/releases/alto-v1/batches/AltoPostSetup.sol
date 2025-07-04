@@ -9,6 +9,7 @@ import {MultiTokenSender} from "@alto/deployments/contracts/testnet/MultiTokenSe
 import {AltoMulticallTestnet} from "@alto/deployments/contracts/multicall/AltoMulticallTestnet.sol";
 import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
 import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
+import {console} from "forge-std/console.sol";
 
 /// @title AltoPostSetup
 /// @dev Batches performs 1-tx deployments via constructor deployment pattern and contains on-chain reports of deployed contracts
@@ -43,6 +44,8 @@ contract AltoPostSetup is Ownable {
         USDO(payable(usdo)).mint(leverageSwapper, MULTI_TOKEN_SENDER_MINT_TOKENS);
         AltoLeverage(payable(altoLeverage)).setMarket(address(borrowMarket), true);
         AltoLeverage(payable(altoLeverage)).setMarket(address(mintMarket), true);
+        console.log("borrowMarket", borrowMarket);
+        console.log("mintMarket", mintMarket);
         IMarket(borrowMarket).setAuthorizedCallback(address(altoLeverage), true);
         IMarket(mintMarket).setAuthorizedCallback(address(altoLeverage), true);
 
