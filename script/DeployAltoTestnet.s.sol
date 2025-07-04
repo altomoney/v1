@@ -36,6 +36,7 @@ contract DeployAltoTestnet is Script {
         input.owner = msg.sender;
         input.bbMarketBorrowCap = DEFAULT_BB_MARKET_BORROW_CAP;
         input.wrappedNativeToken = address(1);
+        input.shouldUseSafeProxy = vm.envOr("VERIFY_PROXY", false);
 
         ERC20Testnet stETH = new ERC20Testnet("stETH", 18, input.owner);
         ERC20Testnet usdc = new ERC20Testnet("USDC", 6, input.owner);

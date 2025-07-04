@@ -12,6 +12,7 @@ import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {IMarket, LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
 import {IrmCommon} from "./IrmCommon.t.sol";
 import {MockMarketDeployer, MockMarket} from "@alto-test/helpers/MockMarket.sol";
+import {RiskParams} from "@alto/lending/interfaces/IMarket.sol";
 
 uint256 constant MIN_AMOUNT = 1000;
 uint256 constant MAX_AMOUNT = 2 ** 64;
@@ -32,14 +33,17 @@ contract FixedRateIrmUpdateTest is IrmCommon {
 
         market = MockMarket(
             MockMarketDeployer.deployMarket(
-                address(borrowToken),
-                address(collateralToken),
-                address(0),
-                address(this),
-                address(oracle),
-                LTV,
-                0,
-                address(this),
+                RiskParams({
+                    borrowToken: address(borrowToken),
+                    collateralToken: address(collateralToken),
+                    irm: address(0),
+                    owner: address(this),
+                    oracle: address(oracle),
+                    maxLtv: LTV,
+                    debtCeiling: 0,
+                    feeRecipient: address(this),
+                    borrowOpeningFee: 0
+                }),
                 LiquidationConfiguration({
                     maxLiquidationLtv: 0.8 ether,
                     dynamicBonusFeeStart: 0.03 ether,
@@ -65,14 +69,17 @@ contract FixedRateIrmUpdateTest is IrmCommon {
 
         newMarket = MockMarket(
             MockMarketDeployer.deployMarket(
-                address(borrowToken),
-                address(collateralToken),
-                address(0),
-                address(this),
-                address(oracle),
-                LTV,
-                0,
-                address(this),
+                RiskParams({
+                    borrowToken: address(borrowToken),
+                    collateralToken: address(collateralToken),
+                    irm: address(0),
+                    owner: address(this),
+                    oracle: address(oracle),
+                    maxLtv: LTV,
+                    debtCeiling: 0,
+                    feeRecipient: address(this),
+                    borrowOpeningFee: 0
+                }),
                 LiquidationConfiguration({
                     maxLiquidationLtv: 0.8 ether,
                     dynamicBonusFeeStart: 0.03 ether,

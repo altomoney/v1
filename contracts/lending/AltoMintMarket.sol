@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import {Uint128Converter} from "./libraries/Uint128Converter.sol";
 
 import {IIrm} from "./interfaces/IIrm.sol";
-import {Balance, Position, LiquidationConfiguration} from "./interfaces/IMarket.sol";
+import {Balance, Position, LiquidationConfiguration, RiskParams} from "./interfaces/IMarket.sol";
 import {IMintableERC20} from "./interfaces/IMintableERC20.sol";
 
 import {AltoBaseMarket} from "./AltoBaseMarket.sol";
@@ -39,34 +39,19 @@ contract AltoMintMarket is AltoBaseMarket {
     }
 
     function initialize(
-        address _borrowToken,
-        address _collateralToken,
-        address _irm,
-        address _owner,
-        address _oracle,
-        uint256 _maxLtv,
-        uint256 _debtCeiling,
-        address _feeRecipient,
-        uint256 _borrowOpeningFee,
+        RiskParams memory _params,
         LiquidationConfiguration memory _liquidationConfiguration
     ) public initializer {
         __AltoBaseMarket_init(
-            _borrowToken,
-            _collateralToken,
-            _irm,
-            _owner,
-            _oracle,
-            _maxLtv,
-            _borrowOpeningFee,
-            _feeRecipient,
+            _params,
             _liquidationConfiguration
         );
 
-        if (_feeRecipient == address(0) && irm != address(0)) {
+        if (_params.feeRecipient == address(0) && irm != address(0)) {
             revert AltoBaseMarketInvalidInput();
         }
-        totalSupply.assets = _debtCeiling.toUint128();
-        emit SetDebtCeiling(0, _debtCeiling);
+        totalSupply.assets = _params.debtCeiling.toUint128();
+        emit SetDebtCeiling(0, _params.debtCeiling);
     }
 
     /// @notice Sets the debt ceiling for the mint market

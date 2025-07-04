@@ -39,7 +39,8 @@ library AltoRelease {
             reports.utilitiesReport.borrowIrm,
             input.borrowOracle,
             reports.utilitiesReport.mintIrm,
-            input.mintOracle
+            input.mintOracle,
+            input.shouldUseSafeProxy
         );
 
         AltoTokenRewardsBatch tokenRewardsBatch = new AltoTokenRewardsBatch(input.altoToken, address(postSetupBatch));
@@ -75,7 +76,8 @@ library AltoRelease {
         address borrowIrm,
         address borrowOracle,
         address mintIrm,
-        address mintOracle
+        address mintOracle,
+        bool shouldUseSafeProxy
     ) private returns (UsdoReport memory usdoReport, LendingReport memory lendingReport) {
         AltoUsdoBatch usdoBatch = new AltoUsdoBatch(endpoint, delegate);
         usdoReport = usdoBatch.getUsdoReport();
@@ -88,7 +90,8 @@ library AltoRelease {
             borrowIrm,
             borrowOracle,
             mintIrm,
-            mintOracle
+            mintOracle,
+            shouldUseSafeProxy
         );
         lendingReport = marketsBatch.getLendingReport();
 

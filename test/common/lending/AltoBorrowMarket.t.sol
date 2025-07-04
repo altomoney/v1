@@ -10,6 +10,7 @@ import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
 import {console2} from "forge-std/console2.sol";
 import {MockMarketDeployer, MockMarket} from "@alto-test/helpers/MockMarket.sol";
 import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
+import {RiskParams} from "@alto/lending/interfaces/IMarket.sol";
 
 contract AltoBorrowMarketTest is Test {
     MockMarket market;
@@ -31,14 +32,17 @@ contract AltoBorrowMarketTest is Test {
         OracleMock(oracle).setPrice(ORACLE_PRICE_PRECISION);
 
         market = MockMarketDeployer.deployMarket(
-            address(borrowToken),
-            address(collateralToken),
-            address(irm),
-            address(this),
-            address(oracle),
-            0.75 ether,
-            0,
-            address(this),
+            RiskParams({
+                borrowToken: address(borrowToken),
+                collateralToken: address(collateralToken),
+                irm: address(irm),
+                owner: address(this),
+                oracle: address(oracle),
+                maxLtv: 0.75 ether,
+                debtCeiling: 0,
+                feeRecipient: address(this),
+                borrowOpeningFee: 0
+            }),
             LiquidationConfiguration({
                 maxLiquidationLtv: 0.8 ether,
                 dynamicBonusFeeStart: 0.03 ether,

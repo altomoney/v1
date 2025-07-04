@@ -8,31 +8,18 @@ import {IOracle} from "@alto/oracles/interfaces/IOracle.sol";
 import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
 import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
+import {RiskParams} from "@alto/lending/interfaces/IMarket.sol";
 
 contract MockMarket is AltoBaseMarket {
     using AssetShareConversionMath for uint256;
     using FixedPointMath for uint256;
 
     function initialize(
-        address _borrowToken,
-        address _collateralToken,
-        address _irm,
-        address _owner,
-        address _oracle,
-        uint256 _maxLtv,
-        uint256 _borrowOpeningFee,
-        address _feeRecipient,
+        RiskParams memory _params,
         LiquidationConfiguration memory _liquidationConfiguration
     ) public initializer {
         __AltoBaseMarket_init(
-            _borrowToken,
-            _collateralToken,
-            _irm,
-            _owner,
-            _oracle,
-            _maxLtv,
-            _borrowOpeningFee,
-            _feeRecipient,
+            _params,
             _liquidationConfiguration
         );
     }
@@ -98,27 +85,13 @@ contract MockMarket is AltoBaseMarket {
 
 library MockMarketDeployer {
     function deployMarket(
-        address _borrowToken,
-        address _collateralToken,
-        address _irm,
-        address _owner,
-        address _oracle,
-        uint256 _maxLtv,
-        uint256 _borrowOpeningFee,
-        address _feeRecipient,
+        RiskParams memory _params,
         LiquidationConfiguration memory _liquidationConfiguration
     ) public returns (MockMarket market) {
         market = new MockMarket();
 
         market.initialize(
-            _borrowToken,
-            _collateralToken,
-            _irm,
-            _owner,
-            _oracle,
-            _maxLtv,
-            _borrowOpeningFee,
-            _feeRecipient,
+            _params,
             _liquidationConfiguration
         );
     }

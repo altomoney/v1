@@ -8,7 +8,7 @@ import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {MarketDeployer} from "@alto/utils/MarketDeployer.sol";
-import {LiquidationConfiguration, Balance, Position} from "@alto/lending/interfaces/IMarket.sol";
+import {LiquidationConfiguration, Balance, Position, RiskParams} from "@alto/lending/interfaces/IMarket.sol";
 import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";
 import {PAUSED_MARKET, FROZEN_MARKET} from "@alto/utils/Constants.sol";
 import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
@@ -38,16 +38,22 @@ contract AltoBorrowMarketProxyTest is Test {
         address oracle = address(new OracleMock());
         OracleMock(oracle).setPrice(ORACLE_PRICE_PRECISION);
 
+        RiskParams memory params = RiskParams({
+            borrowToken: address(borrowToken),
+            collateralToken: address(collateralToken),
+            irm: address(irm),
+            owner: OWNER,
+            oracle: address(oracle),
+            maxLtv: 0.75 ether,
+            debtCeiling: 0,
+            feeRecipient: OWNER,
+            borrowOpeningFee: 0
+        });
+
         market = IMarket(
+
             MarketDeployer.deployBorrowMarket(
-                address(borrowToken),
-                address(collateralToken),
-                address(irm),
-                OWNER,
-                address(oracle),
-                0.75 ether,
-                0,
-                OWNER,
+                params,
                 LiquidationConfiguration({
                     maxLiquidationLtv: 0.8 ether,
                     dynamicBonusFeeStart: 0.03 ether,
@@ -61,7 +67,8 @@ contract AltoBorrowMarketProxyTest is Test {
                     priorityLiquidationGracePeriod: 5 minutes,
                     taggerLiquidationGracePeriod: 2 minutes,
                     liquidationWindowTag: 3 days
-                })
+                }),
+                false
             )
         );
 

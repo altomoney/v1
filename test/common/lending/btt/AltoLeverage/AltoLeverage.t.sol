@@ -12,7 +12,7 @@ import {
     FlashRemoveCollateralLeverageData
 } from "@alto/lending/leverage/AltoLeverage.sol";
 import {IAltoLeverageSwapper} from "@alto/lending/interfaces/IAltoLeverageSwapper.sol";
-import {IMarket, Position, IMarketErrors, LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
+import {IMarket, Position, IMarketErrors, LiquidationConfiguration, RiskParams} from "@alto/lending/interfaces/IMarket.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SwapperSimpleMock} from "@alto/lending/mocks/SwapperSimpleMock.sol";
 
@@ -47,16 +47,21 @@ contract AltoLeverageBTTTest is Test {
         oracle = address(new OracleMock());
         OracleMock(oracle).setPrice(1 * ORACLE_PRICE_PRECISION);
 
+        RiskParams memory params = RiskParams({
+            borrowToken: address(borrowToken),
+            collateralToken: address(collateralToken),
+            irm: address(irm),
+            owner: address(this),
+            oracle: address(oracle),
+            maxLtv: 0.8 ether,
+            debtCeiling: 0,
+            feeRecipient: address(this),
+            borrowOpeningFee: 0
+        });
+
         market = IMarket(
             MarketDeployer.deployBorrowMarket(
-                address(borrowToken),
-                address(collateralToken),
-                address(irm),
-                address(this),
-                address(oracle),
-                0.8 ether,
-                0,
-                address(this),
+                params,
                 LiquidationConfiguration({
                     maxLiquidationLtv: 0.8 ether,
                     dynamicBonusFeeStart: 0.03 ether,
@@ -70,7 +75,8 @@ contract AltoLeverageBTTTest is Test {
                     priorityLiquidationGracePeriod: 5 minutes,
                     taggerLiquidationGracePeriod: 2 minutes,
                     liquidationWindowTag: 3 days
-                })
+                }),
+                false
             )
         );
 

@@ -13,7 +13,7 @@ import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 
 import {AltoMintMarket} from "@alto/lending/AltoMintMarket.sol";
-import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
+import {LiquidationConfiguration, RiskParams} from "@alto/lending/interfaces/IMarket.sol";
 import {IMarketErrors} from "@alto/lending/interfaces/IMarket.sol";
 import {IMintableERC20} from "@alto/lending/interfaces/IMintableERC20.sol";
 import {MarketDeployer} from "@alto/utils/MarketDeployer.sol";
@@ -72,18 +72,23 @@ contract LiquidateTest is Test {
             liquidationWindowTag: 3 days
         });
 
+        RiskParams memory params = RiskParams({
+            borrowToken: address(borrowToken),
+            collateralToken: address(collateralToken),
+            irm: address(irm),
+            owner: owner,
+            oracle: address(oracle),
+            maxLtv: MAX_LTV,
+            debtCeiling: DEBT_CEILING,
+            feeRecipient: feeRecipient,
+            borrowOpeningFee: BORROW_OPENING_FEE
+        });
+
         market = AltoMintMarket(
             MarketDeployer.deployMintMarket(
-                address(borrowToken),
-                address(collateralToken),
-                address(irm),
-                owner,
-                address(oracle),
-                MAX_LTV,
-                DEBT_CEILING,
-                feeRecipient,
-                BORROW_OPENING_FEE,
-                config
+                params,
+                config,
+                false
             )
         );
 

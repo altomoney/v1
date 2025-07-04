@@ -3,7 +3,7 @@ pragma solidity ^0.8.22;
 
 import {Test} from "forge-std/Test.sol";
 import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
-import {AltoBorrowMarket, LiquidationConfiguration} from "@alto/lending/AltoBorrowMarket.sol";
+import {AltoBorrowMarket, LiquidationConfiguration, RiskParams} from "@alto/lending/AltoBorrowMarket.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
@@ -32,16 +32,21 @@ contract LiquidateTest is Test {
         address oracle = address(new OracleMock());
         OracleMock(oracle).setPrice(ORACLE_PRICE_PRECISION);
 
+        RiskParams memory params = RiskParams({
+            borrowToken: address(borrowToken),
+            collateralToken: address(collateralToken),
+            irm: address(irm),
+            owner: owner,
+            oracle: address(oracle),
+            maxLtv: 0.75 ether,
+            debtCeiling: 0,
+            feeRecipient: owner,
+            borrowOpeningFee: 0
+        });
+
         market = AltoBorrowMarket(
             MarketDeployer.deployBorrowMarket(
-                address(borrowToken),
-                address(collateralToken),
-                address(irm),
-                owner,
-                address(oracle),
-                0.75 ether,
-                0,
-                owner,
+                params,
                 LiquidationConfiguration({
                     maxLiquidationLtv: 0.8 ether,
                     dynamicBonusFeeStart: 0.03 ether,
@@ -55,7 +60,8 @@ contract LiquidateTest is Test {
                     priorityLiquidationGracePeriod: 5 minutes,
                     taggerLiquidationGracePeriod: 2 minutes,
                     liquidationWindowTag: 3 days
-                })
+                }),
+                false
             )
         );
 

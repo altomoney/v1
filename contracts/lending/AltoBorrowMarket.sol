@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {AltoBaseMarket} from "./AltoBaseMarket.sol";
-import {LiquidationConfiguration} from "./interfaces/IMarket.sol";
+import {LiquidationConfiguration, RiskParams} from "./interfaces/IMarket.sol";
 
 /// @title Alto Borrow Market
 /// @author Pearl Labs
@@ -18,25 +18,11 @@ contract AltoBorrowMarket is AltoBaseMarket {
     }
 
     function initialize(
-        address _borrowToken,
-        address _collateralToken,
-        address _irm,
-        address _owner,
-        address _oracle,
-        uint256 _maxLtv,
-        uint256 _borrowOpeningFee,
-        address _feeRecipient,
+        RiskParams memory _params,
         LiquidationConfiguration memory _liquidationConfiguration
     ) public initializer {
         __AltoBaseMarket_init(
-            _borrowToken,
-            _collateralToken,
-            _irm,
-            _owner,
-            _oracle,
-            _maxLtv,
-            _borrowOpeningFee,
-            _feeRecipient,
+            _params,
             _liquidationConfiguration
         );
     }

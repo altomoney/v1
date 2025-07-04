@@ -54,6 +54,7 @@ struct AltoInput {
     address mintOracle;
     address usdc;
     address stETH;
+    bool shouldUseSafeProxy;
 }
 
 struct UsdoReport {

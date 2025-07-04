@@ -12,6 +12,7 @@ import {IMarket, IMarketEvents, IMarketErrors} from "@alto/lending/interfaces/IM
 import {ILiquidateCallback} from "@alto/lending/interfaces/IMarketCallbacks.sol";
 import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
 import {MockMarketDeployer, MockMarket} from "@alto-test/helpers/MockMarket.sol";
+import {RiskParams} from "@alto/lending/interfaces/IMarket.sol";
 
 contract LiquidateCallback is ILiquidateCallback {
     function onLiquidateCallback(uint256 assets, bytes calldata data) external {
@@ -52,14 +53,17 @@ contract AltoBorrowMarketTest is Test {
         OracleMock(oracle).setPrice(collateralPrice);
 
         market = MockMarketDeployer.deployMarket(
-            address(borrowToken),
-            address(collateralToken),
-            address(irm),
-            address(this),
-            address(oracle),
-            maxLtv,
-            0,
-            FEE_RECEIVER,
+            RiskParams({
+                borrowToken: address(borrowToken),
+                collateralToken: address(collateralToken),
+                irm: address(irm),
+                owner: address(this),
+                oracle: address(oracle),
+                maxLtv: maxLtv,
+                debtCeiling: 0,
+                feeRecipient: FEE_RECEIVER,
+                borrowOpeningFee: 0
+            }),
             liquidationConfiguration
         );
 

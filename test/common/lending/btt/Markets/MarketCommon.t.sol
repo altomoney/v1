@@ -9,7 +9,7 @@ import {SwapperSimpleMock} from "@alto/lending/mocks/SwapperSimpleMock.sol";
 import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
 import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
-import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
+import {LiquidationConfiguration, RiskParams} from "@alto/lending/interfaces/IMarket.sol";
 import {AltoMintMarket} from "@alto/lending/AltoMintMarket.sol";
 import {ERC20MockMintable} from "@alto-test/helpers/ERC20MockMintable.sol";
 import {PAUSED_MARKET, FROZEN_MARKET} from "@alto/utils/Constants.sol";
@@ -63,16 +63,21 @@ abstract contract MarketCommon is Test {
 
         address irm = address(new FixedRateIrm(0.04 ether / uint256(365 days), address(this)));
         if (marketType == MarketType.BORROW) {
+            RiskParams memory params = RiskParams({
+                borrowToken: address(borrowToken),
+                collateralToken: address(collateralToken),
+                irm: address(irm),
+                owner: address(OWNER),
+                oracle: address(oracle),
+                maxLtv: LTV,
+                debtCeiling: 0,
+                feeRecipient: address(FEE_RECIPIENT),
+                borrowOpeningFee: 0
+            });
+
             market = IMarket(
                 MarketDeployer.deployBorrowMarket(
-                    address(borrowToken),
-                    address(collateralToken),
-                    address(irm),
-                    address(OWNER),
-                    address(oracle),
-                    LTV,
-                    0,
-                    address(FEE_RECIPIENT),
+                    params,
                     LiquidationConfiguration({
                         maxLiquidationLtv: 0.8 ether,
                         dynamicBonusFeeStart: 0.03 ether,
@@ -86,22 +91,28 @@ abstract contract MarketCommon is Test {
                         priorityLiquidationGracePeriod: 5 minutes,
                         taggerLiquidationGracePeriod: 2 minutes,
                         liquidationWindowTag: 3 days
-                    })
+                    }),
+                    false
                 )
             );
         } else if (marketType == MarketType.MINT) {
             borrowToken = ERC20Mock(address(new ERC20MockMintable("borrow", "B")));
+            
+            RiskParams memory params = RiskParams({
+                borrowToken: address(borrowToken),
+                collateralToken: address(collateralToken),
+                irm: address(irm),
+                owner: address(OWNER),
+                oracle: address(oracle),
+                maxLtv: LTV,
+                debtCeiling: 1000000 ether,
+                feeRecipient: address(FEE_RECIPIENT),
+                borrowOpeningFee: 0
+            });
+
             market = IMarket(
                 MarketDeployer.deployMintMarket(
-                    address(borrowToken),
-                    address(collateralToken),
-                    address(irm),
-                    address(OWNER),
-                    address(oracle),
-                    LTV,
-                    1000000 ether,
-                    address(FEE_RECIPIENT),
-                    0,
+                    params,
                     LiquidationConfiguration({
                         maxLiquidationLtv: 0.8 ether,
                         dynamicBonusFeeStart: 0.03 ether,
@@ -115,7 +126,8 @@ abstract contract MarketCommon is Test {
                         priorityLiquidationGracePeriod: 5 minutes,
                         taggerLiquidationGracePeriod: 2 minutes,
                         liquidationWindowTag: 3 days
-                    })
+                    }),
+                    false
                 )
             );
         }

@@ -13,6 +13,7 @@ import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConver
 import {FixedPointMath, MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 import {IOracle} from "@alto/oracles/interfaces/IOracle.sol";
 import {MockMarketDeployer, MockMarket} from "@alto-test/helpers/MockMarket.sol";
+import {RiskParams} from "@alto/lending/interfaces/IMarket.sol";
 
 contract AltoBorrowMarketFeeTest is Test {
     using FixedPointMath for uint256;
@@ -44,14 +45,17 @@ contract AltoBorrowMarketFeeTest is Test {
         OracleMock(oracle).setPrice(ORACLE_PRICE_PRECISION);
 
         MockMarket market = MockMarketDeployer.deployMarket(
-            address(borrowToken),
-            address(collateralToken),
-            address(irm),
-            address(this),
-            address(oracle),
-            LTV,
-            openingFee,
-            FEE_RECIPIENT,
+            RiskParams({
+                borrowToken: address(borrowToken),
+                collateralToken: address(collateralToken),
+                irm: address(irm),
+                owner: address(this),
+                oracle: address(oracle),
+                maxLtv: LTV,
+                debtCeiling: 0,
+                feeRecipient: FEE_RECIPIENT,
+                borrowOpeningFee: openingFee
+            }),
             LiquidationConfiguration({
                 maxLiquidationLtv: 0.8 ether,
                 dynamicBonusFeeStart: 0.03 ether,

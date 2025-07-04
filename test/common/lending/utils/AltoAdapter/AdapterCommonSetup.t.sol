@@ -2,7 +2,7 @@
 pragma solidity ^0.8.28;
 
 import {AltoAdapter} from "@alto/utils/AltoAdapter.sol";
-import {IMarket, LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
+import {IMarket, LiquidationConfiguration, RiskParams} from "@alto/lending/interfaces/IMarket.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {MarketInstance} from "./MarketInstance.sol";
 
@@ -55,36 +55,40 @@ abstract contract AdapterCommonSetup is AdapterCommon {
 
         bool shouldUseSafeProxy = vm.envOr("VERIFY_PROXY", false);
 
+        RiskParams memory params = RiskParams({
+            borrowToken: address(borrowToken),
+            collateralToken: address(collateralToken),
+            irm: address(irm),
+            owner: address(OWNER),
+            oracle: address(oracle),
+            maxLtv: LTV,
+            debtCeiling: 0,
+            feeRecipient: address(this),
+            borrowOpeningFee: 0
+        });
+
+        LiquidationConfiguration memory liquidationConfig = LiquidationConfiguration({
+            maxLiquidationLtv: 0.8 ether,
+            dynamicBonusFeeStart: 0.03 ether,
+            ltvForCompleteLiquidation: 0.9 ether,
+            dynamicBonusFeeDecaySteepness: 5 ether,
+            liquidationBaseFee: 0.05 ether,
+            minPenaltyPercentage: 0.01 ether,
+            protocolFeePercentage: 0.075 ether,
+            isEnabledPriorityLiquidation: true,
+            disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
+            priorityLiquidationGracePeriod: 5 minutes,
+            taggerLiquidationGracePeriod: 2 minutes,
+            liquidationWindowTag: 3 days
+        });
+
         if (shouldUseSafeProxy) {
             market = IMarket(
                 Upgrades.deployUUPSProxy(
                     "MarketInstance.sol",
                     abi.encodeCall(
                         MarketInstance.initialize,
-                        (
-                            address(borrowToken),
-                            address(collateralToken),
-                            address(irm),
-                            address(OWNER),
-                            address(oracle),
-                            LTV,
-                            0,
-                            address(this),
-                            LiquidationConfiguration({
-                                maxLiquidationLtv: 0.8 ether,
-                                dynamicBonusFeeStart: 0.03 ether,
-                                ltvForCompleteLiquidation: 0.9 ether,
-                                dynamicBonusFeeDecaySteepness: 5 ether,
-                                liquidationBaseFee: 0.05 ether,
-                                minPenaltyPercentage: 0.01 ether,
-                                protocolFeePercentage: 0.075 ether,
-                                isEnabledPriorityLiquidation: true,
-                                disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
-                                priorityLiquidationGracePeriod: 5 minutes,
-                                taggerLiquidationGracePeriod: 2 minutes,
-                                liquidationWindowTag: 3 days
-                            })
-                        )
+                        (params, liquidationConfig)
                     )
                 )
             );
@@ -94,30 +98,7 @@ abstract contract AdapterCommonSetup is AdapterCommon {
                     address(new MarketInstance()),
                     abi.encodeCall(
                         MarketInstance.initialize,
-                        (
-                            address(borrowToken),
-                            address(collateralToken),
-                            address(irm),
-                            address(OWNER),
-                            address(oracle),
-                            LTV,
-                            0,
-                            address(this),
-                            LiquidationConfiguration({
-                                maxLiquidationLtv: 0.8 ether,
-                                dynamicBonusFeeStart: 0.03 ether,
-                                ltvForCompleteLiquidation: 0.9 ether,
-                                dynamicBonusFeeDecaySteepness: 5 ether,
-                                liquidationBaseFee: 0.05 ether,
-                                minPenaltyPercentage: 0.01 ether,
-                                protocolFeePercentage: 0.075 ether,
-                                isEnabledPriorityLiquidation: true,
-                                disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
-                                priorityLiquidationGracePeriod: 5 minutes,
-                                taggerLiquidationGracePeriod: 2 minutes,
-                                liquidationWindowTag: 3 days
-                            })
-                        )
+                        (params, liquidationConfig)
                     )
                 )
             );
