@@ -3,7 +3,8 @@ pragma solidity ^0.8.22;
 
 import {AltoUtilitiesBatch} from "./batches/AltoUtilitiesBatch.sol";
 import {AltoUsdoBatch} from "./batches/AltoUsdoBatch.sol";
-import {AltoMarketsBatch} from "./batches/AltoMarketsBatch.sol";
+import {AltoMarketsBatchOne} from "./batches/AltoMarketsBatchOne.sol";
+import {AltoMarketsBatchTwo} from "./batches/AltoMarketsBatchTwo.sol";
 import {AltoPostSetup} from "./batches/AltoPostSetup.sol";
 import {AltoTokenRewardsBatch} from "./batches/AltoTokenRewardsBatch.sol";
 
@@ -82,18 +83,21 @@ library AltoRelease {
         AltoUsdoBatch usdoBatch = new AltoUsdoBatch(endpoint, delegate);
         usdoReport = usdoBatch.getUsdoReport();
 
-        AltoMarketsBatch marketsBatch = new AltoMarketsBatch(
+        AltoMarketsBatchOne marketsBatchOne = new AltoMarketsBatchOne(
+            usdoReport.usdo, delegate, collateralTokenBorrowMarket, borrowIrm, borrowOracle, shouldUseSafeProxy
+        );
+        LendingReport memory lendingReportOne = marketsBatchOne.getLendingReport();
+
+        AltoMarketsBatchTwo marketsBatchTwo = new AltoMarketsBatchTwo(
             usdoReport.usdo,
             delegate,
-            collateralTokenBorrowMarket,
             collateralTokenMintMarket,
-            borrowIrm,
-            borrowOracle,
             mintIrm,
             mintOracle,
-            shouldUseSafeProxy
+            shouldUseSafeProxy,
+            lendingReportOne
         );
-        lendingReport = marketsBatch.getLendingReport();
+        lendingReport = marketsBatchTwo.getLendingReport();
 
         return (usdoReport, lendingReport);
     }

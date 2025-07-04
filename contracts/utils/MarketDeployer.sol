@@ -7,7 +7,46 @@ import {UnsafeUpgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";
 import {AltoMintMarket} from "@alto/lending/AltoMintMarket.sol";
 import {LiquidationConfiguration, RiskParams} from "@alto/lending/interfaces/IMarket.sol";
-import {Vm} from "forge-std/Vm.sol";
+
+library BorrowMarketDeployer {
+    function deployBorrowMarket(
+        RiskParams memory _params,
+        LiquidationConfiguration memory _liquidationConfiguration,
+        bool _shouldUseSafeProxy
+    ) internal returns (address) {
+        if (_shouldUseSafeProxy) {
+            return Upgrades.deployUUPSProxy(
+                "AltoBorrowMarket.sol:AltoBorrowMarket",
+                abi.encodeCall(AltoBorrowMarket.initialize, (_params, _liquidationConfiguration))
+            );
+        } else {
+            return UnsafeUpgrades.deployUUPSProxy(
+                address(new AltoBorrowMarket()),
+                abi.encodeCall(AltoBorrowMarket.initialize, (_params, _liquidationConfiguration))
+            );
+        }
+    }
+}
+
+library MintMarketDeployer {
+    function deployMintMarket(
+        RiskParams memory _params,
+        LiquidationConfiguration memory _liquidationConfiguration,
+        bool _shouldUseSafeProxy
+    ) internal returns (address) {
+        if (_shouldUseSafeProxy) {
+            return Upgrades.deployUUPSProxy(
+                "AltoMintMarket.sol:AltoMintMarket",
+                abi.encodeCall(AltoMintMarket.initialize, (_params, _liquidationConfiguration))
+            );
+        } else {
+            return UnsafeUpgrades.deployUUPSProxy(
+                address(new AltoMintMarket()),
+                abi.encodeCall(AltoMintMarket.initialize, (_params, _liquidationConfiguration))
+            );
+        }
+    }
+}
 
 library MarketDeployer {
     function deployBorrowMarket(
@@ -18,18 +57,12 @@ library MarketDeployer {
         if (_shouldUseSafeProxy) {
             return Upgrades.deployUUPSProxy(
                 "AltoBorrowMarket.sol:AltoBorrowMarket",
-                abi.encodeCall(
-                    AltoBorrowMarket.initialize,
-                    (_params, _liquidationConfiguration)
-                )
+                abi.encodeCall(AltoBorrowMarket.initialize, (_params, _liquidationConfiguration))
             );
         } else {
             return UnsafeUpgrades.deployUUPSProxy(
                 address(new AltoBorrowMarket()),
-                abi.encodeCall(
-                    AltoBorrowMarket.initialize,
-                    (_params, _liquidationConfiguration)
-                )
+                abi.encodeCall(AltoBorrowMarket.initialize, (_params, _liquidationConfiguration))
             );
         }
     }
@@ -42,18 +75,12 @@ library MarketDeployer {
         if (_shouldUseSafeProxy) {
             return Upgrades.deployUUPSProxy(
                 "AltoMintMarket.sol:AltoMintMarket",
-                abi.encodeCall(
-                    AltoMintMarket.initialize,
-                    (_params, _liquidationConfiguration)
-                )
+                abi.encodeCall(AltoMintMarket.initialize, (_params, _liquidationConfiguration))
             );
         } else {
             return UnsafeUpgrades.deployUUPSProxy(
                 address(new AltoMintMarket()),
-                abi.encodeCall(
-                    AltoMintMarket.initialize,
-                    (_params, _liquidationConfiguration)
-                )
+                abi.encodeCall(AltoMintMarket.initialize, (_params, _liquidationConfiguration))
             );
         }
     }
