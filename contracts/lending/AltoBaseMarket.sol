@@ -242,8 +242,9 @@ abstract contract AltoBaseMarket is
             revert AltoBaseMarketInvalidInput();
         }
         if (
-            _liquidationConfiguration.dynamicBonusFeeStart + _liquidationConfiguration.liquidationBaseFee
-                > MATH_PRECISION
+            _liquidationConfiguration.dynamicBonusFeeStart + _liquidationConfiguration.liquidationBaseFee > 0.15 ether
+                || _liquidationConfiguration.dynamicBonusFeeStart + _liquidationConfiguration.liquidationBaseFee
+                    > 1 ether - _liquidationConfiguration.maxLiquidationLtv
         ) {
             revert AltoBaseMarketInvalidInput();
         }

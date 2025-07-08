@@ -35,6 +35,8 @@ struct LiquidationConfiguration {
     /// @notice steepness of the dynamic bonus fee decay curve
     uint256 dynamicBonusFeeDecaySteepness;
     /// @notice base liquidator fee percentage for the liquidation
+    /// @dev both dynamicBonusFeeStart and liquidationBaseFee will be set reasonably high to
+    /// avoid excessive bad debt generation caused by incurring high liquidation fees.
     uint256 liquidationBaseFee;
     /// @notice min penalty percentage applied to the user's position LTV after liquidation
     uint256 minPenaltyPercentage;
