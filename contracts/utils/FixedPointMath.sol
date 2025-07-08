@@ -43,6 +43,25 @@ library FixedPointMath {
         uint256 quadraticTerm = (linearTerm * linearTerm) / (2 * MATH_PRECISION);
         uint256 cubicTerm = (quadraticTerm * linearTerm) / (3 * MATH_PRECISION);
 
-        return linearTerm + quadraticTerm + cubicTerm;
+        uint256 result = linearTerm + quadraticTerm + cubicTerm;
+
+        // Add fourth term when rate * periods exceeds 0.2e18 for improved accuracy
+        if (linearTerm > 0.2e18) {
+            uint256 quarticTerm = (cubicTerm * linearTerm) / (4 * MATH_PRECISION);
+
+            // Check for overflow before adding the fourth term
+            if (result <= type(uint256).max - quarticTerm) {
+                result += quarticTerm;
+            }
+        }
+
+        // Cap the result to prevent downstream uint128 overflows in interest calculations
+        // Max safe value is approximately 1e20 to allow for reasonable multiplication with borrower amounts
+        uint256 maxSafeResult = 1e20;
+        if (result > maxSafeResult) {
+            result = maxSafeResult;
+        }
+
+        return result;
     }
 }
