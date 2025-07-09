@@ -100,7 +100,7 @@ contract AltoBorrowMarketFeeTest is Test {
 
         // we need to subtract the opening fee from the borrow amount
         borrowAmount = borrowAmount.divideWithPrecisionDown(MATH_PRECISION + openingFee);
-        uint256 feeAssets = borrowAmount.multiplyWithPrecision(openingFee);
+        uint256 feeAssets = borrowAmount.multiplyWithPrecisionUp(openingFee);
 
         market.borrow(borrowAmount, 0, USER, USER, "");
 
@@ -137,7 +137,7 @@ contract AltoBorrowMarketFeeTest is Test {
 
         // we need to subtract the opening fee from the borrow amount
         borrowAmount = borrowAmount.divideWithPrecisionDown(MATH_PRECISION + openingFee);
-        uint256 feeAssets = borrowAmount.multiplyWithPrecision(openingFee);
+        uint256 feeAssets = borrowAmount.multiplyWithPrecisionUp(openingFee);
 
         market.borrow(borrowAmount, 0, USER, USER, "");
 
@@ -174,7 +174,7 @@ contract AltoBorrowMarketFeeTest is Test {
 
         // we need to subtract the opening fee from the borrow amount
         borrowAmount = borrowAmount.divideWithPrecisionDown(MATH_PRECISION + openingFee);
-        uint256 feeAssets = borrowAmount.multiplyWithPrecision(openingFee);
+        uint256 feeAssets = borrowAmount.multiplyWithPrecisionUp(openingFee);
         uint256 borrowShares =
             borrowAmount.convertToSharesUp(imarket.totalBorrowed().assets, imarket.totalBorrowed().shares);
 
