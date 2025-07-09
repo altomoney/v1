@@ -174,7 +174,9 @@ abstract contract AltoBaseMarket is
 
     /// @inheritdoc IMarketBase
     function setIrm(address _irm) external onlyOwner {
-        _accrueInterest();
+        if (!paused[PAUSED_MARKET]) {
+            _accrueInterest();
+        }
 
         emit SetIrm(irm, _irm);
         irm = _irm;
