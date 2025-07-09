@@ -13,7 +13,7 @@ import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/Signa
 /// The main purpose is to allow for transaction bundling.
 abstract contract AuthUpgradeable is IAuth, EIP712Upgradeable {
     bytes32 internal constant _AUTHORIZATION_TYPEHASH =
-        keccak256("Authorization(address owner,address spender,bool isAuthorized,uint256 nonce,uint256 deadline)");
+        keccak256("Authorization(address owner,address spender,bool isAuthorizedStatus,uint256 nonce,uint256 deadline)");
 
     /// @inheritdoc IAuth
     mapping(address => mapping(address => bool)) public isAuthorized;
