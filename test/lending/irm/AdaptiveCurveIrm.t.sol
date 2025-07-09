@@ -4,10 +4,14 @@ pragma solidity ^0.8.22;
 import {Test} from "forge-std/Test.sol";
 
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
-
+import {PAUSED_MARKET} from "@alto/utils/Constants.sol";
 import {AdaptiveCurveIrm} from "@alto/lending/irm/AdaptiveCurveIrm.sol";
 import {IIrm} from "@alto/lending/interfaces/IIrm.sol";
 import {IrmCommon} from "./IrmCommon.t.sol";
+import {MarketDeployer} from "@alto/utils/MarketDeployer.sol";
+import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";
+import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
+import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 
 contract AdaptiveCurveIrmMock is AdaptiveCurveIrm {
     constructor(AdaptiveCurveIrm.AdaptiveCurveIrmConfig memory _config, address _owner)
@@ -36,14 +40,49 @@ contract AdaptiveCurveIrmTest is IrmCommon {
 
     AdaptiveCurveIrm public adaptiveCurveIrm;
 
-    InterestRateMarket mockMarket = new InterestRateMarket();
+    address internal immutable OWNER = makeAddr("Owner");
+
+    function _createMarket() internal returns (AltoBorrowMarket) {
+        address oracle = address(new OracleMock());
+        AltoBorrowMarket market = AltoBorrowMarket(
+            MarketDeployer.deployBorrowMarket(
+                address(1),
+                address(2),
+                address(0),
+                OWNER,
+                address(oracle),
+                0.75 ether,
+                0,
+                OWNER,
+                LiquidationConfiguration({
+                    maxLiquidationLtv: 0.8 ether,
+                    dynamicBonusFeeStart: 0.03 ether,
+                    ltvForCompleteLiquidation: 0.9 ether,
+                    dynamicBonusFeeDecaySteepness: 5 ether,
+                    liquidationBaseFee: 0.05 ether,
+                    minPenaltyPercentage: 0.01 ether,
+                    protocolFeePercentage: 0 ether,
+                    isEnabledPriorityLiquidation: true,
+                    disablePriorityLiquidationAbovePositionLtv: type(uint256).max,
+                    priorityLiquidationGracePeriod: 5 minutes,
+                    taggerLiquidationGracePeriod: 2 minutes,
+                    liquidationWindowTag: 3 days
+                })
+            )
+        );
+
+        vm.prank(OWNER);
+        market.setPauser(OWNER, PAUSED_MARKET, true);
+
+        return market;
+    }
 
     function _createAdaptiveCurveIrm(AdaptiveCurveIrm.AdaptiveCurveIrmConfig memory irmConfig)
         internal
         returns (AdaptiveCurveIrmMock)
     {
         AdaptiveCurveIrmMock newAdaptiveCurveIrm = new AdaptiveCurveIrmMock(irmConfig, address(this));
-        newAdaptiveCurveIrm.setMarket(address(mockMarket));
+        newAdaptiveCurveIrm.setMarket(address(_createMarket()));
         return newAdaptiveCurveIrm;
     }
 
@@ -60,7 +99,7 @@ contract AdaptiveCurveIrmTest is IrmCommon {
             address(this)
         );
         if (setMarket) {
-            newAdaptiveCurveIrm.setMarket(address(mockMarket));
+            newAdaptiveCurveIrm.setMarket(address(_createMarket()));
         }
         return newAdaptiveCurveIrm;
     }
@@ -242,6 +281,20 @@ contract AdaptiveCurveIrmTest is IrmCommon {
         irm.setIrmConfig(irmConfig);
     }
 
+    function testSetIrmConfigEventMarketPaused(AdaptiveCurveIrm.AdaptiveCurveIrmConfig memory irmConfig) external {
+        _fuzzAdaptiveCurveConfig(irmConfig);
+
+        AdaptiveCurveIrmMock irm = _createAdaptiveCurveIrmSample(true);
+
+        vm.startPrank(OWNER);
+        AltoBorrowMarket(irm.market()).pause(PAUSED_MARKET, true);
+        vm.stopPrank();
+
+        vm.expectEmit(true, true, true, true, address(irm));
+        emit AdaptiveCurveIrm.SetIrmConfig(irmConfig);
+        irm.setIrmConfig(irmConfig);
+    }
+
     function testSetIrmConfigMarketUnset(AdaptiveCurveIrm.AdaptiveCurveIrmConfig memory irmConfig) external {
         AdaptiveCurveIrmMock irm = _createAdaptiveCurveIrmSample(false);
 
@@ -305,7 +358,7 @@ contract AdaptiveCurveIrmTest is IrmCommon {
         AdaptiveCurveIrmMock irm = _createAdaptiveCurveIrmSample(false);
         irm.setMarket(address(this));
 
-        vm.prank(address(mockMarket));
+        vm.prank(address(_createMarket()));
         vm.expectRevert(IIrm.IrmUnauthorized.selector);
         irm.updateInterestRate(0, 0);
     }

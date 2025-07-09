@@ -9,6 +9,7 @@ interface IPausable {
     error IsPaused(bytes32 pauseType);
     error StateNotChanged(bytes32 pauseType, bool currentState, bool newState);
 
+    function paused(bytes32 pauseType) external view returns (bool);
     function setPauser(address pauser, bytes32 pauseType, bool status) external;
     function pause(bytes32 pauseType, bool _paused) external;
 }

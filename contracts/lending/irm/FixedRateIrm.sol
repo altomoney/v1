@@ -5,6 +5,7 @@ import {IIrm} from "../interfaces/IIrm.sol";
 import {Ownable, Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {IMarket} from "../interfaces/IMarket.sol";
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
+import {PAUSED_MARKET} from "@alto/utils/Constants.sol";
 
 /// @title Fixed Rate Interest Rate Model
 /// @author Pearl Labs
@@ -60,7 +61,10 @@ contract FixedRateIrm is Ownable2Step, IIrm {
         if (market == address(0)) revert IrmMarketNotSet();
         if (_borrowRate == 0 || _borrowRate > MAX_BORROW_RATE) revert IrmInvalidParams();
 
-        IMarket(market).accrueInterest();
+        if (!IMarket(market).paused(PAUSED_MARKET)) {
+            IMarket(market).accrueInterest();
+        }
+
         irState.borrowRate = _borrowRate;
 
         emit SetBorrowRate(_borrowRate);
