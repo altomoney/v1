@@ -5,6 +5,8 @@ import {MarketType, MarketCommon} from "../../MarketCommon.t.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {AltoMintMarket} from "@alto/lending/AltoMintMarket.sol";
 import {IMarketErrors, IMarketEvents} from "@alto/lending/interfaces/IMarket.sol";
+import {PAUSED_MARKET} from "@alto/utils/Constants.sol";
+import {Vm} from "forge-std/Vm.sol";
 
 contract SetDebtCeilingTestMint is MarketCommon {
     AltoMintMarket public mintMarket;
@@ -26,14 +28,13 @@ contract SetDebtCeilingTestMint is MarketCommon {
         deal(address(collateralToken), address(this), 1000 ether);
         market.addCollateral(1000 ether, USER);
         market.borrow(500 ether, 0, USER, USER, hex"");
-        vm.stopPrank();
 
         vm.startPrank(OWNER);
         _;
         vm.stopPrank();
     }
 
-    function test_WhenCallerIsOwner() external whenCallerIsOwner {
+    function test_WhenMarketIsNotPaused() external whenCallerIsOwner {
         // it should update totalSupply assets
         uint256 oldDebtCeiling = market.totalSupply().assets;
         uint256 newDebtCeiling = oldDebtCeiling + 1000 ether;
@@ -48,6 +49,28 @@ contract SetDebtCeilingTestMint is MarketCommon {
 
         mintMarket.setDebtCeiling(newDebtCeiling);
 
+        // it should update totalSupply assets
+        assertEq(market.totalSupply().assets, newDebtCeiling);
+    }
+
+    function test_WhenMarketIsPaused() external whenCallerIsOwner {
+        market.pause(PAUSED_MARKET, true);
+
+        // it should update totalSupply assets
+        uint256 oldDebtCeiling = market.totalSupply().assets;
+        uint256 newDebtCeiling = oldDebtCeiling + 1000 ether;
+
+        // it should emit SetDebtCeiling event
+        vm.expectEmit();
+        emit AltoMintMarket.SetDebtCeiling(oldDebtCeiling, newDebtCeiling);
+
+        vm.recordLogs();
+        mintMarket.setDebtCeiling(newDebtCeiling);
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        // Assert that no AccrueInterest events were emitted
+        for (uint256 i = 0; i < logs.length; i++) {
+            assertFalse(logs[i].topics[0] == IMarketEvents.AccrueInterest.selector);
+        }
         // it should update totalSupply assets
         assertEq(market.totalSupply().assets, newDebtCeiling);
     }

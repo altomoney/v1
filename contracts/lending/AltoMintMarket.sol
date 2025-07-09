@@ -6,6 +6,7 @@ import {Uint128Converter} from "./libraries/Uint128Converter.sol";
 import {IIrm} from "./interfaces/IIrm.sol";
 import {Balance, Position, LiquidationConfiguration} from "./interfaces/IMarket.sol";
 import {IMintableERC20} from "./interfaces/IMintableERC20.sol";
+import {PAUSED_MARKET} from "@alto/utils/Constants.sol";
 
 import {AltoBaseMarket} from "./AltoBaseMarket.sol";
 
@@ -72,7 +73,11 @@ contract AltoMintMarket is AltoBaseMarket {
     /// @notice Sets the debt ceiling for the mint market
     /// @param _debtCeiling The new debt ceiling
     function setDebtCeiling(uint256 _debtCeiling) external onlyOwner {
-        _accrueInterest();
+        // If market is paused we don't want to accrue interest as the rest of the
+        // lending protocol does
+        if (!paused[PAUSED_MARKET]) {
+            _accrueInterest();
+        }
 
         if (totalBorrowed.assets > _debtCeiling) {
             revert AltoBaseMarketInsufficientMarketLiquidity();
