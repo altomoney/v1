@@ -19,6 +19,7 @@ import {
     Position,
     LiquidationConfiguration,
     LiquidationCalculation,
+    LiquidationCalculationResult,
     LiquidablePosition
 } from "@alto/lending/interfaces/IMarket.sol";
 import {AuthUpgradeable} from "@alto/utils/AuthUpgradeable.sol";
@@ -645,35 +646,36 @@ abstract contract AltoBaseMarketUpgraded is
         calc.collateralToSellInBorrowAssets = Math.min(calc.collateralToSellInBorrowAssets, calc.positionBorrowedAssets);
 
         // Calculate final amounts
+        LiquidationCalculationResult memory result;
         uint256 totalCollateralToTake = calc.collateralToSellInBorrowAssets.divideWithRounding(
             ORACLE_PRICE_PRECISION, calc.collateralPrice, true
         ) + calc.liquidatorBonusFee;
-        uint256 f_collateralAmount =
+        result.collateralAmount =
             totalCollateralToTake > _position.collateralAssets ? _position.collateralAssets : totalCollateralToTake;
 
-        uint256 f_repayAmount = calc.collateralToSellInBorrowAssets > calc.positionBorrowedAssets
+        result.repayAmount = calc.collateralToSellInBorrowAssets > calc.positionBorrowedAssets
             ? calc.positionBorrowedAssets
             : calc.collateralToSellInBorrowAssets;
 
-        uint256 f_repayShares = f_repayAmount.convertToSharesDown(totalBorrowed.assets, totalBorrowed.shares);
+        result.repayShares = result.repayAmount.convertToSharesDown(totalBorrowed.assets, totalBorrowed.shares);
 
         // Ensure we don't try to repay more shares than the user has which can happen since we are using virtual shares
         // we check whether substracting 1e6 from the repay shares is still greater than the user's borrow shares
         // as other values are not valid.
         if (
-            f_repayShares.toUint128() > _position.borrowShares
-                && f_repayShares - AssetShareConversionMath.VIRTUAL_SHARES < _position.borrowShares
+            result.repayShares.toUint128() > _position.borrowShares
+                && result.repayShares - AssetShareConversionMath.VIRTUAL_SHARES < _position.borrowShares
         ) {
-            f_repayShares = uint256(_position.borrowShares);
+            result.repayShares = uint256(_position.borrowShares);
         }
 
         // apply liquidation
-        position[borrower].collateralAssets -= f_collateralAmount.toUint128();
-        position[borrower].borrowShares -= f_repayShares.toUint128();
+        position[borrower].collateralAssets -= result.collateralAmount.toUint128();
+        position[borrower].borrowShares -= result.repayShares.toUint128();
 
-        totalBorrowed.shares -= f_repayShares.toUint128();
+        totalBorrowed.shares -= result.repayShares.toUint128();
         totalBorrowed.assets =
-            (totalBorrowed.assets > f_repayAmount ? totalBorrowed.assets - f_repayAmount : 0).toUint128();
+            (totalBorrowed.assets > result.repayAmount ? totalBorrowed.assets - result.repayAmount : 0).toUint128();
 
         if (
             liquidationConfiguration.isEnabledPriorityLiquidation
@@ -698,30 +700,32 @@ abstract contract AltoBaseMarketUpgraded is
         // apply protocol fee
         position[feeRecipient].collateralAssets += calc.protocolFee.toUint128();
 
+        result.collateralAmountToSend = result.collateralAmount - calc.protocolFee;
+
         // transfer collateral and borrow tokens with applied protocol fee
-        IERC20(collateralToken).safeTransfer(msg.sender, f_collateralAmount - calc.protocolFee);
+        IERC20(collateralToken).safeTransfer(msg.sender, result.collateralAmountToSend);
 
         if (data.length > 0) {
-            ILiquidateCallback(msg.sender).onLiquidateCallback(f_repayAmount, data);
+            ILiquidateCallback(msg.sender).onLiquidateCallback(result.repayAmount, result.collateralAmountToSend, data);
         }
 
-        _sendBorrowToken(msg.sender, address(this), f_repayAmount);
+        _sendBorrowToken(msg.sender, address(this), result.repayAmount);
 
         emit Liquidation(
             borrower,
             collateralToken,
             borrowToken,
             msg.sender,
-            f_collateralAmount,
+            result.collateralAmount,
             calc.protocolFee,
             calc.liquidatorBonusFee,
-            f_repayAmount,
-            f_repayShares,
+            result.repayAmount,
+            result.repayShares,
             badDebt.assets,
             badDebt.shares
         );
 
-        return (f_collateralAmount, f_repayAmount, calc.protocolFee);
+        return (result.collateralAmount, result.repayAmount, calc.protocolFee);
     }
 
     /// @dev Calculates the liquidation percentage - how far are we between LTV and LLTV with position's current LTV.
