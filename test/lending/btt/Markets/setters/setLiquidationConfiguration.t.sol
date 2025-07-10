@@ -144,6 +144,23 @@ contract AltoMarketSetLiquidationConfiguration is MarketCommon {
         market.setLiquidationConfiguration(liquidationConfiguration);
     }
 
+    function test_RevertWhen_FeeRecipientIsNotSetAndProtocolFeePercentageIsMoreThan0() external whenCallerIsOwner {
+        LiquidationConfiguration memory liquidationConfigurationPre = market.liquidationConfiguration();
+        LiquidationConfiguration memory liquidationConfiguration = market.liquidationConfiguration();
+
+        liquidationConfigurationPre.protocolFeePercentage = 0;
+        market.setLiquidationConfiguration(liquidationConfigurationPre);
+        market.setIrm(address(0));
+        market.setBorrowOpeningFee(0);
+        market.setFeeRecipient(address(0));
+
+        liquidationConfiguration.protocolFeePercentage = 0.01 ether;
+
+        // it should revert
+        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBaseMarketInvalidInput.selector));
+        market.setLiquidationConfiguration(liquidationConfiguration);
+    }
+
     function test_RevertWhen_PriorityLiquidationGracePeriodIsGreaterThan1Hour() external whenCallerIsOwner {
         LiquidationConfiguration memory liquidationConfiguration = market.liquidationConfiguration();
         liquidationConfiguration.priorityLiquidationGracePeriod = 1 hours + 1;

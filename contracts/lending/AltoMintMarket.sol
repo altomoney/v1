@@ -89,7 +89,10 @@ contract AltoMintMarket is AltoBaseMarket {
 
     /// @inheritdoc AltoBaseMarket
     function setFeeRecipient(address _feeRecipient) external override onlyOwner {
-        if (_feeRecipient == address(0) && (borrowOpeningFee > 0 || irm != address(0))) {
+        if (
+            _feeRecipient == address(0)
+                && (borrowOpeningFee > 0 || liquidationConfiguration.protocolFeePercentage > 0 || irm != address(0))
+        ) {
             revert AltoBaseMarketInvalidInput();
         }
 

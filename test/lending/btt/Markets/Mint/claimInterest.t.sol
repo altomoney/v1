@@ -5,7 +5,7 @@ import {MarketType, MarketCommon} from "../MarketCommon.t.sol";
 import {IPausable} from "@alto/utils/Pausable.sol";
 import {PAUSED_MARKET} from "@alto/utils/Constants.sol";
 import {AltoMintMarket} from "@alto/lending/AltoMintMarket.sol";
-import {IMarketErrors} from "@alto/lending/interfaces/IMarket.sol";
+import {IMarketErrors, LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
 
 contract AltoMintMarketClaimInterest is MarketCommon {
     constructor() MarketCommon(MarketType.MINT) {}
@@ -28,6 +28,9 @@ contract AltoMintMarketClaimInterest is MarketCommon {
 
     function test_RevertWhen_FeeRecipientIsZeroAddress() external {
         vm.startPrank(OWNER);
+        LiquidationConfiguration memory liquidationConfiguration = market.liquidationConfiguration();
+        liquidationConfiguration.protocolFeePercentage = 0;
+        mintMarket.setLiquidationConfiguration(liquidationConfiguration);
         mintMarket.setBorrowOpeningFee(0);
         mintMarket.setIrm(address(0));
         mintMarket.setFeeRecipient(address(0));

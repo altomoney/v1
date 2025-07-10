@@ -112,7 +112,7 @@ abstract contract AltoBaseMarket is
         address _feeRecipient,
         LiquidationConfiguration memory _liquidationConfiguration
     ) internal onlyInitializing {
-        _validateLiquidationConfiguration(_liquidationConfiguration, _maxLtv);
+        _validateLiquidationConfiguration(_liquidationConfiguration, _maxLtv, _feeRecipient);
 
         if (_borrowToken == address(0) || _collateralToken == address(0) || _oracle == address(0)) {
             revert AltoBaseMarketInvalidInput();
@@ -120,7 +120,10 @@ abstract contract AltoBaseMarket is
         if (_maxLtv > MATH_PRECISION || _borrowOpeningFee > MATH_PRECISION) {
             revert AltoBaseMarketInvalidInput();
         }
-        if (_feeRecipient == address(0) && _borrowOpeningFee > 0) {
+        if (
+            _feeRecipient == address(0)
+                && (_borrowOpeningFee > 0 || _liquidationConfiguration.protocolFeePercentage > 0)
+        ) {
             revert AltoBaseMarketInvalidInput();
         }
 
@@ -211,7 +214,7 @@ abstract contract AltoBaseMarket is
         external
         onlyOwner
     {
-        _validateLiquidationConfiguration(_liquidationConfiguration, maxLtv);
+        _validateLiquidationConfiguration(_liquidationConfiguration, maxLtv, feeRecipient);
 
         emit SetLiquidationConfiguration(liquidationConfiguration, _liquidationConfiguration);
         liquidationConfiguration = _liquidationConfiguration;
@@ -219,7 +222,8 @@ abstract contract AltoBaseMarket is
 
     function _validateLiquidationConfiguration(
         LiquidationConfiguration memory _liquidationConfiguration,
-        uint256 _maxLtv
+        uint256 _maxLtv,
+        address _feeRecipient
     ) internal pure {
         if (_liquidationConfiguration.maxLiquidationLtv < _maxLtv) {
             revert AltoBaseMarketInvalidInput();
@@ -245,7 +249,10 @@ abstract contract AltoBaseMarket is
         if (_liquidationConfiguration.minPenaltyPercentage > MATH_PRECISION) {
             revert AltoBaseMarketInvalidInput();
         }
-        if (_liquidationConfiguration.protocolFeePercentage > MATH_PRECISION) {
+        if (
+            _liquidationConfiguration.protocolFeePercentage > MATH_PRECISION
+                || (_liquidationConfiguration.protocolFeePercentage > 0 && _feeRecipient == address(0))
+        ) {
             revert AltoBaseMarketInvalidInput();
         }
         if (_liquidationConfiguration.priorityLiquidationGracePeriod > 1 hours) {
@@ -281,7 +288,8 @@ abstract contract AltoBaseMarket is
 
     /// @inheritdoc IMarketBase
     function setFeeRecipient(address _feeRecipient) external virtual onlyOwner {
-        if (_feeRecipient == address(0) && borrowOpeningFee > 0) {
+        if (_feeRecipient == address(0) && (borrowOpeningFee > 0 || liquidationConfiguration.protocolFeePercentage > 0))
+        {
             revert AltoBaseMarketInvalidInput();
         }
 

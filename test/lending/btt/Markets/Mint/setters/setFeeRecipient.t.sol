@@ -50,4 +50,15 @@ contract SetFeeRecipientTestMint is MarketCommon {
         vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBaseMarketInvalidInput.selector));
         market.setFeeRecipient(address(0));
     }
+
+    function test_RevertWhen_FeeRecipientIsZeroAddressAndProtocolFeePercentageIsGreaterThanZero()
+        external
+        whenCallerIsOwner
+    {
+        market.setBorrowOpeningFee(0.01 ether);
+
+        // it should revert (default protocol fee percentage is 0.075 ether in tests)
+        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBaseMarketInvalidInput.selector));
+        market.setFeeRecipient(address(0));
+    }
 }
