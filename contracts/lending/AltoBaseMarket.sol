@@ -689,12 +689,7 @@ abstract contract AltoBaseMarket is
         totalBorrowed.assets =
             (totalBorrowed.assets > f_repayAmount ? totalBorrowed.assets - f_repayAmount : 0).toUint128();
 
-        if (
-            liquidationConfiguration.isEnabledPriorityLiquidation
-                && calc.currentLtv < liquidationConfiguration.disablePriorityLiquidationAbovePositionLtv
-        ) {
-            delete liquidablePositions[borrower];
-        }
+        delete liquidablePositions[borrower];
 
         Balance memory badDebt;
         if (position[borrower].collateralAssets == 0) {
