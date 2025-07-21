@@ -271,6 +271,10 @@ abstract contract AltoBaseMarket is
             revert AltoBaseMarketInvalidInput();
         }
 
+        if (feeRecipient == address(0) && _borrowOpeningFee > 0) {
+            revert AltoBaseMarketInvalidInput();
+        }
+
         emit SetBorrowOpeningFee(borrowOpeningFee, _borrowOpeningFee);
         borrowOpeningFee = _borrowOpeningFee;
     }

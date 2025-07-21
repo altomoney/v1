@@ -40,4 +40,14 @@ contract AltoMarketSetBorrowOpeningFee is MarketCommon {
         vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBaseMarketInvalidInput.selector));
         market.setBorrowOpeningFee(MATH_PRECISION + 1);
     }
+
+    function test_RevertWhen_FeeRecipientIsNotSetAndBorrowOpeningFeeIsGreaterThan0() external whenCallerIsOwner {
+        market.setBorrowOpeningFee(0);
+        market.setIrm(address(0));
+        market.setFeeRecipient(address(0));
+
+        // it should revert
+        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBaseMarketInvalidInput.selector));
+        market.setBorrowOpeningFee(0.1 ether);
+    }
 }
