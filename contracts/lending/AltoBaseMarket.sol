@@ -469,7 +469,10 @@ abstract contract AltoBaseMarket is
             feeSupplyShares = _applyBorrowOpeningFee(openingFeeAssets);
         }
 
-        if (authorizedCallbacks[receiver] && data.length > 0) {
+        if (authorizedCallbacks[receiver]) {
+            if (data.length == 0) {
+                revert AltoBaseMarketInvalidInput();
+            }
             IBorrowCallback(receiver).onBorrowCallback(assetsToSend, onBehalf, data);
         } else if (data.length > 0) {
             revert AltoBaseMarketUnauthorized();

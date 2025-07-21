@@ -22,6 +22,8 @@ AltoBaseMarket::Borrow()
         │   └── it should apply borrow opening fee
         ├── when receiver is authorized callback and data is not empty
         │   └── it should call onBorrowCallback
+        ├── when receiver is authorized callback and data is empty
+        │   └── it should revert
         ├── when receiver is not authorized callback and data is not empty
         │   └── it should revert
         ├── when position is not solvent after borrow

@@ -368,6 +368,26 @@ contract AltoMarketBorrow is MarketCommon {
         }
     }
 
+    function test_WhenReceiverIsAuthorizedCallbackAndDataIsEmpty()
+        external
+        givenValidInputs
+        whenTotalBorrowedAssetsIsLessThanOrEqualToTotalSupplyAssets
+    {
+        market.addCollateral(20 ether, USER);
+
+        BorrowCallback callback = new BorrowCallback();
+
+        vm.prank(OWNER);
+        market.setAuthorizedCallback(address(callback), true);
+
+        vm.startPrank(USER);
+
+        // it should revert
+        vm.expectRevert(IMarketErrors.AltoBaseMarketInvalidInput.selector);
+        market.borrow(INITIAL_BORROWED_ASSETS, 0, USER, address(callback), "");
+        vm.stopPrank();
+    }
+
     function test_RevertWhen_ReceiverIsNotAuthorizedCallbackAndDataIsNotEmpty()
         external
         givenValidInputs
