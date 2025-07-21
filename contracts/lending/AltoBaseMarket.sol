@@ -438,14 +438,14 @@ abstract contract AltoBaseMarket is
 
         if (assets == 0) {
             // calculate opening fee from shares
-            uint256 openingFeeShares = shares.multiplyWithPrecision(borrowOpeningFee);
-            openingFeeAssets = openingFeeShares.convertToAssetsDown(totalBorrowed.assets, totalBorrowed.shares);
+            uint256 openingFeeShares = shares.multiplyWithPrecisionUp(borrowOpeningFee);
+            openingFeeAssets = openingFeeShares.convertToAssetsUp(totalBorrowed.assets, totalBorrowed.shares);
             shares += openingFeeShares;
 
             assets = shares.convertToAssetsDown(totalBorrowed.assets, totalBorrowed.shares);
         } else {
             // calculate opening fee from assets
-            openingFeeAssets = assets.multiplyWithPrecision(borrowOpeningFee);
+            openingFeeAssets = assets.multiplyWithPrecisionUp(borrowOpeningFee);
             assets += openingFeeAssets;
 
             shares = assets.convertToSharesUp(totalBorrowed.assets, totalBorrowed.shares);

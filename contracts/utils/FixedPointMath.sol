@@ -15,6 +15,11 @@ library FixedPointMath {
         return (multiplicand * multiplier) / MATH_PRECISION;
     }
 
+    /// @dev Multiplies two numbers and divides by MATH_PRECISION, rounding up.
+    function multiplyWithPrecisionUp(uint256 multiplicand, uint256 multiplier) internal pure returns (uint256) {
+        return Math.ceilDiv(multiplicand * multiplier, MATH_PRECISION);
+    }
+
     /// @dev Divides a number by another using MATH_PRECISION, rounding up.
     function divideWithPrecisionUp(uint256 numerator, uint256 denominator) internal pure returns (uint256) {
         return Math.ceilDiv(numerator * MATH_PRECISION, denominator);
