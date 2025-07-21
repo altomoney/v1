@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 import {AltoBaseMarket} from "@alto/lending/AltoBaseMarket.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
-import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
+import {FixedPointMath, MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 import {IOracle} from "@alto/oracles/interfaces/IOracle.sol";
 import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
 import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
@@ -74,6 +74,25 @@ contract MockMarket is AltoBaseMarket {
         uint256 currentLtv = positionBorrowedAssets.divideWithPrecisionUp(positionCollateralValue);
 
         return (currentLtv, _calculateNewLtv(_calculateLiquidationPercentage(currentLtv)));
+    }
+
+    function calculateLiquidatorAndProtocolFee(address user, bool isPriorityLiquidator)
+        external
+        view
+        returns (uint256, uint256)
+    {
+        (uint256 currentLtv, uint256 newLtv) = this.calculatePreLiquidationLtv(user);
+        uint256 bonusFee = !isPriorityLiquidator ? _calculateBonusFee(_calculateLiquidationPercentage(currentLtv)) : 0;
+
+        uint256 liquidatorFee = uint256(position[user].collateralAssets).multiplyWithPrecision(
+            bonusFee + liquidationConfiguration.liquidationBaseFee
+        );
+
+        uint256 protocolFee = uint256(liquidatorFee).divideWithRounding(
+            liquidationConfiguration.protocolFeePercentage, MATH_PRECISION, true
+        );
+
+        return (liquidatorFee, protocolFee);
     }
 }
 

@@ -16,6 +16,7 @@ contract AltoMarketSetLiquidationConfiguration is MarketCommon {
         dynamicBonusFeeDecaySteepness: 10 ether,
         liquidationBaseFee: 0.07 ether,
         minPenaltyPercentage: 0.02 ether,
+        protocolFeePercentage: 0 ether,
         isEnabledPriorityLiquidation: true,
         disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
         priorityLiquidationGracePeriod: 10 minutes,
@@ -64,6 +65,7 @@ contract AltoMarketSetLiquidationConfiguration is MarketCommon {
         );
         assertEq(market.liquidationConfiguration().liquidationBaseFee, VALID_CONFIGURATION.liquidationBaseFee);
         assertEq(market.liquidationConfiguration().minPenaltyPercentage, VALID_CONFIGURATION.minPenaltyPercentage);
+        assertEq(market.liquidationConfiguration().protocolFeePercentage, VALID_CONFIGURATION.protocolFeePercentage);
         assertEq(
             market.liquidationConfiguration().priorityLiquidationGracePeriod,
             VALID_CONFIGURATION.priorityLiquidationGracePeriod
@@ -127,6 +129,15 @@ contract AltoMarketSetLiquidationConfiguration is MarketCommon {
     function test_RevertWhen_MinPenaltyPercentageIsGreaterThanMATH_PRECISION() external whenCallerIsOwner {
         LiquidationConfiguration memory liquidationConfiguration = market.liquidationConfiguration();
         liquidationConfiguration.minPenaltyPercentage = MATH_PRECISION + 1;
+
+        // it should revert
+        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBaseMarketInvalidInput.selector));
+        market.setLiquidationConfiguration(liquidationConfiguration);
+    }
+
+    function test_RevertWhen_ProtocolFeePercentageIsGreaterThanMATH_PRECISION() external whenCallerIsOwner {
+        LiquidationConfiguration memory liquidationConfiguration = market.liquidationConfiguration();
+        liquidationConfiguration.protocolFeePercentage = MATH_PRECISION + 1;
 
         // it should revert
         vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBaseMarketInvalidInput.selector));

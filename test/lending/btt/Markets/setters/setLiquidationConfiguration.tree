@@ -16,6 +16,8 @@ AltoMarket::setLiquidationConfiguration
     │   └── it should revert
     ├── when minPenaltyPercentage is greater than MATH_PRECISION
     │   └── it should revert
+    ├── when protocolFeePercentage is greater than MATH_PRECISION
+    │   └── it should revert
     ├── when priorityLiquidationGracePeriod is greater than 1 hour
     │   └── it should revert
     ├── when taggerLiquidationGracePeriod is greater than 30 minutes
