@@ -14,6 +14,7 @@ import {PAUSED_MARKET, FROZEN_MARKET} from "@alto/utils/Constants.sol";
 import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
+import {UnsafeUpgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 
 import {AltoBorrowMarketUpgraded} from "./contracts/AltoBorrowMarketUpgraded.sol";
 import {AltoBorrowMarketUpgradedOriginalBaseMarket} from "./contracts/AltoBorrowMarketUpgradedOriginalBaseMarket.sol";
@@ -125,6 +126,10 @@ contract AltoBorrowMarketProxyTest is Test {
         Upgrades.upgradeProxy(proxy, contractName, data);
     }
 
+    function upgradeProxyExternalUnsafe(address proxy, address newImpl, bytes memory data) external {
+        UnsafeUpgrades.upgradeProxy(proxy, newImpl, data);
+    }
+
     function test_upgradeWhenBaseWasUpgraded() public {
         vm.warp(block.timestamp + 1 days);
         market.accrueInterest();
@@ -140,11 +145,21 @@ contract AltoBorrowMarketProxyTest is Test {
         assertNotEq(marketDataBefore.position.collateralAssets, 0);
 
         vm.startPrank(OWNER);
-        Upgrades.upgradeProxy(
-            address(market),
-            "AltoBorrowMarketUpgraded.sol",
-            abi.encodeCall(AltoBorrowMarketUpgraded.initializeV2, (1, 2, address(0x1)))
-        );
+        bool shouldUseSafeProxy = vm.envOr("VERIFY_PROXY", false);
+
+        if (shouldUseSafeProxy) {
+            Upgrades.upgradeProxy(
+                address(market),
+                "AltoBorrowMarketUpgraded.sol",
+                abi.encodeCall(AltoBorrowMarketUpgraded.initializeV2, (1, 2, address(0x1)))
+            );
+        } else {
+            UnsafeUpgrades.upgradeProxy(
+                address(market),
+                address(new AltoBorrowMarketUpgraded()),
+                abi.encodeCall(AltoBorrowMarketUpgraded.initializeV2, (1, 2, address(0x1)))
+            );
+        }
         vm.stopPrank();
 
         // Verify the upgrade was successful by checking the new properties exist
@@ -249,11 +264,21 @@ contract AltoBorrowMarketProxyTest is Test {
         assertNotEq(marketDataBefore.position.collateralAssets, 0);
 
         vm.startPrank(OWNER);
-        Upgrades.upgradeProxy(
-            address(market),
-            "AltoBorrowMarketUpgradedOriginalBaseMarket.sol",
-            abi.encodeCall(AltoBorrowMarketUpgradedOriginalBaseMarket.initializeV2, ())
-        );
+        bool shouldUseSafeProxy = vm.envOr("VERIFY_PROXY", false);
+
+        if (shouldUseSafeProxy) {
+            Upgrades.upgradeProxy(
+                address(market),
+                "AltoBorrowMarketUpgradedOriginalBaseMarket.sol",
+                abi.encodeCall(AltoBorrowMarketUpgradedOriginalBaseMarket.initializeV2, ())
+            );
+        } else {
+            UnsafeUpgrades.upgradeProxy(
+                address(market),
+                address(new AltoBorrowMarketUpgradedOriginalBaseMarket()),
+                abi.encodeCall(AltoBorrowMarketUpgradedOriginalBaseMarket.initializeV2, ())
+            );
+        }
         vm.stopPrank();
 
         // Verify the upgrade was successful by checking the new properties exist
@@ -346,20 +371,40 @@ contract AltoBorrowMarketProxyTest is Test {
         bool success = false;
         bytes memory returnData;
 
-        try this.upgradeProxyExternal(
-            address(market),
-            "AltoBorrowMarketUpgradedOriginalBaseMarket.sol",
-            abi.encodeCall(AltoBorrowMarketUpgradedOriginalBaseMarket.initializeV2, ())
-        ) {
-            // If we reach here, the call succeeded when it should have failed
-            fail();
-            success = true;
-        } catch (bytes memory reason) {
-            // Verify the revert reason matches what we expect
-            bytes memory expectedError =
-                abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, address(this));
-            assertEq(reason, expectedError, "Unexpected revert reason");
-            returnData = reason;
+        bool shouldUseSafeProxy = vm.envOr("VERIFY_PROXY", false);
+
+        if (shouldUseSafeProxy) {
+            try this.upgradeProxyExternal(
+                address(market),
+                "AltoBorrowMarketUpgradedOriginalBaseMarket.sol",
+                abi.encodeCall(AltoBorrowMarketUpgradedOriginalBaseMarket.initializeV2, ())
+            ) {
+                // If we reach here, the call succeeded when it should have failed
+                fail();
+                success = true;
+            } catch (bytes memory reason) {
+                // Verify the revert reason matches what we expect
+                bytes memory expectedError =
+                    abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, address(this));
+                assertEq(reason, expectedError, "Unexpected revert reason");
+                returnData = reason;
+            }
+        } else {
+            try this.upgradeProxyExternalUnsafe(
+                address(market),
+                address(new AltoBorrowMarketUpgradedOriginalBaseMarket()),
+                abi.encodeCall(AltoBorrowMarketUpgradedOriginalBaseMarket.initializeV2, ())
+            ) {
+                // If we reach here, the call succeeded when it should have failed
+                fail();
+                success = true;
+            } catch (bytes memory reason) {
+                // Verify the revert reason matches what we expect
+                bytes memory expectedError =
+                    abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, address(this));
+                assertEq(reason, expectedError, "Unexpected revert reason");
+                returnData = reason;
+            }
         }
 
         // Ensure the call failed as expected
