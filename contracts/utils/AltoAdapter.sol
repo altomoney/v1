@@ -16,6 +16,12 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 /// @author Inspired by Morpho's GeneralAdapter1 (https://github.com/morpho-org/bundler3).
 /// @custom:contact security@tapioca.xyz
 /// @notice A contract that allows for transaction bundling Alto's contracts via Morpho's Bundler3.
+/// @dev This contract assumes that all of the functions are being bundled correctly and no funds are
+/// left on the adapter post transaction! If there are any funds left on the adapter,
+/// the "attacker" would be able to drain those funds via any of the functions in this contract. Because this
+/// contract max approves arbitrary contracts in its name, this attack vector could be extended. That being
+/// said, it is the responsibility of the caller to ensure that the adapter is not left with any funds after
+/// the transaction.
 contract AltoAdapter is CoreAdapter {
     using MathRayLib for uint256;
 
