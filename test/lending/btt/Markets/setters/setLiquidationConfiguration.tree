@@ -18,6 +18,8 @@ AltoMarket::setLiquidationConfiguration
     │   └── it should revert
     ├── when protocolFeePercentage is greater than MATH_PRECISION
     │   └── it should revert
+    ├── when feeRecipient is not set and protocolFeePercentage is more than 0
+    │   └── it should revert
     ├── when priorityLiquidationGracePeriod is greater than 1 hour
     │   └── it should revert
     ├── when taggerLiquidationGracePeriod is greater than 30 minutes

@@ -3,7 +3,7 @@ pragma solidity ^0.8.28;
 
 import {MarketCommon, MarketType} from "../MarketCommon.t.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {IMarketErrors, IMarketEvents} from "@alto/lending/interfaces/IMarket.sol";
+import {IMarketErrors, IMarketEvents, LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
 import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 
 contract AltoMarketSetBorrowOpeningFee is MarketCommon {
@@ -42,6 +42,9 @@ contract AltoMarketSetBorrowOpeningFee is MarketCommon {
     }
 
     function test_RevertWhen_FeeRecipientIsNotSetAndBorrowOpeningFeeIsGreaterThan0() external whenCallerIsOwner {
+        LiquidationConfiguration memory liquidationConfiguration = market.liquidationConfiguration();
+        liquidationConfiguration.protocolFeePercentage = 0;
+        market.setLiquidationConfiguration(liquidationConfiguration);
         market.setBorrowOpeningFee(0);
         market.setIrm(address(0));
         market.setFeeRecipient(address(0));
