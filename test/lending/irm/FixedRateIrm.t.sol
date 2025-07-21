@@ -7,6 +7,11 @@ import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {IIrm} from "@alto/lending/interfaces/IIrm.sol";
+import {PAUSED_MARKET} from "@alto/utils/Constants.sol";
+import {MarketDeployer} from "@alto/utils/MarketDeployer.sol";
+import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";
+import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
+import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 
 uint256 constant MIN_AMOUNT = 1000;
 uint256 constant MAX_AMOUNT = 2 ** 64;
@@ -23,21 +28,47 @@ contract FixedRateIrmMock is FixedRateIrm {
     }
 }
 
-contract InterestRateMarket {
-    function accrueInterest() external {}
-}
-
 contract FixedRateIrmTest is Test {
     using FixedPointMath for uint256;
 
+    address internal immutable OWNER = makeAddr("Owner");
     FixedRateIrmMock public fixedRateIrm;
+    AltoBorrowMarket public market;
 
     uint256 constant INITIAL_BORROW_RATE = 1 ether / uint256(365 days);
 
     function setUp() external {
-        InterestRateMarket mockMarket = new InterestRateMarket();
         fixedRateIrm = new FixedRateIrmMock(INITIAL_BORROW_RATE, address(this));
-        fixedRateIrm.setMarket(address(mockMarket));
+        address oracle = address(new OracleMock());
+        market = AltoBorrowMarket(
+            MarketDeployer.deployBorrowMarket(
+                address(1),
+                address(2),
+                address(fixedRateIrm),
+                OWNER,
+                address(oracle),
+                0.75 ether,
+                0,
+                OWNER,
+                LiquidationConfiguration({
+                    maxLiquidationLtv: 0.8 ether,
+                    dynamicBonusFeeStart: 0.03 ether,
+                    ltvForCompleteLiquidation: 0.9 ether,
+                    dynamicBonusFeeDecaySteepness: 5 ether,
+                    liquidationBaseFee: 0.05 ether,
+                    minPenaltyPercentage: 0.01 ether,
+                    protocolFeePercentage: 0 ether,
+                    isEnabledPriorityLiquidation: true,
+                    disablePriorityLiquidationAbovePositionLtv: type(uint256).max,
+                    priorityLiquidationGracePeriod: 5 minutes,
+                    taggerLiquidationGracePeriod: 2 minutes,
+                    liquidationWindowTag: 3 days
+                })
+            )
+        );
+
+        vm.prank(OWNER);
+        market.setPauser(OWNER, PAUSED_MARKET, true);
     }
 
     function testSetBorrowRateViaConstuctor(uint256 borrowRate) external {
@@ -86,6 +117,18 @@ contract FixedRateIrmTest is Test {
     }
 
     function testSetBorrowRateEvent(uint256 borrowRate) external {
+        borrowRate = bound(borrowRate, 1, fixedRateIrm.MAX_BORROW_RATE());
+
+        vm.expectEmit(true, true, true, true, address(fixedRateIrm));
+        emit FixedRateIrm.SetBorrowRate(borrowRate);
+        fixedRateIrm.setBorrowRate(borrowRate);
+    }
+
+    function testSetBorrowRateEventMarketPaused(uint256 borrowRate) external {
+        vm.startPrank(OWNER);
+        market.pause(PAUSED_MARKET, true);
+        vm.stopPrank();
+
         borrowRate = bound(borrowRate, 1, fixedRateIrm.MAX_BORROW_RATE());
 
         vm.expectEmit(true, true, true, true, address(fixedRateIrm));
