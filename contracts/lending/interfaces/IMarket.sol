@@ -67,6 +67,13 @@ struct LiquidationCalculation {
     uint256 collateralToSellInBorrowAssets;
 }
 
+struct LiquidationCalculationResult {
+    uint256 collateralAmount;
+    uint256 collateralAmountToSend;
+    uint256 repayAmount;
+    uint256 repayShares;
+}
+
 interface IMarketErrors {
     /// @notice Error thrown when the input is invalid
     error AltoBaseMarketInvalidInput();

@@ -23,10 +23,10 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IOracle, ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 
 contract LiquidateCallback is ILiquidateCallback {
-    event LiquidateCallbackCalled(uint256 collateralAmount, bytes data);
+    event LiquidateCallbackCalled(uint256 assetsToRepay, uint256 collateralReceived, bytes data);
 
-    function onLiquidateCallback(uint256 collateralAmount, bytes calldata data) external {
-        emit LiquidateCallbackCalled(collateralAmount, data);
+    function onLiquidateCallback(uint256 assetsToRepay, uint256 collateralReceived, bytes calldata data) external {
+        emit LiquidateCallbackCalled(assetsToRepay, collateralReceived, data);
     }
 }
 

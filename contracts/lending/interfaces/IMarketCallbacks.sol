@@ -12,7 +12,8 @@ interface IRemoveCollateralCallback {
 /// @notice Callback interface for liquidator to call during liquidation
 interface ILiquidateCallback {
     /// @notice Callback function for liquidator to call during liquidation
-    /// @param assets The amount of borrow token to be repaid by the liquidator
+    /// @param assetsToRepay The amount of borrow token to be repaid by the liquidator
+    /// @param collateralReceived The amount of collateral received by the liquidator
     /// @param data Additional data for the liquidation
-    function onLiquidateCallback(uint256 assets, bytes calldata data) external;
+    function onLiquidateCallback(uint256 assetsToRepay, uint256 collateralReceived, bytes calldata data) external;
 }

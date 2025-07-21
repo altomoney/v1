@@ -14,9 +14,9 @@ import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
 import {MockMarketDeployer, MockMarket} from "@alto-test/helpers/MockMarket.sol";
 
 contract LiquidateCallback is ILiquidateCallback {
-    function onLiquidateCallback(uint256 assets, bytes calldata data) external {
+    function onLiquidateCallback(uint256 assetsToRepay, uint256 collateralReceived, bytes calldata data) external {
         (address borrowToken, uint256 borrowAmount) = abi.decode(data, (address, uint256));
-        IERC20(borrowToken).approve(msg.sender, borrowAmount);
+        IERC20(borrowToken).approve(msg.sender, assetsToRepay);
     }
 }
 
