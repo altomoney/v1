@@ -11,10 +11,10 @@ contract AltoMarketSetLiquidationConfiguration is MarketCommon {
 
     LiquidationConfiguration VALID_CONFIGURATION = LiquidationConfiguration({
         maxLiquidationLtv: 0.85 ether,
-        dynamicBonusFeeStart: 0.09 ether,
+        dynamicBonusFeeStart: 0.03 ether,
         ltvForCompleteLiquidation: 0.95 ether,
         dynamicBonusFeeDecaySteepness: 10 ether,
-        liquidationBaseFee: 0.07 ether,
+        liquidationBaseFee: 0.05 ether,
         minPenaltyPercentage: 0.02 ether,
         protocolFeePercentage: 0 ether,
         isEnabledPriorityLiquidation: true,
@@ -113,13 +113,26 @@ contract AltoMarketSetLiquidationConfiguration is MarketCommon {
         market.setLiquidationConfiguration(liquidationConfiguration);
     }
 
-    function test_RevertWhen_SumOfDynamicBonusFeeStartAndLiquidationBaseFeeIsGreaterThanMATH_PRECISION()
+    function test_RevertWhen_SumOfDynamicBonusFeeStartAndLiquidationBaseFeeIsGreaterThan0Point15ether()
         external
         whenCallerIsOwner
     {
         LiquidationConfiguration memory liquidationConfiguration = market.liquidationConfiguration();
-        liquidationConfiguration.dynamicBonusFeeStart = 0.5 ether;
-        liquidationConfiguration.liquidationBaseFee = 0.6 ether;
+        liquidationConfiguration.dynamicBonusFeeStart = 0.09 ether;
+        liquidationConfiguration.liquidationBaseFee = 0.15 ether - 0.09 ether + 1;
+
+        // it should revert
+        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBaseMarketInvalidInput.selector));
+        market.setLiquidationConfiguration(liquidationConfiguration);
+    }
+
+    function test_RevertWhen_SumOfDynamicBonusFeeStartAndLiquidationBaseFeeIsGreaterThan1EtherMinusMaxLiquidationLtv()
+        external
+        whenCallerIsOwner
+    {
+        LiquidationConfiguration memory liquidationConfiguration = market.liquidationConfiguration();
+        liquidationConfiguration.dynamicBonusFeeStart = 0;
+        liquidationConfiguration.liquidationBaseFee = 1 ether - liquidationConfiguration.maxLiquidationLtv + 1;
 
         // it should revert
         vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBaseMarketInvalidInput.selector));

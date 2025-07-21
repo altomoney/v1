@@ -12,7 +12,9 @@ AltoMarket::setLiquidationConfiguration
     │   └── it should revert
     ├── when dynamicBonusFeeDecaySteepness is invalid
     │   └── it should revert
-    ├── when sum of dynamicBonusFeeStart and liquidationBaseFee is greater than MATH_PRECISION
+    ├── when sum of dynamicBonusFeeStart and liquidationBaseFee is greater than 0point15 ether
+    │   └── it should revert
+    ├── when sum of dynamicBonusFeeStart and liquidationBaseFee is greater than 1 ether minus maxLiquidationLtv
     │   └── it should revert
     ├── when minPenaltyPercentage is greater than MATH_PRECISION
     │   └── it should revert
