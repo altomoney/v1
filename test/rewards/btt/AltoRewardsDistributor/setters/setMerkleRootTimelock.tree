@@ -1,0 +1,22 @@
+AltoRewardsDistributor::setMerkleRootTimelock
+├── when caller is not owner
+│   └── it should revert
+└── when caller is owner
+    ├── when new timelock equals current timelock
+    │   └── it should revert
+    └── when new timelock is different from current timelock
+        ├── when setting a normal different timelock
+        │   ├── it should update merkle root timelock
+        │   └── it should emit SetMerkleRootTimelock event
+        ├── when setting zero timelock
+        │   ├── it should update merkle root timelock
+        │   └── it should emit SetMerkleRootTimelock event
+        ├── when increasing timelock
+        │   ├── it should update merkle root timelock
+        │   └── it should emit SetMerkleRootTimelock event
+        ├── when decreasing timelock
+        │   ├── it should update merkle root timelock
+        │   └── it should emit SetMerkleRootTimelock event
+        └── when updating timelock multiple times
+            ├── it should update merkle root timelock for each call
+            └── it should emit SetMerkleRootTimelock event for each call

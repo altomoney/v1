@@ -1,0 +1,16 @@
+AltoRewardsDistributor::submitNewPendingRoot
+├── when caller is not merkle root updater or owner
+│   └── it should revert
+├── when new merkle root equals current pending root
+│   └── it should revert
+├── when new merkle root is zero (and current pending is also zero)
+│   └── it should revert with AlreadyPending
+└── when caller is authorized and inputs are valid
+    ├── when updater submits root
+    │   ├── it should set pending merkle root
+    │   ├── it should set validFrom timestamp with timelock
+    │   └── it should emit SubmitPendingMerkleRoot event
+    └── when owner submits root
+        ├── it should set pending merkle root
+        ├── it should set validFrom timestamp with timelock
+        └── it should emit SubmitPendingMerkleRoot event

@@ -1,0 +1,59 @@
+AltoRewardsDistributor::claimRewardTokens()
+├── when contract is paused
+│   └── it should revert
+├── when caller is not authorized for onBehalf
+│   └── it should revert
+├── when merkle root is not set
+│   └── it should revert
+├── when lock purchased rewards is true and lock contract is not set
+│   └── it should revert
+├── given invalid merkle proof
+│   └── it should revert
+├── given invalid inputs
+│   ├── when rewardsPurchaseAmount is zero
+│   │   └── it should revert
+│   ├── when rewardsPurchaseAmount exceeds available amount
+│   │   └── it should revert
+│   └── when onBehalf is zero address
+│       └── it should revert
+├── when payment token is not configured
+│   └── it should revert
+├── when reward token USD oracle is not set
+│   └── it should revert
+├── when oracle returns invalid price (zero)
+│   └── it should revert
+├── given valid inputs
+│   ├── when purchasing partial amount
+│   │   ├── it should update purchased amount for user
+│   │   ├── it should transfer payment tokens from caller
+│   │   ├── it should transfer reward tokens to onBehalf
+│   │   ├── it should emit ClaimRewardTokens event
+│   │   └── it should return payment amount
+│   ├── when purchasing full available amount
+│   │   ├── it should update purchased amount for user
+│   │   ├── it should transfer payment tokens from caller
+│   │   ├── it should transfer reward tokens to onBehalf
+│   │   ├── it should emit ClaimRewardTokens event
+│   │   └── it should return payment amount
+│   ├── when lockPurchasedRewards is true
+│   │   ├── it should apply lock bonus discount
+│   │   ├── it should approve reward tokens to lock contract
+│   │   ├── it should call lock contract with reward amount and onBehalf
+│   │   ├── it should emit ClaimRewardTokens event with combined discount
+│   │   └── it should return payment amount
+│   ├── when discount reaches MAX_DISCOUNT
+│   │   ├── it should cap discount at MAX_DISCOUNT
+│   │   ├── it should calculate payment with capped discount
+│   │   ├── it should emit ClaimRewardTokens event
+│   │   └── it should return payment amount
+│   ├── when using different payment tokens
+│   │   ├── it should calculate payment amount based on token price
+│   │   ├── it should handle different decimal precisions
+│   │   ├── it should emit ClaimRewardTokens event
+│   │   └── it should return payment amount
+│   └── when caller is different from onBehalf (authorized)
+│       ├── it should transfer payment tokens from caller
+│       ├── it should transfer reward tokens to onBehalf
+│       ├── it should update purchased amount for onBehalf
+│       ├── it should emit ClaimRewardTokens event with correct addresses
+│       └── it should return payment amount

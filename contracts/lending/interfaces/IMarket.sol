@@ -92,7 +92,7 @@ interface IMarketErrors {
     /// @notice Error thrown when trying to liquidate a solvent position
     error AltoBaseMarketLiquidatingSolventPosition();
 
-    /// @notice Error thrown when executor is allowed to perform the action on behalf of another user
+    /// @notice Error thrown when executor is not allowed to perform the action on behalf of another user
     error AltoBaseMarketUnauthorized();
 
     /// @notice Error thrown when executor is not allowed to perform liquidation at this time

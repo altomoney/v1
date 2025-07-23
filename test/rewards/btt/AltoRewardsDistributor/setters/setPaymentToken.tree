@@ -1,0 +1,13 @@
+AltoRewardsDistributor::setPaymentToken
+├── when caller is not owner
+│   └── it should revert
+└── when caller is owner
+    ├── when oracle is not zero address
+    │   ├── it should set payment token configuration
+    │   ├── it should cache token decimals
+    │   └── it should emit SetPaymentToken event
+    ├── when oracle is zero address
+    │   ├── it should delete payment token configuration
+    │   └── it should emit SetPaymentToken event
+    └── when token decimals call fails
+        └── it should revert

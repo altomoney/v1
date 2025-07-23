@@ -1,0 +1,13 @@
+AltoRewardsDistributor::setRewardTokenUsdOracle
+├── when caller is not owner
+│   └── it should revert
+└── when caller is owner
+    ├── when new oracle is zero address
+    │   └── it should revert
+    └── when new oracle is not zero address
+        ├── when setting a normal valid oracle
+        │   ├── it should update reward token USD oracle
+        │   └── it should emit SetRewardTokenUsdOracle event
+        └── when setting valid oracle multiple times
+            ├── it should update reward token USD oracle for each call
+            └── it should emit SetRewardTokenUsdOracle event for each call

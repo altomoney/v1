@@ -1,0 +1,19 @@
+AltoRewardsDistributor::setLockContract
+├── when caller is not owner
+│   └── it should revert
+└── when caller is owner
+    ├── when new lock contract is zero address
+    │   ├── it should set lock contract to zero
+    │   └── it should emit SetLockContract event
+    ├── when new lock contract is not zero address
+    │   ├── it should update lock contract
+    │   └── it should emit SetLockContract event
+    ├── when updating lock contract multiple times
+    │   ├── it should update lock contract for each call
+    │   └── it should emit SetLockContract event for each call
+    ├── when setting back to zero after non-zero
+    │   ├── it should set lock contract to zero
+    │   └── it should emit SetLockContract event
+    └── when setting same lock contract again
+        ├── it should keep the same lock contract
+        └── it should emit SetLockContract event

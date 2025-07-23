@@ -1,0 +1,19 @@
+AltoNftRewardsAdapter::setBonusDiscount
+├── when caller is not owner
+│   └── it should revert
+└── when caller is owner
+    ├── when bonus discount is greater than 0.1 ether
+    │   └── it should revert
+    └── when bonus discount is valid
+        ├── when setting normal discount value
+        │   ├── it should update bonus discount
+        │   └── it should emit BonusDiscountSet event
+        ├── when setting zero discount
+        │   ├── it should update bonus discount
+        │   └── it should emit BonusDiscountSet event
+        ├── when setting maximum discount
+        │   ├── it should update bonus discount
+        │   └── it should emit BonusDiscountSet event
+        └── when updating discount multiple times
+            ├── it should update bonus discount for each call
+            └── it should emit BonusDiscountSet event for each call

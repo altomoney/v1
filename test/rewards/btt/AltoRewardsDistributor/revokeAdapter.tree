@@ -1,0 +1,10 @@
+AltoRewardsDistributor::revokeAdapter
+├── when caller is not owner
+│   └── it should revert
+└── when caller is owner
+    ├── when adapter is not in whitelist
+    │   └── it should revert
+    └── when adapter is in whitelist
+        ├── it should remove adapter from whitelist
+        ├── it should maintain array integrity (swap with last element)
+        └── it should emit RevokeAdapter event

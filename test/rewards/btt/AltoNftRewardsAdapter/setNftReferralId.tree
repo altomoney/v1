@@ -1,0 +1,21 @@
+AltoNftRewardsAdapter::setNftReferralId
+├── when referral nft id is greater than 700
+│   └── it should revert
+├── when referral nft id is owned by caller (self-referral)
+│   └── it should revert
+└── when referral nft id is valid
+    ├── when setting referral id to zero (canceling referral)
+    │   ├── it should update nft referral id
+    │   └── it should emit NftReferralIdSet event
+    ├── when setting referral id to valid owned nft
+    │   ├── it should update nft referral id
+    │   └── it should emit NftReferralIdSet event
+    ├── when setting referral id at 700
+    │   ├── it should update nft referral id
+    │   └── it should emit NftReferralIdSet event
+    ├── when updating referral id multiple times
+    │   ├── it should update nft referral id for each call
+    │   └── it should emit NftReferralIdSet event for each call
+    └── when different users set referral ids
+        ├── it should maintain separate referral ids
+        └── it should emit NftReferralIdSet event for each user

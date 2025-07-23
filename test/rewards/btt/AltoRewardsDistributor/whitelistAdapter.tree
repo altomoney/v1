@@ -1,0 +1,13 @@
+AltoRewardsDistributor::whitelistAdapter
+├── when caller is not owner
+│   └── it should revert
+└── when caller is owner
+    ├── when adapters whitelist length exceeds MAX_ADAPTERS_WHITELIST
+    │   └── it should revert
+    ├── when adapter is zero address
+    │   └── it should revert
+    ├── when adapter is already whitelisted
+    │   └── it should revert
+    └── when adapter is valid and not whitelisted
+        ├── it should add adapter to whitelist
+        └── it should emit WhitelistAdapter event

@@ -1,0 +1,19 @@
+AltoRewardsDistributor::withdrawContractTokens
+├── when caller is not owner
+│   └── it should revert
+└── when caller is owner
+    ├── when contract has no tokens to withdraw
+    │   └── it should revert (from SafeERC20)
+    └── when contract has tokens to withdraw
+        ├── when withdrawing payment tokens
+        │   ├── it should transfer tokens to msg.sender (owner)
+        │   └── it should emit WithdrawContractTokens event
+        ├── when withdrawing reward tokens
+        │   ├── it should transfer tokens to msg.sender (owner)
+        │   └── it should emit WithdrawContractTokens event
+        ├── when withdrawing partial amount
+        │   ├── it should transfer partial tokens to msg.sender (owner)
+        │   └── it should emit WithdrawContractTokens event
+        └── when withdrawing different token types
+            ├── it should transfer tokens to msg.sender (owner)
+            └── it should emit WithdrawContractTokens event

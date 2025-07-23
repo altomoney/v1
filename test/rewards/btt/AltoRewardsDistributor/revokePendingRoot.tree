@@ -1,0 +1,17 @@
+AltoRewardsDistributor::revokePendingRoot
+├── when caller is not merkle root updater or owner
+│   └── it should revert
+├── when pending root is not set
+│   └── it should revert
+├── when merkle root to revoke is nonzero and does not match pending root
+│   └── it should revert
+└── when caller is authorized and inputs are valid
+    ├── when updater revokes root
+    │   ├── it should emit RevokePendingMerkleRoot event
+    │   └── it should delete pending root
+    ├── when owner revokes root
+    │   ├── it should emit RevokePendingMerkleRoot event
+    │   └── it should delete pending root
+    └── when revoking with zero parameter
+        ├── it should emit RevokePendingMerkleRoot event
+        └── it should delete pending root
