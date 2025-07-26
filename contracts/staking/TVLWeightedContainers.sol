@@ -35,7 +35,7 @@ abstract contract TVLWeightedContainers is ITVLWeightedContainers {
         EPOCH_DURATION = epochDuration;
         emit EpochDurationSet(epochDuration);
 
-        for (uint256 i = 0; i < initialContainers.length; i++) {
+        for (uint256 i; i < initialContainers.length; i++) {
             _addContainer(initialContainers[i]);
         }
     }
@@ -162,7 +162,10 @@ abstract contract TVLWeightedContainers is ITVLWeightedContainers {
                 epochsToDecay = container.decayRate.max;
             }
 
-            if (container.currentDurationEpochs - epochsToDecay < container.duration.min) {
+            if (
+                epochsToDecay > container.currentDurationEpochs
+                    || container.currentDurationEpochs - epochsToDecay < container.duration.min
+            ) {
                 container.currentDurationEpochs = container.duration.min;
             } else {
                 container.currentDurationEpochs -= uint24(epochsToDecay);
@@ -221,6 +224,10 @@ abstract contract TVLWeightedContainers is ITVLWeightedContainers {
     /// @param containerId The id of the container to activate.
     function _activateContainer(uint256 containerId) internal {
         if (activeContainerIds.length >= MAX_ACTIVE_CONTAINERS) {
+            revert TVLWeightedContainersInvalidInput();
+        }
+
+        if (containerId == 0 || containerId > totalContainerCount) {
             revert TVLWeightedContainersInvalidInput();
         }
 
@@ -334,11 +341,6 @@ abstract contract TVLWeightedContainers is ITVLWeightedContainers {
     }
 
     function _isContainerActive(uint256 containerId) internal view returns (bool) {
-        for (uint256 i; i < activeContainerIds.length; i++) {
-            if (activeContainerIds[i] == containerId) {
-                return true;
-            }
-        }
-        return false;
+        return containerById[containerId].isActive;
     }
 }

@@ -75,7 +75,7 @@ contract AltoStaking_Main is Test {
     }
 
     function test_MainStaking() public {
-        altoStaking.lock(USER, 1 ether, 1, false);
+        altoStaking.lock(USER, 1 ether, 1, false, 0);
 
         assertEq(altoStaking.getPosition(USER, 1).amountLocked, 1 ether);
         assertEq(altoStaking.getPosition(USER, 1).expiryTimestamp, block.timestamp + 1 days);
@@ -85,7 +85,7 @@ contract AltoStaking_Main is Test {
     }
 
     function test_MainStaking_2() public {
-        altoStaking.lock(USER, 1 ether, 1, false);
+        altoStaking.lock(USER, 1 ether, 1, false, 0);
 
         Container memory container = altoStaking.getContainer(1);
         uint256 containerDuration = container.currentDurationEpochs;
@@ -105,7 +105,7 @@ contract AltoStaking_Main is Test {
         uint256 balanceBeforeStaking2 = lockToken.balanceOf(address(altoStaking));
         uint256 balanceBeforeUser2 = lockToken.balanceOf(address(this));
 
-        altoStaking.lock(USER_2, 100 ether, 1, false);
+        altoStaking.lock(USER_2, 100 ether, 1, false, 0);
 
         uint256 balanceAfterStaking2 = lockToken.balanceOf(address(altoStaking));
         uint256 balanceAfterUser2 = lockToken.balanceOf(address(this));
@@ -151,7 +151,7 @@ contract AltoStaking_Main is Test {
         uint256 balanceBeforeStaking = lockToken.balanceOf(address(altoStaking));
         uint256 balanceBeforeUser = lockToken.balanceOf(address(this));
 
-        altoStaking.lock(USER, 1 ether, 1, true);
+        altoStaking.lock(USER, 1 ether, 1, true, 0);
 
         uint256 balanceAfterStaking = lockToken.balanceOf(address(altoStaking));
         uint256 balanceAfterUser = lockToken.balanceOf(address(this));
@@ -193,7 +193,7 @@ contract AltoStaking_Main is Test {
         vm.warp(block.timestamp + altoStaking.EPOCH_DURATION() / 4); // Half an epoch
 
         // Initial lock: 100 tokens in container 1 for 1 epoch (current duration)
-        altoStaking.lock(USER, 100 ether, 1, false);
+        altoStaking.lock(USER, 100 ether, 1, false, 0);
         assertEq(altoStaking.getPosition(USER, 1).amountLocked, 100 ether, "Position should show 100 ether total");
 
         // Check initial TVL in epoch 0
@@ -206,7 +206,7 @@ contract AltoStaking_Main is Test {
         // Lock more tokens to the same position (this should extend/modify the position)
         // This will trigger the double counting bug because it adds new TVL
         // without properly removing old TVL from overlapping epochs
-        altoStaking.lock(USER, 50 ether, 1, false); // Total becomes 150 ether
+        altoStaking.lock(USER, 50 ether, 1, false, 0); // Total becomes 150 ether
 
         // Check TVL after extending - this should be 150 ether total, not more
         uint256 newTVL = altoStaking.epochTVL(altoStaking.currentEpoch(), 1);
@@ -226,7 +226,7 @@ contract AltoStaking_Main is Test {
         vm.warp(altoStaking.initializedAtTimestamp() + 60 minutes);
 
         // Initial lock: 100 tokens in container 1 for 1 epoch (current duration)
-        altoStaking.lock(USER, 100 ether, CONTAINER_ID, false);
+        altoStaking.lock(USER, 100 ether, CONTAINER_ID, false, 0);
         assertEq(
             altoStaking.getPosition(USER, CONTAINER_ID).amountLocked, 100 ether, "Position should show 100 ether total"
         );
@@ -244,7 +244,7 @@ contract AltoStaking_Main is Test {
         // Lock more tokens to the same position (this should extend/modify the position)
         // This will trigger the double counting bug because it adds new TVL
         // without properly removing old TVL from overlapping epochs
-        altoStaking.lock(USER, 50 ether, CONTAINER_ID, false); // Total becomes 150 ether
+        altoStaking.lock(USER, 50 ether, CONTAINER_ID, false, 0); // Total becomes 150 ether
 
         assertEq(altoStaking.currentEpoch(), firstEpoch + 1);
 
@@ -272,7 +272,7 @@ contract AltoStaking_Main is Test {
         vm.warp(altoStaking.initializedAtTimestamp() + 60 minutes);
 
         // Initial lock: 100 tokens in container 1 for 1 epoch (current duration)
-        altoStaking.lock(USER, 100 ether, CONTAINER_ID, false);
+        altoStaking.lock(USER, 100 ether, CONTAINER_ID, false, 0);
         assertEq(
             altoStaking.getPosition(USER, CONTAINER_ID).amountLocked, 100 ether, "Position should show 100 ether total"
         );
@@ -291,7 +291,7 @@ contract AltoStaking_Main is Test {
         // This will trigger the double counting bug because it adds new TVL
         // without properly removing old TVL from overlapping epochs
         altoStaking.unlock(USER, USER, CONTAINER_ID);
-        altoStaking.lock(USER, 50 ether, CONTAINER_ID, false); // Total becomes 150 ether
+        altoStaking.lock(USER, 50 ether, CONTAINER_ID, false, 0); // Total becomes 150 ether
 
         assertEq(altoStaking.currentEpoch(), firstEpoch + 1);
 
@@ -319,7 +319,7 @@ contract AltoStaking_Main is Test {
         vm.warp(altoStaking.initializedAtTimestamp() + 60 minutes);
 
         // Initial lock: 100 tokens in container 1 for 1 epoch (current duration)
-        altoStaking.lock(USER, 100 ether, CONTAINER_ID, false);
+        altoStaking.lock(USER, 100 ether, CONTAINER_ID, false, 0);
         assertEq(
             altoStaking.getPosition(USER, CONTAINER_ID).amountLocked, 100 ether, "Position should show 100 ether total"
         );
@@ -337,7 +337,7 @@ contract AltoStaking_Main is Test {
         // Lock more tokens to the same position (this should extend/modify the position)
         // This will trigger the double counting bug because it adds new TVL
         // without properly removing old TVL from overlapping epochs
-        altoStaking.lock(USER, 100 ether, CONTAINER_ID, true); // Total becomes 150 ether
+        altoStaking.lock(USER, 100 ether, CONTAINER_ID, true, 0); // Total becomes 150 ether
 
         assertEq(altoStaking.currentEpoch(), firstEpoch + 1);
 

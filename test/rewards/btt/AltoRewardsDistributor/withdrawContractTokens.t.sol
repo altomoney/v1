@@ -35,7 +35,7 @@ contract AltoRewardsDistributorWithdrawContractTokens is RewardsDistributorCommo
 
         uint256 purchaseAmount = aliceAvailable / 2;
         distributor.claimRewardTokens(
-            aliceAvailable, aliceProof, purchaseAmount, BASE_DISCOUNT, address(paymentToken), false, ALICE
+            aliceAvailable, aliceProof, purchaseAmount, BASE_DISCOUNT, address(paymentToken), false, 0, ALICE
         );
         vm.stopPrank();
 
@@ -82,7 +82,7 @@ contract AltoRewardsDistributorWithdrawContractTokens is RewardsDistributorCommo
         paymentToken.approve(address(distributor), type(uint256).max);
 
         distributor.claimRewardTokens(
-            aliceAvailable, aliceProof, aliceAvailable / 4, BASE_DISCOUNT, address(paymentToken), false, ALICE
+            aliceAvailable, aliceProof, aliceAvailable / 4, BASE_DISCOUNT, address(paymentToken), false, 0, ALICE
         );
         vm.stopPrank();
 
@@ -108,7 +108,7 @@ contract AltoRewardsDistributorWithdrawContractTokens is RewardsDistributorCommo
         paymentToken2.approve(address(distributor), type(uint256).max);
 
         distributor.claimRewardTokens(
-            aliceAvailable, aliceProof, aliceAvailable / 3, BASE_DISCOUNT, address(paymentToken2), false, ALICE
+            aliceAvailable, aliceProof, aliceAvailable / 3, BASE_DISCOUNT, address(paymentToken2), false, 0, ALICE
         );
         vm.stopPrank();
 

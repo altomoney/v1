@@ -1,0 +1,9 @@
+AltoStaking::emergencySweep()
+├── given contract is not paused
+│   └── it should revert
+├── given caller is not owner
+│   └── it should revert
+└── given valid conditions
+    ├── it should transfer all contract balance to owner
+    ├── it should emit EmergencySweep event
+    └── it should leave contract with zero balance 

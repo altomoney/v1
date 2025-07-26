@@ -30,6 +30,9 @@ contract AltoStaking is IAltoStakingStaticTypes, TVLWeightedContainers, Ownable2
     /// @inheritdoc IAltoStakingStaticTypes
     mapping(address => mapping(uint256 => StakingPosition)) public positions;
 
+    /// @inheritdoc IAltoStakingBase
+    uint256 public maxMultiplierStakingContainerId;
+
     constructor(
         address _lockToken,
         address _owner,
@@ -44,6 +47,11 @@ contract AltoStaking is IAltoStakingStaticTypes, TVLWeightedContainers, Ownable2
             // we add 1 to the containerId because the containerId starts from 1
             _updateContainerMultiplier(i + 1, _containerMultipliers[i]);
         }
+
+        if (_lockToken == address(0)) {
+            revert AltoStakingInvalidInput();
+        }
+
         lockToken = _lockToken;
     }
 
@@ -95,7 +103,7 @@ contract AltoStaking is IAltoStakingStaticTypes, TVLWeightedContainers, Ownable2
     }
 
     /// @inheritdoc IAltoStakingBase
-    function lock(address onBehalf, uint256 amount, uint256 containerId, bool isReuse)
+    function lock(address onBehalf, uint256 amount, uint256 containerId, bool isReuse, uint256 maxEpochsToLockFor)
         external
         whenNotPaused
         whenNotRescueMode
@@ -128,6 +136,10 @@ contract AltoStaking is IAltoStakingStaticTypes, TVLWeightedContainers, Ownable2
         }
 
         uint256 currentEpochDuration = containerById[containerId].currentDurationEpochs;
+
+        if (maxEpochsToLockFor > 0 && currentEpochDuration > maxEpochsToLockFor) {
+            revert AltoStakingTryingToLockForTooManyEpochs();
+        }
 
         uint256 lockedTimestamp = block.timestamp;
         uint256 expiryTimestamp = lockedTimestamp + (currentEpochDuration * EPOCH_DURATION);
@@ -227,6 +239,9 @@ contract AltoStaking is IAltoStakingStaticTypes, TVLWeightedContainers, Ownable2
     function addContainer(Container memory container, uint256 multiplier) external onlyOwner {
         uint256 containerId = _addContainer(container);
         _updateContainerMultiplier(containerId, multiplier);
+
+        // no need to update max multiplier staking container id because it will be updated
+        // when container is activated (it is inactive by default)
     }
 
     /// @inheritdoc IAltoStakingBase
@@ -237,6 +252,12 @@ contract AltoStaking is IAltoStakingStaticTypes, TVLWeightedContainers, Ownable2
 
         _updateContainerMultiplier(containerId, multiplier);
         _updateContainer(containerId, container);
+
+        // if multiplier is not 0, we need to update max multiplier staking container id
+        // as the multiplier has changed
+        if (multiplier != 0) {
+            _updateMaxMultiplierStakingContainerId();
+        }
     }
 
     /// @inheritdoc IAltoStakingBase
@@ -245,6 +266,9 @@ contract AltoStaking is IAltoStakingStaticTypes, TVLWeightedContainers, Ownable2
             revert AltoStakingInvalidInput();
         }
         _activateContainer(containerId);
+
+        // only active containers are able to used for locking so we need to update
+        _updateMaxMultiplierStakingContainerId();
     }
 
     /// @inheritdoc IAltoStakingBase
@@ -253,6 +277,9 @@ contract AltoStaking is IAltoStakingStaticTypes, TVLWeightedContainers, Ownable2
             revert AltoStakingInvalidInput();
         }
         _deactivateContainer(containerId);
+
+        // no need to update max multiplier staking container id because it will be updated
+        // when container is deprecated (which is the requirement for this to run)
     }
 
     /// @inheritdoc IAltoStakingBase
@@ -263,11 +290,39 @@ contract AltoStaking is IAltoStakingStaticTypes, TVLWeightedContainers, Ownable2
         }
         stakingContainerById[containerId].isDeprecated = true;
         emit ContainerDeprecate(containerId);
+
+        // deprecated containers are unable to used for locking so we need to update
+        _updateMaxMultiplierStakingContainerId();
     }
 
     /// @inheritdoc ITVLWeightedContainers
     function startEpoch() external override(TVLWeightedContainers, ITVLWeightedContainers) onlyOwner {
         _startEpoch();
+    }
+
+    /// @dev Internal function to update the max multiplier staking container id.
+    /// @dev Used for locking in max multiplier container during AltoRewardsDistributor.claimRewardTokens.
+    function _updateMaxMultiplierStakingContainerId() internal {
+        uint256 containerId = 0;
+        uint256 multiplier = 0;
+
+        // check if container is active
+        for (uint256 i = 0; i < activeContainerIds.length; i++) {
+            // and not deprecated
+            if (stakingContainerById[activeContainerIds[i]].isDeprecated) {
+                continue;
+            }
+            uint256 currentContainerId = activeContainerIds[i];
+            if (stakingContainerById[currentContainerId].multiplier > multiplier) {
+                multiplier = stakingContainerById[currentContainerId].multiplier;
+                containerId = currentContainerId;
+            }
+        }
+
+        if (containerId != 0 && containerId != maxMultiplierStakingContainerId) {
+            maxMultiplierStakingContainerId = containerId;
+            emit MaxMultiplierStakingContainerIdUpdated(containerId, multiplier);
+        }
     }
 
     /// @dev Internal function to validate and update the multiplier of a container.

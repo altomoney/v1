@@ -2,6 +2,8 @@
 pragma solidity ^0.8.0;
 
 import {PendingMerkleRoot} from "@alto/rewards/interfaces/IMerkleRootManager.sol";
+import {IAuth} from "@alto/utils/interfaces/IAuth.sol";
+import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
 
 /// @notice The reward token struct of the token to be distributed
 struct RewardToken {
@@ -17,11 +19,6 @@ struct PaymentToken {
     address oracle;
     /// @dev The cached payment token decimals
     uint8 decimals;
-}
-
-/// @dev temporary before we have staking contract
-interface ILock {
-    function lock(uint256 amount, address to) external;
 }
 
 /// @title IRewardsErrors
@@ -96,7 +93,7 @@ interface IRewardsEvents {
     event RevokeAdapter(address indexed adapter);
 }
 
-interface IRewardsDistributorBase is IRewardsErrors, IRewardsEvents {
+interface IRewardsDistributorBase is IRewardsErrors, IRewardsEvents, IAuth, IPausable {
     /// @notice Returns the amount of reward tokens already purchased by an account
     /// @param account The account to check
     /// @return The amount purchased
@@ -128,6 +125,8 @@ interface IRewardsDistributorBase is IRewardsErrors, IRewardsEvents {
     /// @param paymentToken The token to use for payment
     /// @param lockPurchasedRewards Whether to lock the purchased tokens for extra discount
     /// @param onBehalf The address on behalf of whom the claim is being made
+    /// @param maxEpochsToLockFor The maximum number of epochs to lock for. Useful when max epochs are updated
+    /// during UI interaction and UI shows an old number of epochs to lock for.
     /// @return amount The amount of payment tokens used
     function claimRewardTokens(
         uint256 totalRewardsForUser,
@@ -136,6 +135,7 @@ interface IRewardsDistributorBase is IRewardsErrors, IRewardsEvents {
         uint256 discount,
         address paymentToken,
         bool lockPurchasedRewards,
+        uint256 maxEpochsToLockFor,
         address onBehalf
     ) external returns (uint256 amount);
 

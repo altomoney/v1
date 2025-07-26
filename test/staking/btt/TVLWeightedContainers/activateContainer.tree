@@ -1,0 +1,12 @@
+TVLWeightedContainers::activateContainer()
+├── given invalid inputs
+│   ├── when container is already active
+│   │   └── it should revert
+│   ├── when container ID does not exist
+│   │   └── it should revert
+│   └── when MAX_ACTIVE_CONTAINERS limit is reached
+│       └── it should revert
+└── given valid inputs
+    ├── it should set container isActive to true
+    ├── it should add container to activeContainerIds array
+    └── it should emit ContainerActivated event 

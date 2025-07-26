@@ -1,0 +1,45 @@
+TVLWeightedContainers::Constructor()
+├── when epochDuration is zero
+│   └── it should revert
+├── given invalid initial containers
+│   ├── when growthRate min is greater than max
+│   │   └── it should revert
+│   ├── when growthRate min is zero
+│   │   └── it should revert
+│   ├── when growthRate max is zero
+│   │   └── it should revert
+│   ├── when decayRate min is greater than max
+│   │   └── it should revert
+│   ├── when decayRate min is zero
+│   │   └── it should revert
+│   ├── when decayRate max is zero
+│   │   └── it should revert
+│   ├── when duration min is greater than max
+│   │   └── it should revert
+│   ├── when duration min is zero
+│   │   └── it should revert
+│   ├── when duration max is zero
+│   │   └── it should revert
+│   ├── when maxRateDifferenceEpochs is greater than duration max
+│   │   └── it should revert
+│   ├── when maxRateDifferenceEpochs is zero
+│   │   └── it should revert
+│   ├── when currentDurationEpochs is not zero
+│   │   └── it should revert
+│   └── when isActive is true
+│       └── it should revert
+└── given valid inputs
+    ├── when no initial containers provided
+    │   ├── it should set EPOCH_DURATION
+    │   ├── it should set initializedAtTimestamp to zero
+    │   ├── it should set nextEpochToProcess to zero
+    │   ├── it should set totalContainerCount to zero
+    │   └── it should emit EpochDurationSet event
+    └── when valid initial containers provided
+        ├── it should set EPOCH_DURATION
+        ├── it should add all containers with correct IDs starting from 1
+        ├── it should set container currentDurationEpochs to duration min
+        ├── it should set container isActive to false
+        ├── it should increment totalContainerCount for each container
+        ├── it should emit EpochDurationSet event
+        └── it should emit ContainerAdded event for each container 

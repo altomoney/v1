@@ -24,17 +24,29 @@ contract MockLock {
     address public lastTo;
     uint256 public lastAmount;
     IERC20 public rewardToken;
+    uint256 public lastContainerId;
+    bool public lastIsReuse;
+    uint256 public lastMaxEpochsToLockFor;
+
+    uint256 public maxMultiplierStakingContainerId = 1;
 
     constructor(address _rewardToken) {
         rewardToken = IERC20(_rewardToken);
     }
 
-    function lock(uint256 amount, address to) external {
-        locked[to] += amount;
-        lastTo = to;
+    function lock(address onBehalf, uint256 amount, uint256 containerId, bool isReuse, uint256 maxEpochsToLockFor)
+        external
+        returns (uint256)
+    {
+        locked[onBehalf] += amount;
+        lastTo = onBehalf;
         lastAmount = amount;
+        lastContainerId = containerId;
+        lastIsReuse = isReuse;
+        lastMaxEpochsToLockFor = maxEpochsToLockFor;
         // Pull tokens from caller (RewardsDistributor)
         rewardToken.transferFrom(msg.sender, address(this), amount);
+        return amount;
     }
 }
 
@@ -147,7 +159,7 @@ contract RewardsDistributorCommon is Test {
         uint256 aliceDiscount,
         uint256 bobClaim,
         uint256 bobDiscount
-    ) internal returns (bytes32 root, bytes32[] memory aliceProofResult, bytes32[] memory bobProofResult) {
+    ) internal view returns (bytes32 root, bytes32[] memory aliceProofResult, bytes32[] memory bobProofResult) {
         bytes32 aliceLeaf = keccak256(bytes.concat(keccak256(abi.encode(ALICE, aliceClaim, aliceDiscount))));
         bytes32 bobLeaf = keccak256(bytes.concat(keccak256(abi.encode(BOB, bobClaim, bobDiscount))));
 

@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import "./AdapterCommonSetup.t.sol";
 
 import {Position} from "@alto/lending/interfaces/IMarket.sol";
+import {StakingPosition, StakingContainer} from "@alto/staking/interfaces/IAltoStaking.sol";
 import {IAuth} from "@alto/utils/interfaces/IAuth.sol";
 
 import {ErrorsLib} from "@morpho-org/bundler3/libraries/ErrorsLib.sol";
@@ -39,6 +40,18 @@ contract AltoAdapterTest is AdapterCommonSetup {
         collateralToken.approve(address(market), type(uint256).max);
         borrowToken.approve(address(altoAdapter), type(uint256).max);
         collateralToken.approve(address(altoAdapter), type(uint256).max);
+        vm.stopPrank();
+    }
+
+    function approvePaymentTokenToAdapter(address user) internal {
+        vm.startPrank(user);
+        paymentToken.approve(address(altoAdapter), type(uint256).max);
+        vm.stopPrank();
+    }
+
+    function approveRewardTokenToAdapter(address user) internal {
+        vm.startPrank(user);
+        rewardToken.approve(address(altoAdapter), type(uint256).max);
         vm.stopPrank();
     }
 
@@ -1087,5 +1100,173 @@ contract AltoAdapterTest is AdapterCommonSetup {
     function testConstructorRevertWhenWNativeIsZeroAddress() public {
         vm.expectRevert(ErrorsLib.ZeroAddress.selector);
         new AltoAdapter(address(bundler3), address(0));
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        REWARDS DISTRIBUTOR TESTS
+    //////////////////////////////////////////////////////////////*/
+
+    function testClaimRewardTokens(uint256 privateKey, uint256 amount) public {
+        address user;
+        privateKey = _boundPrivateKey(privateKey);
+        user = vm.addr(privateKey);
+        approvePaymentTokenToAdapter(user);
+
+        amount = bound(amount, MIN_AMOUNT, USER_AVAILABLE);
+
+        // Fund user with payment tokens for purchasing rewards
+        deal(address(paymentToken), user, 100000 ether);
+
+        // Create a merkle tree for this specific user
+        bytes32[] memory proof = _createMerkleProofForUser(user);
+
+        // Transfer payment tokens to adapter first
+        bundle.push(_erc20TransferFrom(address(paymentToken), 100000 ether));
+        // Use signature-based authorization
+        bundle.push(
+            _rewardsDistributorSetAuthorizationWithSig(
+                rewardsDistributor, privateKey, true, 0, false, address(altoAdapter)
+            )
+        );
+        bundle.push(
+            _rewardsDistributorClaimRewardTokens(
+                rewardsDistributor, USER_AVAILABLE, proof, amount, BASE_DISCOUNT, address(paymentToken), false, 0
+            )
+        );
+
+        vm.prank(user);
+        bundler3.multicall(bundle);
+
+        // Verify the user received reward tokens
+        assertGt(rewardToken.balanceOf(user), 0, "User should have received reward tokens");
+    }
+
+    function testClaimRewardTokensWithStaking(uint256 privateKey, uint256 amount) public {
+        address user;
+        privateKey = _boundPrivateKey(privateKey);
+        user = vm.addr(privateKey);
+        approvePaymentTokenToAdapter(user);
+
+        amount = bound(amount, MIN_AMOUNT, USER_AVAILABLE);
+
+        // Fund user with payment tokens for purchasing rewards
+        deal(address(paymentToken), user, 100000 ether);
+
+        // Create a merkle tree for this specific user
+        bytes32[] memory proof = _createMerkleProofForUser(user);
+
+        // Transfer payment tokens to adapter first
+        bundle.push(_erc20TransferFrom(address(paymentToken), 100000 ether));
+        // Use signature-based authorization
+        bundle.push(
+            _rewardsDistributorSetAuthorizationWithSig(
+                rewardsDistributor, privateKey, true, 0, false, address(altoAdapter)
+            )
+        );
+        bundle.push(
+            _stakingSetAuthorizationWithSig(stakingContract, privateKey, true, 0, false, address(rewardsDistributor))
+        );
+        bundle.push(
+            _rewardsDistributorClaimRewardTokens(
+                rewardsDistributor, USER_AVAILABLE, proof, amount, BASE_DISCOUNT, address(paymentToken), true, 1000
+            )
+        );
+
+        vm.prank(user);
+        bundler3.multicall(bundle);
+
+        // Verify the user has not received reward tokens
+        assertEq(rewardToken.balanceOf(user), 0, "User should have received reward tokens");
+
+        // Verify that staking contract has received the reward tokens
+        assertEq(
+            rewardToken.balanceOf(address(stakingContract)),
+            amount,
+            "Staking contract should have received the reward tokens"
+        );
+
+        // Verify that staking position was created
+        uint256 containerId = stakingContract.maxMultiplierStakingContainerId();
+        StakingContainer memory container = stakingContract.stakingContainerById(containerId);
+        assertEq(container.multiplier, 0.6 ether, "Container multiplier should be the max multiplier");
+        assertEq(containerId, 1, "Container id should be the max multiplier container");
+        StakingPosition memory position = stakingContract.getPosition(user, containerId);
+        assertEq(position.amountLocked, amount, "Position should have the correct amount locked");
+    }
+
+    function _createMerkleProofForUser(address user) internal returns (bytes32[] memory) {
+        // Create a simple single-leaf merkle tree for this specific user
+        bytes32 userLeaf = keccak256(bytes.concat(keccak256(abi.encode(user, USER_AVAILABLE, BASE_DISCOUNT))));
+
+        // Update the rewards distributor with this new root
+        vm.startPrank(OWNER);
+        AltoRewardsDistributor(address(rewardsDistributor)).submitNewPendingRoot(userLeaf, bytes32(0));
+        AltoRewardsDistributor(address(rewardsDistributor)).acceptPendingRoot(userLeaf);
+        vm.stopPrank();
+
+        // Return empty proof for single-leaf tree
+        bytes32[] memory emptyProof = new bytes32[](0);
+        return emptyProof;
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        STAKING TESTS
+    //////////////////////////////////////////////////////////////*/
+
+    function testStakingLock(uint256 privateKey, uint256 amount) public {
+        address user;
+        privateKey = _boundPrivateKey(privateKey);
+        user = vm.addr(privateKey);
+        approveRewardTokenToAdapter(user);
+
+        amount = bound(amount, MIN_AMOUNT, MAX_AMOUNT);
+
+        // Fund user with payment tokens for purchasing rewards
+        deal(address(rewardToken), user, amount);
+
+        bundle.push(_erc20TransferFrom(address(rewardToken), amount));
+        bundle.push(_stakingSetAuthorizationWithSig(stakingContract, privateKey, true, 0, false, address(altoAdapter)));
+        bundle.push(_stakingLock(stakingContract, amount, 1, false, 1000));
+
+        vm.prank(user);
+        bundler3.multicall(bundle);
+
+        // Verify that staking position was created
+        StakingPosition memory position = stakingContract.getPosition(user, 1);
+        assertEq(position.amountLocked, amount, "Position should have the correct amount locked");
+    }
+
+    function testStakingUnlock(uint256 privateKey, uint256 amount) public {
+        address user;
+        privateKey = _boundPrivateKey(privateKey);
+        user = vm.addr(privateKey);
+        approveRewardTokenToAdapter(user);
+
+        amount = bound(amount, MIN_AMOUNT, MAX_AMOUNT);
+
+        // Fund user with payment tokens for purchasing rewards
+        deal(address(rewardToken), user, amount);
+
+        bundle.push(_erc20TransferFrom(address(rewardToken), amount));
+        bundle.push(_stakingSetAuthorizationWithSig(stakingContract, privateKey, true, 0, false, address(altoAdapter)));
+        bundle.push(_stakingLock(stakingContract, amount, 1, false, 1000));
+
+        vm.prank(user);
+        bundler3.multicall(bundle);
+
+        delete bundle;
+
+        StakingPosition memory positionBefore = stakingContract.getPosition(user, 1);
+        vm.warp(positionBefore.expiryTimestamp + 1);
+
+        bundle.push(_stakingUnlock(stakingContract, user, 1));
+        vm.prank(user);
+        bundler3.multicall(bundle);
+
+        // Verify that staking position was created
+        StakingPosition memory position = stakingContract.getPosition(user, 1);
+        assertEq(position.amountLocked, 0, "Position should have the correct amount locked");
+        assertEq(position.expiryTimestamp, 0, "Position should have the correct expiry timestamp");
+        assertEq(position.lockedTimestamp, 0, "Position should have the correct locked timestamp");
     }
 }
