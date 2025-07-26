@@ -2,6 +2,8 @@
 pragma solidity ^0.8.28;
 
 import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
+import {IRewardsDistributor} from "@alto/rewards/interfaces/IRewardsDistributor.sol";
+import {IAltoStaking} from "@alto/staking/interfaces/IAltoStaking.sol";
 
 import {CoreAdapter, Address} from "@morpho-org/bundler3/adapters/CoreAdapter.sol";
 import {IWNative} from "@morpho-org/bundler3/interfaces/IWNative.sol";
@@ -216,5 +218,52 @@ contract AltoAdapter is CoreAdapter {
 
         WRAPPED_NATIVE.withdraw(amount);
         if (receiver != address(this)) Address.sendValue(payable(receiver), amount);
+    }
+
+    /* REWARDS ACTIONS */
+
+    function rewardsDistributorClaimRewardTokens(
+        IRewardsDistributor rewardsDistributor,
+        uint256 totalRewardsForUser,
+        bytes32[] calldata proof,
+        uint256 rewardsPurchaseAmount,
+        uint256 discount,
+        address paymentToken,
+        bool lockPurchasedRewards,
+        uint256 maxEpochsToLockFor
+    ) external onlyBundler3 {
+        // AltoRewardsDistributor's allowance is not reset as it is trusted.
+        SafeERC20.forceApprove(IERC20(paymentToken), address(rewardsDistributor), type(uint256).max);
+
+        rewardsDistributor.claimRewardTokens(
+            totalRewardsForUser,
+            proof,
+            rewardsPurchaseAmount,
+            discount,
+            paymentToken,
+            lockPurchasedRewards,
+            maxEpochsToLockFor,
+            initiator()
+        );
+    }
+
+    /* STAKING ACTIONS */
+
+    function stakingLock(
+        IAltoStaking staking,
+        uint256 amount,
+        uint256 containerId,
+        bool isReuse,
+        uint256 maxEpochsToLockFor
+    ) external onlyBundler3 {
+        if (!isReuse) {
+            // AltoStaking's allowance is not reset as it is trusted.
+            SafeERC20.forceApprove(IERC20(staking.lockToken()), address(staking), type(uint256).max);
+        }
+        staking.lock(initiator(), amount, containerId, isReuse, maxEpochsToLockFor);
+    }
+
+    function stakingUnlock(IAltoStaking staking, address receiver, uint256 containerId) external onlyBundler3 {
+        staking.unlock(initiator(), receiver, containerId);
     }
 }

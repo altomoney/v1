@@ -5,6 +5,12 @@ import {AltoAdapter} from "@alto/utils/AltoAdapter.sol";
 import {IMarket, LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {MarketInstance} from "./MarketInstance.sol";
+import {RewardsDistributorInstance} from "./RewardsDistributorInstance.sol";
+import {StakingInstance} from "./StakingInstance.sol";
+import {IRewardsDistributor} from "@alto/rewards/interfaces/IRewardsDistributor.sol";
+import {AltoRewardsDistributor} from "@alto/rewards/AltoRewardsDistributor.sol";
+import {IAltoStaking, Container} from "@alto/staking/interfaces/IAltoStaking.sol";
+import {MinMaxEpochs} from "@alto/staking/interfaces/ITVLWeightedContainers.sol";
 
 import {AdapterCommon} from "./AdapterCommon.t.sol";
 import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
@@ -39,6 +45,17 @@ abstract contract AdapterCommonSetup is AdapterCommon {
 
     uint256 internal constant LTV = 0.75 ether;
 
+    IRewardsDistributor internal rewardsDistributor;
+    ERC20Mock internal rewardToken;
+    ERC20Mock internal paymentToken;
+
+    IAltoStaking internal stakingContract;
+
+    // Constants for reward testing
+    uint256 public constant USER_AVAILABLE = 1000 ether;
+    uint256 public constant BASE_DISCOUNT = 0.25 ether; // 25%
+    uint256 public constant LOCK_DISCOUNT = 0.15 ether; // 15%
+
     function setUp() public virtual override {
         super.setUp();
 
@@ -47,7 +64,16 @@ abstract contract AdapterCommonSetup is AdapterCommon {
         collateralToken = new ERC20Mock("collateral", "C");
         vm.label(address(collateralToken), "collateralToken");
 
+        rewardToken = new ERC20Mock("reward", "R");
+        vm.label(address(rewardToken), "rewardToken");
+        paymentToken = new ERC20Mock("payment", "P");
+        vm.label(address(paymentToken), "paymentToken");
+
         vm.startPrank(OWNER);
+
+        _setupStakingContract();
+        _setupRewardsDistributor();
+
         swapper = new SwapperSimpleMock(address(OWNER));
         leverage = new AltoLeverage(address(swapper), address(OWNER));
 
@@ -144,6 +170,63 @@ abstract contract AdapterCommonSetup is AdapterCommon {
         vm.prank(USER);
         // So tests can borrow/withdraw on behalf of USER without pranking it.
         market.setAuthorization(address(this), true);
+    }
+
+    function _setupStakingContract() internal {
+        Container[] memory containers = new Container[](2);
+        containers[0] = Container({
+            growthRate: MinMaxEpochs({min: 1, max: 2}),
+            decayRate: MinMaxEpochs({min: 1, max: 2}),
+            duration: MinMaxEpochs({min: 2, max: 12}),
+            maxRateDifferenceEpochs: 10,
+            currentDurationEpochs: 0,
+            isActive: false
+        });
+        containers[1] = Container({
+            growthRate: MinMaxEpochs({min: 1, max: 2}),
+            decayRate: MinMaxEpochs({min: 1, max: 2}),
+            duration: MinMaxEpochs({min: 1, max: 8}),
+            maxRateDifferenceEpochs: 4,
+            currentDurationEpochs: 0,
+            isActive: false
+        });
+
+        uint256[] memory multipliers = new uint256[](2);
+        multipliers[0] = 0.6 ether;
+        multipliers[1] = 0.3 ether;
+
+        stakingContract = IAltoStaking(
+            address(new StakingInstance(address(rewardToken), address(OWNER), 1 days, containers, multipliers))
+        );
+
+        stakingContract.activateContainer(1);
+        stakingContract.activateContainer(2);
+        stakingContract.startEpoch();
+
+        // tokens are already dealt in _setupRewardsDistributor
+    }
+
+    function _setupRewardsDistributor() internal {
+        rewardsDistributor =
+            IRewardsDistributor(address(new RewardsDistributorInstance(address(OWNER), 1 days, address(rewardToken))));
+
+        // Setup payment token oracle
+        AltoRewardsDistributor(address(rewardsDistributor)).setPaymentToken(address(paymentToken), address(oracle));
+
+        // Setup reward token USD oracle
+        AltoRewardsDistributor(address(rewardsDistributor)).setRewardTokenUsdOracle(address(oracle));
+
+        // Setup lock bonus discount
+        AltoRewardsDistributor(address(rewardsDistributor)).setLockBonusDiscount(LOCK_DISCOUNT);
+        AltoRewardsDistributor(address(rewardsDistributor)).setLockContract(address(stakingContract));
+
+        // Setup a dummy merkle root (will be replaced by individual tests)
+        bytes32 dummyRoot = keccak256("dummy_root");
+        AltoRewardsDistributor(address(rewardsDistributor)).submitNewPendingRoot(dummyRoot, bytes32(0));
+        AltoRewardsDistributor(address(rewardsDistributor)).acceptPendingRoot(dummyRoot);
+
+        // Fund distributor with reward tokens
+        deal(address(rewardToken), address(rewardsDistributor), 10000 ether);
     }
 
     function _marketPrepareLeverageData(uint256 minAmountOut, bytes memory swapData)

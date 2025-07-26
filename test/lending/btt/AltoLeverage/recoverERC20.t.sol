@@ -57,6 +57,7 @@ contract RecoverERC20Test is AltoLeverageBTTTest {
     function testFuzz_RecoverTokens(uint256 amount, address recipient) external givenCallerIsOwner {
         vm.assume(amount <= borrowToken.balanceOf(address(leverage)));
         vm.assume(recipient != address(0));
+        vm.assume(recipient != address(leverage));
 
         uint256 recipientBalanceBefore = borrowToken.balanceOf(recipient);
         uint256 leverageBalanceBefore = borrowToken.balanceOf(address(leverage));

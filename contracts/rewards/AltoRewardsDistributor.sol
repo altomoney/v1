@@ -3,13 +3,14 @@ pragma solidity ^0.8.0;
 
 import {
     IRewardsDistributorStaticTypes,
-    ILock,
     PaymentToken,
     RewardToken,
     IRewardsDistributorBase
 } from "@alto/rewards/interfaces/IRewardsDistributor.sol";
 import {MerkleRootManager, PendingMerkleRoot} from "@alto/rewards/MerkleRootManager.sol";
 import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
+
+import {IAltoStakingBase} from "@alto/staking/interfaces/IAltoStaking.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -92,6 +93,7 @@ contract AltoRewardsDistributor is IRewardsDistributorStaticTypes, MerkleRootMan
         uint256 discount,
         address paymentToken,
         bool lockPurchasedRewards,
+        uint256 maxEpochsToLockFor,
         address onBehalf
     ) external whenNotPaused returns (uint256 amount) {
         if (!_isSenderAuthorized(onBehalf)) {
@@ -165,7 +167,13 @@ contract AltoRewardsDistributor is IRewardsDistributorStaticTypes, MerkleRootMan
         // Lock or transfer reward tokens
         if (lockPurchasedRewards) {
             IERC20(REWARD_TOKEN.token).forceApprove(lockContract, rewardsPurchaseAmount);
-            ILock(lockContract).lock(rewardsPurchaseAmount, onBehalf);
+            IAltoStakingBase(lockContract).lock(
+                onBehalf,
+                rewardsPurchaseAmount,
+                IAltoStakingBase(lockContract).maxMultiplierStakingContainerId(),
+                false,
+                maxEpochsToLockFor
+            );
         } else {
             IERC20(REWARD_TOKEN.token).safeTransfer(onBehalf, rewardsPurchaseAmount);
         }
@@ -294,7 +302,11 @@ contract AltoRewardsDistributor is IRewardsDistributorStaticTypes, MerkleRootMan
     }
 
     /// @inheritdoc IPausable
-    function setPauser(address pauser, bytes32 pauseType, bool status) external override(Pausable) onlyOwner {
+    function setPauser(address pauser, bytes32 pauseType, bool status)
+        external
+        override(Pausable, IPausable)
+        onlyOwner
+    {
         _setPauser(pauser, pauseType, status);
     }
 }

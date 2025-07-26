@@ -27,6 +27,7 @@ interface IAltoStakingErrors {
     error AltoStakingUnauthorized();
     error AltoStakingContainerDeprecated();
     error AltoStakingNoPosition();
+    error AltoStakingTryingToLockForTooManyEpochs();
     error AltoStakingPositionNotExpired();
     error AltoStakingNotPausedForEmergencySweep();
 }
@@ -50,12 +51,18 @@ interface IAltoStakingEvents {
     event ContainerDeprecate(uint256 indexed containerId);
 
     event ContainerMultiplierUpdated(uint256 indexed containerId, uint256 multiplier);
+
+    event MaxMultiplierStakingContainerIdUpdated(uint256 indexed containerId, uint256 multiplier);
 }
 
 interface IAltoStakingBase is ITVLWeightedContainers, IAltoStakingErrors, IAltoStakingEvents, IAuth, IPausable {
     /// @notice The address of the lock token.
     /// @dev This token is trusted and does not need any reentrancy protection.
     function lockToken() external view returns (address);
+
+    /// @notice The id of the container with the highest multiplier.
+    /// @dev This is used for locking in the max multiplier container during AltoRewardsDistributor.claimRewardTokens.
+    function maxMultiplierStakingContainerId() external view returns (uint256);
 
     /// @notice Get the votes of an account at current time.
     /// @param account The account of the lock position owner.
@@ -72,8 +79,12 @@ interface IAltoStakingBase is ITVLWeightedContainers, IAltoStakingErrors, IAltoS
     /// @param containerId The id of the container to lock the tokens into.
     /// @param isReuse Whether to reuse expired or non-expired position. Setting this to true will not create a new position,
     /// but will update the existing position's expiry timestamp if it exists.
+    /// @param maxEpochsToLockFor The maximum number of epochs to lock for. Useful when max epochs are updated
+    /// during UI interaction and UI shows an old number of epochs to lock for.
     /// @return amount The amount of lock tokens locked.
-    function lock(address onBehalf, uint256 amount, uint256 containerId, bool isReuse) external returns (uint256);
+    function lock(address onBehalf, uint256 amount, uint256 containerId, bool isReuse, uint256 maxEpochsToLockFor)
+        external
+        returns (uint256);
 
     /// @notice Unlocks all tokens from a container and sends them to the receiver.
     /// @param onBehalf The address of the user who is the owner of the stake position.

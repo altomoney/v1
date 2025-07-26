@@ -1,0 +1,32 @@
+AltoStaking::Constructor()
+├── given invalid inputs
+│   ├── when lockToken is zero address
+│   │   └── it should revert
+│   ├── when owner is zero address
+│   │   └── it should revert
+│   ├── when epochDuration is zero
+│   │   └── it should revert
+│   ├── when containers length does not match multipliers length
+│   │   └── it should revert
+│   ├── when container has invalid parameters
+│   │   └── it should revert
+│   ├── when multiplier is zero
+│   │   └── it should revert
+│   └── when multiplier is greater than MATH_PRECISION
+│       └── it should revert
+└── given valid inputs
+    ├── when no containers provided
+    │   ├── it should set lockToken correctly
+    │   ├── it should set owner correctly
+    │   ├── it should set epoch duration correctly
+    │   ├── it should initialize with zero containers
+    │   └── it should emit EpochDurationSet event
+    └── when valid containers provided
+        ├── it should set lockToken correctly
+        ├── it should set owner correctly
+        ├── it should set epoch duration correctly
+        ├── it should add all containers with correct IDs
+        ├── it should set container multipliers correctly
+        ├── it should emit EpochDurationSet event
+        ├── it should emit ContainerAdded events
+        └── it should emit ContainerMultiplierUpdated events 
