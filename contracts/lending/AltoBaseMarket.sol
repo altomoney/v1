@@ -341,8 +341,9 @@ abstract contract AltoBaseMarket is
         totalSupply.assets += assets.toUint128();
         totalSupply.shares += shares.toUint128();
 
-        _sendBorrowToken(msg.sender, address(this), assets);
         position[onBehalf].supplyShares += shares.toUint128();
+
+        _sendBorrowToken(msg.sender, address(this), assets);
 
         emit AddSupply(msg.sender, onBehalf, assets, shares);
 
@@ -374,8 +375,9 @@ abstract contract AltoBaseMarket is
         totalSupply.assets -= assets.toUint128();
         totalSupply.shares -= shares.toUint128();
 
-        _sendBorrowToken(address(this), receiver, assets);
         position[onBehalf].supplyShares -= shares.toUint128();
+
+        _sendBorrowToken(address(this), receiver, assets);
 
         emit RemoveSupply(msg.sender, onBehalf, receiver, assets, shares);
 
@@ -536,8 +538,9 @@ abstract contract AltoBaseMarket is
         totalBorrowed.assets -= assets.toUint128();
         totalBorrowed.shares -= shares.toUint128();
 
-        _sendBorrowToken(msg.sender, address(this), assets);
         position[onBehalf].borrowShares -= shares.toUint128();
+
+        _sendBorrowToken(msg.sender, address(this), assets);
 
         emit Repay(msg.sender, onBehalf, assets, shares);
 
