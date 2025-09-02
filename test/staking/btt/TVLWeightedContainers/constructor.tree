@@ -2,32 +2,7 @@ TVLWeightedContainers::Constructor()
 ├── when epochDuration is zero
 │   └── it should revert
 ├── given invalid initial containers
-│   ├── when growthRate min is greater than max
-│   │   └── it should revert
-│   ├── when growthRate min is zero
-│   │   └── it should revert
-│   ├── when growthRate max is zero
-│   │   └── it should revert
-│   ├── when decayRate min is greater than max
-│   │   └── it should revert
-│   ├── when decayRate min is zero
-│   │   └── it should revert
-│   ├── when decayRate max is zero
-│   │   └── it should revert
-│   ├── when duration min is greater than max
-│   │   └── it should revert
-│   ├── when duration min is zero
-│   │   └── it should revert
-│   ├── when duration max is zero
-│   │   └── it should revert
-│   ├── when maxRateDifferenceEpochs is greater than duration max
-│   │   └── it should revert
-│   ├── when maxRateDifferenceEpochs is zero
-│   │   └── it should revert
-│   ├── when currentDurationEpochs is not zero
-│   │   └── it should revert
-│   └── when isActive is true
-│       └── it should revert
+│   └── it should inherit all validation tests from TVLWeightedContainersValidation
 └── given valid inputs
     ├── when no initial containers provided
     │   ├── it should set EPOCH_DURATION

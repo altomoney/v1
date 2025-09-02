@@ -71,6 +71,17 @@ contract TVLWeightedContainersCommon is Test {
     // Default container parameters
     Container public defaultContainer;
 
+    /// @notice Struct to hold container parameters for easier readability
+    struct ContainerParams {
+        uint24 growthMin;
+        uint24 growthMax;
+        uint24 decayMin;
+        uint24 decayMax;
+        uint24 durationMin;
+        uint24 durationMax;
+        uint24 maxRateDifference;
+    }
+
     function setUp() public virtual {
         vm.warp(1000000); // Set a reasonable starting timestamp
 
@@ -85,21 +96,13 @@ contract TVLWeightedContainersCommon is Test {
         });
     }
 
-    function _createContainerWithCustomParams(
-        uint24 growthMin,
-        uint24 growthMax,
-        uint24 decayMin,
-        uint24 decayMax,
-        uint24 durationMin,
-        uint24 durationMax,
-        uint24 maxRateDifference
-    ) internal pure returns (Container memory) {
+    function _createContainerWithCustomParams(ContainerParams memory params) internal pure returns (Container memory) {
         return Container({
-            growthRate: MinMaxEpochs({min: growthMin, max: growthMax}),
-            decayRate: MinMaxEpochs({min: decayMin, max: decayMax}),
-            duration: MinMaxEpochs({min: durationMin, max: durationMax}),
+            growthRate: MinMaxEpochs({min: params.growthMin, max: params.growthMax}),
+            decayRate: MinMaxEpochs({min: params.decayMin, max: params.decayMax}),
+            duration: MinMaxEpochs({min: params.durationMin, max: params.durationMax}),
             isActive: false,
-            maxRateDifferenceEpochs: maxRateDifference,
+            maxRateDifferenceEpochs: params.maxRateDifference,
             currentDurationEpochs: 0
         });
     }

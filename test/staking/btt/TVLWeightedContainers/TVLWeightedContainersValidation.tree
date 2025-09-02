@@ -1,0 +1,29 @@
+TVLWeightedContainers::_validateContainer()
+└── given invalid container parameters
+    ├── when growthRate min is greater than max
+    │   └── it should revert
+    ├── when growthRate min is zero
+    │   └── it should revert
+    ├── when growthRate max is zero
+    │   └── it should revert
+    ├── when decayRate min is greater than max
+    │   └── it should revert
+    ├── when decayRate min is zero
+    │   └── it should revert
+    ├── when decayRate max is zero
+    │   └── it should revert
+    ├── when duration min is greater than max
+    │   └── it should revert
+    ├── when duration min is zero
+    │   └── it should revert
+    ├── when duration max is zero
+    │   └── it should revert
+    ├── when maxRateDifferenceEpochs is greater than duration max
+    │   └── it should revert
+    ├── when maxRateDifferenceEpochs is zero
+    │   └── it should revert
+    ├── when currentDurationEpochs is not zero
+    │   └── it should revert
+    └── when isActive is true
+        └── it should revert
+

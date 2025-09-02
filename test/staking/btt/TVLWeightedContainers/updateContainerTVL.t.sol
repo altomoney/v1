@@ -26,7 +26,7 @@ contract TVLWeightedContainersUpdateContainerTVL is TVLWeightedContainersCommon 
 
     function test_RevertGiven_CurrentEpochAlreadyFinished() external {
         // Advance time to move to epoch 1
-        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+        vm.warp(containers.initializedAtTimestamp() + EPOCH_DURATION + 1);
 
         // it should revert
         vm.expectRevert(ITVLWeightedContainersErrors.TVLWeightedContainersCurrentEpochAlreadyFinished.selector);
@@ -39,7 +39,7 @@ contract TVLWeightedContainersUpdateContainerTVL is TVLWeightedContainersCommon 
 
     function test_RevertWhen_AddingTVLAndFromEpochIsNotCurrentEpoch() external givenInvalidInputs {
         // Advance time to epoch 1
-        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+        vm.warp(containers.initializedAtTimestamp() + EPOCH_DURATION + 1);
         containers.advanceEpoch(1);
 
         // Try to add TVL for epoch 0 when current epoch is 1
@@ -48,19 +48,27 @@ contract TVLWeightedContainersUpdateContainerTVL is TVLWeightedContainersCommon 
     }
 
     function test_RevertWhen_FromEpochIsGreaterThanToEpoch() external givenInvalidInputs {
+        vm.warp(containers.initializedAtTimestamp() + EPOCH_DURATION + 1);
+        containers.advanceEpoch(1);
+
+        uint256 nextEpochToProcess = containers.nextEpochToProcess();
+        assertNotEq(nextEpochToProcess, 0);
+
         // it should revert
         vm.expectRevert(ITVLWeightedContainersErrors.TVLWeightedContainersInvalidInput.selector);
-        containers.updateContainerTVL(1, 1000, 2, 1, true);
+        containers.updateContainerTVL(1, 1000, nextEpochToProcess, nextEpochToProcess - 1, true);
     }
 
     function test_RevertWhen_FromEpochIsLessThanNextEpochToProcess() external givenInvalidInputs {
         // Advance time and process epoch 0
-        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+        vm.warp(containers.initializedAtTimestamp() + EPOCH_DURATION + 1);
         containers.advanceEpoch(1);
+
+        uint256 nextEpochToProcess = containers.nextEpochToProcess();
 
         // Now nextEpochToProcess is 1, trying to update epoch 0 should fail
         vm.expectRevert(ITVLWeightedContainersErrors.TVLWeightedContainersInvalidInput.selector);
-        containers.updateContainerTVL(1, 1000, 0, 1, false);
+        containers.updateContainerTVL(1, 1000, nextEpochToProcess - 1, 1, false);
     }
 
     function test_RevertWhen_ContainerIsNotActive() external givenInvalidInputs {
