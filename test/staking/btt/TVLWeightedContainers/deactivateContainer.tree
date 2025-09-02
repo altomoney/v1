@@ -1,0 +1,20 @@
+TVLWeightedContainers::deactivateContainer()
+├── when container is not active
+│   └── it should revert with TVLWeightedContainersInvalidInput
+├── when container ID does not exist in active list
+│   └── it should revert with TVLWeightedContainersInvalidInput
+├── when container is active
+│   ├── it should set container isActive to false
+│   ├── it should remove container from activeContainerIds array
+│   └── it should emit ContainerDeactivated event
+├── when testing array integrity with multiple containers
+│   ├── when deactivating middle container
+│   │   └── it should maintain array integrity and keep other containers active
+│   ├── when deactivating first container in array
+│   │   └── it should remove first container and maintain others
+│   ├── when deactivating last container in array
+│   │   └── it should remove last container and maintain others
+│   └── when deactivating all containers
+│       └── it should result in empty active container array
+└── when container is already deactivated
+    └── it should revert with TVLWeightedContainersInvalidInput

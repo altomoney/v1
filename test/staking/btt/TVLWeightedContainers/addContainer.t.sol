@@ -2,129 +2,22 @@
 pragma solidity ^0.8.22;
 
 import {TVLWeightedContainersCommon} from "./TVLWeightedContainersCommon.t.sol";
+import {TVLWeightedContainersValidation} from "./TVLWeightedContainersValidation.t.sol";
 import {
     Container,
     ITVLWeightedContainersErrors,
     ITVLWeightedContainersEvents
 } from "@alto/staking/interfaces/ITVLWeightedContainers.sol";
 
-contract TVLWeightedContainersAddContainer is TVLWeightedContainersCommon {
+contract TVLWeightedContainersAddContainer is TVLWeightedContainersValidation {
     function setUp() public override {
         super.setUp();
         _deployWithoutContainers();
     }
 
-    modifier givenInvalidContainerParameters() {
-        _;
-    }
-
-    function test_RevertWhen_GrowthRateMinIsGreaterThanMax() external givenInvalidContainerParameters {
-        Container memory invalidContainer = _createContainerWithCustomParams(5, 3, 1, 3, 10, 100, 50);
-
-        // it should revert
-        vm.expectRevert(ITVLWeightedContainersErrors.TVLWeightedContainersInvalidInput.selector);
-        containers.addContainer(invalidContainer);
-    }
-
-    function test_RevertWhen_GrowthRateMinIsZero() external givenInvalidContainerParameters {
-        Container memory invalidContainer = _createContainerWithCustomParams(0, 3, 1, 3, 10, 100, 50);
-
-        // it should revert
-        vm.expectRevert(ITVLWeightedContainersErrors.TVLWeightedContainersInvalidInput.selector);
-        containers.addContainer(invalidContainer);
-    }
-
-    function test_RevertWhen_GrowthRateMaxIsZero() external givenInvalidContainerParameters {
-        Container memory invalidContainer = _createContainerWithCustomParams(1, 0, 1, 3, 10, 100, 50);
-
-        // it should revert
-        vm.expectRevert(ITVLWeightedContainersErrors.TVLWeightedContainersInvalidInput.selector);
-        containers.addContainer(invalidContainer);
-    }
-
-    function test_RevertWhen_DecayRateMinIsGreaterThanMax() external givenInvalidContainerParameters {
-        Container memory invalidContainer = _createContainerWithCustomParams(1, 3, 5, 3, 10, 100, 50);
-
-        // it should revert
-        vm.expectRevert(ITVLWeightedContainersErrors.TVLWeightedContainersInvalidInput.selector);
-        containers.addContainer(invalidContainer);
-    }
-
-    function test_RevertWhen_DecayRateMinIsZero() external givenInvalidContainerParameters {
-        Container memory invalidContainer = _createContainerWithCustomParams(1, 3, 0, 3, 10, 100, 50);
-
-        // it should revert
-        vm.expectRevert(ITVLWeightedContainersErrors.TVLWeightedContainersInvalidInput.selector);
-        containers.addContainer(invalidContainer);
-    }
-
-    function test_RevertWhen_DecayRateMaxIsZero() external givenInvalidContainerParameters {
-        Container memory invalidContainer = _createContainerWithCustomParams(1, 3, 1, 0, 10, 100, 50);
-
-        // it should revert
-        vm.expectRevert(ITVLWeightedContainersErrors.TVLWeightedContainersInvalidInput.selector);
-        containers.addContainer(invalidContainer);
-    }
-
-    function test_RevertWhen_DurationMinIsGreaterThanMax() external givenInvalidContainerParameters {
-        Container memory invalidContainer = _createContainerWithCustomParams(1, 3, 1, 3, 100, 10, 50);
-
-        // it should revert
-        vm.expectRevert(ITVLWeightedContainersErrors.TVLWeightedContainersInvalidInput.selector);
-        containers.addContainer(invalidContainer);
-    }
-
-    function test_RevertWhen_DurationMinIsZero() external givenInvalidContainerParameters {
-        Container memory invalidContainer = _createContainerWithCustomParams(1, 3, 1, 3, 0, 100, 50);
-
-        // it should revert
-        vm.expectRevert(ITVLWeightedContainersErrors.TVLWeightedContainersInvalidInput.selector);
-        containers.addContainer(invalidContainer);
-    }
-
-    function test_RevertWhen_DurationMaxIsZero() external givenInvalidContainerParameters {
-        Container memory invalidContainer = _createContainerWithCustomParams(1, 3, 1, 3, 10, 0, 50);
-
-        // it should revert
-        vm.expectRevert(ITVLWeightedContainersErrors.TVLWeightedContainersInvalidInput.selector);
-        containers.addContainer(invalidContainer);
-    }
-
-    function test_RevertWhen_MaxRateDifferenceEpochsIsGreaterThanDurationMax()
-        external
-        givenInvalidContainerParameters
-    {
-        Container memory invalidContainer = _createContainerWithCustomParams(1, 3, 1, 3, 10, 100, 150);
-
-        // it should revert
-        vm.expectRevert(ITVLWeightedContainersErrors.TVLWeightedContainersInvalidInput.selector);
-        containers.addContainer(invalidContainer);
-    }
-
-    function test_RevertWhen_MaxRateDifferenceEpochsIsZero() external givenInvalidContainerParameters {
-        Container memory invalidContainer = _createContainerWithCustomParams(1, 3, 1, 3, 10, 100, 0);
-
-        // it should revert
-        vm.expectRevert(ITVLWeightedContainersErrors.TVLWeightedContainersInvalidInput.selector);
-        containers.addContainer(invalidContainer);
-    }
-
-    function test_RevertWhen_CurrentDurationEpochsIsNotZero() external givenInvalidContainerParameters {
-        Container memory invalidContainer = defaultContainer;
-        invalidContainer.currentDurationEpochs = 5;
-
-        // it should revert
-        vm.expectRevert(ITVLWeightedContainersErrors.TVLWeightedContainersInvalidInput.selector);
-        containers.addContainer(invalidContainer);
-    }
-
-    function test_RevertWhen_IsActiveIsTrue() external givenInvalidContainerParameters {
-        Container memory invalidContainer = defaultContainer;
-        invalidContainer.isActive = true;
-
-        // it should revert
-        vm.expectRevert(ITVLWeightedContainersErrors.TVLWeightedContainersInvalidInput.selector);
-        containers.addContainer(invalidContainer);
+    /// @dev Implementation for validation tests - calls addContainer with invalid container
+    function _callFunctionUnderTest(Container memory container) internal override {
+        containers.addContainer(container);
     }
 
     modifier givenValidContainerParameters() {
@@ -168,8 +61,28 @@ contract TVLWeightedContainersAddContainer is TVLWeightedContainersCommon {
     }
 
     function test_AddMultipleContainers() external givenValidContainerParameters {
-        Container memory container2 = _createContainerWithCustomParams(2, 4, 1, 2, 5, 50, 25);
-        Container memory container3 = _createContainerWithCustomParams(1, 6, 2, 5, 8, 80, 40);
+        Container memory container2 = _createContainerWithCustomParams(
+            ContainerParams({
+                growthMin: 2,
+                growthMax: 4,
+                decayMin: 1,
+                decayMax: 2,
+                durationMin: 5,
+                durationMax: 50,
+                maxRateDifference: 25
+            })
+        );
+        Container memory container3 = _createContainerWithCustomParams(
+            ContainerParams({
+                growthMin: 1,
+                growthMax: 6,
+                decayMin: 2,
+                decayMax: 5,
+                durationMin: 8,
+                durationMax: 80,
+                maxRateDifference: 40
+            })
+        );
 
         // Add first container
         uint256 containerId1 = containers.addContainer(defaultContainer);

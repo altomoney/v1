@@ -1,0 +1,16 @@
+TVLWeightedContainers::currentEpoch()
+├── given epoch not started
+│   └── it should revert with TVLWeightedContainersNotStarted
+└── given epoch started
+    ├── when current time equals initialized timestamp
+    │   └── it should return zero
+    ├── when current time is less than one epoch duration
+    │   └── it should return zero
+    ├── when current time spans multiple epochs
+    │   ├── it should return correct epoch number for specific epochs (1, 5, 10, 11)
+    │   └── it should handle partial epochs correctly
+    ├── when testing boundary conditions
+    │   ├── it should return correct epoch exactly at epoch boundary
+    │   └── it should return correct epoch just before next epoch
+    └── when using fuzz testing with random time offsets
+        └── it should calculate epoch correctly for any valid time offset

@@ -272,6 +272,11 @@ abstract contract TVLWeightedContainers is ITVLWeightedContainers {
     function _updateContainer(uint256 _containerId, Container memory container) internal returns (uint256) {
         Container memory containerBefore = containerById[_containerId];
 
+        // check if container exists
+        if (containerBefore.duration.min == 0) {
+            revert TVLWeightedContainersInvalidInput();
+        }
+
         if (
             _isContainerActive(_containerId)
                 && (
@@ -302,6 +307,10 @@ abstract contract TVLWeightedContainers is ITVLWeightedContainers {
     }
 
     function _timestampToEpoch(uint256 timestamp) internal view returns (uint256) {
+        if (initializedAtTimestamp == 0) {
+            revert TVLWeightedContainersNotStarted();
+        }
+
         return (timestamp - initializedAtTimestamp) / EPOCH_DURATION;
     }
 

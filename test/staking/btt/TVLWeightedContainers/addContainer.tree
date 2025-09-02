@@ -1,31 +1,6 @@
 TVLWeightedContainers::addContainer()
 ├── given invalid container parameters
-│   ├── when growthRate min is greater than max
-│   │   └── it should revert
-│   ├── when growthRate min is zero
-│   │   └── it should revert
-│   ├── when growthRate max is zero
-│   │   └── it should revert
-│   ├── when decayRate min is greater than max
-│   │   └── it should revert
-│   ├── when decayRate min is zero
-│   │   └── it should revert
-│   ├── when decayRate max is zero
-│   │   └── it should revert
-│   ├── when duration min is greater than max
-│   │   └── it should revert
-│   ├── when duration min is zero
-│   │   └── it should revert
-│   ├── when duration max is zero
-│   │   └── it should revert
-│   ├── when maxRateDifferenceEpochs is greater than duration max
-│   │   └── it should revert
-│   ├── when maxRateDifferenceEpochs is zero
-│   │   └── it should revert
-│   ├── when currentDurationEpochs is not zero
-│   │   └── it should revert
-│   └── when isActive is true
-│       └── it should revert
+│   └── it should inherit all validation tests from TVLWeightedContainersValidation
 └── given valid container parameters
     ├── it should increment totalContainerCount
     ├── it should assign correct container ID starting from 1
@@ -33,4 +8,8 @@ TVLWeightedContainers::addContainer()
     ├── it should set isActive to false
     ├── it should store container with provided parameters
     ├── it should emit ContainerAdded event
-    └── it should return the container ID 
+    ├── it should return the container ID
+    └── when adding multiple containers
+        ├── it should assign sequential container IDs
+        ├── it should increment totalContainerCount for each
+        └── it should store all containers correctly 

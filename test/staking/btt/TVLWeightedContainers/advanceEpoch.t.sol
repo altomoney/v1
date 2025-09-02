@@ -36,18 +36,20 @@ contract TVLWeightedContainersAdvanceEpoch is TVLWeightedContainersCommon {
 
     modifier givenCurrentEpochFinished() {
         // Move to next epoch
-        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+        vm.warp(containers.initializedAtTimestamp() + EPOCH_DURATION + 1);
         _;
     }
 
     function test_WhenMaxEpochsToProcessIsZero() external givenCurrentEpochFinished {
         // Add some TVL for testing
-        vm.warp(block.timestamp - EPOCH_DURATION - 1); // Go back to epoch 0
+        vm.warp(containers.initializedAtTimestamp()); // Go back to epoch 0
         containers.updateContainerTVL(1, 1000, 0, 1, true);
-        vm.warp(block.timestamp + EPOCH_DURATION + 1); // Return to epoch 1
+        vm.warp(containers.initializedAtTimestamp() + EPOCH_DURATION * 5 + 1); // Return to epoch 1
 
         uint256 oldNextEpoch = containers.nextEpochToProcess();
         uint256 currentEpoch = containers.currentEpoch();
+
+        assertNotEq(oldNextEpoch, currentEpoch);
 
         vm.expectEmit(true, true, true, true);
         emit ITVLWeightedContainersEvents.AdvanceEpoch(oldNextEpoch, currentEpoch);
@@ -61,7 +63,7 @@ contract TVLWeightedContainersAdvanceEpoch is TVLWeightedContainersCommon {
 
     function test_WhenMaxEpochsToProcessIsLimited() external givenCurrentEpochFinished {
         // Move forward multiple epochs
-        vm.warp(block.timestamp + 2 * EPOCH_DURATION);
+        vm.warp(containers.initializedAtTimestamp() + 2 * EPOCH_DURATION);
 
         uint256 oldNextEpoch = containers.nextEpochToProcess();
         uint256 maxEpochs = 1;
@@ -78,11 +80,11 @@ contract TVLWeightedContainersAdvanceEpoch is TVLWeightedContainersCommon {
 
     function test_WhenProcessingEpochsWithContainerTVL() external givenCurrentEpochFinished {
         // Go back to add TVL for epoch 0
-        vm.warp(block.timestamp - EPOCH_DURATION - 1);
+        vm.warp(containers.initializedAtTimestamp());
         containers.updateContainerTVL(1, 1000, 0, 1, true);
 
         // Return to epoch 1 to process
-        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+        vm.warp(containers.initializedAtTimestamp() + EPOCH_DURATION + 1);
 
         Container memory containerBefore = containers.getContainer(1);
 
@@ -91,17 +93,26 @@ contract TVLWeightedContainersAdvanceEpoch is TVLWeightedContainersCommon {
 
         Container memory containerAfter = containers.getContainer(1);
 
-        // Verify the container was processed (duration may have changed based on TVL)
-        // The duration should be between min and max based on processing logic
-        assertTrue(containerAfter.currentDurationEpochs >= containerBefore.duration.min);
-        assertTrue(containerAfter.currentDurationEpochs <= containerBefore.duration.max);
+        // Verify the container was processed
+        // The duration should be greater than the previous duration since this is the only container with TVL
+        assertGt(containerAfter.currentDurationEpochs, containerBefore.currentDurationEpochs);
     }
 
     function test_ComplexScenarioWithMultipleContainers() external givenCurrentEpochFinished {
         // Deploy with multiple containers for more complex testing
         Container[] memory multiContainers = new Container[](2);
         multiContainers[0] = defaultContainer;
-        multiContainers[1] = _createContainerWithCustomParams(2, 6, 1, 4, 5, 50, 25);
+        multiContainers[1] = _createContainerWithCustomParams(
+            ContainerParams({
+                growthMin: 2,
+                growthMax: 6,
+                decayMin: 1,
+                decayMax: 4,
+                durationMin: 5,
+                durationMax: 50,
+                maxRateDifference: 25
+            })
+        );
 
         _deployWithContainers(multiContainers);
         containers.activateContainer(1);
@@ -113,7 +124,10 @@ contract TVLWeightedContainersAdvanceEpoch is TVLWeightedContainersCommon {
         containers.updateContainerTVL(2, 1000, 0, 1, true);
 
         // Move to next epoch
-        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+        vm.warp(containers.initializedAtTimestamp() + EPOCH_DURATION + 1);
+
+        Container memory container1Before = containers.getContainer(1);
+        Container memory container2Before = containers.getContainer(2);
 
         // Process the epoch
         containers.advanceEpoch(1);
@@ -122,11 +136,9 @@ contract TVLWeightedContainersAdvanceEpoch is TVLWeightedContainersCommon {
         Container memory container2After = containers.getContainer(2);
 
         // Verify containers were processed
-        // Container 1 had 75% of TVL (3000/4000), Container 2 had 25% (1000/4000)
-        // Both containers should have valid durations within their ranges
-        assertTrue(container1After.currentDurationEpochs >= container1After.duration.min);
-        assertTrue(container1After.currentDurationEpochs <= container1After.duration.max);
-        assertTrue(container2After.currentDurationEpochs >= container2After.duration.min);
-        assertTrue(container2After.currentDurationEpochs <= container2After.duration.max);
+        // Both containers should have grown as they had 0 TVL in the previous epoch
+        // and had TVL in the current epoch
+        assertGt(container1After.currentDurationEpochs, container1Before.currentDurationEpochs);
+        assertGt(container2After.currentDurationEpochs, container2Before.currentDurationEpochs);
     }
 }

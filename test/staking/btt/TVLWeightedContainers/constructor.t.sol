@@ -2,6 +2,7 @@
 pragma solidity ^0.8.22;
 
 import {TVLWeightedContainersCommon, MockTVLWeightedContainers} from "./TVLWeightedContainersCommon.t.sol";
+import {TVLWeightedContainersValidation} from "./TVLWeightedContainersValidation.t.sol";
 import {
     Container,
     MinMaxEpochs,
@@ -9,149 +10,20 @@ import {
     ITVLWeightedContainersEvents
 } from "@alto/staking/interfaces/ITVLWeightedContainers.sol";
 
-contract TVLWeightedContainersConstructor is TVLWeightedContainersCommon {
+contract TVLWeightedContainersConstructor is TVLWeightedContainersValidation {
+    /// @dev Implementation for validation tests - calls constructor with invalid container
+    function _callFunctionUnderTest(Container memory container) internal override {
+        Container[] memory containers = new Container[](1);
+        containers[0] = container;
+        new MockTVLWeightedContainers(EPOCH_DURATION, containers);
+    }
+
     function test_RevertWhen_EpochDurationIsZero() external {
         Container[] memory emptyContainers = new Container[](0);
 
         // it should revert
         vm.expectRevert(ITVLWeightedContainersErrors.TVLWeightedContainersInvalidInput.selector);
         new MockTVLWeightedContainers(0, emptyContainers);
-    }
-
-    modifier givenInvalidInitialContainers() {
-        _;
-    }
-
-    function test_RevertWhen_GrowthRateMinIsGreaterThanMax() external givenInvalidInitialContainers {
-        Container memory invalidContainer = _createContainerWithCustomParams(5, 3, 1, 3, 10, 100, 50);
-        Container[] memory containers = new Container[](1);
-        containers[0] = invalidContainer;
-
-        // it should revert
-        vm.expectRevert(ITVLWeightedContainersErrors.TVLWeightedContainersInvalidInput.selector);
-        new MockTVLWeightedContainers(EPOCH_DURATION, containers);
-    }
-
-    function test_RevertWhen_GrowthRateMinIsZero() external givenInvalidInitialContainers {
-        Container memory invalidContainer = _createContainerWithCustomParams(0, 3, 1, 3, 10, 100, 50);
-        Container[] memory containers = new Container[](1);
-        containers[0] = invalidContainer;
-
-        // it should revert
-        vm.expectRevert(ITVLWeightedContainersErrors.TVLWeightedContainersInvalidInput.selector);
-        new MockTVLWeightedContainers(EPOCH_DURATION, containers);
-    }
-
-    function test_RevertWhen_GrowthRateMaxIsZero() external givenInvalidInitialContainers {
-        Container memory invalidContainer = _createContainerWithCustomParams(1, 0, 1, 3, 10, 100, 50);
-        Container[] memory containers = new Container[](1);
-        containers[0] = invalidContainer;
-
-        // it should revert
-        vm.expectRevert(ITVLWeightedContainersErrors.TVLWeightedContainersInvalidInput.selector);
-        new MockTVLWeightedContainers(EPOCH_DURATION, containers);
-    }
-
-    function test_RevertWhen_DecayRateMinIsGreaterThanMax() external givenInvalidInitialContainers {
-        Container memory invalidContainer = _createContainerWithCustomParams(1, 3, 5, 3, 10, 100, 50);
-        Container[] memory containers = new Container[](1);
-        containers[0] = invalidContainer;
-
-        // it should revert
-        vm.expectRevert(ITVLWeightedContainersErrors.TVLWeightedContainersInvalidInput.selector);
-        new MockTVLWeightedContainers(EPOCH_DURATION, containers);
-    }
-
-    function test_RevertWhen_DecayRateMinIsZero() external givenInvalidInitialContainers {
-        Container memory invalidContainer = _createContainerWithCustomParams(1, 3, 0, 3, 10, 100, 50);
-        Container[] memory containers = new Container[](1);
-        containers[0] = invalidContainer;
-
-        // it should revert
-        vm.expectRevert(ITVLWeightedContainersErrors.TVLWeightedContainersInvalidInput.selector);
-        new MockTVLWeightedContainers(EPOCH_DURATION, containers);
-    }
-
-    function test_RevertWhen_DecayRateMaxIsZero() external givenInvalidInitialContainers {
-        Container memory invalidContainer = _createContainerWithCustomParams(1, 3, 1, 0, 10, 100, 50);
-        Container[] memory containers = new Container[](1);
-        containers[0] = invalidContainer;
-
-        // it should revert
-        vm.expectRevert(ITVLWeightedContainersErrors.TVLWeightedContainersInvalidInput.selector);
-        new MockTVLWeightedContainers(EPOCH_DURATION, containers);
-    }
-
-    function test_RevertWhen_DurationMinIsGreaterThanMax() external givenInvalidInitialContainers {
-        Container memory invalidContainer = _createContainerWithCustomParams(1, 3, 1, 3, 100, 10, 50);
-        Container[] memory containers = new Container[](1);
-        containers[0] = invalidContainer;
-
-        // it should revert
-        vm.expectRevert(ITVLWeightedContainersErrors.TVLWeightedContainersInvalidInput.selector);
-        new MockTVLWeightedContainers(EPOCH_DURATION, containers);
-    }
-
-    function test_RevertWhen_DurationMinIsZero() external givenInvalidInitialContainers {
-        Container memory invalidContainer = _createContainerWithCustomParams(1, 3, 1, 3, 0, 100, 50);
-        Container[] memory containers = new Container[](1);
-        containers[0] = invalidContainer;
-
-        // it should revert
-        vm.expectRevert(ITVLWeightedContainersErrors.TVLWeightedContainersInvalidInput.selector);
-        new MockTVLWeightedContainers(EPOCH_DURATION, containers);
-    }
-
-    function test_RevertWhen_DurationMaxIsZero() external givenInvalidInitialContainers {
-        Container memory invalidContainer = _createContainerWithCustomParams(1, 3, 1, 3, 10, 0, 50);
-        Container[] memory containers = new Container[](1);
-        containers[0] = invalidContainer;
-
-        // it should revert
-        vm.expectRevert(ITVLWeightedContainersErrors.TVLWeightedContainersInvalidInput.selector);
-        new MockTVLWeightedContainers(EPOCH_DURATION, containers);
-    }
-
-    function test_RevertWhen_MaxRateDifferenceEpochsIsGreaterThanDurationMax() external givenInvalidInitialContainers {
-        Container memory invalidContainer = _createContainerWithCustomParams(1, 3, 1, 3, 10, 100, 150);
-        Container[] memory containers = new Container[](1);
-        containers[0] = invalidContainer;
-
-        // it should revert
-        vm.expectRevert(ITVLWeightedContainersErrors.TVLWeightedContainersInvalidInput.selector);
-        new MockTVLWeightedContainers(EPOCH_DURATION, containers);
-    }
-
-    function test_RevertWhen_MaxRateDifferenceEpochsIsZero() external givenInvalidInitialContainers {
-        Container memory invalidContainer = _createContainerWithCustomParams(1, 3, 1, 3, 10, 100, 0);
-        Container[] memory containers = new Container[](1);
-        containers[0] = invalidContainer;
-
-        // it should revert
-        vm.expectRevert(ITVLWeightedContainersErrors.TVLWeightedContainersInvalidInput.selector);
-        new MockTVLWeightedContainers(EPOCH_DURATION, containers);
-    }
-
-    function test_RevertWhen_CurrentDurationEpochsIsNotZero() external givenInvalidInitialContainers {
-        Container memory invalidContainer = defaultContainer;
-        invalidContainer.currentDurationEpochs = 5;
-        Container[] memory containers = new Container[](1);
-        containers[0] = invalidContainer;
-
-        // it should revert
-        vm.expectRevert(ITVLWeightedContainersErrors.TVLWeightedContainersInvalidInput.selector);
-        new MockTVLWeightedContainers(EPOCH_DURATION, containers);
-    }
-
-    function test_RevertWhen_IsActiveIsTrue() external givenInvalidInitialContainers {
-        Container memory invalidContainer = defaultContainer;
-        invalidContainer.isActive = true;
-        Container[] memory containers = new Container[](1);
-        containers[0] = invalidContainer;
-
-        // it should revert
-        vm.expectRevert(ITVLWeightedContainersErrors.TVLWeightedContainersInvalidInput.selector);
-        new MockTVLWeightedContainers(EPOCH_DURATION, containers);
     }
 
     modifier givenValidInputs() {
@@ -176,13 +48,23 @@ contract TVLWeightedContainersConstructor is TVLWeightedContainersCommon {
         assertEq(testContainers.nextEpochToProcess(), 0);
 
         // it should set totalContainerCount to zero
-        assertEq(testContainers.totalContainerCount(), 0);
+        assertEq(testContainers.totalContainerCount(), emptyContainers.length);
     }
 
     function test_WhenValidInitialContainersProvided() external givenValidInputs {
         Container[] memory initialContainers = new Container[](2);
         initialContainers[0] = defaultContainer;
-        initialContainers[1] = _createContainerWithCustomParams(2, 4, 1, 2, 5, 50, 25);
+        initialContainers[1] = _createContainerWithCustomParams(
+            ContainerParams({
+                growthMin: 2,
+                growthMax: 4,
+                decayMin: 1,
+                decayMax: 2,
+                durationMin: 5,
+                durationMax: 50,
+                maxRateDifference: 25
+            })
+        );
 
         vm.expectEmit(true, true, true, true);
         emit ITVLWeightedContainersEvents.EpochDurationSet(EPOCH_DURATION);
@@ -191,7 +73,17 @@ contract TVLWeightedContainersConstructor is TVLWeightedContainersCommon {
         Container memory expectedContainer1 = defaultContainer;
         expectedContainer1.currentDurationEpochs = defaultContainer.duration.min;
 
-        Container memory expectedContainer2 = _createContainerWithCustomParams(2, 4, 1, 2, 5, 50, 25);
+        Container memory expectedContainer2 = _createContainerWithCustomParams(
+            ContainerParams({
+                growthMin: 2,
+                growthMax: 4,
+                decayMin: 1,
+                decayMax: 2,
+                durationMin: 5,
+                durationMax: 50,
+                maxRateDifference: 25
+            })
+        );
         expectedContainer2.currentDurationEpochs = expectedContainer2.duration.min;
 
         vm.expectEmit(true, true, true, true);
