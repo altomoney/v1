@@ -1,0 +1,19 @@
+AltoStaking::addContainer()
+├── when caller is not owner
+│   └── it should revert
+└── when caller is owner
+    ├── given valid container and multiplier
+    │   ├── it should add container to storage
+    │   ├── it should set container multiplier
+    │   ├── it should emit ContainerMultiplierUpdated event
+    │   ├── it should keep container inactive by default
+    │   ├── it should not update max multiplier container id
+    │   └── it should increment total container count
+    ├── given multiple containers added
+    │   └── it should add all containers with correct multipliers
+    └── given invalid multiplier
+        ├── when multiplier is zero
+        │   └── it should revert
+        └── when multiplier is greater than MATH_PRECISION
+            └── it should revert
+

@@ -227,7 +227,7 @@ abstract contract TVLWeightedContainers is ITVLWeightedContainers {
             revert TVLWeightedContainersInvalidInput();
         }
 
-        if (containerId == 0 || containerId > totalContainerCount) {
+        if (!_isContainerExists(containerId)) {
             revert TVLWeightedContainersInvalidInput();
         }
 
@@ -246,10 +246,12 @@ abstract contract TVLWeightedContainers is ITVLWeightedContainers {
     /// If container is not active, does nothing.
     /// @param containerId The id of the container to deactivate.
     function _deactivateContainer(uint256 containerId) internal {
+        // no need to check for existance because container must be active to be deactivated
         if (!containerById[containerId].isActive) {
             revert TVLWeightedContainersInvalidInput();
         }
 
+        // Note: Linear search is acceptable here as MAX_ACTIVE_CONTAINERS is capped at 16
         // swap and pop the last element
         for (uint256 i; i < activeContainerIds.length; i++) {
             if (activeContainerIds[i] == containerId) {
@@ -272,8 +274,7 @@ abstract contract TVLWeightedContainers is ITVLWeightedContainers {
     function _updateContainer(uint256 _containerId, Container memory container) internal returns (uint256) {
         Container memory containerBefore = containerById[_containerId];
 
-        // check if container exists
-        if (containerBefore.duration.min == 0) {
+        if (!_isContainerExists(_containerId)) {
             revert TVLWeightedContainersInvalidInput();
         }
 
@@ -349,7 +350,16 @@ abstract contract TVLWeightedContainers is ITVLWeightedContainers {
         return containerById[containerId];
     }
 
+    /// @dev Checks if a container is active.
+    /// @param containerId The id of the container to check.
     function _isContainerActive(uint256 containerId) internal view returns (bool) {
         return containerById[containerId].isActive;
+    }
+
+    /// @dev Checks if a container exists. Container is considered to exist if duration.min is not 0
+    /// as that's one of the constrains for valid container.
+    /// @param containerId The id of the container to check.
+    function _isContainerExists(uint256 containerId) internal view returns (bool) {
+        return containerById[containerId].duration.min != 0;
     }
 }

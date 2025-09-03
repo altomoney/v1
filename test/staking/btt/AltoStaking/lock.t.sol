@@ -3,6 +3,7 @@ pragma solidity ^0.8.22;
 
 import {AltoStakingCommon, PAUSE_TYPE, RESCUE_MODE_PAUSE_TYPE} from "./AltoStakingCommon.t.sol";
 import {StakingPosition, IAltoStakingErrors, IAltoStakingEvents} from "@alto/staking/interfaces/IAltoStaking.sol";
+import {ITVLWeightedContainersErrors} from "@alto/staking/interfaces/ITVLWeightedContainers.sol";
 import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
 
 contract AltoStakingLock is AltoStakingCommon {
@@ -42,11 +43,8 @@ contract AltoStakingLock is AltoStakingCommon {
     }
 
     function test_RevertWhen_OnBehalfIsZeroAddress() external givenInvalidInputs {
-        // Note: Authorization check happens before null address check in AltoStaking
-        // So we expect AltoStakingUnauthorized error instead of AltoStakingInvalidInput
-
         // it should revert
-        vm.expectRevert(IAltoStakingErrors.AltoStakingUnauthorized.selector);
+        vm.expectRevert(IAltoStakingErrors.AltoStakingInvalidInput.selector);
         _lockPosition(address(0), LOCK_AMOUNT, 1, false);
     }
 
@@ -68,14 +66,11 @@ contract AltoStakingLock is AltoStakingCommon {
 
     function test_RevertWhen_ContainerDoesNotExist() external givenInvalidInputs {
         // it should revert (container validation happens in _updateContainerTVL)
-        vm.expectRevert();
+        vm.expectRevert(ITVLWeightedContainersErrors.TVLWeightedContainersInvalidInput.selector);
         _lockPosition(USER, LOCK_AMOUNT, 999, false);
     }
 
     function test_RevertWhen_MaxEpochsToLockForIsLessThanContainerDuration() external givenInvalidInputs {
-        // Container 1 has duration of 1 epoch, so maxEpochsToLockFor of 0 should revert
-        // (maxEpochsToLockFor > 0 && currentEpochDuration > maxEpochsToLockFor)
-
         // it should revert
         vm.expectRevert(IAltoStakingErrors.AltoStakingTryingToLockForTooManyEpochs.selector);
         _lockPositionWithMaxEpochs(USER, LOCK_AMOUNT, 3, false, 1); // Container 3 has 3 epochs duration, limiting to 1

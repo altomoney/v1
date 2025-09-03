@@ -94,7 +94,7 @@ contract AltoStaking is IAltoStakingStaticTypes, TVLWeightedContainers, Ownable2
         for (uint256 i = 0; i < activeContainerIds.length; i++) {
             uint256 containerId = activeContainerIds[i];
             if (!_isExpiredPosition(positions[account][containerId])) {
-                // votes will have same decimals the the lock token
+                // votes will have same decimals as the lock token
                 votes += positions[account][containerId].amountLocked.multiplyWithPrecision(
                     stakingContainerById[containerId].multiplier
                 );
@@ -111,12 +111,12 @@ contract AltoStaking is IAltoStakingStaticTypes, TVLWeightedContainers, Ownable2
     {
         // Note: containerId is validated in _updateContainerTVL
 
-        if (!_isSenderAuthorized(onBehalf)) {
-            revert AltoStakingUnauthorized();
-        }
-
         if (onBehalf == address(0) || amount == 0) {
             revert AltoStakingInvalidInput();
+        }
+
+        if (!_isSenderAuthorized(onBehalf)) {
+            revert AltoStakingUnauthorized();
         }
 
         if (stakingContainerById[containerId].isDeprecated) {
@@ -278,8 +278,8 @@ contract AltoStaking is IAltoStakingStaticTypes, TVLWeightedContainers, Ownable2
         }
         _deactivateContainer(containerId);
 
-        // no need to update max multiplier staking container id because it will be updated
-        // when container is deprecated (which is the requirement for this to run)
+        // no need to update max multiplier staking container id because it was updated
+        // when container was deprecated (which is the requirement for function to run)
     }
 
     /// @inheritdoc IAltoStakingBase
@@ -288,6 +288,11 @@ contract AltoStaking is IAltoStakingStaticTypes, TVLWeightedContainers, Ownable2
         if (stakingContainerById[containerId].isDeprecated) {
             revert AltoStakingInvalidInput();
         }
+        // check if container exists
+        if (!_isContainerExists(containerId)) {
+            revert AltoStakingInvalidInput();
+        }
+
         stakingContainerById[containerId].isDeprecated = true;
         emit ContainerDeprecate(containerId);
 
@@ -319,7 +324,7 @@ contract AltoStaking is IAltoStakingStaticTypes, TVLWeightedContainers, Ownable2
             }
         }
 
-        if (containerId != 0 && containerId != maxMultiplierStakingContainerId) {
+        if (containerId != maxMultiplierStakingContainerId) {
             maxMultiplierStakingContainerId = containerId;
             emit MaxMultiplierStakingContainerIdUpdated(containerId, multiplier);
         }
@@ -330,6 +335,12 @@ contract AltoStaking is IAltoStakingStaticTypes, TVLWeightedContainers, Ownable2
         if (multiplier > MATH_PRECISION || multiplier == 0) {
             revert AltoStakingInvalidInput();
         }
+
+        if (stakingContainerById[containerId].multiplier == multiplier) {
+            // we should not emit event in this case
+            return;
+        }
+
         stakingContainerById[containerId].multiplier = multiplier;
 
         emit ContainerMultiplierUpdated(containerId, multiplier);

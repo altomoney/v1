@@ -204,17 +204,12 @@ contract AltoStaking_Main is Test {
         vm.warp(block.timestamp + altoStaking.EPOCH_DURATION() / 2); // Half an epoch
 
         // Lock more tokens to the same position (this should extend/modify the position)
-        // This will trigger the double counting bug because it adds new TVL
-        // without properly removing old TVL from overlapping epochs
         altoStaking.lock(USER, 50 ether, 1, false, 0); // Total becomes 150 ether
 
         // Check TVL after extending - this should be 150 ether total, not more
         uint256 newTVL = altoStaking.epochTVL(altoStaking.currentEpoch(), 1);
 
-        // BUG: This will fail because the old 100 ether wasn't removed from epoch 0
-        // when the position was extended, causing double counting
-        // Expected: 150 ether (new total amount)
-        // Actual: 250 ether (100 + 150, double counted)
+        // TVL should be 150 ether total, not double counted
         assertEq(newTVL, 150 ether, "TVL should be 150 ether total, not double counted");
 
         // Additional check: verify the position shows correct total
@@ -242,8 +237,6 @@ contract AltoStaking_Main is Test {
         vm.warp(altoStaking.initializedAtTimestamp() + altoStaking.EPOCH_DURATION() + 10 minutes);
 
         // Lock more tokens to the same position (this should extend/modify the position)
-        // This will trigger the double counting bug because it adds new TVL
-        // without properly removing old TVL from overlapping epochs
         altoStaking.lock(USER, 50 ether, CONTAINER_ID, false, 0); // Total becomes 150 ether
 
         assertEq(altoStaking.currentEpoch(), firstEpoch + 1);
@@ -251,10 +244,7 @@ contract AltoStaking_Main is Test {
         // Check TVL after extending - this should be 150 ether total, not more
         uint256 newTVL = altoStaking.epochTVL(altoStaking.currentEpoch(), CONTAINER_ID);
 
-        // BUG: This will fail because the old 100 ether wasn't removed from epoch 0
-        // when the position was extended, causing double counting
-        // Expected: 150 ether (new total amount)
-        // Actual: 250 ether (100 + 150, double counted)
+        // TVL should be 150 ether total, not double counted
         assertEq(newTVL, 150 ether, "TVL should be 150 ether total, not double counted");
 
         uint256 newTVLPrevEpoch = altoStaking.epochTVL(firstEpoch, CONTAINER_ID);
@@ -288,8 +278,6 @@ contract AltoStaking_Main is Test {
         vm.warp(altoStaking.getPosition(USER, CONTAINER_ID).expiryTimestamp + 1);
 
         // Lock more tokens to the same position (this should extend/modify the position)
-        // This will trigger the double counting bug because it adds new TVL
-        // without properly removing old TVL from overlapping epochs
         altoStaking.unlock(USER, USER, CONTAINER_ID);
         altoStaking.lock(USER, 50 ether, CONTAINER_ID, false, 0); // Total becomes 150 ether
 
@@ -298,10 +286,7 @@ contract AltoStaking_Main is Test {
         // Check TVL after extending - this should be 150 ether total, not more
         uint256 newTVL = altoStaking.epochTVL(altoStaking.currentEpoch(), CONTAINER_ID);
 
-        // BUG: This will fail because the old 100 ether wasn't removed from epoch 0
-        // when the position was extended, causing double counting
-        // Expected: 150 ether (new total amount)
-        // Actual: 250 ether (100 + 150, double counted)
+        // TVL should be 150 ether total, not double counted
         assertEq(newTVL, 50 ether, "TVL should be 150 ether total, not double counted");
 
         uint256 newTVLPrevEpoch = altoStaking.epochTVL(firstEpoch, CONTAINER_ID);
@@ -335,8 +320,6 @@ contract AltoStaking_Main is Test {
         vm.warp(altoStaking.getPosition(USER, CONTAINER_ID).expiryTimestamp + 1);
 
         // Lock more tokens to the same position (this should extend/modify the position)
-        // This will trigger the double counting bug because it adds new TVL
-        // without properly removing old TVL from overlapping epochs
         altoStaking.lock(USER, 100 ether, CONTAINER_ID, true, 0); // Total becomes 150 ether
 
         assertEq(altoStaking.currentEpoch(), firstEpoch + 1);
@@ -344,10 +327,7 @@ contract AltoStaking_Main is Test {
         // Check TVL after extending - this should be 150 ether total, not more
         uint256 newTVL = altoStaking.epochTVL(altoStaking.currentEpoch(), CONTAINER_ID);
 
-        // BUG: This will fail because the old 100 ether wasn't removed from epoch 0
-        // when the position was extended, causing double counting
-        // Expected: 150 ether (new total amount)
-        // Actual: 250 ether (100 + 150, double counted)
+        // TVL should be 150 ether total, not double counted
         assertEq(newTVL, 100 ether, "TVL should be 150 ether total, not double counted");
 
         uint256 newTVLPrevEpoch = altoStaking.epochTVL(firstEpoch, CONTAINER_ID);

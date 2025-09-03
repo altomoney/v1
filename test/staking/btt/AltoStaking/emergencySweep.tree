@@ -3,7 +3,17 @@ AltoStaking::emergencySweep()
 │   └── it should revert
 ├── given caller is not owner
 │   └── it should revert
-└── given valid conditions
-    ├── it should transfer all contract balance to owner
-    ├── it should emit EmergencySweep event
-    └── it should leave contract with zero balance 
+└── given valid conditions (contract paused and caller is owner)
+    ├── when contract has balance
+    │   ├── it should transfer all contract balance to owner
+    │   ├── it should emit EmergencySweep event
+    │   └── it should leave contract with zero balance
+    ├── when contract has no balance
+    │   ├── it should emit EmergencySweep event with zero amount
+    │   └── it should not change owner balance
+    ├── when called multiple times
+    │   └── it should work each time transferring current balance
+    ├── when called after partial unlocks
+    │   └── it should transfer remaining balance after unlocks
+    └── when testing precise balance calculations
+        └── it should transfer exact amounts accurately 

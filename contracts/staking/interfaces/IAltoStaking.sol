@@ -91,6 +91,7 @@ interface IAltoStakingBase is ITVLWeightedContainers, IAltoStakingErrors, IAltoS
     /// @param receiver The address to send the lock tokens to.
     /// @param containerId The id of the container to unlock the tokens from.
     /// @return amount The amount of lock tokens released.
+    /// @dev Positions in deprecated and/or deactivated containers can be unlocked once expired.
     function unlock(address onBehalf, address receiver, uint256 containerId) external returns (uint256);
 
     /// @notice Get the stake position of an account in a container.

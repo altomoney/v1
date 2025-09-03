@@ -1,0 +1,23 @@
+AltoStaking::deprecateContainer()
+├── when caller is not owner
+│   └── it should revert
+└── when caller is owner
+    ├── given container is already deprecated
+    │   └── it should revert
+    ├── given container does not exist
+    │   └── it should revert
+    └── given valid container exists and is not deprecated
+        ├── when container is active
+        │   ├── it should deprecate container
+        │   ├── it should emit ContainerDeprecate event
+        │   ├── it should preserve active status
+        │   └── when container is max multiplier container
+        │       └── it should update max multiplier to next highest active container
+        ├── when container is inactive
+        │   ├── it should deprecate container
+        │   ├── it should emit ContainerDeprecate event
+        │   └── it should preserve inactive status
+        ├── when container is not max multiplier container
+        │   └── it should not change max multiplier container id
+        └── when multiple containers are deprecated
+            └── it should deprecate all containers while preserving their active status

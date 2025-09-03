@@ -45,6 +45,12 @@ AltoStaking::lock()
     │   ├── it should advance epoch before processing
     │   ├── it should process position normally
     │   └── it should maintain correct TVL calculations
+    ├── when multiple users lock in same container
+    │   └── it should create separate positions and aggregate TVL
+    ├── when user locks in different containers
+    │   └── it should create separate positions with container-specific expiry times
+    ├── when testing expiry calculation with different container durations
+    │   └── it should calculate different expiry times based on container duration
     ├── when maxEpochsToLockFor is zero
     │   ├── it should create position normally with full container duration
     │   └── it should not apply any epoch limit

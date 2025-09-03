@@ -1,0 +1,19 @@
+AltoStaking::activateContainer()
+├── when caller is not owner
+│   └── it should revert
+└── when caller is owner
+    ├── given container is deprecated
+    │   └── it should revert
+    └── given valid container exists and is not deprecated
+        └── when container is inactive
+            ├── it should activate container
+            ├── it should emit ContainerActivated event
+            └── when updating max multiplier container id
+                ├── given no previous max multiplier container exists
+                │   └── it should set new container as max multiplier
+                ├── given new container has higher multiplier than current max
+                │   └── it should update max multiplier container id and emit event
+                ├── given new container has lower multiplier than current max
+                │   └── it should not change max multiplier container id
+                └── given multiple containers are activated
+                    └── it should set container with highest multiplier as max

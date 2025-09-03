@@ -20,7 +20,17 @@ AltoStaking::getVotes()
     │   ├── it should include only non-expired positions
     │   ├── it should ignore expired positions
     │   └── it should return voting power for active positions only
-    └── when containers have different multipliers
-        ├── it should apply correct multiplier to each container
-        ├── it should calculate proportional voting power
-        └── it should return accurate weighted total 
+    ├── when containers have different multipliers
+    │   ├── it should apply correct multiplier to each container
+    │   ├── it should calculate proportional voting power
+    │   └── it should return accurate weighted total
+    ├── when testing calculation accuracy
+    │   └── it should handle precise amounts correctly
+    ├── when multiple users have positions
+    │   └── it should calculate voting power independently for each user
+    ├── when positions are partially unlocked
+    │   └── it should decrease voting power by unlocked amount
+    ├── when containers are deprecated
+    │   └── it should still count votes for existing positions in deprecated containers
+    └── when position has zero amount
+        └── it should return zero votes 
