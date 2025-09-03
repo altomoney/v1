@@ -21,12 +21,14 @@ AltoStaking::Constructor()
     │   ├── it should set epoch duration correctly
     │   ├── it should initialize with zero containers
     │   └── it should emit EpochDurationSet event
-    └── when valid containers provided
-        ├── it should set lockToken correctly
-        ├── it should set owner correctly
-        ├── it should set epoch duration correctly
-        ├── it should add all containers with correct IDs
-        ├── it should set container multipliers correctly
-        ├── it should emit EpochDurationSet event
-        ├── it should emit ContainerAdded events
-        └── it should emit ContainerMultiplierUpdated events 
+    ├── when valid containers provided
+    │   ├── it should set lockToken correctly
+    │   ├── it should set owner correctly
+    │   ├── it should set epoch duration correctly
+    │   ├── it should add all containers with correct IDs
+    │   ├── it should set container multipliers correctly
+    │   ├── it should emit EpochDurationSet event
+    │   ├── it should emit ContainerAdded events
+    │   └── it should emit ContainerMultiplierUpdated events
+    └── when testing multiplier boundary values
+        └── it should accept minimum, middle, and maximum valid multipliers 

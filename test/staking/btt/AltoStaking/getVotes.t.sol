@@ -20,6 +20,9 @@ contract AltoStakingGetVotes is AltoStakingCommon {
         // Create position and let it expire
         _lockPosition(USER, LOCK_AMOUNT, 1, false);
 
+        uint256 expectedVotes = LOCK_AMOUNT * 0.3 ether / MATH_PRECISION;
+        assertEq(staking.getVotes(USER), expectedVotes);
+
         // Advance time beyond expiry
         _advanceTime(EPOCH_DURATION + 1);
 

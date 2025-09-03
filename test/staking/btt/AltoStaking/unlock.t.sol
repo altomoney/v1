@@ -235,4 +235,38 @@ contract AltoStakingUnlock is AltoStakingCommon {
         uint256 released = _unlockPosition(USER, RECEIVER, 1);
         assertEq(released, LOCK_AMOUNT);
     }
+
+    function test_UnlockWhenContainerIsDeprecated() external givenValidInputs {
+        // Deprecate container
+        vm.prank(OWNER);
+        staking.deprecateContainer(1);
+
+        _advanceTime(EPOCH_DURATION + 1);
+
+        // it should return released amount
+        uint256 released = _unlockPosition(USER, USER, 1);
+        assertEq(released, LOCK_AMOUNT);
+
+        // it should clear position data
+        _assertPositionEmpty(staking.getPosition(USER, 1));
+    }
+
+    function test_UnlockWhenContainerIsDeprecatedAndInactive() external givenValidInputs {
+        // Deprecate container
+        vm.prank(OWNER);
+        staking.deprecateContainer(1);
+
+        // Deactivate container
+        vm.prank(OWNER);
+        staking.deactivateContainer(1);
+
+        _advanceTime(EPOCH_DURATION + 1);
+
+        // it should return released amount
+        uint256 released = _unlockPosition(USER, USER, 1);
+        assertEq(released, LOCK_AMOUNT);
+
+        // it should clear position data
+        _assertPositionEmpty(staking.getPosition(USER, 1));
+    }
 }
