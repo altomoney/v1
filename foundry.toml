@@ -27,7 +27,10 @@ ffi = true
 ast = true
 build_info = true
 extra_output = ["storageLayout"]
-fs_permissions = [{ access = "read-write", path = "./deployments" }]
+fs_permissions = [
+	{ access = "read-write", path = "./contracts/deployments/testnet/output" },
+	{ access = "read", path = "./out/" },
+]
 
 [profile.market]
 src = 'contracts'
