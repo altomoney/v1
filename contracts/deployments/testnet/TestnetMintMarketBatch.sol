@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
-import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
+import {OracleTestnet} from "@alto/deployments/testnet/contracts/OracleTestnet.sol";
 import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {AdaptiveCurveIrm} from "@alto/lending/irm/AdaptiveCurveIrm.sol";
 import {UnsafeUpgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
@@ -27,8 +27,9 @@ contract TestnetMintMarketBatch is ITestnetMarketBatch {
     TestnetMarketBatchReport public report;
 
     constructor(TestnetMintMarketBatchParams memory _params) {
-        address marketOracle = address(new OracleMock());
-        OracleMock(marketOracle).setPrice(_params.marketOraclePrice);
+        address marketOracle = address(new OracleTestnet(address(this)));
+        OracleTestnet(marketOracle).setPrice(_params.marketOraclePrice);
+        OracleTestnet(marketOracle).transferOwnership(_params.owner);
 
         address marketIrm = address(
             new AdaptiveCurveIrm(

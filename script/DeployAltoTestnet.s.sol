@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
 import {Script} from "forge-std/Script.sol";
@@ -30,6 +30,7 @@ contract DeployAltoTestnetScript is Script {
 
         params = AltoTestnetParams({
             owner: msg.sender,
+            altoMulticall: 0xb471301c353B759226A835653aCec5cD968Fd62B,
             skipLendingDeployment: false,
             lzEndpoint: 0x6EDCE65403992e310A62460808c4b910D972f10f,
             wrappedNativeToken: address(1),
@@ -213,7 +214,7 @@ contract DeployAltoTestnetScript is Script {
         _extractContractABI("AltoMintMarket", abiFolder);
         _extractContractABI("AdaptiveCurveIrm", abiFolder);
         _extractContractABI("FixedRateIrm", abiFolder);
-        _extractContractABI("OracleMock", abiFolder);
+        _extractContractABI("OracleTestnet", abiFolder);
 
         // Extract ABIs for staking contracts
         _extractContractABI("AltoStaking", abiFolder);

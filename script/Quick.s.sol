@@ -3,7 +3,7 @@ pragma solidity ^0.8.22;
 
 import {Script} from "forge-std/Script.sol";
 import {USDO} from "@alto/tokens/USDO.sol";
-import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
+import {OracleTestnet} from "@alto/deployments/testnet/contracts/OracleTestnet.sol";
 import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 
 contract BurnUSDO is Script {
@@ -27,7 +27,7 @@ contract SetWethOracle is Script {
 
         address oracle = 0xe85B26e9A8D65d0f6d9cF26BC280dDF5a44F34b0;
 
-        OracleMock(oracle).setPrice(4000 * ORACLE_PRICE_PRECISION);
+        OracleTestnet(oracle).setPrice(4000 * ORACLE_PRICE_PRECISION);
 
         vm.stopBroadcast();
     }
