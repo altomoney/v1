@@ -4,7 +4,6 @@ pragma solidity ^0.8.22;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-// @dev This is a testnet version of the AltoMulticall contract for multiple owners.
 contract AltoMulticallTestnet {
     mapping(address => bool) public _owners;
 

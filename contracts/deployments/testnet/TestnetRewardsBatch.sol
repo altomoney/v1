@@ -3,7 +3,7 @@ pragma solidity ^0.8.22;
 
 import {AltoRewardsDistributor} from "@alto/rewards/AltoRewardsDistributor.sol";
 import {IRewardsDistributor} from "@alto/rewards/interfaces/IRewardsDistributor.sol";
-import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
+import {OracleTestnet} from "@alto/deployments/testnet/contracts/OracleTestnet.sol";
 
 struct TestnetRewardsBatchParams {
     address owner;
@@ -33,10 +33,12 @@ contract TestnetRewardsBatch {
             address(new AltoRewardsDistributor(address(this), _params.merkleRootTimelock, _params.rewardToken))
         );
 
-        report.paymentOracle = address(new OracleMock());
-        report.rewardOracle = address(new OracleMock());
-        OracleMock(report.paymentOracle).setPrice(_params.paymentUsdOraclePrice);
-        OracleMock(report.rewardOracle).setPrice(_params.rewardTokenUsdOraclePrice);
+        report.paymentOracle = address(new OracleTestnet(address(this)));
+        report.rewardOracle = address(new OracleTestnet(address(this)));
+        OracleTestnet(report.paymentOracle).setPrice(_params.paymentUsdOraclePrice);
+        OracleTestnet(report.rewardOracle).setPrice(_params.rewardTokenUsdOraclePrice);
+        OracleTestnet(report.paymentOracle).transferOwnership(_params.owner);
+        OracleTestnet(report.rewardOracle).transferOwnership(_params.owner);
 
         // Setup payment token oracle
         rewardsDistributor.setPaymentToken(_params.paymentToken, report.paymentOracle);
