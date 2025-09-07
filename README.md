@@ -48,3 +48,8 @@ cast wallet import --interactive <account_name>
 yarn deploy:testnet
 ```
 The output is stored to `contracts/deployments/testnet/output`.
+
+Verify (Optional)
+```bash
+yarn verify:testnet
+```
