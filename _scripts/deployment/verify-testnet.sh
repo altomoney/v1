@@ -2,20 +2,19 @@
 
 source "$(dirname "$0")/_loadEnv.sh"
 
-# Configuration
-ADDRESSES_FILE="contracts/deployments/testnet/output/testnet-17000-1757073504/addresses.json"
-CHAIN_ID=17000
-VERIFIER_URL="https://api-holesky.etherscan.io/api"
 
-if [ ! -f "$ADDRESSES_FILE" ]; then
-    echo "Error: Addresses file not found at $ADDRESSES_FILE"
+# Check required environment variables
+if [ -z "$ETHERSCAN_API_KEY" ] || [ -z "$ETHERSCAN_API_URL" ] || [ -z "$CHAIN_ID" ] || [ -z "$DEPLOYMENT_TIMESTAMP" ]; then
+    echo "Error: Missing required environment variables for verification. Please check your .env file."
+    echo "Required: ETHERSCAN_API_KEY, ETHERSCAN_API_URL, CHAIN_ID, DEPLOYMENT_TIMESTAMP"
     exit 1
 fi
 
-# Check if ETHERSCAN_API_KEY is set
-if [ -z "$ETHERSCAN_API_KEY" ]; then
-    echo "Error: ETHERSCAN_API_KEY environment variable is not set"
-    echo "Please add ETHERSCAN_API_KEY to your .env file"
+
+ADDRESSES_FILE="contracts/deployments/testnet/output/testnet-${CHAIN_ID}-${DEPLOYMENT_TIMESTAMP}/addresses.json"
+
+if [ ! -f "$ADDRESSES_FILE" ]; then
+    echo "Error: Addresses file not found at $ADDRESSES_FILE"
     exit 1
 fi
 
@@ -73,7 +72,7 @@ verify_contract() {
     if [ -n "$extra_args" ]; then
         forge verify-contract \
             --chain-id $CHAIN_ID \
-            --verifier-url $VERIFIER_URL \
+            --verifier-url $ETHERSCAN_API_URL \
             --etherscan-api-key $ETHERSCAN_API_KEY \
             $extra_args \
             $address \
@@ -81,7 +80,7 @@ verify_contract() {
     else
         forge verify-contract \
             --chain-id $CHAIN_ID \
-            --verifier-url $VERIFIER_URL \
+            --verifier-url $ETHERSCAN_API_URL \
             --etherscan-api-key $ETHERSCAN_API_KEY \
             $address \
             $contract_path
