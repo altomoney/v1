@@ -1,0 +1,19 @@
+AltoReferralWhitelistAdapter::setReferralWhitelist
+├── when caller is not owner
+│   └── it should revert
+└── when caller is owner
+    ├── when setting address to whitelisted true
+    │   ├── it should set referral whitelist mapping to true
+    │   └── it should emit ReferralWhitelistSet event
+    ├── when setting address to whitelisted false
+    │   ├── it should set referral whitelist mapping to false
+    │   └── it should emit ReferralWhitelistSet event
+    ├── when updating whitelist status from false to true
+    │   ├── it should update referral whitelist mapping
+    │   └── it should emit ReferralWhitelistSet event
+    ├── when updating whitelist status from true to false
+    │   ├── it should update referral whitelist mapping
+    │   └── it should emit ReferralWhitelistSet event
+    └── when setting whitelist for multiple addresses
+        ├── it should set referral whitelist mapping for each address
+        └── it should emit ReferralWhitelistSet event for each address

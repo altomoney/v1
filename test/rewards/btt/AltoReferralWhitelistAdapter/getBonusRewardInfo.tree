@@ -1,0 +1,24 @@
+AltoReferralWhitelistAdapter::getBonusRewardInfo
+├── when user has no referral address set
+│   └── it should return zero bonus info
+├── when user has referral address set to zero
+│   └── it should return zero bonus info
+├── when referral address is not whitelisted
+│   └── it should return zero bonus info
+└── when referral address is valid and whitelisted
+    ├── when user has valid referral setup
+    │   ├── it should return configured bonus discount
+    │   ├── it should return configured payment token share
+    │   └── it should return referral address as payment token share receiver
+    ├── when multiple users have same referral address
+    │   ├── it should return same bonus info for all users
+    │   └── it should return same referral address as receiver
+    ├── when adapter configuration changes after referral set
+    │   ├── it should return updated bonus discount
+    │   ├── it should return updated payment token share
+    │   └── it should return same referral address as receiver
+    ├── when referral address is removed from whitelist after setting
+    │   └── it should return zero bonus info
+    └── when calling for different users with different setups
+        ├── it should return appropriate bonus info for each user
+        └── it should maintain independent states

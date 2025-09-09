@@ -1,0 +1,19 @@
+AltoReferralWhitelistAdapter::setPaymentTokenShare
+├── when caller is not owner
+│   └── it should revert
+└── when caller is owner
+    ├── when payment token share is greater than 0.1 ether
+    │   └── it should revert
+    └── when payment token share is valid
+        ├── when setting normal share value
+        │   ├── it should update payment token share
+        │   └── it should emit PaymentTokenShareSet event
+        ├── when setting zero share
+        │   ├── it should update payment token share
+        │   └── it should emit PaymentTokenShareSet event
+        ├── when setting maximum share
+        │   ├── it should update payment token share
+        │   └── it should emit PaymentTokenShareSet event
+        └── when updating share multiple times
+            ├── it should update payment token share for each call
+            └── it should emit PaymentTokenShareSet event for each call
