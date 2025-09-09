@@ -3,8 +3,9 @@ pragma solidity ^0.8.0;
 
 import {RewardsDistributorCommon} from "../RewardsDistributorCommon.t.sol";
 import {AltoRewardsDistributor} from "@alto/rewards/AltoRewardsDistributor.sol";
-import {IRewardsEvents, IRewardsErrors} from "@alto/rewards/interfaces/IRewardsDistributor.sol";
+import {IRewardsEvents} from "@alto/rewards/interfaces/IRewardsDistributor.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {IMerkleRootManagerEvents, IMerkleRootManagerErrors} from "@alto/rewards/interfaces/IMerkleRootManager.sol";
 
 contract AltoRewardsDistributorSetMerkleRootTimelock is RewardsDistributorCommon {
     function test_RevertWhen_CallerIsNotOwner() external {
@@ -12,7 +13,7 @@ contract AltoRewardsDistributorSetMerkleRootTimelock is RewardsDistributorCommon
 
         vm.prank(ALICE);
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, ALICE));
+        vm.expectRevert(IMerkleRootManagerErrors.MerkleRootManagerNotOwner.selector);
         distributor.setMerkleRootTimelock(newTimelock);
     }
 
@@ -25,7 +26,7 @@ contract AltoRewardsDistributorSetMerkleRootTimelock is RewardsDistributorCommon
 
         vm.prank(OWNER);
         // it should revert
-        vm.expectRevert(IRewardsErrors.AltoRewardsDistributorInvalidInput.selector);
+        vm.expectRevert(IMerkleRootManagerErrors.MerkleRootManagerInvalidInput.selector);
         distributor.setMerkleRootTimelock(currentTimelock);
     }
 
@@ -35,7 +36,7 @@ contract AltoRewardsDistributorSetMerkleRootTimelock is RewardsDistributorCommon
 
         // it should emit SetMerkleRootTimelock event
         vm.expectEmit(false, false, false, true);
-        emit IRewardsEvents.SetMerkleRootTimelock(newTimelock);
+        emit IMerkleRootManagerEvents.SetMerkleRootTimelock(newTimelock);
 
         vm.prank(OWNER);
         distributor.setMerkleRootTimelock(newTimelock);
@@ -54,7 +55,7 @@ contract AltoRewardsDistributorSetMerkleRootTimelock is RewardsDistributorCommon
 
         // it should emit SetMerkleRootTimelock event
         vm.expectEmit(false, false, false, true);
-        emit IRewardsEvents.SetMerkleRootTimelock(zeroTimelock);
+        emit IMerkleRootManagerEvents.SetMerkleRootTimelock(zeroTimelock);
 
         vm.prank(OWNER);
         distributor.setMerkleRootTimelock(zeroTimelock);
@@ -69,7 +70,7 @@ contract AltoRewardsDistributorSetMerkleRootTimelock is RewardsDistributorCommon
 
         // it should emit SetMerkleRootTimelock event
         vm.expectEmit(false, false, false, true);
-        emit IRewardsEvents.SetMerkleRootTimelock(longerTimelock);
+        emit IMerkleRootManagerEvents.SetMerkleRootTimelock(longerTimelock);
 
         vm.prank(OWNER);
         distributor.setMerkleRootTimelock(longerTimelock);
@@ -89,7 +90,7 @@ contract AltoRewardsDistributorSetMerkleRootTimelock is RewardsDistributorCommon
 
         // it should emit SetMerkleRootTimelock event
         vm.expectEmit(false, false, false, true);
-        emit IRewardsEvents.SetMerkleRootTimelock(shorterTimelock);
+        emit IMerkleRootManagerEvents.SetMerkleRootTimelock(shorterTimelock);
 
         vm.prank(OWNER);
         distributor.setMerkleRootTimelock(shorterTimelock);
@@ -106,7 +107,7 @@ contract AltoRewardsDistributorSetMerkleRootTimelock is RewardsDistributorCommon
 
         // Set first timelock
         vm.expectEmit(false, false, false, true);
-        emit IRewardsEvents.SetMerkleRootTimelock(timelock1);
+        emit IMerkleRootManagerEvents.SetMerkleRootTimelock(timelock1);
 
         vm.prank(OWNER);
         distributor.setMerkleRootTimelock(timelock1);
@@ -115,7 +116,7 @@ contract AltoRewardsDistributorSetMerkleRootTimelock is RewardsDistributorCommon
 
         // Set second timelock
         vm.expectEmit(false, false, false, true);
-        emit IRewardsEvents.SetMerkleRootTimelock(timelock2);
+        emit IMerkleRootManagerEvents.SetMerkleRootTimelock(timelock2);
 
         vm.prank(OWNER);
         distributor.setMerkleRootTimelock(timelock2);
@@ -124,7 +125,7 @@ contract AltoRewardsDistributorSetMerkleRootTimelock is RewardsDistributorCommon
 
         // Set third timelock
         vm.expectEmit(false, false, false, true);
-        emit IRewardsEvents.SetMerkleRootTimelock(timelock3);
+        emit IMerkleRootManagerEvents.SetMerkleRootTimelock(timelock3);
 
         vm.prank(OWNER);
         distributor.setMerkleRootTimelock(timelock3);

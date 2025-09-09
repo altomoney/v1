@@ -1,13 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-/// @notice The pending root struct for a merkle tree distribution during the timelock.
-struct PendingMerkleRoot {
-    /// @dev The submitted pending root.
-    bytes32 merkleRoot;
-    /// @dev The timestamp from which the pending root can be accepted.
-    uint256 validFrom;
-}
+import {PendingMerkleRoot} from "@alto/rewards/interfaces/IMerkleRootManager.sol";
 
 /// @notice The reward token struct of the token to be distributed
 struct RewardToken {
@@ -35,26 +29,16 @@ interface ILock {
 interface IRewardsErrors {
     /// @notice Error thrown when executor is not allowed to perform the action on behalf of another user
     error AltoRewardsDistributorUnauthorized();
-    /// @notice Error thrown when executor does not have the merkle root updater role
-    error AltoRewardsDistributorNotMerkleRootUpdater();
     /// @notice Error thrown when the input is invalid
     error AltoRewardsDistributorInvalidInput();
     /// @notice Error thrown when the input is invalid
     error AltoRewardsDistributorInvalidAdapterPaymentTokenShare();
-    /// @notice Error thrown when the merkle root is not set and user is trying to claim rewards
-    error AltoRewardsDistributorMerkleRootNotSet();
     /// @notice Error thrown when the lock contract is not set and user is trying to lock rewards
     error AltoRewardsDistributorLockContractNotSet();
     /// @notice Error thrown when the lock rewards oracle is not set and user is trying to lock rewards
     error AltoRewardsDistributorLockRewardsOracleNotSet();
     /// @notice Error thrown when the oracle returns an invalid price (0)
     error AltoRewardsDistributorLockInvalidOraclePrice();
-    /// @notice Error thrown when a pending root already exists with the same values
-    error AltoRewardsDistributorAlreadyPending();
-    /// @notice Error thrown when the timelock has not expired yet
-    error AltoRewardsDistributorTimelockNotExpired();
-    /// @notice Error thrown when the pending root is not set
-    error AltoRewardsDistributorPendingRootNotSet();
 }
 
 /// @title IRewardsEvents
@@ -74,20 +58,6 @@ interface IRewardsEvents {
         uint256 rewardTokenAmount,
         uint256 discount
     );
-
-    /// @notice Emitted when a pending root is submitted
-    /// @param updater The address that submitted the pending root
-    /// @param root The new merkle root
-    event SubmitPendingMerkleRoot(address indexed updater, bytes32 indexed root);
-
-    /// @notice Emitted when a root is accepted and set
-    /// @param root The new merkle root
-    event AcceptPendingMerkleRoot(address indexed executor, bytes32 indexed root);
-
-    /// @notice Emitted when a pending root is revoked
-    /// @param updater The address that revoked the pending root
-    /// @param root The revoked merkle root
-    event RevokePendingMerkleRoot(address indexed updater, bytes32 indexed root);
 
     /// @notice Emitted when a payment token is configured
     /// @param token The payment token address
@@ -111,15 +81,6 @@ interface IRewardsEvents {
     /// @dev setting this to 0 will disable the lock functionality when claiming rewards.
     event SetLockContract(address lockContract);
 
-    /// @notice Emitted when the timelock is updated
-    /// @param timelock The new timelock duration in seconds
-    event SetMerkleRootTimelock(uint256 timelock);
-
-    /// @notice Emitted when a root updater is added or removed
-    /// @param updater The updater address
-    /// @param active Whether the updater is active or not
-    event SetMerkleRootUpdater(address indexed updater, bool active);
-
     /// @notice Emitted when tokens are withdrawn
     /// @param token The token address
     /// @param to The recipient address
@@ -136,17 +97,6 @@ interface IRewardsEvents {
 }
 
 interface IRewardsDistributorBase is IRewardsErrors, IRewardsEvents {
-    /// @notice The merkle root used for rewards distribution
-    function merkleRoot() external view returns (bytes32);
-
-    /// @notice Returns whether an address is allowed to submit a new merkle root
-    /// @param updater The address to check
-    /// @return true if the address is allowed to submit a new merkle root
-    function isMerkleRootUpdater(address updater) external view returns (bool);
-
-    /// @notice The time after which a pending root can be accepted since it was submitted
-    function merkleRootTimelock() external view returns (uint256);
-
     /// @notice Returns the amount of reward tokens already purchased by an account
     /// @param account The account to check
     /// @return The amount purchased
@@ -189,20 +139,6 @@ interface IRewardsDistributorBase is IRewardsErrors, IRewardsEvents {
         address onBehalf
     ) external returns (uint256 amount);
 
-    /// @notice Submits a new merkle root
-    /// @param newMerkleRoot The new merkle root
-    function submitNewPendingRoot(bytes32 newMerkleRoot) external;
-
-    /// @notice Accepts and sets the current pending merkle root
-    /// @param merkleRootToAccept The root to accept (0 to accept the pending root)
-    /// @dev Can only be called after the timelock has expired
-    function acceptPendingRoot(bytes32 merkleRootToAccept) external;
-
-    /// @notice Revokes the pending root
-    /// @param merkleRootToRevoke The root to revoke (0 to revoke the pending root)
-    /// @dev Can be frontrun with acceptPendingRoot if timelock has passed
-    function revokePendingRoot(bytes32 merkleRootToRevoke) external;
-
     /// @notice Sets a payment token and its oracle
     /// @param token The payment token address
     /// @param oracle The oracle address (0 to remove)
@@ -219,15 +155,6 @@ interface IRewardsDistributorBase is IRewardsErrors, IRewardsEvents {
     /// @notice Sets the lock contract address
     /// @param newLockContract The new lock contract address
     function setLockContract(address newLockContract) external;
-
-    /// @notice Sets the timelock duration for root updates
-    /// @param newTimelock The new timelock duration in seconds
-    function setMerkleRootTimelock(uint256 newTimelock) external;
-
-    /// @notice Sets or removes a root updater
-    /// @param updater The address of the root updater
-    /// @param active Whether the root updater should be active
-    function setMerkleRootUpdater(address updater, bool active) external;
 
     /// @notice Withdraws tokens from the contract
     /// @param token The token to withdraw
@@ -253,9 +180,6 @@ interface IRewardsDistributorBase is IRewardsErrors, IRewardsEvents {
 /// @dev This interface is inherited by the RewardsDistributor so that function signatures are checked by the
 /// @dev Consider using the IRewardsDistributor interface instead of this one.
 interface IRewardsDistributorStaticTypes is IRewardsDistributorBase {
-    /// @notice Returns the pending merkle root and the timestamp from which it can be accepted
-    function pendingMerkleRoot() external view returns (bytes32 root, uint256 validFrom);
-
     /// @notice The reward token configuration
     /// @dev IMMUTABLE!
     function REWARD_TOKEN() external view returns (address token, uint8 decimals);
@@ -273,8 +197,6 @@ interface IRewardsDistributorStaticTypes is IRewardsDistributorBase {
 /// @dev Use this interface for RewardsDistributor to have access to all the functions with the appropriate
 /// function signatures.
 interface IRewardsDistributor is IRewardsDistributorBase {
-    function pendingMerkleRoot() external view returns (PendingMerkleRoot memory);
-
     /// @notice The reward token configuration
     /// @dev IMMUTABLE!
     function REWARD_TOKEN() external view returns (RewardToken memory);

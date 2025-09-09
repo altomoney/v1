@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {NftRewardsAdapterCommon} from "./NftRewardsAdapterCommon.t.sol";
-import {AltoNftRewardsAdapter} from "@alto/rewards/AltoNftRewardsAdapter.sol";
+import {AltoNftRewardsAdapter} from "@alto/rewards/adapters/AltoNftRewardsAdapter.sol";
 
 contract AltoNftRewardsAdapterSetNftReferralId is NftRewardsAdapterCommon {
     function test_RevertWhen_ReferralNftIdIsGreaterThan700() external {

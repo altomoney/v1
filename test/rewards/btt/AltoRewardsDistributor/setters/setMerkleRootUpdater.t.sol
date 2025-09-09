@@ -3,8 +3,9 @@ pragma solidity ^0.8.0;
 
 import {RewardsDistributorCommon} from "../RewardsDistributorCommon.t.sol";
 import {AltoRewardsDistributor} from "@alto/rewards/AltoRewardsDistributor.sol";
-import {IRewardsEvents, IRewardsErrors} from "@alto/rewards/interfaces/IRewardsDistributor.sol";
+import {IRewardsEvents} from "@alto/rewards/interfaces/IRewardsDistributor.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {IMerkleRootManagerEvents, IMerkleRootManagerErrors} from "@alto/rewards/interfaces/IMerkleRootManager.sol";
 
 contract AltoRewardsDistributorSetMerkleRootUpdater is RewardsDistributorCommon {
     function test_RevertWhen_CallerIsNotOwner() external {
@@ -12,7 +13,7 @@ contract AltoRewardsDistributorSetMerkleRootUpdater is RewardsDistributorCommon 
 
         vm.prank(ALICE);
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, ALICE));
+        vm.expectRevert(IMerkleRootManagerErrors.MerkleRootManagerNotOwner.selector);
         distributor.setMerkleRootUpdater(newUpdater, true);
     }
 
@@ -27,7 +28,7 @@ contract AltoRewardsDistributorSetMerkleRootUpdater is RewardsDistributorCommon 
 
         vm.prank(OWNER);
         // it should revert
-        vm.expectRevert(IRewardsErrors.AltoRewardsDistributorInvalidInput.selector);
+        vm.expectRevert(IMerkleRootManagerErrors.MerkleRootManagerInvalidInput.selector);
         distributor.setMerkleRootUpdater(UPDATER, currentStatus);
     }
 
@@ -40,7 +41,7 @@ contract AltoRewardsDistributorSetMerkleRootUpdater is RewardsDistributorCommon 
 
         // it should emit SetMerkleRootUpdater event
         vm.expectEmit(true, false, false, true);
-        emit IRewardsEvents.SetMerkleRootUpdater(newUpdater, true);
+        emit IMerkleRootManagerEvents.SetMerkleRootUpdater(newUpdater, true);
 
         vm.prank(OWNER);
         distributor.setMerkleRootUpdater(newUpdater, true);
@@ -56,7 +57,7 @@ contract AltoRewardsDistributorSetMerkleRootUpdater is RewardsDistributorCommon 
 
         // it should emit SetMerkleRootUpdater event
         vm.expectEmit(true, false, false, true);
-        emit IRewardsEvents.SetMerkleRootUpdater(UPDATER, false);
+        emit IMerkleRootManagerEvents.SetMerkleRootUpdater(UPDATER, false);
 
         vm.prank(OWNER);
         distributor.setMerkleRootUpdater(UPDATER, false);
@@ -73,7 +74,7 @@ contract AltoRewardsDistributorSetMerkleRootUpdater is RewardsDistributorCommon 
 
         // it should emit SetMerkleRootUpdater event
         vm.expectEmit(true, false, false, true);
-        emit IRewardsEvents.SetMerkleRootUpdater(newUpdater, true);
+        emit IMerkleRootManagerEvents.SetMerkleRootUpdater(newUpdater, true);
 
         vm.prank(OWNER);
         distributor.setMerkleRootUpdater(newUpdater, true);
@@ -90,7 +91,7 @@ contract AltoRewardsDistributorSetMerkleRootUpdater is RewardsDistributorCommon 
 
         // Set to true
         vm.expectEmit(true, false, false, true);
-        emit IRewardsEvents.SetMerkleRootUpdater(testUpdater, true);
+        emit IMerkleRootManagerEvents.SetMerkleRootUpdater(testUpdater, true);
 
         vm.prank(OWNER);
         distributor.setMerkleRootUpdater(testUpdater, true);
@@ -99,7 +100,7 @@ contract AltoRewardsDistributorSetMerkleRootUpdater is RewardsDistributorCommon 
 
         // Set back to false
         vm.expectEmit(true, false, false, true);
-        emit IRewardsEvents.SetMerkleRootUpdater(testUpdater, false);
+        emit IMerkleRootManagerEvents.SetMerkleRootUpdater(testUpdater, false);
 
         vm.prank(OWNER);
         distributor.setMerkleRootUpdater(testUpdater, false);
@@ -108,7 +109,7 @@ contract AltoRewardsDistributorSetMerkleRootUpdater is RewardsDistributorCommon 
 
         // Set to true again
         vm.expectEmit(true, false, false, true);
-        emit IRewardsEvents.SetMerkleRootUpdater(testUpdater, true);
+        emit IMerkleRootManagerEvents.SetMerkleRootUpdater(testUpdater, true);
 
         vm.prank(OWNER);
         distributor.setMerkleRootUpdater(testUpdater, true);
@@ -155,7 +156,7 @@ contract AltoRewardsDistributorSetMerkleRootUpdater is RewardsDistributorCommon 
 
         // it should emit SetMerkleRootUpdater event
         vm.expectEmit(true, false, false, true);
-        emit IRewardsEvents.SetMerkleRootUpdater(OWNER, true);
+        emit IMerkleRootManagerEvents.SetMerkleRootUpdater(OWNER, true);
 
         vm.prank(OWNER);
         distributor.setMerkleRootUpdater(OWNER, true);

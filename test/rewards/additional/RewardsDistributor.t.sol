@@ -18,6 +18,7 @@ import {USD_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IUsdOracle.so
 import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 import {IOracle} from "@alto/oracles/interfaces/IOracle.sol";
+import {IMerkleRootManagerEvents} from "@alto/rewards/interfaces/IMerkleRootManager.sol";
 
 contract MockLock {
     mapping(address => uint256) public locked;
@@ -104,7 +105,7 @@ contract RewardsDistributorTest is Test {
         distributor.setRewardTokenUsdOracle(address(rewardOracle));
         distributor.setLockBonusDiscount(LOCK_DISCOUNT);
         distributor.setLockContract(address(lockContract));
-        distributor.submitNewPendingRoot(testRoot);
+        distributor.submitNewPendingRoot(testRoot, bytes32(0));
         distributor.acceptPendingRoot(testRoot);
         vm.stopPrank();
 
@@ -455,7 +456,7 @@ contract RewardsDistributorTest is Test {
 
         vm.startPrank(owner);
         newDistributor.setPaymentToken(address(paymentToken), address(paymentOracle));
-        newDistributor.submitNewPendingRoot(testRoot);
+        newDistributor.submitNewPendingRoot(testRoot, bytes32(0));
         newDistributor.acceptPendingRoot(testRoot);
         vm.stopPrank();
 
@@ -480,7 +481,7 @@ contract RewardsDistributorTest is Test {
         vm.startPrank(owner);
         newDistributor.setPaymentToken(address(paymentToken), address(paymentOracle));
         newDistributor.setRewardTokenUsdOracle(address(newRewardOracle));
-        newDistributor.submitNewPendingRoot(testRoot);
+        newDistributor.submitNewPendingRoot(testRoot, bytes32(0));
         newDistributor.acceptPendingRoot(testRoot);
         vm.stopPrank();
 
@@ -544,7 +545,7 @@ contract RewardsDistributorTest is Test {
 
         // Update root
         vm.prank(updater);
-        distributor.submitNewPendingRoot(newRoot);
+        distributor.submitNewPendingRoot(newRoot, bytes32(0));
 
         vm.warp(block.timestamp + INITIAL_TIMELOCK);
         distributor.acceptPendingRoot(newRoot);
@@ -605,7 +606,7 @@ contract RewardsDistributorTest is Test {
         uint256 maxDiscount = distributor.MAX_DISCOUNT();
         vm.startPrank(owner);
         (bytes32 root,,) = _setupMerkleTreeWithDiscount(aliceAvailable, maxDiscount, bobAvailable, maxDiscount);
-        distributor.submitNewPendingRoot(root);
+        distributor.submitNewPendingRoot(root, bytes32(0));
         vm.warp(block.timestamp + INITIAL_TIMELOCK);
         distributor.acceptPendingRoot(root);
         vm.stopPrank();
@@ -707,12 +708,12 @@ contract RewardsDistributorTest is Test {
         bytes32 newIpfsHash = bytes32(uint256(2));
 
         vm.expectEmit(true, true, false, true);
-        emit IRewardsEvents.SubmitPendingMerkleRoot(updater, newRoot);
+        emit IMerkleRootManagerEvents.SubmitPendingMerkleRoot(updater, newRoot, bytes32(0));
 
         vm.prank(updater);
-        distributor.submitNewPendingRoot(newRoot);
+        distributor.submitNewPendingRoot(newRoot, bytes32(0));
 
-        (bytes32 root, uint256 validAt) = distributor.pendingMerkleRoot();
+        (bytes32 root, uint256 validAt, bytes32 ipfsHash) = distributor.pendingMerkleRoot();
         assertEq(root, newRoot);
         assertEq(validAt, block.timestamp + INITIAL_TIMELOCK);
     }
@@ -769,7 +770,7 @@ contract RewardsDistributorTest is Test {
         deal(address(rewardToken), address(distributor), aliceClaim);
 
         vm.prank(owner);
-        distributor.submitNewPendingRoot(root);
+        distributor.submitNewPendingRoot(root, bytes32(0));
 
         vm.warp(block.timestamp + INITIAL_TIMELOCK);
         distributor.acceptPendingRoot(root);
@@ -896,7 +897,7 @@ contract RewardsDistributorTest is Test {
         distributor.setLockBonusDiscount(lockDiscount);
         (bytes32 dRoot, bytes32[] memory aProof,) =
             _setupMerkleTreeWithDiscount(aliceAvailable, discount, bobAvailable, discount);
-        distributor.submitNewPendingRoot(dRoot);
+        distributor.submitNewPendingRoot(dRoot, bytes32(0));
         vm.warp(block.timestamp + INITIAL_TIMELOCK);
         distributor.acceptPendingRoot(dRoot);
         vm.stopPrank();
@@ -953,7 +954,7 @@ contract RewardsDistributorTest is Test {
         fuzzOracle.setPrice(_getOraclePriceFromEther(1 ether)); // $1
 
         vm.startPrank(owner);
-        fuzzDistributor.submitNewPendingRoot(testRoot);
+        fuzzDistributor.submitNewPendingRoot(testRoot, bytes32(0));
         fuzzDistributor.acceptPendingRoot(testRoot);
         fuzzDistributor.setMerkleRootUpdater(updater, true);
         fuzzDistributor.setPaymentToken(address(fuzzPaymentToken), address(fuzzOracle));
@@ -987,7 +988,7 @@ contract RewardsDistributorTest is Test {
 
         // Update root
         vm.prank(updater);
-        fuzzDistributor.submitNewPendingRoot(fuzzRoot);
+        fuzzDistributor.submitNewPendingRoot(fuzzRoot, bytes32(0));
         vm.warp(block.timestamp + INITIAL_TIMELOCK);
         fuzzDistributor.acceptPendingRoot(fuzzRoot);
 

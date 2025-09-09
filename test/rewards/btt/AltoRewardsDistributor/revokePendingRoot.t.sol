@@ -3,8 +3,9 @@ pragma solidity ^0.8.0;
 
 import {RewardsDistributorCommon} from "./RewardsDistributorCommon.t.sol";
 import {AltoRewardsDistributor} from "@alto/rewards/AltoRewardsDistributor.sol";
-import {IRewardsEvents, IRewardsErrors} from "@alto/rewards/interfaces/IRewardsDistributor.sol";
+import {IRewardsEvents} from "@alto/rewards/interfaces/IRewardsDistributor.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {IMerkleRootManagerEvents, IMerkleRootManagerErrors} from "@alto/rewards/interfaces/IMerkleRootManager.sol";
 
 contract AltoRewardsDistributorRevokePendingRoot is RewardsDistributorCommon {
     function test_RevertWhen_CallerIsNotMerkleRootUpdaterOrOwner() external {
@@ -12,22 +13,22 @@ contract AltoRewardsDistributorRevokePendingRoot is RewardsDistributorCommon {
 
         // Submit a pending root first
         vm.prank(UPDATER);
-        distributor.submitNewPendingRoot(newRoot);
+        distributor.submitNewPendingRoot(newRoot, bytes32(0));
 
         vm.prank(ALICE);
         // it should revert
-        vm.expectRevert(IRewardsErrors.AltoRewardsDistributorNotMerkleRootUpdater.selector);
+        vm.expectRevert(IMerkleRootManagerErrors.MerkleRootManagerNotUpdater.selector);
         distributor.revokePendingRoot(newRoot);
     }
 
     function test_RevertWhen_PendingRootIsNotSet() external {
         // Verify no pending root exists
-        (bytes32 pendingRoot,) = distributor.pendingMerkleRoot();
+        (bytes32 pendingRoot,,) = distributor.pendingMerkleRoot();
         assertEq(pendingRoot, bytes32(0));
 
         vm.prank(UPDATER);
         // it should revert
-        vm.expectRevert(IRewardsErrors.AltoRewardsDistributorPendingRootNotSet.selector);
+        vm.expectRevert(IMerkleRootManagerErrors.MerkleRootManagerPendingRootNotSet.selector);
         distributor.revokePendingRoot(bytes32(0));
     }
 
@@ -37,11 +38,11 @@ contract AltoRewardsDistributorRevokePendingRoot is RewardsDistributorCommon {
 
         // Submit a pending root first
         vm.prank(UPDATER);
-        distributor.submitNewPendingRoot(newRoot);
+        distributor.submitNewPendingRoot(newRoot, bytes32(0));
 
         vm.prank(UPDATER);
         // it should revert
-        vm.expectRevert(IRewardsErrors.AltoRewardsDistributorInvalidInput.selector);
+        vm.expectRevert(IMerkleRootManagerErrors.MerkleRootManagerInvalidInput.selector);
         distributor.revokePendingRoot(wrongRoot);
     }
 
@@ -54,21 +55,21 @@ contract AltoRewardsDistributorRevokePendingRoot is RewardsDistributorCommon {
 
         // Submit a pending root first
         vm.prank(UPDATER);
-        distributor.submitNewPendingRoot(newRoot);
+        distributor.submitNewPendingRoot(newRoot, bytes32(0));
 
         // Verify pending root exists
-        (bytes32 pendingRoot,) = distributor.pendingMerkleRoot();
+        (bytes32 pendingRoot,,) = distributor.pendingMerkleRoot();
         assertEq(pendingRoot, newRoot);
 
         // it should emit RevokePendingMerkleRoot event
         vm.expectEmit(true, true, false, false);
-        emit IRewardsEvents.RevokePendingMerkleRoot(UPDATER, newRoot);
+        emit IMerkleRootManagerEvents.RevokePendingMerkleRoot(UPDATER, newRoot);
 
         vm.prank(UPDATER);
         distributor.revokePendingRoot(newRoot);
 
         // it should delete pending root
-        (bytes32 pendingRootAfter,) = distributor.pendingMerkleRoot();
+        (bytes32 pendingRootAfter,,) = distributor.pendingMerkleRoot();
         assertEq(pendingRootAfter, bytes32(0));
     }
 
@@ -77,17 +78,17 @@ contract AltoRewardsDistributorRevokePendingRoot is RewardsDistributorCommon {
 
         // Submit a pending root first
         vm.prank(UPDATER);
-        distributor.submitNewPendingRoot(newRoot);
+        distributor.submitNewPendingRoot(newRoot, bytes32(0));
 
         // it should emit RevokePendingMerkleRoot event
         vm.expectEmit(true, true, false, false);
-        emit IRewardsEvents.RevokePendingMerkleRoot(OWNER, newRoot);
+        emit IMerkleRootManagerEvents.RevokePendingMerkleRoot(OWNER, newRoot);
 
         vm.prank(OWNER);
         distributor.revokePendingRoot(newRoot);
 
         // it should delete pending root
-        (bytes32 pendingRootAfter,) = distributor.pendingMerkleRoot();
+        (bytes32 pendingRootAfter,,) = distributor.pendingMerkleRoot();
         assertEq(pendingRootAfter, bytes32(0));
     }
 
@@ -96,18 +97,18 @@ contract AltoRewardsDistributorRevokePendingRoot is RewardsDistributorCommon {
 
         // Submit a pending root first
         vm.prank(UPDATER);
-        distributor.submitNewPendingRoot(newRoot);
+        distributor.submitNewPendingRoot(newRoot, bytes32(0));
 
         // it should emit RevokePendingMerkleRoot event
         vm.expectEmit(true, true, false, false);
-        emit IRewardsEvents.RevokePendingMerkleRoot(UPDATER, newRoot);
+        emit IMerkleRootManagerEvents.RevokePendingMerkleRoot(UPDATER, newRoot);
 
         // Revoke with zero parameter (means revoke whatever is pending)
         vm.prank(UPDATER);
         distributor.revokePendingRoot(bytes32(0));
 
         // it should delete pending root
-        (bytes32 pendingRootAfter,) = distributor.pendingMerkleRoot();
+        (bytes32 pendingRootAfter,,) = distributor.pendingMerkleRoot();
         assertEq(pendingRootAfter, bytes32(0));
     }
 }

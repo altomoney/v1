@@ -6,6 +6,7 @@ import {AltoRewardsDistributor, CLAIM_PAUSE_TYPE} from "@alto/rewards/AltoReward
 import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
 import {IRewardsEvents, IRewardsErrors} from "@alto/rewards/interfaces/IRewardsDistributor.sol";
 import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
+import {IMerkleRootManagerErrors} from "@alto/rewards/interfaces/IMerkleRootManager.sol";
 
 contract AltoRewardsDistributorClaimRewardTokens is RewardsDistributorCommon {
     function test_RevertWhen_ContractIsPaused() external {
@@ -49,7 +50,7 @@ contract AltoRewardsDistributorClaimRewardTokens is RewardsDistributorCommon {
         paymentToken.approve(address(newDistributor), type(uint256).max);
 
         // it should revert
-        vm.expectRevert(IRewardsErrors.AltoRewardsDistributorMerkleRootNotSet.selector);
+        vm.expectRevert(IMerkleRootManagerErrors.MerkleRootManagerRootNotSet.selector);
         newDistributor.claimRewardTokens(
             aliceAvailable, aliceProof, aliceAvailable, BASE_DISCOUNT, address(paymentToken), false, ALICE
         );
@@ -64,7 +65,7 @@ contract AltoRewardsDistributorClaimRewardTokens is RewardsDistributorCommon {
         vm.startPrank(OWNER);
         newDistributor.setPaymentToken(address(paymentToken), address(paymentOracle));
         newDistributor.setRewardTokenUsdOracle(address(rewardOracle));
-        newDistributor.submitNewPendingRoot(testRoot);
+        newDistributor.submitNewPendingRoot(testRoot, bytes32(0));
         newDistributor.acceptPendingRoot(testRoot);
         vm.stopPrank();
 
@@ -153,7 +154,7 @@ contract AltoRewardsDistributorClaimRewardTokens is RewardsDistributorCommon {
 
         vm.startPrank(OWNER);
         newDistributor.setPaymentToken(address(paymentToken), address(paymentOracle));
-        newDistributor.submitNewPendingRoot(testRoot);
+        newDistributor.submitNewPendingRoot(testRoot, bytes32(0));
         newDistributor.acceptPendingRoot(testRoot);
         vm.stopPrank();
 
@@ -298,7 +299,7 @@ contract AltoRewardsDistributorClaimRewardTokens is RewardsDistributorCommon {
         vm.startPrank(OWNER);
         (bytes32 root, bytes32[] memory newAliceProof,) =
             _setupMerkleTreeWithDiscount(aliceAvailable, maxDiscount, bobAvailable, maxDiscount);
-        distributor.submitNewPendingRoot(root);
+        distributor.submitNewPendingRoot(root, bytes32(0));
         vm.warp(block.timestamp + INITIAL_TIMELOCK);
         distributor.acceptPendingRoot(root);
         vm.stopPrank();

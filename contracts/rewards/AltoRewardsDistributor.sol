@@ -8,9 +8,8 @@ import {
     RewardToken,
     IRewardsDistributorBase
 } from "@alto/rewards/interfaces/IRewardsDistributor.sol";
-import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+import {MerkleRootManager, PendingMerkleRoot} from "@alto/rewards/MerkleRootManager.sol";
 import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
-import {PendingMerkleRoot} from "@alto/rewards/interfaces/IRewardsDistributor.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -27,21 +26,9 @@ bytes32 constant CLAIM_PAUSE_TYPE = keccak256("CLAIM_PAUSE");
 /// @author Pearl Labs
 /// @custom:contact security@tapioca.xyz
 /// @notice A contract for distributing rights to purchase tokens to users determined by a merkle tree.
-contract AltoRewardsDistributor is IRewardsDistributorStaticTypes, Ownable2Step, Pausable, Auth {
+contract AltoRewardsDistributor is IRewardsDistributorStaticTypes, MerkleRootManager, Ownable2Step, Pausable, Auth {
     using SafeERC20 for IERC20;
     using FixedPointMath for uint256;
-
-    /// @inheritdoc IRewardsDistributorBase
-    bytes32 public merkleRoot;
-
-    /// @inheritdoc IRewardsDistributorBase
-    mapping(address => bool) public isMerkleRootUpdater;
-
-    /// @inheritdoc IRewardsDistributorBase
-    uint256 public merkleRootTimelock;
-
-    /// @inheritdoc IRewardsDistributorStaticTypes
-    PendingMerkleRoot public pendingMerkleRoot;
 
     /// @inheritdoc IRewardsDistributorStaticTypes
     RewardToken public REWARD_TOKEN;
@@ -69,12 +56,9 @@ contract AltoRewardsDistributor is IRewardsDistributorStaticTypes, Ownable2Step,
 
     address[] public adaptersWhitelist;
 
-    /// @notice reverts if the caller is not a merkle root updater or the owner
-    modifier onlyMerkleRootUpdater() {
-        if (!isMerkleRootUpdater[msg.sender] && msg.sender != owner()) {
-            revert AltoRewardsDistributorNotMerkleRootUpdater();
-        }
-        _;
+    /// @notice Implementation of abstract function from MerkleRootManager
+    function _getOwner() internal view override returns (address) {
+        return owner();
     }
 
     /// @dev Modifier to check if the AltoRewardsDistributor is not paused.
@@ -114,20 +98,12 @@ contract AltoRewardsDistributor is IRewardsDistributorStaticTypes, Ownable2Step,
             revert AltoRewardsDistributorUnauthorized();
         }
 
-        if (merkleRoot == bytes32(0)) {
-            revert AltoRewardsDistributorMerkleRootNotSet();
-        }
-
         if (lockPurchasedRewards && lockContract == address(0)) {
             revert AltoRewardsDistributorLockContractNotSet();
         }
 
         if (
-            !MerkleProof.verifyCalldata(
-                proof,
-                merkleRoot,
-                keccak256(bytes.concat(keccak256(abi.encode(onBehalf, totalRewardsForUser, discount))))
-            )
+            !_verifyProof(proof, keccak256(bytes.concat(keccak256(abi.encode(onBehalf, totalRewardsForUser, discount)))))
         ) {
             revert AltoRewardsDistributorInvalidInput();
         }
@@ -200,58 +176,6 @@ contract AltoRewardsDistributor is IRewardsDistributorStaticTypes, Ownable2Step,
     }
 
     /// @inheritdoc IRewardsDistributorBase
-    function submitNewPendingRoot(bytes32 newMerkleRoot) external onlyMerkleRootUpdater {
-        if (newMerkleRoot == pendingMerkleRoot.merkleRoot) {
-            revert AltoRewardsDistributorAlreadyPending();
-        }
-
-        if (newMerkleRoot == bytes32(0)) {
-            revert AltoRewardsDistributorInvalidInput();
-        }
-
-        pendingMerkleRoot =
-            PendingMerkleRoot({merkleRoot: newMerkleRoot, validFrom: block.timestamp + merkleRootTimelock});
-
-        emit SubmitPendingMerkleRoot(msg.sender, newMerkleRoot);
-    }
-
-    /// @inheritdoc IRewardsDistributorBase
-    function acceptPendingRoot(bytes32 merkleRootToAccept) external {
-        if (pendingMerkleRoot.validFrom == 0) {
-            revert AltoRewardsDistributorMerkleRootNotSet();
-        }
-
-        if (merkleRootToAccept != bytes32(0) && merkleRootToAccept != pendingMerkleRoot.merkleRoot) {
-            revert AltoRewardsDistributorInvalidInput();
-        }
-
-        if (msg.sender != owner() && block.timestamp < pendingMerkleRoot.validFrom) {
-            revert AltoRewardsDistributorTimelockNotExpired();
-        }
-
-        merkleRoot = pendingMerkleRoot.merkleRoot;
-
-        delete pendingMerkleRoot;
-
-        emit AcceptPendingMerkleRoot(msg.sender, merkleRoot);
-    }
-
-    /// @inheritdoc IRewardsDistributorBase
-    function revokePendingRoot(bytes32 merkleRootToRevoke) external onlyMerkleRootUpdater {
-        if (pendingMerkleRoot.validFrom == 0) {
-            revert AltoRewardsDistributorPendingRootNotSet();
-        }
-
-        if (merkleRootToRevoke != bytes32(0) && merkleRootToRevoke != pendingMerkleRoot.merkleRoot) {
-            revert AltoRewardsDistributorInvalidInput();
-        }
-
-        emit RevokePendingMerkleRoot(msg.sender, pendingMerkleRoot.merkleRoot);
-
-        delete pendingMerkleRoot;
-    }
-
-    /// @inheritdoc IRewardsDistributorBase
     function setPaymentToken(address token, address oracle) external onlyOwner {
         if (oracle != address(0)) {
             paymentTokens[token] = PaymentToken({oracle: oracle, decimals: IERC20Metadata(token).decimals()});
@@ -284,26 +208,6 @@ contract AltoRewardsDistributor is IRewardsDistributorStaticTypes, Ownable2Step,
     function setLockContract(address newLockContract) external onlyOwner {
         lockContract = newLockContract;
         emit SetLockContract(newLockContract);
-    }
-
-    /// @inheritdoc IRewardsDistributorBase
-    function setMerkleRootTimelock(uint256 newTimelock) external onlyOwner {
-        if (newTimelock == merkleRootTimelock) {
-            revert AltoRewardsDistributorInvalidInput();
-        }
-
-        _setMerkleRootTimelock(newTimelock);
-    }
-
-    /// @inheritdoc IRewardsDistributorBase
-    function setMerkleRootUpdater(address updater, bool active) external onlyOwner {
-        if (isMerkleRootUpdater[updater] == active) {
-            revert AltoRewardsDistributorInvalidInput();
-        }
-
-        isMerkleRootUpdater[updater] = active;
-
-        emit SetMerkleRootUpdater(updater, active);
     }
 
     /// @inheritdoc IRewardsDistributorBase
@@ -387,13 +291,6 @@ contract AltoRewardsDistributor is IRewardsDistributorStaticTypes, Ownable2Step,
         // This can happen with very high discounts (close to 100%)
 
         return paymentAmount;
-    }
-
-    /// @dev Sets the `merkleRootTimelock` to `_merkleRootTimelock`.
-    function _setMerkleRootTimelock(uint256 _merkleRootTimelock) internal {
-        merkleRootTimelock = _merkleRootTimelock;
-
-        emit SetMerkleRootTimelock(_merkleRootTimelock);
     }
 
     /// @inheritdoc IPausable

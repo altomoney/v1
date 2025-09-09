@@ -106,7 +106,7 @@ contract RewardsDistributorCommon is Test {
         distributor.setLockBonusDiscount(LOCK_DISCOUNT);
         distributor.setLockContract(address(lockContract));
         distributor.setPauser(PAUSER, CLAIM_PAUSE_TYPE, true);
-        distributor.submitNewPendingRoot(testRoot);
+        distributor.submitNewPendingRoot(testRoot, bytes32(0));
         distributor.acceptPendingRoot(testRoot);
         vm.stopPrank();
 
