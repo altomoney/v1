@@ -1,0 +1,19 @@
+AltoRewardsDistributor::claimRewardTokensWithAdapters
+├── when adapter payment token share total exceeds MATH_PRECISION
+│   └── it should revert
+├── when adapters provide bonus discounts
+│   ├── it should apply adapter bonus discount
+│   ├── it should transfer payment token share to adapter receiver
+│   └── it should emit ClaimRewardTokens event with combined discount
+├── when discount reaches MAX_DISCOUNT
+│   ├── it should cap discount at MAX_DISCOUNT
+│   └── it should emit ClaimRewardTokens event with capped discount
+├── when adapter has zero payment token share
+│   ├── it should apply adapter bonus discount
+│   └── it should not transfer any payment tokens to adapter receiver
+├── when adapter has zero address receiver
+│   └── it should not revert and should work normally
+├── when adapter receiver is distributor contract
+│   └── it should not send additional tokens to distributor
+└── when multiple adapters provide payment shares
+    └── it should transfer correct payment shares to both adapter receivers

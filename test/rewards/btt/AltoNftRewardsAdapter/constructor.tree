@@ -1,0 +1,28 @@
+AltoNftRewardsAdapter::constructor
+├── when nft address is zero address
+│   └── it should revert
+├── when bonus discount is greater than 0.1 ether
+│   └── it should revert
+├── when payment token share is greater than 0.1 ether
+│   └── it should revert
+└── when all parameters are valid
+    ├── when setting normal parameter values
+    │   ├── it should set PEARL_CLUB_NFT_ADDRESS
+    │   ├── it should set bonusDiscount
+    │   ├── it should set paymentTokenShare
+    │   ├── it should set owner
+    │   ├── it should emit BonusDiscountSet event
+    │   ├── it should emit PaymentTokenShareSet event
+    │   └── it should emit PearlClubNftAddressInitialized event
+    ├── when bonus discount is maximum
+    │   ├── it should set bonusDiscount
+    │   └── it should emit BonusDiscountSet event
+    ├── when payment token share is maximum
+    │   ├── it should set paymentTokenShare
+    │   └── it should emit PaymentTokenShareSet event
+    ├── when bonus discount is zero
+    │   ├── it should set bonusDiscount
+    │   └── it should emit BonusDiscountSet event
+    └── when payment token share is zero
+        ├── it should set paymentTokenShare
+        └── it should emit PaymentTokenShareSet event

@@ -1,0 +1,19 @@
+AltoRewardsDistributor::setLockBonusDiscount
+├── when caller is not owner
+│   └── it should revert
+└── when caller is owner
+    ├── when new lock bonus discount is greater than MAX_DISCOUNT
+    │   └── it should revert
+    └── when new lock bonus discount is valid
+        ├── when setting a normal discount value
+        │   ├── it should update lock bonus discount
+        │   └── it should emit SetLockBonusDiscount event
+        ├── when setting zero discount
+        │   ├── it should update lock bonus discount
+        │   └── it should emit SetLockBonusDiscount event
+        ├── when setting maximum discount
+        │   ├── it should update lock bonus discount
+        │   └── it should emit SetLockBonusDiscount event
+        └── when updating discount multiple times
+            ├── it should update lock bonus discount for each call
+            └── it should emit SetLockBonusDiscount event for each call

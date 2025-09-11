@@ -1,0 +1,7 @@
+constructor.tree
+├── when reward token address is zero address
+│   └── it should revert with AltoRewardsDistributorInvalidInput
+├── when reward token address is valid
+│   └── it should initialize the contract successfully
+└── when merkle root timelock is set
+    └── it should set the initial timelock value

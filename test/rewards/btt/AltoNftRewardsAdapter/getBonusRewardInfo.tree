@@ -1,0 +1,26 @@
+AltoNftRewardsAdapter::getBonusRewardInfo
+├── when user has no referral nft id set
+│   └── it should return zero bonus info
+├── when user has referral nft id set to zero
+│   └── it should return zero bonus info
+├── when referral nft id is owned by caller (self-referral)
+│   └── it should return zero bonus info
+└── when referral nft id is valid and owned by different user
+    ├── when nft owner is valid address
+    │   ├── it should return configured bonus discount
+    │   ├── it should return configured payment token share
+    │   └── it should return nft owner as payment token share receiver
+    ├── when multiple users have same referral nft
+    │   ├── it should return same bonus info for all users
+    │   └── it should return same nft owner as receiver
+    ├── when adapter configuration changes after referral set
+    │   ├── it should return updated bonus discount
+    │   ├── it should return updated payment token share
+    │   └── it should return same nft owner as receiver
+    ├── when nft is transferred after referral set
+    │   ├── it should return new owner as payment token share receiver
+    │   ├── it should return configured bonus discount
+    │   └── it should return configured payment token share
+    └── when calling for different users
+        ├── it should return appropriate bonus info for each user
+        └── it should maintain independent states

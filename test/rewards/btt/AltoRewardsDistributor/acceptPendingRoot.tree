@@ -1,0 +1,20 @@
+AltoRewardsDistributor::acceptPendingRoot
+├── when pending root is not set
+│   └── it should revert
+├── when merkle root to accept is nonzero and does not match pending root
+│   └── it should revert
+├── when caller is not owner and timelock has not expired
+│   └── it should revert
+└── when conditions are met
+    ├── when caller is owner (can bypass timelock)
+    │   ├── it should set merkle root to pending root
+    │   ├── it should delete pending root
+    │   └── it should emit AcceptPendingMerkleRoot event
+    ├── when caller is not owner but timelock has expired
+    │   ├── it should set merkle root to pending root
+    │   ├── it should delete pending root
+    │   └── it should emit AcceptPendingMerkleRoot event
+    └── when accepting with zero parameter
+        ├── it should set merkle root to pending root
+        ├── it should delete pending root
+        └── it should emit AcceptPendingMerkleRoot event

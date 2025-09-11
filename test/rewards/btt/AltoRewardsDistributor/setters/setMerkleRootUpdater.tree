@@ -1,0 +1,25 @@
+AltoRewardsDistributor::setMerkleRootUpdater
+├── when caller is not owner
+│   └── it should revert
+└── when caller is owner
+    ├── when updater status equals current status
+    │   └── it should revert
+    └── when updater status is different from current status
+        ├── when setting a normal different status
+        │   ├── it should update merkle root updater status
+        │   └── it should emit SetMerkleRootUpdater event
+        ├── when removing existing updater
+        │   ├── it should update merkle root updater status
+        │   └── it should emit SetMerkleRootUpdater event
+        ├── when adding new updater
+        │   ├── it should update merkle root updater status
+        │   └── it should emit SetMerkleRootUpdater event
+        ├── when toggling same updater multiple times
+        │   ├── it should update merkle root updater status for each call
+        │   └── it should emit SetMerkleRootUpdater event for each call
+        ├── when managing multiple updaters
+        │   ├── it should update merkle root updater status for each updater
+        │   └── it should maintain independent states for each updater
+        └── when setting owner as updater
+            ├── it should update merkle root updater status
+            └── it should emit SetMerkleRootUpdater event
