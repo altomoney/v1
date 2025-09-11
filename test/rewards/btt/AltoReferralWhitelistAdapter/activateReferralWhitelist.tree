@@ -1,0 +1,15 @@
+AltoReferralWhitelistAdapter::activateReferralWhitelist
+├── when proof is invalid
+│   └── it should revert
+├── given caller is already whitelisted
+│   └── it should revert
+└── when activation is valid
+    ├── when caller provides valid proof and is not whitelisted
+    │   ├── it should set caller as whitelisted
+    │   └── it should emit ReferralWhitelistSet event
+    ├── when multiple users activate with valid proofs
+    │   ├── it should set each user as whitelisted
+    │   └── it should emit ReferralWhitelistSet event for each user
+    └── when user activates after being removed from whitelist
+        ├── it should re-whitelist the user
+        └── it should emit ReferralWhitelistSet event

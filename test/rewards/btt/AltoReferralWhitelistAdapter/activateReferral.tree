@@ -1,0 +1,17 @@
+AltoReferralWhitelistAdapter::activateReferral
+├── when referral address is not whitelisted
+│   └── it should revert
+├── when referral address equals caller (self-referral)
+│   └── it should revert
+├── given caller already has referral address set and current referral is whitelisted
+│   └── it should revert
+└── when referral activation is valid
+    ├── when caller has no previous referral
+    │   ├── it should set referral mapping
+    │   └── it should emit ReferralSet event
+    ├── when caller has previous referral but it was removed from whitelist
+    │   ├── it should set new referral mapping
+    │   └── it should emit ReferralSet event
+    └── when setting referral for different users
+        ├── it should set referral mapping for each user
+        └── it should emit ReferralSet event for each user
