@@ -2,7 +2,7 @@
   "name": "alto-v1",
   "license": "BUSL-1.1",
   "scripts": {
-    "prepare": "husky install && forge install",
+    "prepare": "forge install",
     "lint": "forge fmt --check",
     "clean": "forge clean",
     "test": "forge test",
@@ -11,7 +11,6 @@
     "coverage:server": "npx -y http-server coverage"
   },
   "devDependencies": {
-    "husky": "8.0.3",
     "@openzeppelin/contracts": "5.3.0",
     "@layerzerolabs/oft-evm": "3.1.4",
     "@layerzerolabs/oapp-evm": "0.3.2",
