@@ -1,0 +1,24 @@
+TVLWeightedContainers::advanceEpoch()
+├── given epoch not started
+│   └── it should revert
+├── given current epoch not finished
+│   └── it should revert
+└── given current epoch finished
+    ├── when maxEpochsToProcess is zero
+    │   ├── it should process all pending epochs
+    │   ├── it should update nextEpochToProcess to current epoch
+    │   └── it should emit AdvanceEpoch event
+    ├── when maxEpochsToProcess is limited
+    │   ├── it should process up to maxEpochsToProcess epochs
+    │   ├── it should update nextEpochToProcess accordingly
+    │   └── it should emit AdvanceEpoch event
+    ├── when processing epochs with container TVL
+    │   ├── it should calculate total TVL for each epoch
+    │   ├── it should update container durations based on TVL share
+    │   ├── it should emit ContainerDurationUpdated events
+    │   └── it should process containers according to growth and decay rules
+    └── when complex scenario with multiple containers
+        ├── it should handle multiple containers with different TVL
+        ├── it should process all containers correctly across epochs
+        ├── it should maintain proper TVL calculations
+        └── it should emit all required events 

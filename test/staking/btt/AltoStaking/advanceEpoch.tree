@@ -1,0 +1,15 @@
+AltoStaking::advanceEpoch()
+├── given contract is paused
+│   └── it should revert
+└── given contract is not paused
+    ├── when limit is zero and current epoch not finished
+    │   └── it should revert
+    ├── when limit is zero after time advance
+    │   └── it should advance all available epochs
+    ├── when limit is greater than epochs to advance
+    │   └── it should advance all available epochs
+    ├── when limit equals epochs to advance
+    │   └── it should advance exact number of epochs
+    └── when limit is less than epochs to advance
+        └── it should advance partial epochs up to limit
+

@@ -1,0 +1,15 @@
+TVLWeightedContainers::addContainer()
+├── given invalid container parameters
+│   └── it should inherit all validation tests from TVLWeightedContainersValidation
+└── given valid container parameters
+    ├── it should increment totalContainerCount
+    ├── it should assign correct container ID starting from 1
+    ├── it should set currentDurationEpochs to duration min
+    ├── it should set isActive to false
+    ├── it should store container with provided parameters
+    ├── it should emit ContainerAdded event
+    ├── it should return the container ID
+    └── when adding multiple containers
+        ├── it should assign sequential container IDs
+        ├── it should increment totalContainerCount for each
+        └── it should store all containers correctly 

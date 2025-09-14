@@ -1,0 +1,43 @@
+AltoStaking::unlock()
+├── given contract is paused
+│   └── it should revert
+├── given invalid inputs
+│   ├── when sender is not authorized for onBehalf
+│   │   └── it should revert
+│   ├── when receiver is zero address
+│   │   └── it should revert
+│   └── when position does not exist
+│       └── it should revert
+└── given valid inputs
+    ├── when position is expired and not in rescue mode
+    │   ├── it should transfer tokens to receiver
+    │   ├── it should clear position data
+    │   ├── it should emit UnlockPosition event
+    │   └── it should return released amount
+    ├── when position is not expired and not in rescue mode
+    │   └── it should revert
+    ├── when position is expired and in rescue mode
+    │   ├── it should transfer tokens to receiver
+    │   ├── it should clear position data
+    │   ├── it should emit UnlockPosition event
+    │   └── it should return released amount
+    ├── when position is not expired and in rescue mode
+    │   ├── it should transfer tokens to receiver
+    │   ├── it should update container TVL for remaining epochs
+    │   ├── it should clear position data
+    │   ├── it should emit UnlockPosition event
+    │   └── it should return released amount
+    ├── when unlocking multiple positions
+    │   └── it should unlock each position independently
+    ├── when unlocking after partial expiry
+    │   └── it should only allow unlocking expired positions
+    ├── when using rescue mode for early unlock
+    │   └── it should allow unlocking unexpired positions
+    ├── when unlocking to different receivers
+    │   └── it should transfer tokens to specified receivers
+    ├── when testing exact expiry timing
+    │   └── it should unlock exactly at expiry time
+    ├── when container is deprecated
+    │   └── it should still allow unlocking expired positions
+    └── when container is deprecated and inactive
+        └── it should still allow unlocking expired positions 

@@ -1,0 +1,22 @@
+TVLWeightedContainers::updateContainer()
+├── given invalid container parameters
+│   └── it should inherit all validation tests from TVLWeightedContainersValidation
+├── given container is active and new duration range conflicts
+│   ├── when new duration min is greater than current duration
+│   │   └── it should revert with TVLWeightedContainersInvalidInput
+│   └── when new duration max is less than current duration
+│       └── it should revert with TVLWeightedContainersInvalidInput
+├── given valid parameters
+│   ├── when updating inactive container
+│   │   ├── it should preserve currentDurationEpochs from original container
+│   │   ├── it should preserve inactive status from original container
+│   │   ├── it should update container parameters with new values
+│   │   ├── it should emit ContainerUpdated event with before and after
+│   │   └── it should return the container ID
+│   ├── when updating active container with valid duration range
+│   │   ├── it should preserve active status and current duration
+│   │   └── it should update other parameters correctly
+│   ├── when updating with same duration range
+│   │   └── it should update parameters even if duration range is identical
+│   └── when updating non-existent container
+│       └── it should revert

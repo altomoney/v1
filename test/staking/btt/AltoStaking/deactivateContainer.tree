@@ -1,0 +1,18 @@
+AltoStaking::deactivateContainer()
+├── when caller is not owner
+│   └── it should revert
+└── when caller is owner
+    ├── given container is not deprecated
+    │   └── it should revert
+    ├── given container does not exist
+    │   └── it should revert
+    └── given valid container exists and is deprecated
+        ├── when container is active
+        │   ├── it should deactivate container
+        │   ├── it should emit ContainerDeactivated event
+        │   └── when container is max multiplier container
+        │       └── it should update max multiplier to next highest active container
+        ├── when container is already inactive
+        │   └── it should revert
+        └── when multiple containers are deactivated
+            └── it should deactivate all and update max multiplier to zero if none active

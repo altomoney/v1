@@ -1,0 +1,62 @@
+AltoStaking::lock()
+├── given contract is paused
+│   └── it should revert
+├── given contract is in rescue mode
+│   └── it should revert
+├── given invalid inputs
+│   ├── when sender is not authorized for onBehalf
+│   │   └── it should revert
+│   ├── when onBehalf is zero address
+│   │   └── it should revert
+│   ├── when amount is zero
+│   │   └── it should revert
+│   ├── when container is deprecated
+│   │   └── it should revert
+│   ├── when container does not exist
+│   │   └── it should revert
+│   └── when maxEpochsToLockFor is less than container duration
+│       └── it should revert
+└── given valid inputs
+    ├── when position does not exist and isReuse is false
+    │   ├── it should create new position
+    │   ├── it should transfer tokens from sender
+    │   ├── it should update container TVL
+    │   ├── it should calculate expiry based on current container duration
+    │   ├── it should emit LockPosition event with isReuse false
+    │   └── it should return locked amount
+    ├── when position exists and isReuse is false
+    │   ├── it should update existing position with additional amount
+    │   ├── it should transfer additional tokens from sender
+    │   ├── it should remove old TVL from future epochs
+    │   ├── it should add new TVL with total amount
+    │   ├── it should update expiry timestamp
+    │   ├── it should emit LockPosition event with isReuse false
+    │   └── it should return total locked amount
+    ├── when position exists and isReuse is true with matching amount
+    │   ├── it should update position expiry without transferring tokens
+    │   ├── it should remove old TVL from future epochs
+    │   ├── it should add new TVL with same amount
+    │   ├── it should update expiry timestamp
+    │   ├── it should emit LockPosition event with isReuse true
+    │   └── it should return locked amount
+    ├── when position exists and isReuse is true with different amount
+    │   └── it should revert
+    ├── when epoch needs to be advanced
+    │   ├── it should advance epoch before processing
+    │   ├── it should process position normally
+    │   └── it should maintain correct TVL calculations
+    ├── when multiple users lock in same container
+    │   └── it should create separate positions and aggregate TVL
+    ├── when user locks in different containers
+    │   └── it should create separate positions with container-specific expiry times
+    ├── when testing expiry calculation with different container durations
+    │   └── it should calculate different expiry times based on container duration
+    ├── when maxEpochsToLockFor is zero
+    │   ├── it should create position normally with full container duration
+    │   └── it should not apply any epoch limit
+    ├── when maxEpochsToLockFor is greater than container duration
+    │   ├── it should create position normally with container's duration
+    │   └── it should not limit the lock duration
+    └── when maxEpochsToLockFor equals container duration
+        ├── it should create position normally
+        └── it should use the container's full duration 

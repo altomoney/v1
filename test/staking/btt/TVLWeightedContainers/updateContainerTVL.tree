@@ -1,0 +1,23 @@
+TVLWeightedContainers::updateContainerTVL()
+├── given epoch not started
+│   └── it should revert
+├── given current epoch already finished
+│   └── it should revert
+├── given invalid inputs
+│   ├── when adding TVL and fromEpoch is not current epoch
+│   │   └── it should revert
+│   ├── when fromEpoch is greater than toEpoch
+│   │   └── it should revert
+│   ├── when fromEpoch is less than nextEpochToProcess
+│   │   └── it should revert
+│   ├── when container is not active
+│   │   └── it should revert
+│   └── when removing more TVL than available
+│       └── it should revert
+└── given valid inputs
+    ├── when adding TVL
+    │   ├── it should update epochTVL for all epochs from fromEpoch to toEpoch
+    │   └── it should emit ContainerTVLUpdated event with add flag true
+    └── when removing TVL
+        ├── it should update epochTVL for all epochs from fromEpoch to toEpoch
+        └── it should emit ContainerTVLUpdated event with add flag false 

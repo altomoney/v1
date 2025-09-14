@@ -1,0 +1,6 @@
+AltoStaking::getPosition()
+├── when position does not exist
+│   └── it should return empty position
+└── when position exists
+    └── it should return position data
+

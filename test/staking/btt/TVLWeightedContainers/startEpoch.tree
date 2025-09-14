@@ -1,0 +1,9 @@
+TVLWeightedContainers::startEpoch()
+├── given epoch already started
+│   └── it should revert
+└── given epoch not started
+    ├── when no active containers
+    │   └── it should revert
+    └── when active containers exist
+        ├── it should set initializedAtTimestamp to current block timestamp
+        └── it should emit EpochStarted event 

@@ -1,0 +1,12 @@
+TVLWeightedContainers::getContainer()
+├── when container ID is zero
+│   └── it should return empty container with all fields set to zero/false
+├── when container ID does not exist
+│   └── it should return empty container with all fields set to zero/false
+├── when container ID exists
+│   ├── it should return correct container data with all fields
+│   └── it should set currentDurationEpochs to duration.min on creation
+├── when container state changes
+│   └── it should return updated isActive status after activation
+└── when multiple containers exist
+    └── it should return correct data for each container independently

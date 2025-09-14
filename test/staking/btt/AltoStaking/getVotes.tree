@@ -1,0 +1,36 @@
+AltoStaking::getVotes()
+├── when user has no positions
+│   └── it should return zero votes
+├── when user has expired positions only
+│   └── it should return zero votes
+└── when user has active positions
+    ├── when user has single active position
+    │   ├── it should calculate votes as amount * multiplier
+    │   └── it should return correct voting power
+    ├── when user has multiple active positions in same container
+    │   ├── it should sum all amounts in container
+    │   ├── it should multiply by container multiplier
+    │   └── it should return correct total voting power
+    ├── when user has active positions in different containers
+    │   ├── it should calculate votes for each container separately
+    │   ├── it should apply respective multipliers
+    │   ├── it should sum all voting powers
+    │   └── it should return correct total voting power
+    ├── when user has mix of active and expired positions
+    │   ├── it should include only non-expired positions
+    │   ├── it should ignore expired positions
+    │   └── it should return voting power for active positions only
+    ├── when containers have different multipliers
+    │   ├── it should apply correct multiplier to each container
+    │   ├── it should calculate proportional voting power
+    │   └── it should return accurate weighted total
+    ├── when testing calculation accuracy
+    │   └── it should handle precise amounts correctly
+    ├── when multiple users have positions
+    │   └── it should calculate voting power independently for each user
+    ├── when positions are partially unlocked
+    │   └── it should decrease voting power by unlocked amount
+    ├── when containers are deprecated
+    │   └── it should still count votes for existing positions in deprecated containers
+    └── when position has zero amount
+        └── it should return zero votes 
