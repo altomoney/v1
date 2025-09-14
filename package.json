@@ -8,7 +8,11 @@
     "test": "forge test",
     "coverage:lending": "rm -rf lcov.info coverage && FOUNDRY_PROFILE=market forge coverage --no-match-coverage '(script|test|contracts/deployments|contracts/lending/mocks|contracts/oracles/mocks|contracts/tokens|contracts/utils/OFT.sol|contracts/utils/LeverageABIHelper.sol)' --report lcov && sleep 2 && genhtml ./lcov.info -o coverage --branch-coverage --rc derive_function_end_line=0 ",
     "coverage:open": "npx -y open-cli coverage/index.html",
-    "coverage:server": "npx -y http-server coverage"
+    "coverage:server": "npx -y http-server coverage",
+    "deploy:testnet": "./_scripts/deployment/altotestnet.sh",
+    "deploy:multicall": "./_scripts/deployment/multicalltestnet.sh",
+    "deploy:urd": "./_scripts/deployment/urdtestnet.sh",
+    "verify:testnet": "./_scripts/deployment/verify-testnet.sh"
   },
   "devDependencies": {
     "@openzeppelin/contracts": "5.3.0",
