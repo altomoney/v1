@@ -620,7 +620,7 @@ abstract contract AltoBaseMarket is
 
         if (
             liquidationConfiguration.isEnabledPriorityLiquidation
-                && calc.currentLtv < liquidationConfiguration.disablePriorityLiquidationAbovePositionLtv
+                && calc.currentLtv <= liquidationConfiguration.disablePriorityLiquidationAbovePositionLtv
         ) {
             if (!priorityLiquidators[msg.sender] && !liquidablePositions[borrower].tagged) {
                 revert AltoBaseMarketLiquidationUnauthorized();
@@ -758,7 +758,8 @@ abstract contract AltoBaseMarket is
     /// @param liquidationPercentage The liquidation percentage.
     /// @return bonusFee The bonus fee.
     function _calculateBonusFee(uint256 liquidationPercentage) internal view returns (uint256) {
-        if (liquidationPercentage < MATH_PRECISION && liquidationConfiguration.dynamicBonusFeeDecaySteepness > 0) {
+        // liquidationConfiguration.dynamicBonusFeeDecaySteepness is already checked in _validateLiquidationConfiguration
+        if (liquidationPercentage < MATH_PRECISION) {
             int256 exponent = -int256(liquidationConfiguration.dynamicBonusFeeDecaySteepness * liquidationPercentage)
                 / MATH_PRECISION_INT;
             return liquidationConfiguration.dynamicBonusFeeStart.multiplyWithPrecision(uint256(ExpLib.wExp(exponent)));
