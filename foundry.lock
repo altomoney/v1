@@ -1,0 +1,20 @@
+{
+  "lib/bundler3": {
+    "rev": "4887f33299ba6e60b54a51237b16e7392dceeb97"
+  },
+  "lib/forge-std": {
+    "rev": "60acb7aaadcce2d68e52986a0a66fe79f07d138f"
+  },
+  "lib/morpho-blue-irm": {
+    "rev": "ef5dcceb2463ab98a4d7bfa45b75fbfe8ca4bdb9"
+  },
+  "lib/openzeppelin-contracts-upgradeable": {
+    "rev": "da12828d5d0fbd8a556e118756eedef9fb042ffc"
+  },
+  "lib/openzeppelin-foundry-upgrades": {
+    "rev": "cbce1e00305e943aa1661d43f41e5ac72c662b07"
+  },
+  "lib/universal-rewards-distributor": {
+    "rev": "8aaa0099db6cef311a2b02e04b930bfe9b6a6e4e"
+  }
+}
