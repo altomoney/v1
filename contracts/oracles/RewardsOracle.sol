@@ -104,7 +104,7 @@ contract RewardsOracle is ModuleChainlinkMulti, ModuleUniswapMulti, IUsdOracle {
     /// @dev The amount returned is expressed with base `BASE` (and not the base of the out-currency)
     function _readUniswapQuote(uint256 quoteAmount) internal view returns (uint256 uniAmount) {
         uniAmount = _quoteUniswap(quoteAmount);
-        // The current uni rate is in outBase we want it in BASE to avoid precision loss
+        // The current uni rate is in outBase we want it in BASE to avoid precision loss in _changeUniswapNotFinal function
         uniAmount = (uniAmount * BASE) / outBase;
         if (uniFinalCurrency > 0) {
             uniAmount = _changeUniswapNotFinal(0, uniAmount);

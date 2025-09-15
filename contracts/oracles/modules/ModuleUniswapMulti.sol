@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: GPL-3.0
-
 pragma solidity ^0.8.7;
 
 import {UniswapUtils, IUniswapV3Pool} from "@alto/oracles/utils/UniswapUtils.sol";

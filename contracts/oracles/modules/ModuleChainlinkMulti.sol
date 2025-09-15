@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: GPL-3.0
-
 pragma solidity ^0.8.7;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
