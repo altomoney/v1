@@ -2,16 +2,40 @@
   "lib/bundler3": {
     "rev": "4887f33299ba6e60b54a51237b16e7392dceeb97"
   },
+  "lib/chainlink-evm": {
+    "tag": {
+      "name": "v0.3.3",
+      "rev": "793106cd598da8b2762958880300787b0b361fa1"
+    }
+  },
   "lib/forge-std": {
-    "rev": "60acb7aaadcce2d68e52986a0a66fe79f07d138f"
+    "tag": {
+      "name": "v1.10.0",
+      "rev": "8bbcf6e3f8f62f419e5429a0bd89331c85c37824"
+    }
   },
   "lib/morpho-blue-irm": {
-    "rev": "ef5dcceb2463ab98a4d7bfa45b75fbfe8ca4bdb9"
+    "tag": {
+      "name": "v1.1.0",
+      "rev": "ef5dcceb2463ab98a4d7bfa45b75fbfe8ca4bdb9"
+    }
   },
   "lib/openzeppelin-contracts-upgradeable": {
-    "rev": "da12828d5d0fbd8a556e118756eedef9fb042ffc"
+    "tag": {
+      "name": "v5.4.0",
+      "rev": "e725abddf1e01cf05ace496e950fc8e243cc7cab"
+    }
   },
   "lib/openzeppelin-foundry-upgrades": {
-    "rev": "cbce1e00305e943aa1661d43f41e5ac72c662b07"
+    "tag": {
+      "name": "v0.4.0",
+      "rev": "cbce1e00305e943aa1661d43f41e5ac72c662b07"
+    }
+  },
+  "lib/v3-core": {
+    "tag": {
+      "name": "v1.0.0",
+      "rev": "e3589b192d0be27e100cd0daaf6c97204fdb1899"
+    }
   }
 }
