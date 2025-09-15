@@ -285,20 +285,18 @@ contract AltoRewardsDistributor is IRewardsDistributorStaticTypes, MerkleRootMan
             true // round up to avoid zero payment
         );
 
-        // Apply discount using MATH_PRECISION
-        rewardToPurchaseCostUsd = rewardToPurchaseCostUsd.multiplyWithPrecision(MATH_PRECISION - discount);
-
         // Convert to payment token amount
         // Result should have paymentDecimals decimals
         uint256 paymentAmount = rewardToPurchaseCostUsd.divideWithRounding(
             10 ** paymentTokenConfig.decimals,
             tokenPrice,
-            true // round up to ensure we never underpay
+            true // round up to avoid zero payment
         );
 
-        // When discount results in zero payment due to rounding, allow it
-        // This can happen with very high discounts (close to 100%)
+        // We round up to avoid zero payment when applying discount
+        paymentAmount = paymentAmount.multiplyWithPrecisionUp(MATH_PRECISION - discount);
 
+        // We allow zero paymentAmount only in case discount is 100%
         return paymentAmount;
     }
 
