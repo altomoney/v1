@@ -2,6 +2,8 @@
 
 pragma solidity >=0.4.0;
 
+/// @author Pearl Labs
+/// @author Adapted from Angle Core repository (https://github.com/AngleProtocol/angle-core)
 /// @title Contains 512-bit math functions
 /// @notice Facilitates multiplication and division that can have overflow of an intermediate value without any loss of precision
 /// @dev Handles "phantom overflow" i.e., allows multiplication and division where an intermediate value overflows 256 bits

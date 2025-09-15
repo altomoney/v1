@@ -2,10 +2,12 @@
 
 pragma solidity ^0.8.7;
 
-import "../utils/ChainlinkUtils.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {ChainlinkUtils, AggregatorV3Interface} from "@alto/oracles/utils/ChainlinkUtils.sol";
 
 /// @title ModuleChainlinkMulti
-/// @author Angle Core Team
+/// @author Pearl Labs
+/// @author Adapted from Angle Core (https://github.com/AngleProtocol/angle-core)
 /// @notice Module Contract that is going to be used to help compute Chainlink prices
 /// @dev This contract helps for an oracle using a Chainlink circuit composed of multiple pools
 /// @dev An oracle using Chainlink is either going to be a `ModuleChainlinkSingle` or a `ModuleChainlinkMulti`
@@ -18,25 +20,16 @@ abstract contract ModuleChainlinkMulti is ChainlinkUtils {
     /// @notice Decimals for each Chainlink pairs
     uint8[] public chainlinkDecimals;
 
+    error ChainlinkCircuitLengthZero();
+    error ChainlinkInvalidInput();
+
     /// @notice Constructor for an oracle using only Chainlink with multiple pools to read from
     /// @param _circuitChainlink Chainlink pool addresses (in order)
     /// @param _circuitChainIsMultiplied Whether we should multiply or divide by this rate when computing Chainlink price
-    constructor(
-        address[] memory _circuitChainlink,
-        uint8[] memory _circuitChainIsMultiplied,
-        uint32 _stalePeriod,
-        address[] memory guardians
-    ) {
+    constructor(address[] memory _circuitChainlink, uint8[] memory _circuitChainIsMultiplied, uint32 _stalePeriod) {
         uint256 circuitLength = _circuitChainlink.length;
-        require(circuitLength > 0, "106");
-        require(circuitLength == _circuitChainIsMultiplied.length, "104");
-        // There is no `GOVERNOR_ROLE` in this contract, governor has `GUARDIAN_ROLE`
-        require(guardians.length > 0, "101");
-        for (uint256 i = 0; i < guardians.length; i++) {
-            require(guardians[i] != address(0), "0");
-            _setupRole(GUARDIAN_ROLE_CHAINLINK, guardians[i]);
-        }
-        _setRoleAdmin(GUARDIAN_ROLE_CHAINLINK, GUARDIAN_ROLE_CHAINLINK);
+        if (circuitLength == 0) revert ChainlinkCircuitLengthZero();
+        if (circuitLength != _circuitChainIsMultiplied.length) revert ChainlinkInvalidInput();
 
         for (uint256 i = 0; i < circuitLength; i++) {
             AggregatorV3Interface _pool = AggregatorV3Interface(_circuitChainlink[i]);

@@ -2,19 +2,17 @@
 
 pragma solidity ^0.8.7;
 
-import "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
-import "../external/AccessControl.sol";
+import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
+import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 
 /// @title ChainlinkUtils
-/// @author Angle Core Team
+/// @author Pearl Labs
+/// @author Adapted from Angle Core (https://github.com/AngleProtocol/angle-core)
 /// @notice Utility contract that is used across the different module contracts using Chainlink
-abstract contract ChainlinkUtils is AccessControl {
+abstract contract ChainlinkUtils is Ownable2Step {
     /// @notice Represent the maximum amount of time (in seconds) between each Chainlink update
     /// before the price feed is considered stale
     uint32 public stalePeriod;
-
-    // Role for guardians and governors
-    bytes32 public constant GUARDIAN_ROLE_CHAINLINK = keccak256("GUARDIAN_ROLE");
 
     error InvalidChainlinkRate();
 
@@ -51,7 +49,7 @@ abstract contract ChainlinkUtils is AccessControl {
 
     /// @notice Changes the Stale Period
     /// @param _stalePeriod New stale period (in seconds)
-    function changeStalePeriod(uint32 _stalePeriod) external onlyRole(GUARDIAN_ROLE_CHAINLINK) {
+    function changeStalePeriod(uint32 _stalePeriod) external onlyOwner {
         stalePeriod = _stalePeriod;
     }
 }
