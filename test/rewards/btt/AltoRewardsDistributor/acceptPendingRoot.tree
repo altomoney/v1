@@ -10,11 +10,7 @@ AltoRewardsDistributor::acceptPendingRoot
     │   ├── it should set merkle root to pending root
     │   ├── it should delete pending root
     │   └── it should emit AcceptPendingMerkleRoot event
-    ├── when caller is not owner but timelock has expired
-    │   ├── it should set merkle root to pending root
-    │   ├── it should delete pending root
-    │   └── it should emit AcceptPendingMerkleRoot event
-    └── when accepting with zero parameter
+    └── when caller is not owner but timelock has expired
         ├── it should set merkle root to pending root
         ├── it should delete pending root
         └── it should emit AcceptPendingMerkleRoot event

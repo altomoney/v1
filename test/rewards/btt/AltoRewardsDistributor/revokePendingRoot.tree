@@ -9,9 +9,6 @@ AltoRewardsDistributor::revokePendingRoot
     ├── when updater revokes root
     │   ├── it should emit RevokePendingMerkleRoot event
     │   └── it should delete pending root
-    ├── when owner revokes root
-    │   ├── it should emit RevokePendingMerkleRoot event
-    │   └── it should delete pending root
-    └── when revoking with zero parameter
+    └── when owner revokes root
         ├── it should emit RevokePendingMerkleRoot event
         └── it should delete pending root
