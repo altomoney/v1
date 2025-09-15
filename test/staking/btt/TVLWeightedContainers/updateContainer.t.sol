@@ -21,15 +21,7 @@ contract TVLWeightedContainersUpdateContainer is TVLWeightedContainersValidation
         containers.updateContainer(1, container);
     }
 
-    modifier givenContainerIsActiveAndNewDurationRangeConflicts() {
-        containers.activateContainer(1);
-        _;
-    }
-
-    function test_RevertWhen_NewDurationMinIsGreaterThanCurrentDuration()
-        external
-        givenContainerIsActiveAndNewDurationRangeConflicts
-    {
+    function test_RevertWhen_NewDurationMinIsGreaterThanCurrentDuration() external {
         // Current duration is set to defaultContainer.duration.min (10) when container is created
         Container memory conflictingContainer = _createContainerWithCustomParams(
             ContainerParams({
@@ -47,10 +39,7 @@ contract TVLWeightedContainersUpdateContainer is TVLWeightedContainersValidation
         containers.updateContainer(1, conflictingContainer);
     }
 
-    function test_RevertWhen_NewDurationMaxIsLessThanCurrentDuration()
-        external
-        givenContainerIsActiveAndNewDurationRangeConflicts
-    {
+    function test_RevertWhen_NewDurationMaxIsLessThanCurrentDuration() external {
         // Current duration is set to defaultContainer.duration.min (10) when container is created
         Container memory conflictingContainer = _createContainerWithCustomParams(
             ContainerParams({

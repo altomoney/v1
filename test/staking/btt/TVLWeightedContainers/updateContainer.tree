@@ -1,7 +1,7 @@
 TVLWeightedContainers::updateContainer()
 ├── given invalid container parameters
 │   └── it should inherit all validation tests from TVLWeightedContainersValidation
-├── given container is active and new duration range conflicts
+├── given new duration range conflicts
 │   ├── when new duration min is greater than current duration
 │   │   └── it should revert with TVLWeightedContainersInvalidInput
 │   └── when new duration max is less than current duration

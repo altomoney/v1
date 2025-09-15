@@ -255,6 +255,7 @@ contract AltoStaking is IAltoStakingStaticTypes, TVLWeightedContainers, Ownable2
         if (stakingContainerById[containerId].isDeprecated) {
             revert AltoStakingInvalidInput();
         }
+
         _activateContainer(containerId);
 
         // only active containers are able to used for locking so we need to update
@@ -266,6 +267,7 @@ contract AltoStaking is IAltoStakingStaticTypes, TVLWeightedContainers, Ownable2
         if (!stakingContainerById[containerId].isDeprecated) {
             revert AltoStakingInvalidInput();
         }
+
         _deactivateContainer(containerId);
 
         // no need to update max multiplier staking container id because it was updated
