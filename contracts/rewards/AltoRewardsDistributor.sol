@@ -55,6 +55,7 @@ contract AltoRewardsDistributor is IRewardsDistributorStaticTypes, MerkleRootMan
     /// @inheritdoc IRewardsDistributorBase
     uint256 public constant MAX_ADAPTERS_WHITELIST = 10;
 
+    /// @inheritdoc IRewardsDistributorStaticTypes
     address[] public adaptersWhitelist;
 
     /// @notice Implementation of abstract function from MerkleRootManager
