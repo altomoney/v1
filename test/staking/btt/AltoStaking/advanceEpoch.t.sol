@@ -16,6 +16,13 @@ contract AltoStaking_AdvanceEpoch_Test is AltoStakingCommon {
         staking.advanceEpoch(1);
     }
 
+    function test_RevertWhen_ContractIsInRescueMode() public {
+        _enableRescueMode();
+
+        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, RESCUE_MODE_PAUSE_TYPE));
+        staking.advanceEpoch(1);
+    }
+
     function test_RevertWhen_LimitIsZeroAndCurrentEpochNotFinished() public {
         vm.expectRevert(
             abi.encodeWithSelector(ITVLWeightedContainersErrors.TVLWeightedContainersCurrentEpochNotFinished.selector)

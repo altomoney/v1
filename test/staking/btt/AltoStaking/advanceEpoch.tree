@@ -1,7 +1,9 @@
 AltoStaking::advanceEpoch()
-├── given contract is paused
+├── given contract is in pause mode
 │   └── it should revert
-└── given contract is not paused
+├── given contract is in rescue mode
+│   └── it should revert
+└── given contract is not paused or in rescue mode
     ├── when limit is zero and current epoch not finished
     │   └── it should revert
     ├── when limit is zero after time advance

@@ -1,0 +1,27 @@
+AltoStaking::pause() - Rescue Mode Disable Prevention
+├── given rescue mode is not enabled
+│   ├── when enabling rescue mode
+│   │   └── it should enable rescue mode successfully
+│   └── when disabling rescue mode
+│       └── it should revert with AltoStakingInvalidInput
+├── given rescue mode is enabled
+│   ├── when attempting to disable rescue mode
+│   │   └── it should revert with AltoStakingInvalidInput
+│   ├── when attempting to enable rescue mode again
+│   │   └── it should revert with StateNotChanged
+│   ├── when rescue mode pauser tries to disable
+│   │   └── it should revert with AltoStakingInvalidInput
+│   ├── when owner tries to disable rescue mode
+│   │   └── it should revert with AltoStakingInvalidInput
+│   └── when disabling rescue mode after other operations
+│       └── it should revert with AltoStakingInvalidInput
+└── given normal pause mode operations
+    ├── when enabling normal pause
+    │   └── it should enable normal pause successfully
+    ├── when disabling normal pause
+    │   └── it should disable normal pause successfully
+    └── when rescue mode is enabled and normal pause operations
+        ├── when enabling normal pause
+        │   └── it should enable normal pause successfully
+        └── when disabling normal pause
+            └── it should disable normal pause successfully

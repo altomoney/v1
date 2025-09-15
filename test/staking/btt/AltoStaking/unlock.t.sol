@@ -132,9 +132,9 @@ contract AltoStakingUnlock is AltoStakingCommon {
         StakingPosition memory position = staking.getPosition(USER, 1);
         _assertPositionEmpty(position);
 
-        // it should update container TVL for remaining epochs
-        // (TVL should be reduced for future epochs)
-        assertEq(staking.epochTVL(0, 1), 0); // Current epoch TVL should be reduced
+        // it should not update container TVL for remaining epochs
+        // TVL should be untouched for future epochs
+        assertEq(staking.epochTVL(0, 1), LOCK_AMOUNT); // Current epoch TVL should be untouched
     }
 
     function test_UnlockMultiplePositions() external givenValidInputs {

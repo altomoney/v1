@@ -3,6 +3,10 @@ AltoStaking::getVotes()
 │   └── it should return zero votes
 ├── when user has expired positions only
 │   └── it should return zero votes
+├── when contract is in pause mode
+│   └── it should return zero votes
+├── when contract is in rescue mode
+│   └── it should return zero votes
 └── when user has active positions
     ├── when user has single active position
     │   ├── it should calculate votes as amount * multiplier
