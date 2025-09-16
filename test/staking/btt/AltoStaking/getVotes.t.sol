@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
-import {AltoStakingCommon} from "./AltoStakingCommon.t.sol";
+import {AltoStakingCommon, PAUSE_TYPE, RESCUE_MODE_PAUSE_TYPE} from "./AltoStakingCommon.t.sol";
 import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 
 contract AltoStakingGetVotes is AltoStakingCommon {
@@ -25,6 +25,36 @@ contract AltoStakingGetVotes is AltoStakingCommon {
 
         // Advance time beyond expiry
         _advanceTime(EPOCH_DURATION + 1);
+
+        // it should return zero votes
+        uint256 votes = staking.getVotes(USER);
+        assertEq(votes, 0);
+    }
+
+    function test_WhenContractIsInPauseMode() external {
+        // Create an active position
+        _lockPosition(USER, LOCK_AMOUNT, 1, false);
+
+        // Verify votes exist before pause
+        uint256 votesBeforePause = staking.getVotes(USER);
+        assertTrue(votesBeforePause > 0);
+
+        _pauseContract();
+
+        // it should return zero votes
+        uint256 votes = staking.getVotes(USER);
+        assertEq(votes, 0);
+    }
+
+    function test_WhenContractIsInRescueMode() external {
+        // Create an active position
+        _lockPosition(USER, LOCK_AMOUNT, 1, false);
+
+        // Verify votes exist before rescue mode
+        uint256 votesBeforeRescue = staking.getVotes(USER);
+        assertTrue(votesBeforeRescue > 0);
+
+        _enableRescueMode();
 
         // it should return zero votes
         uint256 votes = staking.getVotes(USER);

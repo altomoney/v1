@@ -23,7 +23,7 @@ AltoStaking::unlock()
     │   └── it should return released amount
     ├── when position is not expired and in rescue mode
     │   ├── it should transfer tokens to receiver
-    │   ├── it should update container TVL for remaining epochs
+    │   ├── it should not update container TVL for remaining epochs
     │   ├── it should clear position data
     │   ├── it should emit UnlockPosition event
     │   └── it should return released amount

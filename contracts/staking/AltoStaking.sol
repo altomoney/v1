@@ -64,20 +64,11 @@ contract AltoStaking is IAltoStakingStaticTypes, TVLWeightedContainers, Ownable2
         _setPauser(pauser, pauseType, status);
     }
 
-    /// @dev Modifier to check if the contract is not paused.
-    modifier whenNotPaused() {
-        if (paused[PAUSE_TYPE]) {
-            revert IPausable.IsPaused(PAUSE_TYPE);
+    /// @dev we restrict rescue mode to be one-way emergency mode
+    function _onPause(bytes32 pauseType, bool _paused) internal override {
+        if (pauseType == RESCUE_MODE_PAUSE_TYPE && !_paused) {
+            revert AltoStakingInvalidInput();
         }
-        _;
-    }
-
-    /// @dev Modifier to check if the contract is not in rescue mode.
-    modifier whenNotRescueMode() {
-        if (paused[RESCUE_MODE_PAUSE_TYPE]) {
-            revert IPausable.IsPaused(RESCUE_MODE_PAUSE_TYPE);
-        }
-        _;
     }
 
     /// @inheritdoc IAltoStakingBase
@@ -91,6 +82,11 @@ contract AltoStaking is IAltoStakingStaticTypes, TVLWeightedContainers, Ownable2
 
     /// @inheritdoc IAltoStakingBase
     function getVotes(address account) external view returns (uint256 votes) {
+        // if contract is in one of the rescue modes we return 0
+        if (paused[PAUSE_TYPE] || paused[RESCUE_MODE_PAUSE_TYPE]) {
+            return 0;
+        }
+
         for (uint256 i = 0; i < activeContainerIds.length; i++) {
             uint256 containerId = activeContainerIds[i];
             if (!_isExpiredPosition(positions[account][containerId])) {
@@ -105,8 +101,8 @@ contract AltoStaking is IAltoStakingStaticTypes, TVLWeightedContainers, Ownable2
     /// @inheritdoc IAltoStakingBase
     function lock(address onBehalf, uint256 amount, uint256 containerId, bool isReuse, uint256 maxEpochsToLockFor)
         external
-        whenNotPaused
-        whenNotRescueMode
+        whenNot(PAUSE_TYPE)
+        whenNot(RESCUE_MODE_PAUSE_TYPE)
         returns (uint256)
     {
         // Note: containerId is validated in _updateContainerTVL
@@ -123,7 +119,9 @@ contract AltoStaking is IAltoStakingStaticTypes, TVLWeightedContainers, Ownable2
             revert AltoStakingContainerDeprecated();
         }
 
-        if (nextEpochToProcess != currentEpoch()) _advanceEpoch(currentEpoch() - nextEpochToProcess);
+        if (nextEpochToProcess != currentEpoch()) {
+            _advanceEpoch(currentEpoch() - nextEpochToProcess);
+        }
 
         StakingPosition storage position = positions[onBehalf][containerId];
 
@@ -144,9 +142,6 @@ contract AltoStaking is IAltoStakingStaticTypes, TVLWeightedContainers, Ownable2
         uint256 lockedTimestamp = block.timestamp;
         uint256 expiryTimestamp = lockedTimestamp + (currentEpochDuration * EPOCH_DURATION);
 
-        uint256 firstTvlEpoch = _timestampToEpoch(lockedTimestamp);
-        uint256 lastTvlEpoch = _timestampToEpoch(expiryTimestamp);
-
         if (position.amountLocked > 0) {
             // Remove old TVL, but only from epochs that haven't been processed yet
             // position.expiryTimestamp can't be 0 in this case
@@ -156,7 +151,10 @@ contract AltoStaking is IAltoStakingStaticTypes, TVLWeightedContainers, Ownable2
             }
         }
 
-        _updateContainerTVL(containerId, amount, firstTvlEpoch, lastTvlEpoch, true);
+        _updateContainerTVL(
+            containerId, amount, _timestampToEpoch(lockedTimestamp), _timestampToEpoch(expiryTimestamp), true
+        );
+
         uint256 amountPrevious = position.amountLocked;
         position.lockedTimestamp = lockedTimestamp;
         position.expiryTimestamp = expiryTimestamp;
@@ -174,7 +172,7 @@ contract AltoStaking is IAltoStakingStaticTypes, TVLWeightedContainers, Ownable2
     /// @inheritdoc IAltoStakingBase
     function unlock(address onBehalf, address receiver, uint256 containerId)
         external
-        whenNotPaused
+        whenNot(PAUSE_TYPE)
         returns (uint256 releasedAmount)
     {
         if (!_isSenderAuthorized(onBehalf)) {
@@ -201,15 +199,7 @@ contract AltoStaking is IAltoStakingStaticTypes, TVLWeightedContainers, Ownable2
 
         releasedAmount = position.amountLocked;
 
-        // Update TVL when removing position in rescue mode
-        if (inRescueMode && !isExpired) {
-            uint256 currentEpochNum = currentEpoch();
-            uint256 expiryEpoch = _timestampToEpoch(position.expiryTimestamp);
-            if (expiryEpoch > currentEpochNum) {
-                if (nextEpochToProcess != currentEpoch()) _advanceEpoch(currentEpoch() - nextEpochToProcess);
-                _updateContainerTVL(containerId, position.amountLocked, currentEpochNum, expiryEpoch, false);
-            }
-        }
+        // We don't update (subtract) TVL when removing position in rescue mode as rescue mode is a one-way emergency mode
 
         positions[onBehalf][containerId].amountLocked = 0;
         positions[onBehalf][containerId].expiryTimestamp = 0;
@@ -220,7 +210,7 @@ contract AltoStaking is IAltoStakingStaticTypes, TVLWeightedContainers, Ownable2
     }
 
     /// @inheritdoc IAltoStakingBase
-    function advanceEpoch(uint256 limit) external whenNotPaused {
+    function advanceEpoch(uint256 limit) external whenNot(PAUSE_TYPE) whenNot(RESCUE_MODE_PAUSE_TYPE) {
         _advanceEpoch(limit);
     }
 
