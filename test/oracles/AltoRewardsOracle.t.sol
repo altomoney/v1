@@ -45,6 +45,8 @@ contract AltoRewardsOracleTest is Test {
         console2.log("Token 1 in alToEthPool", altoEthPool.token1());
 
         // setting initial price of 1 WETH = ~4000 Alto
+        // uniswap sqrtPriceX96 is price of token1 in terms of token0 i.e. (reserve1 / reserve0)
+        // Since price is set to 4000, sqrtPriceX96 is Math.sqrt(4000 * 2**192) = 5010828967500.959 ether
         altoEthPool.initialize(5010828967500.959 ether);
         altoEthPool.increaseObservationCardinalityNext(10000);
 
