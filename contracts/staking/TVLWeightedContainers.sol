@@ -74,7 +74,7 @@ abstract contract TVLWeightedContainers is ITVLWeightedContainers {
             revert TVLWeightedContainersInvalidInput();
         }
 
-        if (!containerById[containerId].isActive) {
+        if (!_isContainerActive(containerId)) {
             revert TVLWeightedContainersInvalidInput();
         }
 
@@ -231,7 +231,7 @@ abstract contract TVLWeightedContainers is ITVLWeightedContainers {
             revert TVLWeightedContainersInvalidInput();
         }
 
-        if (containerById[containerId].isActive) {
+        if (_isContainerActive(containerId)) {
             revert TVLWeightedContainersInvalidInput();
         }
 
@@ -246,8 +246,8 @@ abstract contract TVLWeightedContainers is ITVLWeightedContainers {
     /// If container is not active, does nothing.
     /// @param containerId The id of the container to deactivate.
     function _deactivateContainer(uint256 containerId) internal {
-        // no need to check for existance because container must be active to be deactivated
-        if (!containerById[containerId].isActive) {
+        // we can't deactivate container that is not active
+        if (!_isContainerActive(containerId)) {
             revert TVLWeightedContainersInvalidInput();
         }
 
@@ -279,11 +279,8 @@ abstract contract TVLWeightedContainers is ITVLWeightedContainers {
         }
 
         if (
-            _isContainerActive(_containerId)
-                && (
-                    container.duration.min > containerBefore.currentDurationEpochs
-                        || container.duration.max < containerBefore.currentDurationEpochs
-                )
+            container.duration.min > containerBefore.currentDurationEpochs
+                || container.duration.max < containerBefore.currentDurationEpochs
         ) {
             revert TVLWeightedContainersInvalidInput();
         }
