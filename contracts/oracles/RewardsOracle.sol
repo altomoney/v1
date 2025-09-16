@@ -42,6 +42,7 @@ contract RewardsOracle is ModuleChainlinkMulti, ModuleUniswapMulti, IUsdOracle {
     /// @param _circuitChainlink Chainlink pool addresses put in order
     /// @param _circuitChainIsMultiplied Whether we should multiply or divide by this rate
     /// @param _owner The initial owner of the contract.
+    /// @param stalePeriod The stale period for the Chainlink oracle
     /// @param _description Description of the assets concerned by the oracle
     /// @dev When deploying this contract, it is important to check in the case where Uniswap circuit is not final whether
     /// Chainlink and Uniswap circuits are compatible. If Chainlink is UNI-WBTC and WBTC-USD and Uniswap is just UNI-WETH,
@@ -75,6 +76,8 @@ contract RewardsOracle is ModuleChainlinkMulti, ModuleUniswapMulti, IUsdOracle {
         description = _description;
     }
 
+    /// @notice Gets the price of the asset in USD_ORACLE_PRICE_PRECISION
+    /// @return The price of the asset in USD_ORACLE_PRICE_PRECISION
     function getPrice() external view override returns (uint256) {
         return _readUniswapQuote(inBase);
     }
