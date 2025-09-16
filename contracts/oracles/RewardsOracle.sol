@@ -2,12 +2,13 @@
 pragma solidity ^0.8.7;
 
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
-import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 
 import {ModuleChainlinkMulti} from "@alto/oracles/modules/ModuleChainlinkMulti.sol";
 import {ModuleUniswapMulti} from "@alto/oracles/modules/ModuleUniswapMulti.sol";
-import {IUsdOracle, USD_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IUsdOracle.sol";
+import {IRewardsOracle} from "@alto/oracles/interfaces/IRewardsOracle.sol";
+import {USD_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IUsdOracle.sol";
+import {FixedPointMath, MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 
 /// @title RewardsOracle
 /// @author Pearl Labs
@@ -17,9 +18,9 @@ import {IUsdOracle, USD_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/I
 /// @dev This is going to be used for like ALTO/USD oracles
 /// @dev A rate gives the price of the out-currency with respect to the in-currency in base `BASE`. For instance
 /// if the out-currency is ALTO worth 10 USD and BASE is 10**8, then the rate ALTO-USD is 10**9
-contract RewardsOracle is ModuleChainlinkMulti, ModuleUniswapMulti, IUsdOracle {
+contract RewardsOracle is Ownable2Step, ModuleChainlinkMulti, ModuleUniswapMulti, IRewardsOracle {
     /// @notice Base used for computation
-    uint256 public constant BASE = 10 ** 18;
+    uint256 public constant BASE = MATH_PRECISION;
     /// @notice Unit of the in-currency
     uint256 public immutable inBase;
 
@@ -29,57 +30,74 @@ contract RewardsOracle is ModuleChainlinkMulti, ModuleUniswapMulti, IUsdOracle {
     /// @notice Whether the final rate obtained with Uniswap should be multiplied to last rate from Chainlink
     uint8 public immutable uniFinalCurrency;
 
+    /// @notice Timestamp when this oracle was last updated to return the new price
+    uint256 public lastUpdateTimestamp;
+
+    /// @notice Initial price of the asset between timestamp when twap period is started and when price is updated
+    uint256 public immutable initialPrice;
+
+    /// @notice Cached price of the asset to be returned by getPrice function
+    uint256 public cachedPrice;
+
+    /// @notice Description of the oracle
     bytes32 public description;
 
-    /// @notice Constructor for an oracle using both Uniswap and Chainlink with multiple pools to read from
-    /// @param addressInAndOutUni List of 2 addresses representing the in-currency address and the out-currency address
-    /// @param _circuitUniswap Path of the Uniswap pools
-    /// @param _circuitUniIsMultiplied Whether we should multiply or divide by this rate in the path
-    /// @param _twapPeriod Time weighted average window for all Uniswap pools
-    /// @param observationLength Number of observations that each pool should have stored
-    /// @param _uniFinalCurrency Whether we need to use the last Chainlink oracle to convert to another
-    /// currency / asset (Forex for instance)
-    /// @param _circuitChainlink Chainlink pool addresses put in order
-    /// @param _circuitChainIsMultiplied Whether we should multiply or divide by this rate
-    /// @param _owner The initial owner of the contract.
-    /// @param stalePeriod The stale period for the Chainlink oracle
-    /// @param _description Description of the assets concerned by the oracle
     /// @dev When deploying this contract, it is important to check in the case where Uniswap circuit is not final whether
     /// Chainlink and Uniswap circuits are compatible. If Chainlink is UNI-WBTC and WBTC-USD and Uniswap is just UNI-WETH,
     /// then Chainlink cannot be the final circuit
-    constructor(
-        address[] memory addressInAndOutUni,
-        IUniswapV3Pool[] memory _circuitUniswap,
-        uint8[] memory _circuitUniIsMultiplied,
-        uint32 _twapPeriod,
-        uint16 observationLength,
-        uint8 _uniFinalCurrency,
-        address[] memory _circuitChainlink,
-        uint8[] memory _circuitChainIsMultiplied,
-        address _owner,
-        uint32 stalePeriod,
-        bytes32 _description
-    )
-        ModuleUniswapMulti(_circuitUniswap, _circuitUniIsMultiplied, _twapPeriod, observationLength)
-        ModuleChainlinkMulti(_circuitChainlink, _circuitChainIsMultiplied, stalePeriod)
-        Ownable(_owner)
+    constructor(RewardsOracleInitParams memory _initParams)
+        ModuleUniswapMulti(
+            _initParams.circuitUniswap,
+            _initParams.circuitUniIsMultiplied,
+            _initParams.twapPeriod,
+            _initParams.observationLength
+        )
+        ModuleChainlinkMulti(_initParams.circuitChainlink, _initParams.circuitChainIsMultiplied, _initParams.stalePeriod)
+        Ownable(_initParams.owner)
     {
-        if (addressInAndOutUni.length != 2) revert InvalidInput();
-        if (_owner == address(0)) revert InvalidInput();
+        if (_initParams.addressInAndOutUni.length != 2) revert InvalidInput();
+        if (_initParams.owner == address(0)) revert InvalidInput();
         // Using the tokens' metadata to get the in and out currencies decimals
-        IERC20Metadata inCur = IERC20Metadata(addressInAndOutUni[0]);
-        IERC20Metadata outCur = IERC20Metadata(addressInAndOutUni[1]);
+        IERC20Metadata inCur = IERC20Metadata(_initParams.addressInAndOutUni[0]);
+        IERC20Metadata outCur = IERC20Metadata(_initParams.addressInAndOutUni[1]);
         inBase = 10 ** (inCur.decimals());
         outBase = 10 ** (outCur.decimals());
 
-        uniFinalCurrency = _uniFinalCurrency;
-        description = _description;
+        initialPrice = _initParams.initialPrice;
+        uniFinalCurrency = _initParams.uniFinalCurrency;
+        description = _initParams.description;
     }
 
     /// @notice Gets the price of the asset in USD_ORACLE_PRICE_PRECISION
     /// @return The price of the asset in USD_ORACLE_PRICE_PRECISION
     function getPrice() external view override returns (uint256) {
-        return _readUniswapQuote(inBase);
+        if (lastUpdateTimestamp == 0) revert NotInitiated();
+        return cachedPrice;
+    }
+
+    /// @notice Starts the TWAP period
+    /// @dev This function will be called after Uniswap pool has been created
+    /// @dev getPrice function will return the cached price until the price is updated through updatePrice function
+    function startTwapPeriod() external onlyOwner {
+        if (lastUpdateTimestamp != 0) revert AlreadyStartedTwapPeriod();
+        lastUpdateTimestamp = block.timestamp;
+        cachedPrice = initialPrice;
+
+        emit PriceUpdated(block.timestamp, cachedPrice, 0);
+    }
+
+    /// @notice Updates the price of the asset based on the Uniswap V3 twap period
+    /// @dev This function will be called periodically to update the price of the asset
+    /// @dev This function will revert if the twap period has not been passed since the last update
+    function updatePrice() external {
+        if (lastUpdateTimestamp == 0) revert NotInitiated();
+        if (block.timestamp - lastUpdateTimestamp < twapPeriod) revert TooEarlyToUpdatePrice();
+
+        uint256 oldPrice = cachedPrice;
+        cachedPrice = _readUniswapQuote(inBase);
+        lastUpdateTimestamp = block.timestamp;
+
+        emit PriceUpdated(block.timestamp, cachedPrice, oldPrice);
     }
 
     /// @notice Uses Chainlink's value to change Uniswap's rate
@@ -108,11 +126,11 @@ contract RewardsOracle is ModuleChainlinkMulti, ModuleUniswapMulti, IUsdOracle {
     function _readUniswapQuote(uint256 quoteAmount) internal view returns (uint256 uniAmount) {
         uniAmount = _quoteUniswap(quoteAmount);
         // The current uni rate is in outBase we want it in BASE to avoid precision loss in _changeUniswapNotFinal function
-        uniAmount = (uniAmount * BASE) / outBase;
+        uniAmount = FixedPointMath.divideWithRounding(uniAmount, BASE, outBase, true);
         if (uniFinalCurrency > 0) {
             uniAmount = _changeUniswapNotFinal(0, uniAmount);
         }
         // The current uniAmount is in BASE. we want our rate to be in USD_ORACLE_PRICE_PRECISION
-        uniAmount = uniAmount * USD_ORACLE_PRICE_PRECISION / BASE;
+        uniAmount = FixedPointMath.divideWithRounding(uniAmount, USD_ORACLE_PRICE_PRECISION, BASE, true);
     }
 }
