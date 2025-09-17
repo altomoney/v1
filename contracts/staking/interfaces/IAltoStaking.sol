@@ -5,7 +5,7 @@ import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IAuth} from "@alto/utils/interfaces/IAuth.sol";
 import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
-import {ITVLWeightedContainers, Container} from "./ITVLWeightedContainers.sol";
+import {ITVLWeightedContainers, ITVLWeightedContainersStaticTypes, Container} from "./ITVLWeightedContainers.sol";
 
 struct StakingPosition {
     uint256 lockedTimestamp; // timestamp when lock was created
@@ -55,7 +55,7 @@ interface IAltoStakingEvents {
     event MaxMultiplierStakingContainerIdUpdated(uint256 indexed containerId, uint256 multiplier);
 }
 
-interface IAltoStakingBase is ITVLWeightedContainers, IAltoStakingErrors, IAltoStakingEvents, IAuth, IPausable {
+interface IAltoStakingBase is IAltoStakingErrors, IAltoStakingEvents, IAuth, IPausable {
     /// @notice The address of the lock token.
     /// @dev This token is trusted and does not need any reentrancy protection.
     function lockToken() external view returns (address);
@@ -140,7 +140,7 @@ interface IAltoStakingBase is ITVLWeightedContainers, IAltoStakingErrors, IAltoS
     function deprecateContainer(uint256 containerId) external;
 }
 
-interface IAltoStaking is IAltoStakingBase {
+interface IAltoStaking is ITVLWeightedContainers, IAltoStakingBase {
     /// @notice The staking position of an account in a container.
     /// @param account The account of the lock position owner.
     /// @param containerId The containerId of the stake position.
@@ -153,7 +153,7 @@ interface IAltoStaking is IAltoStakingBase {
     function stakingContainerById(uint256 containerId) external view returns (StakingContainer memory);
 }
 
-interface IAltoStakingStaticTypes is IAltoStakingBase {
+interface IAltoStakingStaticTypes is ITVLWeightedContainersStaticTypes, IAltoStakingBase {
     /// @notice The staking position of an account in a container.
     /// @param account The account of the lock position owner.
     /// @param containerId The containerId of the stake position.

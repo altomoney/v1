@@ -18,6 +18,7 @@ import {
 import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
 import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
+import {MockAltoStaking} from "@alto-test/staking/helpers/MockAltoStaking.sol";
 
 bytes32 constant PAUSE_TYPE = keccak256("PAUSE");
 bytes32 constant RESCUE_MODE_PAUSE_TYPE = keccak256("RESCUE_MODE");
@@ -35,7 +36,7 @@ contract AltoStakingCommon is Test {
     uint256 public constant LOCK_AMOUNT = 1000 ether;
 
     // Contracts
-    AltoStaking public staking;
+    MockAltoStaking public staking;
     ERC20Mock public lockToken;
 
     // Default containers
@@ -84,7 +85,7 @@ contract AltoStakingCommon is Test {
     }
 
     function _deployWithContainers(Container[] memory containers, uint256[] memory multipliers) internal {
-        staking = new AltoStaking(address(lockToken), OWNER, EPOCH_DURATION, containers, multipliers);
+        staking = new MockAltoStaking(address(lockToken), OWNER, EPOCH_DURATION, containers, multipliers);
 
         // Setup approvals
         lockToken.approve(address(staking), type(uint256).max);

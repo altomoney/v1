@@ -2,7 +2,6 @@
 pragma solidity ^0.8.22;
 
 import {AltoStakingCommon} from "./AltoStakingCommon.t.sol";
-import {AltoStaking} from "@alto/staking/AltoStaking.sol";
 import {
     Container,
     ITVLWeightedContainersErrors,
@@ -10,6 +9,7 @@ import {
 } from "@alto/staking/interfaces/ITVLWeightedContainers.sol";
 import {IAltoStakingErrors, IAltoStakingEvents} from "@alto/staking/interfaces/IAltoStaking.sol";
 import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
+import {MockAltoStaking} from "@alto-test/staking/helpers/MockAltoStaking.sol";
 
 contract AltoStakingConstructor is AltoStakingCommon {
     modifier givenInvalidInputs() {
@@ -21,7 +21,7 @@ contract AltoStakingConstructor is AltoStakingCommon {
         uint256[] memory multipliers = new uint256[](0);
 
         vm.expectRevert(IAltoStakingErrors.AltoStakingInvalidInput.selector);
-        new AltoStaking(address(0), OWNER, EPOCH_DURATION, containers, multipliers);
+        new MockAltoStaking(address(0), OWNER, EPOCH_DURATION, containers, multipliers);
     }
 
     function test_RevertWhen_OwnerIsZeroAddress() external givenInvalidInputs {
@@ -30,7 +30,7 @@ contract AltoStakingConstructor is AltoStakingCommon {
 
         // it should revert
         vm.expectRevert();
-        new AltoStaking(address(lockToken), address(0), EPOCH_DURATION, containers, multipliers);
+        new MockAltoStaking(address(lockToken), address(0), EPOCH_DURATION, containers, multipliers);
     }
 
     function test_RevertWhen_EpochDurationIsZero() external givenInvalidInputs {
@@ -39,7 +39,7 @@ contract AltoStakingConstructor is AltoStakingCommon {
 
         // it should revert
         vm.expectRevert(ITVLWeightedContainersErrors.TVLWeightedContainersInvalidInput.selector);
-        new AltoStaking(address(lockToken), OWNER, 0, containers, multipliers);
+        new MockAltoStaking(address(lockToken), OWNER, 0, containers, multipliers);
     }
 
     function test_RevertWhen_ContainersLengthDoesNotMatchMultipliersLength() external givenInvalidInputs {
@@ -51,7 +51,7 @@ contract AltoStakingConstructor is AltoStakingCommon {
 
         // it should revert
         vm.expectRevert(IAltoStakingErrors.AltoStakingInvalidInput.selector);
-        new AltoStaking(address(lockToken), OWNER, EPOCH_DURATION, containers, multipliers);
+        new MockAltoStaking(address(lockToken), OWNER, EPOCH_DURATION, containers, multipliers);
     }
 
     function test_RevertWhen_ContainerHasInvalidParameters() external givenInvalidInputs {
@@ -62,7 +62,7 @@ contract AltoStakingConstructor is AltoStakingCommon {
 
         // it should revert
         vm.expectRevert(ITVLWeightedContainersErrors.TVLWeightedContainersInvalidInput.selector);
-        new AltoStaking(address(lockToken), OWNER, EPOCH_DURATION, containers, multipliers);
+        new MockAltoStaking(address(lockToken), OWNER, EPOCH_DURATION, containers, multipliers);
     }
 
     function test_RevertWhen_MultiplierIsZero() external givenInvalidInputs {
@@ -73,7 +73,7 @@ contract AltoStakingConstructor is AltoStakingCommon {
 
         // it should revert
         vm.expectRevert(IAltoStakingErrors.AltoStakingInvalidInput.selector);
-        new AltoStaking(address(lockToken), OWNER, EPOCH_DURATION, containers, multipliers);
+        new MockAltoStaking(address(lockToken), OWNER, EPOCH_DURATION, containers, multipliers);
     }
 
     function test_RevertWhen_MultiplierIsGreaterThanMathPrecision() external givenInvalidInputs {
@@ -84,7 +84,7 @@ contract AltoStakingConstructor is AltoStakingCommon {
 
         // it should revert
         vm.expectRevert(IAltoStakingErrors.AltoStakingInvalidInput.selector);
-        new AltoStaking(address(lockToken), OWNER, EPOCH_DURATION, containers, multipliers);
+        new MockAltoStaking(address(lockToken), OWNER, EPOCH_DURATION, containers, multipliers);
     }
 
     modifier givenValidInputs() {
@@ -98,7 +98,8 @@ contract AltoStakingConstructor is AltoStakingCommon {
         vm.expectEmit(true, true, true, true);
         emit ITVLWeightedContainersEvents.EpochDurationSet(EPOCH_DURATION);
 
-        AltoStaking testStaking = new AltoStaking(address(lockToken), OWNER, EPOCH_DURATION, containers, multipliers);
+        MockAltoStaking testStaking =
+            new MockAltoStaking(address(lockToken), OWNER, EPOCH_DURATION, containers, multipliers);
 
         // it should set lockToken correctly
         assertEq(testStaking.lockToken(), address(lockToken));
@@ -145,7 +146,8 @@ contract AltoStakingConstructor is AltoStakingCommon {
         vm.expectEmit(true, true, true, true);
         emit IAltoStakingEvents.ContainerMultiplierUpdated(2, multipliers[1]);
 
-        AltoStaking testStaking = new AltoStaking(address(lockToken), OWNER, EPOCH_DURATION, containers, multipliers);
+        MockAltoStaking testStaking =
+            new MockAltoStaking(address(lockToken), OWNER, EPOCH_DURATION, containers, multipliers);
 
         // it should set lockToken correctly
         assertEq(testStaking.lockToken(), address(lockToken));
@@ -184,7 +186,8 @@ contract AltoStakingConstructor is AltoStakingCommon {
         multipliers[1] = MATH_PRECISION / 2; // 50%
         multipliers[2] = MATH_PRECISION; // Maximum valid multiplier
 
-        AltoStaking testStaking = new AltoStaking(address(lockToken), OWNER, EPOCH_DURATION, containers, multipliers);
+        MockAltoStaking testStaking =
+            new MockAltoStaking(address(lockToken), OWNER, EPOCH_DURATION, containers, multipliers);
 
         (uint256 multiplier1,) = testStaking.stakingContainerById(1);
         (uint256 multiplier2,) = testStaking.stakingContainerById(2);
