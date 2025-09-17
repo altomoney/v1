@@ -7,14 +7,14 @@ import {Container, MinMaxEpochs} from "@alto/staking/interfaces/ITVLWeightedCont
 import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 import {AltoStaking} from "@alto/staking/AltoStaking.sol";
 import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
-import {IAltoStaking} from "@alto/staking/interfaces/IAltoStaking.sol";
+import {MockAltoStaking} from "@alto-test/staking/helpers/MockAltoStaking.sol";
 
 contract AltoStaking_Main is Test {
     address internal immutable OWNER = makeAddr("Owner");
     address internal immutable USER = makeAddr("User");
     address internal immutable USER_2 = makeAddr("User_2");
 
-    IAltoStaking altoStaking;
+    MockAltoStaking altoStaking;
     ERC20Mock lockToken;
 
     function setUp() public {
@@ -53,9 +53,8 @@ contract AltoStaking_Main is Test {
         initialContainerMultipliers[1] = 0.6 ether;
         initialContainerMultipliers[2] = 1 ether;
 
-        altoStaking = IAltoStaking(
-            address(new AltoStaking(address(lockToken), OWNER, 1 days, initialContainers, initialContainerMultipliers))
-        );
+        altoStaking =
+            new MockAltoStaking(address(lockToken), OWNER, 1 days, initialContainers, initialContainerMultipliers);
 
         deal(address(lockToken), address(this), type(uint256).max);
         lockToken.approve(address(altoStaking), type(uint256).max);

@@ -1,26 +1,46 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.22;
 
-import {ITVLWeightedContainers, Container} from "./interfaces/ITVLWeightedContainers.sol";
+import {
+    ITVLWeightedContainersStaticTypes,
+    ITVLWeightedContainersBase,
+    Container
+} from "./interfaces/ITVLWeightedContainers.sol";
 import {FixedPointMath, MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
-abstract contract TVLWeightedContainers is ITVLWeightedContainers {
+/// @title TVL Weighted Containers
+/// @author Pearl Labs
+/// @custom:contact security@tapioca.xyz
+/// @notice An abstract contract for managing TVL weighted containers used for staking.
+abstract contract TVLWeightedContainers is ITVLWeightedContainersStaticTypes {
     using FixedPointMath for uint256;
 
+    /// @inheritdoc ITVLWeightedContainersBase
     uint256 public constant MAX_ACTIVE_CONTAINERS = 16;
 
+    /// @inheritdoc ITVLWeightedContainersBase
     uint256 public immutable EPOCH_DURATION;
+
+    /// @inheritdoc ITVLWeightedContainersBase
     uint256 public initializedAtTimestamp;
+
+    /// @inheritdoc ITVLWeightedContainersBase
     uint256 public nextEpochToProcess;
+
+    /// @inheritdoc ITVLWeightedContainersBase
     uint256 public totalContainerCount;
 
-    mapping(uint256 => Container) public containerById;
+    /// @inheritdoc ITVLWeightedContainersBase
     uint256[] public activeContainerIds;
 
-    /// @inheritdoc ITVLWeightedContainers
+    /// @inheritdoc ITVLWeightedContainersStaticTypes
+    mapping(uint256 => Container) public containerById;
+
+    /// @inheritdoc ITVLWeightedContainersBase
     mapping(uint256 => mapping(uint256 => uint256)) public epochTVL;
 
+    /// @dev Modifier to check if the epochs were started
     modifier whenEpochStarted() {
         if (initializedAtTimestamp == 0) {
             revert TVLWeightedContainersNotStarted();
@@ -40,6 +60,16 @@ abstract contract TVLWeightedContainers is ITVLWeightedContainers {
         }
     }
 
+    /// @inheritdoc ITVLWeightedContainersBase
+    function currentEpoch() public view returns (uint256) {
+        return _timestampToEpoch(block.timestamp);
+    }
+
+    /// @inheritdoc ITVLWeightedContainersBase
+    function startEpoch() external virtual;
+
+    /// @dev Initializes the epoch system - one-time initialization function
+    /// @dev This gives the ability to start the epoch system anytime after the initial deployment
     function _startEpoch() internal {
         if (initializedAtTimestamp != 0) {
             revert TVLWeightedContainersAlreadyStarted();
@@ -54,6 +84,12 @@ abstract contract TVLWeightedContainers is ITVLWeightedContainers {
         emit EpochStarted(initializedAtTimestamp);
     }
 
+    /// @dev Updates the TVL of a container for a specific epoch
+    /// @param containerId The id of the container to update the TVL of
+    /// @param amount The amount of TVL to update
+    /// @param fromEpoch The epoch to start updating the TVL from
+    /// @param toEpoch The epoch to stop updating the TVL at
+    /// @param add Whether to add or subtract the amount from the TVL
     function _updateContainerTVL(uint256 containerId, uint256 amount, uint256 fromEpoch, uint256 toEpoch, bool add)
         internal
         whenEpochStarted
@@ -93,9 +129,11 @@ abstract contract TVLWeightedContainers is ITVLWeightedContainers {
         emit ContainerTVLUpdated(fromEpoch, containerId, amount, add);
     }
 
-    /**
-     * @dev Update enabled containers based on the total deposits in the contract.
-     */
+    /// @dev Process the epoch for all active containers
+    /// @param epochToProcess The epoch to process
+    /// @dev This function is used to process the epoch for all active containers
+    /// @dev This function is used to update the duration of the containers based on the TVL share
+    /// @dev This function is used to process the containers according to the growth and decay rules
     function _processEpoch(uint256 epochToProcess) internal whenEpochStarted {
         uint256 totalTvl = 0;
 
@@ -108,6 +146,13 @@ abstract contract TVLWeightedContainers is ITVLWeightedContainers {
         }
     }
 
+    /// @dev Process the container for a specific epoch
+    /// @param epochToProcess The epoch to process
+    /// @param containerId The id of the container to process
+    /// @param totalTvl The total TVL of all active containers
+    /// @dev Used in the `_processEpoch` function
+    /// @dev This function is used to process the container for a specific epoch
+    /// @dev This function is used to update the duration of the container based on the TVL share
     function _processContainer(uint256 epochToProcess, uint256 containerId, uint256 totalTvl)
         internal
         whenEpochStarted
@@ -175,6 +220,9 @@ abstract contract TVLWeightedContainers is ITVLWeightedContainers {
         emit ContainerDurationUpdated(containerId, currentDurationEpochsBefore, container.currentDurationEpochs);
     }
 
+    /// @dev Validates the container
+    /// @param container The container to validate
+    /// @dev This function is used to validate the container when adding or updating a container
     function _validateContainer(Container memory container) internal pure {
         if (
             container.growthRate.min > container.growthRate.max || container.growthRate.min == 0
@@ -205,6 +253,11 @@ abstract contract TVLWeightedContainers is ITVLWeightedContainers {
         }
     }
 
+    /// @dev Adds a new container to the system
+    /// @param container The container to add
+    /// @dev currentDurationEpochs has to be 0 and isActive has to be false all the other validation rules are
+    /// described in the `_validateContainer` function
+    /// @dev containerIds start from 1 and are incremented by 1 for each new container
     function _addContainer(Container memory container) internal returns (uint256 containerId) {
         _validateContainer(container);
 
@@ -220,57 +273,11 @@ abstract contract TVLWeightedContainers is ITVLWeightedContainers {
         return totalContainerCount;
     }
 
-    /// @dev Activates a container by adding it to the activeContainerIds array.
-    /// @param containerId The id of the container to activate.
-    function _activateContainer(uint256 containerId) internal {
-        if (activeContainerIds.length >= MAX_ACTIVE_CONTAINERS) {
-            revert TVLWeightedContainersInvalidInput();
-        }
-
-        if (!_isContainerExists(containerId)) {
-            revert TVLWeightedContainersInvalidInput();
-        }
-
-        if (_isContainerActive(containerId)) {
-            revert TVLWeightedContainersInvalidInput();
-        }
-
-        containerById[containerId].isActive = true;
-
-        activeContainerIds.push(containerId);
-
-        emit ContainerActivated(containerId);
-    }
-
-    /// @dev Deactivates a container by removing it from the activeContainerIds array.
-    /// If container is not active, does nothing.
-    /// @param containerId The id of the container to deactivate.
-    function _deactivateContainer(uint256 containerId) internal {
-        // we can't deactivate container that is not active
-        if (!_isContainerActive(containerId)) {
-            revert TVLWeightedContainersInvalidInput();
-        }
-
-        // Note: Linear search is acceptable here as MAX_ACTIVE_CONTAINERS is capped at 16
-        // swap and pop the last element
-        for (uint256 i; i < activeContainerIds.length; i++) {
-            if (activeContainerIds[i] == containerId) {
-                activeContainerIds[i] = activeContainerIds[activeContainerIds.length - 1];
-                activeContainerIds.pop();
-                containerById[containerId].isActive = false;
-                emit ContainerDeactivated(containerId);
-                return;
-            }
-        }
-
-        revert TVLWeightedContainersInvalidInput();
-    }
-
-    /**
-     * @dev Updates container params at a specific index.
-     * @param _containerId Index of the container to update
-     * @param container Container to add into the system, ignores currentDurationEpochs field
-     */
+    /// @dev Updates a container
+    /// @param _containerId The id of the container to update
+    /// @param container The container to update
+    /// @dev Updating currentDurationEpochs is not allowed and same rules apply as for validation in the `_addContainer` function.
+    /// On the top of that provided duration.min and duration.max have to be greater than the current currentDurationEpochs.
     function _updateContainer(uint256 _containerId, Container memory container) internal returns (uint256) {
         Container memory containerBefore = containerById[_containerId];
 
@@ -297,13 +304,56 @@ abstract contract TVLWeightedContainers is ITVLWeightedContainers {
         return _containerId;
     }
 
-    /**
-     * @notice Returns the current epoch number
-     */
-    function currentEpoch() public view returns (uint256) {
-        return _timestampToEpoch(block.timestamp);
+    /// @dev Activates a container by adding it to the activeContainerIds array.
+    /// @param containerId The id of the container to activate.
+    /// @dev After actiation conainer is considered active and used in the `_processEpoch` function
+    function _activateContainer(uint256 containerId) internal {
+        if (activeContainerIds.length >= MAX_ACTIVE_CONTAINERS) {
+            revert TVLWeightedContainersInvalidInput();
+        }
+
+        if (!_isContainerExists(containerId)) {
+            revert TVLWeightedContainersInvalidInput();
+        }
+
+        if (_isContainerActive(containerId)) {
+            revert TVLWeightedContainersInvalidInput();
+        }
+
+        containerById[containerId].isActive = true;
+
+        activeContainerIds.push(containerId);
+
+        emit ContainerActivated(containerId);
     }
 
+    /// @dev Deactivates a container by removing it from the activeContainerIds array.
+    /// @param containerId The id of the container to deactivate.
+    /// @dev Once container is deactivated it is considered inactive and not used in the `_processEpoch` function.
+    function _deactivateContainer(uint256 containerId) internal {
+        // we can't deactivate container that is not active
+        if (!_isContainerActive(containerId)) {
+            revert TVLWeightedContainersInvalidInput();
+        }
+
+        // Note: Linear search is acceptable here as MAX_ACTIVE_CONTAINERS is capped at 16
+        // swap and pop the last element
+        for (uint256 i; i < activeContainerIds.length; i++) {
+            if (activeContainerIds[i] == containerId) {
+                activeContainerIds[i] = activeContainerIds[activeContainerIds.length - 1];
+                activeContainerIds.pop();
+                containerById[containerId].isActive = false;
+                emit ContainerDeactivated(containerId);
+                return;
+            }
+        }
+
+        revert TVLWeightedContainersInvalidInput();
+    }
+
+    /// @dev Converts a timestamp to an epoch
+    /// @param timestamp The timestamp to convert
+    /// @return The epoch number
     function _timestampToEpoch(uint256 timestamp) internal view returns (uint256) {
         if (initializedAtTimestamp == 0) {
             revert TVLWeightedContainersNotStarted();
@@ -312,6 +362,9 @@ abstract contract TVLWeightedContainers is ITVLWeightedContainers {
         return (timestamp - initializedAtTimestamp) / EPOCH_DURATION;
     }
 
+    /// @dev Advances the epoch
+    /// @param _maxEpochsToProcess The maximum number of epochs to process
+    /// @dev This function is used to advance specific number of epochs.
     function _advanceEpoch(uint256 _maxEpochsToProcess) internal whenEpochStarted {
         if (_maxEpochsToProcess == 0) {
             _maxEpochsToProcess = uint256(type(uint256).max);
@@ -337,14 +390,6 @@ abstract contract TVLWeightedContainers is ITVLWeightedContainers {
         }
 
         emit AdvanceEpoch(nextEpochToProcessBefore, nextEpochToProcess);
-    }
-
-    /// @inheritdoc ITVLWeightedContainers
-    function startEpoch() external virtual;
-
-    /// @inheritdoc ITVLWeightedContainers
-    function getContainer(uint256 containerId) external view returns (Container memory) {
-        return containerById[containerId];
     }
 
     /// @dev Checks if a container is active.

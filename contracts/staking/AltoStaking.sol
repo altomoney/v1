@@ -10,13 +10,17 @@ import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
 import {StakingPosition, StakingContainer} from "./interfaces/IAltoStaking.sol";
 import {TVLWeightedContainers, Container} from "./TVLWeightedContainers.sol";
 import {IAltoStakingStaticTypes, IAltoStakingBase} from "./interfaces/IAltoStaking.sol";
-import {ITVLWeightedContainers} from "./interfaces/ITVLWeightedContainers.sol";
+import {ITVLWeightedContainers, ITVLWeightedContainersBase} from "./interfaces/ITVLWeightedContainers.sol";
 import {MATH_PRECISION, FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {Auth} from "@alto/utils/Auth.sol";
 
 bytes32 constant PAUSE_TYPE = keccak256("PAUSE");
 bytes32 constant RESCUE_MODE_PAUSE_TYPE = keccak256("RESCUE_MODE");
 
+/// @title Alto Staking
+/// @author Pearl Labs
+/// @custom:contact security@tapioca.xyz
+/// @notice A contract for staking tokens and getting votes based on the amount of tokens locked.
 contract AltoStaking is IAltoStakingStaticTypes, TVLWeightedContainers, Ownable2Step, Auth, Pausable {
     using SafeERC20 for IERC20;
     using FixedPointMath for uint256;
@@ -64,7 +68,7 @@ contract AltoStaking is IAltoStakingStaticTypes, TVLWeightedContainers, Ownable2
         _setPauser(pauser, pauseType, status);
     }
 
-    /// @dev we restrict rescue mode to be one-way emergency mode
+    /// @dev Restrict rescue mode to be one-way emergency mode
     function _onPause(bytes32 pauseType, bool _paused) internal override {
         if (pauseType == RESCUE_MODE_PAUSE_TYPE && !_paused) {
             revert AltoStakingInvalidInput();
@@ -292,13 +296,14 @@ contract AltoStaking is IAltoStakingStaticTypes, TVLWeightedContainers, Ownable2
         _updateMaxMultiplierStakingContainerId();
     }
 
-    /// @inheritdoc ITVLWeightedContainers
-    function startEpoch() external override(TVLWeightedContainers, ITVLWeightedContainers) onlyOwner {
+    /// @inheritdoc ITVLWeightedContainersBase
+    function startEpoch() external override(TVLWeightedContainers, ITVLWeightedContainersBase) onlyOwner {
         _startEpoch();
     }
 
     /// @dev Internal function to update the max multiplier staking container id.
     /// @dev Used for locking in max multiplier container during AltoRewardsDistributor.claimRewardTokens.
+    /// @dev Only containers that can be locked in at the time are considered - not deprecated and active.
     function _updateMaxMultiplierStakingContainerId() internal {
         uint256 containerId = 0;
         uint256 multiplier = 0;

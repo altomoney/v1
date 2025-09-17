@@ -2,53 +2,9 @@
 pragma solidity ^0.8.22;
 
 import {Test} from "forge-std/Test.sol";
-import {TVLWeightedContainers} from "@alto/staking/TVLWeightedContainers.sol";
 import {Container, MinMaxEpochs} from "@alto/staking/interfaces/ITVLWeightedContainers.sol";
 import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
-
-contract TVLWeightedContainersMock is TVLWeightedContainers {
-    constructor(uint256 epochDuration, Container[] memory initialContainers)
-        TVLWeightedContainers(epochDuration, initialContainers)
-    {}
-
-    function startEpoch() external override {
-        _startEpoch();
-    }
-
-    function updateContainerTVL(uint8 containerId, uint256 amount, uint256 fromEpoch, uint256 toEpoch, bool isAdd)
-        external
-    {
-        _updateContainerTVL(containerId, amount, fromEpoch, toEpoch, isAdd);
-    }
-
-    function advanceEpoch(uint256 maxEpochsToProcess) external {
-        _advanceEpoch(maxEpochsToProcess);
-    }
-
-    function addContainer(Container memory container) external {
-        _addContainer(container);
-    }
-
-    function updateContainer(uint256 containerId, Container memory container) external {
-        _updateContainer(containerId, container);
-    }
-
-    function setContainerLockDuration(uint256 containerId, uint24 lockDuration) external {
-        containerById[containerId].currentDurationEpochs = lockDuration;
-    }
-
-    function setLastProcessedEpoch(uint256 epoch) external {
-        nextEpochToProcess = epoch;
-    }
-
-    function activateContainer(uint256 containerId) external {
-        _activateContainer(containerId);
-    }
-
-    function deactivateContainer(uint256 containerId) external {
-        _deactivateContainer(containerId);
-    }
-}
+import {MockTVLWeightedContainersMock} from "@alto-test/staking/helpers/MockTVLWeightedContainersMock.sol";
 
 contract TVLWeightedContainers_Main is Test {
     function setUp() public {}
@@ -83,7 +39,8 @@ contract TVLWeightedContainers_Main is Test {
             isActive: false
         });
 
-        TVLWeightedContainersMock tVLWeightedContainers = new TVLWeightedContainersMock(1 days, initialContainers);
+        MockTVLWeightedContainersMock tVLWeightedContainers =
+            new MockTVLWeightedContainersMock(1 days, initialContainers);
 
         tVLWeightedContainers.activateContainer(1);
         tVLWeightedContainers.activateContainer(2);

@@ -2,66 +2,13 @@
 pragma solidity ^0.8.22;
 
 import {Test} from "forge-std/Test.sol";
-import {TVLWeightedContainers} from "@alto/staking/TVLWeightedContainers.sol";
 import {
     Container, MinMaxEpochs, ITVLWeightedContainersErrors
 } from "@alto/staking/interfaces/ITVLWeightedContainers.sol";
-
-/// @notice Concrete implementation of TVLWeightedContainers for testing
-contract MockTVLWeightedContainers is TVLWeightedContainers {
-    constructor(uint256 epochDuration, Container[] memory initialContainers)
-        TVLWeightedContainers(epochDuration, initialContainers)
-    {}
-
-    function startEpoch() external override {
-        _startEpoch();
-    }
-
-    function addContainer(Container memory container) external returns (uint256) {
-        return _addContainer(container);
-    }
-
-    function activateContainer(uint256 containerId) external {
-        _activateContainer(containerId);
-    }
-
-    function deactivateContainer(uint256 containerId) external {
-        _deactivateContainer(containerId);
-    }
-
-    function updateContainer(uint256 containerId, Container memory container) external returns (uint256) {
-        return _updateContainer(containerId, container);
-    }
-
-    function updateContainerTVL(uint256 containerId, uint256 amount, uint256 fromEpoch, uint256 toEpoch, bool add)
-        external
-    {
-        _updateContainerTVL(containerId, amount, fromEpoch, toEpoch, add);
-    }
-
-    function advanceEpoch(uint256 maxEpochsToProcess) external {
-        _advanceEpoch(maxEpochsToProcess);
-    }
-
-    function processEpoch(uint256 epochToProcess) external {
-        _processEpoch(epochToProcess);
-    }
-
-    function isContainerActive(uint256 containerId) external view returns (bool) {
-        return _isContainerActive(containerId);
-    }
-
-    function getActiveContainerIds() external view returns (uint256[] memory) {
-        return activeContainerIds;
-    }
-
-    function timestampToEpoch(uint256 timestamp) external view returns (uint256) {
-        return _timestampToEpoch(timestamp);
-    }
-}
+import {MockTVLWeightedContainersMock} from "@alto-test/staking/helpers/MockTVLWeightedContainersMock.sol";
 
 contract TVLWeightedContainersCommon is Test {
-    MockTVLWeightedContainers public containers;
+    MockTVLWeightedContainersMock public containers;
 
     // Test constants
     uint256 public constant EPOCH_DURATION = 1 weeks;
@@ -108,17 +55,17 @@ contract TVLWeightedContainersCommon is Test {
     }
 
     function _deployWithContainers(Container[] memory initialContainers) internal {
-        containers = new MockTVLWeightedContainers(EPOCH_DURATION, initialContainers);
+        containers = new MockTVLWeightedContainersMock(EPOCH_DURATION, initialContainers);
     }
 
     function _deployWithoutContainers() internal {
         Container[] memory emptyContainers = new Container[](0);
-        containers = new MockTVLWeightedContainers(EPOCH_DURATION, emptyContainers);
+        containers = new MockTVLWeightedContainersMock(EPOCH_DURATION, emptyContainers);
     }
 
     function _deployWithSingleContainer() internal {
         Container[] memory singleContainer = new Container[](1);
         singleContainer[0] = defaultContainer;
-        containers = new MockTVLWeightedContainers(EPOCH_DURATION, singleContainer);
+        containers = new MockTVLWeightedContainersMock(EPOCH_DURATION, singleContainer);
     }
 }
