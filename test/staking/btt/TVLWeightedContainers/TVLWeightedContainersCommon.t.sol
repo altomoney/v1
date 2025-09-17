@@ -2,9 +2,7 @@
 pragma solidity ^0.8.22;
 
 import {Test} from "forge-std/Test.sol";
-import {
-    Container, MinMaxEpochs, ITVLWeightedContainersErrors
-} from "@alto/staking/interfaces/ITVLWeightedContainers.sol";
+import {Container, MinMaxEpochs} from "@alto/staking/interfaces/ITVLWeightedContainers.sol";
 import {MockTVLWeightedContainersMock} from "@alto-test/staking/helpers/MockTVLWeightedContainersMock.sol";
 
 contract TVLWeightedContainersCommon is Test {

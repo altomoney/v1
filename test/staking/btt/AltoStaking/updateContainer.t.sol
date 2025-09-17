@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
-import "./AltoStakingCommon.t.sol";
+import {AltoStakingCommon} from "./AltoStakingCommon.t.sol";
+import {IAltoStakingErrors, IAltoStakingEvents, Container} from "@alto/staking/interfaces/IAltoStaking.sol";
+import {ITVLWeightedContainersErrors} from "@alto/staking/interfaces/ITVLWeightedContainers.sol";
+import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 
 contract AltoStaking_UpdateContainer_Test is AltoStakingCommon {
     uint256 private constant CONTAINER_ID = 1;

@@ -36,9 +36,11 @@ contract SwapperSimpleMock is IAltoLeverageSwapper, Ownable {
             revert SenderNotValid(msg.sender);
         }
         // Transfer tokens to this contract
+        /// forge-lint: disable-next-line(erc20-unchecked-transfer)
         IERC20(sellToken).transferFrom(msg.sender, address(this), amountIn);
 
         if (returnLeftoverTokens > 0) {
+            /// forge-lint: disable-next-line(erc20-unchecked-transfer)
             IERC20(sellToken).transfer(msg.sender, returnLeftoverTokens);
             returnLeftoverTokens = 0;
         }
@@ -46,6 +48,7 @@ contract SwapperSimpleMock is IAltoLeverageSwapper, Ownable {
         amountOut = minAmountOut;
 
         // Transfer the bought tokens to the sender
+        /// forge-lint: disable-next-line(erc20-unchecked-transfer)
         IERC20(buyToken).transfer(msg.sender, amountOut);
     }
 }

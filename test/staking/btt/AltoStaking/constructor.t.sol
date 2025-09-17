@@ -102,7 +102,7 @@ contract AltoStakingConstructor is AltoStakingCommon {
             new MockAltoStaking(address(lockToken), OWNER, EPOCH_DURATION, containers, multipliers);
 
         // it should set lockToken correctly
-        assertEq(testStaking.lockToken(), address(lockToken));
+        assertEq(testStaking.LOCK_TOKEN(), address(lockToken));
 
         // it should set owner correctly
         assertEq(testStaking.owner(), OWNER);
@@ -150,7 +150,7 @@ contract AltoStakingConstructor is AltoStakingCommon {
             new MockAltoStaking(address(lockToken), OWNER, EPOCH_DURATION, containers, multipliers);
 
         // it should set lockToken correctly
-        assertEq(testStaking.lockToken(), address(lockToken));
+        assertEq(testStaking.LOCK_TOKEN(), address(lockToken));
 
         // it should set owner correctly
         assertEq(testStaking.owner(), OWNER);

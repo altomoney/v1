@@ -3,7 +3,6 @@ pragma solidity ^0.8.22;
 
 import {TVLWeightedContainersCommon} from "./TVLWeightedContainersCommon.t.sol";
 import {
-    Container,
     ITVLWeightedContainersErrors,
     ITVLWeightedContainersEvents
 } from "@alto/staking/interfaces/ITVLWeightedContainers.sol";

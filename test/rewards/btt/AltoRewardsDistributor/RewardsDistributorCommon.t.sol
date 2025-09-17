@@ -3,21 +3,11 @@ pragma solidity ^0.8.0;
 
 import {Test} from "forge-std/Test.sol";
 import {AltoRewardsDistributor, CLAIM_PAUSE_TYPE} from "@alto/rewards/AltoRewardsDistributor.sol";
-import {
-    PendingMerkleRoot,
-    IRewardsDistributor,
-    IRewardsEvents,
-    IRewardsErrors,
-    PaymentToken
-} from "@alto/rewards/interfaces/IRewardsDistributor.sol";
-import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC20MockDecimals} from "@alto-test/helpers/ERC20MockDecimals.sol";
-import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
 import {USD_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IUsdOracle.sol";
 import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
-import {IOracle} from "@alto/oracles/interfaces/IOracle.sol";
 
 contract MockLock {
     mapping(address => uint256) public locked;
@@ -45,6 +35,7 @@ contract MockLock {
         lastIsReuse = isReuse;
         lastMaxEpochsToLockFor = maxEpochsToLockFor;
         // Pull tokens from caller (RewardsDistributor)
+        /// forge-lint: disable-next-line(erc20-unchecked-transfer)
         rewardToken.transferFrom(msg.sender, address(this), amount);
         return amount;
     }

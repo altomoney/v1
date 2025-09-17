@@ -7,7 +7,6 @@ import {
     Container
 } from "./interfaces/ITVLWeightedContainers.sol";
 import {FixedPointMath, MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
-import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /// @title TVL Weighted Containers
 /// @author Pearl Labs

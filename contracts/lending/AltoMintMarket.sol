@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import {Uint128Converter} from "./libraries/Uint128Converter.sol";
 
 import {IIrm} from "./interfaces/IIrm.sol";
-import {Balance, Position, LiquidationConfiguration} from "./interfaces/IMarket.sol";
+import {Balance, LiquidationConfiguration} from "./interfaces/IMarket.sol";
 import {IMintableERC20} from "./interfaces/IMintableERC20.sol";
 import {PAUSED_MARKET} from "@alto/utils/Constants.sol";
 

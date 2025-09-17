@@ -3,7 +3,7 @@ pragma solidity ^0.8.28;
 
 import {MarketType, MarketCommon} from "./MarketCommon.t.sol";
 import {IPausable} from "@alto/utils/Pausable.sol";
-import {PAUSED_MARKET, FROZEN_MARKET} from "@alto/utils/Constants.sol";
+import {PAUSED_MARKET} from "@alto/utils/Constants.sol";
 import {
     IMarketErrors,
     IMarketEvents,

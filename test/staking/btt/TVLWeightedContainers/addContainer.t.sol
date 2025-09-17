@@ -1,13 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
-import {TVLWeightedContainersCommon} from "./TVLWeightedContainersCommon.t.sol";
 import {TVLWeightedContainersValidation} from "./TVLWeightedContainersValidation.t.sol";
-import {
-    Container,
-    ITVLWeightedContainersErrors,
-    ITVLWeightedContainersEvents
-} from "@alto/staking/interfaces/ITVLWeightedContainers.sol";
+import {Container, ITVLWeightedContainersEvents} from "@alto/staking/interfaces/ITVLWeightedContainers.sol";
 
 contract TVLWeightedContainersAddContainer is TVLWeightedContainersValidation {
     function setUp() public override {

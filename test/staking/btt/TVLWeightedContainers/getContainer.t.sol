@@ -2,7 +2,7 @@
 pragma solidity ^0.8.22;
 
 import {TVLWeightedContainersCommon} from "./TVLWeightedContainersCommon.t.sol";
-import {Container, MinMaxEpochs} from "@alto/staking/interfaces/ITVLWeightedContainers.sol";
+import {Container} from "@alto/staking/interfaces/ITVLWeightedContainers.sol";
 
 contract TVLWeightedContainersGetContainer is TVLWeightedContainersCommon {
     function setUp() public override {

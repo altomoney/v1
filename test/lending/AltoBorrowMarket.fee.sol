@@ -8,11 +8,9 @@ import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {ERC20Mock} from "../helpers/ERC20Mock.sol";
-import {console2} from "forge-std/console2.sol";
 import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
 import {FixedPointMath, MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
-import {IOracle} from "@alto/oracles/interfaces/IOracle.sol";
 import {MockMarketDeployer, MockMarket} from "@alto-test/helpers/MockMarket.sol";
 
 contract AltoBorrowMarketFeeTest is Test {

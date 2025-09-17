@@ -2,7 +2,6 @@
 pragma solidity ^0.8.0;
 
 import {NftRewardsAdapterCommon} from "./NftRewardsAdapterCommon.t.sol";
-import {AltoNftRewardsAdapter} from "@alto/rewards/adapters/AltoNftRewardsAdapter.sol";
 import {BonusRewardInfo} from "@alto/rewards/interfaces/IRewardsAdapter.sol";
 
 contract AltoNftRewardsAdapterGetBonusRewardInfo is NftRewardsAdapterCommon {
@@ -126,6 +125,7 @@ contract AltoNftRewardsAdapterGetBonusRewardInfo is NftRewardsAdapterCommon {
 
         // Transfer NFT from BOB to CHARLIE
         vm.prank(BOB);
+        /// forge-lint: disable-next-line(erc20-unchecked-transfer)
         pearlClubNft.transferFrom(BOB, CHARLIE, 2);
 
         // Get info after transfer

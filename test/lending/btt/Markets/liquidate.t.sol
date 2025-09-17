@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.28;
 
-import {Test} from "forge-std/Test.sol";
 import {MarketCommon, MarketType} from "./MarketCommon.t.sol";
 import {IPausable} from "@alto/utils/Pausable.sol";
-import {PAUSED_MARKET, FROZEN_MARKET} from "@alto/utils/Constants.sol";
+import {PAUSED_MARKET} from "@alto/utils/Constants.sol";
 import {
     IMarketErrors,
     IMarketEvents,
@@ -19,7 +18,6 @@ import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConver
 import {Uint128Converter} from "@alto/lending/libraries/Uint128Converter.sol";
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {ILiquidateCallback} from "@alto/lending/interfaces/IMarketCallbacks.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IOracle, ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 
 contract LiquidateCallback is ILiquidateCallback {
