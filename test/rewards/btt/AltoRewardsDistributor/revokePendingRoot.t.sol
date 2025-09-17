@@ -88,24 +88,4 @@ contract AltoRewardsDistributorRevokePendingRoot is RewardsDistributorCommon {
         (bytes32 pendingRootAfter,,) = distributor.pendingMerkleRoot();
         assertEq(pendingRootAfter, bytes32(0));
     }
-
-    function test_WhenRevokingWithZeroParameter() external whenCallerIsAuthorizedAndInputsAreValid {
-        bytes32 newRoot = bytes32(uint256(789));
-
-        // Submit a pending root first
-        vm.prank(UPDATER);
-        distributor.submitNewPendingRoot(newRoot, bytes32(0));
-
-        // it should emit RevokePendingMerkleRoot event
-        vm.expectEmit(true, true, false, false);
-        emit IMerkleRootManagerEvents.RevokePendingMerkleRoot(UPDATER, newRoot);
-
-        // Revoke with zero parameter (means revoke whatever is pending)
-        vm.prank(UPDATER);
-        distributor.revokePendingRoot(bytes32(0));
-
-        // it should delete pending root
-        (bytes32 pendingRootAfter,,) = distributor.pendingMerkleRoot();
-        assertEq(pendingRootAfter, bytes32(0));
-    }
 }

@@ -100,27 +100,4 @@ contract AltoRewardsDistributorAcceptPendingRoot is RewardsDistributorCommon {
         (bytes32 pendingRoot,,) = distributor.pendingMerkleRoot();
         assertEq(pendingRoot, bytes32(0));
     }
-
-    function test_WhenAcceptingWithZeroParameter() external whenConditionsAreMet {
-        bytes32 newRoot = bytes32(uint256(789));
-
-        // Submit a pending root
-        vm.prank(UPDATER);
-        distributor.submitNewPendingRoot(newRoot, bytes32(0));
-
-        // it should emit AcceptPendingMerkleRoot event
-        vm.expectEmit(true, true, false, false);
-        emit IMerkleRootManagerEvents.AcceptPendingMerkleRoot(OWNER, newRoot, bytes32(0));
-
-        // Accept with zero parameter (means accept whatever is pending)
-        vm.prank(OWNER);
-        distributor.acceptPendingRoot(bytes32(0));
-
-        // it should set merkle root to pending root
-        assertEq(distributor.merkleRoot(), newRoot);
-
-        // it should delete pending root
-        (bytes32 pendingRoot,,) = distributor.pendingMerkleRoot();
-        assertEq(pendingRoot, bytes32(0));
-    }
 }

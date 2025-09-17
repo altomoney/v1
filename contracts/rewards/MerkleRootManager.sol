@@ -71,7 +71,7 @@ abstract contract MerkleRootManager is IMerkleRootManagerStaticTypes {
             revert MerkleRootManagerRootNotSet();
         }
 
-        if (merkleRootToAccept != bytes32(0) && merkleRootToAccept != pendingMerkleRoot.merkleRoot) {
+        if (merkleRootToAccept != pendingMerkleRoot.merkleRoot) {
             revert MerkleRootManagerInvalidInput();
         }
 
@@ -93,7 +93,7 @@ abstract contract MerkleRootManager is IMerkleRootManagerStaticTypes {
             revert MerkleRootManagerPendingRootNotSet();
         }
 
-        if (merkleRootToRevoke != bytes32(0) && merkleRootToRevoke != pendingMerkleRoot.merkleRoot) {
+        if (merkleRootToRevoke != pendingMerkleRoot.merkleRoot) {
             revert MerkleRootManagerInvalidInput();
         }
 
