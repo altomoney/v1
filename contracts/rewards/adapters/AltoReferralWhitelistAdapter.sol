@@ -110,6 +110,8 @@ contract AltoReferralWhitelistAdapter is IRewardsAdapter, MerkleRootManager, Own
     /// @param referralAddress The address to set the referral whitelist for
     /// @param isWhitelisted Whether the address is whitelisted
     /// @dev only whitelisted addresses are allowed and resetting to false is allowed
+    /// @dev removed addresses should be removed from the merkle root as well
+    /// otherwise whitelisted referral can re-add themselves back to the whitelist
     function setReferralWhitelist(address referralAddress, bool isWhitelisted) external onlyOwner {
         referralWhitelist[referralAddress] = isWhitelisted;
 
