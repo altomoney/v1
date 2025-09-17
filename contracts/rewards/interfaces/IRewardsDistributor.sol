@@ -187,6 +187,11 @@ interface IRewardsDistributorStaticTypes is IRewardsDistributorBase {
     /// @param token The payment token address
     /// @dev Payment token is used to pay for the reward token
     function paymentTokens(address token) external view returns (address oracle, uint8 decimals);
+
+    /// @notice The adapters whitelist
+    /// @dev This holds the list of trusted contract addresses that implement the IRewardsAdapter interface
+    /// @dev Adapters are used when claiming rewards to provide additional discounts and payment token sharing functionality
+    function adaptersWhitelist(uint256 index) external view returns (address);
 }
 
 /// @title IRewardsDistributor
@@ -204,4 +209,9 @@ interface IRewardsDistributor is IRewardsDistributorBase {
     /// @param token The payment token address
     /// @return PaymentToken struct composed by oracle address and token decimals
     function paymentTokens(address token) external view returns (PaymentToken memory);
+
+    /// @notice The adapters whitelist
+    /// @dev This holds the list of trusted contract addresses that implement the IRewardsAdapter interface
+    /// @dev Adapters are used when claiming rewards to provide additional discounts and payment token sharing functionality
+    function adaptersWhitelist() external view returns (address[] memory);
 }
