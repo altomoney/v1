@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
-import {Test} from "forge-std/Test.sol";
-
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {PAUSED_MARKET} from "@alto/utils/Constants.sol";
 import {AdaptiveCurveIrm} from "@alto/lending/irm/AdaptiveCurveIrm.sol";

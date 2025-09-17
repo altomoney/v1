@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
-import "./AltoStakingCommon.t.sol";
+import {AltoStakingCommon} from "./AltoStakingCommon.t.sol";
+import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
+import {PAUSE_TYPE, RESCUE_MODE_PAUSE_TYPE} from "@alto/staking/AltoStaking.sol";
 
 contract AltoStaking_SetPauser_Test is AltoStakingCommon {
     function setUp() public override {

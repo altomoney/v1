@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
-import "./AltoLeverage.t.sol";
+import {AltoLeverageBTTTest} from "./AltoLeverage.t.sol";
+import {IAltoLeverageSwapper} from "@alto/lending/interfaces/IAltoLeverageSwapper.sol";
+import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
+import {SwapperSimpleMock} from "@alto/lending/mocks/SwapperSimpleMock.sol";
 
 contract SetSwapperTest is AltoLeverageBTTTest {
     /// @dev it should revert

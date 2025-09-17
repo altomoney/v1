@@ -1,12 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {Test} from "forge-std/Test.sol";
 import {MarketCommon, MarketType} from "./MarketCommon.t.sol";
 import {IPausable} from "@alto/utils/Pausable.sol";
-import {PAUSED_MARKET, FROZEN_MARKET} from "@alto/utils/Constants.sol";
+import {PAUSED_MARKET} from "@alto/utils/Constants.sol";
 import {IMarketErrors, IMarketEvents, Position} from "@alto/lending/interfaces/IMarket.sol";
-import {IERC20Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
 import {IRemoveCollateralCallback} from "@alto/lending/interfaces/IMarketCallbacks.sol";
 
 contract RemoveCollateralCallback is IRemoveCollateralCallback {

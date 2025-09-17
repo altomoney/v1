@@ -2,10 +2,8 @@
 pragma solidity ^0.8.0;
 
 import {RewardsDistributorCommon} from "../RewardsDistributorCommon.t.sol";
-import {AltoRewardsDistributor} from "@alto/rewards/AltoRewardsDistributor.sol";
 import {IRewardsEvents, IRewardsErrors} from "@alto/rewards/interfaces/IRewardsDistributor.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 
 contract AltoRewardsDistributorSetLockBonusDiscount is RewardsDistributorCommon {
     function test_RevertWhen_CallerIsNotOwner() external {

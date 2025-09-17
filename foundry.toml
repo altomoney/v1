@@ -32,6 +32,13 @@ fs_permissions = [
 	{ access = "read", path = "./out/" },
 ]
 
+[lint]
+exclude_lints = [
+	"mixed-case-variable",
+	"mixed-case-function",
+	"pascal-case-struct",
+]
+
 [profile.market]
 src = 'contracts'
 test = "test/lending"

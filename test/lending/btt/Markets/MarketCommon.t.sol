@@ -10,7 +10,6 @@ import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
 import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
-import {AltoMintMarket} from "@alto/lending/AltoMintMarket.sol";
 import {ERC20MockMintable} from "@alto-test/helpers/ERC20MockMintable.sol";
 import {PAUSED_MARKET, FROZEN_MARKET} from "@alto/utils/Constants.sol";
 import {MarketDeployer} from "@alto/utils/MarketDeployer.sol";

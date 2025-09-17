@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {PendingMerkleRoot} from "@alto/rewards/interfaces/IMerkleRootManager.sol";
 import {IAuth} from "@alto/utils/interfaces/IAuth.sol";
 import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
 

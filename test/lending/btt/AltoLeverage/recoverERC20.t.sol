@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
-import "./AltoLeverage.t.sol";
+import {AltoLeverageBTTTest} from "./AltoLeverage.t.sol";
 
 contract RecoverERC20Test is AltoLeverageBTTTest {
     /// @dev it should revert

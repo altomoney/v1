@@ -3,7 +3,6 @@ pragma solidity ^0.8.0;
 
 import {Test} from "forge-std/Test.sol";
 import {AltoReferralWhitelistAdapter} from "@alto/rewards/adapters/AltoReferralWhitelistAdapter.sol";
-import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
 abstract contract ReferralWhitelistAdapterCommon is Test {
     AltoReferralWhitelistAdapter public adapter;

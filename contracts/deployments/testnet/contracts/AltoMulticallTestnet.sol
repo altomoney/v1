@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract AltoMulticallTestnet {
     mapping(address => bool) public _owners;
@@ -106,6 +105,7 @@ contract AltoMulticallTestnet {
     }
 
     function transferERC20(address token, address to, uint256 amount) public payable onlyOwner {
+        /// forge-lint: disable-next-line(erc20-unchecked-transfer)
         IERC20(token).transfer(to, amount);
     }
 

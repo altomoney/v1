@@ -10,7 +10,7 @@ import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
 import {StakingPosition, StakingContainer} from "./interfaces/IAltoStaking.sol";
 import {TVLWeightedContainers, Container} from "./TVLWeightedContainers.sol";
 import {IAltoStakingStaticTypes, IAltoStakingBase} from "./interfaces/IAltoStaking.sol";
-import {ITVLWeightedContainers, ITVLWeightedContainersBase} from "./interfaces/ITVLWeightedContainers.sol";
+import {ITVLWeightedContainersBase} from "./interfaces/ITVLWeightedContainers.sol";
 import {MATH_PRECISION, FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {Auth} from "@alto/utils/Auth.sol";
 
@@ -26,7 +26,7 @@ contract AltoStaking is IAltoStakingStaticTypes, TVLWeightedContainers, Ownable2
     using FixedPointMath for uint256;
 
     /// @inheritdoc IAltoStakingBase
-    address public immutable lockToken;
+    address public immutable LOCK_TOKEN;
 
     /// @inheritdoc IAltoStakingStaticTypes
     mapping(uint256 => StakingContainer) public stakingContainerById;
@@ -56,7 +56,7 @@ contract AltoStaking is IAltoStakingStaticTypes, TVLWeightedContainers, Ownable2
             revert AltoStakingInvalidInput();
         }
 
-        lockToken = _lockToken;
+        LOCK_TOKEN = _lockToken;
     }
 
     /// @inheritdoc IPausable
@@ -165,7 +165,7 @@ contract AltoStaking is IAltoStakingStaticTypes, TVLWeightedContainers, Ownable2
         position.amountLocked = amount;
 
         if (!isReuse) {
-            IERC20(lockToken).safeTransferFrom(msg.sender, address(this), amount - amountPrevious);
+            IERC20(LOCK_TOKEN).safeTransferFrom(msg.sender, address(this), amount - amountPrevious);
         }
 
         emit LockPosition(msg.sender, onBehalf, containerId, amount, expiryTimestamp, isReuse);
@@ -209,7 +209,7 @@ contract AltoStaking is IAltoStakingStaticTypes, TVLWeightedContainers, Ownable2
         positions[onBehalf][containerId].expiryTimestamp = 0;
         positions[onBehalf][containerId].lockedTimestamp = 0;
 
-        IERC20(lockToken).safeTransfer(receiver, releasedAmount);
+        IERC20(LOCK_TOKEN).safeTransfer(receiver, releasedAmount);
         emit UnlockPosition(msg.sender, onBehalf, receiver, containerId, releasedAmount);
     }
 
@@ -224,9 +224,9 @@ contract AltoStaking is IAltoStakingStaticTypes, TVLWeightedContainers, Ownable2
             revert AltoStakingNotPausedForEmergencySweep();
         }
 
-        emit EmergencySweep(msg.sender, owner(), IERC20(lockToken).balanceOf(address(this)));
+        emit EmergencySweep(msg.sender, owner(), IERC20(LOCK_TOKEN).balanceOf(address(this)));
 
-        IERC20(lockToken).safeTransfer(owner(), IERC20(lockToken).balanceOf(address(this)));
+        IERC20(LOCK_TOKEN).safeTransfer(owner(), IERC20(LOCK_TOKEN).balanceOf(address(this)));
     }
 
     /// @inheritdoc IAltoStakingBase

@@ -2,7 +2,6 @@
 pragma solidity ^0.8.22;
 
 import {OracleTestnet} from "@alto/deployments/testnet/contracts/OracleTestnet.sol";
-import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {AdaptiveCurveIrm} from "@alto/lending/irm/AdaptiveCurveIrm.sol";
 import {UnsafeUpgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";

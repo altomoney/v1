@@ -9,7 +9,6 @@ import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {MarketDeployer} from "@alto/utils/MarketDeployer.sol";
 import {LiquidationConfiguration, Balance, Position} from "@alto/lending/interfaces/IMarket.sol";
-import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";
 import {PAUSED_MARKET, FROZEN_MARKET} from "@alto/utils/Constants.sol";
 import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";

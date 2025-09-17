@@ -2,7 +2,6 @@
 pragma solidity ^0.8.0;
 
 import {RewardsDistributorCommon} from "./RewardsDistributorCommon.t.sol";
-import {AltoRewardsDistributor} from "@alto/rewards/AltoRewardsDistributor.sol";
 import {IRewardsEvents, IRewardsErrors} from "@alto/rewards/interfaces/IRewardsDistributor.sol";
 import {IRewardsAdapter, BonusRewardInfo} from "@alto/rewards/interfaces/IRewardsAdapter.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";

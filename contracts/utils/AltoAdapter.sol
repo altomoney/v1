@@ -258,7 +258,7 @@ contract AltoAdapter is CoreAdapter {
     ) external onlyBundler3 {
         if (!isReuse) {
             // AltoStaking's allowance is not reset as it is trusted.
-            SafeERC20.forceApprove(IERC20(staking.lockToken()), address(staking), type(uint256).max);
+            SafeERC20.forceApprove(IERC20(staking.LOCK_TOKEN()), address(staking), type(uint256).max);
         }
         staking.lock(initiator(), amount, containerId, isReuse, maxEpochsToLockFor);
     }

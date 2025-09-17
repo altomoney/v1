@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
-import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IAuth} from "@alto/utils/interfaces/IAuth.sol";
 import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
 import {ITVLWeightedContainers, ITVLWeightedContainersStaticTypes, Container} from "./ITVLWeightedContainers.sol";
@@ -58,7 +56,7 @@ interface IAltoStakingEvents {
 interface IAltoStakingBase is IAltoStakingErrors, IAltoStakingEvents, IAuth, IPausable {
     /// @notice The address of the lock token.
     /// @dev This token is trusted and does not need any reentrancy protection.
-    function lockToken() external view returns (address);
+    function LOCK_TOKEN() external view returns (address);
 
     /// @notice The id of the container with the highest multiplier.
     /// @dev This is used for locking in the max multiplier container during AltoRewardsDistributor.claimRewardTokens.

@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
-import "./AltoLeverage.t.sol";
+import {AltoLeverageBTTTest} from "./AltoLeverage.t.sol";
+import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
+import {IAltoLeverageSwapper} from "@alto/lending/interfaces/IAltoLeverageSwapper.sol";
+import {FlashRemoveCollateralLeverageData} from "@alto/lending/leverage/AltoLeverage.sol";
+import {Position} from "@alto/lending/interfaces/IMarket.sol";
 
 contract OnRemoveCollateralCallbackTest is AltoLeverageBTTTest {
     /// @dev it should revert

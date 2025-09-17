@@ -2,7 +2,6 @@
 pragma solidity ^0.8.22;
 
 import {Test} from "forge-std/Test.sol";
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
@@ -12,9 +11,7 @@ import {
     FlashBorrowLeverageData,
     FlashRemoveCollateralLeverageData
 } from "@alto/lending/leverage/AltoLeverage.sol";
-import {IAltoLeverageSwapper} from "@alto/lending/interfaces/IAltoLeverageSwapper.sol";
 import {IMarket, Position, IMarketErrors} from "@alto/lending/interfaces/IMarket.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SwapperSimpleMock} from "@alto/lending/mocks/SwapperSimpleMock.sol";
 import {console} from "forge-std/console.sol";
 

@@ -3,7 +3,6 @@ pragma solidity ^0.8.22;
 
 import {Test} from "forge-std/Test.sol";
 import {Container, MinMaxEpochs} from "@alto/staking/interfaces/ITVLWeightedContainers.sol";
-import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 import {MockTVLWeightedContainersMock} from "@alto-test/staking/helpers/MockTVLWeightedContainersMock.sol";
 
 contract TVLWeightedContainers_Main is Test {

@@ -2,7 +2,6 @@
 pragma solidity ^0.8.0;
 
 import {ReferralWhitelistAdapterCommon} from "./ReferralWhitelistAdapterCommon.t.sol";
-import {AltoReferralWhitelistAdapter} from "@alto/rewards/adapters/AltoReferralWhitelistAdapter.sol";
 import {BonusRewardInfo} from "@alto/rewards/interfaces/IRewardsAdapter.sol";
 
 contract AltoReferralWhitelistAdapterGetBonusRewardInfo is ReferralWhitelistAdapterCommon {

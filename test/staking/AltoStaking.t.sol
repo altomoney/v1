@@ -2,10 +2,7 @@
 pragma solidity ^0.8.22;
 
 import {Test} from "forge-std/Test.sol";
-import {TVLWeightedContainers} from "@alto/staking/TVLWeightedContainers.sol";
 import {Container, MinMaxEpochs} from "@alto/staking/interfaces/ITVLWeightedContainers.sol";
-import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
-import {AltoStaking} from "@alto/staking/AltoStaking.sol";
 import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
 import {MockAltoStaking} from "@alto-test/staking/helpers/MockAltoStaking.sol";
 
