@@ -10,6 +10,8 @@ evm_version = 'cancun'
 optimizer = true
 optimizer_runs = 1
 
+gas_limit = "18446744073709551615"
+
 proptest_max_shrink_iters = 500
 
 remappings = [
@@ -31,6 +33,7 @@ extra_output = ["storageLayout"]
 fs_permissions = [
 	{ access = "read-write", path = "./contracts/deployments/testnet/output" },
 	{ access = "read", path = "./out/" },
+	{ access = "read", path = "./test/oracles/data/" },
 ]
 
 [lint]
