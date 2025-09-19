@@ -34,7 +34,7 @@ struct Tx {
     TxType txType;
 }
 
-contract TapRewardsOracleTest is Test {
+contract SimulationRewardsOracle is Test {
     uint256 constant TAP_WETH_POOL_DEPLOYMENT_BLOCK = 221966847;
     uint256 constant TAP_WETH_POOL_DRAINED_BLOCK = 265077210;
     address constant ETH_USD_PRICE_FEED = 0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612;
@@ -149,9 +149,6 @@ contract TapRewardsOracleTest is Test {
             TAP_WETH_POOL.increaseObservationCardinalityNext(uint16(65 * i));
         }
 
-        console2.log("Token 0 in TAP_WETH_POOL", IERC20Metadata(TAP_WETH_POOL.token0()).name());
-        console2.log("Token 1 in TAP_WETH_POOL", IERC20Metadata(TAP_WETH_POOL.token1()).name());
-
         // deploys the rewards oracle
         {
             address[] memory addressInAndOutUni = new address[](2);
@@ -195,7 +192,7 @@ contract TapRewardsOracleTest is Test {
         }
     }
 
-    function test_printPriceData() public {
+    function testSimulate_printPriceData() public {
         uint256 weeksProcessed = 0;
 
         // process all the transactions
@@ -230,7 +227,7 @@ contract TapRewardsOracleTest is Test {
         }
     }
 
-    function test_sanityCheck() public {
+    function testSimulate_sanityCheck() public {
         // We check simulated dataset liquidity agains mainnet liquidity at the following block numbers
         // This is to ensure that the simulated dataset is consistent with the mainnet dataset
 
@@ -318,5 +315,17 @@ contract TapRewardsOracleTest is Test {
         uint256 amountIn = SWAP_ROUTER.exactOutputSingle(params);
 
         return amountIn;
+    }
+
+    // DO NOT DELETE THIS FUNCTION. IT IS USED BY UNISWAP V3 POOL DURING MINT
+    function uniswapV3MintCallback(uint256 amount0Owed, uint256 amount1Owed, bytes calldata) external {
+        deal(address(TAP_TOKEN), address(this), amount0Owed);
+        deal(MOCK_WETH, address(this), amount1Owed);
+        if (amount0Owed > 0) {
+            TAP_TOKEN.transfer(address(TAP_WETH_POOL), amount0Owed);
+        }
+        if (amount1Owed > 0) {
+            IERC20(MOCK_WETH).transfer(address(TAP_WETH_POOL), amount1Owed);
+        }
     }
 }

@@ -5,12 +5,11 @@ libs = ["node_modules", "lib"]
 test = 'test'
 script = 'script'
 no-match-path = 'playground/*'
+no-match-test = "testSimulate*"
 
 evm_version = 'cancun'
 optimizer = true
 optimizer_runs = 1
-
-gas_limit = "18446744073709551615"
 
 proptest_max_shrink_iters = 500
 
@@ -36,12 +35,18 @@ fs_permissions = [
 	{ access = "read", path = "./test/oracles/data/" },
 ]
 
+[profile.simulations]
+gas_limit = "18446744073709551615"
+match-test = "testSimulate"
+no-match-test = "testNeverExists"  # Override default to allow simulation tests
+
 [lint]
 exclude_lints = [
 	"mixed-case-variable",
 	"mixed-case-function",
 	"pascal-case-struct",
 ]
+
 [rpc_endpoints]
 ethereum = "https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}"
 arbitrum = "https://arb-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}"
