@@ -195,12 +195,11 @@ contract TapRewardsOracleTest is Test {
         }
     }
 
-    function testPrintPriceData() public {
+    function test_printPriceData() public {
         uint256 weeksProcessed = 0;
 
         // process all the transactions
         for (uint256 i = 1; i < txs.length; i++) {
-            TxType txType = txs[i].txType;
             if (txs[i - 1].blockNumber != txs[i].blockNumber) {
                 vm.roll(txs[i].blockNumber);
                 vm.warp(txs[i].timestamp);
@@ -227,39 +226,80 @@ contract TapRewardsOracleTest is Test {
                 weeksProcessed++;
             }
 
-            if (txType == TxType.MINT) {
-                deal(address(TAP_TOKEN), address(this), uint256(txs[i].amount0));
-                deal(MOCK_WETH, address(this), uint256(txs[i].amount1));
-                TAP_WETH_POOL.mint(address(this), txs[i].tickLower, txs[i].tickUpper, uint128(txs[i].amount), "");
-            } else if (txType == TxType.BURN) {
-                TAP_WETH_POOL.burn(txs[i].tickLower, txs[i].tickUpper, uint128(txs[i].amount));
-            } else if (txType == TxType.SWAP) {
-                if (txs[i].amount0 < 0) {
-                    // if tap amount is negative, that means pool has sent tap amount
-                    // it means weth is swapped for tap
-                    _swapOnUniswap(MOCK_WETH, address(TAP_TOKEN), txs[i].amount0);
-                } else if (txs[i].amount1 < 0) {
-                    // if weth amount is negative, that means pool has sent weth amount
-                    // it means tap is swapped for weth
-                    _swapOnUniswap(address(TAP_TOKEN), MOCK_WETH, txs[i].amount1);
+            _processTransaction(txs[i]);
+        }
+    }
+
+    function test_sanityCheck() public {
+        // We check simulated dataset liquidity agains mainnet liquidity at the following block numbers
+        // This is to ensure that the simulated dataset is consistent with the mainnet dataset
+
+        uint256[] memory sanityCheckBlockNumbers = new uint256[](7);
+        sanityCheckBlockNumbers[0] = 221966847; // first block included in the dataset
+        sanityCheckBlockNumbers[1] = 221966848;
+        sanityCheckBlockNumbers[2] = 230000000;
+        sanityCheckBlockNumbers[3] = 240000000;
+        sanityCheckBlockNumbers[4] = 250000000;
+        sanityCheckBlockNumbers[5] = 260000000;
+        sanityCheckBlockNumbers[6] = 265076832; // last block included in the dataset
+
+        uint256[] memory localLiquidity = new uint256[](sanityCheckBlockNumbers.length);
+
+        uint256 currentSanityCheckIndex = 0;
+
+        for (uint256 i = 1; i < txs.length; i++) {
+            if (txs[i - 1].blockNumber != txs[i].blockNumber) {
+                if (sanityCheckBlockNumbers[currentSanityCheckIndex] < txs[i].blockNumber) {
+                    localLiquidity[currentSanityCheckIndex] = TAP_WETH_POOL.liquidity();
+                    currentSanityCheckIndex++;
                 }
+                vm.roll(txs[i].blockNumber);
+                vm.warp(txs[i].timestamp);
+            }
+
+            _processTransaction(txs[i]);
+        }
+
+        localLiquidity[currentSanityCheckIndex] = TAP_WETH_POOL.liquidity();
+
+        for (uint256 i = 0; i < sanityCheckBlockNumbers.length; i++) {
+            string memory rpcUrl = vm.rpcUrl("arbitrum");
+            vm.createSelectFork(rpcUrl, sanityCheckBlockNumbers[i]);
+            uint256 liquidityMainnet = IUniswapV3Pool(0x5918AcA9ae924e6EaAA3d293Bb92BDEc9Ab79338).liquidity();
+            assertEq(
+                localLiquidity[i],
+                liquidityMainnet,
+                string(
+                    abi.encodePacked(
+                        "Liquidity at block ",
+                        vm.toString(sanityCheckBlockNumbers[i]),
+                        " is not equal to mainnet liquidity"
+                    )
+                )
+            );
+        }
+    }
+
+    function _processTransaction(Tx memory _transaction) internal {
+        TxType txType = _transaction.txType;
+        if (txType == TxType.MINT) {
+            deal(address(TAP_TOKEN), address(this), uint256(_transaction.amount0));
+            deal(MOCK_WETH, address(this), uint256(_transaction.amount1));
+            TAP_WETH_POOL.mint(
+                address(this), _transaction.tickLower, _transaction.tickUpper, uint128(_transaction.amount), ""
+            );
+        } else if (txType == TxType.BURN) {
+            TAP_WETH_POOL.burn(_transaction.tickLower, _transaction.tickUpper, uint128(_transaction.amount));
+        } else if (txType == TxType.SWAP) {
+            if (_transaction.amount0 < 0) {
+                _swapOnUniswap(MOCK_WETH, address(TAP_TOKEN), _transaction.amount0);
+            } else if (_transaction.amount1 < 0) {
+                _swapOnUniswap(address(TAP_TOKEN), MOCK_WETH, _transaction.amount1);
             }
         }
     }
 
-    // callback function for uniswap v3 mint
-    function uniswapV3MintCallback(uint256 amount0Owed, uint256 amount1Owed, bytes calldata) external {
-        deal(address(TAP_TOKEN), address(this), amount0Owed);
-        deal(MOCK_WETH, address(this), amount1Owed);
-        if (amount0Owed > 0) {
-            TAP_TOKEN.transfer(address(TAP_WETH_POOL), amount0Owed);
-        }
-        if (amount1Owed > 0) {
-            IERC20(MOCK_WETH).transfer(address(TAP_WETH_POOL), amount1Owed);
-        }
-    }
-
-    function _swapOnUniswap(address tokenIn, address tokenOut, int256 amountOut) public returns (uint256) {
+    function _swapOnUniswap(address tokenIn, address tokenOut, int256 amountOut) internal returns (uint256) {
         deal(tokenIn, address(this), type(uint128).max);
 
         IERC20(tokenIn).approve(address(SWAP_ROUTER), type(uint256).max);
