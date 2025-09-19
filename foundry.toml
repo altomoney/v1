@@ -36,9 +36,9 @@ fs_permissions = [
 ]
 
 [profile.simulations]
-gas_limit = "18446744073709551615"
+gas_limit = "20000000000"
 match-test = "testSimulate"
-no-match-test = "testNeverExists"  # Override default to allow simulation tests
+no-match-test = "testNeverExists" # Override default to allow simulation tests
 
 [lint]
 exclude_lints = [

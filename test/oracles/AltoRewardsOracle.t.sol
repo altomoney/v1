@@ -33,7 +33,7 @@ contract AltoRewardsOracleTest is Test {
     IUniswapV3Pool altoEthPool;
     uint256 wethAmountInPool = 2500 ether;
     uint256 altoAmountInPool = 10_000_000 ether;
-    uint24 constant poolFee = 10000;
+    uint24 constant POOL_FEE = 10000;
     bytes32 description = "Alto Rewards Oracle";
     uint32 twapPeriod = 1 weeks;
     // keeping chainlink stale period to be high value because uniswap twap is 1 weeks
@@ -54,7 +54,7 @@ contract AltoRewardsOracleTest is Test {
         vm.startPrank(OWNER);
         altoToken = new AltoToken(ENDPOINTV2, OWNER);
 
-        altoEthPool = IUniswapV3Pool(UNISWAP_V3_FACTORY.createPool(address(altoToken), WETH, poolFee));
+        altoEthPool = IUniswapV3Pool(UNISWAP_V3_FACTORY.createPool(address(altoToken), WETH, POOL_FEE));
         // weth
         console2.log("Token 0 in alToEthPool", altoEthPool.token0());
         // altoToken
@@ -77,7 +77,7 @@ contract AltoRewardsOracleTest is Test {
         INonfungiblePositionManager.MintParams memory params = INonfungiblePositionManager.MintParams({
             token0: address(WETH),
             token1: address(altoToken),
-            fee: poolFee,
+            fee: POOL_FEE,
             tickLower: MIN_TICK,
             tickUpper: MAX_TICK,
             amount0Desired: wethAmountInPool,
@@ -127,12 +127,12 @@ contract AltoRewardsOracleTest is Test {
         assertEq(rewardsOracle.owner(), OWNER, "Invalid owner in RewardsOracle");
         assertEq(rewardsOracle.description(), description, "Invalid description in RewardsOracle");
         assertEq(rewardsOracle.lastUpdateTimestamp(), 0, "Invalid lastUpdateTimestamp in RewardsOracle");
-        assertEq(rewardsOracle.inBase(), 10 ** 18, "Invalid inBase in RewardsOracle");
-        assertEq(rewardsOracle.outBase(), 10 ** 18, "Invalid outBase in RewardsOracle");
-        assertEq(rewardsOracle.uniFinalCurrency(), 1, "Invalid uniFinalCurrency in RewardsOracle");
+        assertEq(rewardsOracle.IN_BASE(), 10 ** 18, "Invalid inBase in RewardsOracle");
+        assertEq(rewardsOracle.OUT_BASE(), 10 ** 18, "Invalid outBase in RewardsOracle");
+        assertEq(rewardsOracle.UNI_FINAL_CURRENCY(), 1, "Invalid uniFinalCurrency in RewardsOracle");
         assertEq(rewardsOracle.stalePeriod(), stalePeriod, "Invalid stalePeriod in RewardsOracle");
         assertEq(rewardsOracle.twapPeriod(), twapPeriod, "Invalid twapPeriod in RewardsOracle");
-        assertEq(rewardsOracle.initialPrice(), initialPrice, "Invalid initialPrice in RewardsOracle");
+        assertEq(rewardsOracle.INITIAL_PRICE(), initialPrice, "Invalid initialPrice in RewardsOracle");
         assertEq(rewardsOracle.cachedPrice(), 0, "Invalid cachedPrice in RewardsOracle");
         assertEq(rewardsOracle.lastUpdateTimestamp(), 0, "Invalid lastUpdateTimestamp in RewardsOracle");
     }
@@ -221,7 +221,7 @@ contract AltoRewardsOracleTest is Test {
         assertEq(rewardsOracle.getPrice(), initialPrice, "Invalid price from RewardsOracle");
         assertEq(
             rewardsOracle.getPrice(),
-            rewardsOracle.initialPrice(),
+            rewardsOracle.INITIAL_PRICE(),
             "RewardsOracle price and initialPrice should be equal"
         );
         vm.warp(block.timestamp + twapPeriod / 4);
@@ -261,7 +261,7 @@ contract AltoRewardsOracleTest is Test {
         assertEq(rewardsOracle.getPrice(), initialPrice, "Invalid price from RewardsOracle");
         assertEq(
             rewardsOracle.getPrice(),
-            rewardsOracle.initialPrice(),
+            rewardsOracle.INITIAL_PRICE(),
             "RewardsOracle price and initialPrice should be equal"
         );
         vm.warp(block.timestamp + twapPeriod / 4);
@@ -395,7 +395,7 @@ contract AltoRewardsOracleTest is Test {
         ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
             tokenIn: tokenIn,
             tokenOut: tokenOut,
-            fee: poolFee,
+            fee: POOL_FEE,
             recipient: user,
             deadline: block.timestamp,
             amountIn: amountIn,

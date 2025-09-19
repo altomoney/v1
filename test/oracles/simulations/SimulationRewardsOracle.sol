@@ -11,7 +11,6 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {AltoToken} from "@alto/tokens/AltoToken.sol";
 import {ISwapRouter} from "@alto-test/oracles/interfaces/ISwapRouter.sol";
 import {ERC20MockMintable} from "@alto-test/helpers/ERC20MockMintable.sol";
-import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {AggregatorV3Interface} from "@alto/oracles/utils/ChainlinkUtils.sol";
 
 // TxType that occured in the pool
@@ -42,14 +41,14 @@ contract SimulationRewardsOracle is Test {
     IUniswapV3Pool TAP_WETH_POOL;
     address OWNER = makeAddr("Alto-multisig");
     RewardsOracle rewardsOracle;
-    uint32 constant twapPeriod = 1 weeks;
-    uint32 constant stalePeriod = 36 hours;
-    uint256 constant initialPrice = 150000000;
+    uint32 constant TWAP_PERIOD = 1 weeks;
+    uint32 constant STALE_PERIOD = 36 hours;
+    uint256 constant INITIAL_PRICE = 150000000;
     bytes32 description = "TAP-USD Rewards Oracle";
     IUniswapV3Factory UNISWAP_V3_FACTORY = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
     AltoToken TAP_TOKEN;
     address MOCK_WETH;
-    uint24 constant poolFee = 10000;
+    uint24 constant POOL_FEE = 10000;
     Tx[] txs;
 
     uint256[] blockNumberTwapPeriodApart = [
@@ -140,7 +139,7 @@ contract SimulationRewardsOracle is Test {
         // initialize uniswap pool with first deployment transaction
         vm.roll(txs[0].blockNumber);
         vm.warp(txs[0].timestamp);
-        TAP_WETH_POOL = IUniswapV3Pool(UNISWAP_V3_FACTORY.createPool(address(TAP_TOKEN), MOCK_WETH, poolFee));
+        TAP_WETH_POOL = IUniswapV3Pool(UNISWAP_V3_FACTORY.createPool(address(TAP_TOKEN), MOCK_WETH, POOL_FEE));
         TAP_WETH_POOL.initialize(1931732976923280703113065904);
         TAP_WETH_POOL.mint(address(this), txs[0].tickLower, txs[0].tickUpper, uint128(txs[0].amount), "");
 
@@ -169,14 +168,14 @@ contract SimulationRewardsOracle is Test {
                 addressInAndOutUni: addressInAndOutUni,
                 circuitUniswap: _circuitUniswap,
                 circuitUniIsMultiplied: _circuitUniIsMultiplied,
-                twapPeriod: twapPeriod,
+                twapPeriod: TWAP_PERIOD,
                 observationLength: observationLength,
                 uniFinalCurrency: _uniFinalCurrency,
                 circuitChainlink: _circuitChainlink,
                 circuitChainIsMultiplied: _circuitChainIsMultiplied,
                 owner: OWNER,
-                stalePeriod: stalePeriod,
-                initialPrice: initialPrice,
+                stalePeriod: STALE_PERIOD,
+                initialPrice: INITIAL_PRICE,
                 description: description
             });
 
@@ -221,6 +220,8 @@ contract SimulationRewardsOracle is Test {
                 console2.log("Price of rewardsOracle is", rewardsOracle.getPrice());
                 console2.log("--------------------------------");
                 weeksProcessed++;
+
+                vm.clearMockedCalls();
             }
 
             _processTransaction(txs[i]);
@@ -304,7 +305,7 @@ contract SimulationRewardsOracle is Test {
         ISwapRouter.ExactOutputSingleParams memory params = ISwapRouter.ExactOutputSingleParams({
             tokenIn: tokenIn,
             tokenOut: tokenOut,
-            fee: poolFee,
+            fee: POOL_FEE,
             recipient: address(this),
             deadline: block.timestamp,
             amountOut: uint256(-amountOut),
@@ -322,10 +323,12 @@ contract SimulationRewardsOracle is Test {
         deal(address(TAP_TOKEN), address(this), amount0Owed);
         deal(MOCK_WETH, address(this), amount1Owed);
         if (amount0Owed > 0) {
-            TAP_TOKEN.transfer(address(TAP_WETH_POOL), amount0Owed);
+            bool success = TAP_TOKEN.transfer(address(TAP_WETH_POOL), amount0Owed);
+            require(success, "Transfer failed");
         }
         if (amount1Owed > 0) {
-            IERC20(MOCK_WETH).transfer(address(TAP_WETH_POOL), amount1Owed);
+            bool success = IERC20(MOCK_WETH).transfer(address(TAP_WETH_POOL), amount1Owed);
+            require(success, "Transfer failed");
         }
     }
 }
