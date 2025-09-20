@@ -3,7 +3,7 @@ pragma solidity ^0.8.22;
 
 import {Test} from "forge-std/Test.sol";
 import {Container, MinMaxEpochs} from "@alto/staking/interfaces/ITVLWeightedContainers.sol";
-import {MockTVLWeightedContainersMock} from "@alto-test/staking/helpers/MockTVLWeightedContainersMock.sol";
+import {MockTVLWeightedContainers} from "@alto-test/staking/helpers/MockTVLWeightedContainers.sol";
 
 contract TVLWeightedContainers_Main is Test {
     function setUp() public {}
@@ -38,8 +38,7 @@ contract TVLWeightedContainers_Main is Test {
             isActive: false
         });
 
-        MockTVLWeightedContainersMock tVLWeightedContainers =
-            new MockTVLWeightedContainersMock(1 days, initialContainers);
+        MockTVLWeightedContainers tVLWeightedContainers = new MockTVLWeightedContainers(1 days, initialContainers);
 
         tVLWeightedContainers.activateContainer(1);
         tVLWeightedContainers.activateContainer(2);

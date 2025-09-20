@@ -3,7 +3,12 @@ pragma solidity ^0.8.22;
 
 import {IAuth} from "@alto/utils/interfaces/IAuth.sol";
 import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
-import {ITVLWeightedContainers, ITVLWeightedContainersStaticTypes, Container} from "./ITVLWeightedContainers.sol";
+import {
+    ITVLWeightedContainers,
+    ITVLWeightedContainersStaticTypes,
+    Container,
+    MinMaxEpochs
+} from "./ITVLWeightedContainers.sol";
 
 struct StakingPosition {
     uint256 lockedTimestamp; // timestamp when lock was created
@@ -18,6 +23,23 @@ struct StakingContainer {
     /// @notice Whether the container is deprecated.
     /// @dev If the container is deprecated, users are not able to lock new tokens into it.
     bool isDeprecated;
+}
+
+/// @notice This struct merges container structs into one
+/// @dev This is a helper struct when fetching container data
+struct StakingContainerExtended {
+    /// Copy of Container struct
+    MinMaxEpochs growthRate;
+    MinMaxEpochs decayRate;
+    MinMaxEpochs duration;
+    bool isActive;
+    uint24 maxRateDifferenceEpochs;
+    uint24 currentDurationEpochs;
+    /// Copy of StakingContainer struct
+    uint256 multiplier;
+    bool isDeprecated;
+    /// The next duration epochs of the container
+    uint24 currentDurationEpochsNext;
 }
 
 interface IAltoStakingErrors {
@@ -100,6 +122,15 @@ interface IAltoStakingBase is IAltoStakingErrors, IAltoStakingEvents, IAuth, IPa
         external
         view
         returns (StakingPosition memory position);
+
+    /// @notice Get the container after processing a specific epoch.
+    /// @param containerId The id of the container to get the container of.
+    /// @param epochIdToProcess The epoch to get the container after processing.
+    /// @return stakingContainerExtended The extended staking container of the container.
+    function getContainerAfterProcessing(uint256 containerId, uint256 epochIdToProcess)
+        external
+        view
+        returns (StakingContainerExtended memory stakingContainerExtended);
 
     /// @notice Advance the epoch.
     /// @param limit The maximum number of epochs to process in one call.

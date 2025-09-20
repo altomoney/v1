@@ -7,14 +7,14 @@ import {
     ITVLWeightedContainersErrors,
     ITVLWeightedContainersEvents
 } from "@alto/staking/interfaces/ITVLWeightedContainers.sol";
-import {MockTVLWeightedContainersMock} from "@alto-test/staking/helpers/MockTVLWeightedContainersMock.sol";
+import {MockTVLWeightedContainers} from "@alto-test/staking/helpers/MockTVLWeightedContainers.sol";
 
 contract TVLWeightedContainersConstructor is TVLWeightedContainersValidation {
     /// @dev Implementation for validation tests - calls constructor with invalid container
     function _callFunctionUnderTest(Container memory container) internal override {
         Container[] memory containers = new Container[](1);
         containers[0] = container;
-        new MockTVLWeightedContainersMock(EPOCH_DURATION, containers);
+        new MockTVLWeightedContainers(EPOCH_DURATION, containers);
     }
 
     function test_RevertWhen_EpochDurationIsZero() external {
@@ -22,7 +22,7 @@ contract TVLWeightedContainersConstructor is TVLWeightedContainersValidation {
 
         // it should revert
         vm.expectRevert(ITVLWeightedContainersErrors.TVLWeightedContainersInvalidInput.selector);
-        new MockTVLWeightedContainersMock(0, emptyContainers);
+        new MockTVLWeightedContainers(0, emptyContainers);
     }
 
     modifier givenValidInputs() {
@@ -35,8 +35,7 @@ contract TVLWeightedContainersConstructor is TVLWeightedContainersValidation {
         vm.expectEmit(true, true, true, true);
         emit ITVLWeightedContainersEvents.EpochDurationSet(EPOCH_DURATION);
 
-        MockTVLWeightedContainersMock testContainers =
-            new MockTVLWeightedContainersMock(EPOCH_DURATION, emptyContainers);
+        MockTVLWeightedContainers testContainers = new MockTVLWeightedContainers(EPOCH_DURATION, emptyContainers);
 
         // it should set EPOCH_DURATION
         assertEq(testContainers.EPOCH_DURATION(), EPOCH_DURATION);
@@ -92,8 +91,7 @@ contract TVLWeightedContainersConstructor is TVLWeightedContainersValidation {
         vm.expectEmit(true, true, true, true);
         emit ITVLWeightedContainersEvents.ContainerAdded(2, expectedContainer2);
 
-        MockTVLWeightedContainersMock testContainers =
-            new MockTVLWeightedContainersMock(EPOCH_DURATION, initialContainers);
+        MockTVLWeightedContainers testContainers = new MockTVLWeightedContainers(EPOCH_DURATION, initialContainers);
 
         // it should set EPOCH_DURATION
         assertEq(testContainers.EPOCH_DURATION(), EPOCH_DURATION);

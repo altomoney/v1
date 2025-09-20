@@ -3,10 +3,10 @@ pragma solidity ^0.8.22;
 
 import {Test} from "forge-std/Test.sol";
 import {Container, MinMaxEpochs} from "@alto/staking/interfaces/ITVLWeightedContainers.sol";
-import {MockTVLWeightedContainersMock} from "@alto-test/staking/helpers/MockTVLWeightedContainersMock.sol";
+import {MockTVLWeightedContainers} from "@alto-test/staking/helpers/MockTVLWeightedContainers.sol";
 
 contract TVLWeightedContainersCommon is Test {
-    MockTVLWeightedContainersMock public containers;
+    MockTVLWeightedContainers public containers;
 
     // Test constants
     uint256 public constant EPOCH_DURATION = 1 weeks;
@@ -53,17 +53,17 @@ contract TVLWeightedContainersCommon is Test {
     }
 
     function _deployWithContainers(Container[] memory initialContainers) internal {
-        containers = new MockTVLWeightedContainersMock(EPOCH_DURATION, initialContainers);
+        containers = new MockTVLWeightedContainers(EPOCH_DURATION, initialContainers);
     }
 
     function _deployWithoutContainers() internal {
         Container[] memory emptyContainers = new Container[](0);
-        containers = new MockTVLWeightedContainersMock(EPOCH_DURATION, emptyContainers);
+        containers = new MockTVLWeightedContainers(EPOCH_DURATION, emptyContainers);
     }
 
     function _deployWithSingleContainer() internal {
         Container[] memory singleContainer = new Container[](1);
         singleContainer[0] = defaultContainer;
-        containers = new MockTVLWeightedContainersMock(EPOCH_DURATION, singleContainer);
+        containers = new MockTVLWeightedContainers(EPOCH_DURATION, singleContainer);
     }
 }

@@ -1,0 +1,14 @@
+AltoStaking::getContainerAfterProcessing()
+├── given container does not exist
+│   └── it should return empty container data with default values
+├── given container exists but is not active
+│   └── it should return container data with multiplier and deprecated status
+├── given container exists and is active
+│   ├── when epoch has no TVL data
+│   │   └── it should return container with minimum duration as next duration
+│   ├── when epoch has TVL data
+│   │   └── it should return container with calculated next duration based on TVL share
+│   └── when container is deprecated
+│       └── it should return container with isDeprecated set to true
+└── given epoch to process is valid
+    └── it should return extended container with all fields including currentDurationEpochsNext
