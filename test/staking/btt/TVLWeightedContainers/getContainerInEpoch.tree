@@ -1,0 +1,27 @@
+TVLWeightedContainers::getContainerInEpoch()
+├── given epoch system is not started
+│   └── it should return container with data
+├── given container does not exist
+│   └── it should return empty container data with zero duration
+├── given container exists but is not active
+│   ├── when epoch has no TVL data
+│   │   └── it should return container with minimum duration
+│   └── when epoch has TVL data
+│       └── it should return container with minimum duration (inactive containers don't participate in TVL calculations)
+├── given container exists and is active
+│   ├── when epoch has no TVL data for any containers
+│   │   └── it should return container with minimum duration
+│   ├── when epoch has TVL data only for this container
+│   │   ├── when container TVL would cause growth
+│   │   │   └── when container duration grows
+│   │   │       └── it should return container with increased duration by its growth rate
+│   │   └── when container TVL would cause decay
+│   │       └── when container duration decays
+│   │           └── it should return container with decreased duration by normal decay rate
+│   └── when epoch has TVL data for multiple containers
+│       ├── when this container has majority TVL share
+│       │   └── it should return container with calculated duration based on high TVL share
+│       └── when this container has equal TVL share with others
+│           └── it should return container with calculated duration based on equal share
+└── given container duration would exceed maximum
+    └── it should cap duration at maximum value

@@ -134,11 +134,7 @@ abstract contract TVLWeightedContainers is ITVLWeightedContainersStaticTypes {
     /// @dev This function is used to update the duration of the containers based on the TVL share
     /// @dev This function is used to process the containers according to the growth and decay rules
     function _processEpoch(uint256 epochToProcess) internal whenEpochStarted {
-        uint256 totalTvl = 0;
-
-        for (uint256 cId; cId < activeContainerIds.length; cId++) {
-            totalTvl += epochTVL[epochToProcess][activeContainerIds[cId]];
-        }
+        uint256 totalTvl = _getTotalTvlForEpoch(epochToProcess);
 
         for (uint256 cId; cId < activeContainerIds.length; cId++) {
             _processContainer(epochToProcess, activeContainerIds[cId], totalTvl);
@@ -159,6 +155,27 @@ abstract contract TVLWeightedContainers is ITVLWeightedContainersStaticTypes {
         Container storage container = containerById[containerId];
 
         uint24 currentDurationEpochsBefore = container.currentDurationEpochs;
+
+        container.currentDurationEpochs = _getNextDurationEpochsForContainer(epochToProcess, containerId, totalTvl);
+
+        emit ContainerDurationUpdated(containerId, currentDurationEpochsBefore, container.currentDurationEpochs);
+    }
+
+    /// @dev Applies TVL growth and decay rules to the container's currentDurationEpochs without writing the results
+    /// @param epochToProcess The epoch to process
+    /// @param containerId The id of the container to process
+    /// @param totalTvl The total TVL of all active containers
+    /// @dev Used in the `_processContainer` function as well as `_getContainerInEpoch`
+    /// @dev This function is used to process the container for a specific epoch without writing the results
+    /// @dev This function is used to get the duration of the container based on the TVL share
+    function _getNextDurationEpochsForContainer(uint256 epochToProcess, uint256 containerId, uint256 totalTvl)
+        internal
+        view
+        returns (uint24)
+    {
+        Container storage container = containerById[containerId];
+
+        uint24 currentDurationEpochsNext = container.currentDurationEpochs;
 
         uint256 containerTvlSharePercentage =
             totalTvl > 0 ? epochTVL[epochToProcess][containerId].divideWithPrecisionDown(totalTvl) : 0;
@@ -187,9 +204,9 @@ abstract contract TVLWeightedContainers is ITVLWeightedContainersStaticTypes {
             }
 
             if (epochsToGrow + container.currentDurationEpochs > container.duration.max) {
-                container.currentDurationEpochs = container.duration.max;
+                currentDurationEpochsNext = container.duration.max;
             } else {
-                container.currentDurationEpochs += uint24(epochsToGrow);
+                currentDurationEpochsNext += uint24(epochsToGrow);
             }
         } else if (newRequestedDurationEpochs < container.currentDurationEpochs) {
             uint256 epochsToDecay;
@@ -210,13 +227,38 @@ abstract contract TVLWeightedContainers is ITVLWeightedContainersStaticTypes {
                 epochsToDecay > container.currentDurationEpochs
                     || container.currentDurationEpochs - epochsToDecay < container.duration.min
             ) {
-                container.currentDurationEpochs = container.duration.min;
+                currentDurationEpochsNext = container.duration.min;
             } else {
-                container.currentDurationEpochs -= uint24(epochsToDecay);
+                currentDurationEpochsNext -= uint24(epochsToDecay);
             }
         }
 
-        emit ContainerDurationUpdated(containerId, currentDurationEpochsBefore, container.currentDurationEpochs);
+        return currentDurationEpochsNext;
+    }
+
+    /// @dev Returns container data and currentDurationEpochs after processinga specific epoch with current state of TVL
+    /// @param containerId The id of the container to get
+    /// @param epochIdToProcess The epoch to get the container's currentDurationEpochs after processing
+    /// @return Container storage The container data
+    /// @return uint24 currentDurationEpochsNext The current duration epochs next
+    /// @dev This function is helper function for the 3rd party contract to get currently calculated currentDurationEpochs in coming epoch
+    function _getContainerAfterEpochProcessing(uint256 containerId, uint256 epochIdToProcess)
+        internal
+        view
+        returns (Container storage, uint24)
+    {
+        uint24 currentDurationEpochsNext =
+            _getNextDurationEpochsForContainer(epochIdToProcess, containerId, _getTotalTvlForEpoch(epochIdToProcess));
+        return (containerById[containerId], currentDurationEpochsNext);
+    }
+
+    /// @dev Returns the total TVL for a specific epoch
+    /// @param epoch The epoch to get the total TVL for
+    /// @return totalTvl The total TVL for the epoch
+    function _getTotalTvlForEpoch(uint256 epoch) internal view returns (uint256 totalTvl) {
+        for (uint256 cId; cId < activeContainerIds.length; cId++) {
+            totalTvl += epochTVL[epoch][activeContainerIds[cId]];
+        }
     }
 
     /// @dev Validates the container

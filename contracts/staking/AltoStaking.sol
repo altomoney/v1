@@ -7,7 +7,7 @@ import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step
 
 import {Pausable} from "@alto/utils/Pausable.sol";
 import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
-import {StakingPosition, StakingContainer} from "./interfaces/IAltoStaking.sol";
+import {StakingPosition, StakingContainer, StakingContainerExtended} from "./interfaces/IAltoStaking.sol";
 import {TVLWeightedContainers, Container} from "./TVLWeightedContainers.sol";
 import {IAltoStakingStaticTypes, IAltoStakingBase} from "./interfaces/IAltoStaking.sol";
 import {ITVLWeightedContainersBase} from "./interfaces/ITVLWeightedContainers.sol";
@@ -299,6 +299,28 @@ contract AltoStaking is IAltoStakingStaticTypes, TVLWeightedContainers, Ownable2
     /// @inheritdoc ITVLWeightedContainersBase
     function startEpoch() external override(TVLWeightedContainers, ITVLWeightedContainersBase) onlyOwner {
         _startEpoch();
+    }
+
+    /// @inheritdoc IAltoStakingBase
+    function getContainerAfterProcessing(uint256 containerId, uint256 epochIdToProcess)
+        external
+        view
+        returns (StakingContainerExtended memory)
+    {
+        StakingContainer memory stakingContainer = stakingContainerById[containerId];
+        (Container memory container, uint24 currentDurationEpochsNext) =
+            _getContainerAfterEpochProcessing(containerId, epochIdToProcess);
+        return StakingContainerExtended({
+            growthRate: container.growthRate,
+            decayRate: container.decayRate,
+            duration: container.duration,
+            isActive: container.isActive,
+            maxRateDifferenceEpochs: container.maxRateDifferenceEpochs,
+            currentDurationEpochs: container.currentDurationEpochs,
+            multiplier: stakingContainer.multiplier,
+            isDeprecated: stakingContainer.isDeprecated,
+            currentDurationEpochsNext: currentDurationEpochsNext
+        });
     }
 
     /// @dev Internal function to update the max multiplier staking container id.

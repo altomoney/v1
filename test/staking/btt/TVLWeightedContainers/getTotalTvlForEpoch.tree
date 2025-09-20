@@ -1,0 +1,44 @@
+TVLWeightedContainers::getTotalTvlForEpoch()
+├── given no active containers exist
+│   └── it should return zero TVL
+├── given single active container exists
+│   ├── when container has no TVL for the epoch
+│   │   └── it should return zero TVL
+│   ├── when container has TVL for the epoch
+│   │   └── it should return the container's TVL amount
+│   └── when querying future epoch that has no TVL
+│       └── it should return zero TVL
+├── given multiple active containers exist
+│   ├── when no containers have TVL for the epoch
+│   │   └── it should return zero TVL
+│   ├── when only one container has TVL for the epoch
+│   │   └── it should return that container's TVL amount
+│   ├── when multiple containers have TVL for the epoch
+│   │   └── it should return sum of all containers' TVL
+│   └── when containers have different TVL amounts
+│       └── it should return correct sum of all TVL amounts
+├── given mix of active and inactive containers
+│   ├── when both active and inactive containers have TVL
+│   │   └── it should only count TVL from active containers
+│   └── when only inactive containers have TVL
+│       └── it should return zero TVL
+├── given containers are deactivated after having TVL
+│   └── it should not count TVL from deactivated containers
+├── given querying historical epochs
+│   ├── when historical epoch had different active containers
+│   │   └── it should return TVL based on containers that were active at query time
+│   └── when historical epoch had no TVL data
+│       └── it should return zero TVL
+├── given TVL updates with add and subtract operations
+│   ├── when TVL is added first
+│   │   └── it should return the added amount
+│   └── when TVL is subtracted after adding
+│       └── it should return the net amount after subtraction
+├── given maximum number of active containers (16)
+│   └── when all containers have TVL
+│       └── it should return sum of all 16 containers' TVL
+└── given edge cases with mixed TVL values
+    ├── when one container has zero TVL among non-zero containers
+    │   └── it should correctly sum only non-zero TVL amounts
+    └── when containers have very large TVL amounts
+        └── it should handle large numbers without overflow

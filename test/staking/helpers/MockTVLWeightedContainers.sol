@@ -4,7 +4,7 @@ pragma solidity ^0.8.22;
 import {TVLWeightedContainers} from "@alto/staking/TVLWeightedContainers.sol";
 import {Container} from "@alto/staking/interfaces/ITVLWeightedContainers.sol";
 
-contract MockTVLWeightedContainersMock is TVLWeightedContainers {
+contract MockTVLWeightedContainers is TVLWeightedContainers {
     constructor(uint256 epochDuration, Container[] memory initialContainers)
         TVLWeightedContainers(epochDuration, initialContainers)
     {}
@@ -57,6 +57,18 @@ contract MockTVLWeightedContainersMock is TVLWeightedContainers {
 
     function getContainer(uint256 containerId) external view returns (Container memory) {
         return containerById[containerId];
+    }
+
+    function getContainerAfterEpochProcessing(uint256 containerId, uint256 epochIdToProcess)
+        external
+        view
+        returns (Container memory, uint24)
+    {
+        return _getContainerAfterEpochProcessing(containerId, epochIdToProcess);
+    }
+
+    function getTotalTvlForEpoch(uint256 epoch) external view returns (uint256) {
+        return _getTotalTvlForEpoch(epoch);
     }
 
     function setContainerLockDuration(uint256 containerId, uint24 lockDuration) external {
