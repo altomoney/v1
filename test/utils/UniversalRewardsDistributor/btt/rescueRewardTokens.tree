@@ -1,0 +1,15 @@
+UniversalRewardsDistributor::rescueRewardTokens
+├── when caller is not owner
+│   └── it should revert with OwnableUnauthorizedAccount
+├── when contract is not paused
+│   └── it should revert with RewardsDistributorNotPaused
+└── when caller is owner and contract is paused
+    ├── when contract has no balance
+    │   ├── it should not emit any events
+    │   └── it should transfer nothing to owner
+    ├── when contract has balance
+    │   ├── it should transfer the specified amount to owner
+    │   └── it should emit RescueRewardTokens event with correct parameters
+    └── when rescuing with different token
+        ├── it should transfer the specified amount to owner
+        └── it should emit RescueRewardTokens event with correct parameters
