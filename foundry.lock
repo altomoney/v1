@@ -13,8 +13,5 @@
   },
   "lib/openzeppelin-foundry-upgrades": {
     "rev": "cbce1e00305e943aa1661d43f41e5ac72c662b07"
-  },
-  "lib/universal-rewards-distributor": {
-    "rev": "8aaa0099db6cef311a2b02e04b930bfe9b6a6e4e"
   }
 }

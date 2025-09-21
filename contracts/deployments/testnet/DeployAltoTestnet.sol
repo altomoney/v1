@@ -44,8 +44,6 @@ import {
 
 import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {AltoMulticallTestnet} from "@alto/deployments/testnet/contracts/AltoMulticallTestnet.sol";
-import {IUniversalRewardsDistributorBase} from
-    "@morpho-org/universal-rewards-distributor/interfaces/IUniversalRewardsDistributor.sol";
 
 struct AltoTestnetInput {
     TestnetTokens tokens;
@@ -76,7 +74,6 @@ struct AltoTestnetParams {
     bool skipLendingDeployment;
     address lzEndpoint;
     address wrappedNativeToken;
-    address universalRewardsDistributor;
     address altoMulticall;
 }
 
@@ -91,11 +88,9 @@ library DeployAltoTestnet {
 
         _transferOwnership(params, input);
 
-        if (input.contracts.stakingBatch.universalRewardsDistributor != address(0)) {
-            IERC20(input.tokens.dusd).transfer(
-                input.contracts.stakingBatch.universalRewardsDistributor, DUSD_TOKEN_SUPPLY_TO_CONTRACTS
-            );
-        }
+        IERC20(input.tokens.dusd).transfer(
+            input.contracts.stakingBatch.universalRewardsDistributor, DUSD_TOKEN_SUPPLY_TO_CONTRACTS
+        );
 
         IERC20(input.tokens.alto).transfer(input.contracts.rewardsBatch.rewardsDistributor, ALTO_TOKEN_TOTAL_SUPPLY / 2);
 
@@ -211,8 +206,9 @@ library DeployAltoTestnet {
                 })
             )
         ).getStakingContractReport();
-        input.contracts.stakingBatch.universalRewardsDistributor = params.universalRewardsDistributor;
+
         Ownable2Step(input.contracts.stakingBatch.stakingContract).acceptOwnership();
+        Ownable2Step(input.contracts.stakingBatch.universalRewardsDistributor).acceptOwnership();
 
         return input;
     }
@@ -241,7 +237,7 @@ library DeployAltoTestnet {
     }
 
     function _transferOwnership(AltoTestnetParams memory params, AltoTestnetInput memory input) internal {
-        AltoMulticallTestnet.Call[] memory calls = new AltoMulticallTestnet.Call[](9);
+        AltoMulticallTestnet.Call[] memory calls = new AltoMulticallTestnet.Call[](10);
 
         address altoMulticall = params.altoMulticall;
 
@@ -297,20 +293,22 @@ library DeployAltoTestnet {
             callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
             allowFailure: false
         });
-        if (input.contracts.stakingBatch.universalRewardsDistributor != address(0)) {
-            IUniversalRewardsDistributorBase(input.contracts.stakingBatch.universalRewardsDistributor).setOwner(
-                altoMulticall
-            );
-        }
+
+        Ownable2Step(input.contracts.stakingBatch.universalRewardsDistributor).transferOwnership(altoMulticall);
+        calls[7] = AltoMulticallTestnet.Call({
+            target: input.contracts.stakingBatch.universalRewardsDistributor,
+            callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
+            allowFailure: false
+        });
 
         Ownable2Step(input.tokens.alto).transferOwnership(altoMulticall);
-        calls[7] = AltoMulticallTestnet.Call({
+        calls[8] = AltoMulticallTestnet.Call({
             target: input.tokens.alto,
             callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
             allowFailure: false
         });
         Ownable2Step(input.tokens.dusd).transferOwnership(altoMulticall);
-        calls[8] = AltoMulticallTestnet.Call({
+        calls[9] = AltoMulticallTestnet.Call({
             target: input.tokens.dusd,
             callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
             allowFailure: false

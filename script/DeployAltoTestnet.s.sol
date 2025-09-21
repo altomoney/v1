@@ -33,8 +33,7 @@ contract DeployAltoTestnetScript is Script {
             altoMulticall: 0xb471301c353B759226A835653aCec5cD968Fd62B,
             skipLendingDeployment: false,
             lzEndpoint: 0x6EDCE65403992e310A62460808c4b910D972f10f,
-            wrappedNativeToken: address(1),
-            universalRewardsDistributor: 0x018784fE6D9dbf14ba224797f934fcfb71c3bADd
+            wrappedNativeToken: address(1)
         });
 
         input = DeployAltoTestnet.deploy(params, input);

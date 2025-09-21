@@ -1,5 +1,5 @@
 [profile.default]
-# solc_version = "0.8.28"
+solc_version = "0.8.28"
 src = 'contracts'
 libs = ["node_modules", "lib"]
 test = 'test'
@@ -16,7 +16,6 @@ remappings = [
 	'deployments/=contracts/deployments/',
 	'@morpho-org/bundler3/=lib/bundler3/src/',
 	'@morpho-org/irm/=lib/morpho-blue-irm/src/',
-	'@morpho-org/universal-rewards-distributor/=lib/universal-rewards-distributor/src/',
 	'@alto-test/=test/',
 	'@alto/=contracts/',
 	'@openzeppelin/contracts/=lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/',
