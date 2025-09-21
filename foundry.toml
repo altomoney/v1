@@ -41,3 +41,6 @@ exclude_lints = [
 [profile.market]
 src = 'contracts'
 test = "test/lending"
+
+[profile.testnet]
+optimizer_runs = 200

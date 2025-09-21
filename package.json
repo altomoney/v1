@@ -10,7 +10,6 @@
     "coverage:open": "npx -y open-cli coverage/index.html",
     "coverage:server": "npx -y http-server coverage",
     "deploy:testnet": "./_scripts/deployment/altotestnet.sh",
-    "deploy:multicall": "./_scripts/deployment/multicalltestnet.sh",
     "verify:testnet": "./_scripts/deployment/verify-testnet.sh"
   },
   "devDependencies": {

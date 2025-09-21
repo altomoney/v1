@@ -44,6 +44,7 @@ import {
 
 import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {AltoMulticallTestnet} from "@alto/deployments/testnet/contracts/AltoMulticallTestnet.sol";
+import {getMulticallOwnerAddresses} from "@alto/deployments/testnet/Constants.sol";
 
 struct AltoTestnetInput {
     TestnetTokens tokens;
@@ -51,6 +52,7 @@ struct AltoTestnetInput {
 }
 
 struct Contracts {
+    address altoMulticall;
     address multiTokenSender;
     address mockSwapper;
     address altoLeverage;
@@ -74,7 +76,6 @@ struct AltoTestnetParams {
     bool skipLendingDeployment;
     address lzEndpoint;
     address wrappedNativeToken;
-    address altoMulticall;
 }
 
 library DeployAltoTestnet {
@@ -82,6 +83,7 @@ library DeployAltoTestnet {
         internal
         returns (AltoTestnetInput memory)
     {
+        input = _deployMulticall(params, input);
         input = _deployLending(params, input);
         input = _deployStaking(params, input);
         input = _deployRewards(params, input);
@@ -94,6 +96,19 @@ library DeployAltoTestnet {
 
         IERC20(input.tokens.alto).transfer(input.contracts.rewardsBatch.rewardsDistributor, ALTO_TOKEN_TOTAL_SUPPLY / 2);
 
+        return input;
+    }
+
+    function _deployMulticall(AltoTestnetParams memory params, AltoTestnetInput memory input)
+        internal
+        returns (AltoTestnetInput memory)
+    {
+        address altoMulticall = address(new AltoMulticallTestnet());
+        address[] memory ownerAddresses = getMulticallOwnerAddresses();
+        for (uint256 i = 0; i < ownerAddresses.length; i++) {
+            AltoMulticallTestnet(payable(altoMulticall)).setOwner(ownerAddresses[i], true);
+        }
+        input.contracts.altoMulticall = address(new AltoMulticallTestnet());
         return input;
     }
 
@@ -201,8 +216,8 @@ library DeployAltoTestnet {
                 TestnetStakingBatchParams({
                     owner: params.owner,
                     rewardToken: address(input.tokens.alto),
-                    epochDuration: 1 days,
-                    universalRewardsDistributorTimelock: 1 days
+                    epochDuration: 15 minutes,
+                    universalRewardsDistributorTimelock: 1 minutes
                 })
             )
         ).getStakingContractReport();
@@ -222,7 +237,7 @@ library DeployAltoTestnet {
                 TestnetRewardsBatchParams({
                     owner: params.owner,
                     rewardToken: address(input.tokens.alto),
-                    merkleRootTimelock: 1 days,
+                    merkleRootTimelock: 1 minutes,
                     paymentToken: address(input.tokens.usdc),
                     paymentUsdOraclePrice: 1 * USD_ORACLE_PRICE_PRECISION,
                     rewardTokenUsdOraclePrice: 1.2 ether * ORACLE_PRICE_PRECISION / 1 ether,
@@ -239,7 +254,7 @@ library DeployAltoTestnet {
     function _transferOwnership(AltoTestnetParams memory params, AltoTestnetInput memory input) internal {
         AltoMulticallTestnet.Call[] memory calls = new AltoMulticallTestnet.Call[](10);
 
-        address altoMulticall = params.altoMulticall;
+        address altoMulticall = input.contracts.altoMulticall;
 
         Ownable(input.contracts.multiTokenSender).transferOwnership(altoMulticall);
         Ownable(input.contracts.mockSwapper).transferOwnership(altoMulticall);
