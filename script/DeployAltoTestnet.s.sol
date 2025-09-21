@@ -56,7 +56,7 @@ contract DeployAltoTestnetScript is Script {
         // Build tokens JSON
         string memory tokensJson = "";
         tokensJson = vm.serializeAddress("tokens", "alto", input.tokens.alto);
-        tokensJson = vm.serializeAddress("tokens", "usdo", input.tokens.usdo);
+        tokensJson = vm.serializeAddress("tokens", "dusd", input.tokens.dusd);
         tokensJson = vm.serializeAddress("tokens", "usdc", input.tokens.usdc);
         tokensJson = vm.serializeAddress("tokens", "weth", input.tokens.weth);
 
@@ -132,7 +132,7 @@ contract DeployAltoTestnetScript is Script {
 
         // Load tokens
         loadedInput.tokens.alto = vm.parseJsonAddress(json, ".tokens.alto");
-        loadedInput.tokens.usdo = vm.parseJsonAddress(json, ".tokens.usdo");
+        loadedInput.tokens.dusd = vm.parseJsonAddress(json, ".tokens.dusd");
         loadedInput.tokens.usdc = vm.parseJsonAddress(json, ".tokens.usdc");
         loadedInput.tokens.weth = vm.parseJsonAddress(json, ".tokens.weth");
 
@@ -199,7 +199,7 @@ contract DeployAltoTestnetScript is Script {
 
         // Extract ABIs for tokens
         _extractContractABI("AltoToken", abiFolder);
-        _extractContractABI("USDO", abiFolder);
+        _extractContractABI("DUSD", abiFolder);
         _extractContractABI("ERC20Testnet", abiFolder);
 
         // Extract ABIs for main contracts

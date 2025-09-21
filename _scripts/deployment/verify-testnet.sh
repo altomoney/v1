@@ -127,7 +127,7 @@ if command -v jq >/dev/null 2>&1; then
     # Token addresses
     ALTO_TOKEN=$(get_address ".tokens.alto")
     USDC_TOKEN=$(get_address ".tokens.usdc")
-    USDO_TOKEN=$(get_address ".tokens.usdo")
+    DUSD_TOKEN=$(get_address ".tokens.dusd")
     WETH_TOKEN=$(get_address ".tokens.weth")
 else
     # Use fallback grep/sed paths
@@ -161,7 +161,7 @@ else
     # Token addresses
     ALTO_TOKEN=$(get_address "tokens.alto")
     USDC_TOKEN=$(get_address "tokens.usdc")
-    USDO_TOKEN=$(get_address "tokens.usdo")
+    DUSD_TOKEN=$(get_address "tokens.dusd")
     WETH_TOKEN=$(get_address "tokens.weth")
 fi
 
@@ -186,7 +186,7 @@ echo "- Staking Contract: $STAKING_CONTRACT"
 echo "- Universal Rewards Distributor: $UNIVERSAL_REWARDS_DISTRIBUTOR"
 echo "- Alto Token: $ALTO_TOKEN"
 echo "- USDC Token: $USDC_TOKEN"
-echo "- USDO Token: $USDO_TOKEN"
+echo "- DUSD Token: $DUSD_TOKEN"
 echo "- WETH Token: $WETH_TOKEN"
 echo ""
 
@@ -230,7 +230,7 @@ verify_contract "UniversalRewardsDistributor" "$UNIVERSAL_REWARDS_DISTRIBUTOR" "
 # Verify token contracts
 verify_contract "AltoToken" "$ALTO_TOKEN" "contracts/tokens/AltoToken.sol:AltoToken"
 verify_contract "USDCToken" "$USDC_TOKEN" "contracts/deployments/testnet/contracts/ERC20Testnet.sol:ERC20Testnet"
-verify_contract "USDOToken" "$USDO_TOKEN" "contracts/tokens/USDO.sol:USDO"
+verify_contract "DUSDToken" "$DUSD_TOKEN" "contracts/tokens/DUSD.sol:DUSD"
 verify_contract "WETHToken" "$WETH_TOKEN" "contracts/deployments/testnet/contracts/ERC20Testnet.sol:ERC20Testnet"
 
 echo "🎉 Contract verification process completed!"

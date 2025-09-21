@@ -2,17 +2,17 @@
 pragma solidity ^0.8.22;
 
 import {OFT} from "@alto/utils/OFT.sol";
-import {IUSDO} from "@alto/tokens/interfaces/IUSDO.sol";
+import {IDUSD} from "@alto/tokens/interfaces/IDUSD.sol";
 
 import {Pausable, IPausable} from "@alto/utils/Pausable.sol";
 import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {PAUSED_ROLE} from "@alto/utils/Constants.sol";
 
-/// @title USDO Token
+/// @title DUSD Token
 /// @author Pearl Labs
 /// @custom:contact security@tapioca.xyz
-/// @notice The USDO Token is the stablecoin of the Alto Protocol.
-contract USDO is Ownable2Step, Pausable, OFT, IUSDO {
+/// @notice The DUSD Token is the stablecoin of the Alto Protocol.
+contract DUSD is Ownable2Step, Pausable, OFT, IDUSD {
     uint256 public fees;
 
     address public flashLoanHelper;
@@ -20,7 +20,7 @@ contract USDO is Ownable2Step, Pausable, OFT, IUSDO {
     mapping(address => bool) public allowedMinter;
     mapping(address => bool) public allowedBurner;
 
-    constructor(address endpoint, address owner) OFT("USDO", "USDO", endpoint, owner) Ownable(owner) {
+    constructor(address endpoint, address owner) OFT("DUSD", "DUSD", endpoint, owner) Ownable(owner) {
         _setPauser(owner, PAUSED_ROLE, true);
     }
 
@@ -28,25 +28,25 @@ contract USDO is Ownable2Step, Pausable, OFT, IUSDO {
     /// External
     /// =====================
     /**
-     * @notice mints USDO
+     * @notice mints DUSD
      * @param _to receiver address
      * @param _amount the amount to mint
      */
     function mint(address _to, uint256 _amount) external whenNotPaused {
         if (!allowedMinter[msg.sender]) {
-            revert UsdoNotAuthorized();
+            revert DUSDNotAuthorized();
         }
         _mint(_to, _amount);
     }
 
     /**
-     * @notice burns USDO
+     * @notice burns DUSD
      * @param _from address to burn from
      * @param _amount the amount to burn
      */
     function burn(address _from, uint256 _amount) external whenNotPaused {
         if (!allowedBurner[msg.sender]) {
-            revert UsdoNotAuthorized();
+            revert DUSDNotAuthorized();
         }
         _burn(_from, _amount);
     }
@@ -57,7 +57,7 @@ contract USDO is Ownable2Step, Pausable, OFT, IUSDO {
      * @param _fee fees amount
      */
     function addFlashloanFee(uint256 _fee) external {
-        if (msg.sender != flashLoanHelper) revert UsdoNotAuthorized();
+        if (msg.sender != flashLoanHelper) revert DUSDNotAuthorized();
         fees += _fee;
     }
 

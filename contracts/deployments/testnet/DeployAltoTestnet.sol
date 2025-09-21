@@ -4,7 +4,7 @@ pragma solidity ^0.8.22;
 import {Script} from "forge-std/Script.sol";
 import {AltoToken} from "@alto/tokens/AltoToken.sol";
 import {ERC20Testnet} from "@alto/deployments/testnet/contracts/ERC20Testnet.sol";
-import {USDO} from "@alto/tokens/USDO.sol";
+import {DUSD} from "@alto/tokens/DUSD.sol";
 import {
     TestnetBorrowMarketBatch,
     TestnetBorrowMarketBatchParams
@@ -39,7 +39,7 @@ import {
     MULTI_TOKEN_SENDER_MINT_TOKENS,
     BACKEND_TESTNET_ADDRESS,
     ALTO_TOKEN_TOTAL_SUPPLY,
-    USDO_TOKEN_SUPPLY_TO_CONTRACTS
+    DUSD_TOKEN_SUPPLY_TO_CONTRACTS
 } from "@alto/deployments/testnet/Constants.sol";
 
 import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
@@ -66,7 +66,7 @@ struct Contracts {
 
 struct TestnetTokens {
     address alto;
-    address usdo;
+    address dusd;
     address usdc;
     address weth;
 }
@@ -92,8 +92,8 @@ library DeployAltoTestnet {
         _transferOwnership(params, input);
 
         if (input.contracts.stakingBatch.universalRewardsDistributor != address(0)) {
-            IERC20(input.tokens.usdo).transfer(
-                input.contracts.stakingBatch.universalRewardsDistributor, USDO_TOKEN_SUPPLY_TO_CONTRACTS
+            IERC20(input.tokens.dusd).transfer(
+                input.contracts.stakingBatch.universalRewardsDistributor, DUSD_TOKEN_SUPPLY_TO_CONTRACTS
             );
         }
 
@@ -133,7 +133,7 @@ library DeployAltoTestnet {
                 TestnetBorrowMarketBatchParams({
                     owner: params.owner,
                     collateralToken: address(input.tokens.usdc),
-                    borrowToken: address(input.tokens.usdo),
+                    borrowToken: address(input.tokens.dusd),
                     marketOraclePrice: 1e48,
                     maxLtv: 0.75 ether
                 })
@@ -148,7 +148,7 @@ library DeployAltoTestnet {
                 TestnetMintMarketBatchParams({
                     owner: params.owner,
                     collateralToken: address(input.tokens.weth),
-                    borrowToken: address(input.tokens.usdo),
+                    borrowToken: address(input.tokens.dusd),
                     marketOraclePrice: 4000 * ORACLE_PRICE_PRECISION,
                     maxLtv: 0.75 ether,
                     debtCeiling: 3_000_000 ether
@@ -158,8 +158,8 @@ library DeployAltoTestnet {
 
         AltoLeverage(input.contracts.altoLeverage).setMarket(input.contracts.mintMarketBatch.market, true);
         IMarket(input.contracts.mintMarketBatch.market).setAuthorizedCallback(input.contracts.altoLeverage, true);
-        USDO(input.tokens.usdo).setMinterStatus(input.contracts.mintMarketBatch.market, true);
-        USDO(input.tokens.usdo).setBurnerStatus(input.contracts.mintMarketBatch.market, true);
+        DUSD(input.tokens.dusd).setMinterStatus(input.contracts.mintMarketBatch.market, true);
+        DUSD(input.tokens.dusd).setBurnerStatus(input.contracts.mintMarketBatch.market, true);
 
         return input;
     }
@@ -170,11 +170,11 @@ library DeployAltoTestnet {
     {
         input.tokens.alto = address(new AltoToken(params.lzEndpoint, params.owner));
         // all ALTO is already minted to the owner in the constructor
-        input.tokens.usdo = address(new USDO(params.lzEndpoint, params.owner));
-        USDO(input.tokens.usdo).setMinterStatus(params.owner, true);
+        input.tokens.dusd = address(new DUSD(params.lzEndpoint, params.owner));
+        DUSD(input.tokens.dusd).setMinterStatus(params.owner, true);
         // we can't mint uint256 max as markets need to be able to mint during borrow/repay
-        USDO(input.tokens.usdo).mint(params.owner, type(uint128).max);
-        USDO(input.tokens.usdo).setMinterStatus(params.owner, false);
+        DUSD(input.tokens.dusd).mint(params.owner, type(uint128).max);
+        DUSD(input.tokens.dusd).setMinterStatus(params.owner, false);
 
         input.tokens.weth = address(new ERC20Testnet("WETH", 18, params.owner));
         ERC20Testnet(input.tokens.weth).mint(params.owner, type(uint256).max);
@@ -182,14 +182,14 @@ library DeployAltoTestnet {
         ERC20Testnet(input.tokens.usdc).mint(params.owner, type(uint256).max);
 
         // fund tokens to the multi token sender
-        IERC20(input.tokens.usdo).transfer(input.contracts.multiTokenSender, USDO_TOKEN_SUPPLY_TO_CONTRACTS);
+        IERC20(input.tokens.dusd).transfer(input.contracts.multiTokenSender, DUSD_TOKEN_SUPPLY_TO_CONTRACTS);
         IERC20(input.tokens.alto).transfer(input.contracts.multiTokenSender, ALTO_TOKEN_TOTAL_SUPPLY / 4);
 
         IERC20(input.tokens.weth).transfer(input.contracts.multiTokenSender, MULTI_TOKEN_SENDER_MINT_TOKENS);
         IERC20(input.tokens.usdc).transfer(input.contracts.multiTokenSender, MULTI_TOKEN_SENDER_MINT_TOKENS);
 
         // fund tokens to swapper
-        IERC20(input.tokens.usdo).transfer(input.contracts.mockSwapper, USDO_TOKEN_SUPPLY_TO_CONTRACTS);
+        IERC20(input.tokens.dusd).transfer(input.contracts.mockSwapper, DUSD_TOKEN_SUPPLY_TO_CONTRACTS);
 
         IERC20(input.tokens.weth).transfer(input.contracts.mockSwapper, MULTI_TOKEN_SENDER_MINT_TOKENS);
         IERC20(input.tokens.usdc).transfer(input.contracts.mockSwapper, MULTI_TOKEN_SENDER_MINT_TOKENS);
@@ -309,9 +309,9 @@ library DeployAltoTestnet {
             callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
             allowFailure: false
         });
-        Ownable2Step(input.tokens.usdo).transferOwnership(altoMulticall);
+        Ownable2Step(input.tokens.dusd).transferOwnership(altoMulticall);
         calls[8] = AltoMulticallTestnet.Call({
-            target: input.tokens.usdo,
+            target: input.tokens.dusd,
             callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
             allowFailure: false
         });
