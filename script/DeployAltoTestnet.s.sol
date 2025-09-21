@@ -30,11 +30,11 @@ contract DeployAltoTestnetScript is Script {
 
         params = AltoTestnetParams({
             owner: msg.sender,
-            altoMulticall: 0xb471301c353B759226A835653aCec5cD968Fd62B,
+            altoMulticall: 0xFA089061eb441D17035BCe08744DC29db7352719,
             skipLendingDeployment: false,
             lzEndpoint: 0x6EDCE65403992e310A62460808c4b910D972f10f,
             wrappedNativeToken: address(1),
-            universalRewardsDistributor: 0x018784fE6D9dbf14ba224797f934fcfb71c3bADd
+            universalRewardsDistributor: 0xb2076964041A4089Fd79F71dB134B6cb215C1535
         });
 
         input = DeployAltoTestnet.deploy(params, input);

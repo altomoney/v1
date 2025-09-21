@@ -2,6 +2,7 @@
 
 source "$(dirname "$0")/_loadEnv.sh"
 
+DEFAULT_COMPILER_VERSION="0.8.28"
 
 # Check required environment variables
 if [ -z "$ETHERSCAN_API_KEY" ] || [ -z "$ETHERSCAN_API_URL" ] || [ -z "$CHAIN_ID" ] || [ -z "$DEPLOYMENT_TIMESTAMP" ]; then
@@ -51,7 +52,7 @@ get_address() {
 
 
 
-echo "🔍 Starting contract verification on Holesky testnet..."
+echo "🔍 Starting contract verification on $CHAIN_ID..."
 echo "📁 Using addresses from: $ADDRESSES_FILE"
 echo ""
 
@@ -201,38 +202,37 @@ echo "🚀 Starting verification process..."
 echo ""
 
 # Verify contracts
-verify_contract "AltoAdapter" "$ALTO_ADAPTER" "contracts/utils/AltoAdapter.sol:AltoAdapter"
-verify_contract "AltoLeverage" "$ALTO_LEVERAGE" "contracts/lending/leverage/AltoLeverage.sol:AltoLeverage"
-verify_contract "Bundler3" "$BUNDLER3" "lib/bundler3/src/Bundler3.sol:Bundler3"
-verify_contract "MockSwapper" "$MOCK_SWAPPER" "contracts/lending/mocks/SwapperSimpleMock.sol:SwapperSimpleMock"
-verify_contract "MultiTokenSender" "$MULTI_TOKEN_SENDER" "contracts/deployments/testnet/contracts/MultiTokenSender.sol:MultiTokenSender"
+verify_contract "AltoAdapter" "$ALTO_ADAPTER" "contracts/utils/AltoAdapter.sol:AltoAdapter" "--compiler-version $DEFAULT_COMPILER_VERSION"
+verify_contract "AltoLeverage" "$ALTO_LEVERAGE" "contracts/lending/leverage/AltoLeverage.sol:AltoLeverage" "--compiler-version $DEFAULT_COMPILER_VERSION"
+verify_contract "Bundler3" "$BUNDLER3" "lib/bundler3/src/Bundler3.sol:Bundler3" "--compiler-version $DEFAULT_COMPILER_VERSION"
+verify_contract "MockSwapper" "$MOCK_SWAPPER" "contracts/lending/mocks/SwapperSimpleMock.sol:SwapperSimpleMock" "--compiler-version $DEFAULT_COMPILER_VERSION"
+verify_contract "MultiTokenSender" "$MULTI_TOKEN_SENDER" "contracts/deployments/testnet/contracts/MultiTokenSender.sol:MultiTokenSender" "--compiler-version $DEFAULT_COMPILER_VERSION"
 
 # Verify market contracts (these might be proxy contracts, so we verify the implementation)
-verify_contract "BorrowMarket" "$BORROW_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
-verify_contract "BorrowMarketImplementation" "$BORROW_MARKET_IMPL" "contracts/lending/AltoBorrowMarket.sol:AltoBorrowMarket"
-verify_contract "BorrowMarketIRM" "$BORROW_MARKET_IRM" "contracts/lending/irm/AdaptiveCurveIrm.sol:AdaptiveCurveIrm"
-verify_contract "BorrowMarketOracle" "$BORROW_MARKET_ORACLE" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet"
+verify_contract "BorrowMarket" "$BORROW_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy" "--compiler-version $DEFAULT_COMPILER_VERSION"
+verify_contract "BorrowMarketImplementation" "$BORROW_MARKET_IMPL" "contracts/lending/AltoBorrowMarket.sol:AltoBorrowMarket" "--compiler-version $DEFAULT_COMPILER_VERSION"
+verify_contract "BorrowMarketIRM" "$BORROW_MARKET_IRM" "contracts/lending/irm/AdaptiveCurveIrm.sol:AdaptiveCurveIrm" "--compiler-version $DEFAULT_COMPILER_VERSION"
+verify_contract "BorrowMarketOracle" "$BORROW_MARKET_ORACLE" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet" "--compiler-version $DEFAULT_COMPILER_VERSION"
 
-verify_contract "MintMarket" "$MINT_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
-verify_contract "MintMarketImplementation" "$MINT_MARKET_IMPL" "contracts/lending/AltoMintMarket.sol:AltoMintMarket"
-verify_contract "MintMarketIRM" "$MINT_MARKET_IRM" "contracts/lending/irm/AdaptiveCurveIrm.sol:AdaptiveCurveIrm"
-verify_contract "MintMarketOracle" "$MINT_MARKET_ORACLE" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet"
+verify_contract "MintMarket" "$MINT_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy" "--compiler-version $DEFAULT_COMPILER_VERSION"
+verify_contract "MintMarketImplementation" "$MINT_MARKET_IMPL" "contracts/lending/AltoMintMarket.sol:AltoMintMarket" "--compiler-version $DEFAULT_COMPILER_VERSION"
+verify_contract "MintMarketIRM" "$MINT_MARKET_IRM" "contracts/lending/irm/AdaptiveCurveIrm.sol:AdaptiveCurveIrm" "--compiler-version $DEFAULT_COMPILER_VERSION"
+verify_contract "MintMarketOracle" "$MINT_MARKET_ORACLE" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet" "--compiler-version $DEFAULT_COMPILER_VERSION"
 
 # Verify rewards contracts
-verify_contract "PaymentOracle" "$PAYMENT_ORACLE" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet"
-verify_contract "RewardOracle" "$REWARD_ORACLE" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet"
-verify_contract "RewardsDistributor" "$REWARDS_DISTRIBUTOR" "contracts/rewards/AltoRewardsDistributor.sol:AltoRewardsDistributor"
+verify_contract "PaymentOracle" "$PAYMENT_ORACLE" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet" "--compiler-version $DEFAULT_COMPILER_VERSION"
+verify_contract "RewardOracle" "$REWARD_ORACLE" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet" "--compiler-version $DEFAULT_COMPILER_VERSION"
+verify_contract "RewardsDistributor" "$REWARDS_DISTRIBUTOR" "contracts/rewards/AltoRewardsDistributor.sol:AltoRewardsDistributor" "--compiler-version $DEFAULT_COMPILER_VERSION"
 
 # Verify staking contracts
-verify_contract "StakingContract" "$STAKING_CONTRACT" "contracts/staking/AltoStaking.sol:AltoStaking"
+verify_contract "StakingContract" "$STAKING_CONTRACT" "contracts/staking/AltoStaking.sol:AltoStaking" "--compiler-version $DEFAULT_COMPILER_VERSION"
 verify_contract "UniversalRewardsDistributor" "$UNIVERSAL_REWARDS_DISTRIBUTOR" "lib/universal-rewards-distributor/src/UniversalRewardsDistributor.sol:UniversalRewardsDistributor" "--compiler-version 0.8.19"
 
 # Verify token contracts
-verify_contract "AltoToken" "$ALTO_TOKEN" "contracts/tokens/AltoToken.sol:AltoToken"
-verify_contract "USDCToken" "$USDC_TOKEN" "contracts/deployments/testnet/contracts/ERC20Testnet.sol:ERC20Testnet"
-verify_contract "USDOToken" "$USDO_TOKEN" "contracts/tokens/USDO.sol:USDO"
-verify_contract "WETHToken" "$WETH_TOKEN" "contracts/deployments/testnet/contracts/ERC20Testnet.sol:ERC20Testnet"
+verify_contract "AltoToken" "$ALTO_TOKEN" "contracts/tokens/AltoToken.sol:AltoToken" "--compiler-version $DEFAULT_COMPILER_VERSION"
+verify_contract "USDCToken" "$USDC_TOKEN" "contracts/deployments/testnet/contracts/ERC20Testnet.sol:ERC20Testnet" "--compiler-version $DEFAULT_COMPILER_VERSION"
+verify_contract "USDOToken" "$USDO_TOKEN" "contracts/tokens/USDO.sol:USDO" "--compiler-version $DEFAULT_COMPILER_VERSION"
+verify_contract "WETHToken" "$WETH_TOKEN" "contracts/deployments/testnet/contracts/ERC20Testnet.sol:ERC20Testnet" "--compiler-version $DEFAULT_COMPILER_VERSION"
 
 echo "🎉 Contract verification process completed!"
-echo "Check the Holesky Etherscan explorer to see the verification status:"
-echo "https://holesky.etherscan.io/"
+echo "Check the $ETHERSCAN_API_URL explorer to see the verification status:"

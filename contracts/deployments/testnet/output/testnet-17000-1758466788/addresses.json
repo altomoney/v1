@@ -1,0 +1,36 @@
+{
+  "contracts": {
+    "altoAdapter": "0x495EcB2169c11e52988604C4aa0A1B5238817813",
+    "altoLeverage": "0xA15d5b77623aE392069135d677a26eE8Ad788b6A",
+    "borrowMarketBatch": {
+      "market": "0xEa67D64578Ecc7b9EBDf2CEab6e53aA35a332346",
+      "marketImplementation": "0xC69aC50D9fCE33c8dd8f0b9839Df34B6f249c8F0",
+      "marketIrm": "0x6460ee2D247A880680d6Fd04f9d5E72E60c26956",
+      "marketOracle": "0xe288C0EfAfdF35C0cefF671E834CFf4DcD04BA6A"
+    },
+    "bundler3": "0x984A1733A9C6F4b6133962fe8434e6367E399694",
+    "mintMarketBatch": {
+      "market": "0x1bE2E5b5D79Fa91cf172fe48B8A0Cdd4ba4768fC",
+      "marketImplementation": "0x407b5a27Fac745B50BB80A5dcf8F74A57C343db1",
+      "marketIrm": "0xEe8C5808bce8938b679732745973fBDA57F71F91",
+      "marketOracle": "0x756B7C870D1D1Ed3Afb59e5B5F9D640cEe463d07"
+    },
+    "mockSwapper": "0xeB09c0c755c60C487507Ec5d8Bd035A9d85aca1D",
+    "multiTokenSender": "0x6735F10E464204d14D2D9E0C8DeB2a7bB833c957",
+    "rewardsBatch": {
+      "paymentOracle": "0x7A0Dd249c4fd089b943Dcf0F7690A53fDE3Fc246",
+      "rewardOracle": "0xf19ad713e5dC73E0430d25aDed584c9B4d47851f",
+      "rewardsDistributor": "0x85a0767EFEDd8deE4eca9965BeE0a115F902B5E6"
+    },
+    "stakingBatch": {
+      "stakingContract": "0x8B0879C675c5cC0f2162b8b23234e34009758328",
+      "universalRewardsDistributor": "0xb2076964041A4089Fd79F71dB134B6cb215C1535"
+    }
+  },
+  "tokens": {
+    "alto": "0x2051559ac7b70DD1C2Ceb37A19535E8537682D96",
+    "usdc": "0xFDB5A0904E354CE186B6788B422E5A284a663ee9",
+    "usdo": "0x709d6a96D14E11D489749e9b6C15CBB0C81615A9",
+    "weth": "0x95D18D69F23180Ba41f32887CF13fF1f059f0fD7"
+  }
+}

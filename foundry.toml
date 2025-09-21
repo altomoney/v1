@@ -8,7 +8,7 @@ no-match-path = 'playground/*'
 
 evm_version = 'cancun'
 optimizer = true
-optimizer_runs = 1
+optimizer_runs = 200
 
 proptest_max_shrink_iters = 500
 

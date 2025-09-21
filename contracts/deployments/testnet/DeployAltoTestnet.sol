@@ -206,8 +206,8 @@ library DeployAltoTestnet {
                 TestnetStakingBatchParams({
                     owner: params.owner,
                     rewardToken: address(input.tokens.alto),
-                    epochDuration: 1 days,
-                    universalRewardsDistributorTimelock: 1 days
+                    epochDuration: 15 minutes,
+                    universalRewardsDistributorTimelock: 1 minutes
                 })
             )
         ).getStakingContractReport();
@@ -226,7 +226,7 @@ library DeployAltoTestnet {
                 TestnetRewardsBatchParams({
                     owner: params.owner,
                     rewardToken: address(input.tokens.alto),
-                    merkleRootTimelock: 1 days,
+                    merkleRootTimelock: 1 minutes,
                     paymentToken: address(input.tokens.usdc),
                     paymentUsdOraclePrice: 1 * USD_ORACLE_PRICE_PRECISION,
                     rewardTokenUsdOraclePrice: 1.2 ether * ORACLE_PRICE_PRECISION / 1 ether,
