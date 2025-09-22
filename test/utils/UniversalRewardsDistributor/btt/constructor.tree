@@ -1,0 +1,12 @@
+UniversalRewardsDistributor::constructor
+├── when owner is zero address
+│   └── it should revert with OwnableInvalidOwner
+├── when initialTimelock is set
+│   ├── it should set the owner correctly
+│   ├── it should set merkleRootTimelock to initialTimelock
+│   └── it should emit SetMerkleRootTimelock event
+└── when all parameters are valid
+    ├── it should inherit from all parent contracts correctly
+    ├── it should initialize Auth with correct EIP712 domain
+    ├── it should initialize Ownable2Step with correct owner
+    └── it should be ready for operation

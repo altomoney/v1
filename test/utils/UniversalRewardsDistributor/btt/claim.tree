@@ -1,0 +1,33 @@
+UniversalRewardsDistributor::claim
+├── when contract is paused
+│   └── it should revert with PausablePaused
+├── when sender is not authorized to act on behalf of onBehalf
+│   └── it should revert with RewardsDistributorUnauthorized
+├── when merkle proof is invalid
+│   ├── given merkle root is set to another nonzero root
+│   │   └── it should revert with RewardsDistributorInvalidInput
+│   ├── given proof does not verify against merkle root
+│   │   └── it should revert with RewardsDistributorInvalidInput
+│   └── given leaf data does not match provided parameters
+│       └── it should revert with RewardsDistributorInvalidInput
+├── when user has already claimed the full amount
+│   ├── given claimed amount equals totalRewardTokenAssignedToUser
+│   │   └── it should revert with RewardsDistributorInvalidInput
+│   └── given claimed amount exceeds totalRewardTokenAssignedToUser
+│       └── it should revert with RewardsDistributorInvalidInput
+└── when all conditions are met for valid claim
+    ├── when user has never claimed before
+    │   ├── it should transfer full totalRewardTokenAssignedToUser amount
+    │   ├── it should update claimed mapping to totalRewardTokenAssignedToUser
+    │   ├── it should emit ClaimRewardToken event
+    │   └── it should return the claimed amount
+    ├── when user has partially claimed before
+    │   ├── it should transfer remaining unclaimed amount
+    │   ├── it should update claimed mapping to totalRewardTokenAssignedToUser
+    │   ├── it should emit ClaimRewardToken event
+    │   └── it should return the newly claimed amount
+    └── when sender is authorized but not the onBehalf user
+        ├── it should transfer tokens to onBehalf address
+        ├── it should update claimed mapping for onBehalf
+        ├── it should emit ClaimRewardToken event with correct caller and onBehalf
+        └── it should return the claimed amount
