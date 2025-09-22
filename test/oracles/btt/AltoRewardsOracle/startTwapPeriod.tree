@@ -1,0 +1,12 @@
+AltoRewardsOracle::startTwapPeriod()
+├── when caller is not owner
+│   └── it should revert with OwnableUnauthorizedAccount
+├── when caller is owner
+│   ├── given oracle is already initiated
+│   │   └── when lastPriceUpdateTimestamp is not zero
+│   │       └── it should revert with AltoRewardsOracleAlreadyStartedTwapPeriod
+│   └── given oracle is not initiated
+│       └── when lastPriceUpdateTimestamp is zero
+│           ├── it should set lastPriceUpdateTimestamp to current block timestamp
+│           ├── it should set cachedPrice to provided initial price
+│           └── it should emit PriceUpdated event with timestamp, cachedPrice, and oldPrice of 0

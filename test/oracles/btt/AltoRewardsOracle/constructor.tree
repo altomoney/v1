@@ -1,0 +1,29 @@
+AltoRewardsOracle::Constructor()
+├── given invalid inputs
+│   ├── when addressInAndOutUni length is not 2
+│   │   └── it should revert with AltoRewardsOracleInvalidInput
+│   ├── when owner is zero address
+│   │   └── it should revert with OwnableInvalidOwner
+│   ├── when in-currency token has invalid decimals
+│   │   └── it should revert
+│   └── when out-currency token has invalid decimals
+│       └── it should revert
+└── given valid inputs
+    ├── when minimal valid parameters provided
+    │   ├── it should set IN_BASE correctly based on in-currency decimals
+    │   ├── it should set OUT_BASE correctly based on out-currency decimals
+    │   ├── it should set UNI_FINAL_CURRENCY correctly
+    │   ├── it should set description correctly
+    │   ├── it should set priceUpdateCooldownPeriod correctly
+    │   ├── it should set owner correctly
+    │   ├── it should initialize lastPriceUpdateTimestamp to zero
+    │   ├── it should initialize cachedPrice to zero
+    │   └── it should emit PriceUpdateCooldownPeriodUpdated event
+    ├── when tokens have different decimal places
+    │   ├── it should handle 6 decimal tokens correctly
+    │   ├── it should handle 8 decimal tokens correctly
+    │   └── it should handle 18 decimal tokens correctly
+    └── when full circuit parameters provided
+        ├── it should initialize Uniswap module correctly
+        ├── it should initialize Chainlink module correctly
+        └── it should set all parameters correctly

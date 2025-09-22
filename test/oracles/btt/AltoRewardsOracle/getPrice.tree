@@ -1,0 +1,8 @@
+AltoRewardsOracle::getPrice()
+├── given oracle is not initiated
+│   └── when lastPriceUpdateTimestamp is zero
+│       └── it should revert with AltoRewardsOracleNotInitiated
+└── given oracle is initiated
+    └── when lastPriceUpdateTimestamp is greater than zero
+        ├── it should return the cached price
+        └── it should not modify any state
