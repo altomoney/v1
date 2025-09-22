@@ -11,7 +11,7 @@ import {USD_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IUsdOracle.so
 import {MATH_PRECISION, FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 import {IOracle} from "@alto/oracles/interfaces/IOracle.sol";
-import {IMerkleRootManagerEvents} from "@alto/rewards/interfaces/IMerkleRootManager.sol";
+import {IMerkleRootManagerEvents} from "@alto/utils/interfaces/IMerkleRootManager.sol";
 
 contract MockLock {
     mapping(address => uint256) public locked;

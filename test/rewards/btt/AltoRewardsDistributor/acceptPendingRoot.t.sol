@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {RewardsDistributorCommon} from "./RewardsDistributorCommon.t.sol";
-import {IMerkleRootManagerEvents, IMerkleRootManagerErrors} from "@alto/rewards/interfaces/IMerkleRootManager.sol";
+import {IMerkleRootManagerEvents, IMerkleRootManagerErrors} from "@alto/utils/interfaces/IMerkleRootManager.sol";
 
 contract AltoRewardsDistributorAcceptPendingRoot is RewardsDistributorCommon {
     function test_RevertWhen_PendingRootIsNotSet() external {

@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {IRewardsAdapter, BonusRewardInfo} from "@alto/rewards/interfaces/IRewardsAdapter.sol";
-import {MerkleRootManager} from "@alto/rewards/MerkleRootManager.sol";
+import {MerkleRootManager} from "@alto/utils/MerkleRootManager.sol";
 import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 
 /// @title AltoReferralWhitelistAdapter

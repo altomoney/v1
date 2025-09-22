@@ -7,7 +7,7 @@ import {
     RewardToken,
     IRewardsDistributorBase
 } from "@alto/rewards/interfaces/IRewardsDistributor.sol";
-import {MerkleRootManager} from "@alto/rewards/MerkleRootManager.sol";
+import {MerkleRootManager} from "@alto/utils/MerkleRootManager.sol";
 import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 
 import {IAltoStakingBase} from "@alto/staking/interfaces/IAltoStaking.sol";

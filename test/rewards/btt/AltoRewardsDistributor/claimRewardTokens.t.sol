@@ -6,7 +6,7 @@ import {AltoRewardsDistributor, CLAIM_PAUSE_TYPE} from "@alto/rewards/AltoReward
 import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
 import {IRewardsEvents, IRewardsErrors} from "@alto/rewards/interfaces/IRewardsDistributor.sol";
 import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
-import {IMerkleRootManagerErrors} from "@alto/rewards/interfaces/IMerkleRootManager.sol";
+import {IMerkleRootManagerErrors} from "@alto/utils/interfaces/IMerkleRootManager.sol";
 
 contract AltoRewardsDistributorClaimRewardTokens is RewardsDistributorCommon {
     function test_RevertWhen_ContractIsPaused() external {
