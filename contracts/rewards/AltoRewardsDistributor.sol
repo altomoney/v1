@@ -114,7 +114,6 @@ contract AltoRewardsDistributor is IRewardsDistributorStaticTypes, MerkleRootMan
         if (
             rewardsPurchaseAmount == 0
                 || rewardsPurchaseAmount > totalRewardsForUser - purchasedRewardTokenUser[onBehalf]
-                || onBehalf == address(0)
         ) {
             revert AltoRewardsDistributorInvalidInput();
         }
