@@ -20,7 +20,6 @@ contract AltoReleaseTest is Test, TestHelperOz5 {
 
         params = AltoTestnetParams({
             owner: address(this),
-            altoMulticall: address(altoMulticall),
             skipLendingDeployment: false,
             lzEndpoint: address(endpoints[1]),
             wrappedNativeToken: makeAddr("weth")

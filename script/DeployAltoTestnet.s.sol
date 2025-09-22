@@ -30,7 +30,6 @@ contract DeployAltoTestnetScript is Script {
 
         params = AltoTestnetParams({
             owner: msg.sender,
-            altoMulticall: 0xb471301c353B759226A835653aCec5cD968Fd62B,
             skipLendingDeployment: false,
             lzEndpoint: 0x6EDCE65403992e310A62460808c4b910D972f10f,
             wrappedNativeToken: address(1)
@@ -97,6 +96,7 @@ contract DeployAltoTestnetScript is Script {
 
         // Build contracts JSON
         string memory contractsJson = "";
+        contractsJson = vm.serializeAddress("contracts", "altoMulticall", input.contracts.altoMulticall);
         contractsJson = vm.serializeAddress("contracts", "multiTokenSender", input.contracts.multiTokenSender);
         contractsJson = vm.serializeAddress("contracts", "mockSwapper", input.contracts.mockSwapper);
         contractsJson = vm.serializeAddress("contracts", "altoLeverage", input.contracts.altoLeverage);
@@ -136,6 +136,7 @@ contract DeployAltoTestnetScript is Script {
         loadedInput.tokens.weth = vm.parseJsonAddress(json, ".tokens.weth");
 
         // Load contracts
+        loadedInput.contracts.altoMulticall = vm.parseJsonAddress(json, ".contracts.altoMulticall");
         loadedInput.contracts.multiTokenSender = vm.parseJsonAddress(json, ".contracts.multiTokenSender");
         loadedInput.contracts.mockSwapper = vm.parseJsonAddress(json, ".contracts.mockSwapper");
         loadedInput.contracts.altoLeverage = vm.parseJsonAddress(json, ".contracts.altoLeverage");
@@ -202,6 +203,7 @@ contract DeployAltoTestnetScript is Script {
         _extractContractABI("ERC20Testnet", abiFolder);
 
         // Extract ABIs for main contracts
+        _extractContractABI("AltoMulticallTestnet", abiFolder);
         _extractContractABI("MultiTokenSender", abiFolder);
         _extractContractABI("SwapperSimpleMock", abiFolder);
         _extractContractABI("AltoLeverage", abiFolder);
