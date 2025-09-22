@@ -4,6 +4,7 @@ pragma solidity ^0.8.22;
 import {IAltoStaking} from "@alto/staking/interfaces/IAltoStaking.sol";
 import {AltoStaking} from "@alto/staking/AltoStaking.sol";
 import {Container, MinMaxEpochs} from "@alto/staking/interfaces/ITVLWeightedContainers.sol";
+import {UniversalRewardsDistributor} from "@alto/utils/UniversalRewardsDistributor.sol";
 
 struct TestnetStakingBatchParams {
     address owner;
@@ -73,6 +74,11 @@ contract TestnetStakingBatch {
         IAltoStaking(report.stakingContract).activateContainer(4);
 
         AltoStaking(report.stakingContract).transferOwnership(_params.owner);
+
+        report.universalRewardsDistributor =
+            address(new UniversalRewardsDistributor(address(this), _params.universalRewardsDistributorTimelock));
+
+        UniversalRewardsDistributor(report.universalRewardsDistributor).transferOwnership(_params.owner);
     }
 
     function getStakingContractReport() public view returns (TestnetStakingBatchReport memory) {

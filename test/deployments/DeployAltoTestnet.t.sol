@@ -23,8 +23,7 @@ contract AltoReleaseTest is Test, TestHelperOz5 {
             altoMulticall: address(altoMulticall),
             skipLendingDeployment: false,
             lzEndpoint: address(endpoints[1]),
-            wrappedNativeToken: makeAddr("weth"),
-            universalRewardsDistributor: address(0)
+            wrappedNativeToken: makeAddr("weth")
         });
     }
 

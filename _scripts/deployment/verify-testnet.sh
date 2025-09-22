@@ -225,7 +225,7 @@ verify_contract "RewardsDistributor" "$REWARDS_DISTRIBUTOR" "contracts/rewards/A
 
 # Verify staking contracts
 verify_contract "StakingContract" "$STAKING_CONTRACT" "contracts/staking/AltoStaking.sol:AltoStaking"
-verify_contract "UniversalRewardsDistributor" "$UNIVERSAL_REWARDS_DISTRIBUTOR" "lib/universal-rewards-distributor/src/UniversalRewardsDistributor.sol:UniversalRewardsDistributor" "--compiler-version 0.8.19"
+verify_contract "UniversalRewardsDistributor" "$UNIVERSAL_REWARDS_DISTRIBUTOR" "contracts/utils/UniversalRewardsDistributor.sol:UniversalRewardsDistributor"
 
 # Verify token contracts
 verify_contract "AltoToken" "$ALTO_TOKEN" "contracts/tokens/AltoToken.sol:AltoToken"
