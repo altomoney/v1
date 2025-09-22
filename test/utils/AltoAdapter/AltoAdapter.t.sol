@@ -1269,4 +1269,56 @@ contract AltoAdapterTest is AdapterCommonSetup {
         assertEq(position.expiryTimestamp, 0, "Position should have the correct expiry timestamp");
         assertEq(position.lockedTimestamp, 0, "Position should have the correct locked timestamp");
     }
+
+    /*//////////////////////////////////////////////////////////////
+                        UNIVERSAL REWARDS DISTRIBUTOR TESTS
+    //////////////////////////////////////////////////////////////*/
+
+    function testClaimRewardTokensUniversalRewardsDistributor(uint256 privateKey, uint256 amount) public {
+        address user;
+        privateKey = _boundPrivateKey(privateKey);
+        user = vm.addr(privateKey);
+        amount = bound(amount, MIN_AMOUNT, USER_AVAILABLE);
+        deal(address(rewardToken), address(universalRewardsDistributor), amount);
+
+        // Create a merkle tree for this specific user
+        bytes32[] memory proof = _createMerkleProofForUserUniversalRewardsDistributor(user, amount);
+
+        bundle.push(
+            _universalRewardsDistributorSetAuthorizationWithSig(
+                universalRewardsDistributor, privateKey, true, 0, false, address(altoAdapter)
+            )
+        );
+        bundle.push(
+            _universalRewardsDistributorClaimRewardTokens(
+                universalRewardsDistributor, address(rewardToken), amount, proof
+            )
+        );
+
+        vm.prank(user);
+        bundler3.multicall(bundle);
+
+        // Verify the user received reward tokens
+        assertGt(rewardToken.balanceOf(user), 0, "User should have received reward tokens");
+    }
+
+    function _createMerkleProofForUserUniversalRewardsDistributor(address user, uint256 amount)
+        internal
+        returns (bytes32[] memory)
+    {
+        // Create a simple single-leaf merkle tree for this specific user
+        bytes32 userLeaf = keccak256(bytes.concat(keccak256(abi.encode(user, address(rewardToken), amount))));
+
+        // Update the rewards distributor with this new root
+        vm.startPrank(OWNER);
+        UniversalRewardsDistributorInstance(address(universalRewardsDistributor)).submitNewPendingRoot(
+            userLeaf, bytes32(0)
+        );
+        UniversalRewardsDistributorInstance(address(universalRewardsDistributor)).acceptPendingRoot(userLeaf);
+        vm.stopPrank();
+
+        // Return empty proof for single-leaf tree
+        bytes32[] memory emptyProof = new bytes32[](0);
+        return emptyProof;
+    }
 }
