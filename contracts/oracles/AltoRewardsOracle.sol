@@ -6,7 +6,7 @@ import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step
 
 import {ModuleChainlinkMulti} from "@alto/oracles/modules/ModuleChainlinkMulti.sol";
 import {ModuleUniswapMulti} from "@alto/oracles/modules/ModuleUniswapMulti.sol";
-import {IAltoRewardsOracleBase, AltoRewardsOracleInitParams} from "@alto/oracles/interfaces/IAltoRewardsOracle.sol";
+import {IAltoRewardsOracle, AltoRewardsOracleInitParams} from "@alto/oracles/interfaces/IAltoRewardsOracle.sol";
 import {USD_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IUsdOracle.sol";
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 
@@ -18,26 +18,26 @@ import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 /// @dev This is going to be used for like ALTO/USD oracles
 /// @dev A rate gives the price of the out-currency with respect to the in-currency in base `USD_ORACLE_PRICE_PRECISION`. For instance
 /// if the out-currency is ALTO worth 10 USD and USD_ORACLE_PRICE_PRECISION is 10**8, then the rate ALTO-USD is 10**9
-contract AltoRewardsOracle is Ownable2Step, ModuleChainlinkMulti, ModuleUniswapMulti, IAltoRewardsOracleBase {
-    /// @inheritdoc IAltoRewardsOracleBase
+contract AltoRewardsOracle is Ownable2Step, ModuleChainlinkMulti, ModuleUniswapMulti, IAltoRewardsOracle {
+    /// @inheritdoc IAltoRewardsOracle
     uint256 public immutable IN_BASE;
 
-    /// @inheritdoc IAltoRewardsOracleBase
+    /// @inheritdoc IAltoRewardsOracle
     uint256 public immutable OUT_BASE;
 
-    /// @inheritdoc IAltoRewardsOracleBase
+    /// @inheritdoc IAltoRewardsOracle
     uint8 public immutable UNI_FINAL_CURRENCY;
 
-    /// @inheritdoc IAltoRewardsOracleBase
+    /// @inheritdoc IAltoRewardsOracle
     uint256 public lastPriceUpdateTimestamp;
 
-    /// @inheritdoc IAltoRewardsOracleBase
+    /// @inheritdoc IAltoRewardsOracle
     uint256 public priceUpdateCooldownPeriod;
 
-    /// @inheritdoc IAltoRewardsOracleBase
+    /// @inheritdoc IAltoRewardsOracle
     uint256 public cachedPrice;
 
-    /// @inheritdoc IAltoRewardsOracleBase
+    /// @inheritdoc IAltoRewardsOracle
     bytes32 public description;
 
     /// @dev When deploying this contract, it is important to check in the case where Uniswap circuit is not final whether
@@ -66,13 +66,13 @@ contract AltoRewardsOracle is Ownable2Step, ModuleChainlinkMulti, ModuleUniswapM
         emit PriceUpdateCooldownPeriodUpdated(0, _initParams.priceUpdateCooldownPeriod);
     }
 
-    /// @inheritdoc IAltoRewardsOracleBase
+    /// @inheritdoc IAltoRewardsOracle
     function getPrice() external view override returns (uint256) {
         if (lastPriceUpdateTimestamp == 0) revert AltoRewardsOracleNotInitiated();
         return cachedPrice;
     }
 
-    /// @inheritdoc IAltoRewardsOracleBase
+    /// @inheritdoc IAltoRewardsOracle
     function startTwapPeriod(uint256 _initialPrice) external onlyOwner {
         if (lastPriceUpdateTimestamp != 0) revert AltoRewardsOracleAlreadyStartedTwapPeriod();
         lastPriceUpdateTimestamp = block.timestamp;
@@ -81,7 +81,7 @@ contract AltoRewardsOracle is Ownable2Step, ModuleChainlinkMulti, ModuleUniswapM
         emit PriceUpdated(block.timestamp, cachedPrice, 0);
     }
 
-    /// @inheritdoc IAltoRewardsOracleBase
+    /// @inheritdoc IAltoRewardsOracle
     function updatePrice() external {
         if (lastPriceUpdateTimestamp == 0) revert AltoRewardsOracleNotInitiated();
         if (block.timestamp - lastPriceUpdateTimestamp < priceUpdateCooldownPeriod) {
@@ -129,7 +129,7 @@ contract AltoRewardsOracle is Ownable2Step, ModuleChainlinkMulti, ModuleUniswapM
         uniAmount = FixedPointMath.multiplyWithPrecisionUp(uniAmount, USD_ORACLE_PRICE_PRECISION);
     }
 
-    /// @inheritdoc IAltoRewardsOracleBase
+    /// @inheritdoc IAltoRewardsOracle
     function updatePriceUpdateCooldownPeriod(uint256 _priceUpdateCooldownPeriod) external onlyOwner {
         emit PriceUpdateCooldownPeriodUpdated(priceUpdateCooldownPeriod, _priceUpdateCooldownPeriod);
         priceUpdateCooldownPeriod = _priceUpdateCooldownPeriod;

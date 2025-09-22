@@ -407,7 +407,7 @@ contract AltoRewardsOracleTest is Test {
         rewardsOracle.changeStalePeriod(1 hours);
         vm.stopPrank();
         vm.warp(block.timestamp + rewardsOracle.priceUpdateCooldownPeriod());
-        vm.expectRevert(abi.encodeWithSelector(ChainlinkUtils.InvalidChainlinkRate.selector));
+        vm.expectRevert(abi.encodeWithSelector(ChainlinkUtils.ChainlinkUtilsInvalidRate.selector));
         rewardsOracle.updatePrice();
     }
 

@@ -18,16 +18,17 @@ abstract contract ModuleChainlinkMulti is ChainlinkUtils {
     /// @notice Decimals for each Chainlink pairs
     uint8[] public chainlinkDecimals;
 
-    error ChainlinkCircuitLengthZero();
-    error ChainlinkInvalidInput();
+    error ModuleChainlinkMultiInvalidInput();
 
     /// @notice Constructor for an oracle using only Chainlink with multiple pools to read from
     /// @param _circuitChainlink Chainlink pool addresses (in order)
     /// @param _circuitChainIsMultiplied Whether we should multiply or divide by this rate when computing Chainlink price
     constructor(address[] memory _circuitChainlink, uint8[] memory _circuitChainIsMultiplied, uint32 _stalePeriod) {
         uint256 circuitLength = _circuitChainlink.length;
-        if (circuitLength == 0) revert ChainlinkCircuitLengthZero();
-        if (circuitLength != _circuitChainIsMultiplied.length) revert ChainlinkInvalidInput();
+
+        if (circuitLength == 0 || circuitLength != _circuitChainIsMultiplied.length) {
+            revert ModuleChainlinkMultiInvalidInput();
+        }
 
         for (uint256 i = 0; i < circuitLength; i++) {
             AggregatorV3Interface _pool = AggregatorV3Interface(_circuitChainlink[i]);

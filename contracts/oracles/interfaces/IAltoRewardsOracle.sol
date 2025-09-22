@@ -58,7 +58,7 @@ interface IAltoRewardsOracleEvents {
     event PriceUpdateCooldownPeriodUpdated(uint256 oldPriceUpdateCooldownPeriod, uint256 newPriceUpdateCooldownPeriod);
 }
 
-interface IAltoRewardsOracleBase is IUsdOracle, IAltoRewardsOracleErrors, IAltoRewardsOracleEvents {
+interface IAltoRewardsOracle is IUsdOracle, IAltoRewardsOracleErrors, IAltoRewardsOracleEvents {
     /// @notice Unit of the in-currency
     function IN_BASE() external view returns (uint256);
 
