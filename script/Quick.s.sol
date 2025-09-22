@@ -2,20 +2,20 @@
 pragma solidity ^0.8.22;
 
 import {Script} from "forge-std/Script.sol";
-import {USDO} from "@alto/tokens/USDO.sol";
+import {DUSD} from "@alto/tokens/DUSD.sol";
 import {OracleTestnet} from "@alto/deployments/testnet/contracts/OracleTestnet.sol";
 import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 
-contract BurnUSDO is Script {
+contract BurnDUSD is Script {
     function run() public {
         vm.startBroadcast();
 
         address owner = msg.sender;
-        address usdo = 0xab8c06599C80e581dfD0d85a7dBF38820A6A3F5F;
+        address dusd = 0xab8c06599C80e581dfD0d85a7dBF38820A6A3F5F;
 
-        USDO(usdo).setBurnerStatus(owner, true);
-        USDO(usdo).burn(owner, type(uint128).max);
-        USDO(usdo).setBurnerStatus(owner, false);
+        DUSD(dusd).setBurnerStatus(owner, true);
+        DUSD(dusd).burn(owner, type(uint128).max);
+        DUSD(dusd).setBurnerStatus(owner, false);
 
         vm.stopBroadcast();
     }

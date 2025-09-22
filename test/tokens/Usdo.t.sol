@@ -2,21 +2,21 @@
 pragma solidity ^0.8.22;
 
 import {Signature} from "@alto/utils/interfaces/IAuth.sol";
-import {USDO} from "@alto/tokens/USDO.sol";
+import {DUSD} from "@alto/tokens/DUSD.sol";
 
 import {TestHelperOz5} from "@layerzerolabs/test-devtools-evm-foundry/contracts/TestHelperOz5.sol";
 import {TestHelpers} from "@alto-test/helpers/TestHelpers.sol";
 
-contract UsdoTest is TestHelpers, TestHelperOz5 {
-    USDO usdo;
+contract DusdTest is TestHelpers, TestHelperOz5 {
+    DUSD dusd;
 
     address internal immutable USER = makeAddr("User");
 
     function setUp() public override {
         setUpEndpoints(1, LibraryType.UltraLightNode);
 
-        usdo = new USDO(endpoints[1], address(this));
-        vm.label(address(usdo), "aUsdo");
+        dusd = new DUSD(endpoints[1], address(this));
+        vm.label(address(dusd), "dusd");
     }
 
     function test_erc20_permit(uint256 privateKey, uint32 deadline, uint256 amount) public {
@@ -25,10 +25,10 @@ contract UsdoTest is TestHelpers, TestHelperOz5 {
         user = vm.addr(privateKey);
         deadline = uint32(bound(deadline, block.timestamp + 1, type(uint32).max));
 
-        Signature memory signature = _erc20PermitSignature(usdo, privateKey, USER, amount, 0, deadline);
+        Signature memory signature = _erc20PermitSignature(dusd, privateKey, USER, amount, 0, deadline);
 
-        usdo.permit(user, USER, amount, deadline, signature.v, signature.r, signature.s);
-        assertEq(usdo.allowance(user, USER), amount);
-        assertEq(usdo.nonces(user), 1);
+        dusd.permit(user, USER, amount, deadline, signature.v, signature.r, signature.s);
+        assertEq(dusd.allowance(user, USER), amount);
+        assertEq(dusd.nonces(user), 1);
     }
 }

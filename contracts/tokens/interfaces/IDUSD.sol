@@ -5,11 +5,11 @@ import {IOFT} from "@layerzerolabs/oft-evm/contracts/interfaces/IOFT.sol";
 import {IMintableERC20} from "@alto/lending/interfaces/IMintableERC20.sol";
 
 /**
- * @title IUSDO Interface
- * @notice Interface for the USDO stablecoin contract
+ * @title IDUSD Interface
+ * @notice Interface for the DUSD stablecoin contract
  */
-interface IUSDO is IOFT, IMintableERC20 {
-    error UsdoNotAuthorized();
+interface IDUSD is IOFT, IMintableERC20 {
+    error DUSDNotAuthorized();
 
     event SetMinterStatus(address indexed _for, bool _status);
     event SetBurnerStatus(address indexed _for, bool _status);
