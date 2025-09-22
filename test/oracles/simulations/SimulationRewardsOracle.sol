@@ -41,7 +41,8 @@ contract SimulationRewardsOracle is Test {
     IUniswapV3Pool TAP_WETH_POOL;
     address OWNER = makeAddr("Alto-multisig");
     RewardsOracle rewardsOracle;
-    uint32 constant TWAP_PERIOD = 1 weeks;
+    uint256 constant PRICE_UPDATE_COOLDOWN_PERIOD = 1 weeks;
+    uint32 constant TWAP_PERIOD = 1 hours;
     uint32 constant STALE_PERIOD = 36 hours;
     uint256 constant INITIAL_PRICE = 150000000;
     bytes32 description = "TAP-USD Rewards Oracle";
@@ -176,7 +177,8 @@ contract SimulationRewardsOracle is Test {
                 owner: OWNER,
                 stalePeriod: STALE_PERIOD,
                 initialPrice: INITIAL_PRICE,
-                description: description
+                description: description,
+                priceUpdateCooldownPeriod: PRICE_UPDATE_COOLDOWN_PERIOD
             });
 
             // mock the chainlink decimals call to return 8

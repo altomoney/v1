@@ -29,10 +29,13 @@ contract RewardsOracle is Ownable2Step, ModuleChainlinkMulti, ModuleUniswapMulti
     uint8 public immutable UNI_FINAL_CURRENCY;
 
     /// @notice Timestamp when this oracle was last updated to return the new price
-    uint256 public lastUpdateTimestamp;
+    uint256 public lastPriceUpdateTimestamp;
 
     /// @notice Initial price of the asset between timestamp when twap period is started and when price is updated
     uint256 public immutable INITIAL_PRICE;
+
+    /// @notice Minimum time interval (in seconds) required between price updates
+    uint256 public priceUpdateCooldownPeriod;
 
     /// @notice Cached price of the asset to be returned by getPrice function
     uint256 public cachedPrice;
@@ -64,12 +67,13 @@ contract RewardsOracle is Ownable2Step, ModuleChainlinkMulti, ModuleUniswapMulti
         INITIAL_PRICE = _initParams.initialPrice;
         UNI_FINAL_CURRENCY = _initParams.uniFinalCurrency;
         description = _initParams.description;
+        priceUpdateCooldownPeriod = _initParams.priceUpdateCooldownPeriod;
     }
 
     /// @notice Gets the price of the asset in USD_ORACLE_PRICE_PRECISION
     /// @return The price of the asset in USD_ORACLE_PRICE_PRECISION
     function getPrice() external view override returns (uint256) {
-        if (lastUpdateTimestamp == 0) revert NotInitiated();
+        if (lastPriceUpdateTimestamp == 0) revert NotInitiated();
         return cachedPrice;
     }
 
@@ -77,8 +81,8 @@ contract RewardsOracle is Ownable2Step, ModuleChainlinkMulti, ModuleUniswapMulti
     /// @dev This function will be called after Uniswap pool has been created
     /// @dev getPrice function will return the cached price until the price is updated through updatePrice function
     function startTwapPeriod() external onlyOwner {
-        if (lastUpdateTimestamp != 0) revert AlreadyStartedTwapPeriod();
-        lastUpdateTimestamp = block.timestamp;
+        if (lastPriceUpdateTimestamp != 0) revert AlreadyStartedTwapPeriod();
+        lastPriceUpdateTimestamp = block.timestamp;
         cachedPrice = INITIAL_PRICE;
 
         emit PriceUpdated(block.timestamp, cachedPrice, 0);
@@ -88,12 +92,12 @@ contract RewardsOracle is Ownable2Step, ModuleChainlinkMulti, ModuleUniswapMulti
     /// @dev This function will be called periodically to update the price of the asset
     /// @dev This function will revert if the twap period has not been passed since the last update
     function updatePrice() external {
-        if (lastUpdateTimestamp == 0) revert NotInitiated();
-        if (block.timestamp - lastUpdateTimestamp < twapPeriod) revert TooEarlyToUpdatePrice();
+        if (lastPriceUpdateTimestamp == 0) revert NotInitiated();
+        if (block.timestamp - lastPriceUpdateTimestamp < priceUpdateCooldownPeriod) revert TooEarlyToUpdatePrice();
 
         uint256 oldPrice = cachedPrice;
         cachedPrice = _readUniswapQuote(IN_BASE);
-        lastUpdateTimestamp = block.timestamp;
+        lastPriceUpdateTimestamp = block.timestamp;
 
         emit PriceUpdated(block.timestamp, cachedPrice, oldPrice);
     }
@@ -130,5 +134,9 @@ contract RewardsOracle is Ownable2Step, ModuleChainlinkMulti, ModuleUniswapMulti
         }
         // The current uniAmount is in MATH_PRECISION. we want our rate to be in USD_ORACLE_PRICE_PRECISION
         uniAmount = FixedPointMath.multiplyWithPrecisionUp(uniAmount, USD_ORACLE_PRICE_PRECISION);
+    }
+
+    function updatePriceUpdateCooldownPeriod(uint256 _priceUpdateCooldownPeriod) external onlyOwner {
+        priceUpdateCooldownPeriod = _priceUpdateCooldownPeriod;
     }
 }

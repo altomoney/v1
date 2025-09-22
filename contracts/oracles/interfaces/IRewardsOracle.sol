@@ -38,6 +38,8 @@ interface IRewardsOracle is IUsdOracle {
         uint256 initialPrice;
         /// @dev Description of the assets concerned by the oracle
         bytes32 description;
+        /// @dev Minimum time interval (in seconds) required between price updates
+        uint256 priceUpdateCooldownPeriod;
     }
 
     /// @notice Emitted when the price is updated
