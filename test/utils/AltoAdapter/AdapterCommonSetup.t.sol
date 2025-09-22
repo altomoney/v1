@@ -14,6 +14,7 @@ import {MinMaxEpochs} from "@alto/staking/interfaces/ITVLWeightedContainers.sol"
 
 import {AdapterCommon} from "./AdapterCommon.t.sol";
 import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
+import {IUniversalRewardsDistributor} from "@alto/utils/interfaces/IUniversalRewardsDistributor.sol";
 
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
@@ -24,6 +25,7 @@ import {FlashBorrowLeverageData} from "@alto/lending/leverage/AltoLeverage.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {UnsafeUpgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
+import {UniversalRewardsDistributorInstance} from "./UniversalRewardsDistributorInstance.sol";
 
 import "forge-std/Test.sol";
 
@@ -50,6 +52,7 @@ abstract contract AdapterCommonSetup is AdapterCommon {
     ERC20Mock internal paymentToken;
 
     IAltoStaking internal stakingContract;
+    IUniversalRewardsDistributor internal universalRewardsDistributor;
 
     // Constants for reward testing
     uint256 public constant USER_AVAILABLE = 1000 ether;
@@ -73,6 +76,7 @@ abstract contract AdapterCommonSetup is AdapterCommon {
 
         _setupStakingContract();
         _setupRewardsDistributor();
+        _setupUniversalRewardsDistributor();
 
         swapper = new SwapperSimpleMock(address(OWNER));
         leverage = new AltoLeverage(address(swapper), address(OWNER));
@@ -227,6 +231,19 @@ abstract contract AdapterCommonSetup is AdapterCommon {
 
         // Fund distributor with reward tokens
         deal(address(rewardToken), address(rewardsDistributor), 10000 ether);
+    }
+
+    function _setupUniversalRewardsDistributor() internal {
+        universalRewardsDistributor =
+            IUniversalRewardsDistributor(address(new UniversalRewardsDistributorInstance(address(OWNER), 1 days)));
+
+        // Setup distributor
+        bytes32 dummyRoot = keccak256("dummy_root");
+
+        UniversalRewardsDistributorInstance(address(universalRewardsDistributor)).submitNewPendingRoot(
+            dummyRoot, bytes32(0)
+        );
+        UniversalRewardsDistributorInstance(address(universalRewardsDistributor)).acceptPendingRoot(dummyRoot);
     }
 
     function _marketPrepareLeverageData(uint256 minAmountOut, bytes memory swapData)

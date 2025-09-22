@@ -4,6 +4,7 @@ pragma solidity ^0.8.28;
 import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
 import {IRewardsDistributor} from "@alto/rewards/interfaces/IRewardsDistributor.sol";
 import {IAltoStaking} from "@alto/staking/interfaces/IAltoStaking.sol";
+import {IUniversalRewardsDistributor} from "@alto/utils/interfaces/IUniversalRewardsDistributor.sol";
 
 import {CoreAdapter, Address} from "@morpho-org/bundler3/adapters/CoreAdapter.sol";
 import {IWNative} from "@morpho-org/bundler3/interfaces/IWNative.sol";
@@ -265,5 +266,14 @@ contract AltoAdapter is CoreAdapter {
 
     function stakingUnlock(IAltoStaking staking, address receiver, uint256 containerId) external onlyBundler3 {
         staking.unlock(initiator(), receiver, containerId);
+    }
+
+    function claimRewardTokens(
+        IUniversalRewardsDistributor rewardsDistributor,
+        address rewardToken,
+        uint256 amount,
+        bytes32[] calldata proof
+    ) external onlyBundler3 {
+        rewardsDistributor.claim(initiator(), rewardToken, amount, proof);
     }
 }
