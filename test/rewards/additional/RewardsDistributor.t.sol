@@ -8,7 +8,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC20MockDecimals} from "@alto-test/helpers/ERC20MockDecimals.sol";
 import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
 import {USD_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IUsdOracle.sol";
-import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
+import {MATH_PRECISION, FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 import {IOracle} from "@alto/oracles/interfaces/IOracle.sol";
 import {IMerkleRootManagerEvents} from "@alto/rewards/interfaces/IMerkleRootManager.sol";
@@ -46,6 +46,8 @@ contract MockLock {
 }
 
 contract RewardsDistributorTest is Test {
+    using FixedPointMath for uint256;
+
     AltoRewardsDistributor public distributor;
     ERC20MockDecimals public rewardToken;
     ERC20MockDecimals public paymentToken;
@@ -797,9 +799,8 @@ contract RewardsDistributorTest is Test {
         uint256 aliceRewardBefore = rewardToken.balanceOf(alice);
 
         // Calculate expected payment
-        uint256 baseCostUSD = (purchaseAmount * REWARD_PRICE + 10 ** 18 - 1) / 10 ** 18; // Round up
-        uint256 discountedCostUSD = baseCostUSD * (MATH_PRECISION - BASE_DISCOUNT) / MATH_PRECISION;
-        uint256 expectedPayment = (discountedCostUSD * 10 ** 6 + PAYMENT_TOKEN_PRICE - 1) / PAYMENT_TOKEN_PRICE; // Round up
+        uint256 expectedPayment =
+            _calculateExpectedPayment(purchaseAmount, BASE_DISCOUNT, REWARD_PRICE, PAYMENT_TOKEN_PRICE);
 
         // Purchase tokens
         uint256 paymentAmountReturn = distributor.claimRewardTokens(
@@ -812,13 +813,39 @@ contract RewardsDistributorTest is Test {
 
         // Check payment was taken (allow for rounding)
         uint256 actualPayment = alicePaymentBefore - paymentToken.balanceOf(alice);
-        assertGe(actualPayment, expectedPayment - 1);
-        assertLe(actualPayment, expectedPayment + 1);
+        assertEq(actualPayment, expectedPayment);
 
         // Check rewards were received
         assertEq(rewardToken.balanceOf(alice), aliceRewardBefore + purchaseAmount);
 
         vm.stopPrank();
+    }
+
+    function _calculateExpectedPayment(
+        uint256 purchaseAmount,
+        uint256 discount,
+        uint256 rewardTokenPrice,
+        uint256 paymentTokenPrice
+    ) internal view returns (uint256) {
+        // Calculate reward requested to purchase in USD
+        uint256 rewardToPurchaseCostUsd = purchaseAmount.divideWithRounding(
+            rewardTokenPrice,
+            10 ** rewardToken.decimals(),
+            true // round up to avoid zero payment
+        );
+
+        // Convert to payment token amount
+        // Result should have paymentDecimals decimals
+        uint256 paymentAmount = rewardToPurchaseCostUsd.divideWithRounding(
+            10 ** paymentToken.decimals(),
+            paymentTokenPrice,
+            true // round up to ensure we never underpay
+        );
+
+        // Apply discount using MATH_PRECISION
+        paymentAmount = paymentAmount.multiplyWithPrecisionUp(MATH_PRECISION - discount);
+
+        return paymentAmount;
     }
 
     function testFuzz_ClaimPurchase_MultiplePartialPurchases(uint256[3] memory amounts) public {
@@ -874,9 +901,8 @@ contract RewardsDistributorTest is Test {
         uint256 alicePaymentBefore = fuzzPaymentToken.balanceOf(alice);
 
         // Calculate expected payment
-        uint256 baseCostUSD = (purchaseAmount * REWARD_PRICE + 10 ** 18 - 1) / 10 ** 18;
-        uint256 discountedCostUSD = baseCostUSD * (MATH_PRECISION - BASE_DISCOUNT) / MATH_PRECISION;
-        uint256 expectedPayment = (discountedCostUSD * 10 ** 6 + tokenPrice - 1) / tokenPrice;
+
+        uint256 expectedPayment = _calculateExpectedPayment(purchaseAmount, BASE_DISCOUNT, REWARD_PRICE, tokenPrice);
 
         // Should not revert for valid prices
         distributor.claimRewardTokens(
@@ -927,9 +953,8 @@ contract RewardsDistributorTest is Test {
         uint256 appliedDiscount = shouldLock
             ? discount + lockDiscount > distributor.MAX_DISCOUNT() ? distributor.MAX_DISCOUNT() : discount + lockDiscount
             : discount;
-        uint256 baseCostUSD = (purchaseAmount * REWARD_PRICE + 10 ** 18 - 1) / 10 ** 18;
-        uint256 discountedCostUSD = baseCostUSD * (MATH_PRECISION - appliedDiscount) / MATH_PRECISION;
-        uint256 expectedPayment = (discountedCostUSD * 10 ** 6 + PAYMENT_TOKEN_PRICE - 1) / PAYMENT_TOKEN_PRICE;
+        uint256 expectedPayment =
+            _calculateExpectedPayment(purchaseAmount, appliedDiscount, REWARD_PRICE, PAYMENT_TOKEN_PRICE);
 
         distributor.claimRewardTokens(
             aliceAvailable, aProof, purchaseAmount, discount, address(paymentToken), shouldLock, 1, alice

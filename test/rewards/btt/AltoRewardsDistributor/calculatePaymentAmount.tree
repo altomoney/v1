@@ -1,0 +1,29 @@
+calculatePaymentAmount.t.sol
+├── when calculating payment for small reward purchases with sufficient value
+│   ├── given reward token price is $1.00
+│   ├── given payment token price is $1.00  
+│   ├── when user purchases enough to survive discount truncation
+│   └── it should result in non-zero payment
+├── when calculating payment for normal reward purchases (1 token)
+│   ├── given reward token price is $2.50
+│   ├── given payment token price is $1.00
+│   ├── when user has valid merkle proof with 25% discount
+│   └── it should calculate correct payment amount with rounding
+├── when calculating payment with high discount
+│   ├── given both token prices are $1.00
+│   ├── when user has 25% discount from merkle tree
+│   └── it should reduce payment amount accordingly
+├── when fuzzing payment calculation parameters
+│   ├── given reasonable reward purchase amounts (0.001 to 1 token)
+│   ├── given reasonable token prices ($0.1 to $100)
+│   ├── when user has valid merkle proof
+│   └── it should result in non-zero payment for reasonable scenarios
+├── when testing the zero payment edge case
+│   ├── given minimal purchase amount (1 wei)
+│   ├── given standard token prices ($1.00)
+│   ├── when discount causes truncation to zero
+│   └── it should allow zero payment (documented behavior)
+└── when testing rounding prevents underpayment
+    ├── given slightly mismatched token prices
+    ├── when user purchases normal amount
+    └── it should round up to protect protocol from underpayment
