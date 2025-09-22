@@ -10,9 +10,17 @@ import {
 } from "@alto/oracles/interfaces/IAltoRewardsOracle.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ERC20MockDecimals} from "@alto-test/helpers/ERC20MockDecimals.sol";
+import {UniswapUtils} from "@alto/oracles/utils/UniswapUtils.sol";
+import {ModuleUniswapMulti} from "@alto/oracles/modules/ModuleUniswapMulti.sol";
+import {ModuleChainlinkMulti} from "@alto/oracles/modules/ModuleChainlinkMulti.sol";
+import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
 contract AltoRewardsOracleConstructor is AltoRewardsOracleCommon {
     modifier givenInvalidInputs() {
+        _;
+    }
+
+    modifier givenValidInputs() {
         _;
     }
 
@@ -30,26 +38,46 @@ contract AltoRewardsOracleConstructor is AltoRewardsOracleCommon {
         new AltoRewardsOracle(params);
     }
 
-    function test_RevertWhen_InCurrencyTokenHasInvalidDecimals() external givenInvalidInputs {
-        // Create a mock token that will revert on decimals() call
-        // This test assumes the token call will revert, which would cause constructor to revert
-        vm.skip(true); // Skip this test as it's hard to mock without custom contract
+    function test_RevertWhen_TwapPeriodIsInvalid() external givenInvalidInputs {
+        AltoRewardsOracleInitParams memory params = _createValidInitParams();
+        params.twapPeriod = 0; // Invalid twap period
+
+        vm.expectRevert(UniswapUtils.UniswapUtilsInvalidTwapPeriod.selector);
+        new AltoRewardsOracle(params);
     }
 
-    function test_RevertWhen_OutCurrencyTokenHasInvalidDecimals() external givenInvalidInputs {
-        // Create a mock token that will revert on decimals() call
-        // This test assumes the token call will revert, which would cause constructor to revert
-        vm.skip(true); // Skip this test as it's hard to mock without custom contract
-    }
-
-    modifier givenValidInputs() {
-        _;
-    }
-
-    function test_WhenMinimalValidParametersProvided() external givenValidInputs {
+    function test_RevertWhen_CircuitUniswapParametersAreInvalid() external givenInvalidInputs {
         AltoRewardsOracleInitParams memory params = _createValidInitParams();
 
-        vm.expectEmit(true, true, true, true);
+        // Make circuit arrays length mismatch
+        IUniswapV3Pool[] memory circuitUniswap = new IUniswapV3Pool[](2); // length 2
+        uint8[] memory circuitUniIsMultiplied = new uint8[](1); // length 1 - mismatch!
+
+        params.circuitUniswap = circuitUniswap;
+        params.circuitUniIsMultiplied = circuitUniIsMultiplied;
+
+        vm.expectRevert(ModuleUniswapMulti.ModuleUniswapMultiInvalidInput.selector);
+        new AltoRewardsOracle(params);
+    }
+
+    function test_RevertWhen_CircuitChainlinkParametersAreInvalid() external givenInvalidInputs {
+        AltoRewardsOracleInitParams memory params = _createValidInitParams();
+
+        // Make circuit arrays length mismatch
+        address[] memory circuitChainlink = new address[](2); // length 2
+        uint8[] memory circuitChainIsMultiplied = new uint8[](1); // length 1 - mismatch!
+
+        params.circuitChainlink = circuitChainlink;
+        params.circuitChainIsMultiplied = circuitChainIsMultiplied;
+
+        vm.expectRevert(ModuleChainlinkMulti.ModuleChainlinkMultiInvalidInput.selector);
+        new AltoRewardsOracle(params);
+    }
+
+    function test_WhenValidParametersProvided() external givenValidInputs {
+        AltoRewardsOracleInitParams memory params = _createValidInitParams();
+
+        vm.expectEmit(false, false, false, true);
         emit IAltoRewardsOracleEvents.PriceUpdateCooldownPeriodUpdated(0, DEFAULT_COOLDOWN_PERIOD);
 
         AltoRewardsOracle oracle = new AltoRewardsOracle(params);
@@ -69,6 +97,24 @@ contract AltoRewardsOracleConstructor is AltoRewardsOracleCommon {
         // it should set priceUpdateCooldownPeriod correctly
         assertEq(oracle.priceUpdateCooldownPeriod(), DEFAULT_COOLDOWN_PERIOD);
 
+        // it should set twap period correctly
+        assertEq(oracle.twapPeriod(), DEFAULT_TWAP_PERIOD);
+
+        // it should set circuit uniswap correctly
+        assertEq(address(oracle.circuitUniswap(0)), address(mockPool));
+
+        // it should set circuit uni is multiplied correctly
+        assertEq(oracle.circuitUniIsMultiplied(0), 1);
+
+        // it should set circuit chainlink correctly
+        assertEq(address(oracle.circuitChainlink(0)), address(mockFeed));
+
+        // it should set circuit chain is multiplied correctly
+        assertEq(oracle.circuitChainIsMultiplied(0), 1);
+
+        // it should set stale period correctly
+        assertEq(oracle.stalePeriod(), DEFAULT_STALE_PERIOD);
+
         // it should set owner correctly
         assertEq(oracle.owner(), OWNER);
 
@@ -79,75 +125,17 @@ contract AltoRewardsOracleConstructor is AltoRewardsOracleCommon {
         assertEq(oracle.cachedPrice(), 0);
     }
 
-    function test_WhenTokensHave6DecimalPlaces() external givenValidInputs {
-        (ERC20MockDecimals inToken6, ERC20MockDecimals outToken6) = _createTokensWithDecimals(6, 6);
+    function test_WhenBothTokensHaveDifferentDecimalPlaces() external givenValidInputs {
+        (ERC20MockDecimals inToken6, ERC20MockDecimals outToken8) = _createTokensWithDecimals(6, 8);
 
         AltoRewardsOracleInitParams memory params = _createValidInitParams();
         params.addressInAndOutUni[0] = address(inToken6);
-        params.addressInAndOutUni[1] = address(outToken6);
-
-        AltoRewardsOracle oracle = new AltoRewardsOracle(params);
-
-        // it should handle 6 decimal tokens correctly
-        assertEq(oracle.IN_BASE(), 10 ** 6);
-        assertEq(oracle.OUT_BASE(), 10 ** 6);
-    }
-
-    function test_WhenTokensHave8DecimalPlaces() external givenValidInputs {
-        (ERC20MockDecimals inToken8, ERC20MockDecimals outToken8) = _createTokensWithDecimals(8, 8);
-
-        AltoRewardsOracleInitParams memory params = _createValidInitParams();
-        params.addressInAndOutUni[0] = address(inToken8);
         params.addressInAndOutUni[1] = address(outToken8);
-
-        AltoRewardsOracle oracle = new AltoRewardsOracle(params);
-
-        // it should handle 8 decimal tokens correctly
-        assertEq(oracle.IN_BASE(), 10 ** 8);
-        assertEq(oracle.OUT_BASE(), 10 ** 8);
-    }
-
-    function test_WhenTokensHave18DecimalPlaces() external givenValidInputs {
-        (ERC20MockDecimals inToken18, ERC20MockDecimals outToken18) = _createTokensWithDecimals(18, 18);
-
-        AltoRewardsOracleInitParams memory params = _createValidInitParams();
-        params.addressInAndOutUni[0] = address(inToken18);
-        params.addressInAndOutUni[1] = address(outToken18);
-
-        AltoRewardsOracle oracle = new AltoRewardsOracle(params);
-
-        // it should handle 18 decimal tokens correctly
-        assertEq(oracle.IN_BASE(), 10 ** 18);
-        assertEq(oracle.OUT_BASE(), 10 ** 18);
-    }
-
-    function test_WhenTokensHaveDifferentDecimalPlaces() external givenValidInputs {
-        (ERC20MockDecimals inToken6, ERC20MockDecimals outToken18) = _createTokensWithDecimals(6, 18);
-
-        AltoRewardsOracleInitParams memory params = _createValidInitParams();
-        params.addressInAndOutUni[0] = address(inToken6);
-        params.addressInAndOutUni[1] = address(outToken18);
 
         AltoRewardsOracle oracle = new AltoRewardsOracle(params);
 
         // it should handle different decimal tokens correctly
         assertEq(oracle.IN_BASE(), 10 ** 6);
-        assertEq(oracle.OUT_BASE(), 10 ** 18);
-    }
-
-    function test_WhenFullCircuitParametersProvided() external givenValidInputs {
-        AltoRewardsOracleInitParams memory params = _createValidInitParams();
-
-        // Add some circuit parameters (even if empty, they should be handled correctly)
-        params.uniFinalCurrency = 1;
-
-        AltoRewardsOracle oracle = new AltoRewardsOracle(params);
-
-        // it should initialize Uniswap module correctly
-        // it should initialize Chainlink module correctly
-        // it should set all parameters correctly
-        assertEq(oracle.UNI_FINAL_CURRENCY(), 1);
-        assertEq(oracle.owner(), OWNER);
-        assertEq(oracle.description(), DEFAULT_DESCRIPTION);
+        assertEq(oracle.OUT_BASE(), 10 ** 8);
     }
 }

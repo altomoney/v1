@@ -4,26 +4,28 @@ AltoRewardsOracle::Constructor()
 │   │   └── it should revert with AltoRewardsOracleInvalidInput
 │   ├── when owner is zero address
 │   │   └── it should revert with OwnableInvalidOwner
-│   ├── when in-currency token has invalid decimals
-│   │   └── it should revert
-│   └── when out-currency token has invalid decimals
-│       └── it should revert
+│   ├── when twap period is invalid
+│   │   └── it should revert with UniswapUtilsInvalidTwapPeriod
+│   ├── when circuit uniswap parameters are invalid
+│   │   └── it should revert with ModuleUniswapMultiInvalidInput
+│   └── when circuit chainlink parameters are invalid
+│       └── it should revert with ModuleChainlinkMultiInvalidInput
 └── given valid inputs
-    ├── when minimal valid parameters provided
+    ├── when valid parameters provided
     │   ├── it should set IN_BASE correctly based on in-currency decimals
     │   ├── it should set OUT_BASE correctly based on out-currency decimals
     │   ├── it should set UNI_FINAL_CURRENCY correctly
     │   ├── it should set description correctly
     │   ├── it should set priceUpdateCooldownPeriod correctly
     │   ├── it should set owner correctly
+    │   ├── it should set twap period correctly
+    │   ├── it should set circuit uniswap correctly
+    │   ├── it should set circuit uni is multiplied correctly
+    │   ├── it should set circuit chainlink correctly
+    │   ├── it should set circuit chain is multiplied correctly
+    │   ├── it should set stale period correctly
     │   ├── it should initialize lastPriceUpdateTimestamp to zero
     │   ├── it should initialize cachedPrice to zero
     │   └── it should emit PriceUpdateCooldownPeriodUpdated event
-    ├── when tokens have different decimal places
-    │   ├── it should handle 6 decimal tokens correctly
-    │   ├── it should handle 8 decimal tokens correctly
-    │   └── it should handle 18 decimal tokens correctly
-    └── when full circuit parameters provided
-        ├── it should initialize Uniswap module correctly
-        ├── it should initialize Chainlink module correctly
-        └── it should set all parameters correctly
+    └── when tokens have different decimal places
+        ├── it should handle when in-currency token has 6 decimal places and out-currency token has 8 decimal places correctly

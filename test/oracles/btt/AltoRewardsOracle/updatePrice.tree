@@ -1,9 +1,7 @@
 AltoRewardsOracle::updatePrice()
-├── given oracle is not initiated
 │   └── when lastPriceUpdateTimestamp is zero
 │       └── it should revert with AltoRewardsOracleNotInitiated
-└── given oracle is initiated
-    └── when lastPriceUpdateTimestamp is greater than zero
+    └── when lastPriceUpdateTimestamp is not zero
         ├── given cooldown period has not passed
         │   └── when block.timestamp - lastPriceUpdateTimestamp < priceUpdateCooldownPeriod
         │       └── it should revert with AltoRewardsOracleTooEarlyToUpdatePrice

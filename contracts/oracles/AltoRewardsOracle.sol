@@ -131,6 +131,9 @@ contract AltoRewardsOracle is Ownable2Step, ModuleChainlinkMulti, ModuleUniswapM
 
     /// @inheritdoc IAltoRewardsOracle
     function updatePriceUpdateCooldownPeriod(uint256 _priceUpdateCooldownPeriod) external onlyOwner {
+        if (priceUpdateCooldownPeriod == _priceUpdateCooldownPeriod) {
+            revert AltoRewardsOracleInvalidInput();
+        }
         emit PriceUpdateCooldownPeriodUpdated(priceUpdateCooldownPeriod, _priceUpdateCooldownPeriod);
         priceUpdateCooldownPeriod = _priceUpdateCooldownPeriod;
     }

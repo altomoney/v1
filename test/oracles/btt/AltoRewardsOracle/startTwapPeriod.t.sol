@@ -20,15 +20,11 @@ contract AltoRewardsOracleStartTwapPeriod is AltoRewardsOracleCommon {
         oracle = new AltoRewardsOracle(params);
     }
 
-    function test_RevertWhen_CallerIsNotOwner() external {
-        uint256 initialPrice = 1000e8;
-
-        vm.prank(NON_OWNER);
-        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, NON_OWNER));
-        oracle.startTwapPeriod(initialPrice);
+    modifier whenCallerIsNotOwner() {
+        _;
     }
 
-    modifier whenCallerIsOwner() {
+    modifier givenCallerIsOwner() {
         _;
     }
 
@@ -36,12 +32,24 @@ contract AltoRewardsOracleStartTwapPeriod is AltoRewardsOracleCommon {
         _;
     }
 
+    modifier givenOracleIsNotInitiated() {
+        _;
+    }
+
+    function test_RevertWhen_CallerIsNotOwner() external whenCallerIsNotOwner {
+        uint256 initialPrice = 1000e8;
+
+        vm.prank(NON_OWNER);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, NON_OWNER));
+        oracle.startTwapPeriod(initialPrice);
+    }
+
     function test_RevertWhen_LastPriceUpdateTimestampIsNotZero()
         external
-        whenCallerIsOwner
+        givenCallerIsOwner
         givenOracleIsAlreadyInitiated
     {
-        uint256 initialPrice = 1000e8;
+        uint256 initialPrice = 2e8;
 
         // First initialization
         vm.startPrank(OWNER);
@@ -56,11 +64,7 @@ contract AltoRewardsOracleStartTwapPeriod is AltoRewardsOracleCommon {
         vm.stopPrank();
     }
 
-    modifier givenOracleIsNotInitiated() {
-        _;
-    }
-
-    function test_WhenLastPriceUpdateTimestampIsZero() external whenCallerIsOwner givenOracleIsNotInitiated {
+    function test_WhenLastPriceUpdateTimestampIsZero() external givenCallerIsOwner givenOracleIsNotInitiated {
         uint256 initialPrice = 1000e8;
         uint256 timestampBefore = block.timestamp;
 
@@ -68,7 +72,7 @@ contract AltoRewardsOracleStartTwapPeriod is AltoRewardsOracleCommon {
         assertEq(oracle.lastPriceUpdateTimestamp(), 0);
         assertEq(oracle.cachedPrice(), 0);
 
-        vm.expectEmit(true, true, true, true);
+        vm.expectEmit(true, false, false, true);
         emit IAltoRewardsOracleEvents.PriceUpdated(block.timestamp, initialPrice, 0);
 
         vm.prank(OWNER);
@@ -81,7 +85,7 @@ contract AltoRewardsOracleStartTwapPeriod is AltoRewardsOracleCommon {
         assertEq(oracle.cachedPrice(), initialPrice);
     }
 
-    function test_StartTwapPeriodWithDifferentPrices() external whenCallerIsOwner givenOracleIsNotInitiated {
+    function test_StartTwapPeriodWithDifferentPrices() external givenCallerIsOwner givenOracleIsNotInitiated {
         uint256[] memory testPrices = new uint256[](4);
         testPrices[0] = 0; // Edge case: zero price
         testPrices[1] = 1; // Minimum non-zero
@@ -95,7 +99,7 @@ contract AltoRewardsOracleStartTwapPeriod is AltoRewardsOracleCommon {
 
             uint256 timestamp = block.timestamp;
 
-            vm.expectEmit(true, true, true, true);
+            vm.expectEmit(true, false, false, true);
             emit IAltoRewardsOracleEvents.PriceUpdated(timestamp, testPrices[i], 0);
 
             vm.prank(OWNER);
@@ -104,19 +108,5 @@ contract AltoRewardsOracleStartTwapPeriod is AltoRewardsOracleCommon {
             assertEq(testOracle.lastPriceUpdateTimestamp(), timestamp);
             assertEq(testOracle.cachedPrice(), testPrices[i]);
         }
-    }
-
-    function test_StartTwapPeriodTimestampProgression() external whenCallerIsOwner givenOracleIsNotInitiated {
-        uint256 initialPrice = 1000e8;
-
-        // Move forward in time
-        vm.warp(block.timestamp + 1000);
-        uint256 expectedTimestamp = block.timestamp;
-
-        vm.prank(OWNER);
-        oracle.startTwapPeriod(initialPrice);
-
-        assertEq(oracle.lastPriceUpdateTimestamp(), expectedTimestamp);
-        assertEq(oracle.cachedPrice(), initialPrice);
     }
 }

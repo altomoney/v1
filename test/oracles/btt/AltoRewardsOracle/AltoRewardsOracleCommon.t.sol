@@ -2,16 +2,11 @@
 pragma solidity ^0.8.22;
 
 import {Test} from "forge-std/Test.sol";
-import {AltoRewardsOracle} from "@alto/oracles/AltoRewardsOracle.sol";
-import {
-    AltoRewardsOracleInitParams,
-    IAltoRewardsOracleErrors,
-    IAltoRewardsOracleEvents
-} from "@alto/oracles/interfaces/IAltoRewardsOracle.sol";
+import {AltoRewardsOracleInitParams} from "@alto/oracles/interfaces/IAltoRewardsOracle.sol";
 import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import {ERC20MockDecimals} from "@alto-test/helpers/ERC20MockDecimals.sol";
-import {MockUniswapPool} from "./MockUniswapPool.sol";
-import {MockChainlinkFeed} from "./MockChainlinkFeed.sol";
+import {MockUniswapPool} from "@alto-test/oracles/btt/mocks/MockUniswapPool.sol";
+import {MockChainlinkFeed} from "@alto-test/oracles/btt/mocks/MockChainlinkFeed.sol";
 
 contract AltoRewardsOracleCommon is Test {
     address constant OWNER = address(0x1);
