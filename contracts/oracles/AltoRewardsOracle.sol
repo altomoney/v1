@@ -6,11 +6,11 @@ import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step
 
 import {ModuleChainlinkMulti} from "@alto/oracles/modules/ModuleChainlinkMulti.sol";
 import {ModuleUniswapMulti} from "@alto/oracles/modules/ModuleUniswapMulti.sol";
-import {IRewardsOracle} from "@alto/oracles/interfaces/IRewardsOracle.sol";
+import {IAltoRewardsOracleBase, AltoRewardsOracleInitParams} from "@alto/oracles/interfaces/IAltoRewardsOracle.sol";
 import {USD_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IUsdOracle.sol";
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 
-/// @title RewardsOracle
+/// @title AltoRewardsOracle
 /// @author Pearl Labs
 /// @author Adapted from Angle Core (https://github.com/AngleProtocol/angle-core)
 /// @notice Oracle contract, one contract is deployed per collateral/stablecoin pair
@@ -18,35 +18,32 @@ import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 /// @dev This is going to be used for like ALTO/USD oracles
 /// @dev A rate gives the price of the out-currency with respect to the in-currency in base `USD_ORACLE_PRICE_PRECISION`. For instance
 /// if the out-currency is ALTO worth 10 USD and USD_ORACLE_PRICE_PRECISION is 10**8, then the rate ALTO-USD is 10**9
-contract RewardsOracle is Ownable2Step, ModuleChainlinkMulti, ModuleUniswapMulti, IRewardsOracle {
-    /// @notice Unit of the in-currency
+contract AltoRewardsOracle is Ownable2Step, ModuleChainlinkMulti, ModuleUniswapMulti, IAltoRewardsOracleBase {
+    /// @inheritdoc IAltoRewardsOracleBase
     uint256 public immutable IN_BASE;
 
-    /// @notice Unit out Uniswap currency
+    /// @inheritdoc IAltoRewardsOracleBase
     uint256 public immutable OUT_BASE;
 
-    /// @notice Whether the final rate obtained with Uniswap should be multiplied to last rate from Chainlink
+    /// @inheritdoc IAltoRewardsOracleBase
     uint8 public immutable UNI_FINAL_CURRENCY;
 
-    /// @notice Timestamp when this oracle was last updated to return the new price
+    /// @inheritdoc IAltoRewardsOracleBase
     uint256 public lastPriceUpdateTimestamp;
 
-    /// @notice Initial price of the asset between timestamp when twap period is started and when price is updated
-    uint256 public immutable INITIAL_PRICE;
-
-    /// @notice Minimum time interval (in seconds) required between price updates
+    /// @inheritdoc IAltoRewardsOracleBase
     uint256 public priceUpdateCooldownPeriod;
 
-    /// @notice Cached price of the asset to be returned by getPrice function
+    /// @inheritdoc IAltoRewardsOracleBase
     uint256 public cachedPrice;
 
-    /// @notice Description of the oracle
+    /// @inheritdoc IAltoRewardsOracleBase
     bytes32 public description;
 
     /// @dev When deploying this contract, it is important to check in the case where Uniswap circuit is not final whether
     /// Chainlink and Uniswap circuits are compatible. If Chainlink is UNI-WBTC and WBTC-USD and Uniswap is just UNI-WETH,
     /// then Chainlink cannot be the final circuit
-    constructor(RewardsOracleInitParams memory _initParams)
+    constructor(AltoRewardsOracleInitParams memory _initParams)
         ModuleUniswapMulti(
             _initParams.circuitUniswap,
             _initParams.circuitUniIsMultiplied,
@@ -56,44 +53,40 @@ contract RewardsOracle is Ownable2Step, ModuleChainlinkMulti, ModuleUniswapMulti
         ModuleChainlinkMulti(_initParams.circuitChainlink, _initParams.circuitChainIsMultiplied, _initParams.stalePeriod)
         Ownable(_initParams.owner)
     {
-        if (_initParams.addressInAndOutUni.length != 2) revert InvalidInput();
-        if (_initParams.owner == address(0)) revert InvalidInput();
+        if (_initParams.addressInAndOutUni.length != 2) revert AltoRewardsOracleInvalidInput();
         // Using the tokens' metadata to get the in and out currencies decimals
         IERC20Metadata inCur = IERC20Metadata(_initParams.addressInAndOutUni[0]);
         IERC20Metadata outCur = IERC20Metadata(_initParams.addressInAndOutUni[1]);
         IN_BASE = 10 ** (inCur.decimals());
         OUT_BASE = 10 ** (outCur.decimals());
-
-        INITIAL_PRICE = _initParams.initialPrice;
         UNI_FINAL_CURRENCY = _initParams.uniFinalCurrency;
         description = _initParams.description;
+
         priceUpdateCooldownPeriod = _initParams.priceUpdateCooldownPeriod;
+        emit PriceUpdateCooldownPeriodUpdated(0, _initParams.priceUpdateCooldownPeriod);
     }
 
-    /// @notice Gets the price of the asset in USD_ORACLE_PRICE_PRECISION
-    /// @return The price of the asset in USD_ORACLE_PRICE_PRECISION
+    /// @inheritdoc IAltoRewardsOracleBase
     function getPrice() external view override returns (uint256) {
-        if (lastPriceUpdateTimestamp == 0) revert NotInitiated();
+        if (lastPriceUpdateTimestamp == 0) revert AltoRewardsOracleNotInitiated();
         return cachedPrice;
     }
 
-    /// @notice Starts the TWAP period
-    /// @dev This function will be called after Uniswap pool has been created
-    /// @dev getPrice function will return the cached price until the price is updated through updatePrice function
-    function startTwapPeriod() external onlyOwner {
-        if (lastPriceUpdateTimestamp != 0) revert AlreadyStartedTwapPeriod();
+    /// @inheritdoc IAltoRewardsOracleBase
+    function startTwapPeriod(uint256 _initialPrice) external onlyOwner {
+        if (lastPriceUpdateTimestamp != 0) revert AltoRewardsOracleAlreadyStartedTwapPeriod();
         lastPriceUpdateTimestamp = block.timestamp;
-        cachedPrice = INITIAL_PRICE;
+        cachedPrice = _initialPrice;
 
         emit PriceUpdated(block.timestamp, cachedPrice, 0);
     }
 
-    /// @notice Updates the price of the asset based on the Uniswap V3 twap period
-    /// @dev This function will be called periodically to update the price of the asset
-    /// @dev This function will revert if the twap period has not been passed since the last update
+    /// @inheritdoc IAltoRewardsOracleBase
     function updatePrice() external {
-        if (lastPriceUpdateTimestamp == 0) revert NotInitiated();
-        if (block.timestamp - lastPriceUpdateTimestamp < priceUpdateCooldownPeriod) revert TooEarlyToUpdatePrice();
+        if (lastPriceUpdateTimestamp == 0) revert AltoRewardsOracleNotInitiated();
+        if (block.timestamp - lastPriceUpdateTimestamp < priceUpdateCooldownPeriod) {
+            revert AltoRewardsOracleTooEarlyToUpdatePrice();
+        }
 
         uint256 oldPrice = cachedPrice;
         cachedPrice = _readUniswapQuote(IN_BASE);
@@ -136,7 +129,9 @@ contract RewardsOracle is Ownable2Step, ModuleChainlinkMulti, ModuleUniswapMulti
         uniAmount = FixedPointMath.multiplyWithPrecisionUp(uniAmount, USD_ORACLE_PRICE_PRECISION);
     }
 
+    /// @inheritdoc IAltoRewardsOracleBase
     function updatePriceUpdateCooldownPeriod(uint256 _priceUpdateCooldownPeriod) external onlyOwner {
+        emit PriceUpdateCooldownPeriodUpdated(priceUpdateCooldownPeriod, _priceUpdateCooldownPeriod);
         priceUpdateCooldownPeriod = _priceUpdateCooldownPeriod;
     }
 }
