@@ -7,7 +7,8 @@ import {OracleMath} from "@alto/oracles/external/OracleMath.sol";
 
 /// @title UniswapUtils
 /// @author Pearl Labs
-/// @author Adapted from Angle Core (https://github.com/AngleProtocol/angle-core)
+/// @author Adapted from Angle Core (https://github.com/AngleProtocol/angle-core/blob/main/contracts/oracle/utils/UniswapUtils.sol)
+/// @dev This contract was modified to use Ownable2Step instead of AccessControl compared to Angle Core
 /// @notice Utility contract that is used in the Uniswap module contract
 abstract contract UniswapUtils is OracleMath, Ownable2Step {
     // The parameters below are common among the different Uniswap modules contracts

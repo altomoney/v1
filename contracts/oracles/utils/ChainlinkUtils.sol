@@ -6,7 +6,8 @@ import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 
 /// @title ChainlinkUtils
 /// @author Pearl Labs
-/// @author Adapted from Angle Core (https://github.com/AngleProtocol/angle-core)
+/// @author Adapted from Angle Core (https://github.com/AngleProtocol/angle-core/blob/main/contracts/oracle/utils/ChainlinkUtils.sol)
+/// @dev This contract was modified to use Ownable2Step instead of AccessControl compared to Angle Core
 /// @notice Utility contract that is used across the different module contracts using Chainlink
 abstract contract ChainlinkUtils is Ownable2Step {
     /// @notice Represent the maximum amount of time (in seconds) between each Chainlink update

@@ -10,14 +10,12 @@ import {IAltoRewardsOracle, AltoRewardsOracleInitParams} from "@alto/oracles/int
 import {USD_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IUsdOracle.sol";
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 
-/// @title AltoRewardsOracle
+/// @title Alto Rewards Oracle
 /// @author Pearl Labs
-/// @author Adapted from Angle Core (https://github.com/AngleProtocol/angle-core)
-/// @notice Oracle contract, one contract is deployed per collateral/stablecoin pair
-/// @dev This contract concerns an oracle that only uses both Chainlink and Uniswap for multiple pools
-/// @dev This is going to be used for like ALTO/USD oracles
-/// @dev A rate gives the price of the out-currency with respect to the in-currency in base `USD_ORACLE_PRICE_PRECISION`. For instance
-/// if the out-currency is ALTO worth 10 USD and USD_ORACLE_PRICE_PRECISION is 10**8, then the rate ALTO-USD is 10**9
+/// @author Inspired by Angle Core (https://github.com/AngleProtocol/angle-core/blob/main/contracts/oracle/OracleMulti.sol)
+/// @notice Oracle contract used in AltoRewardsDistributor to calculate extended TWAP of ALTO token
+/// @dev Provides a fixed price for claiming (exercising) call options in AltoRewardsDistributor
+/// @dev Returns USD price of ALTO token in `USD_ORACLE_PRICE_PRECISION` as per `IUsdOracle` interface
 contract AltoRewardsOracle is Ownable2Step, ModuleChainlinkMulti, ModuleUniswapMulti, IAltoRewardsOracle {
     /// @inheritdoc IAltoRewardsOracle
     uint256 public immutable IN_BASE;
@@ -53,7 +51,10 @@ contract AltoRewardsOracle is Ownable2Step, ModuleChainlinkMulti, ModuleUniswapM
         ModuleChainlinkMulti(_initParams.circuitChainlink, _initParams.circuitChainIsMultiplied, _initParams.stalePeriod)
         Ownable(_initParams.owner)
     {
-        if (_initParams.addressInAndOutUni.length != 2) revert AltoRewardsOracleInvalidInput();
+        if (_initParams.addressInAndOutUni.length != 2) {
+            revert AltoRewardsOracleInvalidInput();
+        }
+
         // Using the tokens' metadata to get the in and out currencies decimals
         IERC20Metadata inCur = IERC20Metadata(_initParams.addressInAndOutUni[0]);
         IERC20Metadata outCur = IERC20Metadata(_initParams.addressInAndOutUni[1]);
@@ -68,13 +69,19 @@ contract AltoRewardsOracle is Ownable2Step, ModuleChainlinkMulti, ModuleUniswapM
 
     /// @inheritdoc IAltoRewardsOracle
     function getPrice() external view override returns (uint256) {
-        if (lastPriceUpdateTimestamp == 0) revert AltoRewardsOracleNotInitiated();
+        if (lastPriceUpdateTimestamp == 0) {
+            revert AltoRewardsOracleNotInitiated();
+        }
+
         return cachedPrice;
     }
 
     /// @inheritdoc IAltoRewardsOracle
     function startTwapPeriod(uint256 _initialPrice) external onlyOwner {
-        if (lastPriceUpdateTimestamp != 0) revert AltoRewardsOracleAlreadyStartedTwapPeriod();
+        if (lastPriceUpdateTimestamp != 0) {
+            revert AltoRewardsOracleAlreadyStartedTwapPeriod();
+        }
+
         lastPriceUpdateTimestamp = block.timestamp;
         cachedPrice = _initialPrice;
 
@@ -83,7 +90,10 @@ contract AltoRewardsOracle is Ownable2Step, ModuleChainlinkMulti, ModuleUniswapM
 
     /// @inheritdoc IAltoRewardsOracle
     function updatePrice() external {
-        if (lastPriceUpdateTimestamp == 0) revert AltoRewardsOracleNotInitiated();
+        if (lastPriceUpdateTimestamp == 0) {
+            revert AltoRewardsOracleNotInitiated();
+        }
+
         if (block.timestamp - lastPriceUpdateTimestamp < priceUpdateCooldownPeriod) {
             revert AltoRewardsOracleTooEarlyToUpdatePrice();
         }
@@ -95,13 +105,33 @@ contract AltoRewardsOracle is Ownable2Step, ModuleChainlinkMulti, ModuleUniswapM
         emit PriceUpdated(block.timestamp, cachedPrice, oldPrice);
     }
 
+    /// @notice Internal function to convert an in-currency quote amount to out-currency using only the Uniswap rate
+    /// and by transforming it if needed from Chainlink last rate
+    /// @param quoteAmount Amount (in the input collateral) to be converted in out-currency using Uniswap (and Chainlink)
+    /// at the end of the funnel
+    /// @return uniAmount Quote amount in value of the out-currency with `USD_ORACLE_PRICE_PRECISION` precision
+    /// @dev The amount returned is expressed in `USD_ORACLE_PRICE_PRECISION` (and not the base of the out-currency)
+    function _readUniswapQuote(uint256 quoteAmount) internal view returns (uint256 uniAmount) {
+        uniAmount = _quoteUniswap(quoteAmount);
+
+        // The current uni rate is in OUT_BASE we want it in MATH_PRECISION to avoid precision loss in _changeUniswapNotFinal function
+        uniAmount = FixedPointMath.divideWithPrecisionUp(uniAmount, OUT_BASE);
+        if (UNI_FINAL_CURRENCY > 0) {
+            uniAmount = _changeUniswapNotFinal(0, uniAmount);
+        }
+
+        // The current uniAmount is in MATH_PRECISION. we want our rate to be in USD_ORACLE_PRICE_PRECISION
+        uniAmount = FixedPointMath.multiplyWithPrecisionUp(uniAmount, USD_ORACLE_PRICE_PRECISION);
+    }
+
     /// @notice Uses Chainlink's value to change Uniswap's rate
     /// @param ratio Value of the last oracle rate of Chainlink
     /// @param quoteAmountUni End quote computed from Uniswap's circuit
     /// @dev We use the last Chainlink rate to correct the value obtained with Uniswap. It may for instance be used
-    /// to get a Uniswap price in EUR (ex: ETH -> USDC and we use this to do USDC -> EUR)
+    /// to get a Uniswap price in USD (ex: ALTO -> WETH and we use this to do WETH -> USD)
     function _changeUniswapNotFinal(uint256 ratio, uint256 quoteAmountUni) internal view returns (uint256) {
         uint256 idxLastPoolCL = circuitChainlink.length - 1;
+
         (quoteAmountUni,) = _readChainlinkFeed(
             quoteAmountUni,
             circuitChainlink[idxLastPoolCL],
@@ -109,24 +139,8 @@ contract AltoRewardsOracle is Ownable2Step, ModuleChainlinkMulti, ModuleUniswapM
             chainlinkDecimals[idxLastPoolCL],
             ratio
         );
-        return quoteAmountUni;
-    }
 
-    /// @notice Internal function to convert an in-currency quote amount to out-currency using only the Uniswap rate
-    /// and by correcting it if needed from Chainlink last rate
-    /// @param quoteAmount Amount (in the input collateral) to be converted in out-currency using Uniswap (and Chainlink)
-    /// at the end of the funnel
-    /// @return uniAmount Quote amount in out-currency from the base amount in in-currency
-    /// @dev The amount returned is expressed with base `USD_ORACLE_PRICE_PRECISION` (and not the base of the out-currency)
-    function _readUniswapQuote(uint256 quoteAmount) internal view returns (uint256 uniAmount) {
-        uniAmount = _quoteUniswap(quoteAmount);
-        // The current uni rate is in OUT_BASE we want it in MATH_PRECISION to avoid precision loss in _changeUniswapNotFinal function
-        uniAmount = FixedPointMath.divideWithPrecisionUp(uniAmount, OUT_BASE);
-        if (UNI_FINAL_CURRENCY > 0) {
-            uniAmount = _changeUniswapNotFinal(0, uniAmount);
-        }
-        // The current uniAmount is in MATH_PRECISION. we want our rate to be in USD_ORACLE_PRICE_PRECISION
-        uniAmount = FixedPointMath.multiplyWithPrecisionUp(uniAmount, USD_ORACLE_PRICE_PRECISION);
+        return quoteAmountUni;
     }
 
     /// @inheritdoc IAltoRewardsOracle
@@ -134,6 +148,7 @@ contract AltoRewardsOracle is Ownable2Step, ModuleChainlinkMulti, ModuleUniswapM
         if (priceUpdateCooldownPeriod == _priceUpdateCooldownPeriod) {
             revert AltoRewardsOracleInvalidInput();
         }
+
         emit PriceUpdateCooldownPeriodUpdated(priceUpdateCooldownPeriod, _priceUpdateCooldownPeriod);
         priceUpdateCooldownPeriod = _priceUpdateCooldownPeriod;
     }
