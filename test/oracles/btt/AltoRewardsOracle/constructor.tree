@@ -28,4 +28,4 @@ AltoRewardsOracle::Constructor()
     │   ├── it should initialize cachedPrice to zero
     │   └── it should emit PriceUpdateCooldownPeriodUpdated event
     └── when tokens have different decimal places
-        ├── it should handle when in-currency token has 6 decimal places and out-currency token has 8 decimal places correctly
+        └── it should handle when in-currency token has 6 decimal places and out-currency token has 8 decimal places correctly
