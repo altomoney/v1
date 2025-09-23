@@ -59,13 +59,13 @@ interface IAltoRewardsOracleEvents {
 }
 
 interface IAltoRewardsOracle is IUsdOracle, IAltoRewardsOracleErrors, IAltoRewardsOracleEvents {
-    /// @notice Unit of the in-currency
+    /// @notice 1 full unit of the in-currency with decimals
     function IN_BASE() external view returns (uint256);
 
-    /// @notice Unit out Uniswap currency
+    /// @notice 1 full unit of the out-currency with decimals
     function OUT_BASE() external view returns (uint256);
 
-    /// @notice Whether the final rate obtained with Uniswap should be multiplied to last rate from Chainlink
+    /// @notice Whether the final rate obtained with Uniswap should be multiplied with last rate from Chainlink
     function UNI_FINAL_CURRENCY() external view returns (uint8);
 
     /// @notice Timestamp when this oracle was last updated to return the new price
@@ -85,16 +85,17 @@ interface IAltoRewardsOracle is IUsdOracle, IAltoRewardsOracleErrors, IAltoRewar
     function getPrice() external view override returns (uint256);
 
     /// @notice Starts the TWAP period
-    /// @dev This function will be called after Uniswap pool has been created
-    /// @dev getPrice function will return the cached price until the price is updated through updatePrice function
+    /// @dev This function has to be called after deployment to initiate cooldown mechanism
+    /// @param _initialPrice The initial price to be returned by getPrice function before first `priceUpdateCooldownPeriod` passes
+    /// @dev getPrice function will return the `_initialPrice` until the price is updated through updatePrice function
     function startTwapPeriod(uint256 _initialPrice) external;
 
     /// @notice Updates the price of the asset based on the Uniswap V3 twap period
     /// @dev This function will be called periodically to update the price of the asset
-    /// @dev This function will revert if the twap period has not been passed since the last update
+    /// @dev This function will revert if the `priceUpdateCooldownPeriod` did not pass since the last update
     function updatePrice() external;
 
-    /// @notice Updates the price update cooldown period
-    /// @param _priceUpdateCooldownPeriod The new price update cooldown period
+    /// @notice Updates the `priceUpdateCooldownPeriod`
+    /// @param _priceUpdateCooldownPeriod The new `priceUpdateCooldownPeriod`
     function updatePriceUpdateCooldownPeriod(uint256 _priceUpdateCooldownPeriod) external;
 }
