@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0
-
 pragma solidity ^0.8.7;
 
-import "../external/FullMath.sol";
+import {FullMath} from "@alto/oracles/external/FullMath.sol";
 
 /// @title OracleMath
+/// @author Pearl Labs
+/// @author Adapted from Angle Core (https://github.com/AngleProtocol/angle-core)
 /// @author Forked and adapted by Angle Core Team from https://github.com/Uniswap/uniswap-v3-core/blob/main/contracts/libraries/TickMath.sol
 /// @notice Math library for computing prices from ticks
 /// @dev Computes price for ticks of size 1.0001, i.e. sqrt(1.0001^tick). Supports

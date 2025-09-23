@@ -5,6 +5,7 @@ libs = ["node_modules", "lib"]
 test = 'test'
 script = 'script'
 no-match-path = 'playground/*'
+no-match-test = "testSimulate*"
 
 evm_version = 'cancun'
 optimizer = true
@@ -20,6 +21,8 @@ remappings = [
 	'@alto/=contracts/',
 	'@openzeppelin/contracts/=lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/',
 	'@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/',
+	'@uniswap/v3-core/=lib/v3-core/',
+	'@chainlink/=lib/chainlink-evm/',
 ]
 
 ffi = true
@@ -29,7 +32,13 @@ extra_output = ["storageLayout"]
 fs_permissions = [
 	{ access = "read-write", path = "./contracts/deployments/testnet/output" },
 	{ access = "read", path = "./out/" },
+	{ access = "read", path = "./test/oracles/data/" },
 ]
+
+[profile.simulations]
+gas_limit = "20000000000"
+match-test = "testSimulate"
+no-match-test = "testNeverExists" # Override default to allow simulation tests
 
 [lint]
 exclude_lints = [
@@ -37,6 +46,10 @@ exclude_lints = [
 	"mixed-case-function",
 	"pascal-case-struct",
 ]
+
+[rpc_endpoints]
+ethereum = "https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}"
+arbitrum = "https://arb-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}"
 
 [profile.market]
 src = 'contracts'
