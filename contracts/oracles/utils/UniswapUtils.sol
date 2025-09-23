@@ -16,7 +16,9 @@ abstract contract UniswapUtils is OracleMath, Ownable2Step {
     /// It is mainly going to be 5 minutes in the protocol
     uint32 public twapPeriod;
 
-    error UniswapInvalidTwapPeriod();
+    error UniswapUtilsInvalidTwapPeriod();
+
+    event UniswapUtilsTwapPeriodUpdated(uint32 indexed oldVal, uint32 indexed newVal);
 
     /// @notice Gets a quote for an amount of in-currency using UniswapV3 TWAP and converts this
     /// amount to out-currency
@@ -51,7 +53,8 @@ abstract contract UniswapUtils is OracleMath, Ownable2Step {
     /// @notice Changes the TWAP period
     /// @param _twapPeriod New window to compute the TWAP
     function changeTwapPeriod(uint32 _twapPeriod) external onlyOwner {
-        if (_twapPeriod == 0) revert UniswapInvalidTwapPeriod();
+        if (_twapPeriod == 0) revert UniswapUtilsInvalidTwapPeriod();
+        emit UniswapUtilsTwapPeriodUpdated(twapPeriod, _twapPeriod);
         twapPeriod = _twapPeriod;
     }
 }

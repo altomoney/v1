@@ -13,7 +13,9 @@ abstract contract ChainlinkUtils is Ownable2Step {
     /// before the price feed is considered stale
     uint32 public stalePeriod;
 
-    error InvalidChainlinkRate();
+    error ChainlinkUtilsInvalidRate();
+
+    event ChainlinkUtilsStalePeriodUpdated(uint32 indexed oldVal, uint32 indexed newVal);
 
     /// @notice Reads a Chainlink feed using a quote amount and converts the quote amount to
     /// the out-currency
@@ -36,7 +38,7 @@ abstract contract ChainlinkUtils is Ownable2Step {
         if (castedRatio == 0) {
             (uint80 roundId, int256 ratio,, uint256 updatedAt, uint80 answeredInRound) = feed.latestRoundData();
             if (ratio <= 0 || roundId > answeredInRound || block.timestamp - updatedAt > stalePeriod) {
-                revert InvalidChainlinkRate();
+                revert ChainlinkUtilsInvalidRate();
             }
             castedRatio = uint256(ratio);
         }
@@ -49,6 +51,7 @@ abstract contract ChainlinkUtils is Ownable2Step {
     /// @notice Changes the Stale Period
     /// @param _stalePeriod New stale period (in seconds)
     function changeStalePeriod(uint32 _stalePeriod) external onlyOwner {
+        emit ChainlinkUtilsStalePeriodUpdated(stalePeriod, _stalePeriod);
         stalePeriod = _stalePeriod;
     }
 }

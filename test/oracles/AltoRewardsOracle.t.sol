@@ -11,10 +11,14 @@ import {Test} from "forge-std/Test.sol";
 import {ChainlinkUtils} from "@alto/oracles/utils/ChainlinkUtils.sol";
 import {ISwapRouter} from "@alto-test/oracles/interfaces/ISwapRouter.sol";
 import {console2} from "forge-std/console2.sol";
-import {RewardsOracle} from "@alto/oracles/RewardsOracle.sol";
+import {AltoRewardsOracle} from "@alto/oracles/AltoRewardsOracle.sol";
 import {AltoToken} from "@alto/tokens/AltoToken.sol";
 import {INonfungiblePositionManager} from "@alto-test/oracles/interfaces/INonfungiblePositionManager.sol";
-import {IRewardsOracle} from "@alto/oracles/interfaces/IRewardsOracle.sol";
+import {
+    AltoRewardsOracleInitParams,
+    IAltoRewardsOracleErrors,
+    IAltoRewardsOracleEvents
+} from "@alto/oracles/interfaces/IAltoRewardsOracle.sol";
 
 contract AltoRewardsOracleTest is Test {
     // min tick for tick spacing of 200
@@ -22,7 +26,7 @@ contract AltoRewardsOracleTest is Test {
     // max tick for tick spacing of 200
     int24 constant MAX_TICK = -MIN_TICK;
     AltoToken altoToken;
-    RewardsOracle rewardsOracle;
+    AltoRewardsOracle rewardsOracle;
     address constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     IUniswapV3Factory constant UNISWAP_V3_FACTORY = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
     address constant ENDPOINTV2 = 0x1a44076050125825900e736c501f859c50fE728c;
@@ -35,7 +39,8 @@ contract AltoRewardsOracleTest is Test {
     uint256 altoAmountInPool = 10_000_000 ether;
     uint24 constant POOL_FEE = 10000;
     bytes32 description = "Alto Rewards Oracle";
-    uint32 twapPeriod = 1 weeks;
+    uint32 twapPeriod = 1 hours;
+    uint256 priceUpdateCooldownPeriod = 1 weeks;
     // keeping chainlink stale period to be high value because uniswap twap is 1 weeks
     // we need to forward block.timestamp to get twap price of 1 weeks while we lastUpdatedAt won't be updated in chainlink feed
     uint32 stalePeriod = 8 weeks;
@@ -103,7 +108,7 @@ contract AltoRewardsOracleTest is Test {
         uint8[] memory _circuitChainIsMultiplied = new uint8[](1);
         _circuitChainIsMultiplied[0] = 1;
 
-        IRewardsOracle.RewardsOracleInitParams memory initParams = IRewardsOracle.RewardsOracleInitParams({
+        AltoRewardsOracleInitParams memory initParams = AltoRewardsOracleInitParams({
             addressInAndOutUni: addressInAndOutUni,
             circuitUniswap: _circuitUniswap,
             circuitUniIsMultiplied: _circuitUniIsMultiplied,
@@ -114,52 +119,57 @@ contract AltoRewardsOracleTest is Test {
             circuitChainIsMultiplied: _circuitChainIsMultiplied,
             owner: OWNER,
             stalePeriod: stalePeriod,
-            initialPrice: initialPrice,
-            description: description
+            description: description,
+            priceUpdateCooldownPeriod: priceUpdateCooldownPeriod
         });
 
-        rewardsOracle = new RewardsOracle(initParams);
+        rewardsOracle = new AltoRewardsOracle(initParams);
 
         vm.stopPrank();
     }
 
     function testDeploymentSuccess() public view {
-        assertEq(rewardsOracle.owner(), OWNER, "Invalid owner in RewardsOracle");
-        assertEq(rewardsOracle.description(), description, "Invalid description in RewardsOracle");
-        assertEq(rewardsOracle.lastUpdateTimestamp(), 0, "Invalid lastUpdateTimestamp in RewardsOracle");
-        assertEq(rewardsOracle.IN_BASE(), 10 ** 18, "Invalid inBase in RewardsOracle");
-        assertEq(rewardsOracle.OUT_BASE(), 10 ** 18, "Invalid outBase in RewardsOracle");
-        assertEq(rewardsOracle.UNI_FINAL_CURRENCY(), 1, "Invalid uniFinalCurrency in RewardsOracle");
-        assertEq(rewardsOracle.stalePeriod(), stalePeriod, "Invalid stalePeriod in RewardsOracle");
-        assertEq(rewardsOracle.twapPeriod(), twapPeriod, "Invalid twapPeriod in RewardsOracle");
-        assertEq(rewardsOracle.INITIAL_PRICE(), initialPrice, "Invalid initialPrice in RewardsOracle");
-        assertEq(rewardsOracle.cachedPrice(), 0, "Invalid cachedPrice in RewardsOracle");
-        assertEq(rewardsOracle.lastUpdateTimestamp(), 0, "Invalid lastUpdateTimestamp in RewardsOracle");
+        assertEq(rewardsOracle.owner(), OWNER, "Invalid owner in AltoRewardsOracle");
+        assertEq(rewardsOracle.description(), description, "Invalid description in AltoRewardsOracle");
+        assertEq(rewardsOracle.IN_BASE(), 10 ** 18, "Invalid inBase in AltoRewardsOracle");
+        assertEq(rewardsOracle.OUT_BASE(), 10 ** 18, "Invalid outBase in AltoRewardsOracle");
+        assertEq(rewardsOracle.UNI_FINAL_CURRENCY(), 1, "Invalid uniFinalCurrency in AltoRewardsOracle");
+        assertEq(rewardsOracle.stalePeriod(), stalePeriod, "Invalid stalePeriod in AltoRewardsOracle");
+        assertEq(rewardsOracle.twapPeriod(), twapPeriod, "Invalid twapPeriod in AltoRewardsOracle");
+        assertEq(rewardsOracle.cachedPrice(), 0, "Invalid cachedPrice in AltoRewardsOracle");
+        assertEq(rewardsOracle.lastPriceUpdateTimestamp(), 0, "Invalid lastPriceUpdateTimestamp in AltoRewardsOracle");
+        assertEq(
+            rewardsOracle.priceUpdateCooldownPeriod(),
+            priceUpdateCooldownPeriod,
+            "Invalid priceUpdateCooldownPeriod in AltoRewardsOracle"
+        );
     }
 
     modifier whenInitiated() {
         vm.startPrank(OWNER);
-        rewardsOracle.startTwapPeriod();
+        rewardsOracle.startTwapPeriod(initialPrice);
         vm.stopPrank();
         _;
     }
 
     function testGetPriceWhenNotInitiated() public {
         // reverts when twap period is not started
-        vm.expectRevert(abi.encodeWithSelector(IRewardsOracle.NotInitiated.selector));
+        vm.expectRevert(abi.encodeWithSelector(IAltoRewardsOracleErrors.AltoRewardsOracleNotInitiated.selector));
         rewardsOracle.getPrice();
     }
 
     function testGetPriceWhenInitiated() public whenInitiated {
         uint256 price = rewardsOracle.getPrice();
-        assertEq(price, initialPrice, "Invalid price from RewardsOracle");
+        assertEq(price, initialPrice, "Invalid price from AltoRewardsOracle");
     }
 
     function testStartTwapPeriodRevertsWhenInitiated() public whenInitiated {
         // reverts when twap period is already started
         vm.startPrank(OWNER);
-        vm.expectRevert(abi.encodeWithSelector(IRewardsOracle.AlreadyStartedTwapPeriod.selector));
-        rewardsOracle.startTwapPeriod();
+        vm.expectRevert(
+            abi.encodeWithSelector(IAltoRewardsOracleErrors.AltoRewardsOracleAlreadyStartedTwapPeriod.selector)
+        );
+        rewardsOracle.startTwapPeriod(initialPrice);
         vm.stopPrank();
     }
 
@@ -168,140 +178,157 @@ contract AltoRewardsOracleTest is Test {
         address user = makeAddr("User");
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, user));
         vm.startPrank(user);
-        rewardsOracle.startTwapPeriod();
+        rewardsOracle.startTwapPeriod(initialPrice);
         vm.stopPrank();
 
         vm.startPrank(OWNER);
-        rewardsOracle.startTwapPeriod();
+        rewardsOracle.startTwapPeriod(initialPrice);
         vm.stopPrank();
-        assertEq(rewardsOracle.lastUpdateTimestamp(), block.timestamp, "Invalid lastUpdateTimestamp in RewardsOracle");
+        assertEq(
+            rewardsOracle.lastPriceUpdateTimestamp(),
+            block.timestamp,
+            "Invalid lastPriceUpdateTimestamp in AltoRewardsOracle"
+        );
         assertEq(rewardsOracle.cachedPrice(), initialPrice, "Invalid cachedPrice in RewardsOracle");
     }
 
     function testUpdatePriceRevertsWhenNotInitiated() public {
         // updatePrice reverts when twap period is not started
         // this is to prevent fetching price before twap period is passed after uniswap pool is created
-        vm.expectRevert(abi.encodeWithSelector(IRewardsOracle.NotInitiated.selector));
+        vm.expectRevert(abi.encodeWithSelector(IAltoRewardsOracleErrors.AltoRewardsOracleNotInitiated.selector));
         rewardsOracle.updatePrice();
     }
 
     function testUpdatePriceCorrectness() public whenInitiated {
         // updating price before twap period is passed reverts
-        vm.expectRevert(abi.encodeWithSelector(IRewardsOracle.TooEarlyToUpdatePrice.selector));
+        vm.expectRevert(
+            abi.encodeWithSelector(IAltoRewardsOracleErrors.AltoRewardsOracleTooEarlyToUpdatePrice.selector)
+        );
         rewardsOracle.updatePrice();
 
-        assertEq(rewardsOracle.getPrice(), initialPrice, "Invalid price from RewardsOracle");
-        assertEq(initialPrice, rewardsOracle.cachedPrice(), "Invalid price from RewardsOracle");
+        assertEq(rewardsOracle.getPrice(), initialPrice, "Invalid price from AltoRewardsOracle");
+        assertEq(initialPrice, rewardsOracle.cachedPrice(), "Invalid price from AltoRewardsOracle");
 
         // updating price after twap period is successful and updates the price based on the uniswap twap period
-        vm.warp(block.timestamp + twapPeriod);
+        vm.warp(block.timestamp + rewardsOracle.priceUpdateCooldownPeriod());
         vm.expectEmit(true, true, true, false);
-        emit IRewardsOracle.PriceUpdated(block.timestamp, initialPrice, initialPrice);
+        emit IAltoRewardsOracleEvents.PriceUpdated(block.timestamp, initialPrice, initialPrice);
         rewardsOracle.updatePrice();
 
-        assertApproxEqAbs(rewardsOracle.getPrice(), initialPrice, 1e5, "Invalid price from RewardsOracle");
-        assertEq(rewardsOracle.lastUpdateTimestamp(), block.timestamp, "Invalid lastUpdateTimestamp in RewardsOracle");
+        assertApproxEqAbs(rewardsOracle.getPrice(), initialPrice, 1e5, "Invalid price from AltoRewardsOracle");
+        assertEq(
+            rewardsOracle.lastPriceUpdateTimestamp(),
+            block.timestamp,
+            "Invalid lastPriceUpdateTimestamp in AltoRewardsOracle"
+        );
         assertApproxEqAbs(rewardsOracle.cachedPrice(), initialPrice, 1e5, "Invalid cachedPrice in RewardsOracle");
         assertEq(
-            rewardsOracle.getPrice(), rewardsOracle.cachedPrice(), "RewardsOracle price and cachedPrice should be equal"
+            rewardsOracle.getPrice(),
+            rewardsOracle.cachedPrice(),
+            "AltoRewardsOracle price and cachedPrice should be equal"
         );
 
         // updating price before twap period is passed reverts
-        vm.expectRevert(abi.encodeWithSelector(IRewardsOracle.TooEarlyToUpdatePrice.selector));
+        vm.expectRevert(
+            abi.encodeWithSelector(IAltoRewardsOracleErrors.AltoRewardsOracleTooEarlyToUpdatePrice.selector)
+        );
         rewardsOracle.updatePrice();
     }
 
     function testGetPriceWhenPriceDecreases() public whenInitiated {
         // This scenario covers the case where twap price initially at timestamp T is initialPrice
         // at timestamp t1 = T, twap period is initiated with initialPrice
-        // at timestamp t2 =(T + twapPeriod / 4), swap occurs from Alto to WETH
-        // at timestamp t3 =(T + twapPeriod / 2), another swap occurs from Alto to WETH
-        // at timestamp t4 = (T + twapPeriod), price is updated to the new price. new price should be less than initialPrice due to swap
-        // at timestamp t4 = (T + twapPeriod + twapPeriod / 2), price queried should be the same as price at t4 as it's not updated in between
-        assertEq(rewardsOracle.getPrice(), initialPrice, "Invalid price from RewardsOracle");
+        // at timestamp t2 =(T + priceUpdateCooldownPeriod - twapPeriod), swap occurs from Alto to WETH
+        // at timestamp t3 =(T + priceUpdateCooldownPeriod - twapPeriod / 2), another swap occurs from Alto to WETH
+        // at timestamp t4 = (T + priceUpdateCooldownPeriod), price is updated to the new price. new price should be less than initialPrice due to swap
+        // at timestamp t4 = (T + priceUpdateCooldownPeriod + twapPeriod / 2), price queried should be the same as price at t4 as it's not updated in between
+        assertEq(rewardsOracle.getPrice(), initialPrice, "Invalid price from AltoRewardsOracle");
         assertEq(
             rewardsOracle.getPrice(),
-            rewardsOracle.INITIAL_PRICE(),
-            "RewardsOracle price and initialPrice should be equal"
+            rewardsOracle.cachedPrice(),
+            "AltoRewardsOracle price and initialPrice should be equal"
         );
-        vm.warp(block.timestamp + twapPeriod / 4);
+        vm.warp(block.timestamp + rewardsOracle.priceUpdateCooldownPeriod() - twapPeriod);
         uint256 amountIn = 2_000_000 ether;
         // swapping from Alto to WETH
         _swapOnUniswap(address(altoToken), WETH, amountIn);
         _swapOnUniswap(address(altoToken), WETH, amountIn);
 
-        vm.warp(block.timestamp + twapPeriod / 4);
+        // forward twapPeriod/2
+        vm.warp(block.timestamp + twapPeriod / 2);
         // swapping from Alto to WETH
         _swapOnUniswap(address(altoToken), WETH, amountIn);
         _swapOnUniswap(address(altoToken), WETH, amountIn);
 
+        // forward twapPeriod/2
         vm.warp(block.timestamp + twapPeriod / 2);
 
-        // updating price after twap period is successful and updates the price based on the uniswap twap period
+        // updating price after priceUpdateCooldownPeriod is successful and updates the price based on the uniswap twap period
         // it will reduce the price due to earlier swaps from Alto to WETH
         rewardsOracle.updatePrice();
 
         uint256 priceAfterUpdate = rewardsOracle.getPrice();
         console2.log("priceAfterUpdate due to swap is", priceAfterUpdate);
         assertLt(priceAfterUpdate, initialPrice, "Price should decrease due to swap from Alto to WETH");
-        assertEq(priceAfterUpdate, rewardsOracle.cachedPrice(), "Invalid cachedPrice in RewardsOracle");
+        assertEq(priceAfterUpdate, rewardsOracle.cachedPrice(), "Invalid cachedPrice in AltoRewardsOracle");
 
         // price should be the same as price after update because it's not updated in between
         vm.warp(block.timestamp + twapPeriod / 2);
-        assertEq(rewardsOracle.getPrice(), priceAfterUpdate, "Invalid price from RewardsOracle");
+        assertEq(rewardsOracle.getPrice(), priceAfterUpdate, "Invalid price from AltoRewardsOracle");
     }
 
     function testGetPriceWhenPriceIncreases() public whenInitiated {
         // This scenario covers the case where twap price initially at timestamp T is initialPrice
-        // at timestamp t1 = T, twap period is initiated with initialPrice
-        // at timestamp t2 =(T + twapPeriod / 4), swap occurs from WETH to Alto
-        // at timestamp t3 =(T + twapPeriod / 2), another swap occurs from WETH to Alto
-        // at timestamp t4 = (T + twapPeriod), price is updated to the new price. new price should be more than initialPrice due to swap
-        // at timestamp t5 = (T + twapPeriod + twapPeriod / 2), price queried should be the same as price at t4 as it's not updated in between
-        assertEq(rewardsOracle.getPrice(), initialPrice, "Invalid price from RewardsOracle");
+        // at timestamp t1 = T, price is initiated with initialPrice
+        // at timestamp t2 =(T + priceUpdateCooldownPeriod - twapPeriod), swap occurs from WETH to Alto
+        // at timestamp t3 =(T + priceUpdateCooldownPeriod - twapPeriod / 2), another swap occurs from WETH to Alto
+        // at timestamp t4 = (T + priceUpdateCooldownPeriod), price is updated to the new price. new price should be more than initialPrice due to swap
+        // at timestamp t5 = (T + priceUpdateCooldownPeriod + twapPeriod / 2), price queried should be the same as price at t4 as it's not updated in between
+        assertEq(rewardsOracle.getPrice(), initialPrice, "Invalid price from AltoRewardsOracle");
         assertEq(
             rewardsOracle.getPrice(),
-            rewardsOracle.INITIAL_PRICE(),
-            "RewardsOracle price and initialPrice should be equal"
+            rewardsOracle.cachedPrice(),
+            "AltoRewardsOracle price and initialPrice should be equal"
         );
-        vm.warp(block.timestamp + twapPeriod / 4);
+        vm.warp(block.timestamp + rewardsOracle.priceUpdateCooldownPeriod() - twapPeriod);
 
         uint256 amountIn = 10 ether;
         // swapping from WETH to Alto
         _swapOnUniswap(WETH, address(altoToken), amountIn);
 
-        vm.warp(block.timestamp + twapPeriod / 4);
+        vm.warp(block.timestamp + twapPeriod / 2);
         // swapping from WETH to Alto
         _swapOnUniswap(WETH, address(altoToken), amountIn);
 
         vm.warp(block.timestamp + twapPeriod / 2);
 
-        // updating price after twap period is successful and updates the price based on the uniswap twap period
+        // updating price after priceUpdateCooldownPeriod is successful and updates the price based on the uniswap twap period
         // it will increase the price due to earlier swaps from WETH to Alto
         rewardsOracle.updatePrice();
 
         uint256 priceAfterUpdate = rewardsOracle.getPrice();
         console2.log("priceAfterUpdate due to swap is", priceAfterUpdate);
         assertGt(priceAfterUpdate, initialPrice, "Price should increase due to swap from WETH to Alto");
-        assertEq(priceAfterUpdate, rewardsOracle.cachedPrice(), "Invalid cachedPrice in RewardsOracle");
+        assertEq(priceAfterUpdate, rewardsOracle.cachedPrice(), "Invalid cachedPrice in AltoRewardsOracle");
 
         vm.warp(block.timestamp + twapPeriod / 2);
         // price should be the same as price after update because it's not updated in between
-        assertEq(rewardsOracle.getPrice(), priceAfterUpdate, "Invalid price from RewardsOracle");
+        assertEq(rewardsOracle.getPrice(), priceAfterUpdate, "Invalid price from AltoRewardsOracle");
     }
 
     function testGetPriceAfterFluctuations() public whenInitiated {
         // This scenario covers the case where twap price initially at timestamp T is initialPrice
         // at timestamp t1 = T, twap period is initiated with initialPrice
-        // at timestamp t1 =T, swap occurs from Alto to WETH with output amount of X weth
-        // at timestamp t2 =T, swap occurs from X amount ofWETH to Alto
-        // at timestamp t3 = (T + twapPeriod / 2), swap occurs from WETH to Alto with output of Y Alto
-        // at timestamp t4 = (T + twapPeriod / 2), swap occurs from Y amount of Alto to WETH with output of Z WETH
-        // at timestamp t5 = (T + twapPeriod), price is updated to the new price. new price should be almost equal to price at T
+        // at timestamp t1 =T + priceUpdateCooldownPeriod, swap occurs from Alto to WETH with output amount of X weth
+        // at timestamp t2 =T + priceUpdateCooldownPeriod, swap occurs from X amount ofWETH to Alto
+        // at timestamp t3 = (T + priceUpdateCooldownPeriod - twapPeriod), swap occurs from WETH to Alto with output of Y Alto
+        // at timestamp t4 = (T + priceUpdateCooldownPeriod - twapPeriod / 2), swap occurs from Y amount of Alto to WETH with output of Z WETH
+        // at timestamp t5 = (T + priceUpdateCooldownPeriod), price is updated to the new price. new price should be almost equal to price at T
         // old price will be initialPrice set during deployment
         uint256 oldPrice = rewardsOracle.getPrice();
         uint256 amountOutOfWeth;
         {
+            vm.warp(block.timestamp + rewardsOracle.priceUpdateCooldownPeriod() - twapPeriod);
             // swap from Alto to WETH and back to Alto
             uint256 amountIn = 1_000_000 ether;
             // swap from Alto to WETH
@@ -335,19 +362,19 @@ contract AltoRewardsOracleTest is Test {
 
     function testGetPriceReturnsCachedPriceWhenNotUpdated() public whenInitiated {
         // price should be the same as initialPrice set during deployment
-        assertEq(rewardsOracle.getPrice(), initialPrice, "Invalid price from RewardsOracle");
+        assertEq(rewardsOracle.getPrice(), initialPrice, "Invalid price from AltoRewardsOracle");
 
-        vm.warp(block.timestamp + twapPeriod + 1);
+        vm.warp(block.timestamp + rewardsOracle.priceUpdateCooldownPeriod() + 1);
         // updating price after twap period is successful and updates the price based on the uniswap twap period
         // it will update the price based on the uniswap twap period
         rewardsOracle.updatePrice();
         uint256 priceAfterUpdate = rewardsOracle.getPrice();
-        assertEq(priceAfterUpdate, rewardsOracle.cachedPrice(), "Invalid price from RewardsOracle");
-        assertApproxEqAbs(priceAfterUpdate, initialPrice, 1e5, "Invalid price from RewardsOracle");
+        assertEq(priceAfterUpdate, rewardsOracle.cachedPrice(), "Invalid price from AltoRewardsOracle");
+        assertApproxEqAbs(priceAfterUpdate, initialPrice, 1e5, "Invalid price from AltoRewardsOracle");
 
         // price should be the same as cached price as it has not been updated in between
-        vm.warp(block.timestamp + 2 * twapPeriod);
-        assertEq(rewardsOracle.getPrice(), priceAfterUpdate, "Invalid price from RewardsOracle");
+        vm.warp(block.timestamp + 2 * rewardsOracle.priceUpdateCooldownPeriod());
+        assertEq(rewardsOracle.getPrice(), priceAfterUpdate, "Invalid price from AltoRewardsOracle");
     }
 
     function testOwnerCanUpdateOwner() public {
@@ -358,30 +385,48 @@ contract AltoRewardsOracleTest is Test {
         vm.startPrank(newOwner);
         rewardsOracle.acceptOwnership();
         vm.stopPrank();
-        assertEq(rewardsOracle.owner(), newOwner, "Invalid owner in RewardsOracle");
+        assertEq(rewardsOracle.owner(), newOwner, "Invalid owner in AltoRewardsOracle");
     }
 
     function testOwnerCanUpdateStalePeriod() public {
         vm.startPrank(OWNER);
         rewardsOracle.changeStalePeriod(15 hours);
         vm.stopPrank();
-        assertEq(rewardsOracle.stalePeriod(), 15 hours, "Invalid stalePeriod in RewardsOracle");
+        assertEq(rewardsOracle.stalePeriod(), 15 hours, "Invalid stalePeriod in AltoRewardsOracle");
     }
 
     function testOwnerCanUpdateTwapPeriod() public {
         vm.startPrank(OWNER);
         rewardsOracle.changeTwapPeriod(45 minutes);
         vm.stopPrank();
-        assertEq(rewardsOracle.twapPeriod(), 45 minutes, "Invalid twapPeriod in RewardsOracle");
+        assertEq(rewardsOracle.twapPeriod(), 45 minutes, "Invalid twapPeriod in AltoRewardsOracle");
     }
 
     function testChainlinkStalePeriodRevert() public whenInitiated {
         vm.startPrank(OWNER);
         rewardsOracle.changeStalePeriod(1 hours);
         vm.stopPrank();
-        vm.warp(block.timestamp + twapPeriod);
-        vm.expectRevert(abi.encodeWithSelector(ChainlinkUtils.InvalidChainlinkRate.selector));
+        vm.warp(block.timestamp + rewardsOracle.priceUpdateCooldownPeriod());
+        vm.expectRevert(abi.encodeWithSelector(ChainlinkUtils.ChainlinkUtilsInvalidRate.selector));
         rewardsOracle.updatePrice();
+    }
+
+    function testOwnerCanUpdatePriceUpdateCooldownPeriod() public {
+        vm.startPrank(OWNER);
+        vm.expectEmit(false, false, false, true);
+        emit IAltoRewardsOracleEvents.PriceUpdateCooldownPeriodUpdated(
+            rewardsOracle.priceUpdateCooldownPeriod(), 1 hours
+        );
+        rewardsOracle.updatePriceUpdateCooldownPeriod(1 hours);
+        vm.stopPrank();
+        assertEq(
+            rewardsOracle.priceUpdateCooldownPeriod(), 1 hours, "Invalid priceUpdateCooldownPeriod in AltoRewardsOracle"
+        );
+
+        vm.startPrank(makeAddr("User"));
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, makeAddr("User")));
+        rewardsOracle.updatePriceUpdateCooldownPeriod(1 hours);
+        vm.stopPrank();
     }
 
     function _swapOnUniswap(address tokenIn, address tokenOut, uint256 amountIn) public returns (uint256) {

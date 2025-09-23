@@ -15,8 +15,7 @@ abstract contract ModuleUniswapMulti is UniswapUtils {
     /// @notice Whether the rate obtained with each pool should be multiplied or divided to the current amount
     uint8[] public circuitUniIsMultiplied;
 
-    error UniswapCircuitLengthZero();
-    error UniswapInvalidInput();
+    error ModuleUniswapMultiInvalidInput();
 
     /// @notice Constructor for an oracle using multiple Uniswap pool
     /// @param _circuitUniswap Path of the Uniswap pools
@@ -29,12 +28,18 @@ abstract contract ModuleUniswapMulti is UniswapUtils {
         uint32 _twapPeriod,
         uint16 observationLength
     ) {
-        if (_twapPeriod == 0) revert UniswapInvalidTwapPeriod();
+        if (_twapPeriod == 0) {
+            revert UniswapUtilsInvalidTwapPeriod();
+        }
+
         uint256 circuitUniLength = _circuitUniswap.length;
-        if (circuitUniLength == 0) revert UniswapCircuitLengthZero();
-        if (circuitUniLength != _circuitUniIsMultiplied.length) revert UniswapInvalidInput();
+
+        if (circuitUniLength == 0 || circuitUniLength != _circuitUniIsMultiplied.length) {
+            revert ModuleUniswapMultiInvalidInput();
+        }
 
         twapPeriod = _twapPeriod;
+        emit UniswapUtilsTwapPeriodUpdated(twapPeriod, _twapPeriod);
 
         circuitUniswap = _circuitUniswap;
         circuitUniIsMultiplied = _circuitUniIsMultiplied;

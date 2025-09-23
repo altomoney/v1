@@ -3,8 +3,7 @@ pragma solidity ^0.8.22;
 
 import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import {IUniswapV3Factory} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
-import {IRewardsOracle} from "@alto/oracles/interfaces/IRewardsOracle.sol";
-import {RewardsOracle} from "@alto/oracles/RewardsOracle.sol";
+import {AltoRewardsOracle} from "@alto/oracles/AltoRewardsOracle.sol";
 import {console2} from "forge-std/console2.sol";
 import {Test} from "forge-std/Test.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -12,6 +11,7 @@ import {AltoToken} from "@alto/tokens/AltoToken.sol";
 import {ISwapRouter} from "@alto-test/oracles/interfaces/ISwapRouter.sol";
 import {ERC20MockMintable} from "@alto-test/helpers/ERC20MockMintable.sol";
 import {AggregatorV3Interface} from "@alto/oracles/utils/ChainlinkUtils.sol";
+import {AltoRewardsOracleInitParams} from "@alto/oracles/interfaces/IAltoRewardsOracle.sol";
 
 // TxType that occured in the pool
 enum TxType {
@@ -40,8 +40,9 @@ contract SimulationRewardsOracle is Test {
     ISwapRouter constant SWAP_ROUTER = ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
     IUniswapV3Pool TAP_WETH_POOL;
     address OWNER = makeAddr("Alto-multisig");
-    RewardsOracle rewardsOracle;
-    uint32 constant TWAP_PERIOD = 1 weeks;
+    AltoRewardsOracle rewardsOracle;
+    uint256 constant PRICE_UPDATE_COOLDOWN_PERIOD = 1 weeks;
+    uint32 constant TWAP_PERIOD = 1 hours;
     uint32 constant STALE_PERIOD = 36 hours;
     uint256 constant INITIAL_PRICE = 150000000;
     bytes32 description = "TAP-USD Rewards Oracle";
@@ -164,7 +165,7 @@ contract SimulationRewardsOracle is Test {
             uint8[] memory _circuitChainIsMultiplied = new uint8[](1);
             _circuitChainIsMultiplied[0] = 1;
 
-            IRewardsOracle.RewardsOracleInitParams memory initParams = IRewardsOracle.RewardsOracleInitParams({
+            AltoRewardsOracleInitParams memory initParams = AltoRewardsOracleInitParams({
                 addressInAndOutUni: addressInAndOutUni,
                 circuitUniswap: _circuitUniswap,
                 circuitUniIsMultiplied: _circuitUniIsMultiplied,
@@ -175,8 +176,8 @@ contract SimulationRewardsOracle is Test {
                 circuitChainIsMultiplied: _circuitChainIsMultiplied,
                 owner: OWNER,
                 stalePeriod: STALE_PERIOD,
-                initialPrice: INITIAL_PRICE,
-                description: description
+                description: description,
+                priceUpdateCooldownPeriod: PRICE_UPDATE_COOLDOWN_PERIOD
             });
 
             // mock the chainlink decimals call to return 8
@@ -185,9 +186,9 @@ contract SimulationRewardsOracle is Test {
             );
 
             // deploys the rewards oracle and starts the twap period
-            rewardsOracle = new RewardsOracle(initParams);
+            rewardsOracle = new AltoRewardsOracle(initParams);
             vm.prank(OWNER);
-            rewardsOracle.startTwapPeriod();
+            rewardsOracle.startTwapPeriod(INITIAL_PRICE);
         }
     }
 
