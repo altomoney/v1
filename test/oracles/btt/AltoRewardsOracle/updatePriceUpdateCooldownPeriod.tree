@@ -1,0 +1,12 @@
+AltoRewardsOracle::updatePriceUpdateCooldownPeriod()
+├── when caller is not owner
+│   └── it should revert with OwnableUnauthorizedAccount
+└── when caller is owner
+    ├── when new cooldown period is zero
+    │   ├── it should set priceUpdateCooldownPeriod to zero
+    │   └── it should emit PriceUpdateCooldownPeriodUpdated event with old and new values
+    ├── when new cooldown period is same as current
+    │   ├── it should revert with AltoRewardsOracleInvalidInput
+    └── when new cooldown period is different from current
+        ├── it should update priceUpdateCooldownPeriod to new value
+        └── it should emit PriceUpdateCooldownPeriodUpdated event with old and new values
