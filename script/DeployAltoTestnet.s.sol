@@ -230,7 +230,7 @@ contract DeployAltoTestnetScript is Script {
     function _extractContractABI(string memory contractName, string memory outputDir) internal {
         try vm.getCode(contractName) returns (bytes memory) {
             string memory artifactPath = string.concat("./out/", contractName, ".sol/", contractName, ".json");
-            string memory fileName = string.concat(outputDir, "/", contractName, ".abi.json");
+            string memory fileName = string.concat(outputDir, "/", contractName, ".json");
 
             // Use jq command to extract just the ABI field from the artifact JSON
             string[] memory inputs = new string[](3);

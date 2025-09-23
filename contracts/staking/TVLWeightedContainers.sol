@@ -247,6 +247,10 @@ abstract contract TVLWeightedContainers is ITVLWeightedContainersStaticTypes {
         view
         returns (Container storage, uint24)
     {
+        if (!_isContainerActive(containerId)) {
+            return (containerById[containerId], containerById[containerId].currentDurationEpochs);
+        }
+
         uint24 currentDurationEpochsNext =
             _getNextDurationEpochsForContainer(epochIdToProcess, containerId, _getTotalTvlForEpoch(epochIdToProcess));
         return (containerById[containerId], currentDurationEpochsNext);

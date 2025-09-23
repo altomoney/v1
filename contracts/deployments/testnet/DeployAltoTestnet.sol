@@ -103,12 +103,11 @@ library DeployAltoTestnet {
         internal
         returns (AltoTestnetInput memory)
     {
-        address altoMulticall = address(new AltoMulticallTestnet());
+        input.contracts.altoMulticall = address(new AltoMulticallTestnet());
         address[] memory ownerAddresses = getMulticallOwnerAddresses();
         for (uint256 i = 0; i < ownerAddresses.length; i++) {
-            AltoMulticallTestnet(payable(altoMulticall)).setOwner(ownerAddresses[i], true);
+            AltoMulticallTestnet(payable(input.contracts.altoMulticall)).setOwner(ownerAddresses[i], true);
         }
-        input.contracts.altoMulticall = address(new AltoMulticallTestnet());
         return input;
     }
 
