@@ -29,9 +29,9 @@ struct ChainlinkNode {
     // @notice The stale period for the Chainlink circuit
     uint32 stalePeriod;
     // @notice The number of decimals of the in-currency
-    uint256 inDecimals;
+    uint8 inDecimals;
     // @notice The number of decimals of the out-currency
-    uint256 outDecimals;
+    uint8 outDecimals;
 }
 
 /// @notice The node for the Redstone oracle
@@ -43,9 +43,25 @@ struct RedstoneNode {
     // @notice The stale period for the Redstone circuit
     uint32 stalePeriod;
     // @notice The number of decimals of the in-currency
-    uint256 inDecimals;
+    uint8 inDecimals;
     // @notice The number of decimals of the out-currency
-    uint256 outDecimals;
+    uint8 outDecimals;
+}
+
+/// @notice The node for the combination of Chainlink and Redstone oracle
+/// @dev this node is used when the oracle needs combination of weighted average of chainlink and redstone prices
+/// @dev it also has a max allowed deviation between the chainlink and redstone prices
+struct ChainlinkRedstoneNode {
+    /// @notice The Chainlink node
+    ChainlinkNode chainlinkNode;
+    /// @notice The Redstone node
+    RedstoneNode redstoneNode;
+    /// @notice The maximum allowed deviation between the chainlink and redstone prices defined in WAD(1e18 = 100%)
+    uint256 maxAllowedDeviationWad;
+    /// @notice The weight of the chainlink price in WAD(1e18 = 100%)
+    uint256 chainlinkWeightWad;
+    /// @notice The weight of the redstone price in WAD(1e18 = 100%)
+    uint256 redstoneWeightWad;
 }
 
 /// @notice The node for the Uniswap oracle
