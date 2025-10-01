@@ -2,6 +2,7 @@
 pragma solidity ^0.8.7;
 
 import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
+import {ERC4626RatioNode} from "@alto/oracles/interfaces/IModuleNode.sol";
 
 /// @title Module ERC4626 Ratio
 /// @author Pearl Labs
@@ -14,20 +15,17 @@ contract ModuleERC4626Ratio {
 
     /// @notice Return the current capped ratio
     /// @param latestRatio The latest ratio of the ERC4626 vault
-    /// @param _initialRatio The initial ratio of the ERC4626 vault
-    /// @param _initialTimestamp The initial timestamp of the ERC4626 vault when the initial ratio was set
-    /// @param _maxYearlyGrowthRatioWad The maximum yearly growth ratio of the ERC4626 vault defined in wad. (1e18 = 100%)
+    /// @param _erc4626RatioNode The ERC4626 ratio node configuration
     /// @return The current ratio. If the ratio is greater than the maximum allowed ratio, the maximum allowed ratio is returned.
-    function readLatestRatio(
-        uint256 latestRatio,
-        uint256 _initialRatio,
-        uint256 _initialTimestamp,
-        uint256 _maxYearlyGrowthRatioWad
-    ) external view returns (uint256) {
+    function readLatestRatio(uint256 latestRatio, ERC4626RatioNode memory _erc4626RatioNode)
+        external
+        view
+        returns (uint256)
+    {
         uint256 currentRatio = latestRatio;
         if (currentRatio == 0) return 0;
 
-        uint256 maxRatio = _computeMaxRatio(_initialRatio, _initialTimestamp, _maxYearlyGrowthRatioWad);
+        uint256 maxRatio = _computeMaxRatio(_erc4626RatioNode);
 
         if (currentRatio > maxRatio) {
             return maxRatio;
@@ -37,37 +35,25 @@ contract ModuleERC4626Ratio {
     }
 
     /// @notice Computes allowed max ratio growth given initial data and elapsed time
-    /// @param _initialRatio The initial ratio of the ERC4626 vault
-    /// @param _initialTimestamp The initial timestamp of the ERC4626 vault when the initial ratio was set
-    /// @param _maxYearlyGrowthRatioWad The maximum yearly growth ratio of the ERC4626 vault defined in wad. (1e18 = 100%)
+    /// @param _erc4626RatioNode The ERC4626 ratio node configuration
     /// @return The maximum allowed ratio
-    function _computeMaxRatio(uint256 _initialRatio, uint256 _initialTimestamp, uint256 _maxYearlyGrowthRatioWad)
-        internal
-        view
-        returns (uint256)
-    {
-        uint256 timePassed = block.timestamp - _initialTimestamp;
-        uint256 maxGrowthPerYear = _initialRatio * _maxYearlyGrowthRatioWad;
+    function _computeMaxRatio(ERC4626RatioNode memory _erc4626RatioNode) internal view returns (uint256) {
+        uint256 timePassed = block.timestamp - _erc4626RatioNode.initialTimestamp;
+        uint256 maxGrowthPerYear = _erc4626RatioNode.initialRatio * _erc4626RatioNode.maxYearlyGrowthRatioWad;
         uint256 maxAllowedGrowthRatio = maxGrowthPerYear * timePassed / MATH_PRECISION / SECONDS_PER_YEAR;
-        return _initialRatio + maxAllowedGrowthRatio;
+        return _erc4626RatioNode.initialRatio + maxAllowedGrowthRatio;
     }
 
     /// @notice Validates the parameters set for ratio snapshot and growth limits during initialization or updates
-    /// @param _initialRatio The initial ratio of the ERC4626 vault
-    /// @param _initialTimestamp The initial timestamp of the ERC4626 vault when the initial ratio was set
-    /// @param _maxYearlyGrowthRatioWad The maximum yearly growth ratio of the ERC4626 vault defined in wad. (1e18 = 100%)
-    function _validateERC4626RatioParams(
-        uint256 _initialRatio,
-        uint256 _initialTimestamp,
-        uint256 _maxYearlyGrowthRatioWad
-    ) internal view {
-        if (_initialRatio == 0) {
+    /// @param _erc4626RatioNode The ERC4626 ratio node configuration
+    function _validateERC4626RatioParams(ERC4626RatioNode memory _erc4626RatioNode) internal view {
+        if (_erc4626RatioNode.initialRatio == 0) {
             revert ModuleERC4626RatioInvalidInput();
         }
-        if (_initialTimestamp > block.timestamp) {
+        if (_erc4626RatioNode.initialTimestamp > block.timestamp) {
             revert ModuleERC4626RatioInvalidInput();
         }
-        if (_maxYearlyGrowthRatioWad == 0) {
+        if (_erc4626RatioNode.maxYearlyGrowthRatioWad == 0) {
             revert ModuleERC4626RatioInvalidInput();
         }
     }
