@@ -5,106 +5,120 @@ import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step
 import {ModuleChainlink} from "@alto/oracles/lending/modules/ModuleChainlink.sol";
 import {ModuleRedstone} from "@alto/oracles/lending/modules/ModuleRedstone.sol";
 import {IOracle, ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
-import {OracleNode, ChainlinkNode, RedstoneNode, OracleType} from "@alto/oracles/interfaces/IAltoLendingOracle.sol";
-import {IAltoWethLendingOracleErrors} from "@alto/oracles/interfaces/IAltoLendingOracle.sol";
+import {
+    IAltoWethLendingOracleStaticTypes,
+    IAltoWethLendingOracleBase
+} from "@alto/oracles/interfaces/IAltoWethLendingOracle.sol";
+import {IAltoWethLendingOracleErrors} from "@alto/oracles/interfaces/IAltoWethLendingOracle.sol";
 import {MATH_PRECISION, FixedPointMath} from "@alto/utils/FixedPointMath.sol";
+import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
+import {ChainlinkRedstoneNode, ChainlinkNode, RedstoneNode} from "@alto/oracles/interfaces/IModuleNode.sol";
+import {OracleValidation} from "@alto/oracles/lending/libraries/OracleValidation.sol";
 
-contract AltoWethLendingOracle is Ownable2Step, ModuleChainlink, ModuleRedstone, IOracle {
-    uint256 public chainlinkWeight;
-    uint256 public redstoneWeight;
-    uint256 public maxAllowedDeviation;
-    OracleNode[] public oracleNodes;
+/// @title AltoWethLendingOracle
+/// @author Pearl Labs
+/// @notice Oracle contract that is used to get the price of WETH in USD
+/// @dev Uses Chainlink and Redstone to get the price of WETH in USD from ETH/USD feed and combines them using a weighted average
 
-    constructor(
-        address _owner,
-        uint256 _chainlinkWeight,
-        uint256 _redstoneWeight,
-        uint256 _maxAllowedDeviation,
-        OracleNode[] memory _oracleNodes
-    ) Ownable(_owner) {
-        if (_chainlinkWeight + _redstoneWeight != MATH_PRECISION) {
-            revert IAltoWethLendingOracleErrors.AltoWethLendingOracleInvalidInput();
+contract AltoWethLendingOracle is Ownable2Step, ModuleChainlink, ModuleRedstone, IAltoWethLendingOracleStaticTypes {
+    /// @inheritdoc IAltoWethLendingOracleStaticTypes
+    ChainlinkRedstoneNode public chainlinkRedstoneNode;
+
+    /// @notice Constructor
+    /// @param _owner The owner of the contract
+    /// @param _chainlinkRedstoneNode The chainlink and redstone node configuration
+    constructor(address _owner, ChainlinkRedstoneNode memory _chainlinkRedstoneNode) Ownable(_owner) {
+        if (_chainlinkRedstoneNode.chainlinkWeightWad + _chainlinkRedstoneNode.redstoneWeightWad != MATH_PRECISION) {
+            revert AltoWethLendingOracleInvalidInput();
         }
-        if (_maxAllowedDeviation == 0 || _maxAllowedDeviation > MATH_PRECISION) {
-            revert IAltoWethLendingOracleErrors.AltoWethLendingOracleInvalidInput();
+        if (
+            _chainlinkRedstoneNode.maxAllowedDeviationWad == 0
+                || _chainlinkRedstoneNode.maxAllowedDeviationWad > MATH_PRECISION
+        ) {
+            revert AltoWethLendingOracleInvalidInput();
         }
-        if (_oracleNodes.length != 2) {
-            revert IAltoWethLendingOracleErrors.AltoWethLendingOracleInvalidInput();
+        ChainlinkNode memory chainlinkNode = _chainlinkRedstoneNode.chainlinkNode;
+        RedstoneNode memory redstoneNode = _chainlinkRedstoneNode.redstoneNode;
+        // validating the chainlink node config
+        _validateChainlinkParams(chainlinkNode);
+        // validating the redstone node config
+        _validateRedstoneParams(redstoneNode);
+
+        // validates whether the chainlink and redstone node have the same out decimals
+        if (chainlinkNode.outDecimals != redstoneNode.outDecimals) {
+            revert AltoWethLendingOracleInvalidInput();
         }
-        if (_oracleNodes[0].oracleType != OracleType.CHAINLINK || _oracleNodes[1].oracleType != OracleType.REDSTONE) {
-            revert IAltoWethLendingOracleErrors.AltoWethLendingOracleInvalidInput();
-        }
-        chainlinkWeight = _chainlinkWeight;
-        redstoneWeight = _redstoneWeight;
-        maxAllowedDeviation = _maxAllowedDeviation;
-        for (uint256 i = 0; i < _oracleNodes.length; i++) {
-            oracleNodes.push(_oracleNodes[i]);
-        }
+
+        chainlinkRedstoneNode = _chainlinkRedstoneNode;
+        emit SetChainlinkRedstoneNode(
+            ChainlinkRedstoneNode(
+                ChainlinkNode(AggregatorV3Interface(address(0)), 0, 0, 0, 0),
+                RedstoneNode(AggregatorV3Interface(address(0)), 0, 0, 0, 0),
+                0,
+                0,
+                0
+            ),
+            _chainlinkRedstoneNode
+        );
     }
 
+    /// @inheritdoc IAltoWethLendingOracleBase
     function getPrice() external view returns (uint256) {
-        ChainlinkNode memory chainlinkNode = abi.decode(oracleNodes[0].data, (ChainlinkNode));
-        RedstoneNode memory redstoneNode = abi.decode(oracleNodes[1].data, (RedstoneNode));
+        // outDecimals are the same for chainlink and redstone nodes
+        // the chainlink price and redstone price will be in chainlinkNode.outDecimals
+        ChainlinkNode memory chainlinkNode = chainlinkRedstoneNode.chainlinkNode;
+        RedstoneNode memory redstoneNode = chainlinkRedstoneNode.redstoneNode;
 
-        if (
-            chainlinkNode.inDecimals != redstoneNode.inDecimals || chainlinkNode.outDecimals != redstoneNode.outDecimals
-        ) {
-            revert IAltoWethLendingOracleErrors.AltoWethLendingOracleInvalidInput();
-        }
+        uint256 chainlinkPrice = readChainlinkFeed(10 ** chainlinkNode.inDecimals, chainlinkNode);
+        uint256 redstonePrice = readRedstoneFeed(10 ** redstoneNode.inDecimals, redstoneNode);
 
-        uint256 chainlinkPrice = readChainlinkFeed(
-            1e18,
-            chainlinkNode.feed,
-            chainlinkNode.multiplied,
-            chainlinkNode.stalePeriod,
-            chainlinkNode.inDecimals,
-            chainlinkNode.outDecimals
-        );
-        uint256 redstonePrice = readRedstoneFeed(
-            1e18,
-            redstoneNode.feed,
-            redstoneNode.multiplied,
-            redstoneNode.stalePeriod,
-            redstoneNode.inDecimals,
-            redstoneNode.outDecimals
-        );
         uint256 price;
-        if (!_isPriceWithinAllowedDeviation(chainlinkPrice, redstonePrice)) {
-            price = chainlinkPrice;
+        // returns the chainlink price if the price from chainlink and redstone is outside the allowed deviation
+        // otherwise returns the weighted average of the chainlink and redstone prices
+        if (
+            !OracleValidation.isPriceWithinAllowedDeviation(
+                chainlinkPrice, redstonePrice, chainlinkRedstoneNode.maxAllowedDeviationWad
+            )
+        ) {
+            revert AltoWethLendingOracleInvalidPrice();
         } else {
-            price = (chainlinkPrice * chainlinkWeight + redstonePrice * redstoneWeight) / MATH_PRECISION;
+            // calculates the weighted average of the chainlink and redstone prices
+            // the decimals of price will be in chainlinkNode.outDecimals
+            price = (
+                chainlinkPrice * chainlinkRedstoneNode.chainlinkWeightWad
+                    + redstonePrice * chainlinkRedstoneNode.redstoneWeightWad
+            ) / MATH_PRECISION;
         }
-        price = FixedPointMath.divideWithRounding(price, ORACLE_PRICE_PRECISION, 10 ** chainlinkNode.outDecimals, false);
+        // converts the price from chainlinkNode.outDecimals to ORACLE_PRICE_PRECISION
+        price = FixedPointMath.divideWithRounding(
+            price, ORACLE_PRICE_PRECISION, 10 ** chainlinkRedstoneNode.chainlinkNode.outDecimals, false
+        );
         return price;
     }
 
-    function _isPriceWithinAllowedDeviation(uint256 _chainlinkPrice, uint256 _redstonePrice)
-        internal
-        view
-        returns (bool)
-    {
-        uint256 deviation;
-        if (_chainlinkPrice > _redstonePrice) {
-            // using the minimum of two as denominator in deviation so that we don't underestimate the deviation and revert if there isn't enough confidence in price
-            deviation = FixedPointMath.divideWithPrecisionUp(_chainlinkPrice - _redstonePrice, _redstonePrice);
-        } else {
-            deviation = FixedPointMath.divideWithPrecisionUp(_redstonePrice - _chainlinkPrice, _chainlinkPrice);
+    function updateChainlinkRedstoneNode(ChainlinkRedstoneNode memory _chainlinkRedstoneNode) external onlyOwner {
+        if (_chainlinkRedstoneNode.chainlinkWeightWad + _chainlinkRedstoneNode.redstoneWeightWad != MATH_PRECISION) {
+            revert AltoWethLendingOracleInvalidInput();
         }
-        return deviation <= maxAllowedDeviation;
-    }
 
-    function updateWeights(uint256 _chainlinkWeight, uint256 _redstoneWeight) external onlyOwner {
-        if (_chainlinkWeight + _redstoneWeight != MATH_PRECISION) {
-            revert IAltoWethLendingOracleErrors.AltoWethLendingOracleInvalidInput();
+        if (
+            _chainlinkRedstoneNode.maxAllowedDeviationWad == 0
+                || _chainlinkRedstoneNode.maxAllowedDeviationWad > MATH_PRECISION
+        ) {
+            revert AltoWethLendingOracleInvalidInput();
         }
-        chainlinkWeight = _chainlinkWeight;
-        redstoneWeight = _redstoneWeight;
-    }
 
-    function updateMaxAllowedDeviation(uint256 _maxAllowedDeviation) external onlyOwner {
-        if (_maxAllowedDeviation == 0 || _maxAllowedDeviation > MATH_PRECISION) {
-            revert IAltoWethLendingOracleErrors.AltoWethLendingOracleInvalidInput();
+        ChainlinkNode memory chainlinkNode = _chainlinkRedstoneNode.chainlinkNode;
+        RedstoneNode memory redstoneNode = _chainlinkRedstoneNode.redstoneNode;
+
+        _validateChainlinkParams(chainlinkNode);
+        _validateRedstoneParams(redstoneNode);
+
+        if (chainlinkNode.outDecimals != redstoneNode.outDecimals) {
+            revert AltoWethLendingOracleInvalidInput();
         }
-        maxAllowedDeviation = _maxAllowedDeviation;
+
+        emit SetChainlinkRedstoneNode(chainlinkRedstoneNode, _chainlinkRedstoneNode);
+        chainlinkRedstoneNode = _chainlinkRedstoneNode;
     }
 }
