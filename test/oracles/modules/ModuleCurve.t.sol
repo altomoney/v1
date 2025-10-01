@@ -6,6 +6,7 @@ import {console2} from "forge-std/console2.sol";
 import {ModuleCurve} from "@alto/oracles/lending/modules/ModuleCurve.sol";
 import {ICurvePool} from "@alto/oracles/interfaces/ICurvePool.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {CurveNode} from "@alto/oracles/interfaces/IModuleNode.sol";
 
 contract ModuleCurveTest is Test {
     ModuleCurve moduleCurve;
@@ -24,14 +25,15 @@ contract ModuleCurveTest is Test {
     function testGetPricePxEthWeth() public view {
         uint256 pxethQuoteAmount = 10 ** 18;
         uint256 wethAmount = moduleCurve.readCurvePool(
-            pxethQuoteAmount, ICurvePool(PXETH_WETH_CURVE_POOL), 0, 1, 18, 18, 10 minutes, 1 days
+            pxethQuoteAmount, CurveNode(ICurvePool(PXETH_WETH_CURVE_POOL), 0, 1, 18, 18, 10 minutes, 1 days)
         );
         assertGt(wethAmount, 0, "Invalid wethAmount in CurveModule");
         console2.log("price of pxETH/WETH from CurveModule", wethAmount);
         assertApproxEqAbs(wethAmount, 0.994817 * 10 ** 18, 1e12);
 
-        uint256 pxethAmountBack =
-            moduleCurve.readCurvePool(wethAmount, ICurvePool(PXETH_WETH_CURVE_POOL), 0, 0, 18, 18, 10 minutes, 1 days);
+        uint256 pxethAmountBack = moduleCurve.readCurvePool(
+            wethAmount, CurveNode(ICurvePool(PXETH_WETH_CURVE_POOL), 0, 0, 18, 18, 10 minutes, 1 days)
+        );
         assertGt(pxethAmountBack, 0, "Invalid pxethAmountBack in CurveModule");
         console2.log("pxeth amount back", pxethAmountBack);
         assertApproxEqAbs(pxethAmountBack, pxethQuoteAmount, 1e2);
@@ -40,13 +42,14 @@ contract ModuleCurveTest is Test {
     function testGetPricePxEthSteth() public view {
         uint256 pxethQuoteAmount = 10 ** 18;
         uint256 stethAmount = moduleCurve.readCurvePool(
-            pxethQuoteAmount, ICurvePool(PXETH_STETH_CURVE_POOL), 0, 1, 18, 18, 10 minutes, 1 days
+            pxethQuoteAmount, CurveNode(ICurvePool(PXETH_STETH_CURVE_POOL), 0, 1, 18, 18, 10 minutes, 1 days)
         );
         assertGt(stethAmount, 0, "Invalid stethAmount in CurveModule");
         console2.log("price of pxETH/STETH from CurveModule", stethAmount);
         assertApproxEqAbs(stethAmount, 1.004887 * 10 ** 18, 1e12);
-        uint256 pxethAmountBack =
-            moduleCurve.readCurvePool(stethAmount, ICurvePool(PXETH_STETH_CURVE_POOL), 0, 0, 18, 18, 10 minutes, 1 days);
+        uint256 pxethAmountBack = moduleCurve.readCurvePool(
+            stethAmount, CurveNode(ICurvePool(PXETH_STETH_CURVE_POOL), 0, 0, 18, 18, 10 minutes, 1 days)
+        );
         assertGt(pxethAmountBack, 0, "Invalid pxethAmountBack in CurveModule");
         console2.log("pxeth amount back", pxethAmountBack);
         assertApproxEqAbs(pxethAmountBack, pxethQuoteAmount, 1e2);
@@ -56,7 +59,7 @@ contract ModuleCurveTest is Test {
         uint256 pxethQuoteAmount = 10 ** 18;
         vm.expectRevert(abi.encodeWithSelector(ModuleCurve.ModuleCurveInvalidRate.selector));
         moduleCurve.readCurvePool(
-            pxethQuoteAmount, ICurvePool(PXETH_WETH_CURVE_POOL), 0, 1, 18, 18, 10 minutes, 2 hours
+            pxethQuoteAmount, CurveNode(ICurvePool(PXETH_WETH_CURVE_POOL), 0, 1, 18, 18, 10 minutes, 2 hours)
         );
     }
 
@@ -64,7 +67,7 @@ contract ModuleCurveTest is Test {
         uint256 pxethQuoteAmount = 10 ** 18;
         vm.expectRevert(abi.encodeWithSelector(ModuleCurve.ModuleCurveInvalidRate.selector));
         moduleCurve.readCurvePool(
-            pxethQuoteAmount, ICurvePool(PXETH_WETH_CURVE_POOL), 0, 1, 18, 18, 15 minutes, 2 hours
+            pxethQuoteAmount, CurveNode(ICurvePool(PXETH_WETH_CURVE_POOL), 0, 1, 18, 18, 15 minutes, 2 hours)
         );
     }
 }
