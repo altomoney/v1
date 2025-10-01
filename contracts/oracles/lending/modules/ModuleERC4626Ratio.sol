@@ -18,7 +18,7 @@ contract ModuleERC4626Ratio {
     /// @param _erc4626RatioNode The ERC4626 ratio node configuration
     /// @return The current ratio. If the ratio is greater than the maximum allowed ratio, the maximum allowed ratio is returned.
     function readLatestRatio(uint256 latestRatio, ERC4626RatioNode memory _erc4626RatioNode)
-        external
+        public
         view
         returns (uint256)
     {
