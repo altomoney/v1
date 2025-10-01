@@ -5,6 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {console2} from "forge-std/console2.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {ModuleChainlink} from "@alto/oracles/lending/modules/ModuleChainlink.sol";
+import {ChainlinkNode} from "@alto/oracles/interfaces/IModuleNode.sol";
 
 contract ModuleChainlinkTest is Test {
     ModuleChainlink moduleChainlink;
@@ -22,7 +23,7 @@ contract ModuleChainlinkTest is Test {
         uint256 ethQuoteAmount = 10 ** 18;
         // getting the vaule in 8 output decimals
         uint256 usdcAmount = moduleChainlink.readChainlinkFeed(
-            ethQuoteAmount, AggregatorV3Interface(USDC_ETH_PRICE_FEED), 0, 2 days, 18, 6
+            ethQuoteAmount, ChainlinkNode(AggregatorV3Interface(USDC_ETH_PRICE_FEED), 0, 2 days, 18, 6)
         );
         assertGt(usdcAmount, 0, "Invalid usdcAmount in ChainlinkModule");
 
@@ -44,7 +45,7 @@ contract ModuleChainlinkTest is Test {
         uint256 btcQuoteAmount = 10 ** 8;
         // getting the vaule in 8 output decimals
         uint256 usdAmount = moduleChainlink.readChainlinkFeed(
-            btcQuoteAmount, AggregatorV3Interface(BTC_USD_PRICE_FEED), 1, 2 days, 8, 8
+            btcQuoteAmount, ChainlinkNode(AggregatorV3Interface(BTC_USD_PRICE_FEED), 1, 2 days, 8, 8)
         );
         assertGt(usdAmount, 0, "Invalid usdAmount in ChainlinkModule");
 
@@ -63,7 +64,7 @@ contract ModuleChainlinkTest is Test {
         uint256 ethQuoteAmount = 10 ** 18;
         vm.expectRevert(abi.encodeWithSelector(ModuleChainlink.ModuleChainlinkInvalidRate.selector));
         moduleChainlink.readChainlinkFeed(
-            ethQuoteAmount, AggregatorV3Interface(USDC_ETH_PRICE_FEED), 1, 1 minutes, 18, 6
+            ethQuoteAmount, ChainlinkNode(AggregatorV3Interface(USDC_ETH_PRICE_FEED), 1, 1 minutes, 18, 6)
         );
     }
 }
