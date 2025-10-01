@@ -75,3 +75,13 @@ struct CurveNode {
     // @notice The stale period for the Curve pool
     uint32 stalePeriod;
 }
+
+/// @notice The node for the ERC4626 ratio
+struct ERC4626RatioNode {
+    // @notice The initial ratio of the ERC4626 vault
+    uint256 initialRatio;
+    // @notice The initial timestamp of the ERC4626 vault when the initial ratio was set
+    uint256 initialTimestamp;
+    // @notice The maximum yearly growth ratio of the ERC4626 vault defined in wad. (1e18 = 100%)
+    uint256 maxYearlyGrowthRatioWad;
+}
