@@ -223,20 +223,23 @@ contract AltoAdapter is CoreAdapter {
 
     /* REWARDS ACTIONS */
 
-    function rewardsDistributorClaimRewardTokens(
+    function rewardsDistributorClaimRewardTokensWithERC20Transfer(
         IRewardsDistributor rewardsDistributor,
         uint256 totalRewardsForUser,
         bytes32[] calldata proof,
         uint256 rewardsPurchaseAmount,
         uint256 discount,
         address paymentToken,
+        uint256 paymentAmount,
         bool lockPurchasedRewards,
         uint256 maxEpochsToLockFor
     ) external onlyBundler3 {
         // AltoRewardsDistributor's allowance is not reset as it is trusted.
         SafeERC20.forceApprove(IERC20(paymentToken), address(rewardsDistributor), type(uint256).max);
 
-        rewardsDistributor.claimRewardTokens(
+        SafeERC20.safeTransferFrom(IERC20(paymentToken), initiator(), address(this), paymentAmount);
+
+        uint256 amountPaidToDistributor = rewardsDistributor.claimRewardTokens(
             totalRewardsForUser,
             proof,
             rewardsPurchaseAmount,
@@ -246,6 +249,10 @@ contract AltoAdapter is CoreAdapter {
             maxEpochsToLockFor,
             initiator()
         );
+
+        if (paymentAmount - amountPaidToDistributor != 0) {
+            SafeERC20.safeTransfer(IERC20(paymentToken), initiator(), paymentAmount - amountPaidToDistributor);
+        }
     }
 
     /* STAKING ACTIONS */

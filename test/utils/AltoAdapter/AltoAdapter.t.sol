@@ -1117,25 +1117,49 @@ contract AltoAdapterTest is AdapterCommonSetup {
         // Fund user with payment tokens for purchasing rewards
         deal(address(paymentToken), user, 100000 ether);
 
+        uint256 paymentBalanceUserBefore = paymentToken.balanceOf(user);
+        uint256 paymentBalanceRewardsDistributorBefore = paymentToken.balanceOf(address(rewardsDistributor));
+
+        assertEq(paymentBalanceUserBefore, 100000 ether);
+        assertEq(paymentBalanceRewardsDistributorBefore, 0);
+
         // Create a merkle tree for this specific user
         bytes32[] memory proof = _createMerkleProofForUser(user);
 
-        // Transfer payment tokens to adapter first
-        bundle.push(_erc20TransferFrom(address(paymentToken), 100000 ether));
         // Use signature-based authorization
         bundle.push(
             _rewardsDistributorSetAuthorizationWithSig(
                 rewardsDistributor, privateKey, true, 0, false, address(altoAdapter)
             )
         );
+
+        // We don't need to to bundle.push(_erc20TransferFrom(address(paymentToken), 100000 ether));
+        // because we are using rewardsDistributorClaimRewardTokensWithERC20Transfer
+        // which will transfer the exact amount of payment tokens
         bundle.push(
-            _rewardsDistributorClaimRewardTokens(
-                rewardsDistributor, USER_AVAILABLE, proof, amount, BASE_DISCOUNT, address(paymentToken), false, 0
+            _rewardsDistributorClaimRewardTokensWithERC20Transfer(
+                rewardsDistributor,
+                USER_AVAILABLE,
+                proof,
+                amount,
+                BASE_DISCOUNT,
+                address(paymentToken),
+                100000 ether,
+                false,
+                0
             )
         );
 
         vm.prank(user);
         bundler3.multicall(bundle);
+
+        uint256 paymentBalanceUserAfter = paymentToken.balanceOf(user);
+        uint256 paymentBalanceRewardsDistributorAfter = paymentToken.balanceOf(address(rewardsDistributor));
+
+        // Verify the user has received the payment tokens not used for purchasing rewards (100000 ether is burtal overpayment)
+        assertEq(paymentBalanceUserAfter, 100000 ether - paymentBalanceRewardsDistributorAfter);
+        // Verify the rewards distributor has received the payment tokens
+        assertGt(paymentBalanceRewardsDistributorAfter, 0);
 
         // Verify the user received reward tokens
         assertGt(rewardToken.balanceOf(user), 0, "User should have received reward tokens");
@@ -1152,11 +1176,15 @@ contract AltoAdapterTest is AdapterCommonSetup {
         // Fund user with payment tokens for purchasing rewards
         deal(address(paymentToken), user, 100000 ether);
 
+        uint256 paymentBalanceUserBefore = paymentToken.balanceOf(user);
+        uint256 paymentBalanceRewardsDistributorBefore = paymentToken.balanceOf(address(rewardsDistributor));
+
+        assertEq(paymentBalanceUserBefore, 100000 ether);
+        assertEq(paymentBalanceRewardsDistributorBefore, 0);
+
         // Create a merkle tree for this specific user
         bytes32[] memory proof = _createMerkleProofForUser(user);
 
-        // Transfer payment tokens to adapter first
-        bundle.push(_erc20TransferFrom(address(paymentToken), 100000 ether));
         // Use signature-based authorization
         bundle.push(
             _rewardsDistributorSetAuthorizationWithSig(
@@ -1166,14 +1194,31 @@ contract AltoAdapterTest is AdapterCommonSetup {
         bundle.push(
             _stakingSetAuthorizationWithSig(stakingContract, privateKey, true, 0, false, address(rewardsDistributor))
         );
+        // We don't need to to bundle.push(_erc20TransferFrom(address(paymentToken), 100000 ether));
+        // because we are using rewardsDistributorClaimRewardTokensWithERC20Transfer
+        // which will transfer the exact amount of payment tokens
         bundle.push(
-            _rewardsDistributorClaimRewardTokens(
-                rewardsDistributor, USER_AVAILABLE, proof, amount, BASE_DISCOUNT, address(paymentToken), true, 1000
+            _rewardsDistributorClaimRewardTokensWithERC20Transfer(
+                rewardsDistributor,
+                USER_AVAILABLE,
+                proof,
+                amount,
+                BASE_DISCOUNT,
+                address(paymentToken),
+                100000 ether,
+                true,
+                1000
             )
         );
 
         vm.prank(user);
         bundler3.multicall(bundle);
+
+        uint256 paymentBalanceUserAfter = paymentToken.balanceOf(user);
+        uint256 paymentBalanceRewardsDistributorAfter = paymentToken.balanceOf(address(rewardsDistributor));
+
+        assertEq(paymentBalanceUserAfter, 100000 ether - paymentBalanceRewardsDistributorAfter);
+        assertGt(paymentBalanceRewardsDistributorAfter, 0);
 
         // Verify the user has not received reward tokens
         assertEq(rewardToken.balanceOf(user), 0, "User should have received reward tokens");
