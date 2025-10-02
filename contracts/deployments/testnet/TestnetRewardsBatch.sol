@@ -9,8 +9,8 @@ struct TestnetRewardsBatchParams {
     address owner;
     address rewardToken;
     uint256 merkleRootTimelock;
-    address paymentToken;
-    uint256 paymentUsdOraclePrice;
+    address[] paymentTokens;
+    uint256[] paymentUsdOraclePrices;
     uint256 rewardTokenUsdOraclePrice;
     uint256 lockBonusDiscount;
     address stakingContract;
@@ -18,7 +18,7 @@ struct TestnetRewardsBatchParams {
 
 struct TestnetRewardsBatchReport {
     address rewardsDistributor;
-    address paymentOracle;
+    address[] paymentOracles;
     address rewardOracle;
 }
 
@@ -33,15 +33,20 @@ contract TestnetRewardsBatch {
             address(new AltoRewardsDistributor(address(this), _params.merkleRootTimelock, _params.rewardToken))
         );
 
-        report.paymentOracle = address(new OracleTestnet(address(this)));
-        report.rewardOracle = address(new OracleTestnet(address(this)));
-        OracleTestnet(report.paymentOracle).setPrice(_params.paymentUsdOraclePrice);
-        OracleTestnet(report.rewardOracle).setPrice(_params.rewardTokenUsdOraclePrice);
-        OracleTestnet(report.paymentOracle).transferOwnership(_params.owner);
-        OracleTestnet(report.rewardOracle).transferOwnership(_params.owner);
+        report.paymentOracles = new address[](_params.paymentTokens.length);
 
-        // Setup payment token oracle
-        rewardsDistributor.setPaymentToken(_params.paymentToken, report.paymentOracle);
+        for (uint256 i = 0; i < _params.paymentTokens.length; i++) {
+            report.paymentOracles[i] = address(new OracleTestnet(address(this)));
+            OracleTestnet(report.paymentOracles[i]).setPrice(_params.paymentUsdOraclePrices[i]);
+            OracleTestnet(report.paymentOracles[i]).transferOwnership(_params.owner);
+            rewardsDistributor.setPaymentToken(_params.paymentTokens[i], report.paymentOracles[i]);
+        }
+
+        report.rewardOracle = address(new OracleTestnet(address(this)));
+
+        OracleTestnet(report.rewardOracle).setPrice(_params.rewardTokenUsdOraclePrice);
+
+        OracleTestnet(report.rewardOracle).transferOwnership(_params.owner);
 
         // Setup reward token USD oracle
         rewardsDistributor.setRewardTokenUsdOracle(report.rewardOracle);

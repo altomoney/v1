@@ -169,7 +169,8 @@ if command -v jq >/dev/null 2>&1; then
     MINT_MARKET_ORACLE=$(get_address ".contracts.mintMarketBatch.marketOracle")
     
     # Rewards batch addresses
-    PAYMENT_ORACLE=$(get_address ".contracts.rewardsBatch.paymentOracle")
+	# Read paymentOracles array
+	readarray -t PAYMENT_ORACLES < <(jq -r '.contracts.rewardsBatch.paymentOracles[]? // empty' "$ADDRESSES_FILE")
     REWARD_ORACLE=$(get_address ".contracts.rewardsBatch.rewardOracle")
     REWARDS_DISTRIBUTOR=$(get_address ".contracts.rewardsBatch.rewardsDistributor")
     
@@ -204,7 +205,8 @@ else
     MINT_MARKET_ORACLE=$(get_address "mintMarketBatch.marketOracle")
     
     # Rewards batch addresses
-    PAYMENT_ORACLE=$(get_address "rewardsBatch.paymentOracle")
+	# Fallback parse for paymentOracles array
+	PAYMENT_ORACLES=($(sed -n '/"rewardsBatch"/,/}/p' "$ADDRESSES_FILE" | sed -n '/"paymentOracles"/,$p' | sed -n '1,/]/p' | grep -o '0x[0-9a-fA-F]\{40\}'))
     REWARD_ORACLE=$(get_address "rewardsBatch.rewardOracle")
     REWARDS_DISTRIBUTOR=$(get_address "rewardsBatch.rewardsDistributor")
     
@@ -233,7 +235,10 @@ echo "- Mint Market: $MINT_MARKET"
 echo "- Mint Market Implementation: $MINT_MARKET_IMPL"
 echo "- Mint Market IRM: $MINT_MARKET_IRM"
 echo "- Mint Market Oracle: $MINT_MARKET_ORACLE"
-echo "- Payment Oracle: $PAYMENT_ORACLE"
+echo "- Payment Oracles:"
+for addr in "${PAYMENT_ORACLES[@]}"; do
+    echo "  - $addr"
+done
 echo "- Reward Oracle: $REWARD_ORACLE"
 echo "- Rewards Distributor: $REWARDS_DISTRIBUTOR"
 echo "- Staking Contract: $STAKING_CONTRACT"
@@ -255,8 +260,9 @@ echo "🚀 Starting verification process..."
 echo "⏰ This process will take approximately 3-5 minutes due to rate limiting..."
 echo ""
 
-# Initialize progress tracking
-TOTAL_CONTRACTS=21
+# Initialize progress tracking (base excludes payment oracles)
+BASE_CONTRACTS=22
+TOTAL_CONTRACTS=$((BASE_CONTRACTS + ${#PAYMENT_ORACLES[@]}))
 CURRENT_CONTRACT=0
 
 # Function to show progress
@@ -299,8 +305,10 @@ verify_contract "MintMarketOracle" "$MINT_MARKET_ORACLE" "contracts/deployments/
 show_progress
 
 # Verify rewards contracts
-verify_contract "PaymentOracle" "$PAYMENT_ORACLE" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet"
-show_progress
+for addr in "${PAYMENT_ORACLES[@]}"; do
+    verify_contract "PaymentOracle" "$addr" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet"
+    show_progress
+done
 verify_contract "RewardOracle" "$REWARD_ORACLE" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet"
 show_progress
 verify_contract "RewardsDistributor" "$REWARDS_DISTRIBUTOR" "contracts/rewards/AltoRewardsDistributor.sol:AltoRewardsDistributor"

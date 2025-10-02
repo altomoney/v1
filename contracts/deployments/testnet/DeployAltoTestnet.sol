@@ -215,7 +215,7 @@ library DeployAltoTestnet {
                 TestnetStakingBatchParams({
                     owner: params.owner,
                     rewardToken: address(input.tokens.alto),
-                    epochDuration: 15 minutes,
+                    epochDuration: 1 hours,
                     universalRewardsDistributorTimelock: 1 minutes
                 })
             )
@@ -231,15 +231,22 @@ library DeployAltoTestnet {
         internal
         returns (AltoTestnetInput memory)
     {
+        address[] memory paymentTokens = new address[](2);
+        paymentTokens[0] = address(input.tokens.usdc);
+        paymentTokens[1] = address(input.tokens.dusd);
+        uint256[] memory paymentUsdOraclePrices = new uint256[](2);
+        paymentUsdOraclePrices[0] = 1 * USD_ORACLE_PRICE_PRECISION;
+        paymentUsdOraclePrices[1] = 1 * USD_ORACLE_PRICE_PRECISION;
+
         input.contracts.rewardsBatch = (
             new TestnetRewardsBatch(
                 TestnetRewardsBatchParams({
                     owner: params.owner,
                     rewardToken: address(input.tokens.alto),
                     merkleRootTimelock: 1 minutes,
-                    paymentToken: address(input.tokens.usdc),
-                    paymentUsdOraclePrice: 1 * USD_ORACLE_PRICE_PRECISION,
-                    rewardTokenUsdOraclePrice: 1.2 ether * ORACLE_PRICE_PRECISION / 1 ether,
+                    paymentTokens: paymentTokens,
+                    paymentUsdOraclePrices: paymentUsdOraclePrices,
+                    rewardTokenUsdOraclePrice: 1.2 ether * USD_ORACLE_PRICE_PRECISION / 1 ether,
                     lockBonusDiscount: 0.15 ether,
                     stakingContract: input.contracts.stakingBatch.stakingContract
                 })
@@ -298,7 +305,9 @@ library DeployAltoTestnet {
             callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
             allowFailure: false
         });
-        Ownable(input.contracts.rewardsBatch.paymentOracle).transferOwnership(altoMulticall);
+        for (uint256 i = 0; i < input.contracts.rewardsBatch.paymentOracles.length; i++) {
+            Ownable(input.contracts.rewardsBatch.paymentOracles[i]).transferOwnership(altoMulticall);
+        }
         Ownable(input.contracts.rewardsBatch.rewardOracle).transferOwnership(altoMulticall);
 
         Ownable2Step(input.contracts.stakingBatch.stakingContract).transferOwnership(altoMulticall);
