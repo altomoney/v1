@@ -11,7 +11,6 @@ library OracleValidation {
     /// @param price2 The price from second source
     /// @dev this function assumes that price of two sources is in the same decimals
     /// @return True if the price from two sources is within the allowed deviation, false otherwise
-
     function isPriceWithinAllowedDeviation(uint256 price1, uint256 price2, uint256 maxAllowedDeviation)
         internal
         pure
