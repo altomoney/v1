@@ -402,20 +402,21 @@ abstract contract AdapterCommon is Test {
         );
     }
 
-    function _rewardsDistributorClaimRewardTokens(
+    function _rewardsDistributorClaimRewardTokensWithERC20Transfer(
         IRewardsDistributor rewardsDistributor,
         uint256 totalRewardsForUser,
         bytes32[] memory proof,
         uint256 rewardsPurchaseAmount,
         uint256 discount,
         address paymentToken,
+        uint256 paymentAmount,
         bool lockPurchasedRewards,
         uint256 maxEpochsToLockFor
     ) internal view returns (Call memory) {
         return _call(
             altoAdapter,
             abi.encodeCall(
-                AltoAdapter.rewardsDistributorClaimRewardTokens,
+                AltoAdapter.rewardsDistributorClaimRewardTokensWithERC20Transfer,
                 (
                     rewardsDistributor,
                     totalRewardsForUser,
@@ -423,6 +424,7 @@ abstract contract AdapterCommon is Test {
                     rewardsPurchaseAmount,
                     discount,
                     paymentToken,
+                    paymentAmount,
                     lockPurchasedRewards,
                     maxEpochsToLockFor
                 )
