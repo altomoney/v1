@@ -90,7 +90,7 @@ contract DeployAltoTestnetScript is Script {
         rewardsBatchJson =
             vm.serializeAddress("rewardsBatch", "rewardsDistributor", input.contracts.rewardsBatch.rewardsDistributor);
         rewardsBatchJson =
-            vm.serializeAddress("rewardsBatch", "paymentOracle", input.contracts.rewardsBatch.paymentOracle);
+            vm.serializeAddress("rewardsBatch", "paymentOracles", input.contracts.rewardsBatch.paymentOracles);
         rewardsBatchJson =
             vm.serializeAddress("rewardsBatch", "rewardOracle", input.contracts.rewardsBatch.rewardOracle);
 
@@ -171,8 +171,8 @@ contract DeployAltoTestnetScript is Script {
         // Load rewards batch
         loadedInput.contracts.rewardsBatch.rewardsDistributor =
             vm.parseJsonAddress(json, ".contracts.rewardsBatch.rewardsDistributor");
-        loadedInput.contracts.rewardsBatch.paymentOracle =
-            vm.parseJsonAddress(json, ".contracts.rewardsBatch.paymentOracle");
+        loadedInput.contracts.rewardsBatch.paymentOracles =
+            vm.parseJsonAddressArray(json, ".contracts.rewardsBatch.paymentOracles");
         loadedInput.contracts.rewardsBatch.rewardOracle =
             vm.parseJsonAddress(json, ".contracts.rewardsBatch.rewardOracle");
 
