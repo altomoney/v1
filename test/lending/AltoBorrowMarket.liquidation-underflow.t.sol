@@ -168,7 +168,23 @@ contract AltoBorrowMarketLiquidationUnderflowTest is Test {
 
         // Expect arithmetic underflow on `result.repayShares - VIRTUAL_SHARES`
         vm.startPrank(liquidator);
-        vm.expectRevert(stdError.arithmeticError);
+
+        (uint256 liquidatorFee, uint256 protocolFee) = market.calculateLiquidatorAndProtocolFee(borrower2, false);
+
+        vm.expectEmit();
+        emit IMarketEvents.Liquidation(
+            borrower2,
+            address(collateralToken),
+            address(borrowToken),
+            liquidator,
+            10, // liquidated collateral
+            protocolFee,
+            liquidatorFee,
+            1, // repaid borrow
+            1, // repaid borrow shares
+            0,
+            0
+        );
         market.liquidate(borrower2, "");
         vm.stopPrank();
     }

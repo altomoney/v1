@@ -667,12 +667,7 @@ abstract contract AltoBaseMarket is
         result.repayShares = result.repayAmount.convertToSharesDown(totalBorrowed.assets, totalBorrowed.shares);
 
         // Ensure we don't try to repay more shares than the user has which can happen since we are using virtual shares
-        // we check whether substracting 1e6 from the repay shares is still greater than the user's borrow shares
-        // as other values are not valid.
-        if (
-            result.repayShares.toUint128() > _position.borrowShares
-                && result.repayShares - AssetShareConversionMath.VIRTUAL_SHARES < _position.borrowShares
-        ) {
+        if (result.repayShares.toUint128() > _position.borrowShares) {
             result.repayShares = uint256(_position.borrowShares);
         }
 
