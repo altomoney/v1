@@ -20,7 +20,7 @@ import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 
 import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
 import {SwapperSimpleMock} from "@alto/lending/mocks/SwapperSimpleMock.sol";
-import {SwapParams} from "@alto/lending/interfaces/IAltoLeverageSwapper.sol";
+import {SwapParams} from "@alto/lending/leverage/interfaces/IAltoLeverageSwapper.sol";
 import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {UnsafeUpgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {UniversalRewardsDistributorInstance} from "./UniversalRewardsDistributorInstance.sol";

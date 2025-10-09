@@ -7,7 +7,7 @@ import {
     IAltoLeverageSwapper,
     IAltoLeverageSwapperErrors,
     SwapParams
-} from "@alto/lending/interfaces/IAltoLeverageSwapper.sol";
+} from "@alto/lending/leverage/interfaces/IAltoLeverageSwapper.sol";
 import {Position} from "@alto/lending/interfaces/IMarket.sol";
 
 contract OnRemoveCollateralCallbackTest is AltoLeverageBTTTest {

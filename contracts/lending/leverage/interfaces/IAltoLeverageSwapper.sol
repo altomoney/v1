@@ -11,40 +11,25 @@ struct SwapParams {
 interface IAltoLeverageSwapperErrors {
     /// @notice error thrown when the sender is not whitelisted
     error AltoLeverageSwapperSenderNotValid(address sender);
-
     /// @notice error thrown when the input is invalid
     error AltoLeverageSwapperInvalidInput();
-
     /// @notice error thrown when the swap failed
     error AltoLeverageSwapperSwapFailed();
-
     /// @notice error thrown when the minimum expected buyToken balance received is not met
     error AltoLeverageSwapperMinAmountOutNotMet(uint256 minAmountOut, uint256 buyTokenBalanceReceived);
 }
 
 interface IAltoLeverageSwapperEvents {
     /// @notice event emitted when the whitelist is set
-    /// @param contractAddress the address that was whitelisted
-    /// @param isWhitelisted true if the contract is whitelisted, false otherwise
-    event SetWhitelisted(address indexed contractAddress, bool isWhitelisted);
+    event SetWhitelisted(address indexed addr, bool isWhitelisted);
 
     /// @notice event emitted when the swap is executed
-    /// @param sellToken the token that was sold
-    /// @param buyToken the token that was bought
-    /// @param amountIn the amount of sellToken that was sold
-    /// @param amountOut the amount of buyToken that was bought
-    /// @param amountLeftover the amount of sellToken that was leftover
     event Swap(
         address indexed sellToken, address indexed buyToken, uint256 amountIn, uint256 amountOut, uint256 amountLeftover
     );
 }
 
 interface IAltoLeverageSwapper is IAltoLeverageSwapperErrors, IAltoLeverageSwapperEvents {
-    /// @notice returns if an address is whitelisted to call the swap function
-    /// @param _address the address to check
-    /// @return isWhitelisted true if the address is whitelisted, false otherwise
-    function isWhitelisted(address _address) external view returns (bool);
-
     /// @notice sets if an address is whitelisted
     /// @param _address the address to set
     /// @param _isWhitelisted if the address is whitelisted
@@ -61,4 +46,12 @@ interface IAltoLeverageSwapper is IAltoLeverageSwapperErrors, IAltoLeverageSwapp
         external
         payable
         returns (uint256 amountOut);
+
+    /// @notice returns the address of the swap target(0x Allowance holder contract)
+    function SWAP_TARGET() external view returns (address);
+
+    /// @notice returns if an address is whitelisted to call the swap function
+    /// @param _address the address to check
+    /// @return isWhitelisted true if the address is whitelisted, false otherwise
+    function isWhitelisted(address _address) external view returns (bool);
 }
