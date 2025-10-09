@@ -2,7 +2,7 @@
 pragma solidity ^0.8.22;
 
 import {AltoLeverageBTTTest} from "./AltoLeverage.t.sol";
-import {IAltoLeverageSwapper} from "@alto/lending/interfaces/IAltoLeverageSwapper.sol";
+import {IAltoLeverageSwapper} from "@alto/lending/leverage/interfaces/IAltoLeverageSwapper.sol";
 import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
 import {SwapperSimpleMock} from "@alto/lending/mocks/SwapperSimpleMock.sol";
 

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
-import {IAltoLeverageSwapper, SwapParams} from "@alto/lending/interfaces/IAltoLeverageSwapper.sol";
+import {IAltoLeverageSwapper, SwapParams} from "@alto/lending/leverage/interfaces/IAltoLeverageSwapper.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -11,6 +11,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 /// @notice A simple mock for the AltoLeverageSwapper contract.
 /// @dev This contract is used to test the AltoLeverageSwapper contract.
 contract SwapperSimpleMock is IAltoLeverageSwapper, Ownable {
+    address public SWAP_TARGET;
     mapping(address => bool) public isWhitelisted;
 
     uint256 public returnLeftoverTokens;
