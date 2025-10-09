@@ -3,15 +3,14 @@ pragma solidity ^0.8.22;
 
 import {AltoLeverageBTTTest} from "./AltoLeverage.t.sol";
 import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
-import {IAltoLeverageSwapper} from "@alto/lending/interfaces/IAltoLeverageSwapper.sol";
-import {FlashBorrowLeverageData} from "@alto/lending/leverage/AltoLeverage.sol";
+import {IAltoLeverageSwapper, SwapParams} from "@alto/lending/interfaces/IAltoLeverageSwapper.sol";
 import {Position} from "@alto/lending/interfaces/IMarket.sol";
+import {SwapperSimpleMock} from "@alto/lending/mocks/SwapperSimpleMock.sol";
 
 contract OnBorrowCallbackTest is AltoLeverageBTTTest {
     /// @dev it should revert
     function test_RevertGiven_CallerMarketIsNotSupported() external givenMarketIsNotSupported {
-        FlashBorrowLeverageData memory leverageData =
-            FlashBorrowLeverageData({minAmountOut: 1000 ether, swapData: hex""});
+        SwapParams memory leverageData = SwapParams({minAmountOut: 1000 ether, swapData: hex""});
         bytes memory data = abi.encode(leverageData);
 
         // Setup: Alice adds supply and collateral to market
@@ -27,8 +26,7 @@ contract OnBorrowCallbackTest is AltoLeverageBTTTest {
 
     /// @dev it should revert
     function test_RevertWhen_SwapFails() external givenMarketIsSupported {
-        FlashBorrowLeverageData memory leverageData =
-            FlashBorrowLeverageData({minAmountOut: 1000 ether, swapData: hex""});
+        SwapParams memory leverageData = SwapParams({minAmountOut: 1000 ether, swapData: hex""});
         bytes memory data = abi.encode(leverageData);
 
         // Configure swapper to revert on swap
@@ -46,17 +44,17 @@ contract OnBorrowCallbackTest is AltoLeverageBTTTest {
 
     /// @dev it should revert
     function test_RevertWhen_SwapSucceedsButAmountOutIsLessThanMinAmountOut() external givenMarketIsSupported {
-        FlashBorrowLeverageData memory leverageData = FlashBorrowLeverageData({
+        SwapParams memory leverageData = SwapParams({
             minAmountOut: 2000 ether, // Set higher than what swapper returns (1000 ether)
             swapData: hex""
         });
         bytes memory data = abi.encode(leverageData);
 
-        // Configure swapper to return less than minAmountOut
-        vm.mockCall(
+        // Configure swapper to revert due to MinAmountOutNotMet
+        vm.mockCallRevert(
             address(swapper),
             abi.encodeWithSelector(IAltoLeverageSwapper.swap.selector),
-            abi.encode(1000 ether) // Return 1000 ether which is less than minAmountOut (2000 ether)
+            abi.encodeWithSelector(SwapperSimpleMock.MinAmountOutNotMet.selector, 2000 ether, 1000 ether)
         );
 
         // Setup: Alice adds supply and collateral to market
@@ -64,7 +62,7 @@ contract OnBorrowCallbackTest is AltoLeverageBTTTest {
         market.addSupply(10000000000 ether, 0, alice);
         market.addCollateral(1000 ether, alice);
 
-        vm.expectRevert(abi.encodeWithSelector(AltoLeverage.MinAmountNotValid.selector, 2000 ether, 1000 ether));
+        vm.expectRevert(abi.encodeWithSelector(SwapperSimpleMock.MinAmountOutNotMet.selector, 2000 ether, 1000 ether));
         market.borrow(1000 ether, 0, alice, address(leverage), data);
         vm.stopPrank();
     }
@@ -75,8 +73,7 @@ contract OnBorrowCallbackTest is AltoLeverageBTTTest {
         givenMarketIsSupported
     {
         uint256 borrowAmount = 1000 ether;
-        FlashBorrowLeverageData memory leverageData =
-            FlashBorrowLeverageData({minAmountOut: borrowAmount, swapData: hex""});
+        SwapParams memory leverageData = SwapParams({minAmountOut: borrowAmount, swapData: hex""});
         bytes memory data = abi.encode(leverageData);
 
         // Setup: Alice adds supply and collateral to market
@@ -116,8 +113,7 @@ contract OnBorrowCallbackTest is AltoLeverageBTTTest {
         // Configure swapper to leave leftover tokens
         swapper.setLeftoverTokens(leftoverAmount);
 
-        FlashBorrowLeverageData memory leverageData =
-            FlashBorrowLeverageData({minAmountOut: borrowAmount, swapData: hex""});
+        SwapParams memory leverageData = SwapParams({minAmountOut: borrowAmount, swapData: hex""});
         bytes memory data = abi.encode(leverageData);
 
         // Setup: Alice adds supply and collateral to market
@@ -153,8 +149,7 @@ contract OnBorrowCallbackTest is AltoLeverageBTTTest {
         vm.assume(minAmountOut <= borrowAmount); // Ensure minAmountOut is achievable
         vm.assume(minAmountOut > 0); // Avoid zero minAmountOut which might cause issues
 
-        FlashBorrowLeverageData memory leverageData =
-            FlashBorrowLeverageData({minAmountOut: minAmountOut, swapData: hex""});
+        SwapParams memory leverageData = SwapParams({minAmountOut: minAmountOut, swapData: hex""});
         bytes memory data = abi.encode(leverageData);
 
         // Setup: Alice adds supply and collateral to market
@@ -178,7 +173,7 @@ contract OnBorrowCallbackTest is AltoLeverageBTTTest {
 
     /// @dev Test callback with zero amount - this should be caught by the market, not the callback
     function test_RevertWhen_BorrowAmountIsZero() external givenMarketIsSupported {
-        FlashBorrowLeverageData memory leverageData = FlashBorrowLeverageData({minAmountOut: 0, swapData: hex""});
+        SwapParams memory leverageData = SwapParams({minAmountOut: 0, swapData: hex""});
         bytes memory data = abi.encode(leverageData);
 
         // Setup: Alice adds supply and collateral to market

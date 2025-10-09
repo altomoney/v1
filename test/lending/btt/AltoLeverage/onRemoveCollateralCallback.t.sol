@@ -3,9 +3,9 @@ pragma solidity ^0.8.22;
 
 import {AltoLeverageBTTTest} from "./AltoLeverage.t.sol";
 import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
-import {IAltoLeverageSwapper} from "@alto/lending/interfaces/IAltoLeverageSwapper.sol";
-import {FlashRemoveCollateralLeverageData} from "@alto/lending/leverage/AltoLeverage.sol";
+import {IAltoLeverageSwapper, SwapParams} from "@alto/lending/interfaces/IAltoLeverageSwapper.sol";
 import {Position} from "@alto/lending/interfaces/IMarket.sol";
+import {SwapperSimpleMock} from "@alto/lending/mocks/SwapperSimpleMock.sol";
 
 contract OnRemoveCollateralCallbackTest is AltoLeverageBTTTest {
     /// @dev it should revert
@@ -14,8 +14,7 @@ contract OnRemoveCollateralCallbackTest is AltoLeverageBTTTest {
         givenMarketIsNotSupported
         givenUserHasCollateralAndDebt
     {
-        FlashRemoveCollateralLeverageData memory leverageData =
-            FlashRemoveCollateralLeverageData({minAmountOut: 1000 ether, swapData: hex""});
+        SwapParams memory leverageData = SwapParams({minAmountOut: 1000 ether, swapData: hex""});
         bytes memory data = abi.encode(leverageData);
 
         vm.startPrank(alice);
@@ -26,8 +25,7 @@ contract OnRemoveCollateralCallbackTest is AltoLeverageBTTTest {
 
     /// @dev it should revert
     function test_RevertWhen_SwapFails() external givenMarketIsSupported givenUserHasCollateralAndDebt {
-        FlashRemoveCollateralLeverageData memory leverageData =
-            FlashRemoveCollateralLeverageData({minAmountOut: 100 ether, swapData: hex""});
+        SwapParams memory leverageData = SwapParams({minAmountOut: 100 ether, swapData: hex""});
         bytes memory data = abi.encode(leverageData);
 
         // Configure swapper to revert on swap
@@ -45,21 +43,21 @@ contract OnRemoveCollateralCallbackTest is AltoLeverageBTTTest {
         givenMarketIsSupported
         givenUserHasCollateralAndDebt
     {
-        FlashRemoveCollateralLeverageData memory leverageData = FlashRemoveCollateralLeverageData({
+        SwapParams memory leverageData = SwapParams({
             minAmountOut: 2000 ether, // Set higher than what swapper returns (1000 ether)
             swapData: hex""
         });
         bytes memory data = abi.encode(leverageData);
 
-        // Configure swapper to return less than minAmountOut
-        vm.mockCall(
+        // Configure swapper to revert due to MinAmountOutNotMet
+        vm.mockCallRevert(
             address(swapper),
             abi.encodeWithSelector(IAltoLeverageSwapper.swap.selector),
-            abi.encode(100 ether) // Return 100 ether which is less than minAmountOut (2000 ether)
+            abi.encodeWithSelector(SwapperSimpleMock.MinAmountOutNotMet.selector, 2000 ether, 100 ether)
         );
 
         vm.startPrank(alice);
-        vm.expectRevert(abi.encodeWithSelector(AltoLeverage.MinAmountNotValid.selector, 2000 ether, 100 ether));
+        vm.expectRevert(abi.encodeWithSelector(SwapperSimpleMock.MinAmountOutNotMet.selector, 2000 ether, 100 ether));
         market.removeCollateral(100 ether, alice, address(leverage), data);
         vm.stopPrank();
     }
@@ -73,8 +71,7 @@ contract OnRemoveCollateralCallbackTest is AltoLeverageBTTTest {
         uint256 removeAmount = 200 ether;
         uint256 swapOutput = 100 ether; // Less than user's debt
 
-        FlashRemoveCollateralLeverageData memory leverageData =
-            FlashRemoveCollateralLeverageData({minAmountOut: swapOutput, swapData: hex""});
+        SwapParams memory leverageData = SwapParams({minAmountOut: swapOutput, swapData: hex""});
         bytes memory data = abi.encode(leverageData);
 
         Position memory positionBefore = market.position(alice);
@@ -117,8 +114,7 @@ contract OnRemoveCollateralCallbackTest is AltoLeverageBTTTest {
         uint256 removeAmount = 600 ether;
         uint256 swapOutput = 600 ether; // More than user's debt
 
-        FlashRemoveCollateralLeverageData memory leverageData =
-            FlashRemoveCollateralLeverageData({minAmountOut: swapOutput, swapData: hex""});
+        SwapParams memory leverageData = SwapParams({minAmountOut: swapOutput, swapData: hex""});
         bytes memory data = abi.encode(leverageData);
 
         Position memory positionBefore = market.position(alice);
@@ -170,8 +166,7 @@ contract OnRemoveCollateralCallbackTest is AltoLeverageBTTTest {
         // Configure swapper to leave leftovers
         swapper.setLeftoverTokens(leftoverAmount);
 
-        FlashRemoveCollateralLeverageData memory leverageData =
-            FlashRemoveCollateralLeverageData({minAmountOut: swapOutput, swapData: hex""});
+        SwapParams memory leverageData = SwapParams({minAmountOut: swapOutput, swapData: hex""});
         bytes memory data = abi.encode(leverageData);
 
         Position memory positionBefore = market.position(alice);
@@ -224,8 +219,7 @@ contract OnRemoveCollateralCallbackTest is AltoLeverageBTTTest {
         // Configure swapper to leave leftovers
         swapper.setLeftoverTokens(leftoverAmount);
 
-        FlashRemoveCollateralLeverageData memory leverageData =
-            FlashRemoveCollateralLeverageData({minAmountOut: swapOutput, swapData: hex""});
+        SwapParams memory leverageData = SwapParams({minAmountOut: swapOutput, swapData: hex""});
         bytes memory data = abi.encode(leverageData);
 
         Position memory positionBefore = market.position(alice);
@@ -288,8 +282,7 @@ contract OnRemoveCollateralCallbackTest is AltoLeverageBTTTest {
         // User has 1000 ether collateral and 500 ether debt, so we need to keep sufficient collateral
         vm.assume(removeAmount <= 400 ether); // Leave enough collateral to maintain health
 
-        FlashRemoveCollateralLeverageData memory leverageData =
-            FlashRemoveCollateralLeverageData({minAmountOut: minAmountOut, swapData: hex""});
+        SwapParams memory leverageData = SwapParams({minAmountOut: minAmountOut, swapData: hex""});
         bytes memory data = abi.encode(leverageData);
 
         Position memory positionBefore = market.position(alice);
@@ -309,8 +302,7 @@ contract OnRemoveCollateralCallbackTest is AltoLeverageBTTTest {
 
     /// @dev Test callback with zero amount - this should be caught by the market, not the callback
     function test_RevertWhen_RemoveAmountIsZero() external givenMarketIsSupported givenUserHasCollateralAndDebt {
-        FlashRemoveCollateralLeverageData memory leverageData =
-            FlashRemoveCollateralLeverageData({minAmountOut: 0, swapData: hex""});
+        SwapParams memory leverageData = SwapParams({minAmountOut: 0, swapData: hex""});
         bytes memory data = abi.encode(leverageData);
 
         vm.startPrank(alice);

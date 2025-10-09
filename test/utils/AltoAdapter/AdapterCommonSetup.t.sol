@@ -21,7 +21,7 @@ import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 
 import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
 import {SwapperSimpleMock} from "@alto/lending/mocks/SwapperSimpleMock.sol";
-import {FlashBorrowLeverageData} from "@alto/lending/leverage/AltoLeverage.sol";
+import {SwapParams} from "@alto/lending/interfaces/IAltoLeverageSwapper.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {UnsafeUpgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
@@ -268,9 +268,8 @@ abstract contract AdapterCommonSetup is AdapterCommon {
         view
         returns (bytes memory)
     {
-        // Prepare FlashBorrowLeverageData
-        FlashBorrowLeverageData memory leverageData =
-            FlashBorrowLeverageData({minAmountOut: minAmountOut, swapData: swapData});
+        // Prepare SwapParams
+        SwapParams memory leverageData = SwapParams({minAmountOut: minAmountOut, swapData: swapData});
         return abi.encode(leverageData);
     }
 }

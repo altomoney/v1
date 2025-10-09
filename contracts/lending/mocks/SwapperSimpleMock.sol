@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
-import {IAltoLeverageSwapper} from "@alto/lending/interfaces/IAltoLeverageSwapper.sol";
+import {IAltoLeverageSwapper, SwapParams} from "@alto/lending/interfaces/IAltoLeverageSwapper.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -14,6 +14,7 @@ contract SwapperSimpleMock is IAltoLeverageSwapper, Ownable {
     mapping(address => bool) public isWhitelisted;
 
     error SenderNotValid(address sender);
+    error MinAmountOutNotMet(uint256 minAmountOut, uint256 amountOut);
 
     uint256 public returnLeftoverTokens;
 
@@ -27,11 +28,13 @@ contract SwapperSimpleMock is IAltoLeverageSwapper, Ownable {
         returnLeftoverTokens = _returnLeftoverTokens;
     }
 
-    function swap(bytes calldata, address sellToken, address buyToken, uint256 amountIn, uint256 minAmountOut)
+    function swap(bytes calldata swapParams, address sellToken, address buyToken, uint256 amountIn)
         public
         payable
         returns (uint256 amountOut)
     {
+        SwapParams memory params = abi.decode(swapParams, (SwapParams));
+
         if (!isWhitelisted[msg.sender]) {
             revert SenderNotValid(msg.sender);
         }
@@ -45,7 +48,7 @@ contract SwapperSimpleMock is IAltoLeverageSwapper, Ownable {
             returnLeftoverTokens = 0;
         }
 
-        amountOut = minAmountOut;
+        amountOut = params.minAmountOut;
 
         // Transfer the bought tokens to the sender
         /// forge-lint: disable-next-line(erc20-unchecked-transfer)
