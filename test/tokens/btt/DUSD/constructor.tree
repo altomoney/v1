@@ -1,0 +1,13 @@
+DUSD::constructor
+├── when endpoint is zero address
+│   └── it should revert with OFTInvalidEndpoint
+├── when owner is zero address
+│   └── it should revert with OwnableInvalidOwner
+└── when valid parameters are provided
+    ├── it should set the name to "DUSD"
+    ├── it should set the symbol to "DUSD"
+    ├── it should set the endpoint correctly
+    ├── it should set the owner correctly
+    ├── it should initialize flashFeeReceiver to zero address
+    ├── it should initialize flashFee to zero
+    └── it should set owner as pauser with PAUSED_ROLE

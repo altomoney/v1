@@ -9,19 +9,72 @@ import {IMintableERC20} from "@alto/lending/interfaces/IMintableERC20.sol";
  * @notice Interface for the DUSD stablecoin contract
  */
 interface IDUSD is IOFT, IMintableERC20 {
+    /// @notice Thrown when the caller is not authorized to perform the action
     error DUSDNotAuthorized();
 
+    /// @notice Event emitted when the minter status is set
+    /// @param _for The address of the minter
+    /// @param _status The status of the minter
     event SetMinterStatus(address indexed _for, bool _status);
+
+    /// @notice Event emitted when the burner status is set
+    /// @param _for The address of the burner
+    /// @param _status The status of the burner
     event SetBurnerStatus(address indexed _for, bool _status);
 
-    function fees() external view returns (uint256);
-    function flashLoanHelper() external view returns (address);
+    /// @notice Event emitted when the flash fee receiver is set
+    /// @param _oldFeeReceiver The old flash fee receiver
+    /// @param _newFeeReceiver The new flash fee receiver
+    event SetFlashFeeReceiver(address indexed _oldFeeReceiver, address indexed _newFeeReceiver);
+
+    /// @notice Event emitted when the flash fee is set
+    /// @param _oldFee The old flash fee
+    /// @param _newFee The new flash fee
+    event SetFlashFee(uint256 indexed _oldFee, uint256 indexed _newFee);
+
+    /// @notice Returns the flash fee receiver
+    /// @return The flash fee receiver
+    function flashFeeReceiver() external view returns (address);
+
+    /// @notice Returns the flash fee
+    /// @return The flash fee
+    function flashFee() external view returns (uint256);
+
+    /// @notice Returns the allowed minter status for an address
+    /// @param minter The address of the minter
+    /// @return The allowed minter status
     function allowedMinter(address minter) external view returns (bool);
+
+    /// @notice Returns the allowed burner status for an address
+    /// @param burner The address of the burner
+    /// @return The allowed burner status
     function allowedBurner(address burner) external view returns (bool);
 
-    function addFlashloanFee(uint256 _fee) external;
-    function setFlashloanHelper(address _helper) external;
-    function extractFees() external;
+    /// @notice Sets the allowed minter status for an address
+    /// @param _for The address of the minter
+    /// @param _status The status of the minter
     function setMinterStatus(address _for, bool _status) external;
+
+    /// @notice Sets the allowed burner status for an address
+    /// @param _for The address of the burner
+    /// @param _status The status of the burner
     function setBurnerStatus(address _for, bool _status) external;
+
+    /// @notice Sets the flash fee
+    /// @param _flashFee The flash fee
+    function setFlashFee(uint256 _flashFee) external;
+
+    /// @notice Sets the flash fee receiver
+    /// @param _flashFeeReceiver The flash fee receiver
+    function setFlashFeeReceiver(address _flashFeeReceiver) external;
+
+    /// @notice Mints DUSD to an address
+    /// @param _to The address to mint DUSD to
+    /// @param _amount The amount of DUSD to mint
+    function mint(address _to, uint256 _amount) external;
+
+    /// @notice Burns DUSD from an address
+    /// @param _from The address to burn DUSD from
+    /// @param _amount The amount of DUSD to burn
+    function burn(address _from, uint256 _amount) external;
 }

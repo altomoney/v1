@@ -1,0 +1,16 @@
+DUSD::setBurnerStatus
+├── given caller is not owner
+│   └── it should revert with OwnableUnauthorizedAccount
+├── given caller is owner
+│   ├── when setting burner status to true for new address
+│   │   ├── it should set allowedBurner mapping to true
+│   │   └── it should emit SetBurnerStatus event
+│   ├── when setting burner status to false for existing burner
+│   │   ├── it should set allowedBurner mapping to false
+│   │   └── it should emit SetBurnerStatus event
+│   ├── when setting same status (true to true)
+│   │   ├── it should update the mapping
+│   │   └── it should emit SetBurnerStatus event
+│   └── when setting same status (false to false)
+│       ├── it should update the mapping
+│       └── it should emit SetBurnerStatus event

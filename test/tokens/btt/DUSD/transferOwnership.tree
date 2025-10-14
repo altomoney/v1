@@ -1,0 +1,23 @@
+DUSD::transferOwnership
+├── given caller is not owner
+│   └── it should revert with OwnableUnauthorizedAccount
+├── given caller is owner
+│   ├── when newOwner is zero address
+│   │   ├── it should set pendingOwner to zero address
+│   │   └── it should emit OwnershipTransferStarted event with zero address
+│   ├── when newOwner is current owner (self)
+│   │   ├── it should set pendingOwner to current owner
+│   │   └── it should emit OwnershipTransferStarted event
+│   ├── when newOwner is valid address (not zero, not self)
+│   │   ├── it should set pendingOwner to newOwner
+│   │   ├── it should emit OwnershipTransferStarted event
+│   │   └── it should not change current owner
+│   │   ├── new owner should be able to accept ownership
+│   ├── when replacing existing pending owner
+│   │   ├── it should replace previous pendingOwner with new address
+│   │   └── it should emit OwnershipTransferStarted event with new address
+│   │   ├── new owner should be able to accept ownership
+│   └── when newOwner is same as current pendingOwner
+│       ├── it should keep the same pendingOwner
+│       └── it should emit OwnershipTransferStarted event
+│       ├── new owner should be able to accept ownership

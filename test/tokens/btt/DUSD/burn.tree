@@ -1,0 +1,19 @@
+DUSD::burn
+├── given contract is paused
+│   └── it should revert with IsPaused
+├── given caller is not authorized burner
+│   └── it should revert with DUSDNotAuthorized
+├── given caller is authorized burner
+│   ├── when from address is zero address
+│   │   └── it should revert with ERC20InvalidSender
+│   ├── when amount exceeds balance
+│   │   └── it should revert with ERC20InsufficientBalance
+│   ├── when amount is zero
+│   │   └── it should burn zero tokens successfully
+│   ├── when amount is valid and within balance
+│   │   ├── it should burn the specified amount from the account
+│   │   ├── it should decrease total supply by the amount
+│   │   ├── it should decrease account balance by the amount
+│   │   └── it should emit Transfer event from account to zero address
+│   └── when burning entire balance
+│       └── it should burn all tokens and set balance to zero

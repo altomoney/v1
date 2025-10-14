@@ -1,0 +1,17 @@
+DUSD::mint
+├── given contract is paused
+│   └── it should revert with IsPaused
+├── given caller is not authorized minter
+│   └── it should revert with DUSDNotAuthorized
+├── given caller is authorized minter
+│   ├── when to address is zero address
+│   │   └── it should revert with ERC20InvalidReceiver
+│   ├── when amount is zero
+│   │   └── it should mint zero tokens successfully
+│   ├── when amount is valid
+│   │   ├── it should mint the specified amount to the recipient
+│   │   ├── it should increase total supply by the amount
+│   │   ├── it should increase recipient balance by the amount
+│   │   └── it should emit Transfer event from zero address to recipient
+│   └── when minting to contract address
+│       └── it should mint tokens successfully to contract
