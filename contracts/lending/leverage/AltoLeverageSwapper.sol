@@ -13,7 +13,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 contract AltoLeverageSwapper is IAltoLeverageSwapper, Ownable {
     using SafeERC20 for IERC20;
 
-    /// @inheritdoc IAltoLeverageSwapper
+    /// @notice 0x Allowance holder contract
     address public immutable SWAP_TARGET;
 
     /// @inheritdoc IAltoLeverageSwapper
