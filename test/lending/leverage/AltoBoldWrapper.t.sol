@@ -25,8 +25,8 @@ contract AltoBoldWrapperTest is Test {
     }
 
     function testDeploymentSuccess() public view {
-        assertEq(boldWrapper.SBOLD(), SBOLD, "SBOLD address doesn't match");
-        assertEq(boldWrapper.BOLD(), BOLD, "BOLD address doesn't match");
+        assertEq(boldWrapper.WRAPPED_TOKEN(), SBOLD, "Wrapped token address doesn't match with SBOLD");
+        assertEq(boldWrapper.BASE_TOKEN(), BOLD, "Base token address doesn't match with BOLD");
     }
 
     function testWrap() public {

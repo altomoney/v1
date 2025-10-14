@@ -11,7 +11,6 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 /// @notice A simple mock for the AltoLeverageSwapper contract.
 /// @dev This contract is used to test the AltoLeverageSwapper contract.
 contract SwapperSimpleMock is IAltoLeverageSwapper, Ownable {
-    address public SWAP_TARGET;
     mapping(address => bool) public isWhitelisted;
 
     uint256 public returnLeftoverTokens;

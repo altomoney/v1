@@ -47,9 +47,6 @@ interface IAltoLeverageSwapper is IAltoLeverageSwapperErrors, IAltoLeverageSwapp
         payable
         returns (uint256 amountOut);
 
-    /// @notice returns the address of the swap target(0x Allowance holder contract)
-    function SWAP_TARGET() external view returns (address);
-
     /// @notice returns if an address is whitelisted to call the swap function
     /// @param _address the address to check
     /// @return isWhitelisted true if the address is whitelisted, false otherwise

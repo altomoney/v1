@@ -5,7 +5,7 @@ import {IAltoLeverageSwapper, SwapParams} from "@alto/lending/leverage/interface
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {IBoldWrapper} from "@alto/lending/leverage/interfaces/IBoldWrapper.sol";
+import {IWrapper} from "@alto/lending/leverage/interfaces/IWrapper.sol";
 
 /// @title AltoSboldLeverageSwapper
 /// @author Pearl Labs
@@ -14,7 +14,7 @@ import {IBoldWrapper} from "@alto/lending/leverage/interfaces/IBoldWrapper.sol";
 contract AltoSboldLeverageSwapper is IAltoLeverageSwapper, Ownable {
     using SafeERC20 for IERC20;
 
-    /// @inheritdoc IAltoLeverageSwapper
+    /// @notice 0x Allowance holder contract
     address public immutable SWAP_TARGET;
 
     /// @notice the address of the SBOLD token
@@ -26,7 +26,7 @@ contract AltoSboldLeverageSwapper is IAltoLeverageSwapper, Ownable {
     mapping(address => bool) public isWhitelisted;
 
     /// @notice the bold wrapper contract to wrap and unwrap BOLD and SBOLD
-    IBoldWrapper public boldWrapper;
+    IWrapper public boldWrapper;
 
     event SetBoldWrapper(address indexed addr, address indexed boldWrapper);
 
@@ -38,10 +38,10 @@ contract AltoSboldLeverageSwapper is IAltoLeverageSwapper, Ownable {
         SWAP_TARGET = _swapTarget;
 
         emit SetBoldWrapper(address(0), address(_boldWrapper));
-        boldWrapper = IBoldWrapper(_boldWrapper);
+        boldWrapper = IWrapper(_boldWrapper);
 
-        SBOLD = boldWrapper.SBOLD();
-        BOLD = boldWrapper.BOLD();
+        SBOLD = boldWrapper.WRAPPED_TOKEN();
+        BOLD = boldWrapper.BASE_TOKEN();
     }
 
     /// @inheritdoc IAltoLeverageSwapper
@@ -54,7 +54,7 @@ contract AltoSboldLeverageSwapper is IAltoLeverageSwapper, Ownable {
 
     /// @notice sets the bold wrapper contract
     /// @param _boldWrapper the bold wrapper contract
-    function setBoldWrapper(IBoldWrapper _boldWrapper) external onlyOwner {
+    function setBoldWrapper(IWrapper _boldWrapper) external onlyOwner {
         if (address(_boldWrapper) == address(0)) revert AltoLeverageSwapperInvalidInput();
 
         emit SetBoldWrapper(address(boldWrapper), address(_boldWrapper));
