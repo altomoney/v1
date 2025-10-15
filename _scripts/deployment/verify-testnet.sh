@@ -33,11 +33,23 @@ get_address() {
     else
         # Fallback to grep/sed for nested JSON
         case "$path" in
-            *"borrowMarketBatch"*)
-                cat "$ADDRESSES_FILE" | sed -n '/borrowMarketBatch/,/}/p' | grep "${path##*.}" | cut -d'"' -f4
+            *"wethMarketBatch"*)
+                cat "$ADDRESSES_FILE" | sed -n '/wethMarketBatch/,/}/p' | grep "${path##*.}" | cut -d'"' -f4
                 ;;
-            *"mintMarketBatch"*)
-                cat "$ADDRESSES_FILE" | sed -n '/mintMarketBatch/,/}/p' | grep "${path##*.}" | cut -d'"' -f4
+            *"wstethMarketBatch"*)
+                cat "$ADDRESSES_FILE" | sed -n '/wstethMarketBatch/,/}/p' | grep "${path##*.}" | cut -d'"' -f4
+                ;;
+            *"tbtcMarketBatch"*)
+                cat "$ADDRESSES_FILE" | sed -n '/tbtcMarketBatch/,/}/p' | grep "${path##*.}" | cut -d'"' -f4
+                ;;
+            *"sboldMarketBatch"*)
+                cat "$ADDRESSES_FILE" | sed -n '/sboldMarketBatch/,/}/p' | grep "${path##*.}" | cut -d'"' -f4
+                ;;
+            *"rethMarketBatch"*)
+                cat "$ADDRESSES_FILE" | sed -n '/rethMarketBatch/,/}/p' | grep "${path##*.}" | cut -d'"' -f4
+                ;;
+            *"susdeMarketBatch"*)
+                cat "$ADDRESSES_FILE" | sed -n '/susdeMarketBatch/,/}/p' | grep "${path##*.}" | cut -d'"' -f4
                 ;;
             *"rewardsBatch"*)
                 cat "$ADDRESSES_FILE" | sed -n '/rewardsBatch/,/}/p' | grep "${path##*.}" | cut -d'"' -f4
@@ -157,17 +169,43 @@ if command -v jq >/dev/null 2>&1; then
     MULTI_TOKEN_SENDER=$(get_address ".contracts.multiTokenSender")
     
     # Borrow market addresses
-    BORROW_MARKET=$(get_address ".contracts.borrowMarketBatch.market")
-    BORROW_MARKET_IMPL=$(get_address ".contracts.borrowMarketBatch.marketImplementation")
-    BORROW_MARKET_IRM=$(get_address ".contracts.borrowMarketBatch.marketIrm")
-    BORROW_MARKET_ORACLE=$(get_address ".contracts.borrowMarketBatch.marketOracle")
+    ## WETH
+    WETH_MARKET=$(get_address ".contracts.wethMarketBatch.market")
+    WETH_MARKET_IMPL=$(get_address ".contracts.wethMarketBatch.marketImplementation")
+    WETH_MARKET_IRM=$(get_address ".contracts.wethMarketBatch.marketIrm")
+    WETH_MARKET_ORACLE=$(get_address ".contracts.wethMarketBatch.marketOracle")
     
+    ## WSTETH
+    WSTETH_MARKET=$(get_address ".contracts.wstethMarketBatch.market")
+    WSTETH_MARKET_IMPL=$(get_address ".contracts.wstethMarketBatch.marketImplementation")
+    WSTETH_MARKET_IRM=$(get_address ".contracts.wstethMarketBatch.marketIrm")
+    WSTETH_MARKET_ORACLE=$(get_address ".contracts.wstethMarketBatch.marketOracle")
+
+    ## TBTC
+    TBTC_MARKET=$(get_address ".contracts.tbtcMarketBatch.market")
+    TBTC_MARKET_IMPL=$(get_address ".contracts.tbtcMarketBatch.marketImplementation")
+    TBTC_MARKET_IRM=$(get_address ".contracts.tbtcMarketBatch.marketIrm")
+    TBTC_MARKET_ORACLE=$(get_address ".contracts.tbtcMarketBatch.marketOracle")
+
+    ## SBOLD
+    SBOLD_MARKET=$(get_address ".contracts.sboldMarketBatch.market")
+    SBOLD_MARKET_IMPL=$(get_address ".contracts.sboldMarketBatch.marketImplementation")
+    SBOLD_MARKET_IRM=$(get_address ".contracts.sboldMarketBatch.marketIrm")
+    SBOLD_MARKET_ORACLE=$(get_address ".contracts.sboldMarketBatch.marketOracle")
+
+    ## RETH
+    RETH_MARKET=$(get_address ".contracts.rethMarketBatch.market")
+    RETH_MARKET_IMPL=$(get_address ".contracts.rethMarketBatch.marketImplementation")
+    RETH_MARKET_IRM=$(get_address ".contracts.rethMarketBatch.marketIrm")
+    RETH_MARKET_ORACLE=$(get_address ".contracts.rethMarketBatch.marketOracle")
+
     # Mint market addresses
-    MINT_MARKET=$(get_address ".contracts.mintMarketBatch.market")
-    MINT_MARKET_IMPL=$(get_address ".contracts.mintMarketBatch.marketImplementation")
-    MINT_MARKET_IRM=$(get_address ".contracts.mintMarketBatch.marketIrm")
-    MINT_MARKET_ORACLE=$(get_address ".contracts.mintMarketBatch.marketOracle")
-    
+    ## SUSDE
+    SUSDE_MARKET=$(get_address ".contracts.susdeMarketBatch.market")
+    SUSDE_MARKET_IMPL=$(get_address ".contracts.susdeMarketBatch.marketImplementation")
+    SUSDE_MARKET_IRM=$(get_address ".contracts.susdeMarketBatch.marketIrm")
+    SUSDE_MARKET_ORACLE=$(get_address ".contracts.susdeMarketBatch.marketOracle")
+
     # Rewards batch addresses
 	# Read paymentOracles array
 	readarray -t PAYMENT_ORACLES < <(jq -r '.contracts.rewardsBatch.paymentOracles[]? // empty' "$ADDRESSES_FILE")
@@ -183,6 +221,11 @@ if command -v jq >/dev/null 2>&1; then
     USDC_TOKEN=$(get_address ".tokens.usdc")
     DUSD_TOKEN=$(get_address ".tokens.dusd")
     WETH_TOKEN=$(get_address ".tokens.weth")
+    WSTETH_TOKEN=$(get_address ".tokens.wsteth")
+    TBTC_TOKEN=$(get_address ".tokens.tbtc")
+    SBOLD_TOKEN=$(get_address ".tokens.sbold")
+    RETH_TOKEN=$(get_address ".tokens.reth")
+    SUSDE_TOKEN=$(get_address ".tokens.susde")
 else
     # Use fallback grep/sed paths
     ALTO_MULTICALL=$(get_address "altoMulticall")
@@ -193,17 +236,43 @@ else
     MULTI_TOKEN_SENDER=$(get_address "multiTokenSender")
     
     # Borrow market addresses
-    BORROW_MARKET=$(get_address "borrowMarketBatch.market")
-    BORROW_MARKET_IMPL=$(get_address "borrowMarketBatch.marketImplementation")
-    BORROW_MARKET_IRM=$(get_address "borrowMarketBatch.marketIrm")
-    BORROW_MARKET_ORACLE=$(get_address "borrowMarketBatch.marketOracle")
-    
-    # Mint market addresses
-    MINT_MARKET=$(get_address "mintMarketBatch.market")
-    MINT_MARKET_IMPL=$(get_address "mintMarketBatch.marketImplementation")
-    MINT_MARKET_IRM=$(get_address "mintMarketBatch.marketIrm")
-    MINT_MARKET_ORACLE=$(get_address "mintMarketBatch.marketOracle")
-    
+    ## WETH
+    WETH_MARKET=$(get_address "wethMarketBatch.market")
+    WETH_MARKET_IMPL=$(get_address "wethMarketBatch.marketImplementation")
+    WETH_MARKET_IRM=$(get_address "wethMarketBatch.marketIrm")
+    WETH_MARKET_ORACLE=$(get_address "wethMarketBatch.marketOracle")
+
+    ## WSTETH
+    WSTETH_MARKET=$(get_address "wstethMarketBatch.market")
+    WSTETH_MARKET_IMPL=$(get_address "wstethMarketBatch.marketImplementation")
+    WSTETH_MARKET_IRM=$(get_address "wstethMarketBatch.marketIrm")
+    WSTETH_MARKET_ORACLE=$(get_address "wstethMarketBatch.marketOracle")
+
+    ## TBTC
+    TBTC_MARKET=$(get_address "tbtcMarketBatch.market")
+    TBTC_MARKET_IMPL=$(get_address "tbtcMarketBatch.marketImplementation")
+    TBTC_MARKET_IRM=$(get_address "tbtcMarketBatch.marketIrm")
+    TBTC_MARKET_ORACLE=$(get_address "tbtcMarketBatch.marketOracle")
+
+    ## SBOLD
+    SBOLD_MARKET=$(get_address "sboldMarketBatch.market")
+    SBOLD_MARKET_IMPL=$(get_address "sboldMarketBatch.marketImplementation")
+    SBOLD_MARKET_IRM=$(get_address "sboldMarketBatch.marketIrm")
+    SBOLD_MARKET_ORACLE=$(get_address "sboldMarketBatch.marketOracle")
+
+    ## RETH
+    RETH_MARKET=$(get_address "rethMarketBatch.market")
+    RETH_MARKET_IMPL=$(get_address "rethMarketBatch.marketImplementation")
+    RETH_MARKET_IRM=$(get_address "rethMarketBatch.marketIrm")
+    RETH_MARKET_ORACLE=$(get_address "rethMarketBatch.marketOracle")
+
+    # Mint Market Addresses
+    ## SUSDE
+    SUSDE_MARKET=$(get_address "susdeMarketBatch.market")
+    SUSDE_MARKET_IMPL=$(get_address "susdeMarketBatch.marketImplementation")
+    SUSDE_MARKET_IRM=$(get_address "susdeMarketBatch.marketIrm")
+    SUSDE_MARKET_ORACLE=$(get_address "susdeMarketBatch.marketOracle")
+
     # Rewards batch addresses
 	# Fallback parse for paymentOracles array
 	PAYMENT_ORACLES=($(sed -n '/"rewardsBatch"/,/}/p' "$ADDRESSES_FILE" | sed -n '/"paymentOracles"/,$p' | sed -n '1,/]/p' | grep -o '0x[0-9a-fA-F]\{40\}'))
@@ -219,6 +288,11 @@ else
     USDC_TOKEN=$(get_address "tokens.usdc")
     DUSD_TOKEN=$(get_address "tokens.dusd")
     WETH_TOKEN=$(get_address "tokens.weth")
+    WSTETH_TOKEN=$(get_address "tokens.wsteth")
+    TBTC_TOKEN=$(get_address "tokens.tbtc")
+    SBOLD_TOKEN=$(get_address "tokens.sbold")
+    RETH_TOKEN=$(get_address "tokens.reth")
+    SUSDE_TOKEN=$(get_address "tokens.susde")
 fi
 
 echo "📋 Contract verification plan:"
@@ -227,14 +301,30 @@ echo "- Alto Leverage: $ALTO_LEVERAGE"
 echo "- Bundler3: $BUNDLER3"
 echo "- Mock Swapper: $MOCK_SWAPPER"
 echo "- Multi Token Sender: $MULTI_TOKEN_SENDER"
-echo "- Borrow Market: $BORROW_MARKET"
-echo "- Borrow Market Implementation: $BORROW_MARKET_IMPL"
-echo "- Borrow Market IRM: $BORROW_MARKET_IRM"
-echo "- Borrow Market Oracle: $BORROW_MARKET_ORACLE"
-echo "- Mint Market: $MINT_MARKET"
-echo "- Mint Market Implementation: $MINT_MARKET_IMPL"
-echo "- Mint Market IRM: $MINT_MARKET_IRM"
-echo "- Mint Market Oracle: $MINT_MARKET_ORACLE"
+echo "- WETH Market: $WETH_MARKET"
+echo "- WETH Market Implementation: $WETH_MARKET_IMPL"
+echo "- WETH Market IRM: $WETH_MARKET_IRM"
+echo "- WETH Market Oracle: $WETH_MARKET_ORACLE"
+echo "- WSTETH Market: $WSTETH_MARKET"
+echo "- WSTETH Market Implementation: $WSTETH_MARKET_IMPL"
+echo "- WSTETH Market IRM: $WSTETH_MARKET_IRM"
+echo "- WSTETH Market Oracle: $WSTETH_MARKET_ORACLE"
+echo "- TBTC Market: $TBTC_MARKET"
+echo "- TBTC Market Implementation: $TBTC_MARKET_IMPL"
+echo "- TBTC Market IRM: $TBTC_MARKET_IRM"
+echo "- TBTC Market Oracle: $TBTC_MARKET_ORACLE"
+echo "- SBOLD Market: $SBOLD_MARKET"
+echo "- SBOLD Market Implementation: $SBOLD_MARKET_IMPL"
+echo "- SBOLD Market IRM: $SBOLD_MARKET_IRM"
+echo "- SBOLD Market Oracle: $SBOLD_MARKET_ORACLE"
+echo "- RETH Market: $RETH_MARKET"
+echo "- RETH Market Implementation: $RETH_MARKET_IMPL"
+echo "- RETH Market IRM: $RETH_MARKET_IRM"
+echo "- RETH Market Oracle: $RETH_MARKET_ORACLE"
+echo "- SUSDE Market: $SUSDE_MARKET"
+echo "- SUSDE Market Implementation: $SUSDE_MARKET_IMPL"
+echo "- SUSDE Market IRM: $SUSDE_MARKET_IRM"
+echo "- SUSDE Market Oracle: $SUSDE_MARKET_ORACLE"
 echo "- Payment Oracles:"
 for addr in "${PAYMENT_ORACLES[@]}"; do
     echo "  - $addr"
@@ -247,6 +337,11 @@ echo "- Alto Token: $ALTO_TOKEN"
 echo "- USDC Token: $USDC_TOKEN"
 echo "- DUSD Token: $DUSD_TOKEN"
 echo "- WETH Token: $WETH_TOKEN"
+echo "- WSTETH Token: $WSTETH_TOKEN"
+echo "- TBTC Token: $TBTC_TOKEN"
+echo "- SBOLD Token: $SBOLD_TOKEN"
+echo "- RETH Token: $RETH_TOKEN"
+echo "- SUSDE Token: $SUSDE_TOKEN"
 echo ""
 
 read -p "Do you want to proceed with verification? (y/N): " -n 1 -r
@@ -261,7 +356,7 @@ echo "⏰ This process will take approximately 3-5 minutes due to rate limiting.
 echo ""
 
 # Initialize progress tracking (base excludes payment oracles)
-BASE_CONTRACTS=22
+BASE_CONTRACTS=43
 TOTAL_CONTRACTS=$((BASE_CONTRACTS + ${#PAYMENT_ORACLES[@]}))
 CURRENT_CONTRACT=0
 
@@ -286,23 +381,61 @@ verify_contract "MultiTokenSender" "$MULTI_TOKEN_SENDER" "contracts/deployments/
 show_progress
 
 # Verify market contracts (these might be proxy contracts, so we verify the implementation)
-verify_contract "BorrowMarket" "$BORROW_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
+verify_contract "WethMarket" "$WETH_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
 show_progress
-verify_contract "BorrowMarketImplementation" "$BORROW_MARKET_IMPL" "contracts/lending/AltoBorrowMarket.sol:AltoBorrowMarket"
+verify_contract "WethMarketImplementation" "$WETH_MARKET_IMPL" "contracts/lending/AltoBorrowMarket.sol:AltoBorrowMarket"
 show_progress
-verify_contract "BorrowMarketIRM" "$BORROW_MARKET_IRM" "contracts/lending/irm/AdaptiveCurveIrm.sol:AdaptiveCurveIrm"
+verify_contract "WethMarketIRM" "$WETH_MARKET_IRM" "contracts/lending/irm/AdaptiveCurveIrm.sol:AdaptiveCurveIrm"
 show_progress
-verify_contract "BorrowMarketOracle" "$BORROW_MARKET_ORACLE" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet"
+verify_contract "WethMarketOracle" "$WETH_MARKET_ORACLE" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet"
 show_progress
 
-verify_contract "MintMarket" "$MINT_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
+verify_contract "WstethMarket" "$WSTETH_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
 show_progress
-verify_contract "MintMarketImplementation" "$MINT_MARKET_IMPL" "contracts/lending/AltoMintMarket.sol:AltoMintMarket"
+verify_contract "WstethMarketImplementation" "$WSTETH_MARKET_IMPL" "contracts/lending/AltoBorrowMarket.sol:AltoBorrowMarket"
 show_progress
-verify_contract "MintMarketIRM" "$MINT_MARKET_IRM" "contracts/lending/irm/AdaptiveCurveIrm.sol:AdaptiveCurveIrm"
+verify_contract "WstethMarketIRM" "$WSTETH_MARKET_IRM" "contracts/lending/irm/AdaptiveCurveIrm.sol:AdaptiveCurveIrm"
 show_progress
-verify_contract "MintMarketOracle" "$MINT_MARKET_ORACLE" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet"
+verify_contract "WstethMarketOracle" "$WSTETH_MARKET_ORACLE" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet"
 show_progress
+
+verify_contract "TbtcMarket" "$TBTC_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
+show_progress
+verify_contract "TbtcMarketImplementation" "$TBTC_MARKET_IMPL" "contracts/lending/AltoBorrowMarket.sol:AltoBorrowMarket"
+show_progress
+verify_contract "TbtcMarketIRM" "$TBTC_MARKET_IRM" "contracts/lending/irm/AdaptiveCurveIrm.sol:AdaptiveCurveIrm"
+show_progress
+verify_contract "TbtcMarketOracle" "$TBTC_MARKET_ORACLE" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet"
+show_progress
+
+
+verify_contract "SboldMarket" "$SBOLD_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
+show_progress
+verify_contract "SboldMarketImplementation" "$SBOLD_MARKET_IMPL" "contracts/lending/AltoBorrowMarket.sol:AltoBorrowMarket"
+show_progress
+verify_contract "SboldMarketIRM" "$SBOLD_MARKET_IRM" "contracts/lending/irm/AdaptiveCurveIrm.sol:AdaptiveCurveIrm"
+show_progress
+verify_contract "SboldMarketOracle" "$SBOLD_MARKET_ORACLE" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet"
+show_progress
+
+verify_contract "RethMarket" "$RETH_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
+show_progress
+verify_contract "RethMarketImplementation" "$RETH_MARKET_IMPL" "contracts/lending/AltoBorrowMarket.sol:AltoBorrowMarket"
+show_progress
+verify_contract "RethMarketIRM" "$RETH_MARKET_IRM" "contracts/lending/irm/AdaptiveCurveIrm.sol:AdaptiveCurveIrm"
+show_progress
+verify_contract "RethMarketOracle" "$RETH_MARKET_ORACLE" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet"
+show_progress
+
+verify_contract "SusdeMarket" "$SUSDE_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
+show_progress
+verify_contract "SusdeMarketImplementation" "$SUSDE_MARKET_IMPL" "contracts/lending/AltoMintMarket.sol:AltoMintMarket"
+show_progress
+verify_contract "SusdeMarketIRM" "$SUSDE_MARKET_IRM" "contracts/lending/irm/AdaptiveCurveIrm.sol:AdaptiveCurveIrm"
+show_progress
+verify_contract "SusdeMarketOracle" "$SUSDE_MARKET_ORACLE" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet"
+show_progress
+
 
 # Verify rewards contracts
 for addr in "${PAYMENT_ORACLES[@]}"; do
@@ -328,6 +461,16 @@ show_progress
 verify_contract "DUSDToken" "$DUSD_TOKEN" "contracts/tokens/DUSD.sol:DUSD"
 show_progress
 verify_contract "WETHToken" "$WETH_TOKEN" "contracts/deployments/testnet/contracts/ERC20Testnet.sol:ERC20Testnet"
+show_progress
+verify_contract "WSTETHToken" "$WSTETH_TOKEN" "contracts/deployments/testnet/contracts/ERC20Testnet.sol:ERC20Testnet"
+show_progress
+verify_contract "TBTCToken" "$TBTC_TOKEN" "contracts/deployments/testnet/contracts/ERC20Testnet.sol:ERC20Testnet"
+show_progress
+verify_contract "SBOLDToken" "$SBOLD_TOKEN" "contracts/deployments/testnet/contracts/ERC20Testnet.sol:ERC20Testnet"
+show_progress
+verify_contract "RETHToken" "$RETH_TOKEN" "contracts/deployments/testnet/contracts/ERC20Testnet.sol:ERC20Testnet"
+show_progress
+verify_contract "SUSDEToken" "$SUSDE_TOKEN" "contracts/deployments/testnet/contracts/ERC20Testnet.sol:ERC20Testnet"
 show_progress
 
 echo "🎉 Contract verification process completed!"

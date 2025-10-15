@@ -5,6 +5,8 @@ import {IAltoStaking} from "@alto/staking/interfaces/IAltoStaking.sol";
 import {AltoStaking} from "@alto/staking/AltoStaking.sol";
 import {Container, MinMaxEpochs} from "@alto/staking/interfaces/ITVLWeightedContainers.sol";
 import {UniversalRewardsDistributor} from "@alto/utils/UniversalRewardsDistributor.sol";
+import {getMerkleManagerUpdaters} from "@alto/deployments/testnet/Constants.sol";
+import {IMerkleRootManager} from "@alto/utils/interfaces/IMerkleRootManager.sol";
 
 struct TestnetStakingBatchParams {
     address owner;
@@ -77,6 +79,12 @@ contract TestnetStakingBatch {
 
         report.universalRewardsDistributor =
             address(new UniversalRewardsDistributor(address(this), _params.universalRewardsDistributorTimelock));
+
+        // Setup merkle manager updaters
+        address[] memory merkleManagerUpdaters = getMerkleManagerUpdaters();
+        for (uint256 i = 0; i < merkleManagerUpdaters.length; i++) {
+            IMerkleRootManager(report.universalRewardsDistributor).setMerkleRootUpdater(merkleManagerUpdaters[i], true);
+        }
 
         UniversalRewardsDistributor(report.universalRewardsDistributor).transferOwnership(_params.owner);
     }

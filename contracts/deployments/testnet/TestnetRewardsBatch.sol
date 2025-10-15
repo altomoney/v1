@@ -4,6 +4,8 @@ pragma solidity ^0.8.22;
 import {AltoRewardsDistributor} from "@alto/rewards/AltoRewardsDistributor.sol";
 import {IRewardsDistributor} from "@alto/rewards/interfaces/IRewardsDistributor.sol";
 import {OracleTestnet} from "@alto/deployments/testnet/contracts/OracleTestnet.sol";
+import {getMerkleManagerUpdaters} from "@alto/deployments/testnet/Constants.sol";
+import {IMerkleRootManager} from "@alto/utils/interfaces/IMerkleRootManager.sol";
 
 struct TestnetRewardsBatchParams {
     address owner;
@@ -54,6 +56,12 @@ contract TestnetRewardsBatch {
         // Setup lock bonus discount
         rewardsDistributor.setLockBonusDiscount(_params.lockBonusDiscount);
         rewardsDistributor.setLockContract(_params.stakingContract);
+
+        // Setup merkle manager updaters
+        address[] memory merkleManagerUpdaters = getMerkleManagerUpdaters();
+        for (uint256 i = 0; i < merkleManagerUpdaters.length; i++) {
+            IMerkleRootManager(address(rewardsDistributor)).setMerkleRootUpdater(merkleManagerUpdaters[i], true);
+        }
 
         report.rewardsDistributor = address(rewardsDistributor);
 

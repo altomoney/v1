@@ -11,3 +11,10 @@ function getMulticallOwnerAddresses() pure returns (address[] memory) {
     addresses[0] = 0xd7F6Fa30BC8c0E5003689C332bd2b9400Ed87367;
     return addresses;
 }
+
+function getMerkleManagerUpdaters() pure returns (address[] memory) {
+    address[] memory addresses = new address[](2);
+    addresses[0] = 0x16C875e06071F85b683acAb4612744F9aAFc8c0B;
+    addresses[1] = 0xe963e85F639C6aD44FAc75f401fB97C5ac9eb089;
+    return addresses;
+}
