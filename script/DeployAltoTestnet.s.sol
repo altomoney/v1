@@ -57,25 +57,69 @@ contract DeployAltoTestnetScript is Script {
         tokensJson = vm.serializeAddress("tokens", "dusd", input.tokens.dusd);
         tokensJson = vm.serializeAddress("tokens", "usdc", input.tokens.usdc);
         tokensJson = vm.serializeAddress("tokens", "weth", input.tokens.weth);
+        tokensJson = vm.serializeAddress("tokens", "wsteth", input.tokens.wsteth);
+        tokensJson = vm.serializeAddress("tokens", "tbtc", input.tokens.tbtc);
+        tokensJson = vm.serializeAddress("tokens", "sbold", input.tokens.sbold);
+        tokensJson = vm.serializeAddress("tokens", "reth", input.tokens.reth);
+        tokensJson = vm.serializeAddress("tokens", "susde", input.tokens.susde);
 
-        // Build borrow market batch JSON
+        // Build weth market batch JSON
         string memory borrowMarketJson = "";
-        borrowMarketJson = vm.serializeAddress("borrowMarket", "market", input.contracts.borrowMarketBatch.market);
+        borrowMarketJson = vm.serializeAddress("wethMarket", "market", input.contracts.wethMarketBatch.market);
         borrowMarketJson = vm.serializeAddress(
-            "borrowMarket", "marketImplementation", input.contracts.borrowMarketBatch.marketImplementation
+            "wethMarket", "marketImplementation", input.contracts.wethMarketBatch.marketImplementation
         );
-        borrowMarketJson = vm.serializeAddress("borrowMarket", "marketIrm", input.contracts.borrowMarketBatch.marketIrm);
+        borrowMarketJson = vm.serializeAddress("wethMarket", "marketIrm", input.contracts.wethMarketBatch.marketIrm);
         borrowMarketJson =
-            vm.serializeAddress("borrowMarket", "marketOracle", input.contracts.borrowMarketBatch.marketOracle);
+            vm.serializeAddress("wethMarket", "marketOracle", input.contracts.wethMarketBatch.marketOracle);
 
-        // Build mint market batch JSON
+        // Build wsteth market batch JSON
         string memory mintMarketJson = "";
-        mintMarketJson = vm.serializeAddress("mintMarket", "market", input.contracts.mintMarketBatch.market);
+        mintMarketJson = vm.serializeAddress("wstethMarket", "market", input.contracts.wstethMarketBatch.market);
         mintMarketJson = vm.serializeAddress(
-            "mintMarket", "marketImplementation", input.contracts.mintMarketBatch.marketImplementation
+            "wstethMarket", "marketImplementation", input.contracts.wstethMarketBatch.marketImplementation
         );
-        mintMarketJson = vm.serializeAddress("mintMarket", "marketIrm", input.contracts.mintMarketBatch.marketIrm);
-        mintMarketJson = vm.serializeAddress("mintMarket", "marketOracle", input.contracts.mintMarketBatch.marketOracle);
+        mintMarketJson = vm.serializeAddress("wstethMarket", "marketIrm", input.contracts.wstethMarketBatch.marketIrm);
+        mintMarketJson =
+            vm.serializeAddress("wstethMarket", "marketOracle", input.contracts.wstethMarketBatch.marketOracle);
+
+        // Build tbtc market batch JSON
+        string memory tbtcMarketJson = "";
+        tbtcMarketJson = vm.serializeAddress("tbtcMarket", "market", input.contracts.tbtcMarketBatch.market);
+        tbtcMarketJson = vm.serializeAddress(
+            "tbtcMarket", "marketImplementation", input.contracts.tbtcMarketBatch.marketImplementation
+        );
+        tbtcMarketJson = vm.serializeAddress("tbtcMarket", "marketIrm", input.contracts.tbtcMarketBatch.marketIrm);
+        tbtcMarketJson = vm.serializeAddress("tbtcMarket", "marketOracle", input.contracts.tbtcMarketBatch.marketOracle);
+
+        // Build sbold market batch JSON
+        string memory sboldMarketJson = "";
+        sboldMarketJson = vm.serializeAddress("sboldMarket", "market", input.contracts.sboldMarketBatch.market);
+        sboldMarketJson = vm.serializeAddress(
+            "sboldMarket", "marketImplementation", input.contracts.sboldMarketBatch.marketImplementation
+        );
+        sboldMarketJson = vm.serializeAddress("sboldMarket", "marketIrm", input.contracts.sboldMarketBatch.marketIrm);
+        sboldMarketJson =
+            vm.serializeAddress("sboldMarket", "marketOracle", input.contracts.sboldMarketBatch.marketOracle);
+
+        // Build reth market batch JSON
+        string memory rethMarketJson = "";
+        rethMarketJson = vm.serializeAddress("rethMarket", "market", input.contracts.rethMarketBatch.market);
+        rethMarketJson = vm.serializeAddress(
+            "rethMarket", "marketImplementation", input.contracts.rethMarketBatch.marketImplementation
+        );
+        rethMarketJson = vm.serializeAddress("rethMarket", "marketIrm", input.contracts.rethMarketBatch.marketIrm);
+        rethMarketJson = vm.serializeAddress("rethMarket", "marketOracle", input.contracts.rethMarketBatch.marketOracle);
+
+        // Build susde market batch JSON
+        string memory susdeMarketJson = "";
+        susdeMarketJson = vm.serializeAddress("susdeMarket", "market", input.contracts.susdeMarketBatch.market);
+        susdeMarketJson = vm.serializeAddress(
+            "susdeMarket", "marketImplementation", input.contracts.susdeMarketBatch.marketImplementation
+        );
+        susdeMarketJson = vm.serializeAddress("susdeMarket", "marketIrm", input.contracts.susdeMarketBatch.marketIrm);
+        susdeMarketJson =
+            vm.serializeAddress("susdeMarket", "marketOracle", input.contracts.susdeMarketBatch.marketOracle);
 
         // Build staking batch JSON
         string memory stakingBatchJson = "";
@@ -102,8 +146,12 @@ contract DeployAltoTestnetScript is Script {
         contractsJson = vm.serializeAddress("contracts", "altoLeverage", input.contracts.altoLeverage);
         contractsJson = vm.serializeAddress("contracts", "bundler3", input.contracts.bundler3);
         contractsJson = vm.serializeAddress("contracts", "altoAdapter", input.contracts.altoAdapter);
-        contractsJson = vm.serializeString("contracts", "borrowMarketBatch", borrowMarketJson);
-        contractsJson = vm.serializeString("contracts", "mintMarketBatch", mintMarketJson);
+        contractsJson = vm.serializeString("contracts", "wethMarketBatch", borrowMarketJson);
+        contractsJson = vm.serializeString("contracts", "wstethMarketBatch", mintMarketJson);
+        contractsJson = vm.serializeString("contracts", "tbtcMarketBatch", tbtcMarketJson);
+        contractsJson = vm.serializeString("contracts", "sboldMarketBatch", sboldMarketJson);
+        contractsJson = vm.serializeString("contracts", "rethMarketBatch", rethMarketJson);
+        contractsJson = vm.serializeString("contracts", "susdeMarketBatch", susdeMarketJson);
         contractsJson = vm.serializeString("contracts", "stakingBatch", stakingBatchJson);
         contractsJson = vm.serializeString("contracts", "rewardsBatch", rewardsBatchJson);
 
@@ -134,6 +182,11 @@ contract DeployAltoTestnetScript is Script {
         loadedInput.tokens.dusd = vm.parseJsonAddress(json, ".tokens.dusd");
         loadedInput.tokens.usdc = vm.parseJsonAddress(json, ".tokens.usdc");
         loadedInput.tokens.weth = vm.parseJsonAddress(json, ".tokens.weth");
+        loadedInput.tokens.wsteth = vm.parseJsonAddress(json, ".tokens.wsteth");
+        loadedInput.tokens.tbtc = vm.parseJsonAddress(json, ".tokens.tbtc");
+        loadedInput.tokens.sbold = vm.parseJsonAddress(json, ".tokens.sbold");
+        loadedInput.tokens.reth = vm.parseJsonAddress(json, ".tokens.reth");
+        loadedInput.tokens.susde = vm.parseJsonAddress(json, ".tokens.susde");
 
         // Load contracts
         loadedInput.contracts.altoMulticall = vm.parseJsonAddress(json, ".contracts.altoMulticall");
@@ -143,24 +196,60 @@ contract DeployAltoTestnetScript is Script {
         loadedInput.contracts.bundler3 = vm.parseJsonAddress(json, ".contracts.bundler3");
         loadedInput.contracts.altoAdapter = vm.parseJsonAddress(json, ".contracts.altoAdapter");
 
-        // Load borrow market batch
-        loadedInput.contracts.borrowMarketBatch.market =
-            vm.parseJsonAddress(json, ".contracts.borrowMarketBatch.market");
-        loadedInput.contracts.borrowMarketBatch.marketImplementation =
-            vm.parseJsonAddress(json, ".contracts.borrowMarketBatch.marketImplementation");
-        loadedInput.contracts.borrowMarketBatch.marketIrm =
-            vm.parseJsonAddress(json, ".contracts.borrowMarketBatch.marketIrm");
-        loadedInput.contracts.borrowMarketBatch.marketOracle =
-            vm.parseJsonAddress(json, ".contracts.borrowMarketBatch.marketOracle");
+        // Load weth market batch
+        loadedInput.contracts.wethMarketBatch.market = vm.parseJsonAddress(json, ".contracts.wethMarketBatch.market");
+        loadedInput.contracts.wethMarketBatch.marketImplementation =
+            vm.parseJsonAddress(json, ".contracts.wethMarketBatch.marketImplementation");
+        loadedInput.contracts.wethMarketBatch.marketIrm =
+            vm.parseJsonAddress(json, ".contracts.wethMarketBatch.marketIrm");
+        loadedInput.contracts.wethMarketBatch.marketOracle =
+            vm.parseJsonAddress(json, ".contracts.wethMarketBatch.marketOracle");
 
-        // Load mint market batch
-        loadedInput.contracts.mintMarketBatch.market = vm.parseJsonAddress(json, ".contracts.mintMarketBatch.market");
-        loadedInput.contracts.mintMarketBatch.marketImplementation =
-            vm.parseJsonAddress(json, ".contracts.mintMarketBatch.marketImplementation");
-        loadedInput.contracts.mintMarketBatch.marketIrm =
-            vm.parseJsonAddress(json, ".contracts.mintMarketBatch.marketIrm");
-        loadedInput.contracts.mintMarketBatch.marketOracle =
-            vm.parseJsonAddress(json, ".contracts.mintMarketBatch.marketOracle");
+        // Load wsteth market batch
+        loadedInput.contracts.wstethMarketBatch.market =
+            vm.parseJsonAddress(json, ".contracts.wstethMarketBatch.market");
+        loadedInput.contracts.wstethMarketBatch.marketImplementation =
+            vm.parseJsonAddress(json, ".contracts.wstethMarketBatch.marketImplementation");
+        loadedInput.contracts.wstethMarketBatch.marketIrm =
+            vm.parseJsonAddress(json, ".contracts.wstethMarketBatch.marketIrm");
+        loadedInput.contracts.wstethMarketBatch.marketOracle =
+            vm.parseJsonAddress(json, ".contracts.wstethMarketBatch.marketOracle");
+
+        // Load tbtc market batch
+        loadedInput.contracts.tbtcMarketBatch.market = vm.parseJsonAddress(json, ".contracts.tbtcMarketBatch.market");
+        loadedInput.contracts.tbtcMarketBatch.marketImplementation =
+            vm.parseJsonAddress(json, ".contracts.tbtcMarketBatch.marketImplementation");
+        loadedInput.contracts.tbtcMarketBatch.marketIrm =
+            vm.parseJsonAddress(json, ".contracts.tbtcMarketBatch.marketIrm");
+        loadedInput.contracts.tbtcMarketBatch.marketOracle =
+            vm.parseJsonAddress(json, ".contracts.tbtcMarketBatch.marketOracle");
+
+        // Load sbold market batch
+        loadedInput.contracts.sboldMarketBatch.market = vm.parseJsonAddress(json, ".contracts.sboldMarketBatch.market");
+        loadedInput.contracts.sboldMarketBatch.marketImplementation =
+            vm.parseJsonAddress(json, ".contracts.sboldMarketBatch.marketImplementation");
+        loadedInput.contracts.sboldMarketBatch.marketIrm =
+            vm.parseJsonAddress(json, ".contracts.sboldMarketBatch.marketIrm");
+        loadedInput.contracts.sboldMarketBatch.marketOracle =
+            vm.parseJsonAddress(json, ".contracts.sboldMarketBatch.marketOracle");
+
+        // Load reth market batch
+        loadedInput.contracts.rethMarketBatch.market = vm.parseJsonAddress(json, ".contracts.rethMarketBatch.market");
+        loadedInput.contracts.rethMarketBatch.marketImplementation =
+            vm.parseJsonAddress(json, ".contracts.rethMarketBatch.marketImplementation");
+        loadedInput.contracts.rethMarketBatch.marketIrm =
+            vm.parseJsonAddress(json, ".contracts.rethMarketBatch.marketIrm");
+        loadedInput.contracts.rethMarketBatch.marketOracle =
+            vm.parseJsonAddress(json, ".contracts.rethMarketBatch.marketOracle");
+
+        // Load susde market batch
+        loadedInput.contracts.susdeMarketBatch.market = vm.parseJsonAddress(json, ".contracts.susdeMarketBatch.market");
+        loadedInput.contracts.susdeMarketBatch.marketImplementation =
+            vm.parseJsonAddress(json, ".contracts.susdeMarketBatch.marketImplementation");
+        loadedInput.contracts.susdeMarketBatch.marketIrm =
+            vm.parseJsonAddress(json, ".contracts.susdeMarketBatch.marketIrm");
+        loadedInput.contracts.susdeMarketBatch.marketOracle =
+            vm.parseJsonAddress(json, ".contracts.susdeMarketBatch.marketOracle");
 
         // Load staking batch
         loadedInput.contracts.stakingBatch.stakingContract =
