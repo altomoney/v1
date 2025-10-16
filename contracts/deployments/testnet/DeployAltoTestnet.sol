@@ -150,100 +150,112 @@ library DeployAltoTestnet {
         // deploy and mint tokens to the owner
         input = _deployMintFundTokens(params, input);
 
+        // Mint Markets
         input.contracts.wethMarketBatch = (
-            new TestnetBorrowMarketBatch(
-                TestnetBorrowMarketBatchParams({
+            new TestnetMintMarketBatch(
+                TestnetMintMarketBatchParams({
                     owner: params.owner,
                     collateralToken: address(input.tokens.weth),
                     borrowToken: address(input.tokens.dusd),
                     marketOraclePrice: 4100 * ORACLE_PRICE_PRECISION,
-                    maxLtv: 0.75 ether
+                    maxLtv: 0.75 ether,
+                    debtCeiling: 1_000_000 ether
                 })
             )
         ).getMarketReport();
 
         AltoLeverage(input.contracts.altoLeverage).setMarket(input.contracts.wethMarketBatch.market, true);
         IMarket(input.contracts.wethMarketBatch.market).setAuthorizedCallback(input.contracts.altoLeverage, true);
+        DUSD(input.tokens.dusd).setMinterStatus(input.contracts.wethMarketBatch.market, true);
+        DUSD(input.tokens.dusd).setBurnerStatus(input.contracts.wethMarketBatch.market, true);
 
         input.contracts.wstethMarketBatch = (
-            new TestnetBorrowMarketBatch(
-                TestnetBorrowMarketBatchParams({
+            new TestnetMintMarketBatch(
+                TestnetMintMarketBatchParams({
                     owner: params.owner,
                     collateralToken: address(input.tokens.wsteth),
                     borrowToken: address(input.tokens.dusd),
                     marketOraclePrice: 5000 * ORACLE_PRICE_PRECISION,
-                    maxLtv: 0.75 ether
+                    maxLtv: 0.75 ether,
+                    debtCeiling: 1_000_000 ether
                 })
             )
         ).getMarketReport();
 
         AltoLeverage(input.contracts.altoLeverage).setMarket(input.contracts.wstethMarketBatch.market, true);
         IMarket(input.contracts.wstethMarketBatch.market).setAuthorizedCallback(input.contracts.altoLeverage, true);
+        DUSD(input.tokens.dusd).setMinterStatus(input.contracts.wstethMarketBatch.market, true);
+        DUSD(input.tokens.dusd).setBurnerStatus(input.contracts.wstethMarketBatch.market, true);
 
         input.contracts.tbtcMarketBatch = (
-            new TestnetBorrowMarketBatch(
-                TestnetBorrowMarketBatchParams({
+            new TestnetMintMarketBatch(
+                TestnetMintMarketBatchParams({
                     owner: params.owner,
                     collateralToken: address(input.tokens.tbtc),
                     borrowToken: address(input.tokens.dusd),
                     marketOraclePrice: 112000 * ORACLE_PRICE_PRECISION,
-                    maxLtv: 0.75 ether
+                    maxLtv: 0.75 ether,
+                    debtCeiling: 1_000_000 ether
                 })
             )
         ).getMarketReport();
 
         AltoLeverage(input.contracts.altoLeverage).setMarket(input.contracts.tbtcMarketBatch.market, true);
         IMarket(input.contracts.tbtcMarketBatch.market).setAuthorizedCallback(input.contracts.altoLeverage, true);
+        DUSD(input.tokens.dusd).setMinterStatus(input.contracts.tbtcMarketBatch.market, true);
+        DUSD(input.tokens.dusd).setBurnerStatus(input.contracts.tbtcMarketBatch.market, true);
 
         input.contracts.sboldMarketBatch = (
-            new TestnetBorrowMarketBatch(
-                TestnetBorrowMarketBatchParams({
+            new TestnetMintMarketBatch(
+                TestnetMintMarketBatchParams({
                     owner: params.owner,
                     collateralToken: address(input.tokens.sbold),
                     borrowToken: address(input.tokens.dusd),
                     marketOraclePrice: 1.05 ether * ORACLE_PRICE_PRECISION / 1 ether,
-                    maxLtv: 0.75 ether
+                    maxLtv: 0.75 ether,
+                    debtCeiling: 1_000_000 ether
                 })
             )
         ).getMarketReport();
 
         AltoLeverage(input.contracts.altoLeverage).setMarket(input.contracts.sboldMarketBatch.market, true);
         IMarket(input.contracts.sboldMarketBatch.market).setAuthorizedCallback(input.contracts.altoLeverage, true);
+        DUSD(input.tokens.dusd).setMinterStatus(input.contracts.sboldMarketBatch.market, true);
+        DUSD(input.tokens.dusd).setBurnerStatus(input.contracts.sboldMarketBatch.market, true);
 
         input.contracts.rethMarketBatch = (
-            new TestnetBorrowMarketBatch(
-                TestnetBorrowMarketBatchParams({
+            new TestnetMintMarketBatch(
+                TestnetMintMarketBatchParams({
                     owner: params.owner,
                     collateralToken: address(input.tokens.reth),
                     borrowToken: address(input.tokens.dusd),
                     marketOraclePrice: 4700 * ORACLE_PRICE_PRECISION,
-                    maxLtv: 0.75 ether
+                    maxLtv: 0.75 ether,
+                    debtCeiling: 1_000_000 ether
                 })
             )
         ).getMarketReport();
 
         AltoLeverage(input.contracts.altoLeverage).setMarket(input.contracts.rethMarketBatch.market, true);
         IMarket(input.contracts.rethMarketBatch.market).setAuthorizedCallback(input.contracts.altoLeverage, true);
+        DUSD(input.tokens.dusd).setMinterStatus(input.contracts.rethMarketBatch.market, true);
+        DUSD(input.tokens.dusd).setBurnerStatus(input.contracts.rethMarketBatch.market, true);
 
-        // Mint Markets
+        // Borrow Markets
         input.contracts.susdeMarketBatch = (
-            new TestnetMintMarketBatch(
-                TestnetMintMarketBatchParams({
+            new TestnetBorrowMarketBatch(
+                TestnetBorrowMarketBatchParams({
                     owner: params.owner,
                     collateralToken: address(input.tokens.susde),
                     borrowToken: address(input.tokens.dusd),
                     marketOraclePrice: 1.2 ether * ORACLE_PRICE_PRECISION / 1 ether,
-                    maxLtv: 0.75 ether,
-                    debtCeiling: 3_000_000 ether
+                    maxLtv: 0.75 ether
                 })
             )
         ).getMarketReport();
 
         AltoLeverage(input.contracts.altoLeverage).setMarket(input.contracts.susdeMarketBatch.market, true);
         IMarket(input.contracts.susdeMarketBatch.market).setAuthorizedCallback(input.contracts.altoLeverage, true);
-
-        DUSD(input.tokens.dusd).setMinterStatus(input.contracts.susdeMarketBatch.market, true);
-        DUSD(input.tokens.dusd).setBurnerStatus(input.contracts.susdeMarketBatch.market, true);
 
         return input;
     }

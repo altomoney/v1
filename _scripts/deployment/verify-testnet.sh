@@ -93,14 +93,15 @@ verify_contract() {
     
     echo "🔍 Verifying $name at $address..."
     
-    # Rate limiting: wait 3 seconds between requests to respect 2/sec limit
-    if [ -n "${LAST_VERIFICATION_TIME:-}" ]; then
-        local current_time=$(date +%s)
-        local time_diff=$((current_time - LAST_VERIFICATION_TIME))
-        if [ $time_diff -lt 3 ]; then
-            local sleep_time=$((3 - time_diff))
+    # Rate limiting: wait 0.5 seconds between requests to respect free account rate limit
+    if [ -n "${LAST_VERIFICATION_TIME_MS:-}" ]; then
+        local current_time_ms=$(date +%s%3N)
+        local time_diff_ms=$((current_time_ms - LAST_VERIFICATION_TIME_MS))
+        if [ $time_diff_ms -lt 500 ]; then
+            local sleep_time
+            sleep_time=$(awk -v diff="$time_diff_ms" 'BEGIN { printf "%.3f", (500 - diff)/1000 }')
             echo "⏳ Rate limiting: waiting ${sleep_time} seconds..."
-            sleep $sleep_time
+            sleep "$sleep_time"
         fi
     fi
     
@@ -154,7 +155,7 @@ verify_contract() {
     fi
     
     # Update last verification time
-    LAST_VERIFICATION_TIME=$(date +%s)
+    LAST_VERIFICATION_TIME_MS=$(date +%s%3N)
     echo ""
 }
 
@@ -168,7 +169,7 @@ if command -v jq >/dev/null 2>&1; then
     MOCK_SWAPPER=$(get_address ".contracts.mockSwapper")
     MULTI_TOKEN_SENDER=$(get_address ".contracts.multiTokenSender")
     
-    # Borrow market addresses
+    # Mint market addresses
     ## WETH
     WETH_MARKET=$(get_address ".contracts.wethMarketBatch.market")
     WETH_MARKET_IMPL=$(get_address ".contracts.wethMarketBatch.marketImplementation")
@@ -199,7 +200,7 @@ if command -v jq >/dev/null 2>&1; then
     RETH_MARKET_IRM=$(get_address ".contracts.rethMarketBatch.marketIrm")
     RETH_MARKET_ORACLE=$(get_address ".contracts.rethMarketBatch.marketOracle")
 
-    # Mint market addresses
+    # Borrow market addresses
     ## SUSDE
     SUSDE_MARKET=$(get_address ".contracts.susdeMarketBatch.market")
     SUSDE_MARKET_IMPL=$(get_address ".contracts.susdeMarketBatch.marketImplementation")
@@ -235,7 +236,7 @@ else
     MOCK_SWAPPER=$(get_address "mockSwapper")
     MULTI_TOKEN_SENDER=$(get_address "multiTokenSender")
     
-    # Borrow market addresses
+    # Mint market addresses
     ## WETH
     WETH_MARKET=$(get_address "wethMarketBatch.market")
     WETH_MARKET_IMPL=$(get_address "wethMarketBatch.marketImplementation")
@@ -266,7 +267,7 @@ else
     RETH_MARKET_IRM=$(get_address "rethMarketBatch.marketIrm")
     RETH_MARKET_ORACLE=$(get_address "rethMarketBatch.marketOracle")
 
-    # Mint Market Addresses
+    # Borrow Market Addresses
     ## SUSDE
     SUSDE_MARKET=$(get_address "susdeMarketBatch.market")
     SUSDE_MARKET_IMPL=$(get_address "susdeMarketBatch.marketImplementation")
@@ -352,7 +353,7 @@ if [[ ! $REPLY =~ ^[Yy]$ ]]; then
 fi
 
 echo "🚀 Starting verification process..."
-echo "⏰ This process will take approximately 3-5 minutes due to rate limiting..."
+echo "⏰ This process will take approximately 1-2 minutes due to rate limiting..."
 echo ""
 
 # Initialize progress tracking (base excludes payment oracles)
@@ -383,7 +384,7 @@ show_progress
 # Verify market contracts (these might be proxy contracts, so we verify the implementation)
 verify_contract "WethMarket" "$WETH_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
 show_progress
-verify_contract "WethMarketImplementation" "$WETH_MARKET_IMPL" "contracts/lending/AltoBorrowMarket.sol:AltoBorrowMarket"
+verify_contract "WethMarketImplementation" "$WETH_MARKET_IMPL" "contracts/lending/AltoMintMarket.sol:AltoMintMarket"
 show_progress
 verify_contract "WethMarketIRM" "$WETH_MARKET_IRM" "contracts/lending/irm/AdaptiveCurveIrm.sol:AdaptiveCurveIrm"
 show_progress
@@ -392,7 +393,7 @@ show_progress
 
 verify_contract "WstethMarket" "$WSTETH_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
 show_progress
-verify_contract "WstethMarketImplementation" "$WSTETH_MARKET_IMPL" "contracts/lending/AltoBorrowMarket.sol:AltoBorrowMarket"
+verify_contract "WstethMarketImplementation" "$WSTETH_MARKET_IMPL" "contracts/lending/AltoMintMarket.sol:AltoMintMarket"
 show_progress
 verify_contract "WstethMarketIRM" "$WSTETH_MARKET_IRM" "contracts/lending/irm/AdaptiveCurveIrm.sol:AdaptiveCurveIrm"
 show_progress
@@ -401,7 +402,7 @@ show_progress
 
 verify_contract "TbtcMarket" "$TBTC_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
 show_progress
-verify_contract "TbtcMarketImplementation" "$TBTC_MARKET_IMPL" "contracts/lending/AltoBorrowMarket.sol:AltoBorrowMarket"
+verify_contract "TbtcMarketImplementation" "$TBTC_MARKET_IMPL" "contracts/lending/AltoMintMarket.sol:AltoMintMarket"
 show_progress
 verify_contract "TbtcMarketIRM" "$TBTC_MARKET_IRM" "contracts/lending/irm/AdaptiveCurveIrm.sol:AdaptiveCurveIrm"
 show_progress
@@ -411,7 +412,7 @@ show_progress
 
 verify_contract "SboldMarket" "$SBOLD_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
 show_progress
-verify_contract "SboldMarketImplementation" "$SBOLD_MARKET_IMPL" "contracts/lending/AltoBorrowMarket.sol:AltoBorrowMarket"
+verify_contract "SboldMarketImplementation" "$SBOLD_MARKET_IMPL" "contracts/lending/AltoMintMarket.sol:AltoMintMarket"
 show_progress
 verify_contract "SboldMarketIRM" "$SBOLD_MARKET_IRM" "contracts/lending/irm/AdaptiveCurveIrm.sol:AdaptiveCurveIrm"
 show_progress
@@ -420,7 +421,7 @@ show_progress
 
 verify_contract "RethMarket" "$RETH_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
 show_progress
-verify_contract "RethMarketImplementation" "$RETH_MARKET_IMPL" "contracts/lending/AltoBorrowMarket.sol:AltoBorrowMarket"
+verify_contract "RethMarketImplementation" "$RETH_MARKET_IMPL" "contracts/lending/AltoMintMarket.sol:AltoMintMarket"
 show_progress
 verify_contract "RethMarketIRM" "$RETH_MARKET_IRM" "contracts/lending/irm/AdaptiveCurveIrm.sol:AdaptiveCurveIrm"
 show_progress
@@ -429,7 +430,7 @@ show_progress
 
 verify_contract "SusdeMarket" "$SUSDE_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
 show_progress
-verify_contract "SusdeMarketImplementation" "$SUSDE_MARKET_IMPL" "contracts/lending/AltoMintMarket.sol:AltoMintMarket"
+verify_contract "SusdeMarketImplementation" "$SUSDE_MARKET_IMPL" "contracts/lending/AltoBorrowMarket.sol:AltoBorrowMarket"
 show_progress
 verify_contract "SusdeMarketIRM" "$SUSDE_MARKET_IRM" "contracts/lending/irm/AdaptiveCurveIrm.sol:AdaptiveCurveIrm"
 show_progress
