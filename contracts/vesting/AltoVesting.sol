@@ -32,9 +32,14 @@ contract AltoVesting is IAltoVesting, MerkleRootManager, Ownable2Step, Auth, Pau
     /// @param initialTimelock The initial timelock of the contract.
     /// @param _isVestingUpdatable The flag that indicates whether the vesting terms can be updated.
     /// @param _vestingToken The address of the vesting token.
-    constructor(address _owner, uint256 initialTimelock, bool _isVestingUpdatable, address _vestingToken)
-        Ownable(_owner)
-    {
+    constructor(
+        address _owner,
+        uint256 initialTimelock,
+        bool _isVestingUpdatable,
+        address _vestingToken,
+        bytes32 _merkleRoot,
+        bytes32 _ipfsHash
+    ) Ownable(_owner) {
         if (_vestingToken == address(0)) {
             revert AltoVestingInvalidInput();
         }
@@ -42,9 +47,8 @@ contract AltoVesting is IAltoVesting, MerkleRootManager, Ownable2Step, Auth, Pau
         VESTING_TOKEN = _vestingToken;
         IS_VESTING_UPDATABLE = _isVestingUpdatable;
 
-        if (_isVestingUpdatable) {
-            _setMerkleRootTimelock(initialTimelock);
-        }
+        _setMerkleRootTimelock(initialTimelock);
+        MerkleRootManager._submitNewPendingRoot(_merkleRoot, _ipfsHash);
     }
 
     /// @inheritdoc IAltoVesting
@@ -57,7 +61,12 @@ contract AltoVesting is IAltoVesting, MerkleRootManager, Ownable2Step, Auth, Pau
             revert AltoVestingUnauthorized();
         }
 
-        // veeify whether the claim is valid based on address and vesting info
+        // verify that the vesting duration is not zero
+        if (vestingInfo.vestingDuration == 0) {
+            revert AltoVestingInvalidInput();
+        }
+
+        // verify whether the claim is valid based on address and vesting info
         if (!_verifyProof(proof, keccak256(bytes.concat(keccak256(abi.encode(onBehalf, vestingInfo)))))) {
             revert AltoVestingInvalidInput();
         }
@@ -67,7 +76,7 @@ contract AltoVesting is IAltoVesting, MerkleRootManager, Ownable2Step, Auth, Pau
 
         // check if the user has already claimed the vested amount
         if (claimed[onBehalf] >= vestedAmount) {
-            revert AltoVestingAlreadyClaimed();
+            revert AltoVestingNotEnoughVestedAmount();
         }
 
         // calculate the amount to be claimed
@@ -82,10 +91,6 @@ contract AltoVesting is IAltoVesting, MerkleRootManager, Ownable2Step, Auth, Pau
 
     /// @dev Calculates the amount vested for the given vesting info.
     function _calculateAmountVested(VestingInfo memory vestingInfo) internal view returns (uint256) {
-        if (vestingInfo.vestingDuration == 0) {
-            revert AltoVestingInvalidInput();
-        }
-
         if (block.timestamp <= vestingInfo.startAt) {
             return 0;
         }

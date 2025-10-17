@@ -1,0 +1,23 @@
+AltoVesting::constructor
+├── when vesting token is zero address
+│   └── it should revert with AltoVestingInvalidInput
+├── when vesting token is valid address
+│   ├── given vesting is updatable
+│   │   ├── it should set VESTING_TOKEN correctly
+│   │   ├── it should set IS_VESTING_UPDATABLE to true
+│   │   ├── it should set merkle root timelock to initialTimelock
+│   │   ├── it should submit pending root with provided merkle root and ipfs hash
+│   │   ├── it should set owner correctly
+│   │   ├── it should initialize all parent contracts correctly
+│   │   └── when new merkle root is submitted
+│   │       └── it should allow submitting new pending root and update pending root
+│   └── given vesting is not updatable
+│       ├── it should set VESTING_TOKEN correctly
+│       ├── it should set IS_VESTING_UPDATABLE to false
+│       ├── it should set merkle root timelock to initialTimelock
+│       ├── it should submit pending root with provided merkle root and ipfs hash
+│       ├── it should set owner correctly
+│       ├── it should initialize all parent contracts correctly
+│       └── when new merkle root is submitted
+│           └── it should revert with AltoVestingNotUpdatable
+└

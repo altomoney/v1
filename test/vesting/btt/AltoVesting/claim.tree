@@ -1,0 +1,49 @@
+AltoVesting::claim
+├── when contract is paused
+│   └── it should revert with IsPaused
+├── when sender is not authorized to act on behalf of onBehalf
+│   └── it should revert with AltoVestingUnauthorized
+├── when vesting duration is zero
+│   └── it should revert with AltoVestingInvalidInput
+├── when merkle proof is invalid
+│   ├── given proof does not verify against merkle root
+│   │   └── it should revert with AltoVestingInvalidInput
+│   └── given vesting info does not match provided parameters
+│       └── it should revert with AltoVestingInvalidInput
+├── when user has already claimed the full vested amount
+│   ├── given claimed amount equals vested amount
+│   │   └── it should revert with AltoVestingNotEnoughVestedAmount
+│   └── given claimed amount exceeds vested amount
+│       └── it should revert with AltoVestingNotEnoughVestedAmount
+├── when vesting has not started
+│   ├── given current timestamp is before startAt
+│   │   └── it should revert with AltoVestingNotEnoughVestedAmount
+│   └── given current timestamp equals startAt
+│       └── it should revert with AltoVestingNotEnoughVestedAmount
+└── when all conditions are met for valid claim
+    ├── when vesting is fully vested
+    │   ├── given current timestamp is after startAt + vestingDuration
+    │   ├── it should calculate vested amount as totalVestingAmount
+    │   ├── it should transfer full claimable amount to onBehalf
+    │   ├── it should update claimed mapping to totalVestingAmount
+    │   ├── it should emit ClaimVesting event with correct parameters
+    │   └── it should return the claimed amount
+    ├── when vesting is partially vested
+    │   ├── given current timestamp is between startAt and startAt + vestingDuration
+    │   ├── it should calculate vested amount proportionally
+    │   ├── it should transfer claimable amount to onBehalf
+    │   ├── it should update claimed mapping to calculated vested amount
+    │   ├── it should emit ClaimVesting event with correct parameters
+    │   └── it should return the claimed amount
+    ├── when user has partially claimed before
+    │   ├── given user has claimed some amount previously
+    │   ├── it should calculate remaining claimable amount
+    │   ├── it should transfer only remaining amount to onBehalf
+    │   ├── it should update claimed mapping to new vested amount
+    │   ├── it should emit ClaimVesting event with remaining amount
+    │   └── it should return the newly claimed amount
+    └── when sender is authorized but not the onBehalf user
+        ├── it should transfer tokens to onBehalf address
+        ├── it should update claimed mapping for onBehalf
+        ├── it should emit ClaimVesting event with correct caller and onBehalf
+        └── it should return the claimed amount

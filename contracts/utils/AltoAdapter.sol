@@ -5,6 +5,7 @@ import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
 import {IRewardsDistributor} from "@alto/rewards/interfaces/IRewardsDistributor.sol";
 import {IAltoStaking} from "@alto/staking/interfaces/IAltoStaking.sol";
 import {IUniversalRewardsDistributor} from "@alto/utils/interfaces/IUniversalRewardsDistributor.sol";
+import {IAltoVesting, VestingInfo} from "@alto/vesting/interfaces/IAltoVesting.sol";
 
 import {CoreAdapter, Address} from "@morpho-org/bundler3/adapters/CoreAdapter.sol";
 import {IWNative} from "@morpho-org/bundler3/interfaces/IWNative.sol";
@@ -282,5 +283,21 @@ contract AltoAdapter is CoreAdapter {
         bytes32[] calldata proof
     ) external onlyBundler3 {
         rewardsDistributor.claim(initiator(), rewardToken, amount, proof);
+    }
+
+    /* VESTING ACTIONS */
+
+    /// @notice Claims the vested tokens from the vesting contract.
+    /// @param vesting The address of the vesting contract.
+    /// @param onBehalf The address of the user whose tokens are being claimed.
+    /// @param vestingInfo The vesting info struct of the onBehalf user.
+    /// @param proof The merkle proof that validates this claim.
+    function claimVestedTokens(
+        IAltoVesting vesting,
+        address onBehalf,
+        VestingInfo memory vestingInfo,
+        bytes32[] calldata proof
+    ) external onlyBundler3 {
+        vesting.claim(onBehalf, vestingInfo, proof);
     }
 }

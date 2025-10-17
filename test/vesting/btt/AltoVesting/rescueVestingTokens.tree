@@ -1,0 +1,18 @@
+AltoVesting::rescueVestingTokens
+├── when contract is not paused
+│   └── it should revert with AltoVestingNotPaused
+├── when contract is paused
+│   ├── given contract has zero token balance
+│   │   ├── it should not transfer any tokens
+│   │   ├── it should not emit RescueVestingTokens event
+│   │   └── it should complete successfully
+│   └── given contract has non-zero token balance
+│       ├── it should transfer all tokens to owner
+│       ├── it should emit RescueVestingTokens event with correct parameters
+│       ├── it should set contract token balance to zero
+│       └── it should complete successfully
+└── when caller is not owner
+    ├── given contract is paused
+    │   └── it should revert with OwnableUnauthorizedAccount
+    └── given contract is not paused
+        └── it should revert with OwnableUnauthorizedAccount

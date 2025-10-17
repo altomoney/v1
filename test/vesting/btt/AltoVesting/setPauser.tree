@@ -1,0 +1,22 @@
+AltoVesting::setPauser()
+├── given caller is not owner
+│   └── it should revert with OwnableUnauthorizedAccount
+├── given caller is owner
+│   ├── when pauser is zero address
+│   │   └── it should set pauser status and emit event
+│   ├── when pauser is non-zero address
+│   │   ├── when pauseType is zero
+│   │   │   ├── when status is false
+│   │   │   │   └── it should remove pauser status and emit event
+│   │   │   └── when status is true
+│   │   │       └── it should set pauser status and emit event
+│   │   └── when pauseType is non-zero
+│   │       ├── when status is false
+│   │       │   └── it should remove pauser status and emit event
+│   │       └── when status is true
+│   │           └── it should set pauser status and emit event
+│   └── when pauser already has status
+│       ├── when changing from true to false
+│       │   └── it should update status and emit event
+│       └── when changing from false to true
+│           └── it should update status and emit event 

@@ -1,17 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import {IAuth} from "@alto/utils/interfaces/IAuth.sol";
+
 struct VestingInfo {
     uint256 startAt; // The start time of the vesting
     uint256 vestingDuration; // The duration of the vesting
     uint256 totalVestingAmount; // The total amount of that is to be vested
 }
 
-interface IAltoVesting {
+interface IAltoVesting is IAuth {
     error AltoVestingInvalidInput();
     error AltoVestingUnauthorized();
     error AltoVestingNotPaused();
-    error AltoVestingAlreadyClaimed();
+    error AltoVestingNotEnoughVestedAmount();
     error AltoVestingNotUpdatable();
 
     event ClaimVesting(address indexed caller, address indexed onBehalf, uint256 amount);
