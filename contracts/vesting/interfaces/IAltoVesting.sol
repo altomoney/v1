@@ -25,7 +25,7 @@ interface IAltoVesting is IAuth {
     /// @param vestingInfo The vesting information
     /// @param proof The merkle proof that validates this claim
     /// @return amount The amount of vested tokens claimed
-    function claim(address onBehalf, VestingInfo memory vestingInfo, bytes32[] calldata proof)
+    function claim(address onBehalf, VestingInfo calldata vestingInfo, bytes32[] calldata proof)
         external
         returns (uint256 amount);
 

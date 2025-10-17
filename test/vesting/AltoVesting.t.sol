@@ -65,7 +65,6 @@ contract AltoVestingTest is Test {
         vesting.setPauser(PAUSER, keccak256("PAUSE"), true);
         // accept pending root immediately by Owner
         vesting.acceptPendingRoot(merkleRoot);
-        nonUpdatableVesting.acceptPendingRoot(merkleRoot);
         vm.stopPrank();
 
         // Fund vesting contract with tokens
@@ -200,7 +199,7 @@ contract AltoVestingTest is Test {
         vm.stopPrank();
 
         vm.prank(ALICE);
-        vm.expectRevert(IAltoVesting.AltoVestingNotEnoughVestedAmount.selector);
+        vm.expectRevert(IAltoVesting.AltoVestingInvalidInput.selector);
         vesting.claim(ALICE, futureVestingInfo, futureProof);
     }
 
@@ -363,19 +362,14 @@ contract AltoVestingTest is Test {
         vm.stopPrank();
     }
 
-    function test_AcceptPendingRoot_When_VestingIsNotUpdatable() external {
+    function test_RevertAcceptPendingRoot_When_VestingIsNotUpdatable() external {
         vm.startPrank(OWNER);
         AltoVesting newNonUpdatableVesting =
             new AltoVesting(OWNER, INITIAL_TIMELOCK, false, address(vestingToken), bytes32(uint256(123)), bytes32(0));
         vm.stopPrank();
 
         vm.startPrank(ALICE);
-        vm.expectRevert(IMerkleRootManagerErrors.MerkleRootManagerTimelockNotExpired.selector);
-        newNonUpdatableVesting.acceptPendingRoot(bytes32(uint256(123)));
-        vm.stopPrank();
-
-        vm.warp(block.timestamp + INITIAL_TIMELOCK);
-        vm.startPrank(ALICE);
+        vm.expectRevert(IMerkleRootManagerErrors.MerkleRootManagerRootNotSet.selector);
         newNonUpdatableVesting.acceptPendingRoot(bytes32(uint256(123)));
         vm.stopPrank();
     }

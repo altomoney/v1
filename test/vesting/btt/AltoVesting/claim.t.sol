@@ -227,7 +227,10 @@ contract AltoVestingClaim is Test {
         vesting.claim(ALICE, smallerVestingInfo, smallerProof);
     }
 
-    function test_RevertWhen_VestingHasNotStarted() external givenVestingHasNotStarted {
+    function test_RevertWhen_VestingHasNotStarted_CurrentTimestampIsBeforeStartAt()
+        external
+        givenVestingHasNotStarted
+    {
         // Update merkle root for future vesting
         VestingInfo memory futureVestingInfo = VestingInfo({
             startAt: block.timestamp + 1 days,
@@ -246,12 +249,21 @@ contract AltoVestingClaim is Test {
         vm.stopPrank();
 
         vm.prank(ALICE);
-        vm.expectRevert(IAltoVesting.AltoVestingNotEnoughVestedAmount.selector);
+        vm.expectRevert(IAltoVesting.AltoVestingInvalidInput.selector);
         vesting.claim(ALICE, futureVestingInfo, futureProof);
+    }
+
+    function test_RevertWhen_VestingHasNotStarted_CurrentTimestampEqualsStartAt() external givenVestingHasNotStarted {
+        vm.prank(ALICE);
+        vm.expectRevert(IAltoVesting.AltoVestingInvalidInput.selector);
+        vesting.claim(ALICE, aliceVestingInfo, aliceProof);
     }
 
     function test_WhenVestingIsFullyVested() external givenVestingIsFullyVested givenUserHasNeverClaimed {
         uint256 initialBalance = vestingToken.balanceOf(ALICE);
+
+        vm.expectEmit(true, true, true, true);
+        emit IAltoVesting.ClaimVesting(ALICE, ALICE, TOTAL_VESTING_AMOUNT);
 
         vm.prank(ALICE);
         uint256 claimedAmount = vesting.claim(ALICE, aliceVestingInfo, aliceProof);
@@ -264,11 +276,13 @@ contract AltoVestingClaim is Test {
     function test_WhenVestingIsPartiallyVested() external givenVestingIsPartiallyVested givenUserHasNeverClaimed {
         uint256 initialBalance = vestingToken.balanceOf(ALICE);
 
+        vm.expectEmit(true, true, true, true);
+        emit IAltoVesting.ClaimVesting(ALICE, ALICE, TOTAL_VESTING_AMOUNT / 2);
+
         vm.prank(ALICE);
         uint256 claimedAmount = vesting.claim(ALICE, aliceVestingInfo, aliceProof);
 
-        assertTrue(claimedAmount > TOTAL_VESTING_AMOUNT / 2 - 100);
-        assertTrue(claimedAmount < TOTAL_VESTING_AMOUNT / 2 + 100);
+        assertEq(claimedAmount, TOTAL_VESTING_AMOUNT / 2);
         assertEq(vestingToken.balanceOf(ALICE), initialBalance + claimedAmount);
         assertEq(vesting.claimed(ALICE), claimedAmount);
     }
@@ -278,15 +292,18 @@ contract AltoVestingClaim is Test {
         givenVestingIsPartiallyVested
         givenUserHasPartiallyClaimed
     {
+        // half amount was vested, so now we claim the remaining half
         vm.warp(block.timestamp + VESTING_DURATION / 2 + 1 days);
         uint256 balanceBeforeSecondClaim = vestingToken.balanceOf(ALICE);
 
+        vm.expectEmit(true, true, true, true);
+        emit IAltoVesting.ClaimVesting(ALICE, ALICE, TOTAL_VESTING_AMOUNT / 2);
         vm.prank(ALICE);
         uint256 claimedAmount = vesting.claim(ALICE, aliceVestingInfo, aliceProof);
 
         assertEq(vestingToken.balanceOf(ALICE), balanceBeforeSecondClaim + claimedAmount);
         assertEq(vesting.claimed(ALICE), TOTAL_VESTING_AMOUNT);
-        assertTrue(claimedAmount > 0);
+        assertEq(claimedAmount, TOTAL_VESTING_AMOUNT / 2);
     }
 
     function test_WhenSenderIsAuthorizedButNotTheOnBehalfUser()
@@ -296,6 +313,9 @@ contract AltoVestingClaim is Test {
         givenUserHasNeverClaimed
     {
         uint256 initialBalance = vestingToken.balanceOf(ALICE);
+
+        vm.expectEmit(true, true, true, true);
+        emit IAltoVesting.ClaimVesting(ALICE_AUTHORIZED_CALLER, ALICE, TOTAL_VESTING_AMOUNT);
 
         vm.prank(ALICE_AUTHORIZED_CALLER);
         uint256 claimedAmount = vesting.claim(ALICE, aliceVestingInfo, aliceProof);

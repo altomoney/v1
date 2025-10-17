@@ -14,8 +14,8 @@ AltoVesting::constructor
 │   └── given vesting is not updatable
 │       ├── it should set VESTING_TOKEN correctly
 │       ├── it should set IS_VESTING_UPDATABLE to false
-│       ├── it should set merkle root timelock to initialTimelock
-│       ├── it should submit pending root with provided merkle root and ipfs hash
+│       ├── it should set merkle root timelock to 0
+│       ├── it should set vesting merkle root and ipfs hash to provided values
 │       ├── it should set owner correctly
 │       ├── it should initialize all parent contracts correctly
 │       └── when new merkle root is submitted

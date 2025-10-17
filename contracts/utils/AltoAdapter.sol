@@ -289,15 +289,12 @@ contract AltoAdapter is CoreAdapter {
 
     /// @notice Claims the vested tokens from the vesting contract.
     /// @param vesting The address of the vesting contract.
-    /// @param onBehalf The address of the user whose tokens are being claimed.
-    /// @param vestingInfo The vesting info struct of the onBehalf user.
+    /// @param vestingInfo The vesting info struct
     /// @param proof The merkle proof that validates this claim.
-    function claimVestedTokens(
-        IAltoVesting vesting,
-        address onBehalf,
-        VestingInfo memory vestingInfo,
-        bytes32[] calldata proof
-    ) external onlyBundler3 {
-        vesting.claim(onBehalf, vestingInfo, proof);
+    function claimVestedTokens(IAltoVesting vesting, VestingInfo memory vestingInfo, bytes32[] calldata proof)
+        external
+        onlyBundler3
+    {
+        vesting.claim(initiator(), vestingInfo, proof);
     }
 }

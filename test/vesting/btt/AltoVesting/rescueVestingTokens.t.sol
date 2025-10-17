@@ -6,6 +6,7 @@ import {AltoVesting} from "@alto/vesting/AltoVesting.sol";
 import {IAltoVesting, VestingInfo} from "@alto/vesting/interfaces/IAltoVesting.sol";
 import {ERC20MockMintable} from "@alto-test/helpers/ERC20MockMintable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 contract AltoVestingRescueVestingTokens is Test {
     AltoVesting public vesting;
@@ -63,8 +64,13 @@ contract AltoVestingRescueVestingTokens is Test {
     {
         uint256 contractBalanceBefore = vestingToken.balanceOf(address(vesting));
 
+        vm.recordLogs();
+
         vm.prank(OWNER);
         vesting.rescueVestingTokens();
+
+        // doesn't emit any events
+        assertEq(vm.getRecordedLogs().length, 0);
 
         // it should not transfer any tokens
         assertEq(vestingToken.balanceOf(address(vesting)), contractBalanceBefore);
@@ -90,13 +96,13 @@ contract AltoVestingRescueVestingTokens is Test {
 
     function test_RevertWhen_CallerIsNotOwner_GivenContractIsPaused() external givenContractIsPaused {
         vm.prank(NON_OWNER);
-        vm.expectRevert();
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, NON_OWNER));
         vesting.rescueVestingTokens();
     }
 
     function test_RevertWhen_CallerIsNotOwner_GivenContractIsNotPaused() external givenContractIsNotPaused {
         vm.prank(NON_OWNER);
-        vm.expectRevert();
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, NON_OWNER));
         vesting.rescueVestingTokens();
     }
 }

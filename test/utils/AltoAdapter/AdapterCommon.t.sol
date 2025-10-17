@@ -587,10 +587,7 @@ abstract contract AdapterCommon is Test {
         VestingInfo memory vestingInfo,
         bytes32[] memory proof
     ) internal view returns (Call memory) {
-        return _call(
-            altoAdapter,
-            abi.encodeCall(AltoAdapter.claimVestedTokens, (vesting, onBehalf, vestingInfo, proof)),
-            bytes32(0)
-        );
+        return
+            _call(altoAdapter, abi.encodeCall(AltoAdapter.claimVestedTokens, (vesting, vestingInfo, proof)), bytes32(0));
     }
 }

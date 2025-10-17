@@ -17,9 +17,9 @@ AltoVesting::claim
 │       └── it should revert with AltoVestingNotEnoughVestedAmount
 ├── when vesting has not started
 │   ├── given current timestamp is before startAt
-│   │   └── it should revert with AltoVestingNotEnoughVestedAmount
+│   │   └── it should revert with AltoVestingInvalidInput
 │   └── given current timestamp equals startAt
-│       └── it should revert with AltoVestingNotEnoughVestedAmount
+│       └── it should revert with AltoVestingInvalidInput
 └── when all conditions are met for valid claim
     ├── when vesting is fully vested
     │   ├── given current timestamp is after startAt + vestingDuration

@@ -1,0 +1,21 @@
+AltoVesting::submitNewPendingRoot
+├── when caller is not merkle root updater or owner
+│   └── it should revert with MerkleRootManagerNotUpdater
+├── when vesting is not updatable
+│   └── it should revert with AltoVestingNotUpdatable
+├── when newMerkleRoot is zero
+│   └── it should revert with MerkleRootManagerInvalidInput
+├── when newMerkleRoot is same as current pending root
+│   └── it should revert with MerkleRootManagerAlreadyPending
+└── when all conditions are met for valid submission
+    ├── when caller is merkle root updater
+    |    ├── it should set pendingMerkleRoot with new merkle root
+    |    ├── it should set pendingMerkleRoot with new ipfs hash
+    |    ├── it should set pendingMerkleRoot validFrom to current timestamp + timelock
+    |    └── it should emit SubmitPendingMerkleRoot event with correct parameters
+    └── when caller is owner
+         ├── it should set merkle root timelock to initialTimelock
+         ├── it should set pendingMerkleRoot with new merkle root
+         ├── it should set pendingMerkleRoot with new ipfs hash
+         ├── it should set pendingMerkleRoot validFrom to current timestamp + timelock
+         └── it should emit SubmitPendingMerkleRoot event with correct parameters

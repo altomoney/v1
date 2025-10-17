@@ -74,6 +74,12 @@ abstract contract MerkleRootManager is IMerkleRootManagerStaticTypes {
 
     /// @inheritdoc IMerkleRootManagerBase
     function acceptPendingRoot(bytes32 merkleRootToAccept) external {
+        _acceptPendingRoot(merkleRootToAccept);
+    }
+
+    /// @dev Accepts the pending merkle root.
+    /// @param merkleRootToAccept The merkle root to accept.
+    function _acceptPendingRoot(bytes32 merkleRootToAccept) internal virtual {
         if (pendingMerkleRoot.validFrom == 0) {
             revert MerkleRootManagerRootNotSet();
         }

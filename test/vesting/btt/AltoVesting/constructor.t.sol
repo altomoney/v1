@@ -102,13 +102,11 @@ contract AltoVestingConstructor is Test {
         // it should set IS_VESTING_UPDATABLE to false
         assertFalse(vesting.IS_VESTING_UPDATABLE());
 
-        // it should set merkle root timelock to initialTimelock
-        assertEq(vesting.merkleRootTimelock(), INITIAL_TIMELOCK);
+        // timelock is not set for non-updatable vesting
+        assertEq(vesting.merkleRootTimelock(), 0);
 
-        // it should submit pending root with provided merkle root and ipfs hash
-        (bytes32 pendingRoot,, bytes32 pendingIpfsHash) = vesting.pendingMerkleRoot();
-        assertEq(pendingRoot, TEST_MERKLE_ROOT);
-        assertEq(pendingIpfsHash, TEST_IPFS_HASH);
+        assertEq(vesting.merkleRoot(), TEST_MERKLE_ROOT);
+        assertEq(vesting.ipfsHash(), TEST_IPFS_HASH);
 
         // it should set owner correctly
         assertEq(vesting.owner(), OWNER);

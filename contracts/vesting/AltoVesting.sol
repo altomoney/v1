@@ -47,12 +47,20 @@ contract AltoVesting is IAltoVesting, MerkleRootManager, Ownable2Step, Auth, Pau
         VESTING_TOKEN = _vestingToken;
         IS_VESTING_UPDATABLE = _isVestingUpdatable;
 
-        _setMerkleRootTimelock(initialTimelock);
-        MerkleRootManager._submitNewPendingRoot(_merkleRoot, _ipfsHash);
+        // set the timelock if the vesting is updatable, otherwise accept the merkle root
+        // timelock is not needed for non-updatable vesting
+        if (_isVestingUpdatable) {
+            // first set the timelock and then submit the new pending root
+            _setMerkleRootTimelock(initialTimelock);
+            MerkleRootManager._submitNewPendingRoot(_merkleRoot, _ipfsHash);
+        } else {
+            MerkleRootManager._submitNewPendingRoot(_merkleRoot, _ipfsHash);
+            _acceptPendingRoot(_merkleRoot);
+        }
     }
 
     /// @inheritdoc IAltoVesting
-    function claim(address onBehalf, VestingInfo memory vestingInfo, bytes32[] calldata proof)
+    function claim(address onBehalf, VestingInfo calldata vestingInfo, bytes32[] calldata proof)
         external
         whenNot(PAUSE)
         returns (uint256 amount)
@@ -61,8 +69,8 @@ contract AltoVesting is IAltoVesting, MerkleRootManager, Ownable2Step, Auth, Pau
             revert AltoVestingUnauthorized();
         }
 
-        // verify that the vesting duration is not zero
-        if (vestingInfo.vestingDuration == 0) {
+        // verify that the vesting duration is not zero and vesting has started
+        if (vestingInfo.vestingDuration == 0 || block.timestamp <= vestingInfo.startAt) {
             revert AltoVestingInvalidInput();
         }
 
@@ -90,11 +98,7 @@ contract AltoVesting is IAltoVesting, MerkleRootManager, Ownable2Step, Auth, Pau
     }
 
     /// @dev Calculates the amount vested for the given vesting info.
-    function _calculateAmountVested(VestingInfo memory vestingInfo) internal view returns (uint256) {
-        if (block.timestamp <= vestingInfo.startAt) {
-            return 0;
-        }
-
+    function _calculateAmountVested(VestingInfo calldata vestingInfo) internal view returns (uint256) {
         if (block.timestamp >= vestingInfo.startAt + vestingInfo.vestingDuration) {
             return vestingInfo.totalVestingAmount;
         }
