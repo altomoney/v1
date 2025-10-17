@@ -1366,4 +1366,50 @@ contract AltoAdapterTest is AdapterCommonSetup {
         bytes32[] memory emptyProof = new bytes32[](0);
         return emptyProof;
     }
+
+    /*//////////////////////////////////////////////////////////////
+                        VESTING TESTS
+    //////////////////////////////////////////////////////////////*/
+
+    function testClaimVestedTokensVesting(uint256 privateKey, uint256 amount) public {
+        address user;
+        privateKey = _boundPrivateKey(privateKey);
+        user = vm.addr(privateKey);
+        amount = bound(amount, MIN_AMOUNT, USER_AVAILABLE);
+        deal(address(rewardToken), address(vestingContract), amount);
+
+        // Create a merkle tree for this specific user
+        (VestingInfo memory vestingInfo, bytes32[] memory proof) = _createMerkleProofForUserVesting(user, amount);
+
+        bundle.push(_vestingSetAuthorizationWithSig(vestingContract, privateKey, true, 0, false, address(altoAdapter)));
+        bundle.push(_claimVestedTokens(vestingContract, user, vestingInfo, proof));
+
+        vm.warp(block.timestamp + VESTING_DURATION);
+
+        vm.prank(user);
+        bundler3.multicall(bundle);
+
+        // Verify the user received reward tokens
+        assertEq(rewardToken.balanceOf(user), amount, "User should have received reward tokens");
+    }
+
+    function _createMerkleProofForUserVesting(address user, uint256 amount)
+        internal
+        returns (VestingInfo memory, bytes32[] memory)
+    {
+        VestingInfo memory vestingInfo =
+            VestingInfo({startAt: block.timestamp, vestingDuration: VESTING_DURATION, totalVestingAmount: amount});
+        // Create a simple single-leaf merkle tree for this specific user
+        bytes32 userLeaf = keccak256(bytes.concat(keccak256(abi.encode(user, vestingInfo))));
+
+        // Update the vesting contract with this new root
+        vm.startPrank(OWNER);
+        VestingInstance(address(vestingContract)).submitNewPendingRoot(userLeaf, bytes32(0));
+        VestingInstance(address(vestingContract)).acceptPendingRoot(userLeaf);
+        vm.stopPrank();
+
+        // Return empty proof for single-leaf tree
+        bytes32[] memory emptyProof = new bytes32[](0);
+        return (vestingInfo, emptyProof);
+    }
 }

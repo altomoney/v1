@@ -26,6 +26,8 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {UnsafeUpgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {UniversalRewardsDistributorInstance} from "./UniversalRewardsDistributorInstance.sol";
+import {VestingInstance} from "./VestingInstance.sol";
+import {IAltoVesting, VestingInfo} from "@alto/vesting/interfaces/IAltoVesting.sol";
 
 import "forge-std/Test.sol";
 
@@ -53,11 +55,15 @@ abstract contract AdapterCommonSetup is AdapterCommon {
 
     IAltoStaking internal stakingContract;
     IUniversalRewardsDistributor internal universalRewardsDistributor;
+    IAltoVesting internal vestingContract;
 
     // Constants for reward testing
     uint256 public constant USER_AVAILABLE = 1000 ether;
     uint256 public constant BASE_DISCOUNT = 0.25 ether; // 25%
     uint256 public constant LOCK_DISCOUNT = 0.15 ether; // 15%
+
+    // Constants for vesting testing
+    uint256 public constant VESTING_DURATION = 1000;
 
     function setUp() public virtual override {
         super.setUp();
@@ -77,6 +83,7 @@ abstract contract AdapterCommonSetup is AdapterCommon {
         _setupStakingContract();
         _setupRewardsDistributor();
         _setupUniversalRewardsDistributor();
+        _setupVestingContract();
 
         swapper = new SwapperSimpleMock(address(OWNER));
         leverage = new AltoLeverage(address(swapper), address(OWNER));
@@ -244,6 +251,16 @@ abstract contract AdapterCommonSetup is AdapterCommon {
             dummyRoot, bytes32(0)
         );
         UniversalRewardsDistributorInstance(address(universalRewardsDistributor)).acceptPendingRoot(dummyRoot);
+    }
+
+    function _setupVestingContract() internal {
+        bytes32 dummyRoot = keccak256("dummy_root");
+
+        vestingContract = IAltoVesting(
+            address(new VestingInstance(address(OWNER), 1 days, true, address(rewardToken), dummyRoot, bytes32(0)))
+        );
+
+        VestingInstance(address(vestingContract)).acceptPendingRoot(dummyRoot);
     }
 
     function _marketPrepareLeverageData(uint256 minAmountOut, bytes memory swapData)

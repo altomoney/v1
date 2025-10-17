@@ -48,6 +48,13 @@ abstract contract MerkleRootManager is IMerkleRootManagerStaticTypes {
 
     /// @inheritdoc IMerkleRootManagerBase
     function submitNewPendingRoot(bytes32 newMerkleRoot, bytes32 newIpfsHash) external onlyMerkleRootUpdater {
+        _submitNewPendingRoot(newMerkleRoot, newIpfsHash);
+    }
+
+    /// @dev Submits a new pending merkle root.
+    /// @param newMerkleRoot The new merkle root.
+    /// @param newIpfsHash The new ipfs hash.
+    function _submitNewPendingRoot(bytes32 newMerkleRoot, bytes32 newIpfsHash) internal virtual {
         if (newMerkleRoot == pendingMerkleRoot.merkleRoot) {
             revert MerkleRootManagerAlreadyPending();
         }
@@ -67,6 +74,12 @@ abstract contract MerkleRootManager is IMerkleRootManagerStaticTypes {
 
     /// @inheritdoc IMerkleRootManagerBase
     function acceptPendingRoot(bytes32 merkleRootToAccept) external {
+        _acceptPendingRoot(merkleRootToAccept);
+    }
+
+    /// @dev Accepts the pending merkle root.
+    /// @param merkleRootToAccept The merkle root to accept.
+    function _acceptPendingRoot(bytes32 merkleRootToAccept) internal virtual {
         if (pendingMerkleRoot.validFrom == 0) {
             revert MerkleRootManagerRootNotSet();
         }

@@ -18,9 +18,11 @@ import {SigUtils, Permit} from "@alto-test/helpers/SigUtils.sol";
 import {MarketInstance} from "./MarketInstance.sol";
 import {RewardsDistributorInstance} from "./RewardsDistributorInstance.sol";
 import {StakingInstance} from "./StakingInstance.sol";
+import {VestingInstance} from "./VestingInstance.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {IUniversalRewardsDistributor} from "@alto/utils/interfaces/IUniversalRewardsDistributor.sol";
+import {IAltoVesting, VestingInfo} from "@alto/vesting/interfaces/IAltoVesting.sol";
 
 // Mock WETH contract for testing
 contract WETHMock {
@@ -542,5 +544,50 @@ abstract contract AdapterCommon is Test {
             ),
             bytes32(0)
         );
+    }
+
+    function _vestingSetAuthorizationWithSig(
+        IAltoVesting vesting,
+        uint256 privateKey,
+        bool isAuthorized,
+        uint256 nonce,
+        bool skipRevert,
+        address spender
+    ) internal view returns (Call memory) {
+        address user = vm.addr(privateKey);
+
+        Authorization memory authorization = Authorization({
+            owner: user,
+            spender: spender,
+            isAuthorizedStatus: isAuthorized,
+            nonce: nonce,
+            deadline: SIGNATURE_DEADLINE
+        });
+
+        bytes32 digest = SigUtils.toTypedDataHash(
+            VestingInstance(address(vesting)).authorizationTypeHash(),
+            VestingInstance(address(vesting)).domainSeparator(),
+            authorization
+        );
+
+        Signature memory signature;
+        (signature.v, signature.r, signature.s) = vm.sign(privateKey, digest);
+
+        return _call(
+            address(vesting),
+            abi.encodeCall(vesting.setAuthorizationWithSignature, (authorization, signature)),
+            0,
+            skipRevert
+        );
+    }
+
+    function _claimVestedTokens(
+        IAltoVesting vesting,
+        address onBehalf,
+        VestingInfo memory vestingInfo,
+        bytes32[] memory proof
+    ) internal view returns (Call memory) {
+        return
+            _call(altoAdapter, abi.encodeCall(AltoAdapter.claimVestedTokens, (vesting, vestingInfo, proof)), bytes32(0));
     }
 }
