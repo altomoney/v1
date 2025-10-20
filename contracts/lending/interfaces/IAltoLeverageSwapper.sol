@@ -10,11 +10,13 @@ struct SwapParams {
 
 interface IAltoLeverageSwapper {
     /// @notice function that should swaps a token for another
-    /// @param swapParams encoding of the minimum amount of buyToken to buy and
-    ///                   the swapdata specific for the underlying implementation
+    /// @param sellToken the token to sell
+    /// @param buyToken the token to buy
     /// @param amountIn the amount of sellToken to sell
+    /// @param swapParams ABI-encoded swap parameter (see `SwapParams` struct for details)
     /// @return amountOut the amount of buyToken bought
-    function swap(bytes calldata swapParams, address sellToken, address buyToken, uint256 amountIn)
+    /// @dev IMPORTANT:This function has to implement "minAmountOut" check using data proovided by `swapParams`
+    function swap(address sellToken, address buyToken, uint256 amountIn, bytes calldata swapParams)
         external
         payable
         returns (uint256 amountOut);

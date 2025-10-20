@@ -49,18 +49,15 @@ contract AltoLeverage is Ownable2Step, IBorrowCallback, IRemoveCollateralCallbac
         emit MarketUpdated(market, isSupported);
     }
 
-    /// @notice leverage collateral position on behalf of user, called by the market during a flash borrow
-    /// @param amountIn the amount of tokens borrowed
-    /// @param data the data encoding of the minimum amount of buyToken to buy
-    ///             and the swap data specific for the swap target contract
-    function onBorrowCallback(uint256 amountIn, address onBehalf, bytes calldata data) external {
+    /// IBorrowCallback
+    function onBorrowCallback(uint256 assets, address onBehalf, bytes calldata swapParams) external {
         if (!supportedMarkets[msg.sender]) revert NotAuthorized();
         address sellToken = IMarket(msg.sender).borrowToken();
         address buyToken = IMarket(msg.sender).collateralToken();
 
-        uint256 balanceBefore = IERC20(sellToken).balanceOf(address(this)) - amountIn;
+        uint256 balanceBefore = IERC20(sellToken).balanceOf(address(this)) - assets;
 
-        uint256 amountOut = _swap(sellToken, buyToken, amountIn, data);
+        uint256 amountOut = _swap(sellToken, buyToken, assets, swapParams);
 
         uint256 balanceAfter = IERC20(sellToken).balanceOf(address(this));
 
@@ -73,18 +70,15 @@ contract AltoLeverage is Ownable2Step, IBorrowCallback, IRemoveCollateralCallbac
         _addCollateral(buyToken, msg.sender, onBehalf, amountOut);
     }
 
-    /// @notice remove collateral from the market, called by the market during a flash remove collateral
-    /// @param amountIn the amount of tokens removed
-    /// @param data the data encoding of the minimum amount of buyToken to buy
-    ///             and the swap data specific for the swap target contract
-    function onRemoveCollateralCallback(uint256 amountIn, address onBehalf, bytes calldata data) external {
+    /// @inheritdoc IRemoveCollateralCallback
+    function onRemoveCollateralCallback(uint256 assets, address onBehalf, bytes calldata swapParams) external {
         if (!supportedMarkets[msg.sender]) revert NotAuthorized();
         address sellToken = IMarket(msg.sender).collateralToken();
         address buyToken = IMarket(msg.sender).borrowToken();
 
-        uint256 balanceBefore = IERC20(sellToken).balanceOf(address(this)) - amountIn;
+        uint256 balanceBefore = IERC20(sellToken).balanceOf(address(this)) - assets;
 
-        uint256 amountOut = _swap(sellToken, buyToken, amountIn, data);
+        uint256 amountOut = _swap(sellToken, buyToken, assets, swapParams);
 
         uint256 balanceAfter = IERC20(sellToken).balanceOf(address(this));
 
@@ -104,13 +98,13 @@ contract AltoLeverage is Ownable2Step, IBorrowCallback, IRemoveCollateralCallbac
         IERC20(tokenAddress).safeTransfer(recipient, tokenAmount);
     }
 
-    function _swap(address sellToken, address buyToken, uint256 amountIn, bytes memory swapperData)
+    function _swap(address sellToken, address buyToken, uint256 amountIn, bytes calldata swapParams)
         internal
         returns (uint256)
     {
         IERC20(sellToken).forceApprove(address(swapper), amountIn);
 
-        uint256 amountOut = swapper.swap(swapperData, sellToken, buyToken, amountIn);
+        uint256 amountOut = swapper.swap(sellToken, buyToken, amountIn, swapParams);
 
         IERC20(sellToken).forceApprove(address(swapper), 0);
         return amountOut;

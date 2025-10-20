@@ -28,7 +28,7 @@ contract SwapperSimpleMock is IAltoLeverageSwapper, Ownable {
         returnLeftoverTokens = _returnLeftoverTokens;
     }
 
-    function swap(bytes calldata swapParams, address sellToken, address buyToken, uint256 amountIn)
+    function swap(address sellToken, address buyToken, uint256 amountIn, bytes calldata swapParams)
         public
         payable
         returns (uint256 amountOut)
@@ -48,6 +48,7 @@ contract SwapperSimpleMock is IAltoLeverageSwapper, Ownable {
             returnLeftoverTokens = 0;
         }
 
+        // No need to implement minAmountOut check here as it is mock contract
         amountOut = params.minAmountOut;
 
         // Transfer the bought tokens to the sender
