@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {SwapParams} from "@alto/lending/interfaces/IAltoLeverageSwapper.sol";
+import {SwapParams} from "@alto/lending/leverage/interfaces/IAltoLeverageSwapper.sol";
 
 /// @title SwapperABIHelper
 /// @notice Helper contract for swap operations
