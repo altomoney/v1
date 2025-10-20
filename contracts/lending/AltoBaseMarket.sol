@@ -208,10 +208,7 @@ abstract contract AltoBaseMarket is
     }
 
     /// @inheritdoc IMarketBase
-    function setLiquidationConfiguration(LiquidationConfiguration memory _liquidationConfiguration)
-        external
-        onlyOwner
-    {
+    function setLiquidationConfiguration(LiquidationConfiguration memory _liquidationConfiguration) external onlyOwner {
         _validateLiquidationConfiguration(_liquidationConfiguration, maxLtv, feeRecipient);
 
         emit SetLiquidationConfiguration(liquidationConfiguration, _liquidationConfiguration);
@@ -265,7 +262,8 @@ abstract contract AltoBaseMarket is
         }
         if (
             _liquidationConfiguration.priorityLiquidationGracePeriod
-                + _liquidationConfiguration.taggerLiquidationGracePeriod > _liquidationConfiguration.liquidationWindowTag
+                    + _liquidationConfiguration.taggerLiquidationGracePeriod
+                > _liquidationConfiguration.liquidationWindowTag
         ) {
             revert AltoBaseMarketInvalidInput();
         }
@@ -397,7 +395,7 @@ abstract contract AltoBaseMarket is
     }
 
     /// @inheritdoc IMarketBase
-    function removeCollateral(uint256 assets, address onBehalf, address receiver, bytes calldata data)
+    function removeCollateral(uint256 assets, address onBehalf, address receiver, bytes calldata swapParams)
         external
         whenNotPaused
         returns (uint256)
@@ -416,9 +414,9 @@ abstract contract AltoBaseMarket is
 
         IERC20(collateralToken).safeTransfer(receiver, assets);
 
-        if (authorizedCallbacks[receiver] && data.length > 0) {
-            IRemoveCollateralCallback(receiver).onRemoveCollateralCallback(assets, onBehalf, data);
-        } else if (data.length > 0) {
+        if (authorizedCallbacks[receiver] && swapParams.length > 0) {
+            IRemoveCollateralCallback(receiver).onRemoveCollateralCallback(assets, onBehalf, swapParams);
+        } else if (swapParams.length > 0) {
             revert AltoBaseMarketUnauthorized();
         }
 
@@ -432,7 +430,7 @@ abstract contract AltoBaseMarket is
     }
 
     /// @inheritdoc IMarketBase
-    function borrow(uint256 assets, uint256 shares, address onBehalf, address receiver, bytes calldata data)
+    function borrow(uint256 assets, uint256 shares, address onBehalf, address receiver, bytes calldata swapParams)
         external
         whenNotPaused
         whenNotFrozen
@@ -483,11 +481,11 @@ abstract contract AltoBaseMarket is
         }
 
         if (authorizedCallbacks[receiver]) {
-            if (data.length == 0) {
+            if (swapParams.length == 0) {
                 revert AltoBaseMarketInvalidInput();
             }
-            IBorrowCallback(receiver).onBorrowCallback(assetsToSend, onBehalf, data);
-        } else if (data.length > 0) {
+            IBorrowCallback(receiver).onBorrowCallback(assetsToSend, onBehalf, swapParams);
+        } else if (swapParams.length > 0) {
             revert AltoBaseMarketUnauthorized();
         }
 
@@ -515,11 +513,7 @@ abstract contract AltoBaseMarket is
     }
 
     /// @inheritdoc IMarketBase
-    function repay(uint256 assets, uint256 shares, address onBehalf)
-        external
-        whenNotPaused
-        returns (uint256, uint256)
-    {
+    function repay(uint256 assets, uint256 shares, address onBehalf) external whenNotPaused returns (uint256, uint256) {
         if (!_onlyOneZero(assets, shares) || onBehalf == address(0)) {
             revert AltoBaseMarketInvalidInput();
         }
@@ -572,8 +566,8 @@ abstract contract AltoBaseMarket is
     /// uses `maxLtv` instead of `liquidationConfiguration.maxLiquidationLtv` to make a decision.
     function _isSolvent(address _user, bool _isLiquidation) internal view returns (bool) {
         uint256 collateralPrice = IOracle(oracle).getPrice();
-        uint256 collateralValue =
-            uint256(position[_user].collateralAssets).divideWithRounding(collateralPrice, ORACLE_PRICE_PRECISION, false);
+        uint256 collateralValue = uint256(position[_user].collateralAssets)
+            .divideWithRounding(collateralPrice, ORACLE_PRICE_PRECISION, false);
         uint256 maxBorrowValue =
             collateralValue.multiplyWithPrecision(_isLiquidation ? liquidationConfiguration.maxLiquidationLtv : maxLtv);
         uint256 borrowValue =
@@ -645,26 +639,24 @@ abstract contract AltoBaseMarket is
 
         // Calculate fee in collateral
         calc.liquidatorBonusFee = uint256(_position.collateralAssets).multiplyWithPrecision(calc.liquidationFee);
-        calc.protocolFee = uint256(calc.liquidatorBonusFee).divideWithRounding(
-            liquidationConfiguration.protocolFeePercentage, MATH_PRECISION, true
-        );
+        calc.protocolFee = uint256(calc.liquidatorBonusFee)
+            .divideWithRounding(liquidationConfiguration.protocolFeePercentage, MATH_PRECISION, true);
         uint256 remainingCollateralAfterFee = _position.collateralAssets - calc.liquidatorBonusFee;
         calc.remainingCollateralAfterFeeInBorrowAssets =
             remainingCollateralAfterFee.divideWithRounding(calc.collateralPrice, ORACLE_PRICE_PRECISION, false);
 
-        calc.collateralToSellInBorrowAssets = (
-            calc.positionBorrowedAssets
-                - calc.remainingCollateralAfterFeeInBorrowAssets.multiplyWithPrecision(calc.newLtv)
-        ).divideWithPrecisionUp(MATH_PRECISION - calc.newLtv);
+        calc.collateralToSellInBorrowAssets = (calc.positionBorrowedAssets
+                - calc.remainingCollateralAfterFeeInBorrowAssets.multiplyWithPrecision(calc.newLtv))
+        .divideWithPrecisionUp(MATH_PRECISION - calc.newLtv);
         calc.collateralToSellInBorrowAssets =
             Math.min(calc.collateralToSellInBorrowAssets, calc.remainingCollateralAfterFeeInBorrowAssets);
         calc.collateralToSellInBorrowAssets = Math.min(calc.collateralToSellInBorrowAssets, calc.positionBorrowedAssets);
 
         // Calculate final amounts
         LiquidationCalculationResult memory result;
-        uint256 totalCollateralToTake = calc.collateralToSellInBorrowAssets.divideWithRounding(
-            ORACLE_PRICE_PRECISION, calc.collateralPrice, true
-        ) + calc.liquidatorBonusFee;
+        uint256 totalCollateralToTake =
+            calc.collateralToSellInBorrowAssets.divideWithRounding(ORACLE_PRICE_PRECISION, calc.collateralPrice, true)
+                + calc.liquidatorBonusFee;
         result.collateralAmount =
             totalCollateralToTake > _position.collateralAssets ? _position.collateralAssets : totalCollateralToTake;
 
@@ -745,7 +737,8 @@ abstract contract AltoBaseMarket is
         if (currentLtv >= liquidationConfiguration.ltvForCompleteLiquidation) {
             return MATH_PRECISION;
         } else {
-            return (currentLtv - liquidationConfiguration.maxLiquidationLtv).divideWithPrecisionUp(
+            return (currentLtv - liquidationConfiguration.maxLiquidationLtv)
+            .divideWithPrecisionUp(
                 liquidationConfiguration.ltvForCompleteLiquidation - liquidationConfiguration.maxLiquidationLtv
             );
         }
@@ -770,7 +763,7 @@ abstract contract AltoBaseMarket is
     /// @return newLtv The new LTV.
     function _calculateNewLtv(uint256 liquidationPercentage) internal view returns (uint256) {
         uint256 liquidationPercentageAppliedPenalty = liquidationPercentage
-            < liquidationConfiguration.minPenaltyPercentage
+                < liquidationConfiguration.minPenaltyPercentage
             ? liquidationConfiguration.minPenaltyPercentage
             : liquidationPercentage;
 

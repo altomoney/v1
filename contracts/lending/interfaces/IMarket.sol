@@ -355,14 +355,14 @@ interface IMarketBase is IMarketErrors, IMarketEvents, IAuth, IPausable {
     /// @param assets The amount of collateral to remove
     /// @param onBehalf The address of the user who is the owner of the collateral position
     /// @param receiver The address of the user who is receiving the withdrawn collateral
-    /// @param data Additional data for the deleverage
+    /// @param swapParams ABI-encoded swap parameter (see `SwapParams` struct for details)
     /// @return assets The amount of collateral withdrawn
     /// @dev This decreases the `totalCollateral` of the market and the `collateralAssets` of the `onBehalf` user.
     /// @dev This function will revert if this would leave `onBehalf`'s position insolvent after the withdrawal.
-    /// @dev When `data` is provided `receiver` should be an authorized callback contract implementing `IRemoveCollateralCallback`.
+    /// @dev When `swapParams` is provided `receiver` should be an authorized callback contract implementing `IRemoveCollateralCallback`.
     /// This is used to allow for deleverage. Authorized callback contracts would be able to perform a swap and
     /// prepare enough funds to repay `onBehalf`'s position using collateral.
-    function removeCollateral(uint256 assets, address onBehalf, address receiver, bytes calldata data)
+    function removeCollateral(uint256 assets, address onBehalf, address receiver, bytes calldata swapParams)
         external
         returns (uint256);
 
@@ -371,7 +371,7 @@ interface IMarketBase is IMarketErrors, IMarketEvents, IAuth, IPausable {
     /// @param shares The amount of shares to borrow
     /// @param onBehalf The address of the user who will become the owner of the borrow position
     /// @param receiver The address of the user who is receiving the borrowed tokens
-    /// @param data Additional data for the leverage
+    /// @param swapParams ABI-encoded swap parameter (see `SwapParams` struct for details)
     /// @return assets The amount of assets borrowed
     /// @return shares The amount of shares borrowed
     /// @return openingFeeAssets The amount of opening borrow fee paid for this borrow
@@ -381,11 +381,11 @@ interface IMarketBase is IMarketErrors, IMarketEvents, IAuth, IPausable {
     /// Providing `shares` will borrow shares from the market on behalf of `onBehalf`. `assets` should be used in majority
     /// of the cases. Specifying `shares` may end up borrowing more or less assets than expected because of the
     /// slippage. See AltoAdapter.sol for an example on how to handle slippage.
-    /// @dev When `data` is provided `receiver` should be an authorized callback contract implementing `IBorrowCallback`.
+    /// @dev When `swapParams` is provided `receiver` should be an authorized callback contract implementing `IBorrowCallback`.
     /// This is used to allow for leverage. Authorized callback contracts would be able to perform a swap and
     /// prepare enough collateral to borrow `assets` from the market.
     /// @dev This function can only borrow up to to the max LTV of the market for given collateral by `onBehalf`.
-    function borrow(uint256 assets, uint256 shares, address onBehalf, address receiver, bytes calldata data)
+    function borrow(uint256 assets, uint256 shares, address onBehalf, address receiver, bytes calldata swapParams)
         external
         returns (uint256, uint256, uint256);
 

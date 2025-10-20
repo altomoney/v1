@@ -6,15 +6,11 @@ import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
-import {
-    AltoLeverage,
-    FlashBorrowLeverageData,
-    FlashRemoveCollateralLeverageData
-} from "@alto/lending/leverage/AltoLeverage.sol";
+import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
 import {IMarket, Position, IMarketErrors} from "@alto/lending/interfaces/IMarket.sol";
 import {SwapperSimpleMock} from "@alto/lending/mocks/SwapperSimpleMock.sol";
 import {console} from "forge-std/console.sol";
-
+import {SwapParams} from "@alto/lending/interfaces/IAltoLeverageSwapper.sol";
 import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
@@ -96,9 +92,8 @@ contract AltoLeverageTest is Test {
         market.addCollateral(1000 ether, alice);
         vm.stopPrank();
 
-        // Prepare FlashBorrowLeverageData
-        FlashBorrowLeverageData memory leverageData =
-            FlashBorrowLeverageData({minAmountOut: borrowAmount, swapData: hex""});
+        // Prepare SwapParams
+        SwapParams memory leverageData = SwapParams({minAmountOut: borrowAmount, swapData: hex""});
         bytes memory data = abi.encode(leverageData);
         (bool isHealthyBefore, uint256 maxBorrowValue, uint256 borrowValue) = isSolvent(alice, address(market));
 
@@ -133,9 +128,8 @@ contract AltoLeverageTest is Test {
     function testRemoveCollateralWithAltoLeverage() public {
         testBorrowWithAltoLeverageAsRecipient(4000 ether);
 
-        // Prepare FlashBorrowLeverageData
-        FlashRemoveCollateralLeverageData memory leverageData =
-            FlashRemoveCollateralLeverageData({minAmountOut: 3000 ether, swapData: hex""});
+        // Prepare SwapParams
+        SwapParams memory leverageData = SwapParams({minAmountOut: 3000 ether, swapData: hex""});
         bytes memory data = abi.encode(leverageData);
 
         Position memory position = market.position(alice);
@@ -157,9 +151,8 @@ contract AltoLeverageTest is Test {
     function testRemoveCollateralWithAltoLeverage_repay_more_than_borrowed() public {
         testBorrowWithAltoLeverageAsRecipient(4000 ether);
 
-        // Prepare FlashBorrowLeverageData
-        FlashRemoveCollateralLeverageData memory leverageData =
-            FlashRemoveCollateralLeverageData({minAmountOut: 4001 ether, swapData: hex""});
+        // Prepare SwapParams
+        SwapParams memory leverageData = SwapParams({minAmountOut: 4001 ether, swapData: hex""});
         bytes memory data = abi.encode(leverageData);
 
         Position memory position = market.position(alice);
@@ -203,8 +196,8 @@ contract AltoLeverageTest is Test {
         market.addCollateral(1000 ether, alice);
         vm.stopPrank();
 
-        FlashBorrowLeverageData memory leverageData =
-            FlashBorrowLeverageData({minAmountOut: borrowAmount, swapData: hex""});
+        // Prepare SwapParams
+        SwapParams memory leverageData = SwapParams({minAmountOut: borrowAmount, swapData: hex""});
         bytes memory data = abi.encode(leverageData);
         (, uint256 maxBorrowValue, uint256 borrowValue) = isSolvent(alice, address(market));
 
@@ -252,9 +245,8 @@ contract AltoLeverageTest is Test {
         market.addCollateral(1000 ether, alice);
         vm.stopPrank();
 
-        // Prepare FlashBorrowLeverageData
-        FlashBorrowLeverageData memory leverageData =
-            FlashBorrowLeverageData({minAmountOut: 4000.01 ether, swapData: hex""});
+        // Prepare SwapParams
+        SwapParams memory leverageData = SwapParams({minAmountOut: 4000.01 ether, swapData: hex""});
         bytes memory data = abi.encode(leverageData);
 
         // Borrow using AltoLeverage as recipient

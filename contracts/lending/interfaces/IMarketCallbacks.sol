@@ -2,11 +2,21 @@
 pragma solidity ^0.8.0;
 
 interface IBorrowCallback {
-    function onBorrowCallback(uint256 assets, address onBehalf, bytes calldata data) external;
+    /// @notice Callback function for borrowing
+    /// @param assets the amount of assets to borrow - "in" amount for the swap
+    /// @param onBehalf the address of the user whose position is being borrowed
+    /// @param swapParams ABI-encoded swap parameter (see `SwapParams` struct for details)
+    /// @dev Called during market's `borrow`
+    function onBorrowCallback(uint256 assets, address onBehalf, bytes calldata swapParams) external;
 }
 
 interface IRemoveCollateralCallback {
-    function onRemoveCollateralCallback(uint256 assets, address onBehalf, bytes calldata data) external;
+    /// @notice Callback function for removing collateral
+    /// @param assets the amount of assets to remove - "in" amount for the swap
+    /// @param onBehalf the address of the user whose collateral is being removed
+    /// @param swapParams ABI-encoded swap parameter (see `SwapParams` struct for details)
+    /// @dev Called during market's `removeCollateral`
+    function onRemoveCollateralCallback(uint256 assets, address onBehalf, bytes calldata swapParams) external;
 }
 
 /// @notice Callback interface for liquidator to call during liquidation
