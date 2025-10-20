@@ -11,8 +11,6 @@ evm_version = 'cancun'
 optimizer = true
 optimizer_runs = 1
 
-proptest_max_shrink_iters = 500
-
 remappings = [
 	'deployments/=contracts/deployments/',
 	'@morpho-org/bundler3/=lib/bundler3/src/',

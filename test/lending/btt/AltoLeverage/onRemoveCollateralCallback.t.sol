@@ -9,7 +9,6 @@ import {
     SwapParams
 } from "@alto/lending/interfaces/IAltoLeverageSwapper.sol";
 import {Position} from "@alto/lending/interfaces/IMarket.sol";
-import {SwapperSimpleMock} from "@alto/lending/mocks/SwapperSimpleMock.sol";
 
 contract OnRemoveCollateralCallbackTest is AltoLeverageBTTTest {
     /// @dev it should revert

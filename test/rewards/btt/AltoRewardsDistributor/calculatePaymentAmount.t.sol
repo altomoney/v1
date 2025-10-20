@@ -2,8 +2,6 @@
 pragma solidity ^0.8.0;
 
 import {RewardsDistributorCommon} from "./RewardsDistributorCommon.t.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 
 contract CalculatePaymentAmountTest is RewardsDistributorCommon {
     function setUp() public override {

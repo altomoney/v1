@@ -4,7 +4,7 @@ pragma solidity ^0.8.22;
 import {Test} from "forge-std/Test.sol";
 import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
 import {MockMarketDeployer, MockMarket} from "@alto-test/helpers/MockMarket.sol";
-import {IMarket, IMarketEvents, IMarketErrors} from "@alto/lending/interfaces/IMarket.sol";
+import {IMarket, IMarketEvents} from "@alto/lending/interfaces/IMarket.sol";
 import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 import {ILiquidateCallback} from "@alto/lending/interfaces/IMarketCallbacks.sol";

@@ -6,7 +6,7 @@ import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Auth} from "@alto/utils/Auth.sol";
-import {Pausable, IPausable} from "@alto/utils/Pausable.sol";
+import {Pausable} from "@alto/utils/Pausable.sol";
 import {IAltoVesting, VestingInfo} from "@alto/vesting/interfaces/IAltoVesting.sol";
 
 bytes32 constant PAUSE = keccak256("PAUSE");
