@@ -4,10 +4,8 @@ pragma solidity ^0.8.0;
 import {Test} from "forge-std/Test.sol";
 import {UniversalRewardsDistributor, PAUSE} from "@alto/utils/UniversalRewardsDistributor.sol";
 import {IUniversalRewardsDistributor} from "@alto/utils/interfaces/IUniversalRewardsDistributor.sol";
-import {IMerkleRootManagerErrors} from "@alto/utils/interfaces/IMerkleRootManager.sol";
 import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
 import {ERC20MockDecimals} from "@alto-test/helpers/ERC20MockDecimals.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract UniversalRewardsDistributorClaim is Test {
     UniversalRewardsDistributor public distributor;

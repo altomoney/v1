@@ -6,7 +6,6 @@ import {AltoVesting} from "@alto/vesting/AltoVesting.sol";
 import {IAltoVesting, VestingInfo} from "@alto/vesting/interfaces/IAltoVesting.sol";
 import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
 import {ERC20MockMintable} from "@alto-test/helpers/ERC20MockMintable.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract AltoVestingClaim is Test {
     AltoVesting public vesting;
@@ -101,15 +100,11 @@ contract AltoVestingClaim is Test {
         vestingToken = new ERC20MockMintable("Alto Token", "ALTO");
 
         aliceVestingInfo = VestingInfo({
-            startAt: block.timestamp,
-            vestingDuration: VESTING_DURATION,
-            totalVestingAmount: TOTAL_VESTING_AMOUNT
+            startAt: block.timestamp, vestingDuration: VESTING_DURATION, totalVestingAmount: TOTAL_VESTING_AMOUNT
         });
 
         bobVestingInfo = VestingInfo({
-            startAt: block.timestamp,
-            vestingDuration: VESTING_DURATION,
-            totalVestingAmount: TOTAL_VESTING_AMOUNT
+            startAt: block.timestamp, vestingDuration: VESTING_DURATION, totalVestingAmount: TOTAL_VESTING_AMOUNT
         });
 
         _setupMerkleTree();
@@ -180,9 +175,7 @@ contract AltoVestingClaim is Test {
 
     function test_RevertGiven_VestingInfoDoesNotMatchProvidedParameters() external givenMerkleProofIsValid {
         VestingInfo memory wrongVestingInfo = VestingInfo({
-            startAt: block.timestamp,
-            vestingDuration: VESTING_DURATION,
-            totalVestingAmount: TOTAL_VESTING_AMOUNT + 1
+            startAt: block.timestamp, vestingDuration: VESTING_DURATION, totalVestingAmount: TOTAL_VESTING_AMOUNT + 1
         });
 
         vm.prank(ALICE);
@@ -227,10 +220,7 @@ contract AltoVestingClaim is Test {
         vesting.claim(ALICE, smallerVestingInfo, smallerProof);
     }
 
-    function test_RevertWhen_VestingHasNotStarted_CurrentTimestampIsBeforeStartAt()
-        external
-        givenVestingHasNotStarted
-    {
+    function test_RevertWhen_VestingHasNotStarted_CurrentTimestampIsBeforeStartAt() external givenVestingHasNotStarted {
         // Update merkle root for future vesting
         VestingInfo memory futureVestingInfo = VestingInfo({
             startAt: block.timestamp + 1 days,

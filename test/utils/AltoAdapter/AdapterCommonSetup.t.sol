@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.28;
 
-import {AltoAdapter} from "@alto/utils/AltoAdapter.sol";
 import {IMarket, LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {MarketInstance} from "./MarketInstance.sol";
@@ -22,14 +21,11 @@ import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
 import {SwapperSimpleMock} from "@alto/lending/mocks/SwapperSimpleMock.sol";
 import {SwapParams} from "@alto/lending/interfaces/IAltoLeverageSwapper.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {UnsafeUpgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {UniversalRewardsDistributorInstance} from "./UniversalRewardsDistributorInstance.sol";
 import {VestingInstance} from "./VestingInstance.sol";
-import {IAltoVesting, VestingInfo} from "@alto/vesting/interfaces/IAltoVesting.sol";
-
-import "forge-std/Test.sol";
+import {IAltoVesting} from "@alto/vesting/interfaces/IAltoVesting.sol";
 
 uint256 constant MIN_AMOUNT = 1000;
 uint256 constant MAX_AMOUNT = 2 ** 64; // Must be less than or equal to type(uint160).max.
@@ -247,9 +243,8 @@ abstract contract AdapterCommonSetup is AdapterCommon {
         // Setup distributor
         bytes32 dummyRoot = keccak256("dummy_root");
 
-        UniversalRewardsDistributorInstance(address(universalRewardsDistributor)).submitNewPendingRoot(
-            dummyRoot, bytes32(0)
-        );
+        UniversalRewardsDistributorInstance(address(universalRewardsDistributor))
+            .submitNewPendingRoot(dummyRoot, bytes32(0));
         UniversalRewardsDistributorInstance(address(universalRewardsDistributor)).acceptPendingRoot(dummyRoot);
     }
 

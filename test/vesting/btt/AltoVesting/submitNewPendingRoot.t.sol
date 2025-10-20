@@ -3,11 +3,10 @@ pragma solidity ^0.8.0;
 
 import {Test} from "forge-std/Test.sol";
 import {AltoVesting} from "@alto/vesting/AltoVesting.sol";
-import {IAltoVesting, VestingInfo} from "@alto/vesting/interfaces/IAltoVesting.sol";
+import {IAltoVesting} from "@alto/vesting/interfaces/IAltoVesting.sol";
 import {IMerkleRootManagerErrors} from "@alto/utils/interfaces/IMerkleRootManager.sol";
 import {IMerkleRootManagerEvents} from "@alto/utils/interfaces/IMerkleRootManager.sol";
 import {ERC20MockMintable} from "@alto-test/helpers/ERC20MockMintable.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract AltoVestingSubmitNewPendingRoot is Test {
     AltoVesting public updatableVesting;

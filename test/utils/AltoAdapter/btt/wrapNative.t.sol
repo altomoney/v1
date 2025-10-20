@@ -3,7 +3,6 @@ pragma solidity ^0.8.28;
 
 import {AdapterCommonSetup} from "../AdapterCommonSetup.t.sol";
 import {ErrorsLib} from "@morpho-org/bundler3/libraries/ErrorsLib.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Call} from "@morpho-org/bundler3/Bundler3.sol";
 
 contract WrapNativeTest is AdapterCommonSetup {

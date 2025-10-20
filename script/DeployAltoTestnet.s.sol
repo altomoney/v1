@@ -2,17 +2,7 @@
 pragma solidity ^0.8.22;
 
 import {Script} from "forge-std/Script.sol";
-import {Vm} from "forge-std/Vm.sol";
-import {
-    TestnetRewardsBatch,
-    TestnetRewardsBatchReport,
-    TestnetRewardsBatchParams
-} from "@alto/deployments/testnet/TestnetRewardsBatch.sol";
-import {
-    TestnetStakingBatch,
-    TestnetStakingBatchParams,
-    TestnetStakingBatchReport
-} from "@alto/deployments/testnet/TestnetStakingBatch.sol";
+
 import {DeployAltoTestnet, AltoTestnetParams, AltoTestnetInput} from "@alto/deployments/testnet/DeployAltoTestnet.sol";
 import {console} from "forge-std/console.sol";
 
