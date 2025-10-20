@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.28;
 
+import {AdapterContractApproval} from "@alto/utils/AdapterContractApproval.sol";
 import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
 import {IRewardsDistributor} from "@alto/rewards/interfaces/IRewardsDistributor.sol";
 import {IAltoStaking} from "@alto/staking/interfaces/IAltoStaking.sol";
@@ -26,7 +27,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 /// contract max approves arbitrary contracts in its name, this attack vector could be extended. That being
 /// said, it is the responsibility of the caller to ensure that the adapter is not left with any funds after
 /// the transaction.
-contract AltoAdapter is CoreAdapter {
+contract AltoAdapter is CoreAdapter, AdapterContractApproval {
     using MathRayLib for uint256;
 
     /// @dev The address of the wrapped native token.
@@ -34,7 +35,10 @@ contract AltoAdapter is CoreAdapter {
 
     /// @param bundler3 The address of the Bundler3 contract.
     /// @param wNative The address of the canonical native token wrapper.
-    constructor(address bundler3, address wNative) CoreAdapter(bundler3) {
+    constructor(address bundler3, address wNative, address owner)
+        CoreAdapter(bundler3)
+        AdapterContractApproval(owner)
+    {
         require(wNative != address(0), ErrorsLib.ZeroAddress());
 
         WRAPPED_NATIVE = IWNative(wNative);
@@ -51,6 +55,7 @@ contract AltoAdapter is CoreAdapter {
     function marketAddSupply(IMarket market, uint256 assets, uint256 shares, uint256 maxSharePriceE27, address onBehalf)
         external
         onlyBundler3
+        onlyApprovedContract(address(market))
     {
         // Do not check `onBehalf` against the zero address as it's done in AltoBaseMarket.
         require(onBehalf != address(this), ErrorsLib.AdapterAddress());
@@ -80,7 +85,7 @@ contract AltoAdapter is CoreAdapter {
         uint256 shares,
         uint256 minSharePriceE27,
         address receiver
-    ) external onlyBundler3 {
+    ) external onlyBundler3 onlyApprovedContract(address(market)) {
         if (shares == type(uint256).max) {
             shares = market.position(initiator()).supplyShares;
             require(shares != 0, ErrorsLib.ZeroAmount());
@@ -95,7 +100,11 @@ contract AltoAdapter is CoreAdapter {
     /// @param market The address of the market.
     /// @param assets The amount of assets to add.
     /// @param onBehalf The address of the user whose position is collateral being added to.
-    function marketAddCollateral(IMarket market, uint256 assets, address onBehalf) external onlyBundler3 {
+    function marketAddCollateral(IMarket market, uint256 assets, address onBehalf)
+        external
+        onlyBundler3
+        onlyApprovedContract(address(market))
+    {
         // Do not check `onBehalf` against the zero address as it's done at AltoBaseMarket's level.
         require(onBehalf != address(this), ErrorsLib.AdapterAddress());
 
@@ -117,6 +126,7 @@ contract AltoAdapter is CoreAdapter {
     function marketRemoveCollateral(IMarket market, uint256 assets, address receiver, bytes calldata data)
         external
         onlyBundler3
+        onlyApprovedContract(address(market))
     {
         if (assets == type(uint256).max) assets = market.position(initiator()).collateralAssets;
         require(assets != 0, ErrorsLib.ZeroAmount());
@@ -138,7 +148,7 @@ contract AltoAdapter is CoreAdapter {
         uint256 minSharePriceE27,
         address receiver,
         bytes calldata data
-    ) external onlyBundler3 {
+    ) external onlyBundler3 onlyApprovedContract(address(market)) {
         (uint256 borrowedAssets, uint256 borrowedShares,) = market.borrow(assets, shares, initiator(), receiver, data);
 
         require(borrowedAssets.rDivDown(borrowedShares) >= minSharePriceE27, ErrorsLib.SlippageExceeded());
@@ -153,6 +163,7 @@ contract AltoAdapter is CoreAdapter {
     function marketRepay(IMarket market, uint256 assets, uint256 shares, uint256 maxSharePriceE27, address onBehalf)
         external
         onlyBundler3
+        onlyApprovedContract(address(market))
     {
         // Do not check `onBehalf` against the zero address as it's done at AltoBaseMarket's level.
         require(onBehalf != address(this), ErrorsLib.AdapterAddress());
@@ -234,7 +245,7 @@ contract AltoAdapter is CoreAdapter {
         uint256 paymentAmount,
         bool lockPurchasedRewards,
         uint256 maxEpochsToLockFor
-    ) external onlyBundler3 {
+    ) external onlyBundler3 onlyApprovedContract(address(rewardsDistributor)) {
         // AltoRewardsDistributor's allowance is not reset as it is trusted.
         SafeERC20.forceApprove(IERC20(paymentToken), address(rewardsDistributor), type(uint256).max);
 
@@ -264,7 +275,7 @@ contract AltoAdapter is CoreAdapter {
         uint256 containerId,
         bool isReuse,
         uint256 maxEpochsToLockFor
-    ) external onlyBundler3 {
+    ) external onlyBundler3 onlyApprovedContract(address(staking)) {
         if (!isReuse) {
             // AltoStaking's allowance is not reset as it is trusted.
             SafeERC20.forceApprove(IERC20(staking.LOCK_TOKEN()), address(staking), type(uint256).max);
@@ -272,7 +283,11 @@ contract AltoAdapter is CoreAdapter {
         staking.lock(initiator(), amount, containerId, isReuse, maxEpochsToLockFor);
     }
 
-    function stakingUnlock(IAltoStaking staking, address receiver, uint256 containerId) external onlyBundler3 {
+    function stakingUnlock(IAltoStaking staking, address receiver, uint256 containerId)
+        external
+        onlyBundler3
+        onlyApprovedContract(address(staking))
+    {
         staking.unlock(initiator(), receiver, containerId);
     }
 
@@ -281,7 +296,7 @@ contract AltoAdapter is CoreAdapter {
         address rewardToken,
         uint256 amount,
         bytes32[] calldata proof
-    ) external onlyBundler3 {
+    ) external onlyBundler3 onlyApprovedContract(address(rewardsDistributor)) {
         rewardsDistributor.claim(initiator(), rewardToken, amount, proof);
     }
 
@@ -294,6 +309,7 @@ contract AltoAdapter is CoreAdapter {
     function claimVestedTokens(IAltoVesting vesting, VestingInfo memory vestingInfo, bytes32[] calldata proof)
         external
         onlyBundler3
+        onlyApprovedContract(address(vesting))
     {
         vesting.claim(initiator(), vestingInfo, proof);
     }

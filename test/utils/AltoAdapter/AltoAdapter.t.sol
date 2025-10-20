@@ -7,6 +7,7 @@ import {StakingPosition, StakingContainer} from "@alto/staking/interfaces/IAltoS
 import {IAuth} from "@alto/utils/interfaces/IAuth.sol";
 import {VestingInfo} from "@alto/vesting/interfaces/IAltoVesting.sol";
 import {AltoAdapter} from "@alto/utils/AltoAdapter.sol";
+import {AdapterContractApproval} from "@alto/utils/AdapterContractApproval.sol";
 
 import {ErrorsLib} from "@morpho-org/bundler3/libraries/ErrorsLib.sol";
 import {MathRayLib} from "@morpho-org/bundler3/libraries/MathRayLib.sol";
@@ -115,6 +116,54 @@ contract AltoAdapterTest is AdapterCommonSetup {
         bundle.push(_marketRepay(market, assets, 0, type(uint256).max, address(altoAdapter)));
 
         vm.expectRevert(ErrorsLib.AdapterAddress.selector);
+        bundler3.multicall(bundle);
+    }
+
+    function testMarketAddSupplyNotApproved() public {
+        IMarket nonMarket = IMarket(makeAddr("NonMarket"));
+
+        bundle.push(_marketAddSupply(nonMarket, MIN_AMOUNT, 0, 0, USER));
+        vm.expectRevert(AdapterContractApproval.AdapterContractApprovalUnapprovedContract.selector);
+        bundler3.multicall(bundle);
+    }
+
+    function testMarketRemoveSupplyNotApproved() public {
+        IMarket nonMarket = IMarket(makeAddr("NonMarket"));
+
+        bundle.push(_marketRemoveSupply(nonMarket, MIN_AMOUNT, 0, 0, USER));
+        vm.expectRevert(AdapterContractApproval.AdapterContractApprovalUnapprovedContract.selector);
+        bundler3.multicall(bundle);
+    }
+
+    function testMarketAddCollateralNotApproved() public {
+        IMarket nonMarket = IMarket(makeAddr("NonMarket"));
+
+        bundle.push(_marketAddCollateral(nonMarket, MIN_AMOUNT, USER));
+        vm.expectRevert(AdapterContractApproval.AdapterContractApprovalUnapprovedContract.selector);
+        bundler3.multicall(bundle);
+    }
+
+    function testMarketRemoveCollateralNotApproved() public {
+        IMarket nonMarket = IMarket(makeAddr("NonMarket"));
+
+        bundle.push(_marketRemoveCollateral(nonMarket, MIN_AMOUNT, USER, hex""));
+        vm.expectRevert(AdapterContractApproval.AdapterContractApprovalUnapprovedContract.selector);
+        bundler3.multicall(bundle);
+    }
+
+    function testMarketBorrowNotApproved() public {
+        IMarket nonMarket = IMarket(makeAddr("NonMarket"));
+
+        bundle.push(_marketBorrow(nonMarket, MIN_AMOUNT, 0, 0, USER, hex""));
+        vm.expectRevert(AdapterContractApproval.AdapterContractApprovalUnapprovedContract.selector);
+        bundler3.multicall(bundle);
+    }
+
+    function testMarketRepayNotApproved() public {
+        IMarket nonMarket = IMarket(makeAddr("NonMarket"));
+
+        bundle.push(_marketRepay(nonMarket, MIN_AMOUNT, 0, 0, USER));
+        vm.expectRevert(AdapterContractApproval.AdapterContractApprovalUnapprovedContract.selector);
         bundler3.multicall(bundle);
     }
 
@@ -1097,12 +1146,26 @@ contract AltoAdapterTest is AdapterCommonSetup {
 
     function testConstructorRevertWhenWNativeIsZeroAddress() public {
         vm.expectRevert(ErrorsLib.ZeroAddress.selector);
-        new AltoAdapter(address(bundler3), address(0));
+        new AltoAdapter(address(bundler3), address(0), OWNER);
     }
 
     /*//////////////////////////////////////////////////////////////
                         REWARDS DISTRIBUTOR TESTS
     //////////////////////////////////////////////////////////////*/
+
+    function testRewardsDistributorClaimWithERC20TransferNotApproved() public {
+        IRewardsDistributor nonRewards = IRewardsDistributor(makeAddr("NonRewardsDistributor"));
+
+        bytes32[] memory proof;
+        bundle.push(
+            _rewardsDistributorClaimRewardTokensWithERC20Transfer(
+                nonRewards, 0, proof, 0, 0, address(paymentToken), 0, false, 0
+            )
+        );
+
+        vm.expectRevert(AdapterContractApproval.AdapterContractApprovalUnapprovedContract.selector);
+        bundler3.multicall(bundle);
+    }
 
     function testClaimRewardTokens(uint256 privateKey, uint256 amount) public {
         address user;
@@ -1256,6 +1319,24 @@ contract AltoAdapterTest is AdapterCommonSetup {
                         STAKING TESTS
     //////////////////////////////////////////////////////////////*/
 
+    function testStakingLockNotApproved() public {
+        IAltoStaking nonStaking = IAltoStaking(makeAddr("NonStaking"));
+
+        bundle.push(_stakingLock(nonStaking, 1, 1, false, 1));
+
+        vm.expectRevert(AdapterContractApproval.AdapterContractApprovalUnapprovedContract.selector);
+        bundler3.multicall(bundle);
+    }
+
+    function testStakingUnlockNotApproved() public {
+        IAltoStaking nonStaking = IAltoStaking(makeAddr("NonStaking"));
+
+        bundle.push(_stakingUnlock(nonStaking, USER, 1));
+
+        vm.expectRevert(AdapterContractApproval.AdapterContractApprovalUnapprovedContract.selector);
+        bundler3.multicall(bundle);
+    }
+
     function testStakingLock(uint256 privateKey, uint256 amount) public {
         address user;
         privateKey = _boundPrivateKey(privateKey);
@@ -1317,6 +1398,17 @@ contract AltoAdapterTest is AdapterCommonSetup {
                         UNIVERSAL REWARDS DISTRIBUTOR TESTS
     //////////////////////////////////////////////////////////////*/
 
+    function testUniversalRewardsDistributorClaimNotApproved() public {
+        IUniversalRewardsDistributor nonUniversal =
+            IUniversalRewardsDistributor(makeAddr("NonUniversalRewardsDistributor"));
+
+        bytes32[] memory proof;
+        bundle.push(_universalRewardsDistributorClaimRewardTokens(nonUniversal, address(rewardToken), 0, proof));
+
+        vm.expectRevert(AdapterContractApproval.AdapterContractApprovalUnapprovedContract.selector);
+        bundler3.multicall(bundle);
+    }
+
     function testClaimRewardTokensUniversalRewardsDistributor(uint256 privateKey, uint256 amount) public {
         address user;
         privateKey = _boundPrivateKey(privateKey);
@@ -1367,6 +1459,19 @@ contract AltoAdapterTest is AdapterCommonSetup {
     /*//////////////////////////////////////////////////////////////
                         VESTING TESTS
     //////////////////////////////////////////////////////////////*/
+
+    function testVestingClaimNotApproved() public {
+        IAltoVesting nonVesting = IAltoVesting(makeAddr("NonVesting"));
+
+        VestingInfo memory vestingInfo =
+            VestingInfo({startAt: block.timestamp, vestingDuration: VESTING_DURATION, totalVestingAmount: 0});
+        bytes32[] memory proof;
+
+        bundle.push(_claimVestedTokens(nonVesting, USER, vestingInfo, proof));
+
+        vm.expectRevert(AdapterContractApproval.AdapterContractApprovalUnapprovedContract.selector);
+        bundler3.multicall(bundle);
+    }
 
     function testClaimVestedTokensVesting(uint256 privateKey, uint256 amount) public {
         address user;

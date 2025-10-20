@@ -156,6 +156,9 @@ abstract contract AdapterCommonSetup is AdapterCommon {
             );
         }
 
+        // Approve conract to be used in the adapter
+        altoAdapter.approveContract(address(market));
+
         deal(address(borrowToken), address(swapper), type(uint128).max);
         deal(address(collateralToken), address(swapper), type(uint128).max);
         swapper.setWhitelisted(address(leverage), true);
@@ -210,6 +213,9 @@ abstract contract AdapterCommonSetup is AdapterCommon {
         stakingContract.activateContainer(2);
         stakingContract.startEpoch();
 
+        // Approve conract to be used in the adapter
+        altoAdapter.approveContract(address(stakingContract));
+
         // tokens are already dealt in _setupRewardsDistributor
     }
 
@@ -232,6 +238,9 @@ abstract contract AdapterCommonSetup is AdapterCommon {
         AltoRewardsDistributor(address(rewardsDistributor)).submitNewPendingRoot(dummyRoot, bytes32(0));
         AltoRewardsDistributor(address(rewardsDistributor)).acceptPendingRoot(dummyRoot);
 
+        // Approve conract to be used in the adapter
+        altoAdapter.approveContract(address(rewardsDistributor));
+
         // Fund distributor with reward tokens
         deal(address(rewardToken), address(rewardsDistributor), 10000 ether);
     }
@@ -246,6 +255,9 @@ abstract contract AdapterCommonSetup is AdapterCommon {
         UniversalRewardsDistributorInstance(address(universalRewardsDistributor))
             .submitNewPendingRoot(dummyRoot, bytes32(0));
         UniversalRewardsDistributorInstance(address(universalRewardsDistributor)).acceptPendingRoot(dummyRoot);
+
+        // Approve conract to be used in the adapter
+        altoAdapter.approveContract(address(universalRewardsDistributor));
     }
 
     function _setupVestingContract() internal {
@@ -256,6 +268,9 @@ abstract contract AdapterCommonSetup is AdapterCommon {
         );
 
         VestingInstance(address(vestingContract)).acceptPendingRoot(dummyRoot);
+
+        // Approve conract to be used in the adapter
+        altoAdapter.approveContract(address(vestingContract));
     }
 
     function _marketPrepareLeverageData(uint256 minAmountOut, bytes memory swapData)

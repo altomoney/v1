@@ -1,0 +1,14 @@
+AdapterContractApproval::approveContract(address)
+├── given caller is not owner
+│   └── it should revert with OwnableUnauthorizedAccount
+├── given caller is owner
+│   ├── when contractAddress is zero address
+│   │   └── it should revert with AdapterContractApprovalInvalidInput
+│   ├── when contractAddress is already approved
+│   │   └── it should revert with AdapterContractApprovalInvalidInput
+│   └── when contractAddress is not approved
+│       ├── it should set isApprovedContract[contractAddress] to true
+│       └── it should emit AdapterContractApproved(contractAddress)
+└── state invariants
+    └── it should not modify unrelated storage
+
