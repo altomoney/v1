@@ -13,9 +13,6 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 contract SwapperSimpleMock is IAltoLeverageSwapper, Ownable {
     mapping(address => bool) public isWhitelisted;
 
-    error SenderNotValid(address sender);
-    error MinAmountOutNotMet(uint256 minAmountOut, uint256 amountOut);
-
     uint256 public returnLeftoverTokens;
 
     constructor(address _owner) Ownable(_owner) {}
@@ -36,7 +33,7 @@ contract SwapperSimpleMock is IAltoLeverageSwapper, Ownable {
         SwapParams memory params = abi.decode(swapParams, (SwapParams));
 
         if (!isWhitelisted[msg.sender]) {
-            revert SenderNotValid(msg.sender);
+            revert AltoLeverageSwapperSenderNotValid(msg.sender);
         }
         // Transfer tokens to this contract
         /// forge-lint: disable-next-line(erc20-unchecked-transfer)

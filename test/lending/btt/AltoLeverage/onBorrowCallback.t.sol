@@ -3,7 +3,11 @@ pragma solidity ^0.8.22;
 
 import {AltoLeverageBTTTest} from "./AltoLeverage.t.sol";
 import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
-import {IAltoLeverageSwapper, SwapParams} from "@alto/lending/interfaces/IAltoLeverageSwapper.sol";
+import {
+    IAltoLeverageSwapper,
+    IAltoLeverageSwapperErrors,
+    SwapParams
+} from "@alto/lending/interfaces/IAltoLeverageSwapper.sol";
 import {Position} from "@alto/lending/interfaces/IMarket.sol";
 import {SwapperSimpleMock} from "@alto/lending/mocks/SwapperSimpleMock.sol";
 
@@ -50,11 +54,13 @@ contract OnBorrowCallbackTest is AltoLeverageBTTTest {
         });
         bytes memory data = abi.encode(leverageData);
 
-        // Configure swapper to revert due to MinAmountOutNotMet
+        // Configure swapper to revert due to AltoLeverageSwapperMinAmountOutNotMet
         vm.mockCallRevert(
             address(swapper),
             abi.encodeWithSelector(IAltoLeverageSwapper.swap.selector),
-            abi.encodeWithSelector(SwapperSimpleMock.MinAmountOutNotMet.selector, 2000 ether, 1000 ether)
+            abi.encodeWithSelector(
+                IAltoLeverageSwapperErrors.AltoLeverageSwapperMinAmountOutNotMet.selector, 2000 ether, 1000 ether
+            )
         );
 
         // Setup: Alice adds supply and collateral to market
@@ -62,7 +68,11 @@ contract OnBorrowCallbackTest is AltoLeverageBTTTest {
         market.addSupply(10000000000 ether, 0, alice);
         market.addCollateral(1000 ether, alice);
 
-        vm.expectRevert(abi.encodeWithSelector(SwapperSimpleMock.MinAmountOutNotMet.selector, 2000 ether, 1000 ether));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAltoLeverageSwapperErrors.AltoLeverageSwapperMinAmountOutNotMet.selector, 2000 ether, 1000 ether
+            )
+        );
         market.borrow(1000 ether, 0, alice, address(leverage), data);
         vm.stopPrank();
     }
@@ -105,8 +115,10 @@ contract OnBorrowCallbackTest is AltoLeverageBTTTest {
     }
 
     /// @dev it should transfer leftover tokens to onBehalf and add collateral to market
-    function test_TransferLeftoverTokensAndAddCollateral_WhenSwapSucceedsAndAmountOutMeetsMinAmountOutAndLeftoverTokensExist(
-    ) external givenMarketIsSupported {
+    function test_TransferLeftoverTokensAndAddCollateral_WhenSwapSucceedsAndAmountOutMeetsMinAmountOutAndLeftoverTokensExist()
+        external
+        givenMarketIsSupported
+    {
         uint256 borrowAmount = 1000 ether;
         uint256 leftoverAmount = 50 ether;
 

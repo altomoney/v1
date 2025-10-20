@@ -3,7 +3,11 @@ pragma solidity ^0.8.22;
 
 import {AltoLeverageBTTTest} from "./AltoLeverage.t.sol";
 import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
-import {IAltoLeverageSwapper, SwapParams} from "@alto/lending/interfaces/IAltoLeverageSwapper.sol";
+import {
+    IAltoLeverageSwapper,
+    IAltoLeverageSwapperErrors,
+    SwapParams
+} from "@alto/lending/interfaces/IAltoLeverageSwapper.sol";
 import {Position} from "@alto/lending/interfaces/IMarket.sol";
 import {SwapperSimpleMock} from "@alto/lending/mocks/SwapperSimpleMock.sol";
 
@@ -49,15 +53,21 @@ contract OnRemoveCollateralCallbackTest is AltoLeverageBTTTest {
         });
         bytes memory data = abi.encode(leverageData);
 
-        // Configure swapper to revert due to MinAmountOutNotMet
+        // Configure swapper to revert due to AltoLeverageSwapperMinAmountOutNotMet
         vm.mockCallRevert(
             address(swapper),
             abi.encodeWithSelector(IAltoLeverageSwapper.swap.selector),
-            abi.encodeWithSelector(SwapperSimpleMock.MinAmountOutNotMet.selector, 2000 ether, 100 ether)
+            abi.encodeWithSelector(
+                IAltoLeverageSwapperErrors.AltoLeverageSwapperMinAmountOutNotMet.selector, 2000 ether, 100 ether
+            )
         );
 
         vm.startPrank(alice);
-        vm.expectRevert(abi.encodeWithSelector(SwapperSimpleMock.MinAmountOutNotMet.selector, 2000 ether, 100 ether));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAltoLeverageSwapperErrors.AltoLeverageSwapperMinAmountOutNotMet.selector, 2000 ether, 100 ether
+            )
+        );
         market.removeCollateral(100 ether, alice, address(leverage), data);
         vm.stopPrank();
     }
@@ -210,8 +220,11 @@ contract OnRemoveCollateralCallbackTest is AltoLeverageBTTTest {
     }
 
     /// @dev it should transfer leftover tokens to onBehalf repay full debt and transfer excess
-    function test_TransferLeftoverTokensRepayFullDebtAndTransferExcess_WhenLeftoverTokensAndAmountOutIsGreaterThanUserBorrowedAssets(
-    ) external givenMarketIsSupported givenUserHasCollateralAndDebt {
+    function test_TransferLeftoverTokensRepayFullDebtAndTransferExcess_WhenLeftoverTokensAndAmountOutIsGreaterThanUserBorrowedAssets()
+        external
+        givenMarketIsSupported
+        givenUserHasCollateralAndDebt
+    {
         uint256 removeAmount = 600 ether;
         uint256 swapOutput = 600 ether; // More than user's debt
         uint256 leftoverAmount = 50 ether;
