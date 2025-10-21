@@ -12,21 +12,35 @@ contract AltoMintMarketClaimInterest is MarketCommon {
 
     AltoMintMarket internal mintMarket;
 
-    function setUp() public override {
-        super.setUp();
-        mintMarket = AltoMintMarket(address(market));
+    modifier whenCallerIsOwner() {
+        vm.startPrank(OWNER);
+        _;
+        vm.stopPrank();
     }
 
-    function test_RevertWhen_MarketIsPaused() external {
+    modifier whenCallerIsFeeRecipient() {
+        vm.startPrank(FEE_RECIPIENT);
+        _;
+        vm.stopPrank();
+    }
+
+    modifier whenCallerIsNotOwnerNorFeeRecipient() {
+        vm.startPrank(USER);
+        _;
+        vm.stopPrank();
+    }
+
+    modifier whenMarketIsPaused() {
         vm.prank(PAUSER);
         market.pause(PAUSED_MARKET, true);
-
-        // it should revert
-        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, PAUSED_MARKET));
-        mintMarket.claimInterest();
+        _;
     }
 
-    function test_RevertWhen_FeeRecipientIsZeroAddress() external {
+    modifier whenMarketIsNotPaused() {
+        _;
+    }
+
+    modifier whenFeeRecipientIsZero() {
         vm.startPrank(OWNER);
         LiquidationConfiguration memory liquidationConfiguration = market.liquidationConfiguration();
         liquidationConfiguration.protocolFeePercentage = 0;
@@ -35,39 +49,33 @@ contract AltoMintMarketClaimInterest is MarketCommon {
         mintMarket.setIrm(address(0));
         mintMarket.setFeeRecipient(address(0));
         vm.stopPrank();
-
-        // it should revert
-        vm.expectRevert(IMarketErrors.AltoBaseMarketInvalidInput.selector);
-        mintMarket.claimInterest();
-    }
-
-    modifier whenMarketIsNotPaused() {
         _;
     }
 
-    function test_WhenClaimableFeesIsZero() external whenMarketIsNotPaused {
-        uint256 claimableFeesAssets = mintMarket.claimableFeesAssets();
-
-        assertEq(claimableFeesAssets, 0);
-
-        uint256 balanceBefore = borrowToken.balanceOf(FEE_RECIPIENT);
-
-        uint256 claimed = mintMarket.claimInterest();
-
-        // it should not transfer tokens
-        assertEq(borrowToken.balanceOf(FEE_RECIPIENT), balanceBefore);
-
-        // it should not update claimableFeesAssets
-        assertEq(mintMarket.claimableFeesAssets(), 0);
-
-        // it should return zero
-        assertEq(claimed, 0);
+    modifier whenInterestIsGreaterThanClaimableFees() {
+        // Generate some claimable fees first
+        _generateClaimableFees();
+        _;
     }
 
-    function test_WhenClaimableFeesIsGreaterThanZero() external whenMarketIsNotPaused {
-        // generate interest and fees
-        deal(address(collateralToken), address(this), 100 ether);
+    modifier whenInterestPassedInIsZero() {
+        _generateClaimableFees();
+        _;
+    }
 
+    modifier whenInterestPassedInIsNonZeroAndLessThanOrEqualClaimableFees() {
+        _generateClaimableFees();
+        _;
+    }
+
+    function setUp() public override {
+        super.setUp();
+        mintMarket = AltoMintMarket(address(market));
+    }
+
+    function _generateClaimableFees() internal {
+        // Generate interest and fees by borrowing and letting time pass
+        deal(address(collateralToken), address(this), 100 ether);
         market.addCollateral(100 ether, USER);
 
         vm.prank(OWNER);
@@ -76,20 +84,163 @@ contract AltoMintMarketClaimInterest is MarketCommon {
         mintMarket.borrow(70 ether, 0, USER, USER, "");
 
         vm.warp(block.timestamp + 365 days);
-
         market.accrueInterest();
+    }
 
-        uint256 claimableFeesAssetsBefore = mintMarket.claimableFeesAssets();
+    function test_RevertWhen_MarketIsPaused() external whenMarketIsPaused {
+        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, PAUSED_MARKET));
+        mintMarket.claimInterest(0);
+    }
 
+    function test_RevertWhen_FeeRecipientIsZero() external whenFeeRecipientIsZero {
+        vm.startPrank(OWNER);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketInvalidInput.selector);
+        mintMarket.claimInterest(0);
+        vm.stopPrank();
+    }
+
+    function test_RevertWhen_InterestIsGreaterThanClaimableFees() external whenInterestIsGreaterThanClaimableFees {
+        uint256 claimableFees = mintMarket.claimableFeesAssets();
+        uint256 excessiveInterest = claimableFees + 1;
+
+        vm.startPrank(OWNER);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketInvalidInput.selector);
+        mintMarket.claimInterest(excessiveInterest);
+        vm.stopPrank();
+    }
+
+    function test_RevertWhen_CallerIsNotOwnerNorFeeRecipient() external whenMarketIsNotPaused {
+        vm.startPrank(USER);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketUnauthorized.selector);
+        mintMarket.claimInterest(0);
+        vm.stopPrank();
+    }
+
+    function test_WhenInterestPassedInIsZero_GivenCallerIsOwner()
+        external
+        whenMarketIsNotPaused
+        whenInterestPassedInIsZero
+    {
+        uint256 claimableFeesBefore = mintMarket.claimableFeesAssets();
         uint256 balanceBefore = borrowToken.balanceOf(FEE_RECIPIENT);
 
-        uint256 claimed = mintMarket.claimInterest();
+        vm.expectEmit(true, true, true, true);
+        emit AltoMintMarket.InterestClaimed(claimableFeesBefore);
 
-        // it should mint tokens to fee recipient and set claimableFeesAssets to zero
-        assertEq(borrowToken.balanceOf(FEE_RECIPIENT), balanceBefore + claimableFeesAssetsBefore);
+        vm.startPrank(OWNER);
+        uint256 claimed = mintMarket.claimInterest(0);
+        vm.stopPrank();
+
+        assertGt(claimableFeesBefore, 0);
+        assertEq(borrowToken.balanceOf(FEE_RECIPIENT), balanceBefore + claimableFeesBefore);
         assertEq(mintMarket.claimableFeesAssets(), 0);
+        assertEq(claimed, claimableFeesBefore);
+    }
 
-        // it should return the amount of interest claimed
-        assertEq(claimed, claimableFeesAssetsBefore);
+    function test_WhenInterestPassedInIsZero_GivenCallerIsFeeRecipient()
+        external
+        whenMarketIsNotPaused
+        whenInterestPassedInIsZero
+    {
+        uint256 claimableFeesBefore = mintMarket.claimableFeesAssets();
+        uint256 balanceBefore = borrowToken.balanceOf(FEE_RECIPIENT);
+
+        vm.expectEmit(true, true, true, true);
+        emit AltoMintMarket.InterestClaimed(claimableFeesBefore);
+
+        vm.startPrank(FEE_RECIPIENT);
+        uint256 claimed = mintMarket.claimInterest(0);
+        vm.stopPrank();
+
+        assertGt(claimableFeesBefore, 0);
+        assertEq(borrowToken.balanceOf(FEE_RECIPIENT), balanceBefore + claimableFeesBefore);
+        assertEq(mintMarket.claimableFeesAssets(), 0);
+        assertEq(claimed, claimableFeesBefore);
+    }
+
+    function test_WhenInterestIsNonZeroAndLessThanOrEqualClaimableFees_GivenCallerIsOwner()
+        external
+        whenMarketIsNotPaused
+        whenInterestPassedInIsNonZeroAndLessThanOrEqualClaimableFees
+    {
+        uint256 claimableFeesBefore = mintMarket.claimableFeesAssets();
+        uint256 interestToClaim = claimableFeesBefore / 2; // Claim half
+        uint256 balanceBefore = borrowToken.balanceOf(FEE_RECIPIENT);
+
+        vm.expectEmit(true, true, true, true);
+        emit AltoMintMarket.InterestClaimed(interestToClaim);
+
+        vm.startPrank(OWNER);
+        uint256 claimed = mintMarket.claimInterest(interestToClaim);
+        vm.stopPrank();
+
+        assertGt(interestToClaim, 0);
+        assertEq(borrowToken.balanceOf(FEE_RECIPIENT), balanceBefore + interestToClaim);
+        assertEq(mintMarket.claimableFeesAssets(), claimableFeesBefore - interestToClaim);
+        assertEq(claimed, interestToClaim);
+    }
+
+    function test_WhenInterestIsNonZeroAndLessThanOrEqualClaimableFees_GivenCallerIsFeeRecipient()
+        external
+        whenMarketIsNotPaused
+        whenInterestPassedInIsNonZeroAndLessThanOrEqualClaimableFees
+    {
+        uint256 claimableFeesBefore = mintMarket.claimableFeesAssets();
+        uint256 interestToClaim = claimableFeesBefore / 2; // Claim half
+        uint256 balanceBefore = borrowToken.balanceOf(FEE_RECIPIENT);
+
+        vm.expectEmit(true, true, true, true);
+        emit AltoMintMarket.InterestClaimed(interestToClaim);
+
+        vm.startPrank(FEE_RECIPIENT);
+        uint256 claimed = mintMarket.claimInterest(interestToClaim);
+        vm.stopPrank();
+
+        assertGt(interestToClaim, 0);
+        assertEq(borrowToken.balanceOf(FEE_RECIPIENT), balanceBefore + interestToClaim);
+        assertEq(mintMarket.claimableFeesAssets(), claimableFeesBefore - interestToClaim);
+        assertEq(claimed, interestToClaim);
+    }
+
+    function test_WhenInterestEqualsClaimableFees_GivenCallerIsOwner()
+        external
+        whenMarketIsNotPaused
+        whenInterestPassedInIsNonZeroAndLessThanOrEqualClaimableFees
+    {
+        uint256 claimableFeesBefore = mintMarket.claimableFeesAssets();
+        uint256 balanceBefore = borrowToken.balanceOf(FEE_RECIPIENT);
+
+        vm.expectEmit(true, true, true, true);
+        emit AltoMintMarket.InterestClaimed(claimableFeesBefore);
+
+        vm.startPrank(OWNER);
+        uint256 claimed = mintMarket.claimInterest(claimableFeesBefore);
+        vm.stopPrank();
+
+        assertGt(claimableFeesBefore, 0);
+        assertEq(borrowToken.balanceOf(FEE_RECIPIENT), balanceBefore + claimableFeesBefore);
+        assertEq(mintMarket.claimableFeesAssets(), 0);
+        assertEq(claimed, claimableFeesBefore);
+    }
+
+    function test_WhenInterestEqualsClaimableFees_GivenCallerIsFeeRecipient()
+        external
+        whenMarketIsNotPaused
+        whenInterestPassedInIsNonZeroAndLessThanOrEqualClaimableFees
+    {
+        uint256 claimableFeesBefore = mintMarket.claimableFeesAssets();
+        uint256 balanceBefore = borrowToken.balanceOf(FEE_RECIPIENT);
+
+        vm.expectEmit(true, true, true, true);
+        emit AltoMintMarket.InterestClaimed(claimableFeesBefore);
+
+        vm.startPrank(FEE_RECIPIENT);
+        uint256 claimed = mintMarket.claimInterest(claimableFeesBefore);
+        vm.stopPrank();
+
+        assertGt(claimableFeesBefore, 0);
+        assertEq(borrowToken.balanceOf(FEE_RECIPIENT), balanceBefore + claimableFeesBefore);
+        assertEq(mintMarket.claimableFeesAssets(), 0);
+        assertEq(claimed, claimableFeesBefore);
     }
 }

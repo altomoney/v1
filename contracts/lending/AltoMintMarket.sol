@@ -145,15 +145,24 @@ contract AltoMintMarket is AltoBaseMarket {
     }
 
     /// @notice Claims the interest and fees from the mint market by minting the borrow token to the fee recipient
+    /// @param interest The amount of interest to claim
+    /// @dev If interest is 0, it will claim all the interest and fees
     /// @return The amount of interest and fees claimed
-    function claimInterest() external whenNotPaused returns (uint256) {
-        if (feeRecipient == address(0)) {
+    function claimInterest(uint256 interest) external whenNotPaused returns (uint256) {
+        if (feeRecipient == address(0) || interest > claimableFeesAssets) {
             revert AltoBaseMarketInvalidInput();
         }
 
-        uint256 interest = claimableFeesAssets;
+        if (msg.sender != owner() && msg.sender != feeRecipient) {
+            revert AltoBaseMarketUnauthorized();
+        }
+
+        if (interest == 0) {
+            interest = claimableFeesAssets;
+        }
+
         IMintableERC20(borrowToken).mint(feeRecipient, interest);
-        claimableFeesAssets = 0;
+        claimableFeesAssets -= interest.toUint128();
 
         emit InterestClaimed(interest);
 
