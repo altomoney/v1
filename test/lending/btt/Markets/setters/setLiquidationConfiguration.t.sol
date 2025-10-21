@@ -164,7 +164,6 @@ contract AltoMarketSetLiquidationConfiguration is MarketCommon {
         liquidationConfigurationPre.protocolFeePercentage = 0;
         market.setLiquidationConfiguration(liquidationConfigurationPre);
         market.setIrm(address(0));
-        market.setBorrowOpeningFee(0);
         market.setFeeRecipient(address(0));
 
         liquidationConfiguration.protocolFeePercentage = 0.01 ether;

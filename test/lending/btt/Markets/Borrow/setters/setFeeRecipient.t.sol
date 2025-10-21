@@ -4,9 +4,17 @@ pragma solidity ^0.8.28;
 import {MarketType, MarketCommon} from "../../MarketCommon.t.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IMarketErrors, IMarketEvents} from "@alto/lending/interfaces/IMarket.sol";
+import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";
 
 contract SetFeeRecipientTestBorrow is MarketCommon {
+    AltoBorrowMarket public borrowMarket;
+
     constructor() MarketCommon(MarketType.BORROW) {}
+
+    function setUp() public override {
+        super.setUp();
+        borrowMarket = AltoBorrowMarket(address(market));
+    }
 
     function test_RevertWhen_CallerIsNotOwner() external {
         // it should revert
@@ -38,10 +46,10 @@ contract SetFeeRecipientTestBorrow is MarketCommon {
         external
         whenCallerIsOwner
     {
-        market.setBorrowOpeningFee(1);
+        borrowMarket.setBorrowOpeningFee(1);
 
         // it should revert
         vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBaseMarketInvalidInput.selector));
-        market.setFeeRecipient(address(0));
+        borrowMarket.setFeeRecipient(address(0));
     }
 }

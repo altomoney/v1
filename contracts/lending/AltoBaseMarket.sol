@@ -91,13 +91,10 @@ abstract contract AltoBaseMarket is
     LiquidationConfiguration public liquidationConfiguration;
 
     /// @inheritdoc IMarketBase
-    uint256 public borrowOpeningFee;
-
-    /// @inheritdoc IMarketBase
     address public feeRecipient;
 
     /// upgrade gap (previous slot has 12 bytes left)
-    uint256[32] private __gap_base;
+    uint256[33] private __gap_base;
 
     function __AltoBaseMarket_init(
         address _borrowToken,
@@ -106,7 +103,6 @@ abstract contract AltoBaseMarket is
         address _owner,
         address _oracle,
         uint256 _maxLtv,
-        uint256 _borrowOpeningFee,
         address _feeRecipient,
         LiquidationConfiguration memory _liquidationConfiguration
     ) internal onlyInitializing {
@@ -115,13 +111,10 @@ abstract contract AltoBaseMarket is
         if (_borrowToken == address(0) || _collateralToken == address(0) || _oracle == address(0)) {
             revert AltoBaseMarketInvalidInput();
         }
-        if (_maxLtv > MATH_PRECISION || _borrowOpeningFee > MATH_PRECISION) {
+        if (_maxLtv > MATH_PRECISION) {
             revert AltoBaseMarketInvalidInput();
         }
-        if (
-            _feeRecipient == address(0)
-                && (_borrowOpeningFee > 0 || _liquidationConfiguration.protocolFeePercentage > 0)
-        ) {
+        if (_feeRecipient == address(0) && _liquidationConfiguration.protocolFeePercentage > 0) {
             revert AltoBaseMarketInvalidInput();
         }
 
@@ -156,9 +149,6 @@ abstract contract AltoBaseMarket is
             _liquidationConfiguration
         );
 
-        borrowOpeningFee = _borrowOpeningFee;
-        emit SetBorrowOpeningFee(0, _borrowOpeningFee);
-
         feeRecipient = _feeRecipient;
         emit SetFeeRecipient(address(0), _feeRecipient);
 
@@ -172,6 +162,9 @@ abstract contract AltoBaseMarket is
         __Ownable_init(_owner);
         __Auth_init();
     }
+
+    /// @inheritdoc IMarketBase
+    function borrowOpeningFee() public view virtual returns (uint256);
 
     /// @inheritdoc IMarketBase
     function setIrm(address _irm) external onlyOwner {
@@ -272,23 +265,11 @@ abstract contract AltoBaseMarket is
     }
 
     /// @inheritdoc IMarketBase
-    function setBorrowOpeningFee(uint256 _borrowOpeningFee) external onlyOwner {
-        if (_borrowOpeningFee > MATH_PRECISION) {
-            revert AltoBaseMarketInvalidInput();
-        }
-
-        if (feeRecipient == address(0) && _borrowOpeningFee > 0) {
-            revert AltoBaseMarketInvalidInput();
-        }
-
-        emit SetBorrowOpeningFee(borrowOpeningFee, _borrowOpeningFee);
-        borrowOpeningFee = _borrowOpeningFee;
-    }
-
-    /// @inheritdoc IMarketBase
     function setFeeRecipient(address _feeRecipient) external virtual onlyOwner {
-        if (_feeRecipient == address(0) && (borrowOpeningFee > 0 || liquidationConfiguration.protocolFeePercentage > 0))
-        {
+        if (
+            _feeRecipient == address(0)
+                && (borrowOpeningFee() > 0 || liquidationConfiguration.protocolFeePercentage > 0)
+        ) {
             revert AltoBaseMarketInvalidInput();
         }
 
@@ -451,14 +432,14 @@ abstract contract AltoBaseMarket is
 
         if (assets == 0) {
             // calculate opening fee from shares
-            uint256 openingFeeShares = shares.multiplyWithPrecisionUp(borrowOpeningFee);
+            uint256 openingFeeShares = shares.multiplyWithPrecisionUp(borrowOpeningFee());
             openingFeeAssets = openingFeeShares.convertToAssetsUp(totalBorrowed.assets, totalBorrowed.shares);
             shares += openingFeeShares;
 
             assets = shares.convertToAssetsDown(totalBorrowed.assets, totalBorrowed.shares);
         } else {
             // calculate opening fee from assets
-            openingFeeAssets = assets.multiplyWithPrecisionUp(borrowOpeningFee);
+            openingFeeAssets = assets.multiplyWithPrecisionUp(borrowOpeningFee());
             assets += openingFeeAssets;
 
             shares = assets.convertToSharesUp(totalBorrowed.assets, totalBorrowed.shares);

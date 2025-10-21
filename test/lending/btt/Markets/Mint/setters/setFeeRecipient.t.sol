@@ -4,9 +4,17 @@ pragma solidity ^0.8.28;
 import {MarketType, MarketCommon} from "../../MarketCommon.t.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IMarketErrors, IMarketEvents} from "@alto/lending/interfaces/IMarket.sol";
+import {AltoMintMarket} from "@alto/lending/AltoMintMarket.sol";
 
 contract SetFeeRecipientTestMint is MarketCommon {
+    AltoMintMarket public mintMarket;
+
     constructor() MarketCommon(MarketType.MINT) {}
+
+    function setUp() public override {
+        super.setUp();
+        mintMarket = AltoMintMarket(address(market));
+    }
 
     function test_RevertWhen_CallerIsNotOwner() external {
         // it should revert
@@ -38,27 +46,27 @@ contract SetFeeRecipientTestMint is MarketCommon {
         external
         whenCallerIsOwner
     {
-        market.setBorrowOpeningFee(1);
+        mintMarket.setBorrowOpeningFee(1);
 
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBaseMarketInvalidInput.selector));
-        market.setFeeRecipient(address(0));
+        vm.expectRevert(abi.encodeWithSelector(AltoMintMarket.AltoMintMarketInvalidInput.selector));
+        mintMarket.setFeeRecipient(address(0));
 
-        market.setBorrowOpeningFee(0);
+        mintMarket.setBorrowOpeningFee(0);
 
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBaseMarketInvalidInput.selector));
-        market.setFeeRecipient(address(0));
+        vm.expectRevert(abi.encodeWithSelector(AltoMintMarket.AltoMintMarketInvalidInput.selector));
+        mintMarket.setFeeRecipient(address(0));
     }
 
     function test_RevertWhen_FeeRecipientIsZeroAddressAndProtocolFeePercentageIsGreaterThanZero()
         external
         whenCallerIsOwner
     {
-        market.setBorrowOpeningFee(0.01 ether);
+        mintMarket.setBorrowOpeningFee(0.01 ether);
 
         // it should revert (default protocol fee percentage is 0.075 ether in tests)
-        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBaseMarketInvalidInput.selector));
-        market.setFeeRecipient(address(0));
+        vm.expectRevert(abi.encodeWithSelector(AltoMintMarket.AltoMintMarketInvalidInput.selector));
+        mintMarket.setFeeRecipient(address(0));
     }
 }

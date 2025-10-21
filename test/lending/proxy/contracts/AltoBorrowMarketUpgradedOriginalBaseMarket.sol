@@ -13,7 +13,7 @@ contract AltoBorrowMarketUpgradedOriginalBaseMarket is AltoBaseMarket {
     uint128 public addedProperty3;
 
     /// upgrade gap (previous slot has 16 bytes left)
-    uint256[47] private __gap_borrow;
+    uint256[48] private __gap_borrow;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -27,21 +27,16 @@ contract AltoBorrowMarketUpgradedOriginalBaseMarket is AltoBaseMarket {
         address _owner,
         address _oracle,
         uint256 _maxLtv,
-        uint256 _borrowOpeningFee,
         address _feeRecipient,
         LiquidationConfiguration memory _liquidationConfiguration
     ) public initializer {
         __AltoBaseMarket_init(
-            _borrowToken,
-            _collateralToken,
-            _irm,
-            _owner,
-            _oracle,
-            _maxLtv,
-            _borrowOpeningFee,
-            _feeRecipient,
-            _liquidationConfiguration
+            _borrowToken, _collateralToken, _irm, _owner, _oracle, _maxLtv, _feeRecipient, _liquidationConfiguration
         );
+    }
+
+    function borrowOpeningFee() public view override returns (uint256) {
+        return 0;
     }
 
     /// @dev Reinitializer for version 2 upgrade - initializes new storage variables
