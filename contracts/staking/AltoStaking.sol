@@ -13,9 +13,7 @@ import {IAltoStakingStaticTypes, IAltoStakingBase} from "./interfaces/IAltoStaki
 import {ITVLWeightedContainersBase} from "./interfaces/ITVLWeightedContainers.sol";
 import {MATH_PRECISION, FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {Auth} from "@alto/utils/Auth.sol";
-
-bytes32 constant PAUSE_TYPE = keccak256("PAUSE");
-bytes32 constant RESCUE_MODE_PAUSE_TYPE = keccak256("RESCUE_MODE");
+import {PAUSE_TYPE, RESCUE_TYPE} from "@alto/utils/Constants.sol";
 
 /// @title Alto Staking
 /// @author Pearl Labs
@@ -70,7 +68,7 @@ contract AltoStaking is IAltoStakingStaticTypes, TVLWeightedContainers, Ownable2
 
     /// @dev Restrict rescue mode to be one-way emergency mode
     function _onPause(bytes32 pauseType, bool _paused) internal override {
-        if (pauseType == RESCUE_MODE_PAUSE_TYPE && !_paused) {
+        if (pauseType == RESCUE_TYPE && !_paused) {
             revert AltoStakingInvalidInput();
         }
     }
@@ -87,7 +85,7 @@ contract AltoStaking is IAltoStakingStaticTypes, TVLWeightedContainers, Ownable2
     /// @inheritdoc IAltoStakingBase
     function getVotes(address account) external view returns (uint256 votes) {
         // if contract is in one of the rescue modes we return 0
-        if (paused[PAUSE_TYPE] || paused[RESCUE_MODE_PAUSE_TYPE]) {
+        if (paused[PAUSE_TYPE] || paused[RESCUE_TYPE]) {
             return 0;
         }
 
@@ -106,7 +104,7 @@ contract AltoStaking is IAltoStakingStaticTypes, TVLWeightedContainers, Ownable2
     function lock(address onBehalf, uint256 amount, uint256 containerId, bool isReuse, uint256 maxEpochsToLockFor)
         external
         whenNot(PAUSE_TYPE)
-        whenNot(RESCUE_MODE_PAUSE_TYPE)
+        whenNot(RESCUE_TYPE)
         returns (uint256)
     {
         // Note: containerId is validated in _updateContainerTVL
@@ -191,7 +189,7 @@ contract AltoStaking is IAltoStakingStaticTypes, TVLWeightedContainers, Ownable2
 
         // Allow early unlock only in rescue mode
         bool isExpired = _isExpiredPosition(position);
-        bool inRescueMode = paused[RESCUE_MODE_PAUSE_TYPE];
+        bool inRescueMode = paused[RESCUE_TYPE];
 
         if (!isExpired && !inRescueMode) {
             revert AltoStakingPositionNotExpired();
@@ -214,7 +212,7 @@ contract AltoStaking is IAltoStakingStaticTypes, TVLWeightedContainers, Ownable2
     }
 
     /// @inheritdoc IAltoStakingBase
-    function advanceEpoch(uint256 limit) external whenNot(PAUSE_TYPE) whenNot(RESCUE_MODE_PAUSE_TYPE) {
+    function advanceEpoch(uint256 limit) external whenNot(PAUSE_TYPE) whenNot(RESCUE_TYPE) {
         _advanceEpoch(limit);
     }
 

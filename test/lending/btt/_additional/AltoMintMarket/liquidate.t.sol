@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {IPausable} from "@alto/utils/Pausable.sol";
-import {PAUSED_MARKET, FROZEN_MARKET} from "@alto/utils/Constants.sol";
+import {PAUSE_TYPE, FROZEN_TYPE} from "@alto/utils/Constants.sol";
 
 import {Test} from "forge-std/Test.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -114,25 +114,25 @@ contract LiquidateTest is Test {
 
         // Set owner as pauser
         vm.startPrank(owner);
-        market.setPauser(owner, PAUSED_MARKET, true);
-        market.setPauser(owner, FROZEN_MARKET, true);
+        market.setPauser(owner, PAUSE_TYPE, true);
+        market.setPauser(owner, FROZEN_TYPE, true);
         vm.stopPrank();
     }
 
     function test_RevertWhen_MarketIsPaused() external {
         vm.startPrank(owner);
-        market.pause(PAUSED_MARKET, true);
+        market.pause(PAUSE_TYPE, true);
         vm.stopPrank();
 
         vm.startPrank(alice);
-        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, PAUSED_MARKET));
+        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, PAUSE_TYPE));
         market.liquidate(bob, "");
         vm.stopPrank();
     }
 
     function test_RevertWhen_MarketIsFrozen() external {
         vm.startPrank(owner);
-        market.pause(FROZEN_MARKET, true);
+        market.pause(FROZEN_TYPE, true);
         vm.stopPrank();
 
         vm.startPrank(alice);

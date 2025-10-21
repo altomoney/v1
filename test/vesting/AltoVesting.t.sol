@@ -7,6 +7,7 @@ import {IAltoVesting, VestingInfo} from "@alto/vesting/interfaces/IAltoVesting.s
 import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
 import {ERC20MockMintable} from "@alto-test/helpers/ERC20MockMintable.sol";
 import {IMerkleRootManagerErrors} from "@alto/utils/interfaces/IMerkleRootManager.sol";
+import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 
 contract AltoVestingTest is Test {
     AltoVesting public vesting;
@@ -61,7 +62,7 @@ contract AltoVestingTest is Test {
         // Setup vesting contract
         vm.startPrank(OWNER);
         vesting.setMerkleRootUpdater(UPDATER, true);
-        vesting.setPauser(PAUSER, keccak256("PAUSE"), true);
+        vesting.setPauser(PAUSER, PAUSE_TYPE, true);
         // accept pending root immediately by Owner
         vesting.acceptPendingRoot(merkleRoot);
         vm.stopPrank();
@@ -98,16 +99,16 @@ contract AltoVestingTest is Test {
 
     function test_RevertWhen_ContractIsPaused() external {
         vm.prank(PAUSER);
-        vesting.pause(keccak256("PAUSE"), true);
+        vesting.pause(PAUSE_TYPE, true);
 
         vm.prank(ALICE);
-        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, keccak256("PAUSE")));
+        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, PAUSE_TYPE));
         vesting.claim(ALICE, aliceVestingInfo, aliceProof);
     }
 
     function test_RescueVestingTokens_WhenPaused() external {
         vm.prank(PAUSER);
-        vesting.pause(keccak256("PAUSE"), true);
+        vesting.pause(PAUSE_TYPE, true);
 
         uint256 balance = vestingToken.balanceOf(address(vesting));
 

@@ -4,7 +4,7 @@ pragma solidity ^0.8.22;
 import {AltoStakingCommon} from "./AltoStakingCommon.t.sol";
 import {ITVLWeightedContainersErrors} from "@alto/staking/interfaces/ITVLWeightedContainers.sol";
 import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
-import {PAUSE_TYPE, RESCUE_MODE_PAUSE_TYPE} from "@alto/staking/AltoStaking.sol";
+import {PAUSE_TYPE, RESCUE_TYPE} from "@alto/utils/Constants.sol";
 
 contract AltoStaking_AdvanceEpoch_Test is AltoStakingCommon {
     function setUp() public override {
@@ -22,7 +22,7 @@ contract AltoStaking_AdvanceEpoch_Test is AltoStakingCommon {
     function test_RevertWhen_ContractIsInRescueMode() public {
         _enableRescueMode();
 
-        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, RESCUE_MODE_PAUSE_TYPE));
+        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, RESCUE_TYPE));
         staking.advanceEpoch(1);
     }
 

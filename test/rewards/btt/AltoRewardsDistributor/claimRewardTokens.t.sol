@@ -2,7 +2,8 @@
 pragma solidity ^0.8.0;
 
 import {RewardsDistributorCommon} from "./RewardsDistributorCommon.t.sol";
-import {AltoRewardsDistributor, CLAIM_PAUSE_TYPE} from "@alto/rewards/AltoRewardsDistributor.sol";
+import {AltoRewardsDistributor} from "@alto/rewards/AltoRewardsDistributor.sol";
+import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
 import {IRewardsEvents, IRewardsErrors} from "@alto/rewards/interfaces/IRewardsDistributor.sol";
 import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
@@ -11,13 +12,13 @@ import {IMerkleRootManagerErrors} from "@alto/utils/interfaces/IMerkleRootManage
 contract AltoRewardsDistributorClaimRewardTokens is RewardsDistributorCommon {
     function test_RevertWhen_ContractIsPaused() external {
         vm.prank(PAUSER);
-        distributor.pause(CLAIM_PAUSE_TYPE, true);
+        distributor.pause(PAUSE_TYPE, true);
 
         vm.startPrank(ALICE);
         paymentToken.approve(address(distributor), type(uint256).max);
 
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, CLAIM_PAUSE_TYPE));
+        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, PAUSE_TYPE));
         distributor.claimRewardTokens(
             aliceAvailable, aliceProof, aliceAvailable, BASE_DISCOUNT, address(paymentToken), false, 0, ALICE
         );

@@ -26,7 +26,7 @@ import {ExpLib, MATH_PRECISION_INT} from "@alto/lending/libraries/ExpLib.sol";
 import {Uint128Converter} from "@alto/lending/libraries/Uint128Converter.sol";
 
 import {FixedPointMath, MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
-import {PAUSED_MARKET, FROZEN_MARKET} from "@alto/utils/Constants.sol";
+import {PAUSE_TYPE, FROZEN_TYPE} from "@alto/utils/Constants.sol";
 import {IMarketStaticTypes, IMarketBase} from "@alto/lending/interfaces/IMarket.sol";
 import {Pausable, IPausable} from "@alto/utils/Pausable.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
@@ -166,8 +166,8 @@ abstract contract AltoBaseMarketUpgraded is
             IIrm(irm).setMarket(address(this));
         }
 
-        _setPauser(_owner, PAUSED_MARKET, true);
-        _setPauser(_owner, FROZEN_MARKET, true);
+        _setPauser(_owner, PAUSE_TYPE, true);
+        _setPauser(_owner, FROZEN_TYPE, true);
 
         __Ownable_init(_owner);
         __Auth_init();
@@ -831,22 +831,22 @@ abstract contract AltoBaseMarketUpgraded is
 
     /// @dev Modifier to check if the market is not paused.
     modifier whenNotPaused() {
-        if (paused[PAUSED_MARKET]) {
-            revert IPausable.IsPaused(PAUSED_MARKET);
+        if (paused[PAUSE_TYPE]) {
+            revert IPausable.IsPaused(PAUSE_TYPE);
         }
         _;
     }
 
     /// @dev Modifier to check if the market is not frozen.
     modifier whenNotFrozen() {
-        if (paused[FROZEN_MARKET]) {
-            revert IPausable.IsPaused(FROZEN_MARKET);
+        if (paused[FROZEN_TYPE]) {
+            revert IPausable.IsPaused(FROZEN_TYPE);
         }
         _;
     }
 
     function _onPause(bytes32 pauseType, bool _paused) internal override {
-        if (pauseType == PAUSED_MARKET) {
+        if (pauseType == PAUSE_TYPE) {
             if (_paused) {
                 _accrueInterest();
             } else {

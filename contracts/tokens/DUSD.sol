@@ -6,7 +6,7 @@ import {IDUSD} from "@alto/tokens/interfaces/IDUSD.sol";
 
 import {Pausable, IPausable} from "@alto/utils/Pausable.sol";
 import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
-import {PAUSED_ROLE} from "@alto/utils/Constants.sol";
+import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 
 /// @title DUSD Token
 /// @author Pearl Labs
@@ -21,7 +21,7 @@ contract DUSD is Ownable2Step, Pausable, OFT, IDUSD {
     mapping(address => bool) public allowedBurner;
 
     constructor(address endpoint, address owner) OFT("DUSD", "DUSD", endpoint, owner) Ownable(owner) {
-        _setPauser(owner, PAUSED_ROLE, true);
+        _setPauser(owner, PAUSE_TYPE, true);
     }
 
     /// =====================
@@ -109,8 +109,8 @@ contract DUSD is Ownable2Step, Pausable, OFT, IDUSD {
     }
 
     modifier whenNotPaused() {
-        if (paused[PAUSED_ROLE]) {
-            revert IPausable.IsPaused(PAUSED_ROLE);
+        if (paused[PAUSE_TYPE]) {
+            revert IPausable.IsPaused(PAUSE_TYPE);
         }
         _;
     }

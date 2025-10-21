@@ -2,7 +2,8 @@
 pragma solidity ^0.8.0;
 
 import {Test} from "forge-std/Test.sol";
-import {AltoRewardsDistributor, CLAIM_PAUSE_TYPE} from "@alto/rewards/AltoRewardsDistributor.sol";
+import {AltoRewardsDistributor} from "@alto/rewards/AltoRewardsDistributor.sol";
+import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC20MockDecimals} from "@alto-test/helpers/ERC20MockDecimals.sol";
 import {USD_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IUsdOracle.sol";
@@ -108,7 +109,7 @@ contract RewardsDistributorCommon is Test {
         distributor.setRewardTokenUsdOracle(address(rewardOracle));
         distributor.setLockBonusDiscount(LOCK_DISCOUNT);
         distributor.setLockContract(address(lockContract));
-        distributor.setPauser(PAUSER, CLAIM_PAUSE_TYPE, true);
+        distributor.setPauser(PAUSER, PAUSE_TYPE, true);
         distributor.submitNewPendingRoot(testRoot, bytes32(0));
         distributor.acceptPendingRoot(testRoot);
         vm.stopPrank();

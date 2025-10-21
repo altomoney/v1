@@ -8,8 +8,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Auth} from "@alto/utils/Auth.sol";
 import {IUniversalRewardsDistributor} from "@alto/utils/interfaces/IUniversalRewardsDistributor.sol";
 import {Pausable, IPausable} from "@alto/utils/Pausable.sol";
-
-bytes32 constant PAUSE = keccak256("PAUSE");
+import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 
 /// @title Universal Rewards Distributor
 /// @author Pearl Labs
@@ -38,7 +37,7 @@ contract UniversalRewardsDistributor is
         address rewardToken,
         uint256 totalRewardTokenAssignedToUser,
         bytes32[] calldata proof
-    ) external whenNot(PAUSE) returns (uint256 amount) {
+    ) external whenNot(PAUSE_TYPE) returns (uint256 amount) {
         if (!_isSenderAuthorized(onBehalf)) {
             revert RewardsDistributorUnauthorized();
         }
@@ -81,7 +80,7 @@ contract UniversalRewardsDistributor is
 
     /// @inheritdoc IUniversalRewardsDistributor
     function rescueRewardTokens(address token) external onlyOwner {
-        if (!paused[PAUSE]) {
+        if (!paused[PAUSE_TYPE]) {
             revert RewardsDistributorNotPaused();
         }
 

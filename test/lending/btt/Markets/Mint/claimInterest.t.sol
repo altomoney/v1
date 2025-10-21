@@ -3,7 +3,7 @@ pragma solidity ^0.8.28;
 
 import {MarketType, MarketCommon} from "../MarketCommon.t.sol";
 import {IPausable} from "@alto/utils/Pausable.sol";
-import {PAUSED_MARKET} from "@alto/utils/Constants.sol";
+import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 import {AltoMintMarket} from "@alto/lending/AltoMintMarket.sol";
 import {IMarketErrors, LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
 
@@ -32,7 +32,7 @@ contract AltoMintMarketClaimInterest is MarketCommon {
 
     modifier whenMarketIsPaused() {
         vm.prank(PAUSER);
-        market.pause(PAUSED_MARKET, true);
+        market.pause(PAUSE_TYPE, true);
         _;
     }
 
@@ -88,7 +88,7 @@ contract AltoMintMarketClaimInterest is MarketCommon {
     }
 
     function test_RevertWhen_MarketIsPaused() external whenMarketIsPaused {
-        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, PAUSED_MARKET));
+        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, PAUSE_TYPE));
         mintMarket.claimInterest(0);
     }
 

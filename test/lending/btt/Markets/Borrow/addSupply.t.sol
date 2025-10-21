@@ -3,7 +3,7 @@ pragma solidity ^0.8.28;
 
 import {MarketType, MarketCommon} from "../MarketCommon.t.sol";
 import {IPausable} from "@alto/utils/Pausable.sol";
-import {PAUSED_MARKET, FROZEN_MARKET} from "@alto/utils/Constants.sol";
+import {PAUSE_TYPE, FROZEN_TYPE} from "@alto/utils/Constants.sol";
 import {IMarketErrors, Position, IMarketEvents} from "@alto/lending/interfaces/IMarket.sol";
 import {IERC20Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
@@ -17,19 +17,19 @@ contract AltoBorrowMarketAddSupply is MarketCommon {
 
     function test_RevertWhen_MarketIsPaused() external {
         vm.prank(PAUSER);
-        market.pause(PAUSED_MARKET, true);
+        market.pause(PAUSE_TYPE, true);
 
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, PAUSED_MARKET));
+        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, PAUSE_TYPE));
         market.addSupply(100 ether, 0, USER);
     }
 
     function test_RevertWhen_MarketIsFrozen() external {
         vm.prank(PAUSER);
-        market.pause(FROZEN_MARKET, true);
+        market.pause(FROZEN_TYPE, true);
 
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, FROZEN_MARKET));
+        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, FROZEN_TYPE));
         market.addSupply(100 ether, 0, USER);
     }
 

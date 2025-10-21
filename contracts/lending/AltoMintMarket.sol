@@ -6,7 +6,7 @@ import {Uint128Converter} from "./libraries/Uint128Converter.sol";
 import {IIrm} from "./interfaces/IIrm.sol";
 import {Balance, LiquidationConfiguration} from "./interfaces/IMarket.sol";
 import {IMintableERC20} from "./interfaces/IMintableERC20.sol";
-import {PAUSED_MARKET} from "@alto/utils/Constants.sol";
+import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 
 import {AltoBaseMarket} from "./AltoBaseMarket.sol";
 
@@ -75,7 +75,7 @@ contract AltoMintMarket is AltoBaseMarket {
     function setDebtCeiling(uint256 _debtCeiling) external onlyOwner {
         // If market is paused we don't want to accrue interest as the rest of the
         // lending protocol does
-        if (!paused[PAUSED_MARKET]) {
+        if (!paused[PAUSE_TYPE]) {
             _accrueInterest();
         }
 

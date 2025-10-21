@@ -2,15 +2,16 @@
 pragma solidity ^0.8.0;
 
 import {Test} from "forge-std/Test.sol";
-import {AltoRewardsDistributor, CLAIM_PAUSE_TYPE} from "@alto/rewards/AltoRewardsDistributor.sol";
+import {AltoRewardsDistributor} from "@alto/rewards/AltoRewardsDistributor.sol";
+import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 import {IRewardsEvents, IRewardsErrors} from "@alto/rewards/interfaces/IRewardsDistributor.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC20MockDecimals} from "@alto-test/helpers/ERC20MockDecimals.sol";
-import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
 import {USD_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IUsdOracle.sol";
 import {MATH_PRECISION, FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 import {IOracle} from "@alto/oracles/interfaces/IOracle.sol";
+import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
 import {IMerkleRootManagerEvents} from "@alto/utils/interfaces/IMerkleRootManager.sol";
 
 contract MockLock {
@@ -738,18 +739,18 @@ contract RewardsDistributorTest is Test {
     function test_Pause_BlocksClaims() public {
         // Pause the contract
         vm.prank(distributor.owner());
-        distributor.setPauser(bob, CLAIM_PAUSE_TYPE, true);
+        distributor.setPauser(bob, PAUSE_TYPE, true);
 
         vm.prank(bob);
-        distributor.pause(CLAIM_PAUSE_TYPE, true);
+        distributor.pause(PAUSE_TYPE, true);
 
-        assertEq(distributor.paused(CLAIM_PAUSE_TYPE), true);
+        assertEq(distributor.paused(PAUSE_TYPE), true);
 
         // Try to purchase while paused - should fail
         vm.startPrank(alice);
         paymentToken.approve(address(distributor), type(uint256).max);
 
-        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, CLAIM_PAUSE_TYPE));
+        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, PAUSE_TYPE));
         distributor.claimRewardTokens(
             aliceAvailable, aliceProof, aliceAvailable, BASE_DISCOUNT, address(paymentToken), false, 0, alice
         );
@@ -757,9 +758,9 @@ contract RewardsDistributorTest is Test {
 
         // Unpause and try again - should work
         vm.prank(bob);
-        distributor.pause(CLAIM_PAUSE_TYPE, false);
+        distributor.pause(PAUSE_TYPE, false);
 
-        assertEq(distributor.paused(CLAIM_PAUSE_TYPE), false);
+        assertEq(distributor.paused(PAUSE_TYPE), false);
 
         vm.startPrank(alice);
 

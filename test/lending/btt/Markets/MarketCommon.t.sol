@@ -11,7 +11,7 @@ import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
 import {ERC20MockMintable} from "@alto-test/helpers/ERC20MockMintable.sol";
-import {PAUSED_MARKET, FROZEN_MARKET} from "@alto/utils/Constants.sol";
+import {PAUSE_TYPE, FROZEN_TYPE} from "@alto/utils/Constants.sol";
 import {MarketDeployer} from "@alto/utils/MarketDeployer.sol";
 
 uint256 constant MIN_AMOUNT = 1000;
@@ -119,8 +119,8 @@ abstract contract MarketCommon is Test {
             );
         }
 
-        market.setPauser(PAUSER, PAUSED_MARKET, true);
-        market.setPauser(PAUSER, FROZEN_MARKET, true);
+        market.setPauser(PAUSER, PAUSE_TYPE, true);
+        market.setPauser(PAUSER, FROZEN_TYPE, true);
 
         deal(address(borrowToken), address(swapper), type(uint128).max);
         deal(address(collateralToken), address(swapper), type(uint128).max);

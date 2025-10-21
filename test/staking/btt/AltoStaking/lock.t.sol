@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
-import {AltoStakingCommon, PAUSE_TYPE, RESCUE_MODE_PAUSE_TYPE} from "./AltoStakingCommon.t.sol";
+import {AltoStakingCommon} from "./AltoStakingCommon.t.sol";
+import {PAUSE_TYPE, RESCUE_TYPE} from "@alto/utils/Constants.sol";
 import {StakingPosition, IAltoStakingErrors, IAltoStakingEvents} from "@alto/staking/interfaces/IAltoStaking.sol";
 import {ITVLWeightedContainersErrors} from "@alto/staking/interfaces/ITVLWeightedContainers.sol";
 import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
@@ -24,7 +25,7 @@ contract AltoStakingLock is AltoStakingCommon {
         _enableRescueMode();
 
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, RESCUE_MODE_PAUSE_TYPE));
+        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, RESCUE_TYPE));
         _lockPosition(USER, LOCK_AMOUNT, 1, false);
     }
 

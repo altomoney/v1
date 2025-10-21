@@ -2,7 +2,8 @@
 pragma solidity ^0.8.0;
 
 import {Test} from "forge-std/Test.sol";
-import {UniversalRewardsDistributor, PAUSE} from "@alto/utils/UniversalRewardsDistributor.sol";
+import {UniversalRewardsDistributor} from "@alto/utils/UniversalRewardsDistributor.sol";
+import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 import {IUniversalRewardsDistributor} from "@alto/utils/interfaces/IUniversalRewardsDistributor.sol";
 import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
 import {ERC20MockDecimals} from "@alto-test/helpers/ERC20MockDecimals.sol";
@@ -42,7 +43,7 @@ contract UniversalRewardsDistributorClaim is Test {
         // Setup distributor
         vm.startPrank(OWNER);
         distributor.setMerkleRootUpdater(UPDATER, true);
-        distributor.setPauser(PAUSER, PAUSE, true);
+        distributor.setPauser(PAUSER, PAUSE_TYPE, true);
         distributor.submitNewPendingRoot(testRoot, bytes32(0));
         distributor.acceptPendingRoot(testRoot);
         vm.stopPrank();
@@ -113,11 +114,11 @@ contract UniversalRewardsDistributorClaim is Test {
     function test_RevertWhen_ContractIsPaused() external {
         // Pause the contract
         vm.prank(PAUSER);
-        distributor.pause(PAUSE, true);
+        distributor.pause(PAUSE_TYPE, true);
 
         vm.prank(ALICE);
         // it should revert with PausablePaused
-        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, PAUSE));
+        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, PAUSE_TYPE));
         distributor.claim(ALICE, address(rewardToken), aliceTotalReward, aliceProof);
     }
 

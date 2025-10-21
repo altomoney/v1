@@ -20,8 +20,7 @@ import {FixedPointMath, MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 import {IUsdOracle} from "@alto/oracles/interfaces/IUsdOracle.sol";
 import {Auth} from "@alto/utils/Auth.sol";
 import {IRewardsAdapter, BonusRewardInfo} from "@alto/rewards/interfaces/IRewardsAdapter.sol";
-
-bytes32 constant CLAIM_PAUSE_TYPE = keccak256("CLAIM_PAUSE");
+import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 
 /// @title Rewards Distributor
 /// @author Pearl Labs
@@ -65,8 +64,8 @@ contract AltoRewardsDistributor is IRewardsDistributorStaticTypes, MerkleRootMan
 
     /// @dev Modifier to check if the AltoRewardsDistributor is not paused.
     modifier whenNotPaused() {
-        if (paused[CLAIM_PAUSE_TYPE]) {
-            revert IPausable.IsPaused(CLAIM_PAUSE_TYPE);
+        if (paused[PAUSE_TYPE]) {
+            revert IPausable.IsPaused(PAUSE_TYPE);
         }
         _;
     }
@@ -83,7 +82,7 @@ contract AltoRewardsDistributor is IRewardsDistributorStaticTypes, MerkleRootMan
         REWARD_TOKEN =
             RewardToken({token: _rewardTokenAddress, decimals: IERC20Metadata(_rewardTokenAddress).decimals()});
         _setMerkleRootTimelock(_merkleRootTimelock);
-        _setPauser(_owner, CLAIM_PAUSE_TYPE, true);
+        _setPauser(_owner, PAUSE_TYPE, true);
     }
 
     /// @inheritdoc IRewardsDistributorBase
