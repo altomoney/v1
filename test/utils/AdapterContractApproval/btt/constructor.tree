@@ -1,0 +1,8 @@
+AdapterContractApproval::constructor
+├── when owner is zero address
+│   └── it should revert with OwnableInvalidOwner
+└── when owner is valid address
+    ├── it should set owner to provided address
+    ├── it should initialize isApprovedContract[addr] to false
+    └── it should initialize parent Ownable2Step/Ownable correctly
+

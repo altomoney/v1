@@ -116,7 +116,7 @@ abstract contract AdapterCommon is Test {
     function setUp() public virtual {
         bundler3 = new Bundler3();
         weth = new WETHMock();
-        altoAdapter = new AltoAdapter(address(bundler3), address(weth));
+        altoAdapter = new AltoAdapter(address(bundler3), address(weth), OWNER);
         oracle = new OracleMock();
         oracle.setPrice(ORACLE_PRICE_PRECISION);
     }

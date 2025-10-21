@@ -292,7 +292,7 @@ contract AltoStaking is IAltoStakingStaticTypes, TVLWeightedContainers, Ownable2
         stakingContainerById[containerId].isDeprecated = true;
         emit ContainerDeprecate(containerId);
 
-        // deprecated containers are unable to used for locking so we need to update
+        // deprecated containers are unable to be used for locking so we need to update
         _updateMaxMultiplierStakingContainerId();
     }
 

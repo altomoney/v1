@@ -136,7 +136,8 @@ library DeployAltoTestnet {
 
         // deploy bundler3 and alto adapter
         input.contracts.bundler3 = address(new Bundler3());
-        input.contracts.altoAdapter = address(new AltoAdapter(input.contracts.bundler3, params.wrappedNativeToken));
+        input.contracts.altoAdapter =
+            address(new AltoAdapter(input.contracts.bundler3, params.wrappedNativeToken, params.owner));
 
         // deploy multi token sender
         input.contracts.multiTokenSender = address(new MultiTokenSender(params.owner));
@@ -167,6 +168,7 @@ library DeployAltoTestnet {
         IMarket(input.contracts.wethMarketBatch.market).setAuthorizedCallback(input.contracts.altoLeverage, true);
         DUSD(input.tokens.dusd).setMinterStatus(input.contracts.wethMarketBatch.market, true);
         DUSD(input.tokens.dusd).setBurnerStatus(input.contracts.wethMarketBatch.market, true);
+        AltoAdapter(payable(input.contracts.altoAdapter)).approveContract(input.contracts.wethMarketBatch.market);
 
         input.contracts.wstethMarketBatch = (new TestnetMintMarketBatch(
                 TestnetMintMarketBatchParams({
@@ -183,6 +185,7 @@ library DeployAltoTestnet {
         IMarket(input.contracts.wstethMarketBatch.market).setAuthorizedCallback(input.contracts.altoLeverage, true);
         DUSD(input.tokens.dusd).setMinterStatus(input.contracts.wstethMarketBatch.market, true);
         DUSD(input.tokens.dusd).setBurnerStatus(input.contracts.wstethMarketBatch.market, true);
+        AltoAdapter(payable(input.contracts.altoAdapter)).approveContract(input.contracts.wstethMarketBatch.market);
 
         input.contracts.tbtcMarketBatch = (new TestnetMintMarketBatch(
                 TestnetMintMarketBatchParams({
@@ -199,6 +202,7 @@ library DeployAltoTestnet {
         IMarket(input.contracts.tbtcMarketBatch.market).setAuthorizedCallback(input.contracts.altoLeverage, true);
         DUSD(input.tokens.dusd).setMinterStatus(input.contracts.tbtcMarketBatch.market, true);
         DUSD(input.tokens.dusd).setBurnerStatus(input.contracts.tbtcMarketBatch.market, true);
+        AltoAdapter(payable(input.contracts.altoAdapter)).approveContract(input.contracts.tbtcMarketBatch.market);
 
         input.contracts.sboldMarketBatch = (new TestnetMintMarketBatch(
                 TestnetMintMarketBatchParams({
@@ -215,6 +219,7 @@ library DeployAltoTestnet {
         IMarket(input.contracts.sboldMarketBatch.market).setAuthorizedCallback(input.contracts.altoLeverage, true);
         DUSD(input.tokens.dusd).setMinterStatus(input.contracts.sboldMarketBatch.market, true);
         DUSD(input.tokens.dusd).setBurnerStatus(input.contracts.sboldMarketBatch.market, true);
+        AltoAdapter(payable(input.contracts.altoAdapter)).approveContract(input.contracts.sboldMarketBatch.market);
 
         input.contracts.rethMarketBatch = (new TestnetMintMarketBatch(
                 TestnetMintMarketBatchParams({
@@ -231,6 +236,7 @@ library DeployAltoTestnet {
         IMarket(input.contracts.rethMarketBatch.market).setAuthorizedCallback(input.contracts.altoLeverage, true);
         DUSD(input.tokens.dusd).setMinterStatus(input.contracts.rethMarketBatch.market, true);
         DUSD(input.tokens.dusd).setBurnerStatus(input.contracts.rethMarketBatch.market, true);
+        AltoAdapter(payable(input.contracts.altoAdapter)).approveContract(input.contracts.rethMarketBatch.market);
 
         // Borrow Markets
         input.contracts.susdeMarketBatch = (new TestnetBorrowMarketBatch(
@@ -245,6 +251,7 @@ library DeployAltoTestnet {
 
         AltoLeverage(input.contracts.altoLeverage).setMarket(input.contracts.susdeMarketBatch.market, true);
         IMarket(input.contracts.susdeMarketBatch.market).setAuthorizedCallback(input.contracts.altoLeverage, true);
+        AltoAdapter(payable(input.contracts.altoAdapter)).approveContract(input.contracts.susdeMarketBatch.market);
 
         return input;
     }
@@ -326,6 +333,10 @@ library DeployAltoTestnet {
 
         Ownable2Step(input.contracts.stakingBatch.stakingContract).acceptOwnership();
         Ownable2Step(input.contracts.stakingBatch.universalRewardsDistributor).acceptOwnership();
+        AltoAdapter(payable(input.contracts.altoAdapter)).approveContract(input.contracts.stakingBatch.stakingContract);
+        AltoAdapter(payable(input.contracts.altoAdapter)).approveContract(
+            input.contracts.stakingBatch.universalRewardsDistributor
+        );
 
         return input;
     }
@@ -354,6 +365,9 @@ library DeployAltoTestnet {
                 })
             )).getRewardsDistributorReport();
         Ownable2Step(input.contracts.rewardsBatch.rewardsDistributor).acceptOwnership();
+        AltoAdapter(payable(input.contracts.altoAdapter)).approveContract(
+            input.contracts.rewardsBatch.rewardsDistributor
+        );
 
         return input;
     }
