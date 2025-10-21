@@ -7,7 +7,14 @@ import {IMarketErrors, IMarketEvents} from "@alto/lending/interfaces/IMarket.sol
 import {AltoMintMarket} from "@alto/lending/AltoMintMarket.sol";
 
 contract SetFeeRecipientTestMint is MarketCommon {
+    AltoMintMarket public mintMarket;
+
     constructor() MarketCommon(MarketType.MINT) {}
+
+    function setUp() public override {
+        super.setUp();
+        mintMarket = AltoMintMarket(address(market));
+    }
 
     function test_RevertWhen_CallerIsNotOwner() external {
         // it should revert
@@ -39,27 +46,27 @@ contract SetFeeRecipientTestMint is MarketCommon {
         external
         whenCallerIsOwner
     {
-        AltoMintMarket(address(market)).setBorrowOpeningFee(1);
+        mintMarket.setBorrowOpeningFee(1);
 
         // it should revert
         vm.expectRevert(abi.encodeWithSelector(AltoMintMarket.AltoMintMarketInvalidInput.selector));
-        AltoMintMarket(address(market)).setFeeRecipient(address(0));
+        mintMarket.setFeeRecipient(address(0));
 
-        AltoMintMarket(address(market)).setBorrowOpeningFee(0);
+        mintMarket.setBorrowOpeningFee(0);
 
         // it should revert
         vm.expectRevert(abi.encodeWithSelector(AltoMintMarket.AltoMintMarketInvalidInput.selector));
-        AltoMintMarket(address(market)).setFeeRecipient(address(0));
+        mintMarket.setFeeRecipient(address(0));
     }
 
     function test_RevertWhen_FeeRecipientIsZeroAddressAndProtocolFeePercentageIsGreaterThanZero()
         external
         whenCallerIsOwner
     {
-        AltoMintMarket(address(market)).setBorrowOpeningFee(0.01 ether);
+        mintMarket.setBorrowOpeningFee(0.01 ether);
 
         // it should revert (default protocol fee percentage is 0.075 ether in tests)
         vm.expectRevert(abi.encodeWithSelector(AltoMintMarket.AltoMintMarketInvalidInput.selector));
-        AltoMintMarket(address(market)).setFeeRecipient(address(0));
+        mintMarket.setFeeRecipient(address(0));
     }
 }

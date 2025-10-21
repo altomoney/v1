@@ -5,7 +5,6 @@ import {MarketCommon, MarketType} from "../MarketCommon.t.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IMarketErrors, IMarketEvents, LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
 import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
-import {AltoMintMarket} from "@alto/lending/AltoMintMarket.sol";
 
 contract AltoMarketSetLiquidationConfiguration is MarketCommon {
     constructor(MarketType _marketType) MarketCommon(_marketType) {}
@@ -165,14 +164,13 @@ contract AltoMarketSetLiquidationConfiguration is MarketCommon {
         liquidationConfigurationPre.protocolFeePercentage = 0;
         market.setLiquidationConfiguration(liquidationConfigurationPre);
         market.setIrm(address(0));
-        AltoMintMarket(address(market)).setBorrowOpeningFee(0);
-        AltoMintMarket(address(market)).setFeeRecipient(address(0));
+        market.setFeeRecipient(address(0));
 
         liquidationConfiguration.protocolFeePercentage = 0.01 ether;
 
         // it should revert
         vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBaseMarketInvalidInput.selector));
-        AltoMintMarket(address(market)).setLiquidationConfiguration(liquidationConfiguration);
+        market.setLiquidationConfiguration(liquidationConfiguration);
     }
 
     function test_RevertWhen_PriorityLiquidationGracePeriodIsGreaterThan1Hour() external whenCallerIsOwner {
@@ -181,7 +179,7 @@ contract AltoMarketSetLiquidationConfiguration is MarketCommon {
 
         // it should revert
         vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBaseMarketInvalidInput.selector));
-        AltoMintMarket(address(market)).setLiquidationConfiguration(liquidationConfiguration);
+        market.setLiquidationConfiguration(liquidationConfiguration);
     }
 
     function test_RevertWhen_TaggerLiquidationGracePeriodIsGreaterThan30Minutes() external whenCallerIsOwner {

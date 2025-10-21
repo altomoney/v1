@@ -1,0 +1,5 @@
+AltoMintMarket::Borrow()
+└── given valid inputs
+    └── when totalBorrowed assets is less than or equal to totalSupply assets
+        └── when opening fee is greater than 0
+            └── it should apply borrow opening fee

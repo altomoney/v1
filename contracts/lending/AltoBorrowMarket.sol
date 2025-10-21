@@ -18,6 +18,7 @@ contract AltoBorrowMarket is AltoBaseMarket {
     /// @param newBorrowOpeningFee The new borrow opening fee
     event SetBorrowOpeningFee(uint256 oldBorrowOpeningFee, uint256 newBorrowOpeningFee);
 
+    /// @notice The borrow opening fee in MATH_PRECISION
     uint256 private _borrowOpeningFee;
 
     /// upgrade gap
@@ -35,7 +36,7 @@ contract AltoBorrowMarket is AltoBaseMarket {
         address _owner,
         address _oracle,
         uint256 _maxLtv,
-        uint256 _borrowOpeningFeeWad,
+        uint256 _initialBorrowOpeningFee,
         address _feeRecipient,
         LiquidationConfiguration memory _liquidationConfiguration
     ) public initializer {
@@ -43,15 +44,15 @@ contract AltoBorrowMarket is AltoBaseMarket {
             _borrowToken, _collateralToken, _irm, _owner, _oracle, _maxLtv, _feeRecipient, _liquidationConfiguration
         );
 
-        if (_borrowOpeningFeeWad > MATH_PRECISION) {
+        if (_initialBorrowOpeningFee > MATH_PRECISION) {
             revert AltoBorrowMarketInvalidInput();
         }
-        if (_feeRecipient == address(0) && _borrowOpeningFeeWad > 0) {
+        if (_feeRecipient == address(0) && _initialBorrowOpeningFee > 0) {
             revert AltoBorrowMarketInvalidInput();
         }
 
-        _borrowOpeningFee = _borrowOpeningFeeWad;
-        emit SetBorrowOpeningFee(0, _borrowOpeningFeeWad);
+        _borrowOpeningFee = _initialBorrowOpeningFee;
+        emit SetBorrowOpeningFee(0, _initialBorrowOpeningFee);
     }
 
     /// @notice Getter of the borrow opening fee
@@ -61,17 +62,17 @@ contract AltoBorrowMarket is AltoBaseMarket {
     }
 
     /// @notice Setter of the borrow opening fee
-    /// @param _borrowOpeningFeeWad The new borrow opening fee
-    function setBorrowOpeningFee(uint256 _borrowOpeningFeeWad) external onlyOwner {
-        if (_borrowOpeningFeeWad > MATH_PRECISION) {
+    /// @param _newBorrowOpeningFee The new borrow opening fee
+    function setBorrowOpeningFee(uint256 _newBorrowOpeningFee) external onlyOwner {
+        if (_newBorrowOpeningFee > MATH_PRECISION) {
             revert AltoBorrowMarketInvalidInput();
         }
 
-        if (feeRecipient == address(0) && _borrowOpeningFeeWad > 0) {
+        if (feeRecipient == address(0) && _newBorrowOpeningFee > 0) {
             revert AltoBorrowMarketInvalidInput();
         }
 
-        emit SetBorrowOpeningFee(_borrowOpeningFee, _borrowOpeningFeeWad);
-        _borrowOpeningFee = _borrowOpeningFeeWad;
+        emit SetBorrowOpeningFee(_borrowOpeningFee, _newBorrowOpeningFee);
+        _borrowOpeningFee = _newBorrowOpeningFee;
     }
 }

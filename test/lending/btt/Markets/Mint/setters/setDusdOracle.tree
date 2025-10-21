@@ -5,4 +5,4 @@ AltoMintMarket::setDusdOracle()
 │   └── it should revert with AltoMintMarketInvalidInput
 └── when all conditions are met for valid update
     ├── it should emit SetDusdOracle event with old and new oracle addresses
-    ├── it should update dusdOracle state variable to new address
+    └── it should update dusdOracle state variable to new address

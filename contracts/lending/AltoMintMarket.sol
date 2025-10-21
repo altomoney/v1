@@ -43,10 +43,16 @@ contract AltoMintMarket is AltoBaseMarket {
     /// @param newBorrowOpeningFee The new borrow opening fee
     event SetBorrowOpeningFee(uint256 oldBorrowOpeningFee, uint256 newBorrowOpeningFee);
 
+    /// @notice The amount of claimable fees assets
+    /// @dev This is used to store the amount of claimable fees assets used when claiming interest
     uint128 public claimableFeesAssets;
 
+    /// @notice The borrow opening fee in MATH_PRECISION
     uint256 private _borrowOpeningFee;
 
+    /// @notice The address of the DUSD oracle
+    /// @dev This oracle returns USD price of the DUSD token
+    /// @dev Unused right now but will be used in the future to calculate the borrow opening fee as per specification
     address public dusdOracle;
 
     /// upgrade gap
@@ -66,17 +72,17 @@ contract AltoMintMarket is AltoBaseMarket {
         uint256 _maxLtv,
         uint256 _debtCeiling,
         address _feeRecipient,
-        uint256 _borrowOpeningFeeWad,
+        uint256 _initialBorrowOpeningFee,
         LiquidationConfiguration memory _liquidationConfiguration
     ) public initializer {
         __AltoBaseMarket_init(
             _borrowToken, _collateralToken, _irm, _owner, _oracle, _maxLtv, _feeRecipient, _liquidationConfiguration
         );
 
-        if (_borrowOpeningFeeWad > MATH_PRECISION) {
+        if (_initialBorrowOpeningFee > MATH_PRECISION) {
             revert AltoMintMarketInvalidInput();
         }
-        if (_feeRecipient == address(0) && _borrowOpeningFeeWad > 0) {
+        if (_feeRecipient == address(0) && _initialBorrowOpeningFee > 0) {
             revert AltoMintMarketInvalidInput();
         }
 
@@ -84,8 +90,8 @@ contract AltoMintMarket is AltoBaseMarket {
             revert AltoMintMarketInvalidInput();
         }
 
-        _borrowOpeningFee = _borrowOpeningFeeWad;
-        emit SetBorrowOpeningFee(0, _borrowOpeningFeeWad);
+        _borrowOpeningFee = _initialBorrowOpeningFee;
+        emit SetBorrowOpeningFee(0, _initialBorrowOpeningFee);
 
         totalSupply.assets = _debtCeiling.toUint128();
         emit SetDebtCeiling(0, _debtCeiling);
@@ -110,7 +116,6 @@ contract AltoMintMarket is AltoBaseMarket {
 
     /// @notice Setter of the DUSD oracle
     /// @param _dusdOracle The new DUSD oracle
-    /// @dev The DUSD oracle will be used in calculating `borrowOpeningFee`. currently, the implementation is not fully decided
     function setDusdOracle(address _dusdOracle) external onlyOwner {
         if (_dusdOracle == address(0)) {
             revert AltoMintMarketInvalidInput();
@@ -121,24 +126,24 @@ contract AltoMintMarket is AltoBaseMarket {
     }
 
     /// @notice Setter of the borrow opening fee
-    /// @param _borrowOpeningFeeWad The new borrow opening fee
-    function setBorrowOpeningFee(uint256 _borrowOpeningFeeWad) external onlyOwner {
-        if (_borrowOpeningFeeWad > MATH_PRECISION) {
+    /// @param _newBorrowOpeningFee The new borrow opening fee
+    function setBorrowOpeningFee(uint256 _newBorrowOpeningFee) external onlyOwner {
+        if (_newBorrowOpeningFee > MATH_PRECISION) {
             revert AltoMintMarketInvalidInput();
         }
 
-        if (feeRecipient == address(0) && _borrowOpeningFeeWad > 0) {
+        if (feeRecipient == address(0) && _newBorrowOpeningFee > 0) {
             revert AltoMintMarketInvalidInput();
         }
 
-        emit SetBorrowOpeningFee(_borrowOpeningFee, _borrowOpeningFeeWad);
-        _borrowOpeningFee = _borrowOpeningFeeWad;
+        emit SetBorrowOpeningFee(_borrowOpeningFee, _newBorrowOpeningFee);
+        _borrowOpeningFee = _newBorrowOpeningFee;
     }
 
     /// @notice Getter of the borrow opening fee
     /// @return The borrow opening fee
-    /// @dev This implementation is not final. It will be updated in the future.
-    /// @dev The new implementation will use DUSD oracle and determine the borrow opening fee based on the DUSD price to maintain the peg
+    /// @dev The borrow opening fee is calculated as per specification.
+    /// Interaction with the DUSD oracle is not implemented yet.
     function borrowOpeningFee() public view override returns (uint256) {
         return _borrowOpeningFee;
     }
