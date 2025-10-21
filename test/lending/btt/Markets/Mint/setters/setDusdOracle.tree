@@ -1,0 +1,8 @@
+AltoMintMarket::setDusdOracle()
+├── when caller is not owner
+│   └── it should revert with AltoBaseMarketUnauthorized
+├── when _dusdOracle is zero address
+│   └── it should revert with AltoMintMarketInvalidInput
+└── when all conditions are met for valid update
+    ├── it should emit SetDusdOracle event with old and new oracle addresses
+    ├── it should update dusdOracle state variable to new address

@@ -3,11 +3,13 @@ pragma solidity ^0.8.0;
 
 import {AltoBaseMarketUpgraded} from "./AltoBaseMarketUpgraded.sol";
 import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
+import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 
 /// @custom:oz-upgrades-from AltoBorrowMarket
 contract AltoBorrowMarketUpgraded is AltoBaseMarketUpgraded {
+    uint256 private _borrowOpeningFee;
     /// upgrade gap
-    uint256[50] private __gap_borrow;
+    uint256[49] private __gap_borrow;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -21,21 +23,25 @@ contract AltoBorrowMarketUpgraded is AltoBaseMarketUpgraded {
         address _owner,
         address _oracle,
         uint256 _maxLtv,
-        uint256 _borrowOpeningFee,
+        uint256 _borrowOpeningFeeWad,
         address _feeRecipient,
         LiquidationConfiguration memory _liquidationConfiguration
     ) public initializer {
         __AltoBaseMarket_init(
-            _borrowToken,
-            _collateralToken,
-            _irm,
-            _owner,
-            _oracle,
-            _maxLtv,
-            _borrowOpeningFee,
-            _feeRecipient,
-            _liquidationConfiguration
+            _borrowToken, _collateralToken, _irm, _owner, _oracle, _maxLtv, _feeRecipient, _liquidationConfiguration
         );
+        _borrowOpeningFee = _borrowOpeningFeeWad;
+    }
+
+    function borrowOpeningFee() public view override returns (uint256) {
+        return _borrowOpeningFee;
+    }
+
+    function setBorrowOpeningFee(uint256 _borrowOpeningFeeWad) external onlyOwner {
+        if (_borrowOpeningFeeWad > MATH_PRECISION) {
+            revert AltoBaseMarketInvalidInput();
+        }
+        _borrowOpeningFee = _borrowOpeningFeeWad;
     }
 
     /// @dev Reinitializer for version 2 upgrade - initializes new storage variables

@@ -252,7 +252,7 @@ contract AltoMarketBorrow is MarketCommon {
         uint256 openingFee = 0.05 ether;
 
         vm.prank(OWNER);
-        market.setBorrowOpeningFee(openingFee);
+        AltoMintMarket(address(market)).setBorrowOpeningFee(openingFee);
 
         market.addCollateral(20 ether, USER);
 

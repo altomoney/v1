@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.0;
 
-import {AltoBaseMarket} from "@alto/lending/AltoBaseMarket.sol";
+import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";
 import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
 
 /// @custom:oz-upgrades-from AltoBorrowMarket
-contract AltoBorrowMarketUpgradedOriginalBaseMarket is AltoBaseMarket {
+contract AltoBorrowMarketUpgradedOriginalBaseMarket is AltoBorrowMarket {
     uint128 public addedProperty1;
 
     address public addedProperty2;
@@ -18,30 +18,6 @@ contract AltoBorrowMarketUpgradedOriginalBaseMarket is AltoBaseMarket {
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
-    }
-
-    function initialize(
-        address _borrowToken,
-        address _collateralToken,
-        address _irm,
-        address _owner,
-        address _oracle,
-        uint256 _maxLtv,
-        uint256 _borrowOpeningFee,
-        address _feeRecipient,
-        LiquidationConfiguration memory _liquidationConfiguration
-    ) public initializer {
-        __AltoBaseMarket_init(
-            _borrowToken,
-            _collateralToken,
-            _irm,
-            _owner,
-            _oracle,
-            _maxLtv,
-            _borrowOpeningFee,
-            _feeRecipient,
-            _liquidationConfiguration
-        );
     }
 
     /// @dev Reinitializer for version 2 upgrade - initializes new storage variables

@@ -7,6 +7,7 @@ import {IIrm} from "./interfaces/IIrm.sol";
 import {Balance, LiquidationConfiguration} from "./interfaces/IMarket.sol";
 import {IMintableERC20} from "./interfaces/IMintableERC20.sol";
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
+import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 
 import {AltoBaseMarket} from "./AltoBaseMarket.sol";
 
@@ -20,6 +21,9 @@ contract AltoMintMarket is AltoBaseMarket {
     /// @notice Thrown when a function is not implemented for the mint market
     error AltoMintMarketNotImplemented();
 
+    /// @notice Thrown when the input is invalid
+    error AltoMintMarketInvalidInput();
+
     /// @notice Emitted when the debt ceiling is set
     /// @param oldDebtCeiling The old debt ceiling
     /// @param newDebtCeiling The new debt ceiling
@@ -29,10 +33,24 @@ contract AltoMintMarket is AltoBaseMarket {
     /// @param amount The amount of interest claimed
     event InterestClaimed(uint256 amount);
 
+    /// @notice Emitted when the DUSD oracle is set
+    /// @param oldDusdOracle The old DUSD oracle
+    /// @param newDusdOracle The new DUSD oracle
+    event SetDusdOracle(address oldDusdOracle, address newDusdOracle);
+
+    /// @notice Emitted when the borrow opening fee is set
+    /// @param oldBorrowOpeningFee The old borrow opening fee
+    /// @param newBorrowOpeningFee The new borrow opening fee
+    event SetBorrowOpeningFee(uint256 oldBorrowOpeningFee, uint256 newBorrowOpeningFee);
+
     uint128 public claimableFeesAssets;
 
-    /// upgrade gap (previous slot has 16 bytes left)
-    uint256[49] private __gap_mint;
+    uint256 private _borrowOpeningFee;
+
+    address public dusdOracle;
+
+    /// upgrade gap
+    uint256[47] private __gap_mint;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -48,24 +66,27 @@ contract AltoMintMarket is AltoBaseMarket {
         uint256 _maxLtv,
         uint256 _debtCeiling,
         address _feeRecipient,
-        uint256 _borrowOpeningFee,
+        uint256 _borrowOpeningFeeWad,
         LiquidationConfiguration memory _liquidationConfiguration
     ) public initializer {
         __AltoBaseMarket_init(
-            _borrowToken,
-            _collateralToken,
-            _irm,
-            _owner,
-            _oracle,
-            _maxLtv,
-            _borrowOpeningFee,
-            _feeRecipient,
-            _liquidationConfiguration
+            _borrowToken, _collateralToken, _irm, _owner, _oracle, _maxLtv, _feeRecipient, _liquidationConfiguration
         );
 
-        if (_feeRecipient == address(0) && irm != address(0)) {
-            revert AltoBaseMarketInvalidInput();
+        if (_borrowOpeningFeeWad > MATH_PRECISION) {
+            revert AltoMintMarketInvalidInput();
         }
+        if (_feeRecipient == address(0) && _borrowOpeningFeeWad > 0) {
+            revert AltoMintMarketInvalidInput();
+        }
+
+        if (_feeRecipient == address(0) && irm != address(0)) {
+            revert AltoMintMarketInvalidInput();
+        }
+
+        _borrowOpeningFee = _borrowOpeningFeeWad;
+        emit SetBorrowOpeningFee(0, _borrowOpeningFeeWad);
+
         totalSupply.assets = _debtCeiling.toUint128();
         emit SetDebtCeiling(0, _debtCeiling);
     }
@@ -87,13 +108,48 @@ contract AltoMintMarket is AltoBaseMarket {
         totalSupply.assets = _debtCeiling.toUint128();
     }
 
+    /// @notice Setter of the DUSD oracle
+    /// @param _dusdOracle The new DUSD oracle
+    /// @dev The DUSD oracle will be used in calculating `borrowOpeningFee`. currently, the implementation is not fully decided
+    function setDusdOracle(address _dusdOracle) external onlyOwner {
+        if (_dusdOracle == address(0)) {
+            revert AltoMintMarketInvalidInput();
+        }
+
+        emit SetDusdOracle(dusdOracle, _dusdOracle);
+        dusdOracle = _dusdOracle;
+    }
+
+    /// @notice Setter of the borrow opening fee
+    /// @param _borrowOpeningFeeWad The new borrow opening fee
+    function setBorrowOpeningFee(uint256 _borrowOpeningFeeWad) external onlyOwner {
+        if (_borrowOpeningFeeWad > MATH_PRECISION) {
+            revert AltoMintMarketInvalidInput();
+        }
+
+        if (feeRecipient == address(0) && _borrowOpeningFeeWad > 0) {
+            revert AltoMintMarketInvalidInput();
+        }
+
+        emit SetBorrowOpeningFee(_borrowOpeningFee, _borrowOpeningFeeWad);
+        _borrowOpeningFee = _borrowOpeningFeeWad;
+    }
+
+    /// @notice Getter of the borrow opening fee
+    /// @return The borrow opening fee
+    /// @dev This implementation is not final. It will be updated in the future.
+    /// @dev The new implementation will use DUSD oracle and determine the borrow opening fee based on the DUSD price to maintain the peg
+    function borrowOpeningFee() public view override returns (uint256) {
+        return _borrowOpeningFee;
+    }
+
     /// @inheritdoc AltoBaseMarket
     function setFeeRecipient(address _feeRecipient) external override onlyOwner {
         if (
             _feeRecipient == address(0)
-                && (borrowOpeningFee > 0 || liquidationConfiguration.protocolFeePercentage > 0 || irm != address(0))
+                && (_borrowOpeningFee > 0 || liquidationConfiguration.protocolFeePercentage > 0 || irm != address(0))
         ) {
-            revert AltoBaseMarketInvalidInput();
+            revert AltoMintMarketInvalidInput();
         }
 
         emit SetFeeRecipient(feeRecipient, _feeRecipient);

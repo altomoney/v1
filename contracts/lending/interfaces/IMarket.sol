@@ -128,11 +128,6 @@ interface IMarketEvents {
         LiquidationConfiguration oldLiquidationConfiguration, LiquidationConfiguration newLiquidationConfiguration
     );
 
-    /// @notice Emitted when the borrow opening fee is set
-    /// @param oldBorrowOpeningFee The address of the old borrow opening fee
-    /// @param newBorrowOpeningFee The address of the new borrow opening fee
-    event SetBorrowOpeningFee(uint256 oldBorrowOpeningFee, uint256 newBorrowOpeningFee);
-
     /// @notice Emitted when the fee recipient is set
     /// @param oldAddr The address of the old fee recipient
     /// @param newAddr The address of the new fee recipient
@@ -269,8 +264,9 @@ interface IMarketBase is IMarketErrors, IMarketEvents, IAuth, IPausable {
     /// @dev This is used to determine the max amount of borrow that can be taken for a given collateral.
     function maxLtv() external view returns (uint256);
 
-    /// @notice Fee percentage added to the borrow amount when borrowing.
-    /// @dev User is charged this fee on the top of their requested borrow amount.
+    /// @notice function to calculate the borrow opening fee while borrowing
+    /// @dev The implementation used to calculate the borrow opening fee may differ for AltoBorrowMarket and AltoMintMarket
+    /// @dev This function will be implemented by the AltoBorrowMarket and AltoMintMarket
     function borrowOpeningFee() external view returns (uint256);
 
     /// @notice Address that receives the opening fee
@@ -294,10 +290,6 @@ interface IMarketBase is IMarketErrors, IMarketEvents, IAuth, IPausable {
     /// @notice Setter of the liquidation configuration for the market.
     /// @dev Warning: This setter will overwrite the existing liquidation configuration.
     function setLiquidationConfiguration(LiquidationConfiguration memory _liquidationConfiguration) external;
-
-    /// @notice Setter of the borrow opening fee for the market.
-    /// @dev Fee can be set to 0 to disable the opening fee.
-    function setBorrowOpeningFee(uint256 borrowOpeningFee) external;
 
     /// @notice Setter of the fee recipient for the market.
     function setFeeRecipient(address feeRecipient) external;

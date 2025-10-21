@@ -88,9 +88,6 @@ abstract contract AltoBaseMarketUpgraded is
     LiquidationConfiguration public liquidationConfiguration;
 
     /// @inheritdoc IMarketBase
-    uint256 public borrowOpeningFee;
-
-    /// @inheritdoc IMarketBase
     address public feeRecipient;
 
     uint256 public addedProperty1;
@@ -109,7 +106,6 @@ abstract contract AltoBaseMarketUpgraded is
         address _owner,
         address _oracle,
         uint256 _maxLtv,
-        uint256 _borrowOpeningFee,
         address _feeRecipient,
         LiquidationConfiguration memory _liquidationConfiguration
     ) internal onlyInitializing {
@@ -118,10 +114,7 @@ abstract contract AltoBaseMarketUpgraded is
         if (_borrowToken == address(0) || _collateralToken == address(0) || _oracle == address(0)) {
             revert AltoBaseMarketInvalidInput();
         }
-        if (_maxLtv > MATH_PRECISION || _borrowOpeningFee > MATH_PRECISION) {
-            revert AltoBaseMarketInvalidInput();
-        }
-        if (_feeRecipient == address(0) && _borrowOpeningFee > 0) {
+        if (_maxLtv > MATH_PRECISION) {
             revert AltoBaseMarketInvalidInput();
         }
 
@@ -155,9 +148,6 @@ abstract contract AltoBaseMarketUpgraded is
             }),
             _liquidationConfiguration
         );
-
-        borrowOpeningFee = _borrowOpeningFee;
-        emit SetBorrowOpeningFee(0, _borrowOpeningFee);
 
         feeRecipient = _feeRecipient;
         emit SetFeeRecipient(address(0), _feeRecipient);
@@ -266,18 +256,8 @@ abstract contract AltoBaseMarketUpgraded is
     }
 
     /// @inheritdoc IMarketBase
-    function setBorrowOpeningFee(uint256 _borrowOpeningFee) external onlyOwner {
-        if (_borrowOpeningFee > MATH_PRECISION) {
-            revert AltoBaseMarketInvalidInput();
-        }
-
-        emit SetBorrowOpeningFee(borrowOpeningFee, _borrowOpeningFee);
-        borrowOpeningFee = _borrowOpeningFee;
-    }
-
-    /// @inheritdoc IMarketBase
     function setFeeRecipient(address _feeRecipient) external virtual onlyOwner {
-        if (_feeRecipient == address(0) && borrowOpeningFee > 0) {
+        if (_feeRecipient == address(0) && borrowOpeningFee() > 0) {
             revert AltoBaseMarketInvalidInput();
         }
 
@@ -438,14 +418,14 @@ abstract contract AltoBaseMarketUpgraded is
 
         if (assets == 0) {
             // calculate opening fee from shares
-            uint256 openingFeeShares = shares.multiplyWithPrecision(borrowOpeningFee);
+            uint256 openingFeeShares = shares.multiplyWithPrecision(borrowOpeningFee());
             openingFeeAssets = openingFeeShares.convertToAssetsDown(totalBorrowed.assets, totalBorrowed.shares);
             shares += openingFeeShares;
 
             assets = shares.convertToAssetsDown(totalBorrowed.assets, totalBorrowed.shares);
         } else {
             // calculate opening fee from assets
-            openingFeeAssets = assets.multiplyWithPrecision(borrowOpeningFee);
+            openingFeeAssets = assets.multiplyWithPrecision(borrowOpeningFee());
             assets += openingFeeAssets;
 
             shares = assets.convertToSharesUp(totalBorrowed.assets, totalBorrowed.shares);
@@ -483,6 +463,8 @@ abstract contract AltoBaseMarketUpgraded is
 
         return (assets, shares, openingFeeAssets);
     }
+
+    function borrowOpeningFee() public view virtual returns (uint256);
 
     /// @dev Adds opening fee to the fee recipient's supply position and to the market.
     /// @param openingFeeAssets The amount of opening fee to add.
