@@ -9,7 +9,7 @@ import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {MarketDeployer} from "@alto/utils/MarketDeployer.sol";
 import {LiquidationConfiguration, Balance, Position} from "@alto/lending/interfaces/IMarket.sol";
-import {PAUSED_MARKET, FROZEN_MARKET} from "@alto/utils/Constants.sol";
+import {PAUSE_TYPE, FROZEN_TYPE} from "@alto/utils/Constants.sol";
 import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
@@ -65,8 +65,8 @@ contract AltoBorrowMarketProxyTest is Test {
         );
 
         vm.startPrank(OWNER);
-        market.setPauser(PAUSER, PAUSED_MARKET, true);
-        market.setPauser(PAUSER, FROZEN_MARKET, true);
+        market.setPauser(PAUSER, PAUSE_TYPE, true);
+        market.setPauser(PAUSER, FROZEN_TYPE, true);
         vm.stopPrank();
 
         deal(address(borrowToken), address(this), type(uint256).max);

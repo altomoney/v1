@@ -6,9 +6,7 @@ import {Container, MinMaxEpochs} from "@alto/staking/interfaces/ITVLWeightedCont
 import {StakingPosition} from "@alto/staking/interfaces/IAltoStaking.sol";
 import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
 import {MockAltoStaking} from "@alto-test/staking/helpers/MockAltoStaking.sol";
-
-bytes32 constant PAUSE_TYPE = keccak256("PAUSE");
-bytes32 constant RESCUE_MODE_PAUSE_TYPE = keccak256("RESCUE_MODE");
+import {PAUSE_TYPE, RESCUE_TYPE} from "@alto/utils/Constants.sol";
 
 contract AltoStakingCommon is Test {
     // Test addresses
@@ -195,9 +193,9 @@ contract AltoStakingCommon is Test {
 
     function _enableRescueMode() internal {
         vm.prank(OWNER);
-        staking.setPauser(PAUSER, RESCUE_MODE_PAUSE_TYPE, true);
+        staking.setPauser(PAUSER, RESCUE_TYPE, true);
         vm.prank(PAUSER);
-        staking.pause(RESCUE_MODE_PAUSE_TYPE, true);
+        staking.pause(RESCUE_TYPE, true);
     }
 
     function _assertPositionEquals(

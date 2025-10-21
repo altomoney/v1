@@ -11,7 +11,7 @@ import {IIrm} from "../interfaces/IIrm.sol";
 import {IMarket} from "../interfaces/IMarket.sol";
 import {ExpLib} from "../libraries/ExpLib.sol";
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
-import {PAUSED_MARKET} from "@alto/utils/Constants.sol";
+import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 
 /// @title Adaptive Curve Interest Rate Model
 /// @author Pearl Labs
@@ -88,7 +88,7 @@ contract AdaptiveCurveIrm is Ownable2Step, IIrm {
     function setIrmConfig(AdaptiveCurveIrmConfig memory _irmConfig) external onlyOwner {
         if (market == address(0)) revert IrmMarketNotSet();
 
-        if (!IMarket(market).paused(PAUSED_MARKET)) {
+        if (!IMarket(market).paused(PAUSE_TYPE)) {
             IMarket(market).accrueInterest();
         }
 

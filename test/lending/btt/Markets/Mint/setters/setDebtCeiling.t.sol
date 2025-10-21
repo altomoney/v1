@@ -5,7 +5,7 @@ import {MarketType, MarketCommon} from "../../MarketCommon.t.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {AltoMintMarket} from "@alto/lending/AltoMintMarket.sol";
 import {IMarketErrors, IMarketEvents} from "@alto/lending/interfaces/IMarket.sol";
-import {PAUSED_MARKET} from "@alto/utils/Constants.sol";
+import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 import {Vm} from "forge-std/Vm.sol";
 
 contract SetDebtCeilingTestMint is MarketCommon {
@@ -54,7 +54,7 @@ contract SetDebtCeilingTestMint is MarketCommon {
     }
 
     function test_WhenMarketIsPaused() external whenCallerIsOwner {
-        market.pause(PAUSED_MARKET, true);
+        market.pause(PAUSE_TYPE, true);
 
         // it should update totalSupply assets
         uint256 oldDebtCeiling = market.totalSupply().assets;

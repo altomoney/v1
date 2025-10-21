@@ -26,7 +26,7 @@ import {ExpLib, MATH_PRECISION_INT} from "./libraries/ExpLib.sol";
 import {Uint128Converter} from "./libraries/Uint128Converter.sol";
 
 import {FixedPointMath, MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
-import {PAUSED_MARKET, FROZEN_MARKET} from "@alto/utils/Constants.sol";
+import {PAUSE_TYPE, FROZEN_TYPE} from "@alto/utils/Constants.sol";
 import {IMarketStaticTypes, IMarketBase} from "@alto/lending/interfaces/IMarket.sol";
 import {Pausable, IPausable} from "@alto/utils/Pausable.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
@@ -166,8 +166,8 @@ abstract contract AltoBaseMarket is
             IIrm(irm).setMarket(address(this));
         }
 
-        _setPauser(_owner, PAUSED_MARKET, true);
-        _setPauser(_owner, FROZEN_MARKET, true);
+        _setPauser(_owner, PAUSE_TYPE, true);
+        _setPauser(_owner, FROZEN_TYPE, true);
 
         __Ownable_init(_owner);
         __Auth_init();
@@ -175,7 +175,7 @@ abstract contract AltoBaseMarket is
 
     /// @inheritdoc IMarketBase
     function setIrm(address _irm) external onlyOwner {
-        if (!paused[PAUSED_MARKET]) {
+        if (!paused[PAUSE_TYPE]) {
             _accrueInterest();
         }
 
@@ -208,7 +208,10 @@ abstract contract AltoBaseMarket is
     }
 
     /// @inheritdoc IMarketBase
-    function setLiquidationConfiguration(LiquidationConfiguration memory _liquidationConfiguration) external onlyOwner {
+    function setLiquidationConfiguration(LiquidationConfiguration memory _liquidationConfiguration)
+        external
+        onlyOwner
+    {
         _validateLiquidationConfiguration(_liquidationConfiguration, maxLtv, feeRecipient);
 
         emit SetLiquidationConfiguration(liquidationConfiguration, _liquidationConfiguration);
@@ -262,8 +265,7 @@ abstract contract AltoBaseMarket is
         }
         if (
             _liquidationConfiguration.priorityLiquidationGracePeriod
-                    + _liquidationConfiguration.taggerLiquidationGracePeriod
-                > _liquidationConfiguration.liquidationWindowTag
+                + _liquidationConfiguration.taggerLiquidationGracePeriod > _liquidationConfiguration.liquidationWindowTag
         ) {
             revert AltoBaseMarketInvalidInput();
         }
@@ -513,7 +515,11 @@ abstract contract AltoBaseMarket is
     }
 
     /// @inheritdoc IMarketBase
-    function repay(uint256 assets, uint256 shares, address onBehalf) external whenNotPaused returns (uint256, uint256) {
+    function repay(uint256 assets, uint256 shares, address onBehalf)
+        external
+        whenNotPaused
+        returns (uint256, uint256)
+    {
         if (!_onlyOneZero(assets, shares) || onBehalf == address(0)) {
             revert AltoBaseMarketInvalidInput();
         }
@@ -566,8 +572,8 @@ abstract contract AltoBaseMarket is
     /// uses `maxLtv` instead of `liquidationConfiguration.maxLiquidationLtv` to make a decision.
     function _isSolvent(address _user, bool _isLiquidation) internal view returns (bool) {
         uint256 collateralPrice = IOracle(oracle).getPrice();
-        uint256 collateralValue = uint256(position[_user].collateralAssets)
-            .divideWithRounding(collateralPrice, ORACLE_PRICE_PRECISION, false);
+        uint256 collateralValue =
+            uint256(position[_user].collateralAssets).divideWithRounding(collateralPrice, ORACLE_PRICE_PRECISION, false);
         uint256 maxBorrowValue =
             collateralValue.multiplyWithPrecision(_isLiquidation ? liquidationConfiguration.maxLiquidationLtv : maxLtv);
         uint256 borrowValue =
@@ -639,24 +645,26 @@ abstract contract AltoBaseMarket is
 
         // Calculate fee in collateral
         calc.liquidatorBonusFee = uint256(_position.collateralAssets).multiplyWithPrecision(calc.liquidationFee);
-        calc.protocolFee = uint256(calc.liquidatorBonusFee)
-            .divideWithRounding(liquidationConfiguration.protocolFeePercentage, MATH_PRECISION, true);
+        calc.protocolFee = uint256(calc.liquidatorBonusFee).divideWithRounding(
+            liquidationConfiguration.protocolFeePercentage, MATH_PRECISION, true
+        );
         uint256 remainingCollateralAfterFee = _position.collateralAssets - calc.liquidatorBonusFee;
         calc.remainingCollateralAfterFeeInBorrowAssets =
             remainingCollateralAfterFee.divideWithRounding(calc.collateralPrice, ORACLE_PRICE_PRECISION, false);
 
-        calc.collateralToSellInBorrowAssets = (calc.positionBorrowedAssets
-                - calc.remainingCollateralAfterFeeInBorrowAssets.multiplyWithPrecision(calc.newLtv))
-        .divideWithPrecisionUp(MATH_PRECISION - calc.newLtv);
+        calc.collateralToSellInBorrowAssets = (
+            calc.positionBorrowedAssets
+                - calc.remainingCollateralAfterFeeInBorrowAssets.multiplyWithPrecision(calc.newLtv)
+        ).divideWithPrecisionUp(MATH_PRECISION - calc.newLtv);
         calc.collateralToSellInBorrowAssets =
             Math.min(calc.collateralToSellInBorrowAssets, calc.remainingCollateralAfterFeeInBorrowAssets);
         calc.collateralToSellInBorrowAssets = Math.min(calc.collateralToSellInBorrowAssets, calc.positionBorrowedAssets);
 
         // Calculate final amounts
         LiquidationCalculationResult memory result;
-        uint256 totalCollateralToTake =
-            calc.collateralToSellInBorrowAssets.divideWithRounding(ORACLE_PRICE_PRECISION, calc.collateralPrice, true)
-                + calc.liquidatorBonusFee;
+        uint256 totalCollateralToTake = calc.collateralToSellInBorrowAssets.divideWithRounding(
+            ORACLE_PRICE_PRECISION, calc.collateralPrice, true
+        ) + calc.liquidatorBonusFee;
         result.collateralAmount =
             totalCollateralToTake > _position.collateralAssets ? _position.collateralAssets : totalCollateralToTake;
 
@@ -732,8 +740,7 @@ abstract contract AltoBaseMarket is
         if (currentLtv >= liquidationConfiguration.ltvForCompleteLiquidation) {
             return MATH_PRECISION;
         } else {
-            return (currentLtv - liquidationConfiguration.maxLiquidationLtv)
-            .divideWithPrecisionUp(
+            return (currentLtv - liquidationConfiguration.maxLiquidationLtv).divideWithPrecisionUp(
                 liquidationConfiguration.ltvForCompleteLiquidation - liquidationConfiguration.maxLiquidationLtv
             );
         }
@@ -758,7 +765,7 @@ abstract contract AltoBaseMarket is
     /// @return newLtv The new LTV.
     function _calculateNewLtv(uint256 liquidationPercentage) internal view returns (uint256) {
         uint256 liquidationPercentageAppliedPenalty = liquidationPercentage
-                < liquidationConfiguration.minPenaltyPercentage
+            < liquidationConfiguration.minPenaltyPercentage
             ? liquidationConfiguration.minPenaltyPercentage
             : liquidationPercentage;
 
@@ -832,22 +839,22 @@ abstract contract AltoBaseMarket is
 
     /// @dev Modifier to check if the market is not paused.
     modifier whenNotPaused() {
-        if (paused[PAUSED_MARKET]) {
-            revert IPausable.IsPaused(PAUSED_MARKET);
+        if (paused[PAUSE_TYPE]) {
+            revert IPausable.IsPaused(PAUSE_TYPE);
         }
         _;
     }
 
     /// @dev Modifier to check if the market is not frozen.
     modifier whenNotFrozen() {
-        if (paused[FROZEN_MARKET]) {
-            revert IPausable.IsPaused(FROZEN_MARKET);
+        if (paused[FROZEN_TYPE]) {
+            revert IPausable.IsPaused(FROZEN_TYPE);
         }
         _;
     }
 
     function _onPause(bytes32 pauseType, bool _paused) internal override {
-        if (pauseType == PAUSED_MARKET) {
+        if (pauseType == PAUSE_TYPE) {
             if (_paused) {
                 _accrueInterest();
             } else {

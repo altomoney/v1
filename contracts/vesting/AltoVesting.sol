@@ -8,8 +8,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Auth} from "@alto/utils/Auth.sol";
 import {Pausable} from "@alto/utils/Pausable.sol";
 import {IAltoVesting, VestingInfo} from "@alto/vesting/interfaces/IAltoVesting.sol";
-
-bytes32 constant PAUSE = keccak256("PAUSE");
+import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 
 /// @title Alto Vesting Contract
 /// @author Pearl Labs
@@ -62,7 +61,7 @@ contract AltoVesting is IAltoVesting, MerkleRootManager, Ownable2Step, Auth, Pau
     /// @inheritdoc IAltoVesting
     function claim(address onBehalf, VestingInfo calldata vestingInfo, bytes32[] calldata proof)
         external
-        whenNot(PAUSE)
+        whenNot(PAUSE_TYPE)
         returns (uint256 amount)
     {
         if (!_isSenderAuthorized(onBehalf)) {
@@ -127,7 +126,7 @@ contract AltoVesting is IAltoVesting, MerkleRootManager, Ownable2Step, Auth, Pau
 
     /// @inheritdoc IAltoVesting
     function rescueVestingTokens() external onlyOwner {
-        if (!paused[PAUSE]) {
+        if (!paused[PAUSE_TYPE]) {
             revert AltoVestingNotPaused();
         }
 

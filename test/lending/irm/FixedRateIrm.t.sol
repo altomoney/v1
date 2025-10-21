@@ -7,7 +7,7 @@ import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {IIrm} from "@alto/lending/interfaces/IIrm.sol";
-import {PAUSED_MARKET} from "@alto/utils/Constants.sol";
+import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 import {MarketDeployer} from "@alto/utils/MarketDeployer.sol";
 import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";
 import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
@@ -68,7 +68,7 @@ contract FixedRateIrmTest is Test {
         );
 
         vm.prank(OWNER);
-        market.setPauser(OWNER, PAUSED_MARKET, true);
+        market.setPauser(OWNER, PAUSE_TYPE, true);
     }
 
     function testSetBorrowRateViaConstuctor(uint256 borrowRate) external {
@@ -126,7 +126,7 @@ contract FixedRateIrmTest is Test {
 
     function testSetBorrowRateEventMarketPaused(uint256 borrowRate) external {
         vm.startPrank(OWNER);
-        market.pause(PAUSED_MARKET, true);
+        market.pause(PAUSE_TYPE, true);
         vm.stopPrank();
 
         borrowRate = bound(borrowRate, 1, fixedRateIrm.MAX_BORROW_RATE());

@@ -2,7 +2,8 @@
 pragma solidity ^0.8.0;
 
 import {Test} from "forge-std/Test.sol";
-import {UniversalRewardsDistributor, PAUSE} from "@alto/utils/UniversalRewardsDistributor.sol";
+import {UniversalRewardsDistributor} from "@alto/utils/UniversalRewardsDistributor.sol";
+import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 import {IUniversalRewardsDistributor} from "@alto/utils/interfaces/IUniversalRewardsDistributor.sol";
 import {ERC20MockDecimals} from "@alto-test/helpers/ERC20MockDecimals.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
@@ -30,7 +31,7 @@ contract UniversalRewardsDistributorRescueRewardTokens is Test {
 
         // Setup pauser
         vm.prank(OWNER);
-        distributor.setPauser(PAUSER, PAUSE, true);
+        distributor.setPauser(PAUSER, PAUSE_TYPE, true);
 
         // Fund distributor with tokens
         deal(address(rewardToken), address(distributor), TOKEN_AMOUNT);
@@ -40,7 +41,7 @@ contract UniversalRewardsDistributorRescueRewardTokens is Test {
     function test_RevertWhen_CallerIsNotOwner() external {
         // Pause the contract first
         vm.prank(PAUSER);
-        distributor.pause(PAUSE, true);
+        distributor.pause(PAUSE_TYPE, true);
 
         vm.prank(NON_OWNER);
         // it should revert with OwnableUnauthorizedAccount
@@ -50,7 +51,7 @@ contract UniversalRewardsDistributorRescueRewardTokens is Test {
 
     function test_RevertWhen_ContractIsNotPaused() external {
         // Ensure contract is not paused
-        assertFalse(distributor.paused(PAUSE));
+        assertFalse(distributor.paused(PAUSE_TYPE));
 
         vm.prank(OWNER);
         // it should revert with RewardsDistributorNotPaused
@@ -61,7 +62,7 @@ contract UniversalRewardsDistributorRescueRewardTokens is Test {
     modifier whenCallerIsOwnerAndContractIsPaused() {
         // Pause the contract
         vm.prank(PAUSER);
-        distributor.pause(PAUSE, true);
+        distributor.pause(PAUSE_TYPE, true);
         _;
     }
 
@@ -71,10 +72,10 @@ contract UniversalRewardsDistributorRescueRewardTokens is Test {
         assertEq(rewardToken.balanceOf(address(distributor)), 0);
 
         vm.prank(OWNER);
-        distributor.setPauser(PAUSER, PAUSE, true);
+        distributor.setPauser(PAUSER, PAUSE_TYPE, true);
 
         vm.prank(PAUSER);
-        distributor.pause(PAUSE, true);
+        distributor.pause(PAUSE_TYPE, true);
 
         vm.prank(OWNER);
         vm.recordLogs();

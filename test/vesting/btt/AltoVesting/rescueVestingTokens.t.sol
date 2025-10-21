@@ -6,6 +6,7 @@ import {AltoVesting} from "@alto/vesting/AltoVesting.sol";
 import {IAltoVesting} from "@alto/vesting/interfaces/IAltoVesting.sol";
 import {ERC20MockMintable} from "@alto-test/helpers/ERC20MockMintable.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 
 contract AltoVestingRescueVestingTokens is Test {
     AltoVesting public vesting;
@@ -25,7 +26,7 @@ contract AltoVestingRescueVestingTokens is Test {
 
     modifier givenContractIsPaused() {
         vm.prank(PAUSER);
-        vesting.pause(keccak256("PAUSE"), true);
+        vesting.pause(PAUSE_TYPE, true);
         _;
     }
 
@@ -45,7 +46,7 @@ contract AltoVestingRescueVestingTokens is Test {
         vesting = new AltoVesting(OWNER, INITIAL_TIMELOCK, true, address(vestingToken), TEST_MERKLE_ROOT, bytes32(0));
 
         vm.startPrank(OWNER);
-        vesting.setPauser(PAUSER, keccak256("PAUSE"), true);
+        vesting.setPauser(PAUSER, PAUSE_TYPE, true);
         vesting.acceptPendingRoot(TEST_MERKLE_ROOT);
         vm.stopPrank();
     }

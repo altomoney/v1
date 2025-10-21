@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
-import {AltoStakingCommon, PAUSE_TYPE} from "./AltoStakingCommon.t.sol";
+import {AltoStakingCommon} from "./AltoStakingCommon.t.sol";
+import {PAUSE_TYPE, RESCUE_TYPE} from "@alto/utils/Constants.sol";
 import {StakingPosition, IAltoStakingErrors, IAltoStakingEvents} from "@alto/staking/interfaces/IAltoStaking.sol";
 import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
 

@@ -6,6 +6,7 @@ import {AltoVesting} from "@alto/vesting/AltoVesting.sol";
 import {IAltoVesting, VestingInfo} from "@alto/vesting/interfaces/IAltoVesting.sol";
 import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
 import {ERC20MockMintable} from "@alto-test/helpers/ERC20MockMintable.sol";
+import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 
 contract AltoVestingClaim is Test {
     AltoVesting public vesting;
@@ -32,7 +33,7 @@ contract AltoVestingClaim is Test {
     // Modifiers for BTT structure
     modifier givenContractIsPaused() {
         vm.prank(PAUSER);
-        vesting.pause(keccak256("PAUSE"), true);
+        vesting.pause(PAUSE_TYPE, true);
         _;
     }
 
@@ -100,11 +101,15 @@ contract AltoVestingClaim is Test {
         vestingToken = new ERC20MockMintable("Alto Token", "ALTO");
 
         aliceVestingInfo = VestingInfo({
-            startAt: block.timestamp, vestingDuration: VESTING_DURATION, totalVestingAmount: TOTAL_VESTING_AMOUNT
+            startAt: block.timestamp,
+            vestingDuration: VESTING_DURATION,
+            totalVestingAmount: TOTAL_VESTING_AMOUNT
         });
 
         bobVestingInfo = VestingInfo({
-            startAt: block.timestamp, vestingDuration: VESTING_DURATION, totalVestingAmount: TOTAL_VESTING_AMOUNT
+            startAt: block.timestamp,
+            vestingDuration: VESTING_DURATION,
+            totalVestingAmount: TOTAL_VESTING_AMOUNT
         });
 
         _setupMerkleTree();
@@ -113,7 +118,7 @@ contract AltoVestingClaim is Test {
 
         vm.startPrank(OWNER);
         vesting.setMerkleRootUpdater(UPDATER, true);
-        vesting.setPauser(PAUSER, keccak256("PAUSE"), true);
+        vesting.setPauser(PAUSER, PAUSE_TYPE, true);
         vesting.acceptPendingRoot(merkleRoot);
         vm.stopPrank();
 
@@ -137,7 +142,7 @@ contract AltoVestingClaim is Test {
 
     function test_RevertWhen_ContractIsPaused() external givenContractIsPaused {
         vm.prank(ALICE);
-        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, keccak256("PAUSE")));
+        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, PAUSE_TYPE));
         vesting.claim(ALICE, aliceVestingInfo, aliceProof);
     }
 
@@ -175,7 +180,9 @@ contract AltoVestingClaim is Test {
 
     function test_RevertGiven_VestingInfoDoesNotMatchProvidedParameters() external givenMerkleProofIsValid {
         VestingInfo memory wrongVestingInfo = VestingInfo({
-            startAt: block.timestamp, vestingDuration: VESTING_DURATION, totalVestingAmount: TOTAL_VESTING_AMOUNT + 1
+            startAt: block.timestamp,
+            vestingDuration: VESTING_DURATION,
+            totalVestingAmount: TOTAL_VESTING_AMOUNT + 1
         });
 
         vm.prank(ALICE);
@@ -220,7 +227,10 @@ contract AltoVestingClaim is Test {
         vesting.claim(ALICE, smallerVestingInfo, smallerProof);
     }
 
-    function test_RevertWhen_VestingHasNotStarted_CurrentTimestampIsBeforeStartAt() external givenVestingHasNotStarted {
+    function test_RevertWhen_VestingHasNotStarted_CurrentTimestampIsBeforeStartAt()
+        external
+        givenVestingHasNotStarted
+    {
         // Update merkle root for future vesting
         VestingInfo memory futureVestingInfo = VestingInfo({
             startAt: block.timestamp + 1 days,

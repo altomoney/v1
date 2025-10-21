@@ -9,7 +9,7 @@ import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {IPausable} from "@alto/utils/Pausable.sol";
 import {IMarketErrors} from "@alto/lending/interfaces/IMarket.sol";
-import {PAUSED_MARKET} from "@alto/utils/Constants.sol";
+import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 import {MarketDeployer} from "@alto/utils/MarketDeployer.sol";
 
 contract LiquidateTest is Test {
@@ -59,8 +59,8 @@ contract LiquidateTest is Test {
             )
         );
 
-        // Set owner as pauser for PAUSED_MARKET
-        market.setPauser(owner, PAUSED_MARKET, true);
+        // Set owner as pauser for PAUSE_TYPE
+        market.setPauser(owner, PAUSE_TYPE, true);
 
         // Setup priority liquidator
         market.setPriorityLiquidator(priorityLiquidator, true);
@@ -109,11 +109,11 @@ contract LiquidateTest is Test {
 
     function test_RevertWhen_MarketIsPaused() public {
         vm.startPrank(owner);
-        market.pause(PAUSED_MARKET, true);
+        market.pause(PAUSE_TYPE, true);
         vm.stopPrank();
 
         vm.startPrank(liquidator);
-        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, PAUSED_MARKET));
+        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, PAUSE_TYPE));
         market.liquidate(bob, "");
         vm.stopPrank();
     }

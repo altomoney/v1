@@ -2,7 +2,7 @@
 pragma solidity ^0.8.22;
 
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
-import {PAUSED_MARKET} from "@alto/utils/Constants.sol";
+import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 import {AdaptiveCurveIrm} from "@alto/lending/irm/AdaptiveCurveIrm.sol";
 import {IIrm} from "@alto/lending/interfaces/IIrm.sol";
 import {IrmCommon} from "./IrmCommon.t.sol";
@@ -70,7 +70,7 @@ contract AdaptiveCurveIrmTest is IrmCommon {
         );
 
         vm.prank(OWNER);
-        market.setPauser(OWNER, PAUSED_MARKET, true);
+        market.setPauser(OWNER, PAUSE_TYPE, true);
 
         return market;
     }
@@ -285,7 +285,7 @@ contract AdaptiveCurveIrmTest is IrmCommon {
         AdaptiveCurveIrmMock irm = _createAdaptiveCurveIrmSample(true);
 
         vm.startPrank(OWNER);
-        AltoBorrowMarket(irm.market()).pause(PAUSED_MARKET, true);
+        AltoBorrowMarket(irm.market()).pause(PAUSE_TYPE, true);
         vm.stopPrank();
 
         vm.expectEmit(true, true, true, true, address(irm));

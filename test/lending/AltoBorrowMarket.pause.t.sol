@@ -6,7 +6,7 @@ import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
-import {PAUSED_MARKET, FROZEN_MARKET} from "@alto/utils/Constants.sol";
+import {PAUSE_TYPE, FROZEN_TYPE} from "@alto/utils/Constants.sol";
 import {IPausable} from "@alto/utils/Pausable.sol";
 import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
 import {MockMarketDeployer, MockMarket} from "@alto-test/helpers/MockMarket.sol";
@@ -80,93 +80,93 @@ contract AltoBorrowMarketPauseTest is Test {
 
     function testSetPauser() public {
         // Owner can set pauser
-        market.setPauser(pauser, PAUSED_MARKET, true);
-        assertTrue(market.pausers(pauser, PAUSED_MARKET));
+        market.setPauser(pauser, PAUSE_TYPE, true);
+        assertTrue(market.pausers(pauser, PAUSE_TYPE));
 
         // Owner can remove pauser
-        market.setPauser(pauser, PAUSED_MARKET, false);
-        assertFalse(market.pausers(pauser, PAUSED_MARKET));
+        market.setPauser(pauser, PAUSE_TYPE, false);
+        assertFalse(market.pausers(pauser, PAUSE_TYPE));
 
         // Non-owner cannot set pauser
         vm.startPrank(alice);
         vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", alice));
-        market.setPauser(pauser, PAUSED_MARKET, true);
+        market.setPauser(pauser, PAUSE_TYPE, true);
         vm.stopPrank();
     }
 
     function testPauseMarket() public {
         // Setup pauser
-        market.setPauser(pauser, PAUSED_MARKET, true);
+        market.setPauser(pauser, PAUSE_TYPE, true);
 
         // Pauser can pause market
         vm.startPrank(pauser);
-        market.pause(PAUSED_MARKET, true);
-        assertTrue(market.paused(PAUSED_MARKET));
+        market.pause(PAUSE_TYPE, true);
+        assertTrue(market.paused(PAUSE_TYPE));
 
         // Pauser can unpause market
-        market.pause(PAUSED_MARKET, false);
-        assertFalse(market.paused(PAUSED_MARKET));
+        market.pause(PAUSE_TYPE, false);
+        assertFalse(market.paused(PAUSE_TYPE));
         vm.stopPrank();
 
         // Non-pauser cannot pause market
         vm.startPrank(alice);
-        vm.expectRevert(abi.encodeWithSelector(IPausable.Unauthorized.selector, alice, PAUSED_MARKET));
-        market.pause(PAUSED_MARKET, true);
+        vm.expectRevert(abi.encodeWithSelector(IPausable.Unauthorized.selector, alice, PAUSE_TYPE));
+        market.pause(PAUSE_TYPE, true);
         vm.stopPrank();
     }
 
     function testFreezeMarket() public {
         // Setup pauser
-        market.setPauser(pauser, FROZEN_MARKET, true);
+        market.setPauser(pauser, FROZEN_TYPE, true);
 
         // Pauser can freeze market
         vm.startPrank(pauser);
-        market.pause(FROZEN_MARKET, true);
-        assertTrue(market.paused(FROZEN_MARKET));
+        market.pause(FROZEN_TYPE, true);
+        assertTrue(market.paused(FROZEN_TYPE));
 
         // Pauser can unfreeze market
-        market.pause(FROZEN_MARKET, false);
-        assertFalse(market.paused(FROZEN_MARKET));
+        market.pause(FROZEN_TYPE, false);
+        assertFalse(market.paused(FROZEN_TYPE));
         vm.stopPrank();
 
         // Non-pauser cannot freeze market
         vm.startPrank(alice);
-        vm.expectRevert(abi.encodeWithSelector(IPausable.Unauthorized.selector, alice, FROZEN_MARKET));
-        market.pause(FROZEN_MARKET, true);
+        vm.expectRevert(abi.encodeWithSelector(IPausable.Unauthorized.selector, alice, FROZEN_TYPE));
+        market.pause(FROZEN_TYPE, true);
         vm.stopPrank();
     }
 
     function testPausedMarketOperations() public {
         // Setup pauser and pause market
-        market.setPauser(pauser, PAUSED_MARKET, true);
+        market.setPauser(pauser, PAUSE_TYPE, true);
         vm.startPrank(pauser);
-        market.pause(PAUSED_MARKET, true);
+        market.pause(PAUSE_TYPE, true);
         vm.stopPrank();
 
         // All operations should revert when paused
         vm.startPrank(bob);
-        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, PAUSED_MARKET));
+        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, PAUSE_TYPE));
         market.addSupply(1 ether, 0, bob);
 
-        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, PAUSED_MARKET));
+        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, PAUSE_TYPE));
         market.removeSupply(1 ether, 0, bob, bob);
 
-        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, PAUSED_MARKET));
+        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, PAUSE_TYPE));
         market.addCollateral(1 ether, bob);
 
-        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, PAUSED_MARKET));
+        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, PAUSE_TYPE));
         market.removeCollateral(1 ether, bob, bob, "");
 
-        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, PAUSED_MARKET));
+        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, PAUSE_TYPE));
         market.borrow(1 ether, 0, bob, bob, "");
 
-        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, PAUSED_MARKET));
+        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, PAUSE_TYPE));
         market.repay(1 ether, 0, bob);
 
-        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, PAUSED_MARKET));
+        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, PAUSE_TYPE));
         market.liquidate(alice, hex"");
 
-        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, PAUSED_MARKET));
+        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, PAUSE_TYPE));
         market.tagLiquidablePosition(alice, bob);
         vm.stopPrank();
     }
@@ -179,20 +179,20 @@ contract AltoBorrowMarketPauseTest is Test {
         vm.stopPrank();
 
         // Setup pauser and freeze market
-        market.setPauser(pauser, FROZEN_MARKET, true);
+        market.setPauser(pauser, FROZEN_TYPE, true);
         vm.startPrank(pauser);
-        market.pause(FROZEN_MARKET, true);
+        market.pause(FROZEN_TYPE, true);
         vm.stopPrank();
 
         // New supply/borrow/collateral operations should revert
         vm.startPrank(bob);
-        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, FROZEN_MARKET));
+        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, FROZEN_TYPE));
         market.addSupply(1 ether, 0, bob);
 
-        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, FROZEN_MARKET));
+        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, FROZEN_TYPE));
         market.borrow(0.1 ether, 0, bob, bob, "");
 
-        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, FROZEN_MARKET));
+        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, FROZEN_TYPE));
         market.addCollateral(1 ether, bob);
 
         // Repay and remove collateral should still work
@@ -216,20 +216,20 @@ contract AltoBorrowMarketPauseTest is Test {
 
     function testPauseAndFreezeInteraction() public {
         // Setup pauser
-        market.setPauser(pauser, PAUSED_MARKET, true);
-        market.setPauser(pauser, FROZEN_MARKET, true);
+        market.setPauser(pauser, PAUSE_TYPE, true);
+        market.setPauser(pauser, FROZEN_TYPE, true);
 
         // Test pause while frozen
         vm.startPrank(pauser);
-        market.pause(FROZEN_MARKET, true);
-        market.pause(PAUSED_MARKET, true);
-        assertTrue(market.paused(FROZEN_MARKET));
-        assertTrue(market.paused(PAUSED_MARKET));
+        market.pause(FROZEN_TYPE, true);
+        market.pause(PAUSE_TYPE, true);
+        assertTrue(market.paused(FROZEN_TYPE));
+        assertTrue(market.paused(PAUSE_TYPE));
 
         // Test unpause while frozen
-        market.pause(PAUSED_MARKET, false);
-        assertFalse(market.paused(PAUSED_MARKET));
-        assertTrue(market.paused(FROZEN_MARKET));
+        market.pause(PAUSE_TYPE, false);
+        assertFalse(market.paused(PAUSE_TYPE));
+        assertTrue(market.paused(FROZEN_TYPE));
 
         vm.stopPrank();
     }
@@ -239,68 +239,68 @@ contract AltoBorrowMarketPauseTest is Test {
         address pauser3 = address(0x3);
 
         // Setup multiple pausers
-        market.setPauser(pauser, PAUSED_MARKET, true);
-        market.setPauser(pauser2, PAUSED_MARKET, true);
-        market.setPauser(pauser3, PAUSED_MARKET, true);
+        market.setPauser(pauser, PAUSE_TYPE, true);
+        market.setPauser(pauser2, PAUSE_TYPE, true);
+        market.setPauser(pauser3, PAUSE_TYPE, true);
 
         // Each pauser can pause/unpause
         vm.startPrank(pauser);
-        market.pause(PAUSED_MARKET, true);
-        assertTrue(market.paused(PAUSED_MARKET));
+        market.pause(PAUSE_TYPE, true);
+        assertTrue(market.paused(PAUSE_TYPE));
         vm.stopPrank();
 
         vm.startPrank(pauser2);
-        market.pause(PAUSED_MARKET, false);
-        assertFalse(market.paused(PAUSED_MARKET));
+        market.pause(PAUSE_TYPE, false);
+        assertFalse(market.paused(PAUSE_TYPE));
         vm.stopPrank();
 
         vm.startPrank(pauser3);
-        market.pause(PAUSED_MARKET, true);
-        assertTrue(market.paused(PAUSED_MARKET));
+        market.pause(PAUSE_TYPE, true);
+        assertTrue(market.paused(PAUSE_TYPE));
         vm.stopPrank();
     }
 
     function testPauseEvents() public {
-        market.setPauser(pauser, PAUSED_MARKET, true);
+        market.setPauser(pauser, PAUSE_TYPE, true);
 
         // Test pause event
         vm.startPrank(pauser);
         vm.expectEmit(true, true, true, true);
-        emit IPausable.Paused(pauser, PAUSED_MARKET, true);
-        market.pause(PAUSED_MARKET, true);
+        emit IPausable.Paused(pauser, PAUSE_TYPE, true);
+        market.pause(PAUSE_TYPE, true);
 
         // Test unpause event
         vm.expectEmit(true, true, true, true);
-        emit IPausable.Paused(pauser, PAUSED_MARKET, false);
-        market.pause(PAUSED_MARKET, false);
+        emit IPausable.Paused(pauser, PAUSE_TYPE, false);
+        market.pause(PAUSE_TYPE, false);
         vm.stopPrank();
     }
 
     function testFreezeEvents() public {
-        market.setPauser(pauser, FROZEN_MARKET, true);
+        market.setPauser(pauser, FROZEN_TYPE, true);
 
         // Test freeze event
         vm.startPrank(pauser);
         vm.expectEmit(true, true, true, true);
-        emit IPausable.Paused(pauser, FROZEN_MARKET, true);
-        market.pause(FROZEN_MARKET, true);
+        emit IPausable.Paused(pauser, FROZEN_TYPE, true);
+        market.pause(FROZEN_TYPE, true);
 
         // Test unfreeze event
         vm.expectEmit(true, true, true, true);
-        emit IPausable.Paused(pauser, FROZEN_MARKET, false);
-        market.pause(FROZEN_MARKET, false);
+        emit IPausable.Paused(pauser, FROZEN_TYPE, false);
+        market.pause(FROZEN_TYPE, false);
         vm.stopPrank();
     }
 
     function testPauserEvents() public {
         // Test pauser added event
         vm.expectEmit(true, true, true, true);
-        emit IPausable.PauserUpdated(pauser, PAUSED_MARKET, true);
-        market.setPauser(pauser, PAUSED_MARKET, true);
+        emit IPausable.PauserUpdated(pauser, PAUSE_TYPE, true);
+        market.setPauser(pauser, PAUSE_TYPE, true);
 
         // Test pauser removed event
         vm.expectEmit(true, true, true, true);
-        emit IPausable.PauserUpdated(pauser, PAUSED_MARKET, false);
-        market.setPauser(pauser, PAUSED_MARKET, false);
+        emit IPausable.PauserUpdated(pauser, PAUSE_TYPE, false);
+        market.setPauser(pauser, PAUSE_TYPE, false);
     }
 }

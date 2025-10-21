@@ -3,7 +3,7 @@ pragma solidity ^0.8.28;
 
 import {MarketType, MarketCommon} from "../MarketCommon.t.sol";
 import {IPausable} from "@alto/utils/Pausable.sol";
-import {PAUSED_MARKET} from "@alto/utils/Constants.sol";
+import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 import {Vm} from "forge-std/Vm.sol";
 import {IIrm} from "@alto/lending/interfaces/IIrm.sol";
 import {IMarketEvents} from "@alto/lending/interfaces/IMarket.sol";
@@ -13,10 +13,10 @@ contract AccrueInterestTestBorrow is MarketCommon {
 
     function test_RevertWhen_MarketIsPaused() external {
         vm.prank(PAUSER);
-        market.pause(PAUSED_MARKET, true);
+        market.pause(PAUSE_TYPE, true);
 
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, PAUSED_MARKET));
+        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, PAUSE_TYPE));
         market.accrueInterest();
     }
 

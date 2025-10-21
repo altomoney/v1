@@ -2,7 +2,7 @@
 pragma solidity ^0.8.28;
 
 import {MarketCommon, MarketType} from "./MarketCommon.t.sol";
-import {PAUSED_MARKET} from "@alto/utils/Constants.sol";
+import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 import {IPausable} from "@alto/utils/Pausable.sol";
 import {IMarketEvents, Balance} from "@alto/lending/interfaces/IMarket.sol";
 import {AltoMintMarket} from "@alto/lending/AltoMintMarket.sol";
@@ -35,9 +35,9 @@ contract AltoMarketPause is MarketCommon {
         emit IMarketEvents.AccrueInterest(0, 0, 0, 0);
 
         vm.expectEmit();
-        emit IPausable.Paused(PAUSER, PAUSED_MARKET, true);
+        emit IPausable.Paused(PAUSER, PAUSE_TYPE, true);
 
-        market.pause(PAUSED_MARKET, true);
+        market.pause(PAUSE_TYPE, true);
 
         vm.stopPrank();
 
@@ -53,8 +53,8 @@ contract AltoMarketPause is MarketCommon {
 
         vm.startPrank(PAUSER);
         vm.expectEmit();
-        emit IPausable.Paused(PAUSER, PAUSED_MARKET, false);
-        market.pause(PAUSED_MARKET, false);
+        emit IPausable.Paused(PAUSER, PAUSE_TYPE, false);
+        market.pause(PAUSE_TYPE, false);
         vm.stopPrank();
 
         market.accrueInterest();
@@ -92,9 +92,9 @@ contract AltoMarketPause is MarketCommon {
         emit IMarketEvents.AccrueInterest(0, 0, 0, 0);
 
         vm.expectEmit();
-        emit IPausable.Paused(PAUSER, PAUSED_MARKET, true);
+        emit IPausable.Paused(PAUSER, PAUSE_TYPE, true);
 
-        market.pause(PAUSED_MARKET, true);
+        market.pause(PAUSE_TYPE, true);
 
         vm.stopPrank();
 
@@ -105,8 +105,8 @@ contract AltoMarketPause is MarketCommon {
 
         vm.startPrank(PAUSER);
         vm.expectEmit();
-        emit IPausable.Paused(PAUSER, PAUSED_MARKET, false);
-        market.pause(PAUSED_MARKET, false);
+        emit IPausable.Paused(PAUSER, PAUSE_TYPE, false);
+        market.pause(PAUSE_TYPE, false);
         vm.stopPrank();
 
         market.accrueInterest();
@@ -131,18 +131,18 @@ contract AltoMarketPause is MarketCommon {
 
     function test_RevertWhen_MarketIsAlreadyPausedAndPausedAgain() external {
         vm.startPrank(PAUSER);
-        market.pause(PAUSED_MARKET, true);
+        market.pause(PAUSE_TYPE, true);
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(IPausable.StateNotChanged.selector, PAUSED_MARKET, true, true));
-        market.pause(PAUSED_MARKET, true);
+        vm.expectRevert(abi.encodeWithSelector(IPausable.StateNotChanged.selector, PAUSE_TYPE, true, true));
+        market.pause(PAUSE_TYPE, true);
         vm.stopPrank();
     }
 
     function test_RevertWhen_MarketIsUnpausedAndUnpausedAgain() external {
         vm.startPrank(PAUSER);
         // it should revert (default state is false = unpaused)
-        vm.expectRevert(abi.encodeWithSelector(IPausable.StateNotChanged.selector, PAUSED_MARKET, false, false));
-        market.pause(PAUSED_MARKET, false);
+        vm.expectRevert(abi.encodeWithSelector(IPausable.StateNotChanged.selector, PAUSE_TYPE, false, false));
+        market.pause(PAUSE_TYPE, false);
         vm.stopPrank();
     }
 }

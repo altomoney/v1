@@ -6,7 +6,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IMarketEvents} from "@alto/lending/interfaces/IMarket.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {Vm} from "forge-std/Vm.sol";
-import {PAUSED_MARKET} from "@alto/utils/Constants.sol";
+import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 
 contract AltoMarketSetIrm is MarketCommon {
     constructor(MarketType _marketType) MarketCommon(_marketType) {}
@@ -43,7 +43,7 @@ contract AltoMarketSetIrm is MarketCommon {
 
     modifier whenMarketIsPaused() {
         vm.prank(PAUSER);
-        market.pause(PAUSED_MARKET, true);
+        market.pause(PAUSE_TYPE, true);
         _;
     }
 

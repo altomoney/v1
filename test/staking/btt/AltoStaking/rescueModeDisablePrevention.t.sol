@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
-import {AltoStakingCommon, PAUSE_TYPE, RESCUE_MODE_PAUSE_TYPE} from "./AltoStakingCommon.t.sol";
+import {AltoStakingCommon} from "./AltoStakingCommon.t.sol";
+import {PAUSE_TYPE, RESCUE_TYPE} from "@alto/utils/Constants.sol";
 import {IAltoStakingErrors} from "@alto/staking/interfaces/IAltoStaking.sol";
 import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
 
@@ -17,26 +18,26 @@ contract AltoStakingRescueModeDisablePrevention is AltoStakingCommon {
 
         // Set up pausers
         vm.startPrank(OWNER);
-        staking.setPauser(RESCUE_PAUSER, RESCUE_MODE_PAUSE_TYPE, true);
+        staking.setPauser(RESCUE_PAUSER, RESCUE_TYPE, true);
         staking.setPauser(NORMAL_PAUSER, PAUSE_TYPE, true);
         vm.stopPrank();
     }
 
     modifier givenRescueModeIsNotEnabled() {
         // Ensure rescue mode is not enabled
-        assertFalse(staking.paused(RESCUE_MODE_PAUSE_TYPE));
+        assertFalse(staking.paused(RESCUE_TYPE));
         _;
     }
 
     function test_WhenEnablingRescueMode() external givenRescueModeIsNotEnabled {
         // it should enable rescue mode successfully
         vm.expectEmit(true, true, true, true);
-        emit IPausable.Paused(RESCUE_PAUSER, RESCUE_MODE_PAUSE_TYPE, true);
+        emit IPausable.Paused(RESCUE_PAUSER, RESCUE_TYPE, true);
 
         vm.prank(RESCUE_PAUSER);
-        staking.pause(RESCUE_MODE_PAUSE_TYPE, true);
+        staking.pause(RESCUE_TYPE, true);
 
-        assertTrue(staking.paused(RESCUE_MODE_PAUSE_TYPE));
+        assertTrue(staking.paused(RESCUE_TYPE));
     }
 
     function test_RevertWhen_DisablingRescueMode() external givenRescueModeIsNotEnabled {
@@ -44,13 +45,13 @@ contract AltoStakingRescueModeDisablePrevention is AltoStakingCommon {
         vm.expectRevert(IAltoStakingErrors.AltoStakingInvalidInput.selector);
 
         vm.prank(RESCUE_PAUSER);
-        staking.pause(RESCUE_MODE_PAUSE_TYPE, false);
+        staking.pause(RESCUE_TYPE, false);
     }
 
     modifier givenRescueModeIsEnabled() {
         vm.prank(RESCUE_PAUSER);
-        staking.pause(RESCUE_MODE_PAUSE_TYPE, true);
-        assertTrue(staking.paused(RESCUE_MODE_PAUSE_TYPE));
+        staking.pause(RESCUE_TYPE, true);
+        assertTrue(staking.paused(RESCUE_TYPE));
         _;
     }
 
@@ -59,18 +60,18 @@ contract AltoStakingRescueModeDisablePrevention is AltoStakingCommon {
         vm.expectRevert(IAltoStakingErrors.AltoStakingInvalidInput.selector);
 
         vm.prank(RESCUE_PAUSER);
-        staking.pause(RESCUE_MODE_PAUSE_TYPE, false);
+        staking.pause(RESCUE_TYPE, false);
 
         // Verify rescue mode is still enabled
-        assertTrue(staking.paused(RESCUE_MODE_PAUSE_TYPE));
+        assertTrue(staking.paused(RESCUE_TYPE));
     }
 
     function test_RevertWhen_AttemptingToEnableRescueModeAgain() external givenRescueModeIsEnabled {
         // it should revert with StateNotChanged
-        vm.expectRevert(abi.encodeWithSelector(IPausable.StateNotChanged.selector, RESCUE_MODE_PAUSE_TYPE, true, true));
+        vm.expectRevert(abi.encodeWithSelector(IPausable.StateNotChanged.selector, RESCUE_TYPE, true, true));
 
         vm.prank(RESCUE_PAUSER);
-        staking.pause(RESCUE_MODE_PAUSE_TYPE, true);
+        staking.pause(RESCUE_TYPE, true);
     }
 
     function test_RevertWhen_RescueModePauserTriesToDisable() external givenRescueModeIsEnabled {
@@ -78,10 +79,10 @@ contract AltoStakingRescueModeDisablePrevention is AltoStakingCommon {
         vm.expectRevert(IAltoStakingErrors.AltoStakingInvalidInput.selector);
 
         vm.prank(RESCUE_PAUSER);
-        staking.pause(RESCUE_MODE_PAUSE_TYPE, false);
+        staking.pause(RESCUE_TYPE, false);
 
         // Verify rescue mode is still enabled
-        assertTrue(staking.paused(RESCUE_MODE_PAUSE_TYPE));
+        assertTrue(staking.paused(RESCUE_TYPE));
     }
 
     modifier givenNormalPauseModeOperations() {
@@ -117,8 +118,8 @@ contract AltoStakingRescueModeDisablePrevention is AltoStakingCommon {
 
     modifier whenRescueModeIsEnabledAndNormalPauseOperations() {
         vm.prank(RESCUE_PAUSER);
-        staking.pause(RESCUE_MODE_PAUSE_TYPE, true);
-        assertTrue(staking.paused(RESCUE_MODE_PAUSE_TYPE));
+        staking.pause(RESCUE_TYPE, true);
+        assertTrue(staking.paused(RESCUE_TYPE));
         _;
     }
 
@@ -134,7 +135,7 @@ contract AltoStakingRescueModeDisablePrevention is AltoStakingCommon {
         staking.pause(PAUSE_TYPE, true);
 
         assertTrue(staking.paused(PAUSE_TYPE));
-        assertTrue(staking.paused(RESCUE_MODE_PAUSE_TYPE)); // Rescue mode should still be enabled
+        assertTrue(staking.paused(RESCUE_TYPE)); // Rescue mode should still be enabled
     }
 
     function test_WhenDisablingNormalPauseWithRescueModeEnabled()
@@ -154,30 +155,30 @@ contract AltoStakingRescueModeDisablePrevention is AltoStakingCommon {
         staking.pause(PAUSE_TYPE, false);
 
         assertFalse(staking.paused(PAUSE_TYPE));
-        assertTrue(staking.paused(RESCUE_MODE_PAUSE_TYPE)); // Rescue mode should still be enabled
+        assertTrue(staking.paused(RESCUE_TYPE)); // Rescue mode should still be enabled
     }
 
     function test_RevertWhen_OwnerTriesToDisableRescueMode() external {
         // Enable rescue mode
         vm.prank(RESCUE_PAUSER);
-        staking.pause(RESCUE_MODE_PAUSE_TYPE, true);
+        staking.pause(RESCUE_TYPE, true);
 
         // Owner should not be able to disable rescue mode even if they have pauser rights
         vm.prank(OWNER);
-        staking.setPauser(OWNER, RESCUE_MODE_PAUSE_TYPE, true);
+        staking.setPauser(OWNER, RESCUE_TYPE, true);
 
         vm.expectRevert(IAltoStakingErrors.AltoStakingInvalidInput.selector);
         vm.prank(OWNER);
-        staking.pause(RESCUE_MODE_PAUSE_TYPE, false);
+        staking.pause(RESCUE_TYPE, false);
 
         // Verify rescue mode is still enabled
-        assertTrue(staking.paused(RESCUE_MODE_PAUSE_TYPE));
+        assertTrue(staking.paused(RESCUE_TYPE));
     }
 
     function test_RevertWhen_DisablingRescueModeAfterOtherOperations() external {
         // Enable rescue mode
         vm.prank(RESCUE_PAUSER);
-        staking.pause(RESCUE_MODE_PAUSE_TYPE, true);
+        staking.pause(RESCUE_TYPE, true);
 
         // Perform some other operations
         vm.prank(NORMAL_PAUSER);
@@ -193,9 +194,9 @@ contract AltoStakingRescueModeDisablePrevention is AltoStakingCommon {
         // Still should not be able to disable rescue mode
         vm.expectRevert(IAltoStakingErrors.AltoStakingInvalidInput.selector);
         vm.prank(RESCUE_PAUSER);
-        staking.pause(RESCUE_MODE_PAUSE_TYPE, false);
+        staking.pause(RESCUE_TYPE, false);
 
         // Verify rescue mode is still enabled
-        assertTrue(staking.paused(RESCUE_MODE_PAUSE_TYPE));
+        assertTrue(staking.paused(RESCUE_TYPE));
     }
 }
