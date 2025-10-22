@@ -4,16 +4,22 @@ DUSD::burn
 ├── given caller is not authorized burner
 │   └── it should revert with DUSDNotAuthorized
 └── given caller is authorized burner
+    ├── when burner has not minted enough to burn
+    │   └── it should revert with DUSDInvalidInput
     ├── when from address is zero address
     │   └── it should revert with ERC20InvalidSender
     ├── when amount burned exceeds minted balance
     │   └── it should revert with DUSDInvalidInput
     ├── when amount is zero
-    │   └── it should burn zero tokens successfully
+    │   ├── it should burn zero tokens successfully
+    │   ├── it should not decrease minter's minted amount
+    │   └── it should emit Transfer event from account to zero address
     ├── when amount is valid and within balance
-    │   ├── it should burn the specified amount from the account
     │   ├── it should decrease total supply by the amount
     │   ├── it should decrease account balance by the amount
+    │   ├── it should decrease minter's minted amount by the amount
     │   └── it should emit Transfer event from account to zero address
     └── when burning entire balance
-        └── it should burn all tokens and set balance to zero
+        ├── it should burn all tokens and set balance to zero
+        ├── it should decrease minter's minted amount by the amount
+        └── it should emit Transfer event from account to zero address
