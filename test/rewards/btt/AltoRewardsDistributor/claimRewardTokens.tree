@@ -14,7 +14,9 @@ AltoRewardsDistributor::claimRewardTokens()
 │   │   └── it should revert
 │   ├── when rewardsPurchaseAmount exceeds available amount
 │   │   └── it should revert
-│   └── when onBehalf is zero address
+│   ├── when onBehalf is zero address
+│   │   └── it should revert
+│   └── when claim has expired
 │       └── it should revert
 ├── when payment token is not configured
 │   └── it should revert
@@ -24,36 +26,52 @@ AltoRewardsDistributor::claimRewardTokens()
 │   └── it should revert
 ├── given valid inputs
 │   ├── when purchasing partial amount
-│   │   ├── it should update purchased amount for user
+│   │   ├── it should update purchased amount for user with correct id
 │   │   ├── it should transfer payment tokens from caller
 │   │   ├── it should transfer reward tokens to onBehalf
-│   │   ├── it should emit ClaimRewardTokens event
+│   │   ├── it should emit ClaimRewardTokens event with correct id
 │   │   └── it should return payment amount
 │   ├── when purchasing full available amount
-│   │   ├── it should update purchased amount for user
+│   │   ├── it should update purchased amount for user with correct id
 │   │   ├── it should transfer payment tokens from caller
 │   │   ├── it should transfer reward tokens to onBehalf
-│   │   ├── it should emit ClaimRewardTokens event
+│   │   ├── it should emit ClaimRewardTokens event with correct id
 │   │   └── it should return payment amount
 │   ├── when lockPurchasedRewards is true
+│   │   ├── it should update purchased amount for user with correct id
 │   │   ├── it should apply lock bonus discount
 │   │   ├── it should approve reward tokens to lock contract
 │   │   ├── it should call lock contract with reward amount and onBehalf
-│   │   ├── it should emit ClaimRewardTokens event with combined discount
+│   │   ├── it should emit ClaimRewardTokens event with combined discount and correct id
 │   │   └── it should return payment amount
 │   ├── when discount reaches MAX_DISCOUNT
+│   │   ├── it should update purchased amount for user with correct id
 │   │   ├── it should cap discount at MAX_DISCOUNT
 │   │   ├── it should calculate payment with capped discount
-│   │   ├── it should emit ClaimRewardTokens event
+│   │   ├── it should emit ClaimRewardTokens event with correct id
 │   │   └── it should return payment amount
 │   ├── when using different payment tokens
+│   │   ├── it should update purchased amount for user with correct id
 │   │   ├── it should calculate payment amount based on token price
 │   │   ├── it should handle different decimal precisions
-│   │   ├── it should emit ClaimRewardTokens event
+│   │   ├── it should emit ClaimRewardTokens event with correct id
 │   │   └── it should return payment amount
-│   └── when caller is different from onBehalf (authorized)
-│       ├── it should transfer payment tokens from caller
-│       ├── it should transfer reward tokens to onBehalf
-│       ├── it should update purchased amount for onBehalf
-│       ├── it should emit ClaimRewardTokens event with correct addresses
+│   ├── when caller is different from onBehalf (authorized)
+│   │   ├── it should update purchased amount for onBehalf with correct id
+│   │   └── it should transfer payment tokens from caller
+│   │   ├── it should transfer reward tokens to onBehalf
+│   │   ├── it should update purchased amount for onBehalf with correct id
+│   │   ├── it should emit ClaimRewardTokens event with correct addresses and id
+│   │   └── it should return payment amount
+│   ├── when claim has no expiration (expirationTimestamp is 0)
+│   │   ├── it should update purchased amount for user with correct id
+        ├── it should not check expiration timestamp
+│   │   ├── it should process claim successfully
+│   │   ├── it should emit ClaimRewardTokens event with correct id
+│   │   └── it should return payment amount
+│   └── when claim has not expired (block.timestamp <= expirationTimestamp)
+│       ├── it should update purchased amount for user with correct id
+│       ├── it should not revert due to expiration
+│       ├── it should process claim successfully
+│       ├── it should emit ClaimRewardTokens event with correct id
 │       └── it should return payment amount

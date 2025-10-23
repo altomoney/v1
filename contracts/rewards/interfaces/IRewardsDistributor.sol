@@ -20,6 +20,18 @@ struct PaymentToken {
     uint8 decimals;
 }
 
+/// @dev Claim data struct
+struct ClaimData {
+    /// @dev The total rewards for the user
+    uint256 totalRewardsForUser;
+    /// @dev The discount on rewards purchase
+    uint256 discount;
+    /// @dev The id of the reward
+    uint256 id;
+    /// @dev The expiration timestamp of the reward
+    uint256 expirationTimestamp;
+}
+
 /// @title IRewardsErrors
 /// @notice Interface containing all error definitions for the RewardsDistributor
 interface IRewardsErrors {
@@ -43,15 +55,18 @@ interface IRewardsEvents {
     /// @notice Emitted when a user claims and purchases reward tokens
     /// @param caller The account that called the claimPurchase function
     /// @param onBehalf The account on behalf of whom the purchase is being made
+    /// @param id The id of the reward
+    /// @param rewardTokenAmount The amount of reward tokens purchased
     /// @param paymentToken The payment token address
     /// @param paymentTokenAmount The amount of payment tokens used
-    /// @param rewardTokenAmount The amount of reward tokens purchased
+    /// @param discount The discount applied to the rewards
     event ClaimRewardTokens(
         address indexed caller,
         address indexed onBehalf,
+        uint256 indexed id,
+        uint256 rewardTokenAmount,
         address paymentToken,
         uint256 paymentTokenAmount,
-        uint256 rewardTokenAmount,
         uint256 discount
     );
 
@@ -95,8 +110,9 @@ interface IRewardsEvents {
 interface IRewardsDistributorBase is IRewardsErrors, IRewardsEvents, IAuth, IPausable {
     /// @notice Returns the amount of reward tokens already purchased by an account
     /// @param account The account to check
+    /// @param id The id of the reward
     /// @return The amount purchased
-    function purchasedRewardTokenUser(address account) external view returns (uint256);
+    function purchasedRewardTokenUser(address account, uint256 id) external view returns (uint256);
 
     /// @notice The reward token oracle address
     /// @dev The oracle is used to get the price of the reward token in USD when claiming
@@ -117,21 +133,19 @@ interface IRewardsDistributorBase is IRewardsErrors, IRewardsEvents, IAuth, IPau
     function MAX_ADAPTERS_WHITELIST() external view returns (uint256);
 
     /// @notice Claims and purchases reward tokens
-    /// @param totalRewardsForUser The overall available amount of token rewards to purchase
+    ///  @param claimData The claim data used to validate the claim
     /// @param proof The merkle proof that validates this claim
-    /// @param rewardsPurchaseAmount The amount to purchase (must be <= available - purchased)
-    /// @param discount The discount percentage (in MATH_PRECISION)
+    /// @param rewardsPurchaseAmount The amount of reward tokens to purchase
     /// @param paymentToken The token to use for payment
     /// @param lockPurchasedRewards Whether to lock the purchased tokens for extra discount
-    /// @param onBehalf The address on behalf of whom the claim is being made
     /// @param maxEpochsToLockFor The maximum number of epochs to lock for. Useful when max epochs are updated
     /// during UI interaction and UI shows an old number of epochs to lock for.
+    /// @param onBehalf The address on behalf of whom the claim is being made
     /// @return amount The amount of payment tokens used
     function claimRewardTokens(
-        uint256 totalRewardsForUser,
+        ClaimData memory claimData,
         bytes32[] calldata proof,
         uint256 rewardsPurchaseAmount,
-        uint256 discount,
         address paymentToken,
         bool lockPurchasedRewards,
         uint256 maxEpochsToLockFor,

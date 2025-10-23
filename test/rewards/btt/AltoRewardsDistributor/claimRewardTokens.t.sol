@@ -5,7 +5,7 @@ import {RewardsDistributorCommon} from "./RewardsDistributorCommon.t.sol";
 import {AltoRewardsDistributor} from "@alto/rewards/AltoRewardsDistributor.sol";
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
-import {IRewardsEvents, IRewardsErrors} from "@alto/rewards/interfaces/IRewardsDistributor.sol";
+import {IRewardsEvents, IRewardsErrors, ClaimData} from "@alto/rewards/interfaces/IRewardsDistributor.sol";
 import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 import {IMerkleRootManagerErrors} from "@alto/utils/interfaces/IMerkleRootManager.sol";
 
@@ -20,7 +20,13 @@ contract AltoRewardsDistributorClaimRewardTokens is RewardsDistributorCommon {
         // it should revert
         vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, PAUSE_TYPE));
         distributor.claimRewardTokens(
-            aliceAvailable, aliceProof, aliceAvailable, BASE_DISCOUNT, address(paymentToken), false, 0, ALICE
+            _getClaimData(aliceAvailable, BASE_DISCOUNT, 0, 0),
+            aliceProof,
+            aliceAvailable,
+            address(paymentToken),
+            false,
+            0,
+            ALICE
         );
         vm.stopPrank();
     }
@@ -32,7 +38,13 @@ contract AltoRewardsDistributorClaimRewardTokens is RewardsDistributorCommon {
         // it should revert
         vm.expectRevert(IRewardsErrors.AltoRewardsDistributorUnauthorized.selector);
         distributor.claimRewardTokens(
-            aliceAvailable, aliceProof, aliceAvailable, BASE_DISCOUNT, address(paymentToken), false, 0, ALICE
+            _getClaimData(aliceAvailable, BASE_DISCOUNT, 0, 0),
+            aliceProof,
+            aliceAvailable,
+            address(paymentToken),
+            false,
+            0,
+            ALICE
         );
         vm.stopPrank();
     }
@@ -53,7 +65,13 @@ contract AltoRewardsDistributorClaimRewardTokens is RewardsDistributorCommon {
         // it should revert
         vm.expectRevert(IMerkleRootManagerErrors.MerkleRootManagerRootNotSet.selector);
         newDistributor.claimRewardTokens(
-            aliceAvailable, aliceProof, aliceAvailable, BASE_DISCOUNT, address(paymentToken), false, 0, ALICE
+            _getClaimData(aliceAvailable, BASE_DISCOUNT, 0, 0),
+            aliceProof,
+            aliceAvailable,
+            address(paymentToken),
+            false,
+            0,
+            ALICE
         );
         vm.stopPrank();
     }
@@ -76,7 +94,13 @@ contract AltoRewardsDistributorClaimRewardTokens is RewardsDistributorCommon {
         // it should revert
         vm.expectRevert(IRewardsErrors.AltoRewardsDistributorLockContractNotSet.selector);
         newDistributor.claimRewardTokens(
-            aliceAvailable, aliceProof, aliceAvailable, BASE_DISCOUNT, address(paymentToken), true, 1, ALICE
+            _getClaimData(aliceAvailable, BASE_DISCOUNT, 0, 0),
+            aliceProof,
+            aliceAvailable,
+            address(paymentToken),
+            true,
+            1,
+            ALICE
         );
         vm.stopPrank();
     }
@@ -93,7 +117,13 @@ contract AltoRewardsDistributorClaimRewardTokens is RewardsDistributorCommon {
         // it should revert
         vm.expectRevert(IRewardsErrors.AltoRewardsDistributorInvalidInput.selector);
         distributor.claimRewardTokens(
-            aliceAvailable, bobProof, aliceAvailable, BASE_DISCOUNT, address(paymentToken), false, 0, ALICE
+            _getClaimData(aliceAvailable, BASE_DISCOUNT, 0, 0),
+            bobProof,
+            aliceAvailable,
+            address(paymentToken),
+            false,
+            0,
+            ALICE
         );
         vm.stopPrank();
     }
@@ -109,7 +139,7 @@ contract AltoRewardsDistributorClaimRewardTokens is RewardsDistributorCommon {
         // it should revert
         vm.expectRevert(IRewardsErrors.AltoRewardsDistributorInvalidInput.selector);
         distributor.claimRewardTokens(
-            aliceAvailable, aliceProof, 0, BASE_DISCOUNT, address(paymentToken), false, 0, ALICE
+            _getClaimData(aliceAvailable, BASE_DISCOUNT, 0, 0), aliceProof, 0, address(paymentToken), false, 0, ALICE
         );
         vm.stopPrank();
     }
@@ -121,7 +151,13 @@ contract AltoRewardsDistributorClaimRewardTokens is RewardsDistributorCommon {
         // it should revert
         vm.expectRevert(IRewardsErrors.AltoRewardsDistributorInvalidInput.selector);
         distributor.claimRewardTokens(
-            aliceAvailable, aliceProof, aliceAvailable + 1, BASE_DISCOUNT, address(paymentToken), false, 0, ALICE
+            _getClaimData(aliceAvailable, BASE_DISCOUNT, 0, 0),
+            aliceProof,
+            aliceAvailable + 1,
+            address(paymentToken),
+            false,
+            0,
+            ALICE
         );
         vm.stopPrank();
     }
@@ -133,7 +169,61 @@ contract AltoRewardsDistributorClaimRewardTokens is RewardsDistributorCommon {
         // it should revert (authorization check happens first)
         vm.expectRevert(IRewardsErrors.AltoRewardsDistributorUnauthorized.selector);
         distributor.claimRewardTokens(
-            aliceAvailable, aliceProof, aliceAvailable, BASE_DISCOUNT, address(paymentToken), false, 0, address(0)
+            _getClaimData(aliceAvailable, BASE_DISCOUNT, 0, 0),
+            aliceProof,
+            aliceAvailable,
+            address(paymentToken),
+            false,
+            0,
+            address(0)
+        );
+        vm.stopPrank();
+    }
+
+    function test_RevertWhen_ClaimHasExpired() external givenInvalidInputs {
+        // Set a proper timestamp first
+        vm.warp(1000);
+
+        // Create a new merkle tree with expiration timestamp
+        uint256 expirationTimestamp = block.timestamp - 1; // Expired 1 second ago
+
+        // Build new merkle tree with expiration
+        bytes32 aliceLeaf =
+            keccak256(bytes.concat(keccak256(abi.encode(ALICE, aliceAvailable, BASE_DISCOUNT, 0, expirationTimestamp))));
+        bytes32 bobLeaf = keccak256(bytes.concat(keccak256(abi.encode(BOB, bobAvailable, BASE_DISCOUNT, 0, 0))));
+
+        bytes32 root;
+        bytes32[] memory newAliceProof = new bytes32[](1);
+
+        if (uint256(aliceLeaf) < uint256(bobLeaf)) {
+            root = keccak256(abi.encodePacked(aliceLeaf, bobLeaf));
+            newAliceProof[0] = bobLeaf;
+        } else {
+            root = keccak256(abi.encodePacked(bobLeaf, aliceLeaf));
+            newAliceProof[0] = bobLeaf;
+        }
+
+        // Update merkle root
+        vm.startPrank(OWNER);
+        distributor.submitNewPendingRoot(root, bytes32(0));
+        vm.warp(block.timestamp + INITIAL_TIMELOCK);
+        distributor.acceptPendingRoot(root);
+        vm.stopPrank();
+
+        vm.startPrank(ALICE);
+        paymentToken.approve(address(distributor), type(uint256).max);
+
+        // it should revert
+        vm.expectRevert(IRewardsErrors.AltoRewardsDistributorInvalidInput.selector);
+
+        distributor.claimRewardTokens(
+            _getClaimData(aliceAvailable, BASE_DISCOUNT, 0, expirationTimestamp),
+            newAliceProof,
+            aliceAvailable,
+            address(paymentToken),
+            false,
+            0,
+            ALICE
         );
         vm.stopPrank();
     }
@@ -145,7 +235,13 @@ contract AltoRewardsDistributorClaimRewardTokens is RewardsDistributorCommon {
         // it should revert
         vm.expectRevert(IRewardsErrors.AltoRewardsDistributorInvalidInput.selector);
         distributor.claimRewardTokens(
-            aliceAvailable, aliceProof, aliceAvailable, BASE_DISCOUNT, address(0x999), false, 0, ALICE
+            _getClaimData(aliceAvailable, BASE_DISCOUNT, 0, 0),
+            aliceProof,
+            aliceAvailable,
+            address(0x999),
+            false,
+            0,
+            ALICE
         );
         vm.stopPrank();
     }
@@ -167,7 +263,13 @@ contract AltoRewardsDistributorClaimRewardTokens is RewardsDistributorCommon {
         // it should revert
         vm.expectRevert(IRewardsErrors.AltoRewardsDistributorLockRewardsOracleNotSet.selector);
         newDistributor.claimRewardTokens(
-            aliceAvailable, aliceProof, aliceAvailable, BASE_DISCOUNT, address(paymentToken), false, 0, ALICE
+            _getClaimData(aliceAvailable, BASE_DISCOUNT, 0, 0),
+            aliceProof,
+            aliceAvailable,
+            address(paymentToken),
+            false,
+            0,
+            ALICE
         );
         vm.stopPrank();
     }
@@ -182,7 +284,13 @@ contract AltoRewardsDistributorClaimRewardTokens is RewardsDistributorCommon {
         // it should revert
         vm.expectRevert(IRewardsErrors.AltoRewardsDistributorLockInvalidOraclePrice.selector);
         distributor.claimRewardTokens(
-            aliceAvailable, aliceProof, aliceAvailable, BASE_DISCOUNT, address(paymentToken), false, 0, ALICE
+            _getClaimData(aliceAvailable, BASE_DISCOUNT, 0, 0),
+            aliceProof,
+            aliceAvailable,
+            address(paymentToken),
+            false,
+            0,
+            ALICE
         );
         vm.stopPrank();
 
@@ -204,21 +312,27 @@ contract AltoRewardsDistributorClaimRewardTokens is RewardsDistributorCommon {
         uint256 alicePaymentBefore = paymentToken.balanceOf(ALICE);
         uint256 aliceRewardBefore = rewardToken.balanceOf(ALICE);
 
-        // it should emit ClaimRewardTokens event
+        // it should emit ClaimRewardTokens event with correct id
         vm.expectEmit(true, true, true, true);
         emit IRewardsEvents.ClaimRewardTokens(
-            ALICE, ALICE, address(paymentToken), expectedPayment, partialAmount, BASE_DISCOUNT
+            ALICE, ALICE, 0, partialAmount, address(paymentToken), expectedPayment, BASE_DISCOUNT
         );
 
         uint256 paymentAmountReturn = distributor.claimRewardTokens(
-            aliceAvailable, aliceProof, partialAmount, BASE_DISCOUNT, address(paymentToken), false, 0, ALICE
+            _getClaimData(aliceAvailable, BASE_DISCOUNT, 0, 0),
+            aliceProof,
+            partialAmount,
+            address(paymentToken),
+            false,
+            0,
+            ALICE
         );
 
         // it should return payment amount
         assertEq(paymentAmountReturn, expectedPayment);
 
-        // it should update purchased amount for user
-        assertEq(distributor.purchasedRewardTokenUser(ALICE), partialAmount);
+        // it should update purchased amount for user with correct id
+        assertEq(distributor.purchasedRewardTokenUser(ALICE, 0), partialAmount);
 
         // it should transfer payment tokens from caller
         assertEq(paymentToken.balanceOf(ALICE), alicePaymentBefore - expectedPayment);
@@ -238,21 +352,27 @@ contract AltoRewardsDistributorClaimRewardTokens is RewardsDistributorCommon {
         uint256 alicePaymentBefore = paymentToken.balanceOf(ALICE);
         uint256 aliceRewardBefore = rewardToken.balanceOf(ALICE);
 
-        // it should emit ClaimRewardTokens event
+        // it should emit ClaimRewardTokens event with correct id
         vm.expectEmit(true, true, true, true);
         emit IRewardsEvents.ClaimRewardTokens(
-            ALICE, ALICE, address(paymentToken), expectedPayment, aliceAvailable, BASE_DISCOUNT
+            ALICE, ALICE, 0, aliceAvailable, address(paymentToken), expectedPayment, BASE_DISCOUNT
         );
 
         uint256 paymentAmountReturn = distributor.claimRewardTokens(
-            aliceAvailable, aliceProof, aliceAvailable, BASE_DISCOUNT, address(paymentToken), false, 0, ALICE
+            _getClaimData(aliceAvailable, BASE_DISCOUNT, 0, 0),
+            aliceProof,
+            aliceAvailable,
+            address(paymentToken),
+            false,
+            0,
+            ALICE
         );
 
         // it should return payment amount
         assertEq(paymentAmountReturn, expectedPayment);
 
-        // it should update purchased amount for user
-        assertEq(distributor.purchasedRewardTokenUser(ALICE), aliceAvailable);
+        // it should update purchased amount for user with correct id
+        assertEq(distributor.purchasedRewardTokenUser(ALICE, 0), aliceAvailable);
 
         // it should transfer payment tokens from caller
         assertEq(paymentToken.balanceOf(ALICE), alicePaymentBefore - expectedPayment);
@@ -271,18 +391,27 @@ contract AltoRewardsDistributorClaimRewardTokens is RewardsDistributorCommon {
 
         uint256 alicePaymentBefore = paymentToken.balanceOf(ALICE);
 
-        // // it should emit ClaimRewardTokens event with combined discount
-        // vm.expectEmit(true, true, true, true);
-        // emit IRewardsEvents.ClaimRewardTokens(
-        //     ALICE, ALICE, address(paymentToken), expectedPayment, aliceAvailable, BASE_DISCOUNT + LOCK_DISCOUNT
-        // );
+        // it should emit ClaimRewardTokens event with combined discount and correct id
+        vm.expectEmit(true, true, true, true);
+        emit IRewardsEvents.ClaimRewardTokens(
+            ALICE, ALICE, 0, aliceAvailable, address(paymentToken), expectedPayment, BASE_DISCOUNT + LOCK_DISCOUNT
+        );
 
         uint256 paymentAmountReturn = distributor.claimRewardTokens(
-            aliceAvailable, aliceProof, aliceAvailable, BASE_DISCOUNT, address(paymentToken), true, 1, ALICE
+            _getClaimData(aliceAvailable, BASE_DISCOUNT, 0, 0),
+            aliceProof,
+            aliceAvailable,
+            address(paymentToken),
+            true,
+            1,
+            ALICE
         );
 
         // it should return payment amount
         assertEq(paymentAmountReturn, expectedPayment);
+
+        // it should update purchased amount for user with correct id
+        assertEq(distributor.purchasedRewardTokenUser(ALICE, 0), aliceAvailable);
 
         // it should apply lock bonus discount
         assertEq(paymentToken.balanceOf(ALICE), alicePaymentBefore - expectedPayment);
@@ -314,18 +443,27 @@ contract AltoRewardsDistributorClaimRewardTokens is RewardsDistributorCommon {
 
         uint256 alicePaymentBefore = paymentToken.balanceOf(ALICE);
 
-        // it should emit ClaimRewardTokens event
+        // it should emit ClaimRewardTokens event with correct id
         vm.expectEmit(true, true, true, true);
         emit IRewardsEvents.ClaimRewardTokens(
-            ALICE, ALICE, address(paymentToken), expectedPayment, aliceAvailable, maxDiscount
+            ALICE, ALICE, 0, aliceAvailable, address(paymentToken), expectedPayment, maxDiscount
         );
 
         uint256 paymentAmountReturn = distributor.claimRewardTokens(
-            aliceAvailable, newAliceProof, aliceAvailable, maxDiscount, address(paymentToken), false, 0, ALICE
+            _getClaimData(aliceAvailable, maxDiscount, 0, 0),
+            newAliceProof,
+            aliceAvailable,
+            address(paymentToken),
+            false,
+            0,
+            ALICE
         );
 
         // it should return payment amount
         assertEq(paymentAmountReturn, expectedPayment);
+
+        // it should update purchased amount for user with correct id
+        assertEq(distributor.purchasedRewardTokenUser(ALICE, 0), aliceAvailable);
 
         // it should calculate payment with capped discount
         assertEq(paymentToken.balanceOf(ALICE), alicePaymentBefore - expectedPayment);
@@ -347,15 +485,24 @@ contract AltoRewardsDistributorClaimRewardTokens is RewardsDistributorCommon {
         uint256 alicePaymentBefore = paymentToken2.balanceOf(ALICE);
         uint256 aliceRewardBefore = rewardToken.balanceOf(ALICE);
 
-        // it should emit ClaimRewardTokens event
+        // it should emit ClaimRewardTokens event with correct id
         vm.expectEmit(true, true, true, true);
         emit IRewardsEvents.ClaimRewardTokens(
-            ALICE, ALICE, address(paymentToken2), expectedPayment, aliceAvailable, BASE_DISCOUNT
+            ALICE, ALICE, 0, aliceAvailable, address(paymentToken2), expectedPayment, BASE_DISCOUNT
         );
 
         uint256 paymentAmountReturn = distributor.claimRewardTokens(
-            aliceAvailable, aliceProof, aliceAvailable, BASE_DISCOUNT, address(paymentToken2), false, 0, ALICE
+            _getClaimData(aliceAvailable, BASE_DISCOUNT, 0, 0),
+            aliceProof,
+            aliceAvailable,
+            address(paymentToken2),
+            false,
+            0,
+            ALICE
         );
+
+        // it should update purchased amount for user with correct id
+        assertEq(distributor.purchasedRewardTokenUser(ALICE, 0), aliceAvailable);
 
         // it should return payment amount
         assertEq(paymentAmountReturn, expectedPayment);
@@ -382,15 +529,24 @@ contract AltoRewardsDistributorClaimRewardTokens is RewardsDistributorCommon {
         uint256 bobPaymentBefore = paymentToken.balanceOf(BOB);
         uint256 aliceRewardBefore = rewardToken.balanceOf(ALICE);
 
-        // it should emit ClaimRewardTokens event with correct addresses
+        // it should emit ClaimRewardTokens event with correct addresses and id
         vm.expectEmit(true, true, true, true);
         emit IRewardsEvents.ClaimRewardTokens(
-            BOB, ALICE, address(paymentToken), expectedPayment, aliceAvailable, BASE_DISCOUNT
+            BOB, ALICE, 0, aliceAvailable, address(paymentToken), expectedPayment, BASE_DISCOUNT
         );
 
         uint256 paymentAmountReturn = distributor.claimRewardTokens(
-            aliceAvailable, aliceProof, aliceAvailable, BASE_DISCOUNT, address(paymentToken), false, 0, ALICE
+            _getClaimData(aliceAvailable, BASE_DISCOUNT, 0, 0),
+            aliceProof,
+            aliceAvailable,
+            address(paymentToken),
+            false,
+            0,
+            ALICE
         );
+
+        // it should update purchased amount for onBehalf with correct id
+        assertEq(distributor.purchasedRewardTokenUser(ALICE, 0), aliceAvailable);
 
         // it should return payment amount
         assertEq(paymentAmountReturn, expectedPayment);
@@ -401,8 +557,113 @@ contract AltoRewardsDistributorClaimRewardTokens is RewardsDistributorCommon {
         // it should transfer reward tokens to onBehalf
         assertEq(rewardToken.balanceOf(ALICE), aliceRewardBefore + aliceAvailable);
 
-        // it should update purchased amount for onBehalf
-        assertEq(distributor.purchasedRewardTokenUser(ALICE), aliceAvailable);
+        // it should update purchased amount for onBehalf with correct id
+        assertEq(distributor.purchasedRewardTokenUser(ALICE, 0), aliceAvailable);
+
+        vm.stopPrank();
+    }
+
+    function test_WhenClaimHasNoExpiration() external givenValidInputs {
+        uint256 expectedPayment = _getExpectedPayment(true, 0, false);
+
+        vm.startPrank(ALICE);
+        paymentToken.approve(address(distributor), type(uint256).max);
+
+        uint256 alicePaymentBefore = paymentToken.balanceOf(ALICE);
+        uint256 aliceRewardBefore = rewardToken.balanceOf(ALICE);
+
+        // it should emit ClaimRewardTokens event with correct id
+        vm.expectEmit(true, true, true, true);
+        emit IRewardsEvents.ClaimRewardTokens(
+            ALICE, ALICE, 0, aliceAvailable, address(paymentToken), expectedPayment, BASE_DISCOUNT
+        );
+
+        uint256 paymentAmountReturn = distributor.claimRewardTokens(
+            _getClaimData(aliceAvailable, BASE_DISCOUNT, 0, 0), // expirationTimestamp = 0
+            aliceProof,
+            aliceAvailable,
+            address(paymentToken),
+            false,
+            0,
+            ALICE
+        );
+
+        // it should update purchased amount for user with correct id
+        assertEq(distributor.purchasedRewardTokenUser(ALICE, 0), aliceAvailable);
+
+        // it should return payment amount
+        assertEq(paymentAmountReturn, expectedPayment);
+
+        // it should not check expiration timestamp
+        // (implicitly verified by successful execution)
+
+        // it should process claim successfully
+        assertEq(paymentToken.balanceOf(ALICE), alicePaymentBefore - expectedPayment);
+        assertEq(rewardToken.balanceOf(ALICE), aliceRewardBefore + aliceAvailable);
+        assertEq(distributor.purchasedRewardTokenUser(ALICE, 0), aliceAvailable);
+
+        vm.stopPrank();
+    }
+
+    function test_WhenClaimHasNotExpired() external givenValidInputs {
+        uint256 expirationTimestamp = block.timestamp + 30 days; // Expires in 1 hour
+        uint256 expectedPayment = _getExpectedPayment(true, 0, false);
+
+        // Build new merkle tree with expiration
+        bytes32 aliceLeaf =
+            keccak256(bytes.concat(keccak256(abi.encode(ALICE, aliceAvailable, BASE_DISCOUNT, 0, expirationTimestamp))));
+        bytes32 bobLeaf = keccak256(bytes.concat(keccak256(abi.encode(BOB, bobAvailable, BASE_DISCOUNT, 0, 0))));
+
+        bytes32 root;
+        bytes32[] memory newAliceProof = new bytes32[](1);
+
+        if (uint256(aliceLeaf) < uint256(bobLeaf)) {
+            root = keccak256(abi.encodePacked(aliceLeaf, bobLeaf));
+            newAliceProof[0] = bobLeaf;
+        } else {
+            root = keccak256(abi.encodePacked(bobLeaf, aliceLeaf));
+            newAliceProof[0] = bobLeaf;
+        }
+
+        // Update merkle root
+        vm.startPrank(OWNER);
+        distributor.submitNewPendingRoot(root, bytes32(0));
+        vm.warp(block.timestamp + INITIAL_TIMELOCK);
+        distributor.acceptPendingRoot(root);
+        vm.stopPrank();
+
+        vm.startPrank(ALICE);
+        paymentToken.approve(address(distributor), type(uint256).max);
+
+        uint256 alicePaymentBefore = paymentToken.balanceOf(ALICE);
+        uint256 aliceRewardBefore = rewardToken.balanceOf(ALICE);
+
+        // it should emit ClaimRewardTokens event with correct id
+        vm.expectEmit(true, true, true, true);
+        emit IRewardsEvents.ClaimRewardTokens(
+            ALICE, ALICE, 0, aliceAvailable, address(paymentToken), expectedPayment, BASE_DISCOUNT
+        );
+
+        uint256 paymentAmountReturn = distributor.claimRewardTokens(
+            _getClaimData(aliceAvailable, BASE_DISCOUNT, 0, expirationTimestamp),
+            newAliceProof,
+            aliceAvailable,
+            address(paymentToken),
+            false,
+            0,
+            ALICE
+        );
+
+        // it should return payment amount
+        assertEq(paymentAmountReturn, expectedPayment);
+
+        // it should update purchased amount for user with correct id
+        assertEq(distributor.purchasedRewardTokenUser(ALICE, 0), aliceAvailable);
+
+        // it should process claim successfully
+        assertEq(paymentToken.balanceOf(ALICE), alicePaymentBefore - expectedPayment);
+        assertEq(rewardToken.balanceOf(ALICE), aliceRewardBefore + aliceAvailable);
+        assertEq(distributor.purchasedRewardTokenUser(ALICE, 0), aliceAvailable);
 
         vm.stopPrank();
     }

@@ -3,7 +3,7 @@ pragma solidity ^0.8.28;
 
 import {AdapterContractApproval} from "@alto/utils/AdapterContractApproval.sol";
 import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
-import {IRewardsDistributor} from "@alto/rewards/interfaces/IRewardsDistributor.sol";
+import {IRewardsDistributor, ClaimData} from "@alto/rewards/interfaces/IRewardsDistributor.sol";
 import {IAltoStaking} from "@alto/staking/interfaces/IAltoStaking.sol";
 import {IUniversalRewardsDistributor} from "@alto/utils/interfaces/IUniversalRewardsDistributor.sol";
 import {IAltoVesting, VestingInfo} from "@alto/vesting/interfaces/IAltoVesting.sol";
@@ -237,10 +237,9 @@ contract AltoAdapter is CoreAdapter, AdapterContractApproval {
 
     function rewardsDistributorClaimRewardTokensWithERC20Transfer(
         IRewardsDistributor rewardsDistributor,
-        uint256 totalRewardsForUser,
+        ClaimData memory claimData,
         bytes32[] calldata proof,
         uint256 rewardsPurchaseAmount,
-        uint256 discount,
         address paymentToken,
         uint256 paymentAmount,
         bool lockPurchasedRewards,
@@ -252,14 +251,7 @@ contract AltoAdapter is CoreAdapter, AdapterContractApproval {
         SafeERC20.safeTransferFrom(IERC20(paymentToken), initiator(), address(this), paymentAmount);
 
         uint256 amountPaidToDistributor = rewardsDistributor.claimRewardTokens(
-            totalRewardsForUser,
-            proof,
-            rewardsPurchaseAmount,
-            discount,
-            paymentToken,
-            lockPurchasedRewards,
-            maxEpochsToLockFor,
-            initiator()
+            claimData, proof, rewardsPurchaseAmount, paymentToken, lockPurchasedRewards, maxEpochsToLockFor, initiator()
         );
 
         if (paymentAmount - amountPaidToDistributor != 0) {

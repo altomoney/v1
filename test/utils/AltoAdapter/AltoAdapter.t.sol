@@ -468,7 +468,10 @@ contract AltoAdapterTest is AdapterCommonSetup {
         _testSupplyCollateralBorrow(user, amount, collateralAmount);
     }
 
-    function _testSupplyCollateralBorrowLeverage(address user, uint256 amount, uint256 collateralAmount) internal view {
+    function _testSupplyCollateralBorrowLeverage(address user, uint256 amount, uint256 collateralAmount)
+        internal
+        view
+    {
         assertEq(collateralToken.balanceOf(user), 0, "collateral.balanceOf(user)");
         assertEq(borrowToken.balanceOf(user), 0, "borrowToken.balanceOf(user)");
 
@@ -565,11 +568,10 @@ contract AltoAdapterTest is AdapterCommonSetup {
         _testRepayWithdrawCollateral(user, collateralAmount);
     }
 
-    function _testRepayWithdrawCollateralDeleverage(
-        address user,
-        uint256 collateralAmount,
-        uint256 borrowBalanceBefore
-    ) internal view {
+    function _testRepayWithdrawCollateralDeleverage(address user, uint256 collateralAmount, uint256 borrowBalanceBefore)
+        internal
+        view
+    {
         assertEq(collateralToken.balanceOf(user), collateralAmount, "collateralToken.balanceOf(user)");
         assertEq(borrowToken.balanceOf(user), borrowBalanceBefore, "borrowToken.balanceOf(user)");
 
@@ -823,8 +825,9 @@ contract AltoAdapterTest is AdapterCommonSetup {
         uint256 currentBorrowPower = totalBorrowPower - borrowed;
         if (currentBorrowPower == 0) return;
 
-        uint256 maxShares = Math.min(currentBorrowPower, availableLiquidity)
-            .convertToSharesDown(vars.expectedTotalBorrow, vars.expectedBorrowShares);
+        uint256 maxShares = Math.min(currentBorrowPower, availableLiquidity).convertToSharesDown(
+            vars.expectedTotalBorrow, vars.expectedBorrowShares
+        );
         if (maxShares < MIN_AMOUNT) return;
         shares = bound(shares % maxShares, MIN_AMOUNT, maxShares);
 
@@ -1159,7 +1162,7 @@ contract AltoAdapterTest is AdapterCommonSetup {
         bytes32[] memory proof;
         bundle.push(
             _rewardsDistributorClaimRewardTokensWithERC20Transfer(
-                nonRewards, 0, proof, 0, 0, address(paymentToken), 0, false, 0
+                nonRewards, 0, proof, 0, 0, 0, 0, address(paymentToken), 0, false, 0
             )
         );
 
@@ -1204,6 +1207,8 @@ contract AltoAdapterTest is AdapterCommonSetup {
                 proof,
                 amount,
                 BASE_DISCOUNT,
+                0,
+                0,
                 address(paymentToken),
                 100000 ether,
                 false,
@@ -1265,6 +1270,8 @@ contract AltoAdapterTest is AdapterCommonSetup {
                 proof,
                 amount,
                 BASE_DISCOUNT,
+                0,
+                0,
                 address(paymentToken),
                 100000 ether,
                 true,
@@ -1302,7 +1309,7 @@ contract AltoAdapterTest is AdapterCommonSetup {
 
     function _createMerkleProofForUser(address user) internal returns (bytes32[] memory) {
         // Create a simple single-leaf merkle tree for this specific user
-        bytes32 userLeaf = keccak256(bytes.concat(keccak256(abi.encode(user, USER_AVAILABLE, BASE_DISCOUNT))));
+        bytes32 userLeaf = keccak256(bytes.concat(keccak256(abi.encode(user, USER_AVAILABLE, BASE_DISCOUNT, 0, 0))));
 
         // Update the rewards distributor with this new root
         vm.startPrank(OWNER);
@@ -1446,8 +1453,9 @@ contract AltoAdapterTest is AdapterCommonSetup {
 
         // Update the rewards distributor with this new root
         vm.startPrank(OWNER);
-        UniversalRewardsDistributorInstance(address(universalRewardsDistributor))
-            .submitNewPendingRoot(userLeaf, bytes32(0));
+        UniversalRewardsDistributorInstance(address(universalRewardsDistributor)).submitNewPendingRoot(
+            userLeaf, bytes32(0)
+        );
         UniversalRewardsDistributorInstance(address(universalRewardsDistributor)).acceptPendingRoot(userLeaf);
         vm.stopPrank();
 
@@ -1499,9 +1507,8 @@ contract AltoAdapterTest is AdapterCommonSetup {
         internal
         returns (VestingInfo memory, bytes32[] memory)
     {
-        VestingInfo memory vestingInfo = VestingInfo({
-            startAt: block.timestamp, vestingDuration: VESTING_DURATION, totalVestingAmount: amount
-        });
+        VestingInfo memory vestingInfo =
+            VestingInfo({startAt: block.timestamp, vestingDuration: VESTING_DURATION, totalVestingAmount: amount});
         // Create a simple single-leaf merkle tree for this specific user
         bytes32 userLeaf = keccak256(bytes.concat(keccak256(abi.encode(user, vestingInfo))));
 

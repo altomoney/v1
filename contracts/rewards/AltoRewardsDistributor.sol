@@ -5,7 +5,8 @@ import {
     IRewardsDistributorStaticTypes,
     PaymentToken,
     RewardToken,
-    IRewardsDistributorBase
+    IRewardsDistributorBase,
+    ClaimData
 } from "@alto/rewards/interfaces/IRewardsDistributor.sol";
 import {MerkleRootManager} from "@alto/utils/MerkleRootManager.sol";
 import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
@@ -34,7 +35,7 @@ contract AltoRewardsDistributor is IRewardsDistributorStaticTypes, MerkleRootMan
     RewardToken public REWARD_TOKEN;
 
     /// @inheritdoc IRewardsDistributorBase
-    mapping(address account => uint256 amount) public purchasedRewardTokenUser;
+    mapping(address account => mapping(uint256 id => uint256 amount)) public purchasedRewardTokenUser;
 
     /// @inheritdoc IRewardsDistributorStaticTypes
     mapping(address token => PaymentToken paymentToken) public paymentTokens;
@@ -87,10 +88,9 @@ contract AltoRewardsDistributor is IRewardsDistributorStaticTypes, MerkleRootMan
 
     /// @inheritdoc IRewardsDistributorBase
     function claimRewardTokens(
-        uint256 totalRewardsForUser,
+        ClaimData calldata claimData,
         bytes32[] calldata proof,
         uint256 rewardsPurchaseAmount,
-        uint256 discount,
         address paymentToken,
         bool lockPurchasedRewards,
         uint256 maxEpochsToLockFor,
@@ -104,21 +104,23 @@ contract AltoRewardsDistributor is IRewardsDistributorStaticTypes, MerkleRootMan
             revert AltoRewardsDistributorLockContractNotSet();
         }
 
-        if (
-            !_verifyProof(proof, keccak256(bytes.concat(keccak256(abi.encode(onBehalf, totalRewardsForUser, discount)))))
-        ) {
+        if (!_verifyProof(proof, keccak256(bytes.concat(keccak256(abi.encode(onBehalf, claimData)))))) {
             revert AltoRewardsDistributorInvalidInput();
         }
 
         if (
             rewardsPurchaseAmount == 0
-                || rewardsPurchaseAmount > totalRewardsForUser - purchasedRewardTokenUser[onBehalf]
+                || rewardsPurchaseAmount > claimData.totalRewardsForUser - purchasedRewardTokenUser[onBehalf][claimData.id]
         ) {
             revert AltoRewardsDistributorInvalidInput();
         }
 
+        if (claimData.expirationTimestamp != 0 && block.timestamp > claimData.expirationTimestamp) {
+            revert AltoRewardsDistributorInvalidInput();
+        }
+
         // Update purchased amount
-        purchasedRewardTokenUser[onBehalf] += rewardsPurchaseAmount;
+        purchasedRewardTokenUser[onBehalf][claimData.id] += rewardsPurchaseAmount;
 
         // Get discount from adapters
         uint256 adapterDiscountTotal = 0;
@@ -134,14 +136,14 @@ contract AltoRewardsDistributor is IRewardsDistributorStaticTypes, MerkleRootMan
             adapterPaymentTokenShareTotal += bonusRewardInfos[i].paymentTokenShare;
         }
 
-        discount = discount + adapterDiscountTotal;
+        uint256 discountToApply = claimData.discount + adapterDiscountTotal;
 
         if (lockPurchasedRewards) {
-            discount = discount + lockBonusDiscount;
+            discountToApply += lockBonusDiscount;
         }
 
-        if (discount > MAX_DISCOUNT) {
-            discount = MAX_DISCOUNT;
+        if (discountToApply > MAX_DISCOUNT) {
+            discountToApply = MAX_DISCOUNT;
         }
 
         if (adapterPaymentTokenShareTotal > MATH_PRECISION) {
@@ -149,7 +151,7 @@ contract AltoRewardsDistributor is IRewardsDistributorStaticTypes, MerkleRootMan
         }
 
         // Calculate payment
-        uint256 paymentAmount = _calculatePaymentAmount(rewardsPurchaseAmount, discount, paymentToken);
+        uint256 paymentAmount = _calculatePaymentAmount(rewardsPurchaseAmount, discountToApply, paymentToken);
 
         // Transfer payment from user
         IERC20(paymentToken).safeTransferFrom(msg.sender, address(this), paymentAmount);
@@ -177,7 +179,9 @@ contract AltoRewardsDistributor is IRewardsDistributorStaticTypes, MerkleRootMan
             IERC20(REWARD_TOKEN.token).safeTransfer(onBehalf, rewardsPurchaseAmount);
         }
 
-        emit ClaimRewardTokens(msg.sender, onBehalf, paymentToken, paymentAmount, rewardsPurchaseAmount, discount);
+        emit ClaimRewardTokens(
+            msg.sender, onBehalf, claimData.id, rewardsPurchaseAmount, paymentToken, paymentAmount, discountToApply
+        );
 
         return paymentAmount;
     }

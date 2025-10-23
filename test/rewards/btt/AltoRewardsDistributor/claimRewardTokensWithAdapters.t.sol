@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {RewardsDistributorCommon} from "./RewardsDistributorCommon.t.sol";
-import {IRewardsEvents, IRewardsErrors} from "@alto/rewards/interfaces/IRewardsDistributor.sol";
+import {IRewardsEvents, IRewardsErrors, ClaimData} from "@alto/rewards/interfaces/IRewardsDistributor.sol";
 import {IRewardsAdapter, BonusRewardInfo} from "@alto/rewards/interfaces/IRewardsAdapter.sol";
 import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 import {ERC20MockDecimals} from "@alto-test/helpers/ERC20MockDecimals.sol";
@@ -72,7 +72,13 @@ contract AltoRewardsDistributorClaimRewardTokensWithAdapters is RewardsDistribut
         // it should revert
         vm.expectRevert(IRewardsErrors.AltoRewardsDistributorInvalidAdapterPaymentTokenShare.selector);
         distributor.claimRewardTokens(
-            aliceAvailable, aliceProof, aliceAvailable, BASE_DISCOUNT, address(paymentToken), false, 0, ALICE
+            _getClaimData(aliceAvailable, BASE_DISCOUNT, 0, 0),
+            aliceProof,
+            aliceAvailable,
+            address(paymentToken),
+            false,
+            0,
+            ALICE
         );
         vm.stopPrank();
     }
@@ -102,11 +108,17 @@ contract AltoRewardsDistributorClaimRewardTokensWithAdapters is RewardsDistribut
         // it should emit ClaimRewardTokens event with combined discount
         vm.expectEmit(true, true, true, true);
         emit IRewardsEvents.ClaimRewardTokens(
-            ALICE, ALICE, address(paymentToken), expectedPaymentAmount, rewardAmount, expectedCombinedDiscount
+            ALICE, ALICE, 0, rewardAmount, address(paymentToken), expectedPaymentAmount, expectedCombinedDiscount
         );
 
         uint256 actualPaymentAmount = distributor.claimRewardTokens(
-            aliceAvailable, aliceProof, rewardAmount, BASE_DISCOUNT, address(paymentToken), false, 0, ALICE
+            _getClaimData(aliceAvailable, BASE_DISCOUNT, 0, 0),
+            aliceProof,
+            rewardAmount,
+            address(paymentToken),
+            false,
+            0,
+            ALICE
         );
         vm.stopPrank();
 
@@ -148,11 +160,17 @@ contract AltoRewardsDistributorClaimRewardTokensWithAdapters is RewardsDistribut
         // it should emit ClaimRewardTokens event with capped discount
         vm.expectEmit(true, true, true, true);
         emit IRewardsEvents.ClaimRewardTokens(
-            ALICE, ALICE, address(paymentToken), expectedPaymentAmount, rewardAmount, expectedCappedDiscount
+            ALICE, ALICE, 0, rewardAmount, address(paymentToken), expectedPaymentAmount, expectedCappedDiscount
         );
 
         uint256 actualPaymentAmount = distributor.claimRewardTokens(
-            aliceAvailable, aliceProof, rewardAmount, BASE_DISCOUNT, address(paymentToken), false, 0, ALICE
+            _getClaimData(aliceAvailable, BASE_DISCOUNT, 0, 0),
+            aliceProof,
+            rewardAmount,
+            address(paymentToken),
+            false,
+            0,
+            ALICE
         );
         vm.stopPrank();
 
@@ -182,7 +200,13 @@ contract AltoRewardsDistributorClaimRewardTokensWithAdapters is RewardsDistribut
         paymentToken.approve(address(distributor), type(uint256).max);
 
         uint256 actualPaymentAmount = distributor.claimRewardTokens(
-            aliceAvailable, aliceProof, rewardAmount, BASE_DISCOUNT, address(paymentToken), false, 0, ALICE
+            _getClaimData(aliceAvailable, BASE_DISCOUNT, 0, 0),
+            aliceProof,
+            rewardAmount,
+            address(paymentToken),
+            false,
+            0,
+            ALICE
         );
         vm.stopPrank();
 
@@ -211,7 +235,13 @@ contract AltoRewardsDistributorClaimRewardTokensWithAdapters is RewardsDistribut
         paymentToken.approve(address(distributor), type(uint256).max);
 
         uint256 actualPaymentAmount = distributor.claimRewardTokens(
-            aliceAvailable, aliceProof, rewardAmount, BASE_DISCOUNT, address(paymentToken), false, 0, ALICE
+            _getClaimData(aliceAvailable, BASE_DISCOUNT, 0, 0),
+            aliceProof,
+            rewardAmount,
+            address(paymentToken),
+            false,
+            0,
+            ALICE
         );
         vm.stopPrank();
 
@@ -237,7 +267,13 @@ contract AltoRewardsDistributorClaimRewardTokensWithAdapters is RewardsDistribut
         paymentToken.approve(address(distributor), type(uint256).max);
 
         distributor.claimRewardTokens(
-            aliceAvailable, aliceProof, rewardAmount, BASE_DISCOUNT, address(paymentToken), false, 0, ALICE
+            _getClaimData(aliceAvailable, BASE_DISCOUNT, 0, 0),
+            aliceProof,
+            rewardAmount,
+            address(paymentToken),
+            false,
+            0,
+            ALICE
         );
         vm.stopPrank();
 
@@ -278,7 +314,13 @@ contract AltoRewardsDistributorClaimRewardTokensWithAdapters is RewardsDistribut
         paymentToken.approve(address(distributor), type(uint256).max);
 
         distributor.claimRewardTokens(
-            aliceAvailable, aliceProof, rewardAmount, BASE_DISCOUNT, address(paymentToken), false, 0, ALICE
+            _getClaimData(aliceAvailable, BASE_DISCOUNT, 0, 0),
+            aliceProof,
+            rewardAmount,
+            address(paymentToken),
+            false,
+            0,
+            ALICE
         );
         vm.stopPrank();
 

@@ -32,10 +32,9 @@ contract CalculatePaymentAmountTest is RewardsDistributorCommon {
         // Execute the claim using Alice's existing proof and discount
         vm.prank(ALICE);
         distributor.claimRewardTokens(
-            aliceAvailable, // Alice's total available from merkle tree
+            _getClaimData(aliceAvailable, BASE_DISCOUNT, 0, 0), // Alice's total available from merkle tree
             aliceProof, // Alice's existing proof
             rewardsPurchaseAmount, // Purchase enough to avoid zero payment
-            BASE_DISCOUNT, // Alice's discount from merkle tree
             paymentTokenAddr,
             false, // don't lock
             0, // maxEpochsToLockFor
@@ -76,7 +75,13 @@ contract CalculatePaymentAmountTest is RewardsDistributorCommon {
         // Execute the claim
         vm.prank(ALICE);
         distributor.claimRewardTokens(
-            aliceAvailable, aliceProof, rewardsPurchaseAmount, BASE_DISCOUNT, paymentTokenAddr, false, 0, ALICE
+            _getClaimData(aliceAvailable, BASE_DISCOUNT, 0, 0),
+            aliceProof,
+            rewardsPurchaseAmount,
+            paymentTokenAddr,
+            false,
+            0,
+            ALICE
         );
 
         uint256 alicePaymentBalanceAfter = paymentToken.balanceOf(ALICE);
@@ -110,10 +115,9 @@ contract CalculatePaymentAmountTest is RewardsDistributorCommon {
         // Alice gets BASE_DISCOUNT (25%) from merkle tree
         vm.prank(ALICE);
         distributor.claimRewardTokens(
-            aliceAvailable,
+            _getClaimData(aliceAvailable, BASE_DISCOUNT, 0, 0),
             aliceProof,
             rewardsPurchaseAmount,
-            BASE_DISCOUNT, // 25% discount
             paymentTokenAddr,
             false,
             0,
@@ -154,7 +158,13 @@ contract CalculatePaymentAmountTest is RewardsDistributorCommon {
 
         vm.prank(ALICE);
         distributor.claimRewardTokens(
-            aliceAvailable, aliceProof, rewardsPurchaseAmount, BASE_DISCOUNT, paymentTokenAddr, false, 0, ALICE
+            _getClaimData(aliceAvailable, BASE_DISCOUNT, 0, 0),
+            aliceProof,
+            rewardsPurchaseAmount,
+            paymentTokenAddr,
+            false,
+            0,
+            ALICE
         );
 
         uint256 alicePaymentBalanceAfter = paymentToken.balanceOf(ALICE);
@@ -186,7 +196,13 @@ contract CalculatePaymentAmountTest is RewardsDistributorCommon {
         // Execute the transaction that should not result in zero payment
         vm.prank(ALICE);
         distributor.claimRewardTokens(
-            aliceAvailable, aliceProof, rewardsPurchaseAmount, BASE_DISCOUNT, paymentTokenAddr, false, 0, ALICE
+            _getClaimData(aliceAvailable, BASE_DISCOUNT, 0, 0),
+            aliceProof,
+            rewardsPurchaseAmount,
+            paymentTokenAddr,
+            false,
+            0,
+            ALICE
         );
 
         uint256 alicePaymentBalanceAfter = paymentToken.balanceOf(ALICE);
@@ -218,7 +234,13 @@ contract CalculatePaymentAmountTest is RewardsDistributorCommon {
 
         vm.prank(ALICE);
         distributor.claimRewardTokens(
-            aliceAvailable, aliceProof, rewardsPurchaseAmount, BASE_DISCOUNT, paymentTokenAddr, false, 0, ALICE
+            _getClaimData(aliceAvailable, BASE_DISCOUNT, 0, 0),
+            aliceProof,
+            rewardsPurchaseAmount,
+            paymentTokenAddr,
+            false,
+            0,
+            ALICE
         );
 
         uint256 alicePaymentBalanceAfter = paymentToken.balanceOf(ALICE);
