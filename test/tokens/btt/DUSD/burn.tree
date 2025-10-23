@@ -6,8 +6,8 @@ DUSD::burn
 ├── given caller is authorized burner
 │   ├── when from address is zero address
 │   │   └── it should revert with ERC20InvalidSender
-│   ├── when amount exceeds balance
-│   │   └── it should revert with ERC20InsufficientBalance
+│   ├── when amount burned exceeds minted balance
+│   │   └── it should revert with DUSDInvalidInput
 │   ├── when amount is zero
 │   │   └── it should burn zero tokens successfully
 │   ├── when amount is valid and within balance
