@@ -72,15 +72,15 @@ contract DUSD is Ownable2Step, Pausable, OFT, ERC20FlashMint, IDUSD {
     }
 
     /// @inheritdoc IDUSD
-    function setFlashFeeReceiver(address _flashFeeReceiver) external onlyOwner {
-        emit SetFlashFeeReceiver(flashFeeReceiver, _flashFeeReceiver);
-        flashFeeReceiver = _flashFeeReceiver;
+    function setFlashFeeReceiver(address _newFlashFeeReceiver) external onlyOwner {
+        emit SetFlashFeeReceiver(flashFeeReceiver, _newFlashFeeReceiver);
+        flashFeeReceiver = _newFlashFeeReceiver;
     }
 
     /// @inheritdoc IDUSD
-    function setFlashFee(uint256 _flashFee) external onlyOwner {
-        emit SetFlashFee(flashFee, _flashFee);
-        flashFee = _flashFee;
+    function setFlashFee(uint256 _newFlashFee) external onlyOwner {
+        emit SetFlashFee(flashFee, _newFlashFee);
+        flashFee = _newFlashFee;
     }
 
     /// @inheritdoc IDUSD

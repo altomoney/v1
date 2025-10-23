@@ -61,12 +61,12 @@ interface IDUSD is IOFT, IMintableERC20 {
     function setBurnerStatus(address _for, bool _status) external;
 
     /// @notice Sets the flash fee
-    /// @param _flashFee The flash fee
-    function setFlashFee(uint256 _flashFee) external;
+    /// @param _newFlashFee The flash fee
+    function setFlashFee(uint256 _newFlashFee) external;
 
     /// @notice Sets the flash fee receiver
-    /// @param _flashFeeReceiver The flash fee receiver
-    function setFlashFeeReceiver(address _flashFeeReceiver) external;
+    /// @param _newFlashFeeReceiver The flash fee receiver
+    function setFlashFeeReceiver(address _newFlashFeeReceiver) external;
 
     /// @notice Mints DUSD to an address
     /// @param _to The address to mint DUSD to
