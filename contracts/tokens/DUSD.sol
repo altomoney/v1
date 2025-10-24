@@ -66,7 +66,7 @@ contract DUSD is Ownable2Step, Pausable, OFT, ERC20FlashMint, IDUSD {
 
     /// @inheritdoc ERC20FlashMint
     function _flashFee(address, uint256 amount) internal view virtual override returns (uint256) {
-        return flashFee.multiplyWithPrecision(amount);
+        return flashFee.multiplyWithPrecisionUp(amount);
     }
 
     /// @inheritdoc ERC20FlashMint

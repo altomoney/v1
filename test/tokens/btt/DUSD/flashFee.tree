@@ -1,0 +1,15 @@
+DUSD::flashFee
+├── given flashFee is zero
+│   └── when amount is anything
+│       └── it should return zero
+├── given flashFee is non-zero
+│   ├── when amount is zero
+│   │   └── it should return zero
+│   ├── when amount is non-zero
+│   │   ├── it should return calculated fee (flashFee * amount / MATH_PRECISION)
+│   │   └── it should return proportional value
+│   ├── when amount is doubled
+│   │   └── it should return double the previous fee
+│   ├── when amount is halved
+│   │   └── it should return half the previous fee
+

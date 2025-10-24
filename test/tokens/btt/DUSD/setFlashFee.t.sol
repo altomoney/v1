@@ -33,8 +33,12 @@ contract DUSDSetFlashFee is DUSDCommon {
         vm.prank(OWNER);
         dusd.setFlashFee(0);
 
+        uint256 flashFeeAmount = dusd.flashFee(address(dusd), MATH_PRECISION);
+        uint256 expectedFlashFee = 0;
+
         // it should set flashFee to zero
         assertEq(dusd.flashFee(), 0);
+        assertEq(flashFeeAmount, expectedFlashFee);
     }
 
     function test_RevertWhen_SettingFlashFeeToGreaterThanMATH_PRECISION() external givenCallerIsOwner {
@@ -52,8 +56,12 @@ contract DUSDSetFlashFee is DUSDCommon {
         vm.prank(OWNER);
         dusd.setFlashFee(DEFAULT_FLASH_FEE);
 
+        uint256 flashFeeAmount = dusd.flashFee(address(dusd), MATH_PRECISION);
+        uint256 expectedFlashFee = DEFAULT_FLASH_FEE;
+
         // it should set flashFee to the new value
         assertEq(dusd.flashFee(), DEFAULT_FLASH_FEE);
+        assertEq(flashFeeAmount, expectedFlashFee);
     }
 
     function test_WhenSettingFlashFeeToSameValue() external givenCallerIsOwner {
@@ -68,7 +76,12 @@ contract DUSDSetFlashFee is DUSDCommon {
         vm.prank(OWNER);
         dusd.setFlashFee(DEFAULT_FLASH_FEE);
 
+        uint256 flashFeeAmount = dusd.flashFee(address(dusd), MATH_PRECISION);
+        uint256 expectedFlashFee = DEFAULT_FLASH_FEE;
+        assertEq(flashFeeAmount, expectedFlashFee);
+
         // it should update flashFee to the same value
         assertEq(dusd.flashFee(), DEFAULT_FLASH_FEE);
+        assertEq(flashFeeAmount, expectedFlashFee);
     }
 }
