@@ -430,7 +430,7 @@ contract AltoRewardsDistributorClaimRewardTokens is RewardsDistributorCommon {
         // Update merkle tree with max discount
         vm.startPrank(OWNER);
         (bytes32 root, bytes32[] memory newAliceProof,) =
-            _setupMerkleTreeWithDiscount(aliceAvailable, maxDiscount, bobAvailable, maxDiscount);
+            _setupMerkleTreeWithDiscount(0, aliceAvailable, maxDiscount, 0, bobAvailable, maxDiscount);
         distributor.submitNewPendingRoot(root, bytes32(0));
         vm.warp(block.timestamp + INITIAL_TIMELOCK);
         distributor.acceptPendingRoot(root);
@@ -664,6 +664,273 @@ contract AltoRewardsDistributorClaimRewardTokens is RewardsDistributorCommon {
         assertEq(paymentToken.balanceOf(ALICE), alicePaymentBefore - expectedPayment);
         assertEq(rewardToken.balanceOf(ALICE), aliceRewardBefore + aliceAvailable);
         assertEq(distributor.purchasedRewardTokenUser(ALICE, 0), aliceAvailable);
+
+        vm.stopPrank();
+    }
+
+    function test_WhenChangingAmountAfterClaimForSameId_AmountIncreased() external givenValidInputs {
+        uint256 initialAmount = aliceAvailable;
+        uint256 increasedAmount = 2 * initialAmount;
+
+        // First claim with initial amount
+        vm.startPrank(ALICE);
+        paymentToken.approve(address(distributor), type(uint256).max);
+
+        uint256 firstPayment = distributor.claimRewardTokens(
+            _getClaimData(initialAmount, BASE_DISCOUNT, 0, 0),
+            aliceProof,
+            initialAmount,
+            address(paymentToken),
+            false,
+            0,
+            ALICE
+        );
+
+        assertEq(distributor.purchasedRewardTokenUser(ALICE, 0), initialAmount);
+        vm.stopPrank();
+
+        // Submit new merkle tree with increased amount for same ID
+        vm.startPrank(OWNER);
+        (bytes32 newRoot, bytes32[] memory newAliceProof,) =
+            _setupMerkleTreeWithDiscount(0, increasedAmount, BASE_DISCOUNT, 0, bobAvailable, BASE_DISCOUNT);
+        distributor.submitNewPendingRoot(newRoot, bytes32(0));
+        vm.warp(block.timestamp + INITIAL_TIMELOCK);
+        distributor.acceptPendingRoot(newRoot);
+        vm.stopPrank();
+
+        // Second claim with increased amount
+        vm.startPrank(ALICE);
+        uint256 additionalAmount = increasedAmount - initialAmount;
+        uint256 expectedAdditionalPayment = _getExpectedPayment(true, 0, false);
+
+        uint256 alicePaymentBefore = paymentToken.balanceOf(ALICE);
+        uint256 aliceRewardBefore = rewardToken.balanceOf(ALICE);
+
+        // it should emit ClaimRewardTokens event with correct id
+        vm.expectEmit(true, true, true, true);
+        emit IRewardsEvents.ClaimRewardTokens(
+            ALICE, ALICE, 0, additionalAmount, address(paymentToken), expectedAdditionalPayment, BASE_DISCOUNT
+        );
+
+        uint256 secondPayment = distributor.claimRewardTokens(
+            _getClaimData(increasedAmount, BASE_DISCOUNT, 0, 0),
+            newAliceProof,
+            additionalAmount,
+            address(paymentToken),
+            false,
+            0,
+            ALICE
+        );
+
+        // it should return payment amount
+        assertEq(secondPayment, expectedAdditionalPayment);
+
+        // it should update purchased amount for user with correct id
+        assertEq(distributor.purchasedRewardTokenUser(ALICE, 0), increasedAmount);
+
+        // it should transfer payment tokens from caller
+        assertEq(paymentToken.balanceOf(ALICE), alicePaymentBefore - expectedAdditionalPayment);
+
+        // it should transfer reward tokens to onBehalf
+        assertEq(rewardToken.balanceOf(ALICE), aliceRewardBefore + additionalAmount);
+
+        vm.stopPrank();
+    }
+
+    function test_WhenChangingAmountAfterClaimForSameId_AmountDecreased() external givenValidInputs {
+        uint256 initialAmount = aliceAvailable;
+        uint256 decreasedAmount = aliceAvailable / 2;
+
+        // First claim with full amount
+        vm.startPrank(ALICE);
+        paymentToken.approve(address(distributor), type(uint256).max);
+
+        distributor.claimRewardTokens(
+            _getClaimData(aliceAvailable, BASE_DISCOUNT, 0, 0),
+            aliceProof,
+            initialAmount,
+            address(paymentToken),
+            false,
+            0,
+            ALICE
+        );
+
+        assertEq(distributor.purchasedRewardTokenUser(ALICE, 0), initialAmount);
+        vm.stopPrank();
+
+        // Submit new merkle tree with decreased amount for same ID
+        vm.startPrank(OWNER);
+        (bytes32 newRoot, bytes32[] memory newAliceProof,) =
+            _setupMerkleTreeWithDiscount(0, decreasedAmount, BASE_DISCOUNT, 0, bobAvailable, BASE_DISCOUNT);
+        distributor.submitNewPendingRoot(newRoot, bytes32(0));
+        vm.warp(block.timestamp + INITIAL_TIMELOCK);
+        distributor.acceptPendingRoot(newRoot);
+        vm.stopPrank();
+
+        vm.startPrank(ALICE);
+
+        // it should revert with AltoRewardsDistributorInvalidInput
+        vm.expectRevert(IRewardsErrors.AltoRewardsDistributorInvalidInput.selector);
+        distributor.claimRewardTokens(
+            _getClaimData(decreasedAmount, BASE_DISCOUNT, 0, 0),
+            newAliceProof,
+            decreasedAmount,
+            address(paymentToken),
+            false,
+            0,
+            ALICE
+        );
+
+        vm.stopPrank();
+    }
+
+    function test_WhenChangingAmountAfterClaimForSameId_SubmittingMerkleWithDifferentId() external givenValidInputs {
+        uint256 initialAmount = aliceAvailable;
+        uint256 newIdAmount = aliceAvailable;
+
+        // First claim with ID 1
+        vm.startPrank(ALICE);
+        paymentToken.approve(address(distributor), type(uint256).max);
+
+        distributor.claimRewardTokens(
+            _getClaimData(aliceAvailable, BASE_DISCOUNT, 0, 0),
+            aliceProof,
+            initialAmount,
+            address(paymentToken),
+            false,
+            0,
+            ALICE
+        );
+
+        vm.stopPrank();
+
+        assertEq(distributor.purchasedRewardTokenUser(ALICE, 0), initialAmount);
+        assertEq(distributor.purchasedRewardTokenUser(ALICE, 1), 0);
+
+        // Submit new merkle tree with different ID (ID 2)
+        vm.startPrank(OWNER);
+        (bytes32 newRoot, bytes32[] memory newAliceProof,) =
+            _setupMerkleTreeWithDiscount(1, newIdAmount, BASE_DISCOUNT, 0, bobAvailable, BASE_DISCOUNT);
+        distributor.submitNewPendingRoot(newRoot, bytes32(0));
+        vm.warp(block.timestamp + INITIAL_TIMELOCK);
+        distributor.acceptPendingRoot(newRoot);
+        vm.stopPrank();
+
+        // Claim with different ID (should work)
+        vm.startPrank(ALICE);
+        uint256 expectedPayment = _getExpectedPayment(true, 0, false);
+
+        uint256 alicePaymentBefore = paymentToken.balanceOf(ALICE);
+        uint256 aliceRewardBefore = rewardToken.balanceOf(ALICE);
+
+        assertEq(distributor.purchasedRewardTokenUser(ALICE, 1), 0);
+
+        // it should emit ClaimRewardTokens event with new id
+        vm.expectEmit(true, true, true, true);
+        emit IRewardsEvents.ClaimRewardTokens(
+            ALICE, ALICE, 1, newIdAmount, address(paymentToken), expectedPayment, BASE_DISCOUNT
+        );
+
+        uint256 paymentAmountReturn = distributor.claimRewardTokens(
+            _getClaimData(newIdAmount, BASE_DISCOUNT, 1, 0),
+            newAliceProof,
+            newIdAmount,
+            address(paymentToken),
+            false,
+            0,
+            ALICE
+        );
+
+        // it should return payment amount
+        assertEq(paymentAmountReturn, expectedPayment);
+
+        // it should update purchased amount for user with new id
+        assertEq(distributor.purchasedRewardTokenUser(ALICE, 1), newIdAmount);
+
+        // it should transfer payment tokens from caller
+        assertEq(paymentToken.balanceOf(ALICE), alicePaymentBefore - expectedPayment);
+
+        // it should transfer reward tokens to onBehalf
+        assertEq(rewardToken.balanceOf(ALICE), aliceRewardBefore + newIdAmount);
+
+        // Verify both IDs are tracked separately
+        assertEq(distributor.purchasedRewardTokenUser(ALICE, 0), initialAmount);
+        assertEq(distributor.purchasedRewardTokenUser(ALICE, 1), newIdAmount);
+
+        vm.stopPrank();
+    }
+
+    function test_WhenUserHasMultipleClaimsWithDifferentIds() external givenValidInputs {
+        vm.startPrank(OWNER);
+
+        // Create leaves for Alice with different IDs
+        bytes32 aliceLeaf1 = keccak256(bytes.concat(keccak256(abi.encode(ALICE, aliceAvailable, BASE_DISCOUNT, 1, 0))));
+        bytes32 aliceLeaf2 =
+            keccak256(bytes.concat(keccak256(abi.encode(ALICE, 2 * aliceAvailable, BASE_DISCOUNT, 2, 0))));
+
+        bytes32 root;
+        bytes32[] memory aliceProof1 = new bytes32[](1);
+        bytes32[] memory aliceProof2 = new bytes32[](1);
+
+        // Build merkle tree with two Alice leaves
+        if (uint256(aliceLeaf1) < uint256(aliceLeaf2)) {
+            root = keccak256(abi.encodePacked(aliceLeaf1, aliceLeaf2));
+            aliceProof1[0] = aliceLeaf2;
+            aliceProof2[0] = aliceLeaf1;
+        } else {
+            root = keccak256(abi.encodePacked(aliceLeaf2, aliceLeaf1));
+            aliceProof1[0] = aliceLeaf2;
+            aliceProof2[0] = aliceLeaf1;
+        }
+
+        distributor.submitNewPendingRoot(root, bytes32(0));
+        vm.warp(block.timestamp + INITIAL_TIMELOCK);
+        distributor.acceptPendingRoot(root);
+        vm.stopPrank();
+
+        vm.startPrank(ALICE);
+        paymentToken.approve(address(distributor), type(uint256).max);
+
+        uint256 expectedPayment1 = _getExpectedPayment(true, 0, false);
+        uint256 expectedPayment2 = 2 * _getExpectedPayment(true, 0, false);
+
+        vm.expectEmit(true, true, true, true);
+        emit IRewardsEvents.ClaimRewardTokens(
+            ALICE, ALICE, 1, aliceAvailable, address(paymentToken), expectedPayment1, BASE_DISCOUNT
+        );
+
+        // Claim for ID 1
+        uint256 payment1 = distributor.claimRewardTokens(
+            _getClaimData(aliceAvailable, BASE_DISCOUNT, 1, 0),
+            aliceProof1,
+            aliceAvailable,
+            address(paymentToken),
+            false,
+            0,
+            ALICE
+        );
+
+        assertEq(payment1, expectedPayment1);
+        assertEq(distributor.purchasedRewardTokenUser(ALICE, 1), aliceAvailable);
+
+        vm.expectEmit(true, true, true, true);
+        emit IRewardsEvents.ClaimRewardTokens(
+            ALICE, ALICE, 2, 2 * aliceAvailable, address(paymentToken), expectedPayment2, BASE_DISCOUNT
+        );
+
+        // Claim for ID 2
+        uint256 payment2 = distributor.claimRewardTokens(
+            _getClaimData(2 * aliceAvailable, BASE_DISCOUNT, 2, 0),
+            aliceProof2,
+            2 * aliceAvailable,
+            address(paymentToken),
+            false,
+            0,
+            ALICE
+        );
+
+        assertEq(payment2, expectedPayment2);
+        assertEq(distributor.purchasedRewardTokenUser(ALICE, 2), 2 * aliceAvailable);
 
         vm.stopPrank();
     }

@@ -75,3 +75,21 @@ AltoRewardsDistributor::claimRewardTokens()
 │       ├── it should process claim successfully
 │       ├── it should emit ClaimRewardTokens event with correct id
 │       └── it should return payment amount
+│   ├── when changing amount after claim for same id
+│   │   ├── when amount is increased (more than previous claim)
+│   │   │   ├── it should allow user to claim additional amount
+│   │   │   ├── it should update purchased amount for user with correct id
+│   │   │   ├── it should emit ClaimRewardTokens event with correct id
+│   │   │   └── it should return payment amount
+│   │   ├── when amount is decreased (less than previous claim)
+│   │   │   └── it should revert with AltoRewardsDistributorInvalidInput
+│   │   └── when submitting merkle with different id
+│   │       ├── it should allow user to claim full amount for new id
+│   │       ├── it should update purchased amount for user with new id
+│   │       ├── it should emit ClaimRewardTokens event with new id
+│   │       └── it should return payment amount
+│   └── when user has multiple claims with different ids
+│       ├── it should allow user to claim all available amounts
+│       ├── it should update purchasedRewardTokenUser for each id separately
+│       ├── it should emit ClaimRewardTokens event for each claim
+│       └── it should return correct payment amounts for each claim

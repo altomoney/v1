@@ -148,13 +148,15 @@ contract RewardsDistributorCommon is Test {
     }
 
     function _setupMerkleTreeWithDiscount(
+        uint256 aliceId,
         uint256 aliceClaim,
         uint256 aliceDiscount,
+        uint256 bobId,
         uint256 bobClaim,
         uint256 bobDiscount
     ) internal view returns (bytes32 root, bytes32[] memory aliceProofResult, bytes32[] memory bobProofResult) {
-        bytes32 aliceLeaf = keccak256(bytes.concat(keccak256(abi.encode(ALICE, aliceClaim, aliceDiscount, 0, 0))));
-        bytes32 bobLeaf = keccak256(bytes.concat(keccak256(abi.encode(BOB, bobClaim, bobDiscount, 0, 0))));
+        bytes32 aliceLeaf = keccak256(bytes.concat(keccak256(abi.encode(ALICE, aliceClaim, aliceDiscount, aliceId, 0))));
+        bytes32 bobLeaf = keccak256(bytes.concat(keccak256(abi.encode(BOB, bobClaim, bobDiscount, bobId, 0))));
 
         bytes32[] memory newAliceProof = new bytes32[](1);
         bytes32[] memory newBobProof = new bytes32[](1);

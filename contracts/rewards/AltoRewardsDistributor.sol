@@ -110,7 +110,7 @@ contract AltoRewardsDistributor is IRewardsDistributorStaticTypes, MerkleRootMan
 
         if (
             rewardsPurchaseAmount == 0
-                || rewardsPurchaseAmount > claimData.totalRewardsForUser - purchasedRewardTokenUser[onBehalf][claimData.id]
+                || rewardsPurchaseAmount + purchasedRewardTokenUser[onBehalf][claimData.id] > claimData.totalRewardsForUser
         ) {
             revert AltoRewardsDistributorInvalidInput();
         }
