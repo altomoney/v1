@@ -54,7 +54,7 @@ contract FlashLoanTest is DUSDCommon {
     function test_RevertWhen_ValueExceedsMaxFlashLoan() public {
         vm.startPrank(OWNER);
         dusd.setMinterStatus(MINTER, true);
-        dusd.setMinterCeiling(MINTER, 1000e18);
+        // dusd.setMinterCeiling(MINTER, 1000e18);
         vm.stopPrank();
 
         vm.prank(MINTER);
@@ -125,7 +125,7 @@ contract FlashLoanTest is DUSDCommon {
         uint256 flashFee = 100;
         vm.startPrank(OWNER);
         dusd.setFlashFee(flashFee); // Set non-zero fee but keep receiver as zero
-        dusd.setMinterCeiling(address(this), flashFee);
+        // dusd.setMinterCeiling(address(this), flashFee);
         vm.stopPrank();
 
         dusd.mint(address(flashBorrower), flashFee);
@@ -148,7 +148,7 @@ contract FlashLoanTest is DUSDCommon {
         vm.startPrank(OWNER);
         dusd.setFlashFee(fee);
         dusd.setFlashFeeReceiver(FLASH_FEE_RECEIVER);
-        dusd.setMinterCeiling(address(this), fee);
+        // dusd.setMinterStatus(address(this), true);
         vm.stopPrank();
 
         dusd.mint(address(flashBorrower), fee);

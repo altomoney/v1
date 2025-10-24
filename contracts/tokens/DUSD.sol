@@ -9,12 +9,15 @@ import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 import {ERC20FlashMint} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20FlashMint.sol";
 import {IERC3156FlashBorrower} from "@openzeppelin/contracts/interfaces/IERC3156FlashBorrower.sol";
+import {FixedPointMath, MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 
 /// @title DUSD Token
 /// @author Pearl Labs
 /// @custom:contact security@tapioca.xyz
 /// @notice The DUSD Token is the stablecoin of the Alto Protocol.
 contract DUSD is Ownable2Step, Pausable, OFT, ERC20FlashMint, IDUSD {
+    using FixedPointMath for uint256;
+
     /// @inheritdoc IDUSD
     address public flashFeeReceiver;
 
@@ -62,8 +65,8 @@ contract DUSD is Ownable2Step, Pausable, OFT, ERC20FlashMint, IDUSD {
     }
 
     /// @inheritdoc ERC20FlashMint
-    function _flashFee(address, uint256) internal view virtual override returns (uint256) {
-        return flashFee;
+    function _flashFee(address, uint256 amount) internal view virtual override returns (uint256) {
+        return flashFee.multiplyWithPrecision(amount);
     }
 
     /// @inheritdoc ERC20FlashMint
@@ -79,6 +82,9 @@ contract DUSD is Ownable2Step, Pausable, OFT, ERC20FlashMint, IDUSD {
 
     /// @inheritdoc IDUSD
     function setFlashFee(uint256 _newFlashFee) external onlyOwner {
+        if (_newFlashFee > MATH_PRECISION) {
+            revert DUSDInvalidInput();
+        }
         emit SetFlashFee(flashFee, _newFlashFee);
         flashFee = _newFlashFee;
     }

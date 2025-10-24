@@ -12,6 +12,9 @@ interface IDUSD is IOFT, IMintableERC20 {
     /// @notice Thrown when the caller is not authorized to perform the action
     error DUSDNotAuthorized();
 
+    /// @notice Thrown when the input is invalid
+    error DUSDInvalidInput();
+
     /// @notice Event emitted when the minter status is set
     /// @param _for The address of the minter
     /// @param _status The status of the minter
@@ -36,8 +39,8 @@ interface IDUSD is IOFT, IMintableERC20 {
     /// @return The flash fee receiver
     function flashFeeReceiver() external view returns (address);
 
-    /// @notice Returns the flash fee
-    /// @return The flash fee
+    /// @notice the flash fee denominated in MATH_PRECISION to be charged on amount
+    /// @return The flash fee denominated in MATH_PRECISION
     function flashFee() external view returns (uint256);
 
     /// @notice Returns the allowed minter status for an address
@@ -60,8 +63,8 @@ interface IDUSD is IOFT, IMintableERC20 {
     /// @param _status The status of the burner
     function setBurnerStatus(address _for, bool _status) external;
 
-    /// @notice Sets the flash fee
-    /// @param _newFlashFee The flash fee
+    /// @notice Sets the flash fee denominated in MATH_PRECISION to be charged on amount
+    /// @param _newFlashFee The flash fee denominated in MATH_PRECISION to be charged on amount
     function setFlashFee(uint256 _newFlashFee) external;
 
     /// @notice Sets the flash fee receiver

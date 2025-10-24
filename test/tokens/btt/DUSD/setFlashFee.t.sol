@@ -3,6 +3,8 @@ pragma solidity ^0.8.22;
 
 import {DUSDCommon} from "./DUSDCommon.t.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {IDUSD} from "@alto/tokens/interfaces/IDUSD.sol";
+import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 
 contract DUSDSetFlashFee is DUSDCommon {
     modifier givenCallerIsNotOwner() {
@@ -33,6 +35,12 @@ contract DUSDSetFlashFee is DUSDCommon {
 
         // it should set flashFee to zero
         assertEq(dusd.flashFee(), 0);
+    }
+
+    function test_RevertWhen_SettingFlashFeeToGreaterThanMATH_PRECISION() external givenCallerIsOwner {
+        vm.prank(OWNER);
+        vm.expectRevert(abi.encodeWithSelector(IDUSD.DUSDInvalidInput.selector));
+        dusd.setFlashFee(MATH_PRECISION + 1);
     }
 
     function test_WhenSettingFlashFeeToNonZeroValue() external givenCallerIsOwner {
