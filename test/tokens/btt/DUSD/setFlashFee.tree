@@ -1,15 +1,15 @@
 DUSD::setFlashFee
 ├── given caller is not owner
 │   └── it should revert with OwnableUnauthorizedAccount
-├── given caller is owner
-│   ├── when setting flash fee to zero
-│   │   ├── it should set flashFee to zero
-│   │   └── it should emit SetFlashFee event with old and new fee
-│   ├── when setting flash fee to greater than MATH_PRECISION
-│   │   └── it should revert with DUSDInvalidFlashFee
-│   ├── when setting flash fee to non-zero value
-│   │   ├── it should set flashFee to the new value
-│   │   └── it should emit SetFlashFee event with old and new fee
-│   └── when setting flash fee to same value
-│       ├── it should update flashFee to the same value
-│       └── it should emit SetFlashFee event with old and new fee
+└── given caller is owner
+    ├── when setting flash fee to zero
+    │   ├── it should set flashFee to zero
+    │   └── it should emit SetFlashFee event with old and new fee
+    ├── when setting flash fee to greater than MATH_PRECISION
+    │   └── it should revert with DUSDInvalidFlashFee
+    ├── when setting flash fee to non-zero value
+    │   ├── it should set flashFee to the new value
+    │   └── it should emit SetFlashFee event with old and new fee
+    └── when setting flash fee to same value
+        ├── it should update flashFee to the same value
+        └── it should emit SetFlashFee event with old and new fee

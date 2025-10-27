@@ -39,8 +39,9 @@ interface IDUSD is IOFT, IMintableERC20 {
     /// @return The flash fee receiver
     function flashFeeReceiver() external view returns (address);
 
-    /// @notice the flash fee denominated in MATH_PRECISION to be charged on amount of flash loan
+    /// @notice the flash fee is a percentage charged on the amount of flash loan
     /// @return The flash fee denominated in MATH_PRECISION
+    /// @dev The Flash fee is denominated in MATH_PRECISION (MATH_PRECISION = 100% fee)
     function flashFee() external view returns (uint256);
 
     /// @notice Returns the allowed minter status for an address
@@ -63,8 +64,9 @@ interface IDUSD is IOFT, IMintableERC20 {
     /// @param _status The status of the burner
     function setBurnerStatus(address _for, bool _status) external;
 
-    /// @notice Sets the flash fee denominated in MATH_PRECISION to be charged on amount of flash loan
+    /// @notice Sets the flash fee is a percentage charged on the amount of flash loan
     /// @param _newFlashFee The flash fee denominated in MATH_PRECISION to be charged on amount of flash loan
+    /// @dev The Flash fee is denominated in MATH_PRECISION (MATH_PRECISION = 100% fee)
     function setFlashFee(uint256 _newFlashFee) external;
 
     /// @notice Sets the flash fee receiver
