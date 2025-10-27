@@ -3,7 +3,7 @@
 pragma solidity >=0.8.0;
 
 import {IOracle} from "@alto/oracles/interfaces/IOracle.sol";
-import {CurveNode, ChainlinkNode, RedstoneNode, ChainlinkRedstoneNode} from "@alto/oracles/interfaces/IModuleNode.sol";
+import {CurveNode, ChainlinkNode} from "@alto/oracles/interfaces/IModuleNode.sol";
 import {ICurvePool} from "@alto/oracles/interfaces/ICurvePool.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
@@ -32,9 +32,7 @@ interface IAltoPxEthLendingOracleEvents {
     event SetCurveNode2(CurveNode oldCurveNode2, CurveNode newCurveNode2);
 
     /// @notice Emitted when the chainlink node is updated
-    event SetChainlinkRedstoneNode(
-        ChainlinkRedstoneNode oldChainlinkRedstoneNode, ChainlinkRedstoneNode newChainlinkRedstoneNode
-    );
+    event SetChainlinkNode(ChainlinkNode oldChainlinkNode, ChainlinkNode newChainlinkNode);
 
     /// @notice Emitted when the maximum allowed deviation is updated
     event SetMaxAllowedDeviation(uint256 oldMaxAllowedDeviation, uint256 newMaxAllowedDeviation);
@@ -45,9 +43,9 @@ interface IAltoPxEthLendingOracleBase is IOracle, IAltoPxEthLendingOracleErrors,
     /// @return The maximum allowed deviation in WAD(1e18 = 100%)
     function maxAllowedDeviation() external view returns (uint256);
     /// @notice Gets the price of PXETH in USD in ORACLE_PRICE_PRECISION(i.e. 1e36)
-    /// @dev Uses the curve and chainlink and redstone prices to get the price of PXETH in USD
+    /// @dev Uses the curve and chainlink prices to get the price of PXETH in USD
     /// @dev averages the price of PXETH/WETH and PXETH/STETH curve pool
-    /// @dev uses chainlink and redstone to get the price of ETH in USD and combines them using a weighted average
+    /// @dev uses chainlink to get the price of ETH in USD
     /// @return The price of PXETH in USD in ORACLE_PRICE_PRECISION(i.e. 1e36)
     function getPrice() external view returns (uint256);
     /// @notice Updates the curve node for curve pool 1
@@ -61,9 +59,9 @@ interface IAltoPxEthLendingOracleBase is IOracle, IAltoPxEthLendingOracleErrors,
     /// @param _isForPool1 Whether the minimum allowed liquidity pool is for curve pool 1
     /// @param _minAllowedLiquidityPool The new minimum allowed liquidity pool
     function updateMinAllowedLiquidityPoo1(bool _isForPool1, uint256[] memory _minAllowedLiquidityPool) external;
-    /// @notice Updates the chainlink node and redstone node
-    /// @param _chainlinkRedstoneNode The new chainlink and redstone node
-    function updateChainlinkRedstoneNode(ChainlinkRedstoneNode memory _chainlinkRedstoneNode) external;
+    /// @notice Updates the chainlink node
+    /// @param _chainlinkNode The new chainlink node
+    function updateChainlinkNode(ChainlinkNode memory _chainlinkNode) external;
     /// @notice Updates the maximum allowed deviation
     /// @param _maxAllowedDeviation The new maximum allowed deviation
     function updateMaxAllowedDeviation(uint256 _maxAllowedDeviation) external;
@@ -76,9 +74,9 @@ interface IAltoPxEthLendingOracle is IAltoPxEthLendingOracleBase {
     /// @notice Gets the curve node for curve pool 2
     /// @return The curve node for curve pool 2
     function curveNode2() external view returns (CurveNode memory);
-    /// @notice Gets the chainlink and redstone node
+    /// @notice Gets the chainlink node
     /// @return The chainlink node
-    function chainlinkRedstoneNode() external view returns (ChainlinkRedstoneNode memory);
+    function chainlinkNode() external view returns (ChainlinkNode memory);
     /// @notice Gets the minimum allowed liquidity pool for curve pool 1
     /// @return The minimum allowed liquidity pool for curve pool 1
     function minAllowedLiquidityPool1() external view returns (uint256[] memory);
@@ -95,11 +93,8 @@ interface IAltoPxEthLendingOracleStaticTypes is IAltoPxEthLendingOracleBase {
     /// @return The curve node for curve pool 2
     function curveNode2() external view returns (ICurvePool, uint256, uint8, uint8, uint8, uint256, uint32);
     /// @notice Gets the chainlink node
-    /// @return The chainlink and redstone node
-    function chainlinkRedstoneNode()
-        external
-        view
-        returns (ChainlinkNode memory, RedstoneNode memory, uint256, uint256, uint256);
+    /// @return The chainlink node
+    function chainlinkNode() external view returns (AggregatorV3Interface, uint8, uint32, uint8, uint8);
     /// @notice Gets the minimum allowed liquidity pool for curve pool 1 for asset at index
     /// @return The minimum allowed liquidity pool for curve pool 1 for asset at index
     function minAllowedLiquidityPool1(uint256 index) external view returns (uint256);

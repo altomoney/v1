@@ -3,7 +3,7 @@ pragma solidity ^0.8.22;
 
 import {Test} from "forge-std/Test.sol";
 import {AltoPxEthLendingOracle} from "@alto/oracles/lending/AltoPxEthLendingOracle.sol";
-import {CurveNode, ChainlinkNode, RedstoneNode, ChainlinkRedstoneNode} from "@alto/oracles/interfaces/IModuleNode.sol";
+import {CurveNode, ChainlinkNode} from "@alto/oracles/interfaces/IModuleNode.sol";
 import {ICurvePool} from "@alto/oracles/interfaces/ICurvePool.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {console2} from "forge-std/console2.sol";
@@ -12,12 +12,7 @@ import {IAltoPxEthLendingOracleEvents} from "@alto/oracles/interfaces/IAltoPxEth
 
 contract AltoPxEthLendingOracleTest is Test {
     address constant CHAINLINK_ETH_USD_PRICE_FEED = 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419;
-    address constant REDSTONE_ETH_USD_PRICE_FEED = 0x67F6838e58859d612E4ddF04dA396d6DABB66Dc4;
-    uint256 constant CHAINLINK_WEIGHT = 0.9e18;
-    uint256 constant REDSTONE_WEIGHT = 0.1e18;
-    ChainlinkRedstoneNode chainlinkRedstoneNode;
     ChainlinkNode chainlinkNode;
-    RedstoneNode redstoneNode;
     address constant PXETH_WETH_CURVE_POOL = 0xC8Eb2Cf2f792F77AF0Cd9e203305a585E588179D; // curve pool for pxETH/WETH
     address constant PXETH_STETH_CURVE_POOL = 0x6951bDC4734b9f7F3E1B74afeBC670c736A0EDB6; // curve pool for pxETH/STETH
     uint256 constant MAX_ALLOWED_DEVIATION = 2e16; // 2%
@@ -34,9 +29,6 @@ contract AltoPxEthLendingOracleTest is Test {
         curveNode1 = CurveNode(ICurvePool(PXETH_WETH_CURVE_POOL), 0, 0, 8, 8, 10 minutes, 1 days);
         curveNode2 = CurveNode(ICurvePool(PXETH_STETH_CURVE_POOL), 0, 0, 8, 8, 10 minutes, 1 days);
         chainlinkNode = ChainlinkNode(AggregatorV3Interface(CHAINLINK_ETH_USD_PRICE_FEED), 1, 2 hours, 18, 18);
-        redstoneNode = RedstoneNode(AggregatorV3Interface(REDSTONE_ETH_USD_PRICE_FEED), 1, 26 hours, 8, 18);
-        chainlinkRedstoneNode =
-            ChainlinkRedstoneNode(chainlinkNode, redstoneNode, MAX_ALLOWED_DEVIATION, CHAINLINK_WEIGHT, REDSTONE_WEIGHT);
         altoPxEthLendingOracle = new AltoPxEthLendingOracle(
             OWNER,
             curveNode1,
@@ -44,7 +36,7 @@ contract AltoPxEthLendingOracleTest is Test {
             curveNode2,
             minAllowedLiquidityPool2,
             MAX_ALLOWED_DEVIATION,
-            chainlinkRedstoneNode
+            chainlinkNode
         );
     }
 
@@ -81,24 +73,19 @@ contract AltoPxEthLendingOracleTest is Test {
         vm.stopPrank();
     }
 
-    function testOnlyOwnerCanUpdateChainlinkRedstoneNode() public {
+    function testOnlyOwnerCanUpdateChainlinkNode() public {
         address nonOwner = makeAddr("NonOwner");
         vm.startPrank(nonOwner);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, nonOwner));
-        altoPxEthLendingOracle.updateChainlinkRedstoneNode(chainlinkRedstoneNode);
+        altoPxEthLendingOracle.updateChainlinkNode(chainlinkNode);
         vm.stopPrank();
 
         vm.startPrank(OWNER);
-        ChainlinkRedstoneNode memory newChainlinkRedstoneNode = ChainlinkRedstoneNode(
-            ChainlinkNode(AggregatorV3Interface(CHAINLINK_ETH_USD_PRICE_FEED), 1, 5 hours, 8, 18),
-            RedstoneNode(AggregatorV3Interface(REDSTONE_ETH_USD_PRICE_FEED), 1, 27 hours, 8, 18),
-            MAX_ALLOWED_DEVIATION,
-            CHAINLINK_WEIGHT + 1e16,
-            REDSTONE_WEIGHT - 1e16
-        );
+        ChainlinkNode memory newChainlinkNode =
+            ChainlinkNode(AggregatorV3Interface(CHAINLINK_ETH_USD_PRICE_FEED), 1, 5 hours, 8, 18);
         vm.expectEmit(true, true, true, true);
-        emit IAltoPxEthLendingOracleEvents.SetChainlinkRedstoneNode(chainlinkRedstoneNode, newChainlinkRedstoneNode);
-        altoPxEthLendingOracle.updateChainlinkRedstoneNode(newChainlinkRedstoneNode);
+        emit IAltoPxEthLendingOracleEvents.SetChainlinkNode(chainlinkNode, newChainlinkNode);
+        altoPxEthLendingOracle.updateChainlinkNode(newChainlinkNode);
         vm.stopPrank();
     }
 
