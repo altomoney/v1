@@ -34,8 +34,8 @@ contract ModuleChainlinkTest is Test {
         uint256 answerDecimals = AggregatorV3Interface(USDC_ETH_PRICE_FEED).decimals();
         uint256 ethUsdcExpectedPrice =
             ethQuoteAmount * (10 ** answerDecimals) * (10 ** 6) / (uint256(answer) * (10 ** 18));
-        // redstone feed is in 8 decimals
-        // ethUSD price from Redstone is 392246560655. which means 1 ETH is 3922.46560655 USD
+        // chainlink feed is in 8 decimals
+        // ethUSD price from chainlink is 392246560655. which means 1 ETH is 3922.46560655 USD
         console2.log("ethUsdcPrice from Chainlink feed", ethUsdcExpectedPrice);
 
         assertEq(usdcAmount, ethUsdcExpectedPrice, "Invalid price in ChainlinkModule");
@@ -53,8 +53,8 @@ contract ModuleChainlinkTest is Test {
 
         (, int256 answer,,,) = AggregatorV3Interface(BTC_USD_PRICE_FEED).latestRoundData();
         uint256 btcUsdExpectedPrice = uint256(answer);
-        // redstone feed is in 8 decimals
-        // btcUSD price from Redstone is 10952507971300. which means 1 BTC is 10952.5079713 USD
+        // chainlink feed is in 8 decimals
+        // btcUSD price from Chainlink is 10952507971300. which means 1 BTC is 10952.5079713 USD
         console2.log("btcUsdPrice from Chainlink feed", btcUsdExpectedPrice);
 
         assertEq(usdAmount, btcUsdExpectedPrice, "Invalid price in ChainlinkModule");

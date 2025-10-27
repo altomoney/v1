@@ -6,20 +6,6 @@ import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interf
 import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import {ICurvePool} from "@alto/oracles/interfaces/ICurvePool.sol";
 
-/// @notice The type of oracle
-enum OracleType {
-    CHAINLINK,
-    REDSTONE,
-    UNISWAP,
-    CURVE
-}
-
-/// @notice The node for the oracle
-struct OracleNode {
-    OracleType oracleType;
-    bytes data;
-}
-
 /// @notice The node for the Chainlink oracle
 struct ChainlinkNode {
     // @notice The Chainlink feed to query
@@ -32,36 +18,6 @@ struct ChainlinkNode {
     uint8 inDecimals;
     // @notice The number of decimals of the out-currency
     uint8 outDecimals;
-}
-
-/// @notice The node for the Redstone oracle
-struct RedstoneNode {
-    // @notice The Redstone feed to query
-    AggregatorV3Interface feed;
-    // @notice Whether we should multiply or divide by this rate
-    uint8 multiplied;
-    // @notice The stale period for the Redstone circuit
-    uint32 stalePeriod;
-    // @notice The number of decimals of the in-currency
-    uint8 inDecimals;
-    // @notice The number of decimals of the out-currency
-    uint8 outDecimals;
-}
-
-/// @notice The node for the combination of Chainlink and Redstone oracle
-/// @dev this node is used when the oracle needs combination of weighted average of chainlink and redstone prices
-/// @dev it also has a max allowed deviation between the chainlink and redstone prices
-struct ChainlinkRedstoneNode {
-    /// @notice The Chainlink node
-    ChainlinkNode chainlinkNode;
-    /// @notice The Redstone node
-    RedstoneNode redstoneNode;
-    /// @notice The maximum allowed deviation between the chainlink and redstone prices defined in WAD(1e18 = 100%)
-    uint256 maxAllowedDeviationWad;
-    /// @notice The weight of the chainlink price in WAD(1e18 = 100%)
-    uint256 chainlinkWeightWad;
-    /// @notice The weight of the redstone price in WAD(1e18 = 100%)
-    uint256 redstoneWeightWad;
 }
 
 /// @notice The node for the Uniswap oracle
