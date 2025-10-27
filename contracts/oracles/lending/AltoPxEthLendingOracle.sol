@@ -4,8 +4,7 @@ pragma solidity ^0.8.7;
 import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {ModuleCurve} from "@alto/oracles/lending/modules/ModuleCurve.sol";
 import {ModuleChainlink} from "@alto/oracles/lending/modules/ModuleChainlink.sol";
-import {ModuleRedstone} from "@alto/oracles/lending/modules/ModuleRedstone.sol";
-import {CurveNode, ChainlinkNode, RedstoneNode, ChainlinkRedstoneNode} from "@alto/oracles/interfaces/IModuleNode.sol";
+import {CurveNode, ChainlinkNode} from "@alto/oracles/interfaces/IModuleNode.sol";
 import {ICurvePool} from "@alto/oracles/interfaces/ICurvePool.sol";
 import {MATH_PRECISION, FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {OracleValidation} from "@alto/oracles/lending/libraries/OracleValidation.sol";
@@ -18,16 +17,10 @@ import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interf
 /// @title AltoPxEthLendingOracle
 /// @author Pearl Labs
 /// @custom:contact security@tapioca.xyz
-/// @notice An oracle that gets the price of PXETH in USD using the curve and chainlink and redstone prices
+/// @notice An oracle that gets the price of PXETH in USD using the curve and chainlink
 /// @dev uses the average of curve pool PXETH/WETH and PXETH/STETH to get the price of PXETH in ETH. Assumes that steth is pegged to eth
-/// @dev uses chainlink and redstone to get the price of ETH in USD
-contract AltoPxEthLendingOracle is
-    Ownable2Step,
-    ModuleCurve,
-    ModuleChainlink,
-    ModuleRedstone,
-    IAltoPxEthLendingOracleStaticTypes
-{
+/// @dev uses chainlink to get the price of ETH in USD
+contract AltoPxEthLendingOracle is Ownable2Step, ModuleCurve, ModuleChainlink, IAltoPxEthLendingOracleStaticTypes {
     /// @inheritdoc IAltoPxEthLendingOracleStaticTypes
     CurveNode public curveNode1;
 
@@ -44,7 +37,7 @@ contract AltoPxEthLendingOracle is
     uint256 public maxAllowedDeviation;
 
     /// @inheritdoc IAltoPxEthLendingOracleStaticTypes
-    ChainlinkRedstoneNode public chainlinkRedstoneNode;
+    ChainlinkNode public chainlinkNode;
 
     /// @notice Constructor
     /// @param _owner The owner of the contract
@@ -53,7 +46,7 @@ contract AltoPxEthLendingOracle is
     /// @param _curveNode2 The curve node for curve pool 2
     /// @param _minAllowedLiquidityPool2 The minimum allowed liquidity pool for curve pool 2
     /// @param _maxAllowedDeviation The maximum allowed deviation
-    /// @param _chainlinkRedstoneNode The chainlink and redstone node
+    /// @param _chainlinkNode The chainlink node
     constructor(
         address _owner,
         CurveNode memory _curveNode1,
@@ -61,7 +54,7 @@ contract AltoPxEthLendingOracle is
         CurveNode memory _curveNode2,
         uint256[] memory _minAllowedLiquidityPool2,
         uint256 _maxAllowedDeviation,
-        ChainlinkRedstoneNode memory _chainlinkRedstoneNode
+        ChainlinkNode memory _chainlinkNode
     ) Ownable(_owner) {
         if (_maxAllowedDeviation == 0 || _maxAllowedDeviation > MATH_PRECISION) {
             revert AltoPxEthLendingOracleInvalidInput();
@@ -102,35 +95,10 @@ contract AltoPxEthLendingOracle is
         maxAllowedDeviation = _maxAllowedDeviation;
         emit SetMaxAllowedDeviation(0, _maxAllowedDeviation);
 
-        if (_chainlinkRedstoneNode.chainlinkWeightWad + _chainlinkRedstoneNode.redstoneWeightWad != MATH_PRECISION) {
-            revert AltoPxEthLendingOracleInvalidInput();
-        }
-        if (
-            _chainlinkRedstoneNode.maxAllowedDeviationWad == 0
-                || _chainlinkRedstoneNode.maxAllowedDeviationWad > MATH_PRECISION
-        ) {
-            revert AltoPxEthLendingOracleInvalidInput();
-        }
+        _validateChainlinkParams(_chainlinkNode);
 
-        if (_chainlinkRedstoneNode.chainlinkNode.outDecimals != _chainlinkRedstoneNode.redstoneNode.outDecimals) {
-            revert AltoPxEthLendingOracleInvalidInput();
-        }
-
-        // validates the chainlink node parameters
-        _validateChainlinkParams(_chainlinkRedstoneNode.chainlinkNode);
-        _validateRedstoneParams(_chainlinkRedstoneNode.redstoneNode);
-
-        chainlinkRedstoneNode = _chainlinkRedstoneNode;
-        emit SetChainlinkRedstoneNode(
-            ChainlinkRedstoneNode(
-                ChainlinkNode(AggregatorV3Interface(address(0)), 0, 0, 0, 0),
-                RedstoneNode(AggregatorV3Interface(address(0)), 0, 0, 0, 0),
-                0,
-                0,
-                0
-            ),
-            _chainlinkRedstoneNode
-        );
+        chainlinkNode = _chainlinkNode;
+        emit SetChainlinkNode(ChainlinkNode(AggregatorV3Interface(address(0)), 0, 0, 0, 0), _chainlinkNode);
     }
 
     /// @inheritdoc IAltoPxEthLendingOracleBase
@@ -161,35 +129,12 @@ contract AltoPxEthLendingOracle is
             revert AltoPxEthLendingOracleInvalidPrice();
         }
 
-        // gets the price of eth in usd from chainlink and redstone
+        // gets the price of eth in usd from chainlink
         // the price is in chainlinkNode.outDecimals
-        uint256 ethUsdChainlinkPrice =
-            readChainlinkFeed(10 ** chainlinkRedstoneNode.chainlinkNode.inDecimals, chainlinkRedstoneNode.chainlinkNode);
-        uint256 ethUsdRedstonePrice =
-            readRedstoneFeed(10 ** chainlinkRedstoneNode.redstoneNode.inDecimals, chainlinkRedstoneNode.redstoneNode);
-
-        uint256 ethUsdPrice;
-
-        // returns the chainlink price if the price from chainlink and redstone is outside the allowed deviation
-        // otherwise returns the weighted average of the chainlink and redstone prices
-        if (
-            !OracleValidation.isPriceWithinAllowedDeviation(
-                ethUsdChainlinkPrice, ethUsdRedstonePrice, chainlinkRedstoneNode.maxAllowedDeviationWad
-            )
-        ) {
-            ethUsdPrice = ethUsdChainlinkPrice;
-        } else {
-            // calculates the weighted average of the chainlink and redstone prices
-            // the decimals of price will be in chainlinkRedstoneNode.chainlinkNode.outDecimals
-            ethUsdPrice = (
-                ethUsdChainlinkPrice * chainlinkRedstoneNode.chainlinkWeightWad
-                    + ethUsdRedstonePrice * chainlinkRedstoneNode.redstoneWeightWad
-            ) / MATH_PRECISION;
-        }
-
-        // converts the price from chainlinkRedstoneNode.chainlinkNode.outDecimals to MATH_PRECISION
-        ethUsdPrice = FixedPointMath.divideWithRounding(
-            ethUsdPrice, MATH_PRECISION, 10 ** chainlinkRedstoneNode.chainlinkNode.outDecimals, false
+        uint256 ethUsdChainlinkPrice = readChainlinkFeed(10 ** chainlinkNode.inDecimals, chainlinkNode);
+        // converts the price from chainlinkNode.outDecimals to MATH_PRECISION
+        uint256 ethUsdPrice = FixedPointMath.divideWithRounding(
+            ethUsdChainlinkPrice, MATH_PRECISION, 10 ** chainlinkNode.outDecimals, false
         );
 
         // calculates the average price from both curve pools
@@ -228,27 +173,11 @@ contract AltoPxEthLendingOracle is
     }
 
     /// @inheritdoc IAltoPxEthLendingOracleBase
-    function updateChainlinkRedstoneNode(ChainlinkRedstoneNode memory _chainlinkRedstoneNode) public onlyOwner {
-        if (_chainlinkRedstoneNode.chainlinkWeightWad + _chainlinkRedstoneNode.redstoneWeightWad != MATH_PRECISION) {
-            revert AltoPxEthLendingOracleInvalidInput();
-        }
-        if (
-            _chainlinkRedstoneNode.maxAllowedDeviationWad == 0
-                || _chainlinkRedstoneNode.maxAllowedDeviationWad > MATH_PRECISION
-        ) {
-            revert AltoPxEthLendingOracleInvalidInput();
-        }
+    function updateChainlinkNode(ChainlinkNode memory _chainlinkNode) public onlyOwner {
+        _validateChainlinkParams(_chainlinkNode);
 
-        if (_chainlinkRedstoneNode.chainlinkNode.outDecimals != _chainlinkRedstoneNode.redstoneNode.outDecimals) {
-            revert AltoPxEthLendingOracleInvalidInput();
-        }
-
-        // validates the chainlink node parameters
-        _validateChainlinkParams(_chainlinkRedstoneNode.chainlinkNode);
-        _validateRedstoneParams(_chainlinkRedstoneNode.redstoneNode);
-
-        emit SetChainlinkRedstoneNode(chainlinkRedstoneNode, _chainlinkRedstoneNode);
-        chainlinkRedstoneNode = _chainlinkRedstoneNode;
+        emit SetChainlinkNode(chainlinkNode, _chainlinkNode);
+        chainlinkNode = _chainlinkNode;
     }
 
     /// @inheritdoc IAltoPxEthLendingOracleBase
