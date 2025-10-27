@@ -1,0 +1,16 @@
+DUSD::setMinterStatus
+├── given caller is not owner
+│   └── it should revert with OwnableUnauthorizedAccount
+└── given caller is owner
+    ├── when setting minter status to true for new address
+    │   ├── it should set allowedMinter mapping to true
+    │   └── it should emit SetMinterStatus event
+    ├── when setting minter status to false for existing minter
+    │   ├── it should set allowedMinter mapping to false
+    │   └── it should emit SetMinterStatus event
+    ├── when setting same status (true to true)
+    │   ├── it should update the mapping
+    │   └── it should emit SetMinterStatus event
+    └── when setting same status (false to false)
+        ├── it should update the mapping
+        └── it should emit SetMinterStatus event

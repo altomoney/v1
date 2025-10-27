@@ -7,31 +7,37 @@ import {IDUSD} from "@alto/tokens/interfaces/IDUSD.sol";
 import {Pausable, IPausable} from "@alto/utils/Pausable.sol";
 import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
+import {ERC20FlashMint} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20FlashMint.sol";
+import {IERC3156FlashBorrower} from "@openzeppelin/contracts/interfaces/IERC3156FlashBorrower.sol";
+import {FixedPointMath, MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 
 /// @title DUSD Token
 /// @author Pearl Labs
 /// @custom:contact security@tapioca.xyz
 /// @notice The DUSD Token is the stablecoin of the Alto Protocol.
-contract DUSD is Ownable2Step, Pausable, OFT, IDUSD {
-    uint256 public fees;
+contract DUSD is Ownable2Step, Pausable, OFT, ERC20FlashMint, IDUSD {
+    using FixedPointMath for uint256;
 
-    address public flashLoanHelper;
+    /// @inheritdoc IDUSD
+    address public flashFeeReceiver;
 
+    /// @inheritdoc IDUSD
+    uint256 public flashFee;
+
+    /// @inheritdoc IDUSD
     mapping(address => bool) public allowedMinter;
+
+    /// @inheritdoc IDUSD
     mapping(address => bool) public allowedBurner;
 
+    /// @notice constructor
+    /// @param endpoint The endpoint address
+    /// @param owner The owner of the contract
     constructor(address endpoint, address owner) OFT("DUSD", "DUSD", endpoint, owner) Ownable(owner) {
         _setPauser(owner, PAUSE_TYPE, true);
     }
 
-    /// =====================
-    /// External
-    /// =====================
-    /**
-     * @notice mints DUSD
-     * @param _to receiver address
-     * @param _amount the amount to mint
-     */
+    /// @inheritdoc IDUSD
     function mint(address _to, uint256 _amount) external whenNotPaused {
         if (!allowedMinter[msg.sender]) {
             revert DUSDNotAuthorized();
@@ -39,11 +45,7 @@ contract DUSD is Ownable2Step, Pausable, OFT, IDUSD {
         _mint(_to, _amount);
     }
 
-    /**
-     * @notice burns DUSD
-     * @param _from address to burn from
-     * @param _amount the amount to burn
-     */
+    /// @inheritdoc IDUSD
     function burn(address _from, uint256 _amount) external whenNotPaused {
         if (!allowedBurner[msg.sender]) {
             revert DUSDNotAuthorized();
@@ -51,58 +53,49 @@ contract DUSD is Ownable2Step, Pausable, OFT, IDUSD {
         _burn(_from, _amount);
     }
 
-    /**
-     * @notice registeres flashloan fees
-     * @dev can only be called by the `FlashloanHelper` contract
-     * @param _fee fees amount
-     */
-    function addFlashloanFee(uint256 _fee) external {
-        if (msg.sender != flashLoanHelper) revert DUSDNotAuthorized();
-        fees += _fee;
+    /// @inheritdoc ERC20FlashMint
+    function flashLoan(IERC3156FlashBorrower receiver, address token, uint256 value, bytes calldata data)
+        public
+        virtual
+        override
+        whenNotPaused
+        returns (bool)
+    {
+        return super.flashLoan(receiver, token, value, data);
     }
 
-    /// =====================
-    /// Owner
-    /// =====================
-
-    /**
-     * @notice sets `FlashloanHelper` contract
-     * @param _helper the contract address
-     */
-    function setFlashloanHelper(address _helper) external onlyOwner {
-        flashLoanHelper = _helper;
+    /// @inheritdoc ERC20FlashMint
+    function _flashFee(address, uint256 amount) internal view virtual override returns (uint256) {
+        return flashFee.multiplyWithPrecisionUp(amount);
     }
 
-    /**
-     * @notice transfers fees to sender
-     */
-    function extractFees() external onlyOwner {
-        if (fees > 0) {
-            uint256 balance = balanceOf(address(this));
+    /// @inheritdoc ERC20FlashMint
+    function _flashFeeReceiver() internal view virtual override returns (address) {
+        return flashFeeReceiver;
+    }
 
-            uint256 toExtract = balance >= fees ? fees : balance;
-            fees -= toExtract;
-            _transfer(address(this), msg.sender, toExtract);
+    /// @inheritdoc IDUSD
+    function setFlashFeeReceiver(address _newFlashFeeReceiver) external onlyOwner {
+        emit SetFlashFeeReceiver(flashFeeReceiver, _newFlashFeeReceiver);
+        flashFeeReceiver = _newFlashFeeReceiver;
+    }
+
+    /// @inheritdoc IDUSD
+    function setFlashFee(uint256 _newFlashFee) external onlyOwner {
+        if (_newFlashFee > MATH_PRECISION) {
+            revert DUSDInvalidInput();
         }
+        emit SetFlashFee(flashFee, _newFlashFee);
+        flashFee = _newFlashFee;
     }
 
-    /**
-     * @notice sets/unsets address as minter
-     * @dev can only be called by the owner
-     * @param _for role receiver
-     * @param _status true/false
-     */
+    /// @inheritdoc IDUSD
     function setMinterStatus(address _for, bool _status) external onlyOwner {
         allowedMinter[_for] = _status;
         emit SetMinterStatus(_for, _status);
     }
 
-    /**
-     * @notice sets/unsets address as burner
-     * @dev can only be called by the owner
-     * @param _for role receiver
-     * @param _status true/false
-     */
+    /// @inheritdoc IDUSD
     function setBurnerStatus(address _for, bool _status) external onlyOwner {
         allowedBurner[_for] = _status;
         emit SetBurnerStatus(_for, _status);

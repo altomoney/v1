@@ -1,0 +1,13 @@
+DUSD::setFlashFeeReceiver
+├── given caller is not owner
+│   └── it should revert with OwnableUnauthorizedAccount
+└── given caller is owner
+    ├── when setting flash fee receiver to zero address
+    │   ├── it should set flashFeeReceiver to zero address
+    │   └── it should emit SetFlashFeeReceiver event with old and new receiver
+    ├── when setting flash fee receiver to valid address
+    │   ├── it should set flashFeeReceiver to the new address
+    │   └── it should emit SetFlashFeeReceiver event with old and new receiver
+    └── when setting flash fee receiver to same address
+        ├── it should update flashFeeReceiver to the same address
+        └── it should emit SetFlashFeeReceiver event with old and new receiver
