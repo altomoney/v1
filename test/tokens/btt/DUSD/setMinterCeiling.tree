@@ -1,0 +1,7 @@
+DUSD::setMinterCeiling
+├── when caller is not owner
+│   └── it should revert with OwnableUnauthorizedAccount
+└── when caller is owner
+    ├── it should emit SetMinterCeiling event with correct parameters
+    ├── it should update minterConfig.ceiling to new value
+    └── it should complete successfully

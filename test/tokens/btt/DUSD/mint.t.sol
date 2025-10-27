@@ -24,6 +24,13 @@ contract DUSDMint is DUSDCommon {
         _;
     }
 
+    modifier whenMintingWouldExceedCeiling() {
+        // Set a low ceiling to trigger the exceed condition
+        vm.prank(OWNER);
+        dusd.setMinterCeiling(MINTER, MINT_AMOUNT - 1);
+        _;
+    }
+
     function test_RevertWhen_ContractIsPaused() external givenContractIsPaused {
         _setupMinter();
 
@@ -38,6 +45,16 @@ contract DUSDMint is DUSDCommon {
         dusd.mint(USER, MINT_AMOUNT);
     }
 
+    function test_RevertWhen_MintingWouldExceedCeiling()
+        external
+        givenCallerIsAuthorizedMinter
+        whenMintingWouldExceedCeiling
+    {
+        vm.prank(MINTER);
+        vm.expectRevert(IDUSD.DUSDInvalidInput.selector);
+        dusd.mint(USER, MINT_AMOUNT);
+    }
+
     function test_RevertWhen_ToAddressIsZeroAddress() external givenCallerIsAuthorizedMinter {
         vm.prank(MINTER);
         vm.expectRevert(abi.encodeWithSelector(IERC20Errors.ERC20InvalidReceiver.selector, address(0)));
@@ -47,6 +64,10 @@ contract DUSDMint is DUSDCommon {
     function test_WhenAmountIsZero() external givenCallerIsAuthorizedMinter {
         uint256 initialSupply = dusd.totalSupply();
         uint256 initialBalance = dusd.balanceOf(USER);
+        (uint256 initialMinted,) = dusd.minterConfig(MINTER);
+
+        vm.expectEmit(true, true, true, true);
+        emit IERC20.Transfer(address(0), USER, 0);
 
         vm.prank(MINTER);
         dusd.mint(USER, 0);
@@ -54,11 +75,16 @@ contract DUSDMint is DUSDCommon {
         // it should mint zero tokens successfully
         assertEq(dusd.totalSupply(), initialSupply);
         assertEq(dusd.balanceOf(USER), initialBalance);
+
+        // it should not increase minter's minted amount
+        (uint256 finalMinted,) = dusd.minterConfig(MINTER);
+        assertEq(finalMinted, initialMinted);
     }
 
-    function test_WhenAmountIsValid() external givenCallerIsAuthorizedMinter {
+    function test_WhenAmountIsValidAndWithinCeiling() external givenCallerIsAuthorizedMinter {
         uint256 initialSupply = dusd.totalSupply();
         uint256 initialBalance = dusd.balanceOf(USER);
+        (uint256 initialMinted,) = dusd.minterConfig(MINTER);
 
         vm.expectEmit(true, true, true, true);
         emit IERC20.Transfer(address(0), USER, MINT_AMOUNT);
@@ -71,12 +97,20 @@ contract DUSDMint is DUSDCommon {
 
         // it should increase total supply by the amount
         assertEq(dusd.totalSupply(), initialSupply + MINT_AMOUNT);
+
+        // it should increase minter's minted amount by the amount
+        (uint256 finalMinted,) = dusd.minterConfig(MINTER);
+        assertEq(finalMinted, initialMinted + MINT_AMOUNT);
     }
 
     function test_WhenMintingToContractAddress() external givenCallerIsAuthorizedMinter {
         address contractAddress = address(this);
         uint256 initialSupply = dusd.totalSupply();
         uint256 initialBalance = dusd.balanceOf(contractAddress);
+        (uint256 initialMinted,) = dusd.minterConfig(MINTER);
+
+        vm.expectEmit(true, true, true, true);
+        emit IERC20.Transfer(address(0), contractAddress, MINT_AMOUNT);
 
         vm.prank(MINTER);
         dusd.mint(contractAddress, MINT_AMOUNT);
@@ -84,5 +118,9 @@ contract DUSDMint is DUSDCommon {
         // it should mint tokens successfully to contract
         assertEq(dusd.balanceOf(contractAddress), initialBalance + MINT_AMOUNT);
         assertEq(dusd.totalSupply(), initialSupply + MINT_AMOUNT);
+
+        // it should increase minter's minted amount by the amount
+        (uint256 finalMinted,) = dusd.minterConfig(MINTER);
+        assertEq(finalMinted, initialMinted + MINT_AMOUNT);
     }
 }

@@ -46,8 +46,10 @@ contract DUSDCommon is Test, TestHelperOz5 {
     }
 
     function _setupMinter() internal {
-        vm.prank(OWNER);
+        vm.startPrank(OWNER);
         dusd.setMinterStatus(MINTER, true);
+        dusd.setMinterCeiling(MINTER, MINT_AMOUNT);
+        vm.stopPrank();
     }
 
     function _setupBurner() internal {

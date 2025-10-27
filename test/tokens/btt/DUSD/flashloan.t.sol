@@ -54,7 +54,7 @@ contract FlashLoanTest is DUSDCommon {
     function test_RevertWhen_ValueExceedsMaxFlashLoan() public {
         vm.startPrank(OWNER);
         dusd.setMinterStatus(MINTER, true);
-        // dusd.setMinterCe(address(dusd), 1000e18);
+        dusd.setMinterCeiling(MINTER, 1000e18);
         vm.stopPrank();
 
         vm.prank(MINTER);

@@ -28,6 +28,9 @@ contract DUSD is Ownable2Step, Pausable, OFT, ERC20FlashMint, IDUSD {
     mapping(address => bool) public allowedMinter;
 
     /// @inheritdoc IDUSD
+    mapping(address => MinterConfig) public minterConfig;
+
+    /// @inheritdoc IDUSD
     mapping(address => bool) public allowedBurner;
 
     /// @notice constructor
@@ -42,6 +45,10 @@ contract DUSD is Ownable2Step, Pausable, OFT, ERC20FlashMint, IDUSD {
         if (!allowedMinter[msg.sender]) {
             revert DUSDNotAuthorized();
         }
+        if (minterConfig[msg.sender].minted + _amount > minterConfig[msg.sender].ceiling) {
+            revert DUSDInvalidInput();
+        }
+        minterConfig[msg.sender].minted += _amount;
         _mint(_to, _amount);
     }
 
@@ -50,6 +57,10 @@ contract DUSD is Ownable2Step, Pausable, OFT, ERC20FlashMint, IDUSD {
         if (!allowedBurner[msg.sender]) {
             revert DUSDNotAuthorized();
         }
+        if (minterConfig[msg.sender].minted < _amount) {
+            revert DUSDInvalidInput();
+        }
+        minterConfig[msg.sender].minted -= _amount;
         _burn(_from, _amount);
     }
 
@@ -93,6 +104,12 @@ contract DUSD is Ownable2Step, Pausable, OFT, ERC20FlashMint, IDUSD {
     function setMinterStatus(address _for, bool _status) external onlyOwner {
         allowedMinter[_for] = _status;
         emit SetMinterStatus(_for, _status);
+    }
+
+    /// @inheritdoc IDUSD
+    function setMinterCeiling(address _for, uint256 _ceiling) external onlyOwner {
+        minterConfig[_for].ceiling = _ceiling;
+        emit SetMinterCeiling(_for, _ceiling);
     }
 
     /// @inheritdoc IDUSD

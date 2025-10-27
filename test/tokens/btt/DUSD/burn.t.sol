@@ -15,23 +15,31 @@ contract DUSDBurn is DUSDCommon {
     }
 
     modifier givenCallerIsNotAuthorizedBurner() {
-        // Don't set up burner, so caller is not authorized
         _;
     }
 
     modifier givenCallerIsAuthorizedBurner() {
         _setupBurner();
+        // Also set up the burner as a minter so they can burn
+        vm.startPrank(OWNER);
+        dusd.setMinterStatus(BURNER, true);
+        dusd.setMinterCeiling(BURNER, MINT_AMOUNT * 2);
+        vm.stopPrank();
         _;
     }
 
-    function test_RevertWhen_ContractIsPaused() external {
-        // First mint tokens while contract is not paused
-        _setupBurner();
-        _mintTokensToUser(MINT_AMOUNT);
+    modifier whenBurnerHasMintedEnoughToBurn() {
+        // Mint tokens using BURNER as minter so they have enough to burn
+        vm.prank(BURNER);
+        dusd.mint(USER, MINT_AMOUNT);
+        _;
+    }
 
-        // Then pause the contract
-        _pauseContract();
+    modifier whenAmountIsZero() {
+        _;
+    }
 
+    function test_RevertWhen_ContractIsPaused() external givenContractIsPaused {
         vm.startPrank(BURNER);
         vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, PAUSE_TYPE));
         dusd.burn(USER, BURN_AMOUNT);
@@ -39,77 +47,114 @@ contract DUSDBurn is DUSDCommon {
     }
 
     function test_RevertWhen_CallerIsNotAuthorizedBurner() external givenCallerIsNotAuthorizedBurner {
-        _mintTokensToUser(MINT_AMOUNT);
-
         vm.startPrank(NON_OWNER);
         vm.expectRevert(IDUSD.DUSDNotAuthorized.selector);
         dusd.burn(USER, BURN_AMOUNT);
         vm.stopPrank();
     }
 
-    function test_RevertWhen_FromAddressIsZeroAddress() external givenCallerIsAuthorizedBurner {
+    function test_RevertWhen_BurnerHasNotMintedEnoughToBurn() external givenCallerIsAuthorizedBurner {
+        vm.startPrank(BURNER);
+        vm.expectRevert(IDUSD.DUSDInvalidInput.selector);
+        dusd.burn(USER, BURN_AMOUNT);
+        vm.stopPrank();
+    }
+
+    function test_RevertWhen_FromAddressIsZeroAddress()
+        external
+        givenCallerIsAuthorizedBurner
+        whenBurnerHasMintedEnoughToBurn
+    {
         vm.startPrank(BURNER);
         vm.expectRevert(abi.encodeWithSelector(IERC20Errors.ERC20InvalidSender.selector, address(0)));
         dusd.burn(address(0), BURN_AMOUNT);
         vm.stopPrank();
     }
 
-    function test_RevertWhen_AmountExceedsBalance() external givenCallerIsAuthorizedBurner {
-        _mintTokensToUser(MINT_AMOUNT);
+    function test_RevertWhen_AmountExceedsBalance()
+        external
+        givenCallerIsAuthorizedBurner
+        whenBurnerHasMintedEnoughToBurn
+    {
         uint256 excessiveAmount = MINT_AMOUNT + 1;
 
         vm.startPrank(BURNER);
-        vm.expectRevert(
-            abi.encodeWithSelector(IERC20Errors.ERC20InsufficientBalance.selector, USER, MINT_AMOUNT, excessiveAmount)
-        );
+        vm.expectRevert(IDUSD.DUSDInvalidInput.selector);
         dusd.burn(USER, excessiveAmount);
         vm.stopPrank();
     }
 
-    function test_WhenAmountIsZero() external givenCallerIsAuthorizedBurner {
-        _mintTokensToUser(MINT_AMOUNT);
+    function test_WhenAmountIsZero()
+        external
+        givenCallerIsAuthorizedBurner
+        whenBurnerHasMintedEnoughToBurn
+        whenAmountIsZero
+    {
         uint256 initialSupply = dusd.totalSupply();
         uint256 initialBalance = dusd.balanceOf(USER);
+        (uint256 initialMinted,) = dusd.minterConfig(BURNER);
+
+        vm.expectEmit(true, true, true, true);
+        emit IERC20.Transfer(USER, address(0), 0);
 
         vm.startPrank(BURNER);
         dusd.burn(USER, 0);
+        vm.stopPrank();
 
         // it should burn zero tokens successfully
         assertEq(dusd.totalSupply(), initialSupply);
         assertEq(dusd.balanceOf(USER), initialBalance);
-        vm.stopPrank();
+
+        // it should not decrease minter's minted amount
+        (uint256 finalMinted,) = dusd.minterConfig(BURNER);
+        assertEq(finalMinted, initialMinted);
     }
 
-    function test_WhenAmountIsValidAndWithinBalance() external givenCallerIsAuthorizedBurner {
-        _mintTokensToUser(MINT_AMOUNT);
+    function test_WhenAmountIsValidAndWithinBalance()
+        external
+        givenCallerIsAuthorizedBurner
+        whenBurnerHasMintedEnoughToBurn
+    {
         uint256 initialSupply = dusd.totalSupply();
         uint256 initialBalance = dusd.balanceOf(USER);
+        (uint256 initialMinted,) = dusd.minterConfig(BURNER);
 
         vm.expectEmit(true, true, true, true);
         emit IERC20.Transfer(USER, address(0), BURN_AMOUNT);
 
         vm.startPrank(BURNER);
         dusd.burn(USER, BURN_AMOUNT);
+        vm.stopPrank();
 
         // it should burn the specified amount from the account
         assertEq(dusd.balanceOf(USER), initialBalance - BURN_AMOUNT);
 
         // it should decrease total supply by the amount
         assertEq(dusd.totalSupply(), initialSupply - BURN_AMOUNT);
-        vm.stopPrank();
+
+        // it should decrease minter's minted amount by the amount
+        (uint256 finalMinted,) = dusd.minterConfig(BURNER);
+        assertEq(finalMinted, initialMinted - BURN_AMOUNT);
     }
 
-    function test_WhenBurningEntireBalance() external givenCallerIsAuthorizedBurner {
-        _mintTokensToUser(MINT_AMOUNT);
+    function test_WhenBurningEntireBalance() external givenCallerIsAuthorizedBurner whenBurnerHasMintedEnoughToBurn {
         uint256 initialSupply = dusd.totalSupply();
         uint256 userBalance = dusd.balanceOf(USER);
+        (uint256 initialMinted,) = dusd.minterConfig(BURNER);
+
+        vm.expectEmit(true, true, true, true);
+        emit IERC20.Transfer(USER, address(0), userBalance);
 
         vm.startPrank(BURNER);
         dusd.burn(USER, userBalance);
+        vm.stopPrank();
 
         // it should burn all tokens and set balance to zero
         assertEq(dusd.balanceOf(USER), 0);
         assertEq(dusd.totalSupply(), initialSupply - userBalance);
-        vm.stopPrank();
+
+        // it should decrease minter's minted amount by the amount
+        (uint256 finalMinted,) = dusd.minterConfig(BURNER);
+        assertEq(finalMinted, initialMinted - userBalance);
     }
 }
