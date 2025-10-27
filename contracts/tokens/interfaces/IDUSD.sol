@@ -81,7 +81,7 @@ interface IDUSD is IOFT, IMintableERC20 {
     /// @notice Sets the ceiling of DUSD to be minted by an address
     /// @param _for The address of the minter
     /// @param _ceiling The ceiling of DUSD to be minted by the minter
-    /// @dev This is the maximum amount of DUSD that can be minted by the minter
+    /// @dev This is the maximum amount of DUSD that can be minted by the minter at the time
     function setMinterCeiling(address _for, uint256 _ceiling) external;
 
     /// @notice Sets the allowed burner status for an address
