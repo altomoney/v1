@@ -14,12 +14,7 @@ import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConver
 import {MarketDeployer} from "@alto/utils/MarketDeployer.sol";
 import {AltoLeverageSwapper} from "@alto/lending/leverage/AltoLeverageSwapper.sol";
 import {AltoSusdeLendingOracle} from "@alto/oracles/lending/AltoSusdeLendingOracle.sol";
-import {
-    ChainlinkNode,
-    RedstoneNode,
-    ChainlinkRedstoneNode,
-    ERC4626RatioNode
-} from "@alto/oracles/interfaces/IModuleNode.sol";
+import {ChainlinkNode, ERC4626RatioNode} from "@alto/oracles/interfaces/IModuleNode.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -37,10 +32,6 @@ contract AltoLeverageSusdeMarketTest is Test {
     address constant SUSDE = 0x9D39A5DE30e57443BfF2A8307A4256c8797A3497;
     uint256 constant INITIAL_AMOUNT = 100000000000 ether;
     address constant CHAINLINK_USDE_USD_PRICE_FEED = 0xa569d910839Ae8865Da8F8e70FfFb0cBA869F961;
-    address constant REDSTONE_USDE_USD_PRICE_FEED = 0xbC5FBcf58CeAEa19D523aBc76515b9AEFb5cfd58;
-    uint256 constant CHAINLINK_WEIGHT = 0.9e18;
-    uint256 constant REDSTONE_WEIGHT = 0.1e18;
-    uint256 constant MAX_ALLOWED_DEVIATION = 1e16;
     address oracle;
 
     function setUp() public {
@@ -56,11 +47,7 @@ contract AltoLeverageSusdeMarketTest is Test {
         ERC4626RatioNode memory erc4626RatioNode = ERC4626RatioNode(1157209899495068171, 1708004591, 0.06 ether);
         ChainlinkNode memory chainlinkNode =
             ChainlinkNode(AggregatorV3Interface(CHAINLINK_USDE_USD_PRICE_FEED), 1, 26 hours, 8, 18);
-        RedstoneNode memory redstoneNode =
-            RedstoneNode(AggregatorV3Interface(REDSTONE_USDE_USD_PRICE_FEED), 1, 26 hours, 8, 18);
-        ChainlinkRedstoneNode memory chainlinkRedstoneNode =
-            ChainlinkRedstoneNode(chainlinkNode, redstoneNode, MAX_ALLOWED_DEVIATION, CHAINLINK_WEIGHT, REDSTONE_WEIGHT);
-        oracle = address(new AltoSusdeLendingOracle(address(this), erc4626RatioNode, chainlinkRedstoneNode, SUSDE));
+        oracle = address(new AltoSusdeLendingOracle(address(this), erc4626RatioNode, chainlinkNode, SUSDE));
 
         market = IMarket(
             MarketDeployer.deployBorrowMarket(
