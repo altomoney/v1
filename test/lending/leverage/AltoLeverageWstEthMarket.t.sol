@@ -12,12 +12,7 @@ import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {AltoWstEthLendingOracle} from "@alto/oracles/lending/AltoWstEthLendingOracle.sol";
 import {MarketDeployer} from "@alto/utils/MarketDeployer.sol";
 import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
-import {
-    ChainlinkNode,
-    RedstoneNode,
-    ChainlinkRedstoneNode,
-    ERC4626RatioNode
-} from "@alto/oracles/interfaces/IModuleNode.sol";
+import {ChainlinkNode, ERC4626RatioNode} from "@alto/oracles/interfaces/IModuleNode.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {SwapParams} from "@alto/lending/leverage/interfaces/IAltoLeverageSwapper.sol";
 import {ORACLE_PRICE_PRECISION, IOracle} from "@alto/oracles/interfaces/IOracle.sol";
@@ -37,10 +32,7 @@ contract AltoLeverageWstEthMarketTest is Test {
     uint256 constant INITIAL_AMOUNT = 100000000000 ether;
     uint256 constant MAX_ALLOWED_DEVIATION = 1e16; // 1%
     address constant CHAINLINK_ETH_USD_PRICE_FEED = 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419;
-    address constant REDSTONE_ETH_USD_PRICE_FEED = 0x67F6838e58859d612E4ddF04dA396d6DABB66Dc4;
-    address constant REDSTONE_WSTETH_USD_PRICE_FEED = 0xe4aE88743c3834d0c492eAbC47384c84BcADC6a6;
-    uint256 constant CHAINLINK_WEIGHT = 0.9e18;
-    uint256 constant REDSTONE_WEIGHT = 0.1e18;
+    address constant WSTETH = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
     address oracle;
 
     function setUp() public {
@@ -55,25 +47,9 @@ contract AltoLeverageWstEthMarketTest is Test {
 
         address irm = address(new FixedRateIrm(0.04 ether / uint256(365 days), address(this)));
         ERC4626RatioNode memory erc4626RatioNode = ERC4626RatioNode(1157209899495068171, 1708004591, 0.06 ether);
-        ChainlinkRedstoneNode memory chainlinkRedstoneNode = ChainlinkRedstoneNode(
-            ChainlinkNode(AggregatorV3Interface(CHAINLINK_ETH_USD_PRICE_FEED), 1, 2 hours, 18, 18),
-            RedstoneNode(AggregatorV3Interface(REDSTONE_ETH_USD_PRICE_FEED), 1, 26 hours, 18, 18),
-            MAX_ALLOWED_DEVIATION,
-            CHAINLINK_WEIGHT,
-            REDSTONE_WEIGHT
-        );
-        RedstoneNode memory redstoneNode =
-            RedstoneNode(AggregatorV3Interface(REDSTONE_WSTETH_USD_PRICE_FEED), 1, 8 hours, 18, 18);
-        oracle = address(
-            new AltoWstEthLendingOracle(
-                address(this),
-                address(collateralToken),
-                MAX_ALLOWED_DEVIATION,
-                erc4626RatioNode,
-                chainlinkRedstoneNode,
-                redstoneNode
-            )
-        );
+        ChainlinkNode memory chainlinkNode =
+            ChainlinkNode(AggregatorV3Interface(CHAINLINK_ETH_USD_PRICE_FEED), 1, 2 hours, 18, 18);
+        oracle = address(new AltoWstEthLendingOracle(address(this), WSTETH, erc4626RatioNode, chainlinkNode));
 
         market = IMarket(
             MarketDeployer.deployBorrowMarket(

@@ -12,12 +12,7 @@ import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {AltoTbtcLendingOracle} from "@alto/oracles/lending/AltoTbtcLendingOracle.sol";
 import {MarketDeployer} from "@alto/utils/MarketDeployer.sol";
 import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
-import {
-    ChainlinkNode,
-    RedstoneNode,
-    ChainlinkRedstoneNode,
-    ERC4626RatioNode
-} from "@alto/oracles/interfaces/IModuleNode.sol";
+import {ChainlinkNode, ERC4626RatioNode} from "@alto/oracles/interfaces/IModuleNode.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {SwapParams} from "@alto/lending/leverage/interfaces/IAltoLeverageSwapper.sol";
 import {ORACLE_PRICE_PRECISION, IOracle} from "@alto/oracles/interfaces/IOracle.sol";
@@ -36,10 +31,6 @@ contract AltoLeverageTbtcMarketTest is Test {
     address alice = address(0xA11CE);
     uint256 constant INITIAL_AMOUNT = 100000000000 ether;
     address constant CHAINLINK_BTC_USD_PRICE_FEED = 0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c;
-    address constant REDSTONE_BTC_USD_PRICE_FEED = 0xAB7f623fb2F6fea6601D4350FA0E2290663C28Fc;
-    uint256 constant CHAINLINK_WEIGHT = 0.9e18; // 90%
-    uint256 constant REDSTONE_WEIGHT = 0.1e18; // 10%
-    uint256 constant MAX_ALLOWED_DEVIATION = 1e16; // 1%
     address oracle;
 
     function setUp() public {
@@ -55,12 +46,8 @@ contract AltoLeverageTbtcMarketTest is Test {
         address irm = address(new FixedRateIrm(0.04 ether / uint256(365 days), address(this)));
         ChainlinkNode memory chainlinkNode =
             ChainlinkNode(AggregatorV3Interface(CHAINLINK_BTC_USD_PRICE_FEED), 1, 2 hours, 18, 18);
-        RedstoneNode memory redstoneNode =
-            RedstoneNode(AggregatorV3Interface(REDSTONE_BTC_USD_PRICE_FEED), 1, 26 hours, 18, 18);
-        ChainlinkRedstoneNode memory chainlinkRedstoneNode =
-            ChainlinkRedstoneNode(chainlinkNode, redstoneNode, MAX_ALLOWED_DEVIATION, CHAINLINK_WEIGHT, REDSTONE_WEIGHT);
 
-        oracle = address(new AltoTbtcLendingOracle(address(this), chainlinkRedstoneNode));
+        oracle = address(new AltoTbtcLendingOracle(address(this), chainlinkNode));
 
         market = IMarket(
             MarketDeployer.deployBorrowMarket(

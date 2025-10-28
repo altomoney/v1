@@ -14,7 +14,7 @@ import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConver
 import {MarketDeployer} from "@alto/utils/MarketDeployer.sol";
 import {AltoLeverageSwapper} from "@alto/lending/leverage/AltoLeverageSwapper.sol";
 import {AltoWethLendingOracle} from "@alto/oracles/lending/AltoWethLendingOracle.sol";
-import {ChainlinkNode, RedstoneNode, ChainlinkRedstoneNode} from "@alto/oracles/interfaces/IModuleNode.sol";
+import {ChainlinkNode} from "@alto/oracles/interfaces/IModuleNode.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -31,10 +31,6 @@ contract AltoLeverageWethMarketTest is Test {
     address alice = address(0xA11CE);
     uint256 constant INITIAL_AMOUNT = 100000000000 ether;
     address constant CHAINLINK_ETH_USD_PRICE_FEED = 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419;
-    address constant REDSTONE_ETH_USD_PRICE_FEED = 0x67F6838e58859d612E4ddF04dA396d6DABB66Dc4;
-    uint256 constant CHAINLINK_WEIGHT = 0.9e18;
-    uint256 constant REDSTONE_WEIGHT = 0.1e18;
-    uint256 constant MAX_ALLOWED_DEVIATION = 1e16;
     address oracle;
 
     function setUp() public {
@@ -48,12 +44,8 @@ contract AltoLeverageWethMarketTest is Test {
         address irm = address(new FixedRateIrm(0.04 ether / uint256(365 days), address(this)));
         ChainlinkNode memory chainlinkNode =
             ChainlinkNode(AggregatorV3Interface(CHAINLINK_ETH_USD_PRICE_FEED), 1, 2 hours, 18, 18);
-        RedstoneNode memory redstoneNode =
-            RedstoneNode(AggregatorV3Interface(REDSTONE_ETH_USD_PRICE_FEED), 1, 26 hours, 18, 18);
-        ChainlinkRedstoneNode memory chainlinkRedstoneNode =
-            ChainlinkRedstoneNode(chainlinkNode, redstoneNode, MAX_ALLOWED_DEVIATION, CHAINLINK_WEIGHT, REDSTONE_WEIGHT);
 
-        oracle = address(new AltoWethLendingOracle(address(this), chainlinkRedstoneNode));
+        oracle = address(new AltoWethLendingOracle(address(this), chainlinkNode));
 
         market = IMarket(
             MarketDeployer.deployBorrowMarket(
