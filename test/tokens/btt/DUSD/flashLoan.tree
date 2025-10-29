@@ -3,32 +3,39 @@ DUSD::flashLoan
 │   └── it should revert with IsPaused
 └── given contract is not paused
     ├── when token is not this contract
-    │   └── it should revert with ERC3156UnsupportedToken
+    │   └── it should revert with ERC3156ExceededMaxLoan
     └── when token is this contract
-        ├── when value exceeds maxFlashLoan
-        │   └── it should revert with ERC3156ExceededMaxLoan
-        └── when value is within maxFlashLoan
-            ├── when receiver is not a valid flash borrower
-            │   └── it should revert with ERC3156InvalidReceiver
-            ├── when receiver returns invalid hash
-            │   └── it should revert with ERC3156InvalidReceiver
-            ├── when receiver does not approve repayment
-            │   └── it should revert with ERC20InsufficientAllowance
-            ├── when receiver has insufficient balance for repayment
-            │   └── it should revert with ERC20InsufficientBalance
-            ├── when flash fee is zero or flashFeeReceiver is zero
-            │   ├── it should call onFlashLoan on flash borrower
-            │   ├── it should not burn anything
-            │   ├── dusd balance of flash borrower should not change
-            │   └── it should return true
-            ├── when flash fee is non-zero and flashFeeReceiver is set
-            │   ├── it should call onFlashLoan on flash borrower
-            │   ├── it should burn flash fee from flash borrower
-            │   ├── it should transfer fee to flashFeeReceiver
-            │   └── it should return true
-            ├── when value is zero
-            │   ├── it should call receiver onFlashLoan with zero
-            │   └── it should return true
-            └── when value is maximum possible
-                ├── it should call onFlashLoan on flash borrower
-                └── it should return true
+        ├── when flashMintCap is zero
+        │   ├── when value is greater than zero
+        │   │   └── it should revert with ERC3156ExceededMaxLoan
+        │   └── when value is equal to zero
+        │       ├── it should call receiver onFlashLoan with zero
+        │       └── it should return true
+        └── when flashMintCap is set
+            ├── when value exceeds flashMintCap
+            │   └── it should revert with ERC3156ExceededMaxLoan
+            └── when value is within flashMintCap
+                ├── when receiver is not a valid flash borrower
+                │   └── it should revert with ERC3156InvalidReceiver
+                ├── when receiver returns invalid hash
+                │   └── it should revert with ERC3156InvalidReceiver
+                ├── when receiver does not approve repayment
+                │   └── it should revert with ERC20InsufficientAllowance
+                ├── when receiver has insufficient balance for repayment
+                │   └── it should revert with ERC20InsufficientBalance
+                ├── when flash fee is zero or flashFeeReceiver is zero
+                │   ├── it should call onFlashLoan on flash borrower
+                │   ├── it should not burn anything
+                │   ├── dusd balance of flash borrower should not change
+                │   └── it should return true
+                ├── when flash fee is non-zero and flashFeeReceiver is set
+                │   ├── it should call onFlashLoan on flash borrower
+                │   ├── it should burn flash fee from flash borrower
+                │   ├── it should transfer fee to flashFeeReceiver
+                │   └── it should return true
+                ├── when value is zero
+                │   ├── it should call receiver onFlashLoan with zero
+                │   └── it should return true
+                └── when value equals flashMintCap
+                    ├── it should call onFlashLoan on flash borrower
+                    └── it should return true

@@ -3,6 +3,7 @@ pragma solidity ^0.8.22;
 
 import {DUSDCommon} from "./DUSDCommon.t.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {IDUSD} from "@alto/tokens/interfaces/IDUSD.sol";
 
 contract DUSDSetFlashFeeReceiver is DUSDCommon {
     modifier givenCallerIsNotOwner() {
@@ -26,7 +27,7 @@ contract DUSDSetFlashFeeReceiver is DUSDCommon {
         assertEq(dusd.flashFeeReceiver(), FLASH_FEE_RECEIVER);
 
         vm.expectEmit(true, true, true, true);
-        emit SetFlashFeeReceiver(FLASH_FEE_RECEIVER, address(0));
+        emit IDUSD.SetFlashFeeReceiver(FLASH_FEE_RECEIVER, address(0));
 
         vm.prank(OWNER);
         dusd.setFlashFeeReceiver(address(0));
@@ -39,7 +40,7 @@ contract DUSDSetFlashFeeReceiver is DUSDCommon {
         address oldReceiver = dusd.flashFeeReceiver();
 
         vm.expectEmit(true, true, true, true);
-        emit SetFlashFeeReceiver(oldReceiver, FLASH_FEE_RECEIVER);
+        emit IDUSD.SetFlashFeeReceiver(oldReceiver, FLASH_FEE_RECEIVER);
 
         vm.prank(OWNER);
         dusd.setFlashFeeReceiver(FLASH_FEE_RECEIVER);
@@ -55,7 +56,7 @@ contract DUSDSetFlashFeeReceiver is DUSDCommon {
         assertEq(dusd.flashFeeReceiver(), FLASH_FEE_RECEIVER);
 
         vm.expectEmit(true, true, true, true);
-        emit SetFlashFeeReceiver(FLASH_FEE_RECEIVER, FLASH_FEE_RECEIVER);
+        emit IDUSD.SetFlashFeeReceiver(FLASH_FEE_RECEIVER, FLASH_FEE_RECEIVER);
 
         vm.prank(OWNER);
         dusd.setFlashFeeReceiver(FLASH_FEE_RECEIVER);

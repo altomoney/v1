@@ -24,7 +24,7 @@ contract DUSDSetMinterStatus is DUSDCommon {
         assertFalse(dusd.allowedMinter(MINTER));
 
         vm.expectEmit(true, true, true, true);
-        emit SetMinterStatus(MINTER, true);
+        emit IDUSD.SetMinterStatus(MINTER, true);
 
         vm.prank(OWNER);
         dusd.setMinterStatus(MINTER, true);
@@ -40,7 +40,7 @@ contract DUSDSetMinterStatus is DUSDCommon {
         assertTrue(dusd.allowedMinter(MINTER));
 
         vm.expectEmit(true, true, true, true);
-        emit SetMinterStatus(MINTER, false);
+        emit IDUSD.SetMinterStatus(MINTER, false);
 
         vm.prank(OWNER);
         dusd.setMinterStatus(MINTER, false);
@@ -56,7 +56,7 @@ contract DUSDSetMinterStatus is DUSDCommon {
         assertTrue(dusd.allowedMinter(MINTER));
 
         vm.expectEmit(true, true, true, true);
-        emit SetMinterStatus(MINTER, true);
+        emit IDUSD.SetMinterStatus(MINTER, true);
 
         vm.prank(OWNER);
         dusd.setMinterStatus(MINTER, true);
@@ -69,7 +69,7 @@ contract DUSDSetMinterStatus is DUSDCommon {
         assertFalse(dusd.allowedMinter(NON_MINTER));
 
         vm.expectEmit(true, true, true, true);
-        emit SetMinterStatus(NON_MINTER, false);
+        emit IDUSD.SetMinterStatus(NON_MINTER, false);
 
         vm.prank(OWNER);
         dusd.setMinterStatus(NON_MINTER, false);

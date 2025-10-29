@@ -28,7 +28,7 @@ contract DUSDSetFlashFee is DUSDCommon {
         assertEq(dusd.flashFee(), DEFAULT_FLASH_FEE);
 
         vm.expectEmit(true, true, true, true);
-        emit SetFlashFee(DEFAULT_FLASH_FEE, 0);
+        emit IDUSD.SetFlashFee(DEFAULT_FLASH_FEE, 0);
 
         vm.prank(OWNER);
         dusd.setFlashFee(0);
@@ -51,7 +51,7 @@ contract DUSDSetFlashFee is DUSDCommon {
         uint256 oldFee = dusd.flashFee();
 
         vm.expectEmit(true, true, true, true);
-        emit SetFlashFee(oldFee, DEFAULT_FLASH_FEE);
+        emit IDUSD.SetFlashFee(oldFee, DEFAULT_FLASH_FEE);
 
         vm.prank(OWNER);
         dusd.setFlashFee(DEFAULT_FLASH_FEE);
@@ -71,7 +71,7 @@ contract DUSDSetFlashFee is DUSDCommon {
         assertEq(dusd.flashFee(), DEFAULT_FLASH_FEE);
 
         vm.expectEmit(true, true, true, true);
-        emit SetFlashFee(DEFAULT_FLASH_FEE, DEFAULT_FLASH_FEE);
+        emit IDUSD.SetFlashFee(DEFAULT_FLASH_FEE, DEFAULT_FLASH_FEE);
 
         vm.prank(OWNER);
         dusd.setFlashFee(DEFAULT_FLASH_FEE);

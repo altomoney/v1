@@ -31,9 +31,11 @@ contract FlashLoanTest is DUSDCommon {
         invalidBorrower = new MockInvalidBorrower(); // not a valid borrower
     }
 
-    // =====================
-    // Given contract is paused
-    // =====================
+    modifier whenFlashMintCapIsSet() {
+        vm.prank(OWNER);
+        dusd.setFlashMintCap(FLASH_LOAN_AMOUNT * 2);
+        _;
+    }
 
     function test_RevertWhen_ContractIsPaused() public {
         _pauseContract();
@@ -42,17 +44,39 @@ contract FlashLoanTest is DUSDCommon {
         dusd.flashLoan(flashBorrower, address(dusd), FLASH_LOAN_AMOUNT, "");
     }
 
-    // =====================
-    // Given contract is not paused
-    // =====================
-
     function test_RevertWhen_TokenIsNotThisContract() public {
+        // maxFlashLoan returns 0 for non-this token
         vm.expectRevert(abi.encodeWithSelector(ERC20FlashMint.ERC3156ExceededMaxLoan.selector, 0));
         dusd.flashLoan(flashBorrower, INVALID_TOKEN, FLASH_LOAN_AMOUNT, "");
     }
 
-    function test_RevertWhen_ValueExceedsMaxFlashLoan() public {
+    function test_RevertWhen_FlashMintCapIsZeroAndValueIsGreaterThanZero() public {
+        // flashMintCap is 0 by default
+        assertEq(dusd.flashMintCap(), 0);
+        assertEq(dusd.maxFlashLoan(address(dusd)), 0);
+
+        vm.expectRevert(abi.encodeWithSelector(ERC20FlashMint.ERC3156ExceededMaxLoan.selector, 0));
+        dusd.flashLoan(flashBorrower, address(dusd), FLASH_LOAN_AMOUNT, "");
+    }
+
+    function test_FlashLoan_WhenFlashMintCapIsZeroAndValueIsZero() public {
+        // flashMintCap is 0 by default
+        assertEq(dusd.flashMintCap(), 0);
+        assertEq(dusd.maxFlashLoan(address(dusd)), 0);
+
+        uint256 initialSupply = dusd.totalSupply();
+        vm.expectCall(address(flashBorrower), abi.encodeWithSelector(IERC3156FlashBorrower.onFlashLoan.selector));
+        bool result = dusd.flashLoan(flashBorrower, address(dusd), 0, "");
+
+        assertTrue(result);
+        assertEq(dusd.totalSupply(), initialSupply);
+    }
+
+    function test_RevertWhen_ValueExceedsFlashMintCap() public {
+        uint256 flashMintCapValue = 5000e18;
+
         vm.startPrank(OWNER);
+        dusd.setFlashMintCap(flashMintCapValue);
         dusd.setMinterStatus(MINTER, true);
         dusd.setMinterCeiling(MINTER, 1000e18);
         vm.stopPrank();
@@ -61,27 +85,29 @@ contract FlashLoanTest is DUSDCommon {
         dusd.mint(address(this), 1000e18);
 
         uint256 maxLoan = dusd.maxFlashLoan(address(dusd));
-        uint256 exceedingAmount = maxLoan + 1;
+        assertEq(maxLoan, flashMintCapValue);
 
-        vm.expectRevert(abi.encodeWithSelector(ERC20FlashMint.ERC3156ExceededMaxLoan.selector, maxLoan));
+        uint256 exceedingAmount = flashMintCapValue + 1;
+
+        vm.expectRevert(abi.encodeWithSelector(ERC20FlashMint.ERC3156ExceededMaxLoan.selector, flashMintCapValue));
         dusd.flashLoan(flashBorrower, address(dusd), exceedingAmount, "");
     }
 
-    function test_RevertWhen_ReceiverIsNotValidFlashBorrower() public {
+    function test_RevertWhen_ReceiverIsNotValidFlashBorrower() public whenFlashMintCapIsSet {
         vm.expectRevert(
             abi.encodeWithSelector(ERC20FlashMint.ERC3156InvalidReceiver.selector, address(invalidBorrower))
         );
         dusd.flashLoan(IERC3156FlashBorrower(address(invalidBorrower)), address(dusd), FLASH_LOAN_AMOUNT, "");
     }
 
-    function test_RevertWhen_ReceiverReturnsInvalidHash() public {
+    function test_RevertWhen_ReceiverReturnsInvalidHash() public whenFlashMintCapIsSet {
         vm.expectRevert(
             abi.encodeWithSelector(ERC20FlashMint.ERC3156InvalidReceiver.selector, address(invalidReturnBorrower))
         );
         dusd.flashLoan(invalidReturnBorrower, address(dusd), FLASH_LOAN_AMOUNT, "");
     }
 
-    function test_RevertWhen_ReceiverDoesNotApproveRepayment() public {
+    function test_RevertWhen_ReceiverDoesNotApproveRepayment() public whenFlashMintCapIsSet {
         vm.expectRevert(
             abi.encodeWithSelector(
                 IERC20Errors.ERC20InsufficientAllowance.selector, address(dusd), 0, FLASH_LOAN_AMOUNT
@@ -90,7 +116,7 @@ contract FlashLoanTest is DUSDCommon {
         dusd.flashLoan(noApproveBorrower, address(dusd), FLASH_LOAN_AMOUNT, "");
     }
 
-    function test_RevertWhen_ReceiverHasInsufficientBalanceForRepayment() public {
+    function test_RevertWhen_ReceiverHasInsufficientBalanceForRepayment() public whenFlashMintCapIsSet {
         // Create a borrower that approves but doesn't have enough balance
         MockInsufficientBalanceBorrower insufficientBorrower = new MockInsufficientBalanceBorrower();
 
@@ -106,7 +132,7 @@ contract FlashLoanTest is DUSDCommon {
     // When flash fee is zero or flashFeeReceiver is zero
     // =====================
 
-    function test_FlashLoan_WhenFeeIsZeroAndReceiverIsZero() public {
+    function test_FlashLoan_WhenFeeIsZeroAndReceiverIsZero() public whenFlashMintCapIsSet {
         // Default state: flashFee = 0, flashFeeReceiver = address(0)
 
         uint256 initialSupply = dusd.totalSupply();
@@ -121,7 +147,7 @@ contract FlashLoanTest is DUSDCommon {
         assertEq(dusd.balanceOf(address(FLASH_FEE_RECEIVER)), initialReceiverBalance);
     }
 
-    function test_FlashLoan_WhenFeeIsNonZeroButReceiverIsZero() public {
+    function test_FlashLoan_WhenFeeIsNonZeroButReceiverIsZero() public whenFlashMintCapIsSet {
         uint256 flashFee = dusd.flashFee(address(dusd), FLASH_LOAN_AMOUNT);
         vm.startPrank(OWNER);
         dusd.setFlashFee(flashFee); // Set non-zero fee but keep receiver as zero
@@ -141,7 +167,7 @@ contract FlashLoanTest is DUSDCommon {
     // When flash fee is non-zero and flashFeeReceiver is set
     // =====================
 
-    function test_FlashLoan_WhenFeeIsNonZeroAndReceiverIsSet() public {
+    function test_FlashLoan_WhenFeeIsNonZeroAndReceiverIsSet() public whenFlashMintCapIsSet {
         uint256 fee = dusd.flashFee(address(dusd), FLASH_LOAN_AMOUNT);
 
         vm.startPrank(OWNER);
@@ -166,6 +192,10 @@ contract FlashLoanTest is DUSDCommon {
     // =====================
 
     function test_FlashLoan_WhenValueIsZero() public {
+        // Set flashMintCap (zero value should work even with zero cap)
+        vm.prank(OWNER);
+        dusd.setFlashMintCap(0);
+
         uint256 initialSupply = dusd.totalSupply();
         vm.expectCall(address(flashBorrower), abi.encodeWithSelector(IERC3156FlashBorrower.onFlashLoan.selector));
         bool result = dusd.flashLoan(flashBorrower, address(dusd), 0, "");
@@ -174,11 +204,18 @@ contract FlashLoanTest is DUSDCommon {
         assertEq(dusd.totalSupply(), initialSupply);
     }
 
-    function test_FlashLoan_WhenValueIsMaximumPossible() public {
+    function test_FlashLoan_WhenValueEqualsFlashMintCap() public {
+        uint256 flashMintCapValue = 10000e18;
+
+        vm.prank(OWNER);
+        dusd.setFlashMintCap(flashMintCapValue);
+
         uint256 maxLoan = dusd.maxFlashLoan(address(dusd));
+        assertEq(maxLoan, flashMintCapValue);
+
         uint256 initialSupply = dusd.totalSupply();
         vm.expectCall(address(flashBorrower), abi.encodeWithSelector(IERC3156FlashBorrower.onFlashLoan.selector));
-        bool result = dusd.flashLoan(flashBorrower, address(dusd), maxLoan, "");
+        bool result = dusd.flashLoan(flashBorrower, address(dusd), flashMintCapValue, "");
 
         assertTrue(result);
         assertEq(dusd.totalSupply(), initialSupply);
