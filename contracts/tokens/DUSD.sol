@@ -2,7 +2,7 @@
 pragma solidity ^0.8.22;
 
 import {OFT} from "@alto/utils/OFT.sol";
-import {IDUSD} from "@alto/tokens/interfaces/IDUSD.sol";
+import {IDUSD, MinterConfig, FlashFee} from "@alto/tokens/interfaces/IDUSD.sol";
 
 import {Pausable, IPausable} from "@alto/utils/Pausable.sol";
 import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
@@ -22,7 +22,7 @@ contract DUSD is Ownable2Step, Pausable, OFT, ERC20FlashMint, IDUSD {
     address public flashFeeReceiver;
 
     /// @inheritdoc IDUSD
-    uint256 public flashFee;
+    FlashFee public flashFee;
 
     /// @inheritdoc IDUSD
     uint256 public flashMintCap;
@@ -80,7 +80,25 @@ contract DUSD is Ownable2Step, Pausable, OFT, ERC20FlashMint, IDUSD {
 
     /// @inheritdoc ERC20FlashMint
     function _flashFee(address, uint256 amount) internal view virtual override returns (uint256) {
-        return flashFee.multiplyWithPrecisionUp(amount);
+        if (amount > flashMintCap) {
+            revert DUSDExceededFlashMintCap();
+        }
+        uint256 flashFeeToCharge;
+
+        if (flashFee.minFlashFee == flashFee.maxFlashFee) {
+            flashFeeToCharge = flashFee.minFlashFee;
+        } else if (flashFee.maxFlashFee > flashFee.minFlashFee) {
+            uint256 flashFeeDifference = flashFee.maxFlashFee - flashFee.minFlashFee;
+            flashFeeToCharge =
+                flashFee.minFlashFee + FixedPointMath.divideWithRounding(amount, flashFeeDifference, flashMintCap, true);
+        } else {
+            // flashFee.minFlashFee > flashFee.maxFlashFee
+            uint256 flashFeeDifference = flashFee.minFlashFee - flashFee.maxFlashFee;
+            flashFeeToCharge = flashFee.minFlashFee
+                - FixedPointMath.divideWithRounding(amount, flashFeeDifference, flashMintCap, false);
+        }
+
+        return amount.multiplyWithPrecisionUp(flashFeeToCharge);
     }
 
     /// @inheritdoc ERC20FlashMint
@@ -100,10 +118,11 @@ contract DUSD is Ownable2Step, Pausable, OFT, ERC20FlashMint, IDUSD {
     }
 
     /// @inheritdoc IDUSD
-    function setFlashFee(uint256 _newFlashFee) external onlyOwner {
-        if (_newFlashFee > MATH_PRECISION) {
+    function setFlashFee(FlashFee calldata _newFlashFee) external onlyOwner {
+        if (_newFlashFee.minFlashFee > MATH_PRECISION || _newFlashFee.maxFlashFee > MATH_PRECISION) {
             revert DUSDInvalidInput();
         }
+
         emit SetFlashFee(flashFee, _newFlashFee);
         flashFee = _newFlashFee;
     }

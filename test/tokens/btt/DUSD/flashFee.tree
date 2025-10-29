@@ -1,14 +1,35 @@
-DUSD::flashFee
-├── given flashFee is zero
+DUSD::flashFee()
+├── given flashFee.minFlashFee and flashFee.maxFlashFee are both zero
 │   └── when amount is anything
 │       └── it should return zero
-└── given flashFee is non-zero
-    ├── when amount is zero
-    │   └── it should return zero
-    ├── when amount is non-zero
-    │   ├── it should return calculated fee (flashFee * amount / MATH_PRECISION)
-    │   └── it should return proportional value
-    ├── when amount is doubled
-    │   └── it should return double the previous fee
-    └── when amount is halved
-        └── it should return half the previous fee
+├── given flashMintCap is zero
+│   ├── when amount is zero
+│   │   └── it should return zero
+│   └── when amount is greater than zero
+│       └── it should revert with DUSDExceededFlashMintCap
+└── given flashMintCap is non-zero
+    ├── when amount exceeds flashMintCap
+    │   └── it should revert with DUSDExceededFlashMintCap
+    ├── when flashFee.minFlashFee equals flashFee.maxFlashFee
+    │   ├── when amount is zero
+    │   │   └── it should return zero
+    │   ├── when amount is non-zero
+    │   │   └── it should return calculated fee using flat rate of flashFee.minFlashFee
+    │   ├── when amount is doubled
+    │   │   └── it should return double the previous fee
+    │   └── when amount is halved
+    │       └── it should return half the previous fee
+    ├── when flashFee.maxFlashFee is greater than flashFee.minFlashFee
+    │   ├── when amount is zero
+    │   │   └── it should return zero
+    │   ├── when amount equals flashMintCap
+    │   │   └── it should return calculated fee using maxFlashFee
+    │   └── when amount is between zero and flashMintCap
+    │       └── it should return calculated fee that linearly interpolates between minFlashFee and maxFlashFee
+    └── when flashFee.minFlashFee is greater than flashFee.maxFlashFee
+        ├── when amount is zero
+        │   └── it should return calculated fee using minFlashFee
+        ├── when amount equals flashMintCap
+        │   └── it should return calculated fee using maxFlashFee
+        └── when amount is between zero and flashMintCap
+            └── it should return calculated fee that linearly interpolates downward from minFlashFee to maxFlashFee

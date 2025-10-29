@@ -9,11 +9,14 @@ import {IPausable} from "@alto/utils/Pausable.sol";
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
+import {FlashFee} from "@alto/tokens/interfaces/IDUSD.sol";
 
 contract FlashLoanTest is DUSDCommon {
     address constant INVALID_TOKEN = address(0x999);
     uint256 constant FLASH_LOAN_AMOUNT = 1000e18;
     uint256 constant MAX_FLASH_LOAN_AMOUNT = type(uint256).max - 1;
+    uint128 constant MIN_FLASH_FEE = 0.01 ether; // 1%
+    uint128 constant MAX_FLASH_FEE = 0.02 ether; // 2%
 
     ERC3156FlashBorrowerMock invalidReturnBorrower;
     ERC3156FlashBorrowerMock noApproveBorrower;
@@ -22,8 +25,10 @@ contract FlashLoanTest is DUSDCommon {
     function setUp() public override {
         super.setUp();
 
-        vm.prank(OWNER);
+        vm.startPrank(OWNER);
         dusd.setMinterStatus(address(this), true);
+        dusd.setMinterCeiling(address(this), 1_000_000 ether);
+        vm.stopPrank();
 
         // Create different types of borrowers for testing
         invalidReturnBorrower = new ERC3156FlashBorrowerMock(false, true); // returns invalid hash
@@ -148,10 +153,11 @@ contract FlashLoanTest is DUSDCommon {
     }
 
     function test_FlashLoan_WhenFeeIsNonZeroButReceiverIsZero() public whenFlashMintCapIsSet {
-        uint256 flashFee = dusd.flashFee(address(dusd), FLASH_LOAN_AMOUNT);
         vm.startPrank(OWNER);
-        dusd.setFlashFee(flashFee); // Set non-zero fee but keep receiver as zero
+        dusd.setFlashFee(FlashFee({minFlashFee: MIN_FLASH_FEE, maxFlashFee: MAX_FLASH_FEE})); // Set non-zero fee but keep receiver as zero
         vm.stopPrank();
+
+        uint256 flashFee = dusd.flashFee(address(dusd), FLASH_LOAN_AMOUNT);
 
         dusd.mint(address(flashBorrower), flashFee);
 
@@ -168,12 +174,15 @@ contract FlashLoanTest is DUSDCommon {
     // =====================
 
     function test_FlashLoan_WhenFeeIsNonZeroAndReceiverIsSet() public whenFlashMintCapIsSet {
-        uint256 fee = dusd.flashFee(address(dusd), FLASH_LOAN_AMOUNT);
-
+        FlashFee memory flashFee = FlashFee({minFlashFee: MIN_FLASH_FEE, maxFlashFee: MAX_FLASH_FEE});
         vm.startPrank(OWNER);
-        dusd.setFlashFee(fee);
+        dusd.setFlashFee(flashFee);
         dusd.setFlashFeeReceiver(FLASH_FEE_RECEIVER);
         vm.stopPrank();
+
+        uint256 fee = dusd.flashFee(address(dusd), FLASH_LOAN_AMOUNT);
+
+        dusd.mint(address(flashBorrower), fee);
 
         uint256 initialSupply = dusd.totalSupply();
         uint256 initialReceiverBalance = dusd.balanceOf(FLASH_FEE_RECEIVER);

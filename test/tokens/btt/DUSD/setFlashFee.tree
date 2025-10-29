@@ -2,14 +2,22 @@ DUSD::setFlashFee
 ├── given caller is not owner
 │   └── it should revert with OwnableUnauthorizedAccount
 └── given caller is owner
-    ├── when setting flash fee to zero
-    │   ├── it should set flashFee to zero
-    │   └── it should emit SetFlashFee event with old and new fee
-    ├── when setting flash fee to greater than MATH_PRECISION
-    │   └── it should revert with DUSDInvalidFlashFee
-    ├── when setting flash fee to non-zero value
-    │   ├── it should set flashFee to the new value
-    │   └── it should emit SetFlashFee event with old and new fee
-    └── when setting flash fee to same value
-        ├── it should update flashFee to the same value
-        └── it should emit SetFlashFee event with old and new fee
+    ├── when minFlashFee is greater than MATH_PRECISION
+    │   └── it should revert with DUSDInvalidInput
+    ├── when maxFlashFee is greater than MATH_PRECISION
+    │   └── it should revert with DUSDInvalidInput
+    ├── when both minFlashFee and maxFlashFee are zero
+    │   ├── it should set flashFee struct to zero
+    │   └── it should emit SetFlashFee event with old and new flashFee struct
+    ├── when minFlashFee equals maxFlashFee
+    │   ├── it should set flashFee struct correctly
+    │   └── it should emit SetFlashFee event with old and new flashFee struct
+    ├── when maxFlashFee is greater than minFlashFee
+    │   ├── it should set flashFee struct correctly
+    │   └── it should emit SetFlashFee event with old and new flashFee struct
+    ├── when minFlashFee is greater than maxFlashFee
+    │   ├── it should set flashFee struct correctly
+    │   └── it should emit SetFlashFee event with old and new flashFee struct
+    └── when setting flashFee struct to same values
+        ├── it should update flashFee struct to the same values
+        └── it should emit SetFlashFee event with old and new flashFee struct
