@@ -1,0 +1,18 @@
+AltoRewardsOracle::updateChainlinkNode()
+├── given caller is not owner
+│   └── when _chainlinkNode is valid
+│       └── it should revert with OwnableUnauthorizedAccount
+├── given caller is owner
+│   ├── when _chainlinkNode.feed is zero address
+│   │   └── it should revert with ModuleChainlinkInvalidInput
+│   ├── when _chainlinkNode.stalePeriod is zero
+│   │   └── it should revert with ModuleChainlinkInvalidInput
+│   ├── when _chainlinkNode.inDecimals is zero
+│   │   └── it should revert with ModuleChainlinkInvalidInput
+│   ├── when _chainlinkNode.outDecimals is zero
+│   │   └── it should revert with ModuleChainlinkInvalidInput
+│   ├── when _chainlinkNode.multiplied is not 0 or 1
+│   │   └── it should revert with ModuleChainlinkInvalidInput
+│   └── when _chainlinkNode is valid
+│       ├── it should emit SetChainlinkNode event with old and new chainlink node
+│       └── it should update chainlinkNode to new chainlink node

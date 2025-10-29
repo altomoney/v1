@@ -3,9 +3,12 @@ pragma solidity ^0.8.22;
 
 import {AltoRewardsOracleCommon} from "./AltoRewardsOracleCommon.t.sol";
 import {AltoRewardsOracle} from "@alto/oracles/AltoRewardsOracle.sol";
-import {AltoRewardsOracleInitParams, IAltoRewardsOracleEvents} from "@alto/oracles/interfaces/IAltoRewardsOracle.sol";
+import {
+    AltoRewardsOracleInitParams,
+    IAltoRewardsOracleEvents,
+    IAltoRewardsOracleErrors
+} from "@alto/oracles/interfaces/IAltoRewardsOracle.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {IAltoRewardsOracleErrors} from "@alto/oracles/interfaces/IAltoRewardsOracle.sol";
 
 contract AltoRewardsOracleUpdatePriceUpdateCooldownPeriod is AltoRewardsOracleCommon {
     AltoRewardsOracle oracle;

@@ -2,35 +2,24 @@
 
 pragma solidity >=0.8.0;
 
-import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+import {UniswapNode, ChainlinkNode} from "@alto/oracles/interfaces/IModuleNode.sol";
 import {IUsdOracle} from "@alto/oracles/interfaces/IUsdOracle.sol";
+import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
 /// @notice Parameters for initializing the AltoRewardsOracle
 struct AltoRewardsOracleInitParams {
-    /// @dev List of 2 addresses representing the in-currency address and the out-currency address
-    address[] addressInAndOutUni;
-    /// @dev Path of the Uniswap pools
-    IUniswapV3Pool[] circuitUniswap;
-    /// @dev Whether we should multiply or divide by this rate in the path
-    uint8[] circuitUniIsMultiplied;
-    /// @dev Time weighted average window for all Uniswap pools
-    uint32 twapPeriod;
-    /// @dev Number of observations that each pool should have stored
-    uint16 observationLength;
-    /// @dev Whether we need to use the last Chainlink oracle to convert to another
-    /// currency / asset (Forex for instance)
-    uint8 uniFinalCurrency;
-    /// @dev Chainlink pool addresses put in order
-    address[] circuitChainlink;
-    /// @dev Whether we should multiply or divide by this rate
-    uint8[] circuitChainIsMultiplied;
-    /// @dev The initial owner of the contract.
+    // @notice full unit of the in-currency with decimals
+    uint256 inBase;
+    // @notice The Uniswap node to query
+    UniswapNode uniswapNode;
+    // @notice The Chainlink node to query
+    ChainlinkNode chainlinkNode;
+    // @notice The initial owner of the contract.
     address owner;
-    /// @dev The stale period for the Chainlink oracle
-    uint32 stalePeriod;
-    /// @dev Description of the assets concerned by the oracle
+    // @notice Description of the assets concerned by the oracle
     bytes32 description;
-    /// @dev Minimum time interval (in seconds) required between price updates
+    // @notice Minimum time interval (in seconds) required between price updates
     uint256 priceUpdateCooldownPeriod;
 }
 
@@ -56,17 +45,21 @@ interface IAltoRewardsOracleEvents {
     /// @param oldPriceUpdateCooldownPeriod The old price update cooldown period
     /// @param newPriceUpdateCooldownPeriod The new price update cooldown period
     event PriceUpdateCooldownPeriodUpdated(uint256 oldPriceUpdateCooldownPeriod, uint256 newPriceUpdateCooldownPeriod);
+
+    /// @notice Emitted when the Uniswap node is updated
+    /// @param oldUniswapNode The old Uniswap node
+    /// @param newUniswapNode The new Uniswap node
+    event SetUniswapNode(UniswapNode oldUniswapNode, UniswapNode newUniswapNode);
+
+    /// @notice Emitted when the Chainlink node is updated
+    /// @param oldChainlinkNode The old Chainlink node
+    /// @param newChainlinkNode The new Chainlink node
+    event SetChainlinkNode(ChainlinkNode oldChainlinkNode, ChainlinkNode newChainlinkNode);
 }
 
-interface IAltoRewardsOracle is IUsdOracle, IAltoRewardsOracleErrors, IAltoRewardsOracleEvents {
+interface IAltoRewardsOracleBase is IUsdOracle, IAltoRewardsOracleErrors, IAltoRewardsOracleEvents {
     /// @notice 1 full unit of the in-currency with decimals
     function IN_BASE() external view returns (uint256);
-
-    /// @notice 1 full unit of the out-currency with decimals
-    function OUT_BASE() external view returns (uint256);
-
-    /// @notice Whether the final rate obtained with Uniswap should be multiplied with last rate from Chainlink
-    function UNI_FINAL_CURRENCY() external view returns (uint8);
 
     /// @notice Timestamp when this oracle was last updated to return the new price
     function lastPriceUpdateTimestamp() external view returns (uint256);
@@ -95,7 +88,35 @@ interface IAltoRewardsOracle is IUsdOracle, IAltoRewardsOracleErrors, IAltoRewar
     /// @dev This function will revert if the `priceUpdateCooldownPeriod` did not pass since the last update
     function updatePrice() external;
 
-    /// @notice Updates the `priceUpdateCooldownPeriod`
-    /// @param _priceUpdateCooldownPeriod The new `priceUpdateCooldownPeriod`
+    /// @notice Updates the price update cooldown period
+    /// @param _priceUpdateCooldownPeriod The new price update cooldown period
     function updatePriceUpdateCooldownPeriod(uint256 _priceUpdateCooldownPeriod) external;
+
+    /// @notice Updates the Uniswap node
+    /// @param _uniswapNode The new Uniswap node
+    function updateUniswapNode(UniswapNode memory _uniswapNode) external;
+
+    /// @notice Updates the Chainlink node
+    /// @param _chainlinkNode The new Chainlink node
+    function updateChainlinkNode(ChainlinkNode memory _chainlinkNode) external;
+}
+
+interface IAltoRewardsOracle is IAltoRewardsOracleBase {
+    /// @notice Gets the Uniswap node
+    /// @return The Uniswap node
+    function uniswapNode() external view returns (UniswapNode memory);
+
+    /// @notice Gets the Chainlink node
+    /// @return The Chainlink node
+    function chainlinkNode() external view returns (ChainlinkNode memory);
+}
+
+interface IAltoRewardsOracleStaticTypes is IAltoRewardsOracleBase {
+    /// @notice Gets the Uniswap node
+    /// @return The Uniswap node
+    function uniswapNode() external view returns (IUniswapV3Pool, uint8, uint32);
+
+    /// @notice Gets the Chainlink node
+    /// @return The Chainlink node
+    function chainlinkNode() external view returns (AggregatorV3Interface, uint8, uint32, uint8, uint8);
 }

@@ -1,31 +1,20 @@
 AltoRewardsOracle::Constructor()
 ├── given invalid inputs
-│   ├── when addressInAndOutUni length is not 2
+│   ├── when inBase is zero
 │   │   └── it should revert with AltoRewardsOracleInvalidInput
+│   ├── when uniswap node is invalid
+│   │   └── it should revert with ModuleUniswapInvalidInput
+│   ├── when chainlink node is invalid
+│   │   └── it should revert with ModuleChainlinkInvalidInput
 │   ├── when owner is zero address
 │   │   └── it should revert with OwnableInvalidOwner
-│   ├── when twap period is invalid
-│   │   └── it should revert with UniswapUtilsInvalidTwapPeriod
-│   ├── when circuit uniswap parameters are invalid
-│   │   └── it should revert with ModuleUniswapMultiInvalidInput
-│   └── when circuit chainlink parameters are invalid
-│       └── it should revert with ModuleChainlinkMultiInvalidInput
 └── given valid inputs
     ├── when valid parameters provided
-    │   ├── it should set IN_BASE correctly based on in-currency decimals
-    │   ├── it should set OUT_BASE correctly based on out-currency decimals
-    │   ├── it should set UNI_FINAL_CURRENCY correctly
+    │   ├── it should set IN_BASE correctly 
     │   ├── it should set description correctly
     │   ├── it should set priceUpdateCooldownPeriod correctly
     │   ├── it should set owner correctly
-    │   ├── it should set twap period correctly
-    │   ├── it should set circuit uniswap correctly
-    │   ├── it should set circuit uni is multiplied correctly
-    │   ├── it should set circuit chainlink correctly
-    │   ├── it should set circuit chain is multiplied correctly
-    │   ├── it should set stale period correctly
+    │   ├── it should set uniswap node correctly
+    │   ├── it should set chainlink node correctly
     │   ├── it should initialize lastPriceUpdateTimestamp to zero
-    │   ├── it should initialize cachedPrice to zero
-    │   └── it should emit PriceUpdateCooldownPeriodUpdated event
-    └── when tokens have different decimal places
-        └── it should handle when in-currency token has 6 decimal places and out-currency token has 8 decimal places correctly
+    │   └── it should initialize cachedPrice to zero
