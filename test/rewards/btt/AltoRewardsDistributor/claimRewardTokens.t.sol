@@ -188,8 +188,9 @@ contract AltoRewardsDistributorClaimRewardTokens is RewardsDistributorCommon {
         uint256 expirationTimestamp = block.timestamp - 1; // Expired 1 second ago
 
         // Build new merkle tree with expiration
-        bytes32 aliceLeaf =
-            keccak256(bytes.concat(keccak256(abi.encode(ALICE, aliceAvailable, BASE_DISCOUNT, 0, expirationTimestamp))));
+        bytes32 aliceLeaf = keccak256(
+            bytes.concat(keccak256(abi.encode(ALICE, aliceAvailable, BASE_DISCOUNT, 0, expirationTimestamp)))
+        );
         bytes32 bobLeaf = keccak256(bytes.concat(keccak256(abi.encode(BOB, bobAvailable, BASE_DISCOUNT, 0, 0))));
 
         bytes32 root;
@@ -610,8 +611,9 @@ contract AltoRewardsDistributorClaimRewardTokens is RewardsDistributorCommon {
         uint256 expectedPayment = _getExpectedPayment(true, 0, false);
 
         // Build new merkle tree with expiration
-        bytes32 aliceLeaf =
-            keccak256(bytes.concat(keccak256(abi.encode(ALICE, aliceAvailable, BASE_DISCOUNT, 0, expirationTimestamp))));
+        bytes32 aliceLeaf = keccak256(
+            bytes.concat(keccak256(abi.encode(ALICE, aliceAvailable, BASE_DISCOUNT, 0, expirationTimestamp)))
+        );
         bytes32 bobLeaf = keccak256(bytes.concat(keccak256(abi.encode(BOB, bobAvailable, BASE_DISCOUNT, 0, 0))));
 
         bytes32 root;
@@ -788,7 +790,7 @@ contract AltoRewardsDistributorClaimRewardTokens is RewardsDistributorCommon {
         uint256 initialAmount = aliceAvailable;
         uint256 newIdAmount = aliceAvailable;
 
-        // First claim with ID 1
+        // First claim with ID 0
         vm.startPrank(ALICE);
         paymentToken.approve(address(distributor), type(uint256).max);
 
@@ -807,7 +809,7 @@ contract AltoRewardsDistributorClaimRewardTokens is RewardsDistributorCommon {
         assertEq(distributor.purchasedRewardTokenUser(ALICE, 0), initialAmount);
         assertEq(distributor.purchasedRewardTokenUser(ALICE, 1), 0);
 
-        // Submit new merkle tree with different ID (ID 2)
+        // Submit new merkle tree with different ID (ID 1)
         vm.startPrank(OWNER);
         (bytes32 newRoot, bytes32[] memory newAliceProof,) =
             _setupMerkleTreeWithDiscount(1, newIdAmount, BASE_DISCOUNT, 0, bobAvailable, BASE_DISCOUNT);
