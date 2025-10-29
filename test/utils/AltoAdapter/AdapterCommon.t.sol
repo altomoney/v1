@@ -5,7 +5,7 @@ import {AltoAdapter} from "@alto/utils/AltoAdapter.sol";
 import {Test} from "forge-std/Test.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
-import {IRewardsDistributor} from "@alto/rewards/interfaces/IRewardsDistributor.sol";
+import {IRewardsDistributor, ClaimData} from "@alto/rewards/interfaces/IRewardsDistributor.sol";
 import {IAltoStaking} from "@alto/staking/interfaces/IAltoStaking.sol";
 import {Authorization, Signature} from "@alto/utils/interfaces/IAuth.sol";
 import {Bundler3, Call} from "@morpho-org/bundler3/Bundler3.sol";
@@ -410,21 +410,28 @@ abstract contract AdapterCommon is Test {
         bytes32[] memory proof,
         uint256 rewardsPurchaseAmount,
         uint256 discount,
+        uint256 id,
+        uint256 expirationTimestamp,
         address paymentToken,
         uint256 paymentAmount,
         bool lockPurchasedRewards,
         uint256 maxEpochsToLockFor
     ) internal view returns (Call memory) {
+        ClaimData memory claimData = ClaimData({
+            totalRewardsForUser: totalRewardsForUser,
+            discount: discount,
+            id: id,
+            expirationTimestamp: expirationTimestamp
+        });
         return _call(
             altoAdapter,
             abi.encodeCall(
                 AltoAdapter.rewardsDistributorClaimRewardTokensWithERC20Transfer,
                 (
                     rewardsDistributor,
-                    totalRewardsForUser,
+                    claimData,
                     proof,
                     rewardsPurchaseAmount,
-                    discount,
                     paymentToken,
                     paymentAmount,
                     lockPurchasedRewards,

@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {RewardsDistributorCommon} from "./RewardsDistributorCommon.t.sol";
-import {IRewardsEvents} from "@alto/rewards/interfaces/IRewardsDistributor.sol";
+import {IRewardsEvents, ClaimData} from "@alto/rewards/interfaces/IRewardsDistributor.sol";
 import {ERC20MockDecimals} from "@alto-test/helpers/ERC20MockDecimals.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
@@ -34,7 +34,13 @@ contract AltoRewardsDistributorWithdrawContractTokens is RewardsDistributorCommo
 
         uint256 purchaseAmount = aliceAvailable / 2;
         distributor.claimRewardTokens(
-            aliceAvailable, aliceProof, purchaseAmount, BASE_DISCOUNT, address(paymentToken), false, 0, ALICE
+            _getClaimData(aliceAvailable, BASE_DISCOUNT, 0, 0),
+            aliceProof,
+            purchaseAmount,
+            address(paymentToken),
+            false,
+            0,
+            ALICE
         );
         vm.stopPrank();
 
@@ -80,9 +86,10 @@ contract AltoRewardsDistributorWithdrawContractTokens is RewardsDistributorCommo
         vm.startPrank(ALICE);
         paymentToken.approve(address(distributor), type(uint256).max);
 
-        distributor.claimRewardTokens(
-            aliceAvailable, aliceProof, aliceAvailable / 4, BASE_DISCOUNT, address(paymentToken), false, 0, ALICE
-        );
+        ClaimData memory claimData =
+            ClaimData({totalRewardsForUser: aliceAvailable, discount: BASE_DISCOUNT, id: 0, expirationTimestamp: 0});
+
+        distributor.claimRewardTokens(claimData, aliceProof, aliceAvailable / 4, address(paymentToken), false, 0, ALICE);
         vm.stopPrank();
 
         uint256 contractBalance = paymentToken.balanceOf(address(distributor));
@@ -106,8 +113,11 @@ contract AltoRewardsDistributorWithdrawContractTokens is RewardsDistributorCommo
         vm.startPrank(ALICE);
         paymentToken2.approve(address(distributor), type(uint256).max);
 
+        ClaimData memory claimData =
+            ClaimData({totalRewardsForUser: aliceAvailable, discount: BASE_DISCOUNT, id: 0, expirationTimestamp: 0});
+
         distributor.claimRewardTokens(
-            aliceAvailable, aliceProof, aliceAvailable / 3, BASE_DISCOUNT, address(paymentToken2), false, 0, ALICE
+            claimData, aliceProof, aliceAvailable / 3, address(paymentToken2), false, 0, ALICE
         );
         vm.stopPrank();
 

@@ -9,6 +9,7 @@ import {ERC20MockDecimals} from "@alto-test/helpers/ERC20MockDecimals.sol";
 import {USD_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IUsdOracle.sol";
 import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
+import {ClaimData} from "@alto/rewards/interfaces/IRewardsDistributor.sol";
 
 contract MockLock {
     mapping(address => uint256) public locked;
@@ -126,8 +127,8 @@ contract RewardsDistributorCommon is Test {
 
     function _setupMerkleTree() internal {
         // Include BASE_DISCOUNT in leaves
-        bytes32 aliceLeaf = keccak256(bytes.concat(keccak256(abi.encode(ALICE, aliceAvailable, BASE_DISCOUNT))));
-        bytes32 bobLeaf = keccak256(bytes.concat(keccak256(abi.encode(BOB, bobAvailable, BASE_DISCOUNT))));
+        bytes32 aliceLeaf = keccak256(bytes.concat(keccak256(abi.encode(ALICE, aliceAvailable, BASE_DISCOUNT, 0, 0))));
+        bytes32 bobLeaf = keccak256(bytes.concat(keccak256(abi.encode(BOB, bobAvailable, BASE_DISCOUNT, 0, 0))));
 
         if (uint256(aliceLeaf) < uint256(bobLeaf)) {
             testRoot = keccak256(abi.encodePacked(aliceLeaf, bobLeaf));
@@ -147,13 +148,15 @@ contract RewardsDistributorCommon is Test {
     }
 
     function _setupMerkleTreeWithDiscount(
+        uint256 aliceId,
         uint256 aliceClaim,
         uint256 aliceDiscount,
+        uint256 bobId,
         uint256 bobClaim,
         uint256 bobDiscount
     ) internal view returns (bytes32 root, bytes32[] memory aliceProofResult, bytes32[] memory bobProofResult) {
-        bytes32 aliceLeaf = keccak256(bytes.concat(keccak256(abi.encode(ALICE, aliceClaim, aliceDiscount))));
-        bytes32 bobLeaf = keccak256(bytes.concat(keccak256(abi.encode(BOB, bobClaim, bobDiscount))));
+        bytes32 aliceLeaf = keccak256(bytes.concat(keccak256(abi.encode(ALICE, aliceClaim, aliceDiscount, aliceId, 0))));
+        bytes32 bobLeaf = keccak256(bytes.concat(keccak256(abi.encode(BOB, bobClaim, bobDiscount, bobId, 0))));
 
         bytes32[] memory newAliceProof = new bytes32[](1);
         bytes32[] memory newBobProof = new bytes32[](1);
@@ -198,5 +201,18 @@ contract RewardsDistributorCommon is Test {
         uint256 tokenPrice = paymentTokenId == 0 ? PAYMENT_TOKEN_PRICE : _getOraclePriceFromEther(2 ether);
         uint256 expectedPayment = (discountedCostUSD * 10 ** token.decimals() + tokenPrice - 1) / tokenPrice; // Round up
         return expectedPayment;
+    }
+
+    function _getClaimData(uint256 totalRewards, uint256 discount, uint256 id, uint256 expirationTimestamp)
+        internal
+        view
+        returns (ClaimData memory)
+    {
+        return ClaimData({
+            totalRewardsForUser: totalRewards,
+            discount: discount,
+            id: id,
+            expirationTimestamp: expirationTimestamp
+        });
     }
 }

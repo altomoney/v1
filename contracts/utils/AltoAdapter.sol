@@ -3,7 +3,7 @@ pragma solidity ^0.8.28;
 
 import {AdapterContractApproval} from "@alto/utils/AdapterContractApproval.sol";
 import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
-import {IRewardsDistributor} from "@alto/rewards/interfaces/IRewardsDistributor.sol";
+import {IRewardsDistributor, ClaimData} from "@alto/rewards/interfaces/IRewardsDistributor.sol";
 import {IAltoStaking} from "@alto/staking/interfaces/IAltoStaking.sol";
 import {IUniversalRewardsDistributor} from "@alto/utils/interfaces/IUniversalRewardsDistributor.sol";
 import {IAltoVesting, VestingInfo} from "@alto/vesting/interfaces/IAltoVesting.sol";
@@ -237,10 +237,9 @@ contract AltoAdapter is CoreAdapter, AdapterContractApproval {
 
     function rewardsDistributorClaimRewardTokensWithERC20Transfer(
         IRewardsDistributor rewardsDistributor,
-        uint256 totalRewardsForUser,
+        ClaimData memory claimData,
         bytes32[] calldata proof,
         uint256 rewardsPurchaseAmount,
-        uint256 discount,
         address paymentToken,
         uint256 paymentAmount,
         bool lockPurchasedRewards,
@@ -252,14 +251,7 @@ contract AltoAdapter is CoreAdapter, AdapterContractApproval {
         SafeERC20.safeTransferFrom(IERC20(paymentToken), initiator(), address(this), paymentAmount);
 
         uint256 amountPaidToDistributor = rewardsDistributor.claimRewardTokens(
-            totalRewardsForUser,
-            proof,
-            rewardsPurchaseAmount,
-            discount,
-            paymentToken,
-            lockPurchasedRewards,
-            maxEpochsToLockFor,
-            initiator()
+            claimData, proof, rewardsPurchaseAmount, paymentToken, lockPurchasedRewards, maxEpochsToLockFor, initiator()
         );
 
         if (paymentAmount - amountPaidToDistributor != 0) {
@@ -269,6 +261,12 @@ contract AltoAdapter is CoreAdapter, AdapterContractApproval {
 
     /* STAKING ACTIONS */
 
+    /// @notice Locks tokens in the staking contract.
+    /// @param staking The address of the staking contract.
+    /// @param amount The amount of tokens to lock.
+    /// @param containerId The id of the container to lock the tokens in.
+    /// @param isReuse Whether to reuse the container.
+    /// @param maxEpochsToLockFor The maximum number of epochs to lock for.
     function stakingLock(
         IAltoStaking staking,
         uint256 amount,
@@ -283,6 +281,10 @@ contract AltoAdapter is CoreAdapter, AdapterContractApproval {
         staking.lock(initiator(), amount, containerId, isReuse, maxEpochsToLockFor);
     }
 
+    /// @notice Unlocks tokens from the staking contract.
+    /// @param staking The address of the staking contract.
+    /// @param receiver The address to send the unlocked tokens to.
+    /// @param containerId The id of the container to unlock the tokens from.
     function stakingUnlock(IAltoStaking staking, address receiver, uint256 containerId)
         external
         onlyBundler3
@@ -291,6 +293,11 @@ contract AltoAdapter is CoreAdapter, AdapterContractApproval {
         staking.unlock(initiator(), receiver, containerId);
     }
 
+    /// @notice Claims reward tokens from the rewards distributor.
+    /// @param rewardsDistributor The address of the rewards distributor.
+    /// @param rewardToken The address of the reward token.
+    /// @param amount The amount of reward tokens to claim.
+    /// @param proof The merkle proof that validates this claim.
     function claimRewardTokens(
         IUniversalRewardsDistributor rewardsDistributor,
         address rewardToken,
