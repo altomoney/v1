@@ -261,6 +261,12 @@ contract AltoAdapter is CoreAdapter, AdapterContractApproval {
 
     /* STAKING ACTIONS */
 
+    /// @notice Locks tokens in the staking contract.
+    /// @param staking The address of the staking contract.
+    /// @param amount The amount of tokens to lock.
+    /// @param containerId The id of the container to lock the tokens in.
+    /// @param isReuse Whether to reuse the container.
+    /// @param maxEpochsToLockFor The maximum number of epochs to lock for.
     function stakingLock(
         IAltoStaking staking,
         uint256 amount,
@@ -275,6 +281,10 @@ contract AltoAdapter is CoreAdapter, AdapterContractApproval {
         staking.lock(initiator(), amount, containerId, isReuse, maxEpochsToLockFor);
     }
 
+    /// @notice Unlocks tokens from the staking contract.
+    /// @param staking The address of the staking contract.
+    /// @param receiver The address to send the unlocked tokens to.
+    /// @param containerId The id of the container to unlock the tokens from.
     function stakingUnlock(IAltoStaking staking, address receiver, uint256 containerId)
         external
         onlyBundler3
@@ -283,6 +293,11 @@ contract AltoAdapter is CoreAdapter, AdapterContractApproval {
         staking.unlock(initiator(), receiver, containerId);
     }
 
+    /// @notice Claims reward tokens from the rewards distributor.
+    /// @param rewardsDistributor The address of the rewards distributor.
+    /// @param rewardToken The address of the reward token.
+    /// @param amount The amount of reward tokens to claim.
+    /// @param proof The merkle proof that validates this claim.
     function claimRewardTokens(
         IUniversalRewardsDistributor rewardsDistributor,
         address rewardToken,
