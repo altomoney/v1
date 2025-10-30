@@ -68,14 +68,14 @@ contract DUSD is Ownable2Step, Pausable, OFT, ERC20FlashMint, IDUSD {
     }
 
     /// @inheritdoc ERC20FlashMint
-    function flashLoan(IERC3156FlashBorrower receiver, address token, uint256 value, bytes calldata data)
+    function flashLoan(IERC3156FlashBorrower receiver, address, uint256 value, bytes calldata data)
         public
         virtual
         override
         whenNotPaused
         returns (bool)
     {
-        return super.flashLoan(receiver, token, value, data);
+        return super.flashLoan(receiver, address(this), value, data);
     }
 
     /// @inheritdoc ERC20FlashMint
@@ -83,19 +83,23 @@ contract DUSD is Ownable2Step, Pausable, OFT, ERC20FlashMint, IDUSD {
         if (amount > flashMintCap) {
             revert DUSDExceededFlashMintCap();
         }
+
+        if (amount == 0) {
+            return 0;
+        }
+
         uint256 flashFeeToCharge;
 
-        if (flashFee.minFlashFee == flashFee.maxFlashFee) {
-            flashFeeToCharge = flashFee.minFlashFee;
-        } else if (flashFee.maxFlashFee > flashFee.minFlashFee) {
-            uint256 flashFeeDifference = flashFee.maxFlashFee - flashFee.minFlashFee;
-            flashFeeToCharge =
-                flashFee.minFlashFee + FixedPointMath.divideWithRounding(amount, flashFeeDifference, flashMintCap, true);
+        uint256 minFee = flashFee.minFlashFee;
+        uint256 maxFee = flashFee.maxFlashFee;
+
+        if (minFee == maxFee) {
+            flashFeeToCharge = minFee;
         } else {
-            // flashFee.minFlashFee > flashFee.maxFlashFee
-            uint256 flashFeeDifference = flashFee.minFlashFee - flashFee.maxFlashFee;
-            flashFeeToCharge = flashFee.minFlashFee
-                - FixedPointMath.divideWithRounding(amount, flashFeeDifference, flashMintCap, false);
+            bool increasing = maxFee > minFee;
+            uint256 diff = increasing ? (maxFee - minFee) : (minFee - maxFee);
+            uint256 step = FixedPointMath.divideWithRounding(amount, diff, flashMintCap, increasing);
+            flashFeeToCharge = increasing ? (minFee + step) : (minFee - step);
         }
 
         return amount.multiplyWithPrecisionUp(flashFeeToCharge);
@@ -107,8 +111,8 @@ contract DUSD is Ownable2Step, Pausable, OFT, ERC20FlashMint, IDUSD {
     }
 
     /// @inheritdoc ERC20FlashMint
-    function maxFlashLoan(address token) public view virtual override returns (uint256) {
-        return token == address(this) ? flashMintCap : 0;
+    function maxFlashLoan(address) public view virtual override returns (uint256) {
+        return flashMintCap;
     }
 
     /// @inheritdoc IDUSD
