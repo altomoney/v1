@@ -4,24 +4,32 @@ pragma solidity ^0.8.22;
 import {IOFT} from "@layerzerolabs/oft-evm/contracts/interfaces/IOFT.sol";
 import {IMintableERC20} from "@alto/lending/interfaces/IMintableERC20.sol";
 
+struct MinterConfig {
+    /// @notice The amount of DUSD minted by the minter
+    uint256 minted;
+    /// @notice The ceiling of DUSD to be minted by the minter
+    /// @dev This is the maximum amount of DUSD that can be minted by the minter
+    uint256 ceiling;
+}
+
+struct FlashFee {
+    uint128 minFlashFee;
+    uint128 maxFlashFee;
+}
+
 /**
  * @title IDUSD Interface
  * @notice Interface for the DUSD stablecoin contract
  */
 interface IDUSD is IOFT, IMintableERC20 {
-    struct MinterConfig {
-        /// @notice The amount of DUSD minted by the minter
-        uint256 minted;
-        /// @notice The ceiling of DUSD to be minted by the minter
-        /// @dev This is the maximum amount of DUSD that can be minted by the minter
-        uint256 ceiling;
-    }
-
     /// @notice Thrown when the caller is not authorized to perform the action
     error DUSDNotAuthorized();
 
     /// @notice Thrown when the input is invalid
     error DUSDInvalidInput();
+
+    /// @notice Thrown when the amount exceeds the flash mint cap
+    error DUSDExceededFlashMintCap();
 
     /// @notice Event emitted when the minter status is set
     /// @param _for The address of the minter
@@ -44,9 +52,9 @@ interface IDUSD is IOFT, IMintableERC20 {
     event SetFlashFeeReceiver(address indexed _oldFeeReceiver, address indexed _newFeeReceiver);
 
     /// @notice Event emitted when the flash fee is set
-    /// @param _oldFee The old flash fee
-    /// @param _newFee The new flash fee
-    event SetFlashFee(uint256 indexed _oldFee, uint256 indexed _newFee);
+    /// @param _oldFlashFee The old flash fee struct
+    /// @param _newFlashFee The new flash fee struct
+    event SetFlashFee(FlashFee _oldFlashFee, FlashFee _newFlashFee);
 
     /// @notice Event emitted when the flash mint cap is set
     /// @param _oldCap The old flash mint cap
@@ -57,10 +65,10 @@ interface IDUSD is IOFT, IMintableERC20 {
     /// @return The flash fee receiver
     function flashFeeReceiver() external view returns (address);
 
-    /// @notice the flash fee is a percentage charged on the amount of flash loan
-    /// @return The flash fee denominated in MATH_PRECISION
-    /// @dev The Flash fee is denominated in MATH_PRECISION (MATH_PRECISION = 100% fee)
-    function flashFee() external view returns (uint256);
+    /// @notice returns the min and max flash fee
+    /// @return minFlashFee The minimum flash fee
+    /// @return maxFlashFee The maximum flash fee
+    function flashFee() external view returns (uint128 minFlashFee, uint128 maxFlashFee);
 
     /// @notice The flash mint cap is the maximum amount of DUSD that can be flash minted at one time
     /// @return The flash mint cap
@@ -103,9 +111,8 @@ interface IDUSD is IOFT, IMintableERC20 {
     function setFlashMintCap(uint256 _newFlashMintCap) external;
 
     /// @notice Sets the flash fee is a percentage charged on the amount of flash loan
-    /// @param _newFlashFee The flash fee denominated in MATH_PRECISION to be charged on amount of flash loan
-    /// @dev The Flash fee is denominated in MATH_PRECISION (MATH_PRECISION = 100% fee)
-    function setFlashFee(uint256 _newFlashFee) external;
+    /// @param _newFlashFee The flash fee struct
+    function setFlashFee(FlashFee calldata _newFlashFee) external;
 
     /// @notice Sets the flash fee receiver
     /// @param _newFlashFeeReceiver The flash fee receiver

@@ -3,10 +3,14 @@ pragma solidity ^0.8.22;
 
 import {DUSDCommon} from "./DUSDCommon.t.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {IDUSD} from "@alto/tokens/interfaces/IDUSD.sol";
+import {IDUSD, FlashFee} from "@alto/tokens/interfaces/IDUSD.sol";
 import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 
 contract DUSDSetFlashFee is DUSDCommon {
+    uint128 constant MIN_FLASH_FEE_0_1_PERCENT = 0.001 ether; // 0.1%
+    uint128 constant MAX_FLASH_FEE_1_PERCENT = 0.01 ether; // 1%
+    uint128 constant FLAT_FLASH_FEE_0_5_PERCENT = 0.005 ether; // 0.5%
+
     modifier givenCallerIsNotOwner() {
         _;
     }
@@ -16,72 +20,121 @@ contract DUSDSetFlashFee is DUSDCommon {
     }
 
     function test_RevertWhen_CallerIsNotOwner() external givenCallerIsNotOwner {
+        FlashFee memory newFlashFee =
+            FlashFee({minFlashFee: MIN_FLASH_FEE_0_1_PERCENT, maxFlashFee: MAX_FLASH_FEE_1_PERCENT});
+
         vm.prank(NON_OWNER);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, NON_OWNER));
-        dusd.setFlashFee(DEFAULT_FLASH_FEE);
+        dusd.setFlashFee(newFlashFee);
     }
 
-    function test_WhenSettingFlashFeeToZero() external givenCallerIsOwner {
-        // First set a non-zero fee
-        vm.prank(OWNER);
-        dusd.setFlashFee(DEFAULT_FLASH_FEE);
-        assertEq(dusd.flashFee(), DEFAULT_FLASH_FEE);
+    function test_RevertWhen_MinFlashFeeIsGreaterThanMATH_PRECISION() external givenCallerIsOwner {
+        FlashFee memory invalidFlashFee =
+            FlashFee({minFlashFee: uint128(MATH_PRECISION + 1), maxFlashFee: MAX_FLASH_FEE_1_PERCENT});
 
-        vm.expectEmit(true, true, true, true);
-        emit IDUSD.SetFlashFee(DEFAULT_FLASH_FEE, 0);
-
-        vm.prank(OWNER);
-        dusd.setFlashFee(0);
-
-        uint256 flashFeeAmount = dusd.flashFee(address(dusd), MATH_PRECISION);
-        uint256 expectedFlashFee = 0;
-
-        // it should set flashFee to zero
-        assertEq(dusd.flashFee(), 0);
-        assertEq(flashFeeAmount, expectedFlashFee);
-    }
-
-    function test_RevertWhen_SettingFlashFeeToGreaterThanMATH_PRECISION() external givenCallerIsOwner {
         vm.prank(OWNER);
         vm.expectRevert(abi.encodeWithSelector(IDUSD.DUSDInvalidInput.selector));
-        dusd.setFlashFee(MATH_PRECISION + 1);
+        dusd.setFlashFee(invalidFlashFee);
     }
 
-    function test_WhenSettingFlashFeeToNonZeroValue() external givenCallerIsOwner {
-        uint256 oldFee = dusd.flashFee();
-
-        vm.expectEmit(true, true, true, true);
-        emit IDUSD.SetFlashFee(oldFee, DEFAULT_FLASH_FEE);
+    function test_RevertWhen_MaxFlashFeeIsGreaterThanMATH_PRECISION() external givenCallerIsOwner {
+        FlashFee memory invalidFlashFee =
+            FlashFee({minFlashFee: MIN_FLASH_FEE_0_1_PERCENT, maxFlashFee: uint128(MATH_PRECISION + 1)});
 
         vm.prank(OWNER);
-        dusd.setFlashFee(DEFAULT_FLASH_FEE);
-
-        uint256 flashFeeAmount = dusd.flashFee(address(dusd), MATH_PRECISION);
-        uint256 expectedFlashFee = DEFAULT_FLASH_FEE;
-
-        // it should set flashFee to the new value
-        assertEq(dusd.flashFee(), DEFAULT_FLASH_FEE);
-        assertEq(flashFeeAmount, expectedFlashFee);
+        vm.expectRevert(abi.encodeWithSelector(IDUSD.DUSDInvalidInput.selector));
+        dusd.setFlashFee(invalidFlashFee);
     }
 
-    function test_WhenSettingFlashFeeToSameValue() external givenCallerIsOwner {
-        // First set the fee
-        vm.prank(OWNER);
-        dusd.setFlashFee(DEFAULT_FLASH_FEE);
-        assertEq(dusd.flashFee(), DEFAULT_FLASH_FEE);
+    function test_WhenBothMinAndMaxFlashFeeAreZero() external givenCallerIsOwner {
+        FlashFee memory zeroFlashFee = FlashFee({minFlashFee: 0, maxFlashFee: 0});
+
+        (uint128 oldMin, uint128 oldMax) = dusd.flashFee();
+        FlashFee memory oldFlashFee = FlashFee({minFlashFee: oldMin, maxFlashFee: oldMax});
 
         vm.expectEmit(true, true, true, true);
-        emit IDUSD.SetFlashFee(DEFAULT_FLASH_FEE, DEFAULT_FLASH_FEE);
+        emit IDUSD.SetFlashFee(oldFlashFee, zeroFlashFee);
 
         vm.prank(OWNER);
-        dusd.setFlashFee(DEFAULT_FLASH_FEE);
+        dusd.setFlashFee(zeroFlashFee);
 
-        uint256 flashFeeAmount = dusd.flashFee(address(dusd), MATH_PRECISION);
-        uint256 expectedFlashFee = DEFAULT_FLASH_FEE;
-        assertEq(flashFeeAmount, expectedFlashFee);
+        (uint128 newMin, uint128 newMax) = dusd.flashFee();
+        assertEq(newMin, 0);
+        assertEq(newMax, 0);
+    }
 
-        // it should update flashFee to the same value
-        assertEq(dusd.flashFee(), DEFAULT_FLASH_FEE);
-        assertEq(flashFeeAmount, expectedFlashFee);
+    function test_WhenMinFlashFeeEqualsMaxFlashFee() external givenCallerIsOwner {
+        FlashFee memory newFlashFee =
+            FlashFee({minFlashFee: FLAT_FLASH_FEE_0_5_PERCENT, maxFlashFee: FLAT_FLASH_FEE_0_5_PERCENT});
+
+        (uint128 oldMin, uint128 oldMax) = dusd.flashFee();
+        FlashFee memory oldFlashFee = FlashFee({minFlashFee: oldMin, maxFlashFee: oldMax});
+
+        vm.expectEmit(true, true, true, true);
+        emit IDUSD.SetFlashFee(oldFlashFee, newFlashFee);
+
+        vm.prank(OWNER);
+        dusd.setFlashFee(newFlashFee);
+
+        (uint128 newMin, uint128 newMax) = dusd.flashFee();
+        assertEq(newMin, FLAT_FLASH_FEE_0_5_PERCENT);
+        assertEq(newMax, FLAT_FLASH_FEE_0_5_PERCENT);
+    }
+
+    function test_WhenMaxFlashFeeIsGreaterThanMinFlashFee() external givenCallerIsOwner {
+        FlashFee memory newFlashFee =
+            FlashFee({minFlashFee: MIN_FLASH_FEE_0_1_PERCENT, maxFlashFee: MAX_FLASH_FEE_1_PERCENT});
+
+        (uint128 oldMin, uint128 oldMax) = dusd.flashFee();
+        FlashFee memory oldFlashFee = FlashFee({minFlashFee: oldMin, maxFlashFee: oldMax});
+
+        vm.expectEmit(true, true, true, true);
+        emit IDUSD.SetFlashFee(oldFlashFee, newFlashFee);
+
+        vm.prank(OWNER);
+        dusd.setFlashFee(newFlashFee);
+
+        (uint128 newMin, uint128 newMax) = dusd.flashFee();
+        assertEq(newMin, MIN_FLASH_FEE_0_1_PERCENT);
+        assertEq(newMax, MAX_FLASH_FEE_1_PERCENT);
+    }
+
+    function test_WhenMinFlashFeeIsGreaterThanMaxFlashFee() external givenCallerIsOwner {
+        FlashFee memory newFlashFee =
+            FlashFee({minFlashFee: MAX_FLASH_FEE_1_PERCENT, maxFlashFee: MIN_FLASH_FEE_0_1_PERCENT});
+
+        (uint128 oldMin, uint128 oldMax) = dusd.flashFee();
+        FlashFee memory oldFlashFee = FlashFee({minFlashFee: oldMin, maxFlashFee: oldMax});
+
+        vm.expectEmit(true, true, true, true);
+        emit IDUSD.SetFlashFee(oldFlashFee, newFlashFee);
+
+        vm.prank(OWNER);
+        dusd.setFlashFee(newFlashFee);
+
+        (uint128 newMin, uint128 newMax) = dusd.flashFee();
+        assertEq(newMin, MAX_FLASH_FEE_1_PERCENT);
+        assertEq(newMax, MIN_FLASH_FEE_0_1_PERCENT);
+    }
+
+    function test_WhenSettingFlashFeeStructToSameValues() external givenCallerIsOwner {
+        FlashFee memory flashFee =
+            FlashFee({minFlashFee: MIN_FLASH_FEE_0_1_PERCENT, maxFlashFee: MAX_FLASH_FEE_1_PERCENT});
+
+        vm.prank(OWNER);
+        dusd.setFlashFee(flashFee);
+
+        (uint128 oldMin, uint128 oldMax) = dusd.flashFee();
+        FlashFee memory oldFlashFee = FlashFee({minFlashFee: oldMin, maxFlashFee: oldMax});
+
+        vm.expectEmit(true, true, true, true);
+        emit IDUSD.SetFlashFee(oldFlashFee, flashFee);
+
+        vm.prank(OWNER);
+        dusd.setFlashFee(flashFee);
+
+        (uint128 newMin, uint128 newMax) = dusd.flashFee();
+        assertEq(newMin, MIN_FLASH_FEE_0_1_PERCENT);
+        assertEq(newMax, MAX_FLASH_FEE_1_PERCENT);
     }
 }
