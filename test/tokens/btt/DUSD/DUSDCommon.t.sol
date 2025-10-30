@@ -29,11 +29,6 @@ contract DUSDCommon is Test, TestHelperOz5 {
     uint256 constant MINT_AMOUNT = 1000e18;
     uint256 constant BURN_AMOUNT = 500e18;
 
-    event SetMinterStatus(address indexed _for, bool _status);
-    event SetBurnerStatus(address indexed _for, bool _status);
-    event SetFlashFeeReceiver(address indexed _oldFeeReceiver, address indexed _newFeeReceiver);
-    event SetFlashFee(uint256 indexed _oldFee, uint256 indexed _newFee);
-
     function setUp() public virtual override {
         super.setUp();
         setUpEndpoints(1, LibraryType.UltraLightNode);

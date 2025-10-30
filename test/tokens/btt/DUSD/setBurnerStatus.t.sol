@@ -24,7 +24,7 @@ contract DUSDSetBurnerStatus is DUSDCommon {
         assertFalse(dusd.allowedBurner(BURNER));
 
         vm.expectEmit(true, true, true, true);
-        emit SetBurnerStatus(BURNER, true);
+        emit IDUSD.SetBurnerStatus(BURNER, true);
 
         vm.prank(OWNER);
         dusd.setBurnerStatus(BURNER, true);
@@ -40,7 +40,7 @@ contract DUSDSetBurnerStatus is DUSDCommon {
         assertTrue(dusd.allowedBurner(BURNER));
 
         vm.expectEmit(true, true, true, true);
-        emit SetBurnerStatus(BURNER, false);
+        emit IDUSD.SetBurnerStatus(BURNER, false);
 
         vm.prank(OWNER);
         dusd.setBurnerStatus(BURNER, false);
@@ -56,7 +56,7 @@ contract DUSDSetBurnerStatus is DUSDCommon {
         assertTrue(dusd.allowedBurner(BURNER));
 
         vm.expectEmit(true, true, true, true);
-        emit SetBurnerStatus(BURNER, true);
+        emit IDUSD.SetBurnerStatus(BURNER, true);
 
         vm.prank(OWNER);
         dusd.setBurnerStatus(BURNER, true);
@@ -69,7 +69,7 @@ contract DUSDSetBurnerStatus is DUSDCommon {
         assertFalse(dusd.allowedBurner(NON_BURNER));
 
         vm.expectEmit(true, true, true, true);
-        emit SetBurnerStatus(NON_BURNER, false);
+        emit IDUSD.SetBurnerStatus(NON_BURNER, false);
 
         vm.prank(OWNER);
         dusd.setBurnerStatus(NON_BURNER, false);

@@ -25,6 +25,9 @@ contract DUSD is Ownable2Step, Pausable, OFT, ERC20FlashMint, IDUSD {
     uint256 public flashFee;
 
     /// @inheritdoc IDUSD
+    uint256 public flashMintCap;
+
+    /// @inheritdoc IDUSD
     mapping(address => bool) public allowedMinter;
 
     /// @inheritdoc IDUSD
@@ -85,6 +88,11 @@ contract DUSD is Ownable2Step, Pausable, OFT, ERC20FlashMint, IDUSD {
         return flashFeeReceiver;
     }
 
+    /// @inheritdoc ERC20FlashMint
+    function maxFlashLoan(address token) public view virtual override returns (uint256) {
+        return token == address(this) ? flashMintCap : 0;
+    }
+
     /// @inheritdoc IDUSD
     function setFlashFeeReceiver(address _newFlashFeeReceiver) external onlyOwner {
         emit SetFlashFeeReceiver(flashFeeReceiver, _newFlashFeeReceiver);
@@ -98,6 +106,12 @@ contract DUSD is Ownable2Step, Pausable, OFT, ERC20FlashMint, IDUSD {
         }
         emit SetFlashFee(flashFee, _newFlashFee);
         flashFee = _newFlashFee;
+    }
+
+    /// @inheritdoc IDUSD
+    function setFlashMintCap(uint256 _newFlashMintCap) external onlyOwner {
+        emit SetFlashMintCap(flashMintCap, _newFlashMintCap);
+        flashMintCap = _newFlashMintCap;
     }
 
     /// @inheritdoc IDUSD

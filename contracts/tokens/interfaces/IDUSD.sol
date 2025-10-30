@@ -48,6 +48,11 @@ interface IDUSD is IOFT, IMintableERC20 {
     /// @param _newFee The new flash fee
     event SetFlashFee(uint256 indexed _oldFee, uint256 indexed _newFee);
 
+    /// @notice Event emitted when the flash mint cap is set
+    /// @param _oldCap The old flash mint cap
+    /// @param _newCap The new flash mint cap
+    event SetFlashMintCap(uint256 indexed _oldCap, uint256 indexed _newCap);
+
     /// @notice Returns the flash fee receiver
     /// @return The flash fee receiver
     function flashFeeReceiver() external view returns (address);
@@ -56,6 +61,10 @@ interface IDUSD is IOFT, IMintableERC20 {
     /// @return The flash fee denominated in MATH_PRECISION
     /// @dev The Flash fee is denominated in MATH_PRECISION (MATH_PRECISION = 100% fee)
     function flashFee() external view returns (uint256);
+
+    /// @notice The flash mint cap is the maximum amount of DUSD that can be flash minted at one time
+    /// @return The flash mint cap
+    function flashMintCap() external view returns (uint256);
 
     /// @notice Returns the allowed minter status for an address
     /// @param minter The address of the minter
@@ -88,6 +97,10 @@ interface IDUSD is IOFT, IMintableERC20 {
     /// @param _for The address of the burner
     /// @param _status The status of the burner
     function setBurnerStatus(address _for, bool _status) external;
+
+    /// @notice Sets the flash mint cap
+    /// @param _newFlashMintCap The flash mint cap
+    function setFlashMintCap(uint256 _newFlashMintCap) external;
 
     /// @notice Sets the flash fee is a percentage charged on the amount of flash loan
     /// @param _newFlashFee The flash fee denominated in MATH_PRECISION to be charged on amount of flash loan
