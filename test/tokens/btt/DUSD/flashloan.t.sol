@@ -49,12 +49,6 @@ contract FlashLoanTest is DUSDCommon {
         dusd.flashLoan(flashBorrower, address(dusd), FLASH_LOAN_AMOUNT, "");
     }
 
-    function test_RevertWhen_TokenIsNotThisContract() public {
-        // maxFlashLoan returns 0 for non-this token
-        vm.expectRevert(abi.encodeWithSelector(ERC20FlashMint.ERC3156ExceededMaxLoan.selector, 0));
-        dusd.flashLoan(flashBorrower, INVALID_TOKEN, FLASH_LOAN_AMOUNT, "");
-    }
-
     function test_RevertWhen_FlashMintCapIsZeroAndValueIsGreaterThanZero() public {
         // flashMintCap is 0 by default
         assertEq(dusd.flashMintCap(), 0);
@@ -72,6 +66,15 @@ contract FlashLoanTest is DUSDCommon {
         uint256 initialSupply = dusd.totalSupply();
         vm.expectCall(address(flashBorrower), abi.encodeWithSelector(IERC3156FlashBorrower.onFlashLoan.selector));
         bool result = dusd.flashLoan(flashBorrower, address(dusd), 0, "");
+
+        assertTrue(result);
+        assertEq(dusd.totalSupply(), initialSupply);
+    }
+
+    function test_FlashLoan_WhenTokenIsNotThisContract() public whenFlashMintCapIsSet {
+        uint256 initialSupply = dusd.totalSupply();
+        vm.expectCall(address(flashBorrower), abi.encodeWithSelector(IERC3156FlashBorrower.onFlashLoan.selector));
+        bool result = dusd.flashLoan(flashBorrower, INVALID_TOKEN, FLASH_LOAN_AMOUNT, "");
 
         assertTrue(result);
         assertEq(dusd.totalSupply(), initialSupply);

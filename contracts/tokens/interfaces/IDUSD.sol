@@ -13,7 +13,13 @@ struct MinterConfig {
 }
 
 struct FlashFee {
+    /// @notice The minimum flash fee in percent represented as MATH_PRECISION
+    /// @dev This is the fee charged when the amount is flash minted is 0
+    /// @dev minFlashFee does not have to be smaller than maxFlashFee
     uint128 minFlashFee;
+    /// @notice The maximum flash fee in percent represented as MATH_PRECISION
+    /// @dev This is the fee charged when the amount is flash minted is mint cap
+    /// @dev maxFlashFee does not have to be greater than minFlashFee
     uint128 maxFlashFee;
 }
 
@@ -66,8 +72,8 @@ interface IDUSD is IOFT, IMintableERC20 {
     function flashFeeReceiver() external view returns (address);
 
     /// @notice returns the min and max flash fee
-    /// @return minFlashFee The minimum flash fee
-    /// @return maxFlashFee The maximum flash fee
+    /// @return minFlashFee The minimum flash fee in percent represented as MATH_PRECISION
+    /// @return maxFlashFee The maximum flash fee in percent represented as MATH_PRECISION
     function flashFee() external view returns (uint128 minFlashFee, uint128 maxFlashFee);
 
     /// @notice The flash mint cap is the maximum amount of DUSD that can be flash minted at one time
@@ -112,6 +118,11 @@ interface IDUSD is IOFT, IMintableERC20 {
 
     /// @notice Sets the flash fee is a percentage charged on the amount of flash loan
     /// @param _newFlashFee The flash fee struct
+    /// @dev minFlashFee and maxFlashFee represent start and end of the flash fee curve
+    /// @dev the flash fee curve is a linear interpolation between minFlashFee and maxFlashFee
+    /// @dev minFlashFee does not have to be smaller than maxFlashFee
+    /// @dev maxFlashFee does not have to be greater than minFlashFee
+    /// @dev setting minFlashFee and maxFlashFee to the same value will result in a flat fee
     function setFlashFee(FlashFee calldata _newFlashFee) external;
 
     /// @notice Sets the flash fee receiver
