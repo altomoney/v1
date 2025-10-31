@@ -13,7 +13,11 @@ import {
     ERC4626RatioChainlinkOracleRETH
 } from "@alto/oracles/AltoERC4626RatioChainlinkOracle/implementations/ERC4626RatioChainlinkOracleRETH.sol";
 import {MarketDeployer} from "@alto/utils/MarketDeployer.sol";
-import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
+import {
+    LiquidationConfiguration,
+    BaseMarketInitParams,
+    BorrowMarketInitParams
+} from "@alto/lending/interfaces/IMarket.sol";
 import {ChainlinkNode, ERC4626RatioNode, ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {SwapParams} from "@alto/lending/leverage/interfaces/IAltoLeverageSwapper.sol";
@@ -53,17 +57,16 @@ contract AltoLeverageRethMarketTest is Test {
         );
         oracle = address(new ERC4626RatioChainlinkOracleRETH(address(this), RETH, erc4626RatioNode, chainlinkNode));
 
-        market = IMarket(
-            MarketDeployer.deployBorrowMarket(
-                address(borrowToken),
-                address(collateralToken),
-                address(irm),
-                address(this),
-                address(oracle),
-                0.8 ether,
-                0,
-                address(this),
-                LiquidationConfiguration({
+        BorrowMarketInitParams memory borrowMarketInitParams = BorrowMarketInitParams({
+            baseMarketInitParams: BaseMarketInitParams({
+                borrowToken: address(borrowToken),
+                collateralToken: address(collateralToken),
+                irm: address(irm),
+                owner: address(this),
+                oracle: address(oracle),
+                maxLtv: 0.8 ether,
+                feeRecipient: address(this),
+                liquidationConfiguration: LiquidationConfiguration({
                     maxLiquidationLtv: 0.8 ether,
                     dynamicBonusFeeStart: 0.03 ether,
                     ltvForCompleteLiquidation: 0.9 ether,
@@ -77,8 +80,11 @@ contract AltoLeverageRethMarketTest is Test {
                     taggerLiquidationGracePeriod: 2 minutes,
                     liquidationWindowTag: 3 days
                 })
-            )
-        );
+            }),
+            initialBorrowOpeningFee: 0
+        });
+
+        market = IMarket(MarketDeployer.deployBorrowMarket(borrowMarketInitParams));
 
         swapper.setWhitelisted(address(leverage), true);
         // Setup initial balances for test accounts

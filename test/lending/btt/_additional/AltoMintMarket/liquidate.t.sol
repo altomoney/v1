@@ -13,7 +13,11 @@ import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 
 import {AltoMintMarket} from "@alto/lending/AltoMintMarket.sol";
-import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
+import {
+    LiquidationConfiguration,
+    BaseMarketInitParams,
+    MintMarketInitParams
+} from "@alto/lending/interfaces/IMarket.sol";
 import {IMarketErrors} from "@alto/lending/interfaces/IMarket.sol";
 import {IMintableERC20} from "@alto/lending/interfaces/IMintableERC20.sol";
 import {MarketDeployer} from "@alto/utils/MarketDeployer.sol";
@@ -72,20 +76,24 @@ contract LiquidateTest is Test {
             liquidationWindowTag: 3 days
         });
 
-        market = AltoMintMarket(
-            MarketDeployer.deployMintMarket(
-                address(borrowToken),
-                address(collateralToken),
-                address(irm),
-                owner,
-                address(oracle),
-                MAX_LTV,
-                DEBT_CEILING,
-                feeRecipient,
-                BORROW_OPENING_FEE,
-                config
-            )
-        );
+        BaseMarketInitParams memory baseMarketInitParams = BaseMarketInitParams({
+            borrowToken: address(borrowToken),
+            collateralToken: address(collateralToken),
+            irm: address(irm),
+            owner: owner,
+            oracle: address(oracle),
+            maxLtv: MAX_LTV,
+            feeRecipient: feeRecipient,
+            liquidationConfiguration: config
+        });
+
+        MintMarketInitParams memory mintMarketInitParams = MintMarketInitParams({
+            baseMarketInitParams: baseMarketInitParams,
+            debtCeiling: DEBT_CEILING,
+            initialBorrowOpeningFee: BORROW_OPENING_FEE
+        });
+
+        market = AltoMintMarket(MarketDeployer.deployMintMarket(mintMarketInitParams));
 
         // Mint tokens to test accounts
         deal(address(collateralToken), alice, INITIAL_BALANCE);

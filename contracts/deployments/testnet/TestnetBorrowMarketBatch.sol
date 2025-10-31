@@ -5,7 +5,11 @@ import {OracleTestnet} from "@alto/deployments/testnet/contracts/OracleTestnet.s
 import {AdaptiveCurveIrm} from "@alto/lending/irm/AdaptiveCurveIrm.sol";
 import {UnsafeUpgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";
-import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
+import {
+    BorrowMarketInitParams,
+    BaseMarketInitParams,
+    LiquidationConfiguration
+} from "@alto/lending/interfaces/IMarket.sol";
 import {ITestnetMarketBatch, TestnetMarketBatchReport} from "./ITestnetMarketBatch.sol";
 
 struct TestnetBorrowMarketBatchParams {
@@ -45,36 +49,37 @@ contract TestnetBorrowMarketBatch is ITestnetMarketBatch {
 
         address market = address(new AltoBorrowMarket());
 
-        address marketProxy = UnsafeUpgrades.deployUUPSProxy(
-            address(market),
-            abi.encodeCall(
-                AltoBorrowMarket.initialize,
-                (
-                    _params.borrowToken,
-                    _params.collateralToken,
-                    marketIrm,
-                    _params.owner,
-                    marketOracle,
-                    _params.maxLtv,
-                    0.005 ether,
-                    _params.owner,
-                    LiquidationConfiguration({
-                        maxLiquidationLtv: 0.8 ether,
-                        dynamicBonusFeeStart: 0.03 ether,
-                        ltvForCompleteLiquidation: 0.9 ether,
-                        dynamicBonusFeeDecaySteepness: 5 ether,
-                        liquidationBaseFee: 0.05 ether,
-                        minPenaltyPercentage: 0.01 ether,
-                        protocolFeePercentage: 0.075 ether,
-                        isEnabledPriorityLiquidation: true,
-                        disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
-                        priorityLiquidationGracePeriod: 5 minutes,
-                        taggerLiquidationGracePeriod: 2 minutes,
-                        liquidationWindowTag: 3 days
-                    })
-                )
-            )
-        );
+        LiquidationConfiguration memory liquidationConfig = LiquidationConfiguration({
+            maxLiquidationLtv: 0.8 ether,
+            dynamicBonusFeeStart: 0.03 ether,
+            ltvForCompleteLiquidation: 0.9 ether,
+            dynamicBonusFeeDecaySteepness: 5 ether,
+            liquidationBaseFee: 0.05 ether,
+            minPenaltyPercentage: 0.01 ether,
+            protocolFeePercentage: 0.075 ether,
+            isEnabledPriorityLiquidation: true,
+            disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
+            priorityLiquidationGracePeriod: 5 minutes,
+            taggerLiquidationGracePeriod: 2 minutes,
+            liquidationWindowTag: 3 days
+        });
+
+        BaseMarketInitParams memory baseMarketInitParams = BaseMarketInitParams({
+            borrowToken: _params.borrowToken,
+            collateralToken: _params.collateralToken,
+            irm: marketIrm,
+            owner: _params.owner,
+            oracle: marketOracle,
+            maxLtv: _params.maxLtv,
+            feeRecipient: _params.owner,
+            liquidationConfiguration: liquidationConfig
+        });
+
+        BorrowMarketInitParams memory initParams =
+            BorrowMarketInitParams({baseMarketInitParams: baseMarketInitParams, initialBorrowOpeningFee: 0.005 ether});
+
+        address marketProxy =
+            UnsafeUpgrades.deployUUPSProxy(address(market), abi.encodeCall(AltoBorrowMarket.initialize, (initParams)));
 
         report = TestnetMarketBatchReport({
             marketImplementation: market, market: marketProxy, marketIrm: marketIrm, marketOracle: marketOracle

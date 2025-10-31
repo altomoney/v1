@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import {Uint128Converter} from "./libraries/Uint128Converter.sol";
 
 import {IIrm} from "./interfaces/IIrm.sol";
-import {Balance, LiquidationConfiguration} from "./interfaces/IMarket.sol";
+import {Balance, MintMarketInitParams, LiquidationConfiguration} from "./interfaces/IMarket.sol";
 import {IMintableERC20} from "./interfaces/IMintableERC20.sol";
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
@@ -63,38 +63,25 @@ contract AltoMintMarket is AltoBaseMarket {
         _disableInitializers();
     }
 
-    function initialize(
-        address _borrowToken,
-        address _collateralToken,
-        address _irm,
-        address _owner,
-        address _oracle,
-        uint256 _maxLtv,
-        uint256 _debtCeiling,
-        address _feeRecipient,
-        uint256 _initialBorrowOpeningFee,
-        LiquidationConfiguration memory _liquidationConfiguration
-    ) public initializer {
-        __AltoBaseMarket_init(
-            _borrowToken, _collateralToken, _irm, _owner, _oracle, _maxLtv, _feeRecipient, _liquidationConfiguration
-        );
+    function initialize(MintMarketInitParams memory _initParams) public initializer {
+        __AltoBaseMarket_init(_initParams.baseMarketInitParams);
 
-        if (_initialBorrowOpeningFee > MATH_PRECISION) {
+        if (_initParams.initialBorrowOpeningFee > MATH_PRECISION) {
             revert AltoMintMarketInvalidInput();
         }
-        if (_feeRecipient == address(0) && _initialBorrowOpeningFee > 0) {
+        if (_initParams.baseMarketInitParams.feeRecipient == address(0) && _initParams.initialBorrowOpeningFee > 0) {
             revert AltoMintMarketInvalidInput();
         }
 
-        if (_feeRecipient == address(0) && irm != address(0)) {
+        if (_initParams.baseMarketInitParams.feeRecipient == address(0) && irm != address(0)) {
             revert AltoMintMarketInvalidInput();
         }
 
-        _borrowOpeningFee = _initialBorrowOpeningFee;
-        emit SetBorrowOpeningFee(0, _initialBorrowOpeningFee);
+        _borrowOpeningFee = _initParams.initialBorrowOpeningFee;
+        emit SetBorrowOpeningFee(0, _initParams.initialBorrowOpeningFee);
 
-        totalSupply.assets = _debtCeiling.toUint128();
-        emit SetDebtCeiling(0, _debtCeiling);
+        totalSupply.assets = _initParams.debtCeiling.toUint128();
+        emit SetDebtCeiling(0, _initParams.debtCeiling);
     }
 
     /// @notice Sets the debt ceiling for the mint market

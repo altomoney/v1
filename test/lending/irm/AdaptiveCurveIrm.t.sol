@@ -8,7 +8,11 @@ import {IIrm} from "@alto/lending/interfaces/IIrm.sol";
 import {IrmCommon} from "./IrmCommon.t.sol";
 import {MarketDeployer} from "@alto/utils/MarketDeployer.sol";
 import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";
-import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
+import {
+    LiquidationConfiguration,
+    BaseMarketInitParams,
+    BorrowMarketInitParams
+} from "@alto/lending/interfaces/IMarket.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 
 contract AdaptiveCurveIrmMock is AdaptiveCurveIrm {
@@ -42,32 +46,37 @@ contract AdaptiveCurveIrmTest is IrmCommon {
 
     function _createMarket() internal returns (AltoBorrowMarket) {
         address oracle = address(new OracleMock());
-        AltoBorrowMarket market = AltoBorrowMarket(
-            MarketDeployer.deployBorrowMarket(
-                address(1),
-                address(2),
-                address(0),
-                OWNER,
-                address(oracle),
-                0.75 ether,
-                0,
-                OWNER,
-                LiquidationConfiguration({
-                    maxLiquidationLtv: 0.8 ether,
-                    dynamicBonusFeeStart: 0.03 ether,
-                    ltvForCompleteLiquidation: 0.9 ether,
-                    dynamicBonusFeeDecaySteepness: 5 ether,
-                    liquidationBaseFee: 0.05 ether,
-                    minPenaltyPercentage: 0.01 ether,
-                    protocolFeePercentage: 0 ether,
-                    isEnabledPriorityLiquidation: true,
-                    disablePriorityLiquidationAbovePositionLtv: type(uint256).max,
-                    priorityLiquidationGracePeriod: 5 minutes,
-                    taggerLiquidationGracePeriod: 2 minutes,
-                    liquidationWindowTag: 3 days
-                })
-            )
-        );
+
+        LiquidationConfiguration memory liquidationConfig = LiquidationConfiguration({
+            maxLiquidationLtv: 0.8 ether,
+            dynamicBonusFeeStart: 0.03 ether,
+            ltvForCompleteLiquidation: 0.9 ether,
+            dynamicBonusFeeDecaySteepness: 5 ether,
+            liquidationBaseFee: 0.05 ether,
+            minPenaltyPercentage: 0.01 ether,
+            protocolFeePercentage: 0 ether,
+            isEnabledPriorityLiquidation: true,
+            disablePriorityLiquidationAbovePositionLtv: type(uint256).max,
+            priorityLiquidationGracePeriod: 5 minutes,
+            taggerLiquidationGracePeriod: 2 minutes,
+            liquidationWindowTag: 3 days
+        });
+
+        BaseMarketInitParams memory baseMarketInitParams = BaseMarketInitParams({
+            borrowToken: address(1),
+            collateralToken: address(2),
+            irm: address(0),
+            owner: OWNER,
+            oracle: address(oracle),
+            maxLtv: 0.75 ether,
+            feeRecipient: OWNER,
+            liquidationConfiguration: liquidationConfig
+        });
+
+        BorrowMarketInitParams memory borrowMarketInitParams =
+            BorrowMarketInitParams({baseMarketInitParams: baseMarketInitParams, initialBorrowOpeningFee: 0});
+
+        AltoBorrowMarket market = AltoBorrowMarket(MarketDeployer.deployBorrowMarket(borrowMarketInitParams));
 
         vm.prank(OWNER);
         market.setPauser(OWNER, PAUSE_TYPE, true);

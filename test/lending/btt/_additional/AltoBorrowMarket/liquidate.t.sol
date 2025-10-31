@@ -3,7 +3,12 @@ pragma solidity ^0.8.22;
 
 import {Test} from "forge-std/Test.sol";
 import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
-import {AltoBorrowMarket, LiquidationConfiguration} from "@alto/lending/AltoBorrowMarket.sol";
+import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";
+import {
+    LiquidationConfiguration,
+    BaseMarketInitParams,
+    BorrowMarketInitParams
+} from "@alto/lending/interfaces/IMarket.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 import {LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
@@ -32,32 +37,36 @@ contract LiquidateTest is Test {
         address oracle = address(new OracleMock());
         OracleMock(oracle).setPrice(LENDING_ORACLE_PRICE_PRECISION);
 
-        market = AltoBorrowMarket(
-            MarketDeployer.deployBorrowMarket(
-                address(borrowToken),
-                address(collateralToken),
-                address(irm),
-                owner,
-                address(oracle),
-                0.75 ether,
-                0,
-                owner,
-                LiquidationConfiguration({
-                    maxLiquidationLtv: 0.8 ether,
-                    dynamicBonusFeeStart: 0.03 ether,
-                    ltvForCompleteLiquidation: 0.9 ether,
-                    dynamicBonusFeeDecaySteepness: 5 ether,
-                    liquidationBaseFee: 0.05 ether,
-                    minPenaltyPercentage: 0.01 ether,
-                    protocolFeePercentage: 0 ether,
-                    isEnabledPriorityLiquidation: true,
-                    disablePriorityLiquidationAbovePositionLtv: type(uint256).max,
-                    priorityLiquidationGracePeriod: 5 minutes,
-                    taggerLiquidationGracePeriod: 2 minutes,
-                    liquidationWindowTag: 3 days
-                })
-            )
-        );
+        LiquidationConfiguration memory config = LiquidationConfiguration({
+            maxLiquidationLtv: 0.8 ether,
+            dynamicBonusFeeStart: 0.03 ether,
+            ltvForCompleteLiquidation: 0.9 ether,
+            dynamicBonusFeeDecaySteepness: 5 ether,
+            liquidationBaseFee: 0.05 ether,
+            minPenaltyPercentage: 0.01 ether,
+            protocolFeePercentage: 0 ether,
+            isEnabledPriorityLiquidation: true,
+            disablePriorityLiquidationAbovePositionLtv: type(uint256).max,
+            priorityLiquidationGracePeriod: 5 minutes,
+            taggerLiquidationGracePeriod: 2 minutes,
+            liquidationWindowTag: 3 days
+        });
+
+        BaseMarketInitParams memory baseMarketInitParams = BaseMarketInitParams({
+            borrowToken: address(borrowToken),
+            collateralToken: address(collateralToken),
+            irm: address(irm),
+            owner: owner,
+            oracle: address(oracle),
+            maxLtv: 0.75 ether,
+            feeRecipient: owner,
+            liquidationConfiguration: config
+        });
+
+        BorrowMarketInitParams memory borrowMarketInitParams =
+            BorrowMarketInitParams({baseMarketInitParams: baseMarketInitParams, initialBorrowOpeningFee: 0});
+
+        market = AltoBorrowMarket(MarketDeployer.deployBorrowMarket(borrowMarketInitParams));
 
         // Set owner as pauser for PAUSE_TYPE
         market.setPauser(owner, PAUSE_TYPE, true);

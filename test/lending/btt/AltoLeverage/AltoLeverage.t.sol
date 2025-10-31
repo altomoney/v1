@@ -6,7 +6,12 @@ import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 import {LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
-import {IMarket, LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
+import {
+    IMarket,
+    LiquidationConfiguration,
+    BaseMarketInitParams,
+    BorrowMarketInitParams
+} from "@alto/lending/interfaces/IMarket.sol";
 import {SwapperSimpleMock} from "@alto/lending/mocks/SwapperSimpleMock.sol";
 
 import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
@@ -40,32 +45,36 @@ contract AltoLeverageBTTTest is Test {
         oracle = address(new OracleMock());
         OracleMock(oracle).setPrice(1 * LENDING_ORACLE_PRICE_PRECISION);
 
-        market = IMarket(
-            MarketDeployer.deployBorrowMarket(
-                address(borrowToken),
-                address(collateralToken),
-                address(irm),
-                address(this),
-                address(oracle),
-                0.8 ether,
-                0,
-                address(this),
-                LiquidationConfiguration({
-                    maxLiquidationLtv: 0.8 ether,
-                    dynamicBonusFeeStart: 0.03 ether,
-                    ltvForCompleteLiquidation: 0.9 ether,
-                    dynamicBonusFeeDecaySteepness: 5 ether,
-                    liquidationBaseFee: 0.05 ether,
-                    minPenaltyPercentage: 0.01 ether,
-                    protocolFeePercentage: 0.075 ether,
-                    isEnabledPriorityLiquidation: true,
-                    disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
-                    priorityLiquidationGracePeriod: 5 minutes,
-                    taggerLiquidationGracePeriod: 2 minutes,
-                    liquidationWindowTag: 3 days
-                })
-            )
-        );
+        LiquidationConfiguration memory config = LiquidationConfiguration({
+            maxLiquidationLtv: 0.8 ether,
+            dynamicBonusFeeStart: 0.03 ether,
+            ltvForCompleteLiquidation: 0.9 ether,
+            dynamicBonusFeeDecaySteepness: 5 ether,
+            liquidationBaseFee: 0.05 ether,
+            minPenaltyPercentage: 0.01 ether,
+            protocolFeePercentage: 0.075 ether,
+            isEnabledPriorityLiquidation: true,
+            disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
+            priorityLiquidationGracePeriod: 5 minutes,
+            taggerLiquidationGracePeriod: 2 minutes,
+            liquidationWindowTag: 3 days
+        });
+
+        BaseMarketInitParams memory baseMarketInitParams = BaseMarketInitParams({
+            borrowToken: address(borrowToken),
+            collateralToken: address(collateralToken),
+            irm: address(irm),
+            owner: address(this),
+            oracle: address(oracle),
+            maxLtv: 0.8 ether,
+            feeRecipient: address(this),
+            liquidationConfiguration: config
+        });
+
+        BorrowMarketInitParams memory borrowMarketInitParams =
+            BorrowMarketInitParams({baseMarketInitParams: baseMarketInitParams, initialBorrowOpeningFee: 0});
+
+        market = IMarket(MarketDeployer.deployBorrowMarket(borrowMarketInitParams));
 
         swapper.setWhitelisted(address(leverage), true);
         // Setup initial balances for test accounts

@@ -5,7 +5,11 @@ import {OracleTestnet} from "@alto/deployments/testnet/contracts/OracleTestnet.s
 import {AdaptiveCurveIrm} from "@alto/lending/irm/AdaptiveCurveIrm.sol";
 import {UnsafeUpgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {AltoMintMarket} from "@alto/lending/AltoMintMarket.sol";
-import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
+import {
+    MintMarketInitParams,
+    BaseMarketInitParams,
+    LiquidationConfiguration
+} from "@alto/lending/interfaces/IMarket.sol";
 import {ITestnetMarketBatch, TestnetMarketBatchReport} from "./ITestnetMarketBatch.sol";
 
 struct TestnetMintMarketBatchParams {
@@ -46,37 +50,40 @@ contract TestnetMintMarketBatch is ITestnetMarketBatch {
 
         address market = address(new AltoMintMarket());
 
-        address marketProxy = UnsafeUpgrades.deployUUPSProxy(
-            address(market),
-            abi.encodeCall(
-                AltoMintMarket.initialize,
-                (
-                    _params.borrowToken,
-                    _params.collateralToken,
-                    marketIrm,
-                    _params.owner,
-                    marketOracle,
-                    _params.maxLtv,
-                    _params.debtCeiling,
-                    _params.owner,
-                    0.005 ether,
-                    LiquidationConfiguration({
-                        maxLiquidationLtv: 0.8 ether,
-                        dynamicBonusFeeStart: 0.03 ether,
-                        ltvForCompleteLiquidation: 0.9 ether,
-                        dynamicBonusFeeDecaySteepness: 5 ether,
-                        liquidationBaseFee: 0.05 ether,
-                        minPenaltyPercentage: 0.01 ether,
-                        protocolFeePercentage: 0.075 ether,
-                        isEnabledPriorityLiquidation: true,
-                        disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
-                        priorityLiquidationGracePeriod: 5 minutes,
-                        taggerLiquidationGracePeriod: 2 minutes,
-                        liquidationWindowTag: 3 days
-                    })
-                )
-            )
-        );
+        LiquidationConfiguration memory liquidationConfig = LiquidationConfiguration({
+            maxLiquidationLtv: 0.8 ether,
+            dynamicBonusFeeStart: 0.03 ether,
+            ltvForCompleteLiquidation: 0.9 ether,
+            dynamicBonusFeeDecaySteepness: 5 ether,
+            liquidationBaseFee: 0.05 ether,
+            minPenaltyPercentage: 0.01 ether,
+            protocolFeePercentage: 0.075 ether,
+            isEnabledPriorityLiquidation: true,
+            disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
+            priorityLiquidationGracePeriod: 5 minutes,
+            taggerLiquidationGracePeriod: 2 minutes,
+            liquidationWindowTag: 3 days
+        });
+
+        BaseMarketInitParams memory baseMarketInitParams = BaseMarketInitParams({
+            borrowToken: _params.borrowToken,
+            collateralToken: _params.collateralToken,
+            irm: marketIrm,
+            owner: _params.owner,
+            oracle: marketOracle,
+            maxLtv: _params.maxLtv,
+            feeRecipient: _params.owner,
+            liquidationConfiguration: liquidationConfig
+        });
+
+        MintMarketInitParams memory initParams = MintMarketInitParams({
+            baseMarketInitParams: baseMarketInitParams,
+            debtCeiling: _params.debtCeiling,
+            initialBorrowOpeningFee: 0.005 ether
+        });
+
+        address marketProxy =
+            UnsafeUpgrades.deployUUPSProxy(address(market), abi.encodeCall(AltoMintMarket.initialize, (initParams)));
 
         report = TestnetMarketBatchReport({
             marketImplementation: market, market: marketProxy, marketIrm: marketIrm, marketOracle: marketOracle

@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {AltoBaseMarket} from "./AltoBaseMarket.sol";
-import {LiquidationConfiguration} from "./interfaces/IMarket.sol";
+import {BorrowMarketInitParams, LiquidationConfiguration} from "./interfaces/IMarket.sol";
 import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 
 /// @title Alto Borrow Market
@@ -29,30 +29,18 @@ contract AltoBorrowMarket is AltoBaseMarket {
         _disableInitializers();
     }
 
-    function initialize(
-        address _borrowToken,
-        address _collateralToken,
-        address _irm,
-        address _owner,
-        address _oracle,
-        uint256 _maxLtv,
-        uint256 _initialBorrowOpeningFee,
-        address _feeRecipient,
-        LiquidationConfiguration memory _liquidationConfiguration
-    ) public initializer {
-        __AltoBaseMarket_init(
-            _borrowToken, _collateralToken, _irm, _owner, _oracle, _maxLtv, _feeRecipient, _liquidationConfiguration
-        );
+    function initialize(BorrowMarketInitParams memory _initParams) public initializer {
+        __AltoBaseMarket_init(_initParams.baseMarketInitParams);
 
-        if (_initialBorrowOpeningFee > MATH_PRECISION) {
+        if (_initParams.initialBorrowOpeningFee > MATH_PRECISION) {
             revert AltoBorrowMarketInvalidInput();
         }
-        if (_feeRecipient == address(0) && _initialBorrowOpeningFee > 0) {
+        if (_initParams.baseMarketInitParams.feeRecipient == address(0) && _initParams.initialBorrowOpeningFee > 0) {
             revert AltoBorrowMarketInvalidInput();
         }
 
-        _borrowOpeningFee = _initialBorrowOpeningFee;
-        emit SetBorrowOpeningFee(0, _initialBorrowOpeningFee);
+        _borrowOpeningFee = _initParams.initialBorrowOpeningFee;
+        emit SetBorrowOpeningFee(0, _initParams.initialBorrowOpeningFee);
     }
 
     /// @notice Getter of the borrow opening fee
