@@ -13,7 +13,8 @@ import {
     LiquidationConfiguration,
     BaseMarketInitParams,
     BorrowMarketInitParams,
-    MintMarketInitParams
+    MintMarketInitParams,
+    DaoMintMarketInitParams
 } from "@alto/lending/interfaces/IMarket.sol";
 import {ERC20MockMintable} from "@alto-test/helpers/ERC20MockMintable.sol";
 import {PAUSE_TYPE, FROZEN_TYPE} from "@alto/utils/Constants.sol";
@@ -24,7 +25,8 @@ uint256 constant MAX_AMOUNT = 2 ** 64; // Must be less than or equal to type(uin
 
 enum MarketType {
     BORROW,
-    MINT
+    MINT,
+    DAO_MINT
 }
 
 abstract contract MarketCommon is Test {
@@ -105,6 +107,15 @@ abstract contract MarketCommon is Test {
                 baseMarketInitParams: baseMarketInitParams, debtCeiling: 1000000 ether, initialBorrowOpeningFee: 0
             });
             market = IMarket(MarketDeployer.deployMintMarket(mintMarketInitParams));
+        } else if (marketType == MarketType.DAO_MINT) {
+            borrowToken = ERC20Mock(address(new ERC20MockMintable("borrow", "B")));
+            baseMarketInitParams.borrowToken = address(borrowToken);
+            DaoMintMarketInitParams memory daoMintMarketInitParams = DaoMintMarketInitParams({
+                baseMarketInitParams: baseMarketInitParams,
+                debtCeiling: 1000000 ether,
+                initialBorrowOpeningFee: 0
+            });
+            market = IMarket(MarketDeployer.deployDaoMintMarket(daoMintMarketInitParams));
         }
 
         market.setPauser(PAUSER, PAUSE_TYPE, true);

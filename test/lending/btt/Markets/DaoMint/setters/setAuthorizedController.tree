@@ -1,0 +1,16 @@
+AltoDaoMintMarket::setAuthorizedController
+├── when caller is not owner
+│   └── it should revert
+└── when caller is owner
+    ├── when controller is zero address
+    │   └── it should revert
+    └── when controller is not zero address
+        ├── when authorizing a new controller
+        │   ├── it should set authorizedControllers to true
+        │   └── it should emit SetAuthorizedController event
+        ├── when unauthorizing an existing controller
+        │   ├── it should set authorizedControllers to false
+        │   └── it should emit SetAuthorizedController event
+        └── when updating controller status multiple times
+            ├── it should update authorizedControllers mapping correctly
+            └── it should emit SetAuthorizedController event for each update

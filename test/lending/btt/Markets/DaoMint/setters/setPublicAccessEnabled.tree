@@ -1,0 +1,17 @@
+AltoDaoMintMarket::setPublicAccessEnabled
+├── when caller is not owner
+│   └── it should revert
+└── when caller is owner
+    ├── given publicAccessEnabled is already true
+    │   └── it should revert
+    └── given publicAccessEnabled is false
+        ├── when parameter is true
+        │   ├── it should set publicAccessEnabled to true
+        │   └── it should emit SetPublicAccessEnabled event
+        ├── when parameter is false
+        │   ├── it should set publicAccessEnabled to false
+        │   └── it should emit SetPublicAccessEnabled event
+        └── when enabling then trying to change
+            ├── it should set publicAccessEnabled to true on first call
+            └── it should revert on subsequent calls
+

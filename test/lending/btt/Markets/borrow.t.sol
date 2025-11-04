@@ -78,7 +78,7 @@ contract AltoMarketBorrow is MarketCommon {
         if (marketType == MarketType.BORROW) {
             market.addSupply(INITIAL_SUPPLY, 0, SUPPLIER);
         }
-        if (marketType == MarketType.MINT) {
+        if (marketType == MarketType.MINT || marketType == MarketType.DAO_MINT) {
             vm.prank(OWNER);
             AltoMintMarket(address(market)).setDebtCeiling(INITIAL_SUPPLY);
         }
@@ -148,7 +148,7 @@ contract AltoMarketBorrow is MarketCommon {
         if (marketType == MarketType.BORROW) {
             assertEq(borrowToken.balanceOf(address(market)), marketBalanceBefore - INITIAL_BORROWED_ASSETS);
         }
-        if (marketType == MarketType.MINT) {
+        if (marketType == MarketType.MINT || marketType == MarketType.DAO_MINT) {
             assertEq(borrowToken.balanceOf(address(market)), marketBalanceBefore);
         }
 
@@ -195,7 +195,7 @@ contract AltoMarketBorrow is MarketCommon {
         if (marketType == MarketType.BORROW) {
             assertEq(borrowToken.balanceOf(address(market)), marketBalanceBefore - INITIAL_BORROWED_ASSETS);
         }
-        if (marketType == MarketType.MINT) {
+        if (marketType == MarketType.MINT || marketType == MarketType.DAO_MINT) {
             assertEq(borrowToken.balanceOf(address(market)), marketBalanceBefore);
         }
     }
@@ -239,7 +239,7 @@ contract AltoMarketBorrow is MarketCommon {
         if (marketType == MarketType.BORROW) {
             assertEq(borrowToken.balanceOf(address(market)), marketBalanceBefore - INITIAL_BORROWED_ASSETS);
         }
-        if (marketType == MarketType.MINT) {
+        if (marketType == MarketType.MINT || marketType == MarketType.DAO_MINT) {
             assertEq(borrowToken.balanceOf(address(market)), marketBalanceBefore);
         }
     }

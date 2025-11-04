@@ -1,0 +1,42 @@
+AltoDaoMintMarket::claimInterest()
+├── when market is paused
+│   └── it should revert with IsPaused
+├── when feeRecipient is zero
+│   └── it should revert with AltoBaseMarketInvalidInput
+├── when interest is greater than claimableFeesAssets
+│   └── it should revert with AltoBaseMarketInvalidInput
+├── when caller is not owner nor feeRecipient
+│   └── it should revert with AltoBaseMarketUnauthorized
+├── when interest passed in is zero
+│   ├── given caller is owner
+│   │   ├── it should mint full claimableFeesAssets to feeRecipient
+│   │   ├── it should set claimableFeesAssets to zero
+│   │   ├── it should emit InterestClaimed with full amount
+│   │   └── it should return full amount
+│   └── given caller is feeRecipient
+│       ├── it should mint full claimableFeesAssets to feeRecipient
+│       ├── it should set claimableFeesAssets to zero
+│       ├── it should emit InterestClaimed with full amount
+│       └── it should return full amount
+└── when interest passed in is non-zero and <= claimableFeesAssets
+    ├── given caller is owner
+    │   ├── it should mint `interest` to feeRecipient
+    │   ├── it should decrease claimableFeesAssets by `interest`
+    │   ├── it should emit InterestClaimed with `interest`
+    │   └── it should return `interest`
+    ├── given caller is feeRecipient
+        ├── it should mint `interest` to feeRecipient
+        ├── it should decrease claimableFeesAssets by `interest`
+        ├── it should emit InterestClaimed with `interest`
+        └── it should return `interest`
+    └── when interest equals claimableFeesAssets
+        ├── given caller is owner
+        │   ├── it should mint full claimableFeesAssets to feeRecipient
+        │   ├── it should set claimableFeesAssets to zero
+        │   ├── it should emit InterestClaimed with full amount
+        │   └── it should return full amount
+        └── given caller is feeRecipient
+            ├── it should mint full claimableFeesAssets to feeRecipient
+            ├── it should set claimableFeesAssets to zero
+            ├── it should emit InterestClaimed with full amount
+            └── it should return full amount

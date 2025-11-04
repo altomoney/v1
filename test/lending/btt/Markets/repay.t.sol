@@ -57,7 +57,7 @@ contract AltoMarketRepay is MarketCommon {
         if (marketType == MarketType.BORROW) {
             market.addSupply(INITIAL_SUPPLY, 0, SUPPLIER);
         }
-        if (marketType == MarketType.MINT) {
+        if (marketType == MarketType.MINT || marketType == MarketType.DAO_MINT) {
             vm.prank(OWNER);
             AltoMintMarket(address(market)).setDebtCeiling(INITIAL_SUPPLY);
         }
@@ -111,7 +111,7 @@ contract AltoMarketRepay is MarketCommon {
             assertEq(borrowToken.balanceOf(address(market)), marketBalanceBefore + REPAY_AMOUNT);
         }
 
-        if (marketType == MarketType.MINT) {
+        if (marketType == MarketType.MINT || marketType == MarketType.DAO_MINT) {
             assertEq(borrowToken.balanceOf(address(market)), marketBalanceBefore);
         }
     }
@@ -150,7 +150,7 @@ contract AltoMarketRepay is MarketCommon {
             assertEq(borrowToken.balanceOf(address(market)), marketBalanceBefore + REPAY_AMOUNT);
         }
 
-        if (marketType == MarketType.MINT) {
+        if (marketType == MarketType.MINT || marketType == MarketType.DAO_MINT) {
             assertEq(borrowToken.balanceOf(address(market)), 0);
         }
     }
@@ -189,7 +189,7 @@ contract AltoMarketRepay is MarketCommon {
             assertEq(borrowToken.balanceOf(address(market)), marketBalanceBefore + REPAY_AMOUNT);
         }
 
-        if (marketType == MarketType.MINT) {
+        if (marketType == MarketType.MINT || marketType == MarketType.DAO_MINT) {
             assertEq(borrowToken.balanceOf(address(market)), 0);
         }
     }

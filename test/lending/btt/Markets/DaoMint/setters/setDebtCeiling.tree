@@ -1,0 +1,15 @@
+AltoMarket::setDebtCeiling
+├── when caller is not owner
+│   └── it should revert
+└── when caller is owner 
+    ├── when market is not paused
+    │   ├── it should accrue interest
+    │   ├── it should update totalSupply assets
+    │   ├── it should emit SetDebtCeiling event
+    │   └── when totalSupply assets is greater than debt ceiling
+    │       └── it should revert
+    └── when market is paused
+        ├── it should not accrue interest
+        ├── it should accrue interest
+        ├── it should update totalSupply assets
+        └── it should emit SetDebtCeiling event

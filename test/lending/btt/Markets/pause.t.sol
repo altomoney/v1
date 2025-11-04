@@ -17,7 +17,7 @@ contract AltoMarketPause is MarketCommon {
         if (marketType == MarketType.BORROW) {
             market.addSupply(0.75 ether, 0, SUPPLIER);
         }
-        if (marketType == MarketType.MINT) {
+        if (marketType == MarketType.MINT || marketType == MarketType.DAO_MINT) {
             vm.prank(OWNER);
             AltoMintMarket(address(market)).setDebtCeiling(0.75 ether);
         }

@@ -64,7 +64,7 @@ contract AltoBorrowMarketliquidate is MarketCommon {
         if (marketType == MarketType.BORROW) {
             market.addSupply(1000 ether, 0, SUPPLIER);
         }
-        if (marketType == MarketType.MINT) {
+        if (marketType == MarketType.MINT || marketType == MarketType.DAO_MINT) {
             vm.prank(OWNER);
             AltoMintMarket(address(market)).setDebtCeiling(1000 ether);
         }
@@ -87,7 +87,7 @@ contract AltoBorrowMarketliquidate is MarketCommon {
         if (marketType == MarketType.BORROW) {
             market.addSupply(100 ether, 0, SUPPLIER);
         }
-        if (marketType == MarketType.MINT) {
+        if (marketType == MarketType.MINT || marketType == MarketType.DAO_MINT) {
             vm.prank(OWNER);
             AltoMintMarket(address(market)).setDebtCeiling(100 ether);
             vm.stopPrank();
@@ -393,7 +393,7 @@ contract AltoBorrowMarketliquidate is MarketCommon {
         if (marketType == MarketType.BORROW) {
             market.addSupply(100 ether, 0, SUPPLIER);
         }
-        if (marketType == MarketType.MINT) {
+        if (marketType == MarketType.MINT || marketType == MarketType.DAO_MINT) {
             vm.prank(OWNER);
             AltoMintMarket(address(market)).setDebtCeiling(100 ether);
             vm.stopPrank();

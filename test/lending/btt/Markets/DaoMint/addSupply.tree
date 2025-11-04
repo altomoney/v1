@@ -1,0 +1,2 @@
+AltoMintMarket::AddSupply()
+└── it should revert

@@ -6,10 +6,12 @@ import {UnsafeUpgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 
 import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";
 import {AltoMintMarket} from "@alto/lending/AltoMintMarket.sol";
+import {AltoDaoMintMarket} from "@alto/lending/AltoDaoMintMarket.sol";
 import {
     BorrowMarketInitParams,
     MintMarketInitParams,
     BaseMarketInitParams,
+    DaoMintMarketInitParams,
     LiquidationConfiguration
 } from "@alto/lending/interfaces/IMarket.sol";
 import {Vm} from "forge-std/Vm.sol";
@@ -42,6 +44,23 @@ library MarketDeployer {
         } else {
             return UnsafeUpgrades.deployUUPSProxy(
                 address(new AltoMintMarket()), abi.encodeCall(AltoMintMarket.initialize, (_mintMarketInitParams))
+            );
+        }
+    }
+
+    function deployDaoMintMarket(DaoMintMarketInitParams memory _daoMintMarketInitParams) external returns (address) {
+        Vm vm = Vm(address(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D));
+        bool shouldUseSafeProxy = vm.envOr("VERIFY_PROXY", false);
+
+        if (shouldUseSafeProxy) {
+            return Upgrades.deployUUPSProxy(
+                "AltoDaoMintMarket.sol:AltoDaoMintMarket",
+                abi.encodeCall(AltoDaoMintMarket.initialize, (_daoMintMarketInitParams))
+            );
+        } else {
+            return UnsafeUpgrades.deployUUPSProxy(
+                address(new AltoDaoMintMarket()),
+                abi.encodeCall(AltoDaoMintMarket.initialize, (_daoMintMarketInitParams))
             );
         }
     }

@@ -101,6 +101,16 @@ struct MintMarketInitParams {
     uint256 initialBorrowOpeningFee;
 }
 
+/// @notice Struct that represents the parameters for initializing a DAO mint market
+struct DaoMintMarketInitParams {
+    /// @notice The parameters for initializing a base market.
+    BaseMarketInitParams baseMarketInitParams;
+    /// @notice The debt ceiling of mint market.
+    uint256 debtCeiling;
+    /// @notice The initial borrow opening fee.
+    uint256 initialBorrowOpeningFee;
+}
+
 /// @notice Struct used for liquidation calculations
 struct LiquidationCalculation {
     uint256 collateralPrice;

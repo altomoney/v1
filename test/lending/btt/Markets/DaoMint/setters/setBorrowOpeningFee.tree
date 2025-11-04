@@ -1,0 +1,10 @@
+AltoMarket::setBorrowOpeningFee
+├── when caller is not owner
+│   └── it should revert
+└── when caller is owner
+    ├── it should update borrowOpeningFee
+    ├── it should emit SetBorrowOpeningFee event
+    ├── when borrowOpeningFee is greater than MATH_PRECISION
+    │   └── it should revert
+    └── when fee recipient is not set borrowOpeningFee is greater than 0
+        └── it should revert

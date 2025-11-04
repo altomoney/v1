@@ -1,0 +1,13 @@
+AltoDaoMintMarket::borrow()
+└── given valid inputs
+    ├── when totalBorrowed assets is less than or equal to totalSupply assets
+    │   └── when opening fee is greater than 0
+    │       └── it should apply borrow opening fee
+    ├── given caller is not authorized
+    │   └── given caller is not owner
+    │       ├── given public access is not enabled
+    │       │   └── it should revert
+    │       └── given public access is enabled
+    │           └── it should succeed
+    └── given caller is owner
+        └── it should succeed
