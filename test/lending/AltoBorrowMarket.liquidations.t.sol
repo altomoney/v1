@@ -2,7 +2,7 @@
 pragma solidity ^0.8.22;
 
 import {Test} from "forge-std/Test.sol";
-import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
+import {LiquidationConfiguration, Position} from "@alto/lending/interfaces/IMarket.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
@@ -12,6 +12,9 @@ import {IMarket, IMarketEvents, IMarketErrors} from "@alto/lending/interfaces/IM
 import {ILiquidateCallback} from "@alto/lending/interfaces/IMarketCallbacks.sol";
 import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
 import {MockMarketDeployer, MockMarket} from "@alto-test/helpers/MockMarket.sol";
+import {console} from "forge-std/console.sol";
+import {stdError} from "forge-std/StdError.sol";
+import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 
 contract LiquidateCallback is ILiquidateCallback {
     function onLiquidateCallback(uint256 assetsToRepay, uint256 collateralReceived, bytes calldata data) external {
@@ -22,6 +25,7 @@ contract LiquidateCallback is ILiquidateCallback {
 
 contract AltoBorrowMarketTest is Test {
     using AssetShareConversionMath for uint256;
+    using FixedPointMath for uint256;
 
     MockMarket market;
     IMarket internal imarket;
@@ -128,6 +132,54 @@ contract AltoBorrowMarketTest is Test {
 
     function toAssetsUp(uint256 shares, uint256 totalAssets, uint256 totalShares) internal pure returns (uint256) {
         return mulDivUp(shares, totalAssets + 1, totalShares + VIRTUAL_SHARES);
+    }
+
+    function testLiquidationRevertForSmallPosition() public {
+        // deploying market with collateral price of 1e30
+        createMarket(
+            LiquidationConfiguration({
+                maxLiquidationLtv: 0.8 ether,
+                dynamicBonusFeeStart: 0.03 ether,
+                ltvForCompleteLiquidation: 0.9 ether,
+                dynamicBonusFeeDecaySteepness: 5 ether,
+                liquidationBaseFee: 0.05 ether,
+                minPenaltyPercentage: 0.01 ether,
+                protocolFeePercentage: 0.075 ether,
+                isEnabledPriorityLiquidation: true,
+                disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
+                priorityLiquidationGracePeriod: 5 minutes,
+                taggerLiquidationGracePeriod: 2 minutes,
+                liquidationWindowTag: 3 days
+            }),
+            1e30,
+            0.75 ether
+        );
+
+        vm.startPrank(bob);
+        // adding 1e8 collateral
+        market.addCollateral(1e8, bob);
+        // creating a borrowing position
+        market.borrow(10, 0, bob, bob, "");
+        vm.stopPrank();
+
+        // adding interest to make position underwater
+        market.addInterest(0.32 ether);
+
+        // updating oracle price to 1e27 so that (price * amount) < 1e36. So, positionCollateralValue will round down to 0
+        // hence liquidation will revert
+        OracleMock(market.oracle()).setPrice(1e27);
+
+        (,, uint128 collateralAssets) = market.position(bob);
+
+        console.log(
+            "Position Collateral Value",
+            uint256(collateralAssets).divideWithRounding(
+                OracleMock(market.oracle()).getPrice(), ORACLE_PRICE_PRECISION, false
+            )
+        );
+
+        vm.expectRevert(stdError.divisionError);
+        market.liquidate(bob, hex"");
     }
 
     function testLiquidateBasic() public {
