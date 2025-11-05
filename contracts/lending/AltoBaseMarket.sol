@@ -37,6 +37,7 @@ import {
     IRemoveCollateralCallback,
     ILiquidateCallback
 } from "@alto/lending/interfaces/IMarketCallbacks.sol";
+import {console2} from "forge-std/console2.sol";
 
 /// @title Alto Base Market
 /// @author Pearl Labs
@@ -706,6 +707,122 @@ abstract contract AltoBaseMarket is
             result.repayShares,
             badDebt.assets,
             badDebt.shares
+        );
+
+        return (result.collateralAmount, result.repayAmount, calc.protocolFee);
+    }
+
+    function governanceLiquidate(address borrower, bytes calldata data)
+        external
+        onlyOwner
+        returns (uint256, uint256, uint256)
+    {
+        _accrueInterest();
+
+        // Check if the position is underwater
+        if (_isSolvent(borrower, true)) {
+            revert AltoBaseMarketLiquidatingSolventPosition();
+        }
+
+        Position memory _position = position[borrower];
+        LiquidationCalculation memory calc;
+
+        // Initial calculations
+        calc.collateralPrice = IOracle(oracle).getPrice();
+
+        calc.positionCollateralValue =
+            uint256(_position.collateralAssets).divideWithRounding(calc.collateralPrice, ORACLE_PRICE_PRECISION, false);
+        calc.positionBorrowedAssets =
+            uint256(_position.borrowShares).convertToAssetsUp(totalBorrowed.assets, totalBorrowed.shares);
+
+        calc.currentLtv = calc.positionCollateralValue == 0
+            ? MATH_PRECISION
+            : calc.positionBorrowedAssets.divideWithPrecisionUp(calc.positionCollateralValue);
+
+        if (calc.currentLtv < liquidationConfiguration.ltvForCompleteLiquidation) {
+            revert AltoBaseMarketUnauthorized();
+        }
+
+        // calculate liquidation percentage - how far are we between LTV and LLTV from current LTV
+        calc.liquidationPercentage = MATH_PRECISION;
+
+        // apply above to calculate liquidation fee (priority liquidators don't get a bonus fee only base fee)
+        calc.liquidationFee = liquidationConfiguration.liquidationBaseFee;
+
+        // calculate new LTV - how much LTV are we aiming for after liquidation
+        calc.newLtv = 0;
+
+        // Calculate fee in collateral
+        calc.liquidatorBonusFee = uint256(_position.collateralAssets).multiplyWithPrecision(calc.liquidationFee);
+        calc.protocolFee = uint256(calc.liquidatorBonusFee).divideWithRounding(
+            liquidationConfiguration.protocolFeePercentage, MATH_PRECISION, true
+        );
+        uint256 remainingCollateralAfterFee = _position.collateralAssets - calc.liquidatorBonusFee;
+        calc.remainingCollateralAfterFeeInBorrowAssets =
+            remainingCollateralAfterFee.divideWithRounding(calc.collateralPrice, ORACLE_PRICE_PRECISION, false);
+
+        calc.collateralToSellInBorrowAssets = (
+            calc.positionBorrowedAssets
+                - calc.remainingCollateralAfterFeeInBorrowAssets.multiplyWithPrecision(calc.newLtv)
+        ).divideWithPrecisionUp(MATH_PRECISION - calc.newLtv);
+        calc.collateralToSellInBorrowAssets =
+            Math.min(calc.collateralToSellInBorrowAssets, calc.remainingCollateralAfterFeeInBorrowAssets);
+        calc.collateralToSellInBorrowAssets = Math.min(calc.collateralToSellInBorrowAssets, calc.positionBorrowedAssets);
+
+        // Calculate final amounts
+        LiquidationCalculationResult memory result;
+        uint256 totalCollateralToTake = calc.collateralToSellInBorrowAssets.divideWithRounding(
+            ORACLE_PRICE_PRECISION, calc.collateralPrice, true
+        ) + calc.liquidatorBonusFee;
+
+        result.collateralAmount =
+            totalCollateralToTake > _position.collateralAssets ? _position.collateralAssets : totalCollateralToTake;
+
+        result.repayAmount = calc.positionBorrowedAssets;
+
+        result.repayShares = result.repayAmount.convertToSharesDown(totalBorrowed.assets, totalBorrowed.shares);
+
+        // Ensure we don't try to repay more shares than the user has which can happen since we are using virtual shares
+        if (result.repayShares.toUint128() > _position.borrowShares) {
+            result.repayShares = uint256(_position.borrowShares);
+        }
+
+        // apply liquidation
+        position[borrower].collateralAssets -= result.collateralAmount.toUint128();
+        position[borrower].borrowShares -= result.repayShares.toUint128();
+
+        totalBorrowed.shares -= result.repayShares.toUint128();
+        totalBorrowed.assets =
+            (totalBorrowed.assets > result.repayAmount ? totalBorrowed.assets - result.repayAmount : 0).toUint128();
+
+        delete liquidablePositions[borrower];
+
+        // apply protocol fee
+        position[feeRecipient].collateralAssets += calc.protocolFee.toUint128();
+
+        result.collateralAmountToSend = result.collateralAmount - calc.protocolFee;
+
+        // transfer collateral and borrow tokens with applied protocol fee
+        IERC20(collateralToken).safeTransfer(msg.sender, result.collateralAmountToSend);
+
+        if (data.length > 0) {
+            ILiquidateCallback(msg.sender).onLiquidateCallback(result.repayAmount, result.collateralAmountToSend, data);
+        }
+
+        _sendBorrowToken(msg.sender, address(this), result.repayAmount);
+
+        emit Liquidation(
+            borrower,
+            collateralToken,
+            borrowToken,
+            msg.sender,
+            result.collateralAmount,
+            calc.protocolFee,
+            calc.liquidatorBonusFee,
+            result.repayAmount,
+            result.repayShares,
+            0,
+            0
         );
 
         return (result.collateralAmount, result.repayAmount, calc.protocolFee);
