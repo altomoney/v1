@@ -258,6 +258,71 @@ contract AltoBorrowMarketTest is Test {
         assertEq(borrowShares, 0);
     }
 
+    // Invariant violation due to token donation can result in DoS of baddebt liquidations
+    function testDOSWhileBadDebtLiquidation() public {
+        createMarket(
+            LiquidationConfiguration({
+                maxLiquidationLtv: 0.8 ether,
+                dynamicBonusFeeStart: 0.03 ether,
+                ltvForCompleteLiquidation: 0.9 ether,
+                dynamicBonusFeeDecaySteepness: 5 ether,
+                liquidationBaseFee: 0.05 ether,
+                minPenaltyPercentage: 0.01 ether,
+                protocolFeePercentage: 0 ether,
+                isEnabledPriorityLiquidation: true,
+                disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
+                priorityLiquidationGracePeriod: 5 minutes,
+                taggerLiquidationGracePeriod: 2 minutes,
+                liquidationWindowTag: 3 days
+            }),
+            ORACLE_PRICE_PRECISION,
+            0.75 ether
+        );
+
+        vm.startPrank(bob);
+        // bob supplies 2 ether as collateral
+        market.addCollateral(2 ether, bob);
+        // bob borrows 1.5 ether
+        market.borrow(1.5 ether, 0, bob, bob, "");
+        vm.stopPrank();
+
+        vm.startPrank(alice);
+        // alice donates 1.5 ether to the market
+        borrowToken.transfer(address(market), 1.5 ether);
+        // alice removes all her supply of borrow tokens
+        market.removeSupply(100 ether, 0, alice, alice);
+        vm.stopPrank();
+
+        uint256 newOraclePrice = 1e30;
+        // update oracle price to 1e30 to make bob's position underwater
+        OracleMock(market.oracle()).setPrice(newOraclePrice);
+
+        vm.startPrank(liquidator);
+        // liquidator has 2 ether of borrow tokens
+        deal(address(borrowToken), liquidator, 2 ether);
+
+        // total supply assets should be 0 as alice removed all her supply
+        (uint128 totalSupplyAssets,) = market.totalSupply();
+
+        assertEq(totalSupplyAssets, 0, "total supply assets is not 0 even though alice removed all her supply");
+
+        (,, uint128 collateralAssets) = market.position(bob);
+        (uint128 totalBorrowedAssets,) = market.totalBorrowed();
+
+        uint256 collateralValue =
+            uint256(collateralAssets).divideWithRounding(newOraclePrice, ORACLE_PRICE_PRECISION, false);
+        uint256 borrowValue = totalBorrowedAssets;
+
+        // bad debt has been created for bob's position
+        assertGt(borrowValue, collateralValue, "bad debt has not been created yet");
+
+        // liquidation should revert when clearing bad debt because totalSupply.assets is 0
+        vm.expectRevert(stdError.arithmeticError);
+        market.liquidate(bob, hex"");
+
+        vm.stopPrank();
+    }
+
     function testLiquidateBasic() public {
         createMarket(
             LiquidationConfiguration({
