@@ -75,6 +75,7 @@ contract AltoBorrowMarketTest is Test {
         //deal(address(borrowToken), charlie, INITIAL_AMOUNT);
         deal(address(borrowToken), taggerLiquidator, INITIAL_AMOUNT);
         deal(address(borrowToken), externalLiquidator, INITIAL_AMOUNT);
+        deal(address(borrowToken), market.owner(), INITIAL_AMOUNT);
 
         deal(address(collateralToken), alice, INITIAL_AMOUNT);
         deal(address(collateralToken), bob, INITIAL_AMOUNT);
@@ -180,6 +181,66 @@ contract AltoBorrowMarketTest is Test {
 
         vm.expectRevert(stdError.divisionError);
         market.liquidate(bob, hex"");
+    }
+
+    function testGovernanceLiquidateSuccessForSmallPosition() public {
+        // deploying market with collateral price of 1e30
+        createMarket(
+            LiquidationConfiguration({
+                maxLiquidationLtv: 0.8 ether,
+                dynamicBonusFeeStart: 0.03 ether,
+                ltvForCompleteLiquidation: 0.9 ether,
+                dynamicBonusFeeDecaySteepness: 5 ether,
+                liquidationBaseFee: 0.05 ether,
+                minPenaltyPercentage: 0.01 ether,
+                protocolFeePercentage: 0.075 ether,
+                isEnabledPriorityLiquidation: true,
+                disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
+                priorityLiquidationGracePeriod: 5 minutes,
+                taggerLiquidationGracePeriod: 2 minutes,
+                liquidationWindowTag: 3 days
+            }),
+            1e30,
+            0.75 ether
+        );
+
+        vm.startPrank(bob);
+        // adding 1e8 collateral
+        market.addCollateral(1e8, bob);
+        // creating a borrowing position
+        market.borrow(10, 0, bob, bob, "");
+        vm.stopPrank();
+
+        // updating oracle price to 1e27 so that (price * amount) < 1e36. So, positionCollateralValue will round down to 0
+        // hence liquidation will revert
+        OracleMock(market.oracle()).setPrice(1e27);
+
+        (,, uint128 collateralAssets) = market.position(bob);
+
+        console.log(
+            "Position Collateral Value",
+            uint256(collateralAssets).divideWithRounding(
+                OracleMock(market.oracle()).getPrice(), ORACLE_PRICE_PRECISION, false
+            )
+        );
+
+        vm.startPrank(market.owner());
+        borrowToken.approve(address(market), type(uint256).max);
+        vm.expectEmit(true, true, true, true);
+        emit IMarketEvents.Liquidation(
+            bob, address(collateralToken), address(borrowToken), market.owner(), 5e6, 375000, 5e6, 10, 1e7, 0, 0
+        );
+        market.governanceLiquidate(bob, hex"");
+        vm.stopPrank();
+
+        (,, collateralAssets) = market.position(bob);
+
+        assertEq(collateralAssets, 1e8 - 5e6);
+        // assertEq(market.position(bob).borrowShares, 0);
+        // assertEq(market.totalBorrowed().assets, 0);
+        // assertEq(market.totalBorrowed().shares, 0);
+        // assertEq(market.totalSupply().assets, 0);
+        // assertEq(market.totalSupply().shares, 0);
     }
 
     function testLiquidateBasic() public {
