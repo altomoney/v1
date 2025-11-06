@@ -16,6 +16,7 @@ import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConver
 import {MarketDeployer} from "@alto/utils/MarketDeployer.sol";
 import {MockSwapper, MockSwapperData} from "./mocks/MockSwapper.sol";
 import {MaliciousERC20} from "./mocks/MaliciousERC20.sol";
+import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
 contract AltoLeverageReentrancySwapperTest is Test {
     using FixedPointMath for uint256;
@@ -88,6 +89,7 @@ contract AltoLeverageReentrancySwapperTest is Test {
         leverage.setMarket(address(market), true);
     }
 
+    // test after fixing reentrancy vulnerability
     function testLiquidateDuringDevelerage() public {
         uint256 borrowAmount = 600 ether;
 
@@ -112,22 +114,8 @@ contract AltoLeverageReentrancySwapperTest is Test {
 
         vm.startPrank(alice);
         market.setAuthorization(address(maliciousERC20), true);
-        vm.expectEmit(true, true, true, true);
-        emit IMarketEvents.Liquidation(
-            alice,
-            address(collateralToken),
-            address(borrowToken),
-            address(maliciousERC20),
-            1000000000000000000,
-            3750000000000000,
-            50000000000000000,
-            950000000000000000,
-            950000000000000000000000,
-            599050000000000000000, // bad debt cleared assets
-            599050000000000000000000000 // bad debt cleared shares
-        );
-        // removes 999 assets from collateral using leverage.
-        // This should trigger a liquidation of alice's position and bad debt is cleared
+
+        vm.expectRevert(ReentrancyGuardUpgradeable.ReentrancyGuardReentrantCall.selector);
         market.removeCollateral(999 ether, alice, address(leverage), swapParams);
     }
 
