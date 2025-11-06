@@ -11,7 +11,7 @@ import {
 import {IAltoWethLendingOracleErrors} from "@alto/oracles/interfaces/IAltoWethLendingOracle.sol";
 import {MATH_PRECISION, FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
-import {ChainlinkNode} from "@alto/oracles/interfaces/IModuleNode.sol";
+import {ChainlinkNode, ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
 import {OracleValidation} from "@alto/oracles/lending/libraries/OracleValidation.sol";
 
 /// @title AltoWethLendingOracle
@@ -30,7 +30,9 @@ contract AltoWethLendingOracle is Ownable2Step, ModuleChainlink, IAltoWethLendin
         _validateChainlinkParams(_chainlinkNode);
 
         chainlinkNode = _chainlinkNode;
-        emit SetChainlinkNode(ChainlinkNode(AggregatorV3Interface(address(0)), 0, 0, 0, 0), _chainlinkNode);
+        emit SetChainlinkNode(
+            ChainlinkNode(AggregatorV3Interface(address(0)), ConversionDirection.IN_TO_OUT, 0, 0, 0), _chainlinkNode
+        );
     }
 
     /// @inheritdoc IAltoWethLendingOracleBase

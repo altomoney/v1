@@ -12,7 +12,7 @@ import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {AltoWstEthLendingOracle} from "@alto/oracles/lending/AltoWstEthLendingOracle.sol";
 import {MarketDeployer} from "@alto/utils/MarketDeployer.sol";
 import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
-import {ChainlinkNode, ERC4626RatioNode} from "@alto/oracles/interfaces/IModuleNode.sol";
+import {ChainlinkNode, ERC4626RatioNode, ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {SwapParams} from "@alto/lending/leverage/interfaces/IAltoLeverageSwapper.sol";
 import {ORACLE_PRICE_PRECISION, IOracle} from "@alto/oracles/interfaces/IOracle.sol";
@@ -47,8 +47,9 @@ contract AltoLeverageWstEthMarketTest is Test {
 
         address irm = address(new FixedRateIrm(0.04 ether / uint256(365 days), address(this)));
         ERC4626RatioNode memory erc4626RatioNode = ERC4626RatioNode(1157209899495068171, 1708004591, 0.06 ether);
-        ChainlinkNode memory chainlinkNode =
-            ChainlinkNode(AggregatorV3Interface(CHAINLINK_ETH_USD_PRICE_FEED), 1, 2 hours, 18, 36);
+        ChainlinkNode memory chainlinkNode = ChainlinkNode(
+            AggregatorV3Interface(CHAINLINK_ETH_USD_PRICE_FEED), ConversionDirection.IN_TO_OUT, 2 hours, 18, 36
+        );
         oracle = address(new AltoWstEthLendingOracle(address(this), WSTETH, erc4626RatioNode, chainlinkNode));
 
         market = IMarket(

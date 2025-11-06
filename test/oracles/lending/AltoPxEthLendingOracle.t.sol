@@ -3,7 +3,7 @@ pragma solidity ^0.8.22;
 
 import {Test} from "forge-std/Test.sol";
 import {AltoPxEthLendingOracle} from "@alto/oracles/lending/AltoPxEthLendingOracle.sol";
-import {CurveNode, ChainlinkNode} from "@alto/oracles/interfaces/IModuleNode.sol";
+import {CurveNode, ChainlinkNode, ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
 import {ICurvePool} from "@alto/oracles/interfaces/ICurvePool.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {console2} from "forge-std/console2.sol";
@@ -28,7 +28,9 @@ contract AltoPxEthLendingOracleTest is Test {
         vm.createSelectFork(rpcUrl, 23484104);
         curveNode1 = CurveNode(ICurvePool(PXETH_WETH_CURVE_POOL), 0, 0, 8, 8, 10 minutes, 1 days);
         curveNode2 = CurveNode(ICurvePool(PXETH_STETH_CURVE_POOL), 0, 0, 8, 8, 10 minutes, 1 days);
-        chainlinkNode = ChainlinkNode(AggregatorV3Interface(CHAINLINK_ETH_USD_PRICE_FEED), 1, 2 hours, 18, 18);
+        chainlinkNode = ChainlinkNode(
+            AggregatorV3Interface(CHAINLINK_ETH_USD_PRICE_FEED), ConversionDirection.IN_TO_OUT, 2 hours, 18, 18
+        );
         altoPxEthLendingOracle = new AltoPxEthLendingOracle(
             OWNER,
             curveNode1,
@@ -81,8 +83,9 @@ contract AltoPxEthLendingOracleTest is Test {
         vm.stopPrank();
 
         vm.startPrank(OWNER);
-        ChainlinkNode memory newChainlinkNode =
-            ChainlinkNode(AggregatorV3Interface(CHAINLINK_ETH_USD_PRICE_FEED), 1, 5 hours, 8, 18);
+        ChainlinkNode memory newChainlinkNode = ChainlinkNode(
+            AggregatorV3Interface(CHAINLINK_ETH_USD_PRICE_FEED), ConversionDirection.IN_TO_OUT, 5 hours, 8, 18
+        );
         vm.expectEmit(true, true, true, true);
         emit IAltoPxEthLendingOracleEvents.SetChainlinkNode(chainlinkNode, newChainlinkNode);
         altoPxEthLendingOracle.updateChainlinkNode(newChainlinkNode);

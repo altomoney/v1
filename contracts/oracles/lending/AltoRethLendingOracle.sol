@@ -2,7 +2,7 @@
 pragma solidity ^0.8.7;
 
 import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
-import {ERC4626RatioNode, ChainlinkNode} from "@alto/oracles/interfaces/IModuleNode.sol";
+import {ERC4626RatioNode, ChainlinkNode, ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
 import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 import {ModuleERC4626Ratio} from "@alto/oracles/lending/modules/ModuleERC4626Ratio.sol";
 import {ModuleChainlink} from "@alto/oracles/lending/modules/ModuleChainlink.sol";
@@ -51,7 +51,9 @@ contract AltoRethLendingOracle is Ownable2Step, ModuleERC4626Ratio, ModuleChainl
         emit SetERC4626RatioNode(ERC4626RatioNode(0, 0, 0), _erc4626RatioNode);
 
         chainlinkNode = _chainlinkNode;
-        emit SetChainlinkNode(ChainlinkNode(AggregatorV3Interface(address(0)), 0, 0, 0, 0), _chainlinkNode);
+        emit SetChainlinkNode(
+            ChainlinkNode(AggregatorV3Interface(address(0)), ConversionDirection.IN_TO_OUT, 0, 0, 0), _chainlinkNode
+        );
 
         RETH = _reth;
     }

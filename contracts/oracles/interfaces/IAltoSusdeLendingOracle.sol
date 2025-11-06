@@ -3,7 +3,7 @@
 pragma solidity >=0.8.0;
 
 import {IOracle} from "@alto/oracles/interfaces/IOracle.sol";
-import {ERC4626RatioNode, ChainlinkNode} from "@alto/oracles/interfaces/IModuleNode.sol";
+import {ERC4626RatioNode, ChainlinkNode, ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
 interface IAltoSusdeLendingOracleErrors {
@@ -53,5 +53,5 @@ interface IAltoSusdeLendingOracleStaticTypes is IAltoSusdeLendingOracleBase {
     function erc4626RatioNode() external view returns (uint256, uint256, uint256);
     /// @notice Gets the chainlink node
     /// @return The chainlink node
-    function chainlinkNode() external view returns (AggregatorV3Interface, uint8, uint32, uint8, uint8);
+    function chainlinkNode() external view returns (AggregatorV3Interface, ConversionDirection, uint32, uint8, uint8);
 }

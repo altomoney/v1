@@ -12,7 +12,7 @@ import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {AltoMethLendingOracle} from "@alto/oracles/lending/AltoMethLendingOracle.sol";
 import {MarketDeployer} from "@alto/utils/MarketDeployer.sol";
 import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
-import {ChainlinkNode, ERC4626RatioNode} from "@alto/oracles/interfaces/IModuleNode.sol";
+import {ChainlinkNode, ERC4626RatioNode, ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {SwapParams} from "@alto/lending/leverage/interfaces/IAltoLeverageSwapper.sol";
 import {ORACLE_PRICE_PRECISION, IOracle} from "@alto/oracles/interfaces/IOracle.sol";
@@ -51,7 +51,9 @@ contract AltoLeverageMethMarketTest is Test {
         address irm = address(new FixedRateIrm(0.04 ether / uint256(365 days), address(this)));
 
         erc4626RatioNode = ERC4626RatioNode(1 ether, 1696594100, 0.08 ether);
-        chainlinkNode = ChainlinkNode(AggregatorV3Interface(CHAINLINK_ETH_USD_PRICE_FEED), 1, 2 hours, 18, 36);
+        chainlinkNode = ChainlinkNode(
+            AggregatorV3Interface(CHAINLINK_ETH_USD_PRICE_FEED), ConversionDirection.IN_TO_OUT, 2 hours, 18, 36
+        );
         oracle = address(new AltoMethLendingOracle(OWNER, METH_STAKING, erc4626RatioNode, chainlinkNode));
 
         market = IMarket(

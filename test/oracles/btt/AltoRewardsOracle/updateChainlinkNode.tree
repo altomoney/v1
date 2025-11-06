@@ -9,8 +9,6 @@ AltoRewardsOracle::updateChainlinkNode()
 │   │   └── it should revert with ModuleChainlinkInvalidInput
 │   ├── when _chainlinkNode.inDecimals + _chainlinkNode.outDecimals is bigger than 54
 │   │   └── it should revert with ModuleChainlinkInvalidInput
-│   ├── when _chainlinkNode.multiplied is not 0 or 1
-│   │   └── it should revert with ModuleChainlinkInvalidInput
 │   └── when _chainlinkNode is valid
 │       ├── it should emit SetChainlinkNode event with old and new chainlink node
 │       └── it should update chainlinkNode to new chainlink node

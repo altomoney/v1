@@ -7,7 +7,7 @@ import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Po
 import {ERC20MockDecimals} from "@alto-test/helpers/ERC20MockDecimals.sol";
 import {MockUniswapPool} from "@alto-test/oracles/btt/mocks/MockUniswapPool.sol";
 import {MockChainlinkFeed} from "@alto-test/oracles/btt/mocks/MockChainlinkFeed.sol";
-import {UniswapNode, ChainlinkNode} from "@alto/oracles/interfaces/IModuleNode.sol";
+import {UniswapNode, ChainlinkNode, ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
 contract AltoRewardsOracleCommon is Test {
@@ -42,7 +42,7 @@ contract AltoRewardsOracleCommon is Test {
             stalePeriod: DEFAULT_STALE_PERIOD,
             inDecimals: 18,
             outDecimals: 8,
-            multiplied: 1
+            direction: ConversionDirection.IN_TO_OUT
         });
         uniswapNode =
             UniswapNode({pool: IUniswapV3Pool(address(mockPool)), twapPeriod: DEFAULT_TWAP_PERIOD, multiplied: 1});

@@ -3,7 +3,7 @@
 pragma solidity >=0.8.0;
 
 import {IOracle} from "@alto/oracles/interfaces/IOracle.sol";
-import {CurveNode, ChainlinkNode} from "@alto/oracles/interfaces/IModuleNode.sol";
+import {CurveNode, ChainlinkNode, ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
 import {ICurvePool} from "@alto/oracles/interfaces/ICurvePool.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
@@ -94,7 +94,7 @@ interface IAltoPxEthLendingOracleStaticTypes is IAltoPxEthLendingOracleBase {
     function curveNode2() external view returns (ICurvePool, uint256, uint8, uint8, uint8, uint256, uint32);
     /// @notice Gets the chainlink node
     /// @return The chainlink node
-    function chainlinkNode() external view returns (AggregatorV3Interface, uint8, uint32, uint8, uint8);
+    function chainlinkNode() external view returns (AggregatorV3Interface, ConversionDirection, uint32, uint8, uint8);
     /// @notice Gets the minimum allowed liquidity pool for curve pool 1 for asset at index
     /// @return The minimum allowed liquidity pool for curve pool 1 for asset at index
     function minAllowedLiquidityPool1(uint256 index) external view returns (uint256);

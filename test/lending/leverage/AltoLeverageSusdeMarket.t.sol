@@ -14,7 +14,7 @@ import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConver
 import {MarketDeployer} from "@alto/utils/MarketDeployer.sol";
 import {AltoLeverageSwapper} from "@alto/lending/leverage/AltoLeverageSwapper.sol";
 import {AltoSusdeLendingOracle} from "@alto/oracles/lending/AltoSusdeLendingOracle.sol";
-import {ChainlinkNode, ERC4626RatioNode} from "@alto/oracles/interfaces/IModuleNode.sol";
+import {ChainlinkNode, ERC4626RatioNode, ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -45,8 +45,9 @@ contract AltoLeverageSusdeMarketTest is Test {
 
         address irm = address(new FixedRateIrm(0.04 ether / uint256(365 days), address(this)));
         ERC4626RatioNode memory erc4626RatioNode = ERC4626RatioNode(1157209899495068171, 1708004591, 0.06 ether);
-        ChainlinkNode memory chainlinkNode =
-            ChainlinkNode(AggregatorV3Interface(CHAINLINK_USDE_USD_PRICE_FEED), 1, 26 hours, 18, 36);
+        ChainlinkNode memory chainlinkNode = ChainlinkNode(
+            AggregatorV3Interface(CHAINLINK_USDE_USD_PRICE_FEED), ConversionDirection.IN_TO_OUT, 26 hours, 18, 36
+        );
         oracle = address(new AltoSusdeLendingOracle(address(this), erc4626RatioNode, chainlinkNode, SUSDE));
 
         market = IMarket(

@@ -3,7 +3,7 @@
 pragma solidity >=0.8.0;
 
 import {IOracle} from "@alto/oracles/interfaces/IOracle.sol";
-import {ChainlinkNode} from "@alto/oracles/interfaces/IModuleNode.sol";
+import {ChainlinkNode, ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
 interface IAltoWbtcLendingOracleErrors {
@@ -44,9 +44,9 @@ interface IAltoWbtcLendingOracle is IAltoWbtcLendingOracleBase {
 interface IAltoWbtcLendingOracleStaticTypes is IAltoWbtcLendingOracleBase {
     /// @notice Gets the chainlink node configuration
     /// @return The chainlink node configuration
-    function chainlinkNode1() external view returns (AggregatorV3Interface, uint8, uint32, uint8, uint8);
+    function chainlinkNode1() external view returns (AggregatorV3Interface, ConversionDirection, uint32, uint8, uint8);
 
     /// @notice Gets the chainlink node 2 configuration
     /// @return The chainlink node 2 configuration
-    function chainlinkNode2() external view returns (AggregatorV3Interface, uint8, uint32, uint8, uint8);
+    function chainlinkNode2() external view returns (AggregatorV3Interface, ConversionDirection, uint32, uint8, uint8);
 }

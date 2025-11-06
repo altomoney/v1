@@ -3,7 +3,7 @@ pragma solidity ^0.8.22;
 
 import {Test} from "forge-std/Test.sol";
 import {AltoWstEthLendingOracle} from "@alto/oracles/lending/AltoWstEthLendingOracle.sol";
-import {ChainlinkNode, ERC4626RatioNode} from "@alto/oracles/interfaces/IModuleNode.sol";
+import {ChainlinkNode, ERC4626RatioNode, ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {console2} from "forge-std/console2.sol";
 import {IWstEth} from "@alto/oracles/interfaces/IWstEth.sol";
@@ -22,7 +22,9 @@ contract AltoWstEthLendingOracleTest is Test {
         string memory rpcUrl = vm.rpcUrl("ethereum");
         vm.createSelectFork(rpcUrl, 23483134);
         erc4626RatioNode = ERC4626RatioNode(1157209899495068171, 1708004591, 0.06 ether);
-        chainlinkNode = ChainlinkNode(AggregatorV3Interface(CHAINLINK_ETH_USD_PRICE_FEED), 1, 2 hours, 18, 36);
+        chainlinkNode = ChainlinkNode(
+            AggregatorV3Interface(CHAINLINK_ETH_USD_PRICE_FEED), ConversionDirection.IN_TO_OUT, 2 hours, 18, 36
+        );
         altoWstEthLendingOracle = new AltoWstEthLendingOracle(OWNER, WSTETH, erc4626RatioNode, chainlinkNode);
     }
 
@@ -70,8 +72,9 @@ contract AltoWstEthLendingOracleTest is Test {
         vm.stopPrank();
 
         vm.startPrank(OWNER);
-        ChainlinkNode memory newChainlinkNode =
-            ChainlinkNode(AggregatorV3Interface(CHAINLINK_ETH_USD_PRICE_FEED), 1, 2 hours, 18, 18);
+        ChainlinkNode memory newChainlinkNode = ChainlinkNode(
+            AggregatorV3Interface(CHAINLINK_ETH_USD_PRICE_FEED), ConversionDirection.IN_TO_OUT, 2 hours, 18, 18
+        );
         vm.expectEmit(true, true, true, true);
         emit IAltoWstEthLendingOracleEvents.SetChainlinkNode(chainlinkNode, newChainlinkNode);
         altoWstEthLendingOracle.updateChainlinkNode(newChainlinkNode);

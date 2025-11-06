@@ -10,7 +10,7 @@ import {
 } from "@alto/oracles/interfaces/IAltoRewardsOracle.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ModuleChainlink} from "@alto/oracles/lending/modules/ModuleChainlink.sol";
-import {ChainlinkNode} from "@alto/oracles/interfaces/IModuleNode.sol";
+import {ChainlinkNode, ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
 contract AltoRewardsOracleUpdateChainlinkNode is AltoRewardsOracleCommon {
@@ -40,7 +40,7 @@ contract AltoRewardsOracleUpdateChainlinkNode is AltoRewardsOracleCommon {
             stalePeriod: DEFAULT_STALE_PERIOD,
             inDecimals: 18,
             outDecimals: 18,
-            multiplied: 1
+            direction: ConversionDirection.IN_TO_OUT
         });
     }
 
@@ -76,30 +76,23 @@ contract AltoRewardsOracleUpdateChainlinkNode is AltoRewardsOracleCommon {
         oracle.updateChainlinkNode(invalidNode);
     }
 
-    function test_RevertWhen_MultipliedIsNotZeroOrOne() external givenCallerIsOwner {
-        ChainlinkNode memory invalidNode = _createValidChainlinkNode();
-        invalidNode.multiplied = 2; // Invalid value
-
-        vm.expectRevert(ModuleChainlink.ModuleChainlinkInvalidInput.selector);
-        oracle.updateChainlinkNode(invalidNode);
-    }
-
     function test_ShouldEmitSetChainlinkNodeEvent_WhenChainlinkNodeIsValid() external givenCallerIsOwner {
         ChainlinkNode memory newChainlinkNode = _createValidChainlinkNode();
         newChainlinkNode.stalePeriod = 2 days; // Different value to ensure change
-        newChainlinkNode.multiplied = 0; // Different value to ensure change
+        newChainlinkNode.direction = ConversionDirection.OUT_TO_IN; // Different value to ensure change
         newChainlinkNode.inDecimals = 10; // Different value to ensure change
         newChainlinkNode.outDecimals = 10; // Different value to ensure change
 
         // Get current chainlink node
-        (AggregatorV3Interface feed, uint8 multiplied, uint32 stalePeriod, uint8 inDecimals, uint8 outDecimals) =
-            oracle.chainlinkNode();
+        (
+            AggregatorV3Interface feed,
+            ConversionDirection direction,
+            uint32 stalePeriod,
+            uint8 inDecimals,
+            uint8 outDecimals
+        ) = oracle.chainlinkNode();
         ChainlinkNode memory oldChainlinkNode = ChainlinkNode({
-            feed: feed,
-            stalePeriod: stalePeriod,
-            inDecimals: inDecimals,
-            outDecimals: outDecimals,
-            multiplied: multiplied
+            feed: feed, stalePeriod: stalePeriod, inDecimals: inDecimals, outDecimals: outDecimals, direction: direction
         });
 
         vm.expectEmit(true, true, true, true);
@@ -107,9 +100,9 @@ contract AltoRewardsOracleUpdateChainlinkNode is AltoRewardsOracleCommon {
 
         oracle.updateChainlinkNode(newChainlinkNode);
 
-        (feed, multiplied, stalePeriod, inDecimals, outDecimals) = oracle.chainlinkNode();
+        (feed, direction, stalePeriod, inDecimals, outDecimals) = oracle.chainlinkNode();
         assertEq(address(feed), address(newChainlinkNode.feed), "Feed should be updated");
-        assertEq(multiplied, newChainlinkNode.multiplied, "Multiplied should be updated");
+        assertEq(uint8(direction), uint8(newChainlinkNode.direction), "Direction should be updated");
         assertEq(stalePeriod, newChainlinkNode.stalePeriod, "Stale period should be updated");
         assertEq(inDecimals, newChainlinkNode.inDecimals, "In decimals should be updated");
         assertEq(outDecimals, newChainlinkNode.outDecimals, "Out decimals should be updated");
