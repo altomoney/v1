@@ -181,9 +181,88 @@ contract AltoBorrowMarketTest is Test {
 
         vm.expectRevert(stdError.divisionError);
         market.liquidate(bob, hex"");
+
+        vm.startPrank(market.owner());
+        market.governanceLiquidate(bob, hex"", true);
     }
 
-    function testGovernanceLiquidateSuccessForSmallPosition() public {
+    function testGovernanceLiquidateSuccessWithoutSocializingDebt() public {
+        // deploying market with collateral price of 1e30
+        createMarket(
+            LiquidationConfiguration({
+                maxLiquidationLtv: 0.8 ether,
+                dynamicBonusFeeStart: 0.03 ether,
+                ltvForCompleteLiquidation: 0.9 ether,
+                dynamicBonusFeeDecaySteepness: 5 ether,
+                liquidationBaseFee: 0.05 ether,
+                minPenaltyPercentage: 0.01 ether,
+                protocolFeePercentage: 0.075 ether,
+                isEnabledPriorityLiquidation: true,
+                disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
+                priorityLiquidationGracePeriod: 5 minutes,
+                taggerLiquidationGracePeriod: 2 minutes,
+                liquidationWindowTag: 3 days
+            }),
+            1e30,
+            0.75 ether
+        );
+
+        vm.startPrank(bob);
+        // adding 1e8 collateral
+        market.addCollateral(1e8, bob);
+        // creating a borrowing position
+        market.borrow(10, 0, bob, bob, "");
+        vm.stopPrank();
+
+        // updating oracle price to 1e27 so that (price * amount) < 1e36. So, positionCollateralValue will round down to 0
+        // hence normal liquidation will revert
+        OracleMock(market.oracle()).setPrice(1e27);
+
+        (, uint128 borrowShares, uint128 collateralAssets) = market.position(bob);
+
+        console.log(
+            "Position Collateral Value",
+            uint256(collateralAssets).divideWithRounding(
+                OracleMock(market.oracle()).getPrice(), ORACLE_PRICE_PRECISION, false
+            )
+        );
+
+        // attempt governance liquidation without socializing debt
+        vm.startPrank(market.owner());
+        borrowToken.approve(address(market), type(uint256).max);
+        uint256 borrowTokenBalance = borrowToken.balanceOf(market.owner());
+        (uint128 totalSupplyAssetsBefore, uint128 totalSupplySharesBefore) = market.totalSupply();
+        vm.expectEmit(true, true, true, true);
+        emit IMarketEvents.GovernanceLiquidation(
+            bob, false, address(collateralToken), address(borrowToken), market.owner(), 1e8, 10, borrowShares
+        );
+        market.governanceLiquidate(bob, hex"", false);
+        vm.stopPrank();
+
+        (, borrowShares, collateralAssets) = market.position(bob);
+
+        (uint128 totalSupplyAssetsAfter, uint128 totalSupplySharesAfter) = market.totalSupply();
+        (uint128 totalBorrowedAssetsAfter, uint128 totalBorrowedSharesAfter) = market.totalBorrowed();
+
+        // no change in totalSupply since debt is not socialized
+        assertEq(totalSupplySharesAfter, totalSupplySharesBefore);
+        assertEq(totalSupplyAssetsAfter, totalSupplyAssetsBefore);
+
+        // total borrowed is zero since full debt is repaid
+        assertEq(totalBorrowedSharesAfter, 0);
+        assertEq(totalBorrowedAssetsAfter, 0);
+
+        // borrow token balance is reduced by the amount of debt repaid
+        assertEq(borrowToken.balanceOf(market.owner()), borrowTokenBalance - 10);
+
+        // collateral assets are zero since full collateral is seized
+        assertEq(collateralAssets, 0);
+
+        // borrow shares are zero since full debt is repaid
+        assertEq(borrowShares, 0);
+    }
+
+    function testGovernanceLiquidateSuccessWithSocializingDebt() public {
         // deploying market with collateral price of 1e30
         createMarket(
             LiquidationConfiguration({
@@ -215,7 +294,7 @@ contract AltoBorrowMarketTest is Test {
         // hence liquidation will revert
         OracleMock(market.oracle()).setPrice(1e27);
 
-        (,, uint128 collateralAssets) = market.position(bob);
+        (, uint128 borrowShares, uint128 collateralAssets) = market.position(bob);
 
         console.log(
             "Position Collateral Value",
@@ -224,23 +303,37 @@ contract AltoBorrowMarketTest is Test {
             )
         );
 
+        // attempt governance liquidation with socializing debt
         vm.startPrank(market.owner());
         borrowToken.approve(address(market), type(uint256).max);
+        uint256 borrowTokenBalanceBefore = borrowToken.balanceOf(market.owner());
+        (uint128 totalSupplyAssetsBefore, uint128 totalSupplySharesBefore) = market.totalSupply();
         vm.expectEmit(true, true, true, true);
-        emit IMarketEvents.Liquidation(
-            bob, address(collateralToken), address(borrowToken), market.owner(), 5e6, 375000, 5e6, 10, 1e7, 0, 0
+        emit IMarketEvents.GovernanceLiquidation(
+            bob, true, address(collateralToken), address(borrowToken), market.owner(), 1e8, 10, borrowShares
         );
-        market.governanceLiquidate(bob, hex"");
+        market.governanceLiquidate(bob, hex"", true);
         vm.stopPrank();
 
-        (,, collateralAssets) = market.position(bob);
+        (, borrowShares, collateralAssets) = market.position(bob);
 
-        assertEq(collateralAssets, 1e8 - 5e6);
-        // assertEq(market.position(bob).borrowShares, 0);
-        // assertEq(market.totalBorrowed().assets, 0);
-        // assertEq(market.totalBorrowed().shares, 0);
-        // assertEq(market.totalSupply().assets, 0);
-        // assertEq(market.totalSupply().shares, 0);
+        (uint128 totalSupplyAssetsAfter, uint128 totalSupplySharesAfter) = market.totalSupply();
+        (uint128 totalBorrowedAssetsAfter, uint128 totalBorrowedSharesAfter) = market.totalBorrowed();
+
+        // total supply assets is reduced by the amount of debt repaid
+        assertEq(totalSupplySharesAfter, totalSupplySharesBefore);
+        assertEq(totalSupplyAssetsAfter, totalSupplyAssetsBefore - 10);
+
+        // total borrowed is zero since full debt is repaid
+        assertEq(totalBorrowedSharesAfter, 0);
+        assertEq(totalBorrowedAssetsAfter, 0);
+
+        // borrow token balance of owner is unchanged since debt is socialized
+        assertEq(borrowToken.balanceOf(market.owner()), borrowTokenBalanceBefore);
+
+        // collateral assets are zero since full collateral is seized
+        assertEq(collateralAssets, 0);
+        assertEq(borrowShares, 0);
     }
 
     function testLiquidateBasic() public {

@@ -283,6 +283,26 @@ interface IMarketEvents {
         uint256 badDebtClearedAssets,
         uint256 badDebtClearedShares
     );
+
+    /// @notice Emitted when a liquidation is performed by the governance(owner)
+    /// @param user The address of the user whose position was liquidated
+    /// @param socializeDebt If set to true, the debt will be socialized
+    /// @param collateralToken The address of the collateral token
+    /// @param borrowToken The address of the borrow token
+    /// @param liquidator The address of the liquidator
+    /// @param collateralAmount The amount of collateral that was liquidated
+    /// @param repaidBorrow The amount of borrow token that was repaid
+    /// @param repaidBorrowShares The amount of borrow shares that was repaid
+    event GovernanceLiquidation(
+        address indexed user,
+        bool socializeDebt,
+        address collateralToken,
+        address borrowToken,
+        address liquidator,
+        uint256 collateralAmount,
+        uint256 repaidBorrow,
+        uint256 repaidBorrowShares
+    );
 }
 
 interface IMarketBase is IMarketErrors, IMarketEvents, IAuth, IPausable {
@@ -470,6 +490,21 @@ interface IMarketBase is IMarketErrors, IMarketEvents, IAuth, IPausable {
     /// after it was tagged, the tag will expire in `liquidationWindowTag` seconds after the tag was set.
     /// @dev The underlying liquidation logic is well described in the docs.
     function liquidate(address borrower, bytes calldata data) external returns (uint256, uint256, uint256);
+
+    /// @notice Function to liquidate an insolvent position which is not possible to liquidate using normal liquidation
+    /// @dev the governance liquidation seize full collateral of liquidator and full debt of borrower is settled
+    /// @dev if `socializeDebt` is set to true, the debt will be socialized and the debt will be settled from the assets supplied by lenders
+    /// @dev if `socializeDebt` is set to false, the debt will not be socialized and will be paid by liquidator
+    /// @dev no fees are charged for this liquidation for the simplicity of implementation
+    /// @dev this function will only be used if normal liquidation reverts due to truncation of decimals
+    /// @param borrower The address of the borrower being liquidated
+    /// @param data Additional data for the liquidator contract
+    /// @param socializeDebt If set to true, the debt will be socialized
+    /// @return collateralAmount The amount of collateral that was liquidated
+    /// @return repayAmount The amount of borrow token that was repaid
+    function governanceLiquidate(address borrower, bytes calldata data, bool socializeDebt)
+        external
+        returns (uint256, uint256);
 
     /// @notice Function to set a priority liquidator.
     /// @param liquidator The address of the liquidator
