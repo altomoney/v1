@@ -258,8 +258,7 @@ contract AltoBorrowMarketTest is Test {
         assertEq(borrowShares, 0);
     }
 
-    // Invariant violation due to token donation can result in DoS of baddebt liquidations
-    function testDOSWhileBadDebtLiquidation() public {
+    function testBadDebtLiquidation() public {
         createMarket(
             LiquidationConfiguration({
                 maxLiquidationLtv: 0.8 ether,
@@ -275,7 +274,7 @@ contract AltoBorrowMarketTest is Test {
                 taggerLiquidationGracePeriod: 2 minutes,
                 liquidationWindowTag: 3 days
             }),
-            ORACLE_PRICE_PRECISION,
+            LENDING_ORACLE_PRICE_PRECISION,
             0.75 ether
         );
 
@@ -289,7 +288,8 @@ contract AltoBorrowMarketTest is Test {
         vm.startPrank(alice);
         // alice donates 1.5 ether to the market
         borrowToken.transfer(address(market), 1.5 ether);
-        // alice removes all her supply of borrow tokens
+        // alice can't remove full supply because of bob's borrowing
+        vm.expectRevert(IMarketErrors.AltoBaseMarketInsufficientMarketLiquidity.selector);
         market.removeSupply(100 ether, 0, alice, alice);
         vm.stopPrank();
 
@@ -301,23 +301,30 @@ contract AltoBorrowMarketTest is Test {
         // liquidator has 2 ether of borrow tokens
         deal(address(borrowToken), liquidator, 2 ether);
 
-        // total supply assets should be 0 as alice removed all her supply
-        (uint128 totalSupplyAssets,) = market.totalSupply();
-
-        assertEq(totalSupplyAssets, 0, "total supply assets is not 0 even though alice removed all her supply");
-
         (,, uint128 collateralAssets) = market.position(bob);
         (uint128 totalBorrowedAssets,) = market.totalBorrowed();
 
         uint256 collateralValue =
-            uint256(collateralAssets).divideWithRounding(newOraclePrice, ORACLE_PRICE_PRECISION, false);
+            uint256(collateralAssets).divideWithRounding(newOraclePrice, LENDING_ORACLE_PRICE_PRECISION, false);
         uint256 borrowValue = totalBorrowedAssets;
 
         // bad debt has been created for bob's position
         assertGt(borrowValue, collateralValue, "bad debt has not been created yet");
 
-        // liquidation should revert when clearing bad debt because totalSupply.assets is 0
-        vm.expectRevert(stdError.arithmeticError);
+        vm.expectEmit(true, true, true, true);
+        emit IMarketEvents.Liquidation(
+            bob,
+            address(collateralToken),
+            address(borrowToken),
+            liquidator,
+            2 ether,
+            0,
+            1e17,
+            1900000000000,
+            1.9 ether,
+            1499998100000000000,
+            1499998100000000000000000
+        );
         market.liquidate(bob, hex"");
 
         vm.stopPrank();
