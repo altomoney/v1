@@ -7,64 +7,199 @@ import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interf
 import {ModuleChainlink} from "@alto/oracles/lending/modules/ModuleChainlink.sol";
 import {ChainlinkNode} from "@alto/oracles/interfaces/IModuleNode.sol";
 
-contract ModuleChainlinkTest is Test {
+contract MockChainlinkFeed is AggregatorV3Interface {
+    string public description = "Mock Feed";
+    uint256 public version = 1;
+
+    uint8 public immutable decimals;
+    int256 public immutable ratio;
+
+    constructor(uint8 _decimals, int256 _ratio) {
+        decimals = _decimals;
+        ratio = _ratio;
+    }
+
+    function getRoundData(uint80)
+        external
+        view
+        returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)
+    {
+        return (1, ratio, block.timestamp, block.timestamp, 1);
+    }
+
+    function latestRoundData()
+        external
+        view
+        returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)
+    {
+        return (1, ratio, block.timestamp, block.timestamp, 1);
+    }
+}
+
+contract ModuleChainlinkDecimalsTest is Test {
     ModuleChainlink moduleChainlink;
-    address constant USDC_ETH_PRICE_FEED = 0x986b5E1e1755e3C2440e960477f25201B0a8bbD4; // chainlink feed for USDC/ETH
-    address constant BTC_USD_PRICE_FEED = 0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c; // chainlink feed for BTC/USD
-    address OWNER = makeAddr("Alto-multisig");
 
     function setUp() public {
-        string memory rpcUrl = vm.rpcUrl("ethereum");
-        vm.createSelectFork(rpcUrl, 23447653);
         moduleChainlink = new ModuleChainlink();
     }
 
-    function testGetPriceEthUsd() public view {
-        uint256 ethQuoteAmount = 10 ** 18;
-        // getting the vaule in 8 output decimals
+    function testBiggerDecimalToSmallerDecimal() public {
+        // WETH/USDC oracle that returns 8 decimals
+
+        // Going from WETH to USDC
         uint256 usdcAmount = moduleChainlink.readChainlinkFeed(
-            ethQuoteAmount, ChainlinkNode(AggregatorV3Interface(USDC_ETH_PRICE_FEED), 0, 2 days, 18, 6)
+            1e18,
+            ChainlinkNode({
+                feed: new MockChainlinkFeed(8, int256(3000 * 10 ** 8)), // 3000 USDC per WETH
+                multiplied: 1,
+                stalePeriod: 2 days,
+                inDecimals: 18,
+                outDecimals: 6
+            })
         );
-        assertGt(usdcAmount, 0, "Invalid usdcAmount in ChainlinkModule");
 
-        // price is 3976579603. which means 1 ETH is 3976.579603 USDC
-        console2.log("price of ETH/USDC from ChainlinkModule", usdcAmount);
+        assertEq(usdcAmount, 3000e6, "Invalid usdcAmount in ChainlinkModule");
 
-        (, int256 answer,,,) = AggregatorV3Interface(USDC_ETH_PRICE_FEED).latestRoundData();
-        uint256 answerDecimals = AggregatorV3Interface(USDC_ETH_PRICE_FEED).decimals();
-        uint256 ethUsdcExpectedPrice =
-            ethQuoteAmount * (10 ** answerDecimals) * (10 ** 6) / (uint256(answer) * (10 ** 18));
-        // chainlink feed is in 8 decimals
-        // ethUSD price from chainlink is 392246560655. which means 1 ETH is 3922.46560655 USD
-        console2.log("ethUsdcPrice from Chainlink feed", ethUsdcExpectedPrice);
+        // Going from USDC to WETH
+        uint256 wethAmount = moduleChainlink.readChainlinkFeed(
+            4500e6,
+            ChainlinkNode({
+                feed: new MockChainlinkFeed(8, int256(3000 * 10 ** 8)), // 3000 USDC per WETH
+                multiplied: 0,
+                stalePeriod: 2 days,
+                inDecimals: 6,
+                outDecimals: 18
+            })
+        );
 
-        assertEq(usdcAmount, ethUsdcExpectedPrice, "Invalid price in ChainlinkModule");
+        assertEq(wethAmount, 15e17, "Invalid wethAmount in ChainlinkModule");
     }
 
-    function testGetPriceBtcUsd() public view {
-        uint256 btcQuoteAmount = 10 ** 8;
-        // getting the vaule in 8 output decimals
-        uint256 usdAmount = moduleChainlink.readChainlinkFeed(
-            btcQuoteAmount, ChainlinkNode(AggregatorV3Interface(BTC_USD_PRICE_FEED), 1, 2 days, 8, 8)
+    function testSmallerDecimalToBiggerDecimal() public {
+        // USDC/WETH oracle that returns 8 decimals
+
+        // Going from USDC to WETH
+        uint256 wethAmount = moduleChainlink.readChainlinkFeed(
+            6000e6,
+            ChainlinkNode({
+                feed: new MockChainlinkFeed(8, int256(1 / 4000 * 10 ** 8)), // 1/4000 WETH per USDC
+                multiplied: 1,
+                stalePeriod: 2 days,
+                inDecimals: 6,
+                outDecimals: 18
+            })
         );
-        assertGt(usdAmount, 0, "Invalid usdAmount in ChainlinkModule");
 
-        console2.log("price of BTC/USD from ChainlinkModule", usdAmount);
+        assertEq(wethAmount, 15e17, "Invalid wethAmount in ChainlinkModule");
 
-        (, int256 answer,,,) = AggregatorV3Interface(BTC_USD_PRICE_FEED).latestRoundData();
-        uint256 btcUsdExpectedPrice = uint256(answer);
-        // chainlink feed is in 8 decimals
-        // btcUSD price from Chainlink is 10952507971300. which means 1 BTC is 10952.5079713 USD
-        console2.log("btcUsdPrice from Chainlink feed", btcUsdExpectedPrice);
+        // Going from WETH to USDC
+        uint256 usdcAmount = moduleChainlink.readChainlinkFeed(
+            1e18,
+            ChainlinkNode({
+                feed: new MockChainlinkFeed(8, int256(1 / 4000 * 10 ** 8)), // 1/4000 WETH per USDC
+                multiplied: 0,
+                stalePeriod: 2 days,
+                inDecimals: 18,
+                outDecimals: 6
+            })
+        );
 
-        assertEq(usdAmount, btcUsdExpectedPrice, "Invalid price in ChainlinkModule");
+        assertEq(usdcAmount, 4000e6, "Invalid usdcAmount in ChainlinkModule");
     }
 
-    function testRevertWhenPricesAreStale() public {
-        uint256 ethQuoteAmount = 10 ** 18;
-        vm.expectRevert(abi.encodeWithSelector(ModuleChainlink.ModuleChainlinkInvalidRate.selector));
-        moduleChainlink.readChainlinkFeed(
-            ethQuoteAmount, ChainlinkNode(AggregatorV3Interface(USDC_ETH_PRICE_FEED), 1, 1 minutes, 18, 6)
+    function testSameDecimal() public {
+        // USDC/USDT oracle that returns 6 decimals
+
+        // Going from USDC to USDC
+        uint256 usdtAmount = moduleChainlink.readChainlinkFeed(
+            1e6,
+            ChainlinkNode({
+                feed: new MockChainlinkFeed(6, int256(1.2 * 10 ** 6)), // 1.2 USDT per USDC
+                multiplied: 1,
+                stalePeriod: 2 days,
+                inDecimals: 6,
+                outDecimals: 6
+            })
         );
+
+        assertEq(usdtAmount, 12e5, "Invalid usdtAmount in ChainlinkModule");
+
+        // Going from USDT to USDC
+        uint256 usdcAmount = moduleChainlink.readChainlinkFeed(
+            12e5,
+            ChainlinkNode({
+                feed: new MockChainlinkFeed(6, int256(1.2 * 10 ** 6)), // 1.2 USDT per USDC
+                multiplied: 0,
+                stalePeriod: 2 days,
+                inDecimals: 6,
+                outDecimals: 6
+            })
+        );
+
+        assertEq(usdcAmount, 1e6, "Invalid usdcAmount in ChainlinkModule");
+    }
+
+    function testSameInAndOracleDecimal() public {
+        // WBTC/WETH oracle that returns 8 decimals
+
+        // Going from WBTC to WETH
+        uint256 wethAmount = moduleChainlink.readChainlinkFeed(
+            1e8,
+            ChainlinkNode({
+                feed: new MockChainlinkFeed(8, int256(25 * 10 ** 8)), // 25 WETH per WBTC
+                multiplied: 1,
+                stalePeriod: 2 days,
+                inDecimals: 8,
+                outDecimals: 18
+            })
+        );
+
+        assertEq(wethAmount, 25e18, "Invalid wethAmount in ChainlinkModule");
+
+        // Going from WETH to WBTC
+        uint256 wbtcAmount = moduleChainlink.readChainlinkFeed(
+            25e18,
+            ChainlinkNode({
+                feed: new MockChainlinkFeed(8, int256(25 * 10 ** 8)), // 25 WETH per WBTC
+                multiplied: 0,
+                stalePeriod: 2 days,
+                inDecimals: 18,
+                outDecimals: 8
+            })
+        );
+
+        assertEq(wbtcAmount, 1e8, "Invalid wbtcAmount in ChainlinkModule");
+    }
+
+    function testSameOutAndOracleDecimal() public {
+        // WETH/WBTC oracle that returns 8 decimals
+
+        // Going from WETH to WBTC
+        uint256 wethAmount = moduleChainlink.readChainlinkFeed(
+            1e8,
+            ChainlinkNode({
+                feed: new MockChainlinkFeed(8, int256(25 * 10 ** 8)), // 25 WETH per WBTC
+                multiplied: 1,
+                stalePeriod: 2 days,
+                inDecimals: 8,
+                outDecimals: 18
+            })
+        );
+
+        assertEq(wethAmount, 25e18, "Invalid wethAmount in ChainlinkModule");
+
+        // Going from WETH to WBTC
+        uint256 wbtcAmount = moduleChainlink.readChainlinkFeed(
+            25e18,
+            ChainlinkNode({
+                feed: new MockChainlinkFeed(8, int256(25 * 10 ** 8)), // 25 WETH per WBTC
+                multiplied: 0,
+                stalePeriod: 2 days,
+                inDecimals: 18,
+                outDecimals: 8
+            })
+        );
+
+        assertEq(wbtcAmount, 1e8, "Invalid wbtcAmount in ChainlinkModule");
     }
 }

@@ -43,7 +43,7 @@ contract AltoLeverageWethMarketTest is Test {
 
         address irm = address(new FixedRateIrm(0.04 ether / uint256(365 days), address(this)));
         ChainlinkNode memory chainlinkNode =
-            ChainlinkNode(AggregatorV3Interface(CHAINLINK_ETH_USD_PRICE_FEED), 1, 2 hours, 18, 18);
+            ChainlinkNode(AggregatorV3Interface(CHAINLINK_ETH_USD_PRICE_FEED), 1, 2 hours, 18, 36);
 
         oracle = address(new AltoWethLendingOracle(address(this), chainlinkNode));
 
@@ -313,13 +313,11 @@ contract AltoLeverageWethMarketTest is Test {
 
     function isSolvent(address user, address _market) internal view returns (bool, uint256 max, uint256 current) {
         uint256 collateralPrice = IOracle(oracle).getPrice();
-        uint256 collateralValue = uint256(IMarket(_market).position(user).collateralAssets).divideWithRounding(
-            collateralPrice, ORACLE_PRICE_PRECISION, false
-        );
+        uint256 collateralValue = uint256(IMarket(_market).position(user).collateralAssets)
+            .divideWithRounding(collateralPrice, ORACLE_PRICE_PRECISION, false);
         uint256 maxBorrowValue = collateralValue.multiplyWithPrecision(IMarket(_market).maxLtv());
-        uint256 borrowValue = uint256(IMarket(_market).position(user).borrowShares).convertToAssetsUp(
-            IMarket(_market).totalBorrowed().assets, IMarket(_market).totalBorrowed().shares
-        );
+        uint256 borrowValue = uint256(IMarket(_market).position(user).borrowShares)
+            .convertToAssetsUp(IMarket(_market).totalBorrowed().assets, IMarket(_market).totalBorrowed().shares);
 
         return (maxBorrowValue >= borrowValue, maxBorrowValue, borrowValue);
     }

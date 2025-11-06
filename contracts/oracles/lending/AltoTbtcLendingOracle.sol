@@ -32,14 +32,7 @@ contract AltoTbtcLendingOracle is Ownable2Step, ModuleChainlink, IAltoTbtcLendin
 
     /// @inheritdoc IAltoTbtcLendingOracleBase
     function getPrice() external view returns (uint256) {
-        // fetches the price of BTC in USD from chainlink in chainlinkNode.outDecimals decimals
-        uint256 chainlinkPrice = readChainlinkFeed(10 ** chainlinkNode.inDecimals, chainlinkNode);
-
-        // converts the price from chainlinkNode.outDecimals to ORACLE_PRICE_PRECISION
-        uint256 price = FixedPointMath.divideWithRounding(
-            chainlinkPrice, ORACLE_PRICE_PRECISION, 10 ** chainlinkNode.outDecimals, false
-        );
-        return price;
+        return readChainlinkFeed(10 ** chainlinkNode.inDecimals, chainlinkNode);
     }
 
     /// @inheritdoc IAltoTbtcLendingOracleBase

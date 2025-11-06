@@ -82,13 +82,18 @@ contract AltoRewardsOracleConstructor is AltoRewardsOracleCommon {
         assertEq(twapPeriod, DEFAULT_TWAP_PERIOD);
         assertEq(uniswapMultiplied, 1);
 
-        (AggregatorV3Interface feed, uint8 chainlinkMultiplied, uint32 stalePeriod, uint8 inDecimals, uint8 outDecimals)
-        = oracle.chainlinkNode();
+        (
+            AggregatorV3Interface feed,
+            uint8 chainlinkMultiplied,
+            uint32 stalePeriod,
+            uint8 inDecimals,
+            uint8 outDecimals
+        ) = oracle.chainlinkNode();
         assertEq(address(feed), address(mockFeed));
         assertEq(chainlinkMultiplied, 1);
         assertEq(stalePeriod, DEFAULT_STALE_PERIOD);
         assertEq(inDecimals, 18);
-        assertEq(outDecimals, 18);
+        assertEq(outDecimals, 8);
 
         // it should set owner correctly
         assertEq(oracle.owner(), OWNER);

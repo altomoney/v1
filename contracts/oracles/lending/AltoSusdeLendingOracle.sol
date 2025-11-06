@@ -70,24 +70,8 @@ contract AltoSusdeLendingOracle is
         // caps the ratio to the maximum allowed growth rate in case something goes wrong with the SUSDE vault
         susdeUsdeRatio = readLatestRatio(susdeUsdeRatio, erc4626RatioNode);
 
-        // convert the ratio in MATH_PRECISION
-        susdeUsdeRatio = FixedPointMath.divideWithRounding(
-            susdeUsdeRatio, MATH_PRECISION, 10 ** IERC20Metadata(SUSDE).decimals(), false
-        );
-
         // gets the price of susde in usde from chainlink in chainlinkNode.outDecimals decimals
-        uint256 usdeUsdPriceChainlink = readChainlinkFeed(10 ** chainlinkNode.inDecimals, chainlinkNode);
-
-        // convert the price from chainlinkNode.outDecimals to MATH_PRECISION
-        uint256 usdeUsdPrice = FixedPointMath.divideWithRounding(
-            usdeUsdPriceChainlink, MATH_PRECISION, 10 ** chainlinkNode.outDecimals, false
-        );
-
-        // usdeUsdPrice is in MATH_PRECISION(i.e. 1e18) decimals
-        // susdeUsdeRatio is in MATH_PRECISION(i.e. 1e18) decimals
-        // susdeUsdPrice is in ORACLE_PRICE_PRECISION(i.e. 1e36) decimals
-        uint256 susdeUsdPrice = susdeUsdeRatio * usdeUsdPrice;
-        return susdeUsdPrice;
+        return readChainlinkFeed(susdeUsdeRatio, chainlinkNode);
     }
 
     /// @inheritdoc IAltoSusdeLendingOracleBase

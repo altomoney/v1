@@ -105,14 +105,8 @@ contract AltoRewardsOracle is Ownable2Step, ModuleChainlink, ModuleUniswap, IAlt
         uint256 newPrice = readUniswapPool(IN_BASE, uniswapNode);
 
         // converts the price from the out-currency to chainlinkNode.outDecimals decimals
-        newPrice = readChainlinkFeed(newPrice, chainlinkNode);
+        cachedPrice = readChainlinkFeed(newPrice, chainlinkNode);
 
-        // converts the price from the out-currency to USD_ORACLE_PRICE_PRECISION decimals
-        newPrice = FixedPointMath.divideWithRounding(
-            newPrice, USD_ORACLE_PRICE_PRECISION, 10 ** chainlinkNode.outDecimals, false
-        );
-
-        cachedPrice = newPrice;
         lastPriceUpdateTimestamp = block.timestamp;
 
         emit PriceUpdated(block.timestamp, newPrice, oldPrice);

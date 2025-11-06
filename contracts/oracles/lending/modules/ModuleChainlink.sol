@@ -18,33 +18,41 @@ contract ModuleChainlink {
     /// @param config Chainlink node configuration
     /// @return The amount of out-currency in out decimals
     function readChainlinkFeed(uint256 quoteAmount, ChainlinkNode memory config) public view returns (uint256) {
-        uint256 castedRatio;
         (uint80 roundId, int256 ratio,, uint256 updatedAt, uint80 answeredInRound) = config.feed.latestRoundData();
         if (ratio <= 0 || roundId > answeredInRound || block.timestamp - updatedAt > config.stalePeriod) {
             revert ModuleChainlinkInvalidRate();
         }
-        uint8 decimals = config.feed.decimals();
-        castedRatio = uint256(ratio);
+
+        // Storing these to improve readability
+        uint256 price = uint256(ratio);
+        uint256 powFeed = 10 ** config.feed.decimals();
+        uint256 powIn = 10 ** config.inDecimals;
+        uint256 powOut = 10 ** config.outDecimals;
+
         // Checking whether we should multiply or divide by the ratio computed
-        // quote amount decimals will be decimals of in-currency
+        // Combine price application and decimals conversion to minimize rounding loss
         if (config.multiplied == 1) {
-            quoteAmount = FixedPointMath.divideWithRounding(quoteAmount, castedRatio, (10 ** decimals), false);
+            // quoteAmount = quoteAmount * ratio / 10^feedDecimals * 10^outDecimals / 10^inDecimals
+            quoteAmount = FixedPointMath.divideWithRounding(quoteAmount, price * powOut, powFeed * powIn, false);
         } else {
-            quoteAmount = FixedPointMath.divideWithRounding(quoteAmount, (10 ** decimals), castedRatio, false);
+            // quoteAmount = quoteAmount * 10^feedDecimals / ratio * 10^outDecimals / 10^inDecimals
+            quoteAmount = FixedPointMath.divideWithRounding(quoteAmount, powFeed * powOut, price * powIn, false);
         }
-        // converts the quoteAmount to the out-currency decimals
-        quoteAmount =
-            FixedPointMath.divideWithRounding(quoteAmount, (10 ** config.outDecimals), (10 ** config.inDecimals), false);
+
         return quoteAmount;
     }
 
     /// @notice Validates the parameters for the Chainlink feed during initialization or updates
     /// @param config Chainlink node configuration
-    function _validateChainlinkParams(ChainlinkNode memory config) internal pure {
-        if (
-            address(config.feed) == address(0) || config.stalePeriod == 0 || config.inDecimals == 0
-                || config.outDecimals == 0
-        ) {
+    function _validateChainlinkParams(ChainlinkNode memory config) internal view {
+        if (address(config.feed) == address(0) || config.stalePeriod == 0) {
+            revert ModuleChainlinkInvalidInput();
+        }
+
+        // Bound decimals to prevent overflow and DoS via extreme values
+        // 54 is ORACLE_PRICE_PRECISION + 18 decimal input token - everything above this is
+        // unrealistic and potentially dangerous (this is considered a sanity check)
+        if (config.inDecimals + config.outDecimals > 54) {
             revert ModuleChainlinkInvalidInput();
         }
 

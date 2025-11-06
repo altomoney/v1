@@ -26,7 +26,7 @@ contract AltoRethLendingOracleTest is Test {
         vm.createSelectFork(rpcUrl, 23532976);
         // taken from AAVE's contract https://etherscan.io/address/0x6929706c42d637df5ebf7f0bcff2af47f84ea69d
         erc4626RatioNode = ERC4626RatioNode(1098284517740008249, 1708004591, 0.093 ether);
-        chainlinkNode = ChainlinkNode(AggregatorV3Interface(CHAINLINK_ETH_USD_PRICE_FEED), 1, 2 hours, 8, 18);
+        chainlinkNode = ChainlinkNode(AggregatorV3Interface(CHAINLINK_ETH_USD_PRICE_FEED), 1, 2 hours, 18, 36);
         altoRethLendingOracle = new AltoRethLendingOracle(OWNER, erc4626RatioNode, chainlinkNode, RETH);
     }
 

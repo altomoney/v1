@@ -62,24 +62,13 @@ contract AltoWstEthLendingOracle is
     /// @inheritdoc IAltoWstEthLendingOracleBase
     function getPrice() external view returns (uint256) {
         // getting the latest ratio of wsteth/steth.
-        uint256 stEthPerWstEthWad = IWstEth(WSTETH).stEthPerToken();
+        uint256 stEthToEthRatio = IWstEth(WSTETH).stEthPerToken();
 
         // the ratio returned may be capped to the maximum allowed growth rate
-        uint256 wstEthStEthRatioWad = readLatestRatio(stEthPerWstEthWad, erc4626RatioNode);
+        stEthToEthRatio = readLatestRatio(stEthToEthRatio, erc4626RatioNode);
 
         // getting the price of eth in usd from chainlink in chainlinkNode.outDecimals decimals
-        uint256 ethUsdChainlinkPrice = readChainlinkFeed(10 ** chainlinkNode.inDecimals, chainlinkNode);
-
-        // converts the ethUsd price from chainlinkNode.outDecimals to MATH_PRECISION(i.e. 1e18) decimals
-        uint256 ethUsdPrice = FixedPointMath.divideWithRounding(
-            ethUsdChainlinkPrice, MATH_PRECISION, 10 ** chainlinkNode.outDecimals, false
-        );
-
-        // calculates the price of wsteth in usd from fundamental rate in ORACLE_PRICE_PRECISION(i.e. 1e36) decimals
-        // wstEthStEthRatioWad is in MATH_PRECISION(i.e. 1e18) decimals and ethUsdPrice is in MATH_PRECISION(i.e. 1e18) decimals
-        uint256 wstEthUsdPriceFundamentalRate = wstEthStEthRatioWad * ethUsdPrice;
-
-        return wstEthUsdPriceFundamentalRate;
+        return readChainlinkFeed(stEthToEthRatio, chainlinkNode);
     }
 
     /// @inheritdoc IAltoWstEthLendingOracleBase
