@@ -701,6 +701,73 @@ abstract contract AltoBaseMarketUpgraded is
         return (result.collateralAmount, result.repayAmount, calc.protocolFee);
     }
 
+    /// @inheritdoc IMarketBase
+    function governanceLiquidate(address borrower, bytes calldata data, bool socializeDebt)
+        external
+        onlyOwner
+        returns (uint256, uint256)
+    {
+        _accrueInterest();
+
+        // Check if the position is underwater
+        if (_isSolvent(borrower, true)) {
+            revert AltoBaseMarketLiquidatingSolventPosition();
+        }
+
+        Position memory _position = position[borrower];
+
+        // Calculate final amounts
+        LiquidationCalculationResult memory result;
+
+        result.collateralAmount = _position.collateralAssets;
+
+        result.repayAmount =
+            uint256(_position.borrowShares).convertToAssetsUp(totalBorrowed.assets, totalBorrowed.shares);
+
+        result.repayShares = result.repayAmount.convertToSharesDown(totalBorrowed.assets, totalBorrowed.shares);
+
+        // Ensure we don't try to repay more shares than the user has which can happen since we are using virtual shares
+        if (result.repayShares.toUint128() > _position.borrowShares) {
+            result.repayShares = uint256(_position.borrowShares);
+        }
+
+        // apply liquidation
+        position[borrower].collateralAssets = 0;
+        position[borrower].borrowShares = 0;
+
+        totalBorrowed.shares -= result.repayShares.toUint128();
+        totalBorrowed.assets =
+            (totalBorrowed.assets > result.repayAmount ? totalBorrowed.assets - result.repayAmount : 0).toUint128();
+
+        delete liquidablePositions[borrower];
+
+        // transfer collateral and borrow tokens with applied protocol fee
+        IERC20(collateralToken).safeTransfer(msg.sender, result.collateralAmount);
+
+        if (data.length > 0) {
+            ILiquidateCallback(msg.sender).onLiquidateCallback(result.repayAmount, result.collateralAmount, data);
+        }
+
+        if (socializeDebt) {
+            totalSupply.assets -= result.repayAmount.toUint128();
+        } else {
+            _sendBorrowToken(msg.sender, address(this), result.repayAmount);
+        }
+
+        emit GovernanceLiquidation(
+            borrower,
+            socializeDebt,
+            collateralToken,
+            borrowToken,
+            msg.sender,
+            result.collateralAmount,
+            result.repayAmount,
+            result.repayShares
+        );
+
+        return (result.collateralAmount, result.repayAmount);
+    }
+
     /// @dev Calculates the liquidation percentage - how far are we between LTV and LLTV with position's current LTV.
     /// @param currentLtv The current LTV of the position to be liquidated.
     /// @return liquidationPercentage The liquidation percentage.
