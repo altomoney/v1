@@ -1,0 +1,9 @@
+AltoMultiChainlinkLendingOracle::getPrice()
+├── given chainlinkNodes array is empty
+│   └── it should revert with AltoMultiChainlinkLendingOracleInvalidInput
+├── given chainlinkNodes array has one node
+│       ├── it should return price in first node's outDecimals
+│       └── it should apply chainlink node conversion correctly
+└── given chainlinkNodes array has multiple nodes
+        ├── it should return price in last node's outDecimals
+        └── it should chain all conversions correctly

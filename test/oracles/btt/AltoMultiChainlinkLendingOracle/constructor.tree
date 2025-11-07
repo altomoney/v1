@@ -1,0 +1,21 @@
+AltoMultiChainlinkLendingOracle::constructor()
+├── given invalid inputs
+│   ├── when chainlink nodes array is empty
+│   │   └── it should revert with AltoMultiChainlinkLendingOracleInvalidInput
+│   ├── when chainlink node feed is zero address
+│   │   └── it should revert with ModuleChainlinkInvalidInput
+│   ├── when chainlink node stalePeriod is zero
+│   │   └── it should revert with ModuleChainlinkInvalidInput
+│   ├── when chainlink node inDecimals + outDecimals is greater than 54
+│   │   └── it should revert with ModuleChainlinkInvalidInput
+│   └── when owner is zero address
+│       └── it should revert with OwnableInvalidOwner
+└── given valid inputs
+    ├── when single chainlink node is provided
+    │   ├── it should set chainlinkNodes array correctly
+    │   ├── it should set owner correctly
+    │   └── it should emit SetChainlinkNodes event
+    └── when multiple chainlink nodes are provided
+        ├── it should set chainlinkNodes array correctly
+        ├── it should set owner correctly
+        └── it should emit SetChainlinkNodes event

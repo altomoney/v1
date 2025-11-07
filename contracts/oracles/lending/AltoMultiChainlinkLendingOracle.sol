@@ -6,7 +6,8 @@ import {ModuleChainlink} from "@alto/oracles/lending/modules/ModuleChainlink.sol
 import {ChainlinkNode} from "@alto/oracles/interfaces/IModuleNode.sol";
 import {
     IAltoMultiChainlinkLendingOracleStaticTypes,
-    IAltoMultiChainlinkLendingOracleBase
+    IAltoMultiChainlinkLendingOracleBase,
+    IAltoMultiChainlinkLendingOracleErrors
 } from "@alto/oracles/interfaces/IAltoMultiChainlinkLendingOracle.sol";
 
 /// @title AltoMultiChainlinkLendingOracle
@@ -25,6 +26,9 @@ contract AltoMultiChainlinkLendingOracle is
     /// @param _owner The owner of the contract
     /// @param _chainlinkNodes The chainlink nodes configuration
     constructor(address _owner, ChainlinkNode[] memory _chainlinkNodes) Ownable(_owner) {
+        if (_chainlinkNodes.length == 0) {
+            revert AltoMultiChainlinkLendingOracleInvalidInput();
+        }
         for (uint256 i = 0; i < _chainlinkNodes.length; i++) {
             _validateChainlinkParams(_chainlinkNodes[i]);
             chainlinkNodes.push(_chainlinkNodes[i]);
@@ -43,6 +47,9 @@ contract AltoMultiChainlinkLendingOracle is
 
     /// @inheritdoc IAltoMultiChainlinkLendingOracleBase
     function updateChainlinkNodes(ChainlinkNode[] memory _chainlinkNodes) external onlyOwner {
+        if (_chainlinkNodes.length == 0) {
+            revert AltoMultiChainlinkLendingOracleInvalidInput();
+        }
         emit SetChainlinkNodes(chainlinkNodes, _chainlinkNodes);
         delete chainlinkNodes;
         for (uint256 i = 0; i < _chainlinkNodes.length; i++) {

@@ -6,12 +6,21 @@ import {ChainlinkNode, ConversionDirection} from "@alto/oracles/interfaces/IModu
 import {IOracle} from "@alto/oracles/interfaces/IOracle.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
+interface IAltoMultiChainlinkLendingOracleErrors {
+    /// @notice Error thrown when the input is invalid
+    error AltoMultiChainlinkLendingOracleInvalidInput();
+}
+
 interface IAltoMultiChainlinkLendingOracleEvents {
     /// @notice Event emitted when the chainlink nodes are updated
     event SetChainlinkNodes(ChainlinkNode[] oldChainlinkNodes, ChainlinkNode[] newChainlinkNodes);
 }
 
-interface IAltoMultiChainlinkLendingOracleBase is IOracle, IAltoMultiChainlinkLendingOracleEvents {
+interface IAltoMultiChainlinkLendingOracleBase is
+    IOracle,
+    IAltoMultiChainlinkLendingOracleErrors,
+    IAltoMultiChainlinkLendingOracleEvents
+{
     /// @notice Gets the price of the asset in USD in ORACLE_PRICE_PRECISION(i.e. 1e36)
     /// @dev Uses the multiplechainlink nodes to get the price of the asset in USD
     /// @return The price of the asset in USD in ORACLE_PRICE_PRECISION(i.e. 1e36)
