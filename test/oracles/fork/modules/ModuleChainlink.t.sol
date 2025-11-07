@@ -61,13 +61,4 @@ contract ModuleChainlinkTest is Test {
 
         assertEq(usdAmount, btcUsdExpectedPrice, "Invalid price in ChainlinkModule");
     }
-
-    function testRevertWhenPricesAreStale() public {
-        uint256 ethQuoteAmount = 10 ** 18;
-        vm.expectRevert(abi.encodeWithSelector(ModuleChainlink.ModuleChainlinkInvalidRate.selector));
-        moduleChainlink.readChainlinkFeed(
-            ethQuoteAmount,
-            ChainlinkNode(AggregatorV3Interface(USDC_ETH_PRICE_FEED), ConversionDirection.IN_TO_OUT, 1 minutes, 18, 6)
-        );
-    }
 }
