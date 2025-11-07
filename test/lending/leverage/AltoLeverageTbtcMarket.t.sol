@@ -9,7 +9,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
 import {AltoLeverageSwapper} from "@alto/lending/leverage/AltoLeverageSwapper.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
-import {AltoTbtcLendingOracle} from "@alto/oracles/lending/AltoTbtcLendingOracle.sol";
+import {AltoMultiChainlinkLendingOracle} from "@alto/oracles/lending/AltoMultiChainlinkLendingOracle.sol";
 import {MarketDeployer} from "@alto/utils/MarketDeployer.sol";
 import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
 import {ChainlinkNode, ERC4626RatioNode, ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
@@ -45,10 +45,12 @@ contract AltoLeverageTbtcMarketTest is Test {
 
         address irm = address(new FixedRateIrm(0.04 ether / uint256(365 days), address(this)));
         ChainlinkNode memory chainlinkNode = ChainlinkNode(
-            AggregatorV3Interface(CHAINLINK_BTC_USD_PRICE_FEED), ConversionDirection.IN_TO_OUT, 2 hours, 8, 36
+            AggregatorV3Interface(CHAINLINK_BTC_USD_PRICE_FEED), ConversionDirection.IN_TO_OUT, 2 hours, 18, 36
         );
 
-        oracle = address(new AltoTbtcLendingOracle(address(this), chainlinkNode));
+        ChainlinkNode[] memory chainlinkNodes = new ChainlinkNode[](1);
+        chainlinkNodes[0] = chainlinkNode;
+        oracle = address(new AltoMultiChainlinkLendingOracle(address(this), chainlinkNodes));
 
         market = IMarket(
             MarketDeployer.deployBorrowMarket(
@@ -317,11 +319,13 @@ contract AltoLeverageTbtcMarketTest is Test {
 
     function isSolvent(address user, address _market) internal view returns (bool, uint256 max, uint256 current) {
         uint256 collateralPrice = IOracle(oracle).getPrice();
-        uint256 collateralValue = uint256(IMarket(_market).position(user).collateralAssets)
-            .divideWithRounding(collateralPrice, ORACLE_PRICE_PRECISION, false);
+        uint256 collateralValue = uint256(IMarket(_market).position(user).collateralAssets).divideWithRounding(
+            collateralPrice, ORACLE_PRICE_PRECISION, false
+        );
         uint256 maxBorrowValue = collateralValue.multiplyWithPrecision(IMarket(_market).maxLtv());
-        uint256 borrowValue = uint256(IMarket(_market).position(user).borrowShares)
-            .convertToAssetsUp(IMarket(_market).totalBorrowed().assets, IMarket(_market).totalBorrowed().shares);
+        uint256 borrowValue = uint256(IMarket(_market).position(user).borrowShares).convertToAssetsUp(
+            IMarket(_market).totalBorrowed().assets, IMarket(_market).totalBorrowed().shares
+        );
 
         return (maxBorrowValue >= borrowValue, maxBorrowValue, borrowValue);
     }

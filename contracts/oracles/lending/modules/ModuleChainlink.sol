@@ -44,7 +44,7 @@ contract ModuleChainlink {
 
     /// @notice Validates the parameters for the Chainlink feed during initialization or updates
     /// @param config Chainlink node configuration
-    function _validateChainlinkParams(ChainlinkNode memory config) internal view {
+    function _validateChainlinkParams(ChainlinkNode memory config) internal pure {
         if (address(config.feed) == address(0) || config.stalePeriod == 0) {
             revert ModuleChainlinkInvalidInput();
         }
