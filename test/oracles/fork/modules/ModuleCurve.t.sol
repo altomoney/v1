@@ -3,7 +3,7 @@ pragma solidity ^0.8.22;
 
 import {Test} from "forge-std/Test.sol";
 import {console2} from "forge-std/console2.sol";
-import {ModuleCurve} from "@alto/oracles/lending/modules/ModuleCurve.sol";
+import {ModuleCurve} from "@alto/oracles/modules/ModuleCurve.sol";
 import {ICurvePool} from "@alto/oracles/interfaces/ICurvePool.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {CurveNode} from "@alto/oracles/interfaces/IModuleNode.sol";

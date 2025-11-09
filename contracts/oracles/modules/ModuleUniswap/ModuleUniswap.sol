@@ -2,7 +2,7 @@
 pragma solidity ^0.8.7;
 
 import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
-import {OracleMath} from "@alto/oracles/external/OracleMath.sol";
+import {OracleMath} from "./OracleMath.sol";
 import {UniswapNode} from "@alto/oracles/interfaces/IModuleNode.sol";
 
 /// @title ModuleUniswap

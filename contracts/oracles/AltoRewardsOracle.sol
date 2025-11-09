@@ -3,8 +3,8 @@ pragma solidity ^0.8.7;
 
 import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
-import {ModuleChainlink} from "@alto/oracles/lending/modules/ModuleChainlink.sol";
-import {ModuleUniswap} from "@alto/oracles/lending/modules/ModuleUniswap.sol";
+import {ModuleChainlink} from "@alto/oracles/modules/ModuleChainlink.sol";
+import {ModuleUniswap} from "@alto/oracles/modules/ModuleUniswap/ModuleUniswap.sol";
 import {UniswapNode, ChainlinkNode, ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
 import {
     IAltoRewardsOracleBase,

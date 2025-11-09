@@ -9,7 +9,7 @@ import {
     IAltoRewardsOracleEvents
 } from "@alto/oracles/interfaces/IAltoRewardsOracle.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {ModuleUniswap} from "@alto/oracles/lending/modules/ModuleUniswap.sol";
+import {ModuleUniswap} from "@alto/oracles/modules/ModuleUniswap/ModuleUniswap.sol";
 import {UniswapNode} from "@alto/oracles/interfaces/IModuleNode.sol";
 import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 

@@ -2,7 +2,7 @@
 pragma solidity ^0.8.7;
 
 import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
-import {ModuleChainlink} from "@alto/oracles/lending/modules/ModuleChainlink.sol";
+import {ModuleChainlink} from "@alto/oracles/modules/ModuleChainlink.sol";
 import {ChainlinkNode} from "@alto/oracles/interfaces/IModuleNode.sol";
 import {
     IAltoMultiChainlinkLendingOracleStaticTypes,
@@ -14,11 +14,7 @@ import {
 /// @author Pearl Labs
 /// @notice Oracle contract that is used to get the price of the asset in USD in ORACLE_PRICE_PRECISION(i.e. 1e36)
 /// @dev Uses the multiple chainlink nodes to get the price of the asset in USD
-contract AltoMultiChainlinkLendingOracle is
-    Ownable2Step,
-    ModuleChainlink,
-    IAltoMultiChainlinkLendingOracleStaticTypes
-{
+contract AltoMultiChainlinkLendingOracle is Ownable2Step, ModuleChainlink, IAltoMultiChainlinkLendingOracleStaticTypes {
     /// @inheritdoc IAltoMultiChainlinkLendingOracleStaticTypes
     ChainlinkNode[] public chainlinkNodes;
 

@@ -2,8 +2,8 @@
 pragma solidity ^0.8.22;
 
 import {AltoMultiChainlinkLendingOracleCommon} from "./AltoMultiChainlinkLendingOracleCommon.t.sol";
-import {AltoMultiChainlinkLendingOracle} from "@alto/oracles/lending/AltoMultiChainlinkLendingOracle.sol";
-import {ModuleChainlink} from "@alto/oracles/lending/modules/ModuleChainlink.sol";
+import {AltoMultiChainlinkLendingOracle} from "@alto/oracles/AltoMultiChainlinkLendingOracle.sol";
+import {ModuleChainlink} from "@alto/oracles/modules/ModuleChainlink.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {
     IAltoMultiChainlinkLendingOracleErrors,
