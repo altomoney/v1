@@ -6,15 +6,9 @@ import {IOracle} from "@alto/oracles/interfaces/IOracle.sol";
 import {ERC4626RatioNode, ChainlinkNode, ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
-interface IAltoRethLendingOracleErrors {
-    /// @notice Error thrown when the input is invalid
-    error AltoRethLendingOracleInvalidInput();
+interface IAltoERC4626RatioChainlinkOracleErrors {}
 
-    /// @notice Error thrown when the price is invalid
-    error AltoRethLendingOracleInvalidPrice();
-}
-
-interface IAltoRethLendingOracleEvents {
+interface IAltoERC4626RatioChainlinkOracleEvents {
     /// @notice Event emitted when the ERC4626 ratio node is updated
     event SetERC4626RatioNode(ERC4626RatioNode oldERC4626RatioNode, ERC4626RatioNode newERC4626RatioNode);
 
@@ -22,13 +16,14 @@ interface IAltoRethLendingOracleEvents {
     event SetChainlinkNode(ChainlinkNode oldChainlinkNode, ChainlinkNode newChainlinkNode);
 }
 
-interface IAltoRethLendingOracleBase is IOracle, IAltoRethLendingOracleErrors, IAltoRethLendingOracleEvents {
-    /// @notice The address of the RETH token
-    function RETH() external view returns (address);
-
-    /// @notice Gets the price of RETH in USD in ORACLE_PRICE_PRECISION(i.e. 1e36)
-    /// @dev Uses the ERC4626 ratio to get RETH in ETH and uses chainlink ETH/USD price feed
-    /// @return The price of RETH in USD in ORACLE_PRICE_PRECISION(i.e. 1e36)
+interface IAltoERC4626RatioChainlinkOracleBase is
+    IOracle,
+    IAltoERC4626RatioChainlinkOracleErrors,
+    IAltoERC4626RatioChainlinkOracleEvents
+{
+    /// @notice Gets the price of the wrapped asset in USD in ORACLE_PRICE_PRECISION(i.e. 1e36)
+    /// @dev Uses the ratio of the wrapped asset to the underlying asset and uses chainlink price feed
+    /// @return The price of the wrapped asset in USD in ORACLE_PRICE_PRECISION(i.e. 1e36)
     function getPrice() external view returns (uint256);
     /// @notice Updates the ERC4626 ratio node
     /// @param _erc4626RatioNode The new ERC4626 ratio node
@@ -38,7 +33,7 @@ interface IAltoRethLendingOracleBase is IOracle, IAltoRethLendingOracleErrors, I
     function updateChainlinkNode(ChainlinkNode memory _chainlinkNode) external;
 }
 
-interface IAltoRethLendingOracle is IAltoRethLendingOracleBase {
+interface IAltoERC4626RatioChainlinkOracle is IAltoERC4626RatioChainlinkOracleBase {
     /// @notice Gets the ERC4626 ratio node
     /// @return The ERC4626 ratio node
     function erc4626RatioNode() external view returns (ERC4626RatioNode memory);
@@ -47,7 +42,7 @@ interface IAltoRethLendingOracle is IAltoRethLendingOracleBase {
     function chainlinkNode() external view returns (ChainlinkNode memory);
 }
 
-interface IAltoRethLendingOracleStaticTypes is IAltoRethLendingOracleBase {
+interface IAltoERC4626RatioChainlinkOracleStaticTypes is IAltoERC4626RatioChainlinkOracleBase {
     /// @notice Gets the ERC4626 ratio node
     /// @return The ERC4626 ratio node
     function erc4626RatioNode() external view returns (uint256, uint256, uint256);
