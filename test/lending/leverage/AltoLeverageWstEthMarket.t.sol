@@ -9,7 +9,9 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
 import {AltoLeverageSwapper} from "@alto/lending/leverage/AltoLeverageSwapper.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
-import {AltoWstEthLendingOracle} from "@alto/oracles/lending/AltoWstEthLendingOracle.sol";
+import {
+    ERC4626RatioChainlinkOracleWSTETH
+} from "@alto/oracles/lending/AltoERC4626RatioChainlinkOracle/implementations/ERC4626RatioChainlinkOracleWSTETH.sol";
 import {MarketDeployer} from "@alto/utils/MarketDeployer.sol";
 import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
 import {ChainlinkNode, ERC4626RatioNode, ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
@@ -50,7 +52,7 @@ contract AltoLeverageWstEthMarketTest is Test {
         ChainlinkNode memory chainlinkNode = ChainlinkNode(
             AggregatorV3Interface(CHAINLINK_ETH_USD_PRICE_FEED), ConversionDirection.IN_TO_OUT, 2 hours, 18, 36
         );
-        oracle = address(new AltoWstEthLendingOracle(address(this), WSTETH, erc4626RatioNode, chainlinkNode));
+        oracle = address(new ERC4626RatioChainlinkOracleWSTETH(address(this), WSTETH, erc4626RatioNode, chainlinkNode));
 
         market = IMarket(
             MarketDeployer.deployBorrowMarket(
