@@ -11,7 +11,7 @@ import {AltoLeverageSwapper} from "@alto/lending/leverage/AltoLeverageSwapper.so
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {
     ERC4626RatioChainlinkOracleRETH
-} from "@alto/oracles/lending/AltoERC4626RatioChainlinkOracle/implementations/ERC4626RatioChainlinkOracleRETH.sol";
+} from "@alto/oracles/AltoERC4626RatioChainlinkOracle/implementations/ERC4626RatioChainlinkOracleRETH.sol";
 import {MarketDeployer} from "@alto/utils/MarketDeployer.sol";
 import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
 import {ChainlinkNode, ERC4626RatioNode, ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";

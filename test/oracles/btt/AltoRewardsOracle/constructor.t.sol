@@ -10,8 +10,8 @@ import {
 } from "@alto/oracles/interfaces/IAltoRewardsOracle.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
-import {ModuleUniswap} from "@alto/oracles/lending/modules/ModuleUniswap.sol";
-import {ModuleChainlink, ConversionDirection} from "@alto/oracles/lending/modules/ModuleChainlink.sol";
+import {ModuleUniswap} from "@alto/oracles/modules/ModuleUniswap/ModuleUniswap.sol";
+import {ModuleChainlink, ConversionDirection} from "@alto/oracles/modules/ModuleChainlink.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
 contract AltoRewardsOracleConstructor is AltoRewardsOracleCommon {

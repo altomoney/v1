@@ -117,14 +117,19 @@ contract SimulationRewardsOracle is Test {
 
     function setUp() public {
         // sets the bytecode in local
-        vm.etch(address(UNISWAP_V3_FACTORY), vm.parseBytes(vm.readFile("test/oracles/data/factoryCode.txt")));
+        vm.etch(
+            address(UNISWAP_V3_FACTORY), vm.parseBytes(vm.readFile("test/oracles/simulations/data/factoryCode.txt"))
+        );
 
-        vm.etch(address(SWAP_ROUTER), vm.parseBytes(vm.readFile("test/oracles/data/swapRouterCode.txt")));
+        vm.etch(address(SWAP_ROUTER), vm.parseBytes(vm.readFile("test/oracles/simulations/data/swapRouterCode.txt")));
 
-        vm.etch(address(ETH_USD_PRICE_FEED), vm.parseBytes(vm.readFile("test/oracles/data/ethUsdPriceFeedCode.txt")));
+        vm.etch(
+            address(ETH_USD_PRICE_FEED),
+            vm.parseBytes(vm.readFile("test/oracles/simulations/data/ethUsdPriceFeedCode.txt"))
+        );
 
         // fetches the tx data from json file and populates the txs
-        string memory txData = vm.readFile("test/oracles/data/tapWethTxData.json");
+        string memory txData = vm.readFile("test/oracles/simulations/data/tapWethTxData.json");
         bytes memory txDataBytes = vm.parseJson(txData);
         Tx[] memory _txs = abi.decode(txDataBytes, (Tx[]));
 

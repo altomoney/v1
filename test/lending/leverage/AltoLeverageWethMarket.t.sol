@@ -13,7 +13,7 @@ import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
 import {MarketDeployer} from "@alto/utils/MarketDeployer.sol";
 import {AltoLeverageSwapper} from "@alto/lending/leverage/AltoLeverageSwapper.sol";
-import {AltoMultiChainlinkLendingOracle} from "@alto/oracles/lending/AltoMultiChainlinkLendingOracle.sol";
+import {AltoMultiChainlinkLendingOracle} from "@alto/oracles/AltoMultiChainlinkLendingOracle.sol";
 import {ChainlinkNode, ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -315,13 +315,11 @@ contract AltoLeverageWethMarketTest is Test {
 
     function isSolvent(address user, address _market) internal view returns (bool, uint256 max, uint256 current) {
         uint256 collateralPrice = IOracle(oracle).getPrice();
-        uint256 collateralValue = uint256(IMarket(_market).position(user).collateralAssets).divideWithRounding(
-            collateralPrice, ORACLE_PRICE_PRECISION, false
-        );
+        uint256 collateralValue = uint256(IMarket(_market).position(user).collateralAssets)
+            .divideWithRounding(collateralPrice, ORACLE_PRICE_PRECISION, false);
         uint256 maxBorrowValue = collateralValue.multiplyWithPrecision(IMarket(_market).maxLtv());
-        uint256 borrowValue = uint256(IMarket(_market).position(user).borrowShares).convertToAssetsUp(
-            IMarket(_market).totalBorrowed().assets, IMarket(_market).totalBorrowed().shares
-        );
+        uint256 borrowValue = uint256(IMarket(_market).position(user).borrowShares)
+            .convertToAssetsUp(IMarket(_market).totalBorrowed().assets, IMarket(_market).totalBorrowed().shares);
 
         return (maxBorrowValue >= borrowValue, maxBorrowValue, borrowValue);
     }

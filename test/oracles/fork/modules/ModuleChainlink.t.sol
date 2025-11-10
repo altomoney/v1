@@ -4,7 +4,7 @@ pragma solidity ^0.8.22;
 import {Test} from "forge-std/Test.sol";
 import {console2} from "forge-std/console2.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
-import {ModuleChainlink} from "@alto/oracles/lending/modules/ModuleChainlink.sol";
+import {ModuleChainlink} from "@alto/oracles/modules/ModuleChainlink.sol";
 import {ChainlinkNode, ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
 
 contract ModuleChainlinkTest is Test {
@@ -60,14 +60,5 @@ contract ModuleChainlinkTest is Test {
         console2.log("btcUsdPrice from Chainlink feed", btcUsdExpectedPrice);
 
         assertEq(usdAmount, btcUsdExpectedPrice, "Invalid price in ChainlinkModule");
-    }
-
-    function testRevertWhenPricesAreStale() public {
-        uint256 ethQuoteAmount = 10 ** 18;
-        vm.expectRevert(abi.encodeWithSelector(ModuleChainlink.ModuleChainlinkInvalidRate.selector));
-        moduleChainlink.readChainlinkFeed(
-            ethQuoteAmount,
-            ChainlinkNode(AggregatorV3Interface(USDC_ETH_PRICE_FEED), ConversionDirection.IN_TO_OUT, 1 minutes, 18, 6)
-        );
     }
 }

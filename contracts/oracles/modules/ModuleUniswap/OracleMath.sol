@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.7;
 
-import {FullMath} from "@alto/oracles/external/FullMath.sol";
+import {FullMath} from "./FullMath.sol";
 
 /// @title OracleMath
 /// @author Unchanged from Angle Core repository (https://github.com/AngleProtocol/angle-core/blob/main/contracts/utils/OracleMath.sol)

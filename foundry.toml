@@ -30,7 +30,7 @@ extra_output = ["storageLayout"]
 fs_permissions = [
 	{ access = "read-write", path = "./contracts/deployments/testnet/output" },
 	{ access = "read", path = "./out/" },
-	{ access = "read", path = "./test/oracles/data/" },
+	{ access = "read", path = "./test/oracles/simulations/data/" },
 	{ access = "read", path = "./test/lending/leverage/0xswapData/" },
 ]
 
