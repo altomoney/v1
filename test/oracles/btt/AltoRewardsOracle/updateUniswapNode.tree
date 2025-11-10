@@ -1,0 +1,14 @@
+AltoRewardsOracle::updateUniswapNode()
+├── given caller is not owner
+│   └── when _uniswapNode is valid
+│       └── it should revert with OwnableUnauthorizedAccount
+├── given caller is owner
+│   ├── when _uniswapNode.pool is zero address
+│   │   └── it should revert with ModuleUniswapInvalidInput
+│   ├── when _uniswapNode.twapPeriod is zero
+│   │   └── it should revert with ModuleUniswapInvalidInput
+│   ├── when _uniswapNode.multiplied is not 0 or 1
+│   │   └── it should revert with ModuleUniswapInvalidInput
+│   └── when _uniswapNode is valid
+│       ├── it should emit SetUniswapNode event with old and new uniswap node
+│       └── it should update uniswapNode to new uniswap node

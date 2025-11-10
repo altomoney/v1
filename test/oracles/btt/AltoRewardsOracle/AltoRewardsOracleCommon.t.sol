@@ -7,6 +7,8 @@ import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Po
 import {ERC20MockDecimals} from "@alto-test/helpers/ERC20MockDecimals.sol";
 import {MockUniswapPool} from "@alto-test/oracles/btt/mocks/MockUniswapPool.sol";
 import {MockChainlinkFeed} from "@alto-test/oracles/btt/mocks/MockChainlinkFeed.sol";
+import {UniswapNode, ChainlinkNode} from "@alto/oracles/interfaces/IModuleNode.sol";
+import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
 contract AltoRewardsOracleCommon is Test {
     address constant OWNER = address(0x1);
@@ -16,6 +18,8 @@ contract AltoRewardsOracleCommon is Test {
     ERC20MockDecimals outToken;
     MockUniswapPool mockPool;
     MockChainlinkFeed mockFeed;
+    ChainlinkNode chainlinkNode;
+    UniswapNode uniswapNode;
 
     // Default valid parameters
     uint32 constant DEFAULT_TWAP_PERIOD = 1 hours;
@@ -32,82 +36,24 @@ contract AltoRewardsOracleCommon is Test {
         mockFeed = new MockChainlinkFeed();
     }
 
-    function _createValidInitParams() internal view returns (AltoRewardsOracleInitParams memory) {
-        address[] memory addressInAndOutUni = new address[](2);
-        addressInAndOutUni[0] = address(inToken);
-        addressInAndOutUni[1] = address(outToken);
-
-        // Create valid circuits with mock contracts
-        IUniswapV3Pool[] memory circuitUniswap = new IUniswapV3Pool[](1);
-        circuitUniswap[0] = IUniswapV3Pool(address(mockPool));
-        uint8[] memory circuitUniIsMultiplied = new uint8[](1);
-        circuitUniIsMultiplied[0] = 1; // multiply
-
-        address[] memory circuitChainlink = new address[](1);
-        circuitChainlink[0] = address(mockFeed);
-        uint8[] memory circuitChainIsMultiplied = new uint8[](1);
-        circuitChainIsMultiplied[0] = 1; // multiply
+    function _createValidInitParams() internal returns (AltoRewardsOracleInitParams memory) {
+        chainlinkNode = ChainlinkNode({
+            feed: AggregatorV3Interface(address(mockFeed)),
+            stalePeriod: DEFAULT_STALE_PERIOD,
+            inDecimals: 18,
+            outDecimals: 18,
+            multiplied: 1
+        });
+        uniswapNode =
+            UniswapNode({pool: IUniswapV3Pool(address(mockPool)), twapPeriod: DEFAULT_TWAP_PERIOD, multiplied: 1});
 
         return AltoRewardsOracleInitParams({
-            addressInAndOutUni: addressInAndOutUni,
-            circuitUniswap: circuitUniswap,
-            circuitUniIsMultiplied: circuitUniIsMultiplied,
-            twapPeriod: DEFAULT_TWAP_PERIOD,
-            observationLength: DEFAULT_OBSERVATION_LENGTH,
-            uniFinalCurrency: DEFAULT_UNI_FINAL_CURRENCY,
-            circuitChainlink: circuitChainlink,
-            circuitChainIsMultiplied: circuitChainIsMultiplied,
+            inBase: 10 ** 18,
+            uniswapNode: uniswapNode,
+            chainlinkNode: chainlinkNode,
             owner: OWNER,
-            stalePeriod: DEFAULT_STALE_PERIOD,
             description: DEFAULT_DESCRIPTION,
             priceUpdateCooldownPeriod: DEFAULT_COOLDOWN_PERIOD
         });
-    }
-
-    function _createInvalidAddressArrayInitParams() internal view returns (AltoRewardsOracleInitParams memory) {
-        // Create invalid address array with wrong length
-        address[] memory invalidAddressArray = new address[](1);
-        invalidAddressArray[0] = address(inToken);
-
-        // Create valid circuits with mock contracts (same as valid params)
-        IUniswapV3Pool[] memory circuitUniswap = new IUniswapV3Pool[](1);
-        circuitUniswap[0] = IUniswapV3Pool(address(mockPool));
-        uint8[] memory circuitUniIsMultiplied = new uint8[](1);
-        circuitUniIsMultiplied[0] = 1;
-
-        address[] memory circuitChainlink = new address[](1);
-        circuitChainlink[0] = address(mockFeed);
-        uint8[] memory circuitChainIsMultiplied = new uint8[](1);
-        circuitChainIsMultiplied[0] = 1;
-
-        return AltoRewardsOracleInitParams({
-            addressInAndOutUni: invalidAddressArray, // This is the invalid part
-            circuitUniswap: circuitUniswap,
-            circuitUniIsMultiplied: circuitUniIsMultiplied,
-            twapPeriod: DEFAULT_TWAP_PERIOD,
-            observationLength: DEFAULT_OBSERVATION_LENGTH,
-            uniFinalCurrency: DEFAULT_UNI_FINAL_CURRENCY,
-            circuitChainlink: circuitChainlink,
-            circuitChainIsMultiplied: circuitChainIsMultiplied,
-            owner: OWNER,
-            stalePeriod: DEFAULT_STALE_PERIOD,
-            description: DEFAULT_DESCRIPTION,
-            priceUpdateCooldownPeriod: DEFAULT_COOLDOWN_PERIOD
-        });
-    }
-
-    function _createZeroOwnerInitParams() internal view returns (AltoRewardsOracleInitParams memory) {
-        AltoRewardsOracleInitParams memory params = _createValidInitParams();
-        params.owner = address(0);
-        return params;
-    }
-
-    function _createTokensWithDecimals(uint8 inDecimals, uint8 outDecimals)
-        internal
-        returns (ERC20MockDecimals, ERC20MockDecimals)
-    {
-        ERC20MockDecimals inTokenCustom = new ERC20MockDecimals("In Token", "IN", inDecimals);
-        ERC20MockDecimals outTokenCustom = new ERC20MockDecimals("Out Token", "OUT", outDecimals);
-        return (inTokenCustom, outTokenCustom);
     }
 }

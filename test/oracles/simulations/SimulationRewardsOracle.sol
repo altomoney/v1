@@ -10,8 +10,9 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {AltoToken} from "@alto/tokens/AltoToken.sol";
 import {ISwapRouter} from "@alto-test/oracles/interfaces/ISwapRouter.sol";
 import {ERC20MockMintable} from "@alto-test/helpers/ERC20MockMintable.sol";
-import {AggregatorV3Interface} from "@alto/oracles/utils/ChainlinkUtils.sol";
+import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {AltoRewardsOracleInitParams} from "@alto/oracles/interfaces/IAltoRewardsOracle.sol";
+import {UniswapNode, ChainlinkNode} from "@alto/oracles/interfaces/IModuleNode.sol";
 
 // TxType that occured in the pool
 enum TxType {
@@ -47,6 +48,9 @@ contract SimulationRewardsOracle is Test {
     uint256 constant INITIAL_PRICE = 150000000;
     bytes32 description = "TAP-USD Rewards Oracle";
     IUniswapV3Factory UNISWAP_V3_FACTORY = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
+    ChainlinkNode public chainlinkNode;
+    UniswapNode public uniswapNode;
+
     AltoToken TAP_TOKEN;
     address MOCK_WETH;
     uint24 constant POOL_FEE = 10000;
@@ -151,31 +155,20 @@ contract SimulationRewardsOracle is Test {
 
         // deploys the rewards oracle
         {
-            address[] memory addressInAndOutUni = new address[](2);
-            addressInAndOutUni[0] = address(TAP_TOKEN);
-            addressInAndOutUni[1] = MOCK_WETH;
-            IUniswapV3Pool[] memory _circuitUniswap = new IUniswapV3Pool[](1);
-            _circuitUniswap[0] = TAP_WETH_POOL;
-            uint8[] memory _circuitUniIsMultiplied = new uint8[](1);
-            _circuitUniIsMultiplied[0] = 1;
-            uint16 observationLength = 10;
-            uint8 _uniFinalCurrency = 1;
-            address[] memory _circuitChainlink = new address[](1);
-            _circuitChainlink[0] = ETH_USD_PRICE_FEED;
-            uint8[] memory _circuitChainIsMultiplied = new uint8[](1);
-            _circuitChainIsMultiplied[0] = 1;
+            chainlinkNode = ChainlinkNode({
+                feed: AggregatorV3Interface(ETH_USD_PRICE_FEED),
+                stalePeriod: STALE_PERIOD,
+                inDecimals: 18,
+                outDecimals: 18,
+                multiplied: 1
+            });
+            uniswapNode = UniswapNode({pool: TAP_WETH_POOL, twapPeriod: TWAP_PERIOD, multiplied: 1});
 
             AltoRewardsOracleInitParams memory initParams = AltoRewardsOracleInitParams({
-                addressInAndOutUni: addressInAndOutUni,
-                circuitUniswap: _circuitUniswap,
-                circuitUniIsMultiplied: _circuitUniIsMultiplied,
-                twapPeriod: TWAP_PERIOD,
-                observationLength: observationLength,
-                uniFinalCurrency: _uniFinalCurrency,
-                circuitChainlink: _circuitChainlink,
-                circuitChainIsMultiplied: _circuitChainIsMultiplied,
+                inBase: 10 ** 18,
+                uniswapNode: uniswapNode,
+                chainlinkNode: chainlinkNode,
                 owner: OWNER,
-                stalePeriod: STALE_PERIOD,
                 description: description,
                 priceUpdateCooldownPeriod: PRICE_UPDATE_COOLDOWN_PERIOD
             });
@@ -221,8 +214,6 @@ contract SimulationRewardsOracle is Test {
                 console2.log("Price of rewardsOracle is", rewardsOracle.getPrice());
                 console2.log("--------------------------------");
                 weeksProcessed++;
-
-                vm.clearMockedCalls();
             }
 
             _processTransaction(txs[i]);

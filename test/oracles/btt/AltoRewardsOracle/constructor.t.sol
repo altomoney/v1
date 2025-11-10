@@ -9,11 +9,10 @@ import {
     IAltoRewardsOracleEvents
 } from "@alto/oracles/interfaces/IAltoRewardsOracle.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {ERC20MockDecimals} from "@alto-test/helpers/ERC20MockDecimals.sol";
-import {UniswapUtils} from "@alto/oracles/utils/UniswapUtils.sol";
-import {ModuleUniswapMulti} from "@alto/oracles/modules/ModuleUniswapMulti.sol";
-import {ModuleChainlinkMulti} from "@alto/oracles/modules/ModuleChainlinkMulti.sol";
 import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+import {ModuleUniswap} from "@alto/oracles/lending/modules/ModuleUniswap.sol";
+import {ModuleChainlink} from "@alto/oracles/lending/modules/ModuleChainlink.sol";
+import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
 contract AltoRewardsOracleConstructor is AltoRewardsOracleCommon {
     modifier givenInvalidInputs() {
@@ -24,53 +23,38 @@ contract AltoRewardsOracleConstructor is AltoRewardsOracleCommon {
         _;
     }
 
-    function test_RevertWhen_AddressInAndOutUniLengthIsNot2() external givenInvalidInputs {
-        AltoRewardsOracleInitParams memory params = _createInvalidAddressArrayInitParams();
+    function test_RevertWhen_InBaseIsZero() external givenInvalidInputs {
+        AltoRewardsOracleInitParams memory params = _createValidInitParams();
+        params.inBase = 0;
 
         vm.expectRevert(IAltoRewardsOracleErrors.AltoRewardsOracleInvalidInput.selector);
         new AltoRewardsOracle(params);
     }
 
+    function test_RevertWhen_UniswapNodeIsInvalid() external givenInvalidInputs {
+        AltoRewardsOracleInitParams memory params = _createValidInitParams();
+
+        params.uniswapNode.twapPeriod = 0; // twap period is 0 which is invalid
+
+        vm.expectRevert(ModuleUniswap.ModuleUniswapInvalidInput.selector);
+        new AltoRewardsOracle(params);
+    }
+
+    function test_RevertWhen_ChainlinkNodeIsInvalid() external givenInvalidInputs {
+        AltoRewardsOracleInitParams memory params = _createValidInitParams();
+
+        // Make circuit arrays length mismatch
+        params.chainlinkNode.stalePeriod = 0; // stale period is 0 which is invalid
+
+        vm.expectRevert(ModuleChainlink.ModuleChainlinkInvalidInput.selector);
+        new AltoRewardsOracle(params);
+    }
+
     function test_RevertWhen_OwnerIsZeroAddress() external givenInvalidInputs {
-        AltoRewardsOracleInitParams memory params = _createZeroOwnerInitParams();
+        AltoRewardsOracleInitParams memory params = _createValidInitParams();
+        params.owner = address(0);
 
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableInvalidOwner.selector, address(0)));
-        new AltoRewardsOracle(params);
-    }
-
-    function test_RevertWhen_TwapPeriodIsInvalid() external givenInvalidInputs {
-        AltoRewardsOracleInitParams memory params = _createValidInitParams();
-        params.twapPeriod = 0; // Invalid twap period
-
-        vm.expectRevert(UniswapUtils.UniswapUtilsInvalidTwapPeriod.selector);
-        new AltoRewardsOracle(params);
-    }
-
-    function test_RevertWhen_CircuitUniswapParametersAreInvalid() external givenInvalidInputs {
-        AltoRewardsOracleInitParams memory params = _createValidInitParams();
-
-        // Make circuit arrays length mismatch
-        IUniswapV3Pool[] memory circuitUniswap = new IUniswapV3Pool[](2); // length 2
-        uint8[] memory circuitUniIsMultiplied = new uint8[](1); // length 1 - mismatch!
-
-        params.circuitUniswap = circuitUniswap;
-        params.circuitUniIsMultiplied = circuitUniIsMultiplied;
-
-        vm.expectRevert(ModuleUniswapMulti.ModuleUniswapMultiInvalidInput.selector);
-        new AltoRewardsOracle(params);
-    }
-
-    function test_RevertWhen_CircuitChainlinkParametersAreInvalid() external givenInvalidInputs {
-        AltoRewardsOracleInitParams memory params = _createValidInitParams();
-
-        // Make circuit arrays length mismatch
-        address[] memory circuitChainlink = new address[](2); // length 2
-        uint8[] memory circuitChainIsMultiplied = new uint8[](1); // length 1 - mismatch!
-
-        params.circuitChainlink = circuitChainlink;
-        params.circuitChainIsMultiplied = circuitChainIsMultiplied;
-
-        vm.expectRevert(ModuleChainlinkMulti.ModuleChainlinkMultiInvalidInput.selector);
         new AltoRewardsOracle(params);
     }
 
@@ -85,35 +69,26 @@ contract AltoRewardsOracleConstructor is AltoRewardsOracleCommon {
         // it should set IN_BASE correctly based on in-currency decimals
         assertEq(oracle.IN_BASE(), 10 ** 18);
 
-        // it should set OUT_BASE correctly based on out-currency decimals
-        assertEq(oracle.OUT_BASE(), 10 ** 18);
-
-        // it should set UNI_FINAL_CURRENCY correctly
-        assertEq(oracle.UNI_FINAL_CURRENCY(), DEFAULT_UNI_FINAL_CURRENCY);
-
         // it should set description correctly
         assertEq(oracle.description(), DEFAULT_DESCRIPTION);
 
         // it should set priceUpdateCooldownPeriod correctly
         assertEq(oracle.priceUpdateCooldownPeriod(), DEFAULT_COOLDOWN_PERIOD);
 
-        // it should set twap period correctly
-        assertEq(oracle.twapPeriod(), DEFAULT_TWAP_PERIOD);
+        (IUniswapV3Pool pool, uint8 uniswapMultiplied, uint32 twapPeriod) = oracle.uniswapNode();
 
-        // it should set circuit uniswap correctly
-        assertEq(address(oracle.circuitUniswap(0)), address(mockPool));
+        // it should set uniswap node correctly
+        assertEq(address(pool), address(mockPool));
+        assertEq(twapPeriod, DEFAULT_TWAP_PERIOD);
+        assertEq(uniswapMultiplied, 1);
 
-        // it should set circuit uni is multiplied correctly
-        assertEq(oracle.circuitUniIsMultiplied(0), 1);
-
-        // it should set circuit chainlink correctly
-        assertEq(address(oracle.circuitChainlink(0)), address(mockFeed));
-
-        // it should set circuit chain is multiplied correctly
-        assertEq(oracle.circuitChainIsMultiplied(0), 1);
-
-        // it should set stale period correctly
-        assertEq(oracle.stalePeriod(), DEFAULT_STALE_PERIOD);
+        (AggregatorV3Interface feed, uint8 chainlinkMultiplied, uint32 stalePeriod, uint8 inDecimals, uint8 outDecimals)
+        = oracle.chainlinkNode();
+        assertEq(address(feed), address(mockFeed));
+        assertEq(chainlinkMultiplied, 1);
+        assertEq(stalePeriod, DEFAULT_STALE_PERIOD);
+        assertEq(inDecimals, 18);
+        assertEq(outDecimals, 18);
 
         // it should set owner correctly
         assertEq(oracle.owner(), OWNER);
@@ -123,19 +98,5 @@ contract AltoRewardsOracleConstructor is AltoRewardsOracleCommon {
 
         // it should initialize cachedPrice to zero
         assertEq(oracle.cachedPrice(), 0);
-    }
-
-    function test_WhenBothTokensHaveDifferentDecimalPlaces() external givenValidInputs {
-        (ERC20MockDecimals inToken6, ERC20MockDecimals outToken8) = _createTokensWithDecimals(6, 8);
-
-        AltoRewardsOracleInitParams memory params = _createValidInitParams();
-        params.addressInAndOutUni[0] = address(inToken6);
-        params.addressInAndOutUni[1] = address(outToken8);
-
-        AltoRewardsOracle oracle = new AltoRewardsOracle(params);
-
-        // it should handle different decimal tokens correctly
-        assertEq(oracle.IN_BASE(), 10 ** 6);
-        assertEq(oracle.OUT_BASE(), 10 ** 8);
     }
 }

@@ -8,7 +8,6 @@ import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IER
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Test} from "forge-std/Test.sol";
-import {ChainlinkUtils} from "@alto/oracles/utils/ChainlinkUtils.sol";
 import {ISwapRouter} from "@alto-test/oracles/interfaces/ISwapRouter.sol";
 import {console2} from "forge-std/console2.sol";
 import {AltoRewardsOracle} from "@alto/oracles/AltoRewardsOracle.sol";
@@ -19,6 +18,8 @@ import {
     IAltoRewardsOracleErrors,
     IAltoRewardsOracleEvents
 } from "@alto/oracles/interfaces/IAltoRewardsOracle.sol";
+import {UniswapNode, ChainlinkNode} from "@alto/oracles/interfaces/IModuleNode.sol";
+import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
 contract AltoRewardsOracleTest is Test {
     // min tick for tick spacing of 200
@@ -94,31 +95,20 @@ contract AltoRewardsOracleTest is Test {
         });
         NONFUNGIBLE_POSITION_MANAGER.mint(params);
 
-        address[] memory addressInAndOutUni = new address[](2);
-        addressInAndOutUni[0] = address(altoToken);
-        addressInAndOutUni[1] = WETH;
-        IUniswapV3Pool[] memory _circuitUniswap = new IUniswapV3Pool[](1);
-        _circuitUniswap[0] = altoEthPool;
-        uint8[] memory _circuitUniIsMultiplied = new uint8[](1);
-        _circuitUniIsMultiplied[0] = 0;
-        uint16 observationLength = 10;
-        uint8 _uniFinalCurrency = 1;
-        address[] memory _circuitChainlink = new address[](1);
-        _circuitChainlink[0] = ETH_USD_PRICE_FEED;
-        uint8[] memory _circuitChainIsMultiplied = new uint8[](1);
-        _circuitChainIsMultiplied[0] = 1;
+        UniswapNode memory uniswapNode = UniswapNode({pool: altoEthPool, twapPeriod: twapPeriod, multiplied: 0});
+        ChainlinkNode memory chainlinkNode = ChainlinkNode({
+            feed: AggregatorV3Interface(ETH_USD_PRICE_FEED),
+            stalePeriod: stalePeriod,
+            inDecimals: 18,
+            outDecimals: 18,
+            multiplied: 1
+        });
 
         AltoRewardsOracleInitParams memory initParams = AltoRewardsOracleInitParams({
-            addressInAndOutUni: addressInAndOutUni,
-            circuitUniswap: _circuitUniswap,
-            circuitUniIsMultiplied: _circuitUniIsMultiplied,
-            twapPeriod: twapPeriod,
-            observationLength: observationLength,
-            uniFinalCurrency: _uniFinalCurrency,
-            circuitChainlink: _circuitChainlink,
-            circuitChainIsMultiplied: _circuitChainIsMultiplied,
+            inBase: 10 ** 18,
+            uniswapNode: uniswapNode,
+            chainlinkNode: chainlinkNode,
             owner: OWNER,
-            stalePeriod: stalePeriod,
             description: description,
             priceUpdateCooldownPeriod: priceUpdateCooldownPeriod
         });
@@ -132,10 +122,6 @@ contract AltoRewardsOracleTest is Test {
         assertEq(rewardsOracle.owner(), OWNER, "Invalid owner in AltoRewardsOracle");
         assertEq(rewardsOracle.description(), description, "Invalid description in AltoRewardsOracle");
         assertEq(rewardsOracle.IN_BASE(), 10 ** 18, "Invalid inBase in AltoRewardsOracle");
-        assertEq(rewardsOracle.OUT_BASE(), 10 ** 18, "Invalid outBase in AltoRewardsOracle");
-        assertEq(rewardsOracle.UNI_FINAL_CURRENCY(), 1, "Invalid uniFinalCurrency in AltoRewardsOracle");
-        assertEq(rewardsOracle.stalePeriod(), stalePeriod, "Invalid stalePeriod in AltoRewardsOracle");
-        assertEq(rewardsOracle.twapPeriod(), twapPeriod, "Invalid twapPeriod in AltoRewardsOracle");
         assertEq(rewardsOracle.cachedPrice(), 0, "Invalid cachedPrice in AltoRewardsOracle");
         assertEq(rewardsOracle.lastPriceUpdateTimestamp(), 0, "Invalid lastPriceUpdateTimestamp in AltoRewardsOracle");
         assertEq(
@@ -388,29 +374,6 @@ contract AltoRewardsOracleTest is Test {
         assertEq(rewardsOracle.owner(), newOwner, "Invalid owner in AltoRewardsOracle");
     }
 
-    function testOwnerCanUpdateStalePeriod() public {
-        vm.startPrank(OWNER);
-        rewardsOracle.changeStalePeriod(15 hours);
-        vm.stopPrank();
-        assertEq(rewardsOracle.stalePeriod(), 15 hours, "Invalid stalePeriod in AltoRewardsOracle");
-    }
-
-    function testOwnerCanUpdateTwapPeriod() public {
-        vm.startPrank(OWNER);
-        rewardsOracle.changeTwapPeriod(45 minutes);
-        vm.stopPrank();
-        assertEq(rewardsOracle.twapPeriod(), 45 minutes, "Invalid twapPeriod in AltoRewardsOracle");
-    }
-
-    function testChainlinkStalePeriodRevert() public whenInitiated {
-        vm.startPrank(OWNER);
-        rewardsOracle.changeStalePeriod(1 hours);
-        vm.stopPrank();
-        vm.warp(block.timestamp + rewardsOracle.priceUpdateCooldownPeriod());
-        vm.expectRevert(abi.encodeWithSelector(ChainlinkUtils.ChainlinkUtilsInvalidRate.selector));
-        rewardsOracle.updatePrice();
-    }
-
     function testOwnerCanUpdatePriceUpdateCooldownPeriod() public {
         vm.startPrank(OWNER);
         vm.expectEmit(false, false, false, true);
@@ -426,6 +389,63 @@ contract AltoRewardsOracleTest is Test {
         vm.startPrank(makeAddr("User"));
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, makeAddr("User")));
         rewardsOracle.updatePriceUpdateCooldownPeriod(1 hours);
+        vm.stopPrank();
+    }
+
+    function testOwnerCanUpdateUniswapNode() public {
+        address nonOwner = makeAddr("NonOwner");
+        vm.startPrank(nonOwner);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, nonOwner));
+        rewardsOracle.updateUniswapNode(UniswapNode({pool: altoEthPool, twapPeriod: twapPeriod, multiplied: 0}));
+        vm.stopPrank();
+
+        vm.startPrank(OWNER);
+        UniswapNode memory newUniswapNode = UniswapNode({pool: altoEthPool, twapPeriod: 1, multiplied: 0});
+        (IUniswapV3Pool pool, uint8 multiplied, uint32 twapPeriod) = rewardsOracle.uniswapNode();
+        UniswapNode memory oldUniswapNode = UniswapNode({pool: pool, twapPeriod: twapPeriod, multiplied: multiplied});
+
+        vm.expectEmit(true, true, true, true);
+        emit IAltoRewardsOracleEvents.SetUniswapNode(oldUniswapNode, newUniswapNode);
+        rewardsOracle.updateUniswapNode(newUniswapNode);
+        vm.stopPrank();
+    }
+
+    function testOwnerCanUpdateChainlinkNode() public {
+        address nonOwner = makeAddr("NonOwner");
+        vm.startPrank(nonOwner);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, nonOwner));
+        rewardsOracle.updateChainlinkNode(
+            ChainlinkNode({
+                feed: AggregatorV3Interface(ETH_USD_PRICE_FEED),
+                stalePeriod: stalePeriod,
+                inDecimals: 18,
+                outDecimals: 18,
+                multiplied: 0
+            })
+        );
+        vm.stopPrank();
+
+        vm.startPrank(OWNER);
+        ChainlinkNode memory newChainlinkNode = ChainlinkNode({
+            feed: AggregatorV3Interface(ETH_USD_PRICE_FEED),
+            stalePeriod: stalePeriod,
+            inDecimals: 18,
+            outDecimals: 18,
+            multiplied: 0
+        });
+        (AggregatorV3Interface feed, uint8 multiplied, uint32 stalePeriod, uint8 inDecimals, uint8 outDecimals) =
+            rewardsOracle.chainlinkNode();
+        ChainlinkNode memory oldChainlinkNode = ChainlinkNode({
+            feed: feed,
+            stalePeriod: stalePeriod,
+            inDecimals: inDecimals,
+            outDecimals: outDecimals,
+            multiplied: multiplied
+        });
+
+        vm.expectEmit(true, true, true, true);
+        emit IAltoRewardsOracleEvents.SetChainlinkNode(oldChainlinkNode, newChainlinkNode);
+        rewardsOracle.updateChainlinkNode(newChainlinkNode);
         vm.stopPrank();
     }
 
