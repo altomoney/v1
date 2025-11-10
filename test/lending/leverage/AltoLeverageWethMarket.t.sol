@@ -13,7 +13,7 @@ import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
 import {MarketDeployer} from "@alto/utils/MarketDeployer.sol";
 import {AltoLeverageSwapper} from "@alto/lending/leverage/AltoLeverageSwapper.sol";
-import {AltoWethLendingOracle} from "@alto/oracles/lending/AltoWethLendingOracle.sol";
+import {AltoMultiChainlinkLendingOracle} from "@alto/oracles/lending/AltoMultiChainlinkLendingOracle.sol";
 import {ChainlinkNode, ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -32,6 +32,7 @@ contract AltoLeverageWethMarketTest is Test {
     uint256 constant INITIAL_AMOUNT = 100000000000 ether;
     address constant CHAINLINK_ETH_USD_PRICE_FEED = 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419;
     address oracle;
+    ChainlinkNode[] public chainlinkNodes;
 
     function setUp() public {
         string memory rpcUrl = vm.rpcUrl("ethereum");
@@ -45,8 +46,8 @@ contract AltoLeverageWethMarketTest is Test {
         ChainlinkNode memory chainlinkNode = ChainlinkNode(
             AggregatorV3Interface(CHAINLINK_ETH_USD_PRICE_FEED), ConversionDirection.IN_TO_OUT, 2 hours, 18, 36
         );
-
-        oracle = address(new AltoWethLendingOracle(address(this), chainlinkNode));
+        chainlinkNodes.push(chainlinkNode);
+        oracle = address(new AltoMultiChainlinkLendingOracle(address(this), chainlinkNodes));
 
         market = IMarket(
             MarketDeployer.deployBorrowMarket(
@@ -314,11 +315,13 @@ contract AltoLeverageWethMarketTest is Test {
 
     function isSolvent(address user, address _market) internal view returns (bool, uint256 max, uint256 current) {
         uint256 collateralPrice = IOracle(oracle).getPrice();
-        uint256 collateralValue = uint256(IMarket(_market).position(user).collateralAssets)
-            .divideWithRounding(collateralPrice, ORACLE_PRICE_PRECISION, false);
+        uint256 collateralValue = uint256(IMarket(_market).position(user).collateralAssets).divideWithRounding(
+            collateralPrice, ORACLE_PRICE_PRECISION, false
+        );
         uint256 maxBorrowValue = collateralValue.multiplyWithPrecision(IMarket(_market).maxLtv());
-        uint256 borrowValue = uint256(IMarket(_market).position(user).borrowShares)
-            .convertToAssetsUp(IMarket(_market).totalBorrowed().assets, IMarket(_market).totalBorrowed().shares);
+        uint256 borrowValue = uint256(IMarket(_market).position(user).borrowShares).convertToAssetsUp(
+            IMarket(_market).totalBorrowed().assets, IMarket(_market).totalBorrowed().shares
+        );
 
         return (maxBorrowValue >= borrowValue, maxBorrowValue, borrowValue);
     }

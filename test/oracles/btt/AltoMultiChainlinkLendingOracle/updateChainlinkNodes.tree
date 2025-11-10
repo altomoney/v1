@@ -1,0 +1,27 @@
+AltoMultiChainlinkLendingOracle::updateChainlinkNodes()
+├── given caller is not owner
+│   └── when _chainlinkNodes is valid
+│       └── it should revert with OwnableUnauthorizedAccount
+├── given caller is owner
+│   ├── when _chainlinkNodes array is empty
+│   │   └── it should revert with AltoMultiChainlinkLendingOracleInvalidInput
+│   ├── when _chainlinkNodes contains invalid node
+│   │   ├── when node feed is zero address
+│   │   │   └── it should revert with ModuleChainlinkInvalidInput
+│   │   ├── when node stalePeriod is zero
+│   │   │   └── it should revert with ModuleChainlinkInvalidInput
+│   │   └── when node inDecimals + outDecimals is greater than 54
+│   │       └── it should revert with ModuleChainlinkInvalidInput
+│   └── when _chainlinkNodes is valid
+│       ├── when updating with single node
+│       │   ├── it should emit SetChainlinkNodes event with old and new nodes
+│       │   ├── it should replace all existing nodes
+│       │   └── it should update chainlinkNodes array correctly
+│       ├── when updating with multiple nodes
+│       │   ├── it should emit SetChainlinkNodes event with old and new nodes
+│       │   ├── it should replace all existing nodes
+│       │   └── it should update chainlinkNodes array correctly
+│       └── when reducing the number of nodes
+│           ├── it should emit SetChainlinkNodes event with old and new nodes
+│           ├── it should replace all existing nodes
+│           └── it should update chainlinkNodes array correctly
