@@ -2,16 +2,11 @@
 
 pragma solidity >=0.8.0;
 
-import {
-    ERC4626RatioNode,
-    ChainlinkNode,
-    RedstoneNode,
-    CurveNode,
-    ChainlinkRedstoneNode
-} from "@alto/oracles/interfaces/IModuleNode.sol";
+import {ERC4626RatioNode, ChainlinkNode, CurveNode} from "@alto/oracles/interfaces/IModuleNode.sol";
 import {IOracle} from "@alto/oracles/interfaces/IOracle.sol";
-import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {ICurvePool} from "@alto/oracles/interfaces/ICurvePool.sol";
+import {ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
+import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
 interface IAltoSboldLendingOracleErrors {
     /// @notice Thrown when the input is invalid
@@ -31,10 +26,8 @@ interface IAltoSboldLendingOracleEvents {
     /// @notice Event emitted when the curve node is updated
     event SetCurveNode(CurveNode oldCurveNode, CurveNode newCurveNode);
 
-    /// @notice Event emitted when the chainlink and redstone node is updated
-    event SetChainlinkRedstoneNode(
-        ChainlinkRedstoneNode oldChainlinkRedstoneNode, ChainlinkRedstoneNode newChainlinkRedstoneNode
-    );
+    /// @notice Event emitted when the chainlink node is updated
+    event SetChainlinkNode(ChainlinkNode oldChainlinkNode, ChainlinkNode newChainlinkNode);
 
     /// @notice Event emitted when the minimum allowed liquidity pool is updated
     event SetMinAllowedLiquidityPool(uint256[] oldMinAllowedLiquidityPool, uint256[] newMinAllowedLiquidityPool);
@@ -48,7 +41,7 @@ interface IAltoSboldLendingOracleBase is IOracle, IAltoSboldLendingOracleErrors,
     /// @notice Gets the price of SBOLD in USD in ORACLE_PRICE_PRECISION(i.e. 1e36)
     /// @dev uses the SBOLD -> BOLD fundamental ratio. Uses ERC4626 ratio to cap the ratio of SBOLD/BOLD at max allowed ratio
     /// @dev uses the curve pool to get the price of BOLD in USDC
-    /// @dev uses the chainlink and redstone prices to get the price of USDC in USD
+    /// @dev uses the chainlink prices to get the price of USDC in USD
     /// @return The price of SBOLD in USD in ORACLE_PRICE_PRECISION(i.e. 1e36)
     function getPrice() external view returns (uint256);
 
@@ -61,8 +54,8 @@ interface IAltoSboldLendingOracleBase is IOracle, IAltoSboldLendingOracleErrors,
     function updateCurveNode(CurveNode memory _curveNode) external;
 
     /// @notice Updates the chainlink node
-    /// @param _chainlinkRedstoneNode The new chainlink and redstone node
-    function updateChainlinkRedstoneNode(ChainlinkRedstoneNode memory _chainlinkRedstoneNode) external;
+    /// @param _chainlinkNode The new chainlink node
+    function updateChainlinkNode(ChainlinkNode memory _chainlinkNode) external;
 }
 
 interface IAltoSboldLendingOracle is IAltoSboldLendingOracleBase {
@@ -74,9 +67,9 @@ interface IAltoSboldLendingOracle is IAltoSboldLendingOracleBase {
     /// @return The curve node
     function curveNode() external view returns (CurveNode memory);
 
-    /// @notice Gets the chainlink and redstone node
-    /// @return The chainlink and redstone node
-    function chainlinkRedstoneNode() external view returns (ChainlinkRedstoneNode memory);
+    /// @notice Gets the chainlink node
+    /// @return The chainlink node
+    function chainlinkNode() external view returns (ChainlinkNode memory);
 
     /// @notice Gets the minimum allowed liquidity pool
     /// @return The minimum allowed liquidity pool
@@ -92,12 +85,9 @@ interface IAltoSboldLendingOracleStaticTypes is IAltoSboldLendingOracleBase {
     /// @return The curve node
     function curveNode() external view returns (ICurvePool, uint256, uint8, uint8, uint8, uint256, uint32);
 
-    /// @notice Gets the chainlink and redstone node
-    /// @return The chainlink and redstone node
-    function chainlinkRedstoneNode()
-        external
-        view
-        returns (ChainlinkNode memory, RedstoneNode memory, uint256, uint256, uint256);
+    /// @notice Gets the chainlink node
+    /// @return The chainlink node
+    function chainlinkNode() external view returns (AggregatorV3Interface, ConversionDirection, uint32, uint8, uint8);
 
     /// @notice Gets the minimum allowed liquidity pool for asset at index
     /// @return The minimum allowed liquidity pool for asset at index

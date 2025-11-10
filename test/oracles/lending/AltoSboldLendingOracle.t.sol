@@ -2,13 +2,9 @@
 pragma solidity ^0.8.22;
 
 import {Test} from "forge-std/Test.sol";
-import {AltoSboldLendingOracle} from "@alto/oracles/lending/AltoSboldLendingOracle.sol";
+import {AltoSboldLendingOracle} from "@alto/oracles/AltoSboldLendingOracle.sol";
 import {
-    ERC4626RatioNode,
-    CurveNode,
-    ChainlinkNode,
-    RedstoneNode,
-    ChainlinkRedstoneNode
+    ERC4626RatioNode, CurveNode, ChainlinkNode, ConversionDirection
 } from "@alto/oracles/interfaces/IModuleNode.sol";
 import {ICurvePool} from "@alto/oracles/interfaces/ICurvePool.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
@@ -29,11 +25,6 @@ contract AltoSboldLendingOracleTest is Test {
     CurveNode curveNode;
     uint256[] minAllowedLiquidityPool;
     ChainlinkNode chainlinkNode;
-    RedstoneNode redstoneNode;
-    ChainlinkRedstoneNode chainlinkRedstoneNode;
-    uint256 constant CHAINLINK_WEIGHT = 0.9e18; // 90%
-    uint256 constant REDSTONE_WEIGHT = 0.1e18; // 10%
-    uint256 maxAllowedDeviation = 1e15; // 0.1%
 
     function setUp() public {
         string memory rpcUrl = vm.rpcUrl("ethereum");
@@ -42,14 +33,13 @@ contract AltoSboldLendingOracleTest is Test {
         // assuming 6% yearly growth based on deployment timestamp of sBOLD contract
         erc4626RatioNode = ERC4626RatioNode(1 ether, 1749092411, 0.06 ether);
         curveNode = CurveNode(ICurvePool(BOLD_USDC_CURVE_POOL), 0, 0, 18, 18, 10 minutes, 1 days);
-        chainlinkNode = ChainlinkNode(AggregatorV3Interface(CHAINLINK_USDC_USD_PRICE_FEED), 1, 26 hours, 6, 8);
-        redstoneNode = RedstoneNode(AggregatorV3Interface(REDSTONE_USDC_USD_PRICE_FEED), 1, 26 hours, 6, 8);
-        chainlinkRedstoneNode =
-            ChainlinkRedstoneNode(chainlinkNode, redstoneNode, maxAllowedDeviation, CHAINLINK_WEIGHT, REDSTONE_WEIGHT);
+        chainlinkNode = ChainlinkNode(
+            AggregatorV3Interface(CHAINLINK_USDC_USD_PRICE_FEED), ConversionDirection.IN_TO_OUT, 26 hours, 6, 18
+        );
         // minimum liquidity for BOLD(18 decimals) and USDC(6 decimals)
         minAllowedLiquidityPool = [1_000_000 * 10 ** 18, 1_000_000 * 10 ** 6];
         altoSboldLendingOracle = new AltoSboldLendingOracle(
-            OWNER, SBOLD, erc4626RatioNode, curveNode, minAllowedLiquidityPool, chainlinkRedstoneNode
+            OWNER, SBOLD, erc4626RatioNode, curveNode, minAllowedLiquidityPool, chainlinkNode
         );
     }
 
@@ -99,16 +89,16 @@ contract AltoSboldLendingOracleTest is Test {
         address nonOwner = makeAddr("NonOwner");
         vm.startPrank(nonOwner);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, nonOwner));
-        altoSboldLendingOracle.updateChainlinkRedstoneNode(chainlinkRedstoneNode);
+        altoSboldLendingOracle.updateChainlinkNode(chainlinkNode);
         vm.stopPrank();
 
         vm.startPrank(OWNER);
-        ChainlinkRedstoneNode memory newChainlinkRedstoneNode = ChainlinkRedstoneNode(
-            chainlinkNode, redstoneNode, maxAllowedDeviation, CHAINLINK_WEIGHT - 1, REDSTONE_WEIGHT + 1
+        ChainlinkNode memory newChainlinkNode = ChainlinkNode(
+            AggregatorV3Interface(CHAINLINK_USDC_USD_PRICE_FEED), ConversionDirection.IN_TO_OUT, 26 hours, 6, 8
         );
         vm.expectEmit(true, true, true, true);
-        emit IAltoSboldLendingOracleEvents.SetChainlinkRedstoneNode(chainlinkRedstoneNode, newChainlinkRedstoneNode);
-        altoSboldLendingOracle.updateChainlinkRedstoneNode(newChainlinkRedstoneNode);
+        emit IAltoSboldLendingOracleEvents.SetChainlinkNode(chainlinkNode, newChainlinkNode);
+        altoSboldLendingOracle.updateChainlinkNode(newChainlinkNode);
         vm.stopPrank();
     }
 }

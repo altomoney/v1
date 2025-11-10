@@ -12,13 +12,9 @@ import {SwapParams} from "@alto/lending/leverage/interfaces/IAltoLeverageSwapper
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
 import {MarketDeployer} from "@alto/utils/MarketDeployer.sol";
-import {AltoSboldLendingOracle} from "@alto/oracles/lending/AltoSboldLendingOracle.sol";
+import {AltoSboldLendingOracle} from "@alto/oracles/AltoSboldLendingOracle.sol";
 import {
-    ChainlinkNode,
-    RedstoneNode,
-    ChainlinkRedstoneNode,
-    ERC4626RatioNode,
-    CurveNode
+    ChainlinkNode, ConversionDirection, ERC4626RatioNode, CurveNode
 } from "@alto/oracles/interfaces/IModuleNode.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -64,19 +60,16 @@ contract AltoLeverageSboldMarket is Test {
         // assuming 6% yearly growth based on deployment timestamp of sBOLD contract
         ERC4626RatioNode memory erc4626RatioNode = ERC4626RatioNode(1 ether, 1749092411, 0.06 ether);
         CurveNode memory curveNode = CurveNode(ICurvePool(BOLD_USDC_CURVE_POOL), 0, 0, 18, 18, 10 minutes, 1 days);
-        ChainlinkNode memory chainlinkNode =
-            ChainlinkNode(AggregatorV3Interface(CHAINLINK_USDC_USD_PRICE_FEED), 1, 26 hours, 6, 8);
-        RedstoneNode memory redstoneNode =
-            RedstoneNode(AggregatorV3Interface(REDSTONE_USDC_USD_PRICE_FEED), 1, 26 hours, 6, 8);
-        ChainlinkRedstoneNode memory chainlinkRedstoneNode =
-            ChainlinkRedstoneNode(chainlinkNode, redstoneNode, maxAllowedDeviation, CHAINLINK_WEIGHT, REDSTONE_WEIGHT);
+        ChainlinkNode memory chainlinkNode = ChainlinkNode(
+            AggregatorV3Interface(CHAINLINK_USDC_USD_PRICE_FEED), ConversionDirection.IN_TO_OUT, 26 hours, 6, 18
+        );
         // minimum liquidity for BOLD(18 decimals) and USDC(6 decimals)
         uint256[] memory minAllowedLiquidityPool = new uint256[](2);
         minAllowedLiquidityPool[0] = 1_000_000 * 10 ** 18;
         minAllowedLiquidityPool[1] = 1_000_000 * 10 ** 6;
         oracle = address(
             new AltoSboldLendingOracle(
-                address(this), SBOLD, erc4626RatioNode, curveNode, minAllowedLiquidityPool, chainlinkRedstoneNode
+                address(this), SBOLD, erc4626RatioNode, curveNode, minAllowedLiquidityPool, chainlinkNode
             )
         );
 
