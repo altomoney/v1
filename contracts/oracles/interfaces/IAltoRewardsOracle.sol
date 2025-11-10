@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: MIT
-
 pragma solidity >=0.8.0;
 
 import {UniswapNode, ChainlinkNode, ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
@@ -65,10 +64,6 @@ interface IAltoRewardsOracleBase is IUsdOracle, IAltoRewardsOracleErrors, IAltoR
 
     /// @notice Cached price of the asset to be returned by getPrice function
     function cachedPrice() external view returns (uint256);
-
-    /// @notice Gets the price of the asset in USD_ORACLE_PRICE_PRECISION
-    /// @return The price of the asset in USD_ORACLE_PRICE_PRECISION
-    function getPrice() external view override returns (uint256);
 
     /// @notice Starts the TWAP period
     /// @dev This function has to be called after deployment to initiate cooldown mechanism

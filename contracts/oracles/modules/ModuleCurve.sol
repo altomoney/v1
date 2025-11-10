@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.7;
 
 import {ICurvePool} from "@alto/oracles/interfaces/ICurvePool.sol";
@@ -7,6 +7,7 @@ import {CurveNode} from "@alto/oracles/interfaces/IModuleNode.sol";
 
 /// @title ModuleCurve
 /// @author Pearl Labs
+/// @custom:contact security@tapioca.xyz
 /// @notice Module contract that is used to read from Curve pools
 contract ModuleCurve {
     error ModuleCurveInvalidRate();
@@ -44,8 +45,9 @@ contract ModuleCurve {
         }
 
         // converts the quoteAmount to the out-currency decimals
-        quoteAmount =
-            FixedPointMath.divideWithRounding(quoteAmount, (10 ** config.outDecimals), (10 ** config.inDecimals), false);
+        quoteAmount = FixedPointMath.divideWithRounding(
+            quoteAmount, (10 ** config.outDecimals), (10 ** config.inDecimals), false
+        );
         return (quoteAmount);
     }
 

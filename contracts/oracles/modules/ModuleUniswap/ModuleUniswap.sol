@@ -7,15 +7,16 @@ import {UniswapNode} from "@alto/oracles/interfaces/IModuleNode.sol";
 
 /// @title ModuleUniswap
 /// @author Pearl Labs
-/// @dev This contract is used to read from Uniswap pools
+/// @custom:contact security@tapioca.xyz
+/// @notice Utility contract used to read from Uniswap V3 pools
 contract ModuleUniswap is OracleMath {
     error ModuleUniswapInvalidInput();
 
-    /// @notice Gets a quote for an amount of in-currency using UniswapV3 TWAP and converts this
-    /// amount to out-currency
-    /// @param quoteAmount The amount to convert in the out-currency
-    /// @param config Uniswap node configuration
-    /// @return The value of the `quoteAmount` expressed in out-currency
+    /// @notice Gets a quote for an amount of input currency and returns the output currency
+    /// @param quoteAmount The input currency amount to get the price of in output currency
+    /// @param config Uniswap configuration
+    /// @return The value of the `quoteAmount` in output currency
+    /// @dev The input and output currency are determined by the direction of the conversion in config
     function readUniswapPool(uint256 quoteAmount, UniswapNode memory config) public view returns (uint256) {
         uint32[] memory secondAgos = new uint32[](2);
 
@@ -36,7 +37,7 @@ contract ModuleUniswap is OracleMath {
         return _getQuoteAtTick(timeWeightedAverageTick, quoteAmount, config.direction);
     }
 
-    /// @notice Validates the parameters for the Uniswap pool during initialization or updates
+    /// @notice Validates the parameters for the Uniswap configuration during initialization or updates
     /// @param config Uniswap node configuration
     function _validateUniswapParams(UniswapNode memory config) internal pure {
         if (address(config.pool) == address(0) || config.twapPeriod == 0) {

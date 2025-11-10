@@ -6,16 +6,18 @@ import {ERC4626RatioNode} from "@alto/oracles/interfaces/IModuleNode.sol";
 
 /// @title Module ERC4626 Ratio
 /// @author Pearl Labs
-/// @notice Module contract that is used to read from ERC4626 vaults
-/// @dev This contract caps the ratio of the ERC4626 vault to a certain growth rate to prevent impact if underlying erc4626 is manipulated
+/// @custom:contact security@tapioca.xyz
+/// @notice Utility contract used to read the ratio of not only the ERC4626 vault but LSTs as well
+/// @dev This contract caps the ratio of the ERC4626 vault to a certain growth rate to prevent impact if underlying is manipulated
 contract ModuleERC4626Ratio {
     error ModuleERC4626RatioInvalidInput();
 
+    /// @notice The number of seconds in a year
     uint256 public constant SECONDS_PER_YEAR = 365.2425 days;
 
-    /// @notice Return the current capped ratio
+    /// @notice Returns the current capped ratio
     /// @param latestRatio The latest ratio of the ERC4626 vault
-    /// @param _erc4626RatioNode The ERC4626 ratio node configuration
+    /// @param _erc4626RatioNode The ERC4626 ratio configuration
     /// @return The current ratio. If the ratio is greater than the maximum allowed ratio, the maximum allowed ratio is returned.
     function readLatestRatio(uint256 latestRatio, ERC4626RatioNode memory _erc4626RatioNode)
         public

@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: MIT
-
 pragma solidity >=0.8.0;
 
 import {ChainlinkNode, ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
@@ -21,11 +20,6 @@ interface IAltoMultiChainlinkLendingOracleBase is
     IAltoMultiChainlinkLendingOracleErrors,
     IAltoMultiChainlinkLendingOracleEvents
 {
-    /// @notice Gets the price of the asset in USD in ORACLE_PRICE_PRECISION(i.e. 1e36)
-    /// @dev Uses the multiplechainlink nodes to get the price of the asset in USD
-    /// @return The price of the asset in USD in ORACLE_PRICE_PRECISION(i.e. 1e36)
-    function getPrice() external view override returns (uint256);
-
     /// @notice Updates the chainlink node configuration
     /// @param _chainlinkNodes The new chainlink nodes configuration
     function updateChainlinkNodes(ChainlinkNode[] memory _chainlinkNodes) external;
@@ -35,13 +29,15 @@ interface IAltoMultiChainlinkLendingOracle is IAltoMultiChainlinkLendingOracleBa
     /// @notice Gets the chainlink node at the given index
     /// @param _index The index of the chainlink node
     /// @return The chainlink node at the given index
+    /// @dev Read ChainlinkNode documentation for more details on the struct before using this contract
     function chainlinkNodes(uint256 _index) external view returns (ChainlinkNode memory);
 }
 
 interface IAltoMultiChainlinkLendingOracleStaticTypes is IAltoMultiChainlinkLendingOracleBase {
     /// @notice Gets the chainlink node at the given index
     /// @param _index The index of the chainlink node
-    /// @return The aggregator, conversion direction, decimals, and multiplier of the chainlink node at the given index
+    /// @return The chainlink node at the given index
+    /// @dev Read ChainlinkNode documentation for more details on the struct before using this contract
     function chainlinkNodes(uint256 _index)
         external
         view

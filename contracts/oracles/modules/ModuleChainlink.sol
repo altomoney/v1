@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.7;
 
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
@@ -7,16 +7,18 @@ import {ChainlinkNode, ConversionDirection} from "@alto/oracles/interfaces/IModu
 
 /// @title ModuleChainlink
 /// @author Pearl Labs
-/// @notice Module contract that is used to read Chainlink feeds
+/// @custom:contact security@tapioca.xyz
+/// @notice Utility contract used to read from Chainlink price feeds
 contract ModuleChainlink {
     error ModuleChainlinkInvalidRate();
     error ModuleChainlinkInvalidInput();
 
-    /// @notice Gets a quote for an amount of in-currency using Chainlink feeds and converts this
-    /// amount to out-currency
-    /// @param quoteAmount The amount for which to compute the price expressed with base decimal
-    /// @param config Chainlink node configuration
-    /// @return The amount of out-currency in out decimals
+    /// @notice Gets a quote for an amount of input currency and returns the output currency
+    /// @param quoteAmount The input currency amount to get the price of in output currency
+    /// @param config Chainlink configuration
+    /// @dev The input and output currency are determined by the direction of the conversion in config
+    /// @return The value of the `quoteAmount` in output currency
+    /// @dev This will revert if the price is stale, if the ratio is invalid, or if there's a round id mismatch
     function readChainlinkFeed(uint256 quoteAmount, ChainlinkNode memory config) public view returns (uint256) {
         (uint80 roundId, int256 ratio,, uint256 updatedAt, uint80 answeredInRound) = config.feed.latestRoundData();
         if (ratio <= 0 || roundId > answeredInRound || block.timestamp - updatedAt > config.stalePeriod) {

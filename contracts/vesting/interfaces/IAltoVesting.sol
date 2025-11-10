@@ -16,8 +16,16 @@ interface IAltoVesting is IAuth {
     error AltoVestingNotEnoughVestedAmount();
     error AltoVestingNotUpdatable();
 
+    /// @notice Event emitted when a user claims their vested amount
+    /// @param caller The address of the caller
+    /// @param onBehalf The address of the user that's eligible for the vesting
+    /// @param amount The amount of vested tokens claimed
     event ClaimVesting(address indexed caller, address indexed onBehalf, uint256 amount);
 
+    /// @notice Event emitted when tokens are rescued from the contract
+    /// @param token The address of the token
+    /// @param to The address of the recipient
+    /// @param amount The amount of tokens rescued
     event RescueVestingTokens(address indexed token, address indexed to, uint256 amount);
 
     /// @notice Claims the vested amount as per vesting schedule

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.7;
 
 import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
@@ -9,11 +9,12 @@ import {
     IAltoMultiChainlinkLendingOracleBase,
     IAltoMultiChainlinkLendingOracleErrors
 } from "@alto/oracles/interfaces/IAltoMultiChainlinkLendingOracle.sol";
+import {IOracle} from "@alto/oracles/interfaces/IOracle.sol";
 
 /// @title AltoMultiChainlinkLendingOracle
 /// @author Pearl Labs
-/// @notice Oracle contract that is used to get the price of the asset in USD in ORACLE_PRICE_PRECISION(i.e. 1e36)
-/// @dev Uses the multiple chainlink nodes to get the price of the asset in USD
+/// @custom:contact security@tapioca.xyz
+/// @notice Oracle contract that supports fetching the price from multiple Chainlink feeds and combining them into a single price
 contract AltoMultiChainlinkLendingOracle is Ownable2Step, ModuleChainlink, IAltoMultiChainlinkLendingOracleStaticTypes {
     /// @inheritdoc IAltoMultiChainlinkLendingOracleStaticTypes
     ChainlinkNode[] public chainlinkNodes;
@@ -32,7 +33,7 @@ contract AltoMultiChainlinkLendingOracle is Ownable2Step, ModuleChainlink, IAlto
         emit SetChainlinkNodes(new ChainlinkNode[](0), _chainlinkNodes);
     }
 
-    /// @inheritdoc IAltoMultiChainlinkLendingOracleBase
+    /// @inheritdoc IOracle
     function getPrice() external view returns (uint256) {
         uint256 price = 10 ** chainlinkNodes[0].inDecimals;
         for (uint256 i = 0; i < chainlinkNodes.length; i++) {

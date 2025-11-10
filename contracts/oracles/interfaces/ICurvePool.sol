@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
-
 pragma solidity >=0.8.0;
 
+/// @title ICurvePool
+/// @author Curve Finance
+/// @notice Interface for the Curve NG pool
 interface ICurvePool {
     // @notice Getter for the exponential moving-average time for the price oracle
     function ma_exp_time() external view returns (uint256);
