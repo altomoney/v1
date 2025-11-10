@@ -6,7 +6,7 @@ import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConver
 import {FixedPointMath, MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 import {IOracle} from "@alto/oracles/interfaces/IOracle.sol";
 import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
-import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
+import {LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 
 contract MockMarket is AltoBaseMarket {
     using AssetShareConversionMath for uint256;
@@ -82,8 +82,8 @@ contract MockMarket is AltoBaseMarket {
         uint256 collateralPrice = IOracle(oracle).getPrice();
 
         // calculate current LTV
-        uint256 positionCollateralValue =
-            uint256(position[user].collateralAssets).divideWithRounding(collateralPrice, ORACLE_PRICE_PRECISION, false);
+        uint256 positionCollateralValue = uint256(position[user].collateralAssets)
+            .divideWithRounding(collateralPrice, LENDING_ORACLE_PRICE_PRECISION, false);
         uint256 positionBorrowedAssets =
             uint256(position[user].borrowShares).convertToAssetsUp(totalBorrowed.assets, totalBorrowed.shares);
 
@@ -100,13 +100,11 @@ contract MockMarket is AltoBaseMarket {
         (uint256 currentLtv, uint256 newLtv) = this.calculatePreLiquidationLtv(user);
         uint256 bonusFee = !isPriorityLiquidator ? _calculateBonusFee(_calculateLiquidationPercentage(currentLtv)) : 0;
 
-        uint256 liquidatorFee = uint256(position[user].collateralAssets).multiplyWithPrecision(
-            bonusFee + liquidationConfiguration.liquidationBaseFee
-        );
+        uint256 liquidatorFee = uint256(position[user].collateralAssets)
+            .multiplyWithPrecision(bonusFee + liquidationConfiguration.liquidationBaseFee);
 
-        uint256 protocolFee = uint256(liquidatorFee).divideWithRounding(
-            liquidationConfiguration.protocolFeePercentage, MATH_PRECISION, true
-        );
+        uint256 protocolFee = uint256(liquidatorFee)
+            .divideWithRounding(liquidationConfiguration.protocolFeePercentage, MATH_PRECISION, true);
 
         return (liquidatorFee, protocolFee);
     }

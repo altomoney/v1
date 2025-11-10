@@ -13,7 +13,7 @@ import {CoreAdapter} from "@morpho-org/bundler3/adapters/CoreAdapter.sol";
 import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
 import {UniversalRewardsDistributorInstance} from "./UniversalRewardsDistributorInstance.sol";
 
-import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
+import {LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {SigUtils, Permit} from "@alto-test/helpers/SigUtils.sol";
 import {MarketInstance} from "./MarketInstance.sol";
 import {RewardsDistributorInstance} from "./RewardsDistributorInstance.sol";
@@ -118,7 +118,7 @@ abstract contract AdapterCommon is Test {
         weth = new WETHMock();
         altoAdapter = new AltoAdapter(address(bundler3), address(weth), OWNER);
         oracle = new OracleMock();
-        oracle.setPrice(ORACLE_PRICE_PRECISION);
+        oracle.setPrice(LENDING_ORACLE_PRICE_PRECISION);
     }
 
     function _boundPrivateKey(uint256 privateKey) internal returns (uint256) {
@@ -303,8 +303,9 @@ abstract contract AdapterCommon is Test {
         view
         returns (Call memory)
     {
-        return
-            _call(altoAdapter, abi.encodeCall(AltoAdapter.marketAddCollateral, (market, assets, onBehalf)), bytes32(0));
+        return _call(
+            altoAdapter, abi.encodeCall(AltoAdapter.marketAddCollateral, (market, assets, onBehalf)), bytes32(0)
+        );
     }
 
     function _marketRemoveCollateral(IMarket market, uint256 assets, address receiver, bytes memory data)
@@ -380,11 +381,7 @@ abstract contract AdapterCommon is Test {
         address user = vm.addr(privateKey);
 
         Authorization memory authorization = Authorization({
-            owner: user,
-            spender: spender,
-            isAuthorizedStatus: isAuthorized,
-            nonce: nonce,
-            deadline: SIGNATURE_DEADLINE
+            owner: user, spender: spender, isAuthorizedStatus: isAuthorized, nonce: nonce, deadline: SIGNATURE_DEADLINE
         });
 
         bytes32 digest = SigUtils.toTypedDataHash(
@@ -455,11 +452,7 @@ abstract contract AdapterCommon is Test {
         address user = vm.addr(privateKey);
 
         Authorization memory authorization = Authorization({
-            owner: user,
-            spender: spender,
-            isAuthorizedStatus: isAuthorized,
-            nonce: nonce,
-            deadline: SIGNATURE_DEADLINE
+            owner: user, spender: spender, isAuthorizedStatus: isAuthorized, nonce: nonce, deadline: SIGNATURE_DEADLINE
         });
 
         bytes32 digest = SigUtils.toTypedDataHash(
@@ -513,11 +506,7 @@ abstract contract AdapterCommon is Test {
         address user = vm.addr(privateKey);
 
         Authorization memory authorization = Authorization({
-            owner: user,
-            spender: spender,
-            isAuthorizedStatus: isAuthorized,
-            nonce: nonce,
-            deadline: SIGNATURE_DEADLINE
+            owner: user, spender: spender, isAuthorizedStatus: isAuthorized, nonce: nonce, deadline: SIGNATURE_DEADLINE
         });
 
         bytes32 digest = SigUtils.toTypedDataHash(
@@ -564,11 +553,7 @@ abstract contract AdapterCommon is Test {
         address user = vm.addr(privateKey);
 
         Authorization memory authorization = Authorization({
-            owner: user,
-            spender: spender,
-            isAuthorizedStatus: isAuthorized,
-            nonce: nonce,
-            deadline: SIGNATURE_DEADLINE
+            owner: user, spender: spender, isAuthorizedStatus: isAuthorized, nonce: nonce, deadline: SIGNATURE_DEADLINE
         });
 
         bytes32 digest = SigUtils.toTypedDataHash(
@@ -594,7 +579,8 @@ abstract contract AdapterCommon is Test {
         VestingInfo memory vestingInfo,
         bytes32[] memory proof
     ) internal view returns (Call memory) {
-        return
-            _call(altoAdapter, abi.encodeCall(AltoAdapter.claimVestedTokens, (vesting, vestingInfo, proof)), bytes32(0));
+        return _call(
+            altoAdapter, abi.encodeCall(AltoAdapter.claimVestedTokens, (vesting, vestingInfo, proof)), bytes32(0)
+        );
     }
 }

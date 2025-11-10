@@ -21,9 +21,9 @@ interface IAltoERC4626RatioChainlinkOracleBase is
     IAltoERC4626RatioChainlinkOracleErrors,
     IAltoERC4626RatioChainlinkOracleEvents
 {
-    /// @notice Gets the price of the wrapped asset in USD in ORACLE_PRICE_PRECISION(i.e. 1e36)
+    /// @notice Gets the price of the wrapped asset in USD in LENDING_ORACLE_PRICE_PRECISION(i.e. 1e36)
     /// @dev Uses the ratio of the wrapped asset to the underlying asset and uses chainlink price feed
-    /// @return The price of the wrapped asset in USD in ORACLE_PRICE_PRECISION(i.e. 1e36)
+    /// @return The price of the wrapped asset in USD in LENDING_ORACLE_PRICE_PRECISION(i.e. 1e36)
     function getPrice() external view returns (uint256);
     /// @notice Updates the ERC4626 ratio node
     /// @param _erc4626RatioNode The new ERC4626 ratio node

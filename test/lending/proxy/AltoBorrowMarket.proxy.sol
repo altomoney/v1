@@ -6,7 +6,7 @@ import {AltoBorrowMarketUpgraded} from "./contracts/AltoBorrowMarketUpgraded.sol
 import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
-import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
+import {LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {MarketDeployer} from "@alto/utils/MarketDeployer.sol";
 import {LiquidationConfiguration, Balance, Position} from "@alto/lending/interfaces/IMarket.sol";
 import {PAUSE_TYPE, FROZEN_TYPE} from "@alto/utils/Constants.sol";
@@ -35,7 +35,7 @@ contract AltoBorrowMarketProxyTest is Test {
 
         address irm = address(new FixedRateIrm(0.04 ether / uint256(365 days), OWNER));
         address oracle = address(new OracleMock());
-        OracleMock(oracle).setPrice(ORACLE_PRICE_PRECISION);
+        OracleMock(oracle).setPrice(LENDING_ORACLE_PRICE_PRECISION);
 
         market = IMarket(
             MarketDeployer.deployBorrowMarket(

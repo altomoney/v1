@@ -5,7 +5,7 @@ import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 
 import {AdaptiveCurveIrm} from "@alto/lending/irm/AdaptiveCurveIrm.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
-import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
+import {LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {IMarket, LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
 import {IrmCommon} from "./IrmCommon.t.sol";
 import {MockMarketDeployer, MockMarket} from "@alto-test/helpers/MockMarket.sol";
@@ -48,7 +48,7 @@ contract AdaptiveCurveIrmUpdateTest is IrmCommon {
         super.setUp();
 
         address oracle = address(new OracleMock());
-        OracleMock(oracle).setPrice(ORACLE_PRICE_PRECISION);
+        OracleMock(oracle).setPrice(LENDING_ORACLE_PRICE_PRECISION);
 
         market = MockMarket(
             MockMarketDeployer.deployMarket(

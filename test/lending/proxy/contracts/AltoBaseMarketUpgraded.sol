@@ -9,7 +9,7 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-import {IOracle, ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
+import {IOracle, LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 
 import {
     Balance,
@@ -196,10 +196,7 @@ abstract contract AltoBaseMarketUpgraded is
     }
 
     /// @inheritdoc IMarketBase
-    function setLiquidationConfiguration(LiquidationConfiguration memory _liquidationConfiguration)
-        external
-        onlyOwner
-    {
+    function setLiquidationConfiguration(LiquidationConfiguration memory _liquidationConfiguration) external onlyOwner {
         _validateLiquidationConfiguration(_liquidationConfiguration, maxLtv);
 
         emit SetLiquidationConfiguration(liquidationConfiguration, _liquidationConfiguration);
@@ -249,7 +246,8 @@ abstract contract AltoBaseMarketUpgraded is
         }
         if (
             _liquidationConfiguration.priorityLiquidationGracePeriod
-                + _liquidationConfiguration.taggerLiquidationGracePeriod > _liquidationConfiguration.liquidationWindowTag
+                    + _liquidationConfiguration.taggerLiquidationGracePeriod
+                > _liquidationConfiguration.liquidationWindowTag
         ) {
             revert AltoBaseMarketInvalidInput();
         }
@@ -481,11 +479,7 @@ abstract contract AltoBaseMarketUpgraded is
     }
 
     /// @inheritdoc IMarketBase
-    function repay(uint256 assets, uint256 shares, address onBehalf)
-        external
-        whenNotPaused
-        returns (uint256, uint256)
-    {
+    function repay(uint256 assets, uint256 shares, address onBehalf) external whenNotPaused returns (uint256, uint256) {
         if (!_onlyOneZero(assets, shares) || onBehalf == address(0)) {
             revert AltoBaseMarketInvalidInput();
         }
@@ -537,8 +531,8 @@ abstract contract AltoBaseMarketUpgraded is
     /// uses `maxLtv` instead of `liquidationConfiguration.maxLiquidationLtv` to make a decision.
     function _isSolvent(address _user, bool _isLiquidation) internal view returns (bool) {
         uint256 collateralPrice = IOracle(oracle).getPrice();
-        uint256 collateralValue =
-            uint256(position[_user].collateralAssets).divideWithRounding(collateralPrice, ORACLE_PRICE_PRECISION, false);
+        uint256 collateralValue = uint256(position[_user].collateralAssets)
+            .divideWithRounding(collateralPrice, LENDING_ORACLE_PRICE_PRECISION, false);
         uint256 maxBorrowValue =
             collateralValue.multiplyWithPrecision(_isLiquidation ? liquidationConfiguration.maxLiquidationLtv : maxLtv);
         uint256 borrowValue =
@@ -570,8 +564,8 @@ abstract contract AltoBaseMarketUpgraded is
         // Initial calculations
         calc.collateralPrice = IOracle(oracle).getPrice();
 
-        calc.positionCollateralValue =
-            uint256(_position.collateralAssets).divideWithRounding(calc.collateralPrice, ORACLE_PRICE_PRECISION, false);
+        calc.positionCollateralValue = uint256(_position.collateralAssets)
+            .divideWithRounding(calc.collateralPrice, LENDING_ORACLE_PRICE_PRECISION, false);
         calc.positionBorrowedAssets =
             uint256(_position.borrowShares).convertToAssetsUp(totalBorrowed.assets, totalBorrowed.shares);
 
@@ -610,26 +604,23 @@ abstract contract AltoBaseMarketUpgraded is
 
         // Calculate fee in collateral
         calc.liquidatorBonusFee = uint256(_position.collateralAssets).multiplyWithPrecision(calc.liquidationFee);
-        calc.protocolFee = uint256(calc.liquidatorBonusFee).divideWithRounding(
-            liquidationConfiguration.protocolFeePercentage, MATH_PRECISION, true
-        );
+        calc.protocolFee = uint256(calc.liquidatorBonusFee)
+            .divideWithRounding(liquidationConfiguration.protocolFeePercentage, MATH_PRECISION, true);
         uint256 remainingCollateralAfterFee = _position.collateralAssets - calc.liquidatorBonusFee;
         calc.remainingCollateralAfterFeeInBorrowAssets =
-            remainingCollateralAfterFee.divideWithRounding(calc.collateralPrice, ORACLE_PRICE_PRECISION, false);
+            remainingCollateralAfterFee.divideWithRounding(calc.collateralPrice, LENDING_ORACLE_PRICE_PRECISION, false);
 
-        calc.collateralToSellInBorrowAssets = (
-            calc.positionBorrowedAssets
-                - calc.remainingCollateralAfterFeeInBorrowAssets.multiplyWithPrecision(calc.newLtv)
-        ).divideWithPrecisionUp(MATH_PRECISION - calc.newLtv);
+        calc.collateralToSellInBorrowAssets = (calc.positionBorrowedAssets
+                - calc.remainingCollateralAfterFeeInBorrowAssets.multiplyWithPrecision(calc.newLtv))
+        .divideWithPrecisionUp(MATH_PRECISION - calc.newLtv);
         calc.collateralToSellInBorrowAssets =
             Math.min(calc.collateralToSellInBorrowAssets, calc.remainingCollateralAfterFeeInBorrowAssets);
         calc.collateralToSellInBorrowAssets = Math.min(calc.collateralToSellInBorrowAssets, calc.positionBorrowedAssets);
 
         // Calculate final amounts
         LiquidationCalculationResult memory result;
-        uint256 totalCollateralToTake = calc.collateralToSellInBorrowAssets.divideWithRounding(
-            ORACLE_PRICE_PRECISION, calc.collateralPrice, true
-        ) + calc.liquidatorBonusFee;
+        uint256 totalCollateralToTake = calc.collateralToSellInBorrowAssets
+            .divideWithRounding(LENDING_ORACLE_PRICE_PRECISION, calc.collateralPrice, true) + calc.liquidatorBonusFee;
         result.collateralAmount =
             totalCollateralToTake > _position.collateralAssets ? _position.collateralAssets : totalCollateralToTake;
 
@@ -715,7 +706,8 @@ abstract contract AltoBaseMarketUpgraded is
         if (currentLtv >= liquidationConfiguration.ltvForCompleteLiquidation) {
             return MATH_PRECISION;
         } else {
-            return (currentLtv - liquidationConfiguration.maxLiquidationLtv).divideWithPrecisionUp(
+            return (currentLtv - liquidationConfiguration.maxLiquidationLtv)
+            .divideWithPrecisionUp(
                 liquidationConfiguration.ltvForCompleteLiquidation - liquidationConfiguration.maxLiquidationLtv
             );
         }
