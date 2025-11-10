@@ -7,7 +7,7 @@ import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 import {IRewardsEvents, IRewardsErrors, ClaimData} from "@alto/rewards/interfaces/IRewardsDistributor.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC20MockDecimals} from "@alto-test/helpers/ERC20MockDecimals.sol";
-import {USD_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IUsdOracle.sol";
+import {USD_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {MATH_PRECISION, FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 import {IOracle} from "@alto/oracles/interfaces/IOracle.sol";
@@ -1264,7 +1264,9 @@ contract RewardsDistributorTest is Test {
 
         // Calculate expected payment with appropriate discount
         uint256 appliedDiscount = shouldLock
-            ? discount + lockDiscount > distributor.MAX_DISCOUNT() ? distributor.MAX_DISCOUNT() : discount + lockDiscount
+            ? discount + lockDiscount > distributor.MAX_DISCOUNT()
+                ? distributor.MAX_DISCOUNT()
+                : discount + lockDiscount
             : discount;
         uint256 expectedPayment =
             _calculateExpectedPayment(purchaseAmount, appliedDiscount, REWARD_PRICE, PAYMENT_TOKEN_PRICE);

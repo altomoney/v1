@@ -18,7 +18,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {Pausable, IPausable} from "@alto/utils/Pausable.sol";
 import {FixedPointMath, MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
-import {IUsdOracle} from "@alto/oracles/interfaces/IUsdOracle.sol";
+import {IUsdOracle} from "@alto/oracles/interfaces/IOracle.sol";
 import {Auth} from "@alto/utils/Auth.sol";
 import {IRewardsAdapter, BonusRewardInfo} from "@alto/rewards/interfaces/IRewardsAdapter.sol";
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
@@ -110,7 +110,8 @@ contract AltoRewardsDistributor is IRewardsDistributorStaticTypes, MerkleRootMan
 
         if (
             rewardsPurchaseAmount == 0
-                || rewardsPurchaseAmount + purchasedRewardTokenUser[onBehalf][claimData.id] > claimData.totalRewardsForUser
+                || rewardsPurchaseAmount + purchasedRewardTokenUser[onBehalf][claimData.id]
+                    > claimData.totalRewardsForUser
         ) {
             revert AltoRewardsDistributorInvalidInput();
         }
@@ -168,13 +169,14 @@ contract AltoRewardsDistributor is IRewardsDistributorStaticTypes, MerkleRootMan
         // Lock or transfer reward tokens
         if (lockPurchasedRewards) {
             IERC20(REWARD_TOKEN.token).forceApprove(lockContract, rewardsPurchaseAmount);
-            IAltoStakingBase(lockContract).lock(
-                onBehalf,
-                rewardsPurchaseAmount,
-                IAltoStakingBase(lockContract).maxMultiplierStakingContainerId(),
-                false,
-                maxEpochsToLockFor
-            );
+            IAltoStakingBase(lockContract)
+                .lock(
+                    onBehalf,
+                    rewardsPurchaseAmount,
+                    IAltoStakingBase(lockContract).maxMultiplierStakingContainerId(),
+                    false,
+                    maxEpochsToLockFor
+                );
         } else {
             IERC20(REWARD_TOKEN.token).safeTransfer(onBehalf, rewardsPurchaseAmount);
         }
@@ -272,7 +274,7 @@ contract AltoRewardsDistributor is IRewardsDistributorStaticTypes, MerkleRootMan
             revert AltoRewardsDistributorLockRewardsOracleNotSet();
         }
 
-        // Get prices from oracles (always 8 decimals precision)
+        // Get prices from oracles (always USD_ORACLE_PRICE_PRECISION precision)
         uint256 rewardPriceValue = IUsdOracle(rewardTokenUsdOracle).getPrice();
         uint256 tokenPrice = IUsdOracle(paymentTokenConfig.oracle).getPrice();
 

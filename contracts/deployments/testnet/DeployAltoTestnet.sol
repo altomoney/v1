@@ -33,7 +33,7 @@ import {
     TestnetStakingBatchParams,
     TestnetStakingBatchReport
 } from "@alto/deployments/testnet/TestnetStakingBatch.sol";
-import {USD_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IUsdOracle.sol";
+import {USD_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {
     MULTI_TOKEN_SENDER_MINT_TOKENS,
     BACKEND_TESTNET_ADDRESS,
