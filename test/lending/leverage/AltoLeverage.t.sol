@@ -5,7 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
-import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
+import {LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
 import {IMarket, Position, IMarketErrors} from "@alto/lending/interfaces/IMarket.sol";
 import {SwapperSimpleMock} from "@alto/lending/mocks/SwapperSimpleMock.sol";
@@ -37,7 +37,7 @@ contract AltoLeverageTest is Test {
 
         address irm = address(new FixedRateIrm(0.04 ether / uint256(365 days), address(this)));
         oracle = address(new OracleMock());
-        OracleMock(oracle).setPrice(1 * ORACLE_PRICE_PRECISION);
+        OracleMock(oracle).setPrice(1 * LENDING_ORACLE_PRICE_PRECISION);
 
         market = IMarket(
             MarketDeployer.deployBorrowMarket(
@@ -257,13 +257,11 @@ contract AltoLeverageTest is Test {
 
     function isSolvent(address user, address _market) internal view returns (bool, uint256 max, uint256 current) {
         uint256 collateralPrice = OracleMock(oracle).getPrice();
-        uint256 collateralValue = uint256(IMarket(_market).position(user).collateralAssets).divideWithRounding(
-            collateralPrice, ORACLE_PRICE_PRECISION, false
-        );
+        uint256 collateralValue = uint256(IMarket(_market).position(user).collateralAssets)
+            .divideWithRounding(collateralPrice, LENDING_ORACLE_PRICE_PRECISION, false);
         uint256 maxBorrowValue = collateralValue.multiplyWithPrecision(IMarket(_market).maxLtv());
-        uint256 borrowValue = uint256(IMarket(_market).position(user).borrowShares).convertToAssetsUp(
-            IMarket(_market).totalBorrowed().assets, IMarket(_market).totalBorrowed().shares
-        );
+        uint256 borrowValue = uint256(IMarket(_market).position(user).borrowShares)
+            .convertToAssetsUp(IMarket(_market).totalBorrowed().assets, IMarket(_market).totalBorrowed().shares);
 
         return (maxBorrowValue >= borrowValue, maxBorrowValue, borrowValue);
     }

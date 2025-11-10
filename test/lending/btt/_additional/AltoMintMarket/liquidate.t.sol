@@ -10,7 +10,7 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
-import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
+import {LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 
 import {AltoMintMarket} from "@alto/lending/AltoMintMarket.sol";
 import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
@@ -55,7 +55,7 @@ contract LiquidateTest is Test {
         irm = new FixedRateIrm(0.04 ether / uint256(365 days), owner);
 
         // Set oracle price to proper precision
-        oracle.setPrice(ORACLE_PRICE_PRECISION);
+        oracle.setPrice(LENDING_ORACLE_PRICE_PRECISION);
 
         LiquidationConfiguration memory config = LiquidationConfiguration({
             maxLiquidationLtv: 0.8 ether,
@@ -185,7 +185,7 @@ contract LiquidateTest is Test {
         vm.mockCall(
             address(oracle),
             abi.encodeWithSignature("getPrice()"),
-            abi.encode(ORACLE_PRICE_PRECISION / 2) // Half price = double effective LTV
+            abi.encode(LENDING_ORACLE_PRICE_PRECISION / 2) // Half price = double effective LTV
         );
         _;
     }

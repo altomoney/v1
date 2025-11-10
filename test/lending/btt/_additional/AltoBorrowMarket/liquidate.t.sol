@@ -6,7 +6,7 @@ import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
 import {AltoBorrowMarket, LiquidationConfiguration} from "@alto/lending/AltoBorrowMarket.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
-import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
+import {LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {IPausable} from "@alto/utils/Pausable.sol";
 import {IMarketErrors} from "@alto/lending/interfaces/IMarket.sol";
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
@@ -30,7 +30,7 @@ contract LiquidateTest is Test {
 
         address irm = address(new FixedRateIrm(0.04 ether / uint256(365 days), owner));
         address oracle = address(new OracleMock());
-        OracleMock(oracle).setPrice(ORACLE_PRICE_PRECISION);
+        OracleMock(oracle).setPrice(LENDING_ORACLE_PRICE_PRECISION);
 
         market = AltoBorrowMarket(
             MarketDeployer.deployBorrowMarket(
@@ -129,7 +129,7 @@ contract LiquidateTest is Test {
         // Make position liquidatable by reducing collateral value
         address oracle = market.oracle();
         vm.startPrank(owner);
-        OracleMock(oracle).setPrice(ORACLE_PRICE_PRECISION / 2); // Halve collateral value
+        OracleMock(oracle).setPrice(LENDING_ORACLE_PRICE_PRECISION / 2); // Halve collateral value
         vm.stopPrank();
         _;
     }
@@ -169,11 +169,7 @@ contract LiquidateTest is Test {
         _;
     }
 
-    function test_LiquidateWhen_PositionIsTaggedAndWithinWindow()
-        public
-        givenPositionIsInsolvent
-        whenPositionIsTagged
-    {
+    function test_LiquidateWhen_PositionIsTaggedAndWithinWindow() public givenPositionIsInsolvent whenPositionIsTagged {
         // Try to liquidate immediately (should fail due to grace period)
         vm.startPrank(liquidator);
         vm.expectRevert(IMarketErrors.AltoBaseMarketLiquidationUnauthorized.selector);

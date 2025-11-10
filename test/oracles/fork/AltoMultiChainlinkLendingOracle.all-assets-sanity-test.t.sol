@@ -6,7 +6,7 @@ import {console2} from "forge-std/console2.sol";
 import {AltoMultiChainlinkLendingOracle} from "@alto/oracles/AltoMultiChainlinkLendingOracle.sol";
 import {ChainlinkNode, ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
-import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
+import {LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 
 contract AltoMultiChainlinkLendingOracleGetPriceForkTest is Test {
     address internal OWNER = makeAddr("Alto-multisig");
@@ -105,7 +105,7 @@ contract AltoMultiChainlinkLendingOracleGetPriceForkTest is Test {
         AltoMultiChainlinkLendingOracle oracle = new AltoMultiChainlinkLendingOracle(OWNER, nodes);
 
         uint256 price = oracle.getPrice();
-        assertApproxEqRel(price, 4185 * ORACLE_PRICE_PRECISION, 1e15, "Invalid price for WETH (approx)");
+        assertApproxEqRel(price, 4185 * LENDING_ORACLE_PRICE_PRECISION, 1e15, "Invalid price for WETH (approx)");
 
         (, int256 chainlinkAnswer,,,) = AggregatorV3Interface(CHAINLINK_ETH_USD_PRICE_FEED).latestRoundData();
         uint256 chainlinkPrice = uint256(chainlinkAnswer);

@@ -7,7 +7,7 @@ import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 import {SwapperSimpleMock} from "@alto/lending/mocks/SwapperSimpleMock.sol";
 import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
-import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
+import {LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
 import {ERC20MockMintable} from "@alto-test/helpers/ERC20MockMintable.sol";
@@ -58,7 +58,7 @@ abstract contract MarketCommon is Test {
         swapper = new SwapperSimpleMock(address(OWNER));
         leverage = new AltoLeverage(address(swapper), address(OWNER));
         oracle = new OracleMock();
-        oracle.setPrice(ORACLE_PRICE_PRECISION);
+        oracle.setPrice(LENDING_ORACLE_PRICE_PRECISION);
 
         address irm = address(new FixedRateIrm(0.04 ether / uint256(365 days), address(this)));
         if (marketType == MarketType.BORROW) {

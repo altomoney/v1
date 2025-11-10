@@ -5,7 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
-import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
+import {LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {PAUSE_TYPE, FROZEN_TYPE} from "@alto/utils/Constants.sol";
 import {IPausable} from "@alto/utils/Pausable.sol";
 import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
@@ -28,7 +28,7 @@ contract AltoBorrowMarketPauseTest is Test {
 
         address irm = address(new FixedRateIrm(0.04 ether / uint256(365 days), address(this)));
         address oracle = address(new OracleMock());
-        OracleMock(oracle).setPrice(ORACLE_PRICE_PRECISION);
+        OracleMock(oracle).setPrice(LENDING_ORACLE_PRICE_PRECISION);
 
         market = MockMarketDeployer.deployMarket(
             address(borrowToken),

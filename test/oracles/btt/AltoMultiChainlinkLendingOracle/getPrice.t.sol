@@ -4,7 +4,7 @@ pragma solidity ^0.8.22;
 import {AltoMultiChainlinkLendingOracleCommon} from "./AltoMultiChainlinkLendingOracleCommon.t.sol";
 import {AltoMultiChainlinkLendingOracle} from "@alto/oracles/AltoMultiChainlinkLendingOracle.sol";
 import {ModuleChainlink} from "@alto/oracles/modules/ModuleChainlink.sol";
-import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
+import {LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {IAltoMultiChainlinkLendingOracleErrors} from "@alto/oracles/interfaces/IAltoMultiChainlinkLendingOracle.sol";
 import {ChainlinkNode} from "@alto/oracles/interfaces/IModuleNode.sol";
 import {MockChainlinkFeed} from "../mocks/MockChainlinkFeed.sol";

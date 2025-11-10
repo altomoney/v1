@@ -6,7 +6,7 @@ import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
-import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
+import {LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
 import {IMarket, IMarketEvents, IMarketErrors} from "@alto/lending/interfaces/IMarket.sol";
 import {ILiquidateCallback} from "@alto/lending/interfaces/IMarketCallbacks.sol";
@@ -219,7 +219,7 @@ contract AltoBorrowMarketTest is Test {
                 taggerLiquidationGracePeriod: 2 minutes,
                 liquidationWindowTag: 3 days
             }),
-            2 * ORACLE_PRICE_PRECISION,
+            2 * LENDING_ORACLE_PRICE_PRECISION,
             0.75 ether
         );
 
@@ -299,7 +299,7 @@ contract AltoBorrowMarketTest is Test {
             liquidationWindowTag: 3 days
         });
 
-        createMarket(liquidationConfiguration, ORACLE_PRICE_PRECISION, 0.75 ether);
+        createMarket(liquidationConfiguration, LENDING_ORACLE_PRICE_PRECISION, 0.75 ether);
 
         vm.startPrank(bob);
         market.addCollateral(1 ether, bob);
@@ -381,7 +381,7 @@ contract AltoBorrowMarketTest is Test {
                 taggerLiquidationGracePeriod: 2 minutes,
                 liquidationWindowTag: 3 days
             }),
-            ORACLE_PRICE_PRECISION,
+            LENDING_ORACLE_PRICE_PRECISION,
             0.75 ether
         );
 
@@ -449,7 +449,7 @@ contract AltoBorrowMarketTest is Test {
                 taggerLiquidationGracePeriod: 2 minutes,
                 liquidationWindowTag: 3 days
             }),
-            ORACLE_PRICE_PRECISION,
+            LENDING_ORACLE_PRICE_PRECISION,
             0.75 ether
         );
 
@@ -496,7 +496,7 @@ contract AltoBorrowMarketTest is Test {
                 taggerLiquidationGracePeriod: 2 minutes,
                 liquidationWindowTag: 3 days
             }),
-            ORACLE_PRICE_PRECISION,
+            LENDING_ORACLE_PRICE_PRECISION,
             0.75 ether
         );
 
@@ -578,7 +578,7 @@ contract AltoBorrowMarketTest is Test {
                 taggerLiquidationGracePeriod: 2 minutes,
                 liquidationWindowTag: 3 days
             }),
-            ORACLE_PRICE_PRECISION,
+            LENDING_ORACLE_PRICE_PRECISION,
             0.75 ether
         );
 
@@ -659,7 +659,7 @@ contract AltoBorrowMarketTest is Test {
                 taggerLiquidationGracePeriod: 2 minutes,
                 liquidationWindowTag: 3 days
             }),
-            ORACLE_PRICE_PRECISION,
+            LENDING_ORACLE_PRICE_PRECISION,
             0.75 ether
         );
 
@@ -724,7 +724,7 @@ contract AltoBorrowMarketTest is Test {
                 taggerLiquidationGracePeriod: 2 minutes,
                 liquidationWindowTag: 3 days
             }),
-            ORACLE_PRICE_PRECISION,
+            LENDING_ORACLE_PRICE_PRECISION,
             0.75 ether
         );
 
@@ -757,7 +757,7 @@ contract AltoBorrowMarketTest is Test {
                 taggerLiquidationGracePeriod: 2 minutes,
                 liquidationWindowTag: 3 days
             }),
-            ORACLE_PRICE_PRECISION,
+            LENDING_ORACLE_PRICE_PRECISION,
             0.75 ether
         );
 
@@ -792,7 +792,7 @@ contract AltoBorrowMarketTest is Test {
                 taggerLiquidationGracePeriod: 2 minutes,
                 liquidationWindowTag: 3 days
             }),
-            ORACLE_PRICE_PRECISION,
+            LENDING_ORACLE_PRICE_PRECISION,
             0.75 ether
         );
 
@@ -832,7 +832,7 @@ contract AltoBorrowMarketTest is Test {
                 taggerLiquidationGracePeriod: 2 minutes,
                 liquidationWindowTag: 3 days
             }),
-            ORACLE_PRICE_PRECISION,
+            LENDING_ORACLE_PRICE_PRECISION,
             0.75 ether
         );
 
@@ -877,7 +877,7 @@ contract AltoBorrowMarketTest is Test {
                 taggerLiquidationGracePeriod: 2 minutes,
                 liquidationWindowTag: 3 days
             }),
-            ORACLE_PRICE_PRECISION,
+            LENDING_ORACLE_PRICE_PRECISION,
             0.75 ether
         );
 
@@ -920,7 +920,7 @@ contract AltoBorrowMarketTest is Test {
                 taggerLiquidationGracePeriod: 2 minutes,
                 liquidationWindowTag: 3 days
             }),
-            ORACLE_PRICE_PRECISION,
+            LENDING_ORACLE_PRICE_PRECISION,
             0.75 ether
         );
 
@@ -960,7 +960,7 @@ contract AltoBorrowMarketTest is Test {
                 taggerLiquidationGracePeriod: 2 minutes,
                 liquidationWindowTag: 3 days
             }),
-            ORACLE_PRICE_PRECISION,
+            LENDING_ORACLE_PRICE_PRECISION,
             0.75 ether
         );
 

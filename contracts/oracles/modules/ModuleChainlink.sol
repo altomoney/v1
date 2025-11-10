@@ -50,7 +50,7 @@ contract ModuleChainlink {
         }
 
         // Bound decimals to prevent overflow and DoS via extreme values
-        // 54 is ORACLE_PRICE_PRECISION + 18 decimal input token - everything above this is
+        // 54 is LENDING_ORACLE_PRICE_PRECISION + 18 decimal input token - everything above this is
         // unrealistic and potentially dangerous (this is considered a sanity check)
         if (config.inDecimals + config.outDecimals > 54) {
             revert ModuleChainlinkInvalidInput();

@@ -28,7 +28,7 @@ struct ChainlinkNode {
     // @dev this is the decimals of the currency that we want to conver the final result to
     // THIS IS NOT the decimals of the out-currency of the feed
     // for example: ETH/USD feed has 8 decimals, but we want to convert the final result to
-    // ORACLE_PRICE_PRECISION decimals, so outDecimals should be 36 and inDecimals should be 18 (ETH decimals)
+    // LENDING_ORACLE_PRICE_PRECISION decimals, so outDecimals should be 36 and inDecimals should be 18 (ETH decimals)
     uint8 outDecimals;
 }
 

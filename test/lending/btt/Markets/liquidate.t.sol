@@ -18,7 +18,7 @@ import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConver
 import {Uint128Converter} from "@alto/lending/libraries/Uint128Converter.sol";
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {ILiquidateCallback} from "@alto/lending/interfaces/IMarketCallbacks.sol";
-import {IOracle, ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
+import {IOracle, LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 
 contract LiquidateCallback is ILiquidateCallback {
     event LiquidateCallbackCalled(uint256 assetsToRepay, uint256 collateralReceived, bytes data);
@@ -42,9 +42,8 @@ contract AltoBorrowMarketliquidate is MarketCommon {
     function getCurrentLtv(address user) public view returns (uint256) {
         Position memory position = market.position(user);
         Balance memory totalBorrowed = market.totalBorrowed();
-        uint256 collateralValue = uint256(position.collateralAssets).divideWithRounding(
-            IOracle(oracle).getPrice(), ORACLE_PRICE_PRECISION, false
-        );
+        uint256 collateralValue = uint256(position.collateralAssets)
+            .divideWithRounding(IOracle(oracle).getPrice(), LENDING_ORACLE_PRICE_PRECISION, false);
         uint256 positionBorrowedAssets =
             uint256(position.borrowShares).convertToAssetsUp(totalBorrowed.assets, totalBorrowed.shares);
         return positionBorrowedAssets.divideWithPrecisionUp(collateralValue);

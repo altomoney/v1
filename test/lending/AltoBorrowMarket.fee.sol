@@ -6,7 +6,7 @@ import {Test} from "forge-std/Test.sol";
 import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
-import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
+import {LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {ERC20Mock} from "../helpers/ERC20Mock.sol";
 import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
@@ -40,7 +40,7 @@ contract AltoBorrowMarketFeeTest is Test {
     function _createMarketWithOpeningFee(uint256 openingFee) internal returns (MockMarket) {
         address irm = address(new FixedRateIrm(0.04 ether / uint256(365 days), address(this)));
         address oracle = address(new OracleMock());
-        OracleMock(oracle).setPrice(ORACLE_PRICE_PRECISION);
+        OracleMock(oracle).setPrice(LENDING_ORACLE_PRICE_PRECISION);
 
         MockMarket market = MockMarketDeployer.deployMarket(
             address(borrowToken),
@@ -102,16 +102,14 @@ contract AltoBorrowMarketFeeTest is Test {
 
         market.borrow(borrowAmount, 0, USER, USER, "");
 
-        uint256 supplyFeeAssets = uint256(imarket.position(FEE_RECIPIENT).supplyShares).convertToAssetsDown(
-            imarket.totalSupply().assets, imarket.totalSupply().shares
-        );
+        uint256 supplyFeeAssets = uint256(imarket.position(FEE_RECIPIENT).supplyShares)
+            .convertToAssetsDown(imarket.totalSupply().assets, imarket.totalSupply().shares);
 
         // the fee recipient should have the same amount of assets as what was created by the opening fee
         assertEq(feeAssets, supplyFeeAssets);
 
-        uint256 supplyAssetsSupplier = uint256(imarket.position(SUPPLIER).supplyShares).convertToAssetsDown(
-            imarket.totalSupply().assets, imarket.totalSupply().shares
-        );
+        uint256 supplyAssetsSupplier = uint256(imarket.position(SUPPLIER).supplyShares)
+            .convertToAssetsDown(imarket.totalSupply().assets, imarket.totalSupply().shares);
 
         // the supplier should have the same amount of assets as the initial amount
         assertEq(supplyAssetsSupplier, amount);
@@ -139,16 +137,14 @@ contract AltoBorrowMarketFeeTest is Test {
 
         market.borrow(borrowAmount, 0, USER, USER, "");
 
-        uint256 supplyFeeAssets = uint256(imarket.position(FEE_RECIPIENT).supplyShares).convertToAssetsDown(
-            imarket.totalSupply().assets, imarket.totalSupply().shares
-        );
+        uint256 supplyFeeAssets = uint256(imarket.position(FEE_RECIPIENT).supplyShares)
+            .convertToAssetsDown(imarket.totalSupply().assets, imarket.totalSupply().shares);
 
         // the fee recipient should have the same amount of assets as what was created by the opening fee
         assertEq(feeAssets, supplyFeeAssets);
 
-        uint256 supplyAssetsSupplier = uint256(imarket.position(SUPPLIER).supplyShares).convertToAssetsDown(
-            imarket.totalSupply().assets, imarket.totalSupply().shares
-        );
+        uint256 supplyAssetsSupplier = uint256(imarket.position(SUPPLIER).supplyShares)
+            .convertToAssetsDown(imarket.totalSupply().assets, imarket.totalSupply().shares);
 
         // the supplier should have the same amount of assets as the initial amount
         assertEq(amount, supplyAssetsSupplier);
@@ -178,16 +174,14 @@ contract AltoBorrowMarketFeeTest is Test {
 
         market.borrow(0, borrowShares, USER, USER, "");
 
-        uint256 supplyFeeAssets = uint256(imarket.position(FEE_RECIPIENT).supplyShares).convertToAssetsDown(
-            imarket.totalSupply().assets, imarket.totalSupply().shares
-        );
+        uint256 supplyFeeAssets = uint256(imarket.position(FEE_RECIPIENT).supplyShares)
+            .convertToAssetsDown(imarket.totalSupply().assets, imarket.totalSupply().shares);
 
         // the fee recipient should have the same amount of assets as what was created by the opening fee
         assertEq(feeAssets, supplyFeeAssets);
 
-        uint256 supplyAssetsSupplier = uint256(imarket.position(SUPPLIER).supplyShares).convertToAssetsDown(
-            imarket.totalSupply().assets, imarket.totalSupply().shares
-        );
+        uint256 supplyAssetsSupplier = uint256(imarket.position(SUPPLIER).supplyShares)
+            .convertToAssetsDown(imarket.totalSupply().assets, imarket.totalSupply().shares);
 
         // the supplier should have the same amount of assets as the initial amount
         assertEq(amount, supplyAssetsSupplier);
@@ -225,17 +219,15 @@ contract AltoBorrowMarketFeeTest is Test {
         vm.warp(block.timestamp + 1 days);
         uint256 feeAssets2 = _depositCollateralAndBorrow(market, 3 ether, 2 ether, USER2);
 
-        uint256 supplyFeeAssets = uint256(imarket.position(FEE_RECIPIENT).supplyShares).convertToAssetsDown(
-            imarket.totalSupply().assets, imarket.totalSupply().shares
-        );
+        uint256 supplyFeeAssets = uint256(imarket.position(FEE_RECIPIENT).supplyShares)
+            .convertToAssetsDown(imarket.totalSupply().assets, imarket.totalSupply().shares);
 
         // the fee recipient should have the same amount of assets as what was created by the opening fee
         // approximate to account for the interest accrued
         assertApproxEqRel(feeAssets + feeAssets2, supplyFeeAssets, 0.001 ether);
 
-        uint256 supplyAssetsSupplier = uint256(imarket.position(SUPPLIER).supplyShares).convertToAssetsDown(
-            imarket.totalSupply().assets, imarket.totalSupply().shares
-        );
+        uint256 supplyAssetsSupplier = uint256(imarket.position(SUPPLIER).supplyShares)
+            .convertToAssetsDown(imarket.totalSupply().assets, imarket.totalSupply().shares);
 
         // the supplier should have the same amount of assets as the initial amount
         // approximate to account for the interest accrued
