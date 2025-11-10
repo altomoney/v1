@@ -46,7 +46,6 @@ contract SimulationRewardsOracle is Test {
     uint32 constant TWAP_PERIOD = 1 hours;
     uint32 constant STALE_PERIOD = 36 hours;
     uint256 constant INITIAL_PRICE = 150000000;
-    bytes32 description = "TAP-USD Rewards Oracle";
     IUniswapV3Factory UNISWAP_V3_FACTORY = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
     ChainlinkNode public chainlinkNode;
     UniswapNode public uniswapNode;
@@ -167,14 +166,13 @@ contract SimulationRewardsOracle is Test {
                 outDecimals: 8,
                 direction: ConversionDirection.IN_TO_OUT
             });
-            uniswapNode = UniswapNode({pool: TAP_WETH_POOL, twapPeriod: TWAP_PERIOD, multiplied: 1});
+            uniswapNode =
+                UniswapNode({pool: TAP_WETH_POOL, twapPeriod: TWAP_PERIOD, direction: ConversionDirection.IN_TO_OUT});
 
             AltoRewardsOracleInitParams memory initParams = AltoRewardsOracleInitParams({
-                inBase: 10 ** 18,
                 uniswapNode: uniswapNode,
                 chainlinkNode: chainlinkNode,
                 owner: OWNER,
-                description: description,
                 priceUpdateCooldownPeriod: PRICE_UPDATE_COOLDOWN_PERIOD
             });
 

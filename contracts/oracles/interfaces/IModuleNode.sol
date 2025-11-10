@@ -37,7 +37,7 @@ struct UniswapNode {
     // @notice The Uniswap pool to query
     IUniswapV3Pool pool;
     // @notice Whether we should multiply or divide by this rate
-    uint8 multiplied;
+    ConversionDirection direction;
     // @notice The time weighted average period for the Uniswap pool
     uint32 twapPeriod;
 }

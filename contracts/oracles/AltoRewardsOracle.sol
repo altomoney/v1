@@ -14,6 +14,7 @@ import {
 import {USD_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IUsdOracle.sol";
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 /// @title Alto Rewards Oracle
 /// @author Pearl Labs
@@ -22,7 +23,7 @@ import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interf
 /// @dev Returns USD price of ALTO token in `USD_ORACLE_PRICE_PRECISION` as per `IUsdOracle` interface
 contract AltoRewardsOracle is Ownable2Step, ModuleChainlink, ModuleUniswap, IAltoRewardsOracleStaticTypes {
     /// @inheritdoc IAltoRewardsOracleBase
-    uint256 public immutable IN_BASE;
+    uint256 public inTokenOneUnit;
 
     /// @inheritdoc IAltoRewardsOracleStaticTypes
     UniswapNode public uniswapNode;
@@ -39,32 +40,24 @@ contract AltoRewardsOracle is Ownable2Step, ModuleChainlink, ModuleUniswap, IAlt
     /// @inheritdoc IAltoRewardsOracleBase
     uint256 public cachedPrice;
 
-    /// @inheritdoc IAltoRewardsOracleBase
-    bytes32 public description;
-
     /// @notice Constructor
     /// @param _initParams The initialization parameters
     /// @dev The inDecimals of chainlink node should be the same as decimals of token apart from Alto token of uniswap pool
     constructor(AltoRewardsOracleInitParams memory _initParams) Ownable(_initParams.owner) {
-        if (_initParams.inBase == 0) {
-            revert AltoRewardsOracleInvalidInput();
-        }
-
-        IN_BASE = _initParams.inBase;
-
         _validateUniswapParams(_initParams.uniswapNode);
         _validateChainlinkParams(_initParams.chainlinkNode);
 
         uniswapNode = _initParams.uniswapNode;
-        emit SetUniswapNode(UniswapNode(IUniswapV3Pool(address(0)), 0, 0), _initParams.uniswapNode);
+        emit SetUniswapNode(
+            UniswapNode(IUniswapV3Pool(address(0)), ConversionDirection.IN_TO_OUT, 0), _initParams.uniswapNode
+        );
+        _updateInTokenOneUnitFromUniswapNode();
 
         chainlinkNode = _initParams.chainlinkNode;
         emit SetChainlinkNode(
             ChainlinkNode(AggregatorV3Interface(address(0)), ConversionDirection.IN_TO_OUT, 0, 0, 0),
             _initParams.chainlinkNode
         );
-
-        description = _initParams.description;
 
         priceUpdateCooldownPeriod = _initParams.priceUpdateCooldownPeriod;
         emit PriceUpdateCooldownPeriodUpdated(0, _initParams.priceUpdateCooldownPeriod);
@@ -105,7 +98,7 @@ contract AltoRewardsOracle is Ownable2Step, ModuleChainlink, ModuleUniswap, IAlt
 
         // reads the amount of out currency for 1 full unit of in-currency
         // the decimals of newPrice will be the decimals of the out-currency
-        uint256 newPrice = readUniswapPool(IN_BASE, uniswapNode);
+        uint256 newPrice = readUniswapPool(inTokenOneUnit, uniswapNode);
 
         // converts the price from the out-currency to chainlinkNode.outDecimals decimals
         cachedPrice = readChainlinkFeed(newPrice, chainlinkNode);
@@ -139,5 +132,14 @@ contract AltoRewardsOracle is Ownable2Step, ModuleChainlink, ModuleUniswap, IAlt
 
         emit SetUniswapNode(uniswapNode, _uniswapNode);
         uniswapNode = _uniswapNode;
+
+        _updateInTokenOneUnitFromUniswapNode();
+    }
+
+    function _updateInTokenOneUnitFromUniswapNode() internal {
+        address inToken = uniswapNode.direction == ConversionDirection.IN_TO_OUT
+            ? IUniswapV3Pool(uniswapNode.pool).token0()
+            : IUniswapV3Pool(uniswapNode.pool).token1();
+        inTokenOneUnit = 10 ** IERC20Metadata(inToken).decimals();
     }
 }

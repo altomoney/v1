@@ -23,14 +23,6 @@ contract AltoRewardsOracleConstructor is AltoRewardsOracleCommon {
         _;
     }
 
-    function test_RevertWhen_InBaseIsZero() external givenInvalidInputs {
-        AltoRewardsOracleInitParams memory params = _createValidInitParams();
-        params.inBase = 0;
-
-        vm.expectRevert(IAltoRewardsOracleErrors.AltoRewardsOracleInvalidInput.selector);
-        new AltoRewardsOracle(params);
-    }
-
     function test_RevertWhen_UniswapNodeIsInvalid() external givenInvalidInputs {
         AltoRewardsOracleInitParams memory params = _createValidInitParams();
 
@@ -66,31 +58,28 @@ contract AltoRewardsOracleConstructor is AltoRewardsOracleCommon {
 
         AltoRewardsOracle oracle = new AltoRewardsOracle(params);
 
-        // it should set IN_BASE correctly based on in-currency decimals
-        assertEq(oracle.IN_BASE(), 10 ** 18);
-
-        // it should set description correctly
-        assertEq(oracle.description(), DEFAULT_DESCRIPTION);
+        // it should set inTokenOneUnit correctly based on in-currency decimals
+        assertEq(oracle.inTokenOneUnit(), 10 ** 18);
 
         // it should set priceUpdateCooldownPeriod correctly
         assertEq(oracle.priceUpdateCooldownPeriod(), DEFAULT_COOLDOWN_PERIOD);
 
-        (IUniswapV3Pool pool, uint8 uniswapMultiplied, uint32 twapPeriod) = oracle.uniswapNode();
+        (IUniswapV3Pool pool, ConversionDirection direction, uint32 twapPeriod) = oracle.uniswapNode();
 
         // it should set uniswap node correctly
         assertEq(address(pool), address(mockPool));
         assertEq(twapPeriod, DEFAULT_TWAP_PERIOD);
-        assertEq(uniswapMultiplied, 1);
+        assertEq(uint8(direction), uint8(ConversionDirection.IN_TO_OUT));
 
         (
             AggregatorV3Interface feed,
-            ConversionDirection direction,
+            ConversionDirection chainlinkDirection,
             uint32 stalePeriod,
             uint8 inDecimals,
             uint8 outDecimals
         ) = oracle.chainlinkNode();
         assertEq(address(feed), address(mockFeed));
-        assertEq(uint8(direction), uint8(ConversionDirection.IN_TO_OUT));
+        assertEq(uint8(chainlinkDirection), uint8(ConversionDirection.IN_TO_OUT));
         assertEq(stalePeriod, DEFAULT_STALE_PERIOD);
         assertEq(inDecimals, 18);
         assertEq(outDecimals, 8);
