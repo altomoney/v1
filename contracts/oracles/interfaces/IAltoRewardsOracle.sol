@@ -3,7 +3,7 @@
 pragma solidity >=0.8.0;
 
 import {UniswapNode, ChainlinkNode, ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
-import {IUsdOracle} from "@alto/oracles/interfaces/IUsdOracle.sol";
+import {IUsdOracle} from "@alto/oracles/interfaces/IOracle.sol";
 import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 

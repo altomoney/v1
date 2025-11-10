@@ -6,7 +6,7 @@ import {AltoRewardsDistributor} from "@alto/rewards/AltoRewardsDistributor.sol";
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC20MockDecimals} from "@alto-test/helpers/ERC20MockDecimals.sol";
-import {USD_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IUsdOracle.sol";
+import {USD_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 import {ClaimData} from "@alto/rewards/interfaces/IRewardsDistributor.sol";
@@ -209,10 +209,7 @@ contract RewardsDistributorCommon is Test {
         returns (ClaimData memory)
     {
         return ClaimData({
-            totalRewardsForUser: totalRewards,
-            discount: discount,
-            id: id,
-            expirationTimestamp: expirationTimestamp
+            totalRewardsForUser: totalRewards, discount: discount, id: id, expirationTimestamp: expirationTimestamp
         });
     }
 }

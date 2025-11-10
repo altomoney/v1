@@ -11,7 +11,7 @@ import {
     AltoRewardsOracleInitParams,
     IAltoRewardsOracleStaticTypes
 } from "@alto/oracles/interfaces/IAltoRewardsOracle.sol";
-import {USD_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IUsdOracle.sol";
+import {USD_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";

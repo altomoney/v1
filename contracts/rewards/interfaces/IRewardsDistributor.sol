@@ -117,7 +117,7 @@ interface IRewardsDistributorBase is IRewardsErrors, IRewardsEvents, IAuth, IPau
     /// @notice The reward token oracle address
     /// @dev The oracle is used to get the price of the reward token in USD when claiming
     /// the rewards
-    /// @dev it returns price with 8 decimals
+    /// @dev it returns price with USD_ORACLE_PRICE_PRECISION precision
     function rewardTokenUsdOracle() external view returns (address);
 
     /// @notice The maximum discount that can be applied
