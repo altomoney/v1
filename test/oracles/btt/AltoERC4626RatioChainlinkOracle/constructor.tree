@@ -1,0 +1,23 @@
+AltoERC4626RatioChainlinkOracle::constructor()
+├── given invalid inputs
+│   ├── when ERC4626 ratio node initialRatio is zero
+│   │   └── it should revert with ModuleERC4626RatioInvalidInput
+│   ├── when ERC4626 ratio node initialTimestamp is greater than block.timestamp
+│   │   └── it should revert with ModuleERC4626RatioInvalidInput
+│   ├── when ERC4626 ratio node maxYearlyGrowthRatioWad is zero
+│   │   └── it should revert with ModuleERC4626RatioInvalidInput
+│   ├── when chainlink node feed is zero address
+│   │   └── it should revert with ModuleChainlinkInvalidInput
+│   ├── when chainlink node stalePeriod is zero
+│   │   └── it should revert with ModuleChainlinkInvalidInput
+│   ├── when chainlink node inDecimals + outDecimals is greater than 54
+│   │   └── it should revert with ModuleChainlinkInvalidInput
+│   └── when owner is zero address
+│       └── it should revert with OwnableInvalidOwner
+└── given valid inputs
+    ├── it should set erc4626RatioNode correctly
+    ├── it should set chainlinkNode correctly
+    ├── it should set owner correctly
+    ├── it should emit SetERC4626RatioNode event
+    └── it should emit SetChainlinkNode event
+

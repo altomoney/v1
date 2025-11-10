@@ -1,0 +1,17 @@
+AltoERC4626RatioChainlinkOracle::updateChainlinkNode()
+├── given caller is not owner
+│   └── when _chainlinkNode is valid
+│       └── it should revert with OwnableUnauthorizedAccount
+└── given caller is owner
+    ├── when _chainlinkNode contains invalid node
+    │   ├── when node feed is zero address
+    │   │   └── it should revert with ModuleChainlinkInvalidInput
+    │   ├── when node stalePeriod is zero
+    │   │   └── it should revert with ModuleChainlinkInvalidInput
+    │   └── when node inDecimals + outDecimals is greater than 54
+    │       └── it should revert with ModuleChainlinkInvalidInput
+    └── when _chainlinkNode is valid
+        ├── it should emit SetChainlinkNode event with old and new nodes
+        ├── it should replace existing chainlinkNode
+        └── it should update chainlinkNode correctly
+

@@ -1,0 +1,12 @@
+AltoERC4626RatioChainlinkOracle::getPrice()
+├── when ratio is zero
+│   └── it should return zero
+├── when ratio is within max allowed growth
+│   ├── it should return price in chainlinkNode.outDecimals
+│   ├── it should apply ERC4626 ratio conversion correctly
+│   └── it should apply chainlink node conversion correctly
+└── when ratio exceeds max allowed growth
+    ├── it should cap ratio to max allowed growth
+    ├── it should return price in chainlinkNode.outDecimals
+    └── it should apply chainlink node conversion correctly
+

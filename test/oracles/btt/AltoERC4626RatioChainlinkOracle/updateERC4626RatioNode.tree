@@ -1,0 +1,17 @@
+AltoERC4626RatioChainlinkOracle::updateERC4626RatioNode()
+├── given caller is not owner
+│   └── when _erc4626RatioNode is valid
+│       └── it should revert with OwnableUnauthorizedAccount
+└── given caller is owner
+    ├── when _erc4626RatioNode contains invalid node
+    │   ├── when node initialRatio is zero
+    │   │   └── it should revert with ModuleERC4626RatioInvalidInput
+    │   ├── when node initialTimestamp is greater than block.timestamp
+    │   │   └── it should revert with ModuleERC4626RatioInvalidInput
+    │   └── when node maxYearlyGrowthRatioWad is zero
+    │       └── it should revert with ModuleERC4626RatioInvalidInput
+    └── when _erc4626RatioNode is valid
+        ├── it should emit SetERC4626RatioNode event with old and new nodes
+        ├── it should replace existing erc4626RatioNode
+        └── it should update erc4626RatioNode correctly
+
