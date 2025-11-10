@@ -19,7 +19,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 /// @title AltoAdapter
 /// @author Pearl Labs
 /// @author Inspired by Morpho's GeneralAdapter1 (https://github.com/morpho-org/bundler3).
-/// @custom:contact security@tapioca.xyz
+/// @custom:contact security@altofoundation.org
 /// @notice A contract that allows for transaction bundling Alto's contracts via Morpho's Bundler3.
 /// @dev This contract assumes that all of the functions are being bundled correctly and no funds are
 /// left on the adapter post transaction! If there are any funds left on the adapter,
@@ -35,10 +35,7 @@ contract AltoAdapter is CoreAdapter, AdapterContractApproval {
 
     /// @param bundler3 The address of the Bundler3 contract.
     /// @param wNative The address of the canonical native token wrapper.
-    constructor(address bundler3, address wNative, address owner)
-        CoreAdapter(bundler3)
-        AdapterContractApproval(owner)
-    {
+    constructor(address bundler3, address wNative, address owner) CoreAdapter(bundler3) AdapterContractApproval(owner) {
         require(wNative != address(0), ErrorsLib.ZeroAddress());
 
         WRAPPED_NATIVE = IWNative(wNative);

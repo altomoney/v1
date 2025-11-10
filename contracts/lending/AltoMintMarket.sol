@@ -13,7 +13,7 @@ import {AltoBaseMarket} from "./AltoBaseMarket.sol";
 
 /// @title Alto Mint Market
 /// @author Pearl Labs
-/// @custom:contact security@tapioca.xyz
+/// @custom:contact security@altofoundation.org
 /// @notice An Isolated Mint Market
 contract AltoMintMarket is AltoBaseMarket {
     using Uint128Converter for uint256;

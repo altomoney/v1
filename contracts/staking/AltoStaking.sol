@@ -17,7 +17,7 @@ import {PAUSE_TYPE, RESCUE_TYPE} from "@alto/utils/Constants.sol";
 
 /// @title Alto Staking
 /// @author Pearl Labs
-/// @custom:contact security@tapioca.xyz
+/// @custom:contact security@altofoundation.org
 /// @notice A contract for staking tokens and getting votes based on the amount of tokens locked.
 contract AltoStaking is IAltoStakingStaticTypes, TVLWeightedContainers, Ownable2Step, Auth, Pausable {
     using SafeERC20 for IERC20;
@@ -74,11 +74,7 @@ contract AltoStaking is IAltoStakingStaticTypes, TVLWeightedContainers, Ownable2
     }
 
     /// @inheritdoc IAltoStakingBase
-    function getPosition(address account, uint256 containerId)
-        external
-        view
-        returns (StakingPosition memory position)
-    {
+    function getPosition(address account, uint256 containerId) external view returns (StakingPosition memory position) {
         return positions[account][containerId];
     }
 
@@ -93,9 +89,8 @@ contract AltoStaking is IAltoStakingStaticTypes, TVLWeightedContainers, Ownable2
             uint256 containerId = activeContainerIds[i];
             if (!_isExpiredPosition(positions[account][containerId])) {
                 // votes will have same decimals as the lock token
-                votes += positions[account][containerId].amountLocked.multiplyWithPrecision(
-                    stakingContainerById[containerId].multiplier
-                );
+                votes += positions[account][containerId].amountLocked
+                    .multiplyWithPrecision(stakingContainerById[containerId].multiplier);
             }
         }
     }

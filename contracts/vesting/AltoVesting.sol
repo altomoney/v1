@@ -12,7 +12,7 @@ import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 
 /// @title Alto Vesting Contract
 /// @author Pearl Labs
-/// @custom:contact security@tapioca.xyz
+/// @custom:contact security@altofoundation.org
 /// @notice A contract for vesting tokens to users determined by a merkle tree.
 contract AltoVesting is IAltoVesting, MerkleRootManager, Ownable2Step, Auth, Pausable {
     using SafeERC20 for IERC20;

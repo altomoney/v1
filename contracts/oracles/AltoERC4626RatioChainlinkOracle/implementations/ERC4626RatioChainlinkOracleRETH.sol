@@ -10,7 +10,7 @@ interface IReth {
 
 /// @title ERC4626RatioChainlinkOracleRETH
 /// @author Pearl Labs
-/// @custom:contact security@tapioca.xyz
+/// @custom:contact security@altofoundation.org
 /// @notice An oracle that gets the price of RETH using the ERC4626 ratio of RETH to ETH and Chainlink price feed
 contract ERC4626RatioChainlinkOracleRETH is AltoERC4626RatioChainlinkOracle {
     /// @notice The address of the RETH contract

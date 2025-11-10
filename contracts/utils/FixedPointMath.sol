@@ -7,7 +7,7 @@ uint256 constant MATH_PRECISION = 1e18;
 
 /// @title FixedPointMath
 /// @author Pearl Labs
-/// @custom:contact security@tapioca.xyz
+/// @custom:contact security@altofoundation.org
 /// @notice Library for fixed point arithmetic.
 library FixedPointMath {
     /// @dev Multiplies two numbers and divides by MATH_PRECISION, rounding down.

@@ -10,7 +10,7 @@ interface IWstEth {
 
 /// @title ERC4626RatioChainlinkOracleWSTETH
 /// @author Pearl Labs
-/// @custom:contact security@tapioca.xyz
+/// @custom:contact security@altofoundation.org
 /// @notice An oracle that gets the price of WSTETH using the ERC4626 ratio of WSTETH to stETH and Chainlink price feed
 contract ERC4626RatioChainlinkOracleWSTETH is AltoERC4626RatioChainlinkOracle {
     /// @notice The address of the WSTETH contract

@@ -14,7 +14,7 @@ uint256 constant LENDING_ORACLE_PRICE_PRECISION = 1e36;
 
 /// @title IOracle
 /// @author Pearl Labs
-/// @custom:contact security@tapioca.xyz
+/// @custom:contact security@altofoundation.org
 /// @notice This represents the oracle that's used in the Alto Lending
 /// @dev This oracle is supposed to return the price of the asset in with LENDING_ORACLE_PRICE_PRECISION precision
 interface ILendingOracle is IOracle {
@@ -33,7 +33,7 @@ uint256 constant USD_ORACLE_PRICE_PRECISION = 1e8;
 
 /// @title IUsdOracle
 /// @author Pearl Labs
-/// @custom:contact security@tapioca.xyz
+/// @custom:contact security@altofoundation.org
 /// @notice This represents the oracle that returns the price of the asset in USD
 /// @dev This is supposed to return the price of the asset in with USD_ORACLE_PRICE_PRECISION precision
 interface IUsdOracle {

@@ -10,7 +10,7 @@ import {FixedPointMath, MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 
 /// @title TVL Weighted Containers
 /// @author Pearl Labs
-/// @custom:contact security@tapioca.xyz
+/// @custom:contact security@altofoundation.org
 /// @notice An abstract contract for managing TVL weighted containers used for staking.
 abstract contract TVLWeightedContainers is ITVLWeightedContainersStaticTypes {
     using FixedPointMath for uint256;
@@ -180,13 +180,11 @@ abstract contract TVLWeightedContainers is ITVLWeightedContainersStaticTypes {
         uint256 containerTvlSharePercentage =
             totalTvl > 0 ? epochTVL[epochToProcess][containerId].divideWithPrecisionDown(totalTvl) : 0;
 
-        uint256 newRequestedDurationEpochs = (
-            containerTvlSharePercentage > 0
-                ? uint256(container.duration.max - container.duration.min).divideWithRoundingHalfUp(
-                    containerTvlSharePercentage, MATH_PRECISION
-                )
-                : 0
-        ) + container.duration.min;
+        uint256 newRequestedDurationEpochs =
+            (containerTvlSharePercentage > 0
+                        ? uint256(container.duration.max - container.duration.min)
+                            .divideWithRoundingHalfUp(containerTvlSharePercentage, MATH_PRECISION)
+                        : 0) + container.duration.min;
 
         if (newRequestedDurationEpochs > container.currentDurationEpochs) {
             uint256 epochsToGrow;
@@ -196,9 +194,9 @@ abstract contract TVLWeightedContainers is ITVLWeightedContainersStaticTypes {
                 uint256(difference).divideWithPrecisionUp(container.maxRateDifferenceEpochs);
 
             if (differenceFromMaxRatePercentage < MATH_PRECISION) {
-                epochsToGrow = uint256(container.growthRate.max - container.growthRate.min).divideWithRounding(
-                    differenceFromMaxRatePercentage, MATH_PRECISION, true
-                ) + container.growthRate.min;
+                epochsToGrow = uint256(container.growthRate.max - container.growthRate.min)
+                    .divideWithRounding(differenceFromMaxRatePercentage, MATH_PRECISION, true)
+                + container.growthRate.min;
             } else {
                 epochsToGrow = container.growthRate.max;
             }
@@ -216,9 +214,9 @@ abstract contract TVLWeightedContainers is ITVLWeightedContainersStaticTypes {
                 uint256(difference).divideWithPrecisionDown(container.maxRateDifferenceEpochs);
 
             if (differenceFromMaxRatePercentage < MATH_PRECISION) {
-                epochsToDecay = uint256(container.decayRate.max - container.decayRate.min).divideWithRounding(
-                    differenceFromMaxRatePercentage, MATH_PRECISION, false
-                ) + container.decayRate.min;
+                epochsToDecay = uint256(container.decayRate.max - container.decayRate.min)
+                    .divideWithRounding(differenceFromMaxRatePercentage, MATH_PRECISION, false)
+                + container.decayRate.min;
             } else {
                 epochsToDecay = container.decayRate.max;
             }

@@ -13,15 +13,9 @@ import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 /// @title Universal Rewards Distributor
 /// @author Pearl Labs
 /// @author Inspired by Morpho Labs' implementation (https://github.com/morpho-org/universal-rewards-distributor).
-/// @custom:contact security@tapioca.xyz
+/// @custom:contact security@altofoundation.org
 /// @notice A contract for distributing rewards to multiple users using merkle trees
-contract UniversalRewardsDistributor is
-    IUniversalRewardsDistributor,
-    MerkleRootManager,
-    Ownable2Step,
-    Auth,
-    Pausable
-{
+contract UniversalRewardsDistributor is IUniversalRewardsDistributor, MerkleRootManager, Ownable2Step, Auth, Pausable {
     using SafeERC20 for IERC20;
 
     /// @inheritdoc IUniversalRewardsDistributor
@@ -42,12 +36,10 @@ contract UniversalRewardsDistributor is
             revert RewardsDistributorUnauthorized();
         }
 
-        if (
-            !_verifyProof(
+        if (!_verifyProof(
                 proof,
                 keccak256(bytes.concat(keccak256(abi.encode(onBehalf, rewardToken, totalRewardTokenAssignedToUser))))
-            )
-        ) {
+            )) {
             revert RewardsDistributorInvalidInput();
         }
 

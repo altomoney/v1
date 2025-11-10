@@ -13,7 +13,7 @@ import {FixedPointMath, MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 
 /// @title DUSD Token
 /// @author Pearl Labs
-/// @custom:contact security@tapioca.xyz
+/// @custom:contact security@altofoundation.org
 /// @notice The DUSD Token is the stablecoin of the Alto Protocol.
 contract DUSD is Ownable2Step, Pausable, OFT, ERC20FlashMint, IDUSD {
     using FixedPointMath for uint256;

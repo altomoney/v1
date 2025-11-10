@@ -7,7 +7,7 @@ import {ChainlinkNode, ConversionDirection} from "@alto/oracles/interfaces/IModu
 
 /// @title ModuleChainlink
 /// @author Pearl Labs
-/// @custom:contact security@tapioca.xyz
+/// @custom:contact security@altofoundation.org
 /// @notice Utility contract used to read from Chainlink price feeds
 contract ModuleChainlink {
     error ModuleChainlinkInvalidRate();

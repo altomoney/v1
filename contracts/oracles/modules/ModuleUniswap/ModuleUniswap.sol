@@ -7,7 +7,7 @@ import {UniswapNode} from "@alto/oracles/interfaces/IModuleNode.sol";
 
 /// @title ModuleUniswap
 /// @author Pearl Labs
-/// @custom:contact security@tapioca.xyz
+/// @custom:contact security@altofoundation.org
 /// @notice Utility contract used to read from Uniswap V3 pools
 contract ModuleUniswap is OracleMath {
     error ModuleUniswapInvalidInput();

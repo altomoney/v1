@@ -10,7 +10,7 @@ import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProo
 
 /// @title Merkle Root Manager
 /// @author Pearl Labs
-/// @custom:contact security@tapioca.xyz
+/// @custom:contact security@altofoundation.org
 /// @notice An abstract contract for managing merkle roots with timelock functionality
 abstract contract MerkleRootManager is IMerkleRootManagerStaticTypes {
     /// @inheritdoc IMerkleRootManagerBase
@@ -64,9 +64,7 @@ abstract contract MerkleRootManager is IMerkleRootManagerStaticTypes {
         }
 
         pendingMerkleRoot = PendingMerkleRoot({
-            merkleRoot: newMerkleRoot,
-            validFrom: block.timestamp + merkleRootTimelock,
-            ipfsHash: newIpfsHash
+            merkleRoot: newMerkleRoot, validFrom: block.timestamp + merkleRootTimelock, ipfsHash: newIpfsHash
         });
 
         emit SubmitPendingMerkleRoot(msg.sender, newMerkleRoot, newIpfsHash);

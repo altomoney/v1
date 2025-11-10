@@ -25,7 +25,7 @@ import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 
 /// @title Rewards Distributor
 /// @author Pearl Labs
-/// @custom:contact security@tapioca.xyz
+/// @custom:contact security@altofoundation.org
 /// @notice A contract for distributing rights to purchase tokens to users determined by a merkle tree.
 contract AltoRewardsDistributor is IRewardsDistributorStaticTypes, MerkleRootManager, Ownable2Step, Pausable, Auth {
     using SafeERC20 for IERC20;

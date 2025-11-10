@@ -5,7 +5,7 @@ import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step
 
 /// @title AdapterContractApproval
 /// @author Pearl Labs
-/// @custom:contact security@tapioca.xyz
+/// @custom:contact security@altofoundation.org
 /// @notice A contract that allows for approval of contracts to be used in the adapter.
 /// @dev This was created as a separate contract to easily distinguish differences
 /// between Morpho's GeneralAdapter1 (https://github.com/morpho-org/bundler3) and Alto's AltoAdapter.

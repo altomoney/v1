@@ -7,7 +7,7 @@ import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 
 /// @title Alto Borrow Market
 /// @author Pearl Labs
-/// @custom:contact security@tapioca.xyz
+/// @custom:contact security@altofoundation.org
 /// @notice An Isolated Borrow Market
 contract AltoBorrowMarket is AltoBaseMarket {
     /// @notice Thrown when the input is invalid

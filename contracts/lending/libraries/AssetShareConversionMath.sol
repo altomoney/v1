@@ -5,7 +5,7 @@ import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 
 /// @title AssetShareConversionMath
 /// @author Pearl Labs
-/// @custom:contact security@tapioca.xyz
+/// @custom:contact security@altofoundation.org
 /// @notice Library for converting between asset amounts and share amounts with precision control.
 library AssetShareConversionMath {
     using FixedPointMath for uint256;

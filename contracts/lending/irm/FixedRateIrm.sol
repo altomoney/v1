@@ -9,7 +9,7 @@ import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 
 /// @title Fixed Rate Interest Rate Model
 /// @author Pearl Labs
-/// @custom:contact security@tapioca.xyz
+/// @custom:contact security@altofoundation.org
 contract FixedRateIrm is Ownable2Step, IIrm {
     using FixedPointMath for uint256;
 

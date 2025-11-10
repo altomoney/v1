@@ -17,7 +17,7 @@ import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 /// @author Pearl Labs
 /// @author Adapted from Morpho Labs (https://github.com/morpho-org/morpho-blue-irm/).
 /// @author Inspired by Euler's (https://github.com/euler-xyz/evk-periphery) implementation.
-/// @custom:contact security@tapioca.xyz
+/// @custom:contact security@altofoundation.org
 /// @notice A Adaptive Curve IRM that adjusts the rate at target utilization based on time spent above/below it.
 /// @dev This implementation intentionally leaves variables names, units and ExpLib unchanged from original.
 /// @dev This IRM has adjustable parameters post deployment.
@@ -228,8 +228,7 @@ contract AdaptiveCurveIrm is Ownable2Step, IIrm {
 
     /// @dev from Morpho
     function _newRateAtTarget(int256 startRateAtTarget, int256 linearAdaptation) private view returns (int256) {
-        return startRateAtTarget.wMulToZero(ExpLib.wExp(linearAdaptation)).bound(
-            irmConfig.minRateAtTarget, irmConfig.maxRateAtTarget
-        );
+        return startRateAtTarget.wMulToZero(ExpLib.wExp(linearAdaptation))
+            .bound(irmConfig.minRateAtTarget, irmConfig.maxRateAtTarget);
     }
 }
