@@ -6,20 +6,6 @@ import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interf
 import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import {ICurvePool} from "@alto/oracles/interfaces/ICurvePool.sol";
 
-/// @notice The type of oracle
-enum OracleType {
-    CHAINLINK,
-    REDSTONE,
-    UNISWAP,
-    CURVE
-}
-
-/// @notice The node for the oracle
-struct OracleNode {
-    OracleType oracleType;
-    bytes data;
-}
-
 /// @notice The node for the Chainlink oracle
 struct ChainlinkNode {
     // @notice The Chainlink feed to query
@@ -29,23 +15,9 @@ struct ChainlinkNode {
     // @notice The stale period for the Chainlink circuit
     uint32 stalePeriod;
     // @notice The number of decimals of the in-currency
-    uint256 inDecimals;
+    uint8 inDecimals;
     // @notice The number of decimals of the out-currency
-    uint256 outDecimals;
-}
-
-/// @notice The node for the Redstone oracle
-struct RedstoneNode {
-    // @notice The Redstone feed to query
-    AggregatorV3Interface feed;
-    // @notice Whether we should multiply or divide by this rate
-    uint8 multiplied;
-    // @notice The stale period for the Redstone circuit
-    uint32 stalePeriod;
-    // @notice The number of decimals of the in-currency
-    uint256 inDecimals;
-    // @notice The number of decimals of the out-currency
-    uint256 outDecimals;
+    uint8 outDecimals;
 }
 
 /// @notice The node for the Uniswap oracle
