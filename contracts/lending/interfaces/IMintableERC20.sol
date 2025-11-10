@@ -5,7 +5,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /// @title IMintableERC20
 /// @author Pearl Labs
-/// @custom:contact security@tapioca.xyz
+/// @custom:contact security@altofoundation.org
 /// @notice Interface for mintable ERC20 tokens.
 /// @dev This is used as a borrow token in the AltoMintMarket contract.
 interface IMintableERC20 is IERC20 {

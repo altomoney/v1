@@ -7,7 +7,7 @@ import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step
 
 /// @title AltoReferralWhitelistAdapter
 /// @author Pearl Labs
-/// @custom:contact security@tapioca.xyz
+/// @custom:contact security@altofoundation.org
 /// @notice A contract that allows users to set their referral address and receive rewards
 /// this allows referrees to receive bonus discount and referrers to receive payment token share
 contract AltoReferralWhitelistAdapter is IRewardsAdapter, MerkleRootManager, Ownable2Step {

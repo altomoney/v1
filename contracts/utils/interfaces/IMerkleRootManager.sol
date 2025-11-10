@@ -60,7 +60,7 @@ interface IMerkleRootManagerEvents {
 
 /// @title IMerkleRootManager
 /// @author Pearl Labs
-/// @custom:contact security@tapioca.xyz
+/// @custom:contact security@altofoundation.org
 /// @notice Interface for managing merkle roots with timelock functionality
 interface IMerkleRootManagerBase is IMerkleRootManagerErrors, IMerkleRootManagerEvents {
     /// @notice The merkle root used for distribution

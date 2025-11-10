@@ -38,7 +38,7 @@ import {
 
 /// @title Alto Base Market
 /// @author Pearl Labs
-/// @custom:contact security@tapioca.xyz
+/// @custom:contact security@altofoundation.org
 /// @notice An Isolated Borrow Market
 abstract contract AltoBaseMarket is
     Initializable,

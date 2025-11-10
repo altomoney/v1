@@ -7,7 +7,7 @@ import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step
 
 /// @title AltoNftRewards
 /// @author Pearl Labs
-/// @custom:contact security@tapioca.xyz
+/// @custom:contact security@altofoundation.org
 /// @notice A contract that allows users to set their NFT referral ID and receive rewards
 /// this allows referrees to receive bonus discount and referrers to receive payment token share
 contract AltoNftRewardsAdapter is IRewardsAdapter, Ownable2Step {
@@ -129,9 +129,7 @@ contract AltoNftRewardsAdapter is IRewardsAdapter, Ownable2Step {
         // because the referee should still be able to receive bonus discount
         // and the paymentTokenShareReceiver should be verified by the distributor
         return BonusRewardInfo({
-            bonusDiscount: bonusDiscount,
-            paymentTokenShare: paymentTokenShare,
-            paymentTokenShareReceiver: ownerOfNft
+            bonusDiscount: bonusDiscount, paymentTokenShare: paymentTokenShare, paymentTokenShareReceiver: ownerOfNft
         });
     }
 }

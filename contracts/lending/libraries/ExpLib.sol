@@ -8,7 +8,7 @@ int256 constant MATH_PRECISION_INT = int256(MATH_PRECISION);
 /// @title ExpLib
 /// @author Pearl Labs
 /// @author Adapted from Morpho Labs (https://github.com/morpho-org/morpho-blue-irm)
-/// @custom:contact security@tapioca.xyz
+/// @custom:contact security@altofoundation.org
 /// @notice Library to approximate the exponential function.
 library ExpLib {
     /// @dev ln(2).

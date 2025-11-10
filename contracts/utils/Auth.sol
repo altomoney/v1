@@ -7,13 +7,14 @@ import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/Signa
 
 /// @title Auth
 /// @author Pearl Labs
-/// @custom:contact security@tapioca.xyz
+/// @custom:contact security@altofoundation.org
 /// @notice A contract that allows for authorization of addresses.
 /// @dev This is used in several Alto contracts to authorize addresses to manage positions.
 /// The main purpose is to allow for transaction bundling.
 abstract contract Auth is IAuth, EIP712 {
-    bytes32 internal constant _AUTHORIZATION_TYPEHASH =
-        keccak256("Authorization(address owner,address spender,bool isAuthorizedStatus,uint256 nonce,uint256 deadline)");
+    bytes32 internal constant _AUTHORIZATION_TYPEHASH = keccak256(
+        "Authorization(address owner,address spender,bool isAuthorizedStatus,uint256 nonce,uint256 deadline)"
+    );
 
     /// @inheritdoc IAuth
     mapping(address => mapping(address => bool)) public isAuthorized;
