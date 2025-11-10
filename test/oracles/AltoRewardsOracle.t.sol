@@ -95,7 +95,8 @@ contract AltoRewardsOracleTest is Test {
         });
         NONFUNGIBLE_POSITION_MANAGER.mint(params);
 
-        UniswapNode memory uniswapNode = UniswapNode({pool: altoEthPool, twapPeriod: twapPeriod, multiplied: 0});
+        UniswapNode memory uniswapNode =
+            UniswapNode({pool: altoEthPool, twapPeriod: twapPeriod, direction: ConversionDirection.OUT_TO_IN});
         ChainlinkNode memory chainlinkNode = ChainlinkNode({
             feed: AggregatorV3Interface(ETH_USD_PRICE_FEED),
             stalePeriod: stalePeriod,
@@ -105,11 +106,9 @@ contract AltoRewardsOracleTest is Test {
         });
 
         AltoRewardsOracleInitParams memory initParams = AltoRewardsOracleInitParams({
-            inBase: 10 ** 18,
             uniswapNode: uniswapNode,
             chainlinkNode: chainlinkNode,
             owner: OWNER,
-            description: description,
             priceUpdateCooldownPeriod: priceUpdateCooldownPeriod
         });
 
@@ -120,8 +119,7 @@ contract AltoRewardsOracleTest is Test {
 
     function testDeploymentSuccess() public view {
         assertEq(rewardsOracle.owner(), OWNER, "Invalid owner in AltoRewardsOracle");
-        assertEq(rewardsOracle.description(), description, "Invalid description in AltoRewardsOracle");
-        assertEq(rewardsOracle.IN_BASE(), 10 ** 18, "Invalid inBase in AltoRewardsOracle");
+        assertEq(rewardsOracle.inTokenOneUnit(), 10 ** 18, "Invalid inTokenOneUnit in AltoRewardsOracle");
         assertEq(rewardsOracle.cachedPrice(), 0, "Invalid cachedPrice in AltoRewardsOracle");
         assertEq(rewardsOracle.lastPriceUpdateTimestamp(), 0, "Invalid lastPriceUpdateTimestamp in AltoRewardsOracle");
         assertEq(
@@ -396,13 +394,16 @@ contract AltoRewardsOracleTest is Test {
         address nonOwner = makeAddr("NonOwner");
         vm.startPrank(nonOwner);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, nonOwner));
-        rewardsOracle.updateUniswapNode(UniswapNode({pool: altoEthPool, twapPeriod: twapPeriod, multiplied: 0}));
+        rewardsOracle.updateUniswapNode(
+            UniswapNode({pool: altoEthPool, twapPeriod: twapPeriod, direction: ConversionDirection.OUT_TO_IN})
+        );
         vm.stopPrank();
 
         vm.startPrank(OWNER);
-        UniswapNode memory newUniswapNode = UniswapNode({pool: altoEthPool, twapPeriod: 1, multiplied: 0});
-        (IUniswapV3Pool pool, uint8 multiplied, uint32 twapPeriod) = rewardsOracle.uniswapNode();
-        UniswapNode memory oldUniswapNode = UniswapNode({pool: pool, twapPeriod: twapPeriod, multiplied: multiplied});
+        UniswapNode memory newUniswapNode =
+            UniswapNode({pool: altoEthPool, twapPeriod: 1, direction: ConversionDirection.OUT_TO_IN});
+        (IUniswapV3Pool pool, ConversionDirection direction, uint32 twapPeriod) = rewardsOracle.uniswapNode();
+        UniswapNode memory oldUniswapNode = UniswapNode({pool: pool, twapPeriod: twapPeriod, direction: direction});
 
         vm.expectEmit(true, true, true, true);
         emit IAltoRewardsOracleEvents.SetUniswapNode(oldUniswapNode, newUniswapNode);

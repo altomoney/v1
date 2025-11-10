@@ -1,7 +1,5 @@
 AltoRewardsOracle::Constructor()
 ├── given invalid inputs
-│   ├── when inBase is zero
-│   │   └── it should revert with AltoRewardsOracleInvalidInput
 │   ├── when uniswap node is invalid
 │   │   └── it should revert with ModuleUniswapInvalidInput
 │   ├── when chainlink node is invalid
@@ -10,8 +8,7 @@ AltoRewardsOracle::Constructor()
 │   │   └── it should revert with OwnableInvalidOwner
 └── given valid inputs
     ├── when valid parameters provided
-    │   ├── it should set IN_BASE correctly 
-    │   ├── it should set description correctly
+    │   ├── it should set inTokenOneUnit correctly
     │   ├── it should set priceUpdateCooldownPeriod correctly
     │   ├── it should set owner correctly
     │   ├── it should set uniswap node correctly

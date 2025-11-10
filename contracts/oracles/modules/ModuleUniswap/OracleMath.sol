@@ -2,6 +2,7 @@
 pragma solidity ^0.8.7;
 
 import {FullMath} from "./FullMath.sol";
+import {ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
 
 /// @title OracleMath
 /// @author Unchanged from Angle Core repository (https://github.com/AngleProtocol/angle-core/blob/main/contracts/utils/OracleMath.sol)
@@ -16,16 +17,18 @@ contract OracleMath is FullMath {
     /// @notice Given a tick and a token amount, calculates the amount of token received in exchange
     /// @param tick Tick value used to calculate the quote
     /// @param baseAmount Amount of token to be converted
-    /// @param multiply Boolean representing whether the `baseToken` has a lower address than the `quoteToken`
+    /// @param direction The direction of the conversion
     /// @return quoteAmount Amount of `quoteToken` received for `baseAmount` of `baseToken`
-    function _getQuoteAtTick(int24 tick, uint256 baseAmount, uint256 multiply)
+    function _getQuoteAtTick(int24 tick, uint256 baseAmount, ConversionDirection direction)
         internal
         pure
         returns (uint256 quoteAmount)
     {
         uint256 ratio = _getRatioAtTick(tick);
 
-        quoteAmount = (multiply == 1) ? _mulDiv(ratio, baseAmount, 1e18) : _mulDiv(1e18, baseAmount, ratio);
+        quoteAmount = (direction == ConversionDirection.IN_TO_OUT)
+            ? _mulDiv(ratio, baseAmount, 1e18)
+            : _mulDiv(1e18, baseAmount, ratio);
     }
 
     /// @notice Calculates 1.0001^tick * in out ERC20 decimals

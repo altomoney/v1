@@ -33,17 +33,13 @@ contract ModuleUniswap is OracleMath {
         }
 
         // Computing the `quoteAmount` from the ticks obtained from Uniswap
-        return _getQuoteAtTick(timeWeightedAverageTick, quoteAmount, config.multiplied);
+        return _getQuoteAtTick(timeWeightedAverageTick, quoteAmount, config.direction);
     }
 
     /// @notice Validates the parameters for the Uniswap pool during initialization or updates
     /// @param config Uniswap node configuration
     function _validateUniswapParams(UniswapNode memory config) internal pure {
         if (address(config.pool) == address(0) || config.twapPeriod == 0) {
-            revert ModuleUniswapInvalidInput();
-        }
-
-        if (config.multiplied != 0 && config.multiplied != 1) {
             revert ModuleUniswapInvalidInput();
         }
     }

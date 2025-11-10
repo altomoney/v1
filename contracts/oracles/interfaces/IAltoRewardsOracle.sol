@@ -9,16 +9,12 @@ import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interf
 
 /// @notice Parameters for initializing the AltoRewardsOracle
 struct AltoRewardsOracleInitParams {
-    // @notice full unit of the in-currency with decimals
-    uint256 inBase;
     // @notice The Uniswap node to query
     UniswapNode uniswapNode;
     // @notice The Chainlink node to query
     ChainlinkNode chainlinkNode;
     // @notice The initial owner of the contract.
     address owner;
-    // @notice Description of the assets concerned by the oracle
-    bytes32 description;
     // @notice Minimum time interval (in seconds) required between price updates
     uint256 priceUpdateCooldownPeriod;
 }
@@ -59,7 +55,7 @@ interface IAltoRewardsOracleEvents {
 
 interface IAltoRewardsOracleBase is IUsdOracle, IAltoRewardsOracleErrors, IAltoRewardsOracleEvents {
     /// @notice 1 full unit of the in-currency with decimals
-    function IN_BASE() external view returns (uint256);
+    function inTokenOneUnit() external view returns (uint256);
 
     /// @notice Timestamp when this oracle was last updated to return the new price
     function lastPriceUpdateTimestamp() external view returns (uint256);
@@ -69,9 +65,6 @@ interface IAltoRewardsOracleBase is IUsdOracle, IAltoRewardsOracleErrors, IAltoR
 
     /// @notice Cached price of the asset to be returned by getPrice function
     function cachedPrice() external view returns (uint256);
-
-    /// @notice Description of the oracle
-    function description() external view returns (bytes32);
 
     /// @notice Gets the price of the asset in USD_ORACLE_PRICE_PRECISION
     /// @return The price of the asset in USD_ORACLE_PRICE_PRECISION
@@ -114,7 +107,7 @@ interface IAltoRewardsOracle is IAltoRewardsOracleBase {
 interface IAltoRewardsOracleStaticTypes is IAltoRewardsOracleBase {
     /// @notice Gets the Uniswap node
     /// @return The Uniswap node
-    function uniswapNode() external view returns (IUniswapV3Pool, uint8, uint32);
+    function uniswapNode() external view returns (IUniswapV3Pool, ConversionDirection, uint32);
 
     /// @notice Gets the Chainlink node
     /// @return The Chainlink node

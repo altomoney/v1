@@ -26,7 +26,6 @@ contract AltoRewardsOracleCommon is Test {
     uint16 constant DEFAULT_OBSERVATION_LENGTH = 100;
     uint8 constant DEFAULT_UNI_FINAL_CURRENCY = 0;
     uint32 constant DEFAULT_STALE_PERIOD = 1 days;
-    bytes32 constant DEFAULT_DESCRIPTION = "Test Oracle";
     uint256 constant DEFAULT_COOLDOWN_PERIOD = 1 hours;
 
     function setUp() public virtual {
@@ -44,15 +43,16 @@ contract AltoRewardsOracleCommon is Test {
             outDecimals: 8,
             direction: ConversionDirection.IN_TO_OUT
         });
-        uniswapNode =
-            UniswapNode({pool: IUniswapV3Pool(address(mockPool)), twapPeriod: DEFAULT_TWAP_PERIOD, multiplied: 1});
+        uniswapNode = UniswapNode({
+            pool: IUniswapV3Pool(address(mockPool)),
+            twapPeriod: DEFAULT_TWAP_PERIOD,
+            direction: ConversionDirection.IN_TO_OUT
+        });
 
         return AltoRewardsOracleInitParams({
-            inBase: 10 ** 18,
             uniswapNode: uniswapNode,
             chainlinkNode: chainlinkNode,
             owner: OWNER,
-            description: DEFAULT_DESCRIPTION,
             priceUpdateCooldownPeriod: DEFAULT_COOLDOWN_PERIOD
         });
     }

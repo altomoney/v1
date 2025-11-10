@@ -5,11 +5,11 @@ import {Test} from "forge-std/Test.sol";
 import {console2} from "forge-std/console2.sol";
 import {ModuleUniswap} from "@alto/oracles/modules/ModuleUniswap/ModuleUniswap.sol";
 import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
-import {UniswapNode} from "@alto/oracles/interfaces/IModuleNode.sol";
+import {UniswapNode, ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
 
 contract ModuleUniswapTest is Test {
     ModuleUniswap moduleUniswap;
-    address constant WETH_USDC_POOL = 0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640; // uniswap pool for WETH/USDC
+    address constant USDC_WETH_POOL = 0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640; // uniswap pool for WETH/USDC
     address constant WBTC_WETH_POOL = 0xCBCdF9626bC03E24f779434178A73a0B4bad62eD; // uniswap pool for WBTC/WETH
     address OWNER = makeAddr("Alto-multisig");
 
@@ -21,8 +21,9 @@ contract ModuleUniswapTest is Test {
 
     function testGetPriceWethUsdc() public view {
         uint256 wethQuoteAmount = 10 ** 18;
-        uint256 usdcAmount =
-            moduleUniswap.readUniswapPool(wethQuoteAmount, UniswapNode(IUniswapV3Pool(WETH_USDC_POOL), 0, 10 minutes));
+        uint256 usdcAmount = moduleUniswap.readUniswapPool(
+            wethQuoteAmount, UniswapNode(IUniswapV3Pool(USDC_WETH_POOL), ConversionDirection.OUT_TO_IN, 10 minutes)
+        );
 
         assertGt(usdcAmount, 0, "Invalid usdcAmount in UniswapModule");
 
@@ -31,8 +32,9 @@ contract ModuleUniswapTest is Test {
 
         assertApproxEqAbs(usdcAmount, 3959 * 10 ** 6, 1e6);
 
-        uint256 wethAmountBack =
-            moduleUniswap.readUniswapPool(usdcAmount, UniswapNode(IUniswapV3Pool(WETH_USDC_POOL), 1, 10 minutes));
+        uint256 wethAmountBack = moduleUniswap.readUniswapPool(
+            usdcAmount, UniswapNode(IUniswapV3Pool(USDC_WETH_POOL), ConversionDirection.IN_TO_OUT, 10 minutes)
+        );
         assertGt(wethAmountBack, 0, "Invalid wethAmountBack in UniswapModule");
 
         console2.log("Weth amount back", wethAmountBack);
@@ -42,15 +44,17 @@ contract ModuleUniswapTest is Test {
 
     function testGetPriceWbtcWeth() public view {
         uint256 wbtcQuoteAmount = 10 ** 8;
-        uint256 wethAmount =
-            moduleUniswap.readUniswapPool(wbtcQuoteAmount, UniswapNode(IUniswapV3Pool(WBTC_WETH_POOL), 1, 10 minutes));
+        uint256 wethAmount = moduleUniswap.readUniswapPool(
+            wbtcQuoteAmount, UniswapNode(IUniswapV3Pool(WBTC_WETH_POOL), ConversionDirection.IN_TO_OUT, 10 minutes)
+        );
 
         console2.log("price of WBTC/WETH from UniswapModule", wethAmount);
 
         assertApproxEqAbs(wethAmount, 27.683366 ether, 1e12, "Invalid wethAmount in UniswapModule");
 
-        uint256 wbtcAmountBack =
-            moduleUniswap.readUniswapPool(wethAmount, UniswapNode(IUniswapV3Pool(WBTC_WETH_POOL), 0, 10 minutes));
+        uint256 wbtcAmountBack = moduleUniswap.readUniswapPool(
+            wethAmount, UniswapNode(IUniswapV3Pool(WBTC_WETH_POOL), ConversionDirection.OUT_TO_IN, 10 minutes)
+        );
         assertGt(wbtcAmountBack, 0, "Invalid wbtcAmountBack in UniswapModule");
 
         console2.log("Wbtc amount back", wbtcAmountBack);
