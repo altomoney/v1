@@ -6,6 +6,7 @@ import {console2} from "forge-std/console2.sol";
 import {ModuleERC4626Ratio} from "@alto/oracles/lending/modules/ModuleERC4626Ratio.sol";
 import {IWstEth} from "@alto-test/oracles/interfaces/IWstEth.sol";
 import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
+import {ERC4626RatioNode} from "@alto/oracles/interfaces/IModuleNode.sol";
 
 contract ModuleERC4626RatioTest is Test {
     ModuleERC4626Ratio moduleERC4626Ratio;
@@ -34,16 +35,18 @@ contract ModuleERC4626RatioTest is Test {
     function testReadLatestRatioWithinLimits() public view {
         // growth rate of wsteth is less than 4%
         uint256 maxYearlyGrowthRatioWad = 0.04 ether; // 4%
-        uint256 latestRatioReturned =
-            moduleERC4626Ratio.readLatestRatio(currentRatio, initialRatio, initialTimestamp, maxYearlyGrowthRatioWad);
+        uint256 latestRatioReturned = moduleERC4626Ratio.readLatestRatio(
+            currentRatio, ERC4626RatioNode(initialRatio, initialTimestamp, maxYearlyGrowthRatioWad)
+        );
         assertEq(latestRatioReturned, currentRatio, "Latest ratio returned should be equal to current ratio");
     }
 
     function testReadLatestRatioAboveLimits() public view {
         // growth rate of wsteth is greater than 1%
         uint256 maxYearlyGrowthRatioWad = 0.01 ether; // 1%
-        uint256 latestRatioReturned =
-            moduleERC4626Ratio.readLatestRatio(currentRatio, initialRatio, initialTimestamp, maxYearlyGrowthRatioWad);
+        uint256 latestRatioReturned = moduleERC4626Ratio.readLatestRatio(
+            currentRatio, ERC4626RatioNode(initialRatio, initialTimestamp, maxYearlyGrowthRatioWad)
+        );
         assertNotEq(latestRatioReturned, currentRatio, "Latest ratio returned should not be equal to current ratio");
 
         uint256 expectedRatio = initialRatio
