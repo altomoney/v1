@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.7;
 
 import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
@@ -14,10 +14,13 @@ import {
     IAltoERC4626RatioChainlinkOracleStaticTypes,
     IAltoERC4626RatioChainlinkOracleBase
 } from "@alto/oracles/interfaces/IAltoERC4626RatioChainlinkOracle.sol";
+import {IOracle} from "@alto/oracles/interfaces/IOracle.sol";
 
 /// @title AltoERC4626RatioChainlinkOracle
 /// @author Pearl Labs
-/// @notice An oracle that gets the price of a wrapped asset in USD using the ERC4626 ratio of the wrapped asset to the underlying asset and chainlink price feed
+/// @custom:contact security@tapioca.xyz
+/// @notice An oracle that gets the price of a wrapped asset using the ERC4626 ratio of the wrapped asset
+/// to the underlying asset and Chainlink price feed
 abstract contract AltoERC4626RatioChainlinkOracle is
     Ownable2Step,
     ModuleERC4626Ratio,
@@ -33,7 +36,7 @@ abstract contract AltoERC4626RatioChainlinkOracle is
     /// @notice Constructor
     /// @param _owner The owner of the contract
     /// @param _erc4626RatioNode The ERC4626 ratio node
-    /// @param _chainlinkNode The chainlink node
+    /// @param _chainlinkNode The Chainlink node
     constructor(address _owner, ERC4626RatioNode memory _erc4626RatioNode, ChainlinkNode memory _chainlinkNode)
         Ownable(_owner)
     {
@@ -49,7 +52,7 @@ abstract contract AltoERC4626RatioChainlinkOracle is
         );
     }
 
-    /// @inheritdoc IAltoERC4626RatioChainlinkOracleBase
+    /// @inheritdoc IOracle
     function getPrice() external view returns (uint256) {
         // gets the ratio of the wrapped asset to the underlying asset
         uint256 ratio = _getRatioOfWrappedAssetToUnderlyingAsset();
@@ -57,7 +60,7 @@ abstract contract AltoERC4626RatioChainlinkOracle is
         // the ratio returned may be capped to the maximum allowed growth rate
         ratio = readLatestRatio(ratio, erc4626RatioNode);
 
-        // gets the price of ETH in USD from chainlink in chainlinkNode.outDecimals decimals
+        // gets the price of the wrapped asset from Chainlink in chainlinkNode.outDecimals decimals
         return readChainlinkFeed(ratio, chainlinkNode);
     }
 

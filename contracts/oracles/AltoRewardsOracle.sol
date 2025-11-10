@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.7;
 
 import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
@@ -11,10 +11,10 @@ import {
     AltoRewardsOracleInitParams,
     IAltoRewardsOracleStaticTypes
 } from "@alto/oracles/interfaces/IAltoRewardsOracle.sol";
-import {USD_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {IUsdOracle} from "@alto/oracles/interfaces/IOracle.sol";
 
 /// @title Alto Rewards Oracle
 /// @author Pearl Labs
@@ -63,7 +63,7 @@ contract AltoRewardsOracle is Ownable2Step, ModuleChainlink, ModuleUniswap, IAlt
         emit PriceUpdateCooldownPeriodUpdated(0, _initParams.priceUpdateCooldownPeriod);
     }
 
-    /// @inheritdoc IAltoRewardsOracleBase
+    /// @inheritdoc IUsdOracle
     function getPrice() external view override returns (uint256) {
         if (lastPriceUpdateTimestamp == 0) {
             revert AltoRewardsOracleNotInitiated();

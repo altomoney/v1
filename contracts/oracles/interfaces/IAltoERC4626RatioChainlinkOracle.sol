@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: MIT
-
 pragma solidity >=0.8.0;
 
 import {IOracle} from "@alto/oracles/interfaces/IOracle.sol";
@@ -21,10 +20,6 @@ interface IAltoERC4626RatioChainlinkOracleBase is
     IAltoERC4626RatioChainlinkOracleErrors,
     IAltoERC4626RatioChainlinkOracleEvents
 {
-    /// @notice Gets the price of the wrapped asset in USD in LENDING_ORACLE_PRICE_PRECISION(i.e. 1e36)
-    /// @dev Uses the ratio of the wrapped asset to the underlying asset and uses chainlink price feed
-    /// @return The price of the wrapped asset in USD in LENDING_ORACLE_PRICE_PRECISION(i.e. 1e36)
-    function getPrice() external view returns (uint256);
     /// @notice Updates the ERC4626 ratio node
     /// @param _erc4626RatioNode The new ERC4626 ratio node
     function updateERC4626RatioNode(ERC4626RatioNode memory _erc4626RatioNode) external;
@@ -34,19 +29,23 @@ interface IAltoERC4626RatioChainlinkOracleBase is
 }
 
 interface IAltoERC4626RatioChainlinkOracle is IAltoERC4626RatioChainlinkOracleBase {
-    /// @notice Gets the ERC4626 ratio node
-    /// @return The ERC4626 ratio node
+    /// @notice Gets the ERC4626RatioNode
+    /// @return The ERC4626RatioNode
+    /// @dev Read ERC4626RatioNode documentation for more details on the struct before using this contract
     function erc4626RatioNode() external view returns (ERC4626RatioNode memory);
-    /// @notice Gets the chainlink node
-    /// @return The chainlink node
+    /// @notice Gets the ChainlinkNode
+    /// @return The ChainlinkNode
+    /// @dev Read ChainlinkNode documentation for more details on the struct before using this contract
     function chainlinkNode() external view returns (ChainlinkNode memory);
 }
 
 interface IAltoERC4626RatioChainlinkOracleStaticTypes is IAltoERC4626RatioChainlinkOracleBase {
-    /// @notice Gets the ERC4626 ratio node
-    /// @return The ERC4626 ratio node
+    /// @notice Gets the ERC4626RatioNode
+    /// @return The ERC4626RatioNode
+    /// @dev Read ERC4626RatioNode documentation for more details on the struct before using this contract
     function erc4626RatioNode() external view returns (uint256, uint256, uint256);
-    /// @notice Gets the chainlink node
-    /// @return The chainlink node
+    /// @notice Gets the ChainlinkNode
+    /// @return The ChainlinkNode
+    /// @dev Read ChainlinkNode documentation for more details on the struct before using this contract
     function chainlinkNode() external view returns (AggregatorV3Interface, ConversionDirection, uint32, uint8, uint8);
 }
