@@ -159,7 +159,7 @@ contract SimulationRewardsOracle is Test {
                 feed: AggregatorV3Interface(ETH_USD_PRICE_FEED),
                 stalePeriod: STALE_PERIOD,
                 inDecimals: 18,
-                outDecimals: 18,
+                outDecimals: 8,
                 multiplied: 1
             });
             uniswapNode = UniswapNode({pool: TAP_WETH_POOL, twapPeriod: TWAP_PERIOD, multiplied: 1});

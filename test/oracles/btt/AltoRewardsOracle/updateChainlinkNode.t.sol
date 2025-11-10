@@ -67,17 +67,10 @@ contract AltoRewardsOracleUpdateChainlinkNode is AltoRewardsOracleCommon {
         oracle.updateChainlinkNode(invalidNode);
     }
 
-    function test_RevertWhen_InDecimalsIsZero() external givenCallerIsOwner {
+    function test_RevertWhen_InDecimalsPlusOutDecimalsIsGreaterThan54() external givenCallerIsOwner {
         ChainlinkNode memory invalidNode = _createValidChainlinkNode();
-        invalidNode.inDecimals = 0;
-
-        vm.expectRevert(ModuleChainlink.ModuleChainlinkInvalidInput.selector);
-        oracle.updateChainlinkNode(invalidNode);
-    }
-
-    function test_RevertWhen_OutDecimalsIsZero() external givenCallerIsOwner {
-        ChainlinkNode memory invalidNode = _createValidChainlinkNode();
-        invalidNode.outDecimals = 0;
+        invalidNode.inDecimals = 100;
+        invalidNode.outDecimals = 5;
 
         vm.expectRevert(ModuleChainlink.ModuleChainlinkInvalidInput.selector);
         oracle.updateChainlinkNode(invalidNode);

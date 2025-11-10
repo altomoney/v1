@@ -18,7 +18,6 @@ import {OracleValidation} from "@alto/oracles/lending/libraries/OracleValidation
 /// @author Pearl Labs
 /// @notice Oracle contract that is used to get the price of WETH in USD
 /// @dev Uses Chainlink to get the price of WETH in USD from ETH/USD feed
-
 contract AltoWethLendingOracle is Ownable2Step, ModuleChainlink, IAltoWethLendingOracleStaticTypes {
     /// @inheritdoc IAltoWethLendingOracleStaticTypes
     ChainlinkNode public chainlinkNode;
@@ -36,11 +35,7 @@ contract AltoWethLendingOracle is Ownable2Step, ModuleChainlink, IAltoWethLendin
 
     /// @inheritdoc IAltoWethLendingOracleBase
     function getPrice() external view returns (uint256) {
-        uint256 chainlinkPrice = readChainlinkFeed(10 ** chainlinkNode.inDecimals, chainlinkNode);
-        // converts the price from chainlinkNode.outDecimals to ORACLE_PRICE_PRECISION
-        return FixedPointMath.divideWithRounding(
-            chainlinkPrice, ORACLE_PRICE_PRECISION, 10 ** chainlinkNode.outDecimals, false
-        );
+        return readChainlinkFeed(10 ** chainlinkNode.inDecimals, chainlinkNode);
     }
 
     function updateChainlinkNode(ChainlinkNode memory _chainlinkNode) external onlyOwner {

@@ -45,7 +45,7 @@ contract AltoLeverageTbtcMarketTest is Test {
 
         address irm = address(new FixedRateIrm(0.04 ether / uint256(365 days), address(this)));
         ChainlinkNode memory chainlinkNode =
-            ChainlinkNode(AggregatorV3Interface(CHAINLINK_BTC_USD_PRICE_FEED), 1, 2 hours, 18, 18);
+            ChainlinkNode(AggregatorV3Interface(CHAINLINK_BTC_USD_PRICE_FEED), 1, 2 hours, 8, 36);
 
         oracle = address(new AltoTbtcLendingOracle(address(this), chainlinkNode));
 
@@ -60,7 +60,7 @@ contract AltoLeverageTbtcMarketTest is Test {
                 0,
                 address(this),
                 LiquidationConfiguration({
-                    maxLiquidationLtv: 0.8 ether,
+                    maxLiquidationLtv: 0.85 ether,
                     dynamicBonusFeeStart: 0.03 ether,
                     ltvForCompleteLiquidation: 0.9 ether,
                     dynamicBonusFeeDecaySteepness: 5 ether,
@@ -288,7 +288,7 @@ contract AltoLeverageTbtcMarketTest is Test {
         // price of tBTC is around 120,000 DAI
         // with ltv of 0.8, we can borrow 120_000 * 1 * 0.8 = 96000
         // but we will borrow 600_000 due to levarage
-        uint256 collateralAddAmount = 1 ether;
+        uint256 collateralAddAmount = 1 * 1e18;
         market.addCollateral(collateralAddAmount, alice);
         vm.stopPrank();
 
@@ -298,7 +298,7 @@ contract AltoLeverageTbtcMarketTest is Test {
         // Prepare SwapParams
         // swap params to swap 600_000 DAI to tBTC
         // minimum expected tBTC amount is 5 tBTC
-        SwapParams memory leverageData = SwapParams({minAmountOut: 5 ether, swapData: swapData});
+        SwapParams memory leverageData = SwapParams({minAmountOut: 5 * 1e18, swapData: swapData});
         bytes memory data = abi.encode(leverageData);
 
         vm.prank(alice);
@@ -316,13 +316,11 @@ contract AltoLeverageTbtcMarketTest is Test {
 
     function isSolvent(address user, address _market) internal view returns (bool, uint256 max, uint256 current) {
         uint256 collateralPrice = IOracle(oracle).getPrice();
-        uint256 collateralValue = uint256(IMarket(_market).position(user).collateralAssets).divideWithRounding(
-            collateralPrice, ORACLE_PRICE_PRECISION, false
-        );
+        uint256 collateralValue = uint256(IMarket(_market).position(user).collateralAssets)
+            .divideWithRounding(collateralPrice, ORACLE_PRICE_PRECISION, false);
         uint256 maxBorrowValue = collateralValue.multiplyWithPrecision(IMarket(_market).maxLtv());
-        uint256 borrowValue = uint256(IMarket(_market).position(user).borrowShares).convertToAssetsUp(
-            IMarket(_market).totalBorrowed().assets, IMarket(_market).totalBorrowed().shares
-        );
+        uint256 borrowValue = uint256(IMarket(_market).position(user).borrowShares)
+            .convertToAssetsUp(IMarket(_market).totalBorrowed().assets, IMarket(_market).totalBorrowed().shares);
 
         return (maxBorrowValue >= borrowValue, maxBorrowValue, borrowValue);
     }

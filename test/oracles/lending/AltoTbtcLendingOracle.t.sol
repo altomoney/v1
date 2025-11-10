@@ -8,36 +8,43 @@ import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interf
 import {console2} from "forge-std/console2.sol";
 import {IAltoTbtcLendingOracleEvents} from "@alto/oracles/interfaces/IAltoTbtcLendingOracle.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {IAltoTbtcLendingOracle} from "@alto/oracles/interfaces/IAltoTbtcLendingOracle.sol";
 
 contract AltoTbtcLendingOracleTest is Test {
-    AltoTbtcLendingOracle public altoTbtcLendingOracle;
-    address OWNER = makeAddr("Alto-multisig");
     address constant CHAINLINK_BTC_USD_PRICE_FEED = 0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c;
-    ChainlinkNode chainlinkNode;
+    IAltoTbtcLendingOracle internal altoTbtcLendingOracle;
+    ChainlinkNode internal chainlinkNode;
+
+    address OWNER = makeAddr("Alto-multisig");
+    uint256 chainlinkPrice;
+    uint256 chainlinkDecimals;
 
     function setUp() public {
+        altoTbtcLendingOracle = IAltoTbtcLendingOracle(
+            address(
+                new AltoTbtcLendingOracle(
+                    OWNER, ChainlinkNode(AggregatorV3Interface(CHAINLINK_BTC_USD_PRICE_FEED), 1, 2 hours, 18, 36)
+                )
+            )
+        );
+        chainlinkNode = altoTbtcLendingOracle.chainlinkNode();
+
+        // Fetch chainlink price at forked block
         string memory rpcUrl = vm.rpcUrl("ethereum");
         vm.createSelectFork(rpcUrl, 23489205);
-        chainlinkNode = ChainlinkNode(AggregatorV3Interface(CHAINLINK_BTC_USD_PRICE_FEED), 1, 2 hours, 18, 18);
-
-        altoTbtcLendingOracle = new AltoTbtcLendingOracle(OWNER, chainlinkNode);
+        (, int256 chainlinkAnswer,,,) = AggregatorV3Interface(CHAINLINK_BTC_USD_PRICE_FEED).latestRoundData();
+        chainlinkPrice = uint256(chainlinkAnswer);
+        chainlinkDecimals = AggregatorV3Interface(CHAINLINK_BTC_USD_PRICE_FEED).decimals();
     }
 
     function testGetPrice() public view {
         uint256 price = altoTbtcLendingOracle.getPrice();
-        console2.log("price from AltoTbtcLendingOracle", price);
 
-        assertApproxEqRel(price, 118700 * 1e36, 5e15, "Incorrect price returned by AltoTbtcLendingOracle");
-
-        (, int256 chainlinkAnswer,,,) = AggregatorV3Interface(CHAINLINK_BTC_USD_PRICE_FEED).latestRoundData();
-        uint256 chainlinkPrice = uint256(chainlinkAnswer);
-        console2.log("chainlinkPrice", chainlinkPrice);
-
-        // chainlink price is in 8 decimals
-        // we need to convert it to 36 decimals
-        chainlinkPrice = chainlinkPrice * 1e36 / 1e8;
-
-        assertEq(chainlinkPrice, price, "Invalid price from expected and actual price from AltoTbtcLendingOracle");
+        assertEq(
+            price,
+            chainlinkPrice * (10 ** (chainlinkNode.outDecimals - chainlinkDecimals)),
+            "Incorrect price returned by AltoTbtcLendingOracle"
+        );
     }
 
     function testOnlyOwnerCanUpdateChainlinkNode() public {

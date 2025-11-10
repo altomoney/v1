@@ -17,12 +17,7 @@ import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interf
 /// @author Pearl Labs
 /// @notice Oracle contract that is used to get the price of mETH in USD in ORACLE_PRICE_PRECISION(i.e. 1e36)
 /// @dev Uses the ERC4626 ratio to cap the ratio of mETH to ETH and also uses chainlink ETH/USD price feed
-contract AltoMethLendingOracle is
-    Ownable2Step,
-    ModuleChainlink,
-    ModuleERC4626Ratio,
-    IAltoMethLendingOracleStaticTypes
-{
+contract AltoMethLendingOracle is Ownable2Step, ModuleChainlink, ModuleERC4626Ratio, IAltoMethLendingOracleStaticTypes {
     /// @inheritdoc IAltoMethLendingOracleBase
     address public immutable METH_STAKING;
 
@@ -67,18 +62,7 @@ contract AltoMethLendingOracle is
         mETHToETHRatio = readLatestRatio(mETHToETHRatio, erc4626RatioNode);
 
         // getting the price of eth in usd from chainlink in chainlinkNode.outDecimals decimals
-        uint256 ethUsdChainlinkPrice = readChainlinkFeed(10 ** chainlinkNode.inDecimals, chainlinkNode);
-
-        // converts the ethUsd price from chainlinkNode.outDecimals to MATH_PRECISION(i.e. 1e18) decimals
-        uint256 ethUsdPrice = FixedPointMath.divideWithRounding(
-            ethUsdChainlinkPrice, MATH_PRECISION, 10 ** chainlinkNode.outDecimals, false
-        );
-
-        // calculates the price of mETH in usd from fundamental rate in ORACLE_PRICE_PRECISION(i.e. 1e36) decimals
-        // mETHToETHRatio is in MATH_PRECISION(i.e. 1e18) decimals and ethUsdPrice is in MATH_PRECISION(i.e. 1e18) decimals
-        uint256 mETHUsdPriceFundamentalRate = mETHToETHRatio * ethUsdPrice;
-
-        return mETHUsdPriceFundamentalRate;
+        return readChainlinkFeed(mETHToETHRatio, chainlinkNode);
     }
 
     /// @inheritdoc IAltoMethLendingOracleBase

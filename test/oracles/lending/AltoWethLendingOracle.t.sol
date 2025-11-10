@@ -22,7 +22,13 @@ contract AltoWethLendingOracleTest is Test {
     function setUp() public {
         string memory rpcUrl = vm.rpcUrl("ethereum");
         vm.createSelectFork(rpcUrl, 23474424);
-        chainlinkNode = ChainlinkNode(AggregatorV3Interface(CHAINLINK_ETH_USD_PRICE_FEED), 1, 2 hours, 8, 8);
+        chainlinkNode = ChainlinkNode({
+            feed: AggregatorV3Interface(CHAINLINK_ETH_USD_PRICE_FEED),
+            multiplied: 1,
+            stalePeriod: 2 hours,
+            inDecimals: 18,
+            outDecimals: 36
+        });
         altoWethLendingOracle = new AltoWethLendingOracle(OWNER, chainlinkNode);
     }
 

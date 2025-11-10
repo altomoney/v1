@@ -40,25 +40,10 @@ contract AltoWBtcLendingOracle is Ownable2Step, ModuleChainlink, IAltoWbtcLendin
 
     function getPrice() external view returns (uint256) {
         // fetches the ratio of WBTC to BTC from chainlink in chainlinkNode1.inDecimals decimals
-        uint256 wBtcToBtcRatio = readChainlinkFeed(10 ** chainlinkNode1.inDecimals, chainlinkNode1);
+        uint256 oneUnitWbtcInBtc = readChainlinkFeed(10 ** chainlinkNode1.inDecimals, chainlinkNode1);
 
         // fetches the price of BTC in USD from chainlink in chainlinkNode2.inDecimals decimals
-        uint256 btcUsdPrice = readChainlinkFeed(10 ** chainlinkNode2.inDecimals, chainlinkNode2);
-
-        // converts the ratio of WBTC to BTC in MATH_PRECISION decimals
-        wBtcToBtcRatio =
-            FixedPointMath.divideWithRounding(wBtcToBtcRatio, MATH_PRECISION, 10 ** chainlinkNode1.outDecimals, false);
-
-        // converts the price of BTC in USD in MATH_PRECISION decimals
-        btcUsdPrice =
-            FixedPointMath.divideWithRounding(btcUsdPrice, MATH_PRECISION, 10 ** chainlinkNode2.outDecimals, false);
-
-        // calculates the price of WBTC in USD in ORACLE_PRICE_PRECISION decimals
-        // wBtcToBtcRatio is in MATH_PRECISION decimals and btcToUsdPrice is in MATH_PRECISION decimals
-        uint256 wBtcUsdPrice = wBtcToBtcRatio * btcUsdPrice;
-
-        // decimals of WBTC is 8, so we need to multiply by 1e10 to price it in DUSD(18 decimals)
-        return wBtcUsdPrice * 1e10;
+        return readChainlinkFeed(oneUnitWbtcInBtc, chainlinkNode2);
     }
 
     /// @inheritdoc IAltoWbtcLendingOracleBase

@@ -22,7 +22,7 @@ contract AltoWstEthLendingOracleTest is Test {
         string memory rpcUrl = vm.rpcUrl("ethereum");
         vm.createSelectFork(rpcUrl, 23483134);
         erc4626RatioNode = ERC4626RatioNode(1157209899495068171, 1708004591, 0.06 ether);
-        chainlinkNode = ChainlinkNode(AggregatorV3Interface(CHAINLINK_ETH_USD_PRICE_FEED), 1, 2 hours, 8, 8);
+        chainlinkNode = ChainlinkNode(AggregatorV3Interface(CHAINLINK_ETH_USD_PRICE_FEED), 1, 2 hours, 18, 36);
         altoWstEthLendingOracle = new AltoWstEthLendingOracle(OWNER, WSTETH, erc4626RatioNode, chainlinkNode);
     }
 

@@ -41,7 +41,7 @@ contract AltoRewardsOracleCommon is Test {
             feed: AggregatorV3Interface(address(mockFeed)),
             stalePeriod: DEFAULT_STALE_PERIOD,
             inDecimals: 18,
-            outDecimals: 18,
+            outDecimals: 8,
             multiplied: 1
         });
         uniswapNode =

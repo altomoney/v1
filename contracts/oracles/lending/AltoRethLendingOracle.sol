@@ -19,12 +19,7 @@ import {IReth} from "@alto/oracles/interfaces/IReth.sol";
 /// @title AltoRethLendingOracle
 /// @author Pearl Labs
 /// @notice An oracle that gets the price of RETH in USD using the ERC4626 ratio of RETH to ETH and chainlink ETH/USD price feed
-contract AltoRethLendingOracle is
-    Ownable2Step,
-    ModuleERC4626Ratio,
-    ModuleChainlink,
-    IAltoRethLendingOracleStaticTypes
-{
+contract AltoRethLendingOracle is Ownable2Step, ModuleERC4626Ratio, ModuleChainlink, IAltoRethLendingOracleStaticTypes {
     /// @inheritdoc IAltoRethLendingOracleStaticTypes
     ERC4626RatioNode public erc4626RatioNode;
 
@@ -70,18 +65,7 @@ contract AltoRethLendingOracle is
         rETHToETHRatio = readLatestRatio(rETHToETHRatio, erc4626RatioNode);
 
         // gets the price of ETH in USD from chainlink in chainlinkNode.outDecimals decimals
-        uint256 ethUsdPriceChainlink = readChainlinkFeed(10 ** chainlinkNode.inDecimals, chainlinkNode);
-
-        // converts the price from chainlinkNode.outDecimals to MATH_PRECISION
-        uint256 ethUsdPrice = FixedPointMath.divideWithRounding(
-            ethUsdPriceChainlink, MATH_PRECISION, 10 ** chainlinkNode.outDecimals, false
-        );
-
-        // calculates the price of RETH in USD in ORACLE_PRICE_PRECISION(i.e. 1e36) decimals
-        // rETHToETHRatio is in MATH_PRECISION(i.e. 1e18) decimals and ethUsdPrice is in MATH_PRECISION(i.e. 1e18) decimals
-        uint256 rETHUsdPrice = rETHToETHRatio * ethUsdPrice;
-
-        return rETHUsdPrice;
+        return readChainlinkFeed(rETHToETHRatio, chainlinkNode);
     }
 
     /// @inheritdoc IAltoRethLendingOracleBase
