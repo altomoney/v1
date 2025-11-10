@@ -3,7 +3,7 @@ pragma solidity ^0.8.22;
 
 import {Test} from "forge-std/Test.sol";
 import {AltoTbtcLendingOracle} from "@alto/oracles/lending/AltoTbtcLendingOracle.sol";
-import {ChainlinkNode} from "@alto/oracles/interfaces/IModuleNode.sol";
+import {ChainlinkNode, ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {console2} from "forge-std/console2.sol";
 import {IAltoTbtcLendingOracleEvents} from "@alto/oracles/interfaces/IAltoTbtcLendingOracle.sol";
@@ -23,7 +23,14 @@ contract AltoTbtcLendingOracleTest is Test {
         altoTbtcLendingOracle = IAltoTbtcLendingOracle(
             address(
                 new AltoTbtcLendingOracle(
-                    OWNER, ChainlinkNode(AggregatorV3Interface(CHAINLINK_BTC_USD_PRICE_FEED), 1, 2 hours, 18, 36)
+                    OWNER,
+                    ChainlinkNode(
+                        AggregatorV3Interface(CHAINLINK_BTC_USD_PRICE_FEED),
+                        ConversionDirection.IN_TO_OUT,
+                        2 hours,
+                        18,
+                        36
+                    )
                 )
             )
         );
@@ -55,8 +62,9 @@ contract AltoTbtcLendingOracleTest is Test {
         vm.stopPrank();
 
         vm.startPrank(OWNER);
-        ChainlinkNode memory newChainlinkNode =
-            ChainlinkNode(AggregatorV3Interface(CHAINLINK_BTC_USD_PRICE_FEED), 1, 2 hours, 8, 8);
+        ChainlinkNode memory newChainlinkNode = ChainlinkNode(
+            AggregatorV3Interface(CHAINLINK_BTC_USD_PRICE_FEED), ConversionDirection.IN_TO_OUT, 2 hours, 8, 8
+        );
         vm.expectEmit(true, true, true, true);
         emit IAltoTbtcLendingOracleEvents.SetChainlinkNode(chainlinkNode, newChainlinkNode);
         altoTbtcLendingOracle.updateChainlinkNode(newChainlinkNode);

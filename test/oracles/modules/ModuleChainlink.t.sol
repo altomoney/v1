@@ -5,7 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {console2} from "forge-std/console2.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {ModuleChainlink} from "@alto/oracles/lending/modules/ModuleChainlink.sol";
-import {ChainlinkNode} from "@alto/oracles/interfaces/IModuleNode.sol";
+import {ChainlinkNode, ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
 
 contract MockChainlinkFeed is AggregatorV3Interface {
     string public description = "Mock Feed";
@@ -51,7 +51,7 @@ contract ModuleChainlinkDecimalsTest is Test {
             1e18,
             ChainlinkNode({
                 feed: new MockChainlinkFeed(8, int256(3000 * 10 ** 8)), // 3000 USDC per WETH
-                multiplied: 1,
+                direction: ConversionDirection.IN_TO_OUT,
                 stalePeriod: 2 days,
                 inDecimals: 18,
                 outDecimals: 6
@@ -65,7 +65,7 @@ contract ModuleChainlinkDecimalsTest is Test {
             4500e6,
             ChainlinkNode({
                 feed: new MockChainlinkFeed(8, int256(3000 * 10 ** 8)), // 3000 USDC per WETH
-                multiplied: 0,
+                direction: ConversionDirection.OUT_TO_IN,
                 stalePeriod: 2 days,
                 inDecimals: 6,
                 outDecimals: 18
@@ -83,7 +83,7 @@ contract ModuleChainlinkDecimalsTest is Test {
             6000e6,
             ChainlinkNode({
                 feed: new MockChainlinkFeed(8, int256(1 / 4000 * 10 ** 8)), // 1/4000 WETH per USDC
-                multiplied: 1,
+                direction: ConversionDirection.IN_TO_OUT,
                 stalePeriod: 2 days,
                 inDecimals: 6,
                 outDecimals: 18
@@ -97,7 +97,7 @@ contract ModuleChainlinkDecimalsTest is Test {
             1e18,
             ChainlinkNode({
                 feed: new MockChainlinkFeed(8, int256(1 / 4000 * 10 ** 8)), // 1/4000 WETH per USDC
-                multiplied: 0,
+                direction: ConversionDirection.OUT_TO_IN,
                 stalePeriod: 2 days,
                 inDecimals: 18,
                 outDecimals: 6
@@ -115,7 +115,7 @@ contract ModuleChainlinkDecimalsTest is Test {
             1e6,
             ChainlinkNode({
                 feed: new MockChainlinkFeed(6, int256(1.2 * 10 ** 6)), // 1.2 USDT per USDC
-                multiplied: 1,
+                direction: ConversionDirection.IN_TO_OUT,
                 stalePeriod: 2 days,
                 inDecimals: 6,
                 outDecimals: 6
@@ -129,7 +129,7 @@ contract ModuleChainlinkDecimalsTest is Test {
             12e5,
             ChainlinkNode({
                 feed: new MockChainlinkFeed(6, int256(1.2 * 10 ** 6)), // 1.2 USDT per USDC
-                multiplied: 0,
+                direction: ConversionDirection.OUT_TO_IN,
                 stalePeriod: 2 days,
                 inDecimals: 6,
                 outDecimals: 6
@@ -147,7 +147,7 @@ contract ModuleChainlinkDecimalsTest is Test {
             1e8,
             ChainlinkNode({
                 feed: new MockChainlinkFeed(8, int256(25 * 10 ** 8)), // 25 WETH per WBTC
-                multiplied: 1,
+                direction: ConversionDirection.IN_TO_OUT,
                 stalePeriod: 2 days,
                 inDecimals: 8,
                 outDecimals: 18
@@ -161,7 +161,7 @@ contract ModuleChainlinkDecimalsTest is Test {
             25e18,
             ChainlinkNode({
                 feed: new MockChainlinkFeed(8, int256(25 * 10 ** 8)), // 25 WETH per WBTC
-                multiplied: 0,
+                direction: ConversionDirection.OUT_TO_IN,
                 stalePeriod: 2 days,
                 inDecimals: 18,
                 outDecimals: 8
@@ -179,7 +179,7 @@ contract ModuleChainlinkDecimalsTest is Test {
             1e8,
             ChainlinkNode({
                 feed: new MockChainlinkFeed(8, int256(25 * 10 ** 8)), // 25 WETH per WBTC
-                multiplied: 1,
+                direction: ConversionDirection.IN_TO_OUT,
                 stalePeriod: 2 days,
                 inDecimals: 8,
                 outDecimals: 18
@@ -193,7 +193,7 @@ contract ModuleChainlinkDecimalsTest is Test {
             25e18,
             ChainlinkNode({
                 feed: new MockChainlinkFeed(8, int256(25 * 10 ** 8)), // 25 WETH per WBTC
-                multiplied: 0,
+                direction: ConversionDirection.OUT_TO_IN,
                 stalePeriod: 2 days,
                 inDecimals: 18,
                 outDecimals: 8

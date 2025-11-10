@@ -4,7 +4,7 @@ pragma solidity ^0.8.7;
 import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {ModuleChainlink} from "@alto/oracles/lending/modules/ModuleChainlink.sol";
 import {ModuleERC4626Ratio} from "@alto/oracles/lending/modules/ModuleERC4626Ratio.sol";
-import {ChainlinkNode, ERC4626RatioNode} from "@alto/oracles/interfaces/IModuleNode.sol";
+import {ChainlinkNode, ERC4626RatioNode, ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
 import {MATH_PRECISION, FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {IWstEth} from "@alto/oracles/interfaces/IWstEth.sol";
 import {
@@ -56,7 +56,9 @@ contract AltoWstEthLendingOracle is
         emit SetERC4626RatioNode(ERC4626RatioNode(0, 0, 0), _erc4626RatioNode);
 
         chainlinkNode = _chainlinkNode;
-        emit SetChainlinkNode(ChainlinkNode(AggregatorV3Interface(address(0)), 0, 0, 0, 0), _chainlinkNode);
+        emit SetChainlinkNode(
+            ChainlinkNode(AggregatorV3Interface(address(0)), ConversionDirection.IN_TO_OUT, 0, 0, 0), _chainlinkNode
+        );
     }
 
     /// @inheritdoc IAltoWstEthLendingOracleBase

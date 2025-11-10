@@ -5,7 +5,7 @@ import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step
 import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import {ModuleChainlink} from "@alto/oracles/lending/modules/ModuleChainlink.sol";
 import {ModuleUniswap} from "@alto/oracles/lending/modules/ModuleUniswap.sol";
-import {UniswapNode, ChainlinkNode} from "@alto/oracles/interfaces/IModuleNode.sol";
+import {UniswapNode, ChainlinkNode, ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
 import {
     IAltoRewardsOracleBase,
     AltoRewardsOracleInitParams,
@@ -59,7 +59,10 @@ contract AltoRewardsOracle is Ownable2Step, ModuleChainlink, ModuleUniswap, IAlt
         emit SetUniswapNode(UniswapNode(IUniswapV3Pool(address(0)), 0, 0), _initParams.uniswapNode);
 
         chainlinkNode = _initParams.chainlinkNode;
-        emit SetChainlinkNode(ChainlinkNode(AggregatorV3Interface(address(0)), 0, 0, 0, 0), _initParams.chainlinkNode);
+        emit SetChainlinkNode(
+            ChainlinkNode(AggregatorV3Interface(address(0)), ConversionDirection.IN_TO_OUT, 0, 0, 0),
+            _initParams.chainlinkNode
+        );
 
         description = _initParams.description;
 

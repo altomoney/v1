@@ -3,7 +3,7 @@ pragma solidity ^0.8.22;
 
 import {Test} from "forge-std/Test.sol";
 import {AltoWBtcLendingOracle} from "@alto/oracles/lending/AltoWBtcLendingOracle.sol";
-import {ChainlinkNode} from "@alto/oracles/interfaces/IModuleNode.sol";
+import {ChainlinkNode, ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {console2} from "forge-std/console2.sol";
 import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
@@ -30,8 +30,20 @@ contract AltoWBtcLendingOracleTest is Test {
             address(
                 new AltoWBtcLendingOracle(
                     OWNER,
-                    ChainlinkNode(AggregatorV3Interface(CHAINLINK_WBTC_BTC_RATIO_FEED), 1, 26 hours, 8, 8),
-                    ChainlinkNode(AggregatorV3Interface(CHAINLINK_BTC_USD_PRICE_FEED), 1, 2 hours, 8, 36)
+                    ChainlinkNode(
+                        AggregatorV3Interface(CHAINLINK_WBTC_BTC_RATIO_FEED),
+                        ConversionDirection.IN_TO_OUT,
+                        26 hours,
+                        8,
+                        8
+                    ),
+                    ChainlinkNode(
+                        AggregatorV3Interface(CHAINLINK_BTC_USD_PRICE_FEED),
+                        ConversionDirection.IN_TO_OUT,
+                        2 hours,
+                        8,
+                        36
+                    )
                 )
             )
         );
@@ -65,10 +77,12 @@ contract AltoWBtcLendingOracleTest is Test {
         vm.stopPrank();
 
         vm.startPrank(OWNER);
-        ChainlinkNode memory newChainlinkNode1 =
-            ChainlinkNode(AggregatorV3Interface(CHAINLINK_WBTC_BTC_RATIO_FEED), 1, 26 hours, 8, 8);
-        ChainlinkNode memory newChainlinkNode2 =
-            ChainlinkNode(AggregatorV3Interface(CHAINLINK_BTC_USD_PRICE_FEED), 1, 2 hours, 8, 8);
+        ChainlinkNode memory newChainlinkNode1 = ChainlinkNode(
+            AggregatorV3Interface(CHAINLINK_WBTC_BTC_RATIO_FEED), ConversionDirection.IN_TO_OUT, 26 hours, 8, 8
+        );
+        ChainlinkNode memory newChainlinkNode2 = ChainlinkNode(
+            AggregatorV3Interface(CHAINLINK_BTC_USD_PRICE_FEED), ConversionDirection.IN_TO_OUT, 2 hours, 8, 8
+        );
         vm.expectEmit(true, true, true, true);
         emit IAltoWbtcLendingOracleEvents.SetChainlinkNode1(chainlinkNode1, newChainlinkNode1);
         emit IAltoWbtcLendingOracleEvents.SetChainlinkNode2(chainlinkNode2, newChainlinkNode2);

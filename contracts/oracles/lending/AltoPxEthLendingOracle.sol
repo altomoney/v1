@@ -4,7 +4,7 @@ pragma solidity ^0.8.7;
 import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {ModuleCurve} from "@alto/oracles/lending/modules/ModuleCurve.sol";
 import {ModuleChainlink} from "@alto/oracles/lending/modules/ModuleChainlink.sol";
-import {CurveNode, ChainlinkNode} from "@alto/oracles/interfaces/IModuleNode.sol";
+import {CurveNode, ChainlinkNode, ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
 import {ICurvePool} from "@alto/oracles/interfaces/ICurvePool.sol";
 import {MATH_PRECISION, FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {OracleValidation} from "@alto/oracles/lending/libraries/OracleValidation.sol";
@@ -98,7 +98,9 @@ contract AltoPxEthLendingOracle is Ownable2Step, ModuleCurve, ModuleChainlink, I
         _validateChainlinkParams(_chainlinkNode);
 
         chainlinkNode = _chainlinkNode;
-        emit SetChainlinkNode(ChainlinkNode(AggregatorV3Interface(address(0)), 0, 0, 0, 0), _chainlinkNode);
+        emit SetChainlinkNode(
+            ChainlinkNode(AggregatorV3Interface(address(0)), ConversionDirection.IN_TO_OUT, 0, 0, 0), _chainlinkNode
+        );
     }
 
     /// @inheritdoc IAltoPxEthLendingOracleBase

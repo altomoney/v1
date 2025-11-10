@@ -3,7 +3,7 @@ pragma solidity ^0.8.7;
 
 import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {ModuleChainlink} from "@alto/oracles/lending/modules/ModuleChainlink.sol";
-import {ChainlinkNode} from "@alto/oracles/interfaces/IModuleNode.sol";
+import {ChainlinkNode, ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
 import {MATH_PRECISION, FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {
@@ -27,7 +27,9 @@ contract AltoTbtcLendingOracle is Ownable2Step, ModuleChainlink, IAltoTbtcLendin
         _validateChainlinkParams(_chainlinkNode);
 
         chainlinkNode = _chainlinkNode;
-        emit SetChainlinkNode(ChainlinkNode(AggregatorV3Interface(address(0)), 0, 0, 0, 0), _chainlinkNode);
+        emit SetChainlinkNode(
+            ChainlinkNode(AggregatorV3Interface(address(0)), ConversionDirection.IN_TO_OUT, 0, 0, 0), _chainlinkNode
+        );
     }
 
     /// @inheritdoc IAltoTbtcLendingOracleBase

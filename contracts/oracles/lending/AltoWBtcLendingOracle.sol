@@ -3,7 +3,7 @@ pragma solidity ^0.8.7;
 
 import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {ModuleChainlink} from "@alto/oracles/lending/modules/ModuleChainlink.sol";
-import {ChainlinkNode} from "@alto/oracles/interfaces/IModuleNode.sol";
+import {ChainlinkNode, ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
 import {
     IAltoWbtcLendingOracleStaticTypes,
     IAltoWbtcLendingOracleBase
@@ -32,10 +32,14 @@ contract AltoWBtcLendingOracle is Ownable2Step, ModuleChainlink, IAltoWbtcLendin
         _validateChainlinkParams(_chainlinkNode2);
 
         chainlinkNode1 = _chainlinkNode1;
-        emit SetChainlinkNode1(ChainlinkNode(AggregatorV3Interface(address(0)), 0, 0, 0, 0), _chainlinkNode1);
+        emit SetChainlinkNode1(
+            ChainlinkNode(AggregatorV3Interface(address(0)), ConversionDirection.IN_TO_OUT, 0, 0, 0), _chainlinkNode1
+        );
 
         chainlinkNode2 = _chainlinkNode2;
-        emit SetChainlinkNode2(ChainlinkNode(AggregatorV3Interface(address(0)), 0, 0, 0, 0), _chainlinkNode2);
+        emit SetChainlinkNode2(
+            ChainlinkNode(AggregatorV3Interface(address(0)), ConversionDirection.IN_TO_OUT, 0, 0, 0), _chainlinkNode2
+        );
     }
 
     function getPrice() external view returns (uint256) {

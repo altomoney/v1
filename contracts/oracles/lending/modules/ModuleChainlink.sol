@@ -3,7 +3,7 @@ pragma solidity ^0.8.7;
 
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
-import {ChainlinkNode} from "@alto/oracles/interfaces/IModuleNode.sol";
+import {ChainlinkNode, ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
 
 /// @title ModuleChainlink
 /// @author Pearl Labs
@@ -29,9 +29,9 @@ contract ModuleChainlink {
         uint256 powIn = 10 ** config.inDecimals;
         uint256 powOut = 10 ** config.outDecimals;
 
-        // Checking whether we should multiply or divide by the ratio computed
+        // Checking whether we should multiply or divide by the ratio
         // Combine price application and decimals conversion to minimize rounding loss
-        if (config.multiplied == 1) {
+        if (config.direction == ConversionDirection.IN_TO_OUT) {
             // quoteAmount = quoteAmount * ratio / 10^feedDecimals * 10^outDecimals / 10^inDecimals
             quoteAmount = FixedPointMath.divideWithRounding(quoteAmount, price * powOut, powFeed * powIn, false);
         } else {
@@ -53,10 +53,6 @@ contract ModuleChainlink {
         // 54 is ORACLE_PRICE_PRECISION + 18 decimal input token - everything above this is
         // unrealistic and potentially dangerous (this is considered a sanity check)
         if (config.inDecimals + config.outDecimals > 54) {
-            revert ModuleChainlinkInvalidInput();
-        }
-
-        if (config.multiplied != 0 && config.multiplied != 1) {
             revert ModuleChainlinkInvalidInput();
         }
     }

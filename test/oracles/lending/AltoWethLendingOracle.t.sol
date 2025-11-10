@@ -3,7 +3,7 @@ pragma solidity ^0.8.22;
 
 import {Test} from "forge-std/Test.sol";
 import {AltoWethLendingOracle} from "@alto/oracles/lending/AltoWethLendingOracle.sol";
-import {ChainlinkNode} from "@alto/oracles/interfaces/IModuleNode.sol";
+import {ChainlinkNode, ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {console2} from "forge-std/console2.sol";
 import {ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
@@ -24,7 +24,7 @@ contract AltoWethLendingOracleTest is Test {
         vm.createSelectFork(rpcUrl, 23474424);
         chainlinkNode = ChainlinkNode({
             feed: AggregatorV3Interface(CHAINLINK_ETH_USD_PRICE_FEED),
-            multiplied: 1,
+            direction: ConversionDirection.IN_TO_OUT,
             stalePeriod: 2 hours,
             inDecimals: 18,
             outDecimals: 36
@@ -57,8 +57,9 @@ contract AltoWethLendingOracleTest is Test {
         vm.stopPrank();
 
         vm.startPrank(OWNER);
-        ChainlinkNode memory newChainlinkNode =
-            ChainlinkNode(AggregatorV3Interface(CHAINLINK_ETH_USD_PRICE_FEED), 1, 2 hours, 18, 18);
+        ChainlinkNode memory newChainlinkNode = ChainlinkNode(
+            AggregatorV3Interface(CHAINLINK_ETH_USD_PRICE_FEED), ConversionDirection.IN_TO_OUT, 2 hours, 18, 18
+        );
         vm.expectEmit(true, true, true, true);
         emit IAltoWethLendingOracleEvents.SetChainlinkNode(chainlinkNode, newChainlinkNode);
         altoWethLendingOracle.updateChainlinkNode(newChainlinkNode);

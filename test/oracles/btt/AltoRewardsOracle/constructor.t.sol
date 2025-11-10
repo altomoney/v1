@@ -11,7 +11,7 @@ import {
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import {ModuleUniswap} from "@alto/oracles/lending/modules/ModuleUniswap.sol";
-import {ModuleChainlink} from "@alto/oracles/lending/modules/ModuleChainlink.sol";
+import {ModuleChainlink, ConversionDirection} from "@alto/oracles/lending/modules/ModuleChainlink.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
 contract AltoRewardsOracleConstructor is AltoRewardsOracleCommon {
@@ -84,13 +84,13 @@ contract AltoRewardsOracleConstructor is AltoRewardsOracleCommon {
 
         (
             AggregatorV3Interface feed,
-            uint8 chainlinkMultiplied,
+            ConversionDirection direction,
             uint32 stalePeriod,
             uint8 inDecimals,
             uint8 outDecimals
         ) = oracle.chainlinkNode();
         assertEq(address(feed), address(mockFeed));
-        assertEq(chainlinkMultiplied, 1);
+        assertEq(uint8(direction), uint8(ConversionDirection.IN_TO_OUT));
         assertEq(stalePeriod, DEFAULT_STALE_PERIOD);
         assertEq(inDecimals, 18);
         assertEq(outDecimals, 8);

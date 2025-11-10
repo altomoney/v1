@@ -12,7 +12,7 @@ import {ISwapRouter} from "@alto-test/oracles/interfaces/ISwapRouter.sol";
 import {ERC20MockMintable} from "@alto-test/helpers/ERC20MockMintable.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {AltoRewardsOracleInitParams} from "@alto/oracles/interfaces/IAltoRewardsOracle.sol";
-import {UniswapNode, ChainlinkNode} from "@alto/oracles/interfaces/IModuleNode.sol";
+import {UniswapNode, ChainlinkNode, ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
 
 // TxType that occured in the pool
 enum TxType {
@@ -160,7 +160,7 @@ contract SimulationRewardsOracle is Test {
                 stalePeriod: STALE_PERIOD,
                 inDecimals: 18,
                 outDecimals: 8,
-                multiplied: 1
+                direction: ConversionDirection.IN_TO_OUT
             });
             uniswapNode = UniswapNode({pool: TAP_WETH_POOL, twapPeriod: TWAP_PERIOD, multiplied: 1});
 

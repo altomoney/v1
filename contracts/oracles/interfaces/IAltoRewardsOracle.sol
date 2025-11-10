@@ -2,7 +2,7 @@
 
 pragma solidity >=0.8.0;
 
-import {UniswapNode, ChainlinkNode} from "@alto/oracles/interfaces/IModuleNode.sol";
+import {UniswapNode, ChainlinkNode, ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
 import {IUsdOracle} from "@alto/oracles/interfaces/IUsdOracle.sol";
 import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
@@ -118,5 +118,5 @@ interface IAltoRewardsOracleStaticTypes is IAltoRewardsOracleBase {
 
     /// @notice Gets the Chainlink node
     /// @return The Chainlink node
-    function chainlinkNode() external view returns (AggregatorV3Interface, uint8, uint32, uint8, uint8);
+    function chainlinkNode() external view returns (AggregatorV3Interface, ConversionDirection, uint32, uint8, uint8);
 }

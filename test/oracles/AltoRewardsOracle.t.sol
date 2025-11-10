@@ -18,7 +18,7 @@ import {
     IAltoRewardsOracleErrors,
     IAltoRewardsOracleEvents
 } from "@alto/oracles/interfaces/IAltoRewardsOracle.sol";
-import {UniswapNode, ChainlinkNode} from "@alto/oracles/interfaces/IModuleNode.sol";
+import {UniswapNode, ChainlinkNode, ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
 contract AltoRewardsOracleTest is Test {
@@ -101,7 +101,7 @@ contract AltoRewardsOracleTest is Test {
             stalePeriod: stalePeriod,
             inDecimals: 18,
             outDecimals: 8,
-            multiplied: 1
+            direction: ConversionDirection.IN_TO_OUT
         });
 
         AltoRewardsOracleInitParams memory initParams = AltoRewardsOracleInitParams({
@@ -420,7 +420,7 @@ contract AltoRewardsOracleTest is Test {
                 stalePeriod: stalePeriod,
                 inDecimals: 18,
                 outDecimals: 18,
-                multiplied: 0
+                direction: ConversionDirection.OUT_TO_IN
             })
         );
         vm.stopPrank();
@@ -431,16 +431,17 @@ contract AltoRewardsOracleTest is Test {
             stalePeriod: stalePeriod,
             inDecimals: 18,
             outDecimals: 18,
-            multiplied: 0
+            direction: ConversionDirection.OUT_TO_IN
         });
-        (AggregatorV3Interface feed, uint8 multiplied, uint32 stalePeriod, uint8 inDecimals, uint8 outDecimals) =
-            rewardsOracle.chainlinkNode();
+        (
+            AggregatorV3Interface feed,
+            ConversionDirection direction,
+            uint32 stalePeriod,
+            uint8 inDecimals,
+            uint8 outDecimals
+        ) = rewardsOracle.chainlinkNode();
         ChainlinkNode memory oldChainlinkNode = ChainlinkNode({
-            feed: feed,
-            stalePeriod: stalePeriod,
-            inDecimals: inDecimals,
-            outDecimals: outDecimals,
-            multiplied: multiplied
+            feed: feed, stalePeriod: stalePeriod, inDecimals: inDecimals, outDecimals: outDecimals, direction: direction
         });
 
         vm.expectEmit(true, true, true, true);

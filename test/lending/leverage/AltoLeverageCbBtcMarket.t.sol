@@ -12,7 +12,7 @@ import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {AltoCbBtcLendingOracle} from "@alto/oracles/lending/AltoCbBtcLendingOracle.sol";
 import {MarketDeployer} from "@alto/utils/MarketDeployer.sol";
 import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
-import {ChainlinkNode, ERC4626RatioNode} from "@alto/oracles/interfaces/IModuleNode.sol";
+import {ChainlinkNode, ERC4626RatioNode, ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {SwapParams} from "@alto/lending/leverage/interfaces/IAltoLeverageSwapper.sol";
 import {ORACLE_PRICE_PRECISION, IOracle} from "@alto/oracles/interfaces/IOracle.sol";
@@ -44,8 +44,9 @@ contract AltoLeverageCbBtcMarketTest is Test {
         leverage = new AltoLeverage(address(swapper), address(this));
 
         address irm = address(new FixedRateIrm(0.04 ether / uint256(365 days), address(this)));
-        ChainlinkNode memory chainlinkNode =
-            ChainlinkNode(AggregatorV3Interface(CHAINLINK_BTC_USD_PRICE_FEED), 1, 2 hours, 8, 46);
+        ChainlinkNode memory chainlinkNode = ChainlinkNode(
+            AggregatorV3Interface(CHAINLINK_BTC_USD_PRICE_FEED), ConversionDirection.IN_TO_OUT, 2 hours, 8, 46
+        );
 
         oracle = address(new AltoCbBtcLendingOracle(address(this), chainlinkNode));
 
