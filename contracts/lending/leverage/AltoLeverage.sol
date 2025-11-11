@@ -55,17 +55,7 @@ contract AltoLeverage is Ownable2Step, IBorrowCallback, IRemoveCollateralCallbac
         address sellToken = IMarket(msg.sender).borrowToken();
         address buyToken = IMarket(msg.sender).collateralToken();
 
-        uint256 balanceBefore = IERC20(sellToken).balanceOf(address(this)) - assets;
-
         uint256 amountOut = _swap(sellToken, buyToken, assets, swapParams);
-
-        uint256 balanceAfter = IERC20(sellToken).balanceOf(address(this));
-
-        // return any remaining unsold tokens to the user
-        uint256 balanceDiff = balanceAfter - balanceBefore;
-        if (balanceDiff > 0) {
-            IERC20(sellToken).safeTransfer(onBehalf, balanceDiff);
-        }
 
         _addCollateral(buyToken, msg.sender, onBehalf, amountOut);
     }

@@ -113,46 +113,6 @@ contract OnBorrowCallbackTest is AltoLeverageBTTTest {
         vm.stopPrank();
     }
 
-    /// @dev it should transfer leftover tokens to onBehalf and add collateral to market
-    function test_TransferLeftoverTokensAndAddCollateral_WhenSwapSucceedsAndAmountOutMeetsMinAmountOutAndLeftoverTokensExist()
-        external
-        givenMarketIsSupported
-    {
-        uint256 borrowAmount = 1000 ether;
-        uint256 leftoverAmount = 50 ether;
-
-        // Configure swapper to leave leftover tokens
-        swapper.setLeftoverTokens(leftoverAmount);
-
-        SwapParams memory leverageData = SwapParams({minAmountOut: borrowAmount, swapData: hex""});
-        bytes memory data = abi.encode(leverageData);
-
-        // Setup: Alice adds supply and collateral to market
-        vm.startPrank(alice);
-        market.addSupply(10000000000 ether, 0, alice);
-        market.addCollateral(1000 ether, alice);
-
-        uint256 aliceBalanceBefore = borrowToken.balanceOf(alice);
-        Position memory positionBefore = market.position(alice);
-        uint256 leverageBalanceBefore = borrowToken.balanceOf(address(leverage));
-
-        market.borrow(borrowAmount, 0, alice, address(leverage), data);
-
-        uint256 aliceBalanceAfter = borrowToken.balanceOf(alice);
-        Position memory positionAfter = market.position(alice);
-        uint256 leverageBalanceAfter = borrowToken.balanceOf(address(leverage));
-
-        // Alice should receive leftover tokens
-        assertEq(aliceBalanceAfter, aliceBalanceBefore + leftoverAmount, "Alice should receive leftover tokens");
-
-        // Alice should have more collateral after the leverage operation
-        assertGt(positionAfter.collateralAssets, positionBefore.collateralAssets, "Alice should have more collateral");
-
-        // Leverage contract should maintain its original balance (no leftover borrow tokens from this operation)
-        assertEq(leverageBalanceAfter, leverageBalanceBefore, "Leverage contract balance should be unchanged");
-        vm.stopPrank();
-    }
-
     /// @dev Fuzz test for onBorrowCallback
     function testFuzz_OnBorrowCallback(uint256 borrowAmount, uint256 minAmountOut) external givenMarketIsSupported {
         vm.assume(borrowAmount > 0);
