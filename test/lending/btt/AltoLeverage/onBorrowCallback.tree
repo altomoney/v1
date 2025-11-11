@@ -7,7 +7,5 @@ OnBorrowCallbackTest
     ├── when swap succeeds but amountOut is less than minAmountOut
     │   └── it should revert
     └── when swap succeeds and amountOut meets minAmountOut
-        ├── when there are no leftover sell tokens
-        │   └── it should add collateral to market
-        └── when there are leftover sell tokens
-            └── it should transfer leftover tokens to onBehalf and add collateral to market 
+        └── when there are no leftover sell tokens
+            └── it should add collateral to market
