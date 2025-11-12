@@ -37,7 +37,6 @@ import {
     IRemoveCollateralCallback,
     ILiquidateCallback
 } from "@alto/lending/interfaces/IMarketCallbacks.sol";
-import {console2} from "forge-std/console2.sol";
 
 /// @title Alto Base Market
 /// @author Pearl Labs
