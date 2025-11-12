@@ -30,7 +30,8 @@ library FixedPointMath {
         return (numerator * MATH_PRECISION) / denominator;
     }
 
-    /// @dev Performs division with optional rounding up or down.
+    /// @dev Multiplies numerator by multiplier and divides by denominator rounding division result up or down based on roundUp parameter.
+    /// @dev numerator * multiplier / denominator rounding division result.
     function divideWithRounding(uint256 numerator, uint256 multiplier, uint256 denominator, bool roundUp)
         internal
         pure
@@ -42,7 +43,8 @@ library FixedPointMath {
         return (numerator * multiplier) / denominator;
     }
 
-    /// @dev Performs division rounding >=0.5 up and <0.5 down.
+    /// @dev Multiplies numerator by multiplier and divides by denominator rounding division result up or down based on half up rule.
+    /// @dev numerator * multiplier / denominator rounding division result.
     function divideWithRoundingHalfUp(uint256 numerator, uint256 multiplier, uint256 denominator)
         internal
         pure
