@@ -360,11 +360,12 @@ abstract contract AltoBaseMarket is
         totalSupply.assets -= assets.toUint128();
         totalSupply.shares -= shares.toUint128();
 
+        position[onBehalf].supplyShares -= shares.toUint128();
+
+        // Invariant to prevent donation of borrow assets and removing supply
         if (totalBorrowed.assets > totalSupply.assets) {
             revert AltoBaseMarketInsufficientMarketLiquidity();
         }
-
-        position[onBehalf].supplyShares -= shares.toUint128();
 
         _sendBorrowToken(address(this), receiver, assets);
 
