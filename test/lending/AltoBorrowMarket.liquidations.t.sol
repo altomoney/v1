@@ -258,7 +258,7 @@ contract AltoBorrowMarketTest is Test {
         assertEq(borrowShares, 0);
     }
 
-    function testBadDebtLiquidation() public {
+    function testBadDebtLiquidationWithDonationAttack() public {
         createMarket(
             LiquidationConfiguration({
                 maxLiquidationLtv: 0.8 ether,
@@ -289,6 +289,7 @@ contract AltoBorrowMarketTest is Test {
         // alice donates 1.5 ether to the market
         borrowToken.transfer(address(market), 1.5 ether);
         // alice can't remove full supply because of bob's borrowing
+        // invariant prevents donation of borrow assets and removing supply
         vm.expectRevert(IMarketErrors.AltoBaseMarketInsufficientMarketLiquidity.selector);
         market.removeSupply(100 ether, 0, alice, alice);
         vm.stopPrank();
