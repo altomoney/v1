@@ -1,0 +1,18 @@
+AltoBaseMarket::governanceLiquidate()
+├── when caller is not owner
+│   └── it should revert with OwnableUnauthorizedAccount
+├── given position is solvent
+│   └── it should revert with AltoBaseMarketLiquidatingSolventPosition
+└── given position is insolvent
+    ├── when position is tagged
+    │   ├── it should emit GovernanceLiquidation
+    │   ├── it should transfer collateral tokens to owner
+    │   ├── it should delete liquidable position
+    │   └── it should apply bad debt to market
+    ├── when borrower has no collateral remaining
+    │   ├── it should emit GovernanceLiquidation with zero collateral
+    │   ├── it should not transfer collateral tokens to owner
+    │   ├── it should delete liquidable position
+    │   └── it should apply bad debt to market
+    └── it should return collateral amount and bad debt amount
+

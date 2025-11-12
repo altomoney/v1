@@ -175,7 +175,7 @@ contract AltoBorrowMarketTest is Test {
         console.log(
             "Position Collateral Value",
             uint256(collateralAssets)
-                .divideWithRounding(OracleMock(market.oracle()).getPrice(), LENDING_ORACLE_PRICE_PRECISION, false)
+                .divideWithRounding(OracleMock(market.oracle()).getPrice(), ORACLE_PRICE_PRECISION, false)
         );
 
         vm.expectRevert(stdError.divisionError);
@@ -222,7 +222,7 @@ contract AltoBorrowMarketTest is Test {
         console.log(
             "Position Collateral Value",
             uint256(collateralAssets)
-                .divideWithRounding(OracleMock(market.oracle()).getPrice(), LENDING_ORACLE_PRICE_PRECISION, false)
+                .divideWithRounding(OracleMock(market.oracle()).getPrice(), ORACLE_PRICE_PRECISION, false)
         );
 
         // attempt governance liquidation with socializing debt
