@@ -4,6 +4,8 @@ AltoMarket::SetIrm
 └── when caller is owner
     ├── when market is not paused
     │   └── it should emit accrue event
+    ├── when skipAccrueInterest is true
+    │   └── it should not emit accrue event
     ├── it should update irm address
     ├── when irm is not zero address
     │   └── it should set market on new irm

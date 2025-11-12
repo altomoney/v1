@@ -54,7 +54,7 @@ contract SetBorrowOpeningFeeTestBorrow is MarketCommon {
         liquidationConfiguration.protocolFeePercentage = 0;
         borrowMarket.setLiquidationConfiguration(liquidationConfiguration);
         borrowMarket.setBorrowOpeningFee(0);
-        borrowMarket.setIrm(address(0));
+        borrowMarket.setIrm(address(0), false);
         borrowMarket.setFeeRecipient(address(0));
 
         // it should revert

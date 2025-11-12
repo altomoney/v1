@@ -101,7 +101,7 @@ contract FixedRateIrmUpdateTest is IrmCommon {
         borrowedAmount = bound(borrowedAmount, MIN_AMOUNT, MAX_AMOUNT);
 
         address irm = address(new FixedRateIrm(borrowRate, address(this)));
-        market.setIrm(address(irm));
+        market.setIrm(address(irm), false);
 
         market.addSupply(borrowedAmount, 0, USER);
         market.addCollateral(100 ether, USER);
@@ -138,7 +138,7 @@ contract FixedRateIrmUpdateTest is IrmCommon {
         borrowedAmount = bound(borrowedAmount, MIN_AMOUNT, MAX_AMOUNT);
 
         address irm = address(new FixedRateIrm(borrowRate, address(this)));
-        market.setIrm(address(irm));
+        market.setIrm(address(irm), false);
 
         deal(address(borrowToken), address(this), borrowedAmount);
 
@@ -172,7 +172,7 @@ contract FixedRateIrmUpdateTest is IrmCommon {
             FixedRateIrm(irm).setBorrowRate(newBorrowRate);
         } else {
             address irm2 = address(new FixedRateIrm(newBorrowRate, address(this)));
-            market.setIrm(address(irm2));
+            market.setIrm(address(irm2), false);
         }
         assertEq(totalBorrowed, borrowedAmount + expectedInterest);
 

@@ -14,7 +14,7 @@ contract AltoMarketSetIrm is MarketCommon {
     function test_RevertWhen_CallerIsNotOwner() external {
         // it should revert
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, address(this)));
-        market.setIrm(address(1));
+        market.setIrm(address(1), false);
     }
 
     modifier whenCallerIsOwner() {
@@ -35,7 +35,7 @@ contract AltoMarketSetIrm is MarketCommon {
         vm.expectEmit();
         emit IMarketEvents.SetIrm(oldIrm, newIrm);
 
-        market.setIrm(newIrm);
+        market.setIrm(newIrm, false);
 
         // it should update irm address
         assertEq(market.irm(), newIrm);
@@ -56,7 +56,7 @@ contract AltoMarketSetIrm is MarketCommon {
         emit IMarketEvents.SetIrm(oldIrm, newIrm);
 
         vm.recordLogs();
-        market.setIrm(newIrm);
+        market.setIrm(newIrm, false);
 
         Vm.Log[] memory logs = vm.getRecordedLogs();
         // Assert that no AccrueInterest events were emitted
@@ -71,8 +71,29 @@ contract AltoMarketSetIrm is MarketCommon {
     function test_WhenIrmIsNotZeroAddress() external whenCallerIsOwner {
         FixedRateIrm newIrm = new FixedRateIrm(0.05 ether / uint256(365 days), OWNER);
 
-        market.setIrm(address(newIrm));
+        market.setIrm(address(newIrm), false);
 
         assertEq(newIrm.market(), address(market));
+    }
+
+    function test_WhenCallerIsOwnerAndSkipAccrueInterest() external whenCallerIsOwner {
+        address oldIrm = market.irm();
+        address newIrm = address(new FixedRateIrm(0.05 ether / uint256(365 days), OWNER));
+
+        // it should emit SetIrm event
+        vm.expectEmit();
+        emit IMarketEvents.SetIrm(oldIrm, newIrm);
+
+        vm.recordLogs();
+        market.setIrm(newIrm, true);
+
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        // Assert that no AccrueInterest events were emitted
+        for (uint256 i = 0; i < logs.length; i++) {
+            assertFalse(logs[i].topics[0] == IMarketEvents.AccrueInterest.selector);
+        }
+
+        // it should update irm address
+        assertEq(market.irm(), newIrm);
     }
 }

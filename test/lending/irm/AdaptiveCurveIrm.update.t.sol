@@ -121,7 +121,7 @@ contract AdaptiveCurveIrmUpdateTest is IrmCommon {
         _fuzzAdaptiveCurveConfig(irmConfig);
 
         MockAdaptiveCurveIrm irm = new MockAdaptiveCurveIrm(irmConfig, address(this));
-        market.setIrm(address(irm));
+        market.setIrm(address(irm), false);
 
         targetLtv = bound(targetLtv, 0.001 ether, LTV);
         amount = bound(amount, MIN_AMOUNT, MAX_AMOUNT);
@@ -171,7 +171,7 @@ contract AdaptiveCurveIrmUpdateTest is IrmCommon {
             AdaptiveCurveIrm.IRState({rateAtTarget: 0, lastUpdate: uint48(block.timestamp)});
         vm.expectEmit(true, true, true, false, address(irm));
         emit AdaptiveCurveIrm.IRStateUpdated(irState);
-        market.setIrm(address(irm));
+        market.setIrm(address(irm), false);
 
         market.addSupply(amount, 0, USER);
         market.addCollateral(amount, USER);
@@ -187,7 +187,7 @@ contract AdaptiveCurveIrmUpdateTest is IrmCommon {
         MockAdaptiveCurveIrm newIrm = new MockAdaptiveCurveIrm(newIrmConfig, address(this));
         vm.expectEmit(true, true, true, false, address(newIrm));
         emit AdaptiveCurveIrm.IRStateUpdated(irState);
-        newMarket.setIrm(address(newIrm));
+        newMarket.setIrm(address(newIrm), false);
 
         newMarket.modifyTotalBorrowed(IMarket(address(market)).totalBorrowed().assets);
         newMarket.modifyTotalSupply(IMarket(address(market)).totalSupply().assets);
@@ -208,7 +208,7 @@ contract AdaptiveCurveIrmUpdateTest is IrmCommon {
             MockAdaptiveCurveIrm newIrmForMarket = new MockAdaptiveCurveIrm(newIrmConfig, address(this));
             vm.expectEmit(true, true, true, false, address(newIrmForMarket));
             emit AdaptiveCurveIrm.IRStateUpdated(irState);
-            market.setIrm(address(newIrmForMarket));
+            market.setIrm(address(newIrmForMarket), false);
         }
 
         assertEq(

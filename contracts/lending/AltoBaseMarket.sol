@@ -176,8 +176,8 @@ abstract contract AltoBaseMarket is
     function borrowOpeningFee() public view virtual returns (uint256);
 
     /// @inheritdoc IMarketBase
-    function setIrm(address _irm) external onlyOwner {
-        if (!paused[PAUSE_TYPE]) {
+    function setIrm(address _irm, bool _skipAccrueInterest) external onlyOwner {
+        if (!paused[PAUSE_TYPE] && !_skipAccrueInterest) {
             _accrueInterest();
         }
 

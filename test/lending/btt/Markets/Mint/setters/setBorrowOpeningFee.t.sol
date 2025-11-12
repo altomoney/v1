@@ -54,7 +54,7 @@ contract SetBorrowOpeningFeeTestMint is MarketCommon {
         liquidationConfiguration.protocolFeePercentage = 0;
         mintMarket.setLiquidationConfiguration(liquidationConfiguration);
         mintMarket.setBorrowOpeningFee(0);
-        mintMarket.setIrm(address(0));
+        mintMarket.setIrm(address(0), false);
         mintMarket.setFeeRecipient(address(0));
 
         // it should revert

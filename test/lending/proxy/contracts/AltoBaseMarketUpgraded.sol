@@ -166,8 +166,10 @@ abstract contract AltoBaseMarketUpgraded is
     }
 
     /// @inheritdoc IMarketBase
-    function setIrm(address _irm) external onlyOwner {
-        _accrueInterest();
+    function setIrm(address _irm, bool _skipAccrueInterest) external onlyOwner {
+        if (!paused[PAUSE_TYPE] && !_skipAccrueInterest) {
+            _accrueInterest();
+        }
 
         emit SetIrm(irm, _irm);
         irm = _irm;
