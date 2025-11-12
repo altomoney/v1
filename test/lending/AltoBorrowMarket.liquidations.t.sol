@@ -274,7 +274,7 @@ contract AltoBorrowMarketTest is Test {
                 taggerLiquidationGracePeriod: 2 minutes,
                 liquidationWindowTag: 3 days
             }),
-            LENDING_ORACLE_PRICE_PRECISION,
+            ORACLE_PRICE_PRECISION,
             0.75 ether
         );
 
@@ -306,7 +306,7 @@ contract AltoBorrowMarketTest is Test {
         (uint128 totalBorrowedAssets,) = market.totalBorrowed();
 
         uint256 collateralValue =
-            uint256(collateralAssets).divideWithRounding(newOraclePrice, LENDING_ORACLE_PRICE_PRECISION, false);
+            uint256(collateralAssets).divideWithRounding(newOraclePrice, ORACLE_PRICE_PRECISION, false);
         uint256 borrowValue = totalBorrowedAssets;
 
         // bad debt has been created for bob's position

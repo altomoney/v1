@@ -17,6 +17,8 @@ AltoBorrowMarket::RemoveSupply()
     ├── when shares is zero
     │   ├── it should calculate shares from assets
     │   └── it should remove supply shares from position
+    ├── given totalBorrowed equals totalSupply
+    │   └── it should revert
     ├── it should emit AccrueInterest
     ├── it should update totalSupply
     ├── it should not update totalBorrowed

@@ -158,4 +158,28 @@ contract AltoBorrowMarketRemoveSupply is MarketCommon {
         assertEq(totalSupplyAssetsBefore - INITIAL_SUPPLY, market.totalSupply().assets);
         assertEq(totalSupplySharesBefore - expectedRemovedShares, market.totalSupply().shares);
     }
+
+    function test_RevertWhen_RemovingSupplyCausesInsufficientMarketLiquidity() external {
+        // given: USER supplies and someone borrows all available liquidity
+        uint256 supplyAmount = INITIAL_SUPPLY;
+        deal(address(borrowToken), address(this), supplyAmount);
+        market.addSupply(supplyAmount, 0, USER);
+
+        // prepare sufficient collateral for USER_2 to borrow full supply
+        uint256 collateralAmount = 200 ether; // enough for LTV 0.75 to borrow 100 ether
+        deal(address(collateralToken), USER_2, collateralAmount);
+        vm.startPrank(USER_2);
+        collateralToken.approve(address(market), type(uint256).max);
+        market.addCollateral(collateralAmount, USER_2);
+        uint256 borrowable = market.totalSupply().assets;
+        // borrow exactly total supply so totalBorrowed == totalSupply
+        market.borrow(borrowable, 0, USER_2, USER_2, "");
+        vm.stopPrank();
+
+        // when: USER tries to remove any positive amount of supply
+        vm.startPrank(USER);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketInsufficientMarketLiquidity.selector);
+        market.removeSupply(1, 0, USER, USER);
+        vm.stopPrank();
+    }
 }
