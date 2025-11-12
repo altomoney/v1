@@ -446,7 +446,7 @@ contract AltoBorrowMarketLiquidationsFuzzTest is Test {
 
         // Set high interest rate IRM
         vm.startPrank(market.owner());
-        market.setIrm(address(new FixedRateIrm(8 ether / uint256(365 days), address(this))));
+        market.setIrm(address(new FixedRateIrm(8 ether / uint256(365 days), address(this))), false);
         vm.stopPrank();
 
         // advancing time to accrue significant interest

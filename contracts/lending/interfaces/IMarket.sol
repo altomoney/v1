@@ -341,8 +341,11 @@ interface IMarketBase is IMarketErrors, IMarketEvents, IAuth, IPausable {
 
     /// @notice Setter of the IRM contract for the market
     /// @dev This setter accrues the interest using the previous IRM contract and sets up the new IRM contract.
-    /// This can be also used to disable the interest accrual by setting the IRM to zero address..
-    function setIrm(address irm) external;
+    /// This can be also used to disable the interest accrual by setting the IRM to zero address.
+    /// @param irm The address of the new IRM contract
+    /// @param skipAccrueInterest If set to true, the interest accrual will be skipped. This is useful when IRM
+    /// has improper setup and accruing interest would either revert or cause unwanted interest rate calculation.
+    function setIrm(address irm, bool skipAccrueInterest) external;
 
     /// @notice setter of the oracle contract for the market
     function setOracle(address oracle) external;

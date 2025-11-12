@@ -78,7 +78,7 @@ contract AltoBorrowMarketliquidate is MarketCommon {
 
     modifier givenPositionIsInsolvent() {
         vm.startPrank(OWNER);
-        market.setIrm(address(new FixedRateIrm(8 ether / uint256(365 days), address(this))));
+        market.setIrm(address(new FixedRateIrm(8 ether / uint256(365 days), address(this))), false);
         market.setPriorityLiquidator(PRIORITY_LIQUIDATOR, true);
         vm.stopPrank();
 
@@ -346,7 +346,7 @@ contract AltoBorrowMarketliquidate is MarketCommon {
 
     modifier givenMaxLtvPosition() {
         vm.startPrank(OWNER);
-        market.setIrm(address(new FixedRateIrm(8 ether / uint256(365 days), address(this))));
+        market.setIrm(address(new FixedRateIrm(8 ether / uint256(365 days), address(this))), false);
         market.setPriorityLiquidator(PRIORITY_LIQUIDATOR, true);
         vm.stopPrank();
 

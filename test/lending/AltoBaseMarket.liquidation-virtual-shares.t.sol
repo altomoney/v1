@@ -49,7 +49,7 @@ contract AltoBaseMarketLiquidationVirtualSharesTest is MarketCommon {
 
         // Set high interest rate and advance time to create underwater position
         vm.startPrank(OWNER);
-        market.setIrm(address(new FixedRateIrm(8 ether / uint256(365 days), address(this))));
+        market.setIrm(address(new FixedRateIrm(8 ether / uint256(365 days), address(this))), false);
         vm.stopPrank();
 
         // Advance time to accrue significant interest

@@ -57,7 +57,7 @@ contract AltoBorrowMarketGovernanceLiquidate is MarketCommon {
 
     modifier givenPositionIsInsolvent() {
         vm.startPrank(OWNER);
-        market.setIrm(address(new FixedRateIrm(8 ether / uint256(365 days), address(this))));
+        market.setIrm(address(new FixedRateIrm(8 ether / uint256(365 days), address(this))), false);
         vm.stopPrank();
 
         deal(address(collateralToken), address(this), 100 ether);

@@ -57,7 +57,7 @@ contract AltoMarketTagLiquidablePosition is MarketCommon {
 
     modifier givenUserPositionIsNotSolvent() {
         vm.startPrank(OWNER);
-        market.setIrm(address(new FixedRateIrm(8 ether / uint256(365 days), address(this))));
+        market.setIrm(address(new FixedRateIrm(8 ether / uint256(365 days), address(this))), false);
         market.setPriorityLiquidator(PRIORITY_LIQUIDATOR, true);
         vm.stopPrank();
 

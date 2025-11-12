@@ -34,7 +34,7 @@ contract AccrueInterestTestMint is MarketCommon {
 
     function test_WhenIrmIsZeroAddress() external whenMarketIsNotPaused {
         vm.prank(OWNER);
-        market.setIrm(address(0));
+        market.setIrm(address(0), false);
 
         uint256 totalSupplyBefore = market.totalSupply().assets;
         uint256 totalBorrowedBefore = market.totalBorrowed().assets;
