@@ -29,10 +29,7 @@ contract AltoERC4626RatioChainlinkOracleConstructor is AltoERC4626RatioChainlink
         new MockAltoERC4626RatioChainlinkOracle(OWNER, erc4626RatioNode, chainlinkNode, 1.1 ether);
     }
 
-    function test_RevertWhen_ERC4626RatioNodeInitialTimestampIsGreaterThanBlockTimestamp()
-        external
-        givenInvalidInputs
-    {
+    function test_RevertWhen_ERC4626RatioNodeInitialTimestampIsGreaterThanBlockTimestamp() external givenInvalidInputs {
         ERC4626RatioNode memory erc4626RatioNode = _createValidERC4626RatioNode(
             DEFAULT_INITIAL_RATIO, block.timestamp + 1, DEFAULT_MAX_YEARLY_GROWTH_RATIO_WAD
         );

@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
-import {AltoERC4626RatioChainlinkOracle} from
-    "@alto/oracles/AltoERC4626RatioChainlinkOracle/AltoERC4626RatioChainlinkOracle.sol";
+import {
+    AltoERC4626RatioChainlinkOracle
+} from "@alto/oracles/AltoERC4626RatioChainlinkOracle/AltoERC4626RatioChainlinkOracle.sol";
 import {ERC4626RatioNode} from "@alto/oracles/interfaces/IModuleNode.sol";
 import {ChainlinkNode} from "@alto/oracles/interfaces/IModuleNode.sol";
 

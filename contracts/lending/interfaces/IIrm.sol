@@ -36,8 +36,5 @@ interface IIrm {
     /// @param totalSupply Total amount of assets supplied to the markets
     /// @param totalBorrowed Total amount of assets borrowed from the markets
     /// @return new interest rate in second percent yield (SPY), new interest since last update
-    function updateInterestRateView(uint256 totalSupply, uint256 totalBorrowed)
-        external
-        view
-        returns (uint256, uint256);
+    function updateInterestRateView(uint256 totalSupply, uint256 totalBorrowed) external view returns (uint256, uint256);
 }

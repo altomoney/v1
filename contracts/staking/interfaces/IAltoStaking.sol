@@ -118,10 +118,7 @@ interface IAltoStakingBase is IAltoStakingErrors, IAltoStakingEvents, IAuth, IPa
     /// @param account The account of the lock position owner.
     /// @param containerId The containerId of the stake position.
     /// @return position The StakePosition of the account in the container.
-    function getPosition(address account, uint256 containerId)
-        external
-        view
-        returns (StakingPosition memory position);
+    function getPosition(address account, uint256 containerId) external view returns (StakingPosition memory position);
 
     /// @notice Get the container after processing a specific epoch.
     /// @param containerId The id of the container to get the container of.

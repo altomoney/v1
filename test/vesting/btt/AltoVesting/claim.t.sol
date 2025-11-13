@@ -101,15 +101,11 @@ contract AltoVestingClaim is Test {
         vestingToken = new ERC20MockMintable("Alto Token", "ALTO");
 
         aliceVestingInfo = VestingInfo({
-            startAt: block.timestamp,
-            vestingDuration: VESTING_DURATION,
-            totalVestingAmount: TOTAL_VESTING_AMOUNT
+            startAt: block.timestamp, vestingDuration: VESTING_DURATION, totalVestingAmount: TOTAL_VESTING_AMOUNT
         });
 
         bobVestingInfo = VestingInfo({
-            startAt: block.timestamp,
-            vestingDuration: VESTING_DURATION,
-            totalVestingAmount: TOTAL_VESTING_AMOUNT
+            startAt: block.timestamp, vestingDuration: VESTING_DURATION, totalVestingAmount: TOTAL_VESTING_AMOUNT
         });
 
         _setupMerkleTree();
@@ -180,9 +176,7 @@ contract AltoVestingClaim is Test {
 
     function test_RevertGiven_VestingInfoDoesNotMatchProvidedParameters() external givenMerkleProofIsValid {
         VestingInfo memory wrongVestingInfo = VestingInfo({
-            startAt: block.timestamp,
-            vestingDuration: VESTING_DURATION,
-            totalVestingAmount: TOTAL_VESTING_AMOUNT + 1
+            startAt: block.timestamp, vestingDuration: VESTING_DURATION, totalVestingAmount: TOTAL_VESTING_AMOUNT + 1
         });
 
         vm.prank(ALICE);
@@ -227,10 +221,7 @@ contract AltoVestingClaim is Test {
         vesting.claim(ALICE, smallerVestingInfo, smallerProof);
     }
 
-    function test_RevertWhen_VestingHasNotStarted_CurrentTimestampIsBeforeStartAt()
-        external
-        givenVestingHasNotStarted
-    {
+    function test_RevertWhen_VestingHasNotStarted_CurrentTimestampIsBeforeStartAt() external givenVestingHasNotStarted {
         // Update merkle root for future vesting
         VestingInfo memory futureVestingInfo = VestingInfo({
             startAt: block.timestamp + 1 days,

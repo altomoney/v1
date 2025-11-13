@@ -59,11 +59,7 @@ contract AuthTest is Test {
 
     function test_isSenderAuthorized_onBehalf_signed() public {
         Authorization memory authorization = Authorization({
-            owner: alice,
-            spender: bob,
-            isAuthorizedStatus: true,
-            nonce: 0,
-            deadline: block.timestamp + 1 days
+            owner: alice, spender: bob, isAuthorizedStatus: true, nonce: 0, deadline: block.timestamp + 1 days
         });
 
         Signature memory sig;
@@ -85,11 +81,7 @@ contract AuthTest is Test {
 
     function test_isSenderAuthorized_onBehalf_signed_revert_invalidNonce() public {
         Authorization memory authorization = Authorization({
-            owner: alice,
-            spender: bob,
-            isAuthorizedStatus: true,
-            nonce: 10,
-            deadline: block.timestamp + 1 days
+            owner: alice, spender: bob, isAuthorizedStatus: true, nonce: 10, deadline: block.timestamp + 1 days
         });
 
         Signature memory sig;
@@ -106,11 +98,7 @@ contract AuthTest is Test {
 
     function test_isSenderAuthorized_onBehalf_signed_revert_invalidDeadline() public {
         Authorization memory authorization = Authorization({
-            owner: alice,
-            spender: bob,
-            isAuthorizedStatus: true,
-            nonce: 0,
-            deadline: block.timestamp + 1 days
+            owner: alice, spender: bob, isAuthorizedStatus: true, nonce: 0, deadline: block.timestamp + 1 days
         });
 
         Signature memory sig;
@@ -129,11 +117,7 @@ contract AuthTest is Test {
 
     function test_isSenderAuthorized_onBehalf_signed_revert_invalidSignature() public {
         Authorization memory authorization = Authorization({
-            owner: alice,
-            spender: bob,
-            isAuthorizedStatus: true,
-            nonce: 0,
-            deadline: block.timestamp + 1 days
+            owner: alice, spender: bob, isAuthorizedStatus: true, nonce: 0, deadline: block.timestamp + 1 days
         });
 
         Signature memory sig;

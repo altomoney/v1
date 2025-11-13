@@ -67,8 +67,9 @@ contract TestnetStakingBatch {
         multipliers[2] = 0.7 ether;
         multipliers[3] = 1 ether;
 
-        report.stakingContract =
-            address(new AltoStaking(_params.rewardToken, address(this), _params.epochDuration, containers, multipliers));
+        report.stakingContract = address(
+            new AltoStaking(_params.rewardToken, address(this), _params.epochDuration, containers, multipliers)
+        );
 
         IAltoStaking(report.stakingContract).activateContainer(1);
         IAltoStaking(report.stakingContract).activateContainer(2);
