@@ -113,7 +113,7 @@ contract AltoLeverage is Ownable2Step, IBorrowCallback, IRemoveCollateralCallbac
         uint256 userBorrowedAssets =
             uint256(userPosition.borrowShares).convertToAssetsUp(totalBorrowed.assets, totalBorrowed.shares);
 
-        if (amountOut > userBorrowedAssets) {
+        if (amountOut >= userBorrowedAssets) {
             // if the user is trying to repay more than they borrowed, we need to repay the full amount of the borrowed assets
             IERC20(token).forceApprove(address(market), userBorrowedAssets);
             (uint256 assets,) = IMarket(market).repay(0, userPosition.borrowShares, onBehalf);
