@@ -131,6 +131,32 @@ contract AltoBorrowMarketliquidate is MarketCommon {
         _;
     }
 
+    function test_WhenLiquidationWindowTagHasElapsedSinceTagWasSet()
+        external
+        givenPositionIsInsolvent
+        whenPriorityLiquidationIsEnabled
+        whenCurrentLTVIsBelowDisablePriorityLiquidationThreshold
+        whenLiquidatorIsNotPriorityLiquidator
+        whenPositionIsTagged
+    {
+        // Advance time beyond liquidationWindowTag
+        uint32 liquidationWindowTag = market.liquidationConfiguration().liquidationWindowTag;
+        vm.warp(block.timestamp + liquidationWindowTag + 1);
+
+        deal(address(borrowToken), EXTERNAL_LIQUIDATOR, 1 ether);
+        vm.startPrank(EXTERNAL_LIQUIDATOR);
+        borrowToken.approve(address(market), 1 ether);
+
+        // it should revert with AltoBaseMarketLiquidationUnauthorized
+        vm.expectRevert(IMarketErrors.AltoBaseMarketLiquidationUnauthorized.selector);
+        market.liquidate(USER, "");
+        vm.stopPrank();
+    }
+
+    modifier whenLiquidationWindowTagHasNotElapsedSinceTagWasSet() {
+        _;
+    }
+
     modifier whenLiquidatorIsTheTagger() {
         _;
     }
@@ -142,6 +168,7 @@ contract AltoBorrowMarketliquidate is MarketCommon {
         whenCurrentLTVIsBelowDisablePriorityLiquidationThreshold
         whenLiquidatorIsNotPriorityLiquidator
         whenPositionIsTagged
+        whenLiquidationWindowTagHasNotElapsedSinceTagWasSet
         whenLiquidatorIsTheTagger
     {
         // it should revert with AltoBaseMarketLiquidationUnauthorized
@@ -156,10 +183,16 @@ contract AltoBorrowMarketliquidate is MarketCommon {
         whenCurrentLTVIsBelowDisablePriorityLiquidationThreshold
         whenLiquidatorIsNotPriorityLiquidator
         whenPositionIsTagged
+        whenLiquidationWindowTagHasNotElapsedSinceTagWasSet
         whenLiquidatorIsTheTagger
     {
-        // Skip grace period
-        vm.warp(block.timestamp + market.liquidationConfiguration().priorityLiquidationGracePeriod + 1);
+        // Skip grace period but ensure we don't exceed liquidationWindowTag
+        uint32 priorityLiquidationGracePeriod = market.liquidationConfiguration().priorityLiquidationGracePeriod;
+        uint32 liquidationWindowTag = market.liquidationConfiguration().liquidationWindowTag;
+        // Advance time by grace period, but ensure we're still within liquidationWindowTag
+        uint256 timeToAdvance = priorityLiquidationGracePeriod + 1;
+        require(timeToAdvance < liquidationWindowTag, "Grace period exceeds liquidationWindowTag");
+        vm.warp(block.timestamp + timeToAdvance);
 
         deal(address(borrowToken), TAGGER, 1 ether);
         vm.startPrank(TAGGER);
@@ -189,6 +222,7 @@ contract AltoBorrowMarketliquidate is MarketCommon {
         whenCurrentLTVIsBelowDisablePriorityLiquidationThreshold
         whenLiquidatorIsNotPriorityLiquidator
         whenPositionIsTagged
+        whenLiquidationWindowTagHasNotElapsedSinceTagWasSet
         whenLiquidatorIsNotTheTagger
     {
         // it should revert with AltoBaseMarketLiquidationUnauthorized
@@ -203,13 +237,17 @@ contract AltoBorrowMarketliquidate is MarketCommon {
         whenCurrentLTVIsBelowDisablePriorityLiquidationThreshold
         whenLiquidatorIsNotPriorityLiquidator
         whenPositionIsTagged
+        whenLiquidationWindowTagHasNotElapsedSinceTagWasSet
         whenLiquidatorIsNotTheTagger
     {
-        // Skip combined grace periods
-        vm.warp(
-            block.timestamp + market.liquidationConfiguration().priorityLiquidationGracePeriod
-                + market.liquidationConfiguration().taggerLiquidationGracePeriod + 1
-        );
+        // Skip combined grace periods but ensure we don't exceed liquidationWindowTag
+        uint32 priorityLiquidationGracePeriod = market.liquidationConfiguration().priorityLiquidationGracePeriod;
+        uint32 taggerLiquidationGracePeriod = market.liquidationConfiguration().taggerLiquidationGracePeriod;
+        uint32 liquidationWindowTag = market.liquidationConfiguration().liquidationWindowTag;
+        // Advance time by combined grace periods, but ensure we're still within liquidationWindowTag
+        uint256 timeToAdvance = priorityLiquidationGracePeriod + taggerLiquidationGracePeriod + 1;
+        require(timeToAdvance < liquidationWindowTag, "Combined grace periods exceed liquidationWindowTag");
+        vm.warp(block.timestamp + timeToAdvance);
 
         deal(address(borrowToken), EXTERNAL_LIQUIDATOR, 1 ether);
         vm.startPrank(EXTERNAL_LIQUIDATOR);

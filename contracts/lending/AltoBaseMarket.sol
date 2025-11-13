@@ -611,7 +611,12 @@ abstract contract AltoBaseMarket is
             liquidationConfiguration.isEnabledPriorityLiquidation
                 && calc.currentLtv <= liquidationConfiguration.disablePriorityLiquidationAbovePositionLtv
         ) {
-            if (!priorityLiquidators[msg.sender] && !liquidablePositions[borrower].tagged) {
+            if (
+                !priorityLiquidators[msg.sender]
+                    && (!liquidablePositions[borrower].tagged
+                        || block.timestamp - liquidablePositions[borrower].timestamp
+                            > liquidationConfiguration.liquidationWindowTag)
+            ) {
                 revert AltoBaseMarketLiquidationUnauthorized();
             }
 
