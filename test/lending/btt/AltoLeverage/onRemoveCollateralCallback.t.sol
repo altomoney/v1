@@ -8,7 +8,8 @@ import {
     IAltoLeverageSwapperErrors,
     SwapParams
 } from "@alto/lending/leverage/interfaces/IAltoLeverageSwapper.sol";
-import {Position} from "@alto/lending/interfaces/IMarket.sol";
+import {Position, Balance} from "@alto/lending/interfaces/IMarket.sol";
+import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
 
 contract OnRemoveCollateralCallbackTest is AltoLeverageBTTTest {
     /// @dev it should revert
@@ -114,6 +115,51 @@ contract OnRemoveCollateralCallbackTest is AltoLeverageBTTTest {
         );
     }
 
+    /// @dev it should repay full user debt
+    function test_RepayFullUserDebt_WhenNoLeftoverTokensAndAmountOutIsEqualToUserBorrowedAssets()
+        external
+        givenMarketIsSupported
+        givenUserHasCollateralAndDebt
+    {
+        Position memory positionBefore = market.position(alice);
+        Balance memory totalBorrowed = market.totalBorrowed();
+
+        // Calculate user's debt in assets
+        uint256 swapOutput = AssetShareConversionMath.convertToAssetsDown(
+            uint256(positionBefore.borrowShares), totalBorrowed.assets, totalBorrowed.shares
+        );
+
+        SwapParams memory leverageData = SwapParams({minAmountOut: swapOutput, swapData: hex""});
+        bytes memory data = abi.encode(leverageData);
+
+        uint256 leverageBorrowBefore = borrowToken.balanceOf(address(leverage));
+        uint256 leverageCollateralBefore = collateralToken.balanceOf(address(leverage));
+
+        vm.startPrank(alice);
+        market.removeCollateral(400 ether, alice, address(leverage), data);
+        vm.stopPrank();
+
+        Position memory positionAfter = market.position(alice);
+
+        // Alice should have zero debt after full repayment
+        assertEq(positionAfter.borrowShares, 0, "Alice should have zero debt");
+
+        // Alice should have less collateral after removal
+        assertLt(positionAfter.collateralAssets, positionBefore.collateralAssets, "Alice should have less collateral");
+
+        // Leverage contract should maintain its original balances
+        assertEq(
+            borrowToken.balanceOf(address(leverage)),
+            leverageBorrowBefore,
+            "Leverage contract borrow balance should be unchanged"
+        );
+        assertEq(
+            collateralToken.balanceOf(address(leverage)),
+            leverageCollateralBefore,
+            "Leverage contract collateral balance should be unchanged"
+        );
+    }
+
     /// @dev it should repay full user debt and transfer excess to onBehalf
     function test_RepayFullDebtAndTransferExcess_WhenNoLeftoverTokensAndAmountOutIsGreaterThanUserBorrowedAssets()
         external
@@ -214,6 +260,64 @@ contract OnRemoveCollateralCallbackTest is AltoLeverageBTTTest {
         assertEq(
             leverageCollateralBalanceAfter,
             leverageCollateralBalanceBefore,
+            "Leverage contract collateral balance should be unchanged"
+        );
+    }
+
+    /// @dev it should transfer leftover tokens to onBehalf and repay full user debt
+    function test_TransferLeftoverTokensAndRepayFullDebt_WhenLeftoverTokensAndAmountOutIsEqualToUserBorrowedAssets()
+        external
+        givenMarketIsSupported
+        givenUserHasCollateralAndDebt
+    {
+        Position memory positionBefore = market.position(alice);
+        Balance memory totalBorrowed = market.totalBorrowed();
+
+        // Calculate user's debt in assets
+        uint256 swapOutput = AssetShareConversionMath.convertToAssetsDown(
+            uint256(positionBefore.borrowShares), totalBorrowed.assets, totalBorrowed.shares
+        );
+
+        uint256 leftoverAmount = 30 ether;
+
+        // Configure swapper to leave leftovers
+        swapper.setLeftoverTokens(leftoverAmount);
+
+        SwapParams memory leverageData = SwapParams({minAmountOut: swapOutput, swapData: hex""});
+        bytes memory data = abi.encode(leverageData);
+
+        uint256 aliceCollateralBefore = collateralToken.balanceOf(alice);
+        uint256 leverageBorrowBefore = borrowToken.balanceOf(address(leverage));
+        uint256 leverageCollateralBefore = collateralToken.balanceOf(address(leverage));
+
+        vm.startPrank(alice);
+        market.removeCollateral(400 ether, alice, address(leverage), data);
+        vm.stopPrank();
+
+        Position memory positionAfter = market.position(alice);
+
+        // Alice should have zero debt after full repayment
+        assertEq(positionAfter.borrowShares, 0, "Alice should have zero debt");
+
+        // Alice should have less collateral after removal
+        assertLt(positionAfter.collateralAssets, positionBefore.collateralAssets, "Alice should have less collateral");
+
+        // Alice should receive leftover collateral tokens
+        assertEq(
+            collateralToken.balanceOf(alice),
+            aliceCollateralBefore + leftoverAmount,
+            "Alice should receive leftover collateral tokens"
+        );
+
+        // Leverage contract should maintain its original balances
+        assertEq(
+            borrowToken.balanceOf(address(leverage)),
+            leverageBorrowBefore,
+            "Leverage contract borrow balance should be unchanged"
+        );
+        assertEq(
+            collateralToken.balanceOf(address(leverage)),
+            leverageCollateralBefore,
             "Leverage contract collateral balance should be unchanged"
         );
     }
