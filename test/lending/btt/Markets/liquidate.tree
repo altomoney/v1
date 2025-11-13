@@ -10,16 +10,19 @@ AltoBaseMarket::liquidate()
 │   │   │   │   ├── when position is not tagged
 │   │   │   │   │   └── it should revert with AltoBaseMarketLiquidationUnauthorized
 │   │   │   │   └── when position is tagged
-│   │   │   │       ├── when liquidator is the tagger
-│   │   │   │       │   ├── when priority liquidation grace period has not elapsed
-│   │   │   │       │   │   └── it should revert with AltoBaseMarketLiquidationUnauthorized
-│   │   │   │       │   └── when priority liquidation grace period has elapsed
-│   │   │   │       │       └── it should proceed with liquidation
-│   │   │   │       └── when liquidator is not the tagger
-│   │   │   │           ├── when combined grace periods have not elapsed
-│   │   │   │           │   └── it should revert with AltoBaseMarketLiquidationUnauthorized
-│   │   │   │           └── when combined grace periods have elapsed
-│   │   │   │               └── it should proceed with liquidation
+│   │   │   │       ├── when liquidationWindowTag has elapsed since tag was set
+│   │   │   │       │   └── it should revert with AltoBaseMarketLiquidationUnauthorized
+│   │   │   │       └── when liquidationWindowTag has not elapsed since tag was set
+│   │   │   │           ├── when liquidator is the tagger
+│   │   │   │           │   ├── when priority liquidation grace period has not elapsed
+│   │   │   │           │   │   └── it should revert with AltoBaseMarketLiquidationUnauthorized
+│   │   │   │           │   └── when priority liquidation grace period has elapsed
+│   │   │   │           │       └── it should proceed with liquidation
+│   │   │   │           └── when liquidator is not the tagger
+│   │   │   │               ├── when combined grace periods have not elapsed
+│   │   │   │               │   └── it should revert with AltoBaseMarketLiquidationUnauthorized
+│   │   │   │               └── when combined grace periods have elapsed
+│   │   │   │                   └── it should proceed with liquidation
 │   │   │   └── when liquidator is priority liquidator
 │   │   │       └── it should proceed with liquidation
 │   │   └── when current LTV is above disable priority liquidation threshold
