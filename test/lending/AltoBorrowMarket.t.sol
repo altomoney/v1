@@ -10,8 +10,18 @@ import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
 import {console2} from "forge-std/console2.sol";
 import {MockMarketDeployer, MockMarket} from "@alto-test/helpers/MockMarket.sol";
 import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
+import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
+import {AltoLeverageSwapper} from "@alto/lending/leverage/AltoLeverageSwapper.sol";
+import {SwapperSimpleMock} from "@alto/lending/mocks/SwapperSimpleMock.sol";
+import {SwapParams} from "@alto/lending/leverage/interfaces/IAltoLeverageSwapper.sol";
+import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
+import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
+import {stdError} from "forge-std/StdError.sol";
 
 contract AltoBorrowMarketTest is Test {
+    using FixedPointMath for uint256;
+    using AssetShareConversionMath for uint256;
+
     MockMarket market;
     ERC20Mock borrowToken;
     ERC20Mock collateralToken;
@@ -287,6 +297,71 @@ contract AltoBorrowMarketTest is Test {
         // assertEq(market.borrowAmountToShares(4.1 ether), borrowShares);
 
         //market.repay(3037500000000000000, 0);
+        vm.stopPrank();
+    }
+
+    /// @notice POC: Bug in AltoLeverage._repay when assets < shares and amountOut == userBorrowedAssets
+    /// @dev When assets < shares, ceil() in _repay and floor() in repay() cause shares overestimation -> revert
+    function test_POC_AltoLeverageRepayBug_Issue26() public {
+        address supplier = address(0x1);
+        address borrower1 = address(0x2);
+        address borrower2 = address(0x5);
+        address borrower = address(0xB0B);
+
+        deal(address(borrowToken), supplier, INITIAL_AMOUNT);
+        deal(address(collateralToken), borrower1, INITIAL_AMOUNT);
+        deal(address(collateralToken), borrower2, INITIAL_AMOUNT);
+        deal(address(collateralToken), borrower, INITIAL_AMOUNT);
+
+        SwapperSimpleMock swapper = new SwapperSimpleMock(address(this));
+        AltoLeverage leverage = new AltoLeverage(address(swapper), address(this));
+        swapper.setWhitelisted(address(leverage), true);
+        leverage.setMarket(address(market), true);
+        market.setAuthorizedCallback(address(leverage), true);
+        deal(address(borrowToken), address(swapper), INITIAL_AMOUNT);
+
+        vm.startPrank(supplier);
+        borrowToken.approve(address(market), type(uint256).max);
+        market.addSupply(INITIAL_AMOUNT, 0, supplier);
+        vm.stopPrank();
+
+        vm.startPrank(borrower1);
+        collateralToken.approve(address(market), type(uint256).max);
+        market.addCollateral(2, borrower1);
+        market.borrow(1, 0, borrower1, borrower1, "");
+        vm.stopPrank();
+
+        vm.startPrank(borrower2);
+        collateralToken.approve(address(market), type(uint256).max);
+        market.addCollateral(10, borrower2);
+        market.borrow(1, 0, borrower2, borrower2, "");
+        vm.stopPrank();
+
+        (uint128 totalBorrowedAssets, uint128 totalBorrowedShares) = market.totalBorrowed();
+        require(totalBorrowedAssets < totalBorrowedShares, "Need assets < shares for bug");
+
+        vm.startPrank(borrower);
+        collateralToken.approve(address(market), type(uint256).max);
+        market.addCollateral(100 ether, borrower);
+        market.borrow(0, 75, borrower, borrower, "");
+        vm.stopPrank();
+
+        (totalBorrowedAssets, totalBorrowedShares) = market.totalBorrowed();
+        (, uint128 borrowSharesBefore,) = market.position(borrower);
+
+        uint256 userBorrowedAssets =
+            uint256(borrowSharesBefore).convertToAssetsUp(totalBorrowedAssets, totalBorrowedShares);
+        uint256 sharesCalculatedInRepay =
+            userBorrowedAssets.convertToSharesDown(totalBorrowedAssets, totalBorrowedShares);
+
+        assertGt(sharesCalculatedInRepay, borrowSharesBefore, "repay will calculate more shares than user has");
+
+        SwapParams memory swapParams = SwapParams({minAmountOut: userBorrowedAssets, swapData: hex""});
+        bytes memory data = abi.encode(swapParams);
+
+        vm.startPrank(borrower);
+        vm.expectRevert(stdError.arithmeticError);
+        market.removeCollateral(50 ether, borrower, address(leverage), data);
         vm.stopPrank();
     }
 
