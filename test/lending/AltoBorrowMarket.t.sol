@@ -300,9 +300,8 @@ contract AltoBorrowMarketTest is Test {
         vm.stopPrank();
     }
 
-    /// @notice POC: Bug in AltoLeverage._repay when assets < shares and amountOut == userBorrowedAssets
-    /// @dev When assets < shares, ceil() in _repay and floor() in repay() cause shares overestimation -> revert
-    function test_POC_AltoLeverageRepayBug_Issue26() public {
+    // Bailsec Lending Audit; Issue #10
+    function test_AltoLeverageRepay_amountOutEqualsuserBorrowedAssets() public {
         address supplier = address(0x1);
         address borrower1 = address(0x2);
         address borrower2 = address(0x5);
@@ -313,6 +312,7 @@ contract AltoBorrowMarketTest is Test {
         deal(address(collateralToken), borrower2, INITIAL_AMOUNT);
         deal(address(collateralToken), borrower, INITIAL_AMOUNT);
 
+        // Setup swapper and leverage
         SwapperSimpleMock swapper = new SwapperSimpleMock(address(this));
         AltoLeverage leverage = new AltoLeverage(address(swapper), address(this));
         swapper.setWhitelisted(address(leverage), true);
@@ -320,17 +320,20 @@ contract AltoBorrowMarketTest is Test {
         market.setAuthorizedCallback(address(leverage), true);
         deal(address(borrowToken), address(swapper), INITIAL_AMOUNT);
 
+        // Add initial borrow token supply
         vm.startPrank(supplier);
         borrowToken.approve(address(market), type(uint256).max);
         market.addSupply(INITIAL_AMOUNT, 0, supplier);
         vm.stopPrank();
 
+        // Setup borrower1's position
         vm.startPrank(borrower1);
         collateralToken.approve(address(market), type(uint256).max);
         market.addCollateral(2, borrower1);
         market.borrow(1, 0, borrower1, borrower1, "");
         vm.stopPrank();
 
+        // Setup borrower2's position
         vm.startPrank(borrower2);
         collateralToken.approve(address(market), type(uint256).max);
         market.addCollateral(10, borrower2);
@@ -347,7 +350,7 @@ contract AltoBorrowMarketTest is Test {
         vm.stopPrank();
 
         (totalBorrowedAssets, totalBorrowedShares) = market.totalBorrowed();
-        (, uint128 borrowSharesBefore,) = market.position(borrower);
+        (, uint128 borrowSharesBefore, uint128 collateralBefore) = market.position(borrower);
 
         uint256 userBorrowedAssets =
             uint256(borrowSharesBefore).convertToAssetsUp(totalBorrowedAssets, totalBorrowedShares);
@@ -355,14 +358,24 @@ contract AltoBorrowMarketTest is Test {
             userBorrowedAssets.convertToSharesDown(totalBorrowedAssets, totalBorrowedShares);
 
         assertGt(sharesCalculatedInRepay, borrowSharesBefore, "repay will calculate more shares than user has");
+        assertGt(collateralBefore, 50 ether, "borrower should have enough collateral");
+        assertTrue(totalBorrowedAssets < totalBorrowedShares, "assets < shares state");
 
         SwapParams memory swapParams = SwapParams({minAmountOut: userBorrowedAssets, swapData: hex""});
         bytes memory data = abi.encode(swapParams);
 
         vm.startPrank(borrower);
-        vm.expectRevert(stdError.arithmeticError);
         market.removeCollateral(50 ether, borrower, address(leverage), data);
         vm.stopPrank();
+
+        // Assertions after removeCollateral
+        (, uint128 borrowSharesAfter, uint128 collateralAfter) = market.position(borrower);
+        (uint128 totalBorrowedAssetsAfter, uint128 totalBorrowedSharesAfter) = market.totalBorrowed();
+
+        assertEq(collateralAfter, collateralBefore - 50 ether, "collateral should decrease by 50 ether");
+        assertEq(borrowSharesAfter, 0, "borrowShares should be zero after repayment");
+        assertLt(totalBorrowedAssetsAfter, totalBorrowedAssets, "totalBorrowed assets should decrease");
+        assertLt(totalBorrowedSharesAfter, totalBorrowedShares, "totalBorrowed shares should decrease");
     }
 
     function testAccrueInterest() public {
