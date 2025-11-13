@@ -331,6 +331,98 @@ contract AltoBorrowMarketTest is Test {
         vm.stopPrank();
     }
 
+    function testLiquidatorCanReceiveFeeWithoutRepayingDebt() public {
+        createMarket(
+            LiquidationConfiguration({
+                maxLiquidationLtv: 0.8 ether,
+                dynamicBonusFeeStart: 0.03 ether,
+                ltvForCompleteLiquidation: 0.9 ether,
+                dynamicBonusFeeDecaySteepness: 5 ether,
+                liquidationBaseFee: 0.05 ether,
+                minPenaltyPercentage: 0.01 ether,
+                protocolFeePercentage: 0 ether,
+                isEnabledPriorityLiquidation: true,
+                disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
+                priorityLiquidationGracePeriod: 5 minutes,
+                taggerLiquidationGracePeriod: 2 minutes,
+                liquidationWindowTag: 3 days
+            }),
+            0.0003e36,
+            0.75 ether
+        );
+
+        // Initial User position:
+        // collateralAssets = 10525 wei
+        //  collateralValue = 3 wei
+        //  borrowAssets = 2 wei
+
+        vm.startPrank(bob);
+        // bob supplies 10525 assets
+        market.addCollateral(10525, bob);
+        // bob borrows 2 wei of assets
+        market.borrow(2 wei, 0, bob, bob, "");
+        vm.stopPrank();
+
+        // After price goes down:
+        // collateralPrice = 0.0001e36
+        // collateralValue = 1 wei
+        OracleMock(market.oracle()).setPrice(0.0001e36);
+
+        uint256 collateralBalanceOfLiqudatorBefore = collateralToken.balanceOf(liquidator);
+        uint256 debtBalanceOfLiqudatorBefore = borrowToken.balanceOf(liquidator);
+
+        // After liquidation:
+        // liquidationBaseFee = 0.05e18
+        // liquidationPercentage = 1e18
+        // newLtv = 0
+
+        // liquidatorBonusFee = 526
+        // remainingCollateralAfterFee = 10_525 - 526 = 9999 wei
+        // remainingCollateralAfterFeeInBorrowAssets = 0 wei (truncation)
+        // collateralToSellInBorrowAssets = 2 wei --> clamped to 0 wei
+
+        // totalCollateralToTake = 526 wei (only liquidation fee)
+        // repayAmount = 0
+        vm.startPrank(liquidator);
+        market.liquidate(bob, hex"");
+        vm.stopPrank();
+
+        uint256 collateralBalanceOfLiqudatorAfter = collateralToken.balanceOf(liquidator);
+        uint256 debtBalanceOfLiqudatorAfter = borrowToken.balanceOf(liquidator);
+        assertGt(
+            collateralBalanceOfLiqudatorAfter,
+            collateralBalanceOfLiqudatorBefore,
+            "liquidator did not receive collateral after first liquidation"
+        );
+        assertEq(
+            debtBalanceOfLiqudatorAfter,
+            debtBalanceOfLiqudatorBefore,
+            "liquidator paid debt which is not needed after first liquidation"
+        );
+
+        vm.prank(bob);
+        market.addCollateral(1, bob);
+
+        collateralBalanceOfLiqudatorBefore = collateralToken.balanceOf(liquidator);
+        debtBalanceOfLiqudatorBefore = borrowToken.balanceOf(liquidator);
+        vm.startPrank(liquidator);
+        market.liquidate(bob, hex"");
+        vm.stopPrank();
+
+        collateralBalanceOfLiqudatorAfter = collateralToken.balanceOf(liquidator);
+        debtBalanceOfLiqudatorAfter = borrowToken.balanceOf(liquidator);
+        assertGt(
+            collateralBalanceOfLiqudatorAfter,
+            collateralBalanceOfLiqudatorBefore,
+            "liquidator did not receive collateral after second liquidation"
+        );
+        assertEq(
+            debtBalanceOfLiqudatorAfter,
+            debtBalanceOfLiqudatorBefore,
+            "liquidator paid debt which is not needed after second liquidation"
+        );
+    }
+
     function testLiquidateBasic() public {
         createMarket(
             LiquidationConfiguration({
