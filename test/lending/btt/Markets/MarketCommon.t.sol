@@ -111,9 +111,7 @@ abstract contract MarketCommon is Test {
             borrowToken = ERC20Mock(address(new ERC20MockMintable("borrow", "B")));
             baseMarketInitParams.borrowToken = address(borrowToken);
             DaoMintMarketInitParams memory daoMintMarketInitParams = DaoMintMarketInitParams({
-                baseMarketInitParams: baseMarketInitParams,
-                debtCeiling: 1000000 ether,
-                initialBorrowOpeningFee: 0
+                baseMarketInitParams: baseMarketInitParams, debtCeiling: 1000000 ether, initialBorrowOpeningFee: 0
             });
             market = IMarket(MarketDeployer.deployDaoMintMarket(daoMintMarketInitParams));
         }

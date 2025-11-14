@@ -52,9 +52,8 @@ contract BorrowTestDaoMint is AltoMarketBorrow {
         uint256 expectedOpeningFeeAssets = INITIAL_BORROWED_ASSETS.multiplyWithPrecision(openingFee);
         uint256 openingFeeShares =
             expectedOpeningFeeAssets.convertToSharesUp(totalSupplyBefore.assets, totalSupplyBefore.shares);
-        uint256 expectedSharesToBorrow = (INITIAL_BORROWED_ASSETS + expectedOpeningFeeAssets).convertToSharesUp(
-            totalBorrowedBefore.assets, totalBorrowedBefore.shares
-        );
+        uint256 expectedSharesToBorrow = (INITIAL_BORROWED_ASSETS + expectedOpeningFeeAssets)
+        .convertToSharesUp(totalBorrowedBefore.assets, totalBorrowedBefore.shares);
 
         vm.startPrank(USER);
         // it should emit Borrow event

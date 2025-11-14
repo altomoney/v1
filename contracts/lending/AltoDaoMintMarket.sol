@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import {Uint128Converter} from "./libraries/Uint128Converter.sol";
 
 import {IIrm} from "./interfaces/IIrm.sol";
-import {Balance, DaoMintMarketInitParams, LiquidationConfiguration} from "./interfaces/IMarket.sol";
+import {Balance, DaoMintMarketInitParams, LiquidationConfiguration, MarketType} from "./interfaces/IMarket.sol";
 import {IMintableERC20} from "./interfaces/IMintableERC20.sol";
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
@@ -86,7 +86,7 @@ contract AltoDaoMintMarket is AltoBaseMarket {
     }
 
     function initialize(DaoMintMarketInitParams memory _initParams) public initializer {
-        __AltoBaseMarket_init(_initParams.baseMarketInitParams);
+        __AltoBaseMarket_init(_initParams.baseMarketInitParams, MarketType.DAO_MINT);
 
         if (_initParams.initialBorrowOpeningFee > MATH_PRECISION) {
             revert AltoDaoMintMarketInvalidInput();
