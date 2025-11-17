@@ -31,7 +31,7 @@ interface IAltoLeverageSwapperEvents {
     /// @notice event emitted when the swap is executed
     /// @param sellToken the token that was sold
     /// @param buyToken the token that was bought
-    /// @param amountIn the amount of sellToken that was sold
+    /// @param amountIn the amount of sellToken that was approved for the swap
     /// @param amountOut the amount of buyToken that was bought
     /// @param amountLeftover the amount of sellToken that was leftover
     event Swap(
