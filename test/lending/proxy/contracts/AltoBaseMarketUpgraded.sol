@@ -18,7 +18,8 @@ import {
     LiquidationCalculation,
     LiquidationCalculationResult,
     LiquidablePosition,
-    BaseMarketInitParams
+    BaseMarketInitParams,
+    MarketType
 } from "@alto/lending/interfaces/IMarket.sol";
 import {AuthUpgradeable} from "@alto/utils/AuthUpgradeable.sol";
 import {IIrm} from "@alto/lending/interfaces/IIrm.sol";
@@ -51,6 +52,9 @@ abstract contract AltoBaseMarketUpgraded is
     using Uint128Converter for uint256;
 
     using SafeERC20 for IERC20;
+
+    /// @inheritdoc IMarketBase
+    MarketType public MARKET_TYPE;
 
     /// @inheritdoc IMarketBase
     address public borrowToken;
@@ -100,7 +104,10 @@ abstract contract AltoBaseMarketUpgraded is
     /// upgrade gap (previous slot has 12 bytes left)
     uint256[29] private __gap_base;
 
-    function __AltoBaseMarket_init(BaseMarketInitParams memory _baseMarketInitParams) internal onlyInitializing {
+    function __AltoBaseMarket_init(BaseMarketInitParams memory _baseMarketInitParams, MarketType _marketType)
+        internal
+        onlyInitializing
+    {
         _validateLiquidationConfiguration(_baseMarketInitParams.liquidationConfiguration, _baseMarketInitParams.maxLtv);
 
         if (

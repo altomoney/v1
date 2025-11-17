@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import {Uint128Converter} from "./libraries/Uint128Converter.sol";
 
 import {IIrm} from "./interfaces/IIrm.sol";
-import {Balance, MintMarketInitParams, LiquidationConfiguration} from "./interfaces/IMarket.sol";
+import {Balance, MintMarketInitParams, LiquidationConfiguration, MarketType} from "./interfaces/IMarket.sol";
 import {IMintableERC20} from "./interfaces/IMintableERC20.sol";
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
@@ -64,7 +64,7 @@ contract AltoMintMarket is AltoBaseMarket {
     }
 
     function initialize(MintMarketInitParams memory _initParams) public initializer {
-        __AltoBaseMarket_init(_initParams.baseMarketInitParams);
+        __AltoBaseMarket_init(_initParams.baseMarketInitParams, MarketType.MINT);
 
         if (_initParams.initialBorrowOpeningFee > MATH_PRECISION) {
             revert AltoMintMarketInvalidInput();

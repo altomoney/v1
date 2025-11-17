@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {AltoBaseMarket} from "@alto/lending/AltoBaseMarket.sol";
-import {BaseMarketInitParams, LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
+import {BaseMarketInitParams, LiquidationConfiguration, MarketType} from "@alto/lending/interfaces/IMarket.sol";
 import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 
 contract MarketInstance is AltoBaseMarket {
@@ -12,7 +12,7 @@ contract MarketInstance is AltoBaseMarket {
         public
         initializer
     {
-        __AltoBaseMarket_init(_baseMarketInitParams);
+        __AltoBaseMarket_init(_baseMarketInitParams, MarketType.BORROW);
         _borrowOpeningFee = _borrowOpeningFeeWad;
     }
 
