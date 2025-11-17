@@ -50,6 +50,22 @@ contract AltoRewardsOracleUpdatePrice is AltoRewardsOracleCommon {
         oracle.updatePrice();
     }
 
+    function test_RevertWhen_CalledInSameBlockAsLastPriceUpdateTimestamp() external whenOracleIsInitiated {
+        // Initialize oracle
+        vm.prank(OWNER);
+        oracle.startTwapPeriod(INITIAL_PRICE);
+
+        uint256 cooldownPeriod = oracle.priceUpdateCooldownPeriod();
+
+        // Move time forward by exactly the cooldown period
+        vm.warp(block.timestamp + cooldownPeriod);
+
+        oracle.updatePrice();
+
+        vm.expectRevert(IAltoRewardsOracleErrors.AltoRewardsOracleTooEarlyToUpdatePrice.selector);
+        oracle.updatePrice();
+    }
+
     function test_WhenCooldownPeriodHasPassed() external whenOracleIsInitiated {
         // Initialize oracle
         vm.prank(OWNER);
@@ -61,20 +77,5 @@ contract AltoRewardsOracleUpdatePrice is AltoRewardsOracleCommon {
         vm.warp(block.timestamp + cooldownPeriod);
 
         oracle.updatePrice();
-    }
-
-    function test_ZeroCooldownPeriod() external whenOracleIsInitiated {
-        // Create oracle with zero cooldown period
-        AltoRewardsOracleInitParams memory params = _createValidInitParams();
-        params.priceUpdateCooldownPeriod = 0;
-
-        AltoRewardsOracle zeroCooldownOracle = new AltoRewardsOracle(params);
-
-        // Initialize oracle
-        vm.prank(OWNER);
-        zeroCooldownOracle.startTwapPeriod(INITIAL_PRICE);
-
-        // can update price immediately with zero cooldown
-        zeroCooldownOracle.updatePrice();
     }
 }
