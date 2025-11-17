@@ -50,6 +50,14 @@ contract AltoRewardsOracleConstructor is AltoRewardsOracleCommon {
         new AltoRewardsOracle(params);
     }
 
+    function test_RevertWhen_PriceUpdateCooldownPeriodIsZero() external givenInvalidInputs {
+        AltoRewardsOracleInitParams memory params = _createValidInitParams();
+        params.priceUpdateCooldownPeriod = 0;
+
+        vm.expectRevert(IAltoRewardsOracleErrors.AltoRewardsOracleInvalidInput.selector);
+        new AltoRewardsOracle(params);
+    }
+
     function test_WhenValidParametersProvided() external givenValidInputs {
         AltoRewardsOracleInitParams memory params = _createValidInitParams();
 

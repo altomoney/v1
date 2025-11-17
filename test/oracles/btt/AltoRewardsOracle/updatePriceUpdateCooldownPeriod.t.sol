@@ -38,17 +38,12 @@ contract AltoRewardsOracleUpdatePriceUpdateCooldownPeriod is AltoRewardsOracleCo
         vm.stopPrank();
     }
 
-    function test_WhenNewCooldownPeriodIsZero() external whenCallerIsOwner {
+    function test_RevertWhen_NewCooldownPeriodIsZero() external whenCallerIsOwner {
         uint256 oldCooldownPeriod = oracle.priceUpdateCooldownPeriod();
         uint256 newCooldownPeriod = 0;
 
-        vm.expectEmit(false, false, false, true);
-        emit IAltoRewardsOracleEvents.PriceUpdateCooldownPeriodUpdated(oldCooldownPeriod, newCooldownPeriod);
-
+        vm.expectRevert(IAltoRewardsOracleErrors.AltoRewardsOracleInvalidInput.selector);
         oracle.updatePriceUpdateCooldownPeriod(newCooldownPeriod);
-
-        // it should set priceUpdateCooldownPeriod to zero
-        assertEq(oracle.priceUpdateCooldownPeriod(), 0);
     }
 
     function test_WhenNewCooldownPeriodIsSameAsCurrent() external whenCallerIsOwner {

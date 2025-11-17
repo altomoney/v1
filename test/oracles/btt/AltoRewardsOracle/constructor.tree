@@ -6,6 +6,8 @@ AltoRewardsOracle::Constructor()
 │   │   └── it should revert with ModuleChainlinkInvalidInput
 │   ├── when owner is zero address
 │   │   └── it should revert with OwnableInvalidOwner
+│   ├── when priceUpdateCooldownPeriod is zero
+│   │   └── it should revert with AltoRewardsOracleInvalidInput
 └── given valid inputs
     ├── when valid parameters provided
     │   ├── it should set inTokenOneUnit correctly

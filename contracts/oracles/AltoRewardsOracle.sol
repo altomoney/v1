@@ -44,6 +44,9 @@ contract AltoRewardsOracle is Ownable2Step, ModuleChainlink, ModuleUniswap, IAlt
     /// @param _initParams The initialization parameters
     /// @dev The inDecimals of chainlink node should be the same as decimals of token apart from Alto token of uniswap pool
     constructor(AltoRewardsOracleInitParams memory _initParams) Ownable(_initParams.owner) {
+        if (_initParams.priceUpdateCooldownPeriod == 0) {
+            revert AltoRewardsOracleInvalidInput();
+        }
         _validateUniswapParams(_initParams.uniswapNode);
         _validateChainlinkParams(_initParams.chainlinkNode);
 
@@ -110,7 +113,7 @@ contract AltoRewardsOracle is Ownable2Step, ModuleChainlink, ModuleUniswap, IAlt
 
     /// @inheritdoc IAltoRewardsOracleBase
     function updatePriceUpdateCooldownPeriod(uint256 _priceUpdateCooldownPeriod) external onlyOwner {
-        if (priceUpdateCooldownPeriod == _priceUpdateCooldownPeriod) {
+        if (priceUpdateCooldownPeriod == _priceUpdateCooldownPeriod || _priceUpdateCooldownPeriod == 0) {
             revert AltoRewardsOracleInvalidInput();
         }
 

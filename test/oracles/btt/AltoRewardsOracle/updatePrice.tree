@@ -5,7 +5,9 @@ AltoRewardsOracle::updatePrice()
 └── when oracle is initiated
     └── when lastPriceUpdateTimestamp is not zero
         ├── given cooldown period has not passed
-        │   └── when block.timestamp - lastPriceUpdateTimestamp < priceUpdateCooldownPeriod
+        │   ├── when block.timestamp - lastPriceUpdateTimestamp < priceUpdateCooldownPeriod
+        │   │   └── it should revert with AltoRewardsOracleTooEarlyToUpdatePrice
+        │   └── when called in same block as lastPriceUpdateTimestamp
         │       └── it should revert with AltoRewardsOracleTooEarlyToUpdatePrice
         ├── given cooldown period has passed
         │   └── when block.timestamp - lastPriceUpdateTimestamp >= priceUpdateCooldownPeriod
@@ -13,6 +15,3 @@ AltoRewardsOracle::updatePrice()
         │       ├── it should update cachedPrice to the new price
         │       ├── it should update lastPriceUpdateTimestamp to current block timestamp
         │       └── it should emit PriceUpdated event with timestamp, newPrice, and oldPrice
-        └── given cooldown period is zero
-            └── when priceUpdateCooldownPeriod is 0
-                └── it should allow immediate price updates
