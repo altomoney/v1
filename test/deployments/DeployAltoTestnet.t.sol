@@ -22,7 +22,8 @@ contract AltoReleaseTest is Test, TestHelperOz5 {
             owner: address(this),
             skipLendingDeployment: false,
             lzEndpoint: address(endpoints[1]),
-            wrappedNativeToken: makeAddr("weth")
+            wrappedNativeToken: makeAddr("weth"),
+            uniswapV3NonFungiblePositionManager: makeAddr("uniswapV3NonFungiblePositionManager")
         });
     }
 

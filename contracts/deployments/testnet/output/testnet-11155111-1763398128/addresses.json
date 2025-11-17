@@ -1,0 +1,69 @@
+{
+  "contracts": {
+    "altoAdapter": "0x1490E5C1EC3e30b4A95b043030B8D93196b4Bc3A",
+    "altoLeverage": "0x18EaeeE769E25DD758eebee175D4F5d7a3C2F898",
+    "altoMulticall": "0xd6Fb8C657E50BB75c201658317dacbf74Dd5fb99",
+    "bundler3": "0xba7e056bCEF6Cf8Ab1171891345cB836Ad8feb0a",
+    "mockSwapper": "0x67e944E90E6A7f121d987443fB192e099CD69F27",
+    "multiTokenSender": "0xb211a3369ba2D91c81DC7EB8F2648FeD1BdB06B0",
+    "rethMarketBatch": {
+      "market": "0x865C12b77aA54a0A3629b7C35b6FB910a9Da2c3A",
+      "marketImplementation": "0x0d9D5008973007401478DB6f6358d9650e5fD1B3",
+      "marketIrm": "0x06B4b255ac1cdDd233Bd772699234dA919b9de30",
+      "marketOracle": "0xEeA9EBdfA9f9C023b67aDC3e025e3898645026A8"
+    },
+    "rewardsBatch": {
+      "paymentOracles": [
+        "0xb869a09FE10A028679825D21B4aC4D123327C033",
+        "0x3c9bA0567eDB75e158Aa218eD9B8C5DEA0D0Abb4"
+      ],
+      "rewardOracle": "0x8dCD75D35f0c211dF9ebab118E43fBF7eAA6436F",
+      "rewardsDistributor": "0x04E27d3cAaC94a5dd868D0ce8d11E3D2B5371B62"
+    },
+    "sboldMarketBatch": {
+      "market": "0xb93f0268792d57EB5c5B0351d5397e06f92A40f2",
+      "marketImplementation": "0x7eDb166ac79Ddc0c421f60219906a221619dfdD2",
+      "marketIrm": "0xBCc1cf49963aCE09a00981C08F441c01e5Dc2a9a",
+      "marketOracle": "0xC2197310B0C856f430D4febfA17e6947E7c0427B"
+    },
+    "stakingBatch": {
+      "stakingContract": "0x0D625BF69429Ad6D4f0E6511e93932e8D3E31e0e",
+      "universalRewardsDistributor": "0xb42c07B6167b78B628e8412772F4F032F91cC0b8"
+    },
+    "susdeMarketBatch": {
+      "market": "0x28954BDbe498c55449a988963f5dc51Ad440100B",
+      "marketImplementation": "0xe25B5e182c3A24FA2F4Fca0C1793204E607D1EA3",
+      "marketIrm": "0x39FD3c2332E2D605F11C8BcD4b1e601642e1897C",
+      "marketOracle": "0xF43955f6460fEb7482bdaDd5cA5d2397004f19dA"
+    },
+    "tbtcMarketBatch": {
+      "market": "0x8C0ceA14618cEB6A2D653698626010Dfa6E3ec08",
+      "marketImplementation": "0x77b4eF7faDb0a83f5BA019Fb948F2c5BF53736D7",
+      "marketIrm": "0x998c4beea71C7848D0f43E117ea7D218d0509e81",
+      "marketOracle": "0xE4b5A16760BF33A8E06Ef3634E7E364BE9879A40"
+    },
+    "wethMarketBatch": {
+      "market": "0x6f604eBc05FEBC3aE3f19C7a71B861F4847f82AE",
+      "marketImplementation": "0xF68b3D4D758060eca87d6a5006269a2cB71d9F92",
+      "marketIrm": "0x4eDfCb2E4A966a379CA465b5a4955DA7eAa2898f",
+      "marketOracle": "0x912e7Ec3626543bCF9a8858756361bec20f84f44"
+    },
+    "wstethMarketBatch": {
+      "market": "0x60F0C232b7fe6C0F26f5B2D464d63e2780e556Ab",
+      "marketImplementation": "0x7B89eC03C2E67268832a0b4cd2C15f55c0909d08",
+      "marketIrm": "0x7874cD43aA684D5533B85F3259370e0E26ad3232",
+      "marketOracle": "0x4eCA390DBD1871C65624ec98A485c85915e27d37"
+    }
+  },
+  "tokens": {
+    "alto": "0xf500D05F680643ba41EFB218312B8ACB24b44040",
+    "dusd": "0xB985953Cda997D409da59af3183C6091D1f749FF",
+    "reth": "0x1a828705e7a4BAb81844Ac21aFb8276a22B38c98",
+    "sbold": "0x25C31CF9666d055E71db68F49F47AA8E2B87Bf90",
+    "susde": "0xD6e92B7Ea4AAcc176e21B30B54161BC335F94BEe",
+    "tbtc": "0x074DdCCCBA0f541191dB1ee1A18604cc10C6acBd",
+    "usdc": "0xBD7f36e713b6b6C7EdEb01d4F06beAC582feF870",
+    "weth": "0x07f1C5C7Ba593f0F0201A1DcCB5B9D9efCf318fE",
+    "wsteth": "0xff6fbEf0D931565aC67B10027BC69Ef63353BCa6"
+  }
+}
