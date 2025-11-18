@@ -102,7 +102,13 @@ contract FixedRateIrmTest is Test {
         FixedRateIrmMock irmMock = new FixedRateIrmMock(INITIAL_BORROW_RATE, address(this));
 
         assertEq(irmMock.lastUpdate(), 0);
+        FixedRateIrm.IRState memory irState = FixedRateIrm.IRState({borrowRate: INITIAL_BORROW_RATE, lastUpdate: 0});
+        irState.lastUpdate = uint48(block.timestamp);
+
+        vm.expectEmit(true, true, true, true, address(irmMock));
+        emit FixedRateIrm.IRStateUpdated(irState);
         irmMock.setMarket(address(1));
+
         assertEq(irmMock.market(), address(1));
         assertEq(irmMock.lastUpdate(), block.timestamp);
     }
@@ -110,7 +116,13 @@ contract FixedRateIrmTest is Test {
     function testSetMarketRewrite() external {
         FixedRateIrmMock irmMock = new FixedRateIrmMock(INITIAL_BORROW_RATE, address(this));
 
+        FixedRateIrm.IRState memory irState = FixedRateIrm.IRState({borrowRate: INITIAL_BORROW_RATE, lastUpdate: 0});
+        irState.lastUpdate = uint48(block.timestamp);
+
+        vm.expectEmit(true, true, true, true, address(irmMock));
+        emit FixedRateIrm.IRStateUpdated(irState);
         irmMock.setMarket(address(1));
+
         vm.expectRevert(IIrm.IrmMarketAlreadySet.selector);
         irmMock.setMarket(address(2));
     }
@@ -118,6 +130,11 @@ contract FixedRateIrmTest is Test {
     function testSetBorrowRate(uint256 borrowRate) external {
         borrowRate = bound(borrowRate, 1, fixedRateIrm.MAX_BORROW_RATE());
 
+        FixedRateIrm.IRState memory irState = FixedRateIrm.IRState({borrowRate: borrowRate, lastUpdate: 0});
+
+        vm.expectEmit(true, true, true, true, address(fixedRateIrm));
+        emit FixedRateIrm.SetBorrowRate(borrowRate);
+        emit FixedRateIrm.IRStateUpdated(irState);
         fixedRateIrm.setBorrowRate(borrowRate);
 
         assertEq(fixedRateIrm.borrowRate(), borrowRate);
@@ -138,8 +155,11 @@ contract FixedRateIrmTest is Test {
 
         borrowRate = bound(borrowRate, 1, fixedRateIrm.MAX_BORROW_RATE());
 
+        FixedRateIrm.IRState memory irState = FixedRateIrm.IRState({borrowRate: borrowRate, lastUpdate: 0});
+
         vm.expectEmit(true, true, true, true, address(fixedRateIrm));
         emit FixedRateIrm.SetBorrowRate(borrowRate);
+        emit FixedRateIrm.IRStateUpdated(irState);
         fixedRateIrm.setBorrowRate(borrowRate);
     }
 
@@ -193,7 +213,12 @@ contract FixedRateIrmTest is Test {
 
         vm.warp(block.timestamp + 1 days);
 
+        FixedRateIrm.IRState memory irState = FixedRateIrm.IRState({borrowRate: INITIAL_BORROW_RATE, lastUpdate: 0});
+        irState.lastUpdate = uint48(block.timestamp);
+
         vm.prank(address(fixedRateIrm.market()));
+        vm.expectEmit(true, true, true, true, address(fixedRateIrm));
+        emit FixedRateIrm.IRStateUpdated(irState);
         (uint256 interest, uint256 borrowRate) = fixedRateIrm.updateInterestRate(0, 1000 ether);
 
         assertEq(interest, _getAccruedInterest(1000 ether, INITIAL_BORROW_RATE, 1 days));

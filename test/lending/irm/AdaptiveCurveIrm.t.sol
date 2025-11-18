@@ -172,7 +172,12 @@ contract AdaptiveCurveIrmTest is IrmCommon {
         AdaptiveCurveIrmMock irm = _createAdaptiveCurveIrmSample(false);
 
         assertEq(irm.lastUpdate(), 0);
+        AdaptiveCurveIrm.IRState memory irState =
+            AdaptiveCurveIrm.IRState({rateAtTarget: 0, lastUpdate: uint48(block.timestamp)});
+        vm.expectEmit(true, true, true, false, address(irm));
+        emit AdaptiveCurveIrm.IRStateUpdated(irState);
         irm.setMarket(address(1));
+
         assertEq(irm.market(), address(1));
         assertEq(irm.lastUpdate(), block.timestamp);
     }
@@ -190,6 +195,10 @@ contract AdaptiveCurveIrmTest is IrmCommon {
 
         AdaptiveCurveIrmMock irm = _createAdaptiveCurveIrmSample(true);
 
+        AdaptiveCurveIrm.IRState memory irState =
+            AdaptiveCurveIrm.IRState({rateAtTarget: 0, lastUpdate: uint48(block.timestamp)});
+        vm.expectEmit(true, true, true, false, address(irm));
+        emit AdaptiveCurveIrm.IRStateUpdated(irState);
         irm.setIrmConfig(irmConfig);
         (
             int256 curveSteepness,
@@ -277,6 +286,10 @@ contract AdaptiveCurveIrmTest is IrmCommon {
 
         AdaptiveCurveIrmMock irm = _createAdaptiveCurveIrmSample(true);
 
+        AdaptiveCurveIrm.IRState memory irState =
+            AdaptiveCurveIrm.IRState({rateAtTarget: 0, lastUpdate: uint48(block.timestamp)});
+        vm.expectEmit(true, true, true, false, address(irm));
+        emit AdaptiveCurveIrm.IRStateUpdated(irState);
         vm.expectEmit(true, true, true, true, address(irm));
         emit AdaptiveCurveIrm.SetIrmConfig(irmConfig);
         irm.setIrmConfig(irmConfig);
@@ -348,6 +361,10 @@ contract AdaptiveCurveIrmTest is IrmCommon {
         vm.warp(block.timestamp + 1 days);
 
         vm.prank(address(irm.market()));
+        AdaptiveCurveIrm.IRState memory irState =
+            AdaptiveCurveIrm.IRState({rateAtTarget: 0, lastUpdate: uint48(block.timestamp)});
+        vm.expectEmit(true, true, true, false, address(irm));
+        emit AdaptiveCurveIrm.IRStateUpdated(irState);
         (uint256 interest, uint256 borrowRate) = irm.updateInterestRate(0, 1000 ether);
         uint256 expectedBorrowRate = 296494587;
         assertEq(interest, _getAccruedInterest(1000 ether, expectedBorrowRate, 1 days));

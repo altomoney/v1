@@ -135,6 +135,10 @@ contract AdaptiveCurveIrmUpdateTest is IrmCommon {
         (uint256 expectedInterest,) = irm.updateInterestRateViewTimeElapsed(amount, borrowAmount, elapsedTime);
 
         vm.warp(block.timestamp + elapsedTime);
+        AdaptiveCurveIrm.IRState memory irState =
+            AdaptiveCurveIrm.IRState({rateAtTarget: 0, lastUpdate: uint48(block.timestamp)});
+        vm.expectEmit(true, true, true, false, address(irm));
+        emit AdaptiveCurveIrm.IRStateUpdated(irState);
         market.accrueInterest();
 
         assertEq(IMarket(address(market)).totalBorrowed().assets, borrowAmount + expectedInterest);
@@ -163,6 +167,10 @@ contract AdaptiveCurveIrmUpdateTest is IrmCommon {
         _fuzzAdaptiveCurveConfig(newIrmConfig);
 
         MockAdaptiveCurveIrm irm = new MockAdaptiveCurveIrm(irmConfig, address(this));
+        AdaptiveCurveIrm.IRState memory irState =
+            AdaptiveCurveIrm.IRState({rateAtTarget: 0, lastUpdate: uint48(block.timestamp)});
+        vm.expectEmit(true, true, true, false, address(irm));
+        emit AdaptiveCurveIrm.IRStateUpdated(irState);
         market.setIrm(address(irm));
 
         market.addSupply(amount, 0, USER);
@@ -170,15 +178,21 @@ contract AdaptiveCurveIrmUpdateTest is IrmCommon {
         market.borrow(toBorrowAmount, 0, USER, USER, "");
 
         vm.warp(block.timestamp + elapsedTime);
+        vm.expectEmit(true, true, true, false, address(irm));
+        emit AdaptiveCurveIrm.IRStateUpdated(irState);
         market.accrueInterest();
         uint256 marketBorrowed = IMarket(address(market)).totalBorrowed().assets;
         uint256 marketSupply = IMarket(address(market)).totalSupply().assets;
 
         MockAdaptiveCurveIrm newIrm = new MockAdaptiveCurveIrm(newIrmConfig, address(this));
+        vm.expectEmit(true, true, true, false, address(newIrm));
+        emit AdaptiveCurveIrm.IRStateUpdated(irState);
         newMarket.setIrm(address(newIrm));
 
         newMarket.modifyTotalBorrowed(IMarket(address(market)).totalBorrowed().assets);
         newMarket.modifyTotalSupply(IMarket(address(market)).totalSupply().assets);
+        vm.expectEmit(true, true, true, false, address(newIrm));
+        emit AdaptiveCurveIrm.IRStateUpdated(irState);
         newMarket.accrueInterest();
 
         // get fresh market to the same state as the other one
@@ -187,9 +201,13 @@ contract AdaptiveCurveIrmUpdateTest is IrmCommon {
 
         // change borrow rate either via irm or market
         if (testIrmSwap) {
+            vm.expectEmit(true, true, true, false, address(irm));
+            emit AdaptiveCurveIrm.IRStateUpdated(irState);
             irm.setIrmConfig(newIrmConfig);
         } else {
             MockAdaptiveCurveIrm newIrmForMarket = new MockAdaptiveCurveIrm(newIrmConfig, address(this));
+            vm.expectEmit(true, true, true, false, address(newIrmForMarket));
+            emit AdaptiveCurveIrm.IRStateUpdated(irState);
             market.setIrm(address(newIrmForMarket));
         }
 
@@ -199,7 +217,11 @@ contract AdaptiveCurveIrmUpdateTest is IrmCommon {
         );
 
         vm.warp(block.timestamp + elapsedTime);
+        vm.expectEmit(true, true, true, false);
+        emit AdaptiveCurveIrm.IRStateUpdated(irState);
         market.accrueInterest();
+        vm.expectEmit(true, true, true, false);
+        emit AdaptiveCurveIrm.IRStateUpdated(irState);
         newMarket.accrueInterest();
 
         assertEq(IMarket(address(market)).totalBorrowed().assets, IMarket(address(newMarket)).totalBorrowed().assets);
