@@ -2,16 +2,18 @@
 pragma solidity ^0.8.0;
 
 /**
- * @title IRsmPriceStrategy
- * @author Aave
+ * @title IUsmPriceStrategy
+ * @author Pearl Labs
+ * @author Adapted from Aave (https://github.com/aave/gho-core/)
+ * @custom:contact security@altofoundation.org
  * @notice Defines the behaviour of Price Strategies
  */
-interface IRsmPriceStrategy {
+interface IUsmPriceStrategy {
     /**
-     * @notice Returns the number of decimals of GHO
-     * @return The number of decimals of GHO
+     * @notice Returns the number of decimals of Stable Token
+     * @return The number of decimals of Stable Token
      */
-    function GHO_DECIMALS() external view returns (uint256);
+    function STABLE_TOKEN_DECIMALS() external view returns (uint256);
 
     /**
      * @notice Returns the address of the underlying asset being priced
@@ -26,18 +28,18 @@ interface IRsmPriceStrategy {
     function UNDERLYING_ASSET_DECIMALS() external view returns (uint256);
 
     /**
-     * @notice Returns the price of the underlying asset (GHO denominated)
+     * @notice Returns the price of the underlying asset (Stable Token denominated)
      * @param assetAmount The amount of the underlying asset to calculate the price of
      * @param roundUp True if the price should be rounded up, false if rounded down
-     * @return The price of the underlying asset (expressed in GHO units)
+     * @return The price of the underlying asset (expressed in Stable Token units)
      */
-    function getAssetPriceInGho(uint256 assetAmount, bool roundUp) external view returns (uint256);
+    function getAssetPriceInStableToken(uint256 assetAmount, bool roundUp) external view returns (uint256);
 
     /**
-     * @notice Returns the price of GHO (denominated in the underlying asset)
-     * @param ghoAmount The amount of GHO to calculate the price of
+     * @notice Returns the price of Stable Token (denominated in the underlying asset)
+     * @param stableTokenAmount The amount of Stable Token to calculate the price of
      * @param roundUp True if the price should be rounded up, false if rounded down
-     * @return The price of the GHO amount (expressed in underlying asset units)
+     * @return The price of the Stable Token amount (expressed in underlying asset units)
      */
-    function getGhoPriceInAsset(uint256 ghoAmount, bool roundUp) external view returns (uint256);
+    function getStableTokenPriceInAsset(uint256 stableTokenAmount, bool roundUp) external view returns (uint256);
 }

@@ -2,14 +2,14 @@
 pragma solidity ^0.8.10;
 
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
-import {IRsmFeeStrategy} from "./interfaces/IRsmFeeStrategy.sol";
+import {IUsmFeeStrategy} from "./interfaces/IUsmFeeStrategy.sol";
 
 /**
  * @title FixedFeeStrategy
  * @author Aave
  * @notice Fee strategy using a fixed rate to calculate buy/sell fees
  */
-contract FixedFeeStrategy is IRsmFeeStrategy {
+contract FixedFeeStrategy is IUsmFeeStrategy {
     using Math for uint256;
 
     uint256 internal constant PERCENTAGE_PRECISION = 10000;
@@ -33,17 +33,17 @@ contract FixedFeeStrategy is IRsmFeeStrategy {
         _sellFee = sellFee;
     }
 
-    /// @inheritdoc IRsmFeeStrategy
+    /// @inheritdoc IUsmFeeStrategy
     function getBuyFee(uint256 grossAmount) external view returns (uint256) {
         return grossAmount.mulDiv(_buyFee, PERCENTAGE_PRECISION, Math.Rounding.Ceil);
     }
 
-    /// @inheritdoc IRsmFeeStrategy
+    /// @inheritdoc IUsmFeeStrategy
     function getSellFee(uint256 grossAmount) external view returns (uint256) {
         return grossAmount.mulDiv(_sellFee, PERCENTAGE_PRECISION, Math.Rounding.Ceil);
     }
 
-    /// @inheritdoc IRsmFeeStrategy
+    /// @inheritdoc IUsmFeeStrategy
     function getGrossAmountFromTotalBought(uint256 totalAmount) external view returns (uint256) {
         if (totalAmount == 0) {
             return 0;
@@ -54,7 +54,7 @@ contract FixedFeeStrategy is IRsmFeeStrategy {
         }
     }
 
-    /// @inheritdoc IRsmFeeStrategy
+    /// @inheritdoc IUsmFeeStrategy
     function getGrossAmountFromTotalSold(uint256 totalAmount) external view returns (uint256) {
         if (totalAmount == 0) {
             return 0;

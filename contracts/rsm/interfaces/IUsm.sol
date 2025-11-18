@@ -2,36 +2,46 @@
 pragma solidity ^0.8.0;
 
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
-import {IGhoFacilitator} from "./IGhoFacilitator.sol";
+import {IStableTokenFacilitator} from "./IStableTokenFacilitator.sol";
 
 /**
- * @title IGsm
- * @author Aave
- * @notice Defines the behaviour of a GHO Stability Module
+ * @title IUsm
+ * @author Pearl Labs
+ * @author Adapted from Aave (https://github.com/aave/gho-core/)
+ * @custom:contact security@altofoundation.org
+ * @notice Defines the behaviour of a Universal Stability Module
  */
-interface IRsm is IAccessControl, IGhoFacilitator {
+interface IUsm is IAccessControl, IStableTokenFacilitator {
     /**
-     * @dev Emitted when a user buys an asset (selling GHO) in the GSM
+     * @dev Emitted when a user buys an asset (selling Stable Token) in the USM
      * @param originator The address of the buyer originating the request
      * @param receiver The address of the receiver of the underlying asset
      * @param underlyingAmount The amount of the underlying asset bought
-     * @param ghoAmount The amount of GHO sold, inclusive of fee
-     * @param fee The fee paid by the buyer, in GHO
+     * @param stableTokenAmount The amount of Stable Token sold, inclusive of fee
+     * @param fee The fee paid by the buyer, in Stable Token
      */
     event BuyAsset(
-        address indexed originator, address indexed receiver, uint256 underlyingAmount, uint256 ghoAmount, uint256 fee
+        address indexed originator,
+        address indexed receiver,
+        uint256 underlyingAmount,
+        uint256 stableTokenAmount,
+        uint256 fee
     );
 
     /**
-     * @dev Emitted when a user sells an asset (buying GHO) in the GSM
+     * @dev Emitted when a user sells an asset (buying Stable Token) in the USM
      * @param originator The address of the seller originating the request
-     * @param receiver The address of the receiver of GHO
+     * @param receiver The address of the receiver of Stable Token
      * @param underlyingAmount The amount of the underlying asset sold
-     * @param ghoAmount The amount of GHO bought, inclusive of fee
-     * @param fee The fee paid by the buyer, in GHO
+     * @param stableTokenAmount The amount of Stable Token bought, inclusive of fee
+     * @param fee The fee paid by the buyer, in Stable Token
      */
     event SellAsset(
-        address indexed originator, address indexed receiver, uint256 underlyingAmount, uint256 ghoAmount, uint256 fee
+        address indexed originator,
+        address indexed receiver,
+        uint256 underlyingAmount,
+        uint256 stableTokenAmount,
+        uint256 fee
     );
 
     /**
@@ -42,21 +52,23 @@ interface IRsm is IAccessControl, IGhoFacilitator {
     event SwapFreeze(address indexed freezer, bool enabled);
 
     /**
-     * @dev Emitted when a Liquidator seizes GSM funds
+     * @dev Emitted when a Liquidator seizes USM funds
      * @param seizer The address originating the seizure request
      * @param recipient The address of the recipient of seized funds
      * @param underlyingAmount The amount of the underlying asset seized
-     * @param ghoOutstanding The amount of remaining GHO that the GSM had minted
+     * @param stableTokenOutstanding The amount of remaining Stable Token that the USM had minted
      */
-    event Seized(address indexed seizer, address indexed recipient, uint256 underlyingAmount, uint256 ghoOutstanding);
+    event Seized(
+        address indexed seizer, address indexed recipient, uint256 underlyingAmount, uint256 stableTokenOutstanding
+    );
 
     /**
-     * @dev Emitted when burning GHO after a seizure of GSM funds
+     * @dev Emitted when burning Stable Token after a seizure of USM funds
      * @param burner The address of the burner
-     * @param amount The amount of GHO burned
-     * @param ghoOutstanding The amount of remaining GHO that the GSM had minted
+     * @param amount The amount of Stable Token burned
+     * @param stableTokenOutstanding The amount of remaining Stable Token that the USM had minted
      */
-    event BurnAfterSeize(address indexed burner, uint256 amount, uint256 ghoOutstanding);
+    event BurnAfterSeize(address indexed burner, uint256 amount, uint256 stableTokenOutstanding);
 
     /**
      * @dev Emitted when the Fee Strategy is updated
@@ -66,14 +78,14 @@ interface IRsm is IAccessControl, IGhoFacilitator {
     event FeeStrategyUpdated(address indexed oldFeeStrategy, address indexed newFeeStrategy);
 
     /**
-     * @dev Emitted when the GSM underlying asset Exposure Cap is updated
+     * @dev Emitted when the USM underlying asset Exposure Cap is updated
      * @param oldExposureCap The amount of the old Exposure Cap
      * @param newExposureCap The amount of the new Exposure Cap
      */
     event ExposureCapUpdated(uint256 oldExposureCap, uint256 newExposureCap);
 
     /**
-     * @dev Emitted when tokens are rescued from the GSM
+     * @dev Emitted when tokens are rescued from the USM
      * @param tokenRescued The address of the rescued token
      * @param recipient The address that received the rescued tokens
      * @param amountRescued The amount of token rescued
@@ -81,25 +93,25 @@ interface IRsm is IAccessControl, IGhoFacilitator {
     event TokensRescued(address indexed tokenRescued, address indexed recipient, uint256 amountRescued);
 
     /**
-     * @notice Buys the GSM underlying asset in exchange for selling GHO
-     * @dev Use `getAssetAmountForBuyAsset` function to calculate the amount based on the GHO amount to sell
+     * @notice Buys the USM underlying asset in exchange for selling Stable Token
+     * @dev Use `getAssetAmountForBuyAsset` function to calculate the amount based on the Stable Token amount to sell
      * @param minAmount The minimum amount of the underlying asset to buy
      * @param receiver Recipient address of the underlying asset being purchased
      * @return The amount of underlying asset bought
-     * @return The amount of GHO sold by the user
+     * @return The amount of Stable Token sold by the user
      */
     function buyAsset(uint256 minAmount, address receiver) external returns (uint256, uint256);
 
     /**
-     * @notice Buys the GSM underlying asset in exchange for selling GHO, using an EIP-712 signature
-     * @dev Use `getAssetAmountForBuyAsset` function to calculate the amount based on the GHO amount to sell
+     * @notice Buys the USM underlying asset in exchange for selling Stable Token, using an EIP-712 signature
+     * @dev Use `getAssetAmountForBuyAsset` function to calculate the amount based on the Stable Token amount to sell
      * @param originator The signer of the request
      * @param minAmount The minimum amount of the underlying asset to buy
      * @param receiver Recipient address of the underlying asset being purchased
      * @param deadline Signature expiration deadline
      * @param signature Signature data
      * @return The amount of underlying asset bought
-     * @return The amount of GHO sold by the user
+     * @return The amount of Stable Token sold by the user
      */
     function buyAssetWithSig(
         address originator,
@@ -110,25 +122,25 @@ interface IRsm is IAccessControl, IGhoFacilitator {
     ) external returns (uint256, uint256);
 
     /**
-     * @notice Sells the GSM underlying asset in exchange for buying GHO
-     * @dev Use `getAssetAmountForSellAsset` function to calculate the amount based on the GHO amount to buy
+     * @notice Sells the USM underlying asset in exchange for buying Stable Token
+     * @dev Use `getAssetAmountForSellAsset` function to calculate the amount based on the Stable Token amount to buy
      * @param maxAmount The maximum amount of the underlying asset to sell
-     * @param receiver Recipient address of the GHO being purchased
+     * @param receiver Recipient address of the Stable Token being purchased
      * @return The amount of underlying asset sold
-     * @return The amount of GHO bought by the user
+     * @return The amount of Stable Token bought by the user
      */
     function sellAsset(uint256 maxAmount, address receiver) external returns (uint256, uint256);
 
     /**
-     * @notice Sells the GSM underlying asset in exchange for buying GHO, using an EIP-712 signature
-     * @dev Use `getAssetAmountForSellAsset` function to calculate the amount based on the GHO amount to buy
+     * @notice Sells the USM underlying asset in exchange for buying Stable Token, using an EIP-712 signature
+     * @dev Use `getAssetAmountForSellAsset` function to calculate the amount based on the Stable Token amount to buy
      * @param originator The signer of the request
      * @param maxAmount The maximum amount of the underlying asset to sell
-     * @param receiver Recipient address of the GHO being purchased
+     * @param receiver Recipient address of the Stable Token being purchased
      * @param deadline Signature expiration deadline
      * @param signature Signature data
      * @return The amount of underlying asset sold
-     * @return The amount of GHO bought by the user
+     * @return The amount of Stable Token bought by the user
      */
     function sellAssetWithSig(
         address originator,
@@ -153,20 +165,20 @@ interface IRsm is IAccessControl, IGhoFacilitator {
     function setSwapFreeze(bool enable) external;
 
     /**
-     * @notice Seizes all of the underlying asset from the GSM, sending to the Treasury
+     * @notice Seizes all of the underlying asset from the USM, sending to the Treasury
      * @dev Seizing is a last resort mechanism to provide the Treasury with the entire amount of underlying asset
-     * so it can be used to backstop any potential event impacting the functionality of the Gsm.
+     * so it can be used to backstop any potential event impacting the functionality of the USM.
      * @dev Seizing disables the swap feature
      * @return The amount of underlying asset seized and transferred to Treasury
      */
     function seize() external returns (uint256);
 
     /**
-     * @notice Burns an amount of GHO after seizure reducing the facilitator bucket level effectively
-     * @dev Passing an amount higher than the facilitator bucket level will result in burning all minted GHO
-     * @dev Only callable if the GSM has assets seized, helpful to wind down the facilitator
-     * @param amount The amount of GHO to burn
-     * @return The amount of GHO burned
+     * @notice Burns an amount of Stable Token after seizure reducing the facilitator bucket level effectively
+     * @dev Passing an amount higher than the facilitator bucket level will result in burning all minted Stable Token
+     * @dev Only callable if the USM has assets seized, helpful to wind down the facilitator
+     * @param amount The amount of Stable Token to burn
+     * @return The amount of Stable Token burned
      */
     function burnAfterSeize(uint256 amount) external returns (uint256);
 
@@ -189,65 +201,77 @@ interface IRsm is IAccessControl, IGhoFacilitator {
     function DOMAIN_SEPARATOR() external view returns (bytes32);
 
     /**
-     * @notice Returns the total amount of GHO, gross amount and fee result of buying assets
+     * @notice Returns the total amount of Stable Token, gross amount and fee result of buying assets
      * @param minAssetAmount The minimum amount of underlying asset to buy
      * @return The exact amount of underlying asset to be bought
-     * @return The total amount of GHO the user sells (gross amount in GHO plus fee)
-     * @return The gross amount of GHO
-     * @return The fee amount in GHO, applied on top of gross amount of GHO
+     * @return The total amount of Stable Token the user sells (gross amount in Stable Token plus fee)
+     * @return The gross amount of Stable Token
+     * @return The fee amount in Stable Token, applied on top of gross amount of Stable Token
      */
-    function getGhoAmountForBuyAsset(uint256 minAssetAmount) external view returns (uint256, uint256, uint256, uint256);
+    function getStableTokenAmountForBuyAsset(uint256 minAssetAmount)
+        external
+        view
+        returns (uint256, uint256, uint256, uint256);
 
     /**
-     * @notice Returns the total amount of GHO, gross amount and fee result of selling assets
+     * @notice Returns the total amount of Stable Token, gross amount and fee result of selling assets
      * @param maxAssetAmount The maximum amount of underlying asset to sell
      * @return The exact amount of underlying asset to sell
-     * @return The total amount of GHO the user buys (gross amount in GHO minus fee)
-     * @return The gross amount of GHO
-     * @return The fee amount in GHO, applied to the gross amount of GHO
+     * @return The total amount of Stable Token the user buys (gross amount in Stable Token minus fee)
+     * @return The gross amount of Stable Token
+     * @return The fee amount in Stable Token, applied to the gross amount of Stable Token
      */
-    function getGhoAmountForSellAsset(uint256 maxAssetAmount) external view returns (uint256, uint256, uint256, uint256);
+    function getStableTokenAmountForSellAsset(uint256 maxAssetAmount)
+        external
+        view
+        returns (uint256, uint256, uint256, uint256);
 
     /**
-     * @notice Returns the amount of underlying asset, gross amount of GHO and fee result of buying assets
-     * @param maxGhoAmount The maximum amount of GHO the user provides for buying underlying asset
+     * @notice Returns the amount of underlying asset, gross amount of Stable Token and fee result of buying assets
+     * @param maxStableTokenAmount The maximum amount of Stable Token the user provides for buying underlying asset
      * @return The amount of underlying asset the user buys
-     * @return The exact amount of GHO the user provides
-     * @return The gross amount of GHO corresponding to the given total amount of GHO
-     * @return The fee amount in GHO, charged for buying assets
+     * @return The exact amount of Stable Token the user provides
+     * @return The gross amount of Stable Token corresponding to the given total amount of Stable Token
+     * @return The fee amount in Stable Token, charged for buying assets
      */
-    function getAssetAmountForBuyAsset(uint256 maxGhoAmount) external view returns (uint256, uint256, uint256, uint256);
+    function getAssetAmountForBuyAsset(uint256 maxStableTokenAmount)
+        external
+        view
+        returns (uint256, uint256, uint256, uint256);
 
     /**
-     * @notice Returns the amount of underlying asset, gross amount of GHO and fee result of selling assets
-     * @param minGhoAmount The minimum amount of GHO the user must receive for selling underlying asset
+     * @notice Returns the amount of underlying asset, gross amount of Stable Token and fee result of selling assets
+     * @param minStableTokenAmount The minimum amount of Stable Token the user must receive for selling underlying asset
      * @return The amount of underlying asset the user sells
-     * @return The exact amount of GHO the user receives in exchange
-     * @return The gross amount of GHO corresponding to the given total amount of GHO
-     * @return The fee amount in GHO, charged for selling assets
+     * @return The exact amount of Stable Token the user receives in exchange
+     * @return The gross amount of Stable Token corresponding to the given total amount of Stable Token
+     * @return The fee amount in Stable Token, charged for selling assets
      */
-    function getAssetAmountForSellAsset(uint256 minGhoAmount) external view returns (uint256, uint256, uint256, uint256);
+    function getAssetAmountForSellAsset(uint256 minStableTokenAmount)
+        external
+        view
+        returns (uint256, uint256, uint256, uint256);
 
     /**
-     * @notice Returns the remaining GSM exposure capacity
-     * @return The amount of underlying asset that can be sold to the GSM
+     * @notice Returns the remaining USM exposure capacity
+     * @return The amount of underlying asset that can be sold to the USM
      */
     function getAvailableUnderlyingExposure() external view returns (uint256);
 
     /**
      * @notice Returns the exposure limit to the underlying asset
-     * @return The maximum amount of underlying asset that can be sold to the GSM
+     * @return The maximum amount of underlying asset that can be sold to the USM
      */
     function getExposureCap() external view returns (uint128);
 
     /**
-     * @notice Returns the actual underlying asset balance immediately available in the GSM
-     * @return The amount of underlying asset that can be bought from the GSM
+     * @notice Returns the actual underlying asset balance immediately available in the USM
+     * @return The amount of underlying asset that can be bought from the USM
      */
     function getAvailableLiquidity() external view returns (uint256);
 
     /**
-     * @notice Returns the Fee Strategy for the GSM
+     * @notice Returns the Fee Strategy for the USM
      * @dev It returns 0x0 in case of no fee strategy
      * @return The address of the FeeStrategy
      */
@@ -261,43 +285,43 @@ interface IRsm is IAccessControl, IGhoFacilitator {
     function getAccruedFees() external view returns (uint256);
 
     /**
-     * @notice Returns the freeze status of the GSM
+     * @notice Returns the freeze status of the USM
      * @return True if frozen, false if not
      */
     function getIsFrozen() external view returns (bool);
 
     /**
-     * @notice Returns the current seizure status of the GSM
-     * @return True if the GSM has been seized, false if not
+     * @notice Returns the current seizure status of the USM
+     * @return True if the USM has been seized, false if not
      */
     function getIsSeized() external view returns (bool);
 
     /**
      * @notice Returns whether or not swaps via buyAsset/sellAsset are currently possible
-     * @return True if the GSM has swapping enabled, false otherwise
+     * @return True if the USM has swapping enabled, false otherwise
      */
     function canSwap() external view returns (bool);
 
     /**
-     * @notice Returns the GSM revision number
+     * @notice Returns the USM revision number
      * @return The revision number
      */
-    function GSM_REVISION() external pure returns (uint256);
+    function USM_REVISION() external pure returns (uint256);
 
     /**
-     * @notice Returns the address of the GHO token
-     * @return The address of GHO token contract
+     * @notice Returns the address of the Stable Token token
+     * @return The address of Stable Token token contract
      */
-    function GHO_TOKEN() external view returns (address);
+    function STABLE_TOKEN() external view returns (address);
 
     /**
-     * @notice Returns the underlying asset of the GSM
+     * @notice Returns the underlying asset of the USM
      * @return The address of the underlying asset
      */
     function UNDERLYING_ASSET() external view returns (address);
 
     /**
-     * @notice Returns the price strategy of the GSM
+     * @notice Returns the price strategy of the USM
      * @return The address of the price strategy
      */
     function PRICE_STRATEGY() external view returns (address);
