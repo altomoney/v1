@@ -17,6 +17,19 @@
   },
   {
     "type": "function",
+    "name": "IRM_TYPE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint8",
+        "internalType": "enum IRMType"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "MAX_BORROW_RATE",
     "inputs": [],
     "outputs": [
@@ -208,6 +221,31 @@
       }
     ],
     "stateMutability": "view"
+  },
+  {
+    "type": "event",
+    "name": "IRStateUpdated",
+    "inputs": [
+      {
+        "name": "newIRState",
+        "type": "tuple",
+        "indexed": false,
+        "internalType": "struct FixedRateIrm.IRState",
+        "components": [
+          {
+            "name": "borrowRate",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "lastUpdate",
+            "type": "uint48",
+            "internalType": "uint48"
+          }
+        ]
+      }
+    ],
+    "anonymous": false
   },
   {
     "type": "event",

@@ -49,6 +49,19 @@
   },
   {
     "type": "function",
+    "name": "IRM_TYPE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint8",
+        "internalType": "enum IRMType"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "acceptOwnership",
     "inputs": [],
     "outputs": [],
@@ -297,6 +310,31 @@
       }
     ],
     "stateMutability": "view"
+  },
+  {
+    "type": "event",
+    "name": "IRStateUpdated",
+    "inputs": [
+      {
+        "name": "newIRState",
+        "type": "tuple",
+        "indexed": false,
+        "internalType": "struct AdaptiveCurveIrm.IRState",
+        "components": [
+          {
+            "name": "rateAtTarget",
+            "type": "int256",
+            "internalType": "int256"
+          },
+          {
+            "name": "lastUpdate",
+            "type": "uint48",
+            "internalType": "uint48"
+          }
+        ]
+      }
+    ],
+    "anonymous": false
   },
   {
     "type": "event",
