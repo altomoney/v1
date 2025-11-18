@@ -264,7 +264,7 @@ library DeployAltoTestnet {
                     marketOraclePrice: 112000 * LENDING_ORACLE_PRICE_PRECISION,
                     maxLtv: 0.75 ether,
                     debtCeiling: 100_000 ether,
-                    fixedRateIrmInterestRate: 0
+                    fixedRateIrmInterestRate: 0.04 ether / uint256(365 days)
                 })
             ))
         .getMarketReport();
@@ -798,9 +798,11 @@ library DeployAltoTestnet {
         Ownable(input.tokens.usdc).transferOwnership(altoMulticall);
         Ownable(input.tokens.weth).transferOwnership(altoMulticall);
         Ownable(input.tokens.wsteth).transferOwnership(altoMulticall);
-        Ownable(input.tokens.tbtc).transferOwnership(altoMulticall);
-        // Ownable(input.tokens.sbold).transferOwnership(altoMulticall);
         Ownable(input.tokens.reth).transferOwnership(altoMulticall);
+        Ownable(input.tokens.meth).transferOwnership(altoMulticall);
+        Ownable(input.tokens.tbtc).transferOwnership(altoMulticall);
+        Ownable(input.tokens.wbtc).transferOwnership(altoMulticall);
+        Ownable(input.tokens.cbbtc).transferOwnership(altoMulticall);
         Ownable(input.tokens.susde).transferOwnership(altoMulticall);
 
         AltoMulticallTestnet(payable(altoMulticall)).multicall(calls);
