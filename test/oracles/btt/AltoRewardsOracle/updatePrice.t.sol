@@ -57,8 +57,8 @@ contract AltoRewardsOracleUpdatePrice is AltoRewardsOracleCommon {
 
         uint256 cooldownPeriod = oracle.priceUpdateCooldownPeriod();
 
-        // Move time forward by exactly the cooldown period
-        vm.warp(block.timestamp + cooldownPeriod);
+        // Move time forward by just after the cooldown period
+        vm.warp(block.timestamp + cooldownPeriod + 1);
 
         oracle.updatePrice();
 
@@ -73,8 +73,8 @@ contract AltoRewardsOracleUpdatePrice is AltoRewardsOracleCommon {
 
         uint256 cooldownPeriod = oracle.priceUpdateCooldownPeriod();
 
-        // Move time forward by exactly the cooldown period
-        vm.warp(block.timestamp + cooldownPeriod);
+        // Move time forward by just after the cooldown period
+        vm.warp(block.timestamp + cooldownPeriod + 1);
 
         oracle.updatePrice();
     }

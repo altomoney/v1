@@ -67,7 +67,7 @@ contract AltoRewardsOracleGetPrice is AltoRewardsOracleCommon {
         vm.prank(OWNER);
         oracle.startTwapPeriod(initialPrice);
 
-        vm.warp(block.timestamp + oracle.priceUpdateCooldownPeriod());
+        vm.warp(block.timestamp + oracle.priceUpdateCooldownPeriod() + 1);
         vm.prank(OWNER);
         oracle.updatePrice();
 
