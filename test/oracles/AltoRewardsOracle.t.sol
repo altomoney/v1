@@ -194,7 +194,7 @@ contract AltoRewardsOracleTest is Test {
         assertEq(initialPrice, rewardsOracle.cachedPrice(), "Invalid price from AltoRewardsOracle");
 
         // updating price after twap period is successful and updates the price based on the uniswap twap period
-        vm.warp(block.timestamp + rewardsOracle.priceUpdateCooldownPeriod());
+        vm.warp(block.timestamp + rewardsOracle.priceUpdateCooldownPeriod() + 1);
         vm.expectEmit(true, true, true, false);
         emit IAltoRewardsOracleEvents.PriceUpdated(block.timestamp, initialPrice, initialPrice);
         rewardsOracle.updatePrice();
@@ -245,7 +245,7 @@ contract AltoRewardsOracleTest is Test {
         _swapOnUniswap(address(altoToken), WETH, amountIn);
 
         // forward twapPeriod/2
-        vm.warp(block.timestamp + twapPeriod / 2);
+        vm.warp(block.timestamp + twapPeriod / 2 + 1);
 
         // updating price after priceUpdateCooldownPeriod is successful and updates the price based on the uniswap twap period
         // it will reduce the price due to earlier swaps from Alto to WETH
@@ -284,7 +284,7 @@ contract AltoRewardsOracleTest is Test {
         // swapping from WETH to Alto
         _swapOnUniswap(WETH, address(altoToken), amountIn);
 
-        vm.warp(block.timestamp + twapPeriod / 2);
+        vm.warp(block.timestamp + twapPeriod / 2 + 1);
 
         // updating price after priceUpdateCooldownPeriod is successful and updates the price based on the uniswap twap period
         // it will increase the price due to earlier swaps from WETH to Alto
@@ -333,7 +333,7 @@ contract AltoRewardsOracleTest is Test {
             _swapOnUniswap(address(altoToken), WETH, amountOutOfAlto);
         }
 
-        vm.warp(block.timestamp + twapPeriod / 2);
+        vm.warp(block.timestamp + twapPeriod / 2 + 1);
         // updating price after twap period is successful and updates the price based on the uniswap twap period
         // it will update the price based on the uniswap twap period
         // new price should be almost equal to old price because swaps are done in such a way that price doesn't change much

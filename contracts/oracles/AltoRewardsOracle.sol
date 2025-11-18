@@ -93,7 +93,7 @@ contract AltoRewardsOracle is Ownable2Step, ModuleChainlink, ModuleUniswap, IAlt
             revert AltoRewardsOracleNotInitiated();
         }
 
-        if (block.timestamp - lastPriceUpdateTimestamp < priceUpdateCooldownPeriod) {
+        if (block.timestamp - lastPriceUpdateTimestamp <= priceUpdateCooldownPeriod) {
             revert AltoRewardsOracleTooEarlyToUpdatePrice();
         }
 
