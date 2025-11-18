@@ -464,7 +464,7 @@ library DeployAltoTestnet {
         IERC20(input.tokens.weth).approve(address(params.uniswapV3NonFungiblePositionManager), type(uint256).max);
         IERC20(input.tokens.usdc).approve(address(params.uniswapV3NonFungiblePositionManager), type(uint256).max);
         IERC20(input.tokens.dusd).approve(address(params.uniswapV3NonFungiblePositionManager), type(uint256).max);
-        IERC20(input.tokens.tbtc).approve(address(params.uniswapV3NonFungiblePositionManager), type(uint256).max);
+        IERC20(input.tokens.wbtc).approve(address(params.uniswapV3NonFungiblePositionManager), type(uint256).max);
         {
             MintParams memory mintParams = MintParams({
                 token0: address(input.tokens.reth),
@@ -580,12 +580,12 @@ library DeployAltoTestnet {
 
         {
             MintParams memory mintParams = MintParams({
-                token0: address(input.tokens.tbtc),
+                token0: address(input.tokens.wbtc),
                 token1: address(input.tokens.usdc),
                 fee: 3000,
                 tickLower: -887220,
                 tickUpper: 887220,
-                amount0Desired: 1000 ether,
+                amount0Desired: 1000 * 10 ** 8,
                 amount1Desired: 1_000_000 * 10 ** 6,
                 amount0Min: 0,
                 amount1Min: 0,
@@ -593,25 +593,25 @@ library DeployAltoTestnet {
                 deadline: block.timestamp + 1 days
             });
 
-            // initial price of 1 tbtc = 100_000 USDC
-            if (input.tokens.tbtc < input.tokens.usdc) {
+            // initial price of 1 wbtc = 91300 USDC
+            if (input.tokens.wbtc < input.tokens.usdc) {
                 INonfungiblePositionManager(params.uniswapV3NonFungiblePositionManager)
                     .createAndInitializePoolIfNecessary(
-                        address(input.tokens.tbtc), address(input.tokens.usdc), 3000, 25054144837504793118641380
+                        address(input.tokens.wbtc), address(input.tokens.usdc), 3000, 2390522350476481540566216842177
                     );
-                mintParams.token0 = address(input.tokens.tbtc);
-                mintParams.amount0Desired = 1000 ether;
+                mintParams.token0 = address(input.tokens.wbtc);
+                mintParams.amount0Desired = 1000 * 10 ** 8;
                 mintParams.token1 = address(input.tokens.usdc);
                 mintParams.amount1Desired = 100_000_000 * 10 ** 6;
             } else {
                 INonfungiblePositionManager(params.uniswapV3NonFungiblePositionManager)
                     .createAndInitializePoolIfNecessary(
-                        address(input.tokens.usdc), address(input.tokens.tbtc), 3000, 250541448375047931186413801569606
+                        address(input.tokens.usdc), address(input.tokens.wbtc), 3000, 2625828507370166000000000000
                     );
                 mintParams.token0 = address(input.tokens.usdc);
                 mintParams.amount0Desired = 100_000_000 * 10 ** 6;
-                mintParams.token1 = address(input.tokens.tbtc);
-                mintParams.amount1Desired = 1000 ether;
+                mintParams.token1 = address(input.tokens.wbtc);
+                mintParams.amount1Desired = 1000 * 10 ** 8;
             }
 
             INonfungiblePositionManager(params.uniswapV3NonFungiblePositionManager).mint(mintParams);
