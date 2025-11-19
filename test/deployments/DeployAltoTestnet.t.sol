@@ -13,17 +13,17 @@ contract AltoReleaseTest is Test, TestHelperOz5 {
     AltoMulticallTestnet altoMulticall;
 
     function setUp() public override {
-        super.setUp();
-        setUpEndpoints(1, LibraryType.UltraLightNode);
+        string memory rpcUrl = vm.rpcUrl("sepolia");
+        vm.createSelectFork(rpcUrl);
 
         altoMulticall = new AltoMulticallTestnet();
 
         params = AltoTestnetParams({
             owner: address(this),
             skipLendingDeployment: false,
-            lzEndpoint: address(endpoints[1]),
-            wrappedNativeToken: makeAddr("weth"),
-            uniswapV3NonFungiblePositionManager: makeAddr("uniswapV3NonFungiblePositionManager")
+            lzEndpoint: address(0x6EDCE65403992e310A62460808c4b910D972f10f),
+            wrappedNativeToken: 0x7b79995e5f793A07Bc00c21412e50Ecae098E7f9,
+            uniswapV3NonFungiblePositionManager: 0x1238536071E1c677A632429e3655c799b22cDA52
         });
     }
 
