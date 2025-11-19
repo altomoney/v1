@@ -11,6 +11,10 @@ contract ERC20MockMintableDecimals is ERC20, IMintableERC20 {
         _decimals = _tokenDecimals;
     }
 
+    function decimals() public view override returns (uint8) {
+        return _decimals;
+    }
+
     function mint(address to, uint256 amount) external override {
         _mint(to, amount);
     }

@@ -53,7 +53,7 @@ abstract contract Usm is AccessControl, EIP712, IUsm {
     address public immutable UNDERLYING_ASSET;
 
     /// @inheritdoc IUsm
-    address public immutable PRICE_STRATEGY;
+    address public PRICE_STRATEGY;
 
     /// @inheritdoc IUsm
     mapping(address => uint256) public nonces;
@@ -86,15 +86,12 @@ abstract contract Usm is AccessControl, EIP712, IUsm {
      * @dev Constructor
      * @param stableToken The address of the stable token contract
      * @param underlyingAsset The address of the collateral asset
-     * @param priceStrategy The address of the price strategy
      */
-    constructor(address stableToken, address underlyingAsset, address priceStrategy) EIP712("USM", "1") {
+    constructor(address stableToken, address underlyingAsset) EIP712("USM", "1") {
         require(stableToken != address(0), "ZERO_ADDRESS_NOT_VALID");
         require(underlyingAsset != address(0), "ZERO_ADDRESS_NOT_VALID");
-        require(IUsmPriceStrategy(priceStrategy).UNDERLYING_ASSET() == underlyingAsset, "INVALID_PRICE_STRATEGY");
         STABLE_TOKEN = stableToken;
         UNDERLYING_ASSET = underlyingAsset;
-        PRICE_STRATEGY = priceStrategy;
     }
 
     /**
@@ -102,13 +99,17 @@ abstract contract Usm is AccessControl, EIP712, IUsm {
      * @param admin The address of the default admin role
      * @param stableTokenTreasury The address of the stable token treasury
      * @param exposureCap Maximum amount of user-supplied underlying asset in USM
+     * @param priceStrategy The address of the price strategy
      */
-    function initialize(address admin, address stableTokenTreasury, uint128 exposureCap) external {
+    function initialize(address admin, address stableTokenTreasury, uint128 exposureCap, address priceStrategy)
+        external
+    {
         require(admin != address(0), "ZERO_ADDRESS_NOT_VALID");
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(CONFIGURATOR_ROLE, admin);
         _updateStableTokenTreasury(stableTokenTreasury);
         _updateExposureCap(exposureCap);
+        _updatePriceStrategy(priceStrategy);
     }
 
     /// @inheritdoc IUsm
@@ -226,6 +227,11 @@ abstract contract Usm is AccessControl, EIP712, IUsm {
     /// @inheritdoc IUsm
     function updateFeeStrategy(address feeStrategy) external onlyRole(CONFIGURATOR_ROLE) {
         _updateFeeStrategy(feeStrategy);
+    }
+
+    /// @inheritdoc IUsm
+    function updatePriceStrategy(address priceStrategy) external onlyRole(CONFIGURATOR_ROLE) {
+        _updatePriceStrategy(priceStrategy);
     }
 
     /// @inheritdoc IUsm
@@ -478,6 +484,16 @@ abstract contract Usm is AccessControl, EIP712, IUsm {
         uint256 finalAssetAmount = IUsmPriceStrategy(PRICE_STRATEGY).getStableTokenPriceInAsset(finalGrossAmount, true);
         uint256 finalFee = finalGrossAmount - stableTokenBought;
         return (finalAssetAmount, finalGrossAmount - finalFee, finalGrossAmount, finalFee);
+    }
+
+    /**
+     * @dev Updates Price Strategy
+     * @param priceStrategy The address of the new Price Strategy
+     */
+    function _updatePriceStrategy(address priceStrategy) internal {
+        require(IUsmPriceStrategy(priceStrategy).UNDERLYING_ASSET() == UNDERLYING_ASSET, "INVALID_PRICE_STRATEGY");
+        emit PriceStrategyUpdated(PRICE_STRATEGY, priceStrategy);
+        PRICE_STRATEGY = priceStrategy;
     }
 
     /**

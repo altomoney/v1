@@ -45,16 +45,17 @@ contract TestGhoBase is Test, TestHelperOz5, Constants {
         USDC_TOKEN = new ERC20MockMintableDecimals("USDC Coin", "USDC", 6);
         WETH = new ERC20MockMintableDecimals("Wrapped Ether", "WETH", 18);
 
-        GHO_GSM_FIXED_PRICE_STRATEGY = new FixedPriceStrategy(DEFAULT_FIXED_PRICE, address(USDC_TOKEN), 6);
+        GHO_GSM_FIXED_PRICE_STRATEGY =
+            new FixedPriceStrategy(DEFAULT_FIXED_PRICE, address(USDC_TOKEN), 6, address(this));
         GHO_GSM_LAST_RESORT_LIQUIDATOR = new SampleLiquidator();
         GHO_GSM_SWAP_FREEZER = new SampleSwapFreezer();
-        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(USDC_TOKEN), address(GHO_GSM_FIXED_PRICE_STRATEGY));
+        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(USDC_TOKEN));
         // TODO deploy proxy instead once we have it
         // AdminUpgradeabilityProxy gsmProxy = new AdminUpgradeabilityProxy(address(gsm), SHORT_EXECUTOR, "");
         GHO_GSM = gsm;
-        GHO_GSM.initialize(address(this), TREASURY, DEFAULT_GSM_USDC_EXPOSURE);
+        GHO_GSM.initialize(address(this), TREASURY, DEFAULT_GSM_USDC_EXPOSURE, address(GHO_GSM_FIXED_PRICE_STRATEGY));
 
-        GHO_GSM_FIXED_FEE_STRATEGY = new FixedFeeStrategy(DEFAULT_GSM_BUY_FEE, DEFAULT_GSM_SELL_FEE);
+        GHO_GSM_FIXED_FEE_STRATEGY = new FixedFeeStrategy(DEFAULT_GSM_BUY_FEE, DEFAULT_GSM_SELL_FEE, address(this));
         GHO_GSM.updateFeeStrategy(address(GHO_GSM_FIXED_FEE_STRATEGY));
 
         GHO_GSM.grantRole(GSM_LIQUIDATOR_ROLE, address(GHO_GSM_LAST_RESORT_LIQUIDATOR));

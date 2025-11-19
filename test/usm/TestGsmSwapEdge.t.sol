@@ -16,10 +16,11 @@ contract TestGsmSwapEdge is TestGhoBase {
         FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
             10000000000000001, // 1e16 + 1
             address(newToken),
-            5
+            5,
+            address(this)
         );
-        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
-        gsm.initialize(address(this), TREASURY, type(uint128).max);
+        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken));
+        gsm.initialize(address(this), TREASURY, type(uint128).max, address(newPriceStrategy));
         GHO_TOKEN.setMinterStatus(address(gsm), true);
         GHO_TOKEN.setBurnerStatus(address(gsm), true);
         GHO_TOKEN.setMinterCeiling(address(gsm), type(uint128).max);
@@ -65,10 +66,11 @@ contract TestGsmSwapEdge is TestGhoBase {
      */
     function testGetAssetAmountForSellAssetBelowMinimumAmount() public {
         ERC20MockMintableDecimals newToken = new ERC20MockMintableDecimals("Test Coin", "TEST", 18);
-        FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(4900, 4900);
-        FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(DEFAULT_FIXED_PRICE, address(newToken), 18);
-        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
-        gsm.initialize(address(this), TREASURY, 100_000_000e18);
+        FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(4900, 4900, address(this));
+        FixedPriceStrategy newPriceStrategy =
+            new FixedPriceStrategy(DEFAULT_FIXED_PRICE, address(newToken), 18, address(this));
+        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken));
+        gsm.initialize(address(this), TREASURY, 100_000_000e18, address(newPriceStrategy));
         gsm.updateFeeStrategy(address(newFeeStrategy));
         GHO_TOKEN.setMinterStatus(address(gsm), true);
         GHO_TOKEN.setMinterCeiling(address(gsm), DEFAULT_CAPACITY);
@@ -95,10 +97,11 @@ contract TestGsmSwapEdge is TestGhoBase {
      */
     function testSellAssetWithMinimumAmount() public {
         ERC20MockMintableDecimals newToken = new ERC20MockMintableDecimals("Test Coin", "TEST", 18);
-        FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(3000, 3000);
-        FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(DEFAULT_FIXED_PRICE, address(newToken), 18);
-        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
-        gsm.initialize(address(this), TREASURY, 100_000_000e18);
+        FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(3000, 3000, address(this));
+        FixedPriceStrategy newPriceStrategy =
+            new FixedPriceStrategy(DEFAULT_FIXED_PRICE, address(newToken), 18, address(this));
+        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken));
+        gsm.initialize(address(this), TREASURY, 100_000_000e18, address(newPriceStrategy));
         gsm.updateFeeStrategy(address(newFeeStrategy));
         GHO_TOKEN.setMinterStatus(address(gsm), true);
         GHO_TOKEN.setMinterCeiling(address(gsm), DEFAULT_CAPACITY);
@@ -140,10 +143,11 @@ contract TestGsmSwapEdge is TestGhoBase {
         FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
             DEFAULT_FIXED_PRICE, // 1e18
             address(newToken),
-            24 // decimals
+            24, // decimals
+            address(this)
         );
-        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
-        gsm.initialize(ALICE, TREASURY, 1_000_000e24);
+        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken));
+        gsm.initialize(ALICE, TREASURY, 1_000_000e24, address(newPriceStrategy));
         GHO_TOKEN.setMinterStatus(address(gsm), true);
         GHO_TOKEN.setMinterCeiling(address(gsm), DEFAULT_CAPACITY);
 
@@ -190,10 +194,11 @@ contract TestGsmSwapEdge is TestGhoBase {
         FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
             DEFAULT_FIXED_PRICE, // 1e18
             address(newToken),
-            24 // decimals
+            24, // decimals
+            address(this)
         );
-        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
-        gsm.initialize(ALICE, TREASURY, 1_000_000e24);
+        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken));
+        gsm.initialize(ALICE, TREASURY, 1_000_000e24, address(newPriceStrategy));
         GHO_TOKEN.setMinterStatus(address(gsm), true);
         GHO_TOKEN.setBurnerStatus(address(gsm), true);
         GHO_TOKEN.setMinterCeiling(address(gsm), DEFAULT_CAPACITY);
@@ -232,10 +237,11 @@ contract TestGsmSwapEdge is TestGhoBase {
         FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
             DEFAULT_FIXED_PRICE, // 1e18
             address(newToken),
-            6 // decimals
+            6, // decimals
+            address(this)
         );
-        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
-        gsm.initialize(ALICE, TREASURY, 1_000_000e6);
+        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken));
+        gsm.initialize(ALICE, TREASURY, 1_000_000e6, address(newPriceStrategy));
         GHO_TOKEN.setMinterStatus(address(gsm), true);
         GHO_TOKEN.setBurnerStatus(address(gsm), true);
         GHO_TOKEN.setMinterCeiling(address(gsm), DEFAULT_CAPACITY);
@@ -270,10 +276,11 @@ contract TestGsmSwapEdge is TestGhoBase {
         FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
             DEFAULT_FIXED_PRICE, // 1e18
             address(newToken),
-            24 // decimals
+            24, // decimals
+            address(this)
         );
-        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
-        gsm.initialize(ALICE, TREASURY, 1_000_000e24);
+        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken));
+        gsm.initialize(ALICE, TREASURY, 1_000_000e24, address(newPriceStrategy));
         GHO_TOKEN.setMinterStatus(address(gsm), true);
         GHO_TOKEN.setBurnerStatus(address(gsm), true);
         GHO_TOKEN.setMinterCeiling(address(gsm), DEFAULT_CAPACITY);
@@ -308,10 +315,11 @@ contract TestGsmSwapEdge is TestGhoBase {
         FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
             DEFAULT_FIXED_PRICE, // 1e18
             address(newToken),
-            6 // decimals
+            6, // decimals
+            address(this)
         );
-        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
-        gsm.initialize(ALICE, TREASURY, 1_000_000e6);
+        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken));
+        gsm.initialize(ALICE, TREASURY, 1_000_000e6, address(newPriceStrategy));
         GHO_TOKEN.setMinterStatus(address(gsm), true);
         GHO_TOKEN.setBurnerStatus(address(gsm), true);
         GHO_TOKEN.setMinterCeiling(address(gsm), DEFAULT_CAPACITY);
@@ -352,10 +360,11 @@ contract TestGsmSwapEdge is TestGhoBase {
         FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
             DEFAULT_FIXED_PRICE, // 1e18
             address(newToken),
-            24 // decimals
+            24, // decimals
+            address(this)
         );
-        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
-        gsm.initialize(ALICE, TREASURY, 1_000_000e24);
+        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken));
+        gsm.initialize(ALICE, TREASURY, 1_000_000e24, address(newPriceStrategy));
         GHO_TOKEN.setMinterStatus(address(gsm), true);
         GHO_TOKEN.setBurnerStatus(address(gsm), true);
         GHO_TOKEN.setMinterCeiling(address(gsm), DEFAULT_CAPACITY);

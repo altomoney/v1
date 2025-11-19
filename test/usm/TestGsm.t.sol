@@ -26,43 +26,43 @@ contract TestUsm is TestGhoBase {
     }
 
     function testConstructor() public {
-        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(USDC_TOKEN), address(GHO_GSM_FIXED_PRICE_STRATEGY));
+        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(USDC_TOKEN));
         assertEq(gsm.STABLE_TOKEN(), address(GHO_TOKEN), "Unexpected GHO token address");
         assertEq(gsm.UNDERLYING_ASSET(), address(USDC_TOKEN), "Unexpected underlying asset address");
-        assertEq(gsm.PRICE_STRATEGY(), address(GHO_GSM_FIXED_PRICE_STRATEGY), "Unexpected price strategy");
         assertEq(gsm.getExposureCap(), 0, "Unexpected exposure capacity");
     }
 
-    function testRevertConstructorInvalidPriceStrategy() public {
-        FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(1e18, address(GHO_TOKEN), 18);
+    function testRevertInitializeInvalidPriceStrategy() public {
+        FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(1e18, address(GHO_TOKEN), 18, address(this));
+        DUSDUsm usm = new DUSDUsm(address(GHO_TOKEN), address(USDC_TOKEN));
         vm.expectRevert("INVALID_PRICE_STRATEGY");
-        new DUSDUsm(address(GHO_TOKEN), address(USDC_TOKEN), address(newPriceStrategy));
+        usm.initialize(address(this), TREASURY, DEFAULT_GSM_USDC_EXPOSURE, address(newPriceStrategy));
     }
 
     function testRevertConstructorZeroAddressParams() public {
         vm.expectRevert("ZERO_ADDRESS_NOT_VALID");
-        new DUSDUsm(address(0), address(USDC_TOKEN), address(GHO_GSM_FIXED_PRICE_STRATEGY));
+        new DUSDUsm(address(0), address(USDC_TOKEN));
 
         vm.expectRevert("ZERO_ADDRESS_NOT_VALID");
-        new DUSDUsm(address(GHO_TOKEN), address(0), address(GHO_GSM_FIXED_PRICE_STRATEGY));
+        new DUSDUsm(address(GHO_TOKEN), address(0));
     }
 
     function testInitialize() public {
-        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(USDC_TOKEN), address(GHO_GSM_FIXED_PRICE_STRATEGY));
+        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(USDC_TOKEN));
         vm.expectEmit(true, true, true, true);
         emit IAccessControl.RoleGranted(DEFAULT_ADMIN_ROLE, address(this), address(this));
         vm.expectEmit(true, true, false, true);
         emit IStableTokenFacilitator.StableTokenTreasuryUpdated(address(0), address(TREASURY));
         vm.expectEmit(true, true, false, true);
         emit IUsm.ExposureCapUpdated(0, DEFAULT_GSM_USDC_EXPOSURE);
-        gsm.initialize(address(this), TREASURY, DEFAULT_GSM_USDC_EXPOSURE);
+        gsm.initialize(address(this), TREASURY, DEFAULT_GSM_USDC_EXPOSURE, address(GHO_GSM_FIXED_PRICE_STRATEGY));
         assertEq(gsm.getExposureCap(), DEFAULT_GSM_USDC_EXPOSURE, "Unexpected exposure capacity");
     }
 
     function testRevertInitializeZeroAdmin() public {
-        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(USDC_TOKEN), address(GHO_GSM_FIXED_PRICE_STRATEGY));
+        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(USDC_TOKEN));
         vm.expectRevert("ZERO_ADDRESS_NOT_VALID");
-        gsm.initialize(address(0), TREASURY, DEFAULT_GSM_USDC_EXPOSURE);
+        gsm.initialize(address(0), TREASURY, DEFAULT_GSM_USDC_EXPOSURE, address(GHO_GSM_FIXED_PRICE_STRATEGY));
     }
 
     // TODO: implement once we have proxy
@@ -308,8 +308,8 @@ contract TestUsm is TestGhoBase {
     }
 
     function testRevertSellAssetNoBucketCap() public {
-        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(USDC_TOKEN), address(GHO_GSM_FIXED_PRICE_STRATEGY));
-        gsm.initialize(address(this), TREASURY, DEFAULT_GSM_USDC_EXPOSURE * 2);
+        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(USDC_TOKEN));
+        gsm.initialize(address(this), TREASURY, DEFAULT_GSM_USDC_EXPOSURE, address(GHO_GSM_FIXED_PRICE_STRATEGY));
         GHO_TOKEN.setMinterStatus(address(gsm), true);
         GHO_TOKEN.setMinterCeiling(address(gsm), DEFAULT_CAPACITY - 1);
         uint256 defaultCapInUsdc = DEFAULT_CAPACITY / (10 ** (18 - USDC_TOKEN.decimals()));
@@ -319,14 +319,14 @@ contract TestUsm is TestGhoBase {
 
         vm.startPrank(ALICE);
         USDC_TOKEN.approve(address(gsm), defaultCapInUsdc);
-        vm.expectRevert("FACILITATOR_BUCKET_CAPACITY_EXCEEDED");
+        vm.expectRevert(abi.encodeWithSelector(IDUSD.DUSDInvalidInput.selector));
         gsm.sellAsset(defaultCapInUsdc, ALICE);
         vm.stopPrank();
     }
 
     function testRevertSellAssetTooMuchUnderlyingExposure() public {
-        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(USDC_TOKEN), address(GHO_GSM_FIXED_PRICE_STRATEGY));
-        gsm.initialize(address(this), TREASURY, DEFAULT_GSM_USDC_EXPOSURE - 1);
+        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(USDC_TOKEN));
+        gsm.initialize(address(this), TREASURY, DEFAULT_GSM_USDC_EXPOSURE - 1, address(GHO_GSM_FIXED_PRICE_STRATEGY));
         GHO_TOKEN.setMinterStatus(address(gsm), true);
         GHO_TOKEN.setMinterCeiling(address(gsm), DEFAULT_CAPACITY);
 
@@ -856,6 +856,39 @@ contract TestUsm is TestGhoBase {
         GHO_GSM.setSwapFreeze(true);
     }
 
+    function testRevertUpdatePriceStrategyInvalidPriceStrategy() public {
+        FixedPriceStrategy newPriceStrategy =
+            new FixedPriceStrategy(DEFAULT_FIXED_PRICE, address(WETH), 18, address(this));
+        vm.expectRevert("INVALID_PRICE_STRATEGY");
+        vm.prank(address(this));
+        GHO_GSM.updatePriceStrategy(address(newPriceStrategy));
+    }
+
+    function testUpdatePriceStrategy() public {
+        address oldPriceStrategy = GHO_GSM.PRICE_STRATEGY();
+        FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
+            DEFAULT_FIXED_PRICE, FixedPriceStrategy(oldPriceStrategy).UNDERLYING_ASSET(), 6, address(this)
+        );
+        vm.prank(address(this));
+        vm.expectEmit(true, true, true, true, address(GHO_GSM));
+        emit IUsm.PriceStrategyUpdated(oldPriceStrategy, address(newPriceStrategy));
+        GHO_GSM.updatePriceStrategy(address(newPriceStrategy));
+
+        assertEq(GHO_GSM.PRICE_STRATEGY(), address(newPriceStrategy), "Unexpected price strategy");
+    }
+
+    function testRevertUpdatePriceStrategyNotAuthorized() public {
+        FixedPriceStrategy newPriceStrategy =
+            new FixedPriceStrategy(DEFAULT_FIXED_PRICE, address(USDC_TOKEN), 6, address(this));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector, ALICE, GSM_CONFIGURATOR_ROLE
+            )
+        );
+        vm.prank(ALICE);
+        GHO_GSM.updatePriceStrategy(address(newPriceStrategy));
+    }
+
     function testRevertSwapFreezeAlreadyFrozen() public {
         vm.startPrank(address(GHO_GSM_SWAP_FREEZER));
         GHO_GSM.setSwapFreeze(true);
@@ -924,7 +957,7 @@ contract TestUsm is TestGhoBase {
         vm.startPrank(address(ALICE));
 
         assertEq(GHO_GSM.getFeeStrategy(), address(GHO_GSM_FIXED_FEE_STRATEGY), "Unexpected fee strategy");
-        FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(DEFAULT_GSM_BUY_FEE, DEFAULT_GSM_SELL_FEE);
+        FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(DEFAULT_GSM_BUY_FEE, DEFAULT_GSM_SELL_FEE, address(this));
 
         vm.expectEmit(true, true, false, true, address(GHO_GSM));
         emit IUsm.FeeStrategyUpdated(address(GHO_GSM_FIXED_FEE_STRATEGY), address(newFeeStrategy));
@@ -976,9 +1009,9 @@ contract TestUsm is TestGhoBase {
     }
 
     function testRevertInitializeTreasuryZeroAddress() public {
-        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(USDC_TOKEN), address(GHO_GSM_FIXED_PRICE_STRATEGY));
+        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(USDC_TOKEN));
         vm.expectRevert(bytes("ZERO_ADDRESS_NOT_VALID"));
-        gsm.initialize(address(this), address(0), DEFAULT_GSM_USDC_EXPOSURE);
+        gsm.initialize(address(this), address(0), DEFAULT_GSM_USDC_EXPOSURE, address(GHO_GSM_FIXED_PRICE_STRATEGY));
     }
 
     function testUpdateGhoTreasuryRevertIfZero() public {
