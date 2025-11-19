@@ -865,7 +865,7 @@ contract TestUsm is TestGhoBase {
     }
 
     function testUpdatePriceStrategy() public {
-        address oldPriceStrategy = GHO_GSM.PRICE_STRATEGY();
+        address oldPriceStrategy = GHO_GSM.priceStrategy();
         FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
             DEFAULT_FIXED_PRICE, FixedPriceStrategy(oldPriceStrategy).UNDERLYING_ASSET(), 6, address(this)
         );
@@ -874,7 +874,7 @@ contract TestUsm is TestGhoBase {
         emit IUsm.PriceStrategyUpdated(oldPriceStrategy, address(newPriceStrategy));
         GHO_GSM.updatePriceStrategy(address(newPriceStrategy));
 
-        assertEq(GHO_GSM.PRICE_STRATEGY(), address(newPriceStrategy), "Unexpected price strategy");
+        assertEq(GHO_GSM.priceStrategy(), address(newPriceStrategy), "Unexpected price strategy");
     }
 
     function testRevertUpdatePriceStrategyNotAuthorized() public {

@@ -337,7 +337,7 @@ interface IUsm is IAccessControl, IStableTokenFacilitator {
      * @notice Returns the price strategy of the USM
      * @return The address of the price strategy
      */
-    function PRICE_STRATEGY() external view returns (address);
+    function priceStrategy() external view returns (address);
 
     /**
      * @notice Returns the current nonce (for EIP-712 signature methods) of an address

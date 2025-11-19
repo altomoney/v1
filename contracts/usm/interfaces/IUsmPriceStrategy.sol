@@ -17,6 +17,12 @@ interface IUsmPriceStrategy {
     function setPriceRatio(uint256 newPriceRatio) external;
 
     /**
+     * @notice Returns the identifier of the Configurator Role
+     * @return The bytes32 id hash of the Configurator role
+     */
+    function CONFIGURATOR_ROLE() external pure returns (bytes32);
+
+    /**
      * @notice Returns the number of decimals of Stable Token
      * @return The number of decimals of Stable Token
      */

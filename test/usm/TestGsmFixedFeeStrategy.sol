@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "./TestGhoBase.t.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 
 contract TestGsmFixedFeeStrategy is TestGhoBase {
     function testRevertAboveMaximumFee() public {
@@ -39,7 +39,11 @@ contract TestGsmFixedFeeStrategy is TestGhoBase {
         vm.stopPrank();
 
         vm.startPrank(address(ALICE));
-        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, ALICE));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector, ALICE, feeStrategy.CONFIGURATOR_ROLE()
+            )
+        );
         feeStrategy.setFee(DEFAULT_GSM_BUY_FEE + 2000, DEFAULT_GSM_SELL_FEE + 2000);
     }
 }

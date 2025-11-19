@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "./TestGhoBase.t.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 
 contract TestGsmFixedPriceStrategy is TestGhoBase {
     function testConstructor(uint256 ratio, address underlying, uint8 decimals) public {
@@ -11,7 +11,7 @@ contract TestGsmFixedPriceStrategy is TestGhoBase {
 
         FixedPriceStrategy strategy = new FixedPriceStrategy(ratio, underlying, decimals, address(this));
         assertEq(strategy.STABLE_TOKEN_DECIMALS(), 18, "Unexpected GHO decimals");
-        assertEq(strategy.PRICE_RATIO(), ratio, "Unexpected price ratio");
+        assertEq(strategy.priceRatio(), ratio, "Unexpected price ratio");
         assertEq(strategy.UNDERLYING_ASSET(), underlying, "Unexpected underlying asset");
         assertEq(strategy.UNDERLYING_ASSET_DECIMALS(), decimals, "Unexpected underlying asset decimals");
     }
@@ -50,10 +50,14 @@ contract TestGsmFixedPriceStrategy is TestGhoBase {
         vm.startPrank(address(this));
         strategy.setPriceRatio(2e18);
         vm.stopPrank();
-        assertEq(strategy.PRICE_RATIO(), 2e18, "Unexpected price ratio");
+        assertEq(strategy.priceRatio(), 2e18, "Unexpected price ratio");
 
         vm.startPrank(address(ALICE));
-        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, ALICE));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector, ALICE, strategy.CONFIGURATOR_ROLE()
+            )
+        );
         strategy.setPriceRatio(3e18);
         vm.stopPrank();
     }
