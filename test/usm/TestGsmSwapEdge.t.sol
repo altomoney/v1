@@ -12,15 +12,17 @@ contract TestGsmSwapEdge is TestGhoBase {
      * e.g. With (1e16 + 1) priceRatio, a user gets 1e11 gho for selling 1 asset but gets 1 asset by selling 1e11+1 gho
      */
     function testCannotBuyAllUnderlying() public {
-        TestnetERC20 newToken = new TestnetERC20("Test Coin", "TEST", 5, FAUCET);
+        ERC20MockMintableDecimals newToken = new ERC20MockMintableDecimals("Test Coin", "TEST", 5);
         FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
             10000000000000001, // 1e16 + 1
             address(newToken),
             5
         );
-        Gsm gsm = new Gsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
+        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
         gsm.initialize(address(this), TREASURY, type(uint128).max);
-        GHO_TOKEN.addFacilitator(address(gsm), "GSM TINY", type(uint128).max);
+        GHO_TOKEN.setMinterStatus(address(gsm), true);
+        GHO_TOKEN.setBurnerStatus(address(gsm), true);
+        GHO_TOKEN.setMinterCeiling(address(gsm), type(uint128).max);
 
         // Sell 2 assets for 2e11 GHO
         vm.prank(FAUCET);
@@ -32,7 +34,7 @@ contract TestGsmSwapEdge is TestGhoBase {
         vm.stopPrank();
 
         // Top up with GHO
-        (, uint256 estGhoBought,,) = gsm.getGhoAmountForBuyAsset(2);
+        (, uint256 estGhoBought,,) = gsm.getStableTokenAmountForBuyAsset(2);
         ghoFaucet(ALICE, estGhoBought * 20);
 
         vm.startPrank(ALICE);
@@ -62,13 +64,14 @@ contract TestGsmSwapEdge is TestGhoBase {
      * @dev Edge case where it is not possible to sell less than the minimum amount because would lead to 0 GHO.
      */
     function testGetAssetAmountForSellAssetBelowMinimumAmount() public {
-        TestnetERC20 newToken = new TestnetERC20("Test Coin", "TEST", 18, FAUCET);
+        ERC20MockMintableDecimals newToken = new ERC20MockMintableDecimals("Test Coin", "TEST", 18);
         FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(4900, 4900);
         FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(DEFAULT_FIXED_PRICE, address(newToken), 18);
-        Gsm gsm = new Gsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
+        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
         gsm.initialize(address(this), TREASURY, 100_000_000e18);
         gsm.updateFeeStrategy(address(newFeeStrategy));
-        GHO_TOKEN.addFacilitator(address(gsm), "Test GSM", DEFAULT_CAPACITY);
+        GHO_TOKEN.setMinterStatus(address(gsm), true);
+        GHO_TOKEN.setMinterCeiling(address(gsm), DEFAULT_CAPACITY);
 
         // Get asset amount required to receive 1 GHO
         (uint256 assetAmount, uint256 ghoBought, uint256 grossAmount, uint256 fee) = gsm.getAssetAmountForSellAsset(1);
@@ -91,13 +94,14 @@ contract TestGsmSwapEdge is TestGhoBase {
      * e.g. if the GSM can provide 10 GHO for 12 assets, it charges only 12 even if the user provides more than 12.
      */
     function testSellAssetWithMinimumAmount() public {
-        TestnetERC20 newToken = new TestnetERC20("Test Coin", "TEST", 18, FAUCET);
+        ERC20MockMintableDecimals newToken = new ERC20MockMintableDecimals("Test Coin", "TEST", 18);
         FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(3000, 3000);
         FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(DEFAULT_FIXED_PRICE, address(newToken), 18);
-        Gsm gsm = new Gsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
+        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
         gsm.initialize(address(this), TREASURY, 100_000_000e18);
         gsm.updateFeeStrategy(address(newFeeStrategy));
-        GHO_TOKEN.addFacilitator(address(gsm), "Test GSM", DEFAULT_CAPACITY);
+        GHO_TOKEN.setMinterStatus(address(gsm), true);
+        GHO_TOKEN.setMinterCeiling(address(gsm), DEFAULT_CAPACITY);
 
         // Get asset amount required to receive 10000 GHO
         (uint256 assetAmount, uint256 ghoBought, uint256 grossAmount, uint256 fee) =
@@ -129,7 +133,7 @@ contract TestGsmSwapEdge is TestGhoBase {
      * in case the underlying asset has more decimals than GHO (18)
      */
     function testSellAssetWithHigherDecimals() public {
-        TestnetERC20 newToken = new TestnetERC20("Test Coin", "TEST", 24, FAUCET);
+        ERC20MockMintableDecimals newToken = new ERC20MockMintableDecimals("Test Coin", "TEST", 24);
         vm.prank(FAUCET);
         newToken.mint(ALICE, 1_000_000e24);
 
@@ -138,9 +142,10 @@ contract TestGsmSwapEdge is TestGhoBase {
             address(newToken),
             24 // decimals
         );
-        Gsm gsm = new Gsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
+        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
         gsm.initialize(ALICE, TREASURY, 1_000_000e24);
-        GHO_TOKEN.addFacilitator(address(gsm), "GSM TINY", DEFAULT_CAPACITY);
+        GHO_TOKEN.setMinterStatus(address(gsm), true);
+        GHO_TOKEN.setMinterCeiling(address(gsm), DEFAULT_CAPACITY);
 
         vm.startPrank(ALICE);
         newToken.approve(address(gsm), type(uint256).max);
@@ -177,7 +182,7 @@ contract TestGsmSwapEdge is TestGhoBase {
      * gho amount charged, in case the underlying asset has more decimals than GHO (18)
      */
     function testBuyAssetWithHigherDecimals() public {
-        TestnetERC20 newToken = new TestnetERC20("Test Coin", "TEST", 24, FAUCET);
+        ERC20MockMintableDecimals newToken = new ERC20MockMintableDecimals("Test Coin", "TEST", 24);
         vm.prank(FAUCET);
         newToken.mint(ALICE, 1_000_000e24);
         ghoFaucet(ALICE, DEFAULT_CAPACITY);
@@ -187,9 +192,11 @@ contract TestGsmSwapEdge is TestGhoBase {
             address(newToken),
             24 // decimals
         );
-        Gsm gsm = new Gsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
+        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
         gsm.initialize(ALICE, TREASURY, 1_000_000e24);
-        GHO_TOKEN.addFacilitator(address(gsm), "GSM TINY", DEFAULT_CAPACITY);
+        GHO_TOKEN.setMinterStatus(address(gsm), true);
+        GHO_TOKEN.setBurnerStatus(address(gsm), true);
+        GHO_TOKEN.setMinterCeiling(address(gsm), DEFAULT_CAPACITY);
 
         vm.startPrank(ALICE);
         // Alice sells some asset to the GSM
@@ -218,7 +225,7 @@ contract TestGsmSwapEdge is TestGhoBase {
      * in case the underlying asset has less decimals than GHO (18)
      */
     function testSellAssetByGhoAmountWithLowerDecimals() public {
-        TestnetERC20 newToken = new TestnetERC20("Test Coin", "TEST", 6, FAUCET);
+        ERC20MockMintableDecimals newToken = new ERC20MockMintableDecimals("Test Coin", "TEST", 6);
         vm.prank(FAUCET);
         newToken.mint(ALICE, 1_000_000e6);
 
@@ -227,9 +234,11 @@ contract TestGsmSwapEdge is TestGhoBase {
             address(newToken),
             6 // decimals
         );
-        Gsm gsm = new Gsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
+        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
         gsm.initialize(ALICE, TREASURY, 1_000_000e6);
-        GHO_TOKEN.addFacilitator(address(gsm), "GSM TINY", DEFAULT_CAPACITY);
+        GHO_TOKEN.setMinterStatus(address(gsm), true);
+        GHO_TOKEN.setBurnerStatus(address(gsm), true);
+        GHO_TOKEN.setMinterCeiling(address(gsm), DEFAULT_CAPACITY);
 
         // User wants to know how much asset must sell to get 1.9e12 GHO
         vm.startPrank(ALICE);
@@ -254,7 +263,7 @@ contract TestGsmSwapEdge is TestGhoBase {
      * in case the underlying asset has more decimals than GHO (18)
      */
     function testSellAssetByGhoAmountWithHigherDecimals() public {
-        TestnetERC20 newToken = new TestnetERC20("Test Coin", "TEST", 24, FAUCET);
+        ERC20MockMintableDecimals newToken = new ERC20MockMintableDecimals("Test Coin", "TEST", 24);
         vm.prank(FAUCET);
         newToken.mint(ALICE, 1_000_000e24);
 
@@ -263,9 +272,11 @@ contract TestGsmSwapEdge is TestGhoBase {
             address(newToken),
             24 // decimals
         );
-        Gsm gsm = new Gsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
+        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
         gsm.initialize(ALICE, TREASURY, 1_000_000e24);
-        GHO_TOKEN.addFacilitator(address(gsm), "GSM TINY", DEFAULT_CAPACITY);
+        GHO_TOKEN.setMinterStatus(address(gsm), true);
+        GHO_TOKEN.setBurnerStatus(address(gsm), true);
+        GHO_TOKEN.setMinterCeiling(address(gsm), DEFAULT_CAPACITY);
 
         // User wants to know how much asset must sell to get 1 GHO
         vm.startPrank(ALICE);
@@ -289,7 +300,7 @@ contract TestGsmSwapEdge is TestGhoBase {
      * in case the underlying asset has less decimals than GHO (18)
      */
     function testBuyAssetByGhoAmountWithLowerDecimals() public {
-        TestnetERC20 newToken = new TestnetERC20("Test Coin", "TEST", 6, FAUCET);
+        ERC20MockMintableDecimals newToken = new ERC20MockMintableDecimals("Test Coin", "TEST", 6);
         vm.prank(FAUCET);
         newToken.mint(ALICE, 1_000_000e6);
         ghoFaucet(ALICE, DEFAULT_CAPACITY);
@@ -299,9 +310,11 @@ contract TestGsmSwapEdge is TestGhoBase {
             address(newToken),
             6 // decimals
         );
-        Gsm gsm = new Gsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
+        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
         gsm.initialize(ALICE, TREASURY, 1_000_000e6);
-        GHO_TOKEN.addFacilitator(address(gsm), "GSM TINY", DEFAULT_CAPACITY);
+        GHO_TOKEN.setMinterStatus(address(gsm), true);
+        GHO_TOKEN.setBurnerStatus(address(gsm), true);
+        GHO_TOKEN.setMinterCeiling(address(gsm), DEFAULT_CAPACITY);
 
         vm.startPrank(ALICE);
         // Alice sells some asset to the GSM
@@ -331,7 +344,7 @@ contract TestGsmSwapEdge is TestGhoBase {
      * in case the underlying asset has more decimals than GHO (18)
      */
     function testBuyAssetByGhoAmountWithHigherDecimals() public {
-        TestnetERC20 newToken = new TestnetERC20("Test Coin", "TEST", 24, FAUCET);
+        ERC20MockMintableDecimals newToken = new ERC20MockMintableDecimals("Test Coin", "TEST", 24);
         vm.prank(FAUCET);
         newToken.mint(ALICE, 1_000_000e24);
         ghoFaucet(ALICE, DEFAULT_CAPACITY);
@@ -341,9 +354,11 @@ contract TestGsmSwapEdge is TestGhoBase {
             address(newToken),
             24 // decimals
         );
-        Gsm gsm = new Gsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
+        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
         gsm.initialize(ALICE, TREASURY, 1_000_000e24);
-        GHO_TOKEN.addFacilitator(address(gsm), "GSM TINY", DEFAULT_CAPACITY);
+        GHO_TOKEN.setMinterStatus(address(gsm), true);
+        GHO_TOKEN.setBurnerStatus(address(gsm), true);
+        GHO_TOKEN.setMinterCeiling(address(gsm), DEFAULT_CAPACITY);
 
         vm.startPrank(ALICE);
         // Alice sells some asset to the GSM
