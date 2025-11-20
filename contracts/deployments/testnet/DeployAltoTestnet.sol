@@ -285,7 +285,7 @@ library DeployAltoTestnet {
                     owner: params.owner,
                     collateralToken: address(input.tokens.wbtc),
                     borrowToken: address(input.tokens.dusd),
-                    marketOraclePrice: 100_000 ether * LENDING_ORACLE_PRICE_PRECISION / 1 ether,
+                    marketOraclePrice: 100_000 * LENDING_ORACLE_PRICE_PRECISION * 1e10,
                     maxLtv: 0.75 ether
                 })
             ))
@@ -300,7 +300,7 @@ library DeployAltoTestnet {
                     owner: params.owner,
                     collateralToken: address(input.tokens.cbbtc),
                     borrowToken: address(input.tokens.dusd),
-                    marketOraclePrice: 100_000 ether * LENDING_ORACLE_PRICE_PRECISION / 1 ether,
+                    marketOraclePrice: 100_000 * LENDING_ORACLE_PRICE_PRECISION * 1e10,
                     maxLtv: 0.75 ether
                 })
             ))
@@ -315,7 +315,7 @@ library DeployAltoTestnet {
                     owner: params.owner,
                     collateralToken: address(input.tokens.susde),
                     borrowToken: address(input.tokens.dusd),
-                    marketOraclePrice: 1.2 ether * LENDING_ORACLE_PRICE_PRECISION / 1 ether,
+                    marketOraclePrice: 1.2 ether * LENDING_ORACLE_PRICE_PRECISION,
                     maxLtv: 0.75 ether
                 })
             ))
