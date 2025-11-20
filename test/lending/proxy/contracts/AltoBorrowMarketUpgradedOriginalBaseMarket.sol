@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {AltoBaseMarket} from "@alto/lending/AltoBaseMarket.sol";
-import {BaseMarketInitParams, LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
+import {BaseMarketInitParams, LiquidationConfiguration, MarketType} from "@alto/lending/interfaces/IMarket.sol";
 
 /// @custom:oz-upgrades-from AltoBorrowMarket
 contract AltoBorrowMarketUpgradedOriginalBaseMarket is AltoBaseMarket {
@@ -21,7 +21,7 @@ contract AltoBorrowMarketUpgradedOriginalBaseMarket is AltoBaseMarket {
     }
 
     function initialize(BaseMarketInitParams memory _baseMarketInitParams) public initializer {
-        __AltoBaseMarket_init(_baseMarketInitParams);
+        __AltoBaseMarket_init(_baseMarketInitParams, MarketType.BORROW);
     }
 
     function borrowOpeningFee() public view override returns (uint256) {

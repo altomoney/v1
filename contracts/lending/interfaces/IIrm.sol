@@ -2,6 +2,11 @@
 
 pragma solidity >=0.8.0;
 
+enum IRMType {
+    FIXED_RATE, // FixedRateIrm
+    ADAPTIVE_CURVE // AdaptiveCurveIrm
+}
+
 interface IIrm {
     /// @notice Error thrown when the caller is not the market
     error IrmUnauthorized();
@@ -14,6 +19,10 @@ interface IIrm {
 
     /// @notice Error thrown when the parameters are invalid
     error IrmInvalidParams();
+
+    /// @notice The type of the IRM
+    /// @dev This is used to identify the type of the IRM during indexing
+    function IRM_TYPE() external view returns (IRMType);
 
     /// @notice Sets the market for the IRM
     /// @param _market The market to set

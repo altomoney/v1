@@ -9,7 +9,8 @@ import {LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.s
 import {
     BaseMarketInitParams,
     LiquidationConfiguration,
-    BorrowMarketInitParams
+    BorrowMarketInitParams,
+    MarketType
 } from "@alto/lending/interfaces/IMarket.sol";
 
 contract MockMarket is AltoBaseMarket {
@@ -22,7 +23,7 @@ contract MockMarket is AltoBaseMarket {
         public
         initializer
     {
-        __AltoBaseMarket_init(_baseMarketInitParams);
+        __AltoBaseMarket_init(_baseMarketInitParams, MarketType.BORROW);
 
         if (_borrowOpeningFeeWad > MATH_PRECISION) {
             revert AltoBaseMarketInvalidInput();

@@ -5,7 +5,8 @@ import {AltoBaseMarketUpgraded} from "./AltoBaseMarketUpgraded.sol";
 import {
     BaseMarketInitParams,
     BorrowMarketInitParams,
-    LiquidationConfiguration
+    LiquidationConfiguration,
+    MarketType
 } from "@alto/lending/interfaces/IMarket.sol";
 import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 
@@ -21,7 +22,7 @@ contract AltoBorrowMarketUpgraded is AltoBaseMarketUpgraded {
     }
 
     function initialize(BorrowMarketInitParams memory _borrowMarketInitParams) public initializer {
-        __AltoBaseMarket_init(_borrowMarketInitParams.baseMarketInitParams);
+        __AltoBaseMarket_init(_borrowMarketInitParams.baseMarketInitParams, MarketType.BORROW);
         _borrowOpeningFee = _borrowMarketInitParams.initialBorrowOpeningFee;
     }
 

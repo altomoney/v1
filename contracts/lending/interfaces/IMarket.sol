@@ -4,6 +4,13 @@ pragma solidity ^0.8.0;
 import {IAuth} from "@alto/utils/interfaces/IAuth.sol";
 import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
 
+/// @notice The type of the market
+enum MarketType {
+    BORROW, // AltoBorrowMarket
+    MINT, // AltoMintMarket
+    DAO_MINT // AltoDaoMintMarket
+}
+
 /// @notice Struct that represents the balance of a token
 struct Balance {
     uint128 assets;
@@ -279,6 +286,9 @@ interface IMarketEvents {
 }
 
 interface IMarketBase is IMarketErrors, IMarketEvents, IAuth, IPausable {
+    /// @notice The type of the market.
+    function MARKET_TYPE() external view returns (MarketType);
+
     /// @notice The address of the borrow token.
     function borrowToken() external view returns (address);
 

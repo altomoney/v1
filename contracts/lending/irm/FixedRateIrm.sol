@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
-import {IIrm} from "../interfaces/IIrm.sol";
+import {IIrm, IRMType} from "../interfaces/IIrm.sol";
 import {Ownable, Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {IMarket} from "../interfaces/IMarket.sol";
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
@@ -15,6 +15,8 @@ contract FixedRateIrm is Ownable2Step, IIrm {
 
     event SetBorrowRate(uint256 borrowRate);
 
+    event IRStateUpdated(IRState newIRState);
+
     /// @notice Internal cached state of the interest rate model.
     struct IRState {
         /// @dev The fixed borrow rate.
@@ -24,6 +26,9 @@ contract FixedRateIrm is Ownable2Step, IIrm {
     }
 
     uint256 public constant MAX_BORROW_RATE = 8.0 ether / uint256(365 days);
+
+    /// @inheritdoc IIrm
+    IRMType public constant IRM_TYPE = IRMType.FIXED_RATE;
 
     IRState public irState;
     address public market;
@@ -35,6 +40,8 @@ contract FixedRateIrm is Ownable2Step, IIrm {
         if (_borrowRate == 0 || _borrowRate > MAX_BORROW_RATE) revert IrmInvalidParams();
 
         irState.borrowRate = _borrowRate;
+
+        emit IRStateUpdated(irState);
     }
 
     /// @notice Sets the market address
@@ -44,6 +51,8 @@ contract FixedRateIrm is Ownable2Step, IIrm {
         if (market != address(0)) revert IrmMarketAlreadySet();
         market = _market;
         irState.lastUpdate = uint48(block.timestamp);
+
+        emit IRStateUpdated(irState);
     }
 
     /// @inheritdoc IIrm
@@ -51,6 +60,7 @@ contract FixedRateIrm is Ownable2Step, IIrm {
         if (msg.sender != market) revert IrmUnauthorized();
         if (!_paused) {
             irState.lastUpdate = uint48(block.timestamp);
+            emit IRStateUpdated(irState);
         }
     }
 
@@ -66,6 +76,8 @@ contract FixedRateIrm is Ownable2Step, IIrm {
         }
 
         irState.borrowRate = _borrowRate;
+
+        emit IRStateUpdated(irState);
 
         emit SetBorrowRate(_borrowRate);
     }
@@ -101,6 +113,8 @@ contract FixedRateIrm is Ownable2Step, IIrm {
         (uint256 interest, uint256 newBorrowRate) = _accrueInterest(_totalSupply, _totalBorrowed);
 
         irState.lastUpdate = uint48(block.timestamp);
+
+        emit IRStateUpdated(irState);
 
         return (interest, newBorrowRate);
     }

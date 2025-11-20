@@ -6,7 +6,7 @@ import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 import {LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
-import {IMarket, LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
+import {IMarket, IMarketEvents, LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
 import {IrmCommon} from "./IrmCommon.t.sol";
 import {MockMarketDeployer, MockMarket} from "@alto-test/helpers/MockMarket.sol";
 
@@ -110,8 +110,14 @@ contract FixedRateIrmUpdateTest is IrmCommon {
         uint256 expectedInterest = _getAccruedInterest(borrowedAmount, borrowRate, 10 minutes);
 
         vm.warp(block.timestamp + 10 minutes);
+        FixedRateIrm.IRState memory irState = FixedRateIrm.IRState({borrowRate: borrowRate, lastUpdate: 0});
+        irState.lastUpdate = uint48(block.timestamp);
+        vm.expectEmit(true, true, true, true, address(irm));
+        emit FixedRateIrm.IRStateUpdated(irState);
         market.accrueInterest();
         if (executeMoreThanOnce) {
+            vm.expectEmit(true, true, true, true, address(irm));
+            emit FixedRateIrm.IRStateUpdated(irState);
             market.accrueInterest();
         }
         assertEq(IMarket(address(market)).totalBorrowed().assets, borrowedAmount + expectedInterest);
@@ -145,7 +151,12 @@ contract FixedRateIrmUpdateTest is IrmCommon {
         assertEq(IMarket(address(market)).totalBorrowed().assets, borrowedAmount);
         uint256 expectedInterest = _getAccruedInterest(borrowedAmount, borrowRate, elapsedTime);
 
+        FixedRateIrm.IRState memory irState = FixedRateIrm.IRState({borrowRate: borrowRate, lastUpdate: 0});
+
         vm.warp(block.timestamp + elapsedTime);
+        irState.lastUpdate = uint48(block.timestamp);
+        vm.expectEmit(true, true, true, true, address(irm));
+        emit FixedRateIrm.IRStateUpdated(irState);
         market.accrueInterest();
 
         uint256 totalBorrowed = IMarket(address(market)).totalBorrowed().assets;
@@ -155,6 +166,9 @@ contract FixedRateIrmUpdateTest is IrmCommon {
 
         // change borrow rate either via irm or market
         if (testIrmSwap) {
+            irState.borrowRate = newBorrowRate;
+            vm.expectEmit(true, true, true, true, address(irm));
+            emit FixedRateIrm.IRStateUpdated(irState);
             FixedRateIrm(irm).setBorrowRate(newBorrowRate);
         } else {
             address irm2 = address(new FixedRateIrm(newBorrowRate, address(this)));
@@ -163,6 +177,10 @@ contract FixedRateIrmUpdateTest is IrmCommon {
         assertEq(totalBorrowed, borrowedAmount + expectedInterest);
 
         vm.warp(block.timestamp + elapsedTime);
+        irState.borrowRate = newBorrowRate;
+        irState.lastUpdate = uint48(block.timestamp);
+        vm.expectEmit(true, true, true, true);
+        emit FixedRateIrm.IRStateUpdated(irState);
         market.accrueInterest();
         assertEq(IMarket(address(market)).totalBorrowed().assets, totalBorrowed + expectedInterestAfterIrmUpdate);
 
@@ -176,6 +194,9 @@ contract FixedRateIrmUpdateTest is IrmCommon {
         market.repay(toRepay, 0, USER);
 
         vm.warp(block.timestamp + elapsedTime);
+        irState.lastUpdate = uint48(block.timestamp);
+        vm.expectEmit(true, true, true, false);
+        emit FixedRateIrm.IRStateUpdated(irState);
         market.accrueInterest();
         assertEq(
             IMarket(address(market)).totalBorrowed().assets,

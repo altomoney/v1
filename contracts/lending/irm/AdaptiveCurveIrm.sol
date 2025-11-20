@@ -7,7 +7,7 @@ import {MathLib as MathLibInt, WAD_INT} from "@morpho-org/irm/adaptive-curve-irm
 import {UtilsLib} from "@morpho-org/irm/adaptive-curve-irm/libraries/UtilsLib.sol";
 import {MathLib} from "@morpho-org/irm/adaptive-curve-irm/libraries/MathLib.sol";
 
-import {IIrm} from "../interfaces/IIrm.sol";
+import {IIrm, IRMType} from "../interfaces/IIrm.sol";
 import {IMarket} from "../interfaces/IMarket.sol";
 import {ExpLib} from "../libraries/ExpLib.sol";
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
@@ -29,6 +29,9 @@ contract AdaptiveCurveIrm is Ownable2Step, IIrm {
 
     int256 internal constant YEAR = int256(365 days);
 
+    /// @inheritdoc IIrm
+    IRMType public constant IRM_TYPE = IRMType.ADAPTIVE_CURVE;
+
     /// @notice The config of the Adaptive Curve IRM
     struct AdaptiveCurveIrmConfig {
         int256 curveSteepness;
@@ -46,6 +49,8 @@ contract AdaptiveCurveIrm is Ownable2Step, IIrm {
         /// @dev The timestamp of the last update to the model.
         uint48 lastUpdate;
     }
+
+    event IRStateUpdated(IRState newIRState);
 
     event SetIrmConfig(AdaptiveCurveIrmConfig irmConfig);
 
@@ -72,6 +77,8 @@ contract AdaptiveCurveIrm is Ownable2Step, IIrm {
         irState.lastUpdate = uint48(block.timestamp);
         (, int256 rateAtTarget) = _computeInterestRate(0, 0);
         irState.rateAtTarget = rateAtTarget;
+
+        emit IRStateUpdated(irState);
     }
 
     /// @inheritdoc IIrm
@@ -79,6 +86,7 @@ contract AdaptiveCurveIrm is Ownable2Step, IIrm {
         if (msg.sender != market) revert IrmUnauthorized();
         if (!_paused) {
             irState.lastUpdate = uint48(block.timestamp);
+            emit IRStateUpdated(irState);
         }
     }
 
@@ -100,6 +108,7 @@ contract AdaptiveCurveIrm is Ownable2Step, IIrm {
         (, int256 rateAtTarget) = _computeInterestRate(0, 0);
         irState = IRState({rateAtTarget: rateAtTarget, lastUpdate: irState.lastUpdate});
 
+        emit IRStateUpdated(irState);
         emit SetIrmConfig(_irmConfig);
     }
 
@@ -171,6 +180,8 @@ contract AdaptiveCurveIrm is Ownable2Step, IIrm {
         (uint256 interest, uint256 newBorrowRate, int256 rateAtTarget) = _accrueInterest(_totalSupply, _totalBorrowed);
 
         irState = IRState({rateAtTarget: rateAtTarget, lastUpdate: uint48(block.timestamp)});
+
+        emit IRStateUpdated(irState);
 
         return (interest, newBorrowRate, rateAtTarget);
     }
