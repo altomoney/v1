@@ -34,7 +34,7 @@ contract TestUsmSampleLiquidator is TestDusdBase {
         USDC_TOKEN.mint(ALICE, DEFAULT_USM_USDC_AMOUNT);
         vm.startPrank(ALICE);
         USDC_TOKEN.approve(address(DUSD_USM), DEFAULT_USM_USDC_AMOUNT);
-        DUSD_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, ALICE);
+        DUSD_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, ALICE, ALICE);
         vm.stopPrank();
 
         // Seize the GSM
@@ -59,7 +59,7 @@ contract TestUsmSampleLiquidator is TestDusdBase {
         USDC_TOKEN.mint(ALICE, DEFAULT_USM_USDC_AMOUNT);
         vm.startPrank(ALICE);
         USDC_TOKEN.approve(address(DUSD_USM), DEFAULT_USM_USDC_AMOUNT);
-        DUSD_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, ALICE);
+        DUSD_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, ALICE, ALICE);
         vm.stopPrank();
 
         // Seize the GSM

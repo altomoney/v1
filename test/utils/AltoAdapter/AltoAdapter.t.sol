@@ -1518,4 +1518,50 @@ contract AltoAdapterTest is AdapterCommonSetup {
         bytes32[] memory emptyProof = new bytes32[](0);
         return (vestingInfo, emptyProof);
     }
+
+    function testUsmBuyAssetWithSig(uint256 privateKey, uint256 amount) public {
+        address user;
+        privateKey = _boundPrivateKey(privateKey);
+        user = vm.addr(privateKey);
+        amount = bound(amount, MIN_AMOUNT, 1_000_000e6); // Max 1M with 6 decimals
+
+        deal(address(underlyingToken), user, amount);
+        vm.startPrank(user);
+        underlyingToken.approve(address(usmContract), amount);
+        usmContract.sellAsset(amount, user, user);
+        vm.stopPrank();
+
+        (,, uint256 dusdAmount,) = usmContract.getStableTokenAmountForBuyAsset(amount);
+        deal(address(dusdToken), user, dusdAmount);
+
+        bundle.push(_usmSetAuthorizationWithSig(usmContract, privateKey, true, 0, false, address(altoAdapter)));
+        bundle.push(_usmBuyAsset(usmContract, amount, user));
+
+        vm.startPrank(user);
+        dusdToken.approve(address(usmContract), type(uint256).max);
+        bundler3.multicall(bundle);
+        vm.stopPrank();
+
+        assertGt(underlyingToken.balanceOf(user), 0, "User should have received underlying tokens");
+    }
+
+    function testUsmSellAssetWithSig(uint256 privateKey, uint256 amount) public {
+        address user;
+        privateKey = _boundPrivateKey(privateKey);
+        user = vm.addr(privateKey);
+        // Bound amount to avoid exposure cap issues
+        amount = bound(amount, MIN_AMOUNT, 1_000_000e6);
+
+        deal(address(underlyingToken), user, amount);
+
+        bundle.push(_usmSetAuthorizationWithSig(usmContract, privateKey, true, 0, false, address(altoAdapter)));
+        bundle.push(_usmSellAsset(usmContract, amount, user));
+
+        vm.startPrank(user);
+        underlyingToken.approve(address(usmContract), type(uint256).max);
+        bundler3.multicall(bundle);
+        vm.stopPrank();
+
+        assertGt(dusdToken.balanceOf(user), 0, "User should have received DUSD tokens");
+    }
 }

@@ -116,7 +116,7 @@ contract TestUsmSwapFuzz is TestDusdBase {
         vm.startPrank(FAUCET);
         newToken.mint(FAUCET, assetAmount);
         newToken.approve(address(gsm), type(uint256).max);
-        gsm.sellAsset(assetAmount, FAUCET);
+        gsm.sellAsset(assetAmount, FAUCET, FAUCET);
         vm.stopPrank();
 
         // Arb Strat estimation
@@ -134,11 +134,11 @@ contract TestUsmSwapFuzz is TestDusdBase {
         newToken.approve(address(gsm), type(uint256).max);
         DUSD_TOKEN.approve(address(gsm), type(uint256).max);
 
-        (, vars.exactDusdAmount) = gsm.sellAsset(assetAmount, ALICE);
+        (, vars.exactDusdAmount) = gsm.sellAsset(assetAmount, ALICE, ALICE);
         (vars.estAssetAmount1,,,) = gsm.getAssetAmountForBuyAsset(vars.exactDusdAmount);
         assertLe(vars.estAssetAmount1, assetAmount, "getting more assetAmount than provided in estimation");
         vm.assume(vars.estAssetAmount1 > 0); // 0 value is a valid for the property to hold, but buyAsset op would fail
-        (vars.exactAssetAmount,) = gsm.buyAsset(vars.estAssetAmount1, ALICE);
+        (vars.exactAssetAmount,) = gsm.buyAsset(vars.estAssetAmount1, ALICE, ALICE);
 
         assertLe(vars.exactAssetAmount, assetAmount, "getting more assetAmount than provided in swap");
         assertLe(newToken.balanceOf(ALICE), aliceBalanceBefore, "asset balance more than before");
@@ -240,7 +240,7 @@ contract TestUsmSwapFuzz is TestDusdBase {
         newToken.mint(FAUCET, amount);
         newToken.approve(address(gsm), amount);
         vm.expectRevert();
-        gsm.sellAsset(amount, ALICE);
+        gsm.sellAsset(amount, ALICE, ALICE);
         vm.stopPrank();
     }
 
@@ -292,14 +292,14 @@ contract TestUsmSwapFuzz is TestDusdBase {
         vm.startPrank(FAUCET);
         newToken.mint(FAUCET, amount);
         newToken.approve(address(gsm), amount);
-        gsm.sellAsset(amount, ALICE);
+        gsm.sellAsset(amount, ALICE, FAUCET);
         vm.stopPrank();
 
         dusdFaucet(BOB, type(uint128).max);
         vm.startPrank(BOB);
         DUSD_TOKEN.approve(address(gsm), type(uint128).max);
         vm.expectRevert();
-        gsm.buyAsset(amount + 1, BOB);
+        gsm.buyAsset(amount + 1, BOB, BOB);
         vm.stopPrank();
     }
 
@@ -702,7 +702,7 @@ contract TestUsmSwapFuzz is TestDusdBase {
             gsm.getStableTokenAmountForSellAsset(assetAmount);
         vm.assume(vars.estDusdAmount1 > 0);
 
-        (vars.exactAssetAmount, vars.exactDusdAmount) = gsm.sellAsset(assetAmount, ALICE);
+        (vars.exactAssetAmount, vars.exactDusdAmount) = gsm.sellAsset(assetAmount, ALICE, ALICE);
 
         // Calculate asset amount needed for the amount of DUSD required to buy
         (vars.estAssetAmount2,, vars.estGrossAmount2, vars.estFeeAmount2) =
@@ -803,7 +803,7 @@ contract TestUsmSwapFuzz is TestDusdBase {
 
         vm.startPrank(ALICE);
         newToken.approve(address(gsm), type(uint256).max);
-        gsm.sellAsset(sellAssetAmount, ALICE);
+        gsm.sellAsset(sellAssetAmount, ALICE, ALICE);
         vm.stopPrank();
 
         // rough estimation of DUSD funds needed for buyAsset
@@ -823,7 +823,7 @@ contract TestUsmSwapFuzz is TestDusdBase {
         userAssetBefore = newToken.balanceOf(ALICE);
 
         DUSD_TOKEN.approve(address(gsm), type(uint256).max);
-        (vars.exactAssetAmount, vars.exactDusdAmount) = gsm.buyAsset(assetAmount, ALICE);
+        (vars.exactAssetAmount, vars.exactDusdAmount) = gsm.buyAsset(assetAmount, ALICE, ALICE);
 
         // Calculate asset amount can be bought for the amount of DUSD available
         (vars.estAssetAmount2, vars.estDusdAmount2, vars.estGrossAmount2, vars.estFeeAmount2) =

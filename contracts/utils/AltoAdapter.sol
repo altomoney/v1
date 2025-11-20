@@ -7,6 +7,7 @@ import {IRewardsDistributor, ClaimData} from "@alto/rewards/interfaces/IRewardsD
 import {IAltoStaking} from "@alto/staking/interfaces/IAltoStaking.sol";
 import {IUniversalRewardsDistributor} from "@alto/utils/interfaces/IUniversalRewardsDistributor.sol";
 import {IAltoVesting, VestingInfo} from "@alto/vesting/interfaces/IAltoVesting.sol";
+import {IUsm} from "@alto/usm/interfaces/IUsm.sol";
 
 import {CoreAdapter, Address} from "@morpho-org/bundler3/adapters/CoreAdapter.sol";
 import {IWNative} from "@morpho-org/bundler3/interfaces/IWNative.sol";
@@ -316,5 +317,31 @@ contract AltoAdapter is CoreAdapter, AdapterContractApproval {
         onlyApprovedContract(address(vesting))
     {
         vesting.claim(initiator(), vestingInfo, proof);
+    }
+
+    /* USM ACTIONS */
+
+    /// @notice Buys assets from the USM.
+    /// @param usm The address of the USM.
+    /// @param minAmount The minimum amount of assets to buy.
+    /// @param receiver The address of the receiver of the assets.
+    function usmBuyAsset(IUsm usm, uint256 minAmount, address receiver)
+        external
+        onlyBundler3
+        onlyApprovedContract(address(usm))
+    {
+        usm.buyAsset(minAmount, receiver, initiator());
+    }
+
+    /// @notice Sells assets from the USM.
+    /// @param usm The address of the USM.
+    /// @param maxAmount The maximum amount of assets to sell.
+    /// @param receiver The address of the receiver of the assets.
+    function usmSellAsset(IUsm usm, uint256 maxAmount, address receiver)
+        external
+        onlyBundler3
+        onlyApprovedContract(address(usm))
+    {
+        usm.sellAsset(maxAmount, receiver, initiator());
     }
 }

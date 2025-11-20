@@ -104,58 +104,22 @@ interface IUsm is IAccessControl, IStableTokenFacilitator {
      * @dev Use `getAssetAmountForBuyAsset` function to calculate the amount based on the Stable Token amount to sell
      * @param minAmount The minimum amount of the underlying asset to buy
      * @param receiver Recipient address of the underlying asset being purchased
+     * @param onBehalf The address of the user on behalf of which the operation is performed
      * @return The amount of underlying asset bought
      * @return The amount of Stable Token sold by the user
      */
-    function buyAsset(uint256 minAmount, address receiver) external returns (uint256, uint256);
-
-    /**
-     * @notice Buys the USM underlying asset in exchange for selling Stable Token, using an EIP-712 signature
-     * @dev Use `getAssetAmountForBuyAsset` function to calculate the amount based on the Stable Token amount to sell
-     * @param originator The signer of the request
-     * @param minAmount The minimum amount of the underlying asset to buy
-     * @param receiver Recipient address of the underlying asset being purchased
-     * @param deadline Signature expiration deadline
-     * @param signature Signature data
-     * @return The amount of underlying asset bought
-     * @return The amount of Stable Token sold by the user
-     */
-    function buyAssetWithSig(
-        address originator,
-        uint256 minAmount,
-        address receiver,
-        uint256 deadline,
-        bytes calldata signature
-    ) external returns (uint256, uint256);
+    function buyAsset(uint256 minAmount, address receiver, address onBehalf) external returns (uint256, uint256);
 
     /**
      * @notice Sells the USM underlying asset in exchange for buying Stable Token
      * @dev Use `getAssetAmountForSellAsset` function to calculate the amount based on the Stable Token amount to buy
      * @param maxAmount The maximum amount of the underlying asset to sell
      * @param receiver Recipient address of the Stable Token being purchased
+     * @param onBehalf The address of the user on behalf of which the operation is performed
      * @return The amount of underlying asset sold
      * @return The amount of Stable Token bought by the user
      */
-    function sellAsset(uint256 maxAmount, address receiver) external returns (uint256, uint256);
-
-    /**
-     * @notice Sells the USM underlying asset in exchange for buying Stable Token, using an EIP-712 signature
-     * @dev Use `getAssetAmountForSellAsset` function to calculate the amount based on the Stable Token amount to buy
-     * @param originator The signer of the request
-     * @param maxAmount The maximum amount of the underlying asset to sell
-     * @param receiver Recipient address of the Stable Token being purchased
-     * @param deadline Signature expiration deadline
-     * @param signature Signature data
-     * @return The amount of underlying asset sold
-     * @return The amount of Stable Token bought by the user
-     */
-    function sellAssetWithSig(
-        address originator,
-        uint256 maxAmount,
-        address receiver,
-        uint256 deadline,
-        bytes calldata signature
-    ) external returns (uint256, uint256);
+    function sellAsset(uint256 maxAmount, address receiver, address onBehalf) external returns (uint256, uint256);
 
     /**
      * @notice Rescue and transfer tokens locked in this contract
@@ -340,13 +304,6 @@ interface IUsm is IAccessControl, IStableTokenFacilitator {
     function priceStrategy() external view returns (address);
 
     /**
-     * @notice Returns the current nonce (for EIP-712 signature methods) of an address
-     * @param user The address of the user
-     * @return The current nonce of the user
-     */
-    function nonces(address user) external view returns (uint256);
-
-    /**
      * @notice Returns the identifier of the Configurator Role
      * @return The bytes32 id hash of the Configurator role
      */
@@ -369,16 +326,4 @@ interface IUsm is IAccessControl, IStableTokenFacilitator {
      * @return The bytes32 id hash of the Liquidator role
      */
     function LIQUIDATOR_ROLE() external pure returns (bytes32);
-
-    /**
-     * @notice Returns the EIP-712 signature typehash for buyAssetWithSig
-     * @return The bytes32 signature typehash for buyAssetWithSig
-     */
-    function BUY_ASSET_WITH_SIG_TYPEHASH() external pure returns (bytes32);
-
-    /**
-     * @notice Returns the EIP-712 signature typehash for sellAssetWithSig
-     * @return The bytes32 signature typehash for sellAssetWithSig
-     */
-    function SELL_ASSET_WITH_SIG_TYPEHASH() external pure returns (bytes32);
 }

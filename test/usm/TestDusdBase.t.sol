@@ -83,7 +83,7 @@ contract TestDusdBase is Test, TestHelperOz5, Constants {
         vm.startPrank(FAUCET);
         token.mint(FAUCET, amount);
         token.approve(address(usm), amount);
-        (, uint256 dusdBought) = usm.sellAsset(amount, receiver);
+        (, uint256 dusdBought) = usm.sellAsset(amount, receiver, FAUCET);
         vm.stopPrank();
         return dusdBought;
     }

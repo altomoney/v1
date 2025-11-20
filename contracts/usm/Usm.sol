@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.10;
 
-import {EIP712Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol";
-import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {IStableTokenFacilitator} from "./interfaces/IStableTokenFacilitator.sol";
 import {IUsmPriceStrategy} from "./interfaces/IUsmPriceStrategy.sol";
@@ -13,6 +11,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {AuthUpgradeable} from "@alto/utils/AuthUpgradeable.sol";
 
 /**
  * @title Usm
@@ -22,7 +21,7 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
  * @notice Universal Stability Module. It provides buy/sell facilities to go to/from an underlying asset to/from stability token.
  * @dev To be covered by a proxy contract.
  */
-abstract contract Usm is Initializable, AccessControlUpgradeable, EIP712Upgradeable, UUPSUpgradeable, IUsm {
+abstract contract Usm is Initializable, AccessControlUpgradeable, AuthUpgradeable, UUPSUpgradeable, IUsm {
     using SafeERC20 for IERC20;
     using SafeCast for uint256;
 
@@ -38,17 +37,6 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, EIP712Upgradea
     /// @inheritdoc IUsm
     bytes32 public constant LIQUIDATOR_ROLE = keccak256("LIQUIDATOR_ROLE");
 
-    /// @inheritdoc IUsm
-    bytes32 public constant BUY_ASSET_WITH_SIG_TYPEHASH = keccak256(
-        "BuyAssetWithSig(address originator,uint256 minAmount,address receiver,uint256 nonce,uint256 deadline)"
-    );
-
-    /// @inheritdoc IUsm
-    bytes32 public constant SELL_ASSET_WITH_SIG_TYPEHASH = keccak256(
-        "SellAssetWithSig(address originator,uint256 maxAmount,address receiver,uint256 nonce,uint256 deadline)"
-    );
-
-    /// @inheritdoc IUsm
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     address public immutable STABLE_TOKEN;
 
@@ -59,9 +47,6 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, EIP712Upgradea
     /// @inheritdoc IUsm
     address public priceStrategy;
 
-    /// @inheritdoc IUsm
-    mapping(address => uint256) public nonces;
-
     address internal _stableTokenTreasury;
     address internal _feeStrategy;
     bool internal _isFrozen;
@@ -71,7 +56,7 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, EIP712Upgradea
     uint128 internal _accruedFees;
 
     /// upgrade gap
-    uint256[44] private __gap_usm;
+    uint256[45] private __gap_usm;
 
     /**
      * @dev Require USM to not be frozen for functions marked by this modifier
@@ -115,8 +100,8 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, EIP712Upgradea
     {
         require(admin != address(0), "ZERO_ADDRESS_NOT_VALID");
 
-        __EIP712_init("USM", "1");
         __AccessControl_init();
+        __Auth_init();
         __UUPSUpgradeable_init();
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
@@ -127,57 +112,25 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, EIP712Upgradea
     }
 
     /// @inheritdoc IUsm
-    function buyAsset(uint256 minAmount, address receiver) external notFrozen notSeized returns (uint256, uint256) {
-        return _buyAsset(msg.sender, minAmount, receiver);
+    function buyAsset(uint256 minAmount, address receiver, address onBehalf)
+        external
+        notFrozen
+        notSeized
+        returns (uint256, uint256)
+    {
+        require(_isSenderAuthorized(onBehalf), "UNAUTHORIZED");
+        return _buyAsset(onBehalf, minAmount, receiver);
     }
 
     /// @inheritdoc IUsm
-    function buyAssetWithSig(
-        address originator,
-        uint256 minAmount,
-        address receiver,
-        uint256 deadline,
-        bytes calldata signature
-    ) external notFrozen notSeized returns (uint256, uint256) {
-        require(deadline >= block.timestamp, "SIGNATURE_DEADLINE_EXPIRED");
-        bytes32 digest = keccak256(
-            abi.encode(
-                "\x19\x01",
-                _domainSeparatorV4(),
-                BUY_ASSET_WITH_SIG_TYPEHASH,
-                abi.encode(originator, minAmount, receiver, nonces[originator]++, deadline)
-            )
-        );
-        require(SignatureChecker.isValidSignatureNow(originator, digest, signature), "SIGNATURE_INVALID");
-
-        return _buyAsset(originator, minAmount, receiver);
-    }
-
-    /// @inheritdoc IUsm
-    function sellAsset(uint256 maxAmount, address receiver) external notFrozen notSeized returns (uint256, uint256) {
-        return _sellAsset(msg.sender, maxAmount, receiver);
-    }
-
-    /// @inheritdoc IUsm
-    function sellAssetWithSig(
-        address originator,
-        uint256 maxAmount,
-        address receiver,
-        uint256 deadline,
-        bytes calldata signature
-    ) external notFrozen notSeized returns (uint256, uint256) {
-        require(deadline >= block.timestamp, "SIGNATURE_DEADLINE_EXPIRED");
-        bytes32 digest = keccak256(
-            abi.encode(
-                "\x19\x01",
-                _domainSeparatorV4(),
-                SELL_ASSET_WITH_SIG_TYPEHASH,
-                abi.encode(originator, maxAmount, receiver, nonces[originator]++, deadline)
-            )
-        );
-        require(SignatureChecker.isValidSignatureNow(originator, digest, signature), "SIGNATURE_INVALID");
-
-        return _sellAsset(originator, maxAmount, receiver);
+    function sellAsset(uint256 maxAmount, address receiver, address onBehalf)
+        external
+        notFrozen
+        notSeized
+        returns (uint256, uint256)
+    {
+        require(_isSenderAuthorized(onBehalf), "UNAUTHORIZED");
+        return _sellAsset(onBehalf, maxAmount, receiver);
     }
 
     /// @inheritdoc IUsm
