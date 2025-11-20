@@ -54,6 +54,44 @@ struct LiquidationConfiguration {
     uint32 liquidationWindowTag;
 }
 
+/// @notice Struct that represents the parameters for initializing a base market
+struct BaseMarketInitParams {
+    /// @notice The address of the borrow token.
+    address borrowToken;
+    /// @notice The address of the collateral token.
+    address collateralToken;
+    /// @notice The address of the IRM contract.
+    address irm;
+    /// @notice The address of the owner.
+    address owner;
+    /// @notice The address of the oracle contract.
+    address oracle;
+    /// @notice The max LTV for the market.
+    uint256 maxLtv;
+    /// @notice The address of the fee recipient.
+    address feeRecipient;
+    /// @notice The liquidation configuration for the market.
+    LiquidationConfiguration liquidationConfiguration;
+}
+
+/// @notice Struct that represents the parameters for initializing a borrow market
+struct BorrowMarketInitParams {
+    /// @notice The parameters for initializing a base market.
+    BaseMarketInitParams baseMarketInitParams;
+    /// @notice The initial borrow opening fee.
+    uint256 initialBorrowOpeningFee;
+}
+
+/// @notice Struct that represents the parameters for initializing a mint market
+struct MintMarketInitParams {
+    /// @notice The parameters for initializing a base market.
+    BaseMarketInitParams baseMarketInitParams;
+    /// @notice The debt ceiling of mint market.
+    uint256 debtCeiling;
+    /// @notice The initial borrow opening fee.
+    uint256 initialBorrowOpeningFee;
+}
+
 /// @notice Struct used for liquidation calculations
 struct LiquidationCalculation {
     uint256 collateralPrice;

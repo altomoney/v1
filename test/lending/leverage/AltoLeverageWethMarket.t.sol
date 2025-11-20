@@ -2,7 +2,11 @@
 pragma solidity ^0.8.22;
 
 import {Test} from "forge-std/Test.sol";
-import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
+import {
+    LiquidationConfiguration,
+    BaseMarketInitParams,
+    BorrowMarketInitParams
+} from "@alto/lending/interfaces/IMarket.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {LENDING_ORACLE_PRICE_PRECISION, IOracle} from "@alto/oracles/interfaces/IOracle.sol";
 import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
@@ -49,17 +53,16 @@ contract AltoLeverageWethMarketTest is Test {
         chainlinkNodes.push(chainlinkNode);
         oracle = address(new AltoMultiChainlinkLendingOracle(address(this), chainlinkNodes));
 
-        market = IMarket(
-            MarketDeployer.deployBorrowMarket(
-                address(borrowToken),
-                address(collateralToken),
-                address(irm),
-                address(this),
-                address(oracle),
-                0.8 ether,
-                0,
-                address(this),
-                LiquidationConfiguration({
+        BorrowMarketInitParams memory borrowMarketInitParams = BorrowMarketInitParams({
+            baseMarketInitParams: BaseMarketInitParams({
+                borrowToken: address(borrowToken),
+                collateralToken: address(collateralToken),
+                irm: address(irm),
+                owner: address(this),
+                oracle: address(oracle),
+                maxLtv: 0.8 ether,
+                feeRecipient: address(this),
+                liquidationConfiguration: LiquidationConfiguration({
                     maxLiquidationLtv: 0.8 ether,
                     dynamicBonusFeeStart: 0.03 ether,
                     ltvForCompleteLiquidation: 0.9 ether,
@@ -73,8 +76,11 @@ contract AltoLeverageWethMarketTest is Test {
                     taggerLiquidationGracePeriod: 2 minutes,
                     liquidationWindowTag: 3 days
                 })
-            )
-        );
+            }),
+            initialBorrowOpeningFee: 0
+        });
+
+        market = IMarket(MarketDeployer.deployBorrowMarket(borrowMarketInitParams));
 
         swapper.setWhitelisted(address(leverage), true);
         // Setup initial balances for test accounts

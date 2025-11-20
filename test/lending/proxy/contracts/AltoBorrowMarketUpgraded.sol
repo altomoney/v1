@@ -2,7 +2,11 @@
 pragma solidity ^0.8.0;
 
 import {AltoBaseMarketUpgraded} from "./AltoBaseMarketUpgraded.sol";
-import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
+import {
+    BaseMarketInitParams,
+    BorrowMarketInitParams,
+    LiquidationConfiguration
+} from "@alto/lending/interfaces/IMarket.sol";
 import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 
 /// @custom:oz-upgrades-from AltoBorrowMarket
@@ -16,21 +20,9 @@ contract AltoBorrowMarketUpgraded is AltoBaseMarketUpgraded {
         _disableInitializers();
     }
 
-    function initialize(
-        address _borrowToken,
-        address _collateralToken,
-        address _irm,
-        address _owner,
-        address _oracle,
-        uint256 _maxLtv,
-        uint256 _borrowOpeningFeeWad,
-        address _feeRecipient,
-        LiquidationConfiguration memory _liquidationConfiguration
-    ) public initializer {
-        __AltoBaseMarket_init(
-            _borrowToken, _collateralToken, _irm, _owner, _oracle, _maxLtv, _feeRecipient, _liquidationConfiguration
-        );
-        _borrowOpeningFee = _borrowOpeningFeeWad;
+    function initialize(BorrowMarketInitParams memory _borrowMarketInitParams) public initializer {
+        __AltoBaseMarket_init(_borrowMarketInitParams.baseMarketInitParams);
+        _borrowOpeningFee = _borrowMarketInitParams.initialBorrowOpeningFee;
     }
 
     function borrowOpeningFee() public view override returns (uint256) {

@@ -9,7 +9,12 @@ import {SwapperSimpleMock} from "@alto/lending/mocks/SwapperSimpleMock.sol";
 import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
 import {LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
-import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
+import {
+    LiquidationConfiguration,
+    BaseMarketInitParams,
+    BorrowMarketInitParams,
+    MintMarketInitParams
+} from "@alto/lending/interfaces/IMarket.sol";
 import {ERC20MockMintable} from "@alto-test/helpers/ERC20MockMintable.sol";
 import {PAUSE_TYPE, FROZEN_TYPE} from "@alto/utils/Constants.sol";
 import {MarketDeployer} from "@alto/utils/MarketDeployer.sol";
@@ -61,62 +66,42 @@ abstract contract MarketCommon is Test {
         oracle.setPrice(LENDING_ORACLE_PRICE_PRECISION);
 
         address irm = address(new FixedRateIrm(0.04 ether / uint256(365 days), address(this)));
+        LiquidationConfiguration memory liquidationConfig = LiquidationConfiguration({
+            maxLiquidationLtv: 0.8 ether,
+            dynamicBonusFeeStart: 0.03 ether,
+            ltvForCompleteLiquidation: 0.9 ether,
+            dynamicBonusFeeDecaySteepness: 5 ether,
+            liquidationBaseFee: 0.05 ether,
+            minPenaltyPercentage: 0.01 ether,
+            protocolFeePercentage: 0.075 ether,
+            isEnabledPriorityLiquidation: true,
+            disablePriorityLiquidationAbovePositionLtv: type(uint256).max,
+            priorityLiquidationGracePeriod: 5 minutes,
+            taggerLiquidationGracePeriod: 2 minutes,
+            liquidationWindowTag: 3 days
+        });
+
+        BaseMarketInitParams memory baseMarketInitParams = BaseMarketInitParams({
+            borrowToken: address(borrowToken),
+            collateralToken: address(collateralToken),
+            irm: address(irm),
+            owner: address(OWNER),
+            oracle: address(oracle),
+            maxLtv: LTV,
+            feeRecipient: address(FEE_RECIPIENT),
+            liquidationConfiguration: liquidationConfig
+        });
         if (marketType == MarketType.BORROW) {
-            market = IMarket(
-                MarketDeployer.deployBorrowMarket(
-                    address(borrowToken),
-                    address(collateralToken),
-                    address(irm),
-                    address(OWNER),
-                    address(oracle),
-                    LTV,
-                    0,
-                    address(FEE_RECIPIENT),
-                    LiquidationConfiguration({
-                        maxLiquidationLtv: 0.8 ether,
-                        dynamicBonusFeeStart: 0.03 ether,
-                        ltvForCompleteLiquidation: 0.9 ether,
-                        dynamicBonusFeeDecaySteepness: 5 ether,
-                        liquidationBaseFee: 0.05 ether,
-                        minPenaltyPercentage: 0.01 ether,
-                        protocolFeePercentage: 0.075 ether,
-                        isEnabledPriorityLiquidation: true,
-                        disablePriorityLiquidationAbovePositionLtv: type(uint256).max,
-                        priorityLiquidationGracePeriod: 5 minutes,
-                        taggerLiquidationGracePeriod: 2 minutes,
-                        liquidationWindowTag: 3 days
-                    })
-                )
-            );
+            BorrowMarketInitParams memory borrowMarketInitParams =
+                BorrowMarketInitParams({baseMarketInitParams: baseMarketInitParams, initialBorrowOpeningFee: 0});
+            market = IMarket(MarketDeployer.deployBorrowMarket(borrowMarketInitParams));
         } else if (marketType == MarketType.MINT) {
             borrowToken = ERC20Mock(address(new ERC20MockMintable("borrow", "B")));
-            market = IMarket(
-                MarketDeployer.deployMintMarket(
-                    address(borrowToken),
-                    address(collateralToken),
-                    address(irm),
-                    address(OWNER),
-                    address(oracle),
-                    LTV,
-                    1000000 ether,
-                    address(FEE_RECIPIENT),
-                    0,
-                    LiquidationConfiguration({
-                        maxLiquidationLtv: 0.8 ether,
-                        dynamicBonusFeeStart: 0.03 ether,
-                        ltvForCompleteLiquidation: 0.9 ether,
-                        dynamicBonusFeeDecaySteepness: 5 ether,
-                        liquidationBaseFee: 0.05 ether,
-                        minPenaltyPercentage: 0.01 ether,
-                        protocolFeePercentage: 0.075 ether,
-                        isEnabledPriorityLiquidation: true,
-                        disablePriorityLiquidationAbovePositionLtv: type(uint256).max,
-                        priorityLiquidationGracePeriod: 5 minutes,
-                        taggerLiquidationGracePeriod: 2 minutes,
-                        liquidationWindowTag: 3 days
-                    })
-                )
-            );
+            baseMarketInitParams.borrowToken = address(borrowToken);
+            MintMarketInitParams memory mintMarketInitParams = MintMarketInitParams({
+                baseMarketInitParams: baseMarketInitParams, debtCeiling: 1000000 ether, initialBorrowOpeningFee: 0
+            });
+            market = IMarket(MarketDeployer.deployMintMarket(mintMarketInitParams));
         }
 
         market.setPauser(PAUSER, PAUSE_TYPE, true);

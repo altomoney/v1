@@ -2,26 +2,17 @@
 pragma solidity ^0.8.0;
 
 import {AltoBaseMarket} from "@alto/lending/AltoBaseMarket.sol";
-import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
+import {BaseMarketInitParams, LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
 import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 
 contract MarketInstance is AltoBaseMarket {
     uint256 private _borrowOpeningFee;
 
-    function initialize(
-        address _borrowToken,
-        address _collateralToken,
-        address _irm,
-        address _owner,
-        address _oracle,
-        uint256 _maxLtv,
-        uint256 _borrowOpeningFeeWad,
-        address _feeRecipient,
-        LiquidationConfiguration memory _liquidationConfiguration
-    ) public initializer {
-        __AltoBaseMarket_init(
-            _borrowToken, _collateralToken, _irm, _owner, _oracle, _maxLtv, _feeRecipient, _liquidationConfiguration
-        );
+    function initialize(BaseMarketInitParams memory _baseMarketInitParams, uint256 _borrowOpeningFeeWad)
+        public
+        initializer
+    {
+        __AltoBaseMarket_init(_baseMarketInitParams);
         _borrowOpeningFee = _borrowOpeningFeeWad;
     }
 

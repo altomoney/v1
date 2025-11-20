@@ -17,7 +17,8 @@ import {
     LiquidationConfiguration,
     LiquidationCalculation,
     LiquidationCalculationResult,
-    LiquidablePosition
+    LiquidablePosition,
+    BaseMarketInitParams
 } from "@alto/lending/interfaces/IMarket.sol";
 import {AuthUpgradeable} from "@alto/utils/AuthUpgradeable.sol";
 import {IIrm} from "@alto/lending/interfaces/IIrm.sol";
@@ -96,41 +97,37 @@ abstract contract AltoBaseMarket is
     /// upgrade gap (previous slot has 12 bytes left)
     uint256[33] private __gap_base;
 
-    function __AltoBaseMarket_init(
-        address _borrowToken,
-        address _collateralToken,
-        address _irm,
-        address _owner,
-        address _oracle,
-        uint256 _maxLtv,
-        address _feeRecipient,
-        LiquidationConfiguration memory _liquidationConfiguration
-    ) internal onlyInitializing {
-        _validateLiquidationConfiguration(_liquidationConfiguration, _maxLtv, _feeRecipient);
+    function __AltoBaseMarket_init(BaseMarketInitParams memory _initParams) internal onlyInitializing {
+        _validateLiquidationConfiguration(
+            _initParams.liquidationConfiguration, _initParams.maxLtv, _initParams.feeRecipient
+        );
 
-        if (_borrowToken == address(0) || _collateralToken == address(0) || _oracle == address(0)) {
+        if (
+            _initParams.borrowToken == address(0) || _initParams.collateralToken == address(0)
+                || _initParams.oracle == address(0)
+        ) {
             revert AltoBaseMarketInvalidInput();
         }
-        if (_maxLtv > MATH_PRECISION) {
+        if (_initParams.maxLtv > MATH_PRECISION) {
             revert AltoBaseMarketInvalidInput();
         }
-        if (_feeRecipient == address(0) && _liquidationConfiguration.protocolFeePercentage > 0) {
+        if (_initParams.feeRecipient == address(0) && _initParams.liquidationConfiguration.protocolFeePercentage > 0) {
             revert AltoBaseMarketInvalidInput();
         }
 
-        borrowToken = _borrowToken;
-        collateralToken = _collateralToken;
+        borrowToken = _initParams.borrowToken;
+        collateralToken = _initParams.collateralToken;
 
-        irm = _irm;
-        emit SetIrm(address(0), _irm);
+        irm = _initParams.irm;
+        emit SetIrm(address(0), _initParams.irm);
 
-        oracle = _oracle;
-        emit SetOracle(address(0), _oracle);
+        oracle = _initParams.oracle;
+        emit SetOracle(address(0), _initParams.oracle);
 
-        maxLtv = _maxLtv;
-        emit SetMaxLtv(0, _maxLtv);
+        maxLtv = _initParams.maxLtv;
+        emit SetMaxLtv(0, _initParams.maxLtv);
 
-        liquidationConfiguration = _liquidationConfiguration;
+        liquidationConfiguration = _initParams.liquidationConfiguration;
         emit SetLiquidationConfiguration(
             LiquidationConfiguration({
                 maxLiquidationLtv: 0,
@@ -146,20 +143,20 @@ abstract contract AltoBaseMarket is
                 taggerLiquidationGracePeriod: 0,
                 liquidationWindowTag: 0
             }),
-            _liquidationConfiguration
+            _initParams.liquidationConfiguration
         );
 
-        feeRecipient = _feeRecipient;
-        emit SetFeeRecipient(address(0), _feeRecipient);
+        feeRecipient = _initParams.feeRecipient;
+        emit SetFeeRecipient(address(0), _initParams.feeRecipient);
 
         if (irm != address(0)) {
             IIrm(irm).setMarket(address(this));
         }
 
-        _setPauser(_owner, PAUSE_TYPE, true);
-        _setPauser(_owner, FROZEN_TYPE, true);
+        _setPauser(_initParams.owner, PAUSE_TYPE, true);
+        _setPauser(_initParams.owner, FROZEN_TYPE, true);
 
-        __Ownable_init(_owner);
+        __Ownable_init(_initParams.owner);
         __Auth_init();
     }
 

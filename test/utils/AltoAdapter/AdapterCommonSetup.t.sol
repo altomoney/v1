@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.28;
 
-import {IMarket, LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
+import {IMarket, BaseMarketInitParams, LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {MarketInstance} from "./MarketInstance.sol";
 import {RewardsDistributorInstance} from "./RewardsDistributorInstance.sol";
@@ -88,70 +88,42 @@ abstract contract AdapterCommonSetup is AdapterCommon {
 
         bool shouldUseSafeProxy = vm.envOr("VERIFY_PROXY", false);
 
+        LiquidationConfiguration memory liquidationConfig = LiquidationConfiguration({
+            maxLiquidationLtv: 0.8 ether,
+            dynamicBonusFeeStart: 0.03 ether,
+            ltvForCompleteLiquidation: 0.9 ether,
+            dynamicBonusFeeDecaySteepness: 5 ether,
+            liquidationBaseFee: 0.05 ether,
+            minPenaltyPercentage: 0.01 ether,
+            protocolFeePercentage: 0.075 ether,
+            isEnabledPriorityLiquidation: true,
+            disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
+            priorityLiquidationGracePeriod: 5 minutes,
+            taggerLiquidationGracePeriod: 2 minutes,
+            liquidationWindowTag: 3 days
+        });
+
+        BaseMarketInitParams memory baseMarketInitParams = BaseMarketInitParams({
+            borrowToken: address(borrowToken),
+            collateralToken: address(collateralToken),
+            irm: address(irm),
+            owner: address(OWNER),
+            oracle: address(oracle),
+            maxLtv: LTV,
+            feeRecipient: address(this),
+            liquidationConfiguration: liquidationConfig
+        });
+
         if (shouldUseSafeProxy) {
             market = IMarket(
                 Upgrades.deployUUPSProxy(
-                    "MarketInstance.sol",
-                    abi.encodeCall(
-                        MarketInstance.initialize,
-                        (
-                            address(borrowToken),
-                            address(collateralToken),
-                            address(irm),
-                            address(OWNER),
-                            address(oracle),
-                            LTV,
-                            0,
-                            address(this),
-                            LiquidationConfiguration({
-                                maxLiquidationLtv: 0.8 ether,
-                                dynamicBonusFeeStart: 0.03 ether,
-                                ltvForCompleteLiquidation: 0.9 ether,
-                                dynamicBonusFeeDecaySteepness: 5 ether,
-                                liquidationBaseFee: 0.05 ether,
-                                minPenaltyPercentage: 0.01 ether,
-                                protocolFeePercentage: 0.075 ether,
-                                isEnabledPriorityLiquidation: true,
-                                disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
-                                priorityLiquidationGracePeriod: 5 minutes,
-                                taggerLiquidationGracePeriod: 2 minutes,
-                                liquidationWindowTag: 3 days
-                            })
-                        )
-                    )
+                    "MarketInstance.sol", abi.encodeCall(MarketInstance.initialize, (baseMarketInitParams, 0))
                 )
             );
         } else {
             market = IMarket(
                 UnsafeUpgrades.deployUUPSProxy(
-                    address(new MarketInstance()),
-                    abi.encodeCall(
-                        MarketInstance.initialize,
-                        (
-                            address(borrowToken),
-                            address(collateralToken),
-                            address(irm),
-                            address(OWNER),
-                            address(oracle),
-                            LTV,
-                            0,
-                            address(this),
-                            LiquidationConfiguration({
-                                maxLiquidationLtv: 0.8 ether,
-                                dynamicBonusFeeStart: 0.03 ether,
-                                ltvForCompleteLiquidation: 0.9 ether,
-                                dynamicBonusFeeDecaySteepness: 5 ether,
-                                liquidationBaseFee: 0.05 ether,
-                                minPenaltyPercentage: 0.01 ether,
-                                protocolFeePercentage: 0.075 ether,
-                                isEnabledPriorityLiquidation: true,
-                                disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
-                                priorityLiquidationGracePeriod: 5 minutes,
-                                taggerLiquidationGracePeriod: 2 minutes,
-                                liquidationWindowTag: 3 days
-                            })
-                        )
-                    )
+                    address(new MarketInstance()), abi.encodeCall(MarketInstance.initialize, (baseMarketInitParams, 0))
                 )
             );
         }

@@ -5,8 +5,12 @@ import {AltoBaseMarket} from "@alto/lending/AltoBaseMarket.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
 import {FixedPointMath, MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 import {IOracle} from "@alto/oracles/interfaces/IOracle.sol";
-import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
 import {LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
+import {
+    BaseMarketInitParams,
+    LiquidationConfiguration,
+    BorrowMarketInitParams
+} from "@alto/lending/interfaces/IMarket.sol";
 
 contract MockMarket is AltoBaseMarket {
     using AssetShareConversionMath for uint256;
@@ -14,25 +18,16 @@ contract MockMarket is AltoBaseMarket {
 
     uint256 private _borrowOpeningFee;
 
-    function initialize(
-        address _borrowToken,
-        address _collateralToken,
-        address _irm,
-        address _owner,
-        address _oracle,
-        uint256 _maxLtv,
-        uint256 _borrowOpeningFeeWad,
-        address _feeRecipient,
-        LiquidationConfiguration memory _liquidationConfiguration
-    ) public initializer {
-        __AltoBaseMarket_init(
-            _borrowToken, _collateralToken, _irm, _owner, _oracle, _maxLtv, _feeRecipient, _liquidationConfiguration
-        );
+    function initialize(BaseMarketInitParams memory _baseMarketInitParams, uint256 _borrowOpeningFeeWad)
+        public
+        initializer
+    {
+        __AltoBaseMarket_init(_baseMarketInitParams);
 
         if (_borrowOpeningFeeWad > MATH_PRECISION) {
             revert AltoBaseMarketInvalidInput();
         }
-        if (_feeRecipient == address(0) && _borrowOpeningFeeWad > 0) {
+        if (_baseMarketInitParams.feeRecipient == address(0) && _borrowOpeningFeeWad > 0) {
             revert AltoBaseMarketInvalidInput();
         }
         _borrowOpeningFee = _borrowOpeningFeeWad;
@@ -125,15 +120,17 @@ library MockMarketDeployer {
         market = new MockMarket();
 
         market.initialize(
-            _borrowToken,
-            _collateralToken,
-            _irm,
-            _owner,
-            _oracle,
-            _maxLtv,
-            _borrowOpeningFee,
-            _feeRecipient,
-            _liquidationConfiguration
+            BaseMarketInitParams({
+                borrowToken: _borrowToken,
+                collateralToken: _collateralToken,
+                irm: _irm,
+                owner: _owner,
+                oracle: _oracle,
+                maxLtv: _maxLtv,
+                feeRecipient: _feeRecipient,
+                liquidationConfiguration: _liquidationConfiguration
+            }),
+            _borrowOpeningFee
         );
     }
 }
