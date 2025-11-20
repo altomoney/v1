@@ -79,10 +79,7 @@ contract TestnetMintMarketBatch is ITestnetMarketBatch {
         );
 
         report = TestnetMarketBatchReport({
-            marketImplementation: market,
-            market: marketProxy,
-            marketIrm: marketIrm,
-            marketOracle: marketOracle
+            marketImplementation: market, market: marketProxy, marketIrm: marketIrm, marketOracle: marketOracle
         });
     }
 

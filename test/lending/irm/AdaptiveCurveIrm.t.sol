@@ -209,9 +209,7 @@ contract AdaptiveCurveIrmTest is IrmCommon {
         irm.validateConfig(irmConfig);
     }
 
-    function testSetIrmConfigInvalidAdjustmentSpeed(AdaptiveCurveIrm.AdaptiveCurveIrmConfig memory irmConfig)
-        external
-    {
+    function testSetIrmConfigInvalidAdjustmentSpeed(AdaptiveCurveIrm.AdaptiveCurveIrmConfig memory irmConfig) external {
         _fuzzAdaptiveCurveConfig(irmConfig);
 
         AdaptiveCurveIrmMock irm = _createAdaptiveCurveIrmSample(true);
@@ -233,9 +231,7 @@ contract AdaptiveCurveIrmTest is IrmCommon {
         irm.validateConfig(irmConfig);
     }
 
-    function testSetIrmConfigInvalidMinRateAtTarget(AdaptiveCurveIrm.AdaptiveCurveIrmConfig memory irmConfig)
-        external
-    {
+    function testSetIrmConfigInvalidMinRateAtTarget(AdaptiveCurveIrm.AdaptiveCurveIrmConfig memory irmConfig) external {
         _fuzzAdaptiveCurveConfig(irmConfig);
 
         AdaptiveCurveIrmMock irm = _createAdaptiveCurveIrmSample(true);
@@ -245,9 +241,7 @@ contract AdaptiveCurveIrmTest is IrmCommon {
         irm.validateConfig(irmConfig);
     }
 
-    function testSetIrmConfigInvalidMaxRateAtTarget(AdaptiveCurveIrm.AdaptiveCurveIrmConfig memory irmConfig)
-        external
-    {
+    function testSetIrmConfigInvalidMaxRateAtTarget(AdaptiveCurveIrm.AdaptiveCurveIrmConfig memory irmConfig) external {
         _fuzzAdaptiveCurveConfig(irmConfig);
 
         AdaptiveCurveIrmMock irm = _createAdaptiveCurveIrmSample(true);

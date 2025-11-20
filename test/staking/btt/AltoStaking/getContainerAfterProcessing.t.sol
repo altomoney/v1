@@ -51,8 +51,9 @@ contract AltoStaking_GetContainerAfterProcessing_Test is AltoStakingCommon {
         assertGt(result.multiplier, 0); // Has multiplier
     }
 
-    function test_GivenContainerExistsAndIsActive_WhenEpochHasNoTVLData_ItShouldReturnContainerWithMinimumDurationAsNextDuration(
-    ) public {
+    function test_GivenContainerExistsAndIsActive_WhenEpochHasNoTVLData_ItShouldReturnContainerWithMinimumDurationAsNextDuration()
+        public
+    {
         StakingContainerExtended memory result = staking.getContainerAfterProcessing(1, 0);
 
         // Should return minimum duration as next duration since no TVL
@@ -60,8 +61,9 @@ contract AltoStaking_GetContainerAfterProcessing_Test is AltoStakingCommon {
         assertEq(result.currentDurationEpochsNext, shortContainer.duration.min);
     }
 
-    function test_GivenContainerExistsAndIsActive_WhenEpochHasTVLData_ItShouldReturnContainerWithCalculatedNextDurationBasedOnTVLShare(
-    ) public {
+    function test_GivenContainerExistsAndIsActive_WhenEpochHasTVLData_ItShouldReturnContainerWithCalculatedNextDurationBasedOnTVLShare()
+        public
+    {
         // Create a position to generate TVL
         deal(address(lockToken), USER, LOCK_AMOUNT);
         vm.startPrank(USER);
@@ -81,8 +83,9 @@ contract AltoStaking_GetContainerAfterProcessing_Test is AltoStakingCommon {
         assertEq(result.currentDurationEpochsNext, resultAfter.currentDurationEpochs);
     }
 
-    function test_GivenContainerExistsAndIsActive_WhenContainerIsDeprecated_ItShouldReturnContainerWithIsDeprecatedSetToTrue(
-    ) public {
+    function test_GivenContainerExistsAndIsActive_WhenContainerIsDeprecated_ItShouldReturnContainerWithIsDeprecatedSetToTrue()
+        public
+    {
         // Deprecate the container
         vm.prank(OWNER);
         staking.deprecateContainer(1);
@@ -94,8 +97,9 @@ contract AltoStaking_GetContainerAfterProcessing_Test is AltoStakingCommon {
         assertTrue(result.isActive);
     }
 
-    function test_GivenEpochToProcessIsValid_ItShouldReturnExtendedContainerWithAllFieldsIncludingCurrentDurationEpochsNext(
-    ) public {
+    function test_GivenEpochToProcessIsValid_ItShouldReturnExtendedContainerWithAllFieldsIncludingCurrentDurationEpochsNext()
+        public
+    {
         StakingContainerExtended memory result = staking.getContainerAfterProcessing(1, 0);
 
         // Verify all fields are present and properly set

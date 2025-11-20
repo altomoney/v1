@@ -32,9 +32,7 @@ contract PauseTest is Test {
         pausable.pause(PAUSE_TYPE_ONE, true);
     }
 
-    function testFuzz_RevertWhen_CallerIsNotPauserForPauseType(address caller, bytes32 pauseType, bool _paused)
-        public
-    {
+    function testFuzz_RevertWhen_CallerIsNotPauserForPauseType(address caller, bytes32 pauseType, bool _paused) public {
         vm.assume(caller != owner); // Owner is not automatically a pauser
 
         // It should revert with Unauthorized

@@ -39,9 +39,7 @@ contract AltoERC4626RatioChainlinkOracleCommon is Test {
     function _createValidERC4626RatioNode() internal view returns (ERC4626RatioNode memory) {
         // Use block.timestamp - 1 hour to ensure it's in the past (avoiding underflow)
         uint256 pastTimestamp = block.timestamp > 1 hours ? block.timestamp - 1 hours : block.timestamp;
-        return _createValidERC4626RatioNode(
-            DEFAULT_INITIAL_RATIO, pastTimestamp, DEFAULT_MAX_YEARLY_GROWTH_RATIO_WAD
-        );
+        return _createValidERC4626RatioNode(DEFAULT_INITIAL_RATIO, pastTimestamp, DEFAULT_MAX_YEARLY_GROWTH_RATIO_WAD);
     }
 
     function _createValidChainlinkNode(uint8 inDecimals, uint8 outDecimals)
