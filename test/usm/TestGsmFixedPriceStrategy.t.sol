@@ -16,6 +16,11 @@ contract TestGsmFixedPriceStrategy is TestGhoBase {
         assertEq(strategy.UNDERLYING_ASSET_DECIMALS(), decimals, "Unexpected underlying asset decimals");
     }
 
+    function testRevertZeroAdmin() public {
+        vm.expectRevert("ZERO_ADDRESS_NOT_VALID");
+        new FixedPriceStrategy(1e18, address(USDC_TOKEN), 6, address(0));
+    }
+
     function testOneToOnePriceRatio() public {
         FixedPriceStrategy strategy = new FixedPriceStrategy(1e18, address(USDC_TOKEN), 6, address(this));
         uint256 usdcIn = 100e6;

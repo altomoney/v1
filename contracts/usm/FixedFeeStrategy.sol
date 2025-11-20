@@ -32,6 +32,7 @@ contract FixedFeeStrategy is IUsmFeeStrategy, AccessControl {
         require(buyFee < MAXIMUM_FEE_PERCENT, "INVALID_BUY_FEE");
         require(sellFee < MAXIMUM_FEE_PERCENT, "INVALID_SELL_FEE");
         require(buyFee > 0 || sellFee > 0, "MUST_HAVE_ONE_NONZERO_FEE");
+        require(admin != address(0), "ZERO_ADDRESS_NOT_VALID");
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(CONFIGURATOR_ROLE, admin);
         _buyFee = buyFee;

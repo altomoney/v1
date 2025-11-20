@@ -13,6 +13,11 @@ contract TestGsmFixedFeeStrategy is TestGhoBase {
         feeStrategy = new FixedFeeStrategy(DEFAULT_GSM_BUY_FEE, 5000, address(this));
     }
 
+    function testRevertZeroAdmin() public {
+        vm.expectRevert("ZERO_ADDRESS_NOT_VALID");
+        new FixedFeeStrategy(DEFAULT_GSM_BUY_FEE, DEFAULT_GSM_SELL_FEE, address(0));
+    }
+
     function testZeroBuyFee() public {
         FixedFeeStrategy feeStrategy = new FixedFeeStrategy(0, DEFAULT_GSM_SELL_FEE, address(this));
         uint256 fee = feeStrategy.getBuyFee(DEFAULT_GSM_GHO_AMOUNT);

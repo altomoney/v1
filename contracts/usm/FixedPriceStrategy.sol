@@ -39,6 +39,7 @@ contract FixedPriceStrategy is IUsmPriceStrategy, AccessControl {
      */
     constructor(uint256 initialPriceRatio, address underlyingAsset, uint8 underlyingAssetDecimals, address admin) {
         require(initialPriceRatio > 0, "INVALID_PRICE_RATIO");
+        require(admin != address(0), "ZERO_ADDRESS_NOT_VALID");
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(CONFIGURATOR_ROLE, admin);
         priceRatio = initialPriceRatio;
