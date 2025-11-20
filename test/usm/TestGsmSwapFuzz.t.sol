@@ -32,27 +32,27 @@ contract TestGsmSwapFuzz is TestGhoBase {
 
     function _checkValidPrice(FixedPriceStrategy priceStrat, uint256 assetAmount, uint256 ghoAmount) internal {
         assertApproxEqAbs(
-            priceStrat.getAssetPriceInGho(assetAmount, false),
+            priceStrat.getAssetPriceInStableToken(assetAmount, false),
             ghoAmount,
             2,
             "price between asset and gho amounts is not valid _1"
         );
 
         assertApproxEqAbs(
-            priceStrat.getAssetPriceInGho(assetAmount, true),
+            priceStrat.getAssetPriceInStableToken(assetAmount, true),
             ghoAmount,
             2,
             "price between asset and gho amounts is not valid _2"
         );
 
         assertApproxEqAbs(
-            priceStrat.getGhoPriceInAsset(ghoAmount, false),
+            priceStrat.getStableTokenPriceInAsset(ghoAmount, false),
             assetAmount,
             2,
             "price between asset and gho amounts is not valid _3"
         );
         assertApproxEqAbs(
-            priceStrat.getGhoPriceInAsset(ghoAmount, true),
+            priceStrat.getStableTokenPriceInAsset(ghoAmount, true),
             assetAmount,
             2,
             "price between asset and gho amounts is not valid _4"
@@ -77,16 +77,18 @@ contract TestGsmSwapFuzz is TestGhoBase {
         priceRatio = bound(priceRatio, 0.01e18, 100e18);
         assetAmount = bound(assetAmount, 1, type(uint64).max - 1);
 
-        TestnetERC20 newToken = new TestnetERC20("Test Coin", "TEST", underlyingDecimals, FAUCET);
+        ERC20MockMintableDecimals newToken = new ERC20MockMintableDecimals("Test Coin", "TEST", underlyingDecimals);
 
         FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
             priceRatio,
             address(newToken),
             underlyingDecimals // decimals
         );
-        Gsm gsm = new Gsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
+        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
         gsm.initialize(address(this), TREASURY, type(uint128).max);
-        GHO_TOKEN.addFacilitator(address(gsm), "GSM TINY", type(uint128).max);
+        GHO_TOKEN.setMinterStatus(address(gsm), true);
+        GHO_TOKEN.setBurnerStatus(address(gsm), true);
+        GHO_TOKEN.setMinterCeiling(address(gsm), type(uint128).max);
 
         if (buyFeeBps > 0 || sellFeeBps > 0) {
             FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(buyFeeBps, sellFeeBps);
@@ -94,12 +96,12 @@ contract TestGsmSwapFuzz is TestGhoBase {
         }
 
         // Strat estimation
-        (, vars.estGhoAmount1,,) = gsm.getGhoAmountForSellAsset(assetAmount);
+        (, vars.estGhoAmount1,,) = gsm.getStableTokenAmountForSellAsset(assetAmount);
         (vars.estAssetAmount2,,,) = gsm.getAssetAmountForBuyAsset(vars.estGhoAmount1);
         assertLe(vars.estAssetAmount2, assetAmount, "getting more assetAmount than provided in estimation");
 
         // Init GSM with some assets
-        (, uint256 aux,,) = gsm.getGhoAmountForSellAsset(assetAmount);
+        (, uint256 aux,,) = gsm.getStableTokenAmountForSellAsset(assetAmount);
         vm.assume(aux > 0);
         vm.startPrank(FAUCET);
         newToken.mint(FAUCET, assetAmount);
@@ -108,7 +110,7 @@ contract TestGsmSwapFuzz is TestGhoBase {
         vm.stopPrank();
 
         // Arb Strat estimation
-        (, vars.estGhoAmount1,,) = gsm.getGhoAmountForSellAsset(assetAmount);
+        (, vars.estGhoAmount1,,) = gsm.getStableTokenAmountForSellAsset(assetAmount);
         (vars.estAssetAmount2,,,) = gsm.getAssetAmountForBuyAsset(vars.estGhoAmount1);
         assertLe(vars.estAssetAmount2, assetAmount, "getting more assetAmount than provided in estimation");
 
@@ -150,18 +152,18 @@ contract TestGsmSwapFuzz is TestGhoBase {
         priceRatio = bound(priceRatio, 0.01e18, 100e18);
         amount = bound(amount, 1, type(uint128).max - 1);
 
-        TestnetERC20 newToken = new TestnetERC20("Test Coin", "TEST", underlyingDecimals, FAUCET);
+        ERC20MockMintableDecimals newToken = new ERC20MockMintableDecimals("Test Coin", "TEST", underlyingDecimals);
         FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
             priceRatio,
             address(newToken),
             underlyingDecimals // decimals
         );
-        Gsm gsm = new Gsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
+        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
         gsm.initialize(address(this), TREASURY, type(uint128).max);
 
         // Get gho amount for selling assets
-        (uint256 assetSold,, uint256 ghoMinted,) = gsm.getGhoAmountForSellAsset(amount);
-        (,, uint256 ghoToBurn,) = gsm.getGhoAmountForBuyAsset(assetSold);
+        (uint256 assetSold,, uint256 ghoMinted,) = gsm.getStableTokenAmountForSellAsset(amount);
+        (,, uint256 ghoToBurn,) = gsm.getStableTokenAmountForBuyAsset(assetSold);
 
         // 1 unit of imprecision due to rounding
         assertTrue(ghoToBurn <= ghoMinted + 1, "unexpected gsm unbalance");
@@ -187,22 +189,23 @@ contract TestGsmSwapFuzz is TestGhoBase {
         priceRatio = bound(priceRatio, 0.01e18, 100e18);
         amount = bound(amount, 1, type(uint128).max) + type(uint128).max; // avoiding a bug in forge-std where bound will revert
 
-        TestnetERC20 newToken = new TestnetERC20("Test Coin", "TEST", underlyingDecimals, FAUCET);
+        ERC20MockMintableDecimals newToken = new ERC20MockMintableDecimals("Test Coin", "TEST", underlyingDecimals);
         FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
             priceRatio,
             address(newToken),
             underlyingDecimals // decimals
         );
-        Gsm gsm = new Gsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
+        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
         gsm.initialize(address(this), TREASURY, type(uint128).max);
-        GHO_TOKEN.addFacilitator(address(gsm), "Test GSM", type(uint128).max);
+        GHO_TOKEN.setMinterStatus(address(gsm), true);
+        GHO_TOKEN.setMinterCeiling(address(gsm), type(uint128).max);
 
         if (buyFeeBps > 0 || sellFeeBps > 0) {
             FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(buyFeeBps, sellFeeBps);
             gsm.updateFeeStrategy(address(newFeeStrategy));
         }
 
-        (uint256 ghoBought,,,) = gsm.getGhoAmountForSellAsset(amount);
+        (uint256 ghoBought,,,) = gsm.getStableTokenAmountForSellAsset(amount);
         vm.assume(ghoBought > type(uint128).max);
 
         vm.startPrank(FAUCET);
@@ -228,22 +231,23 @@ contract TestGsmSwapFuzz is TestGhoBase {
         buyFeeBps = bound(buyFeeBps, 0, 5000 - 1);
         sellFeeBps = bound(sellFeeBps, 0, 5000 - 1);
 
-        TestnetERC20 newToken = new TestnetERC20("Test Coin", "TEST", underlyingDecimals, FAUCET);
+        ERC20MockMintableDecimals newToken = new ERC20MockMintableDecimals("Test Coin", "TEST", underlyingDecimals);
         FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
             priceRatio,
             address(newToken),
             underlyingDecimals // decimals
         );
-        Gsm gsm = new Gsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
+        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
         gsm.initialize(address(this), TREASURY, type(uint128).max);
-        GHO_TOKEN.addFacilitator(address(gsm), "Test GSM", type(uint128).max);
+        GHO_TOKEN.setMinterStatus(address(gsm), true);
+        GHO_TOKEN.setMinterCeiling(address(gsm), type(uint128).max);
 
         if (buyFeeBps > 0 || sellFeeBps > 0) {
             FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(buyFeeBps, sellFeeBps);
             gsm.updateFeeStrategy(address(newFeeStrategy));
         }
 
-        uint256 amount = newPriceStrategy.getGhoPriceInAsset(type(uint128).max, false);
+        uint256 amount = newPriceStrategy.getStableTokenPriceInAsset(type(uint128).max, false);
         if (amount > type(uint128).max) {
             amount = type(uint128).max;
         }
@@ -263,9 +267,9 @@ contract TestGsmSwapFuzz is TestGhoBase {
     }
 
     /**
-     * @dev Checks behaviour of getGhoAmountForSellAsset
+     * @dev Checks behaviour of getStableTokenAmountForSellAsset
      */
-    function testFuzzGetGhoAmountForSellAsset(
+    function testFuzzgetStableTokenAmountForSellAsset(
         uint8 underlyingDecimals,
         uint256 priceRatio,
         uint256 amount,
@@ -278,13 +282,13 @@ contract TestGsmSwapFuzz is TestGhoBase {
         priceRatio = bound(priceRatio, 0.01e18, 100e18);
         amount = bound(amount, 1, type(uint128).max - 1);
 
-        TestnetERC20 newToken = new TestnetERC20("Test Coin", "TEST", underlyingDecimals, FAUCET);
+        ERC20MockMintableDecimals newToken = new ERC20MockMintableDecimals("Test Coin", "TEST", underlyingDecimals);
         FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
             priceRatio,
             address(newToken),
             underlyingDecimals // decimals
         );
-        Gsm gsm = new Gsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
+        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
         gsm.initialize(address(this), TREASURY, type(uint128).max);
 
         if (buyFeeBps > 0 || sellFeeBps > 0) {
@@ -293,7 +297,7 @@ contract TestGsmSwapFuzz is TestGhoBase {
         }
 
         (uint256 exactAssetAmount, uint256 ghoBought, uint256 grossAmount, uint256 fee) =
-            gsm.getGhoAmountForSellAsset(amount);
+            gsm.getStableTokenAmountForSellAsset(amount);
         assertTrue(exactAssetAmount <= amount, "maximum asset amount exceeded");
         assertTrue(ghoBought <= grossAmount, "gross amount lower than ghoBought");
         _checkValidPrice(newPriceStrategy, exactAssetAmount, grossAmount);
@@ -306,9 +310,9 @@ contract TestGsmSwapFuzz is TestGhoBase {
     }
 
     /**
-     * @dev Checks behaviour of getGhoAmountForBuyAsset
+     * @dev Checks behaviour of getStableTokenAmountForBuyAsset
      */
-    function testFuzzGetGhoAmountForBuyAsset(
+    function testFuzzgetStableTokenAmountForBuyAsset(
         uint8 underlyingDecimals,
         uint256 priceRatio,
         uint256 amount,
@@ -321,13 +325,13 @@ contract TestGsmSwapFuzz is TestGhoBase {
         priceRatio = bound(priceRatio, 0.01e18, 100e18);
         amount = bound(amount, 1, type(uint128).max - 1);
 
-        TestnetERC20 newToken = new TestnetERC20("Test Coin", "TEST", underlyingDecimals, FAUCET);
+        ERC20MockMintableDecimals newToken = new ERC20MockMintableDecimals("Test Coin", "TEST", underlyingDecimals);
         FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
             priceRatio,
             address(newToken),
             underlyingDecimals // decimals
         );
-        Gsm gsm = new Gsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
+        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
         gsm.initialize(address(this), TREASURY, type(uint128).max);
 
         if (buyFeeBps > 0 || sellFeeBps > 0) {
@@ -336,7 +340,7 @@ contract TestGsmSwapFuzz is TestGhoBase {
         }
 
         (uint256 exactAssetAmount, uint256 ghoSold, uint256 grossAmount, uint256 fee) =
-            gsm.getGhoAmountForBuyAsset(amount);
+            gsm.getStableTokenAmountForBuyAsset(amount);
         assertTrue(exactAssetAmount >= amount, "minimum asset amount not reached");
         assertTrue(ghoSold >= grossAmount, "gross amount lower than ghoSold");
         _checkValidPrice(newPriceStrategy, exactAssetAmount, grossAmount);
@@ -364,13 +368,13 @@ contract TestGsmSwapFuzz is TestGhoBase {
         priceRatio = bound(priceRatio, 0.01e18, 100e18);
         amount = bound(amount, 1, type(uint128).max - 1);
 
-        TestnetERC20 newToken = new TestnetERC20("Test Coin", "TEST", underlyingDecimals, FAUCET);
+        ERC20MockMintableDecimals newToken = new ERC20MockMintableDecimals("Test Coin", "TEST", underlyingDecimals);
         FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
             priceRatio,
             address(newToken),
             underlyingDecimals // decimals
         );
-        Gsm gsm = new Gsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
+        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
         gsm.initialize(address(this), TREASURY, type(uint128).max);
 
         if (buyFeeBps > 0 || sellFeeBps > 0) {
@@ -408,13 +412,13 @@ contract TestGsmSwapFuzz is TestGhoBase {
         priceRatio = bound(priceRatio, 0.01e18, 100e18);
         amount = bound(amount, 1, type(uint128).max - 1);
 
-        TestnetERC20 newToken = new TestnetERC20("Test Coin", "TEST", underlyingDecimals, FAUCET);
+        ERC20MockMintableDecimals newToken = new ERC20MockMintableDecimals("Test Coin", "TEST", underlyingDecimals);
         FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
             priceRatio,
             address(newToken),
             underlyingDecimals // decimals
         );
-        Gsm gsm = new Gsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
+        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
         gsm.initialize(address(this), TREASURY, type(uint128).max);
 
         if (buyFeeBps > 0 || sellFeeBps > 0) {
@@ -436,7 +440,7 @@ contract TestGsmSwapFuzz is TestGhoBase {
     }
 
     /**
-     * @dev Checks invariant between inverse functions to query amounts for the sell action: getGhoAmountForSellAsset
+     * @dev Checks invariant between inverse functions to query amounts for the sell action: getStableTokenAmountForSellAsset
      * and getAssetAmountForSellAsset.
      */
     function testFuzzSellEstimation(
@@ -454,13 +458,13 @@ contract TestGsmSwapFuzz is TestGhoBase {
         priceRatio = bound(priceRatio, 0.01e18, 100e18);
         assetAmount = bound(assetAmount, 1, type(uint64).max - 1);
 
-        TestnetERC20 newToken = new TestnetERC20("Test Coin", "TEST", underlyingDecimals, FAUCET);
+        ERC20MockMintableDecimals newToken = new ERC20MockMintableDecimals("Test Coin", "TEST", underlyingDecimals);
         FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
             priceRatio,
             address(newToken),
             underlyingDecimals // decimals
         );
-        Gsm gsm = new Gsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
+        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
         gsm.initialize(address(this), TREASURY, uint128(assetAmount));
 
         if (buyFeeBps > 0 || sellFeeBps > 0) {
@@ -469,7 +473,7 @@ contract TestGsmSwapFuzz is TestGhoBase {
         }
 
         (vars.estAssetAmount1, vars.estGhoAmount1, vars.estGrossAmount1, vars.estFeeAmount1) =
-            gsm.getGhoAmountForSellAsset(assetAmount);
+            gsm.getStableTokenAmountForSellAsset(assetAmount);
         vm.assume(vars.estGhoAmount1 > 0);
         (vars.estAssetAmount2, vars.estGhoAmount2, vars.estGrossAmount2, vars.estFeeAmount2) =
             gsm.getAssetAmountForSellAsset(vars.estGhoAmount1);
@@ -496,7 +500,7 @@ contract TestGsmSwapFuzz is TestGhoBase {
     }
 
     /**
-     * @dev Checks invariant between inverse functions to query amounts for the buy action: getGhoAmountForBuyAsset
+     * @dev Checks invariant between inverse functions to query amounts for the buy action: getStableTokenAmountForBuyAsset
      * and getAssetAmountForBuyAsset.
      */
     function testFuzzBuyEstimation(
@@ -514,13 +518,13 @@ contract TestGsmSwapFuzz is TestGhoBase {
         priceRatio = bound(priceRatio, 0.01e18, 100e18);
         assetAmount = bound(assetAmount, 1, type(uint64).max - 1);
 
-        TestnetERC20 newToken = new TestnetERC20("Test Coin", "TEST", underlyingDecimals, FAUCET);
+        ERC20MockMintableDecimals newToken = new ERC20MockMintableDecimals("Test Coin", "TEST", underlyingDecimals);
         FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
             priceRatio,
             address(newToken),
             underlyingDecimals // decimals
         );
-        Gsm gsm = new Gsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
+        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
         gsm.initialize(address(this), TREASURY, uint128(assetAmount));
 
         if (buyFeeBps > 0 || sellFeeBps > 0) {
@@ -529,7 +533,7 @@ contract TestGsmSwapFuzz is TestGhoBase {
         }
 
         (vars.estAssetAmount1, vars.estGhoAmount1, vars.estGrossAmount1, vars.estFeeAmount1) =
-            gsm.getGhoAmountForBuyAsset(assetAmount);
+            gsm.getStableTokenAmountForBuyAsset(assetAmount);
         vm.assume(vars.estGhoAmount1 > 0);
         (vars.estAssetAmount2, vars.estGhoAmount2, vars.estGrossAmount2, vars.estFeeAmount2) =
             gsm.getAssetAmountForBuyAsset(vars.estGhoAmount1);
@@ -551,7 +555,7 @@ contract TestGsmSwapFuzz is TestGhoBase {
     }
 
     /**
-     * @dev Checks sellAsset is aligned with getAssetAmountForSellAsset and getGhoAmountForSellAsset
+     * @dev Checks sellAsset is aligned with getAssetAmountForSellAsset and getStableTokenAmountForSellAsset
      */
     function testFuzzSellAssetWithEstimation(
         uint8 underlyingDecimals,
@@ -568,7 +572,7 @@ contract TestGsmSwapFuzz is TestGhoBase {
         priceRatio = bound(priceRatio, 0.01e18, 100e18);
         assetAmount = bound(assetAmount, 1, type(uint64).max - 1);
 
-        TestnetERC20 newToken = new TestnetERC20("Test Coin", "TEST", underlyingDecimals, FAUCET);
+        ERC20MockMintableDecimals newToken = new ERC20MockMintableDecimals("Test Coin", "TEST", underlyingDecimals);
         vm.prank(FAUCET);
         newToken.mint(ALICE, assetAmount);
 
@@ -577,9 +581,10 @@ contract TestGsmSwapFuzz is TestGhoBase {
             address(newToken),
             underlyingDecimals // decimals
         );
-        Gsm gsm = new Gsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
+        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
         gsm.initialize(address(this), TREASURY, uint128(assetAmount));
-        GHO_TOKEN.addFacilitator(address(gsm), "GSM TINY", type(uint128).max);
+        GHO_TOKEN.setMinterStatus(address(gsm), true);
+        GHO_TOKEN.setMinterCeiling(address(gsm), type(uint128).max);
 
         if (buyFeeBps > 0 || sellFeeBps > 0) {
             FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(buyFeeBps, sellFeeBps);
@@ -593,7 +598,8 @@ contract TestGsmSwapFuzz is TestGhoBase {
         uint256 userAssetBefore = newToken.balanceOf(ALICE);
 
         // Calculate GHO amount to purchase with given asset amount, bail if 0
-        (, vars.estGhoAmount1, vars.estGrossAmount1, vars.estFeeAmount1) = gsm.getGhoAmountForSellAsset(assetAmount);
+        (, vars.estGhoAmount1, vars.estGrossAmount1, vars.estFeeAmount1) =
+            gsm.getStableTokenAmountForSellAsset(assetAmount);
         vm.assume(vars.estGhoAmount1 > 0);
 
         (vars.exactAssetAmount, vars.exactGhoAmount) = gsm.sellAsset(assetAmount, ALICE);
@@ -642,7 +648,7 @@ contract TestGsmSwapFuzz is TestGhoBase {
     }
 
     /**
-     * @dev Checks buyAsset is aligned with getAssetAmountForBuyAsset and getGhoAmountForBuyAsset
+     * @dev Checks buyAsset is aligned with getAssetAmountForBuyAsset and getStableTokenAmountForBuyAsset
      */
     function testFuzzBuyAssetWithEstimation(
         uint8 underlyingDecimals,
@@ -659,16 +665,18 @@ contract TestGsmSwapFuzz is TestGhoBase {
         priceRatio = bound(priceRatio, 0.01e18, 100e18);
         assetAmount = bound(assetAmount, 1, type(uint64).max - 1);
 
-        TestnetERC20 newToken = new TestnetERC20("Test Coin", "TEST", underlyingDecimals, FAUCET);
+        ERC20MockMintableDecimals newToken = new ERC20MockMintableDecimals("Test Coin", "TEST", underlyingDecimals);
 
         FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
             priceRatio,
             address(newToken),
             underlyingDecimals // decimals
         );
-        Gsm gsm = new Gsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
+        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
         gsm.initialize(address(this), TREASURY, type(uint128).max);
-        GHO_TOKEN.addFacilitator(address(gsm), "GSM TINY", type(uint128).max);
+        GHO_TOKEN.setMinterStatus(address(gsm), true);
+        GHO_TOKEN.setBurnerStatus(address(gsm), true);
+        GHO_TOKEN.setMinterCeiling(address(gsm), type(uint128).max);
 
         if (buyFeeBps > 0 || sellFeeBps > 0) {
             FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(buyFeeBps, sellFeeBps);
@@ -676,7 +684,7 @@ contract TestGsmSwapFuzz is TestGhoBase {
         }
 
         // Alice sells some assets to the GSM, so the purchase is doable
-        uint256 sellAssetAmount = newPriceStrategy.getGhoPriceInAsset(type(uint128).max, false);
+        uint256 sellAssetAmount = newPriceStrategy.getStableTokenPriceInAsset(type(uint128).max, false);
         if (sellAssetAmount > type(uint128).max) {
             sellAssetAmount = type(uint128).max;
         }
@@ -690,7 +698,7 @@ contract TestGsmSwapFuzz is TestGhoBase {
         vm.stopPrank();
 
         // rough estimation of GHO funds needed for buyAsset
-        (, uint256 estGhoBought,,) = gsm.getGhoAmountForBuyAsset(assetAmount);
+        (, uint256 estGhoBought,,) = gsm.getStableTokenAmountForBuyAsset(assetAmount);
         ghoFaucet(ALICE, estGhoBought * 20);
 
         // Buy
@@ -699,7 +707,8 @@ contract TestGsmSwapFuzz is TestGhoBase {
         uint256 userAssetBefore = newToken.balanceOf(ALICE);
 
         // Calculate GHO amount to sell with given asset amount
-        (, vars.estGhoAmount1, vars.estGrossAmount1, vars.estFeeAmount1) = gsm.getGhoAmountForBuyAsset(assetAmount);
+        (, vars.estGhoAmount1, vars.estGrossAmount1, vars.estFeeAmount1) =
+            gsm.getStableTokenAmountForBuyAsset(assetAmount);
 
         userGhoBefore = GHO_TOKEN.balanceOf(ALICE);
         userAssetBefore = newToken.balanceOf(ALICE);
