@@ -7,8 +7,9 @@ uint256 constant ALTO_TOKEN_TOTAL_SUPPLY = 100_000_000 ether;
 uint256 constant DUSD_TOKEN_SUPPLY_TO_CONTRACTS = 100_000_000_000 ether;
 
 function getMulticallOwnerAddresses() pure returns (address[] memory) {
-    address[] memory addresses = new address[](1);
+    address[] memory addresses = new address[](2);
     addresses[0] = 0xd7F6Fa30BC8c0E5003689C332bd2b9400Ed87367;
+    addresses[1] = 0xFC3567948D827F928a82cF1263c5851a74BD90C9;
     return addresses;
 }
 

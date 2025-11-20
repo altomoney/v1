@@ -3,6 +3,7 @@ pragma solidity ^0.8.22;
 
 import {OracleTestnet} from "@alto/deployments/testnet/contracts/OracleTestnet.sol";
 import {AdaptiveCurveIrm} from "@alto/lending/irm/AdaptiveCurveIrm.sol";
+import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {UnsafeUpgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {AltoMintMarket} from "@alto/lending/AltoMintMarket.sol";
 import {
@@ -19,6 +20,7 @@ struct TestnetMintMarketBatchParams {
     uint256 marketOraclePrice;
     uint256 maxLtv;
     uint256 debtCeiling;
+    uint256 fixedRateIrmInterestRate;
 }
 
 int256 constant YEAR = int256(365 days);
@@ -34,19 +36,25 @@ contract TestnetMintMarketBatch is ITestnetMarketBatch {
         OracleTestnet(marketOracle).setPrice(_params.marketOraclePrice);
         OracleTestnet(marketOracle).transferOwnership(_params.owner);
 
-        address marketIrm = address(
-            new AdaptiveCurveIrm(
-                AdaptiveCurveIrm.AdaptiveCurveIrmConfig({
-                    curveSteepness: 4 ether,
-                    adjustmentSpeed: 50 ether / YEAR,
-                    targetUtilization: 0.8 ether,
-                    initialRateAtTarget: 0.04 ether / YEAR,
-                    minRateAtTarget: 0.001e18 / YEAR,
-                    maxRateAtTarget: 2 ether / YEAR
-                }),
-                _params.owner
-            )
-        );
+        address marketIrm;
+
+        if (_params.fixedRateIrmInterestRate > 0) {
+            marketIrm = address(new FixedRateIrm(_params.fixedRateIrmInterestRate, _params.owner));
+        } else {
+            marketIrm = address(
+                new AdaptiveCurveIrm(
+                    AdaptiveCurveIrm.AdaptiveCurveIrmConfig({
+                        curveSteepness: 4 ether,
+                        adjustmentSpeed: 50 ether / YEAR,
+                        targetUtilization: 0.8 ether,
+                        initialRateAtTarget: 0.04 ether / YEAR,
+                        minRateAtTarget: 0.001e18 / YEAR,
+                        maxRateAtTarget: 2 ether / YEAR
+                    }),
+                    _params.owner
+                )
+            );
+        }
 
         address market = address(new AltoMintMarket());
 
