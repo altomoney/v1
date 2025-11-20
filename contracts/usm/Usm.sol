@@ -49,9 +49,11 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, EIP712Upgradea
     );
 
     /// @inheritdoc IUsm
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     address public immutable STABLE_TOKEN;
 
     /// @inheritdoc IUsm
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     address public immutable UNDERLYING_ASSET;
 
     /// @inheritdoc IUsm
@@ -67,6 +69,9 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, EIP712Upgradea
     uint128 internal _exposureCap;
     uint128 internal _currentExposure;
     uint128 internal _accruedFees;
+
+    /// upgrade gap
+    uint256[44] private __gap_usm;
 
     /**
      * @dev Require USM to not be frozen for functions marked by this modifier
@@ -89,6 +94,7 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, EIP712Upgradea
      * @param stableToken The address of the stable token contract
      * @param underlyingAsset The address of the collateral asset
      */
+    /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(address stableToken, address underlyingAsset) {
         require(stableToken != address(0), "ZERO_ADDRESS_NOT_VALID");
         require(underlyingAsset != address(0), "ZERO_ADDRESS_NOT_VALID");
@@ -103,9 +109,9 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, EIP712Upgradea
      * @param exposureCap Maximum amount of user-supplied underlying asset in USM
      * @param priceStrategy The address of the price strategy
      */
-    function initialize(address admin, address stableTokenTreasury, uint128 exposureCap, address priceStrategy)
-        external
-        initializer
+    function __Usm_init(address admin, address stableTokenTreasury, uint128 exposureCap, address priceStrategy)
+        internal
+        onlyInitializing
     {
         require(admin != address(0), "ZERO_ADDRESS_NOT_VALID");
 

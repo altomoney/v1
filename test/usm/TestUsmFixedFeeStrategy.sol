@@ -15,7 +15,7 @@ contract TestUsmFixedFeeStrategy is TestDusdBase {
 
     function testRevertZeroAdmin() public {
         vm.expectRevert("ZERO_ADDRESS_NOT_VALID");
-        new FixedFeeStrategy(DEFAULT_GSM_BUY_FEE, DEFAULT_GSM_SELL_FEE, address(0));
+        new FixedFeeStrategy(DEFAULT_USM_BUY_FEE, DEFAULT_USM_SELL_FEE, address(0));
     }
 
     function testZeroBuyFee() public {

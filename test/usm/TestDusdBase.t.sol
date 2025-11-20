@@ -56,7 +56,7 @@ contract TestDusdBase is Test, TestHelperOz5, Constants {
         address usmProxy = UnsafeUpgrades.deployUUPSProxy(
             address(usm),
             abi.encodeCall(
-                Usm.initialize,
+                DUSDUsm.initialize,
                 (address(this), TREASURY, DEFAULT_USM_USDC_EXPOSURE, address(DUSD_USM_FIXED_PRICE_STRATEGY))
             )
         );
