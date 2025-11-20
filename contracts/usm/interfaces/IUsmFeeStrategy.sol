@@ -13,6 +13,13 @@ pragma solidity ^0.8.0;
  */
 interface IUsmFeeStrategy {
     /**
+     * @notice Sets the buy and sell fees, expressed in bps
+     * @param buyFee The new buy fee, expressed in bps
+     * @param sellFee The new sell fee, expressed in bps
+     */
+    function setFee(uint256 buyFee, uint256 sellFee) external;
+
+    /**
      * @notice Returns the fee to be applied when buying an underlying asset in exchange for Stable Token
      * @param grossAmount The amount of Stable Token being sold for the underlying asset
      * @return The fee amount of Stable Token

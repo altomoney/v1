@@ -53,7 +53,7 @@ abstract contract Usm is AccessControl, EIP712, IUsm {
     address public immutable UNDERLYING_ASSET;
 
     /// @inheritdoc IUsm
-    address public immutable PRICE_STRATEGY;
+    address public priceStrategy;
 
     /// @inheritdoc IUsm
     mapping(address => uint256) public nonces;
@@ -86,15 +86,12 @@ abstract contract Usm is AccessControl, EIP712, IUsm {
      * @dev Constructor
      * @param stableToken The address of the stable token contract
      * @param underlyingAsset The address of the collateral asset
-     * @param priceStrategy The address of the price strategy
      */
-    constructor(address stableToken, address underlyingAsset, address priceStrategy) EIP712("USM", "1") {
+    constructor(address stableToken, address underlyingAsset) EIP712("USM", "1") {
         require(stableToken != address(0), "ZERO_ADDRESS_NOT_VALID");
         require(underlyingAsset != address(0), "ZERO_ADDRESS_NOT_VALID");
-        require(IUsmPriceStrategy(priceStrategy).UNDERLYING_ASSET() == underlyingAsset, "INVALID_PRICE_STRATEGY");
         STABLE_TOKEN = stableToken;
         UNDERLYING_ASSET = underlyingAsset;
-        PRICE_STRATEGY = priceStrategy;
     }
 
     /**
@@ -102,13 +99,17 @@ abstract contract Usm is AccessControl, EIP712, IUsm {
      * @param admin The address of the default admin role
      * @param stableTokenTreasury The address of the stable token treasury
      * @param exposureCap Maximum amount of user-supplied underlying asset in USM
+     * @param priceStrategy The address of the price strategy
      */
-    function initialize(address admin, address stableTokenTreasury, uint128 exposureCap) external {
+    function initialize(address admin, address stableTokenTreasury, uint128 exposureCap, address priceStrategy)
+        external
+    {
         require(admin != address(0), "ZERO_ADDRESS_NOT_VALID");
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(CONFIGURATOR_ROLE, admin);
         _updateStableTokenTreasury(stableTokenTreasury);
         _updateExposureCap(exposureCap);
+        _updatePriceStrategy(priceStrategy);
     }
 
     /// @inheritdoc IUsm
@@ -229,6 +230,11 @@ abstract contract Usm is AccessControl, EIP712, IUsm {
     }
 
     /// @inheritdoc IUsm
+    function updatePriceStrategy(address priceStrategy) external onlyRole(CONFIGURATOR_ROLE) {
+        _updatePriceStrategy(priceStrategy);
+    }
+
+    /// @inheritdoc IUsm
     function updateExposureCap(uint128 exposureCap) external onlyRole(CONFIGURATOR_ROLE) {
         _updateExposureCap(exposureCap);
     }
@@ -282,8 +288,8 @@ abstract contract Usm is AccessControl, EIP712, IUsm {
             ? IUsmFeeStrategy(_feeStrategy).getGrossAmountFromTotalBought(maxStableTokenAmount)
             : maxStableTokenAmount;
         // round down so maxStableTokenAmount is guaranteed
-        uint256 assetAmount = IUsmPriceStrategy(PRICE_STRATEGY).getStableTokenPriceInAsset(grossAmount, false);
-        uint256 finalGrossAmount = IUsmPriceStrategy(PRICE_STRATEGY).getAssetPriceInStableToken(assetAmount, true);
+        uint256 assetAmount = IUsmPriceStrategy(priceStrategy).getStableTokenPriceInAsset(grossAmount, false);
+        uint256 finalGrossAmount = IUsmPriceStrategy(priceStrategy).getAssetPriceInStableToken(assetAmount, true);
         uint256 finalFee = withFee ? IUsmFeeStrategy(_feeStrategy).getBuyFee(finalGrossAmount) : 0;
         return (assetAmount, finalGrossAmount + finalFee, finalGrossAmount, finalFee);
     }
@@ -299,8 +305,8 @@ abstract contract Usm is AccessControl, EIP712, IUsm {
             ? IUsmFeeStrategy(_feeStrategy).getGrossAmountFromTotalSold(minStableTokenAmount)
             : minStableTokenAmount;
         // round up so minStableTokenAmount is guaranteed
-        uint256 assetAmount = IUsmPriceStrategy(PRICE_STRATEGY).getStableTokenPriceInAsset(grossAmount, true);
-        uint256 finalGrossAmount = IUsmPriceStrategy(PRICE_STRATEGY).getAssetPriceInStableToken(assetAmount, false);
+        uint256 assetAmount = IUsmPriceStrategy(priceStrategy).getStableTokenPriceInAsset(grossAmount, true);
+        uint256 finalGrossAmount = IUsmPriceStrategy(priceStrategy).getAssetPriceInStableToken(assetAmount, false);
         uint256 finalFee = withFee ? IUsmFeeStrategy(_feeStrategy).getSellFee(finalGrossAmount) : 0;
         return (assetAmount, finalGrossAmount - finalFee, finalGrossAmount, finalFee);
     }
@@ -443,13 +449,13 @@ abstract contract Usm is AccessControl, EIP712, IUsm {
     {
         bool withFee = _feeStrategy != address(0);
         // pick the highest Stable Token amount possible for given asset amount
-        uint256 grossAmount = IUsmPriceStrategy(PRICE_STRATEGY).getAssetPriceInStableToken(assetAmount, true);
+        uint256 grossAmount = IUsmPriceStrategy(priceStrategy).getAssetPriceInStableToken(assetAmount, true);
         uint256 fee = withFee ? IUsmFeeStrategy(_feeStrategy).getBuyFee(grossAmount) : 0;
         uint256 stableTokenSold = grossAmount + fee;
         uint256 finalGrossAmount =
             withFee ? IUsmFeeStrategy(_feeStrategy).getGrossAmountFromTotalBought(stableTokenSold) : stableTokenSold;
         // pick the lowest asset amount possible for given Stable Token amount
-        uint256 finalAssetAmount = IUsmPriceStrategy(PRICE_STRATEGY).getStableTokenPriceInAsset(finalGrossAmount, false);
+        uint256 finalAssetAmount = IUsmPriceStrategy(priceStrategy).getStableTokenPriceInAsset(finalGrossAmount, false);
         uint256 finalFee = stableTokenSold - finalGrossAmount;
         return (finalAssetAmount, finalGrossAmount + finalFee, finalGrossAmount, finalFee);
     }
@@ -469,15 +475,26 @@ abstract contract Usm is AccessControl, EIP712, IUsm {
     {
         bool withFee = _feeStrategy != address(0);
         // pick the lowest Stable Token amount possible for given asset amount
-        uint256 grossAmount = IUsmPriceStrategy(PRICE_STRATEGY).getAssetPriceInStableToken(assetAmount, false);
+        uint256 grossAmount = IUsmPriceStrategy(priceStrategy).getAssetPriceInStableToken(assetAmount, false);
         uint256 fee = withFee ? IUsmFeeStrategy(_feeStrategy).getSellFee(grossAmount) : 0;
         uint256 stableTokenBought = grossAmount - fee;
         uint256 finalGrossAmount =
             withFee ? IUsmFeeStrategy(_feeStrategy).getGrossAmountFromTotalSold(stableTokenBought) : stableTokenBought;
         // pick the highest asset amount possible for given Stable Token amount
-        uint256 finalAssetAmount = IUsmPriceStrategy(PRICE_STRATEGY).getStableTokenPriceInAsset(finalGrossAmount, true);
+        uint256 finalAssetAmount = IUsmPriceStrategy(priceStrategy).getStableTokenPriceInAsset(finalGrossAmount, true);
         uint256 finalFee = finalGrossAmount - stableTokenBought;
         return (finalAssetAmount, finalGrossAmount - finalFee, finalGrossAmount, finalFee);
+    }
+
+    /**
+     * @dev Updates Price Strategy
+     * @param newPriceStrategy The address of the new Price Strategy
+     */
+    function _updatePriceStrategy(address newPriceStrategy) internal {
+        require(IUsmPriceStrategy(newPriceStrategy).UNDERLYING_ASSET() == UNDERLYING_ASSET, "INVALID_PRICE_STRATEGY");
+        address oldPriceStrategy = priceStrategy;
+        priceStrategy = newPriceStrategy;
+        emit PriceStrategyUpdated(oldPriceStrategy, newPriceStrategy);
     }
 
     /**

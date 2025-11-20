@@ -82,16 +82,17 @@ contract TestGsmSwapFuzz is TestGhoBase {
         FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
             priceRatio,
             address(newToken),
-            underlyingDecimals // decimals
+            underlyingDecimals, // decimals
+            address(this)
         );
-        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
-        gsm.initialize(address(this), TREASURY, type(uint128).max);
+        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken));
+        gsm.initialize(address(this), TREASURY, type(uint128).max, address(newPriceStrategy));
         GHO_TOKEN.setMinterStatus(address(gsm), true);
         GHO_TOKEN.setBurnerStatus(address(gsm), true);
         GHO_TOKEN.setMinterCeiling(address(gsm), type(uint128).max);
 
         if (buyFeeBps > 0 || sellFeeBps > 0) {
-            FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(buyFeeBps, sellFeeBps);
+            FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(buyFeeBps, sellFeeBps, address(this));
             gsm.updateFeeStrategy(address(newFeeStrategy));
         }
 
@@ -156,10 +157,11 @@ contract TestGsmSwapFuzz is TestGhoBase {
         FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
             priceRatio,
             address(newToken),
-            underlyingDecimals // decimals
+            underlyingDecimals, // decimals
+            address(this)
         );
-        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
-        gsm.initialize(address(this), TREASURY, type(uint128).max);
+        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken));
+        gsm.initialize(address(this), TREASURY, type(uint128).max, address(newPriceStrategy));
 
         // Get gho amount for selling assets
         (uint256 assetSold,, uint256 ghoMinted,) = gsm.getStableTokenAmountForSellAsset(amount);
@@ -193,15 +195,16 @@ contract TestGsmSwapFuzz is TestGhoBase {
         FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
             priceRatio,
             address(newToken),
-            underlyingDecimals // decimals
+            underlyingDecimals, // decimals
+            address(this)
         );
-        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
-        gsm.initialize(address(this), TREASURY, type(uint128).max);
+        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken));
+        gsm.initialize(address(this), TREASURY, type(uint128).max, address(newPriceStrategy));
         GHO_TOKEN.setMinterStatus(address(gsm), true);
         GHO_TOKEN.setMinterCeiling(address(gsm), type(uint128).max);
 
         if (buyFeeBps > 0 || sellFeeBps > 0) {
-            FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(buyFeeBps, sellFeeBps);
+            FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(buyFeeBps, sellFeeBps, address(this));
             gsm.updateFeeStrategy(address(newFeeStrategy));
         }
 
@@ -235,15 +238,16 @@ contract TestGsmSwapFuzz is TestGhoBase {
         FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
             priceRatio,
             address(newToken),
-            underlyingDecimals // decimals
+            underlyingDecimals, // decimals
+            address(this)
         );
-        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
-        gsm.initialize(address(this), TREASURY, type(uint128).max);
+        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken));
+        gsm.initialize(address(this), TREASURY, type(uint128).max, address(newPriceStrategy));
         GHO_TOKEN.setMinterStatus(address(gsm), true);
         GHO_TOKEN.setMinterCeiling(address(gsm), type(uint128).max);
 
         if (buyFeeBps > 0 || sellFeeBps > 0) {
-            FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(buyFeeBps, sellFeeBps);
+            FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(buyFeeBps, sellFeeBps, address(this));
             gsm.updateFeeStrategy(address(newFeeStrategy));
         }
 
@@ -286,13 +290,14 @@ contract TestGsmSwapFuzz is TestGhoBase {
         FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
             priceRatio,
             address(newToken),
-            underlyingDecimals // decimals
+            underlyingDecimals, // decimals
+            address(this)
         );
-        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
-        gsm.initialize(address(this), TREASURY, type(uint128).max);
+        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken));
+        gsm.initialize(address(this), TREASURY, type(uint128).max, address(newPriceStrategy));
 
         if (buyFeeBps > 0 || sellFeeBps > 0) {
-            FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(buyFeeBps, sellFeeBps);
+            FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(buyFeeBps, sellFeeBps, address(this));
             gsm.updateFeeStrategy(address(newFeeStrategy));
         }
 
@@ -329,13 +334,14 @@ contract TestGsmSwapFuzz is TestGhoBase {
         FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
             priceRatio,
             address(newToken),
-            underlyingDecimals // decimals
+            underlyingDecimals, // decimals
+            address(this)
         );
-        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
-        gsm.initialize(address(this), TREASURY, type(uint128).max);
+        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken));
+        gsm.initialize(address(this), TREASURY, type(uint128).max, address(newPriceStrategy));
 
         if (buyFeeBps > 0 || sellFeeBps > 0) {
-            FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(buyFeeBps, sellFeeBps);
+            FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(buyFeeBps, sellFeeBps, address(this));
             gsm.updateFeeStrategy(address(newFeeStrategy));
         }
 
@@ -372,13 +378,14 @@ contract TestGsmSwapFuzz is TestGhoBase {
         FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
             priceRatio,
             address(newToken),
-            underlyingDecimals // decimals
+            underlyingDecimals, // decimals
+            address(this)
         );
-        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
-        gsm.initialize(address(this), TREASURY, type(uint128).max);
+        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken));
+        gsm.initialize(address(this), TREASURY, type(uint128).max, address(newPriceStrategy));
 
         if (buyFeeBps > 0 || sellFeeBps > 0) {
-            FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(buyFeeBps, sellFeeBps);
+            FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(buyFeeBps, sellFeeBps, address(this));
             gsm.updateFeeStrategy(address(newFeeStrategy));
         }
 
@@ -416,13 +423,14 @@ contract TestGsmSwapFuzz is TestGhoBase {
         FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
             priceRatio,
             address(newToken),
-            underlyingDecimals // decimals
+            underlyingDecimals, // decimals
+            address(this)
         );
-        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
-        gsm.initialize(address(this), TREASURY, type(uint128).max);
+        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken));
+        gsm.initialize(address(this), TREASURY, type(uint128).max, address(newPriceStrategy));
 
         if (buyFeeBps > 0 || sellFeeBps > 0) {
-            FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(buyFeeBps, sellFeeBps);
+            FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(buyFeeBps, sellFeeBps, address(this));
             gsm.updateFeeStrategy(address(newFeeStrategy));
         }
 
@@ -462,13 +470,14 @@ contract TestGsmSwapFuzz is TestGhoBase {
         FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
             priceRatio,
             address(newToken),
-            underlyingDecimals // decimals
+            underlyingDecimals, // decimals
+            address(this)
         );
-        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
-        gsm.initialize(address(this), TREASURY, uint128(assetAmount));
+        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken));
+        gsm.initialize(address(this), TREASURY, uint128(assetAmount), address(newPriceStrategy));
 
         if (buyFeeBps > 0 || sellFeeBps > 0) {
-            FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(buyFeeBps, sellFeeBps);
+            FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(buyFeeBps, sellFeeBps, address(this));
             gsm.updateFeeStrategy(address(newFeeStrategy));
         }
 
@@ -522,13 +531,14 @@ contract TestGsmSwapFuzz is TestGhoBase {
         FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
             priceRatio,
             address(newToken),
-            underlyingDecimals // decimals
+            underlyingDecimals, // decimals
+            address(this)
         );
-        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
-        gsm.initialize(address(this), TREASURY, uint128(assetAmount));
+        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken));
+        gsm.initialize(address(this), TREASURY, uint128(assetAmount), address(newPriceStrategy));
 
         if (buyFeeBps > 0 || sellFeeBps > 0) {
-            FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(buyFeeBps, sellFeeBps);
+            FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(buyFeeBps, sellFeeBps, address(this));
             gsm.updateFeeStrategy(address(newFeeStrategy));
         }
 
@@ -579,15 +589,16 @@ contract TestGsmSwapFuzz is TestGhoBase {
         FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
             priceRatio,
             address(newToken),
-            underlyingDecimals // decimals
+            underlyingDecimals, // decimals
+            address(this)
         );
-        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
-        gsm.initialize(address(this), TREASURY, uint128(assetAmount));
+        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken));
+        gsm.initialize(address(this), TREASURY, uint128(assetAmount), address(newPriceStrategy));
         GHO_TOKEN.setMinterStatus(address(gsm), true);
         GHO_TOKEN.setMinterCeiling(address(gsm), type(uint128).max);
 
         if (buyFeeBps > 0 || sellFeeBps > 0) {
-            FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(buyFeeBps, sellFeeBps);
+            FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(buyFeeBps, sellFeeBps, address(this));
             gsm.updateFeeStrategy(address(newFeeStrategy));
         }
 
@@ -670,16 +681,17 @@ contract TestGsmSwapFuzz is TestGhoBase {
         FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
             priceRatio,
             address(newToken),
-            underlyingDecimals // decimals
+            underlyingDecimals, // decimals
+            address(this)
         );
-        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken), address(newPriceStrategy));
-        gsm.initialize(address(this), TREASURY, type(uint128).max);
+        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken));
+        gsm.initialize(address(this), TREASURY, type(uint128).max, address(newPriceStrategy));
         GHO_TOKEN.setMinterStatus(address(gsm), true);
         GHO_TOKEN.setBurnerStatus(address(gsm), true);
         GHO_TOKEN.setMinterCeiling(address(gsm), type(uint128).max);
 
         if (buyFeeBps > 0 || sellFeeBps > 0) {
-            FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(buyFeeBps, sellFeeBps);
+            FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(buyFeeBps, sellFeeBps, address(this));
             gsm.updateFeeStrategy(address(newFeeStrategy));
         }
 

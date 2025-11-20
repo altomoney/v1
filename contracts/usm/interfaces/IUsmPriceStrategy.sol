@@ -10,6 +10,19 @@ pragma solidity ^0.8.0;
  */
 interface IUsmPriceStrategy {
     /**
+     * @notice Sets The price ratio from underlying asset to stability token (expressed in WAD),
+     * @dev e.g. a ratio of 2e18 means 2 stability token per 1 underlying asset
+     * @param newPriceRatio The new price ratio from underlying asset to stability token (expressed in WAD)
+     */
+    function setPriceRatio(uint256 newPriceRatio) external;
+
+    /**
+     * @notice Returns the identifier of the Configurator Role
+     * @return The bytes32 id hash of the Configurator role
+     */
+    function CONFIGURATOR_ROLE() external pure returns (bytes32);
+
+    /**
      * @notice Returns the number of decimals of Stable Token
      * @return The number of decimals of Stable Token
      */

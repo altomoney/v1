@@ -3,21 +3,24 @@ pragma solidity ^0.8.10;
 
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {IUsmFeeStrategy} from "./interfaces/IUsmFeeStrategy.sol";
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
 /**
  * @title FixedFeeStrategy
  * @author Aave
  * @notice Fee strategy using a fixed rate to calculate buy/sell fees
  */
-contract FixedFeeStrategy is IUsmFeeStrategy {
+contract FixedFeeStrategy is IUsmFeeStrategy, AccessControl {
     using Math for uint256;
+
+    bytes32 public constant CONFIGURATOR_ROLE = keccak256("CONFIGURATOR_ROLE");
 
     uint256 internal constant PERCENTAGE_PRECISION = 10000;
 
     uint256 internal constant MAXIMUM_FEE_PERCENT = 5000;
 
-    uint256 internal immutable _buyFee;
-    uint256 internal immutable _sellFee;
+    uint256 internal _buyFee;
+    uint256 internal _sellFee;
 
     /**
      * @dev Constructor
@@ -25,7 +28,19 @@ contract FixedFeeStrategy is IUsmFeeStrategy {
      * @param buyFee The fee paid when buying the underlying asset in exchange for GHO, expressed in bps
      * @param sellFee The fee paid when selling the underlying asset in exchange for GHO, expressed in bps
      */
-    constructor(uint256 buyFee, uint256 sellFee) {
+    constructor(uint256 buyFee, uint256 sellFee, address admin) {
+        require(buyFee < MAXIMUM_FEE_PERCENT, "INVALID_BUY_FEE");
+        require(sellFee < MAXIMUM_FEE_PERCENT, "INVALID_SELL_FEE");
+        require(buyFee > 0 || sellFee > 0, "MUST_HAVE_ONE_NONZERO_FEE");
+        require(admin != address(0), "ZERO_ADDRESS_NOT_VALID");
+        _grantRole(DEFAULT_ADMIN_ROLE, admin);
+        _grantRole(CONFIGURATOR_ROLE, admin);
+        _buyFee = buyFee;
+        _sellFee = sellFee;
+    }
+
+    /// @inheritdoc IUsmFeeStrategy
+    function setFee(uint256 buyFee, uint256 sellFee) external onlyRole(CONFIGURATOR_ROLE) {
         require(buyFee < MAXIMUM_FEE_PERCENT, "INVALID_BUY_FEE");
         require(sellFee < MAXIMUM_FEE_PERCENT, "INVALID_SELL_FEE");
         require(buyFee > 0 || sellFee > 0, "MUST_HAVE_ONE_NONZERO_FEE");

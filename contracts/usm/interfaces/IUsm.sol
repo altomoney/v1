@@ -78,6 +78,13 @@ interface IUsm is IAccessControl, IStableTokenFacilitator {
     event FeeStrategyUpdated(address indexed oldFeeStrategy, address indexed newFeeStrategy);
 
     /**
+     * @dev Emitted when the Price Strategy is updated
+     * @param oldPriceStrategy The address of the old Price Strategy
+     * @param newPriceStrategy The address of the new Price Strategy
+     */
+    event PriceStrategyUpdated(address indexed oldPriceStrategy, address indexed newPriceStrategy);
+
+    /**
      * @dev Emitted when the USM underlying asset Exposure Cap is updated
      * @param oldExposureCap The amount of the old Exposure Cap
      * @param newExposureCap The amount of the new Exposure Cap
@@ -193,6 +200,12 @@ interface IUsm is IAccessControl, IStableTokenFacilitator {
      * @param exposureCap The new value for the exposure cap (in underlying asset terms)
      */
     function updateExposureCap(uint128 exposureCap) external;
+
+    /*
+     * @notice Updates the address of the Price Strategy
+     * @param priceStrategy The address of the new Price Strategy
+     */
+    function updatePriceStrategy(address priceStrategy) external;
 
     /**
      * @notice Returns the EIP712 domain separator
@@ -324,7 +337,7 @@ interface IUsm is IAccessControl, IStableTokenFacilitator {
      * @notice Returns the price strategy of the USM
      * @return The address of the price strategy
      */
-    function PRICE_STRATEGY() external view returns (address);
+    function priceStrategy() external view returns (address);
 
     /**
      * @notice Returns the current nonce (for EIP-712 signature methods) of an address

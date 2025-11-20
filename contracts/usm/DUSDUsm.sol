@@ -5,9 +5,7 @@ import {Usm} from "./Usm.sol";
 import {IDUSD} from "@alto/tokens/interfaces/IDUSD.sol";
 
 contract DUSDUsm is Usm {
-    constructor(address dusd, address underlyingAsset, address priceStrategy)
-        Usm(dusd, underlyingAsset, priceStrategy)
-    {}
+    constructor(address dusd, address underlyingAsset) Usm(dusd, underlyingAsset) {}
 
     function _getCurrentlyMintedStableTokenByUsm() internal view override returns (uint256) {
         (uint256 minted,) = IDUSD(STABLE_TOKEN).minterConfig(address(this));
