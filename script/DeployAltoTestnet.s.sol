@@ -22,7 +22,8 @@ contract DeployAltoTestnetScript is Script {
             owner: msg.sender,
             skipLendingDeployment: false,
             lzEndpoint: 0x6EDCE65403992e310A62460808c4b910D972f10f,
-            wrappedNativeToken: address(1)
+            wrappedNativeToken: address(1),
+            uniswapV3NonFungiblePositionManager: 0x1238536071E1c677A632429e3655c799b22cDA52
         });
 
         input = DeployAltoTestnet.deploy(params, input);

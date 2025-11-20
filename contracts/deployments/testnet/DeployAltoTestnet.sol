@@ -45,6 +45,11 @@ import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step
 import {AltoMulticallTestnet} from "@alto/deployments/testnet/contracts/AltoMulticallTestnet.sol";
 import {getMulticallOwnerAddresses} from "@alto/deployments/testnet/Constants.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {
+    INonfungiblePositionManager,
+    MintParams
+} from "@alto/deployments/testnet/interfaces/INonfungiblePositionManager.sol";
+import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
 struct AltoTestnetInput {
     TestnetTokens tokens;
@@ -93,6 +98,7 @@ struct AltoTestnetParams {
     bool skipLendingDeployment;
     address lzEndpoint;
     address wrappedNativeToken;
+    address uniswapV3NonFungiblePositionManager;
 }
 
 library DeployAltoTestnet {
@@ -106,6 +112,7 @@ library DeployAltoTestnet {
         input = _deployLending(params, input);
         input = _deployStaking(params, input);
         input = _deployRewards(params, input);
+        input = _deployUniswapPools(params, input);
 
         _transferOwnership(params, input);
 
@@ -257,7 +264,7 @@ library DeployAltoTestnet {
                     marketOraclePrice: 112000 * LENDING_ORACLE_PRICE_PRECISION,
                     maxLtv: 0.75 ether,
                     debtCeiling: 100_000 ether,
-                    fixedRateIrmInterestRate: 0
+                    fixedRateIrmInterestRate: 0.04 ether / uint256(365 days)
                 })
             ))
         .getMarketReport();
@@ -278,7 +285,7 @@ library DeployAltoTestnet {
                     owner: params.owner,
                     collateralToken: address(input.tokens.wbtc),
                     borrowToken: address(input.tokens.dusd),
-                    marketOraclePrice: 100_000 ether * LENDING_ORACLE_PRICE_PRECISION / 1 ether,
+                    marketOraclePrice: 100_000 * LENDING_ORACLE_PRICE_PRECISION * 1e10,
                     maxLtv: 0.75 ether
                 })
             ))
@@ -293,7 +300,7 @@ library DeployAltoTestnet {
                     owner: params.owner,
                     collateralToken: address(input.tokens.cbbtc),
                     borrowToken: address(input.tokens.dusd),
-                    marketOraclePrice: 100_000 ether * LENDING_ORACLE_PRICE_PRECISION / 1 ether,
+                    marketOraclePrice: 100_000 * LENDING_ORACLE_PRICE_PRECISION * 1e10,
                     maxLtv: 0.75 ether
                 })
             ))
@@ -308,7 +315,7 @@ library DeployAltoTestnet {
                     owner: params.owner,
                     collateralToken: address(input.tokens.susde),
                     borrowToken: address(input.tokens.dusd),
-                    marketOraclePrice: 1.2 ether * LENDING_ORACLE_PRICE_PRECISION / 1 ether,
+                    marketOraclePrice: 1.2 ether * LENDING_ORACLE_PRICE_PRECISION,
                     maxLtv: 0.75 ether
                 })
             ))
@@ -445,6 +452,170 @@ library DeployAltoTestnet {
         Ownable2Step(input.contracts.rewardsBatch.rewardsDistributor).acceptOwnership();
         AltoAdapter(payable(input.contracts.altoAdapter))
             .approveContract(input.contracts.rewardsBatch.rewardsDistributor);
+
+        return input;
+    }
+
+    function _deployUniswapPools(AltoTestnetParams memory params, AltoTestnetInput memory input)
+        internal
+        returns (AltoTestnetInput memory)
+    {
+        IERC20(input.tokens.reth).approve(address(params.uniswapV3NonFungiblePositionManager), type(uint256).max);
+        IERC20(input.tokens.weth).approve(address(params.uniswapV3NonFungiblePositionManager), type(uint256).max);
+        IERC20(input.tokens.usdc).approve(address(params.uniswapV3NonFungiblePositionManager), type(uint256).max);
+        IERC20(input.tokens.dusd).approve(address(params.uniswapV3NonFungiblePositionManager), type(uint256).max);
+        IERC20(input.tokens.wbtc).approve(address(params.uniswapV3NonFungiblePositionManager), type(uint256).max);
+        {
+            MintParams memory mintParams = MintParams({
+                token0: address(input.tokens.reth),
+                token1: address(input.tokens.weth),
+                fee: 100,
+                tickLower: -887272,
+                tickUpper: 887272,
+                amount0Desired: 1_000_000 ether,
+                amount1Desired: 1_000_000 ether,
+                amount0Min: 0,
+                amount1Min: 0,
+                recipient: params.owner,
+                deadline: block.timestamp + 1 days
+            });
+
+            // initial price of 1 rETH = 1.1465 WETH
+            if (input.tokens.reth < input.tokens.weth) {
+                INonfungiblePositionManager(params.uniswapV3NonFungiblePositionManager)
+                    .createAndInitializePoolIfNecessary(
+                        address(input.tokens.reth), address(input.tokens.weth), 100, 84832472985249386653488423004
+                    );
+                mintParams.token0 = address(input.tokens.reth);
+                mintParams.token1 = address(input.tokens.weth);
+            } else {
+                INonfungiblePositionManager(params.uniswapV3NonFungiblePositionManager)
+                    .createAndInitializePoolIfNecessary(
+                        address(input.tokens.weth), address(input.tokens.reth), 100, 73990391685604699676039109455
+                    );
+                mintParams.token0 = address(input.tokens.weth);
+                mintParams.token1 = address(input.tokens.reth);
+            }
+
+            INonfungiblePositionManager(params.uniswapV3NonFungiblePositionManager).mint(mintParams);
+        }
+
+        {
+            MintParams memory mintParams = MintParams({
+                token0: address(input.tokens.usdc),
+                token1: address(input.tokens.weth),
+                fee: 500,
+                tickLower: -887270,
+                tickUpper: 887270,
+                amount0Desired: 100_000_000 * 10 ** 6,
+                amount1Desired: 1_000_000 ether,
+                amount0Min: 0,
+                amount1Min: 0,
+                recipient: params.owner,
+                deadline: block.timestamp + 1 days
+            });
+
+            // initial price of 1 weth = 3200 USDC
+            if (input.tokens.usdc < input.tokens.weth) {
+                INonfungiblePositionManager(params.uniswapV3NonFungiblePositionManager)
+                    .createAndInitializePoolIfNecessary(
+                        address(input.tokens.usdc), address(input.tokens.weth), 500, 1417745249090387378668354381283328
+                    );
+                mintParams.token0 = address(input.tokens.usdc);
+                mintParams.amount0Desired = 100_000_000 * 10 ** 6;
+                mintParams.token1 = address(input.tokens.weth);
+                mintParams.amount1Desired = 1_000_000 ether;
+            } else {
+                INonfungiblePositionManager(params.uniswapV3NonFungiblePositionManager)
+                    .createAndInitializePoolIfNecessary(
+                        address(input.tokens.weth), address(input.tokens.usdc), 500, 4425601977833494958990786
+                    );
+                mintParams.token0 = address(input.tokens.weth);
+                mintParams.amount0Desired = 1_000_000 ether;
+                mintParams.token1 = address(input.tokens.usdc);
+                mintParams.amount1Desired = 100_000_000 * 10 ** 6;
+            }
+
+            INonfungiblePositionManager(params.uniswapV3NonFungiblePositionManager).mint(mintParams);
+        }
+
+        {
+            MintParams memory mintParams = MintParams({
+                token0: address(input.tokens.usdc),
+                token1: address(input.tokens.dusd),
+                fee: 100,
+                tickLower: -887272,
+                tickUpper: 887272,
+                amount0Desired: 1_500_000 * 10 ** 6,
+                amount1Desired: 1_500_000 ether,
+                amount0Min: 0,
+                amount1Min: 0,
+                recipient: params.owner,
+                deadline: block.timestamp + 1 days
+            });
+
+            // initial price of 1 dusd = 1 USDC
+            if (input.tokens.usdc < input.tokens.dusd) {
+                INonfungiblePositionManager(params.uniswapV3NonFungiblePositionManager)
+                    .createAndInitializePoolIfNecessary(
+                        address(input.tokens.usdc), address(input.tokens.dusd), 100, 79226131514347940073696838322079733
+                    );
+                mintParams.token0 = address(input.tokens.usdc);
+                mintParams.amount0Desired = 1_500_000 * 10 ** 6;
+                mintParams.token1 = address(input.tokens.dusd);
+                mintParams.amount1Desired = 1_500_000 ether;
+            } else {
+                INonfungiblePositionManager(params.uniswapV3NonFungiblePositionManager)
+                    .createAndInitializePoolIfNecessary(
+                        address(input.tokens.dusd), address(input.tokens.usdc), 100, 79226398639705836713598
+                    );
+                mintParams.token0 = address(input.tokens.dusd);
+                mintParams.amount0Desired = 1_500_000 ether;
+                mintParams.token1 = address(input.tokens.usdc);
+                mintParams.amount1Desired = 1_500_000 * 10 ** 6;
+            }
+
+            INonfungiblePositionManager(params.uniswapV3NonFungiblePositionManager).mint(mintParams);
+        }
+
+        {
+            MintParams memory mintParams = MintParams({
+                token0: address(input.tokens.wbtc),
+                token1: address(input.tokens.usdc),
+                fee: 3000,
+                tickLower: -887220,
+                tickUpper: 887220,
+                amount0Desired: 1000 * 10 ** 8,
+                amount1Desired: 1_000_000 * 10 ** 6,
+                amount0Min: 0,
+                amount1Min: 0,
+                recipient: params.owner,
+                deadline: block.timestamp + 1 days
+            });
+
+            // initial price of 1 wbtc = 91300 USDC
+            if (input.tokens.wbtc < input.tokens.usdc) {
+                INonfungiblePositionManager(params.uniswapV3NonFungiblePositionManager)
+                    .createAndInitializePoolIfNecessary(
+                        address(input.tokens.wbtc), address(input.tokens.usdc), 3000, 2390522350476481540566216842177
+                    );
+                mintParams.token0 = address(input.tokens.wbtc);
+                mintParams.amount0Desired = 1000 * 10 ** 8;
+                mintParams.token1 = address(input.tokens.usdc);
+                mintParams.amount1Desired = 100_000_000 * 10 ** 6;
+            } else {
+                INonfungiblePositionManager(params.uniswapV3NonFungiblePositionManager)
+                    .createAndInitializePoolIfNecessary(
+                        address(input.tokens.usdc), address(input.tokens.wbtc), 3000, 2625828507370166000000000000
+                    );
+                mintParams.token0 = address(input.tokens.usdc);
+                mintParams.amount0Desired = 100_000_000 * 10 ** 6;
+                mintParams.token1 = address(input.tokens.wbtc);
+                mintParams.amount1Desired = 1000 * 10 ** 8;
+            }
+
+            INonfungiblePositionManager(params.uniswapV3NonFungiblePositionManager).mint(mintParams);
+        }
 
         return input;
     }
@@ -627,9 +798,11 @@ library DeployAltoTestnet {
         Ownable(input.tokens.usdc).transferOwnership(altoMulticall);
         Ownable(input.tokens.weth).transferOwnership(altoMulticall);
         Ownable(input.tokens.wsteth).transferOwnership(altoMulticall);
-        Ownable(input.tokens.tbtc).transferOwnership(altoMulticall);
-        // Ownable(input.tokens.sbold).transferOwnership(altoMulticall);
         Ownable(input.tokens.reth).transferOwnership(altoMulticall);
+        Ownable(input.tokens.meth).transferOwnership(altoMulticall);
+        Ownable(input.tokens.tbtc).transferOwnership(altoMulticall);
+        Ownable(input.tokens.wbtc).transferOwnership(altoMulticall);
+        Ownable(input.tokens.cbbtc).transferOwnership(altoMulticall);
         Ownable(input.tokens.susde).transferOwnership(altoMulticall);
 
         AltoMulticallTestnet(payable(altoMulticall)).multicall(calls);
