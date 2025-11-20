@@ -16,6 +16,9 @@ import {TestDusdBase} from "./TestDusdBase.t.sol";
 import {UnsafeUpgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {DusdUsmInitParams} from "@alto/utils/UsmDeployer.sol";
+import {IAuth, Authorization, Signature} from "@alto/utils/interfaces/IAuth.sol";
+import {SigUtils} from "@alto-test/helpers/SigUtils.sol";
+import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 contract TestUsm is TestDusdBase {
     using PercentageMath for uint256;
@@ -105,7 +108,7 @@ contract TestUsm is TestDusdBase {
         USDC_TOKEN.approve(address(DUSD_USM), DEFAULT_USM_USDC_AMOUNT);
         vm.expectEmit(true, true, true, true, address(DUSD_USM));
         emit IUsm.SellAsset(ALICE, ALICE, DEFAULT_USM_USDC_AMOUNT, DEFAULT_USM_DUSD_AMOUNT, 0);
-        (uint256 assetAmount, uint256 dusdBought) = DUSD_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, ALICE);
+        (uint256 assetAmount, uint256 dusdBought) = DUSD_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, ALICE, ALICE);
         vm.stopPrank();
 
         assertEq(dusdBought, DEFAULT_USM_DUSD_AMOUNT, "Unexpected DUSD amount bought");
@@ -126,7 +129,7 @@ contract TestUsm is TestDusdBase {
         USDC_TOKEN.approve(address(DUSD_USM), DEFAULT_USM_USDC_AMOUNT);
         vm.expectEmit(true, true, true, true, address(DUSD_USM));
         emit IUsm.SellAsset(ALICE, ALICE, DEFAULT_USM_USDC_AMOUNT, DEFAULT_USM_DUSD_AMOUNT, fee);
-        (uint256 assetAmount, uint256 dusdBought) = DUSD_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, ALICE);
+        (uint256 assetAmount, uint256 dusdBought) = DUSD_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, ALICE, ALICE);
         vm.stopPrank();
 
         assertEq(dusdBought, DEFAULT_USM_DUSD_AMOUNT - fee, "Unexpected DUSD amount bought");
@@ -147,7 +150,7 @@ contract TestUsm is TestDusdBase {
         USDC_TOKEN.approve(address(DUSD_USM), DEFAULT_USM_USDC_AMOUNT);
         vm.expectEmit(true, true, true, true, address(DUSD_USM));
         emit IUsm.SellAsset(ALICE, BOB, DEFAULT_USM_USDC_AMOUNT, DEFAULT_USM_DUSD_AMOUNT, fee);
-        (uint256 assetAmount, uint256 dusdBought) = DUSD_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, BOB);
+        (uint256 assetAmount, uint256 dusdBought) = DUSD_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, BOB, ALICE);
         vm.stopPrank();
 
         assertEq(dusdBought, DEFAULT_USM_DUSD_AMOUNT - fee, "Unexpected DUSD amount bought");
@@ -169,30 +172,37 @@ contract TestUsm is TestDusdBase {
         vm.prank(usmSignerAddr);
         USDC_TOKEN.approve(address(DUSD_USM), DEFAULT_USM_USDC_AMOUNT);
 
-        assertEq(DUSD_USM.nonces(usmSignerAddr), 0, "Unexpected before usmSignerAddr nonce");
+        assertEq(DUSD_USM.nonce(usmSignerAddr), 0, "Unexpected before usmSignerAddr nonce");
 
-        bytes32 digest = keccak256(
-            abi.encode(
-                "\x19\x01",
-                DUSD_USM.DOMAIN_SEPARATOR(),
-                USM_SELL_ASSET_WITH_SIG_TYPEHASH,
-                abi.encode(
-                    usmSignerAddr, DEFAULT_USM_USDC_AMOUNT, usmSignerAddr, DUSD_USM.nonces(usmSignerAddr), deadline
-                )
-            )
+        // Create authorization signature
+        bytes32 AUTHORIZATION_TYPEHASH = keccak256(
+            "Authorization(address owner,address spender,bool isAuthorizedStatus,uint256 nonce,uint256 deadline)"
         );
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(usmSignerKey, digest);
-        bytes memory signature = abi.encodePacked(r, s, v);
+        Authorization memory authData = Authorization({
+            owner: usmSignerAddr,
+            spender: ALICE,
+            isAuthorizedStatus: true,
+            nonce: DUSD_USM.nonce(usmSignerAddr),
+            deadline: deadline
+        });
+        bytes32 hash = SigUtils.toTypedDataHash(AUTHORIZATION_TYPEHASH, DUSD_USM.DOMAIN_SEPARATOR(), authData);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(usmSignerKey, hash);
+        Signature memory sigData = Signature({v: v, r: r, s: s});
 
         assertTrue(usmSignerAddr != ALICE, "Signer is the same as Alice");
 
-        // Send the signature via another user
+        // Authorize ALICE to act on behalf of usmSignerAddr using signature
+        vm.prank(ALICE);
+        IAuth(address(DUSD_USM)).setAuthorizationWithSignature(authData, sigData);
+
+        assertEq(DUSD_USM.nonce(usmSignerAddr), 1, "Unexpected after authorization usmSignerAddr nonce");
+
+        // ALICE acts on behalf of usmSignerAddr
         vm.prank(ALICE);
         vm.expectEmit(true, true, true, true, address(DUSD_USM));
         emit IUsm.SellAsset(usmSignerAddr, usmSignerAddr, DEFAULT_USM_USDC_AMOUNT, DEFAULT_USM_DUSD_AMOUNT, fee);
-        DUSD_USM.sellAssetWithSig(usmSignerAddr, DEFAULT_USM_USDC_AMOUNT, usmSignerAddr, deadline, signature);
+        DUSD_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, usmSignerAddr, usmSignerAddr);
 
-        assertEq(DUSD_USM.nonces(usmSignerAddr), 1, "Unexpected final usmSignerAddr nonce");
         assertEq(USDC_TOKEN.balanceOf(usmSignerAddr), 0, "Unexpected final USDC balance");
         assertEq(DUSD_TOKEN.balanceOf(usmSignerAddr), dusdOut, "Unexpected final DUSD balance");
         assertEq(DUSD_TOKEN.balanceOf(address(DUSD_USM)), fee, "Unexpected DUSD USM balance");
@@ -211,30 +221,37 @@ contract TestUsm is TestDusdBase {
         vm.prank(usmSignerAddr);
         USDC_TOKEN.approve(address(DUSD_USM), DEFAULT_USM_USDC_AMOUNT);
 
-        assertEq(DUSD_USM.nonces(usmSignerAddr), 0, "Unexpected before usmSignerAddr nonce");
+        assertEq(DUSD_USM.nonce(usmSignerAddr), 0, "Unexpected before usmSignerAddr nonce");
 
-        bytes32 digest = keccak256(
-            abi.encode(
-                "\x19\x01",
-                DUSD_USM.DOMAIN_SEPARATOR(),
-                USM_SELL_ASSET_WITH_SIG_TYPEHASH,
-                abi.encode(
-                    usmSignerAddr, DEFAULT_USM_USDC_AMOUNT, usmSignerAddr, DUSD_USM.nonces(usmSignerAddr), deadline
-                )
-            )
+        // Create authorization signature
+        bytes32 AUTHORIZATION_TYPEHASH = keccak256(
+            "Authorization(address owner,address spender,bool isAuthorizedStatus,uint256 nonce,uint256 deadline)"
         );
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(usmSignerKey, digest);
-        bytes memory signature = abi.encodePacked(r, s, v);
+        Authorization memory authData = Authorization({
+            owner: usmSignerAddr,
+            spender: ALICE,
+            isAuthorizedStatus: true,
+            nonce: DUSD_USM.nonce(usmSignerAddr),
+            deadline: deadline
+        });
+        bytes32 hash = SigUtils.toTypedDataHash(AUTHORIZATION_TYPEHASH, DUSD_USM.DOMAIN_SEPARATOR(), authData);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(usmSignerKey, hash);
+        Signature memory sigData = Signature({v: v, r: r, s: s});
 
         assertTrue(usmSignerAddr != ALICE, "Signer is the same as Alice");
 
-        // Send the signature via another user
+        // Authorize ALICE to act on behalf of usmSignerAddr using signature
+        vm.prank(ALICE);
+        IAuth(address(DUSD_USM)).setAuthorizationWithSignature(authData, sigData);
+
+        assertEq(DUSD_USM.nonce(usmSignerAddr), 1, "Unexpected after authorization usmSignerAddr nonce");
+
+        // ALICE acts on behalf of usmSignerAddr
         vm.prank(ALICE);
         vm.expectEmit(true, true, true, true, address(DUSD_USM));
         emit IUsm.SellAsset(usmSignerAddr, usmSignerAddr, DEFAULT_USM_USDC_AMOUNT, DEFAULT_USM_DUSD_AMOUNT, fee);
-        DUSD_USM.sellAssetWithSig(usmSignerAddr, DEFAULT_USM_USDC_AMOUNT, usmSignerAddr, deadline, signature);
+        DUSD_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, usmSignerAddr, usmSignerAddr);
 
-        assertEq(DUSD_USM.nonces(usmSignerAddr), 1, "Unexpected final usmSignerAddr nonce");
         assertEq(USDC_TOKEN.balanceOf(usmSignerAddr), 0, "Unexpected final USDC balance");
         assertEq(DUSD_TOKEN.balanceOf(usmSignerAddr), dusdOut, "Unexpected final DUSD balance");
         assertEq(DUSD_TOKEN.balanceOf(address(DUSD_USM)), fee, "Unexpected DUSD USM balance");
@@ -244,55 +261,56 @@ contract TestUsm is TestDusdBase {
     function testRevertSellAssetWithSigExpiredSignature() public {
         uint256 deadline = block.timestamp - 1;
 
-        bytes32 digest = keccak256(
-            abi.encode(
-                "\x19\x01",
-                DUSD_USM.DOMAIN_SEPARATOR(),
-                USM_SELL_ASSET_WITH_SIG_TYPEHASH,
-                abi.encode(
-                    usmSignerAddr, DEFAULT_USM_USDC_AMOUNT, usmSignerAddr, DUSD_USM.nonces(usmSignerAddr), deadline
-                )
-            )
+        // Create authorization signature with expired deadline
+        bytes32 AUTHORIZATION_TYPEHASH = keccak256(
+            "Authorization(address owner,address spender,bool isAuthorizedStatus,uint256 nonce,uint256 deadline)"
         );
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(usmSignerKey, digest);
-        bytes memory signature = abi.encodePacked(r, s, v);
+        Authorization memory authData = Authorization({
+            owner: usmSignerAddr,
+            spender: ALICE,
+            isAuthorizedStatus: true,
+            nonce: DUSD_USM.nonce(usmSignerAddr),
+            deadline: deadline
+        });
+        bytes32 hash = SigUtils.toTypedDataHash(AUTHORIZATION_TYPEHASH, DUSD_USM.DOMAIN_SEPARATOR(), authData);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(usmSignerKey, hash);
+        Signature memory sigData = Signature({v: v, r: r, s: s});
 
         assertTrue(usmSignerAddr != ALICE, "Signer is the same as Alice");
 
-        // Send the signature via another user
+        // Try to authorize with expired signature
         vm.prank(ALICE);
-        vm.expectRevert("SIGNATURE_DEADLINE_EXPIRED");
-        DUSD_USM.sellAssetWithSig(usmSignerAddr, DEFAULT_USM_USDC_AMOUNT, usmSignerAddr, deadline, signature);
+        vm.expectRevert(IAuth.AuthSignatureExpired.selector);
+        IAuth(address(DUSD_USM)).setAuthorizationWithSignature(authData, sigData);
     }
 
     function testRevertSellAssetWithSigInvalidSignature() public {
         uint256 deadline = block.timestamp + 1 hours;
 
-        bytes32 digest = keccak256(
-            abi.encode(
-                "\x19\x01",
-                DUSD_USM.DOMAIN_SEPARATOR(),
-                USM_SELL_ASSET_WITH_SIG_TYPEHASH,
-                abi.encode(
-                    usmSignerAddr, DEFAULT_USM_USDC_AMOUNT, usmSignerAddr, DUSD_USM.nonces(usmSignerAddr), deadline
-                )
-            )
+        // Create authorization signature for ALICE authorizing ALICE (invalid - signing for wrong owner)
+        bytes32 AUTHORIZATION_TYPEHASH = keccak256(
+            "Authorization(address owner,address spender,bool isAuthorizedStatus,uint256 nonce,uint256 deadline)"
         );
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(usmSignerKey, digest);
-        bytes memory signature = abi.encodePacked(r, s, v);
+        Authorization memory authData = Authorization({
+            owner: ALICE, spender: ALICE, isAuthorizedStatus: true, nonce: DUSD_USM.nonce(ALICE), deadline: deadline
+        });
+        bytes32 hash = SigUtils.toTypedDataHash(AUTHORIZATION_TYPEHASH, DUSD_USM.DOMAIN_SEPARATOR(), authData);
+        // Sign with usmSignerKey but authData.owner is ALICE - invalid signature
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(usmSignerKey, hash);
+        Signature memory sigData = Signature({v: v, r: r, s: s});
 
         assertTrue(usmSignerAddr != ALICE, "Signer is the same as Alice");
 
-        // Send the signature via another user
+        // Try to authorize with invalid signature (wrong signer)
         vm.prank(ALICE);
-        vm.expectRevert("SIGNATURE_INVALID");
-        DUSD_USM.sellAssetWithSig(ALICE, DEFAULT_USM_USDC_AMOUNT, ALICE, deadline, signature);
+        vm.expectRevert(IAuth.AuthInvalidSignature.selector);
+        IAuth(address(DUSD_USM)).setAuthorizationWithSignature(authData, sigData);
     }
 
     function testRevertSellAssetZeroAmount() public {
         vm.prank(ALICE);
         vm.expectRevert("INVALID_AMOUNT");
-        DUSD_USM.sellAsset(0, ALICE);
+        DUSD_USM.sellAsset(0, ALICE, ALICE);
     }
 
     function testRevertSellAssetNoAsset() public {
@@ -303,7 +321,7 @@ contract TestUsm is TestDusdBase {
                 IERC20Errors.ERC20InsufficientBalance.selector, address(ALICE), 0, DEFAULT_USM_USDC_AMOUNT
             )
         );
-        DUSD_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, ALICE);
+        DUSD_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, ALICE, ALICE);
         vm.stopPrank();
     }
 
@@ -316,7 +334,7 @@ contract TestUsm is TestDusdBase {
                 IERC20Errors.ERC20InsufficientAllowance.selector, address(DUSD_USM), 0, DEFAULT_USM_USDC_AMOUNT
             )
         );
-        DUSD_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, ALICE);
+        DUSD_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, ALICE, ALICE);
     }
 
     function testRevertSellAssetNoBucketCap() public {
@@ -341,7 +359,7 @@ contract TestUsm is TestDusdBase {
         vm.startPrank(ALICE);
         USDC_TOKEN.approve(address(usm), defaultCapInUsdc);
         vm.expectRevert(abi.encodeWithSelector(IDUSD.DUSDInvalidInput.selector));
-        usm.sellAsset(defaultCapInUsdc, ALICE);
+        usm.sellAsset(defaultCapInUsdc, ALICE, ALICE);
         vm.stopPrank();
     }
 
@@ -365,7 +383,7 @@ contract TestUsm is TestDusdBase {
         vm.startPrank(ALICE);
         USDC_TOKEN.approve(address(usm), DEFAULT_USM_USDC_EXPOSURE);
         vm.expectRevert("EXOGENOUS_ASSET_EXPOSURE_TOO_HIGH");
-        usm.sellAsset(DEFAULT_USM_USDC_EXPOSURE, ALICE);
+        usm.sellAsset(DEFAULT_USM_USDC_EXPOSURE, ALICE, ALICE);
         vm.stopPrank();
     }
 
@@ -442,7 +460,7 @@ contract TestUsm is TestDusdBase {
         USDC_TOKEN.approve(address(DUSD_USM), DEFAULT_USM_USDC_AMOUNT);
         vm.expectEmit(true, true, true, true, address(DUSD_USM));
         emit IUsm.SellAsset(ALICE, ALICE, DEFAULT_USM_USDC_AMOUNT, DEFAULT_USM_DUSD_AMOUNT, 0);
-        DUSD_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, ALICE);
+        DUSD_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, ALICE, ALICE);
         vm.stopPrank();
 
         // Buy assets as another user
@@ -451,7 +469,7 @@ contract TestUsm is TestDusdBase {
         DUSD_TOKEN.approve(address(DUSD_USM), DEFAULT_USM_DUSD_AMOUNT);
         vm.expectEmit(true, true, true, true, address(DUSD_USM));
         emit IUsm.BuyAsset(BOB, BOB, DEFAULT_USM_USDC_AMOUNT, DEFAULT_USM_DUSD_AMOUNT, 0);
-        (uint256 assetAmount, uint256 dusdBought) = DUSD_USM.buyAsset(DEFAULT_USM_USDC_AMOUNT, BOB);
+        (uint256 assetAmount, uint256 dusdBought) = DUSD_USM.buyAsset(DEFAULT_USM_USDC_AMOUNT, BOB, BOB);
         vm.stopPrank();
 
         assertEq(dusdBought, DEFAULT_USM_DUSD_AMOUNT, "Unexpected DUSD amount sold");
@@ -473,7 +491,7 @@ contract TestUsm is TestDusdBase {
         USDC_TOKEN.approve(address(DUSD_USM), DEFAULT_USM_USDC_AMOUNT);
         vm.expectEmit(true, true, true, true, address(DUSD_USM));
         emit IUsm.SellAsset(ALICE, ALICE, DEFAULT_USM_USDC_AMOUNT, DEFAULT_USM_DUSD_AMOUNT, sellFee);
-        DUSD_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, ALICE);
+        DUSD_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, ALICE, ALICE);
         vm.stopPrank();
 
         // Buy assets as another user
@@ -482,7 +500,7 @@ contract TestUsm is TestDusdBase {
         DUSD_TOKEN.approve(address(DUSD_USM), DEFAULT_USM_DUSD_AMOUNT + buyFee);
         vm.expectEmit(true, true, true, true, address(DUSD_USM));
         emit IUsm.BuyAsset(BOB, BOB, DEFAULT_USM_USDC_AMOUNT, DEFAULT_USM_DUSD_AMOUNT + buyFee, buyFee);
-        (uint256 assetAmount, uint256 dusdSold) = DUSD_USM.buyAsset(DEFAULT_USM_USDC_AMOUNT, BOB);
+        (uint256 assetAmount, uint256 dusdSold) = DUSD_USM.buyAsset(DEFAULT_USM_USDC_AMOUNT, BOB, BOB);
         vm.stopPrank();
 
         assertEq(dusdSold, DEFAULT_USM_DUSD_AMOUNT + buyFee, "Unexpected DUSD amount sold");
@@ -511,7 +529,7 @@ contract TestUsm is TestDusdBase {
         USDC_TOKEN.approve(address(DUSD_USM), DEFAULT_USM_USDC_AMOUNT);
         vm.expectEmit(true, true, true, true, address(DUSD_USM));
         emit IUsm.SellAsset(ALICE, ALICE, DEFAULT_USM_USDC_AMOUNT, DEFAULT_USM_DUSD_AMOUNT, sellFee);
-        DUSD_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, ALICE);
+        DUSD_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, ALICE, ALICE);
         vm.stopPrank();
 
         // Buy assets as another user
@@ -520,7 +538,7 @@ contract TestUsm is TestDusdBase {
         DUSD_TOKEN.approve(address(DUSD_USM), DEFAULT_USM_DUSD_AMOUNT + buyFee);
         vm.expectEmit(true, true, true, true, address(DUSD_USM));
         emit IUsm.BuyAsset(BOB, CHARLES, DEFAULT_USM_USDC_AMOUNT, DEFAULT_USM_DUSD_AMOUNT + buyFee, buyFee);
-        (uint256 assetAmount, uint256 dusdSold) = DUSD_USM.buyAsset(DEFAULT_USM_USDC_AMOUNT, CHARLES);
+        (uint256 assetAmount, uint256 dusdSold) = DUSD_USM.buyAsset(DEFAULT_USM_USDC_AMOUNT, CHARLES, BOB);
         vm.stopPrank();
 
         assertEq(dusdSold, DEFAULT_USM_DUSD_AMOUNT + buyFee, "Unexpected DUSD amount sold");
@@ -545,7 +563,7 @@ contract TestUsm is TestDusdBase {
         USDC_TOKEN.approve(address(DUSD_USM), DEFAULT_USM_USDC_AMOUNT);
         vm.expectEmit(true, true, true, true, address(DUSD_USM));
         emit IUsm.SellAsset(ALICE, ALICE, DEFAULT_USM_USDC_AMOUNT, DEFAULT_USM_DUSD_AMOUNT, sellFee);
-        DUSD_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, ALICE);
+        DUSD_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, ALICE, ALICE);
         vm.stopPrank();
 
         assertTrue(usmSignerAddr != ALICE, "Signer is the same as Alice");
@@ -555,31 +573,40 @@ contract TestUsm is TestDusdBase {
         vm.prank(usmSignerAddr);
         DUSD_TOKEN.approve(address(DUSD_USM), DEFAULT_USM_DUSD_AMOUNT + buyFee);
 
-        assertEq(DUSD_USM.nonces(usmSignerAddr), 0, "Unexpected before usmSignerAddr nonce");
+        assertEq(DUSD_USM.nonce(usmSignerAddr), 0, "Unexpected before usmSignerAddr nonce");
 
-        bytes32 digest = keccak256(
-            abi.encode(
-                "\x19\x01",
-                DUSD_USM.DOMAIN_SEPARATOR(),
-                USM_BUY_ASSET_WITH_SIG_TYPEHASH,
-                abi.encode(
-                    usmSignerAddr, DEFAULT_USM_USDC_AMOUNT, usmSignerAddr, DUSD_USM.nonces(usmSignerAddr), deadline
-                )
-            )
+        // Create authorization signature
+        bytes32 AUTHORIZATION_TYPEHASH = keccak256(
+            "Authorization(address owner,address spender,bool isAuthorizedStatus,uint256 nonce,uint256 deadline)"
         );
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(usmSignerKey, digest);
-        bytes memory signature = abi.encodePacked(r, s, v);
+        Authorization memory authData = Authorization({
+            owner: usmSignerAddr,
+            spender: BOB,
+            isAuthorizedStatus: true,
+            nonce: DUSD_USM.nonce(usmSignerAddr),
+            deadline: deadline
+        });
+        bytes32 structHash = keccak256(abi.encode(AUTHORIZATION_TYPEHASH, authData));
+        bytes32 hash = keccak256(abi.encodePacked("\x19\x01", DUSD_USM.DOMAIN_SEPARATOR(), structHash));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(usmSignerKey, hash);
+        Signature memory sigData = Signature({v: v, r: r, s: s});
 
         assertTrue(usmSignerAddr != BOB, "Signer is the same as Bob");
 
+        // Authorize BOB to act on behalf of usmSignerAddr using signature
+        vm.prank(BOB);
+        IAuth(address(DUSD_USM)).setAuthorizationWithSignature(authData, sigData);
+
+        assertEq(DUSD_USM.nonce(usmSignerAddr), 1, "Unexpected after authorization usmSignerAddr nonce");
+
+        // BOB acts on behalf of usmSignerAddr
         vm.prank(BOB);
         vm.expectEmit(true, true, true, true, address(DUSD_USM));
         emit IUsm.BuyAsset(
             usmSignerAddr, usmSignerAddr, DEFAULT_USM_USDC_AMOUNT, DEFAULT_USM_DUSD_AMOUNT + buyFee, buyFee
         );
-        DUSD_USM.buyAssetWithSig(usmSignerAddr, DEFAULT_USM_USDC_AMOUNT, usmSignerAddr, deadline, signature);
+        DUSD_USM.buyAsset(DEFAULT_USM_USDC_AMOUNT, usmSignerAddr, usmSignerAddr);
 
-        assertEq(DUSD_USM.nonces(usmSignerAddr), 1, "Unexpected final usmSignerAddr nonce");
         assertEq(USDC_TOKEN.balanceOf(usmSignerAddr), DEFAULT_USM_USDC_AMOUNT, "Unexpected final USDC balance");
         assertEq(DUSD_TOKEN.balanceOf(ALICE), dusdOut, "Unexpected final DUSD balance");
         assertEq(DUSD_TOKEN.balanceOf(address(DUSD_USM)), sellFee + buyFee, "Unexpected GSM DUSD balance");
@@ -600,7 +627,7 @@ contract TestUsm is TestDusdBase {
         USDC_TOKEN.approve(address(DUSD_USM), DEFAULT_USM_USDC_AMOUNT);
         vm.expectEmit(true, true, true, true, address(DUSD_USM));
         emit IUsm.SellAsset(ALICE, ALICE, DEFAULT_USM_USDC_AMOUNT, DEFAULT_USM_DUSD_AMOUNT, sellFee);
-        DUSD_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, ALICE);
+        DUSD_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, ALICE, ALICE);
         vm.stopPrank();
 
         assertTrue(usmSignerAddr != ALICE, "Signer is the same as Alice");
@@ -610,31 +637,40 @@ contract TestUsm is TestDusdBase {
         vm.prank(usmSignerAddr);
         DUSD_TOKEN.approve(address(DUSD_USM), DEFAULT_USM_DUSD_AMOUNT + buyFee);
 
-        assertEq(DUSD_USM.nonces(usmSignerAddr), 0, "Unexpected before usmSignerAddr nonce");
+        assertEq(DUSD_USM.nonce(usmSignerAddr), 0, "Unexpected before usmSignerAddr nonce");
 
-        bytes32 digest = keccak256(
-            abi.encode(
-                "\x19\x01",
-                DUSD_USM.DOMAIN_SEPARATOR(),
-                USM_BUY_ASSET_WITH_SIG_TYPEHASH,
-                abi.encode(
-                    usmSignerAddr, DEFAULT_USM_USDC_AMOUNT, usmSignerAddr, DUSD_USM.nonces(usmSignerAddr), deadline
-                )
-            )
+        // Create authorization signature
+        bytes32 AUTHORIZATION_TYPEHASH = keccak256(
+            "Authorization(address owner,address spender,bool isAuthorizedStatus,uint256 nonce,uint256 deadline)"
         );
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(usmSignerKey, digest);
-        bytes memory signature = abi.encodePacked(r, s, v);
+        Authorization memory authData = Authorization({
+            owner: usmSignerAddr,
+            spender: BOB,
+            isAuthorizedStatus: true,
+            nonce: DUSD_USM.nonce(usmSignerAddr),
+            deadline: deadline
+        });
+        bytes32 structHash = keccak256(abi.encode(AUTHORIZATION_TYPEHASH, authData));
+        bytes32 hash = keccak256(abi.encodePacked("\x19\x01", DUSD_USM.DOMAIN_SEPARATOR(), structHash));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(usmSignerKey, hash);
+        Signature memory sigData = Signature({v: v, r: r, s: s});
 
         assertTrue(usmSignerAddr != BOB, "Signer is the same as Bob");
 
+        // Authorize BOB to act on behalf of usmSignerAddr using signature
+        vm.prank(BOB);
+        IAuth(address(DUSD_USM)).setAuthorizationWithSignature(authData, sigData);
+
+        assertEq(DUSD_USM.nonce(usmSignerAddr), 1, "Unexpected after authorization usmSignerAddr nonce");
+
+        // BOB acts on behalf of usmSignerAddr
         vm.prank(BOB);
         vm.expectEmit(true, true, true, true, address(DUSD_USM));
         emit IUsm.BuyAsset(
             usmSignerAddr, usmSignerAddr, DEFAULT_USM_USDC_AMOUNT, DEFAULT_USM_DUSD_AMOUNT + buyFee, buyFee
         );
-        DUSD_USM.buyAssetWithSig(usmSignerAddr, DEFAULT_USM_USDC_AMOUNT, usmSignerAddr, deadline, signature);
+        DUSD_USM.buyAsset(DEFAULT_USM_USDC_AMOUNT, usmSignerAddr, usmSignerAddr);
 
-        assertEq(DUSD_USM.nonces(usmSignerAddr), 1, "Unexpected final usmSignerAddr nonce");
         assertEq(USDC_TOKEN.balanceOf(usmSignerAddr), DEFAULT_USM_USDC_AMOUNT, "Unexpected final USDC balance");
         assertEq(DUSD_TOKEN.balanceOf(ALICE), dusdOut, "Unexpected final DUSD balance");
         assertEq(DUSD_TOKEN.balanceOf(address(DUSD_USM)), sellFee + buyFee, "Unexpected GSM DUSD balance");
@@ -654,7 +690,7 @@ contract TestUsm is TestDusdBase {
         USDC_TOKEN.approve(address(DUSD_USM), DEFAULT_USM_USDC_EXPOSURE);
         vm.expectEmit(true, true, true, true, address(DUSD_USM));
         emit IUsm.SellAsset(ALICE, ALICE, DEFAULT_USM_USDC_EXPOSURE, DEFAULT_CAPACITY, 0);
-        DUSD_USM.sellAsset(DEFAULT_USM_USDC_EXPOSURE, ALICE);
+        DUSD_USM.sellAsset(DEFAULT_USM_USDC_EXPOSURE, ALICE, ALICE);
 
         (uint256 minted, uint256 ceiling) = DUSD_TOKEN.minterConfig(address(DUSD_USM));
         assertEq(minted, ceiling, "Unexpected DUSD bucket level after initial sell");
@@ -664,7 +700,7 @@ contract TestUsm is TestDusdBase {
         DUSD_TOKEN.approve(address(DUSD_USM), 1e18);
         vm.expectEmit(true, true, true, true, address(DUSD_USM));
         emit IUsm.BuyAsset(ALICE, ALICE, 1e6, 1e18, 0);
-        DUSD_USM.buyAsset(1e6, ALICE);
+        DUSD_USM.buyAsset(1e6, ALICE, ALICE);
 
         (uint256 mintedAfterBuy, uint256 ceilingAfterBuy) = DUSD_TOKEN.minterConfig(address(DUSD_USM));
         assertEq(mintedAfterBuy, DEFAULT_CAPACITY - 1e18, "Unexpected DUSD bucket level after buy");
@@ -675,7 +711,7 @@ contract TestUsm is TestDusdBase {
         USDC_TOKEN.approve(address(DUSD_USM), 1e6);
         vm.expectEmit(true, true, true, true, address(DUSD_USM));
         emit IUsm.SellAsset(ALICE, ALICE, 1e6, 1e18, 0);
-        DUSD_USM.sellAsset(1e6, ALICE);
+        DUSD_USM.sellAsset(1e6, ALICE, ALICE);
         vm.stopPrank();
 
         (uint256 mintedAfterSecondSell, uint256 ceilingAfterSecondSell) = DUSD_TOKEN.minterConfig(address(DUSD_USM));
@@ -688,53 +724,56 @@ contract TestUsm is TestDusdBase {
     function testRevertBuyAssetWithSigExpiredSignature() public {
         uint256 deadline = block.timestamp - 1;
 
-        bytes32 digest = keccak256(
-            abi.encode(
-                "\x19\x01",
-                DUSD_USM.DOMAIN_SEPARATOR(),
-                USM_BUY_ASSET_WITH_SIG_TYPEHASH,
-                abi.encode(
-                    usmSignerAddr, DEFAULT_USM_USDC_AMOUNT, usmSignerAddr, DUSD_USM.nonces(usmSignerAddr), deadline
-                )
-            )
+        // Create authorization signature with expired deadline
+        bytes32 AUTHORIZATION_TYPEHASH = keccak256(
+            "Authorization(address owner,address spender,bool isAuthorizedStatus,uint256 nonce,uint256 deadline)"
         );
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(usmSignerKey, digest);
-        bytes memory signature = abi.encodePacked(r, s, v);
+        Authorization memory authData = Authorization({
+            owner: usmSignerAddr,
+            spender: BOB,
+            isAuthorizedStatus: true,
+            nonce: DUSD_USM.nonce(usmSignerAddr),
+            deadline: deadline
+        });
+        bytes32 hash = SigUtils.toTypedDataHash(AUTHORIZATION_TYPEHASH, DUSD_USM.DOMAIN_SEPARATOR(), authData);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(usmSignerKey, hash);
+        Signature memory sigData = Signature({v: v, r: r, s: s});
 
         assertTrue(usmSignerAddr != BOB, "Signer is the same as Bob");
 
+        // Try to authorize with expired signature
         vm.prank(BOB);
-        vm.expectRevert("SIGNATURE_DEADLINE_EXPIRED");
-        DUSD_USM.buyAssetWithSig(usmSignerAddr, DEFAULT_USM_USDC_AMOUNT, usmSignerAddr, deadline, signature);
+        vm.expectRevert(IAuth.AuthSignatureExpired.selector);
+        IAuth(address(DUSD_USM)).setAuthorizationWithSignature(authData, sigData);
     }
 
     function testRevertBuyAssetWithSigInvalidSignature() public {
         uint256 deadline = block.timestamp + 1 hours;
 
-        bytes32 digest = keccak256(
-            abi.encode(
-                "\x19\x01",
-                DUSD_USM.DOMAIN_SEPARATOR(),
-                USM_BUY_ASSET_WITH_SIG_TYPEHASH,
-                abi.encode(
-                    usmSignerAddr, DEFAULT_USM_USDC_AMOUNT, usmSignerAddr, DUSD_USM.nonces(usmSignerAddr), deadline
-                )
-            )
+        // Create authorization signature for BOB authorizing BOB (invalid - signing for wrong owner)
+        bytes32 AUTHORIZATION_TYPEHASH = keccak256(
+            "Authorization(address owner,address spender,bool isAuthorizedStatus,uint256 nonce,uint256 deadline)"
         );
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(usmSignerKey, digest);
-        bytes memory signature = abi.encodePacked(r, s, v);
+        Authorization memory authData = Authorization({
+            owner: BOB, spender: BOB, isAuthorizedStatus: true, nonce: DUSD_USM.nonce(BOB), deadline: deadline
+        });
+        bytes32 hash = SigUtils.toTypedDataHash(AUTHORIZATION_TYPEHASH, DUSD_USM.DOMAIN_SEPARATOR(), authData);
+        // Sign with usmSignerKey but authData.owner is BOB - invalid signature
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(usmSignerKey, hash);
+        Signature memory sigData = Signature({v: v, r: r, s: s});
 
         assertTrue(usmSignerAddr != BOB, "Signer is the same as Bob");
 
+        // Try to authorize with invalid signature (wrong signer)
         vm.prank(BOB);
-        vm.expectRevert("SIGNATURE_INVALID");
-        DUSD_USM.buyAssetWithSig(BOB, DEFAULT_USM_USDC_AMOUNT, usmSignerAddr, deadline, signature);
+        vm.expectRevert(IAuth.AuthInvalidSignature.selector);
+        IAuth(address(DUSD_USM)).setAuthorizationWithSignature(authData, sigData);
     }
 
     function testRevertBuyAssetZeroAmount() public {
         vm.prank(ALICE);
         vm.expectRevert("INVALID_AMOUNT");
-        DUSD_USM.buyAsset(0, ALICE);
+        DUSD_USM.buyAsset(0, ALICE, ALICE);
     }
 
     function testRevertBuyAssetNoDUSD() public {
@@ -748,7 +787,7 @@ contract TestUsm is TestDusdBase {
         USDC_TOKEN.approve(address(DUSD_USM), DEFAULT_USM_USDC_AMOUNT);
         vm.expectEmit(true, true, true, true, address(DUSD_USM));
         emit IUsm.SellAsset(ALICE, ALICE, DEFAULT_USM_USDC_AMOUNT, DEFAULT_USM_DUSD_AMOUNT, sellFee);
-        DUSD_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, ALICE);
+        DUSD_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, ALICE, ALICE);
         vm.stopPrank();
 
         vm.startPrank(BOB);
@@ -758,7 +797,7 @@ contract TestUsm is TestDusdBase {
                 IERC20Errors.ERC20InsufficientBalance.selector, address(BOB), 0, DEFAULT_USM_DUSD_AMOUNT + buyFee
             )
         );
-        DUSD_USM.buyAsset(DEFAULT_USM_USDC_AMOUNT, BOB);
+        DUSD_USM.buyAsset(DEFAULT_USM_USDC_AMOUNT, BOB, BOB);
         vm.stopPrank();
     }
 
@@ -773,7 +812,7 @@ contract TestUsm is TestDusdBase {
         USDC_TOKEN.approve(address(DUSD_USM), DEFAULT_USM_USDC_AMOUNT);
         vm.expectEmit(true, true, true, true, address(DUSD_USM));
         emit IUsm.SellAsset(ALICE, ALICE, DEFAULT_USM_USDC_AMOUNT, DEFAULT_USM_DUSD_AMOUNT, sellFee);
-        DUSD_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, ALICE);
+        DUSD_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, ALICE, ALICE);
         vm.stopPrank();
 
         dusdFaucet(BOB, DEFAULT_USM_DUSD_AMOUNT + buyFee);
@@ -783,7 +822,7 @@ contract TestUsm is TestDusdBase {
                 IERC20Errors.ERC20InsufficientAllowance.selector, address(DUSD_USM), 0, DEFAULT_USM_DUSD_AMOUNT + buyFee
             )
         );
-        DUSD_USM.buyAsset(DEFAULT_USM_USDC_AMOUNT, BOB);
+        DUSD_USM.buyAsset(DEFAULT_USM_USDC_AMOUNT, BOB, BOB);
         vm.stopPrank();
     }
 
@@ -801,7 +840,7 @@ contract TestUsm is TestDusdBase {
 
         vm.startPrank(ALICE);
         DUSD_TOKEN.approve(address(DUSD_USM), type(uint256).max);
-        DUSD_USM.buyAsset(DEFAULT_USM_USDC_AMOUNT, ALICE);
+        DUSD_USM.buyAsset(DEFAULT_USM_USDC_AMOUNT, ALICE, ALICE);
         vm.stopPrank();
 
         assertEq(DEFAULT_USM_USDC_AMOUNT, exactAssetAmount, "Unexpected asset amount bought");
@@ -834,7 +873,7 @@ contract TestUsm is TestDusdBase {
 
         vm.startPrank(ALICE);
         DUSD_TOKEN.approve(address(DUSD_USM), type(uint256).max);
-        DUSD_USM.buyAsset(DEFAULT_USM_USDC_AMOUNT, ALICE);
+        DUSD_USM.buyAsset(DEFAULT_USM_USDC_AMOUNT, ALICE, ALICE);
         vm.stopPrank();
 
         assertEq(DEFAULT_USM_USDC_AMOUNT, exactAssetAmount, "Unexpected asset amount bought");
@@ -955,9 +994,9 @@ contract TestUsm is TestDusdBase {
         vm.prank(address(DUSD_USM_SWAP_FREEZER));
         DUSD_USM.setSwapFreeze(true);
         vm.expectRevert("USM_FROZEN");
-        DUSD_USM.buyAsset(0, ALICE);
+        DUSD_USM.buyAsset(0, ALICE, ALICE);
         vm.expectRevert("USM_FROZEN");
-        DUSD_USM.sellAsset(0, ALICE);
+        DUSD_USM.sellAsset(0, ALICE, ALICE);
     }
 
     function testUpdateConfigurator() public {
@@ -1113,7 +1152,7 @@ contract TestUsm is TestDusdBase {
         USDC_TOKEN.approve(address(DUSD_USM), DEFAULT_USM_USDC_AMOUNT);
         vm.expectEmit(true, true, true, true, address(DUSD_USM));
         emit IUsm.SellAsset(ALICE, ALICE, DEFAULT_USM_USDC_AMOUNT, DEFAULT_USM_DUSD_AMOUNT, fee);
-        DUSD_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, ALICE);
+        DUSD_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, ALICE, ALICE);
         vm.stopPrank();
         assertEq(DUSD_TOKEN.balanceOf(address(DUSD_USM)), fee, "Unexpected GSM DUSD balance");
 
@@ -1160,7 +1199,7 @@ contract TestUsm is TestDusdBase {
 
         vm.startPrank(ALICE);
         USDC_TOKEN.approve(address(DUSD_USM), DEFAULT_USM_USDC_AMOUNT);
-        DUSD_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, ALICE);
+        DUSD_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, ALICE, ALICE);
         vm.stopPrank();
 
         uint256 currentGSMBalance = DEFAULT_USM_USDC_AMOUNT;
@@ -1197,7 +1236,7 @@ contract TestUsm is TestDusdBase {
 
         vm.startPrank(ALICE);
         USDC_TOKEN.approve(address(DUSD_USM), DEFAULT_USM_USDC_AMOUNT);
-        DUSD_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, ALICE);
+        DUSD_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, ALICE, ALICE);
         vm.stopPrank();
 
         assertEq(USDC_TOKEN.balanceOf(TREASURY), 0, "Unexpected USDC before token balance");
@@ -1231,7 +1270,7 @@ contract TestUsm is TestDusdBase {
 
         vm.startPrank(ALICE);
         USDC_TOKEN.approve(address(DUSD_USM), DEFAULT_USM_USDC_AMOUNT);
-        DUSD_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, ALICE);
+        DUSD_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, ALICE, ALICE);
         vm.stopPrank();
 
         vm.prank(address(DUSD_USM_LAST_RESORT_LIQUIDATOR));
@@ -1239,9 +1278,9 @@ contract TestUsm is TestDusdBase {
         assertEq(seizedAmount, DEFAULT_USM_USDC_AMOUNT, "Unexpected seized amount");
 
         vm.expectRevert("USM_SEIZED");
-        DUSD_USM.buyAsset(DEFAULT_USM_USDC_AMOUNT, ALICE);
+        DUSD_USM.buyAsset(DEFAULT_USM_USDC_AMOUNT, ALICE, ALICE);
         vm.expectRevert("USM_SEIZED");
-        DUSD_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, ALICE);
+        DUSD_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, ALICE, ALICE);
         vm.expectRevert("USM_SEIZED");
         DUSD_USM.seize();
     }
@@ -1252,7 +1291,7 @@ contract TestUsm is TestDusdBase {
 
         vm.startPrank(ALICE);
         USDC_TOKEN.approve(address(DUSD_USM), DEFAULT_USM_USDC_AMOUNT);
-        DUSD_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, ALICE);
+        DUSD_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, ALICE, ALICE);
         vm.stopPrank();
 
         vm.prank(address(DUSD_USM_LAST_RESORT_LIQUIDATOR));
@@ -1284,7 +1323,7 @@ contract TestUsm is TestDusdBase {
 
         vm.startPrank(ALICE);
         USDC_TOKEN.approve(address(DUSD_USM), DEFAULT_USM_USDC_AMOUNT);
-        DUSD_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, ALICE);
+        DUSD_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, ALICE, ALICE);
         vm.stopPrank();
 
         vm.prank(address(DUSD_USM_LAST_RESORT_LIQUIDATOR));
@@ -1326,7 +1365,7 @@ contract TestUsm is TestDusdBase {
         USDC_TOKEN.approve(address(DUSD_USM), DEFAULT_USM_USDC_AMOUNT);
         vm.expectEmit(true, true, true, true, address(DUSD_USM));
         emit IUsm.SellAsset(ALICE, ALICE, DEFAULT_USM_USDC_AMOUNT, DEFAULT_USM_DUSD_AMOUNT, fee);
-        DUSD_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, ALICE);
+        DUSD_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, ALICE, ALICE);
         vm.stopPrank();
         assertEq(DUSD_TOKEN.balanceOf(address(DUSD_USM)), fee, "Unexpected GSM DUSD balance");
         assertEq(DUSD_USM.getAccruedFees(), fee, "Unexpected GSM accrued fees");
@@ -1374,7 +1413,7 @@ contract TestUsm is TestDusdBase {
         DUSD_TOKEN.approve(address(DUSD_USM), DEFAULT_USM_DUSD_AMOUNT + buyFee);
         vm.expectEmit(true, true, true, true, address(DUSD_USM));
         emit IUsm.BuyAsset(BOB, BOB, DEFAULT_USM_USDC_AMOUNT, DEFAULT_USM_DUSD_AMOUNT + buyFee, buyFee);
-        DUSD_USM.buyAsset(DEFAULT_USM_USDC_AMOUNT, BOB);
+        DUSD_USM.buyAsset(DEFAULT_USM_USDC_AMOUNT, BOB, BOB);
         vm.stopPrank();
 
         assertEq(DUSD_TOKEN.balanceOf(address(DUSD_USM)), sellFee + buyFee, "Unexpected GSM DUSD balance");
@@ -1395,7 +1434,7 @@ contract TestUsm is TestDusdBase {
             dusdFaucet(BOB, DEFAULT_USM_DUSD_AMOUNT);
             vm.startPrank(BOB);
             DUSD_TOKEN.approve(address(DUSD_USM), DEFAULT_USM_DUSD_AMOUNT);
-            DUSD_USM.buyAsset(DEFAULT_USM_USDC_AMOUNT, BOB);
+            DUSD_USM.buyAsset(DEFAULT_USM_USDC_AMOUNT, BOB, BOB);
             vm.stopPrank();
 
             assertEq(DUSD_USM.getAccruedFees(), 0, "Unexpected GSM accrued fees");
@@ -1434,7 +1473,7 @@ contract TestUsm is TestDusdBase {
         DUSD_USM.updateFeeStrategy(address(0));
 
         USDC_TOKEN.approve(address(DUSD_USM), DEFAULT_USM_USDC_AMOUNT);
-        DUSD_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, ALICE);
+        DUSD_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, ALICE, ALICE);
 
         assertEq(
             DUSD_USM.getAvailableUnderlyingExposure(),
@@ -1455,14 +1494,14 @@ contract TestUsm is TestDusdBase {
 
         // Sell cannot be executed
         vm.expectRevert("EXOGENOUS_ASSET_EXPOSURE_TOO_HIGH");
-        DUSD_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, ALICE);
+        DUSD_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, ALICE, ALICE);
 
         // Buy some asset to reduce current exposure
         vm.stopPrank();
         dusdFaucet(BOB, DEFAULT_USM_DUSD_AMOUNT / 2);
         vm.startPrank(BOB);
         DUSD_TOKEN.approve(address(DUSD_USM), DEFAULT_USM_DUSD_AMOUNT / 2);
-        DUSD_USM.buyAsset(DEFAULT_USM_USDC_AMOUNT / 2, BOB);
+        DUSD_USM.buyAsset(DEFAULT_USM_USDC_AMOUNT / 2, BOB, BOB);
 
         assertEq(DUSD_USM.getExposureCap(), 0, "Unexpected exposure capacity");
     }

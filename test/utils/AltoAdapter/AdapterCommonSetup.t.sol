@@ -25,13 +25,21 @@ import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {UnsafeUpgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {UniversalRewardsDistributorInstance} from "./UniversalRewardsDistributorInstance.sol";
 import {VestingInstance} from "./VestingInstance.sol";
+import {DUSDUsmInstance} from "./DUSDUsmInstance.sol";
 import {IAltoVesting} from "@alto/vesting/interfaces/IAltoVesting.sol";
+import {IUsm} from "@alto/usm/interfaces/IUsm.sol";
+import {DUSD} from "@alto/tokens/DUSD.sol";
+import {DUSDUsm} from "@alto/usm/DUSDUsm.sol";
+import {FixedPriceStrategy} from "@alto/usm/FixedPriceStrategy.sol";
+import {FixedFeeStrategy} from "@alto/usm/FixedFeeStrategy.sol";
+import {ERC20MockMintableDecimals} from "@alto-test/helpers/ERC20MockMintableDecimals.sol";
+import {TestHelperOz5} from "@layerzerolabs/test-devtools-evm-foundry/contracts/TestHelperOz5.sol";
 
 uint256 constant MIN_AMOUNT = 1000;
 uint256 constant MAX_AMOUNT = 2 ** 64; // Must be less than or equal to type(uint160).max.
 uint256 constant SIGNATURE_DEADLINE = type(uint32).max;
 
-abstract contract AdapterCommonSetup is AdapterCommon {
+abstract contract AdapterCommonSetup is AdapterCommon, TestHelperOz5 {
     using FixedPointMath for uint256;
     using AssetShareConversionMath for uint256;
     //using stdStorage for StdStorage;
@@ -52,6 +60,9 @@ abstract contract AdapterCommonSetup is AdapterCommon {
     IAltoStaking internal stakingContract;
     IUniversalRewardsDistributor internal universalRewardsDistributor;
     IAltoVesting internal vestingContract;
+    IUsm internal usmContract;
+    DUSD internal dusdToken;
+    ERC20MockMintableDecimals internal underlyingToken;
 
     // Constants for reward testing
     uint256 public constant USER_AVAILABLE = 1000 ether;
@@ -61,8 +72,9 @@ abstract contract AdapterCommonSetup is AdapterCommon {
     // Constants for vesting testing
     uint256 public constant VESTING_DURATION = 1000;
 
-    function setUp() public virtual override {
-        super.setUp();
+    function setUp() public virtual override(AdapterCommon, TestHelperOz5) {
+        AdapterCommon.setUp();
+        TestHelperOz5.setUp();
 
         borrowToken = new ERC20Mock("borrow", "B");
         vm.label(address(borrowToken), "borrowToken");
@@ -138,6 +150,9 @@ abstract contract AdapterCommonSetup is AdapterCommon {
         leverage.setMarket(address(market), true);
 
         vm.stopPrank();
+
+        // Setup USM contract (needs to be after stopping prank)
+        _setupUsmContract();
 
         borrowToken.approve(address(market), type(uint256).max);
         collateralToken.approve(address(market), type(uint256).max);
@@ -243,6 +258,62 @@ abstract contract AdapterCommonSetup is AdapterCommon {
 
         // Approve conract to be used in the adapter
         altoAdapter.approveContract(address(vestingContract));
+    }
+
+    function _setupUsmContract() internal {
+        // Setup LayerZero endpoints for DUSD
+        setUpEndpoints(1, LibraryType.UltraLightNode);
+
+        vm.startPrank(address(OWNER));
+
+        // Create DUSD token
+        dusdToken = new DUSD(address(endpoints[1]), address(OWNER));
+        underlyingToken = new ERC20MockMintableDecimals("Underlying", "UND", 6);
+
+        // Create price and fee strategies
+        FixedPriceStrategy priceStrategy = new FixedPriceStrategy(1e18, address(underlyingToken), 6, address(OWNER));
+        FixedFeeStrategy feeStrategy = new FixedFeeStrategy(0, 100, address(OWNER)); // 1% sell fee
+
+        // Deploy DUSDUsm instance
+        DUSDUsmInstance usmInstance = new DUSDUsmInstance(address(dusdToken), address(underlyingToken));
+
+        bool shouldUseSafeProxy = vm.envOr("VERIFY_PROXY", false);
+
+        if (shouldUseSafeProxy) {
+            usmContract = IUsm(
+                Upgrades.deployUUPSProxy(
+                    "DUSDUsmInstance.sol",
+                    abi.encodeCall(
+                        DUSDUsm.initialize,
+                        (address(OWNER), address(OWNER), uint128(100_000_000e6), address(priceStrategy))
+                    )
+                )
+            );
+        } else {
+            usmContract = IUsm(
+                UnsafeUpgrades.deployUUPSProxy(
+                    address(usmInstance),
+                    abi.encodeCall(
+                        DUSDUsm.initialize,
+                        (address(OWNER), address(OWNER), uint128(100_000_000e6), address(priceStrategy))
+                    )
+                )
+            );
+        }
+
+        // Update fee strategy
+        usmContract.updateFeeStrategy(address(feeStrategy));
+
+        // Setup DUSD token permissions
+        dusdToken.setMinterStatus(address(usmContract), true);
+        dusdToken.setMinterCeiling(address(usmContract), 100_000_000e18);
+        dusdToken.setBurnerStatus(address(usmContract), true);
+
+        vm.stopPrank();
+
+        // Approve contract to be used in the adapter (OWNER is the owner of altoAdapter)
+        vm.prank(address(OWNER));
+        altoAdapter.approveContract(address(usmContract));
     }
 
     function _marketPrepareLeverageData(uint256 minAmountOut, bytes memory swapData)
