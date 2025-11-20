@@ -1,16 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.10;
 
-import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
+import {EIP712Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol";
 import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {IStableTokenFacilitator} from "./interfaces/IStableTokenFacilitator.sol";
 import {IUsmPriceStrategy} from "./interfaces/IUsmPriceStrategy.sol";
 import {IUsmFeeStrategy} from "./interfaces/IUsmFeeStrategy.sol";
 import {IUsm} from "./interfaces/IUsm.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 /**
  * @title Usm
@@ -20,7 +22,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
  * @notice Universal Stability Module. It provides buy/sell facilities to go to/from an underlying asset to/from stability token.
  * @dev To be covered by a proxy contract.
  */
-abstract contract Usm is AccessControl, EIP712, IUsm {
+abstract contract Usm is Initializable, AccessControlUpgradeable, EIP712Upgradeable, UUPSUpgradeable, IUsm {
     using SafeERC20 for IERC20;
     using SafeCast for uint256;
 
@@ -47,9 +49,11 @@ abstract contract Usm is AccessControl, EIP712, IUsm {
     );
 
     /// @inheritdoc IUsm
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     address public immutable STABLE_TOKEN;
 
     /// @inheritdoc IUsm
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     address public immutable UNDERLYING_ASSET;
 
     /// @inheritdoc IUsm
@@ -65,6 +69,9 @@ abstract contract Usm is AccessControl, EIP712, IUsm {
     uint128 internal _exposureCap;
     uint128 internal _currentExposure;
     uint128 internal _accruedFees;
+
+    /// upgrade gap
+    uint256[44] private __gap_usm;
 
     /**
      * @dev Require USM to not be frozen for functions marked by this modifier
@@ -87,7 +94,8 @@ abstract contract Usm is AccessControl, EIP712, IUsm {
      * @param stableToken The address of the stable token contract
      * @param underlyingAsset The address of the collateral asset
      */
-    constructor(address stableToken, address underlyingAsset) EIP712("USM", "1") {
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor(address stableToken, address underlyingAsset) {
         require(stableToken != address(0), "ZERO_ADDRESS_NOT_VALID");
         require(underlyingAsset != address(0), "ZERO_ADDRESS_NOT_VALID");
         STABLE_TOKEN = stableToken;
@@ -101,10 +109,16 @@ abstract contract Usm is AccessControl, EIP712, IUsm {
      * @param exposureCap Maximum amount of user-supplied underlying asset in USM
      * @param priceStrategy The address of the price strategy
      */
-    function initialize(address admin, address stableTokenTreasury, uint128 exposureCap, address priceStrategy)
-        external
+    function __Usm_init(address admin, address stableTokenTreasury, uint128 exposureCap, address priceStrategy)
+        internal
+        onlyInitializing
     {
         require(admin != address(0), "ZERO_ADDRESS_NOT_VALID");
+
+        __EIP712_init("USM", "1");
+        __AccessControl_init();
+        __UUPSUpgradeable_init();
+
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(CONFIGURATOR_ROLE, admin);
         _updateStableTokenTreasury(stableTokenTreasury);
@@ -547,4 +561,6 @@ abstract contract Usm is AccessControl, EIP712, IUsm {
      * @param amount The amount of Stable Token to burn
      */
     function _burnStableToken(address from, uint256 amount) internal virtual;
+
+    function _authorizeUpgrade(address newImplementation) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
 }
