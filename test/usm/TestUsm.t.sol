@@ -15,6 +15,7 @@ import {IERC20Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.so
 import {TestDusdBase} from "./TestDusdBase.t.sol";
 import {UnsafeUpgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {DusdUsmInitParams} from "@alto/utils/UsmDeployer.sol";
 
 contract TestUsm is TestDusdBase {
     using PercentageMath for uint256;
@@ -36,7 +37,8 @@ contract TestUsm is TestDusdBase {
 
     function testRevertInitializeInvalidPriceStrategy() public {
         FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(1e18, address(DUSD_TOKEN), 18, address(this));
-        DUSDUsm usm = new DUSDUsm(address(DUSD_TOKEN), address(USDC_TOKEN));
+        DUSDUsm usm =
+            DUSDUsm(UnsafeUpgrades.deployUUPSProxy(address(new DUSDUsm(address(DUSD_TOKEN), address(USDC_TOKEN))), ""));
         vm.expectRevert("INVALID_PRICE_STRATEGY");
         DUSDUsm(usm).initialize(address(this), TREASURY, DEFAULT_USM_USDC_EXPOSURE, address(newPriceStrategy));
     }
@@ -64,7 +66,8 @@ contract TestUsm is TestDusdBase {
     }
 
     function testRevertInitializeZeroAdmin() public {
-        DUSDUsm usm = new DUSDUsm(address(DUSD_TOKEN), address(USDC_TOKEN));
+        DUSDUsm usm =
+            DUSDUsm(UnsafeUpgrades.deployUUPSProxy(address(new DUSDUsm(address(DUSD_TOKEN), address(USDC_TOKEN))), ""));
         vm.expectRevert("ZERO_ADDRESS_NOT_VALID");
         DUSDUsm(usm).initialize(address(0), TREASURY, DEFAULT_USM_USDC_EXPOSURE, address(DUSD_USM_FIXED_PRICE_STRATEGY));
     }
@@ -310,8 +313,17 @@ contract TestUsm is TestDusdBase {
     }
 
     function testRevertSellAssetNoBucketCap() public {
-        DUSDUsm usm = new DUSDUsm(address(DUSD_TOKEN), address(USDC_TOKEN));
-        usm.initialize(address(this), TREASURY, DEFAULT_USM_USDC_EXPOSURE, address(DUSD_USM_FIXED_PRICE_STRATEGY));
+        DUSDUsm usm = deployDusdUsm(
+            address(DUSD_TOKEN),
+            address(USDC_TOKEN),
+            DusdUsmInitParams({
+                admin: address(this),
+                stableTokenTreasury: TREASURY,
+                exposureCap: DEFAULT_USM_USDC_EXPOSURE,
+                priceStrategy: address(DUSD_USM_FIXED_PRICE_STRATEGY)
+            })
+        );
+
         DUSD_TOKEN.setMinterStatus(address(usm), true);
         DUSD_TOKEN.setMinterCeiling(address(usm), DEFAULT_CAPACITY - 1);
         uint256 defaultCapInUsdc = DEFAULT_CAPACITY / (10 ** (18 - USDC_TOKEN.decimals()));
@@ -327,8 +339,16 @@ contract TestUsm is TestDusdBase {
     }
 
     function testRevertSellAssetTooMuchUnderlyingExposure() public {
-        DUSDUsm usm = new DUSDUsm(address(DUSD_TOKEN), address(USDC_TOKEN));
-        usm.initialize(address(this), TREASURY, DEFAULT_USM_USDC_EXPOSURE - 1, address(DUSD_USM_FIXED_PRICE_STRATEGY));
+        DUSDUsm usm = deployDusdUsm(
+            address(DUSD_TOKEN),
+            address(USDC_TOKEN),
+            DusdUsmInitParams({
+                admin: address(this),
+                stableTokenTreasury: TREASURY,
+                exposureCap: DEFAULT_USM_USDC_EXPOSURE - 1,
+                priceStrategy: address(DUSD_USM_FIXED_PRICE_STRATEGY)
+            })
+        );
         DUSD_TOKEN.setMinterStatus(address(usm), true);
         DUSD_TOKEN.setMinterCeiling(address(usm), DEFAULT_CAPACITY);
 
@@ -1011,7 +1031,8 @@ contract TestUsm is TestDusdBase {
     }
 
     function testRevertInitializeTreasuryZeroAddress() public {
-        DUSDUsm usm = new DUSDUsm(address(DUSD_TOKEN), address(USDC_TOKEN));
+        DUSDUsm usm =
+            DUSDUsm(UnsafeUpgrades.deployUUPSProxy(address(new DUSDUsm(address(DUSD_TOKEN), address(USDC_TOKEN))), ""));
         vm.expectRevert(bytes("ZERO_ADDRESS_NOT_VALID"));
         usm.initialize(address(this), address(0), DEFAULT_USM_USDC_EXPOSURE, address(DUSD_USM_FIXED_PRICE_STRATEGY));
     }

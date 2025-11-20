@@ -19,6 +19,7 @@ import {IUsm} from "@alto/usm/interfaces/IUsm.sol";
 import {Usm} from "@alto/usm/Usm.sol";
 import {UnsafeUpgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {MockUsmV2} from "./mocks/MockUsmV2.sol";
+import {UsmDeployer, DusdUsmInitParams} from "@alto/utils/UsmDeployer.sol";
 
 contract TestDusdBase is Test, TestHelperOz5, Constants {
     using PercentageMath for uint256;
@@ -86,6 +87,13 @@ contract TestDusdBase is Test, TestHelperOz5, Constants {
         (, uint256 dusdBought) = usm.sellAsset(amount, receiver);
         vm.stopPrank();
         return dusdBought;
+    }
+
+    function deployDusdUsm(address dusd, address underlyingAsset, DusdUsmInitParams memory _initParams)
+        internal
+        returns (DUSDUsm)
+    {
+        return DUSDUsm(UsmDeployer.deployDusdUsm(dusd, underlyingAsset, _initParams));
     }
 
     function dusdFaucet(address to, uint256 amount) internal {

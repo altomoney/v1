@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "./TestDusdBase.t.sol";
+import {DusdUsmInitParams} from "@alto/utils/UsmDeployer.sol";
 
 /**
  * @title TestUsmSwapFuzz
@@ -85,8 +86,16 @@ contract TestUsmSwapFuzz is TestDusdBase {
             underlyingDecimals, // decimals
             address(this)
         );
-        DUSDUsm gsm = new DUSDUsm(address(DUSD_TOKEN), address(newToken));
-        gsm.initialize(address(this), TREASURY, type(uint128).max, address(newPriceStrategy));
+        DUSDUsm gsm = deployDusdUsm(
+            address(DUSD_TOKEN),
+            address(newToken),
+            DusdUsmInitParams({
+                admin: address(this),
+                stableTokenTreasury: TREASURY,
+                exposureCap: type(uint128).max,
+                priceStrategy: address(newPriceStrategy)
+            })
+        );
         DUSD_TOKEN.setMinterStatus(address(gsm), true);
         DUSD_TOKEN.setBurnerStatus(address(gsm), true);
         DUSD_TOKEN.setMinterCeiling(address(gsm), type(uint128).max);
@@ -160,8 +169,16 @@ contract TestUsmSwapFuzz is TestDusdBase {
             underlyingDecimals, // decimals
             address(this)
         );
-        DUSDUsm gsm = new DUSDUsm(address(DUSD_TOKEN), address(newToken));
-        gsm.initialize(address(this), TREASURY, type(uint128).max, address(newPriceStrategy));
+        DUSDUsm gsm = deployDusdUsm(
+            address(DUSD_TOKEN),
+            address(newToken),
+            DusdUsmInitParams({
+                admin: address(this),
+                stableTokenTreasury: TREASURY,
+                exposureCap: type(uint128).max,
+                priceStrategy: address(newPriceStrategy)
+            })
+        );
 
         // Get dusd amount for selling assets
         (uint256 assetSold,, uint256 dusdMinted,) = gsm.getStableTokenAmountForSellAsset(amount);
@@ -198,8 +215,16 @@ contract TestUsmSwapFuzz is TestDusdBase {
             underlyingDecimals, // decimals
             address(this)
         );
-        DUSDUsm gsm = new DUSDUsm(address(DUSD_TOKEN), address(newToken));
-        gsm.initialize(address(this), TREASURY, type(uint128).max, address(newPriceStrategy));
+        DUSDUsm gsm = deployDusdUsm(
+            address(DUSD_TOKEN),
+            address(newToken),
+            DusdUsmInitParams({
+                admin: address(this),
+                stableTokenTreasury: TREASURY,
+                exposureCap: type(uint128).max,
+                priceStrategy: address(newPriceStrategy)
+            })
+        );
         DUSD_TOKEN.setMinterStatus(address(gsm), true);
         DUSD_TOKEN.setMinterCeiling(address(gsm), type(uint128).max);
 
@@ -241,8 +266,16 @@ contract TestUsmSwapFuzz is TestDusdBase {
             underlyingDecimals, // decimals
             address(this)
         );
-        DUSDUsm gsm = new DUSDUsm(address(DUSD_TOKEN), address(newToken));
-        gsm.initialize(address(this), TREASURY, type(uint128).max, address(newPriceStrategy));
+        DUSDUsm gsm = deployDusdUsm(
+            address(DUSD_TOKEN),
+            address(newToken),
+            DusdUsmInitParams({
+                admin: address(this),
+                stableTokenTreasury: TREASURY,
+                exposureCap: type(uint128).max,
+                priceStrategy: address(newPriceStrategy)
+            })
+        );
         DUSD_TOKEN.setMinterStatus(address(gsm), true);
         DUSD_TOKEN.setMinterCeiling(address(gsm), type(uint128).max);
 
@@ -293,8 +326,16 @@ contract TestUsmSwapFuzz is TestDusdBase {
             underlyingDecimals, // decimals
             address(this)
         );
-        DUSDUsm gsm = new DUSDUsm(address(DUSD_TOKEN), address(newToken));
-        gsm.initialize(address(this), TREASURY, type(uint128).max, address(newPriceStrategy));
+        DUSDUsm gsm = deployDusdUsm(
+            address(DUSD_TOKEN),
+            address(newToken),
+            DusdUsmInitParams({
+                admin: address(this),
+                stableTokenTreasury: TREASURY,
+                exposureCap: type(uint128).max,
+                priceStrategy: address(newPriceStrategy)
+            })
+        );
 
         if (buyFeeBps > 0 || sellFeeBps > 0) {
             FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(buyFeeBps, sellFeeBps, address(this));
@@ -337,8 +378,16 @@ contract TestUsmSwapFuzz is TestDusdBase {
             underlyingDecimals, // decimals
             address(this)
         );
-        DUSDUsm gsm = new DUSDUsm(address(DUSD_TOKEN), address(newToken));
-        gsm.initialize(address(this), TREASURY, type(uint128).max, address(newPriceStrategy));
+        DUSDUsm gsm = deployDusdUsm(
+            address(DUSD_TOKEN),
+            address(newToken),
+            DusdUsmInitParams({
+                admin: address(this),
+                stableTokenTreasury: TREASURY,
+                exposureCap: type(uint128).max,
+                priceStrategy: address(newPriceStrategy)
+            })
+        );
 
         if (buyFeeBps > 0 || sellFeeBps > 0) {
             FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(buyFeeBps, sellFeeBps, address(this));
@@ -381,8 +430,16 @@ contract TestUsmSwapFuzz is TestDusdBase {
             underlyingDecimals, // decimals
             address(this)
         );
-        DUSDUsm gsm = new DUSDUsm(address(DUSD_TOKEN), address(newToken));
-        gsm.initialize(address(this), TREASURY, type(uint128).max, address(newPriceStrategy));
+        DUSDUsm gsm = deployDusdUsm(
+            address(DUSD_TOKEN),
+            address(newToken),
+            DusdUsmInitParams({
+                admin: address(this),
+                stableTokenTreasury: TREASURY,
+                exposureCap: type(uint128).max,
+                priceStrategy: address(newPriceStrategy)
+            })
+        );
 
         if (buyFeeBps > 0 || sellFeeBps > 0) {
             FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(buyFeeBps, sellFeeBps, address(this));
@@ -426,8 +483,16 @@ contract TestUsmSwapFuzz is TestDusdBase {
             underlyingDecimals, // decimals
             address(this)
         );
-        DUSDUsm gsm = new DUSDUsm(address(DUSD_TOKEN), address(newToken));
-        gsm.initialize(address(this), TREASURY, type(uint128).max, address(newPriceStrategy));
+        DUSDUsm gsm = deployDusdUsm(
+            address(DUSD_TOKEN),
+            address(newToken),
+            DusdUsmInitParams({
+                admin: address(this),
+                stableTokenTreasury: TREASURY,
+                exposureCap: type(uint128).max,
+                priceStrategy: address(newPriceStrategy)
+            })
+        );
 
         if (buyFeeBps > 0 || sellFeeBps > 0) {
             FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(buyFeeBps, sellFeeBps, address(this));
@@ -473,8 +538,16 @@ contract TestUsmSwapFuzz is TestDusdBase {
             underlyingDecimals, // decimals
             address(this)
         );
-        DUSDUsm gsm = new DUSDUsm(address(DUSD_TOKEN), address(newToken));
-        gsm.initialize(address(this), TREASURY, uint128(assetAmount), address(newPriceStrategy));
+        DUSDUsm gsm = deployDusdUsm(
+            address(DUSD_TOKEN),
+            address(newToken),
+            DusdUsmInitParams({
+                admin: address(this),
+                stableTokenTreasury: TREASURY,
+                exposureCap: uint128(assetAmount),
+                priceStrategy: address(newPriceStrategy)
+            })
+        );
 
         if (buyFeeBps > 0 || sellFeeBps > 0) {
             FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(buyFeeBps, sellFeeBps, address(this));
@@ -534,8 +607,16 @@ contract TestUsmSwapFuzz is TestDusdBase {
             underlyingDecimals, // decimals
             address(this)
         );
-        DUSDUsm gsm = new DUSDUsm(address(DUSD_TOKEN), address(newToken));
-        gsm.initialize(address(this), TREASURY, uint128(assetAmount), address(newPriceStrategy));
+        DUSDUsm gsm = deployDusdUsm(
+            address(DUSD_TOKEN),
+            address(newToken),
+            DusdUsmInitParams({
+                admin: address(this),
+                stableTokenTreasury: TREASURY,
+                exposureCap: uint128(assetAmount),
+                priceStrategy: address(newPriceStrategy)
+            })
+        );
 
         if (buyFeeBps > 0 || sellFeeBps > 0) {
             FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(buyFeeBps, sellFeeBps, address(this));
@@ -592,8 +673,16 @@ contract TestUsmSwapFuzz is TestDusdBase {
             underlyingDecimals, // decimals
             address(this)
         );
-        DUSDUsm gsm = new DUSDUsm(address(DUSD_TOKEN), address(newToken));
-        gsm.initialize(address(this), TREASURY, uint128(assetAmount), address(newPriceStrategy));
+        DUSDUsm gsm = deployDusdUsm(
+            address(DUSD_TOKEN),
+            address(newToken),
+            DusdUsmInitParams({
+                admin: address(this),
+                stableTokenTreasury: TREASURY,
+                exposureCap: uint128(assetAmount),
+                priceStrategy: address(newPriceStrategy)
+            })
+        );
         DUSD_TOKEN.setMinterStatus(address(gsm), true);
         DUSD_TOKEN.setMinterCeiling(address(gsm), type(uint128).max);
 
@@ -684,8 +773,16 @@ contract TestUsmSwapFuzz is TestDusdBase {
             underlyingDecimals, // decimals
             address(this)
         );
-        DUSDUsm gsm = new DUSDUsm(address(DUSD_TOKEN), address(newToken));
-        gsm.initialize(address(this), TREASURY, type(uint128).max, address(newPriceStrategy));
+        DUSDUsm gsm = deployDusdUsm(
+            address(DUSD_TOKEN),
+            address(newToken),
+            DusdUsmInitParams({
+                admin: address(this),
+                stableTokenTreasury: TREASURY,
+                exposureCap: type(uint128).max,
+                priceStrategy: address(newPriceStrategy)
+            })
+        );
         DUSD_TOKEN.setMinterStatus(address(gsm), true);
         DUSD_TOKEN.setBurnerStatus(address(gsm), true);
         DUSD_TOKEN.setMinterCeiling(address(gsm), type(uint128).max);

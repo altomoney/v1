@@ -5,7 +5,10 @@ import {Usm} from "./Usm.sol";
 import {IDUSD} from "@alto/tokens/interfaces/IDUSD.sol";
 
 contract DUSDUsm is Usm {
-    constructor(address dusd, address underlyingAsset) Usm(dusd, underlyingAsset) {}
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor(address dusd, address underlyingAsset) Usm(dusd, underlyingAsset) {
+        _disableInitializers();
+    }
 
     /// upgrade gap
     uint256[50] private __gap_dusdusm;
