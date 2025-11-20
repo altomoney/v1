@@ -10,9 +10,6 @@ contract DUSDUsm is Usm {
         _disableInitializers();
     }
 
-    /// upgrade gap
-    uint256[50] private __gap_dusdusm;
-
     function initialize(address admin, address stableTokenTreasury, uint128 exposureCap, address priceStrategy)
         external
         initializer

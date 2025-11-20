@@ -35,6 +35,13 @@ contract TestUsm is TestDusdBase {
         assertEq(usm.getExposureCap(), 0, "Unexpected exposure capacity");
     }
 
+    function testRevertInitializeOnImplementation() public {
+        DUSDUsm usm = new DUSDUsm(address(DUSD_TOKEN), address(USDC_TOKEN));
+        vm.expectRevert(abi.encodeWithSelector(Initializable.InvalidInitialization.selector));
+        DUSDUsm(usm)
+            .initialize(address(this), TREASURY, DEFAULT_USM_USDC_EXPOSURE, address(DUSD_USM_FIXED_PRICE_STRATEGY));
+    }
+
     function testRevertInitializeInvalidPriceStrategy() public {
         FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(1e18, address(DUSD_TOKEN), 18, address(this));
         DUSDUsm usm =

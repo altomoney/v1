@@ -18,7 +18,6 @@ import {PercentageMath} from "./PercentageMath.sol";
 import {IUsm} from "@alto/usm/interfaces/IUsm.sol";
 import {Usm} from "@alto/usm/Usm.sol";
 import {UnsafeUpgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
-import {MockUsmV2} from "./mocks/MockUsmV2.sol";
 import {UsmDeployer, DusdUsmInitParams} from "@alto/utils/UsmDeployer.sol";
 
 contract TestDusdBase is Test, TestHelperOz5, Constants {
