@@ -1,61 +1,61 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "./TestGhoBase.t.sol";
+import "./TestDusdBase.t.sol";
 
 /**
- * @title TestGsmSwapFuzz
+ * @title TestUsmSwapFuzz
  * @dev Fuzzing tests for swap functions
  * @dev Bounds for priceRatio: [0.01e18, 100e18]
  * @dev Bounds for fees: [0, 5000]
  * @dev Bounds for underlyingDecimals: [5, 27]
  */
-contract TestGsmSwapFuzz is TestGhoBase {
+contract TestUsmSwapFuzz is TestDusdBase {
     using PercentageMath for uint256;
     using PercentageMath for uint128;
 
     struct TestFuzzSwapAssetVars {
         // estimation function 1
         uint256 estAssetAmount1;
-        uint256 estGhoAmount1;
+        uint256 estDusdAmount1;
         uint256 estGrossAmount1;
         uint256 estFeeAmount1;
         // estimation function 2
         uint256 estAssetAmount2;
-        uint256 estGhoAmount2;
+        uint256 estDusdAmount2;
         uint256 estGrossAmount2;
         uint256 estFeeAmount2;
         // swap function
         uint256 exactAssetAmount;
-        uint256 exactGhoAmount;
+        uint256 exactDusdAmount;
     }
 
-    function _checkValidPrice(FixedPriceStrategy priceStrat, uint256 assetAmount, uint256 ghoAmount) internal {
+    function _checkValidPrice(FixedPriceStrategy priceStrat, uint256 assetAmount, uint256 dusdAmount) internal {
         assertApproxEqAbs(
             priceStrat.getAssetPriceInStableToken(assetAmount, false),
-            ghoAmount,
+            dusdAmount,
             2,
-            "price between asset and gho amounts is not valid _1"
+            "price between asset and dusd amounts is not valid _1"
         );
 
         assertApproxEqAbs(
             priceStrat.getAssetPriceInStableToken(assetAmount, true),
-            ghoAmount,
+            dusdAmount,
             2,
-            "price between asset and gho amounts is not valid _2"
+            "price between asset and dusd amounts is not valid _2"
         );
 
         assertApproxEqAbs(
-            priceStrat.getStableTokenPriceInAsset(ghoAmount, false),
+            priceStrat.getStableTokenPriceInAsset(dusdAmount, false),
             assetAmount,
             2,
-            "price between asset and gho amounts is not valid _3"
+            "price between asset and dusd amounts is not valid _3"
         );
         assertApproxEqAbs(
-            priceStrat.getStableTokenPriceInAsset(ghoAmount, true),
+            priceStrat.getStableTokenPriceInAsset(dusdAmount, true),
             assetAmount,
             2,
-            "price between asset and gho amounts is not valid _4"
+            "price between asset and dusd amounts is not valid _4"
         );
     }
 
@@ -85,11 +85,11 @@ contract TestGsmSwapFuzz is TestGhoBase {
             underlyingDecimals, // decimals
             address(this)
         );
-        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken));
+        DUSDUsm gsm = new DUSDUsm(address(DUSD_TOKEN), address(newToken));
         gsm.initialize(address(this), TREASURY, type(uint128).max, address(newPriceStrategy));
-        GHO_TOKEN.setMinterStatus(address(gsm), true);
-        GHO_TOKEN.setBurnerStatus(address(gsm), true);
-        GHO_TOKEN.setMinterCeiling(address(gsm), type(uint128).max);
+        DUSD_TOKEN.setMinterStatus(address(gsm), true);
+        DUSD_TOKEN.setBurnerStatus(address(gsm), true);
+        DUSD_TOKEN.setMinterCeiling(address(gsm), type(uint128).max);
 
         if (buyFeeBps > 0 || sellFeeBps > 0) {
             FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(buyFeeBps, sellFeeBps, address(this));
@@ -97,8 +97,8 @@ contract TestGsmSwapFuzz is TestGhoBase {
         }
 
         // Strat estimation
-        (, vars.estGhoAmount1,,) = gsm.getStableTokenAmountForSellAsset(assetAmount);
-        (vars.estAssetAmount2,,,) = gsm.getAssetAmountForBuyAsset(vars.estGhoAmount1);
+        (, vars.estDusdAmount1,,) = gsm.getStableTokenAmountForSellAsset(assetAmount);
+        (vars.estAssetAmount2,,,) = gsm.getAssetAmountForBuyAsset(vars.estDusdAmount1);
         assertLe(vars.estAssetAmount2, assetAmount, "getting more assetAmount than provided in estimation");
 
         // Init GSM with some assets
@@ -111,8 +111,8 @@ contract TestGsmSwapFuzz is TestGhoBase {
         vm.stopPrank();
 
         // Arb Strat estimation
-        (, vars.estGhoAmount1,,) = gsm.getStableTokenAmountForSellAsset(assetAmount);
-        (vars.estAssetAmount2,,,) = gsm.getAssetAmountForBuyAsset(vars.estGhoAmount1);
+        (, vars.estDusdAmount1,,) = gsm.getStableTokenAmountForSellAsset(assetAmount);
+        (vars.estAssetAmount2,,,) = gsm.getAssetAmountForBuyAsset(vars.estDusdAmount1);
         assertLe(vars.estAssetAmount2, assetAmount, "getting more assetAmount than provided in estimation");
 
         // Top up Alice
@@ -123,10 +123,10 @@ contract TestGsmSwapFuzz is TestGhoBase {
         vm.startPrank(ALICE);
         uint256 aliceBalanceBefore = newToken.balanceOf(ALICE);
         newToken.approve(address(gsm), type(uint256).max);
-        GHO_TOKEN.approve(address(gsm), type(uint256).max);
+        DUSD_TOKEN.approve(address(gsm), type(uint256).max);
 
-        (, vars.exactGhoAmount) = gsm.sellAsset(assetAmount, ALICE);
-        (vars.estAssetAmount1,,,) = gsm.getAssetAmountForBuyAsset(vars.exactGhoAmount);
+        (, vars.exactDusdAmount) = gsm.sellAsset(assetAmount, ALICE);
+        (vars.estAssetAmount1,,,) = gsm.getAssetAmountForBuyAsset(vars.exactDusdAmount);
         assertLe(vars.estAssetAmount1, assetAmount, "getting more assetAmount than provided in estimation");
         vm.assume(vars.estAssetAmount1 > 0); // 0 value is a valid for the property to hold, but buyAsset op would fail
         (vars.exactAssetAmount,) = gsm.buyAsset(vars.estAssetAmount1, ALICE);
@@ -137,8 +137,8 @@ contract TestGsmSwapFuzz is TestGhoBase {
     }
 
     /**
-     * @dev It is possible to use values for price ratio that creates unbalance in the GSM, so all GHO cannot be burned.
-     * e.g. With (1e16 + 1) priceRatio, a user gets 1e11 gho for selling 1 asset but gets 1 asset by selling 1e11+1 gho
+     * @dev It is possible to use values for price ratio that creates unbalance in the GSM, so all DUSD cannot be burned.
+     * e.g. With (1e16 + 1) priceRatio, a user gets 1e11 dusd for selling 1 asset but gets 1 asset by selling 1e11+1 dusd
      */
     function testFuzzPriceRatioRoundingUnbalance(
         uint8 underlyingDecimals,
@@ -160,19 +160,19 @@ contract TestGsmSwapFuzz is TestGhoBase {
             underlyingDecimals, // decimals
             address(this)
         );
-        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken));
+        DUSDUsm gsm = new DUSDUsm(address(DUSD_TOKEN), address(newToken));
         gsm.initialize(address(this), TREASURY, type(uint128).max, address(newPriceStrategy));
 
-        // Get gho amount for selling assets
-        (uint256 assetSold,, uint256 ghoMinted,) = gsm.getStableTokenAmountForSellAsset(amount);
-        (,, uint256 ghoToBurn,) = gsm.getStableTokenAmountForBuyAsset(assetSold);
+        // Get dusd amount for selling assets
+        (uint256 assetSold,, uint256 dusdMinted,) = gsm.getStableTokenAmountForSellAsset(amount);
+        (,, uint256 dusdToBurn,) = gsm.getStableTokenAmountForBuyAsset(assetSold);
 
         // 1 unit of imprecision due to rounding
-        assertTrue(ghoToBurn <= ghoMinted + 1, "unexpected gsm unbalance");
+        assertTrue(dusdToBurn <= dusdMinted + 1, "unexpected gsm unbalance");
 
-        // Get amount of assets can be purchased based on minted GHO amount
-        (, uint256 ghoAmount,,) = gsm.getAssetAmountForBuyAsset(ghoMinted);
-        assertTrue(ghoAmount <= ghoMinted);
+        // Get amount of assets can be purchased based on minted DUSD amount
+        (, uint256 dusdAmount,,) = gsm.getAssetAmountForBuyAsset(dusdMinted);
+        assertTrue(dusdAmount <= dusdMinted);
     }
 
     /**
@@ -198,18 +198,18 @@ contract TestGsmSwapFuzz is TestGhoBase {
             underlyingDecimals, // decimals
             address(this)
         );
-        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken));
+        DUSDUsm gsm = new DUSDUsm(address(DUSD_TOKEN), address(newToken));
         gsm.initialize(address(this), TREASURY, type(uint128).max, address(newPriceStrategy));
-        GHO_TOKEN.setMinterStatus(address(gsm), true);
-        GHO_TOKEN.setMinterCeiling(address(gsm), type(uint128).max);
+        DUSD_TOKEN.setMinterStatus(address(gsm), true);
+        DUSD_TOKEN.setMinterCeiling(address(gsm), type(uint128).max);
 
         if (buyFeeBps > 0 || sellFeeBps > 0) {
             FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(buyFeeBps, sellFeeBps, address(this));
             gsm.updateFeeStrategy(address(newFeeStrategy));
         }
 
-        (uint256 ghoBought,,,) = gsm.getStableTokenAmountForSellAsset(amount);
-        vm.assume(ghoBought > type(uint128).max);
+        (uint256 dusdBought,,,) = gsm.getStableTokenAmountForSellAsset(amount);
+        vm.assume(dusdBought > type(uint128).max);
 
         vm.startPrank(FAUCET);
         newToken.mint(FAUCET, amount);
@@ -241,10 +241,10 @@ contract TestGsmSwapFuzz is TestGhoBase {
             underlyingDecimals, // decimals
             address(this)
         );
-        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken));
+        DUSDUsm gsm = new DUSDUsm(address(DUSD_TOKEN), address(newToken));
         gsm.initialize(address(this), TREASURY, type(uint128).max, address(newPriceStrategy));
-        GHO_TOKEN.setMinterStatus(address(gsm), true);
-        GHO_TOKEN.setMinterCeiling(address(gsm), type(uint128).max);
+        DUSD_TOKEN.setMinterStatus(address(gsm), true);
+        DUSD_TOKEN.setMinterCeiling(address(gsm), type(uint128).max);
 
         if (buyFeeBps > 0 || sellFeeBps > 0) {
             FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(buyFeeBps, sellFeeBps, address(this));
@@ -262,9 +262,9 @@ contract TestGsmSwapFuzz is TestGhoBase {
         gsm.sellAsset(amount, ALICE);
         vm.stopPrank();
 
-        ghoFaucet(BOB, type(uint128).max);
+        dusdFaucet(BOB, type(uint128).max);
         vm.startPrank(BOB);
-        GHO_TOKEN.approve(address(gsm), type(uint128).max);
+        DUSD_TOKEN.approve(address(gsm), type(uint128).max);
         vm.expectRevert();
         gsm.buyAsset(amount + 1, BOB);
         vm.stopPrank();
@@ -293,7 +293,7 @@ contract TestGsmSwapFuzz is TestGhoBase {
             underlyingDecimals, // decimals
             address(this)
         );
-        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken));
+        DUSDUsm gsm = new DUSDUsm(address(DUSD_TOKEN), address(newToken));
         gsm.initialize(address(this), TREASURY, type(uint128).max, address(newPriceStrategy));
 
         if (buyFeeBps > 0 || sellFeeBps > 0) {
@@ -301,15 +301,15 @@ contract TestGsmSwapFuzz is TestGhoBase {
             gsm.updateFeeStrategy(address(newFeeStrategy));
         }
 
-        (uint256 exactAssetAmount, uint256 ghoBought, uint256 grossAmount, uint256 fee) =
+        (uint256 exactAssetAmount, uint256 dusdBought, uint256 grossAmount, uint256 fee) =
             gsm.getStableTokenAmountForSellAsset(amount);
         assertTrue(exactAssetAmount <= amount, "maximum asset amount exceeded");
-        assertTrue(ghoBought <= grossAmount, "gross amount lower than ghoBought");
+        assertTrue(dusdBought <= grossAmount, "gross amount lower than dusdBought");
         _checkValidPrice(newPriceStrategy, exactAssetAmount, grossAmount);
 
         // In case of 0 sellFee
         if (sellFeeBps == 0) {
-            assertEq(grossAmount, ghoBought, "unexpected gross amount");
+            assertEq(grossAmount, dusdBought, "unexpected gross amount");
             assertEq(fee, 0, "unexpected fee");
         }
     }
@@ -337,7 +337,7 @@ contract TestGsmSwapFuzz is TestGhoBase {
             underlyingDecimals, // decimals
             address(this)
         );
-        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken));
+        DUSDUsm gsm = new DUSDUsm(address(DUSD_TOKEN), address(newToken));
         gsm.initialize(address(this), TREASURY, type(uint128).max, address(newPriceStrategy));
 
         if (buyFeeBps > 0 || sellFeeBps > 0) {
@@ -345,15 +345,15 @@ contract TestGsmSwapFuzz is TestGhoBase {
             gsm.updateFeeStrategy(address(newFeeStrategy));
         }
 
-        (uint256 exactAssetAmount, uint256 ghoSold, uint256 grossAmount, uint256 fee) =
+        (uint256 exactAssetAmount, uint256 dusdSold, uint256 grossAmount, uint256 fee) =
             gsm.getStableTokenAmountForBuyAsset(amount);
         assertTrue(exactAssetAmount >= amount, "minimum asset amount not reached");
-        assertTrue(ghoSold >= grossAmount, "gross amount lower than ghoSold");
+        assertTrue(dusdSold >= grossAmount, "gross amount lower than dusdSold");
         _checkValidPrice(newPriceStrategy, exactAssetAmount, grossAmount);
 
         // In case of 0 buyFee
         if (buyFeeBps == 0) {
-            assertEq(grossAmount, ghoSold, "unexpected gross amount");
+            assertEq(grossAmount, dusdSold, "unexpected gross amount");
             assertEq(fee, 0, "unexpected fee");
         }
     }
@@ -381,7 +381,7 @@ contract TestGsmSwapFuzz is TestGhoBase {
             underlyingDecimals, // decimals
             address(this)
         );
-        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken));
+        DUSDUsm gsm = new DUSDUsm(address(DUSD_TOKEN), address(newToken));
         gsm.initialize(address(this), TREASURY, type(uint128).max, address(newPriceStrategy));
 
         if (buyFeeBps > 0 || sellFeeBps > 0) {
@@ -389,16 +389,16 @@ contract TestGsmSwapFuzz is TestGhoBase {
             gsm.updateFeeStrategy(address(newFeeStrategy));
         }
 
-        (uint256 exactAssetAmount, uint256 ghoBought, uint256 grossAmount, uint256 fee) =
+        (uint256 exactAssetAmount, uint256 dusdBought, uint256 grossAmount, uint256 fee) =
             gsm.getAssetAmountForSellAsset(amount);
-        assertTrue(ghoBought > 0, "unexpected 0 value for ghoBought");
-        assertTrue(ghoBought >= amount, "minimum gho amount not reached");
-        assertTrue(ghoBought <= grossAmount, "gross amount lower than ghoBought");
+        assertTrue(dusdBought > 0, "unexpected 0 value for dusdBought");
+        assertTrue(dusdBought >= amount, "minimum dusd amount not reached");
+        assertTrue(dusdBought <= grossAmount, "gross amount lower than dusdBought");
         _checkValidPrice(newPriceStrategy, exactAssetAmount, grossAmount);
 
         // In case of 0 sellFee
         if (sellFeeBps == 0) {
-            assertEq(grossAmount, ghoBought, "unexpected gross amount");
+            assertEq(grossAmount, dusdBought, "unexpected gross amount");
             assertEq(fee, 0, "unexpected fee");
         }
     }
@@ -426,7 +426,7 @@ contract TestGsmSwapFuzz is TestGhoBase {
             underlyingDecimals, // decimals
             address(this)
         );
-        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken));
+        DUSDUsm gsm = new DUSDUsm(address(DUSD_TOKEN), address(newToken));
         gsm.initialize(address(this), TREASURY, type(uint128).max, address(newPriceStrategy));
 
         if (buyFeeBps > 0 || sellFeeBps > 0) {
@@ -434,15 +434,15 @@ contract TestGsmSwapFuzz is TestGhoBase {
             gsm.updateFeeStrategy(address(newFeeStrategy));
         }
 
-        (uint256 exactAssetAmount, uint256 ghoSold, uint256 grossAmount, uint256 fee) =
+        (uint256 exactAssetAmount, uint256 dusdSold, uint256 grossAmount, uint256 fee) =
             gsm.getAssetAmountForBuyAsset(amount);
-        assertTrue(ghoSold <= amount, "maximum gho amount exceeded");
-        assertTrue(ghoSold >= grossAmount, "gross amount lower than ghoSold");
+        assertTrue(dusdSold <= amount, "maximum dusd amount exceeded");
+        assertTrue(dusdSold >= grossAmount, "gross amount lower than dusdSold");
         _checkValidPrice(newPriceStrategy, exactAssetAmount, grossAmount);
 
         // In case of 0 buyFee
         if (buyFeeBps == 0) {
-            assertEq(grossAmount, ghoSold, "unexpected gross amount");
+            assertEq(grossAmount, dusdSold, "unexpected gross amount");
             assertEq(fee, 0, "unexpected fee");
         }
     }
@@ -473,7 +473,7 @@ contract TestGsmSwapFuzz is TestGhoBase {
             underlyingDecimals, // decimals
             address(this)
         );
-        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken));
+        DUSDUsm gsm = new DUSDUsm(address(DUSD_TOKEN), address(newToken));
         gsm.initialize(address(this), TREASURY, uint128(assetAmount), address(newPriceStrategy));
 
         if (buyFeeBps > 0 || sellFeeBps > 0) {
@@ -481,11 +481,11 @@ contract TestGsmSwapFuzz is TestGhoBase {
             gsm.updateFeeStrategy(address(newFeeStrategy));
         }
 
-        (vars.estAssetAmount1, vars.estGhoAmount1, vars.estGrossAmount1, vars.estFeeAmount1) =
+        (vars.estAssetAmount1, vars.estDusdAmount1, vars.estGrossAmount1, vars.estFeeAmount1) =
             gsm.getStableTokenAmountForSellAsset(assetAmount);
-        vm.assume(vars.estGhoAmount1 > 0);
-        (vars.estAssetAmount2, vars.estGhoAmount2, vars.estGrossAmount2, vars.estFeeAmount2) =
-            gsm.getAssetAmountForSellAsset(vars.estGhoAmount1);
+        vm.assume(vars.estDusdAmount1 > 0);
+        (vars.estAssetAmount2, vars.estDusdAmount2, vars.estGrossAmount2, vars.estFeeAmount2) =
+            gsm.getAssetAmountForSellAsset(vars.estDusdAmount1);
 
         assertTrue(
             assetAmount >= vars.estAssetAmount1, "exact asset amount being used is higher than the amount passed"
@@ -493,7 +493,7 @@ contract TestGsmSwapFuzz is TestGhoBase {
         assertTrue(
             assetAmount >= vars.estAssetAmount2, "exact asset amount being used is higher than the amount passed"
         );
-        assertEq(vars.estGhoAmount1, vars.estGhoAmount2, "bought gho amount do not match");
+        assertEq(vars.estDusdAmount1, vars.estDusdAmount2, "bought dusd amount do not match");
         assertEq(vars.estAssetAmount1, vars.estAssetAmount2, "given assetAmount and estimated do not match");
         // 1 wei precision error
         assertApproxEqAbs(vars.estGrossAmount1, vars.estGrossAmount2, 1, "estimated gross amounts do not match");
@@ -501,8 +501,8 @@ contract TestGsmSwapFuzz is TestGhoBase {
 
         // In case of 0 sellFee
         if (sellFeeBps == 0) {
-            assertEq(vars.estGrossAmount1, vars.estGhoAmount1, "unexpected grossAmount1 and ghoBought");
-            assertEq(vars.estGrossAmount2, vars.estGhoAmount1, "unexpected grossAmount2 and ghoBought");
+            assertEq(vars.estGrossAmount1, vars.estDusdAmount1, "unexpected grossAmount1 and dusdBought");
+            assertEq(vars.estGrossAmount2, vars.estDusdAmount1, "unexpected grossAmount2 and dusdBought");
             assertEq(vars.estFeeAmount1, 0, "expected fee1");
             assertEq(vars.estFeeAmount2, 0, "expected fee2");
         }
@@ -534,7 +534,7 @@ contract TestGsmSwapFuzz is TestGhoBase {
             underlyingDecimals, // decimals
             address(this)
         );
-        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken));
+        DUSDUsm gsm = new DUSDUsm(address(DUSD_TOKEN), address(newToken));
         gsm.initialize(address(this), TREASURY, uint128(assetAmount), address(newPriceStrategy));
 
         if (buyFeeBps > 0 || sellFeeBps > 0) {
@@ -542,23 +542,23 @@ contract TestGsmSwapFuzz is TestGhoBase {
             gsm.updateFeeStrategy(address(newFeeStrategy));
         }
 
-        (vars.estAssetAmount1, vars.estGhoAmount1, vars.estGrossAmount1, vars.estFeeAmount1) =
+        (vars.estAssetAmount1, vars.estDusdAmount1, vars.estGrossAmount1, vars.estFeeAmount1) =
             gsm.getStableTokenAmountForBuyAsset(assetAmount);
-        vm.assume(vars.estGhoAmount1 > 0);
-        (vars.estAssetAmount2, vars.estGhoAmount2, vars.estGrossAmount2, vars.estFeeAmount2) =
-            gsm.getAssetAmountForBuyAsset(vars.estGhoAmount1);
+        vm.assume(vars.estDusdAmount1 > 0);
+        (vars.estAssetAmount2, vars.estDusdAmount2, vars.estGrossAmount2, vars.estFeeAmount2) =
+            gsm.getAssetAmountForBuyAsset(vars.estDusdAmount1);
 
         assertTrue(vars.estAssetAmount1 >= assetAmount, "exact asset amount being used is less than the amount passed");
         assertTrue(vars.estAssetAmount2 >= assetAmount, "exact asset amount being used is less than the amount passed");
-        assertEq(vars.estGhoAmount1, vars.estGhoAmount2, "sold gho amount do not match");
+        assertEq(vars.estDusdAmount1, vars.estDusdAmount2, "sold dusd amount do not match");
         assertEq(vars.estAssetAmount1, vars.estAssetAmount2, "given assetAmount and estimated do not match");
         assertEq(vars.estGrossAmount1, vars.estGrossAmount2, "estimated gross amounts do not match");
         assertEq(vars.estFeeAmount1, vars.estFeeAmount2, "estimated fees do not match");
 
         // In case of 0 buyFee
         if (buyFeeBps == 0) {
-            assertEq(vars.estGrossAmount1, vars.estGhoAmount1, "unexpected grossAmount1 and ghoSold");
-            assertEq(vars.estGrossAmount2, vars.estGhoAmount1, "unexpected grossAmount2 and ghoSold");
+            assertEq(vars.estGrossAmount1, vars.estDusdAmount1, "unexpected grossAmount1 and dusdSold");
+            assertEq(vars.estGrossAmount2, vars.estDusdAmount1, "unexpected grossAmount2 and dusdSold");
             assertEq(vars.estFeeAmount1, 0, "expected fee1");
             assertEq(vars.estFeeAmount2, 0, "expected fee2");
         }
@@ -592,10 +592,10 @@ contract TestGsmSwapFuzz is TestGhoBase {
             underlyingDecimals, // decimals
             address(this)
         );
-        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken));
+        DUSDUsm gsm = new DUSDUsm(address(DUSD_TOKEN), address(newToken));
         gsm.initialize(address(this), TREASURY, uint128(assetAmount), address(newPriceStrategy));
-        GHO_TOKEN.setMinterStatus(address(gsm), true);
-        GHO_TOKEN.setMinterCeiling(address(gsm), type(uint128).max);
+        DUSD_TOKEN.setMinterStatus(address(gsm), true);
+        DUSD_TOKEN.setMinterCeiling(address(gsm), type(uint128).max);
 
         if (buyFeeBps > 0 || sellFeeBps > 0) {
             FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(buyFeeBps, sellFeeBps, address(this));
@@ -605,19 +605,19 @@ contract TestGsmSwapFuzz is TestGhoBase {
         vm.startPrank(ALICE);
         newToken.approve(address(gsm), type(uint256).max);
 
-        uint256 userGhoBefore = GHO_TOKEN.balanceOf(ALICE);
+        uint256 userDusdBefore = DUSD_TOKEN.balanceOf(ALICE);
         uint256 userAssetBefore = newToken.balanceOf(ALICE);
 
-        // Calculate GHO amount to purchase with given asset amount, bail if 0
-        (, vars.estGhoAmount1, vars.estGrossAmount1, vars.estFeeAmount1) =
+        // Calculate DUSD amount to purchase with given asset amount, bail if 0
+        (, vars.estDusdAmount1, vars.estGrossAmount1, vars.estFeeAmount1) =
             gsm.getStableTokenAmountForSellAsset(assetAmount);
-        vm.assume(vars.estGhoAmount1 > 0);
+        vm.assume(vars.estDusdAmount1 > 0);
 
-        (vars.exactAssetAmount, vars.exactGhoAmount) = gsm.sellAsset(assetAmount, ALICE);
+        (vars.exactAssetAmount, vars.exactDusdAmount) = gsm.sellAsset(assetAmount, ALICE);
 
-        // Calculate asset amount needed for the amount of GHO required to buy
+        // Calculate asset amount needed for the amount of DUSD required to buy
         (vars.estAssetAmount2,, vars.estGrossAmount2, vars.estFeeAmount2) =
-            gsm.getAssetAmountForSellAsset(vars.exactGhoAmount);
+            gsm.getAssetAmountForSellAsset(vars.exactDusdAmount);
 
         assertEq(
             userAssetBefore - newToken.balanceOf(ALICE),
@@ -628,14 +628,14 @@ contract TestGsmSwapFuzz is TestGhoBase {
             userAssetBefore - newToken.balanceOf(ALICE) <= assetAmount, "real assets sold are more than the input"
         );
         assertEq(
-            GHO_TOKEN.balanceOf(ALICE) - userGhoBefore,
-            vars.exactGhoAmount,
-            "real gho bought does not match returned value"
+            DUSD_TOKEN.balanceOf(ALICE) - userDusdBefore,
+            vars.exactDusdAmount,
+            "real dusd bought does not match returned value"
         );
         assertEq(
-            GHO_TOKEN.balanceOf(ALICE) - userGhoBefore,
-            vars.estGhoAmount1,
-            "real gho bought does not match estimated value"
+            DUSD_TOKEN.balanceOf(ALICE) - userDusdBefore,
+            vars.estDusdAmount1,
+            "real dusd bought does not match estimated value"
         );
         assertEq(
             userAssetBefore - newToken.balanceOf(ALICE),
@@ -649,8 +649,8 @@ contract TestGsmSwapFuzz is TestGhoBase {
 
         // In case of 0 sellFeeBps
         if (sellFeeBps == 0) {
-            assertEq(vars.estGrossAmount1, vars.exactGhoAmount, "unexpected grossAmount1 and ghoBought");
-            assertEq(vars.estGrossAmount2, vars.exactGhoAmount, "unexpected grossAmount2 and ghoBought");
+            assertEq(vars.estGrossAmount1, vars.exactDusdAmount, "unexpected grossAmount1 and dusdBought");
+            assertEq(vars.estGrossAmount2, vars.exactDusdAmount, "unexpected grossAmount2 and dusdBought");
             assertEq(vars.estFeeAmount1, 0, "expected fee1");
             assertEq(vars.estFeeAmount2, 0, "expected fee2");
         }
@@ -684,11 +684,11 @@ contract TestGsmSwapFuzz is TestGhoBase {
             underlyingDecimals, // decimals
             address(this)
         );
-        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken));
+        DUSDUsm gsm = new DUSDUsm(address(DUSD_TOKEN), address(newToken));
         gsm.initialize(address(this), TREASURY, type(uint128).max, address(newPriceStrategy));
-        GHO_TOKEN.setMinterStatus(address(gsm), true);
-        GHO_TOKEN.setBurnerStatus(address(gsm), true);
-        GHO_TOKEN.setMinterCeiling(address(gsm), type(uint128).max);
+        DUSD_TOKEN.setMinterStatus(address(gsm), true);
+        DUSD_TOKEN.setBurnerStatus(address(gsm), true);
+        DUSD_TOKEN.setMinterCeiling(address(gsm), type(uint128).max);
 
         if (buyFeeBps > 0 || sellFeeBps > 0) {
             FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(buyFeeBps, sellFeeBps, address(this));
@@ -709,28 +709,28 @@ contract TestGsmSwapFuzz is TestGhoBase {
         gsm.sellAsset(sellAssetAmount, ALICE);
         vm.stopPrank();
 
-        // rough estimation of GHO funds needed for buyAsset
-        (, uint256 estGhoBought,,) = gsm.getStableTokenAmountForBuyAsset(assetAmount);
-        ghoFaucet(ALICE, estGhoBought * 20);
+        // rough estimation of DUSD funds needed for buyAsset
+        (, uint256 estDusdBought,,) = gsm.getStableTokenAmountForBuyAsset(assetAmount);
+        dusdFaucet(ALICE, estDusdBought * 20);
 
         // Buy
         vm.startPrank(ALICE);
-        uint256 userGhoBefore = GHO_TOKEN.balanceOf(ALICE);
+        uint256 userDusdBefore = DUSD_TOKEN.balanceOf(ALICE);
         uint256 userAssetBefore = newToken.balanceOf(ALICE);
 
-        // Calculate GHO amount to sell with given asset amount
-        (, vars.estGhoAmount1, vars.estGrossAmount1, vars.estFeeAmount1) =
+        // Calculate DUSD amount to sell with given asset amount
+        (, vars.estDusdAmount1, vars.estGrossAmount1, vars.estFeeAmount1) =
             gsm.getStableTokenAmountForBuyAsset(assetAmount);
 
-        userGhoBefore = GHO_TOKEN.balanceOf(ALICE);
+        userDusdBefore = DUSD_TOKEN.balanceOf(ALICE);
         userAssetBefore = newToken.balanceOf(ALICE);
 
-        GHO_TOKEN.approve(address(gsm), type(uint256).max);
-        (vars.exactAssetAmount, vars.exactGhoAmount) = gsm.buyAsset(assetAmount, ALICE);
+        DUSD_TOKEN.approve(address(gsm), type(uint256).max);
+        (vars.exactAssetAmount, vars.exactDusdAmount) = gsm.buyAsset(assetAmount, ALICE);
 
-        // Calculate asset amount can be bought for the amount of GHO available
-        (vars.estAssetAmount2, vars.estGhoAmount2, vars.estGrossAmount2, vars.estFeeAmount2) =
-            gsm.getAssetAmountForBuyAsset(vars.exactGhoAmount);
+        // Calculate asset amount can be bought for the amount of DUSD available
+        (vars.estAssetAmount2, vars.estDusdAmount2, vars.estGrossAmount2, vars.estFeeAmount2) =
+            gsm.getAssetAmountForBuyAsset(vars.exactDusdAmount);
 
         assertEq(
             newToken.balanceOf(ALICE) - userAssetBefore,
@@ -746,23 +746,23 @@ contract TestGsmSwapFuzz is TestGhoBase {
             "real assets bought does not match estimated value"
         );
         assertEq(
-            userGhoBefore - GHO_TOKEN.balanceOf(ALICE),
-            vars.exactGhoAmount,
-            "real gho sold does not match returned value"
+            userDusdBefore - DUSD_TOKEN.balanceOf(ALICE),
+            vars.exactDusdAmount,
+            "real dusd sold does not match returned value"
         );
         assertEq(
-            userGhoBefore - GHO_TOKEN.balanceOf(ALICE),
-            vars.estGhoAmount1,
-            "real gho sold does not match estimated value"
+            userDusdBefore - DUSD_TOKEN.balanceOf(ALICE),
+            vars.estDusdAmount1,
+            "real dusd sold does not match estimated value"
         );
 
-        assertEq(vars.estGhoAmount1, vars.estGhoAmount2, "estimated gross amounts do not match");
+        assertEq(vars.estDusdAmount1, vars.estDusdAmount2, "estimated gross amounts do not match");
         assertEq(vars.estFeeAmount1, vars.estFeeAmount2, "estimated fees do not match");
 
         // In case of 0 buyFeeBps
         if (buyFeeBps == 0) {
-            assertEq(vars.estGhoAmount1, vars.exactGhoAmount, "unexpected grossAmount1 and ghoSold");
-            assertEq(vars.estGhoAmount2, vars.exactGhoAmount, "unexpected grossAmount2 and ghoSold");
+            assertEq(vars.estDusdAmount1, vars.exactDusdAmount, "unexpected grossAmount1 and dusdSold");
+            assertEq(vars.estDusdAmount2, vars.exactDusdAmount, "unexpected grossAmount2 and dusdSold");
             assertEq(vars.estFeeAmount1, 0, "expected fee1");
             assertEq(vars.estFeeAmount2, 0, "expected fee2");
         }

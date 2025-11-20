@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "./TestGhoBase.t.sol";
+import "./TestDusdBase.t.sol";
 
-contract TestGsmSwapEdge is TestGhoBase {
+contract TestUsmSwapEdge is TestDusdBase {
     using PercentageMath for uint256;
     using PercentageMath for uint128;
 
     /**
-     * @dev Edge case where it is not possible to burn all GHO minted due to rounding issues.
-     * e.g. With (1e16 + 1) priceRatio, a user gets 1e11 gho for selling 1 asset but gets 1 asset by selling 1e11+1 gho
+     * @dev Edge case where it is not possible to burn all DUSD minted due to rounding issues.
+     * e.g. With (1e16 + 1) priceRatio, a user gets 1e11 dusd for selling 1 asset but gets 1 asset by selling 1e11+1 dusd
      */
     function testCannotBuyAllUnderlying() public {
         ERC20MockMintableDecimals newToken = new ERC20MockMintableDecimals("Test Coin", "TEST", 5);
@@ -19,13 +19,13 @@ contract TestGsmSwapEdge is TestGhoBase {
             5,
             address(this)
         );
-        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken));
+        DUSDUsm gsm = new DUSDUsm(address(DUSD_TOKEN), address(newToken));
         gsm.initialize(address(this), TREASURY, type(uint128).max, address(newPriceStrategy));
-        GHO_TOKEN.setMinterStatus(address(gsm), true);
-        GHO_TOKEN.setBurnerStatus(address(gsm), true);
-        GHO_TOKEN.setMinterCeiling(address(gsm), type(uint128).max);
+        DUSD_TOKEN.setMinterStatus(address(gsm), true);
+        DUSD_TOKEN.setBurnerStatus(address(gsm), true);
+        DUSD_TOKEN.setMinterCeiling(address(gsm), type(uint128).max);
 
-        // Sell 2 assets for 2e11 GHO
+        // Sell 2 assets for 2e11DUSD
         vm.prank(FAUCET);
         newToken.mint(ALICE, 2);
 
@@ -34,52 +34,52 @@ contract TestGsmSwapEdge is TestGhoBase {
         gsm.sellAsset(2, ALICE);
         vm.stopPrank();
 
-        // Top up with GHO
-        (, uint256 estGhoBought,,) = gsm.getStableTokenAmountForBuyAsset(2);
-        ghoFaucet(ALICE, estGhoBought * 20);
+        // Top up withDUSD
+        (, uint256 estDusdBought,,) = gsm.getStableTokenAmountForBuyAsset(2);
+        dusdFaucet(ALICE, estDusdBought * 20);
 
         vm.startPrank(ALICE);
-        GHO_TOKEN.approve(address(gsm), type(uint256).max);
+        DUSD_TOKEN.approve(address(gsm), type(uint256).max);
 
-        // Try to buy all, which is 2 assets for 2e11+1 GHO
+        // Try to buy all, which is 2 assets for 2e11+1DUSD
         uint256 allUnderlying = gsm.getAvailableLiquidity();
         vm.expectRevert();
         gsm.buyAsset(allUnderlying, ALICE);
 
         // Buy a portion
-        uint256 userGhoBefore = GHO_TOKEN.balanceOf(ALICE);
+        uint256 userDusdBefore = DUSD_TOKEN.balanceOf(ALICE);
         uint256 userAssetBefore = newToken.balanceOf(ALICE);
 
-        (uint256 exactAssetAmount, uint256 exactGhoAmount) = gsm.buyAsset(1, ALICE);
+        (uint256 exactAssetAmount, uint256 exactDusdAmount) = gsm.buyAsset(1, ALICE);
 
         assertEq(
             newToken.balanceOf(ALICE) - userAssetBefore, exactAssetAmount, "unexpected underlying balance of ALICE"
         );
-        assertEq(userGhoBefore - GHO_TOKEN.balanceOf(ALICE), exactGhoAmount, "unexpected GHO balance of ALICE");
+        assertEq(userDusdBefore - DUSD_TOKEN.balanceOf(ALICE), exactDusdAmount, "unexpected DUSD balance of ALICE");
 
         assertTrue(gsm.getAvailableLiquidity() > 0, "unexpected remaining liquidity");
         vm.stopPrank();
     }
 
     /**
-     * @dev Edge case where it is not possible to sell less than the minimum amount because would lead to 0 GHO.
+     * @dev Edge case where it is not possible to sell less than the minimum amount because would lead to 0 DUSD.
      */
     function testGetAssetAmountForSellAssetBelowMinimumAmount() public {
         ERC20MockMintableDecimals newToken = new ERC20MockMintableDecimals("Test Coin", "TEST", 18);
         FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(4900, 4900, address(this));
         FixedPriceStrategy newPriceStrategy =
             new FixedPriceStrategy(DEFAULT_FIXED_PRICE, address(newToken), 18, address(this));
-        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken));
+        DUSDUsm gsm = new DUSDUsm(address(DUSD_TOKEN), address(newToken));
         gsm.initialize(address(this), TREASURY, 100_000_000e18, address(newPriceStrategy));
         gsm.updateFeeStrategy(address(newFeeStrategy));
-        GHO_TOKEN.setMinterStatus(address(gsm), true);
-        GHO_TOKEN.setMinterCeiling(address(gsm), DEFAULT_CAPACITY);
+        DUSD_TOKEN.setMinterStatus(address(gsm), true);
+        DUSD_TOKEN.setMinterCeiling(address(gsm), DEFAULT_CAPACITY);
 
-        // Get asset amount required to receive 1 GHO
-        (uint256 assetAmount, uint256 ghoBought, uint256 grossAmount, uint256 fee) = gsm.getAssetAmountForSellAsset(1);
+        // Get asset amount required to receive 1DUSD
+        (uint256 assetAmount, uint256 dusdBought, uint256 grossAmount, uint256 fee) = gsm.getAssetAmountForSellAsset(1);
 
         assertEq(assetAmount, 2, "Unexpected asset to sell");
-        assertEq(ghoBought, 1, "Unexpected gho amount bought");
+        assertEq(dusdBought, 1, "Unexpected dusd amount bought");
         assertEq(grossAmount, 2, "Unexpected gross amount");
         assertEq(fee, 1, "Unexpected fee");
 
@@ -88,52 +88,52 @@ contract TestGsmSwapEdge is TestGhoBase {
         gsm.sellAsset(assetAmount - 1, ALICE);
 
         _sellAsset(gsm, newToken, ALICE, assetAmount);
-        assertEq(GHO_TOKEN.balanceOf(ALICE), 1, "Unexpected GHO balance");
+        assertEq(DUSD_TOKEN.balanceOf(ALICE), 1, "Unexpected DUSD balance");
     }
 
     /**
      * @dev Sell asset function meets the maximum amount to be sold and does not over-charge the user.
-     * e.g. if the GSM can provide 10 GHO for 12 assets, it charges only 12 even if the user provides more than 12.
+     * e.g. if the GSM can provide 10 DUSD for 12 assets, it charges only 12 even if the user provides more than 12.
      */
     function testSellAssetWithMinimumAmount() public {
         ERC20MockMintableDecimals newToken = new ERC20MockMintableDecimals("Test Coin", "TEST", 18);
         FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(3000, 3000, address(this));
         FixedPriceStrategy newPriceStrategy =
             new FixedPriceStrategy(DEFAULT_FIXED_PRICE, address(newToken), 18, address(this));
-        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken));
+        DUSDUsm gsm = new DUSDUsm(address(DUSD_TOKEN), address(newToken));
         gsm.initialize(address(this), TREASURY, 100_000_000e18, address(newPriceStrategy));
         gsm.updateFeeStrategy(address(newFeeStrategy));
-        GHO_TOKEN.setMinterStatus(address(gsm), true);
-        GHO_TOKEN.setMinterCeiling(address(gsm), DEFAULT_CAPACITY);
+        DUSD_TOKEN.setMinterStatus(address(gsm), true);
+        DUSD_TOKEN.setMinterCeiling(address(gsm), DEFAULT_CAPACITY);
 
-        // Get asset amount required to receive 10000 GHO
-        (uint256 assetAmount, uint256 ghoBought, uint256 grossAmount, uint256 fee) =
+        // Get asset amount required to receive 10000DUSD
+        (uint256 assetAmount, uint256 dusdBought, uint256 grossAmount, uint256 fee) =
             gsm.getAssetAmountForSellAsset(10000);
 
         assertEq(assetAmount, 14286, "Unexpected asset to sell");
-        assertEq(ghoBought, 10000, "Unexpected gho amount bought");
+        assertEq(dusdBought, 10000, "Unexpected dusd amount bought");
         assertEq(grossAmount, 14286, "Unexpected gross amount");
         assertEq(fee, 4286, "Unexpected fee");
 
         assertEq(newToken.balanceOf(ALICE), 0, "Unexpected asset amount before");
 
-        // Mint 1 more asset than required (14286) to receive 10000 GHO
+        // Mint 1 more asset than required (14286) to receive 10000DUSD
         vm.prank(FAUCET);
         newToken.mint(ALICE, assetAmount + 1);
 
         vm.startPrank(ALICE);
         newToken.approve(address(gsm), assetAmount);
-        // Sell 1 more asset than required to receive 10000 GHO
+        // Sell 1 more asset than required to receive 10000DUSD
         gsm.sellAsset(assetAmount + 1, ALICE);
         vm.stopPrank();
-        assertEq(GHO_TOKEN.balanceOf(ALICE), 10000, "Unexpected GHO balance");
+        assertEq(DUSD_TOKEN.balanceOf(ALICE), 10000, "Unexpected DUSD balance");
         // Should have 1 "leftover" asset, as sellAsset prevents "overpaying" so only assetAmount spent
         assertEq(newToken.balanceOf(ALICE), 1, "Unexpected ending asset amount");
     }
 
     /**
      * @dev Checks sellAsset does not charge more asset than needed
-     * in case the underlying asset has more decimals than GHO (18)
+     * in case the underlying asset has more decimals than DUSD (18)
      */
     function testSellAssetWithHigherDecimals() public {
         ERC20MockMintableDecimals newToken = new ERC20MockMintableDecimals("Test Coin", "TEST", 24);
@@ -146,35 +146,35 @@ contract TestGsmSwapEdge is TestGhoBase {
             24, // decimals
             address(this)
         );
-        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken));
+        DUSDUsm gsm = new DUSDUsm(address(DUSD_TOKEN), address(newToken));
         gsm.initialize(ALICE, TREASURY, 1_000_000e24, address(newPriceStrategy));
-        GHO_TOKEN.setMinterStatus(address(gsm), true);
-        GHO_TOKEN.setMinterCeiling(address(gsm), DEFAULT_CAPACITY);
+        DUSD_TOKEN.setMinterStatus(address(gsm), true);
+        DUSD_TOKEN.setMinterCeiling(address(gsm), DEFAULT_CAPACITY);
 
         vm.startPrank(ALICE);
         newToken.approve(address(gsm), type(uint256).max);
 
-        // Less than 1e6 results in 0 GHO
+        // Less than 1e6 results in 0DUSD
         vm.expectRevert("INVALID_AMOUNT");
         gsm.sellAsset(0.9e6, ALICE);
 
         // Lowest amount that can be sold is 1e6
-        uint256 userGhoBefore = GHO_TOKEN.balanceOf(ALICE);
+        uint256 userDusdBefore = DUSD_TOKEN.balanceOf(ALICE);
         uint256 userAssetBefore = newToken.balanceOf(ALICE);
 
         gsm.sellAsset(1e6, ALICE);
 
-        assertEq(GHO_TOKEN.balanceOf(ALICE) - userGhoBefore, 1, "unexpected amount of GHO purchased");
+        assertEq(DUSD_TOKEN.balanceOf(ALICE) - userDusdBefore, 1, "unexpected amount of DUSD purchased");
         assertEq(userAssetBefore - newToken.balanceOf(ALICE), 1e6, "unexpected amount of asset sold");
 
         // It does not overcharge in case of non-divisible amount of assets
-        userGhoBefore = GHO_TOKEN.balanceOf(ALICE);
+        userDusdBefore = DUSD_TOKEN.balanceOf(ALICE);
         userAssetBefore = newToken.balanceOf(ALICE);
 
-        (uint256 assetAmount, uint256 ghoBought) = gsm.sellAsset(1.9e6, ALICE);
+        (uint256 assetAmount, uint256 dusdBought) = gsm.sellAsset(1.9e6, ALICE);
 
-        assertEq(GHO_TOKEN.balanceOf(ALICE) - userGhoBefore, 1, "unexpected amount of GHO purchased");
-        assertEq(ghoBought, 1, "unexpected amount of returned GHO purchased");
+        assertEq(DUSD_TOKEN.balanceOf(ALICE) - userDusdBefore, 1, "unexpected amount of DUSD purchased");
+        assertEq(dusdBought, 1, "unexpected amount of returned DUSD purchased");
         assertEq(assetAmount, 1e6, "Unexpected asset amount sold");
         assertEq(userAssetBefore - newToken.balanceOf(ALICE), 1e6, "unexpected amount of asset sold");
 
@@ -183,13 +183,13 @@ contract TestGsmSwapEdge is TestGhoBase {
 
     /**
      * @dev Checks buyAsset does not provide more asset than the corresponding to the
-     * gho amount charged, in case the underlying asset has more decimals than GHO (18)
+     * dusd amount charged, in case the underlying asset has more decimals than DUSD (18)
      */
     function testBuyAssetWithHigherDecimals() public {
         ERC20MockMintableDecimals newToken = new ERC20MockMintableDecimals("Test Coin", "TEST", 24);
         vm.prank(FAUCET);
         newToken.mint(ALICE, 1_000_000e24);
-        ghoFaucet(ALICE, DEFAULT_CAPACITY);
+        dusdFaucet(ALICE, DEFAULT_CAPACITY);
 
         FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
             DEFAULT_FIXED_PRICE, // 1e18
@@ -197,28 +197,28 @@ contract TestGsmSwapEdge is TestGhoBase {
             24, // decimals
             address(this)
         );
-        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken));
+        DUSDUsm gsm = new DUSDUsm(address(DUSD_TOKEN), address(newToken));
         gsm.initialize(ALICE, TREASURY, 1_000_000e24, address(newPriceStrategy));
-        GHO_TOKEN.setMinterStatus(address(gsm), true);
-        GHO_TOKEN.setBurnerStatus(address(gsm), true);
-        GHO_TOKEN.setMinterCeiling(address(gsm), DEFAULT_CAPACITY);
+        DUSD_TOKEN.setMinterStatus(address(gsm), true);
+        DUSD_TOKEN.setBurnerStatus(address(gsm), true);
+        DUSD_TOKEN.setMinterCeiling(address(gsm), DEFAULT_CAPACITY);
 
         vm.startPrank(ALICE);
         // Alice sells some asset to the GSM
         newToken.approve(address(gsm), type(uint256).max);
-        GHO_TOKEN.approve(address(gsm), type(uint256).max);
+        DUSD_TOKEN.approve(address(gsm), type(uint256).max);
         gsm.sellAsset(1_000_000e24, ALICE);
 
         // The minimum amount of assets that can be bought is 1e6, and the contract recalculates
-        // the corresponding amount of assets to the exact GHO burned.
+        // the corresponding amount of assets to the exact DUSD burned.
         // User buys more asset than it should due to price conversion
-        uint256 userGhoBefore = GHO_TOKEN.balanceOf(ALICE);
+        uint256 userDusdBefore = DUSD_TOKEN.balanceOf(ALICE);
         uint256 userAssetBefore = newToken.balanceOf(ALICE);
 
-        (uint256 assetAmount, uint256 ghoSold) = gsm.buyAsset(1.9e6, ALICE); // should by just 1e6 asset in exchange of 1 GHO
+        (uint256 assetAmount, uint256 dusdSold) = gsm.buyAsset(1.9e6, ALICE); // should by just 1e6 asset in exchange of 1DUSD
 
-        assertEq(userGhoBefore - GHO_TOKEN.balanceOf(ALICE), 2, "unexpected amount of GHO spent");
-        assertEq(ghoSold, 2, "unexpected amount of returned GHO spent");
+        assertEq(userDusdBefore - DUSD_TOKEN.balanceOf(ALICE), 2, "unexpected amount of DUSD spent");
+        assertEq(dusdSold, 2, "unexpected amount of returned DUSD spent");
         assertEq(assetAmount, 2e6, "Unexpected asset amount bought");
         assertEq(newToken.balanceOf(ALICE) - userAssetBefore, 2e6, "unexpected amount of assets purchased");
 
@@ -227,9 +227,9 @@ contract TestGsmSwapEdge is TestGhoBase {
 
     /**
      * @dev Checks sellAsset function is aligned with getAssetAmountForSellAsset,
-     * in case the underlying asset has less decimals than GHO (18)
+     * in case the underlying asset has less decimals than DUSD (18)
      */
-    function testSellAssetByGhoAmountWithLowerDecimals() public {
+    function testSellAssetByDusdAmountWithLowerDecimals() public {
         ERC20MockMintableDecimals newToken = new ERC20MockMintableDecimals("Test Coin", "TEST", 6);
         vm.prank(FAUCET);
         newToken.mint(ALICE, 1_000_000e6);
@@ -240,24 +240,26 @@ contract TestGsmSwapEdge is TestGhoBase {
             6, // decimals
             address(this)
         );
-        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken));
+        DUSDUsm gsm = new DUSDUsm(address(DUSD_TOKEN), address(newToken));
         gsm.initialize(ALICE, TREASURY, 1_000_000e6, address(newPriceStrategy));
-        GHO_TOKEN.setMinterStatus(address(gsm), true);
-        GHO_TOKEN.setBurnerStatus(address(gsm), true);
-        GHO_TOKEN.setMinterCeiling(address(gsm), DEFAULT_CAPACITY);
+        DUSD_TOKEN.setMinterStatus(address(gsm), true);
+        DUSD_TOKEN.setBurnerStatus(address(gsm), true);
+        DUSD_TOKEN.setMinterCeiling(address(gsm), DEFAULT_CAPACITY);
 
-        // User wants to know how much asset must sell to get 1.9e12 GHO
+        // User wants to know how much asset must sell to get 1.9e12DUSD
         vm.startPrank(ALICE);
-        uint256 ghoAmountToGet = 1.9e12; // this is the minimum that must get
-        (uint256 estSellAssetAmount, uint256 exactGhoToGet,,) = gsm.getAssetAmountForSellAsset(ghoAmountToGet);
-        uint256 userGhoBefore = GHO_TOKEN.balanceOf(ALICE);
+        uint256 dusdAmountToGet = 1.9e12; // this is the minimum that must get
+        (uint256 estSellAssetAmount, uint256 exactDusdToGet,,) = gsm.getAssetAmountForSellAsset(dusdAmountToGet);
+        uint256 userDusdBefore = DUSD_TOKEN.balanceOf(ALICE);
         uint256 userAssetBefore = newToken.balanceOf(ALICE);
 
         newToken.approve(address(gsm), type(uint256).max);
         gsm.sellAsset(estSellAssetAmount, ALICE);
 
-        assertEq(GHO_TOKEN.balanceOf(ALICE) - userGhoBefore, exactGhoToGet, "exact gho amount to get does not match");
-        assertGt(GHO_TOKEN.balanceOf(ALICE) - userGhoBefore, ghoAmountToGet, "minimum gho to get not reached");
+        assertEq(
+            DUSD_TOKEN.balanceOf(ALICE) - userDusdBefore, exactDusdToGet, "exact dusd amount to get does not match"
+        );
+        assertGt(DUSD_TOKEN.balanceOf(ALICE) - userDusdBefore, dusdAmountToGet, "minimum dusd to get not reached");
 
         assertEq(userAssetBefore - newToken.balanceOf(ALICE), estSellAssetAmount, "sold assets above maximum amount");
 
@@ -266,9 +268,9 @@ contract TestGsmSwapEdge is TestGhoBase {
 
     /**
      * @dev Checks sellAsset function is aligned with getAssetAmountForSellAsset,
-     * in case the underlying asset has more decimals than GHO (18)
+     * in case the underlying asset has more decimals than DUSD (18)
      */
-    function testSellAssetByGhoAmountWithHigherDecimals() public {
+    function testSellAssetByDusdAmountWithHigherDecimals() public {
         ERC20MockMintableDecimals newToken = new ERC20MockMintableDecimals("Test Coin", "TEST", 24);
         vm.prank(FAUCET);
         newToken.mint(ALICE, 1_000_000e24);
@@ -279,24 +281,26 @@ contract TestGsmSwapEdge is TestGhoBase {
             24, // decimals
             address(this)
         );
-        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken));
+        DUSDUsm gsm = new DUSDUsm(address(DUSD_TOKEN), address(newToken));
         gsm.initialize(ALICE, TREASURY, 1_000_000e24, address(newPriceStrategy));
-        GHO_TOKEN.setMinterStatus(address(gsm), true);
-        GHO_TOKEN.setBurnerStatus(address(gsm), true);
-        GHO_TOKEN.setMinterCeiling(address(gsm), DEFAULT_CAPACITY);
+        DUSD_TOKEN.setMinterStatus(address(gsm), true);
+        DUSD_TOKEN.setBurnerStatus(address(gsm), true);
+        DUSD_TOKEN.setMinterCeiling(address(gsm), DEFAULT_CAPACITY);
 
-        // User wants to know how much asset must sell to get 1 GHO
+        // User wants to know how much asset must sell to get 1DUSD
         vm.startPrank(ALICE);
-        uint256 ghoAmountToGet = 1; // this is the lowest GHO that can be purchased
-        (uint256 estSellAssetAmount, uint256 exactGhoToGet,,) = gsm.getAssetAmountForSellAsset(ghoAmountToGet);
-        uint256 userGhoBefore = GHO_TOKEN.balanceOf(ALICE);
+        uint256 dusdAmountToGet = 1; // this is the lowest DUSD that can be purchased
+        (uint256 estSellAssetAmount, uint256 exactDusdToGet,,) = gsm.getAssetAmountForSellAsset(dusdAmountToGet);
+        uint256 userDusdBefore = DUSD_TOKEN.balanceOf(ALICE);
         uint256 userAssetBefore = newToken.balanceOf(ALICE);
 
         newToken.approve(address(gsm), type(uint256).max);
         gsm.sellAsset(estSellAssetAmount, ALICE);
 
-        assertEq(GHO_TOKEN.balanceOf(ALICE) - userGhoBefore, exactGhoToGet, "exact gho amount to get does not match");
-        assertEq(GHO_TOKEN.balanceOf(ALICE) - userGhoBefore, ghoAmountToGet, "unexpected amount of GHO purchased");
+        assertEq(
+            DUSD_TOKEN.balanceOf(ALICE) - userDusdBefore, exactDusdToGet, "exact dusd amount to get does not match"
+        );
+        assertEq(DUSD_TOKEN.balanceOf(ALICE) - userDusdBefore, dusdAmountToGet, "unexpected amount of DUSD purchased");
         assertEq(userAssetBefore - newToken.balanceOf(ALICE), estSellAssetAmount, "unexpected amount of asset sold");
 
         vm.stopPrank();
@@ -304,13 +308,13 @@ contract TestGsmSwapEdge is TestGhoBase {
 
     /**
      * @dev Checks buyAsset function is aligned with getAssetAmountForBuyAsset,
-     * in case the underlying asset has less decimals than GHO (18)
+     * in case the underlying asset has less decimals than DUSD (18)
      */
-    function testBuyAssetByGhoAmountWithLowerDecimals() public {
+    function testBuyAssetByDusdAmountWithLowerDecimals() public {
         ERC20MockMintableDecimals newToken = new ERC20MockMintableDecimals("Test Coin", "TEST", 6);
         vm.prank(FAUCET);
         newToken.mint(ALICE, 1_000_000e6);
-        ghoFaucet(ALICE, DEFAULT_CAPACITY);
+        dusdFaucet(ALICE, DEFAULT_CAPACITY);
 
         FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
             DEFAULT_FIXED_PRICE, // 1e18
@@ -318,28 +322,28 @@ contract TestGsmSwapEdge is TestGhoBase {
             6, // decimals
             address(this)
         );
-        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken));
+        DUSDUsm gsm = new DUSDUsm(address(DUSD_TOKEN), address(newToken));
         gsm.initialize(ALICE, TREASURY, 1_000_000e6, address(newPriceStrategy));
-        GHO_TOKEN.setMinterStatus(address(gsm), true);
-        GHO_TOKEN.setBurnerStatus(address(gsm), true);
-        GHO_TOKEN.setMinterCeiling(address(gsm), DEFAULT_CAPACITY);
+        DUSD_TOKEN.setMinterStatus(address(gsm), true);
+        DUSD_TOKEN.setBurnerStatus(address(gsm), true);
+        DUSD_TOKEN.setMinterCeiling(address(gsm), DEFAULT_CAPACITY);
 
         vm.startPrank(ALICE);
         // Alice sells some asset to the GSM
         newToken.approve(address(gsm), type(uint256).max);
         gsm.sellAsset(1_000_000e6, ALICE);
 
-        // User wants to know how much asset can buy with 1.9e12 GHO
-        uint256 ghoAmountToSpend = 1.9e12; // this is the maximum that can spend
-        (uint256 estBuyAssetAmount, uint256 exactGhoSpent,,) = gsm.getAssetAmountForBuyAsset(ghoAmountToSpend);
-        uint256 userGhoBefore = GHO_TOKEN.balanceOf(ALICE);
+        // User wants to know how much asset can buy with 1.9e12DUSD
+        uint256 dusdAmountToSpend = 1.9e12; // this is the maximum that can spend
+        (uint256 estBuyAssetAmount, uint256 exactDusdSpent,,) = gsm.getAssetAmountForBuyAsset(dusdAmountToSpend);
+        uint256 userDusdBefore = DUSD_TOKEN.balanceOf(ALICE);
         uint256 userAssetBefore = newToken.balanceOf(ALICE);
 
-        GHO_TOKEN.approve(address(gsm), type(uint256).max);
+        DUSD_TOKEN.approve(address(gsm), type(uint256).max);
         gsm.buyAsset(estBuyAssetAmount, ALICE);
 
-        assertTrue(userGhoBefore - GHO_TOKEN.balanceOf(ALICE) <= ghoAmountToSpend, "gho spend above maximum amount");
-        assertEq(userGhoBefore - GHO_TOKEN.balanceOf(ALICE), exactGhoSpent, "gho spent does not match");
+        assertTrue(userDusdBefore - DUSD_TOKEN.balanceOf(ALICE) <= dusdAmountToSpend, "dusd spend above maximum amount");
+        assertEq(userDusdBefore - DUSD_TOKEN.balanceOf(ALICE), exactDusdSpent, "dusd spent does not match");
         assertEq(
             newToken.balanceOf(ALICE) - userAssetBefore, estBuyAssetAmount, "bought assets and amount diff do not match"
         );
@@ -349,13 +353,13 @@ contract TestGsmSwapEdge is TestGhoBase {
 
     /**
      * @dev Checks buyAsset function is aligned with getAssetAmountForBuyAsset,
-     * in case the underlying asset has more decimals than GHO (18)
+     * in case the underlying asset has more decimals than DUSD (18)
      */
-    function testBuyAssetByGhoAmountWithHigherDecimals() public {
+    function testBuyAssetByDusdAmountWithHigherDecimals() public {
         ERC20MockMintableDecimals newToken = new ERC20MockMintableDecimals("Test Coin", "TEST", 24);
         vm.prank(FAUCET);
         newToken.mint(ALICE, 1_000_000e24);
-        ghoFaucet(ALICE, DEFAULT_CAPACITY);
+        dusdFaucet(ALICE, DEFAULT_CAPACITY);
 
         FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
             DEFAULT_FIXED_PRICE, // 1e18
@@ -363,28 +367,28 @@ contract TestGsmSwapEdge is TestGhoBase {
             24, // decimals
             address(this)
         );
-        DUSDUsm gsm = new DUSDUsm(address(GHO_TOKEN), address(newToken));
+        DUSDUsm gsm = new DUSDUsm(address(DUSD_TOKEN), address(newToken));
         gsm.initialize(ALICE, TREASURY, 1_000_000e24, address(newPriceStrategy));
-        GHO_TOKEN.setMinterStatus(address(gsm), true);
-        GHO_TOKEN.setBurnerStatus(address(gsm), true);
-        GHO_TOKEN.setMinterCeiling(address(gsm), DEFAULT_CAPACITY);
+        DUSD_TOKEN.setMinterStatus(address(gsm), true);
+        DUSD_TOKEN.setBurnerStatus(address(gsm), true);
+        DUSD_TOKEN.setMinterCeiling(address(gsm), DEFAULT_CAPACITY);
 
         vm.startPrank(ALICE);
         // Alice sells some asset to the GSM
         newToken.approve(address(gsm), type(uint256).max);
         gsm.sellAsset(1_000_000e24, ALICE);
 
-        // User wants to know how much asset can buy with 1 GHO
-        uint256 ghoAmountToSpend = 1; // this is the lowest amount that can spend
-        (uint256 estBuyAssetAmount, uint256 exactGhoSpent,,) = gsm.getAssetAmountForBuyAsset(ghoAmountToSpend);
-        uint256 userGhoBefore = GHO_TOKEN.balanceOf(ALICE);
+        // User wants to know how much asset can buy with 1DUSD
+        uint256 dusdAmountToSpend = 1; // this is the lowest amount that can spend
+        (uint256 estBuyAssetAmount, uint256 exactDusdSpent,,) = gsm.getAssetAmountForBuyAsset(dusdAmountToSpend);
+        uint256 userDusdBefore = DUSD_TOKEN.balanceOf(ALICE);
         uint256 userAssetBefore = newToken.balanceOf(ALICE);
 
-        GHO_TOKEN.approve(address(gsm), type(uint256).max);
+        DUSD_TOKEN.approve(address(gsm), type(uint256).max);
         gsm.buyAsset(estBuyAssetAmount, ALICE);
 
-        assertEq(userGhoBefore - GHO_TOKEN.balanceOf(ALICE), exactGhoSpent, "exact gho spent does not match");
-        assertEq(userGhoBefore - GHO_TOKEN.balanceOf(ALICE), ghoAmountToSpend, "unexpected amount of GHO spent");
+        assertEq(userDusdBefore - DUSD_TOKEN.balanceOf(ALICE), exactDusdSpent, "exact dusd spent does not match");
+        assertEq(userDusdBefore - DUSD_TOKEN.balanceOf(ALICE), dusdAmountToSpend, "unexpected amount of DUSD spent");
         assertEq(
             newToken.balanceOf(ALICE) - userAssetBefore, estBuyAssetAmount, "unexpected amount of assets purchased"
         );
