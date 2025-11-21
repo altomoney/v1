@@ -2,187 +2,290 @@
 pragma solidity ^0.8.0;
 
 import "./TestDUSDBase.t.sol";
+import {IERC3156FlashBorrower} from "@openzeppelin/contracts/interfaces/IERC3156FlashBorrower.sol";
+import {IERC3156FlashLender} from "@openzeppelin/contracts/interfaces/IERC3156FlashLender.sol";
+import {IERC20Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
-contract TestGhoFlashMinter is TestDUSDBase {
+import {DUSDFlashMinter} from "@alto/usm/DUSDFlashMinter.sol";
+import {IDUSDFlashMinter, FlashFee} from "@alto/usm/interfaces/IDUSDFlashMinter.sol";
+import {IDUSDFacilitator} from "@alto/usm/interfaces/IDUSDFacilitator.sol";
+import {FixedPointMath, MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
+
+import {MockFlashBorrower} from "./mocks/MockFlashBorrower.sol";
+
+contract TestDUSDFlashMinter is TestDusdBase {
+    using FixedPointMath for uint256;
+
+    DUSDFlashMinter public flashMinter;
+    MockFlashBorrower public flashBorrower;
+    MockFlashBorrower public flashBorrowerNoApprove;
+
+    uint256 constant DEFAULT_BORROW_AMOUNT = 1000e18;
+    uint128 constant DEFAULT_MIN_FLASH_FEE = 1e16; // 1%
+    uint128 constant DEFAULT_MAX_FLASH_FEE = 2e16; // 2%
+
+    function setUp() public override {
+        super.setUp();
+
+        FlashFee memory defaultFlashFee = _createFlashFee(DEFAULT_MIN_FLASH_FEE, DEFAULT_MAX_FLASH_FEE);
+        flashMinter = new DUSDFlashMinter(address(DUSD_TOKEN), TREASURY, defaultFlashFee, address(this));
+
+        _setupDusdForFlashMinter();
+        _setupFlashBorrowers();
+    }
+
+    function _createFlashFee(uint128 minFee, uint128 maxFee) internal pure returns (FlashFee memory) {
+        return FlashFee({minFlashFee: minFee, maxFlashFee: maxFee});
+    }
+
+    function _setupDusdForFlashMinter() internal {
+        vm.startPrank(address(this));
+        DUSD_TOKEN.setMinterStatus(address(flashMinter), true);
+        DUSD_TOKEN.setMinterCeiling(address(flashMinter), DEFAULT_CAPACITY);
+        DUSD_TOKEN.setBurnerStatus(address(flashMinter), true);
+        vm.stopPrank();
+    }
+
+    function _setupFlashBorrowers() internal {
+        flashBorrower = new MockFlashBorrower(IERC3156FlashLender(address(flashMinter)));
+        flashBorrowerNoApprove = new MockFlashBorrower(IERC3156FlashLender(address(flashMinter)));
+        flashBorrowerNoApprove.setAllowRepayment(false);
+    }
+
+    function _calculateExpectedFlashFee(uint256 amount, uint128 minFee, uint128 maxFee)
+        internal
+        view
+        returns (uint256)
+    {
+        (, uint256 flashMintCap) = DUSD_TOKEN.minterConfig(address(flashMinter));
+        uint256 flashFeeToCharge;
+
+        if (minFee == maxFee) {
+            flashFeeToCharge = minFee;
+        } else {
+            bool increasing = maxFee > minFee;
+            uint256 diff = increasing ? (maxFee - minFee) : (minFee - maxFee);
+            uint256 step = FixedPointMath.divideWithRounding(amount, diff, flashMintCap, increasing);
+            flashFeeToCharge = increasing ? (minFee + step) : (minFee - step);
+        }
+
+        return amount.multiplyWithPrecisionUp(flashFeeToCharge);
+    }
+
+    // Constructor Tests
+
     function testConstructor() public {
+        FlashFee memory defaultFlashFee = _createFlashFee(DEFAULT_MIN_FLASH_FEE, DEFAULT_MAX_FLASH_FEE);
+
         vm.expectEmit(true, true, false, false);
-        emit GhoTreasuryUpdated(address(0), TREASURY);
+        emit IDUSDFacilitator.DusdTreasuryUpdated(address(0), TREASURY);
         vm.expectEmit(false, false, false, true);
-        emit FeeUpdated(0, DEFAULT_FLASH_FEE);
-        GhoFlashMinter flashMinter =
-            new GhoFlashMinter(address(GHO_TOKEN), TREASURY, DEFAULT_FLASH_FEE, address(PROVIDER));
-        assertEq(address(flashMinter.GHO_TOKEN()), address(GHO_TOKEN), "Wrong GHO token address");
-        assertEq(flashMinter.getFee(), DEFAULT_FLASH_FEE, "Wrong fee");
-        assertEq(flashMinter.getGhoTreasury(), TREASURY, "Wrong TREASURY address");
-        assertEq(address(flashMinter.ADDRESSES_PROVIDER()), address(PROVIDER), "Wrong addresses provider address");
+        emit IDUSDFlashMinter.SetFlashMintFee(_createFlashFee(0, 0), defaultFlashFee);
+
+        DUSDFlashMinter newFlashMinter =
+            new DUSDFlashMinter(address(DUSD_TOKEN), TREASURY, defaultFlashFee, address(this));
+
+        assertEq(address(newFlashMinter.DUSD()), address(DUSD_TOKEN), "Wrong DUSD token address");
+        FlashFee memory fee = newFlashMinter.getFlashMintFee();
+        assertEq(fee.minFlashFee, DEFAULT_MIN_FLASH_FEE, "Wrong min flash fee");
+        assertEq(fee.maxFlashFee, DEFAULT_MAX_FLASH_FEE, "Wrong max flash fee");
+        assertEq(newFlashMinter.getDusdTreasury(), TREASURY, "Wrong TREASURY address");
     }
 
     function testRevertConstructorFeeOutOfRange() public {
-        vm.expectRevert("FlashMinter: Fee out of range");
-        new GhoFlashMinter(address(GHO_TOKEN), TREASURY, 10001, address(PROVIDER));
+        FlashFee memory invalidFlashFee = _createFlashFee(uint128(MATH_PRECISION + 1), DEFAULT_MAX_FLASH_FEE);
+
+        vm.expectRevert("DUSD: Min flash fee exceeds MATH_PRECISION");
+        new DUSDFlashMinter(address(DUSD_TOKEN), TREASURY, invalidFlashFee, address(this));
     }
+
+    // Flash Loan Revert Tests
 
     function testRevertFlashloanNonRecipient() public {
         vm.expectRevert();
-        GHO_FLASH_MINTER.flashLoan(IERC3156FlashBorrower(address(this)), address(GHO_TOKEN), DEFAULT_BORROW_AMOUNT, "");
+        flashMinter.flashLoan(IERC3156FlashBorrower(address(this)), address(DUSD_TOKEN), DEFAULT_BORROW_AMOUNT, "");
     }
 
     function testRevertFlashloanWrongToken() public {
         vm.expectRevert("FlashMinter: Unsupported currency");
-        GHO_FLASH_MINTER.flashLoan(
-            IERC3156FlashBorrower(address(FLASH_BORROWER)), address(0), DEFAULT_BORROW_AMOUNT, ""
-        );
+        flashMinter.flashLoan(IERC3156FlashBorrower(address(flashBorrower)), address(0), DEFAULT_BORROW_AMOUNT, "");
     }
 
     function testRevertFlashloanMoreThanCapacity() public {
-        vm.expectRevert("FACILITATOR_BUCKET_CAPACITY_EXCEEDED");
-        GHO_FLASH_MINTER.flashLoan(
-            IERC3156FlashBorrower(address(FLASH_BORROWER)), address(GHO_TOKEN), DEFAULT_CAPACITY + 1, ""
+        vm.expectRevert("DUSD: Amount exceeds flash mint cap");
+        flashMinter.flashLoan(
+            IERC3156FlashBorrower(address(flashBorrower)), address(DUSD_TOKEN), DEFAULT_CAPACITY + 1, ""
         );
     }
 
     function testRevertFlashloanInsufficientReturned() public {
-        ACL_MANAGER.setState(false);
-        assertEq(
-            ACL_MANAGER.isFlashBorrower(address(FLASH_BORROWER)),
-            false,
-            "Flash borrower should not be a whitelisted borrower"
+        uint256 fee = flashMinter.flashFee(address(DUSD_TOKEN), DEFAULT_BORROW_AMOUNT);
+        uint256 needed = DEFAULT_BORROW_AMOUNT + fee;
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IERC20Errors.ERC20InsufficientAllowance.selector, address(flashMinter), 0, needed)
         );
-        vm.expectRevert(stdError.arithmeticError);
-        FLASH_BORROWER.flashBorrow(address(GHO_TOKEN), DEFAULT_BORROW_AMOUNT);
+        flashBorrowerNoApprove.flashBorrow(address(DUSD_TOKEN), DEFAULT_BORROW_AMOUNT);
     }
 
     function testRevertFlashloanWrongCallback() public {
-        FLASH_BORROWER.setAllowCallback(false);
+        MockFlashBorrower wrongCallbackBorrower = new MockFlashBorrower(IERC3156FlashLender(address(flashMinter)));
+        wrongCallbackBorrower.setAllowCallback(false);
+
         vm.expectRevert("FlashMinter: Callback failed");
-        FLASH_BORROWER.flashBorrow(address(GHO_TOKEN), DEFAULT_BORROW_AMOUNT);
+        wrongCallbackBorrower.flashBorrow(address(DUSD_TOKEN), DEFAULT_BORROW_AMOUNT);
     }
 
-    function testRevertUpdateFeeNotPoolAdmin() public {
-        ACL_MANAGER.setState(false);
-        assertEq(ACL_MANAGER.isPoolAdmin(address(GHO_FLASH_MINTER)), false, "GhoFlashMinter should not be a pool admin");
+    // Update Function Revert Tests
 
-        vm.expectRevert("CALLER_NOT_POOL_ADMIN");
-        GHO_FLASH_MINTER.updateFee(100);
+    function testRevertUpdateFeeNotOwner() public {
+        address notOwner = address(0x1234);
+        FlashFee memory newFlashFee = _createFlashFee(150, 250);
+
+        vm.prank(notOwner);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, notOwner));
+        flashMinter.updateFlashMintFee(newFlashFee);
     }
 
     function testRevertUpdateFeeOutOfRange() public {
-        vm.expectRevert("FlashMinter: Fee out of range");
-        GHO_FLASH_MINTER.updateFee(10001);
+        FlashFee memory invalidFlashFee = _createFlashFee(uint128(MATH_PRECISION + 1), DEFAULT_MAX_FLASH_FEE);
+
+        vm.expectRevert("DUSD: Min flash fee exceeds MATH_PRECISION");
+        flashMinter.updateFlashMintFee(invalidFlashFee);
     }
 
-    function testRevertUpdateTreasuryNotPoolAdmin() public {
-        ACL_MANAGER.setState(false);
-        assertEq(ACL_MANAGER.isPoolAdmin(address(GHO_FLASH_MINTER)), false, "GhoFlashMinter should not be a pool admin");
+    function testRevertUpdateTreasuryNotOwner() public {
+        address notOwner = address(0x1234);
 
-        vm.expectRevert("CALLER_NOT_POOL_ADMIN");
-        GHO_FLASH_MINTER.updateGhoTreasury(address(0));
+        vm.prank(notOwner);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, notOwner));
+        flashMinter.updateDusdTreasury(address(0));
     }
 
-    function testRevertFlashfeeNotGho() public {
+    function testRevertFlashfeeNotDusd() public {
         vm.expectRevert("FlashMinter: Unsupported currency");
-        GHO_FLASH_MINTER.flashFee(address(0), DEFAULT_BORROW_AMOUNT);
+        flashMinter.flashFee(address(0), DEFAULT_BORROW_AMOUNT);
     }
 
-    // Positives
+    // Positive Tests
 
     function testFlashloan() public {
-        ACL_MANAGER.setState(false);
-        assertEq(
-            ACL_MANAGER.isFlashBorrower(address(FLASH_BORROWER)),
-            false,
-            "Flash borrower should not be a whitelisted borrower"
-        );
+        uint256 feeAmount = flashMinter.flashFee(address(DUSD_TOKEN), DEFAULT_BORROW_AMOUNT);
+        dusdFaucet(address(flashBorrower), feeAmount);
 
-        uint256 feeAmount = (DEFAULT_FLASH_FEE * DEFAULT_BORROW_AMOUNT) / 100e2;
-        ghoFaucet(address(FLASH_BORROWER), feeAmount);
-
-        vm.expectEmit(true, true, true, true, address(GHO_FLASH_MINTER));
-        emit FlashMint(
-            address(FLASH_BORROWER), address(FLASH_BORROWER), address(GHO_TOKEN), DEFAULT_BORROW_AMOUNT, feeAmount
+        vm.expectEmit(true, true, true, true, address(flashMinter));
+        emit IDUSDFlashMinter.FlashMint(
+            address(flashBorrower), address(flashBorrower), address(DUSD_TOKEN), DEFAULT_BORROW_AMOUNT, feeAmount
         );
-        FLASH_BORROWER.flashBorrow(address(GHO_TOKEN), DEFAULT_BORROW_AMOUNT);
+        flashBorrower.flashBorrow(address(DUSD_TOKEN), DEFAULT_BORROW_AMOUNT);
     }
 
     function testDistributeFeesToTreasury() public {
-        uint256 treasuryBalanceBefore = GHO_TOKEN.balanceOf(TREASURY);
+        uint256 treasuryBalanceBefore = DUSD_TOKEN.balanceOf(TREASURY);
+        uint256 feeAmount = 100e18;
 
-        ghoFaucet(address(GHO_FLASH_MINTER), 100e18);
-        assertEq(GHO_TOKEN.balanceOf(address(GHO_FLASH_MINTER)), 100e18, "GhoFlashMinter should have 100 GHO");
+        dusdFaucet(address(flashMinter), feeAmount);
+        assertEq(DUSD_TOKEN.balanceOf(address(flashMinter)), feeAmount, "FlashMinter should have fees");
 
-        vm.expectEmit(true, true, false, true, address(GHO_FLASH_MINTER));
-        emit FeesDistributedToTreasury(TREASURY, address(GHO_TOKEN), 100e18);
-        GHO_FLASH_MINTER.distributeFeesToTreasury();
+        vm.expectEmit(true, true, false, true, address(flashMinter));
+        emit IDUSDFacilitator.FeesDistributedToTreasury(TREASURY, address(DUSD_TOKEN), feeAmount);
+        flashMinter.distributeFeesToTreasury();
 
-        assertEq(
-            GHO_TOKEN.balanceOf(address(GHO_FLASH_MINTER)),
-            0,
-            "GhoFlashMinter should have no GHO left after fee distribution"
-        );
-        assertEq(GHO_TOKEN.balanceOf(TREASURY), treasuryBalanceBefore + 100e18, "Treasury should have 100 more GHO");
+        assertEq(DUSD_TOKEN.balanceOf(address(flashMinter)), 0, "FlashMinter should have no DUSD left");
+        assertEq(DUSD_TOKEN.balanceOf(TREASURY), treasuryBalanceBefore + feeAmount, "Treasury should receive fees");
     }
 
     function testUpdateFee() public {
-        assertEq(GHO_FLASH_MINTER.getFee(), DEFAULT_FLASH_FEE, "Flashminter non-default fee");
-        assertTrue(DEFAULT_FLASH_FEE != 100);
-        vm.expectEmit(false, false, false, true, address(GHO_FLASH_MINTER));
-        emit FeeUpdated(DEFAULT_FLASH_FEE, 100);
-        GHO_FLASH_MINTER.updateFee(100);
+        FlashFee memory currentFee = flashMinter.getFlashMintFee();
+        assertEq(currentFee.minFlashFee, DEFAULT_MIN_FLASH_FEE, "Flashminter non-default min fee");
+        assertEq(currentFee.maxFlashFee, DEFAULT_MAX_FLASH_FEE, "Flashminter non-default max fee");
+
+        FlashFee memory newFlashFee = _createFlashFee(1.5e16, 2.5e16);
+        assertTrue(newFlashFee.minFlashFee != currentFee.minFlashFee);
+
+        vm.expectEmit(false, false, false, true, address(flashMinter));
+        emit IDUSDFlashMinter.SetFlashMintFee(currentFee, newFlashFee);
+        flashMinter.updateFlashMintFee(newFlashFee);
+
+        FlashFee memory updatedFee = flashMinter.getFlashMintFee();
+        assertEq(updatedFee.minFlashFee, 1.5e16, "Min fee should be updated");
+        assertEq(updatedFee.maxFlashFee, 2.5e16, "Max fee should be updated");
     }
 
-    function testUpdateGhoTreasury() public {
-        assertEq(GHO_FLASH_MINTER.getGhoTreasury(), TREASURY, "Flashminter non-default TREASURY");
+    function testUpdateDusdTreasury() public {
+        assertEq(flashMinter.getDusdTreasury(), TREASURY, "Flashminter non-default TREASURY");
         assertTrue(TREASURY != address(this));
-        vm.expectEmit(true, true, false, false, address(GHO_FLASH_MINTER));
-        emit GhoTreasuryUpdated(TREASURY, address(this));
-        GHO_FLASH_MINTER.updateGhoTreasury(address(this));
+
+        vm.expectEmit(true, true, false, false, address(flashMinter));
+        emit IDUSDFacilitator.DusdTreasuryUpdated(TREASURY, address(this));
+        flashMinter.updateDusdTreasury(address(this));
+
+        assertEq(flashMinter.getDusdTreasury(), address(this), "Treasury should be updated");
     }
 
-    function testMaxFlashloanNotGho() public {
-        assertEq(GHO_FLASH_MINTER.maxFlashLoan(address(0)), 0, "Max flash loan should be 0 for non-GHO token");
+    function testMaxFlashloanNotDusd() public view {
+        assertEq(flashMinter.maxFlashLoan(address(0)), 0, "Max flash loan should be 0 for non-DUSD token");
     }
 
-    function testMaxFlashloanGho() public {
+    function testMaxFlashloanDusd() public view {
         assertEq(
-            GHO_FLASH_MINTER.maxFlashLoan(address(GHO_TOKEN)),
+            flashMinter.maxFlashLoan(address(DUSD_TOKEN)),
             DEFAULT_CAPACITY,
-            "Max flash loan should be DEFAULT_CAPACITY for GHO token"
+            "Max flash loan should be DEFAULT_CAPACITY for DUSD token"
         );
     }
 
-    function testWhitelistedFlashFee() public {
-        assertEq(
-            GHO_FLASH_MINTER.flashFee(address(GHO_TOKEN), DEFAULT_BORROW_AMOUNT),
-            0,
-            "Flash fee should be 0 for whitelisted borrowers"
-        );
-    }
+    function testFlashFee() public view {
+        uint256 fee = flashMinter.flashFee(address(DUSD_TOKEN), DEFAULT_BORROW_AMOUNT);
+        uint256 expectedFeeMin = (DEFAULT_BORROW_AMOUNT * DEFAULT_MIN_FLASH_FEE) / MATH_PRECISION;
+        uint256 expectedFeeMax = (DEFAULT_BORROW_AMOUNT * DEFAULT_MAX_FLASH_FEE) / MATH_PRECISION;
 
-    function testNotWhitelistedFlashFee() public {
-        ACL_MANAGER.setState(false);
-        assertEq(
-            ACL_MANAGER.isFlashBorrower(address(this)), false, "Flash borrower should not be a whitelisted borrower"
-        );
-        uint256 fee = GHO_FLASH_MINTER.flashFee(address(GHO_TOKEN), DEFAULT_BORROW_AMOUNT);
-        uint256 expectedFee = (DEFAULT_FLASH_FEE * DEFAULT_BORROW_AMOUNT) / 100e2;
-        assertEq(fee, expectedFee, "Flash fee should be correct");
+        assertTrue(fee >= expectedFeeMin, "Flash fee should be at least min fee");
+        assertTrue(fee <= expectedFeeMax, "Flash fee should be at most max fee");
     }
 
     // Fuzzing
-    function testFuzzFlashFee(uint256 feeToSet, uint256 amount) public {
-        vm.assume(feeToSet <= 10000);
-        vm.assume(amount <= DEFAULT_CAPACITY);
-        GHO_FLASH_MINTER.updateFee(feeToSet);
-        ACL_MANAGER.setState(false); // Set ACL manager to return false so there are no whitelisted borrowers.
 
-        uint256 fee = GHO_FLASH_MINTER.flashFee(address(GHO_TOKEN), amount);
-        uint256 expectedFee = (feeToSet * amount) / 100e2;
+    function testFuzzFlashFee(uint128 minFee, uint128 maxFee, uint256 amount) public {
+        minFee = uint128(bound(minFee, 0, MATH_PRECISION));
+        maxFee = uint128(bound(maxFee, 0, MATH_PRECISION));
+        amount = bound(amount, 0, DEFAULT_CAPACITY / 10);
 
-        // We account for +/- 1 wei of rounding error.
-        assertTrue(
-            fee >= (expectedFee == 0 ? 0 : expectedFee - 1),
-            "Flash fee should be greater than or equal to expected fee - 1"
-        );
-        assertTrue(fee <= expectedFee + 1, "Flash fee should be less than or equal to expected fee + 1");
+        FlashFee memory flashFee = _createFlashFee(minFee, maxFee);
+        flashMinter.updateFlashMintFee(flashFee);
+
+        uint256 fee = flashMinter.flashFee(address(DUSD_TOKEN), amount);
+
+        if (amount == 0) {
+            assertEq(fee, 0, "Flash fee should be 0 for 0 amount");
+        } else if (minFee == 0 && maxFee == 0) {
+            assertEq(fee, 0, "Flash fee should be 0 when both fees are zero");
+        } else if (minFee == maxFee) {
+            // Flat fee: fee should equal amount * minFee / MATH_PRECISION
+            uint256 expectedFee = amount.multiplyWithPrecisionUp(minFee);
+            assertEq(fee, expectedFee, "Flash fee should match flat fee calculation");
+            assertGt(fee, 0, "Flash fee should be greater than 0");
+            assertLt(fee, amount, "Flash fee should be less than amount");
+        } else {
+            // Interpolated fee: fee should be between min and max fee amounts
+            uint256 minFeeAmount = amount.multiplyWithPrecisionUp(minFee);
+            uint256 maxFeeAmount = amount.multiplyWithPrecisionUp(maxFee);
+            uint256 expectedFee = _calculateExpectedFlashFee(amount, minFee, maxFee);
+
+            // Fee should be between min and max (accounting for which is larger)
+            // Use >= and <= to account for edge cases where fee equals min/max due to rounding
+            if (maxFee > minFee) {
+                assertGe(fee, minFeeAmount, "Flash fee should be at least min fee amount");
+                assertLe(fee, maxFeeAmount, "Flash fee should be at most max fee amount");
+            } else {
+                assertGe(fee, maxFeeAmount, "Flash fee should be at least max fee amount (when min > max)");
+                assertLe(fee, minFeeAmount, "Flash fee should be at most min fee amount (when min > max)");
+            }
+
+            // Fee should approximately match expected (within 1 wei tolerance for rounding)
+            assertApproxEqAbs(fee, expectedFee, 1, "Flash fee should match expected interpolated fee");
+            assertGt(fee, 0, "Flash fee should be greater than 0");
+        }
     }
 }

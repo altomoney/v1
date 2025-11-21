@@ -4,12 +4,13 @@ pragma solidity ^0.8.10;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC3156FlashBorrower} from "@openzeppelin/contracts/interfaces/IERC3156FlashBorrower.sol";
 import {IERC3156FlashLender} from "@openzeppelin/contracts/interfaces/IERC3156FlashLender.sol";
-import {IGhoToken} from "../../contracts/gho/interfaces/IGhoToken.sol";
+import {IDUSD} from "@alto/tokens/interfaces/IDUSD.sol";
 
 /**
  * @title MockFlashBorrower
  * @author Aave
  * @dev This is purely an unsafe mock testing contract. Do not use in production.
+ * @dev Refactored to work with DUSD and DUSDFlashMinter
  */
 contract MockFlashBorrower is IERC3156FlashBorrower {
     enum Action {
@@ -47,21 +48,22 @@ contract MockFlashBorrower is IERC3156FlashBorrower {
         if (action == Action.NORMAL) {
             // Intentionally left blank.
         } else if (action == Action.OTHER) {
-            // Tests capacity change mid-flashmint.
-            require(
-                _lender.flashFee(token, type(uint128).max) == 0,
-                "FlashBorrower: Non-zero flashfee during capacity change test"
-            );
+            // Tests minter ceiling change mid-flashmint.
+            IDUSD dusd = IDUSD(token);
 
-            (uint256 capacityBefore,) = IGhoToken(token).getFacilitatorBucket(address(_lender));
-            require(capacityBefore != 0, "FlashBorrower: Zero bucket capacity before setting");
+            // Get minter config before change
+            (uint256 mintedBefore, uint256 ceilingBefore) = dusd.minterConfig(address(_lender));
+            require(ceilingBefore != 0, "FlashBorrower: Zero minter ceiling before setting");
 
-            IGhoToken(token).setFacilitatorBucketCapacity(address(_lender), 0);
+            // Set minter ceiling to 0
+            dusd.setMinterCeiling(address(_lender), 0);
 
-            (uint256 capacityAfter,) = IGhoToken(token).getFacilitatorBucket(address(_lender));
-            require(capacityAfter == 0, "FlashBorrower: Non-zero bucket capacity after setting");
+            // Verify minter ceiling is now 0
+            (uint256 mintedAfter, uint256 ceilingAfter) = dusd.minterConfig(address(_lender));
+            require(ceilingAfter == 0, "FlashBorrower: Non-zero minter ceiling after setting");
 
-            require(_lender.maxFlashLoan(token) == 0, "FlashBorrower: Non-zero max flashloan at capacity < level");
+            // Verify maxFlashLoan returns 0 when ceiling is 0
+            require(_lender.maxFlashLoan(token) == 0, "FlashBorrower: Non-zero max flashloan at ceiling = 0");
         }
 
         // Repayment
