@@ -92,8 +92,9 @@ abstract contract MarketCommon is Test {
             liquidationConfiguration: liquidationConfig
         });
         if (marketType == MarketType.BORROW) {
-            BorrowMarketInitParams memory borrowMarketInitParams =
-                BorrowMarketInitParams({baseMarketInitParams: baseMarketInitParams, initialBorrowOpeningFee: 0});
+            BorrowMarketInitParams memory borrowMarketInitParams = BorrowMarketInitParams({
+                baseMarketInitParams: baseMarketInitParams, initialBorrowOpeningFee: 0, supplyCap: type(uint128).max
+            });
             market = IMarket(MarketDeployer.deployBorrowMarket(borrowMarketInitParams));
         } else if (marketType == MarketType.MINT) {
             borrowToken = ERC20Mock(address(new ERC20MockMintable("borrow", "B")));

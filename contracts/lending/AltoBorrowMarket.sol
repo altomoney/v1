@@ -13,16 +13,27 @@ contract AltoBorrowMarket is AltoBaseMarket {
     /// @notice Thrown when the input is invalid
     error AltoBorrowMarketInvalidInput();
 
+    /// @notice Thrown when the supply cap is exceeded
+    error AltoBorrowMarketSupplyCapExceeded();
+
     /// @notice Emitted when the borrow opening fee is set
     /// @param oldBorrowOpeningFee The old borrow opening fee
     /// @param newBorrowOpeningFee The new borrow opening fee
     event SetBorrowOpeningFee(uint256 oldBorrowOpeningFee, uint256 newBorrowOpeningFee);
 
+    /// @notice Emitted when the supply cap is set
+    /// @param oldSupplyCap The old supply cap
+    /// @param newSupplyCap The new supply cap
+    event SetSupplyCap(uint128 oldSupplyCap, uint128 newSupplyCap);
+
     /// @notice The borrow opening fee in MATH_PRECISION
     uint256 private _borrowOpeningFee;
 
+    /// @notice The maximum amount of assets that can be supplied to the market
+    uint128 public supplyCap;
+
     /// upgrade gap
-    uint256[49] private __gap_borrow;
+    uint256[48] private __gap_borrow;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -41,12 +52,22 @@ contract AltoBorrowMarket is AltoBaseMarket {
 
         _borrowOpeningFee = _initParams.initialBorrowOpeningFee;
         emit SetBorrowOpeningFee(0, _initParams.initialBorrowOpeningFee);
+
+        supplyCap = _initParams.supplyCap;
+        emit SetSupplyCap(0, _initParams.supplyCap);
     }
 
     /// @notice Getter of the borrow opening fee
     /// @return The borrow opening fee
     function borrowOpeningFee() public view override returns (uint256) {
         return _borrowOpeningFee;
+    }
+
+    function _addSupply(uint256 assets, uint256 shares, address onBehalf) internal override returns (uint256, uint256) {
+        if (totalSupply.assets + assets > supplyCap) {
+            revert AltoBorrowMarketSupplyCapExceeded();
+        }
+        return super._addSupply(assets, shares, onBehalf);
     }
 
     /// @notice Setter of the borrow opening fee
@@ -62,5 +83,10 @@ contract AltoBorrowMarket is AltoBaseMarket {
 
         emit SetBorrowOpeningFee(_borrowOpeningFee, _newBorrowOpeningFee);
         _borrowOpeningFee = _newBorrowOpeningFee;
+    }
+
+    function setSupplyCap(uint128 _newSupplyCap) external onlyOwner {
+        emit SetSupplyCap(supplyCap, _newSupplyCap);
+        supplyCap = _newSupplyCap;
     }
 }

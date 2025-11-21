@@ -69,8 +69,9 @@ contract AltoBorrowMarketProxyTest is Test {
             liquidationConfiguration: liquidationConfig
         });
 
-        BorrowMarketInitParams memory borrowMarketInitParams =
-            BorrowMarketInitParams({baseMarketInitParams: baseMarketInitParams, initialBorrowOpeningFee: 0});
+        BorrowMarketInitParams memory borrowMarketInitParams = BorrowMarketInitParams({
+            baseMarketInitParams: baseMarketInitParams, initialBorrowOpeningFee: 0, supplyCap: type(uint128).max
+        });
 
         market = IMarket(MarketDeployer.deployBorrowMarket(borrowMarketInitParams));
 

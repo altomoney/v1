@@ -75,8 +75,11 @@ contract TestnetBorrowMarketBatch is ITestnetMarketBatch {
             liquidationConfiguration: liquidationConfig
         });
 
-        BorrowMarketInitParams memory initParams =
-            BorrowMarketInitParams({baseMarketInitParams: baseMarketInitParams, initialBorrowOpeningFee: 0.005 ether});
+        BorrowMarketInitParams memory initParams = BorrowMarketInitParams({
+            baseMarketInitParams: baseMarketInitParams,
+            initialBorrowOpeningFee: 0.005 ether,
+            supplyCap: type(uint128).max
+        });
 
         address marketProxy =
             UnsafeUpgrades.deployUUPSProxy(address(market), abi.encodeCall(AltoBorrowMarket.initialize, (initParams)));

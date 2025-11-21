@@ -84,7 +84,8 @@ contract AltoLeverageWBtcMarketTest is Test {
                     liquidationWindowTag: 3 days
                 })
             }),
-            initialBorrowOpeningFee: 0
+            initialBorrowOpeningFee: 0,
+            supplyCap: type(uint128).max
         });
 
         market = IMarket(MarketDeployer.deployBorrowMarket(borrowMarketInitParams));

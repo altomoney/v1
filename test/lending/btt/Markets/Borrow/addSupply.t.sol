@@ -7,6 +7,7 @@ import {PAUSE_TYPE, FROZEN_TYPE} from "@alto/utils/Constants.sol";
 import {IMarketErrors, Position, IMarketEvents} from "@alto/lending/interfaces/IMarket.sol";
 import {IERC20Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
+import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";
 
 contract AltoBorrowMarketAddSupply is MarketCommon {
     using AssetShareConversionMath for uint256;
@@ -181,5 +182,32 @@ contract AltoBorrowMarketAddSupply is MarketCommon {
 
         assertEq(totalSupplyAssetsBefore + INITIAL_SUPPLY, market.totalSupply().assets);
         assertEq(totalSupplySharesBefore + addedShares, market.totalSupply().shares);
+    }
+
+    function test_RevertWhen_SupplyCapIsExceeded() external givenValidInputs whenUserHasSufficientBalance {
+        // Set a supply cap that will be exceeded
+        uint128 supplyCap = 200 ether;
+        vm.prank(OWNER);
+        AltoBorrowMarket(address(market)).setSupplyCap(supplyCap);
+
+        // First, supply some amount to get close to the cap
+        uint256 firstSupply = 150 ether;
+        deal(address(borrowToken), SUPPLIER, firstSupply);
+        vm.startPrank(SUPPLIER);
+        borrowToken.approve(address(market), firstSupply);
+        market.addSupply(firstSupply, 0, SUPPLIER);
+        vm.stopPrank();
+
+        // Now try to supply more that would exceed the cap
+        uint256 currentSupply = market.totalSupply().assets;
+        uint256 excessAmount = supplyCap - currentSupply + 1 ether; // This will exceed the cap
+
+        deal(address(borrowToken), USER, excessAmount);
+        vm.startPrank(USER);
+        borrowToken.approve(address(market), excessAmount);
+        // it should revert
+        vm.expectRevert(AltoBorrowMarket.AltoBorrowMarketSupplyCapExceeded.selector);
+        market.addSupply(excessAmount, 0, USER);
+        vm.stopPrank();
     }
 }
