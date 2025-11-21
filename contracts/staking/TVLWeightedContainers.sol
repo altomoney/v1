@@ -349,7 +349,7 @@ abstract contract TVLWeightedContainers is ITVLWeightedContainersStaticTypes {
 
     /// @dev Activates a container by adding it to the activeContainerIds array.
     /// @param containerId The id of the container to activate.
-    /// @dev After actiation conainer is considered active and used in the `_processEpoch` function
+    /// @dev After activation container is considered active and used in the `_processEpoch` function
     function _activateContainer(uint256 containerId) internal {
         if (activeContainerIds.length >= MAX_ACTIVE_CONTAINERS) {
             revert TVLWeightedContainersInvalidInput();
