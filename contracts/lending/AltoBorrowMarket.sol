@@ -64,10 +64,11 @@ contract AltoBorrowMarket is AltoBaseMarket {
     }
 
     function _addSupply(uint256 assets, uint256 shares, address onBehalf) internal override returns (uint256, uint256) {
-        if (totalSupply.assets + assets > supplyCap) {
+        (uint256 addedAssets, uint256 addedShares) = super._addSupply(assets, shares, onBehalf);
+        if (totalSupply.assets > supplyCap) {
             revert AltoBorrowMarketSupplyCapExceeded();
         }
-        return super._addSupply(assets, shares, onBehalf);
+        return (addedAssets, addedShares);
     }
 
     /// @notice Setter of the borrow opening fee
