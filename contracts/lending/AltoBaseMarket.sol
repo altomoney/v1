@@ -841,7 +841,7 @@ abstract contract AltoBaseMarket is
     }
 
     /// @inheritdoc IMarketBase
-    function tagLiquidablePosition(address user, address liquidator) external whenNotPaused {
+    function tagLiquidablePosition(address user, address liquidator) external whenNotPaused nonReentrant {
         if (!liquidationConfiguration.isEnabledPriorityLiquidation) {
             revert AltoBaseMarketPriorityLiquidationDisabled();
         }
