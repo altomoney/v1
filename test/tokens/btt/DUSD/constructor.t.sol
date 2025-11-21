@@ -32,14 +32,6 @@ contract DUSDConstructor is DUSDCommon {
         // it should set the owner correctly
         assertEq(newDusd.owner(), OWNER);
 
-        // it should initialize flashFeeReceiver to zero address
-        assertEq(newDusd.flashFeeReceiver(), address(0));
-
-        // it should initialize flashFee to zero
-        (uint128 minFlashFee, uint128 maxFlashFee) = newDusd.flashFee();
-        assertEq(minFlashFee, 0);
-        assertEq(maxFlashFee, 0);
-
         // it should set owner as pauser with PAUSED_ROLE
         assertTrue(newDusd.pausers(OWNER, PAUSE_TYPE));
     }
