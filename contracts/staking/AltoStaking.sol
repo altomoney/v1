@@ -240,11 +240,8 @@ contract AltoStaking is IAltoStakingStaticTypes, TVLWeightedContainers, Ownable2
         _updateContainerMultiplier(containerId, multiplier);
         _updateContainer(containerId, container);
 
-        // if multiplier is not 0, we need to update max multiplier staking container id
-        // as the multiplier has changed
-        if (multiplier != 0) {
-            _updateMaxMultiplierStakingContainerId();
-        }
+        // it's validated that multiplier is not 0 in _updateContainerMultiplier
+        _updateMaxMultiplierStakingContainerId();
     }
 
     /// @inheritdoc IAltoStakingBase
