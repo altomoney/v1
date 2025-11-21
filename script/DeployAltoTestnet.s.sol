@@ -218,7 +218,7 @@ contract DeployAltoTestnetScript is Script {
             contractsJson = vm.serializeAddress("contracts", "altoLeverage", input.contracts.altoLeverage);
             contractsJson = vm.serializeAddress("contracts", "bundler3", input.contracts.bundler3);
             contractsJson = vm.serializeAddress("contracts", "altoAdapter", input.contracts.altoAdapter);
-            contractsJson = vm.serializeString("contracts", "wethMarketBatch", wbtcMarketJson);
+            contractsJson = vm.serializeString("contracts", "wethMarketBatch", wethMarketJson);
             contractsJson = vm.serializeString("contracts", "wstethMarketBatch", wstethMarketJson);
             contractsJson = vm.serializeString("contracts", "rethMarketBatch", rethMarketJson);
             contractsJson = vm.serializeString("contracts", "methMarketBatch", methMarketJson);

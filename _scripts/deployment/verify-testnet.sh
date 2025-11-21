@@ -10,6 +10,13 @@ if [ -z "$ETHERSCAN_API_KEY" ] || [ -z "$ETHERSCAN_API_URL" ] || [ -z "$CHAIN_ID
     exit 1
 fi
 
+# Build Etherscan v2-compatible verifier URL with required chainid param
+if [[ "$ETHERSCAN_API_URL" == *\?* ]]; then
+    VERIFIER_URL="${ETHERSCAN_API_URL}&chainid=${CHAIN_ID}"
+else
+    VERIFIER_URL="${ETHERSCAN_API_URL}?chainid=${CHAIN_ID}"
+fi
+
 echo "Enter the deployment ID (timestamp) to verify:"
 read DEPLOYMENT_TIMESTAMP
 if [ -z "$DEPLOYMENT_TIMESTAMP" ]; then
@@ -121,7 +128,7 @@ verify_contract() {
         if [ -n "$extra_args" ]; then
             forge verify-contract \
                 --chain-id $CHAIN_ID \
-                --verifier-url $ETHERSCAN_API_URL \
+                --verifier-url $VERIFIER_URL \
                 --etherscan-api-key $ETHERSCAN_API_KEY \
                 $extra_args \
                 $address \
@@ -129,7 +136,7 @@ verify_contract() {
         else
             forge verify-contract \
                 --chain-id $CHAIN_ID \
-                --verifier-url $ETHERSCAN_API_URL \
+                --verifier-url $VERIFIER_URL \
                 --etherscan-api-key $ETHERSCAN_API_KEY \
                 $address \
                 $contract_path
@@ -182,25 +189,38 @@ if command -v jq >/dev/null 2>&1; then
     WSTETH_MARKET_IRM=$(get_address ".contracts.wstethMarketBatch.marketIrm")
     WSTETH_MARKET_ORACLE=$(get_address ".contracts.wstethMarketBatch.marketOracle")
 
-    ## TBTC
-    TBTC_MARKET=$(get_address ".contracts.tbtcMarketBatch.market")
-    TBTC_MARKET_IMPL=$(get_address ".contracts.tbtcMarketBatch.marketImplementation")
-    TBTC_MARKET_IRM=$(get_address ".contracts.tbtcMarketBatch.marketIrm")
-    TBTC_MARKET_ORACLE=$(get_address ".contracts.tbtcMarketBatch.marketOracle")
-
-    ## SBOLD
-    SBOLD_MARKET=$(get_address ".contracts.sboldMarketBatch.market")
-    SBOLD_MARKET_IMPL=$(get_address ".contracts.sboldMarketBatch.marketImplementation")
-    SBOLD_MARKET_IRM=$(get_address ".contracts.sboldMarketBatch.marketIrm")
-    SBOLD_MARKET_ORACLE=$(get_address ".contracts.sboldMarketBatch.marketOracle")
-
     ## RETH
     RETH_MARKET=$(get_address ".contracts.rethMarketBatch.market")
     RETH_MARKET_IMPL=$(get_address ".contracts.rethMarketBatch.marketImplementation")
     RETH_MARKET_IRM=$(get_address ".contracts.rethMarketBatch.marketIrm")
     RETH_MARKET_ORACLE=$(get_address ".contracts.rethMarketBatch.marketOracle")
 
+    ## METH
+    METH_MARKET=$(get_address ".contracts.methMarketBatch.market")
+    METH_MARKET_IMPL=$(get_address ".contracts.methMarketBatch.marketImplementation")
+    METH_MARKET_IRM=$(get_address ".contracts.methMarketBatch.marketIrm")
+    METH_MARKET_ORACLE=$(get_address ".contracts.methMarketBatch.marketOracle")
+
+    ## TBTC
+    TBTC_MARKET=$(get_address ".contracts.tbtcMarketBatch.market")
+    TBTC_MARKET_IMPL=$(get_address ".contracts.tbtcMarketBatch.marketImplementation")
+    TBTC_MARKET_IRM=$(get_address ".contracts.tbtcMarketBatch.marketIrm")
+    TBTC_MARKET_ORACLE=$(get_address ".contracts.tbtcMarketBatch.marketOracle")
+
+
     # Borrow market addresses
+    ## WBTC
+    WBTC_MARKET=$(get_address ".contracts.wbtcMarketBatch.market")
+    WBTC_MARKET_IMPL=$(get_address ".contracts.wbtcMarketBatch.marketImplementation")
+    WBTC_MARKET_IRM=$(get_address ".contracts.wbtcMarketBatch.marketIrm")
+    WBTC_MARKET_ORACLE=$(get_address ".contracts.wbtcMarketBatch.marketOracle")
+
+    ## CB-BTC
+    CB_BTC_MARKET=$(get_address ".contracts.cbbtcMarketBatch.market")
+    CB_BTC_MARKET_IMPL=$(get_address ".contracts.cbbtcMarketBatch.marketImplementation")
+    CB_BTC_MARKET_IRM=$(get_address ".contracts.cbbtcMarketBatch.marketIrm")
+    CB_BTC_MARKET_ORACLE=$(get_address ".contracts.cbbtcMarketBatch.marketOracle")
+
     ## SUSDE
     SUSDE_MARKET=$(get_address ".contracts.susdeMarketBatch.market")
     SUSDE_MARKET_IMPL=$(get_address ".contracts.susdeMarketBatch.marketImplementation")
@@ -223,9 +243,11 @@ if command -v jq >/dev/null 2>&1; then
     DUSD_TOKEN=$(get_address ".tokens.dusd")
     WETH_TOKEN=$(get_address ".tokens.weth")
     WSTETH_TOKEN=$(get_address ".tokens.wsteth")
-    TBTC_TOKEN=$(get_address ".tokens.tbtc")
-    SBOLD_TOKEN=$(get_address ".tokens.sbold")
     RETH_TOKEN=$(get_address ".tokens.reth")
+    METH_TOKEN=$(get_address ".tokens.meth")
+    TBTC_TOKEN=$(get_address ".tokens.tbtc")
+    WBTC_TOKEN=$(get_address ".tokens.wbtc")
+    CB_BTC_TOKEN=$(get_address ".tokens.cbbtc")
     SUSDE_TOKEN=$(get_address ".tokens.susde")
 else
     # Use fallback grep/sed paths
@@ -249,25 +271,37 @@ else
     WSTETH_MARKET_IRM=$(get_address "wstethMarketBatch.marketIrm")
     WSTETH_MARKET_ORACLE=$(get_address "wstethMarketBatch.marketOracle")
 
-    ## TBTC
-    TBTC_MARKET=$(get_address "tbtcMarketBatch.market")
-    TBTC_MARKET_IMPL=$(get_address "tbtcMarketBatch.marketImplementation")
-    TBTC_MARKET_IRM=$(get_address "tbtcMarketBatch.marketIrm")
-    TBTC_MARKET_ORACLE=$(get_address "tbtcMarketBatch.marketOracle")
-
-    ## SBOLD
-    SBOLD_MARKET=$(get_address "sboldMarketBatch.market")
-    SBOLD_MARKET_IMPL=$(get_address "sboldMarketBatch.marketImplementation")
-    SBOLD_MARKET_IRM=$(get_address "sboldMarketBatch.marketIrm")
-    SBOLD_MARKET_ORACLE=$(get_address "sboldMarketBatch.marketOracle")
-
     ## RETH
     RETH_MARKET=$(get_address "rethMarketBatch.market")
     RETH_MARKET_IMPL=$(get_address "rethMarketBatch.marketImplementation")
     RETH_MARKET_IRM=$(get_address "rethMarketBatch.marketIrm")
     RETH_MARKET_ORACLE=$(get_address "rethMarketBatch.marketOracle")
 
+    ## METH
+    METH_MARKET=$(get_address "methMarketBatch.market")
+    METH_MARKET_IMPL=$(get_address "methMarketBatch.marketImplementation")
+    METH_MARKET_IRM=$(get_address "methMarketBatch.marketIrm")
+    METH_MARKET_ORACLE=$(get_address "methMarketBatch.marketOracle")
+
+    ## TBTC
+    TBTC_MARKET=$(get_address "tbtcMarketBatch.market")
+    TBTC_MARKET_IMPL=$(get_address "tbtcMarketBatch.marketImplementation")
+    TBTC_MARKET_IRM=$(get_address "tbtcMarketBatch.marketIrm")
+    TBTC_MARKET_ORACLE=$(get_address "tbtcMarketBatch.marketOracle")
+
     # Borrow Market Addresses
+    ## WBTC
+    WBTC_MARKET=$(get_address "wbtcMarketBatch.market")
+    WBTC_MARKET_IMPL=$(get_address "wbtcMarketBatch.marketImplementation")
+    WBTC_MARKET_IRM=$(get_address "wbtcMarketBatch.marketIrm")
+    WBTC_MARKET_ORACLE=$(get_address "wbtcMarketBatch.marketOracle")
+
+    ## CB-BTC
+    CB_BTC_MARKET=$(get_address "cbbtcMarketBatch.market")
+    CB_BTC_MARKET_IMPL=$(get_address "cbbtcMarketBatch.marketImplementation")
+    CB_BTC_MARKET_IRM=$(get_address "cbbtcMarketBatch.marketIrm")
+    CB_BTC_MARKET_ORACLE=$(get_address "cbbtcMarketBatch.marketOracle")
+
     ## SUSDE
     SUSDE_MARKET=$(get_address "susdeMarketBatch.market")
     SUSDE_MARKET_IMPL=$(get_address "susdeMarketBatch.marketImplementation")
@@ -290,9 +324,11 @@ else
     DUSD_TOKEN=$(get_address "tokens.dusd")
     WETH_TOKEN=$(get_address "tokens.weth")
     WSTETH_TOKEN=$(get_address "tokens.wsteth")
-    TBTC_TOKEN=$(get_address "tokens.tbtc")
-    SBOLD_TOKEN=$(get_address "tokens.sbold")
     RETH_TOKEN=$(get_address "tokens.reth")
+    METH_TOKEN=$(get_address "tokens.meth")
+    TBTC_TOKEN=$(get_address "tokens.tbtc")
+    WBTC_TOKEN=$(get_address "tokens.wbtc")
+    CB_BTC_TOKEN=$(get_address "tokens.cbbtc")
     SUSDE_TOKEN=$(get_address "tokens.susde")
 fi
 
@@ -310,19 +346,26 @@ echo "- WSTETH Market: $WSTETH_MARKET"
 echo "- WSTETH Market Implementation: $WSTETH_MARKET_IMPL"
 echo "- WSTETH Market IRM: $WSTETH_MARKET_IRM"
 echo "- WSTETH Market Oracle: $WSTETH_MARKET_ORACLE"
-echo "- TBTC Market: $TBTC_MARKET"
-echo "- TBTC Market Implementation: $TBTC_MARKET_IMPL"
-echo "- TBTC Market IRM: $TBTC_MARKET_IRM"
-echo "- TBTC Market Oracle: $TBTC_MARKET_ORACLE"
-echo "- SBOLD Market: $SBOLD_MARKET"
-echo "- SBOLD Market Implementation: $SBOLD_MARKET_IMPL"
-echo "- SBOLD Market IRM: $SBOLD_MARKET_IRM"
-echo "- SBOLD Market Oracle: $SBOLD_MARKET_ORACLE"
 echo "- RETH Market: $RETH_MARKET"
 echo "- RETH Market Implementation: $RETH_MARKET_IMPL"
 echo "- RETH Market IRM: $RETH_MARKET_IRM"
 echo "- RETH Market Oracle: $RETH_MARKET_ORACLE"
-echo "- SUSDE Market: $SUSDE_MARKET"
+echo "- METH Market: $METH_MARKET"
+echo "- METH Market Implementation: $METH_MARKET_IMPL"
+echo "- METH Market IRM: $METH_MARKET_IRM"
+echo "- METH Market Oracle: $METH_MARKET_ORACLE"
+echo "- TBTC Market: $TBTC_MARKET"
+echo "- TBTC Market Implementation: $TBTC_MARKET_IMPL"
+echo "- TBTC Market IRM: $TBTC_MARKET_IRM"
+echo "- TBTC Market Oracle: $TBTC_MARKET_ORACLE"
+echo "- WBTC Market: $WBTC_MARKET"
+echo "- WBTC Market Implementation: $WBTC_MARKET_IMPL"
+echo "- WBTC Market IRM: $WBTC_MARKET_IRM"
+echo "- WBTC Market Oracle: $WBTC_MARKET_ORACLE"
+echo "- CB-BTC Market: $CB_BTC_MARKET"
+echo "- CB-BTC Market Implementation: $CB_BTC_MARKET_IMPL"
+echo "- CB-BTC Market IRM: $CB_BTC_MARKET_IRM"
+echo "- CB-BTC Market Oracle: $CB_BTC_MARKET_ORACLE"
 echo "- SUSDE Market Implementation: $SUSDE_MARKET_IMPL"
 echo "- SUSDE Market IRM: $SUSDE_MARKET_IRM"
 echo "- SUSDE Market Oracle: $SUSDE_MARKET_ORACLE"
@@ -339,9 +382,11 @@ echo "- USDC Token: $USDC_TOKEN"
 echo "- DUSD Token: $DUSD_TOKEN"
 echo "- WETH Token: $WETH_TOKEN"
 echo "- WSTETH Token: $WSTETH_TOKEN"
-echo "- TBTC Token: $TBTC_TOKEN"
-echo "- SBOLD Token: $SBOLD_TOKEN"
 echo "- RETH Token: $RETH_TOKEN"
+echo "- METH Token: $METH_TOKEN"
+echo "- TBTC Token: $TBTC_TOKEN"
+echo "- WBTC Token: $WBTC_TOKEN"
+echo "- CB-BTC Token: $CB_BTC_TOKEN"
 echo "- SUSDE Token: $SUSDE_TOKEN"
 echo ""
 
@@ -409,16 +454,6 @@ show_progress
 verify_contract "TbtcMarketOracle" "$TBTC_MARKET_ORACLE" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet"
 show_progress
 
-
-verify_contract "SboldMarket" "$SBOLD_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
-show_progress
-verify_contract "SboldMarketImplementation" "$SBOLD_MARKET_IMPL" "contracts/lending/AltoMintMarket.sol:AltoMintMarket"
-show_progress
-verify_contract "SboldMarketIRM" "$SBOLD_MARKET_IRM" "contracts/lending/irm/AdaptiveCurveIrm.sol:AdaptiveCurveIrm"
-show_progress
-verify_contract "SboldMarketOracle" "$SBOLD_MARKET_ORACLE" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet"
-show_progress
-
 verify_contract "RethMarket" "$RETH_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
 show_progress
 verify_contract "RethMarketImplementation" "$RETH_MARKET_IMPL" "contracts/lending/AltoMintMarket.sol:AltoMintMarket"
@@ -426,6 +461,33 @@ show_progress
 verify_contract "RethMarketIRM" "$RETH_MARKET_IRM" "contracts/lending/irm/AdaptiveCurveIrm.sol:AdaptiveCurveIrm"
 show_progress
 verify_contract "RethMarketOracle" "$RETH_MARKET_ORACLE" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet"
+show_progress
+
+verify_contract "MethMarket" "$METH_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
+show_progress
+verify_contract "MethMarketImplementation" "$METH_MARKET_IMPL" "contracts/lending/AltoMintMarket.sol:AltoMintMarket"
+show_progress
+verify_contract "MethMarketIRM" "$METH_MARKET_IRM" "contracts/lending/irm/AdaptiveCurveIrm.sol:AdaptiveCurveIrm"
+show_progress
+verify_contract "MethMarketOracle" "$METH_MARKET_ORACLE" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet"
+show_progress
+
+verify_contract "WbtcMarket" "$WBTC_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
+show_progress
+verify_contract "WbtcMarketImplementation" "$WBTC_MARKET_IMPL" "contracts/lending/AltoBorrowMarket.sol:AltoBorrowMarket"
+show_progress
+verify_contract "WbtcMarketIRM" "$WBTC_MARKET_IRM" "contracts/lending/irm/AdaptiveCurveIrm.sol:AdaptiveCurveIrm"
+show_progress
+verify_contract "WbtcMarketOracle" "$WBTC_MARKET_ORACLE" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet"
+show_progress
+
+verify_contract "Cbb" "$CB_BTC_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
+show_progress
+verify_contract "CbbMarketImplementation" "$CB_BTC_MARKET_IMPL" "contracts/lending/AltoBorrowMarket.sol:AltoBorrowMarket"
+show_progress
+verify_contract "CbbMarketIRM" "$CB_BTC_MARKET_IRM" "contracts/lending/irm/AdaptiveCurveIrm.sol:AdaptiveCurveIrm"
+show_progress
+verify_contract "CbbMarketOracle" "$CB_BTC_MARKET_ORACLE" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet"
 show_progress
 
 verify_contract "SusdeMarket" "$SUSDE_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
@@ -465,11 +527,15 @@ verify_contract "WETHToken" "$WETH_TOKEN" "contracts/deployments/testnet/contrac
 show_progress
 verify_contract "WSTETHToken" "$WSTETH_TOKEN" "contracts/deployments/testnet/contracts/ERC20Testnet.sol:ERC20Testnet"
 show_progress
+verify_contract "RETHToken" "$RETH_TOKEN" "contracts/deployments/testnet/contracts/ERC20Testnet.sol:ERC20Testnet"
+show_progress
+verify_contract "METHToken" "$METH_TOKEN" "contracts/deployments/testnet/contracts/ERC20Testnet.sol:ERC20Testnet"
+show_progress
 verify_contract "TBTCToken" "$TBTC_TOKEN" "contracts/deployments/testnet/contracts/ERC20Testnet.sol:ERC20Testnet"
 show_progress
-verify_contract "SBOLDToken" "$SBOLD_TOKEN" "contracts/deployments/testnet/contracts/ERC20Testnet.sol:ERC20Testnet"
+verify_contract "WBTCToken" "$WBTC_TOKEN" "contracts/deployments/testnet/contracts/ERC20Testnet.sol:ERC20Testnet"
 show_progress
-verify_contract "RETHToken" "$RETH_TOKEN" "contracts/deployments/testnet/contracts/ERC20Testnet.sol:ERC20Testnet"
+verify_contract "CB_BTC_TOKEN" "$CB_BTC_TOKEN" "contracts/deployments/testnet/contracts/ERC20Testnet.sol:ERC20Testnet"
 show_progress
 verify_contract "SUSDEToken" "$SUSDE_TOKEN" "contracts/deployments/testnet/contracts/ERC20Testnet.sol:ERC20Testnet"
 show_progress
@@ -501,7 +567,7 @@ if [ $FAILED_VERIFICATIONS -gt 0 ]; then
 fi
 
 echo "🔗 Check the Etherscan explorer to see the verification status:"
-echo "$ETHERSCAN_API_URL"
+echo "$VERIFIER_URL"
 echo ""
 echo "💡 Tip: You can also run individual verifications using:"
-echo "forge verify-contract --chain-id $CHAIN_ID --verifier-url $ETHERSCAN_API_URL --etherscan-api-key \$ETHERSCAN_API_KEY <address> <contract_path>"
+echo "forge verify-contract --chain-id $CHAIN_ID --verifier-url $VERIFIER_URL --etherscan-api-key \$ETHERSCAN_API_KEY <address> <contract_path>"
