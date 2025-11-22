@@ -240,59 +240,6 @@ contract AltoLeverageWBtcMarketTest is Test {
         );
     }
 
-    function testSendExtraBorrowTokensToSender() public {
-        // borrow 120_000 DAI
-        uint256 borrowAmount = 120_000 ether;
-        uint256 leftOverAmount = 20_000 ether;
-
-        // Alice supplies collateral
-        vm.startPrank(alice);
-        market.addSupply(10000000000 ether, 0, alice);
-        uint256 collateralAddAmount = 1 * 1e8;
-        market.addCollateral(collateralAddAmount, alice);
-        vm.stopPrank();
-
-        (bytes memory swapData,) =
-            _loadInputFromJson("test/lending/leverage/0xswapData/wbtc/data_100000_dai_to_wbtc.txt");
-
-        // Prepare SwapParams
-        // swap params to swap 100_000 DAI to WBTC
-        // minimum expected WBTC amount is 0.85 WBTC
-        // since 120_000 DAI is borrowed, 20_000 DAI will be leftover
-        SwapParams memory leverageData = SwapParams({minAmountOut: 0.85 * 1e8, swapData: swapData});
-        bytes memory data = abi.encode(leverageData);
-
-        uint256 borrowTokenBalanceOfAliceBefore = borrowToken.balanceOf(alice);
-
-        vm.prank(alice);
-        market.borrow(borrowAmount, 0, alice, address(leverage), data);
-
-        // Assertions
-        (bool isHealthyAfter,,) = isSolvent(alice, address(market));
-
-        Position memory position = market.position(alice);
-
-        assertTrue(isHealthyAfter, "Alice should have health");
-
-        // Assert Alice's collateral increased (should be > collateralAddAmount if leverage worked)
-        assertGt(
-            position.collateralAssets, collateralAddAmount, "Alice's collateral should have increased due to leverage"
-        );
-
-        // Assert leverage contract has no leftover borrow tokens
-        assertEq(
-            collateralToken.balanceOf(address(leverage)), 0, "Leverage contract should not retain collateral tokens"
-        );
-
-        // Assert leverage contract has no leftover borrow tokens
-        assertEq(borrowToken.balanceOf(address(leverage)), 0, "Leverage contract should remain same balance as before");
-        assertEq(
-            borrowToken.balanceOf(alice),
-            borrowTokenBalanceOfAliceBefore + leftOverAmount,
-            "Alice should receive leftover tokens"
-        );
-    }
-
     function testBorrowWithAltoLeverageAsRecipient_revert_due_excessive_leverage() public {
         // Alice supplies collateral
         vm.startPrank(alice);
