@@ -12,7 +12,7 @@ import {MockMarketDeployer, MockMarket} from "@alto-test/helpers/MockMarket.sol"
 import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
 import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
 import {SwapperSimpleMock} from "@alto/lending/mocks/SwapperSimpleMock.sol";
-import {SwapParams} from "@alto/lending/interfaces/IAltoLeverageSwapper.sol";
+import {SwapParams} from "@alto/lending/leverage/interfaces/IAltoLeverageSwapper.sol";
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
 import {stdError} from "forge-std/StdError.sol";
