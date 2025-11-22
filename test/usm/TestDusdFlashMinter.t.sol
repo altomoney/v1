@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "./TestDUSDBase.t.sol";
+import "./TestDusdBase.t.sol";
 import {IERC3156FlashBorrower} from "@openzeppelin/contracts/interfaces/IERC3156FlashBorrower.sol";
 import {IERC3156FlashLender} from "@openzeppelin/contracts/interfaces/IERC3156FlashLender.sol";
 import {IERC20Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
@@ -9,12 +9,12 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 import {DUSDFlashMinter} from "@alto/usm/DUSDFlashMinter.sol";
 import {IDUSDFlashMinter, FlashFee} from "@alto/usm/interfaces/IDUSDFlashMinter.sol";
-import {IDUSDFacilitator} from "@alto/usm/interfaces/IDUSDFacilitator.sol";
+import {IStableTokenFacilitator} from "@alto/usm/interfaces/IStableTokenFacilitator.sol";
 import {FixedPointMath, MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 
 import {MockFlashBorrower} from "./mocks/MockFlashBorrower.sol";
 
-contract TestDUSDFlashMinter is TestDusdBase {
+contract TestDusdFlashMinter is TestDusdBase {
     using FixedPointMath for uint256;
 
     DUSDFlashMinter public flashMinter;
@@ -79,7 +79,7 @@ contract TestDUSDFlashMinter is TestDusdBase {
         FlashFee memory defaultFlashFee = _createFlashFee(DEFAULT_MIN_FLASH_FEE, DEFAULT_MAX_FLASH_FEE);
 
         vm.expectEmit(true, true, false, false);
-        emit IDUSDFacilitator.DusdTreasuryUpdated(address(0), TREASURY);
+        emit IStableTokenFacilitator.StableTokenTreasuryUpdated(address(0), TREASURY);
         vm.expectEmit(false, false, false, true);
         emit IDUSDFlashMinter.SetFlashMintFee(_createFlashFee(0, 0), defaultFlashFee);
 
@@ -90,13 +90,13 @@ contract TestDUSDFlashMinter is TestDusdBase {
         FlashFee memory fee = newFlashMinter.getFlashMintFee();
         assertEq(fee.minFlashFee, DEFAULT_MIN_FLASH_FEE, "Wrong min flash fee");
         assertEq(fee.maxFlashFee, DEFAULT_MAX_FLASH_FEE, "Wrong max flash fee");
-        assertEq(newFlashMinter.getDusdTreasury(), TREASURY, "Wrong TREASURY address");
+        assertEq(newFlashMinter.getStableTokenTreasury(), TREASURY, "Wrong TREASURY address");
     }
 
     function testRevertConstructorFeeOutOfRange() public {
         FlashFee memory invalidFlashFee = _createFlashFee(uint128(MATH_PRECISION + 1), DEFAULT_MAX_FLASH_FEE);
 
-        vm.expectRevert("DUSD: Min flash fee exceeds MATH_PRECISION");
+        vm.expectRevert("FlashMinter: Min flash fee exceeds MATH_PRECISION");
         new DUSDFlashMinter(address(DUSD_TOKEN), TREASURY, invalidFlashFee, address(this));
     }
 
@@ -113,7 +113,7 @@ contract TestDUSDFlashMinter is TestDusdBase {
     }
 
     function testRevertFlashloanMoreThanCapacity() public {
-        vm.expectRevert("DUSD: Amount exceeds flash mint cap");
+        vm.expectRevert("FlashMinter: Amount exceeds flash mint cap");
         flashMinter.flashLoan(
             IERC3156FlashBorrower(address(flashBorrower)), address(DUSD_TOKEN), DEFAULT_CAPACITY + 1, ""
         );
@@ -151,7 +151,7 @@ contract TestDUSDFlashMinter is TestDusdBase {
     function testRevertUpdateFeeOutOfRange() public {
         FlashFee memory invalidFlashFee = _createFlashFee(uint128(MATH_PRECISION + 1), DEFAULT_MAX_FLASH_FEE);
 
-        vm.expectRevert("DUSD: Min flash fee exceeds MATH_PRECISION");
+        vm.expectRevert("FlashMinter: Min flash fee exceeds MATH_PRECISION");
         flashMinter.updateFlashMintFee(invalidFlashFee);
     }
 
@@ -160,7 +160,7 @@ contract TestDUSDFlashMinter is TestDusdBase {
 
         vm.prank(notOwner);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, notOwner));
-        flashMinter.updateDusdTreasury(address(0));
+        flashMinter.updateStableTokenTreasury(address(0));
     }
 
     function testRevertFlashfeeNotDusd() public {
@@ -189,7 +189,7 @@ contract TestDUSDFlashMinter is TestDusdBase {
         assertEq(DUSD_TOKEN.balanceOf(address(flashMinter)), feeAmount, "FlashMinter should have fees");
 
         vm.expectEmit(true, true, false, true, address(flashMinter));
-        emit IDUSDFacilitator.FeesDistributedToTreasury(TREASURY, address(DUSD_TOKEN), feeAmount);
+        emit IStableTokenFacilitator.FeesDistributedToTreasury(TREASURY, address(DUSD_TOKEN), feeAmount);
         flashMinter.distributeFeesToTreasury();
 
         assertEq(DUSD_TOKEN.balanceOf(address(flashMinter)), 0, "FlashMinter should have no DUSD left");
@@ -214,14 +214,14 @@ contract TestDUSDFlashMinter is TestDusdBase {
     }
 
     function testUpdateDusdTreasury() public {
-        assertEq(flashMinter.getDusdTreasury(), TREASURY, "Flashminter non-default TREASURY");
+        assertEq(flashMinter.getStableTokenTreasury(), TREASURY, "Flashminter non-default TREASURY");
         assertTrue(TREASURY != address(this));
 
         vm.expectEmit(true, true, false, false, address(flashMinter));
-        emit IDUSDFacilitator.DusdTreasuryUpdated(TREASURY, address(this));
-        flashMinter.updateDusdTreasury(address(this));
+        emit IStableTokenFacilitator.StableTokenTreasuryUpdated(TREASURY, address(this));
+        flashMinter.updateStableTokenTreasury(address(this));
 
-        assertEq(flashMinter.getDusdTreasury(), address(this), "Treasury should be updated");
+        assertEq(flashMinter.getStableTokenTreasury(), address(this), "Treasury should be updated");
     }
 
     function testMaxFlashloanNotDusd() public view {
