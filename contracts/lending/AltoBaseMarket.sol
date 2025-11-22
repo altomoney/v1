@@ -412,7 +412,6 @@ abstract contract AltoBaseMarket is
     /// @inheritdoc IMarketBase
     function removeCollateral(uint256 assets, address onBehalf, address receiver, bytes calldata swapParams)
         external
-        virtual
         whenNotPaused
         nonReentrant
         returns (uint256)

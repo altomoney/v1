@@ -186,12 +186,12 @@ contract AltoDaoMintMarket is AltoBaseMarket {
     }
 
     /// @dev Disabled on mint market
-    function addSupply(uint256, uint256, address) external override returns (uint256, uint256) {
+    function _addSupply(uint256, uint256, address) internal override returns (uint256, uint256) {
         revert AltoDaoMintMarketNotImplemented();
     }
 
     /// @dev Disabled on mint market
-    function removeSupply(uint256, uint256, address, address) external override returns (uint256, uint256) {
+    function _removeSupply(uint256, uint256, address, address) internal override returns (uint256, uint256) {
         revert AltoDaoMintMarketNotImplemented();
     }
 
