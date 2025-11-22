@@ -183,7 +183,8 @@ contract AltoLeverageTagReentrancyTest is Test {
                             liquidationWindowTag: 3 days
                         })
                     }),
-                    initialBorrowOpeningFee: 0
+                    initialBorrowOpeningFee: 0,
+                    supplyCap: uint128(type(uint128).max)
                 })
             )
         );
