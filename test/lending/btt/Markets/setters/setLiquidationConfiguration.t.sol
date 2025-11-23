@@ -3,8 +3,14 @@ pragma solidity ^0.8.28;
 
 import {MarketCommon, MarketType} from "../MarketCommon.t.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {IMarketErrors, IMarketEvents, LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
+import {IMarketErrors, IMarketEvents} from "@alto/lending/interfaces/IMarket.sol";
+import {LiquidationConfiguration} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
 import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
+import {AltoLiquidationEngine} from "@alto/lending/AltoLiquidationEngine.sol";
+import {
+    IPriorityLiquidationEngine,
+    IPriorityLiquidationEngineEvents
+} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
 
 contract AltoMarketSetLiquidationConfiguration is MarketCommon {
     constructor(MarketType _marketType) MarketCommon(_marketType) {}
@@ -25,9 +31,10 @@ contract AltoMarketSetLiquidationConfiguration is MarketCommon {
     });
 
     function test_RevertWhen_CallerIsNotOwner() external {
+        IPriorityLiquidationEngine liquidationEngine = IPriorityLiquidationEngine(market.liquidationEngine());
         // it should revert
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, address(this)));
-        market.setLiquidationConfiguration(VALID_CONFIGURATION);
+        liquidationEngine.setLiquidationConfiguration(VALID_CONFIGURATION);
     }
 
     modifier whenCallerIsOwner() {
@@ -37,132 +44,134 @@ contract AltoMarketSetLiquidationConfiguration is MarketCommon {
     }
 
     function test_WhenCallerIsOwner() external whenCallerIsOwner {
-        LiquidationConfiguration memory oldLiquidationConfiguration = market.liquidationConfiguration();
+        LiquidationConfiguration memory oldLiquidationConfiguration =
+            IPriorityLiquidationEngine(market.liquidationEngine()).liquidationConfiguration();
 
         // it should emit SetLiquidationConfiguration event
+        IPriorityLiquidationEngine liquidationEngine = IPriorityLiquidationEngine(market.liquidationEngine());
         vm.expectEmit();
-        emit IMarketEvents.SetLiquidationConfiguration(oldLiquidationConfiguration, VALID_CONFIGURATION);
-
-        market.setLiquidationConfiguration(VALID_CONFIGURATION);
+        emit IPriorityLiquidationEngineEvents.SetLiquidationConfiguration(
+            oldLiquidationConfiguration, VALID_CONFIGURATION
+        );
+        liquidationEngine.setLiquidationConfiguration(VALID_CONFIGURATION);
 
         // it should update liquidation configuration
-        assertEq(market.liquidationConfiguration().maxLiquidationLtv, VALID_CONFIGURATION.maxLiquidationLtv);
-        assertEq(market.liquidationConfiguration().dynamicBonusFeeStart, VALID_CONFIGURATION.dynamicBonusFeeStart);
+        LiquidationConfiguration memory config = liquidationEngine.liquidationConfiguration();
+        assertEq(config.maxLiquidationLtv, VALID_CONFIGURATION.maxLiquidationLtv);
+        assertEq(config.dynamicBonusFeeStart, VALID_CONFIGURATION.dynamicBonusFeeStart);
+        assertEq(config.ltvForCompleteLiquidation, VALID_CONFIGURATION.ltvForCompleteLiquidation);
+        assertEq(config.dynamicBonusFeeDecaySteepness, VALID_CONFIGURATION.dynamicBonusFeeDecaySteepness);
         assertEq(
-            market.liquidationConfiguration().ltvForCompleteLiquidation, VALID_CONFIGURATION.ltvForCompleteLiquidation
-        );
-        assertEq(
-            market.liquidationConfiguration().dynamicBonusFeeDecaySteepness,
-            VALID_CONFIGURATION.dynamicBonusFeeDecaySteepness
-        );
-        assertEq(
-            market.liquidationConfiguration().disablePriorityLiquidationAbovePositionLtv,
+            config.disablePriorityLiquidationAbovePositionLtv,
             VALID_CONFIGURATION.disablePriorityLiquidationAbovePositionLtv
         );
-        assertEq(
-            market.liquidationConfiguration().isEnabledPriorityLiquidation,
-            VALID_CONFIGURATION.isEnabledPriorityLiquidation
-        );
-        assertEq(market.liquidationConfiguration().liquidationBaseFee, VALID_CONFIGURATION.liquidationBaseFee);
-        assertEq(market.liquidationConfiguration().minPenaltyPercentage, VALID_CONFIGURATION.minPenaltyPercentage);
-        assertEq(market.liquidationConfiguration().protocolFeePercentage, VALID_CONFIGURATION.protocolFeePercentage);
-        assertEq(
-            market.liquidationConfiguration().priorityLiquidationGracePeriod,
-            VALID_CONFIGURATION.priorityLiquidationGracePeriod
-        );
+        assertEq(config.isEnabledPriorityLiquidation, VALID_CONFIGURATION.isEnabledPriorityLiquidation);
+        assertEq(config.liquidationBaseFee, VALID_CONFIGURATION.liquidationBaseFee);
+        assertEq(config.minPenaltyPercentage, VALID_CONFIGURATION.minPenaltyPercentage);
+        assertEq(config.protocolFeePercentage, VALID_CONFIGURATION.protocolFeePercentage);
+        assertEq(config.priorityLiquidationGracePeriod, VALID_CONFIGURATION.priorityLiquidationGracePeriod);
     }
 
     function test_RevertWhen_MaxLiquidationLtvIsLessThanMaxLtv() external whenCallerIsOwner {
-        LiquidationConfiguration memory liquidationConfiguration = market.liquidationConfiguration();
+        IPriorityLiquidationEngine liquidationEngine = IPriorityLiquidationEngine(market.liquidationEngine());
+        LiquidationConfiguration memory liquidationConfiguration = liquidationEngine.liquidationConfiguration();
         liquidationConfiguration.maxLiquidationLtv = market.maxLtv() - 1;
 
         // it should revert
         vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBaseMarketInvalidInput.selector));
-        market.setLiquidationConfiguration(liquidationConfiguration);
+        liquidationEngine.setLiquidationConfiguration(liquidationConfiguration);
     }
 
     function test_RevertWhen_LtvForCompleteLiquidationIsLessThanMaxLiquidationLtv() external whenCallerIsOwner {
-        LiquidationConfiguration memory liquidationConfiguration = market.liquidationConfiguration();
+        IPriorityLiquidationEngine liquidationEngine = IPriorityLiquidationEngine(market.liquidationEngine());
+        LiquidationConfiguration memory liquidationConfiguration = liquidationEngine.liquidationConfiguration();
         liquidationConfiguration.ltvForCompleteLiquidation = liquidationConfiguration.maxLiquidationLtv - 1;
 
         // it should revert
         vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBaseMarketInvalidInput.selector));
-        market.setLiquidationConfiguration(liquidationConfiguration);
+        liquidationEngine.setLiquidationConfiguration(liquidationConfiguration);
     }
 
     function test_RevertWhen_LtvForCompleteLiquidationIsGreaterThanMATH_PRECISION() external whenCallerIsOwner {
-        LiquidationConfiguration memory liquidationConfiguration = market.liquidationConfiguration();
+        IPriorityLiquidationEngine liquidationEngine = IPriorityLiquidationEngine(market.liquidationEngine());
+        LiquidationConfiguration memory liquidationConfiguration = liquidationEngine.liquidationConfiguration();
         liquidationConfiguration.ltvForCompleteLiquidation = MATH_PRECISION + 1;
 
         // it should revert
         vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBaseMarketInvalidInput.selector));
-        market.setLiquidationConfiguration(liquidationConfiguration);
+        liquidationEngine.setLiquidationConfiguration(liquidationConfiguration);
     }
 
     function test_RevertWhen_DynamicBonusFeeDecaySteepnessIsInvalid() external whenCallerIsOwner {
-        LiquidationConfiguration memory liquidationConfiguration = market.liquidationConfiguration();
+        IPriorityLiquidationEngine liquidationEngine = IPriorityLiquidationEngine(market.liquidationEngine());
+        LiquidationConfiguration memory liquidationConfiguration = liquidationEngine.liquidationConfiguration();
         liquidationConfiguration.dynamicBonusFeeDecaySteepness = 100 * MATH_PRECISION + 1;
 
         // it should revert
         vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBaseMarketInvalidInput.selector));
-        market.setLiquidationConfiguration(liquidationConfiguration);
+        liquidationEngine.setLiquidationConfiguration(liquidationConfiguration);
 
         liquidationConfiguration.dynamicBonusFeeDecaySteepness = 0;
         // it should revert
         vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBaseMarketInvalidInput.selector));
-        market.setLiquidationConfiguration(liquidationConfiguration);
+        liquidationEngine.setLiquidationConfiguration(liquidationConfiguration);
     }
 
     function test_RevertWhen_SumOfDynamicBonusFeeStartAndLiquidationBaseFeeIsGreaterThan0Point15ether()
         external
         whenCallerIsOwner
     {
-        LiquidationConfiguration memory liquidationConfiguration = market.liquidationConfiguration();
+        IPriorityLiquidationEngine liquidationEngine = IPriorityLiquidationEngine(market.liquidationEngine());
+        LiquidationConfiguration memory liquidationConfiguration = liquidationEngine.liquidationConfiguration();
         liquidationConfiguration.dynamicBonusFeeStart = 0.09 ether;
         liquidationConfiguration.liquidationBaseFee = 0.15 ether - 0.09 ether + 1;
 
         // it should revert
         vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBaseMarketInvalidInput.selector));
-        market.setLiquidationConfiguration(liquidationConfiguration);
+        liquidationEngine.setLiquidationConfiguration(liquidationConfiguration);
     }
 
     function test_RevertWhen_SumOfDynamicBonusFeeStartAndLiquidationBaseFeeIsGreaterThan1EtherMinusMaxLiquidationLtv()
         external
         whenCallerIsOwner
     {
-        LiquidationConfiguration memory liquidationConfiguration = market.liquidationConfiguration();
+        IPriorityLiquidationEngine liquidationEngine = IPriorityLiquidationEngine(market.liquidationEngine());
+        LiquidationConfiguration memory liquidationConfiguration = liquidationEngine.liquidationConfiguration();
         liquidationConfiguration.dynamicBonusFeeStart = 0;
         liquidationConfiguration.liquidationBaseFee = 1 ether - liquidationConfiguration.maxLiquidationLtv + 1;
 
         // it should revert
         vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBaseMarketInvalidInput.selector));
-        market.setLiquidationConfiguration(liquidationConfiguration);
+        liquidationEngine.setLiquidationConfiguration(liquidationConfiguration);
     }
 
     function test_RevertWhen_MinPenaltyPercentageIsGreaterThanMATH_PRECISION() external whenCallerIsOwner {
-        LiquidationConfiguration memory liquidationConfiguration = market.liquidationConfiguration();
+        IPriorityLiquidationEngine liquidationEngine = IPriorityLiquidationEngine(market.liquidationEngine());
+        LiquidationConfiguration memory liquidationConfiguration = liquidationEngine.liquidationConfiguration();
         liquidationConfiguration.minPenaltyPercentage = MATH_PRECISION + 1;
 
         // it should revert
         vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBaseMarketInvalidInput.selector));
-        market.setLiquidationConfiguration(liquidationConfiguration);
+        liquidationEngine.setLiquidationConfiguration(liquidationConfiguration);
     }
 
     function test_RevertWhen_ProtocolFeePercentageIsGreaterThanMATH_PRECISION() external whenCallerIsOwner {
-        LiquidationConfiguration memory liquidationConfiguration = market.liquidationConfiguration();
+        IPriorityLiquidationEngine liquidationEngine = IPriorityLiquidationEngine(market.liquidationEngine());
+        LiquidationConfiguration memory liquidationConfiguration = liquidationEngine.liquidationConfiguration();
         liquidationConfiguration.protocolFeePercentage = MATH_PRECISION + 1;
 
         // it should revert
         vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBaseMarketInvalidInput.selector));
-        market.setLiquidationConfiguration(liquidationConfiguration);
+        liquidationEngine.setLiquidationConfiguration(liquidationConfiguration);
     }
 
     function test_RevertWhen_FeeRecipientIsNotSetAndProtocolFeePercentageIsMoreThan0() external whenCallerIsOwner {
-        LiquidationConfiguration memory liquidationConfigurationPre = market.liquidationConfiguration();
-        LiquidationConfiguration memory liquidationConfiguration = market.liquidationConfiguration();
+        IPriorityLiquidationEngine liquidationEngine = IPriorityLiquidationEngine(market.liquidationEngine());
+        LiquidationConfiguration memory liquidationConfigurationPre = liquidationEngine.liquidationConfiguration();
+        LiquidationConfiguration memory liquidationConfiguration = liquidationEngine.liquidationConfiguration();
 
         liquidationConfigurationPre.protocolFeePercentage = 0;
-        market.setLiquidationConfiguration(liquidationConfigurationPre);
+        liquidationEngine.setLiquidationConfiguration(liquidationConfigurationPre);
         market.setIrm(address(0), false);
         market.setFeeRecipient(address(0));
 
@@ -170,44 +179,48 @@ contract AltoMarketSetLiquidationConfiguration is MarketCommon {
 
         // it should revert
         vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBaseMarketInvalidInput.selector));
-        market.setLiquidationConfiguration(liquidationConfiguration);
+        liquidationEngine.setLiquidationConfiguration(liquidationConfiguration);
     }
 
     function test_RevertWhen_PriorityLiquidationGracePeriodIsGreaterThan1Hour() external whenCallerIsOwner {
-        LiquidationConfiguration memory liquidationConfiguration = market.liquidationConfiguration();
+        IPriorityLiquidationEngine liquidationEngine = IPriorityLiquidationEngine(market.liquidationEngine());
+        LiquidationConfiguration memory liquidationConfiguration = liquidationEngine.liquidationConfiguration();
         liquidationConfiguration.priorityLiquidationGracePeriod = 1 hours + 1;
 
         // it should revert
         vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBaseMarketInvalidInput.selector));
-        market.setLiquidationConfiguration(liquidationConfiguration);
+        liquidationEngine.setLiquidationConfiguration(liquidationConfiguration);
     }
 
     function test_RevertWhen_TaggerLiquidationGracePeriodIsGreaterThan30Minutes() external whenCallerIsOwner {
-        LiquidationConfiguration memory liquidationConfiguration = market.liquidationConfiguration();
+        IPriorityLiquidationEngine liquidationEngine = IPriorityLiquidationEngine(market.liquidationEngine());
+        LiquidationConfiguration memory liquidationConfiguration = liquidationEngine.liquidationConfiguration();
         liquidationConfiguration.taggerLiquidationGracePeriod = 30 minutes + 1;
 
         // it should revert
         vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBaseMarketInvalidInput.selector));
-        market.setLiquidationConfiguration(liquidationConfiguration);
+        liquidationEngine.setLiquidationConfiguration(liquidationConfiguration);
     }
 
     function test_RevertWhen_LiquidationWindowTagIsGreaterThan3Days() external whenCallerIsOwner {
-        LiquidationConfiguration memory liquidationConfiguration = market.liquidationConfiguration();
+        IPriorityLiquidationEngine liquidationEngine = IPriorityLiquidationEngine(market.liquidationEngine());
+        LiquidationConfiguration memory liquidationConfiguration = liquidationEngine.liquidationConfiguration();
         liquidationConfiguration.liquidationWindowTag = 3 days + 1;
 
         // it should revert
         vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBaseMarketInvalidInput.selector));
-        market.setLiquidationConfiguration(liquidationConfiguration);
+        liquidationEngine.setLiquidationConfiguration(liquidationConfiguration);
     }
 
     function test_RevertWhen_GracePeriodsSumIsGreaterThanLiquidationWindowTag() external whenCallerIsOwner {
-        LiquidationConfiguration memory liquidationConfiguration = market.liquidationConfiguration();
+        IPriorityLiquidationEngine liquidationEngine = IPriorityLiquidationEngine(market.liquidationEngine());
+        LiquidationConfiguration memory liquidationConfiguration = liquidationEngine.liquidationConfiguration();
         liquidationConfiguration.priorityLiquidationGracePeriod = 1 hours;
         liquidationConfiguration.taggerLiquidationGracePeriod = 30 minutes;
         liquidationConfiguration.liquidationWindowTag = 1 hours;
 
         // it should revert
         vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBaseMarketInvalidInput.selector));
-        market.setLiquidationConfiguration(liquidationConfiguration);
+        liquidationEngine.setLiquidationConfiguration(liquidationConfiguration);
     }
 }

@@ -9,15 +9,16 @@ import {SwapperSimpleMock} from "@alto/lending/mocks/SwapperSimpleMock.sol";
 import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
 import {LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
-import {
-    LiquidationConfiguration,
-    BaseMarketInitParams,
-    BorrowMarketInitParams,
-    MintMarketInitParams
-} from "@alto/lending/interfaces/IMarket.sol";
+import {BaseMarketInitParams, BorrowMarketInitParams, MintMarketInitParams} from "@alto/lending/interfaces/IMarket.sol";
 import {ERC20MockMintable} from "@alto-test/helpers/ERC20MockMintable.sol";
 import {PAUSE_TYPE, FROZEN_TYPE} from "@alto/utils/Constants.sol";
 import {MarketDeployer} from "@alto/utils/MarketDeployer.sol";
+import {AltoLiquidationEngine} from "@alto/lending/AltoLiquidationEngine.sol";
+import {AltoBaseMarket} from "@alto/lending/AltoBaseMarket.sol";
+import {
+    IPriorityLiquidationEngine,
+    LiquidationConfiguration
+} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
 
 uint256 constant MIN_AMOUNT = 1000;
 uint256 constant MAX_AMOUNT = 2 ** 64; // Must be less than or equal to type(uint160).max.
@@ -81,6 +82,10 @@ abstract contract MarketCommon is Test {
             liquidationWindowTag: 3 days
         });
 
+        // Liquidation engine will be set after market deployment
+        // Temporary placeholder - not used
+        address(new AltoLiquidationEngine(address(OWNER), address(1)));
+
         BaseMarketInitParams memory baseMarketInitParams = BaseMarketInitParams({
             borrowToken: address(borrowToken),
             collateralToken: address(collateralToken),
@@ -89,13 +94,11 @@ abstract contract MarketCommon is Test {
             oracle: address(oracle),
             maxLtv: LTV,
             feeRecipient: address(FEE_RECIPIENT),
-            liquidationConfiguration: liquidationConfig
+            liquidationEngine: address(1) // Will be updated below
         });
         if (marketType == MarketType.BORROW) {
             BorrowMarketInitParams memory borrowMarketInitParams = BorrowMarketInitParams({
-                baseMarketInitParams: baseMarketInitParams,
-                initialBorrowOpeningFee: 0,
-                supplyCapAssets: 0
+                baseMarketInitParams: baseMarketInitParams, initialBorrowOpeningFee: 0, supplyCapAssets: 0
             });
             market = IMarket(MarketDeployer.deployBorrowMarket(borrowMarketInitParams));
         } else if (marketType == MarketType.MINT) {
@@ -106,6 +109,14 @@ abstract contract MarketCommon is Test {
             });
             market = IMarket(MarketDeployer.deployMintMarket(mintMarketInitParams));
         }
+
+        // Create real liquidation engine with market address and update market
+        address liquidationEngine = address(new AltoLiquidationEngine(address(OWNER), address(market)));
+
+        // Set liquidation configuration
+        AltoLiquidationEngine(liquidationEngine).setLiquidationConfiguration(liquidationConfig);
+
+        AltoBaseMarket(address(market)).setLiquidationEngine(liquidationEngine);
 
         market.setPauser(PAUSER, PAUSE_TYPE, true);
         market.setPauser(PAUSER, FROZEN_TYPE, true);

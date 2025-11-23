@@ -2,16 +2,14 @@
 pragma solidity ^0.8.22;
 
 import {Test} from "forge-std/Test.sol";
-import {
-    LiquidationConfiguration,
-    BaseMarketInitParams,
-    BorrowMarketInitParams
-} from "@alto/lending/interfaces/IMarket.sol";
+import {LiquidationConfiguration} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
+import {BaseMarketInitParams, BorrowMarketInitParams} from "@alto/lending/interfaces/IMarket.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 import {LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
 import {IMarket, Position, IMarketErrors, IMarketEvents} from "@alto/lending/interfaces/IMarket.sol";
+import {AltoBaseMarket} from "@alto/lending/AltoBaseMarket.sol";
 import {IAltoLeverageSwapper, SwapParams} from "@alto/lending/leverage/interfaces/IAltoLeverageSwapper.sol";
 import {console} from "forge-std/console.sol";
 import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
@@ -24,6 +22,8 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {IUniswapV3PoolActions} from "@uniswap/v3-core/contracts/interfaces/pool/IUniswapV3PoolActions.sol";
+import {AltoLiquidationEngine} from "@alto/lending/AltoLiquidationEngine.sol";
+import {IPriorityLiquidationEngine} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
 
 bool constant TESTING_VULNERABLE_CONTRACT = false;
 uint256 constant SUPPLIED_COLLATERAL_AMOUNT = 1000 ether;
@@ -50,7 +50,7 @@ contract MaliciousERC20 is ERC20 {
         // where most of the attacker's collateral is now removed, attacker's position can now be liquidated
         // This liquidation will create bad debt as attacker's collateral is much lower than the debt
         // as market is currently in state where attacker's collateral is now COLLATERAL_AMOUNT_AFTER_WITHDRAW and attacker has borrowed BORROWED_AMOUNT
-        IMarket(market).liquidate(attacker, hex"");
+        IMarket(market).liquidate(attacker, hex"", hex"");
 
         IERC20(IMarket(market).collateralToken()).approve(address(market), type(uint256).max);
 
@@ -166,6 +166,25 @@ contract AltoLeverageReentrancySwapperTest is Test {
         oracle = address(new OracleMock());
         OracleMock(oracle).setPrice(1 * LENDING_ORACLE_PRICE_PRECISION);
 
+        LiquidationConfiguration memory liquidationConfig = LiquidationConfiguration({
+            maxLiquidationLtv: 0.85 ether,
+            dynamicBonusFeeStart: 0.03 ether,
+            ltvForCompleteLiquidation: 0.9 ether,
+            dynamicBonusFeeDecaySteepness: 5 ether,
+            liquidationBaseFee: 0.05 ether,
+            minPenaltyPercentage: 0.01 ether,
+            protocolFeePercentage: 0.075 ether,
+            isEnabledPriorityLiquidation: false,
+            disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
+            priorityLiquidationGracePeriod: 5 minutes,
+            taggerLiquidationGracePeriod: 2 minutes,
+            liquidationWindowTag: 3 days
+        });
+
+        // Liquidation engine will be set after market deployment
+        // Temporary placeholder - not used
+        address(new AltoLiquidationEngine(address(this), address(1)));
+
         market = IMarket(
             MarketDeployer.deployBorrowMarket(
                 BorrowMarketInitParams({
@@ -177,26 +196,18 @@ contract AltoLeverageReentrancySwapperTest is Test {
                         oracle: address(oracle),
                         maxLtv: 0.8 ether,
                         feeRecipient: address(this),
-                        liquidationConfiguration: LiquidationConfiguration({
-                            maxLiquidationLtv: 0.85 ether,
-                            dynamicBonusFeeStart: 0.03 ether,
-                            ltvForCompleteLiquidation: 0.9 ether,
-                            dynamicBonusFeeDecaySteepness: 5 ether,
-                            liquidationBaseFee: 0.05 ether,
-                            minPenaltyPercentage: 0.01 ether,
-                            protocolFeePercentage: 0.075 ether,
-                            isEnabledPriorityLiquidation: false,
-                            disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
-                            priorityLiquidationGracePeriod: 5 minutes,
-                            taggerLiquidationGracePeriod: 2 minutes,
-                            liquidationWindowTag: 3 days
-                        })
+                        liquidationEngine: address(1) // Will be updated below
                     }),
                     initialBorrowOpeningFee: 0,
                     supplyCapAssets: 0
                 })
             )
         );
+
+        // Create real liquidation engine with market address and update market
+        address liquidationEngine = address(new AltoLiquidationEngine(address(this), address(market)));
+        IPriorityLiquidationEngine(liquidationEngine).setLiquidationConfiguration(liquidationConfig);
+        AltoBaseMarket(address(market)).setLiquidationEngine(liquidationEngine);
 
         swapper.setWhitelisted(address(leverage), true);
         leverage.setMarket(address(market), true);
@@ -240,7 +251,9 @@ contract AltoLeverageReentrancySwapperTest is Test {
         // to collateral token value at 1:1 ratio.
         // Also, attacker needs to have enough balance to setup new position with NEW_POSITION_COLLATERAL_AMOUNT and NEW_POSITION_BORROW_AMOUNT
         uint256 borrowAmountNeededToRepay = COLLATERAL_AMOUNT_AFTER_WITHDRAW
-            * (1 ether - market.liquidationConfiguration().liquidationBaseFee) / 1 ether;
+            * (1 ether
+                - IPriorityLiquidationEngine(market.liquidationEngine()).liquidationConfiguration().liquidationBaseFee)
+            / 1 ether;
         deal(
             address(borrowToken),
             address(maliciousERC20),

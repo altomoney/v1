@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.28;
 
-import {IMarket, BaseMarketInitParams, LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
+import {IMarket, BaseMarketInitParams} from "@alto/lending/interfaces/IMarket.sol";
+import {LiquidationConfiguration} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
+import {AltoBaseMarket} from "@alto/lending/AltoBaseMarket.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {MarketInstance} from "./MarketInstance.sol";
 import {RewardsDistributorInstance} from "./RewardsDistributorInstance.sol";
@@ -23,6 +25,8 @@ import {SwapperSimpleMock} from "@alto/lending/mocks/SwapperSimpleMock.sol";
 import {SwapParams} from "@alto/lending/leverage/interfaces/IAltoLeverageSwapper.sol";
 import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {UnsafeUpgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
+import {AltoLiquidationEngine} from "@alto/lending/AltoLiquidationEngine.sol";
+import {AltoBaseMarket} from "@alto/lending/AltoBaseMarket.sol";
 import {UniversalRewardsDistributorInstance} from "./UniversalRewardsDistributorInstance.sol";
 import {VestingInstance} from "./VestingInstance.sol";
 import {DUSDUsmInstance} from "./DUSDUsmInstance.sol";
@@ -115,6 +119,10 @@ abstract contract AdapterCommonSetup is AdapterCommon, TestHelperOz5 {
             liquidationWindowTag: 3 days
         });
 
+        // Liquidation engine will be set after market deployment
+        // Temporary placeholder - not used
+        address(new AltoLiquidationEngine(address(OWNER), address(1)));
+
         BaseMarketInitParams memory baseMarketInitParams = BaseMarketInitParams({
             borrowToken: address(borrowToken),
             collateralToken: address(collateralToken),
@@ -123,7 +131,7 @@ abstract contract AdapterCommonSetup is AdapterCommon, TestHelperOz5 {
             oracle: address(oracle),
             maxLtv: LTV,
             feeRecipient: address(this),
-            liquidationConfiguration: liquidationConfig
+            liquidationEngine: address(1) // Will be updated below
         });
 
         if (shouldUseSafeProxy) {
@@ -139,6 +147,11 @@ abstract contract AdapterCommonSetup is AdapterCommon, TestHelperOz5 {
                 )
             );
         }
+
+        // Create real liquidation engine and update market
+        address liquidationEngine = address(new AltoLiquidationEngine(address(OWNER), address(market)));
+        AltoLiquidationEngine(liquidationEngine).setLiquidationConfiguration(liquidationConfig);
+        AltoBaseMarket(address(market)).setLiquidationEngine(liquidationEngine);
 
         // Approve conract to be used in the adapter
         altoAdapter.approveContract(address(market));

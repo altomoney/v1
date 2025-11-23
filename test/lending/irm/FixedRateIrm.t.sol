@@ -10,12 +10,10 @@ import {IIrm} from "@alto/lending/interfaces/IIrm.sol";
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 import {MarketDeployer} from "@alto/utils/MarketDeployer.sol";
 import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";
-import {
-    LiquidationConfiguration,
-    BaseMarketInitParams,
-    BorrowMarketInitParams
-} from "@alto/lending/interfaces/IMarket.sol";
+import {BaseMarketInitParams, BorrowMarketInitParams} from "@alto/lending/interfaces/IMarket.sol";
+import {LiquidationConfiguration} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
+import {AltoLiquidationEngine} from "@alto/lending/AltoLiquidationEngine.sol";
 
 uint256 constant MIN_AMOUNT = 1000;
 uint256 constant MAX_AMOUNT = 2 ** 64;
@@ -59,6 +57,8 @@ contract FixedRateIrmTest is Test {
             liquidationWindowTag: 3 days
         });
 
+        // Liquidation engine will be set after market deployment
+
         BaseMarketInitParams memory baseMarketInitParams = BaseMarketInitParams({
             borrowToken: address(1),
             collateralToken: address(2),
@@ -67,7 +67,7 @@ contract FixedRateIrmTest is Test {
             oracle: address(oracle),
             maxLtv: 0.75 ether,
             feeRecipient: OWNER,
-            liquidationConfiguration: liquidationConfig
+            liquidationEngine: address(1) // Will be updated below
         });
 
         BorrowMarketInitParams memory borrowMarketInitParams = BorrowMarketInitParams({
@@ -75,8 +75,13 @@ contract FixedRateIrmTest is Test {
         });
         market = AltoBorrowMarket(MarketDeployer.deployBorrowMarket(borrowMarketInitParams));
 
-        vm.prank(OWNER);
+        // Create real liquidation engine with market address and update market
+        address liquidationEngine = address(new AltoLiquidationEngine(OWNER, address(market)));
+        vm.startPrank(OWNER);
+        AltoLiquidationEngine(liquidationEngine).setLiquidationConfiguration(liquidationConfig);
+        market.setLiquidationEngine(liquidationEngine);
         market.setPauser(OWNER, PAUSE_TYPE, true);
+        vm.stopPrank();
     }
 
     function testSetBorrowRateViaConstuctor(uint256 borrowRate) external {

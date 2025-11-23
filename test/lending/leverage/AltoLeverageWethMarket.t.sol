@@ -2,20 +2,19 @@
 pragma solidity ^0.8.22;
 
 import {Test} from "forge-std/Test.sol";
-import {
-    LiquidationConfiguration,
-    BaseMarketInitParams,
-    BorrowMarketInitParams
-} from "@alto/lending/interfaces/IMarket.sol";
+import {LiquidationConfiguration} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
+import {BaseMarketInitParams, BorrowMarketInitParams} from "@alto/lending/interfaces/IMarket.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {LENDING_ORACLE_PRICE_PRECISION, IOracle} from "@alto/oracles/interfaces/IOracle.sol";
 import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
 import {IMarket, Position, IMarketErrors} from "@alto/lending/interfaces/IMarket.sol";
+import {AltoBaseMarket} from "@alto/lending/AltoBaseMarket.sol";
 import {console} from "forge-std/console.sol";
 import {SwapParams} from "@alto/lending/leverage/interfaces/IAltoLeverageSwapper.sol";
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
 import {MarketDeployer} from "@alto/utils/MarketDeployer.sol";
+import {AltoLiquidationEngine} from "@alto/lending/AltoLiquidationEngine.sol";
 import {AltoLeverageSwapper} from "@alto/lending/leverage/AltoLeverageSwapper.sol";
 import {AltoMultiChainlinkLendingOracle} from "@alto/oracles/AltoMultiChainlinkLendingOracle.sol";
 import {ChainlinkNode, ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
@@ -53,6 +52,22 @@ contract AltoLeverageWethMarketTest is Test {
         chainlinkNodes.push(chainlinkNode);
         oracle = address(new AltoMultiChainlinkLendingOracle(address(this), chainlinkNodes));
 
+        LiquidationConfiguration memory liquidationConfig = LiquidationConfiguration({
+            maxLiquidationLtv: 0.8 ether,
+            dynamicBonusFeeStart: 0.03 ether,
+            ltvForCompleteLiquidation: 0.9 ether,
+            dynamicBonusFeeDecaySteepness: 5 ether,
+            liquidationBaseFee: 0.05 ether,
+            minPenaltyPercentage: 0.01 ether,
+            protocolFeePercentage: 0.075 ether,
+            isEnabledPriorityLiquidation: true,
+            disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
+            priorityLiquidationGracePeriod: 5 minutes,
+            taggerLiquidationGracePeriod: 2 minutes,
+            liquidationWindowTag: 3 days
+        });
+
+        // Liquidation engine will be set after market deployment
         BorrowMarketInitParams memory borrowMarketInitParams = BorrowMarketInitParams({
             baseMarketInitParams: BaseMarketInitParams({
                 borrowToken: address(borrowToken),
@@ -62,26 +77,18 @@ contract AltoLeverageWethMarketTest is Test {
                 oracle: address(oracle),
                 maxLtv: 0.8 ether,
                 feeRecipient: address(this),
-                liquidationConfiguration: LiquidationConfiguration({
-                    maxLiquidationLtv: 0.8 ether,
-                    dynamicBonusFeeStart: 0.03 ether,
-                    ltvForCompleteLiquidation: 0.9 ether,
-                    dynamicBonusFeeDecaySteepness: 5 ether,
-                    liquidationBaseFee: 0.05 ether,
-                    minPenaltyPercentage: 0.01 ether,
-                    protocolFeePercentage: 0.075 ether,
-                    isEnabledPriorityLiquidation: true,
-                    disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
-                    priorityLiquidationGracePeriod: 5 minutes,
-                    taggerLiquidationGracePeriod: 2 minutes,
-                    liquidationWindowTag: 3 days
-                })
+                liquidationEngine: address(1) // Will be updated below
             }),
             initialBorrowOpeningFee: 0,
             supplyCapAssets: 0
         });
 
         market = IMarket(MarketDeployer.deployBorrowMarket(borrowMarketInitParams));
+
+        // Create real liquidation engine with market address and update market
+        address liquidationEngine = address(new AltoLiquidationEngine(address(this), address(market)));
+        AltoLiquidationEngine(liquidationEngine).setLiquidationConfiguration(liquidationConfig);
+        AltoBaseMarket(address(market)).setLiquidationEngine(liquidationEngine);
 
         swapper.setWhitelisted(address(leverage), true);
         // Setup initial balances for test accounts

@@ -3,9 +3,12 @@ pragma solidity ^0.8.28;
 
 import {MarketType, MarketCommon} from "../../MarketCommon.t.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {IMarketErrors, IMarketEvents, LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
+import {IMarketErrors, IMarketEvents} from "@alto/lending/interfaces/IMarket.sol";
+import {LiquidationConfiguration} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
 import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 import {AltoMintMarket} from "@alto/lending/AltoMintMarket.sol";
+import {AltoLiquidationEngine} from "@alto/lending/AltoLiquidationEngine.sol";
+import {IPriorityLiquidationEngine} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
 
 contract SetBorrowOpeningFeeTestMint is MarketCommon {
     AltoMintMarket public mintMarket;
@@ -50,9 +53,10 @@ contract SetBorrowOpeningFeeTestMint is MarketCommon {
     }
 
     function test_RevertWhen_FeeRecipientIsNotSetAndBorrowOpeningFeeIsGreaterThan0() external whenCallerIsOwner {
-        LiquidationConfiguration memory liquidationConfiguration = market.liquidationConfiguration();
+        LiquidationConfiguration memory liquidationConfiguration =
+            IPriorityLiquidationEngine(market.liquidationEngine()).liquidationConfiguration();
         liquidationConfiguration.protocolFeePercentage = 0;
-        mintMarket.setLiquidationConfiguration(liquidationConfiguration);
+        AltoLiquidationEngine(market.liquidationEngine()).setLiquidationConfiguration(liquidationConfiguration);
         mintMarket.setBorrowOpeningFee(0);
         mintMarket.setIrm(address(0), false);
         mintMarket.setFeeRecipient(address(0));

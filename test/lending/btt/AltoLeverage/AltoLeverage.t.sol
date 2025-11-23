@@ -6,18 +6,19 @@ import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 import {LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
-import {
-    IMarket,
-    LiquidationConfiguration,
-    BaseMarketInitParams,
-    BorrowMarketInitParams
-} from "@alto/lending/interfaces/IMarket.sol";
+import {IMarket, BaseMarketInitParams, BorrowMarketInitParams} from "@alto/lending/interfaces/IMarket.sol";
 import {SwapperSimpleMock} from "@alto/lending/mocks/SwapperSimpleMock.sol";
 
 import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
 import {MarketDeployer} from "@alto/utils/MarketDeployer.sol";
+import {AltoLiquidationEngine} from "@alto/lending/AltoLiquidationEngine.sol";
+import {AltoBaseMarket} from "@alto/lending/AltoBaseMarket.sol";
+import {
+    IPriorityLiquidationEngine,
+    LiquidationConfiguration
+} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
 
 contract AltoLeverageBTTTest is Test {
     using FixedPointMath for uint256;
@@ -60,6 +61,8 @@ contract AltoLeverageBTTTest is Test {
             liquidationWindowTag: 3 days
         });
 
+        // Liquidation engine will be set after market deployment
+
         BaseMarketInitParams memory baseMarketInitParams = BaseMarketInitParams({
             borrowToken: address(borrowToken),
             collateralToken: address(collateralToken),
@@ -68,7 +71,7 @@ contract AltoLeverageBTTTest is Test {
             oracle: address(oracle),
             maxLtv: 0.8 ether,
             feeRecipient: address(this),
-            liquidationConfiguration: config
+            liquidationEngine: address(1) // Will be updated below
         });
 
         BorrowMarketInitParams memory borrowMarketInitParams = BorrowMarketInitParams({
@@ -76,6 +79,11 @@ contract AltoLeverageBTTTest is Test {
         });
 
         market = IMarket(MarketDeployer.deployBorrowMarket(borrowMarketInitParams));
+
+        // Create real liquidation engine with market address and update market
+        address liquidationEngine = address(new AltoLiquidationEngine(address(this), address(market)));
+        AltoLiquidationEngine(liquidationEngine).setLiquidationConfiguration(config);
+        AltoBaseMarket(address(market)).setLiquidationEngine(liquidationEngine);
 
         swapper.setWhitelisted(address(leverage), true);
         // Setup initial balances for test accounts

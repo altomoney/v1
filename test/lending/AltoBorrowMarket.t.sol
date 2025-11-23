@@ -9,13 +9,17 @@ import {IMarketErrors} from "@alto/lending/interfaces/IMarket.sol";
 import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
 import {console2} from "forge-std/console2.sol";
 import {MockMarketDeployer, MockMarket} from "@alto-test/helpers/MockMarket.sol";
-import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
 import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
 import {SwapperSimpleMock} from "@alto/lending/mocks/SwapperSimpleMock.sol";
 import {SwapParams} from "@alto/lending/leverage/interfaces/IAltoLeverageSwapper.sol";
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
 import {stdError} from "forge-std/StdError.sol";
+import {AltoLiquidationEngine} from "@alto/lending/AltoLiquidationEngine.sol";
+import {
+    IPriorityLiquidationEngine,
+    LiquidationConfiguration
+} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
 
 contract AltoBorrowMarketTest is Test {
     using FixedPointMath for uint256;
@@ -39,6 +43,22 @@ contract AltoBorrowMarketTest is Test {
         address oracle = address(new OracleMock());
         OracleMock(oracle).setPrice(LENDING_ORACLE_PRICE_PRECISION);
 
+        LiquidationConfiguration memory liquidationConfig = LiquidationConfiguration({
+            maxLiquidationLtv: 0.8 ether,
+            dynamicBonusFeeStart: 0.03 ether,
+            ltvForCompleteLiquidation: 0.9 ether,
+            dynamicBonusFeeDecaySteepness: 5 ether,
+            liquidationBaseFee: 0.05 ether,
+            minPenaltyPercentage: 0.01 ether,
+            protocolFeePercentage: 0.075 ether,
+            isEnabledPriorityLiquidation: true,
+            disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
+            priorityLiquidationGracePeriod: 5 minutes,
+            taggerLiquidationGracePeriod: 2 minutes,
+            liquidationWindowTag: 3 days
+        });
+
+        // Liquidation engine will be set after market deployment
         market = MockMarketDeployer.deployMarket(
             address(borrowToken),
             address(collateralToken),
@@ -48,21 +68,14 @@ contract AltoBorrowMarketTest is Test {
             0.75 ether,
             0,
             address(this),
-            LiquidationConfiguration({
-                maxLiquidationLtv: 0.8 ether,
-                dynamicBonusFeeStart: 0.03 ether,
-                ltvForCompleteLiquidation: 0.9 ether,
-                dynamicBonusFeeDecaySteepness: 5 ether,
-                liquidationBaseFee: 0.05 ether,
-                minPenaltyPercentage: 0.01 ether,
-                protocolFeePercentage: 0.075 ether,
-                isEnabledPriorityLiquidation: true,
-                disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
-                priorityLiquidationGracePeriod: 5 minutes,
-                taggerLiquidationGracePeriod: 2 minutes,
-                liquidationWindowTag: 3 days
-            })
+            liquidationConfig,
+            address(1) // Will be updated below
         );
+
+        // Create real liquidation engine with market address and update market
+        address liquidationEngine = address(new AltoLiquidationEngine(address(this), address(market)));
+        AltoLiquidationEngine(liquidationEngine).setLiquidationConfiguration(liquidationConfig);
+        market.setLiquidationEngine(liquidationEngine);
 
         // Setup initial balances for test accounts
         deal(address(borrowToken), alice, INITIAL_AMOUNT);

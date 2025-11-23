@@ -2,7 +2,7 @@
 pragma solidity ^0.8.22;
 
 import {Test} from "forge-std/Test.sol";
-import {LiquidationConfiguration, Position} from "@alto/lending/interfaces/IMarket.sol";
+import {Position} from "@alto/lending/interfaces/IMarket.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
@@ -15,6 +15,13 @@ import {MockMarketDeployer, MockMarket} from "@alto-test/helpers/MockMarket.sol"
 import {console} from "forge-std/console.sol";
 import {stdError} from "forge-std/StdError.sol";
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
+import {AltoLiquidationEngine} from "@alto/lending/AltoLiquidationEngine.sol";
+import {
+    IPriorityLiquidationEngine,
+    IPriorityLiquidationEngineEvents,
+    IPriorityLiquidationEngineStaticTypes,
+    LiquidationConfiguration
+} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
 
 contract LiquidateCallback is ILiquidateCallback {
     function onLiquidateCallback(uint256 assetsToRepay, uint256 collateralReceived, bytes calldata data) external {
@@ -55,6 +62,7 @@ contract AltoBorrowMarketTest is Test {
         address oracle = address(new OracleMock());
         OracleMock(oracle).setPrice(collateralPrice);
 
+        // Liquidation engine will be set after market deployment
         market = MockMarketDeployer.deployMarket(
             address(borrowToken),
             address(collateralToken),
@@ -64,8 +72,14 @@ contract AltoBorrowMarketTest is Test {
             maxLtv,
             0,
             FEE_RECEIVER,
-            liquidationConfiguration
+            liquidationConfiguration,
+            address(1) // Will be updated below
         );
+
+        // Create real liquidation engine with market address and update market
+        address liquidationEngine = address(new AltoLiquidationEngine(address(this), address(market)));
+        IPriorityLiquidationEngine(liquidationEngine).setLiquidationConfiguration(liquidationConfiguration);
+        market.setLiquidationEngine(liquidationEngine);
 
         imarket = IMarket(address(market));
 
@@ -111,9 +125,9 @@ contract AltoBorrowMarketTest is Test {
         vm.stopPrank();
 
         vm.startPrank(market.owner());
-        market.setPriorityLiquidator(bob, true);
-        market.setPriorityLiquidator(liquidator, true);
-        market.setPriorityLiquidator(address(liquidateCallback), true);
+        IPriorityLiquidationEngine(liquidationEngine).setPriorityLiquidator(bob, true);
+        IPriorityLiquidationEngine(liquidationEngine).setPriorityLiquidator(liquidator, true);
+        IPriorityLiquidationEngine(liquidationEngine).setPriorityLiquidator(address(liquidateCallback), true);
         vm.stopPrank();
     }
 
@@ -179,7 +193,7 @@ contract AltoBorrowMarketTest is Test {
         );
 
         vm.expectRevert(stdError.divisionError);
-        market.liquidate(bob, hex"");
+        market.liquidate(bob, hex"", hex"");
 
         vm.startPrank(market.owner());
         market.governanceLiquidate(bob);
@@ -320,13 +334,12 @@ contract AltoBorrowMarketTest is Test {
             liquidator,
             2 ether,
             0,
-            1e17,
             1900000000000,
             1.9 ether,
             1499998100000000000,
             1499998100000000000000000
         );
-        market.liquidate(bob, hex"");
+        market.liquidate(bob, hex"", hex"");
 
         vm.stopPrank();
     }
@@ -384,7 +397,7 @@ contract AltoBorrowMarketTest is Test {
         // totalCollateralToTake = 526 wei (only liquidation fee)
         // repayAmount = 0
         vm.startPrank(liquidator);
-        market.liquidate(bob, hex"");
+        market.liquidate(bob, hex"", hex"");
         vm.stopPrank();
 
         uint256 collateralBalanceOfLiqudatorAfter = collateralToken.balanceOf(liquidator);
@@ -406,7 +419,7 @@ contract AltoBorrowMarketTest is Test {
         collateralBalanceOfLiqudatorBefore = collateralToken.balanceOf(liquidator);
         debtBalanceOfLiqudatorBefore = borrowToken.balanceOf(liquidator);
         vm.startPrank(liquidator);
-        market.liquidate(bob, hex"");
+        market.liquidate(bob, hex"", hex"");
         vm.stopPrank();
 
         collateralBalanceOfLiqudatorAfter = collateralToken.balanceOf(liquidator);
@@ -477,14 +490,14 @@ contract AltoBorrowMarketTest is Test {
             liquidator,
             expectedCollateralAmount,
             protocolFee,
-            liquidatorFee,
             expectedRepayAmount,
             market.borrowAmountToShares(expectedRepayAmount),
             0,
             0
         );
 
-        (uint256 collateralAmount, uint256 repayAmount, uint256 returnedProtocolFee) = market.liquidate(bob, hex"");
+        (uint256 collateralAmount, uint256 repayAmount, uint256 returnedProtocolFee) =
+            market.liquidate(bob, hex"", hex"");
 
         assertEq(collateralAmount, expectedCollateralAmount);
         assertEq(repayAmount, expectedRepayAmount);
@@ -549,7 +562,6 @@ contract AltoBorrowMarketTest is Test {
             liquidator,
             1 ether,
             protocolFee,
-            liquidatorFee,
             1.9 ether,
             borrowSharesToRepay,
             1.1 ether - 1,
@@ -560,7 +572,8 @@ contract AltoBorrowMarketTest is Test {
         assertEq(currentLtv, 1.5 ether);
         assertEq(newLtv, 0 ether);
 
-        (uint256 collateralAmount, uint256 repayAmount, uint256 returnedProtocolFee) = market.liquidate(bob, hex"");
+        (uint256 collateralAmount, uint256 repayAmount, uint256 returnedProtocolFee) =
+            market.liquidate(bob, hex"", hex"");
 
         assertEq(collateralAmount, 1 ether);
         assertEq(repayAmount, 1.9 ether);
@@ -610,10 +623,13 @@ contract AltoBorrowMarketTest is Test {
         deal(address(borrowToken), externalLiquidator, 0.453044162158624307 ether);
         vm.startPrank(externalLiquidator);
 
-        market.tagLiquidablePosition(bob, externalLiquidator);
+        IPriorityLiquidationEngine(market.liquidationEngine()).tagLiquidablePosition(bob, externalLiquidator);
 
         vm.warp(
-            block.timestamp + IMarket(address(market)).liquidationConfiguration().priorityLiquidationGracePeriod + 1
+            block.timestamp
+                + IPriorityLiquidationEngine(market.liquidationEngine())
+                .liquidationConfiguration()
+                .priorityLiquidationGracePeriod + 1
         );
 
         (uint256 currentLtv, uint256 newLtv) = market.calculatePreLiquidationLtv(bob);
@@ -635,14 +651,14 @@ contract AltoBorrowMarketTest is Test {
             externalLiquidator,
             0.513044009445403087 ether,
             protocolFee,
-            liquidatorFee,
             0.453044162158624307 ether,
             283152493245491393478263,
             0,
             0
         );
 
-        (uint256 collateralAmount, uint256 repayAmount, uint256 returnedProtocolFee) = market.liquidate(bob, hex"");
+        (uint256 collateralAmount, uint256 repayAmount, uint256 returnedProtocolFee) =
+            market.liquidate(bob, hex"", hex"");
 
         assertEq(collateralAmount, 0.513044009445403087 ether);
         assertEq(repayAmount, 0.453044162158624307 ether);
@@ -710,14 +726,14 @@ contract AltoBorrowMarketTest is Test {
             liquidator,
             0.95 ether,
             protocolFee,
-            liquidatorFee,
             0.9 ether,
             500000 ether,
             0,
             0
         );
 
-        (uint256 collateralAmount, uint256 repayAmount, uint256 returnedProtocolFee) = market.liquidate(bob, hex"");
+        (uint256 collateralAmount, uint256 repayAmount, uint256 returnedProtocolFee) =
+            market.liquidate(bob, hex"", hex"");
 
         assertEq(collateralAmount, 0.95 ether);
         assertEq(repayAmount, 0.9 ether);
@@ -763,11 +779,12 @@ contract AltoBorrowMarketTest is Test {
 
         vm.startPrank(taggerLiquidator);
         vm.expectEmit();
-        emit IMarketEvents.PositionTagged(bob, taggerLiquidator, block.timestamp);
-        market.tagLiquidablePosition(bob, taggerLiquidator);
+        emit IPriorityLiquidationEngineEvents.PositionTagged(bob, taggerLiquidator, block.timestamp);
+        IPriorityLiquidationEngine(market.liquidationEngine()).tagLiquidablePosition(bob, taggerLiquidator);
         vm.stopPrank();
 
-        (bool tagged, address tagger, uint256 timestamp) = market.liquidablePositions(bob);
+        (bool tagged, address tagger, uint256 timestamp) =
+            IPriorityLiquidationEngineStaticTypes(market.liquidationEngine()).liquidablePositions(bob);
         assertTrue(tagged);
         assertEq(tagger, taggerLiquidator);
         assertEq(timestamp, block.timestamp);
@@ -810,11 +827,12 @@ contract AltoBorrowMarketTest is Test {
 
         vm.startPrank(taggerLiquidator);
         vm.expectEmit();
-        emit IMarketEvents.PositionTagged(bob, taggerLiquidator, block.timestamp);
-        market.tagLiquidablePosition(bob, taggerLiquidator);
+        emit IPriorityLiquidationEngineEvents.PositionTagged(bob, taggerLiquidator, block.timestamp);
+        IPriorityLiquidationEngine(market.liquidationEngine()).tagLiquidablePosition(bob, taggerLiquidator);
         vm.stopPrank();
 
-        LiquidationConfiguration memory liquidationConfiguration = IMarket(address(market)).liquidationConfiguration();
+        LiquidationConfiguration memory liquidationConfiguration =
+            IPriorityLiquidationEngine(market.liquidationEngine()).liquidationConfiguration();
 
         vm.warp(block.timestamp + liquidationConfiguration.priorityLiquidationGracePeriod + 1);
         vm.startPrank(taggerLiquidator);
@@ -832,13 +850,13 @@ contract AltoBorrowMarketTest is Test {
             taggerLiquidator,
             950000343607371433,
             protocolFee,
-            liquidatorFee,
             900000343607371433,
             500000 ether,
             0,
             0
         );
-        (uint256 collateralAmount, uint256 repayAmount, uint256 returnedProtocolFee) = market.liquidate(bob, hex"");
+        (uint256 collateralAmount, uint256 repayAmount, uint256 returnedProtocolFee) =
+            market.liquidate(bob, hex"", hex"");
 
         assertEq(collateralAmount, 950000343607371433);
         assertEq(repayAmount, 900000343607371433);
@@ -846,7 +864,8 @@ contract AltoBorrowMarketTest is Test {
 
         vm.stopPrank();
 
-        (bool tagged, address tagger, uint256 timestamp) = market.liquidablePositions(bob);
+        (bool tagged, address tagger, uint256 timestamp) =
+            IPriorityLiquidationEngineStaticTypes(market.liquidationEngine()).liquidablePositions(bob);
         assertFalse(tagged);
         assertEq(tagger, address(0));
         assertEq(timestamp, 0);
@@ -892,11 +911,12 @@ contract AltoBorrowMarketTest is Test {
 
         vm.startPrank(taggerLiquidator);
         vm.expectEmit();
-        emit IMarketEvents.PositionTagged(bob, taggerLiquidator, block.timestamp);
-        market.tagLiquidablePosition(bob, taggerLiquidator);
+        emit IPriorityLiquidationEngineEvents.PositionTagged(bob, taggerLiquidator, block.timestamp);
+        IPriorityLiquidationEngine(market.liquidationEngine()).tagLiquidablePosition(bob, taggerLiquidator);
         vm.stopPrank();
 
-        LiquidationConfiguration memory liquidationConfiguration = IMarket(address(market)).liquidationConfiguration();
+        LiquidationConfiguration memory liquidationConfiguration =
+            IPriorityLiquidationEngine(market.liquidationEngine()).liquidationConfiguration();
 
         vm.warp(
             block.timestamp + liquidationConfiguration.priorityLiquidationGracePeriod
@@ -916,21 +936,22 @@ contract AltoBorrowMarketTest is Test {
             externalLiquidator,
             950000480593735489,
             protocolFee,
-            liquidatorFee,
             900000480593735489,
             500000 ether,
             0,
             0
         );
 
-        (uint256 collateralAmount, uint256 repayAmount, uint256 returnedProtocolFee) = market.liquidate(bob, hex"");
+        (uint256 collateralAmount, uint256 repayAmount, uint256 returnedProtocolFee) =
+            market.liquidate(bob, hex"", hex"");
 
         assertEq(collateralAmount, 950000480593735489);
         assertEq(repayAmount, 900000480593735489);
 
         vm.stopPrank();
 
-        (bool tagged, address tagger, uint256 timestamp) = market.liquidablePositions(bob);
+        (bool tagged, address tagger, uint256 timestamp) =
+            IPriorityLiquidationEngineStaticTypes(market.liquidationEngine()).liquidablePositions(bob);
         assertFalse(tagged);
         assertEq(tagger, address(0));
         assertEq(timestamp, 0);
@@ -986,13 +1007,13 @@ contract AltoBorrowMarketTest is Test {
             liquidator,
             0.95 ether,
             protocolFee,
-            liquidatorFee,
             0.9 ether,
             borrowShares,
             0,
             0
         );
-        (uint256 collateralAmount, uint256 repayAmount, uint256 returnedProtocolFee) = market.liquidate(bob, hex"");
+        (uint256 collateralAmount, uint256 repayAmount, uint256 returnedProtocolFee) =
+            market.liquidate(bob, hex"", hex"");
 
         assertEq(collateralAmount, 0.95 ether);
         assertEq(repayAmount, 0.9 ether);
@@ -1030,7 +1051,7 @@ contract AltoBorrowMarketTest is Test {
         // Try to liquidate as priority liquidator
         vm.startPrank(liquidator);
         vm.expectRevert(IMarketErrors.AltoBaseMarketLiquidatingSolventPosition.selector);
-        market.liquidate(bob, hex"");
+        market.liquidate(bob, hex"", hex"");
         vm.stopPrank();
     }
 
@@ -1065,7 +1086,7 @@ contract AltoBorrowMarketTest is Test {
         // Try to liquidate as non-priority liquidator
         vm.startPrank(externalLiquidator);
         vm.expectRevert(IMarketErrors.AltoBaseMarketLiquidationUnauthorized.selector);
-        market.liquidate(bob, hex"");
+        market.liquidate(bob, hex"", hex"");
         vm.stopPrank();
     }
 
@@ -1100,12 +1121,12 @@ contract AltoBorrowMarketTest is Test {
         // Tag position
         vm.startPrank(taggerLiquidator);
         vm.expectEmit();
-        emit IMarketEvents.PositionTagged(bob, taggerLiquidator, block.timestamp);
-        market.tagLiquidablePosition(bob, taggerLiquidator);
+        emit IPriorityLiquidationEngineEvents.PositionTagged(bob, taggerLiquidator, block.timestamp);
+        IPriorityLiquidationEngine(market.liquidationEngine()).tagLiquidablePosition(bob, taggerLiquidator);
 
         // Try to liquidate immediately (before grace period)
         vm.expectRevert(IMarketErrors.AltoBaseMarketLiquidationUnauthorized.selector);
-        market.liquidate(bob, hex"");
+        market.liquidate(bob, hex"", hex"");
         vm.stopPrank();
     }
 
@@ -1140,8 +1161,8 @@ contract AltoBorrowMarketTest is Test {
         // Tag position
         vm.startPrank(taggerLiquidator);
         vm.expectEmit();
-        emit IMarketEvents.PositionTagged(bob, taggerLiquidator, block.timestamp);
-        market.tagLiquidablePosition(bob, taggerLiquidator);
+        emit IPriorityLiquidationEngineEvents.PositionTagged(bob, taggerLiquidator, block.timestamp);
+        IPriorityLiquidationEngine(market.liquidationEngine()).tagLiquidablePosition(bob, taggerLiquidator);
         vm.stopPrank();
 
         // Warp past priority grace period but before tagger grace period
@@ -1150,7 +1171,7 @@ contract AltoBorrowMarketTest is Test {
         // Try to liquidate as external liquidator
         vm.startPrank(externalLiquidator);
         vm.expectRevert(IMarketErrors.AltoBaseMarketLiquidationUnauthorized.selector);
-        market.liquidate(bob, hex"");
+        market.liquidate(bob, hex"", hex"");
         vm.stopPrank();
     }
 
@@ -1184,16 +1205,20 @@ contract AltoBorrowMarketTest is Test {
 
         vm.startPrank(taggerLiquidator);
         vm.expectEmit();
-        emit IMarketEvents.PositionTagged(bob, taggerLiquidator, block.timestamp);
-        market.tagLiquidablePosition(bob, taggerLiquidator);
+        emit IPriorityLiquidationEngineEvents.PositionTagged(bob, taggerLiquidator, block.timestamp);
+        IPriorityLiquidationEngine(market.liquidationEngine()).tagLiquidablePosition(bob, taggerLiquidator);
         vm.stopPrank();
 
-        vm.warp(block.timestamp + IMarket(address(market)).liquidationConfiguration().liquidationWindowTag + 1);
+        vm.warp(
+            block.timestamp
+                + IPriorityLiquidationEngine(market.liquidationEngine()).liquidationConfiguration().liquidationWindowTag
+                + 1
+        );
 
         vm.startPrank(alice);
         vm.expectEmit();
-        emit IMarketEvents.PositionTagged(bob, alice, block.timestamp);
-        market.tagLiquidablePosition(bob, alice);
+        emit IPriorityLiquidationEngineEvents.PositionTagged(bob, alice, block.timestamp);
+        IPriorityLiquidationEngine(market.liquidationEngine()).tagLiquidablePosition(bob, alice);
         vm.stopPrank();
     }
 
@@ -1225,15 +1250,17 @@ contract AltoBorrowMarketTest is Test {
 
         market.addInterest(0.4 ether);
 
+        IPriorityLiquidationEngine liquidationEngine = IPriorityLiquidationEngine(market.liquidationEngine());
+
         vm.startPrank(taggerLiquidator);
         vm.expectEmit();
-        emit IMarketEvents.PositionTagged(bob, taggerLiquidator, block.timestamp);
-        market.tagLiquidablePosition(bob, taggerLiquidator);
+        emit IPriorityLiquidationEngineEvents.PositionTagged(bob, taggerLiquidator, block.timestamp);
+        liquidationEngine.tagLiquidablePosition(bob, taggerLiquidator);
         vm.stopPrank();
 
         vm.startPrank(alice);
         vm.expectRevert(IMarketErrors.AltoBaseMarketLiquidationAlreadyTagged.selector);
-        market.tagLiquidablePosition(bob, alice);
+        liquidationEngine.tagLiquidablePosition(bob, alice);
         vm.stopPrank();
     }
 
@@ -1290,7 +1317,6 @@ contract AltoBorrowMarketTest is Test {
             liquidator,
             2 ether,
             protocolFee,
-            liquidatorFee,
             1.9 ether,
             borrowSharesToRepay,
             1.1 ether - 1,
@@ -1301,7 +1327,8 @@ contract AltoBorrowMarketTest is Test {
         assertEq(currentLtv, 1.5 ether);
         assertEq(newLtv, 0 ether);
 
-        (uint256 collateralAmount, uint256 repayAmount, uint256 returnedProtocolFee) = market.liquidate(bob, hex"");
+        (uint256 collateralAmount, uint256 repayAmount, uint256 returnedProtocolFee) =
+            market.liquidate(bob, hex"", hex"");
 
         assertEq(collateralAmount, 2 ether);
         assertEq(repayAmount, 1.9 ether);
@@ -1372,7 +1399,6 @@ contract AltoBorrowMarketTest is Test {
             address(liquidateCallback),
             6.75 ether,
             protocolFee,
-            liquidatorFee,
             0.625 ether,
             market.borrowAmountToShares(0.625 ether),
             0,
@@ -1380,7 +1406,7 @@ contract AltoBorrowMarketTest is Test {
         );
 
         (uint256 collateralAmount, uint256 repayAmount, uint256 returnedProtocolFee) =
-            market.liquidate(bob, abi.encode(address(borrowToken), 0.625 ether));
+            market.liquidate(bob, abi.encode(address(borrowToken), 0.625 ether), hex"");
 
         assertEq(collateralAmount, 6.75 ether);
         assertEq(repayAmount, 0.625 ether);

@@ -16,7 +16,8 @@ import {TestnetMarketBatchReport} from "@alto/deployments/testnet/ITestnetMarket
 import {MultiTokenSender} from "@alto/deployments/testnet/contracts/MultiTokenSender.sol";
 import {SwapperSimpleMock} from "@alto/lending/mocks/SwapperSimpleMock.sol";
 import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
-import {IMarket, LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
+import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
+import {IAltoLiquidationEngine} from "@alto/lending/interfaces/IAltoLiquidationEngine.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
@@ -177,6 +178,10 @@ library DeployAltoTestnet {
             ))
         .getMarketReport();
 
+        // Update market to use real liquidation engine
+        IMarket(input.contracts.wethMarketBatch.market)
+            .setLiquidationEngine(input.contracts.wethMarketBatch.liquidationEngine);
+
         AltoLeverage(input.contracts.altoLeverage).setMarket(input.contracts.wethMarketBatch.market, true);
         IMarket(input.contracts.wethMarketBatch.market).setAuthorizedCallback(input.contracts.altoLeverage, true);
         DUSD(input.tokens.dusd).setMinterStatus(input.contracts.wethMarketBatch.market, true);
@@ -199,6 +204,10 @@ library DeployAltoTestnet {
                 })
             ))
         .getMarketReport();
+
+        // Update market to use real liquidation engine
+        IMarket(input.contracts.wstethMarketBatch.market)
+            .setLiquidationEngine(input.contracts.wstethMarketBatch.liquidationEngine);
 
         AltoLeverage(input.contracts.altoLeverage).setMarket(input.contracts.wstethMarketBatch.market, true);
         IMarket(input.contracts.wstethMarketBatch.market).setAuthorizedCallback(input.contracts.altoLeverage, true);
@@ -223,6 +232,10 @@ library DeployAltoTestnet {
             ))
         .getMarketReport();
 
+        // Update market to use real liquidation engine
+        IMarket(input.contracts.rethMarketBatch.market)
+            .setLiquidationEngine(input.contracts.rethMarketBatch.liquidationEngine);
+
         AltoLeverage(input.contracts.altoLeverage).setMarket(input.contracts.rethMarketBatch.market, true);
         IMarket(input.contracts.rethMarketBatch.market).setAuthorizedCallback(input.contracts.altoLeverage, true);
         DUSD(input.tokens.dusd).setMinterStatus(input.contracts.rethMarketBatch.market, true);
@@ -245,6 +258,10 @@ library DeployAltoTestnet {
                 })
             ))
         .getMarketReport();
+
+        // Update market to use real liquidation engine
+        IMarket(input.contracts.methMarketBatch.market)
+            .setLiquidationEngine(input.contracts.methMarketBatch.liquidationEngine);
 
         AltoLeverage(input.contracts.altoLeverage).setMarket(input.contracts.methMarketBatch.market, true);
         IMarket(input.contracts.methMarketBatch.market).setAuthorizedCallback(input.contracts.altoLeverage, true);
@@ -269,6 +286,10 @@ library DeployAltoTestnet {
             ))
         .getMarketReport();
 
+        // Update market to use real liquidation engine
+        IMarket(input.contracts.tbtcMarketBatch.market)
+            .setLiquidationEngine(input.contracts.tbtcMarketBatch.liquidationEngine);
+
         AltoLeverage(input.contracts.altoLeverage).setMarket(input.contracts.tbtcMarketBatch.market, true);
         IMarket(input.contracts.tbtcMarketBatch.market).setAuthorizedCallback(input.contracts.altoLeverage, true);
         DUSD(input.tokens.dusd).setMinterStatus(input.contracts.tbtcMarketBatch.market, true);
@@ -292,6 +313,10 @@ library DeployAltoTestnet {
             ))
         .getMarketReport();
 
+        // Update market to use real liquidation engine
+        IMarket(input.contracts.wbtcMarketBatch.market)
+            .setLiquidationEngine(input.contracts.wbtcMarketBatch.liquidationEngine);
+
         AltoLeverage(input.contracts.altoLeverage).setMarket(input.contracts.wbtcMarketBatch.market, true);
         IMarket(input.contracts.wbtcMarketBatch.market).setAuthorizedCallback(input.contracts.altoLeverage, true);
         AltoAdapter(payable(input.contracts.altoAdapter)).approveContract(input.contracts.wbtcMarketBatch.market);
@@ -308,6 +333,10 @@ library DeployAltoTestnet {
             ))
         .getMarketReport();
 
+        // Update market to use real liquidation engine
+        IMarket(input.contracts.cbbtcMarketBatch.market)
+            .setLiquidationEngine(input.contracts.cbbtcMarketBatch.liquidationEngine);
+
         AltoLeverage(input.contracts.altoLeverage).setMarket(input.contracts.cbbtcMarketBatch.market, true);
         IMarket(input.contracts.cbbtcMarketBatch.market).setAuthorizedCallback(input.contracts.altoLeverage, true);
         AltoAdapter(payable(input.contracts.altoAdapter)).approveContract(input.contracts.cbbtcMarketBatch.market);
@@ -323,6 +352,10 @@ library DeployAltoTestnet {
                 })
             ))
         .getMarketReport();
+
+        // Update market to use real liquidation engine
+        IMarket(input.contracts.susdeMarketBatch.market)
+            .setLiquidationEngine(input.contracts.susdeMarketBatch.liquidationEngine);
 
         AltoLeverage(input.contracts.altoLeverage).setMarket(input.contracts.susdeMarketBatch.market, true);
         IMarket(input.contracts.susdeMarketBatch.market).setAuthorizedCallback(input.contracts.altoLeverage, true);
@@ -624,10 +657,11 @@ library DeployAltoTestnet {
     }
 
     function _transferOwnership(AltoTestnetParams memory params, AltoTestnetInput memory input) internal {
-        AltoMulticallTestnet.Call[] memory calls = new AltoMulticallTestnet.Call[](22);
+        AltoMulticallTestnet.Call[] memory calls = new AltoMulticallTestnet.Call[](30);
 
         address altoMulticall = input.contracts.altoMulticall;
 
+        // Core contracts
         Ownable(input.contracts.multiTokenSender).transferOwnership(altoMulticall);
         Ownable(input.contracts.mockSwapper).transferOwnership(altoMulticall);
         Ownable2Step(input.contracts.altoLeverage).transferOwnership(altoMulticall);
@@ -637,132 +671,189 @@ library DeployAltoTestnet {
             allowFailure: false
         });
 
+        uint256 callIndex = 1;
+
         // Mint Markets
         // WETH
         Ownable2Step(input.contracts.wethMarketBatch.market).transferOwnership(altoMulticall);
-        calls[1] = AltoMulticallTestnet.Call({
+        calls[callIndex++] = AltoMulticallTestnet.Call({
             target: input.contracts.wethMarketBatch.market,
             callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
             allowFailure: false
         });
         Ownable2Step(input.contracts.wethMarketBatch.marketIrm).transferOwnership(altoMulticall);
-        calls[2] = AltoMulticallTestnet.Call({
+        calls[callIndex++] = AltoMulticallTestnet.Call({
             target: input.contracts.wethMarketBatch.marketIrm,
             callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
             allowFailure: false
         });
         Ownable(input.contracts.wethMarketBatch.marketOracle).transferOwnership(altoMulticall);
+        Ownable2Step(input.contracts.wethMarketBatch.liquidationEngine).acceptOwnership();
+        Ownable2Step(input.contracts.wethMarketBatch.liquidationEngine).transferOwnership(altoMulticall);
+        calls[callIndex++] = AltoMulticallTestnet.Call({
+            target: input.contracts.wethMarketBatch.liquidationEngine,
+            callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
+            allowFailure: false
+        });
 
         // WSTETH
         Ownable2Step(input.contracts.wstethMarketBatch.market).transferOwnership(altoMulticall);
-        calls[3] = AltoMulticallTestnet.Call({
+        calls[callIndex++] = AltoMulticallTestnet.Call({
             target: input.contracts.wstethMarketBatch.market,
             callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
             allowFailure: false
         });
         Ownable2Step(input.contracts.wstethMarketBatch.marketIrm).transferOwnership(altoMulticall);
-        calls[4] = AltoMulticallTestnet.Call({
+        calls[callIndex++] = AltoMulticallTestnet.Call({
             target: input.contracts.wstethMarketBatch.marketIrm,
             callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
             allowFailure: false
         });
         Ownable(input.contracts.wstethMarketBatch.marketOracle).transferOwnership(altoMulticall);
+        Ownable2Step(input.contracts.wstethMarketBatch.liquidationEngine).acceptOwnership();
+        Ownable2Step(input.contracts.wstethMarketBatch.liquidationEngine).transferOwnership(altoMulticall);
+        calls[callIndex++] = AltoMulticallTestnet.Call({
+            target: input.contracts.wstethMarketBatch.liquidationEngine,
+            callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
+            allowFailure: false
+        });
 
         // RETH
         Ownable2Step(input.contracts.rethMarketBatch.market).transferOwnership(altoMulticall);
-        calls[5] = AltoMulticallTestnet.Call({
+        calls[callIndex++] = AltoMulticallTestnet.Call({
             target: input.contracts.rethMarketBatch.market,
             callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
             allowFailure: false
         });
         Ownable2Step(input.contracts.rethMarketBatch.marketIrm).transferOwnership(altoMulticall);
-        calls[6] = AltoMulticallTestnet.Call({
+        calls[callIndex++] = AltoMulticallTestnet.Call({
             target: input.contracts.rethMarketBatch.marketIrm,
             callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
             allowFailure: false
         });
         Ownable(input.contracts.rethMarketBatch.marketOracle).transferOwnership(altoMulticall);
+        Ownable2Step(input.contracts.rethMarketBatch.liquidationEngine).acceptOwnership();
+        Ownable2Step(input.contracts.rethMarketBatch.liquidationEngine).transferOwnership(altoMulticall);
+        calls[callIndex++] = AltoMulticallTestnet.Call({
+            target: input.contracts.rethMarketBatch.liquidationEngine,
+            callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
+            allowFailure: false
+        });
 
         // METH
         Ownable2Step(input.contracts.methMarketBatch.market).transferOwnership(altoMulticall);
-        calls[7] = AltoMulticallTestnet.Call({
+        calls[callIndex++] = AltoMulticallTestnet.Call({
             target: input.contracts.methMarketBatch.market,
             callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
             allowFailure: false
         });
         Ownable2Step(input.contracts.methMarketBatch.marketIrm).transferOwnership(altoMulticall);
-        calls[8] = AltoMulticallTestnet.Call({
+        calls[callIndex++] = AltoMulticallTestnet.Call({
             target: input.contracts.methMarketBatch.marketIrm,
             callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
             allowFailure: false
         });
         Ownable(input.contracts.methMarketBatch.marketOracle).transferOwnership(altoMulticall);
+        Ownable2Step(input.contracts.methMarketBatch.liquidationEngine).acceptOwnership();
+        Ownable2Step(input.contracts.methMarketBatch.liquidationEngine).transferOwnership(altoMulticall);
+        calls[callIndex++] = AltoMulticallTestnet.Call({
+            target: input.contracts.methMarketBatch.liquidationEngine,
+            callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
+            allowFailure: false
+        });
 
         // TBTC
         Ownable2Step(input.contracts.tbtcMarketBatch.market).transferOwnership(altoMulticall);
-        calls[9] = AltoMulticallTestnet.Call({
+        calls[callIndex++] = AltoMulticallTestnet.Call({
             target: input.contracts.tbtcMarketBatch.market,
             callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
             allowFailure: false
         });
         Ownable2Step(input.contracts.tbtcMarketBatch.marketIrm).transferOwnership(altoMulticall);
-        calls[10] = AltoMulticallTestnet.Call({
+        calls[callIndex++] = AltoMulticallTestnet.Call({
             target: input.contracts.tbtcMarketBatch.marketIrm,
             callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
             allowFailure: false
         });
         Ownable(input.contracts.tbtcMarketBatch.marketOracle).transferOwnership(altoMulticall);
+        Ownable2Step(input.contracts.tbtcMarketBatch.liquidationEngine).acceptOwnership();
+        Ownable2Step(input.contracts.tbtcMarketBatch.liquidationEngine).transferOwnership(altoMulticall);
+        calls[callIndex++] = AltoMulticallTestnet.Call({
+            target: input.contracts.tbtcMarketBatch.liquidationEngine,
+            callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
+            allowFailure: false
+        });
 
         // Borrow Markets
-
         // WBTC
         Ownable2Step(input.contracts.wbtcMarketBatch.market).transferOwnership(altoMulticall);
-        calls[11] = AltoMulticallTestnet.Call({
+        calls[callIndex++] = AltoMulticallTestnet.Call({
             target: input.contracts.wbtcMarketBatch.market,
             callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
             allowFailure: false
         });
         Ownable2Step(input.contracts.wbtcMarketBatch.marketIrm).transferOwnership(altoMulticall);
-        calls[12] = AltoMulticallTestnet.Call({
+        calls[callIndex++] = AltoMulticallTestnet.Call({
             target: input.contracts.wbtcMarketBatch.marketIrm,
             callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
             allowFailure: false
         });
         Ownable(input.contracts.wbtcMarketBatch.marketOracle).transferOwnership(altoMulticall);
+        Ownable2Step(input.contracts.wbtcMarketBatch.liquidationEngine).acceptOwnership();
+        Ownable2Step(input.contracts.wbtcMarketBatch.liquidationEngine).transferOwnership(altoMulticall);
+        calls[callIndex++] = AltoMulticallTestnet.Call({
+            target: input.contracts.wbtcMarketBatch.liquidationEngine,
+            callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
+            allowFailure: false
+        });
 
         // CBBTC
         Ownable2Step(input.contracts.cbbtcMarketBatch.market).transferOwnership(altoMulticall);
-        calls[13] = AltoMulticallTestnet.Call({
+        calls[callIndex++] = AltoMulticallTestnet.Call({
             target: input.contracts.cbbtcMarketBatch.market,
             callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
             allowFailure: false
         });
         Ownable2Step(input.contracts.cbbtcMarketBatch.marketIrm).transferOwnership(altoMulticall);
-        calls[14] = AltoMulticallTestnet.Call({
+        calls[callIndex++] = AltoMulticallTestnet.Call({
             target: input.contracts.cbbtcMarketBatch.marketIrm,
             callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
             allowFailure: false
         });
         Ownable(input.contracts.cbbtcMarketBatch.marketOracle).transferOwnership(altoMulticall);
+        Ownable2Step(input.contracts.cbbtcMarketBatch.liquidationEngine).acceptOwnership();
+        Ownable2Step(input.contracts.cbbtcMarketBatch.liquidationEngine).transferOwnership(altoMulticall);
+        calls[callIndex++] = AltoMulticallTestnet.Call({
+            target: input.contracts.cbbtcMarketBatch.liquidationEngine,
+            callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
+            allowFailure: false
+        });
 
         // SUSDE
         Ownable2Step(input.contracts.susdeMarketBatch.market).transferOwnership(altoMulticall);
-        calls[15] = AltoMulticallTestnet.Call({
+        calls[callIndex++] = AltoMulticallTestnet.Call({
             target: input.contracts.susdeMarketBatch.market,
             callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
             allowFailure: false
         });
         Ownable2Step(input.contracts.susdeMarketBatch.marketIrm).transferOwnership(altoMulticall);
-        calls[16] = AltoMulticallTestnet.Call({
+        calls[callIndex++] = AltoMulticallTestnet.Call({
             target: input.contracts.susdeMarketBatch.marketIrm,
             callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
             allowFailure: false
         });
         Ownable(input.contracts.susdeMarketBatch.marketOracle).transferOwnership(altoMulticall);
+        Ownable2Step(input.contracts.susdeMarketBatch.liquidationEngine).acceptOwnership();
+        Ownable2Step(input.contracts.susdeMarketBatch.liquidationEngine).transferOwnership(altoMulticall);
+        calls[callIndex++] = AltoMulticallTestnet.Call({
+            target: input.contracts.susdeMarketBatch.liquidationEngine,
+            callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
+            allowFailure: false
+        });
 
         // Rewards
         Ownable2Step(input.contracts.rewardsBatch.rewardsDistributor).transferOwnership(altoMulticall);
-        calls[17] = AltoMulticallTestnet.Call({
+        calls[callIndex++] = AltoMulticallTestnet.Call({
             target: input.contracts.rewardsBatch.rewardsDistributor,
             callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
             allowFailure: false
@@ -772,28 +863,30 @@ library DeployAltoTestnet {
         }
         Ownable(input.contracts.rewardsBatch.rewardOracle).transferOwnership(altoMulticall);
 
+        // Staking
         Ownable2Step(input.contracts.stakingBatch.stakingContract).transferOwnership(altoMulticall);
-        calls[18] = AltoMulticallTestnet.Call({
+        calls[callIndex++] = AltoMulticallTestnet.Call({
             target: input.contracts.stakingBatch.stakingContract,
             callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
             allowFailure: false
         });
 
         Ownable2Step(input.contracts.stakingBatch.universalRewardsDistributor).transferOwnership(altoMulticall);
-        calls[19] = AltoMulticallTestnet.Call({
+        calls[callIndex++] = AltoMulticallTestnet.Call({
             target: input.contracts.stakingBatch.universalRewardsDistributor,
             callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
             allowFailure: false
         });
 
+        // Tokens
         Ownable2Step(input.tokens.alto).transferOwnership(altoMulticall);
-        calls[20] = AltoMulticallTestnet.Call({
+        calls[callIndex++] = AltoMulticallTestnet.Call({
             target: input.tokens.alto,
             callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
             allowFailure: false
         });
         Ownable2Step(input.tokens.dusd).transferOwnership(altoMulticall);
-        calls[21] = AltoMulticallTestnet.Call({
+        calls[callIndex++] = AltoMulticallTestnet.Call({
             target: input.tokens.dusd,
             callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
             allowFailure: false
@@ -820,8 +913,7 @@ library DeployAltoTestnet {
 
         uint256 debtCeiling = market.totalSupply().assets;
 
-        LiquidationConfiguration memory config = market.liquidationConfiguration();
-        uint256 maxLiquidationLtv = config.maxLiquidationLtv;
+        uint256 maxLiquidationLtv = IAltoLiquidationEngine(market.liquidationEngine()).minLltv();
 
         return debtCeiling * 1.05 ether / maxLiquidationLtv;
     }

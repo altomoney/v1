@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {AltoBaseMarket} from "./AltoBaseMarket.sol";
-import {BorrowMarketInitParams, LiquidationConfiguration, MarketType} from "./interfaces/IMarket.sol";
+import {BorrowMarketInitParams, MarketType} from "./interfaces/IMarket.sol";
 import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 
 /// @title Alto Borrow Market
