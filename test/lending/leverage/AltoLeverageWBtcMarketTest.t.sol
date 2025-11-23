@@ -85,7 +85,7 @@ contract AltoLeverageWBtcMarketTest is Test {
                 })
             }),
             initialBorrowOpeningFee: 0,
-            supplyCap: type(uint128).max
+            supplyCapAssets: 0
         });
 
         market = IMarket(MarketDeployer.deployBorrowMarket(borrowMarketInitParams));

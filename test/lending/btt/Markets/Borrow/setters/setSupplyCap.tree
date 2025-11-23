@@ -3,5 +3,8 @@ AltoBorrowMarket::setSupplyCap
 │   └── it should revert
 └── when caller is owner
     ├── it should update supplyCap
-    └── it should emit SetSupplyCap event
+    ├── it should emit SetSupplyCap event
+    └── when supplyCap is zero
+        ├── it should allow any supply amount
+        └── it should not enforce cap limit
 

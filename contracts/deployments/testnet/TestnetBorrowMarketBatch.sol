@@ -18,6 +18,7 @@ struct TestnetBorrowMarketBatchParams {
     address borrowToken;
     uint256 marketOraclePrice;
     uint256 maxLtv;
+    uint128 supplyCapAssets;
 }
 
 int256 constant YEAR = int256(365 days);
@@ -78,7 +79,7 @@ contract TestnetBorrowMarketBatch is ITestnetMarketBatch {
         BorrowMarketInitParams memory initParams = BorrowMarketInitParams({
             baseMarketInitParams: baseMarketInitParams,
             initialBorrowOpeningFee: 0.005 ether,
-            supplyCap: type(uint128).max
+            supplyCapAssets: _params.supplyCapAssets
         });
 
         address marketProxy =

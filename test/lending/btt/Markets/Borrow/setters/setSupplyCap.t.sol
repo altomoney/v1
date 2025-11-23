@@ -28,16 +28,35 @@ contract SetSupplyCapTestBorrow is MarketCommon {
     }
 
     function test_WhenCallerIsOwner() external whenCallerIsOwner {
-        uint128 oldSupplyCap = borrowMarket.supplyCap();
-        uint128 newSupplyCap = 1000 ether;
+        uint128 oldSupplyCapAssets = borrowMarket.supplyCapAssets();
+        uint128 newSupplyCapAssets = 1000 ether;
 
         // it should emit SetSupplyCap event
         vm.expectEmit();
-        emit AltoBorrowMarket.SetSupplyCap(oldSupplyCap, newSupplyCap);
+        emit AltoBorrowMarket.SetSupplyCap(oldSupplyCapAssets, newSupplyCapAssets);
 
-        borrowMarket.setSupplyCap(newSupplyCap);
+        borrowMarket.setSupplyCap(newSupplyCapAssets);
 
         // it should update supplyCap
-        assertEq(borrowMarket.supplyCap(), newSupplyCap);
+        assertEq(borrowMarket.supplyCapAssets(), newSupplyCapAssets);
+    }
+
+    function test_WhenSupplyCapIsZero_ItShouldDisregardCap() external whenCallerIsOwner {
+        // Set supply cap to 0 to disable it
+        borrowMarket.setSupplyCap(0);
+        assertEq(borrowMarket.supplyCapAssets(), 0);
+
+        // Supply a large amount that would exceed a typical cap
+        uint256 largeSupplyAmount = type(uint64).max;
+        deal(address(borrowToken), SUPPLIER, largeSupplyAmount);
+
+        vm.startPrank(SUPPLIER);
+        borrowToken.approve(address(market), largeSupplyAmount);
+        // it should succeed without reverting
+        market.addSupply(largeSupplyAmount, 0, SUPPLIER);
+        vm.stopPrank();
+
+        // Verify total supply exceeds what would have been a typical cap
+        assertEq(market.totalSupply().assets, largeSupplyAmount);
     }
 }

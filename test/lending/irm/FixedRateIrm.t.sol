@@ -71,7 +71,7 @@ contract FixedRateIrmTest is Test {
         });
 
         BorrowMarketInitParams memory borrowMarketInitParams = BorrowMarketInitParams({
-            baseMarketInitParams: baseMarketInitParams, initialBorrowOpeningFee: 0, supplyCap: type(uint128).max
+            baseMarketInitParams: baseMarketInitParams, initialBorrowOpeningFee: 0, supplyCapAssets: 0
         });
         market = AltoBorrowMarket(MarketDeployer.deployBorrowMarket(borrowMarketInitParams));
 

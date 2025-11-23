@@ -74,7 +74,7 @@ contract AdaptiveCurveIrmTest is IrmCommon {
         });
 
         BorrowMarketInitParams memory borrowMarketInitParams = BorrowMarketInitParams({
-            baseMarketInitParams: baseMarketInitParams, initialBorrowOpeningFee: 0, supplyCap: type(uint128).max
+            baseMarketInitParams: baseMarketInitParams, initialBorrowOpeningFee: 0, supplyCapAssets: 0
         });
 
         AltoBorrowMarket market = AltoBorrowMarket(MarketDeployer.deployBorrowMarket(borrowMarketInitParams));

@@ -22,15 +22,15 @@ contract AltoBorrowMarket is AltoBaseMarket {
     event SetBorrowOpeningFee(uint256 oldBorrowOpeningFee, uint256 newBorrowOpeningFee);
 
     /// @notice Emitted when the supply cap is set
-    /// @param oldSupplyCap The old supply cap
-    /// @param newSupplyCap The new supply cap
-    event SetSupplyCap(uint128 oldSupplyCap, uint128 newSupplyCap);
+    /// @param oldSupplyCapAssets The old supply cap assets
+    /// @param newSupplyCapAssets The new supply cap assets
+    event SetSupplyCap(uint128 oldSupplyCapAssets, uint128 newSupplyCapAssets);
 
     /// @notice The borrow opening fee in MATH_PRECISION
     uint256 private _borrowOpeningFee;
 
     /// @notice The maximum amount of assets that can be supplied to the market
-    uint128 public supplyCap;
+    uint128 public supplyCapAssets;
 
     /// upgrade gap
     uint256[48] private __gap_borrow;
@@ -53,8 +53,8 @@ contract AltoBorrowMarket is AltoBaseMarket {
         _borrowOpeningFee = _initParams.initialBorrowOpeningFee;
         emit SetBorrowOpeningFee(0, _initParams.initialBorrowOpeningFee);
 
-        supplyCap = _initParams.supplyCap;
-        emit SetSupplyCap(0, _initParams.supplyCap);
+        supplyCapAssets = _initParams.supplyCapAssets;
+        emit SetSupplyCap(0, _initParams.supplyCapAssets);
     }
 
     /// @notice Getter of the borrow opening fee
@@ -65,7 +65,7 @@ contract AltoBorrowMarket is AltoBaseMarket {
 
     function _addSupply(uint256 assets, uint256 shares, address onBehalf) internal override returns (uint256, uint256) {
         (uint256 addedAssets, uint256 addedShares) = super._addSupply(assets, shares, onBehalf);
-        if (totalSupply.assets > supplyCap) {
+        if (supplyCapAssets != 0 && totalSupply.assets > supplyCapAssets) {
             revert AltoBorrowMarketSupplyCapExceeded();
         }
         return (addedAssets, addedShares);
@@ -86,8 +86,8 @@ contract AltoBorrowMarket is AltoBaseMarket {
         _borrowOpeningFee = _newBorrowOpeningFee;
     }
 
-    function setSupplyCap(uint128 _newSupplyCap) external onlyOwner {
-        emit SetSupplyCap(supplyCap, _newSupplyCap);
-        supplyCap = _newSupplyCap;
+    function setSupplyCap(uint128 _newSupplyCapAssets) external onlyOwner {
+        emit SetSupplyCap(supplyCapAssets, _newSupplyCapAssets);
+        supplyCapAssets = _newSupplyCapAssets;
     }
 }

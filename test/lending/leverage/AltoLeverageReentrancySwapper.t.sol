@@ -193,7 +193,7 @@ contract AltoLeverageReentrancySwapperTest is Test {
                         })
                     }),
                     initialBorrowOpeningFee: 0,
-                    supplyCap: uint128(type(uint128).max)
+                    supplyCapAssets: 0
                 })
             )
         );

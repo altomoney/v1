@@ -93,7 +93,9 @@ abstract contract MarketCommon is Test {
         });
         if (marketType == MarketType.BORROW) {
             BorrowMarketInitParams memory borrowMarketInitParams = BorrowMarketInitParams({
-                baseMarketInitParams: baseMarketInitParams, initialBorrowOpeningFee: 0, supplyCap: type(uint128).max
+                baseMarketInitParams: baseMarketInitParams,
+                initialBorrowOpeningFee: 0,
+                supplyCapAssets: 0
             });
             market = IMarket(MarketDeployer.deployBorrowMarket(borrowMarketInitParams));
         } else if (marketType == MarketType.MINT) {
