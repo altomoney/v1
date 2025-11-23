@@ -5,12 +5,11 @@ import {OracleTestnet} from "@alto/deployments/testnet/contracts/OracleTestnet.s
 import {AdaptiveCurveIrm} from "@alto/lending/irm/AdaptiveCurveIrm.sol";
 import {UnsafeUpgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";
-import {
-    BorrowMarketInitParams,
-    BaseMarketInitParams,
-    LiquidationConfiguration
-} from "@alto/lending/interfaces/IMarket.sol";
+import {BorrowMarketInitParams, BaseMarketInitParams} from "@alto/lending/interfaces/IMarket.sol";
 import {ITestnetMarketBatch, TestnetMarketBatchReport} from "./ITestnetMarketBatch.sol";
+import {AltoLiquidationEngine} from "@alto/lending/AltoLiquidationEngine.sol";
+import {LiquidationConfiguration} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
+import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 
 struct TestnetBorrowMarketBatchParams {
     address owner;
@@ -65,6 +64,9 @@ contract TestnetBorrowMarketBatch is ITestnetMarketBatch {
             liquidationWindowTag: 3 days
         });
 
+        // Create temporary liquidation engine for market initialization (using address(1) as placeholder)
+        address tempLiquidationEngine = address(new AltoLiquidationEngine(_params.owner, address(1)));
+
         BaseMarketInitParams memory baseMarketInitParams = BaseMarketInitParams({
             borrowToken: _params.borrowToken,
             collateralToken: _params.collateralToken,
@@ -73,7 +75,7 @@ contract TestnetBorrowMarketBatch is ITestnetMarketBatch {
             oracle: marketOracle,
             maxLtv: _params.maxLtv,
             feeRecipient: _params.owner,
-            liquidationConfiguration: liquidationConfig
+            liquidationEngine: tempLiquidationEngine
         });
 
         BorrowMarketInitParams memory initParams = BorrowMarketInitParams({
@@ -85,8 +87,25 @@ contract TestnetBorrowMarketBatch is ITestnetMarketBatch {
         address marketProxy =
             UnsafeUpgrades.deployUUPSProxy(address(market), abi.encodeCall(AltoBorrowMarket.initialize, (initParams)));
 
+        // Create real liquidation engine with market proxy address
+        // Use address(this) as owner so we can set the configuration in the constructor
+        address liquidationEngine = address(new AltoLiquidationEngine(address(this), marketProxy));
+
+        // Set liquidation configuration
+        AltoLiquidationEngine(liquidationEngine).setLiquidationConfiguration(liquidationConfig);
+
+        // Transfer ownership to the actual owner (initiate two-step transfer)
+        Ownable2Step(liquidationEngine).transferOwnership(_params.owner);
+        //
+        // Note: setLiquidationEngine on the market must be called by the market owner
+        // This is handled in the deployment script after the batch is created
+
         report = TestnetMarketBatchReport({
-            marketImplementation: market, market: marketProxy, marketIrm: marketIrm, marketOracle: marketOracle
+            marketImplementation: market,
+            market: marketProxy,
+            marketIrm: marketIrm,
+            marketOracle: marketOracle,
+            liquidationEngine: liquidationEngine
         });
     }
 

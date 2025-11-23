@@ -6,12 +6,7 @@ import {UnsafeUpgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 
 import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";
 import {AltoMintMarket} from "@alto/lending/AltoMintMarket.sol";
-import {
-    BorrowMarketInitParams,
-    MintMarketInitParams,
-    BaseMarketInitParams,
-    LiquidationConfiguration
-} from "@alto/lending/interfaces/IMarket.sol";
+import {BorrowMarketInitParams, MintMarketInitParams, BaseMarketInitParams} from "@alto/lending/interfaces/IMarket.sol";
 import {Vm} from "forge-std/Vm.sol";
 
 library MarketDeployer {

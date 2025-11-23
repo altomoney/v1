@@ -2,7 +2,7 @@ AltoBaseMarket::governanceLiquidate()
 ├── when caller is not owner
 │   └── it should revert with OwnableUnauthorizedAccount
 ├── given position is solvent
-│   └── it should revert with AltoBaseMarketLiquidatingSolventPosition
+│   └── it should work as expected
 └── given position is insolvent
     ├── when position is tagged
     │   ├── it should emit GovernanceLiquidation

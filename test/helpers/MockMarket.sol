@@ -6,12 +6,13 @@ import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConver
 import {FixedPointMath, MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 import {IOracle} from "@alto/oracles/interfaces/IOracle.sol";
 import {LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
+import {BaseMarketInitParams, BorrowMarketInitParams, MarketType} from "@alto/lending/interfaces/IMarket.sol";
+import {AltoLiquidationEngine} from "@alto/lending/AltoLiquidationEngine.sol";
 import {
-    BaseMarketInitParams,
-    LiquidationConfiguration,
-    BorrowMarketInitParams,
-    MarketType
-} from "@alto/lending/interfaces/IMarket.sol";
+    IPriorityLiquidationEngine,
+    LiquidationConfiguration
+} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
+import {ExpLib, MATH_PRECISION_INT} from "@alto/lending/libraries/ExpLib.sol";
 
 contract MockMarket is AltoBaseMarket {
     using AssetShareConversionMath for uint256;
@@ -85,7 +86,7 @@ contract MockMarket is AltoBaseMarket {
 
         uint256 currentLtv = positionBorrowedAssets.divideWithPrecisionUp(positionCollateralValue);
 
-        return (currentLtv, _calculateNewLtv(_calculateLiquidationPercentage(currentLtv)));
+        return (currentLtv, _calculateNewLtv(_calculateLiquidationPercentage(currentLtv), maxLtv));
     }
 
     function calculateLiquidatorAndProtocolFee(address user, bool isPriorityLiquidator)
@@ -93,6 +94,8 @@ contract MockMarket is AltoBaseMarket {
         view
         returns (uint256, uint256)
     {
+        LiquidationConfiguration memory liquidationConfiguration =
+            IPriorityLiquidationEngine(liquidationEngine).liquidationConfiguration();
         (uint256 currentLtv, uint256 newLtv) = this.calculatePreLiquidationLtv(user);
         uint256 bonusFee = !isPriorityLiquidator ? _calculateBonusFee(_calculateLiquidationPercentage(currentLtv)) : 0;
 
@@ -103,6 +106,53 @@ contract MockMarket is AltoBaseMarket {
             .divideWithRounding(liquidationConfiguration.protocolFeePercentage, MATH_PRECISION, true);
 
         return (liquidatorFee, protocolFee);
+    }
+
+    /// @notice Calculates the liquidation percentage - how far are we between LTV and LLTV with position's current LTV
+    /// @param currentLtv The current LTV of the position to be liquidated
+    /// @return liquidationPercentage The liquidation percentage
+    function _calculateLiquidationPercentage(uint256 currentLtv) internal view returns (uint256) {
+        LiquidationConfiguration memory liquidationConfiguration =
+            IPriorityLiquidationEngine(liquidationEngine).liquidationConfiguration();
+        if (currentLtv >= liquidationConfiguration.ltvForCompleteLiquidation) {
+            return MATH_PRECISION;
+        } else {
+            return (currentLtv - liquidationConfiguration.maxLiquidationLtv)
+            .divideWithPrecisionUp(
+                liquidationConfiguration.ltvForCompleteLiquidation - liquidationConfiguration.maxLiquidationLtv
+            );
+        }
+    }
+
+    /// @notice Calculates the bonus fee for the liquidation - used to incentivize fast liquidators
+    /// @param liquidationPercentage The liquidation percentage
+    /// @return bonusFee The bonus fee
+    function _calculateBonusFee(uint256 liquidationPercentage) internal view returns (uint256) {
+        LiquidationConfiguration memory liquidationConfiguration =
+            IPriorityLiquidationEngine(liquidationEngine).liquidationConfiguration();
+        // liquidationConfiguration.dynamicBonusFeeDecaySteepness is already checked in _validateLiquidationConfiguration
+        if (liquidationPercentage < MATH_PRECISION) {
+            int256 exponent = -int256(liquidationConfiguration.dynamicBonusFeeDecaySteepness * liquidationPercentage)
+                / MATH_PRECISION_INT;
+            return liquidationConfiguration.dynamicBonusFeeStart.multiplyWithPrecision(uint256(ExpLib.wExp(exponent)));
+        } else {
+            return 0;
+        }
+    }
+
+    /// @notice Calculates the new LTV after liquidation - how much LTV are we aiming for after liquidation
+    /// @param liquidationPercentage The liquidation percentage
+    /// @param maxLtv The maximum LTV for the market
+    /// @return newLtv The new LTV
+    function _calculateNewLtv(uint256 liquidationPercentage, uint256 maxLtv) internal view returns (uint256) {
+        LiquidationConfiguration memory liquidationConfiguration =
+            IPriorityLiquidationEngine(liquidationEngine).liquidationConfiguration();
+        uint256 liquidationPercentageAppliedPenalty = liquidationPercentage
+            < liquidationConfiguration.minPenaltyPercentage
+            ? liquidationConfiguration.minPenaltyPercentage
+            : liquidationPercentage;
+
+        return maxLtv.multiplyWithPrecision(MATH_PRECISION - liquidationPercentageAppliedPenalty);
     }
 }
 
@@ -116,7 +166,8 @@ library MockMarketDeployer {
         uint256 _maxLtv,
         uint256 _borrowOpeningFee,
         address _feeRecipient,
-        LiquidationConfiguration memory _liquidationConfiguration
+        LiquidationConfiguration memory _liquidationConfiguration,
+        address _liquidationEngine
     ) public returns (MockMarket market) {
         market = new MockMarket();
 
@@ -129,7 +180,7 @@ library MockMarketDeployer {
                 oracle: _oracle,
                 maxLtv: _maxLtv,
                 feeRecipient: _feeRecipient,
-                liquidationConfiguration: _liquidationConfiguration
+                liquidationEngine: _liquidationEngine
             }),
             _borrowOpeningFee
         );

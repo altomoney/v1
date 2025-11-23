@@ -6,9 +6,11 @@ import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 import {LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
-import {IMarket, IMarketEvents, LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
+import {IMarket, IMarketEvents} from "@alto/lending/interfaces/IMarket.sol";
+import {LiquidationConfiguration} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
 import {IrmCommon} from "./IrmCommon.t.sol";
 import {MockMarketDeployer, MockMarket} from "@alto-test/helpers/MockMarket.sol";
+import {AltoLiquidationEngine} from "@alto/lending/AltoLiquidationEngine.sol";
 
 uint256 constant MIN_AMOUNT = 1000;
 uint256 constant MAX_AMOUNT = 2 ** 64;
@@ -27,6 +29,22 @@ contract FixedRateIrmUpdateTest is IrmCommon {
         address oracle = address(new OracleMock());
         OracleMock(oracle).setPrice(LENDING_ORACLE_PRICE_PRECISION);
 
+        LiquidationConfiguration memory liquidationConfig = LiquidationConfiguration({
+            maxLiquidationLtv: 0.8 ether,
+            dynamicBonusFeeStart: 0.03 ether,
+            ltvForCompleteLiquidation: 0.9 ether,
+            dynamicBonusFeeDecaySteepness: 5 ether,
+            liquidationBaseFee: 0.05 ether,
+            minPenaltyPercentage: 0.01 ether,
+            protocolFeePercentage: 0.075 ether,
+            isEnabledPriorityLiquidation: true,
+            disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
+            priorityLiquidationGracePeriod: 5 minutes,
+            taggerLiquidationGracePeriod: 2 minutes,
+            liquidationWindowTag: 3 days
+        });
+
+        // Liquidation engine will be set after market deployment
         market = MockMarket(
             MockMarketDeployer.deployMarket(
                 address(borrowToken),
@@ -37,22 +55,15 @@ contract FixedRateIrmUpdateTest is IrmCommon {
                 LTV,
                 0,
                 address(this),
-                LiquidationConfiguration({
-                    maxLiquidationLtv: 0.8 ether,
-                    dynamicBonusFeeStart: 0.03 ether,
-                    ltvForCompleteLiquidation: 0.9 ether,
-                    dynamicBonusFeeDecaySteepness: 5 ether,
-                    liquidationBaseFee: 0.05 ether,
-                    minPenaltyPercentage: 0.01 ether,
-                    protocolFeePercentage: 0.075 ether,
-                    isEnabledPriorityLiquidation: true,
-                    disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
-                    priorityLiquidationGracePeriod: 5 minutes,
-                    taggerLiquidationGracePeriod: 2 minutes,
-                    liquidationWindowTag: 3 days
-                })
+                liquidationConfig,
+                address(1) // Will be updated below
             )
         );
+
+        // Create real liquidation engine with market address and update market
+        address liquidationEngine = address(new AltoLiquidationEngine(address(this), address(market)));
+        AltoLiquidationEngine(liquidationEngine).setLiquidationConfiguration(liquidationConfig);
+        market.setLiquidationEngine(liquidationEngine);
 
         borrowToken.approve(address(market), type(uint256).max);
         collateralToken.approve(address(market), type(uint256).max);
@@ -60,6 +71,7 @@ contract FixedRateIrmUpdateTest is IrmCommon {
         vm.prank(USER);
         market.setAuthorization(address(this), true);
 
+        // Liquidation engine will be set after new market deployment
         newMarket = MockMarket(
             MockMarketDeployer.deployMarket(
                 address(borrowToken),
@@ -70,22 +82,15 @@ contract FixedRateIrmUpdateTest is IrmCommon {
                 LTV,
                 0,
                 address(this),
-                LiquidationConfiguration({
-                    maxLiquidationLtv: 0.8 ether,
-                    dynamicBonusFeeStart: 0.03 ether,
-                    ltvForCompleteLiquidation: 0.9 ether,
-                    dynamicBonusFeeDecaySteepness: 5 ether,
-                    liquidationBaseFee: 0.05 ether,
-                    minPenaltyPercentage: 0.01 ether,
-                    protocolFeePercentage: 0.075 ether,
-                    isEnabledPriorityLiquidation: true,
-                    disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
-                    priorityLiquidationGracePeriod: 5 minutes,
-                    taggerLiquidationGracePeriod: 2 minutes,
-                    liquidationWindowTag: 3 days
-                })
+                liquidationConfig,
+                address(1) // Will be updated below
             )
         );
+
+        // Create real liquidation engine with new market address and update new market
+        address liquidationEngine2 = address(new AltoLiquidationEngine(address(this), address(newMarket)));
+        AltoLiquidationEngine(liquidationEngine2).setLiquidationConfiguration(liquidationConfig);
+        newMarket.setLiquidationEngine(liquidationEngine2);
     }
 
     function _getAccruedInterest(uint256 borrowedAmount, uint256 borrowRate, uint256 time)

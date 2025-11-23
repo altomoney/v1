@@ -4,7 +4,8 @@ pragma solidity ^0.8.0;
 import {Uint128Converter} from "./libraries/Uint128Converter.sol";
 
 import {IIrm} from "./interfaces/IIrm.sol";
-import {Balance, MintMarketInitParams, LiquidationConfiguration, MarketType} from "./interfaces/IMarket.sol";
+import {Balance, MintMarketInitParams, MarketType} from "./interfaces/IMarket.sol";
+import {IAltoLiquidationEngine} from "./interfaces/IAltoLiquidationEngine.sol";
 import {IMintableERC20} from "./interfaces/IMintableERC20.sol";
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
@@ -137,10 +138,8 @@ contract AltoMintMarket is AltoBaseMarket {
 
     /// @inheritdoc AltoBaseMarket
     function setFeeRecipient(address _feeRecipient) external override onlyOwner {
-        if (
-            _feeRecipient == address(0)
-                && (_borrowOpeningFee > 0 || liquidationConfiguration.protocolFeePercentage > 0 || irm != address(0))
-        ) {
+        uint256 protocolFeePercentage = IAltoLiquidationEngine(liquidationEngine).protocolFeePercentage();
+        if (_feeRecipient == address(0) && (_borrowOpeningFee > 0 || protocolFeePercentage > 0 || irm != address(0))) {
             revert AltoMintMarketInvalidInput();
         }
 

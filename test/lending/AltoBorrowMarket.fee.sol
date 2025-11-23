@@ -3,7 +3,6 @@ pragma solidity ^0.8.22;
 
 import {Test} from "forge-std/Test.sol";
 
-import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 import {LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
@@ -12,6 +11,11 @@ import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
 import {FixedPointMath, MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 import {MockMarketDeployer, MockMarket} from "@alto-test/helpers/MockMarket.sol";
+import {AltoLiquidationEngine} from "@alto/lending/AltoLiquidationEngine.sol";
+import {
+    IPriorityLiquidationEngine,
+    LiquidationConfiguration
+} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
 
 contract AltoBorrowMarketFeeTest is Test {
     using FixedPointMath for uint256;
@@ -42,6 +46,22 @@ contract AltoBorrowMarketFeeTest is Test {
         address oracle = address(new OracleMock());
         OracleMock(oracle).setPrice(LENDING_ORACLE_PRICE_PRECISION);
 
+        LiquidationConfiguration memory liquidationConfig = LiquidationConfiguration({
+            maxLiquidationLtv: 0.8 ether,
+            dynamicBonusFeeStart: 0.03 ether,
+            ltvForCompleteLiquidation: 0.9 ether,
+            dynamicBonusFeeDecaySteepness: 5 ether,
+            liquidationBaseFee: 0.05 ether,
+            minPenaltyPercentage: 0.01 ether,
+            protocolFeePercentage: 0.075 ether,
+            isEnabledPriorityLiquidation: true,
+            disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
+            priorityLiquidationGracePeriod: 5 minutes,
+            taggerLiquidationGracePeriod: 2 minutes,
+            liquidationWindowTag: 3 days
+        });
+
+        // Liquidation engine will be set after market deployment
         MockMarket market = MockMarketDeployer.deployMarket(
             address(borrowToken),
             address(collateralToken),
@@ -51,21 +71,14 @@ contract AltoBorrowMarketFeeTest is Test {
             LTV,
             openingFee,
             FEE_RECIPIENT,
-            LiquidationConfiguration({
-                maxLiquidationLtv: 0.8 ether,
-                dynamicBonusFeeStart: 0.03 ether,
-                ltvForCompleteLiquidation: 0.9 ether,
-                dynamicBonusFeeDecaySteepness: 5 ether,
-                liquidationBaseFee: 0.05 ether,
-                minPenaltyPercentage: 0.01 ether,
-                protocolFeePercentage: 0.075 ether,
-                isEnabledPriorityLiquidation: true,
-                disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
-                priorityLiquidationGracePeriod: 5 minutes,
-                taggerLiquidationGracePeriod: 2 minutes,
-                liquidationWindowTag: 3 days
-            })
+            liquidationConfig,
+            address(1) // Will be updated below
         );
+
+        // Create real liquidation engine with market address and update market
+        address liquidationEngine = address(new AltoLiquidationEngine(address(this), address(market)));
+        AltoLiquidationEngine(liquidationEngine).setLiquidationConfiguration(liquidationConfig);
+        market.setLiquidationEngine(liquidationEngine);
 
         borrowToken.approve(address(market), type(uint256).max);
         collateralToken.approve(address(market), type(uint256).max);

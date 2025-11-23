@@ -10,4 +10,5 @@ struct TestnetMarketBatchReport {
     address marketImplementation;
     address marketIrm;
     address marketOracle;
+    address liquidationEngine;
 }

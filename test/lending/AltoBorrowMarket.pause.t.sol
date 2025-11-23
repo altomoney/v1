@@ -2,7 +2,6 @@
 pragma solidity ^0.8.22;
 
 import {Test} from "forge-std/Test.sol";
-import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 import {LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
@@ -10,6 +9,11 @@ import {PAUSE_TYPE, FROZEN_TYPE} from "@alto/utils/Constants.sol";
 import {IPausable} from "@alto/utils/Pausable.sol";
 import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
 import {MockMarketDeployer, MockMarket} from "@alto-test/helpers/MockMarket.sol";
+import {
+    IPriorityLiquidationEngine,
+    LiquidationConfiguration
+} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
+import {AltoLiquidationEngine} from "@alto/lending/AltoLiquidationEngine.sol";
 
 contract AltoBorrowMarketPauseTest is Test {
     MockMarket market;
@@ -30,6 +34,22 @@ contract AltoBorrowMarketPauseTest is Test {
         address oracle = address(new OracleMock());
         OracleMock(oracle).setPrice(LENDING_ORACLE_PRICE_PRECISION);
 
+        LiquidationConfiguration memory liquidationConfig = LiquidationConfiguration({
+            maxLiquidationLtv: 0.8 ether,
+            dynamicBonusFeeStart: 0.01 ether,
+            ltvForCompleteLiquidation: 0.9 ether,
+            dynamicBonusFeeDecaySteepness: 5 ether,
+            liquidationBaseFee: 0.05 ether,
+            minPenaltyPercentage: 0.05 ether,
+            protocolFeePercentage: 0.075 ether,
+            isEnabledPriorityLiquidation: true,
+            disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
+            priorityLiquidationGracePeriod: 5 minutes,
+            taggerLiquidationGracePeriod: 2 minutes,
+            liquidationWindowTag: 3 days
+        });
+
+        // Liquidation engine will be set after market deployment
         market = MockMarketDeployer.deployMarket(
             address(borrowToken),
             address(collateralToken),
@@ -39,21 +59,14 @@ contract AltoBorrowMarketPauseTest is Test {
             0.75 ether,
             0,
             address(this),
-            LiquidationConfiguration({
-                maxLiquidationLtv: 0.8 ether,
-                dynamicBonusFeeStart: 0.01 ether,
-                ltvForCompleteLiquidation: 0.9 ether,
-                dynamicBonusFeeDecaySteepness: 5 ether,
-                liquidationBaseFee: 0.05 ether,
-                minPenaltyPercentage: 0.05 ether,
-                protocolFeePercentage: 0.075 ether,
-                isEnabledPriorityLiquidation: true,
-                disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
-                priorityLiquidationGracePeriod: 5 minutes,
-                taggerLiquidationGracePeriod: 2 minutes,
-                liquidationWindowTag: 3 days
-            })
+            liquidationConfig,
+            address(1) // Will be updated below
         );
+
+        // Create real liquidation engine with market address and update market
+        address liquidationEngine = address(new AltoLiquidationEngine(address(this), address(market)));
+        IPriorityLiquidationEngine(liquidationEngine).setLiquidationConfiguration(liquidationConfig);
+        market.setLiquidationEngine(liquidationEngine);
 
         // Setup initial balances
         deal(address(borrowToken), alice, INITIAL_AMOUNT);
@@ -164,10 +177,11 @@ contract AltoBorrowMarketPauseTest is Test {
         market.repay(1 ether, 0, bob);
 
         vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, PAUSE_TYPE));
-        market.liquidate(alice, hex"");
+        market.liquidate(alice, hex"", hex"");
 
+        IPriorityLiquidationEngine liquidationEngine = IPriorityLiquidationEngine(market.liquidationEngine());
         vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, PAUSE_TYPE));
-        market.tagLiquidablePosition(alice, bob);
+        liquidationEngine.tagLiquidablePosition(alice, bob);
         vm.stopPrank();
     }
 
@@ -206,11 +220,11 @@ contract AltoBorrowMarketPauseTest is Test {
 
         // Make alice a priority liquidator
         vm.startPrank(owner);
-        market.setPriorityLiquidator(alice, true);
+        IPriorityLiquidationEngine(market.liquidationEngine()).setPriorityLiquidator(alice, true);
         vm.stopPrank();
 
         vm.startPrank(alice);
-        market.liquidate(bob, hex"");
+        market.liquidate(bob, hex"", hex"");
         vm.stopPrank();
     }
 

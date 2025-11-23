@@ -24,43 +24,6 @@ struct Position {
     uint128 collateralAssets;
 }
 
-/// @notice Struct that represents the liquidable position of a user
-struct LiquidablePosition {
-    bool tagged;
-    address tagger;
-    uint256 timestamp;
-}
-
-/// @notice Struct that represents the liquidation configuration of a market
-struct LiquidationConfiguration {
-    /// @notice LLTV - LTV that position has to reach to be allowed for liquidation
-    uint256 maxLiquidationLtv;
-    /// @notice max bonus liquidator fee percentage that can be applied to the liquidation
-    uint256 dynamicBonusFeeStart;
-    /// @notice tLLTV - LTV that position has to reach to be fully liquidated
-    uint256 ltvForCompleteLiquidation;
-    /// @notice steepness of the dynamic bonus fee decay curve
-    uint256 dynamicBonusFeeDecaySteepness;
-    /// @notice base liquidator fee percentage for the liquidation
-    /// @dev both dynamicBonusFeeStart and liquidationBaseFee will be set reasonably high to
-    /// avoid excessive bad debt generation caused by incurring high liquidation fees.
-    uint256 liquidationBaseFee;
-    /// @notice min penalty percentage applied to the user's position LTV after liquidation
-    uint256 minPenaltyPercentage;
-    /// @notice protocol fee percentage applied to the liquidator's reward fee (percentage of sum of bonus fee and base fee)
-    uint256 protocolFeePercentage;
-    /// @notice if true enables priority liquidation
-    bool isEnabledPriorityLiquidation;
-    /// @notice disable priority liquidation when position LTV is above this LTV
-    uint256 disablePriorityLiquidationAbovePositionLtv;
-    /// @notice grace period for the priority liquidator to liquidate a position
-    uint32 priorityLiquidationGracePeriod;
-    /// @notice grace period for the tagger liquidator to liquidate a position
-    uint32 taggerLiquidationGracePeriod;
-    /// @notice duration when tagged position is considered tagged
-    uint32 liquidationWindowTag;
-}
-
 /// @notice Struct that represents the parameters for initializing a base market
 struct BaseMarketInitParams {
     /// @notice The address of the borrow token.
@@ -77,8 +40,8 @@ struct BaseMarketInitParams {
     uint256 maxLtv;
     /// @notice The address of the fee recipient.
     address feeRecipient;
-    /// @notice The liquidation configuration for the market.
-    LiquidationConfiguration liquidationConfiguration;
+    /// @notice The address of the liquidation engine.
+    address liquidationEngine;
 }
 
 /// @notice Struct that represents the parameters for initializing a borrow market
@@ -99,28 +62,6 @@ struct MintMarketInitParams {
     uint256 debtCeiling;
     /// @notice The initial borrow opening fee.
     uint256 initialBorrowOpeningFee;
-}
-
-/// @notice Struct used for liquidation calculations
-struct LiquidationCalculation {
-    uint256 collateralPrice;
-    uint256 currentLtv;
-    uint256 positionCollateralValue;
-    uint256 positionBorrowedAssets;
-    uint256 liquidationPercentage;
-    uint256 liquidationFee;
-    uint256 newLtv;
-    uint256 liquidatorBonusFee;
-    uint256 protocolFee;
-    uint256 remainingCollateralAfterFeeInBorrowAssets;
-    uint256 collateralToSellInBorrowAssets;
-}
-
-struct LiquidationCalculationResult {
-    uint256 collateralAmount;
-    uint256 collateralAmountToSend;
-    uint256 repayAmount;
-    uint256 repayShares;
 }
 
 interface IMarketErrors {
@@ -168,12 +109,10 @@ interface IMarketEvents {
     /// @param newMaxLtv The address of the new max LTV
     event SetMaxLtv(uint256 oldMaxLtv, uint256 newMaxLtv);
 
-    /// @notice Emitted when the liquidation configuration is set
-    /// @param oldLiquidationConfiguration The address of the old liquidation configuration
-    /// @param newLiquidationConfiguration The address of the new liquidation configuration
-    event SetLiquidationConfiguration(
-        LiquidationConfiguration oldLiquidationConfiguration, LiquidationConfiguration newLiquidationConfiguration
-    );
+    /// @notice Emitted when the liquidation engine is set
+    /// @param oldLiquidationEngine The address of the old liquidation engine
+    /// @param newLiquidationEngine The address of the new liquidation engine
+    event SetLiquidationEngine(address indexed oldLiquidationEngine, address indexed newLiquidationEngine);
 
     /// @notice Emitted when the fee recipient is set
     /// @param oldAddr The address of the old fee recipient
@@ -248,17 +187,6 @@ interface IMarketEvents {
     /// @param totalSupplyAssets The total supply assets
     event AccrueInterest(uint256 borrowRate, uint256 interest, uint128 totalBorrowAssets, uint128 totalSupplyAssets);
 
-    /// @notice Emitted when a position is tagged for liquidation
-    /// @param user The address of the user whose position was tagged
-    /// @param tagger The address of the liquidator who tagged the position
-    /// @param timestamp The timestamp when the position was tagged
-    event PositionTagged(address indexed user, address indexed tagger, uint256 timestamp);
-
-    /// @notice Emitted when a priority liquidator's status is updated
-    /// @param liquidator The address of the liquidator
-    /// @param status The new status of the liquidator
-    event PriorityLiquidatorUpdated(address indexed liquidator, bool status);
-
     // add liquidation event
     /// @notice Emitted when a liquidation occurs
     /// @param user The address of the user whose position was liquidated
@@ -267,7 +195,6 @@ interface IMarketEvents {
     /// @param liquidator The address of the liquidator
     /// @param liquidatedCollateral The amount of collateral that was liquidated
     /// @param protocolFee The amount of protocol fee credited to the fee recipient
-    /// @param liquidatorFee The amount of liquidator fee credited to the liquidator before the protocol fee is deducted
     /// @param repaidBorrow The amount of borrow tokens that were repaid
     /// @param repaidBorrowShares The amount of borrow shares that were repaid
     /// @param badDebtClearedAssets The amount of bad debt cleared
@@ -279,7 +206,6 @@ interface IMarketEvents {
         address liquidator,
         uint256 liquidatedCollateral,
         uint256 protocolFee,
-        uint256 liquidatorFee,
         uint256 repaidBorrow,
         uint256 repaidBorrowShares,
         uint256 badDebtClearedAssets,
@@ -319,9 +245,6 @@ interface IMarketBase is IMarketErrors, IMarketEvents, IAuth, IPausable {
     /// @dev This is used to allow for leverage and deleverage.
     function authorizedCallbacks(address callback) external view returns (bool);
 
-    /// @notice Map of priority liquidators that can liquidate positions right after they are tagged.
-    function priorityLiquidators(address liquidator) external view returns (bool);
-
     /// @notice Contract used for Interest Rate Model calculation when market needs to accrue interest.
     function irm() external view returns (address);
 
@@ -357,10 +280,6 @@ interface IMarketBase is IMarketErrors, IMarketEvents, IAuth, IPausable {
     /// This should always be considered to be used in tandem with `setLiquidationConfiguration` as
     /// liquidation calculation depends on the max LTV.
     function setMaxLtv(uint256 maxLtv) external;
-
-    /// @notice Setter of the liquidation configuration for the market.
-    /// @dev Warning: This setter will overwrite the existing liquidation configuration.
-    function setLiquidationConfiguration(LiquidationConfiguration memory _liquidationConfiguration) external;
 
     /// @notice Setter of the fee recipient for the market.
     function setFeeRecipient(address feeRecipient) external;
@@ -476,7 +395,8 @@ interface IMarketBase is IMarketErrors, IMarketEvents, IAuth, IPausable {
 
     /// @notice Function to liquidate an insolvent position.
     /// @param borrower The address of the borrower being liquidated
-    /// @param data Additional data for the liquidator contract
+    /// @param callbackData Additional data for the liquidator contract
+    /// @param liquidationData Additional data for the liquidation engine
     /// @return repaidBorrow The amount of borrow token repaid
     /// @return repaidBorrowShares The amount of borrow shares repaid
     /// @return protocolFee The amount of protocol credited to the fee recipient
@@ -492,7 +412,9 @@ interface IMarketBase is IMarketErrors, IMarketEvents, IAuth, IPausable {
     /// and position is not liquidated, anyone can liquidate it. If position becomes solvent and is not liquidated
     /// after it was tagged, the tag will expire in `liquidationWindowTag` seconds after the tag was set.
     /// @dev The underlying liquidation logic is well described in the docs.
-    function liquidate(address borrower, bytes calldata data) external returns (uint256, uint256, uint256);
+    function liquidate(address borrower, bytes calldata callbackData, bytes calldata liquidationData)
+        external
+        returns (uint256, uint256, uint256);
 
     /// @notice Function to liquidate an insolvent position which is not possible to liquidate using normal liquidation
     /// @dev Governance liquidation seizes full collateral of liquidated user and offsets the debt of the protocol
@@ -504,16 +426,17 @@ interface IMarketBase is IMarketErrors, IMarketEvents, IAuth, IPausable {
     /// @return badDebtAmount The amount of borrow token that was offset
     function governanceLiquidate(address borrower) external returns (uint256, uint256);
 
-    /// @notice Function to set a priority liquidator.
-    /// @param liquidator The address of the liquidator
-    /// @param status If set to true, the liquidator will be allowed to liquidate positions right after
-    /// position is tagged. If set to false, the liquidator will not be allowed to do so.
-    function setPriorityLiquidator(address liquidator, bool status) external;
+    /// @notice Function to set the liquidation engine for the market.
+    /// @param liquidationEngine The address of the liquidation engine
+    function setLiquidationEngine(address liquidationEngine) external;
 
-    /// @notice Function to tag a position for liquidation.
-    /// @param user The address of the user whose position is being tagged
-    /// @param liquidator The address of the liquidator that tagged the position
-    function tagLiquidablePosition(address user, address liquidator) external;
+    /// @dev Returns true if the user's position is solvent based on the max LTV of the market.
+    /// @param _user The address of the user whose position is being checked
+    function isSolvent(address _user) external view returns (bool);
+
+    /// @notice Address of the liquidation engine for the market.
+    /// @return The address of the liquidation engine for the market.
+    function liquidationEngine() external view returns (address);
 }
 
 interface IMarket is IMarketBase {
@@ -526,14 +449,6 @@ interface IMarket is IMarketBase {
 
     /// @notice Total borrowed assets of the market currently borrowed.
     function totalBorrowed() external view returns (Balance memory);
-
-    /// @notice Liquidation state of the user's position in market.
-    /// @param user The address of the user whose position is being queried
-    /// @dev Used for handling priority liquidators.
-    function liquidablePositions(address user) external view returns (LiquidablePosition memory);
-
-    /// @notice Liquidation configuration of the market.
-    function liquidationConfiguration() external view returns (LiquidationConfiguration memory);
 }
 
 interface IMarketStaticTypes is IMarketBase {
@@ -549,27 +464,4 @@ interface IMarketStaticTypes is IMarketBase {
 
     /// @notice Total borrowed assets of the market currently borrowed.
     function totalBorrowed() external view returns (uint128 assets, uint128 shares);
-
-    /// @notice Liquidation state of the user's position in market.
-    /// @dev Used for handling priority liquidators.
-    function liquidablePositions(address user) external view returns (bool tagged, address tagger, uint256 timestamp);
-
-    /// @notice Liquidation configuration of the market.
-    function liquidationConfiguration()
-        external
-        view
-        returns (
-            uint256 maxLiquidationLtv,
-            uint256 dynamicBonusFeeStart,
-            uint256 ltvForCompleteLiquidation,
-            uint256 dynamicBonusFeeDecaySteepness,
-            uint256 liquidationBaseFee,
-            uint256 minPenaltyPercentage,
-            uint256 protocolFeePercentage,
-            bool isEnabledPriorityLiquidation,
-            uint256 disablePriorityLiquidationAbovePositionLtv,
-            uint32 priorityLiquidationGracePeriod,
-            uint32 taggerLiquidationGracePeriod,
-            uint32 liquidationWindowTag
-        );
 }

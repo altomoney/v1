@@ -2,7 +2,6 @@
 pragma solidity ^0.8.22;
 
 import {Test} from "forge-std/Test.sol";
-import {LiquidationConfiguration} from "@alto/lending/interfaces/IMarket.sol";
 import {MockMarketDeployer, MockMarket} from "@alto-test/helpers/MockMarket.sol";
 import {IMarket, IMarketEvents} from "@alto/lending/interfaces/IMarket.sol";
 import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
@@ -11,6 +10,11 @@ import {ILiquidateCallback} from "@alto/lending/interfaces/IMarketCallbacks.sol"
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {ERC20MockDecimals} from "@alto-test/helpers/ERC20MockDecimals.sol";
+import {
+    IPriorityLiquidationEngine,
+    LiquidationConfiguration
+} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
+import {AltoLiquidationEngine} from "@alto/lending/AltoLiquidationEngine.sol";
 
 contract LiquidateCallback is ILiquidateCallback {
     function onLiquidateCallback(uint256 assetsToRepay, uint256 collateralReceived, bytes calldata data) external {
@@ -58,20 +62,60 @@ contract AltoBorrowMarketLiquidationsFuzzTest is Test {
         address irm = address(new FixedRateIrm(0.04 ether / uint256(365 days), address(this)));
         OracleMock(oracle).setPrice(collateralPrice);
 
-        market = MockMarketDeployer.deployMarket(
+        // Liquidation engine will be set after market deployment
+
+        market = _deployMarket(
             address(borrowToken),
             address(collateralToken),
-            address(irm),
-            address(this),
+            irm,
             address(oracle),
             maxLtv,
-            0,
-            FEE_RECEIVER,
-            liquidationConfiguration
+            liquidationConfiguration,
+            address(1) // Will be updated below
         );
 
         imarket = IMarket(address(market));
 
+        // Create real liquidation engine with market address and update market
+        _setupLiquidationEngine(liquidationConfiguration, maxLtv);
+
+        _setupInitialBalances();
+        _setupApprovals();
+        _setupMarketPermissions();
+    }
+
+    function _setupLiquidationEngine(LiquidationConfiguration memory liquidationConfiguration, uint256 maxLtv)
+        internal
+    {
+        address liquidationEngine = address(new AltoLiquidationEngine(address(this), address(market)));
+        IPriorityLiquidationEngine(liquidationEngine).setLiquidationConfiguration(liquidationConfiguration);
+        market.setLiquidationEngine(liquidationEngine);
+    }
+
+    function _deployMarket(
+        address _borrowToken,
+        address _collateralToken,
+        address _irm,
+        address _oracle,
+        uint256 _maxLtv,
+        LiquidationConfiguration memory _liquidationConfiguration,
+        address _liquidationEngine
+    ) internal returns (MockMarket) {
+        return MockMarketDeployer.deployMarket(
+            _borrowToken,
+            _collateralToken,
+            _irm,
+            address(this),
+            _oracle,
+            _maxLtv,
+            0,
+            FEE_RECEIVER,
+            _liquidationConfiguration,
+            _liquidationEngine
+        );
+    }
+
+    function _setupInitialBalances() internal {
         // Setup initial balances for test accounts
         deal(address(borrowToken), alice, INITIAL_AMOUNT);
         deal(address(borrowToken), bob, INITIAL_AMOUNT);
@@ -86,7 +130,9 @@ contract AltoBorrowMarketLiquidationsFuzzTest is Test {
         deal(address(collateralToken), liquidator, INITIAL_AMOUNT);
         deal(address(collateralToken), taggerLiquidator, INITIAL_AMOUNT);
         deal(address(collateralToken), externalLiquidator, INITIAL_AMOUNT);
+    }
 
+    function _setupApprovals() internal {
         // Approve market to spend tokens
         vm.startPrank(alice);
         borrowToken.approve(address(market), type(uint256).max);
@@ -117,11 +163,14 @@ contract AltoBorrowMarketLiquidationsFuzzTest is Test {
         borrowToken.approve(address(market), type(uint256).max);
         collateralToken.approve(address(market), type(uint256).max);
         vm.stopPrank();
+    }
 
+    function _setupMarketPermissions() internal {
         vm.startPrank(market.owner());
-        market.setPriorityLiquidator(bob, true);
-        market.setPriorityLiquidator(liquidator, true);
-        market.setPriorityLiquidator(address(liquidateCallback), true);
+        IPriorityLiquidationEngine liquidationEngine = IPriorityLiquidationEngine(market.liquidationEngine());
+        liquidationEngine.setPriorityLiquidator(bob, true);
+        liquidationEngine.setPriorityLiquidator(liquidator, true);
+        liquidationEngine.setPriorityLiquidator(address(liquidateCallback), true);
         vm.stopPrank();
     }
 
@@ -201,12 +250,12 @@ contract AltoBorrowMarketLiquidationsFuzzTest is Test {
         // expecting the liquidation event to be emitted
         vm.expectEmit(true, false, false, false, address(market));
         emit IMarketEvents.Liquidation(
-            bob, address(collateralToken), address(borrowToken), liquidator, 0, 0, 0, 0, 0, 0, 0
+            bob, address(collateralToken), address(borrowToken), liquidator, 0, 0, 0, 0, 0, 0
         );
 
         uint256 borrowTokenBalanceOfLiquidatorBefore = borrowToken.balanceOf(liquidator);
         // liquidating the underwater position should always succeed
-        (uint256 collateralAmount, uint256 repayAmount,) = market.liquidate(bob, hex"");
+        (uint256 collateralAmount, uint256 repayAmount,) = market.liquidate(bob, hex"", hex"");
 
         // asserts that collateral is seized and amount repaid is greater than 0
         assertGt(collateralAmount, 0, "no collateral seized during liquidation");
@@ -290,12 +339,12 @@ contract AltoBorrowMarketLiquidationsFuzzTest is Test {
         // expecting the liquidation event to be emitted
         vm.expectEmit(true, false, false, false, address(market));
         emit IMarketEvents.Liquidation(
-            bob, address(collateralToken), address(borrowToken), liquidator, 0, 0, 0, 0, 0, 0, 0
+            bob, address(collateralToken), address(borrowToken), liquidator, 0, 0, 0, 0, 0, 0
         );
 
         // liquidating the underwater position should always succeed
         uint256 borrowTokenBalanceOfLiquidatorBefore = borrowToken.balanceOf(liquidator);
-        (uint256 collateralAmount, uint256 repayAmount,) = market.liquidate(bob, hex"");
+        (uint256 collateralAmount, uint256 repayAmount,) = market.liquidate(bob, hex"", hex"");
 
         // asserts that collateral is seized and amount repaid is greater than 0
         assertGt(collateralAmount, 0, "no collateral seized during liquidation");
@@ -388,10 +437,10 @@ contract AltoBorrowMarketLiquidationsFuzzTest is Test {
 
         vm.expectEmit(true, false, false, false, address(market));
         emit IMarketEvents.Liquidation(
-            bob, address(collateralToken), address(borrowToken), liquidator, 0, 0, 0, 0, 0, 0, 0
+            bob, address(collateralToken), address(borrowToken), liquidator, 0, 0, 0, 0, 0, 0
         );
         // liquidation of underwater position with low deposit amount should succeed
-        (uint256 collateralAmount, uint256 repayAmount,) = market.liquidate(bob, hex"");
+        (uint256 collateralAmount, uint256 repayAmount,) = market.liquidate(bob, hex"", hex"");
 
         // asserts that collateral is seized and amount repaid is greater than 0
         assertGt(collateralAmount, 0, "no collateral seized during liquidation");
@@ -462,12 +511,12 @@ contract AltoBorrowMarketLiquidationsFuzzTest is Test {
         // expecting the liquidation event to be emitted
         vm.expectEmit(true, false, false, false, address(market));
         emit IMarketEvents.Liquidation(
-            bob, address(collateralToken), address(borrowToken), liquidator, 0, 0, 0, 0, 0, 0, 0
+            bob, address(collateralToken), address(borrowToken), liquidator, 0, 0, 0, 0, 0, 0
         );
 
         uint256 borrowTokenBalanceOfLiquidatorBefore = borrowToken.balanceOf(liquidator);
         // liquidating the underwater position should always succeed
-        (uint256 collateralAmount, uint256 repayAmount,) = market.liquidate(bob, hex"");
+        (uint256 collateralAmount, uint256 repayAmount,) = market.liquidate(bob, hex"", hex"");
 
         // asserts that collateral is seized and amount repaid is greater than 0
         assertGt(collateralAmount, 0, "no collateral seized during liquidation");
@@ -574,12 +623,12 @@ contract AltoBorrowMarketLiquidationsFuzzTest is Test {
         // expecting the liquidation event to be emitted
         vm.expectEmit(true, false, false, false, address(market));
         emit IMarketEvents.Liquidation(
-            bob, address(collateralToken), address(borrowToken), liquidator, 0, 0, 0, 0, 0, 0, 0
+            bob, address(collateralToken), address(borrowToken), liquidator, 0, 0, 0, 0, 0, 0
         );
 
         uint256 borrowTokenBalanceOfLiquidatorBefore = borrowToken.balanceOf(liquidator);
         // liquidating the underwater position should always succeed
-        (uint256 collateralAmount, uint256 repayAmount,) = market.liquidate(bob, hex"");
+        (uint256 collateralAmount, uint256 repayAmount,) = market.liquidate(bob, hex"", hex"");
 
         // asserts that collateral is seized and amount repaid is greater than 0
         assertGt(collateralAmount, 0, "no collateral seized during liquidation");
@@ -663,7 +712,7 @@ contract AltoBorrowMarketLiquidationsFuzzTest is Test {
 
         // expecting the liquidation to revert because oracle always reverts
         vm.expectRevert(OracleAlwaysReverts.selector);
-        market.liquidate(bob, hex"");
+        market.liquidate(bob, hex"", hex"");
         vm.stopPrank();
     }
 }

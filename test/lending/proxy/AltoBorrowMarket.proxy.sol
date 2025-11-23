@@ -8,18 +8,16 @@ import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 import {LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {MarketDeployer} from "@alto/utils/MarketDeployer.sol";
-import {
-    BorrowMarketInitParams,
-    BaseMarketInitParams,
-    LiquidationConfiguration,
-    Balance,
-    Position
-} from "@alto/lending/interfaces/IMarket.sol";
+import {BorrowMarketInitParams, BaseMarketInitParams, Balance, Position} from "@alto/lending/interfaces/IMarket.sol";
+import {LiquidationConfiguration} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
 import {PAUSE_TYPE, FROZEN_TYPE} from "@alto/utils/Constants.sol";
 import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {UnsafeUpgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
+import {AltoLiquidationEngine} from "@alto/lending/AltoLiquidationEngine.sol";
+import {IPriorityLiquidationEngine} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
+import {AltoBaseMarket} from "@alto/lending/AltoBaseMarket.sol";
 
 import {AltoBorrowMarketUpgraded} from "./contracts/AltoBorrowMarketUpgraded.sol";
 import {AltoBorrowMarketUpgradedOriginalBaseMarket} from "./contracts/AltoBorrowMarketUpgradedOriginalBaseMarket.sol";
@@ -58,6 +56,8 @@ contract AltoBorrowMarketProxyTest is Test {
             liquidationWindowTag: 3 days
         });
 
+        // Liquidation engine will be set after market deployment
+
         BaseMarketInitParams memory baseMarketInitParams = BaseMarketInitParams({
             borrowToken: address(borrowToken),
             collateralToken: address(collateralToken),
@@ -66,7 +66,7 @@ contract AltoBorrowMarketProxyTest is Test {
             oracle: address(oracle),
             maxLtv: 0.75 ether,
             feeRecipient: OWNER,
-            liquidationConfiguration: liquidationConfig
+            liquidationEngine: address(1) // Will be updated below
         });
 
         BorrowMarketInitParams memory borrowMarketInitParams = BorrowMarketInitParams({
@@ -75,7 +75,12 @@ contract AltoBorrowMarketProxyTest is Test {
 
         market = IMarket(MarketDeployer.deployBorrowMarket(borrowMarketInitParams));
 
+        // Create real liquidation engine with market address and update market
+        address liquidationEngine = address(new AltoLiquidationEngine(OWNER, address(market)));
         vm.startPrank(OWNER);
+        IPriorityLiquidationEngine(liquidationEngine).setLiquidationConfiguration(liquidationConfig);
+        AltoBaseMarket(address(market)).setLiquidationEngine(liquidationEngine);
+
         market.setPauser(PAUSER, PAUSE_TYPE, true);
         market.setPauser(PAUSER, FROZEN_TYPE, true);
         vm.stopPrank();
@@ -128,7 +133,7 @@ contract AltoBorrowMarketProxyTest is Test {
             maxLtv: market.maxLtv(),
             borrowOpeningFee: market.borrowOpeningFee(),
             feeRecipient: market.feeRecipient(),
-            liquidationConfiguration: IMarket(address(market)).liquidationConfiguration()
+            liquidationConfiguration: IPriorityLiquidationEngine(market.liquidationEngine()).liquidationConfiguration()
         });
     }
 

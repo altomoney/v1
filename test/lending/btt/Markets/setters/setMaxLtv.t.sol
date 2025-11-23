@@ -4,6 +4,7 @@ pragma solidity ^0.8.28;
 import {MarketCommon, MarketType} from "../MarketCommon.t.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IMarketErrors, IMarketEvents} from "@alto/lending/interfaces/IMarket.sol";
+import {IPriorityLiquidationEngine} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
 
 contract AltoMarketSetMaxLtv is MarketCommon {
     constructor(MarketType _marketType) MarketCommon(_marketType) {}
@@ -41,7 +42,8 @@ contract AltoMarketSetMaxLtv is MarketCommon {
     }
 
     function test_RevertWhen_MaxLtvIsGreaterThanMaxLiquidationLtv() external whenCallerIsOwner {
-        uint256 newLtv = market.liquidationConfiguration().maxLiquidationLtv + 1;
+        uint256 newLtv =
+            IPriorityLiquidationEngine(market.liquidationEngine()).liquidationConfiguration().maxLiquidationLtv + 1;
 
         // it should revert
         vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBaseMarketInvalidInput.selector));

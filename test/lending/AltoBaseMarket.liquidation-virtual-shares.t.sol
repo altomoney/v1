@@ -8,6 +8,7 @@ import {Uint128Converter} from "@alto/lending/libraries/Uint128Converter.sol";
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {Position, Balance} from "@alto/lending/interfaces/IMarket.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
+import {IPriorityLiquidationEngine} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
 
 contract AltoBaseMarketLiquidationVirtualSharesTest is MarketCommon {
     using FixedPointMath for uint256;
@@ -21,9 +22,11 @@ contract AltoBaseMarketLiquidationVirtualSharesTest is MarketCommon {
     function setUp() public override {
         super.setUp();
 
+        IPriorityLiquidationEngine liquidationEngine = IPriorityLiquidationEngine(market.liquidationEngine());
+
         // Setup priority liquidator to avoid restrictions
         vm.prank(OWNER);
-        market.setPriorityLiquidator(TEST_LIQUIDATOR, true);
+        liquidationEngine.setPriorityLiquidator(TEST_LIQUIDATOR, true);
     }
 
     /**
@@ -108,7 +111,7 @@ contract AltoBaseMarketLiquidationVirtualSharesTest is MarketCommon {
             uint256 sharesBefore = totalBorrowed.shares;
 
             // Perform liquidation
-            market.liquidate(USER, "");
+            market.liquidate(USER, hex"", hex"");
 
             vm.stopPrank();
 

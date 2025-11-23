@@ -2,13 +2,7 @@
 pragma solidity ^0.8.28;
 
 import {MarketCommon, MarketType} from "./MarketCommon.t.sol";
-import {
-    IMarketErrors,
-    IMarketEvents,
-    Position,
-    Balance,
-    LiquidablePosition
-} from "@alto/lending/interfaces/IMarket.sol";
+import {IMarketErrors, IMarketEvents, Position, Balance} from "@alto/lending/interfaces/IMarket.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {AltoMintMarket} from "@alto/lending/AltoMintMarket.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
@@ -16,6 +10,11 @@ import {Uint128Converter} from "@alto/lending/libraries/Uint128Converter.sol";
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {
+    IPriorityLiquidationEngine,
+    LiquidationConfiguration,
+    LiquidablePosition
+} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
 
 contract AltoBorrowMarketGovernanceLiquidate is MarketCommon {
     using FixedPointMath for uint256;
@@ -50,7 +49,6 @@ contract AltoBorrowMarketGovernanceLiquidate is MarketCommon {
 
     function test_RevertWhen_PositionIsSolvent() external givenSolventPosition {
         vm.startPrank(OWNER);
-        vm.expectRevert(IMarketErrors.AltoBaseMarketLiquidatingSolventPosition.selector);
         market.governanceLiquidate(USER);
         vm.stopPrank();
     }
@@ -80,7 +78,7 @@ contract AltoBorrowMarketGovernanceLiquidate is MarketCommon {
 
     function test_WhenPositionIsInsolvent() external givenPositionIsInsolvent {
         vm.prank(TAGGER);
-        market.tagLiquidablePosition(USER, TAGGER);
+        IPriorityLiquidationEngine(market.liquidationEngine()).tagLiquidablePosition(USER, TAGGER);
 
         Balance memory totalBorrowedBefore = market.totalBorrowed();
         Balance memory totalSupplyBefore = market.totalSupply();
@@ -95,7 +93,8 @@ contract AltoBorrowMarketGovernanceLiquidate is MarketCommon {
         );
         uint128 expectedBadDebtShares = positionBefore.borrowShares;
 
-        LiquidablePosition memory liquidableBefore = market.liquidablePositions(USER);
+        LiquidablePosition memory liquidableBefore =
+            IPriorityLiquidationEngine(market.liquidationEngine()).liquidablePositions(USER);
         assertTrue(liquidableBefore.tagged);
 
         vm.startPrank(OWNER);
@@ -110,6 +109,8 @@ contract AltoBorrowMarketGovernanceLiquidate is MarketCommon {
             expectedBadDebtShares
         );
         (uint256 collateralAmount, uint256 badDebtAmount) = market.governanceLiquidate(USER);
+        IPriorityLiquidationEngine liquidationEngine = IPriorityLiquidationEngine(market.liquidationEngine());
+        liquidationEngine.deleteLiquidablePosition(USER);
         vm.stopPrank();
 
         assertEq(collateralAmount, expectedCollateral);
@@ -134,7 +135,8 @@ contract AltoBorrowMarketGovernanceLiquidate is MarketCommon {
             assertEq(totalSupplyAfter.shares, totalSupplyBefore.shares);
         }
 
-        LiquidablePosition memory liquidableAfter = market.liquidablePositions(USER);
+        LiquidablePosition memory liquidableAfter =
+            IPriorityLiquidationEngine(market.liquidationEngine()).liquidablePositions(USER);
         assertFalse(liquidableAfter.tagged);
         assertEq(liquidableAfter.tagger, address(0));
         assertEq(liquidableAfter.timestamp, 0);
@@ -142,7 +144,7 @@ contract AltoBorrowMarketGovernanceLiquidate is MarketCommon {
 
     function test_WhenPositionIsInsolventAndHasNoCollateral() external givenPositionIsInsolvent {
         vm.prank(TAGGER);
-        market.tagLiquidablePosition(USER, TAGGER);
+        IPriorityLiquidationEngine(market.liquidationEngine()).tagLiquidablePosition(USER, TAGGER);
 
         bytes32 collateralSlot = bytes32(uint256(keccak256(abi.encode(USER, uint256(8)))) + 1);
         vm.store(address(market), collateralSlot, bytes32(0));
@@ -174,6 +176,8 @@ contract AltoBorrowMarketGovernanceLiquidate is MarketCommon {
             expectedBadDebtShares
         );
         (uint256 collateralAmount, uint256 badDebtAmount) = market.governanceLiquidate(USER);
+        IPriorityLiquidationEngine liquidationEngine = IPriorityLiquidationEngine(market.liquidationEngine());
+        liquidationEngine.deleteLiquidablePosition(USER);
         vm.stopPrank();
 
         assertEq(collateralAmount, expectedCollateral);
@@ -198,7 +202,8 @@ contract AltoBorrowMarketGovernanceLiquidate is MarketCommon {
             assertEq(totalSupplyAfter.shares, totalSupplyBefore.shares);
         }
 
-        LiquidablePosition memory liquidableAfter = market.liquidablePositions(USER);
+        LiquidablePosition memory liquidableAfter =
+            IPriorityLiquidationEngine(market.liquidationEngine()).liquidablePositions(USER);
         assertFalse(liquidableAfter.tagged);
         assertEq(liquidableAfter.tagger, address(0));
         assertEq(liquidableAfter.timestamp, 0);

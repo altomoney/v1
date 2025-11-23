@@ -4,11 +4,8 @@ pragma solidity ^0.8.22;
 import {Test} from "forge-std/Test.sol";
 import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
 import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";
-import {
-    LiquidationConfiguration,
-    BaseMarketInitParams,
-    BorrowMarketInitParams
-} from "@alto/lending/interfaces/IMarket.sol";
+import {BaseMarketInitParams, BorrowMarketInitParams} from "@alto/lending/interfaces/IMarket.sol";
+import {LiquidationConfiguration} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 import {LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
@@ -16,6 +13,8 @@ import {IPausable} from "@alto/utils/Pausable.sol";
 import {IMarketErrors} from "@alto/lending/interfaces/IMarket.sol";
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 import {MarketDeployer} from "@alto/utils/MarketDeployer.sol";
+import {IPriorityLiquidationEngine} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
+import {AltoLiquidationEngine} from "@alto/lending/AltoLiquidationEngine.sol";
 
 contract LiquidateTest is Test {
     AltoBorrowMarket market;
@@ -52,6 +51,8 @@ contract LiquidateTest is Test {
             liquidationWindowTag: 3 days
         });
 
+        // Liquidation engine will be set after market deployment
+
         BaseMarketInitParams memory baseMarketInitParams = BaseMarketInitParams({
             borrowToken: address(borrowToken),
             collateralToken: address(collateralToken),
@@ -60,7 +61,7 @@ contract LiquidateTest is Test {
             oracle: address(oracle),
             maxLtv: 0.75 ether,
             feeRecipient: owner,
-            liquidationConfiguration: config
+            liquidationEngine: address(1) // Will be updated below
         });
 
         BorrowMarketInitParams memory borrowMarketInitParams = BorrowMarketInitParams({
@@ -69,11 +70,16 @@ contract LiquidateTest is Test {
 
         market = AltoBorrowMarket(MarketDeployer.deployBorrowMarket(borrowMarketInitParams));
 
+        // Create real liquidation engine with market address and update market
+        address liquidationEngine = address(new AltoLiquidationEngine(owner, address(market)));
+        IPriorityLiquidationEngine(liquidationEngine).setLiquidationConfiguration(config);
+        market.setLiquidationEngine(liquidationEngine);
+
         // Set owner as pauser for PAUSE_TYPE
         market.setPauser(owner, PAUSE_TYPE, true);
 
         // Setup priority liquidator
-        market.setPriorityLiquidator(priorityLiquidator, true);
+        IPriorityLiquidationEngine(liquidationEngine).setPriorityLiquidator(priorityLiquidator, true);
 
         // Setup initial balances for test accounts
         deal(address(borrowToken), alice, INITIAL_AMOUNT);
@@ -124,14 +130,14 @@ contract LiquidateTest is Test {
 
         vm.startPrank(liquidator);
         vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, PAUSE_TYPE));
-        market.liquidate(bob, "");
+        market.liquidate(bob, hex"", hex"");
         vm.stopPrank();
     }
 
     function test_RevertWhen_PositionIsSolvent() public {
         vm.startPrank(liquidator);
         vm.expectRevert(IMarketErrors.AltoBaseMarketLiquidatingSolventPosition.selector);
-        market.liquidate(bob, "");
+        market.liquidate(bob, hex"", hex"");
         vm.stopPrank();
     }
 
@@ -149,7 +155,7 @@ contract LiquidateTest is Test {
         address nonAuthorized = address(0x9999);
         vm.startPrank(nonAuthorized);
         vm.expectRevert(IMarketErrors.AltoBaseMarketLiquidationUnauthorized.selector);
-        market.liquidate(bob, "");
+        market.liquidate(bob, hex"", hex"");
         vm.stopPrank();
     }
 
@@ -167,14 +173,14 @@ contract LiquidateTest is Test {
 
         vm.startPrank(priorityLiquidator);
         // This should succeed since priorityLiquidator is authorized
-        market.liquidate(bob, "");
+        market.liquidate(bob, hex"", hex"");
         vm.stopPrank();
     }
 
     modifier whenPositionIsTagged() {
         // Tag the position first
         vm.startPrank(liquidator);
-        market.tagLiquidablePosition(bob, liquidator);
+        IPriorityLiquidationEngine(market.liquidationEngine()).tagLiquidablePosition(bob, liquidator);
         vm.stopPrank();
         _;
     }
@@ -183,7 +189,7 @@ contract LiquidateTest is Test {
         // Try to liquidate immediately (should fail due to grace period)
         vm.startPrank(liquidator);
         vm.expectRevert(IMarketErrors.AltoBaseMarketLiquidationUnauthorized.selector);
-        market.liquidate(bob, "");
+        market.liquidate(bob, hex"", hex"");
         vm.stopPrank();
     }
 
@@ -197,7 +203,7 @@ contract LiquidateTest is Test {
 
         vm.startPrank(liquidator);
         // This should succeed now
-        market.liquidate(bob, "");
+        market.liquidate(bob, hex"", hex"");
         vm.stopPrank();
     }
 }
