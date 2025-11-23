@@ -21,6 +21,8 @@ contract TestDusdFlashMinter is TestDusdBase {
     MockFlashBorrower public flashBorrower;
     MockFlashBorrower public flashBorrowerNoApprove;
 
+    address constant OWNER = address(0x12345);
+
     uint256 constant DEFAULT_BORROW_AMOUNT = 1000e18;
     uint128 constant DEFAULT_MIN_FLASH_FEE = 1e16; // 1%
     uint128 constant DEFAULT_MAX_FLASH_FEE = 2e16; // 2%
@@ -29,7 +31,7 @@ contract TestDusdFlashMinter is TestDusdBase {
         super.setUp();
 
         FlashFee memory defaultFlashFee = _createFlashFee(DEFAULT_MIN_FLASH_FEE, DEFAULT_MAX_FLASH_FEE);
-        flashMinter = new DUSDFlashMinter(address(DUSD_TOKEN), TREASURY, defaultFlashFee, address(this));
+        flashMinter = new DUSDFlashMinter(address(DUSD_TOKEN), TREASURY, defaultFlashFee, OWNER);
 
         _setupDusdForFlashMinter();
         _setupFlashBorrowers();
@@ -83,8 +85,7 @@ contract TestDusdFlashMinter is TestDusdBase {
         vm.expectEmit(false, false, false, true);
         emit IDUSDFlashMinter.SetFlashMintFee(_createFlashFee(0, 0), defaultFlashFee);
 
-        DUSDFlashMinter newFlashMinter =
-            new DUSDFlashMinter(address(DUSD_TOKEN), TREASURY, defaultFlashFee, address(this));
+        DUSDFlashMinter newFlashMinter = new DUSDFlashMinter(address(DUSD_TOKEN), TREASURY, defaultFlashFee, OWNER);
 
         assertEq(address(newFlashMinter.DUSD()), address(DUSD_TOKEN), "Wrong DUSD token address");
         FlashFee memory fee = newFlashMinter.getFlashMintFee();
@@ -93,11 +94,18 @@ contract TestDusdFlashMinter is TestDusdBase {
         assertEq(newFlashMinter.getStableTokenTreasury(), TREASURY, "Wrong TREASURY address");
     }
 
-    function testRevertConstructorFeeOutOfRange() public {
+    function testRevertConstructorFeeOutOfRange_MinFlashFee() public {
         FlashFee memory invalidFlashFee = _createFlashFee(uint128(MATH_PRECISION + 1), DEFAULT_MAX_FLASH_FEE);
 
         vm.expectRevert("FlashMinter: Min flash fee exceeds MATH_PRECISION");
-        new DUSDFlashMinter(address(DUSD_TOKEN), TREASURY, invalidFlashFee, address(this));
+        new DUSDFlashMinter(address(DUSD_TOKEN), TREASURY, invalidFlashFee, OWNER);
+    }
+
+    function testRevertConstructorFeeOutOfRange_MaxFlashFee() public {
+        FlashFee memory invalidFlashFee = _createFlashFee(DEFAULT_MIN_FLASH_FEE, uint128(MATH_PRECISION + 1));
+
+        vm.expectRevert("FlashMinter: Max flash fee exceeds MATH_PRECISION");
+        new DUSDFlashMinter(address(DUSD_TOKEN), TREASURY, invalidFlashFee, OWNER);
     }
 
     // Flash Loan Revert Tests
@@ -148,10 +156,19 @@ contract TestDusdFlashMinter is TestDusdBase {
         flashMinter.updateFlashMintFee(newFlashFee);
     }
 
-    function testRevertUpdateFeeOutOfRange() public {
+    function testRevertUpdateFeeOutOfRange_MinFlashFee() public {
         FlashFee memory invalidFlashFee = _createFlashFee(uint128(MATH_PRECISION + 1), DEFAULT_MAX_FLASH_FEE);
 
         vm.expectRevert("FlashMinter: Min flash fee exceeds MATH_PRECISION");
+        vm.prank(OWNER);
+        flashMinter.updateFlashMintFee(invalidFlashFee);
+    }
+
+    function testRevertUpdateFeeOutOfRange_MaxFlashFee() public {
+        FlashFee memory invalidFlashFee = _createFlashFee(DEFAULT_MIN_FLASH_FEE, uint128(MATH_PRECISION + 1));
+
+        vm.expectRevert("FlashMinter: Max flash fee exceeds MATH_PRECISION");
+        vm.prank(OWNER);
         flashMinter.updateFlashMintFee(invalidFlashFee);
     }
 
@@ -171,7 +188,8 @@ contract TestDusdFlashMinter is TestDusdBase {
     // Positive Tests
 
     function testFlashloan() public {
-        uint256 feeAmount = flashMinter.flashFee(address(DUSD_TOKEN), DEFAULT_BORROW_AMOUNT);
+        uint256 feeAmount =
+            _calculateExpectedFlashFee(DEFAULT_BORROW_AMOUNT, DEFAULT_MIN_FLASH_FEE, DEFAULT_MAX_FLASH_FEE);
         dusdFaucet(address(flashBorrower), feeAmount);
 
         vm.expectEmit(true, true, true, true, address(flashMinter));
@@ -206,6 +224,7 @@ contract TestDusdFlashMinter is TestDusdBase {
 
         vm.expectEmit(false, false, false, true, address(flashMinter));
         emit IDUSDFlashMinter.SetFlashMintFee(currentFee, newFlashFee);
+        vm.prank(OWNER);
         flashMinter.updateFlashMintFee(newFlashFee);
 
         FlashFee memory updatedFee = flashMinter.getFlashMintFee();
@@ -215,13 +234,15 @@ contract TestDusdFlashMinter is TestDusdBase {
 
     function testUpdateDusdTreasury() public {
         assertEq(flashMinter.getStableTokenTreasury(), TREASURY, "Flashminter non-default TREASURY");
-        assertTrue(TREASURY != address(this));
+        address newTreasury = address(0x9999);
+        assertTrue(TREASURY != newTreasury);
 
         vm.expectEmit(true, true, false, false, address(flashMinter));
-        emit IStableTokenFacilitator.StableTokenTreasuryUpdated(TREASURY, address(this));
-        flashMinter.updateStableTokenTreasury(address(this));
+        emit IStableTokenFacilitator.StableTokenTreasuryUpdated(TREASURY, newTreasury);
+        vm.prank(OWNER);
+        flashMinter.updateStableTokenTreasury(newTreasury);
 
-        assertEq(flashMinter.getStableTokenTreasury(), address(this), "Treasury should be updated");
+        assertEq(flashMinter.getStableTokenTreasury(), newTreasury, "Treasury should be updated");
     }
 
     function testMaxFlashloanNotDusd() public view {
@@ -253,6 +274,7 @@ contract TestDusdFlashMinter is TestDusdBase {
         amount = bound(amount, 0, DEFAULT_CAPACITY / 10);
 
         FlashFee memory flashFee = _createFlashFee(minFee, maxFee);
+        vm.prank(OWNER);
         flashMinter.updateFlashMintFee(flashFee);
 
         uint256 fee = flashMinter.flashFee(address(DUSD_TOKEN), amount);
@@ -286,6 +308,29 @@ contract TestDusdFlashMinter is TestDusdBase {
             // Fee should approximately match expected (within 1 wei tolerance for rounding)
             assertApproxEqAbs(fee, expectedFee, 1, "Flash fee should match expected interpolated fee");
             assertGt(fee, 0, "Flash fee should be greater than 0");
+        }
+    }
+
+    function test_WhenMinEqualsMaxFlashFee_FeePercentageIsConstant() public {
+        // Set min and max flash fees to the same value
+        uint128 flatFee = 1.5e16; // 1.5%
+        FlashFee memory equalFlashFee = _createFlashFee(flatFee, flatFee);
+        vm.prank(OWNER);
+        flashMinter.updateFlashMintFee(equalFlashFee);
+
+        // Test with different amounts
+        uint256[] memory amounts = new uint256[](5);
+        amounts[0] = 100e18;
+        amounts[1] = 1000e18;
+        amounts[2] = 5000e18;
+        amounts[3] = 10000e18;
+        amounts[4] = DEFAULT_CAPACITY / 2;
+
+        // Verify fee equals flatFee calculation for each amount
+        for (uint256 i = 0; i < amounts.length; i++) {
+            uint256 fee = flashMinter.flashFee(address(DUSD_TOKEN), amounts[i]);
+            uint256 expectedFee = amounts[i].multiplyWithPrecisionUp(flatFee);
+            assertEq(fee, expectedFee, "Fee should equal flatFee calculation");
         }
     }
 }
