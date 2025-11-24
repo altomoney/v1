@@ -306,11 +306,16 @@ abstract contract AltoBaseMarket is
     /// @inheritdoc IMarketBase
     function addSupply(uint256 assets, uint256 shares, address onBehalf)
         external
-        virtual
         whenNotPaused
         whenNotFrozen
         returns (uint256, uint256)
     {
+        return _addSupply(assets, shares, onBehalf);
+    }
+
+    /// @dev See `IMarketBase.addSupply`
+    /// @dev This function is virtual to allow for custom logic.
+    function _addSupply(uint256 assets, uint256 shares, address onBehalf) internal virtual returns (uint256, uint256) {
         if (!_onlyOneZero(assets, shares) || onBehalf == address(0)) {
             revert AltoBaseMarketInvalidInput();
         }
@@ -338,8 +343,17 @@ abstract contract AltoBaseMarket is
     /// @inheritdoc IMarketBase
     function removeSupply(uint256 assets, uint256 shares, address onBehalf, address receiver)
         external
-        virtual
         whenNotPaused
+        returns (uint256, uint256)
+    {
+        return _removeSupply(assets, shares, onBehalf, receiver);
+    }
+
+    /// @dev See `IMarketBase.removeSupply`
+    /// @dev This function is virtual to allow for custom logic.
+    function _removeSupply(uint256 assets, uint256 shares, address onBehalf, address receiver)
+        internal
+        virtual
         returns (uint256, uint256)
     {
         if (!_onlyOneZero(assets, shares) || receiver == address(0)) {
@@ -376,6 +390,12 @@ abstract contract AltoBaseMarket is
 
     /// @inheritdoc IMarketBase
     function addCollateral(uint256 assets, address onBehalf) external whenNotPaused whenNotFrozen returns (uint256) {
+        return _addCollateral(assets, onBehalf);
+    }
+
+    /// @dev See `IMarketBase.addCollateral`
+    /// @dev This function is virtual to allow for custom logic.
+    function _addCollateral(uint256 assets, address onBehalf) internal virtual returns (uint256) {
         if (assets == 0 || onBehalf == address(0)) {
             revert AltoBaseMarketInvalidInput();
         }
@@ -394,6 +414,16 @@ abstract contract AltoBaseMarket is
         external
         whenNotPaused
         nonReentrant
+        returns (uint256)
+    {
+        return _removeCollateral(assets, onBehalf, receiver, swapParams);
+    }
+
+    /// @dev See `IMarketBase.removeCollateral`
+    /// @dev This function is virtual to allow for custom logic.
+    function _removeCollateral(uint256 assets, address onBehalf, address receiver, bytes calldata swapParams)
+        internal
+        virtual
         returns (uint256)
     {
         if (assets == 0 || onBehalf == address(0)) {
@@ -431,6 +461,16 @@ abstract contract AltoBaseMarket is
         whenNotPaused
         whenNotFrozen
         nonReentrant
+        returns (uint256, uint256, uint256)
+    {
+        return _borrow(assets, shares, onBehalf, receiver, swapParams);
+    }
+
+    /// @dev See `IMarketBase.borrow`
+    /// @dev This function is virtual to allow for custom logic.
+    function _borrow(uint256 assets, uint256 shares, address onBehalf, address receiver, bytes calldata swapParams)
+        internal
+        virtual
         returns (uint256, uint256, uint256)
     {
         if (!_onlyOneZero(assets, shares) || receiver == address(0)) {
@@ -511,6 +551,12 @@ abstract contract AltoBaseMarket is
 
     /// @inheritdoc IMarketBase
     function repay(uint256 assets, uint256 shares, address onBehalf) external whenNotPaused returns (uint256, uint256) {
+        return _repay(assets, shares, onBehalf);
+    }
+
+    /// @dev See `IMarketBase.repay`
+    /// @dev This function is virtual to allow for custom logic.
+    function _repay(uint256 assets, uint256 shares, address onBehalf) internal virtual returns (uint256, uint256) {
         if (!_onlyOneZero(assets, shares) || onBehalf == address(0)) {
             revert AltoBaseMarketInvalidInput();
         }
@@ -584,6 +630,12 @@ abstract contract AltoBaseMarket is
         nonReentrant
         returns (uint256, uint256, uint256)
     {
+        return _liquidate(borrower, data);
+    }
+
+    /// @dev See `IMarketBase.liquidate`
+    /// @dev This function is virtual to allow for custom logic.
+    function _liquidate(address borrower, bytes calldata data) internal virtual returns (uint256, uint256, uint256) {
         _accrueInterest();
 
         // Check if the position is underwater
