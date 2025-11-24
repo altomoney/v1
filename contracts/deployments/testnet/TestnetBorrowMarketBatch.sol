@@ -18,6 +18,7 @@ struct TestnetBorrowMarketBatchParams {
     address borrowToken;
     uint256 marketOraclePrice;
     uint256 maxLtv;
+    uint128 supplyCapAssets;
 }
 
 int256 constant YEAR = int256(365 days);
@@ -75,8 +76,11 @@ contract TestnetBorrowMarketBatch is ITestnetMarketBatch {
             liquidationConfiguration: liquidationConfig
         });
 
-        BorrowMarketInitParams memory initParams =
-            BorrowMarketInitParams({baseMarketInitParams: baseMarketInitParams, initialBorrowOpeningFee: 0.005 ether});
+        BorrowMarketInitParams memory initParams = BorrowMarketInitParams({
+            baseMarketInitParams: baseMarketInitParams,
+            initialBorrowOpeningFee: 0.005 ether,
+            supplyCapAssets: _params.supplyCapAssets
+        });
 
         address marketProxy =
             UnsafeUpgrades.deployUUPSProxy(address(market), abi.encodeCall(AltoBorrowMarket.initialize, (initParams)));

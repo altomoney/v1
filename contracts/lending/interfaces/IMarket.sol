@@ -87,6 +87,8 @@ struct BorrowMarketInitParams {
     BaseMarketInitParams baseMarketInitParams;
     /// @notice The initial borrow opening fee.
     uint256 initialBorrowOpeningFee;
+    /// @notice The maximum amount of assets that can be supplied to the market.
+    uint128 supplyCapAssets;
 }
 
 /// @notice Struct that represents the parameters for initializing a mint market

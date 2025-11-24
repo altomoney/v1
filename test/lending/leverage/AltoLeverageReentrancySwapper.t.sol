@@ -192,7 +192,8 @@ contract AltoLeverageReentrancySwapperTest is Test {
                             liquidationWindowTag: 3 days
                         })
                     }),
-                    initialBorrowOpeningFee: 0
+                    initialBorrowOpeningFee: 0,
+                    supplyCapAssets: 0
                 })
             )
         );

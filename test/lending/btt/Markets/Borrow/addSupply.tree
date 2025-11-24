@@ -10,6 +10,7 @@ AltoBorrowMarket::AddSupply()
 │   │   └── it should revert
 │   └── when onBehalf is zero address
 │       └── it should revert
+├
 └── given valid inputs
     ├── when user has insufficient balance
     │   └── it should revert
@@ -20,6 +21,8 @@ AltoBorrowMarket::AddSupply()
         ├── when shares is zero
         │   ├── it should calculate shares from assets
         │   └── it should add supply shares to position
+        ├── when supply cap is exceeded
+        │   └── it should revert
         ├── it should emit AccrueInterest
         ├── it should update totalSupply
         ├── it should not update totalBorrowed

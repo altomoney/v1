@@ -69,8 +69,9 @@ contract AltoLeverageTest is Test {
             liquidationConfiguration: liquidationConfig
         });
 
-        BorrowMarketInitParams memory borrowMarketInitParams =
-            BorrowMarketInitParams({baseMarketInitParams: baseMarketInitParams, initialBorrowOpeningFee: 0});
+        BorrowMarketInitParams memory borrowMarketInitParams = BorrowMarketInitParams({
+            baseMarketInitParams: baseMarketInitParams, initialBorrowOpeningFee: 0, supplyCapAssets: 0
+        });
         market = IMarket(MarketDeployer.deployBorrowMarket(borrowMarketInitParams));
 
         swapper.setWhitelisted(address(leverage), true);

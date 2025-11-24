@@ -70,8 +70,9 @@ contract FixedRateIrmTest is Test {
             liquidationConfiguration: liquidationConfig
         });
 
-        BorrowMarketInitParams memory borrowMarketInitParams =
-            BorrowMarketInitParams({baseMarketInitParams: baseMarketInitParams, initialBorrowOpeningFee: 0});
+        BorrowMarketInitParams memory borrowMarketInitParams = BorrowMarketInitParams({
+            baseMarketInitParams: baseMarketInitParams, initialBorrowOpeningFee: 0, supplyCapAssets: 0
+        });
         market = AltoBorrowMarket(MarketDeployer.deployBorrowMarket(borrowMarketInitParams));
 
         vm.prank(OWNER);
