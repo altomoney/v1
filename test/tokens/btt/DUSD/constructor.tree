@@ -8,6 +8,4 @@ DUSD::constructor
     ├── it should set the symbol to "DUSD"
     ├── it should set the endpoint correctly
     ├── it should set the owner correctly
-    ├── it should initialize flashFeeReceiver to zero address
-    ├── it should initialize flashFee to zero
     └── it should set owner as pauser with PAUSED_ROLE

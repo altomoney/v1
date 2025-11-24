@@ -2,31 +2,17 @@
 pragma solidity ^0.8.22;
 
 import {OFT} from "@alto/utils/OFT.sol";
-import {IDUSD, MinterConfig, FlashFee} from "@alto/tokens/interfaces/IDUSD.sol";
+import {IDUSD, MinterConfig} from "@alto/tokens/interfaces/IDUSD.sol";
 
 import {Pausable, IPausable} from "@alto/utils/Pausable.sol";
 import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
-import {ERC20FlashMint} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20FlashMint.sol";
-import {IERC3156FlashBorrower} from "@openzeppelin/contracts/interfaces/IERC3156FlashBorrower.sol";
-import {FixedPointMath, MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 
 /// @title DUSD Token
 /// @author Pearl Labs
 /// @custom:contact security@altofoundation.org
 /// @notice The DUSD Token is the stablecoin of the Alto Protocol.
-contract DUSD is Ownable2Step, Pausable, OFT, ERC20FlashMint, IDUSD {
-    using FixedPointMath for uint256;
-
-    /// @inheritdoc IDUSD
-    address public flashFeeReceiver;
-
-    /// @inheritdoc IDUSD
-    FlashFee public flashFee;
-
-    /// @inheritdoc IDUSD
-    uint256 public flashMintCap;
-
+contract DUSD is Ownable2Step, Pausable, OFT, IDUSD {
     /// @inheritdoc IDUSD
     mapping(address => bool) public allowedMinter;
 
@@ -65,76 +51,6 @@ contract DUSD is Ownable2Step, Pausable, OFT, ERC20FlashMint, IDUSD {
         }
         minterConfig[msg.sender].minted -= _amount;
         _burn(_from, _amount);
-    }
-
-    /// @inheritdoc ERC20FlashMint
-    function flashLoan(IERC3156FlashBorrower receiver, address, uint256 value, bytes calldata data)
-        public
-        virtual
-        override
-        whenNotPaused
-        returns (bool)
-    {
-        return super.flashLoan(receiver, address(this), value, data);
-    }
-
-    /// @inheritdoc ERC20FlashMint
-    function _flashFee(address, uint256 amount) internal view virtual override returns (uint256) {
-        if (amount > flashMintCap) {
-            revert DUSDExceededFlashMintCap();
-        }
-
-        if (amount == 0) {
-            return 0;
-        }
-
-        uint256 flashFeeToCharge;
-
-        uint256 minFee = flashFee.minFlashFee;
-        uint256 maxFee = flashFee.maxFlashFee;
-
-        if (minFee == maxFee) {
-            flashFeeToCharge = minFee;
-        } else {
-            bool increasing = maxFee > minFee;
-            uint256 diff = increasing ? (maxFee - minFee) : (minFee - maxFee);
-            uint256 step = FixedPointMath.divideWithRounding(amount, diff, flashMintCap, increasing);
-            flashFeeToCharge = increasing ? (minFee + step) : (minFee - step);
-        }
-
-        return amount.multiplyWithPrecisionUp(flashFeeToCharge);
-    }
-
-    /// @inheritdoc ERC20FlashMint
-    function _flashFeeReceiver() internal view virtual override returns (address) {
-        return flashFeeReceiver;
-    }
-
-    /// @inheritdoc ERC20FlashMint
-    function maxFlashLoan(address) public view virtual override returns (uint256) {
-        return flashMintCap;
-    }
-
-    /// @inheritdoc IDUSD
-    function setFlashFeeReceiver(address _newFlashFeeReceiver) external onlyOwner {
-        emit SetFlashFeeReceiver(flashFeeReceiver, _newFlashFeeReceiver);
-        flashFeeReceiver = _newFlashFeeReceiver;
-    }
-
-    /// @inheritdoc IDUSD
-    function setFlashFee(FlashFee calldata _newFlashFee) external onlyOwner {
-        if (_newFlashFee.minFlashFee > MATH_PRECISION || _newFlashFee.maxFlashFee > MATH_PRECISION) {
-            revert DUSDInvalidInput();
-        }
-
-        emit SetFlashFee(flashFee, _newFlashFee);
-        flashFee = _newFlashFee;
-    }
-
-    /// @inheritdoc IDUSD
-    function setFlashMintCap(uint256 _newFlashMintCap) external onlyOwner {
-        emit SetFlashMintCap(flashMintCap, _newFlashMintCap);
-        flashMintCap = _newFlashMintCap;
     }
 
     /// @inheritdoc IDUSD
