@@ -58,6 +58,9 @@ contract AltoBorrowMarketProxyTest is Test {
 
         // Liquidation engine will be set after market deployment
 
+        // Create liquidation engine before market deployment
+        address liquidationEngine = address(new AltoLiquidationEngine(OWNER));
+
         BaseMarketInitParams memory baseMarketInitParams = BaseMarketInitParams({
             borrowToken: address(borrowToken),
             collateralToken: address(collateralToken),
@@ -66,7 +69,7 @@ contract AltoBorrowMarketProxyTest is Test {
             oracle: address(oracle),
             maxLtv: 0.75 ether,
             feeRecipient: OWNER,
-            liquidationEngine: address(1) // Will be updated below
+            liquidationEngine: liquidationEngine
         });
 
         BorrowMarketInitParams memory borrowMarketInitParams = BorrowMarketInitParams({
@@ -75,11 +78,9 @@ contract AltoBorrowMarketProxyTest is Test {
 
         market = IMarket(MarketDeployer.deployBorrowMarket(borrowMarketInitParams));
 
-        // Create real liquidation engine with market address and update market
-        address liquidationEngine = address(new AltoLiquidationEngine(OWNER, address(market)));
+        // Market initialization automatically calls setMarketOnce on the liquidation engine
         vm.startPrank(OWNER);
         IPriorityLiquidationEngine(liquidationEngine).setLiquidationConfiguration(liquidationConfig);
-        AltoBaseMarket(address(market)).setLiquidationEngine(liquidationEngine);
 
         market.setPauser(PAUSER, PAUSE_TYPE, true);
         market.setPauser(PAUSER, FROZEN_TYPE, true);

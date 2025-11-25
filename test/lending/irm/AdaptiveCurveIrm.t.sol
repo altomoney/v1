@@ -73,18 +73,19 @@ contract AdaptiveCurveIrmTest is IrmCommon {
             liquidationEngine: address(1) // Will be updated below
         });
 
+        // Create liquidation engine before market deployment
+        address liquidationEngine = address(new AltoLiquidationEngine(OWNER));
+
+        baseMarketInitParams.liquidationEngine = liquidationEngine;
         BorrowMarketInitParams memory borrowMarketInitParams = BorrowMarketInitParams({
             baseMarketInitParams: baseMarketInitParams, initialBorrowOpeningFee: 0, supplyCapAssets: 0
         });
 
         AltoBorrowMarket market = AltoBorrowMarket(MarketDeployer.deployBorrowMarket(borrowMarketInitParams));
 
-        // Create real liquidation engine with market address and update market
-        address liquidationEngine = address(new AltoLiquidationEngine(OWNER, address(market)));
+        // Market initialization automatically calls setMarketOnce on the liquidation engine
         vm.startPrank(OWNER);
         AltoLiquidationEngine(liquidationEngine).setLiquidationConfiguration(liquidationConfig);
-        market.setLiquidationEngine(liquidationEngine);
-
         market.setPauser(OWNER, PAUSE_TYPE, true);
         vm.stopPrank();
 

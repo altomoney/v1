@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {IMarketErrors} from "@alto/lending/interfaces/IMarket.sol";
 import {IAltoLiquidationEngine} from "@alto/lending/interfaces/IAltoLiquidationEngine.sol";
 
 /// @notice Struct that represents the liquidable position of a user
@@ -56,6 +55,26 @@ struct LiquidationCalculation {
     uint256 collateralToSellInBorrowAssets;
 }
 
+interface IPriorityLiquidationEngineErrors {
+    /// @notice Error thrown when the input is invalid
+    error AltoPriorityLiquidationEngineInvalidInput();
+
+    /// @notice Error thrown when the market is already set and caller is not the same market
+    error AltoPriorityLiquidationEngineMarketAlreadySet();
+
+    /// @notice Error thrown when trying to liquidate a solvent position
+    error AltoPriorityLiquidationEngineLiquidatingSolventPosition();
+
+    /// @notice Error thrown when executor is not allowed to perform liquidation at this time
+    error AltoPriorityLiquidationEnginePriorityLiquidationDisabled();
+
+    /// @notice Error thrown when executor is not allowed to perform liquidation at this time
+    error AltoPriorityLiquidationEngineLiquidationUnauthorized();
+
+    /// @notice Error thrown when trying to tag a position that is already tagged
+    error AltoPriorityLiquidationEngineLiquidationAlreadyTagged();
+}
+
 interface IPriorityLiquidationEngineEvents {
     /// @notice Emitted when a priority liquidator is updated
     /// @param liquidator The address of the liquidator
@@ -76,7 +95,11 @@ interface IPriorityLiquidationEngineEvents {
     event PositionTagged(address indexed user, address indexed tagger, uint256 timestamp);
 }
 
-interface IPriorityLiquidationEngineBase is IAltoLiquidationEngine, IMarketErrors, IPriorityLiquidationEngineEvents {
+interface IPriorityLiquidationEngineBase is
+    IAltoLiquidationEngine,
+    IPriorityLiquidationEngineEvents,
+    IPriorityLiquidationEngineErrors
+{
     /// @notice Sets the priority liquidator
     /// @param liquidator The address of the liquidator
     /// @param status The status of the liquidator
@@ -97,7 +120,7 @@ interface IPriorityLiquidationEngineBase is IAltoLiquidationEngine, IMarketError
     function tagLiquidablePosition(address user, address liquidator) external;
 
     /// @notice Function to delete a tagged position.
-    /// @dev This function is used to delete a tagged position by the governance when user is liqudated with governance liquidation.
+    /// @dev This function needs to be called to delete tagged position when the position is liquidated using governance liquidation on market of this contract.
     /// @param user The address of the user whose position is being deleted
     function deleteLiquidablePosition(address user) external;
 }

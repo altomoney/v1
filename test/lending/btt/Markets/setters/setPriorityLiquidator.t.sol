@@ -6,7 +6,8 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IMarketErrors, IMarketEvents} from "@alto/lending/interfaces/IMarket.sol";
 import {
     IPriorityLiquidationEngine,
-    IPriorityLiquidationEngineEvents
+    IPriorityLiquidationEngineEvents,
+    IPriorityLiquidationEngineErrors
 } from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
 
 contract AltoMarketSetPriorityLiquidator is MarketCommon {
@@ -43,7 +44,7 @@ contract AltoMarketSetPriorityLiquidator is MarketCommon {
     function test_RevertWhen_LiquidatorIsZeroAddress() external whenCallerIsOwner {
         IPriorityLiquidationEngine liquidationEngine = IPriorityLiquidationEngine(market.liquidationEngine());
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBaseMarketInvalidInput.selector));
+        vm.expectRevert(abi.encodeWithSelector(IPriorityLiquidationEngineErrors.AltoPriorityLiquidationEngineInvalidInput.selector));
         liquidationEngine.setPriorityLiquidator(address(0), true);
     }
 }

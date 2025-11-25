@@ -49,9 +49,15 @@ struct LiquidationEngineInput {
 /// - this contract is market aware and allows only market contract to execute calculateLiquidation
 interface IAltoLiquidationEngine {
     /// @notice The address of the market that this liquidation engine is tied to
-    function MARKET() external view returns (address);
+    function market() external view returns (address);
+
+    /// @notice Sets the market address to which this liquidation engine is tied to
+    /// @param _market The market to set
+    /// @dev Used for the first time by the market to set itself to the liquidation engine
+    function setMarketOnce(address _market) external;
 
     /// @notice Calculates liquidation amounts and fees
+    /// @dev This function is only callable by the market contract
     /// @param input The input data for the liquidation calculation
     /// @return result The liquidation calculation result
     function prepareLiquidation(LiquidationEngineInput memory input)
@@ -60,10 +66,13 @@ interface IAltoLiquidationEngine {
 
     /// @notice Returns the minimum LLTV
     /// @dev LLTV is the minimum LTV that a position has to reach to be allowed for liquidation
+    /// @dev Represents the earliest hypothetical LLTV at which the position could be liquidated, assuming the liquidation conditions defined by the engine are met.
+    ///      In case of dynamic LLTV this should be the lowest possible LLTV
     /// @return minLltv The minimum LLTV
     function minLltv() external view returns (uint256);
 
     /// @notice Returns the protocol fee percentage
-    /// @notice protocol fee percentage applied to the liquidator's reward fee (percentage of sum of bonus fee and base fee)
+    /// @dev protocol fee percentage applied to the liquidator's reward fee (percentage of sum of bonus fee and base fee).
+    ///      The precision is in MATH_PRECISION
     function protocolFeePercentage() external view returns (uint256);
 }

@@ -181,9 +181,8 @@ contract AltoLeverageReentrancySwapperTest is Test {
             liquidationWindowTag: 3 days
         });
 
-        // Liquidation engine will be set after market deployment
-        // Temporary placeholder - not used
-        address(new AltoLiquidationEngine(address(this), address(1)));
+        // Create liquidation engine before market deployment
+        address liquidationEngine = address(new AltoLiquidationEngine(address(this)));
 
         market = IMarket(
             MarketDeployer.deployBorrowMarket(
@@ -196,7 +195,7 @@ contract AltoLeverageReentrancySwapperTest is Test {
                         oracle: address(oracle),
                         maxLtv: 0.8 ether,
                         feeRecipient: address(this),
-                        liquidationEngine: address(1) // Will be updated below
+                        liquidationEngine: liquidationEngine
                     }),
                     initialBorrowOpeningFee: 0,
                     supplyCapAssets: 0
@@ -204,10 +203,8 @@ contract AltoLeverageReentrancySwapperTest is Test {
             )
         );
 
-        // Create real liquidation engine with market address and update market
-        address liquidationEngine = address(new AltoLiquidationEngine(address(this), address(market)));
+        // Market initialization automatically calls setMarketOnce on the liquidation engine
         IPriorityLiquidationEngine(liquidationEngine).setLiquidationConfiguration(liquidationConfig);
-        AltoBaseMarket(address(market)).setLiquidationEngine(liquidationEngine);
 
         swapper.setWhitelisted(address(leverage), true);
         leverage.setMarket(address(market), true);

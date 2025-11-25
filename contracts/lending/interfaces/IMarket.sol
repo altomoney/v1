@@ -77,20 +77,8 @@ interface IMarketErrors {
     /// @notice Error thrown when the market has insufficient liquidity for the borrow
     error AltoBaseMarketInsufficientMarketLiquidity();
 
-    /// @notice Error thrown when trying to liquidate a solvent position
-    error AltoBaseMarketLiquidatingSolventPosition();
-
     /// @notice Error thrown when executor is not allowed to perform the action on behalf of another user
     error AltoBaseMarketUnauthorized();
-
-    /// @notice Error thrown when executor is not allowed to perform liquidation at this time
-    error AltoBaseMarketPriorityLiquidationDisabled();
-
-    /// @notice Error thrown when executor is not allowed to perform liquidation at this time
-    error AltoBaseMarketLiquidationUnauthorized();
-
-    /// @notice Error thrown when trying to tag a position that is already tagged
-    error AltoBaseMarketLiquidationAlreadyTagged();
 }
 
 interface IMarketEvents {
@@ -419,6 +407,8 @@ interface IMarketBase is IMarketErrors, IMarketEvents, IAuth, IPausable {
     /// @notice Function to liquidate an insolvent position which is not possible to liquidate using normal liquidation
     /// @dev Governance liquidation seizes full collateral of liquidated user and offsets the debt of the protocol
     /// generating bad debt
+    /// @dev Market's liquidation engine should be reviewed before running this to ensure what implications does it have on the liquidation engine.
+    /// governanceLiquidate​ is not aware of liquidation engine.
     /// @dev No fees are charged for this liquidation for the simplicity of implementation
     /// @dev This function will only be used if normal liquidation reverts caused by its complexity
     /// @param borrower The address of the borrower being liquidated
@@ -429,10 +419,6 @@ interface IMarketBase is IMarketErrors, IMarketEvents, IAuth, IPausable {
     /// @notice Function to set the liquidation engine for the market.
     /// @param liquidationEngine The address of the liquidation engine
     function setLiquidationEngine(address liquidationEngine) external;
-
-    /// @dev Returns true if the user's position is solvent based on the max LTV of the market.
-    /// @param _user The address of the user whose position is being checked
-    function isSolvent(address _user) external view returns (bool);
 
     /// @notice Address of the liquidation engine for the market.
     /// @return The address of the liquidation engine for the market.

@@ -44,7 +44,10 @@ contract FixedRateIrmUpdateTest is IrmCommon {
             liquidationWindowTag: 3 days
         });
 
-        // Liquidation engine will be set after market deployment
+        // Create liquidation engines before market deployment
+        address liquidationEngine = address(new AltoLiquidationEngine(address(this)));
+        address liquidationEngine2 = address(new AltoLiquidationEngine(address(this)));
+
         market = MockMarket(
             MockMarketDeployer.deployMarket(
                 address(borrowToken),
@@ -56,14 +59,12 @@ contract FixedRateIrmUpdateTest is IrmCommon {
                 0,
                 address(this),
                 liquidationConfig,
-                address(1) // Will be updated below
+                liquidationEngine
             )
         );
 
-        // Create real liquidation engine with market address and update market
-        address liquidationEngine = address(new AltoLiquidationEngine(address(this), address(market)));
+        // Market initialization automatically calls setMarketOnce on the liquidation engine
         AltoLiquidationEngine(liquidationEngine).setLiquidationConfiguration(liquidationConfig);
-        market.setLiquidationEngine(liquidationEngine);
 
         borrowToken.approve(address(market), type(uint256).max);
         collateralToken.approve(address(market), type(uint256).max);
@@ -83,14 +84,12 @@ contract FixedRateIrmUpdateTest is IrmCommon {
                 0,
                 address(this),
                 liquidationConfig,
-                address(1) // Will be updated below
+                liquidationEngine2
             )
         );
 
-        // Create real liquidation engine with new market address and update new market
-        address liquidationEngine2 = address(new AltoLiquidationEngine(address(this), address(newMarket)));
+        // Market initialization automatically calls setMarketOnce on the liquidation engine
         AltoLiquidationEngine(liquidationEngine2).setLiquidationConfiguration(liquidationConfig);
-        newMarket.setLiquidationEngine(liquidationEngine2);
     }
 
     function _getAccruedInterest(uint256 borrowedAmount, uint256 borrowRate, uint256 time)
