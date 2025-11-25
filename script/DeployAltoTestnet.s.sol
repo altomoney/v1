@@ -68,6 +68,9 @@ contract DeployAltoTestnetScript is Script {
             wethMarketJson = vm.serializeAddress("wethMarket", "marketIrm", input.contracts.wethMarketBatch.marketIrm);
             wethMarketJson =
                 vm.serializeAddress("wethMarket", "marketOracle", input.contracts.wethMarketBatch.marketOracle);
+            wethMarketJson = vm.serializeAddress(
+                "wethMarket", "liquidationEngine", input.contracts.wethMarketBatch.liquidationEngine
+            );
         }
 
         // Build wsteth market batch JSON
@@ -82,6 +85,9 @@ contract DeployAltoTestnetScript is Script {
                 vm.serializeAddress("wstethMarket", "marketIrm", input.contracts.wstethMarketBatch.marketIrm);
             wstethMarketJson =
                 vm.serializeAddress("wstethMarket", "marketOracle", input.contracts.wstethMarketBatch.marketOracle);
+            wstethMarketJson = vm.serializeAddress(
+                "wstethMarket", "liquidationEngine", input.contracts.wstethMarketBatch.liquidationEngine
+            );
         }
 
         // Build reth market batch JSON
@@ -95,6 +101,9 @@ contract DeployAltoTestnetScript is Script {
             rethMarketJson = vm.serializeAddress("rethMarket", "marketIrm", input.contracts.rethMarketBatch.marketIrm);
             rethMarketJson =
                 vm.serializeAddress("rethMarket", "marketOracle", input.contracts.rethMarketBatch.marketOracle);
+            rethMarketJson = vm.serializeAddress(
+                "rethMarket", "liquidationEngine", input.contracts.rethMarketBatch.liquidationEngine
+            );
         }
 
         // Build meth market batch JSON
@@ -108,6 +117,9 @@ contract DeployAltoTestnetScript is Script {
             methMarketJson = vm.serializeAddress("methMarket", "marketIrm", input.contracts.methMarketBatch.marketIrm);
             methMarketJson =
                 vm.serializeAddress("methMarket", "marketOracle", input.contracts.methMarketBatch.marketOracle);
+            methMarketJson = vm.serializeAddress(
+                "methMarket", "liquidationEngine", input.contracts.methMarketBatch.liquidationEngine
+            );
         }
 
         // Build tbtc market batch JSON
@@ -121,6 +133,9 @@ contract DeployAltoTestnetScript is Script {
             tbtcMarketJson = vm.serializeAddress("tbtcMarket", "marketIrm", input.contracts.tbtcMarketBatch.marketIrm);
             tbtcMarketJson =
                 vm.serializeAddress("tbtcMarket", "marketOracle", input.contracts.tbtcMarketBatch.marketOracle);
+            tbtcMarketJson = vm.serializeAddress(
+                "tbtcMarket", "liquidationEngine", input.contracts.tbtcMarketBatch.liquidationEngine
+            );
         }
 
         // Build wbtc market batch JSON
@@ -134,6 +149,9 @@ contract DeployAltoTestnetScript is Script {
             wbtcMarketJson = vm.serializeAddress("wbtcMarket", "marketIrm", input.contracts.wbtcMarketBatch.marketIrm);
             wbtcMarketJson =
                 vm.serializeAddress("wbtcMarket", "marketOracle", input.contracts.wbtcMarketBatch.marketOracle);
+            wbtcMarketJson = vm.serializeAddress(
+                "wbtcMarket", "liquidationEngine", input.contracts.wbtcMarketBatch.liquidationEngine
+            );
         }
 
         // Build cbbtc market batch JSON
@@ -148,6 +166,9 @@ contract DeployAltoTestnetScript is Script {
                 vm.serializeAddress("cbbtcMarket", "marketIrm", input.contracts.cbbtcMarketBatch.marketIrm);
             cbbtcMarketJson =
                 vm.serializeAddress("cbbtcMarket", "marketOracle", input.contracts.cbbtcMarketBatch.marketOracle);
+            cbbtcMarketJson = vm.serializeAddress(
+                "cbbtcMarket", "liquidationEngine", input.contracts.cbbtcMarketBatch.liquidationEngine
+            );
         }
         // Build susde market batch JSON
         string memory susdeMarketJson = "";
@@ -161,6 +182,9 @@ contract DeployAltoTestnetScript is Script {
                 vm.serializeAddress("susdeMarket", "marketIrm", input.contracts.susdeMarketBatch.marketIrm);
             susdeMarketJson =
                 vm.serializeAddress("susdeMarket", "marketOracle", input.contracts.susdeMarketBatch.marketOracle);
+            susdeMarketJson = vm.serializeAddress(
+                "susdeMarket", "liquidationEngine", input.contracts.susdeMarketBatch.liquidationEngine
+            );
         }
         // Build staking batch JSON
         string memory stakingBatchJson = "";
@@ -259,6 +283,8 @@ contract DeployAltoTestnetScript is Script {
             vm.parseJsonAddress(json, ".contracts.wethMarketBatch.marketIrm");
         loadedInput.contracts.wethMarketBatch.marketOracle =
             vm.parseJsonAddress(json, ".contracts.wethMarketBatch.marketOracle");
+        loadedInput.contracts.wethMarketBatch.liquidationEngine =
+            vm.parseJsonAddress(json, ".contracts.wethMarketBatch.liquidationEngine");
 
         // Load wsteth market batch
         loadedInput.contracts.wstethMarketBatch.market =
@@ -269,6 +295,8 @@ contract DeployAltoTestnetScript is Script {
             vm.parseJsonAddress(json, ".contracts.wstethMarketBatch.marketIrm");
         loadedInput.contracts.wstethMarketBatch.marketOracle =
             vm.parseJsonAddress(json, ".contracts.wstethMarketBatch.marketOracle");
+        loadedInput.contracts.wstethMarketBatch.liquidationEngine =
+            vm.parseJsonAddress(json, ".contracts.wstethMarketBatch.liquidationEngine");
 
         // Load reth market batch
         loadedInput.contracts.rethMarketBatch.market = vm.parseJsonAddress(json, ".contracts.rethMarketBatch.market");
@@ -278,6 +306,8 @@ contract DeployAltoTestnetScript is Script {
             vm.parseJsonAddress(json, ".contracts.rethMarketBatch.marketIrm");
         loadedInput.contracts.rethMarketBatch.marketOracle =
             vm.parseJsonAddress(json, ".contracts.rethMarketBatch.marketOracle");
+        loadedInput.contracts.rethMarketBatch.liquidationEngine =
+            vm.parseJsonAddress(json, ".contracts.rethMarketBatch.liquidationEngine");
 
         // Load meth market batch
         loadedInput.contracts.methMarketBatch.market = vm.parseJsonAddress(json, ".contracts.methMarketBatch.market");
@@ -287,6 +317,8 @@ contract DeployAltoTestnetScript is Script {
             vm.parseJsonAddress(json, ".contracts.methMarketBatch.marketIrm");
         loadedInput.contracts.methMarketBatch.marketOracle =
             vm.parseJsonAddress(json, ".contracts.methMarketBatch.marketOracle");
+        loadedInput.contracts.methMarketBatch.liquidationEngine =
+            vm.parseJsonAddress(json, ".contracts.methMarketBatch.liquidationEngine");
 
         // Load tbtc market batch
         loadedInput.contracts.tbtcMarketBatch.market = vm.parseJsonAddress(json, ".contracts.tbtcMarketBatch.market");
@@ -296,6 +328,8 @@ contract DeployAltoTestnetScript is Script {
             vm.parseJsonAddress(json, ".contracts.tbtcMarketBatch.marketIrm");
         loadedInput.contracts.tbtcMarketBatch.marketOracle =
             vm.parseJsonAddress(json, ".contracts.tbtcMarketBatch.marketOracle");
+        loadedInput.contracts.tbtcMarketBatch.liquidationEngine =
+            vm.parseJsonAddress(json, ".contracts.tbtcMarketBatch.liquidationEngine");
 
         // Load wbtc market batch
         loadedInput.contracts.wbtcMarketBatch.market = vm.parseJsonAddress(json, ".contracts.wbtcMarketBatch.market");
@@ -305,6 +339,8 @@ contract DeployAltoTestnetScript is Script {
             vm.parseJsonAddress(json, ".contracts.wbtcMarketBatch.marketIrm");
         loadedInput.contracts.wbtcMarketBatch.marketOracle =
             vm.parseJsonAddress(json, ".contracts.wbtcMarketBatch.marketOracle");
+        loadedInput.contracts.wbtcMarketBatch.liquidationEngine =
+            vm.parseJsonAddress(json, ".contracts.wbtcMarketBatch.liquidationEngine");
 
         // Load cbbtc market batch
         loadedInput.contracts.cbbtcMarketBatch.market = vm.parseJsonAddress(json, ".contracts.cbbtcMarketBatch.market");
@@ -314,6 +350,8 @@ contract DeployAltoTestnetScript is Script {
             vm.parseJsonAddress(json, ".contracts.cbbtcMarketBatch.marketIrm");
         loadedInput.contracts.cbbtcMarketBatch.marketOracle =
             vm.parseJsonAddress(json, ".contracts.cbbtcMarketBatch.marketOracle");
+        loadedInput.contracts.cbbtcMarketBatch.liquidationEngine =
+            vm.parseJsonAddress(json, ".contracts.cbbtcMarketBatch.liquidationEngine");
 
         // Load susde market batch
         loadedInput.contracts.susdeMarketBatch.market = vm.parseJsonAddress(json, ".contracts.susdeMarketBatch.market");
@@ -323,6 +361,8 @@ contract DeployAltoTestnetScript is Script {
             vm.parseJsonAddress(json, ".contracts.susdeMarketBatch.marketIrm");
         loadedInput.contracts.susdeMarketBatch.marketOracle =
             vm.parseJsonAddress(json, ".contracts.susdeMarketBatch.marketOracle");
+        loadedInput.contracts.susdeMarketBatch.liquidationEngine =
+            vm.parseJsonAddress(json, ".contracts.susdeMarketBatch.liquidationEngine");
 
         // Load staking batch
         loadedInput.contracts.stakingBatch.stakingContract =
@@ -373,6 +413,7 @@ contract DeployAltoTestnetScript is Script {
         _extractContractABI("AltoAdapter", abiFolder);
 
         // Extract ABIs for market contracts
+        _extractContractABI("AltoLiquidationEngine", abiFolder);
         _extractContractABI("AltoBorrowMarket", abiFolder);
         _extractContractABI("AltoMintMarket", abiFolder);
         _extractContractABI("AdaptiveCurveIrm", abiFolder);

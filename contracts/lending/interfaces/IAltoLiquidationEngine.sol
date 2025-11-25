@@ -48,6 +48,10 @@ struct LiquidationEngineInput {
 /// and proper migration plan should be implemented
 /// - this contract is market aware and allows only market contract to execute calculateLiquidation
 interface IAltoLiquidationEngine {
+    /// @notice Emitted when the market is set
+    /// @param market The address of the market
+    event SetMarketOnce(address market);
+
     /// @notice The address of the market that this liquidation engine is tied to
     function market() external view returns (address);
 

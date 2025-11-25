@@ -88,7 +88,6 @@ contract TestnetBorrowMarketBatch is ITestnetMarketBatch {
         address marketProxy =
             UnsafeUpgrades.deployUUPSProxy(address(market), abi.encodeCall(AltoBorrowMarket.initialize, (initParams)));
 
-        // Market initialization automatically calls setMarketOnce on the liquidation engine
         // Now set liquidation configuration
         AltoLiquidationEngine(liquidationEngine).setLiquidationConfiguration(liquidationConfig);
 
