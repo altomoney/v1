@@ -68,6 +68,7 @@ contract AltoLiquidationEngine is Ownable2Step, IPriorityLiquidationEngineStatic
         }
 
         market = _market;
+        emit SetMarketOnce(_market);
     }
 
     /// @inheritdoc IAltoLiquidationEngine
