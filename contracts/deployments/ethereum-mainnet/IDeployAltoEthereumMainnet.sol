@@ -1,0 +1,124 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.22;
+
+import {EthereumMainnetLendingOracleAsset} from "@alto/deployments/EthereumMainnetOracleDeployer.sol";
+import {AdaptiveCurveIrm} from "@alto/lending/irm/AdaptiveCurveIrm.sol";
+import {LiquidationConfiguration} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
+
+enum DeploymentPhase {
+    CORE, // Phase 0: Deploy TimelockController, AltoAdapter, and MockFeeCollector
+    DUSD, // Phase 1: Deploy DUSD and DUSDFlashMinter
+    MINT_MARKET_WETH, // Phase 2: Deploy WETH Mint Market
+    MINT_MARKET_WSTETH, // Phase 3: Deploy wstETH Mint Market
+    MINT_MARKET_RETH, // Phase 4: Deploy rETH Mint Market
+    MINT_MARKET_METH, // Phase 5: Deploy mETH Mint Market
+    MINT_MARKET_TBTC, // Phase 6: Deploy tBTC Mint Market
+    BORROW_MARKET_WBTC, // Phase 7: Deploy WBTC Borrow Market
+    BORROW_MARKET_CBBTC, // Phase 8: Deploy cbBTC Borrow Market
+    BORROW_MARKET_SUSDE, // Phase 9: Deploy sUSDe Borrow Market
+    USDC_USM, // Phase 10: Deploy DUSD/USDC Peg Stability Module
+    POST // Phase 11: Configure TimelockController and transfer ownership
+}
+
+struct MarketContracts {
+    address market;
+    address marketImplementation;
+    address marketIrm;
+    address marketOracle;
+    address liquidationEngine;
+    address leverageSwapper;
+    address leverage;
+}
+
+struct UsdcUsmContracts {
+    address dusdUsm;
+    address dusdUsmImplementation;
+    address fixedPriceStrategy;
+    address fixedFeeStrategy;
+}
+
+struct AltoEthereumMainnetInput {
+    Contracts contracts;
+}
+
+struct Contracts {
+    address timelock;
+    address altoAdapter;
+    address feeRecipient; // Mock fee collector
+    address dusd;
+    address dusdFlashMinter;
+    MarketContracts wethMarket;
+    MarketContracts wstethMarket;
+    MarketContracts rethMarket;
+    MarketContracts methMarket;
+    MarketContracts tbtcMarket;
+    MarketContracts wbtcBorrowMarket;
+    MarketContracts cbbtcBorrowMarket;
+    MarketContracts susdeBorrowMarket;
+    UsdcUsmContracts usdcUsm;
+}
+
+// PARAMETERS FOR THE DEPLOYMENT
+
+struct AltoEthereumMainnetParams {
+    address timelockAdmin;
+    uint256 timelockDelay;
+    address freezer;
+    address feeReceiverAddress;
+    address deployer;
+    DeploymentPhase phase;
+    bool useUnsafeUpgrades;
+}
+
+struct DeployCoreParams {
+    address owner;
+    address bundler3; // Bundler3 address (currently BUNDLER3_MAINNET constant)
+    address wNative; // Wrapped native token address (currently WETH_MAINNET constant)
+}
+
+struct DeployDUSDParams {
+    address owner;
+    address lzEndpoint; // LayerZero endpoint address
+    address feeRecipient; // Fee recipient address (treasury) from previous CORE phase
+}
+
+struct DeployBorrowMarketParams {
+    address owner;
+    address dusd; // From previous DUSD phase
+    address altoAdapter; // From previous CORE phase
+    address feeRecipient; // From previous CORE phase
+    address collateralToken; // WBTC_MAINNET, CBBTC_MAINNET, SUSDE_MAINNET, etc.
+    EthereumMainnetLendingOracleAsset oracleAsset; // Oracle asset type
+    AdaptiveCurveIrm.AdaptiveCurveIrmConfig irmConfig; // AdaptiveCurveIrm configuration
+    uint256 maxLtv; // Maximum loan-to-value ratio
+    uint256 initialBorrowOpeningFee; // Initial borrow opening fee
+    uint128 supplyCapAssets; // Supply cap in assets
+    LiquidationConfiguration liquidationConfig; // Liquidation configuration
+    address freezer; // Pauser/Freezer Multisig address
+}
+
+struct DeployUsdcUsmParams {
+    address owner;
+    address dusd; // From previous DUSD phase
+    address altoAdapter; // From previous CORE phase
+    address feeRecipient; // From previous CORE phase
+    address freezer; // Pauser/Freezer Multisig address
+    uint256 buyFee; // Buy fee for USM
+    uint256 sellFee; // Sell fee for USM
+    uint256 exposureCap; // Exposure cap for USM
+}
+
+struct DeployMintMarketParams {
+    address owner;
+    address dusd; // From previous DUSD phase
+    address altoAdapter; // From previous CORE phase
+    address feeRecipient; // From previous CORE phase
+    address collateralToken; // WETH_MAINNET, WSTETH_MAINNET, etc.
+    EthereumMainnetLendingOracleAsset oracleAsset; // Oracle asset type
+    uint256 irmInterestRate; // Interest rate for FixedRateIrm (annual rate)
+    uint256 maxLtv; // Maximum loan-to-value ratio
+    uint256 initialBorrowOpeningFee; // Initial borrow opening fee
+    uint256 debtCeiling; // Debt ceiling
+    LiquidationConfiguration liquidationConfig; // Liquidation configuration
+    address freezer; // Pauser/Freezer Multisig address
+}

@@ -172,6 +172,32 @@ contract TestDusdFlashMinter is TestDusdBase {
         flashMinter.updateFlashMintFee(invalidFlashFee);
     }
 
+    function testRevertUpdateFeeWhenTreasuryNotSet_MinFlashFee() public {
+        // Set treasury to address(0)
+        vm.prank(OWNER);
+        flashMinter.updateStableTokenTreasury(address(0));
+
+        // Try to update fee with minFlashFee > 0
+        FlashFee memory feeWithMin = _createFlashFee(1e16, 0);
+
+        vm.expectRevert("FlashMinter: DUSD treasury must be set as fees are enabled");
+        vm.prank(OWNER);
+        flashMinter.updateFlashMintFee(feeWithMin);
+    }
+
+    function testRevertUpdateFeeWhenTreasuryNotSet_MaxFlashFee() public {
+        // Set treasury to address(0)
+        vm.prank(OWNER);
+        flashMinter.updateStableTokenTreasury(address(0));
+
+        // Try to update fee with maxFlashFee > 0
+        FlashFee memory feeWithMax = _createFlashFee(0, 1e16);
+
+        vm.expectRevert("FlashMinter: DUSD treasury must be set as fees are enabled");
+        vm.prank(OWNER);
+        flashMinter.updateFlashMintFee(feeWithMax);
+    }
+
     function testRevertUpdateTreasuryNotOwner() public {
         address notOwner = address(0x1234);
 
