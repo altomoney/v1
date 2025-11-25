@@ -3,7 +3,7 @@
 source "$(dirname "$0")/deployment/_loadEnv.sh"
 
 forge script script/Quick.s.sol:SetMulticallOwner \
---rpc-url $RPC_URL \
+--rpc-url "https://eth-sepolia.g.alchemy.com/v2/${ALCHEMY_KEY}" \
 --account $ACCOUNT \
 --sender $SENDER \
 --broadcast -vvv

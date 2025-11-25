@@ -9,8 +9,8 @@ fi
 source .env
 
 # Check required environment variables
-if [ -z "$RPC_URL" ] || [ -z "$ACCOUNT" ] || [ -z "$SENDER" ]; then
+if [ -z "$ALCHEMY_KEY" ] || [ -z "$ACCOUNT" ] || [ -z "$SENDER" ]; then
     echo "Error: Missing required environment variables. Please check your .env file."
-    echo "Required: RPC_URL, ACCOUNT, SENDER"
+    echo "Required: ALCHEMY_KEY, ACCOUNT, SENDER"
     exit 1
 fi

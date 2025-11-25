@@ -141,6 +141,10 @@ contract DUSDFlashMinter is AltoOwnable2Step, IDUSDFlashMinter {
         require(_newFlashMintFee.minFlashFee <= MATH_PRECISION, "FlashMinter: Min flash fee exceeds MATH_PRECISION");
         require(_newFlashMintFee.maxFlashFee <= MATH_PRECISION, "FlashMinter: Max flash fee exceeds MATH_PRECISION");
 
+        if (_newFlashMintFee.minFlashFee > 0 || _newFlashMintFee.maxFlashFee > 0) {
+            require(_dusdTreasury != address(0), "FlashMinter: DUSD treasury must be set as fees are enabled");
+        }
+
         emit SetFlashMintFee(flashMintFee, _newFlashMintFee);
         flashMintFee = _newFlashMintFee;
     }

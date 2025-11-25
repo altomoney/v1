@@ -20,6 +20,16 @@ import {
     ERC4626RatioChainlinkOracleSUSDE,
     IERC4626
 } from "@alto/oracles/AltoERC4626RatioChainlinkOracle/implementations/ERC4626RatioChainlinkOracleSUSDE.sol";
+import {
+    CHAINLINK_ETH_USD_PRICE_FEED,
+    CHAINLINK_BTC_USD_PRICE_FEED,
+    CHAINLINK_WBTC_BTC_RATIO_FEED,
+    CHAINLINK_USDE_USD_PRICE_FEED,
+    WSTETH_MAINNET,
+    RETH_MAINNET,
+    METH_STAKING_MAINNET,
+    SUSDE_MAINNET
+} from "@alto/deployments/ethereum-mainnet/Constants.sol";
 
 enum EthereumMainnetLendingOracleAsset {
     WETH,
@@ -33,16 +43,6 @@ enum EthereumMainnetLendingOracleAsset {
 }
 
 library EthereumMainnetOracleDeployer {
-    address constant CHAINLINK_ETH_USD_PRICE_FEED = 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419;
-    address constant CHAINLINK_BTC_USD_PRICE_FEED = 0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c;
-    address constant CHAINLINK_WBTC_BTC_RATIO_FEED = 0xfdFD9C85aD200c506Cf9e21F1FD8dd01932FBB23;
-    address constant CHAINLINK_USDE_USD_FEED = 0xa569d910839Ae8865Da8F8e70FfFb0cBA869F961;
-
-    address constant WSTETH = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
-    address constant RETH = 0xae78736Cd615f374D3085123A210448E74Fc6393;
-    address constant METH_STAKING = 0xe3cBd06D7dadB3F4e6557bAb7EdD924CD1489E8f;
-    address constant SUSDE = 0x9D39A5DE30e57443BfF2A8307A4256c8797A3497;
-
     function deployOracle(EthereumMainnetLendingOracleAsset asset, address owner) public returns (address) {
         if (asset == EthereumMainnetLendingOracleAsset.WETH) {
             return deployWethOracle(owner);
@@ -80,7 +80,7 @@ library EthereumMainnetOracleDeployer {
     }
 
     function deployWstEthOracle(address owner) public returns (address) {
-        uint256 stEthPerToken = IWstEth(WSTETH).stEthPerToken() * 1005 / 1000; // +0.5%
+        uint256 stEthPerToken = IWstEth(WSTETH_MAINNET).stEthPerToken() * 1005 / 1000; // +0.5%
 
         ERC4626RatioNode memory erc4626RatioNode = ERC4626RatioNode({
             initialRatio: stEthPerToken,
@@ -96,11 +96,11 @@ library EthereumMainnetOracleDeployer {
             outDecimals: 36 // LENDING_ORACLE_PRICE_PRECISION + DUSD decimals - stETH decimals
         });
 
-        return address(new ERC4626RatioChainlinkOracleWSTETH(owner, WSTETH, erc4626RatioNode, chainlinkNode));
+        return address(new ERC4626RatioChainlinkOracleWSTETH(owner, WSTETH_MAINNET, erc4626RatioNode, chainlinkNode));
     }
 
     function deployRethOracle(address owner) public returns (address) {
-        uint256 rethPerToken = IReth(RETH).getExchangeRate() * 1005 / 1000; // +0.5%
+        uint256 rethPerToken = IReth(RETH_MAINNET).getExchangeRate() * 1005 / 1000; // +0.5%
 
         ERC4626RatioNode memory erc4626RatioNode = ERC4626RatioNode({
             initialRatio: rethPerToken,
@@ -116,11 +116,11 @@ library EthereumMainnetOracleDeployer {
             outDecimals: 36 // LENDING_ORACLE_PRICE_PRECISION + DUSD decimals - rETH decimals
         });
 
-        return address(new ERC4626RatioChainlinkOracleRETH(owner, RETH, erc4626RatioNode, chainlinkNode));
+        return address(new ERC4626RatioChainlinkOracleRETH(owner, RETH_MAINNET, erc4626RatioNode, chainlinkNode));
     }
 
     function deployMethOracle(address owner) public returns (address) {
-        uint256 methPerToken = IMethStaking(METH_STAKING).mETHToETH(1 ether) * 1005 / 1000; // +0.5%
+        uint256 methPerToken = IMethStaking(METH_STAKING_MAINNET).mETHToETH(1 ether) * 1005 / 1000; // +0.5%
 
         ERC4626RatioNode memory erc4626RatioNode = ERC4626RatioNode({
             initialRatio: methPerToken,
@@ -136,7 +136,8 @@ library EthereumMainnetOracleDeployer {
             outDecimals: 36 // LENDING_ORACLE_PRICE_PRECISION + DUSD decimals - mETH decimals
         });
 
-        return address(new ERC4626RatioChainlinkOracleMETH(owner, METH_STAKING, erc4626RatioNode, chainlinkNode));
+        return
+            address(new ERC4626RatioChainlinkOracleMETH(owner, METH_STAKING_MAINNET, erc4626RatioNode, chainlinkNode));
     }
 
     function deployTbtcOracle(address owner) public returns (address) {
@@ -190,7 +191,7 @@ library EthereumMainnetOracleDeployer {
     }
 
     function deploySusdeOracle(address owner) public returns (address) {
-        uint256 rethPerToken = IERC4626(SUSDE).convertToAssets(1 ether) * 1015 / 1000; // +1.5%
+        uint256 rethPerToken = IERC4626(SUSDE_MAINNET).convertToAssets(1 ether) * 1015 / 1000; // +1.5%
 
         ERC4626RatioNode memory erc4626RatioNode = ERC4626RatioNode({
             initialRatio: rethPerToken,
@@ -199,13 +200,13 @@ library EthereumMainnetOracleDeployer {
         });
 
         ChainlinkNode memory chainlinkNode = ChainlinkNode({
-            feed: AggregatorV3Interface(CHAINLINK_USDE_USD_FEED),
+            feed: AggregatorV3Interface(CHAINLINK_USDE_USD_PRICE_FEED),
             direction: ConversionDirection.IN_TO_OUT, // USDe to USD
             stalePeriod: 26 hours, // TODO placeholder value
             inDecimals: 18, // USDe decimals
             outDecimals: 36 // LENDING_ORACLE_PRICE_PRECISION + DUSD decimals - USDe decimals
         });
 
-        return address(new ERC4626RatioChainlinkOracleSUSDE(owner, SUSDE, erc4626RatioNode, chainlinkNode));
+        return address(new ERC4626RatioChainlinkOracleSUSDE(owner, SUSDE_MAINNET, erc4626RatioNode, chainlinkNode));
     }
 }
