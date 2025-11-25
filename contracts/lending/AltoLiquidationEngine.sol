@@ -5,7 +5,7 @@ import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 
-import {Position, IMarket, IMarketErrors, IMarketStaticTypes, Balance} from "@alto/lending/interfaces/IMarket.sol";
+import {Position, IMarket, Balance} from "@alto/lending/interfaces/IMarket.sol";
 import {FixedPointMath, MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
 import {Uint128Converter} from "@alto/lending/libraries/Uint128Converter.sol";
@@ -20,29 +20,21 @@ import {
     IPriorityLiquidationEngineStaticTypes,
     IPriorityLiquidationEngine,
     IPriorityLiquidationEngineBase,
+    IPriorityLiquidationEngineErrors,
     LiquidationConfiguration,
     LiquidablePosition,
     LiquidationCalculation
 } from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
-import {Pausable, IPausable} from "@alto/utils/Pausable.sol";
+import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
 
 /// @title Alto Liquidation Engine
 /// @author Pearl Labs
 /// @custom:contact security@altofoundation.org
 /// @notice Standalone contract for calculating liquidation amounts and fees
-contract AltoLiquidationEngine is Ownable2Step, IPriorityLiquidationEngineStaticTypes, Pausable {
+contract AltoLiquidationEngine is Ownable2Step, IPriorityLiquidationEngineStaticTypes {
     using FixedPointMath for uint256;
     using AssetShareConversionMath for uint256;
     using Uint128Converter for uint256;
-
-    /// @notice Error thrown when the input is invalid
-    error AltoLiquidationEngineInvalidInput();
-
-    /// @notice Error thrown when executor is not allowed to perform liquidation at this time
-    error AltoLiquidationEnginePriorityLiquidationDisabled();
-
-    /// @notice Error thrown when executor is not allowed to perform liquidation at this time
-    error AltoLiquidationEngineLiquidationUnauthorized();
 
     /// @inheritdoc IPriorityLiquidationEngineStaticTypes
     LiquidationConfiguration public liquidationConfiguration;
@@ -51,30 +43,31 @@ contract AltoLiquidationEngine is Ownable2Step, IPriorityLiquidationEngineStatic
     mapping(address => LiquidablePosition) public liquidablePositions;
 
     /// @inheritdoc IAltoLiquidationEngine
-    address public immutable MARKET;
+    address public market;
 
     /// @inheritdoc IPriorityLiquidationEngineBase
     mapping(address => bool) public priorityLiquidators;
 
     /// @notice Constructor for the liquidation engine
     /// @param _owner The owner of the contract
-    /// @param _market The market address
-    constructor(address _owner, address _market) Ownable(_owner) {
-        if (_owner == address(0) || _market == address(0)) {
-            revert AltoLiquidationEngineInvalidInput();
+    constructor(address _owner) Ownable(_owner) {
+        if (_owner == address(0)) {
+            revert AltoPriorityLiquidationEngineInvalidInput();
         }
-
-        MARKET = _market;
-
-        _setPauser(_owner, PAUSE_TYPE, true);
     }
 
-    /// @dev Modifier to check if the market is not paused.
-    modifier whenNotPaused() {
-        if (paused[PAUSE_TYPE]) {
-            revert IPausable.IsPaused(PAUSE_TYPE);
+    /// @inheritdoc IAltoLiquidationEngine
+    function setMarketOnce(address _market) external {
+        if (_market == address(0) || market != address(0)) {
+            revert AltoPriorityLiquidationEngineInvalidInput();
         }
-        _;
+
+        // Only the market itself can call this function
+        if (msg.sender != _market) {
+            revert AltoPriorityLiquidationEngineLiquidationUnauthorized();
+        }
+
+        market = _market;
     }
 
     /// @inheritdoc IAltoLiquidationEngine
@@ -82,9 +75,13 @@ contract AltoLiquidationEngine is Ownable2Step, IPriorityLiquidationEngineStatic
         external
         returns (LiquidationEngineResult memory result)
     {
+        if (msg.sender != market) {
+            revert AltoPriorityLiquidationEngineLiquidationUnauthorized();
+        }
+
         // Check if position is solvent (should not be for liquidation)
-        if (isSolvent(input.borrower)) {
-            revert AltoBaseMarketLiquidatingSolventPosition();
+        if (_isSolvent(input.totalBorrowed, input.position, input.collateralPrice)) {
+            revert AltoPriorityLiquidationEngineLiquidatingSolventPosition();
         }
 
         // Fetch liquidable position from the market
@@ -119,7 +116,7 @@ contract AltoLiquidationEngine is Ownable2Step, IPriorityLiquidationEngineStatic
                         || block.timestamp - liquidablePosition.timestamp
                             > liquidationConfiguration.liquidationWindowTag)
             ) {
-                revert AltoBaseMarketLiquidationUnauthorized();
+                revert AltoPriorityLiquidationEngineLiquidationUnauthorized();
             }
 
             // Skip grace period checks for priority liquidators
@@ -130,7 +127,7 @@ contract AltoLiquidationEngine is Ownable2Step, IPriorityLiquidationEngineStatic
                         + liquidationConfiguration.taggerLiquidationGracePeriod;
 
                 if (block.timestamp - liquidablePosition.timestamp <= gracePeriod) {
-                    revert AltoBaseMarketLiquidationUnauthorized();
+                    revert AltoPriorityLiquidationEngineLiquidationUnauthorized();
                 }
             }
         }
@@ -184,29 +181,38 @@ contract AltoLiquidationEngine is Ownable2Step, IPriorityLiquidationEngineStatic
     }
 
     /// @inheritdoc IPriorityLiquidationEngineBase
-    function tagLiquidablePosition(address user, address liquidator) external whenNotPaused {
+    function tagLiquidablePosition(address user, address liquidator) external {
         if (!liquidationConfiguration.isEnabledPriorityLiquidation) {
-            revert AltoBaseMarketPriorityLiquidationDisabled();
+            revert AltoPriorityLiquidationEnginePriorityLiquidationDisabled();
         }
 
-        IMarket(MARKET).accrueInterest();
+        if (IMarket(market).paused(PAUSE_TYPE)) {
+            revert IPausable.IsPaused(PAUSE_TYPE);
+        }
 
-        if (isSolvent(user)) {
-            revert AltoBaseMarketLiquidatingSolventPosition();
+        IMarket(market).accrueInterest();
+
+        uint256 collateralPrice = ILendingOracle(IMarket(market).oracle()).getPrice();
+        Position memory userPosition = IMarket(market).position(user);
+        Balance memory totalBorrowed = IMarket(market).totalBorrowed();
+
+        if (_isSolvent(totalBorrowed, userPosition, collateralPrice)) {
+            revert AltoPriorityLiquidationEngineLiquidatingSolventPosition();
         }
         if (priorityLiquidators[liquidator]) {
-            revert AltoBaseMarketLiquidationUnauthorized();
+            revert AltoPriorityLiquidationEngineLiquidationUnauthorized();
         }
         if (liquidablePositions[user].timestamp > 0) {
             if (liquidablePositions[user].timestamp + liquidationConfiguration.liquidationWindowTag >= block.timestamp)
             {
-                revert AltoBaseMarketLiquidationAlreadyTagged();
+                revert AltoPriorityLiquidationEngineLiquidationAlreadyTagged();
             }
         }
         liquidablePositions[user] = LiquidablePosition({tagged: true, tagger: liquidator, timestamp: block.timestamp});
         emit PositionTagged(user, liquidator, block.timestamp);
     }
 
+    /// @inheritdoc IPriorityLiquidationEngineBase
     function deleteLiquidablePosition(address user) external onlyOwner {
         delete liquidablePositions[user];
     }
@@ -262,58 +268,58 @@ contract AltoLiquidationEngine is Ownable2Step, IPriorityLiquidationEngineStatic
         address _feeRecipient
     ) internal pure {
         if (_liquidationConfiguration.maxLiquidationLtv < _maxLtv) {
-            revert AltoBaseMarketInvalidInput();
+            revert AltoPriorityLiquidationEngineInvalidInput();
         }
         if (_liquidationConfiguration.ltvForCompleteLiquidation < _liquidationConfiguration.maxLiquidationLtv) {
-            revert AltoBaseMarketInvalidInput();
+            revert AltoPriorityLiquidationEngineInvalidInput();
         }
         if (_liquidationConfiguration.ltvForCompleteLiquidation > MATH_PRECISION) {
-            revert AltoBaseMarketInvalidInput();
+            revert AltoPriorityLiquidationEngineInvalidInput();
         }
         if (
             _liquidationConfiguration.dynamicBonusFeeDecaySteepness > 100 * MATH_PRECISION
                 || _liquidationConfiguration.dynamicBonusFeeDecaySteepness == 0
         ) {
-            revert AltoBaseMarketInvalidInput();
+            revert AltoPriorityLiquidationEngineInvalidInput();
         }
         if (
             _liquidationConfiguration.dynamicBonusFeeStart + _liquidationConfiguration.liquidationBaseFee > 0.15 ether
                 || _liquidationConfiguration.dynamicBonusFeeStart + _liquidationConfiguration.liquidationBaseFee
                     > 1 ether - _liquidationConfiguration.maxLiquidationLtv
         ) {
-            revert AltoBaseMarketInvalidInput();
+            revert AltoPriorityLiquidationEngineInvalidInput();
         }
         if (_liquidationConfiguration.minPenaltyPercentage > MATH_PRECISION) {
-            revert AltoBaseMarketInvalidInput();
+            revert AltoPriorityLiquidationEngineInvalidInput();
         }
         if (
             _liquidationConfiguration.protocolFeePercentage > MATH_PRECISION
                 || (_liquidationConfiguration.protocolFeePercentage > 0 && _feeRecipient == address(0))
         ) {
-            revert AltoBaseMarketInvalidInput();
+            revert AltoPriorityLiquidationEngineInvalidInput();
         }
         if (_liquidationConfiguration.priorityLiquidationGracePeriod > 1 hours) {
-            revert AltoBaseMarketInvalidInput();
+            revert AltoPriorityLiquidationEngineInvalidInput();
         }
         if (_liquidationConfiguration.taggerLiquidationGracePeriod > 30 minutes) {
-            revert AltoBaseMarketInvalidInput();
+            revert AltoPriorityLiquidationEngineInvalidInput();
         }
         if (_liquidationConfiguration.liquidationWindowTag > 3 days) {
-            revert AltoBaseMarketInvalidInput();
+            revert AltoPriorityLiquidationEngineInvalidInput();
         }
         if (
             _liquidationConfiguration.priorityLiquidationGracePeriod
                     + _liquidationConfiguration.taggerLiquidationGracePeriod
                 > _liquidationConfiguration.liquidationWindowTag
         ) {
-            revert AltoBaseMarketInvalidInput();
+            revert AltoPriorityLiquidationEngineInvalidInput();
         }
     }
 
     /// @inheritdoc IPriorityLiquidationEngineBase
     function setLiquidationConfiguration(LiquidationConfiguration memory _liquidationConfiguration) external onlyOwner {
         _validateLiquidationConfiguration(
-            _liquidationConfiguration, IMarketStaticTypes(MARKET).maxLtv(), IMarketStaticTypes(MARKET).feeRecipient()
+            _liquidationConfiguration, IMarket(market).maxLtv(), IMarket(market).feeRecipient()
         );
 
         emit SetLiquidationConfiguration(liquidationConfiguration, _liquidationConfiguration);
@@ -323,7 +329,7 @@ contract AltoLiquidationEngine is Ownable2Step, IPriorityLiquidationEngineStatic
     /// @inheritdoc IPriorityLiquidationEngineBase
     function setPriorityLiquidator(address liquidator, bool status) external onlyOwner {
         if (liquidator == address(0)) {
-            revert AltoBaseMarketInvalidInput();
+            revert AltoPriorityLiquidationEngineInvalidInput();
         }
 
         priorityLiquidators[liquidator] = status;
@@ -340,26 +346,22 @@ contract AltoLiquidationEngine is Ownable2Step, IPriorityLiquidationEngineStatic
         return liquidationConfiguration.protocolFeePercentage;
     }
 
-    function isSolvent(address user) public view returns (bool) {
-        uint256 collateralPrice = ILendingOracle(IMarket(MARKET).oracle()).getPrice();
-        Position memory userPosition = IMarket(MARKET).position(user);
-        Balance memory totalBorrowed = IMarket(MARKET).totalBorrowed();
-        uint256 collateralValue = uint256(userPosition.collateralAssets)
+    /// @dev Returns true if the user's position is solvent based on the max LTV of the market.
+    /// @param totalBorrowed The total borrowed amount of the market
+    /// @param position The position of the user
+    /// @param collateralPrice The price of the collateral
+    function _isSolvent(Balance memory totalBorrowed, Position memory position, uint256 collateralPrice)
+        internal
+        view
+        returns (bool)
+    {
+        uint256 collateralValue = uint256(position.collateralAssets)
             .divideWithRounding(collateralPrice, LENDING_ORACLE_PRICE_PRECISION, false);
         uint256 maxBorrowValue = collateralValue.multiplyWithPrecision(liquidationConfiguration.maxLiquidationLtv);
         uint256 borrowValue =
-            uint256(userPosition.borrowShares).convertToAssetsUp(totalBorrowed.assets, totalBorrowed.shares);
+            uint256(position.borrowShares).convertToAssetsUp(totalBorrowed.assets, totalBorrowed.shares);
 
         return borrowValue == 0 || maxBorrowValue > borrowValue;
-    }
-
-    /// @inheritdoc IPausable
-    function setPauser(address pauser, bytes32 pauseType, bool status) external override onlyOwner {
-        if (pauseType != PAUSE_TYPE) {
-            revert AltoBaseMarketInvalidInput();
-        }
-
-        _setPauser(pauser, pauseType, status);
     }
 }
 

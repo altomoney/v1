@@ -82,9 +82,8 @@ abstract contract MarketCommon is Test {
             liquidationWindowTag: 3 days
         });
 
-        // Liquidation engine will be set after market deployment
-        // Temporary placeholder - not used
-        address(new AltoLiquidationEngine(address(OWNER), address(1)));
+        // Create liquidation engine before market deployment
+        address liquidationEngine = address(new AltoLiquidationEngine(address(OWNER)));
 
         BaseMarketInitParams memory baseMarketInitParams = BaseMarketInitParams({
             borrowToken: address(borrowToken),
@@ -94,7 +93,7 @@ abstract contract MarketCommon is Test {
             oracle: address(oracle),
             maxLtv: LTV,
             feeRecipient: address(FEE_RECIPIENT),
-            liquidationEngine: address(1) // Will be updated below
+            liquidationEngine: liquidationEngine
         });
         if (marketType == MarketType.BORROW) {
             BorrowMarketInitParams memory borrowMarketInitParams = BorrowMarketInitParams({
@@ -110,13 +109,9 @@ abstract contract MarketCommon is Test {
             market = IMarket(MarketDeployer.deployMintMarket(mintMarketInitParams));
         }
 
-        // Create real liquidation engine with market address and update market
-        address liquidationEngine = address(new AltoLiquidationEngine(address(OWNER), address(market)));
-
+        // Market initialization automatically calls setMarketOnce on the liquidation engine
         // Set liquidation configuration
         AltoLiquidationEngine(liquidationEngine).setLiquidationConfiguration(liquidationConfig);
-
-        AltoBaseMarket(address(market)).setLiquidationEngine(liquidationEngine);
 
         market.setPauser(PAUSER, PAUSE_TYPE, true);
         market.setPauser(PAUSER, FROZEN_TYPE, true);

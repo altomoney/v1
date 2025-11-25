@@ -22,7 +22,7 @@ import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {ILiquidateCallback} from "@alto/lending/interfaces/IMarketCallbacks.sol";
 import {IOracle, LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {AltoLiquidationEngine} from "@alto/lending/AltoLiquidationEngine.sol";
-import {IPriorityLiquidationEngine} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
+import {IPriorityLiquidationEngine, IPriorityLiquidationEngineErrors} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
 
 contract LiquidateCallback is ILiquidateCallback {
     event LiquidateCallbackCalled(uint256 assetsToRepay, uint256 collateralReceived, bytes data);
@@ -75,8 +75,8 @@ contract AltoBorrowMarketliquidate is MarketCommon {
         market.addCollateral(1 ether, USER);
         market.borrow(0.5 ether, 0, USER, USER, "");
 
-        // it should revert with AltoBaseMarketLiquidatingSolventPosition
-        vm.expectRevert(IMarketErrors.AltoBaseMarketLiquidatingSolventPosition.selector);
+        // it should revert with AltoPriorityLiquidationEngineLiquidatingSolventPosition
+        vm.expectRevert(IPriorityLiquidationEngineErrors.AltoPriorityLiquidationEngineLiquidatingSolventPosition.selector);
         market.liquidate(USER, hex"", hex"");
     }
 
@@ -125,8 +125,8 @@ contract AltoBorrowMarketliquidate is MarketCommon {
         whenCurrentLTVIsBelowDisablePriorityLiquidationThreshold
         whenLiquidatorIsNotPriorityLiquidator
     {
-        // it should revert with AltoBaseMarketLiquidationUnauthorized
-        vm.expectRevert(IMarketErrors.AltoBaseMarketLiquidationUnauthorized.selector);
+        // it should revert with AltoPriorityLiquidationEngineLiquidationUnauthorized
+        vm.expectRevert(IPriorityLiquidationEngineErrors.AltoPriorityLiquidationEngineLiquidationUnauthorized.selector);
         market.liquidate(USER, hex"", hex"");
     }
 
@@ -152,8 +152,8 @@ contract AltoBorrowMarketliquidate is MarketCommon {
         vm.startPrank(EXTERNAL_LIQUIDATOR);
         borrowToken.approve(address(market), 1 ether);
 
-        // it should revert with AltoBaseMarketLiquidationUnauthorized
-        vm.expectRevert(IMarketErrors.AltoBaseMarketLiquidationUnauthorized.selector);
+        // it should revert with AltoPriorityLiquidationEngineLiquidationUnauthorized
+        vm.expectRevert(IPriorityLiquidationEngineErrors.AltoPriorityLiquidationEngineLiquidationUnauthorized.selector);
         market.liquidate(USER, hex"", hex"");
         vm.stopPrank();
     }
@@ -176,8 +176,8 @@ contract AltoBorrowMarketliquidate is MarketCommon {
         whenLiquidationWindowTagHasNotElapsedSinceTagWasSet
         whenLiquidatorIsTheTagger
     {
-        // it should revert with AltoBaseMarketLiquidationUnauthorized
-        vm.expectRevert(IMarketErrors.AltoBaseMarketLiquidationUnauthorized.selector);
+        // it should revert with AltoPriorityLiquidationEngineLiquidationUnauthorized
+        vm.expectRevert(IPriorityLiquidationEngineErrors.AltoPriorityLiquidationEngineLiquidationUnauthorized.selector);
         market.liquidate(USER, hex"", hex"");
     }
 
@@ -230,8 +230,8 @@ contract AltoBorrowMarketliquidate is MarketCommon {
         whenLiquidationWindowTagHasNotElapsedSinceTagWasSet
         whenLiquidatorIsNotTheTagger
     {
-        // it should revert with AltoBaseMarketLiquidationUnauthorized
-        vm.expectRevert(IMarketErrors.AltoBaseMarketLiquidationUnauthorized.selector);
+        // it should revert with AltoPriorityLiquidationEngineLiquidationUnauthorized
+        vm.expectRevert(IPriorityLiquidationEngineErrors.AltoPriorityLiquidationEngineLiquidationUnauthorized.selector);
         market.liquidate(USER, hex"", hex"");
     }
 
@@ -439,7 +439,7 @@ contract AltoBorrowMarketliquidate is MarketCommon {
         vm.startPrank(LIQUIDATOR);
         deal(address(borrowToken), LIQUIDATOR, 1 ether);
         borrowToken.approve(address(market), 1 ether);
-        vm.expectRevert(IMarketErrors.AltoBaseMarketLiquidationUnauthorized.selector);
+        vm.expectRevert(IPriorityLiquidationEngineErrors.AltoPriorityLiquidationEngineLiquidationUnauthorized.selector);
         market.liquidate(USER, hex"", hex"");
         vm.stopPrank();
 

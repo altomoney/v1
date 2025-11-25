@@ -49,7 +49,9 @@ contract AltoBorrowMarketPauseTest is Test {
             liquidationWindowTag: 3 days
         });
 
-        // Liquidation engine will be set after market deployment
+        // Create liquidation engine before market deployment
+        address liquidationEngine = address(new AltoLiquidationEngine(address(this)));
+
         market = MockMarketDeployer.deployMarket(
             address(borrowToken),
             address(collateralToken),
@@ -60,13 +62,11 @@ contract AltoBorrowMarketPauseTest is Test {
             0,
             address(this),
             liquidationConfig,
-            address(1) // Will be updated below
+            liquidationEngine
         );
 
-        // Create real liquidation engine with market address and update market
-        address liquidationEngine = address(new AltoLiquidationEngine(address(this), address(market)));
+        // Market initialization automatically calls setMarketOnce on the liquidation engine
         IPriorityLiquidationEngine(liquidationEngine).setLiquidationConfiguration(liquidationConfig);
-        market.setLiquidationEngine(liquidationEngine);
 
         // Setup initial balances
         deal(address(borrowToken), alice, INITIAL_AMOUNT);

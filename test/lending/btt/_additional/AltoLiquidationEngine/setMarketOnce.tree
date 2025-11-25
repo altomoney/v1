@@ -1,0 +1,12 @@
+AltoLiquidationEngine::setMarketOnce()
+├── given market is already set
+│   └── it should revert with AltoPriorityLiquidationEngineInvalidInput
+└── given market is not set
+    ├── when _market is address(0)
+    │   └── it should revert with AltoPriorityLiquidationEngineInvalidInput
+    └── when _market is not address(0)
+        ├── when msg.sender is not _market
+        │   └── it should revert with AltoPriorityLiquidationEngineLiquidationUnauthorized
+        └── when msg.sender is _market
+            └── it should set market successfully
+

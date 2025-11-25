@@ -13,7 +13,7 @@ import {IPausable} from "@alto/utils/Pausable.sol";
 import {IMarketErrors} from "@alto/lending/interfaces/IMarket.sol";
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 import {MarketDeployer} from "@alto/utils/MarketDeployer.sol";
-import {IPriorityLiquidationEngine} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
+import {IPriorityLiquidationEngine, IPriorityLiquidationEngineErrors} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
 import {AltoLiquidationEngine} from "@alto/lending/AltoLiquidationEngine.sol";
 
 contract LiquidateTest is Test {
@@ -51,7 +51,8 @@ contract LiquidateTest is Test {
             liquidationWindowTag: 3 days
         });
 
-        // Liquidation engine will be set after market deployment
+        // Create liquidation engine before market deployment
+        address liquidationEngine = address(new AltoLiquidationEngine(owner));
 
         BaseMarketInitParams memory baseMarketInitParams = BaseMarketInitParams({
             borrowToken: address(borrowToken),
@@ -61,7 +62,7 @@ contract LiquidateTest is Test {
             oracle: address(oracle),
             maxLtv: 0.75 ether,
             feeRecipient: owner,
-            liquidationEngine: address(1) // Will be updated below
+            liquidationEngine: liquidationEngine
         });
 
         BorrowMarketInitParams memory borrowMarketInitParams = BorrowMarketInitParams({
@@ -70,10 +71,8 @@ contract LiquidateTest is Test {
 
         market = AltoBorrowMarket(MarketDeployer.deployBorrowMarket(borrowMarketInitParams));
 
-        // Create real liquidation engine with market address and update market
-        address liquidationEngine = address(new AltoLiquidationEngine(owner, address(market)));
+        // Market initialization automatically calls setMarketOnce on the liquidation engine
         IPriorityLiquidationEngine(liquidationEngine).setLiquidationConfiguration(config);
-        market.setLiquidationEngine(liquidationEngine);
 
         // Set owner as pauser for PAUSE_TYPE
         market.setPauser(owner, PAUSE_TYPE, true);
@@ -136,7 +135,7 @@ contract LiquidateTest is Test {
 
     function test_RevertWhen_PositionIsSolvent() public {
         vm.startPrank(liquidator);
-        vm.expectRevert(IMarketErrors.AltoBaseMarketLiquidatingSolventPosition.selector);
+        vm.expectRevert(IPriorityLiquidationEngineErrors.AltoPriorityLiquidationEngineLiquidatingSolventPosition.selector);
         market.liquidate(bob, hex"", hex"");
         vm.stopPrank();
     }
@@ -154,7 +153,7 @@ contract LiquidateTest is Test {
         // Try to liquidate as a non-priority, non-tagger, non-owner address
         address nonAuthorized = address(0x9999);
         vm.startPrank(nonAuthorized);
-        vm.expectRevert(IMarketErrors.AltoBaseMarketLiquidationUnauthorized.selector);
+        vm.expectRevert(IPriorityLiquidationEngineErrors.AltoPriorityLiquidationEngineLiquidationUnauthorized.selector);
         market.liquidate(bob, hex"", hex"");
         vm.stopPrank();
     }
@@ -188,7 +187,7 @@ contract LiquidateTest is Test {
     function test_LiquidateWhen_PositionIsTaggedAndWithinWindow() public givenPositionIsInsolvent whenPositionIsTagged {
         // Try to liquidate immediately (should fail due to grace period)
         vm.startPrank(liquidator);
-        vm.expectRevert(IMarketErrors.AltoBaseMarketLiquidationUnauthorized.selector);
+        vm.expectRevert(IPriorityLiquidationEngineErrors.AltoPriorityLiquidationEngineLiquidationUnauthorized.selector);
         market.liquidate(bob, hex"", hex"");
         vm.stopPrank();
     }

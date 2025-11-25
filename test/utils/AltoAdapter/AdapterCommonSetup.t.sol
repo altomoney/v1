@@ -119,9 +119,8 @@ abstract contract AdapterCommonSetup is AdapterCommon, TestHelperOz5 {
             liquidationWindowTag: 3 days
         });
 
-        // Liquidation engine will be set after market deployment
-        // Temporary placeholder - not used
-        address(new AltoLiquidationEngine(address(OWNER), address(1)));
+        // Create liquidation engine before market deployment
+        address liquidationEngine = address(new AltoLiquidationEngine(address(OWNER)));
 
         BaseMarketInitParams memory baseMarketInitParams = BaseMarketInitParams({
             borrowToken: address(borrowToken),
@@ -131,7 +130,7 @@ abstract contract AdapterCommonSetup is AdapterCommon, TestHelperOz5 {
             oracle: address(oracle),
             maxLtv: LTV,
             feeRecipient: address(this),
-            liquidationEngine: address(1) // Will be updated below
+            liquidationEngine: liquidationEngine
         });
 
         if (shouldUseSafeProxy) {
@@ -148,10 +147,8 @@ abstract contract AdapterCommonSetup is AdapterCommon, TestHelperOz5 {
             );
         }
 
-        // Create real liquidation engine and update market
-        address liquidationEngine = address(new AltoLiquidationEngine(address(OWNER), address(market)));
+        // Market initialization automatically calls setMarketOnce on the liquidation engine
         AltoLiquidationEngine(liquidationEngine).setLiquidationConfiguration(liquidationConfig);
-        AltoBaseMarket(address(market)).setLiquidationEngine(liquidationEngine);
 
         // Approve conract to be used in the adapter
         altoAdapter.approveContract(address(market));

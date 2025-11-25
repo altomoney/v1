@@ -72,8 +72,9 @@ contract TestnetMintMarketBatch is ITestnetMarketBatch {
             liquidationWindowTag: 3 days
         });
 
-        // Create temporary liquidation engine for market initialization (using address(1) as placeholder)
-        address tempLiquidationEngine = address(new AltoLiquidationEngine(_params.owner, address(1)));
+        // Create liquidation engine before market initialization
+        // Use address(this) as owner so we can set the configuration before transferring ownership
+        address liquidationEngine = address(new AltoLiquidationEngine(address(this)));
 
         BaseMarketInitParams memory baseMarketInitParams = BaseMarketInitParams({
             borrowToken: _params.borrowToken,
@@ -83,7 +84,7 @@ contract TestnetMintMarketBatch is ITestnetMarketBatch {
             oracle: marketOracle,
             maxLtv: _params.maxLtv,
             feeRecipient: _params.owner,
-            liquidationEngine: tempLiquidationEngine
+            liquidationEngine: liquidationEngine
         });
 
         MintMarketInitParams memory initParams = MintMarketInitParams({
@@ -95,18 +96,12 @@ contract TestnetMintMarketBatch is ITestnetMarketBatch {
         address marketProxy =
             UnsafeUpgrades.deployUUPSProxy(address(market), abi.encodeCall(AltoMintMarket.initialize, (initParams)));
 
-        // Create real liquidation engine with market proxy address
-        // Use address(this) as owner so we can set the configuration in the constructor
-        address liquidationEngine = address(new AltoLiquidationEngine(address(this), marketProxy));
-
-        // Set liquidation configuration
+        // Market initialization automatically calls setMarketOnce on the liquidation engine
+        // Now set liquidation configuration
         AltoLiquidationEngine(liquidationEngine).setLiquidationConfiguration(liquidationConfig);
 
         // Transfer ownership to the actual owner (initiate two-step transfer)
         Ownable2Step(liquidationEngine).transferOwnership(_params.owner);
-
-        // Note: setLiquidationEngine on the market must be called by the market owner
-        // This is handled in the deployment script after the batch is created
 
         report = TestnetMarketBatchReport({
             marketImplementation: market,

@@ -178,10 +178,6 @@ library DeployAltoTestnet {
             ))
         .getMarketReport();
 
-        // Update market to use real liquidation engine
-        IMarket(input.contracts.wethMarketBatch.market)
-            .setLiquidationEngine(input.contracts.wethMarketBatch.liquidationEngine);
-
         AltoLeverage(input.contracts.altoLeverage).setMarket(input.contracts.wethMarketBatch.market, true);
         IMarket(input.contracts.wethMarketBatch.market).setAuthorizedCallback(input.contracts.altoLeverage, true);
         DUSD(input.tokens.dusd).setMinterStatus(input.contracts.wethMarketBatch.market, true);
@@ -204,10 +200,6 @@ library DeployAltoTestnet {
                 })
             ))
         .getMarketReport();
-
-        // Update market to use real liquidation engine
-        IMarket(input.contracts.wstethMarketBatch.market)
-            .setLiquidationEngine(input.contracts.wstethMarketBatch.liquidationEngine);
 
         AltoLeverage(input.contracts.altoLeverage).setMarket(input.contracts.wstethMarketBatch.market, true);
         IMarket(input.contracts.wstethMarketBatch.market).setAuthorizedCallback(input.contracts.altoLeverage, true);
@@ -232,10 +224,6 @@ library DeployAltoTestnet {
             ))
         .getMarketReport();
 
-        // Update market to use real liquidation engine
-        IMarket(input.contracts.rethMarketBatch.market)
-            .setLiquidationEngine(input.contracts.rethMarketBatch.liquidationEngine);
-
         AltoLeverage(input.contracts.altoLeverage).setMarket(input.contracts.rethMarketBatch.market, true);
         IMarket(input.contracts.rethMarketBatch.market).setAuthorizedCallback(input.contracts.altoLeverage, true);
         DUSD(input.tokens.dusd).setMinterStatus(input.contracts.rethMarketBatch.market, true);
@@ -258,10 +246,6 @@ library DeployAltoTestnet {
                 })
             ))
         .getMarketReport();
-
-        // Update market to use real liquidation engine
-        IMarket(input.contracts.methMarketBatch.market)
-            .setLiquidationEngine(input.contracts.methMarketBatch.liquidationEngine);
 
         AltoLeverage(input.contracts.altoLeverage).setMarket(input.contracts.methMarketBatch.market, true);
         IMarket(input.contracts.methMarketBatch.market).setAuthorizedCallback(input.contracts.altoLeverage, true);
@@ -286,10 +270,6 @@ library DeployAltoTestnet {
             ))
         .getMarketReport();
 
-        // Update market to use real liquidation engine
-        IMarket(input.contracts.tbtcMarketBatch.market)
-            .setLiquidationEngine(input.contracts.tbtcMarketBatch.liquidationEngine);
-
         AltoLeverage(input.contracts.altoLeverage).setMarket(input.contracts.tbtcMarketBatch.market, true);
         IMarket(input.contracts.tbtcMarketBatch.market).setAuthorizedCallback(input.contracts.altoLeverage, true);
         DUSD(input.tokens.dusd).setMinterStatus(input.contracts.tbtcMarketBatch.market, true);
@@ -313,10 +293,6 @@ library DeployAltoTestnet {
             ))
         .getMarketReport();
 
-        // Update market to use real liquidation engine
-        IMarket(input.contracts.wbtcMarketBatch.market)
-            .setLiquidationEngine(input.contracts.wbtcMarketBatch.liquidationEngine);
-
         AltoLeverage(input.contracts.altoLeverage).setMarket(input.contracts.wbtcMarketBatch.market, true);
         IMarket(input.contracts.wbtcMarketBatch.market).setAuthorizedCallback(input.contracts.altoLeverage, true);
         AltoAdapter(payable(input.contracts.altoAdapter)).approveContract(input.contracts.wbtcMarketBatch.market);
@@ -333,10 +309,6 @@ library DeployAltoTestnet {
             ))
         .getMarketReport();
 
-        // Update market to use real liquidation engine
-        IMarket(input.contracts.cbbtcMarketBatch.market)
-            .setLiquidationEngine(input.contracts.cbbtcMarketBatch.liquidationEngine);
-
         AltoLeverage(input.contracts.altoLeverage).setMarket(input.contracts.cbbtcMarketBatch.market, true);
         IMarket(input.contracts.cbbtcMarketBatch.market).setAuthorizedCallback(input.contracts.altoLeverage, true);
         AltoAdapter(payable(input.contracts.altoAdapter)).approveContract(input.contracts.cbbtcMarketBatch.market);
@@ -352,10 +324,6 @@ library DeployAltoTestnet {
                 })
             ))
         .getMarketReport();
-
-        // Update market to use real liquidation engine
-        IMarket(input.contracts.susdeMarketBatch.market)
-            .setLiquidationEngine(input.contracts.susdeMarketBatch.liquidationEngine);
 
         AltoLeverage(input.contracts.altoLeverage).setMarket(input.contracts.susdeMarketBatch.market, true);
         IMarket(input.contracts.susdeMarketBatch.market).setAuthorizedCallback(input.contracts.altoLeverage, true);

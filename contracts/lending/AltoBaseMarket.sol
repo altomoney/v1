@@ -114,6 +114,10 @@ abstract contract AltoBaseMarket is
         liquidationEngine = _initParams.liquidationEngine;
         emit SetLiquidationEngine(address(0), _initParams.liquidationEngine);
 
+        if (liquidationEngine != address(0)) {
+            IAltoLiquidationEngine(liquidationEngine).setMarketOnce(address(this));
+        }
+
         irm = _initParams.irm;
         emit SetIrm(address(0), _initParams.irm);
 
@@ -184,6 +188,8 @@ abstract contract AltoBaseMarket is
 
         emit SetLiquidationEngine(liquidationEngine, _liquidationEngine);
         liquidationEngine = _liquidationEngine;
+
+        IAltoLiquidationEngine(liquidationEngine).setMarketOnce(address(this));
     }
 
     /// @inheritdoc IMarketBase
@@ -359,7 +365,7 @@ abstract contract AltoBaseMarket is
             revert AltoBaseMarketUnauthorized();
         }
 
-        if (!isSolvent(onBehalf)) {
+        if (!_isSolvent(onBehalf)) {
             revert AltoBaseMarketInsufficientUserCollateral();
         }
 
@@ -439,7 +445,7 @@ abstract contract AltoBaseMarket is
             revert AltoBaseMarketUnauthorized();
         }
 
-        if (!isSolvent(onBehalf)) {
+        if (!_isSolvent(onBehalf)) {
             revert AltoBaseMarketBorrowingTooMuch();
         }
 
@@ -515,8 +521,9 @@ abstract contract AltoBaseMarket is
         emit AccrueInterest(borrowRate, interest, totalBorrowed.assets, totalSupply.assets);
     }
 
-    /// @inheritdoc IMarketBase
-    function isSolvent(address _user) public view returns (bool) {
+    /// @dev Returns true if the user's position is solvent.
+    /// @param _user The address of the user whose position is being checked
+    function _isSolvent(address _user) internal view returns (bool) {
         uint256 collateralPrice = ILendingOracle(oracle).getPrice();
         uint256 collateralValue = uint256(position[_user].collateralAssets)
             .divideWithRounding(collateralPrice, LENDING_ORACLE_PRICE_PRECISION, false);
