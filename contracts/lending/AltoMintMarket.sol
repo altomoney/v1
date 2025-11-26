@@ -34,11 +34,6 @@ contract AltoMintMarket is AltoBaseMarket {
     /// @param amount The amount of interest claimed
     event InterestClaimed(uint256 amount);
 
-    /// @notice Emitted when the DUSD oracle is set
-    /// @param oldDusdOracle The old DUSD oracle
-    /// @param newDusdOracle The new DUSD oracle
-    event SetDusdOracle(address oldDusdOracle, address newDusdOracle);
-
     /// @notice Emitted when the borrow opening fee is set
     /// @param oldBorrowOpeningFee The old borrow opening fee
     /// @param newBorrowOpeningFee The new borrow opening fee
@@ -50,14 +45,6 @@ contract AltoMintMarket is AltoBaseMarket {
 
     /// @notice The borrow opening fee in MATH_PRECISION
     uint256 private _borrowOpeningFee;
-
-    /// @notice The address of the DUSD oracle
-    /// @dev This oracle returns USD price of the DUSD token
-    /// @dev Unused right now but will be used in the future to calculate the borrow opening fee as per specification
-    address public dusdOracle;
-
-    /// upgrade gap
-    uint256[47] private __gap_mint;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -102,17 +89,6 @@ contract AltoMintMarket is AltoBaseMarket {
         totalSupply.assets = _debtCeiling.toUint128();
     }
 
-    /// @notice Setter of the DUSD oracle
-    /// @param _dusdOracle The new DUSD oracle
-    function setDusdOracle(address _dusdOracle) external onlyOwner {
-        if (_dusdOracle == address(0)) {
-            revert AltoMintMarketInvalidInput();
-        }
-
-        emit SetDusdOracle(dusdOracle, _dusdOracle);
-        dusdOracle = _dusdOracle;
-    }
-
     /// @notice Setter of the borrow opening fee
     /// @param _newBorrowOpeningFee The new borrow opening fee
     function setBorrowOpeningFee(uint256 _newBorrowOpeningFee) external onlyOwner {
@@ -139,7 +115,7 @@ contract AltoMintMarket is AltoBaseMarket {
     /// @inheritdoc AltoBaseMarket
     function setFeeRecipient(address _feeRecipient) external override onlyOwner {
         uint256 protocolFeePercentage = IAltoLiquidationEngine(liquidationEngine).protocolFeePercentage();
-        if (_feeRecipient == address(0) && (_borrowOpeningFee > 0 || protocolFeePercentage > 0 || irm != address(0))) {
+        if (_feeRecipient == address(0) && (borrowOpeningFee() > 0 || protocolFeePercentage > 0 || irm != address(0))) {
             revert AltoMintMarketInvalidInput();
         }
 

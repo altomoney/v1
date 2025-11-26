@@ -32,9 +32,6 @@ contract AltoBorrowMarket is AltoBaseMarket {
     /// @notice The maximum amount of assets that can be supplied to the market
     uint128 public supplyCapAssets;
 
-    /// upgrade gap
-    uint256[48] private __gap_borrow;
-
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
