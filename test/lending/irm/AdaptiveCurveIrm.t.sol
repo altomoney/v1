@@ -60,7 +60,8 @@ contract AdaptiveCurveIrmTest is IrmCommon {
             liquidationWindowTag: 3 days
         });
 
-        // Liquidation engine will be set after market deployment
+        // Create liquidation engine before market deployment
+        address liquidationEngine = address(new AltoLiquidationEngine(OWNER));
 
         BaseMarketInitParams memory baseMarketInitParams = BaseMarketInitParams({
             borrowToken: address(1),
@@ -70,13 +71,9 @@ contract AdaptiveCurveIrmTest is IrmCommon {
             oracle: address(oracle),
             maxLtv: 0.75 ether,
             feeRecipient: OWNER,
-            liquidationEngine: address(1) // Will be updated below
+            liquidationEngine: address(liquidationEngine)
         });
 
-        // Create liquidation engine before market deployment
-        address liquidationEngine = address(new AltoLiquidationEngine(OWNER));
-
-        baseMarketInitParams.liquidationEngine = liquidationEngine;
         BorrowMarketInitParams memory borrowMarketInitParams = BorrowMarketInitParams({
             baseMarketInitParams: baseMarketInitParams, initialBorrowOpeningFee: 0, supplyCapAssets: 0
         });

@@ -11,6 +11,7 @@ import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 import {LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
 import {MarketDeployer} from "@alto/utils/MarketDeployer.sol";
+import {IAltoLiquidationEngine} from "@alto/lending/interfaces/IAltoLiquidationEngine.sol";
 
 contract SetMarketOnceTest is Test {
     AltoLiquidationEngine liquidationEngine;
@@ -127,6 +128,10 @@ contract SetMarketOnceTest is Test {
             baseMarketInitParams: baseMarketInitParams, initialBorrowOpeningFee: 0, supplyCapAssets: 0
         });
 
+        // Expect the event to be emitted from the liquidation engine
+        // We check the event signature and emitter, but not the data since we don't know the market address yet
+        vm.expectEmit(false, false, false, false, address(liquidationEngine));
+        emit IAltoLiquidationEngine.SetMarketOnce(address(0)); // Placeholder - address will be verified separately
         AltoBorrowMarket market = AltoBorrowMarket(MarketDeployer.deployBorrowMarket(borrowMarketInitParams));
         marketAddress = address(market);
 

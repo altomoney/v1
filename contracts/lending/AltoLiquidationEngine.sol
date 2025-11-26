@@ -14,7 +14,8 @@ import {ILendingOracle, LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/inte
 import {
     LiquidationEngineInput,
     LiquidationEngineResult,
-    IAltoLiquidationEngine
+    IAltoLiquidationEngine,
+    LiquidationEngineType
 } from "@alto/lending/interfaces/IAltoLiquidationEngine.sol";
 import {
     IPriorityLiquidationEngineStaticTypes,
@@ -35,6 +36,9 @@ contract AltoLiquidationEngine is Ownable2Step, IPriorityLiquidationEngineStatic
     using FixedPointMath for uint256;
     using AssetShareConversionMath for uint256;
     using Uint128Converter for uint256;
+
+    /// @inheritdoc IAltoLiquidationEngine
+    LiquidationEngineType public constant LIQUIDATION_ENGINE_TYPE = LiquidationEngineType.DLB_DCF_PRIORITY;
 
     /// @inheritdoc IPriorityLiquidationEngineStaticTypes
     LiquidationConfiguration public liquidationConfiguration;
