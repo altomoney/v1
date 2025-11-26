@@ -3,6 +3,11 @@ pragma solidity ^0.8.0;
 
 import {Balance, Position} from "@alto/lending/interfaces/IMarket.sol";
 
+/// @notice The type of the market
+enum LiquidationEngineType {
+    DLB_DCF_PRIORITY // DlbDcfPriorityLiquidationEngine
+}
+
 /// @notice Struct for the liquidation engine result
 /// @param seizedCollateralAssets The amount of collateral assets that were seized from the borrower
 /// excluding protocol fee but including liquidator fee
@@ -51,6 +56,10 @@ interface IAltoLiquidationEngine {
     /// @notice Emitted when the market is set
     /// @param market The address of the market
     event SetMarketOnce(address market);
+
+    /// @notice The type of the liquidation engine
+    /// @dev This is used to identify the type of the liquidation engine during indexing
+    function LIQUIDATION_ENGINE_TYPE() external view returns (LiquidationEngineType);
 
     /// @notice The address of the market that this liquidation engine is tied to
     function market() external view returns (address);

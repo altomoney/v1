@@ -9,4 +9,4 @@ AltoLiquidationEngine::setMarketOnce()
         │   └── it should revert with AltoPriorityLiquidationEngineLiquidationUnauthorized
         └── when msg.sender is _market
             └── it should set market successfully
-
+                └── it should emit SetMarketOnce event
