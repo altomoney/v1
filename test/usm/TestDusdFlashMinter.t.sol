@@ -288,7 +288,8 @@ contract TestDusdFlashMinter is TestDusdBase {
             uint256 expectedFee = amount.multiplyWithPrecisionUp(minFee);
             assertEq(fee, expectedFee, "Flash fee should match flat fee calculation");
             assertGt(fee, 0, "Flash fee should be greater than 0");
-            assertLt(fee, amount, "Flash fee should be less than amount");
+            // [3, 3, 1] is a counter example when assertLt would fail
+            assertLe(fee, amount, "Flash fee should be less than or equal to amount (in case of tiny amounts)");
         } else {
             // Interpolated fee: fee should be between min and max fee amounts
             uint256 minFeeAmount = amount.multiplyWithPrecisionUp(minFee);
