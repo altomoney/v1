@@ -12,8 +12,11 @@ import {LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.s
 import {IPausable} from "@alto/utils/Pausable.sol";
 import {IMarketErrors} from "@alto/lending/interfaces/IMarket.sol";
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
-import {MarketDeployer} from "@alto/utils/MarketDeployer.sol";
-import {IPriorityLiquidationEngine, IPriorityLiquidationEngineErrors} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
+import {MarketDeployer} from "@alto-test/helpers/MarketDeployer.sol";
+import {
+    IPriorityLiquidationEngine,
+    IPriorityLiquidationEngineErrors
+} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
 import {AltoLiquidationEngine} from "@alto/lending/AltoLiquidationEngine.sol";
 
 contract LiquidateTest is Test {
@@ -135,7 +138,9 @@ contract LiquidateTest is Test {
 
     function test_RevertWhen_PositionIsSolvent() public {
         vm.startPrank(liquidator);
-        vm.expectRevert(IPriorityLiquidationEngineErrors.AltoPriorityLiquidationEngineLiquidatingSolventPosition.selector);
+        vm.expectRevert(
+            IPriorityLiquidationEngineErrors.AltoPriorityLiquidationEngineLiquidatingSolventPosition.selector
+        );
         market.liquidate(bob, hex"", hex"");
         vm.stopPrank();
     }

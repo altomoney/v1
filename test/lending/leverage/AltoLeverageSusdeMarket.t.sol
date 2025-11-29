@@ -13,7 +13,7 @@ import {console} from "forge-std/console.sol";
 import {SwapParams} from "@alto/lending/leverage/interfaces/IAltoLeverageSwapper.sol";
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
-import {MarketDeployer} from "@alto/utils/MarketDeployer.sol";
+import {MarketDeployer} from "@alto-test/helpers/MarketDeployer.sol";
 import {AltoLeverageSwapper} from "@alto/lending/leverage/AltoLeverageSwapper.sol";
 import {
     ERC4626RatioChainlinkOracleSUSDE

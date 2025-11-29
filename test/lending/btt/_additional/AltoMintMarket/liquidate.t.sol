@@ -17,8 +17,11 @@ import {BaseMarketInitParams, MintMarketInitParams} from "@alto/lending/interfac
 import {LiquidationConfiguration} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
 import {IMarketErrors} from "@alto/lending/interfaces/IMarket.sol";
 import {IMintableERC20} from "@alto/lending/interfaces/IMintableERC20.sol";
-import {MarketDeployer} from "@alto/utils/MarketDeployer.sol";
-import {IPriorityLiquidationEngine, IPriorityLiquidationEngineErrors} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
+import {MarketDeployer} from "@alto-test/helpers/MarketDeployer.sol";
+import {
+    IPriorityLiquidationEngine,
+    IPriorityLiquidationEngineErrors
+} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
 import {AltoLiquidationEngine} from "@alto/lending/AltoLiquidationEngine.sol";
 
 contract MintableERC20Mock is ERC20, IMintableERC20 {
@@ -153,7 +156,9 @@ contract LiquidateTest is Test {
         vm.startPrank(alice);
         // liquidate function only has whenNotPaused modifier, not whenNotFrozen
         // So it should proceed to liquidation logic and fail on solvency check
-        vm.expectRevert(IPriorityLiquidationEngineErrors.AltoPriorityLiquidationEngineLiquidatingSolventPosition.selector);
+        vm.expectRevert(
+            IPriorityLiquidationEngineErrors.AltoPriorityLiquidationEngineLiquidatingSolventPosition.selector
+        );
         market.liquidate(bob, hex"", hex"");
         vm.stopPrank();
     }
@@ -165,7 +170,9 @@ contract LiquidateTest is Test {
     function test_RevertWhen_UserIsZeroAddress() external whenMarketIsNotPausedAndNotFrozen {
         vm.startPrank(alice);
         // No explicit zero address validation in liquidate, so it gets to liquidation solvency check
-        vm.expectRevert(IPriorityLiquidationEngineErrors.AltoPriorityLiquidationEngineLiquidatingSolventPosition.selector);
+        vm.expectRevert(
+            IPriorityLiquidationEngineErrors.AltoPriorityLiquidationEngineLiquidatingSolventPosition.selector
+        );
         market.liquidate(address(0), hex"", hex"");
         vm.stopPrank();
     }
@@ -182,7 +189,9 @@ contract LiquidateTest is Test {
         vm.stopPrank();
 
         vm.startPrank(alice);
-        vm.expectRevert(IPriorityLiquidationEngineErrors.AltoPriorityLiquidationEngineLiquidatingSolventPosition.selector);
+        vm.expectRevert(
+            IPriorityLiquidationEngineErrors.AltoPriorityLiquidationEngineLiquidatingSolventPosition.selector
+        );
         market.liquidate(bob, hex"", hex"");
         vm.stopPrank();
     }
