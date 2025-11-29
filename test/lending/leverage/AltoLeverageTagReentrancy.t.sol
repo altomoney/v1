@@ -13,7 +13,7 @@ import {console} from "forge-std/console.sol";
 import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
-import {MarketDeployer} from "@alto/utils/MarketDeployer.sol";
+import {MarketDeployer} from "@alto-test/helpers/MarketDeployer.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";

@@ -12,7 +12,7 @@ import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {BaseMarketInitParams, BorrowMarketInitParams, MintMarketInitParams} from "@alto/lending/interfaces/IMarket.sol";
 import {ERC20MockMintable} from "@alto-test/helpers/ERC20MockMintable.sol";
 import {PAUSE_TYPE, FROZEN_TYPE} from "@alto/utils/Constants.sol";
-import {MarketDeployer} from "@alto/utils/MarketDeployer.sol";
+import {MarketDeployer} from "@alto-test/helpers/MarketDeployer.sol";
 import {AltoLiquidationEngine} from "@alto/lending/AltoLiquidationEngine.sol";
 import {AltoBaseMarket} from "@alto/lending/AltoBaseMarket.sol";
 import {

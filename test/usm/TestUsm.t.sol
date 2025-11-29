@@ -15,7 +15,7 @@ import {IERC20Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.so
 import {TestDusdBase} from "./TestDusdBase.t.sol";
 import {UnsafeUpgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {DusdUsmInitParams} from "@alto/utils/UsmDeployer.sol";
+import {DusdUsmInitParams} from "@alto-test/helpers/UsmDeployer.sol";
 import {IAuth, Authorization, Signature} from "@alto/utils/interfaces/IAuth.sol";
 import {SigUtils} from "@alto-test/helpers/SigUtils.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";

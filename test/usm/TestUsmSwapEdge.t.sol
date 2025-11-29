@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "./TestDusdBase.t.sol";
-import {DusdUsmInitParams} from "@alto/utils/UsmDeployer.sol";
+import {DusdUsmInitParams} from "@alto-test/helpers/UsmDeployer.sol";
 
 contract TestUsmSwapEdge is TestDusdBase {
     using PercentageMath for uint256;

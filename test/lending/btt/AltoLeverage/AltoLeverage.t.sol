@@ -12,7 +12,7 @@ import {SwapperSimpleMock} from "@alto/lending/mocks/SwapperSimpleMock.sol";
 import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
-import {MarketDeployer} from "@alto/utils/MarketDeployer.sol";
+import {MarketDeployer} from "@alto-test/helpers/MarketDeployer.sol";
 import {AltoLiquidationEngine} from "@alto/lending/AltoLiquidationEngine.sol";
 import {AltoBaseMarket} from "@alto/lending/AltoBaseMarket.sol";
 import {
