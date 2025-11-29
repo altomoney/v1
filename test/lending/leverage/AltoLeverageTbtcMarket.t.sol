@@ -5,21 +5,17 @@ import {Test} from "forge-std/Test.sol";
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
 import {IMarket, IMarketErrors, Position} from "@alto/lending/interfaces/IMarket.sol";
-import {AltoBaseMarket} from "@alto/lending/AltoBaseMarket.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
 import {AltoLeverageSwapper} from "@alto/lending/leverage/AltoLeverageSwapper.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
-import {AltoMultiChainlinkLendingOracle} from "@alto/oracles/AltoMultiChainlinkLendingOracle.sol";
 import {MarketDeployer} from "@alto-test/helpers/MarketDeployer.sol";
 import {LiquidationConfiguration} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
 import {BaseMarketInitParams, BorrowMarketInitParams} from "@alto/lending/interfaces/IMarket.sol";
-import {ChainlinkNode, ERC4626RatioNode, ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
-import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {SwapParams} from "@alto/lending/leverage/interfaces/IAltoLeverageSwapper.sol";
 import {LENDING_ORACLE_PRICE_PRECISION, IOracle} from "@alto/oracles/interfaces/IOracle.sol";
-import {console} from "forge-std/console.sol";
 import {AltoLiquidationEngine} from "@alto/lending/AltoLiquidationEngine.sol";
+import {EthereumMainnetOracleDeployer} from "@alto/deployments/EthereumMainnetOracleDeployer.sol";
 
 contract AltoLeverageTbtcMarketTest is Test {
     using FixedPointMath for uint256;
@@ -33,7 +29,6 @@ contract AltoLeverageTbtcMarketTest is Test {
     AltoLeverageSwapper swapper;
     address alice = address(0xA11CE);
     uint256 constant INITIAL_AMOUNT = 100000000000 ether;
-    address constant CHAINLINK_BTC_USD_PRICE_FEED = 0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c;
     address oracle;
 
     function setUp() public {
@@ -47,13 +42,7 @@ contract AltoLeverageTbtcMarketTest is Test {
         leverage = new AltoLeverage(address(swapper), address(this));
 
         address irm = address(new FixedRateIrm(0.04 ether / uint256(365 days), address(this)));
-        ChainlinkNode memory chainlinkNode = ChainlinkNode(
-            AggregatorV3Interface(CHAINLINK_BTC_USD_PRICE_FEED), ConversionDirection.IN_TO_OUT, 2 hours, 18, 36
-        );
-
-        ChainlinkNode[] memory chainlinkNodes = new ChainlinkNode[](1);
-        chainlinkNodes[0] = chainlinkNode;
-        oracle = address(new AltoMultiChainlinkLendingOracle(address(this), chainlinkNodes));
+        oracle = address(EthereumMainnetOracleDeployer.deployTbtcOracle(address(this)));
 
         LiquidationConfiguration memory liquidationConfig = LiquidationConfiguration({
             maxLiquidationLtv: 0.8 ether,

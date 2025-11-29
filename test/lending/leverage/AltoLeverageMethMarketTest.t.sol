@@ -4,24 +4,23 @@ pragma solidity ^0.8.22;
 import {Test} from "forge-std/Test.sol";
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
-import {IMarket, IMarketErrors, Position} from "@alto/lending/interfaces/IMarket.sol";
-import {AltoBaseMarket} from "@alto/lending/AltoBaseMarket.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
 import {AltoLeverageSwapper} from "@alto/lending/leverage/AltoLeverageSwapper.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
-import {
-    ERC4626RatioChainlinkOracleMETH
-} from "@alto/oracles/AltoERC4626RatioChainlinkOracle/implementations/ERC4626RatioChainlinkOracleMETH.sol";
 import {MarketDeployer} from "@alto-test/helpers/MarketDeployer.sol";
 import {LiquidationConfiguration} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
-import {BaseMarketInitParams, BorrowMarketInitParams} from "@alto/lending/interfaces/IMarket.sol";
-import {ChainlinkNode, ERC4626RatioNode, ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
-import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
+import {
+    IMarket,
+    Position,
+    IMarketErrors,
+    BaseMarketInitParams,
+    BorrowMarketInitParams
+} from "@alto/lending/interfaces/IMarket.sol";
 import {SwapParams} from "@alto/lending/leverage/interfaces/IAltoLeverageSwapper.sol";
 import {LENDING_ORACLE_PRICE_PRECISION, IOracle} from "@alto/oracles/interfaces/IOracle.sol";
-import {console} from "forge-std/console.sol";
 import {AltoLiquidationEngine} from "@alto/lending/AltoLiquidationEngine.sol";
+import {EthereumMainnetOracleDeployer} from "@alto/deployments/EthereumMainnetOracleDeployer.sol";
 
 contract AltoLeverageMethMarketTest is Test {
     using FixedPointMath for uint256;
@@ -36,11 +35,6 @@ contract AltoLeverageMethMarketTest is Test {
     address OWNER = makeAddr("Alto-multisig");
     address alice = address(0xA11CE);
     uint256 constant INITIAL_AMOUNT = 100000000000 ether;
-    address constant METH_STAKING = 0xe3cBd06D7dadB3F4e6557bAb7EdD924CD1489E8f;
-    address constant CHAINLINK_ETH_USD_PRICE_FEED = 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419;
-    ERC4626RatioNode erc4626RatioNode;
-    ChainlinkNode chainlinkNode;
-
     address oracle;
 
     function setUp() public {
@@ -55,11 +49,7 @@ contract AltoLeverageMethMarketTest is Test {
 
         address irm = address(new FixedRateIrm(0.04 ether / uint256(365 days), address(this)));
 
-        erc4626RatioNode = ERC4626RatioNode(1 ether, 1696594100, 0.08 ether);
-        chainlinkNode = ChainlinkNode(
-            AggregatorV3Interface(CHAINLINK_ETH_USD_PRICE_FEED), ConversionDirection.IN_TO_OUT, 2 hours, 18, 36
-        );
-        oracle = address(new ERC4626RatioChainlinkOracleMETH(OWNER, METH_STAKING, erc4626RatioNode, chainlinkNode));
+        oracle = address(EthereumMainnetOracleDeployer.deployMethOracle(address(this)));
 
         LiquidationConfiguration memory liquidationConfig = LiquidationConfiguration({
             maxLiquidationLtv: 0.8 ether,

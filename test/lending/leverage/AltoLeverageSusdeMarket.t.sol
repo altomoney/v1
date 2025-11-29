@@ -8,20 +8,14 @@ import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {LENDING_ORACLE_PRICE_PRECISION, IOracle} from "@alto/oracles/interfaces/IOracle.sol";
 import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
 import {IMarket, Position, IMarketErrors} from "@alto/lending/interfaces/IMarket.sol";
-import {AltoBaseMarket} from "@alto/lending/AltoBaseMarket.sol";
-import {console} from "forge-std/console.sol";
 import {SwapParams} from "@alto/lending/leverage/interfaces/IAltoLeverageSwapper.sol";
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
 import {MarketDeployer} from "@alto-test/helpers/MarketDeployer.sol";
 import {AltoLeverageSwapper} from "@alto/lending/leverage/AltoLeverageSwapper.sol";
-import {
-    ERC4626RatioChainlinkOracleSUSDE
-} from "@alto/oracles/AltoERC4626RatioChainlinkOracle/implementations/ERC4626RatioChainlinkOracleSUSDE.sol";
-import {ChainlinkNode, ERC4626RatioNode, ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
-import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {AltoLiquidationEngine} from "@alto/lending/AltoLiquidationEngine.sol";
+import {EthereumMainnetOracleDeployer} from "@alto/deployments/EthereumMainnetOracleDeployer.sol";
 
 contract AltoLeverageSusdeMarketTest is Test {
     using FixedPointMath for uint256;
@@ -34,9 +28,7 @@ contract AltoLeverageSusdeMarketTest is Test {
     AltoLeverage leverage;
     AltoLeverageSwapper swapper;
     address alice = address(0xA11CE);
-    address constant SUSDE = 0x9D39A5DE30e57443BfF2A8307A4256c8797A3497;
     uint256 constant INITIAL_AMOUNT = 100000000000 ether;
-    address constant CHAINLINK_USDE_USD_PRICE_FEED = 0xa569d910839Ae8865Da8F8e70FfFb0cBA869F961;
     address oracle;
 
     function setUp() public {
@@ -49,11 +41,7 @@ contract AltoLeverageSusdeMarketTest is Test {
         leverage = new AltoLeverage(address(swapper), address(this));
 
         address irm = address(new FixedRateIrm(0.04 ether / uint256(365 days), address(this)));
-        ERC4626RatioNode memory erc4626RatioNode = ERC4626RatioNode(1157209899495068171, 1708004591, 0.06 ether);
-        ChainlinkNode memory chainlinkNode = ChainlinkNode(
-            AggregatorV3Interface(CHAINLINK_USDE_USD_PRICE_FEED), ConversionDirection.IN_TO_OUT, 26 hours, 18, 36
-        );
-        oracle = address(new ERC4626RatioChainlinkOracleSUSDE(address(this), SUSDE, erc4626RatioNode, chainlinkNode));
+        oracle = address(EthereumMainnetOracleDeployer.deploySusdeOracle(address(this)));
 
         LiquidationConfiguration memory liquidationConfig = LiquidationConfiguration({
             maxLiquidationLtv: 0.8 ether,

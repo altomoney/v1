@@ -5,23 +5,17 @@ import {Test} from "forge-std/Test.sol";
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
 import {IMarket, IMarketErrors, Position} from "@alto/lending/interfaces/IMarket.sol";
-import {AltoBaseMarket} from "@alto/lending/AltoBaseMarket.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
 import {AltoLeverageSwapper} from "@alto/lending/leverage/AltoLeverageSwapper.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
-import {
-    ERC4626RatioChainlinkOracleRETH
-} from "@alto/oracles/AltoERC4626RatioChainlinkOracle/implementations/ERC4626RatioChainlinkOracleRETH.sol";
 import {MarketDeployer} from "@alto-test/helpers/MarketDeployer.sol";
 import {LiquidationConfiguration} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
 import {BaseMarketInitParams, BorrowMarketInitParams} from "@alto/lending/interfaces/IMarket.sol";
-import {ChainlinkNode, ERC4626RatioNode, ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
-import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {SwapParams} from "@alto/lending/leverage/interfaces/IAltoLeverageSwapper.sol";
 import {LENDING_ORACLE_PRICE_PRECISION, IOracle} from "@alto/oracles/interfaces/IOracle.sol";
-import {console} from "forge-std/console.sol";
 import {AltoLiquidationEngine} from "@alto/lending/AltoLiquidationEngine.sol";
+import {EthereumMainnetOracleDeployer} from "@alto/deployments/EthereumMainnetOracleDeployer.sol";
 
 contract AltoLeverageRethMarketTest is Test {
     using FixedPointMath for uint256;
@@ -35,8 +29,6 @@ contract AltoLeverageRethMarketTest is Test {
     AltoLeverageSwapper swapper;
     address alice = address(0xA11CE);
     uint256 constant INITIAL_AMOUNT = 100000000000 ether;
-    address constant RETH = 0xae78736Cd615f374D3085123A210448E74Fc6393;
-    address constant CHAINLINK_ETH_USD_PRICE_FEED = 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419;
     address oracle;
 
     function setUp() public {
@@ -50,11 +42,7 @@ contract AltoLeverageRethMarketTest is Test {
         leverage = new AltoLeverage(address(swapper), address(this));
 
         address irm = address(new FixedRateIrm(0.04 ether / uint256(365 days), address(this)));
-        ERC4626RatioNode memory erc4626RatioNode = ERC4626RatioNode(1098284517740008249, 1708004591, 0.093 ether);
-        ChainlinkNode memory chainlinkNode = ChainlinkNode(
-            AggregatorV3Interface(CHAINLINK_ETH_USD_PRICE_FEED), ConversionDirection.IN_TO_OUT, 2 hours, 18, 36
-        );
-        oracle = address(new ERC4626RatioChainlinkOracleRETH(address(this), RETH, erc4626RatioNode, chainlinkNode));
+        oracle = address(EthereumMainnetOracleDeployer.deployRethOracle(address(this)));
 
         LiquidationConfiguration memory liquidationConfig = LiquidationConfiguration({
             maxLiquidationLtv: 0.8 ether,
