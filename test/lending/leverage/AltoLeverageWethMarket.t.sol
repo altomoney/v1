@@ -8,18 +8,14 @@ import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {LENDING_ORACLE_PRICE_PRECISION, IOracle} from "@alto/oracles/interfaces/IOracle.sol";
 import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
 import {IMarket, Position, IMarketErrors} from "@alto/lending/interfaces/IMarket.sol";
-import {AltoBaseMarket} from "@alto/lending/AltoBaseMarket.sol";
-import {console} from "forge-std/console.sol";
 import {SwapParams} from "@alto/lending/leverage/interfaces/IAltoLeverageSwapper.sol";
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
 import {MarketDeployer} from "@alto-test/helpers/MarketDeployer.sol";
 import {AltoLiquidationEngine} from "@alto/lending/AltoLiquidationEngine.sol";
 import {AltoLeverageSwapper} from "@alto/lending/leverage/AltoLeverageSwapper.sol";
-import {AltoMultiChainlinkLendingOracle} from "@alto/oracles/AltoMultiChainlinkLendingOracle.sol";
-import {ChainlinkNode, ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
-import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {EthereumMainnetOracleDeployer} from "@alto/deployments/EthereumMainnetOracleDeployer.sol";
 
 contract AltoLeverageWethMarketTest is Test {
     using FixedPointMath for uint256;
@@ -33,9 +29,7 @@ contract AltoLeverageWethMarketTest is Test {
     AltoLeverageSwapper swapper;
     address alice = address(0xA11CE);
     uint256 constant INITIAL_AMOUNT = 100000000000 ether;
-    address constant CHAINLINK_ETH_USD_PRICE_FEED = 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419;
     address oracle;
-    ChainlinkNode[] public chainlinkNodes;
 
     function setUp() public {
         string memory rpcUrl = vm.rpcUrl("ethereum");
@@ -46,11 +40,7 @@ contract AltoLeverageWethMarketTest is Test {
         leverage = new AltoLeverage(address(swapper), address(this));
 
         address irm = address(new FixedRateIrm(0.04 ether / uint256(365 days), address(this)));
-        ChainlinkNode memory chainlinkNode = ChainlinkNode(
-            AggregatorV3Interface(CHAINLINK_ETH_USD_PRICE_FEED), ConversionDirection.IN_TO_OUT, 2 hours, 18, 36
-        );
-        chainlinkNodes.push(chainlinkNode);
-        oracle = address(new AltoMultiChainlinkLendingOracle(address(this), chainlinkNodes));
+        oracle = address(EthereumMainnetOracleDeployer.deployWethOracle(address(this)));
 
         LiquidationConfiguration memory liquidationConfig = LiquidationConfiguration({
             maxLiquidationLtv: 0.8 ether,
