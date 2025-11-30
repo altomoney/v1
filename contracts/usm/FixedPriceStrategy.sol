@@ -26,7 +26,7 @@ contract FixedPriceStrategy is IUsmPriceStrategy, AccessControl {
     /// @inheritdoc IUsmPriceStrategy
     uint256 public immutable UNDERLYING_ASSET_DECIMALS;
 
-    /// @dev The price ratio from underlying asset to stability token (expressed in WAD), e.g. a ratio of 2e18 means 2 stability token per 1 underlying asset
+    /// @dev The price ratio from underlying asset to stability token (expressed in stable token units), e.g. a ratio of 2e18 means 2 stability token per 1 underlying asset
     uint256 public priceRatio;
 
     /// @dev Underlying asset units represent units for the underlying asset
@@ -34,7 +34,7 @@ contract FixedPriceStrategy is IUsmPriceStrategy, AccessControl {
 
     /**
      * @dev Constructor
-     * @param initialPriceRatio The price ratio from underlying asset to stability token (expressed in WAD)
+     * @param initialPriceRatio The price ratio from underlying asset to stability token (expressed in stable token units)
      * @param underlyingAsset The address of the underlying asset
      */
     constructor(uint256 initialPriceRatio, address underlyingAsset, address admin) {

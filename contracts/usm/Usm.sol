@@ -212,7 +212,7 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, AuthUpgradeabl
         uint256 accruedFees = _accruedFees;
         if (accruedFees > 0) {
             _accruedFees = 0;
-            IERC20(STABLE_TOKEN).transfer(_stableTokenTreasury, accruedFees);
+            IERC20(STABLE_TOKEN).safeTransfer(_stableTokenTreasury, accruedFees);
             emit FeesDistributedToTreasury(_stableTokenTreasury, STABLE_TOKEN, accruedFees);
         }
     }
