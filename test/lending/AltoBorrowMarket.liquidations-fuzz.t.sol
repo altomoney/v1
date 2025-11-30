@@ -85,7 +85,6 @@ contract AltoBorrowMarketLiquidationsFuzzTest is Test {
         _setupMarketPermissions();
     }
 
-
     function _deployMarket(
         address _borrowToken,
         address _collateralToken,
@@ -243,9 +242,7 @@ contract AltoBorrowMarketLiquidationsFuzzTest is Test {
 
         // expecting the liquidation event to be emitted
         vm.expectEmit(true, false, false, false, address(market));
-        emit IMarketEvents.Liquidation(
-            bob, address(collateralToken), address(borrowToken), liquidator, 0, 0, 0, 0, 0, 0
-        );
+        emit IMarketEvents.Liquidation(bob, liquidator, 0, 0, 0, 0, 0, 0);
 
         uint256 borrowTokenBalanceOfLiquidatorBefore = borrowToken.balanceOf(liquidator);
         // liquidating the underwater position should always succeed
@@ -332,9 +329,7 @@ contract AltoBorrowMarketLiquidationsFuzzTest is Test {
 
         // expecting the liquidation event to be emitted
         vm.expectEmit(true, false, false, false, address(market));
-        emit IMarketEvents.Liquidation(
-            bob, address(collateralToken), address(borrowToken), liquidator, 0, 0, 0, 0, 0, 0
-        );
+        emit IMarketEvents.Liquidation(bob, liquidator, 0, 0, 0, 0, 0, 0);
 
         // liquidating the underwater position should always succeed
         uint256 borrowTokenBalanceOfLiquidatorBefore = borrowToken.balanceOf(liquidator);
@@ -430,9 +425,7 @@ contract AltoBorrowMarketLiquidationsFuzzTest is Test {
         vm.startPrank(liquidator);
 
         vm.expectEmit(true, false, false, false, address(market));
-        emit IMarketEvents.Liquidation(
-            bob, address(collateralToken), address(borrowToken), liquidator, 0, 0, 0, 0, 0, 0
-        );
+        emit IMarketEvents.Liquidation(bob, liquidator, 0, 0, 0, 0, 0, 0);
         // liquidation of underwater position with low deposit amount should succeed
         (uint256 collateralAmount, uint256 repayAmount,) = market.liquidate(bob, hex"", hex"");
 
@@ -504,9 +497,7 @@ contract AltoBorrowMarketLiquidationsFuzzTest is Test {
 
         // expecting the liquidation event to be emitted
         vm.expectEmit(true, false, false, false, address(market));
-        emit IMarketEvents.Liquidation(
-            bob, address(collateralToken), address(borrowToken), liquidator, 0, 0, 0, 0, 0, 0
-        );
+        emit IMarketEvents.Liquidation(bob, liquidator, 0, 0, 0, 0, 0, 0);
 
         uint256 borrowTokenBalanceOfLiquidatorBefore = borrowToken.balanceOf(liquidator);
         // liquidating the underwater position should always succeed
@@ -616,9 +607,7 @@ contract AltoBorrowMarketLiquidationsFuzzTest is Test {
 
         // expecting the liquidation event to be emitted
         vm.expectEmit(true, false, false, false, address(market));
-        emit IMarketEvents.Liquidation(
-            bob, address(collateralToken), address(borrowToken), liquidator, 0, 0, 0, 0, 0, 0
-        );
+        emit IMarketEvents.Liquidation(bob, liquidator, 0, 0, 0, 0, 0, 0);
 
         uint256 borrowTokenBalanceOfLiquidatorBefore = borrowToken.balanceOf(liquidator);
         // liquidating the underwater position should always succeed

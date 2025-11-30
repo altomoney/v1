@@ -4,16 +4,8 @@ pragma solidity ^0.8.28;
 import {MarketCommon, MarketType} from "./MarketCommon.t.sol";
 import {IPausable} from "@alto/utils/Pausable.sol";
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
-import {
-    IMarketErrors,
-    IMarketEvents,
-    Position,
-    Balance
-} from "@alto/lending/interfaces/IMarket.sol";
-import {
-    LiquidablePosition,
-    LiquidationConfiguration
-} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
+import {IMarketErrors, IMarketEvents, Position, Balance} from "@alto/lending/interfaces/IMarket.sol";
+import {LiquidablePosition, LiquidationConfiguration} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {AltoMintMarket} from "@alto/lending/AltoMintMarket.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
@@ -22,7 +14,10 @@ import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {ILiquidateCallback} from "@alto/lending/interfaces/IMarketCallbacks.sol";
 import {IOracle, LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {AltoLiquidationEngine} from "@alto/lending/AltoLiquidationEngine.sol";
-import {IPriorityLiquidationEngine, IPriorityLiquidationEngineErrors} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
+import {
+    IPriorityLiquidationEngine,
+    IPriorityLiquidationEngineErrors
+} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
 
 contract LiquidateCallback is ILiquidateCallback {
     event LiquidateCallbackCalled(uint256 assetsToRepay, uint256 collateralReceived, bytes data);
@@ -76,7 +71,9 @@ contract AltoBorrowMarketliquidate is MarketCommon {
         market.borrow(0.5 ether, 0, USER, USER, "");
 
         // it should revert with AltoPriorityLiquidationEngineLiquidatingSolventPosition
-        vm.expectRevert(IPriorityLiquidationEngineErrors.AltoPriorityLiquidationEngineLiquidatingSolventPosition.selector);
+        vm.expectRevert(
+            IPriorityLiquidationEngineErrors.AltoPriorityLiquidationEngineLiquidatingSolventPosition.selector
+        );
         market.liquidate(USER, hex"", hex"");
     }
 
@@ -207,7 +204,7 @@ contract AltoBorrowMarketliquidate is MarketCommon {
 
         // it should proceed with liquidation
         vm.expectEmit(true, false, false, false);
-        emit IMarketEvents.Liquidation(USER, address(collateralToken), address(borrowToken), TAGGER, 0, 0, 0, 0, 0, 0);
+        emit IMarketEvents.Liquidation(USER, TAGGER, 0, 0, 0, 0, 0, 0);
         (uint256 collateralAmount, uint256 repayAmount, uint256 protocolFee) = market.liquidate(USER, hex"", hex"");
         vm.stopPrank();
 
@@ -262,9 +259,7 @@ contract AltoBorrowMarketliquidate is MarketCommon {
 
         // it should proceed with liquidation
         vm.expectEmit(true, false, false, false);
-        emit IMarketEvents.Liquidation(
-            USER, address(collateralToken), address(borrowToken), EXTERNAL_LIQUIDATOR, 0, 0, 0, 0, 0, 0
-        );
+        emit IMarketEvents.Liquidation(USER, EXTERNAL_LIQUIDATOR, 0, 0, 0, 0, 0, 0);
         (uint256 collateralAmount, uint256 repayAmount, uint256 protocolFee) = market.liquidate(USER, hex"", hex"");
         vm.stopPrank();
 
@@ -285,9 +280,7 @@ contract AltoBorrowMarketliquidate is MarketCommon {
 
         // it should proceed with liquidation
         vm.expectEmit(true, false, false, false);
-        emit IMarketEvents.Liquidation(
-            USER, address(collateralToken), address(borrowToken), PRIORITY_LIQUIDATOR, 0, 0, 0, 0, 0, 0
-        );
+        emit IMarketEvents.Liquidation(USER, PRIORITY_LIQUIDATOR, 0, 0, 0, 0, 0, 0);
         (uint256 collateralAmount, uint256 repayAmount, uint256 protocolFee) = market.liquidate(USER, hex"", hex"");
         vm.stopPrank();
 
@@ -324,9 +317,7 @@ contract AltoBorrowMarketliquidate is MarketCommon {
 
         // it should proceed with liquidation
         vm.expectEmit(true, false, false, false);
-        emit IMarketEvents.Liquidation(
-            USER, address(collateralToken), address(borrowToken), LIQUIDATOR, 0, 0, 0, 0, 0, 0
-        );
+        emit IMarketEvents.Liquidation(USER, LIQUIDATOR, 0, 0, 0, 0, 0, 0);
         (uint256 collateralAmount, uint256 repayAmount, uint256 protocolFee) = market.liquidate(USER, hex"", hex"");
         vm.stopPrank();
 
@@ -354,9 +345,7 @@ contract AltoBorrowMarketliquidate is MarketCommon {
 
         // it should proceed with liquidation
         vm.expectEmit(true, false, false, false);
-        emit IMarketEvents.Liquidation(
-            USER, address(collateralToken), address(borrowToken), LIQUIDATOR, 0, 0, 0, 0, 0, 0
-        );
+        emit IMarketEvents.Liquidation(USER, LIQUIDATOR, 0, 0, 0, 0, 0, 0);
         (uint256 collateralAmount, uint256 repayAmount, uint256 protocolFee) = market.liquidate(USER, hex"", hex"");
         vm.stopPrank();
 
@@ -458,7 +447,7 @@ contract AltoBorrowMarketliquidate is MarketCommon {
 
         // it should delete liquidable position
         vm.expectEmit(true, false, false, false);
-        emit IMarketEvents.Liquidation(USER, address(collateralToken), address(borrowToken), TAGGER, 0, 0, 0, 0, 0, 0);
+        emit IMarketEvents.Liquidation(USER, TAGGER, 0, 0, 0, 0, 0, 0);
         market.liquidate(USER, hex"", hex"");
         vm.stopPrank();
 

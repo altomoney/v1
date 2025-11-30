@@ -611,8 +611,6 @@ abstract contract AltoBaseMarket is
 
         emit Liquidation(
             borrower,
-            collateralToken,
-            borrowToken,
             msg.sender,
             result.seizedCollateralAssets,
             result.protocolSeizedCollateralFee,
@@ -647,9 +645,7 @@ abstract contract AltoBaseMarket is
             IERC20(collateralToken).safeTransfer(msg.sender, collateralAmount);
         }
 
-        emit GovernanceLiquidation(
-            borrower, collateralToken, borrowToken, msg.sender, collateralAmount, badDebtAmount, badDebtShares
-        );
+        emit GovernanceLiquidation(borrower, msg.sender, collateralAmount, badDebtAmount, badDebtShares);
 
         return (collateralAmount, badDebtAmount);
     }
