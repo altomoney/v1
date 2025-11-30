@@ -3,9 +3,41 @@
     "type": "constructor",
     "inputs": [
       {
-        "name": "_borrowRate",
-        "type": "uint256",
-        "internalType": "uint256"
+        "name": "_irmConfig",
+        "type": "tuple",
+        "internalType": "struct AdaptiveCurveIrm.AdaptiveCurveIrmConfig",
+        "components": [
+          {
+            "name": "curveSteepness",
+            "type": "int256",
+            "internalType": "int256"
+          },
+          {
+            "name": "adjustmentSpeed",
+            "type": "int256",
+            "internalType": "int256"
+          },
+          {
+            "name": "targetUtilization",
+            "type": "int256",
+            "internalType": "int256"
+          },
+          {
+            "name": "initialRateAtTarget",
+            "type": "int256",
+            "internalType": "int256"
+          },
+          {
+            "name": "minRateAtTarget",
+            "type": "int256",
+            "internalType": "int256"
+          },
+          {
+            "name": "maxRateAtTarget",
+            "type": "int256",
+            "internalType": "int256"
+          }
+        ]
       },
       {
         "name": "_owner",
@@ -30,19 +62,6 @@
   },
   {
     "type": "function",
-    "name": "MAX_BORROW_RATE",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "acceptOwnership",
     "inputs": [],
     "outputs": [],
@@ -54,14 +73,52 @@
     "inputs": [],
     "outputs": [
       {
-        "name": "borrowRate",
-        "type": "uint256",
-        "internalType": "uint256"
+        "name": "rateAtTarget",
+        "type": "int256",
+        "internalType": "int256"
       },
       {
         "name": "lastUpdate",
         "type": "uint48",
         "internalType": "uint48"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "irmConfig",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "curveSteepness",
+        "type": "int256",
+        "internalType": "int256"
+      },
+      {
+        "name": "adjustmentSpeed",
+        "type": "int256",
+        "internalType": "int256"
+      },
+      {
+        "name": "targetUtilization",
+        "type": "int256",
+        "internalType": "int256"
+      },
+      {
+        "name": "initialRateAtTarget",
+        "type": "int256",
+        "internalType": "int256"
+      },
+      {
+        "name": "minRateAtTarget",
+        "type": "int256",
+        "internalType": "int256"
+      },
+      {
+        "name": "maxRateAtTarget",
+        "type": "int256",
+        "internalType": "int256"
       }
     ],
     "stateMutability": "view"
@@ -127,12 +184,44 @@
   },
   {
     "type": "function",
-    "name": "setBorrowRate",
+    "name": "setIrmConfig",
     "inputs": [
       {
-        "name": "_borrowRate",
-        "type": "uint256",
-        "internalType": "uint256"
+        "name": "_irmConfig",
+        "type": "tuple",
+        "internalType": "struct AdaptiveCurveIrm.AdaptiveCurveIrmConfig",
+        "components": [
+          {
+            "name": "curveSteepness",
+            "type": "int256",
+            "internalType": "int256"
+          },
+          {
+            "name": "adjustmentSpeed",
+            "type": "int256",
+            "internalType": "int256"
+          },
+          {
+            "name": "targetUtilization",
+            "type": "int256",
+            "internalType": "int256"
+          },
+          {
+            "name": "initialRateAtTarget",
+            "type": "int256",
+            "internalType": "int256"
+          },
+          {
+            "name": "minRateAtTarget",
+            "type": "int256",
+            "internalType": "int256"
+          },
+          {
+            "name": "maxRateAtTarget",
+            "type": "int256",
+            "internalType": "int256"
+          }
+        ]
       }
     ],
     "outputs": [],
@@ -154,6 +243,19 @@
   {
     "type": "function",
     "name": "transferOwnership",
+    "inputs": [
+      {
+        "name": "newOwner",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "transferOwnershipSkip2Step",
     "inputs": [
       {
         "name": "newOwner",
@@ -230,12 +332,12 @@
         "name": "newIRState",
         "type": "tuple",
         "indexed": false,
-        "internalType": "struct FixedRateIrm.IRState",
+        "internalType": "struct AdaptiveCurveIrm.IRState",
         "components": [
           {
-            "name": "borrowRate",
-            "type": "uint256",
-            "internalType": "uint256"
+            "name": "rateAtTarget",
+            "type": "int256",
+            "internalType": "int256"
           },
           {
             "name": "lastUpdate",
@@ -287,13 +389,45 @@
   },
   {
     "type": "event",
-    "name": "SetBorrowRate",
+    "name": "SetIrmConfig",
     "inputs": [
       {
-        "name": "borrowRate",
-        "type": "uint256",
+        "name": "irmConfig",
+        "type": "tuple",
         "indexed": false,
-        "internalType": "uint256"
+        "internalType": "struct AdaptiveCurveIrm.AdaptiveCurveIrmConfig",
+        "components": [
+          {
+            "name": "curveSteepness",
+            "type": "int256",
+            "internalType": "int256"
+          },
+          {
+            "name": "adjustmentSpeed",
+            "type": "int256",
+            "internalType": "int256"
+          },
+          {
+            "name": "targetUtilization",
+            "type": "int256",
+            "internalType": "int256"
+          },
+          {
+            "name": "initialRateAtTarget",
+            "type": "int256",
+            "internalType": "int256"
+          },
+          {
+            "name": "minRateAtTarget",
+            "type": "int256",
+            "internalType": "int256"
+          },
+          {
+            "name": "maxRateAtTarget",
+            "type": "int256",
+            "internalType": "int256"
+          }
+        ]
       }
     ],
     "anonymous": false

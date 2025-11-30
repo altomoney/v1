@@ -182,31 +182,35 @@ if command -v jq >/dev/null 2>&1; then
     WETH_MARKET_IMPL=$(get_address ".contracts.wethMarketBatch.marketImplementation")
     WETH_MARKET_IRM=$(get_address ".contracts.wethMarketBatch.marketIrm")
     WETH_MARKET_ORACLE=$(get_address ".contracts.wethMarketBatch.marketOracle")
+    WETH_LIQUIDATION_ENGINE=$(get_address ".contracts.wethMarketBatch.liquidationEngine")
     
     ## WSTETH
     WSTETH_MARKET=$(get_address ".contracts.wstethMarketBatch.market")
     WSTETH_MARKET_IMPL=$(get_address ".contracts.wstethMarketBatch.marketImplementation")
     WSTETH_MARKET_IRM=$(get_address ".contracts.wstethMarketBatch.marketIrm")
     WSTETH_MARKET_ORACLE=$(get_address ".contracts.wstethMarketBatch.marketOracle")
+    WSTETH_LIQUIDATION_ENGINE=$(get_address ".contracts.wstethMarketBatch.liquidationEngine")
 
     ## RETH
     RETH_MARKET=$(get_address ".contracts.rethMarketBatch.market")
     RETH_MARKET_IMPL=$(get_address ".contracts.rethMarketBatch.marketImplementation")
     RETH_MARKET_IRM=$(get_address ".contracts.rethMarketBatch.marketIrm")
     RETH_MARKET_ORACLE=$(get_address ".contracts.rethMarketBatch.marketOracle")
+    RETH_LIQUIDATION_ENGINE=$(get_address ".contracts.rethMarketBatch.liquidationEngine")
 
     ## METH
     METH_MARKET=$(get_address ".contracts.methMarketBatch.market")
     METH_MARKET_IMPL=$(get_address ".contracts.methMarketBatch.marketImplementation")
     METH_MARKET_IRM=$(get_address ".contracts.methMarketBatch.marketIrm")
     METH_MARKET_ORACLE=$(get_address ".contracts.methMarketBatch.marketOracle")
+    METH_LIQUIDATION_ENGINE=$(get_address ".contracts.methMarketBatch.liquidationEngine")
 
     ## TBTC
     TBTC_MARKET=$(get_address ".contracts.tbtcMarketBatch.market")
     TBTC_MARKET_IMPL=$(get_address ".contracts.tbtcMarketBatch.marketImplementation")
     TBTC_MARKET_IRM=$(get_address ".contracts.tbtcMarketBatch.marketIrm")
     TBTC_MARKET_ORACLE=$(get_address ".contracts.tbtcMarketBatch.marketOracle")
-
+    TBTC_LIQUIDATION_ENGINE=$(get_address ".contracts.tbtcMarketBatch.liquidationEngine")
 
     # Borrow market addresses
     ## WBTC
@@ -214,18 +218,27 @@ if command -v jq >/dev/null 2>&1; then
     WBTC_MARKET_IMPL=$(get_address ".contracts.wbtcMarketBatch.marketImplementation")
     WBTC_MARKET_IRM=$(get_address ".contracts.wbtcMarketBatch.marketIrm")
     WBTC_MARKET_ORACLE=$(get_address ".contracts.wbtcMarketBatch.marketOracle")
+    WBTC_LIQUIDATION_ENGINE=$(get_address ".contracts.wbtcMarketBatch.liquidationEngine")
 
     ## CB-BTC
     CB_BTC_MARKET=$(get_address ".contracts.cbbtcMarketBatch.market")
     CB_BTC_MARKET_IMPL=$(get_address ".contracts.cbbtcMarketBatch.marketImplementation")
     CB_BTC_MARKET_IRM=$(get_address ".contracts.cbbtcMarketBatch.marketIrm")
     CB_BTC_MARKET_ORACLE=$(get_address ".contracts.cbbtcMarketBatch.marketOracle")
+    CB_BTC_LIQUIDATION_ENGINE=$(get_address ".contracts.cbbtcMarketBatch.liquidationEngine")
 
     ## SUSDE
     SUSDE_MARKET=$(get_address ".contracts.susdeMarketBatch.market")
     SUSDE_MARKET_IMPL=$(get_address ".contracts.susdeMarketBatch.marketImplementation")
     SUSDE_MARKET_IRM=$(get_address ".contracts.susdeMarketBatch.marketIrm")
     SUSDE_MARKET_ORACLE=$(get_address ".contracts.susdeMarketBatch.marketOracle")
+    SUSDE_LIQUIDATION_ENGINE=$(get_address ".contracts.susdeMarketBatch.liquidationEngine")
+
+    # USM batch addresses
+    USDC_USM=$(get_address ".contracts.usdcUsmBatch.dusdUsm")
+    USDC_USM_IMPL=$(get_address ".contracts.usdcUsmBatch.dusdUsmImplementation")
+    USDC_USM_FIXED_PRICE_STRATEGY=$(get_address ".contracts.usdcUsmBatch.fixedPriceStrategy")
+    USDC_USM_FIXED_FEE_STRATEGY=$(get_address ".contracts.usdcUsmBatch.fixedFeeStrategy")
 
     # Rewards batch addresses
 	# Read paymentOracles array
@@ -264,49 +277,63 @@ else
     WETH_MARKET_IMPL=$(get_address "wethMarketBatch.marketImplementation")
     WETH_MARKET_IRM=$(get_address "wethMarketBatch.marketIrm")
     WETH_MARKET_ORACLE=$(get_address "wethMarketBatch.marketOracle")
+    WETH_LIQUIDATION_ENGINE=$(get_address "wethMarketBatch.liquidationEngine")
 
     ## WSTETH
     WSTETH_MARKET=$(get_address "wstethMarketBatch.market")
     WSTETH_MARKET_IMPL=$(get_address "wstethMarketBatch.marketImplementation")
     WSTETH_MARKET_IRM=$(get_address "wstethMarketBatch.marketIrm")
     WSTETH_MARKET_ORACLE=$(get_address "wstethMarketBatch.marketOracle")
+    WSTETH_LIQUIDATION_ENGINE=$(get_address "wstethMarketBatch.liquidationEngine")
 
     ## RETH
     RETH_MARKET=$(get_address "rethMarketBatch.market")
     RETH_MARKET_IMPL=$(get_address "rethMarketBatch.marketImplementation")
     RETH_MARKET_IRM=$(get_address "rethMarketBatch.marketIrm")
     RETH_MARKET_ORACLE=$(get_address "rethMarketBatch.marketOracle")
+    RETH_LIQUIDATION_ENGINE=$(get_address "rethMarketBatch.liquidationEngine")
 
     ## METH
     METH_MARKET=$(get_address "methMarketBatch.market")
     METH_MARKET_IMPL=$(get_address "methMarketBatch.marketImplementation")
     METH_MARKET_IRM=$(get_address "methMarketBatch.marketIrm")
     METH_MARKET_ORACLE=$(get_address "methMarketBatch.marketOracle")
+    METH_LIQUIDATION_ENGINE=$(get_address "methMarketBatch.liquidationEngine")
 
     ## TBTC
     TBTC_MARKET=$(get_address "tbtcMarketBatch.market")
     TBTC_MARKET_IMPL=$(get_address "tbtcMarketBatch.marketImplementation")
     TBTC_MARKET_IRM=$(get_address "tbtcMarketBatch.marketIrm")
     TBTC_MARKET_ORACLE=$(get_address "tbtcMarketBatch.marketOracle")
-
+    TBTC_LIQUIDATION_ENGINE=$(get_address "tbtcMarketBatch.liquidationEngine")
+    
     # Borrow Market Addresses
     ## WBTC
     WBTC_MARKET=$(get_address "wbtcMarketBatch.market")
     WBTC_MARKET_IMPL=$(get_address "wbtcMarketBatch.marketImplementation")
     WBTC_MARKET_IRM=$(get_address "wbtcMarketBatch.marketIrm")
     WBTC_MARKET_ORACLE=$(get_address "wbtcMarketBatch.marketOracle")
+    WBTC_LIQUIDATION_ENGINE=$(get_address "wbtcMarketBatch.liquidationEngine")
 
     ## CB-BTC
     CB_BTC_MARKET=$(get_address "cbbtcMarketBatch.market")
     CB_BTC_MARKET_IMPL=$(get_address "cbbtcMarketBatch.marketImplementation")
     CB_BTC_MARKET_IRM=$(get_address "cbbtcMarketBatch.marketIrm")
     CB_BTC_MARKET_ORACLE=$(get_address "cbbtcMarketBatch.marketOracle")
+    CB_BTC_LIQUIDATION_ENGINE=$(get_address "cbbtcMarketBatch.liquidationEngine")
 
     ## SUSDE
     SUSDE_MARKET=$(get_address "susdeMarketBatch.market")
     SUSDE_MARKET_IMPL=$(get_address "susdeMarketBatch.marketImplementation")
     SUSDE_MARKET_IRM=$(get_address "susdeMarketBatch.marketIrm")
     SUSDE_MARKET_ORACLE=$(get_address "susdeMarketBatch.marketOracle")
+    SUSDE_LIQUIDATION_ENGINE=$(get_address "susdeMarketBatch.liquidationEngine")
+
+    # USM batch addresses
+    USDC_USM=$(get_address "usdcUsmBatch.dusdUsm")
+    USDC_USM_IMPL=$(get_address "usdcUsmBatch.dusdUsmImplementation")
+    USDC_USM_FIXED_PRICE_STRATEGY=$(get_address "usdcUsmBatch.fixedPriceStrategy")
+    USDC_USM_FIXED_FEE_STRATEGY=$(get_address "usdcUsmBatch.fixedFeeStrategy")
 
     # Rewards batch addresses
 	# Fallback parse for paymentOracles array
@@ -342,33 +369,45 @@ echo "- WETH Market: $WETH_MARKET"
 echo "- WETH Market Implementation: $WETH_MARKET_IMPL"
 echo "- WETH Market IRM: $WETH_MARKET_IRM"
 echo "- WETH Market Oracle: $WETH_MARKET_ORACLE"
+echo "- WETH Market Liquidation Engine: $WETH_LIQUIDATION_ENGINE"
 echo "- WSTETH Market: $WSTETH_MARKET"
 echo "- WSTETH Market Implementation: $WSTETH_MARKET_IMPL"
 echo "- WSTETH Market IRM: $WSTETH_MARKET_IRM"
 echo "- WSTETH Market Oracle: $WSTETH_MARKET_ORACLE"
+echo "- WSTETH Market Liquidation Engine: $WSTETH_LIQUIDATION_ENGINE"
 echo "- RETH Market: $RETH_MARKET"
 echo "- RETH Market Implementation: $RETH_MARKET_IMPL"
 echo "- RETH Market IRM: $RETH_MARKET_IRM"
 echo "- RETH Market Oracle: $RETH_MARKET_ORACLE"
+echo "- RETH Market Liquidation Engine: $RETH_LIQUIDATION_ENGINE"
 echo "- METH Market: $METH_MARKET"
 echo "- METH Market Implementation: $METH_MARKET_IMPL"
 echo "- METH Market IRM: $METH_MARKET_IRM"
 echo "- METH Market Oracle: $METH_MARKET_ORACLE"
+echo "- METH Market Liquidation Engine: $METH_LIQUIDATION_ENGINE"
 echo "- TBTC Market: $TBTC_MARKET"
 echo "- TBTC Market Implementation: $TBTC_MARKET_IMPL"
 echo "- TBTC Market IRM: $TBTC_MARKET_IRM"
 echo "- TBTC Market Oracle: $TBTC_MARKET_ORACLE"
+echo "- TBTC Market Liquidation Engine: $TBTC_LIQUIDATION_ENGINE"
 echo "- WBTC Market: $WBTC_MARKET"
 echo "- WBTC Market Implementation: $WBTC_MARKET_IMPL"
 echo "- WBTC Market IRM: $WBTC_MARKET_IRM"
 echo "- WBTC Market Oracle: $WBTC_MARKET_ORACLE"
+echo "- WBTC Market Liquidation Engine: $WBTC_LIQUIDATION_ENGINE"
 echo "- CB-BTC Market: $CB_BTC_MARKET"
 echo "- CB-BTC Market Implementation: $CB_BTC_MARKET_IMPL"
 echo "- CB-BTC Market IRM: $CB_BTC_MARKET_IRM"
 echo "- CB-BTC Market Oracle: $CB_BTC_MARKET_ORACLE"
+echo "- CB-BTC Market Liquidation Engine: $CB_BTC_LIQUIDATION_ENGINE"
 echo "- SUSDE Market Implementation: $SUSDE_MARKET_IMPL"
 echo "- SUSDE Market IRM: $SUSDE_MARKET_IRM"
 echo "- SUSDE Market Oracle: $SUSDE_MARKET_ORACLE"
+echo "- SUSDE Market Liquidation Engine: $SUSDE_LIQUIDATION_ENGINE"
+echo "- USDC USM: $USDC_USM"
+echo "- USDC USM Implementation: $USDC_USM_IMPL"
+echo "- USDC USM Fixed Price Strategy: $USDC_USM_FIXED_PRICE_STRATEGY"
+echo "- USDC USM Fixed Fee Strategy: $USDC_USM_FIXED_FEE_STRATEGY"
 echo "- Payment Oracles:"
 for addr in "${PAYMENT_ORACLES[@]}"; do
     echo "  - $addr"
@@ -402,7 +441,7 @@ echo "⏰ This process will take approximately 1-2 minutes due to rate limiting.
 echo ""
 
 # Initialize progress tracking (base excludes payment oracles)
-BASE_CONTRACTS=43
+BASE_CONTRACTS=65
 TOTAL_CONTRACTS=$((BASE_CONTRACTS + ${#PAYMENT_ORACLES[@]}))
 CURRENT_CONTRACT=0
 
@@ -435,6 +474,8 @@ verify_contract "WethMarketIRM" "$WETH_MARKET_IRM" "contracts/lending/irm/Adapti
 show_progress
 verify_contract "WethMarketOracle" "$WETH_MARKET_ORACLE" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet"
 show_progress
+verify_contract "WethMarketLiquidationEngine" "$WETH_LIQUIDATION_ENGINE" "contracts/lending/AltoLiquidationEngine.sol:AltoLiquidationEngine"
+show_progress
 
 verify_contract "WstethMarket" "$WSTETH_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
 show_progress
@@ -443,6 +484,8 @@ show_progress
 verify_contract "WstethMarketIRM" "$WSTETH_MARKET_IRM" "contracts/lending/irm/AdaptiveCurveIrm.sol:AdaptiveCurveIrm"
 show_progress
 verify_contract "WstethMarketOracle" "$WSTETH_MARKET_ORACLE" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet"
+show_progress
+verify_contract "WstethMarketLiquidationEngine" "$WSTETH_LIQUIDATION_ENGINE" "contracts/lending/AltoLiquidationEngine.sol:AltoLiquidationEngine"
 show_progress
 
 verify_contract "TbtcMarket" "$TBTC_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
@@ -453,6 +496,8 @@ verify_contract "TbtcMarketIRM" "$TBTC_MARKET_IRM" "contracts/lending/irm/Adapti
 show_progress
 verify_contract "TbtcMarketOracle" "$TBTC_MARKET_ORACLE" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet"
 show_progress
+verify_contract "TbtcMarketLiquidationEngine" "$TBTC_LIQUIDATION_ENGINE" "contracts/lending/AltoLiquidationEngine.sol:AltoLiquidationEngine"
+show_progress
 
 verify_contract "RethMarket" "$RETH_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
 show_progress
@@ -461,6 +506,8 @@ show_progress
 verify_contract "RethMarketIRM" "$RETH_MARKET_IRM" "contracts/lending/irm/AdaptiveCurveIrm.sol:AdaptiveCurveIrm"
 show_progress
 verify_contract "RethMarketOracle" "$RETH_MARKET_ORACLE" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet"
+show_progress
+verify_contract "RethMarketLiquidationEngine" "$RETH_LIQUIDATION_ENGINE" "contracts/lending/AltoLiquidationEngine.sol:AltoLiquidationEngine"
 show_progress
 
 verify_contract "MethMarket" "$METH_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
@@ -471,6 +518,8 @@ verify_contract "MethMarketIRM" "$METH_MARKET_IRM" "contracts/lending/irm/Adapti
 show_progress
 verify_contract "MethMarketOracle" "$METH_MARKET_ORACLE" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet"
 show_progress
+verify_contract "MethMarketLiquidationEngine" "$METH_LIQUIDATION_ENGINE" "contracts/lending/AltoLiquidationEngine.sol:AltoLiquidationEngine"
+show_progress
 
 verify_contract "WbtcMarket" "$WBTC_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
 show_progress
@@ -479,6 +528,8 @@ show_progress
 verify_contract "WbtcMarketIRM" "$WBTC_MARKET_IRM" "contracts/lending/irm/AdaptiveCurveIrm.sol:AdaptiveCurveIrm"
 show_progress
 verify_contract "WbtcMarketOracle" "$WBTC_MARKET_ORACLE" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet"
+show_progress
+verify_contract "WbtcMarketLiquidationEngine" "$WBTC_LIQUIDATION_ENGINE" "contracts/lending/AltoLiquidationEngine.sol:AltoLiquidationEngine"
 show_progress
 
 verify_contract "Cbb" "$CB_BTC_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
@@ -489,6 +540,8 @@ verify_contract "CbbMarketIRM" "$CB_BTC_MARKET_IRM" "contracts/lending/irm/Adapt
 show_progress
 verify_contract "CbbMarketOracle" "$CB_BTC_MARKET_ORACLE" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet"
 show_progress
+verify_contract "CbbMarketLiquidationEngine" "$CB_BTC_LIQUIDATION_ENGINE" "contracts/lending/AltoLiquidationEngine.sol:AltoLiquidationEngine"
+show_progress
 
 verify_contract "SusdeMarket" "$SUSDE_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
 show_progress
@@ -498,7 +551,18 @@ verify_contract "SusdeMarketIRM" "$SUSDE_MARKET_IRM" "contracts/lending/irm/Adap
 show_progress
 verify_contract "SusdeMarketOracle" "$SUSDE_MARKET_ORACLE" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet"
 show_progress
+verify_contract "SusdeMarketLiquidationEngine" "$SUSDE_LIQUIDATION_ENGINE" "contracts/lending/AltoLiquidationEngine.sol:AltoLiquidationEngine"
+show_progress
 
+# Verify usm batch contracts
+verify_contract "UsdcUsm" "$USDC_USM" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
+show_progress
+verify_contract "UsdcUsmImplementation" "$USDC_USM_IMPL" "contracts/usm/DUSDUsm.sol:DUSDUsm"
+show_progress
+verify_contract "UsdcUsmFixedPriceStrategy" "$USDC_USM_FIXED_PRICE_STRATEGY" "contracts/usm/FixedPriceStrategy.sol:FixedPriceStrategy"
+show_progress
+verify_contract "UsdcUsmFixedFeeStrategy" "$USDC_USM_FIXED_FEE_STRATEGY" "contracts/usm/FixedFeeStrategy.sol:FixedFeeStrategy"
+show_progress
 
 # Verify rewards contracts
 for addr in "${PAYMENT_ORACLES[@]}"; do
