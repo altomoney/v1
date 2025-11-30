@@ -80,12 +80,7 @@ contract TestUsmSwapFuzz is TestDusdBase {
 
         ERC20MockMintableDecimals newToken = new ERC20MockMintableDecimals("Test Coin", "TEST", underlyingDecimals);
 
-        FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
-            priceRatio,
-            address(newToken),
-            underlyingDecimals, // decimals
-            address(this)
-        );
+        FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(priceRatio, address(newToken), address(this));
         DUSDUsm gsm = deployDusdUsm(
             address(DUSD_TOKEN),
             address(newToken),
@@ -163,12 +158,7 @@ contract TestUsmSwapFuzz is TestDusdBase {
         amount = bound(amount, 1, type(uint128).max - 1);
 
         ERC20MockMintableDecimals newToken = new ERC20MockMintableDecimals("Test Coin", "TEST", underlyingDecimals);
-        FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
-            priceRatio,
-            address(newToken),
-            underlyingDecimals, // decimals
-            address(this)
-        );
+        FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(priceRatio, address(newToken), address(this));
         DUSDUsm gsm = deployDusdUsm(
             address(DUSD_TOKEN),
             address(newToken),
@@ -209,12 +199,7 @@ contract TestUsmSwapFuzz is TestDusdBase {
         amount = bound(amount, 1, type(uint128).max) + type(uint128).max; // avoiding a bug in forge-std where bound will revert
 
         ERC20MockMintableDecimals newToken = new ERC20MockMintableDecimals("Test Coin", "TEST", underlyingDecimals);
-        FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
-            priceRatio,
-            address(newToken),
-            underlyingDecimals, // decimals
-            address(this)
-        );
+        FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(priceRatio, address(newToken), address(this));
         DUSDUsm gsm = deployDusdUsm(
             address(DUSD_TOKEN),
             address(newToken),
@@ -260,12 +245,7 @@ contract TestUsmSwapFuzz is TestDusdBase {
         sellFeeBps = bound(sellFeeBps, 0, 5000 - 1);
 
         ERC20MockMintableDecimals newToken = new ERC20MockMintableDecimals("Test Coin", "TEST", underlyingDecimals);
-        FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
-            priceRatio,
-            address(newToken),
-            underlyingDecimals, // decimals
-            address(this)
-        );
+        FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(priceRatio, address(newToken), address(this));
         DUSDUsm gsm = deployDusdUsm(
             address(DUSD_TOKEN),
             address(newToken),
@@ -320,12 +300,7 @@ contract TestUsmSwapFuzz is TestDusdBase {
         amount = bound(amount, 1, type(uint128).max - 1);
 
         ERC20MockMintableDecimals newToken = new ERC20MockMintableDecimals("Test Coin", "TEST", underlyingDecimals);
-        FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
-            priceRatio,
-            address(newToken),
-            underlyingDecimals, // decimals
-            address(this)
-        );
+        FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(priceRatio, address(newToken), address(this));
         DUSDUsm gsm = deployDusdUsm(
             address(DUSD_TOKEN),
             address(newToken),
@@ -372,12 +347,7 @@ contract TestUsmSwapFuzz is TestDusdBase {
         amount = bound(amount, 1, type(uint128).max - 1);
 
         ERC20MockMintableDecimals newToken = new ERC20MockMintableDecimals("Test Coin", "TEST", underlyingDecimals);
-        FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
-            priceRatio,
-            address(newToken),
-            underlyingDecimals, // decimals
-            address(this)
-        );
+        FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(priceRatio, address(newToken), address(this));
         DUSDUsm gsm = deployDusdUsm(
             address(DUSD_TOKEN),
             address(newToken),
@@ -424,12 +394,7 @@ contract TestUsmSwapFuzz is TestDusdBase {
         amount = bound(amount, 1, type(uint128).max - 1);
 
         ERC20MockMintableDecimals newToken = new ERC20MockMintableDecimals("Test Coin", "TEST", underlyingDecimals);
-        FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
-            priceRatio,
-            address(newToken),
-            underlyingDecimals, // decimals
-            address(this)
-        );
+        FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(priceRatio, address(newToken), address(this));
         DUSDUsm gsm = deployDusdUsm(
             address(DUSD_TOKEN),
             address(newToken),
@@ -477,12 +442,7 @@ contract TestUsmSwapFuzz is TestDusdBase {
         amount = bound(amount, 1, type(uint128).max - 1);
 
         ERC20MockMintableDecimals newToken = new ERC20MockMintableDecimals("Test Coin", "TEST", underlyingDecimals);
-        FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
-            priceRatio,
-            address(newToken),
-            underlyingDecimals, // decimals
-            address(this)
-        );
+        FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(priceRatio, address(newToken), address(this));
         DUSDUsm gsm = deployDusdUsm(
             address(DUSD_TOKEN),
             address(newToken),
@@ -532,12 +492,7 @@ contract TestUsmSwapFuzz is TestDusdBase {
         assetAmount = bound(assetAmount, 1, type(uint64).max - 1);
 
         ERC20MockMintableDecimals newToken = new ERC20MockMintableDecimals("Test Coin", "TEST", underlyingDecimals);
-        FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
-            priceRatio,
-            address(newToken),
-            underlyingDecimals, // decimals
-            address(this)
-        );
+        FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(priceRatio, address(newToken), address(this));
         DUSDUsm gsm = deployDusdUsm(
             address(DUSD_TOKEN),
             address(newToken),
@@ -601,12 +556,7 @@ contract TestUsmSwapFuzz is TestDusdBase {
         assetAmount = bound(assetAmount, 1, type(uint64).max - 1);
 
         ERC20MockMintableDecimals newToken = new ERC20MockMintableDecimals("Test Coin", "TEST", underlyingDecimals);
-        FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
-            priceRatio,
-            address(newToken),
-            underlyingDecimals, // decimals
-            address(this)
-        );
+        FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(priceRatio, address(newToken), address(this));
         DUSDUsm gsm = deployDusdUsm(
             address(DUSD_TOKEN),
             address(newToken),
@@ -667,12 +617,7 @@ contract TestUsmSwapFuzz is TestDusdBase {
         vm.prank(FAUCET);
         newToken.mint(ALICE, assetAmount);
 
-        FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
-            priceRatio,
-            address(newToken),
-            underlyingDecimals, // decimals
-            address(this)
-        );
+        FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(priceRatio, address(newToken), address(this));
         DUSDUsm gsm = deployDusdUsm(
             address(DUSD_TOKEN),
             address(newToken),
@@ -767,12 +712,7 @@ contract TestUsmSwapFuzz is TestDusdBase {
 
         ERC20MockMintableDecimals newToken = new ERC20MockMintableDecimals("Test Coin", "TEST", underlyingDecimals);
 
-        FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
-            priceRatio,
-            address(newToken),
-            underlyingDecimals, // decimals
-            address(this)
-        );
+        FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(priceRatio, address(newToken), address(this));
         DUSDUsm gsm = deployDusdUsm(
             address(DUSD_TOKEN),
             address(newToken),

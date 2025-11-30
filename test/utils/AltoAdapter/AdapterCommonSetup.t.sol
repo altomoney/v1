@@ -281,7 +281,7 @@ abstract contract AdapterCommonSetup is AdapterCommon, TestHelperOz5 {
         underlyingToken = new ERC20MockMintableDecimals("Underlying", "UND", 6);
 
         // Create price and fee strategies
-        FixedPriceStrategy priceStrategy = new FixedPriceStrategy(1e18, address(underlyingToken), 6, address(OWNER));
+        FixedPriceStrategy priceStrategy = new FixedPriceStrategy(1e18, address(underlyingToken), address(OWNER));
         FixedFeeStrategy feeStrategy = new FixedFeeStrategy(0, 100, address(OWNER)); // 1% sell fee
 
         // Deploy DUSDUsm instance
