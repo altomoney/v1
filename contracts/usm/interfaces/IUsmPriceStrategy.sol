@@ -10,6 +10,13 @@ pragma solidity ^0.8.0;
  */
 interface IUsmPriceStrategy {
     /**
+     * @notice Emitted when the price ratio is set
+     * @param oldPriceRatio The old price ratio
+     * @param newPriceRatio The new price ratio
+     */
+    event PriceRatioSet(uint256 oldPriceRatio, uint256 newPriceRatio);
+
+    /**
      * @notice Sets The price ratio from underlying asset to stability token (expressed in WAD),
      * @dev e.g. a ratio of 2e18 means 2 stability token per 1 underlying asset
      * @param newPriceRatio The new price ratio from underlying asset to stability token (expressed in WAD)

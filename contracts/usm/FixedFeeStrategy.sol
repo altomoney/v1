@@ -37,6 +37,7 @@ contract FixedFeeStrategy is IUsmFeeStrategy, AccessControl {
         _grantRole(CONFIGURATOR_ROLE, admin);
         _buyFee = buyFee;
         _sellFee = sellFee;
+        emit FeeSet(0, buyFee, 0, sellFee);
     }
 
     /// @inheritdoc IUsmFeeStrategy
@@ -44,6 +45,7 @@ contract FixedFeeStrategy is IUsmFeeStrategy, AccessControl {
         require(buyFee < MAXIMUM_FEE_PERCENT, "INVALID_BUY_FEE");
         require(sellFee < MAXIMUM_FEE_PERCENT, "INVALID_SELL_FEE");
         require(buyFee > 0 || sellFee > 0, "MUST_HAVE_ONE_NONZERO_FEE");
+        emit FeeSet(_buyFee, buyFee, _sellFee, sellFee);
         _buyFee = buyFee;
         _sellFee = sellFee;
     }
