@@ -4,6 +4,7 @@ pragma solidity ^0.8.10;
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {IUsmPriceStrategy} from "./interfaces/IUsmPriceStrategy.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 /**
  * @title FixedPriceStrategy
@@ -35,17 +36,16 @@ contract FixedPriceStrategy is IUsmPriceStrategy, AccessControl {
      * @dev Constructor
      * @param initialPriceRatio The price ratio from underlying asset to stability token (expressed in WAD)
      * @param underlyingAsset The address of the underlying asset
-     * @param underlyingAssetDecimals The number of decimals of the underlying asset
      */
-    constructor(uint256 initialPriceRatio, address underlyingAsset, uint8 underlyingAssetDecimals, address admin) {
+    constructor(uint256 initialPriceRatio, address underlyingAsset, address admin) {
         require(initialPriceRatio > 0, "INVALID_PRICE_RATIO");
         require(admin != address(0), "ZERO_ADDRESS_NOT_VALID");
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(CONFIGURATOR_ROLE, admin);
         priceRatio = initialPriceRatio;
         UNDERLYING_ASSET = underlyingAsset;
-        UNDERLYING_ASSET_DECIMALS = underlyingAssetDecimals;
-        _underlyingAssetUnits = 10 ** underlyingAssetDecimals;
+        UNDERLYING_ASSET_DECIMALS = IERC20Metadata(underlyingAsset).decimals();
+        _underlyingAssetUnits = 10 ** UNDERLYING_ASSET_DECIMALS;
     }
 
     /// @inheritdoc IUsmPriceStrategy

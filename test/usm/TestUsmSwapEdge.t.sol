@@ -17,7 +17,6 @@ contract TestUsmSwapEdge is TestDusdBase {
         FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
             10000000000000001, // 1e16 + 1
             address(newToken),
-            5,
             address(this)
         );
         DUSDUsm gsm = deployDusdUsm(
@@ -77,7 +76,7 @@ contract TestUsmSwapEdge is TestDusdBase {
         ERC20MockMintableDecimals newToken = new ERC20MockMintableDecimals("Test Coin", "TEST", 18);
         FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(4900, 4900, address(this));
         FixedPriceStrategy newPriceStrategy =
-            new FixedPriceStrategy(DEFAULT_FIXED_PRICE, address(newToken), 18, address(this));
+            new FixedPriceStrategy(DEFAULT_FIXED_PRICE, address(newToken), address(this));
         DUSDUsm gsm = deployDusdUsm(
             address(DUSD_TOKEN),
             address(newToken),
@@ -116,7 +115,7 @@ contract TestUsmSwapEdge is TestDusdBase {
         ERC20MockMintableDecimals newToken = new ERC20MockMintableDecimals("Test Coin", "TEST", 18);
         FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(3000, 3000, address(this));
         FixedPriceStrategy newPriceStrategy =
-            new FixedPriceStrategy(DEFAULT_FIXED_PRICE, address(newToken), 18, address(this));
+            new FixedPriceStrategy(DEFAULT_FIXED_PRICE, address(newToken), address(this));
         DUSDUsm gsm = deployDusdUsm(
             address(DUSD_TOKEN),
             address(newToken),
@@ -168,7 +167,6 @@ contract TestUsmSwapEdge is TestDusdBase {
         FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
             DEFAULT_FIXED_PRICE, // 1e18
             address(newToken),
-            24, // decimals
             address(this)
         );
         DUSDUsm gsm = deployDusdUsm(
@@ -227,7 +225,6 @@ contract TestUsmSwapEdge is TestDusdBase {
         FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
             DEFAULT_FIXED_PRICE, // 1e18
             address(newToken),
-            24, // decimals
             address(this)
         );
         DUSDUsm gsm = deployDusdUsm(
@@ -278,7 +275,6 @@ contract TestUsmSwapEdge is TestDusdBase {
         FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
             DEFAULT_FIXED_PRICE, // 1e18
             address(newToken),
-            6, // decimals
             address(this)
         );
         DUSDUsm gsm = deployDusdUsm(
@@ -327,7 +323,6 @@ contract TestUsmSwapEdge is TestDusdBase {
         FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
             DEFAULT_FIXED_PRICE, // 1e18
             address(newToken),
-            24, // decimals
             address(this)
         );
         DUSDUsm gsm = deployDusdUsm(
@@ -376,7 +371,6 @@ contract TestUsmSwapEdge is TestDusdBase {
         FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
             DEFAULT_FIXED_PRICE, // 1e18
             address(newToken),
-            6, // decimals
             address(this)
         );
         DUSDUsm gsm = deployDusdUsm(
@@ -429,7 +423,6 @@ contract TestUsmSwapEdge is TestDusdBase {
         FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
             DEFAULT_FIXED_PRICE, // 1e18
             address(newToken),
-            24, // decimals
             address(this)
         );
         DUSDUsm gsm = deployDusdUsm(

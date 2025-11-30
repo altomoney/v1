@@ -48,8 +48,7 @@ contract TestDusdBase is Test, TestHelperOz5, Constants {
         USDC_TOKEN = new ERC20MockMintableDecimals("USDC Coin", "USDC", 6);
         WETH = new ERC20MockMintableDecimals("Wrapped Ether", "WETH", 18);
 
-        DUSD_USM_FIXED_PRICE_STRATEGY =
-            new FixedPriceStrategy(DEFAULT_FIXED_PRICE, address(USDC_TOKEN), 6, address(this));
+        DUSD_USM_FIXED_PRICE_STRATEGY = new FixedPriceStrategy(DEFAULT_FIXED_PRICE, address(USDC_TOKEN), address(this));
         DUSD_USM_LAST_RESORT_LIQUIDATOR = new SampleLiquidator();
         DUSD_USM_SWAP_FREEZER = new SampleSwapFreezer();
         DUSDUsm usm = new DUSDUsm(address(DUSD_TOKEN), address(USDC_TOKEN));

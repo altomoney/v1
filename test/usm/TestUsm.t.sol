@@ -46,7 +46,7 @@ contract TestUsm is TestDusdBase {
     }
 
     function testRevertInitializeInvalidPriceStrategy() public {
-        FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(1e18, address(DUSD_TOKEN), 18, address(this));
+        FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(1e18, address(DUSD_TOKEN), address(this));
         DUSDUsm usm =
             DUSDUsm(UnsafeUpgrades.deployUUPSProxy(address(new DUSDUsm(address(DUSD_TOKEN), address(USDC_TOKEN))), ""));
         vm.expectRevert("INVALID_PRICE_STRATEGY");
@@ -925,8 +925,7 @@ contract TestUsm is TestDusdBase {
     }
 
     function testRevertUpdatePriceStrategyInvalidPriceStrategy() public {
-        FixedPriceStrategy newPriceStrategy =
-            new FixedPriceStrategy(DEFAULT_FIXED_PRICE, address(WETH), 18, address(this));
+        FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(DEFAULT_FIXED_PRICE, address(WETH), address(this));
         vm.expectRevert("INVALID_PRICE_STRATEGY");
         vm.prank(address(this));
         DUSD_USM.updatePriceStrategy(address(newPriceStrategy));
@@ -935,7 +934,7 @@ contract TestUsm is TestDusdBase {
     function testUpdatePriceStrategy() public {
         address oldPriceStrategy = DUSD_USM.priceStrategy();
         FixedPriceStrategy newPriceStrategy = new FixedPriceStrategy(
-            DEFAULT_FIXED_PRICE, FixedPriceStrategy(oldPriceStrategy).UNDERLYING_ASSET(), 6, address(this)
+            DEFAULT_FIXED_PRICE, FixedPriceStrategy(oldPriceStrategy).UNDERLYING_ASSET(), address(this)
         );
         vm.prank(address(this));
         vm.expectEmit(true, true, true, true, address(DUSD_USM));
@@ -947,7 +946,7 @@ contract TestUsm is TestDusdBase {
 
     function testRevertUpdatePriceStrategyNotAuthorized() public {
         FixedPriceStrategy newPriceStrategy =
-            new FixedPriceStrategy(DEFAULT_FIXED_PRICE, address(USDC_TOKEN), 6, address(this));
+            new FixedPriceStrategy(DEFAULT_FIXED_PRICE, address(USDC_TOKEN), address(this));
         vm.expectRevert(
             abi.encodeWithSelector(
                 IAccessControl.AccessControlUnauthorizedAccount.selector, ALICE, USM_CONFIGURATOR_ROLE

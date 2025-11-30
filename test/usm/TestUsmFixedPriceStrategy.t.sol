@@ -3,13 +3,15 @@ pragma solidity ^0.8.0;
 
 import "./TestDusdBase.t.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
+import {ERC20MockMintableDecimals} from "@alto-test/helpers/ERC20MockMintableDecimals.sol";
 
 contract TestUsmFixedPriceStrategy is TestDusdBase {
-    function testConstructor(uint256 ratio, address underlying, uint8 decimals) public {
+    function testConstructor(uint256 ratio, uint8 decimals) public {
         vm.assume(ratio > 0);
         decimals = uint8(bound(decimals, 0, 40));
+        address underlying = address(new ERC20MockMintableDecimals("Test Coin", "TEST", decimals));
 
-        FixedPriceStrategy strategy = new FixedPriceStrategy(ratio, underlying, decimals, address(this));
+        FixedPriceStrategy strategy = new FixedPriceStrategy(ratio, underlying, address(this));
         assertEq(strategy.STABLE_TOKEN_DECIMALS(), 18, "Unexpected DUSD decimals");
         assertEq(strategy.priceRatio(), ratio, "Unexpected price ratio");
         assertEq(strategy.UNDERLYING_ASSET(), underlying, "Unexpected underlying asset");
@@ -18,11 +20,11 @@ contract TestUsmFixedPriceStrategy is TestDusdBase {
 
     function testRevertZeroAdmin() public {
         vm.expectRevert("ZERO_ADDRESS_NOT_VALID");
-        new FixedPriceStrategy(1e18, address(USDC_TOKEN), 6, address(0));
+        new FixedPriceStrategy(1e18, address(USDC_TOKEN), address(0));
     }
 
     function testOneToOnePriceRatio() public {
-        FixedPriceStrategy strategy = new FixedPriceStrategy(1e18, address(USDC_TOKEN), 6, address(this));
+        FixedPriceStrategy strategy = new FixedPriceStrategy(1e18, address(USDC_TOKEN), address(this));
         uint256 usdcIn = 100e6;
         uint256 dusdOut = 100e18;
         assertEq(strategy.getAssetPriceInStableToken(usdcIn, true), dusdOut, "Unexpected asset price in DUSD");
@@ -30,7 +32,7 @@ contract TestUsmFixedPriceStrategy is TestDusdBase {
     }
 
     function testOneToTwoPriceRatio() public {
-        FixedPriceStrategy strategy = new FixedPriceStrategy(2e18, address(USDC_TOKEN), 6, address(this));
+        FixedPriceStrategy strategy = new FixedPriceStrategy(2e18, address(USDC_TOKEN), address(this));
         uint256 usdcIn = 100e6;
         uint256 dusdOut = 200e18;
         assertEq(strategy.getAssetPriceInStableToken(usdcIn, true), dusdOut, "Unexpected asset price in DUSD");
@@ -38,7 +40,7 @@ contract TestUsmFixedPriceStrategy is TestDusdBase {
     }
 
     function testTwoToOnePriceRatio() public {
-        FixedPriceStrategy strategy = new FixedPriceStrategy(0.5e18, address(USDC_TOKEN), 6, address(this));
+        FixedPriceStrategy strategy = new FixedPriceStrategy(0.5e18, address(USDC_TOKEN), address(this));
         uint256 usdcIn = 100e6;
         uint256 dusdOut = 50e18;
         assertEq(strategy.getAssetPriceInStableToken(usdcIn, true), dusdOut, "Unexpected asset price in DUSD");
@@ -47,11 +49,11 @@ contract TestUsmFixedPriceStrategy is TestDusdBase {
 
     function testRevertZeroPriceRatio() public {
         vm.expectRevert("INVALID_PRICE_RATIO");
-        new FixedPriceStrategy(0, address(USDC_TOKEN), 6, address(this));
+        new FixedPriceStrategy(0, address(USDC_TOKEN), address(this));
     }
 
     function testOwnerCanUpdatePriceRatio() public {
-        FixedPriceStrategy strategy = new FixedPriceStrategy(1e18, address(USDC_TOKEN), 6, address(this));
+        FixedPriceStrategy strategy = new FixedPriceStrategy(1e18, address(USDC_TOKEN), address(this));
         vm.startPrank(address(this));
         strategy.setPriceRatio(2e18);
         vm.stopPrank();
@@ -67,12 +69,13 @@ contract TestUsmFixedPriceStrategy is TestDusdBase {
         vm.stopPrank();
     }
 
-    function testFuzzingExchangeRate(uint256 ratio, address underlying, uint8 decimals, uint256 amount) public {
+    function testFuzzingExchangeRate(uint256 ratio, uint8 decimals, uint256 amount) public {
         decimals = uint8(bound(decimals, 1, 40));
         ratio = bound(ratio, 1, type(uint128).max - 1);
         amount = bound(amount, 0, type(uint128).max - 1);
+        address underlying = address(new ERC20MockMintableDecimals("Test Coin", "TEST", decimals));
 
-        FixedPriceStrategy strategy = new FixedPriceStrategy(ratio, underlying, decimals, address(this));
+        FixedPriceStrategy strategy = new FixedPriceStrategy(ratio, underlying, address(this));
         uint256 amountInDusd = (amount * ratio) / (10 ** decimals);
         assertEq(strategy.getAssetPriceInStableToken(amount, false), amountInDusd, "Unexpected asset price in DUSD");
     }
