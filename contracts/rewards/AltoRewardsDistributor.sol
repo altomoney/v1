@@ -9,7 +9,7 @@ import {
     ClaimData
 } from "@alto/rewards/interfaces/IRewardsDistributor.sol";
 import {MerkleRootManager} from "@alto/utils/MerkleRootManager.sol";
-import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import {AltoOwnable2Step, Ownable} from "@alto/utils/AltoOwnable2Step.sol";
 
 import {IAltoStakingBase} from "@alto/staking/interfaces/IAltoStaking.sol";
 
@@ -27,7 +27,7 @@ import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 /// @author Pearl Labs
 /// @custom:contact security@altofoundation.org
 /// @notice A contract for distributing rights to purchase tokens to users determined by a merkle tree.
-contract AltoRewardsDistributor is IRewardsDistributorStaticTypes, MerkleRootManager, Ownable2Step, Pausable, Auth {
+contract AltoRewardsDistributor is IRewardsDistributorStaticTypes, MerkleRootManager, AltoOwnable2Step, Pausable, Auth {
     using SafeERC20 for IERC20;
     using FixedPointMath for uint256;
 

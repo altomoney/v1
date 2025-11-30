@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import {AltoOwnable2Step, Ownable} from "@alto/utils/AltoOwnable2Step.sol";
 
 /// @title AdapterContractApproval
 /// @author Pearl Labs
@@ -9,7 +9,7 @@ import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step
 /// @notice A contract that allows for approval of contracts to be used in the adapter.
 /// @dev This was created as a separate contract to easily distinguish differences
 /// between Morpho's GeneralAdapter1 (https://github.com/morpho-org/bundler3) and Alto's AltoAdapter.
-abstract contract AdapterContractApproval is Ownable2Step {
+abstract contract AdapterContractApproval is AltoOwnable2Step {
     /// @notice The error thrown when a contract is not approved to be used in the adapter.
     error AdapterContractApprovalUnapprovedContract();
 

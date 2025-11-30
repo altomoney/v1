@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.7;
 
-import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import {AltoOwnable2Step, Ownable} from "@alto/utils/AltoOwnable2Step.sol";
 import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import {ModuleChainlink} from "@alto/oracles/modules/ModuleChainlink.sol";
 import {ModuleUniswap} from "@alto/oracles/modules/ModuleUniswap/ModuleUniswap.sol";
@@ -21,7 +21,7 @@ import {IUsdOracle} from "@alto/oracles/interfaces/IOracle.sol";
 /// @notice Oracle contract used in AltoRewardsDistributor to calculate extended TWAP of ALTO token
 /// @dev Provides a fixed price for claiming (exercising) call options in AltoRewardsDistributor
 /// @dev Returns USD price of ALTO token in `USD_ORACLE_PRICE_PRECISION` as per `IUsdOracle` interface
-contract AltoRewardsOracle is Ownable2Step, ModuleChainlink, ModuleUniswap, IAltoRewardsOracleStaticTypes {
+contract AltoRewardsOracle is AltoOwnable2Step, ModuleChainlink, ModuleUniswap, IAltoRewardsOracleStaticTypes {
     /// @inheritdoc IAltoRewardsOracleBase
     uint256 public inTokenOneUnit;
 

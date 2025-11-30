@@ -1,0 +1,15 @@
+AltoOwnable2Step::transferOwnershipSkip2Step(address)
+├── given caller is not owner
+│   └── it should revert with OwnableUnauthorizedAccount
+├── given caller is owner
+│   ├── when newOwner is zero address
+│   │   ├── it should set owner to zero address (renounce ownership)
+│   │   ├── it should clear any pending owner
+│   │   └── it should emit OwnershipTransferred event
+│   └── when newOwner is valid address
+│       ├── it should set owner to newOwner immediately
+│       ├── it should clear any pending owner
+│       └── it should emit OwnershipTransferred event
+└── state invariants
+    └── it should not use 2-step transfer process
+

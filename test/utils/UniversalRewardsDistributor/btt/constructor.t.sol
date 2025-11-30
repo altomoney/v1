@@ -40,7 +40,7 @@ contract UniversalRewardsDistributorConstructor is Test {
 
         // it should inherit from all parent contracts correctly
         // Check that it properly implements all interfaces
-        assertEq(distributor.owner(), OWNER); // Ownable2Step
+        assertEq(distributor.owner(), OWNER); // Ownable
         assertEq(distributor.merkleRootTimelock(), INITIAL_TIMELOCK); // MerkleRootManager
         assertEq(distributor.nonce(OWNER), 0); // Auth
 
@@ -48,7 +48,7 @@ contract UniversalRewardsDistributorConstructor is Test {
         // We can't directly test the domain separator, but we can verify nonce works
         assertEq(distributor.nonce(address(0x123)), 0);
 
-        // it should initialize Ownable2Step with correct owner
+        // it should initialize Ownable with correct owner
         assertEq(distributor.owner(), OWNER);
         assertEq(distributor.pendingOwner(), address(0));
 
