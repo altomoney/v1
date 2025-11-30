@@ -6,6 +6,7 @@ import {TestHelperOz5} from "@layerzerolabs/test-devtools-evm-foundry/contracts/
 
 import {DeployAltoTestnet, AltoTestnetParams, AltoTestnetInput} from "@alto/deployments/testnet/DeployAltoTestnet.sol";
 import {AltoMulticallTestnet} from "@alto/deployments/testnet/contracts/AltoMulticallTestnet.sol";
+import {console} from "forge-std/console.sol";
 
 contract AltoReleaseTest is Test, TestHelperOz5 {
     AltoTestnetParams params;
@@ -16,19 +17,17 @@ contract AltoReleaseTest is Test, TestHelperOz5 {
         string memory rpcUrl = vm.rpcUrl("sepolia");
         vm.createSelectFork(rpcUrl);
 
-        altoMulticall = new AltoMulticallTestnet();
-
         params = AltoTestnetParams({
-            owner: address(this),
             skipLendingDeployment: false,
             lzEndpoint: address(0x6EDCE65403992e310A62460808c4b910D972f10f),
             wrappedNativeToken: 0x7b79995e5f793A07Bc00c21412e50Ecae098E7f9,
-            uniswapV3NonFungiblePositionManager: 0x1238536071E1c677A632429e3655c799b22cDA52
+            uniswapV3NonFungiblePositionManager: 0x1238536071E1c677A632429e3655c799b22cDA52,
+            deployer: address(this)
         });
     }
 
     function test_deployAltoTestnet() public {
-        params.owner = address(this);
+        params.deployer = address(this);
         input = DeployAltoTestnet.deploy(params, input);
     }
 }
