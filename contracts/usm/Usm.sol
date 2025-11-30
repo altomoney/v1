@@ -343,6 +343,7 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, AuthUpgradeabl
         _beforeBuyAsset(originator, assetAmount, receiver);
 
         require(assetAmount > 0, "INVALID_AMOUNT");
+        require(assetAmount >= minAmount, "INSUFFICIENT_OUTPUT_AMOUNT");
         require(_currentExposure >= assetAmount, "INSUFFICIENT_AVAILABLE_EXOGENOUS_ASSET_LIQUIDITY");
 
         _currentExposure -= uint128(assetAmount);
