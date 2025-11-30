@@ -8,12 +8,61 @@
         "internalType": "address"
       },
       {
-        "name": "initialTimelock",
+        "name": "_merkleRootTimelock",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "_rewardTokenAddress",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "MAX_ADAPTERS_WHITELIST",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
         "type": "uint256",
         "internalType": "uint256"
       }
     ],
-    "stateMutability": "nonpayable"
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "MAX_DISCOUNT",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "REWARD_TOKEN",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "token",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "decimals",
+        "type": "uint8",
+        "internalType": "uint8"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -37,27 +86,83 @@
   },
   {
     "type": "function",
-    "name": "claim",
+    "name": "adaptersWhitelist",
     "inputs": [
       {
-        "name": "onBehalf",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "rewardToken",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "totalRewardTokenAssignedToUser",
+        "name": "",
         "type": "uint256",
         "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "claimRewardTokens",
+    "inputs": [
+      {
+        "name": "claimData",
+        "type": "tuple",
+        "internalType": "struct ClaimData",
+        "components": [
+          {
+            "name": "totalRewardsForUser",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "discount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "id",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "expirationTimestamp",
+            "type": "uint256",
+            "internalType": "uint256"
+          }
+        ]
       },
       {
         "name": "proof",
         "type": "bytes32[]",
         "internalType": "bytes32[]"
+      },
+      {
+        "name": "rewardsPurchaseAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "paymentToken",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "lockPurchasedRewards",
+        "type": "bool",
+        "internalType": "bool"
+      },
+      {
+        "name": "maxEpochsToLockFor",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "onBehalf",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "outputs": [
@@ -68,30 +173,6 @@
       }
     ],
     "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "claimed",
-    "inputs": [
-      {
-        "name": "user",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "rewardToken",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "amount",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -188,6 +269,32 @@
         "name": "",
         "type": "bool",
         "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "lockBonusDiscount",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "lockContract",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "stateMutability": "view"
@@ -313,6 +420,30 @@
   },
   {
     "type": "function",
+    "name": "paymentTokens",
+    "inputs": [
+      {
+        "name": "token",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "oracle",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "decimals",
+        "type": "uint8",
+        "internalType": "uint8"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "pendingMerkleRoot",
     "inputs": [],
     "outputs": [
@@ -349,6 +480,30 @@
   },
   {
     "type": "function",
+    "name": "purchasedRewardTokenUser",
+    "inputs": [
+      {
+        "name": "account",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "id",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "amount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "renounceOwnership",
     "inputs": [],
     "outputs": [],
@@ -356,10 +511,10 @@
   },
   {
     "type": "function",
-    "name": "rescueRewardTokens",
+    "name": "revokeAdapter",
     "inputs": [
       {
-        "name": "token",
+        "name": "adapter",
         "type": "address",
         "internalType": "address"
       }
@@ -379,6 +534,19 @@
     ],
     "outputs": [],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "rewardTokenUsdOracle",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -462,6 +630,32 @@
   },
   {
     "type": "function",
+    "name": "setLockBonusDiscount",
+    "inputs": [
+      {
+        "name": "newLockBonusDiscount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setLockContract",
+    "inputs": [
+      {
+        "name": "newLockContract",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "setMerkleRootTimelock",
     "inputs": [
       {
@@ -516,6 +710,37 @@
   },
   {
     "type": "function",
+    "name": "setPaymentToken",
+    "inputs": [
+      {
+        "name": "token",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "oracle",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setRewardTokenUsdOracle",
+    "inputs": [
+      {
+        "name": "newOracle",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "submitNewPendingRoot",
     "inputs": [
       {
@@ -540,6 +765,50 @@
         "name": "newOwner",
         "type": "address",
         "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "transferOwnershipSkip2Step",
+    "inputs": [
+      {
+        "name": "newOwner",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "whitelistAdapter",
+    "inputs": [
+      {
+        "name": "adapter",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "withdrawContractTokens",
+    "inputs": [
+      {
+        "name": "token",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "outputs": [],
@@ -572,7 +841,7 @@
   },
   {
     "type": "event",
-    "name": "ClaimRewardToken",
+    "name": "ClaimRewardTokens",
     "inputs": [
       {
         "name": "caller",
@@ -587,13 +856,31 @@
         "internalType": "address"
       },
       {
-        "name": "rewardToken",
+        "name": "id",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "rewardTokenAmount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "paymentToken",
         "type": "address",
         "indexed": false,
         "internalType": "address"
       },
       {
-        "name": "amount",
+        "name": "paymentTokenAmount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "discount",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
@@ -722,25 +1009,13 @@
   },
   {
     "type": "event",
-    "name": "RescueRewardTokens",
+    "name": "RevokeAdapter",
     "inputs": [
       {
-        "name": "token",
+        "name": "adapter",
         "type": "address",
         "indexed": true,
         "internalType": "address"
-      },
-      {
-        "name": "to",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "amount",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
       }
     ],
     "anonymous": false
@@ -797,6 +1072,32 @@
   },
   {
     "type": "event",
+    "name": "SetLockBonusDiscount",
+    "inputs": [
+      {
+        "name": "lockBonusDiscount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "SetLockContract",
+    "inputs": [
+      {
+        "name": "lockContract",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "SetMerkleRootTimelock",
     "inputs": [
       {
@@ -829,6 +1130,38 @@
   },
   {
     "type": "event",
+    "name": "SetPaymentToken",
+    "inputs": [
+      {
+        "name": "token",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "oracle",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "SetRewardTokenUsdOracle",
+    "inputs": [
+      {
+        "name": "oracle",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "SubmitPendingMerkleRoot",
     "inputs": [
       {
@@ -851,6 +1184,74 @@
       }
     ],
     "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "WhitelistAdapter",
+    "inputs": [
+      {
+        "name": "adapter",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "WithdrawContractTokens",
+    "inputs": [
+      {
+        "name": "token",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "to",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "error",
+    "name": "AltoRewardsDistributorInvalidAdapterPaymentTokenShare",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "AltoRewardsDistributorInvalidInput",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "AltoRewardsDistributorLockContractNotSet",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "AltoRewardsDistributorLockInvalidOraclePrice",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "AltoRewardsDistributorLockRewardsOracleNotSet",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "AltoRewardsDistributorUnauthorized",
+    "inputs": []
   },
   {
     "type": "error",
@@ -944,21 +1345,6 @@
         "internalType": "address"
       }
     ]
-  },
-  {
-    "type": "error",
-    "name": "RewardsDistributorInvalidInput",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "RewardsDistributorNotPaused",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "RewardsDistributorUnauthorized",
-    "inputs": []
   },
   {
     "type": "error",

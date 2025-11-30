@@ -186,6 +186,21 @@ contract DeployAltoTestnetScript is Script {
                 "susdeMarket", "liquidationEngine", input.contracts.susdeMarketBatch.liquidationEngine
             );
         }
+
+        // Build usdc usm batch JSON
+        string memory usdcUsmBatchJson = "";
+        {
+            usdcUsmBatchJson = vm.serializeAddress("usdcUsmBatch", "dusdUsm", input.contracts.usdcUsmBatch.dusdUsm);
+            usdcUsmBatchJson = vm.serializeAddress(
+                "usdcUsmBatch", "dusdUsmImplementation", input.contracts.usdcUsmBatch.dusdUsmImplementation
+            );
+            usdcUsmBatchJson = vm.serializeAddress(
+                "usdcUsmBatch", "fixedPriceStrategy", input.contracts.usdcUsmBatch.fixedPriceStrategy
+            );
+            usdcUsmBatchJson =
+                vm.serializeAddress("usdcUsmBatch", "fixedFeeStrategy", input.contracts.usdcUsmBatch.fixedFeeStrategy);
+        }
+
         // Build staking batch JSON
         string memory stakingBatchJson = "";
         {
@@ -226,6 +241,7 @@ contract DeployAltoTestnetScript is Script {
             contractsJson = vm.serializeString("contracts", "wbtcMarketBatch", wbtcMarketJson);
             contractsJson = vm.serializeString("contracts", "cbbtcMarketBatch", cbbtcMarketJson);
             contractsJson = vm.serializeString("contracts", "susdeMarketBatch", susdeMarketJson);
+            contractsJson = vm.serializeString("contracts", "usdcUsmBatch", usdcUsmBatchJson);
             contractsJson = vm.serializeString("contracts", "stakingBatch", stakingBatchJson);
             contractsJson = vm.serializeString("contracts", "rewardsBatch", rewardsBatchJson);
         }
@@ -364,6 +380,15 @@ contract DeployAltoTestnetScript is Script {
         loadedInput.contracts.susdeMarketBatch.liquidationEngine =
             vm.parseJsonAddress(json, ".contracts.susdeMarketBatch.liquidationEngine");
 
+        // Load usdc usm batch
+        loadedInput.contracts.usdcUsmBatch.dusdUsm = vm.parseJsonAddress(json, ".contracts.usdcUsmBatch.dusdUsm");
+        loadedInput.contracts.usdcUsmBatch.dusdUsmImplementation =
+            vm.parseJsonAddress(json, ".contracts.usdcUsmBatch.dusdUsmImplementation");
+        loadedInput.contracts.usdcUsmBatch.fixedPriceStrategy =
+            vm.parseJsonAddress(json, ".contracts.usdcUsmBatch.fixedPriceStrategy");
+        loadedInput.contracts.usdcUsmBatch.fixedFeeStrategy =
+            vm.parseJsonAddress(json, ".contracts.usdcUsmBatch.fixedFeeStrategy");
+
         // Load staking batch
         loadedInput.contracts.stakingBatch.stakingContract =
             vm.parseJsonAddress(json, ".contracts.stakingBatch.stakingContract");
@@ -419,6 +444,12 @@ contract DeployAltoTestnetScript is Script {
         _extractContractABI("AdaptiveCurveIrm", abiFolder);
         _extractContractABI("FixedRateIrm", abiFolder);
         _extractContractABI("OracleTestnet", abiFolder);
+        _extractContractABI("IAltoLiquidationEngine", abiFolder);
+
+        // Extract ABIs for DUSDUsm contract
+        _extractContractABI("DUSDUsm", abiFolder);
+        _extractContractABI("FixedPriceStrategy", abiFolder);
+        _extractContractABI("FixedFeeStrategy", abiFolder);
 
         // Extract ABIs for staking contracts
         _extractContractABI("AltoStaking", abiFolder);

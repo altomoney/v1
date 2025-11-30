@@ -73,17 +73,17 @@
     "name": "addSupply",
     "inputs": [
       {
-        "name": "",
+        "name": "assets",
         "type": "uint256",
         "internalType": "uint256"
       },
       {
-        "name": "",
+        "name": "shares",
         "type": "uint256",
         "internalType": "uint256"
       },
       {
-        "name": "",
+        "name": "onBehalf",
         "type": "address",
         "internalType": "address"
       }
@@ -198,52 +198,7 @@
   },
   {
     "type": "function",
-    "name": "claimInterest",
-    "inputs": [
-      {
-        "name": "interest",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "claimableFeesAssets",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint128",
-        "internalType": "uint128"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "collateralToken",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "dusdOracle",
     "inputs": [],
     "outputs": [
       {
@@ -312,12 +267,36 @@
   },
   {
     "type": "function",
+    "name": "governanceLiquidate",
+    "inputs": [
+      {
+        "name": "borrower",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "initialize",
     "inputs": [
       {
         "name": "_initParams",
         "type": "tuple",
-        "internalType": "struct MintMarketInitParams",
+        "internalType": "struct BorrowMarketInitParams",
         "components": [
           {
             "name": "baseMarketInitParams",
@@ -360,83 +339,21 @@
                 "internalType": "address"
               },
               {
-                "name": "liquidationConfiguration",
-                "type": "tuple",
-                "internalType": "struct LiquidationConfiguration",
-                "components": [
-                  {
-                    "name": "maxLiquidationLtv",
-                    "type": "uint256",
-                    "internalType": "uint256"
-                  },
-                  {
-                    "name": "dynamicBonusFeeStart",
-                    "type": "uint256",
-                    "internalType": "uint256"
-                  },
-                  {
-                    "name": "ltvForCompleteLiquidation",
-                    "type": "uint256",
-                    "internalType": "uint256"
-                  },
-                  {
-                    "name": "dynamicBonusFeeDecaySteepness",
-                    "type": "uint256",
-                    "internalType": "uint256"
-                  },
-                  {
-                    "name": "liquidationBaseFee",
-                    "type": "uint256",
-                    "internalType": "uint256"
-                  },
-                  {
-                    "name": "minPenaltyPercentage",
-                    "type": "uint256",
-                    "internalType": "uint256"
-                  },
-                  {
-                    "name": "protocolFeePercentage",
-                    "type": "uint256",
-                    "internalType": "uint256"
-                  },
-                  {
-                    "name": "isEnabledPriorityLiquidation",
-                    "type": "bool",
-                    "internalType": "bool"
-                  },
-                  {
-                    "name": "disablePriorityLiquidationAbovePositionLtv",
-                    "type": "uint256",
-                    "internalType": "uint256"
-                  },
-                  {
-                    "name": "priorityLiquidationGracePeriod",
-                    "type": "uint32",
-                    "internalType": "uint32"
-                  },
-                  {
-                    "name": "taggerLiquidationGracePeriod",
-                    "type": "uint32",
-                    "internalType": "uint32"
-                  },
-                  {
-                    "name": "liquidationWindowTag",
-                    "type": "uint32",
-                    "internalType": "uint32"
-                  }
-                ]
+                "name": "liquidationEngine",
+                "type": "address",
+                "internalType": "address"
               }
             ]
-          },
-          {
-            "name": "debtCeiling",
-            "type": "uint256",
-            "internalType": "uint256"
           },
           {
             "name": "initialBorrowOpeningFee",
             "type": "uint256",
             "internalType": "uint256"
+          },
+          {
+            "name": "supplyCapAssets",
+            "type": "uint128",
+            "internalType": "uint128"
           }
         ]
       }
@@ -483,35 +400,6 @@
   },
   {
     "type": "function",
-    "name": "liquidablePositions",
-    "inputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "tagged",
-        "type": "bool",
-        "internalType": "bool"
-      },
-      {
-        "name": "tagger",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "timestamp",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "liquidate",
     "inputs": [
       {
@@ -520,7 +408,12 @@
         "internalType": "address"
       },
       {
-        "name": "data",
+        "name": "callbackData",
+        "type": "bytes",
+        "internalType": "bytes"
+      },
+      {
+        "name": "liquidationData",
         "type": "bytes",
         "internalType": "bytes"
       }
@@ -546,68 +439,13 @@
   },
   {
     "type": "function",
-    "name": "liquidationConfiguration",
+    "name": "liquidationEngine",
     "inputs": [],
     "outputs": [
       {
-        "name": "maxLiquidationLtv",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "dynamicBonusFeeStart",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "ltvForCompleteLiquidation",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "dynamicBonusFeeDecaySteepness",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "liquidationBaseFee",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "minPenaltyPercentage",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "protocolFeePercentage",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "isEnabledPriorityLiquidation",
-        "type": "bool",
-        "internalType": "bool"
-      },
-      {
-        "name": "disablePriorityLiquidationAbovePositionLtv",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "priorityLiquidationGracePeriod",
-        "type": "uint32",
-        "internalType": "uint32"
-      },
-      {
-        "name": "taggerLiquidationGracePeriod",
-        "type": "uint32",
-        "internalType": "uint32"
-      },
-      {
-        "name": "liquidationWindowTag",
-        "type": "uint32",
-        "internalType": "uint32"
+        "name": "",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "stateMutability": "view"
@@ -775,25 +613,6 @@
   },
   {
     "type": "function",
-    "name": "priorityLiquidators",
-    "inputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bool",
-        "internalType": "bool"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "proxiableUUID",
     "inputs": [],
     "outputs": [
@@ -844,22 +663,22 @@
     "name": "removeSupply",
     "inputs": [
       {
-        "name": "",
+        "name": "assets",
         "type": "uint256",
         "internalType": "uint256"
       },
       {
-        "name": "",
+        "name": "shares",
         "type": "uint256",
         "internalType": "uint256"
       },
       {
-        "name": "",
+        "name": "onBehalf",
         "type": "address",
         "internalType": "address"
       },
       {
-        "name": "",
+        "name": "receiver",
         "type": "address",
         "internalType": "address"
       }
@@ -1032,32 +851,6 @@
   },
   {
     "type": "function",
-    "name": "setDebtCeiling",
-    "inputs": [
-      {
-        "name": "_debtCeiling",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "setDusdOracle",
-    "inputs": [
-      {
-        "name": "_dusdOracle",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
     "name": "setFeeRecipient",
     "inputs": [
       {
@@ -1077,6 +870,11 @@
         "name": "_irm",
         "type": "address",
         "internalType": "address"
+      },
+      {
+        "name": "_skipAccrueInterest",
+        "type": "bool",
+        "internalType": "bool"
       }
     ],
     "outputs": [],
@@ -1084,74 +882,12 @@
   },
   {
     "type": "function",
-    "name": "setLiquidationConfiguration",
+    "name": "setLiquidationEngine",
     "inputs": [
       {
-        "name": "_liquidationConfiguration",
-        "type": "tuple",
-        "internalType": "struct LiquidationConfiguration",
-        "components": [
-          {
-            "name": "maxLiquidationLtv",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "dynamicBonusFeeStart",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "ltvForCompleteLiquidation",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "dynamicBonusFeeDecaySteepness",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "liquidationBaseFee",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "minPenaltyPercentage",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "protocolFeePercentage",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "isEnabledPriorityLiquidation",
-            "type": "bool",
-            "internalType": "bool"
-          },
-          {
-            "name": "disablePriorityLiquidationAbovePositionLtv",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "priorityLiquidationGracePeriod",
-            "type": "uint32",
-            "internalType": "uint32"
-          },
-          {
-            "name": "taggerLiquidationGracePeriod",
-            "type": "uint32",
-            "internalType": "uint32"
-          },
-          {
-            "name": "liquidationWindowTag",
-            "type": "uint32",
-            "internalType": "uint32"
-          }
-        ]
+        "name": "_liquidationEngine",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "outputs": [],
@@ -1208,17 +944,12 @@
   },
   {
     "type": "function",
-    "name": "setPriorityLiquidator",
+    "name": "setSupplyCap",
     "inputs": [
       {
-        "name": "liquidator",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "status",
-        "type": "bool",
-        "internalType": "bool"
+        "name": "_newSupplyCapAssets",
+        "type": "uint128",
+        "internalType": "uint128"
       }
     ],
     "outputs": [],
@@ -1226,21 +957,16 @@
   },
   {
     "type": "function",
-    "name": "tagLiquidablePosition",
-    "inputs": [
+    "name": "supplyCapAssets",
+    "inputs": [],
+    "outputs": [
       {
-        "name": "user",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "liquidator",
-        "type": "address",
-        "internalType": "address"
+        "name": "",
+        "type": "uint128",
+        "internalType": "uint128"
       }
     ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -1281,6 +1007,19 @@
   {
     "type": "function",
     "name": "transferOwnership",
+    "inputs": [
+      {
+        "name": "newOwner",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "transferOwnershipSkip2Step",
     "inputs": [
       {
         "name": "newOwner",
@@ -1453,6 +1192,43 @@
   },
   {
     "type": "event",
+    "name": "GovernanceLiquidation",
+    "inputs": [
+      {
+        "name": "user",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "liquidator",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      },
+      {
+        "name": "liquidatedCollateral",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "badDebtClearedAssets",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "badDebtClearedShares",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "IncrementNonce",
     "inputs": [
       {
@@ -1491,37 +1267,12 @@
   },
   {
     "type": "event",
-    "name": "InterestClaimed",
-    "inputs": [
-      {
-        "name": "amount",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
     "name": "Liquidation",
     "inputs": [
       {
         "name": "user",
         "type": "address",
         "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "collateralToken",
-        "type": "address",
-        "indexed": false,
-        "internalType": "address"
-      },
-      {
-        "name": "borrowToken",
-        "type": "address",
-        "indexed": false,
         "internalType": "address"
       },
       {
@@ -1538,12 +1289,6 @@
       },
       {
         "name": "protocolFee",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      },
-      {
-        "name": "liquidatorFee",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
@@ -1653,50 +1398,6 @@
         "type": "bytes32",
         "indexed": false,
         "internalType": "bytes32"
-      },
-      {
-        "name": "status",
-        "type": "bool",
-        "indexed": false,
-        "internalType": "bool"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "PositionTagged",
-    "inputs": [
-      {
-        "name": "user",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "tagger",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "timestamp",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "PriorityLiquidatorUpdated",
-    "inputs": [
-      {
-        "name": "liquidator",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
       },
       {
         "name": "status",
@@ -1877,44 +1578,6 @@
   },
   {
     "type": "event",
-    "name": "SetDebtCeiling",
-    "inputs": [
-      {
-        "name": "oldDebtCeiling",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      },
-      {
-        "name": "newDebtCeiling",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "SetDusdOracle",
-    "inputs": [
-      {
-        "name": "oldDusdOracle",
-        "type": "address",
-        "indexed": false,
-        "internalType": "address"
-      },
-      {
-        "name": "newDusdOracle",
-        "type": "address",
-        "indexed": false,
-        "internalType": "address"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
     "name": "SetFeeRecipient",
     "inputs": [
       {
@@ -1953,143 +1616,19 @@
   },
   {
     "type": "event",
-    "name": "SetLiquidationConfiguration",
+    "name": "SetLiquidationEngine",
     "inputs": [
       {
-        "name": "oldLiquidationConfiguration",
-        "type": "tuple",
-        "indexed": false,
-        "internalType": "struct LiquidationConfiguration",
-        "components": [
-          {
-            "name": "maxLiquidationLtv",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "dynamicBonusFeeStart",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "ltvForCompleteLiquidation",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "dynamicBonusFeeDecaySteepness",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "liquidationBaseFee",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "minPenaltyPercentage",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "protocolFeePercentage",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "isEnabledPriorityLiquidation",
-            "type": "bool",
-            "internalType": "bool"
-          },
-          {
-            "name": "disablePriorityLiquidationAbovePositionLtv",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "priorityLiquidationGracePeriod",
-            "type": "uint32",
-            "internalType": "uint32"
-          },
-          {
-            "name": "taggerLiquidationGracePeriod",
-            "type": "uint32",
-            "internalType": "uint32"
-          },
-          {
-            "name": "liquidationWindowTag",
-            "type": "uint32",
-            "internalType": "uint32"
-          }
-        ]
+        "name": "oldLiquidationEngine",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
       },
       {
-        "name": "newLiquidationConfiguration",
-        "type": "tuple",
-        "indexed": false,
-        "internalType": "struct LiquidationConfiguration",
-        "components": [
-          {
-            "name": "maxLiquidationLtv",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "dynamicBonusFeeStart",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "ltvForCompleteLiquidation",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "dynamicBonusFeeDecaySteepness",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "liquidationBaseFee",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "minPenaltyPercentage",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "protocolFeePercentage",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "isEnabledPriorityLiquidation",
-            "type": "bool",
-            "internalType": "bool"
-          },
-          {
-            "name": "disablePriorityLiquidationAbovePositionLtv",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "priorityLiquidationGracePeriod",
-            "type": "uint32",
-            "internalType": "uint32"
-          },
-          {
-            "name": "taggerLiquidationGracePeriod",
-            "type": "uint32",
-            "internalType": "uint32"
-          },
-          {
-            "name": "liquidationWindowTag",
-            "type": "uint32",
-            "internalType": "uint32"
-          }
-        ]
+        "name": "newLiquidationEngine",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
       }
     ],
     "anonymous": false
@@ -2128,6 +1667,25 @@
         "type": "address",
         "indexed": true,
         "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "SetSupplyCap",
+    "inputs": [
+      {
+        "name": "oldSupplyCapAssets",
+        "type": "uint128",
+        "indexed": false,
+        "internalType": "uint128"
+      },
+      {
+        "name": "newSupplyCapAssets",
+        "type": "uint128",
+        "indexed": false,
+        "internalType": "uint128"
       }
     ],
     "anonymous": false
@@ -2178,37 +1736,17 @@
   },
   {
     "type": "error",
-    "name": "AltoBaseMarketLiquidatingSolventPosition",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "AltoBaseMarketLiquidationAlreadyTagged",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "AltoBaseMarketLiquidationUnauthorized",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "AltoBaseMarketPriorityLiquidationDisabled",
-    "inputs": []
-  },
-  {
-    "type": "error",
     "name": "AltoBaseMarketUnauthorized",
     "inputs": []
   },
   {
     "type": "error",
-    "name": "AltoMintMarketInvalidInput",
+    "name": "AltoBorrowMarketInvalidInput",
     "inputs": []
   },
   {
     "type": "error",
-    "name": "AltoMintMarketNotImplemented",
+    "name": "AltoBorrowMarketSupplyCapExceeded",
     "inputs": []
   },
   {
@@ -2299,6 +1837,11 @@
         "internalType": "address"
       }
     ]
+  },
+  {
+    "type": "error",
+    "name": "ReentrancyGuardReentrantCall",
+    "inputs": []
   },
   {
     "type": "error",

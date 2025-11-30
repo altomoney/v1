@@ -52,7 +52,11 @@ import {
 } from "@alto/deployments/testnet/interfaces/INonfungiblePositionManager.sol";
 import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import {AltoOwnable2Step} from "@alto/utils/AltoOwnable2Step.sol";
-import {console} from "forge-std/console.sol";
+import {
+    TestnetUsmBatch,
+    TestnetUsmBatchParams,
+    TestnetUsmBatchReport
+} from "@alto/deployments/testnet/TestnetUsmBatch.sol";
 
 struct AltoTestnetInput {
     TestnetTokens tokens;
@@ -76,6 +80,7 @@ struct Contracts {
     TestnetMarketBatchReport susdeMarketBatch;
     TestnetStakingBatchReport stakingBatch;
     TestnetRewardsBatchReport rewardsBatch;
+    TestnetUsmBatchReport usdcUsmBatch;
 }
 
 struct TestnetTokens {
@@ -334,6 +339,21 @@ library DeployAltoTestnet {
         AltoAdapter(payable(input.contracts.altoAdapter)).approveContract(input.contracts.susdeMarketBatch.market);
 
         AltoOwnable2Step(input.contracts.altoLeverage).transferOwnershipSkip2Step(contractOwner);
+
+        input.contracts.usdcUsmBatch = (new TestnetUsmBatch(
+                        TestnetUsmBatchParams({
+                            owner: contractOwner,
+                            dusd: input.tokens.dusd,
+                            underlyingAsset: input.tokens.usdc,
+                            buyFee: 0.005e4, // 0.5%
+                            sellFee: 0.005e4, // 0.5%
+                            exposureCap: 100_000 * 10 ** 6 // 100,000 USDC
+                        })
+                    )).getReport();
+
+        DUSD(input.tokens.dusd).setMinterStatus(input.contracts.usdcUsmBatch.dusdUsm, true);
+        DUSD(input.tokens.dusd).setMinterCeiling(input.contracts.usdcUsmBatch.dusdUsm, 100_000 ether);
+        DUSD(input.tokens.dusd).setBurnerStatus(input.contracts.usdcUsmBatch.dusdUsm, true);
 
         return input;
     }
