@@ -6,6 +6,7 @@ import {IRewardsDistributor} from "@alto/rewards/interfaces/IRewardsDistributor.
 import {OracleTestnet} from "@alto/deployments/testnet/contracts/OracleTestnet.sol";
 import {getMerkleManagerUpdaters} from "@alto/deployments/testnet/Constants.sol";
 import {IMerkleRootManager} from "@alto/utils/interfaces/IMerkleRootManager.sol";
+import {AltoOwnable2Step} from "@alto/utils/AltoOwnable2Step.sol";
 
 struct TestnetRewardsBatchParams {
     address owner;
@@ -65,7 +66,7 @@ contract TestnetRewardsBatch {
 
         report.rewardsDistributor = address(rewardsDistributor);
 
-        AltoRewardsDistributor(report.rewardsDistributor).transferOwnership(_params.owner);
+        AltoOwnable2Step(report.rewardsDistributor).transferOwnershipSkip2Step(_params.owner);
     }
 
     function getRewardsDistributorReport() public view returns (TestnetRewardsBatchReport memory) {

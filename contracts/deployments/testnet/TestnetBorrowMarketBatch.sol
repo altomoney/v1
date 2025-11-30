@@ -9,7 +9,8 @@ import {BorrowMarketInitParams, BaseMarketInitParams} from "@alto/lending/interf
 import {ITestnetMarketBatch, TestnetMarketBatchReport} from "./ITestnetMarketBatch.sol";
 import {AltoLiquidationEngine} from "@alto/lending/AltoLiquidationEngine.sol";
 import {LiquidationConfiguration} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
-import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import {AltoOwnable2Step} from "@alto/utils/AltoOwnable2Step.sol";
+import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
 
 struct TestnetBorrowMarketBatchParams {
     address owner;
@@ -18,6 +19,7 @@ struct TestnetBorrowMarketBatchParams {
     uint256 marketOraclePrice;
     uint256 maxLtv;
     uint128 supplyCapAssets;
+    address leverageAddress;
 }
 
 int256 constant YEAR = int256(365 days);
@@ -72,7 +74,7 @@ contract TestnetBorrowMarketBatch is ITestnetMarketBatch {
             borrowToken: _params.borrowToken,
             collateralToken: _params.collateralToken,
             irm: marketIrm,
-            owner: _params.owner,
+            owner: address(this),
             oracle: marketOracle,
             maxLtv: _params.maxLtv,
             feeRecipient: _params.owner,
@@ -92,7 +94,10 @@ contract TestnetBorrowMarketBatch is ITestnetMarketBatch {
         AltoLiquidationEngine(liquidationEngine).setLiquidationConfiguration(liquidationConfig);
 
         // Transfer ownership to the actual owner (initiate two-step transfer)
-        Ownable2Step(liquidationEngine).transferOwnership(_params.owner);
+        AltoOwnable2Step(liquidationEngine).transferOwnershipSkip2Step(_params.owner);
+
+        IMarket(marketProxy).setAuthorizedCallback(_params.leverageAddress, true);
+        AltoOwnable2Step(marketProxy).transferOwnershipSkip2Step(_params.owner);
 
         report = TestnetMarketBatchReport({
             marketImplementation: market,

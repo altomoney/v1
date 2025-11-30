@@ -6,8 +6,10 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 contract AltoMulticallTestnet {
     mapping(address => bool) public _owners;
 
-    constructor() {
-        _owners[msg.sender] = true;
+    constructor(address[] memory owners) {
+        for (uint256 i = 0; i < owners.length; i++) {
+            _owners[owners[i]] = true;
+        }
     }
 
     struct Call {

@@ -20,7 +20,7 @@ import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
 import {IAltoLiquidationEngine} from "@alto/lending/interfaces/IAltoLiquidationEngine.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
-import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Bundler3} from "@morpho-org/bundler3/Bundler3.sol";
 import {AltoAdapter} from "@alto/utils/AltoAdapter.sol";
 
@@ -51,6 +51,8 @@ import {
     MintParams
 } from "@alto/deployments/testnet/interfaces/INonfungiblePositionManager.sol";
 import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+import {AltoOwnable2Step} from "@alto/utils/AltoOwnable2Step.sol";
+import {console} from "forge-std/console.sol";
 
 struct AltoTestnetInput {
     TestnetTokens tokens;
@@ -95,11 +97,11 @@ struct TestnetTokens {
 }
 
 struct AltoTestnetParams {
-    address owner;
     bool skipLendingDeployment;
     address lzEndpoint;
     address wrappedNativeToken;
     address uniswapV3NonFungiblePositionManager;
+    address deployer;
 }
 
 library DeployAltoTestnet {
@@ -130,11 +132,7 @@ library DeployAltoTestnet {
         internal
         returns (AltoTestnetInput memory)
     {
-        input.contracts.altoMulticall = address(new AltoMulticallTestnet());
-        address[] memory ownerAddresses = getMulticallOwnerAddresses();
-        for (uint256 i = 0; i < ownerAddresses.length; i++) {
-            AltoMulticallTestnet(payable(input.contracts.altoMulticall)).setOwner(ownerAddresses[i], true);
-        }
+        input.contracts.altoMulticall = address(new AltoMulticallTestnet(getMulticallOwnerAddresses()));
         return input;
     }
 
@@ -142,6 +140,8 @@ library DeployAltoTestnet {
         internal
         returns (AltoTestnetInput memory)
     {
+        address contractOwner = input.contracts.altoMulticall;
+
         if (params.skipLendingDeployment) {
             return input;
         }
@@ -149,17 +149,19 @@ library DeployAltoTestnet {
         // deploy bundler3 and alto adapter
         input.contracts.bundler3 = address(new Bundler3());
         input.contracts.altoAdapter =
-            address(new AltoAdapter(input.contracts.bundler3, params.wrappedNativeToken, params.owner));
+            address(new AltoAdapter(input.contracts.bundler3, params.wrappedNativeToken, params.deployer));
 
         // deploy multi token sender
-        input.contracts.multiTokenSender = address(new MultiTokenSender(params.owner));
+        input.contracts.multiTokenSender = address(new MultiTokenSender(params.deployer));
         MultiTokenSender(input.contracts.multiTokenSender).updateWhitelist(BACKEND_TESTNET_ADDRESS, true);
+        Ownable(input.contracts.multiTokenSender).transferOwnership(contractOwner);
 
         // deploy leverage and mock swapper
-        input.contracts.mockSwapper = address(new SwapperSimpleMock(params.owner));
-        input.contracts.altoLeverage = address(new AltoLeverage(input.contracts.mockSwapper, params.owner));
+        input.contracts.mockSwapper = address(new SwapperSimpleMock(params.deployer));
+        input.contracts.altoLeverage = address(new AltoLeverage(input.contracts.mockSwapper, params.deployer));
         SwapperSimpleMock(payable(input.contracts.mockSwapper))
             .setWhitelisted(address(input.contracts.altoLeverage), true);
+        Ownable(input.contracts.mockSwapper).transferOwnership(contractOwner);
 
         // deploy and mint tokens to the owner
         input = _deployMintFundTokens(params, input);
@@ -167,19 +169,20 @@ library DeployAltoTestnet {
         // Mint Markets
         input.contracts.wethMarketBatch = (new TestnetMintMarketBatch(
                 TestnetMintMarketBatchParams({
-                    owner: params.owner,
+                    owner: contractOwner,
                     collateralToken: address(input.tokens.weth),
                     borrowToken: address(input.tokens.dusd),
                     marketOraclePrice: 4100 * LENDING_ORACLE_PRICE_PRECISION,
                     maxLtv: 0.75 ether,
                     debtCeiling: 500_000 ether,
-                    fixedRateIrmInterestRate: 0.035 ether / uint256(365 days)
+                    fixedRateIrmInterestRate: 0.035 ether / uint256(365 days),
+                    leverageAddress: input.contracts.altoLeverage
                 })
             ))
         .getMarketReport();
 
         AltoLeverage(input.contracts.altoLeverage).setMarket(input.contracts.wethMarketBatch.market, true);
-        IMarket(input.contracts.wethMarketBatch.market).setAuthorizedCallback(input.contracts.altoLeverage, true);
+
         DUSD(input.tokens.dusd).setMinterStatus(input.contracts.wethMarketBatch.market, true);
         DUSD(input.tokens.dusd)
             .setMinterCeiling(
@@ -190,19 +193,19 @@ library DeployAltoTestnet {
 
         input.contracts.wstethMarketBatch = (new TestnetMintMarketBatch(
                 TestnetMintMarketBatchParams({
-                    owner: params.owner,
+                    owner: contractOwner,
                     collateralToken: address(input.tokens.wsteth),
                     borrowToken: address(input.tokens.dusd),
                     marketOraclePrice: 5000 * LENDING_ORACLE_PRICE_PRECISION,
                     maxLtv: 0.75 ether,
                     debtCeiling: 300_000 ether,
-                    fixedRateIrmInterestRate: 0.035 ether / uint256(365 days)
+                    fixedRateIrmInterestRate: 0.035 ether / uint256(365 days),
+                    leverageAddress: input.contracts.altoLeverage
                 })
             ))
         .getMarketReport();
 
         AltoLeverage(input.contracts.altoLeverage).setMarket(input.contracts.wstethMarketBatch.market, true);
-        IMarket(input.contracts.wstethMarketBatch.market).setAuthorizedCallback(input.contracts.altoLeverage, true);
         DUSD(input.tokens.dusd).setMinterStatus(input.contracts.wstethMarketBatch.market, true);
         DUSD(input.tokens.dusd)
             .setMinterCeiling(
@@ -213,19 +216,19 @@ library DeployAltoTestnet {
 
         input.contracts.rethMarketBatch = (new TestnetMintMarketBatch(
                 TestnetMintMarketBatchParams({
-                    owner: params.owner,
+                    owner: contractOwner,
                     collateralToken: address(input.tokens.reth),
                     borrowToken: address(input.tokens.dusd),
                     marketOraclePrice: 4700 * LENDING_ORACLE_PRICE_PRECISION,
                     maxLtv: 0.75 ether,
                     debtCeiling: 100_000 ether,
-                    fixedRateIrmInterestRate: 0.04 ether / uint256(365 days)
+                    fixedRateIrmInterestRate: 0.04 ether / uint256(365 days),
+                    leverageAddress: input.contracts.altoLeverage
                 })
             ))
         .getMarketReport();
 
         AltoLeverage(input.contracts.altoLeverage).setMarket(input.contracts.rethMarketBatch.market, true);
-        IMarket(input.contracts.rethMarketBatch.market).setAuthorizedCallback(input.contracts.altoLeverage, true);
         DUSD(input.tokens.dusd).setMinterStatus(input.contracts.rethMarketBatch.market, true);
         DUSD(input.tokens.dusd)
             .setMinterCeiling(
@@ -236,19 +239,19 @@ library DeployAltoTestnet {
 
         input.contracts.methMarketBatch = (new TestnetMintMarketBatch(
                 TestnetMintMarketBatchParams({
-                    owner: params.owner,
+                    owner: contractOwner,
                     collateralToken: address(input.tokens.meth),
                     borrowToken: address(input.tokens.dusd),
                     marketOraclePrice: 4700 * LENDING_ORACLE_PRICE_PRECISION,
                     maxLtv: 0.75 ether,
                     debtCeiling: 100_000 ether,
-                    fixedRateIrmInterestRate: 0.04 ether / uint256(365 days)
+                    fixedRateIrmInterestRate: 0.04 ether / uint256(365 days),
+                    leverageAddress: input.contracts.altoLeverage
                 })
             ))
         .getMarketReport();
 
         AltoLeverage(input.contracts.altoLeverage).setMarket(input.contracts.methMarketBatch.market, true);
-        IMarket(input.contracts.methMarketBatch.market).setAuthorizedCallback(input.contracts.altoLeverage, true);
         DUSD(input.tokens.dusd).setMinterStatus(input.contracts.methMarketBatch.market, true);
         DUSD(input.tokens.dusd)
             .setMinterCeiling(
@@ -259,19 +262,19 @@ library DeployAltoTestnet {
 
         input.contracts.tbtcMarketBatch = (new TestnetMintMarketBatch(
                 TestnetMintMarketBatchParams({
-                    owner: params.owner,
+                    owner: contractOwner,
                     collateralToken: address(input.tokens.tbtc),
                     borrowToken: address(input.tokens.dusd),
                     marketOraclePrice: 112000 * LENDING_ORACLE_PRICE_PRECISION,
                     maxLtv: 0.75 ether,
                     debtCeiling: 100_000 ether,
-                    fixedRateIrmInterestRate: 0.04 ether / uint256(365 days)
+                    fixedRateIrmInterestRate: 0.04 ether / uint256(365 days),
+                    leverageAddress: input.contracts.altoLeverage
                 })
             ))
         .getMarketReport();
 
         AltoLeverage(input.contracts.altoLeverage).setMarket(input.contracts.tbtcMarketBatch.market, true);
-        IMarket(input.contracts.tbtcMarketBatch.market).setAuthorizedCallback(input.contracts.altoLeverage, true);
         DUSD(input.tokens.dusd).setMinterStatus(input.contracts.tbtcMarketBatch.market, true);
         DUSD(input.tokens.dusd)
             .setMinterCeiling(
@@ -283,51 +286,54 @@ library DeployAltoTestnet {
         // Borrow Markets
         input.contracts.wbtcMarketBatch = (new TestnetBorrowMarketBatch(
                 TestnetBorrowMarketBatchParams({
-                    owner: params.owner,
+                    owner: contractOwner,
                     collateralToken: address(input.tokens.wbtc),
                     borrowToken: address(input.tokens.dusd),
                     marketOraclePrice: 100_000 * LENDING_ORACLE_PRICE_PRECISION * 1e10,
                     maxLtv: 0.75 ether,
-                    supplyCapAssets: 0
+                    supplyCapAssets: 0,
+                    leverageAddress: input.contracts.altoLeverage
                 })
             ))
         .getMarketReport();
 
         AltoLeverage(input.contracts.altoLeverage).setMarket(input.contracts.wbtcMarketBatch.market, true);
-        IMarket(input.contracts.wbtcMarketBatch.market).setAuthorizedCallback(input.contracts.altoLeverage, true);
+
         AltoAdapter(payable(input.contracts.altoAdapter)).approveContract(input.contracts.wbtcMarketBatch.market);
 
         input.contracts.cbbtcMarketBatch = (new TestnetBorrowMarketBatch(
                 TestnetBorrowMarketBatchParams({
-                    owner: params.owner,
+                    owner: contractOwner,
                     collateralToken: address(input.tokens.cbbtc),
                     borrowToken: address(input.tokens.dusd),
                     marketOraclePrice: 100_000 * LENDING_ORACLE_PRICE_PRECISION * 1e10,
                     maxLtv: 0.75 ether,
-                    supplyCapAssets: 1_000_000 ether
+                    supplyCapAssets: 1_000_000 ether,
+                    leverageAddress: input.contracts.altoLeverage
                 })
             ))
         .getMarketReport();
 
         AltoLeverage(input.contracts.altoLeverage).setMarket(input.contracts.cbbtcMarketBatch.market, true);
-        IMarket(input.contracts.cbbtcMarketBatch.market).setAuthorizedCallback(input.contracts.altoLeverage, true);
         AltoAdapter(payable(input.contracts.altoAdapter)).approveContract(input.contracts.cbbtcMarketBatch.market);
 
         input.contracts.susdeMarketBatch = (new TestnetBorrowMarketBatch(
                 TestnetBorrowMarketBatchParams({
-                    owner: params.owner,
+                    owner: contractOwner,
                     collateralToken: address(input.tokens.susde),
                     borrowToken: address(input.tokens.dusd),
                     marketOraclePrice: 1.2 ether * LENDING_ORACLE_PRICE_PRECISION,
                     maxLtv: 0.75 ether,
-                    supplyCapAssets: 0
+                    supplyCapAssets: 0,
+                    leverageAddress: input.contracts.altoLeverage
                 })
             ))
         .getMarketReport();
 
         AltoLeverage(input.contracts.altoLeverage).setMarket(input.contracts.susdeMarketBatch.market, true);
-        IMarket(input.contracts.susdeMarketBatch.market).setAuthorizedCallback(input.contracts.altoLeverage, true);
         AltoAdapter(payable(input.contracts.altoAdapter)).approveContract(input.contracts.susdeMarketBatch.market);
+
+        AltoOwnable2Step(input.contracts.altoLeverage).transferOwnershipSkip2Step(contractOwner);
 
         return input;
     }
@@ -336,45 +342,57 @@ library DeployAltoTestnet {
         internal
         returns (AltoTestnetInput memory)
     {
-        input.tokens.alto = address(new AltoToken(params.lzEndpoint, params.owner));
+        address contractOwner = input.contracts.altoMulticall;
+        input.tokens.alto = address(new AltoToken(params.lzEndpoint, params.deployer));
+        Ownable(input.tokens.alto).transferOwnership(contractOwner);
+
         // all ALTO is already minted to the owner in the constructor
-        input.tokens.dusd = address(new DUSD(params.lzEndpoint, params.owner));
-        DUSD(input.tokens.dusd).setMinterStatus(params.owner, true);
-        DUSD(input.tokens.dusd).setMinterCeiling(params.owner, type(uint128).max);
+        input.tokens.dusd = address(new DUSD(params.lzEndpoint, params.deployer));
+        DUSD(input.tokens.dusd).setMinterStatus(params.deployer, true);
+        DUSD(input.tokens.dusd).setMinterCeiling(params.deployer, type(uint128).max);
         // we can't mint uint256 max as markets need to be able to mint during borrow/repay
-        DUSD(input.tokens.dusd).mint(params.owner, type(uint128).max);
-        DUSD(input.tokens.dusd).setMinterStatus(params.owner, false);
+        DUSD(input.tokens.dusd).mint(params.deployer, type(uint128).max);
+        DUSD(input.tokens.dusd).setMinterStatus(params.deployer, false);
 
         // Reward Payment Token
-        input.tokens.usdc = address(new ERC20Testnet("USDC", 6, params.owner));
-        ERC20Testnet(input.tokens.usdc).mint(params.owner, type(uint256).max);
+        input.tokens.usdc = address(new ERC20Testnet("USDC", 6, params.deployer));
+        ERC20Testnet(input.tokens.usdc).mint(params.deployer, type(uint256).max);
+        Ownable(input.tokens.usdc).transferOwnership(contractOwner);
 
         // Mint
-        input.tokens.weth = address(new ERC20Testnet("WETH", 18, params.owner));
-        ERC20Testnet(input.tokens.weth).mint(params.owner, type(uint256).max);
+        input.tokens.weth = address(new ERC20Testnet("WETH", 18, params.deployer));
+        ERC20Testnet(input.tokens.weth).mint(params.deployer, type(uint256).max);
+        Ownable(input.tokens.weth).transferOwnership(contractOwner);
 
-        input.tokens.wsteth = address(new ERC20Testnet("wstETH", 18, params.owner));
-        ERC20Testnet(input.tokens.wsteth).mint(params.owner, type(uint256).max);
+        input.tokens.wsteth = address(new ERC20Testnet("wstETH", 18, params.deployer));
+        ERC20Testnet(input.tokens.wsteth).mint(params.deployer, type(uint256).max);
+        Ownable(input.tokens.wsteth).transferOwnership(contractOwner);
 
-        input.tokens.reth = address(new ERC20Testnet("rETH", 18, params.owner));
-        ERC20Testnet(input.tokens.reth).mint(params.owner, type(uint256).max);
+        input.tokens.reth = address(new ERC20Testnet("rETH", 18, params.deployer));
+        ERC20Testnet(input.tokens.reth).mint(params.deployer, type(uint256).max);
+        Ownable(input.tokens.reth).transferOwnership(contractOwner);
 
-        input.tokens.meth = address(new ERC20Testnet("mETH", 18, params.owner));
-        ERC20Testnet(input.tokens.meth).mint(params.owner, type(uint256).max);
+        input.tokens.meth = address(new ERC20Testnet("mETH", 18, params.deployer));
+        ERC20Testnet(input.tokens.meth).mint(params.deployer, type(uint256).max);
+        Ownable(input.tokens.meth).transferOwnership(contractOwner);
 
-        input.tokens.tbtc = address(new ERC20Testnet("tBTC", 18, params.owner));
-        ERC20Testnet(input.tokens.tbtc).mint(params.owner, type(uint256).max);
+        input.tokens.tbtc = address(new ERC20Testnet("tBTC", 18, params.deployer));
+        ERC20Testnet(input.tokens.tbtc).mint(params.deployer, type(uint256).max);
+        Ownable(input.tokens.tbtc).transferOwnership(contractOwner);
 
         // Borrow
 
-        input.tokens.wbtc = address(new ERC20Testnet("wBTC", 8, params.owner));
-        ERC20Testnet(input.tokens.wbtc).mint(params.owner, type(uint256).max);
+        input.tokens.wbtc = address(new ERC20Testnet("wBTC", 8, params.deployer));
+        ERC20Testnet(input.tokens.wbtc).mint(params.deployer, type(uint256).max);
+        Ownable(input.tokens.wbtc).transferOwnership(contractOwner);
 
-        input.tokens.cbbtc = address(new ERC20Testnet("cbBTC", 8, params.owner));
-        ERC20Testnet(input.tokens.cbbtc).mint(params.owner, type(uint256).max);
+        input.tokens.cbbtc = address(new ERC20Testnet("cbBTC", 8, params.deployer));
+        ERC20Testnet(input.tokens.cbbtc).mint(params.deployer, type(uint256).max);
+        Ownable(input.tokens.cbbtc).transferOwnership(contractOwner);
 
-        input.tokens.susde = address(new ERC20Testnet("sUSDe", 18, params.owner));
-        ERC20Testnet(input.tokens.susde).mint(params.owner, type(uint256).max);
+        input.tokens.susde = address(new ERC20Testnet("sUSDe", 18, params.deployer));
+        ERC20Testnet(input.tokens.susde).mint(params.deployer, type(uint256).max);
+        Ownable(input.tokens.susde).transferOwnership(contractOwner);
 
         // fund tokens to the multi token sender
         IERC20(input.tokens.dusd).safeTransfer(input.contracts.multiTokenSender, DUSD_TOKEN_SUPPLY_TO_CONTRACTS);
@@ -410,9 +428,10 @@ library DeployAltoTestnet {
         internal
         returns (AltoTestnetInput memory)
     {
+        address contractOwner = input.contracts.altoMulticall;
         input.contracts.stakingBatch = (new TestnetStakingBatch(
                 TestnetStakingBatchParams({
-                    owner: params.owner,
+                    owner: contractOwner,
                     rewardToken: address(input.tokens.alto),
                     epochDuration: 3 days,
                     universalRewardsDistributorTimelock: 1 minutes
@@ -420,8 +439,6 @@ library DeployAltoTestnet {
             ))
         .getStakingContractReport();
 
-        Ownable2Step(input.contracts.stakingBatch.stakingContract).acceptOwnership();
-        Ownable2Step(input.contracts.stakingBatch.universalRewardsDistributor).acceptOwnership();
         AltoAdapter(payable(input.contracts.altoAdapter)).approveContract(input.contracts.stakingBatch.stakingContract);
         AltoAdapter(payable(input.contracts.altoAdapter))
             .approveContract(input.contracts.stakingBatch.universalRewardsDistributor);
@@ -440,9 +457,11 @@ library DeployAltoTestnet {
         paymentUsdOraclePrices[0] = 1 * USD_ORACLE_PRICE_PRECISION;
         paymentUsdOraclePrices[1] = 1 * USD_ORACLE_PRICE_PRECISION;
 
+        address contractOwner = input.contracts.altoMulticall;
+
         input.contracts.rewardsBatch = (new TestnetRewardsBatch(
                 TestnetRewardsBatchParams({
-                    owner: params.owner,
+                    owner: contractOwner,
                     rewardToken: address(input.tokens.alto),
                     merkleRootTimelock: 1 minutes,
                     paymentTokens: paymentTokens,
@@ -453,7 +472,7 @@ library DeployAltoTestnet {
                 })
             ))
         .getRewardsDistributorReport();
-        Ownable2Step(input.contracts.rewardsBatch.rewardsDistributor).acceptOwnership();
+
         AltoAdapter(payable(input.contracts.altoAdapter))
             .approveContract(input.contracts.rewardsBatch.rewardsDistributor);
 
@@ -480,7 +499,7 @@ library DeployAltoTestnet {
                 amount1Desired: 1_000_000 ether,
                 amount0Min: 0,
                 amount1Min: 0,
-                recipient: params.owner,
+                recipient: params.deployer,
                 deadline: block.timestamp + 1 days
             });
 
@@ -515,7 +534,7 @@ library DeployAltoTestnet {
                 amount1Desired: 1_000_000 ether,
                 amount0Min: 0,
                 amount1Min: 0,
-                recipient: params.owner,
+                recipient: params.deployer,
                 deadline: block.timestamp + 1 days
             });
 
@@ -554,7 +573,7 @@ library DeployAltoTestnet {
                 amount1Desired: 1_500_000 ether,
                 amount0Min: 0,
                 amount1Min: 0,
-                recipient: params.owner,
+                recipient: params.deployer,
                 deadline: block.timestamp + 1 days
             });
 
@@ -593,7 +612,7 @@ library DeployAltoTestnet {
                 amount1Desired: 1_000_000 * 10 ** 6,
                 amount0Min: 0,
                 amount1Min: 0,
-                recipient: params.owner,
+                recipient: params.deployer,
                 deadline: block.timestamp + 1 days
             });
 
@@ -625,251 +644,8 @@ library DeployAltoTestnet {
     }
 
     function _transferOwnership(AltoTestnetParams memory params, AltoTestnetInput memory input) internal {
-        AltoMulticallTestnet.Call[] memory calls = new AltoMulticallTestnet.Call[](30);
-
-        address altoMulticall = input.contracts.altoMulticall;
-
-        // Core contracts
-        Ownable(input.contracts.multiTokenSender).transferOwnership(altoMulticall);
-        Ownable(input.contracts.mockSwapper).transferOwnership(altoMulticall);
-        Ownable2Step(input.contracts.altoLeverage).transferOwnership(altoMulticall);
-        calls[0] = AltoMulticallTestnet.Call({
-            target: input.contracts.altoLeverage,
-            callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
-            allowFailure: false
-        });
-
-        uint256 callIndex = 1;
-
-        // Mint Markets
-        // WETH
-        Ownable2Step(input.contracts.wethMarketBatch.market).transferOwnership(altoMulticall);
-        calls[callIndex++] = AltoMulticallTestnet.Call({
-            target: input.contracts.wethMarketBatch.market,
-            callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
-            allowFailure: false
-        });
-        Ownable2Step(input.contracts.wethMarketBatch.marketIrm).transferOwnership(altoMulticall);
-        calls[callIndex++] = AltoMulticallTestnet.Call({
-            target: input.contracts.wethMarketBatch.marketIrm,
-            callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
-            allowFailure: false
-        });
-        Ownable(input.contracts.wethMarketBatch.marketOracle).transferOwnership(altoMulticall);
-        Ownable2Step(input.contracts.wethMarketBatch.liquidationEngine).acceptOwnership();
-        Ownable2Step(input.contracts.wethMarketBatch.liquidationEngine).transferOwnership(altoMulticall);
-        calls[callIndex++] = AltoMulticallTestnet.Call({
-            target: input.contracts.wethMarketBatch.liquidationEngine,
-            callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
-            allowFailure: false
-        });
-
-        // WSTETH
-        Ownable2Step(input.contracts.wstethMarketBatch.market).transferOwnership(altoMulticall);
-        calls[callIndex++] = AltoMulticallTestnet.Call({
-            target: input.contracts.wstethMarketBatch.market,
-            callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
-            allowFailure: false
-        });
-        Ownable2Step(input.contracts.wstethMarketBatch.marketIrm).transferOwnership(altoMulticall);
-        calls[callIndex++] = AltoMulticallTestnet.Call({
-            target: input.contracts.wstethMarketBatch.marketIrm,
-            callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
-            allowFailure: false
-        });
-        Ownable(input.contracts.wstethMarketBatch.marketOracle).transferOwnership(altoMulticall);
-        Ownable2Step(input.contracts.wstethMarketBatch.liquidationEngine).acceptOwnership();
-        Ownable2Step(input.contracts.wstethMarketBatch.liquidationEngine).transferOwnership(altoMulticall);
-        calls[callIndex++] = AltoMulticallTestnet.Call({
-            target: input.contracts.wstethMarketBatch.liquidationEngine,
-            callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
-            allowFailure: false
-        });
-
-        // RETH
-        Ownable2Step(input.contracts.rethMarketBatch.market).transferOwnership(altoMulticall);
-        calls[callIndex++] = AltoMulticallTestnet.Call({
-            target: input.contracts.rethMarketBatch.market,
-            callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
-            allowFailure: false
-        });
-        Ownable2Step(input.contracts.rethMarketBatch.marketIrm).transferOwnership(altoMulticall);
-        calls[callIndex++] = AltoMulticallTestnet.Call({
-            target: input.contracts.rethMarketBatch.marketIrm,
-            callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
-            allowFailure: false
-        });
-        Ownable(input.contracts.rethMarketBatch.marketOracle).transferOwnership(altoMulticall);
-        Ownable2Step(input.contracts.rethMarketBatch.liquidationEngine).acceptOwnership();
-        Ownable2Step(input.contracts.rethMarketBatch.liquidationEngine).transferOwnership(altoMulticall);
-        calls[callIndex++] = AltoMulticallTestnet.Call({
-            target: input.contracts.rethMarketBatch.liquidationEngine,
-            callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
-            allowFailure: false
-        });
-
-        // METH
-        Ownable2Step(input.contracts.methMarketBatch.market).transferOwnership(altoMulticall);
-        calls[callIndex++] = AltoMulticallTestnet.Call({
-            target: input.contracts.methMarketBatch.market,
-            callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
-            allowFailure: false
-        });
-        Ownable2Step(input.contracts.methMarketBatch.marketIrm).transferOwnership(altoMulticall);
-        calls[callIndex++] = AltoMulticallTestnet.Call({
-            target: input.contracts.methMarketBatch.marketIrm,
-            callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
-            allowFailure: false
-        });
-        Ownable(input.contracts.methMarketBatch.marketOracle).transferOwnership(altoMulticall);
-        Ownable2Step(input.contracts.methMarketBatch.liquidationEngine).acceptOwnership();
-        Ownable2Step(input.contracts.methMarketBatch.liquidationEngine).transferOwnership(altoMulticall);
-        calls[callIndex++] = AltoMulticallTestnet.Call({
-            target: input.contracts.methMarketBatch.liquidationEngine,
-            callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
-            allowFailure: false
-        });
-
-        // TBTC
-        Ownable2Step(input.contracts.tbtcMarketBatch.market).transferOwnership(altoMulticall);
-        calls[callIndex++] = AltoMulticallTestnet.Call({
-            target: input.contracts.tbtcMarketBatch.market,
-            callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
-            allowFailure: false
-        });
-        Ownable2Step(input.contracts.tbtcMarketBatch.marketIrm).transferOwnership(altoMulticall);
-        calls[callIndex++] = AltoMulticallTestnet.Call({
-            target: input.contracts.tbtcMarketBatch.marketIrm,
-            callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
-            allowFailure: false
-        });
-        Ownable(input.contracts.tbtcMarketBatch.marketOracle).transferOwnership(altoMulticall);
-        Ownable2Step(input.contracts.tbtcMarketBatch.liquidationEngine).acceptOwnership();
-        Ownable2Step(input.contracts.tbtcMarketBatch.liquidationEngine).transferOwnership(altoMulticall);
-        calls[callIndex++] = AltoMulticallTestnet.Call({
-            target: input.contracts.tbtcMarketBatch.liquidationEngine,
-            callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
-            allowFailure: false
-        });
-
-        // Borrow Markets
-        // WBTC
-        Ownable2Step(input.contracts.wbtcMarketBatch.market).transferOwnership(altoMulticall);
-        calls[callIndex++] = AltoMulticallTestnet.Call({
-            target: input.contracts.wbtcMarketBatch.market,
-            callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
-            allowFailure: false
-        });
-        Ownable2Step(input.contracts.wbtcMarketBatch.marketIrm).transferOwnership(altoMulticall);
-        calls[callIndex++] = AltoMulticallTestnet.Call({
-            target: input.contracts.wbtcMarketBatch.marketIrm,
-            callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
-            allowFailure: false
-        });
-        Ownable(input.contracts.wbtcMarketBatch.marketOracle).transferOwnership(altoMulticall);
-        Ownable2Step(input.contracts.wbtcMarketBatch.liquidationEngine).acceptOwnership();
-        Ownable2Step(input.contracts.wbtcMarketBatch.liquidationEngine).transferOwnership(altoMulticall);
-        calls[callIndex++] = AltoMulticallTestnet.Call({
-            target: input.contracts.wbtcMarketBatch.liquidationEngine,
-            callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
-            allowFailure: false
-        });
-
-        // CBBTC
-        Ownable2Step(input.contracts.cbbtcMarketBatch.market).transferOwnership(altoMulticall);
-        calls[callIndex++] = AltoMulticallTestnet.Call({
-            target: input.contracts.cbbtcMarketBatch.market,
-            callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
-            allowFailure: false
-        });
-        Ownable2Step(input.contracts.cbbtcMarketBatch.marketIrm).transferOwnership(altoMulticall);
-        calls[callIndex++] = AltoMulticallTestnet.Call({
-            target: input.contracts.cbbtcMarketBatch.marketIrm,
-            callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
-            allowFailure: false
-        });
-        Ownable(input.contracts.cbbtcMarketBatch.marketOracle).transferOwnership(altoMulticall);
-        Ownable2Step(input.contracts.cbbtcMarketBatch.liquidationEngine).acceptOwnership();
-        Ownable2Step(input.contracts.cbbtcMarketBatch.liquidationEngine).transferOwnership(altoMulticall);
-        calls[callIndex++] = AltoMulticallTestnet.Call({
-            target: input.contracts.cbbtcMarketBatch.liquidationEngine,
-            callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
-            allowFailure: false
-        });
-
-        // SUSDE
-        Ownable2Step(input.contracts.susdeMarketBatch.market).transferOwnership(altoMulticall);
-        calls[callIndex++] = AltoMulticallTestnet.Call({
-            target: input.contracts.susdeMarketBatch.market,
-            callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
-            allowFailure: false
-        });
-        Ownable2Step(input.contracts.susdeMarketBatch.marketIrm).transferOwnership(altoMulticall);
-        calls[callIndex++] = AltoMulticallTestnet.Call({
-            target: input.contracts.susdeMarketBatch.marketIrm,
-            callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
-            allowFailure: false
-        });
-        Ownable(input.contracts.susdeMarketBatch.marketOracle).transferOwnership(altoMulticall);
-        Ownable2Step(input.contracts.susdeMarketBatch.liquidationEngine).acceptOwnership();
-        Ownable2Step(input.contracts.susdeMarketBatch.liquidationEngine).transferOwnership(altoMulticall);
-        calls[callIndex++] = AltoMulticallTestnet.Call({
-            target: input.contracts.susdeMarketBatch.liquidationEngine,
-            callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
-            allowFailure: false
-        });
-
-        // Rewards
-        Ownable2Step(input.contracts.rewardsBatch.rewardsDistributor).transferOwnership(altoMulticall);
-        calls[callIndex++] = AltoMulticallTestnet.Call({
-            target: input.contracts.rewardsBatch.rewardsDistributor,
-            callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
-            allowFailure: false
-        });
-        for (uint256 i = 0; i < input.contracts.rewardsBatch.paymentOracles.length; i++) {
-            Ownable(input.contracts.rewardsBatch.paymentOracles[i]).transferOwnership(altoMulticall);
-        }
-        Ownable(input.contracts.rewardsBatch.rewardOracle).transferOwnership(altoMulticall);
-
-        // Staking
-        Ownable2Step(input.contracts.stakingBatch.stakingContract).transferOwnership(altoMulticall);
-        calls[callIndex++] = AltoMulticallTestnet.Call({
-            target: input.contracts.stakingBatch.stakingContract,
-            callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
-            allowFailure: false
-        });
-
-        Ownable2Step(input.contracts.stakingBatch.universalRewardsDistributor).transferOwnership(altoMulticall);
-        calls[callIndex++] = AltoMulticallTestnet.Call({
-            target: input.contracts.stakingBatch.universalRewardsDistributor,
-            callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
-            allowFailure: false
-        });
-
-        // Tokens
-        Ownable2Step(input.tokens.alto).transferOwnership(altoMulticall);
-        calls[callIndex++] = AltoMulticallTestnet.Call({
-            target: input.tokens.alto,
-            callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
-            allowFailure: false
-        });
-        Ownable2Step(input.tokens.dusd).transferOwnership(altoMulticall);
-        calls[callIndex++] = AltoMulticallTestnet.Call({
-            target: input.tokens.dusd,
-            callData: abi.encodeWithSelector(Ownable2Step.acceptOwnership.selector),
-            allowFailure: false
-        });
-        Ownable(input.tokens.usdc).transferOwnership(altoMulticall);
-        Ownable(input.tokens.weth).transferOwnership(altoMulticall);
-        Ownable(input.tokens.wsteth).transferOwnership(altoMulticall);
-        Ownable(input.tokens.reth).transferOwnership(altoMulticall);
-        Ownable(input.tokens.meth).transferOwnership(altoMulticall);
-        Ownable(input.tokens.tbtc).transferOwnership(altoMulticall);
-        Ownable(input.tokens.wbtc).transferOwnership(altoMulticall);
-        Ownable(input.tokens.cbbtc).transferOwnership(altoMulticall);
-        Ownable(input.tokens.susde).transferOwnership(altoMulticall);
-
-        AltoMulticallTestnet(payable(altoMulticall)).multicall(calls);
+        AltoOwnable2Step(input.tokens.dusd).transferOwnershipSkip2Step(input.contracts.altoMulticall);
+        Ownable(input.contracts.altoAdapter).transferOwnership(input.contracts.altoMulticall);
     }
 
     function _calculateMinterCeiling(TestnetMarketBatchReport memory marketBatchReport)
