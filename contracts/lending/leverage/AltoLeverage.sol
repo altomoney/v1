@@ -3,7 +3,7 @@ pragma solidity ^0.8.22;
 
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import {Ownable, Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import {AltoOwnable2Step, Ownable} from "@alto/utils/AltoOwnable2Step.sol";
 import {IAltoLeverageSwapper} from "@alto/lending/leverage/interfaces/IAltoLeverageSwapper.sol";
 import {IMarket, Balance, Position} from "@alto/lending/interfaces/IMarket.sol";
 import {IBorrowCallback, IRemoveCollateralCallback} from "../../lending/interfaces/IMarketCallbacks.sol";
@@ -16,7 +16,7 @@ import {AssetShareConversionMath} from "../libraries/AssetShareConversionMath.so
 /// @dev This contract is used to leverage and deleverage collateral of a borrow position on behalf of users.
 /// It is used in the AltoLeverageSwapper contract to swap assets.
 /// It is also used in the AltoBaseMarket contract in `borrow` and `removeCollateral` functions.
-contract AltoLeverage is Ownable2Step, IBorrowCallback, IRemoveCollateralCallback {
+contract AltoLeverage is AltoOwnable2Step, IBorrowCallback, IRemoveCollateralCallback {
     using AssetShareConversionMath for uint256;
     using SafeERC20 for IERC20;
     using SafeCast for uint256;

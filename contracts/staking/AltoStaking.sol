@@ -3,7 +3,7 @@ pragma solidity ^0.8.22;
 
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import {AltoOwnable2Step, Ownable} from "@alto/utils/AltoOwnable2Step.sol";
 
 import {Pausable} from "@alto/utils/Pausable.sol";
 import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
@@ -19,7 +19,7 @@ import {PAUSE_TYPE, RESCUE_TYPE} from "@alto/utils/Constants.sol";
 /// @author Pearl Labs
 /// @custom:contact security@altofoundation.org
 /// @notice A contract for staking tokens and getting votes based on the amount of tokens locked.
-contract AltoStaking is IAltoStakingStaticTypes, TVLWeightedContainers, Ownable2Step, Auth, Pausable {
+contract AltoStaking is IAltoStakingStaticTypes, TVLWeightedContainers, AltoOwnable2Step, Auth, Pausable {
     using SafeERC20 for IERC20;
     using FixedPointMath for uint256;
 

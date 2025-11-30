@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.7;
 
-import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import {AltoOwnable2Step, Ownable} from "@alto/utils/AltoOwnable2Step.sol";
 import {ModuleChainlink} from "@alto/oracles/modules/ModuleChainlink.sol";
 import {ChainlinkNode} from "@alto/oracles/interfaces/IModuleNode.sol";
 import {
@@ -15,7 +15,11 @@ import {IOracle} from "@alto/oracles/interfaces/IOracle.sol";
 /// @author Pearl Labs
 /// @custom:contact security@altofoundation.org
 /// @notice Oracle contract that supports fetching the price from multiple Chainlink feeds and combining them into a single price
-contract AltoMultiChainlinkLendingOracle is Ownable2Step, ModuleChainlink, IAltoMultiChainlinkLendingOracleStaticTypes {
+contract AltoMultiChainlinkLendingOracle is
+    AltoOwnable2Step,
+    ModuleChainlink,
+    IAltoMultiChainlinkLendingOracleStaticTypes
+{
     /// @inheritdoc IAltoMultiChainlinkLendingOracleStaticTypes
     ChainlinkNode[] public chainlinkNodes;
 

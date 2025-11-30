@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.0;
 
-import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import {AltoOwnable2Step, Ownable} from "@alto/utils/AltoOwnable2Step.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 
@@ -32,7 +32,7 @@ import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
 /// @author Pearl Labs
 /// @custom:contact security@altofoundation.org
 /// @notice Standalone contract for calculating liquidation amounts and fees
-contract AltoLiquidationEngine is Ownable2Step, IPriorityLiquidationEngineStaticTypes {
+contract AltoLiquidationEngine is AltoOwnable2Step, IPriorityLiquidationEngineStaticTypes {
     using FixedPointMath for uint256;
     using AssetShareConversionMath for uint256;
     using Uint128Converter for uint256;

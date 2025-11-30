@@ -2,7 +2,7 @@
 pragma solidity ^0.8.28;
 
 import {MerkleRootManager} from "@alto/utils/MerkleRootManager.sol";
-import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import {AltoOwnable2Step, Ownable} from "@alto/utils/AltoOwnable2Step.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Auth} from "@alto/utils/Auth.sol";
@@ -15,7 +15,13 @@ import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 /// @author Inspired by Morpho Labs' implementation (https://github.com/morpho-org/universal-rewards-distributor).
 /// @custom:contact security@altofoundation.org
 /// @notice A contract for distributing rewards to multiple users using merkle trees
-contract UniversalRewardsDistributor is IUniversalRewardsDistributor, MerkleRootManager, Ownable2Step, Auth, Pausable {
+contract UniversalRewardsDistributor is
+    IUniversalRewardsDistributor,
+    MerkleRootManager,
+    AltoOwnable2Step,
+    Auth,
+    Pausable
+{
     using SafeERC20 for IERC20;
 
     /// @inheritdoc IUniversalRewardsDistributor

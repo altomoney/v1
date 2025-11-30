@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
-import {Ownable, Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import {AltoOwnable2Step, Ownable} from "@alto/utils/AltoOwnable2Step.sol";
 
 import {MathLib as MathLibInt, WAD_INT} from "@morpho-org/irm/adaptive-curve-irm/libraries/MathLib.sol";
 import {UtilsLib} from "@morpho-org/irm/adaptive-curve-irm/libraries/UtilsLib.sol";
@@ -21,7 +21,7 @@ import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 /// @notice A Adaptive Curve IRM that adjusts the rate at target utilization based on time spent above/below it.
 /// @dev This implementation intentionally leaves variables names, units and ExpLib unchanged from original.
 /// @dev This IRM has adjustable parameters post deployment.
-contract AdaptiveCurveIrm is Ownable2Step, IIrm {
+contract AdaptiveCurveIrm is AltoOwnable2Step, IIrm {
     using FixedPointMath for uint256;
     using MathLib for uint256;
     using UtilsLib for int256;

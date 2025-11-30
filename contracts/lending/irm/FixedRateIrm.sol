@@ -2,7 +2,7 @@
 pragma solidity ^0.8.22;
 
 import {IIrm, IRMType} from "../interfaces/IIrm.sol";
-import {Ownable, Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import {AltoOwnable2Step, Ownable} from "@alto/utils/AltoOwnable2Step.sol";
 import {IMarket} from "../interfaces/IMarket.sol";
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
@@ -10,7 +10,7 @@ import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 /// @title Fixed Rate Interest Rate Model
 /// @author Pearl Labs
 /// @custom:contact security@altofoundation.org
-contract FixedRateIrm is Ownable2Step, IIrm {
+contract FixedRateIrm is AltoOwnable2Step, IIrm {
     using FixedPointMath for uint256;
 
     event SetBorrowRate(uint256 borrowRate);

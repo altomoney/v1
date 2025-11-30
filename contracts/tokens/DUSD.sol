@@ -5,14 +5,14 @@ import {OFT} from "@alto/utils/OFT.sol";
 import {IDUSD, MinterConfig} from "@alto/tokens/interfaces/IDUSD.sol";
 
 import {Pausable, IPausable} from "@alto/utils/Pausable.sol";
-import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import {AltoOwnable2Step, Ownable} from "@alto/utils/AltoOwnable2Step.sol";
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 
 /// @title DUSD Token
 /// @author Pearl Labs
 /// @custom:contact security@altofoundation.org
 /// @notice The DUSD Token is the stablecoin of the Alto Protocol.
-contract DUSD is Ownable2Step, Pausable, OFT, IDUSD {
+contract DUSD is AltoOwnable2Step, Pausable, OFT, IDUSD {
     /// @inheritdoc IDUSD
     mapping(address => bool) public allowedMinter;
 
@@ -79,12 +79,12 @@ contract DUSD is Ownable2Step, Pausable, OFT, IDUSD {
     }
 
     /// @dev we need to override the _transferOwnership function as OFT contract uses Ownable
-    function _transferOwnership(address newOwner) internal virtual override(Ownable, Ownable2Step) {
+    function _transferOwnership(address newOwner) internal virtual override(Ownable, AltoOwnable2Step) {
         super._transferOwnership(newOwner);
     }
 
     /// @dev we need to override the transferOwnership function as OFT contract uses Ownable
-    function transferOwnership(address newOwner) public virtual override(Ownable, Ownable2Step) {
+    function transferOwnership(address newOwner) public virtual override(Ownable, AltoOwnable2Step) {
         super.transferOwnership(newOwner);
     }
 

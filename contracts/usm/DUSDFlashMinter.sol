@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import {AltoOwnable2Step, Ownable} from "@alto/utils/AltoOwnable2Step.sol";
 import {IERC3156FlashBorrower} from "@openzeppelin/contracts/interfaces/IERC3156FlashBorrower.sol";
 import {IERC3156FlashLender} from "@openzeppelin/contracts/interfaces/IERC3156FlashLender.sol";
 import {IDUSD} from "@alto/tokens/interfaces/IDUSD.sol";
@@ -15,7 +15,7 @@ import {FixedPointMath, MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 /// @author Adapted from Aave (https://github.com/aave/gho-core/)
 /// @notice Contract that enables FlashMinting of DUSD.
 /// @dev Based heavily on the EIP3156 reference implementation
-contract DUSDFlashMinter is Ownable2Step, IDUSDFlashMinter {
+contract DUSDFlashMinter is AltoOwnable2Step, IDUSDFlashMinter {
     using FixedPointMath for uint256;
 
     // @inheritdoc IDUSDFlashMinter

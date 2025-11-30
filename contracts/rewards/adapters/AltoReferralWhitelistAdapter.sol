@@ -3,14 +3,14 @@ pragma solidity ^0.8.0;
 
 import {IRewardsAdapter, BonusRewardInfo} from "@alto/rewards/interfaces/IRewardsAdapter.sol";
 import {MerkleRootManager} from "@alto/utils/MerkleRootManager.sol";
-import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import {AltoOwnable2Step, Ownable} from "@alto/utils/AltoOwnable2Step.sol";
 
 /// @title AltoReferralWhitelistAdapter
 /// @author Pearl Labs
 /// @custom:contact security@altofoundation.org
 /// @notice A contract that allows users to set their referral address and receive rewards
 /// this allows referrees to receive bonus discount and referrers to receive payment token share
-contract AltoReferralWhitelistAdapter is IRewardsAdapter, MerkleRootManager, Ownable2Step {
+contract AltoReferralWhitelistAdapter is IRewardsAdapter, MerkleRootManager, AltoOwnable2Step {
     error AltoReferralWhitelistAdapterInvalidInput();
     error AltoReferralWhitelistAdapterInvalidReferralAddress();
     error AltoReferralWhitelistAdapterInvalidReferralAlreadySet();

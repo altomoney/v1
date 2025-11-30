@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.7;
 
-import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import {AltoOwnable2Step, Ownable} from "@alto/utils/AltoOwnable2Step.sol";
 import {ERC4626RatioNode, ChainlinkNode, ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
 import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 import {ModuleERC4626Ratio} from "@alto/oracles/modules/ModuleERC4626Ratio.sol";
@@ -22,7 +22,7 @@ import {IOracle} from "@alto/oracles/interfaces/IOracle.sol";
 /// @notice An oracle that gets the price of a wrapped asset using the ERC4626 ratio of the wrapped asset
 /// to the underlying asset and Chainlink price feed
 abstract contract AltoERC4626RatioChainlinkOracle is
-    Ownable2Step,
+    AltoOwnable2Step,
     ModuleERC4626Ratio,
     ModuleChainlink,
     IAltoERC4626RatioChainlinkOracleStaticTypes

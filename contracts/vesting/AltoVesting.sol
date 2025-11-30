@@ -2,7 +2,7 @@
 pragma solidity ^0.8.28;
 
 import {MerkleRootManager} from "@alto/utils/MerkleRootManager.sol";
-import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import {AltoOwnable2Step, Ownable} from "@alto/utils/AltoOwnable2Step.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Auth} from "@alto/utils/Auth.sol";
@@ -14,7 +14,7 @@ import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 /// @author Pearl Labs
 /// @custom:contact security@altofoundation.org
 /// @notice A contract for vesting tokens to users determined by a merkle tree.
-contract AltoVesting is IAltoVesting, MerkleRootManager, Ownable2Step, Auth, Pausable {
+contract AltoVesting is IAltoVesting, MerkleRootManager, AltoOwnable2Step, Auth, Pausable {
     using SafeERC20 for IERC20;
 
     /// @inheritdoc IAltoVesting

@@ -4,5 +4,5 @@ AdapterContractApproval::constructor
 └── when owner is valid address
     ├── it should set owner to provided address
     ├── it should initialize isApprovedContract[addr] to false
-    └── it should initialize parent Ownable2Step/Ownable correctly
+    └── it should initialize parent Ownable correctly
 
