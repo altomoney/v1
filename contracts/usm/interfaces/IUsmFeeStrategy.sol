@@ -13,6 +13,15 @@ pragma solidity ^0.8.0;
  */
 interface IUsmFeeStrategy {
     /**
+     * @notice Emitted when the buy and sell fees are set
+     * @param oldBuyFee The old buy fee
+     * @param newBuyFee The new buy fee
+     * @param oldSellFee The old sell fee
+     * @param newSellFee The new sell fee
+     */
+    event FeeSet(uint256 oldBuyFee, uint256 newBuyFee, uint256 oldSellFee, uint256 newSellFee);
+
+    /**
      * @notice Sets the buy and sell fees, expressed in bps
      * @param buyFee The new buy fee, expressed in bps
      * @param sellFee The new sell fee, expressed in bps

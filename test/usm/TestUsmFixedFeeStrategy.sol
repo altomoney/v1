@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import "./TestDusdBase.t.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
+import {IUsmFeeStrategy} from "@alto/usm/interfaces/IUsmFeeStrategy.sol";
 
 contract TestUsmFixedFeeStrategy is TestDusdBase {
     function testRevertAboveMaximumFee() public {
@@ -40,6 +41,10 @@ contract TestUsmFixedFeeStrategy is TestDusdBase {
     function testOwnerCanUpdateFee() public {
         FixedFeeStrategy feeStrategy = new FixedFeeStrategy(DEFAULT_USM_BUY_FEE, DEFAULT_USM_SELL_FEE, address(this));
         vm.startPrank(address(this));
+        vm.expectEmit(true, true, true, true, address(feeStrategy));
+        emit IUsmFeeStrategy.FeeSet(
+            DEFAULT_USM_BUY_FEE, DEFAULT_USM_BUY_FEE + 1000, DEFAULT_USM_SELL_FEE, DEFAULT_USM_SELL_FEE + 1000
+        );
         feeStrategy.setFee(DEFAULT_USM_BUY_FEE + 1000, DEFAULT_USM_SELL_FEE + 1000);
         vm.stopPrank();
 

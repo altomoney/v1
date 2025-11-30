@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import "./TestDusdBase.t.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
+import {IUsmPriceStrategy} from "@alto/usm/interfaces/IUsmPriceStrategy.sol";
 import {ERC20MockMintableDecimals} from "@alto-test/helpers/ERC20MockMintableDecimals.sol";
 
 contract TestUsmFixedPriceStrategy is TestDusdBase {
@@ -55,6 +56,8 @@ contract TestUsmFixedPriceStrategy is TestDusdBase {
     function testOwnerCanUpdatePriceRatio() public {
         FixedPriceStrategy strategy = new FixedPriceStrategy(1e18, address(USDC_TOKEN), address(this));
         vm.startPrank(address(this));
+        vm.expectEmit(true, true, false, true, address(strategy));
+        emit IUsmPriceStrategy.PriceRatioSet(1e18, 2e18);
         strategy.setPriceRatio(2e18);
         vm.stopPrank();
         assertEq(strategy.priceRatio(), 2e18, "Unexpected price ratio");

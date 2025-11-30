@@ -51,6 +51,7 @@ contract FixedPriceStrategy is IUsmPriceStrategy, AccessControl {
     /// @inheritdoc IUsmPriceStrategy
     function setPriceRatio(uint256 newPriceRatio) external onlyRole(CONFIGURATOR_ROLE) {
         require(newPriceRatio > 0, "INVALID_PRICE_RATIO");
+        emit PriceRatioSet(priceRatio, newPriceRatio);
         priceRatio = newPriceRatio;
     }
 
