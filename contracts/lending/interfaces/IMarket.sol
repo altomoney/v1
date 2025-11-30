@@ -178,8 +178,6 @@ interface IMarketEvents {
     // add liquidation event
     /// @notice Emitted when a liquidation occurs
     /// @param user The address of the user whose position was liquidated
-    /// @param collateralToken The address of the collateral token
-    /// @param borrowToken The address of the borrow token
     /// @param liquidator The address of the liquidator
     /// @param liquidatedCollateral The amount of collateral that was liquidated
     /// @param protocolFee The amount of protocol fee credited to the fee recipient
@@ -189,8 +187,6 @@ interface IMarketEvents {
     /// @param badDebtClearedShares The amount of bad debt shares cleared
     event Liquidation(
         address indexed user,
-        address collateralToken,
-        address borrowToken,
         address liquidator,
         uint256 liquidatedCollateral,
         uint256 protocolFee,
@@ -202,16 +198,12 @@ interface IMarketEvents {
 
     /// @notice Emitted when a liquidation is performed through governance
     /// @param user The address of the user whose position was liquidated
-    /// @param collateralToken The address of the collateral token
-    /// @param borrowToken The address of the borrow token
     /// @param liquidator The address of the liquidator
     /// @param liquidatedCollateral The amount of collateral that was seized
     /// @param badDebtClearedAssets The amount of bad debt cleared
     /// @param badDebtClearedShares The amount of bad debt shares cleared
     event GovernanceLiquidation(
         address indexed user,
-        address collateralToken,
-        address borrowToken,
         address liquidator,
         uint256 liquidatedCollateral,
         uint256 badDebtClearedAssets,

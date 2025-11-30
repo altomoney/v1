@@ -100,13 +100,7 @@ contract AltoBorrowMarketGovernanceLiquidate is MarketCommon {
         vm.startPrank(OWNER);
         vm.expectEmit(true, true, true, true);
         emit IMarketEvents.GovernanceLiquidation(
-            USER,
-            address(collateralToken),
-            address(borrowToken),
-            OWNER,
-            expectedCollateral,
-            expectedBadDebt,
-            expectedBadDebtShares
+            USER, OWNER, expectedCollateral, expectedBadDebt, expectedBadDebtShares
         );
         (uint256 collateralAmount, uint256 badDebtAmount) = market.governanceLiquidate(USER);
         IPriorityLiquidationEngine liquidationEngine = IPriorityLiquidationEngine(market.liquidationEngine());
@@ -167,13 +161,7 @@ contract AltoBorrowMarketGovernanceLiquidate is MarketCommon {
         vm.startPrank(OWNER);
         vm.expectEmit(true, true, true, true);
         emit IMarketEvents.GovernanceLiquidation(
-            USER,
-            address(collateralToken),
-            address(borrowToken),
-            OWNER,
-            expectedCollateral,
-            expectedBadDebt,
-            expectedBadDebtShares
+            USER, OWNER, expectedCollateral, expectedBadDebt, expectedBadDebtShares
         );
         (uint256 collateralAmount, uint256 badDebtAmount) = market.governanceLiquidate(USER);
         IPriorityLiquidationEngine liquidationEngine = IPriorityLiquidationEngine(market.liquidationEngine());

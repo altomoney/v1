@@ -246,9 +246,7 @@ contract AltoBorrowMarketTest is Test {
         uint256 borrowTokenBalanceBefore = borrowToken.balanceOf(market.owner());
         (uint128 totalSupplyAssetsBefore, uint128 totalSupplySharesBefore) = market.totalSupply();
         vm.expectEmit(true, true, true, true);
-        emit IMarketEvents.GovernanceLiquidation(
-            bob, address(collateralToken), address(borrowToken), market.owner(), 1e8, 10, borrowShares
-        );
+        emit IMarketEvents.GovernanceLiquidation(bob, market.owner(), 1e8, 10, borrowShares);
         market.governanceLiquidate(bob);
         vm.stopPrank();
 
@@ -329,16 +327,7 @@ contract AltoBorrowMarketTest is Test {
 
         vm.expectEmit(true, true, true, true);
         emit IMarketEvents.Liquidation(
-            bob,
-            address(collateralToken),
-            address(borrowToken),
-            liquidator,
-            2 ether,
-            0,
-            1900000000000,
-            1.9 ether,
-            1499998100000000000,
-            1499998100000000000000000
+            bob, liquidator, 2 ether, 0, 1900000000000, 1.9 ether, 1499998100000000000, 1499998100000000000000000
         );
         market.liquidate(bob, hex"", hex"");
 
@@ -486,8 +475,6 @@ contract AltoBorrowMarketTest is Test {
         vm.expectEmit();
         emit IMarketEvents.Liquidation(
             bob,
-            address(collateralToken),
-            address(borrowToken),
             liquidator,
             expectedCollateralAmount,
             protocolFee,
@@ -557,16 +544,7 @@ contract AltoBorrowMarketTest is Test {
 
         vm.expectEmit();
         emit IMarketEvents.Liquidation(
-            bob,
-            address(collateralToken),
-            address(borrowToken),
-            liquidator,
-            1 ether,
-            protocolFee,
-            1.9 ether,
-            borrowSharesToRepay,
-            1.1 ether - 1,
-            badDebtShares
+            bob, liquidator, 1 ether, protocolFee, 1.9 ether, borrowSharesToRepay, 1.1 ether - 1, badDebtShares
         );
 
         (uint256 currentLtv, uint256 newLtv) = market.calculatePreLiquidationLtv(bob);
@@ -647,8 +625,6 @@ contract AltoBorrowMarketTest is Test {
         vm.expectEmit();
         emit IMarketEvents.Liquidation(
             bob,
-            address(collateralToken),
-            address(borrowToken),
             externalLiquidator,
             0.513044009445403087 ether,
             protocolFee,
@@ -720,18 +696,7 @@ contract AltoBorrowMarketTest is Test {
         assertEq(protocolFee, 0.00375 ether);
 
         vm.expectEmit();
-        emit IMarketEvents.Liquidation(
-            bob,
-            address(collateralToken),
-            address(borrowToken),
-            liquidator,
-            0.95 ether,
-            protocolFee,
-            0.9 ether,
-            500000 ether,
-            0,
-            0
-        );
+        emit IMarketEvents.Liquidation(bob, liquidator, 0.95 ether, protocolFee, 0.9 ether, 500000 ether, 0, 0);
 
         (uint256 collateralAmount, uint256 repayAmount, uint256 returnedProtocolFee) =
             market.liquidate(bob, hex"", hex"");
@@ -845,16 +810,7 @@ contract AltoBorrowMarketTest is Test {
 
         vm.expectEmit();
         emit IMarketEvents.Liquidation(
-            bob,
-            address(collateralToken),
-            address(borrowToken),
-            taggerLiquidator,
-            950000343607371433,
-            protocolFee,
-            900000343607371433,
-            500000 ether,
-            0,
-            0
+            bob, taggerLiquidator, 950000343607371433, protocolFee, 900000343607371433, 500000 ether, 0, 0
         );
         (uint256 collateralAmount, uint256 repayAmount, uint256 returnedProtocolFee) =
             market.liquidate(bob, hex"", hex"");
@@ -931,16 +887,7 @@ contract AltoBorrowMarketTest is Test {
 
         vm.expectEmit();
         emit IMarketEvents.Liquidation(
-            bob,
-            address(collateralToken),
-            address(borrowToken),
-            externalLiquidator,
-            950000480593735489,
-            protocolFee,
-            900000480593735489,
-            500000 ether,
-            0,
-            0
+            bob, externalLiquidator, 950000480593735489, protocolFee, 900000480593735489, 500000 ether, 0, 0
         );
 
         (uint256 collateralAmount, uint256 repayAmount, uint256 returnedProtocolFee) =
@@ -1001,18 +948,7 @@ contract AltoBorrowMarketTest is Test {
         assertEq(protocolFee, 0);
 
         vm.expectEmit();
-        emit IMarketEvents.Liquidation(
-            bob,
-            address(collateralToken),
-            address(borrowToken),
-            liquidator,
-            0.95 ether,
-            protocolFee,
-            0.9 ether,
-            borrowShares,
-            0,
-            0
-        );
+        emit IMarketEvents.Liquidation(bob, liquidator, 0.95 ether, protocolFee, 0.9 ether, borrowShares, 0, 0);
         (uint256 collateralAmount, uint256 repayAmount, uint256 returnedProtocolFee) =
             market.liquidate(bob, hex"", hex"");
 
@@ -1314,16 +1250,7 @@ contract AltoBorrowMarketTest is Test {
 
         vm.expectEmit();
         emit IMarketEvents.Liquidation(
-            bob,
-            address(collateralToken),
-            address(borrowToken),
-            liquidator,
-            2 ether,
-            protocolFee,
-            1.9 ether,
-            borrowSharesToRepay,
-            1.1 ether - 1,
-            badDebtShares
+            bob, liquidator, 2 ether, protocolFee, 1.9 ether, borrowSharesToRepay, 1.1 ether - 1, badDebtShares
         );
 
         (uint256 currentLtv, uint256 newLtv) = market.calculatePreLiquidationLtv(bob);
@@ -1397,8 +1324,6 @@ contract AltoBorrowMarketTest is Test {
         vm.expectEmit();
         emit IMarketEvents.Liquidation(
             bob,
-            address(collateralToken),
-            address(borrowToken),
             address(liquidateCallback),
             6.75 ether,
             protocolFee,

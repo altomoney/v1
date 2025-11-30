@@ -179,9 +179,7 @@ contract AltoBorrowMarketLiquidationUnderflowTest is Test {
 
         // Check only indexed topic (user); data fields are dynamic and computed on-chain
         vm.expectEmit(true, false, false, false);
-        emit IMarketEvents.Liquidation(
-            borrower2, address(collateralToken), address(borrowToken), liquidator, 0, 0, 0, 0, 0, 0
-        );
+        emit IMarketEvents.Liquidation(borrower2, liquidator, 0, 0, 0, 0, 0, 0);
 
         (,, uint128 feeRecipientCollateralBefore) = market.position(FEE_RECEIVER);
         (, uint128 borrowerBorrowSharesBefore,) = market.position(borrower2);
@@ -240,9 +238,7 @@ contract AltoBorrowMarketLiquidationUnderflowTest is Test {
 
         // Check only indexed topic (user); data fields are dynamic and computed on-chain
         vm.expectEmit(true, false, false, false);
-        emit IMarketEvents.Liquidation(
-            borrower2, address(collateralToken), address(borrowToken), liquidator, 0, 0, 0, 0, 0, 0
-        );
+        emit IMarketEvents.Liquidation(borrower2, liquidator, 0, 0, 0, 0, 0, 0);
 
         (,, uint128 feeRecipientCollateralBefore) = market.position(FEE_RECEIVER);
         (, uint128 borrowerBorrowSharesBefore,) = market.position(borrower2);
