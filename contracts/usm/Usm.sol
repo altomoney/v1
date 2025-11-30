@@ -163,6 +163,7 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, AuthUpgradeabl
     function seize() external notSeized onlyRole(LIQUIDATOR_ROLE) returns (uint256) {
         _isSeized = true;
         _currentExposure = 0;
+        _accruedFees = 0;
         _updateExposureCap(0);
 
         uint256 stableTokenMinted = _getCurrentlyMintedStableTokenByUsm();
