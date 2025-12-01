@@ -1,6 +1,0 @@
-TapiocaOptionBroker_activateEmergencySweep.tree
-├── when caller is not owner
-│   └── it should revert
-└── when caller is owner
-    ├── it should set _lastEmergencySweep to current timestamp
-    └── it should emit ActivateEmergencySweep event

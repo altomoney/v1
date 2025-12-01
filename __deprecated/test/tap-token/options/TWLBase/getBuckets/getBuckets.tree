@@ -1,5 +1,0 @@
-TWLBase_getBuckets
-├── given an empty buckets array
-│   └── it should return an empty array
-└── given a non-empty buckets array
-    └── it should return an array of all buckets

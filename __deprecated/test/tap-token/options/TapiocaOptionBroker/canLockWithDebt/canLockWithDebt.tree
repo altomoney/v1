@@ -1,9 +1,0 @@
-TapiocaOptionBroker_canLockWithDebt.tree
-├── given user has no BigBang debt
-│   └── it should return true with max amount as buffer
-├── given user has BigBang debt
-│   ├── when amount + total locked exceeds max allowed
-│   │   └── it should return false with calculated max amount
-│   └── when amount + total locked is within limits
-│       └── it should return true with calculated max amount
-└── it should always return correct minted USDO amount

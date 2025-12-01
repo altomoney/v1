@@ -1,9 +1,0 @@
-TWLBase_supplyInBucket
-├── given bucket is enabled
-│   ├── when amount is less or equal max uint
-│   │   ├── it should increase the bucket's currentEpochInflows by the given amount
-│   │   └── it should not affect other buckets
-│   ├── when amount is greater than max uint
-│   │   └── it should revert
-└── given bucket is disabled
-    └── it should revert

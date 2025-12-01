@@ -1,6 +1,0 @@
-TapiocaOptionBroker_setExerciseWindow.tree
-├── when caller is not owner
-│   └── it should revert
-└── when caller is owner
-    ├── it should set _exerciseWindow
-    └── it should emit SetExerciseWindow event

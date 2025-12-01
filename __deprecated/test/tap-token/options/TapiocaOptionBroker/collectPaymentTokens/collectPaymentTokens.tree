@@ -1,9 +1,0 @@
-TapiocaOptionBroker_collectPaymentTokens.tree
-├── when caller is not owner
-│   └── it should revert
-├── when payment token beneficiary is zero address
-│   └── it should revert with PaymentTokenNotSupported
-└── when conditions are met
-    ├── it should get token balance
-    ├── it should transfer balance to beneficiary
-    └── it should emit PaymentCollection event
