@@ -567,5 +567,165 @@ contract AltoTimelockControllerTest is Test {
 
         assertEq(mockOwnable.value(), 20, "Batch execution should work after delay");
     }
+
+    function testFuzz_DirectGrantRole_Reverts_AnyCaller(address caller, bytes32 role, address account) public {
+        vm.assume(caller != address(timelock));
+        vm.assume(account != address(0));
+
+        vm.prank(caller);
+        vm.expectRevert(
+            abi.encodeWithSelector(AltoTimelockController.AltoTimelockController_OnlyCallableFromTimelock.selector)
+        );
+        timelock.grantRole(role, account);
+    }
+
+    function testFuzz_DirectRevokeRole_Reverts_AnyCaller(address caller, bytes32 role, address account) public {
+        vm.assume(caller != address(timelock));
+
+        vm.prank(caller);
+        vm.expectRevert(
+            abi.encodeWithSelector(AltoTimelockController.AltoTimelockController_OnlyCallableFromTimelock.selector)
+        );
+        timelock.revokeRole(role, account);
+    }
+
+    function testFuzz_GrantRole_ThroughTimelock_AnyAddress(address newRoleHolder) public {
+        vm.assume(newRoleHolder != address(0));
+        vm.assume(newRoleHolder != proposer); // proposer already has this role
+
+        bytes32 proposerRole = timelock.PROPOSER_ROLE();
+        assertFalse(timelock.hasRole(proposerRole, newRoleHolder), "Should not have role initially");
+
+        bytes memory grantRoleData =
+            abi.encodeWithSelector(AccessControl.grantRole.selector, proposerRole, newRoleHolder);
+        bytes32 salt = keccak256(abi.encodePacked(newRoleHolder));
+        bytes32 predecessor = bytes32(0);
+
+        vm.prank(proposer);
+        timelock.schedule(address(timelock), 0, grantRoleData, predecessor, salt, DELAY);
+
+        vm.warp(block.timestamp + DELAY);
+
+        vm.prank(executor);
+        timelock.execute(address(timelock), 0, grantRoleData, predecessor, salt);
+
+        assertTrue(timelock.hasRole(proposerRole, newRoleHolder), "Role should be granted");
+    }
+
+    function testFuzz_RevokeRole_ThroughTimelock_AnyAddress(address roleHolder) public {
+        vm.assume(roleHolder != address(0));
+        vm.assume(roleHolder != proposer);
+
+        // First grant the role
+        bytes32 proposerRole = timelock.PROPOSER_ROLE();
+        bytes memory grantRoleData = abi.encodeWithSelector(AccessControl.grantRole.selector, proposerRole, roleHolder);
+        bytes32 grantSalt = keccak256(abi.encodePacked("grant", roleHolder));
+        bytes32 predecessor = bytes32(0);
+
+        vm.prank(proposer);
+        timelock.schedule(address(timelock), 0, grantRoleData, predecessor, grantSalt, DELAY);
+        vm.warp(block.timestamp + DELAY);
+        vm.prank(executor);
+        timelock.execute(address(timelock), 0, grantRoleData, predecessor, grantSalt);
+
+        assertTrue(timelock.hasRole(proposerRole, roleHolder), "Role should be granted");
+
+        // Now revoke the role
+        bytes memory revokeRoleData =
+            abi.encodeWithSelector(AccessControl.revokeRole.selector, proposerRole, roleHolder);
+        bytes32 revokeSalt = keccak256(abi.encodePacked("revoke", roleHolder));
+
+        vm.prank(proposer);
+        timelock.schedule(address(timelock), 0, revokeRoleData, predecessor, revokeSalt, DELAY);
+        vm.warp(block.timestamp + DELAY);
+        vm.prank(executor);
+        timelock.execute(address(timelock), 0, revokeRoleData, predecessor, revokeSalt);
+
+        assertFalse(timelock.hasRole(proposerRole, roleHolder), "Role should be revoked");
+    }
+
+    function testFuzz_RenounceRole_AdminRole_AlwaysReverts(address adminHolder) public {
+        vm.assume(adminHolder != address(0));
+        vm.assume(adminHolder != admin);
+        vm.assume(adminHolder != address(timelock));
+
+        // Grant admin role to fuzzed address
+        bytes32 adminRole = timelock.DEFAULT_ADMIN_ROLE();
+        bytes memory grantRoleData = abi.encodeWithSelector(AccessControl.grantRole.selector, adminRole, adminHolder);
+        bytes32 salt = keccak256(abi.encodePacked(adminHolder));
+        bytes32 predecessor = bytes32(0);
+
+        vm.prank(proposer);
+        timelock.schedule(address(timelock), 0, grantRoleData, predecessor, salt, DELAY);
+        vm.warp(block.timestamp + DELAY);
+        vm.prank(executor);
+        timelock.execute(address(timelock), 0, grantRoleData, predecessor, salt);
+
+        assertTrue(timelock.hasRole(adminRole, adminHolder), "Admin role should be granted");
+
+        // Try to renounce - should always revert
+        vm.prank(adminHolder);
+        vm.expectRevert(
+            abi.encodeWithSelector(AltoTimelockController.AltoTimelockController_AdminRoleCannotBeRenounced.selector)
+        );
+        timelock.renounceRole(adminRole, adminHolder);
+
+        assertTrue(timelock.hasRole(adminRole, adminHolder), "Admin role should still exist");
+    }
+
+    function testFuzz_RenounceRole_NonAdminRole_Succeeds(address roleHolder) public {
+        vm.assume(roleHolder != address(0));
+        vm.assume(roleHolder != executor);
+
+        // Grant executor role to fuzzed address
+        bytes32 executorRole = timelock.EXECUTOR_ROLE();
+        bytes memory grantRoleData = abi.encodeWithSelector(AccessControl.grantRole.selector, executorRole, roleHolder);
+        bytes32 salt = keccak256(abi.encodePacked(roleHolder));
+        bytes32 predecessor = bytes32(0);
+
+        vm.prank(proposer);
+        timelock.schedule(address(timelock), 0, grantRoleData, predecessor, salt, DELAY);
+        vm.warp(block.timestamp + DELAY);
+        vm.prank(executor);
+        timelock.execute(address(timelock), 0, grantRoleData, predecessor, salt);
+
+        assertTrue(timelock.hasRole(executorRole, roleHolder), "Executor role should be granted");
+
+        // Renounce should succeed for non-admin roles
+        vm.prank(roleHolder);
+        timelock.renounceRole(executorRole, roleHolder);
+
+        assertFalse(timelock.hasRole(executorRole, roleHolder), "Role should be renounced");
+    }
+
+    function testFuzz_OnlyProposerCanSchedule_AnyAddress(address caller) public {
+        vm.assume(caller != proposer);
+        vm.assume(caller != address(0));
+
+        bytes memory setValueData = abi.encodeWithSelector(MockOwnableContract.setValue.selector, 42);
+        bytes32 salt = keccak256(abi.encodePacked(caller));
+        bytes32 predecessor = bytes32(0);
+
+        vm.prank(caller);
+        vm.expectRevert();
+        timelock.schedule(address(mockOwnable), 0, setValueData, predecessor, salt, DELAY);
+    }
+
+    function testFuzz_OnlyExecutorCanExecute_AnyAddress(address caller) public {
+        vm.assume(caller != executor);
+        vm.assume(caller != address(0));
+
+        bytes memory setValueData = abi.encodeWithSelector(MockOwnableContract.setValue.selector, 42);
+        bytes32 salt = keccak256(abi.encodePacked(caller));
+        bytes32 predecessor = bytes32(0);
+
+        vm.prank(proposer);
+        timelock.schedule(address(mockOwnable), 0, setValueData, predecessor, salt, DELAY);
+        vm.warp(block.timestamp + DELAY);
+
+        vm.prank(caller);
+        vm.expectRevert();
+        timelock.execute(address(mockOwnable), 0, setValueData, predecessor, salt);
+    }
 }
 
