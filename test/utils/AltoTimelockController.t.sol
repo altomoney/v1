@@ -86,7 +86,7 @@ contract AltoTimelockControllerTest is Test {
         bytes32 adminRole = timelock.DEFAULT_ADMIN_ROLE();
         vm.prank(unauthorized);
         vm.expectRevert(
-            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, unauthorized, adminRole)
+            abi.encodeWithSelector(AltoTimelockController.AltoTimelockController_OnlyCallableFromTimelock.selector)
         );
         timelock.grantRole(adminRole, newAdmin);
     }
