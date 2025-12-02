@@ -53,6 +53,14 @@ interface IFeeClaimer {
     /// @return The active borrow markets
     function activeBorrowMarkets(uint256 index) external view returns (address);
 
+    /// @notice Returns the number of active mint markets
+    /// @return The number of active mint markets
+    function activeMintMarketsLength() external view returns (uint256);
+
+    /// @notice Returns the number of active borrow markets
+    /// @return The number of active borrow markets
+    function activeBorrowMarketsLength() external view returns (uint256);
+
     /// @notice Returns whether the address can call claimFees function
     /// @param claimer The address of the claimer
     /// @return whether the address can call claimFees function
