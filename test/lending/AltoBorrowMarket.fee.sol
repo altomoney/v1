@@ -61,9 +61,6 @@ contract AltoBorrowMarketFeeTest is Test {
             liquidationWindowTag: 3 days
         });
 
-        // Create liquidation engine before market deployment
-        address liquidationEngine = address(new AltoLiquidationEngine(address(this)));
-
         MockMarket market = MockMarketDeployer.deployMarket(
             address(borrowToken),
             address(collateralToken),
@@ -73,12 +70,8 @@ contract AltoBorrowMarketFeeTest is Test {
             LTV,
             openingFee,
             FEE_RECIPIENT,
-            liquidationConfig,
-            liquidationEngine
+            liquidationConfig
         );
-
-        // Market initialization automatically calls setMarketOnce on the liquidation engine
-        AltoLiquidationEngine(liquidationEngine).setLiquidationConfiguration(liquidationConfig);
 
         borrowToken.approve(address(market), type(uint256).max);
         collateralToken.approve(address(market), type(uint256).max);

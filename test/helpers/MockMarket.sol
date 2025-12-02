@@ -166,9 +166,10 @@ library MockMarketDeployer {
         uint256 _maxLtv,
         uint256 _borrowOpeningFee,
         address _feeRecipient,
-        LiquidationConfiguration memory _liquidationConfiguration,
-        address _liquidationEngine
+        LiquidationConfiguration memory _liquidationConfiguration
     ) public returns (MockMarket market) {
+        address liquidationEngine = address(new AltoLiquidationEngine(address(this)));
+
         market = new MockMarket();
 
         market.initialize(
@@ -180,9 +181,11 @@ library MockMarketDeployer {
                 oracle: _oracle,
                 maxLtv: _maxLtv,
                 feeRecipient: _feeRecipient,
-                liquidationEngine: _liquidationEngine
+                liquidationEngine: liquidationEngine
             }),
             _borrowOpeningFee
         );
+
+        AltoLiquidationEngine(liquidationEngine).setLiquidationConfiguration(_liquidationConfiguration);
     }
 }

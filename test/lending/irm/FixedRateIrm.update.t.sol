@@ -44,10 +44,6 @@ contract FixedRateIrmUpdateTest is IrmCommon {
             liquidationWindowTag: 3 days
         });
 
-        // Create liquidation engines before market deployment
-        address liquidationEngine = address(new AltoLiquidationEngine(address(this)));
-        address liquidationEngine2 = address(new AltoLiquidationEngine(address(this)));
-
         market = MockMarket(
             MockMarketDeployer.deployMarket(
                 address(borrowToken),
@@ -58,13 +54,9 @@ contract FixedRateIrmUpdateTest is IrmCommon {
                 LTV,
                 0,
                 address(this),
-                liquidationConfig,
-                liquidationEngine
+                liquidationConfig
             )
         );
-
-        // Market initialization automatically calls setMarketOnce on the liquidation engine
-        AltoLiquidationEngine(liquidationEngine).setLiquidationConfiguration(liquidationConfig);
 
         borrowToken.approve(address(market), type(uint256).max);
         collateralToken.approve(address(market), type(uint256).max);
@@ -83,13 +75,9 @@ contract FixedRateIrmUpdateTest is IrmCommon {
                 LTV,
                 0,
                 address(this),
-                liquidationConfig,
-                liquidationEngine2
+                liquidationConfig
             )
         );
-
-        // Market initialization automatically calls setMarketOnce on the liquidation engine
-        AltoLiquidationEngine(liquidationEngine2).setLiquidationConfiguration(liquidationConfig);
     }
 
     function _getAccruedInterest(uint256 borrowedAmount, uint256 borrowRate, uint256 time)

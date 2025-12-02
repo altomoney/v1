@@ -62,23 +62,11 @@ contract AltoBorrowMarketLiquidationsFuzzTest is Test {
         address irm = address(new FixedRateIrm(0.04 ether / uint256(365 days), address(this)));
         OracleMock(oracle).setPrice(collateralPrice);
 
-        // Create liquidation engine before market deployment
-        address liquidationEngine = address(new AltoLiquidationEngine(address(this)));
-
         market = _deployMarket(
-            address(borrowToken),
-            address(collateralToken),
-            irm,
-            address(oracle),
-            maxLtv,
-            liquidationConfiguration,
-            liquidationEngine
+            address(borrowToken), address(collateralToken), irm, address(oracle), maxLtv, liquidationConfiguration
         );
 
         imarket = IMarket(address(market));
-
-        // Market initialization automatically calls setMarketOnce on the liquidation engine
-        IPriorityLiquidationEngine(liquidationEngine).setLiquidationConfiguration(liquidationConfiguration);
 
         _setupInitialBalances();
         _setupApprovals();
@@ -91,8 +79,7 @@ contract AltoBorrowMarketLiquidationsFuzzTest is Test {
         address _irm,
         address _oracle,
         uint256 _maxLtv,
-        LiquidationConfiguration memory _liquidationConfiguration,
-        address _liquidationEngine
+        LiquidationConfiguration memory _liquidationConfiguration
     ) internal returns (MockMarket) {
         return MockMarketDeployer.deployMarket(
             _borrowToken,
@@ -103,8 +90,7 @@ contract AltoBorrowMarketLiquidationsFuzzTest is Test {
             _maxLtv,
             0,
             FEE_RECEIVER,
-            _liquidationConfiguration,
-            _liquidationEngine
+            _liquidationConfiguration
         );
     }
 
