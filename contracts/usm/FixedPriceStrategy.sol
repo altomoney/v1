@@ -43,6 +43,7 @@ contract FixedPriceStrategy is IUsmPriceStrategy, AccessControl {
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(CONFIGURATOR_ROLE, admin);
         priceRatio = initialPriceRatio;
+        emit PriceRatioSet(0, initialPriceRatio);
         UNDERLYING_ASSET = underlyingAsset;
         UNDERLYING_ASSET_DECIMALS = IERC20Metadata(underlyingAsset).decimals();
         _underlyingAssetUnits = 10 ** UNDERLYING_ASSET_DECIMALS;
