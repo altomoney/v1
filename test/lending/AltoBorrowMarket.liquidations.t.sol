@@ -63,9 +63,6 @@ contract AltoBorrowMarketTest is Test {
         address oracle = address(new OracleMock());
         OracleMock(oracle).setPrice(collateralPrice);
 
-        // Create liquidation engine before market deployment
-        address liquidationEngine = address(new AltoLiquidationEngine(address(this)));
-
         market = MockMarketDeployer.deployMarket(
             address(borrowToken),
             address(collateralToken),
@@ -75,12 +72,8 @@ contract AltoBorrowMarketTest is Test {
             maxLtv,
             0,
             FEE_RECEIVER,
-            liquidationConfiguration,
-            liquidationEngine
+            liquidationConfiguration
         );
-
-        // Market initialization automatically calls setMarketOnce on the liquidation engine
-        IPriorityLiquidationEngine(liquidationEngine).setLiquidationConfiguration(liquidationConfiguration);
 
         imarket = IMarket(address(market));
 
@@ -126,9 +119,9 @@ contract AltoBorrowMarketTest is Test {
         vm.stopPrank();
 
         vm.startPrank(market.owner());
-        IPriorityLiquidationEngine(liquidationEngine).setPriorityLiquidator(bob, true);
-        IPriorityLiquidationEngine(liquidationEngine).setPriorityLiquidator(liquidator, true);
-        IPriorityLiquidationEngine(liquidationEngine).setPriorityLiquidator(address(liquidateCallback), true);
+        IPriorityLiquidationEngine(market.liquidationEngine()).setPriorityLiquidator(bob, true);
+        IPriorityLiquidationEngine(market.liquidationEngine()).setPriorityLiquidator(liquidator, true);
+        IPriorityLiquidationEngine(market.liquidationEngine()).setPriorityLiquidator(address(liquidateCallback), true);
         vm.stopPrank();
     }
 
