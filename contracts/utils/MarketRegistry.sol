@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import {AltoOwnable2Step, Ownable} from "@alto/utils/AltoOwnable2Step.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {IMarketRegistry} from "./interfaces/IMarketRegistry.sol";
 
@@ -9,7 +9,7 @@ import {IMarketRegistry} from "./interfaces/IMarketRegistry.sol";
 /// @author Pearl Labs
 /// @custom:contact security@altofoundation.org
 /// @notice Main registry of mint and borrow market contracts
-contract MarketRegistry is Ownable2Step, IMarketRegistry {
+contract MarketRegistry is AltoOwnable2Step, IMarketRegistry {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     /// @dev Set of mint market addresses
