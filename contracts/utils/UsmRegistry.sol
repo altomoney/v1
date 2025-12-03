@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import {AltoOwnable2Step, Ownable} from "@alto/utils/AltoOwnable2Step.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {IUsmRegistry} from "./interfaces/IUsmRegistry.sol";
 
@@ -9,7 +9,7 @@ import {IUsmRegistry} from "./interfaces/IUsmRegistry.sol";
 /// @author Pearl Labs
 /// @custom:contact security@altofoundation.org
 /// @notice Main registry of USM (Universal Stability Module) contracts
-contract UsmRegistry is Ownable2Step, IUsmRegistry {
+contract UsmRegistry is AltoOwnable2Step, IUsmRegistry {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     /// @dev Set of USM addresses
