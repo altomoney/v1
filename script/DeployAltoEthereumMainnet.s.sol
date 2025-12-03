@@ -32,7 +32,8 @@ contract DeployAltoEthereumMainnetScript is Script {
             feeReceiverAddress: address(0), // TODO: Set to actual fee recipient address
             deployer: msg.sender,
             phase: PHASE_TO_DEPLOY,
-            useUnsafeUpgrades: false
+            useUnsafeUpgrades: false,
+            treasuryMultisig: address(1) // TODO: Set to actual treasury multisig address
         });
 
         input = DeployAltoEthereumMainnet.deploy(params, input);
@@ -71,16 +72,30 @@ contract DeployAltoEthereumMainnetScript is Script {
         contractsJson = _serializeMarketContracts(contractsJson, "susdeBorrow", input.contracts.susdeBorrowMarket);
 
         // Serialize USDC USM contracts
-        if (input.contracts.usdcUsm.dusdUsm != address(0)) {
-            contractsJson = vm.serializeAddress("contracts", "usdcUsm", input.contracts.usdcUsm.dusdUsm);
+        if (input.contracts.permissionedUsm.dusdUsm != address(0)) {
+            contractsJson = vm.serializeAddress("contracts", "permissionedUsm", input.contracts.permissionedUsm.dusdUsm);
             contractsJson = vm.serializeAddress(
-                "contracts", "usdcUsmImplementation", input.contracts.usdcUsm.dusdUsmImplementation
+                "contracts", "permissionedUsmImplementation", input.contracts.permissionedUsm.dusdUsmImplementation
             );
             contractsJson = vm.serializeAddress(
-                "contracts", "usdcUsmFixedPriceStrategy", input.contracts.usdcUsm.fixedPriceStrategy
+                "contracts", "permissionedUsmFixedPriceStrategy", input.contracts.permissionedUsm.fixedPriceStrategy
             );
+            contractsJson = vm.serializeAddress(
+                "contracts", "permissionedUsmFixedFeeStrategy", input.contracts.permissionedUsm.fixedFeeStrategy
+            );
+        }
+        if (input.contracts.permissionlessUsm.dusdUsm != address(0)) {
             contractsJson =
-                vm.serializeAddress("contracts", "usdcUsmFixedFeeStrategy", input.contracts.usdcUsm.fixedFeeStrategy);
+                vm.serializeAddress("contracts", "permissionlessUsm", input.contracts.permissionlessUsm.dusdUsm);
+            contractsJson = vm.serializeAddress(
+                "contracts", "permissionlessUsmImplementation", input.contracts.permissionlessUsm.dusdUsmImplementation
+            );
+            contractsJson = vm.serializeAddress(
+                "contracts", "permissionlessUsmFixedPriceStrategy", input.contracts.permissionlessUsm.fixedPriceStrategy
+            );
+            contractsJson = vm.serializeAddress(
+                "contracts", "permissionlessUsmFixedFeeStrategy", input.contracts.permissionlessUsm.fixedFeeStrategy
+            );
         }
 
         // Build final JSON and write to file
@@ -142,11 +157,20 @@ contract DeployAltoEthereumMainnetScript is Script {
         loadedInput.contracts.susdeBorrowMarket = _loadMarketContracts(json, "susdeBorrow");
 
         // Load USDC USM contracts
-        loadedInput.contracts.usdcUsm.dusdUsm = _tryParseAddress(json, ".contracts.usdcUsm");
-        loadedInput.contracts.usdcUsm.dusdUsmImplementation = _tryParseAddress(json, ".contracts.usdcUsmImplementation");
-        loadedInput.contracts.usdcUsm.fixedPriceStrategy =
-            _tryParseAddress(json, ".contracts.usdcUsmFixedPriceStrategy");
-        loadedInput.contracts.usdcUsm.fixedFeeStrategy = _tryParseAddress(json, ".contracts.usdcUsmFixedFeeStrategy");
+        loadedInput.contracts.permissionedUsm.dusdUsm = _tryParseAddress(json, ".contracts.permissionedUsm");
+        loadedInput.contracts.permissionedUsm.dusdUsmImplementation =
+            _tryParseAddress(json, ".contracts.permissionedUsmImplementation");
+        loadedInput.contracts.permissionedUsm.fixedPriceStrategy =
+            _tryParseAddress(json, ".contracts.permissionedUsmFixedPriceStrategy");
+        loadedInput.contracts.permissionedUsm.fixedFeeStrategy =
+            _tryParseAddress(json, ".contracts.permissionedUsmFixedFeeStrategy");
+        loadedInput.contracts.permissionlessUsm.dusdUsm = _tryParseAddress(json, ".contracts.permissionlessUsm");
+        loadedInput.contracts.permissionlessUsm.dusdUsmImplementation =
+            _tryParseAddress(json, ".contracts.permissionlessUsmImplementation");
+        loadedInput.contracts.permissionlessUsm.fixedPriceStrategy =
+            _tryParseAddress(json, ".contracts.permissionlessUsmFixedPriceStrategy");
+        loadedInput.contracts.permissionlessUsm.fixedFeeStrategy =
+            _tryParseAddress(json, ".contracts.permissionlessUsmFixedFeeStrategy");
 
         input = loadedInput;
     }

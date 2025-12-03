@@ -10,6 +10,7 @@ contract Constants {
     bytes32 public constant USM_TOKEN_RESCUER_ROLE = keccak256("TOKEN_RESCUER_ROLE");
     bytes32 public constant USM_SWAP_FREEZER_ROLE = keccak256("SWAP_FREEZER_ROLE");
     bytes32 public constant USM_LIQUIDATOR_ROLE = keccak256("LIQUIDATOR_ROLE");
+    bytes32 public constant USM_SWAPPER_ROLE = keccak256("SWAPPER_ROLE");
 
     // signature typehash for USM
     bytes32 public constant USM_BUY_ASSET_WITH_SIG_TYPEHASH = keccak256(

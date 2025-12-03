@@ -31,7 +31,7 @@ struct MarketContracts {
     address leverage;
 }
 
-struct UsdcUsmContracts {
+struct UsmContracts {
     address dusdUsm;
     address dusdUsmImplementation;
     address fixedPriceStrategy;
@@ -58,7 +58,8 @@ struct Contracts {
     MarketContracts wbtcBorrowMarket;
     MarketContracts cbbtcBorrowMarket;
     MarketContracts susdeBorrowMarket;
-    UsdcUsmContracts usdcUsm;
+    UsmContracts permissionedUsm;
+    UsmContracts permissionlessUsm;
 }
 
 // PARAMETERS FOR THE DEPLOYMENT
@@ -71,6 +72,7 @@ struct AltoEthereumMainnetParams {
     address deployer;
     DeploymentPhase phase;
     bool useUnsafeUpgrades;
+    address treasuryMultisig;
 }
 
 struct DeployCoreParams {
@@ -100,15 +102,18 @@ struct DeployBorrowMarketParams {
     address freezer; // Pauser/Freezer Multisig address
 }
 
-struct DeployUsdcUsmParams {
+struct DeployUsmParams {
     address owner;
     address dusd; // From previous DUSD phase
+    address underlyingAsset; // Underlying asset address (USDC_MAINNET, etc.)
     address altoAdapter; // From previous CORE phase
     address feeRecipient; // From previous CORE phase
     address freezer; // Pauser/Freezer Multisig address
     uint256 buyFee; // Buy fee for USM
     uint256 sellFee; // Sell fee for USM
     uint256 exposureCap; // Exposure cap for USM
+    bool isPermissioned; // Whether the USM is permissioned
+    address treasuryMultisig; // Treasury multisig address
 }
 
 struct DeployMintMarketParams {
