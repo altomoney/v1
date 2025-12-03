@@ -40,11 +40,8 @@ contract UsmBatch {
 
     constructor(UsmBatchParams memory _params) {
         // Deploy FixedPriceStrategy
-        address fixedPriceStrategy = address(
-            new FixedPriceStrategy(
-                _params.priceRatio, _params.underlyingAsset, _params.underlyingAssetDecimals, _params.owner
-            )
-        );
+        address fixedPriceStrategy =
+            address(new FixedPriceStrategy(_params.priceRatio, _params.underlyingAsset, _params.owner));
 
         // Deploy FixedFeeStrategy
         address fixedFeeStrategy = address(new FixedFeeStrategy(_params.buyFee, _params.sellFee, _params.owner));
