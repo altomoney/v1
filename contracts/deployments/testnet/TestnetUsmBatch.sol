@@ -32,11 +32,7 @@ contract TestnetUsmBatch {
 
     constructor(TestnetUsmBatchParams memory _params) {
         // Deploy FixedPriceStrategy
-        address fixedPriceStrategy = address(
-            new FixedPriceStrategy(
-                1 ether, _params.underlyingAsset, IERC20Metadata(_params.underlyingAsset).decimals(), _params.owner
-            )
-        );
+        address fixedPriceStrategy = address(new FixedPriceStrategy(1 ether, _params.underlyingAsset, _params.owner));
 
         // Deploy FixedFeeStrategy
         address fixedFeeStrategy = address(new FixedFeeStrategy(_params.buyFee, _params.sellFee, _params.owner));
