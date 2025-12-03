@@ -175,6 +175,10 @@ if command -v jq >/dev/null 2>&1; then
     BUNDLER3=$(get_address ".contracts.bundler3")
     MOCK_SWAPPER=$(get_address ".contracts.mockSwapper")
     MULTI_TOKEN_SENDER=$(get_address ".contracts.multiTokenSender")
+
+    # Registry contracts
+    MARKET_REGISTRY=$(get_address ".contracts.marketRegistry")
+    USM_REGISTRY=$(get_address ".contracts.usmRegistry")
     
     # Mint market addresses
     ## WETH
@@ -270,6 +274,10 @@ else
     BUNDLER3=$(get_address "bundler3")
     MOCK_SWAPPER=$(get_address "mockSwapper")
     MULTI_TOKEN_SENDER=$(get_address "multiTokenSender")
+
+    # Registry contracts
+    MARKET_REGISTRY=$(get_address "marketRegistry")
+    USM_REGISTRY=$(get_address "usmRegistry")
     
     # Mint market addresses
     ## WETH
@@ -365,6 +373,8 @@ echo "- Alto Leverage: $ALTO_LEVERAGE"
 echo "- Bundler3: $BUNDLER3"
 echo "- Mock Swapper: $MOCK_SWAPPER"
 echo "- Multi Token Sender: $MULTI_TOKEN_SENDER"
+echo "- Market Registry: $MARKET_REGISTRY"
+echo "- USM Registry: $USM_REGISTRY"
 echo "- WETH Market: $WETH_MARKET"
 echo "- WETH Market Implementation: $WETH_MARKET_IMPL"
 echo "- WETH Market IRM: $WETH_MARKET_IRM"
@@ -441,7 +451,7 @@ echo "⏰ This process will take approximately 1-2 minutes due to rate limiting.
 echo ""
 
 # Initialize progress tracking (base excludes payment oracles)
-BASE_CONTRACTS=65
+BASE_CONTRACTS=67
 TOTAL_CONTRACTS=$((BASE_CONTRACTS + ${#PAYMENT_ORACLES[@]}))
 CURRENT_CONTRACT=0
 
@@ -463,6 +473,12 @@ show_progress
 verify_contract "MockSwapper" "$MOCK_SWAPPER" "contracts/lending/mocks/SwapperSimpleMock.sol:SwapperSimpleMock"
 show_progress
 verify_contract "MultiTokenSender" "$MULTI_TOKEN_SENDER" "contracts/deployments/testnet/contracts/MultiTokenSender.sol:MultiTokenSender"
+show_progress
+
+# Verify registry contracts
+verify_contract "MarketRegistry" "$MARKET_REGISTRY" "contracts/utils/MarketRegistry.sol:MarketRegistry"
+show_progress
+verify_contract "UsmRegistry" "$USM_REGISTRY" "contracts/utils/UsmRegistry.sol:UsmRegistry"
 show_progress
 
 # Verify market contracts (these might be proxy contracts, so we verify the implementation)

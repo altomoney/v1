@@ -233,6 +233,8 @@ contract DeployAltoTestnetScript is Script {
             contractsJson = vm.serializeAddress("contracts", "altoLeverage", input.contracts.altoLeverage);
             contractsJson = vm.serializeAddress("contracts", "bundler3", input.contracts.bundler3);
             contractsJson = vm.serializeAddress("contracts", "altoAdapter", input.contracts.altoAdapter);
+            contractsJson = vm.serializeAddress("contracts", "marketRegistry", input.contracts.marketRegistry);
+            contractsJson = vm.serializeAddress("contracts", "usmRegistry", input.contracts.usmRegistry);
             contractsJson = vm.serializeString("contracts", "wethMarketBatch", wethMarketJson);
             contractsJson = vm.serializeString("contracts", "wstethMarketBatch", wstethMarketJson);
             contractsJson = vm.serializeString("contracts", "rethMarketBatch", rethMarketJson);
@@ -290,6 +292,8 @@ contract DeployAltoTestnetScript is Script {
         loadedInput.contracts.altoLeverage = vm.parseJsonAddress(json, ".contracts.altoLeverage");
         loadedInput.contracts.bundler3 = vm.parseJsonAddress(json, ".contracts.bundler3");
         loadedInput.contracts.altoAdapter = vm.parseJsonAddress(json, ".contracts.altoAdapter");
+        loadedInput.contracts.marketRegistry = vm.parseJsonAddress(json, ".contracts.marketRegistry");
+        loadedInput.contracts.usmRegistry = vm.parseJsonAddress(json, ".contracts.usmRegistry");
 
         // Load weth market batch
         loadedInput.contracts.wethMarketBatch.market = vm.parseJsonAddress(json, ".contracts.wethMarketBatch.market");
@@ -436,6 +440,8 @@ contract DeployAltoTestnetScript is Script {
         _extractContractABI("AltoLeverage", abiFolder);
         _extractContractABI("Bundler3", abiFolder);
         _extractContractABI("AltoAdapter", abiFolder);
+        _extractContractABI("MarketRegistry", abiFolder);
+        _extractContractABI("UsmRegistry", abiFolder);
 
         // Extract ABIs for market contracts
         _extractContractABI("AltoLiquidationEngine", abiFolder);

@@ -57,6 +57,10 @@ import {
     TestnetUsmBatchParams,
     TestnetUsmBatchReport
 } from "@alto/deployments/testnet/TestnetUsmBatch.sol";
+import {IUsmRegistry} from "@alto/utils/interfaces/IUsmRegistry.sol";
+import {IMarketRegistry} from "@alto/utils/interfaces/IMarketRegistry.sol";
+import {MarketRegistry} from "@alto/utils/MarketRegistry.sol";
+import {UsmRegistry} from "@alto/utils/UsmRegistry.sol";
 
 struct AltoTestnetInput {
     TestnetTokens tokens;
@@ -70,6 +74,8 @@ struct Contracts {
     address altoLeverage;
     address bundler3;
     address altoAdapter;
+    address marketRegistry;
+    address usmRegistry;
     TestnetMarketBatchReport wethMarketBatch;
     TestnetMarketBatchReport wstethMarketBatch;
     TestnetMarketBatchReport rethMarketBatch;
@@ -118,6 +124,7 @@ library DeployAltoTestnet {
     {
         input = _deployMulticall(params, input);
         input = _deployLending(params, input);
+        input = _deployRegistry(params, input);
         input = _deployStaking(params, input);
         input = _deployRewards(params, input);
         input = _deployUniswapPools(params, input);
@@ -138,6 +145,29 @@ library DeployAltoTestnet {
         returns (AltoTestnetInput memory)
     {
         input.contracts.altoMulticall = address(new AltoMulticallTestnet(getMulticallOwnerAddresses()));
+        return input;
+    }
+
+    function _deployRegistry(AltoTestnetParams memory params, AltoTestnetInput memory input)
+        internal
+        returns (AltoTestnetInput memory)
+    {
+        input.contracts.marketRegistry = address(new MarketRegistry(params.deployer));
+        IMarketRegistry(input.contracts.marketRegistry).addMintMarket(input.contracts.wethMarketBatch.market);
+        IMarketRegistry(input.contracts.marketRegistry).addMintMarket(input.contracts.wstethMarketBatch.market);
+        IMarketRegistry(input.contracts.marketRegistry).addMintMarket(input.contracts.rethMarketBatch.market);
+        IMarketRegistry(input.contracts.marketRegistry).addMintMarket(input.contracts.methMarketBatch.market);
+        IMarketRegistry(input.contracts.marketRegistry).addMintMarket(input.contracts.tbtcMarketBatch.market);
+        IMarketRegistry(input.contracts.marketRegistry).addBorrowMarket(input.contracts.wbtcMarketBatch.market);
+        IMarketRegistry(input.contracts.marketRegistry).addBorrowMarket(input.contracts.cbbtcMarketBatch.market);
+        IMarketRegistry(input.contracts.marketRegistry).addBorrowMarket(input.contracts.susdeMarketBatch.market);
+
+        input.contracts.usmRegistry = address(new UsmRegistry(params.deployer));
+        IUsmRegistry(input.contracts.usmRegistry).addUsm(input.contracts.usdcUsmBatch.dusdUsm);
+
+        address contractOwner = input.contracts.altoMulticall;
+        AltoOwnable2Step(input.contracts.marketRegistry).transferOwnershipSkip2Step(contractOwner);
+        AltoOwnable2Step(input.contracts.usmRegistry).transferOwnershipSkip2Step(contractOwner);
         return input;
     }
 
