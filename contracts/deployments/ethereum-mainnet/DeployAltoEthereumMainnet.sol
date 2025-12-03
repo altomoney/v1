@@ -37,6 +37,8 @@ import {DUSDBatch, DUSDBatchParams, DUSDBatchReport} from "@alto/deployments/eth
 import {MintMarketBatch, MintMarketBatchParams} from "@alto/deployments/ethereum-mainnet/MintMarketBatch.sol";
 import {BorrowMarketBatch, BorrowMarketBatchParams} from "@alto/deployments/ethereum-mainnet/BorrowMarketBatch.sol";
 import {UsmBatch, UsmBatchParams, UsmBatchReport} from "@alto/deployments/ethereum-mainnet/UsmBatch.sol";
+import {IMarketRegistry, MarketRegistry} from "@alto/utils/MarketRegistry.sol";
+import {IUsmRegistry, UsmRegistry} from "@alto/utils/UsmRegistry.sol";
 import {
     MarketContracts,
     UsdcUsmContracts,
@@ -60,6 +62,8 @@ library DeployAltoEthereumMainnet {
             DeployCoreParams memory coreParams =
                 DeployCoreParams({owner: params.deployer, bundler3: BUNDLER3_MAINNET, wNative: WETH_MAINNET});
             input = _deployCore(coreParams, params, input);
+        } else if (params.phase == DeploymentPhase.REGISTRY) {
+            input = _deployRegistries(params, input);
         } else if (params.phase == DeploymentPhase.DUSD) {
             input = _deployDUSD(
                 DeployDUSDParams({
@@ -99,6 +103,7 @@ library DeployAltoEthereumMainnet {
                     }),
                     freezer: params.freezer
                 }),
+                input,
                 params.useUnsafeUpgrades
             );
         } else if (params.phase == DeploymentPhase.MINT_MARKET_WSTETH) {
@@ -130,6 +135,7 @@ library DeployAltoEthereumMainnet {
                     }),
                     freezer: params.freezer
                 }),
+                input,
                 params.useUnsafeUpgrades
             );
         } else if (params.phase == DeploymentPhase.MINT_MARKET_RETH) {
@@ -161,6 +167,7 @@ library DeployAltoEthereumMainnet {
                     }),
                     freezer: params.freezer
                 }),
+                input,
                 params.useUnsafeUpgrades
             );
         } else if (params.phase == DeploymentPhase.MINT_MARKET_METH) {
@@ -192,6 +199,7 @@ library DeployAltoEthereumMainnet {
                     }),
                     freezer: params.freezer
                 }),
+                input,
                 params.useUnsafeUpgrades
             );
         } else if (params.phase == DeploymentPhase.MINT_MARKET_TBTC) {
@@ -223,6 +231,7 @@ library DeployAltoEthereumMainnet {
                     }),
                     freezer: params.freezer
                 }),
+                input,
                 params.useUnsafeUpgrades
             );
         } else if (params.phase == DeploymentPhase.BORROW_MARKET_WBTC) {
@@ -261,6 +270,7 @@ library DeployAltoEthereumMainnet {
                     }),
                     freezer: params.freezer
                 }),
+                input,
                 params.useUnsafeUpgrades
             );
         } else if (params.phase == DeploymentPhase.BORROW_MARKET_CBBTC) {
@@ -299,6 +309,7 @@ library DeployAltoEthereumMainnet {
                     }),
                     freezer: params.freezer
                 }),
+                input,
                 params.useUnsafeUpgrades
             );
         } else if (params.phase == DeploymentPhase.BORROW_MARKET_SUSDE) {
@@ -337,6 +348,7 @@ library DeployAltoEthereumMainnet {
                     }),
                     freezer: params.freezer
                 }),
+                input,
                 params.useUnsafeUpgrades
             );
         } else if (params.phase == DeploymentPhase.USDC_USM) {
@@ -394,6 +406,15 @@ library DeployAltoEthereumMainnet {
         return input;
     }
 
+    function _deployRegistries(AltoEthereumMainnetParams memory params, AltoEthereumMainnetInput memory input)
+        internal
+        returns (AltoEthereumMainnetInput memory)
+    {
+        input.contracts.marketRegistry = address(new MarketRegistry(params.deployer));
+        input.contracts.usmRegistry = address(new UsmRegistry(params.deployer));
+        return input;
+    }
+
     function _deployDUSD(
         DeployDUSDParams memory dusdParams,
         AltoEthereumMainnetParams memory params,
@@ -419,12 +440,12 @@ library DeployAltoEthereumMainnet {
         return input;
     }
 
-    function _deployMintMarket(DeployMintMarketParams memory marketParams, bool useUnsafeUpgrades)
-        internal
-        returns (MarketContracts memory)
-    {
-        uint256 minterCeiling =
-            marketParams.debtCeiling * 1.05 ether / marketParams.liquidationConfig.maxLiquidationLtv;
+    function _deployMintMarket(
+        DeployMintMarketParams memory marketParams,
+        AltoEthereumMainnetInput memory input,
+        bool useUnsafeUpgrades
+    ) internal returns (MarketContracts memory) {
+        uint256 minterCeiling = marketParams.debtCeiling * 1.05 ether / marketParams.liquidationConfig.maxLiquidationLtv;
         MintMarketBatch batch = new MintMarketBatch(
             MintMarketBatchParams({
                 owner: marketParams.owner,
@@ -452,16 +473,19 @@ library DeployAltoEthereumMainnet {
         IDUSD(marketParams.dusd).setMinterCeiling(report.market, minterCeiling);
         IDUSD(marketParams.dusd).setBurnerStatus(report.market, true);
 
+        IMarketRegistry(input.contracts.marketRegistry).addMintMarket(report.market);
+
         // Approve market on AltoAdapter (requires adapter ownership)
         AltoAdapter(payable(marketParams.altoAdapter)).approveContract(report.market);
 
         return report;
     }
 
-    function _deployBorrowMarket(DeployBorrowMarketParams memory marketParams, bool useUnsafeUpgrades)
-        internal
-        returns (MarketContracts memory)
-    {
+    function _deployBorrowMarket(
+        DeployBorrowMarketParams memory marketParams,
+        AltoEthereumMainnetInput memory input,
+        bool useUnsafeUpgrades
+    ) internal returns (MarketContracts memory) {
         // Deploy batch - deploys all market components in single constructor (including Oracle and IRM)
         BorrowMarketBatch batch = new BorrowMarketBatch(
             BorrowMarketBatchParams({
@@ -482,6 +506,8 @@ library DeployAltoEthereumMainnet {
             })
         );
         MarketContracts memory report = batch.getReport();
+
+        IMarketRegistry(input.contracts.marketRegistry).addBorrowMarket(report.market);
 
         // Approve market on AltoAdapter (requires adapter ownership)
         AltoAdapter(payable(marketParams.altoAdapter)).approveContract(report.market);
@@ -522,6 +548,8 @@ library DeployAltoEthereumMainnet {
         IDUSD(usmParams.dusd).setMinterCeiling(report.dusdUsm, mintCeiling);
         IDUSD(usmParams.dusd).setBurnerStatus(report.dusdUsm, true);
 
+        IUsmRegistry(input.contracts.usmRegistry).addUsm(report.dusdUsm);
+
         // Approve USM on AltoAdapter (requires adapter ownership)
         AltoAdapter(payable(usmParams.altoAdapter)).approveContract(report.dusdUsm);
 
@@ -536,11 +564,12 @@ library DeployAltoEthereumMainnet {
     }
 
     function _transferOwnershipToTimelock(Contracts memory contracts, address timelock) internal {
-        // Transfer ownership from DUSD and AltoAdapter (which were deployed with deployer as owner)
+        // Transfer ownership from DUSD, MarketRegistry, UsmRegistry, and AltoAdapter (which were deployed with deployer as owner)
         // DUSDFlashMinter already has timelock as owner from DUSDBatch deployment
         AltoOwnable2Step(contracts.altoAdapter).transferOwnershipSkip2Step(timelock);
         AltoOwnable2Step(contracts.dusd).transferOwnershipSkip2Step(timelock);
-
+        AltoOwnable2Step(contracts.marketRegistry).transferOwnershipSkip2Step(timelock);
+        AltoOwnable2Step(contracts.usmRegistry).transferOwnershipSkip2Step(timelock);
         // All other contracts already have timelock as owner
     }
 

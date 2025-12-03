@@ -2,6 +2,7 @@
 pragma solidity ^0.8.22;
 
 import {Test} from "forge-std/Test.sol";
+import {MarketType} from "@alto/lending/interfaces/IMarket.sol";
 
 import {
     DeployAltoEthereumMainnet,
@@ -38,6 +39,8 @@ import {IAltoLiquidationEngine} from "@alto/lending/interfaces/IAltoLiquidationE
 import {Pausable} from "@alto/utils/Pausable.sol";
 import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
 import {AltoLeverageSwapper} from "@alto/lending/leverage/AltoLeverageSwapper.sol";
+import {IMarketRegistry, MarketRegistry} from "@alto/utils/MarketRegistry.sol";
+import {IUsmRegistry, UsmRegistry} from "@alto/utils/UsmRegistry.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
 contract DeployAltoEthereumMainnetTest is Test {
@@ -79,9 +82,14 @@ contract DeployAltoEthereumMainnetTest is Test {
             input = DeployAltoEthereumMainnet.deploy(params, input);
         }
 
-        // All other phases depend on CORE and DUSD
         if (targetPhase != DeploymentPhase.DUSD) {
             params.phase = DeploymentPhase.DUSD;
+            input = DeployAltoEthereumMainnet.deploy(params, input);
+        }
+
+        // All other phases depend on CORE, DUSD and REGISTRY
+        if (targetPhase != DeploymentPhase.REGISTRY) {
+            params.phase = DeploymentPhase.REGISTRY;
             input = DeployAltoEthereumMainnet.deploy(params, input);
         }
     }
@@ -129,6 +137,24 @@ contract DeployAltoEthereumMainnetTest is Test {
         assertEq(address(adapter.WRAPPED_NATIVE()), WETH_MAINNET, "AltoAdapter wNative should be correct");
     }
 
+    function test_deployPhase_REGISTRY() public {
+        _deployPrerequisites(DeploymentPhase.REGISTRY);
+
+        params.phase = DeploymentPhase.REGISTRY;
+        input = DeployAltoEthereumMainnet.deploy(params, input);
+
+        MarketRegistry marketRegistry = MarketRegistry(input.contracts.marketRegistry);
+        UsmRegistry usmRegistry = UsmRegistry(input.contracts.usmRegistry);
+
+        // Verify MarketRegistry is deployed
+        _verifyDeployed(address(marketRegistry), "MarketRegistry");
+        assertEq(marketRegistry.owner(), DEPLOYER, "MarketRegistry owner should be deployer");
+
+        // Verify UsmRegistry is deployed
+        _verifyDeployed(address(usmRegistry), "UsmRegistry");
+        assertEq(usmRegistry.owner(), DEPLOYER, "UsmRegistry owner should be deployer");
+    }
+
     function test_deployPhase_DUSD() public {
         _deployPrerequisites(DeploymentPhase.DUSD);
 
@@ -163,6 +189,14 @@ contract DeployAltoEthereumMainnetTest is Test {
 
     function _verifyMarketContracts(MarketContracts memory market) internal view {
         string memory s = IERC20Metadata(IMarket(market.market).collateralToken()).symbol();
+        MarketType marketType = IMarket(market.market).MARKET_TYPE();
+        MarketRegistry marketRegistry = MarketRegistry(input.contracts.marketRegistry);
+
+        if (marketType == MarketType.MINT) {
+            assertTrue(marketRegistry.isMintMarket(market.market), "Market should be registered as mint market");
+        } else if (marketType == MarketType.BORROW) {
+            assertTrue(marketRegistry.isBorrowMarket(market.market), "Market should be registered as borrow market");
+        }
 
         _verifyDeployed(market.market, "market");
         _verifyDeployed(market.marketImplementation, "implementation");
@@ -247,6 +281,7 @@ contract DeployAltoEthereumMainnetTest is Test {
 
         _verifyMarketContracts(input.contracts.wethMarket);
         _verifyMintCeilingMarket(input.contracts.wethMarket.market, 300_000 ether);
+
         // TODO verify other parameters - base, liquidation engine, IRM, oracle...
     }
 
@@ -258,6 +293,7 @@ contract DeployAltoEthereumMainnetTest is Test {
 
         _verifyMarketContracts(input.contracts.wstethMarket);
         _verifyMintCeilingMarket(input.contracts.wstethMarket.market, 300_000 ether);
+
         // TODO verify other parameters - base, liquidation engine, IRM, oracle...
     }
 
@@ -269,6 +305,7 @@ contract DeployAltoEthereumMainnetTest is Test {
 
         _verifyMarketContracts(input.contracts.rethMarket);
         _verifyMintCeilingMarket(input.contracts.rethMarket.market, 300_000 ether);
+
         // TODO verify other parameters - base, liquidation engine, IRM, oracle...
     }
 
@@ -280,6 +317,7 @@ contract DeployAltoEthereumMainnetTest is Test {
 
         _verifyMarketContracts(input.contracts.methMarket);
         _verifyMintCeilingMarket(input.contracts.methMarket.market, 300_000 ether);
+
         // TODO verify other parameters - base, liquidation engine, IRM, oracle...
     }
 
@@ -291,6 +329,7 @@ contract DeployAltoEthereumMainnetTest is Test {
 
         _verifyMarketContracts(input.contracts.tbtcMarket);
         _verifyMintCeilingMarket(input.contracts.tbtcMarket.market, 300_000 ether);
+
         // TODO verify other parameters - base, liquidation engine, IRM, oracle...
     }
 
@@ -301,6 +340,7 @@ contract DeployAltoEthereumMainnetTest is Test {
         input = DeployAltoEthereumMainnet.deploy(params, input);
 
         _verifyMarketContracts(input.contracts.wbtcBorrowMarket);
+
         // TODO verify other parameters - base, liquidation engine, IRM, oracle...
     }
 
@@ -311,6 +351,7 @@ contract DeployAltoEthereumMainnetTest is Test {
         input = DeployAltoEthereumMainnet.deploy(params, input);
 
         _verifyMarketContracts(input.contracts.cbbtcBorrowMarket);
+
         // TODO verify other parameters - base, liquidation engine, IRM, oracle...
     }
 
@@ -321,6 +362,7 @@ contract DeployAltoEthereumMainnetTest is Test {
         input = DeployAltoEthereumMainnet.deploy(params, input);
 
         _verifyMarketContracts(input.contracts.susdeBorrowMarket);
+
         // TODO verify other parameters - base, liquidation engine, IRM, oracle...
     }
 
@@ -352,6 +394,9 @@ contract DeployAltoEthereumMainnetTest is Test {
         _verifyDeployed(input.contracts.usdcUsm.fixedFeeStrategy, "Fixed fee strategy");
 
         _verifyMintCeiling(input.contracts.usdcUsm.dusdUsm, 5_000_000_000 ether);
+
+        UsmRegistry usmRegistry = UsmRegistry(input.contracts.usmRegistry);
+        assertTrue(usmRegistry.isUsm(input.contracts.usdcUsm.dusdUsm), "DUSD USM should be registered");
 
         // TODO verify other parameters - fees, exposure cap, etc.
 
@@ -451,6 +496,8 @@ contract DeployAltoEthereumMainnetTest is Test {
 
         _verifyOwner(input.contracts.altoAdapter, "AltoAdapter");
         _verifyOwner(input.contracts.dusd, "DUSD");
+        _verifyOwner(input.contracts.marketRegistry, "MarketRegistry");
+        _verifyOwner(input.contracts.usmRegistry, "UsmRegistry");
         _verifyHasAllRolesTimelock(MULTISIG_TIMELOCK_ADMIN, "multisig admin");
         _verifyHasNoRolesTimelock(params.deployer, "deployer");
         for (uint256 i = 0; i < getMulticallOwnerAddresses().length; i++) {
@@ -486,6 +533,9 @@ contract DeployAltoEthereumMainnetTest is Test {
 
     function test_deployAllPhasesSequentially() public {
         params.phase = DeploymentPhase.CORE;
+        input = DeployAltoEthereumMainnet.deploy(params, input);
+
+        params.phase = DeploymentPhase.REGISTRY;
         input = DeployAltoEthereumMainnet.deploy(params, input);
 
         params.phase = DeploymentPhase.DUSD;

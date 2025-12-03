@@ -57,6 +57,8 @@ contract DeployAltoEthereumMainnetScript is Script {
         contractsJson = vm.serializeAddress("contracts", "feeRecipient", input.contracts.feeRecipient);
         contractsJson = vm.serializeAddress("contracts", "dusd", input.contracts.dusd);
         contractsJson = vm.serializeAddress("contracts", "dusdFlashMinter", input.contracts.dusdFlashMinter);
+        contractsJson = vm.serializeAddress("contracts", "marketRegistry", input.contracts.marketRegistry);
+        contractsJson = vm.serializeAddress("contracts", "usmRegistry", input.contracts.usmRegistry);
 
         // Serialize market contracts using helper
         contractsJson = _serializeMarketContracts(contractsJson, "weth", input.contracts.wethMarket);
@@ -126,6 +128,8 @@ contract DeployAltoEthereumMainnetScript is Script {
         loadedInput.contracts.feeRecipient = _tryParseAddress(json, ".contracts.feeRecipient");
         loadedInput.contracts.dusd = _tryParseAddress(json, ".contracts.dusd");
         loadedInput.contracts.dusdFlashMinter = _tryParseAddress(json, ".contracts.dusdFlashMinter");
+        loadedInput.contracts.marketRegistry = _tryParseAddress(json, ".contracts.marketRegistry");
+        loadedInput.contracts.usmRegistry = _tryParseAddress(json, ".contracts.usmRegistry");
 
         // Load market contracts using helper
         loadedInput.contracts.wethMarket = _loadMarketContracts(json, "weth");
@@ -192,6 +196,9 @@ contract DeployAltoEthereumMainnetScript is Script {
             _extractContractABI("AltoAdapter", abiFolder);
             _extractContractABI("MockFeeCollector", abiFolder);
             _extractContractABI("AltoTimelockController", abiFolder);
+        } else if (PHASE_TO_DEPLOY == DeploymentPhase.REGISTRY) {
+            _extractContractABI("MarketRegistry", abiFolder);
+            _extractContractABI("UsmRegistry", abiFolder);
         } else if (PHASE_TO_DEPLOY == DeploymentPhase.DUSD) {
             _extractContractABI("DUSD", abiFolder);
             _extractContractABI("DUSDFlashMinter", abiFolder);
