@@ -4,6 +4,11 @@ pragma solidity ^0.8.0;
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 import {IStableTokenFacilitator} from "./IStableTokenFacilitator.sol";
 
+enum AccessMode {
+    PERMISSIONLESS,
+    PERMISSIONED
+}
+
 /**
  * @title IUsm
  * @author Pearl Labs
@@ -92,6 +97,12 @@ interface IUsm is IAccessControl, IStableTokenFacilitator {
     event ExposureCapUpdated(uint256 oldExposureCap, uint256 newExposureCap);
 
     /**
+     * @dev Emitted when the Access Mode is updated
+     * @param accessMode The new access mode
+     */
+    event AccessModeUpdated(AccessMode accessMode);
+
+    /**
      * @dev Emitted when tokens are rescued from the USM
      * @param tokenRescued The address of the rescued token
      * @param recipient The address that received the rescued tokens
@@ -158,6 +169,12 @@ interface IUsm is IAccessControl, IStableTokenFacilitator {
      * @param feeStrategy The address of the new FeeStrategy
      */
     function updateFeeStrategy(address feeStrategy) external;
+
+    /**
+     * @notice Updates the access mode of the USM
+     * @param accessMode The new access mode
+     */
+    function updateAccessMode(AccessMode accessMode) external;
 
     /**
      * @notice Updates the exposure cap of the underlying asset
@@ -268,6 +285,12 @@ interface IUsm is IAccessControl, IStableTokenFacilitator {
     function getIsFrozen() external view returns (bool);
 
     /**
+     * @notice Returns the access mode of the USM
+     * @return The access mode
+     */
+    function getAccessMode() external view returns (AccessMode);
+
+    /**
      * @notice Returns the current seizure status of the USM
      * @return True if the USM has been seized, false if not
      */
@@ -326,4 +349,10 @@ interface IUsm is IAccessControl, IStableTokenFacilitator {
      * @return The bytes32 id hash of the Liquidator role
      */
     function LIQUIDATOR_ROLE() external pure returns (bytes32);
+
+    /**
+     * @notice Returns the identifier of the Swapper Role
+     * @return The bytes32 id hash of the Swapper role
+     */
+    function SWAPPER_ROLE() external pure returns (bytes32);
 }

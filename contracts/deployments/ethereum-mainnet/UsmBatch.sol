@@ -4,7 +4,7 @@ pragma solidity ^0.8.22;
 import {DUSDUsm} from "@alto/usm/DUSDUsm.sol";
 import {FixedPriceStrategy} from "@alto/usm/FixedPriceStrategy.sol";
 import {FixedFeeStrategy} from "@alto/usm/FixedFeeStrategy.sol";
-import {IUsm} from "@alto/usm/interfaces/IUsm.sol";
+import {IUsm, AccessMode} from "@alto/usm/interfaces/IUsm.sol";
 import {IDUSD} from "@alto/tokens/interfaces/IDUSD.sol";
 import {AltoAdapter} from "@alto/utils/AltoAdapter.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
@@ -23,8 +23,9 @@ struct UsmBatchParams {
     uint256 exposureCap;
     address underlyingAsset;
     uint256 priceRatio;
-    uint8 underlyingAssetDecimals;
+    bool isPermissioned;
     bool useUnsafeUpgrades;
+    address treasuryMultisig;
 }
 
 struct UsmBatchReport {
@@ -44,7 +45,13 @@ contract UsmBatch {
             address(new FixedPriceStrategy(_params.priceRatio, _params.underlyingAsset, _params.owner));
 
         // Deploy FixedFeeStrategy
-        address fixedFeeStrategy = address(new FixedFeeStrategy(_params.buyFee, _params.sellFee, _params.owner));
+        address fixedFeeStrategy;
+
+        if (_params.isPermissioned) {
+            fixedFeeStrategy = address(0);
+        } else {
+            fixedFeeStrategy = address(new FixedFeeStrategy(_params.buyFee, _params.sellFee, _params.owner));
+        }
 
         // Deploy DUSDUsm Proxy with constructor data
         bytes memory initData = abi.encodeCall(
@@ -65,13 +72,20 @@ contract UsmBatch {
         // Grant SWAP_FREEZER_ROLE to freezer (requires DUSDUsm admin role)
         IAccessControl(dusdUsm).grantRole(IUsm(dusdUsm).SWAP_FREEZER_ROLE(), _params.freezer);
 
-        // Set FixedFeeStrategy on DUSDUsm (requires CONFIGURATOR_ROLE, which is granted to admin)
-        IUsm(dusdUsm).updateFeeStrategy(fixedFeeStrategy);
+        if (!_params.isPermissioned) {
+            // Set FixedFeeStrategy on DUSDUsm (requires CONFIGURATOR_ROLE, which is granted to admin)
+            IUsm(dusdUsm).updateFeeStrategy(fixedFeeStrategy);
+        } else {
+            IUsm(dusdUsm).updateAccessMode(AccessMode.PERMISSIONED);
+        }
 
         // Transfer admin role to final owner (timelock)
         bytes32 adminRole = bytes32(0); // DEFAULT_ADMIN_ROLE
         IAccessControl(dusdUsm).grantRole(adminRole, _params.owner);
         IAccessControl(dusdUsm).grantRole(IUsm(dusdUsm).CONFIGURATOR_ROLE(), _params.owner);
+        if (_params.isPermissioned) {
+            IAccessControl(dusdUsm).grantRole(IUsm(dusdUsm).SWAPPER_ROLE(), _params.treasuryMultisig);
+        }
         IAccessControl(dusdUsm).revokeRole(IUsm(dusdUsm).CONFIGURATOR_ROLE(), address(this));
         IAccessControl(dusdUsm).revokeRole(adminRole, address(this));
 

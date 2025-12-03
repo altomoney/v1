@@ -139,6 +139,40 @@ contract TestUsm is TestDusdBase {
         assertEq(DUSD_USM.getExposureCap(), DEFAULT_USM_USDC_EXPOSURE, "Unexpected exposure capacity");
     }
 
+    function testSellAssetPermissioned() public {
+        uint256 fee = 0;
+        uint256 dusdOut = DEFAULT_USM_DUSD_AMOUNT;
+
+        vm.prank(FAUCET);
+        USDC_TOKEN.mint(multisigTreasury, DEFAULT_USM_USDC_AMOUNT);
+
+        vm.startPrank(multisigTreasury);
+        USDC_TOKEN.approve(address(PERMISSIONED_DUSD_USM), DEFAULT_USM_USDC_AMOUNT);
+        vm.expectEmit(true, true, true, true, address(PERMISSIONED_DUSD_USM));
+        emit IUsm.SellAsset(multisigTreasury, multisigTreasury, DEFAULT_USM_USDC_AMOUNT, DEFAULT_USM_DUSD_AMOUNT, 0);
+        (uint256 assetAmount, uint256 dusdBought) =
+            PERMISSIONED_DUSD_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, multisigTreasury, multisigTreasury);
+        vm.stopPrank();
+
+        assertEq(dusdBought, DEFAULT_USM_DUSD_AMOUNT - fee, "Unexpected DUSD amount bought");
+        assertEq(assetAmount, DEFAULT_USM_USDC_AMOUNT, "Unexpected asset amount sold");
+        assertEq(USDC_TOKEN.balanceOf(multisigTreasury), 0, "Unexpected final USDC balance");
+        assertEq(DUSD_TOKEN.balanceOf(multisigTreasury), dusdOut, "Unexpected final DUSD balance");
+        assertEq(PERMISSIONED_DUSD_USM.getExposureCap(), DEFAULT_USM_USDC_EXPOSURE, "Unexpected exposure capacity");
+    }
+
+    function testRevertSellAssetPermissionedIfNotPermissioned() public {
+        vm.prank(FAUCET);
+        USDC_TOKEN.mint(multisigTreasury, DEFAULT_USM_USDC_AMOUNT);
+
+        address notPermissioned = makeAddr("notPermissioned");
+        vm.startPrank(notPermissioned);
+        USDC_TOKEN.approve(address(PERMISSIONED_DUSD_USM), DEFAULT_USM_USDC_AMOUNT);
+        vm.expectRevert("NOT PERMISSIONED");
+        PERMISSIONED_DUSD_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, notPermissioned, notPermissioned);
+        vm.stopPrank();
+    }
+
     function testSellAssetSendToOther() public {
         uint256 fee = DEFAULT_USM_DUSD_AMOUNT.percentMul(DEFAULT_USM_SELL_FEE);
         uint256 dusdOut = DEFAULT_USM_DUSD_AMOUNT - fee;
@@ -515,6 +549,57 @@ contract TestUsm is TestDusdBase {
         );
         assertEq(DUSD_USM.getAvailableLiquidity(), 0, "Unexpected available liquidity");
         assertEq(DUSD_USM.getExposureCap(), DEFAULT_USM_USDC_EXPOSURE, "Unexpected exposure capacity");
+    }
+
+    function testBuyAssetPermissioned() public {
+        uint256 sellFee = 0;
+        uint256 buyFee = 0;
+        uint256 dusdOut = DEFAULT_USM_DUSD_AMOUNT;
+
+        // Supply assets to the GSM first
+        vm.prank(FAUCET);
+        USDC_TOKEN.mint(multisigTreasury, DEFAULT_USM_USDC_AMOUNT);
+        vm.startPrank(multisigTreasury);
+        USDC_TOKEN.approve(address(PERMISSIONED_DUSD_USM), DEFAULT_USM_USDC_AMOUNT);
+        vm.expectEmit(true, true, true, true, address(PERMISSIONED_DUSD_USM));
+        emit IUsm.SellAsset(
+            multisigTreasury, multisigTreasury, DEFAULT_USM_USDC_AMOUNT, DEFAULT_USM_DUSD_AMOUNT, sellFee
+        );
+        PERMISSIONED_DUSD_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, multisigTreasury, multisigTreasury);
+        vm.stopPrank();
+
+        // Buy assets as another user
+        dusdFaucet(multisigTreasury, DEFAULT_USM_DUSD_AMOUNT + buyFee);
+        vm.startPrank(multisigTreasury);
+        DUSD_TOKEN.approve(address(PERMISSIONED_DUSD_USM), DEFAULT_USM_DUSD_AMOUNT + buyFee);
+        vm.expectEmit(true, true, true, true, address(PERMISSIONED_DUSD_USM));
+        emit IUsm.BuyAsset(
+            multisigTreasury, multisigTreasury, DEFAULT_USM_USDC_AMOUNT, DEFAULT_USM_DUSD_AMOUNT + buyFee, buyFee
+        );
+        (uint256 assetAmount, uint256 dusdSold) =
+            PERMISSIONED_DUSD_USM.buyAsset(DEFAULT_USM_USDC_AMOUNT, multisigTreasury, multisigTreasury);
+        vm.stopPrank();
+
+        assertEq(dusdSold, DEFAULT_USM_DUSD_AMOUNT + buyFee, "Unexpected DUSD amount sold");
+        assertEq(assetAmount, DEFAULT_USM_USDC_AMOUNT, "Unexpected asset amount bought");
+        assertEq(USDC_TOKEN.balanceOf(multisigTreasury), DEFAULT_USM_USDC_AMOUNT, "Unexpected final USDC balance");
+        assertEq(DUSD_TOKEN.balanceOf(multisigTreasury), dusdOut, "Unexpected final DUSD balance");
+        assertEq(DUSD_TOKEN.balanceOf(address(PERMISSIONED_DUSD_USM)), sellFee + buyFee, "Unexpected GSM DUSD balance");
+        assertEq(
+            PERMISSIONED_DUSD_USM.getAvailableUnderlyingExposure(),
+            DEFAULT_USM_USDC_EXPOSURE,
+            "Unexpected available underlying exposure"
+        );
+        assertEq(PERMISSIONED_DUSD_USM.getAvailableLiquidity(), 0, "Unexpected available liquidity");
+        assertEq(PERMISSIONED_DUSD_USM.getExposureCap(), DEFAULT_USM_USDC_EXPOSURE, "Unexpected exposure capacity");
+    }
+
+    function testRevertBuyAssetPermissionedIfNotPermissioned() public {
+        address notPermissioned = makeAddr("notPermissioned");
+        vm.startPrank(notPermissioned);
+        vm.expectRevert("NOT PERMISSIONED");
+        PERMISSIONED_DUSD_USM.buyAsset(DEFAULT_USM_USDC_AMOUNT, notPermissioned, notPermissioned);
+        vm.stopPrank();
     }
 
     function testBuyAssetSendToOther() public {
