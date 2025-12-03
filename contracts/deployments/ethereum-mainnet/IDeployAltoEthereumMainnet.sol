@@ -7,17 +7,18 @@ import {LiquidationConfiguration} from "@alto/lending/interfaces/IPriorityLiquid
 
 enum DeploymentPhase {
     CORE, // Phase 0: Deploy TimelockController, AltoAdapter, and MockFeeCollector
-    DUSD, // Phase 1: Deploy DUSD and DUSDFlashMinter
-    MINT_MARKET_WETH, // Phase 2: Deploy WETH Mint Market
-    MINT_MARKET_WSTETH, // Phase 3: Deploy wstETH Mint Market
-    MINT_MARKET_RETH, // Phase 4: Deploy rETH Mint Market
-    MINT_MARKET_METH, // Phase 5: Deploy mETH Mint Market
-    MINT_MARKET_TBTC, // Phase 6: Deploy tBTC Mint Market
-    BORROW_MARKET_WBTC, // Phase 7: Deploy WBTC Borrow Market
-    BORROW_MARKET_CBBTC, // Phase 8: Deploy cbBTC Borrow Market
-    BORROW_MARKET_SUSDE, // Phase 9: Deploy sUSDe Borrow Market
-    USDC_USM, // Phase 10: Deploy DUSD/USDC Peg Stability Module
-    POST // Phase 11: Configure TimelockController and transfer ownership
+    REGISTRY, // Phase 1: Deploy MarketRegistry and UsmRegistry
+    DUSD, // Phase 2: Deploy DUSD and DUSDFlashMinter
+    MINT_MARKET_WETH, // Phase 3: Deploy WETH Mint Market
+    MINT_MARKET_WSTETH, // Phase 4: Deploy wstETH Mint Market
+    MINT_MARKET_RETH, // Phase 5: Deploy rETH Mint Market
+    MINT_MARKET_METH, // Phase 6: Deploy mETH Mint Market
+    MINT_MARKET_TBTC, // Phase 7: Deploy tBTC Mint Market
+    BORROW_MARKET_WBTC, // Phase 8: Deploy WBTC Borrow Market
+    BORROW_MARKET_CBBTC, // Phase 9: Deploy cbBTC Borrow Market
+    BORROW_MARKET_SUSDE, // Phase 10: Deploy sUSDe Borrow Market
+    USDC_USM, // Phase 11: Deploy DUSD/USDC Peg Stability Module
+    POST // Phase 12: Configure TimelockController and transfer ownership
 }
 
 struct MarketContracts {
@@ -47,6 +48,8 @@ struct Contracts {
     address feeRecipient; // Mock fee collector
     address dusd;
     address dusdFlashMinter;
+    address marketRegistry;
+    address usmRegistry;
     MarketContracts wethMarket;
     MarketContracts wstethMarket;
     MarketContracts rethMarket;
