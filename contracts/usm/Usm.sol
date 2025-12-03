@@ -5,7 +5,7 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {IStableTokenFacilitator} from "./interfaces/IStableTokenFacilitator.sol";
 import {IUsmPriceStrategy} from "./interfaces/IUsmPriceStrategy.sol";
 import {IUsmFeeStrategy} from "./interfaces/IUsmFeeStrategy.sol";
-import {IUsm} from "./interfaces/IUsm.sol";
+import {IUsm, AccessMode} from "./interfaces/IUsm.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
@@ -37,6 +37,9 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, AuthUpgradeabl
     /// @inheritdoc IUsm
     bytes32 public constant LIQUIDATOR_ROLE = keccak256("LIQUIDATOR_ROLE");
 
+    /// @inheritdoc IUsm
+    bytes32 public constant SWAPPER_ROLE = keccak256("SWAPPER_ROLE");
+
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     address public immutable STABLE_TOKEN;
 
@@ -54,6 +57,7 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, AuthUpgradeabl
     uint128 internal _exposureCap;
     uint128 internal _currentExposure;
     uint128 internal _accruedFees;
+    AccessMode internal _accessMode;
 
     /// upgrade gap
     uint256[45] private __gap_usm;
@@ -71,6 +75,19 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, AuthUpgradeabl
      */
     modifier notSeized() {
         require(!_isSeized, "USM_SEIZED");
+        _;
+    }
+
+    /**
+     * @dev Require caller to have access to the USM for
+     * For Permissioned USMs, the caller must have the SWAPPER_ROLE
+     * For Permissionless USMs, the caller can be any address
+     * @param caller The address of the caller
+     */
+    modifier hasAccess(address caller) {
+        if (_accessMode == AccessMode.PERMISSIONED) {
+            require(hasRole(SWAPPER_ROLE, caller), "NOT PERMISSIONED");
+        }
         _;
     }
 
@@ -116,6 +133,7 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, AuthUpgradeabl
         external
         notFrozen
         notSeized
+        hasAccess(msg.sender)
         returns (uint256, uint256)
     {
         require(_isSenderAuthorized(onBehalf), "UNAUTHORIZED");
@@ -127,6 +145,7 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, AuthUpgradeabl
         external
         notFrozen
         notSeized
+        hasAccess(msg.sender)
         returns (uint256, uint256)
     {
         require(_isSenderAuthorized(onBehalf), "UNAUTHORIZED");
@@ -205,6 +224,11 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, AuthUpgradeabl
     /// @inheritdoc IUsm
     function updateExposureCap(uint128 exposureCap) external onlyRole(CONFIGURATOR_ROLE) {
         _updateExposureCap(exposureCap);
+    }
+
+    /// @inheritdoc IUsm
+    function updateAccessMode(AccessMode accessMode) external onlyRole(CONFIGURATOR_ROLE) {
+        _updateAccessMode(accessMode);
     }
 
     /// @inheritdoc IStableTokenFacilitator
@@ -317,6 +341,11 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, AuthUpgradeabl
     /// @inheritdoc IUsm
     function canSwap() external view returns (bool) {
         return !_isFrozen && !_isSeized;
+    }
+
+    /// @inheritdoc IUsm
+    function getAccessMode() external view returns (AccessMode) {
+        return _accessMode;
     }
 
     /// @inheritdoc IStableTokenFacilitator
@@ -484,6 +513,15 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, AuthUpgradeabl
         uint128 oldExposureCap = _exposureCap;
         _exposureCap = exposureCap;
         emit ExposureCapUpdated(oldExposureCap, exposureCap);
+    }
+
+    /**
+     * @dev Updates Access Mode
+     * @param accessMode The new access mode
+     */
+    function _updateAccessMode(AccessMode accessMode) internal {
+        _accessMode = accessMode;
+        emit AccessModeUpdated(accessMode);
     }
 
     /**

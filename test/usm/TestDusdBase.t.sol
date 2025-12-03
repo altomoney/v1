@@ -15,7 +15,7 @@ import {SampleLiquidator} from "@alto/usm/mocks/SampleLiquidator.sol";
 import {SampleSwapFreezer} from "@alto/usm/mocks/SampleSwapFreezer.sol";
 import {DUSDUsm} from "@alto/usm/DUSDUsm.sol";
 import {PercentageMath} from "./PercentageMath.sol";
-import {IUsm} from "@alto/usm/interfaces/IUsm.sol";
+import {IUsm, AccessMode} from "@alto/usm/interfaces/IUsm.sol";
 import {Usm} from "@alto/usm/Usm.sol";
 import {UnsafeUpgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {UsmDeployer, DusdUsmInitParams} from "@alto-test/helpers/UsmDeployer.sol";
@@ -27,10 +27,12 @@ contract TestDusdBase is Test, TestHelperOz5, Constants {
     ERC20MockMintableDecimals USDC_TOKEN;
     ERC20MockMintableDecimals WETH;
     Usm DUSD_USM;
+    Usm PERMISSIONED_DUSD_USM;
     FixedPriceStrategy DUSD_USM_FIXED_PRICE_STRATEGY;
     FixedFeeStrategy DUSD_USM_FIXED_FEE_STRATEGY;
     SampleLiquidator DUSD_USM_LAST_RESORT_LIQUIDATOR;
     SampleSwapFreezer DUSD_USM_SWAP_FREEZER;
+    address multisigTreasury = makeAddr("MultisigTreasury");
 
     constructor() {
         setupDusd();
@@ -52,6 +54,7 @@ contract TestDusdBase is Test, TestHelperOz5, Constants {
         DUSD_USM_LAST_RESORT_LIQUIDATOR = new SampleLiquidator();
         DUSD_USM_SWAP_FREEZER = new SampleSwapFreezer();
         DUSDUsm usm = new DUSDUsm(address(DUSD_TOKEN), address(USDC_TOKEN));
+        DUSDUsm permissionedUsm = new DUSDUsm(address(DUSD_TOKEN), address(USDC_TOKEN));
         address usmProxy = UnsafeUpgrades.deployUUPSProxy(
             address(usm),
             abi.encodeCall(
@@ -61,15 +64,32 @@ contract TestDusdBase is Test, TestHelperOz5, Constants {
         );
         DUSD_USM = Usm(usmProxy);
 
+        address permissionedUsmProxy = UnsafeUpgrades.deployUUPSProxy(
+            address(permissionedUsm),
+            abi.encodeCall(
+                DUSDUsm.initialize,
+                (address(this), TREASURY, DEFAULT_USM_USDC_EXPOSURE, address(DUSD_USM_FIXED_PRICE_STRATEGY))
+            )
+        );
+        PERMISSIONED_DUSD_USM = Usm(permissionedUsmProxy);
+
         DUSD_USM_FIXED_FEE_STRATEGY = new FixedFeeStrategy(DEFAULT_USM_BUY_FEE, DEFAULT_USM_SELL_FEE, address(this));
         DUSD_USM.updateFeeStrategy(address(DUSD_USM_FIXED_FEE_STRATEGY));
 
         DUSD_USM.grantRole(USM_LIQUIDATOR_ROLE, address(DUSD_USM_LAST_RESORT_LIQUIDATOR));
         DUSD_USM.grantRole(USM_SWAP_FREEZER_ROLE, address(DUSD_USM_SWAP_FREEZER));
 
+        PERMISSIONED_DUSD_USM.grantRole(USM_LIQUIDATOR_ROLE, address(DUSD_USM_LAST_RESORT_LIQUIDATOR));
+        PERMISSIONED_DUSD_USM.grantRole(USM_SWAP_FREEZER_ROLE, address(DUSD_USM_SWAP_FREEZER));
+        PERMISSIONED_DUSD_USM.grantRole(USM_SWAPPER_ROLE, multisigTreasury);
+        PERMISSIONED_DUSD_USM.updateAccessMode(AccessMode.PERMISSIONED);
+
         DUSD(DUSD_TOKEN).setMinterStatus(address(DUSD_USM), true);
+        DUSD(DUSD_TOKEN).setMinterStatus(address(PERMISSIONED_DUSD_USM), true);
         DUSD(DUSD_TOKEN).setMinterCeiling(address(DUSD_USM), DEFAULT_CAPACITY);
+        DUSD(DUSD_TOKEN).setMinterCeiling(address(PERMISSIONED_DUSD_USM), DEFAULT_CAPACITY);
         DUSD(DUSD_TOKEN).setBurnerStatus(address(DUSD_USM), true);
+        DUSD(DUSD_TOKEN).setBurnerStatus(address(PERMISSIONED_DUSD_USM), true);
 
         DUSD(DUSD_TOKEN).setMinterStatus(FAUCET, true);
         DUSD(DUSD_TOKEN).setMinterCeiling(FAUCET, uint256(type(uint128).max));

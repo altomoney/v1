@@ -42,6 +42,7 @@ import {AltoLeverageSwapper} from "@alto/lending/leverage/AltoLeverageSwapper.so
 import {IMarketRegistry, MarketRegistry} from "@alto/utils/MarketRegistry.sol";
 import {IUsmRegistry, UsmRegistry} from "@alto/utils/UsmRegistry.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
+import {IUsm, AccessMode} from "@alto/usm/interfaces/IUsm.sol";
 
 contract DeployAltoEthereumMainnetTest is Test {
     AltoEthereumMainnetParams params;
@@ -56,6 +57,7 @@ contract DeployAltoEthereumMainnetTest is Test {
     bytes32 immutable SWAP_FREEZER_ROLE = keccak256("SWAP_FREEZER_ROLE");
     bytes32 immutable TOKEN_RESCUER_ROLE = keccak256("TOKEN_RESCUER_ROLE");
     bytes32 immutable LIQUIDATOR_ROLE = keccak256("LIQUIDATOR_ROLE");
+    bytes32 immutable SWAPPER_ROLE = keccak256("SWAPPER_ROLE");
     bytes32 immutable DEFAULT_ADMIN_ROLE = bytes32(0);
 
     function setUp() public {
@@ -71,7 +73,8 @@ contract DeployAltoEthereumMainnetTest is Test {
             feeReceiverAddress: STAKING_URD,
             deployer: DEPLOYER,
             phase: DeploymentPhase.CORE,
-            useUnsafeUpgrades: true
+            useUnsafeUpgrades: true,
+            treasuryMultisig: address(1) // TODO: Set to actual treasury multisig address
         });
     }
 
@@ -388,39 +391,118 @@ contract DeployAltoEthereumMainnetTest is Test {
         input = DeployAltoEthereumMainnet.deploy(params, input);
 
         // Verify USDC USM contracts are deployed
-        _verifyDeployed(input.contracts.usdcUsm.dusdUsm, "DUSD USM");
-        _verifyDeployed(input.contracts.usdcUsm.dusdUsmImplementation, "DUSD USM implementation");
-        _verifyDeployed(input.contracts.usdcUsm.fixedPriceStrategy, "Fixed price strategy");
-        _verifyDeployed(input.contracts.usdcUsm.fixedFeeStrategy, "Fixed fee strategy");
+        _verifyDeployed(input.contracts.permissionedUsm.dusdUsm, "DUSD USM Permissioned");
+        _verifyDeployed(input.contracts.permissionedUsm.dusdUsmImplementation, "DUSD USM implementation Permissioned");
+        _verifyDeployed(input.contracts.permissionedUsm.fixedPriceStrategy, "Fixed price strategy Permissioned");
+        assertEq(
+            input.contracts.permissionedUsm.fixedFeeStrategy,
+            address(0),
+            "Fixed fee strategy for permissionless USM should be 0"
+        );
 
-        _verifyMintCeiling(input.contracts.usdcUsm.dusdUsm, 5_000_000_000 ether);
+        _verifyDeployed(input.contracts.permissionlessUsm.dusdUsm, "DUSD USM Permissionless");
+        _verifyDeployed(
+            input.contracts.permissionlessUsm.dusdUsmImplementation, "DUSD USM implementation Permissionless"
+        );
+        _verifyDeployed(input.contracts.permissionlessUsm.fixedFeeStrategy, "Fixed fee strategy Permissionless");
+        _verifyDeployed(input.contracts.permissionlessUsm.fixedPriceStrategy, "Fixed price strategy Permissionless");
+
+        _verifyMintCeiling(input.contracts.permissionedUsm.dusdUsm, 5_000_000_000 ether);
+        _verifyMintCeiling(input.contracts.permissionlessUsm.dusdUsm, 5_000_000_000 ether);
 
         UsmRegistry usmRegistry = UsmRegistry(input.contracts.usmRegistry);
-        assertTrue(usmRegistry.isUsm(input.contracts.usdcUsm.dusdUsm), "DUSD USM should be registered");
+        assertTrue(
+            usmRegistry.isUsm(input.contracts.permissionedUsm.dusdUsm), "DUSD USM Permissioned should be registered"
+        );
+        assertTrue(
+            usmRegistry.isUsm(input.contracts.permissionlessUsm.dusdUsm), "DUSD USM Permissionless should be registered"
+        );
+
+        assertTrue(
+            IUsm(input.contracts.permissionedUsm.dusdUsm).getAccessMode() == AccessMode.PERMISSIONED,
+            "DUSD USM Permissioned should be permissioned"
+        );
+        assertTrue(
+            IUsm(input.contracts.permissionlessUsm.dusdUsm).getAccessMode() == AccessMode.PERMISSIONLESS,
+            "DUSD USM Permissionless should be permissionless"
+        );
 
         // TODO verify other parameters - fees, exposure cap, etc.
 
-        _verifyHasRole(input.contracts.usdcUsm.dusdUsm, input.contracts.timelock, DEFAULT_ADMIN_ROLE, "DUSD USM");
-        _verifyHasRole(input.contracts.usdcUsm.dusdUsm, input.contracts.timelock, CONFIGURATOR_ROLE, "DUSD USM");
-        _verifyHasRole(input.contracts.usdcUsm.dusdUsm, MULTISIG_FREEZER_PAUSER, SWAP_FREEZER_ROLE, "DUSD USM");
-
         _verifyHasRole(
-            input.contracts.usdcUsm.fixedPriceStrategy,
+            input.contracts.permissionedUsm.dusdUsm,
             input.contracts.timelock,
             DEFAULT_ADMIN_ROLE,
-            "Fixed price strategy"
+            "DUSD USM Permissioned"
         );
         _verifyHasRole(
-            input.contracts.usdcUsm.fixedPriceStrategy,
+            input.contracts.permissionedUsm.dusdUsm,
             input.contracts.timelock,
             CONFIGURATOR_ROLE,
-            "Fixed price strategy"
+            "DUSD USM Permissioned"
         );
         _verifyHasRole(
-            input.contracts.usdcUsm.fixedFeeStrategy, input.contracts.timelock, DEFAULT_ADMIN_ROLE, "Fixed fee strategy"
+            input.contracts.permissionedUsm.dusdUsm, MULTISIG_FREEZER_PAUSER, SWAP_FREEZER_ROLE, "DUSD USM Permissioned"
+        );
+
+        _verifyHasRole(
+            input.contracts.permissionlessUsm.dusdUsm,
+            input.contracts.timelock,
+            DEFAULT_ADMIN_ROLE,
+            "DUSD USM Permissionless"
         );
         _verifyHasRole(
-            input.contracts.usdcUsm.fixedFeeStrategy, input.contracts.timelock, CONFIGURATOR_ROLE, "Fixed fee strategy"
+            input.contracts.permissionlessUsm.dusdUsm,
+            input.contracts.timelock,
+            CONFIGURATOR_ROLE,
+            "DUSD USM Permissionless"
+        );
+        _verifyHasRole(
+            input.contracts.permissionlessUsm.dusdUsm,
+            MULTISIG_FREEZER_PAUSER,
+            SWAP_FREEZER_ROLE,
+            "DUSD USM Permissionless"
+        );
+
+        _verifyHasRole(
+            input.contracts.permissionlessUsm.fixedPriceStrategy,
+            input.contracts.timelock,
+            DEFAULT_ADMIN_ROLE,
+            "Fixed price strategy Permissionless"
+        );
+        _verifyHasRole(
+            input.contracts.permissionlessUsm.fixedPriceStrategy,
+            input.contracts.timelock,
+            CONFIGURATOR_ROLE,
+            "Fixed price strategy Permissionless"
+        );
+        _verifyHasRole(
+            input.contracts.permissionlessUsm.fixedFeeStrategy,
+            input.contracts.timelock,
+            DEFAULT_ADMIN_ROLE,
+            "Fixed fee strategy Permissionless"
+        );
+        _verifyHasRole(
+            input.contracts.permissionlessUsm.fixedFeeStrategy,
+            input.contracts.timelock,
+            CONFIGURATOR_ROLE,
+            "Fixed fee strategy Permissionless"
+        );
+
+        _verifyHasRole(
+            input.contracts.permissionedUsm.fixedPriceStrategy,
+            input.contracts.timelock,
+            DEFAULT_ADMIN_ROLE,
+            "Fixed price strategy Permissioned"
+        );
+        _verifyHasRole(
+            input.contracts.permissionedUsm.fixedPriceStrategy,
+            input.contracts.timelock,
+            CONFIGURATOR_ROLE,
+            "Fixed price strategy Permissioned"
+        );
+        _verifyHasRole(
+            input.contracts.permissionedUsm.dusdUsm, params.treasuryMultisig, SWAPPER_ROLE, "DUSD USM permissioned"
         );
     }
 
@@ -445,6 +527,10 @@ contract DeployAltoEthereumMainnetTest is Test {
             assertTrue(
                 AccessControl(_address).hasRole(role, _owner), string.concat(name, " should have LIQUIDATOR_ROLE")
             );
+        } else if (role == SWAPPER_ROLE) {
+            assertTrue(AccessControl(_address).hasRole(role, _owner), string.concat(name, " should have SWAPPER_ROLE"));
+        } else {
+            revert(string.concat(name, " invalid role"));
         }
     }
 

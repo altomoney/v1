@@ -41,7 +41,7 @@ import {IMarketRegistry, MarketRegistry} from "@alto/utils/MarketRegistry.sol";
 import {IUsmRegistry, UsmRegistry} from "@alto/utils/UsmRegistry.sol";
 import {
     MarketContracts,
-    UsdcUsmContracts,
+    UsmContracts,
     DeploymentPhase,
     AltoEthereumMainnetParams,
     AltoEthereumMainnetInput,
@@ -49,9 +49,10 @@ import {
     DeployDUSDParams,
     DeployMintMarketParams,
     DeployBorrowMarketParams,
-    DeployUsdcUsmParams,
+    DeployUsmParams,
     Contracts
 } from "@alto/deployments/ethereum-mainnet/IDeployAltoEthereumMainnet.sol";
+import {AccessMode} from "@alto/usm/interfaces/IUsm.sol";
 
 library DeployAltoEthereumMainnet {
     function deploy(AltoEthereumMainnetParams memory params, AltoEthereumMainnetInput memory input)
@@ -352,8 +353,8 @@ library DeployAltoEthereumMainnet {
                 params.useUnsafeUpgrades
             );
         } else if (params.phase == DeploymentPhase.USDC_USM) {
-            input = _deployUsdcUsm(
-                DeployUsdcUsmParams({
+            input = _deployUsm(
+                DeployUsmParams({
                     owner: input.contracts.timelock,
                     dusd: input.contracts.dusd,
                     altoAdapter: input.contracts.altoAdapter,
@@ -361,7 +362,28 @@ library DeployAltoEthereumMainnet {
                     freezer: params.freezer,
                     buyFee: 1, // TODO placeholder value
                     sellFee: 1, // TODO placeholder value
-                    exposureCap: 0 // TODO placeholder value
+                    exposureCap: 0, // TODO placeholder value
+                    underlyingAsset: USDC_MAINNET,
+                    isPermissioned: false,
+                    treasuryMultisig: params.treasuryMultisig
+                }),
+                input,
+                params.useUnsafeUpgrades
+            );
+
+            input = _deployUsm(
+                DeployUsmParams({
+                    owner: input.contracts.timelock,
+                    dusd: input.contracts.dusd,
+                    altoAdapter: input.contracts.altoAdapter,
+                    feeRecipient: input.contracts.feeRecipient,
+                    freezer: params.freezer,
+                    buyFee: 0,
+                    sellFee: 0,
+                    exposureCap: 0, // TODO placeholder value
+                    underlyingAsset: USDC_MAINNET,
+                    isPermissioned: true,
+                    treasuryMultisig: params.treasuryMultisig
                 }),
                 input,
                 params.useUnsafeUpgrades
@@ -515,11 +537,10 @@ library DeployAltoEthereumMainnet {
         return report;
     }
 
-    function _deployUsdcUsm(
-        DeployUsdcUsmParams memory usmParams,
-        AltoEthereumMainnetInput memory input,
-        bool useUnsafeUpgrades
-    ) internal returns (AltoEthereumMainnetInput memory) {
+    function _deployUsm(DeployUsmParams memory usmParams, AltoEthereumMainnetInput memory input, bool useUnsafeUpgrades)
+        internal
+        returns (AltoEthereumMainnetInput memory)
+    {
         require(usmParams.freezer != address(0), "Freezer must be set");
 
         UsmBatch batch = new UsmBatch(
@@ -532,10 +553,11 @@ library DeployAltoEthereumMainnet {
                 sellFee: usmParams.sellFee,
                 exposureCap: usmParams.exposureCap,
                 freezer: usmParams.freezer,
-                underlyingAsset: USDC_MAINNET,
+                underlyingAsset: usmParams.underlyingAsset,
                 priceRatio: 1 ether,
-                underlyingAssetDecimals: 6,
-                useUnsafeUpgrades: useUnsafeUpgrades
+                isPermissioned: usmParams.isPermissioned,
+                useUnsafeUpgrades: useUnsafeUpgrades,
+                treasuryMultisig: usmParams.treasuryMultisig
             })
         );
         UsmBatchReport memory report = batch.getReport();
@@ -553,12 +575,18 @@ library DeployAltoEthereumMainnet {
         // Approve USM on AltoAdapter (requires adapter ownership)
         AltoAdapter(payable(usmParams.altoAdapter)).approveContract(report.dusdUsm);
 
-        input.contracts.usdcUsm = UsdcUsmContracts({
+        UsmContracts memory usmContract = UsmContracts({
             dusdUsm: report.dusdUsm,
             dusdUsmImplementation: report.dusdUsmImplementation,
             fixedPriceStrategy: report.fixedPriceStrategy,
             fixedFeeStrategy: report.fixedFeeStrategy
         });
+
+        if (usmParams.isPermissioned) {
+            input.contracts.permissionedUsm = usmContract;
+        } else {
+            input.contracts.permissionlessUsm = usmContract;
+        }
 
         return input;
     }
