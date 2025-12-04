@@ -233,6 +233,9 @@ contract AltoStaking is IAltoStakingStaticTypes, TVLWeightedContainers, AltoOwna
 
     /// @inheritdoc IAltoStakingBase
     function updateContainer(uint256 containerId, Container memory container, uint256 multiplier) external onlyOwner {
+        if (nextEpochToProcess != currentEpoch()) {
+            _advanceEpoch(currentEpoch() - nextEpochToProcess);
+        }
         if (stakingContainerById[containerId].isDeprecated) {
             revert AltoStakingInvalidInput();
         }
