@@ -169,6 +169,10 @@ contract AltoRewardsDistributor is IRewardsDistributorStaticTypes, MerkleRootMan
         // Lock or transfer reward tokens
         if (lockPurchasedRewards) {
             IERC20(REWARD_TOKEN.token).forceApprove(lockContract, rewardsPurchaseAmount);
+            // The maxMultiplierStakingContainerId determination process is
+            // order dependent which means that if there are two containers with
+            // the same multiplier, the ID of the first container will be assigned to
+            // maxMultiplierStakingContainerId.
             IAltoStakingBase(lockContract)
                 .lock(
                     onBehalf,
