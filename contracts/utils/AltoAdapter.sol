@@ -347,9 +347,10 @@ contract AltoAdapter is CoreAdapter, AdapterContractApproval {
 
     /// @notice Sells assets from the USM.
     /// @param usm The address of the USM.
-    /// @param maxAmount The maximum amount of assets to sell.
+    /// @param maxAmount The maximum amount of underlying assets to sell.
+    /// @param minStableTokenAmount The minimum amount of Stable Token to receive.
     /// @param receiver The address of the receiver of the Stable Token.
-    function usmSellAssetWithERC20Transfer(IUsm usm, uint256 maxAmount, address receiver)
+    function usmSellAssetWithERC20Transfer(IUsm usm, uint256 maxAmount, uint256 minStableTokenAmount, address receiver)
         external
         onlyBundler3
         onlyApprovedContract(address(usm))
@@ -361,7 +362,9 @@ contract AltoAdapter is CoreAdapter, AdapterContractApproval {
 
         SafeERC20.safeTransferFrom(IERC20(underlyingAsset), initiator(), address(this), maxAmount);
 
-        (uint256 assetAmountSold,) = usm.sellAsset(maxAmount, receiver);
+        (uint256 assetAmountSold, uint256 stableTokenBought) = usm.sellAsset(maxAmount, receiver);
+
+        require(stableTokenBought >= minStableTokenAmount, ErrorsLib.SlippageExceeded());
 
         if (maxAmount - assetAmountSold != 0) {
             SafeERC20.safeTransfer(IERC20(underlyingAsset), initiator(), maxAmount - assetAmountSold);

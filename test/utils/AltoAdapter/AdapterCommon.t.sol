@@ -599,14 +599,14 @@ abstract contract AdapterCommon is Test {
         );
     }
 
-    function _usmSellAssetWithERC20Transfer(IUsm usm, uint256 maxAmount, address receiver)
+    function _usmSellAssetWithERC20Transfer(IUsm usm, uint256 maxAmount, uint256 minStableTokenAmount, address receiver)
         internal
         view
         returns (Call memory)
     {
         return _call(
             altoAdapter,
-            abi.encodeCall(AltoAdapter.usmSellAssetWithERC20Transfer, (usm, maxAmount, receiver)),
+            abi.encodeCall(AltoAdapter.usmSellAssetWithERC20Transfer, (usm, maxAmount, minStableTokenAmount, receiver)),
             bytes32(0)
         );
     }
