@@ -7,6 +7,11 @@ AltoRewardsOracle::updateUniswapNode()
 │   │   └── it should revert with ModuleUniswapInvalidInput
 │   ├── when _uniswapNode.twapPeriod is zero
 │   │   └── it should revert with ModuleUniswapInvalidInput
+│   ├── when inToken is not Alto token
+│   │   ├── when direction is IN_TO_OUT
+│   │   │   └── it should revert with AltoRewardsOracleInvalidInput
+│   │   └── when direction is OUT_TO_IN
+│   │       └── it should revert with AltoRewardsOracleInvalidInput
 │   └── when _uniswapNode is valid
 │       ├── it should emit SetUniswapNode event with old and new uniswap node
 │       ├── it should update uniswapNode to new uniswap node

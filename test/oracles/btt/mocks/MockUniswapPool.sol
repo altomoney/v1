@@ -5,11 +5,11 @@ import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
 
 /// @notice Mock Uniswap V3 Pool for testing purposes
 contract MockUniswapPool {
-    address inToken;
-    address outToken;
+    address public inToken;
+    address public outToken;
 
     constructor() {
-        inToken = address(new ERC20Mock("In Token", "IN"));
+        inToken = address(new ERC20Mock("ALTO", "ALTO"));
         outToken = address(new ERC20Mock("Out Token", "OUT"));
     }
 
@@ -26,6 +26,11 @@ contract MockUniswapPool {
         tickCumulatives[1] = 1000;
         secondsPerLiquidityCumulativeX128s[0] = 0;
         secondsPerLiquidityCumulativeX128s[1] = 1000;
+    }
+
+    function setTokens(address newInToken, address newOutToken) external {
+        inToken = newInToken;
+        outToken = newOutToken;
     }
 
     function token0() external view returns (address) {
