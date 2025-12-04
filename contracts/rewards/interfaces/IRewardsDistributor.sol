@@ -153,6 +153,10 @@ interface IRewardsDistributorBase is IRewardsErrors, IRewardsEvents, IAuth, IPau
     ) external returns (uint256 amount);
 
     /// @notice Sets a payment token and its oracle
+    /// @dev This contract is not compatible with transfer-tax tokens as
+    /// paymentToken. If these token types are used for any purpose
+    /// within the contract, this will result in down-stream issues and
+    /// inherently break the accounting.
     /// @param token The payment token address
     /// @param oracle The oracle address (0 to remove)
     function setPaymentToken(address token, address oracle) external;
