@@ -7,17 +7,26 @@ AltoStaking::updateContainer()
     ├── given container does not exist
     │   └── it should revert during validation
     └── given valid container exists and is not deprecated
-        ├── given valid multiplier
-        │   ├── when multiplier is non-zero
+        ├── given epochs are behind (nextEpochToProcess < currentEpoch)
+        │   ├── given valid multiplier
+        │   │   ├── it should advance epochs to current epoch
         │   │   ├── it should update container multiplier
-        │   │   ├── it should update container data
-        │   │   ├── it should emit ContainerMultiplierUpdated event
-        │   │   ├── it should emit ContainerUpdated event
-        │   │   └── when checking max multiplier container updates
-        │   │       └── it should update max multiplier container id if new multiplier is highest
-        │   └── when multiplier is zero
+        │   │   └── it should update container data
+        │   └── given invalid multiplier greater than MATH_PRECISION
         │       └── it should revert
-        ├── given invalid multiplier greater than MATH_PRECISION
-        │   └── it should revert
-        └── when updating with same multiplier but different container data
-            └── it should update container data while preserving multiplier
+        ├── given epochs are not behind (nextEpochToProcess == currentEpoch)
+        │   ├── given valid multiplier
+        │   │   ├── when multiplier is non-zero
+        │   │   │   ├── it should not advance epochs
+        │   │   │   ├── it should update container multiplier
+        │   │   │   ├── it should update container data
+        │   │   │   ├── it should emit ContainerMultiplierUpdated event
+        │   │   │   ├── it should emit ContainerUpdated event
+        │   │   │   └── when checking max multiplier container updates
+        │   │   │       └── it should update max multiplier container id if new multiplier is highest
+        │   │   └── when multiplier is zero
+        │   │       └── it should revert
+        │   ├── given invalid multiplier greater than MATH_PRECISION
+        │   │   └── it should revert
+        │   └── when updating with same multiplier but different container data
+        │       └── it should update container data while preserving multiplier
