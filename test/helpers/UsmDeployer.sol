@@ -6,12 +6,14 @@ import {UnsafeUpgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {Options} from "openzeppelin-foundry-upgrades/Options.sol";
 import {DUSDUsm} from "@alto/usm/DUSDUsm.sol";
 import {Vm} from "forge-std/Vm.sol";
+import {AccessMode} from "@alto/usm/interfaces/IUsm.sol";
 
 struct DusdUsmInitParams {
     address admin;
     address stableTokenTreasury;
     uint128 exposureCap;
     address priceStrategy;
+    AccessMode accessMode;
 }
 
 library UsmDeployer {
@@ -33,7 +35,8 @@ library UsmDeployer {
                         _initParams.admin,
                         _initParams.stableTokenTreasury,
                         _initParams.exposureCap,
-                        _initParams.priceStrategy
+                        _initParams.priceStrategy,
+                        _initParams.accessMode
                     )
                 ),
                 opts
@@ -47,7 +50,8 @@ library UsmDeployer {
                         _initParams.admin,
                         _initParams.stableTokenTreasury,
                         _initParams.exposureCap,
-                        _initParams.priceStrategy
+                        _initParams.priceStrategy,
+                        _initParams.accessMode
                     )
                 )
             );

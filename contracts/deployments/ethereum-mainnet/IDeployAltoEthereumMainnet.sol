@@ -17,8 +17,9 @@ enum DeploymentPhase {
     BORROW_MARKET_WBTC, // Phase 8: Deploy WBTC Borrow Market
     BORROW_MARKET_CBBTC, // Phase 9: Deploy cbBTC Borrow Market
     BORROW_MARKET_SUSDE, // Phase 10: Deploy sUSDe Borrow Market
-    USDC_USM, // Phase 11: Deploy DUSD/USDC Peg Stability Module
-    POST // Phase 12: Configure TimelockController and transfer ownership
+    PERMISSIONED_USM, // Phase 11: Deploy Permissioned DUSD/USDC Peg Stability Module
+    PERMISSIONLESS_USM, // Phase 12: Deploy Permissionless DUSD/USDC Peg Stability Module
+    POST // Phase 13: Configure TimelockController and transfer ownership
 }
 
 struct MarketContracts {

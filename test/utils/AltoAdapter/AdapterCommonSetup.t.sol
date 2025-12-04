@@ -38,6 +38,7 @@ import {FixedPriceStrategy} from "@alto/usm/FixedPriceStrategy.sol";
 import {FixedFeeStrategy} from "@alto/usm/FixedFeeStrategy.sol";
 import {ERC20MockMintableDecimals} from "@alto-test/helpers/ERC20MockMintableDecimals.sol";
 import {TestHelperOz5} from "@layerzerolabs/test-devtools-evm-foundry/contracts/TestHelperOz5.sol";
+import {AccessMode} from "@alto/usm/interfaces/IUsm.sol";
 
 uint256 constant MIN_AMOUNT = 1000;
 uint256 constant MAX_AMOUNT = 2 ** 64; // Must be less than or equal to type(uint160).max.
@@ -295,7 +296,13 @@ abstract contract AdapterCommonSetup is AdapterCommon, TestHelperOz5 {
                     "DUSDUsmInstance.sol",
                     abi.encodeCall(
                         DUSDUsm.initialize,
-                        (address(OWNER), address(OWNER), uint128(100_000_000e6), address(priceStrategy))
+                        (
+                            address(OWNER),
+                            address(OWNER),
+                            uint128(100_000_000e6),
+                            address(priceStrategy),
+                            AccessMode.PERMISSIONLESS
+                        )
                     )
                 )
             );
@@ -305,7 +312,13 @@ abstract contract AdapterCommonSetup is AdapterCommon, TestHelperOz5 {
                     address(usmInstance),
                     abi.encodeCall(
                         DUSDUsm.initialize,
-                        (address(OWNER), address(OWNER), uint128(100_000_000e6), address(priceStrategy))
+                        (
+                            address(OWNER),
+                            address(OWNER),
+                            uint128(100_000_000e6),
+                            address(priceStrategy),
+                            AccessMode.PERMISSIONLESS
+                        )
                     )
                 )
             );

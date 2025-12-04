@@ -3,6 +3,7 @@ pragma solidity ^0.8.10;
 
 import {Usm} from "@alto/usm/Usm.sol";
 import {IDUSD} from "@alto/tokens/interfaces/IDUSD.sol";
+import {AccessMode} from "@alto/usm/interfaces/IUsm.sol";
 
 /// @custom:oz-upgrades-from DUSDUsm
 contract DUSDUsmUpgradedOriginalUsm is Usm {
@@ -22,11 +23,14 @@ contract DUSDUsmUpgradedOriginalUsm is Usm {
         return 2;
     }
 
-    function initialize(address admin, address stableTokenTreasury, uint128 exposureCap, address priceStrategy)
-        external
-        initializer
-    {
-        __Usm_init(admin, stableTokenTreasury, exposureCap, priceStrategy);
+    function initialize(
+        address admin,
+        address stableTokenTreasury,
+        uint128 exposureCap,
+        address priceStrategy,
+        AccessMode accessMode
+    ) external initializer {
+        __Usm_init(admin, stableTokenTreasury, exposureCap, priceStrategy, accessMode);
     }
 
     /// @dev Reinitializer for version 2 upgrade - initializes new storage variables
