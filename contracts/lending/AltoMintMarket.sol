@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {Uint128Converter} from "./libraries/Uint128Converter.sol";
+import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 
 import {IIrm} from "./interfaces/IIrm.sol";
 import {Balance, MintMarketInitParams, MarketType} from "./interfaces/IMarket.sol";
@@ -18,6 +19,7 @@ import {AltoBaseMarket} from "./AltoBaseMarket.sol";
 /// @notice An Isolated Mint Market
 contract AltoMintMarket is AltoBaseMarket {
     using Uint128Converter for uint256;
+    using FixedPointMath for uint256;
 
     /// @notice Thrown when a function is not implemented for the mint market
     error AltoMintMarketNotImplemented();
@@ -32,7 +34,8 @@ contract AltoMintMarket is AltoBaseMarket {
 
     /// @notice Emitted when interest is claimed by the fee recipient
     /// @param amount The amount of interest claimed
-    event InterestClaimed(uint256 amount);
+    /// @param interestFeeAmount The amount of interest fee claimed
+    event InterestClaimed(uint256 amount, uint256 interestFeeAmount);
 
     /// @notice Emitted when the borrow opening fee is set
     /// @param oldBorrowOpeningFee The old borrow opening fee
@@ -184,10 +187,15 @@ contract AltoMintMarket is AltoBaseMarket {
             interest = claimableFeesAssets;
         }
 
-        IMintableERC20(borrowToken).mint(feeRecipient, interest);
+        uint256 interestFeeAmount = interest.multiplyWithPrecision(interestFee.fee);
+
+        if (interestFeeAmount > 0) {
+            IMintableERC20(borrowToken).mint(interestFee.recipient, interestFeeAmount);
+        }
+        IMintableERC20(borrowToken).mint(feeRecipient, interest - interestFeeAmount);
         claimableFeesAssets -= interest.toUint128();
 
-        emit InterestClaimed(interest);
+        emit InterestClaimed(interest, interestFeeAmount);
 
         return interest;
     }
