@@ -300,7 +300,6 @@ contract AltoRewardsDistributor is IRewardsDistributorStaticTypes, MerkleRootMan
         // We round up to avoid zero payment when applying discount
         paymentAmount = paymentAmount.multiplyWithPrecisionUp(MATH_PRECISION - discount);
 
-        // We allow zero paymentAmount only in case discount is 100%
         return paymentAmount;
     }
 
