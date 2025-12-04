@@ -175,12 +175,26 @@ contract AltoMintMarket is AltoBaseMarket {
     /// @dev If interest is 0, it will claim all the interest and fees
     /// @return The amount of interest and fees claimed
     function claimInterest(uint256 interest) external whenNotPaused returns (uint256) {
-        if (feeRecipient == address(0) || interest > claimableFeesAssets) {
+        // should revert if claimableFeesAssets is 0 or interest to claim is greater than claimableFeesAssets
+        if (claimableFeesAssets == 0 || interest > claimableFeesAssets) {
             revert AltoBaseMarketInvalidInput();
         }
 
-        if (msg.sender != owner() && msg.sender != feeRecipient) {
+        // should revert if feeRecipient is 0 and interestFee.recipient is 0
+        if (feeRecipient == address(0) && interestFee.recipient == address(0)) {
             revert AltoBaseMarketUnauthorized();
+        }
+
+        if (feeRecipient != address(0)) {
+            // if feeRecipient is not 0, caller should be owner or feeRecipient
+            if (msg.sender != owner() && msg.sender != feeRecipient) {
+                revert AltoBaseMarketUnauthorized();
+            }
+        } else if (interestFee.recipient != address(0)) {
+            // if feeRecipient is 0 and interestFee.recipient is not 0, caller should be owner or interestFee.recipient
+            if (msg.sender != owner() && msg.sender != interestFee.recipient) {
+                revert AltoBaseMarketUnauthorized();
+            }
         }
 
         if (interest == 0) {
@@ -192,7 +206,9 @@ contract AltoMintMarket is AltoBaseMarket {
         if (interestFeeAmount > 0) {
             IMintableERC20(borrowToken).mint(interestFee.recipient, interestFeeAmount);
         }
-        IMintableERC20(borrowToken).mint(feeRecipient, interest - interestFeeAmount);
+        if (interest - interestFeeAmount > 0) {
+            IMintableERC20(borrowToken).mint(feeRecipient, interest - interestFeeAmount);
+        }
         claimableFeesAssets -= interest.toUint128();
 
         emit InterestClaimed(interest, interestFeeAmount);

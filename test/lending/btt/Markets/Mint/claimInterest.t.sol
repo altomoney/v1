@@ -70,19 +70,66 @@ contract AltoMintMarketClaimInterest is MarketCommon {
         _;
     }
 
-    modifier whenInterestPassedInIsNonZeroAndLessThanOrEqualClaimableFees() {
+    modifier whenInterestPassedInIsNonZeroAndLessThanClaimableFees() {
         _generateClaimableFees();
         _;
     }
 
-    modifier givenInterestFeeFeeIsZero() {
+    modifier whenFeeRecipientIsZeroAndInterestFeeRecipientIsZero() {
+        _generateClaimableFees();
+        vm.startPrank(OWNER);
+        LiquidationConfiguration memory liquidationConfiguration =
+            IPriorityLiquidationEngine(market.liquidationEngine()).liquidationConfiguration();
+        liquidationConfiguration.protocolFeePercentage = 0;
+        AltoLiquidationEngine(market.liquidationEngine()).setLiquidationConfiguration(liquidationConfiguration);
+        mintMarket.setBorrowOpeningFee(0);
+        mintMarket.setIrm(address(0), true);
+        mintMarket.setFeeRecipient(address(0));
+        market.setInterestFeeConfig(InterestFeeConfig({recipient: address(0), fee: 0}));
+        vm.stopPrank();
+        _;
+    }
+
+    modifier whenFeeRecipientIsZeroAndInterestFeeRecipientIsNonZero() {
+        _generateClaimableFees();
+        address interestFeeRecipient = makeAddr("InterestFeeRecipient");
+        vm.startPrank(OWNER);
+        LiquidationConfiguration memory liquidationConfiguration =
+            IPriorityLiquidationEngine(market.liquidationEngine()).liquidationConfiguration();
+        liquidationConfiguration.protocolFeePercentage = 0;
+        AltoLiquidationEngine(market.liquidationEngine()).setLiquidationConfiguration(liquidationConfiguration);
+        mintMarket.setBorrowOpeningFee(0);
+        mintMarket.setIrm(address(0), true);
+        mintMarket.setFeeRecipient(address(0));
+        market.setInterestFeeConfig(InterestFeeConfig({recipient: interestFeeRecipient, fee: 0.1 ether})); // 10% fee
+        vm.stopPrank();
+        _;
+    }
+
+    modifier whenFeeRecipientIsZeroAndInterestFeeRecipientIsNonZeroButFeeIsZero() {
+        _generateClaimableFees();
+        address interestFeeRecipient = makeAddr("InterestFeeRecipient");
+        vm.startPrank(OWNER);
+        LiquidationConfiguration memory liquidationConfiguration =
+            IPriorityLiquidationEngine(market.liquidationEngine()).liquidationConfiguration();
+        liquidationConfiguration.protocolFeePercentage = 0;
+        AltoLiquidationEngine(market.liquidationEngine()).setLiquidationConfiguration(liquidationConfiguration);
+        mintMarket.setBorrowOpeningFee(0);
+        mintMarket.setIrm(address(0), true);
+        mintMarket.setFeeRecipient(address(0));
+        market.setInterestFeeConfig(InterestFeeConfig({recipient: interestFeeRecipient, fee: 0})); // fee is zero but recipient is set
+        vm.stopPrank();
+        _;
+    }
+
+    modifier givenInterestFeeIsZero() {
         vm.startPrank(OWNER);
         market.setInterestFeeConfig(InterestFeeConfig({recipient: address(0), fee: 0}));
         vm.stopPrank();
         _;
     }
 
-    modifier givenInterestFeeFeeIsNonZero() {
+    modifier givenInterestFeeIsNonZero() {
         address interestFeeRecipient = makeAddr("InterestFeeRecipient");
         vm.startPrank(OWNER);
         market.setInterestFeeConfig(InterestFeeConfig({recipient: interestFeeRecipient, fee: 0.1 ether})); // 10% fee
@@ -114,7 +161,7 @@ contract AltoMintMarketClaimInterest is MarketCommon {
         mintMarket.claimInterest(0);
     }
 
-    function test_RevertWhen_FeeRecipientIsZero() external whenFeeRecipientIsZero {
+    function test_RevertWhen_ClaimableFeesAssetsIsZero() external {
         vm.startPrank(OWNER);
         vm.expectRevert(IMarketErrors.AltoBaseMarketInvalidInput.selector);
         mintMarket.claimInterest(0);
@@ -131,18 +178,32 @@ contract AltoMintMarketClaimInterest is MarketCommon {
         vm.stopPrank();
     }
 
-    function test_RevertWhen_CallerIsNotOwnerNorFeeRecipient() external whenMarketIsNotPaused {
+    function test_RevertWhen_FeeRecipientIsZeroAndInterestFeeRecipientIsZero()
+        external
+        whenFeeRecipientIsZeroAndInterestFeeRecipientIsZero
+    {
+        vm.startPrank(OWNER);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketUnauthorized.selector);
+        mintMarket.claimInterest(0);
+        vm.stopPrank();
+    }
+
+    function test_RevertWhen_FeeRecipientIsNonZero_CallerIsNotOwnerNorFeeRecipient()
+        external
+        whenMarketIsNotPaused
+        whenInterestPassedInIsZero
+    {
         vm.startPrank(USER);
         vm.expectRevert(IMarketErrors.AltoBaseMarketUnauthorized.selector);
         mintMarket.claimInterest(0);
         vm.stopPrank();
     }
 
-    function test_WhenInterestPassedInIsZero_GivenInterestFeeFeeIsZero_GivenCallerIsOwner()
+    function test_WhenFeeRecipientIsNonZero_WhenInterestPassedInIsZeroOrEqualsClaimableFees_GivenInterestFeeIsZero_WhenCallerIsOwner()
         external
         whenMarketIsNotPaused
         whenInterestPassedInIsZero
-        givenInterestFeeFeeIsZero
+        givenInterestFeeIsZero
     {
         uint256 claimableFeesBefore = mintMarket.claimableFeesAssets();
         uint256 balanceBefore = borrowToken.balanceOf(FEE_RECIPIENT);
@@ -160,11 +221,11 @@ contract AltoMintMarketClaimInterest is MarketCommon {
         assertEq(claimed, claimableFeesBefore);
     }
 
-    function test_WhenInterestPassedInIsZero_GivenInterestFeeFeeIsZero_GivenCallerIsFeeRecipient()
+    function test_WhenFeeRecipientIsNonZero_WhenInterestPassedInIsZeroOrEqualsClaimableFees_GivenInterestFeeIsZero_WhenCallerIsFeeRecipient()
         external
         whenMarketIsNotPaused
         whenInterestPassedInIsZero
-        givenInterestFeeFeeIsZero
+        givenInterestFeeIsZero
     {
         uint256 claimableFeesBefore = mintMarket.claimableFeesAssets();
         uint256 balanceBefore = borrowToken.balanceOf(FEE_RECIPIENT);
@@ -173,7 +234,7 @@ contract AltoMintMarketClaimInterest is MarketCommon {
         emit AltoMintMarket.InterestClaimed(claimableFeesBefore, 0);
 
         vm.startPrank(FEE_RECIPIENT);
-        uint256 claimed = mintMarket.claimInterest(0);
+        uint256 claimed = mintMarket.claimInterest(claimableFeesBefore);
         vm.stopPrank();
 
         assertGt(claimableFeesBefore, 0);
@@ -182,11 +243,11 @@ contract AltoMintMarketClaimInterest is MarketCommon {
         assertEq(claimed, claimableFeesBefore);
     }
 
-    function test_WhenInterestPassedInIsZero_GivenInterestFeeFeeIsNonZero_GivenCallerIsOwner()
+    function test_WhenFeeRecipientIsNonZero_WhenInterestPassedInIsZeroOrEqualsClaimableFees_GivenInterestFeeIsNonZero_WhenCallerIsOwner()
         external
         whenMarketIsNotPaused
         whenInterestPassedInIsZero
-        givenInterestFeeFeeIsNonZero
+        givenInterestFeeIsNonZero
     {
         uint256 claimableFeesBefore = mintMarket.claimableFeesAssets();
         address interestFeeRecipient = market.interestFee().recipient;
@@ -212,11 +273,11 @@ contract AltoMintMarketClaimInterest is MarketCommon {
         assertEq(claimed, claimableFeesBefore);
     }
 
-    function test_WhenInterestPassedInIsZero_GivenInterestFeeFeeIsNonZero_GivenCallerIsFeeRecipient()
+    function test_WhenFeeRecipientIsNonZero_WhenInterestPassedInIsZeroOrEqualsClaimableFees_GivenInterestFeeFeeIsNonZero_WhenCallerIsFeeRecipient()
         external
         whenMarketIsNotPaused
         whenInterestPassedInIsZero
-        givenInterestFeeFeeIsNonZero
+        givenInterestFeeIsNonZero
     {
         uint256 claimableFeesBefore = mintMarket.claimableFeesAssets();
         address interestFeeRecipient = market.interestFee().recipient;
@@ -231,7 +292,7 @@ contract AltoMintMarketClaimInterest is MarketCommon {
         emit AltoMintMarket.InterestClaimed(claimableFeesBefore, expectedFeeAmount);
 
         vm.startPrank(FEE_RECIPIENT);
-        uint256 claimed = mintMarket.claimInterest(0);
+        uint256 claimed = mintMarket.claimInterest(claimableFeesBefore);
         vm.stopPrank();
 
         assertGt(claimableFeesBefore, 0);
@@ -242,11 +303,11 @@ contract AltoMintMarketClaimInterest is MarketCommon {
         assertEq(claimed, claimableFeesBefore);
     }
 
-    function test_WhenInterestIsNonZeroAndLessThanOrEqualClaimableFees_GivenInterestFeeFeeIsZero_GivenCallerIsOwner()
+    function test_WhenFeeRecipientIsNonZero_WhenInterestIsNonZeroAndLessThanClaimableFees_GivenInterestFeeIsZero_WhenCallerIsOwner()
         external
         whenMarketIsNotPaused
-        whenInterestPassedInIsNonZeroAndLessThanOrEqualClaimableFees
-        givenInterestFeeFeeIsZero
+        whenInterestPassedInIsNonZeroAndLessThanClaimableFees
+        givenInterestFeeIsZero
     {
         uint256 claimableFeesBefore = mintMarket.claimableFeesAssets();
         uint256 interestToClaim = claimableFeesBefore / 2; // Claim half
@@ -265,11 +326,11 @@ contract AltoMintMarketClaimInterest is MarketCommon {
         assertEq(claimed, interestToClaim);
     }
 
-    function test_WhenInterestIsNonZeroAndLessThanOrEqualClaimableFees_GivenInterestFeeFeeIsZero_GivenCallerIsFeeRecipient()
+    function test_WhenFeeRecipientIsNonZero_WhenInterestIsNonZeroAndLessThanClaimableFees_GivenInterestFeeIsZero_WhenCallerIsFeeRecipient()
         external
         whenMarketIsNotPaused
-        whenInterestPassedInIsNonZeroAndLessThanOrEqualClaimableFees
-        givenInterestFeeFeeIsZero
+        whenInterestPassedInIsNonZeroAndLessThanClaimableFees
+        givenInterestFeeIsZero
     {
         uint256 claimableFeesBefore = mintMarket.claimableFeesAssets();
         uint256 interestToClaim = claimableFeesBefore / 2; // Claim half
@@ -288,11 +349,11 @@ contract AltoMintMarketClaimInterest is MarketCommon {
         assertEq(claimed, interestToClaim);
     }
 
-    function test_WhenInterestIsNonZeroAndLessThanOrEqualClaimableFees_GivenInterestFeeFeeIsNonZero_GivenCallerIsOwner()
+    function test_WhenFeeRecipientIsNonZero_WhenInterestIsNonZeroAndLessThanClaimableFees_GivenInterestFeeIsNonZero_WhenCallerIsOwner()
         external
         whenMarketIsNotPaused
-        whenInterestPassedInIsNonZeroAndLessThanOrEqualClaimableFees
-        givenInterestFeeFeeIsNonZero
+        whenInterestPassedInIsNonZeroAndLessThanClaimableFees
+        givenInterestFeeIsNonZero
     {
         uint256 claimableFeesBefore = mintMarket.claimableFeesAssets();
         uint256 interestToClaim = claimableFeesBefore / 2; // Claim half
@@ -319,11 +380,11 @@ contract AltoMintMarketClaimInterest is MarketCommon {
         assertEq(claimed, interestToClaim);
     }
 
-    function test_WhenInterestIsNonZeroAndLessThanOrEqualClaimableFees_GivenInterestFeeFeeIsNonZero_GivenCallerIsFeeRecipient()
+    function test_WhenFeeRecipientIsNonZero_WhenInterestIsNonZeroAndLessThanClaimableFees_GivenInterestFeeFeeIsNonZero_WhenCallerIsFeeRecipient()
         external
         whenMarketIsNotPaused
-        whenInterestPassedInIsNonZeroAndLessThanOrEqualClaimableFees
-        givenInterestFeeFeeIsNonZero
+        whenInterestPassedInIsNonZeroAndLessThanClaimableFees
+        givenInterestFeeIsNonZero
     {
         uint256 claimableFeesBefore = mintMarket.claimableFeesAssets();
         uint256 interestToClaim = claimableFeesBefore / 2; // Claim half
@@ -350,55 +411,22 @@ contract AltoMintMarketClaimInterest is MarketCommon {
         assertEq(claimed, interestToClaim);
     }
 
-    function test_WhenInterestEqualsClaimableFees_GivenInterestFeeFeeIsZero_GivenCallerIsOwner()
+    // Tests for when feeRecipient is zero and interestFee.recipient is non-zero
+    function test_RevertWhen_FeeRecipientIsZeroAndInterestFeeRecipientIsNonZero_CallerIsNotOwnerNorInterestFeeRecipient()
         external
         whenMarketIsNotPaused
-        whenInterestPassedInIsNonZeroAndLessThanOrEqualClaimableFees
-        givenInterestFeeFeeIsZero
+        whenFeeRecipientIsZeroAndInterestFeeRecipientIsNonZero
     {
-        uint256 claimableFeesBefore = mintMarket.claimableFeesAssets();
-        uint256 balanceBefore = borrowToken.balanceOf(FEE_RECIPIENT);
-
-        vm.expectEmit(true, true, true, true);
-        emit AltoMintMarket.InterestClaimed(claimableFeesBefore, 0);
-
-        vm.startPrank(OWNER);
-        uint256 claimed = mintMarket.claimInterest(claimableFeesBefore);
+        vm.startPrank(USER);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketUnauthorized.selector);
+        mintMarket.claimInterest(0);
         vm.stopPrank();
-
-        assertGt(claimableFeesBefore, 0);
-        assertEq(borrowToken.balanceOf(FEE_RECIPIENT), balanceBefore + claimableFeesBefore);
-        assertEq(mintMarket.claimableFeesAssets(), 0);
-        assertEq(claimed, claimableFeesBefore);
     }
 
-    function test_WhenInterestEqualsClaimableFees_GivenInterestFeeFeeIsZero_GivenCallerIsFeeRecipient()
+    function test_WhenFeeRecipientIsZeroAndInterestFeeRecipientIsNonZero_WhenInterestPassedInIsZeroOrEqualsClaimableFees_GivenInterestFeeFeeIsNonZero_WhenCallerIsOwner()
         external
         whenMarketIsNotPaused
-        whenInterestPassedInIsNonZeroAndLessThanOrEqualClaimableFees
-        givenInterestFeeFeeIsZero
-    {
-        uint256 claimableFeesBefore = mintMarket.claimableFeesAssets();
-        uint256 balanceBefore = borrowToken.balanceOf(FEE_RECIPIENT);
-
-        vm.expectEmit(true, true, true, true);
-        emit AltoMintMarket.InterestClaimed(claimableFeesBefore, 0);
-
-        vm.startPrank(FEE_RECIPIENT);
-        uint256 claimed = mintMarket.claimInterest(claimableFeesBefore);
-        vm.stopPrank();
-
-        assertGt(claimableFeesBefore, 0);
-        assertEq(borrowToken.balanceOf(FEE_RECIPIENT), balanceBefore + claimableFeesBefore);
-        assertEq(mintMarket.claimableFeesAssets(), 0);
-        assertEq(claimed, claimableFeesBefore);
-    }
-
-    function test_WhenInterestEqualsClaimableFees_GivenInterestFeeFeeIsNonZero_GivenCallerIsOwner()
-        external
-        whenMarketIsNotPaused
-        whenInterestPassedInIsNonZeroAndLessThanOrEqualClaimableFees
-        givenInterestFeeFeeIsNonZero
+        whenFeeRecipientIsZeroAndInterestFeeRecipientIsNonZero
     {
         uint256 claimableFeesBefore = mintMarket.claimableFeesAssets();
         address interestFeeRecipient = market.interestFee().recipient;
@@ -406,29 +434,31 @@ contract AltoMintMarketClaimInterest is MarketCommon {
         uint256 expectedFeeAmount = claimableFeesBefore.multiplyWithPrecision(feeRate);
         uint256 expectedRemainingAmount = claimableFeesBefore - expectedFeeAmount;
 
-        uint256 feeRecipientBalanceBefore = borrowToken.balanceOf(FEE_RECIPIENT);
-        uint256 interestFeeRecipientBalanceBefore = borrowToken.balanceOf(interestFeeRecipient);
+        // When feeRecipient is zero and there's a remaining amount, contract will try to mint to address(0) and revert
+        if (expectedRemainingAmount > 0) {
+            vm.startPrank(OWNER);
+            vm.expectRevert(); // ERC20InvalidReceiver when trying to mint to address(0)
+            mintMarket.claimInterest(0);
+            vm.stopPrank();
+        } else {
+            // If fee is 100%, no remaining amount, so it should succeed
+            uint256 interestFeeRecipientBalanceBefore = borrowToken.balanceOf(interestFeeRecipient);
+            vm.startPrank(OWNER);
+            uint256 claimed = mintMarket.claimInterest(0);
+            vm.stopPrank();
 
-        vm.expectEmit(true, true, true, true);
-        emit AltoMintMarket.InterestClaimed(claimableFeesBefore, expectedFeeAmount);
-
-        vm.startPrank(OWNER);
-        uint256 claimed = mintMarket.claimInterest(claimableFeesBefore);
-        vm.stopPrank();
-
-        assertGt(claimableFeesBefore, 0);
-        assertGt(expectedFeeAmount, 0);
-        assertEq(borrowToken.balanceOf(interestFeeRecipient), interestFeeRecipientBalanceBefore + expectedFeeAmount);
-        assertEq(borrowToken.balanceOf(FEE_RECIPIENT), feeRecipientBalanceBefore + expectedRemainingAmount);
-        assertEq(mintMarket.claimableFeesAssets(), 0);
-        assertEq(claimed, claimableFeesBefore);
+            assertGt(claimableFeesBefore, 0);
+            assertGt(expectedFeeAmount, 0);
+            assertEq(borrowToken.balanceOf(interestFeeRecipient), interestFeeRecipientBalanceBefore + expectedFeeAmount);
+            assertEq(mintMarket.claimableFeesAssets(), 0);
+            assertEq(claimed, claimableFeesBefore);
+        }
     }
 
-    function test_WhenInterestEqualsClaimableFees_GivenInterestFeeFeeIsNonZero_GivenCallerIsFeeRecipient()
+    function test_WhenFeeRecipientIsZeroAndInterestFeeRecipientIsNonZero_WhenInterestPassedInIsZeroOrEqualsClaimableFees_GivenInterestFeeFeeIsNonZero_WhenCallerIsInterestFeeRecipient()
         external
         whenMarketIsNotPaused
-        whenInterestPassedInIsNonZeroAndLessThanOrEqualClaimableFees
-        givenInterestFeeFeeIsNonZero
+        whenFeeRecipientIsZeroAndInterestFeeRecipientIsNonZero
     {
         uint256 claimableFeesBefore = mintMarket.claimableFeesAssets();
         address interestFeeRecipient = market.interestFee().recipient;
@@ -436,21 +466,160 @@ contract AltoMintMarketClaimInterest is MarketCommon {
         uint256 expectedFeeAmount = claimableFeesBefore.multiplyWithPrecision(feeRate);
         uint256 expectedRemainingAmount = claimableFeesBefore - expectedFeeAmount;
 
+        // When feeRecipient is zero and there's a remaining amount, contract will try to mint to address(0) and revert
+        if (expectedRemainingAmount > 0) {
+            vm.startPrank(interestFeeRecipient);
+            vm.expectRevert(); // ERC20InvalidReceiver when trying to mint to address(0)
+            mintMarket.claimInterest(claimableFeesBefore);
+            vm.stopPrank();
+        } else {
+            // If fee is 100%, no remaining amount, so it should succeed
+            uint256 interestFeeRecipientBalanceBefore = borrowToken.balanceOf(interestFeeRecipient);
+            vm.startPrank(interestFeeRecipient);
+            uint256 claimed = mintMarket.claimInterest(claimableFeesBefore);
+            vm.stopPrank();
+
+            assertGt(claimableFeesBefore, 0);
+            assertGt(expectedFeeAmount, 0);
+            assertEq(borrowToken.balanceOf(interestFeeRecipient), interestFeeRecipientBalanceBefore + expectedFeeAmount);
+            assertEq(mintMarket.claimableFeesAssets(), 0);
+            assertEq(claimed, claimableFeesBefore);
+        }
+    }
+
+    function test_WhenFeeRecipientIsZeroAndInterestFeeRecipientIsNonZero_WhenInterestIsNonZeroAndLessThanClaimableFees_GivenInterestFeeFeeIsNonZero_WhenCallerIsOwner()
+        external
+        whenMarketIsNotPaused
+        whenFeeRecipientIsZeroAndInterestFeeRecipientIsNonZero
+    {
+        uint256 claimableFeesBefore = mintMarket.claimableFeesAssets();
+        uint256 interestToClaim = claimableFeesBefore / 2;
+        address interestFeeRecipient = market.interestFee().recipient;
+        uint256 feeRate = market.interestFee().fee;
+        uint256 expectedFeeAmount = interestToClaim.multiplyWithPrecision(feeRate);
+        uint256 expectedRemainingAmount = interestToClaim - expectedFeeAmount;
+
+        // When feeRecipient is zero and there's a remaining amount, contract will try to mint to address(0) and revert
+        if (expectedRemainingAmount > 0) {
+            vm.startPrank(OWNER);
+            vm.expectRevert(); // ERC20InvalidReceiver when trying to mint to address(0)
+            mintMarket.claimInterest(interestToClaim);
+            vm.stopPrank();
+        } else {
+            // If fee is 100%, no remaining amount, so it should succeed
+            uint256 interestFeeRecipientBalanceBefore = borrowToken.balanceOf(interestFeeRecipient);
+            vm.startPrank(OWNER);
+            uint256 claimed = mintMarket.claimInterest(interestToClaim);
+            vm.stopPrank();
+
+            assertGt(interestToClaim, 0);
+            assertGt(expectedFeeAmount, 0);
+            assertEq(borrowToken.balanceOf(interestFeeRecipient), interestFeeRecipientBalanceBefore + expectedFeeAmount);
+            assertEq(mintMarket.claimableFeesAssets(), claimableFeesBefore - interestToClaim);
+            assertEq(claimed, interestToClaim);
+        }
+    }
+
+    function test_WhenFeeRecipientIsZeroAndInterestFeeRecipientIsNonZero_WhenInterestIsNonZeroAndLessThanClaimableFees_GivenInterestFeeFeeIsNonZero_WhenCallerIsInterestFeeRecipient()
+        external
+        whenMarketIsNotPaused
+        whenFeeRecipientIsZeroAndInterestFeeRecipientIsNonZero
+    {
+        uint256 claimableFeesBefore = mintMarket.claimableFeesAssets();
+        uint256 interestToClaim = claimableFeesBefore / 2;
+        address interestFeeRecipient = market.interestFee().recipient;
+        uint256 feeRate = market.interestFee().fee;
+        uint256 expectedFeeAmount = interestToClaim.multiplyWithPrecision(feeRate);
+        uint256 expectedRemainingAmount = interestToClaim - expectedFeeAmount;
+
+        // When feeRecipient is zero and there's a remaining amount, contract will try to mint to address(0) and revert
+        if (expectedRemainingAmount > 0) {
+            vm.startPrank(interestFeeRecipient);
+            vm.expectRevert(); // ERC20InvalidReceiver when trying to mint to address(0)
+            mintMarket.claimInterest(interestToClaim);
+            vm.stopPrank();
+        } else {
+            // If fee is 100%, no remaining amount, so it should succeed
+            uint256 interestFeeRecipientBalanceBefore = borrowToken.balanceOf(interestFeeRecipient);
+            vm.startPrank(interestFeeRecipient);
+            uint256 claimed = mintMarket.claimInterest(interestToClaim);
+            vm.stopPrank();
+
+            assertGt(interestToClaim, 0);
+            assertGt(expectedFeeAmount, 0);
+            assertEq(borrowToken.balanceOf(interestFeeRecipient), interestFeeRecipientBalanceBefore + expectedFeeAmount);
+            assertEq(mintMarket.claimableFeesAssets(), claimableFeesBefore - interestToClaim);
+            assertEq(claimed, interestToClaim);
+        }
+    }
+
+    function test_WhenFeeRecipientIsZeroAndInterestFeeRecipientIsNonZero_WhenInterestPassedInIsZeroOrEqualsClaimableFees_GivenInterestFeeFeeIsZero_WhenCallerIsOwner()
+        external
+        whenMarketIsNotPaused
+        whenFeeRecipientIsZeroAndInterestFeeRecipientIsNonZeroButFeeIsZero
+    {
+        uint256 claimableFeesBefore = mintMarket.claimableFeesAssets();
+        address interestFeeRecipient = market.interestFee().recipient;
         uint256 feeRecipientBalanceBefore = borrowToken.balanceOf(FEE_RECIPIENT);
         uint256 interestFeeRecipientBalanceBefore = borrowToken.balanceOf(interestFeeRecipient);
 
-        vm.expectEmit(true, true, true, true);
-        emit AltoMintMarket.InterestClaimed(claimableFeesBefore, expectedFeeAmount);
-
-        vm.startPrank(FEE_RECIPIENT);
-        uint256 claimed = mintMarket.claimInterest(claimableFeesBefore);
+        // When feeRecipient is zero and interestFee.fee is zero, contract will try to mint to address(0) and revert
+        vm.startPrank(OWNER);
+        vm.expectRevert(); // ERC20InvalidReceiver when trying to mint to address(0)
+        mintMarket.claimInterest(0);
         vm.stopPrank();
+    }
 
-        assertGt(claimableFeesBefore, 0);
-        assertGt(expectedFeeAmount, 0);
-        assertEq(borrowToken.balanceOf(interestFeeRecipient), interestFeeRecipientBalanceBefore + expectedFeeAmount);
-        assertEq(borrowToken.balanceOf(FEE_RECIPIENT), feeRecipientBalanceBefore + expectedRemainingAmount);
-        assertEq(mintMarket.claimableFeesAssets(), 0);
-        assertEq(claimed, claimableFeesBefore);
+    function test_WhenFeeRecipientIsZeroAndInterestFeeRecipientIsNonZero_WhenInterestPassedInIsZeroOrEqualsClaimableFees_GivenInterestFeeFeeIsZero_WhenCallerIsInterestFeeRecipient()
+        external
+        whenMarketIsNotPaused
+        whenFeeRecipientIsZeroAndInterestFeeRecipientIsNonZeroButFeeIsZero
+    {
+        uint256 claimableFeesBefore = mintMarket.claimableFeesAssets();
+        address interestFeeRecipient = market.interestFee().recipient;
+        uint256 feeRecipientBalanceBefore = borrowToken.balanceOf(FEE_RECIPIENT);
+        uint256 interestFeeRecipientBalanceBefore = borrowToken.balanceOf(interestFeeRecipient);
+
+        // When feeRecipient is zero and interestFee.fee is zero, contract will try to mint to address(0) and revert
+        vm.startPrank(interestFeeRecipient);
+        vm.expectRevert(); // ERC20InvalidReceiver when trying to mint to address(0)
+        mintMarket.claimInterest(claimableFeesBefore);
+        vm.stopPrank();
+    }
+
+    function test_WhenFeeRecipientIsZeroAndInterestFeeRecipientIsNonZero_WhenInterestIsNonZeroAndLessThanClaimableFees_GivenInterestFeeFeeIsZero_WhenCallerIsOwner()
+        external
+        whenMarketIsNotPaused
+        whenFeeRecipientIsZeroAndInterestFeeRecipientIsNonZeroButFeeIsZero
+    {
+        uint256 claimableFeesBefore = mintMarket.claimableFeesAssets();
+        uint256 interestToClaim = claimableFeesBefore / 2;
+        address interestFeeRecipient = market.interestFee().recipient;
+        uint256 feeRecipientBalanceBefore = borrowToken.balanceOf(FEE_RECIPIENT);
+        uint256 interestFeeRecipientBalanceBefore = borrowToken.balanceOf(interestFeeRecipient);
+
+        // When feeRecipient is zero and interestFee.fee is zero, contract will try to mint to address(0) and revert
+        vm.startPrank(OWNER);
+        vm.expectRevert(); // ERC20InvalidReceiver when trying to mint to address(0)
+        mintMarket.claimInterest(interestToClaim);
+        vm.stopPrank();
+    }
+
+    function test_WhenFeeRecipientIsZeroAndInterestFeeRecipientIsNonZero_WhenInterestIsNonZeroAndLessThanClaimableFees_GivenInterestFeeFeeIsZero_WhenCallerIsInterestFeeRecipient()
+        external
+        whenMarketIsNotPaused
+        whenFeeRecipientIsZeroAndInterestFeeRecipientIsNonZeroButFeeIsZero
+    {
+        uint256 claimableFeesBefore = mintMarket.claimableFeesAssets();
+        uint256 interestToClaim = claimableFeesBefore / 2;
+        address interestFeeRecipient = market.interestFee().recipient;
+        uint256 feeRecipientBalanceBefore = borrowToken.balanceOf(FEE_RECIPIENT);
+        uint256 interestFeeRecipientBalanceBefore = borrowToken.balanceOf(interestFeeRecipient);
+
+        // When feeRecipient is zero and interestFee.fee is zero, contract will try to mint to address(0) and revert
+        vm.startPrank(interestFeeRecipient);
+        vm.expectRevert(); // ERC20InvalidReceiver when trying to mint to address(0)
+        mintMarket.claimInterest(interestToClaim);
+        vm.stopPrank();
     }
 }

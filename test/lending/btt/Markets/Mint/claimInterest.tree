@@ -1,84 +1,65 @@
 AltoMintMarket::claimInterest()
 ├── when market is paused
 │   └── it should revert with IsPaused
-├── when feeRecipient is zero
+├── when claimableFeesAssets is zero
 │   └── it should revert with AltoBaseMarketInvalidInput
 ├── when interest is greater than claimableFeesAssets
 │   └── it should revert with AltoBaseMarketInvalidInput
-├── when caller is not owner nor feeRecipient
+├── when feeRecipient is zero and interestFee.recipient is zero
 │   └── it should revert with AltoBaseMarketUnauthorized
-├── when interest passed in is zero
-│   ├── given interestFee.fee is zero
-│   │   ├── given caller is owner
-│   │   │   ├── it should mint full claimableFeesAssets to feeRecipient
-│   │   │   ├── it should set claimableFeesAssets to zero
-│   │   │   ├── it should emit InterestClaimed with full amount and zero fee
-│   │   │   └── it should return full amount
-│   │   └── given caller is feeRecipient
-│   │       ├── it should mint full claimableFeesAssets to feeRecipient
-│   │       ├── it should set claimableFeesAssets to zero
-│   │       ├── it should emit InterestClaimed with full amount and zero fee
-│   │       └── it should return full amount
-│   └── given interestFee.fee is non-zero
-│       ├── given caller is owner
-│       │   ├── it should mint interestFeeAmount to interestFee.recipient
-│       │   ├── it should mint remaining amount to feeRecipient
-│       │   ├── it should set claimableFeesAssets to zero
-│       │   ├── it should emit InterestClaimed with full amount and interestFeeAmount
-│       │   └── it should return full amount
-│       └── given caller is feeRecipient
-│           ├── it should mint interestFeeAmount to interestFee.recipient
-│           ├── it should mint remaining amount to feeRecipient
-│           ├── it should set claimableFeesAssets to zero
-│           ├── it should emit InterestClaimed with full amount and interestFeeAmount
-│           └── it should return full amount
-└── when interest passed in is non-zero and <= claimableFeesAssets
-    ├── given interestFee.fee is zero
-    │   ├── given caller is owner
-    │   │   ├── it should mint `interest` to feeRecipient
-    │   │   ├── it should decrease claimableFeesAssets by `interest`
-    │   │   ├── it should emit InterestClaimed with `interest` and zero fee
-    │   │   └── it should return `interest`
-    │   └── given caller is feeRecipient
-    │       ├── it should mint `interest` to feeRecipient
-    │       ├── it should decrease claimableFeesAssets by `interest`
-    │       ├── it should emit InterestClaimed with `interest` and zero fee
-    │       └── it should return `interest`
-    ├── given interestFee.fee is non-zero
-    │   ├── given caller is owner
-    │   │   ├── it should mint interestFeeAmount to interestFee.recipient
-    │   │   ├── it should mint remaining amount to feeRecipient
-    │   │   ├── it should decrease claimableFeesAssets by `interest`
-    │   │   ├── it should emit InterestClaimed with `interest` and interestFeeAmount
-    │   │   └── it should return `interest`
-    │   └── given caller is feeRecipient
-    │       ├── it should mint interestFeeAmount to interestFee.recipient
-    │       ├── it should mint remaining amount to feeRecipient
-    │       ├── it should decrease claimableFeesAssets by `interest`
-    │       ├── it should emit InterestClaimed with `interest` and interestFeeAmount
-    │       └── it should return `interest`
-    └── when interest equals claimableFeesAssets
-        ├── given interestFee.fee is zero
-        │   ├── given caller is owner
-        │   │   ├── it should mint full claimableFeesAssets to feeRecipient
+├── when feeRecipient is non-zero
+│   ├── when caller is not owner nor feeRecipient
+│   │   └── it should revert with AltoBaseMarketUnauthorized
+│   └── when caller is authorized (owner or feeRecipient)
+│       ├── when interest passed in is zero or equals claimableFeesAssets
+│       │   ├── given interestFee.fee is zero
+│       │   │   ├── it should mint full claimableFeesAssets to feeRecipient
+│       │   │   ├── it should set claimableFeesAssets to zero
+│       │   │   ├── it should emit InterestClaimed with full amount and zero fee
+│       │   │   └── it should return full amount
+│       │   └── given interestFee.fee is non-zero
+│       │       ├── it should mint interestFeeAmount to interestFee.recipient
+│       │       ├── it should mint remaining amount to feeRecipient
+│       │       ├── it should set claimableFeesAssets to zero
+│       │       ├── it should emit InterestClaimed with full amount and interestFeeAmount
+│       │       └── it should return full amount
+│       └── when interest passed in is non-zero and < claimableFeesAssets
+│           ├── given interestFee.fee is zero
+│           │   ├── it should mint `interest` to feeRecipient
+│           │   ├── it should decrease claimableFeesAssets by `interest`
+│           │   ├── it should emit InterestClaimed with `interest` and zero fee
+│           │   └── it should return `interest`
+│           └── given interestFee.fee is non-zero
+│               ├── it should mint interestFeeAmount to interestFee.recipient
+│               ├── it should mint remaining amount to feeRecipient
+│               ├── it should decrease claimableFeesAssets by `interest`
+│               ├── it should emit InterestClaimed with `interest` and interestFeeAmount
+│               └── it should return `interest`
+└── when feeRecipient is zero and interestFee.recipient is non-zero
+    ├── when caller is not owner nor interestFee.recipient
+    │   └── it should revert with AltoBaseMarketUnauthorized
+    └── when caller is authorized (owner or interestFee.recipient)
+        ├── when interest passed in is zero or equals claimableFeesAssets
+        │   ├── given interestFee.fee is zero
+        │   │   ├── it should not mint any tokens
         │   │   ├── it should set claimableFeesAssets to zero
         │   │   ├── it should emit InterestClaimed with full amount and zero fee
         │   │   └── it should return full amount
-        │   └── given caller is feeRecipient
-        │       ├── it should mint full claimableFeesAssets to feeRecipient
+        │   └── given interestFee.fee is non-zero
+        │       ├── it should mint interestFeeAmount to interestFee.recipient
+        │       ├── it should not mint to feeRecipient
         │       ├── it should set claimableFeesAssets to zero
-        │       ├── it should emit InterestClaimed with full amount and zero fee
+        │       ├── it should emit InterestClaimed with full amount and interestFeeAmount
         │       └── it should return full amount
-        └── given interestFee.fee is non-zero
-            ├── given caller is owner
-            │   ├── it should mint interestFeeAmount to interestFee.recipient
-            │   ├── it should mint remaining amount to feeRecipient
-            │   ├── it should set claimableFeesAssets to zero
-            │   ├── it should emit InterestClaimed with full amount and interestFeeAmount
-            │   └── it should return full amount
-            └── given caller is feeRecipient
+        └── when interest passed in is non-zero and < claimableFeesAssets
+            ├── given interestFee.fee is zero
+            │   ├── it should not mint any tokens
+            │   ├── it should decrease claimableFeesAssets by `interest`
+            │   ├── it should emit InterestClaimed with `interest` and zero fee
+            │   └── it should return `interest`
+            └── given interestFee.fee is non-zero
                 ├── it should mint interestFeeAmount to interestFee.recipient
-                ├── it should mint remaining amount to feeRecipient
-                ├── it should set claimableFeesAssets to zero
-                ├── it should emit InterestClaimed with full amount and interestFeeAmount
-                └── it should return full amount
+                ├── it should not mint to feeRecipient
+                ├── it should decrease claimableFeesAssets by `interest`
+                ├── it should emit InterestClaimed with `interest` and interestFeeAmount
+                └── it should return `interest`
