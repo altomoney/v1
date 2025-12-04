@@ -11,7 +11,6 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {AuthUpgradeable} from "@alto/utils/AuthUpgradeable.sol";
 
 /**
  * @title Usm
@@ -21,7 +20,7 @@ import {AuthUpgradeable} from "@alto/utils/AuthUpgradeable.sol";
  * @notice Universal Stability Module. It provides buy/sell facilities to go to/from an underlying asset to/from stability token.
  * @dev To be covered by a proxy contract.
  */
-abstract contract Usm is Initializable, AccessControlUpgradeable, AuthUpgradeable, UUPSUpgradeable, IUsm {
+abstract contract Usm is Initializable, AccessControlUpgradeable, UUPSUpgradeable, IUsm {
     using SafeERC20 for IERC20;
     using SafeCast for uint256;
 
@@ -122,7 +121,6 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, AuthUpgradeabl
         require(admin != address(0), "ZERO_ADDRESS_NOT_VALID");
 
         __AccessControl_init();
-        __Auth_init();
         __UUPSUpgradeable_init();
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
@@ -134,27 +132,25 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, AuthUpgradeabl
     }
 
     /// @inheritdoc IUsm
-    function buyAsset(uint256 minAmount, address receiver, address onBehalf)
+    function buyAsset(uint256 minAmount, address receiver)
         external
         notFrozen
         notSeized
         hasAccess(msg.sender)
         returns (uint256, uint256)
     {
-        require(_isSenderAuthorized(onBehalf), "UNAUTHORIZED");
-        return _buyAsset(onBehalf, minAmount, receiver);
+        return _buyAsset(msg.sender, minAmount, receiver);
     }
 
     /// @inheritdoc IUsm
-    function sellAsset(uint256 maxAmount, address receiver, address onBehalf)
+    function sellAsset(uint256 maxAmount, address receiver)
         external
         notFrozen
         notSeized
         hasAccess(msg.sender)
         returns (uint256, uint256)
     {
-        require(_isSenderAuthorized(onBehalf), "UNAUTHORIZED");
-        return _sellAsset(onBehalf, maxAmount, receiver);
+        return _sellAsset(msg.sender, maxAmount, receiver);
     }
 
     /// @inheritdoc IUsm
@@ -249,11 +245,6 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, AuthUpgradeabl
     /// @inheritdoc IStableTokenFacilitator
     function updateStableTokenTreasury(address newStableTokenTreasury) external override onlyRole(CONFIGURATOR_ROLE) {
         _updateStableTokenTreasury(newStableTokenTreasury);
-    }
-
-    /// @inheritdoc IUsm
-    function DOMAIN_SEPARATOR() external view returns (bytes32) {
-        return _domainSeparatorV4();
     }
 
     /// @inheritdoc IUsm

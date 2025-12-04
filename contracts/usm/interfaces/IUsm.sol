@@ -118,22 +118,20 @@ interface IUsm is IAccessControl, IStableTokenFacilitator {
      * @dev Use `getAssetAmountForBuyAsset` function to calculate the amount based on the Stable Token amount to sell
      * @param minAmount The minimum amount of the underlying asset to buy
      * @param receiver Recipient address of the underlying asset being purchased
-     * @param onBehalf The address of the user on behalf of which the operation is performed
      * @return The amount of underlying asset bought
      * @return The amount of Stable Token sold by the user
      */
-    function buyAsset(uint256 minAmount, address receiver, address onBehalf) external returns (uint256, uint256);
+    function buyAsset(uint256 minAmount, address receiver) external returns (uint256, uint256);
 
     /**
      * @notice Sells the USM underlying asset in exchange for buying Stable Token
      * @dev Use `getAssetAmountForSellAsset` function to calculate the amount based on the Stable Token amount to buy
      * @param maxAmount The maximum amount of the underlying asset to sell
      * @param receiver Recipient address of the Stable Token being purchased
-     * @param onBehalf The address of the user on behalf of which the operation is performed
      * @return The amount of underlying asset sold
      * @return The amount of Stable Token bought by the user
      */
-    function sellAsset(uint256 maxAmount, address receiver, address onBehalf) external returns (uint256, uint256);
+    function sellAsset(uint256 maxAmount, address receiver) external returns (uint256, uint256);
 
     /**
      * @notice Rescue and transfer tokens locked in this contract
@@ -195,7 +193,7 @@ interface IUsm is IAccessControl, IStableTokenFacilitator {
      * @notice Returns the EIP712 domain separator
      * @return The EIP712 domain separator
      */
-    function DOMAIN_SEPARATOR() external view returns (bytes32);
+    // function DOMAIN_SEPARATOR() external view returns (bytes32);
 
     /**
      * @notice Returns the total amount of Stable Token, gross amount and fee result of buying assets
