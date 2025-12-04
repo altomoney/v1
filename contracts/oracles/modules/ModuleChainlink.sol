@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.7;
 
-import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
-import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {ChainlinkNode, ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
+import {FullMath} from "@alto/oracles/modules/ModuleUniswap/FullMath.sol";
 
 /// @title ModuleChainlink
 /// @author Pearl Labs
 /// @custom:contact security@altofoundation.org
 /// @notice Utility contract used to read from Chainlink price feeds
-contract ModuleChainlink {
+contract ModuleChainlink is FullMath {
     error ModuleChainlinkInvalidRate();
     error ModuleChainlinkInvalidInput();
 
@@ -25,20 +24,19 @@ contract ModuleChainlink {
             revert ModuleChainlinkInvalidRate();
         }
 
-        // Storing these to improve readability
         uint256 price = uint256(ratio);
         uint256 powFeed = 10 ** config.feed.decimals();
         uint256 powIn = 10 ** config.inDecimals;
         uint256 powOut = 10 ** config.outDecimals;
 
         // Checking whether we should multiply or divide by the ratio
-        // Combine price application and decimals conversion to minimize rounding loss
+        // Using _mulDiv for 512-bit intermediate precision to prevent phantom overflow
         if (config.direction == ConversionDirection.IN_TO_OUT) {
-            // quoteAmount = quoteAmount * ratio / 10^feedDecimals * 10^outDecimals / 10^inDecimals
-            quoteAmount = FixedPointMath.divideWithRounding(quoteAmount, price * powOut, powFeed * powIn, false);
+            // quoteAmount = quoteAmount * ratio * 10^outDecimals / (10^feedDecimals * 10^inDecimals)
+            quoteAmount = _mulDiv(quoteAmount, price * powOut, powFeed * powIn);
         } else {
-            // quoteAmount = quoteAmount * 10^feedDecimals / ratio * 10^outDecimals / 10^inDecimals
-            quoteAmount = FixedPointMath.divideWithRounding(quoteAmount, powFeed * powOut, price * powIn, false);
+            // quoteAmount = quoteAmount * 10^feedDecimals * 10^outDecimals / (ratio * 10^inDecimals)
+            quoteAmount = _mulDiv(quoteAmount, powFeed * powOut, price * powIn);
         }
 
         return quoteAmount;
