@@ -190,12 +190,6 @@ interface IUsm is IAccessControl, IStableTokenFacilitator {
     function updatePriceStrategy(address priceStrategy) external;
 
     /**
-     * @notice Returns the EIP712 domain separator
-     * @return The EIP712 domain separator
-     */
-    // function DOMAIN_SEPARATOR() external view returns (bytes32);
-
-    /**
      * @notice Returns the total amount of Stable Token, gross amount and fee result of buying assets
      * @param minAssetAmount The minimum amount of underlying asset to buy
      * @return The exact amount of underlying asset to be bought

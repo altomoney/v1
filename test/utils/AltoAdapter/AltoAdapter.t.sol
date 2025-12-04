@@ -1627,7 +1627,7 @@ contract AltoAdapterTest is AdapterCommonSetup {
     function testUsmSellAssetWithERC20TransferNotApproved() public {
         IUsm nonUsm = IUsm(makeAddr("NonUsm"));
 
-        bundle.push(_usmSellAssetWithERC20Transfer(nonUsm, MIN_AMOUNT, USER));
+        bundle.push(_usmSellAssetWithERC20Transfer(nonUsm, MIN_AMOUNT, 0, USER));
 
         vm.expectRevert(AdapterContractApproval.AdapterContractApprovalUnapprovedContract.selector);
         bundler3.multicall(bundle);
@@ -1646,7 +1646,9 @@ contract AltoAdapterTest is AdapterCommonSetup {
         assertEq(underlyingBalanceUserBefore, amount);
         assertEq(dusdBalanceUserBefore, 0);
 
-        bundle.push(_usmSellAssetWithERC20Transfer(usmContract, amount, user));
+        // Get expected stable token amount (second return value is stableTokenBought)
+        (, uint256 expectedStableTokenAmount,,) = usmContract.getStableTokenAmountForSellAsset(amount);
+        bundle.push(_usmSellAssetWithERC20Transfer(usmContract, amount, expectedStableTokenAmount, user));
 
         vm.startPrank(user);
         underlyingToken.approve(address(altoAdapter), type(uint256).max);
@@ -1658,6 +1660,7 @@ contract AltoAdapterTest is AdapterCommonSetup {
         uint256 underlyingBalanceUsmAfter = underlyingToken.balanceOf(address(usmContract));
 
         assertGt(dusdBalanceUserAfter, 0, "User should have received DUSD tokens");
+        assertEq(dusdBalanceUserAfter, expectedStableTokenAmount, "User should have received the expected DUSD amount");
 
         uint256 underlyingSpent = underlyingBalanceUserBefore - underlyingBalanceUserAfter;
         assertLe(underlyingSpent, amount, "User should not have spent more than the max amount");
@@ -1682,7 +1685,9 @@ contract AltoAdapterTest is AdapterCommonSetup {
         assertEq(dusdBalanceUserBefore, 0);
         assertEq(dusdBalanceReceiverBefore, 0);
 
-        bundle.push(_usmSellAssetWithERC20Transfer(usmContract, amount, receiver));
+        // Get expected stable token amount (second return value is stableTokenBought)
+        (, uint256 expectedStableTokenAmount,,) = usmContract.getStableTokenAmountForSellAsset(amount);
+        bundle.push(_usmSellAssetWithERC20Transfer(usmContract, amount, expectedStableTokenAmount, receiver));
 
         vm.startPrank(user);
         underlyingToken.approve(address(altoAdapter), type(uint256).max);
@@ -1696,11 +1701,37 @@ contract AltoAdapterTest is AdapterCommonSetup {
 
         assertEq(dusdBalanceUserAfter, 0, "User should not have received DUSD tokens");
         assertGt(dusdBalanceReceiverAfter, 0, "Receiver should have received DUSD tokens");
+        assertEq(
+            dusdBalanceReceiverAfter,
+            expectedStableTokenAmount,
+            "Receiver should have received the expected DUSD amount"
+        );
 
         uint256 underlyingSpent = underlyingBalanceUserBefore - underlyingBalanceUserAfter;
         assertLe(underlyingSpent, amount, "User should not have spent more than the max amount");
         assertGt(underlyingSpent, 0, "User should have spent some underlying tokens");
 
         assertGt(underlyingBalanceUsmAfter, underlyingBalanceUsmBefore, "USM should have received underlying tokens");
+    }
+
+    function testUsmSellAssetWithERC20TransferSlippageExceeded(uint256 amount) public {
+        address user = makeAddr("User");
+        amount = bound(amount, MIN_AMOUNT, 1_000_000e6);
+
+        deal(address(underlyingToken), user, amount);
+
+        // Get expected stable token amount
+        (, uint256 expectedStableTokenAmount,,) = usmContract.getStableTokenAmountForSellAsset(amount);
+
+        // Set minStableTokenAmount higher than expected to trigger slippage protection
+        uint256 minStableTokenAmount = expectedStableTokenAmount + 1;
+
+        bundle.push(_usmSellAssetWithERC20Transfer(usmContract, amount, minStableTokenAmount, user));
+
+        vm.startPrank(user);
+        underlyingToken.approve(address(altoAdapter), type(uint256).max);
+        vm.expectRevert(ErrorsLib.SlippageExceeded.selector);
+        bundler3.multicall(bundle);
+        vm.stopPrank();
     }
 }
