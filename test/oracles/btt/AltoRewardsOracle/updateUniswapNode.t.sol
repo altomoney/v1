@@ -12,6 +12,8 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ModuleUniswap} from "@alto/oracles/modules/ModuleUniswap/ModuleUniswap.sol";
 import {UniswapNode, ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
 import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+import {MockUniswapPool} from "@alto-test/oracles/btt/mocks/MockUniswapPool.sol";
+import {ERC20MockDecimals} from "@alto-test/helpers/ERC20MockDecimals.sol";
 
 contract AltoRewardsOracleUpdateUniswapNode is AltoRewardsOracleCommon {
     AltoRewardsOracle oracle;
@@ -65,10 +67,43 @@ contract AltoRewardsOracleUpdateUniswapNode is AltoRewardsOracleCommon {
         oracle.updateUniswapNode(invalidNode);
     }
 
+    function test_RevertWhen_InTokenIsNotAltoToken_WhenDirectionIsInToOut() external givenCallerIsOwner {
+        UniswapNode memory invalidNode = _createValidUniswapNode();
+        invalidNode.direction = ConversionDirection.IN_TO_OUT;
+
+        // Create a non-ALTO token
+        ERC20MockDecimals nonAltoToken = new ERC20MockDecimals("Wrapped Ether", "WETH", 18);
+        address otherToken = MockUniswapPool(address(invalidNode.pool)).outToken();
+
+        // Set non-ALTO token as token0 (which is the inToken for IN_TO_OUT direction)
+        MockUniswapPool(address(invalidNode.pool)).setTokens(address(nonAltoToken), otherToken);
+
+        vm.expectRevert(IAltoRewardsOracleErrors.AltoRewardsOracleInvalidInput.selector);
+        oracle.updateUniswapNode(invalidNode);
+    }
+
+    function test_RevertWhen_InTokenIsNotAltoToken_WhenDirectionIsOutToIn() external givenCallerIsOwner {
+        UniswapNode memory invalidNode = _createValidUniswapNode();
+        invalidNode.direction = ConversionDirection.OUT_TO_IN;
+
+        // Create a non-ALTO token
+        ERC20MockDecimals nonAltoToken = new ERC20MockDecimals("Wrapped Ether", "WETH", 18);
+        address otherToken = MockUniswapPool(address(invalidNode.pool)).outToken();
+
+        // Set non-ALTO token as token1 (which is the inToken for OUT_TO_IN direction)
+        MockUniswapPool(address(invalidNode.pool)).setTokens(otherToken, address(nonAltoToken));
+
+        vm.expectRevert(IAltoRewardsOracleErrors.AltoRewardsOracleInvalidInput.selector);
+        oracle.updateUniswapNode(invalidNode);
+    }
+
     function test_ShouldEmitSetUniswapNodeEvent_WhenUniswapNodeIsValid() external givenCallerIsOwner {
         UniswapNode memory newUniswapNode = _createValidUniswapNode();
         newUniswapNode.twapPeriod = 2 hours; // Different value to ensure change
         newUniswapNode.direction = ConversionDirection.OUT_TO_IN; // Different value to ensure change
+        address altoToken = MockUniswapPool(address(newUniswapNode.pool)).inToken();
+        address otherToken = MockUniswapPool(address(newUniswapNode.pool)).outToken();
+        MockUniswapPool(address(newUniswapNode.pool)).setTokens(otherToken, altoToken);
 
         // Get current uniswap node
         (IUniswapV3Pool pool, ConversionDirection direction, uint32 twapPeriod) = oracle.uniswapNode();

@@ -29,8 +29,8 @@ contract AltoRewardsOracleCommon is Test {
     uint256 constant DEFAULT_COOLDOWN_PERIOD = 1 hours;
 
     function setUp() public virtual {
-        inToken = new ERC20MockDecimals("In Token", "IN", 18);
-        outToken = new ERC20MockDecimals("Out Token", "OUT", 18);
+        inToken = new ERC20MockDecimals("ALTO", "ALTO", 18);
+        outToken = new ERC20MockDecimals("Wrapped Ether", "WETH", 18);
         mockPool = new MockUniswapPool();
         mockFeed = new MockChainlinkFeed();
     }

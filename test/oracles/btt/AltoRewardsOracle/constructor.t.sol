@@ -13,6 +13,9 @@ import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Po
 import {ModuleUniswap} from "@alto/oracles/modules/ModuleUniswap/ModuleUniswap.sol";
 import {ModuleChainlink, ConversionDirection} from "@alto/oracles/modules/ModuleChainlink.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
+import {MockUniswapPool} from "@alto-test/oracles/btt/mocks/MockUniswapPool.sol";
+import {ERC20MockDecimals} from "@alto-test/helpers/ERC20MockDecimals.sol";
+import {UniswapNode} from "@alto/oracles/interfaces/IModuleNode.sol";
 
 contract AltoRewardsOracleConstructor is AltoRewardsOracleCommon {
     modifier givenInvalidInputs() {
@@ -29,6 +32,38 @@ contract AltoRewardsOracleConstructor is AltoRewardsOracleCommon {
         params.uniswapNode.twapPeriod = 0; // twap period is 0 which is invalid
 
         vm.expectRevert(ModuleUniswap.ModuleUniswapInvalidInput.selector);
+        new AltoRewardsOracle(params);
+    }
+
+    function test_RevertWhen_InTokenIsNotAltoToken_WhenDirectionIsInToOut() external givenInvalidInputs {
+        AltoRewardsOracleInitParams memory params = _createValidInitParams();
+        params.uniswapNode.direction = ConversionDirection.IN_TO_OUT;
+
+        // Create a new pool with non-ALTO token as token0 (inToken for IN_TO_OUT)
+        ERC20MockDecimals nonAltoToken = new ERC20MockDecimals("Wrapped Ether", "WETH", 18);
+        ERC20MockDecimals otherToken = new ERC20MockDecimals("Out Token", "OUT", 18);
+        MockUniswapPool newPool = new MockUniswapPool();
+        newPool.setTokens(address(nonAltoToken), address(otherToken));
+
+        params.uniswapNode.pool = IUniswapV3Pool(address(newPool));
+
+        vm.expectRevert(IAltoRewardsOracleErrors.AltoRewardsOracleInvalidInput.selector);
+        new AltoRewardsOracle(params);
+    }
+
+    function test_RevertWhen_InTokenIsNotAltoToken_WhenDirectionIsOutToIn() external givenInvalidInputs {
+        AltoRewardsOracleInitParams memory params = _createValidInitParams();
+        params.uniswapNode.direction = ConversionDirection.OUT_TO_IN;
+
+        // Create a new pool with non-ALTO token as token1 (inToken for OUT_TO_IN)
+        ERC20MockDecimals nonAltoToken = new ERC20MockDecimals("Wrapped Ether", "WETH", 18);
+        ERC20MockDecimals otherToken = new ERC20MockDecimals("Out Token", "OUT", 18);
+        MockUniswapPool newPool = new MockUniswapPool();
+        newPool.setTokens(address(otherToken), address(nonAltoToken));
+
+        params.uniswapNode.pool = IUniswapV3Pool(address(newPool));
+
+        vm.expectRevert(IAltoRewardsOracleErrors.AltoRewardsOracleInvalidInput.selector);
         new AltoRewardsOracle(params);
     }
 

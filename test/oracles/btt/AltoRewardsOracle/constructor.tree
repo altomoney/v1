@@ -2,6 +2,11 @@ AltoRewardsOracle::Constructor()
 ├── given invalid inputs
 │   ├── when uniswap node is invalid
 │   │   └── it should revert with ModuleUniswapInvalidInput
+│   ├── when inToken is not Alto token
+│   │   ├── when direction is IN_TO_OUT
+│   │   │   └── it should revert with AltoRewardsOracleInvalidInput
+│   │   └── when direction is OUT_TO_IN
+│   │       └── it should revert with AltoRewardsOracleInvalidInput
 │   ├── when chainlink node is invalid
 │   │   └── it should revert with ModuleChainlinkInvalidInput
 │   ├── when owner is zero address
