@@ -10,6 +10,7 @@ import {AltoAdapter} from "@alto/utils/AltoAdapter.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 import {UnsafeUpgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {AccessMode} from "@alto/usm/interfaces/IUsm.sol";
 
 struct TestnetUsmBatchParams {
     address owner;
@@ -44,7 +45,14 @@ contract TestnetUsmBatch {
         address dusdUsm = UnsafeUpgrades.deployUUPSProxy(
             address(dusdUsmImplementation),
             abi.encodeCall(
-                DUSDUsm.initialize, (address(this), _params.owner, uint128(_params.exposureCap), fixedPriceStrategy)
+                DUSDUsm.initialize,
+                (
+                    address(this),
+                    _params.owner,
+                    uint128(_params.exposureCap),
+                    fixedPriceStrategy,
+                    AccessMode.PERMISSIONLESS
+                )
             )
         );
 

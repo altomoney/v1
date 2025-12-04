@@ -3,6 +3,7 @@ pragma solidity ^0.8.10;
 
 import {Usm} from "./Usm.sol";
 import {IDUSD} from "@alto/tokens/interfaces/IDUSD.sol";
+import {AccessMode} from "@alto/usm/interfaces/IUsm.sol";
 
 contract DUSDUsm is Usm {
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -10,11 +11,14 @@ contract DUSDUsm is Usm {
         _disableInitializers();
     }
 
-    function initialize(address admin, address stableTokenTreasury, uint128 exposureCap, address priceStrategy)
-        external
-        initializer
-    {
-        __Usm_init(admin, stableTokenTreasury, exposureCap, priceStrategy);
+    function initialize(
+        address admin,
+        address stableTokenTreasury,
+        uint128 exposureCap,
+        address priceStrategy,
+        AccessMode accessMode
+    ) external initializer {
+        __Usm_init(admin, stableTokenTreasury, exposureCap, priceStrategy, accessMode);
     }
 
     function _getCurrentlyMintedStableTokenByUsm() internal view override returns (uint256) {

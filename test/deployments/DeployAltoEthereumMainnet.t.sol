@@ -384,10 +384,10 @@ contract DeployAltoEthereumMainnetTest is Test {
         assertEq(_ceiling, ceiling, string.concat(contractAddressString, " mint ceiling should be correct"));
     }
 
-    function test_deployPhase_USDC_USM() public {
-        _deployPrerequisites(DeploymentPhase.USDC_USM);
+    function test_deployPhase_PERMISSIONED_USM() public {
+        _deployPrerequisites(DeploymentPhase.PERMISSIONED_USM);
 
-        params.phase = DeploymentPhase.USDC_USM;
+        params.phase = DeploymentPhase.PERMISSIONED_USM;
         input = DeployAltoEthereumMainnet.deploy(params, input);
 
         // Verify USDC USM contracts are deployed
@@ -397,36 +397,20 @@ contract DeployAltoEthereumMainnetTest is Test {
         assertEq(
             input.contracts.permissionedUsm.fixedFeeStrategy,
             address(0),
-            "Fixed fee strategy for permissionless USM should be 0"
+            "Fixed fee strategy for permissioned USM should be 0"
         );
-
-        _verifyDeployed(input.contracts.permissionlessUsm.dusdUsm, "DUSD USM Permissionless");
-        _verifyDeployed(
-            input.contracts.permissionlessUsm.dusdUsmImplementation, "DUSD USM implementation Permissionless"
-        );
-        _verifyDeployed(input.contracts.permissionlessUsm.fixedFeeStrategy, "Fixed fee strategy Permissionless");
-        _verifyDeployed(input.contracts.permissionlessUsm.fixedPriceStrategy, "Fixed price strategy Permissionless");
 
         _verifyMintCeiling(input.contracts.permissionedUsm.dusdUsm, 5_000_000_000 ether);
-        _verifyMintCeiling(input.contracts.permissionlessUsm.dusdUsm, 5_000_000_000 ether);
 
         UsmRegistry usmRegistry = UsmRegistry(input.contracts.usmRegistry);
         assertTrue(
             usmRegistry.isUsm(input.contracts.permissionedUsm.dusdUsm), "DUSD USM Permissioned should be registered"
-        );
-        assertTrue(
-            usmRegistry.isUsm(input.contracts.permissionlessUsm.dusdUsm), "DUSD USM Permissionless should be registered"
         );
 
         assertTrue(
             IUsm(input.contracts.permissionedUsm.dusdUsm).getAccessMode() == AccessMode.PERMISSIONED,
             "DUSD USM Permissioned should be permissioned"
         );
-        assertTrue(
-            IUsm(input.contracts.permissionlessUsm.dusdUsm).getAccessMode() == AccessMode.PERMISSIONLESS,
-            "DUSD USM Permissionless should be permissionless"
-        );
-
         // TODO verify other parameters - fees, exposure cap, etc.
 
         _verifyHasRole(
@@ -443,6 +427,43 @@ contract DeployAltoEthereumMainnetTest is Test {
         );
         _verifyHasRole(
             input.contracts.permissionedUsm.dusdUsm, MULTISIG_FREEZER_PAUSER, SWAP_FREEZER_ROLE, "DUSD USM Permissioned"
+        );
+
+        _verifyHasRole(
+            input.contracts.permissionedUsm.fixedPriceStrategy,
+            input.contracts.timelock,
+            CONFIGURATOR_ROLE,
+            "Fixed price strategy Permissioned"
+        );
+        _verifyHasRole(
+            input.contracts.permissionedUsm.dusdUsm, params.treasuryMultisig, SWAPPER_ROLE, "DUSD USM permissioned"
+        );
+    }
+
+    function test_deployPhase_PERMISSIONLESS_USM() public {
+        _deployPrerequisites(DeploymentPhase.PERMISSIONLESS_USM);
+
+        params.phase = DeploymentPhase.PERMISSIONLESS_USM;
+        input = DeployAltoEthereumMainnet.deploy(params, input);
+
+        _verifyDeployed(input.contracts.permissionlessUsm.dusdUsm, "DUSD USM Permissionless");
+        _verifyDeployed(
+            input.contracts.permissionlessUsm.dusdUsmImplementation, "DUSD USM implementation Permissionless"
+        );
+        _verifyDeployed(input.contracts.permissionlessUsm.fixedFeeStrategy, "Fixed fee strategy Permissionless");
+        _verifyDeployed(input.contracts.permissionlessUsm.fixedPriceStrategy, "Fixed price strategy Permissionless");
+
+        _verifyMintCeiling(input.contracts.permissionlessUsm.dusdUsm, 5_000_000_000 ether);
+
+        UsmRegistry usmRegistry = UsmRegistry(input.contracts.usmRegistry);
+
+        assertTrue(
+            IUsm(input.contracts.permissionlessUsm.dusdUsm).getAccessMode() == AccessMode.PERMISSIONLESS,
+            "DUSD USM Permissionless should be permissionless"
+        );
+
+        assertTrue(
+            usmRegistry.isUsm(input.contracts.permissionlessUsm.dusdUsm), "DUSD USM Permissionless should be registered"
         );
 
         _verifyHasRole(
@@ -490,19 +511,10 @@ contract DeployAltoEthereumMainnetTest is Test {
         );
 
         _verifyHasRole(
-            input.contracts.permissionedUsm.fixedPriceStrategy,
+            input.contracts.permissionlessUsm.fixedPriceStrategy,
             input.contracts.timelock,
             DEFAULT_ADMIN_ROLE,
-            "Fixed price strategy Permissioned"
-        );
-        _verifyHasRole(
-            input.contracts.permissionedUsm.fixedPriceStrategy,
-            input.contracts.timelock,
-            CONFIGURATOR_ROLE,
-            "Fixed price strategy Permissioned"
-        );
-        _verifyHasRole(
-            input.contracts.permissionedUsm.dusdUsm, params.treasuryMultisig, SWAPPER_ROLE, "DUSD USM permissioned"
+            "Fixed price strategy Permissionless"
         );
     }
 
@@ -570,10 +582,7 @@ contract DeployAltoEthereumMainnetTest is Test {
     }
 
     function test_deployPhase_POST() public {
-        _deployPrerequisites(DeploymentPhase.USDC_USM);
-
-        params.phase = DeploymentPhase.USDC_USM;
-        input = DeployAltoEthereumMainnet.deploy(params, input);
+        _deployPrerequisites(DeploymentPhase.PERMISSIONED_USM);
 
         params.phase = DeploymentPhase.POST;
         input = DeployAltoEthereumMainnet.deploy(params, input);
@@ -651,7 +660,10 @@ contract DeployAltoEthereumMainnetTest is Test {
         params.phase = DeploymentPhase.BORROW_MARKET_SUSDE;
         input = DeployAltoEthereumMainnet.deploy(params, input);
 
-        params.phase = DeploymentPhase.USDC_USM;
+        params.phase = DeploymentPhase.PERMISSIONED_USM;
+        input = DeployAltoEthereumMainnet.deploy(params, input);
+
+        params.phase = DeploymentPhase.PERMISSIONLESS_USM;
         input = DeployAltoEthereumMainnet.deploy(params, input);
 
         params.phase = DeploymentPhase.POST;

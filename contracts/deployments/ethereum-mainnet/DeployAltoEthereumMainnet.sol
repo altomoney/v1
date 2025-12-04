@@ -352,25 +352,7 @@ library DeployAltoEthereumMainnet {
                 input,
                 params.useUnsafeUpgrades
             );
-        } else if (params.phase == DeploymentPhase.USDC_USM) {
-            input = _deployUsm(
-                DeployUsmParams({
-                    owner: input.contracts.timelock,
-                    dusd: input.contracts.dusd,
-                    altoAdapter: input.contracts.altoAdapter,
-                    feeRecipient: input.contracts.feeRecipient,
-                    freezer: params.freezer,
-                    buyFee: 1, // TODO placeholder value
-                    sellFee: 1, // TODO placeholder value
-                    exposureCap: 0, // TODO placeholder value
-                    underlyingAsset: USDC_MAINNET,
-                    isPermissioned: false,
-                    treasuryMultisig: params.treasuryMultisig
-                }),
-                input,
-                params.useUnsafeUpgrades
-            );
-
+        } else if (params.phase == DeploymentPhase.PERMISSIONED_USM) {
             input = _deployUsm(
                 DeployUsmParams({
                     owner: input.contracts.timelock,
@@ -383,6 +365,24 @@ library DeployAltoEthereumMainnet {
                     exposureCap: 0, // TODO placeholder value
                     underlyingAsset: USDC_MAINNET,
                     isPermissioned: true,
+                    treasuryMultisig: params.treasuryMultisig
+                }),
+                input,
+                params.useUnsafeUpgrades
+            );
+        } else if (params.phase == DeploymentPhase.PERMISSIONLESS_USM) {
+            input = _deployUsm(
+                DeployUsmParams({
+                    owner: input.contracts.timelock,
+                    dusd: input.contracts.dusd,
+                    altoAdapter: input.contracts.altoAdapter,
+                    feeRecipient: input.contracts.feeRecipient,
+                    freezer: params.freezer,
+                    buyFee: 1, // TODO placeholder value
+                    sellFee: 1, // TODO placeholder value
+                    exposureCap: 0, // TODO placeholder value
+                    underlyingAsset: USDC_MAINNET,
+                    isPermissioned: false,
                     treasuryMultisig: params.treasuryMultisig
                 }),
                 input,

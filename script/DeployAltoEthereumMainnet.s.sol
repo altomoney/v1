@@ -242,11 +242,17 @@ contract DeployAltoEthereumMainnetScript is Script {
             _extractBorrowMarketABIs(abiFolder, "AltoMultiChainlinkLendingOracle");
         } else if (PHASE_TO_DEPLOY == DeploymentPhase.BORROW_MARKET_SUSDE) {
             _extractBorrowMarketABIs(abiFolder, "ERC4626RatioChainlinkOracleSUSDE");
-        } else if (PHASE_TO_DEPLOY == DeploymentPhase.USDC_USM) {
+        } else if (PHASE_TO_DEPLOY == DeploymentPhase.PERMISSIONED_USM) {
             _extractContractABI("DUSDUsm", abiFolder);
             _extractContractABI("FixedPriceStrategy", abiFolder);
             _extractContractABI("FixedFeeStrategy", abiFolder);
-        } else if (PHASE_TO_DEPLOY == DeploymentPhase.POST) {}
+        } else if (PHASE_TO_DEPLOY == DeploymentPhase.PERMISSIONLESS_USM) {
+            _extractContractABI("DUSDUsm", abiFolder);
+            _extractContractABI("FixedPriceStrategy", abiFolder);
+            _extractContractABI("FixedFeeStrategy", abiFolder);
+        } else if (PHASE_TO_DEPLOY == DeploymentPhase.POST) {
+            _extractContractABI("AltoTimelockController", abiFolder);
+        }
 
         console.log("ABIs extracted to:", abiFolder);
     }

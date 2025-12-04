@@ -110,11 +110,15 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, AuthUpgradeabl
      * @param stableTokenTreasury The address of the stable token treasury
      * @param exposureCap Maximum amount of user-supplied underlying asset in USM
      * @param priceStrategy The address of the price strategy
+     * @param accessMode The access mode of the USM
      */
-    function __Usm_init(address admin, address stableTokenTreasury, uint128 exposureCap, address priceStrategy)
-        internal
-        onlyInitializing
-    {
+    function __Usm_init(
+        address admin,
+        address stableTokenTreasury,
+        uint128 exposureCap,
+        address priceStrategy,
+        AccessMode accessMode
+    ) internal onlyInitializing {
         require(admin != address(0), "ZERO_ADDRESS_NOT_VALID");
 
         __AccessControl_init();
@@ -126,6 +130,7 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, AuthUpgradeabl
         _updateStableTokenTreasury(stableTokenTreasury);
         _updateExposureCap(exposureCap);
         _updatePriceStrategy(priceStrategy);
+        _updateAccessMode(accessMode);
     }
 
     /// @inheritdoc IUsm
