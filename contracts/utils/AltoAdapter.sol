@@ -324,24 +324,47 @@ contract AltoAdapter is CoreAdapter, AdapterContractApproval {
     /// @notice Buys assets from the USM.
     /// @param usm The address of the USM.
     /// @param minAmount The minimum amount of assets to buy.
+    /// @param maxStableTokenAmount The maximum amount of Stable Token to pay.
     /// @param receiver The address of the receiver of the assets.
-    function usmBuyAsset(IUsm usm, uint256 minAmount, address receiver)
+    function usmBuyAssetWithERC20Transfer(IUsm usm, uint256 minAmount, uint256 maxStableTokenAmount, address receiver)
         external
         onlyBundler3
         onlyApprovedContract(address(usm))
     {
-        usm.buyAsset(minAmount, receiver, initiator());
+        address stableToken = usm.STABLE_TOKEN();
+
+        // USM's allowance is not reset as it is trusted.
+        SafeERC20.forceApprove(IERC20(stableToken), address(usm), type(uint256).max);
+
+        SafeERC20.safeTransferFrom(IERC20(stableToken), initiator(), address(this), maxStableTokenAmount);
+
+        (, uint256 stableTokenSold) = usm.buyAsset(minAmount, receiver);
+
+        if (maxStableTokenAmount - stableTokenSold != 0) {
+            SafeERC20.safeTransfer(IERC20(stableToken), initiator(), maxStableTokenAmount - stableTokenSold);
+        }
     }
 
     /// @notice Sells assets from the USM.
     /// @param usm The address of the USM.
     /// @param maxAmount The maximum amount of assets to sell.
-    /// @param receiver The address of the receiver of the assets.
-    function usmSellAsset(IUsm usm, uint256 maxAmount, address receiver)
+    /// @param receiver The address of the receiver of the Stable Token.
+    function usmSellAssetWithERC20Transfer(IUsm usm, uint256 maxAmount, address receiver)
         external
         onlyBundler3
         onlyApprovedContract(address(usm))
     {
-        usm.sellAsset(maxAmount, receiver, initiator());
+        address underlyingAsset = usm.UNDERLYING_ASSET();
+
+        // USM's allowance is not reset as it is trusted.
+        SafeERC20.forceApprove(IERC20(underlyingAsset), address(usm), type(uint256).max);
+
+        SafeERC20.safeTransferFrom(IERC20(underlyingAsset), initiator(), address(this), maxAmount);
+
+        (uint256 assetAmountSold,) = usm.sellAsset(maxAmount, receiver);
+
+        if (maxAmount - assetAmountSold != 0) {
+            SafeERC20.safeTransfer(IERC20(underlyingAsset), initiator(), maxAmount - assetAmountSold);
+        }
     }
 }

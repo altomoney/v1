@@ -40,7 +40,7 @@ contract TestUsmSwapEdge is TestDusdBase {
 
         vm.startPrank(ALICE);
         newToken.approve(address(gsm), 2);
-        gsm.sellAsset(2, ALICE, ALICE);
+        gsm.sellAsset(2, ALICE);
         vm.stopPrank();
 
         // Top up withDUSD
@@ -53,13 +53,13 @@ contract TestUsmSwapEdge is TestDusdBase {
         // Try to buy all, which is 2 assets for 2e11+1DUSD
         uint256 allUnderlying = gsm.getAvailableLiquidity();
         vm.expectRevert();
-        gsm.buyAsset(allUnderlying, ALICE, ALICE);
+        gsm.buyAsset(allUnderlying, ALICE);
 
         // Buy a portion
         uint256 userDusdBefore = DUSD_TOKEN.balanceOf(ALICE);
         uint256 userAssetBefore = newToken.balanceOf(ALICE);
 
-        (uint256 exactAssetAmount, uint256 exactDusdAmount) = gsm.buyAsset(1, ALICE, ALICE);
+        (uint256 exactAssetAmount, uint256 exactDusdAmount) = gsm.buyAsset(1, ALICE);
 
         assertEq(
             newToken.balanceOf(ALICE) - userAssetBefore, exactAssetAmount, "unexpected underlying balance of ALICE"
@@ -103,7 +103,7 @@ contract TestUsmSwapEdge is TestDusdBase {
 
         // Using 1 wei less than the assetAmount will round down the asset amount to 0, so should revert
         vm.expectRevert("INVALID_AMOUNT");
-        gsm.sellAsset(assetAmount - 1, ALICE, address(this));
+        gsm.sellAsset(assetAmount - 1, address(this));
 
         _sellAsset(gsm, newToken, ALICE, assetAmount);
         assertEq(DUSD_TOKEN.balanceOf(ALICE), 1, "Unexpected DUSD balance");
@@ -151,7 +151,7 @@ contract TestUsmSwapEdge is TestDusdBase {
         vm.startPrank(ALICE);
         newToken.approve(address(gsm), assetAmount);
         // Sell 1 more asset than required to receive 10000DUSD
-        gsm.sellAsset(assetAmount + 1, ALICE, ALICE);
+        gsm.sellAsset(assetAmount + 1, ALICE);
         vm.stopPrank();
         assertEq(DUSD_TOKEN.balanceOf(ALICE), 10000, "Unexpected DUSD balance");
         // Should have 1 "leftover" asset, as sellAsset prevents "overpaying" so only assetAmount spent
@@ -191,13 +191,13 @@ contract TestUsmSwapEdge is TestDusdBase {
 
         // Less than 1e6 results in 0DUSD
         vm.expectRevert("INVALID_AMOUNT");
-        gsm.sellAsset(0.9e6, ALICE, ALICE);
+        gsm.sellAsset(0.9e6, ALICE);
 
         // Lowest amount that can be sold is 1e6
         uint256 userDusdBefore = DUSD_TOKEN.balanceOf(ALICE);
         uint256 userAssetBefore = newToken.balanceOf(ALICE);
 
-        gsm.sellAsset(1e6, ALICE, ALICE);
+        gsm.sellAsset(1e6, ALICE);
 
         assertEq(DUSD_TOKEN.balanceOf(ALICE) - userDusdBefore, 1, "unexpected amount of DUSD purchased");
         assertEq(userAssetBefore - newToken.balanceOf(ALICE), 1e6, "unexpected amount of asset sold");
@@ -206,7 +206,7 @@ contract TestUsmSwapEdge is TestDusdBase {
         userDusdBefore = DUSD_TOKEN.balanceOf(ALICE);
         userAssetBefore = newToken.balanceOf(ALICE);
 
-        (uint256 assetAmount, uint256 dusdBought) = gsm.sellAsset(1.9e6, ALICE, ALICE);
+        (uint256 assetAmount, uint256 dusdBought) = gsm.sellAsset(1.9e6, ALICE);
 
         assertEq(DUSD_TOKEN.balanceOf(ALICE) - userDusdBefore, 1, "unexpected amount of DUSD purchased");
         assertEq(dusdBought, 1, "unexpected amount of returned DUSD purchased");
@@ -250,7 +250,7 @@ contract TestUsmSwapEdge is TestDusdBase {
         // Alice sells some asset to the GSM
         newToken.approve(address(gsm), type(uint256).max);
         DUSD_TOKEN.approve(address(gsm), type(uint256).max);
-        gsm.sellAsset(1_000_000e24, ALICE, ALICE);
+        gsm.sellAsset(1_000_000e24, ALICE);
 
         // The minimum amount of assets that can be bought is 1e6, and the contract recalculates
         // the corresponding amount of assets to the exact DUSD burned.
@@ -258,7 +258,7 @@ contract TestUsmSwapEdge is TestDusdBase {
         uint256 userDusdBefore = DUSD_TOKEN.balanceOf(ALICE);
         uint256 userAssetBefore = newToken.balanceOf(ALICE);
 
-        (uint256 assetAmount, uint256 dusdSold) = gsm.buyAsset(1.9e6, ALICE, ALICE); // should by just 1e6 asset in exchange of 1DUSD
+        (uint256 assetAmount, uint256 dusdSold) = gsm.buyAsset(1.9e6, ALICE); // should by just 1e6 asset in exchange of 1DUSD
 
         assertEq(userDusdBefore - DUSD_TOKEN.balanceOf(ALICE), 2, "unexpected amount of DUSD spent");
         assertEq(dusdSold, 2, "unexpected amount of returned DUSD spent");
@@ -305,7 +305,7 @@ contract TestUsmSwapEdge is TestDusdBase {
         uint256 userAssetBefore = newToken.balanceOf(ALICE);
 
         newToken.approve(address(gsm), type(uint256).max);
-        gsm.sellAsset(estSellAssetAmount, ALICE, ALICE);
+        gsm.sellAsset(estSellAssetAmount, ALICE);
 
         assertEq(
             DUSD_TOKEN.balanceOf(ALICE) - userDusdBefore, exactDusdToGet, "exact dusd amount to get does not match"
@@ -354,7 +354,7 @@ contract TestUsmSwapEdge is TestDusdBase {
         uint256 userAssetBefore = newToken.balanceOf(ALICE);
 
         newToken.approve(address(gsm), type(uint256).max);
-        gsm.sellAsset(estSellAssetAmount, ALICE, ALICE);
+        gsm.sellAsset(estSellAssetAmount, ALICE);
 
         assertEq(
             DUSD_TOKEN.balanceOf(ALICE) - userDusdBefore, exactDusdToGet, "exact dusd amount to get does not match"
@@ -398,7 +398,7 @@ contract TestUsmSwapEdge is TestDusdBase {
         vm.startPrank(ALICE);
         // Alice sells some asset to the GSM
         newToken.approve(address(gsm), type(uint256).max);
-        gsm.sellAsset(1_000_000e6, ALICE, ALICE);
+        gsm.sellAsset(1_000_000e6, ALICE);
 
         // User wants to know how much asset can buy with 1.9e12DUSD
         uint256 dusdAmountToSpend = 1.9e12; // this is the maximum that can spend
@@ -407,7 +407,7 @@ contract TestUsmSwapEdge is TestDusdBase {
         uint256 userAssetBefore = newToken.balanceOf(ALICE);
 
         DUSD_TOKEN.approve(address(gsm), type(uint256).max);
-        gsm.buyAsset(estBuyAssetAmount, ALICE, ALICE);
+        gsm.buyAsset(estBuyAssetAmount, ALICE);
 
         assertTrue(userDusdBefore - DUSD_TOKEN.balanceOf(ALICE) <= dusdAmountToSpend, "dusd spend above maximum amount");
         assertEq(userDusdBefore - DUSD_TOKEN.balanceOf(ALICE), exactDusdSpent, "dusd spent does not match");
@@ -451,7 +451,7 @@ contract TestUsmSwapEdge is TestDusdBase {
         vm.startPrank(ALICE);
         // Alice sells some asset to the GSM
         newToken.approve(address(gsm), type(uint256).max);
-        gsm.sellAsset(1_000_000e24, ALICE, ALICE);
+        gsm.sellAsset(1_000_000e24, ALICE);
 
         // User wants to know how much asset can buy with 1DUSD
         uint256 dusdAmountToSpend = 1; // this is the lowest amount that can spend
@@ -460,7 +460,7 @@ contract TestUsmSwapEdge is TestDusdBase {
         uint256 userAssetBefore = newToken.balanceOf(ALICE);
 
         DUSD_TOKEN.approve(address(gsm), type(uint256).max);
-        gsm.buyAsset(estBuyAssetAmount, ALICE, ALICE);
+        gsm.buyAsset(estBuyAssetAmount, ALICE);
 
         assertEq(userDusdBefore - DUSD_TOKEN.balanceOf(ALICE), exactDusdSpent, "exact dusd spent does not match");
         assertEq(userDusdBefore - DUSD_TOKEN.balanceOf(ALICE), dusdAmountToSpend, "unexpected amount of DUSD spent");

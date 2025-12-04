@@ -67,7 +67,7 @@ contract TestUsmUpgraded is TestDusdBase {
         vm.startPrank(ALICE);
         USDC_TOKEN.mint(ALICE, 1000e6);
         USDC_TOKEN.approve(address(DUSD_USM), 1000e6);
-        DUSD_USM.sellAsset(100e6, ALICE, ALICE);
+        DUSD_USM.sellAsset(100e6, ALICE);
         vm.stopPrank();
 
         UsmData memory usmDataBefore = _getAllUsmData();
@@ -137,7 +137,7 @@ contract TestUsmUpgraded is TestDusdBase {
         vm.startPrank(ALICE);
         USDC_TOKEN.mint(ALICE, 100e6);
         USDC_TOKEN.approve(address(DUSD_USM), 100e6);
-        DUSD_USM.sellAsset(50e6, ALICE, ALICE);
+        DUSD_USM.sellAsset(50e6, ALICE);
         vm.stopPrank();
     }
 
@@ -147,7 +147,7 @@ contract TestUsmUpgraded is TestDusdBase {
         vm.startPrank(ALICE);
         USDC_TOKEN.mint(ALICE, 1000e6);
         USDC_TOKEN.approve(address(DUSD_USM), 1000e6);
-        DUSD_USM.sellAsset(100e6, ALICE, ALICE);
+        DUSD_USM.sellAsset(100e6, ALICE);
         vm.stopPrank();
 
         UsmData memory usmDataBefore = _getAllUsmData();
@@ -212,7 +212,7 @@ contract TestUsmUpgraded is TestDusdBase {
         vm.startPrank(ALICE);
         USDC_TOKEN.mint(ALICE, 100e6);
         USDC_TOKEN.approve(address(DUSD_USM), 100e6);
-        DUSD_USM.sellAsset(50e6, ALICE, ALICE);
+        DUSD_USM.sellAsset(50e6, ALICE);
         vm.stopPrank();
     }
 
@@ -222,7 +222,7 @@ contract TestUsmUpgraded is TestDusdBase {
         vm.startPrank(ALICE);
         USDC_TOKEN.mint(ALICE, 1000e6);
         USDC_TOKEN.approve(address(DUSD_USM), 1000e6);
-        DUSD_USM.sellAsset(100e6, ALICE, ALICE);
+        DUSD_USM.sellAsset(100e6, ALICE);
         vm.stopPrank();
 
         bool success = false;

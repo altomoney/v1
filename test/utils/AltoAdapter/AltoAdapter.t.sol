@@ -1519,49 +1519,188 @@ contract AltoAdapterTest is AdapterCommonSetup {
         return (vestingInfo, emptyProof);
     }
 
-    function testUsmBuyAssetWithSig(uint256 privateKey, uint256 amount) public {
-        address user;
-        privateKey = _boundPrivateKey(privateKey);
-        user = vm.addr(privateKey);
-        amount = bound(amount, MIN_AMOUNT, 1_000_000e6); // Max 1M with 6 decimals
+    function testUsmBuyAssetWithERC20TransferNotApproved() public {
+        IUsm nonUsm = IUsm(makeAddr("NonUsm"));
+
+        bundle.push(_usmBuyAssetWithERC20Transfer(nonUsm, MIN_AMOUNT, MIN_AMOUNT, USER));
+
+        vm.expectRevert(AdapterContractApproval.AdapterContractApprovalUnapprovedContract.selector);
+        bundler3.multicall(bundle);
+    }
+
+    function testUsmBuyAssetWithERC20Transfer(uint256 amount) public {
+        address user = makeAddr("User");
+        amount = bound(amount, MIN_AMOUNT, 1_000_000e6);
+
+        uint256 dusdBalanceUsmBefore = dusdToken.balanceOf(address(usmContract));
 
         deal(address(underlyingToken), user, amount);
         vm.startPrank(user);
         underlyingToken.approve(address(usmContract), amount);
-        usmContract.sellAsset(amount, user, user);
+        usmContract.sellAsset(amount, user);
         vm.stopPrank();
 
-        (,, uint256 dusdAmount,) = usmContract.getStableTokenAmountForBuyAsset(amount);
-        deal(address(dusdToken), user, dusdAmount);
+        (uint256 exactAssetAmount, uint256 totalDusdAmount,,) = usmContract.getStableTokenAmountForBuyAsset(amount);
+        // Adding some buffer so that we get something return
+        uint256 maxStableTokenAmount = totalDusdAmount + (totalDusdAmount / 10);
+        deal(address(dusdToken), user, maxStableTokenAmount);
 
-        bundle.push(_usmSetAuthorizationWithSig(usmContract, privateKey, true, 0, false, address(altoAdapter)));
-        bundle.push(_usmBuyAsset(usmContract, amount, user));
+        uint256 dusdBalanceUserBefore = dusdToken.balanceOf(user);
+        uint256 underlyingBalanceUserBefore = underlyingToken.balanceOf(user);
+
+        assertEq(dusdBalanceUserBefore, maxStableTokenAmount);
+        assertEq(underlyingBalanceUserBefore, 0);
+
+        bundle.push(_usmBuyAssetWithERC20Transfer(usmContract, amount, maxStableTokenAmount, user));
 
         vm.startPrank(user);
-        dusdToken.approve(address(usmContract), type(uint256).max);
+        dusdToken.approve(address(altoAdapter), type(uint256).max);
         bundler3.multicall(bundle);
         vm.stopPrank();
 
-        assertGt(underlyingToken.balanceOf(user), 0, "User should have received underlying tokens");
+        uint256 dusdBalanceUserAfter = dusdToken.balanceOf(user);
+        uint256 underlyingBalanceUserAfter = underlyingToken.balanceOf(user);
+        uint256 dusdBalanceUsmAfter = dusdToken.balanceOf(address(usmContract));
+
+        assertGt(underlyingBalanceUserAfter, 0, "User should have received underlying tokens");
+        assertGe(underlyingBalanceUserAfter, exactAssetAmount, "User should have received at least the exact amount");
+        assertLe(underlyingBalanceUserAfter, amount, "User should not have received more than requested");
+
+        uint256 dusdSpent = dusdBalanceUserBefore - dusdBalanceUserAfter;
+        assertLe(dusdSpent, maxStableTokenAmount, "User should not have spent more than maxStableTokenAmount");
+        assertEq(dusdSpent, totalDusdAmount, "User should have spent at least the estimated amount");
+
+        assertGt(dusdBalanceUsmAfter, dusdBalanceUsmBefore, "USM should have received DUSD");
     }
 
-    function testUsmSellAssetWithSig(uint256 privateKey, uint256 amount) public {
-        address user;
-        privateKey = _boundPrivateKey(privateKey);
-        user = vm.addr(privateKey);
-        // Bound amount to avoid exposure cap issues
+    function testUsmBuyAssetWithERC20TransferDifferentReceiver(uint256 amount) public {
+        address user = makeAddr("User");
+        address receiver = RECEIVER;
+        amount = bound(amount, MIN_AMOUNT, 1_000_000e6);
+
+        uint256 dusdBalanceUsmBefore = dusdToken.balanceOf(address(usmContract));
+
+        deal(address(underlyingToken), user, amount);
+        vm.startPrank(user);
+        underlyingToken.approve(address(usmContract), amount);
+        usmContract.sellAsset(amount, user);
+        vm.stopPrank();
+
+        (uint256 exactAssetAmount, uint256 totalDusdAmount,,) = usmContract.getStableTokenAmountForBuyAsset(amount);
+        uint256 maxStableTokenAmount = totalDusdAmount + (totalDusdAmount / 10);
+        deal(address(dusdToken), user, maxStableTokenAmount);
+
+        uint256 dusdBalanceUserBefore = dusdToken.balanceOf(user);
+        uint256 underlyingBalanceUserBefore = underlyingToken.balanceOf(user);
+        uint256 underlyingBalanceReceiverBefore = underlyingToken.balanceOf(receiver);
+
+        assertEq(dusdBalanceUserBefore, maxStableTokenAmount);
+        assertEq(underlyingBalanceUserBefore, 0);
+        assertEq(underlyingBalanceReceiverBefore, 0);
+
+        bundle.push(_usmBuyAssetWithERC20Transfer(usmContract, amount, maxStableTokenAmount, receiver));
+
+        vm.startPrank(user);
+        dusdToken.approve(address(altoAdapter), type(uint256).max);
+        bundler3.multicall(bundle);
+        vm.stopPrank();
+
+        uint256 dusdBalanceUserAfter = dusdToken.balanceOf(user);
+        uint256 underlyingBalanceUserAfter = underlyingToken.balanceOf(user);
+        uint256 underlyingBalanceReceiverAfter = underlyingToken.balanceOf(receiver);
+        uint256 dusdBalanceUsmAfter = dusdToken.balanceOf(address(usmContract));
+
+        assertEq(underlyingBalanceUserAfter, 0, "User should not have received underlying tokens");
+        assertGt(underlyingBalanceReceiverAfter, 0, "Receiver should have received underlying tokens");
+        assertGe(
+            underlyingBalanceReceiverAfter, exactAssetAmount, "Receiver should have received at least the exact amount"
+        );
+        assertLe(underlyingBalanceReceiverAfter, amount, "Receiver should not have received more than requested");
+
+        uint256 dusdSpent = dusdBalanceUserBefore - dusdBalanceUserAfter;
+        assertLe(dusdSpent, maxStableTokenAmount, "User should not have spent more than maxStableTokenAmount");
+        assertEq(dusdSpent, totalDusdAmount, "User should have spent the exact estimated amount");
+
+        assertGt(dusdBalanceUsmAfter, dusdBalanceUsmBefore, "USM should have received DUSD");
+    }
+
+    function testUsmSellAssetWithERC20TransferNotApproved() public {
+        IUsm nonUsm = IUsm(makeAddr("NonUsm"));
+
+        bundle.push(_usmSellAssetWithERC20Transfer(nonUsm, MIN_AMOUNT, USER));
+
+        vm.expectRevert(AdapterContractApproval.AdapterContractApprovalUnapprovedContract.selector);
+        bundler3.multicall(bundle);
+    }
+
+    function testUsmSellAssetWithERC20Transfer(uint256 amount) public {
+        address user = makeAddr("User");
         amount = bound(amount, MIN_AMOUNT, 1_000_000e6);
 
         deal(address(underlyingToken), user, amount);
 
-        bundle.push(_usmSetAuthorizationWithSig(usmContract, privateKey, true, 0, false, address(altoAdapter)));
-        bundle.push(_usmSellAsset(usmContract, amount, user));
+        uint256 underlyingBalanceUserBefore = underlyingToken.balanceOf(user);
+        uint256 dusdBalanceUserBefore = dusdToken.balanceOf(user);
+        uint256 underlyingBalanceUsmBefore = underlyingToken.balanceOf(address(usmContract));
+
+        assertEq(underlyingBalanceUserBefore, amount);
+        assertEq(dusdBalanceUserBefore, 0);
+
+        bundle.push(_usmSellAssetWithERC20Transfer(usmContract, amount, user));
 
         vm.startPrank(user);
-        underlyingToken.approve(address(usmContract), type(uint256).max);
+        underlyingToken.approve(address(altoAdapter), type(uint256).max);
         bundler3.multicall(bundle);
         vm.stopPrank();
 
-        assertGt(dusdToken.balanceOf(user), 0, "User should have received DUSD tokens");
+        uint256 underlyingBalanceUserAfter = underlyingToken.balanceOf(user);
+        uint256 dusdBalanceUserAfter = dusdToken.balanceOf(user);
+        uint256 underlyingBalanceUsmAfter = underlyingToken.balanceOf(address(usmContract));
+
+        assertGt(dusdBalanceUserAfter, 0, "User should have received DUSD tokens");
+
+        uint256 underlyingSpent = underlyingBalanceUserBefore - underlyingBalanceUserAfter;
+        assertLe(underlyingSpent, amount, "User should not have spent more than the max amount");
+        assertGt(underlyingSpent, 0, "User should have spent some underlying tokens");
+
+        assertGt(underlyingBalanceUsmAfter, underlyingBalanceUsmBefore, "USM should have received underlying tokens");
+    }
+
+    function testUsmSellAssetDifferentReceiver(uint256 amount) public {
+        address user = makeAddr("User");
+        address receiver = RECEIVER;
+        amount = bound(amount, MIN_AMOUNT, 1_000_000e6);
+
+        deal(address(underlyingToken), user, amount);
+
+        uint256 underlyingBalanceUserBefore = underlyingToken.balanceOf(user);
+        uint256 dusdBalanceUserBefore = dusdToken.balanceOf(user);
+        uint256 dusdBalanceReceiverBefore = dusdToken.balanceOf(receiver);
+        uint256 underlyingBalanceUsmBefore = underlyingToken.balanceOf(address(usmContract));
+
+        assertEq(underlyingBalanceUserBefore, amount);
+        assertEq(dusdBalanceUserBefore, 0);
+        assertEq(dusdBalanceReceiverBefore, 0);
+
+        bundle.push(_usmSellAssetWithERC20Transfer(usmContract, amount, receiver));
+
+        vm.startPrank(user);
+        underlyingToken.approve(address(altoAdapter), type(uint256).max);
+        bundler3.multicall(bundle);
+        vm.stopPrank();
+
+        uint256 underlyingBalanceUserAfter = underlyingToken.balanceOf(user);
+        uint256 dusdBalanceUserAfter = dusdToken.balanceOf(user);
+        uint256 dusdBalanceReceiverAfter = dusdToken.balanceOf(receiver);
+        uint256 underlyingBalanceUsmAfter = underlyingToken.balanceOf(address(usmContract));
+
+        assertEq(dusdBalanceUserAfter, 0, "User should not have received DUSD tokens");
+        assertGt(dusdBalanceReceiverAfter, 0, "Receiver should have received DUSD tokens");
+
+        uint256 underlyingSpent = underlyingBalanceUserBefore - underlyingBalanceUserAfter;
+        assertLe(underlyingSpent, amount, "User should not have spent more than the max amount");
+        assertGt(underlyingSpent, 0, "User should have spent some underlying tokens");
+
+        assertGt(underlyingBalanceUsmAfter, underlyingBalanceUsmBefore, "USM should have received underlying tokens");
     }
 }
