@@ -4,6 +4,9 @@ pragma solidity ^0.8.0;
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 import {IStableTokenFacilitator} from "./IStableTokenFacilitator.sol";
 
+/// @notice The access mode of the USM
+/// @dev Anyone can swap if the access mode is PERMISSIONLESS
+/// @dev Only addresses with the SWAPPER_ROLE can swap if the access mode is PERMISSIONED
 enum AccessMode {
     PERMISSIONLESS,
     PERMISSIONED

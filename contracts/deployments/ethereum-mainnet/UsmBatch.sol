@@ -11,6 +11,7 @@ import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol"
 import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {UnsafeUpgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {Options} from "openzeppelin-foundry-upgrades/Options.sol";
+import {AccessMode} from "@alto/usm/interfaces/IUsm.sol";
 
 struct UsmBatchParams {
     address owner;
@@ -46,16 +47,20 @@ contract UsmBatch {
 
         // Deploy FixedFeeStrategy
         address fixedFeeStrategy;
+        AccessMode accessMode;
 
         if (_params.isPermissioned) {
             fixedFeeStrategy = address(0);
+            accessMode = AccessMode.PERMISSIONED;
         } else {
             fixedFeeStrategy = address(new FixedFeeStrategy(_params.buyFee, _params.sellFee, _params.owner));
+            accessMode = AccessMode.PERMISSIONLESS;
         }
 
         // Deploy DUSDUsm Proxy with constructor data
         bytes memory initData = abi.encodeCall(
-            DUSDUsm.initialize, (address(this), _params.feeRecipient, uint128(_params.exposureCap), fixedPriceStrategy)
+            DUSDUsm.initialize,
+            (address(this), _params.feeRecipient, uint128(_params.exposureCap), fixedPriceStrategy, accessMode)
         );
         address dusdUsm;
         address dusdUsmImplementation;
