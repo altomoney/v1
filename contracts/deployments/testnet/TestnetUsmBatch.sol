@@ -44,9 +44,16 @@ contract TestnetUsmBatch {
         address dusdUsm = UnsafeUpgrades.deployUUPSProxy(
             address(dusdUsmImplementation),
             abi.encodeCall(
-                DUSDUsm.initialize, (_params.owner, _params.owner, uint128(_params.exposureCap), fixedPriceStrategy)
+                DUSDUsm.initialize, (address(this), _params.owner, uint128(_params.exposureCap), fixedPriceStrategy)
             )
         );
+
+        DUSDUsm(dusdUsm).updateFeeStrategy(fixedFeeStrategy);
+
+        IAccessControl(dusdUsm).grantRole(bytes32(0), _params.owner);
+        IAccessControl(dusdUsm).grantRole(IUsm(dusdUsm).CONFIGURATOR_ROLE(), _params.owner);
+        IAccessControl(dusdUsm).revokeRole(IUsm(dusdUsm).CONFIGURATOR_ROLE(), address(this));
+        IAccessControl(dusdUsm).revokeRole(bytes32(0), address(this));
 
         report = TestnetUsmBatchReport({
             dusdUsm: dusdUsm,

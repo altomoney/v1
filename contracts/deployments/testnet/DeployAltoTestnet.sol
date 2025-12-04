@@ -357,7 +357,7 @@ library DeployAltoTestnet {
                     owner: contractOwner,
                     collateralToken: address(input.tokens.susde),
                     borrowToken: address(input.tokens.dusd),
-                    marketOraclePrice: 1.2 ether * LENDING_ORACLE_PRICE_PRECISION,
+                    marketOraclePrice: 1.2 ether * LENDING_ORACLE_PRICE_PRECISION / 1 ether,
                     maxLtv: 0.75 ether,
                     supplyCapAssets: 0,
                     leverageAddress: input.contracts.altoLeverage
@@ -384,6 +384,8 @@ library DeployAltoTestnet {
         DUSD(input.tokens.dusd).setMinterStatus(input.contracts.usdcUsmBatch.dusdUsm, true);
         DUSD(input.tokens.dusd).setMinterCeiling(input.contracts.usdcUsmBatch.dusdUsm, 100_000 ether);
         DUSD(input.tokens.dusd).setBurnerStatus(input.contracts.usdcUsmBatch.dusdUsm, true);
+
+        AltoAdapter(payable(input.contracts.altoAdapter)).approveContract(input.contracts.usdcUsmBatch.dusdUsm);
 
         return input;
     }
