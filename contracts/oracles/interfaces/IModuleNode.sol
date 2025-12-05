@@ -52,6 +52,8 @@ struct UniswapNode {
     // @dev IT IS ABSOLUTELY NECESSARY to verify that pools cardinality is big enough to support specified TWAP period
     // see the `observationCardinalityNext` function in the Uniswap V3 pool contract for more details
     uint32 twapPeriod;
+    // @notice Whether to round up the price to the nearest integer
+    bool roundUp;
 }
 
 /// @notice The node for the Curve oracle

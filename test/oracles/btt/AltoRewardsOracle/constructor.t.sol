@@ -106,7 +106,7 @@ contract AltoRewardsOracleConstructor is AltoRewardsOracleCommon {
         // it should set priceUpdateCooldownPeriod correctly
         assertEq(oracle.priceUpdateCooldownPeriod(), DEFAULT_COOLDOWN_PERIOD);
 
-        (IUniswapV3Pool pool, ConversionDirection direction, uint32 twapPeriod) = oracle.uniswapNode();
+        (IUniswapV3Pool pool, ConversionDirection direction, uint32 twapPeriod, bool roundUp) = oracle.uniswapNode();
 
         // it should set uniswap node correctly
         assertEq(address(pool), address(mockPool));

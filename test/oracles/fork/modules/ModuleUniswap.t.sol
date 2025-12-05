@@ -22,7 +22,8 @@ contract ModuleUniswapTest is Test {
     function testGetPriceWethUsdc() public view {
         uint256 wethQuoteAmount = 10 ** 18;
         uint256 usdcAmount = moduleUniswap.readUniswapPool(
-            wethQuoteAmount, UniswapNode(IUniswapV3Pool(USDC_WETH_POOL), ConversionDirection.OUT_TO_IN, 10 minutes)
+            wethQuoteAmount,
+            UniswapNode(IUniswapV3Pool(USDC_WETH_POOL), ConversionDirection.OUT_TO_IN, 10 minutes, true)
         );
 
         assertGt(usdcAmount, 0, "Invalid usdcAmount in UniswapModule");
@@ -33,7 +34,7 @@ contract ModuleUniswapTest is Test {
         assertApproxEqAbs(usdcAmount, 3959 * 10 ** 6, 1e6);
 
         uint256 wethAmountBack = moduleUniswap.readUniswapPool(
-            usdcAmount, UniswapNode(IUniswapV3Pool(USDC_WETH_POOL), ConversionDirection.IN_TO_OUT, 10 minutes)
+            usdcAmount, UniswapNode(IUniswapV3Pool(USDC_WETH_POOL), ConversionDirection.IN_TO_OUT, 10 minutes, true)
         );
         assertGt(wethAmountBack, 0, "Invalid wethAmountBack in UniswapModule");
 
@@ -45,7 +46,8 @@ contract ModuleUniswapTest is Test {
     function testGetPriceWbtcWeth() public view {
         uint256 wbtcQuoteAmount = 10 ** 8;
         uint256 wethAmount = moduleUniswap.readUniswapPool(
-            wbtcQuoteAmount, UniswapNode(IUniswapV3Pool(WBTC_WETH_POOL), ConversionDirection.IN_TO_OUT, 10 minutes)
+            wbtcQuoteAmount,
+            UniswapNode(IUniswapV3Pool(WBTC_WETH_POOL), ConversionDirection.IN_TO_OUT, 10 minutes, true)
         );
 
         console2.log("price of WBTC/WETH from UniswapModule", wethAmount);
@@ -53,7 +55,7 @@ contract ModuleUniswapTest is Test {
         assertApproxEqAbs(wethAmount, 27.683366 ether, 1e12, "Invalid wethAmount in UniswapModule");
 
         uint256 wbtcAmountBack = moduleUniswap.readUniswapPool(
-            wethAmount, UniswapNode(IUniswapV3Pool(WBTC_WETH_POOL), ConversionDirection.OUT_TO_IN, 10 minutes)
+            wethAmount, UniswapNode(IUniswapV3Pool(WBTC_WETH_POOL), ConversionDirection.OUT_TO_IN, 10 minutes, true)
         );
         assertGt(wbtcAmountBack, 0, "Invalid wbtcAmountBack in UniswapModule");
 

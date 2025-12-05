@@ -166,8 +166,9 @@ contract SimulationRewardsOracle is Test {
                 outDecimals: 8,
                 direction: ConversionDirection.IN_TO_OUT
             });
-            uniswapNode =
-                UniswapNode({pool: TAP_WETH_POOL, twapPeriod: TWAP_PERIOD, direction: ConversionDirection.IN_TO_OUT});
+            uniswapNode = UniswapNode({
+                pool: TAP_WETH_POOL, twapPeriod: TWAP_PERIOD, direction: ConversionDirection.IN_TO_OUT, roundUp: true
+            });
 
             AltoRewardsOracleInitParams memory initParams = AltoRewardsOracleInitParams({
                 uniswapNode: uniswapNode,

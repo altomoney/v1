@@ -34,7 +34,7 @@ contract ModuleUniswap is OracleMath {
         }
 
         // Computing the `quoteAmount` from the ticks obtained from Uniswap
-        return _getQuoteAtTick(timeWeightedAverageTick, quoteAmount, config.direction);
+        return _getQuoteAtTick(timeWeightedAverageTick, quoteAmount, config.direction, config.roundUp);
     }
 
     /// @notice Validates the parameters for the Uniswap configuration during initialization or updates
