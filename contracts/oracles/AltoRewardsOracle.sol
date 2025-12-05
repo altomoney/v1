@@ -81,10 +81,14 @@ contract AltoRewardsOracle is AltoOwnable2Step, ModuleChainlink, ModuleUniswap, 
             revert AltoRewardsOracleAlreadyStartedTwapPeriod();
         }
 
+        if (_initialPrice == 0) {
+            revert AltoRewardsOracleInvalidInput();
+        }
+
         lastPriceUpdateTimestamp = block.timestamp;
         cachedPrice = _initialPrice;
 
-        emit PriceUpdated(block.timestamp, cachedPrice, 0);
+        emit PriceUpdated(block.timestamp, 0, cachedPrice);
     }
 
     /// @inheritdoc IAltoRewardsOracleBase
@@ -108,7 +112,7 @@ contract AltoRewardsOracle is AltoOwnable2Step, ModuleChainlink, ModuleUniswap, 
 
         lastPriceUpdateTimestamp = block.timestamp;
 
-        emit PriceUpdated(block.timestamp, newPrice, oldPrice);
+        emit PriceUpdated(block.timestamp, oldPrice, cachedPrice);
     }
 
     /// @inheritdoc IAltoRewardsOracleBase

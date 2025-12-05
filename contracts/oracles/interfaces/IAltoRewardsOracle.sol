@@ -32,9 +32,9 @@ interface IAltoRewardsOracleErrors {
 interface IAltoRewardsOracleEvents {
     /// @notice Emitted when the price is updated
     /// @param timestamp The timestamp when the price was updated
-    /// @param newPrice The new price
     /// @param oldPrice The old price
-    event PriceUpdated(uint256 indexed timestamp, uint256 newPrice, uint256 oldPrice);
+    /// @param newPrice The new price
+    event PriceUpdated(uint256 indexed timestamp, uint256 oldPrice, uint256 newPrice);
 
     /// @notice Emitted when the price update cooldown period is updated
     /// @param oldPriceUpdateCooldownPeriod The old price update cooldown period
