@@ -31,7 +31,7 @@ contract AltoRewardsOracleCommon is Test {
     function setUp() public virtual {
         inToken = new ERC20MockDecimals("ALTO", "ALTO", 18);
         outToken = new ERC20MockDecimals("Wrapped Ether", "WETH", 18);
-        mockPool = new MockUniswapPool();
+        mockPool = new MockUniswapPool(address(inToken), address(outToken));
         mockFeed = new MockChainlinkFeed();
     }
 
@@ -53,7 +53,8 @@ contract AltoRewardsOracleCommon is Test {
             uniswapNode: uniswapNode,
             chainlinkNode: chainlinkNode,
             owner: OWNER,
-            priceUpdateCooldownPeriod: DEFAULT_COOLDOWN_PERIOD
+            priceUpdateCooldownPeriod: DEFAULT_COOLDOWN_PERIOD,
+            altoToken: address(inToken)
         });
     }
 }

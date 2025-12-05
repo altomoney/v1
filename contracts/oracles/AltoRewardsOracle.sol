@@ -15,7 +15,6 @@ import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {IUsdOracle} from "@alto/oracles/interfaces/IOracle.sol";
-import {ALTO_TOKEN_SYMBOL} from "@alto/utils/Constants.sol";
 
 /// @title Alto Rewards Oracle
 /// @author Pearl Labs
@@ -41,17 +40,21 @@ contract AltoRewardsOracle is AltoOwnable2Step, ModuleChainlink, ModuleUniswap, 
     /// @inheritdoc IAltoRewardsOracleBase
     uint256 public cachedPrice;
 
+    address public immutable ALTO_TOKEN;
+
     /// @notice Constructor
     /// @param _initParams The initialization parameters
     /// @dev The inDecimals of chainlink node should be the same as decimals of token apart from Alto token of uniswap pool
     constructor(AltoRewardsOracleInitParams memory _initParams) Ownable(_initParams.owner) {
-        if (_initParams.priceUpdateCooldownPeriod == 0) {
+        if (_initParams.priceUpdateCooldownPeriod == 0 || _initParams.altoToken == address(0)) {
             revert AltoRewardsOracleInvalidInput();
         }
+
         _validateUniswapParams(_initParams.uniswapNode);
         _validateChainlinkParams(_initParams.chainlinkNode);
 
         uniswapNode = _initParams.uniswapNode;
+        ALTO_TOKEN = _initParams.altoToken;
         emit SetUniswapNode(
             UniswapNode(IUniswapV3Pool(address(0)), ConversionDirection.IN_TO_OUT, 0), _initParams.uniswapNode
         );
@@ -149,14 +152,10 @@ contract AltoRewardsOracle is AltoOwnable2Step, ModuleChainlink, ModuleUniswap, 
             ? IUniswapV3Pool(uniswapNode.pool).token0()
             : IUniswapV3Pool(uniswapNode.pool).token1();
 
-        if (!_isAltoToken(inToken)) {
+        if (inToken != ALTO_TOKEN) {
             revert AltoRewardsOracleInvalidInput();
         }
 
         inTokenOneUnit = 10 ** IERC20Metadata(inToken).decimals();
-    }
-
-    function _isAltoToken(address _token) internal view returns (bool) {
-        return keccak256(bytes(IERC20Metadata(_token).symbol())) == keccak256(bytes(ALTO_TOKEN_SYMBOL));
     }
 }

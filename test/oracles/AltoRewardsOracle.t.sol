@@ -109,7 +109,8 @@ contract AltoRewardsOracleTest is Test {
             uniswapNode: uniswapNode,
             chainlinkNode: chainlinkNode,
             owner: OWNER,
-            priceUpdateCooldownPeriod: priceUpdateCooldownPeriod
+            priceUpdateCooldownPeriod: priceUpdateCooldownPeriod,
+            altoToken: address(altoToken)
         });
 
         rewardsOracle = new AltoRewardsOracle(initParams);

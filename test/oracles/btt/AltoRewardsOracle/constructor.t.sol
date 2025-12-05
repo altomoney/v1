@@ -42,7 +42,7 @@ contract AltoRewardsOracleConstructor is AltoRewardsOracleCommon {
         // Create a new pool with non-ALTO token as token0 (inToken for IN_TO_OUT)
         ERC20MockDecimals nonAltoToken = new ERC20MockDecimals("Wrapped Ether", "WETH", 18);
         ERC20MockDecimals otherToken = new ERC20MockDecimals("Out Token", "OUT", 18);
-        MockUniswapPool newPool = new MockUniswapPool();
+        MockUniswapPool newPool = new MockUniswapPool(address(nonAltoToken), address(otherToken));
         newPool.setTokens(address(nonAltoToken), address(otherToken));
 
         params.uniswapNode.pool = IUniswapV3Pool(address(newPool));
@@ -58,8 +58,7 @@ contract AltoRewardsOracleConstructor is AltoRewardsOracleCommon {
         // Create a new pool with non-ALTO token as token1 (inToken for OUT_TO_IN)
         ERC20MockDecimals nonAltoToken = new ERC20MockDecimals("Wrapped Ether", "WETH", 18);
         ERC20MockDecimals otherToken = new ERC20MockDecimals("Out Token", "OUT", 18);
-        MockUniswapPool newPool = new MockUniswapPool();
-        newPool.setTokens(address(otherToken), address(nonAltoToken));
+        MockUniswapPool newPool = new MockUniswapPool(address(otherToken), address(nonAltoToken));
 
         params.uniswapNode.pool = IUniswapV3Pool(address(newPool));
 
