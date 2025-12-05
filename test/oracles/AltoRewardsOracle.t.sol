@@ -95,8 +95,9 @@ contract AltoRewardsOracleTest is Test {
         });
         NONFUNGIBLE_POSITION_MANAGER.mint(params);
 
-        UniswapNode memory uniswapNode =
-            UniswapNode({pool: altoEthPool, twapPeriod: twapPeriod, direction: ConversionDirection.OUT_TO_IN});
+        UniswapNode memory uniswapNode = UniswapNode({
+            pool: altoEthPool, twapPeriod: twapPeriod, direction: ConversionDirection.OUT_TO_IN, roundUp: true
+        });
         ChainlinkNode memory chainlinkNode = ChainlinkNode({
             feed: AggregatorV3Interface(ETH_USD_PRICE_FEED),
             stalePeriod: stalePeriod,
@@ -405,15 +406,19 @@ contract AltoRewardsOracleTest is Test {
         vm.startPrank(nonOwner);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, nonOwner));
         rewardsOracle.updateUniswapNode(
-            UniswapNode({pool: altoEthPool, twapPeriod: twapPeriod, direction: ConversionDirection.OUT_TO_IN})
+            UniswapNode({
+                pool: altoEthPool, twapPeriod: twapPeriod, direction: ConversionDirection.OUT_TO_IN, roundUp: false
+            })
         );
         vm.stopPrank();
 
         vm.startPrank(OWNER);
         UniswapNode memory newUniswapNode =
-            UniswapNode({pool: altoEthPool, twapPeriod: 1, direction: ConversionDirection.OUT_TO_IN});
-        (IUniswapV3Pool pool, ConversionDirection direction, uint32 twapPeriod) = rewardsOracle.uniswapNode();
-        UniswapNode memory oldUniswapNode = UniswapNode({pool: pool, twapPeriod: twapPeriod, direction: direction});
+            UniswapNode({pool: altoEthPool, twapPeriod: 1, direction: ConversionDirection.OUT_TO_IN, roundUp: true});
+        (IUniswapV3Pool pool, ConversionDirection direction, uint32 twapPeriod, bool roundUp) =
+            rewardsOracle.uniswapNode();
+        UniswapNode memory oldUniswapNode =
+            UniswapNode({pool: pool, twapPeriod: twapPeriod, direction: direction, roundUp: roundUp});
 
         vm.expectEmit(true, true, true, true);
         emit IAltoRewardsOracleEvents.SetUniswapNode(oldUniswapNode, newUniswapNode);

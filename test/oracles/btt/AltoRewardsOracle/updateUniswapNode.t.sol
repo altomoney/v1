@@ -40,7 +40,8 @@ contract AltoRewardsOracleUpdateUniswapNode is AltoRewardsOracleCommon {
         return UniswapNode({
             pool: IUniswapV3Pool(address(mockPool)),
             twapPeriod: DEFAULT_TWAP_PERIOD,
-            direction: ConversionDirection.IN_TO_OUT
+            direction: ConversionDirection.IN_TO_OUT,
+            roundUp: true
         });
     }
 
@@ -106,8 +107,9 @@ contract AltoRewardsOracleUpdateUniswapNode is AltoRewardsOracleCommon {
         MockUniswapPool(address(newUniswapNode.pool)).setTokens(otherToken, altoToken);
 
         // Get current uniswap node
-        (IUniswapV3Pool pool, ConversionDirection direction, uint32 twapPeriod) = oracle.uniswapNode();
-        UniswapNode memory oldUniswapNode = UniswapNode({pool: pool, twapPeriod: twapPeriod, direction: direction});
+        (IUniswapV3Pool pool, ConversionDirection direction, uint32 twapPeriod, bool roundUp) = oracle.uniswapNode();
+        UniswapNode memory oldUniswapNode =
+            UniswapNode({pool: pool, twapPeriod: twapPeriod, direction: direction, roundUp: roundUp});
 
         vm.expectEmit(true, true, true, true);
         emit IAltoRewardsOracleEvents.SetUniswapNode(oldUniswapNode, newUniswapNode);
@@ -115,10 +117,11 @@ contract AltoRewardsOracleUpdateUniswapNode is AltoRewardsOracleCommon {
         oracle.updateUniswapNode(newUniswapNode);
 
         // Verify the uniswap node was updated
-        (pool, direction, twapPeriod) = oracle.uniswapNode();
+        (pool, direction, twapPeriod, roundUp) = oracle.uniswapNode();
         assertEq(address(pool), address(newUniswapNode.pool), "Pool should be updated");
         assertEq(uint8(direction), uint8(newUniswapNode.direction), "Direction should be updated");
         assertEq(twapPeriod, newUniswapNode.twapPeriod, "TWAP period should be updated");
+        assertEq(roundUp, newUniswapNode.roundUp, "Round up should be updated");
         // Verify inTokenOneUnit updated to match in-currency decimals
         assertEq(oracle.inTokenOneUnit(), 10 ** 18, "inTokenOneUnit should be 1e18 for mock in-token");
     }

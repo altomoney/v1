@@ -56,7 +56,7 @@ contract AltoRewardsOracle is AltoOwnable2Step, ModuleChainlink, ModuleUniswap, 
         uniswapNode = _initParams.uniswapNode;
         ALTO_TOKEN = _initParams.altoToken;
         emit SetUniswapNode(
-            UniswapNode(IUniswapV3Pool(address(0)), ConversionDirection.IN_TO_OUT, 0), _initParams.uniswapNode
+            UniswapNode(IUniswapV3Pool(address(0)), ConversionDirection.IN_TO_OUT, 0, false), _initParams.uniswapNode
         );
         _updateInTokenOneUnitFromUniswapNode();
 

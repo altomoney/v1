@@ -104,7 +104,7 @@ interface IAltoRewardsOracle is IAltoRewardsOracleBase {
 interface IAltoRewardsOracleStaticTypes is IAltoRewardsOracleBase {
     /// @notice Gets the Uniswap node
     /// @return The Uniswap node
-    function uniswapNode() external view returns (IUniswapV3Pool, ConversionDirection, uint32);
+    function uniswapNode() external view returns (IUniswapV3Pool, ConversionDirection, uint32, bool);
 
     /// @notice Gets the Chainlink node
     /// @return The Chainlink node

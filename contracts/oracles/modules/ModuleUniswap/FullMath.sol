@@ -105,4 +105,23 @@ abstract contract FullMath {
         result = prod0 * inv;
         return result;
     }
+
+    /// @notice Calculates ceil(a×b/denominator) with full precision. Throws if result overflows a uint256 or denominator == 0
+    /// @param a The multiplicand
+    /// @param b The multiplier
+    /// @param denominator The divisor
+    /// @return result The 256-bit result
+    /// @dev Credit to Remco Bloemen under MIT license https://xn--2-umb.com/21/muldiv
+    /// @dev Contrary to UniswapV3 implementation, this contract doesn't handle `a*b` overflows
+    /// and will revert if so
+    function _mulDivRoundingUp(uint256 a, uint256 b, uint256 denominator) internal pure returns (uint256 result) {
+        result = _mulDiv(a, b, denominator);
+        uint256 remainder;
+        assembly {
+            remainder := mulmod(a, b, denominator)
+        }
+        if (remainder > 0) {
+            result++;
+        }
+    }
 }

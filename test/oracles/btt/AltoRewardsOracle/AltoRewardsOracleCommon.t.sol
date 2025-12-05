@@ -46,7 +46,8 @@ contract AltoRewardsOracleCommon is Test {
         uniswapNode = UniswapNode({
             pool: IUniswapV3Pool(address(mockPool)),
             twapPeriod: DEFAULT_TWAP_PERIOD,
-            direction: ConversionDirection.IN_TO_OUT
+            direction: ConversionDirection.IN_TO_OUT,
+            roundUp: true
         });
 
         return AltoRewardsOracleInitParams({
