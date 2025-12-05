@@ -8,9 +8,9 @@ contract MockUniswapPool {
     address public inToken;
     address public outToken;
 
-    constructor() {
-        inToken = address(new ERC20Mock("ALTO", "ALTO"));
-        outToken = address(new ERC20Mock("Out Token", "OUT"));
+    constructor(address _inToken, address _outToken) {
+        inToken = _inToken;
+        outToken = _outToken;
     }
 
     function increaseObservationCardinalityNext(uint16) external {}

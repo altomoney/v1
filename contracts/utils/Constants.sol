@@ -6,5 +6,3 @@ bytes32 constant PAUSE_TYPE = keccak256("PAUSE_TYPE");
 bytes32 constant RESCUE_TYPE = keccak256("RESCUE_TYPE");
 
 bytes32 constant FROZEN_TYPE = keccak256("FROZEN_TYPE");
-
-string constant ALTO_TOKEN_SYMBOL = "ALTO";

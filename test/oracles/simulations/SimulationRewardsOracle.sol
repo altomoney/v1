@@ -173,7 +173,8 @@ contract SimulationRewardsOracle is Test {
                 uniswapNode: uniswapNode,
                 chainlinkNode: chainlinkNode,
                 owner: OWNER,
-                priceUpdateCooldownPeriod: PRICE_UPDATE_COOLDOWN_PERIOD
+                priceUpdateCooldownPeriod: PRICE_UPDATE_COOLDOWN_PERIOD,
+                altoToken: address(TAP_TOKEN)
             });
 
             // mock the chainlink decimals call to return 8

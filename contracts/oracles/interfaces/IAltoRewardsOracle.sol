@@ -16,6 +16,8 @@ struct AltoRewardsOracleInitParams {
     address owner;
     // @notice Minimum time interval (in seconds) required between price updates
     uint256 priceUpdateCooldownPeriod;
+    // @notice The Alto token address
+    address altoToken;
 }
 
 interface IAltoRewardsOracleErrors {
