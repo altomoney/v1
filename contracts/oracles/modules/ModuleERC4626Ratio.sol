@@ -9,6 +9,14 @@ import {ERC4626RatioNode} from "@alto/oracles/interfaces/IModuleNode.sol";
 /// @custom:contact security@altofoundation.org
 /// @notice Utility contract used to read the ratio of not only the ERC4626 vault but LSTs as well
 /// @dev This contract caps the ratio of the ERC4626 vault to a certain growth rate to prevent impact if underlying is manipulated
+/// @dev IMPORTANT ASSUMPTION: This module assumes that all underlying asset ratios are
+/// monotonically increasing (never decrease). This holds true for:
+/// - Liquid staking tokens (wstETH, rETH, mETH) where ratios represent accumulated rewards
+/// - Yield-bearing tokens (sUSDe) where ratios represent accrued interest
+/// @dev If an asset experiences slashing or losses causing the ratio to decrease, this
+/// module will report the decreased value without safeguards. Such assets should either:
+/// 1. Not be integrated into the protocol, or
+/// 2. Use a different oracle mechanism that includes minimum ratio enforcement
 contract ModuleERC4626Ratio {
     error ModuleERC4626RatioInvalidInput();
 
@@ -16,6 +24,8 @@ contract ModuleERC4626Ratio {
     uint256 public constant SECONDS_PER_YEAR = 365.2425 days;
 
     /// @notice Returns the current capped ratio
+    /// @dev ROUNDING: Always returns floor value (rounds down) to avoid overvaluing the collateral
+    /// @dev This is appropriate for lending scenarios where users borrow against this collateral
     /// @param latestRatio The latest ratio of the ERC4626 vault
     /// @param _erc4626RatioNode The ERC4626 ratio configuration
     /// @return The current ratio. If the ratio is greater than the maximum allowed ratio, the maximum allowed ratio is returned.
