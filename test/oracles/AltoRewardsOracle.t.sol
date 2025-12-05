@@ -195,8 +195,17 @@ contract AltoRewardsOracleTest is Test {
 
         // updating price after twap period is successful and updates the price based on the uniswap twap period
         vm.warp(block.timestamp + rewardsOracle.priceUpdateCooldownPeriod() + 1);
-        vm.expectEmit(true, true, true, false);
-        emit IAltoRewardsOracleEvents.PriceUpdated(block.timestamp, initialPrice, initialPrice);
+
+        // Use snapshot to capture what the final price will be
+        uint256 snapshotId = vm.snapshotState();
+        uint256 oldPrice = rewardsOracle.cachedPrice();
+        rewardsOracle.updatePrice();
+        uint256 finalPrice = rewardsOracle.cachedPrice();
+        vm.revertToState(snapshotId);
+
+        // Now test with the correct final price
+        vm.expectEmit(true, true, true, true);
+        emit IAltoRewardsOracleEvents.PriceUpdated(block.timestamp, oldPrice, finalPrice);
         rewardsOracle.updatePrice();
 
         assertApproxEqAbs(rewardsOracle.getPrice(), initialPrice, 1e5, "Invalid price from AltoRewardsOracle");

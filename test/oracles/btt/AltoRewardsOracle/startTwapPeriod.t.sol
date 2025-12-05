@@ -36,6 +36,10 @@ contract AltoRewardsOracleStartTwapPeriod is AltoRewardsOracleCommon {
         _;
     }
 
+    modifier whenInitialPriceIsZero() {
+        _;
+    }
+
     function test_RevertWhen_CallerIsNotOwner() external whenCallerIsNotOwner {
         uint256 initialPrice = 1000e8;
 
@@ -64,6 +68,23 @@ contract AltoRewardsOracleStartTwapPeriod is AltoRewardsOracleCommon {
         vm.stopPrank();
     }
 
+    function test_RevertWhen_InitialPriceIsZero()
+        external
+        givenCallerIsOwner
+        givenOracleIsNotInitiated
+        whenInitialPriceIsZero
+    {
+        uint256 initialPrice = 0;
+
+        // Verify oracle is not initiated
+        assertEq(oracle.lastPriceUpdateTimestamp(), 0);
+        assertEq(oracle.cachedPrice(), 0);
+
+        vm.prank(OWNER);
+        vm.expectRevert(IAltoRewardsOracleErrors.AltoRewardsOracleInvalidInput.selector);
+        oracle.startTwapPeriod(initialPrice);
+    }
+
     function test_WhenLastPriceUpdateTimestampIsZero() external givenCallerIsOwner givenOracleIsNotInitiated {
         uint256 initialPrice = 1000e8;
         uint256 timestampBefore = block.timestamp;
@@ -72,8 +93,8 @@ contract AltoRewardsOracleStartTwapPeriod is AltoRewardsOracleCommon {
         assertEq(oracle.lastPriceUpdateTimestamp(), 0);
         assertEq(oracle.cachedPrice(), 0);
 
-        vm.expectEmit(true, false, false, true);
-        emit IAltoRewardsOracleEvents.PriceUpdated(block.timestamp, initialPrice, 0);
+        vm.expectEmit(true, true, true, true);
+        emit IAltoRewardsOracleEvents.PriceUpdated(block.timestamp, 0, initialPrice);
 
         vm.prank(OWNER);
         oracle.startTwapPeriod(initialPrice);
@@ -86,11 +107,10 @@ contract AltoRewardsOracleStartTwapPeriod is AltoRewardsOracleCommon {
     }
 
     function test_StartTwapPeriodWithDifferentPrices() external givenCallerIsOwner givenOracleIsNotInitiated {
-        uint256[] memory testPrices = new uint256[](4);
-        testPrices[0] = 0; // Edge case: zero price
-        testPrices[1] = 1; // Minimum non-zero
-        testPrices[2] = 1000e8; // Normal price (1000 USD)
-        testPrices[3] = type(uint256).max; // Maximum value
+        uint256[] memory testPrices = new uint256[](3);
+        testPrices[0] = 1; // Minimum non-zero
+        testPrices[1] = 1000e8; // Normal price (1000 USD)
+        testPrices[2] = type(uint256).max; // Maximum value
 
         for (uint256 i = 0; i < testPrices.length; i++) {
             // Deploy new oracle for each test
@@ -99,8 +119,8 @@ contract AltoRewardsOracleStartTwapPeriod is AltoRewardsOracleCommon {
 
             uint256 timestamp = block.timestamp;
 
-            vm.expectEmit(true, false, false, true);
-            emit IAltoRewardsOracleEvents.PriceUpdated(timestamp, testPrices[i], 0);
+            vm.expectEmit(true, true, true, true);
+            emit IAltoRewardsOracleEvents.PriceUpdated(timestamp, 0, testPrices[i]);
 
             vm.prank(OWNER);
             testOracle.startTwapPeriod(testPrices[i]);

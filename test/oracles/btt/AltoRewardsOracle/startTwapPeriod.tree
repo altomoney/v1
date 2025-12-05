@@ -6,12 +6,13 @@ AltoRewardsOracle::startTwapPeriod()
     │   └── when lastPriceUpdateTimestamp is not zero
     │       └── it should revert with AltoRewardsOracleAlreadyStartedTwapPeriod
     └── given oracle is not initiated
+        ├── when initialPrice is zero
+        │   └── it should revert with AltoRewardsOracleInvalidInput
         ├── when lastPriceUpdateTimestamp is zero
         │   ├── it should set lastPriceUpdateTimestamp to current block timestamp
         │   ├── it should set cachedPrice to provided initial price
         │   └── it should emit PriceUpdated event with timestamp, cachedPrice, and oldPrice of 0
-        └── when testing with different price values (0, 1, normal, max)
-            ├── it should handle zero price correctly
+        └── when testing with different price values (1, normal, max)
             ├── it should handle minimum non-zero price correctly
             ├── it should handle normal price correctly
             └── it should handle maximum uint256 price correctly
