@@ -143,7 +143,7 @@ contract SimulationRewardsOracle is Test {
 
         // creates mock weth and tap tokem
         MOCK_WETH = address(new ERC20MockMintable("MOCK_WETH", "MockWETH"));
-        TAP_TOKEN = AltoToken(address(new ERC20MockMintable("MOCK_ALTO", "MockALTO")));
+        TAP_TOKEN = AltoToken(address(new ERC20MockMintable("ALTO", "ALTO")));
 
         // initialize uniswap pool with first deployment transaction
         vm.roll(txs[0].blockNumber);
