@@ -5,5 +5,13 @@ AltoBorrowMarket::accrueInterest()
     ├── when irm is zero address
     │   └── it should do nothing
     └── when irm is not zero address
-        ├── it should update totalSupply.assets and totalBorrowed.assets
-        └── it should emit AccrueInterest event
+        ├── when interestFee is zero
+        │   ├── it should update totalSupply.assets and totalBorrowed.assets
+        │   ├── it should emit AccrueInterest event
+        │   └── it should not accrue fee shares
+        └── when interestFee is non-zero
+            ├── it should update totalSupply.assets and totalBorrowed.assets
+            ├── it should emit AccrueInterest event
+            ├── it should update feeRecipient's supplyShares
+            ├── it should update totalSupply.shares
+            └── it should emit InterestFeeAccrued event
