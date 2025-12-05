@@ -1,0 +1,9 @@
+AltoBorrowMarket::setInterestFee
+├── when caller is not owner
+│   └── it should revert
+└── when caller is owner
+    ├── it should update interestFee
+    ├── it should emit SetInterestFee event
+    └── when interestFee is greater than MATH_PRECISION
+        └── it should revert
+

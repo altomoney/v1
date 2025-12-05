@@ -69,7 +69,10 @@ contract LiquidateTest is Test {
         });
 
         BorrowMarketInitParams memory borrowMarketInitParams = BorrowMarketInitParams({
-            baseMarketInitParams: baseMarketInitParams, initialBorrowOpeningFee: 0, supplyCapAssets: 0
+            baseMarketInitParams: baseMarketInitParams,
+            initialBorrowOpeningFee: 0,
+            supplyCapAssets: 0,
+            initialInterestFee: 0
         });
 
         market = AltoBorrowMarket(MarketDeployer.deployBorrowMarket(borrowMarketInitParams));

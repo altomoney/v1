@@ -3,13 +3,20 @@ pragma solidity ^0.8.0;
 
 import {AltoBaseMarket} from "./AltoBaseMarket.sol";
 import {BorrowMarketInitParams, MarketType} from "./interfaces/IMarket.sol";
-import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
+import {MATH_PRECISION, FixedPointMath} from "@alto/utils/FixedPointMath.sol";
+import {IIrm} from "./interfaces/IIrm.sol";
+import {Uint128Converter} from "./libraries/Uint128Converter.sol";
+import {AssetShareConversionMath} from "./libraries/AssetShareConversionMath.sol";
 
 /// @title Alto Borrow Market
 /// @author Pearl Labs
 /// @custom:contact security@altofoundation.org
 /// @notice An Isolated Borrow Market
 contract AltoBorrowMarket is AltoBaseMarket {
+    using Uint128Converter for uint256;
+    using FixedPointMath for uint256;
+    using AssetShareConversionMath for uint256;
+
     /// @notice Thrown when the input is invalid
     error AltoBorrowMarketInvalidInput();
 
@@ -26,11 +33,29 @@ contract AltoBorrowMarket is AltoBaseMarket {
     /// @param newSupplyCapAssets The new supply cap assets
     event SetSupplyCap(uint128 oldSupplyCapAssets, uint128 newSupplyCapAssets);
 
+    /// @notice Emitted when the interest fee is set
+    /// @param oldInterestFee The old interest fee
+    /// @param newInterestFee The new interest fee
+    event SetInterestFee(uint256 oldInterestFee, uint256 newInterestFee);
+
+    /// @notice Emitted when interest fee is accrued
+    /// @param recipient The recipient of the interest fee
+    /// @param interest The amount of interest accrued
+    /// @param feeShares The amount of fee shares accrued
+    event InterestFeeAccrued(address indexed recipient, uint256 interest, uint256 feeShares);
+
     /// @notice The borrow opening fee in MATH_PRECISION
     uint256 private _borrowOpeningFee;
 
     /// @notice The maximum amount of assets that can be supplied to the market
     uint128 public supplyCapAssets;
+
+    /// @notice The interest fee in MATH_PRECISION charged on accrued interest
+    /// @dev For borrow market we would be mixing borrow opening fee accumulated shares with shares accumulated from interest
+    /// and that's totally fine and this would be our limitation.
+    /// If we'd still want to be so precise and split borrow opening fees and interest
+    /// we can still use offchain indexer to get the event data.
+    uint256 public interestFee;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -40,12 +65,18 @@ contract AltoBorrowMarket is AltoBaseMarket {
     function initialize(BorrowMarketInitParams memory _initParams) public initializer {
         __AltoBaseMarket_init(_initParams.baseMarketInitParams, MarketType.BORROW);
 
-        if (_initParams.initialBorrowOpeningFee > MATH_PRECISION) {
+        if (_initParams.initialBorrowOpeningFee > MATH_PRECISION || _initParams.initialInterestFee > MATH_PRECISION) {
             revert AltoBorrowMarketInvalidInput();
         }
-        if (_initParams.baseMarketInitParams.feeRecipient == address(0) && _initParams.initialBorrowOpeningFee > 0) {
+        if (
+            _initParams.baseMarketInitParams.feeRecipient == address(0)
+                && (_initParams.initialBorrowOpeningFee > 0 || _initParams.initialInterestFee > 0)
+        ) {
             revert AltoBorrowMarketInvalidInput();
         }
+
+        interestFee = _initParams.initialInterestFee;
+        emit SetInterestFee(0, _initParams.initialInterestFee);
 
         _borrowOpeningFee = _initParams.initialBorrowOpeningFee;
         emit SetBorrowOpeningFee(0, _initParams.initialBorrowOpeningFee);
@@ -68,6 +99,31 @@ contract AltoBorrowMarket is AltoBaseMarket {
         return (addedAssets, addedShares);
     }
 
+    /// @dev Accrues interest for the market and applies the interest fee to the fee recipient.
+    function _accrueInterest() internal override {
+        if (irm == address(0)) {
+            return;
+        }
+
+        (uint256 interest, uint256 borrowRate) = IIrm(irm).updateInterestRate(totalSupply.assets, totalBorrowed.assets);
+
+        totalSupply.assets += interest.toUint128();
+        totalBorrowed.assets += interest.toUint128();
+
+        uint256 feeShares;
+        if (interestFee != 0) {
+            uint256 feeBorrowAssets = interest.multiplyWithPrecision(interestFee);
+
+            feeShares = feeBorrowAssets.convertToSharesDown(totalSupply.assets - feeBorrowAssets, totalSupply.shares);
+            position[feeRecipient].supplyShares += feeShares.toUint128();
+            totalSupply.shares += feeShares.toUint128();
+
+            emit InterestFeeAccrued(feeRecipient, interest, feeShares);
+        }
+
+        emit AccrueInterest(borrowRate, interest, totalBorrowed.assets, totalSupply.assets);
+    }
+
     /// @notice Setter of the borrow opening fee
     /// @param _newBorrowOpeningFee The new borrow opening fee
     function setBorrowOpeningFee(uint256 _newBorrowOpeningFee) external onlyOwner {
@@ -81,6 +137,17 @@ contract AltoBorrowMarket is AltoBaseMarket {
 
         emit SetBorrowOpeningFee(_borrowOpeningFee, _newBorrowOpeningFee);
         _borrowOpeningFee = _newBorrowOpeningFee;
+    }
+
+    /// @notice Setter of the interest fee
+    /// @param _newInterestFee The new interest fee
+    function setInterestFee(uint256 _newInterestFee) external onlyOwner {
+        if (_newInterestFee > MATH_PRECISION) {
+            revert AltoBorrowMarketInvalidInput();
+        }
+
+        emit SetInterestFee(interestFee, _newInterestFee);
+        interestFee = _newInterestFee;
     }
 
     function setSupplyCap(uint128 _newSupplyCapAssets) external onlyOwner {
