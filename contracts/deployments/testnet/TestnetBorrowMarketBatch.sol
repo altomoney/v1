@@ -84,7 +84,8 @@ contract TestnetBorrowMarketBatch is ITestnetMarketBatch {
         BorrowMarketInitParams memory initParams = BorrowMarketInitParams({
             baseMarketInitParams: baseMarketInitParams,
             initialBorrowOpeningFee: 0.005 ether,
-            supplyCapAssets: _params.supplyCapAssets
+            supplyCapAssets: _params.supplyCapAssets,
+            initialInterestFee: 0
         });
 
         address marketProxy =

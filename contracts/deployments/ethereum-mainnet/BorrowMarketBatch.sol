@@ -67,7 +67,8 @@ contract BorrowMarketBatch {
                         liquidationEngine: liquidationEngine
                     }),
                     initialBorrowOpeningFee: _params.initialBorrowOpeningFee,
-                    supplyCapAssets: _params.supplyCapAssets
+                    supplyCapAssets: _params.supplyCapAssets,
+                    initialInterestFee: 0
                 }))
         );
         address marketProxy;

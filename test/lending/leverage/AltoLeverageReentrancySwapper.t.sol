@@ -198,7 +198,8 @@ contract AltoLeverageReentrancySwapperTest is Test {
                         liquidationEngine: liquidationEngine
                     }),
                     initialBorrowOpeningFee: 0,
-                    supplyCapAssets: 0
+                    supplyCapAssets: 0,
+                    initialInterestFee: 0
                 })
             )
         );

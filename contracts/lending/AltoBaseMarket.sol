@@ -457,7 +457,7 @@ abstract contract AltoBaseMarket is
     /// @dev Adds opening fee to the fee recipient's supply position and to the market.
     /// @param openingFeeAssets The amount of opening fee to add.
     /// @return feeSupplyShares The amount of shares added to the fee recipient's supply position.
-    /// @dev This function is virtual to allow for custom logic in the case of mint market.
+    /// @dev This function is virtual to allow for custom logic
     function _applyBorrowOpeningFee(uint256 openingFeeAssets) internal virtual returns (uint256) {
         // add opening fee to the fee recipient's supply position
         uint256 feeSupplyShares = openingFeeAssets.convertToSharesUp(totalSupply.assets, totalSupply.shares);
@@ -507,7 +507,7 @@ abstract contract AltoBaseMarket is
 
     /// @dev Accrues interest for the market.
     /// @dev If `irm` is set to zero address, this function does nothing.
-    /// @dev This function is virtual to allow for custom logic in the case of mint market.
+    /// @dev This function is virtual to allow for custom logic.
     function _accrueInterest() internal virtual {
         if (irm == address(0)) {
             return;
@@ -653,7 +653,7 @@ abstract contract AltoBaseMarket is
     /// @dev Applies the bad debt to the market.
     /// @param badDebt The bad debt to apply.
     /// @param borrower The address of the borrower whose position is being liquidated.
-    /// @dev This function is virtual to allow for custom logic in the case of mint market.
+    /// @dev This function is virtual to allow for custom logic.
     function _applyLiquidationBadDebt(Balance memory badDebt, address borrower) internal virtual {
         totalBorrowed.shares -= badDebt.shares;
         totalBorrowed.assets -= badDebt.assets;
@@ -667,7 +667,7 @@ abstract contract AltoBaseMarket is
     /// @param from The address of the sender.
     /// @param to The address of the receiver.
     /// @param amount The amount of borrow token to send.
-    /// @dev This function is virtual to allow for custom logic in the case of mint market.
+    /// @dev This function is virtual to allow for custom logic.
     function _sendBorrowToken(address from, address to, uint256 amount) internal virtual {
         if (from == address(this)) {
             IERC20(borrowToken).safeTransfer(to, amount);
