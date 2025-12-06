@@ -36,7 +36,7 @@ import {DUSD} from "@alto/tokens/DUSD.sol";
 import {DUSDUsm} from "@alto/usm/DUSDUsm.sol";
 import {FixedPriceStrategy} from "@alto/usm/FixedPriceStrategy.sol";
 import {FixedFeeStrategy} from "@alto/usm/FixedFeeStrategy.sol";
-import {ERC20MockMintableDecimals} from "@alto-test/helpers/ERC20MockMintableDecimals.sol";
+import {ERC20MockDecimals} from "@alto-test/helpers/ERC20MockDecimals.sol";
 import {TestHelperOz5} from "@layerzerolabs/test-devtools-evm-foundry/contracts/TestHelperOz5.sol";
 import {AccessMode} from "@alto/usm/interfaces/IUsm.sol";
 
@@ -67,7 +67,7 @@ abstract contract AdapterCommonSetup is AdapterCommon, TestHelperOz5 {
     IAltoVesting internal vestingContract;
     IUsm internal usmContract;
     DUSD internal dusdToken;
-    ERC20MockMintableDecimals internal underlyingToken;
+    ERC20MockDecimals internal underlyingToken;
 
     // Constants for reward testing
     uint256 public constant USER_AVAILABLE = 1000 ether;
@@ -279,7 +279,7 @@ abstract contract AdapterCommonSetup is AdapterCommon, TestHelperOz5 {
 
         // Create DUSD token
         dusdToken = new DUSD(address(endpoints[1]), address(OWNER));
-        underlyingToken = new ERC20MockMintableDecimals("Underlying", "UND", 6);
+        underlyingToken = new ERC20MockDecimals("Underlying", "UND", 6);
 
         // Create price and fee strategies
         FixedPriceStrategy priceStrategy = new FixedPriceStrategy(1e18, address(underlyingToken), address(OWNER));
