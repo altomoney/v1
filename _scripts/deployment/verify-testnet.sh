@@ -490,7 +490,7 @@ verify_contract "WethMarketIRM" "$WETH_MARKET_IRM" "contracts/lending/irm/Adapti
 show_progress
 verify_contract "WethMarketOracle" "$WETH_MARKET_ORACLE" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet"
 show_progress
-verify_contract "WethMarketLiquidationEngine" "$WETH_LIQUIDATION_ENGINE" "contracts/lending/AltoLiquidationEngine.sol:AltoLiquidationEngine"
+verify_contract "WethMarketLiquidationEngine" "$WETH_LIQUIDATION_ENGINE" "contracts/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol:DlbDcfPriorityLiquidationEngine"
 show_progress
 
 verify_contract "WstethMarket" "$WSTETH_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
@@ -501,7 +501,7 @@ verify_contract "WstethMarketIRM" "$WSTETH_MARKET_IRM" "contracts/lending/irm/Ad
 show_progress
 verify_contract "WstethMarketOracle" "$WSTETH_MARKET_ORACLE" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet"
 show_progress
-verify_contract "WstethMarketLiquidationEngine" "$WSTETH_LIQUIDATION_ENGINE" "contracts/lending/AltoLiquidationEngine.sol:AltoLiquidationEngine"
+verify_contract "WstethMarketLiquidationEngine" "$WSTETH_LIQUIDATION_ENGINE" "contracts/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol:DlbDcfPriorityLiquidationEngine"
 show_progress
 
 verify_contract "TbtcMarket" "$TBTC_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
@@ -512,7 +512,7 @@ verify_contract "TbtcMarketIRM" "$TBTC_MARKET_IRM" "contracts/lending/irm/Adapti
 show_progress
 verify_contract "TbtcMarketOracle" "$TBTC_MARKET_ORACLE" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet"
 show_progress
-verify_contract "TbtcMarketLiquidationEngine" "$TBTC_LIQUIDATION_ENGINE" "contracts/lending/AltoLiquidationEngine.sol:AltoLiquidationEngine"
+verify_contract "TbtcMarketLiquidationEngine" "$TBTC_LIQUIDATION_ENGINE" "contracts/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol:DlbDcfPriorityLiquidationEngine"
 show_progress
 
 verify_contract "RethMarket" "$RETH_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
@@ -523,7 +523,7 @@ verify_contract "RethMarketIRM" "$RETH_MARKET_IRM" "contracts/lending/irm/Adapti
 show_progress
 verify_contract "RethMarketOracle" "$RETH_MARKET_ORACLE" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet"
 show_progress
-verify_contract "RethMarketLiquidationEngine" "$RETH_LIQUIDATION_ENGINE" "contracts/lending/AltoLiquidationEngine.sol:AltoLiquidationEngine"
+verify_contract "RethMarketLiquidationEngine" "$RETH_LIQUIDATION_ENGINE" "contracts/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol:DlbDcfPriorityLiquidationEngine"
 show_progress
 
 verify_contract "MethMarket" "$METH_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
@@ -534,7 +534,7 @@ verify_contract "MethMarketIRM" "$METH_MARKET_IRM" "contracts/lending/irm/Adapti
 show_progress
 verify_contract "MethMarketOracle" "$METH_MARKET_ORACLE" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet"
 show_progress
-verify_contract "MethMarketLiquidationEngine" "$METH_LIQUIDATION_ENGINE" "contracts/lending/AltoLiquidationEngine.sol:AltoLiquidationEngine"
+verify_contract "MethMarketLiquidationEngine" "$METH_LIQUIDATION_ENGINE" "contracts/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol:DlbDcfPriorityLiquidationEngine"
 show_progress
 
 verify_contract "WbtcMarket" "$WBTC_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
@@ -545,7 +545,7 @@ verify_contract "WbtcMarketIRM" "$WBTC_MARKET_IRM" "contracts/lending/irm/Adapti
 show_progress
 verify_contract "WbtcMarketOracle" "$WBTC_MARKET_ORACLE" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet"
 show_progress
-verify_contract "WbtcMarketLiquidationEngine" "$WBTC_LIQUIDATION_ENGINE" "contracts/lending/AltoLiquidationEngine.sol:AltoLiquidationEngine"
+verify_contract "WbtcMarketLiquidationEngine" "$WBTC_LIQUIDATION_ENGINE" "contracts/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol:DlbDcfPriorityLiquidationEngine"
 show_progress
 
 verify_contract "Cbb" "$CB_BTC_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
@@ -556,7 +556,7 @@ verify_contract "CbbMarketIRM" "$CB_BTC_MARKET_IRM" "contracts/lending/irm/Adapt
 show_progress
 verify_contract "CbbMarketOracle" "$CB_BTC_MARKET_ORACLE" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet"
 show_progress
-verify_contract "CbbMarketLiquidationEngine" "$CB_BTC_LIQUIDATION_ENGINE" "contracts/lending/AltoLiquidationEngine.sol:AltoLiquidationEngine"
+verify_contract "CbbMarketLiquidationEngine" "$CB_BTC_LIQUIDATION_ENGINE" "contracts/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol:DlbDcfPriorityLiquidationEngine"
 show_progress
 
 verify_contract "SusdeMarket" "$SUSDE_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
@@ -567,7 +567,7 @@ verify_contract "SusdeMarketIRM" "$SUSDE_MARKET_IRM" "contracts/lending/irm/Adap
 show_progress
 verify_contract "SusdeMarketOracle" "$SUSDE_MARKET_ORACLE" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet"
 show_progress
-verify_contract "SusdeMarketLiquidationEngine" "$SUSDE_LIQUIDATION_ENGINE" "contracts/lending/AltoLiquidationEngine.sol:AltoLiquidationEngine"
+verify_contract "SusdeMarketLiquidationEngine" "$SUSDE_LIQUIDATION_ENGINE" "contracts/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol:DlbDcfPriorityLiquidationEngine"
 show_progress
 
 # Verify usm batch contracts

@@ -261,7 +261,7 @@ contract DeployAltoEthereumMainnetScript is Script {
         _extractContractABI("AltoMintMarket", abiFolder);
         _extractContractABI("FixedRateIrm", abiFolder);
         _extractContractABI(oracleName, abiFolder);
-        _extractContractABI("AltoLiquidationEngine", abiFolder);
+        _extractContractABI("DlbDcfPriorityLiquidationEngine", abiFolder);
         _extractContractABI("AltoLeverageSwapper", abiFolder);
         _extractContractABI("AltoLeverage", abiFolder);
     }
@@ -270,7 +270,7 @@ contract DeployAltoEthereumMainnetScript is Script {
         _extractContractABI("AltoBorrowMarket", abiFolder);
         _extractContractABI("AdaptiveCurveIrm", abiFolder);
         _extractContractABI(oracleName, abiFolder);
-        _extractContractABI("AltoLiquidationEngine", abiFolder);
+        _extractContractABI("DlbDcfPriorityLiquidationEngine", abiFolder);
         _extractContractABI("AltoLeverageSwapper", abiFolder);
         _extractContractABI("AltoLeverage", abiFolder);
     }
