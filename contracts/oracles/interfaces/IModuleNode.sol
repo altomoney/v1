@@ -53,6 +53,13 @@ struct UniswapNode {
     // see the `observationCardinalityNext` function in the Uniswap V3 pool contract for more details
     uint32 twapPeriod;
     // @notice Whether to round up the price to the nearest integer
+    // @dev roundUp should be true when rounding needs to be done in favor of protocol(or against the user) and vice versa
+    // @dev roundUp should be true when:
+    //      - Pricing collateral in lending protocols (conservative valuation)
+    //      - Calculating amounts when USERS RECEIVE tokens
+    // @dev roundUp should be false when:
+    //      - Pricing assets when users make payments
+    //      - Any scenario where protocol should receive more rather than less
     bool roundUp;
 }
 
