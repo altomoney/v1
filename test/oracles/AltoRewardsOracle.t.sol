@@ -103,7 +103,8 @@ contract AltoRewardsOracleTest is Test {
             stalePeriod: stalePeriod,
             inDecimals: 18,
             outDecimals: 8,
-            direction: ConversionDirection.IN_TO_OUT
+            direction: ConversionDirection.IN_TO_OUT,
+            feedDecimals: AggregatorV3Interface(ETH_USD_PRICE_FEED).decimals()
         });
 
         AltoRewardsOracleInitParams memory initParams = AltoRewardsOracleInitParams({
@@ -428,6 +429,7 @@ contract AltoRewardsOracleTest is Test {
 
     function testOwnerCanUpdateChainlinkNode() public {
         address nonOwner = makeAddr("NonOwner");
+        uint8 feedDecimals = AggregatorV3Interface(ETH_USD_PRICE_FEED).decimals();
         vm.startPrank(nonOwner);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, nonOwner));
         rewardsOracle.updateChainlinkNode(
@@ -436,7 +438,8 @@ contract AltoRewardsOracleTest is Test {
                 stalePeriod: stalePeriod,
                 inDecimals: 18,
                 outDecimals: 18,
-                direction: ConversionDirection.OUT_TO_IN
+                direction: ConversionDirection.OUT_TO_IN,
+                feedDecimals: feedDecimals
             })
         );
         vm.stopPrank();
@@ -447,17 +450,24 @@ contract AltoRewardsOracleTest is Test {
             stalePeriod: stalePeriod,
             inDecimals: 18,
             outDecimals: 18,
-            direction: ConversionDirection.OUT_TO_IN
+            direction: ConversionDirection.OUT_TO_IN,
+            feedDecimals: feedDecimals
         });
         (
             AggregatorV3Interface feed,
             ConversionDirection direction,
             uint32 stalePeriod,
             uint8 inDecimals,
-            uint8 outDecimals
+            uint8 outDecimals,
+            uint8 oldFeedDecimals
         ) = rewardsOracle.chainlinkNode();
         ChainlinkNode memory oldChainlinkNode = ChainlinkNode({
-            feed: feed, stalePeriod: stalePeriod, inDecimals: inDecimals, outDecimals: outDecimals, direction: direction
+            feed: feed,
+            stalePeriod: stalePeriod,
+            inDecimals: inDecimals,
+            outDecimals: outDecimals,
+            direction: direction,
+            feedDecimals: oldFeedDecimals
         });
 
         vm.expectEmit(true, true, true, true);

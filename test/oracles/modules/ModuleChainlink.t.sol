@@ -54,7 +54,8 @@ contract ModuleChainlinkDecimalsTest is Test {
                 direction: ConversionDirection.IN_TO_OUT,
                 stalePeriod: 2 days,
                 inDecimals: 18,
-                outDecimals: 6
+                outDecimals: 6,
+                feedDecimals: 8
             })
         );
 
@@ -68,7 +69,8 @@ contract ModuleChainlinkDecimalsTest is Test {
                 direction: ConversionDirection.OUT_TO_IN,
                 stalePeriod: 2 days,
                 inDecimals: 6,
-                outDecimals: 18
+                outDecimals: 18,
+                feedDecimals: 8
             })
         );
 
@@ -86,7 +88,8 @@ contract ModuleChainlinkDecimalsTest is Test {
                 direction: ConversionDirection.IN_TO_OUT,
                 stalePeriod: 2 days,
                 inDecimals: 6,
-                outDecimals: 18
+                outDecimals: 18,
+                feedDecimals: 8
             })
         );
 
@@ -100,7 +103,8 @@ contract ModuleChainlinkDecimalsTest is Test {
                 direction: ConversionDirection.OUT_TO_IN,
                 stalePeriod: 2 days,
                 inDecimals: 18,
-                outDecimals: 6
+                outDecimals: 6,
+                feedDecimals: 8
             })
         );
 
@@ -118,7 +122,8 @@ contract ModuleChainlinkDecimalsTest is Test {
                 direction: ConversionDirection.IN_TO_OUT,
                 stalePeriod: 2 days,
                 inDecimals: 6,
-                outDecimals: 6
+                outDecimals: 6,
+                feedDecimals: 6
             })
         );
 
@@ -132,7 +137,8 @@ contract ModuleChainlinkDecimalsTest is Test {
                 direction: ConversionDirection.OUT_TO_IN,
                 stalePeriod: 2 days,
                 inDecimals: 6,
-                outDecimals: 6
+                outDecimals: 6,
+                feedDecimals: 6
             })
         );
 
@@ -150,7 +156,8 @@ contract ModuleChainlinkDecimalsTest is Test {
                 direction: ConversionDirection.IN_TO_OUT,
                 stalePeriod: 2 days,
                 inDecimals: 8,
-                outDecimals: 18
+                outDecimals: 18,
+                feedDecimals: 8
             })
         );
 
@@ -164,7 +171,8 @@ contract ModuleChainlinkDecimalsTest is Test {
                 direction: ConversionDirection.OUT_TO_IN,
                 stalePeriod: 2 days,
                 inDecimals: 18,
-                outDecimals: 8
+                outDecimals: 8,
+                feedDecimals: 8
             })
         );
 
@@ -182,7 +190,8 @@ contract ModuleChainlinkDecimalsTest is Test {
                 direction: ConversionDirection.IN_TO_OUT,
                 stalePeriod: 2 days,
                 inDecimals: 8,
-                outDecimals: 18
+                outDecimals: 18,
+                feedDecimals: 8
             })
         );
 
@@ -196,7 +205,8 @@ contract ModuleChainlinkDecimalsTest is Test {
                 direction: ConversionDirection.OUT_TO_IN,
                 stalePeriod: 2 days,
                 inDecimals: 18,
-                outDecimals: 8
+                outDecimals: 8,
+                feedDecimals: 8
             })
         );
 

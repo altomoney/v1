@@ -48,7 +48,7 @@ abstract contract AltoERC4626RatioChainlinkOracle is
 
         chainlinkNode = _chainlinkNode;
         emit SetChainlinkNode(
-            ChainlinkNode(AggregatorV3Interface(address(0)), ConversionDirection.IN_TO_OUT, 0, 0, 0), _chainlinkNode
+            ChainlinkNode(AggregatorV3Interface(address(0)), ConversionDirection.IN_TO_OUT, 0, 0, 0, 0), _chainlinkNode
         );
     }
 

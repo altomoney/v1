@@ -66,7 +66,7 @@ contract AltoRewardsOracle is AltoOwnable2Step, ModuleChainlink, ModuleUniswap, 
 
         chainlinkNode = _initParams.chainlinkNode;
         emit SetChainlinkNode(
-            ChainlinkNode(AggregatorV3Interface(address(0)), ConversionDirection.IN_TO_OUT, 0, 0, 0),
+            ChainlinkNode(AggregatorV3Interface(address(0)), ConversionDirection.IN_TO_OUT, 0, 0, 0, 0),
             _initParams.chainlinkNode
         );
 

@@ -34,7 +34,8 @@ contract AltoMultiChainlinkLendingOracleCommon is Test {
             stalePeriod: DEFAULT_STALE_PERIOD,
             inDecimals: inDecimals,
             outDecimals: outDecimals,
-            direction: ConversionDirection.IN_TO_OUT
+            direction: ConversionDirection.IN_TO_OUT,
+            feedDecimals: mockFeed1.decimals()
         });
     }
 
@@ -48,7 +49,8 @@ contract AltoMultiChainlinkLendingOracleCommon is Test {
             stalePeriod: DEFAULT_STALE_PERIOD,
             inDecimals: inDecimals,
             outDecimals: outDecimals,
-            direction: ConversionDirection.IN_TO_OUT
+            direction: ConversionDirection.IN_TO_OUT,
+            feedDecimals: mockFeed2.decimals()
         });
     }
 

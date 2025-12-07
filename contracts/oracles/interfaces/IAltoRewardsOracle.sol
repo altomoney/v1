@@ -109,5 +109,8 @@ interface IAltoRewardsOracleStaticTypes is IAltoRewardsOracleBase {
 
     /// @notice Gets the Chainlink node
     /// @return The Chainlink node
-    function chainlinkNode() external view returns (AggregatorV3Interface, ConversionDirection, uint32, uint8, uint8);
+    function chainlinkNode()
+        external
+        view
+        returns (AggregatorV3Interface, ConversionDirection, uint32, uint8, uint8, uint8);
 }

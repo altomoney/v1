@@ -40,7 +40,8 @@ contract AltoRewardsOracleUpdateChainlinkNode is AltoRewardsOracleCommon {
             stalePeriod: DEFAULT_STALE_PERIOD,
             inDecimals: 18,
             outDecimals: 18,
-            direction: ConversionDirection.IN_TO_OUT
+            direction: ConversionDirection.IN_TO_OUT,
+            feedDecimals: mockFeed.decimals()
         });
     }
 
@@ -89,10 +90,16 @@ contract AltoRewardsOracleUpdateChainlinkNode is AltoRewardsOracleCommon {
             ConversionDirection direction,
             uint32 stalePeriod,
             uint8 inDecimals,
-            uint8 outDecimals
+            uint8 outDecimals,
+            uint8 feedDecimals
         ) = oracle.chainlinkNode();
         ChainlinkNode memory oldChainlinkNode = ChainlinkNode({
-            feed: feed, stalePeriod: stalePeriod, inDecimals: inDecimals, outDecimals: outDecimals, direction: direction
+            feed: feed,
+            stalePeriod: stalePeriod,
+            inDecimals: inDecimals,
+            outDecimals: outDecimals,
+            direction: direction,
+            feedDecimals: mockFeed.decimals()
         });
 
         vm.expectEmit(true, true, true, true);
@@ -100,11 +107,12 @@ contract AltoRewardsOracleUpdateChainlinkNode is AltoRewardsOracleCommon {
 
         oracle.updateChainlinkNode(newChainlinkNode);
 
-        (feed, direction, stalePeriod, inDecimals, outDecimals) = oracle.chainlinkNode();
+        (feed, direction, stalePeriod, inDecimals, outDecimals, feedDecimals) = oracle.chainlinkNode();
         assertEq(address(feed), address(newChainlinkNode.feed), "Feed should be updated");
         assertEq(uint8(direction), uint8(newChainlinkNode.direction), "Direction should be updated");
         assertEq(stalePeriod, newChainlinkNode.stalePeriod, "Stale period should be updated");
         assertEq(inDecimals, newChainlinkNode.inDecimals, "In decimals should be updated");
         assertEq(outDecimals, newChainlinkNode.outDecimals, "Out decimals should be updated");
+        assertEq(feedDecimals, mockFeed.decimals());
     }
 }
