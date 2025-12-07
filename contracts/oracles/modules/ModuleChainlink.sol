@@ -44,8 +44,13 @@ contract ModuleChainlink is FullMath {
 
     /// @notice Validates the parameters for the Chainlink feed during initialization or updates
     /// @param config Chainlink node configuration
-    function _validateChainlinkParams(ChainlinkNode memory config) internal pure {
+    function _validateChainlinkParams(ChainlinkNode memory config) internal view {
         if (address(config.feed) == address(0) || config.stalePeriod == 0) {
+            revert ModuleChainlinkInvalidInput();
+        }
+
+        // Validate that cached feedDecimals matches actual feed decimals
+        if (config.feedDecimals != config.feed.decimals()) {
             revert ModuleChainlinkInvalidInput();
         }
 

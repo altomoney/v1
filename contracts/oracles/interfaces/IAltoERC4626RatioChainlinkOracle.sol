@@ -47,5 +47,8 @@ interface IAltoERC4626RatioChainlinkOracleStaticTypes is IAltoERC4626RatioChainl
     /// @notice Gets the ChainlinkNode
     /// @return The ChainlinkNode
     /// @dev Read ChainlinkNode documentation for more details on the struct before using this contract
-    function chainlinkNode() external view returns (AggregatorV3Interface, ConversionDirection, uint32, uint8, uint8);
+    function chainlinkNode()
+        external
+        view
+        returns (AggregatorV3Interface, ConversionDirection, uint32, uint8, uint8, uint8);
 }

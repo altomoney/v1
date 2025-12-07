@@ -164,7 +164,8 @@ contract SimulationRewardsOracle is Test {
                 stalePeriod: STALE_PERIOD,
                 inDecimals: 18,
                 outDecimals: 8,
-                direction: ConversionDirection.IN_TO_OUT
+                direction: ConversionDirection.IN_TO_OUT,
+                feedDecimals: 8
             });
             uniswapNode = UniswapNode({
                 pool: TAP_WETH_POOL, twapPeriod: TWAP_PERIOD, direction: ConversionDirection.IN_TO_OUT, roundUp: true

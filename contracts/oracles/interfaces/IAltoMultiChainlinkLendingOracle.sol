@@ -41,5 +41,5 @@ interface IAltoMultiChainlinkLendingOracleStaticTypes is IAltoMultiChainlinkLend
     function chainlinkNodes(uint256 _index)
         external
         view
-        returns (AggregatorV3Interface, ConversionDirection, uint32, uint8, uint8);
+        returns (AggregatorV3Interface, ConversionDirection, uint32, uint8, uint8, uint8);
 }

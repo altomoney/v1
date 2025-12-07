@@ -35,6 +35,8 @@ struct ChainlinkNode {
     // For example: ETH/USD feed has 8 decimals, but we want to convert the final result to
     // LENDING_ORACLE_PRICE_PRECISION decimals, so outDecimals should be 36 and inDecimals should be 18 (ETH decimals)
     uint8 outDecimals;
+    // @notice The number of decimals of the feed
+    uint8 feedDecimals;
 }
 
 /// @notice The node for the Uniswap oracle

@@ -17,7 +17,7 @@ contract AltoMultiChainlinkLendingOracleGetPriceForkTest is Test {
         AltoMultiChainlinkLendingOracle oracle =
             AltoMultiChainlinkLendingOracle(EthereumMainnetOracleDeployer.deployCbbtcOracle(OWNER));
 
-        (AggregatorV3Interface feed,,,, uint8 outDecimals) = oracle.chainlinkNodes(0);
+        (AggregatorV3Interface feed,,,, uint8 outDecimals,) = oracle.chainlinkNodes(0);
 
         (, int256 chainlinkAnswer,,,) = feed.latestRoundData();
         uint256 chainlinkDecimals = feed.decimals();
@@ -38,7 +38,7 @@ contract AltoMultiChainlinkLendingOracleGetPriceForkTest is Test {
         AltoMultiChainlinkLendingOracle oracle =
             AltoMultiChainlinkLendingOracle(EthereumMainnetOracleDeployer.deployTbtcOracle(OWNER));
 
-        (AggregatorV3Interface feed,,,, uint8 outDecimals) = oracle.chainlinkNodes(0);
+        (AggregatorV3Interface feed,,,, uint8 outDecimals,) = oracle.chainlinkNodes(0);
 
         (, int256 chainlinkAnswer,,,) = feed.latestRoundData();
         uint256 chainlinkDecimals = feed.decimals();
@@ -59,7 +59,7 @@ contract AltoMultiChainlinkLendingOracleGetPriceForkTest is Test {
         AltoMultiChainlinkLendingOracle oracle =
             AltoMultiChainlinkLendingOracle(EthereumMainnetOracleDeployer.deployWbtcOracle(OWNER));
 
-        (AggregatorV3Interface feed,,, uint8 inDecimals, uint8 outDecimals) = oracle.chainlinkNodes(1);
+        (AggregatorV3Interface feed,,, uint8 inDecimals, uint8 outDecimals,) = oracle.chainlinkNodes(1);
 
         (, int256 chainlinkAnswer,,,) = feed.latestRoundData();
 
@@ -80,7 +80,7 @@ contract AltoMultiChainlinkLendingOracleGetPriceForkTest is Test {
         AltoMultiChainlinkLendingOracle oracle =
             AltoMultiChainlinkLendingOracle(EthereumMainnetOracleDeployer.deployWethOracle(OWNER));
 
-        (AggregatorV3Interface feed,,,, uint8 outDecimals) = oracle.chainlinkNodes(0);
+        (AggregatorV3Interface feed,,,, uint8 outDecimals,) = oracle.chainlinkNodes(0);
 
         (, int256 chainlinkAnswer,,,) = feed.latestRoundData();
         uint256 chainlinkDecimals = feed.decimals();

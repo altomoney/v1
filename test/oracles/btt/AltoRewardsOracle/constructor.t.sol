@@ -118,14 +118,15 @@ contract AltoRewardsOracleConstructor is AltoRewardsOracleCommon {
             ConversionDirection chainlinkDirection,
             uint32 stalePeriod,
             uint8 inDecimals,
-            uint8 outDecimals
+            uint8 outDecimals,
+            uint8 feedDecimals
         ) = oracle.chainlinkNode();
         assertEq(address(feed), address(mockFeed));
         assertEq(uint8(chainlinkDirection), uint8(ConversionDirection.IN_TO_OUT));
         assertEq(stalePeriod, DEFAULT_STALE_PERIOD);
         assertEq(inDecimals, 18);
         assertEq(outDecimals, 8);
-
+        assertEq(feedDecimals, mockFeed.decimals());
         // it should set owner correctly
         assertEq(oracle.owner(), OWNER);
 

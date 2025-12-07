@@ -53,7 +53,8 @@ contract AltoMultiChainlinkLendingOracleUpdateChainlinkNodes is AltoMultiChainli
             stalePeriod: DEFAULT_STALE_PERIOD,
             inDecimals: 18,
             outDecimals: 36,
-            direction: ConversionDirection.IN_TO_OUT
+            direction: ConversionDirection.IN_TO_OUT,
+            feedDecimals: 8
         });
 
         vm.prank(OWNER);
@@ -68,7 +69,8 @@ contract AltoMultiChainlinkLendingOracleUpdateChainlinkNodes is AltoMultiChainli
             stalePeriod: 0,
             inDecimals: 18,
             outDecimals: 36,
-            direction: ConversionDirection.IN_TO_OUT
+            direction: ConversionDirection.IN_TO_OUT,
+            feedDecimals: mockFeed1.decimals()
         });
 
         vm.prank(OWNER);
@@ -83,7 +85,8 @@ contract AltoMultiChainlinkLendingOracleUpdateChainlinkNodes is AltoMultiChainli
             stalePeriod: DEFAULT_STALE_PERIOD,
             inDecimals: 30,
             outDecimals: 25, // 30 + 25 = 55 > 54
-            direction: ConversionDirection.IN_TO_OUT
+            direction: ConversionDirection.IN_TO_OUT,
+            feedDecimals: mockFeed1.decimals()
         });
 
         vm.prank(OWNER);
@@ -98,7 +101,8 @@ contract AltoMultiChainlinkLendingOracleUpdateChainlinkNodes is AltoMultiChainli
             stalePeriod: 2 days,
             inDecimals: 10,
             outDecimals: 18,
-            direction: ConversionDirection.OUT_TO_IN
+            direction: ConversionDirection.OUT_TO_IN,
+            feedDecimals: mockFeed2.decimals()
         });
 
         uint256 oldLength = 1;
@@ -109,14 +113,15 @@ contract AltoMultiChainlinkLendingOracleUpdateChainlinkNodes is AltoMultiChainli
                 ConversionDirection direction,
                 uint32 stalePeriod,
                 uint8 inDecimals,
-                uint8 outDecimals
+                uint8 outDecimals,
             ) = oracle.chainlinkNodes(i);
             oldNodes[i] = ChainlinkNode({
                 feed: feed,
                 direction: direction,
                 stalePeriod: stalePeriod,
                 inDecimals: inDecimals,
-                outDecimals: outDecimals
+                outDecimals: outDecimals,
+                feedDecimals: mockFeed1.decimals()
             });
         }
 
@@ -138,13 +143,15 @@ contract AltoMultiChainlinkLendingOracleUpdateChainlinkNodes is AltoMultiChainli
             ConversionDirection direction0,
             uint32 stalePeriod0,
             uint8 inDecimals0,
-            uint8 outDecimals0
+            uint8 outDecimals0,
+            uint8 feedDecimals0
         ) = oracle.chainlinkNodes(0);
         assertEq(address(feed0), address(mockFeed2));
         assertEq(uint8(direction0), uint8(ConversionDirection.OUT_TO_IN));
         assertEq(stalePeriod0, 2 days);
         assertEq(inDecimals0, 10);
         assertEq(outDecimals0, 18);
+        assertEq(feedDecimals0, mockFeed2.decimals());
     }
 
     function test_WhenUpdatingWithMultipleNodes() public givenCallerIsOwner {
@@ -158,14 +165,15 @@ contract AltoMultiChainlinkLendingOracleUpdateChainlinkNodes is AltoMultiChainli
                 ConversionDirection direction,
                 uint32 stalePeriod,
                 uint8 inDecimals,
-                uint8 outDecimals
+                uint8 outDecimals,
             ) = oracle.chainlinkNodes(i);
             oldNodes[i] = ChainlinkNode({
                 feed: feed,
                 direction: direction,
                 stalePeriod: stalePeriod,
                 inDecimals: inDecimals,
-                outDecimals: outDecimals
+                outDecimals: outDecimals,
+                feedDecimals: mockFeed1.decimals()
             });
         }
 
@@ -188,26 +196,29 @@ contract AltoMultiChainlinkLendingOracleUpdateChainlinkNodes is AltoMultiChainli
             ConversionDirection direction0,
             uint32 stalePeriod0,
             uint8 inDecimals0,
-            uint8 outDecimals0
+            uint8 outDecimals0,
+            uint8 feedDecimals0
         ) = oracle.chainlinkNodes(0);
         assertEq(address(feed0), address(mockFeed1));
         assertEq(uint8(direction0), uint8(ConversionDirection.IN_TO_OUT));
         assertEq(stalePeriod0, DEFAULT_STALE_PERIOD);
         assertEq(inDecimals0, 18);
         assertEq(outDecimals0, 18);
-
+        assertEq(feedDecimals0, mockFeed1.decimals());
         (
             AggregatorV3Interface feed1,
             ConversionDirection direction1,
             uint32 stalePeriod1,
             uint8 inDecimals1,
-            uint8 outDecimals1
+            uint8 outDecimals1,
+            uint8 feedDecimals1
         ) = oracle.chainlinkNodes(1);
         assertEq(address(feed1), address(mockFeed2));
         assertEq(uint8(direction1), uint8(ConversionDirection.IN_TO_OUT));
         assertEq(stalePeriod1, DEFAULT_STALE_PERIOD);
         assertEq(inDecimals1, 18);
         assertEq(outDecimals1, 36);
+        assertEq(feedDecimals1, mockFeed2.decimals());
     }
 
     function test_WhenReducingTheNumberOfNodes() public givenCallerIsOwner {
@@ -221,14 +232,16 @@ contract AltoMultiChainlinkLendingOracleUpdateChainlinkNodes is AltoMultiChainli
                 ConversionDirection direction,
                 uint32 stalePeriod,
                 uint8 inDecimals,
-                uint8 outDecimals
+                uint8 outDecimals,
+                uint8 feedDecimals
             ) = oracle.chainlinkNodes(i);
             oldNodes[i] = ChainlinkNode({
                 feed: feed,
                 direction: direction,
                 stalePeriod: stalePeriod,
                 inDecimals: inDecimals,
-                outDecimals: outDecimals
+                outDecimals: outDecimals,
+                feedDecimals: mockFeed1.decimals()
             });
         }
 
@@ -237,6 +250,7 @@ contract AltoMultiChainlinkLendingOracleUpdateChainlinkNodes is AltoMultiChainli
             feed: AggregatorV3Interface(address(mockFeed1)),
             stalePeriod: DEFAULT_STALE_PERIOD,
             inDecimals: 18,
+            feedDecimals: mockFeed1.decimals(),
             outDecimals: 36,
             direction: ConversionDirection.IN_TO_OUT
         });
@@ -257,12 +271,14 @@ contract AltoMultiChainlinkLendingOracleUpdateChainlinkNodes is AltoMultiChainli
             ConversionDirection direction0,
             uint32 stalePeriod0,
             uint8 inDecimals0,
-            uint8 outDecimals0
+            uint8 outDecimals0,
+            uint8 feedDecimals0
         ) = oracle.chainlinkNodes(0);
         assertEq(address(feed0), address(mockFeed1));
         assertEq(uint8(direction0), uint8(ConversionDirection.IN_TO_OUT));
         assertEq(stalePeriod0, DEFAULT_STALE_PERIOD);
         assertEq(inDecimals0, 18);
         assertEq(outDecimals0, 36);
+        assertEq(feedDecimals0, mockFeed1.decimals());
     }
 }

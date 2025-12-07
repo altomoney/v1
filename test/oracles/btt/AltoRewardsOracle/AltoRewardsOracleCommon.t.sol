@@ -41,7 +41,8 @@ contract AltoRewardsOracleCommon is Test {
             stalePeriod: DEFAULT_STALE_PERIOD,
             inDecimals: 18,
             outDecimals: 8,
-            direction: ConversionDirection.IN_TO_OUT
+            direction: ConversionDirection.IN_TO_OUT,
+            feedDecimals: mockFeed.decimals()
         });
         uniswapNode = UniswapNode({
             pool: IUniswapV3Pool(address(mockPool)),

@@ -34,7 +34,8 @@ contract AltoMultiChainlinkLendingOracleConstructor is AltoMultiChainlinkLending
             stalePeriod: DEFAULT_STALE_PERIOD,
             inDecimals: 18,
             outDecimals: 36,
-            direction: ConversionDirection.IN_TO_OUT
+            direction: ConversionDirection.IN_TO_OUT,
+            feedDecimals: 8
         });
 
         vm.expectRevert(ModuleChainlink.ModuleChainlinkInvalidInput.selector);
@@ -48,7 +49,8 @@ contract AltoMultiChainlinkLendingOracleConstructor is AltoMultiChainlinkLending
             stalePeriod: 0,
             inDecimals: 18,
             outDecimals: 36,
-            direction: ConversionDirection.IN_TO_OUT
+            direction: ConversionDirection.IN_TO_OUT,
+            feedDecimals: mockFeed1.decimals()
         });
 
         vm.expectRevert(ModuleChainlink.ModuleChainlinkInvalidInput.selector);
@@ -62,7 +64,8 @@ contract AltoMultiChainlinkLendingOracleConstructor is AltoMultiChainlinkLending
             stalePeriod: DEFAULT_STALE_PERIOD,
             inDecimals: 30,
             outDecimals: 25, // 30 + 25 = 55 > 54
-            direction: ConversionDirection.IN_TO_OUT
+            direction: ConversionDirection.IN_TO_OUT,
+            feedDecimals: mockFeed1.decimals()
         });
 
         vm.expectRevert(ModuleChainlink.ModuleChainlinkInvalidInput.selector);
@@ -94,7 +97,7 @@ contract AltoMultiChainlinkLendingOracleConstructor is AltoMultiChainlinkLending
             ConversionDirection direction,
             uint32 stalePeriod,
             uint8 inDecimals,
-            uint8 outDecimals
+            uint8 outDecimals,
         ) = oracle.chainlinkNodes(0);
         assertEq(address(feed), address(mockFeed1));
         assertEq(uint8(direction), uint8(ConversionDirection.IN_TO_OUT));
@@ -126,20 +129,23 @@ contract AltoMultiChainlinkLendingOracleConstructor is AltoMultiChainlinkLending
             ConversionDirection direction,
             uint32 stalePeriod,
             uint8 inDecimals,
-            uint8 outDecimals
+            uint8 outDecimals,
+            uint8 feedDecimals
         ) = oracle.chainlinkNodes(0);
         assertEq(address(feed), address(mockFeed1));
         assertEq(uint8(direction), uint8(ConversionDirection.IN_TO_OUT));
         assertEq(stalePeriod, DEFAULT_STALE_PERIOD);
         assertEq(inDecimals, 18);
         assertEq(outDecimals, 18);
+        assertEq(feedDecimals, mockFeed1.decimals());
 
-        (feed, direction, stalePeriod, inDecimals, outDecimals) = oracle.chainlinkNodes(1);
+        (feed, direction, stalePeriod, inDecimals, outDecimals, feedDecimals) = oracle.chainlinkNodes(1);
         assertEq(address(feed), address(mockFeed2));
         assertEq(uint8(direction), uint8(ConversionDirection.IN_TO_OUT));
         assertEq(stalePeriod, DEFAULT_STALE_PERIOD);
         assertEq(inDecimals, 18);
         assertEq(outDecimals, 36);
+        assertEq(feedDecimals, mockFeed2.decimals());
 
         // it should set owner correctly
         assertEq(oracle.owner(), OWNER);

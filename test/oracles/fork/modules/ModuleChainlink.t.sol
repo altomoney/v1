@@ -24,7 +24,14 @@ contract ModuleChainlinkTest is Test {
         // getting the vaule in 8 output decimals
         uint256 usdcAmount = moduleChainlink.readChainlinkFeed(
             ethQuoteAmount,
-            ChainlinkNode(AggregatorV3Interface(USDC_ETH_PRICE_FEED), ConversionDirection.OUT_TO_IN, 2 days, 18, 6)
+            ChainlinkNode(
+                AggregatorV3Interface(USDC_ETH_PRICE_FEED),
+                ConversionDirection.OUT_TO_IN,
+                2 days,
+                18,
+                6,
+                AggregatorV3Interface(USDC_ETH_PRICE_FEED).decimals()
+            )
         );
         assertGt(usdcAmount, 0, "Invalid usdcAmount in ChainlinkModule");
 
@@ -47,7 +54,14 @@ contract ModuleChainlinkTest is Test {
         // getting the vaule in 8 output decimals
         uint256 usdAmount = moduleChainlink.readChainlinkFeed(
             btcQuoteAmount,
-            ChainlinkNode(AggregatorV3Interface(BTC_USD_PRICE_FEED), ConversionDirection.IN_TO_OUT, 2 days, 8, 8)
+            ChainlinkNode(
+                AggregatorV3Interface(BTC_USD_PRICE_FEED),
+                ConversionDirection.IN_TO_OUT,
+                2 days,
+                8,
+                8,
+                AggregatorV3Interface(BTC_USD_PRICE_FEED).decimals()
+            )
         );
         assertGt(usdAmount, 0, "Invalid usdAmount in ChainlinkModule");
 
