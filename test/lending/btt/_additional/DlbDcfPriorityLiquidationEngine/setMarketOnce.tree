@@ -1,12 +1,12 @@
-AltoLiquidationEngine::setMarketOnce()
+DlbDcfPriorityLiquidationEngine::setMarketOnce()
 ├── given market is already set
-│   └── it should revert with AltoPriorityLiquidationEngineInvalidInput
+│   └── it should revert with DlbDcfPriorityLiquidationEngineInvalidInput
 └── given market is not set
     ├── when _market is address(0)
-    │   └── it should revert with AltoPriorityLiquidationEngineInvalidInput
+    │   └── it should revert with DlbDcfPriorityLiquidationEngineInvalidInput
     └── when _market is not address(0)
         ├── when msg.sender is not _market
-        │   └── it should revert with AltoPriorityLiquidationEngineLiquidationUnauthorized
+        │   └── it should revert with DlbDcfPriorityLiquidationEngineLiquidationUnauthorized
         └── when msg.sender is _market
             └── it should set market successfully
                 └── it should emit SetMarketOnce event

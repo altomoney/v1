@@ -2,7 +2,10 @@
 pragma solidity ^0.8.22;
 
 import {Test} from "forge-std/Test.sol";
-import {LiquidationConfiguration} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
+import {
+    IDcfDlbPriorityLiquidationEngine,
+    LiquidationConfiguration
+} from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";
 import {BaseMarketInitParams, BorrowMarketInitParams} from "@alto/lending/interfaces/IMarket.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {LENDING_ORACLE_PRICE_PRECISION, IOracle} from "@alto/oracles/interfaces/IOracle.sol";
@@ -12,7 +15,7 @@ import {SwapParams} from "@alto/lending/leverage/interfaces/IAltoLeverageSwapper
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
 import {MarketDeployer} from "@alto-test/helpers/MarketDeployer.sol";
-import {AltoLiquidationEngine} from "@alto/lending/AltoLiquidationEngine.sol";
+import {DlbDcfPriorityLiquidationEngine} from "@alto/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol";
 import {AltoLeverageSwapper} from "@alto/lending/leverage/AltoLeverageSwapper.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {EthereumMainnetOracleDeployer} from "@alto/deployments/EthereumMainnetOracleDeployer.sol";
@@ -58,7 +61,7 @@ contract AltoLeverageWethMarketTest is Test {
         });
 
         // Create liquidation engine before market deployment
-        address liquidationEngine = address(new AltoLiquidationEngine(address(this)));
+        address liquidationEngine = address(new DlbDcfPriorityLiquidationEngine(address(this)));
 
         BorrowMarketInitParams memory borrowMarketInitParams = BorrowMarketInitParams({
             baseMarketInitParams: BaseMarketInitParams({
@@ -79,7 +82,7 @@ contract AltoLeverageWethMarketTest is Test {
         market = IMarket(MarketDeployer.deployBorrowMarket(borrowMarketInitParams));
 
         // Market initialization automatically calls setMarketOnce on the liquidation engine
-        AltoLiquidationEngine(liquidationEngine).setLiquidationConfiguration(liquidationConfig);
+        IDcfDlbPriorityLiquidationEngine(liquidationEngine).setLiquidationConfiguration(liquidationConfig);
 
         swapper.setWhitelisted(address(leverage), true);
         // Setup initial balances for test accounts

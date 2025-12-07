@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.22;
 
-import {AltoLiquidationEngine} from "@alto/lending/AltoLiquidationEngine.sol";
+import {DlbDcfPriorityLiquidationEngine} from "@alto/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol";
 import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";
 import {BorrowMarketInitParams, BaseMarketInitParams} from "@alto/lending/interfaces/IMarket.sol";
-import {LiquidationConfiguration} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
+import {LiquidationConfiguration} from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";
 import {AltoLeverageSwapper} from "@alto/lending/leverage/AltoLeverageSwapper.sol";
 import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
 import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
@@ -50,7 +50,7 @@ contract BorrowMarketBatch {
 
         // Deploy Liquidation Engine with batch contract as owner temporarily to allow configuration
         // owner will be transferred to _params.owner after configuration
-        address liquidationEngine = address(new AltoLiquidationEngine(address(this)));
+        address liquidationEngine = address(new DlbDcfPriorityLiquidationEngine(address(this)));
 
         // Deploy Market Proxy
         bytes memory initData = abi.encodeCall(
@@ -82,7 +82,7 @@ contract BorrowMarketBatch {
         }
 
         // Set liquidation configuration (requires ownership)
-        AltoLiquidationEngine(liquidationEngine).setLiquidationConfiguration(_params.liquidationConfig);
+        DlbDcfPriorityLiquidationEngine(liquidationEngine).setLiquidationConfiguration(_params.liquidationConfig);
 
         // Transfer liquidation engine ownership to _params.owner
         AltoOwnable2Step(liquidationEngine).transferOwnershipSkip2Step(_params.owner);

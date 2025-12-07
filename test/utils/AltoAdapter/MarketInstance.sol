@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import {AltoBaseMarket} from "@alto/lending/AltoBaseMarket.sol";
 import {BaseMarketInitParams, MarketType} from "@alto/lending/interfaces/IMarket.sol";
-import {LiquidationConfiguration} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
+import {LiquidationConfiguration} from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";
 import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 
 contract MarketInstance is AltoBaseMarket {

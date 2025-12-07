@@ -11,10 +11,9 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {ERC20MockDecimals} from "@alto-test/helpers/ERC20MockDecimals.sol";
 import {
-    IPriorityLiquidationEngine,
+    IDcfDlbPriorityLiquidationEngine,
     LiquidationConfiguration
-} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
-import {AltoLiquidationEngine} from "@alto/lending/AltoLiquidationEngine.sol";
+} from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";
 
 contract LiquidateCallback is ILiquidateCallback {
     function onLiquidateCallback(uint256 assetsToRepay, uint256 collateralReceived, bytes calldata data) external {
@@ -146,7 +145,8 @@ contract AltoBorrowMarketLiquidationsFuzzTest is Test {
 
     function _setupMarketPermissions() internal {
         vm.startPrank(market.owner());
-        IPriorityLiquidationEngine liquidationEngine = IPriorityLiquidationEngine(market.liquidationEngine());
+        IDcfDlbPriorityLiquidationEngine liquidationEngine =
+            IDcfDlbPriorityLiquidationEngine(market.liquidationEngine());
         liquidationEngine.setPriorityLiquidator(bob, true);
         liquidationEngine.setPriorityLiquidator(liquidator, true);
         liquidationEngine.setPriorityLiquidator(address(liquidateCallback), true);

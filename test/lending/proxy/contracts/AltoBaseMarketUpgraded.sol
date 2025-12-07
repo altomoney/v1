@@ -12,7 +12,12 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 import {ILendingOracle, LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 
 import {Balance, Position, BaseMarketInitParams, MarketType} from "@alto/lending/interfaces/IMarket.sol";
-import {LiquidationConfiguration, LiquidablePosition} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
+import {
+    IDcfDlbPriorityLiquidationEngine,
+    IDcfDlbPriorityLiquidationEngineEvents,
+    LiquidationConfiguration,
+    LiquidablePosition
+} from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";
 import {AuthUpgradeable} from "@alto/utils/AuthUpgradeable.sol";
 import {IIrm} from "@alto/lending/interfaces/IIrm.sol";
 
@@ -33,10 +38,6 @@ import {
     LiquidationEngineResult,
     LiquidationEngineInput
 } from "@alto/lending/interfaces/IAltoLiquidationEngine.sol";
-import {
-    IPriorityLiquidationEngine,
-    IPriorityLiquidationEngineEvents
-} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
 /// @custom:oz-upgrades-from AltoBaseMarket

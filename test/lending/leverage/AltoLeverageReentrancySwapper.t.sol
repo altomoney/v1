@@ -2,7 +2,10 @@
 pragma solidity ^0.8.22;
 
 import {Test} from "forge-std/Test.sol";
-import {LiquidationConfiguration} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
+import {
+    IDcfDlbPriorityLiquidationEngine,
+    LiquidationConfiguration
+} from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";
 import {BaseMarketInitParams, BorrowMarketInitParams} from "@alto/lending/interfaces/IMarket.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
@@ -22,8 +25,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {IUniswapV3PoolActions} from "@uniswap/v3-core/contracts/interfaces/pool/IUniswapV3PoolActions.sol";
-import {AltoLiquidationEngine} from "@alto/lending/AltoLiquidationEngine.sol";
-import {IPriorityLiquidationEngine} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
+import {DlbDcfPriorityLiquidationEngine} from "@alto/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol";
 
 bool constant TESTING_VULNERABLE_CONTRACT = false;
 uint256 constant SUPPLIED_COLLATERAL_AMOUNT = 1000 ether;
@@ -182,7 +184,7 @@ contract AltoLeverageReentrancySwapperTest is Test {
         });
 
         // Create liquidation engine before market deployment
-        address liquidationEngine = address(new AltoLiquidationEngine(address(this)));
+        address liquidationEngine = address(new DlbDcfPriorityLiquidationEngine(address(this)));
 
         market = IMarket(
             MarketDeployer.deployBorrowMarket(
@@ -205,7 +207,7 @@ contract AltoLeverageReentrancySwapperTest is Test {
         );
 
         // Market initialization automatically calls setMarketOnce on the liquidation engine
-        IPriorityLiquidationEngine(liquidationEngine).setLiquidationConfiguration(liquidationConfig);
+        IDcfDlbPriorityLiquidationEngine(liquidationEngine).setLiquidationConfiguration(liquidationConfig);
 
         swapper.setWhitelisted(address(leverage), true);
         leverage.setMarket(address(market), true);
@@ -250,7 +252,7 @@ contract AltoLeverageReentrancySwapperTest is Test {
         // Also, attacker needs to have enough balance to setup new position with NEW_POSITION_COLLATERAL_AMOUNT and NEW_POSITION_BORROW_AMOUNT
         uint256 borrowAmountNeededToRepay = COLLATERAL_AMOUNT_AFTER_WITHDRAW
             * (1 ether
-                - IPriorityLiquidationEngine(market.liquidationEngine()).liquidationConfiguration().liquidationBaseFee)
+                - IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).liquidationConfiguration().liquidationBaseFee)
             / 1 ether;
         deal(
             address(borrowToken),

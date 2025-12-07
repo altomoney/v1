@@ -24,7 +24,7 @@ import {
 } from "@alto/deployments/ethereum-mainnet/Constants.sol";
 import {AltoAdapter} from "@alto/utils/AltoAdapter.sol";
 import {AdaptiveCurveIrm} from "@alto/lending/irm/AdaptiveCurveIrm.sol";
-import {LiquidationConfiguration} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
+import {LiquidationConfiguration} from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";
 import {IDUSD} from "@alto/tokens/interfaces/IDUSD.sol";
 import {FlashFee} from "@alto/usm/interfaces/IDUSDFlashMinter.sol";
 import {

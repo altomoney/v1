@@ -2,7 +2,11 @@
 pragma solidity ^0.8.22;
 
 import {Test} from "forge-std/Test.sol";
-import {LiquidationConfiguration, LiquidablePosition} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
+import {
+    IDcfDlbPriorityLiquidationEngine,
+    LiquidationConfiguration,
+    LiquidablePosition
+} from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 import {LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
@@ -19,9 +23,8 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
-import {AltoLiquidationEngine} from "@alto/lending/AltoLiquidationEngine.sol";
+import {DlbDcfPriorityLiquidationEngine} from "@alto/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol";
 import {AltoBaseMarket} from "@alto/lending/AltoBaseMarket.sol";
-import {IPriorityLiquidationEngine} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
 
 bool constant TESTING_TAG_REENTRANCY = false; // Set to true to test the vulnerability, false to test the fix (expects reentrancy guard in tagLiquidablePosition)
 
@@ -52,7 +55,7 @@ contract MaliciousERC20ForTagging is ERC20 {
             // At this point, the position is unhealthy because:
             // - borrow() has already updated borrowShares
             // - But collateral hasn't been added yet (will be added after this callback)
-            IPriorityLiquidationEngine(IMarket(market).liquidationEngine()).tagLiquidablePosition(attacker, liquidator);
+            IDcfDlbPriorityLiquidationEngine(IMarket(market).liquidationEngine()).tagLiquidablePosition(attacker, liquidator);
 
             // Complete the transfer normally
             return super.transfer(to, amount);
@@ -171,7 +174,7 @@ contract AltoLeverageTagReentrancyTest is Test {
         });
 
         // Create liquidation engine before market deployment
-        address liquidationEngine = address(new AltoLiquidationEngine(address(this)));
+        address liquidationEngine = address(new DlbDcfPriorityLiquidationEngine(address(this)));
 
         market = IMarket(
             MarketDeployer.deployBorrowMarket(
@@ -194,7 +197,7 @@ contract AltoLeverageTagReentrancyTest is Test {
         );
 
         // Market initialization automatically calls setMarketOnce on the liquidation engine
-        AltoLiquidationEngine(liquidationEngine).setLiquidationConfiguration(liquidationConfig);
+        IDcfDlbPriorityLiquidationEngine(liquidationEngine).setLiquidationConfiguration(liquidationConfig);
 
         // Supply tokens to the protocol
         deal(address(borrowToken), address(this), INITIAL_AMOUNT);
@@ -265,7 +268,7 @@ contract AltoLeverageTagReentrancyTest is Test {
 
         // Check position is not tagged before
         LiquidablePosition memory liquidableBefore =
-            IPriorityLiquidationEngine(IMarket(market).liquidationEngine()).liquidablePositions(ATTACKER);
+            IDcfDlbPriorityLiquidationEngine(IMarket(market).liquidationEngine()).liquidablePositions(ATTACKER);
         assertFalse(liquidableBefore.tagged, "Position should not be tagged before");
 
         // Now borrow using leverage - this will:
@@ -300,7 +303,7 @@ contract AltoLeverageTagReentrancyTest is Test {
 
         // But position is tagged, which should not be allowed for healthy positions
         LiquidablePosition memory liquidableAfter =
-            IPriorityLiquidationEngine(IMarket(market).liquidationEngine()).liquidablePositions(ATTACKER);
+            IDcfDlbPriorityLiquidationEngine(IMarket(market).liquidationEngine()).liquidablePositions(ATTACKER);
 
         console.log("Position is solvent after leverage:", isSolventAfter);
         console.log("Position is tagged:", liquidableAfter.tagged);

@@ -10,10 +10,9 @@ import {IPausable} from "@alto/utils/Pausable.sol";
 import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
 import {MockMarketDeployer, MockMarket} from "@alto-test/helpers/MockMarket.sol";
 import {
-    IPriorityLiquidationEngine,
+    IDcfDlbPriorityLiquidationEngine,
     LiquidationConfiguration
-} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
-import {AltoLiquidationEngine} from "@alto/lending/AltoLiquidationEngine.sol";
+} from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";
 
 contract AltoBorrowMarketPauseTest is Test {
     MockMarket market;
@@ -172,7 +171,8 @@ contract AltoBorrowMarketPauseTest is Test {
         vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, PAUSE_TYPE));
         market.liquidate(alice, hex"", hex"");
 
-        IPriorityLiquidationEngine liquidationEngine = IPriorityLiquidationEngine(market.liquidationEngine());
+        IDcfDlbPriorityLiquidationEngine liquidationEngine =
+            IDcfDlbPriorityLiquidationEngine(market.liquidationEngine());
         vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, PAUSE_TYPE));
         liquidationEngine.tagLiquidablePosition(alice, bob);
         vm.stopPrank();
@@ -213,7 +213,7 @@ contract AltoBorrowMarketPauseTest is Test {
 
         // Make alice a priority liquidator
         vm.startPrank(owner);
-        IPriorityLiquidationEngine(market.liquidationEngine()).setPriorityLiquidator(alice, true);
+        IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).setPriorityLiquidator(alice, true);
         vm.stopPrank();
 
         vm.startPrank(alice);

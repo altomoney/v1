@@ -13,12 +13,12 @@ import {BaseMarketInitParams, BorrowMarketInitParams, MintMarketInitParams} from
 import {ERC20MockMintable} from "@alto-test/helpers/ERC20MockMintable.sol";
 import {PAUSE_TYPE, FROZEN_TYPE} from "@alto/utils/Constants.sol";
 import {MarketDeployer} from "@alto-test/helpers/MarketDeployer.sol";
-import {AltoLiquidationEngine} from "@alto/lending/AltoLiquidationEngine.sol";
+import {DlbDcfPriorityLiquidationEngine} from "@alto/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol";
 import {AltoBaseMarket} from "@alto/lending/AltoBaseMarket.sol";
 import {
-    IPriorityLiquidationEngine,
+    IDcfDlbPriorityLiquidationEngine,
     LiquidationConfiguration
-} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
+} from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";
 
 uint256 constant MIN_AMOUNT = 1000;
 uint256 constant MAX_AMOUNT = 2 ** 64; // Must be less than or equal to type(uint160).max.
@@ -83,7 +83,7 @@ abstract contract MarketCommon is Test {
         });
 
         // Create liquidation engine before market deployment
-        address liquidationEngine = address(new AltoLiquidationEngine(address(OWNER)));
+        address liquidationEngine = address(new DlbDcfPriorityLiquidationEngine(address(OWNER)));
 
         BaseMarketInitParams memory baseMarketInitParams = BaseMarketInitParams({
             borrowToken: address(borrowToken),
@@ -114,7 +114,7 @@ abstract contract MarketCommon is Test {
 
         // Market initialization automatically calls setMarketOnce on the liquidation engine
         // Set liquidation configuration
-        AltoLiquidationEngine(liquidationEngine).setLiquidationConfiguration(liquidationConfig);
+        IDcfDlbPriorityLiquidationEngine(liquidationEngine).setLiquidationConfiguration(liquidationConfig);
 
         market.setPauser(PAUSER, PAUSE_TYPE, true);
         market.setPauser(PAUSER, FROZEN_TYPE, true);

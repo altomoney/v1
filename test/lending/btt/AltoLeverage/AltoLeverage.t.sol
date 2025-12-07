@@ -13,12 +13,12 @@ import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
 import {MarketDeployer} from "@alto-test/helpers/MarketDeployer.sol";
-import {AltoLiquidationEngine} from "@alto/lending/AltoLiquidationEngine.sol";
+import {DlbDcfPriorityLiquidationEngine} from "@alto/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol";
 import {AltoBaseMarket} from "@alto/lending/AltoBaseMarket.sol";
 import {
-    IPriorityLiquidationEngine,
+    IDcfDlbPriorityLiquidationEngine,
     LiquidationConfiguration
-} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
+} from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";
 
 contract AltoLeverageBTTTest is Test {
     using FixedPointMath for uint256;
@@ -62,7 +62,7 @@ contract AltoLeverageBTTTest is Test {
         });
 
         // Create liquidation engine before market deployment
-        address liquidationEngine = address(new AltoLiquidationEngine(address(this)));
+        address liquidationEngine = address(new DlbDcfPriorityLiquidationEngine(address(this)));
 
         BaseMarketInitParams memory baseMarketInitParams = BaseMarketInitParams({
             borrowToken: address(borrowToken),
@@ -76,13 +76,16 @@ contract AltoLeverageBTTTest is Test {
         });
 
         BorrowMarketInitParams memory borrowMarketInitParams = BorrowMarketInitParams({
-            baseMarketInitParams: baseMarketInitParams, initialBorrowOpeningFee: 0, supplyCapAssets: 0, initialInterestFee: 0
+            baseMarketInitParams: baseMarketInitParams,
+            initialBorrowOpeningFee: 0,
+            supplyCapAssets: 0,
+            initialInterestFee: 0
         });
 
         market = IMarket(MarketDeployer.deployBorrowMarket(borrowMarketInitParams));
 
         // Market initialization automatically calls setMarketOnce on the liquidation engine
-        AltoLiquidationEngine(liquidationEngine).setLiquidationConfiguration(config);
+        IDcfDlbPriorityLiquidationEngine(liquidationEngine).setLiquidationConfiguration(config);
 
         swapper.setWhitelisted(address(leverage), true);
         // Setup initial balances for test accounts
