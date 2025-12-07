@@ -70,7 +70,6 @@ contract DeployAltoEthereumMainnetTest is Test {
             timelockAdmin: MULTISIG_TIMELOCK_ADMIN,
             timelockDelay: 2 days,
             freezer: MULTISIG_FREEZER_PAUSER,
-            feeReceiverAddress: STAKING_URD,
             deployer: DEPLOYER,
             phase: DeploymentPhase.CORE,
             useUnsafeUpgrades: true,
@@ -131,6 +130,24 @@ contract DeployAltoEthereumMainnetTest is Test {
         // Verify feeRecipient is deployed
         // TODO
         _verifyDeployed(input.contracts.feeRecipient, "FeeRecipient");
+        AltoTimelockController feeRecipient = AltoTimelockController(payable(input.contracts.feeRecipient));
+        assertEq(feeRecipient.getMinDelay(), params.timelockDelay, "FeeRecipient delay should be correct");
+        assertTrue(
+            feeRecipient.hasRole(feeRecipient.PROPOSER_ROLE(), params.timelockAdmin),
+            "FeeRecipient proposer should be timelock admin"
+        );
+        assertTrue(
+            feeRecipient.hasRole(feeRecipient.EXECUTOR_ROLE(), params.timelockAdmin),
+            "FeeRecipient executor should be timelock admin"
+        );
+        assertTrue(
+            feeRecipient.hasRole(feeRecipient.CANCELLER_ROLE(), params.timelockAdmin),
+            "FeeRecipient canceller should be timelock admin"
+        );
+        assertTrue(
+            feeRecipient.hasRole(feeRecipient.DEFAULT_ADMIN_ROLE(), params.timelockAdmin),
+            "FeeRecipient admin should be timelock admin"
+        );
 
         // Verify AltoAdapter is deployed
         AltoAdapter adapter = AltoAdapter(payable(input.contracts.altoAdapter));
