@@ -56,8 +56,12 @@ contract ModuleERC4626Ratio {
         return _erc4626RatioNode.initialRatio + maxAllowedGrowthRatio;
     }
 
-    /// @notice Validates the parameters set for ratio snapshot and growth limits during initialization or updates
+    /// @notice Validates and stores the ERC4626 ratio configuration
     /// @param _erc4626RatioNode The ERC4626 ratio node configuration
+    /// @dev NOTE: initialRatio may exceed current on-chain ratio (e.g., for safety buffer),
+    /// so we cannot enforce initialRatio <= currentRatio
+    /// @dev INVARIANT: Over time, ratio should only increase (monotonicity assumption)
+    /// @dev SECURITY: If ratio decreases, it indicates asset losses/slashing - should trigger alerts
     function _validateERC4626RatioParams(ERC4626RatioNode memory _erc4626RatioNode) internal view {
         if (_erc4626RatioNode.initialRatio == 0) {
             revert ModuleERC4626RatioInvalidInput();

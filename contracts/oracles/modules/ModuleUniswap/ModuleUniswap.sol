@@ -16,13 +16,6 @@ contract ModuleUniswap is OracleMath {
     /// @param quoteAmount The input currency amount to get the price of in output currency
     /// @param config Uniswap configuration
     /// @return The value of the `quoteAmount` in output currency
-    /// @dev ROUNDING: This function uses floor division (rounds down)
-    /// @dev APPROPRIATE USES:
-    ///      - Pricing collateral in lending protocols (conservative valuation)
-    ///      - Calculating amounts when USERS RECEIVE tokens
-    /// @dev INAPPROPRIATE USES:
-    ///      - Pricing assets when users make payments (use ceiling division instead)
-    ///      - Any scenario where protocol should receive more rather than less
     /// @dev The input and output currency are determined by the direction of the conversion in config
     function readUniswapPool(uint256 quoteAmount, UniswapNode memory config) public view returns (uint256) {
         uint32[] memory secondAgos = new uint32[](2);
