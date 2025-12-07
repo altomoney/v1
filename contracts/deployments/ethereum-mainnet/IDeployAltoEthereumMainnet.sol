@@ -69,7 +69,6 @@ struct AltoEthereumMainnetParams {
     address timelockAdmin;
     uint256 timelockDelay;
     address freezer;
-    address feeReceiverAddress;
     address deployer;
     DeploymentPhase phase;
     bool useUnsafeUpgrades;

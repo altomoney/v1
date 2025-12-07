@@ -417,9 +417,15 @@ library DeployAltoEthereumMainnet {
         }
         input.contracts.timelock = address(new AltoTimelockController(0, proposers, executors, params.deployer));
 
-        // Deploy fee collector with timelock as owner
-        input.contracts.feeRecipient =
-            address(new MockFeeCollector(input.contracts.timelock, params.feeReceiverAddress));
+        address[] memory feeRecipientRoleHolders = new address[](1);
+        feeRecipientRoleHolders[0] = params.timelockAdmin;
+
+        // Deploy fee collector with timelock admin as owner, proposer, executor and canceller
+        input.contracts.feeRecipient = address(
+            new AltoTimelockController(
+                params.timelockDelay, feeRecipientRoleHolders, feeRecipientRoleHolders, params.timelockAdmin
+            )
+        );
 
         // Deploy AltoAdapter with Morpho's Bundler3, WETH, and deployer as owner
         // Owner will be transferred to timelock in POST phase (needed to authorize contracts during deployment)

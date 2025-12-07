@@ -29,7 +29,6 @@ contract DeployAltoEthereumMainnetScript is Script {
             timelockAdmin: msg.sender, // TODO: Set to actual timelock admin address
             timelockDelay: 2 days, // TODO: Set to actual timelock delay
             freezer: address(0), // TODO: Set to actual freezer address
-            feeReceiverAddress: address(0), // TODO: Set to actual fee recipient address
             deployer: msg.sender,
             phase: PHASE_TO_DEPLOY,
             useUnsafeUpgrades: false,
