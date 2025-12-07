@@ -2,8 +2,11 @@
 pragma solidity ^0.8.22;
 
 import {Test} from "forge-std/Test.sol";
-import {AltoLiquidationEngine} from "@alto/lending/AltoLiquidationEngine.sol";
-import {IPriorityLiquidationEngineErrors} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
+import {DlbDcfPriorityLiquidationEngine} from "@alto/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol";
+import {
+    IDcfDlbPriorityLiquidationEngine,
+    IDcfDlbPriorityLiquidationEngineErrors
+} from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";
 import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";
 import {BaseMarketInitParams, BorrowMarketInitParams} from "@alto/lending/interfaces/IMarket.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
@@ -14,13 +17,13 @@ import {MarketDeployer} from "@alto-test/helpers/MarketDeployer.sol";
 import {IAltoLiquidationEngine} from "@alto/lending/interfaces/IAltoLiquidationEngine.sol";
 
 contract SetMarketOnceTest is Test {
-    AltoLiquidationEngine liquidationEngine;
+    IDcfDlbPriorityLiquidationEngine liquidationEngine;
     address owner = address(this);
     address marketAddress;
     address otherAddress = address(0x1234);
 
     function setUp() public {
-        liquidationEngine = new AltoLiquidationEngine(owner);
+        liquidationEngine = IDcfDlbPriorityLiquidationEngine(address(new DlbDcfPriorityLiquidationEngine(owner)));
     }
 
     modifier givenMarketIsAlreadySet() {
@@ -76,15 +79,15 @@ contract SetMarketOnceTest is Test {
     }
 
     function test_RevertWhen_MarketIsAlreadySet() external givenMarketIsAlreadySet {
-        // it should revert with AltoPriorityLiquidationEngineInvalidInput
-        vm.expectRevert(IPriorityLiquidationEngineErrors.AltoPriorityLiquidationEngineInvalidInput.selector);
+        // it should revert with DcfDlbPriorityLiquidationEngineInvalidInput
+        vm.expectRevert(IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineInvalidInput.selector);
         vm.prank(marketAddress);
         liquidationEngine.setMarketOnce(marketAddress);
     }
 
     function test_RevertWhen_MarketIsAddressZero() external givenMarketIsNotSet whenMarketIsAddressZero {
-        // it should revert with AltoPriorityLiquidationEngineInvalidInput
-        vm.expectRevert(IPriorityLiquidationEngineErrors.AltoPriorityLiquidationEngineInvalidInput.selector);
+        // it should revert with DcfDlbPriorityLiquidationEngineInvalidInput
+        vm.expectRevert(IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineInvalidInput.selector);
         liquidationEngine.setMarketOnce(address(0));
     }
 
@@ -97,8 +100,8 @@ contract SetMarketOnceTest is Test {
         // Use a non-zero address for the market parameter
         address testMarket = address(0x5678);
 
-        // it should revert with AltoPriorityLiquidationEngineLiquidationUnauthorized
-        vm.expectRevert(IPriorityLiquidationEngineErrors.AltoPriorityLiquidationEngineLiquidationUnauthorized.selector);
+        // it should revert with DcfDlbPriorityLiquidationEngineLiquidationUnauthorized
+        vm.expectRevert(IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationUnauthorized.selector);
         vm.prank(otherAddress);
         liquidationEngine.setMarketOnce(testMarket);
     }

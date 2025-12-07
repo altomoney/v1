@@ -7,10 +7,9 @@ import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 import {LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {IMarket, IMarketEvents} from "@alto/lending/interfaces/IMarket.sol";
-import {LiquidationConfiguration} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
+import {LiquidationConfiguration} from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";
 import {IrmCommon} from "./IrmCommon.t.sol";
 import {MockMarketDeployer, MockMarket} from "@alto-test/helpers/MockMarket.sol";
-import {AltoLiquidationEngine} from "@alto/lending/AltoLiquidationEngine.sol";
 
 uint256 constant MIN_AMOUNT = 1000;
 uint256 constant MAX_AMOUNT = 2 ** 64;

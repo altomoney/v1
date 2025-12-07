@@ -7,8 +7,8 @@ import {UnsafeUpgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";
 import {BorrowMarketInitParams, BaseMarketInitParams} from "@alto/lending/interfaces/IMarket.sol";
 import {ITestnetMarketBatch, TestnetMarketBatchReport} from "./ITestnetMarketBatch.sol";
-import {AltoLiquidationEngine} from "@alto/lending/AltoLiquidationEngine.sol";
-import {LiquidationConfiguration} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
+import {DlbDcfPriorityLiquidationEngine} from "@alto/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol";
+import {LiquidationConfiguration} from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";
 import {AltoOwnable2Step} from "@alto/utils/AltoOwnable2Step.sol";
 import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
 
@@ -68,7 +68,7 @@ contract TestnetBorrowMarketBatch is ITestnetMarketBatch {
 
         // Create liquidation engine before market initialization
         // Use address(this) as owner so we can set the configuration before transferring ownership
-        address liquidationEngine = address(new AltoLiquidationEngine(address(this)));
+        address liquidationEngine = address(new DlbDcfPriorityLiquidationEngine(address(this)));
 
         BaseMarketInitParams memory baseMarketInitParams = BaseMarketInitParams({
             borrowToken: _params.borrowToken,
@@ -92,7 +92,7 @@ contract TestnetBorrowMarketBatch is ITestnetMarketBatch {
             UnsafeUpgrades.deployUUPSProxy(address(market), abi.encodeCall(AltoBorrowMarket.initialize, (initParams)));
 
         // Now set liquidation configuration
-        AltoLiquidationEngine(liquidationEngine).setLiquidationConfiguration(liquidationConfig);
+        DlbDcfPriorityLiquidationEngine(liquidationEngine).setLiquidationConfiguration(liquidationConfig);
 
         // Transfer ownership to the actual owner (initiate two-step transfer)
         AltoOwnable2Step(liquidationEngine).transferOwnershipSkip2Step(_params.owner);

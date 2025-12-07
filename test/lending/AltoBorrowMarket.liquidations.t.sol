@@ -15,14 +15,14 @@ import {MockMarketDeployer, MockMarket} from "@alto-test/helpers/MockMarket.sol"
 import {console} from "forge-std/console.sol";
 import {stdError} from "forge-std/StdError.sol";
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
-import {AltoLiquidationEngine} from "@alto/lending/AltoLiquidationEngine.sol";
+import {DlbDcfPriorityLiquidationEngine} from "@alto/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol";
 import {
-    IPriorityLiquidationEngine,
-    IPriorityLiquidationEngineEvents,
-    IPriorityLiquidationEngineStaticTypes,
-    IPriorityLiquidationEngineErrors,
+    IDcfDlbPriorityLiquidationEngine,
+    IDcfDlbPriorityLiquidationEngineEvents,
+    IDcfDlbPriorityLiquidationEngineStaticTypes,
+    IDcfDlbPriorityLiquidationEngineErrors,
     LiquidationConfiguration
-} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
+} from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";
 
 contract LiquidateCallback is ILiquidateCallback {
     function onLiquidateCallback(uint256 assetsToRepay, uint256 collateralReceived, bytes calldata data) external {
@@ -119,9 +119,9 @@ contract AltoBorrowMarketTest is Test {
         vm.stopPrank();
 
         vm.startPrank(market.owner());
-        IPriorityLiquidationEngine(market.liquidationEngine()).setPriorityLiquidator(bob, true);
-        IPriorityLiquidationEngine(market.liquidationEngine()).setPriorityLiquidator(liquidator, true);
-        IPriorityLiquidationEngine(market.liquidationEngine()).setPriorityLiquidator(address(liquidateCallback), true);
+        IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).setPriorityLiquidator(bob, true);
+        IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).setPriorityLiquidator(liquidator, true);
+        IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).setPriorityLiquidator(address(liquidateCallback), true);
         vm.stopPrank();
     }
 
@@ -595,11 +595,11 @@ contract AltoBorrowMarketTest is Test {
         deal(address(borrowToken), externalLiquidator, 0.453044162158624307 ether);
         vm.startPrank(externalLiquidator);
 
-        IPriorityLiquidationEngine(market.liquidationEngine()).tagLiquidablePosition(bob, externalLiquidator);
+        IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).tagLiquidablePosition(bob, externalLiquidator);
 
         vm.warp(
             block.timestamp
-                + IPriorityLiquidationEngine(market.liquidationEngine())
+                + IDcfDlbPriorityLiquidationEngine(market.liquidationEngine())
                 .liquidationConfiguration()
                 .priorityLiquidationGracePeriod + 1
         );
@@ -738,12 +738,12 @@ contract AltoBorrowMarketTest is Test {
 
         vm.startPrank(taggerLiquidator);
         vm.expectEmit();
-        emit IPriorityLiquidationEngineEvents.PositionTagged(bob, taggerLiquidator, block.timestamp);
-        IPriorityLiquidationEngine(market.liquidationEngine()).tagLiquidablePosition(bob, taggerLiquidator);
+        emit IDcfDlbPriorityLiquidationEngineEvents.PositionTagged(bob, taggerLiquidator, block.timestamp);
+        IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).tagLiquidablePosition(bob, taggerLiquidator);
         vm.stopPrank();
 
         (bool tagged, address tagger, uint256 timestamp) =
-            IPriorityLiquidationEngineStaticTypes(market.liquidationEngine()).liquidablePositions(bob);
+            IDcfDlbPriorityLiquidationEngineStaticTypes(market.liquidationEngine()).liquidablePositions(bob);
         assertTrue(tagged);
         assertEq(tagger, taggerLiquidator);
         assertEq(timestamp, block.timestamp);
@@ -786,12 +786,12 @@ contract AltoBorrowMarketTest is Test {
 
         vm.startPrank(taggerLiquidator);
         vm.expectEmit();
-        emit IPriorityLiquidationEngineEvents.PositionTagged(bob, taggerLiquidator, block.timestamp);
-        IPriorityLiquidationEngine(market.liquidationEngine()).tagLiquidablePosition(bob, taggerLiquidator);
+        emit IDcfDlbPriorityLiquidationEngineEvents.PositionTagged(bob, taggerLiquidator, block.timestamp);
+        IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).tagLiquidablePosition(bob, taggerLiquidator);
         vm.stopPrank();
 
         LiquidationConfiguration memory liquidationConfiguration =
-            IPriorityLiquidationEngine(market.liquidationEngine()).liquidationConfiguration();
+            IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).liquidationConfiguration();
 
         vm.warp(block.timestamp + liquidationConfiguration.priorityLiquidationGracePeriod + 1);
         vm.startPrank(taggerLiquidator);
@@ -815,7 +815,7 @@ contract AltoBorrowMarketTest is Test {
         vm.stopPrank();
 
         (bool tagged, address tagger, uint256 timestamp) =
-            IPriorityLiquidationEngineStaticTypes(market.liquidationEngine()).liquidablePositions(bob);
+            IDcfDlbPriorityLiquidationEngineStaticTypes(market.liquidationEngine()).liquidablePositions(bob);
         assertFalse(tagged);
         assertEq(tagger, address(0));
         assertEq(timestamp, 0);
@@ -861,12 +861,12 @@ contract AltoBorrowMarketTest is Test {
 
         vm.startPrank(taggerLiquidator);
         vm.expectEmit();
-        emit IPriorityLiquidationEngineEvents.PositionTagged(bob, taggerLiquidator, block.timestamp);
-        IPriorityLiquidationEngine(market.liquidationEngine()).tagLiquidablePosition(bob, taggerLiquidator);
+        emit IDcfDlbPriorityLiquidationEngineEvents.PositionTagged(bob, taggerLiquidator, block.timestamp);
+        IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).tagLiquidablePosition(bob, taggerLiquidator);
         vm.stopPrank();
 
         LiquidationConfiguration memory liquidationConfiguration =
-            IPriorityLiquidationEngine(market.liquidationEngine()).liquidationConfiguration();
+            IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).liquidationConfiguration();
 
         vm.warp(
             block.timestamp + liquidationConfiguration.priorityLiquidationGracePeriod
@@ -892,7 +892,7 @@ contract AltoBorrowMarketTest is Test {
         vm.stopPrank();
 
         (bool tagged, address tagger, uint256 timestamp) =
-            IPriorityLiquidationEngineStaticTypes(market.liquidationEngine()).liquidablePositions(bob);
+            IDcfDlbPriorityLiquidationEngineStaticTypes(market.liquidationEngine()).liquidablePositions(bob);
         assertFalse(tagged);
         assertEq(tagger, address(0));
         assertEq(timestamp, 0);
@@ -981,7 +981,7 @@ contract AltoBorrowMarketTest is Test {
         // Try to liquidate as priority liquidator
         vm.startPrank(liquidator);
         vm.expectRevert(
-            IPriorityLiquidationEngineErrors.AltoPriorityLiquidationEngineLiquidatingSolventPosition.selector
+            IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidatingSolventPosition.selector
         );
         market.liquidate(bob, hex"", hex"");
         vm.stopPrank();
@@ -1017,7 +1017,7 @@ contract AltoBorrowMarketTest is Test {
 
         // Try to liquidate as non-priority liquidator
         vm.startPrank(externalLiquidator);
-        vm.expectRevert(IPriorityLiquidationEngineErrors.AltoPriorityLiquidationEngineLiquidationUnauthorized.selector);
+        vm.expectRevert(IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationUnauthorized.selector);
         market.liquidate(bob, hex"", hex"");
         vm.stopPrank();
     }
@@ -1053,11 +1053,11 @@ contract AltoBorrowMarketTest is Test {
         // Tag position
         vm.startPrank(taggerLiquidator);
         vm.expectEmit();
-        emit IPriorityLiquidationEngineEvents.PositionTagged(bob, taggerLiquidator, block.timestamp);
-        IPriorityLiquidationEngine(market.liquidationEngine()).tagLiquidablePosition(bob, taggerLiquidator);
+        emit IDcfDlbPriorityLiquidationEngineEvents.PositionTagged(bob, taggerLiquidator, block.timestamp);
+        IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).tagLiquidablePosition(bob, taggerLiquidator);
 
         // Try to liquidate immediately (before grace period)
-        vm.expectRevert(IPriorityLiquidationEngineErrors.AltoPriorityLiquidationEngineLiquidationUnauthorized.selector);
+        vm.expectRevert(IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationUnauthorized.selector);
         market.liquidate(bob, hex"", hex"");
         vm.stopPrank();
     }
@@ -1093,8 +1093,8 @@ contract AltoBorrowMarketTest is Test {
         // Tag position
         vm.startPrank(taggerLiquidator);
         vm.expectEmit();
-        emit IPriorityLiquidationEngineEvents.PositionTagged(bob, taggerLiquidator, block.timestamp);
-        IPriorityLiquidationEngine(market.liquidationEngine()).tagLiquidablePosition(bob, taggerLiquidator);
+        emit IDcfDlbPriorityLiquidationEngineEvents.PositionTagged(bob, taggerLiquidator, block.timestamp);
+        IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).tagLiquidablePosition(bob, taggerLiquidator);
         vm.stopPrank();
 
         // Warp past priority grace period but before tagger grace period
@@ -1102,7 +1102,7 @@ contract AltoBorrowMarketTest is Test {
 
         // Try to liquidate as external liquidator
         vm.startPrank(externalLiquidator);
-        vm.expectRevert(IPriorityLiquidationEngineErrors.AltoPriorityLiquidationEngineLiquidationUnauthorized.selector);
+        vm.expectRevert(IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationUnauthorized.selector);
         market.liquidate(bob, hex"", hex"");
         vm.stopPrank();
     }
@@ -1137,20 +1137,20 @@ contract AltoBorrowMarketTest is Test {
 
         vm.startPrank(taggerLiquidator);
         vm.expectEmit();
-        emit IPriorityLiquidationEngineEvents.PositionTagged(bob, taggerLiquidator, block.timestamp);
-        IPriorityLiquidationEngine(market.liquidationEngine()).tagLiquidablePosition(bob, taggerLiquidator);
+        emit IDcfDlbPriorityLiquidationEngineEvents.PositionTagged(bob, taggerLiquidator, block.timestamp);
+        IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).tagLiquidablePosition(bob, taggerLiquidator);
         vm.stopPrank();
 
         vm.warp(
             block.timestamp
-                + IPriorityLiquidationEngine(market.liquidationEngine()).liquidationConfiguration().liquidationWindowTag
+                + IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).liquidationConfiguration().liquidationWindowTag
                 + 1
         );
 
         vm.startPrank(alice);
         vm.expectEmit();
-        emit IPriorityLiquidationEngineEvents.PositionTagged(bob, alice, block.timestamp);
-        IPriorityLiquidationEngine(market.liquidationEngine()).tagLiquidablePosition(bob, alice);
+        emit IDcfDlbPriorityLiquidationEngineEvents.PositionTagged(bob, alice, block.timestamp);
+        IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).tagLiquidablePosition(bob, alice);
         vm.stopPrank();
     }
 
@@ -1182,16 +1182,16 @@ contract AltoBorrowMarketTest is Test {
 
         market.addInterest(0.4 ether);
 
-        IPriorityLiquidationEngine liquidationEngine = IPriorityLiquidationEngine(market.liquidationEngine());
+        IDcfDlbPriorityLiquidationEngine liquidationEngine = IDcfDlbPriorityLiquidationEngine(market.liquidationEngine());
 
         vm.startPrank(taggerLiquidator);
         vm.expectEmit();
-        emit IPriorityLiquidationEngineEvents.PositionTagged(bob, taggerLiquidator, block.timestamp);
+        emit IDcfDlbPriorityLiquidationEngineEvents.PositionTagged(bob, taggerLiquidator, block.timestamp);
         liquidationEngine.tagLiquidablePosition(bob, taggerLiquidator);
         vm.stopPrank();
 
         vm.startPrank(alice);
-        vm.expectRevert(IPriorityLiquidationEngineErrors.AltoPriorityLiquidationEngineLiquidationAlreadyTagged.selector);
+        vm.expectRevert(IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationAlreadyTagged.selector);
         liquidationEngine.tagLiquidablePosition(bob, alice);
         vm.stopPrank();
     }

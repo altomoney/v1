@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {AltoBaseMarketUpgraded} from "./AltoBaseMarketUpgraded.sol";
-import {LiquidationConfiguration} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
+import {LiquidationConfiguration} from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";
 import {BaseMarketInitParams, BorrowMarketInitParams, MarketType} from "@alto/lending/interfaces/IMarket.sol";
 import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 

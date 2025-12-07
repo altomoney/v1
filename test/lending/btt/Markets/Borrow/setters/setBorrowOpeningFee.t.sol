@@ -4,11 +4,13 @@ pragma solidity ^0.8.28;
 import {MarketType, MarketCommon} from "../../MarketCommon.t.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IMarketErrors, IMarketEvents} from "@alto/lending/interfaces/IMarket.sol";
-import {LiquidationConfiguration} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
+import {
+    IDcfDlbPriorityLiquidationEngine,
+    LiquidationConfiguration
+} from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";
 import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";
-import {AltoLiquidationEngine} from "@alto/lending/AltoLiquidationEngine.sol";
-import {IPriorityLiquidationEngine} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
+import {DlbDcfPriorityLiquidationEngine} from "@alto/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol";
 
 contract SetBorrowOpeningFeeTestBorrow is MarketCommon {
     AltoBorrowMarket public borrowMarket;
@@ -54,9 +56,10 @@ contract SetBorrowOpeningFeeTestBorrow is MarketCommon {
 
     function test_RevertWhen_FeeRecipientIsNotSetAndBorrowOpeningFeeIsGreaterThan0() external whenCallerIsOwner {
         LiquidationConfiguration memory liquidationConfiguration =
-            IPriorityLiquidationEngine(borrowMarket.liquidationEngine()).liquidationConfiguration();
+            IDcfDlbPriorityLiquidationEngine(borrowMarket.liquidationEngine()).liquidationConfiguration();
         liquidationConfiguration.protocolFeePercentage = 0;
-        IPriorityLiquidationEngine(borrowMarket.liquidationEngine()).setLiquidationConfiguration(liquidationConfiguration);
+        IDcfDlbPriorityLiquidationEngine(borrowMarket.liquidationEngine())
+            .setLiquidationConfiguration(liquidationConfiguration);
         borrowMarket.setBorrowOpeningFee(0);
         borrowMarket.setIrm(address(0), false);
         borrowMarket.setFeeRecipient(address(0));

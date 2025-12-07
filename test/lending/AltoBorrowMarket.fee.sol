@@ -11,11 +11,11 @@ import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
 import {FixedPointMath, MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 import {MockMarketDeployer, MockMarket} from "@alto-test/helpers/MockMarket.sol";
-import {AltoLiquidationEngine} from "@alto/lending/AltoLiquidationEngine.sol";
+import {DlbDcfPriorityLiquidationEngine} from "@alto/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol";
 import {
-    IPriorityLiquidationEngine,
+    IDcfDlbPriorityLiquidationEngine,
     LiquidationConfiguration
-} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
+} from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";
 
 contract AltoBorrowMarketFeeTest is Test {
     using FixedPointMath for uint256;

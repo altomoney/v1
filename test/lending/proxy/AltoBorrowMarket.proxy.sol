@@ -9,14 +9,16 @@ import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 import {LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {MarketDeployer} from "@alto-test/helpers/MarketDeployer.sol";
 import {BorrowMarketInitParams, BaseMarketInitParams, Balance, Position} from "@alto/lending/interfaces/IMarket.sol";
-import {LiquidationConfiguration} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
+import {
+    IDcfDlbPriorityLiquidationEngine,
+    LiquidationConfiguration
+} from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";
 import {PAUSE_TYPE, FROZEN_TYPE} from "@alto/utils/Constants.sol";
 import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {UnsafeUpgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
-import {AltoLiquidationEngine} from "@alto/lending/AltoLiquidationEngine.sol";
-import {IPriorityLiquidationEngine} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
+import {DlbDcfPriorityLiquidationEngine} from "@alto/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol";
 import {AltoBaseMarket} from "@alto/lending/AltoBaseMarket.sol";
 
 import {AltoBorrowMarketUpgraded} from "./contracts/AltoBorrowMarketUpgraded.sol";
@@ -59,7 +61,7 @@ contract AltoBorrowMarketProxyTest is Test {
         // Liquidation engine will be set after market deployment
 
         // Create liquidation engine before market deployment
-        address liquidationEngine = address(new AltoLiquidationEngine(OWNER));
+        address liquidationEngine = address(new DlbDcfPriorityLiquidationEngine(OWNER));
 
         BaseMarketInitParams memory baseMarketInitParams = BaseMarketInitParams({
             borrowToken: address(borrowToken),
@@ -83,7 +85,7 @@ contract AltoBorrowMarketProxyTest is Test {
 
         // Market initialization automatically calls setMarketOnce on the liquidation engine
         vm.startPrank(OWNER);
-        IPriorityLiquidationEngine(liquidationEngine).setLiquidationConfiguration(liquidationConfig);
+        IDcfDlbPriorityLiquidationEngine(liquidationEngine).setLiquidationConfiguration(liquidationConfig);
 
         market.setPauser(PAUSER, PAUSE_TYPE, true);
         market.setPauser(PAUSER, FROZEN_TYPE, true);
@@ -137,7 +139,7 @@ contract AltoBorrowMarketProxyTest is Test {
             maxLtv: market.maxLtv(),
             borrowOpeningFee: market.borrowOpeningFee(),
             feeRecipient: market.feeRecipient(),
-            liquidationConfiguration: IPriorityLiquidationEngine(market.liquidationEngine()).liquidationConfiguration()
+            liquidationConfiguration: IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).liquidationConfiguration()
         });
     }
 

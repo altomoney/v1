@@ -5,7 +5,12 @@ import {MarketCommon, MarketType} from "./MarketCommon.t.sol";
 import {IPausable} from "@alto/utils/Pausable.sol";
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 import {IMarketErrors, IMarketEvents, Position, Balance} from "@alto/lending/interfaces/IMarket.sol";
-import {LiquidablePosition, LiquidationConfiguration} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
+import {
+    IDcfDlbPriorityLiquidationEngine,
+    IDcfDlbPriorityLiquidationEngineErrors,
+    LiquidablePosition,
+    LiquidationConfiguration
+} from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {AltoMintMarket} from "@alto/lending/AltoMintMarket.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
@@ -13,11 +18,7 @@ import {Uint128Converter} from "@alto/lending/libraries/Uint128Converter.sol";
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {ILiquidateCallback} from "@alto/lending/interfaces/IMarketCallbacks.sol";
 import {IOracle, LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
-import {AltoLiquidationEngine} from "@alto/lending/AltoLiquidationEngine.sol";
-import {
-    IPriorityLiquidationEngine,
-    IPriorityLiquidationEngineErrors
-} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
+import {DlbDcfPriorityLiquidationEngine} from "@alto/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol";
 
 contract LiquidateCallback is ILiquidateCallback {
     event LiquidateCallbackCalled(uint256 assetsToRepay, uint256 collateralReceived, bytes data);
@@ -70,9 +71,9 @@ contract AltoBorrowMarketliquidate is MarketCommon {
         market.addCollateral(1 ether, USER);
         market.borrow(0.5 ether, 0, USER, USER, "");
 
-        // it should revert with AltoPriorityLiquidationEngineLiquidatingSolventPosition
+        // it should revert with DcfDlbPriorityLiquidationEngineLiquidatingSolventPosition
         vm.expectRevert(
-            IPriorityLiquidationEngineErrors.AltoPriorityLiquidationEngineLiquidatingSolventPosition.selector
+            IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidatingSolventPosition.selector
         );
         market.liquidate(USER, hex"", hex"");
     }
@@ -80,7 +81,7 @@ contract AltoBorrowMarketliquidate is MarketCommon {
     modifier givenPositionIsInsolvent() {
         vm.startPrank(OWNER);
         market.setIrm(address(new FixedRateIrm(8 ether / uint256(365 days), address(this))), false);
-        IPriorityLiquidationEngine(market.liquidationEngine()).setPriorityLiquidator(PRIORITY_LIQUIDATOR, true);
+        IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).setPriorityLiquidator(PRIORITY_LIQUIDATOR, true);
         vm.stopPrank();
 
         deal(address(collateralToken), address(this), 100 ether);
@@ -122,13 +123,13 @@ contract AltoBorrowMarketliquidate is MarketCommon {
         whenCurrentLTVIsBelowDisablePriorityLiquidationThreshold
         whenLiquidatorIsNotPriorityLiquidator
     {
-        // it should revert with AltoPriorityLiquidationEngineLiquidationUnauthorized
-        vm.expectRevert(IPriorityLiquidationEngineErrors.AltoPriorityLiquidationEngineLiquidationUnauthorized.selector);
+        // it should revert with DcfDlbPriorityLiquidationEngineLiquidationUnauthorized
+        vm.expectRevert(IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationUnauthorized.selector);
         market.liquidate(USER, hex"", hex"");
     }
 
     modifier whenPositionIsTagged() {
-        IPriorityLiquidationEngine(market.liquidationEngine()).tagLiquidablePosition(USER, TAGGER);
+        IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).tagLiquidablePosition(USER, TAGGER);
         _;
     }
 
@@ -142,15 +143,15 @@ contract AltoBorrowMarketliquidate is MarketCommon {
     {
         // Advance time beyond liquidationWindowTag
         uint32 liquidationWindowTag =
-            IPriorityLiquidationEngine(market.liquidationEngine()).liquidationConfiguration().liquidationWindowTag;
+            IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).liquidationConfiguration().liquidationWindowTag;
         vm.warp(block.timestamp + liquidationWindowTag + 1);
 
         deal(address(borrowToken), EXTERNAL_LIQUIDATOR, 1 ether);
         vm.startPrank(EXTERNAL_LIQUIDATOR);
         borrowToken.approve(address(market), 1 ether);
 
-        // it should revert with AltoPriorityLiquidationEngineLiquidationUnauthorized
-        vm.expectRevert(IPriorityLiquidationEngineErrors.AltoPriorityLiquidationEngineLiquidationUnauthorized.selector);
+        // it should revert with DcfDlbPriorityLiquidationEngineLiquidationUnauthorized
+        vm.expectRevert(IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationUnauthorized.selector);
         market.liquidate(USER, hex"", hex"");
         vm.stopPrank();
     }
@@ -173,8 +174,8 @@ contract AltoBorrowMarketliquidate is MarketCommon {
         whenLiquidationWindowTagHasNotElapsedSinceTagWasSet
         whenLiquidatorIsTheTagger
     {
-        // it should revert with AltoPriorityLiquidationEngineLiquidationUnauthorized
-        vm.expectRevert(IPriorityLiquidationEngineErrors.AltoPriorityLiquidationEngineLiquidationUnauthorized.selector);
+        // it should revert with DcfDlbPriorityLiquidationEngineLiquidationUnauthorized
+        vm.expectRevert(IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationUnauthorized.selector);
         market.liquidate(USER, hex"", hex"");
     }
 
@@ -190,7 +191,7 @@ contract AltoBorrowMarketliquidate is MarketCommon {
     {
         // Skip grace period but ensure we don't exceed liquidationWindowTag
         LiquidationConfiguration memory config =
-            IPriorityLiquidationEngine(market.liquidationEngine()).liquidationConfiguration();
+            IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).liquidationConfiguration();
         uint32 priorityLiquidationGracePeriod = config.priorityLiquidationGracePeriod;
         uint32 liquidationWindowTag = config.liquidationWindowTag;
         // Advance time by grace period, but ensure we're still within liquidationWindowTag
@@ -227,8 +228,8 @@ contract AltoBorrowMarketliquidate is MarketCommon {
         whenLiquidationWindowTagHasNotElapsedSinceTagWasSet
         whenLiquidatorIsNotTheTagger
     {
-        // it should revert with AltoPriorityLiquidationEngineLiquidationUnauthorized
-        vm.expectRevert(IPriorityLiquidationEngineErrors.AltoPriorityLiquidationEngineLiquidationUnauthorized.selector);
+        // it should revert with DcfDlbPriorityLiquidationEngineLiquidationUnauthorized
+        vm.expectRevert(IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationUnauthorized.selector);
         market.liquidate(USER, hex"", hex"");
     }
 
@@ -244,7 +245,7 @@ contract AltoBorrowMarketliquidate is MarketCommon {
     {
         // Skip combined grace periods but ensure we don't exceed liquidationWindowTag
         LiquidationConfiguration memory config =
-            IPriorityLiquidationEngine(market.liquidationEngine()).liquidationConfiguration();
+            IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).liquidationConfiguration();
         uint32 priorityLiquidationGracePeriod = config.priorityLiquidationGracePeriod;
         uint32 taggerLiquidationGracePeriod = config.taggerLiquidationGracePeriod;
         uint32 liquidationWindowTag = config.liquidationWindowTag;
@@ -295,10 +296,10 @@ contract AltoBorrowMarketliquidate is MarketCommon {
         whenPriorityLiquidationIsEnabled
     {
         LiquidationConfiguration memory config =
-            IPriorityLiquidationEngine(market.liquidationEngine()).liquidationConfiguration();
+            IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).liquidationConfiguration();
         config.disablePriorityLiquidationAbovePositionLtv = 1 ether; // if LTV is over 100%
         vm.startPrank(OWNER);
-        AltoLiquidationEngine(market.liquidationEngine()).setLiquidationConfiguration(config);
+        IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).setLiquidationConfiguration(config);
         vm.stopPrank();
 
         market.accrueInterest();
@@ -306,7 +307,7 @@ contract AltoBorrowMarketliquidate is MarketCommon {
         uint256 currentLtv = getCurrentLtv(USER);
         assertGt(
             currentLtv,
-            IPriorityLiquidationEngine(market.liquidationEngine())
+            IDcfDlbPriorityLiquidationEngine(market.liquidationEngine())
             .liquidationConfiguration()
             .disablePriorityLiquidationAbovePositionLtv
         );
@@ -334,9 +335,9 @@ contract AltoBorrowMarketliquidate is MarketCommon {
     function test_WhenPriorityLiquidationIsDisabled() external givenPositionIsInsolvent {
         vm.startPrank(OWNER);
         LiquidationConfiguration memory config =
-            IPriorityLiquidationEngine(market.liquidationEngine()).liquidationConfiguration();
+            IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).liquidationConfiguration();
         config.isEnabledPriorityLiquidation = false;
-        AltoLiquidationEngine(market.liquidationEngine()).setLiquidationConfiguration(config);
+        IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).setLiquidationConfiguration(config);
         vm.stopPrank();
 
         deal(address(borrowToken), LIQUIDATOR, 1 ether);
@@ -389,7 +390,7 @@ contract AltoBorrowMarketliquidate is MarketCommon {
     modifier givenMaxLtvPosition() {
         vm.startPrank(OWNER);
         market.setIrm(address(new FixedRateIrm(8 ether / uint256(365 days), address(this))), false);
-        IPriorityLiquidationEngine(market.liquidationEngine()).setPriorityLiquidator(PRIORITY_LIQUIDATOR, true);
+        IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).setPriorityLiquidator(PRIORITY_LIQUIDATOR, true);
         vm.stopPrank();
 
         deal(address(collateralToken), address(this), 100 ether);
@@ -411,16 +412,16 @@ contract AltoBorrowMarketliquidate is MarketCommon {
     function test_WhenPriorityLiquidationIsEnabledAndCurrentLTVIsBelowThreshold() external givenMaxLtvPosition {
         vm.startPrank(OWNER);
         LiquidationConfiguration memory config =
-            IPriorityLiquidationEngine(market.liquidationEngine()).liquidationConfiguration();
+            IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).liquidationConfiguration();
         config.disablePriorityLiquidationAbovePositionLtv = 0.95 ether;
-        AltoLiquidationEngine(market.liquidationEngine()).setLiquidationConfiguration(config);
+        IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).setLiquidationConfiguration(config);
         vm.stopPrank();
 
         vm.warp(block.timestamp + 10 days);
         market.accrueInterest();
 
         LiquidationConfiguration memory configAfter =
-            IPriorityLiquidationEngine(market.liquidationEngine()).liquidationConfiguration();
+            IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).liquidationConfiguration();
         uint256 currentLtv = getCurrentLtv(USER);
         assertGt(currentLtv, configAfter.maxLiquidationLtv);
         assertLt(currentLtv, configAfter.disablePriorityLiquidationAbovePositionLtv);
@@ -428,15 +429,15 @@ contract AltoBorrowMarketliquidate is MarketCommon {
         vm.startPrank(LIQUIDATOR);
         deal(address(borrowToken), LIQUIDATOR, 1 ether);
         borrowToken.approve(address(market), 1 ether);
-        vm.expectRevert(IPriorityLiquidationEngineErrors.AltoPriorityLiquidationEngineLiquidationUnauthorized.selector);
+        vm.expectRevert(IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationUnauthorized.selector);
         market.liquidate(USER, hex"", hex"");
         vm.stopPrank();
 
         // Tag position first
-        IPriorityLiquidationEngine(market.liquidationEngine()).tagLiquidablePosition(USER, TAGGER);
+        IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).tagLiquidablePosition(USER, TAGGER);
         vm.warp(
             block.timestamp
-                + IPriorityLiquidationEngine(market.liquidationEngine())
+                + IDcfDlbPriorityLiquidationEngine(market.liquidationEngine())
                 .liquidationConfiguration()
                 .priorityLiquidationGracePeriod + 1
         );
@@ -452,7 +453,7 @@ contract AltoBorrowMarketliquidate is MarketCommon {
         vm.stopPrank();
 
         LiquidablePosition memory liquidablePosition =
-            IPriorityLiquidationEngine(market.liquidationEngine()).liquidablePositions(USER);
+            IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).liquidablePositions(USER);
         assertFalse(liquidablePosition.tagged);
     }
 

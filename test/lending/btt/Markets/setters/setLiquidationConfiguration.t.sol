@@ -4,14 +4,14 @@ pragma solidity ^0.8.28;
 import {MarketCommon, MarketType} from "../MarketCommon.t.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IMarketErrors, IMarketEvents} from "@alto/lending/interfaces/IMarket.sol";
-import {LiquidationConfiguration} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
-import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
-import {AltoLiquidationEngine} from "@alto/lending/AltoLiquidationEngine.sol";
 import {
-    IPriorityLiquidationEngine,
-    IPriorityLiquidationEngineEvents,
-    IPriorityLiquidationEngineErrors
-} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
+    IDcfDlbPriorityLiquidationEngine,
+    IDcfDlbPriorityLiquidationEngineEvents,
+    IDcfDlbPriorityLiquidationEngineErrors,
+    LiquidationConfiguration
+} from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";
+import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
+import {DlbDcfPriorityLiquidationEngine} from "@alto/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol";
 
 contract AltoMarketSetLiquidationConfiguration is MarketCommon {
     constructor(MarketType _marketType) MarketCommon(_marketType) {}
@@ -32,7 +32,7 @@ contract AltoMarketSetLiquidationConfiguration is MarketCommon {
     });
 
     function test_RevertWhen_CallerIsNotOwner() external {
-        IPriorityLiquidationEngine liquidationEngine = IPriorityLiquidationEngine(market.liquidationEngine());
+        IDcfDlbPriorityLiquidationEngine liquidationEngine = IDcfDlbPriorityLiquidationEngine(market.liquidationEngine());
         // it should revert
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, address(this)));
         liquidationEngine.setLiquidationConfiguration(VALID_CONFIGURATION);
@@ -46,12 +46,12 @@ contract AltoMarketSetLiquidationConfiguration is MarketCommon {
 
     function test_WhenCallerIsOwner() external whenCallerIsOwner {
         LiquidationConfiguration memory oldLiquidationConfiguration =
-            IPriorityLiquidationEngine(market.liquidationEngine()).liquidationConfiguration();
+            IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).liquidationConfiguration();
 
         // it should emit SetLiquidationConfiguration event
-        IPriorityLiquidationEngine liquidationEngine = IPriorityLiquidationEngine(market.liquidationEngine());
+        IDcfDlbPriorityLiquidationEngine liquidationEngine = IDcfDlbPriorityLiquidationEngine(market.liquidationEngine());
         vm.expectEmit();
-        emit IPriorityLiquidationEngineEvents.SetLiquidationConfiguration(
+        emit IDcfDlbPriorityLiquidationEngineEvents.SetLiquidationConfiguration(
             oldLiquidationConfiguration, VALID_CONFIGURATION
         );
         liquidationEngine.setLiquidationConfiguration(VALID_CONFIGURATION);
@@ -74,47 +74,57 @@ contract AltoMarketSetLiquidationConfiguration is MarketCommon {
     }
 
     function test_RevertWhen_MaxLiquidationLtvIsLessThanMaxLtv() external whenCallerIsOwner {
-        IPriorityLiquidationEngine liquidationEngine = IPriorityLiquidationEngine(market.liquidationEngine());
+        IDcfDlbPriorityLiquidationEngine liquidationEngine = IDcfDlbPriorityLiquidationEngine(market.liquidationEngine());
         LiquidationConfiguration memory liquidationConfiguration = liquidationEngine.liquidationConfiguration();
         liquidationConfiguration.maxLiquidationLtv = market.maxLtv() - 1;
 
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(IPriorityLiquidationEngineErrors.AltoPriorityLiquidationEngineInvalidInput.selector));
+        vm.expectRevert(
+            abi.encodeWithSelector(IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineInvalidInput.selector)
+        );
         liquidationEngine.setLiquidationConfiguration(liquidationConfiguration);
     }
 
     function test_RevertWhen_LtvForCompleteLiquidationIsLessThanMaxLiquidationLtv() external whenCallerIsOwner {
-        IPriorityLiquidationEngine liquidationEngine = IPriorityLiquidationEngine(market.liquidationEngine());
+        IDcfDlbPriorityLiquidationEngine liquidationEngine = IDcfDlbPriorityLiquidationEngine(market.liquidationEngine());
         LiquidationConfiguration memory liquidationConfiguration = liquidationEngine.liquidationConfiguration();
         liquidationConfiguration.ltvForCompleteLiquidation = liquidationConfiguration.maxLiquidationLtv - 1;
 
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(IPriorityLiquidationEngineErrors.AltoPriorityLiquidationEngineInvalidInput.selector));
+        vm.expectRevert(
+            abi.encodeWithSelector(IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineInvalidInput.selector)
+        );
         liquidationEngine.setLiquidationConfiguration(liquidationConfiguration);
     }
 
     function test_RevertWhen_LtvForCompleteLiquidationIsGreaterThanMATH_PRECISION() external whenCallerIsOwner {
-        IPriorityLiquidationEngine liquidationEngine = IPriorityLiquidationEngine(market.liquidationEngine());
+        IDcfDlbPriorityLiquidationEngine liquidationEngine = IDcfDlbPriorityLiquidationEngine(market.liquidationEngine());
         LiquidationConfiguration memory liquidationConfiguration = liquidationEngine.liquidationConfiguration();
         liquidationConfiguration.ltvForCompleteLiquidation = MATH_PRECISION + 1;
 
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(IPriorityLiquidationEngineErrors.AltoPriorityLiquidationEngineInvalidInput.selector));
+        vm.expectRevert(
+            abi.encodeWithSelector(IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineInvalidInput.selector)
+        );
         liquidationEngine.setLiquidationConfiguration(liquidationConfiguration);
     }
 
     function test_RevertWhen_DynamicBonusFeeDecaySteepnessIsInvalid() external whenCallerIsOwner {
-        IPriorityLiquidationEngine liquidationEngine = IPriorityLiquidationEngine(market.liquidationEngine());
+        IDcfDlbPriorityLiquidationEngine liquidationEngine = IDcfDlbPriorityLiquidationEngine(market.liquidationEngine());
         LiquidationConfiguration memory liquidationConfiguration = liquidationEngine.liquidationConfiguration();
         liquidationConfiguration.dynamicBonusFeeDecaySteepness = 100 * MATH_PRECISION + 1;
 
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(IPriorityLiquidationEngineErrors.AltoPriorityLiquidationEngineInvalidInput.selector));
+        vm.expectRevert(
+            abi.encodeWithSelector(IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineInvalidInput.selector)
+        );
         liquidationEngine.setLiquidationConfiguration(liquidationConfiguration);
 
         liquidationConfiguration.dynamicBonusFeeDecaySteepness = 0;
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(IPriorityLiquidationEngineErrors.AltoPriorityLiquidationEngineInvalidInput.selector));
+        vm.expectRevert(
+            abi.encodeWithSelector(IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineInvalidInput.selector)
+        );
         liquidationEngine.setLiquidationConfiguration(liquidationConfiguration);
     }
 
@@ -122,13 +132,15 @@ contract AltoMarketSetLiquidationConfiguration is MarketCommon {
         external
         whenCallerIsOwner
     {
-        IPriorityLiquidationEngine liquidationEngine = IPriorityLiquidationEngine(market.liquidationEngine());
+        IDcfDlbPriorityLiquidationEngine liquidationEngine = IDcfDlbPriorityLiquidationEngine(market.liquidationEngine());
         LiquidationConfiguration memory liquidationConfiguration = liquidationEngine.liquidationConfiguration();
         liquidationConfiguration.dynamicBonusFeeStart = 0.09 ether;
         liquidationConfiguration.liquidationBaseFee = 0.15 ether - 0.09 ether + 1;
 
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(IPriorityLiquidationEngineErrors.AltoPriorityLiquidationEngineInvalidInput.selector));
+        vm.expectRevert(
+            abi.encodeWithSelector(IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineInvalidInput.selector)
+        );
         liquidationEngine.setLiquidationConfiguration(liquidationConfiguration);
     }
 
@@ -136,38 +148,44 @@ contract AltoMarketSetLiquidationConfiguration is MarketCommon {
         external
         whenCallerIsOwner
     {
-        IPriorityLiquidationEngine liquidationEngine = IPriorityLiquidationEngine(market.liquidationEngine());
+        IDcfDlbPriorityLiquidationEngine liquidationEngine = IDcfDlbPriorityLiquidationEngine(market.liquidationEngine());
         LiquidationConfiguration memory liquidationConfiguration = liquidationEngine.liquidationConfiguration();
         liquidationConfiguration.dynamicBonusFeeStart = 0;
         liquidationConfiguration.liquidationBaseFee = 1 ether - liquidationConfiguration.maxLiquidationLtv + 1;
 
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(IPriorityLiquidationEngineErrors.AltoPriorityLiquidationEngineInvalidInput.selector));
+        vm.expectRevert(
+            abi.encodeWithSelector(IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineInvalidInput.selector)
+        );
         liquidationEngine.setLiquidationConfiguration(liquidationConfiguration);
     }
 
     function test_RevertWhen_MinPenaltyPercentageIsGreaterThanMATH_PRECISION() external whenCallerIsOwner {
-        IPriorityLiquidationEngine liquidationEngine = IPriorityLiquidationEngine(market.liquidationEngine());
+        IDcfDlbPriorityLiquidationEngine liquidationEngine = IDcfDlbPriorityLiquidationEngine(market.liquidationEngine());
         LiquidationConfiguration memory liquidationConfiguration = liquidationEngine.liquidationConfiguration();
         liquidationConfiguration.minPenaltyPercentage = MATH_PRECISION + 1;
 
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(IPriorityLiquidationEngineErrors.AltoPriorityLiquidationEngineInvalidInput.selector));
+        vm.expectRevert(
+            abi.encodeWithSelector(IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineInvalidInput.selector)
+        );
         liquidationEngine.setLiquidationConfiguration(liquidationConfiguration);
     }
 
     function test_RevertWhen_ProtocolFeePercentageIsGreaterThanMATH_PRECISION() external whenCallerIsOwner {
-        IPriorityLiquidationEngine liquidationEngine = IPriorityLiquidationEngine(market.liquidationEngine());
+        IDcfDlbPriorityLiquidationEngine liquidationEngine = IDcfDlbPriorityLiquidationEngine(market.liquidationEngine());
         LiquidationConfiguration memory liquidationConfiguration = liquidationEngine.liquidationConfiguration();
         liquidationConfiguration.protocolFeePercentage = MATH_PRECISION + 1;
 
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(IPriorityLiquidationEngineErrors.AltoPriorityLiquidationEngineInvalidInput.selector));
+        vm.expectRevert(
+            abi.encodeWithSelector(IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineInvalidInput.selector)
+        );
         liquidationEngine.setLiquidationConfiguration(liquidationConfiguration);
     }
 
     function test_RevertWhen_FeeRecipientIsNotSetAndProtocolFeePercentageIsMoreThan0() external whenCallerIsOwner {
-        IPriorityLiquidationEngine liquidationEngine = IPriorityLiquidationEngine(market.liquidationEngine());
+        IDcfDlbPriorityLiquidationEngine liquidationEngine = IDcfDlbPriorityLiquidationEngine(market.liquidationEngine());
         LiquidationConfiguration memory liquidationConfigurationPre = liquidationEngine.liquidationConfiguration();
         LiquidationConfiguration memory liquidationConfiguration = liquidationEngine.liquidationConfiguration();
 
@@ -179,49 +197,59 @@ contract AltoMarketSetLiquidationConfiguration is MarketCommon {
         liquidationConfiguration.protocolFeePercentage = 0.01 ether;
 
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(IPriorityLiquidationEngineErrors.AltoPriorityLiquidationEngineInvalidInput.selector));
+        vm.expectRevert(
+            abi.encodeWithSelector(IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineInvalidInput.selector)
+        );
         liquidationEngine.setLiquidationConfiguration(liquidationConfiguration);
     }
 
     function test_RevertWhen_PriorityLiquidationGracePeriodIsGreaterThan1Hour() external whenCallerIsOwner {
-        IPriorityLiquidationEngine liquidationEngine = IPriorityLiquidationEngine(market.liquidationEngine());
+        IDcfDlbPriorityLiquidationEngine liquidationEngine = IDcfDlbPriorityLiquidationEngine(market.liquidationEngine());
         LiquidationConfiguration memory liquidationConfiguration = liquidationEngine.liquidationConfiguration();
         liquidationConfiguration.priorityLiquidationGracePeriod = 1 hours + 1;
 
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(IPriorityLiquidationEngineErrors.AltoPriorityLiquidationEngineInvalidInput.selector));
+        vm.expectRevert(
+            abi.encodeWithSelector(IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineInvalidInput.selector)
+        );
         liquidationEngine.setLiquidationConfiguration(liquidationConfiguration);
     }
 
     function test_RevertWhen_TaggerLiquidationGracePeriodIsGreaterThan30Minutes() external whenCallerIsOwner {
-        IPriorityLiquidationEngine liquidationEngine = IPriorityLiquidationEngine(market.liquidationEngine());
+        IDcfDlbPriorityLiquidationEngine liquidationEngine = IDcfDlbPriorityLiquidationEngine(market.liquidationEngine());
         LiquidationConfiguration memory liquidationConfiguration = liquidationEngine.liquidationConfiguration();
         liquidationConfiguration.taggerLiquidationGracePeriod = 30 minutes + 1;
 
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(IPriorityLiquidationEngineErrors.AltoPriorityLiquidationEngineInvalidInput.selector));
+        vm.expectRevert(
+            abi.encodeWithSelector(IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineInvalidInput.selector)
+        );
         liquidationEngine.setLiquidationConfiguration(liquidationConfiguration);
     }
 
     function test_RevertWhen_LiquidationWindowTagIsGreaterThan3Days() external whenCallerIsOwner {
-        IPriorityLiquidationEngine liquidationEngine = IPriorityLiquidationEngine(market.liquidationEngine());
+        IDcfDlbPriorityLiquidationEngine liquidationEngine = IDcfDlbPriorityLiquidationEngine(market.liquidationEngine());
         LiquidationConfiguration memory liquidationConfiguration = liquidationEngine.liquidationConfiguration();
         liquidationConfiguration.liquidationWindowTag = 3 days + 1;
 
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(IPriorityLiquidationEngineErrors.AltoPriorityLiquidationEngineInvalidInput.selector));
+        vm.expectRevert(
+            abi.encodeWithSelector(IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineInvalidInput.selector)
+        );
         liquidationEngine.setLiquidationConfiguration(liquidationConfiguration);
     }
 
     function test_RevertWhen_GracePeriodsSumIsGreaterThanLiquidationWindowTag() external whenCallerIsOwner {
-        IPriorityLiquidationEngine liquidationEngine = IPriorityLiquidationEngine(market.liquidationEngine());
+        IDcfDlbPriorityLiquidationEngine liquidationEngine = IDcfDlbPriorityLiquidationEngine(market.liquidationEngine());
         LiquidationConfiguration memory liquidationConfiguration = liquidationEngine.liquidationConfiguration();
         liquidationConfiguration.priorityLiquidationGracePeriod = 1 hours;
         liquidationConfiguration.taggerLiquidationGracePeriod = 30 minutes;
         liquidationConfiguration.liquidationWindowTag = 1 hours;
 
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(IPriorityLiquidationEngineErrors.AltoPriorityLiquidationEngineInvalidInput.selector));
+        vm.expectRevert(
+            abi.encodeWithSelector(IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineInvalidInput.selector)
+        );
         liquidationEngine.setLiquidationConfiguration(liquidationConfiguration);
     }
 }

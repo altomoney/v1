@@ -4,13 +4,13 @@ AltoBaseMarket::TagLiquidablePosition()
 ├── when priority liquidation is disabled
 │   └── it should revert
 ├── given user position is solvent
-│   └── it should revert with AltoPriorityLiquidationEngineLiquidatingSolventPosition
+│   └── it should revert with DlbDcfPriorityLiquidationEngineLiquidatingSolventPosition
 └── given user position is not solvent
     ├── when liquidator is a priority liquidator
-    │   └── it should revert with AltoPriorityLiquidationEngineLiquidationUnauthorized
+    │   └── it should revert with DlbDcfPriorityLiquidationEngineLiquidationUnauthorized
     ├── when user has already been tagged
     │   ├── when liquidationWindowTag has not expired
-    │   │   └── it should revert with AltoPriorityLiquidationEngineLiquidationAlreadyTagged
+    │   │   └── it should revert with DlbDcfPriorityLiquidationEngineLiquidationAlreadyTagged
     │   └── when liquidationWindowTag has expired
     │       ├── it should emit AccrueInterest event
     │       ├── it should update liquidablePositions

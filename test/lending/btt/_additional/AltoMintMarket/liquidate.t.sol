@@ -14,15 +14,15 @@ import {LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.s
 
 import {AltoMintMarket} from "@alto/lending/AltoMintMarket.sol";
 import {BaseMarketInitParams, MintMarketInitParams} from "@alto/lending/interfaces/IMarket.sol";
-import {LiquidationConfiguration} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
+import {
+    IDcfDlbPriorityLiquidationEngine,
+    IDcfDlbPriorityLiquidationEngineErrors,
+    LiquidationConfiguration
+} from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";
 import {IMarketErrors} from "@alto/lending/interfaces/IMarket.sol";
 import {IMintableERC20} from "@alto/lending/interfaces/IMintableERC20.sol";
 import {MarketDeployer} from "@alto-test/helpers/MarketDeployer.sol";
-import {
-    IPriorityLiquidationEngine,
-    IPriorityLiquidationEngineErrors
-} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
-import {AltoLiquidationEngine} from "@alto/lending/AltoLiquidationEngine.sol";
+import {DlbDcfPriorityLiquidationEngine} from "@alto/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol";
 
 contract MintableERC20Mock is ERC20, IMintableERC20 {
     constructor(string memory name, string memory symbol) ERC20(name, symbol) {}
@@ -79,7 +79,7 @@ contract LiquidateTest is Test {
         });
 
         // Create liquidation engine before market deployment
-        address liquidationEngine = address(new AltoLiquidationEngine(owner));
+        address liquidationEngine = address(new DlbDcfPriorityLiquidationEngine(owner));
 
         BaseMarketInitParams memory baseMarketInitParams = BaseMarketInitParams({
             borrowToken: address(borrowToken),
@@ -102,7 +102,7 @@ contract LiquidateTest is Test {
 
         // Market initialization automatically calls setMarketOnce on the liquidation engine
         vm.startPrank(owner);
-        IPriorityLiquidationEngine(liquidationEngine).setLiquidationConfiguration(config);
+        IDcfDlbPriorityLiquidationEngine(liquidationEngine).setLiquidationConfiguration(config);
         vm.stopPrank();
 
         // Mint tokens to test accounts
@@ -157,7 +157,7 @@ contract LiquidateTest is Test {
         // liquidate function only has whenNotPaused modifier, not whenNotFrozen
         // So it should proceed to liquidation logic and fail on solvency check
         vm.expectRevert(
-            IPriorityLiquidationEngineErrors.AltoPriorityLiquidationEngineLiquidatingSolventPosition.selector
+            IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidatingSolventPosition.selector
         );
         market.liquidate(bob, hex"", hex"");
         vm.stopPrank();
@@ -171,7 +171,7 @@ contract LiquidateTest is Test {
         vm.startPrank(alice);
         // No explicit zero address validation in liquidate, so it gets to liquidation solvency check
         vm.expectRevert(
-            IPriorityLiquidationEngineErrors.AltoPriorityLiquidationEngineLiquidatingSolventPosition.selector
+            IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidatingSolventPosition.selector
         );
         market.liquidate(address(0), hex"", hex"");
         vm.stopPrank();
@@ -190,7 +190,7 @@ contract LiquidateTest is Test {
 
         vm.startPrank(alice);
         vm.expectRevert(
-            IPriorityLiquidationEngineErrors.AltoPriorityLiquidationEngineLiquidatingSolventPosition.selector
+            IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidatingSolventPosition.selector
         );
         market.liquidate(bob, hex"", hex"");
         vm.stopPrank();
@@ -231,14 +231,14 @@ contract LiquidateTest is Test {
         givenCallerIsNotPriorityLiquidator
     {
         vm.startPrank(alice);
-        vm.expectRevert(IPriorityLiquidationEngineErrors.AltoPriorityLiquidationEngineLiquidationUnauthorized.selector);
+        vm.expectRevert(IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationUnauthorized.selector);
         market.liquidate(bob, hex"", hex"");
         vm.stopPrank();
     }
 
     modifier givenCallerIsPriorityLiquidator() {
         vm.startPrank(owner);
-        IPriorityLiquidationEngine(market.liquidationEngine()).setPriorityLiquidator(alice, true);
+        IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).setPriorityLiquidator(alice, true);
         vm.stopPrank();
         _;
     }
@@ -278,7 +278,7 @@ contract LiquidateTest is Test {
     modifier givenPositionIsTagged() {
         // Tag the position first
         vm.startPrank(charlie);
-        IPriorityLiquidationEngine(market.liquidationEngine()).tagLiquidablePosition(bob, charlie);
+        IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).tagLiquidablePosition(bob, charlie);
         vm.stopPrank();
         _;
     }
@@ -293,7 +293,7 @@ contract LiquidateTest is Test {
         // Charlie (tagger) should NOT be able to liquidate during priority grace period
         // Only priority liquidators can liquidate during this time
         vm.startPrank(charlie);
-        vm.expectRevert(IPriorityLiquidationEngineErrors.AltoPriorityLiquidationEngineLiquidationUnauthorized.selector);
+        vm.expectRevert(IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationUnauthorized.selector);
         market.liquidate(bob, hex"", hex"");
         vm.stopPrank();
     }

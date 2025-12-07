@@ -7,9 +7,12 @@ import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
 import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
-import {LiquidationConfiguration} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
+import {
+    IDcfDlbPriorityLiquidationEngine,
+    LiquidationConfiguration
+} from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";
 import {IMarketEvents} from "@alto/lending/interfaces/IMarket.sol";
-import {AltoLiquidationEngine} from "@alto/lending/AltoLiquidationEngine.sol";
+import {DlbDcfPriorityLiquidationEngine} from "@alto/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol";
 import {console} from "forge-std/console.sol";
 
 contract AltoBorrowMarketLiquidationUnderflowTest is Test {
@@ -101,8 +104,8 @@ contract AltoBorrowMarketLiquidationUnderflowTest is Test {
         vm.stopPrank();
 
         vm.startPrank(market.owner());
-        AltoLiquidationEngine(market.liquidationEngine()).setPriorityLiquidator(bob, true);
-        AltoLiquidationEngine(market.liquidationEngine()).setPriorityLiquidator(liquidator, true);
+        IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).setPriorityLiquidator(bob, true);
+        IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).setPriorityLiquidator(liquidator, true);
         vm.stopPrank();
 
         vm.startPrank(supplier);

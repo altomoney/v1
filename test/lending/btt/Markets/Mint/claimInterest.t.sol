@@ -6,9 +6,11 @@ import {IPausable} from "@alto/utils/Pausable.sol";
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 import {AltoMintMarket} from "@alto/lending/AltoMintMarket.sol";
 import {IMarketErrors} from "@alto/lending/interfaces/IMarket.sol";
-import {LiquidationConfiguration} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
-import {AltoLiquidationEngine} from "@alto/lending/AltoLiquidationEngine.sol";
-import {IPriorityLiquidationEngine} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
+import {
+    IDcfDlbPriorityLiquidationEngine,
+    LiquidationConfiguration
+} from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";
+import {DlbDcfPriorityLiquidationEngine} from "@alto/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol";
 
 contract AltoMintMarketClaimInterest is MarketCommon {
     constructor() MarketCommon(MarketType.MINT) {}
@@ -46,9 +48,10 @@ contract AltoMintMarketClaimInterest is MarketCommon {
     modifier whenFeeRecipientIsZero() {
         vm.startPrank(OWNER);
         LiquidationConfiguration memory liquidationConfiguration =
-            IPriorityLiquidationEngine(market.liquidationEngine()).liquidationConfiguration();
+            IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).liquidationConfiguration();
         liquidationConfiguration.protocolFeePercentage = 0;
-        AltoLiquidationEngine(market.liquidationEngine()).setLiquidationConfiguration(liquidationConfiguration);
+        IDcfDlbPriorityLiquidationEngine(market.liquidationEngine())
+            .setLiquidationConfiguration(liquidationConfiguration);
         mintMarket.setBorrowOpeningFee(0);
         mintMarket.setIrm(address(0), false);
         mintMarket.setFeeRecipient(address(0));

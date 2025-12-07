@@ -7,10 +7,9 @@ import {AdaptiveCurveIrm} from "@alto/lending/irm/AdaptiveCurveIrm.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 import {LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
-import {LiquidationConfiguration} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
+import {LiquidationConfiguration} from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";
 import {IrmCommon} from "./IrmCommon.t.sol";
 import {MockMarketDeployer, MockMarket} from "@alto-test/helpers/MockMarket.sol";
-import {AltoLiquidationEngine} from "@alto/lending/AltoLiquidationEngine.sol";
 
 contract MockAdaptiveCurveIrm is AdaptiveCurveIrm {
     constructor(AdaptiveCurveIrm.AdaptiveCurveIrmConfig memory _irmConfig, address _owner)

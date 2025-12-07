@@ -55,27 +55,27 @@ struct LiquidationCalculation {
     uint256 collateralToSellInBorrowAssets;
 }
 
-interface IPriorityLiquidationEngineErrors {
+interface IDcfDlbPriorityLiquidationEngineErrors {
     /// @notice Error thrown when the input is invalid
-    error AltoPriorityLiquidationEngineInvalidInput();
+    error DcfDlbPriorityLiquidationEngineInvalidInput();
 
     /// @notice Error thrown when the market is already set and caller is not the same market
-    error AltoPriorityLiquidationEngineMarketAlreadySet();
+    error DcfDlbPriorityLiquidationEngineMarketAlreadySet();
 
     /// @notice Error thrown when trying to liquidate a solvent position
-    error AltoPriorityLiquidationEngineLiquidatingSolventPosition();
+    error DcfDlbPriorityLiquidationEngineLiquidatingSolventPosition();
 
     /// @notice Error thrown when executor is not allowed to perform liquidation at this time
-    error AltoPriorityLiquidationEnginePriorityLiquidationDisabled();
+    error DcfDlbPriorityLiquidationEnginePriorityLiquidationDisabled();
 
     /// @notice Error thrown when executor is not allowed to perform liquidation at this time
-    error AltoPriorityLiquidationEngineLiquidationUnauthorized();
+    error DcfDlbPriorityLiquidationEngineLiquidationUnauthorized();
 
     /// @notice Error thrown when trying to tag a position that is already tagged
-    error AltoPriorityLiquidationEngineLiquidationAlreadyTagged();
+    error DcfDlbPriorityLiquidationEngineLiquidationAlreadyTagged();
 }
 
-interface IPriorityLiquidationEngineEvents {
+interface IDcfDlbPriorityLiquidationEngineEvents {
     /// @notice Emitted when a priority liquidator is updated
     /// @param liquidator The address of the liquidator
     /// @param status The status of the liquidator
@@ -95,10 +95,10 @@ interface IPriorityLiquidationEngineEvents {
     event PositionTagged(address indexed user, address indexed tagger, uint256 timestamp);
 }
 
-interface IPriorityLiquidationEngineBase is
+interface IDcfDlbPriorityLiquidationEngineBase is
     IAltoLiquidationEngine,
-    IPriorityLiquidationEngineEvents,
-    IPriorityLiquidationEngineErrors
+    IDcfDlbPriorityLiquidationEngineEvents,
+    IDcfDlbPriorityLiquidationEngineErrors
 {
     /// @notice Sets the priority liquidator
     /// @param liquidator The address of the liquidator
@@ -125,7 +125,7 @@ interface IPriorityLiquidationEngineBase is
     function deleteLiquidablePosition(address user) external;
 }
 
-interface IPriorityLiquidationEngine is IPriorityLiquidationEngineBase {
+interface IDcfDlbPriorityLiquidationEngine is IDcfDlbPriorityLiquidationEngineBase {
     /// @notice Returns the liquidation configuration
     /// @return liquidationConfiguration The liquidation configuration
     function liquidationConfiguration() external view returns (LiquidationConfiguration memory);
@@ -136,7 +136,7 @@ interface IPriorityLiquidationEngine is IPriorityLiquidationEngineBase {
     function liquidablePositions(address user) external view returns (LiquidablePosition memory);
 }
 
-interface IPriorityLiquidationEngineStaticTypes is IPriorityLiquidationEngineBase {
+interface IDcfDlbPriorityLiquidationEngineStaticTypes is IDcfDlbPriorityLiquidationEngineBase {
     /// @notice Returns the liquidation configuration
     /// @return maxLiquidationLtv The maximum liquidation LTV
     /// @return dynamicBonusFeeStart The dynamic bonus fee start

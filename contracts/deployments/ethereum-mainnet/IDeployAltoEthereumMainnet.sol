@@ -3,7 +3,7 @@ pragma solidity ^0.8.22;
 
 import {EthereumMainnetLendingOracleAsset} from "@alto/deployments/EthereumMainnetOracleDeployer.sol";
 import {AdaptiveCurveIrm} from "@alto/lending/irm/AdaptiveCurveIrm.sol";
-import {LiquidationConfiguration} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
+import {LiquidationConfiguration} from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";
 
 enum DeploymentPhase {
     CORE, // Phase 0: Deploy TimelockController, AltoAdapter, and MockFeeCollector

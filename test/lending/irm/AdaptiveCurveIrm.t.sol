@@ -9,9 +9,12 @@ import {IrmCommon} from "./IrmCommon.t.sol";
 import {MarketDeployer} from "@alto-test/helpers/MarketDeployer.sol";
 import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";
 import {BaseMarketInitParams, BorrowMarketInitParams} from "@alto/lending/interfaces/IMarket.sol";
-import {LiquidationConfiguration} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
+import {
+    IDcfDlbPriorityLiquidationEngine,
+    LiquidationConfiguration
+} from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
-import {AltoLiquidationEngine} from "@alto/lending/AltoLiquidationEngine.sol";
+import {DlbDcfPriorityLiquidationEngine} from "@alto/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol";
 
 contract AdaptiveCurveIrmMock is AdaptiveCurveIrm {
     constructor(AdaptiveCurveIrm.AdaptiveCurveIrmConfig memory _config, address _owner)
@@ -61,7 +64,7 @@ contract AdaptiveCurveIrmTest is IrmCommon {
         });
 
         // Create liquidation engine before market deployment
-        address liquidationEngine = address(new AltoLiquidationEngine(OWNER));
+        address liquidationEngine = address(new DlbDcfPriorityLiquidationEngine(OWNER));
 
         BaseMarketInitParams memory baseMarketInitParams = BaseMarketInitParams({
             borrowToken: address(1),
@@ -75,14 +78,17 @@ contract AdaptiveCurveIrmTest is IrmCommon {
         });
 
         BorrowMarketInitParams memory borrowMarketInitParams = BorrowMarketInitParams({
-            baseMarketInitParams: baseMarketInitParams, initialBorrowOpeningFee: 0, supplyCapAssets: 0, initialInterestFee: 0
+            baseMarketInitParams: baseMarketInitParams,
+            initialBorrowOpeningFee: 0,
+            supplyCapAssets: 0,
+            initialInterestFee: 0
         });
 
         AltoBorrowMarket market = AltoBorrowMarket(MarketDeployer.deployBorrowMarket(borrowMarketInitParams));
 
         // Market initialization automatically calls setMarketOnce on the liquidation engine
         vm.startPrank(OWNER);
-        AltoLiquidationEngine(liquidationEngine).setLiquidationConfiguration(liquidationConfig);
+        IDcfDlbPriorityLiquidationEngine(liquidationEngine).setLiquidationConfiguration(liquidationConfig);
         market.setPauser(OWNER, PAUSE_TYPE, true);
         vm.stopPrank();
 

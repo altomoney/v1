@@ -2,25 +2,25 @@ AltoBaseMarket::liquidate()
 ├── when market is paused
 │   └── it should revert
 ├── given position is solvent
-│   └── it should revert with AltoPriorityLiquidationEngineLiquidatingSolventPosition
+│   └── it should revert with DlbDcfPriorityLiquidationEngineLiquidatingSolventPosition
 ├── given position is insolvent
 │   ├── when priority liquidation is enabled
 │   │   ├── when current LTV is below disable priority liquidation threshold
 │   │   │   ├── when liquidator is not priority liquidator
 │   │   │   │   ├── when position is not tagged
-│   │   │   │   │   └── it should revert with AltoPriorityLiquidationEngineLiquidationUnauthorized
+│   │   │   │   │   └── it should revert with DlbDcfPriorityLiquidationEngineLiquidationUnauthorized
 │   │   │   │   └── when position is tagged
 │   │   │   │       ├── when liquidationWindowTag has elapsed since tag was set
-│   │   │   │       │   └── it should revert with AltoPriorityLiquidationEngineLiquidationUnauthorized
+│   │   │   │       │   └── it should revert with DlbDcfPriorityLiquidationEngineLiquidationUnauthorized
 │   │   │   │       └── when liquidationWindowTag has not elapsed since tag was set
 │   │   │   │           ├── when liquidator is the tagger
 │   │   │   │           │   ├── when priority liquidation grace period has not elapsed
-│   │   │   │           │   │   └── it should revert with AltoPriorityLiquidationEngineLiquidationUnauthorized
+│   │   │   │           │   │   └── it should revert with DlbDcfPriorityLiquidationEngineLiquidationUnauthorized
 │   │   │   │           │   └── when priority liquidation grace period has elapsed
 │   │   │   │           │       └── it should proceed with liquidation
 │   │   │   │           └── when liquidator is not the tagger
 │   │   │   │               ├── when combined grace periods have not elapsed
-│   │   │   │               │   └── it should revert with AltoPriorityLiquidationEngineLiquidationUnauthorized
+│   │   │   │               │   └── it should revert with ADlbDcfPriorityLiquidationEngineLiquidationUnauthorized
 │   │   │   │               └── when combined grace periods have elapsed
 │   │   │   │                   └── it should proceed with liquidation
 │   │   │   └── when liquidator is priority liquidator

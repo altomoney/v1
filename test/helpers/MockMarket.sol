@@ -7,11 +7,11 @@ import {FixedPointMath, MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 import {IOracle} from "@alto/oracles/interfaces/IOracle.sol";
 import {LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {BaseMarketInitParams, BorrowMarketInitParams, MarketType} from "@alto/lending/interfaces/IMarket.sol";
-import {AltoLiquidationEngine} from "@alto/lending/AltoLiquidationEngine.sol";
+import {DlbDcfPriorityLiquidationEngine} from "@alto/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol";
 import {
-    IPriorityLiquidationEngine,
+    IDcfDlbPriorityLiquidationEngine,
     LiquidationConfiguration
-} from "@alto/lending/interfaces/IPriorityLiquidationEngine.sol";
+} from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";
 import {ExpLib, MATH_PRECISION_INT} from "@alto/lending/libraries/ExpLib.sol";
 
 contract MockMarket is AltoBaseMarket {
@@ -95,7 +95,7 @@ contract MockMarket is AltoBaseMarket {
         returns (uint256, uint256)
     {
         LiquidationConfiguration memory liquidationConfiguration =
-            IPriorityLiquidationEngine(liquidationEngine).liquidationConfiguration();
+            IDcfDlbPriorityLiquidationEngine(liquidationEngine).liquidationConfiguration();
         (uint256 currentLtv, uint256 newLtv) = this.calculatePreLiquidationLtv(user);
         uint256 bonusFee = !isPriorityLiquidator ? _calculateBonusFee(_calculateLiquidationPercentage(currentLtv)) : 0;
 
@@ -113,7 +113,7 @@ contract MockMarket is AltoBaseMarket {
     /// @return liquidationPercentage The liquidation percentage
     function _calculateLiquidationPercentage(uint256 currentLtv) internal view returns (uint256) {
         LiquidationConfiguration memory liquidationConfiguration =
-            IPriorityLiquidationEngine(liquidationEngine).liquidationConfiguration();
+            IDcfDlbPriorityLiquidationEngine(liquidationEngine).liquidationConfiguration();
         if (currentLtv >= liquidationConfiguration.ltvForCompleteLiquidation) {
             return MATH_PRECISION;
         } else {
@@ -129,7 +129,7 @@ contract MockMarket is AltoBaseMarket {
     /// @return bonusFee The bonus fee
     function _calculateBonusFee(uint256 liquidationPercentage) internal view returns (uint256) {
         LiquidationConfiguration memory liquidationConfiguration =
-            IPriorityLiquidationEngine(liquidationEngine).liquidationConfiguration();
+            IDcfDlbPriorityLiquidationEngine(liquidationEngine).liquidationConfiguration();
         // liquidationConfiguration.dynamicBonusFeeDecaySteepness is already checked in _validateLiquidationConfiguration
         if (liquidationPercentage < MATH_PRECISION) {
             int256 exponent = -int256(liquidationConfiguration.dynamicBonusFeeDecaySteepness * liquidationPercentage)
@@ -146,7 +146,7 @@ contract MockMarket is AltoBaseMarket {
     /// @return newLtv The new LTV
     function _calculateNewLtv(uint256 liquidationPercentage, uint256 maxLtv) internal view returns (uint256) {
         LiquidationConfiguration memory liquidationConfiguration =
-            IPriorityLiquidationEngine(liquidationEngine).liquidationConfiguration();
+            IDcfDlbPriorityLiquidationEngine(liquidationEngine).liquidationConfiguration();
         uint256 liquidationPercentageAppliedPenalty = liquidationPercentage
             < liquidationConfiguration.minPenaltyPercentage
             ? liquidationConfiguration.minPenaltyPercentage
@@ -168,7 +168,7 @@ library MockMarketDeployer {
         address _feeRecipient,
         LiquidationConfiguration memory _liquidationConfiguration
     ) public returns (MockMarket market) {
-        address liquidationEngine = address(new AltoLiquidationEngine(address(this)));
+        address liquidationEngine = address(new DlbDcfPriorityLiquidationEngine(address(this)));
 
         market = new MockMarket();
 
@@ -186,6 +186,6 @@ library MockMarketDeployer {
             _borrowOpeningFee
         );
 
-        AltoLiquidationEngine(liquidationEngine).setLiquidationConfiguration(_liquidationConfiguration);
+        IDcfDlbPriorityLiquidationEngine(liquidationEngine).setLiquidationConfiguration(_liquidationConfiguration);
     }
 }
