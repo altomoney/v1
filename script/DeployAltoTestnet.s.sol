@@ -444,7 +444,7 @@ contract DeployAltoTestnetScript is Script {
         _extractContractABI("UsmRegistry", abiFolder);
 
         // Extract ABIs for market contracts
-        _extractContractABI("AltoLiquidationEngine", abiFolder);
+        _extractContractABI("DlbDcfPriorityLiquidationEngine", abiFolder);
         _extractContractABI("AltoBorrowMarket", abiFolder);
         _extractContractABI("AltoMintMarket", abiFolder);
         _extractContractABI("AdaptiveCurveIrm", abiFolder);
