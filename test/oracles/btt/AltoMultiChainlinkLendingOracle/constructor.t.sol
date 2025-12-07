@@ -50,7 +50,7 @@ contract AltoMultiChainlinkLendingOracleConstructor is AltoMultiChainlinkLending
             inDecimals: 18,
             outDecimals: 36,
             direction: ConversionDirection.IN_TO_OUT,
-            feedDecimals: mockFeed1.decimals()
+            feedDecimals: 8
         });
 
         vm.expectRevert(ModuleChainlink.ModuleChainlinkInvalidInput.selector);
@@ -65,7 +65,22 @@ contract AltoMultiChainlinkLendingOracleConstructor is AltoMultiChainlinkLending
             inDecimals: 30,
             outDecimals: 25, // 30 + 25 = 55 > 54
             direction: ConversionDirection.IN_TO_OUT,
-            feedDecimals: mockFeed1.decimals()
+            feedDecimals: 8
+        });
+
+        vm.expectRevert(ModuleChainlink.ModuleChainlinkInvalidInput.selector);
+        new AltoMultiChainlinkLendingOracle(OWNER, nodes);
+    }
+
+    function test_RevertWhen_ChainlinkNodeFeedDecimalsDoesNotMatchFeedDecimals() external givenInvalidInputs {
+        ChainlinkNode[] memory nodes = new ChainlinkNode[](1);
+        nodes[0] = ChainlinkNode({
+            feed: AggregatorV3Interface(address(mockFeed1)),
+            stalePeriod: DEFAULT_STALE_PERIOD,
+            inDecimals: 18,
+            outDecimals: 36,
+            direction: ConversionDirection.IN_TO_OUT,
+            feedDecimals: 6 // mockFeed1.decimals() returns 8, so this should revert
         });
 
         vm.expectRevert(ModuleChainlink.ModuleChainlinkInvalidInput.selector);
@@ -137,7 +152,7 @@ contract AltoMultiChainlinkLendingOracleConstructor is AltoMultiChainlinkLending
         assertEq(stalePeriod, DEFAULT_STALE_PERIOD);
         assertEq(inDecimals, 18);
         assertEq(outDecimals, 18);
-        assertEq(feedDecimals, mockFeed1.decimals());
+        assertEq(feedDecimals, 8);
 
         (feed, direction, stalePeriod, inDecimals, outDecimals, feedDecimals) = oracle.chainlinkNodes(1);
         assertEq(address(feed), address(mockFeed2));
@@ -145,7 +160,7 @@ contract AltoMultiChainlinkLendingOracleConstructor is AltoMultiChainlinkLending
         assertEq(stalePeriod, DEFAULT_STALE_PERIOD);
         assertEq(inDecimals, 18);
         assertEq(outDecimals, 36);
-        assertEq(feedDecimals, mockFeed2.decimals());
+        assertEq(feedDecimals, 8);
 
         // it should set owner correctly
         assertEq(oracle.owner(), OWNER);

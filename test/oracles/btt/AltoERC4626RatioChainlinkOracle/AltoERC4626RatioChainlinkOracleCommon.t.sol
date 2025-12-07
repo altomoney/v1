@@ -53,7 +53,7 @@ contract AltoERC4626RatioChainlinkOracleCommon is Test {
             inDecimals: inDecimals,
             outDecimals: outDecimals,
             direction: ConversionDirection.IN_TO_OUT,
-            feedDecimals: mockFeed1.decimals()
+            feedDecimals: 8
         });
     }
 
@@ -68,7 +68,7 @@ contract AltoERC4626RatioChainlinkOracleCommon is Test {
             inDecimals: inDecimals,
             outDecimals: outDecimals,
             direction: ConversionDirection.IN_TO_OUT,
-            feedDecimals: mockFeed2.decimals()
+            feedDecimals: 8
         });
     }
 }

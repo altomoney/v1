@@ -12,6 +12,8 @@ AltoERC4626RatioChainlinkOracle::constructor()
 │   │   └── it should revert with ModuleChainlinkInvalidInput
 │   ├── when chainlink node inDecimals + outDecimals is greater than 54
 │   │   └── it should revert with ModuleChainlinkInvalidInput
+│   ├── when chainlink node feedDecimals does not match feed decimals
+│   │   └── it should revert with ModuleChainlinkInvalidInput
 │   └── when owner is zero address
 │       └── it should revert with OwnableInvalidOwner
 └── given valid inputs

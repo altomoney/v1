@@ -104,7 +104,7 @@ contract AltoRewardsOracleTest is Test {
             inDecimals: 18,
             outDecimals: 8,
             direction: ConversionDirection.IN_TO_OUT,
-            feedDecimals: AggregatorV3Interface(ETH_USD_PRICE_FEED).decimals()
+            feedDecimals: 8
         });
 
         AltoRewardsOracleInitParams memory initParams = AltoRewardsOracleInitParams({
@@ -429,7 +429,6 @@ contract AltoRewardsOracleTest is Test {
 
     function testOwnerCanUpdateChainlinkNode() public {
         address nonOwner = makeAddr("NonOwner");
-        uint8 feedDecimals = AggregatorV3Interface(ETH_USD_PRICE_FEED).decimals();
         vm.startPrank(nonOwner);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, nonOwner));
         rewardsOracle.updateChainlinkNode(
@@ -439,7 +438,7 @@ contract AltoRewardsOracleTest is Test {
                 inDecimals: 18,
                 outDecimals: 18,
                 direction: ConversionDirection.OUT_TO_IN,
-                feedDecimals: feedDecimals
+                feedDecimals: 8
             })
         );
         vm.stopPrank();
@@ -451,7 +450,7 @@ contract AltoRewardsOracleTest is Test {
             inDecimals: 18,
             outDecimals: 18,
             direction: ConversionDirection.OUT_TO_IN,
-            feedDecimals: feedDecimals
+            feedDecimals: 8
         });
         (
             AggregatorV3Interface feed,
@@ -459,7 +458,7 @@ contract AltoRewardsOracleTest is Test {
             uint32 stalePeriod,
             uint8 inDecimals,
             uint8 outDecimals,
-            uint8 oldFeedDecimals
+            uint8 feedDecimals
         ) = rewardsOracle.chainlinkNode();
         ChainlinkNode memory oldChainlinkNode = ChainlinkNode({
             feed: feed,
@@ -467,7 +466,7 @@ contract AltoRewardsOracleTest is Test {
             inDecimals: inDecimals,
             outDecimals: outDecimals,
             direction: direction,
-            feedDecimals: oldFeedDecimals
+            feedDecimals: feedDecimals
         });
 
         vm.expectEmit(true, true, true, true);

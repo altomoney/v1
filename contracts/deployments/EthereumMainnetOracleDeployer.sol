@@ -74,7 +74,7 @@ library EthereumMainnetOracleDeployer {
             stalePeriod: 2 hours, // TODO placeholder value
             inDecimals: 18, // ETH decimals
             outDecimals: 36, // LENDING_ORACLE_PRICE_PRECISION + DUSD decimals - WETH decimals
-            feedDecimals: AggregatorV3Interface(CHAINLINK_ETH_USD_PRICE_FEED).decimals()
+            feedDecimals: 8
         });
 
         return address(new AltoMultiChainlinkLendingOracle(owner, chainlinkNodes));
@@ -95,7 +95,7 @@ library EthereumMainnetOracleDeployer {
             stalePeriod: 2 hours, // TODO placeholder value
             inDecimals: 18, // stETH/ETH decimals
             outDecimals: 36, // LENDING_ORACLE_PRICE_PRECISION + DUSD decimals - stETH decimals
-            feedDecimals: AggregatorV3Interface(CHAINLINK_ETH_USD_PRICE_FEED).decimals()
+            feedDecimals: 8
         });
 
         return address(new ERC4626RatioChainlinkOracleWSTETH(owner, WSTETH_MAINNET, erc4626RatioNode, chainlinkNode));
@@ -116,7 +116,7 @@ library EthereumMainnetOracleDeployer {
             stalePeriod: 2 hours, // TODO placeholder value
             inDecimals: 18, // ETH decimals
             outDecimals: 36, // LENDING_ORACLE_PRICE_PRECISION + DUSD decimals - rETH decimals
-            feedDecimals: AggregatorV3Interface(CHAINLINK_ETH_USD_PRICE_FEED).decimals()
+            feedDecimals: 8
         });
 
         return address(new ERC4626RatioChainlinkOracleRETH(owner, RETH_MAINNET, erc4626RatioNode, chainlinkNode));
@@ -137,7 +137,7 @@ library EthereumMainnetOracleDeployer {
             stalePeriod: 2 hours, // TODO placeholder value
             inDecimals: 18, // ETH decimals
             outDecimals: 36, // LENDING_ORACLE_PRICE_PRECISION + DUSD decimals - mETH decimals
-            feedDecimals: AggregatorV3Interface(CHAINLINK_ETH_USD_PRICE_FEED).decimals()
+            feedDecimals: 8
         });
 
         return
@@ -153,7 +153,7 @@ library EthereumMainnetOracleDeployer {
             stalePeriod: 2 hours, // TODO placeholder value
             inDecimals: 18, // tBTC/BTC decimals
             outDecimals: 36, // LENDING_ORACLE_PRICE_PRECISION + DUSD decimals - tBTC decimals
-            feedDecimals: AggregatorV3Interface(CHAINLINK_BTC_USD_PRICE_FEED).decimals()
+            feedDecimals: 8
         });
 
         return address(new AltoMultiChainlinkLendingOracle(owner, chainlinkNodes));
@@ -168,7 +168,7 @@ library EthereumMainnetOracleDeployer {
             stalePeriod: 26 hours, // TODO placeholder value
             inDecimals: 8, // WBTC decimals
             outDecimals: 8, // BTC
-            feedDecimals: AggregatorV3Interface(CHAINLINK_WBTC_BTC_RATIO_FEED).decimals()
+            feedDecimals: 8
         });
 
         chainlinkNodes[1] = ChainlinkNode({
@@ -177,7 +177,7 @@ library EthereumMainnetOracleDeployer {
             stalePeriod: 2 hours, // TODO placeholder value
             inDecimals: 8, // BTC decimals
             outDecimals: 46, // LENDING_ORACLE_PRICE_PRECISION + DUSD decimals - wBTC decimals
-            feedDecimals: AggregatorV3Interface(CHAINLINK_BTC_USD_PRICE_FEED).decimals()
+            feedDecimals: 8
         });
 
         return address(new AltoMultiChainlinkLendingOracle(owner, chainlinkNodes));
@@ -192,7 +192,7 @@ library EthereumMainnetOracleDeployer {
             stalePeriod: 2 hours, // TODO placeholder value
             inDecimals: 8, // cbBTC/BTC decimals
             outDecimals: 46, // LENDING_ORACLE_PRICE_PRECISION + DUSD decimals - cbBTC decimals
-            feedDecimals: AggregatorV3Interface(CHAINLINK_BTC_USD_PRICE_FEED).decimals()
+            feedDecimals: 8
         });
 
         return address(new AltoMultiChainlinkLendingOracle(owner, chainlinkNodes));
@@ -213,7 +213,7 @@ library EthereumMainnetOracleDeployer {
             stalePeriod: 26 hours, // TODO placeholder value
             inDecimals: 18, // USDe decimals
             outDecimals: 36, // LENDING_ORACLE_PRICE_PRECISION + DUSD decimals - USDe decimals
-            feedDecimals: AggregatorV3Interface(CHAINLINK_USDE_USD_FEED).decimals()
+            feedDecimals: 8
         });
 
         return address(new ERC4626RatioChainlinkOracleSUSDE(owner, SUSDE_MAINNET, erc4626RatioNode, chainlinkNode));

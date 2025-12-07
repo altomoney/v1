@@ -71,7 +71,7 @@ contract AltoERC4626RatioChainlinkOracleConstructor is AltoERC4626RatioChainlink
             inDecimals: 18,
             outDecimals: 36,
             direction: ConversionDirection.IN_TO_OUT,
-            feedDecimals: mockFeed1.decimals()
+            feedDecimals: 8
         });
 
         vm.expectRevert(ModuleChainlink.ModuleChainlinkInvalidInput.selector);
@@ -86,7 +86,22 @@ contract AltoERC4626RatioChainlinkOracleConstructor is AltoERC4626RatioChainlink
             inDecimals: 30,
             outDecimals: 25, // 30 + 25 = 55 > 54
             direction: ConversionDirection.IN_TO_OUT,
-            feedDecimals: mockFeed1.decimals()
+            feedDecimals: 8
+        });
+
+        vm.expectRevert(ModuleChainlink.ModuleChainlinkInvalidInput.selector);
+        new MockAltoERC4626RatioChainlinkOracle(OWNER, erc4626RatioNode, chainlinkNode, 1.1 ether);
+    }
+
+    function test_RevertWhen_ChainlinkNodeFeedDecimalsDoesNotMatchFeedDecimals() external givenInvalidInputs {
+        ERC4626RatioNode memory erc4626RatioNode = _createValidERC4626RatioNode();
+        ChainlinkNode memory chainlinkNode = ChainlinkNode({
+            feed: AggregatorV3Interface(address(mockFeed1)),
+            stalePeriod: DEFAULT_STALE_PERIOD,
+            inDecimals: 18,
+            outDecimals: 36,
+            direction: ConversionDirection.IN_TO_OUT,
+            feedDecimals: 6 // mockFeed1.decimals() returns 8, so this should revert
         });
 
         vm.expectRevert(ModuleChainlink.ModuleChainlinkInvalidInput.selector);
@@ -137,7 +152,7 @@ contract AltoERC4626RatioChainlinkOracleConstructor is AltoERC4626RatioChainlink
         assertEq(stalePeriod, DEFAULT_STALE_PERIOD);
         assertEq(inDecimals, 18);
         assertEq(outDecimals, 36);
-        assertEq(feedDecimals, mockFeed1.decimals());
+        assertEq(feedDecimals, 8);
 
         // it should set owner correctly
         assertEq(oracle.owner(), OWNER);

@@ -126,7 +126,7 @@ contract AltoRewardsOracleConstructor is AltoRewardsOracleCommon {
         assertEq(stalePeriod, DEFAULT_STALE_PERIOD);
         assertEq(inDecimals, 18);
         assertEq(outDecimals, 8);
-        assertEq(feedDecimals, mockFeed.decimals());
+        assertEq(feedDecimals, 8);
         // it should set owner correctly
         assertEq(oracle.owner(), OWNER);
 

@@ -41,7 +41,7 @@ contract AltoRewardsOracleUpdateChainlinkNode is AltoRewardsOracleCommon {
             inDecimals: 18,
             outDecimals: 18,
             direction: ConversionDirection.IN_TO_OUT,
-            feedDecimals: mockFeed.decimals()
+            feedDecimals: 8
         });
     }
 
@@ -99,7 +99,7 @@ contract AltoRewardsOracleUpdateChainlinkNode is AltoRewardsOracleCommon {
             inDecimals: inDecimals,
             outDecimals: outDecimals,
             direction: direction,
-            feedDecimals: mockFeed.decimals()
+            feedDecimals: feedDecimals
         });
 
         vm.expectEmit(true, true, true, true);
@@ -113,6 +113,6 @@ contract AltoRewardsOracleUpdateChainlinkNode is AltoRewardsOracleCommon {
         assertEq(stalePeriod, newChainlinkNode.stalePeriod, "Stale period should be updated");
         assertEq(inDecimals, newChainlinkNode.inDecimals, "In decimals should be updated");
         assertEq(outDecimals, newChainlinkNode.outDecimals, "Out decimals should be updated");
-        assertEq(feedDecimals, mockFeed.decimals());
+        assertEq(feedDecimals, 8);
     }
 }
