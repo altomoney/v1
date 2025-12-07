@@ -9,6 +9,7 @@ import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interf
 /// @notice Parameters for initializing the AltoRewardsOracle
 struct AltoRewardsOracleInitParams {
     // @notice The Uniswap node to query
+    /// @dev The roundUp parameter should be true for the AltoRewardsOracle
     UniswapNode uniswapNode;
     // @notice The Chainlink node to query
     ChainlinkNode chainlinkNode;
