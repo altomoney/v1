@@ -58,7 +58,7 @@ contract AltoERC4626RatioChainlinkOracleUpdateChainlinkNode is AltoERC4626RatioC
             inDecimals: 18,
             outDecimals: 36,
             direction: ConversionDirection.IN_TO_OUT,
-            feedDecimals: mockFeed1.decimals()
+            feedDecimals: 8
         });
 
         vm.prank(OWNER);
@@ -73,7 +73,7 @@ contract AltoERC4626RatioChainlinkOracleUpdateChainlinkNode is AltoERC4626RatioC
             inDecimals: 30,
             outDecimals: 25, // 30 + 25 = 55 > 54
             direction: ConversionDirection.IN_TO_OUT,
-            feedDecimals: mockFeed1.decimals()
+            feedDecimals: 8
         });
 
         vm.prank(OWNER);
@@ -96,7 +96,7 @@ contract AltoERC4626RatioChainlinkOracleUpdateChainlinkNode is AltoERC4626RatioC
             stalePeriod: oldStalePeriod,
             inDecimals: oldInDecimals,
             outDecimals: oldOutDecimals,
-            feedDecimals: mockFeed1.decimals()
+            feedDecimals: 8
         });
 
         // Create new node

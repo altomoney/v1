@@ -42,7 +42,7 @@ contract AltoRewardsOracleCommon is Test {
             inDecimals: 18,
             outDecimals: 8,
             direction: ConversionDirection.IN_TO_OUT,
-            feedDecimals: mockFeed.decimals()
+            feedDecimals: 8
         });
         uniswapNode = UniswapNode({
             pool: IUniswapV3Pool(address(mockPool)),
