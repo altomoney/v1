@@ -73,7 +73,8 @@ contract DeployAltoEthereumMainnetTest is Test {
             deployer: DEPLOYER,
             phase: DeploymentPhase.CORE,
             useUnsafeUpgrades: true,
-            treasuryMultisig: address(1) // TODO: Set to actual treasury multisig address
+            treasuryMultisig: address(1), // TODO: Set to actual treasury multisig address
+            uniswapV3NonFungiblePositionManager: 0xC36442b4a4522E871399CD717aBDD847Ab11FE88
         });
     }
 

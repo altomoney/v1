@@ -32,7 +32,8 @@ contract DeployAltoEthereumMainnetScript is Script {
             deployer: msg.sender,
             phase: PHASE_TO_DEPLOY,
             useUnsafeUpgrades: false,
-            treasuryMultisig: address(1) // TODO: Set to actual treasury multisig address
+            treasuryMultisig: address(1), // TODO: Set to actual treasury multisig address
+            uniswapV3NonFungiblePositionManager: 0xC36442b4a4522E871399CD717aBDD847Ab11FE88
         });
 
         input = DeployAltoEthereumMainnet.deploy(params, input);

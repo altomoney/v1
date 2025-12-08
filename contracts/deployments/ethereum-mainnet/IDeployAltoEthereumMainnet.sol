@@ -51,6 +51,7 @@ struct Contracts {
     address dusdFlashMinter;
     address marketRegistry;
     address usmRegistry;
+    address uniswapPool;
     MarketContracts wethMarket;
     MarketContracts wstethMarket;
     MarketContracts rethMarket;
@@ -73,6 +74,7 @@ struct AltoEthereumMainnetParams {
     DeploymentPhase phase;
     bool useUnsafeUpgrades;
     address treasuryMultisig;
+    address uniswapV3NonFungiblePositionManager;
 }
 
 struct DeployCoreParams {
