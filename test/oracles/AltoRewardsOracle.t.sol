@@ -407,7 +407,7 @@ contract AltoRewardsOracleTest is Test {
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, nonOwner));
         rewardsOracle.updateUniswapNode(
             UniswapNode({
-                pool: altoEthPool, twapPeriod: twapPeriod, direction: ConversionDirection.OUT_TO_IN, roundUp: false
+                pool: altoEthPool, twapPeriod: twapPeriod, direction: ConversionDirection.IN_TO_OUT, roundUp: true
             })
         );
         vm.stopPrank();

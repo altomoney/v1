@@ -51,6 +51,10 @@ contract AltoRewardsOracle is AltoOwnable2Step, ModuleChainlink, ModuleUniswap, 
         }
 
         _validateUniswapParams(_initParams.uniswapNode);
+        if (_initParams.uniswapNode.roundUp == false) {
+            revert AltoRewardsOracleInvalidInput();
+        }
+
         _validateChainlinkParams(_initParams.chainlinkNode);
 
         uniswapNode = _initParams.uniswapNode;
@@ -140,6 +144,11 @@ contract AltoRewardsOracle is AltoOwnable2Step, ModuleChainlink, ModuleUniswap, 
     /// @inheritdoc IAltoRewardsOracleBase
     function updateUniswapNode(UniswapNode memory _uniswapNode) external onlyOwner {
         _validateUniswapParams(_uniswapNode);
+
+        // The roundUp parameter should be true for the payment prices (such as the one returned by this oracle)
+        if (_uniswapNode.roundUp == false) {
+            revert AltoRewardsOracleInvalidInput();
+        }
 
         emit SetUniswapNode(uniswapNode, _uniswapNode);
         uniswapNode = _uniswapNode;
