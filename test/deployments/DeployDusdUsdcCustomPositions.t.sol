@@ -169,8 +169,8 @@ contract DeployDusdUsdcCustomPositionsTest is Test {
         console.logInt(pos2Upper);
 
         _mintTokens();
-        dusd.approve(UNISWAP_V3_NFT_POSITION_MANAGER, type(uint256).max);
-        usdc.approve(UNISWAP_V3_NFT_POSITION_MANAGER, type(uint256).max);
+        dusd.approve(UNISWAP_V3_NFT_POSITION_MANAGER, 300_000 ether);
+        usdc.approve(UNISWAP_V3_NFT_POSITION_MANAGER, 1_200_000 * 1e6);
 
         // Position 1
         console.log("=== POSITION 1: Tight Range ===");
