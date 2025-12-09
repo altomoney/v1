@@ -38,4 +38,5 @@ contract Constants {
     address constant TREASURY = address(0x10002);
 
     address constant SHORT_EXECUTOR = address(0x10003);
+    address constant FEE_RECIPIENT = address(0x10004);
 }

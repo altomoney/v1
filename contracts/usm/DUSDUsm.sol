@@ -16,9 +16,10 @@ contract DUSDUsm is Usm {
         address stableTokenTreasury,
         uint128 exposureCap,
         address priceStrategy,
-        AccessMode accessMode
+        AccessMode accessMode,
+        address feeRecipient
     ) external initializer {
-        __Usm_init(admin, stableTokenTreasury, exposureCap, priceStrategy, accessMode);
+        __Usm_init(admin, stableTokenTreasury, exposureCap, priceStrategy, accessMode, feeRecipient);
     }
 
     function _getCurrentlyMintedStableTokenByUsm() internal view override returns (uint256) {

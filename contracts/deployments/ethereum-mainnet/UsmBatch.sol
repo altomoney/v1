@@ -60,7 +60,14 @@ contract UsmBatch {
         // Deploy DUSDUsm Proxy with constructor data
         bytes memory initData = abi.encodeCall(
             DUSDUsm.initialize,
-            (address(this), _params.feeRecipient, uint128(_params.exposureCap), fixedPriceStrategy, accessMode)
+            (
+                address(this),
+                _params.feeRecipient,
+                uint128(_params.exposureCap),
+                fixedPriceStrategy,
+                accessMode,
+                _params.feeRecipient
+            )
         );
         address dusdUsm;
         address dusdUsmImplementation;

@@ -304,7 +304,8 @@ abstract contract AdapterCommonSetup is AdapterCommon, TestHelperOz5 {
                             address(OWNER),
                             uint128(100_000_000e6),
                             address(priceStrategy),
-                            AccessMode.PERMISSIONLESS
+                            AccessMode.PERMISSIONLESS,
+                            address(this)
                         )
                     )
                 )
@@ -320,7 +321,8 @@ abstract contract AdapterCommonSetup is AdapterCommon, TestHelperOz5 {
                             address(OWNER),
                             uint128(100_000_000e6),
                             address(priceStrategy),
-                            AccessMode.PERMISSIONLESS
+                            AccessMode.PERMISSIONLESS,
+                            address(this)
                         )
                     )
                 )
