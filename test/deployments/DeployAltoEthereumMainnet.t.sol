@@ -196,14 +196,14 @@ contract DeployAltoEthereumMainnetTest is Test {
         // Verify parameters
         assertEq(address(flashMinter.DUSD()), input.contracts.dusd, "DUSDFlashMinter DUSD should be correct");
         (uint128 minFlashFee, uint128 maxFlashFee) = flashMinter.flashMintFee();
-        assertEq(minFlashFee, 5e14, "DUSDFlashMinter min flash fee should be correct");
-        assertEq(maxFlashFee, 1e16, "DUSDFlashMinter max flash fee should be correct");
+        assertEq(minFlashFee, 0, "DUSDFlashMinter min flash fee should be correct");
+        assertEq(maxFlashFee, 0, "DUSDFlashMinter max flash fee should be correct");
 
         // Verify flash minter configuration
         assertTrue(dusd.allowedMinter(input.contracts.dusdFlashMinter), "FlashMinter should be allowed minter");
         assertTrue(dusd.allowedBurner(input.contracts.dusdFlashMinter), "FlashMinter should be allowed burner");
         (uint256 minted, uint256 ceiling) = dusd.minterConfig(input.contracts.dusdFlashMinter);
-        assertEq(ceiling, 750_000 ether, "Flash mint ceiling should be correct");
+        assertEq(ceiling, 500_000 ether, "Flash mint ceiling should be correct");
         assertEq(minted, 0, "Flash minter should have 0 minted initially");
     }
 
@@ -300,7 +300,7 @@ contract DeployAltoEthereumMainnetTest is Test {
         input = DeployAltoEthereumMainnet.deploy(params, input);
 
         _verifyMarketContracts(input.contracts.wethMarket);
-        _verifyMintCeilingMarket(input.contracts.wethMarket.market, 300_000 ether);
+        _verifyMintCeilingMarket(input.contracts.wethMarket.market, 500_000 ether);
 
         // TODO verify other parameters - base, liquidation engine, IRM, oracle...
     }
@@ -312,7 +312,7 @@ contract DeployAltoEthereumMainnetTest is Test {
         input = DeployAltoEthereumMainnet.deploy(params, input);
 
         _verifyMarketContracts(input.contracts.wstethMarket);
-        _verifyMintCeilingMarket(input.contracts.wstethMarket.market, 300_000 ether);
+        _verifyMintCeilingMarket(input.contracts.wstethMarket.market, 500_000 ether);
 
         // TODO verify other parameters - base, liquidation engine, IRM, oracle...
     }
@@ -324,7 +324,7 @@ contract DeployAltoEthereumMainnetTest is Test {
         input = DeployAltoEthereumMainnet.deploy(params, input);
 
         _verifyMarketContracts(input.contracts.rethMarket);
-        _verifyMintCeilingMarket(input.contracts.rethMarket.market, 300_000 ether);
+        _verifyMintCeilingMarket(input.contracts.rethMarket.market, 200_000 ether);
 
         // TODO verify other parameters - base, liquidation engine, IRM, oracle...
     }
@@ -336,7 +336,7 @@ contract DeployAltoEthereumMainnetTest is Test {
         input = DeployAltoEthereumMainnet.deploy(params, input);
 
         _verifyMarketContracts(input.contracts.methMarket);
-        _verifyMintCeilingMarket(input.contracts.methMarket.market, 300_000 ether);
+        _verifyMintCeilingMarket(input.contracts.methMarket.market, 200_000 ether);
 
         // TODO verify other parameters - base, liquidation engine, IRM, oracle...
     }
@@ -348,7 +348,7 @@ contract DeployAltoEthereumMainnetTest is Test {
         input = DeployAltoEthereumMainnet.deploy(params, input);
 
         _verifyMarketContracts(input.contracts.tbtcMarket);
-        _verifyMintCeilingMarket(input.contracts.tbtcMarket.market, 300_000 ether);
+        _verifyMintCeilingMarket(input.contracts.tbtcMarket.market, 200_000 ether);
 
         // TODO verify other parameters - base, liquidation engine, IRM, oracle...
     }
@@ -470,7 +470,7 @@ contract DeployAltoEthereumMainnetTest is Test {
         _verifyDeployed(input.contracts.permissionlessUsm.fixedFeeStrategy, "Fixed fee strategy Permissionless");
         _verifyDeployed(input.contracts.permissionlessUsm.fixedPriceStrategy, "Fixed price strategy Permissionless");
 
-        _verifyMintCeiling(input.contracts.permissionlessUsm.dusdUsm, 5_000_000_000 ether);
+        _verifyMintCeiling(input.contracts.permissionlessUsm.dusdUsm, 5_000_000 ether);
 
         UsmRegistry usmRegistry = UsmRegistry(input.contracts.usmRegistry);
 
