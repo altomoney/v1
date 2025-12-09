@@ -48,6 +48,7 @@ contract DeployDusdUsdcCustomPositionsTest is Test {
 
     uint24 constant FEE_100 = 100; // 0.01%
     int24 constant TICK_SPACING = 1;
+    uint256 constant SLIPPAGE_BPS = 100; // 1% slippage tolerance
 
     AltoEthereumMainnetParams params;
     AltoEthereumMainnetInput input;
@@ -176,7 +177,7 @@ contract DeployDusdUsdcCustomPositionsTest is Test {
         console.log("=== POSITION 1: Tight Range ===");
         console.log("Requested: 240,000 DUSD + 960,000 USDC");
         (uint256 id1, uint128 liq1, uint256 a0_1, uint256 a1_1) =
-            _mintPosition(pos1Lower, pos1Upper, 240_000 ether, 960_000 * 1e6);
+            _mintPosition(pos1Lower, pos1Upper, 239999 ether, 944202 * 1e6);
 
         console.log("NFT ID:", id1);
         console.log("Liquidity:", liq1);
@@ -187,7 +188,7 @@ contract DeployDusdUsdcCustomPositionsTest is Test {
         console.log("=== POSITION 2: Wide Range ===");
         console.log("Requested: 60,000 DUSD + 240,000 USDC");
         (uint256 id2, uint128 liq2, uint256 a0_2, uint256 a1_2) =
-            _mintPosition(pos2Lower, pos2Upper, 60_000 ether, 240_000 * 1e6);
+            _mintPosition(pos2Lower, pos2Upper, 54641 ether, 240_000 * 1e6);
 
         console.log("NFT ID:", id2);
         console.log("Liquidity:", liq2);
@@ -296,6 +297,11 @@ contract DeployDusdUsdcCustomPositionsTest is Test {
         internal
         returns (uint256 tokenId, uint128 liquidity, uint256 amount0, uint256 amount1)
     {
+        uint256 amount0Desired = dusdIsToken0 ? dusdDesired : usdcDesired;
+        uint256 amount1Desired = dusdIsToken0 ? usdcDesired : dusdDesired;
+        uint256 amount0Min = amount0Desired * (10_000 - SLIPPAGE_BPS) / 10_000;
+        uint256 amount1Min = amount1Desired * (10_000 - SLIPPAGE_BPS) / 10_000;
+
         return nftManager.mint(
             INonfungiblePositionManager.MintParams({
                 token0: token0,
@@ -303,10 +309,10 @@ contract DeployDusdUsdcCustomPositionsTest is Test {
                 fee: FEE_100,
                 tickLower: tickLower,
                 tickUpper: tickUpper,
-                amount0Desired: dusdIsToken0 ? dusdDesired : usdcDesired,
-                amount1Desired: dusdIsToken0 ? usdcDesired : dusdDesired,
-                amount0Min: 0,
-                amount1Min: 0,
+                amount0Desired: amount0Desired,
+                amount1Desired: amount1Desired,
+                amount0Min: amount0Min,
+                amount1Min: amount1Min,
                 recipient: DEPLOYER,
                 deadline: block.timestamp + 1 hours
             })
