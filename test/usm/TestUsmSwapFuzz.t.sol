@@ -89,7 +89,8 @@ contract TestUsmSwapFuzz is TestDusdBase {
                 stableTokenTreasury: TREASURY,
                 exposureCap: type(uint128).max,
                 priceStrategy: address(newPriceStrategy),
-                accessMode: AccessMode.PERMISSIONLESS
+                accessMode: AccessMode.PERMISSIONLESS,
+                feeRecipient: FEE_RECIPIENT
             })
         );
         DUSD_TOKEN.setMinterStatus(address(gsm), true);
@@ -168,7 +169,8 @@ contract TestUsmSwapFuzz is TestDusdBase {
                 stableTokenTreasury: TREASURY,
                 exposureCap: type(uint128).max,
                 priceStrategy: address(newPriceStrategy),
-                accessMode: AccessMode.PERMISSIONLESS
+                accessMode: AccessMode.PERMISSIONLESS,
+                feeRecipient: FEE_RECIPIENT
             })
         );
 
@@ -210,7 +212,8 @@ contract TestUsmSwapFuzz is TestDusdBase {
                 stableTokenTreasury: TREASURY,
                 exposureCap: type(uint128).max,
                 priceStrategy: address(newPriceStrategy),
-                accessMode: AccessMode.PERMISSIONLESS
+                accessMode: AccessMode.PERMISSIONLESS,
+                feeRecipient: FEE_RECIPIENT
             })
         );
         DUSD_TOKEN.setMinterStatus(address(gsm), true);
@@ -257,7 +260,8 @@ contract TestUsmSwapFuzz is TestDusdBase {
                 stableTokenTreasury: TREASURY,
                 exposureCap: type(uint128).max,
                 priceStrategy: address(newPriceStrategy),
-                accessMode: AccessMode.PERMISSIONLESS
+                accessMode: AccessMode.PERMISSIONLESS,
+                feeRecipient: FEE_RECIPIENT
             })
         );
         DUSD_TOKEN.setMinterStatus(address(gsm), true);
@@ -313,7 +317,8 @@ contract TestUsmSwapFuzz is TestDusdBase {
                 stableTokenTreasury: TREASURY,
                 exposureCap: type(uint128).max,
                 priceStrategy: address(newPriceStrategy),
-                accessMode: AccessMode.PERMISSIONLESS
+                accessMode: AccessMode.PERMISSIONLESS,
+                feeRecipient: FEE_RECIPIENT
             })
         );
 
@@ -361,7 +366,8 @@ contract TestUsmSwapFuzz is TestDusdBase {
                 stableTokenTreasury: TREASURY,
                 exposureCap: type(uint128).max,
                 priceStrategy: address(newPriceStrategy),
-                accessMode: AccessMode.PERMISSIONLESS
+                accessMode: AccessMode.PERMISSIONLESS,
+                feeRecipient: FEE_RECIPIENT
             })
         );
 
@@ -409,7 +415,8 @@ contract TestUsmSwapFuzz is TestDusdBase {
                 stableTokenTreasury: TREASURY,
                 exposureCap: type(uint128).max,
                 priceStrategy: address(newPriceStrategy),
-                accessMode: AccessMode.PERMISSIONLESS
+                accessMode: AccessMode.PERMISSIONLESS,
+                feeRecipient: FEE_RECIPIENT
             })
         );
 
@@ -458,7 +465,8 @@ contract TestUsmSwapFuzz is TestDusdBase {
                 stableTokenTreasury: TREASURY,
                 exposureCap: type(uint128).max,
                 priceStrategy: address(newPriceStrategy),
-                accessMode: AccessMode.PERMISSIONLESS
+                accessMode: AccessMode.PERMISSIONLESS,
+                feeRecipient: FEE_RECIPIENT
             })
         );
 
@@ -509,7 +517,8 @@ contract TestUsmSwapFuzz is TestDusdBase {
                 stableTokenTreasury: TREASURY,
                 exposureCap: uint128(assetAmount),
                 priceStrategy: address(newPriceStrategy),
-                accessMode: AccessMode.PERMISSIONLESS
+                accessMode: AccessMode.PERMISSIONLESS,
+                feeRecipient: FEE_RECIPIENT
             })
         );
 
@@ -574,7 +583,8 @@ contract TestUsmSwapFuzz is TestDusdBase {
                 stableTokenTreasury: TREASURY,
                 exposureCap: uint128(assetAmount),
                 priceStrategy: address(newPriceStrategy),
-                accessMode: AccessMode.PERMISSIONLESS
+                accessMode: AccessMode.PERMISSIONLESS,
+                feeRecipient: FEE_RECIPIENT
             })
         );
 
@@ -636,7 +646,8 @@ contract TestUsmSwapFuzz is TestDusdBase {
                 stableTokenTreasury: TREASURY,
                 exposureCap: uint128(assetAmount),
                 priceStrategy: address(newPriceStrategy),
-                accessMode: AccessMode.PERMISSIONLESS
+                accessMode: AccessMode.PERMISSIONLESS,
+                feeRecipient: FEE_RECIPIENT
             })
         );
         DUSD_TOKEN.setMinterStatus(address(gsm), true);
@@ -732,7 +743,8 @@ contract TestUsmSwapFuzz is TestDusdBase {
                 stableTokenTreasury: TREASURY,
                 exposureCap: type(uint128).max,
                 priceStrategy: address(newPriceStrategy),
-                accessMode: AccessMode.PERMISSIONLESS
+                accessMode: AccessMode.PERMISSIONLESS,
+                feeRecipient: FEE_RECIPIENT
             })
         );
         DUSD_TOKEN.setMinterStatus(address(gsm), true);

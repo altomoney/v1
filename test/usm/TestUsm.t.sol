@@ -48,7 +48,8 @@ contract TestUsm is TestDusdBase {
                 TREASURY,
                 DEFAULT_USM_USDC_EXPOSURE,
                 address(DUSD_USM_FIXED_PRICE_STRATEGY),
-                AccessMode.PERMISSIONLESS
+                AccessMode.PERMISSIONLESS,
+                FEE_RECIPIENT
             );
     }
 
@@ -59,7 +60,12 @@ contract TestUsm is TestDusdBase {
         vm.expectRevert("INVALID_PRICE_STRATEGY");
         DUSDUsm(usm)
             .initialize(
-                address(this), TREASURY, DEFAULT_USM_USDC_EXPOSURE, address(newPriceStrategy), AccessMode.PERMISSIONLESS
+                address(this),
+                TREASURY,
+                DEFAULT_USM_USDC_EXPOSURE,
+                address(newPriceStrategy),
+                AccessMode.PERMISSIONLESS,
+                FEE_RECIPIENT
             );
     }
 
@@ -86,7 +92,8 @@ contract TestUsm is TestDusdBase {
             TREASURY,
             DEFAULT_USM_USDC_EXPOSURE,
             address(DUSD_USM_FIXED_PRICE_STRATEGY),
-            AccessMode.PERMISSIONLESS
+            AccessMode.PERMISSIONLESS,
+            FEE_RECIPIENT
         );
         assertEq(usm.getExposureCap(), DEFAULT_USM_USDC_EXPOSURE, "Unexpected exposure capacity");
     }
@@ -101,7 +108,8 @@ contract TestUsm is TestDusdBase {
                 TREASURY,
                 DEFAULT_USM_USDC_EXPOSURE,
                 address(DUSD_USM_FIXED_PRICE_STRATEGY),
-                AccessMode.PERMISSIONLESS
+                AccessMode.PERMISSIONLESS,
+                FEE_RECIPIENT
             );
     }
 
@@ -115,7 +123,8 @@ contract TestUsm is TestDusdBase {
                     TREASURY,
                     DEFAULT_USM_USDC_EXPOSURE,
                     address(DUSD_USM_FIXED_PRICE_STRATEGY),
-                    AccessMode.PERMISSIONLESS
+                    AccessMode.PERMISSIONLESS,
+                    FEE_RECIPIENT
                 )
             )
         );
@@ -127,7 +136,8 @@ contract TestUsm is TestDusdBase {
                 TREASURY,
                 DEFAULT_USM_USDC_EXPOSURE,
                 address(DUSD_USM_FIXED_PRICE_STRATEGY),
-                AccessMode.PERMISSIONLESS
+                AccessMode.PERMISSIONLESS,
+                FEE_RECIPIENT
             );
     }
 
@@ -269,7 +279,8 @@ contract TestUsm is TestDusdBase {
                 stableTokenTreasury: TREASURY,
                 exposureCap: DEFAULT_USM_USDC_EXPOSURE,
                 priceStrategy: address(DUSD_USM_FIXED_PRICE_STRATEGY),
-                accessMode: AccessMode.PERMISSIONLESS
+                accessMode: AccessMode.PERMISSIONLESS,
+                feeRecipient: FEE_RECIPIENT
             })
         );
 
@@ -296,7 +307,8 @@ contract TestUsm is TestDusdBase {
                 stableTokenTreasury: TREASURY,
                 exposureCap: DEFAULT_USM_USDC_EXPOSURE - 1,
                 priceStrategy: address(DUSD_USM_FIXED_PRICE_STRATEGY),
-                accessMode: AccessMode.PERMISSIONLESS
+                accessMode: AccessMode.PERMISSIONLESS,
+                feeRecipient: FEE_RECIPIENT
             })
         );
         DUSD_TOKEN.setMinterStatus(address(usm), true);
@@ -840,7 +852,8 @@ contract TestUsm is TestDusdBase {
             address(0),
             DEFAULT_USM_USDC_EXPOSURE,
             address(DUSD_USM_FIXED_PRICE_STRATEGY),
-            AccessMode.PERMISSIONLESS
+            AccessMode.PERMISSIONLESS,
+            FEE_RECIPIENT
         );
     }
 
@@ -1133,11 +1146,11 @@ contract TestUsm is TestDusdBase {
 
         vm.expectEmit(true, true, true, true, address(DUSD_USM));
         emit IStableTokenFacilitator.FeesDistributedToTreasury(
-            TREASURY, address(DUSD_TOKEN), DUSD_TOKEN.balanceOf(address(DUSD_USM))
+            FEE_RECIPIENT, address(DUSD_TOKEN), DUSD_TOKEN.balanceOf(address(DUSD_USM))
         );
         DUSD_USM.distributeFeesToTreasury();
         assertEq(DUSD_TOKEN.balanceOf(address(DUSD_USM)), 0, "Unexpected GSM DUSD balance post-distribution");
-        assertEq(DUSD_TOKEN.balanceOf(TREASURY), fee, "Unexpected DUSD balance in treasury");
+        assertEq(DUSD_TOKEN.balanceOf(FEE_RECIPIENT), fee, "Unexpected DUSD balance in fee recipient");
         assertEq(DUSD_USM.getAccruedFees(), 0, "Unexpected GSM accrued fees");
     }
 

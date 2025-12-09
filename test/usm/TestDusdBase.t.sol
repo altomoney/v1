@@ -64,7 +64,8 @@ contract TestDusdBase is Test, TestHelperOz5, Constants {
                     TREASURY,
                     DEFAULT_USM_USDC_EXPOSURE,
                     address(DUSD_USM_FIXED_PRICE_STRATEGY),
-                    AccessMode.PERMISSIONLESS
+                    AccessMode.PERMISSIONLESS,
+                    FEE_RECIPIENT
                 )
             )
         );
@@ -79,7 +80,8 @@ contract TestDusdBase is Test, TestHelperOz5, Constants {
                     TREASURY,
                     DEFAULT_USM_USDC_EXPOSURE,
                     address(DUSD_USM_FIXED_PRICE_STRATEGY),
-                    AccessMode.PERMISSIONED
+                    AccessMode.PERMISSIONED,
+                    FEE_RECIPIENT
                 )
             )
         );
