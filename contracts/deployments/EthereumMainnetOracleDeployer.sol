@@ -71,7 +71,7 @@ library EthereumMainnetOracleDeployer {
         chainlinkNodes[0] = ChainlinkNode({
             feed: AggregatorV3Interface(CHAINLINK_ETH_USD_PRICE_FEED),
             direction: ConversionDirection.IN_TO_OUT, // ETH to USD
-            stalePeriod: 2 hours, // TODO placeholder value
+            stalePeriod: 3900, // 3900 seconds
             inDecimals: 18, // ETH decimals
             outDecimals: 36, // LENDING_ORACLE_PRICE_PRECISION + DUSD decimals - WETH decimals
             feedDecimals: 8
@@ -92,7 +92,7 @@ library EthereumMainnetOracleDeployer {
         ChainlinkNode memory chainlinkNode = ChainlinkNode({
             feed: AggregatorV3Interface(CHAINLINK_ETH_USD_PRICE_FEED),
             direction: ConversionDirection.IN_TO_OUT, // ETH to USD
-            stalePeriod: 2 hours, // TODO placeholder value
+            stalePeriod: 3900, // 3900 seconds
             inDecimals: 18, // stETH/ETH decimals
             outDecimals: 36, // LENDING_ORACLE_PRICE_PRECISION + DUSD decimals - stETH decimals
             feedDecimals: 8
@@ -113,7 +113,7 @@ library EthereumMainnetOracleDeployer {
         ChainlinkNode memory chainlinkNode = ChainlinkNode({
             feed: AggregatorV3Interface(CHAINLINK_ETH_USD_PRICE_FEED),
             direction: ConversionDirection.IN_TO_OUT, // ETH to USD
-            stalePeriod: 2 hours, // TODO placeholder value
+            stalePeriod: 3900, // 3900 seconds
             inDecimals: 18, // ETH decimals
             outDecimals: 36, // LENDING_ORACLE_PRICE_PRECISION + DUSD decimals - rETH decimals
             feedDecimals: 8
@@ -134,7 +134,7 @@ library EthereumMainnetOracleDeployer {
         ChainlinkNode memory chainlinkNode = ChainlinkNode({
             feed: AggregatorV3Interface(CHAINLINK_ETH_USD_PRICE_FEED),
             direction: ConversionDirection.IN_TO_OUT, // ETH to USD
-            stalePeriod: 2 hours, // TODO placeholder value
+            stalePeriod: 3900, // 3900 seconds
             inDecimals: 18, // ETH decimals
             outDecimals: 36, // LENDING_ORACLE_PRICE_PRECISION + DUSD decimals - mETH decimals
             feedDecimals: 8
@@ -150,7 +150,7 @@ library EthereumMainnetOracleDeployer {
         chainlinkNodes[0] = ChainlinkNode({
             feed: AggregatorV3Interface(CHAINLINK_BTC_USD_PRICE_FEED),
             direction: ConversionDirection.IN_TO_OUT, // BTC to USD
-            stalePeriod: 2 hours, // TODO placeholder value
+            stalePeriod: 3900, // 3900 seconds
             inDecimals: 18, // tBTC/BTC decimals
             outDecimals: 36, // LENDING_ORACLE_PRICE_PRECISION + DUSD decimals - tBTC decimals
             feedDecimals: 8
@@ -165,7 +165,7 @@ library EthereumMainnetOracleDeployer {
         chainlinkNodes[0] = ChainlinkNode({
             feed: AggregatorV3Interface(CHAINLINK_WBTC_BTC_RATIO_FEED),
             direction: ConversionDirection.IN_TO_OUT, // BTC to USD
-            stalePeriod: 26 hours, // TODO placeholder value
+            stalePeriod: 86700, // 86700 seconds
             inDecimals: 8, // WBTC decimals
             outDecimals: 8, // BTC
             feedDecimals: 8
@@ -174,7 +174,7 @@ library EthereumMainnetOracleDeployer {
         chainlinkNodes[1] = ChainlinkNode({
             feed: AggregatorV3Interface(CHAINLINK_BTC_USD_PRICE_FEED),
             direction: ConversionDirection.IN_TO_OUT, // BTC to USD
-            stalePeriod: 2 hours, // TODO placeholder value
+            stalePeriod: 3900, // 3900 seconds
             inDecimals: 8, // BTC decimals
             outDecimals: 46, // LENDING_ORACLE_PRICE_PRECISION + DUSD decimals - wBTC decimals
             feedDecimals: 8
@@ -189,7 +189,7 @@ library EthereumMainnetOracleDeployer {
         chainlinkNodes[0] = ChainlinkNode({
             feed: AggregatorV3Interface(CHAINLINK_BTC_USD_PRICE_FEED),
             direction: ConversionDirection.IN_TO_OUT, // BTC to USD
-            stalePeriod: 2 hours, // TODO placeholder value
+            stalePeriod: 3900, // 3900 seconds
             inDecimals: 8, // cbBTC/BTC decimals
             outDecimals: 46, // LENDING_ORACLE_PRICE_PRECISION + DUSD decimals - cbBTC decimals
             feedDecimals: 8
@@ -210,7 +210,7 @@ library EthereumMainnetOracleDeployer {
         ChainlinkNode memory chainlinkNode = ChainlinkNode({
             feed: AggregatorV3Interface(CHAINLINK_USDE_USD_PRICE_FEED),
             direction: ConversionDirection.IN_TO_OUT, // USDe to USD
-            stalePeriod: 26 hours, // TODO placeholder value
+            stalePeriod: 83100, // 83100 seconds
             inDecimals: 18, // USDe decimals
             outDecimals: 36, // LENDING_ORACLE_PRICE_PRECISION + DUSD decimals - USDe decimals
             feedDecimals: 8
