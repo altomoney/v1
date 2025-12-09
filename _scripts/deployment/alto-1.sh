@@ -10,4 +10,7 @@ FOUNDRY_PROFILE=deployment forge script script/DeployAltoEthereumMainnet.s.sol:D
 --rpc-url "https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}" \
 --account $ACCOUNT \
 --sender $SENDER \
---broadcast -vvv
+--broadcast -vvv \
+--slow \
+--priority-gas-price 0.4gwei \
+--confirmations 2

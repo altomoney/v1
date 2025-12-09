@@ -474,7 +474,7 @@ library DeployAltoEthereumMainnet {
         bool useUnsafeUpgrades
     ) internal returns (MarketContracts memory) {
         uint256 minterCeiling = marketParams.debtCeiling * 1.05 ether / marketParams.liquidationConfig.maxLiquidationLtv;
-        MintMarketBatch batch = new MintMarketBatch(
+        MarketContracts memory report = MintMarketBatch.deploy(
             MintMarketBatchParams({
                 owner: marketParams.owner,
                 dusd: marketParams.dusd,
@@ -493,7 +493,6 @@ library DeployAltoEthereumMainnet {
                 useUnsafeUpgrades: useUnsafeUpgrades
             })
         );
-        MarketContracts memory report = batch.getReport();
 
         // Configure DUSD minter permissions for market (requires DUSD ownership)
         // This is done here because DUSD may be owned by the deployment caller, not the batch contract
@@ -515,7 +514,7 @@ library DeployAltoEthereumMainnet {
         bool useUnsafeUpgrades
     ) internal returns (MarketContracts memory) {
         // Deploy batch - deploys all market components in single constructor (including Oracle and IRM)
-        BorrowMarketBatch batch = new BorrowMarketBatch(
+        MarketContracts memory report = BorrowMarketBatch.deploy(
             BorrowMarketBatchParams({
                 owner: marketParams.owner,
                 dusd: marketParams.dusd,
@@ -533,7 +532,6 @@ library DeployAltoEthereumMainnet {
                 useUnsafeUpgrades: useUnsafeUpgrades
             })
         );
-        MarketContracts memory report = batch.getReport();
 
         IMarketRegistry(input.contracts.marketRegistry).addBorrowMarket(report.market);
 
