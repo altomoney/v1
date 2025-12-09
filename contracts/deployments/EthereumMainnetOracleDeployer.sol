@@ -43,7 +43,7 @@ enum EthereumMainnetLendingOracleAsset {
 }
 
 library EthereumMainnetOracleDeployer {
-    function deployOracle(EthereumMainnetLendingOracleAsset asset, address owner) public returns (address) {
+    function deployOracle(EthereumMainnetLendingOracleAsset asset, address owner) internal returns (address) {
         if (asset == EthereumMainnetLendingOracleAsset.WETH) {
             return deployWethOracle(owner);
         } else if (asset == EthereumMainnetLendingOracleAsset.WBTC) {
@@ -65,7 +65,7 @@ library EthereumMainnetOracleDeployer {
         revert("Invalid asset");
     }
 
-    function deployWethOracle(address owner) public returns (address) {
+    function deployWethOracle(address owner) internal returns (address) {
         ChainlinkNode[] memory chainlinkNodes = new ChainlinkNode[](1);
 
         chainlinkNodes[0] = ChainlinkNode({
@@ -80,7 +80,7 @@ library EthereumMainnetOracleDeployer {
         return address(new AltoMultiChainlinkLendingOracle(owner, chainlinkNodes));
     }
 
-    function deployWstEthOracle(address owner) public returns (address) {
+    function deployWstEthOracle(address owner) internal returns (address) {
         uint256 stEthPerToken = IWstEth(WSTETH_MAINNET).stEthPerToken() * 1005 / 1000; // +0.5%
 
         ERC4626RatioNode memory erc4626RatioNode = ERC4626RatioNode({
@@ -101,7 +101,7 @@ library EthereumMainnetOracleDeployer {
         return address(new ERC4626RatioChainlinkOracleWSTETH(owner, WSTETH_MAINNET, erc4626RatioNode, chainlinkNode));
     }
 
-    function deployRethOracle(address owner) public returns (address) {
+    function deployRethOracle(address owner) internal returns (address) {
         uint256 rethPerToken = IReth(RETH_MAINNET).getExchangeRate() * 1005 / 1000; // +0.5%
 
         ERC4626RatioNode memory erc4626RatioNode = ERC4626RatioNode({
@@ -122,7 +122,7 @@ library EthereumMainnetOracleDeployer {
         return address(new ERC4626RatioChainlinkOracleRETH(owner, RETH_MAINNET, erc4626RatioNode, chainlinkNode));
     }
 
-    function deployMethOracle(address owner) public returns (address) {
+    function deployMethOracle(address owner) internal returns (address) {
         uint256 methPerToken = IMethStaking(METH_STAKING_MAINNET).mETHToETH(1 ether) * 1005 / 1000; // +0.5%
 
         ERC4626RatioNode memory erc4626RatioNode = ERC4626RatioNode({
@@ -144,7 +144,7 @@ library EthereumMainnetOracleDeployer {
             address(new ERC4626RatioChainlinkOracleMETH(owner, METH_STAKING_MAINNET, erc4626RatioNode, chainlinkNode));
     }
 
-    function deployTbtcOracle(address owner) public returns (address) {
+    function deployTbtcOracle(address owner) internal returns (address) {
         ChainlinkNode[] memory chainlinkNodes = new ChainlinkNode[](1);
 
         chainlinkNodes[0] = ChainlinkNode({
@@ -159,7 +159,7 @@ library EthereumMainnetOracleDeployer {
         return address(new AltoMultiChainlinkLendingOracle(owner, chainlinkNodes));
     }
 
-    function deployWbtcOracle(address owner) public returns (address) {
+    function deployWbtcOracle(address owner) internal returns (address) {
         ChainlinkNode[] memory chainlinkNodes = new ChainlinkNode[](2);
 
         chainlinkNodes[0] = ChainlinkNode({
@@ -183,7 +183,7 @@ library EthereumMainnetOracleDeployer {
         return address(new AltoMultiChainlinkLendingOracle(owner, chainlinkNodes));
     }
 
-    function deployCbbtcOracle(address owner) public returns (address) {
+    function deployCbbtcOracle(address owner) internal returns (address) {
         ChainlinkNode[] memory chainlinkNodes = new ChainlinkNode[](1);
 
         chainlinkNodes[0] = ChainlinkNode({
@@ -198,7 +198,7 @@ library EthereumMainnetOracleDeployer {
         return address(new AltoMultiChainlinkLendingOracle(owner, chainlinkNodes));
     }
 
-    function deploySusdeOracle(address owner) public returns (address) {
+    function deploySusdeOracle(address owner) internal returns (address) {
         uint256 rethPerToken = IERC4626(SUSDE_MAINNET).convertToAssets(1 ether) * 1015 / 1000; // +1.5%
 
         ERC4626RatioNode memory erc4626RatioNode = ERC4626RatioNode({
