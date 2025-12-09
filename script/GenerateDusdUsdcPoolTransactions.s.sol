@@ -97,19 +97,6 @@ contract GenerateDusdUsdcPoolTransactionsScript is Script {
         address multisig_,
         uint256 deadline_
     ) internal pure {
-        // Calculate position ticks
-        int24 pos1Lower = baseTick_ + POS_1_LOWER_OFFSET;
-        int24 pos1Upper = baseTick_ + POS_1_UPPER_OFFSET;
-        int24 pos2Lower = baseTick_ + POS_2_LOWER_OFFSET;
-        int24 pos2Upper = baseTick_ + POS_2_UPPER_OFFSET;
-
-        console.log("\nPosition 1 ticks:");
-        console.logInt(pos1Lower);
-        console.logInt(pos1Upper);
-        console.log("Position 2 ticks:");
-        console.logInt(pos2Lower);
-        console.logInt(pos2Upper);
-
         console.log("\n=== TRANSACTION DATA FOR SAFE WALLET ===");
         console.log("\n--- Transaction 1: Approve DUSD ---");
         bytes memory approveDusdData = abi.encodeWithSelector(
@@ -138,72 +125,67 @@ contract GenerateDusdUsdcPoolTransactionsScript is Script {
         console.log("To:", UNISWAP_V3_NFT_POSITION_MANAGER);
         console.log("Value: 0");
         console.logBytes(createPoolData);
+        {
+            // Calculate position ticks
+            int24 pos1Lower = baseTick_ + POS_1_LOWER_OFFSET;
+            int24 pos1Upper = baseTick_ + POS_1_UPPER_OFFSET;
 
-        _generatePosition1(token0_, token1_, pos1Lower, pos1Upper, dusdIsToken0_, multisig_, deadline_);
-        _generatePosition2(token0_, token1_, pos2Lower, pos2Upper, dusdIsToken0_, multisig_, deadline_);
-    }
+            console.log("\nPosition 1 ticks:");
+            console.logInt(pos1Lower);
+            console.logInt(pos1Upper);
+            _generatePosition(
+                "\n--- Transaction 4: Mint Position 1 (Tight Range) ---",
+                token0_,
+                token1_,
+                pos1Lower,
+                pos1Upper,
+                dusdIsToken0_,
+                POSITION_1_DUSD,
+                POSITION_1_USDC,
+                multisig_,
+                deadline_
+            );
+        }
+        {
 
-    /// @notice Generate Position 1 mint transaction
-    function _generatePosition1(
-        address token0_,
-        address token1_,
-        int24 tickLower,
-        int24 tickUpper,
-        bool dusdIsToken0_,
-        address recipient,
-        uint256 deadline_
-    ) internal pure {
-        console.log("\n--- Transaction 4: Mint Position 1 (Tight Range) ---");
-
-        uint256 amount0Desired = dusdIsToken0_ ? POSITION_1_DUSD : POSITION_1_USDC;
-        uint256 amount1Desired = dusdIsToken0_ ? POSITION_1_USDC : POSITION_1_DUSD;
-
-        uint256 amount0Min = amount0Desired * (10_000 - SLIPPAGE_BPS) / 10_000;
-        uint256 amount1Min = amount1Desired * (10_000 - SLIPPAGE_BPS) / 10_000;
-
-        MintParams memory params = MintParams({
-            token0: token0_,
-            token1: token1_,
-            fee: FEE_100,
-            tickLower: tickLower,
-            tickUpper: tickUpper,
-            amount0Desired: amount0Desired,
-            amount1Desired: amount1Desired,
-            amount0Min: amount0Min,
-            amount1Min: amount1Min,
-            recipient: recipient,
-            deadline: deadline_
-        });
-
-        bytes memory mintData = abi.encodeWithSelector(INonfungiblePositionManager.mint.selector, params);
-
-        console.log("To:", UNISWAP_V3_NFT_POSITION_MANAGER);
-        console.log("Value: 0");
-        console.logBytes(mintData);
-        console.log("Expected amounts:");
-        if (dusdIsToken0_) {
-            console.log("  DUSD (token0):", POSITION_1_DUSD / 1e18);
-            console.log("  USDC (token1):", POSITION_1_USDC / 1e6);
-        } else {
-            console.log("  USDC (token0):", POSITION_1_USDC / 1e6);
-            console.log("  DUSD (token1):", POSITION_1_DUSD / 1e18);
+            int24 pos2Lower = baseTick_ + POS_2_LOWER_OFFSET;
+            int24 pos2Upper = baseTick_ + POS_2_UPPER_OFFSET;
+            console.log("Position 2 ticks:");
+            console.logInt(pos2Lower);
+            console.logInt(pos2Upper);
+            _generatePosition(
+                "\n--- Transaction 5: Mint Position 2 (Wide Range) ---",
+                token0_,
+                token1_,
+                pos2Lower,
+                pos2Upper,
+                dusdIsToken0_,
+                POSITION_2_DUSD,
+                POSITION_2_USDC,
+                multisig_,
+                deadline_
+            );
         }
     }
 
-    /// @notice Generate Position 2 mint transaction
-    function _generatePosition2(
+    /// @notice Generate mint transaction for a liquidity position
+    function _generatePosition(
+        string memory transactionTitle,
         address token0_,
         address token1_,
         int24 tickLower,
         int24 tickUpper,
         bool dusdIsToken0_,
+        uint256 dusdAmount,
+        uint256 usdcAmount,
         address recipient,
         uint256 deadline_
     ) internal pure {
-        console.log("\n--- Transaction 5: Mint Position 2 (Wide Range) ---");
+        console.log(transactionTitle);
 
-        uint256 amount0Desired = dusdIsToken0_ ? POSITION_2_DUSD : POSITION_2_USDC;
-        uint256 amount1Desired = dusdIsToken0_ ? POSITION_2_USDC : POSITION_2_DUSD;
+        uint256 amount0Desired = dusdIsToken0_ ? dusdAmount : usdcAmount;
+        uint256 amount1Desired = dusdIsToken0_ ? usdcAmount : dusdAmount;
+
         uint256 amount0Min = amount0Desired * (10_000 - SLIPPAGE_BPS) / 10_000;
         uint256 amount1Min = amount1Desired * (10_000 - SLIPPAGE_BPS) / 10_000;
 
@@ -228,11 +210,11 @@ contract GenerateDusdUsdcPoolTransactionsScript is Script {
         console.logBytes(mintData);
         console.log("Expected amounts:");
         if (dusdIsToken0_) {
-            console.log("  DUSD (token0):", POSITION_2_DUSD / 1e18);
-            console.log("  USDC (token1):", POSITION_2_USDC / 1e6);
+            console.log("  DUSD (token0):", dusdAmount / 1e18);
+            console.log("  USDC (token1):", usdcAmount / 1e6);
         } else {
-            console.log("  USDC (token0):", POSITION_2_USDC / 1e6);
-            console.log("  DUSD (token1):", POSITION_2_DUSD / 1e18);
+            console.log("  USDC (token0):", usdcAmount / 1e6);
+            console.log("  DUSD (token1):", dusdAmount / 1e18);
         }
     }
 }
