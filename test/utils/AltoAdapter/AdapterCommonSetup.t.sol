@@ -304,8 +304,7 @@ abstract contract AdapterCommonSetup is AdapterCommon, TestHelperOz5 {
                             address(OWNER),
                             uint128(100_000_000e6),
                             address(priceStrategy),
-                            AccessMode.PERMISSIONLESS,
-                            address(this)
+                            AccessMode.PERMISSIONLESS
                         )
                     )
                 )
@@ -321,14 +320,15 @@ abstract contract AdapterCommonSetup is AdapterCommon, TestHelperOz5 {
                             address(OWNER),
                             uint128(100_000_000e6),
                             address(priceStrategy),
-                            AccessMode.PERMISSIONLESS,
-                            address(this)
+                            AccessMode.PERMISSIONLESS
                         )
                     )
                 )
             );
         }
 
+        // Set fee recipient before setting fee strategy
+        usmContract.updateFeeRecipient(address(OWNER));
         // Update fee strategy
         usmContract.updateFeeStrategy(address(feeStrategy));
 

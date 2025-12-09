@@ -117,8 +117,7 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
         address stableTokenTreasury,
         uint128 exposureCap,
         address priceStrategy,
-        AccessMode accessMode,
-        address feeRecipient
+        AccessMode accessMode
     ) internal onlyInitializing {
         require(admin != address(0), "ZERO_ADDRESS_NOT_VALID");
 
@@ -131,7 +130,6 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
         _updateExposureCap(exposureCap);
         _updatePriceStrategy(priceStrategy);
         _updateAccessMode(accessMode);
-        _updateFeeRecipient(feeRecipient);
     }
 
     /// @inheritdoc IUsm
@@ -328,6 +326,11 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
     }
 
     /// @inheritdoc IUsm
+    function getFeeRecipient() external view returns (address) {
+        return _feeRecipient;
+    }
+
+    /// @inheritdoc IUsm
     function getAccruedFees() external view returns (uint256) {
         return _accruedFees;
     }
@@ -504,6 +507,10 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
      * @param feeStrategy The address of the new Fee Strategy
      */
     function _updateFeeStrategy(address feeStrategy) internal {
+        // Setting fee strategy to non-zero should be possible only if fee recipient is non-zero as well
+        if (feeStrategy != address(0)) {
+            require(_feeRecipient != address(0), "FEE_STRATEGY_REQUIRES_FEE_RECIPIENT");
+        }
         address oldFeeStrategy = _feeStrategy;
         _feeStrategy = feeStrategy;
         emit FeeStrategyUpdated(oldFeeStrategy, feeStrategy);
@@ -544,7 +551,10 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
      * @param newFeeRecipient The address of the new Fee Recipient
      */
     function _updateFeeRecipient(address newFeeRecipient) internal {
-        require(newFeeRecipient != address(0), "ZERO_ADDRESS_NOT_VALID");
+        // Setting fee recipient to 0 should be possible only if fee strategy is 0 as well
+        if (newFeeRecipient == address(0)) {
+            require(_feeStrategy == address(0), "FEE_RECIPIENT_CANNOT_BE_ZERO_WITH_FEE_STRATEGY");
+        }
         address oldFeeRecipient = _feeRecipient;
         _feeRecipient = newFeeRecipient;
         emit FeeRecipientUpdated(oldFeeRecipient, newFeeRecipient);

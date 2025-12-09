@@ -28,10 +28,9 @@ contract DUSDUsmUpgradedOriginalUsm is Usm {
         address stableTokenTreasury,
         uint128 exposureCap,
         address priceStrategy,
-        AccessMode accessMode,
-        address feeRecipient
+        AccessMode accessMode
     ) external initializer {
-        __Usm_init(admin, stableTokenTreasury, exposureCap, priceStrategy, accessMode, feeRecipient);
+        __Usm_init(admin, stableTokenTreasury, exposureCap, priceStrategy, accessMode);
     }
 
     /// @dev Reinitializer for version 2 upgrade - initializes new storage variables

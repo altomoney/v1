@@ -48,8 +48,7 @@ contract TestUsm is TestDusdBase {
                 TREASURY,
                 DEFAULT_USM_USDC_EXPOSURE,
                 address(DUSD_USM_FIXED_PRICE_STRATEGY),
-                AccessMode.PERMISSIONLESS,
-                FEE_RECIPIENT
+                AccessMode.PERMISSIONLESS
             );
     }
 
@@ -60,12 +59,7 @@ contract TestUsm is TestDusdBase {
         vm.expectRevert("INVALID_PRICE_STRATEGY");
         DUSDUsm(usm)
             .initialize(
-                address(this),
-                TREASURY,
-                DEFAULT_USM_USDC_EXPOSURE,
-                address(newPriceStrategy),
-                AccessMode.PERMISSIONLESS,
-                FEE_RECIPIENT
+                address(this), TREASURY, DEFAULT_USM_USDC_EXPOSURE, address(newPriceStrategy), AccessMode.PERMISSIONLESS
             );
     }
 
@@ -92,9 +86,9 @@ contract TestUsm is TestDusdBase {
             TREASURY,
             DEFAULT_USM_USDC_EXPOSURE,
             address(DUSD_USM_FIXED_PRICE_STRATEGY),
-            AccessMode.PERMISSIONLESS,
-            FEE_RECIPIENT
+            AccessMode.PERMISSIONLESS
         );
+        usm.updateFeeRecipient(FEE_RECIPIENT);
         assertEq(usm.getExposureCap(), DEFAULT_USM_USDC_EXPOSURE, "Unexpected exposure capacity");
     }
 
@@ -108,8 +102,7 @@ contract TestUsm is TestDusdBase {
                 TREASURY,
                 DEFAULT_USM_USDC_EXPOSURE,
                 address(DUSD_USM_FIXED_PRICE_STRATEGY),
-                AccessMode.PERMISSIONLESS,
-                FEE_RECIPIENT
+                AccessMode.PERMISSIONLESS
             );
     }
 
@@ -123,8 +116,7 @@ contract TestUsm is TestDusdBase {
                     TREASURY,
                     DEFAULT_USM_USDC_EXPOSURE,
                     address(DUSD_USM_FIXED_PRICE_STRATEGY),
-                    AccessMode.PERMISSIONLESS,
-                    FEE_RECIPIENT
+                    AccessMode.PERMISSIONLESS
                 )
             )
         );
@@ -136,8 +128,7 @@ contract TestUsm is TestDusdBase {
                 TREASURY,
                 DEFAULT_USM_USDC_EXPOSURE,
                 address(DUSD_USM_FIXED_PRICE_STRATEGY),
-                AccessMode.PERMISSIONLESS,
-                FEE_RECIPIENT
+                AccessMode.PERMISSIONLESS
             );
     }
 
@@ -818,6 +809,54 @@ contract TestUsm is TestDusdBase {
         vm.stopPrank();
     }
 
+    function testRevertSetFeeRecipientToZeroWithNonZeroFeeStrategy() public {
+        // Fee strategy is already set (non-zero) from setup
+        assertEq(DUSD_USM.getFeeStrategy(), address(DUSD_USM_FIXED_FEE_STRATEGY), "Fee strategy should be set");
+        assertEq(DUSD_USM.getFeeRecipient(), FEE_RECIPIENT, "Fee recipient should be set");
+
+        // Should revert when trying to set fee recipient to 0 while fee strategy is non-zero
+        vm.expectRevert("FEE_RECIPIENT_CANNOT_BE_ZERO_WITH_FEE_STRATEGY");
+        DUSD_USM.updateFeeRecipient(address(0));
+    }
+
+    function testSetFeeRecipientToZeroWithZeroFeeStrategy() public {
+        // First set fee strategy to 0
+        DUSD_USM.updateFeeStrategy(address(0));
+        assertEq(DUSD_USM.getFeeStrategy(), address(0), "Fee strategy should be zero");
+
+        // Now setting fee recipient to 0 should succeed
+        vm.expectEmit(true, true, false, true, address(DUSD_USM));
+        emit IUsm.FeeRecipientUpdated(FEE_RECIPIENT, address(0));
+        DUSD_USM.updateFeeRecipient(address(0));
+        assertEq(DUSD_USM.getFeeRecipient(), address(0), "Fee recipient should be zero");
+    }
+
+    function testRevertSetFeeStrategyToNonZeroWithZeroFeeRecipient() public {
+        // First set fee strategy to 0
+        DUSD_USM.updateFeeStrategy(address(0));
+        // Then set fee recipient to 0
+        DUSD_USM.updateFeeRecipient(address(0));
+        assertEq(DUSD_USM.getFeeRecipient(), address(0), "Fee recipient should be zero");
+        assertEq(DUSD_USM.getFeeStrategy(), address(0), "Fee strategy should be zero");
+
+        // Should revert when trying to set fee strategy to non-zero while fee recipient is 0
+        FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(DEFAULT_USM_BUY_FEE, DEFAULT_USM_SELL_FEE, address(this));
+        vm.expectRevert("FEE_STRATEGY_REQUIRES_FEE_RECIPIENT");
+        DUSD_USM.updateFeeStrategy(address(newFeeStrategy));
+    }
+
+    function testSetFeeStrategyToNonZeroWithNonZeroFeeRecipient() public {
+        // Fee recipient is already set (non-zero) from setup
+        assertEq(DUSD_USM.getFeeRecipient(), FEE_RECIPIENT, "Fee recipient should be set");
+
+        // Setting fee strategy to non-zero should succeed when fee recipient is non-zero
+        FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(DEFAULT_USM_BUY_FEE, DEFAULT_USM_SELL_FEE, address(this));
+        vm.expectEmit(true, true, false, true, address(DUSD_USM));
+        emit IUsm.FeeStrategyUpdated(address(DUSD_USM_FIXED_FEE_STRATEGY), address(newFeeStrategy));
+        DUSD_USM.updateFeeStrategy(address(newFeeStrategy));
+        assertEq(DUSD_USM.getFeeStrategy(), address(newFeeStrategy), "Fee strategy should be updated");
+    }
+
     function testRevertConfiguratorUpdateMethodsNotAuthorized() public {
         vm.startPrank(ALICE);
         vm.expectRevert(
@@ -852,8 +891,7 @@ contract TestUsm is TestDusdBase {
             address(0),
             DEFAULT_USM_USDC_EXPOSURE,
             address(DUSD_USM_FIXED_PRICE_STRATEGY),
-            AccessMode.PERMISSIONLESS,
-            FEE_RECIPIENT
+            AccessMode.PERMISSIONLESS
         );
     }
 

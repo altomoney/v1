@@ -455,6 +455,13 @@ contract DeployAltoEthereumMainnetTest is Test {
         _verifyHasRole(
             input.contracts.permissionedUsm.dusdUsm, params.treasuryMultisig, SWAPPER_ROLE, "DUSD USM permissioned"
         );
+
+        // Verify fee recipient is set correctly
+        assertEq(
+            IUsm(input.contracts.permissionedUsm.dusdUsm).getFeeRecipient(),
+            address(0),
+            "Fee recipient should be set to 0"
+        );
     }
 
     function test_deployPhase_PERMISSIONLESS_USM() public {
@@ -532,6 +539,13 @@ contract DeployAltoEthereumMainnetTest is Test {
             input.contracts.timelock,
             DEFAULT_ADMIN_ROLE,
             "Fixed price strategy Permissionless"
+        );
+
+        // Verify fee recipient is set correctly
+        assertEq(
+            IUsm(input.contracts.permissionlessUsm.dusdUsm).getFeeRecipient(),
+            input.contracts.feeRecipient,
+            "Fee recipient should be set to feeRecipient timelock"
         );
     }
 
