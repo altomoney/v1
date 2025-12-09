@@ -18,7 +18,6 @@ import {EthereumMainnetLendingOracleAsset} from "@alto/deployments/EthereumMainn
 import {DUSDBatch, DUSDBatchParams, DUSDBatchReport} from "@alto/deployments/ethereum-mainnet/DUSDBatch.sol";
 import {MintMarketBatch, MintMarketBatchParams} from "@alto/deployments/ethereum-mainnet/MintMarketBatch.sol";
 import {BorrowMarketBatch, BorrowMarketBatchParams} from "@alto/deployments/ethereum-mainnet/BorrowMarketBatch.sol";
-import {IMarketRegistry} from "@alto/utils/MarketRegistry.sol";
 import {
     MarketContracts,
     DeploymentPhase,
@@ -30,6 +29,7 @@ import {
     DeployBorrowMarketParams
 } from "@alto/deployments/ethereum-mainnet/IDeployAltoEthereumMainnet.sol";
 import {DUSD} from "@alto/tokens/DUSD.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {
     INonfungiblePositionManager,
     MintParams
@@ -41,9 +41,11 @@ library DeployAltoEthereumMainnet {
         returns (AltoEthereumMainnetInput memory)
     {
         if (params.phase == DeploymentPhase.CORE) {
-            DeployCoreParams memory coreParams =
-                DeployCoreParams({owner: params.deployer, bundler3: BUNDLER3_MAINNET, wNative: WETH_MAINNET});
-            input = _deployCore(coreParams, params, input);
+            input = _deployCore(
+                DeployCoreParams({owner: params.deployer, bundler3: BUNDLER3_MAINNET, wNative: WETH_MAINNET}),
+                params,
+                input
+            );
         } else if (params.phase == DeploymentPhase.DUSD) {
             input = _deployDUSD(
                 DeployDUSDParams({
@@ -65,8 +67,8 @@ library DeployAltoEthereumMainnet {
                     oracleAsset: EthereumMainnetLendingOracleAsset.WETH,
                     irmInterestRate: 0.035 ether / uint256(365 days), // 3.5%
                     maxLtv: 0.8 ether, // 80%
-                    initialBorrowOpeningFee: 0, // TODO placeholder value
-                    debtCeiling: 300_000 ether, // TODO placeholder value
+                    initialBorrowOpeningFee: 0.005 ether, // TODO placeholder value
+                    debtCeiling: 5000 ether, // TODO placeholder value
                     liquidationConfig: LiquidationConfiguration({
                         maxLiquidationLtv: 0.85 ether, // 85%
                         dynamicBonusFeeStart: 0.02 ether, // 2%
@@ -104,7 +106,7 @@ library DeployAltoEthereumMainnet {
                         maxRateAtTarget: 2 ether / int256(365 days) // 200%
                     }),
                     maxLtv: 0.75 ether, // 75%
-                    initialBorrowOpeningFee: 0, // TODO placeholder value
+                    initialBorrowOpeningFee: 0.005 ether, // TODO placeholder value
                     supplyCapAssets: 0, // TODO placeholder value
                     liquidationConfig: LiquidationConfiguration({
                         maxLiquidationLtv: 0.8 ether, // 80%
@@ -161,7 +163,7 @@ library DeployAltoEthereumMainnet {
                 lzEndpoint: dusdParams.lzEndpoint,
                 treasury: dusdParams.feeRecipient,
                 flashFee: FlashFee({minFlashFee: 5e14, maxFlashFee: 1e16}), // TODO placeholder value
-                flashMintCeiling: 750_000 ether, // TODO placeholder value
+                flashMintCeiling: 1,
                 deployer: params.deployer,
                 freezer: params.freezer
             })
@@ -180,7 +182,7 @@ library DeployAltoEthereumMainnet {
         bool useUnsafeUpgrades
     ) internal returns (MarketContracts memory) {
         uint256 minterCeiling = marketParams.debtCeiling * 1.05 ether / marketParams.liquidationConfig.maxLiquidationLtv;
-        MintMarketBatch batch = new MintMarketBatch(
+        MarketContracts memory report = MintMarketBatch.deploy(
             MintMarketBatchParams({
                 owner: marketParams.owner,
                 dusd: marketParams.dusd,
@@ -199,15 +201,12 @@ library DeployAltoEthereumMainnet {
                 useUnsafeUpgrades: useUnsafeUpgrades
             })
         );
-        MarketContracts memory report = batch.getReport();
 
         // Configure DUSD minter permissions for market (requires DUSD ownership)
         // This is done here because DUSD may be owned by the deployment caller, not the batch contract
         IDUSD(marketParams.dusd).setMinterStatus(report.market, true);
         IDUSD(marketParams.dusd).setMinterCeiling(report.market, minterCeiling);
         IDUSD(marketParams.dusd).setBurnerStatus(report.market, true);
-
-        IMarketRegistry(input.contracts.marketRegistry).addMintMarket(report.market);
 
         // Approve market on AltoAdapter (requires adapter ownership)
         AltoAdapter(payable(marketParams.altoAdapter)).approveContract(report.market);
@@ -221,7 +220,7 @@ library DeployAltoEthereumMainnet {
         bool useUnsafeUpgrades
     ) internal returns (MarketContracts memory) {
         // Deploy batch - deploys all market components in single constructor (including Oracle and IRM)
-        BorrowMarketBatch batch = new BorrowMarketBatch(
+        MarketContracts memory report = BorrowMarketBatch.deploy(
             BorrowMarketBatchParams({
                 owner: marketParams.owner,
                 dusd: marketParams.dusd,
@@ -239,9 +238,6 @@ library DeployAltoEthereumMainnet {
                 useUnsafeUpgrades: useUnsafeUpgrades
             })
         );
-        MarketContracts memory report = batch.getReport();
-
-        IMarketRegistry(input.contracts.marketRegistry).addBorrowMarket(report.market);
 
         // Approve market on AltoAdapter (requires adapter ownership)
         AltoAdapter(payable(marketParams.altoAdapter)).approveContract(report.market);
@@ -258,41 +254,42 @@ library DeployAltoEthereumMainnet {
 
         DUSD(input.contracts.dusd).mint(params.deployer, 1_000_000 ether);
 
+        DUSD(input.contracts.dusd).setMinterStatus(params.deployer, true);
+
         {
+            // Determine token order (Uniswap V3 requires token0 < token1)
+            bool usdcIsToken0 = USDC_MAINNET < input.contracts.dusd;
+            address token0 = usdcIsToken0 ? address(USDC_MAINNET) : address(input.contracts.dusd);
+            address token1 = usdcIsToken0 ? address(input.contracts.dusd) : address(USDC_MAINNET);
+
+            // Create pool with initial price of 1 DUSD = 1 USDC
+            // sqrtPriceX96 values calculated for 1:1 price accounting for decimal difference (6 vs 18)
+            uint160 sqrtPriceX96 = usdcIsToken0 ? 79226131514347940073696838322079733 : 79226398639705836713598;
+            input.contracts.uniswapPool = INonfungiblePositionManager(params.uniswapV3NonFungiblePositionManager)
+                .createAndInitializePoolIfNecessary(token0, token1, 100, sqrtPriceX96);
+
+            // Mint liquidity position with correct token ordering
+            // Ticks for 0.95-1.05 DUSD/USDC price range (accounting for 6 vs 18 decimal difference)
+            // Base tick for 1:1 = ±276324, ±5% adjustment ≈ ±500 ticks
+            // USDC as token0: tickLower=275836 ($1.05), tickUpper=276837 ($0.95)
+            // DUSD as token0: tickLower=-276837 ($0.95), tickUpper=-275836 ($1.05)
+            // Approve tokens for the position manager
+            IERC20(input.contracts.dusd).approve(params.uniswapV3NonFungiblePositionManager, type(uint256).max);
+            IERC20(USDC_MAINNET).approve(params.uniswapV3NonFungiblePositionManager, type(uint256).max);
+
             MintParams memory mintParams = MintParams({
-                token0: address(USDC_MAINNET),
-                token1: address(input.contracts.dusd),
+                token0: token0,
+                token1: token1,
                 fee: 100,
-                tickLower: -887272,
-                tickUpper: 887272,
-                amount0Desired: 1000 * 10 ** 6,
-                amount1Desired: 1000 ether,
+                tickLower: usdcIsToken0 ? int24(275836) : int24(-276837),
+                tickUpper: usdcIsToken0 ? int24(276837) : int24(-275836),
+                amount0Desired: usdcIsToken0 ? 500 * 10 ** 6 : 500 ether,
+                amount1Desired: usdcIsToken0 ? 500 ether : 500 * 10 ** 6,
                 amount0Min: 0,
                 amount1Min: 0,
                 recipient: params.deployer,
                 deadline: block.timestamp + 1 days
             });
-
-            // initial price of 1 dusd = 1 USDC
-            if (USDC_MAINNET < input.contracts.dusd) {
-                input.contracts.uniswapPool = INonfungiblePositionManager(params.uniswapV3NonFungiblePositionManager)
-                    .createAndInitializePoolIfNecessary(
-                        address(USDC_MAINNET), address(input.contracts.dusd), 100, 79226131514347940073696838322079733
-                    );
-                mintParams.token0 = address(USDC_MAINNET);
-                mintParams.amount0Desired = 1000 * 10 ** 6;
-                mintParams.token1 = address(input.contracts.dusd);
-                mintParams.amount1Desired = 1000 ether;
-            } else {
-                input.contracts.uniswapPool = INonfungiblePositionManager(params.uniswapV3NonFungiblePositionManager)
-                    .createAndInitializePoolIfNecessary(
-                        address(input.contracts.dusd), address(USDC_MAINNET), 100, 79226398639705836713598
-                    );
-                mintParams.token0 = address(input.contracts.dusd);
-                mintParams.amount0Desired = 1000 ether;
-                mintParams.token1 = address(USDC_MAINNET);
-                mintParams.amount1Desired = 1000 * 10 ** 6;
-            }
 
             INonfungiblePositionManager(params.uniswapV3NonFungiblePositionManager).mint(mintParams);
         }
