@@ -84,17 +84,17 @@ library DeployAltoEthereumMainnet {
                     feeRecipient: input.contracts.feeRecipient,
                     collateralToken: WETH_MAINNET,
                     oracleAsset: EthereumMainnetLendingOracleAsset.WETH,
-                    irmInterestRate: 0.035 ether / uint256(365 days), // 3.5%
+                    irmInterestRate: 0.02 ether / uint256(365 days), // 2%
                     maxLtv: 0.8 ether, // 80%
-                    initialBorrowOpeningFee: 0, // TODO placeholder value
-                    debtCeiling: 300_000 ether, // TODO placeholder value
+                    initialBorrowOpeningFee: 0.0005 ether, // 0.05%
+                    debtCeiling: 500_000 ether,
                     liquidationConfig: LiquidationConfiguration({
                         maxLiquidationLtv: 0.85 ether, // 85%
                         dynamicBonusFeeStart: 0.02 ether, // 2%
                         ltvForCompleteLiquidation: 0.93 ether, // 93%
                         dynamicBonusFeeDecaySteepness: 5 ether, // 5
                         liquidationBaseFee: 0.05 ether, // 5%
-                        minPenaltyPercentage: 0, // TODO placeholder value
+                        minPenaltyPercentage: 0.005 ether, // 0.5%
                         protocolFeePercentage: 0.07 ether, // 7%
                         isEnabledPriorityLiquidation: false,
                         disablePriorityLiquidationAbovePositionLtv: 0,
@@ -116,17 +116,17 @@ library DeployAltoEthereumMainnet {
                     feeRecipient: input.contracts.feeRecipient,
                     collateralToken: WSTETH_MAINNET,
                     oracleAsset: EthereumMainnetLendingOracleAsset.stETH,
-                    irmInterestRate: 0.035 ether / uint256(365 days), // 3.5%
+                    irmInterestRate: 0.025 ether / uint256(365 days), // 2.5%
                     maxLtv: 0.78 ether, // 78%
-                    initialBorrowOpeningFee: 0, // TODO placeholder value
-                    debtCeiling: 300_000 ether, // TODO placeholder value
+                    initialBorrowOpeningFee: 0.0005 ether, // 0.05%
+                    debtCeiling: 500_000 ether, // 500,000 DUSD
                     liquidationConfig: LiquidationConfiguration({
                         maxLiquidationLtv: 0.83 ether, // 83%
                         dynamicBonusFeeStart: 0.02 ether, // 2%
                         ltvForCompleteLiquidation: 0.91 ether, // 91%
                         dynamicBonusFeeDecaySteepness: 5 ether, // 5
                         liquidationBaseFee: 0.06 ether, // 6%
-                        minPenaltyPercentage: 0, // TODO placeholder value
+                        minPenaltyPercentage: 0.005 ether, // 0.5%
                         protocolFeePercentage: 0.07 ether, // 7%
                         isEnabledPriorityLiquidation: false,
                         disablePriorityLiquidationAbovePositionLtv: 0,
@@ -148,17 +148,17 @@ library DeployAltoEthereumMainnet {
                     feeRecipient: input.contracts.feeRecipient,
                     collateralToken: RETH_MAINNET,
                     oracleAsset: EthereumMainnetLendingOracleAsset.rETH,
-                    irmInterestRate: 0.04 ether / uint256(365 days), // 4%
+                    irmInterestRate: 0.025 ether / uint256(365 days), // 2.5%
                     maxLtv: 0.7 ether, // 70%
-                    initialBorrowOpeningFee: 0, // TODO placeholder value
-                    debtCeiling: 300_000 ether, // TODO placeholder value
+                    initialBorrowOpeningFee: 0.0005 ether, // 0.05%
+                    debtCeiling: 200_000 ether, // 200,000 DUSD
                     liquidationConfig: LiquidationConfiguration({
                         maxLiquidationLtv: 0.75 ether, // 75%
                         dynamicBonusFeeStart: 0.02 ether, // 2%
                         ltvForCompleteLiquidation: 0.83 ether, // 83%
                         dynamicBonusFeeDecaySteepness: 5 ether, // 5
                         liquidationBaseFee: 0.07 ether, // 7%
-                        minPenaltyPercentage: 0, // TODO placeholder value
+                        minPenaltyPercentage: 0.005 ether, // 0.5%
                         protocolFeePercentage: 0.07 ether, // 7%
                         isEnabledPriorityLiquidation: false,
                         disablePriorityLiquidationAbovePositionLtv: 0,
@@ -180,17 +180,17 @@ library DeployAltoEthereumMainnet {
                     feeRecipient: input.contracts.feeRecipient,
                     collateralToken: METH_MAINNET,
                     oracleAsset: EthereumMainnetLendingOracleAsset.METH,
-                    irmInterestRate: 0.04 ether / uint256(365 days), // 4%
-                    maxLtv: 0.67 ether, // 67%
-                    initialBorrowOpeningFee: 0, // TODO placeholder value
-                    debtCeiling: 300_000 ether, // TODO placeholder value
+                    irmInterestRate: 0.025 ether / uint256(365 days), // 2.5%
+                    maxLtv: 0.65 ether, // 65%
+                    initialBorrowOpeningFee: 0.0005 ether, // 0.05%
+                    debtCeiling: 200_000 ether, // 200,000 DUSD
                     liquidationConfig: LiquidationConfiguration({
                         maxLiquidationLtv: 0.72 ether, // 72%
                         dynamicBonusFeeStart: 0.02 ether, // 2%
                         ltvForCompleteLiquidation: 0.8 ether, // 80%
                         dynamicBonusFeeDecaySteepness: 5 ether, // 5
                         liquidationBaseFee: 0.075 ether, // 7.5%
-                        minPenaltyPercentage: 0, // TODO placeholder value
+                        minPenaltyPercentage: 0.005 ether, // 0.5%
                         protocolFeePercentage: 0.07 ether, // 7%
                         isEnabledPriorityLiquidation: false,
                         disablePriorityLiquidationAbovePositionLtv: 0,
@@ -212,17 +212,17 @@ library DeployAltoEthereumMainnet {
                     feeRecipient: input.contracts.feeRecipient,
                     collateralToken: TBTC_MAINNET,
                     oracleAsset: EthereumMainnetLendingOracleAsset.tBTC,
-                    irmInterestRate: 0.01 ether / uint256(365 days), // TODO placeholder value
-                    maxLtv: 0.72 ether, // 72%
-                    initialBorrowOpeningFee: 0, // TODO placeholder value
-                    debtCeiling: 300_000 ether, // TODO placeholder value
+                    irmInterestRate: 0.025 ether / uint256(365 days), // 2.5%
+                    maxLtv: 0.7 ether, // 70%
+                    initialBorrowOpeningFee: 0.0005 ether, // 0.05%
+                    debtCeiling: 200_000 ether, // 200,000 DUSD
                     liquidationConfig: LiquidationConfiguration({
                         maxLiquidationLtv: 0.77 ether, // 77%
                         dynamicBonusFeeStart: 0.01 ether, // 1%
                         ltvForCompleteLiquidation: 0.85 ether, // 85%
                         dynamicBonusFeeDecaySteepness: 5 ether, // 5
                         liquidationBaseFee: 0.07 ether, // 7%
-                        minPenaltyPercentage: 0, // TODO placeholder value
+                        minPenaltyPercentage: 0.005 ether, // 0.5%
                         protocolFeePercentage: 0.07 ether, // 7%
                         isEnabledPriorityLiquidation: false,
                         disablePriorityLiquidationAbovePositionLtv: 0,
@@ -248,20 +248,20 @@ library DeployAltoEthereumMainnet {
                         curveSteepness: 4 ether,
                         adjustmentSpeed: 50 ether / int256(365 days),
                         targetUtilization: 0.9 ether, // 90%
-                        initialRateAtTarget: 0.04 ether / int256(365 days), // 4%
+                        initialRateAtTarget: 0.1 ether / int256(365 days), // 10%
                         minRateAtTarget: 0.001 ether / int256(365 days), // 0.1%
                         maxRateAtTarget: 2 ether / int256(365 days) // 200%
                     }),
                     maxLtv: 0.75 ether, // 75%
-                    initialBorrowOpeningFee: 0, // TODO placeholder value
-                    supplyCapAssets: 0, // TODO placeholder value
+                    initialBorrowOpeningFee: 0.002 ether, // 0.2%
+                    supplyCapAssets: 0,
                     liquidationConfig: LiquidationConfiguration({
                         maxLiquidationLtv: 0.8 ether, // 80%
                         dynamicBonusFeeStart: 0.01 ether, // 1%
                         ltvForCompleteLiquidation: 0.88 ether, // 88%
                         dynamicBonusFeeDecaySteepness: 5 ether, // 5
                         liquidationBaseFee: 0.07 ether, // 7%
-                        minPenaltyPercentage: 0, // TODO placeholder value
+                        minPenaltyPercentage: 0.005 ether, // 0.5%
                         protocolFeePercentage: 0.07 ether, // 7%
                         isEnabledPriorityLiquidation: false,
                         disablePriorityLiquidationAbovePositionLtv: 0,
@@ -287,20 +287,20 @@ library DeployAltoEthereumMainnet {
                         curveSteepness: 4 ether,
                         adjustmentSpeed: 50 ether / int256(365 days),
                         targetUtilization: 0.9 ether, // 90%
-                        initialRateAtTarget: 0.04 ether / int256(365 days), // 4%
+                        initialRateAtTarget: 0.1 ether / int256(365 days), // 10%
                         minRateAtTarget: 0.001 ether / int256(365 days), // 0.1%
                         maxRateAtTarget: 2 ether / int256(365 days) // 200%
                     }),
                     maxLtv: 0.75 ether, // 75%
-                    initialBorrowOpeningFee: 0, // TODO placeholder value
-                    supplyCapAssets: 0, // TODO placeholder value
+                    initialBorrowOpeningFee: 0.002 ether, // 0.2%
+                    supplyCapAssets: 0,
                     liquidationConfig: LiquidationConfiguration({
                         maxLiquidationLtv: 0.8 ether, // 80%
                         dynamicBonusFeeStart: 0.01 ether, // 1%
                         ltvForCompleteLiquidation: 0.88 ether, // 88%
                         dynamicBonusFeeDecaySteepness: 5 ether, // 5
                         liquidationBaseFee: 0.07 ether, // 7%
-                        minPenaltyPercentage: 0, // placeholder value
+                        minPenaltyPercentage: 0.005 ether, // 0.5%
                         protocolFeePercentage: 0.07 ether, // 7%
                         isEnabledPriorityLiquidation: false, // priority liquidation is not enabled
                         disablePriorityLiquidationAbovePositionLtv: 0,
@@ -326,20 +326,20 @@ library DeployAltoEthereumMainnet {
                         curveSteepness: 4 ether,
                         adjustmentSpeed: 50 ether / int256(365 days),
                         targetUtilization: 0.9 ether, // 90%
-                        initialRateAtTarget: 0.04 ether / int256(365 days), // 4%
+                        initialRateAtTarget: 0.1 ether / int256(365 days), // 10%
                         minRateAtTarget: 0.001 ether / int256(365 days), // 0.1%
                         maxRateAtTarget: 2 ether / int256(365 days) // 200%
                     }),
                     maxLtv: 0.8 ether, // 80%
-                    initialBorrowOpeningFee: 0, // TODO placeholder value
-                    supplyCapAssets: 0, // TODO placeholder value
+                    initialBorrowOpeningFee: 0.002 ether, // 0.2%
+                    supplyCapAssets: 0,
                     liquidationConfig: LiquidationConfiguration({
                         maxLiquidationLtv: 0.85 ether, // 85%
                         dynamicBonusFeeStart: 0.005 ether, // 0.5%
                         ltvForCompleteLiquidation: 0.93 ether, // 93%
                         dynamicBonusFeeDecaySteepness: 5 ether, // 5
                         liquidationBaseFee: 0.06 ether, // 6%
-                        minPenaltyPercentage: 0, // TODO placeholder value
+                        minPenaltyPercentage: 0.005 ether, // 0.5%
                         protocolFeePercentage: 0.07 ether, // 7%
                         isEnabledPriorityLiquidation: false, // priority liquidation is not enabled
                         disablePriorityLiquidationAbovePositionLtv: 0,
@@ -362,7 +362,7 @@ library DeployAltoEthereumMainnet {
                     freezer: params.freezer,
                     buyFee: 0,
                     sellFee: 0,
-                    exposureCap: 0, // TODO placeholder value
+                    exposureCap: 5_000_000_000 * 10 ** 6, // 5,000,000,000 USDC
                     underlyingAsset: USDC_MAINNET,
                     isPermissioned: true,
                     treasuryMultisig: params.treasuryMultisig
@@ -378,9 +378,9 @@ library DeployAltoEthereumMainnet {
                     altoAdapter: input.contracts.altoAdapter,
                     feeRecipient: input.contracts.feeRecipient,
                     freezer: params.freezer,
-                    buyFee: 1, // TODO placeholder value
-                    sellFee: 1, // TODO placeholder value
-                    exposureCap: 0, // TODO placeholder value
+                    buyFee: 20, // 0.2%
+                    sellFee: 20, // 0.2%
+                    exposureCap: 5_000_000 * 10 ** 6, // 5,000,000 USDC
                     underlyingAsset: USDC_MAINNET,
                     isPermissioned: false,
                     treasuryMultisig: params.treasuryMultisig
@@ -454,8 +454,8 @@ library DeployAltoEthereumMainnet {
                 timelock: input.contracts.timelock,
                 lzEndpoint: dusdParams.lzEndpoint,
                 treasury: dusdParams.feeRecipient,
-                flashFee: FlashFee({minFlashFee: 5e14, maxFlashFee: 1e16}), // TODO placeholder value
-                flashMintCeiling: 750_000 ether, // TODO placeholder value
+                flashFee: FlashFee({minFlashFee: 0, maxFlashFee: 0}),
+                flashMintCeiling: 500_000 ether,
                 deployer: params.deployer,
                 freezer: params.freezer
             })
@@ -579,7 +579,9 @@ library DeployAltoEthereumMainnet {
         IUsmRegistry(input.contracts.usmRegistry).addUsm(report.dusdUsm);
 
         // Approve USM on AltoAdapter (requires adapter ownership)
-        AltoAdapter(payable(usmParams.altoAdapter)).approveContract(report.dusdUsm);
+        if (!usmParams.isPermissioned) {
+            AltoAdapter(payable(usmParams.altoAdapter)).approveContract(report.dusdUsm);
+        }
 
         UsmContracts memory usmContract = UsmContracts({
             dusdUsm: report.dusdUsm,
