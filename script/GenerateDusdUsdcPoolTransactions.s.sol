@@ -15,11 +15,12 @@ import {
 contract GenerateDusdUsdcPoolTransactionsScript is Script {
     address constant UNISWAP_V3_NFT_POSITION_MANAGER = 0xC36442b4a4522E871399CD717aBDD847Ab11FE88;
     uint24 constant FEE_100 = 100; // 0.01%
+    uint256 constant SLIPPAGE_BPS = 100; // 1% slippage tolerance
 
     // Position amounts (from test)
-    uint256 constant POSITION_1_DUSD = 240_000 ether;
-    uint256 constant POSITION_1_USDC = 960_000 * 1e6;
-    uint256 constant POSITION_2_DUSD = 60_000 ether;
+    uint256 constant POSITION_1_DUSD = 239999 ether;
+    uint256 constant POSITION_1_USDC = 944202 * 1e6;
+    uint256 constant POSITION_2_DUSD = 54641 ether;
     uint256 constant POSITION_2_USDC = 240_000 * 1e6;
 
     // Tick offsets from base tick (from test)
@@ -157,6 +158,9 @@ contract GenerateDusdUsdcPoolTransactionsScript is Script {
         uint256 amount0Desired = dusdIsToken0_ ? POSITION_1_DUSD : POSITION_1_USDC;
         uint256 amount1Desired = dusdIsToken0_ ? POSITION_1_USDC : POSITION_1_DUSD;
 
+        uint256 amount0Min = amount0Desired * (10_000 - SLIPPAGE_BPS) / 10_000;
+        uint256 amount1Min = amount1Desired * (10_000 - SLIPPAGE_BPS) / 10_000;
+
         MintParams memory params = MintParams({
             token0: token0_,
             token1: token1_,
@@ -165,8 +169,8 @@ contract GenerateDusdUsdcPoolTransactionsScript is Script {
             tickUpper: tickUpper,
             amount0Desired: amount0Desired,
             amount1Desired: amount1Desired,
-            amount0Min: 0,
-            amount1Min: 0,
+            amount0Min: amount0Min,
+            amount1Min: amount1Min,
             recipient: recipient,
             deadline: deadline_
         });
@@ -200,6 +204,8 @@ contract GenerateDusdUsdcPoolTransactionsScript is Script {
 
         uint256 amount0Desired = dusdIsToken0_ ? POSITION_2_DUSD : POSITION_2_USDC;
         uint256 amount1Desired = dusdIsToken0_ ? POSITION_2_USDC : POSITION_2_DUSD;
+        uint256 amount0Min = amount0Desired * (10_000 - SLIPPAGE_BPS) / 10_000;
+        uint256 amount1Min = amount1Desired * (10_000 - SLIPPAGE_BPS) / 10_000;
 
         MintParams memory params = MintParams({
             token0: token0_,
@@ -209,8 +215,8 @@ contract GenerateDusdUsdcPoolTransactionsScript is Script {
             tickUpper: tickUpper,
             amount0Desired: amount0Desired,
             amount1Desired: amount1Desired,
-            amount0Min: 0,
-            amount1Min: 0,
+            amount0Min: amount0Min,
+            amount1Min: amount1Min,
             recipient: recipient,
             deadline: deadline_
         });
