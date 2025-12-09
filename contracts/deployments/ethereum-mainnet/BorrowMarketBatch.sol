@@ -24,6 +24,7 @@ import {MarketContracts} from "@alto/deployments/ethereum-mainnet/IDeployAltoEth
 
 struct BorrowMarketBatchParams {
     address owner;
+    address deployer;
     address dusd;
     address altoAdapter;
     address feeRecipient;
@@ -46,9 +47,9 @@ library BorrowMarketBatch {
         address marketOracle = EthereumMainnetOracleDeployer.deployOracle(_params.oracleAsset, _params.owner);
         address marketIrm = address(new AdaptiveCurveIrm(_params.irmConfig, _params.owner));
 
-        // Deploy Liquidation Engine with batch contract as owner temporarily to allow configuration
+        // Deploy Liquidation Engine with deployer as owner temporarily to allow configuration
         // owner will be transferred to _params.owner after configuration
-        address liquidationEngine = address(new DlbDcfPriorityLiquidationEngine(msg.sender));
+        address liquidationEngine = address(new DlbDcfPriorityLiquidationEngine(_params.deployer));
 
         // Deploy Market Proxy
         bytes memory initData = abi.encodeCall(
@@ -58,7 +59,7 @@ library BorrowMarketBatch {
                         borrowToken: _params.dusd,
                         collateralToken: _params.collateralToken,
                         irm: marketIrm,
-                        owner: msg.sender, // ownership of market is temporarily set to batch contract
+                        owner: _params.deployer, // ownership of market is temporarily set to deployer
                         oracle: marketOracle,
                         maxLtv: _params.maxLtv,
                         feeRecipient: _params.feeRecipient,
@@ -89,10 +90,10 @@ library BorrowMarketBatch {
         IPausable(marketProxy).setPauser(_params.freezer, PAUSE_TYPE, true);
         IPausable(marketProxy).setPauser(_params.freezer, FROZEN_TYPE, true);
 
-        // Deploy leverage components with batch contract as owner temporarily to allow configuration
+        // Deploy leverage components with deployer as owner temporarily to allow configuration
         // owner will be transferred to _params.owner after configuration
-        address leverageSwapper = address(new AltoLeverageSwapper(msg.sender, _params.zeroXSwapTarget));
-        address leverage = address(new AltoLeverage(leverageSwapper, msg.sender));
+        address leverageSwapper = address(new AltoLeverageSwapper(_params.deployer, _params.zeroXSwapTarget));
+        address leverage = address(new AltoLeverage(leverageSwapper, _params.deployer));
 
         // Configure leverage components (requires ownership)
         AltoLeverage(leverage).setMarket(marketProxy, true);
