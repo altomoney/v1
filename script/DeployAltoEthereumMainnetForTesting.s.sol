@@ -9,10 +9,10 @@ import {
     AltoEthereumMainnetInput,
     DeploymentPhase,
     MarketContracts
-} from "@alto/deployments/ethereum-mainnet/DeployAltoEthereumMainnet.sol";
+} from "@alto/deployments/ethereum-mainnet/DeployAltoEthereumMainnetForTesting.sol";
 import {console} from "forge-std/console.sol";
 
-uint256 constant DEPLOYMENT_ID_TO_LOAD = 0;
+uint256 constant DEPLOYMENT_ID_TO_LOAD = 1765210967;
 DeploymentPhase constant PHASE_TO_DEPLOY = DeploymentPhase.CORE; // CORE, DUSD, MINT_MARKET_WETH, MINT_MARKET_WSTETH, MINT_MARKET_RETH, MINT_MARKET_METH, MINT_MARKET_TBTC, BORROW_MARKET_WBTC, BORROW_MARKET_CBBTC, BORROW_MARKET_SUSDE, USDC_USM, or POST
 string constant OUTPUT_DIR = "./contracts/deployments/ethereum-mainnet/output";
 
@@ -26,29 +26,32 @@ contract DeployAltoEthereumMainnetScript is Script {
         vm.startBroadcast();
 
         params = AltoEthereumMainnetParams({
-            timelockAdmin: msg.sender, // TODO: Set to actual timelock admin address
-            timelockDelay: 10, // TODO: Set to actual timelock delay
-            freezer: address(0), // TODO: Set to actual freezer address
+            timelockAdmin: msg.sender,
+            timelockDelay: 0,
+            freezer: msg.sender,
             deployer: msg.sender,
             phase: PHASE_TO_DEPLOY,
-            useUnsafeUpgrades: false,
-            treasuryMultisig: address(1), // TODO: Set to actual treasury multisig address
+            useUnsafeUpgrades: true,
+            treasuryMultisig: msg.sender,
             uniswapV3NonFungiblePositionManager: 0xC36442b4a4522E871399CD717aBDD847Ab11FE88
         });
 
-        input = DeployAltoEthereumMainnet.deploy(params, input);
+        // Set feeRecipient for testing (needed when loading from previous deployment and skipping CORE)
+        input.contracts.feeRecipient = msg.sender;
 
-        params.phase = DeploymentPhase.DUSD;
-        input = DeployAltoEthereumMainnet.deploy(params, input);
+        // input = DeployAltoEthereumMainnet.deploy(params, input);
+
+        // params.phase = DeploymentPhase.DUSD;
+        // input = DeployAltoEthereumMainnet.deploy(params, input);
 
         params.phase = DeploymentPhase.MINT_MARKET_WETH;
         input = DeployAltoEthereumMainnet.deploy(params, input);
 
-        params.phase = DeploymentPhase.BORROW_MARKET_WBTC;
-        input = DeployAltoEthereumMainnet.deploy(params, input);
+        // params.phase = DeploymentPhase.BORROW_MARKET_WBTC;
+        // input = DeployAltoEthereumMainnet.deploy(params, input);
 
-        params.phase = DeploymentPhase.POST;
-        input = DeployAltoEthereumMainnet.deploy(params, input);
+        // params.phase = DeploymentPhase.POST;
+        // input = DeployAltoEthereumMainnet.deploy(params, input);
 
         vm.stopBroadcast();
 

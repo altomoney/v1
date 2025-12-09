@@ -25,7 +25,7 @@ contract DUSD is AltoOwnable2Step, Pausable, OFT, IDUSD {
     /// @notice constructor
     /// @param endpoint The endpoint address
     /// @param owner The owner of the contract
-    constructor(address endpoint, address owner) OFT("DUSD", "DUSD", endpoint, owner) Ownable(owner) {
+    constructor(address endpoint, address owner) OFT("TESTCOIN", "TESTCOIN", endpoint, owner) Ownable(owner) {
         _setPauser(owner, PAUSE_TYPE, true);
     }
 

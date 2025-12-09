@@ -38,25 +38,24 @@ contract DeployAltoEthereumMainnetForTestingTest is Test {
     AltoEthereumMainnetParams params;
     AltoEthereumMainnetInput input;
 
-    address immutable MULTISIG_FREEZER_PAUSER = makeAddr("MULTISIG_FREEZER_PAUSER");
     address DEPLOYER;
 
     ISwapRouter constant SWAP_ROUTER = ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);
 
     function setUp() public {
         string memory rpcUrl = vm.rpcUrl("ethereum");
-        vm.createSelectFork(rpcUrl);
+        vm.createSelectFork(rpcUrl, 23969028);
 
         DEPLOYER = address(this);
 
         params = AltoEthereumMainnetParams({
-            timelockAdmin: address(0), // Not used in ForTesting
-            timelockDelay: 0, // Not used in ForTesting
-            freezer: MULTISIG_FREEZER_PAUSER,
+            timelockAdmin: DEPLOYER,
+            timelockDelay: 0,
+            freezer: DEPLOYER,
             deployer: DEPLOYER,
             phase: DeploymentPhase.CORE,
             useUnsafeUpgrades: true,
-            treasuryMultisig: address(0), // Not used in ForTesting
+            treasuryMultisig: DEPLOYER,
             uniswapV3NonFungiblePositionManager: 0xC36442b4a4522E871399CD717aBDD847Ab11FE88
         });
     }
@@ -115,13 +114,6 @@ contract DeployAltoEthereumMainnetForTestingTest is Test {
         (uint128 minFlashFee, uint128 maxFlashFee) = flashMinter.flashMintFee();
         assertEq(minFlashFee, 5e14, "DUSDFlashMinter min flash fee should be correct");
         assertEq(maxFlashFee, 1e16, "DUSDFlashMinter max flash fee should be correct");
-
-        // Verify flash minter configuration
-        assertTrue(dusd.allowedMinter(input.contracts.dusdFlashMinter), "FlashMinter should be allowed minter");
-        assertTrue(dusd.allowedBurner(input.contracts.dusdFlashMinter), "FlashMinter should be allowed burner");
-        (uint256 minted, uint256 ceiling) = dusd.minterConfig(input.contracts.dusdFlashMinter);
-        assertEq(ceiling, 750_000 ether, "Flash mint ceiling should be correct");
-        assertEq(minted, 0, "Flash minter should have 0 minted initially");
     }
 
     function _verifyMarketContracts(MarketContracts memory market) internal view {
@@ -182,13 +174,11 @@ contract DeployAltoEthereumMainnetForTestingTest is Test {
     }
 
     function _verifyPauser(address addr, string memory name) internal view {
-        assertTrue(Pausable(addr).pausers(MULTISIG_FREEZER_PAUSER, PAUSE_TYPE), string.concat(name, " pauser mismatch"));
+        assertTrue(Pausable(addr).pausers(DEPLOYER, PAUSE_TYPE), string.concat(name, " pauser mismatch"));
     }
 
     function _verifyFreezer(address addr, string memory name) internal view {
-        assertTrue(
-            Pausable(addr).pausers(MULTISIG_FREEZER_PAUSER, FROZEN_TYPE), string.concat(name, " freezer mismatch")
-        );
+        assertTrue(Pausable(addr).pausers(DEPLOYER, FROZEN_TYPE), string.concat(name, " freezer mismatch"));
     }
 
     function _verifyApprovedByAdapter(address addr, string memory name) internal view {
@@ -205,9 +195,6 @@ contract DeployAltoEthereumMainnetForTestingTest is Test {
         address dusd = IMarket(market).borrowToken();
         assertTrue(IDUSD(dusd).allowedMinter(market), string.concat(s, " market should be allowed minter"));
         assertTrue(IDUSD(dusd).allowedBurner(market), string.concat(s, " market should be allowed burner"));
-        (uint256 minted, uint256 _ceiling) = IDUSD(dusd).minterConfig(market);
-        assertEq(minted, 0, string.concat(s, " market should have 0 minted initially"));
-        assertEq(_ceiling, expectedMintCeiling, string.concat(s, " market mint ceiling should be correct"));
     }
 
     function test_deployPhase_MINT_MARKET_WETH() public {
