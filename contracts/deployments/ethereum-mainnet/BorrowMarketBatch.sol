@@ -40,17 +40,15 @@ struct BorrowMarketBatchParams {
 }
 
 /// @notice Deploys all borrow market components in a single transaction
-contract BorrowMarketBatch {
-    MarketContracts public report;
-
-    constructor(BorrowMarketBatchParams memory _params) {
+library BorrowMarketBatch {
+    function deploy(BorrowMarketBatchParams memory _params) internal returns (MarketContracts memory) {
         // Deploy Oracle and IRM first (deployed directly with _params.owner as owner)
         address marketOracle = EthereumMainnetOracleDeployer.deployOracle(_params.oracleAsset, _params.owner);
         address marketIrm = address(new AdaptiveCurveIrm(_params.irmConfig, _params.owner));
 
         // Deploy Liquidation Engine with batch contract as owner temporarily to allow configuration
         // owner will be transferred to _params.owner after configuration
-        address liquidationEngine = address(new DlbDcfPriorityLiquidationEngine(address(this)));
+        address liquidationEngine = address(new DlbDcfPriorityLiquidationEngine(msg.sender));
 
         // Deploy Market Proxy
         bytes memory initData = abi.encodeCall(
@@ -60,7 +58,7 @@ contract BorrowMarketBatch {
                         borrowToken: _params.dusd,
                         collateralToken: _params.collateralToken,
                         irm: marketIrm,
-                        owner: address(this), // ownership of market is temporarily set to batch contract
+                        owner: msg.sender, // ownership of market is temporarily set to batch contract
                         oracle: marketOracle,
                         maxLtv: _params.maxLtv,
                         feeRecipient: _params.feeRecipient,
@@ -93,8 +91,8 @@ contract BorrowMarketBatch {
 
         // Deploy leverage components with batch contract as owner temporarily to allow configuration
         // owner will be transferred to _params.owner after configuration
-        address leverageSwapper = address(new AltoLeverageSwapper(address(this), _params.zeroXSwapTarget));
-        address leverage = address(new AltoLeverage(leverageSwapper, address(this)));
+        address leverageSwapper = address(new AltoLeverageSwapper(msg.sender, _params.zeroXSwapTarget));
+        address leverage = address(new AltoLeverage(leverageSwapper, msg.sender));
 
         // Configure leverage components (requires ownership)
         AltoLeverage(leverage).setMarket(marketProxy, true);
@@ -110,7 +108,7 @@ contract BorrowMarketBatch {
         // Transfer market ownership to _params.owner
         AltoOwnable2StepUpgradeable(marketProxy).transferOwnershipSkip2Step(_params.owner);
 
-        report = MarketContracts({
+        return MarketContracts({
             market: marketProxy,
             marketImplementation: marketImplementation,
             marketIrm: marketIrm,
@@ -119,10 +117,6 @@ contract BorrowMarketBatch {
             leverageSwapper: leverageSwapper,
             leverage: leverage
         });
-    }
-
-    function getReport() public view returns (MarketContracts memory) {
-        return report;
     }
 }
 
