@@ -14,6 +14,7 @@ struct DusdUsmInitParams {
     uint128 exposureCap;
     address priceStrategy;
     AccessMode accessMode;
+    address feeRecipient;
 }
 
 library UsmDeployer {
@@ -36,7 +37,8 @@ library UsmDeployer {
                         _initParams.stableTokenTreasury,
                         _initParams.exposureCap,
                         _initParams.priceStrategy,
-                        _initParams.accessMode
+                        _initParams.accessMode,
+                        _initParams.feeRecipient
                     )
                 ),
                 opts
@@ -51,7 +53,8 @@ library UsmDeployer {
                         _initParams.stableTokenTreasury,
                         _initParams.exposureCap,
                         _initParams.priceStrategy,
-                        _initParams.accessMode
+                        _initParams.accessMode,
+                        _initParams.feeRecipient
                     )
                 )
             );

@@ -19,6 +19,7 @@ struct TestnetUsmBatchParams {
     uint256 buyFee;
     uint256 sellFee;
     uint256 exposureCap;
+    address feeRecipient;
 }
 
 struct TestnetUsmBatchReport {
@@ -51,7 +52,8 @@ contract TestnetUsmBatch {
                     _params.owner,
                     uint128(_params.exposureCap),
                     fixedPriceStrategy,
-                    AccessMode.PERMISSIONLESS
+                    AccessMode.PERMISSIONLESS,
+                    _params.feeRecipient
                 )
             )
         );

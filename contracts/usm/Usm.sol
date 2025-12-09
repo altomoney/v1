@@ -57,9 +57,10 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
     uint128 internal _currentExposure;
     uint128 internal _accruedFees;
     AccessMode internal _accessMode;
+    address internal _feeRecipient;
 
     /// upgrade gap
-    uint256[45] private __gap_usm;
+    uint256[44] private __gap_usm;
 
     /**
      * @dev Require USM to not be frozen for functions marked by this modifier
@@ -116,7 +117,8 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
         address stableTokenTreasury,
         uint128 exposureCap,
         address priceStrategy,
-        AccessMode accessMode
+        AccessMode accessMode,
+        address feeRecipient
     ) internal onlyInitializing {
         require(admin != address(0), "ZERO_ADDRESS_NOT_VALID");
 
@@ -129,6 +131,7 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
         _updateExposureCap(exposureCap);
         _updatePriceStrategy(priceStrategy);
         _updateAccessMode(accessMode);
+        _updateFeeRecipient(feeRecipient);
     }
 
     /// @inheritdoc IUsm
@@ -237,14 +240,19 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
         uint256 accruedFees = _accruedFees;
         if (accruedFees > 0) {
             _accruedFees = 0;
-            IERC20(STABLE_TOKEN).safeTransfer(_stableTokenTreasury, accruedFees);
-            emit FeesDistributedToTreasury(_stableTokenTreasury, STABLE_TOKEN, accruedFees);
+            IERC20(STABLE_TOKEN).safeTransfer(_feeRecipient, accruedFees);
+            emit FeesDistributedToTreasury(_feeRecipient, STABLE_TOKEN, accruedFees);
         }
     }
 
     /// @inheritdoc IStableTokenFacilitator
     function updateStableTokenTreasury(address newStableTokenTreasury) external override onlyRole(CONFIGURATOR_ROLE) {
         _updateStableTokenTreasury(newStableTokenTreasury);
+    }
+
+    /// @inheritdoc IUsm
+    function updateFeeRecipient(address newFeeRecipient) external override onlyRole(CONFIGURATOR_ROLE) {
+        _updateFeeRecipient(newFeeRecipient);
     }
 
     /// @inheritdoc IUsm
@@ -529,6 +537,17 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
         address oldStableTokenTreasury = _stableTokenTreasury;
         _stableTokenTreasury = newStableTokenTreasury;
         emit StableTokenTreasuryUpdated(oldStableTokenTreasury, newStableTokenTreasury);
+    }
+
+    /**
+     * @dev Updates Fee Recipient Address
+     * @param newFeeRecipient The address of the new Fee Recipient
+     */
+    function _updateFeeRecipient(address newFeeRecipient) internal {
+        require(newFeeRecipient != address(0), "ZERO_ADDRESS_NOT_VALID");
+        address oldFeeRecipient = _feeRecipient;
+        _feeRecipient = newFeeRecipient;
+        emit FeeRecipientUpdated(oldFeeRecipient, newFeeRecipient);
     }
 
     /**

@@ -377,7 +377,8 @@ library DeployAltoTestnet {
                             underlyingAsset: input.tokens.usdc,
                             buyFee: 0.005e4, // 0.5%
                             sellFee: 0.005e4, // 0.5%
-                            exposureCap: 100_000 * 10 ** 6 // 100,000 USDC
+                            exposureCap: 100_000 * 10 ** 6, // 100,000 USDC
+                            feeRecipient: params.deployer // Use deployer as feeRecipient, separate from owner (stableTokenTreasury)
                         })
                     )).getReport();
 
