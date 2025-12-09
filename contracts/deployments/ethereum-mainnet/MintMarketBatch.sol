@@ -25,6 +25,7 @@ import {MarketContracts} from "@alto/deployments/ethereum-mainnet/IDeployAltoEth
 
 struct MintMarketBatchParams {
     address owner;
+    address deployer;
     address dusd;
     address altoAdapter;
     address feeRecipient;
@@ -48,9 +49,9 @@ library MintMarketBatch {
         address marketOracle = EthereumMainnetOracleDeployer.deployOracle(_params.oracleAsset, _params.owner);
         address marketIrm = address(new FixedRateIrm(_params.irmInterestRate, _params.owner));
 
-        // Deploy Liquidation Engine with batch contract as owner temporarily to allow configuration
+        // Deploy Liquidation Engine with deployer as owner temporarily to allow configuration
         // owner will be transferred to _params.owner after configuration
-        address liquidationEngine = address(new DlbDcfPriorityLiquidationEngine(msg.sender));
+        address liquidationEngine = address(new DlbDcfPriorityLiquidationEngine(_params.deployer));
 
         // Deploy Market Proxy
         bytes memory initData = abi.encodeCall(
@@ -60,7 +61,7 @@ library MintMarketBatch {
                         borrowToken: _params.dusd,
                         collateralToken: _params.collateralToken,
                         irm: marketIrm,
-                        owner: msg.sender,
+                        owner: _params.deployer,
                         oracle: marketOracle,
                         maxLtv: _params.maxLtv,
                         feeRecipient: _params.feeRecipient,
@@ -80,7 +81,8 @@ library MintMarketBatch {
             marketImplementation = Upgrades.getImplementationAddress(marketProxy);
         }
 
-        // Set liquidation configuration (requires ownership)
+        // Set liquidation configuration (requires ownership and market to be set)
+        // Market initialization calls setMarketOnce on liquidation engine, so market must be initialized first
         DlbDcfPriorityLiquidationEngine(liquidationEngine).setLiquidationConfiguration(_params.liquidationConfig);
 
         // Transfer liquidation engine ownership to _params.owner
@@ -90,10 +92,10 @@ library MintMarketBatch {
         IPausable(marketProxy).setPauser(_params.freezer, PAUSE_TYPE, true);
         IPausable(marketProxy).setPauser(_params.freezer, FROZEN_TYPE, true);
 
-        // Deploy leverage components with batch contract as owner temporarily to allow configuration
+        // Deploy leverage components with deployer as owner temporarily to allow configuration
         // owner will be transferred to _params.owner after configuration
-        address leverageSwapper = address(new AltoLeverageSwapper(msg.sender, _params.zeroXSwapTarget));
-        address leverage = address(new AltoLeverage(leverageSwapper, msg.sender));
+        address leverageSwapper = address(new AltoLeverageSwapper(_params.deployer, _params.zeroXSwapTarget));
+        address leverage = address(new AltoLeverage(leverageSwapper, _params.deployer));
 
         // Configure leverage components (requires ownership)
         AltoLeverage(leverage).setMarket(marketProxy, true);
