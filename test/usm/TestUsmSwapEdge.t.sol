@@ -91,6 +91,7 @@ contract TestUsmSwapEdge is TestDusdBase {
                 feeRecipient: FEE_RECIPIENT
             })
         );
+        gsm.updateFeeRecipient(FEE_RECIPIENT);
         gsm.updateFeeStrategy(address(newFeeStrategy));
         DUSD_TOKEN.setMinterStatus(address(gsm), true);
         DUSD_TOKEN.setMinterCeiling(address(gsm), DEFAULT_CAPACITY);
@@ -132,6 +133,7 @@ contract TestUsmSwapEdge is TestDusdBase {
                 feeRecipient: FEE_RECIPIENT
             })
         );
+        gsm.updateFeeRecipient(FEE_RECIPIENT);
         gsm.updateFeeStrategy(address(newFeeStrategy));
         DUSD_TOKEN.setMinterStatus(address(gsm), true);
         DUSD_TOKEN.setMinterCeiling(address(gsm), DEFAULT_CAPACITY);

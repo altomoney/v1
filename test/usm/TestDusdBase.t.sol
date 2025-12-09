@@ -64,11 +64,11 @@ contract TestDusdBase is Test, TestHelperOz5, Constants {
                     TREASURY,
                     DEFAULT_USM_USDC_EXPOSURE,
                     address(DUSD_USM_FIXED_PRICE_STRATEGY),
-                    AccessMode.PERMISSIONLESS,
-                    FEE_RECIPIENT
+                    AccessMode.PERMISSIONLESS
                 )
             )
         );
+        DUSDUsm(usmProxy).updateFeeRecipient(FEE_RECIPIENT);
         DUSD_USM = Usm(usmProxy);
 
         address permissionedUsmProxy = UnsafeUpgrades.deployUUPSProxy(
@@ -80,14 +80,14 @@ contract TestDusdBase is Test, TestHelperOz5, Constants {
                     TREASURY,
                     DEFAULT_USM_USDC_EXPOSURE,
                     address(DUSD_USM_FIXED_PRICE_STRATEGY),
-                    AccessMode.PERMISSIONED,
-                    FEE_RECIPIENT
+                    AccessMode.PERMISSIONED
                 )
             )
         );
         PERMISSIONED_DUSD_USM = Usm(permissionedUsmProxy);
 
         DUSD_USM_FIXED_FEE_STRATEGY = new FixedFeeStrategy(DEFAULT_USM_BUY_FEE, DEFAULT_USM_SELL_FEE, address(this));
+        DUSD_USM.updateFeeRecipient(FEE_RECIPIENT);
         DUSD_USM.updateFeeStrategy(address(DUSD_USM_FIXED_FEE_STRATEGY));
 
         DUSD_USM.grantRole(USM_LIQUIDATOR_ROLE, address(DUSD_USM_LAST_RESORT_LIQUIDATOR));

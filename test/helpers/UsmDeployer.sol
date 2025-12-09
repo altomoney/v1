@@ -37,8 +37,7 @@ library UsmDeployer {
                         _initParams.stableTokenTreasury,
                         _initParams.exposureCap,
                         _initParams.priceStrategy,
-                        _initParams.accessMode,
-                        _initParams.feeRecipient
+                        _initParams.accessMode
                     )
                 ),
                 opts
@@ -53,8 +52,7 @@ library UsmDeployer {
                         _initParams.stableTokenTreasury,
                         _initParams.exposureCap,
                         _initParams.priceStrategy,
-                        _initParams.accessMode,
-                        _initParams.feeRecipient
+                        _initParams.accessMode
                     )
                 )
             );

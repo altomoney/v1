@@ -52,12 +52,13 @@ contract TestnetUsmBatch {
                     _params.owner,
                     uint128(_params.exposureCap),
                     fixedPriceStrategy,
-                    AccessMode.PERMISSIONLESS,
-                    _params.feeRecipient
+                    AccessMode.PERMISSIONLESS
                 )
             )
         );
 
+        // Set fee recipient (requires CONFIGURATOR_ROLE)
+        IUsm(dusdUsm).updateFeeRecipient(_params.feeRecipient);
         DUSDUsm(dusdUsm).updateFeeStrategy(fixedFeeStrategy);
 
         IAccessControl(dusdUsm).grantRole(bytes32(0), _params.owner);

@@ -305,6 +305,12 @@ interface IUsm is IAccessControl, IStableTokenFacilitator {
     function getIsSeized() external view returns (bool);
 
     /**
+     * @notice Returns the address of the Fee Recipient
+     * @return The address of the Fee Recipient
+     */
+    function getFeeRecipient() external view returns (address);
+
+    /**
      * @notice Returns whether or not swaps via buyAsset/sellAsset are currently possible
      * @return True if the USM has swapping enabled, false otherwise
      */

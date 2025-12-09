@@ -60,14 +60,7 @@ contract UsmBatch {
         // Deploy DUSDUsm Proxy with constructor data
         bytes memory initData = abi.encodeCall(
             DUSDUsm.initialize,
-            (
-                address(this),
-                _params.feeRecipient,
-                uint128(_params.exposureCap),
-                fixedPriceStrategy,
-                accessMode,
-                _params.feeRecipient
-            )
+            (address(this), _params.feeRecipient, uint128(_params.exposureCap), fixedPriceStrategy, accessMode)
         );
         address dusdUsm;
         address dusdUsmImplementation;
@@ -85,6 +78,8 @@ contract UsmBatch {
         IAccessControl(dusdUsm).grantRole(IUsm(dusdUsm).SWAP_FREEZER_ROLE(), _params.freezer);
 
         if (!_params.isPermissioned) {
+            // Set fee recipient (requires CONFIGURATOR_ROLE)
+            IUsm(dusdUsm).updateFeeRecipient(_params.feeRecipient);
             // Set FixedFeeStrategy on DUSDUsm (requires CONFIGURATOR_ROLE, which is granted to admin)
             IUsm(dusdUsm).updateFeeStrategy(fixedFeeStrategy);
         } else {

@@ -98,6 +98,8 @@ contract TestUsmSwapFuzz is TestDusdBase {
         DUSD_TOKEN.setMinterCeiling(address(gsm), type(uint128).max);
 
         if (buyFeeBps > 0 || sellFeeBps > 0) {
+            // Set fee recipient before setting fee strategy
+            gsm.updateFeeRecipient(FEE_RECIPIENT);
             FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(buyFeeBps, sellFeeBps, address(this));
             gsm.updateFeeStrategy(address(newFeeStrategy));
         }
@@ -220,6 +222,7 @@ contract TestUsmSwapFuzz is TestDusdBase {
         DUSD_TOKEN.setMinterCeiling(address(gsm), type(uint128).max);
 
         if (buyFeeBps > 0 || sellFeeBps > 0) {
+            gsm.updateFeeRecipient(FEE_RECIPIENT);
             FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(buyFeeBps, sellFeeBps, address(this));
             gsm.updateFeeStrategy(address(newFeeStrategy));
         }
@@ -268,6 +271,7 @@ contract TestUsmSwapFuzz is TestDusdBase {
         DUSD_TOKEN.setMinterCeiling(address(gsm), type(uint128).max);
 
         if (buyFeeBps > 0 || sellFeeBps > 0) {
+            gsm.updateFeeRecipient(FEE_RECIPIENT);
             FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(buyFeeBps, sellFeeBps, address(this));
             gsm.updateFeeStrategy(address(newFeeStrategy));
         }
@@ -323,6 +327,7 @@ contract TestUsmSwapFuzz is TestDusdBase {
         );
 
         if (buyFeeBps > 0 || sellFeeBps > 0) {
+            gsm.updateFeeRecipient(FEE_RECIPIENT);
             FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(buyFeeBps, sellFeeBps, address(this));
             gsm.updateFeeStrategy(address(newFeeStrategy));
         }
@@ -372,6 +377,7 @@ contract TestUsmSwapFuzz is TestDusdBase {
         );
 
         if (buyFeeBps > 0 || sellFeeBps > 0) {
+            gsm.updateFeeRecipient(FEE_RECIPIENT);
             FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(buyFeeBps, sellFeeBps, address(this));
             gsm.updateFeeStrategy(address(newFeeStrategy));
         }
@@ -421,6 +427,7 @@ contract TestUsmSwapFuzz is TestDusdBase {
         );
 
         if (buyFeeBps > 0 || sellFeeBps > 0) {
+            gsm.updateFeeRecipient(FEE_RECIPIENT);
             FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(buyFeeBps, sellFeeBps, address(this));
             gsm.updateFeeStrategy(address(newFeeStrategy));
         }
@@ -471,6 +478,7 @@ contract TestUsmSwapFuzz is TestDusdBase {
         );
 
         if (buyFeeBps > 0 || sellFeeBps > 0) {
+            gsm.updateFeeRecipient(FEE_RECIPIENT);
             FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(buyFeeBps, sellFeeBps, address(this));
             gsm.updateFeeStrategy(address(newFeeStrategy));
         }
@@ -523,6 +531,7 @@ contract TestUsmSwapFuzz is TestDusdBase {
         );
 
         if (buyFeeBps > 0 || sellFeeBps > 0) {
+            gsm.updateFeeRecipient(FEE_RECIPIENT);
             FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(buyFeeBps, sellFeeBps, address(this));
             gsm.updateFeeStrategy(address(newFeeStrategy));
         }
@@ -589,6 +598,7 @@ contract TestUsmSwapFuzz is TestDusdBase {
         );
 
         if (buyFeeBps > 0 || sellFeeBps > 0) {
+            gsm.updateFeeRecipient(FEE_RECIPIENT);
             FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(buyFeeBps, sellFeeBps, address(this));
             gsm.updateFeeStrategy(address(newFeeStrategy));
         }
@@ -654,6 +664,7 @@ contract TestUsmSwapFuzz is TestDusdBase {
         DUSD_TOKEN.setMinterCeiling(address(gsm), type(uint128).max);
 
         if (buyFeeBps > 0 || sellFeeBps > 0) {
+            gsm.updateFeeRecipient(FEE_RECIPIENT);
             FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(buyFeeBps, sellFeeBps, address(this));
             gsm.updateFeeStrategy(address(newFeeStrategy));
         }
@@ -752,6 +763,8 @@ contract TestUsmSwapFuzz is TestDusdBase {
         DUSD_TOKEN.setMinterCeiling(address(gsm), type(uint128).max);
 
         if (buyFeeBps > 0 || sellFeeBps > 0) {
+            // Set fee recipient before setting fee strategy
+            gsm.updateFeeRecipient(FEE_RECIPIENT);
             FixedFeeStrategy newFeeStrategy = new FixedFeeStrategy(buyFeeBps, sellFeeBps, address(this));
             gsm.updateFeeStrategy(address(newFeeStrategy));
         }
