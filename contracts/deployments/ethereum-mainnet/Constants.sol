@@ -37,7 +37,7 @@ address constant CHAINLINK_USDE_USD_PRICE_FEED = 0xa569d910839Ae8865Da8F8e70FfFb
 // 0x.org swap target for Ethereum mainnet
 address constant ZEROX_SWAP_TARGET_MAINNET = 0x0000000000001fF3684f28c67538d4D072C22734;
 // Morpho's deployment of Bundler3
-address constant BUNDLER3_MAINNET = 0x6566194141eefa99Af43Bb5Aa71460Ca2Dc90245;
+address constant BUNDLER3_MAINNET = 0xAc80387009231b4D55B85Df27924B85f2ED6823D;
 // LayerZero endpoint for Ethereum mainnet
 address constant LAYERZERO_ENDPOINT_MAINNET = 0x1a44076050125825900e736c501f859c50fE728c;
 
