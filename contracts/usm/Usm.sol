@@ -236,7 +236,7 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
     /// @inheritdoc IStableTokenFacilitator
     function distributeFeesToFeeRecipient() public virtual override {
         uint256 accruedFees = _accruedFees;
-        if (accruedFees > 0) {
+        if (accruedFees > 0 && _feeRecipient != address(0)) {
             _accruedFees = 0;
             IERC20(STABLE_TOKEN).safeTransfer(_feeRecipient, accruedFees);
             emit FeesDistributedToFeeRecipient(_feeRecipient, STABLE_TOKEN, accruedFees);
@@ -557,7 +557,7 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
         }
         address oldFeeRecipient = _feeRecipient;
         _feeRecipient = newFeeRecipient;
-        emit FeeRecipientUpdated(oldFeeRecipient, newFeeRecipient);
+        emit StableTokenFeeRecipientUpdated(oldFeeRecipient, newFeeRecipient);
     }
 
     /**

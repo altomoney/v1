@@ -69,8 +69,10 @@ contract DUSDFlashMinter is AltoOwnable2Step, IDUSDFlashMinter {
     /// @inheritdoc IStableTokenFacilitator
     function distributeFeesToFeeRecipient() external override {
         uint256 balance = DUSD.balanceOf(address(this));
-        DUSD.transfer(_dusdFeeRecipient, balance);
-        emit FeesDistributedToFeeRecipient(_dusdFeeRecipient, address(DUSD), balance);
+        if (balance > 0 && _dusdFeeRecipient != address(0)) {
+            DUSD.transfer(_dusdFeeRecipient, balance);
+            emit FeesDistributedToFeeRecipient(_dusdFeeRecipient, address(DUSD), balance);
+        }
     }
 
     // @inheritdoc IDUSDFlashMinter
@@ -150,6 +152,12 @@ contract DUSDFlashMinter is AltoOwnable2Step, IDUSDFlashMinter {
     }
 
     function _updateDusdFeeRecipient(address newDusdFeeRecipient) internal {
+        if (newDusdFeeRecipient == address(0)) {
+            require(
+                flashMintFee.minFlashFee == 0 && flashMintFee.maxFlashFee == 0,
+                "FlashMinter: Fees are enabled but fee recipient is not set"
+            );
+        }
         address oldDusdFeeRecipient = _dusdFeeRecipient;
         _dusdFeeRecipient = newDusdFeeRecipient;
         emit StableTokenFeeRecipientUpdated(oldDusdFeeRecipient, newDusdFeeRecipient);
