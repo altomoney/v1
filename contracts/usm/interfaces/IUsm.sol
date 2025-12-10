@@ -114,6 +114,13 @@ interface IUsm is IAccessControl, IStableTokenFacilitator {
     event TokensRescued(address indexed tokenRescued, address indexed recipient, uint256 amountRescued);
 
     /**
+     * @dev Emitted when Stable Token Treasury address is updated
+     * @param oldStableTokenTreasury The address of the old Stable Token Treasury contract
+     * @param newStableTokenTreasury The address of the new Stable Token Treasury contract
+     */
+    event StableTokenTreasuryUpdated(address indexed oldStableTokenTreasury, address indexed newStableTokenTreasury);
+
+    /**
      * @notice Buys the USM underlying asset in exchange for selling Stable Token
      * @dev Use `getAssetAmountForBuyAsset` function to calculate the amount based on the Stable Token amount to sell
      * @param minAmount The minimum amount of the underlying asset to buy
