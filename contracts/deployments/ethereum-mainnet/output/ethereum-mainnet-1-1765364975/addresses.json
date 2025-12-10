@@ -1,6 +1,13 @@
 {
   "contracts": {
     "altoAdapter": "0x241aA0aC561a5c210a86FeCC82f45D2713F59C0C",
+    "cbbtcBorrowLeverage": "0x93B227F37819d147ad31589C686fbfe654657503",
+    "cbbtcBorrowLeverageSwapper": "0xC882Dbc9F17123186a4aaE8F3B73440A489b7B85",
+    "cbbtcBorrowLiquidationEngine": "0xCB28c27539D7B57E802b9BC6E58501B8f2d6d898",
+    "cbbtcBorrowMarket": "0xaE4f2B998783e2041E87E08Da73985e4E0420159",
+    "cbbtcBorrowMarketImplementation": "0xB7EFffaB2a68055571513Ba9A04fa04991f054d9",
+    "cbbtcBorrowMarketIrm": "0xfb8647d936992d22ac83EDD52da82FD0Ce4cfDFF",
+    "cbbtcBorrowMarketOracle": "0x070EAF353B9E884B4C93B44F8105C31348477f29",
     "dusd": "0x63d74d22E689C715a04F2C13962b1f77F443d35b",
     "dusdFlashMinter": "0x8b7448877E292b8422608d1dCbf066E484461948",
     "feeRecipient": "0xb9F06fEFc4c53dEd77A90Cb798eD08DC068Bb6dd",
