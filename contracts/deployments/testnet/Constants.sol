@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.19;
 
 uint128 constant MULTI_TOKEN_SENDER_MINT_TOKENS = type(uint128).max;

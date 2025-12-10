@@ -248,7 +248,7 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
         _updateStableTokenTreasury(newStableTokenTreasury);
     }
 
-    /// @inheritdoc IUsm
+    /// @inheritdoc IStableTokenFacilitator
     function updateFeeRecipient(address newFeeRecipient) external override onlyRole(CONFIGURATOR_ROLE) {
         _updateFeeRecipient(newFeeRecipient);
     }
@@ -325,7 +325,7 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
         return _feeStrategy;
     }
 
-    /// @inheritdoc IUsm
+    /// @inheritdoc IStableTokenFacilitator
     function getFeeRecipient() external view returns (address) {
         return _feeRecipient;
     }

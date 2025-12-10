@@ -197,12 +197,6 @@ interface IUsm is IAccessControl, IStableTokenFacilitator {
     function updatePriceStrategy(address priceStrategy) external;
 
     /**
-     * @notice Updates the address of the Fee Recipient
-     * @param newFeeRecipient The address of the new Fee Recipient
-     */
-    function updateFeeRecipient(address newFeeRecipient) external;
-
-    /**
      * @notice Updates the address of the Stable Token Treasury
      * @dev WARNING: The Stable Token Treasury is where revenue fees are sent to. Update carefully
      * @param newStableTokenTreasury The address of the Stable Token Treasury
@@ -316,12 +310,6 @@ interface IUsm is IAccessControl, IStableTokenFacilitator {
      * @return True if the USM has been seized, false if not
      */
     function getIsSeized() external view returns (bool);
-
-    /**
-     * @notice Returns the address of the Fee Recipient
-     * @return The address of the Fee Recipient
-     */
-    function getFeeRecipient() external view returns (address);
 
     /**
      * @notice Returns whether or not swaps via buyAsset/sellAsset are currently possible
