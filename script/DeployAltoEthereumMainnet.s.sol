@@ -27,7 +27,7 @@ contract DeployAltoEthereumMainnetScript is Script {
 
         params = AltoEthereumMainnetParams({
             timelockAdmin: 0xc49bf619CC9A68F84A6C9aB88506F2627565a4D0,
-            timelockDelay: 1 days,
+            timelockDelay: 1 hours,
             freezer: 0x1c11d2d42929bd17aB7212b79c91862Adfa8bbe4,
             deployer: msg.sender,
             phase: PHASE_TO_DEPLOY,
