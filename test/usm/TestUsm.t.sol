@@ -270,8 +270,7 @@ contract TestUsm is TestDusdBase {
                 stableTokenTreasury: TREASURY,
                 exposureCap: DEFAULT_USM_USDC_EXPOSURE,
                 priceStrategy: address(DUSD_USM_FIXED_PRICE_STRATEGY),
-                accessMode: AccessMode.PERMISSIONLESS,
-                feeRecipient: FEE_RECIPIENT
+                accessMode: AccessMode.PERMISSIONLESS
             })
         );
 
@@ -298,8 +297,7 @@ contract TestUsm is TestDusdBase {
                 stableTokenTreasury: TREASURY,
                 exposureCap: DEFAULT_USM_USDC_EXPOSURE - 1,
                 priceStrategy: address(DUSD_USM_FIXED_PRICE_STRATEGY),
-                accessMode: AccessMode.PERMISSIONLESS,
-                feeRecipient: FEE_RECIPIENT
+                accessMode: AccessMode.PERMISSIONLESS
             })
         );
         DUSD_TOKEN.setMinterStatus(address(usm), true);
@@ -1183,10 +1181,10 @@ contract TestUsm is TestDusdBase {
         assertEq(DUSD_USM.getAccruedFees(), fee, "Unexpected GSM accrued fees");
 
         vm.expectEmit(true, true, true, true, address(DUSD_USM));
-        emit IStableTokenFacilitator.FeesDistributedToTreasury(
+        emit IStableTokenFacilitator.FeesDistributedToFeeRecipient(
             FEE_RECIPIENT, address(DUSD_TOKEN), DUSD_TOKEN.balanceOf(address(DUSD_USM))
         );
-        DUSD_USM.distributeFeesToTreasury();
+        DUSD_USM.distributeFeesToFeeRecipient();
         assertEq(DUSD_TOKEN.balanceOf(address(DUSD_USM)), 0, "Unexpected GSM DUSD balance post-distribution");
         assertEq(DUSD_TOKEN.balanceOf(FEE_RECIPIENT), fee, "Unexpected DUSD balance in fee recipient");
         assertEq(DUSD_USM.getAccruedFees(), 0, "Unexpected GSM accrued fees");
@@ -1198,7 +1196,7 @@ contract TestUsm is TestDusdBase {
         assertEq(DUSD_USM.getAccruedFees(), 0, "Unexpected GSM accrued fees");
 
         vm.record();
-        DUSD_USM.distributeFeesToTreasury();
+        DUSD_USM.distributeFeesToFeeRecipient();
         (, bytes32[] memory writes) = vm.accesses(address(DUSD_USM));
         assertEq(writes.length, 0, "Unexpected update of accrued fees");
 

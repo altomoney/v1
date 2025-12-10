@@ -234,16 +234,16 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
     }
 
     /// @inheritdoc IStableTokenFacilitator
-    function distributeFeesToTreasury() public virtual override {
+    function distributeFeesToFeeRecipient() public virtual override {
         uint256 accruedFees = _accruedFees;
         if (accruedFees > 0) {
             _accruedFees = 0;
             IERC20(STABLE_TOKEN).safeTransfer(_feeRecipient, accruedFees);
-            emit FeesDistributedToTreasury(_feeRecipient, STABLE_TOKEN, accruedFees);
+            emit FeesDistributedToFeeRecipient(_feeRecipient, STABLE_TOKEN, accruedFees);
         }
     }
 
-    /// @inheritdoc IStableTokenFacilitator
+    /// @inheritdoc IUsm
     function updateStableTokenTreasury(address newStableTokenTreasury) external override onlyRole(CONFIGURATOR_ROLE) {
         _updateStableTokenTreasury(newStableTokenTreasury);
     }
@@ -355,7 +355,7 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
         return _accessMode;
     }
 
-    /// @inheritdoc IStableTokenFacilitator
+    /// @inheritdoc IUsm
     function getStableTokenTreasury() external view override returns (address) {
         return _stableTokenTreasury;
     }

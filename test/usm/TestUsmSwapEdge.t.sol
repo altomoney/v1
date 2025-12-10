@@ -27,8 +27,7 @@ contract TestUsmSwapEdge is TestDusdBase {
                 stableTokenTreasury: TREASURY,
                 exposureCap: type(uint128).max,
                 priceStrategy: address(newPriceStrategy),
-                accessMode: AccessMode.PERMISSIONLESS,
-                feeRecipient: FEE_RECIPIENT
+                accessMode: AccessMode.PERMISSIONLESS
             })
         );
         DUSD_TOKEN.setMinterStatus(address(gsm), true);
@@ -87,8 +86,7 @@ contract TestUsmSwapEdge is TestDusdBase {
                 stableTokenTreasury: TREASURY,
                 exposureCap: 100_000_000e18,
                 priceStrategy: address(newPriceStrategy),
-                accessMode: AccessMode.PERMISSIONLESS,
-                feeRecipient: FEE_RECIPIENT
+                accessMode: AccessMode.PERMISSIONLESS
             })
         );
         gsm.updateFeeRecipient(FEE_RECIPIENT);
@@ -129,8 +127,7 @@ contract TestUsmSwapEdge is TestDusdBase {
                 stableTokenTreasury: TREASURY,
                 exposureCap: 100_000_000e18,
                 priceStrategy: address(newPriceStrategy),
-                accessMode: AccessMode.PERMISSIONLESS,
-                feeRecipient: FEE_RECIPIENT
+                accessMode: AccessMode.PERMISSIONLESS
             })
         );
         gsm.updateFeeRecipient(FEE_RECIPIENT);
@@ -185,8 +182,7 @@ contract TestUsmSwapEdge is TestDusdBase {
                 stableTokenTreasury: TREASURY,
                 exposureCap: 1_000_000e24,
                 priceStrategy: address(newPriceStrategy),
-                accessMode: AccessMode.PERMISSIONLESS,
-                feeRecipient: FEE_RECIPIENT
+                accessMode: AccessMode.PERMISSIONLESS
             })
         );
         DUSD_TOKEN.setMinterStatus(address(gsm), true);
@@ -245,8 +241,7 @@ contract TestUsmSwapEdge is TestDusdBase {
                 stableTokenTreasury: TREASURY,
                 exposureCap: 1_000_000e24,
                 priceStrategy: address(newPriceStrategy),
-                accessMode: AccessMode.PERMISSIONLESS,
-                feeRecipient: FEE_RECIPIENT
+                accessMode: AccessMode.PERMISSIONLESS
             })
         );
         DUSD_TOKEN.setMinterStatus(address(gsm), true);
@@ -297,8 +292,7 @@ contract TestUsmSwapEdge is TestDusdBase {
                 stableTokenTreasury: TREASURY,
                 exposureCap: 1_000_000e6,
                 priceStrategy: address(newPriceStrategy),
-                accessMode: AccessMode.PERMISSIONLESS,
-                feeRecipient: FEE_RECIPIENT
+                accessMode: AccessMode.PERMISSIONLESS
             })
         );
         DUSD_TOKEN.setMinterStatus(address(gsm), true);
@@ -347,8 +341,7 @@ contract TestUsmSwapEdge is TestDusdBase {
                 stableTokenTreasury: TREASURY,
                 exposureCap: 1_000_000e24,
                 priceStrategy: address(newPriceStrategy),
-                accessMode: AccessMode.PERMISSIONLESS,
-                feeRecipient: FEE_RECIPIENT
+                accessMode: AccessMode.PERMISSIONLESS
             })
         );
         DUSD_TOKEN.setMinterStatus(address(gsm), true);
@@ -397,8 +390,7 @@ contract TestUsmSwapEdge is TestDusdBase {
                 stableTokenTreasury: TREASURY,
                 exposureCap: 1_000_000e6,
                 priceStrategy: address(newPriceStrategy),
-                accessMode: AccessMode.PERMISSIONLESS,
-                feeRecipient: FEE_RECIPIENT
+                accessMode: AccessMode.PERMISSIONLESS
             })
         );
         DUSD_TOKEN.setMinterStatus(address(gsm), true);
@@ -451,8 +443,7 @@ contract TestUsmSwapEdge is TestDusdBase {
                 stableTokenTreasury: TREASURY,
                 exposureCap: 1_000_000e24,
                 priceStrategy: address(newPriceStrategy),
-                accessMode: AccessMode.PERMISSIONLESS,
-                feeRecipient: FEE_RECIPIENT
+                accessMode: AccessMode.PERMISSIONLESS
             })
         );
         DUSD_TOKEN.setMinterStatus(address(gsm), true);

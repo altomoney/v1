@@ -14,7 +14,6 @@ struct DusdUsmInitParams {
     uint128 exposureCap;
     address priceStrategy;
     AccessMode accessMode;
-    address feeRecipient;
 }
 
 library UsmDeployer {

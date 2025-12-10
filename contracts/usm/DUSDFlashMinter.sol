@@ -28,17 +28,17 @@ contract DUSDFlashMinter is AltoOwnable2Step, IDUSDFlashMinter {
     FlashFee public flashMintFee;
 
     // The DUSD treasury, the recipient of fee distributions
-    address private _dusdTreasury;
+    address private _dusdFeeRecipient;
 
     /// @notice constructor
     /// @param _dusd The address of the DUSD token contract
-    /// @param _treasury The address of the DUSD treasury
+    /// @param _feeRecipient The address of the DUSD fee recipient
     /// @param _flashMintFee The flash mint fee struct
     /// @param _owner The owner of the contract
-    constructor(address _dusd, address _treasury, FlashFee memory _flashMintFee, address _owner) Ownable(_owner) {
+    constructor(address _dusd, address _feeRecipient, FlashFee memory _flashMintFee, address _owner) Ownable(_owner) {
         require(_owner != address(0), "AltoDUSDFlashMinter: Owner cannot be zero address");
         DUSD = IDUSD(_dusd);
-        _updateDusdTreasury(_treasury);
+        _updateDusdFeeRecipient(_feeRecipient);
         _updateFlashMintFee(_flashMintFee);
     }
 
@@ -67,10 +67,10 @@ contract DUSDFlashMinter is AltoOwnable2Step, IDUSDFlashMinter {
     }
 
     /// @inheritdoc IStableTokenFacilitator
-    function distributeFeesToTreasury() external override {
+    function distributeFeesToFeeRecipient() external override {
         uint256 balance = DUSD.balanceOf(address(this));
-        DUSD.transfer(_dusdTreasury, balance);
-        emit FeesDistributedToTreasury(_dusdTreasury, address(DUSD), balance);
+        DUSD.transfer(_dusdFeeRecipient, balance);
+        emit FeesDistributedToFeeRecipient(_dusdFeeRecipient, address(DUSD), balance);
     }
 
     // @inheritdoc IDUSDFlashMinter
@@ -79,8 +79,8 @@ contract DUSDFlashMinter is AltoOwnable2Step, IDUSDFlashMinter {
     }
 
     /// @inheritdoc IStableTokenFacilitator
-    function updateStableTokenTreasury(address newDusdTreasury) external onlyOwner {
-        _updateDusdTreasury(newDusdTreasury);
+    function updateFeeRecipient(address newDusdFeeRecipient) external onlyOwner {
+        _updateDusdFeeRecipient(newDusdFeeRecipient);
     }
 
     /// @inheritdoc IERC3156FlashLender
@@ -105,8 +105,8 @@ contract DUSDFlashMinter is AltoOwnable2Step, IDUSDFlashMinter {
     }
 
     /// @inheritdoc IStableTokenFacilitator
-    function getStableTokenTreasury() external view returns (address) {
-        return _dusdTreasury;
+    function getFeeRecipient() external view returns (address) {
+        return _dusdFeeRecipient;
     }
 
     /// @notice returns the flash fee to charge for a given flashloan
@@ -142,17 +142,17 @@ contract DUSDFlashMinter is AltoOwnable2Step, IDUSDFlashMinter {
         require(_newFlashMintFee.maxFlashFee <= MATH_PRECISION, "FlashMinter: Max flash fee exceeds MATH_PRECISION");
 
         if (_newFlashMintFee.minFlashFee > 0 || _newFlashMintFee.maxFlashFee > 0) {
-            require(_dusdTreasury != address(0), "FlashMinter: DUSD treasury must be set as fees are enabled");
+            require(_dusdFeeRecipient != address(0), "FlashMinter: DUSD fee recipient must be set as fees are enabled");
         }
 
         emit SetFlashMintFee(flashMintFee, _newFlashMintFee);
         flashMintFee = _newFlashMintFee;
     }
 
-    function _updateDusdTreasury(address newDusdTreasury) internal {
-        address oldDusdTreasury = _dusdTreasury;
-        _dusdTreasury = newDusdTreasury;
-        emit StableTokenTreasuryUpdated(oldDusdTreasury, newDusdTreasury);
+    function _updateDusdFeeRecipient(address newDusdFeeRecipient) internal {
+        address oldDusdFeeRecipient = _dusdFeeRecipient;
+        _dusdFeeRecipient = newDusdFeeRecipient;
+        emit StableTokenFeeRecipientUpdated(oldDusdFeeRecipient, newDusdFeeRecipient);
     }
 }
 
