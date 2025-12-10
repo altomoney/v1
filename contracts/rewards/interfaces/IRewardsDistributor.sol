@@ -209,7 +209,7 @@ interface IRewardsDistributorStaticTypes is IRewardsDistributorBase {
 }
 
 /// @title IRewardsDistributor
-/// @author Pearl Labs
+/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice A contract for distributing rights to purchase tokens to users determined by a merkle tree
 /// @dev Use this interface for RewardsDistributor to have access to all the functions with the appropriate

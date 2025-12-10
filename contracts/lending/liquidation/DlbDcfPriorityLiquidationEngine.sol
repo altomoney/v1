@@ -30,7 +30,7 @@ import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
 
 /// @title DlbDcfPriorityLiquidationEngine
 /// @dev Dynamic Liquidator Bonus(DLB), Dynamic Close Factor(DCF) and Priority Liquidation Engine
-/// @author Pearl Labs
+/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice Standalone contract for calculating liquidation amounts and fees
 contract DlbDcfPriorityLiquidationEngine is AltoOwnable2Step, IDcfDlbPriorityLiquidationEngineStaticTypes {

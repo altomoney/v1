@@ -4,7 +4,7 @@ pragma solidity ^0.8.28;
 import {AltoOwnable2Step, Ownable} from "@alto/utils/AltoOwnable2Step.sol";
 
 /// @title AdapterContractApproval
-/// @author Pearl Labs
+/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice A contract that allows for approval of contracts to be used in the adapter.
 /// @dev This was created as a separate contract to easily distinguish differences

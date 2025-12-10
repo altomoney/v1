@@ -9,7 +9,7 @@ import {Uint128Converter} from "./libraries/Uint128Converter.sol";
 import {AssetShareConversionMath} from "./libraries/AssetShareConversionMath.sol";
 
 /// @title Alto Borrow Market
-/// @author Pearl Labs
+/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice An Isolated Borrow Market
 contract AltoBorrowMarket is AltoBaseMarket {

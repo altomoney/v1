@@ -5,7 +5,7 @@ import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 import {ERC4626RatioNode} from "@alto/oracles/interfaces/IModuleNode.sol";
 
 /// @title Module ERC4626 Ratio
-/// @author Pearl Labs
+/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice Utility contract used to read the ratio of not only the ERC4626 vault but LSTs as well
 /// @dev This contract caps the ratio of the ERC4626 vault to a certain growth rate to prevent impact if underlying is manipulated

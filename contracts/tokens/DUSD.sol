@@ -9,7 +9,7 @@ import {AltoOwnable2Step, Ownable} from "@alto/utils/AltoOwnable2Step.sol";
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 
 /// @title DUSD Token
-/// @author Pearl Labs
+/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice The DUSD Token is the stablecoin of the Alto Protocol.
 contract DUSD is AltoOwnable2Step, Pausable, OFT, IDUSD {

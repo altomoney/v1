@@ -6,7 +6,7 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
 import {IUsmRegistry} from "./interfaces/IUsmRegistry.sol";
 
 /// @title UsmRegistry
-/// @author Pearl Labs
+/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice Main registry of USM (Universal Stability Module) contracts
 contract UsmRegistry is AltoOwnable2Step, IUsmRegistry {

@@ -5,7 +5,7 @@ import {ChainlinkNode, ConversionDirection} from "@alto/oracles/interfaces/IModu
 import {FullMath} from "@alto/oracles/modules/ModuleUniswap/FullMath.sol";
 
 /// @title ModuleChainlink
-/// @author Pearl Labs
+/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice Utility contract used to read from Chainlink price feeds
 contract ModuleChainlink is FullMath {

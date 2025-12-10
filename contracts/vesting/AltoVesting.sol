@@ -11,7 +11,7 @@ import {IAltoVesting, VestingInfo} from "@alto/vesting/interfaces/IAltoVesting.s
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 
 /// @title Alto Vesting Contract
-/// @author Pearl Labs
+/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice A contract for vesting tokens to users determined by a merkle tree.
 contract AltoVesting is IAltoVesting, MerkleRootManager, AltoOwnable2Step, Auth, Pausable {

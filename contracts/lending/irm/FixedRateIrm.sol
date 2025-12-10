@@ -8,7 +8,7 @@ import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 
 /// @title Fixed Rate Interest Rate Model
-/// @author Pearl Labs
+/// @author GPM
 /// @custom:contact security@altofoundation.org
 contract FixedRateIrm is AltoOwnable2Step, IIrm {
     using FixedPointMath for uint256;

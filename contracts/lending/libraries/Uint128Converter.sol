@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 /// @title Uint128Converter
-/// @author Pearl Labs
+/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice Library for converting uint256 to uint128.
 library Uint128Converter {

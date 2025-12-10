@@ -11,7 +11,7 @@ import {Pausable, IPausable} from "@alto/utils/Pausable.sol";
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 
 /// @title Universal Rewards Distributor
-/// @author Pearl Labs
+/// @author GPM
 /// @author Inspired by Morpho Labs' implementation (https://github.com/morpho-org/universal-rewards-distributor).
 /// @custom:contact security@altofoundation.org
 /// @notice A contract for distributing rewards to multiple users using merkle trees

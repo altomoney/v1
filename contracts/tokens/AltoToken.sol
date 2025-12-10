@@ -5,7 +5,7 @@ import {OFT} from "@alto/utils/OFT.sol";
 import {AltoOwnable2Step, Ownable} from "@alto/utils/AltoOwnable2Step.sol";
 
 /// @title Alto Token
-/// @author Pearl Labs
+/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice The Alto Token is the native token of the Alto Protocol.
 contract AltoToken is AltoOwnable2Step, OFT {

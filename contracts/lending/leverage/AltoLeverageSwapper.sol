@@ -7,7 +7,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /// @title AltoSwapper
-/// @author Pearl Labs
+/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice This contract is used to swap tokens in AltoLeverage contract during levarage and deleverage
 /// @dev Contracts using this swapper have to handle potential reeentrancy protection caused by swap function by themselves

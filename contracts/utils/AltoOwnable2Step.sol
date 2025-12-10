@@ -5,7 +5,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
  * @title Alto Ownable 2 Step
- * @author Pearl Labs
+ * @author GPM
  * @custom:contact security@altofoundation.org
  * @notice This contract extends Ownable2Step contract from OpenZeppelin, with a way to bypass the 2 steps ownership transfer.
  */
