@@ -2,7 +2,7 @@
 pragma solidity ^0.8.28;
 
 /// @title IUsmRegistry
-/// @author Pearl Labs
+/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice Interface for the UsmRegistry contract
 interface IUsmRegistry {

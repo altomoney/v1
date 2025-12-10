@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 /**
  * @title IUsmPriceStrategy
- * @author Pearl Labs
+ * @author GPM
  * @author Adapted from Aave (https://github.com/aave/gho-core/)
  * @custom:contact security@altofoundation.org
  * @notice Defines the behaviour of Price Strategies

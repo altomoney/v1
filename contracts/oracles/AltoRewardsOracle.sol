@@ -17,7 +17,7 @@ import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IER
 import {IUsdOracle} from "@alto/oracles/interfaces/IOracle.sol";
 
 /// @title Alto Rewards Oracle
-/// @author Pearl Labs
+/// @author GPM
 /// @notice Oracle contract used in AltoRewardsDistributor to calculate extended TWAP of ALTO token
 /// @dev Provides a fixed price for claiming (exercising) call options in AltoRewardsDistributor
 /// @dev Returns USD price of ALTO token in `USD_ORACLE_PRICE_PRECISION` as per `IUsdOracle` interface

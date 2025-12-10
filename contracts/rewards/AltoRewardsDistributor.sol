@@ -24,7 +24,7 @@ import {IRewardsAdapter, BonusRewardInfo} from "@alto/rewards/interfaces/IReward
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 
 /// @title Rewards Distributor
-/// @author Pearl Labs
+/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice A contract for distributing rights to purchase tokens to users determined by a merkle tree.
 contract AltoRewardsDistributor is IRewardsDistributorStaticTypes, MerkleRootManager, AltoOwnable2Step, Pausable, Auth {

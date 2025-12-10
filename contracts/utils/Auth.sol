@@ -6,7 +6,7 @@ import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 
 /// @title Auth
-/// @author Pearl Labs
+/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice A contract that allows for authorization of addresses.
 /// @dev This is used in several Alto contracts to authorize addresses to manage positions.

@@ -7,7 +7,7 @@ import {ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
 /// @title OracleMath
 /// @author Forked and adapted from Angle Core repository (https://github.com/AngleProtocol/angle-core/blob/main/contracts/utils/OracleMath.sol)
 /// @author Forked and adapted by Angle Core Team from https://github.com/Uniswap/uniswap-v3-core/blob/main/contracts/libraries/TickMath.sol
-/// @author Pearl Labs
+/// @author GPM
 /// @notice Math library for computing prices from ticks
 /// @dev Computes price for ticks of size 1.0001, i.e. sqrt(1.0001^tick). Supports
 /// prices between 2**-128 and 2**128

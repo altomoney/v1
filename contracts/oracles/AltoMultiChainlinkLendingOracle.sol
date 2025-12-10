@@ -12,7 +12,7 @@ import {
 import {IOracle} from "@alto/oracles/interfaces/IOracle.sol";
 
 /// @title AltoMultiChainlinkLendingOracle
-/// @author Pearl Labs
+/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice Oracle contract that supports fetching the price from multiple Chainlink feeds and combining them into a single price
 contract AltoMultiChainlinkLendingOracle is

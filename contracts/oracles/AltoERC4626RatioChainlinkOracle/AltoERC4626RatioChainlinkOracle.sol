@@ -17,7 +17,7 @@ import {
 import {IOracle} from "@alto/oracles/interfaces/IOracle.sol";
 
 /// @title AltoERC4626RatioChainlinkOracle
-/// @author Pearl Labs
+/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice An oracle that gets the price of a wrapped asset using the ERC4626 ratio of the wrapped asset
 /// to the underlying asset and Chainlink price feed

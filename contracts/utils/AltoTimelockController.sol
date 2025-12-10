@@ -6,7 +6,7 @@ import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
 /**
  * @title AltoTimelockController
- * @author Pearl Labs
+ * @author GPM
  * @custom:contact security@altofoundation.org
  * @dev Custom TimelockController that requires AccessControl role changes - grantRole, revokeRole -
  *      to go through the timelock process. Addiontaly, renounceRole is disabled for the admin role.

@@ -9,7 +9,7 @@ import {
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
 /// @title Merkle Root Manager
-/// @author Pearl Labs
+/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice An abstract contract for managing merkle roots with timelock functionality
 abstract contract MerkleRootManager is IMerkleRootManagerStaticTypes {

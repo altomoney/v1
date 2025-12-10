@@ -10,7 +10,7 @@ import {IBorrowCallback, IRemoveCollateralCallback} from "../../lending/interfac
 import {AssetShareConversionMath} from "../libraries/AssetShareConversionMath.sol";
 
 /// @title Alto Leverage
-/// @author Pearl Labs
+/// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice A contract that allows users to leverage and deleverage their collateral by swapping it for a different asset.
 /// @dev This contract is used to leverage and deleverage collateral of a borrow position on behalf of users.

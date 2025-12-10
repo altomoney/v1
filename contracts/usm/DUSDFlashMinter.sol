@@ -11,7 +11,7 @@ import {FixedPointMath, MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 
 /// @title DUSDFlashMinter
 /// @notice Contract that enables FlashMinting of DUSD.
-/// @author Pearl Labs
+/// @author GPM
 /// @author Adapted from Aave (https://github.com/aave/gho-core/)
 /// @notice Contract that enables FlashMinting of DUSD.
 /// @dev Based heavily on the EIP3156 reference implementation
