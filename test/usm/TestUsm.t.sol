@@ -78,7 +78,7 @@ contract TestUsm is TestDusdBase {
         vm.expectEmit(true, true, true, true);
         emit IAccessControl.RoleGranted(DEFAULT_ADMIN_ROLE, address(this), address(this));
         vm.expectEmit(true, true, false, true);
-        emit IStableTokenFacilitator.StableTokenTreasuryUpdated(address(0), address(TREASURY));
+        emit IUsm.StableTokenTreasuryUpdated(address(0), address(TREASURY));
         vm.expectEmit(true, true, false, true);
         emit IUsm.ExposureCapUpdated(0, DEFAULT_USM_USDC_EXPOSURE);
         usm.initialize(
@@ -790,7 +790,7 @@ contract TestUsm is TestDusdBase {
 
         address newDusdTreasury = address(DUSD_USM);
         vm.expectEmit(true, true, true, true, address(newDusdTreasury));
-        emit IStableTokenFacilitator.StableTokenTreasuryUpdated(TREASURY, newDusdTreasury);
+        emit IUsm.StableTokenTreasuryUpdated(TREASURY, newDusdTreasury);
         DUSD_USM.updateStableTokenTreasury(newDusdTreasury);
         assertEq(DUSD_USM.getStableTokenTreasury(), newDusdTreasury);
 
@@ -900,7 +900,7 @@ contract TestUsm is TestDusdBase {
 
     function testUpdateDusdTreasury() public {
         vm.expectEmit(true, true, true, true, address(DUSD_USM));
-        emit IStableTokenFacilitator.StableTokenTreasuryUpdated(TREASURY, ALICE);
+        emit IUsm.StableTokenTreasuryUpdated(TREASURY, ALICE);
         DUSD_USM.updateStableTokenTreasury(ALICE);
 
         assertEq(DUSD_USM.getStableTokenTreasury(), ALICE);

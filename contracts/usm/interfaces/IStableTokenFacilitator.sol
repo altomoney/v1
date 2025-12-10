@@ -18,13 +18,6 @@ interface IStableTokenFacilitator {
     event FeesDistributedToFeeRecipient(address indexed feeRecipient, address indexed asset, uint256 amount);
 
     /**
-     * @dev Emitted when Stable Token Treasury address is updated
-     * @param oldStableTokenTreasury The address of the old Stable Token Treasury contract
-     * @param newStableTokenTreasury The address of the new Stable Token Treasury contract
-     */
-    event StableTokenTreasuryUpdated(address indexed oldStableTokenTreasury, address indexed newStableTokenTreasury);
-
-    /**
      * @dev Emitted when Stable Token Fee Recipient address is updated
      * @param oldStableTokenFeeRecipient The address of the old Stable Token Fee Recipient contract
      * @param newStableTokenFeeRecipient The address of the new Stable Token Fee Recipient contract
