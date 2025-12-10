@@ -6,6 +6,13 @@
     "feeRecipient": "0xb9F06fEFc4c53dEd77A90Cb798eD08DC068Bb6dd",
     "marketRegistry": "0xBd45d50611c38E35dD1D1119077De1E988eD2257",
     "timelock": "0xfAe841679dc1A93D225ECc827E4BbF3e8d703F86",
-    "usmRegistry": "0xAD5620e10C33918E2C6A2E8E53325bf98c548E5e"
+    "usmRegistry": "0xAD5620e10C33918E2C6A2E8E53325bf98c548E5e",
+    "wethLeverage": "0xc3eE67f860f7f7f0BC95CF40e403E5f4728747A6",
+    "wethLeverageSwapper": "0x623E9278ab11e816AD05A220E58Be102DCa84Afb",
+    "wethLiquidationEngine": "0x984E3D783E78ac5c5192CaEB562bE84306724A86",
+    "wethMarket": "0x8DED9e2B8Bc5128B862dD534b97c8a32991959ff",
+    "wethMarketImplementation": "0x195b11839e371bd25346f14158F6C51F733e866e",
+    "wethMarketIrm": "0x388fc9d91074f2E5ca0Ca36c761Ad24733401130",
+    "wethMarketOracle": "0xFaa114a9f19d86837c373D13fbf3cC154d03459D"
   }
 }
