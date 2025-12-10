@@ -824,7 +824,7 @@ contract TestUsm is TestDusdBase {
 
         // Now setting fee recipient to 0 should succeed
         vm.expectEmit(true, true, false, true, address(DUSD_USM));
-        emit IUsm.FeeRecipientUpdated(FEE_RECIPIENT, address(0));
+        emit IStableTokenFacilitator.StableTokenFeeRecipientUpdated(FEE_RECIPIENT, address(0));
         DUSD_USM.updateFeeRecipient(address(0));
         assertEq(DUSD_USM.getFeeRecipient(), address(0), "Fee recipient should be zero");
     }

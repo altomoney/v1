@@ -173,7 +173,12 @@ contract TestDusdFlashMinter is TestDusdBase {
     }
 
     function testRevertUpdateFeeWhenTreasuryNotSet_MinFlashFee() public {
-        // Set treasury to address(0)
+        // First set fees to 0
+        FlashFee memory zeroFee = _createFlashFee(0, 0);
+        vm.prank(OWNER);
+        flashMinter.updateFlashMintFee(zeroFee);
+
+        // Then set fee recipient to address(0)
         vm.prank(OWNER);
         flashMinter.updateFeeRecipient(address(0));
 
@@ -186,7 +191,12 @@ contract TestDusdFlashMinter is TestDusdBase {
     }
 
     function testRevertUpdateFeeWhenTreasuryNotSet_MaxFlashFee() public {
-        // Set treasury to address(0)
+        // First set fees to 0
+        FlashFee memory zeroFee = _createFlashFee(0, 0);
+        vm.prank(OWNER);
+        flashMinter.updateFlashMintFee(zeroFee);
+
+        // Then set fee recipient to address(0)
         vm.prank(OWNER);
         flashMinter.updateFeeRecipient(address(0));
 
@@ -196,6 +206,29 @@ contract TestDusdFlashMinter is TestDusdBase {
         vm.expectRevert("FlashMinter: DUSD fee recipient must be set as fees are enabled");
         vm.prank(OWNER);
         flashMinter.updateFlashMintFee(feeWithMax);
+    }
+
+    function testRevertUpdateFeeRecipientToZeroWithFeesEnabled() public {
+        // Flash minter is initialized with fees (DEFAULT_MIN_FLASH_FEE and DEFAULT_MAX_FLASH_FEE)
+        // Try to set fee recipient to address(0) while fees are enabled - should revert
+        vm.expectRevert("FlashMinter: Fees are enabled but fee recipient is not set");
+        vm.prank(OWNER);
+        flashMinter.updateFeeRecipient(address(0));
+    }
+
+    function testSetFeeRecipientToZeroWithZeroFees() public {
+        // First set fees to 0
+        FlashFee memory zeroFee = _createFlashFee(0, 0);
+        vm.prank(OWNER);
+        flashMinter.updateFlashMintFee(zeroFee);
+
+        // Now setting fee recipient to 0 should succeed
+        vm.expectEmit(true, true, false, false, address(flashMinter));
+        emit IStableTokenFacilitator.StableTokenFeeRecipientUpdated(TREASURY, address(0));
+        vm.prank(OWNER);
+        flashMinter.updateFeeRecipient(address(0));
+
+        assertEq(flashMinter.getFeeRecipient(), address(0), "Fee recipient should be zero");
     }
 
     function testRevertUpdateTreasuryNotOwner() public {
