@@ -26,13 +26,13 @@ contract DeployAltoEthereumMainnetScript is Script {
         vm.startBroadcast();
 
         params = AltoEthereumMainnetParams({
-            timelockAdmin: msg.sender, // TODO: Set to actual timelock admin address
-            timelockDelay: 2 days, // TODO: Set to actual timelock delay
-            freezer: address(0), // TODO: Set to actual freezer address
+            timelockAdmin: 0xc49bf619CC9A68F84A6C9aB88506F2627565a4D0,
+            timelockDelay: 1 days,
+            freezer: 0x1c11d2d42929bd17aB7212b79c91862Adfa8bbe4,
             deployer: msg.sender,
             phase: PHASE_TO_DEPLOY,
             useUnsafeUpgrades: false,
-            treasuryMultisig: address(1) // TODO: Set to actual treasury multisig address
+            treasuryMultisig: 0xA1148A1b94262540994Cf9Aa431A13ad39764228
         });
 
         input = DeployAltoEthereumMainnet.deploy(params, input);
