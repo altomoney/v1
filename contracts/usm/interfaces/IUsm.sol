@@ -203,6 +203,19 @@ interface IUsm is IAccessControl, IStableTokenFacilitator {
     function updateFeeRecipient(address newFeeRecipient) external;
 
     /**
+     * @notice Updates the address of the Stable Token Treasury
+     * @dev WARNING: The Stable Token Treasury is where revenue fees are sent to. Update carefully
+     * @param newStableTokenTreasury The address of the Stable Token Treasury
+     */
+    function updateStableTokenTreasury(address newStableTokenTreasury) external;
+
+    /**
+     * @notice Returns the address of the Stable Token Treasury
+     * @return The address of the Stable Token Treasury contract
+     */
+    function getStableTokenTreasury() external view returns (address);
+
+    /**
      * @notice Returns the total amount of Stable Token, gross amount and fee result of buying assets
      * @param minAssetAmount The minimum amount of underlying asset to buy
      * @return The exact amount of underlying asset to be bought

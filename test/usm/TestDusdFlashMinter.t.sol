@@ -81,7 +81,7 @@ contract TestDusdFlashMinter is TestDusdBase {
         FlashFee memory defaultFlashFee = _createFlashFee(DEFAULT_MIN_FLASH_FEE, DEFAULT_MAX_FLASH_FEE);
 
         vm.expectEmit(true, true, false, false);
-        emit IStableTokenFacilitator.StableTokenTreasuryUpdated(address(0), TREASURY);
+        emit IStableTokenFacilitator.StableTokenFeeRecipientUpdated(address(0), TREASURY);
         vm.expectEmit(false, false, false, true);
         emit IDUSDFlashMinter.SetFlashMintFee(_createFlashFee(0, 0), defaultFlashFee);
 
@@ -91,7 +91,7 @@ contract TestDusdFlashMinter is TestDusdBase {
         FlashFee memory fee = newFlashMinter.getFlashMintFee();
         assertEq(fee.minFlashFee, DEFAULT_MIN_FLASH_FEE, "Wrong min flash fee");
         assertEq(fee.maxFlashFee, DEFAULT_MAX_FLASH_FEE, "Wrong max flash fee");
-        assertEq(newFlashMinter.getStableTokenTreasury(), TREASURY, "Wrong TREASURY address");
+        assertEq(newFlashMinter.getFeeRecipient(), TREASURY, "Wrong fee recipient address");
     }
 
     function testRevertConstructorFeeOutOfRange_MinFlashFee() public {
@@ -175,12 +175,12 @@ contract TestDusdFlashMinter is TestDusdBase {
     function testRevertUpdateFeeWhenTreasuryNotSet_MinFlashFee() public {
         // Set treasury to address(0)
         vm.prank(OWNER);
-        flashMinter.updateStableTokenTreasury(address(0));
+        flashMinter.updateFeeRecipient(address(0));
 
         // Try to update fee with minFlashFee > 0
         FlashFee memory feeWithMin = _createFlashFee(1e16, 0);
 
-        vm.expectRevert("FlashMinter: DUSD treasury must be set as fees are enabled");
+        vm.expectRevert("FlashMinter: DUSD fee recipient must be set as fees are enabled");
         vm.prank(OWNER);
         flashMinter.updateFlashMintFee(feeWithMin);
     }
@@ -188,12 +188,12 @@ contract TestDusdFlashMinter is TestDusdBase {
     function testRevertUpdateFeeWhenTreasuryNotSet_MaxFlashFee() public {
         // Set treasury to address(0)
         vm.prank(OWNER);
-        flashMinter.updateStableTokenTreasury(address(0));
+        flashMinter.updateFeeRecipient(address(0));
 
         // Try to update fee with maxFlashFee > 0
         FlashFee memory feeWithMax = _createFlashFee(0, 1e16);
 
-        vm.expectRevert("FlashMinter: DUSD treasury must be set as fees are enabled");
+        vm.expectRevert("FlashMinter: DUSD fee recipient must be set as fees are enabled");
         vm.prank(OWNER);
         flashMinter.updateFlashMintFee(feeWithMax);
     }
@@ -203,7 +203,7 @@ contract TestDusdFlashMinter is TestDusdBase {
 
         vm.prank(notOwner);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, notOwner));
-        flashMinter.updateStableTokenTreasury(address(0));
+        flashMinter.updateFeeRecipient(address(0));
     }
 
     function testRevertFlashfeeNotDusd() public {
@@ -233,8 +233,8 @@ contract TestDusdFlashMinter is TestDusdBase {
         assertEq(DUSD_TOKEN.balanceOf(address(flashMinter)), feeAmount, "FlashMinter should have fees");
 
         vm.expectEmit(true, true, false, true, address(flashMinter));
-        emit IStableTokenFacilitator.FeesDistributedToTreasury(TREASURY, address(DUSD_TOKEN), feeAmount);
-        flashMinter.distributeFeesToTreasury();
+        emit IStableTokenFacilitator.FeesDistributedToFeeRecipient(TREASURY, address(DUSD_TOKEN), feeAmount);
+        flashMinter.distributeFeesToFeeRecipient();
 
         assertEq(DUSD_TOKEN.balanceOf(address(flashMinter)), 0, "FlashMinter should have no DUSD left");
         assertEq(DUSD_TOKEN.balanceOf(TREASURY), treasuryBalanceBefore + feeAmount, "Treasury should receive fees");
@@ -258,17 +258,17 @@ contract TestDusdFlashMinter is TestDusdBase {
         assertEq(updatedFee.maxFlashFee, 2.5e16, "Max fee should be updated");
     }
 
-    function testUpdateDusdTreasury() public {
-        assertEq(flashMinter.getStableTokenTreasury(), TREASURY, "Flashminter non-default TREASURY");
-        address newTreasury = address(0x9999);
-        assertTrue(TREASURY != newTreasury);
+    function testUpdateFeeRecipient() public {
+        assertEq(flashMinter.getFeeRecipient(), TREASURY, "Flashminter non-default fee recipient");
+        address newFeeRecipient = address(0x9999);
+        assertTrue(TREASURY != newFeeRecipient);
 
         vm.expectEmit(true, true, false, false, address(flashMinter));
-        emit IStableTokenFacilitator.StableTokenTreasuryUpdated(TREASURY, newTreasury);
+        emit IStableTokenFacilitator.StableTokenFeeRecipientUpdated(TREASURY, newFeeRecipient);
         vm.prank(OWNER);
-        flashMinter.updateStableTokenTreasury(newTreasury);
+        flashMinter.updateFeeRecipient(newFeeRecipient);
 
-        assertEq(flashMinter.getStableTokenTreasury(), newTreasury, "Treasury should be updated");
+        assertEq(flashMinter.getFeeRecipient(), newFeeRecipient, "Fee recipient should be updated");
     }
 
     function testMaxFlashloanNotDusd() public view {

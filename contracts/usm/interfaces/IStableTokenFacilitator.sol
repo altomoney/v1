@@ -10,12 +10,12 @@ pragma solidity ^0.8.0;
  */
 interface IStableTokenFacilitator {
     /**
-     * @dev Emitted when fees are distributed to the Stable Token Treasury
-     * @param stableTokenTreasury The address of the Stable Token Treasury
-     * @param asset The address of the asset transferred to the Stable Token Treasury
-     * @param amount The amount of the asset transferred to the Stable Token Treasury
+     * @dev Emitted when fees are distributed to the fee recipient
+     * @param feeRecipient The address of the Fee Recipient
+     * @param asset The address of the asset transferred to the fee recipient
+     * @param amount The amount of the asset transferred to the Fee Recipient
      */
-    event FeesDistributedToTreasury(address indexed stableTokenTreasury, address indexed asset, uint256 amount);
+    event FeesDistributedToFeeRecipient(address indexed feeRecipient, address indexed asset, uint256 amount);
 
     /**
      * @dev Emitted when Stable Token Treasury address is updated
@@ -25,20 +25,28 @@ interface IStableTokenFacilitator {
     event StableTokenTreasuryUpdated(address indexed oldStableTokenTreasury, address indexed newStableTokenTreasury);
 
     /**
-     * @notice Distribute fees to the Stable Token Treasury
+     * @dev Emitted when Stable Token Fee Recipient address is updated
+     * @param oldStableTokenFeeRecipient The address of the old Stable Token Fee Recipient contract
+     * @param newStableTokenFeeRecipient The address of the new Stable Token Fee Recipient contract
      */
-    function distributeFeesToTreasury() external;
+    event StableTokenFeeRecipientUpdated(
+        address indexed oldStableTokenFeeRecipient, address indexed newStableTokenFeeRecipient
+    );
 
     /**
-     * @notice Updates the address of the Stable Token Treasury
-     * @dev WARNING: The Stable Token Treasury is where revenue fees are sent to. Update carefully
-     * @param newStableTokenTreasury The address of the Stable Token Treasury
+     * @notice Distribute fees to the Fee Recipient
      */
-    function updateStableTokenTreasury(address newStableTokenTreasury) external;
+    function distributeFeesToFeeRecipient() external;
 
     /**
-     * @notice Returns the address of the Stable Token Treasury
-     * @return The address of the Stable Token Treasury contract
+     * @notice Updates the address of the Stable Token Fee Recipient
+     * @param newStableTokenFeeRecipient The address of the new Stable Token Fee Recipient
      */
-    function getStableTokenTreasury() external view returns (address);
+    function updateFeeRecipient(address newStableTokenFeeRecipient) external;
+
+    /**
+     * @notice Returns the address of the Stable Token Fee Recipient
+     * @return The address of the Stable Token Fee Recipient contract
+     */
+    function getFeeRecipient() external view returns (address);
 }
