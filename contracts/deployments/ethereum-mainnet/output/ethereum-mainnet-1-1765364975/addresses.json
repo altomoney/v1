@@ -13,6 +13,13 @@
     "wethMarket": "0x8DED9e2B8Bc5128B862dD534b97c8a32991959ff",
     "wethMarketImplementation": "0x195b11839e371bd25346f14158F6C51F733e866e",
     "wethMarketIrm": "0x388fc9d91074f2E5ca0Ca36c761Ad24733401130",
-    "wethMarketOracle": "0xFaa114a9f19d86837c373D13fbf3cC154d03459D"
+    "wethMarketOracle": "0xFaa114a9f19d86837c373D13fbf3cC154d03459D",
+    "wstethLeverage": "0x3E1B400D44389CDaC84803e836e2BcdD7E3bBeF8",
+    "wstethLeverageSwapper": "0xD64d46C313258D248AE7870c64EDF1eccde72906",
+    "wstethLiquidationEngine": "0xB9724552a774369E8319d8EDC00A7cb95fc5dDe2",
+    "wstethMarket": "0xfd8c25047f4397dC5461B919999585a2a3EaC2eF",
+    "wstethMarketImplementation": "0x988A01E35a924e13Bd3a297d9b0521Ba2FeB17f2",
+    "wstethMarketIrm": "0x74EAaB99cc141b7B91F1f3B326bcF1270b03Df3C",
+    "wstethMarketOracle": "0xCf041e3266152e07EED37D32d4476c16028070A4"
   }
 }
