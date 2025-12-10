@@ -3,6 +3,7 @@ pragma solidity ^0.8.22;
 
 import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+import {AltoMintMarket} from "@alto/lending/AltoMintMarket.sol";
 
 /**
  * @title AltoTimelockControllerMintMarketFee
@@ -50,5 +51,9 @@ contract AltoTimelockControllerMintMarketFee is TimelockController {
         }
 
         super._revokeRole(role, callerConfirmation);
+    }
+
+    function claimInterest(address mintMarket, uint256 interest) external {
+        AltoMintMarket(mintMarket).claimInterest(interest);
     }
 }
