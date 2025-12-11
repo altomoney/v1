@@ -11,6 +11,7 @@
     "dusd": "0x63d74d22E689C715a04F2C13962b1f77F443d35b",
     "dusdFlashMinter": "0x8b7448877E292b8422608d1dCbf066E484461948",
     "feeRecipient": "0xb9F06fEFc4c53dEd77A90Cb798eD08DC068Bb6dd",
+    "feeRecipientMintMarkets": "0x5F80c18b6B73B1C4F06fa5233De32778eC90FA96",
     "marketRegistry": "0xBd45d50611c38E35dD1D1119077De1E988eD2257",
     "methLeverage": "0x0e64cC242FA7a7a294efC29B0CA08DAa6bf98a33",
     "methLeverageSwapper": "0x4838477c7Cc8044a319040ACEe751d6E3295d0ce",
