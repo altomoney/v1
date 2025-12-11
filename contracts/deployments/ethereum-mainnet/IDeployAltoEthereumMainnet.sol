@@ -46,7 +46,8 @@ struct AltoEthereumMainnetInput {
 struct Contracts {
     address timelock;
     address altoAdapter;
-    address feeRecipient; // Mock fee collector
+    address feeRecipient; // Timelock controller for fee recipients
+    address feeRecipientMintMarkets; // Timelock controller for mint market fee recipients
     address dusd;
     address dusdFlashMinter;
     address marketRegistry;

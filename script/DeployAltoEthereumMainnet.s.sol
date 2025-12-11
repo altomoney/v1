@@ -55,6 +55,8 @@ contract DeployAltoEthereumMainnetScript is Script {
         contractsJson = vm.serializeAddress("contracts", "timelock", input.contracts.timelock);
         contractsJson = vm.serializeAddress("contracts", "altoAdapter", input.contracts.altoAdapter);
         contractsJson = vm.serializeAddress("contracts", "feeRecipient", input.contracts.feeRecipient);
+        contractsJson =
+            vm.serializeAddress("contracts", "feeRecipientMintMarkets", input.contracts.feeRecipientMintMarkets);
         contractsJson = vm.serializeAddress("contracts", "dusd", input.contracts.dusd);
         contractsJson = vm.serializeAddress("contracts", "dusdFlashMinter", input.contracts.dusdFlashMinter);
         contractsJson = vm.serializeAddress("contracts", "marketRegistry", input.contracts.marketRegistry);
@@ -140,6 +142,7 @@ contract DeployAltoEthereumMainnetScript is Script {
         loadedInput.contracts.timelock = _tryParseAddress(json, ".contracts.timelock");
         loadedInput.contracts.altoAdapter = _tryParseAddress(json, ".contracts.altoAdapter");
         loadedInput.contracts.feeRecipient = _tryParseAddress(json, ".contracts.feeRecipient");
+        loadedInput.contracts.feeRecipientMintMarkets = _tryParseAddress(json, ".contracts.feeRecipientMintMarkets");
         loadedInput.contracts.dusd = _tryParseAddress(json, ".contracts.dusd");
         loadedInput.contracts.dusdFlashMinter = _tryParseAddress(json, ".contracts.dusdFlashMinter");
         loadedInput.contracts.marketRegistry = _tryParseAddress(json, ".contracts.marketRegistry");
@@ -219,6 +222,7 @@ contract DeployAltoEthereumMainnetScript is Script {
             _extractContractABI("AltoAdapter", abiFolder);
             _extractContractABI("MockFeeCollector", abiFolder);
             _extractContractABI("AltoTimelockController", abiFolder);
+            _extractContractABI("AltoTimelockControllerMintMarketFee", abiFolder);
         } else if (PHASE_TO_DEPLOY == DeploymentPhase.REGISTRY) {
             _extractContractABI("MarketRegistry", abiFolder);
             _extractContractABI("UsmRegistry", abiFolder);
