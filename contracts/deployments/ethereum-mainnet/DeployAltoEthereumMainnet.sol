@@ -4,6 +4,9 @@ pragma solidity ^0.8.22;
 import {AltoOwnable2Step} from "@alto/utils/AltoOwnable2Step.sol";
 import {AltoOwnable2StepUpgradeable} from "@alto/utils/AltoOwnable2StepUpgradeable.sol";
 import {AltoTimelockController} from "@alto/utils/AltoTimelockController.sol";
+import {
+    AltoTimelockControllerMintMarketFee
+} from "@alto/deployments/ethereum-mainnet/contracts/AltoTimelockControllerMintMarketFee.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
 
@@ -81,7 +84,7 @@ library DeployAltoEthereumMainnet {
                     owner: input.contracts.timelock,
                     dusd: input.contracts.dusd,
                     altoAdapter: input.contracts.altoAdapter,
-                    feeRecipient: input.contracts.feeRecipient,
+                    feeRecipient: input.contracts.feeRecipientMintMarkets,
                     collateralToken: WETH_MAINNET,
                     oracleAsset: EthereumMainnetLendingOracleAsset.WETH,
                     irmInterestRate: 0.02 ether / uint256(365 days), // 2%
@@ -114,7 +117,7 @@ library DeployAltoEthereumMainnet {
                     owner: input.contracts.timelock,
                     dusd: input.contracts.dusd,
                     altoAdapter: input.contracts.altoAdapter,
-                    feeRecipient: input.contracts.feeRecipient,
+                    feeRecipient: input.contracts.feeRecipientMintMarkets,
                     collateralToken: WSTETH_MAINNET,
                     oracleAsset: EthereumMainnetLendingOracleAsset.stETH,
                     irmInterestRate: 0.025 ether / uint256(365 days), // 2.5%
@@ -147,7 +150,7 @@ library DeployAltoEthereumMainnet {
                     owner: input.contracts.timelock,
                     dusd: input.contracts.dusd,
                     altoAdapter: input.contracts.altoAdapter,
-                    feeRecipient: input.contracts.feeRecipient,
+                    feeRecipient: input.contracts.feeRecipientMintMarkets,
                     collateralToken: RETH_MAINNET,
                     oracleAsset: EthereumMainnetLendingOracleAsset.rETH,
                     irmInterestRate: 0.025 ether / uint256(365 days), // 2.5%
@@ -180,7 +183,7 @@ library DeployAltoEthereumMainnet {
                     owner: input.contracts.timelock,
                     dusd: input.contracts.dusd,
                     altoAdapter: input.contracts.altoAdapter,
-                    feeRecipient: input.contracts.feeRecipient,
+                    feeRecipient: input.contracts.feeRecipientMintMarkets,
                     collateralToken: METH_MAINNET,
                     oracleAsset: EthereumMainnetLendingOracleAsset.METH,
                     irmInterestRate: 0.025 ether / uint256(365 days), // 2.5%
@@ -213,7 +216,7 @@ library DeployAltoEthereumMainnet {
                     owner: input.contracts.timelock,
                     dusd: input.contracts.dusd,
                     altoAdapter: input.contracts.altoAdapter,
-                    feeRecipient: input.contracts.feeRecipient,
+                    feeRecipient: input.contracts.feeRecipientMintMarkets,
                     collateralToken: TBTC_MAINNET,
                     oracleAsset: EthereumMainnetLendingOracleAsset.tBTC,
                     irmInterestRate: 0.025 ether / uint256(365 days), // 2.5%
@@ -431,6 +434,13 @@ library DeployAltoEthereumMainnet {
         // Deploy fee collector with timelock admin as owner, proposer, executor and canceller
         input.contracts.feeRecipient = address(
             new AltoTimelockController(
+                params.timelockDelay, feeRecipientRoleHolders, feeRecipientRoleHolders, params.timelockAdmin
+            )
+        );
+
+        // Deploy timelock controller for mint market fee recipients
+        input.contracts.feeRecipientMintMarkets = address(
+            new AltoTimelockControllerMintMarketFee(
                 params.timelockDelay, feeRecipientRoleHolders, feeRecipientRoleHolders, params.timelockAdmin
             )
         );
