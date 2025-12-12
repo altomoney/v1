@@ -1,0 +1,2048 @@
+[
+  {
+    "type": "constructor",
+    "inputs": [
+      {
+        "name": "_lockToken",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "_owner",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "_epochDuration",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "_containers",
+        "type": "tuple[]",
+        "internalType": "struct Container[]",
+        "components": [
+          {
+            "name": "growthRate",
+            "type": "tuple",
+            "internalType": "struct MinMaxEpochs",
+            "components": [
+              {
+                "name": "min",
+                "type": "uint24",
+                "internalType": "uint24"
+              },
+              {
+                "name": "max",
+                "type": "uint24",
+                "internalType": "uint24"
+              }
+            ]
+          },
+          {
+            "name": "decayRate",
+            "type": "tuple",
+            "internalType": "struct MinMaxEpochs",
+            "components": [
+              {
+                "name": "min",
+                "type": "uint24",
+                "internalType": "uint24"
+              },
+              {
+                "name": "max",
+                "type": "uint24",
+                "internalType": "uint24"
+              }
+            ]
+          },
+          {
+            "name": "duration",
+            "type": "tuple",
+            "internalType": "struct MinMaxEpochs",
+            "components": [
+              {
+                "name": "min",
+                "type": "uint24",
+                "internalType": "uint24"
+              },
+              {
+                "name": "max",
+                "type": "uint24",
+                "internalType": "uint24"
+              }
+            ]
+          },
+          {
+            "name": "isActive",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "maxRateDifferenceEpochs",
+            "type": "uint24",
+            "internalType": "uint24"
+          },
+          {
+            "name": "currentDurationEpochs",
+            "type": "uint24",
+            "internalType": "uint24"
+          }
+        ]
+      },
+      {
+        "name": "_containerMultipliers",
+        "type": "uint256[]",
+        "internalType": "uint256[]"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "EPOCH_DURATION",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "LOCK_TOKEN",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "MAX_ACTIVE_CONTAINERS",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "acceptOwnership",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "activateContainer",
+    "inputs": [
+      {
+        "name": "containerId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "activeContainerIds",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "addContainer",
+    "inputs": [
+      {
+        "name": "container",
+        "type": "tuple",
+        "internalType": "struct Container",
+        "components": [
+          {
+            "name": "growthRate",
+            "type": "tuple",
+            "internalType": "struct MinMaxEpochs",
+            "components": [
+              {
+                "name": "min",
+                "type": "uint24",
+                "internalType": "uint24"
+              },
+              {
+                "name": "max",
+                "type": "uint24",
+                "internalType": "uint24"
+              }
+            ]
+          },
+          {
+            "name": "decayRate",
+            "type": "tuple",
+            "internalType": "struct MinMaxEpochs",
+            "components": [
+              {
+                "name": "min",
+                "type": "uint24",
+                "internalType": "uint24"
+              },
+              {
+                "name": "max",
+                "type": "uint24",
+                "internalType": "uint24"
+              }
+            ]
+          },
+          {
+            "name": "duration",
+            "type": "tuple",
+            "internalType": "struct MinMaxEpochs",
+            "components": [
+              {
+                "name": "min",
+                "type": "uint24",
+                "internalType": "uint24"
+              },
+              {
+                "name": "max",
+                "type": "uint24",
+                "internalType": "uint24"
+              }
+            ]
+          },
+          {
+            "name": "isActive",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "maxRateDifferenceEpochs",
+            "type": "uint24",
+            "internalType": "uint24"
+          },
+          {
+            "name": "currentDurationEpochs",
+            "type": "uint24",
+            "internalType": "uint24"
+          }
+        ]
+      },
+      {
+        "name": "multiplier",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "advanceEpoch",
+    "inputs": [
+      {
+        "name": "limit",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "containerById",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "growthRate",
+        "type": "tuple",
+        "internalType": "struct MinMaxEpochs",
+        "components": [
+          {
+            "name": "min",
+            "type": "uint24",
+            "internalType": "uint24"
+          },
+          {
+            "name": "max",
+            "type": "uint24",
+            "internalType": "uint24"
+          }
+        ]
+      },
+      {
+        "name": "decayRate",
+        "type": "tuple",
+        "internalType": "struct MinMaxEpochs",
+        "components": [
+          {
+            "name": "min",
+            "type": "uint24",
+            "internalType": "uint24"
+          },
+          {
+            "name": "max",
+            "type": "uint24",
+            "internalType": "uint24"
+          }
+        ]
+      },
+      {
+        "name": "duration",
+        "type": "tuple",
+        "internalType": "struct MinMaxEpochs",
+        "components": [
+          {
+            "name": "min",
+            "type": "uint24",
+            "internalType": "uint24"
+          },
+          {
+            "name": "max",
+            "type": "uint24",
+            "internalType": "uint24"
+          }
+        ]
+      },
+      {
+        "name": "isActive",
+        "type": "bool",
+        "internalType": "bool"
+      },
+      {
+        "name": "maxRateDifferenceEpochs",
+        "type": "uint24",
+        "internalType": "uint24"
+      },
+      {
+        "name": "currentDurationEpochs",
+        "type": "uint24",
+        "internalType": "uint24"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "currentEpoch",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "deactivateContainer",
+    "inputs": [
+      {
+        "name": "containerId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "deprecateContainer",
+    "inputs": [
+      {
+        "name": "containerId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "eip712Domain",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "fields",
+        "type": "bytes1",
+        "internalType": "bytes1"
+      },
+      {
+        "name": "name",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "version",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "chainId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "verifyingContract",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "salt",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "extensions",
+        "type": "uint256[]",
+        "internalType": "uint256[]"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "emergencySweep",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "epochTVL",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getContainerAfterProcessing",
+    "inputs": [
+      {
+        "name": "containerId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "epochIdToProcess",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "tuple",
+        "internalType": "struct StakingContainerExtended",
+        "components": [
+          {
+            "name": "growthRate",
+            "type": "tuple",
+            "internalType": "struct MinMaxEpochs",
+            "components": [
+              {
+                "name": "min",
+                "type": "uint24",
+                "internalType": "uint24"
+              },
+              {
+                "name": "max",
+                "type": "uint24",
+                "internalType": "uint24"
+              }
+            ]
+          },
+          {
+            "name": "decayRate",
+            "type": "tuple",
+            "internalType": "struct MinMaxEpochs",
+            "components": [
+              {
+                "name": "min",
+                "type": "uint24",
+                "internalType": "uint24"
+              },
+              {
+                "name": "max",
+                "type": "uint24",
+                "internalType": "uint24"
+              }
+            ]
+          },
+          {
+            "name": "duration",
+            "type": "tuple",
+            "internalType": "struct MinMaxEpochs",
+            "components": [
+              {
+                "name": "min",
+                "type": "uint24",
+                "internalType": "uint24"
+              },
+              {
+                "name": "max",
+                "type": "uint24",
+                "internalType": "uint24"
+              }
+            ]
+          },
+          {
+            "name": "isActive",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "maxRateDifferenceEpochs",
+            "type": "uint24",
+            "internalType": "uint24"
+          },
+          {
+            "name": "currentDurationEpochs",
+            "type": "uint24",
+            "internalType": "uint24"
+          },
+          {
+            "name": "multiplier",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "isDeprecated",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "currentDurationEpochsNext",
+            "type": "uint24",
+            "internalType": "uint24"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getPosition",
+    "inputs": [
+      {
+        "name": "account",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "containerId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "position",
+        "type": "tuple",
+        "internalType": "struct StakingPosition",
+        "components": [
+          {
+            "name": "lockedTimestamp",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "expiryTimestamp",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "amountLocked",
+            "type": "uint256",
+            "internalType": "uint256"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getVotes",
+    "inputs": [
+      {
+        "name": "account",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "votes",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "initializedAtTimestamp",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "isAuthorized",
+    "inputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "lock",
+    "inputs": [
+      {
+        "name": "onBehalf",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "containerId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "isReuse",
+        "type": "bool",
+        "internalType": "bool"
+      },
+      {
+        "name": "maxEpochsToLockFor",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "maxMultiplierStakingContainerId",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "nextEpochToProcess",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "nonce",
+    "inputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "owner",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "pause",
+    "inputs": [
+      {
+        "name": "pauseType",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "_paused",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "paused",
+    "inputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "pausers",
+    "inputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "pendingOwner",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "positions",
+    "inputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "lockedTimestamp",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "expiryTimestamp",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "amountLocked",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "renounceOwnership",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setAuthorization",
+    "inputs": [
+      {
+        "name": "spender",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "isAuthorizedStatus",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setAuthorizationWithSignature",
+    "inputs": [
+      {
+        "name": "authData",
+        "type": "tuple",
+        "internalType": "struct Authorization",
+        "components": [
+          {
+            "name": "owner",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "spender",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "isAuthorizedStatus",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "nonce",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "deadline",
+            "type": "uint256",
+            "internalType": "uint256"
+          }
+        ]
+      },
+      {
+        "name": "sigData",
+        "type": "tuple",
+        "internalType": "struct Signature",
+        "components": [
+          {
+            "name": "v",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "r",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "s",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          }
+        ]
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setPauser",
+    "inputs": [
+      {
+        "name": "pauser",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "pauseType",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "status",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "stakingContainerById",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "multiplier",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "isDeprecated",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "startEpoch",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "totalContainerCount",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "transferOwnership",
+    "inputs": [
+      {
+        "name": "newOwner",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "transferOwnershipSkip2Step",
+    "inputs": [
+      {
+        "name": "newOwner",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "unlock",
+    "inputs": [
+      {
+        "name": "onBehalf",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "receiver",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "containerId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "releasedAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "updateContainer",
+    "inputs": [
+      {
+        "name": "containerId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "container",
+        "type": "tuple",
+        "internalType": "struct Container",
+        "components": [
+          {
+            "name": "growthRate",
+            "type": "tuple",
+            "internalType": "struct MinMaxEpochs",
+            "components": [
+              {
+                "name": "min",
+                "type": "uint24",
+                "internalType": "uint24"
+              },
+              {
+                "name": "max",
+                "type": "uint24",
+                "internalType": "uint24"
+              }
+            ]
+          },
+          {
+            "name": "decayRate",
+            "type": "tuple",
+            "internalType": "struct MinMaxEpochs",
+            "components": [
+              {
+                "name": "min",
+                "type": "uint24",
+                "internalType": "uint24"
+              },
+              {
+                "name": "max",
+                "type": "uint24",
+                "internalType": "uint24"
+              }
+            ]
+          },
+          {
+            "name": "duration",
+            "type": "tuple",
+            "internalType": "struct MinMaxEpochs",
+            "components": [
+              {
+                "name": "min",
+                "type": "uint24",
+                "internalType": "uint24"
+              },
+              {
+                "name": "max",
+                "type": "uint24",
+                "internalType": "uint24"
+              }
+            ]
+          },
+          {
+            "name": "isActive",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "maxRateDifferenceEpochs",
+            "type": "uint24",
+            "internalType": "uint24"
+          },
+          {
+            "name": "currentDurationEpochs",
+            "type": "uint24",
+            "internalType": "uint24"
+          }
+        ]
+      },
+      {
+        "name": "multiplier",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "event",
+    "name": "AdvanceEpoch",
+    "inputs": [
+      {
+        "name": "oldEpoch",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "newEpoch",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "ContainerActivated",
+    "inputs": [
+      {
+        "name": "containerId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "ContainerAdded",
+    "inputs": [
+      {
+        "name": "containerId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "container",
+        "type": "tuple",
+        "indexed": false,
+        "internalType": "struct Container",
+        "components": [
+          {
+            "name": "growthRate",
+            "type": "tuple",
+            "internalType": "struct MinMaxEpochs",
+            "components": [
+              {
+                "name": "min",
+                "type": "uint24",
+                "internalType": "uint24"
+              },
+              {
+                "name": "max",
+                "type": "uint24",
+                "internalType": "uint24"
+              }
+            ]
+          },
+          {
+            "name": "decayRate",
+            "type": "tuple",
+            "internalType": "struct MinMaxEpochs",
+            "components": [
+              {
+                "name": "min",
+                "type": "uint24",
+                "internalType": "uint24"
+              },
+              {
+                "name": "max",
+                "type": "uint24",
+                "internalType": "uint24"
+              }
+            ]
+          },
+          {
+            "name": "duration",
+            "type": "tuple",
+            "internalType": "struct MinMaxEpochs",
+            "components": [
+              {
+                "name": "min",
+                "type": "uint24",
+                "internalType": "uint24"
+              },
+              {
+                "name": "max",
+                "type": "uint24",
+                "internalType": "uint24"
+              }
+            ]
+          },
+          {
+            "name": "isActive",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "maxRateDifferenceEpochs",
+            "type": "uint24",
+            "internalType": "uint24"
+          },
+          {
+            "name": "currentDurationEpochs",
+            "type": "uint24",
+            "internalType": "uint24"
+          }
+        ]
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "ContainerDeactivated",
+    "inputs": [
+      {
+        "name": "containerId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "ContainerDeprecate",
+    "inputs": [
+      {
+        "name": "containerId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "ContainerDurationUpdated",
+    "inputs": [
+      {
+        "name": "containerId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "oldDuration",
+        "type": "uint24",
+        "indexed": false,
+        "internalType": "uint24"
+      },
+      {
+        "name": "newDuration",
+        "type": "uint24",
+        "indexed": false,
+        "internalType": "uint24"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "ContainerMultiplierUpdated",
+    "inputs": [
+      {
+        "name": "containerId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "multiplier",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "ContainerTVLUpdated",
+    "inputs": [
+      {
+        "name": "epoch",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "containerId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "deltaAmount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "add",
+        "type": "bool",
+        "indexed": false,
+        "internalType": "bool"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "ContainerUpdated",
+    "inputs": [
+      {
+        "name": "index",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "containerBefore",
+        "type": "tuple",
+        "indexed": false,
+        "internalType": "struct Container",
+        "components": [
+          {
+            "name": "growthRate",
+            "type": "tuple",
+            "internalType": "struct MinMaxEpochs",
+            "components": [
+              {
+                "name": "min",
+                "type": "uint24",
+                "internalType": "uint24"
+              },
+              {
+                "name": "max",
+                "type": "uint24",
+                "internalType": "uint24"
+              }
+            ]
+          },
+          {
+            "name": "decayRate",
+            "type": "tuple",
+            "internalType": "struct MinMaxEpochs",
+            "components": [
+              {
+                "name": "min",
+                "type": "uint24",
+                "internalType": "uint24"
+              },
+              {
+                "name": "max",
+                "type": "uint24",
+                "internalType": "uint24"
+              }
+            ]
+          },
+          {
+            "name": "duration",
+            "type": "tuple",
+            "internalType": "struct MinMaxEpochs",
+            "components": [
+              {
+                "name": "min",
+                "type": "uint24",
+                "internalType": "uint24"
+              },
+              {
+                "name": "max",
+                "type": "uint24",
+                "internalType": "uint24"
+              }
+            ]
+          },
+          {
+            "name": "isActive",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "maxRateDifferenceEpochs",
+            "type": "uint24",
+            "internalType": "uint24"
+          },
+          {
+            "name": "currentDurationEpochs",
+            "type": "uint24",
+            "internalType": "uint24"
+          }
+        ]
+      },
+      {
+        "name": "containerAfter",
+        "type": "tuple",
+        "indexed": false,
+        "internalType": "struct Container",
+        "components": [
+          {
+            "name": "growthRate",
+            "type": "tuple",
+            "internalType": "struct MinMaxEpochs",
+            "components": [
+              {
+                "name": "min",
+                "type": "uint24",
+                "internalType": "uint24"
+              },
+              {
+                "name": "max",
+                "type": "uint24",
+                "internalType": "uint24"
+              }
+            ]
+          },
+          {
+            "name": "decayRate",
+            "type": "tuple",
+            "internalType": "struct MinMaxEpochs",
+            "components": [
+              {
+                "name": "min",
+                "type": "uint24",
+                "internalType": "uint24"
+              },
+              {
+                "name": "max",
+                "type": "uint24",
+                "internalType": "uint24"
+              }
+            ]
+          },
+          {
+            "name": "duration",
+            "type": "tuple",
+            "internalType": "struct MinMaxEpochs",
+            "components": [
+              {
+                "name": "min",
+                "type": "uint24",
+                "internalType": "uint24"
+              },
+              {
+                "name": "max",
+                "type": "uint24",
+                "internalType": "uint24"
+              }
+            ]
+          },
+          {
+            "name": "isActive",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "maxRateDifferenceEpochs",
+            "type": "uint24",
+            "internalType": "uint24"
+          },
+          {
+            "name": "currentDurationEpochs",
+            "type": "uint24",
+            "internalType": "uint24"
+          }
+        ]
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "EIP712DomainChanged",
+    "inputs": [],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "EmergencySweep",
+    "inputs": [
+      {
+        "name": "caller",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "receiver",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "EpochDurationSet",
+    "inputs": [
+      {
+        "name": "epochDuration",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "EpochStarted",
+    "inputs": [
+      {
+        "name": "initializedAtTimestamp",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "IncrementNonce",
+    "inputs": [
+      {
+        "name": "caller",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "owner",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "nonce",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "LockPosition",
+    "inputs": [
+      {
+        "name": "caller",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "onBehalf",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "containerId",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "expiryTimestamp",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "isReuse",
+        "type": "bool",
+        "indexed": false,
+        "internalType": "bool"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "MaxMultiplierStakingContainerIdUpdated",
+    "inputs": [
+      {
+        "name": "containerId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "multiplier",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "OwnershipTransferStarted",
+    "inputs": [
+      {
+        "name": "previousOwner",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "newOwner",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "OwnershipTransferred",
+    "inputs": [
+      {
+        "name": "previousOwner",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "newOwner",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "Paused",
+    "inputs": [
+      {
+        "name": "pauser",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "pauseType",
+        "type": "bytes32",
+        "indexed": false,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "paused",
+        "type": "bool",
+        "indexed": false,
+        "internalType": "bool"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "PauserUpdated",
+    "inputs": [
+      {
+        "name": "pauser",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "pauseType",
+        "type": "bytes32",
+        "indexed": false,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "status",
+        "type": "bool",
+        "indexed": false,
+        "internalType": "bool"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "SetAuthorization",
+    "inputs": [
+      {
+        "name": "caller",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "owner",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "spender",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "isAuthorized",
+        "type": "bool",
+        "indexed": false,
+        "internalType": "bool"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "UnlockPosition",
+    "inputs": [
+      {
+        "name": "caller",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "onBehalf",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "receiver",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "containerId",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "error",
+    "name": "AltoStakingContainerDeprecated",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "AltoStakingInvalidInput",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "AltoStakingNoPosition",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "AltoStakingNotPausedForEmergencySweep",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "AltoStakingPositionNotExpired",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "AltoStakingTryingToLockForTooManyEpochs",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "AltoStakingUnauthorized",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "AuthAuthorizationAlreadySet",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "AuthInvalidNonce",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "AuthInvalidSignature",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "AuthSignatureExpired",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidShortString",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "IsPaused",
+    "inputs": [
+      {
+        "name": "pauseType",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "OwnableInvalidOwner",
+    "inputs": [
+      {
+        "name": "owner",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "OwnableUnauthorizedAccount",
+    "inputs": [
+      {
+        "name": "account",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "SafeERC20FailedOperation",
+    "inputs": [
+      {
+        "name": "token",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "StateNotChanged",
+    "inputs": [
+      {
+        "name": "pauseType",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "currentState",
+        "type": "bool",
+        "internalType": "bool"
+      },
+      {
+        "name": "newState",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "StringTooLong",
+    "inputs": [
+      {
+        "name": "str",
+        "type": "string",
+        "internalType": "string"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "TVLWeightedContainersAlreadyStarted",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "TVLWeightedContainersContainerDisabled",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "TVLWeightedContainersCurrentEpochAlreadyFinished",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "TVLWeightedContainersCurrentEpochNotFinished",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "TVLWeightedContainersInvalidInput",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "TVLWeightedContainersNoContainers",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "TVLWeightedContainersNotStarted",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "Unauthorized",
+    "inputs": [
+      {
+        "name": "pauser",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "pauseType",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ]
+  }
+]
