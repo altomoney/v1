@@ -12,23 +12,15 @@ import {USDC_MAINNET} from "@alto/deployments/ethereum-mainnet/Constants.sol";
 contract GenerateUsmTransactionsScript is Script {
     function run() public {
         // Get inputs interactively from user
-        string memory usmInput = vm.prompt("Enter Permissioned USM address:");
-        address permissionedUsm = vm.parseAddress(usmInput);
+        address permissionedUsm = 0x2dE874B83f4d0a64D81A16f2e050bcB55f118398;
 
-        string memory dusdInput = vm.prompt("Enter DUSD token address:");
-        address dusd = vm.parseAddress(dusdInput);
+        address dusd = 0x63d74d22E689C715a04F2C13962b1f77F443d35b;
 
-        string memory multisigInput = vm.prompt("Enter multisig/Safe wallet address:");
-        address multisig = vm.parseAddress(multisigInput);
+        address multisig = 0xA1148A1b94262540994Cf9Aa431A13ad39764228;
 
-        string memory usdcAmountInput =
-            vm.prompt("Enter USDC amount to sell (with 6 decimals, e.g., 1000000000000 for 1M USDC):");
-        uint256 usdcAmount = uint256(vm.parseUint(usdcAmountInput)); // Full decimal value
+        uint256 usdcAmount = (55_000 + 240_000) * 10 ** 6;
 
-        string memory dusdAmountInput = vm.prompt(
-            "Enter DUSD amount to buy USDC with (with 18 decimals, e.g., 1000000000000000000000000 for 1M DUSD):"
-        );
-        uint256 dusdAmount = uint256(vm.parseUint(dusdAmountInput)); // Full decimal value
+        uint256 dusdAmount = IERC20(dusd).balanceOf(multisig);
 
         console.log("=== USM Transaction Generator (Permissioned - No Fees) ===");
         console.log("Permissioned USM Address:", permissionedUsm);

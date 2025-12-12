@@ -31,14 +31,12 @@ contract GenerateDusdUsdcPoolTransactionsScript is Script {
 
     function run() public {
         // Get inputs interactively from user
-        string memory dusdInput = vm.prompt("Enter DUSD token address:");
-        address dusd = vm.parseAddress(dusdInput);
+        address dusd = 0x63d74d22E689C715a04F2C13962b1f77F443d35b;
 
-        string memory multisigInput = vm.prompt("Enter multisig/Safe wallet address:");
-        address multisig = vm.parseAddress(multisigInput);
+        address multisig = 0xA1148A1b94262540994Cf9Aa431A13ad39764228;
 
         // Deadline: use env var if provided, otherwise use 1 year from now
-        uint256 deadline = vm.envOr("DEADLINE", uint256(block.timestamp + 365 days));
+        uint256 deadline = block.timestamp + 3 hours;
 
         console.log("=== DUSD/USDC Pool Deployment Transaction Generator ===");
         console.log("DUSD Address:", dusd);

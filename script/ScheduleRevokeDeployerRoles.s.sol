@@ -8,14 +8,11 @@ import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 /// @title Execute Batch: Revoke Deployer Roles from Timelock
 /// @notice Generates executeBatch transaction data to revoke PROPOSER_ROLE, EXECUTOR_ROLE, CANCELLER_ROLE, and DEFAULT_ADMIN_ROLE from deployer
 /// @dev This script generates the executeBatch transaction created in _revokeTimelockRolesFromDeployer in POST phase
-contract ExecuteRevokeDeployerRolesScript is Script {
+contract ScheduleRevokeDeployerRoles is Script {
     function run() public {
-        // Get inputs interactively from user
-        string memory timelockInput = vm.prompt("Enter Timelock address:");
-        address timelock = vm.parseAddress(timelockInput);
+        address timelock = 0xfAe841679dc1A93D225ECc827E4BbF3e8d703F86;
 
-        string memory deployerInput = vm.prompt("Enter Deployer address to revoke roles from:");
-        address deployer = vm.parseAddress(deployerInput);
+        address deployer = 0xBA5eD2B1234274a0fFE44E717119C0ECa04703ed;
 
         console.log("=== Execute Batch: Revoke Deployer Roles ===");
         console.log("Timelock Address:", timelock);
