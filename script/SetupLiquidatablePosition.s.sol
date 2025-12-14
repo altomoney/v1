@@ -4,7 +4,7 @@ pragma solidity ^0.8.22;
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
 
-import {IMarket, Position} from "@alto/lending/interfaces/IMarket.sol";
+import {IMarket, Position, MarketType} from "@alto/lending/interfaces/IMarket.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {OracleTestnet} from "@alto/deployments/testnet/contracts/OracleTestnet.sol";
 import {AltoMulticallTestnet} from "@alto/deployments/testnet/contracts/AltoMulticallTestnet.sol";
@@ -37,6 +37,7 @@ contract SetupLiquidatablePositionScript is Script {
     address marketOracle;
     address liquidationEngine;
     address collateralToken;
+    address borrowToken;
 
     // Market parameters
     uint256 defaultOraclePrice;
@@ -66,6 +67,13 @@ contract SetupLiquidatablePositionScript is Script {
         console.log("Test user address:", user);
         console.log("Test user private key:", vm.toString(bytes32(userPrivateKey)));
 
+        vm.startBroadcast(userPrivateKey);
+
+        // approving msg.sender to authorize on behalf of user
+        IMarket(market).setAuthorization(msg.sender, true);
+
+        vm.stopBroadcast();
+
         vm.startBroadcast();
 
         // Step 1: Disable priority liquidation if enabled
@@ -77,10 +85,7 @@ contract SetupLiquidatablePositionScript is Script {
         // Step 3: Fund user with collateral and native token for gas
         _fundUser();
 
-        vm.stopBroadcast();
-
         // Steps 4-5: User actions (deposit and borrow) - broadcast as user
-        vm.startBroadcast(userPrivateKey);
 
         // Step 4: Deposit collateral
         _depositCollateral();
@@ -123,6 +128,7 @@ contract SetupLiquidatablePositionScript is Script {
 
         altoMulticall = vm.parseJsonAddress(json, ".contracts.altoMulticall");
         multiTokenSender = vm.parseJsonAddress(json, ".contracts.multiTokenSender");
+        borrowToken = vm.parseJsonAddress(json, ".tokens.dusd");
 
         if (keccak256(bytes(marketType)) == keccak256(bytes("weth"))) {
             market = vm.parseJsonAddress(json, ".contracts.wethMarketBatch.market");
@@ -231,7 +237,7 @@ contract SetupLiquidatablePositionScript is Script {
     }
 
     function _fundUser() internal {
-        console.log("Funding user with collateral...");
+        console.log("Funding sender with collateral...");
         console.log("Collateral amount:", collateralAmountFor10k);
 
         AltoMulticallTestnet multicall = AltoMulticallTestnet(payable(altoMulticall));
@@ -250,18 +256,19 @@ contract SetupLiquidatablePositionScript is Script {
         tokens[0] = collateralToken;
         uint256[] memory amounts = new uint256[](1);
         amounts[0] = collateralAmountFor10k;
-        MultiTokenSender(multiTokenSender).sendTokens(tokens, user, amounts);
+        MultiTokenSender(multiTokenSender).sendTokens(tokens, msg.sender, amounts);
 
-        // Step 3: Transfer native token for gas directly from executor
-        // User needs enough for: approve + addCollateral + borrow transactions
-        (bool success,) = user.call{value: 0.05 ether}("");
-        require(success, "ETH transfer failed");
+        if (IMarket(market).MARKET_TYPE() == MarketType.BORROW) {
+            tokens[0] = borrowToken;
+            amounts[0] = 10_000 ether;
+            MultiTokenSender(multiTokenSender).sendTokens(tokens, msg.sender, amounts);
+        }
 
-        console.log("User funded with collateral and gas");
+        console.log("Sender funded with collateral");
     }
 
     function _depositCollateral() internal {
-        console.log("Depositing collateral...");
+        console.log("Depositing collateral on behalf of user...");
 
         IERC20(collateralToken).approve(market, collateralAmountFor10k);
         IMarket(market).addCollateral(collateralAmountFor10k, user);
@@ -271,13 +278,22 @@ contract SetupLiquidatablePositionScript is Script {
     }
 
     function _borrowAtMaxLtv() internal {
-        console.log("Borrowing at max LTV...");
+        console.log("Borrowing at max LTV on behalf of user...");
 
         IMarket marketContract = IMarket(market);
 
         uint256 borrowAmount = 10_000 ether;
 
-        marketContract.borrow(borrowAmount.multiplyWithPrecisionUp(0.745 ether) + 5 ether, 0, user, user, "");
+        if (marketContract.MARKET_TYPE() == MarketType.BORROW) {
+            console.log("Supplying DUSD for borrow market...");
+
+            IERC20(borrowToken).approve(address(marketContract), borrowAmount);
+            marketContract.addSupply(borrowAmount, 0, msg.sender);
+
+            console.log("DUSD supplied: ", borrowAmount);
+        }
+
+        marketContract.borrow(borrowAmount.multiplyWithPrecisionUp(0.745 ether) + 5 ether, 0, user, msg.sender, "");
     }
 
     function _makePositionLiquidatable() internal {
