@@ -9,16 +9,28 @@ AltoReferralWhitelistAdapter::getBonusRewardInfo
     ├── when user has valid referral setup
     │   ├── it should return configured bonus discount
     │   ├── it should return configured payment token share
-    │   └── it should return referral address as payment token share receiver
+    │   ├── when referral address has no custom receiver set
+    │   │   └── it should return referral address as payment token share receiver
+    │   └── when referral address has custom receiver set
+    │       └── it should return custom receiver address as payment token share receiver
     ├── when multiple users have same referral address
     │   ├── it should return same bonus info for all users
-    │   └── it should return same referral address as receiver
+    │   ├── when referral address has no custom receiver set
+    │   │   └── it should return same referral address as receiver
+    │   └── when referral address has custom receiver set
+    │       └── it should return same custom receiver address for all users
     ├── when adapter configuration changes after referral set
     │   ├── it should return updated bonus discount
     │   ├── it should return updated payment token share
-    │   └── it should return same referral address as receiver
+    │   └── it should return same receiver address (referral or custom)
+    ├── when referral address sets custom receiver after referral is set
+    │   ├── it should return custom receiver address
+    │   └── when custom receiver is set to zero address
+    │       └── it should return referral address as receiver (default)
     ├── when referral address is removed from whitelist after setting
     │   └── it should return zero bonus info
     └── when calling for different users with different setups
         ├── it should return appropriate bonus info for each user
-        └── it should maintain independent states
+        ├── it should maintain independent states
+        └── when different referral addresses have different custom receivers
+            └── it should return respective custom receiver addresses
