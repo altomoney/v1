@@ -21,6 +21,7 @@ contract AltoReferralWhitelistAdapter is IRewardsAdapter, MerkleRootManager, Alt
     event PaymentTokenShareSet(uint256 paymentTokenShare);
     event ReferralSet(address indexed setFor, address indexed referralAddress);
     event ReferralWhitelistSet(address indexed setFor, bool isWhitelisted);
+    event PaymentTokenShareReceiverSet(address indexed setFor, address indexed paymentTokenShareReceiver);
 
     /// @notice The bonus discount for being the referred user
     uint256 public bonusDiscount;
@@ -31,6 +32,10 @@ contract AltoReferralWhitelistAdapter is IRewardsAdapter, MerkleRootManager, Alt
     /// @notice The mapping of the referral addresses able to be set as a referred user
     /// @dev address => is whitelisted
     mapping(address => bool) public referralWhitelist;
+
+    /// @notice The mapping of the payment token share receiver for a referral address
+    /// @dev address => payment token share receiver
+    mapping(address => address) public paymentTokenShareReceiver;
 
     /// @notice The mapping of the referral address set as a referred user
     /// @dev user => referral address
@@ -158,6 +163,23 @@ contract AltoReferralWhitelistAdapter is IRewardsAdapter, MerkleRootManager, Alt
         emit ReferralWhitelistSet(msg.sender, true);
     }
 
+    /// @notice Sets the payment token share receiver for the caller
+    /// @param receiver The payment token share receiver for the caller
+    /// @dev only whitelisted addresses are allowed and resetting to address(0) is allowed
+    function setPaymentTokenShareReceiver(address receiver) external {
+        if (!referralWhitelist[msg.sender]) {
+            revert AltoReferralWhitelistAdapterInvalidReferralAddress();
+        }
+
+        if (paymentTokenShareReceiver[msg.sender] == receiver) {
+            revert AltoReferralWhitelistAdapterInvalidInput();
+        }
+
+        paymentTokenShareReceiver[msg.sender] = receiver;
+
+        emit PaymentTokenShareReceiverSet(msg.sender, receiver);
+    }
+
     /// @inheritdoc IRewardsAdapter
     function getBonusRewardInfo(address onBehalf) external view returns (BonusRewardInfo memory) {
         address referralAddress = referral[onBehalf];
@@ -166,10 +188,13 @@ contract AltoReferralWhitelistAdapter is IRewardsAdapter, MerkleRootManager, Alt
             return BonusRewardInfo({bonusDiscount: 0, paymentTokenShare: 0, paymentTokenShareReceiver: address(0)});
         }
 
+        address receiver = paymentTokenShareReceiver[referralAddress];
+        if (receiver == address(0)) {
+            receiver = referralAddress;
+        }
+
         return BonusRewardInfo({
-            bonusDiscount: bonusDiscount,
-            paymentTokenShare: paymentTokenShare,
-            paymentTokenShareReceiver: referralAddress
+            bonusDiscount: bonusDiscount, paymentTokenShare: paymentTokenShare, paymentTokenShareReceiver: receiver
         });
     }
 }

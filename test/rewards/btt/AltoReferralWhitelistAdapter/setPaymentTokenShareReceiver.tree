@@ -1,0 +1,23 @@
+AltoReferralWhitelistAdapter::setPaymentTokenShareReceiver
+├── when caller is not whitelisted
+│   └── it should revert
+└── when caller is whitelisted
+    ├── when setting receiver to same address as current receiver
+    │   └── it should revert
+    ├── when setting receiver to different address
+    │   ├── when current receiver is zero (initial set)
+    │   │   ├── it should set payment token share receiver mapping
+    │   │   └── it should emit PaymentTokenShareReceiverSet event
+    │   └── when current receiver is non-zero (update)
+    │       ├── it should update payment token share receiver mapping
+    │       └── it should emit PaymentTokenShareReceiverSet event with new receiver
+    ├── when setting receiver to zero address (reset)
+    │   ├── when current receiver is not zero
+    │   │   ├── it should set payment token share receiver mapping to zero
+    │   │   └── it should emit PaymentTokenShareReceiverSet event with zero address
+    │   └── when current receiver is already zero
+    │       └── it should revert
+    └── when multiple whitelisted addresses set receivers
+        ├── it should set independent receiver mappings for each address
+        └── it should emit PaymentTokenShareReceiverSet event for each address
+

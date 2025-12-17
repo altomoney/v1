@@ -44,7 +44,7 @@ contract AltoReferralWhitelistAdapterGetBonusRewardInfo is ReferralWhitelistAdap
         assertEq(info.paymentTokenShareReceiver, address(0));
     }
 
-    function test_WhenUserHasValidReferralSetup()
+    function test_WhenUserHasValidReferralSetup_WhenReferralAddressHasNoCustomReceiverSet()
         external
         givenUserIsWhitelisted(BOB)
         givenUserHasReferral(ALICE, BOB)
@@ -61,7 +61,28 @@ contract AltoReferralWhitelistAdapterGetBonusRewardInfo is ReferralWhitelistAdap
         assertEq(info.paymentTokenShareReceiver, BOB);
     }
 
-    function test_WhenMultipleUsersHaveSameReferralAddress()
+    function test_WhenUserHasValidReferralSetup_WhenReferralAddressHasCustomReceiverSet()
+        external
+        givenUserIsWhitelisted(BOB)
+        givenUserHasReferral(ALICE, BOB)
+    {
+        // BOB sets a custom receiver
+        vm.prank(BOB);
+        adapter.setPaymentTokenShareReceiver(CHARLIE);
+
+        BonusRewardInfo memory info = adapter.getBonusRewardInfo(ALICE);
+
+        // it should return configured bonus discount
+        assertEq(info.bonusDiscount, INITIAL_BONUS_DISCOUNT);
+
+        // it should return configured payment token share
+        assertEq(info.paymentTokenShare, INITIAL_PAYMENT_TOKEN_SHARE);
+
+        // it should return custom receiver address as payment token share receiver
+        assertEq(info.paymentTokenShareReceiver, CHARLIE);
+    }
+
+    function test_WhenMultipleUsersHaveSameReferralAddress_WhenReferralAddressHasNoCustomReceiverSet()
         external
         givenUserIsWhitelisted(CHARLIE)
         givenUserHasReferral(ALICE, CHARLIE)
@@ -79,11 +100,37 @@ contract AltoReferralWhitelistAdapterGetBonusRewardInfo is ReferralWhitelistAdap
         assertEq(bobInfo.paymentTokenShareReceiver, CHARLIE);
     }
 
+    function test_WhenMultipleUsersHaveSameReferralAddress_WhenReferralAddressHasCustomReceiverSet()
+        external
+        givenUserIsWhitelisted(CHARLIE)
+        givenUserHasReferral(ALICE, CHARLIE)
+        givenUserHasReferral(BOB, CHARLIE)
+    {
+        // CHARLIE sets a custom receiver
+        vm.prank(CHARLIE);
+        adapter.setPaymentTokenShareReceiver(DAVE);
+
+        BonusRewardInfo memory aliceInfo = adapter.getBonusRewardInfo(ALICE);
+        BonusRewardInfo memory bobInfo = adapter.getBonusRewardInfo(BOB);
+
+        // it should return same bonus info for all users
+        assertEq(aliceInfo.bonusDiscount, bobInfo.bonusDiscount);
+        assertEq(aliceInfo.paymentTokenShare, bobInfo.paymentTokenShare);
+
+        // it should return same custom receiver address for all users
+        assertEq(aliceInfo.paymentTokenShareReceiver, DAVE);
+        assertEq(bobInfo.paymentTokenShareReceiver, DAVE);
+    }
+
     function test_WhenAdapterConfigurationChangesAfterReferralSet()
         external
         givenUserIsWhitelisted(BOB)
         givenUserHasReferral(ALICE, BOB)
     {
+        // Get initial receiver address
+        BonusRewardInfo memory initialInfo = adapter.getBonusRewardInfo(ALICE);
+        address initialReceiver = initialInfo.paymentTokenShareReceiver;
+
         // Change configuration
         uint256 newDiscount = 0.08 ether; // 8%
         uint256 newShare = 0.06 ether; // 6%
@@ -101,7 +148,49 @@ contract AltoReferralWhitelistAdapterGetBonusRewardInfo is ReferralWhitelistAdap
         // it should return updated payment token share
         assertEq(info.paymentTokenShare, newShare);
 
-        // it should return same referral address as receiver
+        // it should return same receiver address (referral or custom)
+        assertEq(info.paymentTokenShareReceiver, initialReceiver);
+    }
+
+    function test_WhenReferralAddressSetsCustomReceiverAfterReferralIsSet()
+        external
+        givenUserIsWhitelisted(BOB)
+        givenUserHasReferral(ALICE, BOB)
+    {
+        // Initially receiver should be BOB (referral address)
+        BonusRewardInfo memory initialInfo = adapter.getBonusRewardInfo(ALICE);
+        assertEq(initialInfo.paymentTokenShareReceiver, BOB);
+
+        // BOB sets a custom receiver
+        vm.prank(BOB);
+        adapter.setPaymentTokenShareReceiver(CHARLIE);
+
+        BonusRewardInfo memory info = adapter.getBonusRewardInfo(ALICE);
+
+        // it should return custom receiver address
+        assertEq(info.paymentTokenShareReceiver, CHARLIE);
+    }
+
+    function test_WhenReferralAddressSetsCustomReceiverAfterReferralIsSet_WhenCustomReceiverIsSetToZeroAddress()
+        external
+        givenUserIsWhitelisted(BOB)
+        givenUserHasReferral(ALICE, BOB)
+    {
+        // BOB sets a custom receiver first
+        vm.prank(BOB);
+        adapter.setPaymentTokenShareReceiver(CHARLIE);
+
+        // Verify custom receiver is set
+        BonusRewardInfo memory infoWithCustom = adapter.getBonusRewardInfo(ALICE);
+        assertEq(infoWithCustom.paymentTokenShareReceiver, CHARLIE);
+
+        // BOB resets receiver to zero address
+        vm.prank(BOB);
+        adapter.setPaymentTokenShareReceiver(address(0));
+
+        BonusRewardInfo memory info = adapter.getBonusRewardInfo(ALICE);
+
+        // it should return referral address as receiver (default)
         assertEq(info.paymentTokenShareReceiver, BOB);
     }
 
@@ -159,5 +248,32 @@ contract AltoReferralWhitelistAdapterGetBonusRewardInfo is ReferralWhitelistAdap
 
         // it should maintain independent states
         assertNotEq(aliceInfo.paymentTokenShareReceiver, daveInfo.paymentTokenShareReceiver);
+    }
+
+    function test_WhenCallingForDifferentUsersWithDifferentSetups_WhenDifferentReferralAddressesHaveDifferentCustomReceivers()
+        external
+        givenUserIsWhitelisted(BOB)
+        givenUserIsWhitelisted(CHARLIE)
+    {
+        // Set different referrals
+        vm.startPrank(OWNER);
+        adapter.setReferral(ALICE, BOB);
+        adapter.setReferral(DAVE, CHARLIE);
+        vm.stopPrank();
+
+        // BOB sets custom receiver to EVE
+        vm.prank(BOB);
+        adapter.setPaymentTokenShareReceiver(EVE);
+
+        // CHARLIE sets custom receiver to DAVE
+        vm.prank(CHARLIE);
+        adapter.setPaymentTokenShareReceiver(DAVE);
+
+        BonusRewardInfo memory aliceInfo = adapter.getBonusRewardInfo(ALICE);
+        BonusRewardInfo memory daveInfo = adapter.getBonusRewardInfo(DAVE);
+
+        // it should return respective custom receiver addresses
+        assertEq(aliceInfo.paymentTokenShareReceiver, EVE); // BOB's custom receiver
+        assertEq(daveInfo.paymentTokenShareReceiver, DAVE); // CHARLIE's custom receiver
     }
 }
