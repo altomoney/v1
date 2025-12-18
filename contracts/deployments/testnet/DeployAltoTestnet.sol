@@ -513,18 +513,19 @@ library DeployAltoTestnet {
         address contractOwner = input.contracts.altoMulticall;
 
         input.contracts.rewardsBatch = (new TestnetRewardsBatch(
-                TestnetRewardsBatchParams({
-                    owner: contractOwner,
-                    rewardToken: address(input.tokens.alto),
-                    merkleRootTimelock: 1 minutes,
-                    paymentTokens: paymentTokens,
-                    paymentUsdOraclePrices: paymentUsdOraclePrices,
-                    rewardTokenUsdOraclePrice: 1.5 ether * USD_ORACLE_PRICE_PRECISION / 1 ether,
-                    lockBonusDiscount: 0.15 ether,
-                    stakingContract: input.contracts.stakingBatch.stakingContract
-                })
-            ))
-        .getRewardsDistributorReport();
+                        TestnetRewardsBatchParams({
+                            owner: contractOwner,
+                            rewardToken: address(input.tokens.alto),
+                            merkleRootTimelock: 1 minutes,
+                            paymentTokens: paymentTokens,
+                            paymentUsdOraclePrices: paymentUsdOraclePrices,
+                            rewardTokenUsdOraclePrice: 1.5 ether * USD_ORACLE_PRICE_PRECISION / 1 ether,
+                            lockBonusDiscount: 0.15 ether,
+                            stakingContract: input.contracts.stakingBatch.stakingContract,
+                            referralBonusDiscount: 0.05 ether, // 5% bonus discount
+                            referralPaymentTokenShare: 0.05 ether // 5% payment token share
+                        })
+                    )).getRewardsDistributorReport();
 
         AltoAdapter(payable(input.contracts.altoAdapter))
             .approveContract(input.contracts.rewardsBatch.rewardsDistributor);
