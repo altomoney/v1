@@ -70,6 +70,10 @@ interface IRewardsEvents {
         uint256 discount
     );
 
+    event PaymentShareTransferred(
+        address indexed paymentToken, address indexed receiver, address indexed onBehalf, uint256 amount
+    );
+
     /// @notice Emitted when a payment token is configured
     /// @param token The payment token address
     /// @param oracle The oracle address for the token
