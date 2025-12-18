@@ -7,13 +7,30 @@ AltoReferralWhitelistAdapter::setReferralWhitelist
     │   └── it should emit ReferralWhitelistSet event
     ├── when setting address to whitelisted false
     │   ├── it should set referral whitelist mapping to false
+    │   ├── when payment token share receiver is not zero
+    │   │   ├── it should reset payment token share receiver to zero
+    │   │   └── it should emit PaymentTokenShareReceiverSet event with zero address
+    │   ├── when payment token share receiver is already zero
+    │   │   └── it should not emit PaymentTokenShareReceiverSet event
     │   └── it should emit ReferralWhitelistSet event
     ├── when updating whitelist status from false to true
     │   ├── it should update referral whitelist mapping
     │   └── it should emit ReferralWhitelistSet event
     ├── when updating whitelist status from true to false
     │   ├── it should update referral whitelist mapping
+    │   ├── when address has payment token share receiver set (non-zero)
+    │   │   ├── it should reset payment token share receiver to zero
+    │   │   └── it should emit PaymentTokenShareReceiverSet event with zero address
+    │   ├── when address has no payment token share receiver set (zero)
+    │   │   └── it should not emit PaymentTokenShareReceiverSet event
     │   └── it should emit ReferralWhitelistSet event
     └── when setting whitelist for multiple addresses
         ├── it should set referral whitelist mapping for each address
+        ├── when removing addresses from whitelist
+        │   ├── when removed address has payment token share receiver set (non-zero)
+        │   │   ├── it should reset payment token share receiver to zero
+        │   │   └── it should emit PaymentTokenShareReceiverSet event
+        │   ├── when removed address has no payment token share receiver set (zero)
+        │   │   └── it should not emit PaymentTokenShareReceiverSet event
+        │   └── it should emit ReferralWhitelistSet event for each removed address
         └── it should emit ReferralWhitelistSet event for each address

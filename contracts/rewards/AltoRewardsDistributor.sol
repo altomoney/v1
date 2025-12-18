@@ -163,7 +163,11 @@ contract AltoRewardsDistributor is IRewardsDistributorStaticTypes, MerkleRootMan
             if (receiver == address(0) || receiver == address(this) || paymentTokenShare == 0) {
                 continue;
             }
+
             IERC20(paymentToken).safeTransfer(receiver, paymentTokenShare.multiplyWithPrecision(paymentAmount));
+            emit PaymentShareTransferred(
+                paymentToken, receiver, onBehalf, paymentTokenShare.multiplyWithPrecision(paymentAmount)
+            );
         }
 
         // Lock or transfer reward tokens

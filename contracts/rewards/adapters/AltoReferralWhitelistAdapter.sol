@@ -120,6 +120,11 @@ contract AltoReferralWhitelistAdapter is IRewardsAdapter, MerkleRootManager, Alt
     function setReferralWhitelist(address referralAddress, bool isWhitelisted) external onlyOwner {
         referralWhitelist[referralAddress] = isWhitelisted;
 
+        if (!isWhitelisted && paymentTokenShareReceiver[referralAddress] != address(0)) {
+            paymentTokenShareReceiver[referralAddress] = address(0);
+            emit PaymentTokenShareReceiverSet(referralAddress, address(0));
+        }
+
         emit ReferralWhitelistSet(referralAddress, isWhitelisted);
     }
 
