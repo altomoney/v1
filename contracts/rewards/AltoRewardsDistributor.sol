@@ -164,10 +164,7 @@ contract AltoRewardsDistributor is IRewardsDistributorStaticTypes, MerkleRootMan
                 continue;
             }
 
-            IERC20(paymentToken).safeTransfer(receiver, paymentTokenShare.multiplyWithPrecision(paymentAmount));
-            emit PaymentShareTransferred(
-                paymentToken, receiver, onBehalf, paymentTokenShare.multiplyWithPrecision(paymentAmount)
-            );
+            _transferAdapterPaymentShares(paymentToken, receiver, onBehalf, paymentTokenShare, paymentAmount);
         }
 
         // Lock or transfer reward tokens
@@ -265,6 +262,24 @@ contract AltoRewardsDistributor is IRewardsDistributorStaticTypes, MerkleRootMan
         }
 
         revert AltoRewardsDistributorInvalidInput();
+    }
+
+    /// @dev Transfers payment token shares to adapter receivers.
+    /// @param paymentToken The payment token address.
+    /// @param receiver The address receiving the payment share.
+    /// @param onBehalf The address on whose behalf the payment is being made.
+    /// @param paymentTokenShare The payment token share (in MATH_PRECISION).
+    /// @param paymentAmount The total payment amount.
+    function _transferAdapterPaymentShares(
+        address paymentToken,
+        address receiver,
+        address onBehalf,
+        uint256 paymentTokenShare,
+        uint256 paymentAmount
+    ) internal {
+        uint256 shareAmount = paymentTokenShare.multiplyWithPrecision(paymentAmount);
+        IERC20(paymentToken).safeTransfer(receiver, shareAmount);
+        emit PaymentShareTransferred(paymentToken, receiver, onBehalf, shareAmount);
     }
 
     /// @dev Calculates the payment amount in payment token.

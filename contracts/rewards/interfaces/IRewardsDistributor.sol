@@ -70,6 +70,11 @@ interface IRewardsEvents {
         uint256 discount
     );
 
+    /// @notice Emitted when a payment token share is transferred to an adapter receiver
+    /// @param paymentToken The payment token address
+    /// @param receiver The address receiving the payment share
+    /// @param onBehalf The address on whose behalf the payment share is being transferred
+    /// @param amount The amount of payment tokens transferred
     event PaymentShareTransferred(
         address indexed paymentToken, address indexed receiver, address indexed onBehalf, uint256 amount
     );
