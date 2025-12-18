@@ -105,6 +105,12 @@ contract AltoRewardsDistributorClaimRewardTokensWithAdapters is RewardsDistribut
         vm.startPrank(ALICE);
         paymentToken.approve(address(distributor), type(uint256).max);
 
+        // it should emit PaymentShareTransferred event
+        vm.expectEmit(true, true, true, false);
+        emit IRewardsEvents.PaymentShareTransferred(
+            address(paymentToken), ADAPTER_RECEIVER_1, ALICE, expectedAdapterShare
+        );
+
         // it should emit ClaimRewardTokens event with combined discount
         vm.expectEmit(true, true, true, true);
         emit IRewardsEvents.ClaimRewardTokens(
@@ -312,6 +318,17 @@ contract AltoRewardsDistributorClaimRewardTokensWithAdapters is RewardsDistribut
 
         vm.startPrank(ALICE);
         paymentToken.approve(address(distributor), type(uint256).max);
+
+        // it should emit PaymentShareTransferred event for each adapter
+        vm.expectEmit(true, true, true, false);
+        emit IRewardsEvents.PaymentShareTransferred(
+            address(paymentToken), ADAPTER_RECEIVER_1, ALICE, expectedAdapter1Share
+        );
+
+        vm.expectEmit(true, true, true, false);
+        emit IRewardsEvents.PaymentShareTransferred(
+            address(paymentToken), ADAPTER_RECEIVER_2, ALICE, expectedAdapter2Share
+        );
 
         distributor.claimRewardTokens(
             _getClaimData(aliceAvailable, BASE_DISCOUNT, 0, 0),

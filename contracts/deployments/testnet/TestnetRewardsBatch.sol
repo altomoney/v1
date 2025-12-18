@@ -3,8 +3,9 @@ pragma solidity ^0.8.22;
 
 import {AltoRewardsDistributor} from "@alto/rewards/AltoRewardsDistributor.sol";
 import {IRewardsDistributor} from "@alto/rewards/interfaces/IRewardsDistributor.sol";
+import {AltoReferralWhitelistAdapter} from "@alto/rewards/adapters/AltoReferralWhitelistAdapter.sol";
 import {OracleTestnet} from "@alto/deployments/testnet/contracts/OracleTestnet.sol";
-import {getMerkleManagerUpdaters} from "@alto/deployments/testnet/Constants.sol";
+import {getMerkleManagerUpdaters, getMulticallOwnerAddresses} from "@alto/deployments/testnet/Constants.sol";
 import {IMerkleRootManager} from "@alto/utils/interfaces/IMerkleRootManager.sol";
 import {AltoOwnable2Step} from "@alto/utils/AltoOwnable2Step.sol";
 
@@ -17,12 +18,15 @@ struct TestnetRewardsBatchParams {
     uint256 rewardTokenUsdOraclePrice;
     uint256 lockBonusDiscount;
     address stakingContract;
+    uint256 referralBonusDiscount;
+    uint256 referralPaymentTokenShare;
 }
 
 struct TestnetRewardsBatchReport {
     address rewardsDistributor;
     address[] paymentOracles;
     address rewardOracle;
+    address referralAdapter;
 }
 
 /// @title TestnetRewardsBatch
@@ -63,6 +67,20 @@ contract TestnetRewardsBatch {
         for (uint256 i = 0; i < merkleManagerUpdaters.length; i++) {
             IMerkleRootManager(address(rewardsDistributor)).setMerkleRootUpdater(merkleManagerUpdaters[i], true);
         }
+
+        // Deploy referral adapter
+        report.referralAdapter =
+            address(new AltoReferralWhitelistAdapter(_params.referralBonusDiscount, _params.referralPaymentTokenShare));
+
+        // Setup merkle root updaters for referral adapter (multicall admins)
+        address[] memory multicallAdmins = getMulticallOwnerAddresses();
+        for (uint256 i = 0; i < multicallAdmins.length; i++) {
+            IMerkleRootManager(report.referralAdapter).setMerkleRootUpdater(multicallAdmins[i], true);
+        }
+        AltoOwnable2Step(report.referralAdapter).transferOwnershipSkip2Step(_params.owner);
+
+        // Whitelist referral adapter in rewards distributor
+        rewardsDistributor.whitelistAdapter(report.referralAdapter);
 
         report.rewardsDistributor = address(rewardsDistributor);
 
