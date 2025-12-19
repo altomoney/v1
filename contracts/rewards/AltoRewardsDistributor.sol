@@ -157,15 +157,8 @@ contract AltoRewardsDistributor is IRewardsDistributorStaticTypes, MerkleRootMan
         // Transfer payment from user
         IERC20(paymentToken).safeTransferFrom(msg.sender, address(this), paymentAmount);
 
-        for (uint256 i = 0; i < adaptersWhitelist.length; i++) {
-            address receiver = bonusRewardInfos[i].paymentTokenShareReceiver;
-            uint256 paymentTokenShare = bonusRewardInfos[i].paymentTokenShare;
-            if (receiver == address(0) || receiver == address(this) || paymentTokenShare == 0) {
-                continue;
-            }
-
-            _transferAdapterPaymentShares(paymentToken, receiver, onBehalf, paymentTokenShare, paymentAmount);
-        }
+        // Transfer payment shares to adapters payment token share receivers
+        _transferAdapterPaymentShares(paymentToken, paymentAmount, onBehalf, bonusRewardInfos);
 
         // Lock or transfer reward tokens
         if (lockPurchasedRewards) {
@@ -266,20 +259,26 @@ contract AltoRewardsDistributor is IRewardsDistributorStaticTypes, MerkleRootMan
 
     /// @dev Transfers payment token shares to adapter receivers.
     /// @param paymentToken The payment token address.
-    /// @param receiver The address receiving the payment share.
-    /// @param onBehalf The address on whose behalf the payment is being made.
-    /// @param paymentTokenShare The payment token share (in MATH_PRECISION).
     /// @param paymentAmount The total payment amount.
+    /// @param onBehalf The address on whose behalf the payment is being made.
+    /// @param bonusRewardInfos Array of bonus reward info from adapters.
     function _transferAdapterPaymentShares(
         address paymentToken,
-        address receiver,
+        uint256 paymentAmount,
         address onBehalf,
-        uint256 paymentTokenShare,
-        uint256 paymentAmount
+        BonusRewardInfo[] memory bonusRewardInfos
     ) internal {
-        uint256 shareAmount = paymentTokenShare.multiplyWithPrecision(paymentAmount);
-        IERC20(paymentToken).safeTransfer(receiver, shareAmount);
-        emit PaymentShareTransferred(paymentToken, receiver, onBehalf, shareAmount);
+        for (uint256 i = 0; i < bonusRewardInfos.length; i++) {
+            address receiver = bonusRewardInfos[i].paymentTokenShareReceiver;
+            uint256 paymentTokenShare = bonusRewardInfos[i].paymentTokenShare;
+            if (receiver == address(0) || receiver == address(this) || paymentTokenShare == 0) {
+                continue;
+            }
+
+            uint256 shareAmount = paymentTokenShare.multiplyWithPrecision(paymentAmount);
+            IERC20(paymentToken).safeTransfer(receiver, shareAmount);
+            emit PaymentShareTransferred(paymentToken, receiver, onBehalf, shareAmount);
+        }
     }
 
     /// @dev Calculates the payment amount in payment token.

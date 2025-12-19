@@ -222,6 +222,8 @@ contract DeployAltoTestnetScript is Script {
                 vm.serializeAddress("rewardsBatch", "paymentOracles", input.contracts.rewardsBatch.paymentOracles);
             rewardsBatchJson =
                 vm.serializeAddress("rewardsBatch", "rewardOracle", input.contracts.rewardsBatch.rewardOracle);
+            rewardsBatchJson =
+                vm.serializeAddress("rewardsBatch", "referralAdapter", input.contracts.rewardsBatch.referralAdapter);
         }
 
         // Build contracts JSON
@@ -406,6 +408,8 @@ contract DeployAltoTestnetScript is Script {
             vm.parseJsonAddressArray(json, ".contracts.rewardsBatch.paymentOracles");
         loadedInput.contracts.rewardsBatch.rewardOracle =
             vm.parseJsonAddress(json, ".contracts.rewardsBatch.rewardOracle");
+        loadedInput.contracts.rewardsBatch.referralAdapter =
+            vm.parseJsonAddress(json, ".contracts.rewardsBatch.referralAdapter");
 
         input = loadedInput;
     }
@@ -463,6 +467,7 @@ contract DeployAltoTestnetScript is Script {
 
         // Extract ABIs for rewards contracts
         _extractContractABI("AltoRewardsDistributor", abiFolder);
+        _extractContractABI("AltoReferralWhitelistAdapter", abiFolder);
 
         console.log("ABIs extracted to:", abiFolder);
     }
