@@ -19,7 +19,9 @@ contract AltoReferralWhitelistAdapter is IRewardsAdapter, MerkleRootManager, Alt
 
     event BonusDiscountSet(uint256 bonusDiscount);
     event PaymentTokenShareSet(uint256 paymentTokenShare);
-    event ReferralSet(address indexed setFor, address indexed referralAddress);
+    event ReferralSet(
+        address indexed setFor, address indexed referralAddressBefore, address indexed referralAddressAfter
+    );
     event ReferralWhitelistSet(address indexed setFor, bool isWhitelisted);
     event PaymentTokenShareReceiverSet(address indexed setFor, address indexed paymentTokenShareReceiver);
 
@@ -106,9 +108,10 @@ contract AltoReferralWhitelistAdapter is IRewardsAdapter, MerkleRootManager, Alt
             revert AltoReferralWhitelistAdapterInvalidReferralAddress();
         }
 
+        address referralAddressBefore = referral[referredUser];
         referral[referredUser] = referralAddress;
 
-        emit ReferralSet(referredUser, referralAddress);
+        emit ReferralSet(referredUser, referralAddressBefore, referralAddress);
     }
 
     /// @notice Sets the referral whitelist for an address
@@ -148,8 +151,9 @@ contract AltoReferralWhitelistAdapter is IRewardsAdapter, MerkleRootManager, Alt
             revert AltoReferralWhitelistAdapterInvalidReferralAddress();
         }
 
+        address referralAddressBefore = referral[msg.sender];
         referral[msg.sender] = referralAddress;
-        emit ReferralSet(msg.sender, referralAddress);
+        emit ReferralSet(msg.sender, referralAddressBefore, referralAddress);
     }
 
     /// @notice Activates the referral whitelist for the caller

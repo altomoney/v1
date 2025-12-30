@@ -5,7 +5,7 @@ import {AltoRewardsDistributor} from "@alto/rewards/AltoRewardsDistributor.sol";
 import {IRewardsDistributor} from "@alto/rewards/interfaces/IRewardsDistributor.sol";
 import {AltoReferralWhitelistAdapter} from "@alto/rewards/adapters/AltoReferralWhitelistAdapter.sol";
 import {OracleTestnet} from "@alto/deployments/testnet/contracts/OracleTestnet.sol";
-import {getMerkleManagerUpdaters, getMulticallOwnerAddresses} from "@alto/deployments/testnet/Constants.sol";
+import {getMerkleManagerUpdaters} from "@alto/deployments/testnet/Constants.sol";
 import {IMerkleRootManager} from "@alto/utils/interfaces/IMerkleRootManager.sol";
 import {AltoOwnable2Step} from "@alto/utils/AltoOwnable2Step.sol";
 
@@ -72,10 +72,9 @@ contract TestnetRewardsBatch {
         report.referralAdapter =
             address(new AltoReferralWhitelistAdapter(_params.referralBonusDiscount, _params.referralPaymentTokenShare));
 
-        // Setup merkle root updaters for referral adapter (multicall admins)
-        address[] memory multicallAdmins = getMulticallOwnerAddresses();
-        for (uint256 i = 0; i < multicallAdmins.length; i++) {
-            IMerkleRootManager(report.referralAdapter).setMerkleRootUpdater(multicallAdmins[i], true);
+        // Setup merkle root updaters for referral adapter
+        for (uint256 i = 0; i < merkleManagerUpdaters.length; i++) {
+            IMerkleRootManager(report.referralAdapter).setMerkleRootUpdater(merkleManagerUpdaters[i], true);
         }
         AltoOwnable2Step(report.referralAdapter).transferOwnershipSkip2Step(_params.owner);
 

@@ -38,7 +38,7 @@ contract AltoReferralWhitelistAdapterActivateReferral is ReferralWhitelistAdapte
     function test_WhenCallerHasNoPreviousReferral() external givenUserIsWhitelisted(BOB) {
         // it should emit ReferralSet event
         vm.expectEmit(true, true, false, false);
-        emit AltoReferralWhitelistAdapter.ReferralSet(ALICE, BOB);
+        emit AltoReferralWhitelistAdapter.ReferralSet(ALICE, address(0), BOB);
 
         vm.prank(ALICE);
         adapter.activateReferral(BOB);
@@ -63,7 +63,7 @@ contract AltoReferralWhitelistAdapterActivateReferral is ReferralWhitelistAdapte
 
         // Now Alice can set CHARLIE as referral
         vm.expectEmit(true, true, false, false);
-        emit AltoReferralWhitelistAdapter.ReferralSet(ALICE, CHARLIE);
+        emit AltoReferralWhitelistAdapter.ReferralSet(ALICE, BOB, CHARLIE);
 
         vm.prank(ALICE);
         adapter.activateReferral(CHARLIE);
@@ -76,14 +76,14 @@ contract AltoReferralWhitelistAdapterActivateReferral is ReferralWhitelistAdapte
     function test_WhenSettingReferralForDifferentUsers() external givenUserIsWhitelisted(CHARLIE) {
         // Alice sets CHARLIE as referral
         vm.expectEmit(true, true, false, false);
-        emit AltoReferralWhitelistAdapter.ReferralSet(ALICE, CHARLIE);
+        emit AltoReferralWhitelistAdapter.ReferralSet(ALICE, address(0), CHARLIE);
 
         vm.prank(ALICE);
         adapter.activateReferral(CHARLIE);
 
         // BOB sets CHARLIE as referral
         vm.expectEmit(true, true, false, false);
-        emit AltoReferralWhitelistAdapter.ReferralSet(BOB, CHARLIE);
+        emit AltoReferralWhitelistAdapter.ReferralSet(BOB, address(0), CHARLIE);
 
         vm.prank(BOB);
         adapter.activateReferral(CHARLIE);
