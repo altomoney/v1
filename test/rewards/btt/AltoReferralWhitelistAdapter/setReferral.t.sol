@@ -38,7 +38,7 @@ contract AltoReferralWhitelistAdapterSetReferral is ReferralWhitelistAdapterComm
     function test_WhenReferralAddressIsWhitelisted() external whenCallerIsOwner givenUserIsWhitelisted(BOB) {
         // it should emit ReferralSet event
         vm.expectEmit(true, true, false, false);
-        emit AltoReferralWhitelistAdapter.ReferralSet(ALICE, BOB);
+        emit AltoReferralWhitelistAdapter.ReferralSet(ALICE, address(0), BOB);
 
         vm.prank(OWNER);
         adapter.setReferral(ALICE, BOB);
@@ -56,7 +56,7 @@ contract AltoReferralWhitelistAdapterSetReferral is ReferralWhitelistAdapterComm
 
         // Now reset to zero
         vm.expectEmit(true, true, false, false);
-        emit AltoReferralWhitelistAdapter.ReferralSet(ALICE, address(0));
+        emit AltoReferralWhitelistAdapter.ReferralSet(ALICE, BOB, address(0));
 
         vm.prank(OWNER);
         adapter.setReferral(ALICE, address(0));
@@ -78,7 +78,7 @@ contract AltoReferralWhitelistAdapterSetReferral is ReferralWhitelistAdapterComm
 
         // Update to new referral
         vm.expectEmit(true, true, false, false);
-        emit AltoReferralWhitelistAdapter.ReferralSet(ALICE, CHARLIE);
+        emit AltoReferralWhitelistAdapter.ReferralSet(ALICE, BOB, CHARLIE);
 
         vm.prank(OWNER);
         adapter.setReferral(ALICE, CHARLIE);
@@ -91,14 +91,14 @@ contract AltoReferralWhitelistAdapterSetReferral is ReferralWhitelistAdapterComm
     function test_WhenSettingReferralForMultipleUsers() external whenCallerIsOwner givenUserIsWhitelisted(CHARLIE) {
         // Set referral for ALICE
         vm.expectEmit(true, true, false, false);
-        emit AltoReferralWhitelistAdapter.ReferralSet(ALICE, CHARLIE);
+        emit AltoReferralWhitelistAdapter.ReferralSet(ALICE, address(0), CHARLIE);
 
         vm.prank(OWNER);
         adapter.setReferral(ALICE, CHARLIE);
 
         // Set referral for BOB
         vm.expectEmit(true, true, false, false);
-        emit AltoReferralWhitelistAdapter.ReferralSet(BOB, CHARLIE);
+        emit AltoReferralWhitelistAdapter.ReferralSet(BOB, address(0), CHARLIE);
 
         vm.prank(OWNER);
         adapter.setReferral(BOB, CHARLIE);

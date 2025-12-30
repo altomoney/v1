@@ -167,205 +167,104 @@ verify_contract() {
 }
 
 # Extract addresses
-if command -v jq >/dev/null 2>&1; then
-    # Use jq paths for precise extraction
-    ALTO_MULTICALL=$(get_address ".contracts.altoMulticall")
-    ALTO_ADAPTER=$(get_address ".contracts.altoAdapter")
-    ALTO_LEVERAGE=$(get_address ".contracts.altoLeverage")
-    BUNDLER3=$(get_address ".contracts.bundler3")
-    MOCK_SWAPPER=$(get_address ".contracts.mockSwapper")
-    MULTI_TOKEN_SENDER=$(get_address ".contracts.multiTokenSender")
+ALTO_MULTICALL=$(get_address ".contracts.altoMulticall")
+ALTO_ADAPTER=$(get_address ".contracts.altoAdapter")
+ALTO_LEVERAGE=$(get_address ".contracts.altoLeverage")
+BUNDLER3=$(get_address ".contracts.bundler3")
+MOCK_SWAPPER=$(get_address ".contracts.mockSwapper")
+MULTI_TOKEN_SENDER=$(get_address ".contracts.multiTokenSender")
 
-    # Registry contracts
-    MARKET_REGISTRY=$(get_address ".contracts.marketRegistry")
-    USM_REGISTRY=$(get_address ".contracts.usmRegistry")
-    
-    # Mint market addresses
-    ## WETH
-    WETH_MARKET=$(get_address ".contracts.wethMarketBatch.market")
-    WETH_MARKET_IMPL=$(get_address ".contracts.wethMarketBatch.marketImplementation")
-    WETH_MARKET_IRM=$(get_address ".contracts.wethMarketBatch.marketIrm")
-    WETH_MARKET_ORACLE=$(get_address ".contracts.wethMarketBatch.marketOracle")
-    WETH_LIQUIDATION_ENGINE=$(get_address ".contracts.wethMarketBatch.liquidationEngine")
-    
-    ## WSTETH
-    WSTETH_MARKET=$(get_address ".contracts.wstethMarketBatch.market")
-    WSTETH_MARKET_IMPL=$(get_address ".contracts.wstethMarketBatch.marketImplementation")
-    WSTETH_MARKET_IRM=$(get_address ".contracts.wstethMarketBatch.marketIrm")
-    WSTETH_MARKET_ORACLE=$(get_address ".contracts.wstethMarketBatch.marketOracle")
-    WSTETH_LIQUIDATION_ENGINE=$(get_address ".contracts.wstethMarketBatch.liquidationEngine")
+# Registry contracts
+MARKET_REGISTRY=$(get_address ".contracts.marketRegistry")
+USM_REGISTRY=$(get_address ".contracts.usmRegistry")
 
-    ## RETH
-    RETH_MARKET=$(get_address ".contracts.rethMarketBatch.market")
-    RETH_MARKET_IMPL=$(get_address ".contracts.rethMarketBatch.marketImplementation")
-    RETH_MARKET_IRM=$(get_address ".contracts.rethMarketBatch.marketIrm")
-    RETH_MARKET_ORACLE=$(get_address ".contracts.rethMarketBatch.marketOracle")
-    RETH_LIQUIDATION_ENGINE=$(get_address ".contracts.rethMarketBatch.liquidationEngine")
+# Mint market addresses
+## WETH
+WETH_MARKET=$(get_address ".contracts.wethMarketBatch.market")
+WETH_MARKET_IMPL=$(get_address ".contracts.wethMarketBatch.marketImplementation")
+WETH_MARKET_IRM=$(get_address ".contracts.wethMarketBatch.marketIrm")
+WETH_MARKET_ORACLE=$(get_address ".contracts.wethMarketBatch.marketOracle")
+WETH_LIQUIDATION_ENGINE=$(get_address ".contracts.wethMarketBatch.liquidationEngine")
 
-    ## METH
-    METH_MARKET=$(get_address ".contracts.methMarketBatch.market")
-    METH_MARKET_IMPL=$(get_address ".contracts.methMarketBatch.marketImplementation")
-    METH_MARKET_IRM=$(get_address ".contracts.methMarketBatch.marketIrm")
-    METH_MARKET_ORACLE=$(get_address ".contracts.methMarketBatch.marketOracle")
-    METH_LIQUIDATION_ENGINE=$(get_address ".contracts.methMarketBatch.liquidationEngine")
+## WSTETH
+WSTETH_MARKET=$(get_address ".contracts.wstethMarketBatch.market")
+WSTETH_MARKET_IMPL=$(get_address ".contracts.wstethMarketBatch.marketImplementation")
+WSTETH_MARKET_IRM=$(get_address ".contracts.wstethMarketBatch.marketIrm")
+WSTETH_MARKET_ORACLE=$(get_address ".contracts.wstethMarketBatch.marketOracle")
+WSTETH_LIQUIDATION_ENGINE=$(get_address ".contracts.wstethMarketBatch.liquidationEngine")
 
-    ## TBTC
-    TBTC_MARKET=$(get_address ".contracts.tbtcMarketBatch.market")
-    TBTC_MARKET_IMPL=$(get_address ".contracts.tbtcMarketBatch.marketImplementation")
-    TBTC_MARKET_IRM=$(get_address ".contracts.tbtcMarketBatch.marketIrm")
-    TBTC_MARKET_ORACLE=$(get_address ".contracts.tbtcMarketBatch.marketOracle")
-    TBTC_LIQUIDATION_ENGINE=$(get_address ".contracts.tbtcMarketBatch.liquidationEngine")
+## RETH
+RETH_MARKET=$(get_address ".contracts.rethMarketBatch.market")
+RETH_MARKET_IMPL=$(get_address ".contracts.rethMarketBatch.marketImplementation")
+RETH_MARKET_IRM=$(get_address ".contracts.rethMarketBatch.marketIrm")
+RETH_MARKET_ORACLE=$(get_address ".contracts.rethMarketBatch.marketOracle")
+RETH_LIQUIDATION_ENGINE=$(get_address ".contracts.rethMarketBatch.liquidationEngine")
 
-    # Borrow market addresses
-    ## WBTC
-    WBTC_MARKET=$(get_address ".contracts.wbtcMarketBatch.market")
-    WBTC_MARKET_IMPL=$(get_address ".contracts.wbtcMarketBatch.marketImplementation")
-    WBTC_MARKET_IRM=$(get_address ".contracts.wbtcMarketBatch.marketIrm")
-    WBTC_MARKET_ORACLE=$(get_address ".contracts.wbtcMarketBatch.marketOracle")
-    WBTC_LIQUIDATION_ENGINE=$(get_address ".contracts.wbtcMarketBatch.liquidationEngine")
+## METH
+METH_MARKET=$(get_address ".contracts.methMarketBatch.market")
+METH_MARKET_IMPL=$(get_address ".contracts.methMarketBatch.marketImplementation")
+METH_MARKET_IRM=$(get_address ".contracts.methMarketBatch.marketIrm")
+METH_MARKET_ORACLE=$(get_address ".contracts.methMarketBatch.marketOracle")
+METH_LIQUIDATION_ENGINE=$(get_address ".contracts.methMarketBatch.liquidationEngine")
 
-    ## CB-BTC
-    CB_BTC_MARKET=$(get_address ".contracts.cbbtcMarketBatch.market")
-    CB_BTC_MARKET_IMPL=$(get_address ".contracts.cbbtcMarketBatch.marketImplementation")
-    CB_BTC_MARKET_IRM=$(get_address ".contracts.cbbtcMarketBatch.marketIrm")
-    CB_BTC_MARKET_ORACLE=$(get_address ".contracts.cbbtcMarketBatch.marketOracle")
-    CB_BTC_LIQUIDATION_ENGINE=$(get_address ".contracts.cbbtcMarketBatch.liquidationEngine")
+## TBTC
+TBTC_MARKET=$(get_address ".contracts.tbtcMarketBatch.market")
+TBTC_MARKET_IMPL=$(get_address ".contracts.tbtcMarketBatch.marketImplementation")
+TBTC_MARKET_IRM=$(get_address ".contracts.tbtcMarketBatch.marketIrm")
+TBTC_MARKET_ORACLE=$(get_address ".contracts.tbtcMarketBatch.marketOracle")
+TBTC_LIQUIDATION_ENGINE=$(get_address ".contracts.tbtcMarketBatch.liquidationEngine")
 
-    ## SUSDE
-    SUSDE_MARKET=$(get_address ".contracts.susdeMarketBatch.market")
-    SUSDE_MARKET_IMPL=$(get_address ".contracts.susdeMarketBatch.marketImplementation")
-    SUSDE_MARKET_IRM=$(get_address ".contracts.susdeMarketBatch.marketIrm")
-    SUSDE_MARKET_ORACLE=$(get_address ".contracts.susdeMarketBatch.marketOracle")
-    SUSDE_LIQUIDATION_ENGINE=$(get_address ".contracts.susdeMarketBatch.liquidationEngine")
+# Borrow market addresses
+## WBTC
+WBTC_MARKET=$(get_address ".contracts.wbtcMarketBatch.market")
+WBTC_MARKET_IMPL=$(get_address ".contracts.wbtcMarketBatch.marketImplementation")
+WBTC_MARKET_IRM=$(get_address ".contracts.wbtcMarketBatch.marketIrm")
+WBTC_MARKET_ORACLE=$(get_address ".contracts.wbtcMarketBatch.marketOracle")
+WBTC_LIQUIDATION_ENGINE=$(get_address ".contracts.wbtcMarketBatch.liquidationEngine")
 
-    # USM batch addresses
-    USDC_USM=$(get_address ".contracts.usdcUsmBatch.dusdUsm")
-    USDC_USM_IMPL=$(get_address ".contracts.usdcUsmBatch.dusdUsmImplementation")
-    USDC_USM_FIXED_PRICE_STRATEGY=$(get_address ".contracts.usdcUsmBatch.fixedPriceStrategy")
-    USDC_USM_FIXED_FEE_STRATEGY=$(get_address ".contracts.usdcUsmBatch.fixedFeeStrategy")
+## CB-BTC
+CB_BTC_MARKET=$(get_address ".contracts.cbbtcMarketBatch.market")
+CB_BTC_MARKET_IMPL=$(get_address ".contracts.cbbtcMarketBatch.marketImplementation")
+CB_BTC_MARKET_IRM=$(get_address ".contracts.cbbtcMarketBatch.marketIrm")
+CB_BTC_MARKET_ORACLE=$(get_address ".contracts.cbbtcMarketBatch.marketOracle")
+CB_BTC_LIQUIDATION_ENGINE=$(get_address ".contracts.cbbtcMarketBatch.liquidationEngine")
 
-    # Rewards batch addresses
-	# Read paymentOracles array
-	readarray -t PAYMENT_ORACLES < <(jq -r '.contracts.rewardsBatch.paymentOracles[]? // empty' "$ADDRESSES_FILE")
-    REWARD_ORACLE=$(get_address ".contracts.rewardsBatch.rewardOracle")
-    REWARDS_DISTRIBUTOR=$(get_address ".contracts.rewardsBatch.rewardsDistributor")
-    
-    # Staking batch addresses
-    STAKING_CONTRACT=$(get_address ".contracts.stakingBatch.stakingContract")
-    UNIVERSAL_REWARDS_DISTRIBUTOR=$(get_address ".contracts.stakingBatch.universalRewardsDistributor")
-    
-    # Token addresses
-    ALTO_TOKEN=$(get_address ".tokens.alto")
-    USDC_TOKEN=$(get_address ".tokens.usdc")
-    DUSD_TOKEN=$(get_address ".tokens.dusd")
-    WETH_TOKEN=$(get_address ".tokens.weth")
-    WSTETH_TOKEN=$(get_address ".tokens.wsteth")
-    RETH_TOKEN=$(get_address ".tokens.reth")
-    METH_TOKEN=$(get_address ".tokens.meth")
-    TBTC_TOKEN=$(get_address ".tokens.tbtc")
-    WBTC_TOKEN=$(get_address ".tokens.wbtc")
-    CB_BTC_TOKEN=$(get_address ".tokens.cbbtc")
-    SUSDE_TOKEN=$(get_address ".tokens.susde")
-else
-    # Use fallback grep/sed paths
-    ALTO_MULTICALL=$(get_address "altoMulticall")
-    ALTO_ADAPTER=$(get_address "altoAdapter")
-    ALTO_LEVERAGE=$(get_address "altoLeverage")
-    BUNDLER3=$(get_address "bundler3")
-    MOCK_SWAPPER=$(get_address "mockSwapper")
-    MULTI_TOKEN_SENDER=$(get_address "multiTokenSender")
+## SUSDE
+SUSDE_MARKET=$(get_address ".contracts.susdeMarketBatch.market")
+SUSDE_MARKET_IMPL=$(get_address ".contracts.susdeMarketBatch.marketImplementation")
+SUSDE_MARKET_IRM=$(get_address ".contracts.susdeMarketBatch.marketIrm")
+SUSDE_MARKET_ORACLE=$(get_address ".contracts.susdeMarketBatch.marketOracle")
+SUSDE_LIQUIDATION_ENGINE=$(get_address ".contracts.susdeMarketBatch.liquidationEngine")
 
-    # Registry contracts
-    MARKET_REGISTRY=$(get_address "marketRegistry")
-    USM_REGISTRY=$(get_address "usmRegistry")
-    
-    # Mint market addresses
-    ## WETH
-    WETH_MARKET=$(get_address "wethMarketBatch.market")
-    WETH_MARKET_IMPL=$(get_address "wethMarketBatch.marketImplementation")
-    WETH_MARKET_IRM=$(get_address "wethMarketBatch.marketIrm")
-    WETH_MARKET_ORACLE=$(get_address "wethMarketBatch.marketOracle")
-    WETH_LIQUIDATION_ENGINE=$(get_address "wethMarketBatch.liquidationEngine")
+# USM batch addresses
+USDC_USM=$(get_address ".contracts.usdcUsmBatch.dusdUsm")
+USDC_USM_IMPL=$(get_address ".contracts.usdcUsmBatch.dusdUsmImplementation")
+USDC_USM_FIXED_PRICE_STRATEGY=$(get_address ".contracts.usdcUsmBatch.fixedPriceStrategy")
+USDC_USM_FIXED_FEE_STRATEGY=$(get_address ".contracts.usdcUsmBatch.fixedFeeStrategy")
 
-    ## WSTETH
-    WSTETH_MARKET=$(get_address "wstethMarketBatch.market")
-    WSTETH_MARKET_IMPL=$(get_address "wstethMarketBatch.marketImplementation")
-    WSTETH_MARKET_IRM=$(get_address "wstethMarketBatch.marketIrm")
-    WSTETH_MARKET_ORACLE=$(get_address "wstethMarketBatch.marketOracle")
-    WSTETH_LIQUIDATION_ENGINE=$(get_address "wstethMarketBatch.liquidationEngine")
+# Rewards batch addresses
+# Read paymentOracles array
+readarray -t PAYMENT_ORACLES < <(jq -r '.contracts.rewardsBatch.paymentOracles[]? // empty' "$ADDRESSES_FILE")
+REWARD_ORACLE=$(get_address ".contracts.rewardsBatch.rewardOracle")
+REWARDS_DISTRIBUTOR=$(get_address ".contracts.rewardsBatch.rewardsDistributor")
+REFERRAL_ADAPTER=$(get_address ".contracts.rewardsBatch.referralAdapter")
 
-    ## RETH
-    RETH_MARKET=$(get_address "rethMarketBatch.market")
-    RETH_MARKET_IMPL=$(get_address "rethMarketBatch.marketImplementation")
-    RETH_MARKET_IRM=$(get_address "rethMarketBatch.marketIrm")
-    RETH_MARKET_ORACLE=$(get_address "rethMarketBatch.marketOracle")
-    RETH_LIQUIDATION_ENGINE=$(get_address "rethMarketBatch.liquidationEngine")
+# Staking batch addresses
+STAKING_CONTRACT=$(get_address ".contracts.stakingBatch.stakingContract")
+UNIVERSAL_REWARDS_DISTRIBUTOR=$(get_address ".contracts.stakingBatch.universalRewardsDistributor")
 
-    ## METH
-    METH_MARKET=$(get_address "methMarketBatch.market")
-    METH_MARKET_IMPL=$(get_address "methMarketBatch.marketImplementation")
-    METH_MARKET_IRM=$(get_address "methMarketBatch.marketIrm")
-    METH_MARKET_ORACLE=$(get_address "methMarketBatch.marketOracle")
-    METH_LIQUIDATION_ENGINE=$(get_address "methMarketBatch.liquidationEngine")
-
-    ## TBTC
-    TBTC_MARKET=$(get_address "tbtcMarketBatch.market")
-    TBTC_MARKET_IMPL=$(get_address "tbtcMarketBatch.marketImplementation")
-    TBTC_MARKET_IRM=$(get_address "tbtcMarketBatch.marketIrm")
-    TBTC_MARKET_ORACLE=$(get_address "tbtcMarketBatch.marketOracle")
-    TBTC_LIQUIDATION_ENGINE=$(get_address "tbtcMarketBatch.liquidationEngine")
-    
-    # Borrow Market Addresses
-    ## WBTC
-    WBTC_MARKET=$(get_address "wbtcMarketBatch.market")
-    WBTC_MARKET_IMPL=$(get_address "wbtcMarketBatch.marketImplementation")
-    WBTC_MARKET_IRM=$(get_address "wbtcMarketBatch.marketIrm")
-    WBTC_MARKET_ORACLE=$(get_address "wbtcMarketBatch.marketOracle")
-    WBTC_LIQUIDATION_ENGINE=$(get_address "wbtcMarketBatch.liquidationEngine")
-
-    ## CB-BTC
-    CB_BTC_MARKET=$(get_address "cbbtcMarketBatch.market")
-    CB_BTC_MARKET_IMPL=$(get_address "cbbtcMarketBatch.marketImplementation")
-    CB_BTC_MARKET_IRM=$(get_address "cbbtcMarketBatch.marketIrm")
-    CB_BTC_MARKET_ORACLE=$(get_address "cbbtcMarketBatch.marketOracle")
-    CB_BTC_LIQUIDATION_ENGINE=$(get_address "cbbtcMarketBatch.liquidationEngine")
-
-    ## SUSDE
-    SUSDE_MARKET=$(get_address "susdeMarketBatch.market")
-    SUSDE_MARKET_IMPL=$(get_address "susdeMarketBatch.marketImplementation")
-    SUSDE_MARKET_IRM=$(get_address "susdeMarketBatch.marketIrm")
-    SUSDE_MARKET_ORACLE=$(get_address "susdeMarketBatch.marketOracle")
-    SUSDE_LIQUIDATION_ENGINE=$(get_address "susdeMarketBatch.liquidationEngine")
-
-    # USM batch addresses
-    USDC_USM=$(get_address "usdcUsmBatch.dusdUsm")
-    USDC_USM_IMPL=$(get_address "usdcUsmBatch.dusdUsmImplementation")
-    USDC_USM_FIXED_PRICE_STRATEGY=$(get_address "usdcUsmBatch.fixedPriceStrategy")
-    USDC_USM_FIXED_FEE_STRATEGY=$(get_address "usdcUsmBatch.fixedFeeStrategy")
-
-    # Rewards batch addresses
-	# Fallback parse for paymentOracles array
-	PAYMENT_ORACLES=($(sed -n '/"rewardsBatch"/,/}/p' "$ADDRESSES_FILE" | sed -n '/"paymentOracles"/,$p' | sed -n '1,/]/p' | grep -o '0x[0-9a-fA-F]\{40\}'))
-    REWARD_ORACLE=$(get_address "rewardsBatch.rewardOracle")
-    REWARDS_DISTRIBUTOR=$(get_address "rewardsBatch.rewardsDistributor")
-    
-    # Staking batch addresses
-    STAKING_CONTRACT=$(get_address "stakingBatch.stakingContract")
-    UNIVERSAL_REWARDS_DISTRIBUTOR=$(get_address "stakingBatch.universalRewardsDistributor")
-    
-    # Token addresses
-    ALTO_TOKEN=$(get_address "tokens.alto")
-    USDC_TOKEN=$(get_address "tokens.usdc")
-    DUSD_TOKEN=$(get_address "tokens.dusd")
-    WETH_TOKEN=$(get_address "tokens.weth")
-    WSTETH_TOKEN=$(get_address "tokens.wsteth")
-    RETH_TOKEN=$(get_address "tokens.reth")
-    METH_TOKEN=$(get_address "tokens.meth")
-    TBTC_TOKEN=$(get_address "tokens.tbtc")
-    WBTC_TOKEN=$(get_address "tokens.wbtc")
-    CB_BTC_TOKEN=$(get_address "tokens.cbbtc")
-    SUSDE_TOKEN=$(get_address "tokens.susde")
-fi
+# Token addresses
+ALTO_TOKEN=$(get_address ".tokens.alto")
+USDC_TOKEN=$(get_address ".tokens.usdc")
+DUSD_TOKEN=$(get_address ".tokens.dusd")
+WETH_TOKEN=$(get_address ".tokens.weth")
+WSTETH_TOKEN=$(get_address ".tokens.wsteth")
+RETH_TOKEN=$(get_address ".tokens.reth")
+METH_TOKEN=$(get_address ".tokens.meth")
+TBTC_TOKEN=$(get_address ".tokens.tbtc")
+WBTC_TOKEN=$(get_address ".tokens.wbtc")
+CB_BTC_TOKEN=$(get_address ".tokens.cbbtc")
+SUSDE_TOKEN=$(get_address ".tokens.susde")
 
 echo "📋 Contract verification plan:"
 echo "- Alto Adapter: $ALTO_ADAPTER"
@@ -424,6 +323,7 @@ for addr in "${PAYMENT_ORACLES[@]}"; do
 done
 echo "- Reward Oracle: $REWARD_ORACLE"
 echo "- Rewards Distributor: $REWARDS_DISTRIBUTOR"
+echo "- Referral Adapter: $REFERRAL_ADAPTER"
 echo "- Staking Contract: $STAKING_CONTRACT"
 echo "- Universal Rewards Distributor: $UNIVERSAL_REWARDS_DISTRIBUTOR"
 echo "- Alto Token: $ALTO_TOKEN"
@@ -451,7 +351,7 @@ echo "⏰ This process will take approximately 1-2 minutes due to rate limiting.
 echo ""
 
 # Initialize progress tracking (base excludes payment oracles)
-BASE_CONTRACTS=67
+BASE_CONTRACTS=68
 TOTAL_CONTRACTS=$((BASE_CONTRACTS + ${#PAYMENT_ORACLES[@]}))
 CURRENT_CONTRACT=0
 
@@ -588,6 +488,8 @@ done
 verify_contract "RewardOracle" "$REWARD_ORACLE" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet"
 show_progress
 verify_contract "RewardsDistributor" "$REWARDS_DISTRIBUTOR" "contracts/rewards/AltoRewardsDistributor.sol:AltoRewardsDistributor"
+show_progress
+verify_contract "ReferralAdapter" "$REFERRAL_ADAPTER" "contracts/rewards/adapters/AltoReferralWhitelistAdapter.sol:AltoReferralWhitelistAdapter"
 show_progress
 
 # Verify staking contracts
