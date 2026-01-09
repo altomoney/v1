@@ -20,6 +20,10 @@ import {
     WBTC_MAINNET,
     CBBTC_MAINNET,
     SUSDE_MAINNET,
+    PAXG_MAINNET,
+    SUSDS_MAINNET,
+    SYRUPUSDC_MAINNET,
+    SYRUPUSDT_MAINNET,
     USDC_MAINNET,
     LAYERZERO_ENDPOINT_MAINNET,
     ZEROX_SWAP_TARGET_MAINNET,
@@ -404,6 +408,166 @@ library DeployAltoEthereumMainnet {
             input = _deployPost(params, input);
         } else if (params.phase == DeploymentPhase.REFERRAL_ADAPTER) {
             input = _deployReferralAdapter(params, input);
+        } else if (params.phase == DeploymentPhase.BORROW_MARKET_PAXG) {
+            input.contracts.paxgBorrowMarket = _deployBorrowMarket(
+                DeployBorrowMarketParams({
+                    owner: input.contracts.timelock,
+                    dusd: input.contracts.dusd,
+                    altoAdapter: input.contracts.altoAdapter,
+                    feeRecipient: input.contracts.feeRecipient,
+                    collateralToken: address(0), // TODO: set PAXG collateral token
+                    oracleAsset: EthereumMainnetLendingOracleAsset.PAXG,
+                    irmConfig: AdaptiveCurveIrm.AdaptiveCurveIrmConfig({
+                        curveSteepness: 0, // TODO
+                        adjustmentSpeed: 0, // TODO
+                        targetUtilization: 0, // TODO
+                        initialRateAtTarget: 0, // TODO
+                        minRateAtTarget: 0, // TODO
+                        maxRateAtTarget: 0 // TODO
+                    }),
+                    maxLtv: 0, // TODO
+                    initialBorrowOpeningFee: 0, // TODO
+                    supplyCapAssets: 0, // TODO
+                    liquidationConfig: LiquidationConfiguration({
+                        maxLiquidationLtv: 0, // TODO
+                        dynamicBonusFeeStart: 0, // TODO
+                        ltvForCompleteLiquidation: 0, // TODO
+                        dynamicBonusFeeDecaySteepness: 0, // TODO
+                        liquidationBaseFee: 0, // TODO
+                        minPenaltyPercentage: 0, // TODO
+                        protocolFeePercentage: 0, // TODO
+                        isEnabledPriorityLiquidation: false,
+                        disablePriorityLiquidationAbovePositionLtv: 0,
+                        priorityLiquidationGracePeriod: 0,
+                        taggerLiquidationGracePeriod: 0,
+                        liquidationWindowTag: 0
+                    }),
+                    freezer: params.freezer
+                }),
+                input,
+                params,
+                params.useUnsafeUpgrades
+            );
+        } else if (params.phase == DeploymentPhase.BORROW_MARKET_SUSDS) {
+            input.contracts.susdsBorrowMarket = _deployBorrowMarket(
+                DeployBorrowMarketParams({
+                    owner: input.contracts.timelock,
+                    dusd: input.contracts.dusd,
+                    altoAdapter: input.contracts.altoAdapter,
+                    feeRecipient: input.contracts.feeRecipient,
+                    collateralToken: address(0), // TODO: set sUSDS collateral token
+                    oracleAsset: EthereumMainnetLendingOracleAsset.SUSDS,
+                    irmConfig: AdaptiveCurveIrm.AdaptiveCurveIrmConfig({
+                        curveSteepness: 0, // TODO
+                        adjustmentSpeed: 0, // TODO
+                        targetUtilization: 0, // TODO
+                        initialRateAtTarget: 0, // TODO
+                        minRateAtTarget: 0, // TODO
+                        maxRateAtTarget: 0 // TODO
+                    }),
+                    maxLtv: 0, // TODO
+                    initialBorrowOpeningFee: 0, // TODO
+                    supplyCapAssets: 0, // TODO
+                    liquidationConfig: LiquidationConfiguration({
+                        maxLiquidationLtv: 0, // TODO
+                        dynamicBonusFeeStart: 0, // TODO
+                        ltvForCompleteLiquidation: 0, // TODO
+                        dynamicBonusFeeDecaySteepness: 0, // TODO
+                        liquidationBaseFee: 0, // TODO
+                        minPenaltyPercentage: 0, // TODO
+                        protocolFeePercentage: 0, // TODO
+                        isEnabledPriorityLiquidation: false,
+                        disablePriorityLiquidationAbovePositionLtv: 0,
+                        priorityLiquidationGracePeriod: 0,
+                        taggerLiquidationGracePeriod: 0,
+                        liquidationWindowTag: 0
+                    }),
+                    freezer: params.freezer
+                }),
+                input,
+                params,
+                params.useUnsafeUpgrades
+            );
+        } else if (params.phase == DeploymentPhase.BORROW_MARKET_SYRUP_USDC) {
+            input.contracts.syrupUsdcBorrowMarket = _deployBorrowMarket(
+                DeployBorrowMarketParams({
+                    owner: input.contracts.timelock,
+                    dusd: input.contracts.dusd,
+                    altoAdapter: input.contracts.altoAdapter,
+                    feeRecipient: input.contracts.feeRecipient,
+                    collateralToken: address(0), // TODO: set SyrupUSDC collateral token
+                    oracleAsset: EthereumMainnetLendingOracleAsset.SYRUPUSDC,
+                    irmConfig: AdaptiveCurveIrm.AdaptiveCurveIrmConfig({
+                        curveSteepness: 0, // TODO
+                        adjustmentSpeed: 0, // TODO
+                        targetUtilization: 0, // TODO
+                        initialRateAtTarget: 0, // TODO
+                        minRateAtTarget: 0, // TODO
+                        maxRateAtTarget: 0 // TODO
+                    }),
+                    maxLtv: 0, // TODO
+                    initialBorrowOpeningFee: 0, // TODO
+                    supplyCapAssets: 0, // TODO
+                    liquidationConfig: LiquidationConfiguration({
+                        maxLiquidationLtv: 0, // TODO
+                        dynamicBonusFeeStart: 0, // TODO
+                        ltvForCompleteLiquidation: 0, // TODO
+                        dynamicBonusFeeDecaySteepness: 0, // TODO
+                        liquidationBaseFee: 0, // TODO
+                        minPenaltyPercentage: 0, // TODO
+                        protocolFeePercentage: 0, // TODO
+                        isEnabledPriorityLiquidation: false,
+                        disablePriorityLiquidationAbovePositionLtv: 0,
+                        priorityLiquidationGracePeriod: 0,
+                        taggerLiquidationGracePeriod: 0,
+                        liquidationWindowTag: 0
+                    }),
+                    freezer: params.freezer
+                }),
+                input,
+                params,
+                params.useUnsafeUpgrades
+            );
+        } else if (params.phase == DeploymentPhase.BORROW_MARKET_SYRUP_USDT) {
+            input.contracts.syrupUsdtBorrowMarket = _deployBorrowMarket(
+                DeployBorrowMarketParams({
+                    owner: input.contracts.timelock,
+                    dusd: input.contracts.dusd,
+                    altoAdapter: input.contracts.altoAdapter,
+                    feeRecipient: input.contracts.feeRecipient,
+                    collateralToken: address(0), // TODO: set SyrupUSDT collateral token
+                    oracleAsset: EthereumMainnetLendingOracleAsset.SYRUPUSDT,
+                    irmConfig: AdaptiveCurveIrm.AdaptiveCurveIrmConfig({
+                        curveSteepness: 0, // TODO
+                        adjustmentSpeed: 0, // TODO
+                        targetUtilization: 0, // TODO
+                        initialRateAtTarget: 0, // TODO
+                        minRateAtTarget: 0, // TODO
+                        maxRateAtTarget: 0 // TODO
+                    }),
+                    maxLtv: 0, // TODO
+                    initialBorrowOpeningFee: 0, // TODO
+                    supplyCapAssets: 0, // TODO
+                    liquidationConfig: LiquidationConfiguration({
+                        maxLiquidationLtv: 0, // TODO
+                        dynamicBonusFeeStart: 0, // TODO
+                        ltvForCompleteLiquidation: 0, // TODO
+                        dynamicBonusFeeDecaySteepness: 0, // TODO
+                        liquidationBaseFee: 0, // TODO
+                        minPenaltyPercentage: 0, // TODO
+                        protocolFeePercentage: 0, // TODO
+                        isEnabledPriorityLiquidation: false,
+                        disablePriorityLiquidationAbovePositionLtv: 0,
+                        priorityLiquidationGracePeriod: 0,
+                        taggerLiquidationGracePeriod: 0,
+                        liquidationWindowTag: 0
+                    }),
+                    freezer: params.freezer
+                }),
+                input,
+                params,
+                params.useUnsafeUpgrades
+            );
         } else {
             revert("Invalid phase");
         }
@@ -558,10 +722,13 @@ library DeployAltoEthereumMainnet {
             })
         );
 
-        IMarketRegistry(input.contracts.marketRegistry).addBorrowMarket(report.market);
+        // NOTE: Registry add + adapter approval removed here because deployer no longer has ownership to perform them.
+        // Execute those steps separately under the owner/timelock context after deployment.
 
-        // Approve market on AltoAdapter (requires adapter ownership)
-        AltoAdapter(payable(marketParams.altoAdapter)).approveContract(report.market);
+        // IMarketRegistry(input.contracts.marketRegistry).addBorrowMarket(report.market);
+
+        // // Approve market on AltoAdapter (requires adapter ownership)
+        // AltoAdapter(payable(marketParams.altoAdapter)).approveContract(report.market);
 
         return report;
     }

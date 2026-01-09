@@ -20,7 +20,11 @@ enum DeploymentPhase {
     PERMISSIONED_USM, // Phase 11: Deploy Permissioned DUSD/USDC Peg Stability Module
     PERMISSIONLESS_USM, // Phase 12: Deploy Permissionless DUSD/USDC Peg Stability Module
     POST, // Phase 13: Configure TimelockController and transfer ownership
-    REFERRAL_ADAPTER // Phase 14: Deploy AltoReferralWhitelistAdapter
+    REFERRAL_ADAPTER, // Phase 14: Deploy AltoReferralWhitelistAdapter
+    BORROW_MARKET_PAXG, // Phase 15: Deploy PAXG Borrow Market
+    BORROW_MARKET_SUSDS, // Phase 16: Deploy sUSDS Borrow Market
+    BORROW_MARKET_SYRUP_USDC, // Phase 17: Deploy syrupUSDC Borrow Market
+    BORROW_MARKET_SYRUP_USDT // Phase 18: Deploy syrupUSDT Borrow Market
 }
 
 struct MarketContracts {
@@ -62,6 +66,10 @@ struct Contracts {
     MarketContracts wbtcBorrowMarket;
     MarketContracts cbbtcBorrowMarket;
     MarketContracts susdeBorrowMarket;
+    MarketContracts paxgBorrowMarket;
+    MarketContracts susdsBorrowMarket;
+    MarketContracts syrupUsdcBorrowMarket;
+    MarketContracts syrupUsdtBorrowMarket;
     UsmContracts permissionedUsm;
     UsmContracts permissionlessUsm;
 }

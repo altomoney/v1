@@ -92,5 +92,26 @@ contract AltoMultiChainlinkLendingOracleGetPriceForkTest is Test {
             "Incorrect price returned for WETH"
         );
     }
+
+    function test_GetPrice_Paxg() public {
+        // Fork and setup
+        string memory rpcUrl = vm.rpcUrl("ethereum");
+        vm.createSelectFork(rpcUrl, 24197555);
+
+        AltoMultiChainlinkLendingOracle oracle =
+            AltoMultiChainlinkLendingOracle(EthereumMainnetOracleDeployer.deployPaxgOracle(OWNER));
+
+        (AggregatorV3Interface feed,,,, uint8 outDecimals,) = oracle.chainlinkNodes(0);
+
+        (, int256 chainlinkAnswer,,,) = feed.latestRoundData();
+        uint256 chainlinkDecimals = feed.decimals();
+
+        uint256 price = oracle.getPrice();
+        assertEq(
+            price,
+            uint256(chainlinkAnswer) * (10 ** (outDecimals - chainlinkDecimals)),
+            "Incorrect price returned for PAXG"
+        );
+    }
 }
 

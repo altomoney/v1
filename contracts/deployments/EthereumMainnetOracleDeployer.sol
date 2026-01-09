@@ -21,14 +21,30 @@ import {
     IERC4626
 } from "@alto/oracles/AltoERC4626RatioChainlinkOracle/implementations/ERC4626RatioChainlinkOracleSUSDE.sol";
 import {
+    ERC4626RatioChainlinkOracleSUSDS
+} from "@alto/oracles/AltoERC4626RatioChainlinkOracle/implementations/ERC4626RatioChainlinkOracleSUSDS.sol";
+import {
+    ERC4626RatioChainlinkOracleSYRUPUSDC
+} from "@alto/oracles/AltoERC4626RatioChainlinkOracle/implementations/ERC4626RatioChainlinkOracleSYRUPUSDC.sol";
+import {
+    ERC4626RatioChainlinkOracleSYRUPUSDT
+} from "@alto/oracles/AltoERC4626RatioChainlinkOracle/implementations/ERC4626RatioChainlinkOracleSYRUPUSDT.sol";
+import {
     CHAINLINK_ETH_USD_PRICE_FEED,
     CHAINLINK_BTC_USD_PRICE_FEED,
     CHAINLINK_WBTC_BTC_RATIO_FEED,
     CHAINLINK_USDE_USD_PRICE_FEED,
+    CHAINLINK_PAXG_USD_PRICE_FEED,
+    CHAINLINK_USDS_USD_PRICE_FEED,
+    CHAINLINK_USDC_USD_PRICE_FEED,
+    CHAINLINK_USDT_USD_PRICE_FEED,
     WSTETH_MAINNET,
     RETH_MAINNET,
     METH_STAKING_MAINNET,
-    SUSDE_MAINNET
+    SUSDE_MAINNET,
+    SUSDS_MAINNET,
+    SYRUPUSDC_MAINNET,
+    SYRUPUSDT_MAINNET
 } from "@alto/deployments/ethereum-mainnet/Constants.sol";
 
 enum EthereumMainnetLendingOracleAsset {
@@ -39,7 +55,11 @@ enum EthereumMainnetLendingOracleAsset {
     METH,
     tBTC,
     rETH,
-    stETH
+    stETH,
+    PAXG,
+    SUSDS,
+    SYRUPUSDC,
+    SYRUPUSDT
 }
 
 library EthereumMainnetOracleDeployer {
@@ -60,6 +80,14 @@ library EthereumMainnetOracleDeployer {
             return deployRethOracle(owner);
         } else if (asset == EthereumMainnetLendingOracleAsset.stETH) {
             return deployWstEthOracle(owner);
+        } else if (asset == EthereumMainnetLendingOracleAsset.PAXG) {
+            return deployPaxgOracle(owner);
+        } else if (asset == EthereumMainnetLendingOracleAsset.SUSDS) {
+            return deploySusdsOracle(owner);
+        } else if (asset == EthereumMainnetLendingOracleAsset.SYRUPUSDC) {
+            return deploySyrupUsdcOracle(owner);
+        } else if (asset == EthereumMainnetLendingOracleAsset.SYRUPUSDT) {
+            return deploySyrupUsdtOracle(owner);
         }
 
         revert("Invalid asset");
@@ -217,5 +245,88 @@ library EthereumMainnetOracleDeployer {
         });
 
         return address(new ERC4626RatioChainlinkOracleSUSDE(owner, SUSDE_MAINNET, erc4626RatioNode, chainlinkNode));
+    }
+
+    function deployPaxgOracle(address owner) internal returns (address) {
+        ChainlinkNode[] memory chainlinkNodes = new ChainlinkNode[](1);
+
+        chainlinkNodes[0] = ChainlinkNode({
+            feed: AggregatorV3Interface(CHAINLINK_PAXG_USD_PRICE_FEED),
+            direction: ConversionDirection.IN_TO_OUT, // PAXG to USD
+            stalePeriod: 86700, // 86700 seconds // TODO: Ask risk parameters team for the correct stale period
+            inDecimals: 18, // PAXG decimals
+            outDecimals: 36, // LENDING_ORACLE_PRICE_PRECISION + DUSD decimals - PAXG decimals
+            feedDecimals: 8
+        });
+
+        return address(new AltoMultiChainlinkLendingOracle(owner, chainlinkNodes));
+    }
+
+    function deploySusdsOracle(address owner) internal returns (address) {
+        // TODO: Ask risk parameters team for the correct initial ratio calculation
+        uint256 usdsPerToken = IERC4626(SUSDS_MAINNET).convertToAssets(1 ether) * 1005 / 1000; // +0.5%
+
+        ERC4626RatioNode memory erc4626RatioNode = ERC4626RatioNode({
+            initialRatio: usdsPerToken,
+            initialTimestamp: block.timestamp,
+            maxYearlyGrowthRatioWad: 0.07 ether // 7% // TODO: Ask risk parameters team for the correct max yearly growth ratio
+        });
+
+        ChainlinkNode memory chainlinkNode = ChainlinkNode({
+            feed: AggregatorV3Interface(CHAINLINK_USDS_USD_PRICE_FEED),
+            direction: ConversionDirection.IN_TO_OUT, // USDS to USD
+            stalePeriod: 86700, // 86700 seconds // TODO: Ask risk parameters team for the correct stale period
+            inDecimals: 18, // USDS decimals
+            outDecimals: 36, // LENDING_ORACLE_PRICE_PRECISION + DUSD decimals - USDS decimals
+            feedDecimals: 8
+        });
+
+        return address(new ERC4626RatioChainlinkOracleSUSDS(owner, SUSDS_MAINNET, erc4626RatioNode, chainlinkNode));
+    }
+
+    function deploySyrupUsdcOracle(address owner) internal returns (address) {
+        // TODO: Ask risk parameters team for the correct initial ratio calculation
+        uint256 usdcPerToken = IERC4626(SYRUPUSDC_MAINNET).convertToAssets(1e6) * 1005 / 1000; // +0.5%
+
+        ERC4626RatioNode memory erc4626RatioNode = ERC4626RatioNode({
+            initialRatio: usdcPerToken,
+            initialTimestamp: block.timestamp,
+            maxYearlyGrowthRatioWad: 0.07 ether // 7% // TODO: Ask risk parameters team for the correct max yearly growth ratio
+        });
+
+        ChainlinkNode memory chainlinkNode = ChainlinkNode({
+            feed: AggregatorV3Interface(CHAINLINK_USDC_USD_PRICE_FEED),
+            direction: ConversionDirection.IN_TO_OUT, // USDC to USD
+            stalePeriod: 86700, // 86700 seconds // TODO: Ask risk parameters team for the correct stale period
+            inDecimals: 6, // decimals of syrup USDC ratio
+            outDecimals: 48, // LENDING_ORACLE_PRICE_PRECISION + DUSD decimals - USDC decimals
+            feedDecimals: 8
+        });
+
+        return
+            address(new ERC4626RatioChainlinkOracleSYRUPUSDC(owner, SYRUPUSDC_MAINNET, erc4626RatioNode, chainlinkNode));
+    }
+
+    function deploySyrupUsdtOracle(address owner) internal returns (address) {
+        // TODO: Ask risk parameters team for the correct initial ratio calculation
+        uint256 usdtPerToken = IERC4626(SYRUPUSDT_MAINNET).convertToAssets(1e6) * 1005 / 1000; // +0.5%
+
+        ERC4626RatioNode memory erc4626RatioNode = ERC4626RatioNode({
+            initialRatio: usdtPerToken,
+            initialTimestamp: block.timestamp,
+            maxYearlyGrowthRatioWad: 0.07 ether // 7% // TODO: Ask risk parameters team for the correct max yearly growth ratio
+        });
+
+        ChainlinkNode memory chainlinkNode = ChainlinkNode({
+            feed: AggregatorV3Interface(CHAINLINK_USDT_USD_PRICE_FEED),
+            direction: ConversionDirection.IN_TO_OUT, // USDT to USD
+            stalePeriod: 86700, // 86700 seconds // TODO: Ask risk parameters team for the correct stale period
+            inDecimals: 6, // decimals of syrup USDT ratio
+            outDecimals: 48, // LENDING_ORACLE_PRICE_PRECISION + DUSD decimals - USDT decimals
+            feedDecimals: 8
+        });
+
+        return
+            address(new ERC4626RatioChainlinkOracleSYRUPUSDT(owner, SYRUPUSDT_MAINNET, erc4626RatioNode, chainlinkNode));
     }
 }
