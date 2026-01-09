@@ -13,7 +13,7 @@ import {
 import {console} from "forge-std/console.sol";
 
 uint256 constant DEPLOYMENT_ID_TO_LOAD = 0;
-DeploymentPhase constant PHASE_TO_DEPLOY = DeploymentPhase.CORE; // CORE, DUSD, MINT_MARKET_WETH, MINT_MARKET_WSTETH, MINT_MARKET_RETH, MINT_MARKET_METH, MINT_MARKET_TBTC, BORROW_MARKET_WBTC, BORROW_MARKET_CBBTC, BORROW_MARKET_SUSDE, USDC_USM, POST, REFERRAL_ADAPTER
+DeploymentPhase constant PHASE_TO_DEPLOY = DeploymentPhase.CORE; // CORE, DUSD, MINT_MARKET_WETH, MINT_MARKET_WSTETH, MINT_MARKET_RETH, MINT_MARKET_METH, MINT_MARKET_TBTC, BORROW_MARKET_WBTC, BORROW_MARKET_CBBTC, BORROW_MARKET_SUSDE, USDC_USM, POST, REFERRAL_ADAPTER, BORROW_MARKET_PAXG, BORROW_MARKET_SUSDS, BORROW_MARKET_SYRUP_USDC, BORROW_MARKET_SYRUP_USDT
 string constant OUTPUT_DIR = "./contracts/deployments/ethereum-mainnet/output";
 
 contract DeployAltoEthereumMainnetScript is Script {
@@ -73,6 +73,12 @@ contract DeployAltoEthereumMainnetScript is Script {
         contractsJson = _serializeMarketContracts(contractsJson, "wbtcBorrow", input.contracts.wbtcBorrowMarket);
         contractsJson = _serializeMarketContracts(contractsJson, "cbbtcBorrow", input.contracts.cbbtcBorrowMarket);
         contractsJson = _serializeMarketContracts(contractsJson, "susdeBorrow", input.contracts.susdeBorrowMarket);
+        contractsJson = _serializeMarketContracts(contractsJson, "paxgBorrow", input.contracts.paxgBorrowMarket);
+        contractsJson = _serializeMarketContracts(contractsJson, "susdsBorrow", input.contracts.susdsBorrowMarket);
+        contractsJson =
+            _serializeMarketContracts(contractsJson, "syrupUsdcBorrow", input.contracts.syrupUsdcBorrowMarket);
+        contractsJson =
+            _serializeMarketContracts(contractsJson, "syrupUsdtBorrow", input.contracts.syrupUsdtBorrowMarket);
 
         // Serialize USDC USM contracts
         if (input.contracts.permissionedUsm.dusdUsm != address(0)) {
@@ -160,6 +166,10 @@ contract DeployAltoEthereumMainnetScript is Script {
         loadedInput.contracts.wbtcBorrowMarket = _loadMarketContracts(json, "wbtcBorrow");
         loadedInput.contracts.cbbtcBorrowMarket = _loadMarketContracts(json, "cbbtcBorrow");
         loadedInput.contracts.susdeBorrowMarket = _loadMarketContracts(json, "susdeBorrow");
+        loadedInput.contracts.paxgBorrowMarket = _loadMarketContracts(json, "paxgBorrow");
+        loadedInput.contracts.susdsBorrowMarket = _loadMarketContracts(json, "susdsBorrow");
+        loadedInput.contracts.syrupUsdcBorrowMarket = _loadMarketContracts(json, "syrupUsdcBorrow");
+        loadedInput.contracts.syrupUsdtBorrowMarket = _loadMarketContracts(json, "syrupUsdtBorrow");
 
         // Load USDC USM contracts
         loadedInput.contracts.permissionedUsm.dusdUsm = _tryParseAddress(json, ".contracts.permissionedUsm");
@@ -260,6 +270,18 @@ contract DeployAltoEthereumMainnetScript is Script {
             _extractContractABI("AltoTimelockController", abiFolder);
         } else if (PHASE_TO_DEPLOY == DeploymentPhase.REFERRAL_ADAPTER) {
             _extractContractABI("AltoReferralWhitelistAdapter", abiFolder);
+        } else if (PHASE_TO_DEPLOY == DeploymentPhase.BORROW_MARKET_PAXG) {
+            // TODO: implement oracle
+            // _extractBorrowMarketABIs(abiFolder, "AltoMultiChainlinkLendingOracle");
+        } else if (PHASE_TO_DEPLOY == DeploymentPhase.BORROW_MARKET_SUSDS) {
+            // TODO: implement oracle
+            // _extractBorrowMarketABIs(abiFolder, "AltoMultiChainlinkLendingOracle");
+        } else if (PHASE_TO_DEPLOY == DeploymentPhase.BORROW_MARKET_SYRUP_USDC) {
+            // TODO: implement oracle
+            // _extractBorrowMarketABIs(abiFolder, "AltoMultiChainlinkLendingOracle");
+        } else if (PHASE_TO_DEPLOY == DeploymentPhase.BORROW_MARKET_SYRUP_USDT) {
+            // TODO: implement oracle
+            // _extractBorrowMarketABIs(abiFolder, "AltoMultiChainlinkLendingOracle");
         }
 
         console.log("ABIs extracted to:", abiFolder);
