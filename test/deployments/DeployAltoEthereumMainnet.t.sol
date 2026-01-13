@@ -43,6 +43,7 @@ import {IMarketRegistry, MarketRegistry} from "@alto/utils/MarketRegistry.sol";
 import {IUsmRegistry, UsmRegistry} from "@alto/utils/UsmRegistry.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {IUsm, AccessMode} from "@alto/usm/interfaces/IUsm.sol";
+import {AltoReferralWhitelistAdapter} from "@alto/rewards/adapters/AltoReferralWhitelistAdapter.sol";
 
 contract DeployAltoEthereumMainnetTest is Test {
     AltoEthereumMainnetParams params;
@@ -51,6 +52,7 @@ contract DeployAltoEthereumMainnetTest is Test {
     address immutable MULTISIG_TIMELOCK_ADMIN = makeAddr("TIMELLOCK_ADMIN");
     address immutable MULTISIG_FREEZER_PAUSER = makeAddr("MULTISIG_FREEZER_PAUSER");
     address immutable STAKING_URD = makeAddr("STAKING_URD");
+    address immutable MERKLE_ROOT_UPDATER = makeAddr("MERKLE_ROOT_UPDATER");
     address DEPLOYER;
 
     bytes32 immutable CONFIGURATOR_ROLE = keccak256("CONFIGURATOR_ROLE");
@@ -73,7 +75,8 @@ contract DeployAltoEthereumMainnetTest is Test {
             deployer: DEPLOYER,
             phase: DeploymentPhase.CORE,
             useUnsafeUpgrades: true,
-            treasuryMultisig: address(1) // TODO: Set to actual treasury multisig address
+            treasuryMultisig: address(1), // TODO: Set to actual treasury multisig address
+            updater: MERKLE_ROOT_UPDATER
         });
     }
 
@@ -549,6 +552,32 @@ contract DeployAltoEthereumMainnetTest is Test {
         );
     }
 
+    function test_deployPhase_REFERRAL_ADAPTER() public {
+        _deployPrerequisites(DeploymentPhase.REFERRAL_ADAPTER);
+
+        params.phase = DeploymentPhase.REFERRAL_ADAPTER;
+        input = DeployAltoEthereumMainnet.deploy(params, input);
+
+        // Verify referral adapter is deployed
+        _verifyDeployed(input.contracts.referralAdapter, "ReferralAdapter");
+
+        AltoReferralWhitelistAdapter adapter = AltoReferralWhitelistAdapter(input.contracts.referralAdapter);
+
+        // Verify owner is timelock
+        assertEq(adapter.owner(), input.contracts.timelock, "ReferralAdapter owner should be timelock");
+
+        // Verify bonus discount is 5%
+        assertEq(adapter.bonusDiscount(), 0.05 ether, "ReferralAdapter bonusDiscount should be 5%");
+
+        // Verify payment token share is 5%
+        assertEq(adapter.paymentTokenShare(), 0.05 ether, "ReferralAdapter paymentTokenShare should be 5%");
+
+        // Verify merkle root updater is set
+        assertTrue(
+            adapter.isMerkleRootUpdater(MERKLE_ROOT_UPDATER), "ReferralAdapter merkle root updater should be set"
+        );
+    }
+
     function _verifyHasRole(address _address, address _owner, bytes32 role, string memory name) internal view {
         if (role == DEFAULT_ADMIN_ROLE) {
             assertTrue(
@@ -698,6 +727,9 @@ contract DeployAltoEthereumMainnetTest is Test {
         input = DeployAltoEthereumMainnet.deploy(params, input);
 
         params.phase = DeploymentPhase.POST;
+        input = DeployAltoEthereumMainnet.deploy(params, input);
+
+        params.phase = DeploymentPhase.REFERRAL_ADAPTER;
         input = DeployAltoEthereumMainnet.deploy(params, input);
     }
 }

@@ -19,7 +19,8 @@ enum DeploymentPhase {
     BORROW_MARKET_SUSDE, // Phase 10: Deploy sUSDe Borrow Market
     PERMISSIONED_USM, // Phase 11: Deploy Permissioned DUSD/USDC Peg Stability Module
     PERMISSIONLESS_USM, // Phase 12: Deploy Permissionless DUSD/USDC Peg Stability Module
-    POST // Phase 13: Configure TimelockController and transfer ownership
+    POST, // Phase 13: Configure TimelockController and transfer ownership
+    REFERRAL_ADAPTER // Phase 14: Deploy AltoReferralWhitelistAdapter
 }
 
 struct MarketContracts {
@@ -52,6 +53,7 @@ struct Contracts {
     address dusdFlashMinter;
     address marketRegistry;
     address usmRegistry;
+    address referralAdapter;
     MarketContracts wethMarket;
     MarketContracts wstethMarket;
     MarketContracts rethMarket;
@@ -74,6 +76,7 @@ struct AltoEthereumMainnetParams {
     DeploymentPhase phase;
     bool useUnsafeUpgrades;
     address treasuryMultisig;
+    address updater;
 }
 
 struct DeployCoreParams {
