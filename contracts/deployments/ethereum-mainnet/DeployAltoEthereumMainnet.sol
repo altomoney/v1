@@ -42,6 +42,7 @@ import {BorrowMarketBatch, BorrowMarketBatchParams} from "@alto/deployments/ethe
 import {UsmBatch, UsmBatchParams, UsmBatchReport} from "@alto/deployments/ethereum-mainnet/UsmBatch.sol";
 import {IMarketRegistry, MarketRegistry} from "@alto/utils/MarketRegistry.sol";
 import {IUsmRegistry, UsmRegistry} from "@alto/utils/UsmRegistry.sol";
+import {AltoReferralWhitelistAdapter} from "@alto/rewards/adapters/AltoReferralWhitelistAdapter.sol";
 import {
     MarketContracts,
     UsmContracts,
@@ -401,6 +402,8 @@ library DeployAltoEthereumMainnet {
             );
         } else if (params.phase == DeploymentPhase.POST) {
             input = _deployPost(params, input);
+        } else if (params.phase == DeploymentPhase.REFERRAL_ADAPTER) {
+            input = _deployReferralAdapter(params, input);
         } else {
             revert("Invalid phase");
         }
@@ -615,6 +618,30 @@ library DeployAltoEthereumMainnet {
         } else {
             input.contracts.permissionlessUsm = usmContract;
         }
+
+        return input;
+    }
+
+    function _deployReferralAdapter(AltoEthereumMainnetParams memory params, AltoEthereumMainnetInput memory input)
+        internal
+        returns (AltoEthereumMainnetInput memory)
+    {
+        require(params.updater != address(0), "Updater must be set");
+
+        // Deploy AltoReferralWhitelistAdapter with 5% bonusDiscount and 5% paymentTokenShare
+        // owner at this point is deployer
+        AltoReferralWhitelistAdapter adapter = new AltoReferralWhitelistAdapter(
+            0.05 ether, // 5% bonusDiscount
+            0.05 ether // 5% paymentTokenShare
+        );
+
+        // Set the merkle root updater
+        adapter.setMerkleRootUpdater(params.updater, true);
+
+        // Transfer ownership from deployer to timelock
+        adapter.transferOwnershipSkip2Step(input.contracts.timelock);
+
+        input.contracts.referralAdapter = address(adapter);
 
         return input;
     }
