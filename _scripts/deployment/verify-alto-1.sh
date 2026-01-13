@@ -132,6 +132,7 @@ verify_contract() {
 TIMELOCK=$(get_address ".contracts.timelock")
 FEE_RECIPIENT=$(get_address ".contracts.feeRecipient")
 ALTO_ADAPTER=$(get_address ".contracts.altoAdapter")
+ALTO_REFERRAL_ADAPTER=$(get_address ".contracts.referralAdapter")
 DUSD=$(get_address ".contracts.dusd")
 DUSD_FLASH_MINTER=$(get_address ".contracts.dusdFlashMinter")
 MARKET_REGISTRY=$(get_address ".contracts.marketRegistry")
@@ -225,6 +226,7 @@ echo "📋 Contract verification plan:"
 echo "- Timelock: $TIMELOCK"
 echo "- Fee Recipient: $FEE_RECIPIENT"
 echo "- Alto Adapter: $ALTO_ADAPTER"
+echo "- Alto Referral Adapter: $ALTO_REFERRAL_ADAPTER"
 echo "- DUSD: $DUSD"
 echo "- DUSD Flash Minter: $DUSD_FLASH_MINTER"
 echo "- Market Registry: $MARKET_REGISTRY"
@@ -309,6 +311,7 @@ echo ""
 verify_contract "Timelock" "$TIMELOCK" "contracts/utils/AltoTimelockController.sol:AltoTimelockController"
 verify_contract "FeeRecipient" "$FEE_RECIPIENT" "contracts/utils/AltoTimelockController.sol:AltoTimelockController"
 verify_contract "AltoAdapter" "$ALTO_ADAPTER" "contracts/utils/AltoAdapter.sol:AltoAdapter"
+verify_contract "AltoReferralAdapter" "$ALTO_REFERRAL_ADAPTER" "contracts/rewards/adapters/AltoReferralWhitelistAdapter.sol:AltoReferralWhitelistAdapter"
 verify_contract "DUSD" "$DUSD" "contracts/tokens/DUSD.sol:DUSD"
 verify_contract "DUSDFlashMinter" "$DUSD_FLASH_MINTER" "contracts/usm/DUSDFlashMinter.sol:DUSDFlashMinter"
 verify_contract "MarketRegistry" "$MARKET_REGISTRY" "contracts/utils/MarketRegistry.sol:MarketRegistry"

@@ -28,6 +28,7 @@
     "permissionlessUsmFixedFeeStrategy": "0x274C913a859cC5F6fb3ba01FEa5799f38add6ed4",
     "permissionlessUsmFixedPriceStrategy": "0x3C8A74daeA086456f520AE0C750CD90186138De3",
     "permissionlessUsmImplementation": "0x62f24301bCdF946E556743cB2bC4073fC87D8246",
+    "referralAdapter": "0x766D36c3E140A29bD47390958939Ed7F7239513d",
     "rethLeverage": "0xb60C669E9831AdF1D202d28Fc2ACd91E1db0cfe2",
     "rethLeverageSwapper": "0x4354E3E89aA6f86ac6b53eb45A10134F48569169",
     "rethLiquidationEngine": "0x2a3fB51184183405c975Bd8b355d4Dc43209f45B",
