@@ -1,5 +1,6 @@
 {
   "contracts": {
+    "addressChange": "0x8cf6F8D0201f38Fa3e6f21C1f4803f4eb40c0bB2",
     "altoAdapter": "0x241aA0aC561a5c210a86FeCC82f45D2713F59C0C",
     "cbbtcBorrowLeverage": "0x93B227F37819d147ad31589C686fbfe654657503",
     "cbbtcBorrowLeverageSwapper": "0xC882Dbc9F17123186a4aaE8F3B73440A489b7B85",
