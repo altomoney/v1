@@ -495,27 +495,27 @@ library DeployAltoEthereumMainnet {
                     dusd: input.contracts.dusd,
                     altoAdapter: input.contracts.altoAdapter,
                     feeRecipient: input.contracts.feeRecipient,
-                    collateralToken: address(0), // TODO: set SyrupUSDC collateral token
+                    collateralToken: SYRUPUSDC_MAINNET,
                     oracleAsset: EthereumMainnetLendingOracleAsset.SYRUPUSDC,
                     irmConfig: AdaptiveCurveIrm.AdaptiveCurveIrmConfig({
-                        curveSteepness: 0, // TODO
-                        adjustmentSpeed: 0, // TODO
-                        targetUtilization: 0, // TODO
-                        initialRateAtTarget: 0, // TODO
-                        minRateAtTarget: 0, // TODO
-                        maxRateAtTarget: 0 // TODO
+                        curveSteepness: 4 ether,
+                        adjustmentSpeed: 50 ether / int256(365 days),
+                        targetUtilization: 0.9 ether, // 90%
+                        initialRateAtTarget: 0.1 ether / int256(365 days), // 10%
+                        minRateAtTarget: 0.001 ether / int256(365 days), // 0.1%
+                        maxRateAtTarget: 2 ether / int256(365 days) // 200%
                     }),
-                    maxLtv: 0, // TODO
-                    initialBorrowOpeningFee: 0, // TODO
-                    supplyCapAssets: 0, // TODO
+                    maxLtv: 0.8 ether, // 80%
+                    initialBorrowOpeningFee: 0.002 ether, // 0.2%
+                    supplyCapAssets: 0,
                     liquidationConfig: LiquidationConfiguration({
-                        maxLiquidationLtv: 0, // TODO
-                        dynamicBonusFeeStart: 0, // TODO
-                        ltvForCompleteLiquidation: 0, // TODO
-                        dynamicBonusFeeDecaySteepness: 0, // TODO
-                        liquidationBaseFee: 0, // TODO
-                        minPenaltyPercentage: 0, // TODO
-                        protocolFeePercentage: 0, // TODO
+                        maxLiquidationLtv: 0.85 ether, // 85%
+                        dynamicBonusFeeStart: 0.01 ether, // 1%
+                        ltvForCompleteLiquidation: 0.93 ether, // 93%
+                        dynamicBonusFeeDecaySteepness: 5 ether, // 5
+                        liquidationBaseFee: 0.06 ether, // 6%
+                        minPenaltyPercentage: 0.005 ether, // 0.5%
+                        protocolFeePercentage: 0.07 ether, // 7%
                         isEnabledPriorityLiquidation: false,
                         disablePriorityLiquidationAbovePositionLtv: 0,
                         priorityLiquidationGracePeriod: 0,
@@ -535,27 +535,27 @@ library DeployAltoEthereumMainnet {
                     dusd: input.contracts.dusd,
                     altoAdapter: input.contracts.altoAdapter,
                     feeRecipient: input.contracts.feeRecipient,
-                    collateralToken: address(0), // TODO: set SyrupUSDT collateral token
+                    collateralToken: SYRUPUSDT_MAINNET,
                     oracleAsset: EthereumMainnetLendingOracleAsset.SYRUPUSDT,
                     irmConfig: AdaptiveCurveIrm.AdaptiveCurveIrmConfig({
-                        curveSteepness: 0, // TODO
-                        adjustmentSpeed: 0, // TODO
-                        targetUtilization: 0, // TODO
-                        initialRateAtTarget: 0, // TODO
-                        minRateAtTarget: 0, // TODO
-                        maxRateAtTarget: 0 // TODO
+                        curveSteepness: 4 ether,
+                        adjustmentSpeed: 50 ether / int256(365 days),
+                        targetUtilization: 0.9 ether, // 90%
+                        initialRateAtTarget: 0.1 ether / int256(365 days), // 10%
+                        minRateAtTarget: 0.001 ether / int256(365 days), // 0.1%
+                        maxRateAtTarget: 2 ether / int256(365 days) // 200%
                     }),
-                    maxLtv: 0, // TODO
-                    initialBorrowOpeningFee: 0, // TODO
-                    supplyCapAssets: 0, // TODO
+                    maxLtv: 0.8 ether, // 80%
+                    initialBorrowOpeningFee: 0.002 ether, // 0.2%
+                    supplyCapAssets: 0,
                     liquidationConfig: LiquidationConfiguration({
-                        maxLiquidationLtv: 0, // TODO
-                        dynamicBonusFeeStart: 0, // TODO
-                        ltvForCompleteLiquidation: 0, // TODO
-                        dynamicBonusFeeDecaySteepness: 0, // TODO
-                        liquidationBaseFee: 0, // TODO
-                        minPenaltyPercentage: 0, // TODO
-                        protocolFeePercentage: 0, // TODO
+                        maxLiquidationLtv: 0.85 ether, // 85%
+                        dynamicBonusFeeStart: 0.01 ether, // 1%
+                        ltvForCompleteLiquidation: 0.93 ether, // 93%
+                        dynamicBonusFeeDecaySteepness: 5 ether, // 5
+                        liquidationBaseFee: 0.06 ether, // 6%
+                        minPenaltyPercentage: 0.005 ether, // 0.5%
+                        protocolFeePercentage: 0.07 ether, // 7%
                         isEnabledPriorityLiquidation: false,
                         disablePriorityLiquidationAbovePositionLtv: 0,
                         priorityLiquidationGracePeriod: 0,

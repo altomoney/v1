@@ -44,6 +44,10 @@ import {IUsmRegistry, UsmRegistry} from "@alto/utils/UsmRegistry.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {IUsm, AccessMode} from "@alto/usm/interfaces/IUsm.sol";
 import {AltoReferralWhitelistAdapter} from "@alto/rewards/adapters/AltoReferralWhitelistAdapter.sol";
+import {AdaptiveCurveIrm} from "@alto/lending/irm/AdaptiveCurveIrm.sol";
+import {
+    IDcfDlbPriorityLiquidationEngineStaticTypes
+} from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";
 
 contract DeployAltoEthereumMainnetTest is Test {
     AltoEthereumMainnetParams params;
@@ -387,6 +391,86 @@ contract DeployAltoEthereumMainnetTest is Test {
         _verifyMarketContracts(input.contracts.susdeBorrowMarket);
 
         // TODO verify other parameters - base, liquidation engine, IRM, oracle...
+    }
+
+    function test_deployPhase_BORROW_MARKET_SYRUP_USDC() public {
+        _deployPrerequisites(DeploymentPhase.BORROW_MARKET_SYRUP_USDC);
+
+        params.phase = DeploymentPhase.BORROW_MARKET_SYRUP_USDC;
+        input = DeployAltoEthereumMainnet.deploy(params, input);
+
+        // Manual post-deployment steps (requires owner)
+        MarketRegistry(input.contracts.marketRegistry).addBorrowMarket(input.contracts.syrupUsdcBorrowMarket.market);
+        AltoAdapter(payable(input.contracts.altoAdapter)).approveContract(input.contracts.syrupUsdcBorrowMarket.market);
+
+        _verifyMarketContracts(input.contracts.syrupUsdcBorrowMarket);
+        _verifySyrupBorrowMarketParams(input.contracts.syrupUsdcBorrowMarket);
+    }
+
+    function test_deployPhase_BORROW_MARKET_SYRUP_USDT() public {
+        _deployPrerequisites(DeploymentPhase.BORROW_MARKET_SYRUP_USDT);
+
+        params.phase = DeploymentPhase.BORROW_MARKET_SYRUP_USDT;
+        input = DeployAltoEthereumMainnet.deploy(params, input);
+
+        // Manual post-deployment steps (requires owner)
+        MarketRegistry(input.contracts.marketRegistry).addBorrowMarket(input.contracts.syrupUsdtBorrowMarket.market);
+        AltoAdapter(payable(input.contracts.altoAdapter)).approveContract(input.contracts.syrupUsdtBorrowMarket.market);
+
+        _verifyMarketContracts(input.contracts.syrupUsdtBorrowMarket);
+        _verifySyrupBorrowMarketParams(input.contracts.syrupUsdtBorrowMarket);
+    }
+
+    function _verifySyrupBorrowMarketParams(MarketContracts memory market) internal view {
+        // Verify maxLtv
+        assertEq(IMarket(market.market).maxLtv(), 0.8 ether, "maxLtv should be 80%");
+
+        // Verify oracle is deployed
+        assertTrue(IMarket(market.market).oracle() != address(0), "oracle should be deployed");
+
+        // Split into separate functions to avoid stack too deep
+        _verifySyrupLiquidationConfig(market.liquidationEngine);
+        _verifySyrupIrmConfig(market.marketIrm);
+    }
+
+    function _verifySyrupLiquidationConfig(address liquidationEngine) internal view {
+        (
+            uint256 maxLiquidationLtv,
+            uint256 dynamicBonusFeeStart,
+            uint256 ltvForCompleteLiquidation,
+            uint256 dynamicBonusFeeDecaySteepness,
+            uint256 liquidationBaseFee,
+            uint256 minPenaltyPercentage,
+            uint256 protocolFeePercentage,
+            bool isEnabledPriorityLiquidation,,,,
+        ) = IDcfDlbPriorityLiquidationEngineStaticTypes(liquidationEngine).liquidationConfiguration();
+
+        assertEq(maxLiquidationLtv, 0.85 ether, "LLTV should be 85%");
+        assertEq(dynamicBonusFeeStart, 0.01 ether, "dynamicBonusFeeStart should be 1%");
+        assertEq(ltvForCompleteLiquidation, 0.93 ether, "tLLTV should be 93%");
+        assertEq(dynamicBonusFeeDecaySteepness, 5 ether, "DLB steepness should be 5");
+        assertEq(liquidationBaseFee, 0.06 ether, "liquidationBaseFee should be 6%");
+        assertEq(minPenaltyPercentage, 0.005 ether, "maxDLB should be 0.5%");
+        assertEq(protocolFeePercentage, 0.07 ether, "protocolFee should be 7%");
+        assertFalse(isEnabledPriorityLiquidation, "priority liquidation should be disabled");
+    }
+
+    function _verifySyrupIrmConfig(address irm) internal view {
+        (
+            int256 curveSteepness,
+            int256 adjustmentSpeed,
+            int256 targetUtilization,
+            int256 initialRateAtTarget,
+            int256 minRateAtTarget,
+            int256 maxRateAtTarget
+        ) = AdaptiveCurveIrm(irm).irmConfig();
+
+        assertEq(curveSteepness, 4 ether, "curveSteepness should be 4");
+        assertEq(adjustmentSpeed, 50 ether / int256(365 days), "adjustmentSpeed should be 50/year");
+        assertEq(targetUtilization, 0.9 ether, "targetUtilization should be 90%");
+        assertEq(initialRateAtTarget, 0.1 ether / int256(365 days), "initialRateAtTarget should be 10%/year");
+        assertEq(minRateAtTarget, 0.001 ether / int256(365 days), "minRateAtTarget should be 0.1%/year");
+        assertEq(maxRateAtTarget, 2 ether / int256(365 days), "maxRateAtTarget should be 200%/year");
     }
 
     function _verifyMintCeiling(address contractAddress, uint256 ceiling) internal view {
