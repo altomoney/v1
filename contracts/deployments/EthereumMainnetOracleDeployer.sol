@@ -285,13 +285,12 @@ library EthereumMainnetOracleDeployer {
     }
 
     function deploySyrupUsdcOracle(address owner) internal returns (address) {
-        // TODO: Ask risk parameters team for the correct initial ratio calculation
         uint256 usdcPerToken = IERC4626(SYRUPUSDC_MAINNET).convertToAssets(1e6) * 1005 / 1000; // +0.5%
 
         ERC4626RatioNode memory erc4626RatioNode = ERC4626RatioNode({
             initialRatio: usdcPerToken,
             initialTimestamp: block.timestamp,
-            maxYearlyGrowthRatioWad: 0.07 ether // 7% // TODO: Ask risk parameters team for the correct max yearly growth ratio
+            maxYearlyGrowthRatioWad: 0.12 ether // 12%
         });
 
         ChainlinkNode memory chainlinkNode = ChainlinkNode({
@@ -308,13 +307,12 @@ library EthereumMainnetOracleDeployer {
     }
 
     function deploySyrupUsdtOracle(address owner) internal returns (address) {
-        // TODO: Ask risk parameters team for the correct initial ratio calculation
         uint256 usdtPerToken = IERC4626(SYRUPUSDT_MAINNET).convertToAssets(1e6) * 1005 / 1000; // +0.5%
 
         ERC4626RatioNode memory erc4626RatioNode = ERC4626RatioNode({
             initialRatio: usdtPerToken,
             initialTimestamp: block.timestamp,
-            maxYearlyGrowthRatioWad: 0.07 ether // 7% // TODO: Ask risk parameters team for the correct max yearly growth ratio
+            maxYearlyGrowthRatioWad: 0.12 ether // 12%
         });
 
         ChainlinkNode memory chainlinkNode = ChainlinkNode({
