@@ -611,16 +611,26 @@ library DeployAltoEthereumMainnet {
             IMarketRegistry(input.contracts.marketRegistry).addBorrowMarket(report.market);
             AltoAdapter(payable(marketParams.altoAdapter)).approveContract(report.market);
         } else {
-            // Log transaction data for multisig submission
-            console.log("=== Pending Multisig Transaction ===");
-            console.log("Description: Add borrow market to registry");
-            console.log("Target:", input.contracts.marketRegistry);
-            console.logBytes(abi.encodeCall(IMarketRegistry.addBorrowMarket, (report.market)));
+            // Log timelock batch transaction data for multisig submission
+            // Multisig must call timelock.scheduleBatch() then timelock.executeBatch() after delay
+            address timelock = input.contracts.timelock;
+            uint256 minDelay = TimelockController(payable(timelock)).getMinDelay();
 
-            console.log("=== Pending Multisig Transaction ===");
-            console.log("Description: Approve market on AltoAdapter");
-            console.log("Target:", marketParams.altoAdapter);
-            console.logBytes(abi.encodeCall(AdapterContractApproval.approveContract, (report.market)));
+            address[] memory targets = new address[](2);
+            uint256[] memory values = new uint256[](2);
+            bytes[] memory payloads = new bytes[](2);
+
+            // Transaction 1: Add borrow market to registry
+            targets[0] = input.contracts.marketRegistry;
+            values[0] = 0;
+            payloads[0] = abi.encodeCall(IMarketRegistry.addBorrowMarket, (report.market));
+
+            // Transaction 2: Approve market on AltoAdapter
+            targets[1] = marketParams.altoAdapter;
+            values[1] = 0;
+            payloads[1] = abi.encodeCall(AdapterContractApproval.approveContract, (report.market));
+
+            _logTimelockBatchTransaction(timelock, targets, values, payloads, minDelay);
         }
 
         return report;
@@ -794,6 +804,54 @@ library DeployAltoEthereumMainnet {
 
         // Note: executeBatch is not called here because it requires waiting for the delay
         timelockContract.scheduleBatch(targets, values, payloads, bytes32(0), bytes32(0), params.timelockDelay);
+    }
+
+    /// @dev Logs timelock batch transaction data for multisig submission
+    /// @param timelock The timelock controller address
+    /// @param targets Array of target contract addresses
+    /// @param values Array of ETH values (typically all zeros)
+    /// @param payloads Array of calldata for each target
+    /// @param delay The timelock delay (use timelock.getMinDelay())
+    function _logTimelockBatchTransaction(
+        address timelock,
+        address[] memory targets,
+        uint256[] memory values,
+        bytes[] memory payloads,
+        uint256 delay
+    ) internal view {
+        bytes32 predecessor = bytes32(0);
+        bytes32 salt = bytes32(0);
+
+        // Generate scheduleBatch calldata
+        bytes memory scheduleBatchData =
+            abi.encodeCall(TimelockController.scheduleBatch, (targets, values, payloads, predecessor, salt, delay));
+
+        // Generate executeBatch calldata
+        bytes memory executeBatchData =
+            abi.encodeCall(TimelockController.executeBatch, (targets, values, payloads, predecessor, salt));
+
+        console.log("=== Pending Timelock Batch Transaction ===");
+        console.log("Timelock:", timelock);
+        console.log("Delay (seconds):", delay);
+        console.log("Number of operations:", targets.length);
+        console.log("");
+        console.log("--- Batch Contents ---");
+        for (uint256 i = 0; i < targets.length; i++) {
+            console.log("Operation", i);
+            console.log("  target:", targets[i]);
+            console.log("  value:", values[i]);
+            console.log("  payload:");
+            console.logBytes(payloads[i]);
+        }
+        console.log("");
+        console.log("--- Step 1: ScheduleBatch (submit to multisig now) ---");
+        console.log("Call timelock at:", timelock);
+        console.logBytes(scheduleBatchData);
+        console.log("");
+        console.log("--- Step 2: ExecuteBatch (submit to multisig after delay) ---");
+        console.log("Call timelock at:", timelock);
+        console.logBytes(executeBatchData);
+        console.log("==========================================");
     }
 
     function _deployPost(AltoEthereumMainnetParams memory params, AltoEthereumMainnetInput memory input)
