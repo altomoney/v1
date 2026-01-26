@@ -22,14 +22,8 @@ address constant CBBTC_MAINNET = 0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf;
 address constant SUSDE_MAINNET = 0x9D39A5DE30e57443BfF2A8307A4256c8797A3497;
 // USDC on mainnet
 address constant USDC_MAINNET = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
-// PAXG on mainnet
-address constant PAXG_MAINNET = 0x45804880De22913dAFE09f4980848ECE6EcbAf78;
-// sUSDs on mainnet
-address constant SUSDS_MAINNET = 0xa3931d71877C0E7a3148CB7Eb4463524FEc27fbD;
 // SyrupUSDC on mainnet
 address constant SYRUPUSDC_MAINNET = 0x80ac24aA929eaF5013f6436cdA2a7ba190f5Cc0b;
-// SyrupUSDT on mainnet
-address constant SYRUPUSDT_MAINNET = 0x356B8d89c1e1239Cbbb9dE4815c39A1474d5BA7D;
 
 // Chainlink feeds
 // Standard Chainlink ETH/USD feed
@@ -40,14 +34,8 @@ address constant CHAINLINK_BTC_USD_PRICE_FEED = 0xF4030086522a5bEEa4988F8cA5B36d
 address constant CHAINLINK_WBTC_BTC_RATIO_FEED = 0xfdFD9C85aD200c506Cf9e21F1FD8dd01932FBB23;
 // Standard Chainlink USDe/USD feed
 address constant CHAINLINK_USDE_USD_PRICE_FEED = 0xa569d910839Ae8865Da8F8e70FfFb0cBA869F961;
-// Standard Chainlink PAXG/USD feed
-address constant CHAINLINK_PAXG_USD_PRICE_FEED = 0x9944D86CEB9160aF5C5feB251FD671923323f8C3;
-// Standard Chainlink USDS/USD feed
-address constant CHAINLINK_USDS_USD_PRICE_FEED = 0xfF30586cD0F29eD462364C7e81375FC0C71219b1;
 // Standard Chainlink USDC/USD feed
 address constant CHAINLINK_USDC_USD_PRICE_FEED = 0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6;
-// Standard Chainlink USDT/USD feed
-address constant CHAINLINK_USDT_USD_PRICE_FEED = 0x3E7d1eAB13ad0104d2750B8863b489D65364e32D;
 
 // Miscellaneous
 // 0x.org swap target for Ethereum mainnet
