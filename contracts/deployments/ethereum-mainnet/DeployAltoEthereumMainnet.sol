@@ -22,6 +22,7 @@ import {
     SUSDE_MAINNET,
     SYRUPUSDC_MAINNET,
     PAXG_MAINNET,
+    SYRUPUSDT_MAINNET,
     USDC_MAINNET,
     LAYERZERO_ENDPOINT_MAINNET,
     ZEROX_SWAP_TARGET_MAINNET,
@@ -488,6 +489,48 @@ library DeployAltoEthereumMainnet {
                         ltvForCompleteLiquidation: 0.93 ether, // 93%
                         dynamicBonusFeeDecaySteepness: 5 ether, // 5
                         liquidationBaseFee: 0.05 ether, // 5%
+                        minPenaltyPercentage: 0.005 ether, // 0.5%
+                        protocolFeePercentage: 0.07 ether, // 7%
+                        isEnabledPriorityLiquidation: false,
+                        disablePriorityLiquidationAbovePositionLtv: 0,
+                        priorityLiquidationGracePeriod: 0,
+                        taggerLiquidationGracePeriod: 0,
+                        liquidationWindowTag: 0
+                    }),
+                    freezer: params.freezer,
+                    swapRouter: ZEROX_SWAP_TARGET_MAINNET
+                }),
+                input,
+                params,
+                params.useUnsafeUpgrades,
+                params.deployerHasOwnership
+            );
+        } else if (params.phase == DeploymentPhase.BORROW_MARKET_SYRUP_USDT) {
+            input.contracts.syrupUsdtBorrowMarket = _deployBorrowMarket(
+                DeployBorrowMarketParams({
+                    owner: input.contracts.timelock,
+                    dusd: input.contracts.dusd,
+                    altoAdapter: input.contracts.altoAdapter,
+                    feeRecipient: input.contracts.feeRecipient,
+                    collateralToken: SYRUPUSDT_MAINNET,
+                    oracleAsset: EthereumMainnetLendingOracleAsset.SYRUPUSDT,
+                    irmConfig: AdaptiveCurveIrm.AdaptiveCurveIrmConfig({
+                        curveSteepness: 4 ether,
+                        adjustmentSpeed: 50 ether / int256(365 days),
+                        targetUtilization: 0.9 ether, // 90%
+                        initialRateAtTarget: 0.1 ether / int256(365 days), // 10%
+                        minRateAtTarget: 0.001 ether / int256(365 days), // 0.1%
+                        maxRateAtTarget: 2 ether / int256(365 days) // 200%
+                    }),
+                    maxLtv: 0.8 ether, // 80%
+                    initialBorrowOpeningFee: 0.002 ether, // 0.2%
+                    supplyCapAssets: 0,
+                    liquidationConfig: LiquidationConfiguration({
+                        maxLiquidationLtv: 0.85 ether, // 85%
+                        dynamicBonusFeeStart: 0.01 ether, // 1%
+                        ltvForCompleteLiquidation: 0.93 ether, // 93%
+                        dynamicBonusFeeDecaySteepness: 5 ether, // 5
+                        liquidationBaseFee: 0.06 ether, // 6%
                         minPenaltyPercentage: 0.005 ether, // 0.5%
                         protocolFeePercentage: 0.07 ether, // 7%
                         isEnabledPriorityLiquidation: false,

@@ -409,6 +409,21 @@ contract DeployAltoEthereumMainnetTest is Test {
         _verifySyrupBorrowMarketParams(input.contracts.syrupUsdcBorrowMarket);
     }
 
+    function test_deployPhase_BORROW_MARKET_SYRUP_USDT() public {
+        _deployPrerequisites(DeploymentPhase.BORROW_MARKET_SYRUP_USDT);
+
+        params.phase = DeploymentPhase.BORROW_MARKET_SYRUP_USDT;
+        params.deployerHasOwnership = false;
+        input = DeployAltoEthereumMainnet.deploy(params, input);
+
+        // Manual post-deployment steps (requires owner)
+        MarketRegistry(input.contracts.marketRegistry).addBorrowMarket(input.contracts.syrupUsdtBorrowMarket.market);
+        AltoAdapter(payable(input.contracts.altoAdapter)).approveContract(input.contracts.syrupUsdtBorrowMarket.market);
+
+        _verifyMarketContracts(input.contracts.syrupUsdtBorrowMarket);
+        _verifySyrupBorrowMarketParams(input.contracts.syrupUsdtBorrowMarket);
+    }
+
     function _verifySyrupBorrowMarketParams(MarketContracts memory market) internal view {
         // Verify maxLtv
         assertEq(IMarket(market.market).maxLtv(), 0.8 ether, "maxLtv should be 80%");

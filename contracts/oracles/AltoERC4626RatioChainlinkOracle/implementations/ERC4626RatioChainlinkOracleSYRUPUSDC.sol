@@ -3,15 +3,7 @@ pragma solidity ^0.8.7;
 
 import {AltoERC4626RatioChainlinkOracle} from "../AltoERC4626RatioChainlinkOracle.sol";
 import {ERC4626RatioNode, ChainlinkNode} from "@alto/oracles/interfaces/IModuleNode.sol";
-
-/// @title ISyrupAsset
-/// @notice Interface for Syrup assets that support exit asset conversion
-interface ISyrupAsset {
-    /// @notice Converts a given amount of shares to the equivalent exit assets
-    /// @param shares The amount of shares to convert
-    /// @return assets The equivalent amount of exit assets
-    function convertToExitAssets(uint256 shares) external view returns (uint256 assets);
-}
+import {ISyrupAsset} from "@alto/deployments/interfaces/ISyrupAsset.sol";
 
 /// @title ERC4626RatioChainlinkOracleSYRUPUSDC
 /// @notice An oracle that gets the price of SyrupUSDC using the ERC4626 ratio and a Chainlink feed
