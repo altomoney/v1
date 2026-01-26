@@ -30,6 +30,7 @@ import {
     getMulticallOwnerAddresses
 } from "@alto/deployments/ethereum-mainnet/Constants.sol";
 import {AltoAdapter} from "@alto/utils/AltoAdapter.sol";
+import {AdapterContractApproval} from "@alto/utils/AdapterContractApproval.sol";
 import {AdaptiveCurveIrm} from "@alto/lending/irm/AdaptiveCurveIrm.sol";
 import {LiquidationConfiguration} from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";
 import {IDUSD} from "@alto/tokens/interfaces/IDUSD.sol";
@@ -61,6 +62,7 @@ import {
     Contracts
 } from "@alto/deployments/ethereum-mainnet/IDeployAltoEthereumMainnet.sol";
 import {AccessMode} from "@alto/usm/interfaces/IUsm.sol";
+import {console} from "forge-std/console.sol";
 
 library DeployAltoEthereumMainnet {
     function deploy(AltoEthereumMainnetParams memory params, AltoEthereumMainnetInput memory input)
@@ -286,7 +288,8 @@ library DeployAltoEthereumMainnet {
                 }),
                 input,
                 params,
-                params.useUnsafeUpgrades
+                params.useUnsafeUpgrades,
+                params.deployerHasOwnership
             );
         } else if (params.phase == DeploymentPhase.BORROW_MARKET_CBBTC) {
             input.contracts.cbbtcBorrowMarket = _deployBorrowMarket(
@@ -326,7 +329,8 @@ library DeployAltoEthereumMainnet {
                 }),
                 input,
                 params,
-                params.useUnsafeUpgrades
+                params.useUnsafeUpgrades,
+                params.deployerHasOwnership
             );
         } else if (params.phase == DeploymentPhase.BORROW_MARKET_SUSDE) {
             input.contracts.susdeBorrowMarket = _deployBorrowMarket(
@@ -366,7 +370,8 @@ library DeployAltoEthereumMainnet {
                 }),
                 input,
                 params,
-                params.useUnsafeUpgrades
+                params.useUnsafeUpgrades,
+                params.deployerHasOwnership
             );
         } else if (params.phase == DeploymentPhase.PERMISSIONED_USM) {
             input = _deployUsm(
@@ -446,7 +451,8 @@ library DeployAltoEthereumMainnet {
                 }),
                 input,
                 params,
-                params.useUnsafeUpgrades
+                params.useUnsafeUpgrades,
+                params.deployerHasOwnership
             );
         } else if (params.phase == DeploymentPhase.BORROW_MARKET_SUSDS) {
             input.contracts.susdsBorrowMarket = _deployBorrowMarket(
@@ -486,7 +492,8 @@ library DeployAltoEthereumMainnet {
                 }),
                 input,
                 params,
-                params.useUnsafeUpgrades
+                params.useUnsafeUpgrades,
+                params.deployerHasOwnership
             );
         } else if (params.phase == DeploymentPhase.BORROW_MARKET_SYRUP_USDC) {
             input.contracts.syrupUsdcBorrowMarket = _deployBorrowMarket(
@@ -526,7 +533,8 @@ library DeployAltoEthereumMainnet {
                 }),
                 input,
                 params,
-                params.useUnsafeUpgrades
+                params.useUnsafeUpgrades,
+                params.deployerHasOwnership
             );
         } else if (params.phase == DeploymentPhase.BORROW_MARKET_SYRUP_USDT) {
             input.contracts.syrupUsdtBorrowMarket = _deployBorrowMarket(
@@ -566,7 +574,8 @@ library DeployAltoEthereumMainnet {
                 }),
                 input,
                 params,
-                params.useUnsafeUpgrades
+                params.useUnsafeUpgrades,
+                params.deployerHasOwnership
             );
         } else {
             revert("Invalid phase");
@@ -699,7 +708,8 @@ library DeployAltoEthereumMainnet {
         DeployBorrowMarketParams memory marketParams,
         AltoEthereumMainnetInput memory input,
         AltoEthereumMainnetParams memory params,
-        bool useUnsafeUpgrades
+        bool useUnsafeUpgrades,
+        bool deployerHasOwnership
     ) internal returns (MarketContracts memory) {
         // Deploy batch - deploys all market components in single constructor (including Oracle and IRM)
         MarketContracts memory report = BorrowMarketBatch.deploy(
@@ -722,13 +732,22 @@ library DeployAltoEthereumMainnet {
             })
         );
 
-        // NOTE: Registry add + adapter approval removed here because deployer no longer has ownership to perform them.
-        // Execute those steps separately under the owner/timelock context after deployment.
+        if (deployerHasOwnership) {
+            // Execute directly when deployer has ownership
+            IMarketRegistry(input.contracts.marketRegistry).addBorrowMarket(report.market);
+            AltoAdapter(payable(marketParams.altoAdapter)).approveContract(report.market);
+        } else {
+            // Log transaction data for multisig submission
+            console.log("=== Pending Multisig Transaction ===");
+            console.log("Description: Add borrow market to registry");
+            console.log("Target:", input.contracts.marketRegistry);
+            console.logBytes(abi.encodeCall(IMarketRegistry.addBorrowMarket, (report.market)));
 
-        // IMarketRegistry(input.contracts.marketRegistry).addBorrowMarket(report.market);
-
-        // // Approve market on AltoAdapter (requires adapter ownership)
-        // AltoAdapter(payable(marketParams.altoAdapter)).approveContract(report.market);
+            console.log("=== Pending Multisig Transaction ===");
+            console.log("Description: Approve market on AltoAdapter");
+            console.log("Target:", marketParams.altoAdapter);
+            console.logBytes(abi.encodeCall(AdapterContractApproval.approveContract, (report.market)));
+        }
 
         return report;
     }

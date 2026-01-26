@@ -3,7 +3,7 @@ pragma solidity ^0.8.7;
 
 import {AltoERC4626RatioChainlinkOracle} from "../AltoERC4626RatioChainlinkOracle.sol";
 import {ERC4626RatioNode, ChainlinkNode} from "@alto/oracles/interfaces/IModuleNode.sol";
-import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
+import {ISyrupAsset} from "@alto/deployments/interfaces/ISyrupAsset.sol";
 
 /// @title ERC4626RatioChainlinkOracleSYRUPUSDC
 /// @notice An oracle that gets the price of SyrupUSDC using the ERC4626 ratio and a Chainlink feed
@@ -33,7 +33,7 @@ contract ERC4626RatioChainlinkOracleSYRUPUSDC is AltoERC4626RatioChainlinkOracle
     /// @inheritdoc AltoERC4626RatioChainlinkOracle
     function _getRatioOfWrappedAssetToUnderlyingAsset() internal view override returns (uint256) {
         // SYRUP_USDC vault has 6 decimals
-        return IERC4626(SYRUP_USDC).convertToAssets(1e6);
+        return ISyrupAsset(SYRUP_USDC).convertToExitAssets(1e6);
     }
 }
 

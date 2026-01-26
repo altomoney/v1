@@ -33,7 +33,8 @@ contract DeployAltoEthereumMainnetScript is Script {
             phase: PHASE_TO_DEPLOY,
             useUnsafeUpgrades: false,
             treasuryMultisig: 0xA1148A1b94262540994Cf9Aa431A13ad39764228,
-            updater: 0x7db7C14533a4186EcC07950F78835859320835Be
+            updater: 0x7db7C14533a4186EcC07950F78835859320835Be,
+            deployerHasOwnership: false // Deployer doesn't have ownership, log txs for multisig
         });
 
         input = DeployAltoEthereumMainnet.deploy(params, input);
