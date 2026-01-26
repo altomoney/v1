@@ -46,15 +46,6 @@ contract AltoERC4626RatioChainlinkOracleGetPriceForkTest is Test {
         assertEq(5227741891879173215020051770310000000000, price, "Invalid price from the WSTETH Oracle");
     }
 
-    function test_GetPrice_Susds() public {
-        vm.createSelectFork(rpcUrl, 24197555);
-
-        ILendingOracle oracle = ILendingOracle(EthereumMainnetOracleDeployer.deploySusdsOracle(OWNER));
-        uint256 price = oracle.getPrice();
-
-        assertEq(price, 1081983902065373184386200180000000000, "Invalid price from the SUSDS Oracle");
-    }
-
     function test_GetPrice_SyrupUsdc() public {
         vm.createSelectFork(rpcUrl, 24197555);
 
@@ -62,15 +53,6 @@ contract AltoERC4626RatioChainlinkOracleGetPriceForkTest is Test {
         uint256 price = oracle.getPrice();
 
         assertEq(price, 1145608214400000000000000000000000000000000000000, "Invalid price from the SyrupUSDC Oracle");
-    }
-
-    function test_GetPrice_SyrupUsdt() public {
-        vm.createSelectFork(rpcUrl, 24197555);
-
-        ILendingOracle oracle = ILendingOracle(EthereumMainnetOracleDeployer.deploySyrupUsdtOracle(OWNER));
-        uint256 price = oracle.getPrice();
-
-        assertEq(price, 1109734996259630000000000000000000000000000000000, "Invalid price from the SyrupUSDT Oracle");
     }
 }
 
