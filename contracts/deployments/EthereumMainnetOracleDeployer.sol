@@ -20,6 +20,7 @@ import {
     ERC4626RatioChainlinkOracleSUSDE,
     IERC4626
 } from "@alto/oracles/AltoERC4626RatioChainlinkOracle/implementations/ERC4626RatioChainlinkOracleSUSDE.sol";
+import {ISyrupAsset} from "@alto/deployments/interfaces/ISyrupAsset.sol";
 import {
     ERC4626RatioChainlinkOracleSUSDS
 } from "@alto/oracles/AltoERC4626RatioChainlinkOracle/implementations/ERC4626RatioChainlinkOracleSUSDS.sol";
@@ -285,7 +286,7 @@ library EthereumMainnetOracleDeployer {
     }
 
     function deploySyrupUsdcOracle(address owner) internal returns (address) {
-        uint256 usdcPerToken = IERC4626(SYRUPUSDC_MAINNET).convertToAssets(1e6) * 1005 / 1000; // +0.5%
+        uint256 usdcPerToken = ISyrupAsset(SYRUPUSDC_MAINNET).convertToExitAssets(1e6) * 1005 / 1000; // +0.5%
 
         ERC4626RatioNode memory erc4626RatioNode = ERC4626RatioNode({
             initialRatio: usdcPerToken,
@@ -307,7 +308,7 @@ library EthereumMainnetOracleDeployer {
     }
 
     function deploySyrupUsdtOracle(address owner) internal returns (address) {
-        uint256 usdtPerToken = IERC4626(SYRUPUSDT_MAINNET).convertToAssets(1e6) * 1005 / 1000; // +0.5%
+        uint256 usdtPerToken = ISyrupAsset(SYRUPUSDT_MAINNET).convertToExitAssets(1e6) * 1005 / 1000; // +0.5%
 
         ERC4626RatioNode memory erc4626RatioNode = ERC4626RatioNode({
             initialRatio: usdtPerToken,

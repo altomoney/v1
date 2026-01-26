@@ -85,6 +85,7 @@ struct AltoEthereumMainnetParams {
     bool useUnsafeUpgrades;
     address treasuryMultisig;
     address updater;
+    bool deployerHasOwnership;
 }
 
 struct DeployCoreParams {

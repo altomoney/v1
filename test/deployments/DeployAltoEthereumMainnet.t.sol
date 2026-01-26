@@ -80,7 +80,8 @@ contract DeployAltoEthereumMainnetTest is Test {
             phase: DeploymentPhase.CORE,
             useUnsafeUpgrades: true,
             treasuryMultisig: address(1), // TODO: Set to actual treasury multisig address
-            updater: MERKLE_ROOT_UPDATER
+            updater: MERKLE_ROOT_UPDATER,
+            deployerHasOwnership: true // Deployer has ownership in tests, execute directly
         });
     }
 
@@ -397,6 +398,7 @@ contract DeployAltoEthereumMainnetTest is Test {
         _deployPrerequisites(DeploymentPhase.BORROW_MARKET_SYRUP_USDC);
 
         params.phase = DeploymentPhase.BORROW_MARKET_SYRUP_USDC;
+        params.deployerHasOwnership = false;
         input = DeployAltoEthereumMainnet.deploy(params, input);
 
         // Manual post-deployment steps (requires owner)
@@ -411,6 +413,7 @@ contract DeployAltoEthereumMainnetTest is Test {
         _deployPrerequisites(DeploymentPhase.BORROW_MARKET_SYRUP_USDT);
 
         params.phase = DeploymentPhase.BORROW_MARKET_SYRUP_USDT;
+        params.deployerHasOwnership = false;
         input = DeployAltoEthereumMainnet.deploy(params, input);
 
         // Manual post-deployment steps (requires owner)

@@ -79,7 +79,8 @@ contract DeployDusdUsdcCustomPositionsTest is Test {
             phase: DeploymentPhase.CORE,
             useUnsafeUpgrades: true,
             treasuryMultisig: address(1),
-            updater: makeAddr("UPDATER")
+            updater: makeAddr("UPDATER"),
+            deployerHasOwnership: true
         });
 
         input = DeployAltoEthereumMainnet.deploy(params, input);
