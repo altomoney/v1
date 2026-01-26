@@ -210,6 +210,15 @@ SUSDE_LIQUIDATION_ENGINE=$(get_address ".contracts.susdeBorrowLiquidationEngine"
 SUSDE_LEVERAGE_SWAPPER=$(get_address ".contracts.susdeBorrowLeverageSwapper")
 SUSDE_LEVERAGE=$(get_address ".contracts.susdeBorrowLeverage")
 
+# SYRUP USDC Borrow Market contracts
+SYRUPUSDC_MARKET=$(get_address ".contracts.syrupUsdcBorrowMarket")
+SYRUPUSDC_MARKET_IMPL=$(get_address ".contracts.syrupUsdcBorrowMarketImplementation")
+SYRUPUSDC_MARKET_IRM=$(get_address ".contracts.syrupUsdcBorrowMarketIrm")
+SYRUPUSDC_MARKET_ORACLE=$(get_address ".contracts.syrupUsdcBorrowMarketOracle")
+SYRUPUSDC_LIQUIDATION_ENGINE=$(get_address ".contracts.syrupUsdcBorrowLiquidationEngine")
+SYRUPUSDC_LEVERAGE_SWAPPER=$(get_address ".contracts.syrupUsdcBorrowLeverageSwapper")
+SYRUPUSDC_LEVERAGE=$(get_address ".contracts.syrupUsdcBorrowLeverage")
+
 # Permissioned USM contracts
 PERMISSIONED_USM=$(get_address ".contracts.permissionedUsm")
 PERMISSIONED_USM_IMPL=$(get_address ".contracts.permissionedUsmImplementation")
@@ -287,6 +296,13 @@ echo "- SUSDE Borrow Market Oracle: $SUSDE_MARKET_ORACLE"
 echo "- SUSDE Borrow Liquidation Engine: $SUSDE_LIQUIDATION_ENGINE"
 echo "- SUSDE Borrow Leverage Swapper: $SUSDE_LEVERAGE_SWAPPER"
 echo "- SUSDE Borrow Leverage: $SUSDE_LEVERAGE"
+echo "- SYRUP USDC Borrow Market: $SYRUPUSDC_MARKET"
+echo "- SYRUP USDC Borrow Market Implementation: $SYRUPUSDC_MARKET_IMPL"
+echo "- SYRUP USDC Borrow Market IRM: $SYRUPUSDC_MARKET_IRM"
+echo "- SYRUP USDC Borrow Market Oracle: $SYRUPUSDC_MARKET_ORACLE"
+echo "- SYRUP USDC Borrow Liquidation Engine: $SYRUPUSDC_LIQUIDATION_ENGINE"
+echo "- SYRUP USDC Borrow Leverage Swapper: $SYRUPUSDC_LEVERAGE_SWAPPER"
+echo "- SYRUP USDC Borrow Leverage: $SYRUPUSDC_LEVERAGE"
 echo "- Permissioned USM: $PERMISSIONED_USM"
 echo "- Permissioned USM Implementation: $PERMISSIONED_USM_IMPL"
 echo "- Permissioned USM Fixed Price Strategy: $PERMISSIONED_USM_FIXED_PRICE_STRATEGY"
@@ -388,6 +404,15 @@ verify_contract "SusdeBorrowMarketOracle" "$SUSDE_MARKET_ORACLE" "contracts/orac
 verify_contract "SusdeBorrowLiquidationEngine" "$SUSDE_LIQUIDATION_ENGINE" "contracts/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol:DlbDcfPriorityLiquidationEngine"
 verify_contract "SusdeBorrowLeverageSwapper" "$SUSDE_LEVERAGE_SWAPPER" "contracts/lending/leverage/AltoLeverageSwapper.sol:AltoLeverageSwapper"
 verify_contract "SusdeBorrowLeverage" "$SUSDE_LEVERAGE" "contracts/lending/leverage/AltoLeverage.sol:AltoLeverage"
+
+# SYRUP USDC Borrow Market contracts
+verify_contract "SyrupUsdcBorrowMarket" "$SYRUPUSDC_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
+verify_contract "SyrupUsdcBorrowMarketImplementation" "$SYRUPUSDC_MARKET_IMPL" "contracts/lending/AltoBorrowMarket.sol:AltoBorrowMarket"
+verify_contract "SyrupUsdcBorrowMarketIRM" "$SYRUPUSDC_MARKET_IRM" "contracts/lending/irm/AdaptiveCurveIrm.sol:AdaptiveCurveIrm"
+verify_contract "SyrupUsdcBorrowMarketOracle" "$SYRUPUSDC_MARKET_ORACLE" "contracts/oracles/AltoERC4626RatioChainlinkOracle/implementations/ERC4626RatioChainlinkOracleSYRUPUSDC.sol:ERC4626RatioChainlinkOracleSYRUPUSDC"
+verify_contract "SyrupUsdcBorrowLiquidationEngine" "$SYRUPUSDC_LIQUIDATION_ENGINE" "contracts/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol:DlbDcfPriorityLiquidationEngine"
+verify_contract "SyrupUsdcBorrowLeverageSwapper" "$SYRUPUSDC_LEVERAGE_SWAPPER" "contracts/lending/leverage/AltoLeverageSwapper.sol:AltoLeverageSwapper"
+verify_contract "SyrupUsdcBorrowLeverage" "$SYRUPUSDC_LEVERAGE" "contracts/lending/leverage/AltoLeverage.sol:AltoLeverage"
 
 # Permissioned USM contracts
 verify_contract "PermissionedUsm" "$PERMISSIONED_USM" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
