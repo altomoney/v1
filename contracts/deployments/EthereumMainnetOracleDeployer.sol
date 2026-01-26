@@ -32,6 +32,7 @@ import {
     CHAINLINK_WBTC_BTC_RATIO_FEED,
     CHAINLINK_USDE_USD_PRICE_FEED,
     CHAINLINK_USDC_USD_PRICE_FEED,
+    CHAINLINK_PAXG_USD_PRICE_FEED,
     WSTETH_MAINNET,
     RETH_MAINNET,
     METH_STAKING_MAINNET,
@@ -48,7 +49,8 @@ enum EthereumMainnetLendingOracleAsset {
     tBTC,
     rETH,
     stETH,
-    SYRUPUSDC
+    SYRUPUSDC,
+    PAXG
 }
 
 library EthereumMainnetOracleDeployer {
@@ -71,6 +73,8 @@ library EthereumMainnetOracleDeployer {
             return deployWstEthOracle(owner);
         } else if (asset == EthereumMainnetLendingOracleAsset.SYRUPUSDC) {
             return deploySyrupUsdcOracle(owner);
+        } else if (asset == EthereumMainnetLendingOracleAsset.PAXG) {
+            return deployPaxgOracle(owner);
         }
 
         revert("Invalid asset");
@@ -250,5 +254,20 @@ library EthereumMainnetOracleDeployer {
 
         return
             address(new ERC4626RatioChainlinkOracleSYRUPUSDC(owner, SYRUPUSDC_MAINNET, erc4626RatioNode, chainlinkNode));
+    }
+
+    function deployPaxgOracle(address owner) internal returns (address) {
+        ChainlinkNode[] memory chainlinkNodes = new ChainlinkNode[](1);
+
+        chainlinkNodes[0] = ChainlinkNode({
+            feed: AggregatorV3Interface(CHAINLINK_PAXG_USD_PRICE_FEED),
+            direction: ConversionDirection.IN_TO_OUT, // PAXG to USD
+            stalePeriod: 86700, // 86700 seconds
+            inDecimals: 18, // PAXG decimals
+            outDecimals: 36, // LENDING_ORACLE_PRICE_PRECISION + DUSD decimals - PAXG decimals
+            feedDecimals: 8
+        });
+
+        return address(new AltoMultiChainlinkLendingOracle(owner, chainlinkNodes));
     }
 }
