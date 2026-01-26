@@ -23,6 +23,7 @@ import {
     SYRUPUSDC_MAINNET,
     PAXG_MAINNET,
     SYRUPUSDT_MAINNET,
+    SUSDS_MAINNET,
     USDC_MAINNET,
     LAYERZERO_ENDPOINT_MAINNET,
     ZEROX_SWAP_TARGET_MAINNET,
@@ -541,6 +542,48 @@ library DeployAltoEthereumMainnet {
                     }),
                     freezer: params.freezer,
                     swapRouter: ODOS_ROUTER_V3_MAINNET
+                }),
+                input,
+                params,
+                params.useUnsafeUpgrades,
+                params.deployerHasOwnership
+            );
+        } else if (params.phase == DeploymentPhase.BORROW_MARKET_SUSDS) {
+            input.contracts.susdsBorrowMarket = _deployBorrowMarket(
+                DeployBorrowMarketParams({
+                    owner: input.contracts.timelock,
+                    dusd: input.contracts.dusd,
+                    altoAdapter: input.contracts.altoAdapter,
+                    feeRecipient: input.contracts.feeRecipient,
+                    collateralToken: SUSDS_MAINNET,
+                    oracleAsset: EthereumMainnetLendingOracleAsset.SUSDS,
+                    irmConfig: AdaptiveCurveIrm.AdaptiveCurveIrmConfig({
+                        curveSteepness: 0, // TODO
+                        adjustmentSpeed: 0, // TODO
+                        targetUtilization: 0, // TODO
+                        initialRateAtTarget: 0, // TODO
+                        minRateAtTarget: 0, // TODO
+                        maxRateAtTarget: 0 // TODO
+                    }),
+                    maxLtv: 0, // TODO
+                    initialBorrowOpeningFee: 0, // TODO
+                    supplyCapAssets: 0, // TODO
+                    liquidationConfig: LiquidationConfiguration({
+                        maxLiquidationLtv: 0, // TODO
+                        dynamicBonusFeeStart: 0, // TODO
+                        ltvForCompleteLiquidation: 0, // TODO
+                        dynamicBonusFeeDecaySteepness: 0, // TODO
+                        liquidationBaseFee: 0, // TODO
+                        minPenaltyPercentage: 0, // TODO
+                        protocolFeePercentage: 0, // TODO
+                        isEnabledPriorityLiquidation: false,
+                        disablePriorityLiquidationAbovePositionLtv: 0,
+                        priorityLiquidationGracePeriod: 0,
+                        taggerLiquidationGracePeriod: 0,
+                        liquidationWindowTag: 0
+                    }),
+                    freezer: params.freezer,
+                    swapRouter: ZEROX_SWAP_TARGET_MAINNET
                 }),
                 input,
                 params,

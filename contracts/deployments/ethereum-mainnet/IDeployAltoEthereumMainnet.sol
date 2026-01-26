@@ -23,7 +23,8 @@ enum DeploymentPhase {
     REFERRAL_ADAPTER, // Phase 14: Deploy AltoReferralWhitelistAdapter
     BORROW_MARKET_SYRUP_USDC, // Phase 15: Deploy syrupUSDC Borrow Market
     BORROW_MARKET_PAXG, // Phase 16: Deploy PAXG Borrow Market
-    BORROW_MARKET_SYRUP_USDT // Phase 17: Deploy syrupUSDT Borrow Market
+    BORROW_MARKET_SYRUP_USDT, // Phase 17: Deploy syrupUSDT Borrow Market
+    BORROW_MARKET_SUSDS // Phase 18: Deploy sUSDS Borrow Market
 }
 
 struct MarketContracts {
@@ -68,6 +69,7 @@ struct Contracts {
     MarketContracts syrupUsdcBorrowMarket;
     MarketContracts paxgBorrowMarket;
     MarketContracts syrupUsdtBorrowMarket;
+    MarketContracts susdsBorrowMarket;
     UsmContracts permissionedUsm;
     UsmContracts permissionlessUsm;
 }
