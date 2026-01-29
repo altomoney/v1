@@ -15,7 +15,10 @@ uint256 constant DEPLOYMENT_ID_TO_LOAD = 1765364975;
 string constant OUTPUT_DIR = "./contracts/deployments/ethereum-mainnet/output";
 
 contract DeployNewLeverageSwapper is Script {
+    // SyrupUSDC Borrow Leverage contract address
     address constant SYRUP_USDC_BORROW_LEVERAGE = 0xA30Fbc6847e27F795C33C8e298AaD9136A08DA87;
+    // Old swapper address to remove whitelist from
+    address constant OLD_SWAPPER = 0xa22baCC5bc9C1011854AFbE9A9CC2BEeBEFe5238;
 
     function run() public {
         address timelock = _loadTimelock();
@@ -24,6 +27,7 @@ contract DeployNewLeverageSwapper is Script {
         console.log("=== Deployment Parameters ===");
         console.log("Timelock:", timelock);
         console.log("Leverage contract:", SYRUP_USDC_BORROW_LEVERAGE);
+        console.log("Old swapper (to remove whitelist):", OLD_SWAPPER);
         console.log("ODOS Router:", ODOS_ROUTER_V3_MAINNET);
         console.log("");
 
@@ -63,20 +67,25 @@ contract DeployNewLeverageSwapper is Script {
         return vm.parseJsonAddress(json, ".contracts.timelock");
     }
 
-    /// @dev Logs timelock transaction data for calling setSwapper on the leverage contract
+    /// @dev Logs timelock transaction data for swapper migration
     /// @param timelock The timelock controller address
     /// @param newSwapper The new swapper address to set
     function _logTimelockSetSwapperTransaction(address timelock, address newSwapper) internal view {
         uint256 minDelay = TimelockController(payable(timelock)).getMinDelay();
 
-        address[] memory targets = new address[](1);
-        uint256[] memory values = new uint256[](1);
-        bytes[] memory payloads = new bytes[](1);
+        address[] memory targets = new address[](2);
+        uint256[] memory values = new uint256[](2);
+        bytes[] memory payloads = new bytes[](2);
 
-        // Transaction: Call setSwapper on leverage contract
+        // Transaction 0: Call setSwapper on leverage contract with new swapper
         targets[0] = SYRUP_USDC_BORROW_LEVERAGE;
         values[0] = 0;
         payloads[0] = abi.encodeCall(AltoLeverage.setSwapper, (IAltoLeverageSwapper(newSwapper)));
+
+        // Transaction 1: Remove leverage from old swapper whitelist
+        targets[1] = OLD_SWAPPER;
+        values[1] = 0;
+        payloads[1] = abi.encodeCall(IAltoLeverageSwapper.setWhitelisted, (SYRUP_USDC_BORROW_LEVERAGE, false));
 
         bytes32 predecessor = bytes32(0);
         bytes32 salt = bytes32(0);
@@ -87,18 +96,25 @@ contract DeployNewLeverageSwapper is Script {
         bytes memory executeBatchData =
             abi.encodeCall(TimelockController.executeBatch, (targets, values, payloads, predecessor, salt));
 
-        console.log("=== Step 4: Timelock Batch Transaction for setSwapper ===");
+        console.log("=== Step 4: Timelock Batch Transaction for Swapper Migration ===");
         console.log("Timelock:", timelock);
         console.log("Delay (seconds):", minDelay);
         console.log("Number of operations:", targets.length);
         console.log("");
 
         console.log("--- Batch Contents ---");
-        console.log("Operation 0: setSwapper on AltoLeverage");
+        console.log("Operation 0: setSwapper on AltoLeverage (set new swapper)");
         console.log("  target:", targets[0]);
         console.log("  value:", values[0]);
-        console.log("  payload (setSwapper):");
+        console.log("  payload:");
         console.logBytes(payloads[0]);
+        console.log("");
+
+        console.log("Operation 1: setWhitelisted on old swapper (remove leverage whitelist)");
+        console.log("  target:", targets[1]);
+        console.log("  value:", values[1]);
+        console.log("  payload:");
+        console.logBytes(payloads[1]);
         console.log("");
 
         console.log("--- Step 4a: ScheduleBatch (submit to multisig now) ---");
