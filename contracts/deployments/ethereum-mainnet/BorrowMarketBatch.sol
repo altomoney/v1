@@ -35,7 +35,7 @@ struct BorrowMarketBatchParams {
     uint256 initialBorrowOpeningFee;
     uint128 supplyCapAssets;
     LiquidationConfiguration liquidationConfig;
-    address zeroXSwapTarget;
+    address swapRouter;
     address freezer;
     bool useUnsafeUpgrades;
 }
@@ -92,7 +92,7 @@ library BorrowMarketBatch {
 
         // Deploy leverage components with deployer as owner temporarily to allow configuration
         // owner will be transferred to _params.owner after configuration
-        address leverageSwapper = address(new AltoLeverageSwapper(_params.deployer, _params.zeroXSwapTarget));
+        address leverageSwapper = address(new AltoLeverageSwapper(_params.deployer, _params.swapRouter));
         address leverage = address(new AltoLeverage(leverageSwapper, _params.deployer));
 
         // Configure leverage components (requires ownership)

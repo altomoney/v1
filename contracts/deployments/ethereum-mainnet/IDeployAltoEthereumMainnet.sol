@@ -107,6 +107,7 @@ struct DeployBorrowMarketParams {
     uint128 supplyCapAssets; // Supply cap in assets
     LiquidationConfiguration liquidationConfig; // Liquidation configuration
     address freezer; // Pauser/Freezer Multisig address
+    address swapRouter; // swap router address
 }
 
 struct DeployUsmParams {
@@ -136,4 +137,5 @@ struct DeployMintMarketParams {
     uint256 debtCeiling; // Debt ceiling
     LiquidationConfiguration liquidationConfig; // Liquidation configuration
     address freezer; // Pauser/Freezer Multisig address
+    address swapRouter; // swap router address
 }
