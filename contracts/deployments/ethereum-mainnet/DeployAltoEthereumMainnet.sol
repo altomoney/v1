@@ -24,6 +24,7 @@ import {
     USDC_MAINNET,
     LAYERZERO_ENDPOINT_MAINNET,
     ZEROX_SWAP_TARGET_MAINNET,
+    ODOS_ROUTER_V3_MAINNET,
     getMulticallOwnerAddresses
 } from "@alto/deployments/ethereum-mainnet/Constants.sol";
 import {AltoAdapter} from "@alto/utils/AltoAdapter.sol";
@@ -109,7 +110,8 @@ library DeployAltoEthereumMainnet {
                         taggerLiquidationGracePeriod: 0,
                         liquidationWindowTag: 0
                     }),
-                    freezer: params.freezer
+                    freezer: params.freezer,
+                    swapRouter: ZEROX_SWAP_TARGET_MAINNET
                 }),
                 input,
                 params,
@@ -142,7 +144,8 @@ library DeployAltoEthereumMainnet {
                         taggerLiquidationGracePeriod: 0,
                         liquidationWindowTag: 0
                     }),
-                    freezer: params.freezer
+                    freezer: params.freezer,
+                    swapRouter: ZEROX_SWAP_TARGET_MAINNET
                 }),
                 input,
                 params,
@@ -175,7 +178,8 @@ library DeployAltoEthereumMainnet {
                         taggerLiquidationGracePeriod: 0,
                         liquidationWindowTag: 0
                     }),
-                    freezer: params.freezer
+                    freezer: params.freezer,
+                    swapRouter: ZEROX_SWAP_TARGET_MAINNET
                 }),
                 input,
                 params,
@@ -208,7 +212,8 @@ library DeployAltoEthereumMainnet {
                         taggerLiquidationGracePeriod: 0,
                         liquidationWindowTag: 0
                     }),
-                    freezer: params.freezer
+                    freezer: params.freezer,
+                    swapRouter: ZEROX_SWAP_TARGET_MAINNET
                 }),
                 input,
                 params,
@@ -241,7 +246,8 @@ library DeployAltoEthereumMainnet {
                         taggerLiquidationGracePeriod: 0,
                         liquidationWindowTag: 0
                     }),
-                    freezer: params.freezer
+                    freezer: params.freezer,
+                    swapRouter: ZEROX_SWAP_TARGET_MAINNET
                 }),
                 input,
                 params,
@@ -281,7 +287,8 @@ library DeployAltoEthereumMainnet {
                         taggerLiquidationGracePeriod: 0,
                         liquidationWindowTag: 0
                     }),
-                    freezer: params.freezer
+                    freezer: params.freezer,
+                    swapRouter: ZEROX_SWAP_TARGET_MAINNET
                 }),
                 input,
                 params,
@@ -322,7 +329,8 @@ library DeployAltoEthereumMainnet {
                         taggerLiquidationGracePeriod: 0,
                         liquidationWindowTag: 0
                     }),
-                    freezer: params.freezer
+                    freezer: params.freezer,
+                    swapRouter: ZEROX_SWAP_TARGET_MAINNET
                 }),
                 input,
                 params,
@@ -363,7 +371,8 @@ library DeployAltoEthereumMainnet {
                         taggerLiquidationGracePeriod: 0,
                         liquidationWindowTag: 0
                     }),
-                    freezer: params.freezer
+                    freezer: params.freezer,
+                    swapRouter: ZEROX_SWAP_TARGET_MAINNET
                 }),
                 input,
                 params,
@@ -444,7 +453,8 @@ library DeployAltoEthereumMainnet {
                         taggerLiquidationGracePeriod: 0,
                         liquidationWindowTag: 0
                     }),
-                    freezer: params.freezer
+                    freezer: params.freezer,
+                    swapRouter: ODOS_ROUTER_V3_MAINNET
                 }),
                 input,
                 params,
@@ -558,7 +568,7 @@ library DeployAltoEthereumMainnet {
                 debtCeiling: marketParams.debtCeiling,
                 liquidationConfig: marketParams.liquidationConfig,
                 minterCeiling: minterCeiling,
-                zeroXSwapTarget: ZEROX_SWAP_TARGET_MAINNET,
+                swapRouter: marketParams.swapRouter,
                 freezer: marketParams.freezer,
                 useUnsafeUpgrades: useUnsafeUpgrades
             })
@@ -600,7 +610,7 @@ library DeployAltoEthereumMainnet {
                 initialBorrowOpeningFee: marketParams.initialBorrowOpeningFee,
                 supplyCapAssets: marketParams.supplyCapAssets,
                 liquidationConfig: marketParams.liquidationConfig,
-                zeroXSwapTarget: ZEROX_SWAP_TARGET_MAINNET,
+                swapRouter: marketParams.swapRouter,
                 freezer: marketParams.freezer,
                 useUnsafeUpgrades: useUnsafeUpgrades
             })
