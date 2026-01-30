@@ -206,19 +206,10 @@ contract AltoMintMarket is AltoBaseMarket {
         }
     }
 
-    /// @notice Claims the interest and fees from the mint market by minting the borrow token to the fee recipient
-    /// @param interest The amount of interest to claim
-    /// @dev If interest is 0, it will claim all the interest and fees
+    /// @dev Internal function to claim interest and fees
+    /// @param interest The amount of interest to claim (0 means claim all)
     /// @return The amount of interest and fees claimed
-    function claimInterest(uint256 interest) external whenNotPaused returns (uint256) {
-        if (feeRecipient == address(0) || interest > claimableFeesAssets) {
-            revert AltoBaseMarketInvalidInput();
-        }
-
-        if (msg.sender != owner() && msg.sender != feeRecipient) {
-            revert AltoBaseMarketUnauthorized();
-        }
-
+    function _claimInterest(uint256 interest) internal returns (uint256) {
         if (interest == 0) {
             interest = claimableFeesAssets;
         }
@@ -229,5 +220,49 @@ contract AltoMintMarket is AltoBaseMarket {
         emit InterestClaimed(interest);
 
         return interest;
+    }
+
+    /// @notice Claims the interest and fees from the mint market by minting the borrow token to the fee recipient
+    /// @param interest The amount of interest to claim
+    /// @dev If interest is 0, it will claim all the interest and fees
+    /// @return The amount of interest and fees claimed
+    function claimInterest(uint256 interest) public whenNotPaused returns (uint256) {
+        if (feeRecipient == address(0) || interest > claimableFeesAssets) {
+            revert AltoBaseMarketInvalidInput();
+        }
+
+        if (msg.sender != owner() && msg.sender != feeRecipient) {
+            revert AltoBaseMarketUnauthorized();
+        }
+
+        return _claimInterest(interest);
+    }
+
+    function _repay(uint256 assets, uint256 shares, address onBehalf) internal override returns (uint256, uint256) {
+        if (claimableFeesAssets > 0) {
+            _claimInterest(0);
+        }
+
+        // @dev there would still be some claimable fees assets left due to accrue interest being called
+        // but if markets are often, that won't be significant amount and hence repay won't revert due to accrual of unminted fees
+        // also, claiming of fees will be happening periodically
+
+        return super._repay(assets, shares, onBehalf);
+    }
+
+    function _liquidate(address borrower, bytes calldata callbackData, bytes calldata liquidationData)
+        internal
+        override
+        returns (uint256, uint256, uint256)
+    {
+        if (claimableFeesAssets > 0) {
+            _claimInterest(0);
+        }
+
+        // @dev there would still be some claimable fees assets left due to accrue interest being called
+        // but if markets are often, that won't be significant amount and hence liquidate won't revert due to accrual of unminted fees
+        // also, claiming of fees will be happening periodically
+
+        return super._liquidate(borrower, callbackData, liquidationData);
     }
 }
