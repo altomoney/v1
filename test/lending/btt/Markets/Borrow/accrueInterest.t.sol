@@ -66,9 +66,9 @@ contract AccrueInterestTestBorrow is MarketCommon {
     }
 
     function test_WhenInterestFeeIsZero() external whenMarketIsNotPaused whenIrmIsNotZeroAddress {
-        // Ensure interestFee is zero
+        // Ensure interestFee is zero, skip accrue to not interfere with test
         vm.prank(OWNER);
-        borrowMarket.setInterestFee(0);
+        borrowMarket.setInterestFee(0, true);
 
         uint256 totalSupplyAssetsBefore = market.totalSupply().assets;
         uint256 totalSupplySharesBefore = market.totalSupply().shares;
@@ -103,10 +103,10 @@ contract AccrueInterestTestBorrow is MarketCommon {
     }
 
     function test_WhenInterestFeeIsNonZero() external whenMarketIsNotPaused whenIrmIsNotZeroAddress {
-        // Set interestFee to 10% (0.1 * MATH_PRECISION)
+        // Set interestFee to 10% (0.1 * MATH_PRECISION), skip accrue to not interfere with test
         uint256 interestFee = 0.1 ether; // 10% in MATH_PRECISION
         vm.prank(OWNER);
-        borrowMarket.setInterestFee(interestFee);
+        borrowMarket.setInterestFee(interestFee, true);
 
         uint256 totalSupplyAssetsBefore = market.totalSupply().assets;
         uint256 totalSupplySharesBefore = market.totalSupply().shares;
