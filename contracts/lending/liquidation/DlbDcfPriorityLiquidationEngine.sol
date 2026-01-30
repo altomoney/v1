@@ -276,6 +276,9 @@ contract DlbDcfPriorityLiquidationEngine is AltoOwnable2Step, IDcfDlbPriorityLiq
         if (_liquidationConfiguration.maxLiquidationLtv < _maxLtv) {
             revert DcfDlbPriorityLiquidationEngineInvalidInput();
         }
+        // maxLiquidationLtv can be equal to ltvForCompleteLiquidation
+        // This eliminates the gradual liquidation mechanism where positions closer to maxLiquidationLtv
+        // receive partial liquidations and only severely underwater positions face complete liquidation.
         if (_liquidationConfiguration.ltvForCompleteLiquidation < _liquidationConfiguration.maxLiquidationLtv) {
             revert DcfDlbPriorityLiquidationEngineInvalidInput();
         }
