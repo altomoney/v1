@@ -7,6 +7,7 @@ import {MATH_PRECISION, FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {IIrm} from "./interfaces/IIrm.sol";
 import {Uint128Converter} from "./libraries/Uint128Converter.sol";
 import {AssetShareConversionMath} from "./libraries/AssetShareConversionMath.sol";
+import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 
 /// @title Alto Borrow Market
 /// @author GPM
@@ -141,9 +142,14 @@ contract AltoBorrowMarket is AltoBaseMarket {
 
     /// @notice Setter of the interest fee
     /// @param _newInterestFee The new interest fee
-    function setInterestFee(uint256 _newInterestFee) external onlyOwner {
+    /// @param _skipAccrueInterest Whether to skip accruing interest
+    function setInterestFee(uint256 _newInterestFee, bool _skipAccrueInterest) external onlyOwner {
         if (_newInterestFee > MATH_PRECISION) {
             revert AltoBorrowMarketInvalidInput();
+        }
+
+        if (!paused[PAUSE_TYPE] && !_skipAccrueInterest) {
+            _accrueInterest();
         }
 
         emit SetInterestFee(interestFee, _newInterestFee);
