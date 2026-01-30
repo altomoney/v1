@@ -242,13 +242,14 @@ contract DlbDcfPriorityLiquidationEngine is AltoOwnable2Step, IDcfDlbPriorityLiq
     /// @return bonusFee The bonus fee
     function _calculateBonusFee(uint256 liquidationPercentage) internal view returns (uint256) {
         // liquidationConfiguration.dynamicBonusFeeDecaySteepness is already checked in _validateLiquidationConfiguration
-        if (liquidationPercentage < MATH_PRECISION) {
-            int256 exponent = -int256(liquidationConfiguration.dynamicBonusFeeDecaySteepness * liquidationPercentage)
-                / MATH_PRECISION_INT;
-            return liquidationConfiguration.dynamicBonusFeeStart.multiplyWithPrecision(uint256(ExpLib.wExp(exponent)));
-        } else {
+        if (liquidationPercentage >= MATH_PRECISION) {
             return 0;
         }
+        uint256 base = MATH_PRECISION - liquidationPercentage;
+        // this is pow(base, liquidationConfiguration.dynamicBonusFeeDecaySteepness) considering the precision of the numbers
+        uint256 decay = (base ** liquidationConfiguration.dynamicBonusFeeDecaySteepness)
+            / (MATH_PRECISION ** liquidationConfiguration.dynamicBonusFeeDecaySteepness);
+        return liquidationConfiguration.dynamicBonusFeeStart.multiplyWithPrecision(decay);
     }
 
     /// @notice Calculates the new LTV after liquidation - how much LTV are we aiming for after liquidation

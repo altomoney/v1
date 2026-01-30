@@ -121,7 +121,8 @@ contract AltoBorrowMarketTest is Test {
         vm.startPrank(market.owner());
         IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).setPriorityLiquidator(bob, true);
         IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).setPriorityLiquidator(liquidator, true);
-        IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).setPriorityLiquidator(address(liquidateCallback), true);
+        IDcfDlbPriorityLiquidationEngine(market.liquidationEngine())
+            .setPriorityLiquidator(address(liquidateCallback), true);
         vm.stopPrank();
     }
 
@@ -425,7 +426,7 @@ contract AltoBorrowMarketTest is Test {
                 maxLiquidationLtv: 0.8 ether,
                 dynamicBonusFeeStart: 0.03 ether,
                 ltvForCompleteLiquidation: 0.9 ether,
-                dynamicBonusFeeDecaySteepness: 5 ether,
+                dynamicBonusFeeDecaySteepness: 5,
                 liquidationBaseFee: 0.05 ether,
                 minPenaltyPercentage: 0.01 ether,
                 protocolFeePercentage: 0.075 ether,
@@ -496,7 +497,7 @@ contract AltoBorrowMarketTest is Test {
                 maxLiquidationLtv: 0.8 ether,
                 dynamicBonusFeeStart: 0.03 ether,
                 ltvForCompleteLiquidation: 0.9 ether,
-                dynamicBonusFeeDecaySteepness: 5 ether,
+                dynamicBonusFeeDecaySteepness: 5,
                 liquidationBaseFee: 0.05 ether,
                 minPenaltyPercentage: 0.01 ether,
                 protocolFeePercentage: 0.075 ether,
@@ -566,7 +567,7 @@ contract AltoBorrowMarketTest is Test {
             maxLiquidationLtv: 0.8 ether,
             dynamicBonusFeeStart: 0.01 ether,
             ltvForCompleteLiquidation: 0.9 ether,
-            dynamicBonusFeeDecaySteepness: 5 ether,
+            dynamicBonusFeeDecaySteepness: 4,
             liquidationBaseFee: 0.05 ether,
             minPenaltyPercentage: 0.05 ether,
             protocolFeePercentage: 0 ether,
@@ -612,17 +613,17 @@ contract AltoBorrowMarketTest is Test {
         market.accrueInterest();
 
         (uint256 liquidatorFee, uint256 protocolFee) = market.calculateLiquidatorAndProtocolFee(bob, false);
-        assertEq(liquidatorFee, 0.05999984728677878 ether);
+        assertEq(liquidatorFee, 0.05 ether);
         assertEq(protocolFee, 0);
 
         vm.expectEmit();
         emit IMarketEvents.Liquidation(
             bob,
             externalLiquidator,
-            0.513044009445403087 ether,
+            0.478261931926172547 ether,
             protocolFee,
-            0.453044162158624307 ether,
-            283152493245491393478263,
+            0.428261931926172547 ether,
+            267663605263649138865608,
             0,
             0
         );
@@ -630,14 +631,14 @@ contract AltoBorrowMarketTest is Test {
         (uint256 collateralAmount, uint256 repayAmount, uint256 returnedProtocolFee) =
             market.liquidate(bob, hex"", hex"");
 
-        assertEq(collateralAmount, 0.513044009445403087 ether);
-        assertEq(repayAmount, 0.453044162158624307 ether);
+        assertEq(collateralAmount, 0.478261931926172547 ether);
+        assertEq(repayAmount, 0.428261931926172547 ether);
         assertEq(returnedProtocolFee, protocolFee);
 
         assertApproxEqAbs(
             collateralAmount - repayAmount,
             // because we have deposited 1 ether worth of collateral, we dont have apply percentage to it
-            liquidationConfiguration.dynamicBonusFeeStart + liquidationConfiguration.liquidationBaseFee,
+            liquidatorFee,
             0.0001 ether
         );
 
@@ -650,7 +651,7 @@ contract AltoBorrowMarketTest is Test {
                 maxLiquidationLtv: 0.8 ether,
                 dynamicBonusFeeStart: 0.01 ether,
                 ltvForCompleteLiquidation: 0.9 ether,
-                dynamicBonusFeeDecaySteepness: 5 ether,
+                dynamicBonusFeeDecaySteepness: 5,
                 liquidationBaseFee: 0.05 ether,
                 minPenaltyPercentage: 0.05 ether,
                 protocolFeePercentage: 0.075 ether,
@@ -1017,7 +1018,9 @@ contract AltoBorrowMarketTest is Test {
 
         // Try to liquidate as non-priority liquidator
         vm.startPrank(externalLiquidator);
-        vm.expectRevert(IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationUnauthorized.selector);
+        vm.expectRevert(
+            IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationUnauthorized.selector
+        );
         market.liquidate(bob, hex"", hex"");
         vm.stopPrank();
     }
@@ -1057,7 +1060,9 @@ contract AltoBorrowMarketTest is Test {
         IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).tagLiquidablePosition(bob, taggerLiquidator);
 
         // Try to liquidate immediately (before grace period)
-        vm.expectRevert(IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationUnauthorized.selector);
+        vm.expectRevert(
+            IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationUnauthorized.selector
+        );
         market.liquidate(bob, hex"", hex"");
         vm.stopPrank();
     }
@@ -1102,7 +1107,9 @@ contract AltoBorrowMarketTest is Test {
 
         // Try to liquidate as external liquidator
         vm.startPrank(externalLiquidator);
-        vm.expectRevert(IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationUnauthorized.selector);
+        vm.expectRevert(
+            IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationUnauthorized.selector
+        );
         market.liquidate(bob, hex"", hex"");
         vm.stopPrank();
     }
@@ -1143,8 +1150,9 @@ contract AltoBorrowMarketTest is Test {
 
         vm.warp(
             block.timestamp
-                + IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).liquidationConfiguration().liquidationWindowTag
-                + 1
+                + IDcfDlbPriorityLiquidationEngine(market.liquidationEngine())
+                .liquidationConfiguration()
+                .liquidationWindowTag + 1
         );
 
         vm.startPrank(alice);
@@ -1182,7 +1190,8 @@ contract AltoBorrowMarketTest is Test {
 
         market.addInterest(0.4 ether);
 
-        IDcfDlbPriorityLiquidationEngine liquidationEngine = IDcfDlbPriorityLiquidationEngine(market.liquidationEngine());
+        IDcfDlbPriorityLiquidationEngine liquidationEngine =
+            IDcfDlbPriorityLiquidationEngine(market.liquidationEngine());
 
         vm.startPrank(taggerLiquidator);
         vm.expectEmit();
@@ -1191,7 +1200,9 @@ contract AltoBorrowMarketTest is Test {
         vm.stopPrank();
 
         vm.startPrank(alice);
-        vm.expectRevert(IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationAlreadyTagged.selector);
+        vm.expectRevert(
+            IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationAlreadyTagged.selector
+        );
         liquidationEngine.tagLiquidablePosition(bob, alice);
         vm.stopPrank();
     }

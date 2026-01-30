@@ -103,7 +103,6 @@ contract MockMarket is AltoBaseMarket {
             IDcfDlbPriorityLiquidationEngine(liquidationEngine).liquidationConfiguration();
         (uint256 currentLtv, uint256 newLtv) = this.calculatePreLiquidationLtv(user);
         uint256 bonusFee = !isPriorityLiquidator ? _calculateBonusFee(_calculateLiquidationPercentage(currentLtv)) : 0;
-
         uint256 liquidatorFee = uint256(position[user].collateralAssets)
             .multiplyWithPrecision(bonusFee + liquidationConfiguration.liquidationBaseFee);
 
@@ -136,13 +135,14 @@ contract MockMarket is AltoBaseMarket {
         LiquidationConfiguration memory liquidationConfiguration =
             IDcfDlbPriorityLiquidationEngine(liquidationEngine).liquidationConfiguration();
         // liquidationConfiguration.dynamicBonusFeeDecaySteepness is already checked in _validateLiquidationConfiguration
-        if (liquidationPercentage < MATH_PRECISION) {
-            int256 exponent = -int256(liquidationConfiguration.dynamicBonusFeeDecaySteepness * liquidationPercentage)
-                / MATH_PRECISION_INT;
-            return liquidationConfiguration.dynamicBonusFeeStart.multiplyWithPrecision(uint256(ExpLib.wExp(exponent)));
-        } else {
+        if (liquidationPercentage >= MATH_PRECISION) {
             return 0;
         }
+        uint256 base = MATH_PRECISION - liquidationPercentage;
+        // this is pow(base, liquidationConfiguration.dynamicBonusFeeDecaySteepness) considering the precision of the numbers
+        uint256 decay = (base ** liquidationConfiguration.dynamicBonusFeeDecaySteepness)
+            / (MATH_PRECISION ** liquidationConfiguration.dynamicBonusFeeDecaySteepness);
+        return liquidationConfiguration.dynamicBonusFeeStart.multiplyWithPrecision(decay);
     }
 
     /// @notice Calculates the new LTV after liquidation - how much LTV are we aiming for after liquidation
