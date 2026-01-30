@@ -29,6 +29,11 @@ contract AltoBorrowMarketUpgradedOriginalBaseMarket is AltoBaseMarket {
         return 0;
     }
 
+    function setFeeRecipient(address _feeRecipient) external onlyOwner {
+        feeRecipient = _feeRecipient;
+        emit SetFeeRecipient(feeRecipient, _feeRecipient);
+    }
+
     /// @dev Reinitializer for version 2 upgrade - initializes new storage variables
     function initializeV2() public reinitializer(2) {}
 
