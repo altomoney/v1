@@ -182,7 +182,7 @@ abstract contract AltoBaseMarket is
 
     /// @inheritdoc IMarketBase
     function setLiquidationEngine(address _liquidationEngine) external onlyOwner {
-        if (_liquidationEngine == address(0)) {
+        if (_liquidationEngine == address(0) || liquidationEngine == address(0)) {
             revert AltoBaseMarketInvalidInput();
         }
 
