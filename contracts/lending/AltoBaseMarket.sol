@@ -193,17 +193,6 @@ abstract contract AltoBaseMarket is
     }
 
     /// @inheritdoc IMarketBase
-    function setFeeRecipient(address _feeRecipient) external virtual onlyOwner {
-        uint256 protocolFeePercentage = IAltoLiquidationEngine(liquidationEngine).protocolFeePercentage();
-        if (_feeRecipient == address(0) && (borrowOpeningFee() > 0 || protocolFeePercentage > 0)) {
-            revert AltoBaseMarketInvalidInput();
-        }
-
-        emit SetFeeRecipient(feeRecipient, _feeRecipient);
-        feeRecipient = _feeRecipient;
-    }
-
-    /// @inheritdoc IMarketBase
     function setAuthorizedCallback(address callback, bool value) external onlyOwner {
         if (callback == address(0)) {
             revert AltoBaseMarketInvalidInput();

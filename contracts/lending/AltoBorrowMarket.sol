@@ -8,6 +8,7 @@ import {IIrm} from "./interfaces/IIrm.sol";
 import {Uint128Converter} from "./libraries/Uint128Converter.sol";
 import {AssetShareConversionMath} from "./libraries/AssetShareConversionMath.sol";
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
+import {IAltoLiquidationEngine} from "./interfaces/IAltoLiquidationEngine.sol";
 
 /// @title Alto Borrow Market
 /// @author GPM
@@ -140,11 +141,27 @@ contract AltoBorrowMarket is AltoBaseMarket {
         _borrowOpeningFee = _newBorrowOpeningFee;
     }
 
+    /// @notice Setter of the fee recipient for the market.
+    /// @param _feeRecipient The new fee recipient
+    function setFeeRecipient(address _feeRecipient) external onlyOwner {
+        uint256 protocolFeePercentage = IAltoLiquidationEngine(liquidationEngine).protocolFeePercentage();
+        if (_feeRecipient == address(0) && (borrowOpeningFee() > 0 || protocolFeePercentage > 0 || interestFee > 0)) {
+            revert AltoBorrowMarketInvalidInput();
+        }
+
+        emit SetFeeRecipient(feeRecipient, _feeRecipient);
+        feeRecipient = _feeRecipient;
+    }
+
     /// @notice Setter of the interest fee
     /// @param _newInterestFee The new interest fee
     /// @param _skipAccrueInterest Whether to skip accruing interest
     function setInterestFee(uint256 _newInterestFee, bool _skipAccrueInterest) external onlyOwner {
         if (_newInterestFee > MATH_PRECISION) {
+            revert AltoBorrowMarketInvalidInput();
+        }
+
+        if (feeRecipient == address(0) && _newInterestFee > 0) {
             revert AltoBorrowMarketInvalidInput();
         }
 

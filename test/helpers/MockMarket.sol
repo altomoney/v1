@@ -35,6 +35,11 @@ contract MockMarket is AltoBaseMarket {
         _borrowOpeningFee = _borrowOpeningFeeWad;
     }
 
+    function setFeeRecipient(address _feeRecipient) external onlyOwner {
+        feeRecipient = _feeRecipient;
+        emit SetFeeRecipient(feeRecipient, _feeRecipient);
+    }
+
     function addInterest(uint256 amount) external {
         totalSupply.assets += uint128(amount);
         totalBorrowed.assets += uint128(amount);
