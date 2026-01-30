@@ -1,0 +1,12 @@
+AltoMarket::setLiquidationEngine
+├── when caller is not owner
+│   └── it should revert
+└── when caller is owner
+    ├── when new liquidation engine is zero address
+    │   └── it should revert
+    ├── when current liquidation engine is zero address
+    │   └── it should revert
+    └── when both are non-zero
+        ├── it should emit SetLiquidationEngine event
+        ├── it should update liquidationEngine
+        └── it should call setMarketOnce on new liquidation engine
