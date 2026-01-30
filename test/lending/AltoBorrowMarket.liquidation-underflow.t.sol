@@ -140,10 +140,10 @@ contract AltoBorrowMarketLiquidationUnderflowTest is Test {
         console.log("Borrow shares before interest:", borrowShares);
 
         // Configure totalBorrowed so that (shares + 1e6) / (assets + 1) == 3 exactly
-        // Mint two borrow shares (assets remain ~0 initially due to rounding)
+        // Borrow small amounts of assets initially (shares-only borrows that compute to zero assets are now prevented)
         vm.startPrank(borrower1);
         market.addCollateral(2, borrower1);
-        market.borrow(0, 1, borrower1, borrower1, "");
+        market.borrow(1, 0, borrower1, borrower1, "");
         vm.stopPrank();
 
         (borrowAssets, borrowShares) = market.totalBorrowed();
@@ -152,7 +152,7 @@ contract AltoBorrowMarketLiquidationUnderflowTest is Test {
 
         vm.startPrank(borrower2);
         market.addCollateral(10, borrower2);
-        market.borrow(0, 1, borrower2, borrower2, "");
+        market.borrow(1, 0, borrower2, borrower2, "");
         vm.stopPrank();
 
         (borrowAssets, borrowShares) = market.totalBorrowed();

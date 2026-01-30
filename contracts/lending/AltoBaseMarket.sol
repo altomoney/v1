@@ -399,6 +399,12 @@ abstract contract AltoBaseMarket is
             shares += openingFeeShares;
 
             assets = shares.convertToAssetsDown(totalBorrowed.assets, totalBorrowed.shares);
+
+            // Prevent shares-only borrows that compute to zero assets
+            // This prevents share inflation attacks when totalBorrowed.assets is zero or very small
+            if (assets == 0) {
+                revert AltoBaseMarketInvalidInput();
+            }
         } else {
             // calculate opening fee from assets
             openingFeeAssets = assets.multiplyWithPrecisionUp(borrowOpeningFee());

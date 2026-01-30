@@ -306,12 +306,15 @@ contract AltoMarketBorrow is MarketCommon {
         givenValidInputs
         whenTotalBorrowedAssetsIsLessThanOrEqualToTotalSupplyAssets
     {
-        market.addCollateral(1 ether, USER);
+        address user = makeAddr("normalUser");
 
-        vm.startPrank(USER);
+        deal(address(collateralToken), user, 1 ether);
+        market.addCollateral(1 ether, user);
+
+        vm.startPrank(user);
         // it should revert
         vm.expectRevert(IMarketErrors.AltoBaseMarketBorrowingTooMuch.selector);
-        market.borrow(2 ether, 0, USER, USER, "");
+        market.borrow(2 ether, 0, user, user, "");
         vm.stopPrank();
     }
 }

@@ -391,15 +391,15 @@ contract AltoBorrowMarketLiquidationsFuzzTest is Test {
         // adding collateral by the borrower
         vm.startPrank(alice);
         market.addCollateral(2, alice);
-        // borrowing 1 wei of shares
-        market.borrow(0, 1, alice, alice, "");
+        // borrowing 1 wei of assets (shares-only borrows that compute to zero assets are now prevented)
+        market.borrow(1, 0, alice, alice, "");
         vm.stopPrank();
 
         // adding collateral by the borrower
         vm.startPrank(bob);
         market.addCollateral(depositAmount, bob);
-        // borrowing shares of half of deposit amount
-        market.borrow(0, depositAmount / 2, bob, bob, "");
+        // borrowing assets of half of deposit amount (shares-only borrows that compute to zero assets are now prevented)
+        market.borrow(depositAmount / 2, 0, bob, bob, "");
         vm.stopPrank();
 
         // adding sufficient interest in the market to make position underwater

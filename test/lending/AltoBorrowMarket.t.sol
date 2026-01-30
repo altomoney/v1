@@ -351,7 +351,13 @@ contract AltoBorrowMarketTest is Test {
         vm.startPrank(borrower);
         collateralToken.approve(address(market), type(uint256).max);
         market.addCollateral(100 ether, borrower);
-        market.borrow(0, 75, borrower, borrower, "");
+        // The fix prevents shares borrows that compute to 0 assets
+        // Due to virtual shares, totalBorrowedShares grows faster than totalBorrowedAssets
+        // To ensure shares convert to >= 1 asset, we need: shares * (assets + 1) >= (shares_total + 1e6)
+        // Borrow a large number of shares to ensure conversion results in >= 1 asset
+        // Calculate minimum shares needed: shares >= (totalBorrowedShares + 1e6) / (totalBorrowedAssets + 1)
+        uint256 minShares = (uint256(totalBorrowedShares) + 1_000_000) / (uint256(totalBorrowedAssets) + 1) + 1;
+        market.borrow(0, minShares, borrower, borrower, "");
         vm.stopPrank();
 
         (totalBorrowedAssets, totalBorrowedShares) = market.totalBorrowed();
