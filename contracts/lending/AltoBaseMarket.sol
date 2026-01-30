@@ -614,7 +614,9 @@ abstract contract AltoBaseMarket is
 
     /// @inheritdoc IMarketBase
     function governanceLiquidate(address borrower) external onlyOwner nonReentrant returns (uint256, uint256) {
-        _accrueInterest();
+        if (!paused[PAUSE_TYPE]) {
+            _accrueInterest();
+        }
 
         Position memory _position = position[borrower];
 
