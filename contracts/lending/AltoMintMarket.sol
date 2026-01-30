@@ -46,6 +46,10 @@ contract AltoMintMarket is AltoBaseMarket {
     /// @notice The borrow opening fee in MATH_PRECISION
     uint256 private _borrowOpeningFee;
 
+    /// @notice Cumulative bad debt assets written off from liquidations
+    /// @dev This is used to reduce the effective debt ceiling capacity
+    uint128 public badDebtAssets;
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
@@ -70,6 +74,24 @@ contract AltoMintMarket is AltoBaseMarket {
 
         totalSupply.assets = _initParams.debtCeiling.toUint128();
         emit SetDebtCeiling(0, _initParams.debtCeiling);
+    }
+
+    function _borrow(uint256 assets, uint256 shares, address onBehalf, address receiver, bytes calldata swapParams)
+        internal
+        override
+        returns (uint256, uint256, uint256)
+    {
+        uint256 openingFeeAssets;
+
+        (assets, shares, openingFeeAssets) = super._borrow(assets, shares, onBehalf, receiver, swapParams);
+
+        // Include bad debt in debt ceiling check to account for written-off positions
+        // whose minted tokens remain in circulation
+        if (totalBorrowed.assets + badDebtAssets > totalSupply.assets) {
+            revert AltoBaseMarketInsufficientMarketLiquidity();
+        }
+
+        return (assets, shares, openingFeeAssets);
     }
 
     /// @notice Sets the debt ceiling for the mint market
@@ -155,6 +177,7 @@ contract AltoMintMarket is AltoBaseMarket {
     function _applyLiquidationBadDebt(Balance memory badDebt, address borrower) internal override {
         totalBorrowed.shares -= badDebt.shares;
         totalBorrowed.assets -= badDebt.assets;
+        badDebtAssets += badDebt.assets;
 
         position[borrower].borrowShares = 0;
     }
