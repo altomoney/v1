@@ -406,9 +406,10 @@ interface IMarketBase is IMarketErrors, IMarketEvents, IAuth, IPausable {
     /// @dev No fees are charged for this liquidation for the simplicity of implementation
     /// @dev This function will only be used if normal liquidation reverts caused by its complexity
     /// @param borrower The address of the borrower being liquidated
+    /// @param skipAccrueInterest Whether to skip interest accrual before liquidation
     /// @return sizedCollateral The amount of collateral that was seized
     /// @return badDebtAmount The amount of borrow token that was offset
-    function governanceLiquidate(address borrower) external returns (uint256, uint256);
+    function governanceLiquidate(address borrower, bool skipAccrueInterest) external returns (uint256, uint256);
 
     /// @notice Function to set the liquidation engine for the market.
     /// @param liquidationEngine The address of the liquidation engine

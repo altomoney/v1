@@ -190,7 +190,7 @@ contract AltoBorrowMarketTest is Test {
         market.liquidate(bob, hex"", hex"");
 
         vm.startPrank(market.owner());
-        market.governanceLiquidate(bob);
+        market.governanceLiquidate(bob, false);
     }
 
     function testGovernanceLiquidateSuccessWithSocializingDebt() public {
@@ -240,7 +240,7 @@ contract AltoBorrowMarketTest is Test {
         (uint128 totalSupplyAssetsBefore, uint128 totalSupplySharesBefore) = market.totalSupply();
         vm.expectEmit(true, true, true, true);
         emit IMarketEvents.GovernanceLiquidation(bob, market.owner(), 1e8, 10, borrowShares);
-        market.governanceLiquidate(bob);
+        market.governanceLiquidate(bob, false);
         vm.stopPrank();
 
         (, borrowShares, collateralAssets) = market.position(bob);

@@ -4,30 +4,22 @@ AltoBaseMarket::governanceLiquidate()
 ├── given position is solvent
 │   └── it should work as expected
 └── given position is insolvent
-    ├── when market is not paused
-    │   ├── it should emit AccrueInterest event
-    │   ├── when position is tagged
-    │   │   ├── it should emit GovernanceLiquidation
-    │   │   ├── it should transfer collateral tokens to owner
-    │   │   ├── it should delete liquidable position
-    │   │   └── it should apply bad debt to market
-    │   ├── when borrower has no collateral remaining
-    │   │   ├── it should emit GovernanceLiquidation with zero collateral
-    │   │   ├── it should not transfer collateral tokens to owner
-    │   │   ├── it should delete liquidable position
-    │   │   └── it should apply bad debt to market
-    │   └── it should return collateral amount and bad debt amount
-    └── when market is paused
-        ├── it should not emit AccrueInterest event
-        ├── when position is tagged
-        │   ├── it should emit GovernanceLiquidation
-        │   ├── it should transfer collateral tokens to owner
-        │   ├── it should delete liquidable position
-        │   └── it should apply bad debt to market
-        ├── when borrower has no collateral remaining
-        │   ├── it should emit GovernanceLiquidation with zero collateral
-        │   ├── it should not transfer collateral tokens to owner
-        │   ├── it should delete liquidable position
-        │   └── it should apply bad debt to market
-        └── it should return collateral amount and bad debt amount
-
+    ├── when market is not paused and skipAccrueInterest is false
+    │   └── it should emit AccrueInterest event
+    ├── when market is not paused and skipAccrueInterest is true
+    │   └── it should not emit AccrueInterest event
+    ├── when market is paused and skipAccrueInterest is false
+    │   └── it should not emit AccrueInterest event
+    ├── when market is paused and skipAccrueInterest is true
+    │   └── it should not emit AccrueInterest event
+    ├── when position is tagged
+    │   ├── it should emit GovernanceLiquidation
+    │   ├── it should transfer collateral tokens to owner
+    │   ├── it should delete liquidable position
+    │   └── it should apply bad debt to market
+    ├── when borrower has no collateral remaining
+    │   ├── it should emit GovernanceLiquidation with zero collateral
+    │   ├── it should not transfer collateral tokens to owner
+    │   ├── it should delete liquidable position
+    │   └── it should apply bad debt to market
+    └── it should return collateral amount and bad debt amount

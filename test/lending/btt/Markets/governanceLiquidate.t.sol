@@ -29,7 +29,7 @@ contract AltoBorrowMarketGovernanceLiquidate is MarketCommon {
 
     function test_RevertWhen_CallerIsNotOwner() external {
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, address(this)));
-        market.governanceLiquidate(USER);
+        market.governanceLiquidate(USER, false);
     }
 
     modifier givenSolventPosition() {
@@ -49,9 +49,9 @@ contract AltoBorrowMarketGovernanceLiquidate is MarketCommon {
         _;
     }
 
-    function test_RevertWhen_PositionIsSolvent() external givenSolventPosition {
+    function test_GivenPositionIsSolvent() external givenSolventPosition {
         vm.startPrank(OWNER);
-        market.governanceLiquidate(USER);
+        market.governanceLiquidate(USER, false);
         vm.stopPrank();
     }
 
@@ -78,20 +78,62 @@ contract AltoBorrowMarketGovernanceLiquidate is MarketCommon {
         _;
     }
 
-    modifier whenMarketIsNotPaused() {
-        _;
+    // ==================== AccrueInterest emission tests ====================
+
+    function test_WhenMarketIsNotPausedAndSkipAccrueInterestIsFalse_ShouldEmitAccrueInterest()
+        external
+        givenPositionIsInsolvent
+    {
+        vm.startPrank(OWNER);
+        vm.expectEmit(false, false, false, false);
+        emit IMarketEvents.AccrueInterest(0, 0, 0, 0);
+        market.governanceLiquidate(USER, false);
+        vm.stopPrank();
     }
 
-    modifier whenMarketIsPaused() {
-        // Tag position before pausing, as tagging requires market to be unpaused
+    function test_WhenMarketIsPaused_ShouldNotEmitAccrueInterest() external givenPositionIsInsolvent {
         vm.prank(TAGGER);
         IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).tagLiquidablePosition(USER, TAGGER);
         vm.prank(PAUSER);
         market.pause(PAUSE_TYPE, true);
-        _;
+
+        vm.startPrank(OWNER);
+        vm.recordLogs();
+        market.governanceLiquidate(USER, false);
+        vm.stopPrank();
+
+        _assertNoAccrueInterestEvent();
     }
 
-    function test_WhenPositionIsInsolvent() external givenPositionIsInsolvent whenMarketIsNotPaused {
+    function test_WhenSkipAccrueInterestIsTrue_ShouldNotEmitAccrueInterest() external givenPositionIsInsolvent {
+        vm.startPrank(OWNER);
+        vm.recordLogs();
+        market.governanceLiquidate(USER, true);
+        vm.stopPrank();
+
+        _assertNoAccrueInterestEvent();
+    }
+
+    function test_WhenMarketIsPausedAndSkipAccrueInterestIsTrue_ShouldNotEmitAccrueInterest()
+        external
+        givenPositionIsInsolvent
+    {
+        vm.prank(TAGGER);
+        IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).tagLiquidablePosition(USER, TAGGER);
+        vm.prank(PAUSER);
+        market.pause(PAUSE_TYPE, true);
+
+        vm.startPrank(OWNER);
+        vm.recordLogs();
+        market.governanceLiquidate(USER, true);
+        vm.stopPrank();
+
+        _assertNoAccrueInterestEvent();
+    }
+
+    // ==================== Liquidation behavior tests ====================
+
+    function test_WhenPositionIsTagged() external givenPositionIsInsolvent {
         vm.prank(TAGGER);
         IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).tagLiquidablePosition(USER, TAGGER);
 
@@ -113,28 +155,28 @@ contract AltoBorrowMarketGovernanceLiquidate is MarketCommon {
         assertTrue(liquidableBefore.tagged);
 
         vm.startPrank(OWNER);
-        // it should emit AccrueInterest event
-        vm.expectEmit(false, false, false, false);
-        emit IMarketEvents.AccrueInterest(0, 0, 0, 0);
+        // it should emit GovernanceLiquidation
         vm.expectEmit(true, true, true, true);
         emit IMarketEvents.GovernanceLiquidation(
             USER, OWNER, expectedCollateral, expectedBadDebt, expectedBadDebtShares
         );
-        (uint256 collateralAmount, uint256 badDebtAmount) = market.governanceLiquidate(USER);
-        IDcfDlbPriorityLiquidationEngine liquidationEngine =
-            IDcfDlbPriorityLiquidationEngine(market.liquidationEngine());
-        liquidationEngine.deleteLiquidablePosition(USER);
+        (uint256 collateralAmount, uint256 badDebtAmount) = market.governanceLiquidate(USER, false);
+        // it should delete liquidable position
+        IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).deleteLiquidablePosition(USER);
         vm.stopPrank();
 
+        // it should return collateral amount and bad debt amount
         assertEq(collateralAmount, expectedCollateral);
         assertEq(badDebtAmount, expectedBadDebt);
 
+        // it should transfer collateral tokens to owner
         assertEq(collateralToken.balanceOf(OWNER), ownerCollateralBefore + expectedCollateral);
 
         Position memory positionAfter = market.position(USER);
         assertEq(positionAfter.collateralAssets, 0);
         assertEq(positionAfter.borrowShares, 0);
 
+        // it should apply bad debt to market
         Balance memory totalBorrowedAfter = market.totalBorrowed();
         assertEq(totalBorrowedAfter.assets, totalBorrowedBefore.assets - badDebtAmount);
         assertEq(totalBorrowedAfter.shares, totalBorrowedBefore.shares - expectedBadDebtShares);
@@ -155,10 +197,11 @@ contract AltoBorrowMarketGovernanceLiquidate is MarketCommon {
         assertEq(liquidableAfter.timestamp, 0);
     }
 
-    function test_WhenPositionIsInsolventAndHasNoCollateral() external givenPositionIsInsolvent whenMarketIsNotPaused {
+    function test_WhenBorrowerHasNoCollateralRemaining() external givenPositionIsInsolvent {
         vm.prank(TAGGER);
         IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).tagLiquidablePosition(USER, TAGGER);
 
+        // Set collateral to zero
         bytes32 collateralSlot = bytes32(uint256(keccak256(abi.encode(USER, uint256(8)))) + 1);
         vm.store(address(market), collateralSlot, bytes32(0));
 
@@ -169,7 +212,6 @@ contract AltoBorrowMarketGovernanceLiquidate is MarketCommon {
 
         assertEq(positionBefore.collateralAssets, 0);
 
-        uint256 expectedCollateral = 0;
         uint256 expectedBadDebt = Math.min(
             uint256(positionBefore.borrowShares)
                 .convertToAssetsUp(totalBorrowedBefore.assets, totalBorrowedBefore.shares),
@@ -178,28 +220,26 @@ contract AltoBorrowMarketGovernanceLiquidate is MarketCommon {
         uint128 expectedBadDebtShares = positionBefore.borrowShares;
 
         vm.startPrank(OWNER);
-        // it should emit AccrueInterest event
-        vm.expectEmit(false, false, false, false);
-        emit IMarketEvents.AccrueInterest(0, 0, 0, 0);
+        // it should emit GovernanceLiquidation with zero collateral
         vm.expectEmit(true, true, true, true);
-        emit IMarketEvents.GovernanceLiquidation(
-            USER, OWNER, expectedCollateral, expectedBadDebt, expectedBadDebtShares
-        );
-        (uint256 collateralAmount, uint256 badDebtAmount) = market.governanceLiquidate(USER);
-        IDcfDlbPriorityLiquidationEngine liquidationEngine =
-            IDcfDlbPriorityLiquidationEngine(market.liquidationEngine());
-        liquidationEngine.deleteLiquidablePosition(USER);
+        emit IMarketEvents.GovernanceLiquidation(USER, OWNER, 0, expectedBadDebt, expectedBadDebtShares);
+        (uint256 collateralAmount, uint256 badDebtAmount) = market.governanceLiquidate(USER, false);
+        // it should delete liquidable position
+        IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).deleteLiquidablePosition(USER);
         vm.stopPrank();
 
-        assertEq(collateralAmount, expectedCollateral);
+        // it should return collateral amount and bad debt amount
+        assertEq(collateralAmount, 0);
         assertEq(badDebtAmount, expectedBadDebt);
 
+        // it should not transfer collateral tokens to owner
         assertEq(collateralToken.balanceOf(OWNER), ownerCollateralBefore);
 
         Position memory positionAfter = market.position(USER);
         assertEq(positionAfter.collateralAssets, 0);
         assertEq(positionAfter.borrowShares, 0);
 
+        // it should apply bad debt to market
         Balance memory totalBorrowedAfter = market.totalBorrowed();
         assertEq(totalBorrowedAfter.assets, totalBorrowedBefore.assets - badDebtAmount);
         assertEq(totalBorrowedAfter.shares, totalBorrowedBefore.shares - expectedBadDebtShares);
@@ -220,129 +260,12 @@ contract AltoBorrowMarketGovernanceLiquidate is MarketCommon {
         assertEq(liquidableAfter.timestamp, 0);
     }
 
-    function test_WhenPositionIsInsolventAndMarketIsPaused() external givenPositionIsInsolvent whenMarketIsPaused {
-        Balance memory totalBorrowedBefore = market.totalBorrowed();
-        Balance memory totalSupplyBefore = market.totalSupply();
-        Position memory positionBefore = market.position(USER);
-        uint256 ownerCollateralBefore = collateralToken.balanceOf(OWNER);
+    // ==================== Helper functions ====================
 
-        uint256 expectedCollateral = positionBefore.collateralAssets;
-        uint256 expectedBadDebt = Math.min(
-            uint256(positionBefore.borrowShares)
-                .convertToAssetsUp(totalBorrowedBefore.assets, totalBorrowedBefore.shares),
-            totalBorrowedBefore.assets
-        );
-        uint128 expectedBadDebtShares = positionBefore.borrowShares;
-
-        vm.startPrank(OWNER);
-        vm.recordLogs();
-        vm.expectEmit(true, true, true, true);
-        emit IMarketEvents.GovernanceLiquidation(
-            USER, OWNER, expectedCollateral, expectedBadDebt, expectedBadDebtShares
-        );
-        (uint256 collateralAmount, uint256 badDebtAmount) = market.governanceLiquidate(USER);
-        IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).deleteLiquidablePosition(USER);
-        vm.stopPrank();
-
-        // it should not emit AccrueInterest event
+    function _assertNoAccrueInterestEvent() internal {
         Vm.Log[] memory logs = vm.getRecordedLogs();
         for (uint256 i = 0; i < logs.length; i++) {
             assertFalse(logs[i].topics[0] == IMarketEvents.AccrueInterest.selector);
         }
-
-        assertEq(collateralAmount, expectedCollateral);
-        assertEq(badDebtAmount, expectedBadDebt);
-        assertEq(collateralToken.balanceOf(OWNER), ownerCollateralBefore + expectedCollateral);
-
-        Position memory positionAfter = market.position(USER);
-        assertEq(positionAfter.collateralAssets, 0);
-        assertEq(positionAfter.borrowShares, 0);
-
-        Balance memory totalBorrowedAfter = market.totalBorrowed();
-        assertEq(totalBorrowedAfter.assets, totalBorrowedBefore.assets - badDebtAmount);
-        assertEq(totalBorrowedAfter.shares, totalBorrowedBefore.shares - expectedBadDebtShares);
-
-        Balance memory totalSupplyAfter = market.totalSupply();
-        if (marketType == MarketType.BORROW) {
-            assertEq(totalSupplyAfter.assets, totalSupplyBefore.assets - badDebtAmount);
-            assertEq(totalSupplyAfter.shares, totalSupplyBefore.shares);
-        } else {
-            assertEq(totalSupplyAfter.assets, totalSupplyBefore.assets);
-            assertEq(totalSupplyAfter.shares, totalSupplyBefore.shares);
-        }
-
-        LiquidablePosition memory liquidableAfter =
-            IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).liquidablePositions(USER);
-        assertFalse(liquidableAfter.tagged);
-        assertEq(liquidableAfter.tagger, address(0));
-        assertEq(liquidableAfter.timestamp, 0);
-    }
-
-    function test_WhenPositionIsInsolventAndHasNoCollateralAndMarketIsPaused()
-        external
-        givenPositionIsInsolvent
-        whenMarketIsPaused
-    {
-        bytes32 collateralSlot = bytes32(uint256(keccak256(abi.encode(USER, uint256(8)))) + 1);
-        vm.store(address(market), collateralSlot, bytes32(0));
-
-        Balance memory totalBorrowedBefore = market.totalBorrowed();
-        Balance memory totalSupplyBefore = market.totalSupply();
-        Position memory positionBefore = market.position(USER);
-        uint256 ownerCollateralBefore = collateralToken.balanceOf(OWNER);
-
-        assertEq(positionBefore.collateralAssets, 0);
-
-        uint256 expectedCollateral = 0;
-        uint256 expectedBadDebt = Math.min(
-            uint256(positionBefore.borrowShares)
-                .convertToAssetsUp(totalBorrowedBefore.assets, totalBorrowedBefore.shares),
-            totalBorrowedBefore.assets
-        );
-        uint128 expectedBadDebtShares = positionBefore.borrowShares;
-
-        vm.startPrank(OWNER);
-        vm.recordLogs();
-        vm.expectEmit(true, true, true, true);
-        emit IMarketEvents.GovernanceLiquidation(
-            USER, OWNER, expectedCollateral, expectedBadDebt, expectedBadDebtShares
-        );
-        (uint256 collateralAmount, uint256 badDebtAmount) = market.governanceLiquidate(USER);
-        IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).deleteLiquidablePosition(USER);
-        vm.stopPrank();
-
-        // it should not emit AccrueInterest event
-        Vm.Log[] memory logs = vm.getRecordedLogs();
-        for (uint256 i = 0; i < logs.length; i++) {
-            assertFalse(logs[i].topics[0] == IMarketEvents.AccrueInterest.selector);
-        }
-
-        assertEq(collateralAmount, expectedCollateral);
-        assertEq(badDebtAmount, expectedBadDebt);
-        assertEq(collateralToken.balanceOf(OWNER), ownerCollateralBefore);
-
-        Position memory positionAfter = market.position(USER);
-        assertEq(positionAfter.collateralAssets, 0);
-        assertEq(positionAfter.borrowShares, 0);
-
-        Balance memory totalBorrowedAfter = market.totalBorrowed();
-        assertEq(totalBorrowedAfter.assets, totalBorrowedBefore.assets - badDebtAmount);
-        assertEq(totalBorrowedAfter.shares, totalBorrowedBefore.shares - expectedBadDebtShares);
-
-        Balance memory totalSupplyAfter = market.totalSupply();
-        if (marketType == MarketType.BORROW) {
-            assertEq(totalSupplyAfter.assets, totalSupplyBefore.assets - badDebtAmount);
-            assertEq(totalSupplyAfter.shares, totalSupplyBefore.shares);
-        } else {
-            assertEq(totalSupplyAfter.assets, totalSupplyBefore.assets);
-            assertEq(totalSupplyAfter.shares, totalSupplyBefore.shares);
-        }
-
-        LiquidablePosition memory liquidableAfter =
-            IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).liquidablePositions(USER);
-        assertFalse(liquidableAfter.tagged);
-        assertEq(liquidableAfter.tagger, address(0));
-        assertEq(liquidableAfter.timestamp, 0);
     }
 }
-
