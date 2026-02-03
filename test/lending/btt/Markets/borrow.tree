@@ -28,7 +28,6 @@ AltoBaseMarket::Borrow()
         │   └── it should revert
         ├── when position is not solvent after borrow
         │   └── it should revert
-        ├── it should emit AccrueInterest event
         ├── it should update totalBorrowed and position
         ├── it should emit Borrow event
         └── it should return assets shares openingFeeAssets

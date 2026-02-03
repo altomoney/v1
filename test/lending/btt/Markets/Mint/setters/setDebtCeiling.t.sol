@@ -39,10 +39,6 @@ contract SetDebtCeilingTestMint is MarketCommon {
         uint256 oldDebtCeiling = market.totalSupply().assets;
         uint256 newDebtCeiling = oldDebtCeiling + 1000 ether;
 
-        // it should emit AccrueInterest event
-        vm.expectEmit(false, false, false, false);
-        emit IMarketEvents.AccrueInterest(0, 0, 0, 0);
-
         // it should emit SetDebtCeiling event
         vm.expectEmit();
         emit AltoMintMarket.SetDebtCeiling(oldDebtCeiling, newDebtCeiling);

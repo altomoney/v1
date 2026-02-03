@@ -117,9 +117,6 @@ contract AltoMarketBorrow is MarketCommon {
             INITIAL_BORROWED_ASSETS.convertToSharesUp(totalBorrowedSharesBefore, totalBorrowedAssetsBefore);
 
         vm.startPrank(USER);
-        // it should emit AccrueInterest event
-        vm.expectEmit(false, false, false, false);
-        emit IMarketEvents.AccrueInterest(0, 0, 0, 0);
         // it should emit Borrow event
         vm.expectEmit();
         emit IMarketEvents.Borrow(USER, USER, USER, INITIAL_BORROWED_ASSETS, sharesToBorrow, 0, 0);

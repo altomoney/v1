@@ -30,10 +30,6 @@ contract AltoMarketPause is MarketCommon {
     function test_WhenMarketIsPaused() external setUpMarket {
         vm.startPrank(PAUSER);
 
-        // it should accrue interest
-        vm.expectEmit(false, false, false, false);
-        emit IMarketEvents.AccrueInterest(0, 0, 0, 0);
-
         vm.expectEmit();
         emit IPausable.Paused(PAUSER, PAUSE_TYPE, true);
 
@@ -86,10 +82,6 @@ contract AltoMarketPause is MarketCommon {
         vm.revertTo(snapshot);
 
         vm.startPrank(PAUSER);
-
-        // it should accrue interest
-        vm.expectEmit(false, false, false, false);
-        emit IMarketEvents.AccrueInterest(0, 0, 0, 0);
 
         vm.expectEmit();
         emit IPausable.Paused(PAUSER, PAUSE_TYPE, true);

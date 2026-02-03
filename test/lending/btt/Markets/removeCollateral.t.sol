@@ -98,10 +98,6 @@ contract AltoMarketRemoveCollateral is MarketCommon {
         uint256 returnedAmount;
         {
             vm.startPrank(USER);
-            // it should accrue interest and emit AccrueInterest event
-            vm.expectEmit(false, false, false, false);
-            emit IMarketEvents.AccrueInterest(0, 0, 0, 0);
-
             // it should emit RemoveCollateral event
             vm.expectEmit(true, true, true, true);
             emit IMarketEvents.RemoveCollateral(USER, USER, USER, removalAmount);

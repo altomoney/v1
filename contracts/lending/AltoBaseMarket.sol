@@ -504,6 +504,10 @@ abstract contract AltoBaseMarket is
 
         (uint256 interest, uint256 borrowRate) = IIrm(irm).updateInterestRate(totalSupply.assets, totalBorrowed.assets);
 
+        if (interest == 0) {
+            return;
+        }
+
         totalSupply.assets += interest.toUint128();
         totalBorrowed.assets += interest.toUint128();
 
