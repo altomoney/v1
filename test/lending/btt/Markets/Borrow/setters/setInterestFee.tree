@@ -8,6 +8,8 @@ AltoBorrowMarket::setInterestFee
     │   └── it should not emit accrue event
     ├── when market is paused
     │   └── it should not emit accrue event
+    ├── when market is paused and skipAccrueInterest is true
+    │   └── it should not emit accrue event
     ├── it should update interestFee
     ├── it should emit SetInterestFee event
     └── when interestFee is greater than MATH_PRECISION

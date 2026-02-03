@@ -97,6 +97,30 @@ contract SetInterestFeeTestBorrow is MarketCommon {
         assertEq(borrowMarket.interestFee(), newInterestFee);
     }
 
+    function test_WhenCallerIsOwnerAndMarketIsPausedAndSkipAccrueInterest()
+        external
+        whenMarketIsPaused
+        whenCallerIsOwner
+    {
+        uint256 oldInterestFee = borrowMarket.interestFee();
+        uint256 newInterestFee = oldInterestFee + 1;
+
+        vm.expectEmit();
+        emit AltoBorrowMarket.SetInterestFee(oldInterestFee, newInterestFee);
+
+        vm.recordLogs();
+        borrowMarket.setInterestFee(newInterestFee, true);
+
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        // it should not emit accrue event
+        for (uint256 i = 0; i < logs.length; i++) {
+            assertFalse(logs[i].topics[0] == IMarketEvents.AccrueInterest.selector);
+        }
+
+        // it should update interestFee
+        assertEq(borrowMarket.interestFee(), newInterestFee);
+    }
+
     function test_RevertWhen_InterestFeeIsGreaterThanMATH_PRECISION() external whenCallerIsOwner {
         // it should revert
         vm.expectRevert(abi.encodeWithSelector(AltoBorrowMarket.AltoBorrowMarketInvalidInput.selector));
