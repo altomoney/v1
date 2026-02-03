@@ -147,8 +147,9 @@ contract AltoMintMarket is AltoBaseMarket {
         return _borrowOpeningFee;
     }
 
-    /// @inheritdoc IMarketBase
-    function setFeeRecipient(address _feeRecipient) external onlyOwner {
+    /// @notice Setter of the fee recipient for the mint market.
+    /// @param _feeRecipient The new fee recipient
+    function setFeeRecipient(address _feeRecipient) external override onlyOwner {
         uint256 protocolFeePercentage = IAltoLiquidationEngine(liquidationEngine).protocolFeePercentage();
         if (_feeRecipient == address(0) && (borrowOpeningFee() > 0 || protocolFeePercentage > 0 || irm != address(0))) {
             revert AltoMintMarketInvalidInput();
