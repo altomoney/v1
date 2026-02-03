@@ -45,7 +45,7 @@
     "susdeBorrowMarketIrm": "0x0fA28df153dcdE055996ecdf6B9797aAC9bed1CC",
     "susdeBorrowMarketOracle": "0xDBa31C2F3AB8542a48bA2d2B3E77fd900662954D",
     "syrupUsdcBorrowLeverage": "0xA30Fbc6847e27F795C33C8e298AaD9136A08DA87",
-    "syrupUsdcBorrowLeverageSwapper": "0xa22baCC5bc9C1011854AFbE9A9CC2BEeBEFe5238",
+    "syrupUsdcBorrowLeverageSwapper": "0x3a48d1600A33e58cB124fc7688f0C5b7A9336A5C",
     "syrupUsdcBorrowLiquidationEngine": "0xf86Fc229a93692CdEEfc82A3D9bdB6656A71e9a4",
     "syrupUsdcBorrowMarket": "0x33B24510233281350bF8679A7c427d04db0ed208",
     "syrupUsdcBorrowMarketImplementation": "0x8F7638f2c0107f6FF766f79f68E084078fA56C0E",
