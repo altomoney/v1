@@ -176,6 +176,10 @@ contract AltoMintMarket is AltoBaseMarket {
 
         (uint256 interest, uint256 borrowRate) = IIrm(irm).updateInterestRate(totalSupply.assets, totalBorrowed.assets);
 
+        if (interest == 0) {
+            return;
+        }
+
         totalBorrowed.assets += interest.toUint128();
         claimableFeesAssets += interest.toUint128();
 
@@ -239,13 +243,11 @@ contract AltoMintMarket is AltoBaseMarket {
     }
 
     function _repay(uint256 assets, uint256 shares, address onBehalf) internal override returns (uint256, uint256) {
+        _accrueInterest();
+
         if (claimableFeesAssets > 0) {
             _claimInterest(0);
         }
-
-        // @dev there would still be some claimable fees assets left due to accrue interest being called
-        // but if markets are often, that won't be significant amount and hence repay won't revert due to accrual of unminted fees
-        // also, claiming of fees will be happening periodically
 
         return super._repay(assets, shares, onBehalf);
     }
@@ -255,13 +257,11 @@ contract AltoMintMarket is AltoBaseMarket {
         override
         returns (uint256, uint256, uint256)
     {
+        _accrueInterest();
+
         if (claimableFeesAssets > 0) {
             _claimInterest(0);
         }
-
-        // @dev there would still be some claimable fees assets left due to accrue interest being called
-        // but if markets are often, that won't be significant amount and hence liquidate won't revert due to accrual of unminted fees
-        // also, claiming of fees will be happening periodically
 
         return super._liquidate(borrower, callbackData, liquidationData);
     }

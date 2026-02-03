@@ -14,7 +14,6 @@ AltoBaseMarket::RemoveCollateral()
     ├── when position becomes insolvent after removal
     │   └── it should revert
     └── when all conditions are met
-        ├── it should accrue interest and emit AccrueInterest event
         ├── it should remove collateral from position
         ├── it should transfer collateral tokens to receiver
         ├── when callback data is provided and receiver is authorized

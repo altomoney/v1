@@ -5,6 +5,9 @@ AltoMintMarket::accrueInterest()
     ├── when irm is zero address
     │   └── it should do nothing
     └── when irm is not zero address
-        ├── it should update claimableFeesAssets and totalBorrowed.assets
-        ├── it should not update totalSupply.assets
-        └── it should emit AccrueInterest event
+        ├── when interest is zero
+        │   └── it should do nothing and not emit any event
+        └── when interest is non-zero
+            ├── it should update claimableFeesAssets and totalBorrowed.assets
+            ├── it should not update totalSupply.assets
+            └── it should emit AccrueInterest event

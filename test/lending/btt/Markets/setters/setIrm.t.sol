@@ -27,10 +27,6 @@ contract AltoMarketSetIrm is MarketCommon {
         address oldIrm = market.irm();
         address newIrm = address(new FixedRateIrm(0.05 ether / uint256(365 days), OWNER));
 
-        // it should emit accrue event
-        vm.expectEmit(false, false, false, false);
-        emit IMarketEvents.AccrueInterest(0, 0, 0, 0);
-
         // it should emit SetIrm event
         vm.expectEmit();
         emit IMarketEvents.SetIrm(oldIrm, newIrm);

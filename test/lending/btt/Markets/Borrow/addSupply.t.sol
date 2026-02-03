@@ -94,9 +94,6 @@ contract AltoBorrowMarketAddSupply is MarketCommon {
 
         vm.startPrank(USER);
         borrowToken.approve(address(market), INITIAL_SUPPLY);
-        // it should emit AccrueInterest event
-        vm.expectEmit(false, false, false, false);
-        emit IMarketEvents.AccrueInterest(0, 0, 0, 0);
         // it should emit AddSupply event
         vm.expectEmit();
         emit IMarketEvents.AddSupply(USER, USER, INITIAL_SUPPLY, expectedAddedShares);

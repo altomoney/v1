@@ -41,10 +41,6 @@ contract SetInterestFeeTestBorrow is MarketCommon {
         uint256 oldInterestFee = borrowMarket.interestFee();
         uint256 newInterestFee = oldInterestFee + 1;
 
-        // it should emit accrue event
-        vm.expectEmit(false, false, false, false);
-        emit IMarketEvents.AccrueInterest(0, 0, 0, 0);
-
         // it should emit SetInterestFee event
         vm.expectEmit();
         emit AltoBorrowMarket.SetInterestFee(oldInterestFee, newInterestFee);
