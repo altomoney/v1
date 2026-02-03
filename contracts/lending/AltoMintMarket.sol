@@ -39,6 +39,10 @@ contract AltoMintMarket is AltoBaseMarket {
     /// @param newBorrowOpeningFee The new borrow opening fee
     event SetBorrowOpeningFee(uint256 oldBorrowOpeningFee, uint256 newBorrowOpeningFee);
 
+    /// @notice Emitted when bad debt is accrued from liquidations
+    /// @param badDebtAmount The amount of bad debt accrued
+    event BadDebtAccrued(uint256 badDebtAmount);
+
     /// @notice The amount of claimable fees assets
     /// @dev This is used to store the amount of claimable fees assets used when claiming interest
     uint128 public claimableFeesAssets;
@@ -76,6 +80,15 @@ contract AltoMintMarket is AltoBaseMarket {
         emit SetDebtCeiling(0, _initParams.debtCeiling);
     }
 
+    /// @notice Reinitializer for version 2 upgrade - initializes bad debt assets accumulator
+    /// @param _badDebtAssets The cumulative amount of bad debt assets to initialize
+    /// @dev _badDebtAssets should represent the total bad debt accrued before the upgrade.
+    /// @dev This should only be initialized when there's no risk of bad debt during redeployment.
+    function initializeV2(uint128 _badDebtAssets) public reinitializer(2) {
+        badDebtAssets = _badDebtAssets;
+        emit BadDebtAccrued(_badDebtAssets);
+    }
+
     function _borrow(uint256 assets, uint256 shares, address onBehalf, address receiver, bytes calldata swapParams)
         internal
         override
@@ -103,7 +116,7 @@ contract AltoMintMarket is AltoBaseMarket {
             _accrueInterest();
         }
 
-        if (totalBorrowed.assets > _debtCeiling) {
+        if (totalBorrowed.assets + badDebtAssets > _debtCeiling) {
             revert AltoBaseMarketInsufficientMarketLiquidity();
         }
 
@@ -177,7 +190,9 @@ contract AltoMintMarket is AltoBaseMarket {
     function _applyLiquidationBadDebt(Balance memory badDebt, address borrower) internal override {
         totalBorrowed.shares -= badDebt.shares;
         totalBorrowed.assets -= badDebt.assets;
+
         badDebtAssets += badDebt.assets;
+        emit BadDebtAccrued(badDebt.assets);
 
         position[borrower].borrowShares = 0;
     }
