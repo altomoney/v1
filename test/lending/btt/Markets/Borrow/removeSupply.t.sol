@@ -70,9 +70,6 @@ contract AltoBorrowMarketRemoveSupply is MarketCommon {
             INITIAL_SUPPLY.convertToSharesUp(totalSupplyAssetsBefore, totalSupplySharesBefore);
 
         vm.startPrank(USER);
-        // it should emit AccrueInterest event
-        vm.expectEmit(false, false, false, false);
-        emit IMarketEvents.AccrueInterest(0, 0, 0, 0);
         // it should emit RemoveSupply event
         vm.expectEmit();
         emit IMarketEvents.RemoveSupply(USER, USER, USER, INITIAL_SUPPLY, expectedRemovedShares);

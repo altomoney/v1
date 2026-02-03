@@ -30,9 +30,14 @@ contract MintTestLiquidate is AltoBorrowMarketliquidate {
     }
 
     modifier givenClaimableFeesAssetsIsZero() {
-        // Use the position set up by givenPositionIsInsolvent
-        // Since we don't accrue interest here, claimableFeesAssets should be 0
-        // (givenPositionIsInsolvent warps time but doesn't accrue interest)
+        // Accrue interest to reset the IRM timestamp, so liquidate's internal _accrueInterest() yields 0
+        market.accrueInterest();
+        // Claim all generated fees to reset claimableFeesAssets to 0
+        uint256 fees = mintMarket.claimableFeesAssets();
+        if (fees > 0) {
+            vm.prank(OWNER);
+            mintMarket.claimInterest(0);
+        }
         _;
     }
 

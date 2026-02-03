@@ -51,14 +51,46 @@ contract AccrueInterestTestMint is MarketCommon {
         assertEq(mintMarket.claimableFeesAssets(), claimableFeesAssetsBefore);
     }
 
-    function test_WhenIrmIsNotZeroAddress() external whenMarketIsNotPaused {
+    modifier whenIrmIsNotZeroAddress() {
         deal(address(collateralToken), address(this), 1 ether);
         deal(address(borrowToken), address(this), 1 ether);
         market.addCollateral(1 ether, USER);
         market.borrow(0.5 ether, 0, USER, USER, hex"");
+        _;
+    }
 
+    function test_WhenInterestIsZero_SameBlock() external whenMarketIsNotPaused whenIrmIsNotZeroAddress {
+        // First call to accrue interest
         vm.warp(block.timestamp + 100 days);
+        market.accrueInterest();
 
+        // Record state after first accrual
+        uint256 totalSupplyBefore = market.totalSupply().assets;
+        uint256 totalBorrowedBefore = market.totalBorrowed().assets;
+        uint256 claimableFeesAssetsBefore = mintMarket.claimableFeesAssets();
+
+        // Second call in same block - should do nothing and not emit AccrueInterest event
+        vm.recordLogs();
+        market.accrueInterest();
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+
+        // it should do nothing and not emit AccrueInterest event
+        bytes32 accrueInterestSelector = IMarketEvents.AccrueInterest.selector;
+        for (uint256 i = 0; i < entries.length; i++) {
+            assertTrue(entries[i].topics[0] != accrueInterestSelector, "AccrueInterest event should not be emitted");
+        }
+
+        assertEq(market.totalSupply().assets, totalSupplyBefore, "totalSupply.assets unchanged");
+        assertEq(market.totalBorrowed().assets, totalBorrowedBefore, "totalBorrowed.assets unchanged");
+        assertEq(mintMarket.claimableFeesAssets(), claimableFeesAssetsBefore, "claimableFeesAssets unchanged");
+    }
+
+    modifier whenInterestIsNonZero() {
+        vm.warp(block.timestamp + 100 days);
+        _;
+    }
+
+    function test_WhenInterestIsNonZero() external whenMarketIsNotPaused whenIrmIsNotZeroAddress whenInterestIsNonZero {
         uint256 totalSupplyBefore = market.totalSupply().assets;
         uint256 totalBorrowedBefore = market.totalBorrowed().assets;
         uint256 claimableFeesAssetsBefore = mintMarket.claimableFeesAssets();

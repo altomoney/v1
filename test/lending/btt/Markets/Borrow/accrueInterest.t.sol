@@ -61,11 +61,47 @@ contract AccrueInterestTestBorrow is MarketCommon {
         market.addSupply(0.5 ether, 0, SUPPLIER);
         market.addCollateral(1 ether, USER);
         market.borrow(0.5 ether, 0, USER, USER, hex"");
+        _;
+    }
+
+    function test_WhenInterestIsZero_SameBlock() external whenMarketIsNotPaused whenIrmIsNotZeroAddress {
+        // First call to accrue interest
+        vm.warp(block.timestamp + 100 days);
+        market.accrueInterest();
+
+        // Record state after first accrual
+        uint256 totalSupplyAssetsBefore = market.totalSupply().assets;
+        uint256 totalSupplySharesBefore = market.totalSupply().shares;
+        uint256 totalBorrowedBefore = market.totalBorrowed().assets;
+        uint256 feeRecipientSupplySharesBefore = market.position(FEE_RECIPIENT).supplyShares;
+
+        // Second call in same block - should do nothing and not emit AccrueInterest event
+        vm.recordLogs();
+        market.accrueInterest();
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+
+        // it should do nothing and not emit AccrueInterest event
+        bytes32 accrueInterestSelector = IMarketEvents.AccrueInterest.selector;
+        for (uint256 i = 0; i < entries.length; i++) {
+            assertTrue(entries[i].topics[0] != accrueInterestSelector, "AccrueInterest event should not be emitted");
+        }
+
+        assertEq(market.totalSupply().assets, totalSupplyAssetsBefore, "totalSupply.assets unchanged");
+        assertEq(market.totalSupply().shares, totalSupplySharesBefore, "totalSupply.shares unchanged");
+        assertEq(market.totalBorrowed().assets, totalBorrowedBefore, "totalBorrowed.assets unchanged");
+        assertEq(
+            market.position(FEE_RECIPIENT).supplyShares,
+            feeRecipientSupplySharesBefore,
+            "feeRecipient supplyShares unchanged"
+        );
+    }
+
+    modifier whenInterestIsNonZero() {
         vm.warp(block.timestamp + 100 days);
         _;
     }
 
-    function test_WhenInterestFeeIsZero() external whenMarketIsNotPaused whenIrmIsNotZeroAddress {
+    function test_WhenInterestFeeIsZero() external whenMarketIsNotPaused whenIrmIsNotZeroAddress whenInterestIsNonZero {
         // Ensure interestFee is zero, skip accrue to not interfere with test
         vm.prank(OWNER);
         borrowMarket.setInterestFee(0, true);
@@ -102,7 +138,12 @@ contract AccrueInterestTestBorrow is MarketCommon {
         assertEq(market.position(FEE_RECIPIENT).supplyShares, feeRecipientSupplySharesBefore);
     }
 
-    function test_WhenInterestFeeIsNonZero() external whenMarketIsNotPaused whenIrmIsNotZeroAddress {
+    function test_WhenInterestFeeIsNonZero()
+        external
+        whenMarketIsNotPaused
+        whenIrmIsNotZeroAddress
+        whenInterestIsNonZero
+    {
         // Set interestFee to 10% (0.1 * MATH_PRECISION), skip accrue to not interfere with test
         uint256 interestFee = 0.1 ether; // 10% in MATH_PRECISION
         vm.prank(OWNER);

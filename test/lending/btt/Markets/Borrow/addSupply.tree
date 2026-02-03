@@ -23,7 +23,6 @@ AltoBorrowMarket::AddSupply()
         │   └── it should add supply shares to position
         ├── when supply cap is exceeded
         │   └── it should revert
-        ├── it should emit AccrueInterest
         ├── it should update totalSupply
         ├── it should not update totalBorrowed
         ├── it should transfer borrow tokens from sender

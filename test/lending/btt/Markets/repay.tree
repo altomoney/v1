@@ -7,7 +7,10 @@ AltoBaseMarket::Repay()
 │   └── when onBehalf is zero address
 │       └── it should revert
 └── given valid input
-    ├── it should accrue interest
+    ├── when accrued interest is greater than zero
+    │   └── it should emit AccrueInterest event
+    ├── when accrued interest is zero
+    │   └── it should not emit AccrueInterest event
     ├── when assets is zero
     │   └── it should calculate assets from shares
     ├── when shares is zero

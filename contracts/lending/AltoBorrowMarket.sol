@@ -112,6 +112,10 @@ contract AltoBorrowMarket is AltoBaseMarket {
         totalSupply.assets += interest.toUint128();
         totalBorrowed.assets += interest.toUint128();
 
+        if (interest == 0) {
+            return;
+        }
+
         uint256 feeShares;
         if (interestFee != 0) {
             uint256 feeBorrowAssets = interest.multiplyWithPrecision(interestFee);
