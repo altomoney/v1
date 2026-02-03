@@ -264,7 +264,7 @@ interface IMarketBase is IMarketErrors, IMarketEvents, IAuth, IPausable {
     function setMaxLtv(uint256 maxLtv) external;
 
     /// @notice Setter of the fee recipient for the market.
-    function setFeeRecipient(address feeRecipient) external virtual;
+    function setFeeRecipient(address feeRecipient) external;
 
     /// @notice Function to set an authorized callback contract.
     /// @param callback The address of the callback contract

@@ -141,9 +141,9 @@ contract AltoBorrowMarket is AltoBaseMarket {
         _borrowOpeningFee = _newBorrowOpeningFee;
     }
 
-    /// @notice Setter of the fee recipient for the market.
+    /// @notice Setter of the fee recipient for the borrow market.
     /// @param _feeRecipient The new fee recipient
-    function setFeeRecipient(address _feeRecipient) external onlyOwner {
+    function setFeeRecipient(address _feeRecipient) external override onlyOwner {
         uint256 protocolFeePercentage = IAltoLiquidationEngine(liquidationEngine).protocolFeePercentage();
         if (_feeRecipient == address(0) && (borrowOpeningFee() > 0 || protocolFeePercentage > 0 || interestFee > 0)) {
             revert AltoBorrowMarketInvalidInput();
