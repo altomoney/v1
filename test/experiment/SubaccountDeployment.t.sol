@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
 import {Test} from "forge-std/Test.sol";
@@ -6,6 +7,8 @@ import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {AltoAdapter} from "@alto/utils/AltoAdapter.sol";
+import {Bundler3, Call} from "@morpho-org/bundler3/Bundler3.sol";
 
 enum PositionType {
     SUPPLY,
@@ -87,6 +90,44 @@ contract TestProxyDeployer is Test {
         vm.startPrank(user);
         IERC20(borrowToken).approve(proxy, 10 ether);
         Position(proxy).supply(market, 10 ether);
+        vm.stopPrank();
+    }
+
+    function testNoProxy() public {
+        vm.startPrank(user);
+        IERC20(borrowToken).approve(market, 10 ether);
+        IMarket(market).addSupply(10 ether, 0, user);
+        vm.stopPrank();
+    }
+
+    function testAltoAdapter() public {
+        Bundler3 bundler3 = Bundler3(0xAc80387009231b4D55B85Df27924B85f2ED6823D);
+        AltoAdapter altoAdapter = AltoAdapter(payable(0x241aA0aC561a5c210a86FeCC82f45D2713F59C0C));
+
+        vm.startPrank(user);
+
+        IERC20(borrowToken).approve(address(altoAdapter), 10 ether);
+
+        Call[] memory bundle = new Call[](2);
+
+        bundle[0] = Call({
+            to: address(altoAdapter),
+            data: abi.encodeCall(altoAdapter.erc20TransferFrom, (borrowToken, address(altoAdapter), 10 ether)),
+            value: 0,
+            skipRevert: false,
+            callbackHash: bytes32(0)
+        });
+
+        bundle[1] = Call({
+            to: address(altoAdapter),
+            data: abi.encodeCall(altoAdapter.marketAddSupply, (IMarket(market), 10 ether, 0, type(uint256).max, user)),
+            value: 0,
+            skipRevert: false,
+            callbackHash: bytes32(0)
+        });
+
+        bundler3.multicall(bundle);
+
         vm.stopPrank();
     }
 }
