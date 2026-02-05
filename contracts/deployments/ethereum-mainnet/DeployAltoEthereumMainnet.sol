@@ -540,7 +540,7 @@ library DeployAltoEthereumMainnet {
                         liquidationWindowTag: 0
                     }),
                     freezer: params.freezer,
-                    swapRouter: ZEROX_SWAP_TARGET_MAINNET
+                    swapRouter: ODOS_ROUTER_V3_MAINNET
                 }),
                 input,
                 params,
