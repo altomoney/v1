@@ -12,7 +12,7 @@ import {
     IDcfDlbPriorityLiquidationEngine,
     LiquidationConfiguration
 } from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";
-import {ExpLib, MATH_PRECISION_INT} from "@alto/lending/libraries/ExpLib.sol";
+import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 
 contract MockMarket is AltoBaseMarket {
     using AssetShareConversionMath for uint256;
@@ -139,9 +139,9 @@ contract MockMarket is AltoBaseMarket {
             return 0;
         }
         uint256 base = MATH_PRECISION - liquidationPercentage;
-        // this is pow(base, liquidationConfiguration.dynamicBonusFeeDecaySteepness) considering the precision of the numbers
-        uint256 decay = (base ** liquidationConfiguration.dynamicBonusFeeDecaySteepness)
-            / (MATH_PRECISION ** liquidationConfiguration.dynamicBonusFeeDecaySteepness);
+        uint256 decay = FixedPointMathLib.rpow(
+            base, liquidationConfiguration.dynamicBonusFeeDecaySteepness / MATH_PRECISION, MATH_PRECISION
+        );
         return liquidationConfiguration.dynamicBonusFeeStart.multiplyWithPrecision(decay);
     }
 

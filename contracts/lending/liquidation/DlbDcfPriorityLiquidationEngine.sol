@@ -9,7 +9,7 @@ import {Position, IMarket, Balance} from "@alto/lending/interfaces/IMarket.sol";
 import {FixedPointMath, MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
 import {Uint128Converter} from "@alto/lending/libraries/Uint128Converter.sol";
-import {ExpLib, MATH_PRECISION_INT} from "@alto/lending/libraries/ExpLib.sol";
+import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 import {ILendingOracle, LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {
     LiquidationEngineInput,
@@ -246,9 +246,9 @@ contract DlbDcfPriorityLiquidationEngine is AltoOwnable2Step, IDcfDlbPriorityLiq
             return 0;
         }
         uint256 base = MATH_PRECISION - liquidationPercentage;
-        // this is pow(base, liquidationConfiguration.dynamicBonusFeeDecaySteepness) considering the precision of the numbers
-        uint256 decay = (base ** liquidationConfiguration.dynamicBonusFeeDecaySteepness)
-            / (MATH_PRECISION ** liquidationConfiguration.dynamicBonusFeeDecaySteepness);
+        uint256 decay = FixedPointMathLib.rpow(
+            base, liquidationConfiguration.dynamicBonusFeeDecaySteepness / MATH_PRECISION, MATH_PRECISION
+        );
         return liquidationConfiguration.dynamicBonusFeeStart.multiplyWithPrecision(decay);
     }
 
@@ -289,6 +289,8 @@ contract DlbDcfPriorityLiquidationEngine is AltoOwnable2Step, IDcfDlbPriorityLiq
         if (
             _liquidationConfiguration.dynamicBonusFeeDecaySteepness > 100 * MATH_PRECISION
                 || _liquidationConfiguration.dynamicBonusFeeDecaySteepness == 0
+                // check if the steepness is a multiple of the precision
+                || _liquidationConfiguration.dynamicBonusFeeDecaySteepness % MATH_PRECISION != 0
         ) {
             revert DcfDlbPriorityLiquidationEngineInvalidInput();
         }

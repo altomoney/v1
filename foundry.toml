@@ -21,6 +21,7 @@ remappings = [
 	'@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/',
 	'@uniswap/v3-core/=lib/v3-core/',
 	'@chainlink/=lib/chainlink-evm/',
+	'solady/=lib/solady/src/',
 ]
 
 ffi = true
