@@ -62,8 +62,11 @@ import {
 } from "@alto/deployments/ethereum-mainnet/IDeployAltoEthereumMainnet.sol";
 import {AccessMode} from "@alto/usm/interfaces/IUsm.sol";
 import {console} from "forge-std/console.sol";
+import {Vm} from "forge-std/Vm.sol";
 
 library DeployAltoEthereumMainnet {
+    Vm internal constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
+
     function deploy(AltoEthereumMainnetParams memory params, AltoEthereumMainnetInput memory input)
         internal
         returns (AltoEthereumMainnetInput memory)
@@ -683,7 +686,7 @@ library DeployAltoEthereumMainnet {
             values[1] = 0;
             payloads[1] = abi.encodeCall(AdapterContractApproval.approveContract, (report.market));
 
-            _logTimelockBatchTransaction(timelock, targets, values, payloads, minDelay);
+            _writeSafeTimelockBatchJson("borrow-market-registry", timelock, targets, values, payloads, minDelay);
         }
 
         return report;
@@ -859,52 +862,55 @@ library DeployAltoEthereumMainnet {
         timelockContract.scheduleBatch(targets, values, payloads, bytes32(0), bytes32(0), params.timelockDelay);
     }
 
-    /// @dev Logs timelock batch transaction data for multisig submission
+    /// @dev Writes Safe Transaction Builder JSON files for a timelock batch transaction
+    /// @param name Identifier for the output files (e.g. "borrow-market-registry")
     /// @param timelock The timelock controller address
     /// @param targets Array of target contract addresses
     /// @param values Array of ETH values (typically all zeros)
     /// @param payloads Array of calldata for each target
     /// @param delay The timelock delay (use timelock.getMinDelay())
-    function _logTimelockBatchTransaction(
+    function _writeSafeTimelockBatchJson(
+        string memory name,
         address timelock,
         address[] memory targets,
         uint256[] memory values,
         bytes[] memory payloads,
         uint256 delay
-    ) internal view {
+    ) internal {
         bytes32 predecessor = bytes32(0);
         bytes32 salt = bytes32(0);
 
-        // Generate scheduleBatch calldata
         bytes memory scheduleBatchData =
             abi.encodeCall(TimelockController.scheduleBatch, (targets, values, payloads, predecessor, salt, delay));
-
-        // Generate executeBatch calldata
         bytes memory executeBatchData =
             abi.encodeCall(TimelockController.executeBatch, (targets, values, payloads, predecessor, salt));
 
-        console.log("=== Pending Timelock Batch Transaction ===");
-        console.log("Timelock:", timelock);
-        console.log("Delay (seconds):", delay);
-        console.log("Number of operations:", targets.length);
-        console.log("");
-        console.log("--- Batch Contents ---");
-        for (uint256 i = 0; i < targets.length; i++) {
-            console.log("Operation", i);
-            console.log("  target:", targets[i]);
-            console.log("  value:", values[i]);
-            console.log("  payload:");
-            console.logBytes(payloads[i]);
-        }
-        console.log("");
-        console.log("--- Step 1: ScheduleBatch (submit to multisig now) ---");
-        console.log("Call timelock at:", timelock);
-        console.logBytes(scheduleBatchData);
-        console.log("");
-        console.log("--- Step 2: ExecuteBatch (submit to multisig after delay) ---");
-        console.log("Call timelock at:", timelock);
-        console.logBytes(executeBatchData);
-        console.log("==========================================");
+        string memory outputDir = "contracts/deployments/ethereum-mainnet/output";
+
+        vm.writeFile(
+            string.concat(outputDir, "/safe-tx-", name, "-schedule.json"),
+            _buildSafeJson(string.concat(name, " - Schedule"), timelock, scheduleBatchData)
+        );
+        vm.writeFile(
+            string.concat(outputDir, "/safe-tx-", name, "-execute.json"),
+            _buildSafeJson(string.concat(name, " - Execute"), timelock, executeBatchData)
+        );
+
+        console.log("Safe TX Builder JSONs written:");
+        console.log("  1. safe-tx-%s-schedule.json  (propose)", name);
+        console.log("  2. safe-tx-%s-execute.json   (execute after delay)", name);
+    }
+
+    function _buildSafeJson(string memory name, address to, bytes memory data) internal pure returns (string memory) {
+        return string.concat(
+            '{"version":"1.0","chainId":"1","meta":{"name":"',
+            name,
+            '"},"transactions":[{"to":"',
+            vm.toString(to),
+            '","value":"0","data":"',
+            vm.toString(data),
+            '"}]}'
+        );
     }
 
     function _deployPost(AltoEthereumMainnetParams memory params, AltoEthereumMainnetInput memory input)
