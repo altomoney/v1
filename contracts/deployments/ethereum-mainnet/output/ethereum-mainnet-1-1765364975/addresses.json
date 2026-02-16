@@ -80,6 +80,7 @@
     "wstethMarket": "0xfd8c25047f4397dC5461B919999585a2a3EaC2eF",
     "wstethMarketImplementation": "0x988A01E35a924e13Bd3a297d9b0521Ba2FeB17f2",
     "wstethMarketIrm": "0x74EAaB99cc141b7B91F1f3B326bcF1270b03Df3C",
-    "wstethMarketOracle": "0xCf041e3266152e07EED37D32d4476c16028070A4"
+    "wstethMarketOracle": "0xCf041e3266152e07EED37D32d4476c16028070A4",
+    "paxgBorrowMarket": "0x0000000000000000000000000000000000000000"
   }
 }
