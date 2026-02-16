@@ -472,8 +472,8 @@ library DeployAltoEthereumMainnet {
                     collateralToken: PAXG_MAINNET,
                     oracleAsset: EthereumMainnetLendingOracleAsset.PAXG,
                     irmConfig: AdaptiveCurveIrm.AdaptiveCurveIrmConfig({
-                        curveSteepness: 4 ether,
-                        adjustmentSpeed: 50 ether / int256(365 days),
+                        curveSteepness: 2 ether,
+                        adjustmentSpeed: 25 ether / int256(365 days),
                         targetUtilization: 0.9 ether, // 90%
                         initialRateAtTarget: 0.04 ether / int256(365 days), // 4%
                         minRateAtTarget: 0.001 ether / int256(365 days), // 0.1%
