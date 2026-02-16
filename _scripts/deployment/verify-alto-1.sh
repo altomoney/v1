@@ -219,6 +219,15 @@ SYRUPUSDC_LIQUIDATION_ENGINE=$(get_address ".contracts.syrupUsdcBorrowLiquidatio
 SYRUPUSDC_LEVERAGE_SWAPPER=$(get_address ".contracts.syrupUsdcBorrowLeverageSwapper")
 SYRUPUSDC_LEVERAGE=$(get_address ".contracts.syrupUsdcBorrowLeverage")
 
+# PAXG Borrow Market contracts
+PAXG_MARKET=$(get_address ".contracts.paxgBorrowMarket")
+PAXG_MARKET_IMPL=$(get_address ".contracts.paxgBorrowMarketImplementation")
+PAXG_MARKET_IRM=$(get_address ".contracts.paxgBorrowMarketIrm")
+PAXG_MARKET_ORACLE=$(get_address ".contracts.paxgBorrowMarketOracle")
+PAXG_LIQUIDATION_ENGINE=$(get_address ".contracts.paxgBorrowLiquidationEngine")
+PAXG_LEVERAGE_SWAPPER=$(get_address ".contracts.paxgBorrowLeverageSwapper")
+PAXG_LEVERAGE=$(get_address ".contracts.paxgBorrowLeverage")
+
 # Permissioned USM contracts
 PERMISSIONED_USM=$(get_address ".contracts.permissionedUsm")
 PERMISSIONED_USM_IMPL=$(get_address ".contracts.permissionedUsmImplementation")
@@ -303,6 +312,13 @@ echo "- SYRUP USDC Borrow Market Oracle: $SYRUPUSDC_MARKET_ORACLE"
 echo "- SYRUP USDC Borrow Liquidation Engine: $SYRUPUSDC_LIQUIDATION_ENGINE"
 echo "- SYRUP USDC Borrow Leverage Swapper: $SYRUPUSDC_LEVERAGE_SWAPPER"
 echo "- SYRUP USDC Borrow Leverage: $SYRUPUSDC_LEVERAGE"
+echo "- PAXG Borrow Market: $PAXG_MARKET"
+echo "- PAXG Borrow Market Implementation: $PAXG_MARKET_IMPL"
+echo "- PAXG Borrow Market IRM: $PAXG_MARKET_IRM"
+echo "- PAXG Borrow Market Oracle: $PAXG_MARKET_ORACLE"
+echo "- PAXG Borrow Liquidation Engine: $PAXG_LIQUIDATION_ENGINE"
+echo "- PAXG Borrow Leverage Swapper: $PAXG_LEVERAGE_SWAPPER"
+echo "- PAXG Borrow Leverage: $PAXG_LEVERAGE"
 echo "- Permissioned USM: $PERMISSIONED_USM"
 echo "- Permissioned USM Implementation: $PERMISSIONED_USM_IMPL"
 echo "- Permissioned USM Fixed Price Strategy: $PERMISSIONED_USM_FIXED_PRICE_STRATEGY"
@@ -413,6 +429,15 @@ verify_contract "SyrupUsdcBorrowMarketOracle" "$SYRUPUSDC_MARKET_ORACLE" "contra
 verify_contract "SyrupUsdcBorrowLiquidationEngine" "$SYRUPUSDC_LIQUIDATION_ENGINE" "contracts/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol:DlbDcfPriorityLiquidationEngine"
 verify_contract "SyrupUsdcBorrowLeverageSwapper" "$SYRUPUSDC_LEVERAGE_SWAPPER" "contracts/lending/leverage/AltoLeverageSwapper.sol:AltoLeverageSwapper"
 verify_contract "SyrupUsdcBorrowLeverage" "$SYRUPUSDC_LEVERAGE" "contracts/lending/leverage/AltoLeverage.sol:AltoLeverage"
+
+# PAXG Borrow Market contracts
+verify_contract "PaxgBorrowMarket" "$PAXG_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
+verify_contract "PaxgBorrowMarketImplementation" "$PAXG_MARKET_IMPL" "contracts/lending/AltoBorrowMarket.sol:AltoBorrowMarket"
+verify_contract "PaxgBorrowMarketIRM" "$PAXG_MARKET_IRM" "contracts/lending/irm/AdaptiveCurveIrm.sol:AdaptiveCurveIrm"
+verify_contract "PaxgBorrowMarketOracle" "$PAXG_MARKET_ORACLE" "contracts/oracles/AltoMultiChainlinkLendingOracle.sol:AltoMultiChainlinkLendingOracle"
+verify_contract "PaxgBorrowLiquidationEngine" "$PAXG_LIQUIDATION_ENGINE" "contracts/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol:DlbDcfPriorityLiquidationEngine"
+verify_contract "PaxgBorrowLeverageSwapper" "$PAXG_LEVERAGE_SWAPPER" "contracts/lending/leverage/AltoLeverageSwapper.sol:AltoLeverageSwapper"
+verify_contract "PaxgBorrowLeverage" "$PAXG_LEVERAGE" "contracts/lending/leverage/AltoLeverage.sol:AltoLeverage"
 
 # Permissioned USM contracts
 verify_contract "PermissionedUsm" "$PERMISSIONED_USM" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
