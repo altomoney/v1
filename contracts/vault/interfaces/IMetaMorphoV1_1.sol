@@ -1,37 +1,191 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity >=0.5.0;
 
-import {IMorpho, Id, MarketParams} from "../../lib/morpho-blue/src/interfaces/IMorpho.sol";
-import {IERC4626} from "../../lib/openzeppelin-contracts/contracts/interfaces/IERC4626.sol";
-import {IERC20Permit} from "../../lib/openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Permit.sol";
-
-import {MarketConfig, PendingUint192, PendingAddress} from "../libraries/PendingLib.sol";
+import {MarketConfig, PendingUint192, PendingAddress} from "@metamorpho/libraries/PendingLib.sol";
 
 struct MarketAllocation {
     /// @notice The market to allocate.
-    MarketParams marketParams;
+    address market;
     /// @notice The amount of assets to allocate.
     uint256 assets;
 }
 
-interface IMulticall {
-    function multicall(bytes[] calldata) external returns (bytes[] memory);
+interface IMetaMorphoV1_1Errors {
+    /// @notice Thrown when the address passed is the zero address.
+    error ZeroAddress();
+
+    /// @notice Thrown when the caller doesn't have the curator role.
+    error NotCuratorRole();
+
+    /// @notice Thrown when the caller doesn't have the allocator role.
+    error NotAllocatorRole();
+
+    /// @notice Thrown when the caller doesn't have the guardian role.
+    error NotGuardianRole();
+
+    /// @notice Thrown when the caller doesn't have the curator nor the guardian role.
+    error NotCuratorNorGuardianRole();
+
+    /// @notice Thrown when the market cannot be set in the supply queue.
+    error UnauthorizedMarket(address market);
+
+    /// @notice Thrown when submitting a cap for a market whose loan token does not correspond to the underlying asset.
+    error InconsistentAsset(address market);
+
+    /// @notice Thrown when the supply cap has been exceeded on market during a reallocation of funds.
+    error SupplyCapExceeded(address market);
+
+    /// @notice Thrown when the fee to set exceeds the maximum fee.
+    error MaxFeeExceeded();
+
+    /// @notice Thrown when the value is already set.
+    error AlreadySet();
+
+    /// @notice Thrown when a value is already pending.
+    error AlreadyPending();
+
+    /// @notice Thrown when submitting the removal of a market when there is a cap already pending on that market.
+    error PendingCap(address market);
+
+    /// @notice Thrown when submitting a cap for a market with a pending removal.
+    error PendingRemoval();
+
+    /// @notice Thrown when submitting a market removal for a market with a non zero cap.
+    error NonZeroCap();
+
+    /// @notice Thrown when market is a duplicate in the new withdraw queue to set.
+    error DuplicateMarket(address market);
+
+    /// @notice Thrown when market is missing in the updated withdraw queue and the market has a non-zero cap set.
+    error InvalidMarketRemovalNonZeroCap(address market);
+
+    /// @notice Thrown when market is missing in the updated withdraw queue and the market has a non-zero supply.
+    error InvalidMarketRemovalNonZeroSupply(address market);
+
+    /// @notice Thrown when market is missing in the updated withdraw queue and the market is not yet disabled.
+    error InvalidMarketRemovalTimelockNotElapsed(address market);
+
+    /// @notice Thrown when there's no pending value to set.
+    error NoPendingValue();
+
+    /// @notice Thrown when the requested liquidity cannot be withdrawn from Morpho.
+    error NotEnoughLiquidity();
+
+    /// @notice Thrown when submitting a cap for a market which does not exist.
+    error MarketNotCreated();
+
+    /// @notice Thrown when interacting with a non previously enabled market.
+    error MarketNotEnabled(address market);
+
+    /// @notice Thrown when the submitted timelock is above the max timelock.
+    error AboveMaxTimelock();
+
+    /// @notice Thrown when the submitted timelock is below the min timelock.
+    error BelowMinTimelock();
+
+    /// @notice Thrown when the timelock is not elapsed.
+    error TimelockNotElapsed();
+
+    /// @notice Thrown when too many markets are in the withdraw queue.
+    error MaxQueueLengthExceeded();
+
+    /// @notice Thrown when setting the fee to a non zero value while the fee recipient is the zero address.
+    error ZeroFeeRecipient();
+
+    /// @notice Thrown when the amount withdrawn is not exactly the amount supplied.
+    error InconsistentReallocation();
+
+    /// @notice Thrown when all caps have been reached.
+    error AllCapsReached();
 }
 
-interface IOwnable {
-    function owner() external view returns (address);
-    function transferOwnership(address) external;
-    function renounceOwnership() external;
-    function acceptOwnership() external;
-    function pendingOwner() external view returns (address);
+interface IMetaMorphoV1_1Events {
+    /// @notice Emitted when a pending `newTimelock` is submitted.
+    event SubmitTimelock(uint256 newTimelock);
+
+    /// @notice Emitted when `timelock` is set to `newTimelock`.
+    event SetTimelock(address indexed caller, uint256 newTimelock);
+
+    /// @notice Emitted when `skimRecipient` is set to `newSkimRecipient`.
+    event SetSkimRecipient(address indexed newSkimRecipient);
+
+    /// @notice Emitted when `fee` is set to `newFee`.
+    event SetFee(address indexed caller, uint256 newFee);
+
+    /// @notice Emitted when a new `newFeeRecipient` is set.
+    event SetFeeRecipient(address indexed newFeeRecipient);
+
+    /// @notice Emitted when the name of the vault is set to `newName`.
+    event SetName(string indexed newName);
+
+    /// @notice Emitted when the symbol of the vault is set to `newSymbol`.
+    event SetSymbol(string indexed newSymbol);
+
+    /// @notice Emitted when a pending `newGuardian` is submitted.
+    event SubmitGuardian(address indexed newGuardian);
+
+    /// @notice Emitted when `guardian` is set to `newGuardian`.
+    event SetGuardian(address indexed caller, address indexed guardian);
+
+    /// @notice Emitted when a pending `cap` is submitted for market.
+    event SubmitCap(address indexed caller, address indexed market, uint256 cap);
+
+    /// @notice Emitted when a new `cap` is set for market.
+    event SetCap(address indexed caller, address indexed market, uint256 cap);
+
+    /// @notice Emitted when the vault's last total assets is updated to `updatedTotalAssets`.
+    event UpdateLastTotalAssets(uint256 updatedTotalAssets);
+
+    /// @notice Emitted when the vault's lostAssets is updated to `newLostAssets`.
+    event UpdateLostAssets(uint256 newLostAssets);
+
+    /// @notice Emitted when the market is submitted for removal.
+    event SubmitMarketRemoval(address indexed caller, address indexed market);
+
+    /// @notice Emitted when `curator` is set to `newCurator`.
+    event SetCurator(address indexed newCurator);
+
+    /// @notice Emitted when an `allocator` is set to `isAllocator`.
+    event SetIsAllocator(address indexed allocator, bool isAllocator);
+
+    /// @notice Emitted when a `pendingTimelock` is revoked.
+    event RevokePendingTimelock(address indexed caller);
+
+    /// @notice Emitted when a `pendingCap` for the market is revoked.
+    event RevokePendingCap(address indexed caller, address indexed market);
+
+    /// @notice Emitted when a `pendingGuardian` is revoked.
+    event RevokePendingGuardian(address indexed caller);
+
+    /// @notice Emitted when a pending market removal is revoked.
+    event RevokePendingMarketRemoval(address indexed caller, address indexed market);
+
+    /// @notice Emitted when the `supplyQueue` is set to `newSupplyQueue`.
+    event SetSupplyQueue(address indexed caller, address[] newSupplyQueue);
+
+    /// @notice Emitted when the `withdrawQueue` is set to `newWithdrawQueue`.
+    event SetWithdrawQueue(address indexed caller, address[] newWithdrawQueue);
+
+    /// @notice Emitted when a reallocation supplies assets to the market.
+    event ReallocateSupply(
+        address indexed caller, address indexed market, uint256 suppliedAssets, uint256 suppliedShares
+    );
+
+    /// @notice Emitted when a reallocation withdraws assets from the market.
+    event ReallocateWithdraw(
+        address indexed caller, address indexed market, uint256 withdrawnAssets, uint256 withdrawnShares
+    );
+
+    /// @notice Emitted when interest is accrued.
+    event AccrueInterest(uint256 newTotalAssets, uint256 feeShares);
+
+    /// @notice Emitted when an `amount` of `token` is transferred to the skim recipient by `caller`.
+    event Skim(address indexed caller, address indexed token, uint256 amount);
 }
 
 /// @dev This interface is used for factorizing IMetaMorphoV1_1StaticTyping and IMetaMorphoV1_1.
 /// @dev Consider using the IMetaMorphoV1_1 interface instead of this one.
-interface IMetaMorphoV1_1Base {
-    /// @notice The address of the Morpho contract.
-    function MORPHO() external view returns (IMorpho);
-
+interface IMetaMorphoV1_1Base is IMetaMorphoV1_1Errors, IMetaMorphoV1_1Events {
     /// @notice OpenZeppelin decimals offset used by the ERC4626 implementation.
     /// @dev Calculated to be max(0, 18 - underlyingDecimals).
     /// @dev When equal to zero (<=> token decimals >= 18), the protection against the inflation front-running attack on
@@ -63,7 +217,7 @@ interface IMetaMorphoV1_1Base {
 
     /// @dev Stores the order of markets on which liquidity is supplied upon deposit.
     /// @dev Can contain any market. A market is skipped as soon as its supply cap is reached.
-    function supplyQueue(uint256) external view returns (Id);
+    function supplyQueue(uint256) external view returns (address);
 
     /// @notice Returns the length of the supply queue.
     function supplyQueueLength() external view returns (uint256);
@@ -71,7 +225,7 @@ interface IMetaMorphoV1_1Base {
     /// @dev Stores the order of markets from which liquidity is withdrawn upon withdrawal.
     /// @dev Always contain all non-zero cap markets as well as all markets on which the vault supplies liquidity,
     /// without duplicate.
-    function withdrawQueue(uint256) external view returns (Id);
+    function withdrawQueue(uint256) external view returns (address);
 
     /// @notice Returns the length of the withdraw queue.
     function withdrawQueueLength() external view returns (uint256);
@@ -100,14 +254,14 @@ interface IMetaMorphoV1_1Base {
     /// @dev Warning: Reverts if a cap is already pending. Revoke the pending cap to overwrite it.
     /// @dev Warning: Reverts if a market removal is pending.
     /// @dev In case the new cap is lower than the current one, the cap is set immediately.
-    function submitCap(MarketParams memory marketParams, uint256 newSupplyCap) external;
+    function submitCap(address market, uint256 newSupplyCap) external;
 
     /// @notice Accepts the pending cap of the market defined by `marketParams`.
-    function acceptCap(MarketParams memory marketParams) external;
+    function acceptCap(address market) external;
 
-    /// @notice Revokes the pending cap of the market defined by `id`.
+    /// @notice Revokes the pending cap of the market
     /// @dev Does not revert if there is no pending cap.
-    function revokePendingCap(Id id) external;
+    function revokePendingCap(address market) external;
 
     /// @notice Submits a forced market removal from the vault, eventually losing all funds supplied to the market.
     /// @notice This forced removal is expected to be used as an emergency process in case a market constantly reverts.
@@ -115,11 +269,11 @@ interface IMetaMorphoV1_1Base {
     /// first (using `reallocate`), followed by the removal of the market (using `updateWithdrawQueue`).
     /// @dev Warning: Reverts for non-zero cap or if there is a pending cap. Successfully submitting a zero cap will
     /// prevent such reverts.
-    function submitMarketRemoval(MarketParams memory marketParams) external;
+    function submitMarketRemoval(address market) external;
 
-    /// @notice Revokes the pending removal of the market defined by `id`.
+    /// @notice Revokes the pending removal of the market
     /// @dev Does not revert if there is no pending market removal.
-    function revokePendingMarketRemoval(Id id) external;
+    function revokePendingMarketRemoval(address market) external;
 
     /// @notice Sets the name of the vault.
     function setName(string memory newName) external;
@@ -161,7 +315,7 @@ interface IMetaMorphoV1_1Base {
     /// @notice Sets `supplyQueue` to `newSupplyQueue`.
     /// @param newSupplyQueue is an array of enabled markets, and can contain duplicate markets, but it would only
     /// increase the cost of depositing to the vault.
-    function setSupplyQueue(Id[] calldata newSupplyQueue) external;
+    function setSupplyQueue(address[] calldata newSupplyQueue) external;
 
     /// @notice Updates the withdraw queue. Some markets can be removed, but no market can be added.
     /// @notice Removing a market requires the vault to have 0 supply on it, or to have previously submitted a removal
@@ -193,13 +347,13 @@ interface IMetaMorphoV1_1Base {
 /// @dev Consider using the IMetaMorphoV1_1 interface instead of this one.
 interface IMetaMorphoV1_1StaticTyping is IMetaMorphoV1_1Base {
     /// @notice Returns the current configuration of each market.
-    function config(Id) external view returns (uint184 cap, bool enabled, uint64 removableAt);
+    function config(address market) external view returns (uint184 cap, bool enabled, uint64 removableAt);
 
     /// @notice Returns the pending guardian.
     function pendingGuardian() external view returns (address guardian, uint64 validAt);
 
     /// @notice Returns the pending cap for each market.
-    function pendingCap(Id) external view returns (uint192 value, uint64 validAt);
+    function pendingCap(address market) external view returns (uint192 value, uint64 validAt);
 
     /// @notice Returns the pending timelock.
     function pendingTimelock() external view returns (uint192 value, uint64 validAt);
@@ -210,15 +364,15 @@ interface IMetaMorphoV1_1StaticTyping is IMetaMorphoV1_1Base {
 /// @custom:contact security@morpho.org
 /// @dev Use this interface for MetaMorphoV1_1 to have access to all the functions with the appropriate function
 /// signatures.
-interface IMetaMorphoV1_1 is IMetaMorphoV1_1Base, IERC4626, IERC20Permit, IOwnable, IMulticall {
+interface IMetaMorphoV1_1 is IMetaMorphoV1_1Base {
     /// @notice Returns the current configuration of each market.
-    function config(Id) external view returns (MarketConfig memory);
+    function config(address market) external view returns (MarketConfig memory);
 
     /// @notice Returns the pending guardian.
     function pendingGuardian() external view returns (PendingAddress memory);
 
     /// @notice Returns the pending cap for each market.
-    function pendingCap(Id) external view returns (PendingUint192 memory);
+    function pendingCap(address market) external view returns (PendingUint192 memory);
 
     /// @notice Returns the pending timelock.
     function pendingTimelock() external view returns (PendingUint192 memory);
