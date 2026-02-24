@@ -6,9 +6,9 @@ import {
     PendingUint192,
     PendingAddress,
     MarketAllocation,
-    IMetaMorphoV1_1Base,
-    IMetaMorphoV1_1StaticTyping
-} from "./interfaces/IMetaMorphoV1_1.sol";
+    IAltoVaultBase,
+    IAltoVaultStaticTypes
+} from "./interfaces/IAltoVault.sol";
 import {Market, MarketLib} from "./libraries/MarketLib.sol";
 import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
 import {IMarketRegistry} from "@alto/utils/interfaces/IMarketRegistry.sol";
@@ -19,7 +19,7 @@ import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {MorphoBalancesLib} from "./libraries/MorphoBalancesLib.sol";
+import {AltoBalancesLib} from "./libraries/AltoBalancesLib.sol";
 
 import {Multicall} from "@openzeppelin/contracts/utils/Multicall.sol";
 import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
@@ -34,75 +34,76 @@ import {
 } from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
 import {UtilsLib} from "@bundler3/lib/morpho-blue/src/libraries/UtilsLib.sol";
 
-/// @title MetaMorpho
-/// @author Morpho Labs
-/// @custom:contact security@morpho.org
-/// @notice ERC4626 compliant vault allowing users to deposit assets to Morpho.
-contract MetaMorphoV1_1 is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaMorphoV1_1StaticTyping {
+/// @title AltoVault
+/// @author GPM
+/// @author Adapted from Morpho Labs' MetaMorphoV1.1 (https://github.com/morpho-org/metamorpho-v1.1/blob/main/src/MetaMorphoV1_1.sol)
+/// @custom:contact security@altofoundation.org
+/// @notice ERC4626 compliant vault allowing users to deposit assets to AltoBorrowMarkets
+contract AltoVault is ERC4626, ERC20Permit, Ownable2Step, Multicall, IAltoVaultStaticTypes {
     using Math for uint256;
     using UtilsLib for uint256;
     using SafeCast for uint256;
     using SafeERC20 for IERC20;
     using AssetShareConversionMath for uint256;
     using AssetShareConversionMath for uint128;
-    using MorphoBalancesLib for address;
+    using AltoBalancesLib for address;
     using PendingLib for PendingUint192;
     using PendingLib for PendingAddress;
     using MarketLib for address;
 
     /* IMMUTABLES */
 
-    /// @inheritdoc IMetaMorphoV1_1Base
+    /// @inheritdoc IAltoVaultBase
     uint8 public immutable DECIMALS_OFFSET;
 
     /* STORAGE */
 
-    /// @inheritdoc IMetaMorphoV1_1Base
+    /// @inheritdoc IAltoVaultBase
     IMarketRegistry public marketRegistry;
 
-    /// @inheritdoc IMetaMorphoV1_1Base
+    /// @inheritdoc IAltoVaultBase
     address public curator;
 
-    /// @inheritdoc IMetaMorphoV1_1Base
+    /// @inheritdoc IAltoVaultBase
     mapping(address => bool) public isAllocator;
 
-    /// @inheritdoc IMetaMorphoV1_1Base
+    /// @inheritdoc IAltoVaultBase
     address public guardian;
 
-    /// @inheritdoc IMetaMorphoV1_1StaticTyping
+    /// @inheritdoc IAltoVaultStaticTypes
     mapping(address => MarketConfig) public config;
 
-    /// @inheritdoc IMetaMorphoV1_1Base
+    /// @inheritdoc IAltoVaultBase
     uint256 public timelock;
 
-    /// @inheritdoc IMetaMorphoV1_1StaticTyping
+    /// @inheritdoc IAltoVaultStaticTypes
     PendingAddress public pendingGuardian;
 
-    /// @inheritdoc IMetaMorphoV1_1StaticTyping
+    /// @inheritdoc IAltoVaultStaticTypes
     mapping(address => PendingUint192) public pendingCap;
 
-    /// @inheritdoc IMetaMorphoV1_1StaticTyping
+    /// @inheritdoc IAltoVaultStaticTypes
     PendingUint192 public pendingTimelock;
 
-    /// @inheritdoc IMetaMorphoV1_1Base
+    /// @inheritdoc IAltoVaultBase
     uint96 public fee;
 
-    /// @inheritdoc IMetaMorphoV1_1Base
+    /// @inheritdoc IAltoVaultBase
     address public feeRecipient;
 
-    /// @inheritdoc IMetaMorphoV1_1Base
+    /// @inheritdoc IAltoVaultBase
     address public skimRecipient;
 
-    /// @inheritdoc IMetaMorphoV1_1Base
+    /// @inheritdoc IAltoVaultBase
     address[] public supplyQueue;
 
-    /// @inheritdoc IMetaMorphoV1_1Base
+    /// @inheritdoc IAltoVaultBase
     address[] public withdrawQueue;
 
-    /// @inheritdoc IMetaMorphoV1_1Base
+    /// @inheritdoc IAltoVaultBase
     uint256 public lastTotalAssets;
 
-    /// @inheritdoc IMetaMorphoV1_1Base
+    /// @inheritdoc IAltoVaultBase
     uint256 public lostAssets;
 
     /// @dev "Overrides" the ERC20's storage variable to be able to modify it.
@@ -193,19 +194,21 @@ contract MetaMorphoV1_1 is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaM
 
     /* ONLY OWNER FUNCTIONS */
 
+    /// @inheritdoc IAltoVaultBase
     function setName(string memory newName) external onlyOwner {
         _name = newName;
 
         emit SetName(newName);
     }
 
+    /// @inheritdoc IAltoVaultBase
     function setSymbol(string memory newSymbol) external onlyOwner {
         _symbol = newSymbol;
 
         emit SetSymbol(newSymbol);
     }
 
-    /// @inheritdoc IMetaMorphoV1_1Base
+    /// @inheritdoc IAltoVaultBase
     function setMarketRegistry(address newMarketRegistry) external onlyOwner {
         if (newMarketRegistry == address(0)) revert ZeroAddress();
         if (newMarketRegistry == address(marketRegistry)) revert AlreadySet();
@@ -215,7 +218,7 @@ contract MetaMorphoV1_1 is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaM
         emit SetMarketRegistry(newMarketRegistry);
     }
 
-    /// @inheritdoc IMetaMorphoV1_1Base
+    /// @inheritdoc IAltoVaultBase
     function setCurator(address newCurator) external onlyOwner {
         if (newCurator == curator) revert AlreadySet();
 
@@ -224,7 +227,7 @@ contract MetaMorphoV1_1 is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaM
         emit SetCurator(newCurator);
     }
 
-    /// @inheritdoc IMetaMorphoV1_1Base
+    /// @inheritdoc IAltoVaultBase
     function setIsAllocator(address newAllocator, bool newIsAllocator) external onlyOwner {
         if (isAllocator[newAllocator] == newIsAllocator) revert AlreadySet();
 
@@ -233,7 +236,7 @@ contract MetaMorphoV1_1 is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaM
         emit SetIsAllocator(newAllocator, newIsAllocator);
     }
 
-    /// @inheritdoc IMetaMorphoV1_1Base
+    /// @inheritdoc IAltoVaultBase
     function setSkimRecipient(address newSkimRecipient) external onlyOwner {
         if (newSkimRecipient == skimRecipient) revert AlreadySet();
 
@@ -242,7 +245,7 @@ contract MetaMorphoV1_1 is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaM
         emit SetSkimRecipient(newSkimRecipient);
     }
 
-    /// @inheritdoc IMetaMorphoV1_1Base
+    /// @inheritdoc IAltoVaultBase
     function submitTimelock(uint256 newTimelock) external onlyOwner {
         if (newTimelock == timelock) revert AlreadySet();
         if (pendingTimelock.validAt != 0) revert AlreadyPending();
@@ -258,7 +261,7 @@ contract MetaMorphoV1_1 is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaM
         }
     }
 
-    /// @inheritdoc IMetaMorphoV1_1Base
+    /// @inheritdoc IAltoVaultBase
     function setFee(uint256 newFee) external onlyOwner {
         if (newFee == fee) revert AlreadySet();
         if (newFee > ConstantsLib.MAX_FEE) revert MaxFeeExceeded();
@@ -273,7 +276,7 @@ contract MetaMorphoV1_1 is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaM
         emit SetFee(_msgSender(), fee);
     }
 
-    /// @inheritdoc IMetaMorphoV1_1Base
+    /// @inheritdoc IAltoVaultBase
     function setFeeRecipient(address newFeeRecipient) external onlyOwner {
         if (newFeeRecipient == feeRecipient) revert AlreadySet();
         if (newFeeRecipient == address(0) && fee != 0) revert ZeroFeeRecipient();
@@ -286,7 +289,7 @@ contract MetaMorphoV1_1 is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaM
         emit SetFeeRecipient(newFeeRecipient);
     }
 
-    /// @inheritdoc IMetaMorphoV1_1Base
+    /// @inheritdoc IAltoVaultBase
     function submitGuardian(address newGuardian) external onlyOwner {
         if (newGuardian == guardian) revert AlreadySet();
         if (pendingGuardian.validAt != 0) revert AlreadyPending();
@@ -302,7 +305,7 @@ contract MetaMorphoV1_1 is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaM
 
     /* ONLY CURATOR FUNCTIONS */
 
-    /// @inheritdoc IMetaMorphoV1_1Base
+    /// @inheritdoc IAltoVaultBase
     function submitCap(address market, uint256 newSupplyCap) external onlyCuratorRole {
         if (!marketRegistry.isBorrowMarket(market)) revert MarketNotInRegistry(market);
         if (IMarket(market).borrowToken() != asset()) revert InconsistentAsset(market);
@@ -320,7 +323,7 @@ contract MetaMorphoV1_1 is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaM
         }
     }
 
-    /// @inheritdoc IMetaMorphoV1_1Base
+    /// @inheritdoc IAltoVaultBase
     function submitMarketRemoval(address market) external onlyCuratorRole {
         if (config[market].removableAt != 0) revert AlreadyPending();
         if (config[market].cap != 0) revert NonZeroCap();
@@ -335,7 +338,7 @@ contract MetaMorphoV1_1 is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaM
 
     /* ONLY ALLOCATOR FUNCTIONS */
 
-    /// @inheritdoc IMetaMorphoV1_1Base
+    /// @inheritdoc IAltoVaultBase
     function setSupplyQueue(address[] calldata newSupplyQueue) external onlyAllocatorRole {
         uint256 length = newSupplyQueue.length;
 
@@ -350,7 +353,7 @@ contract MetaMorphoV1_1 is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaM
         emit SetSupplyQueue(_msgSender(), newSupplyQueue);
     }
 
-    /// @inheritdoc IMetaMorphoV1_1Base
+    /// @inheritdoc IAltoVaultBase
     function updateWithdrawQueue(uint256[] calldata indexes) external onlyAllocatorRole {
         uint256 newLength = indexes.length;
         uint256 currLength = withdrawQueue.length;
@@ -395,7 +398,7 @@ contract MetaMorphoV1_1 is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaM
         emit SetWithdrawQueue(_msgSender(), newWithdrawQueue);
     }
 
-    /// @inheritdoc IMetaMorphoV1_1Base
+    /// @inheritdoc IAltoVaultBase
     function reallocate(MarketAllocation[] calldata allocations) external onlyAllocatorRole {
         uint256 totalSupplied;
         uint256 totalWithdrawn;
@@ -450,28 +453,28 @@ contract MetaMorphoV1_1 is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaM
 
     /* REVOKE FUNCTIONS */
 
-    /// @inheritdoc IMetaMorphoV1_1Base
+    /// @inheritdoc IAltoVaultBase
     function revokePendingTimelock() external onlyGuardianRole {
         delete pendingTimelock;
 
         emit RevokePendingTimelock(_msgSender());
     }
 
-    /// @inheritdoc IMetaMorphoV1_1Base
+    /// @inheritdoc IAltoVaultBase
     function revokePendingGuardian() external onlyGuardianRole {
         delete pendingGuardian;
 
         emit RevokePendingGuardian(_msgSender());
     }
 
-    /// @inheritdoc IMetaMorphoV1_1Base
+    /// @inheritdoc IAltoVaultBase
     function revokePendingCap(address market) external onlyCuratorOrGuardianRole {
         delete pendingCap[market];
 
         emit RevokePendingCap(_msgSender(), market);
     }
 
-    /// @inheritdoc IMetaMorphoV1_1Base
+    /// @inheritdoc IAltoVaultBase
     function revokePendingMarketRemoval(address market) external onlyCuratorOrGuardianRole {
         delete config[market].removableAt;
 
@@ -480,33 +483,33 @@ contract MetaMorphoV1_1 is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaM
 
     /* EXTERNAL */
 
-    /// @inheritdoc IMetaMorphoV1_1Base
+    /// @inheritdoc IAltoVaultBase
     function supplyQueueLength() external view returns (uint256) {
         return supplyQueue.length;
     }
 
-    /// @inheritdoc IMetaMorphoV1_1Base
+    /// @inheritdoc IAltoVaultBase
     function withdrawQueueLength() external view returns (uint256) {
         return withdrawQueue.length;
     }
 
-    /// @inheritdoc IMetaMorphoV1_1Base
+    /// @inheritdoc IAltoVaultBase
     function acceptTimelock() external afterTimelock(pendingTimelock.validAt) {
         _setTimelock(pendingTimelock.value);
     }
 
-    /// @inheritdoc IMetaMorphoV1_1Base
+    /// @inheritdoc IAltoVaultBase
     function acceptGuardian() external afterTimelock(pendingGuardian.validAt) {
         _setGuardian(pendingGuardian.value);
     }
 
-    /// @inheritdoc IMetaMorphoV1_1Base
+    /// @inheritdoc IAltoVaultBase
     function acceptCap(address market) external afterTimelock(pendingCap[market].validAt) {
         // Safe "unchecked" cast because pendingCap <= type(uint184).max.
         _setCap(market, uint184(pendingCap[market].value));
     }
 
-    /// @inheritdoc IMetaMorphoV1_1Base
+    /// @inheritdoc IAltoVaultBase
     function skim(address token) external {
         if (skimRecipient == address(0)) revert ZeroAddress();
 
@@ -606,8 +609,8 @@ contract MetaMorphoV1_1 is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaM
     }
 
     /// @inheritdoc IERC4626
-    /// @dev totalAssets is the sum of the vault's assets on the Morpho markets plus the lost assets (see corresponding
-    /// docs in IMetaMorphoV1_1.sol).
+    /// @dev totalAssets is the sum of the vault's assets on the Alto borrow markets plus the lost assets (see corresponding
+    /// docs in IAltoVault.sol).
     function totalAssets() public view override returns (uint256) {
         (, uint256 newTotalAssets,) = _accruedFeeAndAssets();
 
@@ -633,10 +636,10 @@ contract MetaMorphoV1_1 is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaM
         newTotalSupply = totalSupply() + feeShares;
 
         assets = _convertToAssetsWithTotals(balanceOf(owner), newTotalSupply, newTotalAssets, Math.Rounding.Floor);
-        assets -= _simulateWithdrawMorpho(assets);
+        assets -= _simulateWithdrawFromMarkets(assets);
     }
 
-    /// @dev Returns the maximum amount of assets that the vault can supply on Morpho.
+    /// @dev Returns the maximum amount of assets that the vault can supply on AltoBorrowMarkets.
     function _maxDeposit() internal view returns (uint256 totalSuppliable) {
         for (uint256 i; i < supplyQueue.length; ++i) {
             address market = supplyQueue[i];
@@ -692,11 +695,11 @@ contract MetaMorphoV1_1 is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaM
     }
 
     /// @inheritdoc ERC4626
-    /// @dev Used in mint or deposit to deposit the underlying asset to Morpho markets.
+    /// @dev Used in mint or deposit to deposit the underlying asset to AltoBorrowMarkets.
     function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal override {
         super._deposit(caller, receiver, assets, shares);
 
-        _supplyMorpho(assets);
+        _supplyToMarkets(assets);
 
         // `lastTotalAssets + assets` may be a little above `totalAssets()`.
         // This can lead to a small accrual of `lostAssets` at the next interaction.
@@ -704,7 +707,7 @@ contract MetaMorphoV1_1 is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaM
     }
 
     /// @inheritdoc ERC4626
-    /// @dev Used in redeem or withdraw to withdraw the underlying asset from Morpho markets.
+    /// @dev Used in redeem or withdraw to withdraw the underlying asset from Alto borrow markets.
     /// @dev Depending on 3 cases, reverts when withdrawing "too much" with:
     /// 1. NotEnoughLiquidity when withdrawing more than available liquidity.
     /// 2. ERC20InsufficientAllowance when withdrawing more than `caller`'s allowance.
@@ -718,16 +721,15 @@ contract MetaMorphoV1_1 is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaM
         // clamp at 0 so the error raised is the more informative NotEnoughLiquidity.
         _updateLastTotalAssets(lastTotalAssets.zeroFloorSub(assets));
 
-        _withdrawMorpho(assets);
+        _withdrawFromMarkets(assets);
 
         super._withdraw(caller, receiver, owner, assets, shares);
     }
 
     /* INTERNAL */
 
-    /// @dev Accrues interest on Morpho Blue and returns the vault's assets & corresponding shares supplied on the
-    /// market defined by `marketParams`, as well as the market's state.
-    /// @dev Assumes that the inputs `marketParams` and `id` match.
+    /// @dev Accrues interest on the market at `market` and returns the vault's supply assets, supply shares, and the
+    /// market's state (totals and lastUpdate).
     function _accruedSupplyBalance(address market)
         internal
         returns (uint256 assets, uint256 shares, Market memory marketState)
@@ -763,8 +765,7 @@ contract MetaMorphoV1_1 is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaM
         delete pendingGuardian;
     }
 
-    /// @dev Sets the cap of the market defined by `id` to `supplyCap`.
-    /// @dev Assumes that the inputs `marketParams` and `id` match.
+    /// @dev Sets the supply cap of the market at `market` to `supplyCap`.
     function _setCap(address market, uint184 supplyCap) internal {
         MarketConfig storage marketConfig = config[market];
 
@@ -794,8 +795,8 @@ contract MetaMorphoV1_1 is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaM
 
     /* LIQUIDITY ALLOCATION */
 
-    /// @dev Supplies `assets` to Morpho.
-    function _supplyMorpho(uint256 assets) internal {
+    /// @dev Supplies `assets` to Alto borrow markets.
+    function _supplyToMarkets(uint256 assets) internal {
         for (uint256 i; i < supplyQueue.length; ++i) {
             address market = supplyQueue[i];
 
@@ -826,8 +827,8 @@ contract MetaMorphoV1_1 is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaM
         if (assets != 0) revert AllCapsReached();
     }
 
-    /// @dev Withdraws `assets` from Morpho.
-    function _withdrawMorpho(uint256 assets) internal {
+    /// @dev Withdraws `assets` from Alto borrow markets.
+    function _withdrawFromMarkets(uint256 assets) internal {
         for (uint256 i; i < withdrawQueue.length; ++i) {
             address market = withdrawQueue[i];
             (uint256 supplyAssets,, Market memory marketState) = _accruedSupplyBalance(market);
@@ -850,9 +851,9 @@ contract MetaMorphoV1_1 is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaM
         if (assets != 0) revert NotEnoughLiquidity();
     }
 
-    /// @dev Simulates a withdraw of `assets` from Morpho.
-    /// @return The remaining assets to be withdrawn.
-    function _simulateWithdrawMorpho(uint256 assets) internal view returns (uint256) {
+    /// @dev Simulates a withdraw of `assets` from the vault's Alto borrow markets (by iterating the withdraw queue).
+    /// @return The remaining assets that could not be satisfied from available market liquidity.
+    function _simulateWithdrawFromMarkets(uint256 assets) internal view returns (uint256) {
         for (uint256 i; i < withdrawQueue.length; ++i) {
             address market = withdrawQueue[i];
 
@@ -860,9 +861,9 @@ contract MetaMorphoV1_1 is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaM
             (uint256 totalSupplyAssets, uint256 totalSupplyShares, uint256 totalBorrowAssets,) =
                 market.expectedMarketBalances();
 
-            // The vault withdrawing from Morpho cannot fail because:
+            // The vault withdrawing from Alto borrow markets cannot fail because:
             // 1. oracle.price() is never called (the vault doesn't borrow)
-            // 2. the amount is capped to the liquidity available on Morpho
+            // 2. the amount is capped to the liquidity available on Alto borrow markets
             // 3. virtually accruing interest didn't fail
             assets = assets.zeroFloorSub(
                 _withdrawable(
@@ -879,14 +880,13 @@ contract MetaMorphoV1_1 is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaM
         return assets;
     }
 
-    /// @dev Returns the withdrawable amount of assets from the market defined by `marketParams`, given the market's
-    /// total supply and borrow assets and the vault's assets supplied.
+    /// @dev Returns the withdrawable amount of assets from the market at `market`, given the market's total supply
+    /// and borrow assets and the vault's supply assets on that market.
     function _withdrawable(address market, uint256 totalSupplyAssets, uint256 totalBorrowAssets, uint256 supplyAssets)
         internal
         view
         returns (uint256)
     {
-        // Inside a flashloan callback, liquidity on Morpho Blue may be limited to the singleton's balance.
         address borrowToken = IMarket(market).borrowToken();
         uint256 availableLiquidity =
             UtilsLib.min(totalSupplyAssets - totalBorrowAssets, ERC20(borrowToken).balanceOf(address(market)));
@@ -925,7 +925,7 @@ contract MetaMorphoV1_1 is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaM
         view
         returns (uint256 feeShares, uint256 newTotalAssets, uint256 newLostAssets)
     {
-        // The assets that the vault has on Morpho.
+        // The assets that the vault has on Alto borrow markets.
         uint256 realTotalAssets;
         for (uint256 i; i < withdrawQueue.length; ++i) {
             realTotalAssets += withdrawQueue[i].expectedSupplyAssets(address(this));

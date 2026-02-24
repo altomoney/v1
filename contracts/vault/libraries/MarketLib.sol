@@ -10,10 +10,11 @@ interface IInterestFeeMarket {
     function interestFee() external view returns (uint256);
 }
 
-/// @dev Warning: `totalSupplyAssets` does not contain the accrued interest since the last interest accrual.
-/// @dev Warning: `totalBorrowAssets` does not contain the accrued interest since the last interest accrual.
-/// @dev Warning: `totalSupplyShares` does not contain the additional shares accrued by `feeRecipient` since the last
-/// interest accrual.
+/// @dev Snapshot of market state. Totals do not include interest accrued after `lastUpdate`.
+/// @dev Warning: `totalSupplyAssets` and `totalBorrowAssets` do not contain interest since the last accrual.
+/// @dev Warning: `totalSupplyShares` does not include shares accrued by the fee recipient since the last accrual.
+/// @dev `lastUpdate` is the timestamp of the last IRM update (from the market's IRM, by IRM_TYPE).
+/// @dev `fee` is the market's interest fee (from interestFee() for borrow markets, 0 for mint markets).
 struct Market {
     uint128 totalSupplyAssets;
     uint128 totalSupplyShares;
@@ -23,6 +24,8 @@ struct Market {
 }
 
 /// @title MarketLib
+/// @author GPM
+/// @custom:contact security@altofoundation.org
 /// @notice Library to fetch market state for Alto markets.
 library MarketLib {
     /// @notice Returns total supply (assets, shares) of the market.
