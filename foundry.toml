@@ -21,6 +21,7 @@ remappings = [
 	'@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/',
 	'@uniswap/v3-core/=lib/v3-core/',
 	'@chainlink/=lib/chainlink-evm/',
+	'@morpho-blue/=lib/morpho-blue/src/',
 ]
 
 ffi = true

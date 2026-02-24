@@ -2,22 +2,20 @@
 // Copyright (c) 2025 Morpho Association
 pragma solidity 0.8.28;
 
-import {IMorpho, MarketParams, Id} from "../../lib/morpho-blue/src/interfaces/IMorpho.sol";
-import {MarketParamsLib} from "../../lib/morpho-blue/src/libraries/MarketParamsLib.sol";
-import {SharesMathLib} from "../../lib/morpho-blue/src/libraries/SharesMathLib.sol";
+import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
 import {IVaultV2} from "../interfaces/IVaultV2.sol";
-import {IERC20} from "../interfaces/IERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IMorphoMarketV1AdapterV2} from "./interfaces/IMorphoMarketV1AdapterV2.sol";
 import {SafeERC20Lib} from "../libraries/SafeERC20Lib.sol";
-import {
-    AdaptiveCurveIrmLib
-} from "../../lib/morpho-blue-irm/src/adaptive-curve-irm/libraries/periphery/AdaptiveCurveIrmLib.sol";
+import {IMarketBase} from "@alto/lending/interfaces/IMarket.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {AltoBalancesLib} from "../libraries/AltoBalancesLib.sol";
 
-/// @dev Morpho Market V1 is also known as Morpho Blue.
-/// @dev This adapter must be used with Morpho Market V1 that are protected against inflation attacks with an initial
-/// supply. Following resource is relevant: https://docs.openzeppelin.com/contracts/5.x/erc4626#inflation-attack.
+/// @dev This adapter is used with Alto borrow markets.
+/// @dev Alto borrow markets used with this adapter must be protected against inflation attacks with an initial
+/// supply. See https://docs.openzeppelin.com/contracts/5.x/erc4626#inflation-attack.
 /// @dev Rounding error losses on supply/withdraw are realizable.
-/// @dev If expectedSupplyAssets reverts for a market of the marketIds, realAssets will revert and the vault will not be
+/// @dev If expectedSupplyAssets reverts for a market of the markets, realAssets will revert and the vault will not be
 /// able to accrueInterest.
 /// @dev Upon interest accrual, the vault calls realAssets(). If there are too many markets, it could cause issues such
 /// as expensive interactions, even DOS, because of the gas.
@@ -38,17 +36,15 @@ import {
 /// @dev It is possible to burn the shares of a market whose IRM reverts.
 /// @dev Burnt shares are lost forever.
 contract MorphoMarketV1AdapterV2 is IMorphoMarketV1AdapterV2 {
-    using MarketParamsLib for MarketParams;
-    using SharesMathLib for uint256;
+    using AssetShareConversionMath for uint256;
+    using SafeERC20 for IERC20;
+    using AltoBalancesLib for address;
 
     /* IMMUTABLES */
 
-    address public immutable factory;
     address public immutable parentVault;
     address public immutable asset;
-    address public immutable morpho;
     bytes32 public immutable adapterId;
-    address public immutable adaptiveCurveIrm;
 
     /* TIMELOCKS STORAGE */
 
@@ -59,25 +55,21 @@ contract MorphoMarketV1AdapterV2 is IMorphoMarketV1AdapterV2 {
     /* OTHER STORAGE */
 
     address public skimRecipient;
-    bytes32[] public marketIds;
-    mapping(bytes32 marketId => uint256) public supplyShares;
+    address[] public markets;
+    mapping(address market => uint256) public supplyShares;
 
     /* GETTERS */
 
-    function marketIdsLength() external view returns (uint256) {
-        return marketIds.length;
+    function marketsLength() external view returns (uint256) {
+        return markets.length;
     }
 
     /* CONSTRUCTOR */
 
-    constructor(address _parentVault, address _morpho, address _adaptiveCurveIrm) {
-        factory = msg.sender;
+    constructor(address _parentVault) {
         parentVault = _parentVault;
-        morpho = _morpho;
         asset = IVaultV2(_parentVault).asset();
         adapterId = keccak256(abi.encode("this", address(this)));
-        adaptiveCurveIrm = _adaptiveCurveIrm;
-        SafeERC20Lib.safeApprove(asset, _morpho, type(uint256).max);
         SafeERC20Lib.safeApprove(asset, _parentVault, type(uint256).max);
     }
 
@@ -158,11 +150,11 @@ contract MorphoMarketV1AdapterV2 is IMorphoMarketV1AdapterV2 {
     }
 
     /// @dev Deallocate 0 from the vault after burning shares to update the allocation there.
-    function burnShares(bytes32 marketId) external {
+    function burnShares(address market) external {
         timelocked();
-        uint256 supplySharesBefore = supplyShares[marketId];
-        supplyShares[marketId] = 0;
-        emit BurnShares(marketId, supplySharesBefore);
+        uint256 supplySharesBefore = supplyShares[market];
+        supplyShares[market] = 0;
+        emit BurnShares(market, supplySharesBefore);
     }
 
     /* OTHER FUNCTIONS */
@@ -178,28 +170,28 @@ contract MorphoMarketV1AdapterV2 is IMorphoMarketV1AdapterV2 {
 
     /// @dev Returns the ids of the allocation and the change in allocation.
     function allocate(bytes memory data, uint256 assets, bytes4, address) external returns (bytes32[] memory, int256) {
-        MarketParams memory marketParams = abi.decode(data, (MarketParams));
+        address market = abi.decode(data, (address));
         require(msg.sender == parentVault, Unauthorized());
-        require(marketParams.loanToken == asset, LoanAssetMismatch());
-        require(marketParams.irm == adaptiveCurveIrm, IrmMismatch());
-        bytes32 marketId = Id.unwrap(marketParams.id());
+        require(IMarketBase(market).borrowToken() == asset, LoanAssetMismatch());
 
         uint256 mintedShares;
         if (assets > 0) {
-            (, mintedShares) = IMorpho(morpho).supply(marketParams, assets, 0, address(this), hex"");
+            IERC20(asset).forceApprove(market, assets);
+            (, mintedShares) = IMarketBase(market).addSupply(assets, 0, address(this));
+            IERC20(asset).forceApprove(market, 0);
             require(mintedShares >= assets, SharePriceAboveOne());
-            supplyShares[marketId] += mintedShares;
+            supplyShares[market] += mintedShares;
         }
 
-        uint256 oldAllocation = allocation(marketParams);
-        uint256 newAllocation = expectedSupplyAssets(marketId);
-        updateList(marketId, oldAllocation, newAllocation);
+        uint256 oldAllocation = allocation(market);
+        uint256 newAllocation = expectedSupplyAssets(market);
+        updateList(market, oldAllocation, newAllocation);
 
-        emit Allocate(marketId, newAllocation, mintedShares);
+        emit Allocate(market, newAllocation, mintedShares);
 
         // forge-lint: disable-next-item(unsafe-typecast) safe because Market V1 bounds the total supply of the
         // underlying token, and allocation is less than the max total assets of the vault.
-        return (ids(marketParams), int256(newAllocation) - int256(oldAllocation));
+        return (ids(market), int256(newAllocation) - int256(oldAllocation));
     }
 
     /// @dev Returns the ids of the deallocation and the change in allocation.
@@ -207,75 +199,72 @@ contract MorphoMarketV1AdapterV2 is IMorphoMarketV1AdapterV2 {
         external
         returns (bytes32[] memory, int256)
     {
-        MarketParams memory marketParams = abi.decode(data, (MarketParams));
+        address market = abi.decode(data, (address));
         require(msg.sender == parentVault, Unauthorized());
-        require(marketParams.loanToken == asset, LoanAssetMismatch());
-        require(marketParams.irm == adaptiveCurveIrm, IrmMismatch());
-        bytes32 marketId = Id.unwrap(marketParams.id());
-
+        require(IMarketBase(market).borrowToken() == asset, LoanAssetMismatch());
         uint256 burnedShares;
         if (assets > 0) {
-            (, burnedShares) = IMorpho(morpho).withdraw(marketParams, assets, 0, address(this), address(this));
-            supplyShares[marketId] -= burnedShares;
+            (, burnedShares) = IMarketBase(market).removeSupply(assets, 0, address(this), address(this));
+            supplyShares[market] -= burnedShares;
         }
 
-        uint256 oldAllocation = allocation(marketParams);
-        uint256 newAllocation = expectedSupplyAssets(marketId);
-        updateList(marketId, oldAllocation, newAllocation);
-
-        emit Deallocate(marketId, newAllocation, burnedShares);
+        uint256 oldAllocation = allocation(market);
+        uint256 newAllocation = expectedSupplyAssets(market);
+        updateList(market, oldAllocation, newAllocation);
+        emit Deallocate(market, newAllocation, burnedShares);
 
         // forge-lint: disable-next-item(unsafe-typecast) safe because Market V1 bounds the total supply of the
         // underlying token, and allocation is less than the max total assets of the vault.
-        return (ids(marketParams), int256(newAllocation) - int256(oldAllocation));
+        return (ids(market), int256(newAllocation) - int256(oldAllocation));
     }
 
-    function updateList(bytes32 marketId, uint256 oldAllocation, uint256 newAllocation) internal {
+    function updateList(address market, uint256 oldAllocation, uint256 newAllocation) internal {
         if (oldAllocation > 0 && newAllocation == 0) {
-            for (uint256 i = 0; i < marketIds.length; i++) {
-                if (marketIds[i] == marketId) {
-                    marketIds[i] = marketIds[marketIds.length - 1];
-                    marketIds.pop();
+            for (uint256 i = 0; i < markets.length; i++) {
+                if (markets[i] == market) {
+                    markets[i] = markets[markets.length - 1];
+                    markets.pop();
                     break;
                 }
             }
         } else if (oldAllocation == 0 && newAllocation > 0) {
-            marketIds.push(marketId);
+            markets.push(market);
         }
     }
 
     /* VIEW FUNCTIONS */
 
     /// @dev Returns the expected supply assets of the market, taking into account the internal shares accounting.
-    function expectedSupplyAssets(bytes32 marketId) public view returns (uint256) {
-        uint256 _supplyShares = supplyShares[marketId];
+    function expectedSupplyAssets(address market) public view returns (uint256) {
+        uint256 _supplyShares = supplyShares[market];
         if (_supplyShares == 0) {
             return 0;
         } else {
-            (uint256 totalSupplyAssets, uint256 totalSupplyShares,,) =
-                AdaptiveCurveIrmLib.expectedMarketBalances(morpho, marketId, adaptiveCurveIrm);
-            return _supplyShares.toAssetsDown(totalSupplyAssets, totalSupplyShares);
+            (uint256 totalSupplyAssets, uint256 totalSupplyShares,,) = market.expectedMarketBalances();
+            return _supplyShares.convertToAssetsDown(totalSupplyAssets, totalSupplyShares);
         }
     }
 
     /// @dev Returns the Vault's allocation for this market.
-    function allocation(MarketParams memory marketParams) public view returns (uint256) {
-        return IVaultV2(parentVault).allocation(keccak256(abi.encode("this/marketParams", address(this), marketParams)));
+    function allocation(address market) public view returns (uint256) {
+        // todo: morpho has different allocation for different market params because morpho markets can share IRM
+        // discuss with Peter on how we want to structure caps based on IDs
+        return IVaultV2(parentVault).allocation(keccak256(abi.encode("this/market", address(this), market)));
     }
 
     /// @dev Returns adapter's ids.
-    function ids(MarketParams memory marketParams) public view returns (bytes32[] memory) {
+    function ids(address market) public view returns (bytes32[] memory) {
         bytes32[] memory ids_ = new bytes32[](3);
         ids_[0] = adapterId;
-        ids_[1] = keccak256(abi.encode("collateralToken", marketParams.collateralToken));
-        ids_[2] = keccak256(abi.encode("this/marketParams", address(this), marketParams));
+        ids_[1] = keccak256(abi.encode("collateralToken", IMarketBase(market).collateralToken()));
+        ids_[2] = keccak256(abi.encode("this/market", address(this), market));
         return ids_;
     }
 
     function realAssets() external view returns (uint256) {
         uint256 _realAssets = 0;
-        for (uint256 i = 0; i < marketIds.length; i++) {
-            _realAssets += expectedSupplyAssets(marketIds[i]);
+        for (uint256 i = 0; i < markets.length; i++) {
+            _realAssets += expectedSupplyAssets(markets[i]);
         }
         return _realAssets;
     }
