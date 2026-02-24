@@ -11,7 +11,7 @@ struct MarketAllocation {
     uint256 assets;
 }
 
-interface IMetaMorphoV1_1Errors {
+interface IAltoVaultErrors {
     /// @notice Thrown when the address passed is the zero address.
     error ZeroAddress();
 
@@ -69,7 +69,7 @@ interface IMetaMorphoV1_1Errors {
     /// @notice Thrown when there's no pending value to set.
     error NoPendingValue();
 
-    /// @notice Thrown when the requested liquidity cannot be withdrawn from Morpho.
+    /// @notice Thrown when the requested liquidity cannot be withdrawn from market.
     error NotEnoughLiquidity();
 
     /// @notice Thrown when interacting with a non previously enabled market.
@@ -100,7 +100,7 @@ interface IMetaMorphoV1_1Errors {
     error MarketNotInRegistry(address market);
 }
 
-interface IMetaMorphoV1_1Events {
+interface IAltoVaultEvents {
     /// @notice Emitted when a pending `newTimelock` is submitted.
     event SubmitTimelock(uint256 newTimelock);
 
@@ -187,9 +187,9 @@ interface IMetaMorphoV1_1Events {
     event Skim(address indexed caller, address indexed token, uint256 amount);
 }
 
-/// @dev This interface is used for factorizing IMetaMorphoV1_1StaticTyping and IMetaMorphoV1_1.
-/// @dev Consider using the IMetaMorphoV1_1 interface instead of this one.
-interface IMetaMorphoV1_1Base is IMetaMorphoV1_1Errors, IMetaMorphoV1_1Events {
+/// @dev This interface is used for factorizing IAltoVaultStaticTypes and IAltoVault.
+/// @dev Consider using the IAltoVault interface instead of this one.
+interface IAltoVaultBase is IAltoVaultErrors, IAltoVaultEvents {
     /// @notice OpenZeppelin decimals offset used by the ERC4626 implementation.
     /// @dev Calculated to be max(0, 18 - underlyingDecimals).
     /// @dev When equal to zero (<=> token decimals >= 18), the protection against the inflation front-running attack on
@@ -257,13 +257,13 @@ interface IMetaMorphoV1_1Base is IMetaMorphoV1_1Errors, IMetaMorphoV1_1Events {
     /// @dev Does not revert if there is no pending timelock.
     function revokePendingTimelock() external;
 
-    /// @notice Submits a `newSupplyCap` for the market defined by `marketParams`.
+    /// @notice Submits a `newSupplyCap` for the market at `market`.
     /// @dev Warning: Reverts if a cap is already pending. Revoke the pending cap to overwrite it.
     /// @dev Warning: Reverts if a market removal is pending.
     /// @dev In case the new cap is lower than the current one, the cap is set immediately.
     function submitCap(address market, uint256 newSupplyCap) external;
 
-    /// @notice Accepts the pending cap of the market defined by `marketParams`.
+    /// @notice Accepts the pending cap for the market at `market`.
     function acceptCap(address market) external;
 
     /// @notice Revokes the pending cap of the market
@@ -291,8 +291,8 @@ interface IMetaMorphoV1_1Base is IMetaMorphoV1_1Errors, IMetaMorphoV1_1Events {
     /// @notice Submits a `newGuardian`.
     /// @notice Warning: a malicious guardian could disrupt the vault's operation, and would have the power to revoke
     /// any pending guardian.
-    /// @dev In case there is no guardian, the gardian is set immediately.
-    /// @dev Warning: Submitting a gardian will overwrite the current pending gardian.
+    /// @dev In case there is no guardian, the guardian is set immediately.
+    /// @dev Warning: Submitting a guardian will overwrite the current pending guardian.
     function submitGuardian(address newGuardian) external;
 
     /// @notice Accepts the pending guardian.
@@ -353,9 +353,9 @@ interface IMetaMorphoV1_1Base is IMetaMorphoV1_1Errors, IMetaMorphoV1_1Events {
     function reallocate(MarketAllocation[] calldata allocations) external;
 }
 
-/// @dev This interface is inherited by MetaMorphoV1_1 so that function signatures are checked by the compiler.
-/// @dev Consider using the IMetaMorphoV1_1 interface instead of this one.
-interface IMetaMorphoV1_1StaticTyping is IMetaMorphoV1_1Base {
+/// @dev This interface is inherited by AltoVault so that function signatures are checked by the compiler.
+/// @dev Consider using the IAltoVault interface instead of this one.
+interface IAltoVaultStaticTypes is IAltoVaultBase {
     /// @notice Returns the current configuration of each market.
     function config(address market) external view returns (uint184 cap, bool enabled, uint64 removableAt);
 
@@ -369,12 +369,12 @@ interface IMetaMorphoV1_1StaticTyping is IMetaMorphoV1_1Base {
     function pendingTimelock() external view returns (uint192 value, uint64 validAt);
 }
 
-/// @title IMetaMorphoV1_1
-/// @author Morpho Labs
-/// @custom:contact security@morpho.org
-/// @dev Use this interface for MetaMorphoV1_1 to have access to all the functions with the appropriate function
-/// signatures.
-interface IMetaMorphoV1_1 is IMetaMorphoV1_1Base {
+/// @title IAltoVault
+/// @author GPM
+/// @author Adapted from Morpho Labs' IMetaMorphoV1.1 (https://github.com/morpho-org/metamorpho-v1.1/blob/main/src/interfaces/IMetaMorphoV1_1.sol)
+/// @custom:contact security@altofoundation.org
+/// @dev Use this interface for AltoVault to have access to all the functions with the appropriate function signatures.
+interface IAltoVault is IAltoVaultBase {
     /// @notice Returns the current configuration of each market.
     function config(address market) external view returns (MarketConfig memory);
 
