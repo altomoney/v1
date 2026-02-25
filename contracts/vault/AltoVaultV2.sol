@@ -188,7 +188,7 @@ import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 /// @dev At creation, all settings are set to their default values. Notably, timelocks are zero which is useful to set
 /// up the vault quickly. Also, there are no gates so anybody can interact with the vault. To prevent that, the gates
 /// configuration can be batched with the vault creation.
-contract VaultV2 is IVaultV2StaticTypes {
+contract AltoVaultV2 is IVaultV2StaticTypes {
     using FixedPointMath for uint256;
     using FixedPointMath for uint128;
     using FixedPointMath for int256;

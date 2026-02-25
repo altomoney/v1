@@ -4,7 +4,7 @@ pragma solidity >=0.5.0;
 
 import {IAdapter} from "../../interfaces/IAdapter.sol";
 
-interface IMorphoMarketV1AdapterV2 is IAdapter {
+interface IAltoMarketAdapter is IAdapter {
     /* EVENTS */
 
     event Submit(bytes4 indexed selector, bytes data, uint256 executableAt);

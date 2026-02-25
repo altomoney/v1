@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
 import {IVaultV2} from "../interfaces/IVaultV2.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {IMorphoMarketV1AdapterV2} from "./interfaces/IMorphoMarketV1AdapterV2.sol";
+import {IAltoMarketAdapter} from "./interfaces/IAltoMarketAdapter.sol";
 import {SafeERC20Lib} from "../libraries/SafeERC20Lib.sol";
 import {IMarketBase} from "@alto/lending/interfaces/IMarket.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -35,7 +35,7 @@ import {AltoBalancesLib} from "../libraries/AltoBalancesLib.sol";
 /// @dev Burning shares takes time, so reactive depositors might be able to exit before the share price reduction.
 /// @dev It is possible to burn the shares of a market whose IRM reverts.
 /// @dev Burnt shares are lost forever.
-contract MorphoMarketV1AdapterV2 is IMorphoMarketV1AdapterV2 {
+contract AltoMarketAdapter is IAltoMarketAdapter {
     using AssetShareConversionMath for uint256;
     using SafeERC20 for IERC20;
     using AltoBalancesLib for address;
@@ -84,9 +84,8 @@ contract MorphoMarketV1AdapterV2 is IMorphoMarketV1AdapterV2 {
         // forge-lint: disable-next-item(unsafe-typecast) we explicitly want only the first bytes4.
         bytes4 selector = bytes4(data);
         // forge-lint: disable-next-item(unsafe-typecast) we explicitly want only the second bytes4.
-        uint256 _timelock = selector == IMorphoMarketV1AdapterV2.decreaseTimelock.selector
-            ? timelock[bytes4(data[4:8])]
-            : timelock[selector];
+        uint256 _timelock =
+            selector == IAltoMarketAdapter.decreaseTimelock.selector ? timelock[bytes4(data[4:8])] : timelock[selector];
         executableAt[data] = block.timestamp + _timelock;
         emit Submit(selector, data, executableAt[data]);
     }
@@ -119,7 +118,7 @@ contract MorphoMarketV1AdapterV2 is IMorphoMarketV1AdapterV2 {
     /// executableAt.
     function increaseTimelock(bytes4 selector, uint256 newDuration) external {
         timelocked();
-        require(selector != IMorphoMarketV1AdapterV2.decreaseTimelock.selector, AutomaticallyTimelocked());
+        require(selector != IAltoMarketAdapter.decreaseTimelock.selector, AutomaticallyTimelocked());
         require(newDuration >= timelock[selector], TimelockNotIncreasing());
 
         timelock[selector] = newDuration;
@@ -128,7 +127,7 @@ contract MorphoMarketV1AdapterV2 is IMorphoMarketV1AdapterV2 {
 
     function decreaseTimelock(bytes4 selector, uint256 newDuration) external {
         timelocked();
-        require(selector != IMorphoMarketV1AdapterV2.decreaseTimelock.selector, AutomaticallyTimelocked());
+        require(selector != IAltoMarketAdapter.decreaseTimelock.selector, AutomaticallyTimelocked());
         require(newDuration <= timelock[selector], TimelockNotDecreasing());
 
         timelock[selector] = newDuration;
@@ -248,7 +247,7 @@ contract MorphoMarketV1AdapterV2 is IMorphoMarketV1AdapterV2 {
     /// @dev Returns the Vault's allocation for this market.
     function allocation(address market) public view returns (uint256) {
         // todo: morpho has different allocation for different market params because morpho markets can share IRM
-        // discuss with Peter on how we want to structure caps based on IDs
+        // to be discussed with team on how we want to structure caps based on IDs
         return IVaultV2(parentVault).allocation(keccak256(abi.encode("this/market", address(this), market)));
     }
 
