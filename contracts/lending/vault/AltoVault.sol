@@ -8,18 +8,18 @@ import {
     MarketAllocation,
     IAltoVaultBase,
     IAltoVaultStaticTypes
-} from "./interfaces/IAltoVault.sol";
-import {Market, MarketLib} from "./libraries/MarketLib.sol";
+} from "@alto/lending/interfaces/IAltoVault.sol";
+import {Market, MarketLib} from "@alto/lending/libraries/MarketLib.sol";
 import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
 import {IMarketRegistry} from "@alto/utils/interfaces/IMarketRegistry.sol";
 
 import {PendingLib} from "@metamorpho/libraries/PendingLib.sol";
-import {ConstantsLib} from "./libraries/ConstantsLib.sol";
+import {ConstantsLib} from "@alto/lending/libraries/ConstantsLib.sol";
 import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {AltoBalancesLib} from "./libraries/AltoBalancesLib.sol";
+import {AltoBalancesLib} from "@alto/lending/libraries/AltoBalancesLib.sol";
 
 import {Multicall} from "@openzeppelin/contracts/utils/Multicall.sol";
 import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";

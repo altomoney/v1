@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity ^0.8.0;
 
-import {Market, MarketLib} from "./MarketLib.sol";
+import {Market, MarketLib} from "@alto/lending/libraries/MarketLib.sol";
 import {IIrm} from "@alto/lending/interfaces/IIrm.sol";
 import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
