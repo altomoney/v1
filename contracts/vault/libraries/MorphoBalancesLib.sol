@@ -4,8 +4,7 @@ pragma solidity ^0.8.0;
 import {Market, MarketLib} from "./MarketLib.sol";
 import {IIrm} from "@alto/lending/interfaces/IIrm.sol";
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
-import {UtilsLib} from "@morpho-blue/libraries/UtilsLib.sol";
-import {IMarketBase, IMarketStaticTypes} from "@alto/lending/interfaces/IMarket.sol";
+import {UtilsLib} from "@bundler3/lib/morpho-blue/src/libraries/UtilsLib.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
 
 /// @title MorphoBalancesLib
@@ -31,24 +30,25 @@ library MorphoBalancesLib {
     function expectedMarketBalances(address market) internal view returns (uint256, uint256, uint256, uint256) {
         Market memory marketState = market.getState();
 
-        uint256 elapsed = block.timestamp - marketState.lastUpdate;
-        address irm = IMarketBase(market).irm();
+        address irm = market.irm();
 
-        // Skipped if elapsed == 0 or totalBorrowAssets == 0 because interest would be null, or if irm == address(0).
-        if (elapsed != 0 && marketState.totalBorrowAssets != 0 && irm != address(0)) {
+        // Skipped if totalBorrowAssets == 0 because interest would be null, or if irm == address(0).
+        if (marketState.totalBorrowAssets != 0 && irm != address(0)) {
             (uint256 interest,) =
                 IIrm(irm).updateInterestRateView(marketState.totalSupplyAssets, marketState.totalBorrowAssets);
-            marketState.totalBorrowAssets += interest.toUint128();
-            marketState.totalSupplyAssets += interest.toUint128();
+            if (interest > 0) {
+                marketState.totalBorrowAssets += interest.toUint128();
+                marketState.totalSupplyAssets += interest.toUint128();
 
-            if (marketState.fee != 0) {
-                uint256 feeAmount = interest.multiplyWithPrecision(marketState.fee);
-                // The fee amount is subtracted from the total supply in this calculation to compensate for the fact
-                // that total supply is already updated.
-                uint256 feeShares = feeAmount.convertToSharesDown(
-                    marketState.totalSupplyAssets - feeAmount, marketState.totalSupplyShares
-                );
-                marketState.totalSupplyShares += feeShares.toUint128();
+                if (marketState.fee != 0) {
+                    uint256 feeAmount = interest.multiplyWithPrecision(marketState.fee);
+                    // The fee amount is subtracted from the total supply in this calculation to compensate for the fact
+                    // that total supply is already updated.
+                    uint256 feeShares = feeAmount.convertToSharesDown(
+                        marketState.totalSupplyAssets - feeAmount, marketState.totalSupplyShares
+                    );
+                    marketState.totalSupplyShares += feeShares.toUint128();
+                }
             }
         }
 
@@ -80,7 +80,7 @@ library MorphoBalancesLib {
     /// @dev Warning: Withdrawing using the expected supply assets can lead to a revert due to conversion roundings from
     /// assets to shares.
     function expectedSupplyAssets(address market, address user) internal view returns (uint256) {
-        (uint128 supplyShares,,) = IMarketStaticTypes(market).position(user);
+        uint128 supplyShares = market.userSupplyShares(user);
         (uint256 totalSupplyAssets, uint256 totalSupplyShares,,) = expectedMarketBalances(market);
 
         return supplyShares.convertToAssetsDown(totalSupplyAssets, totalSupplyShares);
@@ -90,7 +90,7 @@ library MorphoBalancesLib {
     /// @dev Warning: The expected balance is rounded up, so it may be greater than the market's expected total borrow
     /// assets.
     function expectedBorrowAssets(address market, address user) internal view returns (uint256) {
-        (, uint128 borrowShares,) = IMarketStaticTypes(market).position(user);
+        uint128 borrowShares = market.userBorrowShares(user);
         (,, uint256 totalBorrowAssets, uint256 totalBorrowShares) = expectedMarketBalances(market);
 
         return borrowShares.convertToAssetsUp(totalBorrowAssets, totalBorrowShares);

@@ -71,9 +71,6 @@ interface IMetaMorphoV1_1Errors {
     /// @notice Thrown when the requested liquidity cannot be withdrawn from Morpho.
     error NotEnoughLiquidity();
 
-    /// @notice Thrown when submitting a cap for a market which does not exist.
-    error MarketNotCreated();
-
     /// @notice Thrown when interacting with a non previously enabled market.
     error MarketNotEnabled(address market);
 
