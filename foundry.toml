@@ -14,6 +14,7 @@ optimizer_runs = 1
 remappings = [
 	'deployments/=contracts/deployments/',
 	'@morpho-org/bundler3/=lib/bundler3/src/',
+	'@bundler3/=lib/bundler3/',
 	'@morpho-org/irm/=lib/morpho-blue-irm/src/',
 	'@alto-test/=test/',
 	'@alto/=contracts/',
@@ -22,7 +23,6 @@ remappings = [
 	'@uniswap/v3-core/=lib/v3-core/',
 	'@chainlink/=lib/chainlink-evm/',
 	'@metamorpho/=lib/metamorpho/src/',
-	'@morpho-blue/=lib/morpho-blue/src/',
 ]
 
 ffi = true

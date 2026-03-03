@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity ^0.8.0;
 
-import {IMarketBase, IMarketStaticTypes, MarketType} from "@alto/lending/interfaces/IMarket.sol";
+import {IMarketStaticTypes, IMarket} from "@alto/lending/interfaces/IMarket.sol";
 import {AdaptiveCurveIrm} from "@alto/lending/irm/AdaptiveCurveIrm.sol";
 import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";
 
@@ -14,28 +14,48 @@ struct Market {
     uint128 totalSupplyShares;
     uint128 totalBorrowAssets;
     uint128 totalBorrowShares;
-    uint128 lastUpdate;
     uint128 fee;
 }
 
 /// @title MarketLib
 /// @notice Library to fetch market state for Alto markets.
 library MarketLib {
+    /// @notice Returns total supply (assets, shares) of the market.
+    function totalSupply(address market) internal view returns (uint128 assets, uint128 shares) {
+        return IMarketStaticTypes(market).totalSupply();
+    }
+
+    /// @notice Returns total borrowed (assets, shares) of the market.
+    function totalBorrowed(address market) internal view returns (uint128 assets, uint128 shares) {
+        return IMarketStaticTypes(market).totalBorrowed();
+    }
+
+    /// @notice Returns the supply shares of `user` in the market.
+    function userSupplyShares(address market, address user) internal view returns (uint128) {
+        return IMarket(market).position(user).supplyShares;
+    }
+
+    /// @notice Returns the borrow shares of `user` in the market.
+    function userBorrowShares(address market, address user) internal view returns (uint128) {
+        return IMarket(market).position(user).borrowShares;
+    }
+
+    /// @notice Returns the collateral assets of `user` in the market.
+    function userCollateralAssets(address market, address user) internal view returns (uint128) {
+        return IMarket(market).position(user).collateralAssets;
+    }
+
+    /// @notice Returns the IRM address of the market.
+    function irm(address market) internal view returns (address) {
+        return IMarket(market).irm();
+    }
+
     /// @notice Fetches market state from the given market address and returns a Market struct.
     /// @param market The address of the market
-    /// @return marketState The Market struct with totalSupplyAssets, totalSupplyShares, totalBorrowAssets, totalBorrowShares,
-    /// lastUpdate from the market's IRM (by IRM_TYPE), and fee (interestFee for borrow markets, 0 for mint markets).
+    /// @return marketState The Market struct with totalSupplyAssets, totalSupplyShares, totalBorrowAssets, totalBorrowShares, and fee.
     function getState(address market) internal view returns (Market memory marketState) {
-        (uint128 totalSupplyAssets, uint128 totalSupplyShares) = IMarketStaticTypes(market).totalSupply();
-        (uint128 totalBorrowAssets, uint128 totalBorrowShares) = IMarketStaticTypes(market).totalBorrowed();
-
-        uint48 lastUpdate;
-        address irm = IMarketBase(market).irm();
-        if (irm != address(0)) {
-            // This library is used in context of AltoVault to be used for fetching state of Alto borrow markets.
-            // Since Alto borrow markets use AdaptiveCurveIrm, we can safely cast to AdaptiveCurveIrm.
-            (, lastUpdate) = AdaptiveCurveIrm(irm).irState();
-        }
+        (uint128 totalSupplyAssets, uint128 totalSupplyShares) = totalSupply(market);
+        (uint128 totalBorrowAssets, uint128 totalBorrowShares) = totalBorrowed(market);
 
         // This library is used in context of AltoVault to be used for fetching state of Alto borrow markets.
         // Since Alto borrow markets contains interestFee, we can safely cast to AltoBorrowMarket and get the interestFee.
@@ -46,7 +66,6 @@ library MarketLib {
             totalSupplyShares: totalSupplyShares,
             totalBorrowAssets: totalBorrowAssets,
             totalBorrowShares: totalBorrowShares,
-            lastUpdate: uint128(lastUpdate),
             fee: fee
         });
     }

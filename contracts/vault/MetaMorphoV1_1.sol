@@ -12,7 +12,7 @@ import {
     IMetaMorphoV1_1Events
 } from "./interfaces/IMetaMorphoV1_1.sol";
 import {Market, MarketLib} from "./libraries/MarketLib.sol";
-import {IMarketBase, IMarketStaticTypes} from "@alto/lending/interfaces/IMarket.sol";
+import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
 import {AdaptiveCurveIrm} from "@alto/lending/irm/AdaptiveCurveIrm.sol";
 
 import {PendingUint192, PendingAddress, PendingLib} from "@metamorpho/libraries/PendingLib.sol";
@@ -34,7 +34,7 @@ import {
     SafeERC20,
     IERC4626
 } from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
-import {UtilsLib} from "@morpho-blue/libraries/UtilsLib.sol";
+import {UtilsLib} from "@bundler3/lib/morpho-blue/src/libraries/UtilsLib.sol";
 
 /// @title MetaMorpho
 /// @author Morpho Labs
@@ -130,10 +130,10 @@ contract MetaMorphoV1_1 is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaM
         _setTimelock(initialTimelock);
 
         _name = __name;
-        emit IMetaMorphoV1_1Events.SetName(__name);
+        emit SetName(__name);
 
         _symbol = __symbol;
-        emit IMetaMorphoV1_1Events.SetSymbol(__symbol);
+        emit SetSymbol(__symbol);
 
         DECIMALS_OFFSET = uint8(uint256(18).zeroFloorSub(IERC20Metadata(_asset).decimals()));
     }
@@ -288,14 +288,7 @@ contract MetaMorphoV1_1 is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaM
 
     /// @inheritdoc IMetaMorphoV1_1Base
     function submitCap(address market, uint256 newSupplyCap) external onlyCuratorRole {
-        if (IMarketBase(market).borrowToken() != asset()) revert InconsistentAsset(market);
-        uint48 lastUpdate;
-        address irm = IMarketBase(market).irm();
-        if (irm != address(0)) {
-            // Since Alto borrow markets use AdaptiveCurveIrm, we can safely cast to AdaptiveCurveIrm.
-            (, lastUpdate) = AdaptiveCurveIrm(irm).irState();
-        }
-        if (lastUpdate == 0) revert MarketNotCreated();
+        if (IMarket(market).borrowToken() != asset()) revert InconsistentAsset(market);
         if (pendingCap[market].validAt != 0) revert AlreadyPending();
         if (config[market].removableAt != 0) revert PendingRemoval();
         uint256 supplyCap = config[market].cap;
@@ -366,7 +359,7 @@ contract MetaMorphoV1_1 is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaM
                 if (config[market].cap != 0) revert InvalidMarketRemovalNonZeroCap(market);
                 if (pendingCap[market].validAt != 0) revert PendingCap(market);
 
-                (uint128 supplyShares,,) = IMarketStaticTypes(market).position(address(this));
+                uint128 supplyShares = market.userSupplyShares(address(this));
 
                 if (supplyShares != 0) {
                     if (config[market].removableAt == 0) revert InvalidMarketRemovalNonZeroSupply(market);
@@ -393,12 +386,12 @@ contract MetaMorphoV1_1 is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaM
             MarketAllocation memory allocation = allocations[i];
             address market = allocation.market;
 
+            if (!config[market].enabled) revert MarketNotEnabled(market);
+
             (uint256 supplyAssets, uint256 supplyShares,) = _accruedSupplyBalance(allocation.market);
             uint256 withdrawn = supplyAssets.zeroFloorSub(allocation.assets);
 
             if (withdrawn > 0) {
-                if (!config[market].enabled) revert MarketNotEnabled(market);
-
                 // Guarantees that unknown frontrunning donations can be withdrawn, in order to disable a market.
                 uint256 shares;
                 if (allocation.assets == 0) {
@@ -407,7 +400,7 @@ contract MetaMorphoV1_1 is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaM
                 }
 
                 (uint256 withdrawnAssets, uint256 withdrawnShares) =
-                    IMarketBase(market).removeSupply(withdrawn, shares, address(this), address(this));
+                    IMarket(market).removeSupply(withdrawn, shares, address(this), address(this));
 
                 emit ReallocateWithdraw(_msgSender(), market, withdrawnAssets, withdrawnShares);
 
@@ -427,7 +420,7 @@ contract MetaMorphoV1_1 is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaM
                 IERC20(asset()).forceApprove(market, suppliedAssets);
 
                 // The market's loan asset is guaranteed to be the vault's asset because it has a non-zero supply cap.
-                (, uint256 suppliedShares) = IMarketBase(market).addSupply(suppliedAssets, 0, address(this));
+                (, uint256 suppliedShares) = IMarket(market).addSupply(suppliedAssets, 0, address(this));
 
                 IERC20(asset()).forceApprove(market, 0);
 
@@ -636,7 +629,7 @@ contract MetaMorphoV1_1 is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaM
             uint256 supplyCap = config[market].cap;
             if (supplyCap == 0) continue;
 
-            (uint128 supplyShares,,) = IMarketStaticTypes(market).position(address(this));
+            uint128 supplyShares = market.userSupplyShares(address(this));
             (uint256 totalSupplyAssets, uint256 totalSupplyShares,,) = market.expectedMarketBalances();
             // `supplyAssets` needs to be rounded up for `totalSuppliable` to be rounded down.
             uint256 supplyAssets = supplyShares.convertToAssetsUp(totalSupplyAssets, totalSupplyShares);
@@ -724,10 +717,10 @@ contract MetaMorphoV1_1 is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaM
         internal
         returns (uint256 assets, uint256 shares, Market memory marketState)
     {
-        IMarketBase(market).accrueInterest();
+        IMarket(market).accrueInterest();
 
         marketState = market.getState();
-        (shares,,) = IMarketStaticTypes(market).position(address(this));
+        shares = market.userSupplyShares(address(this));
         assets = shares.convertToAssetsDown(marketState.totalSupplyAssets, marketState.totalSupplyShares);
     }
 
@@ -794,10 +787,10 @@ contract MetaMorphoV1_1 is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaM
             uint256 supplyCap = config[market].cap;
             if (supplyCap == 0) continue;
 
-            IMarketBase(market).accrueInterest();
+            IMarket(market).accrueInterest();
 
-            (uint128 totalSupplyAssets, uint128 totalSupplyShares) = IMarketStaticTypes(market).totalSupply();
-            (uint128 supplyShares,,) = IMarketStaticTypes(market).position(address(this));
+            (uint128 totalSupplyAssets, uint128 totalSupplyShares) = market.totalSupply();
+            uint128 supplyShares = market.userSupplyShares(address(this));
             // `supplyAssets` needs to be rounded up for `toSupply` to be rounded down.
             uint256 supplyAssets = supplyShares.convertToAssetsUp(totalSupplyAssets, totalSupplyShares);
 
@@ -806,7 +799,7 @@ contract MetaMorphoV1_1 is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaM
             if (toSupply > 0) {
                 IERC20(asset()).forceApprove(market, toSupply);
                 // Using try/catch to skip markets that revert.
-                try IMarketBase(market).addSupply(toSupply, 0, address(this)) {
+                try IMarket(market).addSupply(toSupply, 0, address(this)) {
                     assets -= toSupply;
                 } catch {}
                 IERC20(asset()).forceApprove(market, 0);
@@ -831,7 +824,7 @@ contract MetaMorphoV1_1 is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaM
 
             if (toWithdraw > 0) {
                 // Using try/catch to skip markets that revert.
-                try IMarketBase(market).removeSupply(toWithdraw, 0, address(this), address(this)) {
+                try IMarket(market).removeSupply(toWithdraw, 0, address(this), address(this)) {
                     assets -= toWithdraw;
                 } catch {}
             }
@@ -848,7 +841,7 @@ contract MetaMorphoV1_1 is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaM
         for (uint256 i; i < withdrawQueue.length; ++i) {
             address market = withdrawQueue[i];
 
-            (uint128 supplyShares,,) = IMarketStaticTypes(market).position(address(this));
+            uint128 supplyShares = market.userSupplyShares(address(this));
             (uint256 totalSupplyAssets, uint256 totalSupplyShares, uint256 totalBorrowAssets,) =
                 market.expectedMarketBalances();
 
@@ -879,7 +872,7 @@ contract MetaMorphoV1_1 is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaM
         returns (uint256)
     {
         // Inside a flashloan callback, liquidity on Morpho Blue may be limited to the singleton's balance.
-        address borrowToken = IMarketBase(market).borrowToken();
+        address borrowToken = IMarket(market).borrowToken();
         uint256 availableLiquidity =
             UtilsLib.min(totalSupplyAssets - totalBorrowAssets, ERC20(borrowToken).balanceOf(address(market)));
 
