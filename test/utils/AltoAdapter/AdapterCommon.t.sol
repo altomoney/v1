@@ -26,6 +26,7 @@ import {IUniversalRewardsDistributor} from "@alto/utils/interfaces/IUniversalRew
 import {IAltoVesting, VestingInfo} from "@alto/vesting/interfaces/IAltoVesting.sol";
 import {IUsm} from "@alto/usm/interfaces/IUsm.sol";
 import {IAuth} from "@alto/utils/interfaces/IAuth.sol";
+import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 
 // Mock WETH contract for testing
 contract WETHMock {
@@ -607,6 +608,56 @@ abstract contract AdapterCommon is Test {
         return _call(
             altoAdapter,
             abi.encodeCall(AltoAdapter.usmSellAssetWithERC20Transfer, (usm, maxAmount, minStableTokenAmount, receiver)),
+            bytes32(0)
+        );
+    }
+
+    /* VAULT ACTIONS */
+
+    function _vaultDeposit(IERC4626 vault, uint256 assets, address receiver, uint256 expectedShares)
+        internal
+        view
+        returns (Call memory)
+    {
+        return _call(
+            altoAdapter,
+            abi.encodeCall(AltoAdapter.vaultDeposit, (vault, assets, receiver, expectedShares)),
+            bytes32(0)
+        );
+    }
+
+    function _vaultMint(IERC4626 vault, uint256 shares, address receiver, uint256 expectedAssets)
+        internal
+        view
+        returns (Call memory)
+    {
+        return _call(
+            altoAdapter,
+            abi.encodeCall(AltoAdapter.vaultMint, (vault, shares, receiver, expectedAssets)),
+            bytes32(0)
+        );
+    }
+
+    function _vaultWithdraw(IERC4626 vault, uint256 assets, address receiver, uint256 expectedShares)
+        internal
+        view
+        returns (Call memory)
+    {
+        return _call(
+            altoAdapter,
+            abi.encodeCall(AltoAdapter.vaultWithdraw, (vault, assets, receiver, expectedShares)),
+            bytes32(0)
+        );
+    }
+
+    function _vaultRedeem(IERC4626 vault, uint256 shares, address receiver, uint256 expectedAssets)
+        internal
+        view
+        returns (Call memory)
+    {
+        return _call(
+            altoAdapter,
+            abi.encodeCall(AltoAdapter.vaultRedeem, (vault, shares, receiver, expectedAssets)),
             bytes32(0)
         );
     }
