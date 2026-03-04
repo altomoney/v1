@@ -42,6 +42,11 @@ import {FixedFeeStrategy} from "@alto/usm/FixedFeeStrategy.sol";
 import {ERC20MockDecimals} from "@alto-test/helpers/ERC20MockDecimals.sol";
 import {TestHelperOz5} from "@layerzerolabs/test-devtools-evm-foundry/contracts/TestHelperOz5.sol";
 import {AccessMode} from "@alto/usm/interfaces/IUsm.sol";
+import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
+import {AltoVaultInstance} from "./AltoVaultInstance.sol";
+import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";
+import {BorrowMarketInitParams} from "@alto/lending/interfaces/IMarket.sol";
+import {ConstantsLib} from "@alto/lending/libraries/ConstantsLib.sol";
 
 uint256 constant MIN_AMOUNT = 1000;
 uint256 constant MAX_AMOUNT = 2 ** 64; // Must be less than or equal to type(uint160).max.
@@ -71,6 +76,10 @@ abstract contract AdapterCommonSetup is AdapterCommon, TestHelperOz5 {
     IUsm internal usmContract;
     DUSD internal dusdToken;
     ERC20MockDecimals internal underlyingToken;
+
+    ERC20Mock internal vaultAssetToken;
+    IERC4626 internal vaultContract;
+    IMarket internal borrowMarket;
 
     // Constants for reward testing
     uint256 public constant USER_AVAILABLE = 1000 ether;
@@ -162,6 +171,8 @@ abstract contract AdapterCommonSetup is AdapterCommon, TestHelperOz5 {
         swapper.setWhitelisted(address(leverage), true);
         market.setAuthorizedCallback(address(leverage), true);
         leverage.setMarket(address(market), true);
+
+        _setupVaultContract();
 
         vm.stopPrank();
 
@@ -272,6 +283,71 @@ abstract contract AdapterCommonSetup is AdapterCommon, TestHelperOz5 {
 
         // Approve conract to be used in the adapter
         altoAdapter.approveContract(address(vestingContract));
+    }
+
+    function _setupVaultContract() internal {
+        vaultAssetToken = new ERC20Mock("VaultAsset", "VA");
+        vm.label(address(vaultAssetToken), "vaultAssetToken");
+
+        address marketIrm = address(new FixedRateIrm(0.04 ether / uint256(365 days), address(this)));
+
+        LiquidationConfiguration memory liquidationConfig = LiquidationConfiguration({
+            maxLiquidationLtv: 0.8 ether,
+            dynamicBonusFeeStart: 0.03 ether,
+            ltvForCompleteLiquidation: 0.9 ether,
+            dynamicBonusFeeDecaySteepness: 5 ether,
+            liquidationBaseFee: 0.05 ether,
+            minPenaltyPercentage: 0.01 ether,
+            protocolFeePercentage: 0.075 ether,
+            isEnabledPriorityLiquidation: true,
+            disablePriorityLiquidationAbovePositionLtv: 0.95 ether,
+            priorityLiquidationGracePeriod: 5 minutes,
+            taggerLiquidationGracePeriod: 2 minutes,
+            liquidationWindowTag: 3 days
+        });
+
+        address liquidationEngine = address(new DlbDcfPriorityLiquidationEngine(address(OWNER)));
+
+        BorrowMarketInitParams memory borrowParams = BorrowMarketInitParams({
+            baseMarketInitParams: BaseMarketInitParams({
+                borrowToken: address(vaultAssetToken),
+                collateralToken: address(collateralToken),
+                irm: address(marketIrm),
+                owner: address(OWNER),
+                oracle: address(oracle),
+                maxLtv: 0.75 ether,
+                feeRecipient: address(this),
+                liquidationEngine: liquidationEngine
+            }),
+            initialBorrowOpeningFee: 0,
+            supplyCapAssets: 0,
+            initialInterestFee: 0
+        });
+
+        borrowMarket = IMarket(
+            UnsafeUpgrades.deployUUPSProxy(
+                address(new AltoBorrowMarket()), abi.encodeCall(AltoBorrowMarket.initialize, (borrowParams))
+            )
+        );
+        vm.label(address(borrowMarket), "borrowMarket");
+
+        IDcfDlbPriorityLiquidationEngine(liquidationEngine).setLiquidationConfiguration(liquidationConfig);
+
+        AltoVaultInstance vault = new AltoVaultInstance(
+            address(OWNER), ConstantsLib.MIN_TIMELOCK, address(vaultAssetToken), "AltoVault", "aV"
+        );
+        vaultContract = IERC4626(address(vault));
+        vm.label(address(vaultContract), "vaultContract");
+
+        vault.submitCap(address(borrowMarket), type(uint184).max);
+        vm.warp(block.timestamp + ConstantsLib.MIN_TIMELOCK + 1);
+        vault.acceptCap(address(borrowMarket));
+
+        address[] memory newSupplyQueue = new address[](1);
+        newSupplyQueue[0] = address(borrowMarket);
+        vault.setSupplyQueue(newSupplyQueue);
+
+        altoAdapter.approveContract(address(vaultContract));
     }
 
     function _setupUsmContract() internal {

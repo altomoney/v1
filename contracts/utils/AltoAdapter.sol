@@ -15,6 +15,7 @@ import {ErrorsLib} from "@morpho-org/bundler3/libraries/ErrorsLib.sol";
 import {MathRayLib} from "@morpho-org/bundler3/libraries/MathRayLib.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /// @title AltoAdapter
@@ -182,6 +183,85 @@ contract AltoAdapter is CoreAdapter, AdapterContractApproval {
         (uint256 repaidAssets, uint256 repaidShares) = market.repay(assets, shares, onBehalf);
 
         require(repaidAssets.rDivUp(repaidShares) <= maxSharePriceE27, ErrorsLib.SlippageExceeded());
+    }
+
+    /* VAULT ACTIONS */
+
+    /// @notice Deposits assets into the vault (ERC4626).
+    /// @param vault The address of the vault
+    /// @param assets The amount of assets to deposit. Pass `type(uint256).max` to deposit the adapter's balance.
+    /// @param receiver The address that will receive the vault shares.
+    /// @param expectedShares The expected amount of shares to receive.
+    function vaultDeposit(IERC4626 vault, uint256 assets, address receiver, uint256 expectedShares)
+        external
+        onlyBundler3
+        onlyApprovedContract(address(vault))
+    {
+        require(receiver != address(this), ErrorsLib.AdapterAddress());
+
+        address assetToken = vault.asset();
+        if (assets == type(uint256).max) assets = IERC20(assetToken).balanceOf(address(this));
+
+        require(assets != 0, ErrorsLib.ZeroAmount());
+
+        SafeERC20.forceApprove(IERC20(assetToken), address(vault), type(uint256).max);
+        uint256 sharesMinted = vault.deposit(assets, receiver);
+        require(sharesMinted >= expectedShares, ErrorsLib.SlippageExceeded());
+    }
+
+    /// @notice Mints vault shares (ERC4626) by depositing assets.
+    /// @param vault The address of the vault
+    /// @param shares The amount of shares to mint.
+    /// @param receiver The address that will receive the vault shares.
+    /// @param expectedAssets The expected amount of assets to take from the adapter.
+    function vaultMint(IERC4626 vault, uint256 shares, address receiver, uint256 expectedAssets)
+        external
+        onlyBundler3
+        onlyApprovedContract(address(vault))
+    {
+        require(receiver != address(this), ErrorsLib.AdapterAddress());
+        require(shares != 0, ErrorsLib.ZeroAmount());
+
+        address assetToken = vault.asset();
+        SafeERC20.forceApprove(IERC20(assetToken), address(vault), type(uint256).max);
+        uint256 assetsTaken = vault.mint(shares, receiver);
+        require(assetsTaken <= expectedAssets, ErrorsLib.SlippageExceeded());
+    }
+
+    /// @notice Withdraws assets from the vault (ERC4626) by burning the adapter's vault shares.
+    /// @param vault The address of the vault
+    /// @param assets The amount of assets to withdraw. Pass `type(uint256).max` to withdraw all (convert adapter's shares to assets).
+    /// @param receiver The address that will receive the withdrawn assets.
+    /// @param expectedShares The maximum amount of shares to burn (slippage protection).
+    function vaultWithdraw(IERC4626 vault, uint256 assets, address receiver, uint256 expectedShares)
+        external
+        onlyBundler3
+        onlyApprovedContract(address(vault))
+    {
+        require(receiver != address(this), ErrorsLib.AdapterAddress());
+        require(assets != 0, ErrorsLib.ZeroAmount());
+
+        uint256 sharesBurned = vault.withdraw(assets, receiver, initiator());
+        require(sharesBurned <= expectedShares, ErrorsLib.SlippageExceeded());
+    }
+
+    /// @notice Redeems assets from the vault (ERC4626) by burning the adapter's vault shares.
+    /// @param vault The address of the vault
+    /// @param shares The amount of shares to redeem. Pass `type(uint256).max` to redeem all
+    /// @param receiver The address that will receive the redeemed assets.
+    /// @param expectedAssets The minimum amount of assets to receive.
+    function vaultRedeem(IERC4626 vault, uint256 shares, address receiver, uint256 expectedAssets)
+        external
+        onlyBundler3
+        onlyApprovedContract(address(vault))
+    {
+        require(receiver != address(this), ErrorsLib.AdapterAddress());
+
+        if (shares == type(uint256).max) shares = vault.balanceOf(initiator());
+        require(shares != 0, ErrorsLib.ZeroAmount());
+
+        uint256 assetsRedeemed = vault.redeem(shares, receiver, initiator());
+        require(assetsRedeemed >= expectedAssets, ErrorsLib.SlippageExceeded());
     }
 
     /* TRANSFER ACTIONS */
