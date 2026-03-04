@@ -1,0 +1,12 @@
+VaultRegistry::addVault(address)
+├── given caller is not owner
+│   └── it should revert with OwnableUnauthorizedAccount
+├── given caller is owner
+│   ├── when vault is zero address
+│   │   └── it should revert with VaultRegistryZeroAddress
+│   ├── when vault is already registered
+│   │   └── it should revert with VaultRegistryVaultAlreadyExists
+│   └── when vault is not registered
+│       ├── it should add vault to the list
+│       ├── it should emit VaultAdded(vault)
+│       └── it should make isVault(vault) return true

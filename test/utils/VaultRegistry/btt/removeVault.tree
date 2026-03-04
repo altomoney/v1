@@ -1,0 +1,12 @@
+VaultRegistry::removeVault(address)
+├── given caller is not owner
+│   └── it should revert with OwnableUnauthorizedAccount
+├── given caller is owner
+│   ├── when vault is zero address
+│   │   └── it should revert with VaultRegistryZeroAddress
+│   ├── when vault is not registered
+│   │   └── it should revert with VaultRegistryVaultDoesNotExist
+│   └── when vault is registered
+│       ├── it should remove vault from the list
+│       ├── it should emit VaultRemoved(vault)
+│       └── it should make isVault(vault) return false
