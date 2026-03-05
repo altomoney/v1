@@ -20,6 +20,7 @@ import {
 } from "@alto/deployments/EthereumMainnetOracleDeployer.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {PAUSE_TYPE, FROZEN_TYPE} from "@alto/utils/Constants.sol";
+import {ALTO_MINT_MARKET_IMPL} from "@alto/deployments/ethereum-mainnet/Constants.sol";
 
 import {MarketContracts} from "@alto/deployments/ethereum-mainnet/IDeployAltoEthereumMainnet.sol";
 
@@ -72,9 +73,8 @@ library MintMarketBatch {
                 }))
         );
         address marketProxy;
-        address marketImplementation;
+        address marketImplementation = ALTO_MINT_MARKET_IMPL;
         if (_params.useUnsafeUpgrades) {
-            marketImplementation = address(new AltoMintMarket());
             marketProxy = UnsafeUpgrades.deployUUPSProxy(marketImplementation, initData);
         } else {
             marketProxy = Upgrades.deployUUPSProxy("AltoMintMarket.sol:AltoMintMarket", initData);

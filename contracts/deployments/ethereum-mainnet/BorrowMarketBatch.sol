@@ -20,6 +20,7 @@ import {
 } from "@alto/deployments/EthereumMainnetOracleDeployer.sol";
 import {AdaptiveCurveIrm} from "@alto/lending/irm/AdaptiveCurveIrm.sol";
 import {PAUSE_TYPE, FROZEN_TYPE} from "@alto/utils/Constants.sol";
+import {ALTO_BORROW_MARKET_IMPL} from "@alto/deployments/ethereum-mainnet/Constants.sol";
 import {MarketContracts} from "@alto/deployments/ethereum-mainnet/IDeployAltoEthereumMainnet.sol";
 
 struct BorrowMarketBatchParams {
@@ -71,9 +72,8 @@ library BorrowMarketBatch {
                 }))
         );
         address marketProxy;
-        address marketImplementation;
+        address marketImplementation = ALTO_BORROW_MARKET_IMPL;
         if (_params.useUnsafeUpgrades) {
-            marketImplementation = address(new AltoBorrowMarket());
             marketProxy = UnsafeUpgrades.deployUUPSProxy(marketImplementation, initData);
         } else {
             marketProxy = Upgrades.deployUUPSProxy("AltoBorrowMarket.sol:AltoBorrowMarket", initData);

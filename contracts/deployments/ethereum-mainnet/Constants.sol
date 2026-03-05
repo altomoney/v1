@@ -51,6 +51,10 @@ address constant BUNDLER3_MAINNET = 0xAc80387009231b4D55B85Df27924B85f2ED6823D;
 // LayerZero endpoint for Ethereum mainnet
 address constant LAYERZERO_ENDPOINT_MAINNET = 0x1a44076050125825900e736c501f859c50fE728c;
 
+// Deployed implementation contracts (shared across all markets of same type)
+address constant ALTO_MINT_MARKET_IMPL = 0x266e5FB314ba71BBA7d1Bb830f527Acd5c143675;
+address constant ALTO_BORROW_MARKET_IMPL = 0x223566C6B2d0706cD9cD75F628cC9Ec6889f9ca3;
+
 function getMulticallOwnerAddresses() pure returns (address[] memory) {
     address[] memory addresses = new address[](2);
     addresses[0] = 0xd7F6Fa30BC8c0E5003689C332bd2b9400Ed87367;
