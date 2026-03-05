@@ -14,4 +14,9 @@ contract ERC20MockMintable is ERC20, IMintableERC20 {
     function burn(address from, uint256 amount) external override {
         _burn(from, amount);
     }
+
+    function setBalance(address account, uint256 amount) external {
+        _burn(account, balanceOf(account));
+        _mint(account, amount);
+    }
 }
