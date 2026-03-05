@@ -228,6 +228,24 @@ PAXG_LIQUIDATION_ENGINE=$(get_address ".contracts.paxgBorrowLiquidationEngine")
 PAXG_LEVERAGE_SWAPPER=$(get_address ".contracts.paxgBorrowLeverageSwapper")
 PAXG_LEVERAGE=$(get_address ".contracts.paxgBorrowLeverage")
 
+# sUSDe Mint Market contracts
+SUSDE_MINT_MARKET=$(get_address ".contracts.susdeMintMarket")
+SUSDE_MINT_MARKET_IMPL=$(get_address ".contracts.susdeMintMarketImplementation")
+SUSDE_MINT_MARKET_IRM=$(get_address ".contracts.susdeMintMarketIrm")
+SUSDE_MINT_MARKET_ORACLE=$(get_address ".contracts.susdeMintMarketOracle")
+SUSDE_MINT_LIQUIDATION_ENGINE=$(get_address ".contracts.susdeMintLiquidationEngine")
+SUSDE_MINT_LEVERAGE_SWAPPER=$(get_address ".contracts.susdeMintLeverageSwapper")
+SUSDE_MINT_LEVERAGE=$(get_address ".contracts.susdeMintLeverage")
+
+# syrupUSDC Mint Market contracts
+SYRUPUSDC_MINT_MARKET=$(get_address ".contracts.syrupUsdcMintMarket")
+SYRUPUSDC_MINT_MARKET_IMPL=$(get_address ".contracts.syrupUsdcMintMarketImplementation")
+SYRUPUSDC_MINT_MARKET_IRM=$(get_address ".contracts.syrupUsdcMintMarketIrm")
+SYRUPUSDC_MINT_MARKET_ORACLE=$(get_address ".contracts.syrupUsdcMintMarketOracle")
+SYRUPUSDC_MINT_LIQUIDATION_ENGINE=$(get_address ".contracts.syrupUsdcMintLiquidationEngine")
+SYRUPUSDC_MINT_LEVERAGE_SWAPPER=$(get_address ".contracts.syrupUsdcMintLeverageSwapper")
+SYRUPUSDC_MINT_LEVERAGE=$(get_address ".contracts.syrupUsdcMintLeverage")
+
 # Permissioned USM contracts
 PERMISSIONED_USM=$(get_address ".contracts.permissionedUsm")
 PERMISSIONED_USM_IMPL=$(get_address ".contracts.permissionedUsmImplementation")
@@ -319,6 +337,20 @@ echo "- PAXG Borrow Market Oracle: $PAXG_MARKET_ORACLE"
 echo "- PAXG Borrow Liquidation Engine: $PAXG_LIQUIDATION_ENGINE"
 echo "- PAXG Borrow Leverage Swapper: $PAXG_LEVERAGE_SWAPPER"
 echo "- PAXG Borrow Leverage: $PAXG_LEVERAGE"
+echo "- sUSDe Mint Market: $SUSDE_MINT_MARKET"
+echo "- sUSDe Mint Market Implementation: $SUSDE_MINT_MARKET_IMPL"
+echo "- sUSDe Mint Market IRM: $SUSDE_MINT_MARKET_IRM"
+echo "- sUSDe Mint Market Oracle: $SUSDE_MINT_MARKET_ORACLE"
+echo "- sUSDe Mint Liquidation Engine: $SUSDE_MINT_LIQUIDATION_ENGINE"
+echo "- sUSDe Mint Leverage Swapper: $SUSDE_MINT_LEVERAGE_SWAPPER"
+echo "- sUSDe Mint Leverage: $SUSDE_MINT_LEVERAGE"
+echo "- syrupUSDC Mint Market: $SYRUPUSDC_MINT_MARKET"
+echo "- syrupUSDC Mint Market Implementation: $SYRUPUSDC_MINT_MARKET_IMPL"
+echo "- syrupUSDC Mint Market IRM: $SYRUPUSDC_MINT_MARKET_IRM"
+echo "- syrupUSDC Mint Market Oracle: $SYRUPUSDC_MINT_MARKET_ORACLE"
+echo "- syrupUSDC Mint Liquidation Engine: $SYRUPUSDC_MINT_LIQUIDATION_ENGINE"
+echo "- syrupUSDC Mint Leverage Swapper: $SYRUPUSDC_MINT_LEVERAGE_SWAPPER"
+echo "- syrupUSDC Mint Leverage: $SYRUPUSDC_MINT_LEVERAGE"
 echo "- Permissioned USM: $PERMISSIONED_USM"
 echo "- Permissioned USM Implementation: $PERMISSIONED_USM_IMPL"
 echo "- Permissioned USM Fixed Price Strategy: $PERMISSIONED_USM_FIXED_PRICE_STRATEGY"
@@ -438,6 +470,24 @@ verify_contract "PaxgBorrowMarketOracle" "$PAXG_MARKET_ORACLE" "contracts/oracle
 verify_contract "PaxgBorrowLiquidationEngine" "$PAXG_LIQUIDATION_ENGINE" "contracts/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol:DlbDcfPriorityLiquidationEngine"
 verify_contract "PaxgBorrowLeverageSwapper" "$PAXG_LEVERAGE_SWAPPER" "contracts/lending/leverage/AltoLeverageSwapper.sol:AltoLeverageSwapper"
 verify_contract "PaxgBorrowLeverage" "$PAXG_LEVERAGE" "contracts/lending/leverage/AltoLeverage.sol:AltoLeverage"
+
+# sUSDe Mint Market contracts
+verify_contract "SusdeMintMarket" "$SUSDE_MINT_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
+verify_contract "SusdeMintMarketImplementation" "$SUSDE_MINT_MARKET_IMPL" "contracts/lending/AltoMintMarket.sol:AltoMintMarket"
+verify_contract "SusdeMintMarketIRM" "$SUSDE_MINT_MARKET_IRM" "contracts/lending/irm/FixedRateIrm.sol:FixedRateIrm"
+verify_contract "SusdeMintMarketOracle" "$SUSDE_MINT_MARKET_ORACLE" "contracts/oracles/AltoERC4626RatioChainlinkOracle/implementations/ERC4626RatioChainlinkOracleSUSDE.sol:ERC4626RatioChainlinkOracleSUSDE"
+verify_contract "SusdeMintLiquidationEngine" "$SUSDE_MINT_LIQUIDATION_ENGINE" "contracts/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol:DlbDcfPriorityLiquidationEngine"
+verify_contract "SusdeMintLeverageSwapper" "$SUSDE_MINT_LEVERAGE_SWAPPER" "contracts/lending/leverage/AltoLeverageSwapper.sol:AltoLeverageSwapper"
+verify_contract "SusdeMintLeverage" "$SUSDE_MINT_LEVERAGE" "contracts/lending/leverage/AltoLeverage.sol:AltoLeverage"
+
+# syrupUSDC Mint Market contracts
+verify_contract "SyrupUsdcMintMarket" "$SYRUPUSDC_MINT_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
+verify_contract "SyrupUsdcMintMarketImplementation" "$SYRUPUSDC_MINT_MARKET_IMPL" "contracts/lending/AltoMintMarket.sol:AltoMintMarket"
+verify_contract "SyrupUsdcMintMarketIRM" "$SYRUPUSDC_MINT_MARKET_IRM" "contracts/lending/irm/FixedRateIrm.sol:FixedRateIrm"
+verify_contract "SyrupUsdcMintMarketOracle" "$SYRUPUSDC_MINT_MARKET_ORACLE" "contracts/oracles/AltoERC4626RatioChainlinkOracle/implementations/ERC4626RatioChainlinkOracleSYRUPUSDC.sol:ERC4626RatioChainlinkOracleSYRUPUSDC"
+verify_contract "SyrupUsdcMintLiquidationEngine" "$SYRUPUSDC_MINT_LIQUIDATION_ENGINE" "contracts/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol:DlbDcfPriorityLiquidationEngine"
+verify_contract "SyrupUsdcMintLeverageSwapper" "$SYRUPUSDC_MINT_LEVERAGE_SWAPPER" "contracts/lending/leverage/AltoLeverageSwapper.sol:AltoLeverageSwapper"
+verify_contract "SyrupUsdcMintLeverage" "$SYRUPUSDC_MINT_LEVERAGE" "contracts/lending/leverage/AltoLeverage.sol:AltoLeverage"
 
 # Permissioned USM contracts
 verify_contract "PermissionedUsm" "$PERMISSIONED_USM" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"

@@ -22,7 +22,9 @@ enum DeploymentPhase {
     POST, // Phase 13: Configure TimelockController and transfer ownership
     REFERRAL_ADAPTER, // Phase 14: Deploy AltoReferralWhitelistAdapter
     BORROW_MARKET_SYRUP_USDC, // Phase 15: Deploy syrupUSDC Borrow Market
-    BORROW_MARKET_PAXG // Phase 16: Deploy PAXG Borrow Market
+    BORROW_MARKET_PAXG, // Phase 16: Deploy PAXG Borrow Market
+    MINT_MARKET_SUSDE, // Phase 17: Deploy sUSDe Mint Market
+    MINT_MARKET_SYRUPUSDC // Phase 18: Deploy syrupUSDC Mint Market
 }
 
 struct MarketContracts {
@@ -66,6 +68,8 @@ struct Contracts {
     MarketContracts susdeBorrowMarket;
     MarketContracts syrupUsdcBorrowMarket;
     MarketContracts paxgBorrowMarket;
+    MarketContracts susdeMintMarket;
+    MarketContracts syrupUsdcMintMarket;
     UsmContracts permissionedUsm;
     UsmContracts permissionlessUsm;
 }

@@ -512,6 +512,76 @@ library DeployAltoEthereumMainnet {
                 params.useUnsafeUpgrades,
                 params.deployerHasOwnership
             );
+        } else if (params.phase == DeploymentPhase.MINT_MARKET_SUSDE) {
+            input.contracts.susdeMintMarket = _deployMintMarket(
+                DeployMintMarketParams({
+                    owner: input.contracts.timelock,
+                    dusd: input.contracts.dusd,
+                    altoAdapter: input.contracts.altoAdapter,
+                    feeRecipient: input.contracts.feeRecipientMintMarkets,
+                    collateralToken: SUSDE_MAINNET,
+                    oracleAsset: EthereumMainnetLendingOracleAsset.SUSDE,
+                    irmInterestRate: 0.015 ether / uint256(365 days), // 1.5%
+                    maxLtv: 0.8 ether, // 80%
+                    initialBorrowOpeningFee: 0.0005 ether, // 0.05%
+                    debtCeiling: 250_000 ether, // 250,000 DUSD
+                    liquidationConfig: LiquidationConfiguration({
+                        maxLiquidationLtv: 0.85 ether, // 85%
+                        dynamicBonusFeeStart: 0.005 ether, // 0.5%
+                        ltvForCompleteLiquidation: 0.93 ether, // 93%
+                        dynamicBonusFeeDecaySteepness: 5 ether, // 5
+                        liquidationBaseFee: 0.04 ether, // 4%
+                        minPenaltyPercentage: 0.005 ether, // 0.5%
+                        protocolFeePercentage: 0.07 ether, // 7%
+                        isEnabledPriorityLiquidation: false,
+                        disablePriorityLiquidationAbovePositionLtv: 0,
+                        priorityLiquidationGracePeriod: 0,
+                        taggerLiquidationGracePeriod: 0,
+                        liquidationWindowTag: 0
+                    }),
+                    freezer: params.freezer,
+                    swapRouter: ZEROX_SWAP_TARGET_MAINNET
+                }),
+                input,
+                params,
+                params.useUnsafeUpgrades,
+                params.deployerHasOwnership
+            );
+        } else if (params.phase == DeploymentPhase.MINT_MARKET_SYRUPUSDC) {
+            input.contracts.syrupUsdcMintMarket = _deployMintMarket(
+                DeployMintMarketParams({
+                    owner: input.contracts.timelock,
+                    dusd: input.contracts.dusd,
+                    altoAdapter: input.contracts.altoAdapter,
+                    feeRecipient: input.contracts.feeRecipientMintMarkets,
+                    collateralToken: SYRUPUSDC_MAINNET,
+                    oracleAsset: EthereumMainnetLendingOracleAsset.SYRUPUSDC,
+                    irmInterestRate: 0.03 ether / uint256(365 days), // 3%
+                    maxLtv: 0.8 ether, // 80%
+                    initialBorrowOpeningFee: 0.0005 ether, // 0.05%
+                    debtCeiling: 250_000 ether, // 250,000 DUSD
+                    liquidationConfig: LiquidationConfiguration({
+                        maxLiquidationLtv: 0.85 ether, // 85%
+                        dynamicBonusFeeStart: 0.005 ether, // 0.5%
+                        ltvForCompleteLiquidation: 0.93 ether, // 93%
+                        dynamicBonusFeeDecaySteepness: 5 ether, // 5
+                        liquidationBaseFee: 0.04 ether, // 4%
+                        minPenaltyPercentage: 0.005 ether, // 0.5%
+                        protocolFeePercentage: 0.07 ether, // 7%
+                        isEnabledPriorityLiquidation: false,
+                        disablePriorityLiquidationAbovePositionLtv: 0,
+                        priorityLiquidationGracePeriod: 0,
+                        taggerLiquidationGracePeriod: 0,
+                        liquidationWindowTag: 0
+                    }),
+                    freezer: params.freezer,
+                    swapRouter: ODOS_ROUTER_V3_MAINNET
+                }),
+                input,
+                params,
+                params.useUnsafeUpgrades,
+                params.deployerHasOwnership
+            );
         } else {
             revert("Invalid phase");
         }
