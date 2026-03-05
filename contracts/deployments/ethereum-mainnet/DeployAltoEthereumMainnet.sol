@@ -119,7 +119,8 @@ library DeployAltoEthereumMainnet {
                 }),
                 input,
                 params,
-                params.useUnsafeUpgrades
+                params.useUnsafeUpgrades,
+                params.deployerHasOwnership
             );
         } else if (params.phase == DeploymentPhase.MINT_MARKET_WSTETH) {
             input.contracts.wstethMarket = _deployMintMarket(
@@ -153,7 +154,8 @@ library DeployAltoEthereumMainnet {
                 }),
                 input,
                 params,
-                params.useUnsafeUpgrades
+                params.useUnsafeUpgrades,
+                params.deployerHasOwnership
             );
         } else if (params.phase == DeploymentPhase.MINT_MARKET_RETH) {
             input.contracts.rethMarket = _deployMintMarket(
@@ -187,7 +189,8 @@ library DeployAltoEthereumMainnet {
                 }),
                 input,
                 params,
-                params.useUnsafeUpgrades
+                params.useUnsafeUpgrades,
+                params.deployerHasOwnership
             );
         } else if (params.phase == DeploymentPhase.MINT_MARKET_METH) {
             input.contracts.methMarket = _deployMintMarket(
@@ -221,7 +224,8 @@ library DeployAltoEthereumMainnet {
                 }),
                 input,
                 params,
-                params.useUnsafeUpgrades
+                params.useUnsafeUpgrades,
+                params.deployerHasOwnership
             );
         } else if (params.phase == DeploymentPhase.MINT_MARKET_TBTC) {
             input.contracts.tbtcMarket = _deployMintMarket(
@@ -255,7 +259,8 @@ library DeployAltoEthereumMainnet {
                 }),
                 input,
                 params,
-                params.useUnsafeUpgrades
+                params.useUnsafeUpgrades,
+                params.deployerHasOwnership
             );
         } else if (params.phase == DeploymentPhase.BORROW_MARKET_WBTC) {
             input.contracts.wbtcBorrowMarket = _deployBorrowMarket(
@@ -596,7 +601,8 @@ library DeployAltoEthereumMainnet {
         DeployMintMarketParams memory marketParams,
         AltoEthereumMainnetInput memory input,
         AltoEthereumMainnetParams memory params,
-        bool useUnsafeUpgrades
+        bool useUnsafeUpgrades,
+        bool deployerHasOwnership
     ) internal returns (MarketContracts memory) {
         uint256 minterCeiling = marketParams.debtCeiling * 1.05 ether / marketParams.liquidationConfig.maxLiquidationLtv;
         MarketContracts memory report = MintMarketBatch.deploy(
@@ -620,16 +626,43 @@ library DeployAltoEthereumMainnet {
             })
         );
 
-        // Configure DUSD minter permissions for market (requires DUSD ownership)
-        // This is done here because DUSD may be owned by the deployment caller, not the batch contract
-        IDUSD(marketParams.dusd).setMinterStatus(report.market, true);
-        IDUSD(marketParams.dusd).setMinterCeiling(report.market, minterCeiling);
-        IDUSD(marketParams.dusd).setBurnerStatus(report.market, true);
+        if (deployerHasOwnership) {
+            IDUSD(marketParams.dusd).setMinterStatus(report.market, true);
+            IDUSD(marketParams.dusd).setMinterCeiling(report.market, minterCeiling);
+            IDUSD(marketParams.dusd).setBurnerStatus(report.market, true);
 
-        IMarketRegistry(input.contracts.marketRegistry).addMintMarket(report.market);
+            IMarketRegistry(input.contracts.marketRegistry).addMintMarket(report.market);
+            AltoAdapter(payable(marketParams.altoAdapter)).approveContract(report.market);
+        } else {
+            address timelock = input.contracts.timelock;
+            uint256 minDelay = TimelockController(payable(timelock)).getMinDelay();
 
-        // Approve market on AltoAdapter (requires adapter ownership)
-        AltoAdapter(payable(marketParams.altoAdapter)).approveContract(report.market);
+            address[] memory targets = new address[](5);
+            uint256[] memory values = new uint256[](5);
+            bytes[] memory payloads = new bytes[](5);
+
+            targets[0] = marketParams.dusd;
+            values[0] = 0;
+            payloads[0] = abi.encodeCall(IDUSD.setMinterStatus, (report.market, true));
+
+            targets[1] = marketParams.dusd;
+            values[1] = 0;
+            payloads[1] = abi.encodeCall(IDUSD.setMinterCeiling, (report.market, minterCeiling));
+
+            targets[2] = marketParams.dusd;
+            values[2] = 0;
+            payloads[2] = abi.encodeCall(IDUSD.setBurnerStatus, (report.market, true));
+
+            targets[3] = input.contracts.marketRegistry;
+            values[3] = 0;
+            payloads[3] = abi.encodeCall(IMarketRegistry.addMintMarket, (report.market));
+
+            targets[4] = marketParams.altoAdapter;
+            values[4] = 0;
+            payloads[4] = abi.encodeCall(AdapterContractApproval.approveContract, (report.market));
+
+            _writeSafeTimelockBatchJson("mint-market-registry", timelock, targets, values, payloads, minDelay);
+        }
 
         return report;
     }
