@@ -235,10 +235,6 @@ contract AltoMintMarket is AltoBaseMarket {
             revert AltoBaseMarketInvalidInput();
         }
 
-        if (msg.sender != owner() && msg.sender != feeRecipient) {
-            revert AltoBaseMarketUnauthorized();
-        }
-
         return _claimInterest(interest);
     }
 
