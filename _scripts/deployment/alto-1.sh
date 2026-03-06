@@ -12,4 +12,4 @@ FOUNDRY_PROFILE=deployment forge script script/DeployAltoEthereumMainnet.s.sol:D
 --sender $SENDER \
 --broadcast -vvv \
 --slow \
---priority-gas-price 0.3gwei
+--with-gas-price 0.6gwei --priority-gas-price 0.2gwei
