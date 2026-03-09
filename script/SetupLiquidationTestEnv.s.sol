@@ -22,11 +22,16 @@ import {
 string constant ADDRESSES_FILE =
     "./contracts/deployments/ethereum-mainnet/output/ethereum-mainnet-1-1765364975/addresses.json";
 
+uint256 constant TENDERLY_GAS_FUNDING_WEI = 1 ether;
+
 /// @title SetupLiquidationTestEnv
-/// @notice Sets up multiple liquidatable positions for any market on mainnet fork
-/// @dev Run example:
-///      MARKET=weth NUM_POSITIONS=5 MIN_COLLATERAL=1 MAX_COLLATERAL=100 forge script script/SetupLiquidationTestEnv.s.sol --rpc-url http://localhost:8545 --broadcast -vvv
-///      MARKET=susde NUM_POSITIONS=10 MIN_COLLATERAL=1000 MAX_COLLATERAL=100000 forge script script/SetupLiquidationTestEnv.s.sol --rpc-url http://localhost:8545 --broadcast -vvv
+/// @notice Sets up multiple liquidatable positions for any market on a Tenderly Virtual TestNet
+/// @dev Run example (Tenderly Virtual TestNet):
+///      MARKET=susde NUM_POSITIONS=3 MIN_COLLATERAL=1 MAX_COLLATERAL=100 forge script script/SetupLiquidationTestEnv.s.sol --rpc-url $TENDERLY_VIRTUAL_TESTNET_RPC --broadcast --unlocked --skip-simulation --slow -vvv
+/// @dev Uses Tenderly Admin RPC (tenderly_setErc20Balance) to fund accounts; --unlocked
+///      broadcasts unsigned txs from arbitrary addresses. Use --skip-simulation so the
+///      broadcast runs after RPC balance updates are applied (simulation uses stale state).
+///      See: https://docs.tenderly.co/virtual-testnets/admin-rpc
 /// @dev Environment variables:
 ///      - MARKET: Market name (weth, wsteth, meth, reth, tbtc, susde, wbtc, cbbtc) - required
 ///      - NUM_POSITIONS: Number of positions to create (default: 5)
@@ -36,27 +41,18 @@ contract SetupLiquidationTestEnvScript is Script, StdCheats {
     using FixedPointMath for uint256;
     using AssetShareConversionMath for uint256;
 
-    // Loaded from addresses.json
     address market;
     address dusd;
     address liquidationEngine;
-
-    // Derived from market
     address collateralToken;
     uint256 collateralDecimals;
-
-    // User-provided parameters
     uint256 minCollateral;
     uint256 maxCollateral;
     uint256 numPositions;
-
-    // Calculated values
     uint256 liquidatableOraclePrice;
     uint256 initialLiquidity;
-
     OracleTestnet newOracle;
     address[] public users;
-    uint256[] public userPrivateKeys;
 
     function run() public {
         string memory marketName = vm.envString("MARKET");
@@ -110,7 +106,6 @@ contract SetupLiquidationTestEnvScript is Script, StdCheats {
             }
         } catch {}
 
-        // If mint market not found, try borrow market pattern
         if (market == address(0)) {
             market = vm.parseJsonAddress(json, borrowMarketKey);
             liquidationEngine =
@@ -134,11 +129,9 @@ contract SetupLiquidationTestEnvScript is Script, StdCheats {
 
         console.log("\nCurrent oracle price:", currentOraclePrice);
         console.log("Liquidatable oracle price (70%):", liquidatableOraclePrice);
-
-        // 2x buffer for initial liquidity (only used for BORROW markets)
         uint256 maxBorrowPerPosition =
             maxCollateral.divideWithRounding(currentOraclePrice, LENDING_ORACLE_PRICE_PRECISION, false);
-        initialLiquidity = maxBorrowPerPosition * numPositions * 2;
+        initialLiquidity = maxBorrowPerPosition * numPositions * 2 * 102 / 100;
     }
 
     function _disablePriorityLiquidationIfEnabled() internal {
@@ -154,9 +147,11 @@ contract SetupLiquidationTestEnvScript is Script, StdCheats {
 
         config.isEnabledPriorityLiquidation = false;
 
-        vm.startPrank(Ownable(liquidationEngine).owner());
+        address owner = Ownable(liquidationEngine).owner();
+        _tenderlySetBalance(owner, TENDERLY_GAS_FUNDING_WEI);
+        vm.startBroadcast(owner);
         DlbDcfPriorityLiquidationEngine(liquidationEngine).setLiquidationConfiguration(config);
-        vm.stopPrank();
+        vm.stopBroadcast();
 
         console.log("Priority liquidation disabled");
     }
@@ -165,12 +160,15 @@ contract SetupLiquidationTestEnvScript is Script, StdCheats {
         console.log("\n--- Supplying initial liquidity (BORROW market) ---");
 
         address liquidityProvider = address(0x1111111111111111111111111111111111111111);
-        deal(dusd, liquidityProvider, initialLiquidity);
+        uint256 lpDusdBalance = initialLiquidity * 102 / 100;
+        _tenderlySetErc20Balance(dusd, liquidityProvider, lpDusdBalance);
+        _tenderlySetBalance(liquidityProvider, TENDERLY_GAS_FUNDING_WEI);
+        deal(dusd, liquidityProvider, lpDusdBalance);
 
-        vm.startPrank(liquidityProvider);
+        vm.startBroadcast(liquidityProvider);
         IERC20(dusd).approve(market, initialLiquidity);
         IMarket(market).addSupply(initialLiquidity, 0, liquidityProvider);
-        vm.stopPrank();
+        vm.stopBroadcast();
 
         console.log("Supplied:", initialLiquidity / 1e18, "DUSD");
     }
@@ -179,12 +177,8 @@ contract SetupLiquidationTestEnvScript is Script, StdCheats {
         console.log("\n--- Creating positions ---");
 
         for (uint256 i = 0; i < _numPositions; i++) {
-            uint256 userPk = uint256(keccak256(abi.encodePacked(i, block.timestamp)));
-            address user = vm.addr(userPk);
-
+            address user = vm.addr(uint256(keccak256(abi.encodePacked(i, block.number))));
             users.push(user);
-            userPrivateKeys.push(userPk);
-
             uint256 randomSeed = uint256(keccak256(abi.encodePacked(i, block.timestamp, block.number)));
             uint256 collateralAmount = minCollateral + (randomSeed % (maxCollateral - minCollateral + 1));
 
@@ -196,22 +190,26 @@ contract SetupLiquidationTestEnvScript is Script, StdCheats {
     }
 
     function _fundAndCreatePosition(address user, uint256 collateralAmount) internal {
-        IMarket market = IMarket(market);
-        uint256 currentOraclePrice = IOracle(market.oracle()).getPrice();
+        IMarket _market = IMarket(market);
+        uint256 currentOraclePrice = IOracle(_market.oracle()).getPrice();
 
         uint256 collateralValueInDusd =
             collateralAmount.divideWithRounding(currentOraclePrice, LENDING_ORACLE_PRICE_PRECISION, false);
-        uint256 borrowAmount = collateralValueInDusd.multiplyWithPrecision(market.maxLtv()) * 95 / 100;
+        uint256 borrowAmount = collateralValueInDusd.multiplyWithPrecision(_market.maxLtv()) * 95 / 100;
 
         console.log("Borrow:", borrowAmount / 1e18, "DUSD");
+        uint256 collateralBalanceToSet = collateralAmount * 102 / 100;
+        _tenderlySetErc20Balance(collateralToken, user, collateralBalanceToSet);
+        _tenderlySetBalance(user, TENDERLY_GAS_FUNDING_WEI);
+        // Foundry runs the script in a local EVM fork (state copied from RPC). deal() updates that fork so
+        // addCollateral succeed during the run. tenderly_setErc20Balance above updates Tenderly so the broadcast tx succeeds on-chain.
+        deal(collateralToken, user, collateralBalanceToSet);
 
-        deal(collateralToken, user, collateralAmount);
-
-        vm.startPrank(user);
-        IERC20(collateralToken).approve(address(market), type(uint256).max);
-        market.addCollateral(collateralAmount, user);
-        market.borrow(borrowAmount, 0, user, user, "");
-        vm.stopPrank();
+        vm.startBroadcast(user);
+        IERC20(collateralToken).approve(address(_market), type(uint256).max);
+        _market.addCollateral(collateralAmount, user);
+        _market.borrow(borrowAmount, 0, user, user, "");
+        vm.stopBroadcast();
 
         require(_isSolvent(user), "Position should be solvent after creation");
     }
@@ -220,12 +218,13 @@ contract SetupLiquidationTestEnvScript is Script, StdCheats {
         console.log("\n--- Deploying new oracle ---");
 
         address marketOwner = Ownable(market).owner();
+        _tenderlySetBalance(marketOwner, TENDERLY_GAS_FUNDING_WEI);
 
-        vm.startPrank(marketOwner);
+        vm.startBroadcast(marketOwner);
         newOracle = new OracleTestnet(marketOwner);
         newOracle.setPrice(liquidatableOraclePrice);
         IMarket(market).setOracle(address(newOracle));
-        vm.stopPrank();
+        vm.stopBroadcast();
 
         console.log("Oracle deployed:", address(newOracle));
         console.log("Price set to:", liquidatableOraclePrice);
@@ -236,29 +235,60 @@ contract SetupLiquidationTestEnvScript is Script, StdCheats {
 
         uint256 liquidatableCount = 0;
         for (uint256 i = 0; i < users.length; i++) {
-            bool solvent = _isSolvent(users[i]);
-            if (!solvent) {
+            if (!_isSolvent(users[i])) {
                 liquidatableCount++;
                 console.log("User", i + 1, users[i], "- LIQUIDATABLE");
             } else {
                 console.log("User", i + 1, users[i], "- SOLVENT (unexpected!)");
             }
         }
-
         console.log("\nLiquidatable:", liquidatableCount, "/", users.length);
         require(liquidatableCount == users.length, "All positions should be liquidatable");
     }
 
-    /// @dev Mirrors _isSolvent from AltoBaseMarket.sol
+    function _tenderlySetBalance(address wallet, uint256 amountWei) internal {
+        vm.rpc("tenderly_setBalance", string.concat('["', vm.toString(wallet), '","', _toCompactHex(amountWei), '"]'));
+    }
+
+    function _tenderlySetErc20Balance(address token, address wallet, uint256 amount) internal {
+        vm.rpc(
+            "tenderly_setErc20Balance",
+            string.concat('["', vm.toString(token), '","', vm.toString(wallet), '","', _toCompactHex(amount), '"]')
+        );
+    }
+
+    function _toCompactHex(uint256 value) internal pure returns (string memory) {
+        if (value == 0) return "0x0";
+        uint256 temp = value;
+        uint256 length;
+        while (temp != 0) {
+            length++;
+            temp >>= 4;
+        }
+        bytes memory buf = new bytes(2 + length);
+        buf[0] = "0";
+        buf[1] = "x";
+        temp = value;
+        for (uint256 i = 2 + length; i > 2;) {
+            unchecked {
+                i--;
+                uint8 nibble = uint8(temp & 0xf);
+                buf[i] = nibble < 10 ? bytes1(uint8(0x30 + nibble)) : bytes1(uint8(0x57 + nibble));
+                temp >>= 4;
+            }
+        }
+        return string(buf);
+    }
+
     function _isSolvent(address user) internal view returns (bool) {
-        IMarket market = IMarket(market);
-        uint256 collateralPrice = IOracle(market.oracle()).getPrice();
-        Position memory pos = market.position(user);
-        Balance memory totalBorrowed = market.totalBorrowed();
+        IMarket _market = IMarket(market);
+        uint256 collateralPrice = IOracle(_market.oracle()).getPrice();
+        Position memory pos = _market.position(user);
+        Balance memory totalBorrowed = _market.totalBorrowed();
 
         uint256 collateralValue =
             uint256(pos.collateralAssets).divideWithRounding(collateralPrice, LENDING_ORACLE_PRICE_PRECISION, false);
-        uint256 maxBorrowValue = collateralValue.multiplyWithPrecision(market.maxLtv());
+        uint256 maxBorrowValue = collateralValue.multiplyWithPrecision(_market.maxLtv());
         uint256 borrowValue = uint256(pos.borrowShares).convertToAssetsUp(totalBorrowed.assets, totalBorrowed.shares);
 
         return maxBorrowValue >= borrowValue;
