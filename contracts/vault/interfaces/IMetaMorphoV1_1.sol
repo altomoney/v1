@@ -26,9 +26,9 @@ interface IOwnable {
     function pendingOwner() external view returns (address);
 }
 
-/// @dev This interface is used for factorizing IMetaMorphoStaticTyping and IMetaMorpho.
-/// @dev Consider using the IMetaMorpho interface instead of this one.
-interface IMetaMorphoBase {
+/// @dev This interface is used for factorizing IMetaMorphoV1_1StaticTyping and IMetaMorphoV1_1.
+/// @dev Consider using the IMetaMorphoV1_1 interface instead of this one.
+interface IMetaMorphoV1_1Base {
     /// @notice The address of the Morpho contract.
     function MORPHO() external view returns (IMorpho);
 
@@ -77,10 +77,12 @@ interface IMetaMorphoBase {
     function withdrawQueueLength() external view returns (uint256);
 
     /// @notice Stores the total assets managed by this vault when the fee was last accrued.
-    /// @dev May be greater than `totalAssets()` due to removal of markets with non-zero supply or socialized bad debt.
-    /// This difference will decrease the fee accrued until one of the functions updating `lastTotalAssets` is
-    /// triggered (deposit/mint/withdraw/redeem/setFee/setFeeRecipient).
     function lastTotalAssets() external view returns (uint256);
+
+    /// @notice Stores the missing assets due to realized bad debt or forced market removal.
+    /// @dev In order to cover those lost assets, it is advised to supply on behalf of address(1) on the vault
+    /// (canonical method).
+    function lostAssets() external view returns (uint256);
 
     /// @notice Submits a `newTimelock`.
     /// @dev Warning: Reverts if a timelock is already pending. Revoke the pending timelock to overwrite it.
@@ -111,7 +113,6 @@ interface IMetaMorphoBase {
     /// @notice This forced removal is expected to be used as an emergency process in case a market constantly reverts.
     /// To softly remove a sane market, the curator role is expected to bundle a reallocation that empties the market
     /// first (using `reallocate`), followed by the removal of the market (using `updateWithdrawQueue`).
-    /// @dev Warning: Removing a market with non-zero supply will instantly impact the vault's price per share.
     /// @dev Warning: Reverts for non-zero cap or if there is a pending cap. Successfully submitting a zero cap will
     /// prevent such reverts.
     function submitMarketRemoval(MarketParams memory marketParams) external;
@@ -119,6 +120,12 @@ interface IMetaMorphoBase {
     /// @notice Revokes the pending removal of the market defined by `id`.
     /// @dev Does not revert if there is no pending market removal.
     function revokePendingMarketRemoval(Id id) external;
+
+    /// @notice Sets the name of the vault.
+    function setName(string memory newName) external;
+
+    /// @notice Sets the symbol of the vault.
+    function setSymbol(string memory newSymbol) external;
 
     /// @notice Submits a `newGuardian`.
     /// @notice Warning: a malicious guardian could disrupt the vault's operation, and would have the power to revoke
@@ -182,9 +189,9 @@ interface IMetaMorphoBase {
     function reallocate(MarketAllocation[] calldata allocations) external;
 }
 
-/// @dev This interface is inherited by MetaMorpho so that function signatures are checked by the compiler.
-/// @dev Consider using the IMetaMorpho interface instead of this one.
-interface IMetaMorphoStaticTyping is IMetaMorphoBase {
+/// @dev This interface is inherited by MetaMorphoV1_1 so that function signatures are checked by the compiler.
+/// @dev Consider using the IMetaMorphoV1_1 interface instead of this one.
+interface IMetaMorphoV1_1StaticTyping is IMetaMorphoV1_1Base {
     /// @notice Returns the current configuration of each market.
     function config(Id) external view returns (uint184 cap, bool enabled, uint64 removableAt);
 
@@ -198,11 +205,12 @@ interface IMetaMorphoStaticTyping is IMetaMorphoBase {
     function pendingTimelock() external view returns (uint192 value, uint64 validAt);
 }
 
-/// @title IMetaMorpho
+/// @title IMetaMorphoV1_1
 /// @author Morpho Labs
 /// @custom:contact security@morpho.org
-/// @dev Use this interface for MetaMorpho to have access to all the functions with the appropriate function signatures.
-interface IMetaMorpho is IMetaMorphoBase, IERC4626, IERC20Permit, IOwnable, IMulticall {
+/// @dev Use this interface for MetaMorphoV1_1 to have access to all the functions with the appropriate function
+/// signatures.
+interface IMetaMorphoV1_1 is IMetaMorphoV1_1Base, IERC4626, IERC20Permit, IOwnable, IMulticall {
     /// @notice Returns the current configuration of each market.
     function config(Id) external view returns (MarketConfig memory);
 
