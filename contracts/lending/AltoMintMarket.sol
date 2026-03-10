@@ -84,7 +84,7 @@ contract AltoMintMarket is AltoBaseMarket {
     /// @param _badDebtAssets The cumulative amount of bad debt assets to initialize
     /// @dev _badDebtAssets should represent the total bad debt accrued before the upgrade.
     /// @dev This should only be initialized when there's no risk of bad debt during redeployment.
-    function initializeV2(uint128 _badDebtAssets) public reinitializer(2) {
+    function initializeV2(uint128 _badDebtAssets) public reinitializer(2) onlyOwner {
         badDebtAssets = _badDebtAssets;
         emit BadDebtAccrued(_badDebtAssets);
     }
