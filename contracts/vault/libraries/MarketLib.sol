@@ -3,7 +3,13 @@ pragma solidity ^0.8.0;
 
 import {IMarketStaticTypes, IMarket} from "@alto/lending/interfaces/IMarket.sol";
 import {AdaptiveCurveIrm} from "@alto/lending/irm/AdaptiveCurveIrm.sol";
-import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";
+
+/// @title IInterestFeeMarket
+/// @notice Interface for market-specific functionality that returns the interest fee.
+interface IInterestFeeMarket {
+    /// @notice The interest fee in MATH_PRECISION charged on accrued interest.
+    function interestFee() external view returns (uint256);
+}
 
 /// @dev Warning: `totalSupplyAssets` does not contain the accrued interest since the last interest accrual.
 /// @dev Warning: `totalBorrowAssets` does not contain the accrued interest since the last interest accrual.
@@ -57,9 +63,7 @@ library MarketLib {
         (uint128 totalSupplyAssets, uint128 totalSupplyShares) = totalSupply(market);
         (uint128 totalBorrowAssets, uint128 totalBorrowShares) = totalBorrowed(market);
 
-        // This library is used in context of AltoVault to be used for fetching state of Alto borrow markets.
-        // Since Alto borrow markets contains interestFee, we can safely cast to AltoBorrowMarket and get the interestFee.
-        uint128 fee = uint128(AltoBorrowMarket(market).interestFee());
+        uint128 fee = uint128(IInterestFeeMarket(market).interestFee());
 
         marketState = Market({
             totalSupplyAssets: totalSupplyAssets,
