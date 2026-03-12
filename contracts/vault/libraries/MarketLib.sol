@@ -2,7 +2,6 @@
 pragma solidity ^0.8.0;
 
 import {IMarketStaticTypes, IMarket} from "@alto/lending/interfaces/IMarket.sol";
-import {AdaptiveCurveIrm} from "@alto/lending/irm/AdaptiveCurveIrm.sol";
 
 /// @title IInterestFeeMarket
 /// @notice Interface for market-specific functionality that returns the interest fee.
