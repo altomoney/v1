@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
 import "./helpers/IntegrationTest.sol";
@@ -19,7 +20,9 @@ contract ERC4626Test is IntegrationTest {
     function testDecimals(uint8 decimals) public {
         vm.mockCall(address(loanToken), abi.encodeWithSignature("decimals()"), abi.encode(decimals));
 
-        vault = IAltoVault(address(new AltoVault(OWNER, TIMELOCK, address(loanToken), "Alto Vault", "AV")));
+        vault = IAltoVault(
+            address(new AltoVault(OWNER, TIMELOCK, address(loanToken), "Alto Vault", "AV", address(marketRegistry)))
+        );
 
         assertEq(ERC20(address(vault)).decimals(), Math.max(18, decimals), "decimals");
     }

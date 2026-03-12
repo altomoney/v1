@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
 import {stdError} from "forge-std/StdError.sol";
@@ -67,6 +68,7 @@ contract MarketTest is IntegrationTest {
         lltv = bound(lltv, 0.5 ether, 0.8 ether);
 
         address market = _deployMarket(address(collateralToken), address(loanToken), lltv, address(0), address(0));
+        _registerMarketInRegistry(market);
 
         vm.prank(CURATOR);
         vm.expectRevert(abi.encodeWithSelector(IAltoVaultErrors.InconsistentAsset.selector, market));

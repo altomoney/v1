@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
 import {ERC1820Registry} from "../../helpers/ERC1820Registry.sol";
@@ -32,8 +33,11 @@ contract ReentrancyTest is IntegrationTest, IERC1820Implementer {
         idleMarket = _deployMarket(
             address(collateralToken), address(reentrantToken), 0, address(idleMarketOracle), address(irmIdleMarket)
         );
+        _registerMarketInRegistry(idleMarket);
 
-        vault = IAltoVault(address(new AltoVault(OWNER, TIMELOCK, address(reentrantToken), "Alto Vault", "AV")));
+        vault = IAltoVault(
+            address(new AltoVault(OWNER, TIMELOCK, address(reentrantToken), "Alto Vault", "AV", address(marketRegistry)))
+        );
 
         vm.startPrank(OWNER);
         vault.setCurator(CURATOR);

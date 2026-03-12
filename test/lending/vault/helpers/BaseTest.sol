@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
 import {ConstantsLib} from "@alto/lending/libraries/ConstantsLib.sol";
@@ -33,6 +34,8 @@ import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConver
 import {MarketLib} from "@alto/lending/libraries/MarketLib.sol";
 import {UtilsLib} from "@bundler3/lib/morpho-blue/src/libraries/UtilsLib.sol";
 
+import {MarketRegistry} from "@alto/utils/MarketRegistry.sol";
+
 import {Test} from "forge-std/Test.sol";
 
 uint256 constant BLOCK_TIME = 1;
@@ -63,6 +66,7 @@ contract BaseTest is Test {
     IrmMock internal irmIdleMarket;
     IrmMock[] internal irmMarkets;
 
+    MarketRegistry internal marketRegistry;
     address[] internal allMarkets;
     uint256[] internal allMarketsLltvs;
     address internal idleMarket;
@@ -71,6 +75,8 @@ contract BaseTest is Test {
         vm.label(address(loanToken), "Loan");
         vm.label(address(collateralToken), "Collateral");
         vm.label(address(oracle), "Oracle");
+
+        marketRegistry = new MarketRegistry(MARKET_OWNER);
 
         oracle.setPrice(LENDING_ORACLE_PRICE_PRECISION);
         idleMarketOracle.setPrice(0);
@@ -90,6 +96,8 @@ contract BaseTest is Test {
         }
 
         allMarkets.push(idleMarket); // Must be pushed last.
+
+        _registerMarketsInRegistry();
 
         vm.startPrank(SUPPLIER);
         for (uint256 i = 0; i < allMarkets.length; ++i) {
@@ -231,5 +239,18 @@ contract BaseTest is Test {
         users = _removeAll(users, address(0));
 
         return _randomCandidate(users, seed);
+    }
+
+    function _registerMarketsInRegistry() internal {
+        vm.startPrank(MARKET_OWNER);
+        for (uint256 i; i < allMarkets.length; ++i) {
+            marketRegistry.addBorrowMarket(allMarkets[i]);
+        }
+        vm.stopPrank();
+    }
+
+    function _registerMarketInRegistry(address market) internal {
+        vm.prank(MARKET_OWNER);
+        marketRegistry.addBorrowMarket(market);
     }
 }
