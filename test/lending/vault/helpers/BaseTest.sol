@@ -21,7 +21,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC20, ERC20} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
 import {IAltoVault, MarketAllocation} from "@alto/lending/interfaces/IAltoVault.sol";
 import {AltoVault} from "@alto/lending/vault/AltoVault.sol";
-import {PendingUint192, PendingAddress, MarketConfig} from "@metamorpho/libraries/PendingLib.sol";
+import {MarketConfig, PendingUint192, PendingAddress} from "@alto/lending/libraries/PendingLib.sol";
 import {AltoBalancesLib} from "@alto/lending/libraries/AltoBalancesLib.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IERC20Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";

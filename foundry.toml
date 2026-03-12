@@ -22,7 +22,6 @@ remappings = [
 	'@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/',
 	'@uniswap/v3-core/=lib/v3-core/',
 	'@chainlink/=lib/chainlink-evm/',
-	'@metamorpho/=lib/metamorpho/src/',
 	'@erc4626-tests/=lib/erc4626-tests/',
 ]
 

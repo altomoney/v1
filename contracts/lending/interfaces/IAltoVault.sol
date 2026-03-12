@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity >=0.5.0;
 
-import {MarketConfig, PendingUint192, PendingAddress} from "@metamorpho/libraries/PendingLib.sol";
+import {MarketConfig, PendingUint192, PendingAddress} from "@alto/lending/libraries/PendingLib.sol";
 import {IMarketRegistry} from "@alto/utils/interfaces/IMarketRegistry.sol";
 
 struct MarketAllocation {

@@ -20,18 +20,6 @@
       "rev": "8bbcf6e3f8f62f419e5429a0bd89331c85c37824"
     }
   },
-  "lib/metamorpho": {
-    "tag": {
-      "name": "v1.0.0",
-      "rev": "f5faa9c21b1396c291b471a6a5ad9407d23486a9"
-    }
-  },
-  "lib/morpho-blue": {
-    "tag": {
-      "name": "v1.0.0",
-      "rev": "55d2d99304fb3fb930c688462ae2ccabb1d533ad"
-    }
-  },
   "lib/morpho-blue-irm": {
     "tag": {
       "name": "v1.1.0",
