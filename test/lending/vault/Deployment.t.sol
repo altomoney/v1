@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
 import "./helpers/IntegrationTest.sol";
@@ -47,7 +48,7 @@ contract DeploymentTest is IntegrationTest {
         vm.assume(address(notToken) != address(vault));
 
         vm.expectRevert();
-        new AltoVault(OWNER, 1 days, notToken, "Alto Vault", "AV");
+        new AltoVault(OWNER, 1 days, notToken, "Alto Vault", "AV", address(marketRegistry));
     }
 
     function testDeployAltoVault(address owner, uint256 initialTimelock, string memory name, string memory symbol)
@@ -56,7 +57,8 @@ contract DeploymentTest is IntegrationTest {
         assumeNotZeroAddress(owner);
         initialTimelock = _boundInitialTimelock(initialTimelock);
 
-        AltoVault newVault = new AltoVault(owner, initialTimelock, address(loanToken), name, symbol);
+        AltoVault newVault =
+            new AltoVault(owner, initialTimelock, address(loanToken), name, symbol, address(marketRegistry));
 
         assertEq(newVault.owner(), owner, "owner");
         assertEq(newVault.timelock(), initialTimelock, "timelock");

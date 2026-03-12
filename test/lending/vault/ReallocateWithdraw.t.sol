@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
 import "./helpers/IntegrationTest.sol";
@@ -177,7 +178,7 @@ contract ReallocateWithdrawTest is IntegrationTest {
         allocations.push(MarketAllocation({market: allMarkets[2], assets: suppliedAssets[2]}));
 
         vm.prank(ALLOCATOR);
-        vm.expectRevert(abi.encodeWithSelector(IAltoVaultErrors.UnauthorizedMarket.selector, allMarkets[1]));
+        vm.expectRevert(abi.encodeWithSelector(IAltoVaultErrors.SupplyCapExceeded.selector, allMarkets[1]));
         vault.reallocate(allocations);
     }
 

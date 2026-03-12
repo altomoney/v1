@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
 import "./helpers/BaseTest.sol";
@@ -18,7 +19,7 @@ contract VaultInternalTest is BaseTest {
     function setUp() public virtual override {
         super.setUp();
 
-        vaultMock = new AltoVaultMock(OWNER, 1 days, address(loanToken), "Alto Vault", "AV");
+        vaultMock = new AltoVaultMock(OWNER, 1 days, address(loanToken), "Alto Vault", "AV", address(marketRegistry));
 
         vm.startPrank(OWNER);
         vaultMock.setCurator(CURATOR);

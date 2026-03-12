@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
 import "./helpers/IntegrationTest.sol";
@@ -66,7 +67,7 @@ contract TimelockTest is IntegrationTest {
         timelock = bound(timelock, ConstantsLib.MAX_TIMELOCK + 1, type(uint256).max);
 
         vm.expectRevert(IAltoVaultErrors.AboveMaxTimelock.selector);
-        new AltoVault(OWNER, timelock, address(loanToken), "Alto Vault", "AV");
+        new AltoVault(OWNER, timelock, address(loanToken), "Alto Vault", "AV", address(marketRegistry));
     }
 
     function testSubmitTimelockAboveMaxTimelock(uint256 timelock) public {
