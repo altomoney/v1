@@ -34,13 +34,13 @@ contract VaultRegistry_RemoveVault_Test is Test {
         vaultRegistry.removeVault(address(0));
     }
 
-    function test_RevertWhen_VaultNotRegistered() public {
+    function test_RevertWhen_VaultIsNotRegistered() public {
         vm.prank(OWNER);
         vm.expectRevert(IVaultRegistry.VaultRegistryVaultDoesNotExist.selector);
         vaultRegistry.removeVault(makeAddr("NotRegistered"));
     }
 
-    function test_RemoveVault_WhenVaultIsNotRegistered() public {
+    function test_RemoveVault_WhenVaultIsRegistered() public {
         address vault = vaultRegistry.getVaultAtIndex(0);
         assertTrue(vaultRegistry.isVault(vault));
 
