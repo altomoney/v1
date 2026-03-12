@@ -7,16 +7,13 @@ import {
     PendingAddress,
     MarketAllocation,
     IMetaMorphoV1_1Base,
-    IMetaMorphoV1_1StaticTyping,
-    IMetaMorphoV1_1Errors,
-    IMetaMorphoV1_1Events
+    IMetaMorphoV1_1StaticTyping
 } from "./interfaces/IMetaMorphoV1_1.sol";
 import {Market, MarketLib} from "./libraries/MarketLib.sol";
 import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
 import {IMarketRegistry} from "@alto/utils/interfaces/IMarketRegistry.sol";
-import {AdaptiveCurveIrm} from "@alto/lending/irm/AdaptiveCurveIrm.sol";
 
-import {PendingUint192, PendingAddress, PendingLib} from "@metamorpho/libraries/PendingLib.sol";
+import {PendingLib} from "@metamorpho/libraries/PendingLib.sol";
 import {ConstantsLib} from "./libraries/ConstantsLib.sol";
 import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
@@ -131,12 +128,7 @@ contract MetaMorphoV1_1 is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaM
         string memory __name,
         string memory __symbol,
         address _marketRegistry
-    )
-        ERC4626(IERC20(_asset))
-        ERC20Permit("")
-        ERC20("", "")
-        Ownable(owner)
-    {
+    ) ERC4626(IERC20(_asset)) ERC20Permit("") ERC20("", "") Ownable(owner) {
         if (_marketRegistry == address(0)) revert ZeroAddress();
         marketRegistry = IMarketRegistry(_marketRegistry);
 
@@ -312,7 +304,6 @@ contract MetaMorphoV1_1 is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaM
 
     /// @inheritdoc IMetaMorphoV1_1Base
     function submitCap(address market, uint256 newSupplyCap) external onlyCuratorRole {
-
         if (!marketRegistry.isBorrowMarket(market)) revert MarketNotInRegistry(market);
         if (IMarket(market).borrowToken() != asset()) revert InconsistentAsset(market);
         if (pendingCap[market].validAt != 0) revert AlreadyPending();
