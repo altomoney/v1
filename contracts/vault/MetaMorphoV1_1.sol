@@ -413,8 +413,6 @@ contract MetaMorphoV1_1 is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaM
                 if (suppliedAssets == 0) continue;
 
                 uint256 supplyCap = config[market].cap;
-                if (supplyCap == 0) revert UnauthorizedMarket(market);
-
                 if (supplyAssets + suppliedAssets > supplyCap) revert SupplyCapExceeded(market);
 
                 IERC20(asset()).forceApprove(market, suppliedAssets);
