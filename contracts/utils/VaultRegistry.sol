@@ -17,9 +17,7 @@ contract VaultRegistry is AltoOwnable2Step, IVaultRegistry {
 
     /// @notice Constructor
     /// @param owner The address of the contract owner
-    constructor(address owner) Ownable(owner) {
-        if (owner == address(0)) revert VaultRegistryZeroAddress();
-    }
+    constructor(address owner) Ownable(owner) {}
 
     /// @inheritdoc IVaultRegistry
     function addVault(address vault) external onlyOwner {

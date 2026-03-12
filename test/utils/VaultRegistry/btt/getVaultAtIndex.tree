@@ -1,0 +1,9 @@
+VaultRegistry::getVaultAtIndex(uint256)
+├── given vault list is empty
+│   └── when index is 0
+│       └── it should revert with VaultRegistryInvalidIndex
+├── given vault list has vaults
+│   ├── when index is greater than or equal to vault list length
+│   │   └── it should revert with VaultRegistryInvalidIndex
+│   └── when index is less than vault list length
+│       └── it should return the vault at the given index
