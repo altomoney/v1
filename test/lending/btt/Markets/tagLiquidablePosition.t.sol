@@ -4,10 +4,7 @@ pragma solidity ^0.8.28;
 import {MarketType, MarketCommon} from "./MarketCommon.t.sol";
 import {IPausable} from "@alto/utils/Pausable.sol";
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
-import {
-    IMarketErrors,
-    IMarketEvents
-} from "@alto/lending/interfaces/IMarket.sol";
+import {IMarketErrors, IMarketEvents} from "@alto/lending/interfaces/IMarket.sol";
 import {
     IDcfDlbPriorityLiquidationEngine,
     IDcfDlbPriorityLiquidationEngineEvents,
@@ -30,21 +27,28 @@ contract AltoMarketTagLiquidablePosition is MarketCommon {
         vm.prank(PAUSER);
         market.pause(PAUSE_TYPE, true);
 
-        IDcfDlbPriorityLiquidationEngine liquidationEngine = IDcfDlbPriorityLiquidationEngine(market.liquidationEngine());
+        IDcfDlbPriorityLiquidationEngine liquidationEngine =
+            IDcfDlbPriorityLiquidationEngine(market.liquidationEngine());
         // it should revert
         vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, PAUSE_TYPE));
         liquidationEngine.tagLiquidablePosition(USER, USER);
     }
 
     function test_RevertWhen_PriorityLiquidationIsDisabled() external {
-        IDcfDlbPriorityLiquidationEngine liquidationEngine = IDcfDlbPriorityLiquidationEngine(market.liquidationEngine());
+        IDcfDlbPriorityLiquidationEngine liquidationEngine =
+            IDcfDlbPriorityLiquidationEngine(market.liquidationEngine());
         LiquidationConfiguration memory liquidationConfiguration = liquidationEngine.liquidationConfiguration();
         liquidationConfiguration.isEnabledPriorityLiquidation = false;
         vm.prank(OWNER);
         liquidationEngine.setLiquidationConfiguration(liquidationConfiguration);
 
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEnginePriorityLiquidationDisabled.selector));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEnginePriorityLiquidationDisabled
+                .selector
+            )
+        );
         liquidationEngine.tagLiquidablePosition(USER, USER);
     }
 
@@ -57,9 +61,15 @@ contract AltoMarketTagLiquidablePosition is MarketCommon {
         market.addCollateral(1 ether, USER);
         market.borrow(0.5 ether, 0, USER, USER, hex"");
 
-        IDcfDlbPriorityLiquidationEngine liquidationEngine = IDcfDlbPriorityLiquidationEngine(market.liquidationEngine());
+        IDcfDlbPriorityLiquidationEngine liquidationEngine =
+            IDcfDlbPriorityLiquidationEngine(market.liquidationEngine());
         // it should revert with DcfDlbPriorityLiquidationEngineLiquidatingSolventPosition
-        vm.expectRevert(abi.encodeWithSelector(IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidatingSolventPosition.selector));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidatingSolventPosition
+                .selector
+            )
+        );
         liquidationEngine.tagLiquidablePosition(USER, address(this));
     }
 
@@ -89,14 +99,20 @@ contract AltoMarketTagLiquidablePosition is MarketCommon {
     }
 
     function test_WhenLiquidatorIsAPriorityLiquidator() external givenUserPositionIsNotSolvent {
-        IDcfDlbPriorityLiquidationEngine liquidationEngine = IDcfDlbPriorityLiquidationEngine(market.liquidationEngine());
+        IDcfDlbPriorityLiquidationEngine liquidationEngine =
+            IDcfDlbPriorityLiquidationEngine(market.liquidationEngine());
         // it should revert with DcfDlbPriorityLiquidationEngineLiquidationUnauthorized
-        vm.expectRevert(abi.encodeWithSelector(IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationUnauthorized.selector));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationUnauthorized.selector
+            )
+        );
         liquidationEngine.tagLiquidablePosition(USER, PRIORITY_LIQUIDATOR);
     }
 
     modifier whenUserHasAlreadyBeenTagged() {
-        IDcfDlbPriorityLiquidationEngine liquidationEngine = IDcfDlbPriorityLiquidationEngine(market.liquidationEngine());
+        IDcfDlbPriorityLiquidationEngine liquidationEngine =
+            IDcfDlbPriorityLiquidationEngine(market.liquidationEngine());
         liquidationEngine.tagLiquidablePosition(USER, LIQUIDATOR);
         _;
     }
@@ -106,9 +122,14 @@ contract AltoMarketTagLiquidablePosition is MarketCommon {
         givenUserPositionIsNotSolvent
         whenUserHasAlreadyBeenTagged
     {
-        IDcfDlbPriorityLiquidationEngine liquidationEngine = IDcfDlbPriorityLiquidationEngine(market.liquidationEngine());
+        IDcfDlbPriorityLiquidationEngine liquidationEngine =
+            IDcfDlbPriorityLiquidationEngine(market.liquidationEngine());
         // it should revert with DcfDlbPriorityLiquidationEngineLiquidationAlreadyTagged
-        vm.expectRevert(abi.encodeWithSelector(IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationAlreadyTagged.selector));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationAlreadyTagged.selector
+            )
+        );
         liquidationEngine.tagLiquidablePosition(USER, LIQUIDATOR);
     }
 
@@ -127,7 +148,8 @@ contract AltoMarketTagLiquidablePosition is MarketCommon {
         // it should emit PositionTagged event
         vm.expectEmit();
         emit IDcfDlbPriorityLiquidationEngineEvents.PositionTagged(USER, LIQUIDATOR, block.timestamp);
-        IDcfDlbPriorityLiquidationEngine liquidationEngine = IDcfDlbPriorityLiquidationEngine(market.liquidationEngine());
+        IDcfDlbPriorityLiquidationEngine liquidationEngine =
+            IDcfDlbPriorityLiquidationEngine(market.liquidationEngine());
         liquidationEngine.tagLiquidablePosition(USER, LIQUIDATOR);
 
         LiquidablePosition memory liquidablePositionAfter =
@@ -147,7 +169,8 @@ contract AltoMarketTagLiquidablePosition is MarketCommon {
         // it should emit PositionTagged event
         vm.expectEmit();
         emit IDcfDlbPriorityLiquidationEngineEvents.PositionTagged(USER, LIQUIDATOR, block.timestamp);
-        IDcfDlbPriorityLiquidationEngine liquidationEngine = IDcfDlbPriorityLiquidationEngine(market.liquidationEngine());
+        IDcfDlbPriorityLiquidationEngine liquidationEngine =
+            IDcfDlbPriorityLiquidationEngine(market.liquidationEngine());
         liquidationEngine.tagLiquidablePosition(USER, LIQUIDATOR);
 
         LiquidablePosition memory liquidablePositionAfter =

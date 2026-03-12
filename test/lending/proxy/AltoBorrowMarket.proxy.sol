@@ -139,7 +139,8 @@ contract AltoBorrowMarketProxyTest is Test {
             maxLtv: market.maxLtv(),
             borrowOpeningFee: market.borrowOpeningFee(),
             feeRecipient: market.feeRecipient(),
-            liquidationConfiguration: IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).liquidationConfiguration()
+            liquidationConfiguration: IDcfDlbPriorityLiquidationEngine(market.liquidationEngine())
+                .liquidationConfiguration()
         });
     }
 

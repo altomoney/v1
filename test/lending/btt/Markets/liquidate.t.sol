@@ -124,7 +124,9 @@ contract AltoBorrowMarketliquidate is MarketCommon {
         whenLiquidatorIsNotPriorityLiquidator
     {
         // it should revert with DcfDlbPriorityLiquidationEngineLiquidationUnauthorized
-        vm.expectRevert(IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationUnauthorized.selector);
+        vm.expectRevert(
+            IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationUnauthorized.selector
+        );
         market.liquidate(USER, hex"", hex"");
     }
 
@@ -151,7 +153,9 @@ contract AltoBorrowMarketliquidate is MarketCommon {
         borrowToken.approve(address(market), 1 ether);
 
         // it should revert with DcfDlbPriorityLiquidationEngineLiquidationUnauthorized
-        vm.expectRevert(IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationUnauthorized.selector);
+        vm.expectRevert(
+            IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationUnauthorized.selector
+        );
         market.liquidate(USER, hex"", hex"");
         vm.stopPrank();
     }
@@ -175,7 +179,9 @@ contract AltoBorrowMarketliquidate is MarketCommon {
         whenLiquidatorIsTheTagger
     {
         // it should revert with DcfDlbPriorityLiquidationEngineLiquidationUnauthorized
-        vm.expectRevert(IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationUnauthorized.selector);
+        vm.expectRevert(
+            IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationUnauthorized.selector
+        );
         market.liquidate(USER, hex"", hex"");
     }
 
@@ -229,7 +235,9 @@ contract AltoBorrowMarketliquidate is MarketCommon {
         whenLiquidatorIsNotTheTagger
     {
         // it should revert with DcfDlbPriorityLiquidationEngineLiquidationUnauthorized
-        vm.expectRevert(IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationUnauthorized.selector);
+        vm.expectRevert(
+            IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationUnauthorized.selector
+        );
         market.liquidate(USER, hex"", hex"");
     }
 
@@ -295,8 +303,8 @@ contract AltoBorrowMarketliquidate is MarketCommon {
         givenPositionIsInsolvent
         whenPriorityLiquidationIsEnabled
     {
-        LiquidationConfiguration memory config =
-            IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).liquidationConfiguration();
+        LiquidationConfiguration memory config = IDcfDlbPriorityLiquidationEngine(market.liquidationEngine())
+            .liquidationConfiguration();
         config.disablePriorityLiquidationAbovePositionLtv = 1 ether; // if LTV is over 100%
         vm.startPrank(OWNER);
         IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).setLiquidationConfiguration(config);
@@ -429,7 +437,9 @@ contract AltoBorrowMarketliquidate is MarketCommon {
         vm.startPrank(LIQUIDATOR);
         deal(address(borrowToken), LIQUIDATOR, 1 ether);
         borrowToken.approve(address(market), 1 ether);
-        vm.expectRevert(IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationUnauthorized.selector);
+        vm.expectRevert(
+            IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationUnauthorized.selector
+        );
         market.liquidate(USER, hex"", hex"");
         vm.stopPrank();
 

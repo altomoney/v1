@@ -121,7 +121,8 @@ contract AltoBorrowMarketTest is Test {
         vm.startPrank(market.owner());
         IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).setPriorityLiquidator(bob, true);
         IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).setPriorityLiquidator(liquidator, true);
-        IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).setPriorityLiquidator(address(liquidateCallback), true);
+        IDcfDlbPriorityLiquidationEngine(market.liquidationEngine())
+            .setPriorityLiquidator(address(liquidateCallback), true);
         vm.stopPrank();
     }
 
@@ -1017,7 +1018,9 @@ contract AltoBorrowMarketTest is Test {
 
         // Try to liquidate as non-priority liquidator
         vm.startPrank(externalLiquidator);
-        vm.expectRevert(IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationUnauthorized.selector);
+        vm.expectRevert(
+            IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationUnauthorized.selector
+        );
         market.liquidate(bob, hex"", hex"");
         vm.stopPrank();
     }
@@ -1057,7 +1060,9 @@ contract AltoBorrowMarketTest is Test {
         IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).tagLiquidablePosition(bob, taggerLiquidator);
 
         // Try to liquidate immediately (before grace period)
-        vm.expectRevert(IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationUnauthorized.selector);
+        vm.expectRevert(
+            IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationUnauthorized.selector
+        );
         market.liquidate(bob, hex"", hex"");
         vm.stopPrank();
     }
@@ -1102,7 +1107,9 @@ contract AltoBorrowMarketTest is Test {
 
         // Try to liquidate as external liquidator
         vm.startPrank(externalLiquidator);
-        vm.expectRevert(IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationUnauthorized.selector);
+        vm.expectRevert(
+            IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationUnauthorized.selector
+        );
         market.liquidate(bob, hex"", hex"");
         vm.stopPrank();
     }
@@ -1143,8 +1150,9 @@ contract AltoBorrowMarketTest is Test {
 
         vm.warp(
             block.timestamp
-                + IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).liquidationConfiguration().liquidationWindowTag
-                + 1
+                + IDcfDlbPriorityLiquidationEngine(market.liquidationEngine())
+                .liquidationConfiguration()
+                .liquidationWindowTag + 1
         );
 
         vm.startPrank(alice);
@@ -1182,7 +1190,8 @@ contract AltoBorrowMarketTest is Test {
 
         market.addInterest(0.4 ether);
 
-        IDcfDlbPriorityLiquidationEngine liquidationEngine = IDcfDlbPriorityLiquidationEngine(market.liquidationEngine());
+        IDcfDlbPriorityLiquidationEngine liquidationEngine =
+            IDcfDlbPriorityLiquidationEngine(market.liquidationEngine());
 
         vm.startPrank(taggerLiquidator);
         vm.expectEmit();
@@ -1191,7 +1200,9 @@ contract AltoBorrowMarketTest is Test {
         vm.stopPrank();
 
         vm.startPrank(alice);
-        vm.expectRevert(IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationAlreadyTagged.selector);
+        vm.expectRevert(
+            IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationAlreadyTagged.selector
+        );
         liquidationEngine.tagLiquidablePosition(bob, alice);
         vm.stopPrank();
     }

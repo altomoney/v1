@@ -78,8 +78,7 @@ contract DeployAltoEthereumMainnetScript is Script {
             _serializeMarketContracts(contractsJson, "syrupUsdcBorrow", input.contracts.syrupUsdcBorrowMarket);
         contractsJson = _serializeMarketContracts(contractsJson, "paxgBorrow", input.contracts.paxgBorrowMarket);
         contractsJson = _serializeMarketContracts(contractsJson, "susdeMint", input.contracts.susdeMintMarket);
-        contractsJson =
-            _serializeMarketContracts(contractsJson, "syrupUsdcMint", input.contracts.syrupUsdcMintMarket);
+        contractsJson = _serializeMarketContracts(contractsJson, "syrupUsdcMint", input.contracts.syrupUsdcMintMarket);
 
         // Serialize USDC USM contracts
         if (input.contracts.permissionedUsm.dusdUsm != address(0)) {

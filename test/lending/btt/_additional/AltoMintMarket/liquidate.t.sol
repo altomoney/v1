@@ -231,7 +231,9 @@ contract LiquidateTest is Test {
         givenCallerIsNotPriorityLiquidator
     {
         vm.startPrank(alice);
-        vm.expectRevert(IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationUnauthorized.selector);
+        vm.expectRevert(
+            IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationUnauthorized.selector
+        );
         market.liquidate(bob, hex"", hex"");
         vm.stopPrank();
     }
@@ -293,7 +295,9 @@ contract LiquidateTest is Test {
         // Charlie (tagger) should NOT be able to liquidate during priority grace period
         // Only priority liquidators can liquidate during this time
         vm.startPrank(charlie);
-        vm.expectRevert(IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationUnauthorized.selector);
+        vm.expectRevert(
+            IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationUnauthorized.selector
+        );
         market.liquidate(bob, hex"", hex"");
         vm.stopPrank();
     }

@@ -161,7 +161,9 @@ contract LiquidateTest is Test {
         // Try to liquidate as a non-priority, non-tagger, non-owner address
         address nonAuthorized = address(0x9999);
         vm.startPrank(nonAuthorized);
-        vm.expectRevert(IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationUnauthorized.selector);
+        vm.expectRevert(
+            IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationUnauthorized.selector
+        );
         market.liquidate(bob, hex"", hex"");
         vm.stopPrank();
     }
@@ -195,7 +197,9 @@ contract LiquidateTest is Test {
     function test_LiquidateWhen_PositionIsTaggedAndWithinWindow() public givenPositionIsInsolvent whenPositionIsTagged {
         // Try to liquidate immediately (should fail due to grace period)
         vm.startPrank(liquidator);
-        vm.expectRevert(IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationUnauthorized.selector);
+        vm.expectRevert(
+            IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationUnauthorized.selector
+        );
         market.liquidate(bob, hex"", hex"");
         vm.stopPrank();
     }

@@ -101,7 +101,9 @@ contract SetMarketOnceTest is Test {
         address testMarket = address(0x5678);
 
         // it should revert with DcfDlbPriorityLiquidationEngineLiquidationUnauthorized
-        vm.expectRevert(IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationUnauthorized.selector);
+        vm.expectRevert(
+            IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationUnauthorized.selector
+        );
         vm.prank(otherAddress);
         liquidationEngine.setMarketOnce(testMarket);
     }

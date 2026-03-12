@@ -14,7 +14,8 @@ contract AltoMarketSetPriorityLiquidator is MarketCommon {
     constructor(MarketType _marketType) MarketCommon(_marketType) {}
 
     function test_RevertWhen_CallerIsNotOwner() external {
-        IDcfDlbPriorityLiquidationEngine liquidationEngine = IDcfDlbPriorityLiquidationEngine(market.liquidationEngine());
+        IDcfDlbPriorityLiquidationEngine liquidationEngine =
+            IDcfDlbPriorityLiquidationEngine(market.liquidationEngine());
         // it should revert
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, address(this)));
         liquidationEngine.setPriorityLiquidator(address(0), true);
@@ -27,7 +28,8 @@ contract AltoMarketSetPriorityLiquidator is MarketCommon {
     }
 
     function test_WhenCallerIsOwner() external whenCallerIsOwner {
-        IDcfDlbPriorityLiquidationEngine liquidationEngine = IDcfDlbPriorityLiquidationEngine(market.liquidationEngine());
+        IDcfDlbPriorityLiquidationEngine liquidationEngine =
+            IDcfDlbPriorityLiquidationEngine(market.liquidationEngine());
         address liquidator = address(0x123);
         bool status = true;
 
@@ -42,9 +44,14 @@ contract AltoMarketSetPriorityLiquidator is MarketCommon {
     }
 
     function test_RevertWhen_LiquidatorIsZeroAddress() external whenCallerIsOwner {
-        IDcfDlbPriorityLiquidationEngine liquidationEngine = IDcfDlbPriorityLiquidationEngine(market.liquidationEngine());
+        IDcfDlbPriorityLiquidationEngine liquidationEngine =
+            IDcfDlbPriorityLiquidationEngine(market.liquidationEngine());
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineInvalidInput.selector));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineInvalidInput.selector
+            )
+        );
         liquidationEngine.setPriorityLiquidator(address(0), true);
     }
 }

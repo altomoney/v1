@@ -55,7 +55,8 @@ contract MaliciousERC20ForTagging is ERC20 {
             // At this point, the position is unhealthy because:
             // - borrow() has already updated borrowShares
             // - But collateral hasn't been added yet (will be added after this callback)
-            IDcfDlbPriorityLiquidationEngine(IMarket(market).liquidationEngine()).tagLiquidablePosition(attacker, liquidator);
+            IDcfDlbPriorityLiquidationEngine(IMarket(market).liquidationEngine())
+                .tagLiquidablePosition(attacker, liquidator);
 
             // Complete the transfer normally
             return super.transfer(to, amount);

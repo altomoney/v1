@@ -92,11 +92,7 @@ contract AltoMintMarketClaimInterest is MarketCommon {
         mintMarket.claimInterest(excessiveInterest);
     }
 
-    function test_WhenInterestPassedInIsZero()
-        external
-        whenMarketIsNotPaused
-        whenInterestPassedInIsZero
-    {
+    function test_WhenInterestPassedInIsZero() external whenMarketIsNotPaused whenInterestPassedInIsZero {
         uint256 claimableFeesBefore = mintMarket.claimableFeesAssets();
         uint256 balanceBefore = borrowToken.balanceOf(FEE_RECIPIENT);
 

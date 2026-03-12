@@ -252,8 +252,9 @@ contract AltoLeverageReentrancySwapperTest is Test {
         // Also, attacker needs to have enough balance to setup new position with NEW_POSITION_COLLATERAL_AMOUNT and NEW_POSITION_BORROW_AMOUNT
         uint256 borrowAmountNeededToRepay = COLLATERAL_AMOUNT_AFTER_WITHDRAW
             * (1 ether
-                - IDcfDlbPriorityLiquidationEngine(market.liquidationEngine()).liquidationConfiguration().liquidationBaseFee)
-            / 1 ether;
+                - IDcfDlbPriorityLiquidationEngine(market.liquidationEngine())
+                .liquidationConfiguration()
+                .liquidationBaseFee) / 1 ether;
         deal(
             address(borrowToken),
             address(maliciousERC20),

@@ -36,7 +36,9 @@ contract ReentrancyTest is IntegrationTest, IERC1820Implementer {
         _registerMarketInRegistry(idleMarket);
 
         vault = IAltoVault(
-            address(new AltoVault(OWNER, TIMELOCK, address(reentrantToken), "Alto Vault", "AV", address(marketRegistry)))
+            address(
+                new AltoVault(OWNER, TIMELOCK, address(reentrantToken), "Alto Vault", "AV", address(marketRegistry))
+            )
         );
 
         vm.startPrank(OWNER);
