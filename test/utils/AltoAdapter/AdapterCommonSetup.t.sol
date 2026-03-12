@@ -47,6 +47,7 @@ import {AltoVaultInstance} from "./AltoVaultInstance.sol";
 import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";
 import {BorrowMarketInitParams} from "@alto/lending/interfaces/IMarket.sol";
 import {ConstantsLib} from "@alto/lending/libraries/ConstantsLib.sol";
+import {MarketRegistry} from "@alto/utils/MarketRegistry.sol";
 
 uint256 constant MIN_AMOUNT = 1000;
 uint256 constant MAX_AMOUNT = 2 ** 64; // Must be less than or equal to type(uint160).max.
@@ -333,14 +334,22 @@ abstract contract AdapterCommonSetup is AdapterCommon, TestHelperOz5 {
 
         IDcfDlbPriorityLiquidationEngine(liquidationEngine).setLiquidationConfiguration(liquidationConfig);
 
+        MarketRegistry marketRegistry = new MarketRegistry(address(OWNER));
+        marketRegistry.addBorrowMarket(address(borrowMarket));
+
         AltoVaultInstance vault = new AltoVaultInstance(
-            address(OWNER), ConstantsLib.MIN_TIMELOCK, address(vaultAssetToken), "AltoVault", "aV"
+            address(OWNER),
+            ConstantsLib.POST_INITIALIZATION_MIN_TIMELOCK,
+            address(vaultAssetToken),
+            "AltoVault",
+            "aV",
+            address(marketRegistry)
         );
         vaultContract = IERC4626(address(vault));
         vm.label(address(vaultContract), "vaultContract");
 
         vault.submitCap(address(borrowMarket), type(uint184).max);
-        vm.warp(block.timestamp + ConstantsLib.MIN_TIMELOCK + 1);
+        vm.warp(block.timestamp + ConstantsLib.POST_INITIALIZATION_MIN_TIMELOCK + 1);
         vault.acceptCap(address(borrowMarket));
 
         address[] memory newSupplyQueue = new address[](1);
