@@ -13,7 +13,7 @@ import {Market, MarketLib} from "@alto/lending/libraries/MarketLib.sol";
 import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
 import {IMarketRegistry} from "@alto/utils/interfaces/IMarketRegistry.sol";
 
-import {PendingLib} from "@metamorpho/libraries/PendingLib.sol";
+import {PendingLib} from "@alto/lending/libraries/PendingLib.sol";
 import {ConstantsLib} from "@alto/lending/libraries/ConstantsLib.sol";
 import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
