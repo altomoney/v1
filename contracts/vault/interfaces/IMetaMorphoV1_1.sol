@@ -2,6 +2,7 @@
 pragma solidity >=0.5.0;
 
 import {MarketConfig, PendingUint192, PendingAddress} from "@metamorpho/libraries/PendingLib.sol";
+import {IMarketRegistry} from "@alto/utils/interfaces/IMarketRegistry.sol";
 
 struct MarketAllocation {
     /// @notice The market to allocate.
@@ -94,6 +95,9 @@ interface IMetaMorphoV1_1Errors {
 
     /// @notice Thrown when all caps have been reached.
     error AllCapsReached();
+
+    /// @notice Thrown when the market is not registered in the MarketRegistry.
+    error MarketNotInRegistry(address market);
 }
 
 interface IMetaMorphoV1_1Events {
@@ -102,6 +106,9 @@ interface IMetaMorphoV1_1Events {
 
     /// @notice Emitted when `timelock` is set to `newTimelock`.
     event SetTimelock(address indexed caller, uint256 newTimelock);
+
+    /// @notice Emitted when `marketRegistry` is set to `newMarketRegistry`.
+    event SetMarketRegistry(address indexed newMarketRegistry);
 
     /// @notice Emitted when `skimRecipient` is set to `newSkimRecipient`.
     event SetSkimRecipient(address indexed newSkimRecipient);
@@ -190,6 +197,9 @@ interface IMetaMorphoV1_1Base is IMetaMorphoV1_1Errors, IMetaMorphoV1_1Events {
     /// against this attack, vault deployers should make an initial deposit of a non-trivial amount in the vault or
     /// depositors should check that the share price does not exceed a certain limit.
     function DECIMALS_OFFSET() external view returns (uint8);
+
+    /// @notice The market registry used to validate markets.
+    function marketRegistry() external view returns (IMarketRegistry);
 
     /// @notice The address of the curator.
     function curator() external view returns (address);
@@ -296,6 +306,9 @@ interface IMetaMorphoV1_1Base is IMetaMorphoV1_1Errors, IMetaMorphoV1_1Events {
 
     /// @notice Sets `newAllocator` as an allocator or not (`newIsAllocator`).
     function setIsAllocator(address newAllocator, bool newIsAllocator) external;
+
+    /// @notice Sets `marketRegistry` to `newMarketRegistry`.
+    function setMarketRegistry(address newMarketRegistry) external;
 
     /// @notice Sets `curator` to `newCurator`.
     function setCurator(address newCurator) external;
