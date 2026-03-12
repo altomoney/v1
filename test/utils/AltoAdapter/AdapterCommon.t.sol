@@ -612,52 +612,52 @@ abstract contract AdapterCommon is Test {
         );
     }
 
-    /* VAULT ACTIONS */
+    /* ERC4626 ACTIONS */
 
-    function _vaultDeposit(IERC4626 vault, uint256 assets, address receiver, uint256 expectedShares)
+    function _erc4626Deposit(address vault, uint256 assets, uint256 maxSharePriceE27, address receiver)
         internal
         view
         returns (Call memory)
     {
         return _call(
             altoAdapter,
-            abi.encodeCall(AltoAdapter.vaultDeposit, (vault, assets, receiver, expectedShares)),
+            abi.encodeCall(AltoAdapter.erc4626Deposit, (vault, assets, maxSharePriceE27, receiver)),
             bytes32(0)
         );
     }
 
-    function _vaultMint(IERC4626 vault, uint256 shares, address receiver, uint256 expectedAssets)
+    function _erc4626Mint(address vault, uint256 shares, uint256 maxSharePriceE27, address receiver)
         internal
         view
         returns (Call memory)
     {
         return _call(
             altoAdapter,
-            abi.encodeCall(AltoAdapter.vaultMint, (vault, shares, receiver, expectedAssets)),
+            abi.encodeCall(AltoAdapter.erc4626Mint, (vault, shares, maxSharePriceE27, receiver)),
             bytes32(0)
         );
     }
 
-    function _vaultWithdraw(IERC4626 vault, uint256 assets, address receiver, uint256 expectedShares)
+    function _erc4626Withdraw(address vault, uint256 assets, uint256 minSharePriceE27, address receiver, address owner)
         internal
         view
         returns (Call memory)
     {
         return _call(
             altoAdapter,
-            abi.encodeCall(AltoAdapter.vaultWithdraw, (vault, assets, receiver, expectedShares)),
+            abi.encodeCall(AltoAdapter.erc4626Withdraw, (vault, assets, minSharePriceE27, receiver, owner)),
             bytes32(0)
         );
     }
 
-    function _vaultRedeem(IERC4626 vault, uint256 shares, address receiver, uint256 expectedAssets)
+    function _erc4626Redeem(address vault, uint256 shares, uint256 minSharePriceE27, address receiver, address owner)
         internal
         view
         returns (Call memory)
     {
         return _call(
             altoAdapter,
-            abi.encodeCall(AltoAdapter.vaultRedeem, (vault, shares, receiver, expectedAssets)),
+            abi.encodeCall(AltoAdapter.erc4626Redeem, (vault, shares, minSharePriceE27, receiver, owner)),
             bytes32(0)
         );
     }

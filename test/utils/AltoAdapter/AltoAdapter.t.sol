@@ -1677,36 +1677,59 @@ contract AltoAdapterTest is AdapterCommonSetup {
     }
 
     /*//////////////////////////////////////////////////////////////
-                        VAULT DEPOSIT TESTS
+                        ERC4626 UNAUTHORIZED TESTS
     //////////////////////////////////////////////////////////////*/
 
-    function testVaultDepositNotApproved() public {
-        IERC4626 nonVault = IERC4626(makeAddr("NonVault"));
-        bundle.push(_vaultDeposit(nonVault, MIN_AMOUNT, USER, 1));
+    function testErc4626DepositUnauthorized(uint256 assets) public {
+        vm.expectRevert(ErrorsLib.UnauthorizedSender.selector);
+        altoAdapter.erc4626Deposit(address(vaultContract), assets, type(uint256).max, RECEIVER);
+    }
+
+    function testErc4626MintUnauthorized(uint256 shares) public {
+        vm.expectRevert(ErrorsLib.UnauthorizedSender.selector);
+        altoAdapter.erc4626Mint(address(vaultContract), shares, type(uint256).max, RECEIVER);
+    }
+
+    function testErc4626WithdrawUnauthorized(uint256 assets) public {
+        vm.expectRevert(ErrorsLib.UnauthorizedSender.selector);
+        altoAdapter.erc4626Withdraw(address(vaultContract), assets, 0, RECEIVER, address(altoAdapter));
+    }
+
+    function testErc4626RedeemUnauthorized(uint256 shares) public {
+        vm.expectRevert(ErrorsLib.UnauthorizedSender.selector);
+        altoAdapter.erc4626Redeem(address(vaultContract), shares, 0, RECEIVER, address(altoAdapter));
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        ERC4626 DEPOSIT TESTS
+    //////////////////////////////////////////////////////////////*/
+
+    function testErc4626DepositNotApproved() public {
+        address nonVault = makeAddr("NonVault");
+        bundle.push(_erc4626Deposit(nonVault, MIN_AMOUNT, type(uint256).max, USER));
         vm.expectRevert(AdapterContractApproval.AdapterContractApprovalUnapprovedContract.selector);
         bundler3.multicall(bundle);
     }
 
-    function testVaultDepositReceiverIsAdapter() public {
-        bundle.push(_vaultDeposit(vaultContract, MIN_AMOUNT, address(altoAdapter), 1));
-        vm.expectRevert(ErrorsLib.AdapterAddress.selector);
+    function testErc4626DepositReceiverIsZero() public {
+        bundle.push(_erc4626Deposit(address(vaultContract), MIN_AMOUNT, type(uint256).max, address(0)));
+        vm.expectRevert(ErrorsLib.ZeroAddress.selector);
         bundler3.multicall(bundle);
     }
 
-    function testVaultDepositZeroAmount() public {
-        bundle.push(_vaultDeposit(vaultContract, 0, USER, 1));
+    function testErc4626DepositZeroAmount() public {
+        bundle.push(_erc4626Deposit(address(vaultContract), 0, type(uint256).max, USER));
         vm.expectRevert(ErrorsLib.ZeroAmount.selector);
         bundler3.multicall(bundle);
     }
 
-    function testVaultDepositMaxZeroBalanceOfUser() public {
-        bundle.push(_vaultDeposit(vaultContract, type(uint256).max, USER, 0));
-        assertEq(vaultAssetToken.balanceOf(USER), 0);
+    function testErc4626DepositMaxZeroBalance() public {
+        bundle.push(_erc4626Deposit(address(vaultContract), type(uint256).max, type(uint256).max, USER));
         vm.expectRevert(ErrorsLib.ZeroAmount.selector);
         bundler3.multicall(bundle);
     }
 
-    function testVaultDeposit(uint256 amount) public {
+    function testErc4626Deposit(uint256 amount) public {
         amount = bound(amount, MIN_AMOUNT, MAX_AMOUNT);
 
         deal(address(vaultAssetToken), USER, amount);
@@ -1714,7 +1737,7 @@ contract AltoAdapterTest is AdapterCommonSetup {
         uint256 expectedShares = vaultContract.previewDeposit(amount);
 
         bundle.push(_erc20TransferFrom(address(vaultAssetToken), amount));
-        bundle.push(_vaultDeposit(vaultContract, amount, USER, expectedShares));
+        bundle.push(_erc4626Deposit(address(vaultContract), amount, type(uint256).max, USER));
 
         vm.startPrank(USER);
         vaultAssetToken.approve(address(altoAdapter), amount);
@@ -1723,15 +1746,16 @@ contract AltoAdapterTest is AdapterCommonSetup {
 
         assertEq(vaultContract.balanceOf(USER), expectedShares, "User should have received exact shares");
         assertEq(vaultAssetToken.balanceOf(address(altoAdapter)), 0, "Adapter should have no leftover assets");
+        assertEq(vaultAssetToken.allowance(address(altoAdapter), address(vaultContract)), 0, "Approval should be reset");
     }
 
-    function testVaultDepositMax(uint256 amount) public {
+    function testErc4626DepositMax(uint256 amount) public {
         amount = bound(amount, MIN_AMOUNT, MAX_AMOUNT);
 
         deal(address(vaultAssetToken), USER, amount);
 
         bundle.push(_erc20TransferFrom(address(vaultAssetToken), amount));
-        bundle.push(_vaultDeposit(vaultContract, type(uint256).max, USER, 0));
+        bundle.push(_erc4626Deposit(address(vaultContract), type(uint256).max, type(uint256).max, USER));
 
         vm.startPrank(USER);
         vaultAssetToken.approve(address(altoAdapter), amount);
@@ -1742,13 +1766,13 @@ contract AltoAdapterTest is AdapterCommonSetup {
         assertEq(vaultAssetToken.balanceOf(address(altoAdapter)), 0, "Adapter should have no leftover assets");
     }
 
-    function testVaultDepositDifferentReceiver(uint256 amount) public {
+    function testErc4626DepositDifferentReceiver(uint256 amount) public {
         amount = bound(amount, MIN_AMOUNT, MAX_AMOUNT);
 
         deal(address(vaultAssetToken), USER, amount);
 
         bundle.push(_erc20TransferFrom(address(vaultAssetToken), amount));
-        bundle.push(_vaultDeposit(vaultContract, amount, RECEIVER, 0));
+        bundle.push(_erc4626Deposit(address(vaultContract), amount, type(uint256).max, RECEIVER));
 
         vm.startPrank(USER);
         vaultAssetToken.approve(address(altoAdapter), amount);
@@ -1760,49 +1784,50 @@ contract AltoAdapterTest is AdapterCommonSetup {
         assertEq(vaultAssetToken.balanceOf(address(altoAdapter)), 0, "Adapter should have no leftover assets");
     }
 
-    function testVaultDepositSlippageExceeded(uint256 amount) public {
+    function testErc4626DepositSlippageExceeded(uint256 amount) public {
         amount = bound(amount, MIN_AMOUNT, MAX_AMOUNT);
 
         deal(address(vaultAssetToken), address(altoAdapter), amount);
 
         uint256 expectedShares = vaultContract.previewDeposit(amount);
+        uint256 sharePriceE27 = amount.rDivUp(expectedShares);
 
-        bundle.push(_vaultDeposit(vaultContract, amount, USER, expectedShares + 1));
+        bundle.push(_erc4626Deposit(address(vaultContract), amount, sharePriceE27 - 1, USER));
         vm.expectRevert(ErrorsLib.SlippageExceeded.selector);
         bundler3.multicall(bundle);
     }
 
     /*//////////////////////////////////////////////////////////////
-                        VAULT MINT TESTS
+                        ERC4626 MINT TESTS
     //////////////////////////////////////////////////////////////*/
 
-    function testVaultMintNotApproved() public {
-        IERC4626 nonVault = IERC4626(makeAddr("NonVault"));
-        bundle.push(_vaultMint(nonVault, MIN_AMOUNT, USER, type(uint256).max));
+    function testErc4626MintNotApproved() public {
+        address nonVault = makeAddr("NonVault");
+        bundle.push(_erc4626Mint(nonVault, MIN_AMOUNT, type(uint256).max, USER));
         vm.expectRevert(AdapterContractApproval.AdapterContractApprovalUnapprovedContract.selector);
         bundler3.multicall(bundle);
     }
 
-    function testVaultMintReceiverIsAdapter() public {
-        bundle.push(_vaultMint(vaultContract, MIN_AMOUNT, address(altoAdapter), type(uint256).max));
-        vm.expectRevert(ErrorsLib.AdapterAddress.selector);
+    function testErc4626MintReceiverIsZero() public {
+        bundle.push(_erc4626Mint(address(vaultContract), MIN_AMOUNT, type(uint256).max, address(0)));
+        vm.expectRevert(ErrorsLib.ZeroAddress.selector);
         bundler3.multicall(bundle);
     }
 
-    function testVaultMintZeroShares() public {
-        bundle.push(_vaultMint(vaultContract, 0, USER, type(uint256).max));
-        vm.expectRevert(ErrorsLib.ZeroAmount.selector);
+    function testErc4626MintZeroShares() public {
+        bundle.push(_erc4626Mint(address(vaultContract), 0, type(uint256).max, USER));
+        vm.expectRevert(ErrorsLib.ZeroShares.selector);
         bundler3.multicall(bundle);
     }
 
-    function testVaultMint(uint256 shares) public {
+    function testErc4626Mint(uint256 shares) public {
         shares = bound(shares, MIN_AMOUNT, MAX_AMOUNT);
 
         uint256 assetsNeeded = vaultContract.previewMint(shares);
         deal(address(vaultAssetToken), USER, assetsNeeded);
 
         bundle.push(_erc20TransferFrom(address(vaultAssetToken), assetsNeeded));
-        bundle.push(_vaultMint(vaultContract, shares, USER, assetsNeeded));
+        bundle.push(_erc4626Mint(address(vaultContract), shares, type(uint256).max, USER));
 
         vm.startPrank(USER);
         vaultAssetToken.approve(address(altoAdapter), assetsNeeded);
@@ -1811,16 +1836,17 @@ contract AltoAdapterTest is AdapterCommonSetup {
 
         assertEq(vaultContract.balanceOf(USER), shares, "User should have received exact shares");
         assertEq(vaultAssetToken.balanceOf(address(altoAdapter)), 0, "Adapter should have no leftover assets");
+        assertEq(vaultAssetToken.allowance(address(altoAdapter), address(vaultContract)), 0, "Approval should be reset");
     }
 
-    function testVaultMintDifferentReceiver(uint256 shares) public {
+    function testErc4626MintDifferentReceiver(uint256 shares) public {
         shares = bound(shares, MIN_AMOUNT, MAX_AMOUNT);
 
         uint256 assetsNeeded = vaultContract.previewMint(shares);
         deal(address(vaultAssetToken), USER, assetsNeeded);
 
         bundle.push(_erc20TransferFrom(address(vaultAssetToken), assetsNeeded));
-        bundle.push(_vaultMint(vaultContract, shares, RECEIVER, assetsNeeded));
+        bundle.push(_erc4626Mint(address(vaultContract), shares, type(uint256).max, RECEIVER));
 
         vm.startPrank(USER);
         vaultAssetToken.approve(address(altoAdapter), assetsNeeded);
@@ -1832,41 +1858,50 @@ contract AltoAdapterTest is AdapterCommonSetup {
         assertEq(vaultAssetToken.balanceOf(address(altoAdapter)), 0, "Adapter should have no leftover assets");
     }
 
-    function testVaultMintSlippageExceeded(uint256 shares) public {
+    function testErc4626MintSlippageExceeded(uint256 shares) public {
         shares = bound(shares, MIN_AMOUNT, MAX_AMOUNT);
 
         uint256 assetsNeeded = vaultContract.previewMint(shares);
         deal(address(vaultAssetToken), address(altoAdapter), assetsNeeded);
 
-        bundle.push(_vaultMint(vaultContract, shares, USER, assetsNeeded - 1));
+        uint256 sharePriceE27 = assetsNeeded.rDivUp(shares);
+
+        bundle.push(_erc4626Mint(address(vaultContract), shares, sharePriceE27 - 1, USER));
         vm.expectRevert(ErrorsLib.SlippageExceeded.selector);
         bundler3.multicall(bundle);
     }
 
     /*//////////////////////////////////////////////////////////////
-                        VAULT WITHDRAW TESTS
+                        ERC4626 WITHDRAW TESTS
     //////////////////////////////////////////////////////////////*/
 
-    function testVaultWithdrawNotApproved() public {
-        IERC4626 nonVault = IERC4626(makeAddr("NonVault"));
-        bundle.push(_vaultWithdraw(nonVault, MIN_AMOUNT, USER, type(uint256).max));
+    function testErc4626WithdrawNotApproved() public {
+        address nonVault = makeAddr("NonVault");
+        bundle.push(_erc4626Withdraw(nonVault, MIN_AMOUNT, 0, USER, USER));
         vm.expectRevert(AdapterContractApproval.AdapterContractApprovalUnapprovedContract.selector);
         bundler3.multicall(bundle);
     }
 
-    function testVaultWithdrawReceiverIsAdapter() public {
-        bundle.push(_vaultWithdraw(vaultContract, MIN_AMOUNT, address(altoAdapter), type(uint256).max));
-        vm.expectRevert(ErrorsLib.AdapterAddress.selector);
+    function testErc4626WithdrawReceiverIsZero() public {
+        bundle.push(_erc4626Withdraw(address(vaultContract), MIN_AMOUNT, 0, address(0), USER));
+        vm.expectRevert(ErrorsLib.ZeroAddress.selector);
         bundler3.multicall(bundle);
     }
 
-    function testVaultWithdrawZeroAssets() public {
-        bundle.push(_vaultWithdraw(vaultContract, 0, USER, type(uint256).max));
+    function testErc4626WithdrawUnexpectedOwner(address owner) public {
+        vm.assume(owner != address(altoAdapter) && owner != address(this));
+        bundle.push(_erc4626Withdraw(address(vaultContract), MIN_AMOUNT, 0, USER, owner));
+        vm.expectRevert(ErrorsLib.UnexpectedOwner.selector);
+        bundler3.multicall(bundle);
+    }
+
+    function testErc4626WithdrawZeroAssets() public {
+        bundle.push(_erc4626Withdraw(address(vaultContract), 0, 0, USER, address(altoAdapter)));
         vm.expectRevert(ErrorsLib.ZeroAmount.selector);
         bundler3.multicall(bundle);
     }
 
-    function testVaultWithdraw(uint256 amount) public {
+    function testErc4626Withdraw(uint256 amount) public {
         amount = bound(amount, MIN_AMOUNT, MAX_AMOUNT);
 
         deal(address(vaultAssetToken), USER, amount);
@@ -1878,7 +1913,7 @@ contract AltoAdapterTest is AdapterCommonSetup {
         uint256 sharesBefore = vaultContract.balanceOf(USER);
         IERC20(address(vaultContract)).approve(address(altoAdapter), sharesBefore);
 
-        bundle.push(_vaultWithdraw(vaultContract, amount, USER, sharesBefore));
+        bundle.push(_erc4626Withdraw(address(vaultContract), amount, 0, USER, USER));
         bundler3.multicall(bundle);
         vm.stopPrank();
 
@@ -1887,7 +1922,7 @@ contract AltoAdapterTest is AdapterCommonSetup {
         assertEq(vaultAssetToken.balanceOf(address(altoAdapter)), 0, "Adapter should have no leftover assets");
     }
 
-    function testVaultWithdrawDifferentReceiver(uint256 amount) public {
+    function testErc4626WithdrawDifferentReceiver(uint256 amount) public {
         amount = bound(amount, MIN_AMOUNT, MAX_AMOUNT);
 
         deal(address(vaultAssetToken), USER, amount);
@@ -1897,10 +1932,9 @@ contract AltoAdapterTest is AdapterCommonSetup {
         vaultContract.deposit(amount, USER);
 
         uint256 sharesBefore = vaultContract.balanceOf(USER);
-        uint256 expectedShares = vaultContract.previewWithdraw(amount);
-        IERC20(address(vaultContract)).approve(address(altoAdapter), expectedShares);
+        IERC20(address(vaultContract)).approve(address(altoAdapter), sharesBefore);
 
-        bundle.push(_vaultWithdraw(vaultContract, amount, RECEIVER, expectedShares));
+        bundle.push(_erc4626Withdraw(address(vaultContract), amount, 0, RECEIVER, USER));
         bundler3.multicall(bundle);
         vm.stopPrank();
 
@@ -1910,7 +1944,29 @@ contract AltoAdapterTest is AdapterCommonSetup {
         assertEq(vaultAssetToken.balanceOf(address(altoAdapter)), 0, "Adapter should have no leftover assets");
     }
 
-    function testVaultWithdrawSlippageExceeded(uint256 amount) public {
+    function testErc4626WithdrawAdapterAsOwner(uint256 amount) public {
+        amount = bound(amount, MIN_AMOUNT, MAX_AMOUNT);
+
+        deal(address(vaultAssetToken), USER, amount);
+
+        vm.startPrank(USER);
+        vaultAssetToken.approve(address(vaultContract), amount);
+        uint256 shares = vaultContract.deposit(amount, USER);
+
+        IERC20(address(vaultContract)).approve(address(altoAdapter), shares);
+
+        bundle.push(_erc20TransferFrom(address(vaultContract), shares));
+        bundle.push(_erc4626Withdraw(address(vaultContract), amount, 0, RECEIVER, address(altoAdapter)));
+        bundler3.multicall(bundle);
+        vm.stopPrank();
+
+        assertEq(vaultAssetToken.balanceOf(RECEIVER), amount, "Receiver should have received assets");
+        assertEq(vaultContract.balanceOf(USER), 0, "User should have no vault shares left");
+        assertEq(vaultContract.balanceOf(address(altoAdapter)), 0, "Adapter should have no vault shares left");
+        assertEq(vaultAssetToken.balanceOf(address(altoAdapter)), 0, "Adapter should have no leftover assets");
+    }
+
+    function testErc4626WithdrawSlippageExceeded(uint256 amount) public {
         amount = bound(amount, MIN_AMOUNT, MAX_AMOUNT);
 
         deal(address(vaultAssetToken), USER, amount);
@@ -1920,45 +1976,51 @@ contract AltoAdapterTest is AdapterCommonSetup {
         vaultContract.deposit(amount, USER);
 
         uint256 sharesBefore = vaultContract.balanceOf(USER);
-        uint256 expectedShares = vaultContract.previewWithdraw(amount);
         IERC20(address(vaultContract)).approve(address(altoAdapter), sharesBefore);
 
-        bundle.push(_vaultWithdraw(vaultContract, amount, USER, expectedShares - 1));
+        bundle.push(_erc4626Withdraw(address(vaultContract), amount, type(uint256).max, USER, USER));
         vm.expectRevert(ErrorsLib.SlippageExceeded.selector);
         bundler3.multicall(bundle);
         vm.stopPrank();
     }
 
     /*//////////////////////////////////////////////////////////////
-                        VAULT REDEEM TESTS
+                        ERC4626 REDEEM TESTS
     //////////////////////////////////////////////////////////////*/
 
-    function testVaultRedeemNotApproved() public {
-        IERC4626 nonVault = IERC4626(makeAddr("NonVault"));
-        bundle.push(_vaultRedeem(nonVault, MIN_AMOUNT, USER, 0));
+    function testErc4626RedeemNotApproved() public {
+        address nonVault = makeAddr("NonVault");
+        bundle.push(_erc4626Redeem(nonVault, MIN_AMOUNT, 0, USER, USER));
         vm.expectRevert(AdapterContractApproval.AdapterContractApprovalUnapprovedContract.selector);
         bundler3.multicall(bundle);
     }
 
-    function testVaultRedeemReceiverIsAdapter() public {
-        bundle.push(_vaultRedeem(vaultContract, MIN_AMOUNT, address(altoAdapter), 0));
-        vm.expectRevert(ErrorsLib.AdapterAddress.selector);
+    function testErc4626RedeemReceiverIsZero() public {
+        bundle.push(_erc4626Redeem(address(vaultContract), MIN_AMOUNT, 0, address(0), USER));
+        vm.expectRevert(ErrorsLib.ZeroAddress.selector);
         bundler3.multicall(bundle);
     }
 
-    function testVaultRedeemZeroShares() public {
-        bundle.push(_vaultRedeem(vaultContract, 0, USER, 0));
-        vm.expectRevert(ErrorsLib.ZeroAmount.selector);
+    function testErc4626RedeemUnexpectedOwner(address owner) public {
+        vm.assume(owner != address(altoAdapter) && owner != address(this));
+        bundle.push(_erc4626Redeem(address(vaultContract), MIN_AMOUNT, 0, USER, owner));
+        vm.expectRevert(ErrorsLib.UnexpectedOwner.selector);
         bundler3.multicall(bundle);
     }
 
-    function testVaultRedeemMaxZeroBalance() public {
-        bundle.push(_vaultRedeem(vaultContract, type(uint256).max, USER, 0));
-        vm.expectRevert(ErrorsLib.ZeroAmount.selector);
+    function testErc4626RedeemZeroShares() public {
+        bundle.push(_erc4626Redeem(address(vaultContract), 0, 0, USER, address(altoAdapter)));
+        vm.expectRevert(ErrorsLib.ZeroShares.selector);
         bundler3.multicall(bundle);
     }
 
-    function testVaultRedeem(uint256 amount) public {
+    function testErc4626RedeemMaxZeroBalance() public {
+        bundle.push(_erc4626Redeem(address(vaultContract), type(uint256).max, 0, USER, address(altoAdapter)));
+        vm.expectRevert(ErrorsLib.ZeroShares.selector);
+        bundler3.multicall(bundle);
+    }
+
+    function testErc4626Redeem(uint256 amount) public {
         amount = bound(amount, MIN_AMOUNT, MAX_AMOUNT);
 
         deal(address(vaultAssetToken), USER, amount);
@@ -1969,7 +2031,7 @@ contract AltoAdapterTest is AdapterCommonSetup {
 
         IERC20(address(vaultContract)).approve(address(altoAdapter), shares);
 
-        bundle.push(_vaultRedeem(vaultContract, shares, USER, 0));
+        bundle.push(_erc4626Redeem(address(vaultContract), shares, 0, USER, USER));
         bundler3.multicall(bundle);
         vm.stopPrank();
 
@@ -1978,7 +2040,7 @@ contract AltoAdapterTest is AdapterCommonSetup {
         assertEq(vaultAssetToken.balanceOf(address(altoAdapter)), 0, "Adapter should have no leftover assets");
     }
 
-    function testVaultRedeemMax(uint256 amount) public {
+    function testErc4626RedeemMax(uint256 amount) public {
         amount = bound(amount, MIN_AMOUNT, MAX_AMOUNT);
 
         deal(address(vaultAssetToken), USER, amount);
@@ -1990,7 +2052,7 @@ contract AltoAdapterTest is AdapterCommonSetup {
 
         IERC20(address(vaultContract)).approve(address(altoAdapter), shares);
 
-        bundle.push(_vaultRedeem(vaultContract, type(uint256).max, USER, expectedAssets));
+        bundle.push(_erc4626Redeem(address(vaultContract), type(uint256).max, 0, USER, USER));
         bundler3.multicall(bundle);
         vm.stopPrank();
 
@@ -1999,7 +2061,7 @@ contract AltoAdapterTest is AdapterCommonSetup {
         assertEq(vaultAssetToken.balanceOf(address(altoAdapter)), 0, "Adapter should have no leftover assets");
     }
 
-    function testVaultRedeemDifferentReceiver(uint256 amount) public {
+    function testErc4626RedeemDifferentReceiver(uint256 amount) public {
         amount = bound(amount, MIN_AMOUNT, MAX_AMOUNT);
 
         deal(address(vaultAssetToken), USER, amount);
@@ -2011,7 +2073,7 @@ contract AltoAdapterTest is AdapterCommonSetup {
 
         IERC20(address(vaultContract)).approve(address(altoAdapter), shares);
 
-        bundle.push(_vaultRedeem(vaultContract, shares, RECEIVER, expectedAssets));
+        bundle.push(_erc4626Redeem(address(vaultContract), shares, 0, RECEIVER, USER));
         bundler3.multicall(bundle);
         vm.stopPrank();
 
@@ -2020,7 +2082,52 @@ contract AltoAdapterTest is AdapterCommonSetup {
         assertEq(vaultContract.balanceOf(USER), 0, "User should have no vault shares left");
     }
 
-    function testVaultRedeemSlippageExceeded(uint256 amount) public {
+    function testErc4626RedeemAdapterAsOwner(uint256 amount) public {
+        amount = bound(amount, MIN_AMOUNT, MAX_AMOUNT);
+
+        deal(address(vaultAssetToken), USER, amount);
+
+        vm.startPrank(USER);
+        vaultAssetToken.approve(address(vaultContract), amount);
+        uint256 shares = vaultContract.deposit(amount, USER);
+        uint256 expectedAssets = vaultContract.previewRedeem(shares);
+
+        IERC20(address(vaultContract)).approve(address(altoAdapter), shares);
+
+        bundle.push(_erc20TransferFrom(address(vaultContract), shares));
+        bundle.push(_erc4626Redeem(address(vaultContract), shares, 0, RECEIVER, address(altoAdapter)));
+        bundler3.multicall(bundle);
+        vm.stopPrank();
+
+        assertEq(vaultAssetToken.balanceOf(RECEIVER), expectedAssets, "Receiver should have received assets");
+        assertEq(vaultContract.balanceOf(USER), 0, "User should have no vault shares left");
+        assertEq(vaultContract.balanceOf(address(altoAdapter)), 0, "Adapter should have no vault shares left");
+        assertEq(vaultAssetToken.balanceOf(address(altoAdapter)), 0, "Adapter should have no leftover assets");
+    }
+
+    function testErc4626RedeemAdapterAsOwnerMax(uint256 amount) public {
+        amount = bound(amount, MIN_AMOUNT, MAX_AMOUNT);
+
+        deal(address(vaultAssetToken), USER, amount);
+
+        vm.startPrank(USER);
+        vaultAssetToken.approve(address(vaultContract), amount);
+        uint256 shares = vaultContract.deposit(amount, USER);
+        uint256 expectedAssets = vaultContract.previewRedeem(shares);
+
+        IERC20(address(vaultContract)).approve(address(altoAdapter), shares);
+
+        bundle.push(_erc20TransferFrom(address(vaultContract), shares));
+        bundle.push(_erc4626Redeem(address(vaultContract), type(uint256).max, 0, RECEIVER, address(altoAdapter)));
+        bundler3.multicall(bundle);
+        vm.stopPrank();
+
+        assertEq(vaultAssetToken.balanceOf(RECEIVER), expectedAssets, "Receiver should have received assets");
+        assertEq(vaultContract.balanceOf(address(altoAdapter)), 0, "Adapter should have no vault shares left");
+        assertEq(vaultAssetToken.balanceOf(address(altoAdapter)), 0, "Adapter should have no leftover assets");
+    }
+
+    function testErc4626RedeemSlippageExceeded(uint256 amount) public {
         amount = bound(amount, MIN_AMOUNT, MAX_AMOUNT);
 
         deal(address(vaultAssetToken), USER, amount);
@@ -2029,10 +2136,9 @@ contract AltoAdapterTest is AdapterCommonSetup {
         vaultAssetToken.approve(address(vaultContract), amount);
         uint256 shares = vaultContract.deposit(amount, USER);
 
-        uint256 expectedAssets = vaultContract.previewRedeem(shares);
         IERC20(address(vaultContract)).approve(address(altoAdapter), shares);
 
-        bundle.push(_vaultRedeem(vaultContract, shares, USER, expectedAssets + 1));
+        bundle.push(_erc4626Redeem(address(vaultContract), shares, type(uint256).max, USER, USER));
         vm.expectRevert(ErrorsLib.SlippageExceeded.selector);
         bundler3.multicall(bundle);
         vm.stopPrank();
