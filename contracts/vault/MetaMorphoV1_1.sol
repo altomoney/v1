@@ -13,6 +13,7 @@ import {
 } from "./interfaces/IMetaMorphoV1_1.sol";
 import {Market, MarketLib} from "./libraries/MarketLib.sol";
 import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
+import {IMarketRegistry} from "@alto/utils/interfaces/IMarketRegistry.sol";
 import {AdaptiveCurveIrm} from "@alto/lending/irm/AdaptiveCurveIrm.sol";
 
 import {PendingUint192, PendingAddress, PendingLib} from "@metamorpho/libraries/PendingLib.sol";
@@ -58,6 +59,9 @@ contract MetaMorphoV1_1 is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaM
     uint8 public immutable DECIMALS_OFFSET;
 
     /* STORAGE */
+
+    /// @inheritdoc IMetaMorphoV1_1Base
+    IMarketRegistry public marketRegistry;
 
     /// @inheritdoc IMetaMorphoV1_1Base
     address public curator;
@@ -120,12 +124,22 @@ contract MetaMorphoV1_1 is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaM
     /// @param __symbol The symbol of the vault.
     /// @dev We pass "" as name and symbol to the ERC20 because these are overriden in this contract.
     /// This means that the contract deviates slightly from the ERC2612 standard.
-    constructor(address owner, uint256 initialTimelock, address _asset, string memory __name, string memory __symbol)
+    constructor(
+        address owner,
+        uint256 initialTimelock,
+        address _asset,
+        string memory __name,
+        string memory __symbol,
+        address _marketRegistry
+    )
         ERC4626(IERC20(_asset))
         ERC20Permit("")
         ERC20("", "")
         Ownable(owner)
     {
+        if (_marketRegistry == address(0)) revert ZeroAddress();
+        marketRegistry = IMarketRegistry(_marketRegistry);
+
         if (initialTimelock != 0) _checkTimelockBounds(initialTimelock);
         _setTimelock(initialTimelock);
 
@@ -197,6 +211,16 @@ contract MetaMorphoV1_1 is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaM
         _symbol = newSymbol;
 
         emit SetSymbol(newSymbol);
+    }
+
+    /// @inheritdoc IMetaMorphoV1_1Base
+    function setMarketRegistry(address newMarketRegistry) external onlyOwner {
+        if (newMarketRegistry == address(0)) revert ZeroAddress();
+        if (newMarketRegistry == address(marketRegistry)) revert AlreadySet();
+
+        marketRegistry = IMarketRegistry(newMarketRegistry);
+
+        emit SetMarketRegistry(newMarketRegistry);
     }
 
     /// @inheritdoc IMetaMorphoV1_1Base
@@ -288,6 +312,8 @@ contract MetaMorphoV1_1 is ERC4626, ERC20Permit, Ownable2Step, Multicall, IMetaM
 
     /// @inheritdoc IMetaMorphoV1_1Base
     function submitCap(address market, uint256 newSupplyCap) external onlyCuratorRole {
+
+        if (!marketRegistry.isBorrowMarket(market)) revert MarketNotInRegistry(market);
         if (IMarket(market).borrowToken() != asset()) revert InconsistentAsset(market);
         if (pendingCap[market].validAt != 0) revert AlreadyPending();
         if (config[market].removableAt != 0) revert PendingRemoval();
