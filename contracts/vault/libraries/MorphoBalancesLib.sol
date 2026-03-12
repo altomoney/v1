@@ -3,6 +3,8 @@ pragma solidity ^0.8.0;
 
 import {Market, MarketLib} from "./MarketLib.sol";
 import {IIrm} from "@alto/lending/interfaces/IIrm.sol";
+import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
+import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {UtilsLib} from "@bundler3/lib/morpho-blue/src/libraries/UtilsLib.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
@@ -32,8 +34,9 @@ library MorphoBalancesLib {
 
         address irm = market.irm();
 
-        // Skipped if totalBorrowAssets == 0 because interest would be null, or if irm == address(0).
-        if (marketState.totalBorrowAssets != 0 && irm != address(0)) {
+        // Skip virtual accrual while the market is paused to match the market's pause semantics.
+        // Also skipped if totalBorrowAssets == 0 because interest would be null, or if irm == address(0).
+        if (marketState.totalBorrowAssets != 0 && irm != address(0) && !IPausable(market).paused(PAUSE_TYPE)) {
             (uint256 interest,) =
                 IIrm(irm).updateInterestRateView(marketState.totalSupplyAssets, marketState.totalBorrowAssets);
             if (interest > 0) {
