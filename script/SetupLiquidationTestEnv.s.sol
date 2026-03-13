@@ -70,6 +70,7 @@ contract SetupLiquidationTestEnvScript is Script, StdCheats {
         console.log("=====================================");
 
         _loadDeployment(marketName);
+        _syncBlockTimestamp();
         _initializeMarketParams(minCollateralUnits, maxCollateralUnits);
 
         console.log("\nMarket address:", market);
@@ -244,6 +245,14 @@ contract SetupLiquidationTestEnvScript is Script, StdCheats {
         }
         console.log("\nLiquidatable:", liquidatableCount, "/", users.length);
         require(liquidatableCount == users.length, "All positions should be liquidatable");
+    }
+
+    function _syncBlockTimestamp() internal {
+        // Sync the virtual testnet's  block timestamp to the current real-world Unix time so that
+        // oracle staleness checks and IRM calculations use a realistic timestamp rather than a
+        // potentially stale value from tenderly devnet.
+        vm.rpc("evm_setNextBlockTimestamp", string.concat('["', _toCompactHex(vm.unixTime() / 1000), '"]'));
+        vm.warp(vm.unixTime() / 1000);
     }
 
     function _tenderlySetBalance(address wallet, uint256 amountWei) internal {
