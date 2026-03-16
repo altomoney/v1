@@ -505,6 +505,7 @@ contract AltoVault is ERC4626, ERC20Permit, Ownable2Step, Multicall, IAltoVaultS
 
     /// @inheritdoc IAltoVaultBase
     function acceptCap(address market) external afterTimelock(pendingCap[market].validAt) {
+        if (!marketRegistry.isBorrowMarket(market)) revert MarketNotInRegistry(market);
         // Safe "unchecked" cast because pendingCap <= type(uint184).max.
         _setCap(market, uint184(pendingCap[market].value));
     }
@@ -734,7 +735,8 @@ contract AltoVault is ERC4626, ERC20Permit, Ownable2Step, Multicall, IAltoVaultS
         internal
         returns (uint256 assets, uint256 shares, Market memory marketState)
     {
-        IMarket(market).accrueInterest();
+        // Wrapped in try/catch so a paused or reverting market doesn't block withdrawals.
+        try IMarket(market).accrueInterest() {} catch {}
 
         marketState = market.getState();
         shares = market.userSupplyShares(address(this));
@@ -803,7 +805,8 @@ contract AltoVault is ERC4626, ERC20Permit, Ownable2Step, Multicall, IAltoVaultS
             uint256 supplyCap = config[market].cap;
             if (supplyCap == 0) continue;
 
-            IMarket(market).accrueInterest();
+            // Wrapped in try/catch so a paused or reverting market doesn't block deposits.
+            try IMarket(market).accrueInterest() {} catch {}
 
             (uint128 totalSupplyAssets, uint128 totalSupplyShares) = market.totalSupply();
             uint128 supplyShares = market.userSupplyShares(address(this));
