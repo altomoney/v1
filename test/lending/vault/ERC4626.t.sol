@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "./helpers/IntegrationTest.sol";
+import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 
 contract ERC4626Test is IntegrationTest {
     using AltoBalancesLib for address;
@@ -371,5 +372,76 @@ contract ERC4626Test is IntegrationTest {
         erc4626Vault.deposit(1 ether, ONBEHALF);
 
         assertEq(erc4626Vault.maxDeposit(SUPPLIER), 0);
+    }
+
+    function testDepositSkipsPausedMarketAndFallsBackToNextMarket(uint256 assets) public {
+        assets = bound(assets, MIN_TEST_ASSETS, MAX_TEST_ASSETS);
+
+        // Enable a second market as fallback.
+        _setCap(allMarkets[1], CAP);
+        _sortSupplyQueueIdleLast();
+
+        // Pause allMarkets[0] so accrueInterest and addSupply revert.
+        vm.prank(MARKET_OWNER);
+        IMarket(allMarkets[0]).pause(PAUSE_TYPE, true);
+
+        loanToken.setBalance(SUPPLIER, assets);
+
+        vm.prank(SUPPLIER);
+        uint256 shares = erc4626Vault.deposit(assets, ONBEHALF);
+
+        assertGt(shares, 0, "shares");
+        // allMarkets[0] is paused so supply must have gone elsewhere (allMarkets[1] or idle).
+        assertEq(allMarkets[0].expectedSupplyAssets(address(erc4626Vault)), 0, "paused market supply");
+        assertGt(
+            allMarkets[1].expectedSupplyAssets(address(erc4626Vault))
+                + idleMarket.expectedSupplyAssets(address(erc4626Vault)),
+            0,
+            "fallback market supply"
+        );
+    }
+
+    function testDepositWorksWhenMarketPaused(uint256 assets) public {
+        assets = bound(assets, MIN_TEST_ASSETS, MAX_TEST_ASSETS);
+
+        // Pause market, for other markets cap is set to 0 for now
+        vm.prank(MARKET_OWNER);
+        IMarket(allMarkets[0]).pause(PAUSE_TYPE, true);
+
+        loanToken.setBalance(SUPPLIER, assets);
+
+        vm.prank(SUPPLIER);
+        uint256 shares = erc4626Vault.deposit(assets, ONBEHALF);
+
+        assertGt(shares, 0, "shares");
+        // All assets must have landed in the idle market.
+        assertEq(allMarkets[0].expectedSupplyAssets(address(erc4626Vault)), 0, "paused market supply");
+        assertEq(_idle(), assets, "idle assets");
+    }
+
+    function testWithdrawFromMarketsWorksWhenOneMarketPaused() public {
+        // Seed allMarkets[0] with liquidity via the vault.
+        uint256 depositAmount = 1e18;
+        loanToken.setBalance(SUPPLIER, depositAmount);
+        vm.prank(SUPPLIER);
+        erc4626Vault.deposit(depositAmount, ONBEHALF);
+
+        _setCap(allMarkets[1], CAP);
+
+        // Pause allMarkets[0]
+        vm.prank(MARKET_OWNER);
+        IMarket(allMarkets[0]).pause(PAUSE_TYPE, true);
+
+        // Seed allMarkets[1] with liquidity via the vault so that we can withdraw from it while first market is paused
+        loanToken.setBalance(SUPPLIER, depositAmount);
+        vm.prank(SUPPLIER);
+        erc4626Vault.deposit(depositAmount, ONBEHALF);
+
+        uint256 sharesToRedeem = erc4626Vault.balanceOf(ONBEHALF) / 2;
+        vm.prank(ONBEHALF);
+        uint256 assetsReceived = erc4626Vault.redeem(sharesToRedeem, RECEIVER, ONBEHALF);
+
+        assertEq(assetsReceived, depositAmount, "assetsReceived");
+        assertEq(loanToken.balanceOf(RECEIVER), depositAmount, "receiver loanToken balance");
     }
 }
