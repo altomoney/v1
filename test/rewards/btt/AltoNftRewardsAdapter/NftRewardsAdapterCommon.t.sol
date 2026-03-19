@@ -19,6 +19,10 @@ contract MockPearlClubNft is ERC721 {
             _mint(to, i);
         }
     }
+
+    function burn(uint256 tokenId) external {
+        _burn(tokenId);
+    }
 }
 
 abstract contract NftRewardsAdapterCommon is Test {

@@ -10,6 +10,10 @@ AltoNftRewardsAdapter::getBonusRewardInfo
     │   ├── it should return configured bonus discount
     │   ├── it should return configured payment token share
     │   └── it should return nft owner as payment token share receiver
+    ├── when nft is burned after referral set
+    │   ├── it should return configured bonus discount
+    │   ├── it should return configured payment token share
+    │   └── it should return address(0) as payment token share receiver
     ├── when multiple users have same referral nft
     │   ├── it should return same bonus info for all users
     │   └── it should return same nft owner as receiver

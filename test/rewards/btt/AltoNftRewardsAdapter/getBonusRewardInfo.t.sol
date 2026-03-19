@@ -62,6 +62,28 @@ contract AltoNftRewardsAdapterGetBonusRewardInfo is NftRewardsAdapterCommon {
         assertEq(info.paymentTokenShareReceiver, BOB);
     }
 
+    function test_WhenNftIsBurnedAfterReferralSet() external {
+        // ALICE sets referral to BOB's NFT
+        vm.prank(ALICE);
+        adapter.setNftReferralId(2); // BOB's NFT
+
+        // BOB burns his NFT
+        vm.prank(BOB);
+        pearlClubNft.burn(2);
+
+        BonusRewardInfo memory info = adapter.getBonusRewardInfo(ALICE);
+
+        // it should still return configured bonus discount
+        assertEq(info.bonusDiscount, INITIAL_BONUS_DISCOUNT);
+
+        // it should still return configured payment token share
+        assertEq(info.paymentTokenShare, INITIAL_PAYMENT_TOKEN_SHARE);
+
+        // it should return address(0) as payment token share receiver
+        // distributor skips the transfer, funds stay in treasury
+        assertEq(info.paymentTokenShareReceiver, address(0));
+    }
+
     function test_WhenMultipleUsersHaveSameReferralNft() external {
         // Both ALICE and CHARLIE set referral to BOB's NFT
         vm.prank(ALICE);

@@ -14,6 +14,15 @@ contract AltoNftRewardsAdapterSetNftReferralId is NftRewardsAdapterCommon {
         adapter.setNftReferralId(invalidId);
     }
 
+    function test_RevertWhen_ReferralNftIdOwnerOfCallReverts() external {
+        pearlClubNft.burn(1);
+
+        vm.prank(BOB);
+        // it should revert
+        vm.expectRevert(AltoNftRewardsAdapter.AltoNftRewardsInvalidReferralNftId.selector);
+        adapter.setNftReferralId(1);
+    }
+
     function test_RevertWhen_ReferralNftIdIsOwnedByCallerSelfReferral() external {
         // ALICE owns NFT #1, try to set self-referral
         vm.prank(ALICE);

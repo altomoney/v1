@@ -1,6 +1,8 @@
 AltoNftRewardsAdapter::setNftReferralId
 ├── when referral nft id is greater than 700
 │   └── it should revert
+├── when referral nft id ownerOf call reverts (unminted/burned nft)
+│   └── it should revert
 ├── when referral nft id is owned by caller (self-referral)
 │   └── it should revert
 └── when referral nft id is valid

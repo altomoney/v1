@@ -87,15 +87,21 @@ contract AltoNftRewardsAdapter is IRewardsAdapter, AltoOwnable2Step {
             revert AltoNftRewardsInvalidReferralNftId();
         }
 
+        if (referralNftId == 0) {
+            nftReferralId[msg.sender] = referralNftId;
+            emit NftReferralIdSet(msg.sender, referralNftId);
+            return;
+        }
+
         address nftOwner;
         try IERC721(PEARL_CLUB_NFT_ADDRESS).ownerOf(referralNftId) returns (address owner) {
             nftOwner = owner;
         } catch {
-            nftOwner = address(0);
+            revert AltoNftRewardsInvalidReferralNftId();
         }
 
-        // we don't allow self-referral
-        if (nftOwner == msg.sender) {
+        // we don't allow unresolvable ownership (burnded/unminted) or self-referral
+        if (nftOwner == address(0) || nftOwner == msg.sender) {
             revert AltoNftRewardsInvalidReferralNftId();
         }
 
