@@ -94,3 +94,9 @@ struct ERC4626RatioNode {
     // @dev This is used to prevent the ratio from growing too fast
     uint256 maxYearlyGrowthRatioWad;
 }
+
+// @dev The module using this node should multiply the input by the multiplier
+struct MultiplierNode {
+    // @notice The multiplier to apply to the input
+    uint256 multiplier;
+}
