@@ -1,0 +1,12 @@
+AltoChainlinkERC4626RatioMultiplierOracle::getPrice()
+├── when chainlink feed is stale
+│   └── it should revert with ModuleChainlinkInvalidRate
+├── when chainlink price is zero
+│   └── it should revert with ModuleChainlinkInvalidRate
+├── when chainlink price is within ERC4626 max allowed growth
+│   ├── it should return the unchained price scaled by the multiplier
+│   ├── it should not cap the intermediate price
+│   └── it should apply chainlink conversion with correct in and out decimals
+└── when chainlink price exceeds ERC4626 max allowed growth
+    ├── it should cap the intermediate price to the max allowed growth ratio
+    └── it should return the capped price scaled by the multiplier

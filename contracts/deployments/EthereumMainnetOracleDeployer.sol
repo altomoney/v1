@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-import {ChainlinkNode, ConversionDirection, ERC4626RatioNode} from "@alto/oracles/interfaces/IModuleNode.sol";
+import {
+    ChainlinkNode,
+    ConversionDirection,
+    ERC4626RatioNode,
+    MultiplierNode
+} from "@alto/oracles/interfaces/IModuleNode.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {AltoMultiChainlinkLendingOracle} from "@alto/oracles/AltoMultiChainlinkLendingOracle.sol";
 import {
@@ -27,17 +32,23 @@ import {
     ERC4626RatioChainlinkOracleSYRUPUSDC
 } from "@alto/oracles/AltoERC4626RatioChainlinkOracle/implementations/ERC4626RatioChainlinkOracleSYRUPUSDC.sol";
 import {
+    AltoChainlinkERC4626RatioMultiplierOracle
+} from "@alto/oracles/AltoChainlinkERC4626RatioMultiplierOracle/AltoChainlinkERC4626RatioMultiplierOracle.sol";
+import {ISharePriceCalculator} from "@alto/deployments/interfaces/ISharePriceCalculator.sol";
+import {
     CHAINLINK_ETH_USD_PRICE_FEED,
     CHAINLINK_BTC_USD_PRICE_FEED,
     CHAINLINK_WBTC_BTC_RATIO_FEED,
     CHAINLINK_USDE_USD_PRICE_FEED,
     CHAINLINK_USDC_USD_PRICE_FEED,
     CHAINLINK_PAXG_USD_PRICE_FEED,
+    CHAINLINK_REUSD_USD_PRICE_FEED,
     WSTETH_MAINNET,
     RETH_MAINNET,
     METH_STAKING_MAINNET,
     SUSDE_MAINNET,
-    SYRUPUSDC_MAINNET
+    SYRUPUSDC_MAINNET,
+    REUSD_SHARE_PRICE_CALCULATOR_MAINNET
 } from "@alto/deployments/ethereum-mainnet/Constants.sol";
 
 enum EthereumMainnetLendingOracleAsset {
@@ -50,7 +61,8 @@ enum EthereumMainnetLendingOracleAsset {
     rETH,
     stETH,
     SYRUPUSDC,
-    PAXG
+    PAXG,
+    REUSD
 }
 
 library EthereumMainnetOracleDeployer {
@@ -75,6 +87,8 @@ library EthereumMainnetOracleDeployer {
             return deploySyrupUsdcOracle(owner);
         } else if (asset == EthereumMainnetLendingOracleAsset.PAXG) {
             return deployPaxgOracle(owner);
+        } else if (asset == EthereumMainnetLendingOracleAsset.REUSD) {
+            return deployReusdOracle(owner);
         }
 
         revert("Invalid asset");
@@ -269,5 +283,32 @@ library EthereumMainnetOracleDeployer {
         });
 
         return address(new AltoMultiChainlinkLendingOracle(owner, chainlinkNodes));
+    }
+
+    function deployReusdOracle(address owner) internal returns (address) {
+        uint256 initialRatio = ISharePriceCalculator(REUSD_SHARE_PRICE_CALCULATOR_MAINNET).getSharePrice() * 1015 / 1000; // +1.5%
+        ERC4626RatioNode memory erc4626RatioNode = ERC4626RatioNode({
+            initialRatio: initialRatio,
+            initialTimestamp: block.timestamp,
+            maxYearlyGrowthRatioWad: 0.185 ether // 18.5%
+        });
+
+        ChainlinkNode memory chainlinkNode = ChainlinkNode({
+            feed: AggregatorV3Interface(CHAINLINK_REUSD_USD_PRICE_FEED),
+            direction: ConversionDirection.IN_TO_OUT, // REUSD to USD
+            stalePeriod: 86700, // 86700 seconds // todo: consult this with risk management team
+            inDecimals: 18, // REUSD decimals
+            outDecimals: 18, // the decimals of ratio used in erc4626RatioNode
+            feedDecimals: 18
+        });
+
+        MultiplierNode memory multiplierNode = MultiplierNode({multiplier: 10 ** 18});
+
+        // the decimals of reUSD is 18, so we want output in 36 decimals since decimals of DUSD is also 18
+        // the decimals of chainlink node output is 18, so we want to multiply by 10 ** 18 to get the price in 36 decimals
+        return
+            address(
+                new AltoChainlinkERC4626RatioMultiplierOracle(owner, chainlinkNode, erc4626RatioNode, multiplierNode)
+            );
     }
 }

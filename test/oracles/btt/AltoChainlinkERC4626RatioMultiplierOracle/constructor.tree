@@ -1,0 +1,32 @@
+AltoChainlinkERC4626RatioMultiplierOracle::constructor()
+├── given invalid inputs
+│   ├── when owner is zero address
+│   │   └── it should revert with OwnableInvalidOwner
+│   ├── when chainlink node feed is zero address
+│   │   └── it should revert with ModuleChainlinkInvalidInput
+│   ├── when chainlink node stalePeriod is zero
+│   │   └── it should revert with ModuleChainlinkInvalidInput
+│   ├── when chainlink node inDecimals + outDecimals is greater than 54
+│   │   └── it should revert with ModuleChainlinkInvalidInput
+│   ├── when chainlink node feedDecimals does not match feed decimals
+│   │   └── it should revert with ModuleChainlinkInvalidInput
+│   ├── when ERC4626 ratio node initialRatio is zero
+│   │   └── it should revert with ModuleERC4626RatioInvalidInput
+│   ├── when ERC4626 ratio node initialTimestamp is greater than block.timestamp
+│   │   └── it should revert with ModuleERC4626RatioInvalidInput
+│   ├── when ERC4626 ratio node maxYearlyGrowthRatioWad is zero
+│   │   └── it should revert with ModuleERC4626RatioInvalidInput
+│   ├── when multiplier node multiplier is zero
+│   │   └── it should revert with ModuleMultiplierInvalidInput
+│   ├── when multiplier node multiplier is greater than 10^54
+│   │   └── it should revert with ModuleMultiplierInvalidInput
+│   └── when multiplier node multiplier is not divisible by 10
+│       └── it should revert with ModuleMultiplierInvalidInput
+└── given valid inputs
+    ├── it should set owner correctly
+    ├── it should set chainlinkNode correctly
+    ├── it should set erc4626RatioNode correctly
+    ├── it should set multiplierNode correctly
+    ├── it should emit SetChainlinkNode with zero-value old node and new node
+    ├── it should emit SetERC4626RatioNode with zero-value old node and new node
+    └── it should emit SetMultiplierNode with zero-value old node and new node
