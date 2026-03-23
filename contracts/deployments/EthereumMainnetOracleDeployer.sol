@@ -5,7 +5,8 @@ import {
     ChainlinkNode,
     ConversionDirection,
     ERC4626RatioNode,
-    MultiplierNode
+    MultiplierNode,
+    LinearDiscountNode
 } from "@alto/oracles/interfaces/IModuleNode.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {AltoMultiChainlinkLendingOracle} from "@alto/oracles/AltoMultiChainlinkLendingOracle.sol";
@@ -36,6 +37,11 @@ import {
 } from "@alto/oracles/AltoChainlinkERC4626RatioMultiplierOracle/AltoChainlinkERC4626RatioMultiplierOracle.sol";
 
 import {
+    ISharePriceCalculator,
+    ERC4626RatioLinearDiscountOraclePTREUSD
+} from "@alto/oracles/AltoERC4626RatioLinearDiscountOracle/implementations/ERC4626RatioLinearDiscountOraclePTREUSD.sol";
+import {IPTToken} from "@alto/oracles/modules/ModuleLinearDiscount.sol";
+import {
     CHAINLINK_ETH_USD_PRICE_FEED,
     CHAINLINK_BTC_USD_PRICE_FEED,
     CHAINLINK_WBTC_BTC_RATIO_FEED,
@@ -48,7 +54,9 @@ import {
     RETH_MAINNET,
     METH_STAKING_MAINNET,
     SUSDE_MAINNET,
-    SYRUPUSDC_MAINNET
+    SYRUPUSDC_MAINNET,
+    REUSD_SHARE_PRICE_CALCULATOR_MAINNET,
+    PT_REUSD_MAINNET
 } from "@alto/deployments/ethereum-mainnet/Constants.sol";
 
 enum EthereumMainnetLendingOracleAsset {
@@ -63,7 +71,8 @@ enum EthereumMainnetLendingOracleAsset {
     SYRUPUSDC,
     PAXG,
     REUSD,
-    FRXUSD
+    FRXUSD,
+    PT_REUSD_MAINNET
 }
 
 library EthereumMainnetOracleDeployer {
@@ -92,6 +101,8 @@ library EthereumMainnetOracleDeployer {
             return deployReusdOracle(owner);
         } else if (asset == EthereumMainnetLendingOracleAsset.FRXUSD) {
             return deployFrxUsdOracle(owner);
+        } else if (asset == EthereumMainnetLendingOracleAsset.PT_REUSD_MAINNET) {
+            return deployPtReusdOracle(owner);
         }
 
         revert("Invalid asset");
@@ -332,5 +343,28 @@ library EthereumMainnetOracleDeployer {
         });
 
         return address(new AltoMultiChainlinkLendingOracle(owner, chainlinkNodes));
+    }
+
+    function deployPtReusdOracle(address owner) internal returns (address) {
+        uint256 initialRatio = ISharePriceCalculator(REUSD_SHARE_PRICE_CALCULATOR_MAINNET).getSharePrice() * 1015 / 1000; // +1.5%
+        ERC4626RatioNode memory erc4626RatioNode = ERC4626RatioNode({
+            initialRatio: initialRatio,
+            initialTimestamp: block.timestamp,
+            maxYearlyGrowthRatioWad: 0.185 ether // 18.5%
+        });
+
+        LinearDiscountNode memory linearDiscountNode = LinearDiscountNode({
+            ptToken: PT_REUSD_MAINNET,
+            maturity: IPTToken(PT_REUSD_MAINNET).expiry(),
+            baseDiscountPerYear: 0.08 ether, // 8%
+            inDecimals: 18,
+            outDecimals: 36
+        });
+
+        return address(
+            new ERC4626RatioLinearDiscountOraclePTREUSD(
+                owner, REUSD_SHARE_PRICE_CALCULATOR_MAINNET, erc4626RatioNode, linearDiscountNode
+            )
+        );
     }
 }
