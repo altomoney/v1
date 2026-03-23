@@ -42,6 +42,10 @@ address constant CRV_TOKEN_MAINNET = 0xD533a949740bb3306d119CC777fa900bA034cd52;
 address constant CVX_TOKEN_MAINNET = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B;
 // Wrapped Frax token address on mainnet
 address constant WFRAX_TOKEN_MAINNET = 0x04ACaF8D2865c0714F79da09645C13FD2888977f;
+// REUSD Share Price Calculator on mainnet
+address constant REUSD_SHARE_PRICE_CALCULATOR_MAINNET = 0xd1D104a7515989ac82F1AFDa15a23650411b05B8;
+// PT-reUSD on mainnet
+address constant PT_REUSD_MAINNET = 0x3EAA0F0f0A5d3D595ae4e4b0D27f439d01c3E7b2;
 
 // Chainlink feeds
 // Standard Chainlink ETH/USD feed
