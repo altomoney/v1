@@ -238,6 +238,12 @@ contract AltoAdapter is CoreAdapter, AdapterContractApproval {
         SafeERC20.forceApprove(underlyingToken, vault, 0);
 
         require(assets.rDivUp(shares) <= maxSharePriceE27, ErrorsLib.SlippageExceeded());
+
+        uint256 remainingBalance = underlyingToken.balanceOf(address(this));
+
+        if (remainingBalance != 0) {
+            SafeERC20.safeTransfer(underlyingToken, initiator(), remainingBalance);
+        }
     }
 
     /// @notice Withdraws underlying token from an ERC4626 vault.
@@ -260,6 +266,12 @@ contract AltoAdapter is CoreAdapter, AdapterContractApproval {
 
         uint256 shares = IERC4626(vault).withdraw(assets, receiver, owner);
         require(assets.rDivDown(shares) >= minSharePriceE27, ErrorsLib.SlippageExceeded());
+
+        uint256 remainingBalance = IERC20(vault).balanceOf(address(this));
+
+        if (remainingBalance != 0) {
+            SafeERC20.safeTransfer(IERC20(vault), initiator(), remainingBalance);
+        }
     }
 
     /// @notice Redeems shares of an ERC4626 vault.
