@@ -220,4 +220,71 @@ contract ReallocateWithdrawTest is IntegrationTest {
         vm.expectRevert(abi.encodeWithSelector(IAltoVaultErrors.MarketNotEnabled.selector, allMarkets[3]));
         vault.reallocate(allocations);
     }
+
+    /// @notice Demonstrates that reallocate() cannot clear dust supply shares when
+    /// the vault's share position has a rounded-down asset value of zero.
+    /// @dev This is POC of audit report from Cantina with issue number 2
+    /// @dev fixed by adding condition (allocation.assets == 0 && supplyShares != 0) in the reallocate function
+    ///
+    /// Scenario:
+    ///   1. A large external supplier deposits directly into allMarkets[0], inflating
+    ///      totalSupplyAssets/totalSupplyShares.
+    ///   2. Someone supplies 1 share on behalf of the vault (via addSupply(0, 1, vault)),
+    ///      giving it a dust share position.
+    ///   3. convertToAssetsDown(1 share, ~1000e18, ~1000e24) ≈ 0 due to rounding.
+    ///   4. reallocate(assets=0) is called to fully unwind, but:
+    ///        supplyAssets = 0 (rounded down), so withdrawn = 0.zeroFloorSub(0) = 0
+    ///        The `if (withdrawn > 0)` branch is skipped entirely.
+    function testPOCReallocateDustSharesNotCleared() public {
+        address market = allMarkets[0];
+
+        // First, withdraw everything from allMarkets[0..2] back to idle so the vault
+        // has no position in any non-idle market.
+        allocations.push(MarketAllocation({market: allMarkets[0], assets: 0}));
+        allocations.push(MarketAllocation({market: allMarkets[1], assets: 0}));
+        allocations.push(MarketAllocation({market: allMarkets[2], assets: 0}));
+        allocations.push(MarketAllocation({market: idleMarket, assets: type(uint256).max}));
+
+        vm.prank(ALLOCATOR);
+        vault.reallocate(allocations);
+        delete allocations;
+
+        assertEq(market.userSupplyShares(address(vault)), 0, "vault shares should be 0 before setup");
+
+        // Step 1: Large external supplier deposits directly into the market, inflating
+        // totalSupply so that any subsequent tiny share position rounds to 0 assets.
+        uint256 largeDeposit = 1000e18;
+        loanToken.setBalance(SUPPLIER, largeDeposit);
+        vm.prank(SUPPLIER);
+        IMarket(market).addSupply(largeDeposit, 0, SUPPLIER);
+
+        // Step 2: Give the vault exactly 1 supply share via addSupply(0, 1, vault).
+        // convertToAssetsUp(1, 1000e18, 1000e24) rounds up to 1 wei of loan token cost.
+        loanToken.setBalance(SUPPLIER, 1);
+        vm.prank(SUPPLIER);
+        IMarket(market).addSupply(0, 1, address(vault));
+
+        uint128 vaultShares = market.userSupplyShares(address(vault));
+        assertEq(vaultShares, 1, "vault must hold exactly 1 supply share");
+
+        // Step 3: Verify the vault's 1 share rounds to 0 assets.
+        // convertToAssetsDown(1, ~1000e18, ~1000e24) = 1 * (~1000e18 + 1) / (~1000e24 + 1e6) ≈ 0
+        (uint128 totalAssets, uint128 totalShares) = market.totalSupply();
+        uint256 vaultAssets = uint256(vaultShares).convertToAssetsDown(uint256(totalAssets), uint256(totalShares));
+        assertEq(vaultAssets, 0, "vault asset value must round to 0 (dust shares)");
+        assertGt(market.userSupplyShares(address(vault)), 0, "vault must still hold nonzero shares");
+
+        // Step 4: Attempt to fully unwind via reallocate(assets=0). This should clear
+        // the position, but the bug causes it to skip the withdrawal entirely.
+        // After the fix, the dust shares should be cleared.
+        allocations.push(MarketAllocation({market: market, assets: 0}));
+        allocations.push(MarketAllocation({market: idleMarket, assets: type(uint256).max}));
+
+        vm.prank(ALLOCATOR);
+        vault.reallocate(allocations);
+
+        // After the fix, the dust shares should be cleared.
+        uint128 remainingShares = market.userSupplyShares(address(vault));
+        assertEq(remainingShares, 0, "dust shares should have been cleared but were not");
+    }
 }
