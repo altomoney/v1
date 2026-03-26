@@ -10,6 +10,8 @@ import {
     IAltoVaultStaticTypes
 } from "@alto/lending/interfaces/IAltoVault.sol";
 import {Market, MarketLib} from "@alto/lending/libraries/MarketLib.sol";
+import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
+import {IPausable} from "@alto/utils/Pausable.sol";
 import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
 import {IMarketRegistry} from "@alto/utils/interfaces/IMarketRegistry.sol";
 import {PendingLib} from "@alto/lending/libraries/PendingLib.sol";
@@ -859,6 +861,9 @@ contract AltoVault is ERC4626, ERC20Permit, Ownable2Step, Multicall, IAltoVaultS
     function _simulateWithdrawFromMarkets(uint256 assets) internal view returns (uint256) {
         for (uint256 i; i < withdrawQueue.length; ++i) {
             address market = withdrawQueue[i];
+
+            // if market is paused, supplied assets can't be withdrawn from it
+            if (IPausable(market).paused(PAUSE_TYPE)) continue;
 
             uint128 supplyShares = market.userSupplyShares(address(this));
             (uint256 totalSupplyAssets, uint256 totalSupplyShares, uint256 totalBorrowAssets,) =
