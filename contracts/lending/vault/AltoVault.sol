@@ -778,14 +778,22 @@ contract AltoVault is ERC4626, ERC20Permit, Ownable2Step, Multicall, IAltoVaultS
 
         if (supplyCap > 0) {
             if (!marketConfig.enabled) {
+                (, , uint256 currentLostAssets) = _accruedFeeAndAssets();
+                uint256 liveAssets = market.expectedSupplyAssets(address(this));
+                uint256 recoveredAssets = UtilsLib.min(currentLostAssets, liveAssets);
+
                 withdrawQueue.push(market);
 
                 if (withdrawQueue.length > ConstantsLib.MAX_QUEUE_LENGTH) revert MaxQueueLengthExceeded();
 
                 marketConfig.enabled = true;
 
-                // Take into account assets of the new market without applying a fee.
-                _updateLastTotalAssets(lastTotalAssets + market.expectedSupplyAssets(address(this)));
+                // Re-enabling a force-removed market can bring back assets already preserved through lostAssets.
+                // Only the delta above that preserved amount should increase accounting.
+                lostAssets = currentLostAssets - recoveredAssets;
+                emit UpdateLostAssets(lostAssets);
+
+                _updateLastTotalAssets(lastTotalAssets + liveAssets - recoveredAssets);
 
                 emit SetWithdrawQueue(msg.sender, withdrawQueue);
             }

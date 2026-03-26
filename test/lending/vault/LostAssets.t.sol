@@ -22,6 +22,24 @@ contract LostAssetsTest is IntegrationTest {
         vm.store(market, totalSupplySlot, newTotalSupplyValue);
     }
 
+    function _withdrawQueueIndexesWithout(address excludedMarket) internal view returns (uint256[] memory indexes) {
+        uint256 length = vault.withdrawQueueLength();
+        uint256 kept;
+
+        for (uint256 i; i < length; ++i) {
+            if (vault.withdrawQueue(i) != excludedMarket) ++kept;
+        }
+
+        indexes = new uint256[](kept);
+        uint256 nextIndex;
+
+        for (uint256 i; i < length; ++i) {
+            if (vault.withdrawQueue(i) == excludedMarket) continue;
+            indexes[nextIndex] = i;
+            ++nextIndex;
+        }
+    }
+
     function setUp() public override {
         super.setUp();
 
@@ -364,6 +382,97 @@ contract LostAssetsTest is IntegrationTest {
 
         vm.prank(ONBEHALF);
         erc4626Vault.withdraw(assets, ONBEHALF, ONBEHALF);
+    }
+
+    function testReenableRemovedMarketDoesNotDoubleCountResidualSupply() public {
+        uint256 initialDeposit = 100 ether;
+        address market = allMarkets[0];
+
+        loanToken.setBalance(SUPPLIER, initialDeposit);
+
+        vm.prank(SUPPLIER);
+        uint256 supplierShares = erc4626Vault.deposit(initialDeposit, SUPPLIER);
+
+        assertEq(supplierShares, initialDeposit, "initial shares");
+        assertEq(vault.lastTotalAssets(), initialDeposit, "initial lastTotalAssets");
+        assertEq(erc4626Vault.totalAssets(), initialDeposit, "initial totalAssets");
+        assertEq(market.expectedSupplyAssets(address(vault)), initialDeposit, "initial market balance");
+
+        _setCap(market, 0);
+
+        vm.prank(CURATOR);
+        vault.submitMarketRemoval(market);
+
+        vm.warp(block.timestamp + vault.timelock());
+
+        uint256[] memory indexes = _withdrawQueueIndexesWithout(market);
+
+        vm.prank(ALLOCATOR);
+        vault.updateWithdrawQueue(indexes);
+
+        assertFalse(vault.config(market).enabled, "market removed");
+        assertEq(market.expectedSupplyAssets(address(vault)), initialDeposit, "residual market balance kept");
+        assertEq(vault.lastTotalAssets(), initialDeposit, "removal preserves lastTotalAssets");
+        assertEq(erc4626Vault.totalAssets(), initialDeposit, "removal preserves totalAssets");
+
+        _setCap(market, type(uint184).max);
+
+        assertEq(vault.lastTotalAssets(), initialDeposit, "re-enable should not inflate lastTotalAssets");
+        assertEq(vault.lostAssets(), 0, "re-enable should clear preserved lostAssets overlap");
+        assertEq(erc4626Vault.totalAssets(), initialDeposit, "re-enable should not inflate totalAssets");
+
+        loanToken.setBalance(ONBEHALF, initialDeposit);
+
+        vm.prank(ONBEHALF);
+        uint256 victimShares = erc4626Vault.deposit(initialDeposit, ONBEHALF);
+
+        assertEq(victimShares, initialDeposit, "victim should receive full shares");
+
+        vm.prank(SUPPLIER);
+        uint256 supplierAssets = erc4626Vault.redeem(supplierShares, SUPPLIER, SUPPLIER);
+
+        assertEq(supplierAssets, initialDeposit, "supplier should only redeem their fair share");
+    }
+
+    function testReenableRemovedMarketWithPartialBadDebt() public {
+        uint256 initialDeposit = 100 ether;
+        address market = allMarkets[0];
+
+        loanToken.setBalance(SUPPLIER, initialDeposit);
+
+        vm.prank(SUPPLIER);
+        erc4626Vault.deposit(initialDeposit, SUPPLIER);
+
+        uint128 totalSupplyBefore = IMarket(market).totalSupply().assets;
+        _writeTotalSupplyAssets(market, totalSupplyBefore / 2);
+
+        _setCap(market, 0);
+
+        vm.prank(CURATOR);
+        vault.submitMarketRemoval(market);
+
+        vm.warp(block.timestamp + vault.timelock());
+
+        uint256[] memory indexes = _withdrawQueueIndexesWithout(market);
+
+        vm.prank(ALLOCATOR);
+        vault.updateWithdrawQueue(indexes);
+
+        erc4626Vault.deposit(0, ONBEHALF);
+
+        uint256 residual = market.expectedSupplyAssets(address(vault));
+        assertEq(residual, initialDeposit / 2, "expected half residual balance");
+
+        uint256 lostBefore = vault.lostAssets();
+        assertEq(lostBefore, initialDeposit, "all removed assets preserved as lost");
+
+        uint256 expectedLostAfter = lostBefore - residual;
+
+        _setCap(market, type(uint184).max);
+
+        assertEq(vault.lostAssets(), expectedLostAfter, "lostAssets only partially reduced by residual");
+        assertEq(erc4626Vault.totalAssets(), initialDeposit, "totalAssets should not inflate");
+        assertEq(vault.lastTotalAssets(), initialDeposit, "lastTotalAssets should not inflate");
     }
 
     function testSupplyCanCreateLostAssets() public {
