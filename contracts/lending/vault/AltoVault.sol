@@ -466,7 +466,7 @@ contract AltoVault is ERC4626, ERC20Permit, Ownable2Step, Multicall, IAltoVaultS
     }
 
     /// @inheritdoc IAltoVaultBase
-    function revokePendingGuardian() external onlyGuardianRole {
+    function revokePendingGuardian() external onlyOwner {
         delete pendingGuardian;
 
         emit RevokePendingGuardian(_msgSender());

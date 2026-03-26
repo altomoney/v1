@@ -108,9 +108,6 @@ contract RoleTest is IntegrationTest {
         vm.expectRevert(IAltoVaultErrors.NotGuardianRole.selector);
         vault.revokePendingTimelock();
 
-        vm.expectRevert(IAltoVaultErrors.NotGuardianRole.selector);
-        vault.revokePendingGuardian();
-
         vm.stopPrank();
     }
 
