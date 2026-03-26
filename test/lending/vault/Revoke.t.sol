@@ -99,8 +99,8 @@ contract RevokeTest is IntegrationTest {
         vm.warp(block.timestamp + elapsed);
 
         vm.expectEmit();
-        emit IAltoVaultEvents.RevokePendingGuardian(GUARDIAN);
-        vm.prank(GUARDIAN);
+        emit IAltoVaultEvents.RevokePendingGuardian(OWNER);
+        vm.prank(OWNER);
         vault.revokePendingGuardian();
 
         address newGuardian = vault.guardian();

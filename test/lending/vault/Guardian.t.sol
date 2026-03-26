@@ -92,18 +92,19 @@ contract GuardianTest is IntegrationTest {
         assertEq(pendingCap.validAt, 0, "pendingCap.validAt");
     }
 
-    function testGuardianRevokePendingGuardian(uint256 elapsed) public {
+    function testGuardianCannotRevokePendingGuardian(uint256 elapsed) public {
         elapsed = bound(elapsed, 0, TIMELOCK - 1);
 
         address guardian = makeAddr("Guardian2");
+
+        uint256 validAt = block.timestamp + TIMELOCK;
 
         vm.prank(OWNER);
         vault.submitGuardian(guardian);
 
         vm.warp(block.timestamp + elapsed);
 
-        vm.expectEmit(address(vault));
-        emit IAltoVaultEvents.RevokePendingGuardian(GUARDIAN);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, GUARDIAN));
         vm.prank(GUARDIAN);
         vault.revokePendingGuardian();
 
@@ -111,8 +112,8 @@ contract GuardianTest is IntegrationTest {
         PendingAddress memory pendingGuardian = vault.pendingGuardian();
 
         assertEq(newGuardian, GUARDIAN, "newGuardian");
-        assertEq(pendingGuardian.value, address(0), "pendingGuardian.value");
-        assertEq(pendingGuardian.validAt, 0, "pendingGuardian.validAt");
+        assertEq(pendingGuardian.value, address(guardian), "pendingGuardian.value");
+        assertEq(pendingGuardian.validAt, validAt, "pendingGuardian.validAt");
     }
 
     function testRevokePendingMarketRemoval(uint256 elapsed) public {

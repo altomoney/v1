@@ -290,8 +290,7 @@ interface IAltoVaultBase is IAltoVaultErrors, IAltoVaultEvents {
     function setSymbol(string memory newSymbol) external;
 
     /// @notice Submits a `newGuardian`.
-    /// @notice Warning: a malicious guardian could disrupt the vault's operation, and would have the power to revoke
-    /// any pending guardian.
+    /// @notice Warning: a malicious guardian could disrupt the vault's operation
     /// @dev In case there is no guardian, the guardian is set immediately.
     /// @dev Warning: Submitting a guardian will overwrite the current pending guardian.
     function submitGuardian(address newGuardian) external;
