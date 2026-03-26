@@ -261,6 +261,7 @@ interface IAltoVaultBase is IAltoVaultErrors, IAltoVaultEvents {
     /// @dev Warning: Reverts if a cap is already pending. Revoke the pending cap to overwrite it.
     /// @dev Warning: Reverts if a market removal is pending.
     /// @dev In case the new cap is lower than the current one, the cap is set immediately.
+    /// @dev Warning: FeeRecipient of market should never be the vault
     function submitCap(address market, uint256 newSupplyCap) external;
 
     /// @notice Accepts the pending cap for the market at `market`.

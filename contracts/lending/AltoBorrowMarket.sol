@@ -147,6 +147,8 @@ contract AltoBorrowMarket is AltoBaseMarket {
 
     /// @notice Setter of the fee recipient for the borrow market.
     /// @param _feeRecipient The new fee recipient
+    /// @dev FeeRecipient of borrow market should never be the AltoVault
+    ///      because their supply shares increase is not taken into account in AltoBalancesLib.expectedSupplyAssets
     function setFeeRecipient(address _feeRecipient) external override onlyOwner {
         uint256 protocolFeePercentage = IAltoLiquidationEngine(liquidationEngine).protocolFeePercentage();
         if (_feeRecipient == address(0) && (borrowOpeningFee() > 0 || protocolFeePercentage > 0 || interestFee > 0)) {
