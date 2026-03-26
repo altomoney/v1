@@ -413,7 +413,10 @@ contract AltoVault is ERC4626, ERC20Permit, Ownable2Step, Multicall, IAltoVaultS
             (uint256 supplyAssets, uint256 supplyShares,) = _accruedSupplyBalance(allocation.market);
             uint256 withdrawn = supplyAssets.zeroFloorSub(allocation.assets);
 
-            if (withdrawn > 0) {
+            // @dev the condition (allocation.assets == 0 && supplyShares != 0) is to handle the case
+            // where we want to withdraw all the dust supply shares but supplyAssets rounds down to 0
+            // in that case, allocation.assets will be 0 and supplyAssets will be 0. So, withdrawn will be 0
+            if (withdrawn > 0 || (allocation.assets == 0 && supplyShares != 0)) {
                 // Guarantees that unknown frontrunning donations can be withdrawn, in order to disable a market.
                 uint256 shares;
                 if (allocation.assets == 0) {
