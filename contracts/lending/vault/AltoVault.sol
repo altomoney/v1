@@ -811,7 +811,10 @@ contract AltoVault is ERC4626, ERC20Permit, Ownable2Step, Multicall, IAltoVaultS
             if (supplyCap == 0) continue;
 
             // Wrapped in try/catch so a paused or reverting market doesn't block deposits.
-            try IMarket(market).accrueInterest() {} catch {}
+            try IMarket(market).accrueInterest() {}
+                catch {
+                continue;
+            }
 
             (uint128 totalSupplyAssets, uint128 totalSupplyShares) = market.totalSupply();
             uint128 supplyShares = market.userSupplyShares(address(this));
