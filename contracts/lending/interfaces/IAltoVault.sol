@@ -243,6 +243,12 @@ interface IAltoVaultBase is IAltoVaultErrors, IAltoVaultEvents {
     /// @notice Stores the missing assets due to realized bad debt or forced market removal.
     /// @dev In order to cover those lost assets, it is advised to supply on behalf of address(1) on the vault
     /// (canonical method).
+    /// @dev lostAssets value is non decreasing.
+    /// @dev Even if underlying markets in vault accrues interest and earns real liquidity for vault, lostAssets don't decrease
+    /// @dev The organic recovery through interest is treated as new fee bearing yield.
+    ///      Due to this, the preferred way to cover lostAssets is to supply on behalf of address(1) on the vault
+    /// @dev The shares held address(1) also accrues interest and compounds as vault earns yield through underlying markets
+    ///      However, since the address(1) can't move shares, the interest earned on shares can help in future losses to the vault
     function lostAssets() external view returns (uint256);
 
     /// @notice Submits a `newTimelock`.
