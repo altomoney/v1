@@ -4,6 +4,7 @@ pragma solidity ^0.8.22;
 import {Script} from "forge-std/Script.sol";
 
 import {DeployAltoTestnet, AltoTestnetParams, AltoTestnetInput} from "@alto/deployments/testnet/DeployAltoTestnet.sol";
+import {TestnetMarketBatchReport} from "@alto/deployments/testnet/ITestnetMarketBatch.sol";
 import {console} from "forge-std/console.sol";
 
 uint256 constant DEPLOYMENT_ID_TO_LOAD = 0;
@@ -20,6 +21,7 @@ contract DeployAltoTestnetScript is Script {
 
         params = AltoTestnetParams({
             skipLendingDeployment: false,
+            skipRewardsDeployment: false,
             lzEndpoint: 0x6EDCE65403992e310A62460808c4b910D972f10f,
             wrappedNativeToken: address(1),
             uniswapV3NonFungiblePositionManager: 0x1238536071E1c677A632429e3655c799b22cDA52,
@@ -39,234 +41,123 @@ contract DeployAltoTestnetScript is Script {
         console.log("Deployment completed successfully");
     }
 
+    function _serializeMarketBatchJson(string memory objectKey, TestnetMarketBatchReport storage batch)
+        internal
+        returns (string memory j)
+    {
+        j = vm.serializeAddress(objectKey, "market", batch.market);
+        j = vm.serializeAddress(objectKey, "marketImplementation", batch.marketImplementation);
+        j = vm.serializeAddress(objectKey, "marketIrm", batch.marketIrm);
+        j = vm.serializeAddress(objectKey, "marketOracle", batch.marketOracle);
+        j = vm.serializeAddress(objectKey, "liquidationEngine", batch.liquidationEngine);
+    }
+
     function _writeInputToJson() internal {
-        string memory json = "";
-
-        // Build tokens JSON
         string memory tokensJson = "";
-        {
-            tokensJson = vm.serializeAddress("tokens", "alto", input.tokens.alto);
-            tokensJson = vm.serializeAddress("tokens", "dusd", input.tokens.dusd);
-            tokensJson = vm.serializeAddress("tokens", "usdc", input.tokens.usdc);
-            tokensJson = vm.serializeAddress("tokens", "weth", input.tokens.weth);
-            tokensJson = vm.serializeAddress("tokens", "wsteth", input.tokens.wsteth);
-            tokensJson = vm.serializeAddress("tokens", "reth", input.tokens.reth);
-            tokensJson = vm.serializeAddress("tokens", "meth", input.tokens.meth);
-            tokensJson = vm.serializeAddress("tokens", "tbtc", input.tokens.tbtc);
-            tokensJson = vm.serializeAddress("tokens", "wbtc", input.tokens.wbtc);
-            tokensJson = vm.serializeAddress("tokens", "cbbtc", input.tokens.cbbtc);
-            tokensJson = vm.serializeAddress("tokens", "susde", input.tokens.susde);
-        }
+        tokensJson = vm.serializeAddress("tokens", "alto", input.tokens.alto);
+        tokensJson = vm.serializeAddress("tokens", "dusd", input.tokens.dusd);
+        tokensJson = vm.serializeAddress("tokens", "usdc", input.tokens.usdc);
+        tokensJson = vm.serializeAddress("tokens", "weth", input.tokens.weth);
+        tokensJson = vm.serializeAddress("tokens", "wsteth", input.tokens.wsteth);
+        tokensJson = vm.serializeAddress("tokens", "reth", input.tokens.reth);
+        tokensJson = vm.serializeAddress("tokens", "meth", input.tokens.meth);
+        tokensJson = vm.serializeAddress("tokens", "tbtc", input.tokens.tbtc);
+        tokensJson = vm.serializeAddress("tokens", "wbtc", input.tokens.wbtc);
+        tokensJson = vm.serializeAddress("tokens", "cbbtc", input.tokens.cbbtc);
+        tokensJson = vm.serializeAddress("tokens", "susde", input.tokens.susde);
+        tokensJson = vm.serializeAddress("tokens", "paxg", input.tokens.paxg);
+        tokensJson = vm.serializeAddress("tokens", "syrupUsdc", input.tokens.syrupUsdc);
 
-        // Build weth market batch JSON
-        string memory wethMarketJson = "";
-        {
-            wethMarketJson = vm.serializeAddress("wethMarket", "market", input.contracts.wethMarketBatch.market);
-            wethMarketJson = vm.serializeAddress(
-                "wethMarket", "marketImplementation", input.contracts.wethMarketBatch.marketImplementation
-            );
-            wethMarketJson = vm.serializeAddress("wethMarket", "marketIrm", input.contracts.wethMarketBatch.marketIrm);
-            wethMarketJson =
-                vm.serializeAddress("wethMarket", "marketOracle", input.contracts.wethMarketBatch.marketOracle);
-            wethMarketJson = vm.serializeAddress(
-                "wethMarket", "liquidationEngine", input.contracts.wethMarketBatch.liquidationEngine
-            );
-        }
-
-        // Build wsteth market batch JSON
-        string memory wstethMarketJson = "";
-        {
-
-            wstethMarketJson = vm.serializeAddress("wstethMarket", "market", input.contracts.wstethMarketBatch.market);
-            wstethMarketJson = vm.serializeAddress(
-                "wstethMarket", "marketImplementation", input.contracts.wstethMarketBatch.marketImplementation
-            );
-            wstethMarketJson =
-                vm.serializeAddress("wstethMarket", "marketIrm", input.contracts.wstethMarketBatch.marketIrm);
-            wstethMarketJson =
-                vm.serializeAddress("wstethMarket", "marketOracle", input.contracts.wstethMarketBatch.marketOracle);
-            wstethMarketJson = vm.serializeAddress(
-                "wstethMarket", "liquidationEngine", input.contracts.wstethMarketBatch.liquidationEngine
-            );
-        }
-
-        // Build reth market batch JSON
-        string memory rethMarketJson = "";
-        {
-
-            rethMarketJson = vm.serializeAddress("rethMarket", "market", input.contracts.rethMarketBatch.market);
-            rethMarketJson = vm.serializeAddress(
-                "rethMarket", "marketImplementation", input.contracts.rethMarketBatch.marketImplementation
-            );
-            rethMarketJson = vm.serializeAddress("rethMarket", "marketIrm", input.contracts.rethMarketBatch.marketIrm);
-            rethMarketJson =
-                vm.serializeAddress("rethMarket", "marketOracle", input.contracts.rethMarketBatch.marketOracle);
-            rethMarketJson = vm.serializeAddress(
-                "rethMarket", "liquidationEngine", input.contracts.rethMarketBatch.liquidationEngine
-            );
-        }
-
-        // Build meth market batch JSON
-        string memory methMarketJson = "";
-        {
-
-            methMarketJson = vm.serializeAddress("methMarket", "market", input.contracts.methMarketBatch.market);
-            methMarketJson = vm.serializeAddress(
-                "methMarket", "marketImplementation", input.contracts.methMarketBatch.marketImplementation
-            );
-            methMarketJson = vm.serializeAddress("methMarket", "marketIrm", input.contracts.methMarketBatch.marketIrm);
-            methMarketJson =
-                vm.serializeAddress("methMarket", "marketOracle", input.contracts.methMarketBatch.marketOracle);
-            methMarketJson = vm.serializeAddress(
-                "methMarket", "liquidationEngine", input.contracts.methMarketBatch.liquidationEngine
-            );
-        }
-
-        // Build tbtc market batch JSON
-        string memory tbtcMarketJson = "";
-        {
-
-            tbtcMarketJson = vm.serializeAddress("tbtcMarket", "market", input.contracts.tbtcMarketBatch.market);
-            tbtcMarketJson = vm.serializeAddress(
-                "tbtcMarket", "marketImplementation", input.contracts.tbtcMarketBatch.marketImplementation
-            );
-            tbtcMarketJson = vm.serializeAddress("tbtcMarket", "marketIrm", input.contracts.tbtcMarketBatch.marketIrm);
-            tbtcMarketJson =
-                vm.serializeAddress("tbtcMarket", "marketOracle", input.contracts.tbtcMarketBatch.marketOracle);
-            tbtcMarketJson = vm.serializeAddress(
-                "tbtcMarket", "liquidationEngine", input.contracts.tbtcMarketBatch.liquidationEngine
-            );
-        }
-
-        // Build wbtc market batch JSON
-        string memory wbtcMarketJson = "";
-        {
-
-            wbtcMarketJson = vm.serializeAddress("wbtcMarket", "market", input.contracts.wbtcMarketBatch.market);
-            wbtcMarketJson = vm.serializeAddress(
-                "wbtcMarket", "marketImplementation", input.contracts.wbtcMarketBatch.marketImplementation
-            );
-            wbtcMarketJson = vm.serializeAddress("wbtcMarket", "marketIrm", input.contracts.wbtcMarketBatch.marketIrm);
-            wbtcMarketJson =
-                vm.serializeAddress("wbtcMarket", "marketOracle", input.contracts.wbtcMarketBatch.marketOracle);
-            wbtcMarketJson = vm.serializeAddress(
-                "wbtcMarket", "liquidationEngine", input.contracts.wbtcMarketBatch.liquidationEngine
-            );
-        }
-
-        // Build cbbtc market batch JSON
-        string memory cbbtcMarketJson = "";
-        {
-
-            cbbtcMarketJson = vm.serializeAddress("cbbtcMarket", "market", input.contracts.cbbtcMarketBatch.market);
-            cbbtcMarketJson = vm.serializeAddress(
-                "cbbtcMarket", "marketImplementation", input.contracts.cbbtcMarketBatch.marketImplementation
-            );
-            cbbtcMarketJson =
-                vm.serializeAddress("cbbtcMarket", "marketIrm", input.contracts.cbbtcMarketBatch.marketIrm);
-            cbbtcMarketJson =
-                vm.serializeAddress("cbbtcMarket", "marketOracle", input.contracts.cbbtcMarketBatch.marketOracle);
-            cbbtcMarketJson = vm.serializeAddress(
-                "cbbtcMarket", "liquidationEngine", input.contracts.cbbtcMarketBatch.liquidationEngine
-            );
-        }
-        // Build susde market batch JSON
-        string memory susdeMarketJson = "";
-        {
-
-            susdeMarketJson = vm.serializeAddress("susdeMarket", "market", input.contracts.susdeMarketBatch.market);
-            susdeMarketJson = vm.serializeAddress(
-                "susdeMarket", "marketImplementation", input.contracts.susdeMarketBatch.marketImplementation
-            );
-            susdeMarketJson =
-                vm.serializeAddress("susdeMarket", "marketIrm", input.contracts.susdeMarketBatch.marketIrm);
-            susdeMarketJson =
-                vm.serializeAddress("susdeMarket", "marketOracle", input.contracts.susdeMarketBatch.marketOracle);
-            susdeMarketJson = vm.serializeAddress(
-                "susdeMarket", "liquidationEngine", input.contracts.susdeMarketBatch.liquidationEngine
-            );
-        }
-
-        // Build usdc usm batch JSON
-        string memory usdcUsmBatchJson = "";
-        {
-            usdcUsmBatchJson = vm.serializeAddress("usdcUsmBatch", "dusdUsm", input.contracts.usdcUsmBatch.dusdUsm);
-            usdcUsmBatchJson = vm.serializeAddress(
-                "usdcUsmBatch", "dusdUsmImplementation", input.contracts.usdcUsmBatch.dusdUsmImplementation
-            );
-            usdcUsmBatchJson = vm.serializeAddress(
-                "usdcUsmBatch", "fixedPriceStrategy", input.contracts.usdcUsmBatch.fixedPriceStrategy
-            );
-            usdcUsmBatchJson =
-                vm.serializeAddress("usdcUsmBatch", "fixedFeeStrategy", input.contracts.usdcUsmBatch.fixedFeeStrategy);
-        }
-
-        // Build staking batch JSON
-        string memory stakingBatchJson = "";
-        {
-            stakingBatchJson =
-                vm.serializeAddress("stakingBatch", "stakingContract", input.contracts.stakingBatch.stakingContract);
-            stakingBatchJson = vm.serializeAddress(
-                "stakingBatch", "universalRewardsDistributor", input.contracts.stakingBatch.universalRewardsDistributor
-            );
-        }
-
-        // Build rewards batch JSON
-        string memory rewardsBatchJson = "";
-        {
-
-            rewardsBatchJson = vm.serializeAddress(
-                "rewardsBatch", "rewardsDistributor", input.contracts.rewardsBatch.rewardsDistributor
-            );
-            rewardsBatchJson =
-                vm.serializeAddress("rewardsBatch", "paymentOracles", input.contracts.rewardsBatch.paymentOracles);
-            rewardsBatchJson =
-                vm.serializeAddress("rewardsBatch", "rewardOracle", input.contracts.rewardsBatch.rewardOracle);
-            rewardsBatchJson =
-                vm.serializeAddress("rewardsBatch", "referralAdapter", input.contracts.rewardsBatch.referralAdapter);
-        }
-
-        // Build contracts JSON
         string memory contractsJson = "";
-        {
-            contractsJson = vm.serializeAddress("contracts", "altoMulticall", input.contracts.altoMulticall);
-            contractsJson = vm.serializeAddress("contracts", "multiTokenSender", input.contracts.multiTokenSender);
-            contractsJson = vm.serializeAddress("contracts", "mockSwapper", input.contracts.mockSwapper);
-            contractsJson = vm.serializeAddress("contracts", "altoLeverage", input.contracts.altoLeverage);
-            contractsJson = vm.serializeAddress("contracts", "bundler3", input.contracts.bundler3);
-            contractsJson = vm.serializeAddress("contracts", "altoAdapter", input.contracts.altoAdapter);
-            contractsJson = vm.serializeAddress("contracts", "marketRegistry", input.contracts.marketRegistry);
-            contractsJson = vm.serializeAddress("contracts", "usmRegistry", input.contracts.usmRegistry);
-            contractsJson = vm.serializeString("contracts", "wethMarketBatch", wethMarketJson);
-            contractsJson = vm.serializeString("contracts", "wstethMarketBatch", wstethMarketJson);
-            contractsJson = vm.serializeString("contracts", "rethMarketBatch", rethMarketJson);
-            contractsJson = vm.serializeString("contracts", "methMarketBatch", methMarketJson);
-            contractsJson = vm.serializeString("contracts", "tbtcMarketBatch", tbtcMarketJson);
-            contractsJson = vm.serializeString("contracts", "wbtcMarketBatch", wbtcMarketJson);
-            contractsJson = vm.serializeString("contracts", "cbbtcMarketBatch", cbbtcMarketJson);
-            contractsJson = vm.serializeString("contracts", "susdeMarketBatch", susdeMarketJson);
-            contractsJson = vm.serializeString("contracts", "usdcUsmBatch", usdcUsmBatchJson);
-            contractsJson = vm.serializeString("contracts", "stakingBatch", stakingBatchJson);
-            contractsJson = vm.serializeString("contracts", "rewardsBatch", rewardsBatchJson);
-        }
+        contractsJson = vm.serializeAddress("contracts", "altoMulticall", input.contracts.altoMulticall);
+        contractsJson = vm.serializeAddress("contracts", "multiTokenSender", input.contracts.multiTokenSender);
+        contractsJson = vm.serializeAddress("contracts", "mockSwapper", input.contracts.mockSwapper);
+        contractsJson = vm.serializeAddress("contracts", "altoLeverage", input.contracts.altoLeverage);
+        contractsJson = vm.serializeAddress("contracts", "bundler3", input.contracts.bundler3);
+        contractsJson = vm.serializeAddress("contracts", "altoAdapter", input.contracts.altoAdapter);
+        contractsJson = vm.serializeAddress("contracts", "marketRegistry", input.contracts.marketRegistry);
+        contractsJson = vm.serializeAddress("contracts", "usmRegistry", input.contracts.usmRegistry);
+        contractsJson = vm.serializeAddress("contracts", "altoVault", input.contracts.altoVault);
 
-        // Build final JSON
-        json = vm.serializeString("", "tokens", tokensJson);
+        contractsJson =
+            vm.serializeString("contracts", "wethMarketBatch", _serializeMarketBatchJson("wethMarket", input.contracts.wethMarketBatch));
+        contractsJson = vm.serializeString(
+            "contracts", "wstethMarketBatch", _serializeMarketBatchJson("wstethMarket", input.contracts.wstethMarketBatch)
+        );
+        contractsJson =
+            vm.serializeString("contracts", "rethMarketBatch", _serializeMarketBatchJson("rethMarket", input.contracts.rethMarketBatch));
+        contractsJson =
+            vm.serializeString("contracts", "methMarketBatch", _serializeMarketBatchJson("methMarket", input.contracts.methMarketBatch));
+        contractsJson =
+            vm.serializeString("contracts", "tbtcMarketBatch", _serializeMarketBatchJson("tbtcMarket", input.contracts.tbtcMarketBatch));
+        contractsJson =
+            vm.serializeString("contracts", "wbtcMarketBatch", _serializeMarketBatchJson("wbtcMarket", input.contracts.wbtcMarketBatch));
+        contractsJson = vm.serializeString(
+            "contracts", "cbbtcMarketBatch", _serializeMarketBatchJson("cbbtcMarket", input.contracts.cbbtcMarketBatch)
+        );
+        contractsJson = vm.serializeString(
+            "contracts", "susdeMarketBatch", _serializeMarketBatchJson("susdeMarket", input.contracts.susdeMarketBatch)
+        );
+        contractsJson = vm.serializeString(
+            "contracts",
+            "syrupUsdcBorrowMarketBatch",
+            _serializeMarketBatchJson("syrupUsdcBorrowMarket", input.contracts.syrupUsdcBorrowMarketBatch)
+        );
+        contractsJson = vm.serializeString(
+            "contracts",
+            "paxgBorrowMarketBatch",
+            _serializeMarketBatchJson("paxgBorrowMarket", input.contracts.paxgBorrowMarketBatch)
+        );
+        contractsJson = vm.serializeString(
+            "contracts",
+            "susdeMintMarketBatch",
+            _serializeMarketBatchJson("susdeMintMarket", input.contracts.susdeMintMarketBatch)
+        );
+        contractsJson = vm.serializeString(
+            "contracts",
+            "syrupUsdcMintMarketBatch",
+            _serializeMarketBatchJson("syrupUsdcMintMarket", input.contracts.syrupUsdcMintMarketBatch)
+        );
+
+        string memory usdcUsmBatchJson = "";
+        usdcUsmBatchJson = vm.serializeAddress("usdcUsmBatch", "dusdUsm", input.contracts.usdcUsmBatch.dusdUsm);
+        usdcUsmBatchJson = vm.serializeAddress(
+            "usdcUsmBatch", "dusdUsmImplementation", input.contracts.usdcUsmBatch.dusdUsmImplementation
+        );
+        usdcUsmBatchJson =
+            vm.serializeAddress("usdcUsmBatch", "fixedPriceStrategy", input.contracts.usdcUsmBatch.fixedPriceStrategy);
+        usdcUsmBatchJson =
+            vm.serializeAddress("usdcUsmBatch", "fixedFeeStrategy", input.contracts.usdcUsmBatch.fixedFeeStrategy);
+        contractsJson = vm.serializeString("contracts", "usdcUsmBatch", usdcUsmBatchJson);
+
+        string memory stakingBatchJson = "";
+        stakingBatchJson =
+            vm.serializeAddress("stakingBatch", "stakingContract", input.contracts.stakingBatch.stakingContract);
+        stakingBatchJson = vm.serializeAddress(
+            "stakingBatch", "universalRewardsDistributor", input.contracts.stakingBatch.universalRewardsDistributor
+        );
+        contractsJson = vm.serializeString("contracts", "stakingBatch", stakingBatchJson);
+
+        string memory rewardsBatchJson = "";
+        rewardsBatchJson = vm.serializeAddress(
+            "rewardsBatch", "rewardsDistributor", input.contracts.rewardsBatch.rewardsDistributor
+        );
+        rewardsBatchJson =
+            vm.serializeAddress("rewardsBatch", "paymentOracles", input.contracts.rewardsBatch.paymentOracles);
+        rewardsBatchJson = vm.serializeAddress("rewardsBatch", "rewardOracle", input.contracts.rewardsBatch.rewardOracle);
+        rewardsBatchJson =
+            vm.serializeAddress("rewardsBatch", "referralAdapter", input.contracts.rewardsBatch.referralAdapter);
+        contractsJson = vm.serializeString("contracts", "rewardsBatch", rewardsBatchJson);
+
+        string memory json = vm.serializeString("", "tokens", tokensJson);
         json = vm.serializeString("", "contracts", contractsJson);
-        {
-            // copying the JSON to avoid stack too deep error
-            string memory jsonDup = json;
-            // Create deployment folder and write addresses.json
-            string memory deploymentFolder =
-                string.concat(OUTPUT_DIR, "/testnet-", vm.toString(block.chainid), "-", vm.toString(block.timestamp));
-            string memory fileName = string.concat(deploymentFolder, "/addresses.json");
 
-            // Create the directory structure first
-            vm.createDir(deploymentFolder, true);
-            // Then write the file
-            vm.writeJson(jsonDup, fileName);
-            console.log("Deployment data saved to:", fileName);
-        }
+        string memory deploymentFolder =
+            string.concat(OUTPUT_DIR, "/testnet-", vm.toString(block.chainid), "-", vm.toString(block.timestamp));
+        string memory fileName = string.concat(deploymentFolder, "/addresses.json");
+        vm.createDir(deploymentFolder, true);
+        vm.writeJson(json, fileName);
+        console.log("Deployment data saved to:", fileName);
     }
 
     function _loadInputFromJson(string memory fileName) internal {
@@ -286,6 +177,8 @@ contract DeployAltoTestnetScript is Script {
         loadedInput.tokens.wbtc = vm.parseJsonAddress(json, ".tokens.wbtc");
         loadedInput.tokens.cbbtc = vm.parseJsonAddress(json, ".tokens.cbbtc");
         loadedInput.tokens.susde = vm.parseJsonAddress(json, ".tokens.susde");
+        loadedInput.tokens.paxg = vm.parseJsonAddress(json, ".tokens.paxg");
+        loadedInput.tokens.syrupUsdc = vm.parseJsonAddress(json, ".tokens.syrupUsdc");
 
         // Load contracts
         loadedInput.contracts.altoMulticall = vm.parseJsonAddress(json, ".contracts.altoMulticall");
@@ -296,6 +189,7 @@ contract DeployAltoTestnetScript is Script {
         loadedInput.contracts.altoAdapter = vm.parseJsonAddress(json, ".contracts.altoAdapter");
         loadedInput.contracts.marketRegistry = vm.parseJsonAddress(json, ".contracts.marketRegistry");
         loadedInput.contracts.usmRegistry = vm.parseJsonAddress(json, ".contracts.usmRegistry");
+        loadedInput.contracts.altoVault = vm.parseJsonAddress(json, ".contracts.altoVault");
 
         // Load weth market batch
         loadedInput.contracts.wethMarketBatch.market = vm.parseJsonAddress(json, ".contracts.wethMarketBatch.market");
@@ -386,6 +280,50 @@ contract DeployAltoTestnetScript is Script {
         loadedInput.contracts.susdeMarketBatch.liquidationEngine =
             vm.parseJsonAddress(json, ".contracts.susdeMarketBatch.liquidationEngine");
 
+        loadedInput.contracts.syrupUsdcBorrowMarketBatch.market =
+            vm.parseJsonAddress(json, ".contracts.syrupUsdcBorrowMarketBatch.market");
+        loadedInput.contracts.syrupUsdcBorrowMarketBatch.marketImplementation =
+            vm.parseJsonAddress(json, ".contracts.syrupUsdcBorrowMarketBatch.marketImplementation");
+        loadedInput.contracts.syrupUsdcBorrowMarketBatch.marketIrm =
+            vm.parseJsonAddress(json, ".contracts.syrupUsdcBorrowMarketBatch.marketIrm");
+        loadedInput.contracts.syrupUsdcBorrowMarketBatch.marketOracle =
+            vm.parseJsonAddress(json, ".contracts.syrupUsdcBorrowMarketBatch.marketOracle");
+        loadedInput.contracts.syrupUsdcBorrowMarketBatch.liquidationEngine =
+            vm.parseJsonAddress(json, ".contracts.syrupUsdcBorrowMarketBatch.liquidationEngine");
+
+        loadedInput.contracts.paxgBorrowMarketBatch.market =
+            vm.parseJsonAddress(json, ".contracts.paxgBorrowMarketBatch.market");
+        loadedInput.contracts.paxgBorrowMarketBatch.marketImplementation =
+            vm.parseJsonAddress(json, ".contracts.paxgBorrowMarketBatch.marketImplementation");
+        loadedInput.contracts.paxgBorrowMarketBatch.marketIrm =
+            vm.parseJsonAddress(json, ".contracts.paxgBorrowMarketBatch.marketIrm");
+        loadedInput.contracts.paxgBorrowMarketBatch.marketOracle =
+            vm.parseJsonAddress(json, ".contracts.paxgBorrowMarketBatch.marketOracle");
+        loadedInput.contracts.paxgBorrowMarketBatch.liquidationEngine =
+            vm.parseJsonAddress(json, ".contracts.paxgBorrowMarketBatch.liquidationEngine");
+
+        loadedInput.contracts.susdeMintMarketBatch.market =
+            vm.parseJsonAddress(json, ".contracts.susdeMintMarketBatch.market");
+        loadedInput.contracts.susdeMintMarketBatch.marketImplementation =
+            vm.parseJsonAddress(json, ".contracts.susdeMintMarketBatch.marketImplementation");
+        loadedInput.contracts.susdeMintMarketBatch.marketIrm =
+            vm.parseJsonAddress(json, ".contracts.susdeMintMarketBatch.marketIrm");
+        loadedInput.contracts.susdeMintMarketBatch.marketOracle =
+            vm.parseJsonAddress(json, ".contracts.susdeMintMarketBatch.marketOracle");
+        loadedInput.contracts.susdeMintMarketBatch.liquidationEngine =
+            vm.parseJsonAddress(json, ".contracts.susdeMintMarketBatch.liquidationEngine");
+
+        loadedInput.contracts.syrupUsdcMintMarketBatch.market =
+            vm.parseJsonAddress(json, ".contracts.syrupUsdcMintMarketBatch.market");
+        loadedInput.contracts.syrupUsdcMintMarketBatch.marketImplementation =
+            vm.parseJsonAddress(json, ".contracts.syrupUsdcMintMarketBatch.marketImplementation");
+        loadedInput.contracts.syrupUsdcMintMarketBatch.marketIrm =
+            vm.parseJsonAddress(json, ".contracts.syrupUsdcMintMarketBatch.marketIrm");
+        loadedInput.contracts.syrupUsdcMintMarketBatch.marketOracle =
+            vm.parseJsonAddress(json, ".contracts.syrupUsdcMintMarketBatch.marketOracle");
+        loadedInput.contracts.syrupUsdcMintMarketBatch.liquidationEngine =
+            vm.parseJsonAddress(json, ".contracts.syrupUsdcMintMarketBatch.liquidationEngine");
+
         // Load usdc usm batch
         loadedInput.contracts.usdcUsmBatch.dusdUsm = vm.parseJsonAddress(json, ".contracts.usdcUsmBatch.dusdUsm");
         loadedInput.contracts.usdcUsmBatch.dusdUsmImplementation =
@@ -446,6 +384,7 @@ contract DeployAltoTestnetScript is Script {
         _extractContractABI("AltoAdapter", abiFolder);
         _extractContractABI("MarketRegistry", abiFolder);
         _extractContractABI("UsmRegistry", abiFolder);
+        _extractContractABI("AltoVault", abiFolder);
 
         // Extract ABIs for market contracts
         _extractContractABI("DlbDcfPriorityLiquidationEngine", abiFolder);

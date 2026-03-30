@@ -61,6 +61,7 @@ import {IUsmRegistry} from "@alto/utils/interfaces/IUsmRegistry.sol";
 import {IMarketRegistry} from "@alto/utils/interfaces/IMarketRegistry.sol";
 import {MarketRegistry} from "@alto/utils/MarketRegistry.sol";
 import {UsmRegistry} from "@alto/utils/UsmRegistry.sol";
+import {AltoVault} from "@alto/lending/vault/AltoVault.sol";
 
 struct AltoTestnetInput {
     TestnetTokens tokens;
@@ -76,6 +77,7 @@ struct Contracts {
     address altoAdapter;
     address marketRegistry;
     address usmRegistry;
+    address altoVault;
     TestnetMarketBatchReport wethMarketBatch;
     TestnetMarketBatchReport wstethMarketBatch;
     TestnetMarketBatchReport rethMarketBatch;
@@ -84,6 +86,10 @@ struct Contracts {
     TestnetMarketBatchReport wbtcMarketBatch;
     TestnetMarketBatchReport cbbtcMarketBatch;
     TestnetMarketBatchReport susdeMarketBatch;
+    TestnetMarketBatchReport syrupUsdcBorrowMarketBatch;
+    TestnetMarketBatchReport paxgBorrowMarketBatch;
+    TestnetMarketBatchReport susdeMintMarketBatch;
+    TestnetMarketBatchReport syrupUsdcMintMarketBatch;
     TestnetStakingBatchReport stakingBatch;
     TestnetRewardsBatchReport rewardsBatch;
     TestnetUsmBatchReport usdcUsmBatch;
@@ -105,10 +111,13 @@ struct TestnetTokens {
     address wbtc;
     address cbbtc;
     address susde;
+    address paxg;
+    address syrupUsdc;
 }
 
 struct AltoTestnetParams {
     bool skipLendingDeployment;
+    bool skipRewardsDeployment;
     address lzEndpoint;
     address wrappedNativeToken;
     address uniswapV3NonFungiblePositionManager;
@@ -125,6 +134,7 @@ library DeployAltoTestnet {
         input = _deployMulticall(params, input);
         input = _deployLending(params, input);
         input = _deployRegistry(params, input);
+        input = _deployVault(params, input);
         input = _deployStaking(params, input);
         input = _deployRewards(params, input);
         input = _deployUniswapPools(params, input);
@@ -158,9 +168,14 @@ library DeployAltoTestnet {
         IMarketRegistry(input.contracts.marketRegistry).addMintMarket(input.contracts.rethMarketBatch.market);
         IMarketRegistry(input.contracts.marketRegistry).addMintMarket(input.contracts.methMarketBatch.market);
         IMarketRegistry(input.contracts.marketRegistry).addMintMarket(input.contracts.tbtcMarketBatch.market);
+        IMarketRegistry(input.contracts.marketRegistry).addMintMarket(input.contracts.susdeMintMarketBatch.market);
+        IMarketRegistry(input.contracts.marketRegistry).addMintMarket(input.contracts.syrupUsdcMintMarketBatch.market);
         IMarketRegistry(input.contracts.marketRegistry).addBorrowMarket(input.contracts.wbtcMarketBatch.market);
         IMarketRegistry(input.contracts.marketRegistry).addBorrowMarket(input.contracts.cbbtcMarketBatch.market);
         IMarketRegistry(input.contracts.marketRegistry).addBorrowMarket(input.contracts.susdeMarketBatch.market);
+        IMarketRegistry(input.contracts.marketRegistry)
+            .addBorrowMarket(input.contracts.syrupUsdcBorrowMarketBatch.market);
+        IMarketRegistry(input.contracts.marketRegistry).addBorrowMarket(input.contracts.paxgBorrowMarketBatch.market);
 
         input.contracts.usmRegistry = address(new UsmRegistry(params.deployer));
         IUsmRegistry(input.contracts.usmRegistry).addUsm(input.contracts.usdcUsmBatch.dusdUsm);
@@ -168,6 +183,20 @@ library DeployAltoTestnet {
         address contractOwner = input.contracts.altoMulticall;
         AltoOwnable2Step(input.contracts.marketRegistry).transferOwnershipSkip2Step(contractOwner);
         AltoOwnable2Step(input.contracts.usmRegistry).transferOwnershipSkip2Step(contractOwner);
+        return input;
+    }
+
+    function _deployVault(AltoTestnetParams memory params, AltoTestnetInput memory input)
+        internal
+        returns (AltoTestnetInput memory)
+    {
+        address contractOwner = input.contracts.altoMulticall;
+        input.contracts.altoVault = address(
+            new AltoVault(
+                contractOwner, 0, input.tokens.dusd, "Alto DUSD Vault", "Alto-DUSD", input.contracts.marketRegistry
+            )
+        );
+        AltoAdapter(payable(input.contracts.altoAdapter)).approveContract(input.contracts.altoVault);
         return input;
     }
 
@@ -368,6 +397,88 @@ library DeployAltoTestnet {
         AltoLeverage(input.contracts.altoLeverage).setMarket(input.contracts.susdeMarketBatch.market, true);
         AltoAdapter(payable(input.contracts.altoAdapter)).approveContract(input.contracts.susdeMarketBatch.market);
 
+        input.contracts.syrupUsdcBorrowMarketBatch = (new TestnetBorrowMarketBatch(
+                TestnetBorrowMarketBatchParams({
+                    owner: contractOwner,
+                    collateralToken: address(input.tokens.syrupUsdc),
+                    borrowToken: address(input.tokens.dusd),
+                    marketOraclePrice: 1.2 ether * LENDING_ORACLE_PRICE_PRECISION / 1 ether,
+                    maxLtv: 0.8 ether,
+                    supplyCapAssets: 0,
+                    leverageAddress: input.contracts.altoLeverage
+                })
+            ))
+        .getMarketReport();
+
+        AltoLeverage(input.contracts.altoLeverage).setMarket(input.contracts.syrupUsdcBorrowMarketBatch.market, true);
+        AltoAdapter(payable(input.contracts.altoAdapter))
+            .approveContract(input.contracts.syrupUsdcBorrowMarketBatch.market);
+
+        input.contracts.paxgBorrowMarketBatch = (new TestnetBorrowMarketBatch(
+                TestnetBorrowMarketBatchParams({
+                    owner: contractOwner,
+                    collateralToken: address(input.tokens.paxg),
+                    borrowToken: address(input.tokens.dusd),
+                    marketOraclePrice: 5000 * LENDING_ORACLE_PRICE_PRECISION,
+                    maxLtv: 0.75 ether,
+                    supplyCapAssets: 0,
+                    leverageAddress: input.contracts.altoLeverage
+                })
+            ))
+        .getMarketReport();
+
+        AltoLeverage(input.contracts.altoLeverage).setMarket(input.contracts.paxgBorrowMarketBatch.market, true);
+        AltoAdapter(payable(input.contracts.altoAdapter)).approveContract(input.contracts.paxgBorrowMarketBatch.market);
+
+        input.contracts.susdeMintMarketBatch = (new TestnetMintMarketBatch(
+                TestnetMintMarketBatchParams({
+                    owner: contractOwner,
+                    collateralToken: address(input.tokens.susde),
+                    borrowToken: address(input.tokens.dusd),
+                    marketOraclePrice: 1.2 ether * LENDING_ORACLE_PRICE_PRECISION / 1 ether,
+                    maxLtv: 0.8 ether,
+                    debtCeiling: 250_000 ether,
+                    fixedRateIrmInterestRate: 0.015 ether / uint256(365 days),
+                    leverageAddress: input.contracts.altoLeverage
+                })
+            ))
+        .getMarketReport();
+
+        AltoLeverage(input.contracts.altoLeverage).setMarket(input.contracts.susdeMintMarketBatch.market, true);
+        DUSD(input.tokens.dusd).setMinterStatus(input.contracts.susdeMintMarketBatch.market, true);
+        DUSD(input.tokens.dusd)
+            .setMinterCeiling(
+                input.contracts.susdeMintMarketBatch.market,
+                _calculateMinterCeiling(input.contracts.susdeMintMarketBatch)
+            );
+        DUSD(input.tokens.dusd).setBurnerStatus(input.contracts.susdeMintMarketBatch.market, true);
+        AltoAdapter(payable(input.contracts.altoAdapter)).approveContract(input.contracts.susdeMintMarketBatch.market);
+
+        input.contracts.syrupUsdcMintMarketBatch = (new TestnetMintMarketBatch(
+                TestnetMintMarketBatchParams({
+                    owner: contractOwner,
+                    collateralToken: address(input.tokens.syrupUsdc),
+                    borrowToken: address(input.tokens.dusd),
+                    marketOraclePrice: 1.2 ether * LENDING_ORACLE_PRICE_PRECISION / 1 ether,
+                    maxLtv: 0.8 ether,
+                    debtCeiling: 250_000 ether,
+                    fixedRateIrmInterestRate: 0.03 ether / uint256(365 days),
+                    leverageAddress: input.contracts.altoLeverage
+                })
+            ))
+        .getMarketReport();
+
+        AltoLeverage(input.contracts.altoLeverage).setMarket(input.contracts.syrupUsdcMintMarketBatch.market, true);
+        DUSD(input.tokens.dusd).setMinterStatus(input.contracts.syrupUsdcMintMarketBatch.market, true);
+        DUSD(input.tokens.dusd)
+            .setMinterCeiling(
+                input.contracts.syrupUsdcMintMarketBatch.market,
+                _calculateMinterCeiling(input.contracts.syrupUsdcMintMarketBatch)
+            );
+        DUSD(input.tokens.dusd).setBurnerStatus(input.contracts.syrupUsdcMintMarketBatch.market, true);
+        AltoAdapter(payable(input.contracts.altoAdapter))
+            .approveContract(input.contracts.syrupUsdcMintMarketBatch.market);
+
         AltoOwnable2Step(input.contracts.altoLeverage).transferOwnershipSkip2Step(contractOwner);
 
         input.contracts.usdcUsmBatch = (new TestnetUsmBatch(
@@ -447,6 +558,14 @@ library DeployAltoTestnet {
         ERC20Testnet(input.tokens.susde).mint(params.deployer, type(uint256).max);
         Ownable(input.tokens.susde).transferOwnership(contractOwner);
 
+        input.tokens.paxg = address(new ERC20Testnet("PAXG", 18, params.deployer));
+        ERC20Testnet(input.tokens.paxg).mint(params.deployer, type(uint256).max);
+        Ownable(input.tokens.paxg).transferOwnership(contractOwner);
+
+        input.tokens.syrupUsdc = address(new ERC20Testnet("SyrupUSDC", 18, params.deployer));
+        ERC20Testnet(input.tokens.syrupUsdc).mint(params.deployer, type(uint256).max);
+        Ownable(input.tokens.syrupUsdc).transferOwnership(contractOwner);
+
         // fund tokens to the multi token sender
         IERC20(input.tokens.dusd).safeTransfer(input.contracts.multiTokenSender, DUSD_TOKEN_SUPPLY_TO_CONTRACTS);
         IERC20(input.tokens.alto).safeTransfer(input.contracts.multiTokenSender, ALTO_TOKEN_TOTAL_SUPPLY / 4);
@@ -460,6 +579,8 @@ library DeployAltoTestnet {
         IERC20(input.tokens.wbtc).safeTransfer(input.contracts.multiTokenSender, MULTI_TOKEN_SENDER_MINT_TOKENS);
         IERC20(input.tokens.cbbtc).safeTransfer(input.contracts.multiTokenSender, MULTI_TOKEN_SENDER_MINT_TOKENS);
         IERC20(input.tokens.susde).safeTransfer(input.contracts.multiTokenSender, MULTI_TOKEN_SENDER_MINT_TOKENS);
+        IERC20(input.tokens.paxg).safeTransfer(input.contracts.multiTokenSender, MULTI_TOKEN_SENDER_MINT_TOKENS);
+        IERC20(input.tokens.syrupUsdc).safeTransfer(input.contracts.multiTokenSender, MULTI_TOKEN_SENDER_MINT_TOKENS);
 
         // fund tokens to swapper
         IERC20(input.tokens.dusd).safeTransfer(input.contracts.mockSwapper, DUSD_TOKEN_SUPPLY_TO_CONTRACTS);
@@ -473,6 +594,8 @@ library DeployAltoTestnet {
         IERC20(input.tokens.wbtc).safeTransfer(input.contracts.mockSwapper, MULTI_TOKEN_SENDER_MINT_TOKENS);
         IERC20(input.tokens.cbbtc).safeTransfer(input.contracts.mockSwapper, MULTI_TOKEN_SENDER_MINT_TOKENS);
         IERC20(input.tokens.susde).safeTransfer(input.contracts.mockSwapper, MULTI_TOKEN_SENDER_MINT_TOKENS);
+        IERC20(input.tokens.paxg).safeTransfer(input.contracts.mockSwapper, MULTI_TOKEN_SENDER_MINT_TOKENS);
+        IERC20(input.tokens.syrupUsdc).safeTransfer(input.contracts.mockSwapper, MULTI_TOKEN_SENDER_MINT_TOKENS);
 
         return input;
     }
@@ -481,6 +604,9 @@ library DeployAltoTestnet {
         internal
         returns (AltoTestnetInput memory)
     {
+        if (params.skipRewardsDeployment) {
+            return input;
+        }
         address contractOwner = input.contracts.altoMulticall;
         input.contracts.stakingBatch = (new TestnetStakingBatch(
                 TestnetStakingBatchParams({
@@ -503,6 +629,9 @@ library DeployAltoTestnet {
         internal
         returns (AltoTestnetInput memory)
     {
+        if (params.skipRewardsDeployment) {
+            return input;
+        }
         address[] memory paymentTokens = new address[](2);
         paymentTokens[0] = address(input.tokens.usdc);
         paymentTokens[1] = address(input.tokens.dusd);
