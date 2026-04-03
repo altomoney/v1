@@ -414,12 +414,14 @@ contract LostAssetsTest is IntegrationTest {
         assertEq(market.expectedSupplyAssets(address(vault)), initialDeposit, "residual market balance kept");
         assertEq(vault.lastTotalAssets(), initialDeposit, "removal preserves lastTotalAssets");
         assertEq(erc4626Vault.totalAssets(), initialDeposit, "removal preserves totalAssets");
+        assertEq(vault.quarantinedAssets(market), initialDeposit, "quarantined recorded at removal");
 
         _setCap(market, type(uint184).max);
 
         assertEq(vault.lastTotalAssets(), initialDeposit, "re-enable should not inflate lastTotalAssets");
         assertEq(vault.lostAssets(), 0, "re-enable should clear preserved lostAssets overlap");
         assertEq(erc4626Vault.totalAssets(), initialDeposit, "re-enable should not inflate totalAssets");
+        assertEq(vault.quarantinedAssets(market), 0, "quarantine cleared on re-enable");
 
         loanToken.setBalance(ONBEHALF, initialDeposit);
 
@@ -473,6 +475,164 @@ contract LostAssetsTest is IntegrationTest {
         assertEq(vault.lostAssets(), expectedLostAfter, "lostAssets only partially reduced by residual");
         assertEq(erc4626Vault.totalAssets(), initialDeposit, "totalAssets should not inflate");
         assertEq(vault.lastTotalAssets(), initialDeposit, "lastTotalAssets should not inflate");
+    }
+
+    /// @dev Verifies that re-enabling a force-removed market does NOT consume unrelated
+    /// lostAssets that originated from a different market's impairment.
+    function testReenablePreservesUnrelatedLostAssets() public {
+        address marketA = allMarkets[0];
+        address marketB = allMarkets[1];
+        _setCap(marketB, type(uint184).max);
+
+        address[] memory sq = new address[](3);
+        sq[0] = marketA;
+        sq[1] = marketB;
+        sq[2] = idleMarket;
+        vm.prank(ALLOCATOR);
+        vault.setSupplyQueue(sq);
+
+        loanToken.setBalance(SUPPLIER, 100 ether);
+        vm.prank(SUPPLIER);
+        erc4626Vault.deposit(100 ether, SUPPLIER);
+
+        MarketAllocation[] memory allocs = new MarketAllocation[](2);
+        allocs[0] = MarketAllocation(marketA, 50 ether);
+        allocs[1] = MarketAllocation(marketB, type(uint256).max);
+        vm.prank(ALLOCATOR);
+        vault.reallocate(allocs);
+
+        uint128 totalSupplyA = IMarket(marketA).totalSupply().assets;
+        _writeTotalSupplyAssets(marketA, totalSupplyA - 20 ether);
+        erc4626Vault.deposit(0, ONBEHALF);
+
+        uint256 unrelatedLoss = vault.lostAssets();
+        assertEq(unrelatedLoss, 20 ether, "unrelated lostAssets seeded");
+
+        _setCap(marketB, 0);
+        vm.prank(CURATOR);
+        vault.submitMarketRemoval(marketB);
+        vm.warp(block.timestamp + vault.timelock());
+
+        uint256 marketBBalance = marketB.expectedSupplyAssets(address(vault));
+        uint256[] memory indexes = _withdrawQueueIndexesWithout(marketB);
+        vm.prank(ALLOCATOR);
+        vault.updateWithdrawQueue(indexes);
+
+        assertEq(vault.quarantinedAssets(marketB), marketBBalance, "quarantined recorded");
+
+        erc4626Vault.deposit(0, ONBEHALF);
+        assertEq(vault.lostAssets(), unrelatedLoss + marketBBalance, "total lostAssets after removal");
+
+        _setCap(marketB, type(uint184).max);
+
+        assertEq(vault.lostAssets(), unrelatedLoss, "unrelated lostAssets preserved after re-enable");
+        assertEq(erc4626Vault.totalAssets(), 100 ether, "totalAssets unchanged");
+    }
+
+    /// @dev Same as above but the removed market accrues interest while quarantined.
+    /// The excess interest should increase lastTotalAssets without consuming unrelated losses.
+    function testReenableWithInterestPreservesUnrelatedLostAssets() public {
+        address marketA = allMarkets[0];
+        address marketB = allMarkets[1];
+        _setCap(marketB, type(uint184).max);
+
+        address[] memory sq = new address[](3);
+        sq[0] = marketA;
+        sq[1] = marketB;
+        sq[2] = idleMarket;
+        vm.prank(ALLOCATOR);
+        vault.setSupplyQueue(sq);
+
+        loanToken.setBalance(SUPPLIER, 100 ether);
+        vm.prank(SUPPLIER);
+        erc4626Vault.deposit(100 ether, SUPPLIER);
+
+        MarketAllocation[] memory allocs = new MarketAllocation[](2);
+        allocs[0] = MarketAllocation(marketA, 50 ether);
+        allocs[1] = MarketAllocation(marketB, type(uint256).max);
+        vm.prank(ALLOCATOR);
+        vault.reallocate(allocs);
+
+        uint128 totalSupplyA = IMarket(marketA).totalSupply().assets;
+        _writeTotalSupplyAssets(marketA, totalSupplyA - 20 ether);
+        erc4626Vault.deposit(0, ONBEHALF);
+        assertEq(vault.lostAssets(), 20 ether, "unrelated lostAssets seeded");
+
+        _setCap(marketB, 0);
+        vm.prank(CURATOR);
+        vault.submitMarketRemoval(marketB);
+        vm.warp(block.timestamp + vault.timelock());
+
+        uint256 marketBBalance = marketB.expectedSupplyAssets(address(vault));
+        uint256[] memory indexes = _withdrawQueueIndexesWithout(marketB);
+        vm.prank(ALLOCATOR);
+        vault.updateWithdrawQueue(indexes);
+        erc4626Vault.deposit(0, ONBEHALF);
+
+        uint128 totalSupplyB = IMarket(marketB).totalSupply().assets;
+        _writeTotalSupplyAssets(marketB, totalSupplyB + 30 ether);
+
+        uint256 newMarketBBalance = marketB.expectedSupplyAssets(address(vault));
+        uint256 interestDelta = newMarketBBalance - marketBBalance;
+
+        _setCap(marketB, type(uint184).max);
+
+        assertEq(vault.lostAssets(), 20 ether, "unrelated lostAssets preserved with interest");
+        assertEq(vault.lastTotalAssets(), 100 ether + interestDelta, "interest captured in lastTotalAssets");
+    }
+
+    /// @dev Verifies that when a removed market loses value while quarantined,
+    /// the additional loss stays in lostAssets alongside any unrelated losses.
+    function testReenableWithLossPreservesUnrelatedLostAssets() public {
+        address marketA = allMarkets[0];
+        address marketB = allMarkets[1];
+        _setCap(marketB, type(uint184).max);
+
+        address[] memory sq = new address[](3);
+        sq[0] = marketA;
+        sq[1] = marketB;
+        sq[2] = idleMarket;
+        vm.prank(ALLOCATOR);
+        vault.setSupplyQueue(sq);
+
+        loanToken.setBalance(SUPPLIER, 100 ether);
+        vm.prank(SUPPLIER);
+        erc4626Vault.deposit(100 ether, SUPPLIER);
+
+        MarketAllocation[] memory allocs = new MarketAllocation[](2);
+        allocs[0] = MarketAllocation(marketA, 50 ether);
+        allocs[1] = MarketAllocation(marketB, type(uint256).max);
+        vm.prank(ALLOCATOR);
+        vault.reallocate(allocs);
+
+        uint128 totalSupplyA = IMarket(marketA).totalSupply().assets;
+        _writeTotalSupplyAssets(marketA, totalSupplyA - 20 ether);
+        erc4626Vault.deposit(0, ONBEHALF);
+        assertEq(vault.lostAssets(), 20 ether, "unrelated lostAssets seeded");
+
+        _setCap(marketB, 0);
+        vm.prank(CURATOR);
+        vault.submitMarketRemoval(marketB);
+        vm.warp(block.timestamp + vault.timelock());
+
+        uint256 marketBBalance = marketB.expectedSupplyAssets(address(vault));
+        uint256[] memory indexes = _withdrawQueueIndexesWithout(marketB);
+        vm.prank(ALLOCATOR);
+        vault.updateWithdrawQueue(indexes);
+        erc4626Vault.deposit(0, ONBEHALF);
+
+        uint128 totalSupplyB = IMarket(marketB).totalSupply().assets;
+        uint256 marketBLoss = 10 ether;
+        _writeTotalSupplyAssets(marketB, totalSupplyB - uint128(marketBLoss));
+
+        _setCap(marketB, type(uint184).max);
+
+        assertEq(
+            vault.lostAssets(),
+            20 ether + marketBLoss,
+            "lostAssets includes unrelated loss + market B's quarantined loss"
+        );
+        assertEq(erc4626Vault.totalAssets(), 100 ether, "totalAssets unchanged");
     }
 
     function testSupplyCanCreateLostAssets() public {
