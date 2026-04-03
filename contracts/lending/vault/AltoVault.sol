@@ -108,6 +108,9 @@ contract AltoVault is ERC4626, ERC20Permit, Ownable2Step, Multicall, IAltoVaultS
     /// @inheritdoc IAltoVaultBase
     uint256 public lostAssets;
 
+    /// @inheritdoc IAltoVaultBase
+    mapping(address => uint256) public quarantinedAssets;
+
     /// @dev "Overrides" the ERC20's storage variable to be able to modify it.
     string private _name;
 
@@ -389,6 +392,10 @@ contract AltoVault is ERC4626, ERC20Permit, Ownable2Step, Multicall, IAltoVaultS
                     if (block.timestamp < config[market].removableAt) {
                         revert InvalidMarketRemovalTimelockNotElapsed(market);
                     }
+
+                    quarantinedAssets[market] = market.expectedSupplyAssets(address(this));
+
+                    emit SetQuarantinedAssets(market, quarantinedAssets[market]);
                 }
 
                 delete config[market];
@@ -780,7 +787,12 @@ contract AltoVault is ERC4626, ERC20Permit, Ownable2Step, Multicall, IAltoVaultS
             if (!marketConfig.enabled) {
                 (, , uint256 currentLostAssets) = _accruedFeeAndAssets();
                 uint256 liveAssets = market.expectedSupplyAssets(address(this));
-                uint256 recoveredAssets = UtilsLib.min(currentLostAssets, liveAssets);
+                uint256 quarantined = quarantinedAssets[market];
+                delete quarantinedAssets[market];
+
+                // Only recover the portion of lostAssets attributable to this specific market's
+                // quarantined balance, capped by its current live balance.
+                uint256 recoveredAssets = UtilsLib.min(currentLostAssets, UtilsLib.min(quarantined, liveAssets));
 
                 withdrawQueue.push(market);
 
@@ -788,8 +800,6 @@ contract AltoVault is ERC4626, ERC20Permit, Ownable2Step, Multicall, IAltoVaultS
 
                 marketConfig.enabled = true;
 
-                // Re-enabling a force-removed market can bring back assets already preserved through lostAssets.
-                // Only the delta above that preserved amount should increase accounting.
                 lostAssets = currentLostAssets - recoveredAssets;
                 emit UpdateLostAssets(lostAssets);
 

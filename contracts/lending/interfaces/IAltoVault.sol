@@ -143,6 +143,9 @@ interface IAltoVaultEvents {
     /// @notice Emitted when the vault's lostAssets is updated to `newLostAssets`.
     event UpdateLostAssets(uint256 newLostAssets);
 
+    /// @notice Emitted when a market is force-removed with residual supply, recording its quarantined asset balance.
+    event SetQuarantinedAssets(address indexed market, uint256 assets);
+
     /// @notice Emitted when the market is submitted for removal.
     event SubmitMarketRemoval(address indexed caller, address indexed market);
 
@@ -241,8 +244,9 @@ interface IAltoVaultBase is IAltoVaultErrors, IAltoVaultEvents {
     function lastTotalAssets() external view returns (uint256);
 
     /// @notice Stores the missing assets due to realized bad debt or forced market removal.
-    /// @dev `lostAssets` never decreases under the current implementation.
-    ///      Even as underlying markets accrue interest and restore real liquidity, `lostAssets` remains unchanged.
+    /// @dev `lostAssets` increases when real assets fall below the accounted base.
+    ///      It can decrease when a previously force-removed market is re-enabled and its quarantined assets
+    ///      are recognized back into live accounting.
     /// @dev Because `totalAssets = realTotalAssets + lostAssets`, any organic growth in `realTotalAssets` from
     ///      market interest increases `totalAssets` and is treated as new yield. Fees are assessed on this yield
     ///      even though the vault's real asset base may not have recovered to its pre-loss level. In effect,
@@ -254,6 +258,11 @@ interface IAltoVaultBase is IAltoVaultErrors, IAltoVaultEvents {
     ///      never redeem or transfer them. This acts as a built-in reserve against future losses, but also
     ///      permanently dilutes other shareholders' claim on future yield.
     function lostAssets() external view returns (uint256);
+
+    /// @notice Returns the amount of assets that were quarantined when a market was force-removed
+    /// with residual supply. Used on re-enable to isolate the recovery to this market's own
+    /// contribution to `lostAssets`, preventing unrelated losses from being consumed.
+    function quarantinedAssets(address market) external view returns (uint256);
 
     /// @notice Submits a `newTimelock`.
     /// @dev Warning: Reverts if a timelock is already pending. Revoke the pending timelock to overwrite it.
