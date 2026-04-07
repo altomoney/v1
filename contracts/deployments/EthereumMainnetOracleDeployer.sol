@@ -4,8 +4,7 @@ pragma solidity ^0.8.0;
 import {
     ChainlinkNode,
     ConversionDirection,
-    ERC4626RatioNode,
-    MultiplierNode
+    ERC4626RatioNode
 } from "@alto/oracles/interfaces/IModuleNode.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {AltoMultiChainlinkLendingOracle} from "@alto/oracles/AltoMultiChainlinkLendingOracle.sol";
@@ -32,8 +31,8 @@ import {
     ERC4626RatioChainlinkOracleSYRUPUSDC
 } from "@alto/oracles/AltoERC4626RatioChainlinkOracle/implementations/ERC4626RatioChainlinkOracleSYRUPUSDC.sol";
 import {
-    AltoChainlinkERC4626RatioMultiplierOracle
-} from "@alto/oracles/AltoChainlinkERC4626RatioMultiplierOracle/AltoChainlinkERC4626RatioMultiplierOracle.sol";
+    AltoCappedChainlinkOracle
+} from "@alto/oracles/AltoCappedChainlinkOracle/AltoCappedChainlinkOracle.sol";
 
 import {
     CHAINLINK_ETH_USD_PRICE_FEED,
@@ -285,30 +284,26 @@ library EthereumMainnetOracleDeployer {
     }
 
     function deployReusdOracle(address owner) internal returns (address) {
-        (, int256 initialRatio,,,) = AggregatorV3Interface(CHAINLINK_REUSD_USD_PRICE_FEED).latestRoundData(); // +1.5%
-        initialRatio = initialRatio * 1015 / 1000;
+        (, int256 nav,, uint256 navUpdatedAt,) =
+            AggregatorV3Interface(CHAINLINK_REUSD_USD_PRICE_FEED).latestRoundData();
+        require(nav > 0, "ReUSD: invalid NAV");
+        require(block.timestamp - navUpdatedAt <= 86700, "ReUSD: stale NAV");
+
+        ChainlinkNode memory chainlinkNode = ChainlinkNode({
+            feed: AggregatorV3Interface(CHAINLINK_REUSD_USD_PRICE_FEED),
+            direction: ConversionDirection.IN_TO_OUT, // reUSD to USD
+            stalePeriod: 86700, // 86700 seconds // todo: consult this with risk management team
+            inDecimals: 18, // reUSD decimals (adapter input unit)
+            outDecimals: 36, // scaling baked in: LENDING_ORACLE_PRICE_PRECISION + DUSD decimals - reUSD decimals
+            feedDecimals: 18
+        });
+
         ERC4626RatioNode memory erc4626RatioNode = ERC4626RatioNode({
-            initialRatio: uint256(initialRatio),
+            initialRatio: uint256(nav) * 1e18 * 1015 / 1000, // scaled to 36 dec, +1.5%
             initialTimestamp: block.timestamp,
             maxYearlyGrowthRatioWad: 0.185 ether // 18.5%
         });
 
-        ChainlinkNode memory chainlinkNode = ChainlinkNode({
-            feed: AggregatorV3Interface(CHAINLINK_REUSD_USD_PRICE_FEED),
-            direction: ConversionDirection.IN_TO_OUT, // REUSD to USD
-            stalePeriod: 86700, // 86700 seconds // todo: consult this with risk management team
-            inDecimals: 18, // REUSD decimals
-            outDecimals: 18, // the decimals of ratio used in erc4626RatioNode
-            feedDecimals: 18
-        });
-
-        MultiplierNode memory multiplierNode = MultiplierNode({multiplier: 10 ** 18});
-
-        // the decimals of reUSD is 18, so we want output in 36 decimals since decimals of DUSD is also 18
-        // the decimals of chainlink node output is 18, so we want to multiply by 10 ** 18 to get the price in 36 decimals
-        return
-            address(
-                new AltoChainlinkERC4626RatioMultiplierOracle(owner, chainlinkNode, erc4626RatioNode, multiplierNode)
-            );
+        return address(new AltoCappedChainlinkOracle(owner, chainlinkNode, erc4626RatioNode));
     }
 }

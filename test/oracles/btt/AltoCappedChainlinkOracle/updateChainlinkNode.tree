@@ -1,4 +1,4 @@
-AltoChainlinkERC4626RatioMultiplierOracle::updateChainlinkNode()
+AltoCappedChainlinkOracle::updateChainlinkNode()
 ├── given caller is not owner
 │   └── when _chainlinkNode is valid
 │       └── it should revert with OwnableUnauthorizedAccount

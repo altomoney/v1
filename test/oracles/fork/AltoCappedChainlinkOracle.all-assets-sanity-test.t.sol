@@ -5,7 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {EthereumMainnetOracleDeployer} from "@alto/deployments/EthereumMainnetOracleDeployer.sol";
 import {ILendingOracle} from "@alto/oracles/interfaces/IOracle.sol";
 
-contract AltoChainlinkERC4626RatioMultiplierOracleGetPriceForkTest is Test {
+contract AltoCappedChainlinkOracleGetPriceForkTest is Test {
     address internal OWNER = makeAddr("Alto-multisig");
 
     string internal rpcUrl = vm.rpcUrl("ethereum");
@@ -16,6 +16,10 @@ contract AltoChainlinkERC4626RatioMultiplierOracleGetPriceForkTest is Test {
         ILendingOracle oracle = ILendingOracle(EthereumMainnetOracleDeployer.deployReusdOracle(OWNER));
         uint256 price = oracle.getPrice();
 
-        assertEq(price, 1067443054115740032000000000000000000, "Invalid price from the REUSD Oracle");
+        // NAV at block 24698135 = 1067443054115740032 (18 dec)
+        // readChainlinkFeed(1e18, {in=18, out=36, feed=18}) = NAV * 1e18 (36 dec)
+        // initialRatio = NAV * 1e18 * 1015 / 1000 > NAV * 1e18 → cap does not bind
+        // Expected: NAV * 1e18 = 1067443054115740032 * 1e18
+        assertEq(price, 1067443054115740032000000000000000000, "Exact price from the REUSD Oracle");
     }
 }

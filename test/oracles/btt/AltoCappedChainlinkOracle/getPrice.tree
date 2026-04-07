@@ -1,0 +1,13 @@
+AltoCappedChainlinkOracle::getPrice()
+├── when chainlink feed is stale
+│   └── it should revert with ModuleChainlinkInvalidRate
+├── when chainlink price is zero
+│   └── it should revert with ModuleChainlinkInvalidRate
+├── when chainlink price is within ERC4626 max allowed growth
+│   └── it should return the price without capping
+├── when chainlink price exceeds ERC4626 max allowed growth
+│   └── it should return the capped price
+├── when outDecimals is 36 and price is within cap
+│   └── it should return nav scaled to 36 decimals
+└── when outDecimals is 36 and cap binds
+    └── it should return the capped price in 36 decimals

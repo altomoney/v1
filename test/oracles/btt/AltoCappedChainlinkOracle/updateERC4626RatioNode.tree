@@ -1,4 +1,4 @@
-AltoChainlinkERC4626RatioMultiplierOracle::updateERC4626RatioNode()
+AltoCappedChainlinkOracle::updateERC4626RatioNode()
 ├── given caller is not owner
 │   └── when _erc4626RatioNode is valid
 │       └── it should revert with OwnableUnauthorizedAccount

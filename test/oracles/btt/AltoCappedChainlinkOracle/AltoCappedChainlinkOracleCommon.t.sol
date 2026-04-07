@@ -2,19 +2,12 @@
 pragma solidity ^0.8.22;
 
 import {Test} from "forge-std/Test.sol";
-import {
-    AltoChainlinkERC4626RatioMultiplierOracle
-} from "@alto/oracles/AltoChainlinkERC4626RatioMultiplierOracle/AltoChainlinkERC4626RatioMultiplierOracle.sol";
+import {AltoCappedChainlinkOracle} from "@alto/oracles/AltoCappedChainlinkOracle/AltoCappedChainlinkOracle.sol";
 import {MockChainlinkFeed} from "../mocks/MockChainlinkFeed.sol";
-import {
-    ERC4626RatioNode,
-    ChainlinkNode,
-    MultiplierNode,
-    ConversionDirection
-} from "@alto/oracles/interfaces/IModuleNode.sol";
+import {ERC4626RatioNode, ChainlinkNode, ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
-contract AltoChainlinkERC4626RatioMultiplierOracleCommon is Test {
+contract AltoCappedChainlinkOracleCommon is Test {
     address constant OWNER = address(0x1);
     address constant NON_OWNER = address(0x2);
 
@@ -24,7 +17,6 @@ contract AltoChainlinkERC4626RatioMultiplierOracleCommon is Test {
     uint32 constant DEFAULT_STALE_PERIOD = 1 days;
     uint256 constant DEFAULT_INITIAL_RATIO = 1 ether;
     uint256 constant DEFAULT_MAX_YEARLY_GROWTH_RATIO_WAD = 0.1 ether; // 10% yearly growth
-    uint256 constant DEFAULT_MULTIPLIER = 10;
 
     function setUp() public virtual {
         mockFeed1 = new MockChainlinkFeed();
@@ -78,17 +70,7 @@ contract AltoChainlinkERC4626RatioMultiplierOracleCommon is Test {
         return _createValidERC4626RatioNode(DEFAULT_INITIAL_RATIO, pastTimestamp, DEFAULT_MAX_YEARLY_GROWTH_RATIO_WAD);
     }
 
-    function _createValidMultiplierNode() internal pure returns (MultiplierNode memory) {
-        return MultiplierNode({multiplier: DEFAULT_MULTIPLIER});
-    }
-
-    function _createValidMultiplierNode(uint256 multiplier) internal pure returns (MultiplierNode memory) {
-        return MultiplierNode({multiplier: multiplier});
-    }
-
-    function _deployOracle() internal returns (AltoChainlinkERC4626RatioMultiplierOracle) {
-        return new AltoChainlinkERC4626RatioMultiplierOracle(
-            OWNER, _createValidChainlinkNode(18, 18), _createValidERC4626RatioNode(), _createValidMultiplierNode()
-        );
+    function _deployOracle() internal returns (AltoCappedChainlinkOracle) {
+        return new AltoCappedChainlinkOracle(OWNER, _createValidChainlinkNode(18, 18), _createValidERC4626RatioNode());
     }
 }

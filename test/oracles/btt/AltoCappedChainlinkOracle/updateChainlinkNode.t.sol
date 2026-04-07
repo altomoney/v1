@@ -1,22 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
-import {AltoChainlinkERC4626RatioMultiplierOracleCommon} from
-    "./AltoChainlinkERC4626RatioMultiplierOracleCommon.t.sol";
-import {
-    AltoChainlinkERC4626RatioMultiplierOracle
-} from "@alto/oracles/AltoChainlinkERC4626RatioMultiplierOracle/AltoChainlinkERC4626RatioMultiplierOracle.sol";
+import {AltoCappedChainlinkOracleCommon} from "./AltoCappedChainlinkOracleCommon.t.sol";
+import {AltoCappedChainlinkOracle} from "@alto/oracles/AltoCappedChainlinkOracle/AltoCappedChainlinkOracle.sol";
 import {ModuleChainlink} from "@alto/oracles/modules/ModuleChainlink.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {IAltoChainlinkERC4626RatioMultiplierOracleEvents} from
-    "@alto/oracles/interfaces/IAltoChainlinkERC4626RatioMultiplierOracle.sol";
+import {IAltoCappedChainlinkOracleEvents} from "@alto/oracles/interfaces/IAltoCappedChainlinkOracle.sol";
 import {ChainlinkNode, ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
-contract AltoChainlinkERC4626RatioMultiplierOracleUpdateChainlinkNode is
-    AltoChainlinkERC4626RatioMultiplierOracleCommon
-{
-    AltoChainlinkERC4626RatioMultiplierOracle oracle;
+contract AltoCappedChainlinkOracleUpdateChainlinkNode is AltoCappedChainlinkOracleCommon {
+    AltoCappedChainlinkOracle oracle;
 
     function setUp() public override {
         super.setUp();
@@ -121,7 +115,7 @@ contract AltoChainlinkERC4626RatioMultiplierOracleUpdateChainlinkNode is
         ChainlinkNode memory newNode = _createValidChainlinkNode2(10, 18);
 
         vm.expectEmit(true, true, true, true);
-        emit IAltoChainlinkERC4626RatioMultiplierOracleEvents.SetChainlinkNode(oldNode, newNode);
+        emit IAltoCappedChainlinkOracleEvents.SetChainlinkNode(oldNode, newNode);
 
         vm.prank(OWNER);
         oracle.updateChainlinkNode(newNode);
