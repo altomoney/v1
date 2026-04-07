@@ -16,6 +16,6 @@ contract AltoChainlinkERC4626RatioMultiplierOracleGetPriceForkTest is Test {
         ILendingOracle oracle = ILendingOracle(EthereumMainnetOracleDeployer.deployReusdOracle(OWNER));
         uint256 price = oracle.getPrice();
 
-        assertEq(price, 1067443054115740032000000000000000000, "Invalid price from the REUSD Oracle");
+        assertEq(price, 1067443054115740032000000000000000000, "Invalid price from the reUSD Oracle");
     }
 }

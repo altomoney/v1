@@ -34,7 +34,7 @@ import {
 import {
     AltoChainlinkERC4626RatioMultiplierOracle
 } from "@alto/oracles/AltoChainlinkERC4626RatioMultiplierOracle/AltoChainlinkERC4626RatioMultiplierOracle.sol";
-import {ISharePriceCalculator} from "@alto/deployments/interfaces/ISharePriceCalculator.sol";
+
 import {
     CHAINLINK_ETH_USD_PRICE_FEED,
     CHAINLINK_BTC_USD_PRICE_FEED,
@@ -47,8 +47,7 @@ import {
     RETH_MAINNET,
     METH_STAKING_MAINNET,
     SUSDE_MAINNET,
-    SYRUPUSDC_MAINNET,
-    REUSD_SHARE_PRICE_CALCULATOR_MAINNET
+    SYRUPUSDC_MAINNET
 } from "@alto/deployments/ethereum-mainnet/Constants.sol";
 
 enum EthereumMainnetLendingOracleAsset {
@@ -228,10 +227,10 @@ library EthereumMainnetOracleDeployer {
     }
 
     function deploySusdeOracle(address owner) internal returns (address) {
-        uint256 rethPerToken = IERC4626(SUSDE_MAINNET).convertToAssets(1 ether) * 1015 / 1000; // +1.5%
+        uint256 susdePerToken = IERC4626(SUSDE_MAINNET).convertToAssets(1 ether) * 1015 / 1000; // +1.5%
 
         ERC4626RatioNode memory erc4626RatioNode = ERC4626RatioNode({
-            initialRatio: rethPerToken,
+            initialRatio: susdePerToken,
             initialTimestamp: block.timestamp,
             maxYearlyGrowthRatioWad: 0.185 ether // 18.5%
         });
@@ -286,18 +285,22 @@ library EthereumMainnetOracleDeployer {
     }
 
     function deployReusdOracle(address owner) internal returns (address) {
-        uint256 initialRatio = ISharePriceCalculator(REUSD_SHARE_PRICE_CALCULATOR_MAINNET).getSharePrice() * 1015 / 1000; // +1.5%
+        (, int256 initialRatio,, uint256 navUpdatedAt,) =
+            AggregatorV3Interface(CHAINLINK_REUSD_USD_PRICE_FEED).latestRoundData();
+        require(initialRatio > 0, "reUSD: invalid NAV");
+        require(block.timestamp - navUpdatedAt <= 86700, "reUSD: stale NAV");
+        initialRatio = initialRatio * 1015 / 1000; // +1.5%
         ERC4626RatioNode memory erc4626RatioNode = ERC4626RatioNode({
-            initialRatio: initialRatio,
+            initialRatio: uint256(initialRatio),
             initialTimestamp: block.timestamp,
             maxYearlyGrowthRatioWad: 0.185 ether // 18.5%
         });
 
         ChainlinkNode memory chainlinkNode = ChainlinkNode({
             feed: AggregatorV3Interface(CHAINLINK_REUSD_USD_PRICE_FEED),
-            direction: ConversionDirection.IN_TO_OUT, // REUSD to USD
-            stalePeriod: 86700, // 86700 seconds // todo: consult this with risk management team
-            inDecimals: 18, // REUSD decimals
+            direction: ConversionDirection.IN_TO_OUT, // reUSD to USD
+            stalePeriod: 86700, // 86700 seconds
+            inDecimals: 18, // reUSD decimals
             outDecimals: 18, // the decimals of ratio used in erc4626RatioNode
             feedDecimals: 18
         });
