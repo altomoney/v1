@@ -34,7 +34,7 @@ import {
 import {
     AltoChainlinkERC4626RatioMultiplierOracle
 } from "@alto/oracles/AltoChainlinkERC4626RatioMultiplierOracle/AltoChainlinkERC4626RatioMultiplierOracle.sol";
-import {ISharePriceCalculator} from "@alto/deployments/interfaces/ISharePriceCalculator.sol";
+
 import {
     CHAINLINK_ETH_USD_PRICE_FEED,
     CHAINLINK_BTC_USD_PRICE_FEED,
@@ -47,8 +47,7 @@ import {
     RETH_MAINNET,
     METH_STAKING_MAINNET,
     SUSDE_MAINNET,
-    SYRUPUSDC_MAINNET,
-    REUSD_SHARE_PRICE_CALCULATOR_MAINNET
+    SYRUPUSDC_MAINNET
 } from "@alto/deployments/ethereum-mainnet/Constants.sol";
 
 enum EthereumMainnetLendingOracleAsset {
@@ -286,9 +285,10 @@ library EthereumMainnetOracleDeployer {
     }
 
     function deployReusdOracle(address owner) internal returns (address) {
-        uint256 initialRatio = ISharePriceCalculator(REUSD_SHARE_PRICE_CALCULATOR_MAINNET).getSharePrice() * 1015 / 1000; // +1.5%
+        (, int256 initialRatio,,,) = AggregatorV3Interface(CHAINLINK_REUSD_USD_PRICE_FEED).latestRoundData(); // +1.5%
+        initialRatio = initialRatio * 1015 / 1000;
         ERC4626RatioNode memory erc4626RatioNode = ERC4626RatioNode({
-            initialRatio: initialRatio,
+            initialRatio: uint256(initialRatio),
             initialTimestamp: block.timestamp,
             maxYearlyGrowthRatioWad: 0.185 ether // 18.5%
         });
