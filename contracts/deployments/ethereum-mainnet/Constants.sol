@@ -26,8 +26,6 @@ address constant USDC_MAINNET = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
 address constant SYRUPUSDC_MAINNET = 0x80ac24aA929eaF5013f6436cdA2a7ba190f5Cc0b;
 // PAXG on mainnet
 address constant PAXG_MAINNET = 0x45804880De22913dAFE09f4980848ECE6EcbAf78;
-// REUSD Share Price Calculator on mainnet
-address constant REUSD_SHARE_PRICE_CALCULATOR_MAINNET = 0xd1D104a7515989ac82F1AFDa15a23650411b05B8;
 
 // Chainlink feeds
 // Standard Chainlink ETH/USD feed
