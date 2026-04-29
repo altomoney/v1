@@ -8,6 +8,15 @@ struct SwapParams {
     bytes swapData;
 }
 
+struct SwapParamsV1 {
+    /// @notice the minimum amount of buyToken to buy
+    uint256 minAmountOut;
+    /// @notice  swap target contract address
+    address swapTarget;
+    /// @notice the swap calldata to pass to the swap target contract
+    bytes swapData;
+}
+
 interface IAltoLeverageSwapperErrors {
     /// @notice error thrown when the sender is not whitelisted
     error AltoLeverageSwapperSenderNotValid(address sender);
@@ -20,6 +29,11 @@ interface IAltoLeverageSwapperErrors {
 
     /// @notice error thrown when the minimum expected buyToken balance received is not met
     error AltoLeverageSwapperMinAmountOutNotMet(uint256 minAmountOut, uint256 buyTokenBalanceReceived);
+}
+
+interface IAltoLeverageSwapperV1Errors is IAltoLeverageSwapperErrors {
+    /// @notice error thrown when the swap target is invalid
+    error AltoLeverageSwapperInvalidSwapTarget(address swapTarget);
 }
 
 interface IAltoLeverageSwapperEvents {
@@ -36,6 +50,29 @@ interface IAltoLeverageSwapperEvents {
     /// @param amountLeftover the amount of sellToken that was leftover
     event Swap(
         address indexed sellToken, address indexed buyToken, uint256 amountIn, uint256 amountOut, uint256 amountLeftover
+    );
+}
+
+interface IAltoLeverageSwapperV1Events is IAltoLeverageSwapperEvents {
+    /// @notice event emitted when the valid swap target is set or unset
+    /// @param swapTarget the swap target contract address
+    /// @param isValid true if the swap target is valid, false otherwise
+    event SetValidSwapTarget(address indexed swapTarget, bool isValid);
+
+    /// @notice event emitted when the swap is executed
+    /// @param swapTarget the swap target contract address
+    /// @param sellToken the token that was sold
+    /// @param buyToken the token that was bought
+    /// @param amountIn the amount of sellToken that was approved for the swap
+    /// @param amountOut the amount of buyToken that was bought
+    /// @param amountLeftover the amount of sellToken that was leftover
+    event Swap(
+        address indexed swapTarget,
+        address indexed sellToken,
+        address indexed buyToken,
+        uint256 amountIn,
+        uint256 amountOut,
+        uint256 amountLeftover
     );
 }
 
@@ -61,4 +98,16 @@ interface IAltoLeverageSwapper is IAltoLeverageSwapperErrors, IAltoLeverageSwapp
         external
         payable
         returns (uint256 amountOut);
+}
+
+interface IAltoLeverageSwapperV1 is IAltoLeverageSwapper, IAltoLeverageSwapperV1Errors, IAltoLeverageSwapperV1Events {
+    /// @notice returns if a swap target is valid
+    /// @param _swapTarget the swap target contract address
+    /// @return isValid true if the swap target is valid, false otherwise
+    function isValidSwapTarget(address _swapTarget) external view returns (bool);
+
+    /// @notice sets if a swap target is valid
+    /// @param _swapTarget the swap target contract address
+    /// @param _isValid true if the swap target is valid, false otherwise
+    function setValidSwapTarget(address _swapTarget, bool _isValid) external;
 }
