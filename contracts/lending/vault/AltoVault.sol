@@ -23,7 +23,7 @@ import {AltoBalancesLib} from "@alto/lending/libraries/AltoBalancesLib.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {Multicall} from "@openzeppelin/contracts/utils/Multicall.sol";
-import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import {AltoOwnable2Step, Ownable} from "@alto/utils/AltoOwnable2Step.sol";
 import {ERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 import {
     IERC20,
@@ -41,7 +41,7 @@ import {UtilsLib} from "@bundler3/lib/morpho-blue/src/libraries/UtilsLib.sol";
 /// @author Adapted from Morpho Labs' MetaMorphoV1.1 (https://github.com/morpho-org/metamorpho-v1.1/blob/main/src/MetaMorphoV1_1.sol)
 /// @custom:contact security@altofoundation.org
 /// @notice ERC4626 compliant vault allowing users to deposit assets to AltoBorrowMarkets
-contract AltoVault is ERC4626, ERC20Permit, Ownable2Step, Multicall, IAltoVaultStaticTypes {
+contract AltoVault is ERC4626, ERC20Permit, AltoOwnable2Step, Multicall, IAltoVaultStaticTypes {
     using Math for uint256;
     using UtilsLib for uint256;
     using SafeCast for uint256;
@@ -785,7 +785,7 @@ contract AltoVault is ERC4626, ERC20Permit, Ownable2Step, Multicall, IAltoVaultS
 
         if (supplyCap > 0) {
             if (!marketConfig.enabled) {
-                (, , uint256 currentLostAssets) = _accruedFeeAndAssets();
+                (,, uint256 currentLostAssets) = _accruedFeeAndAssets();
                 uint256 liveAssets = market.expectedSupplyAssets(address(this));
                 uint256 quarantined = quarantinedAssets[market];
                 delete quarantinedAssets[market];
@@ -830,7 +830,7 @@ contract AltoVault is ERC4626, ERC20Permit, Ownable2Step, Multicall, IAltoVaultS
 
             // Wrapped in try/catch so a paused or reverting market doesn't block deposits.
             try IMarket(market).accrueInterest() {}
-                catch {
+            catch {
                 continue;
             }
 
