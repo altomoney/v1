@@ -23,6 +23,7 @@ import {LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.s
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Bundler3} from "@morpho-org/bundler3/Bundler3.sol";
 import {AltoAdapter} from "@alto/utils/AltoAdapter.sol";
+import {AdapterContractApproval} from "@alto/utils/AdapterContractApproval.sol";
 
 import {
     TestnetRewardsBatch,
@@ -44,7 +45,7 @@ import {
 
 import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {AltoMulticallTestnet} from "@alto/deployments/testnet/contracts/AltoMulticallTestnet.sol";
-import {getMulticallOwnerAddresses} from "@alto/deployments/testnet/Constants.sol";
+import {getMulticallOwnerAddresses, getMerkleManagerUpdaters} from "@alto/deployments/testnet/Constants.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {
     INonfungiblePositionManager,
@@ -118,6 +119,7 @@ struct TestnetTokens {
 struct AltoTestnetParams {
     bool skipLendingDeployment;
     bool skipRewardsDeployment;
+    bool deployVaultOnly;
     address lzEndpoint;
     address wrappedNativeToken;
     address uniswapV3NonFungiblePositionManager;
@@ -131,6 +133,10 @@ library DeployAltoTestnet {
         internal
         returns (AltoTestnetInput memory)
     {
+        if (params.deployVaultOnly) {
+            return _deployVault(params, input);
+        }
+
         input = _deployMulticall(params, input);
         input = _deployLending(params, input);
         input = _deployRegistry(params, input);
@@ -190,13 +196,64 @@ library DeployAltoTestnet {
         internal
         returns (AltoTestnetInput memory)
     {
-        address contractOwner = input.contracts.altoMulticall;
-        input.contracts.altoVault = address(
-            new AltoVault(
-                contractOwner, 0, input.tokens.dusd, "Alto DUSD Vault", "Alto-DUSD", input.contracts.marketRegistry
-            )
+        // Deploy with deployer as initial owner so configuration calls can be made directly.
+        AltoVault vault = new AltoVault(
+            params.deployer, 0, input.tokens.dusd, "Alto DUSD Vault", "Alto-DUSD", input.contracts.marketRegistry
         );
-        AltoAdapter(payable(input.contracts.altoAdapter)).approveContract(input.contracts.altoVault);
+        input.contracts.altoVault = address(vault);
+
+        address[] memory merkleUpdaters = getMerkleManagerUpdaters();
+
+        // Roles
+        vault.setCurator(params.deployer);
+        vault.submitGuardian(params.deployer);
+        vault.setIsAllocator(merkleUpdaters[0], true);
+        vault.setIsAllocator(merkleUpdaters[1], true);
+        vault.setIsAllocator(BACKEND_TESTNET_ADDRESS, true);
+
+        // Fee and skim recipients
+        vault.setFeeRecipient(params.deployer);
+        vault.setSkimRecipient(params.deployer);
+
+        // Supply caps for all DUSD borrow markets — 100k DUSD each.
+        // valid immediately because timelock == 0.
+        uint256 supplyCap = 100_000 ether;
+        if (input.contracts.wbtcMarketBatch.market != address(0)) {
+            vault.submitCap(input.contracts.wbtcMarketBatch.market, supplyCap);
+            vault.acceptCap(input.contracts.wbtcMarketBatch.market);
+        }
+        if (input.contracts.cbbtcMarketBatch.market != address(0)) {
+            vault.submitCap(input.contracts.cbbtcMarketBatch.market, supplyCap);
+            vault.acceptCap(input.contracts.cbbtcMarketBatch.market);
+        }
+        if (input.contracts.susdeMarketBatch.market != address(0)) {
+            vault.submitCap(input.contracts.susdeMarketBatch.market, supplyCap);
+            vault.acceptCap(input.contracts.susdeMarketBatch.market);
+        }
+        if (input.contracts.syrupUsdcBorrowMarketBatch.market != address(0)) {
+            vault.submitCap(input.contracts.syrupUsdcBorrowMarketBatch.market, supplyCap);
+            vault.acceptCap(input.contracts.syrupUsdcBorrowMarketBatch.market);
+        }
+        if (input.contracts.paxgBorrowMarketBatch.market != address(0)) {
+            vault.submitCap(input.contracts.paxgBorrowMarketBatch.market, supplyCap);
+            vault.acceptCap(input.contracts.paxgBorrowMarketBatch.market);
+        }
+
+        // if this is only vault deployment, this needs to go through multicall
+        // else the owner is deployer, so we can directly call it
+        if (params.deployVaultOnly) {
+            AltoMulticallTestnet.Call[] memory calls = new AltoMulticallTestnet.Call[](1);
+            calls[0] = AltoMulticallTestnet.Call({
+                target: input.contracts.altoAdapter,
+                allowFailure: false,
+                callData: abi.encodeCall(AdapterContractApproval.approveContract, (address(vault)))
+            });
+            AltoMulticallTestnet(payable(input.contracts.altoMulticall)).multicall(calls);
+        } else {
+            AltoAdapter(payable(input.contracts.altoAdapter)).approveContract(address(vault));
+        }
+
+        AltoOwnable2Step(address(vault)).transferOwnershipSkip2Step(input.contracts.altoMulticall);
         return input;
     }
 
@@ -828,7 +885,7 @@ library DeployAltoTestnet {
 
     function _transferOwnership(AltoTestnetParams memory params, AltoTestnetInput memory input) internal {
         AltoOwnable2Step(input.tokens.dusd).transferOwnershipSkip2Step(input.contracts.altoMulticall);
-        Ownable(input.contracts.altoAdapter).transferOwnership(input.contracts.altoMulticall);
+        AltoOwnable2Step(input.contracts.altoAdapter).transferOwnershipSkip2Step(input.contracts.altoMulticall);
     }
 
     function _calculateMinterCeiling(TestnetMarketBatchReport memory marketBatchReport)

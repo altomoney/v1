@@ -20,6 +20,7 @@ contract AltoReleaseTest is Test, TestHelperOz5 {
         params = AltoTestnetParams({
             skipLendingDeployment: false,
             skipRewardsDeployment: false,
+            deployVaultOnly: false,
             lzEndpoint: address(0x6EDCE65403992e310A62460808c4b910D972f10f),
             wrappedNativeToken: 0x7b79995e5f793A07Bc00c21412e50Ecae098E7f9,
             uniswapV3NonFungiblePositionManager: 0x1238536071E1c677A632429e3655c799b22cDA52,
