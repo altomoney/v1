@@ -2,16 +2,19 @@
 pragma solidity ^0.8.22;
 
 import {Test} from "forge-std/Test.sol";
-import {AltoLeverageSwapperV1} from "@alto/lending/leverage/AltoLeverageSwapperV1.sol";
-import {IAltoLeverageSwapperV1Errors, SwapParamsV1} from "@alto/lending/leverage/interfaces/IAltoLeverageSwapper.sol";
+import {AltoLeverageSwapperMultiTarget} from "@alto/lending/leverage/AltoLeverageSwapperMultiTarget.sol";
+import {
+    IAltoLeverageSwapperMultiTargetErrors,
+    SwapParamsMultiTarget
+} from "@alto/lending/leverage/interfaces/IAltoLeverageSwapper.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-contract AltoLeverageSwapperV1Test is Test {
+contract AltoLeverageSwapperMultiTargetTest is Test {
     event SetWhitelisted(address indexed contractAddress, bool isWhitelisted);
     event SetValidSwapTarget(address indexed swapTarget, bool isValid);
 
-    AltoLeverageSwapperV1 internal swapper;
+    AltoLeverageSwapperMultiTarget internal swapper;
 
     address internal constant PENDLE_ROUTER_V4 = 0x888888888889758F76e7103c6CbF23ABbF58F946;
     address internal constant OPEN_OCEAN_ROUTER = 0x6352a56caadC4F1E25CD6c75970Fa768A3304e64;
@@ -38,17 +41,18 @@ contract AltoLeverageSwapperV1Test is Test {
         validSwapTargets[1] = OPEN_OCEAN_ROUTER;
         validSwapTargets[2] = ENSO_ROUTER;
 
-        swapper = new AltoLeverageSwapperV1(address(this), validSwapTargets);
+        swapper = new AltoLeverageSwapperMultiTarget(address(this), validSwapTargets);
         swapper.setWhitelisted(caller, true);
     }
 
     function test_reverts_when_swap_target_not_allowed() public {
         address notAllowed = address(0x2222222222222222222222222222222222222222);
-        bytes memory swapParams = abi.encode(SwapParamsV1({minAmountOut: 0, swapTarget: notAllowed, swapData: hex""}));
+        bytes memory swapParams =
+            abi.encode(SwapParamsMultiTarget({minAmountOut: 0, swapTarget: notAllowed, swapData: hex""}));
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IAltoLeverageSwapperV1Errors.AltoLeverageSwapperInvalidSwapTarget.selector, notAllowed
+                IAltoLeverageSwapperMultiTargetErrors.AltoLeverageSwapperInvalidSwapTarget.selector, notAllowed
             )
         );
         vm.prank(caller);
@@ -151,13 +155,30 @@ contract AltoLeverageSwapperV1Test is Test {
         );
     }
 
-    // @dev This test fails due to incorrect swap data from pendle + velora API
-    //      PT-reUSD -> DUSD works but DUSD -> PT-reUSD doesn't
-    // function test_swap_pendleVelora_dusd_to_ptreusd() public {
-    //     _executeSwapAndAssertReverse(
-    //         PENDLE_ROUTER_V4, _loadSwapData("pendleVelora-100000-dusd-to-ptreusd.json", ".routes[0].tx.data")
-    //     );
-    // }
+    // @dev This route currently reverts for this direction on the pinned fork block.
+    //      The revert happens downstream in the Pendle route, so we assert the swap fails here.
+    function test_revertWhen_swap_pendleVelora_dusd_to_ptreusd() public {
+        bytes memory swapData = _loadSwapData("pendleVelora-100000-dusd-to-ptreusd.json", ".routes[0].tx.data");
+
+        deal(DUSD, caller, DUSD_AMOUNT_IN);
+        vm.prank(caller);
+        IERC20(DUSD).approve(address(swapper), DUSD_AMOUNT_IN);
+
+        bytes memory swapParams = abi.encode(
+            SwapParamsMultiTarget({
+                minAmountOut: PT_REUSD_MIN_AMOUNT_OUT,
+                swapTarget: PENDLE_ROUTER_V4,
+                swapData: swapData
+            })
+        );
+
+        vm.prank(caller);
+        (bool success,) = address(swapper).call(
+            abi.encodeCall(swapper.swap, (DUSD, PT_REUSD, DUSD_AMOUNT_IN, swapParams))
+        );
+
+        assertFalse(success, "pendle paraswap reverse route should revert on the pinned fork block");
+    }
 
     function test_swap_openOcean_dusd_to_ptreusd() public {
         _executeSwapAndAssertReverse(
@@ -187,7 +208,7 @@ contract AltoLeverageSwapperV1Test is Test {
         IERC20(sellToken).approve(address(swapper), amountIn);
 
         bytes memory swapParams =
-            abi.encode(SwapParamsV1({minAmountOut: minAmountOut, swapTarget: swapTarget, swapData: swapData}));
+            abi.encode(SwapParamsMultiTarget({minAmountOut: minAmountOut, swapTarget: swapTarget, swapData: swapData}));
 
         uint256 buyTokenBalanceBefore = IERC20(buyToken).balanceOf(caller);
         vm.prank(caller);

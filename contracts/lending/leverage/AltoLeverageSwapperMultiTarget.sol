@@ -2,24 +2,24 @@
 pragma solidity ^0.8.22;
 
 import {
-    IAltoLeverageSwapperV1,
-    SwapParamsV1,
+    IAltoLeverageSwapperMultiTarget,
+    SwapParamsMultiTarget,
     IAltoLeverageSwapper
 } from "@alto/lending/leverage/interfaces/IAltoLeverageSwapper.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-/// @title AltoLeverageSwapperV1
+/// @title AltoLeverageSwapperMultiTarget
 /// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice This contract is used to swap tokens in AltoLeverage contract during levarage and deleverage
-/// @dev This contract uses whitelisted SWAP_TARGET instead of fixed address for the swap target
-/// @dev Contracts using this swapper have to handle potential reeentrancy protection caused by swap function by themselves
-contract AltoLeverageSwapperV1 is IAltoLeverageSwapperV1, Ownable {
+/// @dev This contract uses whitelisted swap targets instead of a single fixed swap target
+/// @dev Contracts using this swapper must handle any reentrancy protection around `swap()` themselves
+contract AltoLeverageSwapperMultiTarget is IAltoLeverageSwapperMultiTarget, Ownable {
     using SafeERC20 for IERC20;
 
-    /// @inheritdoc IAltoLeverageSwapperV1
+    /// @inheritdoc IAltoLeverageSwapperMultiTarget
     mapping(address => bool) public isValidSwapTarget;
 
     /// @inheritdoc IAltoLeverageSwapper
@@ -44,8 +44,9 @@ contract AltoLeverageSwapperV1 is IAltoLeverageSwapperV1, Ownable {
         emit SetWhitelisted(_address, _isWhitelisted);
     }
 
-    /// @inheritdoc IAltoLeverageSwapperV1
+    /// @inheritdoc IAltoLeverageSwapperMultiTarget
     function setValidSwapTarget(address _swapTarget, bool _isValid) external onlyOwner {
+        if (_swapTarget == address(0)) revert AltoLeverageSwapperInvalidInput();
         if (isValidSwapTarget[_swapTarget] == _isValid) revert AltoLeverageSwapperInvalidInput();
 
         isValidSwapTarget[_swapTarget] = _isValid;
@@ -62,7 +63,7 @@ contract AltoLeverageSwapperV1 is IAltoLeverageSwapperV1, Ownable {
             revert AltoLeverageSwapperSenderNotValid(msg.sender);
         }
 
-        SwapParamsV1 memory params = abi.decode(swapParams, (SwapParamsV1));
+        SwapParamsMultiTarget memory params = abi.decode(swapParams, (SwapParamsMultiTarget));
 
         if (!isValidSwapTarget[params.swapTarget]) {
             revert AltoLeverageSwapperInvalidSwapTarget(params.swapTarget);
