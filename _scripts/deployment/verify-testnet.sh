@@ -2,7 +2,6 @@
 
 source "$(dirname "$0")/_loadEnv.sh"
 
-
 # Check required environment variables
 if [ -z "$ETHERSCAN_API_KEY" ] || [ -z "$ETHERSCAN_API_URL" ] || [ -z "$CHAIN_ID" ]; then
     echo "Error: Missing required environment variables for verification. Please check your .env file."
@@ -35,46 +34,11 @@ fi
 get_address() {
     local path=$1
     if command -v jq >/dev/null 2>&1; then
-        # Use jq if available (more reliable)
         jq -r "$path // empty" "$ADDRESSES_FILE" 2>/dev/null
     else
-        # Fallback to grep/sed for nested JSON
-        case "$path" in
-            *"wethMarketBatch"*)
-                cat "$ADDRESSES_FILE" | sed -n '/wethMarketBatch/,/}/p' | grep "${path##*.}" | cut -d'"' -f4
-                ;;
-            *"wstethMarketBatch"*)
-                cat "$ADDRESSES_FILE" | sed -n '/wstethMarketBatch/,/}/p' | grep "${path##*.}" | cut -d'"' -f4
-                ;;
-            *"tbtcMarketBatch"*)
-                cat "$ADDRESSES_FILE" | sed -n '/tbtcMarketBatch/,/}/p' | grep "${path##*.}" | cut -d'"' -f4
-                ;;
-            *"sboldMarketBatch"*)
-                cat "$ADDRESSES_FILE" | sed -n '/sboldMarketBatch/,/}/p' | grep "${path##*.}" | cut -d'"' -f4
-                ;;
-            *"rethMarketBatch"*)
-                cat "$ADDRESSES_FILE" | sed -n '/rethMarketBatch/,/}/p' | grep "${path##*.}" | cut -d'"' -f4
-                ;;
-            *"susdeMarketBatch"*)
-                cat "$ADDRESSES_FILE" | sed -n '/susdeMarketBatch/,/}/p' | grep "${path##*.}" | cut -d'"' -f4
-                ;;
-            *"rewardsBatch"*)
-                cat "$ADDRESSES_FILE" | sed -n '/rewardsBatch/,/}/p' | grep "${path##*.}" | cut -d'"' -f4
-                ;;
-            *"stakingBatch"*)
-                cat "$ADDRESSES_FILE" | sed -n '/stakingBatch/,/}/p' | grep "${path##*.}" | cut -d'"' -f4
-                ;;
-            *"tokens"*)
-                cat "$ADDRESSES_FILE" | sed -n '/tokens/,/}/p' | grep "${path##*.}" | cut -d'"' -f4
-                ;;
-            *)
-                cat "$ADDRESSES_FILE" | grep -o "\"$path\": \"[^\"]*\"" | cut -d'"' -f4
-                ;;
-        esac
+        cat "$ADDRESSES_FILE" | grep -o "\"${path##*.}\": \"[^\"]*\"" | cut -d'"' -f4
     fi
 }
-
-
 
 echo "🔍 Starting contract verification on $CHAIN_ID..."
 echo "📁 Using addresses from: $ADDRESSES_FILE"
@@ -92,7 +56,7 @@ verify_contract() {
     local contract_path=$3
     local extra_args=${4:-""}
     
-    if [ -z "$address" ] || [ "$address" == "null" ]; then
+    if [ -z "$address" ] || [ "$address" == "null" ] || [ "$address" == "0x0000000000000000000000000000000000000000" ]; then
         echo "⚠️  Skipping $name - no address found"
         VERIFICATION_RESULTS+=("SKIPPED: $name - no address found")
         return
@@ -100,7 +64,7 @@ verify_contract() {
     
     echo "🔍 Verifying $name at $address..."
     
-    # Rate limiting: wait 0.5 seconds between requests to respect free account rate limit
+    # Rate limiting: wait 0.5 seconds between requests
     if [ -n "${LAST_VERIFICATION_TIME_MS:-}" ]; then
         local current_time_ms=$(date +%s%3N)
         local time_diff_ms=$((current_time_ms - LAST_VERIFICATION_TIME_MS))
@@ -119,7 +83,6 @@ verify_contract() {
     while [ $retry_count -lt $max_retries ] && [ "$success" = false ]; do
         if [ $retry_count -gt 0 ]; then
             echo "🔄 Retry attempt $retry_count for $name..."
-            # Exponential backoff: wait longer on retries
             local wait_time=$((10 * retry_count))
             echo "⏳ Waiting ${wait_time} seconds before retry..."
             sleep $wait_time
@@ -161,7 +124,6 @@ verify_contract() {
         VERIFICATION_RESULTS+=("FAILED: $name at $address")
     fi
     
-    # Update last verification time
     LAST_VERIFICATION_TIME_MS=$(date +%s%3N)
     echo ""
 }
@@ -173,6 +135,7 @@ ALTO_LEVERAGE=$(get_address ".contracts.altoLeverage")
 BUNDLER3=$(get_address ".contracts.bundler3")
 MOCK_SWAPPER=$(get_address ".contracts.mockSwapper")
 MULTI_TOKEN_SENDER=$(get_address ".contracts.multiTokenSender")
+ALTO_VAULT=$(get_address ".contracts.altoVault")
 
 # Registry contracts
 MARKET_REGISTRY=$(get_address ".contracts.marketRegistry")
@@ -236,6 +199,34 @@ SUSDE_MARKET_IRM=$(get_address ".contracts.susdeMarketBatch.marketIrm")
 SUSDE_MARKET_ORACLE=$(get_address ".contracts.susdeMarketBatch.marketOracle")
 SUSDE_LIQUIDATION_ENGINE=$(get_address ".contracts.susdeMarketBatch.liquidationEngine")
 
+## SYRUP USDC
+SYRUP_USDC_BORROW_MARKET=$(get_address ".contracts.syrupUsdcBorrowMarketBatch.market")
+SYRUP_USDC_BORROW_MARKET_IMPL=$(get_address ".contracts.syrupUsdcBorrowMarketBatch.marketImplementation")
+SYRUP_USDC_BORROW_MARKET_IRM=$(get_address ".contracts.syrupUsdcBorrowMarketBatch.marketIrm")
+SYRUP_USDC_BORROW_MARKET_ORACLE=$(get_address ".contracts.syrupUsdcBorrowMarketBatch.marketOracle")
+SYRUP_USDC_BORROW_LIQUIDATION_ENGINE=$(get_address ".contracts.syrupUsdcBorrowMarketBatch.liquidationEngine")
+
+## PAXG
+PAXG_BORROW_MARKET=$(get_address ".contracts.paxgBorrowMarketBatch.market")
+PAXG_BORROW_MARKET_IMPL=$(get_address ".contracts.paxgBorrowMarketBatch.marketImplementation")
+PAXG_BORROW_MARKET_IRM=$(get_address ".contracts.paxgBorrowMarketBatch.marketIrm")
+PAXG_BORROW_MARKET_ORACLE=$(get_address ".contracts.paxgBorrowMarketBatch.marketOracle")
+PAXG_BORROW_LIQUIDATION_ENGINE=$(get_address ".contracts.paxgBorrowMarketBatch.liquidationEngine")
+
+## SUSDE Mint
+SUSDE_MINT_MARKET=$(get_address ".contracts.susdeMintMarketBatch.market")
+SUSDE_MINT_MARKET_IMPL=$(get_address ".contracts.susdeMintMarketBatch.marketImplementation")
+SUSDE_MINT_MARKET_IRM=$(get_address ".contracts.susdeMintMarketBatch.marketIrm")
+SUSDE_MINT_MARKET_ORACLE=$(get_address ".contracts.susdeMintMarketBatch.marketOracle")
+SUSDE_MINT_LIQUIDATION_ENGINE=$(get_address ".contracts.susdeMintMarketBatch.liquidationEngine")
+
+## SYRUP USDC Mint
+SYRUP_USDC_MINT_MARKET=$(get_address ".contracts.syrupUsdcMintMarketBatch.market")
+SYRUP_USDC_MINT_MARKET_IMPL=$(get_address ".contracts.syrupUsdcMintMarketBatch.marketImplementation")
+SYRUP_USDC_MINT_MARKET_IRM=$(get_address ".contracts.syrupUsdcMintMarketBatch.marketIrm")
+SYRUP_USDC_MINT_MARKET_ORACLE=$(get_address ".contracts.syrupUsdcMintMarketBatch.marketOracle")
+SYRUP_USDC_MINT_LIQUIDATION_ENGINE=$(get_address ".contracts.syrupUsdcMintMarketBatch.liquidationEngine")
+
 # USM batch addresses
 USDC_USM=$(get_address ".contracts.usdcUsmBatch.dusdUsm")
 USDC_USM_IMPL=$(get_address ".contracts.usdcUsmBatch.dusdUsmImplementation")
@@ -265,6 +256,8 @@ TBTC_TOKEN=$(get_address ".tokens.tbtc")
 WBTC_TOKEN=$(get_address ".tokens.wbtc")
 CB_BTC_TOKEN=$(get_address ".tokens.cbbtc")
 SUSDE_TOKEN=$(get_address ".tokens.susde")
+PAXG_TOKEN=$(get_address ".tokens.paxg")
+SYRUP_USDC_TOKEN=$(get_address ".tokens.syrupUsdc")
 
 echo "📋 Contract verification plan:"
 echo "- Alto Adapter: $ALTO_ADAPTER"
@@ -272,6 +265,7 @@ echo "- Alto Leverage: $ALTO_LEVERAGE"
 echo "- Bundler3: $BUNDLER3"
 echo "- Mock Swapper: $MOCK_SWAPPER"
 echo "- Multi Token Sender: $MULTI_TOKEN_SENDER"
+echo "- Alto Vault: $ALTO_VAULT"
 echo "- Market Registry: $MARKET_REGISTRY"
 echo "- USM Registry: $USM_REGISTRY"
 echo "- WETH Market: $WETH_MARKET"
@@ -309,10 +303,31 @@ echo "- CB-BTC Market Implementation: $CB_BTC_MARKET_IMPL"
 echo "- CB-BTC Market IRM: $CB_BTC_MARKET_IRM"
 echo "- CB-BTC Market Oracle: $CB_BTC_MARKET_ORACLE"
 echo "- CB-BTC Market Liquidation Engine: $CB_BTC_LIQUIDATION_ENGINE"
+echo "- SUSDE Market: $SUSDE_MARKET"
 echo "- SUSDE Market Implementation: $SUSDE_MARKET_IMPL"
 echo "- SUSDE Market IRM: $SUSDE_MARKET_IRM"
 echo "- SUSDE Market Oracle: $SUSDE_MARKET_ORACLE"
 echo "- SUSDE Market Liquidation Engine: $SUSDE_LIQUIDATION_ENGINE"
+echo "- SyrupUSDC Borrow Market: $SYRUP_USDC_BORROW_MARKET"
+echo "- SyrupUSDC Borrow Market Implementation: $SYRUP_USDC_BORROW_MARKET_IMPL"
+echo "- SyrupUSDC Borrow Market IRM: $SYRUP_USDC_BORROW_MARKET_IRM"
+echo "- SyrupUSDC Borrow Market Oracle: $SYRUP_USDC_BORROW_MARKET_ORACLE"
+echo "- SyrupUSDC Borrow Market Liquidation Engine: $SYRUP_USDC_BORROW_LIQUIDATION_ENGINE"
+echo "- PAXG Borrow Market: $PAXG_BORROW_MARKET"
+echo "- PAXG Borrow Market Implementation: $PAXG_BORROW_MARKET_IMPL"
+echo "- PAXG Borrow Market IRM: $PAXG_BORROW_MARKET_IRM"
+echo "- PAXG Borrow Market Oracle: $PAXG_BORROW_MARKET_ORACLE"
+echo "- PAXG Borrow Market Liquidation Engine: $PAXG_BORROW_LIQUIDATION_ENGINE"
+echo "- SUSDE Mint Market: $SUSDE_MINT_MARKET"
+echo "- SUSDE Mint Market Implementation: $SUSDE_MINT_MARKET_IMPL"
+echo "- SUSDE Mint Market IRM: $SUSDE_MINT_MARKET_IRM"
+echo "- SUSDE Mint Market Oracle: $SUSDE_MINT_MARKET_ORACLE"
+echo "- SUSDE Mint Market Liquidation Engine: $SUSDE_MINT_LIQUIDATION_ENGINE"
+echo "- SyrupUSDC Mint Market: $SYRUP_USDC_MINT_MARKET"
+echo "- SyrupUSDC Mint Market Implementation: $SYRUP_USDC_MINT_MARKET_IMPL"
+echo "- SyrupUSDC Mint Market IRM: $SYRUP_USDC_MINT_MARKET_IRM"
+echo "- SyrupUSDC Mint Market Oracle: $SYRUP_USDC_MINT_MARKET_ORACLE"
+echo "- SyrupUSDC Mint Market Liquidation Engine: $SYRUP_USDC_MINT_LIQUIDATION_ENGINE"
 echo "- USDC USM: $USDC_USM"
 echo "- USDC USM Implementation: $USDC_USM_IMPL"
 echo "- USDC USM Fixed Price Strategy: $USDC_USM_FIXED_PRICE_STRATEGY"
@@ -337,6 +352,8 @@ echo "- TBTC Token: $TBTC_TOKEN"
 echo "- WBTC Token: $WBTC_TOKEN"
 echo "- CB-BTC Token: $CB_BTC_TOKEN"
 echo "- SUSDE Token: $SUSDE_TOKEN"
+echo "- PAXG Token: $PAXG_TOKEN"
+echo "- SyrupUSDC Token: $SYRUP_USDC_TOKEN"
 echo ""
 
 read -p "Do you want to proceed with verification? (y/N): " -n 1 -r
@@ -347,180 +364,126 @@ if [[ ! $REPLY =~ ^[Yy]$ ]]; then
 fi
 
 echo "🚀 Starting verification process..."
-echo "⏰ This process will take approximately 1-2 minutes due to rate limiting..."
 echo ""
-
-# Initialize progress tracking (base excludes payment oracles)
-BASE_CONTRACTS=68
-TOTAL_CONTRACTS=$((BASE_CONTRACTS + ${#PAYMENT_ORACLES[@]}))
-CURRENT_CONTRACT=0
-
-# Function to show progress
-show_progress() {
-    CURRENT_CONTRACT=$((CURRENT_CONTRACT + 1))
-    echo "📊 Progress: $CURRENT_CONTRACT/$TOTAL_CONTRACTS contracts processed"
-}
 
 # Verify contracts
 verify_contract "AltoMulticall" "$ALTO_MULTICALL" "contracts/deployments/testnet/contracts/AltoMulticallTestnet.sol:AltoMulticallTestnet"
-show_progress
 verify_contract "AltoAdapter" "$ALTO_ADAPTER" "contracts/utils/AltoAdapter.sol:AltoAdapter"
-show_progress
 verify_contract "AltoLeverage" "$ALTO_LEVERAGE" "contracts/lending/leverage/AltoLeverage.sol:AltoLeverage"
-show_progress
 verify_contract "Bundler3" "$BUNDLER3" "lib/bundler3/src/Bundler3.sol:Bundler3"
-show_progress
 verify_contract "MockSwapper" "$MOCK_SWAPPER" "contracts/lending/mocks/SwapperSimpleMock.sol:SwapperSimpleMock"
-show_progress
 verify_contract "MultiTokenSender" "$MULTI_TOKEN_SENDER" "contracts/deployments/testnet/contracts/MultiTokenSender.sol:MultiTokenSender"
-show_progress
+verify_contract "AltoVault" "$ALTO_VAULT" "contracts/lending/vault/AltoVault.sol:AltoVault"
 
 # Verify registry contracts
 verify_contract "MarketRegistry" "$MARKET_REGISTRY" "contracts/utils/MarketRegistry.sol:MarketRegistry"
-show_progress
 verify_contract "UsmRegistry" "$USM_REGISTRY" "contracts/utils/UsmRegistry.sol:UsmRegistry"
-show_progress
 
 # Verify market contracts (these might be proxy contracts, so we verify the implementation)
 verify_contract "WethMarket" "$WETH_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
-show_progress
 verify_contract "WethMarketImplementation" "$WETH_MARKET_IMPL" "contracts/lending/AltoMintMarket.sol:AltoMintMarket"
-show_progress
-verify_contract "WethMarketIRM" "$WETH_MARKET_IRM" "contracts/lending/irm/AdaptiveCurveIrm.sol:AdaptiveCurveIrm"
-show_progress
+verify_contract "WethMarketIRM" "$WETH_MARKET_IRM" "contracts/lending/irm/FixedRateIrm.sol:FixedRateIrm"
 verify_contract "WethMarketOracle" "$WETH_MARKET_ORACLE" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet"
-show_progress
 verify_contract "WethMarketLiquidationEngine" "$WETH_LIQUIDATION_ENGINE" "contracts/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol:DlbDcfPriorityLiquidationEngine"
-show_progress
 
 verify_contract "WstethMarket" "$WSTETH_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
-show_progress
 verify_contract "WstethMarketImplementation" "$WSTETH_MARKET_IMPL" "contracts/lending/AltoMintMarket.sol:AltoMintMarket"
-show_progress
-verify_contract "WstethMarketIRM" "$WSTETH_MARKET_IRM" "contracts/lending/irm/AdaptiveCurveIrm.sol:AdaptiveCurveIrm"
-show_progress
+verify_contract "WstethMarketIRM" "$WSTETH_MARKET_IRM" "contracts/lending/irm/FixedRateIrm.sol:FixedRateIrm"
 verify_contract "WstethMarketOracle" "$WSTETH_MARKET_ORACLE" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet"
-show_progress
 verify_contract "WstethMarketLiquidationEngine" "$WSTETH_LIQUIDATION_ENGINE" "contracts/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol:DlbDcfPriorityLiquidationEngine"
-show_progress
 
 verify_contract "TbtcMarket" "$TBTC_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
-show_progress
 verify_contract "TbtcMarketImplementation" "$TBTC_MARKET_IMPL" "contracts/lending/AltoMintMarket.sol:AltoMintMarket"
-show_progress
-verify_contract "TbtcMarketIRM" "$TBTC_MARKET_IRM" "contracts/lending/irm/AdaptiveCurveIrm.sol:AdaptiveCurveIrm"
-show_progress
+verify_contract "TbtcMarketIRM" "$TBTC_MARKET_IRM" "contracts/lending/irm/FixedRateIrm.sol:FixedRateIrm"
 verify_contract "TbtcMarketOracle" "$TBTC_MARKET_ORACLE" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet"
-show_progress
 verify_contract "TbtcMarketLiquidationEngine" "$TBTC_LIQUIDATION_ENGINE" "contracts/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol:DlbDcfPriorityLiquidationEngine"
-show_progress
 
 verify_contract "RethMarket" "$RETH_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
-show_progress
 verify_contract "RethMarketImplementation" "$RETH_MARKET_IMPL" "contracts/lending/AltoMintMarket.sol:AltoMintMarket"
-show_progress
-verify_contract "RethMarketIRM" "$RETH_MARKET_IRM" "contracts/lending/irm/AdaptiveCurveIrm.sol:AdaptiveCurveIrm"
-show_progress
+verify_contract "RethMarketIRM" "$RETH_MARKET_IRM" "contracts/lending/irm/FixedRateIrm.sol:FixedRateIrm"
 verify_contract "RethMarketOracle" "$RETH_MARKET_ORACLE" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet"
-show_progress
 verify_contract "RethMarketLiquidationEngine" "$RETH_LIQUIDATION_ENGINE" "contracts/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol:DlbDcfPriorityLiquidationEngine"
-show_progress
 
 verify_contract "MethMarket" "$METH_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
-show_progress
 verify_contract "MethMarketImplementation" "$METH_MARKET_IMPL" "contracts/lending/AltoMintMarket.sol:AltoMintMarket"
-show_progress
-verify_contract "MethMarketIRM" "$METH_MARKET_IRM" "contracts/lending/irm/AdaptiveCurveIrm.sol:AdaptiveCurveIrm"
-show_progress
+verify_contract "MethMarketIRM" "$METH_MARKET_IRM" "contracts/lending/irm/FixedRateIrm.sol:FixedRateIrm"
 verify_contract "MethMarketOracle" "$METH_MARKET_ORACLE" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet"
-show_progress
 verify_contract "MethMarketLiquidationEngine" "$METH_LIQUIDATION_ENGINE" "contracts/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol:DlbDcfPriorityLiquidationEngine"
-show_progress
 
 verify_contract "WbtcMarket" "$WBTC_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
-show_progress
 verify_contract "WbtcMarketImplementation" "$WBTC_MARKET_IMPL" "contracts/lending/AltoBorrowMarket.sol:AltoBorrowMarket"
-show_progress
 verify_contract "WbtcMarketIRM" "$WBTC_MARKET_IRM" "contracts/lending/irm/AdaptiveCurveIrm.sol:AdaptiveCurveIrm"
-show_progress
 verify_contract "WbtcMarketOracle" "$WBTC_MARKET_ORACLE" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet"
-show_progress
 verify_contract "WbtcMarketLiquidationEngine" "$WBTC_LIQUIDATION_ENGINE" "contracts/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol:DlbDcfPriorityLiquidationEngine"
-show_progress
 
 verify_contract "Cbb" "$CB_BTC_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
-show_progress
 verify_contract "CbbMarketImplementation" "$CB_BTC_MARKET_IMPL" "contracts/lending/AltoBorrowMarket.sol:AltoBorrowMarket"
-show_progress
 verify_contract "CbbMarketIRM" "$CB_BTC_MARKET_IRM" "contracts/lending/irm/AdaptiveCurveIrm.sol:AdaptiveCurveIrm"
-show_progress
 verify_contract "CbbMarketOracle" "$CB_BTC_MARKET_ORACLE" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet"
-show_progress
 verify_contract "CbbMarketLiquidationEngine" "$CB_BTC_LIQUIDATION_ENGINE" "contracts/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol:DlbDcfPriorityLiquidationEngine"
-show_progress
 
 verify_contract "SusdeMarket" "$SUSDE_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
-show_progress
 verify_contract "SusdeMarketImplementation" "$SUSDE_MARKET_IMPL" "contracts/lending/AltoBorrowMarket.sol:AltoBorrowMarket"
-show_progress
 verify_contract "SusdeMarketIRM" "$SUSDE_MARKET_IRM" "contracts/lending/irm/AdaptiveCurveIrm.sol:AdaptiveCurveIrm"
-show_progress
 verify_contract "SusdeMarketOracle" "$SUSDE_MARKET_ORACLE" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet"
-show_progress
 verify_contract "SusdeMarketLiquidationEngine" "$SUSDE_LIQUIDATION_ENGINE" "contracts/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol:DlbDcfPriorityLiquidationEngine"
-show_progress
+
+verify_contract "SyrupUsdcBorrowMarket" "$SYRUP_USDC_BORROW_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
+verify_contract "SyrupUsdcBorrowMarketImplementation" "$SYRUP_USDC_BORROW_MARKET_IMPL" "contracts/lending/AltoBorrowMarket.sol:AltoBorrowMarket"
+verify_contract "SyrupUsdcBorrowMarketIRM" "$SYRUP_USDC_BORROW_MARKET_IRM" "contracts/lending/irm/AdaptiveCurveIrm.sol:AdaptiveCurveIrm"
+verify_contract "SyrupUsdcBorrowMarketOracle" "$SYRUP_USDC_BORROW_MARKET_ORACLE" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet"
+verify_contract "SyrupUsdcBorrowMarketLiquidationEngine" "$SYRUP_USDC_BORROW_LIQUIDATION_ENGINE" "contracts/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol:DlbDcfPriorityLiquidationEngine"
+
+verify_contract "PaxgBorrowMarket" "$PAXG_BORROW_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
+verify_contract "PaxgBorrowMarketImplementation" "$PAXG_BORROW_MARKET_IMPL" "contracts/lending/AltoBorrowMarket.sol:AltoBorrowMarket"
+verify_contract "PaxgBorrowMarketIRM" "$PAXG_BORROW_MARKET_IRM" "contracts/lending/irm/AdaptiveCurveIrm.sol:AdaptiveCurveIrm"
+verify_contract "PaxgBorrowMarketOracle" "$PAXG_BORROW_MARKET_ORACLE" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet"
+verify_contract "PaxgBorrowMarketLiquidationEngine" "$PAXG_BORROW_LIQUIDATION_ENGINE" "contracts/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol:DlbDcfPriorityLiquidationEngine"
+
+verify_contract "SusdeMintMarket" "$SUSDE_MINT_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
+verify_contract "SusdeMintMarketImplementation" "$SUSDE_MINT_MARKET_IMPL" "contracts/lending/AltoMintMarket.sol:AltoMintMarket"
+verify_contract "SusdeMintMarketIRM" "$SUSDE_MINT_MARKET_IRM" "contracts/lending/irm/FixedRateIrm.sol:FixedRateIrm"
+verify_contract "SusdeMintMarketOracle" "$SUSDE_MINT_MARKET_ORACLE" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet"
+verify_contract "SusdeMintMarketLiquidationEngine" "$SUSDE_MINT_LIQUIDATION_ENGINE" "contracts/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol:DlbDcfPriorityLiquidationEngine"
+
+verify_contract "SyrupUsdcMintMarket" "$SYRUP_USDC_MINT_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
+verify_contract "SyrupUsdcMintMarketImplementation" "$SYRUP_USDC_MINT_MARKET_IMPL" "contracts/lending/AltoMintMarket.sol:AltoMintMarket"
+verify_contract "SyrupUsdcMintMarketIRM" "$SYRUP_USDC_MINT_MARKET_IRM" "contracts/lending/irm/FixedRateIrm.sol:FixedRateIrm"
+verify_contract "SyrupUsdcMintMarketOracle" "$SYRUP_USDC_MINT_MARKET_ORACLE" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet"
+verify_contract "SyrupUsdcMintMarketLiquidationEngine" "$SYRUP_USDC_MINT_LIQUIDATION_ENGINE" "contracts/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol:DlbDcfPriorityLiquidationEngine"
 
 # Verify usm batch contracts
 verify_contract "UsdcUsm" "$USDC_USM" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
-show_progress
 verify_contract "UsdcUsmImplementation" "$USDC_USM_IMPL" "contracts/usm/DUSDUsm.sol:DUSDUsm"
-show_progress
 verify_contract "UsdcUsmFixedPriceStrategy" "$USDC_USM_FIXED_PRICE_STRATEGY" "contracts/usm/FixedPriceStrategy.sol:FixedPriceStrategy"
-show_progress
 verify_contract "UsdcUsmFixedFeeStrategy" "$USDC_USM_FIXED_FEE_STRATEGY" "contracts/usm/FixedFeeStrategy.sol:FixedFeeStrategy"
-show_progress
 
 # Verify rewards contracts
 for addr in "${PAYMENT_ORACLES[@]}"; do
     verify_contract "PaymentOracle" "$addr" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet"
-    show_progress
 done
 verify_contract "RewardOracle" "$REWARD_ORACLE" "contracts/deployments/testnet/contracts/OracleTestnet.sol:OracleTestnet"
-show_progress
 verify_contract "RewardsDistributor" "$REWARDS_DISTRIBUTOR" "contracts/rewards/AltoRewardsDistributor.sol:AltoRewardsDistributor"
-show_progress
 verify_contract "ReferralAdapter" "$REFERRAL_ADAPTER" "contracts/rewards/adapters/AltoReferralWhitelistAdapter.sol:AltoReferralWhitelistAdapter"
-show_progress
 
 # Verify staking contracts
 verify_contract "StakingContract" "$STAKING_CONTRACT" "contracts/staking/AltoStaking.sol:AltoStaking"
-show_progress
 verify_contract "UniversalRewardsDistributor" "$UNIVERSAL_REWARDS_DISTRIBUTOR" "contracts/utils/UniversalRewardsDistributor.sol:UniversalRewardsDistributor"
-show_progress
 
 # Verify token contracts
 verify_contract "AltoToken" "$ALTO_TOKEN" "contracts/tokens/AltoToken.sol:AltoToken"
-show_progress
 verify_contract "USDCToken" "$USDC_TOKEN" "contracts/deployments/testnet/contracts/ERC20Testnet.sol:ERC20Testnet"
-show_progress
 verify_contract "DUSDToken" "$DUSD_TOKEN" "contracts/tokens/DUSD.sol:DUSD"
-show_progress
 verify_contract "WETHToken" "$WETH_TOKEN" "contracts/deployments/testnet/contracts/ERC20Testnet.sol:ERC20Testnet"
-show_progress
 verify_contract "WSTETHToken" "$WSTETH_TOKEN" "contracts/deployments/testnet/contracts/ERC20Testnet.sol:ERC20Testnet"
-show_progress
 verify_contract "RETHToken" "$RETH_TOKEN" "contracts/deployments/testnet/contracts/ERC20Testnet.sol:ERC20Testnet"
-show_progress
 verify_contract "METHToken" "$METH_TOKEN" "contracts/deployments/testnet/contracts/ERC20Testnet.sol:ERC20Testnet"
-show_progress
 verify_contract "TBTCToken" "$TBTC_TOKEN" "contracts/deployments/testnet/contracts/ERC20Testnet.sol:ERC20Testnet"
-show_progress
 verify_contract "WBTCToken" "$WBTC_TOKEN" "contracts/deployments/testnet/contracts/ERC20Testnet.sol:ERC20Testnet"
-show_progress
 verify_contract "CB_BTC_TOKEN" "$CB_BTC_TOKEN" "contracts/deployments/testnet/contracts/ERC20Testnet.sol:ERC20Testnet"
-show_progress
 verify_contract "SUSDEToken" "$SUSDE_TOKEN" "contracts/deployments/testnet/contracts/ERC20Testnet.sol:ERC20Testnet"
-show_progress
+verify_contract "PAXGToken" "$PAXG_TOKEN" "contracts/deployments/testnet/contracts/ERC20Testnet.sol:ERC20Testnet"
+verify_contract "SyrupUSDCToken" "$SYRUP_USDC_TOKEN" "contracts/deployments/testnet/contracts/ERC20Testnet.sol:ERC20Testnet"
 
 echo "🎉 Contract verification process completed!"
 echo ""
@@ -548,8 +511,7 @@ if [ $FAILED_VERIFICATIONS -gt 0 ]; then
     echo ""
 fi
 
-echo "🔗 Check the Etherscan explorer to see the verification status:"
-echo "$VERIFIER_URL"
+echo "🔗 Check the Etherscan explorer to see the verification status"
 echo ""
 echo "💡 Tip: You can also run individual verifications using:"
 echo "forge verify-contract --chain-id $CHAIN_ID --verifier-url $VERIFIER_URL --etherscan-api-key \$ETHERSCAN_API_KEY <address> <contract_path>"
