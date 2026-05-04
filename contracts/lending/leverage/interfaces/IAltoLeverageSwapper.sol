@@ -8,10 +8,10 @@ struct SwapParams {
     bytes swapData;
 }
 
-struct SwapParamsV1 {
+struct SwapParamsMultiTarget {
     /// @notice the minimum amount of buyToken to buy
     uint256 minAmountOut;
-    /// @notice  swap target contract address
+    /// @notice the selected swap target contract address
     address swapTarget;
     /// @notice the swap calldata to pass to the swap target contract
     bytes swapData;
@@ -31,7 +31,7 @@ interface IAltoLeverageSwapperErrors {
     error AltoLeverageSwapperMinAmountOutNotMet(uint256 minAmountOut, uint256 buyTokenBalanceReceived);
 }
 
-interface IAltoLeverageSwapperV1Errors is IAltoLeverageSwapperErrors {
+interface IAltoLeverageSwapperMultiTargetErrors is IAltoLeverageSwapperErrors {
     /// @notice error thrown when the swap target is invalid
     error AltoLeverageSwapperInvalidSwapTarget(address swapTarget);
 }
@@ -53,7 +53,7 @@ interface IAltoLeverageSwapperEvents {
     );
 }
 
-interface IAltoLeverageSwapperV1Events is IAltoLeverageSwapperEvents {
+interface IAltoLeverageSwapperMultiTargetEvents is IAltoLeverageSwapperEvents {
     /// @notice event emitted when the valid swap target is set or unset
     /// @param swapTarget the swap target contract address
     /// @param isValid true if the swap target is valid, false otherwise
@@ -87,20 +87,24 @@ interface IAltoLeverageSwapper is IAltoLeverageSwapperErrors, IAltoLeverageSwapp
     /// @param _isWhitelisted if the address is whitelisted
     function setWhitelisted(address _address, bool _isWhitelisted) external;
 
-    //// @notice function that should swaps a token for another
+    /// @notice swaps one token for another
     /// @param sellToken the token to sell
     /// @param buyToken the token to buy
     /// @param amountIn the amount of sellToken to sell
-    /// @param swapParams ABI-encoded swap parameter (see `SwapParams` struct for details)
+    /// @param swapParams ABI-encoded swap parameters (see the relevant swap params struct for details)
     /// @return amountOut the amount of buyToken bought
-    /// @dev IMPORTANT:This function has to implement "minAmountOut" check using data proovided by `swapParams`
+    /// @dev IMPORTANT: This function must enforce the `minAmountOut` check using data provided by `swapParams`
     function swap(address sellToken, address buyToken, uint256 amountIn, bytes calldata swapParams)
         external
         payable
         returns (uint256 amountOut);
 }
 
-interface IAltoLeverageSwapperV1 is IAltoLeverageSwapper, IAltoLeverageSwapperV1Errors, IAltoLeverageSwapperV1Events {
+interface IAltoLeverageSwapperMultiTarget is
+    IAltoLeverageSwapper,
+    IAltoLeverageSwapperMultiTargetErrors,
+    IAltoLeverageSwapperMultiTargetEvents
+{
     /// @notice returns if a swap target is valid
     /// @param _swapTarget the swap target contract address
     /// @return isValid true if the swap target is valid, false otherwise
