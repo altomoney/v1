@@ -13,7 +13,7 @@ import {
 import {console} from "forge-std/console.sol";
 
 uint256 constant DEPLOYMENT_ID_TO_LOAD = 1765364975;
-DeploymentPhase constant PHASE_TO_DEPLOY = DeploymentPhase.DUSD_VAULT; // CORE, DUSD, MINT_MARKET_WETH, MINT_MARKET_WSTETH, MINT_MARKET_RETH, MINT_MARKET_METH, MINT_MARKET_TBTC, BORROW_MARKET_WBTC, BORROW_MARKET_CBBTC, BORROW_MARKET_SUSDE, USDC_USM, POST, REFERRAL_ADAPTER, BORROW_MARKET_SYRUP_USDC, BORROW_MARKET_PAXG, MINT_MARKET_SUSDE, MINT_MARKET_SYRUPUSDC, PERMISSIONED_FRXUSD_USM, ADAPTER, DUSD_VAULT
+DeploymentPhase constant PHASE_TO_DEPLOY = DeploymentPhase.DUSD_VAULT; // CORE, DUSD, MINT_MARKET_WETH, MINT_MARKET_WSTETH, MINT_MARKET_RETH, MINT_MARKET_METH, MINT_MARKET_TBTC, BORROW_MARKET_WBTC, BORROW_MARKET_CBBTC, BORROW_MARKET_SUSDE, USDC_USM, POST, REFERRAL_ADAPTER, BORROW_MARKET_SYRUP_USDC, BORROW_MARKET_PAXG, MINT_MARKET_SUSDE, MINT_MARKET_SYRUPUSDC, PERMISSIONED_FRXUSD_USM, ADAPTER, DUSD_VAULT, VAULT_REGISTRY
 string constant OUTPUT_DIR = "./contracts/deployments/ethereum-mainnet/output";
 
 contract DeployAltoEthereumMainnetScript is Script {
@@ -63,6 +63,7 @@ contract DeployAltoEthereumMainnetScript is Script {
         contractsJson = vm.serializeAddress("contracts", "dusdFlashMinter", input.contracts.dusdFlashMinter);
         contractsJson = vm.serializeAddress("contracts", "marketRegistry", input.contracts.marketRegistry);
         contractsJson = vm.serializeAddress("contracts", "usmRegistry", input.contracts.usmRegistry);
+        contractsJson = vm.serializeAddress("contracts", "vaultRegistry", input.contracts.vaultRegistry);
         contractsJson = vm.serializeAddress("contracts", "referralAdapter", input.contracts.referralAdapter);
 
         // Serialize market contracts using helper
@@ -178,6 +179,7 @@ contract DeployAltoEthereumMainnetScript is Script {
         loadedInput.contracts.dusdFlashMinter = _tryParseAddress(json, ".contracts.dusdFlashMinter");
         loadedInput.contracts.marketRegistry = _tryParseAddress(json, ".contracts.marketRegistry");
         loadedInput.contracts.usmRegistry = _tryParseAddress(json, ".contracts.usmRegistry");
+        loadedInput.contracts.vaultRegistry = _tryParseAddress(json, ".contracts.vaultRegistry");
         loadedInput.contracts.referralAdapter = _tryParseAddress(json, ".contracts.referralAdapter");
 
         // Load market contracts using helper
@@ -301,6 +303,8 @@ contract DeployAltoEthereumMainnetScript is Script {
             _extractContractABI("FixedFeeStrategy", abiFolder);
         } else if (PHASE_TO_DEPLOY == DeploymentPhase.DUSD_VAULT) {
             _extractContractABI("AltoVault", abiFolder);
+        } else if (PHASE_TO_DEPLOY == DeploymentPhase.VAULT_REGISTRY) {
+            _extractContractABI("VaultRegistry", abiFolder);
         } else if (PHASE_TO_DEPLOY == DeploymentPhase.PERMISSIONLESS_USM) {
             _extractContractABI("DUSDUsm", abiFolder);
             _extractContractABI("FixedPriceStrategy", abiFolder);

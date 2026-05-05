@@ -28,6 +28,7 @@ enum DeploymentPhase {
     PERMISSIONED_FRXUSD_USM, // Phase 19: Deploy Permissioned DUSD/FRXUSD Peg Stability Module
     ADAPTER, // Phase 20: Deploy AltoAdapter
     DUSD_VAULT // Phase 21: Deploy DUSD ERC4626 Vault (`Alto DUSD Vault`, aDUSD)
+    VAULT_REGISTRY // Phase 22: Deploy VaultRegistry, register existing vaults, transfer to timelock
 }
 
 enum UsmFinalizeMode {
@@ -65,6 +66,7 @@ struct Contracts {
     address dusdFlashMinter;
     address marketRegistry;
     address usmRegistry;
+    address vaultRegistry;
     address referralAdapter;
     MarketContracts wethMarket;
     MarketContracts wstethMarket;
