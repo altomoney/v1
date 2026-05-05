@@ -35,6 +35,7 @@ import {
 } from "@alto/deployments/ethereum-mainnet/Constants.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {IAltoVault, IAltoVaultBase} from "@alto/lending/interfaces/IAltoVault.sol";
+import {VaultRegistry} from "@alto/utils/VaultRegistry.sol";
 
 /// @dev Set to a non-zero deployment timestamp to load a real deployment's addresses.json
 ///      and skip re-deploying prerequisites. The file must be at:
@@ -534,6 +535,24 @@ abstract contract DeployAltoEthereumMainnetTestBase is Test {
                 assertEq(IAltoVault(vault).config(expectedMarkets[i]).cap, 10_000 ether, "market cap mismatch");
             }
         }
+    }
+
+    // NOTE: @dev remove this test once vault registry is deployed on-chain
+    //       @dev move this test to deprecated folder
+    function test_deployVaultRegistry() public {
+        test_deployDusdVault();
+
+        params.phase = DeploymentPhase.VAULT_REGISTRY;
+        input = DeployAltoEthereumMainnet.deploy(params, input);
+
+        address vaultRegistry = input.contracts.vaultRegistry;
+        address timelock = input.contracts.timelock;
+
+        _verifyDeployed(vaultRegistry, "vaultRegistry");
+
+        assertEq(Ownable(vaultRegistry).owner(), timelock, "vaultRegistry owner should be timelock");
+
+        assertEq(VaultRegistry(vaultRegistry).isVault(input.contracts.dusdVault), true, "vault should be registered");
     }
 }
 

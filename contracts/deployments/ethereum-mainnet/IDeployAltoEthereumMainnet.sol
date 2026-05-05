@@ -27,7 +27,7 @@ enum DeploymentPhase {
     MINT_MARKET_SYRUPUSDC, // Phase 18: Deploy syrupUSDC Mint Market
     PERMISSIONED_FRXUSD_USM, // Phase 19: Deploy Permissioned DUSD/FRXUSD Peg Stability Module
     ADAPTER, // Phase 20: Deploy AltoAdapter
-    DUSD_VAULT // Phase 21: Deploy DUSD ERC4626 Vault (`Alto DUSD Vault`, aDUSD)
+    DUSD_VAULT, // Phase 21: Deploy DUSD ERC4626 Vault (`Alto DUSD Vault`, aDUSD)
     VAULT_REGISTRY // Phase 22: Deploy VaultRegistry, register existing vaults, transfer to timelock
 }
 
