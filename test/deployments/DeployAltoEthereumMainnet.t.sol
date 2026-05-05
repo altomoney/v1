@@ -34,6 +34,7 @@ import {
     WETH_MAINNET
 } from "@alto/deployments/ethereum-mainnet/Constants.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
+import {IAltoVault, IAltoVaultBase} from "@alto/lending/interfaces/IAltoVault.sol";
 
 /// @dev Set to a non-zero deployment timestamp to load a real deployment's addresses.json
 ///      and skip re-deploying prerequisites. The file must be at:
@@ -147,6 +148,8 @@ abstract contract DeployAltoEthereumMainnetTestBase is Test {
             _tryParseAddress(json, ".contracts.permissionedFrxUsdUsmFixedPriceStrategy");
         loaded.contracts.permissionedFrxusdUsm.fixedFeeStrategy =
             _tryParseAddress(json, ".contracts.permissionedFrxUsdUsmFixedFeeStrategy");
+
+        loaded.contracts.dusdVault = _tryParseAddress(json, ".contracts.dusdVault");
 
         input = loaded;
     }
@@ -388,7 +391,7 @@ abstract contract DeployAltoEthereumMainnetTestBase is Test {
         assertTrue(IUsmRegistry(input.contracts.usmRegistry).isUsm(usm), "USM not registered in UsmRegistry");
     }
 
-    // NOTE: @dev remove this test once frxUSD is deployed on-chain
+    // NOTE: @dev remove this test once DUSD Vault is deployed on-chain
     //       @dev move this test to deprecated folder
     function _assertTresuryPSMMigration() internal {
         // frxUSD USM should be deployed first
@@ -479,6 +482,57 @@ abstract contract DeployAltoEthereumMainnetTestBase is Test {
                 string.concat("adapter approval mismatch for ", Strings.toHexString(uint256(uint160(candidate)), 20))
             );
         }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // DUSD_VAULT
+    // ─────────────────────────────────────────────────────────────────────────
+
+    // NOTE: @dev remove this test once frxUSD is deployed on-chain
+    //       @dev move this test to deprecated folder
+    function test_deployDusdVault() public {
+        deal(input.contracts.dusd, DEPLOYER, 1 ether);
+
+        params.phase = DeploymentPhase.DUSD_VAULT;
+        input = DeployAltoEthereumMainnet.deploy(params, input);
+
+        address vault = input.contracts.dusdVault;
+        address timelock = input.contracts.timelock;
+
+        _verifyDeployed(vault, "dusdVault");
+
+        assertEq(IERC20Metadata(vault).name(), "Alto DUSD Vault", "vault name mismatch");
+        assertEq(IERC20Metadata(vault).symbol(), "aDUSD", "vault symbol mismatch");
+        assertEq(IERC4626(vault).asset(), input.contracts.dusd, "vault asset mismatch");
+
+        assertEq(Ownable(vault).owner(), timelock, "vault owner should be timelock");
+
+        assertEq(IAltoVaultBase(vault).curator(), MULTISIG_TIMELOCK_ADMIN, "curator mismatch");
+        assertTrue(IAltoVaultBase(vault).isAllocator(MERKLE_ROOT_UPDATER), "allocator mismatch");
+        assertEq(IAltoVaultBase(vault).guardian(), MULTISIG_FREEZER_PAUSER, "guardian mismatch");
+
+        assertEq(IAltoVaultBase(vault).fee(), 0, "fee should be zero");
+        assertEq(IAltoVaultBase(vault).feeRecipient(), input.contracts.feeRecipient, "feeRecipient mismatch");
+        assertEq(IAltoVaultBase(vault).skimRecipient(), params.treasuryMultisig, "skimRecipient mismatch");
+
+        assertEq(IAltoVaultBase(vault).timelock(), 1 days, "vault timelock mismatch");
+
+        address[5] memory expectedMarkets = [
+            input.contracts.syrupUsdcBorrowMarket.market,
+            input.contracts.susdeBorrowMarket.market,
+            input.contracts.paxgBorrowMarket.market,
+            input.contracts.wbtcBorrowMarket.market,
+            input.contracts.cbbtcBorrowMarket.market
+        ];
+
+        assertEq(IAltoVaultBase(vault).supplyQueueLength(), 5, "supply queue length mismatch");
+        for (uint256 i; i < 5; ++i) {
+            assertEq(IAltoVaultBase(vault).supplyQueue(i), expectedMarkets[i], "supply queue order mismatch");
+            assertEq(IAltoVault(vault).config(expectedMarkets[i]).cap, 80_000 ether, "market cap mismatch");
+        }
+
+        assertGt(IERC20Metadata(vault).balanceOf(address(1)), 0, "seed shares should be minted to address(1)");
+        assertGe(IERC4626(vault).totalAssets(), 1 ether, "vault should hold at least 1 DUSD");
     }
 }
 
