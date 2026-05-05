@@ -258,6 +258,12 @@ PERMISSIONLESS_USM_IMPL=$(get_address ".contracts.permissionlessUsmImplementatio
 PERMISSIONLESS_USM_FIXED_PRICE_STRATEGY=$(get_address ".contracts.permissionlessUsmFixedPriceStrategy")
 PERMISSIONLESS_USM_FIXED_FEE_STRATEGY=$(get_address ".contracts.permissionlessUsmFixedFeeStrategy")
 
+# Permissioned frxUSD USM contracts
+PERMISSIONED_FRXUSD_USM=$(get_address ".contracts.permissionedFrxUsdUsm")
+PERMISSIONED_FRXUSD_USM_IMPL=$(get_address ".contracts.permissionedFrxUsdUsmImplementation")
+PERMISSIONED_FRXUSD_USM_FIXED_PRICE_STRATEGY=$(get_address ".contracts.permissionedFrxUsdUsmFixedPriceStrategy")
+PERMISSIONED_FRXUSD_USM_FIXED_FEE_STRATEGY=$(get_address ".contracts.permissionedFrxUsdUsmFixedFeeStrategy")
+
 echo "📋 Contract verification plan:"
 echo "- Timelock: $TIMELOCK"
 echo "- Fee Recipient: $FEE_RECIPIENT"
@@ -359,6 +365,10 @@ echo "- Permissionless USM: $PERMISSIONLESS_USM"
 echo "- Permissionless USM Implementation: $PERMISSIONLESS_USM_IMPL"
 echo "- Permissionless USM Fixed Price Strategy: $PERMISSIONLESS_USM_FIXED_PRICE_STRATEGY"
 echo "- Permissionless USM Fixed Fee Strategy: $PERMISSIONLESS_USM_FIXED_FEE_STRATEGY"
+echo "- Permissioned frxUSD USM: $PERMISSIONED_FRXUSD_USM"
+echo "- Permissioned frxUSD USM Implementation: $PERMISSIONED_FRXUSD_USM_IMPL"
+echo "- Permissioned frxUSD USM Fixed Price Strategy: $PERMISSIONED_FRXUSD_USM_FIXED_PRICE_STRATEGY"
+echo "- Permissioned frxUSD USM Fixed Fee Strategy: $PERMISSIONED_FRXUSD_USM_FIXED_FEE_STRATEGY"
 echo ""
 
 read -p "Do you want to proceed with verification? (y/N): " -n 1 -r
@@ -500,6 +510,12 @@ verify_contract "PermissionlessUsm" "$PERMISSIONLESS_USM" "lib/openzeppelin-cont
 verify_contract "PermissionlessUsmImplementation" "$PERMISSIONLESS_USM_IMPL" "contracts/usm/DUSDUsm.sol:DUSDUsm"
 verify_contract "PermissionlessUsmFixedPriceStrategy" "$PERMISSIONLESS_USM_FIXED_PRICE_STRATEGY" "contracts/usm/FixedPriceStrategy.sol:FixedPriceStrategy"
 verify_contract "PermissionlessUsmFixedFeeStrategy" "$PERMISSIONLESS_USM_FIXED_FEE_STRATEGY" "contracts/usm/FixedFeeStrategy.sol:FixedFeeStrategy"
+
+# Permissioned frxUSD USM contracts
+verify_contract "PermissionedFrxUsdUsm" "$PERMISSIONED_FRXUSD_USM" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
+verify_contract "PermissionedFrxUsdUsmImplementation" "$PERMISSIONED_FRXUSD_USM_IMPL" "contracts/usm/DUSDUsm.sol:DUSDUsm"
+verify_contract "PermissionedFrxUsdUsmFixedPriceStrategy" "$PERMISSIONED_FRXUSD_USM_FIXED_PRICE_STRATEGY" "contracts/usm/FixedPriceStrategy.sol:FixedPriceStrategy"
+verify_contract "PermissionedFrxUsdUsmFixedFeeStrategy" "$PERMISSIONED_FRXUSD_USM_FIXED_FEE_STRATEGY" "contracts/usm/FixedFeeStrategy.sol:FixedFeeStrategy"
 
 echo "🎉 Contract verification process completed!"
 echo ""
