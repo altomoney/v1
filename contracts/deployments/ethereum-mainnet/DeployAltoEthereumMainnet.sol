@@ -51,6 +51,8 @@ import {UsmBatch, UsmBatchParams, UsmBatchReport} from "@alto/deployments/ethere
 import {VaultBatch, VaultBatchParams, VaultBatchReport} from "@alto/deployments/ethereum-mainnet/VaultBatch.sol";
 import {IMarketRegistry, MarketRegistry} from "@alto/utils/MarketRegistry.sol";
 import {IUsmRegistry, UsmRegistry} from "@alto/utils/UsmRegistry.sol";
+import {IVaultRegistry} from "@alto/utils/interfaces/IVaultRegistry.sol";
+import {VaultRegistry} from "@alto/utils/VaultRegistry.sol";
 import {AltoReferralWhitelistAdapter} from "@alto/rewards/adapters/AltoReferralWhitelistAdapter.sol";
 import {
     MarketContracts,
@@ -594,6 +596,8 @@ library DeployAltoEthereumMainnet {
             );
         } else if (params.phase == DeploymentPhase.DUSD_VAULT) {
             input = _deployDusdVault(params, input);
+        } else if (params.phase == DeploymentPhase.VAULT_REGISTRY) {
+            input = _deployVaultRegistry(params, input);
         } else if (params.phase == DeploymentPhase.PERMISSIONED_FRXUSD_USM) {
             input.contracts.permissionedFrxusdUsm = _deployUsm(
                 DeployUsmParams({
@@ -675,6 +679,27 @@ library DeployAltoEthereumMainnet {
     {
         input.contracts.marketRegistry = address(new MarketRegistry(params.deployer));
         input.contracts.usmRegistry = address(new UsmRegistry(params.deployer));
+        return input;
+    }
+
+    /// @dev Deploys VaultRegistry with the deployer as initial owner, registers any already-deployed
+    ///      vaults from `input.contracts`, and transfers ownership to the timelock.
+    function _deployVaultRegistry(AltoEthereumMainnetParams memory params, AltoEthereumMainnetInput memory input)
+        internal
+        returns (AltoEthereumMainnetInput memory)
+    {
+        require(input.contracts.timelock != address(0), "Timelock not deployed");
+
+        VaultRegistry registry = new VaultRegistry(params.deployer);
+
+        if (input.contracts.dusdVault != address(0)) {
+            registry.addVault(input.contracts.dusdVault);
+        }
+
+        registry.transferOwnershipSkip2Step(input.contracts.timelock);
+
+        input.contracts.vaultRegistry = address(registry);
+
         return input;
     }
 
