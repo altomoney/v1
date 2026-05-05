@@ -28,6 +28,11 @@ enum DeploymentPhase {
     PERMISSIONED_FRXUSD_USM // Phase 19: Deploy Permissioned DUSD/FRXUSD Peg Stability Module
 }
 
+enum UsmFinalizeMode {
+    DIRECT,
+    TIMELOCK_BATCH
+}
+
 struct MarketContracts {
     address market;
     address marketImplementation;
@@ -130,6 +135,8 @@ struct DeployUsmParams {
     uint256 exposureCap; // Exposure cap for USM
     bool isPermissioned; // Whether the USM is permissioned
     address treasuryMultisig; // Treasury multisig address
+    UsmFinalizeMode finalizeMode; // Whether to finalize directly or via timelock batch
+    string safeBatchName; // Safe batch name for delayed finalization
 }
 
 struct DeployMintMarketParams {
