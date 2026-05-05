@@ -34,6 +34,8 @@ import {AdapterContractApproval} from "@alto/utils/AdapterContractApproval.sol";
 import {AdaptiveCurveIrm} from "@alto/lending/irm/AdaptiveCurveIrm.sol";
 import {LiquidationConfiguration} from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";
 import {IDUSD} from "@alto/tokens/interfaces/IDUSD.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {FlashFee} from "@alto/usm/interfaces/IDUSDFlashMinter.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {
@@ -46,6 +48,7 @@ import {DUSDBatch, DUSDBatchParams, DUSDBatchReport} from "@alto/deployments/eth
 import {MintMarketBatch, MintMarketBatchParams} from "@alto/deployments/ethereum-mainnet/MintMarketBatch.sol";
 import {BorrowMarketBatch, BorrowMarketBatchParams} from "@alto/deployments/ethereum-mainnet/BorrowMarketBatch.sol";
 import {UsmBatch, UsmBatchParams, UsmBatchReport} from "@alto/deployments/ethereum-mainnet/UsmBatch.sol";
+import {VaultBatch, VaultBatchParams, VaultBatchReport} from "@alto/deployments/ethereum-mainnet/VaultBatch.sol";
 import {IMarketRegistry, MarketRegistry} from "@alto/utils/MarketRegistry.sol";
 import {IUsmRegistry, UsmRegistry} from "@alto/utils/UsmRegistry.sol";
 import {AltoReferralWhitelistAdapter} from "@alto/rewards/adapters/AltoReferralWhitelistAdapter.sol";
@@ -589,6 +592,8 @@ library DeployAltoEthereumMainnet {
                 params.useUnsafeUpgrades,
                 params.deployerHasOwnership
             );
+        } else if (params.phase == DeploymentPhase.DUSD_VAULT) {
+            input = _deployDusdVault(params, input);
         } else if (params.phase == DeploymentPhase.PERMISSIONED_FRXUSD_USM) {
             input.contracts.permissionedFrxusdUsm = _deployUsm(
                 DeployUsmParams({
@@ -944,6 +949,84 @@ library DeployAltoEthereumMainnet {
         }
 
         _writeSafeTimelockBatchJson(usmParams.safeBatchName, timelock, targets, values, payloads, minDelay);
+    }
+
+    /// @dev Deploys the Alto DUSD Vault and emits a Safe TX bundle for the multisig to:
+    ///      - Approve the vault on AltoAdapter via the timelock.
+    function _deployDusdVault(AltoEthereumMainnetParams memory params, AltoEthereumMainnetInput memory input)
+        internal
+        returns (AltoEthereumMainnetInput memory)
+    {
+        require(params.freezer != address(0), "Freezer must be set");
+        require(params.timelockAdmin != address(0), "TimelockAdmin must be set");
+        require(params.treasuryMultisig != address(0), "TreasuryMultisig must be set");
+        require(input.contracts.dusd != address(0), "DUSD not deployed");
+        require(input.contracts.timelock != address(0), "Timelock not deployed");
+        require(input.contracts.altoAdapter != address(0), "AltoAdapter not deployed");
+        require(input.contracts.marketRegistry != address(0), "MarketRegistry not deployed");
+        require(input.contracts.feeRecipient != address(0), "FeeRecipient not deployed");
+
+        address[] memory markets = new address[](5);
+        markets[0] = input.contracts.syrupUsdcBorrowMarket.market;
+        markets[1] = input.contracts.susdeBorrowMarket.market;
+        markets[2] = input.contracts.paxgBorrowMarket.market;
+        markets[3] = input.contracts.wbtcBorrowMarket.market;
+        markets[4] = input.contracts.cbbtcBorrowMarket.market;
+
+        uint256[] memory caps = new uint256[](5);
+        for (uint256 i; i < 5; ++i) {
+            require(markets[i] != address(0), "Borrow market not deployed");
+            caps[i] = 80_000 ether;
+        }
+
+        // supplyQueue == markets ordering already (syrupUSDC -> sUSDe -> PAXG -> WBTC -> cbBTC)
+        address[] memory supplyQueue = new address[](5);
+        for (uint256 i; i < 5; ++i) {
+            supplyQueue[i] = markets[i];
+        }
+
+        VaultBatch batch = new VaultBatch(
+            VaultBatchParams({
+                timelock: input.contracts.timelock,
+                dusd: input.contracts.dusd,
+                marketRegistry: input.contracts.marketRegistry,
+                curator: params.timelockAdmin,
+                allocator: params.updater,
+                guardian: params.freezer,
+                skimRecipient: params.treasuryMultisig,
+                feeRecipient: input.contracts.feeRecipient,
+                fee: 0,
+                markets: markets,
+                caps: caps,
+                supplyQueue: supplyQueue,
+                finalTimelock: 1 days
+            })
+        );
+        VaultBatchReport memory report = batch.getReport();
+
+        address vault = report.vault;
+
+        // Seed the vault with 1 DUSD from the deployer EOA.
+        IERC20(input.contracts.dusd).approve(vault, 1 ether);
+        IERC4626(vault).deposit(1 ether, address(1));
+
+        // Log Safe TX bundle for the multisig: timelock-owned AltoAdapter must approve the vault.
+        address timelock = input.contracts.timelock;
+        uint256 minDelay = TimelockController(payable(timelock)).getMinDelay();
+
+        address[] memory targets = new address[](1);
+        uint256[] memory values = new uint256[](1);
+        bytes[] memory payloads = new bytes[](1);
+
+        targets[0] = input.contracts.altoAdapter;
+        values[0] = 0;
+        payloads[0] = abi.encodeCall(AdapterContractApproval.approveContract, (vault));
+
+        _writeSafeTimelockBatchJson("dusd-vault-adapter-approval", timelock, targets, values, payloads, minDelay);
+
+        input.contracts.dusdVault = vault;
+
+        return input;
     }
 
     function _deployReferralAdapter(AltoEthereumMainnetParams memory params, AltoEthereumMainnetInput memory input)

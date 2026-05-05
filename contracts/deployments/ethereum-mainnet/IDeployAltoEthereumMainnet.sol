@@ -26,7 +26,8 @@ enum DeploymentPhase {
     MINT_MARKET_SUSDE, // Phase 17: Deploy sUSDe Mint Market
     MINT_MARKET_SYRUPUSDC, // Phase 18: Deploy syrupUSDC Mint Market
     PERMISSIONED_FRXUSD_USM, // Phase 19: Deploy Permissioned DUSD/FRXUSD Peg Stability Module
-    ADAPTER // Phase 20: Deploy AltoAdapter
+    ADAPTER, // Phase 20: Deploy AltoAdapter
+    DUSD_VAULT // Phase 21: Deploy DUSD ERC4626 Vault (`Alto DUSD Vault`, aDUSD)
 }
 
 enum UsmFinalizeMode {
@@ -80,6 +81,7 @@ struct Contracts {
     UsmContracts permissionedUsm;
     UsmContracts permissionlessUsm;
     UsmContracts permissionedFrxusdUsm;
+    address dusdVault;
 }
 
 // PARAMETERS FOR THE DEPLOYMENT
