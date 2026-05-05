@@ -13,7 +13,7 @@ import {
 import {console} from "forge-std/console.sol";
 
 uint256 constant DEPLOYMENT_ID_TO_LOAD = 1765364975;
-DeploymentPhase constant PHASE_TO_DEPLOY = DeploymentPhase.ADAPTER; // CORE, DUSD, MINT_MARKET_WETH, MINT_MARKET_WSTETH, MINT_MARKET_RETH, MINT_MARKET_METH, MINT_MARKET_TBTC, BORROW_MARKET_WBTC, BORROW_MARKET_CBBTC, BORROW_MARKET_SUSDE, USDC_USM, POST, REFERRAL_ADAPTER, BORROW_MARKET_SYRUP_USDC, BORROW_MARKET_PAXG, MINT_MARKET_SUSDE, MINT_MARKET_SYRUPUSDC, PERMISSIONED_FRXUSD_USM, ADAPTER
+DeploymentPhase constant PHASE_TO_DEPLOY = DeploymentPhase.DUSD_VAULT; // CORE, DUSD, MINT_MARKET_WETH, MINT_MARKET_WSTETH, MINT_MARKET_RETH, MINT_MARKET_METH, MINT_MARKET_TBTC, BORROW_MARKET_WBTC, BORROW_MARKET_CBBTC, BORROW_MARKET_SUSDE, USDC_USM, POST, REFERRAL_ADAPTER, BORROW_MARKET_SYRUP_USDC, BORROW_MARKET_PAXG, MINT_MARKET_SUSDE, MINT_MARKET_SYRUPUSDC, PERMISSIONED_FRXUSD_USM, ADAPTER, DUSD_VAULT
 string constant OUTPUT_DIR = "./contracts/deployments/ethereum-mainnet/output";
 
 contract DeployAltoEthereumMainnetScript is Script {
@@ -126,6 +126,9 @@ contract DeployAltoEthereumMainnetScript is Script {
                 input.contracts.permissionedFrxusdUsm.fixedFeeStrategy
             );
         }
+        if (input.contracts.dusdVault != address(0)) {
+            contractsJson = vm.serializeAddress("contracts", "dusdVault", input.contracts.dusdVault);
+        }
 
         // Build final JSON and write to file
         string memory json = vm.serializeString("", "contracts", contractsJson);
@@ -215,6 +218,7 @@ contract DeployAltoEthereumMainnetScript is Script {
             _tryParseAddress(json, ".contracts.permissionedFrxUsdUsmFixedPriceStrategy");
         loadedInput.contracts.permissionedFrxusdUsm.fixedFeeStrategy =
             _tryParseAddress(json, ".contracts.permissionedFrxUsdUsmFixedFeeStrategy");
+        loadedInput.contracts.dusdVault = _tryParseAddress(json, ".contracts.dusdVault");
 
         input = loadedInput;
     }
@@ -295,6 +299,8 @@ contract DeployAltoEthereumMainnetScript is Script {
             _extractContractABI("DUSDUsm", abiFolder);
             _extractContractABI("FixedPriceStrategy", abiFolder);
             _extractContractABI("FixedFeeStrategy", abiFolder);
+        } else if (PHASE_TO_DEPLOY == DeploymentPhase.DUSD_VAULT) {
+            _extractContractABI("AltoVault", abiFolder);
         } else if (PHASE_TO_DEPLOY == DeploymentPhase.PERMISSIONLESS_USM) {
             _extractContractABI("DUSDUsm", abiFolder);
             _extractContractABI("FixedPriceStrategy", abiFolder);
