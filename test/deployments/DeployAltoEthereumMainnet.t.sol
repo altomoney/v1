@@ -36,7 +36,7 @@ import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 uint256 constant DEPLOYMENT_ID_TO_LOAD = 1765364975;
 string constant OUTPUT_DIR = "./contracts/deployments/ethereum-mainnet/output";
 
-contract DeployAltoEthereumMainnetTest is Test {
+abstract contract DeployAltoEthereumMainnetTestBase is Test {
     AltoEthereumMainnetParams params;
     AltoEthereumMainnetInput input;
 
@@ -321,9 +321,23 @@ contract DeployAltoEthereumMainnetTest is Test {
 
     // NOTE: @dev remove this test once frxUSD is deployed on-chain
     //       @dev move this test to deprecated folder
-    function test_deployPermissionedFrxUsdPsm() public {
+    function _deployPermissionedFrxUsdPsm() internal {
         params.phase = DeploymentPhase.PERMISSIONED_FRXUSD_USM;
         input = DeployAltoEthereumMainnet.deploy(params, input);
+
+        address usm = input.contracts.permissionedFrxusdUsm.dusdUsm;
+        uint256 mintCeiling = 5_000_000_000 ether;
+
+        vm.startPrank(input.contracts.timelock);
+        IDUSD(input.contracts.dusd).setMinterStatus(usm, true);
+        IDUSD(input.contracts.dusd).setMinterCeiling(usm, mintCeiling);
+        IDUSD(input.contracts.dusd).setBurnerStatus(usm, true);
+        IUsmRegistry(input.contracts.usmRegistry).addUsm(usm);
+        vm.stopPrank();
+    }
+
+    function _assertDeployPermissionedFrxUsdPsm() internal {
+        _deployPermissionedFrxUsdPsm();
 
         address usm = input.contracts.permissionedFrxusdUsm.dusdUsm;
         address impl = input.contracts.permissionedFrxusdUsm.dusdUsmImplementation;
@@ -365,25 +379,15 @@ contract DeployAltoEthereumMainnetTest is Test {
 
         assertEq(IUsm(usm).getExposureCap(), 5_000_000_000 ether, "exposure cap mismatch");
 
-        uint256 mintCeiling = 5_000_000_000 ether;
-
-        vm.startPrank(input.contracts.timelock);
-        IDUSD(input.contracts.dusd).setMinterStatus(usm, true);
-        IDUSD(input.contracts.dusd).setMinterCeiling(usm, mintCeiling);
-        IDUSD(input.contracts.dusd).setBurnerStatus(usm, true);
-        IUsmRegistry(input.contracts.usmRegistry).addUsm(usm);
-
-        vm.stopPrank();
-
-        _verifyMintCeiling(usm, mintCeiling);
+        _verifyMintCeiling(usm, 5_000_000_000 ether);
         assertTrue(IUsmRegistry(input.contracts.usmRegistry).isUsm(usm), "USM not registered in UsmRegistry");
     }
 
     // NOTE: @dev remove this test once frxUSD is deployed on-chain
     //       @dev move this test to deprecated folder
-    function test_TresuryPSMMigration() public {
+    function _assertTresuryPSMMigration() internal {
         // frxUSD USM should be deployed first
-        test_deployPermissionedFrxUsdPsm();
+        _deployPermissionedFrxUsdPsm();
 
         address treasury = params.treasuryMultisig;
         IERC4626 fraxCustodian = IERC4626(0x4F95C5bA0C7c69FB2f9340E190cCeE890B3bd87c);
@@ -419,6 +423,18 @@ contract DeployAltoEthereumMainnetTest is Test {
 
         uint256 usdcPsmExposureAfter = IUsm(usdcPsm).getAvailableLiquidity();
         assertEq(usdcPsmExposureBefore - usdcPsmExposureAfter, usdcAmount, "USDC PSM exposure reduction mismatch");
+    }
+}
+
+contract DeployPermissionedFrxUsdPsmTest is DeployAltoEthereumMainnetTestBase {
+    function test_deployPermissionedFrxUsdPsm() public {
+        _assertDeployPermissionedFrxUsdPsm();
+    }
+}
+
+contract TresuryPSMMigrationTest is DeployAltoEthereumMainnetTestBase {
+    function test_TresuryPSMMigration() public {
+        _assertTresuryPSMMigration();
     }
 }
 
