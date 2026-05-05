@@ -35,6 +35,7 @@ import {AdaptiveCurveIrm} from "@alto/lending/irm/AdaptiveCurveIrm.sol";
 import {LiquidationConfiguration} from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";
 import {IDUSD} from "@alto/tokens/interfaces/IDUSD.sol";
 import {FlashFee} from "@alto/usm/interfaces/IDUSDFlashMinter.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {
     EthereumMainnetOracleDeployer,
     EthereumMainnetLendingOracleAsset
@@ -59,6 +60,7 @@ import {
     DeployMintMarketParams,
     DeployBorrowMarketParams,
     DeployUsmParams,
+    UsmFinalizeMode,
     Contracts
 } from "@alto/deployments/ethereum-mainnet/IDeployAltoEthereumMainnet.sol";
 import {AccessMode} from "@alto/usm/interfaces/IUsm.sol";
@@ -390,7 +392,7 @@ library DeployAltoEthereumMainnet {
                 params.deployerHasOwnership
             );
         } else if (params.phase == DeploymentPhase.PERMISSIONED_USM) {
-            input = _deployUsm(
+            input.contracts.permissionedUsm = _deployUsm(
                 DeployUsmParams({
                     owner: input.contracts.timelock,
                     dusd: input.contracts.dusd,
@@ -402,13 +404,15 @@ library DeployAltoEthereumMainnet {
                     exposureCap: 5_000_000_000 * 10 ** 6, // 5,000,000,000 USDC
                     underlyingAsset: USDC_MAINNET,
                     isPermissioned: true,
-                    treasuryMultisig: params.treasuryMultisig
+                    treasuryMultisig: params.treasuryMultisig,
+                    finalizeMode: UsmFinalizeMode.DIRECT,
+                    safeBatchName: ""
                 }),
                 input,
                 params.useUnsafeUpgrades
             );
         } else if (params.phase == DeploymentPhase.PERMISSIONLESS_USM) {
-            input = _deployUsm(
+            input.contracts.permissionlessUsm = _deployUsm(
                 DeployUsmParams({
                     owner: input.contracts.timelock,
                     dusd: input.contracts.dusd,
@@ -420,7 +424,9 @@ library DeployAltoEthereumMainnet {
                     exposureCap: 5_000_000 * 10 ** 6, // 5,000,000 USDC
                     underlyingAsset: USDC_MAINNET,
                     isPermissioned: false,
-                    treasuryMultisig: params.treasuryMultisig
+                    treasuryMultisig: params.treasuryMultisig,
+                    finalizeMode: UsmFinalizeMode.DIRECT,
+                    safeBatchName: ""
                 }),
                 input,
                 params.useUnsafeUpgrades
@@ -584,7 +590,7 @@ library DeployAltoEthereumMainnet {
                 params.deployerHasOwnership
             );
         } else if (params.phase == DeploymentPhase.PERMISSIONED_FRXUSD_USM) {
-            input = _deployFrxusdPermissionedUsm(
+            input.contracts.permissionedFrxusdUsm = _deployUsm(
                 DeployUsmParams({
                     owner: input.contracts.timelock,
                     dusd: input.contracts.dusd,
@@ -596,7 +602,9 @@ library DeployAltoEthereumMainnet {
                     exposureCap: 5_000_000_000 ether, // 5,000,000,000 frxUSD (18 decimals)
                     underlyingAsset: FRXUSD_MAINNET,
                     isPermissioned: true,
-                    treasuryMultisig: params.treasuryMultisig
+                    treasuryMultisig: params.treasuryMultisig,
+                    finalizeMode: UsmFinalizeMode.TIMELOCK_BATCH,
+                    safeBatchName: "frxusd-permissioned-usm-registry"
                 }),
                 input,
                 params.useUnsafeUpgrades
@@ -816,7 +824,7 @@ library DeployAltoEthereumMainnet {
 
     function _deployUsm(DeployUsmParams memory usmParams, AltoEthereumMainnetInput memory input, bool useUnsafeUpgrades)
         internal
-        returns (AltoEthereumMainnetInput memory)
+        returns (UsmContracts memory)
     {
         require(usmParams.freezer != address(0), "Freezer must be set");
 
@@ -839,101 +847,99 @@ library DeployAltoEthereumMainnet {
         );
         UsmBatchReport memory report = batch.getReport();
 
-        // exposureCap​ is in underlying asset (in this case USDC) this should be transformed to DUSD amount instead
-        // USDC is 6 decimals, DUSD is 18 decimals, so 1e12 is the factor to convert USDC to DUSD
-        uint256 mintCeiling = usmParams.exposureCap == 0 ? 5_000_000_000 ether : usmParams.exposureCap * 1e12;
+        uint256 mintCeiling = _getUsmMintCeiling(usmParams);
 
-        IDUSD(usmParams.dusd).setMinterStatus(report.dusdUsm, true);
-        IDUSD(usmParams.dusd).setMinterCeiling(report.dusdUsm, mintCeiling);
-        IDUSD(usmParams.dusd).setBurnerStatus(report.dusdUsm, true);
-
-        IUsmRegistry(input.contracts.usmRegistry).addUsm(report.dusdUsm);
-
-        // Approve USM on AltoAdapter (requires adapter ownership)
-        if (!usmParams.isPermissioned) {
-            AltoAdapter(payable(usmParams.altoAdapter)).approveContract(report.dusdUsm);
+        if (usmParams.finalizeMode == UsmFinalizeMode.DIRECT) {
+            _finalizeUsmDirect(usmParams, input, report.dusdUsm, mintCeiling);
+        } else if (usmParams.finalizeMode == UsmFinalizeMode.TIMELOCK_BATCH) {
+            _finalizeUsmViaTimelockBatch(usmParams, input, report.dusdUsm, mintCeiling);
+        } else {
+            revert("Invalid USM finalize mode");
         }
 
-        UsmContracts memory usmContract = UsmContracts({
+        return UsmContracts({
             dusdUsm: report.dusdUsm,
             dusdUsmImplementation: report.dusdUsmImplementation,
             fixedPriceStrategy: report.fixedPriceStrategy,
             fixedFeeStrategy: report.fixedFeeStrategy
         });
-
-        if (usmParams.isPermissioned) {
-            input.contracts.permissionedUsm = usmContract;
-        } else {
-            input.contracts.permissionlessUsm = usmContract;
-        }
-
-        return input;
     }
 
-    /// @dev Deploys the Permissioned DUSD/frxUSD Peg Stability Module.
-    ///      - `AltoAdapter.approveContract` is skipped (permissioned USM).
-    function _deployFrxusdPermissionedUsm(
+    function _getUsmMintCeiling(DeployUsmParams memory usmParams) internal view returns (uint256) {
+        uint8 underlyingDecimals = IERC20Metadata(usmParams.underlyingAsset).decimals();
+        uint256 exposureCap = usmParams.exposureCap;
+
+        if (exposureCap == 0) {
+            exposureCap = 5_000_000_000 * 10 ** underlyingDecimals;
+        }
+
+        if (underlyingDecimals < 18) {
+            return exposureCap * 10 ** (18 - underlyingDecimals);
+        }
+        if (underlyingDecimals > 18) {
+            return exposureCap / 10 ** (underlyingDecimals - 18);
+        }
+
+        return exposureCap;
+    }
+
+    function _finalizeUsmDirect(
         DeployUsmParams memory usmParams,
         AltoEthereumMainnetInput memory input,
-        bool useUnsafeUpgrades
-    ) internal returns (AltoEthereumMainnetInput memory) {
-        require(usmParams.freezer != address(0), "Freezer must be set");
-        require(usmParams.isPermissioned, "Frxusd USM must be permissioned");
+        address usm,
+        uint256 mintCeiling
+    ) internal {
+        IDUSD(usmParams.dusd).setMinterStatus(usm, true);
+        IDUSD(usmParams.dusd).setMinterCeiling(usm, mintCeiling);
+        IDUSD(usmParams.dusd).setBurnerStatus(usm, true);
 
-        UsmBatch batch = new UsmBatch(
-            UsmBatchParams({
-                owner: usmParams.owner,
-                dusd: usmParams.dusd,
-                altoAdapter: usmParams.altoAdapter,
-                feeRecipient: usmParams.feeRecipient,
-                buyFee: usmParams.buyFee,
-                sellFee: usmParams.sellFee,
-                exposureCap: usmParams.exposureCap,
-                freezer: usmParams.freezer,
-                underlyingAsset: usmParams.underlyingAsset,
-                priceRatio: 1 ether,
-                isPermissioned: usmParams.isPermissioned,
-                useUnsafeUpgrades: useUnsafeUpgrades,
-                treasuryMultisig: usmParams.treasuryMultisig
-            })
-        );
-        UsmBatchReport memory report = batch.getReport();
+        IUsmRegistry(input.contracts.usmRegistry).addUsm(usm);
 
-        uint256 mintCeiling = usmParams.exposureCap == 0 ? 5_000_000_000 ether : usmParams.exposureCap;
+        // Approve USM on AltoAdapter (requires adapter ownership)
+        if (!usmParams.isPermissioned) {
+            AltoAdapter(payable(usmParams.altoAdapter)).approveContract(usm);
+        }
+    }
+
+    function _finalizeUsmViaTimelockBatch(
+        DeployUsmParams memory usmParams,
+        AltoEthereumMainnetInput memory input,
+        address usm,
+        uint256 mintCeiling
+    ) internal {
+        require(bytes(usmParams.safeBatchName).length > 0, "Safe batch name must be set");
 
         address timelock = input.contracts.timelock;
         uint256 minDelay = TimelockController(payable(timelock)).getMinDelay();
 
-        address[] memory targets = new address[](4);
-        uint256[] memory values = new uint256[](4);
-        bytes[] memory payloads = new bytes[](4);
+        uint256 actionCount = usmParams.isPermissioned ? 4 : 5;
+        address[] memory targets = new address[](actionCount);
+        uint256[] memory values = new uint256[](actionCount);
+        bytes[] memory payloads = new bytes[](actionCount);
 
         targets[0] = usmParams.dusd;
         values[0] = 0;
-        payloads[0] = abi.encodeCall(IDUSD.setMinterStatus, (report.dusdUsm, true));
+        payloads[0] = abi.encodeCall(IDUSD.setMinterStatus, (usm, true));
 
         targets[1] = usmParams.dusd;
         values[1] = 0;
-        payloads[1] = abi.encodeCall(IDUSD.setMinterCeiling, (report.dusdUsm, mintCeiling));
+        payloads[1] = abi.encodeCall(IDUSD.setMinterCeiling, (usm, mintCeiling));
 
         targets[2] = usmParams.dusd;
         values[2] = 0;
-        payloads[2] = abi.encodeCall(IDUSD.setBurnerStatus, (report.dusdUsm, true));
+        payloads[2] = abi.encodeCall(IDUSD.setBurnerStatus, (usm, true));
 
         targets[3] = input.contracts.usmRegistry;
         values[3] = 0;
-        payloads[3] = abi.encodeCall(IUsmRegistry.addUsm, (report.dusdUsm));
+        payloads[3] = abi.encodeCall(IUsmRegistry.addUsm, (usm));
 
-        _writeSafeTimelockBatchJson("frxusd-permissioned-usm-registry", timelock, targets, values, payloads, minDelay);
+        if (!usmParams.isPermissioned) {
+            targets[4] = usmParams.altoAdapter;
+            values[4] = 0;
+            payloads[4] = abi.encodeCall(AdapterContractApproval.approveContract, (usm));
+        }
 
-        input.contracts.permissionedFrxusdUsm = UsmContracts({
-            dusdUsm: report.dusdUsm,
-            dusdUsmImplementation: report.dusdUsmImplementation,
-            fixedPriceStrategy: report.fixedPriceStrategy,
-            fixedFeeStrategy: report.fixedFeeStrategy
-        });
-
-        return input;
+        _writeSafeTimelockBatchJson(usmParams.safeBatchName, timelock, targets, values, payloads, minDelay);
     }
 
     function _deployReferralAdapter(AltoEthereumMainnetParams memory params, AltoEthereumMainnetInput memory input)
