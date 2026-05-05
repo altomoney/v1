@@ -24,7 +24,8 @@ enum DeploymentPhase {
     BORROW_MARKET_SYRUP_USDC, // Phase 15: Deploy syrupUSDC Borrow Market
     BORROW_MARKET_PAXG, // Phase 16: Deploy PAXG Borrow Market
     MINT_MARKET_SUSDE, // Phase 17: Deploy sUSDe Mint Market
-    MINT_MARKET_SYRUPUSDC // Phase 18: Deploy syrupUSDC Mint Market
+    MINT_MARKET_SYRUPUSDC, // Phase 18: Deploy syrupUSDC Mint Market
+    PERMISSIONED_FRXUSD_USM // Phase 19: Deploy Permissioned DUSD/FRXUSD Peg Stability Module
 }
 
 struct MarketContracts {
@@ -72,6 +73,7 @@ struct Contracts {
     MarketContracts syrupUsdcMintMarket;
     UsmContracts permissionedUsm;
     UsmContracts permissionlessUsm;
+    UsmContracts permissionedFrxusdUsm;
 }
 
 // PARAMETERS FOR THE DEPLOYMENT

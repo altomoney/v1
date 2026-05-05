@@ -26,6 +26,8 @@ address constant USDC_MAINNET = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
 address constant SYRUPUSDC_MAINNET = 0x80ac24aA929eaF5013f6436cdA2a7ba190f5Cc0b;
 // PAXG on mainnet
 address constant PAXG_MAINNET = 0x45804880De22913dAFE09f4980848ECE6EcbAf78;
+// frxUsd on mainnet
+address constant FRXUSD_MAINNET = 0xCAcd6fd266aF91b8AeD52aCCc382b4e165586E29;
 
 // Chainlink feeds
 // Standard Chainlink ETH/USD feed

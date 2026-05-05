@@ -23,6 +23,7 @@ import {
     SYRUPUSDC_MAINNET,
     PAXG_MAINNET,
     USDC_MAINNET,
+    FRXUSD_MAINNET,
     LAYERZERO_ENDPOINT_MAINNET,
     ZEROX_SWAP_TARGET_MAINNET,
     ODOS_ROUTER_V3_MAINNET,
@@ -582,6 +583,24 @@ library DeployAltoEthereumMainnet {
                 params.useUnsafeUpgrades,
                 params.deployerHasOwnership
             );
+        } else if (params.phase == DeploymentPhase.PERMISSIONED_FRXUSD_USM) {
+            input = _deployFrxusdPermissionedUsm(
+                DeployUsmParams({
+                    owner: input.contracts.timelock,
+                    dusd: input.contracts.dusd,
+                    altoAdapter: input.contracts.altoAdapter,
+                    feeRecipient: input.contracts.feeRecipient,
+                    freezer: params.freezer,
+                    buyFee: 0,
+                    sellFee: 0,
+                    exposureCap: 5_000_000_000 ether, // 5,000,000,000 frxUSD (18 decimals)
+                    underlyingAsset: FRXUSD_MAINNET,
+                    isPermissioned: true,
+                    treasuryMultisig: params.treasuryMultisig
+                }),
+                input,
+                params.useUnsafeUpgrades
+            );
         } else {
             revert("Invalid phase");
         }
@@ -847,6 +866,72 @@ library DeployAltoEthereumMainnet {
         } else {
             input.contracts.permissionlessUsm = usmContract;
         }
+
+        return input;
+    }
+
+    /// @dev Deploys the Permissioned DUSD/frxUSD Peg Stability Module.
+    ///      - `AltoAdapter.approveContract` is skipped (permissioned USM).
+    function _deployFrxusdPermissionedUsm(
+        DeployUsmParams memory usmParams,
+        AltoEthereumMainnetInput memory input,
+        bool useUnsafeUpgrades
+    ) internal returns (AltoEthereumMainnetInput memory) {
+        require(usmParams.freezer != address(0), "Freezer must be set");
+        require(usmParams.isPermissioned, "Frxusd USM must be permissioned");
+
+        UsmBatch batch = new UsmBatch(
+            UsmBatchParams({
+                owner: usmParams.owner,
+                dusd: usmParams.dusd,
+                altoAdapter: usmParams.altoAdapter,
+                feeRecipient: usmParams.feeRecipient,
+                buyFee: usmParams.buyFee,
+                sellFee: usmParams.sellFee,
+                exposureCap: usmParams.exposureCap,
+                freezer: usmParams.freezer,
+                underlyingAsset: usmParams.underlyingAsset,
+                priceRatio: 1 ether,
+                isPermissioned: usmParams.isPermissioned,
+                useUnsafeUpgrades: useUnsafeUpgrades,
+                treasuryMultisig: usmParams.treasuryMultisig
+            })
+        );
+        UsmBatchReport memory report = batch.getReport();
+
+        uint256 mintCeiling = usmParams.exposureCap == 0 ? 5_000_000_000 ether : usmParams.exposureCap;
+
+        address timelock = input.contracts.timelock;
+        uint256 minDelay = TimelockController(payable(timelock)).getMinDelay();
+
+        address[] memory targets = new address[](4);
+        uint256[] memory values = new uint256[](4);
+        bytes[] memory payloads = new bytes[](4);
+
+        targets[0] = usmParams.dusd;
+        values[0] = 0;
+        payloads[0] = abi.encodeCall(IDUSD.setMinterStatus, (report.dusdUsm, true));
+
+        targets[1] = usmParams.dusd;
+        values[1] = 0;
+        payloads[1] = abi.encodeCall(IDUSD.setMinterCeiling, (report.dusdUsm, mintCeiling));
+
+        targets[2] = usmParams.dusd;
+        values[2] = 0;
+        payloads[2] = abi.encodeCall(IDUSD.setBurnerStatus, (report.dusdUsm, true));
+
+        targets[3] = input.contracts.usmRegistry;
+        values[3] = 0;
+        payloads[3] = abi.encodeCall(IUsmRegistry.addUsm, (report.dusdUsm));
+
+        _writeSafeTimelockBatchJson("frxusd-permissioned-usm-registry", timelock, targets, values, payloads, minDelay);
+
+        input.contracts.permissionedFrxusdUsm = UsmContracts({
+            dusdUsm: report.dusdUsm,
+            dusdUsmImplementation: report.dusdUsmImplementation,
+            fixedPriceStrategy: report.fixedPriceStrategy,
+            fixedFeeStrategy: report.fixedFeeStrategy
+        });
 
         return input;
     }
