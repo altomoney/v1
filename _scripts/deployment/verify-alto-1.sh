@@ -135,6 +135,7 @@ ALTO_ADAPTER=$(get_address ".contracts.altoAdapter")
 ALTO_REFERRAL_ADAPTER=$(get_address ".contracts.referralAdapter")
 DUSD=$(get_address ".contracts.dusd")
 DUSD_FLASH_MINTER=$(get_address ".contracts.dusdFlashMinter")
+DUSD_VAULT=$(get_address ".contracts.dusdVault")
 MARKET_REGISTRY=$(get_address ".contracts.marketRegistry")
 USM_REGISTRY=$(get_address ".contracts.usmRegistry")
 
@@ -271,6 +272,7 @@ echo "- Alto Adapter: $ALTO_ADAPTER"
 echo "- Alto Referral Adapter: $ALTO_REFERRAL_ADAPTER"
 echo "- DUSD: $DUSD"
 echo "- DUSD Flash Minter: $DUSD_FLASH_MINTER"
+echo "- DUSD Vault: $DUSD_VAULT"
 echo "- Market Registry: $MARKET_REGISTRY"
 echo "- USM Registry: $USM_REGISTRY"
 echo "- WETH Market: $WETH_MARKET"
@@ -388,6 +390,7 @@ verify_contract "AltoAdapter" "$ALTO_ADAPTER" "contracts/utils/AltoAdapter.sol:A
 verify_contract "AltoReferralAdapter" "$ALTO_REFERRAL_ADAPTER" "contracts/rewards/adapters/AltoReferralWhitelistAdapter.sol:AltoReferralWhitelistAdapter"
 verify_contract "DUSD" "$DUSD" "contracts/tokens/DUSD.sol:DUSD"
 verify_contract "DUSDFlashMinter" "$DUSD_FLASH_MINTER" "contracts/usm/DUSDFlashMinter.sol:DUSDFlashMinter"
+verify_contract "DUSDVault" "$DUSD_VAULT" "contracts/lending/vault/AltoVault.sol:AltoVault"
 verify_contract "MarketRegistry" "$MARKET_REGISTRY" "contracts/utils/MarketRegistry.sol:MarketRegistry"
 verify_contract "UsmRegistry" "$USM_REGISTRY" "contracts/utils/UsmRegistry.sol:UsmRegistry"
 

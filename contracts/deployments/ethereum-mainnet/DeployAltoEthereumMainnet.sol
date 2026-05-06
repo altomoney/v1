@@ -1001,7 +1001,7 @@ library DeployAltoEthereumMainnet {
                 markets: markets,
                 caps: caps,
                 supplyQueue: supplyQueue,
-                finalTimelock: 1 hours
+                finalTimelock: 1 days
             })
         );
         VaultBatchReport memory report = batch.getReport();
