@@ -86,6 +86,7 @@
     "tbtcMarketOracle": "0x3365e8DE476d416BF7bE20E8adBaA7f6E3CAaF3a",
     "timelock": "0xfAe841679dc1A93D225ECc827E4BbF3e8d703F86",
     "usmRegistry": "0xAD5620e10C33918E2C6A2E8E53325bf98c548E5e",
+    "vaultRegistry": "0x696E7b1D5D11E2cf7F7b970aCf54cF1491f17A47",
     "wbtcBorrowLeverage": "0xcC51aCb1D625F06487D7D568e7E8F9620Ec6b082",
     "wbtcBorrowLeverageSwapper": "0x8714cc923aAA7dFD37264f91C82A33454CD41eFc",
     "wbtcBorrowLiquidationEngine": "0x5B7a27B467C4B111c780210475d527aD91e30277",
