@@ -138,6 +138,7 @@ DUSD_FLASH_MINTER=$(get_address ".contracts.dusdFlashMinter")
 DUSD_VAULT=$(get_address ".contracts.dusdVault")
 MARKET_REGISTRY=$(get_address ".contracts.marketRegistry")
 USM_REGISTRY=$(get_address ".contracts.usmRegistry")
+VAULT_REGISTRY=$(get_address ".contracts.vaultRegistry")
 
 # WETH Market contracts
 WETH_MARKET=$(get_address ".contracts.wethMarket")
@@ -275,6 +276,7 @@ echo "- DUSD Flash Minter: $DUSD_FLASH_MINTER"
 echo "- DUSD Vault: $DUSD_VAULT"
 echo "- Market Registry: $MARKET_REGISTRY"
 echo "- USM Registry: $USM_REGISTRY"
+echo "- Vault Registry: $VAULT_REGISTRY"
 echo "- WETH Market: $WETH_MARKET"
 echo "- WETH Market Implementation: $WETH_MARKET_IMPL"
 echo "- WETH Market IRM: $WETH_MARKET_IRM"
@@ -393,6 +395,7 @@ verify_contract "DUSDFlashMinter" "$DUSD_FLASH_MINTER" "contracts/usm/DUSDFlashM
 verify_contract "DUSDVault" "$DUSD_VAULT" "contracts/lending/vault/AltoVault.sol:AltoVault"
 verify_contract "MarketRegistry" "$MARKET_REGISTRY" "contracts/utils/MarketRegistry.sol:MarketRegistry"
 verify_contract "UsmRegistry" "$USM_REGISTRY" "contracts/utils/UsmRegistry.sol:UsmRegistry"
+verify_contract "VaultRegistry" "$VAULT_REGISTRY" "contracts/utils/VaultRegistry.sol:VaultRegistry"
 
 # WETH Market contracts
 verify_contract "WethMarket" "$WETH_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
