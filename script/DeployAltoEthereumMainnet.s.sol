@@ -13,7 +13,7 @@ import {
 import {console} from "forge-std/console.sol";
 
 uint256 constant DEPLOYMENT_ID_TO_LOAD = 1765364975;
-DeploymentPhase constant PHASE_TO_DEPLOY = DeploymentPhase.PERMISSIONED_FRXUSD_USM; // CORE, DUSD, MINT_MARKET_WETH, MINT_MARKET_WSTETH, MINT_MARKET_RETH, MINT_MARKET_METH, MINT_MARKET_TBTC, BORROW_MARKET_WBTC, BORROW_MARKET_CBBTC, BORROW_MARKET_SUSDE, USDC_USM, POST, REFERRAL_ADAPTER, BORROW_MARKET_SYRUP_USDC, BORROW_MARKET_PAXG, MINT_MARKET_SUSDE, MINT_MARKET_SYRUPUSDC, PERMISSIONED_FRXUSD_USM
+DeploymentPhase constant PHASE_TO_DEPLOY = DeploymentPhase.ADAPTER; // CORE, DUSD, MINT_MARKET_WETH, MINT_MARKET_WSTETH, MINT_MARKET_RETH, MINT_MARKET_METH, MINT_MARKET_TBTC, BORROW_MARKET_WBTC, BORROW_MARKET_CBBTC, BORROW_MARKET_SUSDE, USDC_USM, POST, REFERRAL_ADAPTER, BORROW_MARKET_SYRUP_USDC, BORROW_MARKET_PAXG, MINT_MARKET_SUSDE, MINT_MARKET_SYRUPUSDC, PERMISSIONED_FRXUSD_USM, ADAPTER
 string constant OUTPUT_DIR = "./contracts/deployments/ethereum-mainnet/output";
 
 contract DeployAltoEthereumMainnetScript is Script {
@@ -311,6 +311,8 @@ contract DeployAltoEthereumMainnetScript is Script {
             _extractMintMarketABIs(abiFolder, "ERC4626RatioChainlinkOracleSUSDE");
         } else if (PHASE_TO_DEPLOY == DeploymentPhase.MINT_MARKET_SYRUPUSDC) {
             _extractMintMarketABIs(abiFolder, "ERC4626RatioChainlinkOracleSYRUPUSDC");
+        } else if (PHASE_TO_DEPLOY == DeploymentPhase.ADAPTER) {
+            _extractContractABI("AltoAdapter", abiFolder);
         }
 
         console.log("ABIs extracted to:", abiFolder);
