@@ -448,25 +448,35 @@ abstract contract DeployAltoEthereumMainnetTestBase is Test {
         assertEq(address(AltoAdapter(payable(adapter)).WRAPPED_NATIVE()), WETH_MAINNET, "WETH");
         assertEq(AltoAdapter(payable(adapter)).BUNDLER3(), BUNDLER3_MAINNET, "Bundler3");
 
-        address[] memory approved = new address[](13);
-        approved[0] = input.contracts.wethMarket.market;
-        approved[1] = input.contracts.wstethMarket.market;
-        approved[2] = input.contracts.rethMarket.market;
-        approved[3] = input.contracts.methMarket.market;
-        approved[4] = input.contracts.tbtcMarket.market;
-        approved[5] = input.contracts.wbtcBorrowMarket.market;
-        approved[6] = input.contracts.cbbtcBorrowMarket.market;
-        approved[7] = input.contracts.susdeBorrowMarket.market;
-        approved[8] = input.contracts.syrupUsdcBorrowMarket.market;
-        approved[9] = input.contracts.paxgBorrowMarket.market;
-        approved[10] = input.contracts.susdeMintMarket.market;
-        approved[11] = input.contracts.syrupUsdcMintMarket.market;
-        approved[12] = input.contracts.permissionlessUsm.dusdUsm;
+        address[] memory candidates = new address[](16);
+        candidates[0] = input.contracts.wethMarket.market;
+        candidates[1] = input.contracts.wstethMarket.market;
+        candidates[2] = input.contracts.rethMarket.market;
+        candidates[3] = input.contracts.methMarket.market;
+        candidates[4] = input.contracts.tbtcMarket.market;
+        candidates[5] = input.contracts.wbtcBorrowMarket.market;
+        candidates[6] = input.contracts.cbbtcBorrowMarket.market;
+        candidates[7] = input.contracts.susdeBorrowMarket.market;
+        candidates[8] = input.contracts.syrupUsdcBorrowMarket.market;
+        candidates[9] = input.contracts.paxgBorrowMarket.market;
+        candidates[10] = input.contracts.susdeMintMarket.market;
+        candidates[11] = input.contracts.syrupUsdcMintMarket.market;
+        candidates[12] = input.contracts.permissionlessUsm.dusdUsm;
+        candidates[13] = input.contracts.permissionedUsm.dusdUsm;
+        candidates[14] = input.contracts.permissionedFrxusdUsm.dusdUsm;
+        candidates[15] = input.contracts.referralAdapter;
 
-        for (uint256 i; i < approved.length; ++i) {
-            assertTrue(
-                AltoAdapter(payable(adapter)).isApprovedContract(approved[i]),
-                string.concat("adapter approval missing for ", Strings.toHexString(uint256(uint160(approved[i])), 20))
+        for (uint256 i; i < candidates.length; ++i) {
+            address candidate = candidates[i];
+            if (candidate == address(0)) continue;
+
+            bool previousApproval = AltoAdapter(payable(previousAdapter)).isApprovedContract(candidate);
+            bool newApproval = AltoAdapter(payable(adapter)).isApprovedContract(candidate);
+
+            assertEq(
+                newApproval,
+                previousApproval,
+                string.concat("adapter approval mismatch for ", Strings.toHexString(uint256(uint160(candidate)), 20))
             );
         }
     }
