@@ -27,7 +27,12 @@ import {MarketRegistry} from "@alto/utils/MarketRegistry.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {IUsm, AccessMode} from "@alto/usm/interfaces/IUsm.sol";
 import {IUsmRegistry} from "@alto/utils/UsmRegistry.sol";
-import {FRXUSD_MAINNET, USDC_MAINNET} from "@alto/deployments/ethereum-mainnet/Constants.sol";
+import {
+    BUNDLER3_MAINNET,
+    FRXUSD_MAINNET,
+    USDC_MAINNET,
+    WETH_MAINNET
+} from "@alto/deployments/ethereum-mainnet/Constants.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 
 /// @dev Set to a non-zero deployment timestamp to load a real deployment's addresses.json
@@ -424,6 +429,47 @@ abstract contract DeployAltoEthereumMainnetTestBase is Test {
         uint256 usdcPsmExposureAfter = IUsm(usdcPsm).getAvailableLiquidity();
         assertEq(usdcPsmExposureBefore - usdcPsmExposureAfter, usdcAmount, "USDC PSM exposure reduction mismatch");
     }
+
+    /// @dev Exercises `DeploymentPhase.ADAPTER` / `_deployAdapterAndApproval` against addresses loaded from
+    ///      a prior deployment (requires `DEPLOYMENT_ID_TO_LOAD` and a valid `addresses.json`).
+    function _assertDeployAdapterAndApproval() internal {
+        address previousAdapter = input.contracts.altoAdapter;
+        assertTrue(
+            previousAdapter != address(0) && previousAdapter.code.length > 0,
+            "need prior altoAdapter from addresses.json"
+        );
+
+        params.phase = DeploymentPhase.ADAPTER;
+        input = DeployAltoEthereumMainnet.deploy(params, input);
+
+        address adapter = input.contracts.altoAdapter;
+        assertTrue(adapter != previousAdapter, "adapter should be redeployed");
+        assertEq(Ownable(adapter).owner(), input.contracts.timelock, "adapter owner should be timelock");
+        assertEq(address(AltoAdapter(payable(adapter)).WRAPPED_NATIVE()), WETH_MAINNET, "WETH");
+        assertEq(AltoAdapter(payable(adapter)).BUNDLER3(), BUNDLER3_MAINNET, "Bundler3");
+
+        address[] memory approved = new address[](13);
+        approved[0] = input.contracts.wethMarket.market;
+        approved[1] = input.contracts.wstethMarket.market;
+        approved[2] = input.contracts.rethMarket.market;
+        approved[3] = input.contracts.methMarket.market;
+        approved[4] = input.contracts.tbtcMarket.market;
+        approved[5] = input.contracts.wbtcBorrowMarket.market;
+        approved[6] = input.contracts.cbbtcBorrowMarket.market;
+        approved[7] = input.contracts.susdeBorrowMarket.market;
+        approved[8] = input.contracts.syrupUsdcBorrowMarket.market;
+        approved[9] = input.contracts.paxgBorrowMarket.market;
+        approved[10] = input.contracts.susdeMintMarket.market;
+        approved[11] = input.contracts.syrupUsdcMintMarket.market;
+        approved[12] = input.contracts.permissionlessUsm.dusdUsm;
+
+        for (uint256 i; i < approved.length; ++i) {
+            assertTrue(
+                AltoAdapter(payable(adapter)).isApprovedContract(approved[i]),
+                string.concat("adapter approval missing for ", Strings.toHexString(uint256(uint160(approved[i])), 20))
+            );
+        }
+    }
 }
 
 contract DeployPermissionedFrxUsdPsmTest is DeployAltoEthereumMainnetTestBase {
@@ -435,6 +481,12 @@ contract DeployPermissionedFrxUsdPsmTest is DeployAltoEthereumMainnetTestBase {
 contract TresuryPSMMigrationTest is DeployAltoEthereumMainnetTestBase {
     function test_TresuryPSMMigration() public {
         _assertTresuryPSMMigration();
+    }
+}
+
+contract DeployAdapterPhaseTest is DeployAltoEthereumMainnetTestBase {
+    function test_deployAdapterAndApproval() public {
+        _assertDeployAdapterAndApproval();
     }
 }
 

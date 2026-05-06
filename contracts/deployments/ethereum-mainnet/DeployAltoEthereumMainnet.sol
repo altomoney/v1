@@ -609,6 +609,10 @@ library DeployAltoEthereumMainnet {
                 input,
                 params.useUnsafeUpgrades
             );
+        } else if (params.phase == DeploymentPhase.ADAPTER) {
+            DeployCoreParams memory adapterCoreParams =
+                DeployCoreParams({owner: params.deployer, bundler3: BUNDLER3_MAINNET, wNative: WETH_MAINNET});
+            input.contracts.altoAdapter = _deployAdapterAndApproval(adapterCoreParams, params, input);
         } else {
             revert("Invalid phase");
         }
@@ -964,6 +968,28 @@ library DeployAltoEthereumMainnet {
         input.contracts.referralAdapter = address(adapter);
 
         return input;
+    }
+
+    function _deployAdapterAndApproval(DeployCoreParams memory coreParams, AltoEthereumMainnetParams memory params, AltoEthereumMainnetInput memory input) internal returns (address) {
+        AltoAdapter adapter = new AltoAdapter(coreParams.bundler3, coreParams.wNative, params.deployer);
+
+        adapter.approveContract(input.contracts.wethMarket.market);
+        adapter.approveContract(input.contracts.wstethMarket.market);
+        adapter.approveContract(input.contracts.rethMarket.market);
+        adapter.approveContract(input.contracts.methMarket.market);
+        adapter.approveContract(input.contracts.tbtcMarket.market);
+        adapter.approveContract(input.contracts.wbtcBorrowMarket.market);
+        adapter.approveContract(input.contracts.cbbtcBorrowMarket.market);
+        adapter.approveContract(input.contracts.susdeBorrowMarket.market);
+        adapter.approveContract(input.contracts.syrupUsdcBorrowMarket.market);
+        adapter.approveContract(input.contracts.paxgBorrowMarket.market);
+        adapter.approveContract(input.contracts.susdeMintMarket.market);
+        adapter.approveContract(input.contracts.syrupUsdcMintMarket.market);
+        adapter.approveContract(input.contracts.permissionlessUsm.dusdUsm);
+
+        AltoOwnable2Step(address(adapter)).transferOwnershipSkip2Step(input.contracts.timelock);
+
+        return address(adapter);
     }
 
     function _transferOwnershipToTimelock(Contracts memory contracts, address timelock) internal {
