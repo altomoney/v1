@@ -67,6 +67,7 @@ import {
     Contracts
 } from "@alto/deployments/ethereum-mainnet/IDeployAltoEthereumMainnet.sol";
 import {AccessMode} from "@alto/usm/interfaces/IUsm.sol";
+import {IAltoVaultBase} from "@alto/lending/interfaces/IAltoVault.sol";
 import {console} from "forge-std/console.sol";
 import {Vm} from "forge-std/Vm.sol";
 
@@ -953,6 +954,7 @@ library DeployAltoEthereumMainnet {
 
     /// @dev Deploys the Alto DUSD Vault and emits a Safe TX bundle for the multisig to:
     ///      - Approve the vault on AltoAdapter via the timelock.
+    ///      - Submit a higher supply cap (80_000 ether) on the vault for each borrow market
     function _deployDusdVault(AltoEthereumMainnetParams memory params, AltoEthereumMainnetInput memory input)
         internal
         returns (AltoEthereumMainnetInput memory)
@@ -974,14 +976,16 @@ library DeployAltoEthereumMainnet {
         markets[4] = input.contracts.cbbtcBorrowMarket.market;
 
         uint256[] memory caps = new uint256[](5);
-        for (uint256 i; i < 5; ++i) {
-            require(markets[i] != address(0), "Borrow market not deployed");
-            caps[i] = 80_000 ether;
-        }
+        caps[0] = 62_000 ether;
+        caps[1] = 62_000 ether;
+        caps[2] = 62_000 ether;
+        caps[3] = 10_000 ether;
+        caps[4] = 10_000 ether;
 
         // supplyQueue == markets ordering already (syrupUSDC -> sUSDe -> PAXG -> WBTC -> cbBTC)
         address[] memory supplyQueue = new address[](5);
         for (uint256 i; i < 5; ++i) {
+            require(markets[i] != address(0), "Borrow market not deployed");
             supplyQueue[i] = markets[i];
         }
 
@@ -999,30 +1003,36 @@ library DeployAltoEthereumMainnet {
                 markets: markets,
                 caps: caps,
                 supplyQueue: supplyQueue,
-                finalTimelock: 1 days
+                finalTimelock: 1 hours
             })
         );
         VaultBatchReport memory report = batch.getReport();
 
         address vault = report.vault;
 
-        // Seed the vault with 1 DUSD from the deployer EOA.
-        IERC20(input.contracts.dusd).approve(vault, 1 ether);
-        IERC4626(vault).deposit(1 ether, address(1));
-
-        // Log Safe TX bundle for the multisig: timelock-owned AltoAdapter must approve the vault.
+        // Log Safe TX bundle for the multisig: timelock executes adapter approval and vault cap increases.
         address timelock = input.contracts.timelock;
         uint256 minDelay = TimelockController(payable(timelock)).getMinDelay();
 
-        address[] memory targets = new address[](1);
-        uint256[] memory values = new uint256[](1);
-        bytes[] memory payloads = new bytes[](1);
+        uint256 capRaise = 80_000 ether;
+        uint256 actionCount = 1 + markets.length;
+        address[] memory targets = new address[](actionCount);
+        uint256[] memory values = new uint256[](actionCount);
+        bytes[] memory payloads = new bytes[](actionCount);
 
         targets[0] = input.contracts.altoAdapter;
         values[0] = 0;
         payloads[0] = abi.encodeCall(AdapterContractApproval.approveContract, (vault));
 
-        _writeSafeTimelockBatchJson("dusd-vault-adapter-approval", timelock, targets, values, payloads, minDelay);
+        for (uint256 i; i < markets.length; ++i) {
+            targets[1 + i] = vault;
+            values[1 + i] = 0;
+            payloads[1 + i] = abi.encodeCall(IAltoVaultBase.submitCap, (markets[i], capRaise));
+        }
+
+        _writeSafeTimelockBatchJson(
+            "dusd-vault-adapter-approval-increase-caps", timelock, targets, values, payloads, minDelay
+        );
 
         input.contracts.dusdVault = vault;
 
@@ -1053,7 +1063,11 @@ library DeployAltoEthereumMainnet {
         return input;
     }
 
-    function _deployAdapterAndApproval(DeployCoreParams memory coreParams, AltoEthereumMainnetParams memory params, AltoEthereumMainnetInput memory input) internal returns (address) {
+    function _deployAdapterAndApproval(
+        DeployCoreParams memory coreParams,
+        AltoEthereumMainnetParams memory params,
+        AltoEthereumMainnetInput memory input
+    ) internal returns (address) {
         AltoAdapter adapter = new AltoAdapter(coreParams.bundler3, coreParams.wNative, params.deployer);
 
         adapter.approveContract(input.contracts.wethMarket.market);
