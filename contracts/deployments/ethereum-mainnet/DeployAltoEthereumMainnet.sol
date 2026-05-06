@@ -67,7 +67,6 @@ import {
     Contracts
 } from "@alto/deployments/ethereum-mainnet/IDeployAltoEthereumMainnet.sol";
 import {AccessMode} from "@alto/usm/interfaces/IUsm.sol";
-import {IAltoVaultBase} from "@alto/lending/interfaces/IAltoVault.sol";
 import {console} from "forge-std/console.sol";
 import {Vm} from "forge-std/Vm.sol";
 
@@ -952,9 +951,8 @@ library DeployAltoEthereumMainnet {
         _writeSafeTimelockBatchJson(usmParams.safeBatchName, timelock, targets, values, payloads, minDelay);
     }
 
-    /// @dev Deploys the Alto DUSD Vault and emits a Safe TX bundle for the multisig to:
-    ///      - Approve the vault on AltoAdapter via the timelock.
-    ///      - Submit a higher supply cap (80_000 ether) on the vault for each borrow market
+    /// @dev Deploys the Alto DUSD Vault and emits a Safe TX bundle for the multisig to
+    ///      approve the vault on AltoAdapter via the timelock.
     function _deployDusdVault(AltoEthereumMainnetParams memory params, AltoEthereumMainnetInput memory input)
         internal
         returns (AltoEthereumMainnetInput memory)
@@ -1010,12 +1008,11 @@ library DeployAltoEthereumMainnet {
 
         address vault = report.vault;
 
-        // Log Safe TX bundle for the multisig: timelock executes adapter approval and vault cap increases.
+        // Log Safe TX bundle for the multisig: timelock executes adapter approval.
         address timelock = input.contracts.timelock;
         uint256 minDelay = TimelockController(payable(timelock)).getMinDelay();
 
-        uint256 capRaise = 80_000 ether;
-        uint256 actionCount = 1 + markets.length;
+        uint256 actionCount = 1;
         address[] memory targets = new address[](actionCount);
         uint256[] memory values = new uint256[](actionCount);
         bytes[] memory payloads = new bytes[](actionCount);
@@ -1024,15 +1021,7 @@ library DeployAltoEthereumMainnet {
         values[0] = 0;
         payloads[0] = abi.encodeCall(AdapterContractApproval.approveContract, (vault));
 
-        for (uint256 i; i < markets.length; ++i) {
-            targets[1 + i] = vault;
-            values[1 + i] = 0;
-            payloads[1 + i] = abi.encodeCall(IAltoVaultBase.submitCap, (markets[i], capRaise));
-        }
-
-        _writeSafeTimelockBatchJson(
-            "dusd-vault-adapter-approval-increase-caps", timelock, targets, values, payloads, minDelay
-        );
+        _writeSafeTimelockBatchJson("dusd-vault-adapter-approval", timelock, targets, values, payloads, minDelay);
 
         input.contracts.dusdVault = vault;
 
