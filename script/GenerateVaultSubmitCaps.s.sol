@@ -12,7 +12,6 @@ import {IAltoVaultBase} from "@alto/lending/interfaces/IAltoVault.sol";
 /// Run:
 ///   forge script script/GenerateVaultSubmitCaps.s.sol:GenerateVaultSubmitCaps --rpc-url ethereum
 contract GenerateVaultSubmitCaps is Script {
-    // TODO: update VAULT to the deployed dusdVault address before running
     address constant VAULT = 0x6954785783c6EE90400fA715E591fBbA0D0Bd749;
     address constant TIMELOCK = 0xfAe841679dc1A93D225ECc827E4BbF3e8d703F86;
 

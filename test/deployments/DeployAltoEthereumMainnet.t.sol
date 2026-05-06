@@ -16,8 +16,9 @@ import {IDUSD} from "@alto/tokens/interfaces/IDUSD.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {AltoAdapter} from "@alto/utils/AltoAdapter.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
 import {PAUSE_TYPE, FROZEN_TYPE} from "@alto/utils/Constants.sol";
-import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
+import {IMarket, IMarketBase} from "@alto/lending/interfaces/IMarket.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {IAltoLiquidationEngine} from "@alto/lending/interfaces/IAltoLiquidationEngine.sol";
 import {Pausable} from "@alto/utils/Pausable.sol";
@@ -51,6 +52,7 @@ abstract contract DeployAltoEthereumMainnetTestBase is Test {
     address immutable MULTISIG_FREEZER_PAUSER = makeAddr("MULTISIG_FREEZER_PAUSER");
     address immutable STAKING_URD = makeAddr("STAKING_URD");
     address immutable MERKLE_ROOT_UPDATER = makeAddr("MERKLE_ROOT_UPDATER");
+    address constant MAINNET_TIMELOCK_ADMIN = 0xc49bf619CC9A68F84A6C9aB88506F2627565a4D0;
     address DEPLOYER;
 
     bytes32 immutable CONFIGURATOR_ROLE = keccak256("CONFIGURATOR_ROLE");
@@ -434,6 +436,67 @@ abstract contract DeployAltoEthereumMainnetTestBase is Test {
         assertEq(usdcPsmExposureBefore - usdcPsmExposureAfter, usdcAmount, "USDC PSM exposure reduction mismatch");
     }
 
+    function _assertTreasuryMigrationSafeTxs() internal {
+        address treasury = params.treasuryMultisig;
+        IERC4626 fraxCustodian = IERC4626(0x4F95C5bA0C7c69FB2f9340E190cCeE890B3bd87c);
+        address frxUsdUsm = 0x1BD08B43D1579881cfAd0A35AEEa5b547dBE4c91;
+        address usdcUsm = 0x2dE874B83f4d0a64D81A16f2e050bcB55f118398;
+        address vault = 0x6954785783c6EE90400fA715E591fBbA0D0Bd749;
+
+        uint256 amount = 206_000 ether;
+        uint256 usdcIn = 206_000e6;
+        uint256 dusdForUsdc = 200_000 ether;
+        uint256 usdcOut = 200_000e6;
+
+        vm.startPrank(treasury);
+
+        // TX 1: approve USDC to fraxCustodian
+        IERC20Metadata(USDC_MAINNET).approve(address(fraxCustodian), usdcIn);
+
+        // TX 2: deposit USDC into fraxCustodian, receiving frxUSD
+        uint256 frxUsdReceived = fraxCustodian.deposit(usdcIn, treasury);
+        assertEq(frxUsdReceived, amount, "frxUSD received mismatch");
+
+        // TX 3: approve frxUSD to frxUSD USM
+        IERC20Metadata(FRXUSD_MAINNET).approve(frxUsdUsm, amount);
+
+        // TX 4: sell frxUSD for DUSD
+        IUsm(frxUsdUsm).sellAsset(amount, treasury);
+
+        assertEq(IERC20Metadata(input.contracts.dusd).balanceOf(treasury), amount, "dusd balance mismatch");
+
+        // TX 5: approve DUSD to vault
+        IERC20Metadata(input.contracts.dusd).approve(vault, amount);
+
+        // TX 6: deposit DUSD into vault
+        uint256 vaultShares = IERC4626(vault).deposit(amount, treasury);
+        assertGt(vaultShares, 0, "vault shares should be minted");
+
+        // TX 7-11: remove supply from borrow markets
+        _removeTreasurySupply(input.contracts.cbbtcBorrowMarket.market, treasury);
+        _removeTreasurySupply(input.contracts.wbtcBorrowMarket.market, treasury);
+        _removeTreasurySupply(input.contracts.susdeBorrowMarket.market, treasury);
+        _removeTreasurySupply(input.contracts.syrupUsdcBorrowMarket.market, treasury);
+        _removeTreasurySupply(input.contracts.paxgBorrowMarket.market, treasury);
+
+        // TX 12: approve DUSD to USDC USM
+        IERC20Metadata(input.contracts.dusd).approve(usdcUsm, dusdForUsdc);
+
+        uint256 usdcBalanceBefore = IERC20Metadata(USDC_MAINNET).balanceOf(treasury);
+        uint256 exposureBefore = IUsm(usdcUsm).getAvailableLiquidity();
+
+        // TX 13: buy USDC from USDC USM
+        IUsm(usdcUsm).buyAsset(usdcOut, treasury);
+        assertEq(IERC20Metadata(USDC_MAINNET).balanceOf(treasury), usdcBalanceBefore + usdcOut, "USDC balance mismatch");
+        assertEq(IUsm(usdcUsm).getAvailableLiquidity(), exposureBefore - usdcOut, "USDC PSM exposure mismatch");
+        vm.stopPrank();
+    }
+
+    function _removeTreasurySupply(address market, address treasury) internal {
+        uint128 shares = IMarket(market).position(treasury).supplyShares;
+        IMarketBase(market).removeSupply(0, uint256(shares), treasury, treasury);
+    }
+
     /// @dev Exercises `DeploymentPhase.ADAPTER` / `_deployAdapterAndApproval` against addresses loaded from
     ///      a prior deployment (requires `DEPLOYMENT_ID_TO_LOAD` and a valid `addresses.json`).
     function _assertDeployAdapterAndApproval() internal {
@@ -554,6 +617,51 @@ abstract contract DeployAltoEthereumMainnetTestBase is Test {
 
         assertEq(VaultRegistry(vaultRegistry).isVault(input.contracts.dusdVault), true, "vault should be registered");
     }
+
+    function _assertVaultSubmitCapsSafeTxs() internal {
+        address vault = 0x6954785783c6EE90400fA715E591fBbA0D0Bd749;
+        address timelock = input.contracts.timelock;
+        uint256 cap = 80_000 ether;
+
+        address[] memory targets = new address[](5);
+        uint256[] memory values = new uint256[](5);
+        bytes[] memory payloads = new bytes[](5);
+
+        address[5] memory markets = [
+            input.contracts.syrupUsdcBorrowMarket.market,
+            input.contracts.susdeBorrowMarket.market,
+            input.contracts.paxgBorrowMarket.market,
+            input.contracts.wbtcBorrowMarket.market,
+            input.contracts.cbbtcBorrowMarket.market
+        ];
+
+        for (uint256 i; i < markets.length; ++i) {
+            assertLt(IAltoVault(vault).config(markets[i]).cap, cap, "cap should start below target");
+
+            targets[i] = vault;
+            payloads[i] = abi.encodeCall(IAltoVaultBase.submitCap, (markets[i], cap));
+        }
+
+        bytes32 predecessor = bytes32(0);
+        bytes32 salt = bytes32(0);
+        uint256 delay = TimelockController(payable(timelock)).getMinDelay();
+
+        vm.prank(MAINNET_TIMELOCK_ADMIN);
+        TimelockController(payable(timelock)).scheduleBatch(targets, values, payloads, predecessor, salt, delay);
+
+        vm.warp(block.timestamp + delay);
+
+        vm.prank(MAINNET_TIMELOCK_ADMIN);
+        TimelockController(payable(timelock)).executeBatch(targets, values, payloads, predecessor, salt);
+
+        uint256 vaultTimelock = IAltoVaultBase(vault).timelock();
+        vm.warp(block.timestamp + vaultTimelock);
+
+        for (uint256 i; i < markets.length; ++i) {
+            IAltoVaultBase(vault).acceptCap(markets[i]);
+            assertEq(IAltoVault(vault).config(markets[i]).cap, cap, "cap mismatch");
+        }
+    }
 }
 
 contract DeployPermissionedFrxUsdPsmTest is DeployAltoEthereumMainnetTestBase {
@@ -565,6 +673,18 @@ contract DeployPermissionedFrxUsdPsmTest is DeployAltoEthereumMainnetTestBase {
 contract TresuryPSMMigrationTest is DeployAltoEthereumMainnetTestBase {
     function test_TresuryPSMMigration() public {
         _assertTresuryPSMMigration();
+    }
+}
+
+contract TreasuryMigrationSafeTxForkTest is DeployAltoEthereumMainnetTestBase {
+    function test_treasuryMigrationSafeTxs() public {
+        _assertTreasuryMigrationSafeTxs();
+    }
+}
+
+contract VaultSubmitCapsSafeTxForkTest is DeployAltoEthereumMainnetTestBase {
+    function test_vaultSubmitCapsSafeTxs() public {
+        _assertVaultSubmitCapsSafeTxs();
     }
 }
 

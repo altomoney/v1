@@ -21,7 +21,6 @@ contract GenerateTreasuryMigration is Script {
 
     address constant FRXUSD_USM = 0x1BD08B43D1579881cfAd0A35AEEa5b547dBE4c91;
     address constant USDC_USM = 0x2dE874B83f4d0a64D81A16f2e050bcB55f118398;
-    /// todo @dev ⚠️  Update this before signing – vault has not been deployed yet.
     address constant VAULT = 0x6954785783c6EE90400fA715E591fBbA0D0Bd749;
 
     address constant CBBTC_BORROW = 0xaE4f2B998783e2041E87E08Da73985e4E0420159;
