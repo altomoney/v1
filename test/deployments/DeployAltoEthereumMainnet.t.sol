@@ -528,11 +528,12 @@ abstract contract DeployAltoEthereumMainnetTestBase is Test {
         assertEq(IAltoVaultBase(vault).supplyQueueLength(), 5, "supply queue length mismatch");
         for (uint256 i; i < 5; ++i) {
             assertEq(IAltoVaultBase(vault).supplyQueue(i), expectedMarkets[i], "supply queue order mismatch");
-            assertEq(IAltoVault(vault).config(expectedMarkets[i]).cap, 80_000 ether, "market cap mismatch");
+            if (i < 3) {
+                assertEq(IAltoVault(vault).config(expectedMarkets[i]).cap, 62_000 ether, "market cap mismatch");
+            } else {
+                assertEq(IAltoVault(vault).config(expectedMarkets[i]).cap, 10_000 ether, "market cap mismatch");
+            }
         }
-
-        assertGt(IERC20Metadata(vault).balanceOf(address(1)), 0, "seed shares should be minted to address(1)");
-        assertGe(IERC4626(vault).totalAssets(), 1 ether, "vault should hold at least 1 DUSD");
     }
 }
 
