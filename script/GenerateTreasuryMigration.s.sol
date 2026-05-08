@@ -1,17 +1,20 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.22;
 
-import {Script, console} from "forge-std/Script.sol";
+import {Script} from "forge-std/Script.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {IUsm} from "@alto/usm/interfaces/IUsm.sol";
-import {IMarket, IMarketBase, Position} from "@alto/lending/interfaces/IMarket.sol";
+import {IMarket, IMarketBase} from "@alto/lending/interfaces/IMarket.sol";
 
 /// @title GenerateTreasuryMigration
 /// @notice Generates a Safe Transaction Builder JSON with the full treasury PSM migration flow:
 /// Run:
 ///   forge script script/GenerateTreasuryMigration.s.sol:GenerateTreasuryMigration --rpc-url ethereum
 contract GenerateTreasuryMigration is Script {
+    uint256 internal constant MARKET_COUNT = 5;
+    uint256 internal constant TX_COUNT = 13;
+
     address constant TREASURY = 0xA1148A1b94262540994Cf9Aa431A13ad39764228;
     address constant FRAX_CUSTODIAN = 0x4F95C5bA0C7c69FB2f9340E190cCeE890B3bd87c;
 
@@ -29,26 +32,20 @@ contract GenerateTreasuryMigration is Script {
     address constant SYRUPUSDC_BORROW = 0x33B24510233281350bF8679A7c427d04db0ed208;
     address constant PAXG_BORROW = 0x99f538Ec7c840197DcAf30A25B635482ba9e8817;
 
-    uint256 constant AMOUNT = 206_000 ether;
-    uint256 constant USDC_IN = 206_000e6;
+    uint256 constant AMOUNT = 200_000 ether;
+    uint256 constant USDC_IN = 200_000e6;
     uint256 constant DUSD_FOR_USDC = 200_000 ether;
     uint256 constant USDC_OUT = 200_000e6;
 
     string constant OUTPUT_FILE = "contracts/deployments/ethereum-mainnet/output/safe-tx-treasury-migration.json";
 
     function run() public {
-        string memory rpcUrl = vm.rpcUrl("ethereum");
-        vm.createSelectFork(rpcUrl);
+        vm.createSelectFork(vm.rpcUrl("ethereum"));
 
-        address[5] memory markets = [CBBTC_BORROW, WBTC_BORROW, SUSDE_BORROW, SYRUPUSDC_BORROW, PAXG_BORROW];
-        uint128[5] memory supplyShares;
-        for (uint256 i; i < 5; ++i) {
-            supplyShares[i] = IMarket(markets[i]).position(TREASURY).supplyShares;
-        }
-
-        uint256 n = 13;
-        address[] memory to = new address[](n);
-        bytes[] memory cd = new bytes[](n);
+        address[MARKET_COUNT] memory markets = [CBBTC_BORROW, WBTC_BORROW, SUSDE_BORROW, SYRUPUSDC_BORROW, PAXG_BORROW];
+        uint128[MARKET_COUNT] memory supplyShares = _loadSupplyShares(markets);
+        address[] memory to = new address[](TX_COUNT);
+        bytes[] memory cd = new bytes[](TX_COUNT);
         uint256 idx;
 
         // TX 1 – approve USDC to fraxCustodian
@@ -71,7 +68,7 @@ contract GenerateTreasuryMigration is Script {
         cd[idx] = abi.encodeCall(IUsm.sellAsset, (AMOUNT, TREASURY));
         ++idx;
 
-        // TX 5 – approve DUSD to vault (⚠️ vault = address(0) – update before signing)
+        // TX 5 – approve DUSD to vault
         to[idx] = DUSD;
         cd[idx] = abi.encodeCall(IERC20.approve, (VAULT, AMOUNT));
         ++idx;
@@ -82,8 +79,7 @@ contract GenerateTreasuryMigration is Script {
         ++idx;
 
         // TX 7–11 – removeSupply from each borrow market (shares → DUSD to treasury)
-        string[5] memory marketNames = ["cbBTC", "WBTC", "sUSDe", "syrupUSDC", "PAXG"];
-        for (uint256 i; i < 5; ++i) {
+        for (uint256 i; i < MARKET_COUNT; ++i) {
             to[idx] = markets[i];
             cd[idx] = abi.encodeCall(IMarketBase.removeSupply, (0, uint256(supplyShares[i]), TREASURY, TREASURY));
             ++idx;
@@ -97,36 +93,18 @@ contract GenerateTreasuryMigration is Script {
         // TX 13 – usdcUSM.buyAsset (DUSD in, USDC out to treasury)
         to[idx] = USDC_USM;
         cd[idx] = abi.encodeCall(IUsm.buyAsset, (USDC_OUT, TREASURY));
-        ++idx;
-
-        console.log("=== Treasury PSM Migration - %d transactions ===", n);
-        string[13] memory labels = [
-            "approve USDC -> fraxCustodian",
-            "fraxCustodian.deposit (USDC -> frxUSD)",
-            "approve frxUSD -> frxUSDUsm",
-            "frxUSDUsm.sellAsset (frxUSD -> DUSD)",
-            "approve DUSD -> vault  [PLACEHOLDER - update vault addr]",
-            "vault.deposit (DUSD -> shares)  [PLACEHOLDER]",
-            "cbBTC removeSupply",
-            "WBTC  removeSupply",
-            "sUSDe removeSupply",
-            "syrupUSDC removeSupply",
-            "PAXG  removeSupply",
-            "approve DUSD -> usdcUSM",
-            "usdcUSM.buyAsset (DUSD -> USDC)"
-        ];
-        for (uint256 i; i < n; ++i) {
-            console.log("TX [%s]", i + 1, labels[i]);
-            console.log("     to   : %s", to[i]);
-            console.log("     data : %s", vm.toString(cd[i]));
-        }
-
-        console.log("\n--- Live supply shares ---");
-        for (uint256 i; i < 5; ++i) {
-            console.log("  %s : %s shares", marketNames[i], vm.toString(supplyShares[i]));
-        }
 
         _writeSafeBatch(to, cd);
+    }
+
+    function _loadSupplyShares(address[MARKET_COUNT] memory markets)
+        internal
+        view
+        returns (uint128[MARKET_COUNT] memory supplyShares)
+    {
+        for (uint256 i; i < MARKET_COUNT; ++i) {
+            supplyShares[i] = IMarket(markets[i]).position(TREASURY).supplyShares;
+        }
     }
 
     function _writeSafeBatch(address[] memory to, bytes[] memory cd) internal {
@@ -146,7 +124,5 @@ contract GenerateTreasuryMigration is Script {
         );
 
         vm.writeFile(OUTPUT_FILE, json);
-        console.log("\nSafe TX JSON written to: %s", OUTPUT_FILE);
-        console.log("WARNING: TX10 and TX11 target address(0) - set VAULT before signing!");
     }
 }

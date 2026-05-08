@@ -3,7 +3,7 @@ pragma solidity ^0.8.22;
 
 import {Test} from "forge-std/Test.sol";
 import {console} from "forge-std/console.sol";
-import {MarketType} from "@alto/lending/interfaces/IMarket.sol";
+import {Balance, MarketType} from "@alto/lending/interfaces/IMarket.sol";
 
 import {
     DeployAltoEthereumMainnet,
@@ -441,7 +441,7 @@ abstract contract DeployAltoEthereumMainnetTestBase is Test {
         IERC4626 fraxCustodian = IERC4626(0x4F95C5bA0C7c69FB2f9340E190cCeE890B3bd87c);
         address frxUsdUsm = 0x1BD08B43D1579881cfAd0A35AEEa5b547dBE4c91;
         address usdcUsm = 0x2dE874B83f4d0a64D81A16f2e050bcB55f118398;
-        address vault = 0x6954785783c6EE90400fA715E591fBbA0D0Bd749;
+        address dusd = input.contracts.dusd;
 
         uint256 amount = 206_000 ether;
         uint256 usdcIn = 206_000e6;
@@ -450,26 +450,31 @@ abstract contract DeployAltoEthereumMainnetTestBase is Test {
 
         vm.startPrank(treasury);
 
-        // TX 1: approve USDC to fraxCustodian
-        IERC20Metadata(USDC_MAINNET).approve(address(fraxCustodian), usdcIn);
+        {
+            uint256 dusdBalanceBefore = IERC20Metadata(dusd).balanceOf(treasury);
 
-        // TX 2: deposit USDC into fraxCustodian, receiving frxUSD
-        uint256 frxUsdReceived = fraxCustodian.deposit(usdcIn, treasury);
-        assertEq(frxUsdReceived, amount, "frxUSD received mismatch");
+            // TX 1: approve USDC to fraxCustodian
+            IERC20Metadata(USDC_MAINNET).approve(address(fraxCustodian), usdcIn);
 
-        // TX 3: approve frxUSD to frxUSD USM
-        IERC20Metadata(FRXUSD_MAINNET).approve(frxUsdUsm, amount);
+            // TX 2: deposit USDC into fraxCustodian, receiving frxUSD
+            uint256 frxUsdReceived = fraxCustodian.deposit(usdcIn, treasury);
+            assertEq(frxUsdReceived, amount, "frxUSD received mismatch");
 
-        // TX 4: sell frxUSD for DUSD
-        IUsm(frxUsdUsm).sellAsset(amount, treasury);
+            // TX 3: approve frxUSD to frxUSD USM
+            IERC20Metadata(FRXUSD_MAINNET).approve(frxUsdUsm, amount);
 
-        assertEq(IERC20Metadata(input.contracts.dusd).balanceOf(treasury), amount, "dusd balance mismatch");
+            // TX 4: sell frxUSD for DUSD
+            IUsm(frxUsdUsm).sellAsset(amount, treasury);
+
+            uint256 dusdBalanceAfterSell = IERC20Metadata(dusd).balanceOf(treasury);
+            assertEq(dusdBalanceAfterSell - dusdBalanceBefore, amount, "dusd bought mismatch");
+        }
 
         // TX 5: approve DUSD to vault
-        IERC20Metadata(input.contracts.dusd).approve(vault, amount);
+        IERC20Metadata(dusd).approve(input.contracts.dusdVault, amount);
 
         // TX 6: deposit DUSD into vault
-        uint256 vaultShares = IERC4626(vault).deposit(amount, treasury);
+        uint256 vaultShares = IERC4626(input.contracts.dusdVault).deposit(amount, treasury);
         assertGt(vaultShares, 0, "vault shares should be minted");
 
         // TX 7-11: remove supply from borrow markets
@@ -480,21 +485,101 @@ abstract contract DeployAltoEthereumMainnetTestBase is Test {
         _removeTreasurySupply(input.contracts.paxgBorrowMarket.market, treasury);
 
         // TX 12: approve DUSD to USDC USM
-        IERC20Metadata(input.contracts.dusd).approve(usdcUsm, dusdForUsdc);
+        IERC20Metadata(dusd).approve(usdcUsm, dusdForUsdc);
 
-        uint256 usdcBalanceBefore = IERC20Metadata(USDC_MAINNET).balanceOf(treasury);
-        uint256 exposureBefore = IUsm(usdcUsm).getAvailableLiquidity();
+        {
+            uint256 usdcBalanceBefore = IERC20Metadata(USDC_MAINNET).balanceOf(treasury);
+            uint256 exposureBefore = IUsm(usdcUsm).getAvailableLiquidity();
 
-        // TX 13: buy USDC from USDC USM
-        IUsm(usdcUsm).buyAsset(usdcOut, treasury);
-        assertEq(IERC20Metadata(USDC_MAINNET).balanceOf(treasury), usdcBalanceBefore + usdcOut, "USDC balance mismatch");
-        assertEq(IUsm(usdcUsm).getAvailableLiquidity(), exposureBefore - usdcOut, "USDC PSM exposure mismatch");
+            // TX 13: buy USDC from USDC USM
+            IUsm(usdcUsm).buyAsset(usdcOut, treasury);
+            assertEq(
+                IERC20Metadata(USDC_MAINNET).balanceOf(treasury), usdcBalanceBefore + usdcOut, "USDC balance mismatch"
+            );
+            assertEq(IUsm(usdcUsm).getAvailableLiquidity(), exposureBefore - usdcOut, "USDC PSM exposure mismatch");
+        }
+
+        _assertTreasuryHasNoSuppliedShares(treasury);
+        _logMarketLiquidityAfterMigration();
+
+        uint256 dusdBalanceAfterMigration = IERC20Metadata(dusd).balanceOf(treasury);
+        console.log("Treasury DUSD balance after migration:", dusdBalanceAfterMigration);
         vm.stopPrank();
     }
 
     function _removeTreasurySupply(address market, address treasury) internal {
         uint128 shares = IMarket(market).position(treasury).supplyShares;
         IMarketBase(market).removeSupply(0, uint256(shares), treasury, treasury);
+    }
+
+    function _assertTreasuryHasNoSuppliedShares(address treasury) internal view {
+        address[] memory markets = new address[](12);
+        markets[0] = input.contracts.wethMarket.market;
+        markets[1] = input.contracts.wstethMarket.market;
+        markets[2] = input.contracts.rethMarket.market;
+        markets[3] = input.contracts.methMarket.market;
+        markets[4] = input.contracts.tbtcMarket.market;
+        markets[5] = input.contracts.wbtcBorrowMarket.market;
+        markets[6] = input.contracts.cbbtcBorrowMarket.market;
+        markets[7] = input.contracts.susdeBorrowMarket.market;
+        markets[8] = input.contracts.syrupUsdcBorrowMarket.market;
+        markets[9] = input.contracts.paxgBorrowMarket.market;
+        markets[10] = input.contracts.susdeMintMarket.market;
+        markets[11] = input.contracts.syrupUsdcMintMarket.market;
+
+        for (uint256 i; i < markets.length; ++i) {
+            address market = markets[i];
+            if (market == address(0)) continue;
+
+            assertEq(
+                IMarket(market).position(treasury).supplyShares,
+                0,
+                string.concat(
+                    "treasury should have no supplied shares in market ",
+                    Strings.toHexString(uint256(uint160(market)), 20)
+                )
+            );
+        }
+    }
+
+    function _logMarketLiquidityAfterMigration() internal view {
+        address[] memory markets = new address[](12);
+        markets[0] = input.contracts.wethMarket.market;
+        markets[1] = input.contracts.wstethMarket.market;
+        markets[2] = input.contracts.rethMarket.market;
+        markets[3] = input.contracts.methMarket.market;
+        markets[4] = input.contracts.tbtcMarket.market;
+        markets[5] = input.contracts.wbtcBorrowMarket.market;
+        markets[6] = input.contracts.cbbtcBorrowMarket.market;
+        markets[7] = input.contracts.susdeBorrowMarket.market;
+        markets[8] = input.contracts.syrupUsdcBorrowMarket.market;
+        markets[9] = input.contracts.paxgBorrowMarket.market;
+        markets[10] = input.contracts.susdeMintMarket.market;
+        markets[11] = input.contracts.syrupUsdcMintMarket.market;
+
+        string[12] memory labels = [
+            "wethMarket",
+            "wstethMarket",
+            "rethMarket",
+            "methMarket",
+            "tbtcMarket",
+            "wbtcBorrowMarket",
+            "cbbtcBorrowMarket",
+            "susdeBorrowMarket",
+            "syrupUsdcBorrowMarket",
+            "paxgBorrowMarket",
+            "susdeMintMarket",
+            "syrupUsdcMintMarket"
+        ];
+
+        for (uint256 i; i < markets.length; ++i) {
+            address market = markets[i];
+            if (market == address(0)) continue;
+
+            Balance memory totalSupply = IMarket(market).totalSupply();
+            console.log(labels[i], "liquidity assets:", uint256(totalSupply.assets));
+            console.log(labels[i], "liquidity shares:", uint256(totalSupply.shares));
+        }
     }
 
     /// @dev Exercises `DeploymentPhase.ADAPTER` / `_deployAdapterAndApproval` against addresses loaded from
