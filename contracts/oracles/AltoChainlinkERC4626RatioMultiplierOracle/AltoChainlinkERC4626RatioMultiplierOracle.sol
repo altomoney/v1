@@ -21,10 +21,11 @@ import {
 /// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice Oracle that pipelines three modules in sequence:
-///         1. Chainlink  — converts 1 unit of input into an intermediate price
-///         2. ERC4626 ratio — caps the intermediate price against a max allowed growth rate
-///         3. Multiplier — scales the capped price by a fixed factor
+///         1. Chainlink  - converts 1 unit of input into an intermediate price
+///         2. ERC4626 ratio - caps the intermediate price against a max allowed growth rate
+///         3. Multiplier - scales the capped price by a fixed factor
 /// @dev The out decimals of chainlink node should be the same as decimals of values used in initialRatio of erc4626RatioNode
+/// @custom:audit Pending
 contract AltoChainlinkERC4626RatioMultiplierOracle is
     AltoOwnable2Step,
     ModuleChainlink,

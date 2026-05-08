@@ -215,7 +215,7 @@ library DeployAltoTestnet {
         vault.setFeeRecipient(params.deployer);
         vault.setSkimRecipient(params.deployer);
 
-        // Supply caps for all DUSD borrow markets — 100k DUSD each.
+        // Supply caps for all DUSD borrow markets - 100k DUSD each.
         // valid immediately because timelock == 0.
         uint256 supplyCap = 100_000 ether;
         if (input.contracts.wbtcMarketBatch.market != address(0)) {

@@ -9,6 +9,8 @@ import {CurveNode} from "@alto/oracles/interfaces/IModuleNode.sol";
 /// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice Module contract that is used to read from Curve pools
+/// @dev work-in-progress
+/// @custom:audit Pending
 contract ModuleCurve {
     error ModuleCurveInvalidRate();
     error ModuleCurveInvalidInput();

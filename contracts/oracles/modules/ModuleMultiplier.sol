@@ -7,6 +7,7 @@ import {MultiplierNode} from "@alto/oracles/interfaces/IModuleNode.sol";
 /// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice Utility contract used to scale an input by a fixed multiplier
+/// @custom:audit Pending
 contract ModuleMultiplier {
     error ModuleMultiplierInvalidInput();
 
