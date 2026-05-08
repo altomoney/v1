@@ -1,0 +1,21 @@
+AltoERC4626RatioLinearDiscountOracle::updateLinearDiscountNode()
+├── given caller is not owner
+│   └── it should revert with OwnableUnauthorizedAccount
+└── given caller is owner
+    ├── when maturity is not in the future
+    │   └── it should revert with ModuleLinearDiscountInvalidInput
+    ├── when ptToken is zero address
+    │   └── it should revert with ModuleLinearDiscountInvalidInput
+    ├── when ptToken expiry does not match maturity
+    │   └── it should revert with ModuleLinearDiscountInvalidInput
+    ├── when baseDiscountPerYear exceeds MATH_PRECISION
+    │   └── it should revert with ModuleLinearDiscountInvalidInput
+    ├── when inDecimals + outDecimals exceeds 54
+    │   └── it should revert with ModuleLinearDiscountInvalidInput
+    ├── when node is valid
+    │   ├── it should replace the existing linearDiscountNode
+    │   ├── it should emit SetLinearDiscountNode with old and new node
+    │   └── it should update linearDiscountNode storage correctly
+    └── given current maturity has already passed
+        └── when new node has a future maturity
+            └── it should succeed and update linearDiscountNode

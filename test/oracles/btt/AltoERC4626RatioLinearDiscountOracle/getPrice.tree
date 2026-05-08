@@ -1,0 +1,21 @@
+AltoERC4626RatioLinearDiscountOracle::getPrice()
+├── when ratio is zero
+│   └── it should return zero
+├── when ratio is within max allowed growth
+│   ├── given PT is pre-maturity
+│   │   ├── it should not cap the ratio
+│   │   ├── it should apply the linear discount to the ratio
+│   │   └── it should return a price less than the undiscounted value
+│   └── given PT is post-maturity
+│       ├── it should not cap the ratio
+│       ├── it should apply no discount (full ratio value returned)
+│       └── it should return the ratio scaled to outDecimals
+└── when ratio exceeds max allowed growth
+    ├── given PT is pre-maturity
+    │   ├── it should cap the ratio to max allowed growth
+    │   ├── it should apply the linear discount to the capped ratio
+    │   └── it should return a price less than the uncapped undiscounted value
+    └── given PT is post-maturity
+        ├── it should cap the ratio to max allowed growth (cap is independent of maturity)
+        ├── it should apply no discount to the capped ratio
+        └── it should return the capped ratio scaled to outDecimals

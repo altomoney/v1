@@ -1,0 +1,26 @@
+AltoERC4626RatioLinearDiscountOracle::constructor()
+├── given invalid inputs
+│   ├── when ERC4626 ratio node initialRatio is zero
+│   │   └── it should revert with ModuleERC4626RatioInvalidInput
+│   ├── when ERC4626 ratio node initialTimestamp is greater than block.timestamp
+│   │   └── it should revert with ModuleERC4626RatioInvalidInput
+│   ├── when ERC4626 ratio node maxYearlyGrowthRatioWad is zero
+│   │   └── it should revert with ModuleERC4626RatioInvalidInput
+│   ├── when linear discount node maturity is not in the future
+│   │   └── it should revert with ModuleLinearDiscountInvalidInput
+│   ├── when linear discount node ptToken is zero address
+│   │   └── it should revert with ModuleLinearDiscountInvalidInput
+│   ├── when linear discount node ptToken expiry does not match maturity
+│   │   └── it should revert with ModuleLinearDiscountInvalidInput
+│   ├── when linear discount node baseDiscountPerYear exceeds MATH_PRECISION
+│   │   └── it should revert with ModuleLinearDiscountInvalidInput
+│   ├── when linear discount node inDecimals + outDecimals exceeds 54
+│   │   └── it should revert with ModuleLinearDiscountInvalidInput
+│   └── when owner is zero address
+│       └── it should revert with OwnableInvalidOwner
+└── given valid inputs
+    ├── it should set erc4626RatioNode correctly
+    ├── it should set linearDiscountNode correctly
+    ├── it should set owner correctly
+    ├── it should emit SetERC4626RatioNode event
+    └── it should emit SetLinearDiscountNode event

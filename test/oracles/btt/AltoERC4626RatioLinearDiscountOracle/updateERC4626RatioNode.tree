@@ -1,0 +1,14 @@
+AltoERC4626RatioLinearDiscountOracle::updateERC4626RatioNode()
+├── given caller is not owner
+│   └── it should revert with OwnableUnauthorizedAccount
+└── given caller is owner
+    ├── when initialRatio is zero
+    │   └── it should revert with ModuleERC4626RatioInvalidInput
+    ├── when initialTimestamp is greater than block.timestamp
+    │   └── it should revert with ModuleERC4626RatioInvalidInput
+    ├── when maxYearlyGrowthRatioWad is zero
+    │   └── it should revert with ModuleERC4626RatioInvalidInput
+    └── when node is valid
+        ├── it should replace the existing erc4626RatioNode
+        ├── it should emit SetERC4626RatioNode with old and new node
+        └── it should update erc4626RatioNode storage correctly
