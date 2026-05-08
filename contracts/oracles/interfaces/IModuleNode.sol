@@ -100,3 +100,20 @@ struct MultiplierNode {
     // @notice The multiplier to apply to the input
     uint256 multiplier;
 }
+
+/// @notice The node for the Linear Discount oracle
+/// @dev This would be used for PT tokens where we apply linear discount to the price of PT tokens based om time to maturity
+struct LinearDiscountNode {
+    // @notice The PT token address
+    address ptToken;
+    // @notice The maturity timestamp of the PT token
+    // @dev Must be in the future at configuration time
+    uint256 maturity;
+    // @notice The base discount rate per year expressed in WAD (1e18 = 100%)
+    // @dev Maximum allowed value is 1e18 (100%)
+    uint256 baseDiscountPerYear;
+    // @notice The number of decimals of the in-currency (quoteAmount)
+    uint8 inDecimals;
+    // @notice The number of decimals of the out-currency
+    uint8 outDecimals;
+}
