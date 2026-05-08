@@ -22,6 +22,7 @@ uint256 constant SECONDS_PER_YEAR = 365.2425 days;
 /// @dev quoteAmount should be the yield-bearing asset in terms of it's underlying asset
 /// (ex: for PT-aDAI and if 1 aDAI = 1.05 DAI, quoteAmount should be 1.05 * 10**18).
 /// To get price of PT-aDAI, we apply linear discount to that price based on time to maturity because at maturity, the 1 PT-aDAI will be worth to 1 aDAI.
+/// @custom:audit Pending
 contract ModuleLinearDiscount is FullMath {
     error ModuleLinearDiscountInvalidRate();
     error ModuleLinearDiscountInvalidInput();
@@ -65,9 +66,9 @@ contract ModuleLinearDiscount is FullMath {
         // timeLeft * baseDiscountPerYear <= SECONDS_PER_YEAR * MATH_PRECISION.
         // Enforcing this at config time prevents misconfigurations that would later
         // brick readLinearDiscount via ModuleLinearDiscountInvalidRate.
-        if (
-            (config.maturity - block.timestamp) * config.baseDiscountPerYear > SECONDS_PER_YEAR * MATH_PRECISION
-        ) revert ModuleLinearDiscountInvalidInput();
+        if ((config.maturity - block.timestamp) * config.baseDiscountPerYear > SECONDS_PER_YEAR * MATH_PRECISION) {
+            revert ModuleLinearDiscountInvalidInput();
+        }
 
         // 54 comes from LENDING_ORACLE_PRICE_PRECISION (36) plus max token decimals (18);
         // decimal sums above this are unsupported and potentially dangerous.
