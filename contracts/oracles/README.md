@@ -8,6 +8,7 @@ Collateral deposits and borrowing capacity are valued with floor division, so co
 
 - `AltoMultiChainlinkLendingOracle` uses `ModuleChainlink`, which floors.
 - `AltoERC4626RatioChainlinkOracle` uses `ModuleERC4626Ratio` and `ModuleChainlink`, which both floor.
+- `AltoERC4626RatioLinearDiscountOracle` uses `ModuleERC4626Ratio`, which floors, and `ModuleLinearDiscount`, which applies a time-based discount to PT-style assets until maturity and floors the result.
 
 ## Payments round up
 
@@ -15,6 +16,7 @@ Amounts users must pay, and prices of tokens users purchase, are rounded up so t
 
 - `ModuleUniswap` rounds up when `UniswapNode.roundUp` is set.
 - `ModuleChainlink` only floors. A consumer that needs a rounded-up USD value rounds at the call site.
+- `ModuleLinearDiscount` has no round-up mode.
 
 ## AltoRewardsOracle
 
