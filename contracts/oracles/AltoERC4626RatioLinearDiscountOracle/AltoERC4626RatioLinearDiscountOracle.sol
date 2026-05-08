@@ -16,16 +16,17 @@ import {IOracle} from "@alto/oracles/interfaces/IOracle.sol";
 /// @custom:contact security@altofoundation.org
 /// @notice Abstract oracle that prices PT (Principal Token) positions backed by a yield-bearing asset.
 /// @notice Combines two modules in sequence:
-///   1. ModuleERC4626Ratio — caps the yield-bearing asset ratio to prevent manipulation impact.
-///   2. ModuleLinearDiscount — applies a time-based discount to price the PT before maturity.
+///   1. ModuleERC4626Ratio - caps the yield-bearing asset ratio to prevent manipulation impact.
+///   2. ModuleLinearDiscount - applies a time-based discount to price the PT before maturity.
 /// @dev Data flow for getPrice():
 ///   rawRatio  = _getRatioOfWrappedAssetToUnderlyingAsset()   (implementation-specific)
 ///   cappedRatio = readLatestRatio(rawRatio, erc4626RatioNode) (growth-capped ratio)
 ///   price       = readLinearDiscount(cappedRatio, linearDiscountNode) (discounted PT price)
 /// @dev IMPORTANT: linearDiscountNode.inDecimals MUST match the decimals of the value returned
-/// by _getRatioOfWrappedAssetToUnderlyingAsset(). This is implementation-specific — typically
+/// by _getRatioOfWrappedAssetToUnderlyingAsset(). This is implementation-specific - typically
 /// 18 decimals for ERC4626 vaults using convertToAssets(1e18). There is no on-chain enforcement
 /// because ERC4626RatioNode carries no outDecimals field
+/// @custom:audit Pending
 abstract contract AltoERC4626RatioLinearDiscountOracle is
     AltoOwnable2Step,
     ModuleERC4626Ratio,

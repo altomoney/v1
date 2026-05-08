@@ -38,7 +38,7 @@ contract AltoERC4626RatioLinearDiscountOracleUpdateLinearDiscountNode is AltoERC
     }
 
     function test_RevertWhen_MaturityIsNotInFuture() external givenCallerIsOwner {
-        // maturity = block.timestamp is NOT strictly in the future — fails before ptToken check
+        // maturity = block.timestamp is NOT strictly in the future - fails before ptToken check
         LinearDiscountNode memory invalidNode = LinearDiscountNode({
             ptToken: address(new MockPTToken(block.timestamp)),
             maturity: block.timestamp,
@@ -104,8 +104,13 @@ contract AltoERC4626RatioLinearDiscountOracleUpdateLinearDiscountNode is AltoERC
 
     function test_WhenNodeIsValid() external givenCallerIsOwner {
         // Capture old node for event assertion
-        (address oldPTToken, uint256 oldMaturity, uint256 oldBaseDiscountPerYear, uint8 oldInDecimals, uint8 oldOutDecimals) =
-            oracle.linearDiscountNode();
+        (
+            address oldPTToken,
+            uint256 oldMaturity,
+            uint256 oldBaseDiscountPerYear,
+            uint8 oldInDecimals,
+            uint8 oldOutDecimals
+        ) = oracle.linearDiscountNode();
         LinearDiscountNode memory oldNode = LinearDiscountNode({
             ptToken: oldPTToken,
             maturity: oldMaturity,
@@ -141,7 +146,7 @@ contract AltoERC4626RatioLinearDiscountOracleUpdateLinearDiscountNode is AltoERC
         (, uint256 currentMaturity,,,) = oracle.linearDiscountNode();
         vm.warp(currentMaturity + 1);
 
-        // New node with a future maturity — should succeed despite current maturity being stale
+        // New node with a future maturity - should succeed despite current maturity being stale
         uint256 newMaturity = block.timestamp + SECONDS_PER_YEAR;
         LinearDiscountNode memory newNode = _createValidLinearDiscountNode(newMaturity, 0.08 ether, 18, 36);
 

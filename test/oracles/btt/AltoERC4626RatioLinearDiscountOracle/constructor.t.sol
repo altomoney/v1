@@ -54,7 +54,7 @@ contract AltoERC4626RatioLinearDiscountOracleConstructor is AltoERC4626RatioLine
 
     function test_RevertWhen_LinearDiscountNodeMaturityIsNotInFuture() external givenInvalidInputs {
         ERC4626RatioNode memory ratioNode = _createValidERC4626RatioNode();
-        // maturity = block.timestamp is NOT strictly in the future — fails before ptToken check
+        // maturity = block.timestamp is NOT strictly in the future - fails before ptToken check
         LinearDiscountNode memory discountNode = LinearDiscountNode({
             ptToken: address(new MockPTToken(block.timestamp)),
             maturity: block.timestamp,
