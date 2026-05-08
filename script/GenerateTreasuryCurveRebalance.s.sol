@@ -49,6 +49,8 @@ interface INonfungiblePositionManagerTreasury {
 }
 
 interface ICurveFrxUsdDusdPool {
+    function coins(uint256 i) external view returns (address);
+
     function add_liquidity(uint256[] calldata amounts, uint256 minMintAmount, address receiver)
         external
         returns (uint256);
@@ -74,7 +76,6 @@ contract GenerateTreasuryCurveRebalance is Script {
 
     address constant TREASURY = 0xA1148A1b94262540994Cf9Aa431A13ad39764228;
     address constant NONFUNGIBLE_POSITION_MANAGER = 0xC36442b4a4522E871399CD717aBDD847Ab11FE88;
-    address constant CURVE_FRXUSD_DUSD_POOL = 0x35364a18efDe0169D214E7c72f4Ee0e4C522bA63;
     address constant FRAX_CUSTODIAN = 0x4F95C5bA0C7c69FB2f9340E190cCeE890B3bd87c;
 
     address constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
@@ -93,6 +94,15 @@ contract GenerateTreasuryCurveRebalance is Script {
     function run() public {
         string memory rpcUrl = vm.rpcUrl("ethereum");
         vm.createSelectFork(rpcUrl);
+
+        address curvePool = vm.promptAddress("Curve frxUSD/DUSD pool address (mainnet checksummed hex)");
+        require(curvePool.code.length > 0, "Invalid curve pool address");
+
+        (address curveCoin0, address curveCoin1) = _readCurveCoins(curvePool);
+        require(
+            (curveCoin0 == FRXUSD && curveCoin1 == DUSD) || (curveCoin0 == DUSD && curveCoin1 == FRXUSD),
+            "curve pool coins[0,1] must be frxUSD and DUSD"
+        );
 
         uint256 deadline = block.timestamp
             + vm.promptUint("Deadline hours from now - this deadline is set for uniswap remove liquidity transactions")
@@ -153,20 +163,18 @@ contract GenerateTreasuryCurveRebalance is Script {
 
         labels[idx] = "approve frxUSD to Curve";
         to[idx] = FRXUSD;
-        data[idx] = abi.encodeCall(IERC20.approve, (CURVE_FRXUSD_DUSD_POOL, curveConfig.frxUsdAmount));
+        data[idx] = abi.encodeCall(IERC20.approve, (curvePool, curveConfig.frxUsdAmount));
         ++idx;
 
         labels[idx] = "approve DUSD to Curve";
         to[idx] = DUSD;
-        data[idx] = abi.encodeCall(IERC20.approve, (CURVE_FRXUSD_DUSD_POOL, curveConfig.dusdAmount));
+        data[idx] = abi.encodeCall(IERC20.approve, (curvePool, curveConfig.dusdAmount));
         ++idx;
 
-        uint256[] memory curveAmounts = new uint256[](2);
-        curveAmounts[0] = curveConfig.frxUsdAmount;
-        curveAmounts[1] = curveConfig.dusdAmount;
+        uint256[] memory curveAmounts = _curveAddLiquidityAmounts(curveCoin0, curveConfig);
 
         labels[idx] = "Curve add_liquidity frxUSD and DUSD";
-        to[idx] = CURVE_FRXUSD_DUSD_POOL;
+        to[idx] = curvePool;
         data[idx] =
             abi.encodeCall(ICurveFrxUsdDusdPool.add_liquidity, (curveAmounts, curveConfig.minMintAmount, TREASURY));
         ++idx;
@@ -185,6 +193,28 @@ contract GenerateTreasuryCurveRebalance is Script {
 
         _logTransactions(labels, to, data);
         _writeSafeBatch(to, data);
+    }
+
+    function _readCurveCoins(address pool) internal view returns (address coin0, address coin1) {
+        ICurveFrxUsdDusdPool p = ICurveFrxUsdDusdPool(pool);
+        coin0 = p.coins(0);
+        coin1 = p.coins(1);
+    }
+
+    /// @notice `_amounts[i]` matches `pool.coins(i)` for a 2-coin pool.
+    function _curveAddLiquidityAmounts(address curveCoin0, CurveConfig memory cfg)
+        internal
+        pure
+        returns (uint256[] memory amounts)
+    {
+        amounts = new uint256[](2);
+        if (curveCoin0 == FRXUSD) {
+            amounts[0] = cfg.frxUsdAmount;
+            amounts[1] = cfg.dusdAmount;
+        } else {
+            amounts[0] = cfg.dusdAmount;
+            amounts[1] = cfg.frxUsdAmount;
+        }
     }
 
     function _readPositionConfig(string memory label, uint256 tokenId) internal returns (PositionConfig memory cfg) {
