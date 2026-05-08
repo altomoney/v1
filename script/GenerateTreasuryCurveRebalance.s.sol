@@ -51,6 +51,8 @@ interface INonfungiblePositionManagerTreasury {
 interface ICurveFrxUsdDusdPool {
     function coins(uint256 i) external view returns (address);
 
+    function calc_token_amount(uint256[] calldata amounts, bool isDeposit) external view returns (uint256);
+
     function add_liquidity(uint256[] calldata amounts, uint256 minMintAmount, address receiver)
         external
         returns (uint256);
@@ -64,232 +66,312 @@ contract GenerateTreasuryCurveRebalance is Script {
         string label;
         uint256 tokenId;
         uint256 reductionBps;
-        uint256 amount0Min;
-        uint256 amount1Min;
+        uint256 minDusdOut;
+        uint256 minUsdcOut;
     }
 
     struct CurveConfig {
         uint256 frxUsdAmount;
         uint256 dusdAmount;
-        uint256 minMintAmount;
     }
 
-    address constant TREASURY = 0xA1148A1b94262540994Cf9Aa431A13ad39764228;
-    address constant NONFUNGIBLE_POSITION_MANAGER = 0xC36442b4a4522E871399CD717aBDD847Ab11FE88;
-    address constant FRAX_CUSTODIAN = 0x4F95C5bA0C7c69FB2f9340E190cCeE890B3bd87c;
+    struct PositionState {
+        uint128 currentLiquidity;
+        uint128 liquidityToRemove;
+    }
 
-    address constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
-    address constant FRXUSD = 0xCAcd6fd266aF91b8AeD52aCCc382b4e165586E29;
-    address constant DUSD = 0x63d74d22E689C715a04F2C13962b1f77F443d35b;
-    address constant FRXUSD_USM = 0x1BD08B43D1579881cfAd0A35AEEa5b547dBE4c91;
-    address constant USDC_USM = 0x2dE874B83f4d0a64D81A16f2e050bcB55f118398;
+    struct BuildContext {
+        PositionConfig narrow;
+        PositionConfig wide;
+        CurveConfig curveConfig;
+        PositionState narrowState;
+        PositionState wideState;
+        uint256[] curveAmounts;
+        uint256 curveMinMintAmount;
+        uint256 totalUsdcForFrax;
+        uint256 extraDusd;
+        address[] to;
+        bytes[] data;
+        string[] labels;
+    }
 
-    uint256 constant NARROW_TOKEN_ID = 1_150_307;
-    uint256 constant WIDE_TOKEN_ID = 1_150_308;
-    uint256 constant BPS = 10_000;
-    uint256 constant TOKEN_DECIMAL_SCALE = 1e12; // 18-decimal frxUSD/DUSD to 6-decimal USDC.
+    address public constant TREASURY = 0xA1148A1b94262540994Cf9Aa431A13ad39764228;
+    address public constant NONFUNGIBLE_POSITION_MANAGER = 0xC36442b4a4522E871399CD717aBDD847Ab11FE88;
+    address public constant FRAX_CUSTODIAN = 0x4F95C5bA0C7c69FB2f9340E190cCeE890B3bd87c;
 
-    string constant OUTPUT_FILE = "contracts/deployments/ethereum-mainnet/output/safe-tx-treasury-curve-rebalance.json";
+    address public constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+    address public constant FRXUSD = 0xCAcd6fd266aF91b8AeD52aCCc382b4e165586E29;
+    address public constant DUSD = 0x63d74d22E689C715a04F2C13962b1f77F443d35b;
+    address public constant FRXUSD_USM = 0x1BD08B43D1579881cfAd0A35AEEa5b547dBE4c91;
+    address public constant USDC_USM = 0x2dE874B83f4d0a64D81A16f2e050bcB55f118398;
+
+    uint256 public constant NARROW_TOKEN_ID = 1_150_307;
+    uint256 public constant WIDE_TOKEN_ID = 1_150_308;
+    uint256 public constant BPS = 10_000;
+    uint256 public constant TOKEN_DECIMAL_SCALE = 1e12; // 18-decimal frxUSD/DUSD to 6-decimal USDC.
+
+    // Update to the target Curve frxUSD/DUSD pool.
+    address public constant CONFIG_CURVE_POOL = 0x104d6a1b97A6CEf88D905d7b865A378d90be932A;
+    // Update to set the Uniswap decreaseLiquidity deadline relative to script execution.
+    uint256 public constant CONFIG_DEADLINE_HOURS = 36;
+
+    // Narrow position: update bps and minimum received token amounts before generating Safe calldata.
+    uint256 public constant CONFIG_NARROW_REDUCTION_BPS = 3_400;
+    uint256 public constant CONFIG_NARROW_MIN_DUSD_OUT = 98_600 ether;
+    uint256 public constant CONFIG_NARROW_MIN_USDC_OUT = 299_200 * 1e6;
+
+    // Wide position: update bps and minimum received token amounts before generating Safe calldata.
+    uint256 public constant CONFIG_WIDE_REDUCTION_BPS = 3_400;
+    uint256 public constant CONFIG_WIDE_MIN_DUSD_OUT = 16_666 ether;
+    uint256 public constant CONFIG_WIDE_MIN_USDC_OUT = 78_200 * 1e6;
+
+    // Update to the desired Curve deposit amounts. Curve coin order is read from the pool.
+    uint256 public constant CONFIG_CURVE_FRXUSD_AMOUNT = 250_000 ether;
+    uint256 public constant CONFIG_CURVE_DUSD_AMOUNT = 250_000 ether;
+    // Minimum Curve LP tokens to accept from add_liquidity (slippage guard). Run calc_token_amount off-chain to set this.
+    uint256 public constant CONFIG_CURVE_MIN_LP_AMOUNT = 490_000 ether;
+
+    // DUSD actually received from Uniswap positions to burn back via USDC USM.
+    // May exceed the sum of minDusdOut values if the pool price moved favourably.
+    uint256 public constant CONFIG_EXTRA_DUSD_TO_BURN = 115_266 ether;
+
+    string public constant OUTPUT_FILE =
+        "contracts/deployments/ethereum-mainnet/output/safe-tx-treasury-curve-rebalance.json";
 
     function run() public {
         string memory rpcUrl = vm.rpcUrl("ethereum");
         vm.createSelectFork(rpcUrl);
 
-        address curvePool = vm.promptAddress("Curve frxUSD/DUSD pool address (mainnet checksummed hex)");
+        address curvePool = CONFIG_CURVE_POOL;
         require(curvePool.code.length > 0, "Invalid curve pool address");
 
-        (address curveCoin0, address curveCoin1) = _readCurveCoins(curvePool);
+        address curveCoin0 = ICurveFrxUsdDusdPool(curvePool).coins(0);
+        address curveCoin1 = ICurveFrxUsdDusdPool(curvePool).coins(1);
         require(
             (curveCoin0 == FRXUSD && curveCoin1 == DUSD) || (curveCoin0 == DUSD && curveCoin1 == FRXUSD),
             "curve pool coins[0,1] must be frxUSD and DUSD"
         );
 
-        uint256 deadline = block.timestamp
-            + vm.promptUint("Deadline hours from now - this deadline is set for uniswap remove liquidity transactions")
-            * 1 hours;
+        uint256 deadline = block.timestamp + CONFIG_DEADLINE_HOURS * 1 hours;
 
-        PositionConfig memory narrow = _readPositionConfig("narrow tick range", NARROW_TOKEN_ID);
-        PositionConfig memory wide = _readPositionConfig("wide tick range", WIDE_TOKEN_ID);
-        CurveConfig memory curveConfig = CurveConfig({
-            frxUsdAmount: vm.promptUint("Curve frxUSD amount to deposit (18 decimals)"),
-            dusdAmount: vm.promptUint("Curve DUSD amount to deposit (18 decimals)"),
-            minMintAmount: vm.promptUint(
-                "Curve min LP tokens to mint - Please simulate it on curve UI and then set this value"
-            )
+        _buildAndWrite(curvePool, curveCoin0, deadline);
+    }
+
+    function _buildAndWrite(address curvePool, address curveCoin0, uint256 deadline) internal {
+        BuildContext memory ctx;
+        ctx.narrow = PositionConfig({
+            label: "narrow tick range",
+            tokenId: NARROW_TOKEN_ID,
+            reductionBps: CONFIG_NARROW_REDUCTION_BPS,
+            minDusdOut: CONFIG_NARROW_MIN_DUSD_OUT,
+            minUsdcOut: CONFIG_NARROW_MIN_USDC_OUT
         });
+        require(ctx.narrow.reductionBps <= BPS, "narrow reduction bps too high");
+        ctx.wide = PositionConfig({
+            label: "wide tick range",
+            tokenId: WIDE_TOKEN_ID,
+            reductionBps: CONFIG_WIDE_REDUCTION_BPS,
+            minDusdOut: CONFIG_WIDE_MIN_DUSD_OUT,
+            minUsdcOut: CONFIG_WIDE_MIN_USDC_OUT
+        });
+        require(ctx.wide.reductionBps <= BPS, "wide reduction bps too high");
+        ctx.curveConfig = CurveConfig({frxUsdAmount: CONFIG_CURVE_FRXUSD_AMOUNT, dusdAmount: CONFIG_CURVE_DUSD_AMOUNT});
+        ctx.narrowState = _positionState(ctx.narrow);
+        ctx.wideState = _positionState(ctx.wide);
+        ctx.curveAmounts = new uint256[](2);
+        if (curveCoin0 == FRXUSD) {
+            ctx.curveAmounts[0] = ctx.curveConfig.frxUsdAmount;
+            ctx.curveAmounts[1] = ctx.curveConfig.dusdAmount;
+        } else {
+            ctx.curveAmounts[0] = ctx.curveConfig.dusdAmount;
+            ctx.curveAmounts[1] = ctx.curveConfig.frxUsdAmount;
+        }
+        uint256 expectedLp = ICurveFrxUsdDusdPool(curvePool).calc_token_amount(ctx.curveAmounts, true);
+        console.log("Expected Curve LP from calc_token_amount: %s", vm.toString(expectedLp));
+        console.log("Configured Curve min LP (CONFIG_CURVE_MIN_LP_AMOUNT): %s", vm.toString(CONFIG_CURVE_MIN_LP_AMOUNT));
+        ctx.curveMinMintAmount = CONFIG_CURVE_MIN_LP_AMOUNT;
+        ctx.extraDusd = CONFIG_EXTRA_DUSD_TO_BURN;
+        ctx.to = new address[](14);
+        ctx.data = new bytes[](14);
+        ctx.labels = new string[](14);
 
-        // NOTE: This is DUSD  expected to be received from uniswap and sent back to USDC USM
-        // @dev We may receive extra DUSD from uniswap due to slippage, so there can be residue
-        uint256 extraDusd = narrow.amount0Min + wide.amount0Min;
+        _printStateBefore(curvePool, ctx);
 
-        address[] memory to = new address[](14);
-        bytes[] memory data = new bytes[](14);
-        string[] memory labels = new string[](14);
         uint256 idx;
 
-        _appendDecreaseLiquidity(to, data, labels, idx++, narrow, deadline);
-        _appendCollect(to, data, labels, idx++, narrow);
-        _appendDecreaseLiquidity(to, data, labels, idx++, wide, deadline);
-        _appendCollect(to, data, labels, idx++, wide);
+        _appendDecreaseLiquidity(ctx, idx++, true, deadline);
+        _appendCollect(ctx, idx++, true);
+        _appendDecreaseLiquidity(ctx, idx++, false, deadline);
+        _appendCollect(ctx, idx++, false);
 
-        uint256 usdcForCurveDusd = curveConfig.dusdAmount / TOKEN_DECIMAL_SCALE;
-        uint256 usdcForCurveFrxUsd = curveConfig.frxUsdAmount / TOKEN_DECIMAL_SCALE;
-        uint256 totalUsdcForFrax = usdcForCurveDusd + usdcForCurveFrxUsd;
+        uint256 usdcForCurveDusd = ctx.curveConfig.dusdAmount / TOKEN_DECIMAL_SCALE;
+        uint256 usdcForCurveFrxUsd = ctx.curveConfig.frxUsdAmount / TOKEN_DECIMAL_SCALE;
+        ctx.totalUsdcForFrax = usdcForCurveDusd + usdcForCurveFrxUsd;
 
-        labels[idx] = "approve USDC to fraxCustodian";
-        to[idx] = USDC;
-        data[idx] = abi.encodeCall(IERC20.approve, (FRAX_CUSTODIAN, totalUsdcForFrax));
+        ctx.labels[idx] = "approve USDC to fraxCustodian to get frxUSD and then mint DUSD from frxUSD USM";
+        ctx.to[idx] = USDC;
+        ctx.data[idx] = abi.encodeCall(IERC20.approve, (FRAX_CUSTODIAN, ctx.totalUsdcForFrax));
         ++idx;
 
-        labels[idx] = "fraxCustodian.deposit USDC for DUSD leg";
-        to[idx] = FRAX_CUSTODIAN;
-        data[idx] = abi.encodeCall(IERC4626.deposit, (usdcForCurveDusd, TREASURY));
+        ctx.labels[idx] = "fraxCustodian.deposit USDC to get frxUSD and then mint DUSD from frxUSD USM";
+        ctx.to[idx] = FRAX_CUSTODIAN;
+        ctx.data[idx] = abi.encodeCall(IERC4626.deposit, (usdcForCurveDusd, TREASURY));
         ++idx;
 
-        labels[idx] = "approve frxUSD to frxUSD USM";
-        to[idx] = FRXUSD;
-        data[idx] = abi.encodeCall(IERC20.approve, (FRXUSD_USM, curveConfig.dusdAmount));
+        ctx.labels[idx] = "approve frxUSD to frxUSD USM to mint DUSD to deposit to Curve pool";
+        ctx.to[idx] = FRXUSD;
+        ctx.data[idx] = abi.encodeCall(IERC20.approve, (FRXUSD_USM, ctx.curveConfig.dusdAmount));
         ++idx;
 
-        labels[idx] = "frxUSD USM sellAsset frxUSD for DUSD";
-        to[idx] = FRXUSD_USM;
-        data[idx] = abi.encodeCall(IUsm.sellAsset, (curveConfig.dusdAmount, TREASURY));
+        ctx.labels[idx] = "frxUSD USM sellAsset to get DUSD to deposit to Curve pool";
+        ctx.to[idx] = FRXUSD_USM;
+        ctx.data[idx] = abi.encodeCall(IUsm.sellAsset, (ctx.curveConfig.dusdAmount, TREASURY));
         ++idx;
 
-        labels[idx] = "fraxCustodian.deposit frxUSD for frxUSD leg";
-        to[idx] = FRAX_CUSTODIAN;
-        data[idx] = abi.encodeCall(IERC4626.deposit, (usdcForCurveFrxUsd, TREASURY));
+        ctx.labels[idx] = "fraxCustodian.deposit USDC to get frxUSD to deposit to Curve pool";
+        ctx.to[idx] = FRAX_CUSTODIAN;
+        ctx.data[idx] = abi.encodeCall(IERC4626.deposit, (usdcForCurveFrxUsd, TREASURY));
         ++idx;
 
-        labels[idx] = "approve frxUSD to Curve";
-        to[idx] = FRXUSD;
-        data[idx] = abi.encodeCall(IERC20.approve, (curvePool, curveConfig.frxUsdAmount));
+        ctx.labels[idx] = "approve frxUSD to Curve to deposit to Curve pool";
+        ctx.to[idx] = FRXUSD;
+        ctx.data[idx] = abi.encodeCall(IERC20.approve, (curvePool, ctx.curveConfig.frxUsdAmount));
         ++idx;
 
-        labels[idx] = "approve DUSD to Curve";
-        to[idx] = DUSD;
-        data[idx] = abi.encodeCall(IERC20.approve, (curvePool, curveConfig.dusdAmount));
+        ctx.labels[idx] = "approve DUSD to Curve to deposit to Curve pool";
+        ctx.to[idx] = DUSD;
+        ctx.data[idx] = abi.encodeCall(IERC20.approve, (curvePool, ctx.curveConfig.dusdAmount));
         ++idx;
 
-        uint256[] memory curveAmounts = _curveAddLiquidityAmounts(curveCoin0, curveConfig);
-
-        labels[idx] = "Curve add_liquidity frxUSD and DUSD";
-        to[idx] = curvePool;
-        data[idx] =
-            abi.encodeCall(ICurveFrxUsdDusdPool.add_liquidity, (curveAmounts, curveConfig.minMintAmount, TREASURY));
+        ctx.labels[idx] = "Curve add_liquidity to get LP tokens";
+        ctx.to[idx] = curvePool;
+        ctx.data[idx] =
+            abi.encodeCall(ICurveFrxUsdDusdPool.add_liquidity, (ctx.curveAmounts, ctx.curveMinMintAmount, TREASURY));
         ++idx;
 
-        labels[idx] = "approve extra DUSD received from uniswap positions to USDC USM";
-        to[idx] = DUSD;
-        data[idx] = abi.encodeCall(IERC20.approve, (USDC_USM, extraDusd));
+        ctx.labels[idx] = "approve extra DUSD received from uniswap positions to USDC USM to buy USDC";
+        ctx.to[idx] = DUSD;
+        ctx.data[idx] = abi.encodeCall(IERC20.approve, (USDC_USM, ctx.extraDusd));
         ++idx;
 
-        labels[idx] = "USDC USM buyAsset with extra DUSD received from uniswap positions to USDC";
-        to[idx] = USDC_USM;
-        data[idx] = abi.encodeCall(IUsm.buyAsset, (extraDusd / TOKEN_DECIMAL_SCALE, TREASURY));
+        ctx.labels[idx] = "USDC USM buyAsset to get USDC";
+        ctx.to[idx] = USDC_USM;
+        ctx.data[idx] = abi.encodeCall(IUsm.buyAsset, (ctx.extraDusd / TOKEN_DECIMAL_SCALE, TREASURY));
         ++idx;
 
-        require(idx == to.length, "transaction count mismatch");
+        require(idx == ctx.to.length, "transaction count mismatch");
 
-        _logTransactions(labels, to, data);
-        _writeSafeBatch(to, data);
+        _printStateAfter(curvePool, ctx);
+        _logTransactions(ctx.labels, ctx.to, ctx.data);
+        _writeSafeBatch(ctx.to, ctx.data);
     }
 
-    function _readCurveCoins(address pool) internal view returns (address coin0, address coin1) {
-        ICurveFrxUsdDusdPool p = ICurveFrxUsdDusdPool(pool);
-        coin0 = p.coins(0);
-        coin1 = p.coins(1);
-    }
-
-    /// @notice `_amounts[i]` matches `pool.coins(i)` for a 2-coin pool.
-    function _curveAddLiquidityAmounts(address curveCoin0, CurveConfig memory cfg)
-        internal
-        pure
-        returns (uint256[] memory amounts)
-    {
-        amounts = new uint256[](2);
-        if (curveCoin0 == FRXUSD) {
-            amounts[0] = cfg.frxUsdAmount;
-            amounts[1] = cfg.dusdAmount;
-        } else {
-            amounts[0] = cfg.dusdAmount;
-            amounts[1] = cfg.frxUsdAmount;
-        }
-    }
-
-    function _readPositionConfig(string memory label, uint256 tokenId) internal returns (PositionConfig memory cfg) {
-        cfg.label = label;
-        cfg.tokenId = tokenId;
-        cfg.reductionBps = vm.promptUint(string.concat("Uniswap ", label, " reduction bps (10000 = 100%)"));
-        cfg.amount0Min = vm.promptUint(
-            string.concat(
-                "Uniswap ", label, " amount0Min DUSD (18 decimals) - simulate it on uniswap UI and then set this value"
-            )
-        );
-        cfg.amount1Min = vm.promptUint(
-            string.concat(
-                "Uniswap ", label, " amount1Min USDC (6 decimals) - simulate it on uniswap UI and then set this value"
-            )
-        );
-
-        require(cfg.reductionBps <= BPS, "reduction bps too high");
-    }
-
-    function _appendDecreaseLiquidity(
-        address[] memory to,
-        bytes[] memory data,
-        string[] memory labels,
-        uint256 idx,
-        PositionConfig memory cfg,
-        uint256 deadline
-    ) internal view {
-        (address token0, address token1, uint128 currentLiquidity) = _positionTokensAndLiquidity(cfg.tokenId);
+    function _positionState(PositionConfig memory cfg) internal view returns (PositionState memory state) {
+        (address token0, address token1, uint128 liq) = _positionInfo(cfg.tokenId);
         require(token0 == DUSD, "unexpected Uniswap token0");
         require(token1 == USDC, "unexpected Uniswap token1");
+        state.currentLiquidity = liq;
 
-        uint128 liquidityToRemove = uint128(uint256(currentLiquidity) * cfg.reductionBps / BPS);
-        require(liquidityToRemove > 0, "zero liquidity to remove");
+        state.liquidityToRemove = uint128(uint256(state.currentLiquidity) * cfg.reductionBps / BPS);
+        require(state.liquidityToRemove > 0, "zero liquidity to remove");
+    }
 
+    function _appendDecreaseLiquidity(BuildContext memory ctx, uint256 idx, bool isNarrow, uint256 deadline)
+        internal
+        pure
+    {
+        PositionConfig memory cfg = isNarrow ? ctx.narrow : ctx.wide;
+        PositionState memory state = isNarrow ? ctx.narrowState : ctx.wideState;
         DecreaseLiquidityParams memory params = DecreaseLiquidityParams({
             tokenId: cfg.tokenId,
-            liquidity: liquidityToRemove,
-            amount0Min: cfg.amount0Min,
-            amount1Min: cfg.amount1Min,
+            liquidity: state.liquidityToRemove,
+            amount0Min: cfg.minDusdOut,
+            amount1Min: cfg.minUsdcOut,
             deadline: deadline
         });
 
-        labels[idx] = string.concat("Uniswap decreaseLiquidity ", cfg.label);
-        to[idx] = NONFUNGIBLE_POSITION_MANAGER;
-        data[idx] = abi.encodeCall(INonfungiblePositionManagerTreasury.decreaseLiquidity, (params));
-
-        console.log("Position %s tokenId: %s", cfg.label, vm.toString(cfg.tokenId));
-        console.log("  current liquidity: %s", vm.toString(currentLiquidity));
-        console.log("  liquidity to remove: %s", vm.toString(liquidityToRemove));
+        ctx.labels[idx] = string.concat("Uniswap decreaseLiquidity from uniswap position ", cfg.label);
+        ctx.to[idx] = NONFUNGIBLE_POSITION_MANAGER;
+        ctx.data[idx] = abi.encodeCall(INonfungiblePositionManagerTreasury.decreaseLiquidity, (params));
     }
 
-    function _appendCollect(
-        address[] memory to,
-        bytes[] memory data,
-        string[] memory labels,
-        uint256 idx,
-        PositionConfig memory cfg
-    ) internal pure {
+    function _appendCollect(BuildContext memory ctx, uint256 idx, bool isNarrow) internal pure {
+        PositionConfig memory cfg = isNarrow ? ctx.narrow : ctx.wide;
         CollectParams memory params = CollectParams({
             tokenId: cfg.tokenId, recipient: TREASURY, amount0Max: type(uint128).max, amount1Max: type(uint128).max
         });
 
-        labels[idx] = string.concat("Uniswap collect ", cfg.label);
-        to[idx] = NONFUNGIBLE_POSITION_MANAGER;
-        data[idx] = abi.encodeCall(INonfungiblePositionManagerTreasury.collect, (params));
+        ctx.labels[idx] = string.concat("Uniswap collect ", cfg.label);
+        ctx.to[idx] = NONFUNGIBLE_POSITION_MANAGER;
+        ctx.data[idx] = abi.encodeCall(INonfungiblePositionManagerTreasury.collect, (params));
     }
 
-    function _positionTokensAndLiquidity(uint256 tokenId)
-        internal
-        view
-        returns (address token0, address token1, uint128 liquidity)
-    {
+    function _positionInfo(uint256 tokenId) internal view returns (address token0, address token1, uint128 liquidity) {
         (,, token0, token1,,,, liquidity,,,,) =
             INonfungiblePositionManagerTreasury(NONFUNGIBLE_POSITION_MANAGER).positions(tokenId);
+    }
+
+    function _printStateBefore(address curvePool, BuildContext memory ctx) internal view {
+        console.log("\n=== State Before ===");
+        _printBalances("Treasury", TREASURY);
+        _printBalances("Curve pool", curvePool);
+        _printPositionState("narrow", ctx.narrow, ctx.narrowState);
+        _printPositionState("wide", ctx.wide, ctx.wideState);
+    }
+
+    function _printStateAfter(address curvePool, BuildContext memory ctx) internal view {
+        uint256 projectedUsdc = IERC20(USDC).balanceOf(TREASURY) - ctx.totalUsdcForFrax + ctx.narrow.minUsdcOut
+            + ctx.wide.minUsdcOut + ctx.extraDusd / TOKEN_DECIMAL_SCALE;
+        uint256 projectedDusd = IERC20(DUSD).balanceOf(TREASURY);
+        uint256 projectedFrxUsd = IERC20(FRXUSD).balanceOf(TREASURY);
+
+        console.log("\n=== Projected State After (using configured mins) ===");
+        _printTokenAmounts("Treasury", projectedUsdc, projectedDusd, projectedFrxUsd);
+        _printTokenAmounts(
+            "Curve pool",
+            IERC20(USDC).balanceOf(curvePool),
+            IERC20(DUSD).balanceOf(curvePool) + ctx.curveConfig.dusdAmount,
+            IERC20(FRXUSD).balanceOf(curvePool) + ctx.curveConfig.frxUsdAmount
+        );
+        _printPositionAfter("narrow", ctx.narrow, ctx.narrowState);
+        _printPositionAfter("wide", ctx.wide, ctx.wideState);
+    }
+
+    function _printBalances(string memory label, address account) internal view {
+        _printTokenAmounts(
+            label, IERC20(USDC).balanceOf(account), IERC20(DUSD).balanceOf(account), IERC20(FRXUSD).balanceOf(account)
+        );
+    }
+
+    function _printTokenAmounts(string memory label, uint256 usdcAmount, uint256 dusdAmount, uint256 frxUsdAmount)
+        internal
+        view
+    {
+        console.log("%s balances:", label);
+        console.log("  USDC  : %s", vm.toString(usdcAmount));
+        console.log("  DUSD  : %s", vm.toString(dusdAmount));
+        console.log("  frxUSD: %s", vm.toString(frxUsdAmount));
+    }
+
+    function _printPositionState(string memory label, PositionConfig memory cfg, PositionState memory state)
+        internal
+        view
+    {
+        console.log("%s Uniswap position:", label);
+        console.log("  current liquidity : %s", vm.toString(state.currentLiquidity));
+        console.log("  remove liquidity  : %s", vm.toString(state.liquidityToRemove));
+        console.log("  configured DUSD min : %s", vm.toString(cfg.minDusdOut));
+        console.log("  configured USDC min : %s", vm.toString(cfg.minUsdcOut));
+    }
+
+    function _printPositionAfter(string memory label, PositionConfig memory cfg, PositionState memory state)
+        internal
+        view
+    {
+        console.log("%s Uniswap position after:", label);
+        console.log("  remaining liquidity: %s", vm.toString(state.currentLiquidity - state.liquidityToRemove));
+        console.log("  min DUSD removed   : %s", vm.toString(cfg.minDusdOut));
+        console.log("  min USDC removed   : %s", vm.toString(cfg.minUsdcOut));
     }
 
     function _logTransactions(string[] memory labels, address[] memory to, bytes[] memory data) internal view {
