@@ -37,7 +37,6 @@ import {
 } from "@alto/oracles/AltoChainlinkERC4626RatioMultiplierOracle/AltoChainlinkERC4626RatioMultiplierOracle.sol";
 
 import {
-    ISharePriceCalculator,
     ERC4626RatioLinearDiscountOraclePTREUSD
 } from "@alto/oracles/AltoERC4626RatioLinearDiscountOracle/implementations/ERC4626RatioLinearDiscountOraclePTREUSD.sol";
 import {IPTToken} from "@alto/oracles/modules/ModuleLinearDiscount.sol";
@@ -55,7 +54,6 @@ import {
     METH_STAKING_MAINNET,
     SUSDE_MAINNET,
     SYRUPUSDC_MAINNET,
-    REUSD_SHARE_PRICE_CALCULATOR_MAINNET,
     PT_REUSD_MAINNET
 } from "@alto/deployments/ethereum-mainnet/Constants.sol";
 
@@ -346,25 +344,20 @@ library EthereumMainnetOracleDeployer {
     }
 
     function deployPtReusdOracle(address owner) internal returns (address) {
-        uint256 initialRatio = ISharePriceCalculator(REUSD_SHARE_PRICE_CALCULATOR_MAINNET).getSharePrice() * 1015 / 1000; // +1.5%
         ERC4626RatioNode memory erc4626RatioNode = ERC4626RatioNode({
-            initialRatio: initialRatio,
+            initialRatio: 1e6, // matches PT-reUSD 6 decimals (1:1 peg at face value)
             initialTimestamp: block.timestamp,
-            maxYearlyGrowthRatioWad: 0.185 ether // 18.5%
+            maxYearlyGrowthRatioWad: 0.01 ether // 1% — safety ceiling only; ratio is fixed at 1e6
         });
 
         LinearDiscountNode memory linearDiscountNode = LinearDiscountNode({
             ptToken: PT_REUSD_MAINNET,
             maturity: IPTToken(PT_REUSD_MAINNET).expiry(),
             baseDiscountPerYear: 0.08 ether, // 8%
-            inDecimals: 18,
-            outDecimals: 36
+            inDecimals: 6, // PT-reUSD decimals
+            outDecimals: 48 // LENDING_ORACLE_PRICE_PRECISION + DUSD decimals - PT-reUSD decimals (36 + 18 - 6)
         });
 
-        return address(
-            new ERC4626RatioLinearDiscountOraclePTREUSD(
-                owner, REUSD_SHARE_PRICE_CALCULATOR_MAINNET, erc4626RatioNode, linearDiscountNode
-            )
-        );
+        return address(new ERC4626RatioLinearDiscountOraclePTREUSD(owner, erc4626RatioNode, linearDiscountNode));
     }
 }
