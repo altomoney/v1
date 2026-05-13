@@ -1,13 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.10;
 
-import {Usm} from "./Usm.sol";
+import {AdvancedPermissionsUsm} from "./AdvancedPermissionsUsm.sol";
 import {IDUSD} from "@alto/tokens/interfaces/IDUSD.sol";
-import {AccessMode} from "@alto/usm/interfaces/IUsm.sol";
+import {DirectionAccess} from "./interfaces/IAdvancedPermissionsUsm.sol";
 
-contract DUSDUsm is Usm {
+/**
+ * @title DUSDAdvancedPermissionsUsm
+ * @author GPM
+ * @author Adapted from Aave (https://github.com/aave/gho-core/)
+ * @custom:contact security@altofoundation.org
+ * @notice Universal Stability Module with independent buy and sell access control for DUSD.
+ */
+contract DUSDAdvancedPermissionsUsm is AdvancedPermissionsUsm {
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor(address dusd, address underlyingAsset) Usm(dusd, underlyingAsset) {
+    constructor(address dusd, address underlyingAsset) AdvancedPermissionsUsm(dusd, underlyingAsset) {
         _disableInitializers();
     }
 
@@ -16,9 +23,10 @@ contract DUSDUsm is Usm {
         address stableTokenTreasury,
         uint128 exposureCap,
         address priceStrategy,
-        AccessMode accessMode
+        DirectionAccess buyAccess,
+        DirectionAccess sellAccess
     ) external initializer {
-        __Usm_init(admin, stableTokenTreasury, exposureCap, priceStrategy, accessMode);
+        __AdvancedPermissionsUsm_init(admin, stableTokenTreasury, exposureCap, priceStrategy, buyAccess, sellAccess);
     }
 
     function _getCurrentlyMintedStableTokenByUsm() internal view override returns (uint256) {
