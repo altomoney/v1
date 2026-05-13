@@ -96,6 +96,7 @@ contract GenerateTreasuryCurveRebalance is Script {
     }
 
     address public constant TREASURY = 0xA1148A1b94262540994Cf9Aa431A13ad39764228;
+    address public constant BORROW_MARKET_FEE_RECIPIENT = 0xb9F06fEFc4c53dEd77A90Cb798eD08DC068Bb6dd;
     address public constant NONFUNGIBLE_POSITION_MANAGER = 0xC36442b4a4522E871399CD717aBDD847Ab11FE88;
     address public constant FRAX_CUSTODIAN = 0x4F95C5bA0C7c69FB2f9340E190cCeE890B3bd87c;
 
@@ -113,17 +114,17 @@ contract GenerateTreasuryCurveRebalance is Script {
     // Update to the target Curve frxUSD/DUSD pool.
     address public constant CONFIG_CURVE_POOL = 0x104d6a1b97A6CEf88D905d7b865A378d90be932A;
     // Update to set the Uniswap decreaseLiquidity deadline relative to script execution.
-    uint256 public constant CONFIG_DEADLINE_HOURS = 36;
+    uint256 public constant CONFIG_DEADLINE_HOURS = 1;
 
     // Narrow position: update bps and minimum received token amounts before generating Safe calldata.
     uint256 public constant CONFIG_NARROW_REDUCTION_BPS = 3_400;
-    uint256 public constant CONFIG_NARROW_MIN_DUSD_OUT = 98_600 ether;
-    uint256 public constant CONFIG_NARROW_MIN_USDC_OUT = 299_200 * 1e6;
+    uint256 public constant CONFIG_NARROW_MIN_DUSD_OUT = 104_000 ether;
+    uint256 public constant CONFIG_NARROW_MIN_USDC_OUT = 291_000 * 1e6;
 
     // Wide position: update bps and minimum received token amounts before generating Safe calldata.
     uint256 public constant CONFIG_WIDE_REDUCTION_BPS = 3_400;
-    uint256 public constant CONFIG_WIDE_MIN_DUSD_OUT = 16_666 ether;
-    uint256 public constant CONFIG_WIDE_MIN_USDC_OUT = 78_200 * 1e6;
+    uint256 public constant CONFIG_WIDE_MIN_DUSD_OUT = 18_400 ether;
+    uint256 public constant CONFIG_WIDE_MIN_USDC_OUT = 79_800 * 1e6;
 
     // Update to the desired Curve deposit amounts. Curve coin order is read from the pool.
     uint256 public constant CONFIG_CURVE_FRXUSD_AMOUNT = 250_000 ether;
@@ -131,9 +132,10 @@ contract GenerateTreasuryCurveRebalance is Script {
     // Minimum Curve LP tokens to accept from add_liquidity (slippage guard). Run calc_token_amount off-chain to set this.
     uint256 public constant CONFIG_CURVE_MIN_LP_AMOUNT = 490_000 ether;
 
-    // DUSD actually received from Uniswap positions to burn back via USDC USM.
-    // May exceed the sum of minDusdOut values if the pool price moved favourably.
-    uint256 public constant CONFIG_EXTRA_DUSD_TO_BURN = 115_266 ether;
+    // DUSD received from Uniswap positions to burn back via USDC USM.
+    // Initial treasury DUSD is sent to the fee recipient first, so this must not exceed
+    // actual V3 DUSD alone. Set conservatively below expected actuals.
+    uint256 public constant CONFIG_EXTRA_DUSD_TO_BURN = 122_000 ether;
 
     string public constant OUTPUT_FILE =
         "contracts/deployments/ethereum-mainnet/output/safe-tx-treasury-curve-rebalance.json";
@@ -191,13 +193,20 @@ contract GenerateTreasuryCurveRebalance is Script {
         console.log("Configured Curve min LP (CONFIG_CURVE_MIN_LP_AMOUNT): %s", vm.toString(CONFIG_CURVE_MIN_LP_AMOUNT));
         ctx.curveMinMintAmount = CONFIG_CURVE_MIN_LP_AMOUNT;
         ctx.extraDusd = CONFIG_EXTRA_DUSD_TO_BURN;
-        ctx.to = new address[](14);
-        ctx.data = new bytes[](14);
-        ctx.labels = new string[](14);
+        ctx.to = new address[](15);
+        ctx.data = new bytes[](15);
+        ctx.labels = new string[](15);
 
         _printStateBefore(curvePool, ctx);
 
         uint256 idx;
+
+        uint256 treasuryDusd = IERC20(DUSD).balanceOf(TREASURY);
+        require(treasuryDusd > 0, "no DUSD in treasury to transfer");
+        ctx.labels[idx] = "transfer existing DUSD balance to borrow market fee recipient";
+        ctx.to[idx] = DUSD;
+        ctx.data[idx] = abi.encodeCall(IERC20.transfer, (BORROW_MARKET_FEE_RECIPIENT, treasuryDusd));
+        ++idx;
 
         _appendDecreaseLiquidity(ctx, idx++, true, deadline);
         _appendCollect(ctx, idx++, true);

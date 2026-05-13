@@ -14,10 +14,11 @@ import {
     GenerateTreasuryCurveRebalance
 } from "../../script/GenerateTreasuryCurveRebalance.s.sol";
 
-/// @notice Fork test that executes the 14-transaction treasury Uniswap -> Curve rebalance
+/// @notice Fork test that executes the 15-transaction treasury Uniswap -> Curve rebalance
 ///         against a mainnet fork and logs balances after every step.
 contract TreasuryCurveRebalanceTest is Test {
     address TREASURY;
+    address BORROW_MARKET_FEE_RECIPIENT;
     address NONFUNGIBLE_POSITION_MANAGER;
     address FRAX_CUSTODIAN;
     address USDC;
@@ -49,6 +50,7 @@ contract TreasuryCurveRebalanceTest is Test {
         script = new GenerateTreasuryCurveRebalance();
 
         TREASURY = script.TREASURY();
+        BORROW_MARKET_FEE_RECIPIENT = script.BORROW_MARKET_FEE_RECIPIENT();
         NONFUNGIBLE_POSITION_MANAGER = script.NONFUNGIBLE_POSITION_MANAGER();
         FRAX_CUSTODIAN = script.FRAX_CUSTODIAN();
         USDC = script.USDC();
@@ -83,12 +85,19 @@ contract TreasuryCurveRebalanceTest is Test {
 
         uint256 deadline = block.timestamp + 36 hours;
 
-        // ── TX 1: decreaseLiquidity narrow ────────────────────────────────────
+        // ── TX 1: transfer existing DUSD to fee recipient ─────────────────────
+        uint256 initialDusd = IERC20(DUSD).balanceOf(TREASURY);
+        vm.startPrank(TREASURY);
+        IERC20(DUSD).transfer(BORROW_MARKET_FEE_RECIPIENT, initialDusd);
+        _logHeader("Post TX 1: transfer existing DUSD to borrow market fee recipient");
+        _logTreasuryBalances();
+        console.log("  Fee recipient DUSD: %s", vm.toString(IERC20(DUSD).balanceOf(BORROW_MARKET_FEE_RECIPIENT)));
+
+        // ── TX 2: decreaseLiquidity narrow ────────────────────────────────────
         {
             (,,,,,,, uint128 liq,,,,) = _positions(NARROW_TOKEN_ID);
             uint128 toRemove = uint128(uint256(liq) * CONFIG_NARROW_REDUCTION_BPS / BPS);
 
-            vm.startPrank(TREASURY);
             INonfungiblePositionManagerTreasury(NONFUNGIBLE_POSITION_MANAGER)
                 .decreaseLiquidity(
                     DecreaseLiquidityParams({
@@ -100,11 +109,11 @@ contract TreasuryCurveRebalanceTest is Test {
                     })
                 );
         }
-        _logHeader("Post TX 1: decreaseLiquidity from uniswap narrow range position");
+        _logHeader("Post TX 2: decreaseLiquidity from uniswap narrow range position");
         _logTreasuryBalances();
         _logUniswapPosition("narrow", NARROW_TOKEN_ID);
 
-        // ── TX 2: collect narrow ──────────────────────────────────────────────
+        // ── TX 3: collect narrow ──────────────────────────────────────────────
         INonfungiblePositionManagerTreasury(NONFUNGIBLE_POSITION_MANAGER)
             .collect(
                 CollectParams({
@@ -114,10 +123,10 @@ contract TreasuryCurveRebalanceTest is Test {
                     amount1Max: type(uint128).max
                 })
             );
-        _logHeader("Post TX 2: collect from uniswap narrow range position");
+        _logHeader("Post TX 3: collect from uniswap narrow range position");
         _logTreasuryBalances();
 
-        // ── TX 3: decreaseLiquidity wide ──────────────────────────────────────
+        // ── TX 4: decreaseLiquidity wide ──────────────────────────────────────
         {
             (,,,,,,, uint128 liq,,,,) = _positions(WIDE_TOKEN_ID);
             uint128 toRemove = uint128(uint256(liq) * CONFIG_WIDE_REDUCTION_BPS / BPS);
@@ -133,11 +142,11 @@ contract TreasuryCurveRebalanceTest is Test {
                     })
                 );
         }
-        _logHeader("Post TX 3: decreaseLiquidity from uniswap wide range position");
+        _logHeader("Post TX 4: decreaseLiquidity from uniswap wide range position");
         _logTreasuryBalances();
         _logUniswapPosition("wide", WIDE_TOKEN_ID);
 
-        // ── TX 4: collect wide ────────────────────────────────────────────────
+        // ── TX 5: collect wide ────────────────────────────────────────────────
         INonfungiblePositionManagerTreasury(NONFUNGIBLE_POSITION_MANAGER)
             .collect(
                 CollectParams({
@@ -148,53 +157,53 @@ contract TreasuryCurveRebalanceTest is Test {
                 })
             );
 
-        _logHeader("Post TX 4: collect from uniswap wide range position");
+        _logHeader("Post TX 5: collect from uniswap wide range position");
         _logTreasuryBalances();
 
         uint256 usdcForCurveDusd = CONFIG_CURVE_DUSD_AMOUNT / TOKEN_DECIMAL_SCALE;
         uint256 usdcForCurveFrxUsd = CONFIG_CURVE_FRXUSD_AMOUNT / TOKEN_DECIMAL_SCALE;
         uint256 totalUsdcForFrax = usdcForCurveDusd + usdcForCurveFrxUsd;
 
-        // ── TX 5: approve USDC to fraxCustodian ───────────────────────────────
+        // ── TX 6: approve USDC to fraxCustodian ───────────────────────────────
         IERC20(USDC).approve(FRAX_CUSTODIAN, totalUsdcForFrax);
 
-        _logHeader("Post TX 5: approve USDC to fraxCustodian to get frxUSD and then mint DUSD from frxUSD USM");
+        _logHeader("Post TX 6: approve USDC to fraxCustodian to get frxUSD and then mint DUSD from frxUSD USM");
         _logTreasuryBalances();
 
-        // ── TX 6: fraxCustodian.deposit for DUSD leg ──────────────────────────
+        // ── TX 7: fraxCustodian.deposit for DUSD leg ──────────────────────────
         IERC4626(FRAX_CUSTODIAN).deposit(usdcForCurveDusd, TREASURY);
-        _logHeader("Post TX 6: fraxCustodian.deposit USDC to get frxUSD and then mint DUSD from frxUSD USM");
+        _logHeader("Post TX 7: fraxCustodian.deposit USDC to get frxUSD and then mint DUSD from frxUSD USM");
         _logTreasuryBalances();
 
-        // ── TX 7: approve frxUSD to FRXUSD_USM ───────────────────────────────
+        // ── TX 8: approve frxUSD to FRXUSD_USM ───────────────────────────────
         IERC20(FRXUSD).approve(FRXUSD_USM, CONFIG_CURVE_DUSD_AMOUNT);
 
-        _logHeader("Post TX 7: approve frxUSD to frxUSD USM to mint DUSD to deposit to Curve pool");
+        _logHeader("Post TX 8: approve frxUSD to frxUSD USM to mint DUSD to deposit to Curve pool");
         _logTreasuryBalances();
 
-        // ── TX 8: sellAsset frxUSD for DUSD ──────────────────────────────────
+        // ── TX 9: sellAsset frxUSD for DUSD ──────────────────────────────────
         IUsm(FRXUSD_USM).sellAsset(CONFIG_CURVE_DUSD_AMOUNT, TREASURY);
-        _logHeader("Post TX 8: frxUSD USM sellAsset to get DUSD to deposit to Curve pool");
+        _logHeader("Post TX 9: frxUSD USM sellAsset to get DUSD to deposit to Curve pool");
         _logTreasuryBalances();
 
-        // ── TX 9: fraxCustodian.deposit for frxUSD leg ───────────────────────
+        // ── TX 10: fraxCustodian.deposit for frxUSD leg ──────────────────────
         IERC4626(FRAX_CUSTODIAN).deposit(CONFIG_CURVE_FRXUSD_AMOUNT / TOKEN_DECIMAL_SCALE, TREASURY);
-        _logHeader("Post TX 9: fraxCustodian.deposit USDC to get frxUSD to deposit to Curve pool");
+        _logHeader("Post TX 10: fraxCustodian.deposit USDC to get frxUSD to deposit to Curve pool");
         _logTreasuryBalances();
 
-        // ── TX 10: approve frxUSD to Curve ───────────────────────────────────
+        // ── TX 11: approve frxUSD to Curve ───────────────────────────────────
         IERC20(FRXUSD).approve(CONFIG_CURVE_POOL, CONFIG_CURVE_FRXUSD_AMOUNT);
 
-        _logHeader("Post TX 10: approve frxUSD to Curve");
+        _logHeader("Post TX 11: approve frxUSD to Curve");
         _logTreasuryBalances();
 
-        // ── TX 11: approve DUSD to Curve ─────────────────────────────────────
+        // ── TX 12: approve DUSD to Curve ─────────────────────────────────────
         IERC20(DUSD).approve(CONFIG_CURVE_POOL, CONFIG_CURVE_DUSD_AMOUNT);
 
-        _logHeader("Post TX 11: approve DUSD to Curve");
+        _logHeader("Post TX 12: approve DUSD to Curve");
         _logTreasuryBalances();
 
-        // ── TX 12: Curve add_liquidity ────────────────────────────────────────
+        // ── TX 13: Curve add_liquidity ────────────────────────────────────────
         {
             address coin0 = ICurveFrxUsdDusdPool(CONFIG_CURVE_POOL).coins(0);
             uint256[] memory amounts = new uint256[](2);
@@ -211,27 +220,52 @@ contract TreasuryCurveRebalanceTest is Test {
             console.log("  LP tokens minted: %s", vm.toString(lpMinted));
             assertGe(lpMinted, CONFIG_CURVE_MIN_LP_AMOUNT, "LP minted below configured minimum");
         }
-        _logHeader("Post TX 12: Curve add_liquidity to get LP tokens");
+        _logHeader("Post TX 13: Curve add_liquidity to get LP tokens");
         _logTreasuryBalances();
         _logCurvePool();
 
-        // ── TX 13: approve extra DUSD to USDC_USM ────────────────────────────
+        // ── TX 14: approve extra DUSD to USDC_USM ────────────────────────────
         IERC20(DUSD).approve(USDC_USM, CONFIG_EXTRA_DUSD_TO_BURN);
 
-        _logHeader("Post TX 13: approve extra DUSD to USDC USM to buy USDC");
+        _logHeader("Post TX 14: approve extra DUSD to USDC USM to buy USDC");
         _logTreasuryBalances();
 
-        // ── TX 14: buyAsset extra DUSD -> USDC ───────────────────────────────
+        // ── TX 15: buyAsset extra DUSD -> USDC ───────────────────────────────
         IUsm(USDC_USM).buyAsset(CONFIG_EXTRA_DUSD_TO_BURN / TOKEN_DECIMAL_SCALE, TREASURY);
 
         vm.stopPrank();
-        _logHeader("Post TX 14: USDC USM buyAsset extra DUSD to get USDC");
+        _logHeader("Post TX 15: USDC USM buyAsset extra DUSD to get USDC");
         _logTreasuryBalances();
 
         _logHeader("FINAL STATE");
         _logUniswapPosition("narrow", NARROW_TOKEN_ID);
         _logUniswapPosition("wide", WIDE_TOKEN_ID);
         _logCurvePool();
+
+        _assertFinalState();
+    }
+
+    function _assertFinalState() internal view {
+        (,,,,,,, uint128 narrowLiq,,,,) = _positions(NARROW_TOKEN_ID);
+        (,,,,,,, uint128 wideLiq,,,,) = _positions(WIDE_TOKEN_ID);
+
+        uint256 narrowOriginal = 2368915007018330610639;
+        uint256 wideOriginal = 15860032301389520788;
+        uint256 narrowExpectedRemaining = narrowOriginal - (narrowOriginal * CONFIG_NARROW_REDUCTION_BPS / BPS);
+        uint256 wideExpectedRemaining = wideOriginal - (wideOriginal * CONFIG_WIDE_REDUCTION_BPS / BPS);
+        assertEq(uint256(narrowLiq), narrowExpectedRemaining, "narrow remaining liquidity mismatch");
+        assertEq(uint256(wideLiq), wideExpectedRemaining, "wide remaining liquidity mismatch");
+
+        uint256 curvePoolDusd = IERC20(DUSD).balanceOf(CONFIG_CURVE_POOL);
+        uint256 curvePoolFrxUsd = IERC20(FRXUSD).balanceOf(CONFIG_CURVE_POOL);
+        assertGe(curvePoolDusd, CONFIG_CURVE_DUSD_AMOUNT, "Curve pool DUSD below deposit amount");
+        assertGe(curvePoolFrxUsd, CONFIG_CURVE_FRXUSD_AMOUNT, "Curve pool frxUSD below deposit amount");
+
+        uint256 treasuryFrxUsd = IERC20(FRXUSD).balanceOf(TREASURY);
+        assertEq(treasuryFrxUsd, 0, "treasury should have no leftover frxUSD");
+
+        uint256 treasuryDusd = IERC20(DUSD).balanceOf(TREASURY);
+        assertLe(treasuryDusd, 10_000 ether, "excessive DUSD left unconverted in treasury");
     }
 
     // ── helpers ───────────────────────────────────────────────────────────────
