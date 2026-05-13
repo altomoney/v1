@@ -4,8 +4,8 @@ pragma solidity ^0.8.10;
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {IStableTokenFacilitator} from "./interfaces/IStableTokenFacilitator.sol";
 import {IUsmPriceStrategy} from "./interfaces/IUsmPriceStrategy.sol";
-import {IUsmFeeStrategy} from "./interfaces/IUsmFeeStrategy.sol";
-import {IUsm, AccessMode} from "./interfaces/IUsm.sol";
+import {IAdvancedPermissionsUsmFeeStrategy} from "./interfaces/IAdvancedPermissionsUsmFeeStrategy.sol";
+import {IAdvancedPermissionsUsm, DirectionAccess} from "./interfaces/IAdvancedPermissionsUsm.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
@@ -13,40 +13,55 @@ import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/acce
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 /**
- * @title Usm
+ * @title AdvancedPermissionsUsm
  * @author GPM
  * @author Adapted from Aave (https://github.com/aave/gho-core/)
  * @custom:contact security@altofoundation.org
- * @notice Universal Stability Module. It provides buy/sell facilities to go to/from an underlying asset to/from stability token.
- * @dev To be covered by a proxy contract.
+ * @notice Universal Stability Module with independent buy and sell access control.
+ * @dev Lets the protocol configure who may swap in each direction: buy and sell
+ *      each use `DirectionAccess` (`DISABLED`, `PERMISSIONED`, `PERMISSIONLESS`).
+ *      In `PERMISSIONED` mode, `BUY_SWAPPER_ROLE` gates buys and `SELL_SWAPPER_ROLE` gates sells; in
+ *      `PERMISSIONLESS` mode anyone may call that direction; `DISABLED` blocks it for everyone.
+ * @dev Fee quotes and settlement use `IAdvancedPermissionsUsmFeeStrategy` with an `originator` so per-user fee
+ *      tiers can differ from access roles
+ * @dev `canSwap()` reflects only freeze/seize state; it does not encode direction access—use `getBuyAccess` /
+ *      `getSellAccess` for that.
  */
-abstract contract Usm is Initializable, AccessControlUpgradeable, UUPSUpgradeable, IUsm {
+abstract contract AdvancedPermissionsUsm is
+    Initializable,
+    AccessControlUpgradeable,
+    UUPSUpgradeable,
+    IAdvancedPermissionsUsm
+{
     using SafeERC20 for IERC20;
     using SafeCast for uint256;
 
-    /// @inheritdoc IUsm
+    /// @inheritdoc IAdvancedPermissionsUsm
     bytes32 public constant CONFIGURATOR_ROLE = keccak256("CONFIGURATOR_ROLE");
 
-    /// @inheritdoc IUsm
+    /// @inheritdoc IAdvancedPermissionsUsm
     bytes32 public constant TOKEN_RESCUER_ROLE = keccak256("TOKEN_RESCUER_ROLE");
 
-    /// @inheritdoc IUsm
+    /// @inheritdoc IAdvancedPermissionsUsm
     bytes32 public constant SWAP_FREEZER_ROLE = keccak256("SWAP_FREEZER_ROLE");
 
-    /// @inheritdoc IUsm
+    /// @inheritdoc IAdvancedPermissionsUsm
     bytes32 public constant LIQUIDATOR_ROLE = keccak256("LIQUIDATOR_ROLE");
 
-    /// @inheritdoc IUsm
-    bytes32 public constant SWAPPER_ROLE = keccak256("SWAPPER_ROLE");
+    /// @inheritdoc IAdvancedPermissionsUsm
+    bytes32 public constant BUY_SWAPPER_ROLE = keccak256("BUY_SWAPPER_ROLE");
+
+    /// @inheritdoc IAdvancedPermissionsUsm
+    bytes32 public constant SELL_SWAPPER_ROLE = keccak256("SELL_SWAPPER_ROLE");
 
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     address public immutable STABLE_TOKEN;
 
-    /// @inheritdoc IUsm
+    /// @inheritdoc IAdvancedPermissionsUsm
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     address public immutable UNDERLYING_ASSET;
 
-    /// @inheritdoc IUsm
+    /// @inheritdoc IAdvancedPermissionsUsm
     address public priceStrategy;
 
     address internal _stableTokenTreasury;
@@ -56,7 +71,8 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
     uint128 internal _exposureCap;
     uint128 internal _currentExposure;
     uint128 internal _accruedFees;
-    AccessMode internal _accessMode;
+    DirectionAccess internal _buyDirectionAccess;
+    DirectionAccess internal _sellDirectionAccess;
     address internal _feeRecipient;
 
     /// upgrade gap
@@ -79,14 +95,31 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
     }
 
     /**
-     * @dev Require caller to have access to the USM for
-     * For Permissioned USMs, the caller must have the SWAPPER_ROLE
-     * For Permissionless USMs, the caller can be any address
+     * @dev Require caller to have buy access to the USM
+     * For DISABLED: the buy direction is not available
+     * For PERMISSIONED: the caller must have the BUY_SWAPPER_ROLE
+     * For PERMISSIONLESS: the caller can be any address
      * @param caller The address of the caller
      */
-    modifier hasAccess(address caller) {
-        if (_accessMode == AccessMode.PERMISSIONED) {
-            require(hasRole(SWAPPER_ROLE, caller), "NOT PERMISSIONED");
+    modifier canBuyAsset(address caller) {
+        require(_buyDirectionAccess != DirectionAccess.DISABLED, "BUY_DISABLED");
+        if (_buyDirectionAccess == DirectionAccess.PERMISSIONED) {
+            require(hasRole(BUY_SWAPPER_ROLE, caller), "NOT PERMISSIONED");
+        }
+        _;
+    }
+
+    /**
+     * @dev Require caller to have sell access to the USM
+     * For DISABLED: the sell direction is not available
+     * For PERMISSIONED: the caller must have the SELL_SWAPPER_ROLE
+     * For PERMISSIONLESS: the caller can be any address
+     * @param caller The address of the caller
+     */
+    modifier canSellAsset(address caller) {
+        require(_sellDirectionAccess != DirectionAccess.DISABLED, "SELL_DISABLED");
+        if (_sellDirectionAccess == DirectionAccess.PERMISSIONED) {
+            require(hasRole(SELL_SWAPPER_ROLE, caller), "NOT PERMISSIONED");
         }
         _;
     }
@@ -105,19 +138,21 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
     }
 
     /**
-     * @notice USM initializer
+     * @notice AdvancedPermissionsUsm initializer
      * @param admin The address of the default admin role
      * @param stableTokenTreasury The address of the stable token treasury
      * @param exposureCap Maximum amount of user-supplied underlying asset in USM
      * @param priceStrategy The address of the price strategy
-     * @param accessMode The access mode of the USM
+     * @param buyAccess The buy direction access of the USM
+     * @param sellAccess The sell direction access of the USM
      */
-    function __Usm_init(
+    function __AdvancedPermissionsUsm_init(
         address admin,
         address stableTokenTreasury,
         uint128 exposureCap,
         address priceStrategy,
-        AccessMode accessMode
+        DirectionAccess buyAccess,
+        DirectionAccess sellAccess
     ) internal onlyInitializing {
         require(admin != address(0), "ZERO_ADDRESS_NOT_VALID");
 
@@ -129,32 +164,32 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
         _updateStableTokenTreasury(stableTokenTreasury);
         _updateExposureCap(exposureCap);
         _updatePriceStrategy(priceStrategy);
-        _updateAccessMode(accessMode);
+        _updateAccessConfig(buyAccess, sellAccess);
     }
 
-    /// @inheritdoc IUsm
+    /// @inheritdoc IAdvancedPermissionsUsm
     function buyAsset(uint256 minAmount, address receiver)
         external
         notFrozen
         notSeized
-        hasAccess(msg.sender)
+        canBuyAsset(msg.sender)
         returns (uint256, uint256)
     {
         return _buyAsset(msg.sender, minAmount, receiver);
     }
 
-    /// @inheritdoc IUsm
+    /// @inheritdoc IAdvancedPermissionsUsm
     function sellAsset(uint256 maxAmount, address receiver)
         external
         notFrozen
         notSeized
-        hasAccess(msg.sender)
+        canSellAsset(msg.sender)
         returns (uint256, uint256)
     {
         return _sellAsset(msg.sender, maxAmount, receiver);
     }
 
-    /// @inheritdoc IUsm
+    /// @inheritdoc IAdvancedPermissionsUsm
     function rescueTokens(address token, address to, uint256 amount) external onlyRole(TOKEN_RESCUER_ROLE) {
         require(amount > 0, "INVALID_AMOUNT");
         if (token == STABLE_TOKEN) {
@@ -169,7 +204,7 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
         emit TokensRescued(token, to, amount);
     }
 
-    /// @inheritdoc IUsm
+    /// @inheritdoc IAdvancedPermissionsUsm
     function setSwapFreeze(bool enable) external onlyRole(SWAP_FREEZER_ROLE) {
         if (enable) {
             require(!_isFrozen, "USM_ALREADY_FROZEN");
@@ -180,7 +215,7 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
         emit SwapFreeze(msg.sender, enable);
     }
 
-    /// @inheritdoc IUsm
+    /// @inheritdoc IAdvancedPermissionsUsm
     function seize() external notSeized onlyRole(LIQUIDATOR_ROLE) returns (uint256) {
         _isSeized = true;
         _currentExposure = 0;
@@ -197,7 +232,7 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
         return underlyingBalance;
     }
 
-    /// @inheritdoc IUsm
+    /// @inheritdoc IAdvancedPermissionsUsm
     function burnAfterSeize(uint256 amount) external onlyRole(LIQUIDATOR_ROLE) returns (uint256) {
         require(_isSeized, "USM_NOT_SEIZED");
         require(amount > 0, "INVALID_AMOUNT");
@@ -213,24 +248,29 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
         return amount;
     }
 
-    /// @inheritdoc IUsm
+    /// @inheritdoc IAdvancedPermissionsUsm
     function updateFeeStrategy(address feeStrategy) external onlyRole(CONFIGURATOR_ROLE) {
         _updateFeeStrategy(feeStrategy);
     }
 
-    /// @inheritdoc IUsm
+    /// @inheritdoc IAdvancedPermissionsUsm
     function updatePriceStrategy(address priceStrategy) external onlyRole(CONFIGURATOR_ROLE) {
         _updatePriceStrategy(priceStrategy);
     }
 
-    /// @inheritdoc IUsm
+    /// @inheritdoc IAdvancedPermissionsUsm
     function updateExposureCap(uint128 exposureCap) external onlyRole(CONFIGURATOR_ROLE) {
         _updateExposureCap(exposureCap);
     }
 
-    /// @inheritdoc IUsm
-    function updateAccessMode(AccessMode accessMode) external onlyRole(CONFIGURATOR_ROLE) {
-        _updateAccessMode(accessMode);
+    /// @inheritdoc IAdvancedPermissionsUsm
+    function updateBuyAccess(DirectionAccess buyAccess) external onlyRole(CONFIGURATOR_ROLE) {
+        _updateAccessConfig(buyAccess, _sellDirectionAccess);
+    }
+
+    /// @inheritdoc IAdvancedPermissionsUsm
+    function updateSellAccess(DirectionAccess sellAccess) external onlyRole(CONFIGURATOR_ROLE) {
+        _updateAccessConfig(_buyDirectionAccess, sellAccess);
     }
 
     /// @inheritdoc IStableTokenFacilitator
@@ -243,7 +283,7 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
         }
     }
 
-    /// @inheritdoc IUsm
+    /// @inheritdoc IAdvancedPermissionsUsm
     function updateStableTokenTreasury(address newStableTokenTreasury) external override onlyRole(CONFIGURATOR_ROLE) {
         _updateStableTokenTreasury(newStableTokenTreasury);
     }
@@ -253,74 +293,78 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
         _updateFeeRecipient(newFeeRecipient);
     }
 
-    /// @inheritdoc IUsm
-    function getStableTokenAmountForBuyAsset(uint256 minAssetAmount)
+    /// @inheritdoc IAdvancedPermissionsUsm
+    function getStableTokenAmountForBuyAsset(uint256 minAssetAmount, address originator)
         external
         view
         returns (uint256, uint256, uint256, uint256)
     {
-        return _calculateStableTokenAmountForBuyAsset(minAssetAmount);
+        return _calculateStableTokenAmountForBuyAsset(minAssetAmount, originator);
     }
 
-    /// @inheritdoc IUsm
-    function getStableTokenAmountForSellAsset(uint256 maxAssetAmount)
+    /// @inheritdoc IAdvancedPermissionsUsm
+    function getStableTokenAmountForSellAsset(uint256 maxAssetAmount, address originator)
         external
         view
         returns (uint256, uint256, uint256, uint256)
     {
-        return _calculateStableTokenAmountForSellAsset(maxAssetAmount);
+        return _calculateStableTokenAmountForSellAsset(maxAssetAmount, originator);
     }
 
-    /// @inheritdoc IUsm
-    function getAssetAmountForBuyAsset(uint256 maxStableTokenAmount)
+    /// @inheritdoc IAdvancedPermissionsUsm
+    function getAssetAmountForBuyAsset(uint256 maxStableTokenAmount, address originator)
         external
         view
         returns (uint256, uint256, uint256, uint256)
     {
         bool withFee = _feeStrategy != address(0);
         uint256 grossAmount = withFee
-            ? IUsmFeeStrategy(_feeStrategy).getGrossAmountFromTotalBought(maxStableTokenAmount)
+            ? IAdvancedPermissionsUsmFeeStrategy(_feeStrategy)
+                .getGrossAmountFromTotalBought(maxStableTokenAmount, originator)
             : maxStableTokenAmount;
         // round down so maxStableTokenAmount is guaranteed
         uint256 assetAmount = IUsmPriceStrategy(priceStrategy).getStableTokenPriceInAsset(grossAmount, false);
         uint256 finalGrossAmount = IUsmPriceStrategy(priceStrategy).getAssetPriceInStableToken(assetAmount, true);
-        uint256 finalFee = withFee ? IUsmFeeStrategy(_feeStrategy).getBuyFee(finalGrossAmount) : 0;
+        uint256 finalFee =
+            withFee ? IAdvancedPermissionsUsmFeeStrategy(_feeStrategy).getBuyFee(finalGrossAmount, originator) : 0;
         return (assetAmount, finalGrossAmount + finalFee, finalGrossAmount, finalFee);
     }
 
-    /// @inheritdoc IUsm
-    function getAssetAmountForSellAsset(uint256 minStableTokenAmount)
+    /// @inheritdoc IAdvancedPermissionsUsm
+    function getAssetAmountForSellAsset(uint256 minStableTokenAmount, address originator)
         external
         view
         returns (uint256, uint256, uint256, uint256)
     {
         bool withFee = _feeStrategy != address(0);
         uint256 grossAmount = withFee
-            ? IUsmFeeStrategy(_feeStrategy).getGrossAmountFromTotalSold(minStableTokenAmount)
+            ? IAdvancedPermissionsUsmFeeStrategy(_feeStrategy)
+                .getGrossAmountFromTotalSold(minStableTokenAmount, originator)
             : minStableTokenAmount;
         // round up so minStableTokenAmount is guaranteed
         uint256 assetAmount = IUsmPriceStrategy(priceStrategy).getStableTokenPriceInAsset(grossAmount, true);
         uint256 finalGrossAmount = IUsmPriceStrategy(priceStrategy).getAssetPriceInStableToken(assetAmount, false);
-        uint256 finalFee = withFee ? IUsmFeeStrategy(_feeStrategy).getSellFee(finalGrossAmount) : 0;
+        uint256 finalFee =
+            withFee ? IAdvancedPermissionsUsmFeeStrategy(_feeStrategy).getSellFee(finalGrossAmount, originator) : 0;
         return (assetAmount, finalGrossAmount - finalFee, finalGrossAmount, finalFee);
     }
 
-    /// @inheritdoc IUsm
+    /// @inheritdoc IAdvancedPermissionsUsm
     function getAvailableUnderlyingExposure() external view returns (uint256) {
         return _exposureCap > _currentExposure ? _exposureCap - _currentExposure : 0;
     }
 
-    /// @inheritdoc IUsm
+    /// @inheritdoc IAdvancedPermissionsUsm
     function getExposureCap() external view returns (uint128) {
         return _exposureCap;
     }
 
-    /// @inheritdoc IUsm
+    /// @inheritdoc IAdvancedPermissionsUsm
     function getAvailableLiquidity() external view returns (uint256) {
         return _currentExposure;
     }
 
-    /// @inheritdoc IUsm
+    /// @inheritdoc IAdvancedPermissionsUsm
     function getFeeStrategy() external view returns (address) {
         return _feeStrategy;
     }
@@ -330,37 +374,42 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
         return _feeRecipient;
     }
 
-    /// @inheritdoc IUsm
+    /// @inheritdoc IAdvancedPermissionsUsm
     function getAccruedFees() external view returns (uint256) {
         return _accruedFees;
     }
 
-    /// @inheritdoc IUsm
+    /// @inheritdoc IAdvancedPermissionsUsm
     function getIsFrozen() external view returns (bool) {
         return _isFrozen;
     }
 
-    /// @inheritdoc IUsm
+    /// @inheritdoc IAdvancedPermissionsUsm
     function getIsSeized() external view returns (bool) {
         return _isSeized;
     }
 
-    /// @inheritdoc IUsm
+    /// @inheritdoc IAdvancedPermissionsUsm
     function canSwap() external view returns (bool) {
         return !_isFrozen && !_isSeized;
     }
 
-    /// @inheritdoc IUsm
-    function getAccessMode() external view returns (AccessMode) {
-        return _accessMode;
+    /// @inheritdoc IAdvancedPermissionsUsm
+    function getBuyAccess() external view returns (DirectionAccess) {
+        return _buyDirectionAccess;
     }
 
-    /// @inheritdoc IUsm
+    /// @inheritdoc IAdvancedPermissionsUsm
+    function getSellAccess() external view returns (DirectionAccess) {
+        return _sellDirectionAccess;
+    }
+
+    /// @inheritdoc IAdvancedPermissionsUsm
     function getStableTokenTreasury() external view override returns (address) {
         return _stableTokenTreasury;
     }
 
-    /// @inheritdoc IUsm
+    /// @inheritdoc IAdvancedPermissionsUsm
     function USM_REVISION() public pure virtual override returns (uint256) {
         return 1;
     }
@@ -375,7 +424,7 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
      */
     function _buyAsset(address originator, uint256 minAmount, address receiver) internal returns (uint256, uint256) {
         (uint256 assetAmount, uint256 stableTokenSold, uint256 grossAmount, uint256 fee) =
-            _calculateStableTokenAmountForBuyAsset(minAmount);
+            _calculateStableTokenAmountForBuyAsset(minAmount, originator);
 
         _beforeBuyAsset(originator, assetAmount, receiver);
 
@@ -412,7 +461,7 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
      */
     function _sellAsset(address originator, uint256 maxAmount, address receiver) internal returns (uint256, uint256) {
         (uint256 assetAmount, uint256 stableTokenBought, uint256 grossAmount, uint256 fee) =
-            _calculateStableTokenAmountForSellAsset(maxAmount);
+            _calculateStableTokenAmountForSellAsset(maxAmount, originator);
 
         _beforeSellAsset(originator, assetAmount, receiver);
 
@@ -442,12 +491,13 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
     /**
      * @dev Returns the amount of Stable Token sold in exchange of buying underlying asset
      * @param assetAmount The amount of underlying asset to buy
+     * @param originator The originator of the request
      * @return The exact amount of asset the user purchases
      * @return The total amount of Stable Token the user sells (gross amount in Stable Token plus fee)
      * @return The gross amount of Stable Token
      * @return The fee amount in Stable Token, applied on top of gross amount of Stable Token
      */
-    function _calculateStableTokenAmountForBuyAsset(uint256 assetAmount)
+    function _calculateStableTokenAmountForBuyAsset(uint256 assetAmount, address originator)
         internal
         view
         returns (uint256, uint256, uint256, uint256)
@@ -455,10 +505,12 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
         bool withFee = _feeStrategy != address(0);
         // pick the highest Stable Token amount possible for given asset amount
         uint256 grossAmount = IUsmPriceStrategy(priceStrategy).getAssetPriceInStableToken(assetAmount, true);
-        uint256 fee = withFee ? IUsmFeeStrategy(_feeStrategy).getBuyFee(grossAmount) : 0;
+        uint256 fee = withFee ? IAdvancedPermissionsUsmFeeStrategy(_feeStrategy).getBuyFee(grossAmount, originator) : 0;
         uint256 stableTokenSold = grossAmount + fee;
-        uint256 finalGrossAmount =
-            withFee ? IUsmFeeStrategy(_feeStrategy).getGrossAmountFromTotalBought(stableTokenSold) : stableTokenSold;
+        uint256 finalGrossAmount = withFee
+            ? IAdvancedPermissionsUsmFeeStrategy(_feeStrategy)
+                .getGrossAmountFromTotalBought(stableTokenSold, originator)
+            : stableTokenSold;
         // pick the lowest asset amount possible for given Stable Token amount
         uint256 finalAssetAmount = IUsmPriceStrategy(priceStrategy).getStableTokenPriceInAsset(finalGrossAmount, false);
         uint256 finalFee = stableTokenSold - finalGrossAmount;
@@ -468,12 +520,13 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
     /**
      * @dev Returns the amount of Stable Token bought in exchange of a given amount of underlying asset
      * @param assetAmount The amount of underlying asset to sell
+     * @param originator The originator of the request
      * @return The exact amount of asset the user sells
      * @return The total amount of Stable Token the user buys (gross amount in Stable Token minus fee)
      * @return The gross amount of Stable Token
      * @return The fee amount in Stable Token, applied to the gross amount of Stable Token
      */
-    function _calculateStableTokenAmountForSellAsset(uint256 assetAmount)
+    function _calculateStableTokenAmountForSellAsset(uint256 assetAmount, address originator)
         internal
         view
         returns (uint256, uint256, uint256, uint256)
@@ -481,10 +534,12 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
         bool withFee = _feeStrategy != address(0);
         // pick the lowest Stable Token amount possible for given asset amount
         uint256 grossAmount = IUsmPriceStrategy(priceStrategy).getAssetPriceInStableToken(assetAmount, false);
-        uint256 fee = withFee ? IUsmFeeStrategy(_feeStrategy).getSellFee(grossAmount) : 0;
+        uint256 fee = withFee ? IAdvancedPermissionsUsmFeeStrategy(_feeStrategy).getSellFee(grossAmount, originator) : 0;
         uint256 stableTokenBought = grossAmount - fee;
-        uint256 finalGrossAmount =
-            withFee ? IUsmFeeStrategy(_feeStrategy).getGrossAmountFromTotalSold(stableTokenBought) : stableTokenBought;
+        uint256 finalGrossAmount = withFee
+            ? IAdvancedPermissionsUsmFeeStrategy(_feeStrategy)
+                .getGrossAmountFromTotalSold(stableTokenBought, originator)
+            : stableTokenBought;
         // pick the highest asset amount possible for given Stable Token amount
         uint256 finalAssetAmount = IUsmPriceStrategy(priceStrategy).getStableTokenPriceInAsset(finalGrossAmount, true);
         uint256 finalFee = finalGrossAmount - stableTokenBought;
@@ -527,12 +582,14 @@ abstract contract Usm is Initializable, AccessControlUpgradeable, UUPSUpgradeabl
     }
 
     /**
-     * @dev Updates Access Mode
-     * @param accessMode The new access mode
+     * @dev Updates Access Configuration for both directions
+     * @param buyAccess The new buy direction access
+     * @param sellAccess The new sell direction access
      */
-    function _updateAccessMode(AccessMode accessMode) internal {
-        _accessMode = accessMode;
-        emit AccessModeUpdated(accessMode);
+    function _updateAccessConfig(DirectionAccess buyAccess, DirectionAccess sellAccess) internal {
+        _buyDirectionAccess = buyAccess;
+        _sellDirectionAccess = sellAccess;
+        emit AccessConfigUpdated(buyAccess, sellAccess);
     }
 
     /**
