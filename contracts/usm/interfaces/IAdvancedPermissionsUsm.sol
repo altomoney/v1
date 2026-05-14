@@ -5,11 +5,9 @@ import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol"
 import {IStableTokenFacilitator} from "./IStableTokenFacilitator.sol";
 
 /// @notice The direction access configuration for a USM swap direction
-/// @dev DISABLED: no one can use this direction
 /// @dev PERMISSIONED: only role holders can use this direction
 /// @dev PERMISSIONLESS: anyone can use this direction
 enum DirectionAccess {
-    DISABLED,
     PERMISSIONED,
     PERMISSIONLESS
 }

@@ -21,9 +21,6 @@ contract TestAdvancedPermissionsUsm is TestDusdBase {
     /// Access-specific USMs
     DUSDAdvancedPermissionsUsm PERMISSIONED_BUY_USM; // PERMISSIONED buy / PERMISSIONLESS sell
     DUSDAdvancedPermissionsUsm PERMISSIONED_SELL_USM; // PERMISSIONLESS buy / PERMISSIONED sell (pre-seeded)
-    DUSDAdvancedPermissionsUsm DISABLED_BUY_USM; // DISABLED buy    / PERMISSIONLESS sell
-    DUSDAdvancedPermissionsUsm DISABLED_SELL_USM; // PERMISSIONLESS buy / DISABLED sell (pre-seeded)
-    DUSDAdvancedPermissionsUsm DISABLED_BOTH_USM; // DISABLED buy    / DISABLED sell
 
     bytes32 constant BUY_SWAPPER_ROLE = keccak256("BUY_SWAPPER_ROLE");
     bytes32 constant SELL_SWAPPER_ROLE = keccak256("SELL_SWAPPER_ROLE");
@@ -59,13 +56,6 @@ contract TestAdvancedPermissionsUsm is TestDusdBase {
         // Access-specific USMs
         PERMISSIONED_BUY_USM = _makeUsm(DirectionAccess.PERMISSIONED, DirectionAccess.PERMISSIONLESS);
         PERMISSIONED_SELL_USM = _makeUsm(DirectionAccess.PERMISSIONLESS, DirectionAccess.PERMISSIONED);
-        DISABLED_BUY_USM = _makeUsm(DirectionAccess.DISABLED, DirectionAccess.PERMISSIONLESS);
-        DISABLED_BOTH_USM = _makeUsm(DirectionAccess.DISABLED, DirectionAccess.DISABLED);
-
-        // DISABLED_SELL_USM: seed while sell is still open, then lock it
-        DISABLED_SELL_USM = _makeUsm(DirectionAccess.PERMISSIONLESS, DirectionAccess.PERMISSIONLESS);
-        _seedLiquidityAs(DISABLED_SELL_USM, FAUCET, DEFAULT_USM_USDC_AMOUNT);
-        DISABLED_SELL_USM.updateSellAccess(DirectionAccess.DISABLED);
 
         // PERMISSIONED_SELL_USM: seed via BOB who holds SELL_SWAPPER_ROLE
         _seedLiquidityAs(PERMISSIONED_SELL_USM, BOB, DEFAULT_USM_USDC_AMOUNT);
@@ -98,7 +88,7 @@ contract TestAdvancedPermissionsUsm is TestDusdBase {
             address(new DUSDAdvancedPermissionsUsm(address(DUSD_TOKEN), address(USDC_TOKEN))), ""
         );
         vm.expectEmit(false, false, false, true, proxy);
-        emit IAdvancedPermissionsUsm.AccessConfigUpdated(DirectionAccess.PERMISSIONED, DirectionAccess.DISABLED);
+        emit IAdvancedPermissionsUsm.AccessConfigUpdated(DirectionAccess.PERMISSIONED, DirectionAccess.PERMISSIONED);
         DUSDAdvancedPermissionsUsm(proxy)
             .initialize(
                 address(this),
@@ -106,7 +96,7 @@ contract TestAdvancedPermissionsUsm is TestDusdBase {
                 DEFAULT_USM_USDC_EXPOSURE,
                 address(DUSD_USM_FIXED_PRICE_STRATEGY),
                 DirectionAccess.PERMISSIONED,
-                DirectionAccess.DISABLED
+                DirectionAccess.PERMISSIONED
             );
     }
 
@@ -187,13 +177,11 @@ contract TestAdvancedPermissionsUsm is TestDusdBase {
     function testGetBuyAccess_InitializedCorrectly() public view {
         assertEq(uint8(USM.getBuyAccess()), uint8(DirectionAccess.PERMISSIONLESS));
         assertEq(uint8(PERMISSIONED_BUY_USM.getBuyAccess()), uint8(DirectionAccess.PERMISSIONED));
-        assertEq(uint8(DISABLED_BUY_USM.getBuyAccess()), uint8(DirectionAccess.DISABLED));
     }
 
     function testGetSellAccess_InitializedCorrectly() public view {
         assertEq(uint8(USM.getSellAccess()), uint8(DirectionAccess.PERMISSIONLESS));
         assertEq(uint8(PERMISSIONED_SELL_USM.getSellAccess()), uint8(DirectionAccess.PERMISSIONED));
-        assertEq(uint8(DISABLED_SELL_USM.getSellAccess()), uint8(DirectionAccess.DISABLED));
     }
 
     function testUpdateBuyAccess_OnlyConfigurator() public {
@@ -220,14 +208,24 @@ contract TestAdvancedPermissionsUsm is TestDusdBase {
                 IAccessControl.AccessControlUnauthorizedAccount.selector, ALICE, USM_CONFIGURATOR_ROLE
             )
         );
-        USM.updateSellAccess(DirectionAccess.DISABLED);
+        USM.updateSellAccess(DirectionAccess.PERMISSIONED);
 
         vm.expectEmit(false, false, false, true, address(USM));
-        emit IAdvancedPermissionsUsm.AccessConfigUpdated(DirectionAccess.PERMISSIONLESS, DirectionAccess.DISABLED);
-        USM.updateSellAccess(DirectionAccess.DISABLED);
+        emit IAdvancedPermissionsUsm.AccessConfigUpdated(DirectionAccess.PERMISSIONLESS, DirectionAccess.PERMISSIONED);
+        USM.updateSellAccess(DirectionAccess.PERMISSIONED);
 
         assertEq(uint8(USM.getBuyAccess()), uint8(DirectionAccess.PERMISSIONLESS));
-        assertEq(uint8(USM.getSellAccess()), uint8(DirectionAccess.DISABLED));
+        assertEq(uint8(USM.getSellAccess()), uint8(DirectionAccess.PERMISSIONED));
+    }
+
+    function testRevertUpdateBuyAccess_SameAccess() public {
+        vm.expectRevert("SAME_ACCESS");
+        USM.updateBuyAccess(DirectionAccess.PERMISSIONLESS); // already PERMISSIONLESS
+    }
+
+    function testRevertUpdateSellAccess_SameAccess() public {
+        vm.expectRevert("SAME_ACCESS");
+        USM.updateSellAccess(DirectionAccess.PERMISSIONLESS); // already PERMISSIONLESS
     }
 
     function testUpdateBuyAccess_ChangesSwapBehavior() public {
@@ -277,13 +275,6 @@ contract TestAdvancedPermissionsUsm is TestDusdBase {
         assertEq(assetOut, DEFAULT_USM_USDC_AMOUNT);
     }
 
-    function testRevertBuyAsset_Disabled_EvenRoleHolder() public {
-        // DISABLED_BUY_USM: buy is DISABLED, BOB has BUY_SWAPPER_ROLE but is still blocked
-        vm.prank(BOB);
-        vm.expectRevert("BUY_DISABLED");
-        DISABLED_BUY_USM.buyAsset(DEFAULT_USM_USDC_AMOUNT, BOB);
-    }
-
     function testSellAsset_Permissionless_AnyoneCanSell() public {
         _mintUsdcAndApprove(ALICE, DEFAULT_USM_USDC_AMOUNT);
         vm.prank(ALICE);
@@ -307,43 +298,6 @@ contract TestAdvancedPermissionsUsm is TestDusdBase {
         (, uint256 dusdOut) = PERMISSIONED_SELL_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, BOB);
         vm.stopPrank();
         assertEq(dusdOut, DEFAULT_USM_DUSD_AMOUNT - BOB_SELL_FEE);
-    }
-
-    function testRevertSellAsset_Disabled_EvenRoleHolder() public {
-        // DISABLED_SELL_USM: sell is DISABLED, BOB has SELL_SWAPPER_ROLE but is still blocked
-        vm.prank(BOB);
-        vm.expectRevert("SELL_DISABLED");
-        DISABLED_SELL_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, BOB);
-    }
-
-    function testBuyDisabled_SellStillWorks() public {
-        // DISABLED_BUY_USM: sell is PERMISSIONLESS, buy is DISABLED
-        vm.prank(FAUCET);
-        USDC_TOKEN.mint(ALICE, DEFAULT_USM_USDC_AMOUNT);
-        vm.startPrank(ALICE);
-        USDC_TOKEN.approve(address(DISABLED_BUY_USM), DEFAULT_USM_USDC_AMOUNT);
-        (, uint256 dusdOut) = DISABLED_BUY_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, ALICE);
-        vm.stopPrank();
-        assertGt(dusdOut, 0);
-
-        dusdFaucet(ALICE, DEFAULT_USM_DUSD_AMOUNT);
-        vm.prank(ALICE);
-        vm.expectRevert("BUY_DISABLED");
-        DISABLED_BUY_USM.buyAsset(DEFAULT_USM_USDC_AMOUNT, ALICE);
-    }
-
-    function testSellDisabled_BuyStillWorks() public {
-        // DISABLED_SELL_USM: buy is PERMISSIONLESS, sell is DISABLED (liquidity pre-seeded in setUp)
-        dusdFaucet(ALICE, DEFAULT_USM_DUSD_AMOUNT + ALICE_BUY_FEE);
-        vm.startPrank(ALICE);
-        DUSD_TOKEN.approve(address(DISABLED_SELL_USM), DEFAULT_USM_DUSD_AMOUNT + ALICE_BUY_FEE);
-        (uint256 assetOut,) = DISABLED_SELL_USM.buyAsset(DEFAULT_USM_USDC_AMOUNT, ALICE);
-        vm.stopPrank();
-        assertEq(assetOut, DEFAULT_USM_USDC_AMOUNT);
-
-        vm.prank(ALICE);
-        vm.expectRevert("SELL_DISABLED");
-        DISABLED_SELL_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, ALICE);
     }
 
     function testBuyPermissioned_SellPermissionless() public {
@@ -401,17 +355,6 @@ contract TestAdvancedPermissionsUsm is TestDusdBase {
         (, uint256 dusdOut) = PERMISSIONED_SELL_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, BOB);
         vm.stopPrank();
         assertGt(dusdOut, 0);
-    }
-
-    function testBothDisabled_NoSwapsPossible() public {
-        // DISABLED_BOTH_USM: all swaps blocked even for role holders
-        vm.prank(BOB);
-        vm.expectRevert("BUY_DISABLED");
-        DISABLED_BOTH_USM.buyAsset(DEFAULT_USM_USDC_AMOUNT, BOB);
-
-        vm.prank(BOB);
-        vm.expectRevert("SELL_DISABLED");
-        DISABLED_BOTH_USM.sellAsset(DEFAULT_USM_USDC_AMOUNT, BOB);
     }
 
     function testSellAsset_ThreeFeeUsers_FeeTiersApplied() public {
@@ -570,18 +513,18 @@ contract TestAdvancedPermissionsUsm is TestDusdBase {
         vm.stopPrank();
     }
 
-    function testQuoteWorks_EvenWhenDirectionDisabled() public {
-        // DISABLED_BOTH_USM has both directions disabled, but quotes are pure view functions
-        (, uint256 buyDusd,,) = DISABLED_BOTH_USM.getStableTokenAmountForBuyAsset(DEFAULT_USM_USDC_AMOUNT, ALICE);
+    function testQuoteWorks_EvenWhenPermissioned() public {
+        // PERMISSIONED_BUY_USM has buy PERMISSIONED, but quotes are pure view functions open to anyone
+        (, uint256 buyDusd,,) = PERMISSIONED_BUY_USM.getStableTokenAmountForBuyAsset(DEFAULT_USM_USDC_AMOUNT, ALICE);
         assertGt(buyDusd, 0, "buy quote should work");
 
-        (, uint256 sellDusd,,) = DISABLED_BOTH_USM.getStableTokenAmountForSellAsset(DEFAULT_USM_USDC_AMOUNT, ALICE);
+        (, uint256 sellDusd,,) = PERMISSIONED_BUY_USM.getStableTokenAmountForSellAsset(DEFAULT_USM_USDC_AMOUNT, ALICE);
         assertGt(sellDusd, 0, "sell quote should work");
 
-        (uint256 buyAsset,,,) = DISABLED_BOTH_USM.getAssetAmountForBuyAsset(DEFAULT_USM_DUSD_AMOUNT, ALICE);
+        (uint256 buyAsset,,,) = PERMISSIONED_BUY_USM.getAssetAmountForBuyAsset(DEFAULT_USM_DUSD_AMOUNT, ALICE);
         assertGt(buyAsset, 0, "getAssetAmountForBuyAsset should work");
 
-        (uint256 sellAsset,,,) = DISABLED_BOTH_USM.getAssetAmountForSellAsset(DEFAULT_USM_DUSD_AMOUNT, ALICE);
+        (uint256 sellAsset,,,) = PERMISSIONED_BUY_USM.getAssetAmountForSellAsset(DEFAULT_USM_DUSD_AMOUNT, ALICE);
         assertGt(sellAsset, 0, "getAssetAmountForSellAsset should work");
     }
 
