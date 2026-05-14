@@ -626,8 +626,8 @@ library DeployAltoEthereumMainnet {
                     altoAdapter: input.contracts.altoAdapter,
                     feeRecipient: input.contracts.feeRecipient,
                     freezer: params.freezer,
-                    buyFee: 20, //0.2% same as USDC Permissionless USM
-                    sellFee: 20, //0.2% same as USDC Permissionless USM
+                    buyFee: 5, // 0.05%
+                    sellFee: 5, // 0.05%
                     exposureCap: 500_000 ether, // 500,000 frxUSD (18 decimals)
                     underlyingAsset: FRXUSD_MAINNET,
                     isPermissioned: false,

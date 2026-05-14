@@ -452,7 +452,7 @@ abstract contract DeployAltoEthereumMainnetTestBase is Test {
         assertEq(address(AltoAdapter(payable(adapter)).WRAPPED_NATIVE()), WETH_MAINNET, "WETH");
         assertEq(AltoAdapter(payable(adapter)).BUNDLER3(), BUNDLER3_MAINNET, "Bundler3");
 
-        address[] memory candidates = new address[](16);
+        address[] memory candidates = new address[](17);
         candidates[0] = input.contracts.wethMarket.market;
         candidates[1] = input.contracts.wstethMarket.market;
         candidates[2] = input.contracts.rethMarket.market;
@@ -468,7 +468,8 @@ abstract contract DeployAltoEthereumMainnetTestBase is Test {
         candidates[12] = input.contracts.permissionlessUsm.dusdUsm;
         candidates[13] = input.contracts.permissionedUsm.dusdUsm;
         candidates[14] = input.contracts.permissionedFrxusdUsm.dusdUsm;
-        candidates[15] = input.contracts.referralAdapter;
+        candidates[15] = input.contracts.permissionlessFrxusdUsm.dusdUsm;
+        candidates[16] = input.contracts.referralAdapter;
 
         for (uint256 i; i < candidates.length; ++i) {
             address candidate = candidates[i];
@@ -571,6 +572,7 @@ abstract contract DeployAltoEthereumMainnetTestBase is Test {
         IDUSD(input.contracts.dusd).setMinterCeiling(usm, mintCeiling);
         IDUSD(input.contracts.dusd).setBurnerStatus(usm, true);
         IUsmRegistry(input.contracts.usmRegistry).addUsm(usm);
+        AltoAdapter(payable(input.contracts.altoAdapter)).approveContract(usm);
         vm.stopPrank();
     }
 
@@ -638,7 +640,7 @@ abstract contract DeployAltoEthereumMainnetTestBase is Test {
         vm.stopPrank();
 
         assertEq(assetSold, frxUsdAmount, "asset sold mismatch");
-        assertEq(dusdReceived, 998 ether, "DUSD received be 0.2% less than frxUSD sold");
+        assertEq(dusdReceived, 999.5 ether, "DUSD received should be 0.05% less than frxUSD sold");
         assertEq(IERC20Metadata(FRXUSD_MAINNET).balanceOf(randomUser), 0, "user should have no frxUSD left");
         assertEq(IERC20Metadata(input.contracts.dusd).balanceOf(randomUser), dusdReceived, "user DUSD balance mismatch");
     }
