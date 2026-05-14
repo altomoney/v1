@@ -20,6 +20,9 @@ import {PAUSE_TYPE, FROZEN_TYPE} from "@alto/utils/Constants.sol";
 import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {IAltoLiquidationEngine} from "@alto/lending/interfaces/IAltoLiquidationEngine.sol";
+import {
+    IDcfDlbPriorityLiquidationEngine
+} from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";
 import {Pausable} from "@alto/utils/Pausable.sol";
 import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
 import {AltoLeverageSwapper} from "@alto/lending/leverage/AltoLeverageSwapper.sol";
@@ -36,6 +39,11 @@ import {
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {IAltoVault, IAltoVaultBase} from "@alto/lending/interfaces/IAltoVault.sol";
 import {VaultRegistry} from "@alto/utils/VaultRegistry.sol";
+
+/// @dev Minimal interface for setDebtCeiling on AltoMintMarket
+interface IAltoMintMarketCap {
+    function setDebtCeiling(uint256 _debtCeiling) external;
+}
 
 /// @dev Set to a non-zero deployment timestamp to load a real deployment's addresses.json
 ///      and skip re-deploying prerequisites. The file must be at:
@@ -671,6 +679,88 @@ contract TresuryPSMMigrationTest is DeployAltoEthereumMainnetTestBase {
 contract DeployAdapterPhaseTest is DeployAltoEthereumMainnetTestBase {
     function test_deployAdapterAndApproval() public {
         _assertDeployAdapterAndApproval();
+    }
+}
+
+contract UpdateMintMarketCapsTest is DeployAltoEthereumMainnetTestBase {
+    uint256 constant WETH_NEW_CAP = 60_000 * 1e18;
+    uint256 constant WSTETH_NEW_CAP = 60_000 * 1e18;
+    uint256 constant SUSDE_NEW_CAP = 35_000 * 1e18;
+    uint256 constant SYRUP_USDC_NEW_CAP = 35_000 * 1e18;
+    uint256 constant TBTC_NEW_CAP = 20_000 * 1e18;
+    uint256 constant METH_NEW_CAP = 20_000 * 1e18;
+    uint256 constant RETH_NEW_CAP = 20_000 * 1e18;
+
+    uint256 constant MINTER_CEILING_BUFFER = 1.05 ether;
+
+    function _computeMinterCeiling(address liquidationEngine, uint256 newCap) internal view returns (uint256) {
+        uint256 maxLiquidationLtv =
+            IDcfDlbPriorityLiquidationEngine(liquidationEngine).liquidationConfiguration().maxLiquidationLtv;
+        return newCap * MINTER_CEILING_BUFFER / maxLiquidationLtv;
+    }
+
+    function _updateCap(address market, address liquidationEngine, uint256 newCap) internal {
+        uint256 expectedMinterCeiling = _computeMinterCeiling(liquidationEngine, newCap);
+        address dusd = IMarket(market).borrowToken();
+
+        vm.startPrank(input.contracts.timelock);
+        IAltoMintMarketCap(market).setDebtCeiling(newCap);
+        IDUSD(dusd).setMinterCeiling(market, expectedMinterCeiling);
+        vm.stopPrank();
+    }
+
+    function _assertCap(address market, address liquidationEngine, uint256 expectedCap) internal view {
+        uint256 expectedMinterCeiling = _computeMinterCeiling(liquidationEngine, expectedCap);
+        address dusd = IMarket(market).borrowToken();
+
+        assertEq(IMarket(market).totalSupply().assets, expectedCap, "debt ceiling mismatch");
+
+        (, uint256 ceiling) = IDUSD(dusd).minterConfig(market);
+        assertEq(ceiling, expectedMinterCeiling, "minter ceiling mismatch");
+    }
+
+    function test_updateMintMarketCaps() public {
+        // ── wETH ──────────────────────────────────────────────────────────────
+        _updateCap(input.contracts.wethMarket.market, input.contracts.wethMarket.liquidationEngine, WETH_NEW_CAP);
+
+        // ── wstETH ────────────────────────────────────────────────────────────
+        _updateCap(input.contracts.wstethMarket.market, input.contracts.wstethMarket.liquidationEngine, WSTETH_NEW_CAP);
+
+        // ── sUSDe (mint) ──────────────────────────────────────────────────────
+        _updateCap(
+            input.contracts.susdeMintMarket.market, input.contracts.susdeMintMarket.liquidationEngine, SUSDE_NEW_CAP
+        );
+
+        // ── syrupUSDC (mint) ──────────────────────────────────────────────────
+        _updateCap(
+            input.contracts.syrupUsdcMintMarket.market,
+            input.contracts.syrupUsdcMintMarket.liquidationEngine,
+            SYRUP_USDC_NEW_CAP
+        );
+
+        // ── tBTC ──────────────────────────────────────────────────────────────
+        _updateCap(input.contracts.tbtcMarket.market, input.contracts.tbtcMarket.liquidationEngine, TBTC_NEW_CAP);
+
+        // ── mETH ──────────────────────────────────────────────────────────────
+        _updateCap(input.contracts.methMarket.market, input.contracts.methMarket.liquidationEngine, METH_NEW_CAP);
+
+        // ── rETH ──────────────────────────────────────────────────────────────
+        _updateCap(input.contracts.rethMarket.market, input.contracts.rethMarket.liquidationEngine, RETH_NEW_CAP);
+
+        // ── Assertions ────────────────────────────────────────────────────────
+        _assertCap(input.contracts.wethMarket.market, input.contracts.wethMarket.liquidationEngine, WETH_NEW_CAP);
+        _assertCap(input.contracts.wstethMarket.market, input.contracts.wstethMarket.liquidationEngine, WSTETH_NEW_CAP);
+        _assertCap(
+            input.contracts.susdeMintMarket.market, input.contracts.susdeMintMarket.liquidationEngine, SUSDE_NEW_CAP
+        );
+        _assertCap(
+            input.contracts.syrupUsdcMintMarket.market,
+            input.contracts.syrupUsdcMintMarket.liquidationEngine,
+            SYRUP_USDC_NEW_CAP
+        );
+        _assertCap(input.contracts.tbtcMarket.market, input.contracts.tbtcMarket.liquidationEngine, TBTC_NEW_CAP);
+        _assertCap(input.contracts.methMarket.market, input.contracts.methMarket.liquidationEngine, METH_NEW_CAP);
+        _assertCap(input.contracts.rethMarket.market, input.contracts.rethMarket.liquidationEngine, RETH_NEW_CAP);
     }
 }
 
