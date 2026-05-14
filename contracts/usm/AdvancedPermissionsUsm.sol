@@ -19,9 +19,9 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
  * @custom:contact security@altofoundation.org
  * @notice Universal Stability Module with independent buy and sell access control.
  * @dev Lets the protocol configure who may swap in each direction: buy and sell
- *      each use `DirectionAccess` (`DISABLED`, `PERMISSIONED`, `PERMISSIONLESS`).
+ *      each use `DirectionAccess` (`PERMISSIONED`, `PERMISSIONLESS`).
  *      In `PERMISSIONED` mode, `BUY_SWAPPER_ROLE` gates buys and `SELL_SWAPPER_ROLE` gates sells; in
- *      `PERMISSIONLESS` mode anyone may call that direction; `DISABLED` blocks it for everyone.
+ *      `PERMISSIONLESS` mode anyone may call that direction.
  * @dev Fee quotes and settlement use `IAdvancedPermissionsUsmFeeStrategy` with an `originator` so per-user fee
  *      tiers can differ from access roles
  * @dev `canSwap()` reflects only freeze/seize state; it does not encode direction access—use `getBuyAccess` /
@@ -96,13 +96,11 @@ abstract contract AdvancedPermissionsUsm is
 
     /**
      * @dev Require caller to have buy access to the USM
-     * For DISABLED: the buy direction is not available
      * For PERMISSIONED: the caller must have the BUY_SWAPPER_ROLE
      * For PERMISSIONLESS: the caller can be any address
      * @param caller The address of the caller
      */
     modifier canBuyAsset(address caller) {
-        require(_buyDirectionAccess != DirectionAccess.DISABLED, "BUY_DISABLED");
         if (_buyDirectionAccess == DirectionAccess.PERMISSIONED) {
             require(hasRole(BUY_SWAPPER_ROLE, caller), "NOT PERMISSIONED");
         }
@@ -111,13 +109,11 @@ abstract contract AdvancedPermissionsUsm is
 
     /**
      * @dev Require caller to have sell access to the USM
-     * For DISABLED: the sell direction is not available
      * For PERMISSIONED: the caller must have the SELL_SWAPPER_ROLE
      * For PERMISSIONLESS: the caller can be any address
      * @param caller The address of the caller
      */
     modifier canSellAsset(address caller) {
-        require(_sellDirectionAccess != DirectionAccess.DISABLED, "SELL_DISABLED");
         if (_sellDirectionAccess == DirectionAccess.PERMISSIONED) {
             require(hasRole(SELL_SWAPPER_ROLE, caller), "NOT PERMISSIONED");
         }
@@ -265,11 +261,13 @@ abstract contract AdvancedPermissionsUsm is
 
     /// @inheritdoc IAdvancedPermissionsUsm
     function updateBuyAccess(DirectionAccess buyAccess) external onlyRole(CONFIGURATOR_ROLE) {
+        require(buyAccess != _buyDirectionAccess, "SAME_ACCESS");
         _updateAccessConfig(buyAccess, _sellDirectionAccess);
     }
 
     /// @inheritdoc IAdvancedPermissionsUsm
     function updateSellAccess(DirectionAccess sellAccess) external onlyRole(CONFIGURATOR_ROLE) {
+        require(sellAccess != _sellDirectionAccess, "SAME_ACCESS");
         _updateAccessConfig(_buyDirectionAccess, sellAccess);
     }
 
