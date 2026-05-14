@@ -764,3 +764,28 @@ contract UpdateMintMarketCapsTest is DeployAltoEthereumMainnetTestBase {
     }
 }
 
+contract StakeLpTokensTest is DeployAltoEthereumMainnetTestBase {
+    address constant TREASURY = 0xA1148A1b94262540994Cf9Aa431A13ad39764228;
+    address constant LP_TOKEN = 0x104d6a1b97A6CEf88D905d7b865A378d90be932A;
+    address constant CURVE_GAUGE = 0xA41eb3062FD68B6Fa9f11439C86503913806761D;
+
+    function test_stakeLpTokens() public {
+        uint256 lpBalance = IERC20Metadata(LP_TOKEN).balanceOf(TREASURY);
+        assertGe(lpBalance, 500_000 ether, "treasury should hold LP tokens");
+
+        vm.startPrank(TREASURY);
+
+        // Tx 1: approve gauge
+        IERC20Metadata(LP_TOKEN).approve(CURVE_GAUGE, lpBalance);
+
+        // Tx 2: deposit into gauge on behalf of treasury
+        (bool ok,) = CURVE_GAUGE.call(abi.encodeWithSignature("deposit(uint256,address)", lpBalance, TREASURY));
+        assertTrue(ok, "gauge deposit failed");
+
+        vm.stopPrank();
+
+        assertEq(IERC20Metadata(LP_TOKEN).balanceOf(TREASURY), 0, "treasury LP balance should be zero after staking");
+        assertGe(IERC20Metadata(CURVE_GAUGE).balanceOf(TREASURY), 500_000 ether, "treasury should hold gauge tokens");
+    }
+}
+
