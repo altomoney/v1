@@ -13,7 +13,7 @@ import {
 import {console} from "forge-std/console.sol";
 
 uint256 constant DEPLOYMENT_ID_TO_LOAD = 1765364975;
-DeploymentPhase constant PHASE_TO_DEPLOY = DeploymentPhase.VAULT_REGISTRY; // CORE, DUSD, MINT_MARKET_WETH, MINT_MARKET_WSTETH, MINT_MARKET_RETH, MINT_MARKET_METH, MINT_MARKET_TBTC, BORROW_MARKET_WBTC, BORROW_MARKET_CBBTC, BORROW_MARKET_SUSDE, USDC_USM, POST, REFERRAL_ADAPTER, BORROW_MARKET_SYRUP_USDC, BORROW_MARKET_PAXG, MINT_MARKET_SUSDE, MINT_MARKET_SYRUPUSDC, PERMISSIONED_FRXUSD_USM, ADAPTER, DUSD_VAULT, VAULT_REGISTRY
+DeploymentPhase constant PHASE_TO_DEPLOY = DeploymentPhase.PERMISSIONLESS_FRXUSD_USM; // CORE, DUSD, MINT_MARKET_WETH, MINT_MARKET_WSTETH, MINT_MARKET_RETH, MINT_MARKET_METH, MINT_MARKET_TBTC, BORROW_MARKET_WBTC, BORROW_MARKET_CBBTC, BORROW_MARKET_SUSDE, USDC_USM, POST, REFERRAL_ADAPTER, BORROW_MARKET_SYRUP_USDC, BORROW_MARKET_PAXG, MINT_MARKET_SUSDE, MINT_MARKET_SYRUPUSDC, PERMISSIONED_FRXUSD_USM, ADAPTER, DUSD_VAULT, VAULT_REGISTRY, PERMISSIONLESS_FRXUSD_USM
 string constant OUTPUT_DIR = "./contracts/deployments/ethereum-mainnet/output";
 
 contract DeployAltoEthereumMainnetScript is Script {
@@ -127,6 +127,26 @@ contract DeployAltoEthereumMainnetScript is Script {
                 input.contracts.permissionedFrxusdUsm.fixedFeeStrategy
             );
         }
+        if (input.contracts.permissionlessFrxusdUsm.dusdUsm != address(0)) {
+            contractsJson = vm.serializeAddress(
+                "contracts", "permissionlessFrxUsdUsm", input.contracts.permissionlessFrxusdUsm.dusdUsm
+            );
+            contractsJson = vm.serializeAddress(
+                "contracts",
+                "permissionlessFrxUsdUsmImplementation",
+                input.contracts.permissionlessFrxusdUsm.dusdUsmImplementation
+            );
+            contractsJson = vm.serializeAddress(
+                "contracts",
+                "permissionlessFrxUsdUsmFixedPriceStrategy",
+                input.contracts.permissionlessFrxusdUsm.fixedPriceStrategy
+            );
+            contractsJson = vm.serializeAddress(
+                "contracts",
+                "permissionlessFrxUsdUsmFixedFeeStrategy",
+                input.contracts.permissionlessFrxusdUsm.fixedFeeStrategy
+            );
+        }
         if (input.contracts.dusdVault != address(0)) {
             contractsJson = vm.serializeAddress("contracts", "dusdVault", input.contracts.dusdVault);
         }
@@ -220,6 +240,14 @@ contract DeployAltoEthereumMainnetScript is Script {
             _tryParseAddress(json, ".contracts.permissionedFrxUsdUsmFixedPriceStrategy");
         loadedInput.contracts.permissionedFrxusdUsm.fixedFeeStrategy =
             _tryParseAddress(json, ".contracts.permissionedFrxUsdUsmFixedFeeStrategy");
+        loadedInput.contracts.permissionlessFrxusdUsm.dusdUsm =
+            _tryParseAddress(json, ".contracts.permissionlessFrxUsdUsm");
+        loadedInput.contracts.permissionlessFrxusdUsm.dusdUsmImplementation =
+            _tryParseAddress(json, ".contracts.permissionlessFrxUsdUsmImplementation");
+        loadedInput.contracts.permissionlessFrxusdUsm.fixedPriceStrategy =
+            _tryParseAddress(json, ".contracts.permissionlessFrxUsdUsmFixedPriceStrategy");
+        loadedInput.contracts.permissionlessFrxusdUsm.fixedFeeStrategy =
+            _tryParseAddress(json, ".contracts.permissionlessFrxUsdUsmFixedFeeStrategy");
         loadedInput.contracts.dusdVault = _tryParseAddress(json, ".contracts.dusdVault");
 
         input = loadedInput;
@@ -298,6 +326,10 @@ contract DeployAltoEthereumMainnetScript is Script {
             _extractContractABI("FixedPriceStrategy", abiFolder);
             _extractContractABI("FixedFeeStrategy", abiFolder);
         } else if (PHASE_TO_DEPLOY == DeploymentPhase.PERMISSIONED_FRXUSD_USM) {
+            _extractContractABI("DUSDUsm", abiFolder);
+            _extractContractABI("FixedPriceStrategy", abiFolder);
+            _extractContractABI("FixedFeeStrategy", abiFolder);
+        } else if (PHASE_TO_DEPLOY == DeploymentPhase.PERMISSIONLESS_FRXUSD_USM) {
             _extractContractABI("DUSDUsm", abiFolder);
             _extractContractABI("FixedPriceStrategy", abiFolder);
             _extractContractABI("FixedFeeStrategy", abiFolder);

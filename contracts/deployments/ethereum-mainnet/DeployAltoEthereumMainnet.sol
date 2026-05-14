@@ -618,6 +618,26 @@ library DeployAltoEthereumMainnet {
                 input,
                 params.useUnsafeUpgrades
             );
+        } else if (params.phase == DeploymentPhase.PERMISSIONLESS_FRXUSD_USM) {
+            input.contracts.permissionlessFrxusdUsm = _deployUsm(
+                DeployUsmParams({
+                    owner: input.contracts.timelock,
+                    dusd: input.contracts.dusd,
+                    altoAdapter: input.contracts.altoAdapter,
+                    feeRecipient: input.contracts.feeRecipient,
+                    freezer: params.freezer,
+                    buyFee: 20, //0.2% same as USDC Permissionless USM
+                    sellFee: 20, //0.2% same as USDC Permissionless USM
+                    exposureCap: 500_000 ether, // 500,000 frxUSD (18 decimals)
+                    underlyingAsset: FRXUSD_MAINNET,
+                    isPermissioned: false,
+                    treasuryMultisig: params.treasuryMultisig,
+                    finalizeMode: UsmFinalizeMode.TIMELOCK_BATCH,
+                    safeBatchName: "frxusd-permissionless-usm-registry"
+                }),
+                input,
+                params.useUnsafeUpgrades
+            );
         } else if (params.phase == DeploymentPhase.ADAPTER) {
             DeployCoreParams memory adapterCoreParams =
                 DeployCoreParams({owner: params.deployer, bundler3: BUNDLER3_MAINNET, wNative: WETH_MAINNET});

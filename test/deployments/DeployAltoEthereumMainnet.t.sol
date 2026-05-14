@@ -554,11 +554,109 @@ abstract contract DeployAltoEthereumMainnetTestBase is Test {
 
         assertEq(VaultRegistry(vaultRegistry).isVault(input.contracts.dusdVault), true, "vault should be registered");
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // PERMISSIONLESS_FRXUSD_USM
+    // ─────────────────────────────────────────────────────────────────────────
+
+    function _deployPermissionlessFrxUsdPsm() internal {
+        params.phase = DeploymentPhase.PERMISSIONLESS_FRXUSD_USM;
+        input = DeployAltoEthereumMainnet.deploy(params, input);
+
+        address usm = input.contracts.permissionlessFrxusdUsm.dusdUsm;
+        uint256 mintCeiling = 500_000 ether;
+
+        vm.startPrank(input.contracts.timelock);
+        IDUSD(input.contracts.dusd).setMinterStatus(usm, true);
+        IDUSD(input.contracts.dusd).setMinterCeiling(usm, mintCeiling);
+        IDUSD(input.contracts.dusd).setBurnerStatus(usm, true);
+        IUsmRegistry(input.contracts.usmRegistry).addUsm(usm);
+        vm.stopPrank();
+    }
+
+    function _assertDeployPermissionlessFrxUsdPsm() internal {
+        _deployPermissionlessFrxUsdPsm();
+
+        address usm = input.contracts.permissionlessFrxusdUsm.dusdUsm;
+        address impl = input.contracts.permissionlessFrxusdUsm.dusdUsmImplementation;
+        address priceStrategy = input.contracts.permissionlessFrxusdUsm.fixedPriceStrategy;
+        address feeStrategy = input.contracts.permissionlessFrxusdUsm.fixedFeeStrategy;
+        address timelock = input.contracts.timelock;
+
+        _verifyDeployed(usm, "permissionless frxUSD USM proxy");
+        _verifyDeployed(impl, "permissionless frxUSD USM implementation");
+        _verifyDeployed(priceStrategy, "permissionless frxUSD FixedPriceStrategy");
+        _verifyDeployed(feeStrategy, "permissionless frxUSD FixedFeeStrategy");
+
+        assertEq(
+            uint256(IUsm(usm).getAccessMode()),
+            uint256(AccessMode.PERMISSIONLESS),
+            "access mode should be PERMISSIONLESS"
+        );
+
+        assertEq(IUsm(usm).priceStrategy(), priceStrategy, "price strategy mismatch");
+        assertEq(
+            AccessControl(priceStrategy).hasRole(DEFAULT_ADMIN_ROLE, timelock),
+            true,
+            "timelock should own price strategy"
+        );
+
+        _verifyHasRole(usm, timelock, DEFAULT_ADMIN_ROLE, "permissionless frxUSD USM");
+        _verifyHasRole(usm, timelock, CONFIGURATOR_ROLE, "permissionless frxUSD USM");
+        _verifyHasRole(usm, MULTISIG_FREEZER_PAUSER, SWAP_FREEZER_ROLE, "permissionless frxUSD USM");
+
+        // Deployer must have revoked its own admin and configurator roles
+        assertFalse(
+            AccessControl(usm).hasRole(DEFAULT_ADMIN_ROLE, DEPLOYER),
+            "deployer should not retain DEFAULT_ADMIN_ROLE on USM"
+        );
+        assertFalse(
+            AccessControl(usm).hasRole(CONFIGURATOR_ROLE, DEPLOYER),
+            "deployer should not retain CONFIGURATOR_ROLE on USM"
+        );
+
+        assertEq(IUsm(usm).UNDERLYING_ASSET(), FRXUSD_MAINNET, "underlying asset should be frxUSD");
+        assertEq(IUsm(usm).getExposureCap(), 500_000 ether, "exposure cap should be 500,000 frxUSD");
+
+        _verifyMintCeiling(usm, 500_000 ether);
+        assertTrue(IUsmRegistry(input.contracts.usmRegistry).isUsm(usm), "USM not registered in UsmRegistry");
+    }
+
+    function _assertPermissionlessFrxUsdUsmBuyAndSell() internal {
+        _deployPermissionlessFrxUsdPsm();
+
+        address usm = input.contracts.permissionlessFrxusdUsm.dusdUsm;
+        address randomUser = makeAddr("randomUser");
+        uint256 frxUsdAmount = 1_000 ether;
+
+        // Fund random user with frxUSD and have them sell it into the USM (receive DUSD)
+        deal(FRXUSD_MAINNET, randomUser, frxUsdAmount);
+
+        vm.startPrank(randomUser);
+        IERC20Metadata(FRXUSD_MAINNET).approve(usm, frxUsdAmount);
+        (uint256 assetSold, uint256 dusdReceived) = IUsm(usm).sellAsset(frxUsdAmount, randomUser);
+        vm.stopPrank();
+
+        assertEq(assetSold, frxUsdAmount, "asset sold mismatch");
+        assertEq(dusdReceived, 998 ether, "DUSD received be 0.2% less than frxUSD sold");
+        assertEq(IERC20Metadata(FRXUSD_MAINNET).balanceOf(randomUser), 0, "user should have no frxUSD left");
+        assertEq(IERC20Metadata(input.contracts.dusd).balanceOf(randomUser), dusdReceived, "user DUSD balance mismatch");
+    }
 }
 
 contract DeployPermissionedFrxUsdPsmTest is DeployAltoEthereumMainnetTestBase {
     function test_deployPermissionedFrxUsdPsm() public {
         _assertDeployPermissionedFrxUsdPsm();
+    }
+}
+
+contract DeployPermissionlessFrxUsdPsmTest is DeployAltoEthereumMainnetTestBase {
+    function test_deployPermissionlessFrxUsdPsm() public {
+        _assertDeployPermissionlessFrxUsdPsm();
+    }
+
+    function test_permissionlessFrxUsdUsmBuyAndSell() public {
+        _assertPermissionlessFrxUsdUsmBuyAndSell();
     }
 }
 

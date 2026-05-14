@@ -28,7 +28,8 @@ enum DeploymentPhase {
     PERMISSIONED_FRXUSD_USM, // Phase 19: Deploy Permissioned DUSD/FRXUSD Peg Stability Module
     ADAPTER, // Phase 20: Deploy AltoAdapter
     DUSD_VAULT, // Phase 21: Deploy DUSD ERC4626 Vault (`Alto DUSD Vault`, aDUSD)
-    VAULT_REGISTRY // Phase 22: Deploy VaultRegistry, register existing vaults, transfer to timelock
+    VAULT_REGISTRY, // Phase 22: Deploy VaultRegistry, register existing vaults, transfer to timelock
+    PERMISSIONLESS_FRXUSD_USM // Phase 23: Deploy Permissionless DUSD/FRXUSD Peg Stability Module
 }
 
 enum UsmFinalizeMode {
@@ -83,6 +84,7 @@ struct Contracts {
     UsmContracts permissionedUsm;
     UsmContracts permissionlessUsm;
     UsmContracts permissionedFrxusdUsm;
+    UsmContracts permissionlessFrxusdUsm;
     address dusdVault;
 }
 
