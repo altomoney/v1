@@ -26,6 +26,7 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
  *      tiers can differ from access roles
  * @dev `canSwap()` reflects only freeze/seize state; it does not encode direction access—use `getBuyAccess` /
  *      `getSellAccess` for that.
+ * @custom:audit Pending
  */
 abstract contract AdvancedPermissionsUsm is
     Initializable,
