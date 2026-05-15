@@ -764,6 +764,116 @@ contract UpdateMintMarketCapsTest is DeployAltoEthereumMainnetTestBase {
     }
 }
 
+contract DeprecatePermissionlessUsdcUsmTest is DeployAltoEthereumMainnetTestBase {
+    address constant TREASURY = 0xA1148A1b94262540994Cf9Aa431A13ad39764228;
+    address constant TIMELOCK = 0xfAe841679dc1A93D225ECc827E4BbF3e8d703F86;
+
+    /// @dev Permissionless USDC PSM being deprecated
+    address constant USDC_PSM = 0x4026db9152cEb2e6D376de72Efb70eb8F407A0e4;
+
+    /// @dev Permissionless frxUSD PSM replacing it
+    address constant FRXUSD_PSM = 0x7b9468fB9f3146ec82ceB2Dd75e6a47F3EAd5f79;
+
+    /// @dev Frax ERC-4626 custodian: deposit USDC (6 dec) → receive frxUSD (18 dec) 1:1 USD value
+    address constant FRAX_CUSTODIAN = 0x4F95C5bA0C7c69FB2f9340E190cCeE890B3bd87c;
+
+    address constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+    address constant FRXUSD = 0xCAcd6fd266aF91b8AeD52aCCc382b4e165586E29;
+    address constant DUSD = 0x63d74d22E689C715a04F2C13962b1f77F443d35b;
+    address constant USM_REGISTRY = 0xAD5620e10C33918E2C6A2E8E53325bf98c548E5e;
+    address constant ALTO_ADAPTER = 0x4F46bb6948190eDd091c3A4f47DC2946Ae627369;
+
+    function test_deprecatePermissionlessUsdcUsm() public {
+        // ── Prerequisite: authorize frxUSD PSM as DUSD minter/burner ─────────
+        // In production this is a separate timelock tx that must be finalized
+        // before the treasury executes the migration batch.
+        vm.startPrank(TIMELOCK);
+        IDUSD(DUSD).setMinterStatus(FRXUSD_PSM, true);
+        IDUSD(DUSD).setMinterCeiling(FRXUSD_PSM, type(uint128).max);
+        IDUSD(DUSD).setBurnerStatus(FRXUSD_PSM, true);
+        vm.stopPrank();
+
+        // ── Phase 1: Treasury migration ───────────────────────────────────────
+
+        uint256 usdcExposure = IUsm(USDC_PSM).getAvailableLiquidity();
+        assertGt(usdcExposure, 0, "USDC PSM must have exposure to migrate");
+
+        // DUSD needed to buy all USDC from the USDC PSM (fees included)
+        // Returns: (assetAmount, stableTokenSold, grossAmount, fee)
+        (, uint256 dusdNeeded,,) = IUsm(USDC_PSM).getStableTokenAmountForBuyAsset(usdcExposure);
+
+        // frxUSD needed to sell into the frxUSD PSM to receive at least dusdNeeded DUSD
+        // Returns: (assetAmount, stableTokenBought, grossAmount, fee)
+        (uint256 frxUsdNeeded,,,) = IUsm(FRXUSD_PSM).getAssetAmountForSellAsset(dusdNeeded);
+
+        // USDC to deposit into the custodian: frxUSD (18 dec) → USDC (6 dec), rounded UP
+        uint256 usdcToDeposit = (frxUsdNeeded + 1e12 - 1) / 1e12;
+
+        vm.startPrank(TREASURY);
+
+        // Tx 1: Approve USDC to Frax Custodian
+        IERC20Metadata(USDC).approve(FRAX_CUSTODIAN, usdcToDeposit);
+
+        // Tx 2: Deposit USDC → Frax Custodian, receive frxUSD 1:1
+        uint256 frxUsdReceived = IERC4626(FRAX_CUSTODIAN).deposit(usdcToDeposit, TREASURY);
+        assertGe(frxUsdReceived, frxUsdNeeded, "frxUSD received must cover frxUsdNeeded");
+
+        // Tx 3: Approve frxUSD to frxUSD PSM
+        IERC20Metadata(FRXUSD).approve(FRXUSD_PSM, frxUsdNeeded);
+
+        // Tx 4: Sell frxUSD into frxUSD PSM → receive DUSD
+        // Actual frxUSD pulled may be <= frxUsdNeeded; DUSD received is guaranteed >= dusdNeeded
+        (, uint256 dusdReceived) = IUsm(FRXUSD_PSM).sellAsset(frxUsdNeeded, TREASURY);
+        assertGe(dusdReceived, dusdNeeded, "DUSD received must cover dusdNeeded");
+
+        // Tx 5: Approve DUSD to USDC PSM
+        IERC20Metadata(DUSD).approve(USDC_PSM, dusdNeeded);
+
+        // Tx 6: Buy all USDC from USDC PSM using DUSD
+        (uint256 usdcBought,) = IUsm(USDC_PSM).buyAsset(usdcExposure, TREASURY);
+
+        vm.stopPrank();
+
+        assertEq(IUsm(USDC_PSM).getAvailableLiquidity(), 0, "USDC PSM must be fully drained after migration");
+        assertEq(usdcBought, usdcExposure, "must have purchased all USDC exposure");
+
+        // ── Phase 2: Timelock cleanup ─────────────────────────────────────────
+        // Mirrors the scheduleBatch/executeBatch the timelock executes after Phase 1.
+
+        vm.startPrank(TIMELOCK);
+
+        // 1. Revoke DUSD minting permission
+        IDUSD(DUSD).setMinterStatus(USDC_PSM, false);
+
+        // 2. Zero out DUSD minter ceiling (PSM has 0 minted after migration, so this is safe)
+        IDUSD(DUSD).setMinterCeiling(USDC_PSM, 0);
+
+        // 3. Revoke DUSD burning permission
+        IDUSD(DUSD).setBurnerStatus(USDC_PSM, false);
+
+        // 4. Remove from USM registry
+        IUsmRegistry(USM_REGISTRY).removeUsm(USDC_PSM);
+
+        // 5. Revoke adapter approval
+        AltoAdapter(payable(ALTO_ADAPTER)).revokeContract(USDC_PSM);
+
+        vm.stopPrank();
+
+        // ── Phase 2 assertions ────────────────────────────────────────────────
+        assertFalse(IDUSD(DUSD).allowedMinter(USDC_PSM), "USDC PSM must no longer be a DUSD minter");
+        assertFalse(IDUSD(DUSD).allowedBurner(USDC_PSM), "USDC PSM must no longer be a DUSD burner");
+
+        (uint256 minted, uint256 minterCeiling) = IDUSD(DUSD).minterConfig(USDC_PSM);
+        assertEq(minterCeiling, 0, "USDC PSM minter ceiling must be zero");
+        assertEq(minted, 0, "USDC PSM must have no DUSD minted");
+
+        assertFalse(IUsmRegistry(USM_REGISTRY).isUsm(USDC_PSM), "USDC PSM must be removed from USM registry");
+        assertFalse(
+            AltoAdapter(payable(ALTO_ADAPTER)).isApprovedContract(USDC_PSM), "USDC PSM must be revoked from AltoAdapter"
+        );
+    }
+}
+
 contract StakeLpTokensTest is DeployAltoEthereumMainnetTestBase {
     address constant TREASURY = 0xA1148A1b94262540994Cf9Aa431A13ad39764228;
     address constant LP_TOKEN = 0x104d6a1b97A6CEf88D905d7b865A378d90be932A;
