@@ -1,0 +1,22 @@
+LiquidationPeriphery::liquidate
+├── when market is not a registered mint or borrow market
+│   └── it should revert with InvalidInput
+└── when market is registered
+    ├── when market is a borrow market
+    │   ├── it should return seized collateral, repaid borrow, and protocol fee from market
+    │   ├── given repayViaUsm is false
+    │   │   └── it should liquidate using borrow token from liquidator matching returned amounts
+    │   └── given repayViaUsm is true
+    │       ├── when stable token bought equals borrow amount to repay
+    │       │   └── it should liquidate via usm without refunding stable to liquidator
+    │       └── when stable token bought is greater than borrow amount to repay
+    │           └── it should refund excess stable token to liquidator
+    └── when market is a mint market
+        ├── it should return seized collateral, repaid borrow, and protocol fee from market
+        ├── given repayViaUsm is false
+        │   └── it should liquidate using borrow token from liquidator matching returned amounts
+        └── given repayViaUsm is true
+            ├── when stable token bought equals borrow amount to repay
+            │   └── it should liquidate via usm without refunding stable to liquidator
+            └── when stable token bought is greater than borrow amount to repay
+                └── it should refund excess stable token to liquidator
