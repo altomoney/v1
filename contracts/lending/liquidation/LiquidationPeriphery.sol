@@ -6,7 +6,12 @@ import {ILiquidateCallback} from "@alto/lending/interfaces/IMarketCallbacks.sol"
 import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {ILiquidationPeripheryBase, IUsm, IMarketRegistry} from "./interfaces/ILiquidationPeriphery.sol";
+import {
+    ILiquidationPeripheryBase,
+    IAdvancedPermissionsUsm,
+    IMarketRegistry
+} from "./interfaces/ILiquidationPeriphery.sol";
+import {ILiquidationPeripheryCallback} from "./interfaces/ILiquidationPeripheryCallback.sol";
 
 /// @title LiquidationPeriphery
 /// @author GPM
@@ -20,7 +25,7 @@ contract LiquidationPeriphery is AltoOwnable2Step, ILiquidateCallback, ILiquidat
     IMarketRegistry public marketRegistry;
 
     /// @inheritdoc ILiquidationPeripheryBase
-    IUsm public usm;
+    IAdvancedPermissionsUsm public usm;
 
     /// @inheritdoc ILiquidationPeripheryBase
     address public immutable BORROW_TOKEN;
@@ -37,20 +42,22 @@ contract LiquidationPeriphery is AltoOwnable2Step, ILiquidateCallback, ILiquidat
         marketRegistry = IMarketRegistry(_marketRegistry);
 
         emit UsmSet(address(0), _usm);
-        usm = IUsm(_usm);
+        usm = IAdvancedPermissionsUsm(_usm);
 
         BORROW_TOKEN = usm.STABLE_TOKEN();
     }
 
     /// @inheritdoc ILiquidationPeripheryBase
-    function liquidate(address market, address borrower, bool repayViaUsm, bytes calldata liquidationData)
-        external
-        isValidMarket(market)
-        returns (uint256 seizedCollateral, uint256 repaidBorrow, uint256 protocolFee)
-    {
+    function liquidate(
+        address market,
+        address borrower,
+        bool repayViaUsm,
+        bytes calldata liquidationData,
+        bytes calldata liquidationPeripheryCallbackData
+    ) external isValidMarket(market) returns (uint256 seizedCollateral, uint256 repaidBorrow, uint256 protocolFee) {
         // msg.sender is the liquidator
         // repayViaUsm is the flag to indicate if the borrow amount should be repaid via USM
-        bytes memory callbackData = abi.encode(msg.sender, repayViaUsm, market);
+        bytes memory callbackData = abi.encode(msg.sender, repayViaUsm, market, liquidationPeripheryCallbackData);
 
         (seizedCollateral, repaidBorrow, protocolFee) =
             IMarket(market).liquidate(borrower, callbackData, liquidationData);
@@ -65,7 +72,8 @@ contract LiquidationPeriphery is AltoOwnable2Step, ILiquidateCallback, ILiquidat
         override
         isValidMarket(msg.sender)
     {
-        (address liquidator, bool repayViaUsm, address market) = abi.decode(callbackData, (address, bool, address));
+        (address liquidator, bool repayViaUsm, address market, bytes memory liquidationPeripheryCallbackData) =
+            abi.decode(callbackData, (address, bool, address, bytes));
 
         if (market != msg.sender) revert InvalidInput();
 
@@ -74,10 +82,17 @@ contract LiquidationPeriphery is AltoOwnable2Step, ILiquidateCallback, ILiquidat
 
         if (repayViaUsm) {
             // gets the asset amount required to repay the borrow amount
-            (uint256 assetAmount,,,) = usm.getAssetAmountForSellAsset(borrowAmountToRepay);
+            (uint256 assetAmount,,,) = usm.getAssetAmountForSellAsset(borrowAmountToRepay, address(this));
 
             // gets the underlying asset of the USM
             address underlyingAsset = usm.UNDERLYING_ASSET();
+
+            if (liquidationPeripheryCallbackData.length > 0) {
+                ILiquidationPeripheryCallback(liquidator)
+                    .onLiquidationPeripheryCallback(
+                        collateralReceived, underlyingAsset, assetAmount, liquidationPeripheryCallbackData
+                    );
+            }
 
             // transfers the underlying asset from the liquidator to the periphery
             IERC20(underlyingAsset).safeTransferFrom(liquidator, address(this), assetAmount);
@@ -96,6 +111,13 @@ contract LiquidationPeriphery is AltoOwnable2Step, ILiquidateCallback, ILiquidat
                 IERC20(BORROW_TOKEN).safeTransfer(liquidator, stableTokenBought - borrowAmountToRepay);
             }
         } else {
+            if (liquidationPeripheryCallbackData.length > 0) {
+                ILiquidationPeripheryCallback(liquidator)
+                    .onLiquidationPeripheryCallback(
+                        collateralReceived, BORROW_TOKEN, borrowAmountToRepay, liquidationPeripheryCallbackData
+                    );
+            }
+
             // transfers the borrow amount to the periphery
             IERC20(BORROW_TOKEN).safeTransferFrom(liquidator, address(this), borrowAmountToRepay);
 
@@ -117,10 +139,10 @@ contract LiquidationPeriphery is AltoOwnable2Step, ILiquidateCallback, ILiquidat
     function setUsm(address newUsm) external onlyOwner {
         if (newUsm == address(0)) revert ZeroAddress();
         if (newUsm == address(usm)) revert AlreadySet();
-        if (IUsm(newUsm).STABLE_TOKEN() != BORROW_TOKEN) revert InvalidInput();
+        if (IAdvancedPermissionsUsm(newUsm).STABLE_TOKEN() != BORROW_TOKEN) revert InvalidInput();
 
         emit UsmSet(address(usm), newUsm);
-        usm = IUsm(newUsm);
+        usm = IAdvancedPermissionsUsm(newUsm);
     }
 
     /// @dev Modifier to check if the market is valid
