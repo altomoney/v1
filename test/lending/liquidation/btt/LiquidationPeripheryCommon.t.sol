@@ -7,11 +7,13 @@ import {LiquidationPeriphery} from "@alto/lending/liquidation/LiquidationPeriphe
 import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
 import {ERC20MockMintableDecimals} from "@alto-test/helpers/ERC20MockMintableDecimals.sol";
 import {MarketDeployer} from "@alto-test/helpers/MarketDeployer.sol";
-import {UsmDeployer, DusdUsmInitParams} from "@alto-test/helpers/UsmDeployer.sol";
 import {DUSD} from "@alto/tokens/DUSD.sol";
-import {DUSDUsm} from "@alto/usm/DUSDUsm.sol";
+import {DUSDAdvancedPermissionsUsm} from "@alto/usm/DUSDAdvancedPermissionsUsm.sol";
 import {FixedPriceStrategy} from "@alto/usm/FixedPriceStrategy.sol";
-import {AccessMode} from "@alto/usm/interfaces/IUsm.sol";
+import {AdvancedPermissionsFeeStrategy} from "@alto/usm/AdvancedPermissionsFeeStrategy.sol";
+import {DirectionAccess} from "@alto/usm/interfaces/IAdvancedPermissionsUsm.sol";
+import {IAdvancedPermissionsUsmFeeStrategy} from "@alto/usm/interfaces/IAdvancedPermissionsUsmFeeStrategy.sol";
+import {UnsafeUpgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {MarketRegistry} from "@alto/utils/MarketRegistry.sol";
 import {
     IMarket,
@@ -40,9 +42,11 @@ abstract contract LiquidationPeripheryCommon is Test, TestHelperOz5 {
     uint256 internal constant EXCESS_SELL_PRICE_RATIO = 12e17;
     uint256 internal constant DEBT_CEILING = 1_000_000 ether;
 
+    bytes32 internal constant SELL_SWAPPER_ROLE = keccak256("SELL_SWAPPER_ROLE");
+
     LiquidationPeriphery internal periphery;
     MarketRegistry internal registry;
-    DUSDUsm internal usm;
+    DUSDAdvancedPermissionsUsm internal usm;
     FixedPriceStrategy internal priceStrategy;
 
     IMarket internal borrowMarket;
@@ -67,6 +71,7 @@ abstract contract LiquidationPeripheryCommon is Test, TestHelperOz5 {
 
         registry = new MarketRegistry(OWNER);
         periphery = new LiquidationPeriphery(OWNER, address(registry), address(usm));
+        _grantPeripheryUsmSellPermission();
         vm.stopPrank();
 
         borrowMarket = _deployBorrowMarket();
@@ -83,38 +88,62 @@ abstract contract LiquidationPeripheryCommon is Test, TestHelperOz5 {
         vm.stopPrank();
     }
 
-    uint256 internal borrowerNonce;
-
-    function _nextBorrower() internal returns (address) {
-        borrowerNonce++;
-        return makeAddr(string.concat("Borrower", vm.toString(borrowerNonce)));
-    }
-
     function _deployUsm(address stableToken, address underlyingAsset, uint256 initialPriceRatio)
         internal
-        returns (DUSDUsm)
+        returns (DUSDAdvancedPermissionsUsm)
     {
         FixedPriceStrategy strategy = initialPriceRatio == ONE_TO_ONE_PRICE_RATIO
+            && underlyingAsset == address(underlyingToken)
             ? priceStrategy
             : new FixedPriceStrategy(initialPriceRatio, underlyingAsset, OWNER);
 
-        DusdUsmInitParams memory initParams = DusdUsmInitParams({
-            admin: OWNER,
-            stableTokenTreasury: STABLE_TREASURY,
-            exposureCap: uint128(100_000_000e6),
-            priceStrategy: address(strategy),
-            accessMode: AccessMode.PERMISSIONLESS
-        });
+        address impl = address(new DUSDAdvancedPermissionsUsm(stableToken, underlyingAsset));
+        address proxy = UnsafeUpgrades.deployUUPSProxy(
+            impl,
+            abi.encodeCall(
+                DUSDAdvancedPermissionsUsm.initialize,
+                (
+                    OWNER,
+                    STABLE_TREASURY,
+                    uint128(100_000_000e6),
+                    address(strategy),
+                    DirectionAccess.PERMISSIONED,
+                    DirectionAccess.PERMISSIONED
+                )
+            )
+        );
 
-        DUSDUsm deployed = DUSDUsm(UsmDeployer.deployDusdUsm(stableToken, underlyingAsset, initParams));
+        DUSDAdvancedPermissionsUsm deployed = DUSDAdvancedPermissionsUsm(proxy);
 
         vm.startPrank(OWNER);
         DUSD(stableToken).setMinterStatus(address(deployed), true);
         DUSD(stableToken).setMinterCeiling(address(deployed), type(uint128).max);
         DUSD(stableToken).setBurnerStatus(address(deployed), true);
+        _configureUsmFeeStrategy(deployed);
         vm.stopPrank();
 
         return deployed;
+    }
+
+    function _configureUsmFeeStrategy(DUSDAdvancedPermissionsUsm deployed) internal {
+        AdvancedPermissionsFeeStrategy feeStrategy = new AdvancedPermissionsFeeStrategy(10, 10, OWNER);
+        feeStrategy.setSellFeeByRoleHash(
+            SELL_SWAPPER_ROLE, IAdvancedPermissionsUsmFeeStrategy.OverriddenFeeData({isOverridden: true, fee: 0})
+        );
+        deployed.updateFeeRecipient(STABLE_TREASURY);
+        deployed.updateFeeStrategy(address(feeStrategy));
+    }
+
+    function _grantPeripheryUsmSellPermission() internal {
+        _grantPeripheryUsmSellPermissionOn(usm);
+    }
+
+    function _grantPeripheryUsmSellPermissionOn(DUSDAdvancedPermissionsUsm target) internal {
+        vm.startPrank(OWNER);
+        target.grantRole(SELL_SWAPPER_ROLE, address(periphery));
+        AdvancedPermissionsFeeStrategy(target.getFeeStrategy())
+            .setUserSellFeeRole(address(periphery), SELL_SWAPPER_ROLE);
+        vm.stopPrank();
     }
 
     function _liquidationConfig() internal pure returns (LiquidationConfiguration memory) {
@@ -243,18 +272,23 @@ abstract contract LiquidationPeripheryCommon is Test, TestHelperOz5 {
     }
 
     function _fundLiquidatorForUsmRepay(uint256 minStableAmount) internal {
-        (uint256 assetAmount,,,) = usm.getAssetAmountForSellAsset(minStableAmount);
+        (uint256 assetAmount,,,) = usm.getAssetAmountForSellAsset(minStableAmount, address(periphery));
         underlyingToken.mint(LIQUIDATOR, assetAmount * 2);
         vm.prank(LIQUIDATOR);
         underlyingToken.approve(address(periphery), type(uint256).max);
     }
 
     function _expectedStableRefund(uint256 repayAmount) internal view returns (uint256) {
-        (, uint256 stableBought,,) = usm.getAssetAmountForSellAsset(repayAmount);
+        (, uint256 stableBought,,) = usm.getAssetAmountForSellAsset(repayAmount, address(periphery));
         return stableBought - repayAmount;
     }
 
-    function _callbackData(address liquidator, bool repayViaUsm, address market) internal pure returns (bytes memory) {
-        return abi.encode(liquidator, repayViaUsm, market);
+    function _callbackData(
+        address liquidator,
+        bool repayViaUsm,
+        address market,
+        bytes memory liquidationPeripheryCallbackData
+    ) internal pure returns (bytes memory) {
+        return abi.encode(liquidator, repayViaUsm, market, liquidationPeripheryCallbackData);
     }
 }

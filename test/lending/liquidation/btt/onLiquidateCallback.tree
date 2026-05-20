@@ -6,9 +6,19 @@ LiquidationPeriphery::onLiquidateCallback
     │   └── it should revert with InvalidInput
     ├── it should transfer seized collateral to the liquidator
     ├── given repayViaUsm is false
-    │   └── it should pull borrow token from liquidator and approve market
+    │   ├── given liquidationPeripheryCallbackData is empty
+    │   │   └── it should pull borrow token from liquidator without calling liquidation periphery callback
+    │   ├── given liquidationPeripheryCallbackData is not empty
+    │   │   ├── it should call liquidation periphery callback with borrow token and amount and approve periphery
+    │   │   └── it should leave zero approval from callback to periphery after pull
+    │   └── it should approve borrow token to market
     └── given repayViaUsm is true
-        ├── it should pull underlying from liquidator, sell in usm, and approve borrow token to market
+        ├── given liquidationPeripheryCallbackData is empty
+        │   └── it should pull underlying from liquidator and sell in usm without calling liquidation periphery callback
+        ├── given liquidationPeripheryCallbackData is not empty
+        │   ├── it should call liquidation periphery callback with underlying and amount and approve periphery
+        │   └── it should leave zero approval from callback to periphery after pull
+        ├── it should approve borrow token to market
         ├── when stable token bought equals borrow amount to repay
         │   └── it should not refund stable to liquidator
         └── when stable token bought is greater than borrow amount to repay

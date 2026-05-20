@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {IMarketRegistry} from "@alto/utils/interfaces/IMarketRegistry.sol";
-import {IUsm} from "@alto/usm/interfaces/IUsm.sol";
+import {IAdvancedPermissionsUsm} from "@alto/usm/interfaces/IAdvancedPermissionsUsm.sol";
 
 interface ILiquidationPeripheryErrors {
     /// @notice Thrown when the address passed is the zero address.
@@ -29,9 +29,14 @@ interface ILiquidationPeripheryBase is ILiquidationPeripheryErrors, ILiquidation
     /// @param borrower The address of the borrower to liquidate the position for
     /// @param repayViaUsm Whether to repay the borrow amount via USM
     /// @param liquidationData Additional data for the liquidation
-    function liquidate(address market, address borrower, bool repayViaUsm, bytes calldata liquidationData)
-        external
-        returns (uint256 seizedCollateral, uint256 repaidBorrow, uint256 protocolFee);
+    /// @param liquidationPeripheryCallbackData Additional data to passed to the callback receiver of liquidation periphery contract
+    function liquidate(
+        address market,
+        address borrower,
+        bool repayViaUsm,
+        bytes calldata liquidationData,
+        bytes calldata liquidationPeripheryCallbackData
+    ) external returns (uint256 seizedCollateral, uint256 repaidBorrow, uint256 protocolFee);
 
     /// @notice Sets the market registry
     /// @param newMarketRegistry The address of the new market registry
@@ -47,7 +52,7 @@ interface ILiquidationPeripheryBase is ILiquidationPeripheryErrors, ILiquidation
     function marketRegistry() external view returns (IMarketRegistry);
 
     /// @notice Returns the address of the USM
-    function usm() external view returns (IUsm);
+    function usm() external view returns (IAdvancedPermissionsUsm);
 
     /// @notice Returns the address of the borrow token
     function BORROW_TOKEN() external view returns (address);

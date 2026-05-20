@@ -3,7 +3,7 @@ pragma solidity ^0.8.28;
 
 import {LiquidationPeripheryCommon} from "./LiquidationPeripheryCommon.t.sol";
 import {DUSD} from "@alto/tokens/DUSD.sol";
-import {DUSDUsm} from "@alto/usm/DUSDUsm.sol";
+import {DUSDAdvancedPermissionsUsm} from "@alto/usm/DUSDAdvancedPermissionsUsm.sol";
 import {
     ILiquidationPeripheryErrors,
     ILiquidationPeripheryEvents
@@ -12,7 +12,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 contract LiquidationPeriphery_SetUsm_Test is LiquidationPeripheryCommon {
     function test_RevertWhen_CallerIsNotOwner() public {
-        DUSDUsm newUsm = _deployUsm(address(borrowToken), address(underlyingToken), ONE_TO_ONE_PRICE_RATIO);
+        DUSDAdvancedPermissionsUsm newUsm = _deployUsm(address(borrowToken), address(underlyingToken), ONE_TO_ONE_PRICE_RATIO);
 
         vm.prank(NON_OWNER);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, NON_OWNER));
@@ -34,7 +34,8 @@ contract LiquidationPeriphery_SetUsm_Test is LiquidationPeripheryCommon {
     function test_RevertWhen_NewUsmStableTokenDiffersFromBorrowToken() public {
         vm.prank(OWNER);
         DUSD otherStable = new DUSD(address(endpoints[1]), OWNER);
-        DUSDUsm wrongUsm = _deployUsm(address(otherStable), address(underlyingToken), ONE_TO_ONE_PRICE_RATIO);
+        DUSDAdvancedPermissionsUsm wrongUsm =
+            _deployUsm(address(otherStable), address(underlyingToken), ONE_TO_ONE_PRICE_RATIO);
 
         vm.prank(OWNER);
         vm.expectRevert(ILiquidationPeripheryErrors.InvalidInput.selector);
@@ -42,12 +43,13 @@ contract LiquidationPeriphery_SetUsm_Test is LiquidationPeripheryCommon {
     }
 
     function test_SetUsm_UpdatesStateAndEmitsEvent() public {
-        DUSDUsm newUsm = _deployUsm(address(borrowToken), address(underlyingToken), ONE_TO_ONE_PRICE_RATIO);
+        DUSDAdvancedPermissionsUsm newUsm = _deployUsm(address(borrowToken), address(underlyingToken), ONE_TO_ONE_PRICE_RATIO);
 
         vm.prank(OWNER);
         vm.expectEmit(true, true, false, true);
         emit ILiquidationPeripheryEvents.UsmSet(address(usm), address(newUsm));
         periphery.setUsm(address(newUsm));
+        _grantPeripheryUsmSellPermissionOn(newUsm);
 
         assertEq(address(periphery.usm()), address(newUsm));
     }
