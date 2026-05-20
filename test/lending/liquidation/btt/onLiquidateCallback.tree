@@ -1,0 +1,15 @@
+LiquidationPeriphery::onLiquidateCallback
+├── when caller is not a registered mint or borrow market
+│   └── it should revert with InvalidInput
+└── when caller is a registered market
+    ├── when market in callback data does not match caller
+    │   └── it should revert with InvalidInput
+    ├── it should transfer seized collateral to the liquidator
+    ├── given repayViaUsm is false
+    │   └── it should pull borrow token from liquidator and approve market
+    └── given repayViaUsm is true
+        ├── it should pull underlying from liquidator, sell in usm, and approve borrow token to market
+        ├── when stable token bought equals borrow amount to repay
+        │   └── it should not refund stable to liquidator
+        └── when stable token bought is greater than borrow amount to repay
+            └── it should refund excess stable token to liquidator

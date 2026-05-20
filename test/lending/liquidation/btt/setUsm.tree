@@ -1,0 +1,12 @@
+LiquidationPeriphery::setUsm
+├── when caller is not owner
+│   └── it should revert with OwnableUnauthorizedAccount
+├── when new usm is zero address
+│   └── it should revert with ZeroAddress
+├── when new usm is already set
+│   └── it should revert with AlreadySet
+├── when new usm stable token differs from BORROW_TOKEN
+│   └── it should revert with InvalidInput
+└── when new usm is valid with matching stable token
+    ├── it should emit UsmSet
+    └── it should update usm

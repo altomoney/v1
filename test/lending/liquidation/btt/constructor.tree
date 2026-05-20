@@ -1,0 +1,9 @@
+LiquidationPeriphery::constructor
+├── when market registry is zero address
+│   └── it should revert with ZeroAddress
+├── when usm is zero address
+│   └── it should revert with ZeroAddress
+└── when parameters are valid
+    ├── it should set market registry
+    ├── it should set usm
+    └── it should set BORROW_TOKEN to usm stable token
