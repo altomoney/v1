@@ -11,144 +11,136 @@ import {
     IAdvancedPermissionsUsm,
     IMarketRegistry
 } from "./interfaces/ILiquidationPeriphery.sol";
-import {ILiquidationPeripheryCallback} from "./interfaces/ILiquidationPeripheryCallback.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {IUsmRegistry} from "@alto/utils/interfaces/IUsmRegistry.sol";
 
 /// @title LiquidationPeriphery
 /// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice This contract is used as a periphery to liquidate positions in a market
-/// @notice This contract supports sourcing of borrow token of market from USM by selling underlying asset of USM in USM
-contract LiquidationPeriphery is AltoOwnable2Step, ILiquidateCallback, ILiquidationPeripheryBase {
+/// @notice This contract sources borrow tokens from USM by selling underlying asset of USM in USM
+contract LiquidationPeriphery is AltoOwnable2Step, ILiquidateCallback, ILiquidationPeripheryBase, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     /// @inheritdoc ILiquidationPeripheryBase
-    IMarketRegistry public marketRegistry;
-
-    /// @inheritdoc ILiquidationPeripheryBase
-    IAdvancedPermissionsUsm public usm;
+    mapping(address => bool) public supportedMarkets;
 
     /// @inheritdoc ILiquidationPeripheryBase
     address public immutable BORROW_TOKEN;
 
+    address public usmRegistry;
+
     /// @notice Constructor
     /// @param owner The address of the owner
-    /// @param _marketRegistry The address of the market registry
-    /// @param _usm The address of the USM
-    constructor(address owner, address _marketRegistry, address _usm) Ownable(owner) {
-        if (_marketRegistry == address(0)) revert ZeroAddress();
-        if (_usm == address(0)) revert ZeroAddress();
+    /// @param _borrowToken The address of the borrow token
+    /// @param _usmRegistry The address of the USM registry
+    constructor(address owner, address _borrowToken, address _usmRegistry) Ownable(owner) {
+        if (_borrowToken == address(0) || _usmRegistry == address(0)) revert ZeroAddress();
 
-        emit MarketRegistrySet(address(0), _marketRegistry);
-        marketRegistry = IMarketRegistry(_marketRegistry);
+        BORROW_TOKEN = _borrowToken;
 
-        emit UsmSet(address(0), _usm);
-        usm = IAdvancedPermissionsUsm(_usm);
-
-        BORROW_TOKEN = usm.STABLE_TOKEN();
+        usmRegistry = _usmRegistry;
+        emit UsmRegistrySet(address(0), _usmRegistry);
     }
 
     /// @inheritdoc ILiquidationPeripheryBase
     function liquidate(
         address market,
         address borrower,
-        bool repayViaUsm,
+        address usm,
         bytes calldata liquidationData,
         bytes calldata liquidationPeripheryCallbackData
-    ) external isValidMarket(market) returns (uint256 seizedCollateral, uint256 repaidBorrow, uint256 protocolFee) {
+    ) external returns (uint256 seizedCollateral, uint256 repaidBorrow, uint256 protocolFee) {
+        if (!supportedMarkets[market]) revert InvalidInput();
+
         // msg.sender is the liquidator
-        // repayViaUsm is the flag to indicate if the borrow amount should be repaid via USM
-        bytes memory callbackData = abi.encode(msg.sender, repayViaUsm, market, liquidationPeripheryCallbackData);
+        bytes memory callbackData = abi.encode(msg.sender, market, usm, liquidationPeripheryCallbackData);
 
         (seizedCollateral, repaidBorrow, protocolFee) =
             IMarket(market).liquidate(borrower, callbackData, liquidationData);
 
         // resets the approval given to market for the borrow token in onLiquidateCallback function
         IERC20(BORROW_TOKEN).forceApprove(market, 0);
+
+        emit Liquidation(market, msg.sender, borrower, seizedCollateral, protocolFee, repaidBorrow);
     }
 
     /// @inheritdoc ILiquidateCallback
+    /// @dev This callback function uses nonreentrant modifier to prevent liquidation callback
+    /// from different market when there is ongoing liquidation in one market.
+    /// for ex: external liquidator contractcalls market1.liquidate() which will call Periphery.onLiquidateCallback()
+    /// and in callback, external liquidator contract calls market2.liquidate() which will call Periphery.onLiquidateCallback()
+    /// This will revert due to nonReentrant modifier.
     function onLiquidateCallback(uint256 borrowAmountToRepay, uint256 collateralReceived, bytes calldata callbackData)
         external
         override
-        isValidMarket(msg.sender)
+        nonReentrant
     {
-        (address liquidator, bool repayViaUsm, address market, bytes memory liquidationPeripheryCallbackData) =
-            abi.decode(callbackData, (address, bool, address, bytes));
+        (address liquidator, address market, address usm, bytes memory liquidationPeripheryCallbackData) =
+            abi.decode(callbackData, (address, address, address, bytes));
 
-        if (market != msg.sender) revert InvalidInput();
+        if (market != msg.sender || !supportedMarkets[market]) revert InvalidInput();
+        if (!IUsmRegistry(usmRegistry).isUsm(usm)) revert InvalidInput();
+        if (IAdvancedPermissionsUsm(usm).STABLE_TOKEN() != BORROW_TOKEN) revert InvalidInput();
 
         // transfers the collateral seized of the borrower to the liquidator
         IERC20(IMarket(market).collateralToken()).safeTransfer(liquidator, collateralReceived);
 
-        if (repayViaUsm) {
-            // gets the asset amount required to repay the borrow amount
-            (uint256 assetAmount,,,) = usm.getAssetAmountForSellAsset(borrowAmountToRepay, address(this));
+        // gets the asset amount of underlying asset required to repay the borrow amount
+        (uint256 assetAmount,,,) =
+            IAdvancedPermissionsUsm(usm).getAssetAmountForSellAsset(borrowAmountToRepay, address(this));
 
-            // gets the underlying asset of the USM
-            address underlyingAsset = usm.UNDERLYING_ASSET();
+        // gets the underlying asset of the USM
+        address underlyingAsset = IAdvancedPermissionsUsm(usm).UNDERLYING_ASSET();
 
-            if (liquidationPeripheryCallbackData.length > 0) {
-                ILiquidationPeripheryCallback(liquidator)
-                    .onLiquidationPeripheryCallback(
-                        collateralReceived, underlyingAsset, assetAmount, liquidationPeripheryCallbackData
-                    );
-            }
+        if (liquidationPeripheryCallbackData.length > 0) {
+            // @dev the first argument of onLiquidateCallback for liquidator is the assetAmount and not borrowAmountToRepay
+            // because liquidator needs to give approval of assetAmount of underlying asset of USM to the periphery
+            ILiquidateCallback(liquidator)
+                .onLiquidateCallback(assetAmount, collateralReceived, liquidationPeripheryCallbackData);
+        }
 
-            // transfers the underlying asset from the liquidator to the periphery
-            IERC20(underlyingAsset).safeTransferFrom(liquidator, address(this), assetAmount);
+        // transfers the underlying asset from the liquidator to the periphery
+        IERC20(underlyingAsset).safeTransferFrom(liquidator, address(this), assetAmount);
 
-            // approves the underlying asset to the USM
-            IERC20(underlyingAsset).forceApprove(address(usm), assetAmount);
+        // approves the underlying asset to the USM
+        IERC20(underlyingAsset).forceApprove(address(usm), assetAmount);
 
-            // sells the underlying asset to the USM
-            (, uint256 stableTokenBought) = usm.sellAsset(assetAmount, address(this));
+        // sells the underlying asset to the USM
+        // this will utilize assetAmount of underlying asset to buy stable token and won't leave any dust in underlying asset
+        // this is because the assetAmount is determined by getAssetAmountForSellAsset
+        // which returns the amount of underlying asset the user sells to the USM to get borrowAmountToRepay amount of stable token
+        // stableTokenBought can be more than borrowAmountToRepay due to rounding and extra amount will be refunded to liquidator
+        (, uint256 stableTokenBought) = IAdvancedPermissionsUsm(usm).sellAsset(assetAmount, address(this));
 
-            // approves the borrow token to the market so that market can pull it from periphery to repay the borrow amount
-            IERC20(BORROW_TOKEN).forceApprove(market, borrowAmountToRepay);
+        // resets the approval given to the USM for the underlying asset
+        IERC20(underlyingAsset).forceApprove(address(usm), 0);
 
-            if (stableTokenBought > borrowAmountToRepay) {
-                // transfers the extra stable token bought to the liquidator
-                IERC20(BORROW_TOKEN).safeTransfer(liquidator, stableTokenBought - borrowAmountToRepay);
-            }
-        } else {
-            if (liquidationPeripheryCallbackData.length > 0) {
-                ILiquidationPeripheryCallback(liquidator)
-                    .onLiquidationPeripheryCallback(
-                        collateralReceived, BORROW_TOKEN, borrowAmountToRepay, liquidationPeripheryCallbackData
-                    );
-            }
+        // approves the borrow token to the market so that market can pull it from periphery to repay the borrow amount
+        IERC20(BORROW_TOKEN).forceApprove(market, borrowAmountToRepay);
 
-            // transfers the borrow amount to the periphery
-            IERC20(BORROW_TOKEN).safeTransferFrom(liquidator, address(this), borrowAmountToRepay);
-
-            // approves the borrow token to the market so that market can pull it from periphery to repay the borrow amount
-            IERC20(BORROW_TOKEN).forceApprove(market, borrowAmountToRepay);
+        if (stableTokenBought > borrowAmountToRepay) {
+            // transfers the extra stable token bought to the liquidator
+            IERC20(BORROW_TOKEN).safeTransfer(liquidator, stableTokenBought - borrowAmountToRepay);
         }
     }
 
     /// @inheritdoc ILiquidationPeripheryBase
-    function setMarketRegistry(address newMarketRegistry) external onlyOwner {
-        if (newMarketRegistry == address(0)) revert ZeroAddress();
-        if (newMarketRegistry == address(marketRegistry)) revert AlreadySet();
-
-        emit MarketRegistrySet(address(marketRegistry), newMarketRegistry);
-        marketRegistry = IMarketRegistry(newMarketRegistry);
+    function setSupportedMarket(address market, bool isSupported) external onlyOwner {
+        if (market == address(0)) revert ZeroAddress();
+        supportedMarkets[market] = isSupported;
+        emit SupportedMarketSet(market, isSupported);
     }
 
     /// @inheritdoc ILiquidationPeripheryBase
-    function setUsm(address newUsm) external onlyOwner {
-        if (newUsm == address(0)) revert ZeroAddress();
-        if (newUsm == address(usm)) revert AlreadySet();
-        if (IAdvancedPermissionsUsm(newUsm).STABLE_TOKEN() != BORROW_TOKEN) revert InvalidInput();
-
-        emit UsmSet(address(usm), newUsm);
-        usm = IAdvancedPermissionsUsm(newUsm);
+    function setUsmRegistry(address _usmRegistry) external onlyOwner {
+        if (_usmRegistry == address(0)) revert ZeroAddress();
+        emit UsmRegistrySet(usmRegistry, _usmRegistry);
+        usmRegistry = _usmRegistry;
     }
 
-    /// @dev Modifier to check if the market is valid
-    /// @param market The address of the market to check
-    modifier isValidMarket(address market) {
-        if (!marketRegistry.isMintMarket(market) && !marketRegistry.isBorrowMarket(market)) revert InvalidInput();
-        _;
+    /// @inheritdoc ILiquidationPeripheryBase
+    function recoverERC20(address tokenAddress, uint256 tokenAmount, address recipient) external onlyOwner {
+        IERC20(tokenAddress).safeTransfer(recipient, tokenAmount);
     }
 }

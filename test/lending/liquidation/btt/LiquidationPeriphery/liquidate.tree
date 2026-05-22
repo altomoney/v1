@@ -1,0 +1,74 @@
+LiquidationPeriphery::liquidate
+├── when market is not supported
+│   └── it should revert with InvalidInput
+└── when market is supported
+    ├── when market is a borrow market
+    │   ├── given liquidationPeripheryCallbackData is empty
+    │   │   ├── it should return seized collateral, repaid borrow, and protocol fee from market
+    │   │   ├── it should emit Liquidation event
+    │   │   ├── it should reset borrow token approval to market after liquidation
+    │   │   ├── it should transfer seized collateral to the liquidator
+    │   │   ├── it should liquidate via usm without calling liquidator callback
+    │   │   ├── it should reset underlying approval to usm after sell
+    │   │   └── it should leave periphery with zero borrow and underlying balances
+    │   ├── given liquidationPeripheryCallbackData is not empty
+    │   │   ├── it should return seized collateral, repaid borrow, and protocol fee from market
+    │   │   ├── it should emit Liquidation event
+    │   │   ├── it should reset borrow token approval to market after liquidation
+    │   │   ├── it should transfer seized collateral to the liquidator
+    │   │   ├── it should call liquidator onLiquidateCallback with underlying asset amount and collateral received
+    │   │   ├── it should forward liquidationPeripheryCallbackData to liquidator callback
+    │   │   ├── it should leave zero approval from liquidator to periphery after pull
+    │   │   ├── it should reset underlying approval to usm after sell
+    │   │   └── it should leave periphery with zero borrow and underlying balances
+    │   ├── given stable token bought equals borrow amount to repay
+    │   │   ├── it should return seized collateral, repaid borrow, and protocol fee from market
+    │   │   ├── it should emit Liquidation event
+    │   │   ├── it should reset borrow token approval to market after liquidation
+    │   │   ├── it should transfer seized collateral to the liquidator
+    │   │   ├── it should not refund stable to liquidator
+    │   │   ├── it should reset underlying approval to usm after sell
+    │   │   └── it should leave periphery with zero borrow and underlying balances
+    │   └── given stable token bought is greater than borrow amount to repay
+    │       ├── it should return seized collateral, repaid borrow, and protocol fee from market
+    │       ├── it should emit Liquidation event
+    │       ├── it should reset borrow token approval to market after liquidation
+    │       ├── it should transfer seized collateral to the liquidator
+    │       ├── it should refund excess stable token to liquidator
+    │       ├── it should reset underlying approval to usm after sell
+    │       └── it should leave periphery with zero borrow and underlying balances
+    └── when market is a mint market
+        ├── given liquidationPeripheryCallbackData is empty
+        │   ├── it should return seized collateral, repaid borrow, and protocol fee from market
+        │   ├── it should emit Liquidation event
+        │   ├── it should reset borrow token approval to market after liquidation
+        │   ├── it should transfer seized collateral to the liquidator
+        │   ├── it should liquidate via usm without calling liquidator callback
+        │   ├── it should reset underlying approval to usm after sell
+        │   └── it should leave periphery with zero borrow and underlying balances
+        ├── given liquidationPeripheryCallbackData is not empty
+        │   ├── it should return seized collateral, repaid borrow, and protocol fee from market
+        │   ├── it should emit Liquidation event
+        │   ├── it should reset borrow token approval to market after liquidation
+        │   ├── it should transfer seized collateral to the liquidator
+        │   ├── it should call liquidator onLiquidateCallback with underlying asset amount and collateral received
+        │   ├── it should forward liquidationPeripheryCallbackData to liquidator callback
+        │   ├── it should leave zero approval from liquidator to periphery after pull
+        │   ├── it should reset underlying approval to usm after sell
+        │   └── it should leave periphery with zero borrow and underlying balances
+        ├── given stable token bought equals borrow amount to repay
+        │   ├── it should return seized collateral, repaid borrow, and protocol fee from market
+        │   ├── it should emit Liquidation event
+        │   ├── it should reset borrow token approval to market after liquidation
+        │   ├── it should transfer seized collateral to the liquidator
+        │   ├── it should not refund stable to liquidator
+        │   ├── it should reset underlying approval to usm after sell
+        │   └── it should leave periphery with zero borrow and underlying balances
+        └── given stable token bought is greater than borrow amount to repay
+            ├── it should return seized collateral, repaid borrow, and protocol fee from market
+            ├── it should emit Liquidation event
+            ├── it should reset borrow token approval to market after liquidation
+            ├── it should transfer seized collateral to the liquidator
+            ├── it should refund excess stable token to liquidator
+            ├── it should reset underlying approval to usm after sell
+            └── it should leave periphery with zero borrow and underlying balances

@@ -1,0 +1,8 @@
+LiquidationPeriphery::setUsmRegistry
+├── when caller is not owner
+│   └── it should revert
+├── when usm registry is zero address
+│   └── it should revert with ZeroAddress
+└── when caller is owner and usm registry is valid
+    ├── it should set usmRegistry
+    └── it should emit UsmRegistrySet
