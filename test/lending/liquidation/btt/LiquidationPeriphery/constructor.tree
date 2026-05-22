@@ -1,0 +1,10 @@
+LiquidationPeriphery::constructor
+├── when borrow token is zero address
+│   └── it should revert with ZeroAddress
+├── when usm registry is zero address
+│   └── it should revert with ZeroAddress
+└── when parameters are valid
+    ├── it should set owner
+    ├── it should set BORROW_TOKEN
+    ├── it should set usmRegistry
+    └── it should emit UsmRegistrySet

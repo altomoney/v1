@@ -15,6 +15,7 @@ import {DirectionAccess} from "@alto/usm/interfaces/IAdvancedPermissionsUsm.sol"
 import {IAdvancedPermissionsUsmFeeStrategy} from "@alto/usm/interfaces/IAdvancedPermissionsUsmFeeStrategy.sol";
 import {UnsafeUpgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {MarketRegistry} from "@alto/utils/MarketRegistry.sol";
+import {UsmRegistry} from "@alto/utils/UsmRegistry.sol";
 import {
     IMarket,
     BaseMarketInitParams,
@@ -29,6 +30,8 @@ import {
     LiquidationConfiguration
 } from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";
 import {DlbDcfPriorityLiquidationEngine} from "@alto/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol";
+import {MockSwapper} from "@alto-test/lending/liquidation/helpers/MockSwapper.sol";
+import {SimpleLiquidator} from "@alto-test/lending/liquidation/helpers/SimpleLiquidator.sol";
 
 abstract contract LiquidationPeripheryCommon is Test, TestHelperOz5 {
     address internal immutable OWNER = makeAddr("Owner");
@@ -41,11 +44,18 @@ abstract contract LiquidationPeripheryCommon is Test, TestHelperOz5 {
     uint256 internal constant ONE_TO_ONE_PRICE_RATIO = 1e18;
     uint256 internal constant EXCESS_SELL_PRICE_RATIO = 12e17;
     uint256 internal constant DEBT_CEILING = 1_000_000 ether;
+    uint256 internal constant SWAPPER_UNDERLYING_LIQUIDITY = 1_000_000e6;
 
+    bytes32 internal constant BUY_SWAPPER_ROLE = keccak256("BUY_SWAPPER_ROLE");
     bytes32 internal constant SELL_SWAPPER_ROLE = keccak256("SELL_SWAPPER_ROLE");
+    uint256 internal constant MAX_USM_FEE_BPS = 4999;
+    address internal constant WARMUP_SWAPPER = address(uint160(uint256(keccak256("WarmupSwapper"))));
 
     LiquidationPeriphery internal periphery;
+    MockSwapper internal swapper;
+    SimpleLiquidator internal simpleLiquidator;
     MarketRegistry internal registry;
+    UsmRegistry internal usmRegistry;
     DUSDAdvancedPermissionsUsm internal usm;
     FixedPriceStrategy internal priceStrategy;
 
@@ -70,14 +80,23 @@ abstract contract LiquidationPeripheryCommon is Test, TestHelperOz5 {
         usm = _deployUsm(address(borrowToken), address(underlyingToken), ONE_TO_ONE_PRICE_RATIO);
 
         registry = new MarketRegistry(OWNER);
-        periphery = new LiquidationPeriphery(OWNER, address(registry), address(usm));
+        usmRegistry = new UsmRegistry(OWNER);
+        vm.startPrank(OWNER);
+        usmRegistry.addUsm(address(usm));
+        periphery = new LiquidationPeriphery(OWNER, address(borrowToken), address(usmRegistry));
         _grantPeripheryUsmSellPermission();
+
+        swapper = new MockSwapper();
+        simpleLiquidator = new SimpleLiquidator(address(periphery), address(usm), address(swapper));
+        underlyingToken.mint(address(swapper), SWAPPER_UNDERLYING_LIQUIDITY);
         vm.stopPrank();
 
         borrowMarket = _deployBorrowMarket();
         mintMarket = _deployMintMarket();
 
         vm.startPrank(OWNER);
+        periphery.setSupportedMarket(address(borrowMarket), true);
+        periphery.setSupportedMarket(address(mintMarket), true);
         registry.addBorrowMarket(address(borrowMarket));
         registry.addMintMarket(address(mintMarket));
         borrowToken.setMinterStatus(address(this), true);
@@ -265,17 +284,97 @@ abstract contract LiquidationPeripheryCommon is Test, TestHelperOz5 {
         priceStrategy.setPriceRatio(EXCESS_SELL_PRICE_RATIO);
     }
 
+    function _configureUsmPriceRatio(uint256 priceRatio) internal {
+        vm.prank(OWNER);
+        priceStrategy.setPriceRatio(priceRatio);
+    }
+
+    function _configureUsmFees(uint256 buyFeeBps, uint256 sellFeeBps) internal {
+        AdvancedPermissionsFeeStrategy feeStrategy = AdvancedPermissionsFeeStrategy(usm.getFeeStrategy());
+        vm.startPrank(OWNER);
+        feeStrategy.setFee(buyFeeBps, sellFeeBps);
+        feeStrategy.setBuyFeeByRoleHash(
+            BUY_SWAPPER_ROLE,
+            IAdvancedPermissionsUsmFeeStrategy.OverriddenFeeData({isOverridden: true, fee: buyFeeBps})
+        );
+        feeStrategy.setSellFeeByRoleHash(
+            SELL_SWAPPER_ROLE,
+            IAdvancedPermissionsUsmFeeStrategy.OverriddenFeeData({isOverridden: true, fee: sellFeeBps})
+        );
+        vm.stopPrank();
+    }
+
+    function _ensureWarmupSwapperRoles() internal {
+        if (usm.hasRole(BUY_SWAPPER_ROLE, WARMUP_SWAPPER)) return;
+
+        vm.startPrank(OWNER);
+        usm.grantRole(BUY_SWAPPER_ROLE, WARMUP_SWAPPER);
+        usm.grantRole(SELL_SWAPPER_ROLE, WARMUP_SWAPPER);
+        AdvancedPermissionsFeeStrategy(usm.getFeeStrategy()).setUserBuyFeeRole(WARMUP_SWAPPER, BUY_SWAPPER_ROLE);
+        AdvancedPermissionsFeeStrategy(usm.getFeeStrategy()).setUserSellFeeRole(WARMUP_SWAPPER, SELL_SWAPPER_ROLE);
+        vm.stopPrank();
+    }
+
+    function _warmupUsmSwaps(uint256 sellAmount, uint256 buyMinUnderlying, uint256 sellAmount2) internal {
+        _ensureWarmupSwapperRoles();
+
+        underlyingToken.mint(WARMUP_SWAPPER, sellAmount + sellAmount2);
+
+        vm.startPrank(WARMUP_SWAPPER);
+        underlyingToken.approve(address(usm), type(uint256).max);
+        borrowToken.approve(address(usm), type(uint256).max);
+
+        usm.sellAsset(sellAmount, WARMUP_SWAPPER);
+
+        if (buyMinUnderlying > 0 && buyMinUnderlying <= usm.getAvailableLiquidity()) {
+            (, uint256 stableForBuy,,) = usm.getStableTokenAmountForBuyAsset(buyMinUnderlying, WARMUP_SWAPPER);
+            if (stableForBuy > 0) {
+                vm.stopPrank();
+                _mintBorrowToken(WARMUP_SWAPPER, stableForBuy);
+                vm.startPrank(WARMUP_SWAPPER);
+                borrowToken.approve(address(usm), type(uint256).max);
+                try usm.buyAsset(buyMinUnderlying, WARMUP_SWAPPER) {} catch {}
+            }
+        }
+
+        if (sellAmount2 > 0) {
+            uint256 balance = underlyingToken.balanceOf(WARMUP_SWAPPER);
+            sellAmount2 = sellAmount2 > balance ? balance : sellAmount2;
+            if (sellAmount2 > 0) {
+                try usm.sellAsset(sellAmount2, WARMUP_SWAPPER) {} catch {}
+            }
+        }
+
+        vm.stopPrank();
+    }
+
+    function _invokeOnLiquidateCallback(
+        address caller,
+        uint256 repayAmount,
+        uint256 collateralAmount,
+        bytes memory callbackData
+    ) internal {
+        vm.prank(caller);
+        periphery.onLiquidateCallback(repayAmount, collateralAmount, callbackData);
+    }
+
     function _fundLiquidatorForDirectRepay() internal {
         _mintBorrowToken(LIQUIDATOR, 100 ether);
         vm.prank(LIQUIDATOR);
         borrowToken.approve(address(periphery), type(uint256).max);
     }
 
-    function _fundLiquidatorForUsmRepay(uint256 minStableAmount) internal {
-        (uint256 assetAmount,,,) = usm.getAssetAmountForSellAsset(minStableAmount, address(periphery));
-        underlyingToken.mint(LIQUIDATOR, assetAmount * 2);
-        vm.prank(LIQUIDATOR);
-        underlyingToken.approve(address(periphery), type(uint256).max);
+    function _assertUnderlyingApprovalResetToUsm() internal view {
+        assertEq(underlyingToken.allowance(address(periphery), address(usm)), 0);
+    }
+
+    function _liquidationCallbackData(address market) internal pure returns (bytes memory) {
+        return abi.encode(market);
+    }
+
+    function _transferUnderlyingFromSwapperToSimpleLiquidator(uint256 amount) internal {
+        vm.prank(address(swapper));
+        underlyingToken.transfer(address(simpleLiquidator), amount);
     }
 
     function _expectedStableRefund(uint256 repayAmount) internal view returns (uint256) {
@@ -285,10 +384,10 @@ abstract contract LiquidationPeripheryCommon is Test, TestHelperOz5 {
 
     function _callbackData(
         address liquidator,
-        bool repayViaUsm,
         address market,
+        address targetUsm,
         bytes memory liquidationPeripheryCallbackData
     ) internal pure returns (bytes memory) {
-        return abi.encode(liquidator, repayViaUsm, market, liquidationPeripheryCallbackData);
+        return abi.encode(liquidator, market, targetUsm, liquidationPeripheryCallbackData);
     }
 }

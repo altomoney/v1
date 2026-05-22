@@ -1,0 +1,75 @@
+{
+    "priceRoute": {
+      "blockNumber": 25143358,
+      "network": 1,
+      "srcToken": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+      "srcDecimals": 18,
+      "srcAmount": "1993000000000000000",
+      "destToken": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "destDecimals": 6,
+      "destAmount": "4216427246",
+      "bestRoute": [
+        {
+          "percent": 100,
+          "swaps": [
+            {
+              "srcToken": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+              "srcDecimals": 18,
+              "destToken": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+              "destDecimals": 6,
+              "swapExchanges": [
+                {
+                  "exchange": "uniswapv3",
+                  "srcAmount": "1993000000000000000",
+                  "destAmount": "4216427246",
+                  "percent": 100,
+                  "poolAddresses": [
+                    "0x11b815efb8f581194ae79006d24e0d814b7697f6",
+                    "0x3416cf6c708da44db2624d63ea0aaef7113527c6"
+                  ],
+                  "poolIdentifiers": [
+                    "uniswapv3_0x11b815efb8f581194ae79006d24e0d814b7697f6",
+                    "uniswapv3_0x3416cf6c708da44db2624d63ea0aaef7113527c6"
+                  ],
+                  "data": {
+                    "apiGo": true,
+                    "blockNumber": 25143358,
+                    "source": "L1",
+                    "path": [
+                      {
+                        "tokenIn": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+                        "tokenOut": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+                        "fee": "500",
+                        "currentFee": "500"
+                      },
+                      {
+                        "tokenIn": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+                        "tokenOut": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                        "fee": "100",
+                        "currentFee": "100"
+                      }
+                    ],
+                    "gasUSD": "0.080236"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "gasCostUSD": "0.126893",
+      "gasCost": "316300",
+      "side": "SELL",
+      "version": "5",
+      "contractAddress": "0xDEF171Fe48CF0115B1d80b88dc8eAB59176FEe57",
+      "tokenTransferProxy": "0x216b4b4ba9f3e719726886d34a177484278bfcae",
+      "contractMethod": "directUniV3Swap",
+      "partnerFee": 0.01,
+      "srcUSD": "4218.5233100000",
+      "destUSD": "4215.3773556157",
+      "destAmountAfterFee": "4216005603",
+      "partner": "anon",
+      "maxImpactReached": false,
+      "hmac": "7767b6f437f0d1a7812b43bba1043a40cef9fd0d"
+    }
+  }
