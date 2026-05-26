@@ -19,6 +19,8 @@ import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {ILiquidateCallback} from "@alto/lending/interfaces/IMarketCallbacks.sol";
 import {IOracle, LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {DlbDcfPriorityLiquidationEngine} from "@alto/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol";
+import {AltoBaseMarket} from "@alto/lending/AltoBaseMarket.sol";
+import {IAltoLiquidationEngine, LiquidationEngineInput} from "@alto/lending/interfaces/IAltoLiquidationEngine.sol";
 
 contract LiquidateCallback is ILiquidateCallback {
     event LiquidateCallbackCalled(uint256 assetsToRepay, uint256 collateralReceived, bytes data);
@@ -76,6 +78,126 @@ contract AltoBorrowMarketliquidate is MarketCommon {
             IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidatingSolventPosition.selector
         );
         market.liquidate(USER, hex"", hex"");
+    }
+
+    function _fundLiquidator(address liquidator, uint256 amount) internal {
+        deal(address(borrowToken), liquidator, amount);
+        vm.prank(liquidator);
+        borrowToken.approve(address(market), amount);
+    }
+
+    /// @dev Asserts prepareLiquidation is called with the expected liquidator and liquidationData.
+    ///      Syncs interest and builds calldata before prank so static reads do not consume it.
+    function _expectPrepareLiquidation(address liquidator, bytes memory liquidationData) internal {
+        market.accrueInterest();
+
+        LiquidationEngineInput memory expectedInput = LiquidationEngineInput({
+            borrower: USER,
+            liquidator: liquidator,
+            totalSupply: market.totalSupply(),
+            totalBorrowed: market.totalBorrowed(),
+            position: market.position(USER),
+            maxLtv: market.maxLtv(),
+            collateralPrice: IOracle(oracle).getPrice(),
+            liquidationData: liquidationData
+        });
+
+        vm.expectCall(
+            market.liquidationEngine(),
+            abi.encodeWithSelector(IAltoLiquidationEngine.prepareLiquidation.selector, expectedInput)
+        );
+    }
+
+    function test_WhenCallerIsNotAuthorizedLiquidationPeriphery_WhenLiquidationDataIsEmpty()
+        external
+        givenPositionIsInsolvent
+        whenPriorityLiquidationIsEnabled
+        whenCurrentLTVIsBelowDisablePriorityLiquidationThreshold
+    {
+        // it should pass msg.sender to liquidation engine as liquidator
+        _fundLiquidator(EXTERNAL_LIQUIDATOR, 1 ether);
+        _expectPrepareLiquidation(EXTERNAL_LIQUIDATOR, hex"");
+        vm.prank(EXTERNAL_LIQUIDATOR);
+        vm.expectRevert(
+            IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationUnauthorized.selector
+        );
+        market.liquidate(USER, hex"", hex"");
+
+        _fundLiquidator(PRIORITY_LIQUIDATOR, 1 ether);
+        _expectPrepareLiquidation(PRIORITY_LIQUIDATOR, hex"");
+        vm.prank(PRIORITY_LIQUIDATOR);
+        (uint256 collateralAmount, uint256 repayAmount,) = market.liquidate(USER, hex"", hex"");
+        assertGt(collateralAmount, 0);
+        assertGt(repayAmount, 0);
+    }
+
+    function test_WhenCallerIsNotAuthorizedLiquidationPeriphery_WhenLiquidationDataIsAbiEncodeSpoofedLiquidator()
+        external
+        givenPositionIsInsolvent
+        whenPriorityLiquidationIsEnabled
+        whenCurrentLTVIsBelowDisablePriorityLiquidationThreshold
+    {
+        bytes memory spoofedLiquidationData = abi.encode(PRIORITY_LIQUIDATOR, hex"0101");
+
+        // it should pass msg.sender to liquidation engine as liquidator
+        // it should pass the full encoded bytes to liquidation engine as liquidationData
+        // it should not grant priority-liquidator privileges to spoofedLiquidator
+        _fundLiquidator(EXTERNAL_LIQUIDATOR, 1 ether);
+        _expectPrepareLiquidation(EXTERNAL_LIQUIDATOR, spoofedLiquidationData);
+        vm.prank(EXTERNAL_LIQUIDATOR);
+        vm.expectRevert(
+            IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationUnauthorized.selector
+        );
+        market.liquidate(USER, hex"", spoofedLiquidationData);
+
+        _fundLiquidator(PRIORITY_LIQUIDATOR, 1 ether);
+        _expectPrepareLiquidation(PRIORITY_LIQUIDATOR, hex"");
+        vm.prank(PRIORITY_LIQUIDATOR);
+        (uint256 collateralAmount, uint256 repayAmount,) = market.liquidate(USER, hex"", hex"");
+        assertGt(collateralAmount, 0);
+        assertGt(repayAmount, 0);
+    }
+
+    function test_WhenCallerIsAuthorizedLiquidationPeriphery_WhenLiquidationDataIsNotValidAbiEncode()
+        external
+        givenPositionIsInsolvent
+    {
+        vm.prank(OWNER);
+        AltoBaseMarket(address(market)).setAuthorizedLiquidationPeriphery(address(this), true);
+
+        _fundLiquidator(address(this), 1 ether);
+
+        // it should revert on abi.decode
+        vm.expectRevert();
+        market.liquidate(USER, hex"", hex"deadbeef");
+    }
+
+    function test_WhenCallerIsAuthorizedLiquidationPeriphery_WhenLiquidationDataIsAbiEncodeOriginalLiquidator()
+        external
+        givenPositionIsInsolvent
+        whenPriorityLiquidationIsEnabled
+        whenCurrentLTVIsBelowDisablePriorityLiquidationThreshold
+    {
+        vm.prank(OWNER);
+        AltoBaseMarket(address(market)).setAuthorizedLiquidationPeriphery(address(this), true);
+
+        _fundLiquidator(address(this), 1 ether);
+
+        bytes memory innerLiquidationData = hex"0102";
+
+        // it should pass originalLiquidator to liquidation engine as liquidator
+        // it should pass originalLiquidationData to liquidation engine as liquidationData
+        // it should emit Liquidation event with msg.sender as liquidator
+        _expectPrepareLiquidation(PRIORITY_LIQUIDATOR, innerLiquidationData);
+        vm.expectEmit(true, false, false, false);
+        emit IMarketEvents.Liquidation(USER, address(this), 0, 0, 0, 0, 0, 0);
+
+        (uint256 collateralAmount, uint256 repayAmount, uint256 protocolFee) =
+            market.liquidate(USER, hex"", abi.encode(PRIORITY_LIQUIDATOR, innerLiquidationData));
+
+        assertGt(collateralAmount, 0);
+        assertGt(repayAmount, 0);
+        assertGt(protocolFee, 0);
     }
 
     modifier givenPositionIsInsolvent() {

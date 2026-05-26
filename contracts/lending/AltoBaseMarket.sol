@@ -89,8 +89,11 @@ abstract contract AltoBaseMarket is
     /// @inheritdoc IMarketBase
     address public liquidationEngine;
 
+    /// @inheritdoc IMarketBase
+    mapping(address => bool) public authorizedLiquidationPeriphery;
+
     /// upgrade gap (previous slot has 12 bytes left)
-    uint256[35] private __gap_base;
+    uint256[34] private __gap_base;
 
     function __AltoBaseMarket_init(BaseMarketInitParams memory _initParams, MarketType _marketType)
         internal
@@ -190,6 +193,16 @@ abstract contract AltoBaseMarket is
         liquidationEngine = _liquidationEngine;
 
         IAltoLiquidationEngine(liquidationEngine).setMarketOnce(address(this));
+    }
+
+    /// @inheritdoc IMarketBase
+    function setAuthorizedLiquidationPeriphery(address periphery, bool value) external onlyOwner {
+        if (periphery == address(0)) {
+            revert AltoBaseMarketInvalidInput();
+        }
+
+        authorizedLiquidationPeriphery[periphery] = value;
+        emit SetAuthorizedLiquidationPeriphery(periphery, value);
     }
 
     /// @inheritdoc IMarketBase
@@ -544,18 +557,23 @@ abstract contract AltoBaseMarket is
     /// @return The amount of collateral received.
     /// @return The amount of assets repaid.
     /// @return The amount of protocol fee paid.
-    function _liquidate(address borrower, bytes calldata callbackData, bytes calldata liquidationData)
+    function _liquidate(address borrower, bytes calldata callbackData, bytes memory liquidationData)
         internal
         virtual
         returns (uint256, uint256, uint256)
     {
         _accrueInterest();
+        address originalLiquidator = msg.sender;
+
+        if (authorizedLiquidationPeriphery[msg.sender]) {
+            (originalLiquidator, liquidationData) = abi.decode(liquidationData, (address, bytes));
+        }
 
         LiquidationEngineResult memory result = IAltoLiquidationEngine(liquidationEngine)
             .prepareLiquidation(
                 LiquidationEngineInput({
                     borrower: borrower,
-                    liquidator: msg.sender,
+                    liquidator: originalLiquidator,
                     totalSupply: totalSupply,
                     totalBorrowed: totalBorrowed,
                     position: position[borrower],

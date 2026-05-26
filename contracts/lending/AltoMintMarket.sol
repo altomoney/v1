@@ -248,7 +248,7 @@ contract AltoMintMarket is AltoBaseMarket {
         return super._repay(assets, shares, onBehalf);
     }
 
-    function _liquidate(address borrower, bytes calldata callbackData, bytes calldata liquidationData)
+    function _liquidate(address borrower, bytes calldata callbackData, bytes memory liquidationData)
         internal
         override
         returns (uint256, uint256, uint256)

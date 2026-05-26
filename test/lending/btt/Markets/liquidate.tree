@@ -3,6 +3,21 @@ AltoBaseMarket::liquidate()
 │   └── it should revert
 ├── given position is solvent
 │   └── it should revert with DlbDcfPriorityLiquidationEngineLiquidatingSolventPosition
+├── given liquidator identity forwarding
+│   ├── when caller is not authorized liquidation periphery
+│   │   ├── when liquidationData is empty
+│   │   │   └── it should pass msg.sender to liquidation engine as liquidator
+│   │   └── when liquidationData is abi.encode(spoofedLiquidator, innerLiquidationData)
+│   │       ├── it should pass msg.sender to liquidation engine as liquidator
+│   │       ├── it should pass the full encoded bytes to liquidation engine as liquidationData
+│   │       └── it should not grant priority-liquidator privileges to spoofedLiquidator
+│   └── when caller is authorized liquidation periphery
+│       ├── when liquidationData is not valid abi.encode(address, bytes)
+│       │   └── it should revert on abi.decode
+│       └── when liquidationData is abi.encode(originalLiquidator, originalLiquidationData)
+│           ├── it should pass originalLiquidator to liquidation engine as liquidator
+│           ├── it should pass originalLiquidationData to liquidation engine as liquidationData
+│           └── it should emit Liquidation event with msg.sender as liquidator
 ├── given position is insolvent
 │   ├── when priority liquidation is enabled
 │   │   ├── when current LTV is below disable priority liquidation threshold
@@ -20,7 +35,7 @@ AltoBaseMarket::liquidate()
 │   │   │   │           │       └── it should proceed with liquidation
 │   │   │   │           └── when liquidator is not the tagger
 │   │   │   │               ├── when combined grace periods have not elapsed
-│   │   │   │               │   └── it should revert with ADlbDcfPriorityLiquidationEngineLiquidationUnauthorized
+│   │   │   │               │   └── it should revert with DlbDcfPriorityLiquidationEngineLiquidationUnauthorized
 │   │   │   │               └── when combined grace periods have elapsed
 │   │   │   │                   └── it should proceed with liquidation
 │   │   │   └── when liquidator is priority liquidator
@@ -59,12 +74,12 @@ AltoBaseMarket::liquidate()
 │   └── when borrower has collateral remaining
 │       └── it should not apply bad debt
 ├── given token transfers
-│   ├── it should transfer collateral tokens to liquidator
-│   ├── it should transfer borrow tokens from liquidator to market
+│   ├── it should transfer collateral tokens to msg.sender
+│   ├── it should transfer borrow tokens from msg.sender to market
 │   └── when callback data is provided
-│       ├── it should call onLiquidateCallback
+│       ├── it should call onLiquidateCallback on msg.sender
 │       └── it should pass collateral amount and data
 ├── given event emission
-│   └── it should emit Liquidation event with correct parameters
+│   └── it should emit Liquidation event with msg.sender as liquidator
 └── given function completion
     └── it should return collateral amount and repay amount

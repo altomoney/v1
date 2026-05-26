@@ -35,6 +35,9 @@ interface ILiquidationPeripheryEvents {
 
     /// @notice Emitted when the USM registry is set
     event UsmRegistrySet(address indexed oldUsmRegistry, address indexed newUsmRegistry);
+
+    /// @notice Emitted when the treasury is set
+    event TreasurySet(address indexed oldTreasury, address indexed newTreasury);
 }
 
 interface ILiquidationPeripheryBase is ILiquidationPeripheryErrors, ILiquidationPeripheryEvents {
@@ -43,6 +46,7 @@ interface ILiquidationPeripheryBase is ILiquidationPeripheryErrors, ILiquidation
     /// @param borrower The address of the borrower to liquidate the position for
     /// @param usm The address of the USM to use for the liquidation
     /// @param liquidationData Additional data for the liquidation
+    /// @dev the periphery needs to encode(msg.sender, liquidationData) and pass it to the market.liquidate function so that market can identify the original liquidator
     /// @param liquidationPeripheryCallbackData Additional data to passed to the callback receiver of liquidation periphery contract
     function liquidate(
         address market,
@@ -66,6 +70,13 @@ interface ILiquidationPeripheryBase is ILiquidationPeripheryErrors, ILiquidation
     /// @notice Returns the address of the USM registry
     function usmRegistry() external view returns (address);
 
+    /// @notice Returns the address of the treasury
+    function treasury() external view returns (address);
+
+    /// @notice Sets the treasury
+    /// @param _treasury The address of the treasury
+    function setTreasury(address _treasury) external;
+
     /// @notice Sets the USM registry
     /// @param _usmRegistry The address of the USM registry
     function setUsmRegistry(address _usmRegistry) external;
@@ -73,6 +84,5 @@ interface ILiquidationPeripheryBase is ILiquidationPeripheryErrors, ILiquidation
     /// @notice Recovers ERC20 tokens from the contract
     /// @param tokenAddress The address of the token to recover
     /// @param tokenAmount The amount of tokens to recover
-    /// @param recipient The recipient of the tokens
-    function recoverERC20(address tokenAddress, uint256 tokenAmount, address recipient) external;
+    function recoverERC20(address tokenAddress, uint256 tokenAmount) external;
 }

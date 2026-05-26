@@ -37,9 +37,12 @@ abstract contract LiquidationPeripheryCommon is Test, TestHelperOz5 {
     address internal immutable OWNER = makeAddr("Owner");
     address internal immutable NON_OWNER = makeAddr("NonOwner");
     address internal immutable LIQUIDATOR = makeAddr("Liquidator");
+    address internal immutable TAGGER = makeAddr("Tagger");
+    address internal immutable OTHER_LIQUIDATOR = makeAddr("OtherLiquidator");
     address internal immutable BORROWER = makeAddr("Borrower");
     address internal immutable SUPPLIER = makeAddr("Supplier");
     address internal immutable STABLE_TREASURY = makeAddr("StableTreasury");
+    address internal immutable TREASURY = makeAddr("Treasury");
 
     uint256 internal constant ONE_TO_ONE_PRICE_RATIO = 1e18;
     uint256 internal constant EXCESS_SELL_PRICE_RATIO = 12e17;
@@ -83,7 +86,7 @@ abstract contract LiquidationPeripheryCommon is Test, TestHelperOz5 {
         usmRegistry = new UsmRegistry(OWNER);
         vm.startPrank(OWNER);
         usmRegistry.addUsm(address(usm));
-        periphery = new LiquidationPeriphery(OWNER, address(borrowToken), address(usmRegistry));
+        periphery = new LiquidationPeriphery(OWNER, address(borrowToken), address(usmRegistry), TREASURY);
         _grantPeripheryUsmSellPermission();
 
         swapper = new MockSwapper();
@@ -97,6 +100,7 @@ abstract contract LiquidationPeripheryCommon is Test, TestHelperOz5 {
         vm.startPrank(OWNER);
         periphery.setSupportedMarket(address(borrowMarket), true);
         periphery.setSupportedMarket(address(mintMarket), true);
+        _authorizePeripheryOnMarkets();
         registry.addBorrowMarket(address(borrowMarket));
         registry.addMintMarket(address(mintMarket));
         borrowToken.setMinterStatus(address(this), true);
@@ -366,6 +370,45 @@ abstract contract LiquidationPeripheryCommon is Test, TestHelperOz5 {
 
     function _assertUnderlyingApprovalResetToUsm() internal view {
         assertEq(underlyingToken.allowance(address(periphery), address(usm)), 0);
+    }
+
+    function _authorizePeripheryOnMarkets() internal {
+        borrowMarket.setAuthorizedLiquidationPeriphery(address(periphery), true);
+        mintMarket.setAuthorizedLiquidationPeriphery(address(periphery), true);
+    }
+
+    function _deauthorizePeripheryOnMarkets() internal {
+        vm.startPrank(OWNER);
+        borrowMarket.setAuthorizedLiquidationPeriphery(address(periphery), false);
+        mintMarket.setAuthorizedLiquidationPeriphery(address(periphery), false);
+        vm.stopPrank();
+    }
+
+    function _enablePriorityLiquidation(IMarket target) internal {
+        address liquidationEngine = target.liquidationEngine();
+        LiquidationConfiguration memory config =
+            IDcfDlbPriorityLiquidationEngine(liquidationEngine).liquidationConfiguration();
+        config.isEnabledPriorityLiquidation = true;
+        vm.prank(OWNER);
+        IDcfDlbPriorityLiquidationEngine(liquidationEngine).setLiquidationConfiguration(config);
+    }
+
+    function _setPriorityLiquidator(IMarket target, address liquidator, bool status) internal {
+        address liquidationEngine = target.liquidationEngine();
+        vm.prank(OWNER);
+        IDcfDlbPriorityLiquidationEngine(liquidationEngine).setPriorityLiquidator(liquidator, status);
+    }
+
+    function _setupBorrowMarketPriorityLiquidation() internal {
+        _createInsolventPosition(borrowMarket, true, BORROWER);
+        _enablePriorityLiquidation(borrowMarket);
+    }
+
+    function _fundSimpleLiquidatorForPriorityLiquidation(uint256 repayAmountBound) internal {
+        (uint256 assetAmount,,,) = usm.getAssetAmountForSellAsset(repayAmountBound, address(periphery));
+        _transferUnderlyingFromSwapperToSimpleLiquidator(assetAmount);
+        vm.prank(address(simpleLiquidator));
+        underlyingToken.approve(address(periphery), type(uint256).max);
     }
 
     function _liquidationCallbackData(address market) internal pure returns (bytes memory) {

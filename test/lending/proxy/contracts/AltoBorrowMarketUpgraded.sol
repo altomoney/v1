@@ -2,9 +2,9 @@
 pragma solidity ^0.8.0;
 
 import {AltoBaseMarketUpgraded} from "./AltoBaseMarketUpgraded.sol";
-import {LiquidationConfiguration} from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";
 import {BaseMarketInitParams, BorrowMarketInitParams, MarketType} from "@alto/lending/interfaces/IMarket.sol";
 import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
+import {IAltoLiquidationEngine} from "@alto/lending/interfaces/IAltoLiquidationEngine.sol";
 
 /// @custom:oz-upgrades-from AltoBorrowMarket
 contract AltoBorrowMarketUpgraded is AltoBaseMarketUpgraded {
@@ -31,6 +31,16 @@ contract AltoBorrowMarketUpgraded is AltoBaseMarketUpgraded {
             revert AltoBaseMarketInvalidInput();
         }
         _borrowOpeningFee = _borrowOpeningFeeWad;
+    }
+
+    function setFeeRecipient(address _feeRecipient) external override onlyOwner {
+        uint256 protocolFeePercentage = IAltoLiquidationEngine(liquidationEngine).protocolFeePercentage();
+        if (_feeRecipient == address(0) && (borrowOpeningFee() > 0 || protocolFeePercentage > 0)) {
+            revert AltoBaseMarketInvalidInput();
+        }
+
+        emit SetFeeRecipient(feeRecipient, _feeRecipient);
+        feeRecipient = _feeRecipient;
     }
 
     /// @dev Reinitializer for version 2 upgrade - initializes new storage variables

@@ -115,6 +115,12 @@ interface IMarketEvents {
     /// If set to false, the callback contract will be disallowed as an authorized callback.
     event SetAuthorizedCallback(address indexed callback, bool isAuthorized);
 
+    /// @notice Emitted when the authorized liquidation periphery is set
+    /// @param periphery The address of the authorized liquidation periphery
+    /// @param isAuthorized If set to true, the liquidation periphery will be allowed as an authorized liquidation periphery.
+    /// If set to false, the liquidation periphery will be disallowed as an authorized liquidation periphery.
+    event SetAuthorizedLiquidationPeriphery(address indexed periphery, bool isAuthorized);
+
     /// @notice Emitted when a user supplies tokens to the lending market
     /// @param caller The address of the caller who is supplying tokens
     /// @param onBehalf The address of the user who is receiving the ownership of supplied tokens
@@ -227,6 +233,9 @@ interface IMarketBase is IMarketErrors, IMarketEvents, IAuth, IPausable {
     /// @dev This is used to allow for leverage and deleverage.
     function authorizedCallbacks(address callback) external view returns (bool);
 
+    /// @notice Authorized contracts to be called during liquidation.
+    function authorizedLiquidationPeriphery(address periphery) external view returns (bool);
+
     /// @notice Contract used for Interest Rate Model calculation when market needs to accrue interest.
     function irm() external view returns (address);
 
@@ -272,6 +281,12 @@ interface IMarketBase is IMarketErrors, IMarketEvents, IAuth, IPausable {
     /// If set to false, the callback contract will be disallowed as an authorized callback.
     /// @dev This is used to allow for leverage and deleverage.
     function setAuthorizedCallback(address callback, bool isAuthorized) external;
+
+    /// @notice Function to set an authorized liquidation periphery contract.
+    /// @param periphery The address of the liquidation periphery contract
+    /// @param isAuthorized If set to true, the liquidation periphery contract will be allowed as an authorized liquidation periphery.
+    /// If set to false, the liquidation periphery contract will be disallowed as an authorized liquidation periphery.
+    function setAuthorizedLiquidationPeriphery(address periphery, bool isAuthorized) external;
 
     /// @notice Function to supply the borrow token to the market and make it available for borrowing.
     /// @param assets The amount of assets supplied
@@ -379,6 +394,10 @@ interface IMarketBase is IMarketErrors, IMarketEvents, IAuth, IPausable {
     /// @param borrower The address of the borrower being liquidated
     /// @param callbackData Additional data for the liquidator contract
     /// @param liquidationData Additional data for the liquidation engine
+    /// @dev If caller(msg.sender) is an authorized liquidation periphery, then liquidationData needs to be abi.encode(originalLiquidator, originalLiquidationData)
+    /// @dev originalLiquidationData will be passed to the liquidation engine 
+    /// @dev originalLiquidator will be used for checks of priority liquidation
+    /// @dev if caller is not authorized liquidation periphery, then liquidationData will be passed directly to the liquidation engine
     /// @return repaidBorrow The amount of borrow token repaid
     /// @return repaidBorrowShares The amount of borrow shares repaid
     /// @return protocolFee The amount of protocol credited to the fee recipient
