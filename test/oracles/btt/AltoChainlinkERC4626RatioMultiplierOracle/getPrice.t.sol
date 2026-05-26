@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
-import {AltoChainlinkERC4626RatioMultiplierOracleCommon} from
-    "./AltoChainlinkERC4626RatioMultiplierOracleCommon.t.sol";
+import {AltoChainlinkERC4626RatioMultiplierOracleCommon} from "./AltoChainlinkERC4626RatioMultiplierOracleCommon.t.sol";
 import {
     AltoChainlinkERC4626RatioMultiplierOracle
 } from "@alto/oracles/AltoChainlinkERC4626RatioMultiplierOracle/AltoChainlinkERC4626RatioMultiplierOracle.sol";

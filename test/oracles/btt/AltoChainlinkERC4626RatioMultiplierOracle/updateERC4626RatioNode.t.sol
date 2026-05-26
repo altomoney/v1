@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
-import {AltoChainlinkERC4626RatioMultiplierOracleCommon} from
-    "./AltoChainlinkERC4626RatioMultiplierOracleCommon.t.sol";
+import {AltoChainlinkERC4626RatioMultiplierOracleCommon} from "./AltoChainlinkERC4626RatioMultiplierOracleCommon.t.sol";
 import {
     AltoChainlinkERC4626RatioMultiplierOracle
 } from "@alto/oracles/AltoChainlinkERC4626RatioMultiplierOracle/AltoChainlinkERC4626RatioMultiplierOracle.sol";
 import {ModuleERC4626Ratio} from "@alto/oracles/modules/ModuleERC4626Ratio.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {IAltoChainlinkERC4626RatioMultiplierOracleEvents} from
-    "@alto/oracles/interfaces/IAltoChainlinkERC4626RatioMultiplierOracle.sol";
+import {
+    IAltoChainlinkERC4626RatioMultiplierOracleEvents
+} from "@alto/oracles/interfaces/IAltoChainlinkERC4626RatioMultiplierOracle.sol";
 import {ERC4626RatioNode} from "@alto/oracles/interfaces/IModuleNode.sol";
 
 contract AltoChainlinkERC4626RatioMultiplierOracleUpdateERC4626RatioNode is

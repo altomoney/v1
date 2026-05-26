@@ -199,10 +199,7 @@ interface IAdvancedPermissionsUsmFeeStrategy {
      * @param originator The address of the originator of the buy request
      * @return The gross amount of Stable Token being bought (total amount minus fee)
      */
-    function getGrossAmountFromTotalBought(uint256 totalAmount, address originator)
-        external
-        view
-        returns (uint256);
+    function getGrossAmountFromTotalBought(uint256 totalAmount, address originator) external view returns (uint256);
 
     /**
      * @notice Returns the amount of Stable Token being sold based on the total sold amount
@@ -210,8 +207,5 @@ interface IAdvancedPermissionsUsmFeeStrategy {
      * @param originator The address of the originator of the sell request
      * @return The gross amount of Stable Token being sold (total amount plus fee)
      */
-    function getGrossAmountFromTotalSold(uint256 totalAmount, address originator)
-        external
-        view
-        returns (uint256);
+    function getGrossAmountFromTotalSold(uint256 totalAmount, address originator) external view returns (uint256);
 }

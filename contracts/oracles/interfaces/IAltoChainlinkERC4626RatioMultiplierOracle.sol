@@ -2,7 +2,12 @@
 pragma solidity >=0.8.0;
 
 import {IOracle} from "@alto/oracles/interfaces/IOracle.sol";
-import {ChainlinkNode, ERC4626RatioNode, MultiplierNode, ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
+import {
+    ChainlinkNode,
+    ERC4626RatioNode,
+    MultiplierNode,
+    ConversionDirection
+} from "@alto/oracles/interfaces/IModuleNode.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
 interface IAltoChainlinkERC4626RatioMultiplierOracleErrors {}
@@ -54,7 +59,14 @@ interface IAltoChainlinkERC4626RatioMultiplierOracleStaticTypes is IAltoChainlin
     function chainlinkNode()
         external
         view
-        returns (AggregatorV3Interface feed, ConversionDirection direction, uint32 stalePeriod, uint8 inDecimals, uint8 outDecimals, uint8 feedDecimals);
+        returns (
+            AggregatorV3Interface feed,
+            ConversionDirection direction,
+            uint32 stalePeriod,
+            uint8 inDecimals,
+            uint8 outDecimals,
+            uint8 feedDecimals
+        );
 
     /// @notice Returns the ERC4626 ratio node configuration as individual fields
     function erc4626RatioNode()

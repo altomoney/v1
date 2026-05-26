@@ -166,16 +166,13 @@ contract AltoLeverageSwapperMultiTargetTest is Test {
 
         bytes memory swapParams = abi.encode(
             SwapParamsMultiTarget({
-                minAmountOut: PT_REUSD_MIN_AMOUNT_OUT,
-                swapTarget: PENDLE_ROUTER_V4,
-                swapData: swapData
+                minAmountOut: PT_REUSD_MIN_AMOUNT_OUT, swapTarget: PENDLE_ROUTER_V4, swapData: swapData
             })
         );
 
         vm.prank(caller);
-        (bool success,) = address(swapper).call(
-            abi.encodeCall(swapper.swap, (DUSD, PT_REUSD, DUSD_AMOUNT_IN, swapParams))
-        );
+        (bool success,) =
+            address(swapper).call(abi.encodeCall(swapper.swap, (DUSD, PT_REUSD, DUSD_AMOUNT_IN, swapParams)));
 
         assertFalse(success, "pendle paraswap reverse route should revert on the pinned fork block");
     }
