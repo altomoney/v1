@@ -172,6 +172,20 @@ contract AltoBorrowMarketliquidate is MarketCommon {
         market.liquidate(USER, hex"", hex"deadbeef");
     }
 
+    function test_WhenCallerIsAuthorizedLiquidationPeriphery_WhenOriginalLiquidatorIsZeroAddress()
+        external
+        givenPositionIsInsolvent
+    {
+        vm.prank(OWNER);
+        AltoBaseMarket(address(market)).setAuthorizedLiquidationPeriphery(address(this), true);
+
+        _fundLiquidator(address(this), 1 ether);
+
+        // it should revert with AltoBaseMarketInvalidInput
+        vm.expectRevert(abi.encodeWithSelector(IMarketErrors.AltoBaseMarketInvalidInput.selector));
+        market.liquidate(USER, hex"", abi.encode(address(0), hex""));
+    }
+
     function test_WhenCallerIsAuthorizedLiquidationPeriphery_WhenLiquidationDataIsAbiEncodeOriginalLiquidator()
         external
         givenPositionIsInsolvent

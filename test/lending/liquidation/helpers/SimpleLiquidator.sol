@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {ILiquidateCallback} from "@alto/lending/interfaces/IMarketCallbacks.sol";
 import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
 import {IAdvancedPermissionsUsm} from "@alto/usm/interfaces/IAdvancedPermissionsUsm.sol";
 import {ILiquidationPeripheryBase} from "@alto/lending/liquidation/interfaces/ILiquidationPeriphery.sol";
+import {ILiquidationPeripheryCallback} from "@alto/lending/liquidation/interfaces/ILiquidationPeripheryCallback.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {MockSwapper} from "./MockSwapper.sol";
 
 /// @dev Test helper liquidator: swaps seized collateral to USM underlying via MockSwapper, then approves periphery.
-contract SimpleLiquidator is ILiquidateCallback {
+contract SimpleLiquidator is ILiquidationPeripheryCallback {
     using SafeERC20 for IERC20;
 
     address public immutable periphery;
@@ -32,9 +32,11 @@ contract SimpleLiquidator is ILiquidateCallback {
         swapper = MockSwapper(swapper_);
     }
 
-    /// @inheritdoc ILiquidateCallback
+    /// @inheritdoc ILiquidationPeripheryCallback
     /// @dev Periphery passes required underlying amount as `assetsToRepay`; `data` is abi.encode(market).
-    function onLiquidateCallback(uint256 assetsToRepay, uint256 collateralReceived, bytes calldata data) external {
+    function onLiquidationPeripheryCallback(uint256 assetsToRepay, uint256 collateralReceived, bytes calldata data)
+        external
+    {
         if (msg.sender != periphery) revert InvalidCaller();
 
         address underlyingAsset = usm.UNDERLYING_ASSET();

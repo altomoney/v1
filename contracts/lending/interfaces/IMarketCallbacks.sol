@@ -22,10 +22,10 @@ interface IRemoveCollateralCallback {
 /// @notice Callback interface for liquidator to call during liquidation
 interface ILiquidateCallback {
     /// @notice Callback function for liquidator to call during liquidation
-    /// @param assetsToRepay The amount of token to be repaid by the callback receiver
-    /// @dev for the callback receiver of AltoBaseMarket.liquidate, this will be amount of borrow token of market
-    /// for the callback receiver of LiquidationPeriphery.onLiquidateCallback, this will be amount of underlying asset of USM
-    /// @param collateralReceived The amount of collateral received by the liquidator
+    /// @param assetsToRepay The amount of token to be repaid by the callback receiver, this will be amount of borrow token of market
+    /// @dev The callback receiver needs to give approval of assetsToRepay of borrow token of market to the market
+    /// @param collateralReceived The amount of collateral received by the liquidator receiving the callback
+    /// @dev The callback receiver needs to give approval of collateralReceived of collateral token of market to the market
     /// @param data Additional data for the liquidation
     function onLiquidateCallback(uint256 assetsToRepay, uint256 collateralReceived, bytes calldata data) external;
 }

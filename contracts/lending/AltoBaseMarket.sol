@@ -12,7 +12,14 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 
 import {ILendingOracle, LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 
-import {Balance, Position, BaseMarketInitParams, MarketType} from "@alto/lending/interfaces/IMarket.sol";
+import {
+    Balance,
+    Position,
+    BaseMarketInitParams,
+    MarketType,
+    IMarketStaticTypes,
+    IMarketBase
+} from "@alto/lending/interfaces/IMarket.sol";
 import {AuthUpgradeable} from "@alto/utils/AuthUpgradeable.sol";
 import {IIrm} from "@alto/lending/interfaces/IIrm.sol";
 
@@ -20,7 +27,6 @@ import {Uint128Converter} from "./libraries/Uint128Converter.sol";
 
 import {FixedPointMath, MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 import {PAUSE_TYPE, FROZEN_TYPE} from "@alto/utils/Constants.sol";
-import {IMarketStaticTypes, IMarketBase} from "@alto/lending/interfaces/IMarket.sol";
 import {Pausable, IPausable} from "@alto/utils/Pausable.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
 import {
@@ -567,6 +573,10 @@ abstract contract AltoBaseMarket is
 
         if (authorizedLiquidationPeriphery[msg.sender]) {
             (originalLiquidator, liquidationData) = abi.decode(liquidationData, (address, bytes));
+
+            if (originalLiquidator == address(0)) {
+                revert AltoBaseMarketInvalidInput();
+            }
         }
 
         LiquidationEngineResult memory result = IAltoLiquidationEngine(liquidationEngine)

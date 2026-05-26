@@ -15,6 +15,8 @@ AltoBaseMarket::liquidate()
 │       ├── when liquidationData is not valid abi.encode(address, bytes)
 │       │   └── it should revert on abi.decode
 │       └── when liquidationData is abi.encode(originalLiquidator, originalLiquidationData)
+│           ├── when originalLiquidator is zero address
+│           │   └── it should revert with AltoBaseMarketInvalidInput
 │           ├── it should pass originalLiquidator to liquidation engine as liquidator
 │           ├── it should pass originalLiquidationData to liquidation engine as liquidationData
 │           └── it should emit Liquidation event with msg.sender as liquidator

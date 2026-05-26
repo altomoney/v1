@@ -451,20 +451,13 @@ contract LiquidationPeriphery_Liquidate_Test is LiquidationPeripheryCommon {
         _assertLiquidationSucceeded(seized, repaid, protocolFee);
     }
 
-    function test_GivenMarketHasNotAuthorizedPeriphery_WhenPriorityLiquidationIsEnabled_WhenPositionIsNotTagged()
-        public
-    {
-        _setupBorrowMarketPriorityLiquidation();
+    function test_WhenMarketHasNotAuthorizedPeripheryOnMarket() public {
+        _setupBorrowMarketLiquidation();
         _deauthorizePeripheryOnMarkets();
-        _setPriorityLiquidator(borrowMarket, address(simpleLiquidator), true);
-        _fundSimpleLiquidatorForPriorityLiquidation(100 ether);
 
-        _expectMarketLiquidateWithLiquidationData(borrowMarket, "", "");
-        _expectPrepareLiquidation(borrowMarket, BORROWER, address(periphery), "");
+        // it should revert with UnauthorizedLiquidationPeriphery
         vm.prank(LIQUIDATOR);
-        vm.expectRevert(
-            IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationUnauthorized.selector
-        );
+        vm.expectRevert(ILiquidationPeripheryErrors.UnauthorizedLiquidationPeriphery.selector);
         simpleLiquidator.liquidateMarket(address(borrowMarket), BORROWER, address(usm), "", "");
     }
 }
