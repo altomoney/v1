@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {IMarketRegistry} from "@alto/utils/interfaces/IMarketRegistry.sol";
-import {IAdvancedPermissionsUsm} from "@alto/usm/interfaces/IAdvancedPermissionsUsm.sol";
-
 interface ILiquidationPeripheryErrors {
     /// @notice Thrown when the address passed is the zero address.
     error ZeroAddress();
@@ -11,6 +8,8 @@ interface ILiquidationPeripheryErrors {
     error InvalidInput();
     /// @notice Thrown when the address passed is already set.
     error AlreadySet();
+    /// @notice Thrown when the periphery is not authorized to liquidate the market.
+    error UnauthorizedLiquidationPeriphery();
 }
 
 interface ILiquidationPeripheryEvents {
@@ -45,9 +44,10 @@ interface ILiquidationPeripheryBase is ILiquidationPeripheryErrors, ILiquidation
     /// @param market The address of the market to liquidate the position in
     /// @param borrower The address of the borrower to liquidate the position for
     /// @param usm The address of the USM to use for the liquidation
-    /// @param liquidationData Additional data for the liquidation
-    /// @dev the periphery needs to encode(msg.sender, liquidationData) and pass it to the market.liquidate function so that market can identify the original liquidator
-    /// @param liquidationPeripheryCallbackData Additional data to passed to the callback receiver of liquidation periphery contract
+    /// @param liquidationData Additional data for the liquidation engine
+    /// @param liquidationPeripheryCallbackData Additional data passed to the liquidator's callback via this periphery
+    /// @dev Implementations must always pack `msg.sender`(original liquidator) in callbackData while calling IMarket.liquidate function.
+    /// @dev Original liquidator address is needed to make a call from LiquidationPeriphery to liquidator contract when liquidationPeripheryCallbackData is provided.
     function liquidate(
         address market,
         address borrower,

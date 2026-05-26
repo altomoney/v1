@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {ILiquidateCallback} from "@alto/lending/interfaces/IMarketCallbacks.sol";
 import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
 import {IAdvancedPermissionsUsm} from "@alto/usm/interfaces/IAdvancedPermissionsUsm.sol";
 import {ILiquidationPeripheryBase} from "@alto/lending/liquidation/interfaces/ILiquidationPeriphery.sol";
+import {ILiquidationPeripheryCallback} from "@alto/lending/liquidation/interfaces/ILiquidationPeripheryCallback.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /// @dev Sample liquidator that resembles to mainnet implementation for fork testing
 /// @dev This contract doesn't have any checks on who is caller and is for testing purposes and should not be used in production
-contract Liquidator is ILiquidateCallback {
+contract Liquidator is ILiquidationPeripheryCallback {
     using SafeERC20 for IERC20;
 
     address public immutable periphery;
@@ -28,8 +28,10 @@ contract Liquidator is ILiquidateCallback {
         paraswapAugustus = paraswapAugustus_;
     }
 
-    /// @inheritdoc ILiquidateCallback
-    function onLiquidateCallback(uint256 assetsToRepay, uint256 collateralReceived, bytes calldata data) external {
+    /// @inheritdoc ILiquidationPeripheryCallback
+    function onLiquidationPeripheryCallback(uint256 assetsToRepay, uint256 collateralReceived, bytes calldata data)
+        external
+    {
         if (msg.sender != periphery) revert InvalidCaller();
 
         (address market, address tokenTransferProxy, bytes memory swapCalldata) =

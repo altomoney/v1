@@ -2,15 +2,13 @@
 pragma solidity ^0.8.0;
 
 import {AltoOwnable2Step, Ownable} from "@alto/utils/AltoOwnable2Step.sol";
+import {ILiquidationPeripheryCallback} from "./interfaces/ILiquidationPeripheryCallback.sol";
 import {ILiquidateCallback} from "@alto/lending/interfaces/IMarketCallbacks.sol";
 import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {
-    ILiquidationPeripheryBase,
-    IAdvancedPermissionsUsm,
-    IMarketRegistry
-} from "./interfaces/ILiquidationPeriphery.sol";
+import {ILiquidationPeripheryBase} from "./interfaces/ILiquidationPeriphery.sol";
+import {IAdvancedPermissionsUsm} from "@alto/usm/interfaces/IAdvancedPermissionsUsm.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IUsmRegistry} from "@alto/utils/interfaces/IUsmRegistry.sol";
 
@@ -64,11 +62,12 @@ contract LiquidationPeriphery is AltoOwnable2Step, ILiquidateCallback, ILiquidat
         // msg.sender is the liquidator
         bytes memory callbackData = abi.encode(msg.sender, market, usm, liquidationPeripheryCallbackData);
 
-        bytes memory modifiedLiquidationData = liquidationData;
-
-        if (IMarket(market).authorizedLiquidationPeriphery(address(this))) {
-            modifiedLiquidationData = abi.encode(msg.sender, liquidationData);
+        if (!IMarket(market).authorizedLiquidationPeriphery(address(this))) {
+            revert UnauthorizedLiquidationPeriphery();
         }
+
+        bytes memory modifiedLiquidationData = liquidationData;
+        modifiedLiquidationData = abi.encode(msg.sender, liquidationData);
 
         (seizedCollateral, repaidBorrow, protocolFee) =
             IMarket(market).liquidate(borrower, callbackData, modifiedLiquidationData);
@@ -110,8 +109,8 @@ contract LiquidationPeriphery is AltoOwnable2Step, ILiquidateCallback, ILiquidat
         if (liquidationPeripheryCallbackData.length > 0) {
             // @dev the first argument of onLiquidateCallback for liquidator is the assetAmount and not borrowAmountToRepay
             // because liquidator needs to give approval of assetAmount of underlying asset of USM to the periphery
-            ILiquidateCallback(liquidator)
-                .onLiquidateCallback(assetAmount, collateralReceived, liquidationPeripheryCallbackData);
+            ILiquidationPeripheryCallback(liquidator)
+                .onLiquidationPeripheryCallback(assetAmount, collateralReceived, liquidationPeripheryCallbackData);
         }
 
         // transfers the underlying asset from the liquidator to the periphery

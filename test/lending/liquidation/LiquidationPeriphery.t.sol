@@ -103,7 +103,7 @@ contract LiquidationPeripheryTest is LiquidationPeripheryCommon {
         _assertPeripheryClean();
     }
 
-    /// @dev Fuzzes USM buy/sell fees and prior swap activity, then asserts `onLiquidateCallback` leaves no underlying asset on periphery.
+    /// @dev Fuzzes USM buy/sell fees and prior swap activity, then asserts periphery `onLiquidateCallback` leaves no underlying asset on periphery.
     function testFuzz_OnLiquidateCallback_NoUnderlyingDustOnPeriphery(
         uint256 buyFeeBps,
         uint256 sellFeeBps,

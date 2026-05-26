@@ -15,7 +15,7 @@ LiquidationPeriphery::onLiquidateCallback
     │   └── it should approve borrow token to market
     ├── given liquidationPeripheryCallbackData is not empty
     │   ├── it should transfer seized collateral to the liquidator
-    │   ├── it should call liquidator onLiquidateCallback with underlying asset amount and collateral received
+    │   ├── it should call liquidator onLiquidationPeripheryCallback with underlying asset amount and collateral received
     │   ├── it should forward liquidationPeripheryCallbackData to liquidator callback
     │   ├── it should leave zero approval from liquidator to periphery after pull
     │   ├── it should reset underlying approval to usm after sell
