@@ -14,24 +14,36 @@ contract LiquidationPeriphery_Constructor_Test is LiquidationPeripheryCommon {
         UsmRegistry registry = new UsmRegistry(OWNER);
 
         vm.expectRevert(ILiquidationPeripheryErrors.ZeroAddress.selector);
-        new LiquidationPeriphery(OWNER, address(0), address(registry));
+        new LiquidationPeriphery(OWNER, address(0), address(registry), TREASURY);
     }
 
     function test_RevertWhen_UsmRegistryIsZeroAddress() public {
         vm.expectRevert(ILiquidationPeripheryErrors.ZeroAddress.selector);
-        new LiquidationPeriphery(OWNER, address(borrowToken), address(0));
+        new LiquidationPeriphery(OWNER, address(borrowToken), address(0), TREASURY);
     }
 
-    function test_Constructor_SetsOwnerBorrowTokenUsmRegistryAndEmitsUsmRegistrySet() public {
+    function test_RevertWhen_TreasuryIsZeroAddress() public {
+        UsmRegistry registry = new UsmRegistry(OWNER);
+
+        vm.expectRevert(ILiquidationPeripheryErrors.ZeroAddress.selector);
+        new LiquidationPeriphery(OWNER, address(borrowToken), address(registry), address(0));
+    }
+
+    function test_Constructor_SetsOwnerBorrowTokenUsmRegistryTreasuryAndEmitsEvents() public {
         UsmRegistry registry = new UsmRegistry(OWNER);
 
         vm.expectEmit(true, true, false, true);
         emit ILiquidationPeripheryEvents.UsmRegistrySet(address(0), address(registry));
 
-        LiquidationPeriphery deployed = new LiquidationPeriphery(OWNER, address(borrowToken), address(registry));
+        vm.expectEmit(true, true, false, true);
+        emit ILiquidationPeripheryEvents.TreasurySet(address(0), TREASURY);
+
+        LiquidationPeriphery deployed =
+            new LiquidationPeriphery(OWNER, address(borrowToken), address(registry), TREASURY);
 
         assertEq(deployed.owner(), OWNER);
         assertEq(deployed.BORROW_TOKEN(), address(borrowToken));
         assertEq(address(deployed.usmRegistry()), address(registry));
+        assertEq(deployed.treasury(), TREASURY);
     }
 }

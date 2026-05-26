@@ -6,6 +6,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {UnsafeUpgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {LiquidationPeriphery} from "@alto/lending/liquidation/LiquidationPeriphery.sol";
+import {AltoMintMarket} from "@alto/lending/AltoMintMarket.sol";
 import {Liquidator} from "./Liquidator.sol";
 import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
 import {DirectionAccess} from "@alto/usm/interfaces/IAdvancedPermissionsUsm.sol";
@@ -36,6 +37,7 @@ contract LiquidationPeripheryForkTest is Test {
     address internal liquidatorEoa = makeAddr("LiquidatorEoa");
     address internal borrower = makeAddr("Borrower");
     address internal stableTreasury = makeAddr("StableTreasury");
+    address internal peripheryTreasury = makeAddr("PeripheryTreasury");
 
     LiquidationPeriphery internal periphery;
     DUSDAdvancedPermissionsUsm internal usm;
@@ -67,10 +69,22 @@ contract LiquidationPeripheryForkTest is Test {
         UsmRegistry usmRegistry = new UsmRegistry(address(this));
         usm = _deployForkUsm();
         usmRegistry.addUsm(address(usm));
-        periphery = new LiquidationPeriphery(address(this), DUSD_MAINNET, address(usmRegistry));
+        periphery = new LiquidationPeriphery(address(this), DUSD_MAINNET, address(usmRegistry), peripheryTreasury);
         liquidatorContract = new Liquidator(address(periphery), address(usm), paraswapAugustus);
 
         periphery.setSupportedMarket(WETH_MINT_MARKET, true);
+        _upgradeForkMarketAndAuthorizePeriphery();
+    }
+
+    /// @dev Mainnet mint market impl predates `authorizedLiquidationPeriphery`; upgrade on fork then whitelist periphery.
+    function _upgradeForkMarketAndAuthorizePeriphery() internal {
+        address marketOwner = Ownable(WETH_MINT_MARKET).owner();
+        address upgradedImpl = address(new AltoMintMarket());
+
+        vm.startPrank(marketOwner);
+        UnsafeUpgrades.upgradeProxy(WETH_MINT_MARKET, upgradedImpl, "");
+        IMarket(WETH_MINT_MARKET).setAuthorizedLiquidationPeriphery(address(periphery), true);
+        vm.stopPrank();
     }
 
     // test liquidation where liquidator contract has no prefunded balance

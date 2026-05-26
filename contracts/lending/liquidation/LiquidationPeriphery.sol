@@ -28,19 +28,27 @@ contract LiquidationPeriphery is AltoOwnable2Step, ILiquidateCallback, ILiquidat
     /// @inheritdoc ILiquidationPeripheryBase
     address public immutable BORROW_TOKEN;
 
+    /// @inheritdoc ILiquidationPeripheryBase
     address public usmRegistry;
+
+    /// @inheritdoc ILiquidationPeripheryBase
+    address public treasury;
 
     /// @notice Constructor
     /// @param owner The address of the owner
     /// @param _borrowToken The address of the borrow token
     /// @param _usmRegistry The address of the USM registry
-    constructor(address owner, address _borrowToken, address _usmRegistry) Ownable(owner) {
-        if (_borrowToken == address(0) || _usmRegistry == address(0)) revert ZeroAddress();
+    /// @param _treasury The address of the treasury
+    constructor(address owner, address _borrowToken, address _usmRegistry, address _treasury) Ownable(owner) {
+        if (_borrowToken == address(0) || _usmRegistry == address(0) || _treasury == address(0)) revert ZeroAddress();
 
         BORROW_TOKEN = _borrowToken;
 
         usmRegistry = _usmRegistry;
         emit UsmRegistrySet(address(0), _usmRegistry);
+
+        treasury = _treasury;
+        emit TreasurySet(address(0), _treasury);
     }
 
     /// @inheritdoc ILiquidationPeripheryBase
@@ -56,8 +64,14 @@ contract LiquidationPeriphery is AltoOwnable2Step, ILiquidateCallback, ILiquidat
         // msg.sender is the liquidator
         bytes memory callbackData = abi.encode(msg.sender, market, usm, liquidationPeripheryCallbackData);
 
+        bytes memory modifiedLiquidationData = liquidationData;
+
+        if (IMarket(market).authorizedLiquidationPeriphery(address(this))) {
+            modifiedLiquidationData = abi.encode(msg.sender, liquidationData);
+        }
+
         (seizedCollateral, repaidBorrow, protocolFee) =
-            IMarket(market).liquidate(borrower, callbackData, liquidationData);
+            IMarket(market).liquidate(borrower, callbackData, modifiedLiquidationData);
 
         // resets the approval given to market for the borrow token in onLiquidateCallback function
         IERC20(BORROW_TOKEN).forceApprove(market, 0);
@@ -128,6 +142,7 @@ contract LiquidationPeriphery is AltoOwnable2Step, ILiquidateCallback, ILiquidat
     /// @inheritdoc ILiquidationPeripheryBase
     function setSupportedMarket(address market, bool isSupported) external onlyOwner {
         if (market == address(0)) revert ZeroAddress();
+        if (IMarket(market).borrowToken() != BORROW_TOKEN) revert InvalidInput();
         supportedMarkets[market] = isSupported;
         emit SupportedMarketSet(market, isSupported);
     }
@@ -140,7 +155,14 @@ contract LiquidationPeriphery is AltoOwnable2Step, ILiquidateCallback, ILiquidat
     }
 
     /// @inheritdoc ILiquidationPeripheryBase
-    function recoverERC20(address tokenAddress, uint256 tokenAmount, address recipient) external onlyOwner {
-        IERC20(tokenAddress).safeTransfer(recipient, tokenAmount);
+    function setTreasury(address _treasury) external onlyOwner {
+        if (_treasury == address(0)) revert ZeroAddress();
+        emit TreasurySet(treasury, _treasury);
+        treasury = _treasury;
+    }
+
+    /// @inheritdoc ILiquidationPeripheryBase
+    function recoverERC20(address tokenAddress, uint256 tokenAmount) external onlyOwner {
+        IERC20(tokenAddress).safeTransfer(treasury, tokenAmount);
     }
 }

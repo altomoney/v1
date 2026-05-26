@@ -1,0 +1,10 @@
+LiquidationPeriphery::setSupportedMarket
+├── when caller is not owner
+│   └── it should revert
+├── when market is zero address
+│   └── it should revert with ZeroAddress
+├── when market borrow token does not match BORROW_TOKEN
+│   └── it should revert with InvalidInput
+└── when caller is owner and market borrow token matches BORROW_TOKEN
+    ├── it should set supportedMarkets
+    └── it should emit SupportedMarketSet

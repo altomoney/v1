@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {AltoOwnable2StepUpgradeable} from "@alto/utils/AltoOwnable2StepUpgradeable.sol";
+import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
@@ -12,12 +13,6 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 import {ILendingOracle, LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 
 import {Balance, Position, BaseMarketInitParams, MarketType} from "@alto/lending/interfaces/IMarket.sol";
-import {
-    IDcfDlbPriorityLiquidationEngine,
-    IDcfDlbPriorityLiquidationEngineEvents,
-    LiquidationConfiguration,
-    LiquidablePosition
-} from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";
 import {AuthUpgradeable} from "@alto/utils/AuthUpgradeable.sol";
 import {IIrm} from "@alto/lending/interfaces/IIrm.sol";
 
@@ -38,7 +33,6 @@ import {
     LiquidationEngineResult,
     LiquidationEngineInput
 } from "@alto/lending/interfaces/IAltoLiquidationEngine.sol";
-import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
 /// @custom:oz-upgrades-from AltoBaseMarket
 abstract contract AltoBaseMarketUpgraded is
@@ -89,7 +83,11 @@ abstract contract AltoBaseMarketUpgraded is
     /// @inheritdoc IMarketBase
     address public feeRecipient;
 
+    /// @inheritdoc IMarketBase
     address public liquidationEngine;
+
+    /// @inheritdoc IMarketBase
+    mapping(address => bool) public authorizedLiquidationPeriphery;
 
     uint256 public addedProperty1;
 
@@ -98,7 +96,7 @@ abstract contract AltoBaseMarketUpgraded is
     address public addedProperty3;
 
     /// upgrade gap (previous slot has 12 bytes left)
-    uint256[32] private __gap_base;
+    uint256[31] private __gap_base;
 
     function __AltoBaseMarket_init(BaseMarketInitParams memory _initParams, MarketType _marketType)
         internal
@@ -121,6 +119,10 @@ abstract contract AltoBaseMarketUpgraded is
 
         liquidationEngine = _initParams.liquidationEngine;
         emit SetLiquidationEngine(address(0), _initParams.liquidationEngine);
+
+        if (liquidationEngine != address(0)) {
+            IAltoLiquidationEngine(liquidationEngine).setMarketOnce(address(this));
+        }
 
         irm = _initParams.irm;
         emit SetIrm(address(0), _initParams.irm);
@@ -184,24 +186,26 @@ abstract contract AltoBaseMarketUpgraded is
         maxLtv = _maxLtv;
     }
 
+    /// @inheritdoc IMarketBase
     function setLiquidationEngine(address _liquidationEngine) external onlyOwner {
-        if (_liquidationEngine == address(0)) {
+        if (_liquidationEngine == address(0) || liquidationEngine == address(0)) {
             revert AltoBaseMarketInvalidInput();
         }
 
         emit SetLiquidationEngine(liquidationEngine, _liquidationEngine);
         liquidationEngine = _liquidationEngine;
+
+        IAltoLiquidationEngine(liquidationEngine).setMarketOnce(address(this));
     }
 
     /// @inheritdoc IMarketBase
-    function setFeeRecipient(address _feeRecipient) external virtual onlyOwner {
-        uint256 protocolFeePercentage = IAltoLiquidationEngine(liquidationEngine).protocolFeePercentage();
-        if (_feeRecipient == address(0) && (borrowOpeningFee() > 0 || protocolFeePercentage > 0)) {
+    function setAuthorizedLiquidationPeriphery(address periphery, bool value) external onlyOwner {
+        if (periphery == address(0)) {
             revert AltoBaseMarketInvalidInput();
         }
 
-        emit SetFeeRecipient(feeRecipient, _feeRecipient);
-        feeRecipient = _feeRecipient;
+        authorizedLiquidationPeriphery[periphery] = value;
+        emit SetAuthorizedLiquidationPeriphery(periphery, value);
     }
 
     /// @inheritdoc IMarketBase
@@ -516,6 +520,10 @@ abstract contract AltoBaseMarketUpgraded is
 
         (uint256 interest, uint256 borrowRate) = IIrm(irm).updateInterestRate(totalSupply.assets, totalBorrowed.assets);
 
+        if (interest == 0) {
+            return;
+        }
+
         totalSupply.assets += interest.toUint128();
         totalBorrowed.assets += interest.toUint128();
 
@@ -552,18 +560,23 @@ abstract contract AltoBaseMarketUpgraded is
     /// @return The amount of collateral received.
     /// @return The amount of assets repaid.
     /// @return The amount of protocol fee paid.
-    function _liquidate(address borrower, bytes calldata callbackData, bytes calldata liquidationData)
+    function _liquidate(address borrower, bytes calldata callbackData, bytes memory liquidationData)
         internal
         virtual
         returns (uint256, uint256, uint256)
     {
         _accrueInterest();
+        address originalLiquidator = msg.sender;
+
+        if (authorizedLiquidationPeriphery[msg.sender]) {
+            (originalLiquidator, liquidationData) = abi.decode(liquidationData, (address, bytes));
+        }
 
         LiquidationEngineResult memory result = IAltoLiquidationEngine(liquidationEngine)
             .prepareLiquidation(
                 LiquidationEngineInput({
                     borrower: borrower,
-                    liquidator: msg.sender,
+                    liquidator: originalLiquidator,
                     totalSupply: totalSupply,
                     totalBorrowed: totalBorrowed,
                     position: position[borrower],
@@ -625,13 +638,13 @@ abstract contract AltoBaseMarketUpgraded is
     }
 
     /// @inheritdoc IMarketBase
-    function governanceLiquidate(address borrower, bool _skipAccrueInterest)
+    function governanceLiquidate(address borrower, bool skipAccrueInterest)
         external
         onlyOwner
         nonReentrant
         returns (uint256, uint256)
     {
-        if (!paused[PAUSE_TYPE] && !_skipAccrueInterest) {
+        if (!paused[PAUSE_TYPE] && !skipAccrueInterest) {
             _accrueInterest();
         }
 

@@ -3,8 +3,12 @@ LiquidationPeriphery::constructor
 │   └── it should revert with ZeroAddress
 ├── when usm registry is zero address
 │   └── it should revert with ZeroAddress
+├── when treasury is zero address
+│   └── it should revert with ZeroAddress
 └── when parameters are valid
     ├── it should set owner
     ├── it should set BORROW_TOKEN
     ├── it should set usmRegistry
-    └── it should emit UsmRegistrySet
+    ├── it should set treasury
+    ├── it should emit UsmRegistrySet
+    └── it should emit TreasurySet

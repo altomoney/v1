@@ -2,18 +2,42 @@
 pragma solidity ^0.8.28;
 
 import {LiquidationPeripheryCommon} from "./LiquidationPeripheryCommon.t.sol";
-import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
+import {IMarket, IMarketBase} from "@alto/lending/interfaces/IMarket.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {
     ILiquidationPeripheryErrors,
     ILiquidationPeripheryEvents
 } from "@alto/lending/liquidation/interfaces/ILiquidationPeriphery.sol";
+import {
+    IDcfDlbPriorityLiquidationEngine,
+    IDcfDlbPriorityLiquidationEngineErrors,
+    LiquidationConfiguration
+} from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";
+import {IAltoLiquidationEngine, LiquidationEngineInput} from "@alto/lending/interfaces/IAltoLiquidationEngine.sol";
+import {IOracle} from "@alto/oracles/interfaces/IOracle.sol";
+import {IMarketEvents} from "@alto/lending/interfaces/IMarket.sol";
 
 contract LiquidationPeriphery_Liquidate_Test is LiquidationPeripheryCommon {
     struct LiquidatorBalances {
         uint256 borrow;
         uint256 collateral;
         uint256 underlying;
+    }
+
+    function _expectMarketLiquidateWithLiquidationData(
+        IMarket target,
+        bytes memory liquidationData,
+        bytes memory peripheryCallbackData
+    ) internal {
+        vm.expectCall(
+            address(target),
+            abi.encodeWithSelector(
+                IMarketBase.liquidate.selector,
+                BORROWER,
+                abi.encode(address(simpleLiquidator), address(target), address(usm), peripheryCallbackData),
+                liquidationData
+            )
+        );
     }
 
     function _liquidatorBalances(address liquidator) internal view returns (LiquidatorBalances memory balances) {
@@ -28,6 +52,9 @@ contract LiquidationPeriphery_Liquidate_Test is LiquidationPeripheryCommon {
         address targetUsm,
         bytes memory liquidationPeripheryCallbackData
     ) internal returns (uint256 seizedCollateral, uint256 repaidBorrow, uint256 protocolFee) {
+        _expectMarketLiquidateWithLiquidationData(
+            target, abi.encode(address(simpleLiquidator), ""), liquidationPeripheryCallbackData
+        );
         _expectLiquidationEvent(target, address(simpleLiquidator), borrower);
 
         vm.prank(LIQUIDATOR);
@@ -70,6 +97,32 @@ contract LiquidationPeriphery_Liquidate_Test is LiquidationPeripheryCommon {
     function _expectLiquidationEvent(IMarket target, address liquidator, address borrower) internal {
         vm.expectEmit(true, true, true, false);
         emit ILiquidationPeripheryEvents.Liquidation(address(target), liquidator, borrower, 0, 0, 0);
+    }
+
+    /// @dev Asserts `prepareLiquidation` receives the expected liquidator and liquidationData.
+    function _expectPrepareLiquidation(
+        IMarket target,
+        address borrower,
+        address liquidator,
+        bytes memory liquidationData
+    ) internal {
+        target.accrueInterest();
+
+        LiquidationEngineInput memory expectedInput = LiquidationEngineInput({
+            borrower: borrower,
+            liquidator: liquidator,
+            totalSupply: target.totalSupply(),
+            totalBorrowed: target.totalBorrowed(),
+            position: target.position(borrower),
+            maxLtv: target.maxLtv(),
+            collateralPrice: IOracle(target.oracle()).getPrice(),
+            liquidationData: liquidationData
+        });
+
+        vm.expectCall(
+            target.liquidationEngine(),
+            abi.encodeWithSelector(IAltoLiquidationEngine.prepareLiquidation.selector, expectedInput)
+        );
     }
 
     function _assertUsmLiquidationOutcome(
@@ -269,5 +322,149 @@ contract LiquidationPeriphery_Liquidate_Test is LiquidationPeripheryCommon {
 
         _assertLiquidationSucceeded(seized, repaid, protocolFee);
         _assertUsmLiquidationOutcome(mintMarket, before, seized, repaid, protocolFee, expectedRefund);
+    }
+
+    function test_GivenMarketHasAuthorizedPeriphery_WhenPeripheryCallerIsNotPriorityLiquidator_WhenPositionIsNotTagged()
+        public
+    {
+        _setupBorrowMarketPriorityLiquidation();
+        _fundSimpleLiquidatorForPriorityLiquidation(100 ether);
+
+        vm.prank(LIQUIDATOR);
+        vm.expectRevert(
+            IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationUnauthorized.selector
+        );
+        simpleLiquidator.liquidateMarket(address(borrowMarket), BORROWER, address(usm), "", "");
+    }
+
+    function test_GivenMarketHasAuthorizedPeriphery_ItShouldPassPeripheryCallerAsOriginalLiquidatorToEngine() public {
+        _setupBorrowMarketLiquidation();
+        _fundSimpleLiquidatorForEmptyCallback(100 ether);
+        _expectPrepareLiquidation(borrowMarket, BORROWER, address(simpleLiquidator), "");
+
+        (uint256 seized, uint256 repaid, uint256 protocolFee) =
+            _liquidateViaSimpleLiquidator(borrowMarket, BORROWER, address(usm), "");
+
+        _assertLiquidationSucceeded(seized, repaid, protocolFee);
+    }
+
+    function test_GivenMarketHasAuthorizedPeriphery_WhenPeripheryCallerIsPriorityLiquidator_WhenPositionIsNotTagged()
+        public
+    {
+        _setupBorrowMarketPriorityLiquidation();
+        _setPriorityLiquidator(borrowMarket, address(simpleLiquidator), true);
+        _fundSimpleLiquidatorForPriorityLiquidation(100 ether);
+
+        vm.expectEmit(true, false, false, false);
+        emit IMarketEvents.Liquidation(BORROWER, address(periphery), 0, 0, 0, 0, 0, 0);
+
+        (uint256 seized, uint256 repaid, uint256 protocolFee) =
+            _liquidateViaSimpleLiquidator(borrowMarket, BORROWER, address(usm), "");
+
+        _assertLiquidationSucceeded(seized, repaid, protocolFee);
+    }
+
+    function test_GivenMarketHasAuthorizedPeriphery_WhenPositionIsTaggedByPeripheryCaller_WhenWithinPriorityGracePeriod()
+        public
+    {
+        _setupBorrowMarketPriorityLiquidation();
+        IDcfDlbPriorityLiquidationEngine(borrowMarket.liquidationEngine())
+            .tagLiquidablePosition(BORROWER, address(simpleLiquidator));
+        _fundSimpleLiquidatorForPriorityLiquidation(100 ether);
+
+        vm.prank(LIQUIDATOR);
+        vm.expectRevert(
+            IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationUnauthorized.selector
+        );
+        simpleLiquidator.liquidateMarket(address(borrowMarket), BORROWER, address(usm), "", "");
+    }
+
+    function test_GivenMarketHasAuthorizedPeriphery_WhenPositionIsTaggedByPeripheryCaller_WhenAfterPriorityGracePeriod()
+        public
+    {
+        _setupBorrowMarketPriorityLiquidation();
+        IDcfDlbPriorityLiquidationEngine(borrowMarket.liquidationEngine())
+            .tagLiquidablePosition(BORROWER, address(simpleLiquidator));
+        _fundSimpleLiquidatorForPriorityLiquidation(100 ether);
+
+        LiquidationConfiguration memory config =
+            IDcfDlbPriorityLiquidationEngine(borrowMarket.liquidationEngine()).liquidationConfiguration();
+        vm.warp(block.timestamp + config.priorityLiquidationGracePeriod + 1);
+
+        (uint256 seized, uint256 repaid, uint256 protocolFee) =
+            _liquidateViaSimpleLiquidator(borrowMarket, BORROWER, address(usm), "");
+
+        _assertLiquidationSucceeded(seized, repaid, protocolFee);
+    }
+
+    function test_GivenMarketHasAuthorizedPeriphery_WhenPositionIsTaggedByOtherLiquidator_WhenWithinCombinedGracePeriods()
+        public
+    {
+        _setupBorrowMarketPriorityLiquidation();
+        IDcfDlbPriorityLiquidationEngine(borrowMarket.liquidationEngine()).tagLiquidablePosition(BORROWER, TAGGER);
+        _fundSimpleLiquidatorForPriorityLiquidation(100 ether);
+
+        vm.prank(LIQUIDATOR);
+        vm.expectRevert(
+            IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationUnauthorized.selector
+        );
+        simpleLiquidator.liquidateMarket(address(borrowMarket), BORROWER, address(usm), "", "");
+    }
+
+    function test_GivenMarketHasAuthorizedPeriphery_WhenPositionIsTaggedByOtherLiquidator_WhenAfterCombinedGracePeriods()
+        public
+    {
+        _setupBorrowMarketPriorityLiquidation();
+        IDcfDlbPriorityLiquidationEngine(borrowMarket.liquidationEngine()).tagLiquidablePosition(BORROWER, TAGGER);
+        _fundSimpleLiquidatorForPriorityLiquidation(100 ether);
+
+        LiquidationConfiguration memory config =
+            IDcfDlbPriorityLiquidationEngine(borrowMarket.liquidationEngine()).liquidationConfiguration();
+        vm.warp(
+            block.timestamp + config.priorityLiquidationGracePeriod + config.taggerLiquidationGracePeriod + 1
+        );
+
+        (uint256 seized, uint256 repaid, uint256 protocolFee) =
+            _liquidateViaSimpleLiquidator(borrowMarket, BORROWER, address(usm), "");
+
+        _assertLiquidationSucceeded(seized, repaid, protocolFee);
+    }
+
+    function test_GivenMarketHasAuthorizedPeriphery_WhenCurrentLtvIsAboveDisablePriorityLiquidationThreshold()
+        public
+    {
+        _setupBorrowMarketPriorityLiquidation();
+
+        LiquidationConfiguration memory config =
+            IDcfDlbPriorityLiquidationEngine(borrowMarket.liquidationEngine()).liquidationConfiguration();
+        config.disablePriorityLiquidationAbovePositionLtv = 1 ether;
+        address liquidationEngine = borrowMarket.liquidationEngine();
+        vm.prank(OWNER);
+        IDcfDlbPriorityLiquidationEngine(liquidationEngine).setLiquidationConfiguration(config);
+
+        borrowMarket.accrueInterest();
+        _fundSimpleLiquidatorForPriorityLiquidation(100 ether);
+
+        (uint256 seized, uint256 repaid, uint256 protocolFee) =
+            _liquidateViaSimpleLiquidator(borrowMarket, BORROWER, address(usm), "");
+
+        _assertLiquidationSucceeded(seized, repaid, protocolFee);
+    }
+
+    function test_GivenMarketHasNotAuthorizedPeriphery_WhenPriorityLiquidationIsEnabled_WhenPositionIsNotTagged()
+        public
+    {
+        _setupBorrowMarketPriorityLiquidation();
+        _deauthorizePeripheryOnMarkets();
+        _setPriorityLiquidator(borrowMarket, address(simpleLiquidator), true);
+        _fundSimpleLiquidatorForPriorityLiquidation(100 ether);
+
+        _expectMarketLiquidateWithLiquidationData(borrowMarket, "", "");
+        _expectPrepareLiquidation(borrowMarket, BORROWER, address(periphery), "");
+        vm.prank(LIQUIDATOR);
+        vm.expectRevert(
+            IDcfDlbPriorityLiquidationEngineErrors.DcfDlbPriorityLiquidationEngineLiquidationUnauthorized.selector
+        );
+        simpleLiquidator.liquidateMarket(address(borrowMarket), BORROWER, address(usm), "", "");
     }
 }

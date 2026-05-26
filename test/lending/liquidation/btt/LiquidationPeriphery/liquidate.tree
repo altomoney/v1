@@ -2,10 +2,36 @@ LiquidationPeriphery::liquidate
 ├── when market is not supported
 │   └── it should revert with InvalidInput
 └── when market is supported
+    ├── given market has authorized periphery
+    │   ├── it should call market.liquidate with abi.encode(periphery caller, liquidationData)
+    │   ├── it should pass periphery caller as originalLiquidator to market for engine checks
+    │   └── when priority liquidation is enabled on market
+    │       ├── given position is not tagged
+    │       │   ├── when periphery caller is not priority liquidator
+    │       │   │   └── it should revert with DlbDcfPriorityLiquidationEngineLiquidationUnauthorized
+    │       │   └── when periphery caller is priority liquidator
+    │       │       └── it should proceed with liquidation
+    │       ├── given position is tagged by periphery caller
+    │       │   ├── when within priority grace period
+    │       │   │   └── it should revert with DlbDcfPriorityLiquidationEngineLiquidationUnauthorized
+    │       │   └── when after priority grace period
+    │       │       └── it should proceed with liquidation
+    │       ├── given position is tagged by other liquidator
+    │       │   ├── when within combined grace periods
+    │       │   │   └── it should revert with DlbDcfPriorityLiquidationEngineLiquidationUnauthorized
+    │       │   └── when after combined grace periods
+    │       │       └── it should proceed with liquidation
+    │       └── when current LTV is above disable priority liquidation threshold
+    │           └── it should proceed with liquidation
+    ├── given market has not authorized periphery
+    │   ├── it should call market.liquidate with unmodified liquidationData
+    │   ├── it should use periphery contract address as liquidator for engine checks
+    │   └── when priority liquidation is enabled and position is not tagged
+    │       └── it should revert with DlbDcfPriorityLiquidationEngineLiquidationUnauthorized
     ├── when market is a borrow market
     │   ├── given liquidationPeripheryCallbackData is empty
     │   │   ├── it should return seized collateral, repaid borrow, and protocol fee from market
-    │   │   ├── it should emit Liquidation event
+    │   │   ├── it should emit Liquidation event with periphery caller as liquidator
     │   │   ├── it should reset borrow token approval to market after liquidation
     │   │   ├── it should transfer seized collateral to the liquidator
     │   │   ├── it should liquidate via usm without calling liquidator callback
@@ -13,7 +39,7 @@ LiquidationPeriphery::liquidate
     │   │   └── it should leave periphery with zero borrow and underlying balances
     │   ├── given liquidationPeripheryCallbackData is not empty
     │   │   ├── it should return seized collateral, repaid borrow, and protocol fee from market
-    │   │   ├── it should emit Liquidation event
+    │   │   ├── it should emit Liquidation event with periphery caller as liquidator
     │   │   ├── it should reset borrow token approval to market after liquidation
     │   │   ├── it should transfer seized collateral to the liquidator
     │   │   ├── it should call liquidator onLiquidateCallback with underlying asset amount and collateral received
@@ -23,7 +49,7 @@ LiquidationPeriphery::liquidate
     │   │   └── it should leave periphery with zero borrow and underlying balances
     │   ├── given stable token bought equals borrow amount to repay
     │   │   ├── it should return seized collateral, repaid borrow, and protocol fee from market
-    │   │   ├── it should emit Liquidation event
+    │   │   ├── it should emit Liquidation event with periphery caller as liquidator
     │   │   ├── it should reset borrow token approval to market after liquidation
     │   │   ├── it should transfer seized collateral to the liquidator
     │   │   ├── it should not refund stable to liquidator
@@ -31,7 +57,7 @@ LiquidationPeriphery::liquidate
     │   │   └── it should leave periphery with zero borrow and underlying balances
     │   └── given stable token bought is greater than borrow amount to repay
     │       ├── it should return seized collateral, repaid borrow, and protocol fee from market
-    │       ├── it should emit Liquidation event
+    │       ├── it should emit Liquidation event with periphery caller as liquidator
     │       ├── it should reset borrow token approval to market after liquidation
     │       ├── it should transfer seized collateral to the liquidator
     │       ├── it should refund excess stable token to liquidator
@@ -40,7 +66,7 @@ LiquidationPeriphery::liquidate
     └── when market is a mint market
         ├── given liquidationPeripheryCallbackData is empty
         │   ├── it should return seized collateral, repaid borrow, and protocol fee from market
-        │   ├── it should emit Liquidation event
+        │   ├── it should emit Liquidation event with periphery caller as liquidator
         │   ├── it should reset borrow token approval to market after liquidation
         │   ├── it should transfer seized collateral to the liquidator
         │   ├── it should liquidate via usm without calling liquidator callback
@@ -48,7 +74,7 @@ LiquidationPeriphery::liquidate
         │   └── it should leave periphery with zero borrow and underlying balances
         ├── given liquidationPeripheryCallbackData is not empty
         │   ├── it should return seized collateral, repaid borrow, and protocol fee from market
-        │   ├── it should emit Liquidation event
+        │   ├── it should emit Liquidation event with periphery caller as liquidator
         │   ├── it should reset borrow token approval to market after liquidation
         │   ├── it should transfer seized collateral to the liquidator
         │   ├── it should call liquidator onLiquidateCallback with underlying asset amount and collateral received
@@ -58,7 +84,7 @@ LiquidationPeriphery::liquidate
         │   └── it should leave periphery with zero borrow and underlying balances
         ├── given stable token bought equals borrow amount to repay
         │   ├── it should return seized collateral, repaid borrow, and protocol fee from market
-        │   ├── it should emit Liquidation event
+        │   ├── it should emit Liquidation event with periphery caller as liquidator
         │   ├── it should reset borrow token approval to market after liquidation
         │   ├── it should transfer seized collateral to the liquidator
         │   ├── it should not refund stable to liquidator
@@ -66,7 +92,7 @@ LiquidationPeriphery::liquidate
         │   └── it should leave periphery with zero borrow and underlying balances
         └── given stable token bought is greater than borrow amount to repay
             ├── it should return seized collateral, repaid borrow, and protocol fee from market
-            ├── it should emit Liquidation event
+            ├── it should emit Liquidation event with periphery caller as liquidator
             ├── it should reset borrow token approval to market after liquidation
             ├── it should transfer seized collateral to the liquidator
             ├── it should refund excess stable token to liquidator
