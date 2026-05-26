@@ -298,8 +298,7 @@ abstract contract LiquidationPeripheryCommon is Test, TestHelperOz5 {
         vm.startPrank(OWNER);
         feeStrategy.setFee(buyFeeBps, sellFeeBps);
         feeStrategy.setBuyFeeByRoleHash(
-            BUY_SWAPPER_ROLE,
-            IAdvancedPermissionsUsmFeeStrategy.OverriddenFeeData({isOverridden: true, fee: buyFeeBps})
+            BUY_SWAPPER_ROLE, IAdvancedPermissionsUsmFeeStrategy.OverriddenFeeData({isOverridden: true, fee: buyFeeBps})
         );
         feeStrategy.setSellFeeByRoleHash(
             SELL_SWAPPER_ROLE,

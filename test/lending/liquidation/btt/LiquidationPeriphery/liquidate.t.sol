@@ -58,9 +58,8 @@ contract LiquidationPeriphery_Liquidate_Test is LiquidationPeripheryCommon {
         _expectLiquidationEvent(target, address(simpleLiquidator), borrower);
 
         vm.prank(LIQUIDATOR);
-        return simpleLiquidator.liquidateMarket(
-            address(target), borrower, targetUsm, "", liquidationPeripheryCallbackData
-        );
+        return
+            simpleLiquidator.liquidateMarket(address(target), borrower, targetUsm, "", liquidationPeripheryCallbackData);
     }
 
     function _assertLiquidationSucceeded(uint256 seizedCollateral, uint256 repaidBorrow, uint256 protocolFee)
@@ -420,9 +419,7 @@ contract LiquidationPeriphery_Liquidate_Test is LiquidationPeripheryCommon {
 
         LiquidationConfiguration memory config =
             IDcfDlbPriorityLiquidationEngine(borrowMarket.liquidationEngine()).liquidationConfiguration();
-        vm.warp(
-            block.timestamp + config.priorityLiquidationGracePeriod + config.taggerLiquidationGracePeriod + 1
-        );
+        vm.warp(block.timestamp + config.priorityLiquidationGracePeriod + config.taggerLiquidationGracePeriod + 1);
 
         (uint256 seized, uint256 repaid, uint256 protocolFee) =
             _liquidateViaSimpleLiquidator(borrowMarket, BORROWER, address(usm), "");
@@ -430,9 +427,7 @@ contract LiquidationPeriphery_Liquidate_Test is LiquidationPeripheryCommon {
         _assertLiquidationSucceeded(seized, repaid, protocolFee);
     }
 
-    function test_GivenMarketHasAuthorizedPeriphery_WhenCurrentLtvIsAboveDisablePriorityLiquidationThreshold()
-        public
-    {
+    function test_GivenMarketHasAuthorizedPeriphery_WhenCurrentLtvIsAboveDisablePriorityLiquidationThreshold() public {
         _setupBorrowMarketPriorityLiquidation();
 
         LiquidationConfiguration memory config =

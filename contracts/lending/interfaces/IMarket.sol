@@ -395,7 +395,7 @@ interface IMarketBase is IMarketErrors, IMarketEvents, IAuth, IPausable {
     /// @param callbackData Additional data for the liquidator contract
     /// @param liquidationData Additional data for the liquidation engine
     /// @dev If caller(msg.sender) is an authorized liquidation periphery, then liquidationData needs to be abi.encode(originalLiquidator, originalLiquidationData)
-    /// @dev originalLiquidationData will be passed to the liquidation engine 
+    /// @dev originalLiquidationData will be passed to the liquidation engine
     /// @dev originalLiquidator will be used for checks of priority liquidation
     /// @dev if caller is not authorized liquidation periphery, then liquidationData will be passed directly to the liquidation engine
     /// @return repaidBorrow The amount of borrow token repaid
