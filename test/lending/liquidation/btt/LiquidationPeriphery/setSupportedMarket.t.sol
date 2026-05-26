@@ -33,9 +33,7 @@ contract LiquidationPeriphery_SetSupportedMarket_Test is LiquidationPeripheryCom
     }
 
     function test_RevertWhen_MarketBorrowTokenDoesNotMatchBorrowToken() public {
-        IMarket otherMarket = _deployBorrowMarketWithBorrowToken(
-            address(new DUSD(address(endpoints[1]), OWNER))
-        );
+        IMarket otherMarket = _deployBorrowMarketWithBorrowToken(address(new DUSD(address(endpoints[1]), OWNER)));
 
         vm.prank(OWNER);
         vm.expectRevert(ILiquidationPeripheryErrors.InvalidInput.selector);

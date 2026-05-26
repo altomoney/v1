@@ -46,7 +46,7 @@ interface ILiquidationPeripheryBase is ILiquidationPeripheryErrors, ILiquidation
     /// @param usm The address of the USM to use for the liquidation
     /// @param liquidationData Additional data for the liquidation engine
     /// @param liquidationPeripheryCallbackData Additional data passed to the liquidator's callback via this periphery
-    /// @dev Implementations must always pack `msg.sender`(original liquidator) in callbackData while calling IMarket.liquidate function.
+    /// @dev Implementations must always pack `msg.sender`(original liquidator) in liquidationData while calling IMarket.liquidate function.
     /// @dev Original liquidator address is needed to make a call from LiquidationPeriphery to liquidator contract when liquidationPeripheryCallbackData is provided.
     function liquidate(
         address market,

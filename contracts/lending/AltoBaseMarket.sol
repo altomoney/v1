@@ -98,7 +98,7 @@ abstract contract AltoBaseMarket is
     /// @inheritdoc IMarketBase
     mapping(address => bool) public authorizedLiquidationPeriphery;
 
-    /// upgrade gap (previous slot has 12 bytes left)
+    /// upgrade gap
     uint256[34] private __gap_base;
 
     function __AltoBaseMarket_init(BaseMarketInitParams memory _initParams, MarketType _marketType)
