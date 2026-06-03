@@ -1,0 +1,10 @@
+AltoLeverageSwapperForWrapperToken::constructor
+├── when market is zero address
+│   └── it should revert with AltoLeverageSwapperInvalidInput
+├── when validSwapTargets contains zero address
+│   └── it should revert with AltoLeverageSwapperInvalidInput
+└── when market and all validSwapTargets are valid
+    ├── it should set MARKET to provided address
+    ├── it should set isValidSwapTarget for each target
+    ├── it should emit SetValidSwapTarget for each target
+    └── it should set owner to provided address

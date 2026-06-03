@@ -1,0 +1,57 @@
+WrapperToken::rollover
+├── when caller is not rollOverBot
+│   └── it should revert with NotRollOverBot
+└── given caller is rollOverBot
+    ├── given contract is not paused
+    │   └── it should revert with IsNotPaused
+    └── given contract is paused
+        ├── when newUnderlyingToken is zero address
+        │   └── it should revert with InvalidInput
+        ├── when newUnderlyingToken equals current underlyingToken
+        │   └── it should revert with InvalidInput
+        ├── when newUnderlyingToken decimals differ from DECIMALS
+        │   └── it should revert with InvalidInput
+        ├── when swapTarget is zero address
+        │   └── it should revert with InvalidInput
+        ├── when swapTarget is not whitelisted
+        │   └── it should revert with InvalidInput
+        ├── when whitelisted approveTarget is zero address
+        │   └── it should revert with InvalidInput
+        ├── when minAmountOut is zero
+        │   └── it should revert with InvalidInput
+        ├── when amountIn is zero
+        │   └── it should revert with InvalidInput
+        ├── when contract underlying balance is zero
+        │   └── it should revert
+        ├── when swap call fails
+        │   └── it should revert with SwapFailed
+        ├── when swap leaves sell token balance
+        │   └── it should revert with SellTokenBalanceLeftover
+        ├── when buy token received is less than minAmountOut
+        │   └── it should revert with MinAmountOutNotMet
+        ├── when updated exchangeRate would be zero
+        │   └── it should revert with ExchangeRateZero
+        ├── given underlying token was donated after pause
+        │   ├── when amountIn matches swapData amount but is less than wrapper underlying balance
+        │   │   ├── it should approve whitelisted approveTarget for amountIn
+        │   │   ├── it should execute swap via swapTarget
+        │   │   ├── it should reset approval to zero
+        │   │   ├── it should update exchangeRate based on amountIn
+        │   │   ├── it should update underlyingToken to newUnderlyingToken
+        │   │   ├── it should emit UnderlyingTokenSet
+        │   │   ├── it should emit ExchangeRateUpdated
+        │   │   ├── it should emit Rollover
+        │   │   └── it should leave donated amount as remnant sell-token balance
+        │   └── when amountIn includes donated amount but swapData matches pre-donation amount
+        │       └── it should revert with SellTokenBalanceLeftover
+        └── when all inputs are valid and swap succeeds
+            ├── it should approve whitelisted approveTarget for amountIn
+            ├── it should execute swap via swapTarget
+            ├── it should reset approval to zero
+            ├── it should update exchangeRate
+            ├── it should update underlyingToken to newUnderlyingToken
+            ├── it should leave zero underlying token balance on contract
+            ├── it should leave zero underlying token allowance on approveTarget
+            ├── it should emit UnderlyingTokenSet
+            ├── it should emit ExchangeRateUpdated
+            └── it should emit Rollover

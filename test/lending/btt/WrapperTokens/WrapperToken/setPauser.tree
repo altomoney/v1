@@ -1,0 +1,22 @@
+WrapperToken::setPauser
+├── when caller is not owner
+│   └── it should revert with OwnableUnauthorizedAccount
+└── when caller is owner
+    ├── when pauser is zero address
+    │   └── it should set pauser status and emit PauserUpdated
+    ├── when pauser is non-zero address
+    │   ├── when pauseType is zero
+    │   │   ├── when status is false
+    │   │   │   └── it should remove pauser status and emit PauserUpdated
+    │   │   └── when status is true
+    │   │       └── it should set pauser status and emit PauserUpdated
+    │   └── when pauseType is non-zero
+    │       ├── when status is false
+    │       │   └── it should remove pauser status and emit PauserUpdated
+    │       └── when status is true
+    │           └── it should set pauser status and emit PauserUpdated
+    └── when pauser already has status
+        ├── when changing from true to false
+        │   └── it should update status and emit PauserUpdated
+        └── when changing from false to true
+            └── it should update status and emit PauserUpdated

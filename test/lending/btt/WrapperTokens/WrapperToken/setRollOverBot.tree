@@ -1,0 +1,9 @@
+WrapperToken::setRollOverBot
+├── when caller is not owner
+│   └── it should revert with OwnableUnauthorizedAccount
+└── given caller is owner
+    ├── when rollOverBot is zero address
+    │   └── it should revert with ZeroAddress
+    └── when rollOverBot is valid
+        ├── it should update rollOverBot
+        └── it should emit RollOverBotSet

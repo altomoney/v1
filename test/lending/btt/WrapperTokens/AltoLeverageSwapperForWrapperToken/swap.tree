@@ -1,0 +1,98 @@
+AltoLeverageSwapperForWrapperToken::swap
+├── when caller is not whitelisted
+│   └── it should revert with AltoLeverageSwapperSenderNotValid
+└── given caller is whitelisted
+    ├── when neither sellToken nor buyToken is MARKET collateral token
+    │   └── it should revert with AltoLeverageSwapperInvalidInput
+    ├── when swapTarget is not valid
+    │   └── it should revert with AltoLeverageSwapperInvalidSwapTarget
+    ├── when underlyingToken does not match collateral wrapper underlyingToken
+    │   └── it should revert with AltoLeverageSwapperInvalidInput
+    ├── when sellToken transferFrom fails
+    │   └── it should revert
+    ├── given sellToken is MARKET collateral token
+    │   ├── when unwrap reverts
+    │   │   └── it should revert
+    │   ├── when swap call fails
+    │   │   └── it should revert with AltoLeverageSwapperSwapFailed
+    │   ├── when buy token received is less than minAmountOut
+    │   │   └── it should revert with AltoLeverageSwapperMinAmountOutNotMet
+    │   ├── given collateral token was donated to swapper
+    │   │   └── when swap underlying amount matches swapData but swapper holds extra donated collateral
+    │   │       ├── it should pull collateral token from caller
+    │   │       ├── it should unwrap collateral to underlying PT
+    │   │       ├── it should approve swapTarget for PT amount
+    │   │       ├── it should execute swap via swapTarget
+    │   │       ├── it should reset swapTarget approval to zero
+    │   │       ├── it should transfer buy tokens to caller
+    │   │       ├── it should emit Swap
+    │   │       ├── it should return buyTokenBalanceReceived
+    │   │       └── it should leave donated collateral token on swapper
+    │   ├── given underlying token was donated to swapper
+    │   │   └── when swap underlying amount matches swapData but swapper holds extra donated underlying
+    │   │       ├── it should pull collateral token from caller
+    │   │       ├── it should unwrap collateral to underlying PT
+    │   │       ├── it should approve swapTarget for PT amount
+    │   │       ├── it should execute swap via swapTarget
+    │   │       ├── it should reset swapTarget approval to zero
+    │   │       ├── it should transfer buy tokens to caller
+    │   │       ├── it should emit Swap
+    │   │       ├── it should return buyTokenBalanceReceived
+    │   │       └── it should leave donated underlying token on swapper
+    │   └── when swap succeeds
+    │       ├── it should pull collateral token from caller
+    │       ├── it should unwrap collateral to underlying PT
+    │       ├── it should approve swapTarget for PT amount
+    │       ├── it should execute swap via swapTarget
+    │       ├── it should reset swapTarget approval to zero
+    │       ├── when swap leaves sell token balance
+    │       │   └── it should transfer leftover sell tokens to caller
+    │       ├── it should transfer buy tokens to caller
+    │       ├── it should leave zero sellToken balance on contract
+    │       ├── it should leave zero buyToken balance on contract
+    │       ├── it should leave zero collateral token balance on contract
+    │       ├── it should leave zero underlyingToken balance on contract
+    │       ├── it should emit Swap
+    │       └── it should return buyTokenBalanceReceived
+    └── given buyToken is MARKET collateral token
+        ├── when swap call fails
+        │   └── it should revert with AltoLeverageSwapperSwapFailed
+        ├── when buy token received is less than minAmountOut
+        │   └── it should revert with AltoLeverageSwapperMinAmountOutNotMet
+        ├── given collateral token was donated to swapper
+        │   └── when swap sell amount matches swapData but swapper holds extra donated collateral
+        │       ├── it should pull sellToken from caller
+        │       ├── it should swap sellToken for underlying PT
+        │       ├── it should approve collateral wrapper for received PT
+        │       ├── it should wrap underlying PT to collateral token
+        │       ├── it should reset underlying PT approval to zero
+        │       ├── it should transfer wrapped collateral tokens to caller
+        │       ├── it should emit Swap with underlying PT amount as buyTokenBalanceReceived
+        │       ├── it should return wrapped collateral amount received
+        │       └── it should leave donated collateral token on swapper
+        ├── given underlying token was donated to swapper
+        │   └── when swap sell amount matches swapData but swapper holds extra donated underlying
+        │       ├── it should pull sellToken from caller
+        │       ├── it should swap sellToken for underlying PT
+        │       ├── it should approve collateral wrapper for received PT
+        │       ├── it should wrap underlying PT to collateral token
+        │       ├── it should reset underlying PT approval to zero
+        │       ├── it should transfer wrapped collateral tokens to caller
+        │       ├── it should emit Swap with underlying PT amount as buyTokenBalanceReceived
+        │       ├── it should return wrapped collateral amount received
+        │       └── it should leave donated underlying token on swapper
+        └── when swap succeeds
+            ├── it should pull sellToken from caller
+            ├── it should swap sellToken for underlying PT
+            ├── it should approve collateral wrapper for received PT
+            ├── it should wrap underlying PT to collateral token
+            ├── it should reset underlying PT approval to zero
+            ├── when swap leaves sell token balance
+            │   └── it should transfer leftover sell tokens to caller
+            ├── it should transfer wrapped collateral tokens to caller
+            ├── it should leave zero sellToken balance on contract
+            ├── it should leave zero buyToken balance on contract
+            ├── it should leave zero collateral token balance on contract
+            ├── it should leave zero underlyingToken balance on contract
+            ├── it should emit Swap with underlying PT amount as buyTokenBalanceReceived
+            └── it should return wrapped collateral amount received
