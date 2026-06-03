@@ -1,0 +1,28 @@
+WrapperToken::unwrap
+├── given contract is paused
+│   └── it should revert with IsPaused
+└── given contract is not paused
+    ├── when user has insufficient wrapped token balance
+    │   └── it should revert
+    ├── when previewUnwrap returns zero
+    │   ├── when wrappedTokenAmount is zero
+    │   │   └── it should revert with InvalidInput
+    │   └── when computed pt amount rounds down to zero
+    │       └── it should revert with InvalidInput
+    └── when previewUnwrap returns greater than zero
+        ├── it should burn wrapped tokens from caller
+        ├── it should transfer previewUnwrap amount to caller
+        ├── it should reduce wrapper underlying token balance by previewUnwrap amount
+        ├── it should emit Unwrapped
+        ├── it should return previewUnwrap amount
+        ├── given exchangeRate equals 10 ** DECIMALS
+        │   └── it should transfer PT to caller one-to-one with wrapped amount
+        └── given exchangeRate is not 10 ** DECIMALS
+            ├── given exchangeRate is greater than 10 ** DECIMALS
+            │   ├── it should transfer rounded-down PT amount
+            │   └── when wrappedTokenAmount times exchangeRate divides evenly by 10 ** DECIMALS
+            │       └── it should transfer exact PT amount without rounding loss
+            ├── given exchangeRate is less than 10 ** DECIMALS
+            │   └── it should return fewer PT per wrapped token than one-to-one when not exact
+            └── when caller unwraps wrapped tokens minted from a prior wrap at same exchangeRate
+                └── it should not guarantee recovering the original ptAmount due to asymmetric rounding

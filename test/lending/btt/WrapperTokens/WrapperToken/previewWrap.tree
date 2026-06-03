@@ -1,0 +1,13 @@
+WrapperToken::previewWrap
+├── when ptAmount is zero
+│   └── it should return zero
+├── when wrapped amount rounds down to zero
+│   └── it should return zero
+└── when wrapped amount is greater than zero
+    ├── it should return (ptAmount * 10 ** DECIMALS / exchangeRate) rounded down
+    ├── given exchangeRate equals 10 ** DECIMALS
+    │   └── it should return ptAmount
+    ├── given exchangeRate is greater than 10 ** DECIMALS
+    │   └── it should return fewer wrapped tokens per PT than one-to-one
+    └── given exchangeRate is less than 10 ** DECIMALS
+        └── it should return more wrapped tokens per PT than one-to-one

@@ -1,0 +1,13 @@
+AltoLeverageSwapperForWrapperToken::setWhitelisted
+├── when caller is not owner
+│   └── it should revert with OwnableUnauthorizedAccount
+└── when caller is owner
+    ├── when isWhitelisted status is unchanged
+    │   └── it should revert with AltoLeverageSwapperInvalidInput
+    └── when isWhitelisted status changes
+        ├── when setting to true
+        │   ├── it should update isWhitelisted mapping
+        │   └── it should emit SetWhitelisted
+        └── when setting to false
+            ├── it should update isWhitelisted mapping
+            └── it should emit SetWhitelisted

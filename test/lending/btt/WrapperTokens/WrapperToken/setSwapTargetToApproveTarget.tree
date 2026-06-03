@@ -1,0 +1,12 @@
+WrapperToken::setSwapTargetToApproveTarget
+├── when caller is not owner
+│   └── it should revert with OwnableUnauthorizedAccount
+└── when caller is owner
+    ├── when isValid is true
+    │   ├── it should store swapTarget metadata
+    │   ├── it should emit SetSwapTargetToApproveTarget
+    │   └── it should return stored approveTarget and isValid via swapTargetToApproveTarget
+    └── when isValid is false
+        ├── it should delete swapTarget metadata
+        ├── it should emit SetSwapTargetToApproveTarget
+        └── it should return zero approveTarget and false isValid via swapTargetToApproveTarget

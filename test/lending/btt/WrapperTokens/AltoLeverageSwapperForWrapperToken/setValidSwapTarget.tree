@@ -1,0 +1,15 @@
+AltoLeverageSwapperForWrapperToken::setValidSwapTarget
+├── when caller is not owner
+│   └── it should revert with OwnableUnauthorizedAccount
+└── when caller is owner
+    ├── when swapTarget is zero address
+    │   └── it should revert with AltoLeverageSwapperInvalidInput
+    ├── when isValid status is unchanged
+    │   └── it should revert with AltoLeverageSwapperInvalidInput
+    └── when isValid status changes
+        ├── when setting to true
+        │   ├── it should update isValidSwapTarget mapping
+        │   └── it should emit SetValidSwapTarget
+        └── when setting to false
+            ├── it should update isValidSwapTarget mapping
+            └── it should emit SetValidSwapTarget

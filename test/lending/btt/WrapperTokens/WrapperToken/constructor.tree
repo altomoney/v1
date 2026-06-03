@@ -1,0 +1,16 @@
+WrapperToken::constructor
+├── when rollOverBot is zero address
+│   └── it should revert with ZeroAddress
+└── when rollOverBot is valid address
+    ├── when underlyingToken is zero address
+    │   └── it should revert with ZeroAddress
+    └── when underlyingToken is valid address
+        ├── it should set rollOverBot
+        ├── it should emit RollOverBotSet
+        ├── it should set underlyingToken
+        ├── it should emit UnderlyingTokenSet
+        ├── it should set DECIMALS from underlying token metadata
+        ├── it should set exchangeRate to 10 ** DECIMALS
+        ├── it should emit ExchangeRateUpdated
+        ├── it should set ERC20 name and symbol
+        └── it should set owner to provided address
