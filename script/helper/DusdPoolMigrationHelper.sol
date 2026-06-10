@@ -1,289 +1,223 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
-import {IUsm} from "@alto/usm/interfaces/IUsm.sol";
 import {
     INonfungiblePositionManager,
     MintParams,
     DecreaseLiquidityParams,
-    CollectParams,
-    IncreaseLiquidityParams
+    CollectParams
 } from "@alto/deployments/testnet/interfaces/INonfungiblePositionManager.sol";
 import {USDC_MAINNET, FRXUSD_MAINNET} from "@alto/deployments/ethereum-mainnet/Constants.sol";
 
 /// @title DUSD/USDC → DUSD/frxUSD pool migration helper
-/// @notice Executes drain, PSM routing, new-pool mint, and leftover sweep in one call.
-/// @dev Prerequisites before `executeMigration`:
-///      1. Owner holds Uniswap V3 position NFTs (pos1/pos2 token IDs).
-///      2. Owner calls `UNISWAP_V3_NFT_POSITION_MANAGER.setApprovalForAll(address(this), true)`.
-///      3. Helper holds `SWAPPER_ROLE` on `USDC_USM` and `FRXUSD_USM` (calls originate from this contract).
-contract DusdPoolMigrationHelper {
+/// @notice Executes removal of liquidity from the old DUSD/USDC pool, deploys the new DUSD/frxUSD pool,
+///      and sends any remaining DUSD, frxUSD, or USDC balances to treasury.
+contract DusdPoolMigrationHelper is Ownable {
     using SafeERC20 for IERC20;
 
-    /// @dev Narrow-range LP target: DUSD / frxUSD = 44 / 100 = 0.44
-    uint256 private constant SWEEP_DUSD_NUM = 44;
-    uint256 private constant SWEEP_DUSD_DEN = 100;
-    uint256 private constant SWEEP_SUM_DEN = 144;
     uint256 private constant USDC_TO_FRXUSD_SCALE = 1e12;
-    uint256 private constant MIN_SWEEP_VALUE = 10 ether;
     uint256 private constant Q96 = 1 << 96;
+    uint256 private constant NARROW_POSITION_SLIPPAGE = 70;
+    uint256 private constant WIDE_POSITION_SLIPPAGE = 90;
+    uint256 private constant SLIPPAGE_PCT_DENOMINATOR = 100;
 
     address public constant UNISWAP_V3_NFT_POSITION_MANAGER = 0xC36442b4a4522E871399CD717aBDD847Ab11FE88;
     address public constant DUSD = 0x63d74d22E689C715a04F2C13962b1f77F443d35b;
-    address public constant USDC_USM = 0x2dE874B83f4d0a64D81A16f2e050bcB55f118398;
-    address public constant FRXUSD_USM = 0x1BD08B43D1579881cfAd0A35AEEa5b547dBE4c91;
     address public constant FRAX_CUSTODIAN = 0x4F95C5bA0C7c69FB2f9340E190cCeE890B3bd87c;
 
-    uint256 public constant POS1_TOKEN_ID = 1150307;
-    uint256 public constant POS2_TOKEN_ID = 1150308;
-    uint24 public constant POOL_FEE = 100;
-    int24 public constant POS_1_LOWER = -7;
-    int24 public constant POS_1_UPPER = 3;
-    int24 public constant POS_2_LOWER = -304;
-    int24 public constant POS_2_UPPER = 70;
+    uint256 public constant NARROW_POSITION_TOKEN_ID = 1150307;
+    uint256 public constant WIDE_POSITION_TOKEN_ID = 1150308;
+    uint24 public constant POOL_FEE = 100; // same as original pool
+    int24 public constant NARROW_POSITION_LOWER = -7; // 0.9993
+    int24 public constant NARROW_POSITION_UPPER = 3; // 1.0003
+    int24 public constant WIDE_POSITION_LOWER = -304; // 0.97
+    int24 public constant WIDE_POSITION_UPPER = 70; // 1.007
 
-    address public immutable owner;
-
-    // ─── Set after drain & collect ───────────────────────────────────────────
-    uint256 public pos1DusdCollected;
-    uint256 public pos1UsdcCollected;
-    uint256 public pos2DusdCollected;
-    uint256 public pos2UsdcCollected;
-    uint256 public collectedUsdcFromUniswapPool;
-
-    // ─── Set after PSM routing (drain script Tx 5-10) ──────────────────────
-    uint256 public usdcUsmLiquidityDrained;
+    // ─── Values set after removal of liquidity from old uniswap pool(i.e. DUSD/USDC pool) and collection of tokens ───────────────────
+    uint256 public dusdCollectedFromNarrowPosition;
+    uint256 public usdcCollectedFromNarrowPosition;
+    uint256 public dusdCollectedFromWidePosition;
+    uint256 public usdcCollectedFromWidePosition;
+    uint256 public totalUsdcCollectedFromOldUniswapPool;
 
     // ─── Set after new-pool mint ─────────────────────────────────────────────
     address public newPool;
-    uint256 public newPos1TokenId;
-    uint256 public newPos2TokenId;
-    uint256 public pos1DusdDeposited;
-    uint256 public pos1FrxUsdDeposited;
-    uint256 public pos2DusdDeposited;
-    uint256 public pos2FrxUsdDeposited;
+    uint256 public newNarrowPositionTokenId;
+    uint256 public newWidePositionTokenId;
+    uint256 public dusdDepositedToNarrowPosition;
+    uint256 public frxUsdDepositedToNarrowPosition;
+    uint256 public dusdDepositedToWidePosition;
+    uint256 public frxUsdDepositedToWidePosition;
 
-    // ─── Set after sweep ─────────────────────────────────────────────────────
-    uint256 public frxUsdToSwapToDusd;
-    uint256 public remainingFrxUsdToAddToLp;
-    uint256 public frxUsdToBuyFromPsm;
-    uint256 public dusdForLp;
-    uint256 public sweepDusdDeposited;
-    uint256 public sweepFrxUsdDeposited;
+    // ─── Set after sending remaining balances to treasury ──────────────────────
+    uint256 public dusdSentToTreasury;
+    uint256 public frxUsdSentToTreasury;
+    uint256 public usdcSentToTreasury;
 
     struct DrainMins {
-        uint256 pos1DusdMin;
-        uint256 pos1UsdcMin;
-        uint256 pos2DusdMin;
-        uint256 pos2UsdcMin;
+        uint256 minExpectedDusdFromNarrowPosition;
+        uint256 minExpectedUsdcFromNarrowPosition;
+        uint256 minExpectedDusdFromWidePosition;
+        uint256 minExpectedUsdcFromWidePosition;
     }
 
     event MigrationExecuted(
         address indexed owner,
         address newPool,
-        uint256 newPos1TokenId,
-        uint256 newPos2TokenId,
-        uint256 sweepDusdDeposited,
-        uint256 sweepFrxUsdDeposited
+        uint256 newNarrowPositionTokenId,
+        uint256 newWidePositionTokenId,
+        uint256 dusdSentToTreasury,
+        uint256 frxUsdSentToTreasury,
+        uint256 usdcSentToTreasury
     );
 
-    error NotOwner();
-    error ZeroAddress();
+    constructor(address ownerAddress) Ownable(ownerAddress) {}
 
-    modifier onlyOwner() {
-        if (msg.sender != owner) revert NotOwner();
-        _;
+    /// @notice Recover full `token` balance to owner (treasury).
+    /// @return amount Amount transferred to owner.
+    function recoverERC20(address token) external onlyOwner returns (uint256 amount) {
+        amount = IERC20(token).balanceOf(address(this));
+        if (amount > 0) IERC20(token).safeTransfer(owner(), amount);
     }
 
-    constructor(address owner_) {
-        if (owner_ == address(0)) revert ZeroAddress();
-        owner = owner_;
-    }
+    /// @notice Drain old positions, deploy new pool LP, and send remaining balances to treasury.
+    /// @param drainMins Slippage floors for `decreaseLiquidity` on each old position.
+    /// @param deadline Uniswap NFT manager deadline for all liquidity ops in this migration.
+    function executeMigration(DrainMins calldata drainMins, uint256 deadline) external onlyOwner {
+        INonfungiblePositionManager uniswapPositionManager =
+            INonfungiblePositionManager(UNISWAP_V3_NFT_POSITION_MANAGER);
 
-    /// @notice Drain old positions, route through PSMs, deploy new pool LP, and sweep leftovers.
-    /// @param mins Slippage floors for `decreaseLiquidity` on each old position.
-    function executeMigration(DrainMins calldata mins) external onlyOwner {
-        uint256 deadline = block.timestamp + 3 hours;
-        INonfungiblePositionManager nftMgr = INonfungiblePositionManager(UNISWAP_V3_NFT_POSITION_MANAGER);
-
-        _drainAndCollect(nftMgr, mins, deadline);
-        _routeThroughPsms();
-        _deployNewPoolLp(nftMgr, deadline);
-        _sweepLeftovers(nftMgr, deadline);
+        _drainAndCollect(uniswapPositionManager, drainMins, deadline);
+        _deployNewPoolLp(uniswapPositionManager, deadline);
+        _sendRemainingBalancesToTreasury();
 
         emit MigrationExecuted(
-            owner, newPool, newPos1TokenId, newPos2TokenId, sweepDusdDeposited, sweepFrxUsdDeposited
+            owner(),
+            newPool,
+            newNarrowPositionTokenId,
+            newWidePositionTokenId,
+            dusdSentToTreasury,
+            frxUsdSentToTreasury,
+            usdcSentToTreasury
         );
     }
 
     function _drainAndCollect(
-        INonfungiblePositionManager nftMgr,
-        DrainMins calldata mins,
+        INonfungiblePositionManager uniswapPositionManager,
+        DrainMins calldata drainMins,
         uint256 deadline
     ) internal {
-        (,,,,,,, uint128 pos1Liquidity,,,,) = nftMgr.positions(POS1_TOKEN_ID);
-        (,,,,,,, uint128 pos2Liquidity,,,,) = nftMgr.positions(POS2_TOKEN_ID);
+        (,,,,,,, uint128 narrowPositionLiquidity,,,,) = uniswapPositionManager.positions(NARROW_POSITION_TOKEN_ID);
+        (,,,,,,, uint128 widePositionLiquidity,,,,) = uniswapPositionManager.positions(WIDE_POSITION_TOKEN_ID);
 
-        nftMgr.decreaseLiquidity(
+        uniswapPositionManager.decreaseLiquidity(
             DecreaseLiquidityParams({
-                tokenId: POS1_TOKEN_ID,
-                liquidity: pos1Liquidity,
-                amount0Min: mins.pos1DusdMin,
-                amount1Min: mins.pos1UsdcMin,
+                tokenId: NARROW_POSITION_TOKEN_ID,
+                liquidity: narrowPositionLiquidity,
+                amount0Min: drainMins.minExpectedDusdFromNarrowPosition,
+                amount1Min: drainMins.minExpectedUsdcFromNarrowPosition,
                 deadline: deadline
             })
         );
-        nftMgr.decreaseLiquidity(
+        uniswapPositionManager.decreaseLiquidity(
             DecreaseLiquidityParams({
-                tokenId: POS2_TOKEN_ID,
-                liquidity: pos2Liquidity,
-                amount0Min: mins.pos2DusdMin,
-                amount1Min: mins.pos2UsdcMin,
+                tokenId: WIDE_POSITION_TOKEN_ID,
+                liquidity: widePositionLiquidity,
+                amount0Min: drainMins.minExpectedDusdFromWidePosition,
+                amount1Min: drainMins.minExpectedUsdcFromWidePosition,
                 deadline: deadline
             })
         );
 
-        (pos1DusdCollected, pos1UsdcCollected) = nftMgr.collect(
+        (dusdCollectedFromNarrowPosition, usdcCollectedFromNarrowPosition) = uniswapPositionManager.collect(
             CollectParams({
-                tokenId: POS1_TOKEN_ID,
+                tokenId: NARROW_POSITION_TOKEN_ID,
                 recipient: address(this),
                 amount0Max: type(uint128).max,
                 amount1Max: type(uint128).max
             })
         );
-        (pos2DusdCollected, pos2UsdcCollected) = nftMgr.collect(
+        (dusdCollectedFromWidePosition, usdcCollectedFromWidePosition) = uniswapPositionManager.collect(
             CollectParams({
-                tokenId: POS2_TOKEN_ID,
+                tokenId: WIDE_POSITION_TOKEN_ID,
                 recipient: address(this),
                 amount0Max: type(uint128).max,
                 amount1Max: type(uint128).max
             })
         );
 
-        collectedUsdcFromUniswapPool = pos1UsdcCollected + pos2UsdcCollected;
+        totalUsdcCollectedFromOldUniswapPool = usdcCollectedFromNarrowPosition + usdcCollectedFromWidePosition;
     }
 
-    function _routeThroughPsms() internal {
-        usdcUsmLiquidityDrained = IUsm(USDC_USM).getAvailableLiquidity();
-        if (usdcUsmLiquidityDrained == 0) return;
+    function _deployNewPoolLp(INonfungiblePositionManager uniswapPositionManager, uint256 deadline) internal {
+        IERC20(USDC_MAINNET).forceApprove(FRAX_CUSTODIAN, totalUsdcCollectedFromOldUniswapPool);
+        IERC4626(FRAX_CUSTODIAN).deposit(totalUsdcCollectedFromOldUniswapPool, address(this));
+        IERC20(USDC_MAINNET).forceApprove(FRAX_CUSTODIAN, 0);
 
-        uint256 dusdBefore = IERC20(DUSD).balanceOf(address(this));
+        // price is set to 1:1 and hence sqrtPriceQ96 is Q96
+        newPool =
+            uniswapPositionManager.createAndInitializePoolIfNecessary(DUSD, FRXUSD_MAINNET, POOL_FEE, uint160(Q96));
 
-        IERC20(DUSD).forceApprove(USDC_USM, usdcUsmLiquidityDrained * USDC_TO_FRXUSD_SCALE);
-        IUsm(USDC_USM).buyAsset(usdcUsmLiquidityDrained, address(this));
+        uint256 narrowFrxUsdDesired = usdcCollectedFromNarrowPosition * USDC_TO_FRXUSD_SCALE;
+        IERC20(DUSD).forceApprove(UNISWAP_V3_NFT_POSITION_MANAGER, dusdCollectedFromNarrowPosition);
+        IERC20(FRXUSD_MAINNET).forceApprove(UNISWAP_V3_NFT_POSITION_MANAGER, narrowFrxUsdDesired);
+        (newNarrowPositionTokenId,, dusdDepositedToNarrowPosition, frxUsdDepositedToNarrowPosition) =
+            uniswapPositionManager.mint(
+                MintParams({
+                    token0: DUSD,
+                    token1: FRXUSD_MAINNET,
+                    fee: POOL_FEE,
+                    tickLower: NARROW_POSITION_LOWER,
+                    tickUpper: NARROW_POSITION_UPPER,
+                    amount0Desired: dusdCollectedFromNarrowPosition,
+                    amount1Desired: narrowFrxUsdDesired,
+                    amount0Min: _minAmountForSlippage(dusdCollectedFromNarrowPosition, NARROW_POSITION_SLIPPAGE),
+                    amount1Min: _minAmountForSlippage(narrowFrxUsdDesired, NARROW_POSITION_SLIPPAGE),
+                    recipient: owner(),
+                    deadline: deadline
+                })
+            );
 
-        IERC20(USDC_MAINNET).forceApprove(FRAX_CUSTODIAN, usdcUsmLiquidityDrained);
-        IERC4626(FRAX_CUSTODIAN).deposit(usdcUsmLiquidityDrained, address(this));
-
-        IERC20(FRXUSD_MAINNET).forceApprove(FRXUSD_USM, usdcUsmLiquidityDrained * USDC_TO_FRXUSD_SCALE);
-        IUsm(FRXUSD_USM).sellAsset(usdcUsmLiquidityDrained * USDC_TO_FRXUSD_SCALE, address(this));
-
-        require(IERC20(DUSD).balanceOf(address(this)) == dusdBefore, "DUSD balance changed during PSM route");
-        require(IERC20(FRXUSD_MAINNET).balanceOf(address(this)) == 0, "frxUSD leftover after PSM route");
+        uint256 wideFrxUsdDesired = usdcCollectedFromWidePosition * USDC_TO_FRXUSD_SCALE;
+        IERC20(DUSD).forceApprove(UNISWAP_V3_NFT_POSITION_MANAGER, dusdCollectedFromWidePosition);
+        IERC20(FRXUSD_MAINNET).forceApprove(UNISWAP_V3_NFT_POSITION_MANAGER, wideFrxUsdDesired);
+        (newWidePositionTokenId,, dusdDepositedToWidePosition, frxUsdDepositedToWidePosition) =
+            uniswapPositionManager.mint(
+                MintParams({
+                    token0: DUSD,
+                    token1: FRXUSD_MAINNET,
+                    fee: POOL_FEE,
+                    tickLower: WIDE_POSITION_LOWER,
+                    tickUpper: WIDE_POSITION_UPPER,
+                    amount0Desired: dusdCollectedFromWidePosition,
+                    amount1Desired: wideFrxUsdDesired,
+                    amount0Min: _minAmountForSlippage(dusdCollectedFromWidePosition, WIDE_POSITION_SLIPPAGE),
+                    amount1Min: _minAmountForSlippage(wideFrxUsdDesired, WIDE_POSITION_SLIPPAGE),
+                    recipient: owner(),
+                    deadline: deadline
+                })
+            );
+        IERC20(DUSD).forceApprove(UNISWAP_V3_NFT_POSITION_MANAGER, 0);
+        IERC20(FRXUSD_MAINNET).forceApprove(UNISWAP_V3_NFT_POSITION_MANAGER, 0);
     }
 
-    function _deployNewPoolLp(INonfungiblePositionManager nftMgr, uint256 deadline) internal {
-        IERC20(USDC_MAINNET).forceApprove(FRAX_CUSTODIAN, collectedUsdcFromUniswapPool);
-        IERC4626(FRAX_CUSTODIAN).deposit(collectedUsdcFromUniswapPool, address(this));
+    /// @dev Send any remaining DUSD, frxUSD, or USDC on this contract to treasury.
+    function _sendRemainingBalancesToTreasury() internal {
+        dusdSentToTreasury = IERC20(DUSD).balanceOf(address(this));
+        if (dusdSentToTreasury > 0) IERC20(DUSD).safeTransfer(owner(), dusdSentToTreasury);
 
-        newPool = nftMgr.createAndInitializePoolIfNecessary(DUSD, FRXUSD_MAINNET, POOL_FEE, uint160(Q96));
+        frxUsdSentToTreasury = IERC20(FRXUSD_MAINNET).balanceOf(address(this));
+        if (frxUsdSentToTreasury > 0) IERC20(FRXUSD_MAINNET).safeTransfer(owner(), frxUsdSentToTreasury);
 
-        IERC20(DUSD).forceApprove(UNISWAP_V3_NFT_POSITION_MANAGER, pos1DusdCollected);
-        IERC20(FRXUSD_MAINNET).forceApprove(UNISWAP_V3_NFT_POSITION_MANAGER, pos1UsdcCollected * USDC_TO_FRXUSD_SCALE);
-        (newPos1TokenId,, pos1DusdDeposited, pos1FrxUsdDeposited) = nftMgr.mint(
-            MintParams({
-                token0: DUSD,
-                token1: FRXUSD_MAINNET,
-                fee: POOL_FEE,
-                tickLower: POS_1_LOWER,
-                tickUpper: POS_1_UPPER,
-                amount0Desired: pos1DusdCollected,
-                amount1Desired: pos1UsdcCollected * USDC_TO_FRXUSD_SCALE,
-                amount0Min: 0,
-                amount1Min: 0,
-                recipient: owner,
-                deadline: deadline
-            })
-        );
-
-        IERC20(DUSD).forceApprove(UNISWAP_V3_NFT_POSITION_MANAGER, pos2DusdCollected);
-        IERC20(FRXUSD_MAINNET).forceApprove(UNISWAP_V3_NFT_POSITION_MANAGER, pos2UsdcCollected * USDC_TO_FRXUSD_SCALE);
-        (newPos2TokenId,, pos2DusdDeposited, pos2FrxUsdDeposited) = nftMgr.mint(
-            MintParams({
-                token0: DUSD,
-                token1: FRXUSD_MAINNET,
-                fee: POOL_FEE,
-                tickLower: POS_2_LOWER,
-                tickUpper: POS_2_UPPER,
-                amount0Desired: pos2DusdCollected,
-                amount1Desired: pos2UsdcCollected * USDC_TO_FRXUSD_SCALE,
-                amount0Min: 0,
-                amount1Min: 0,
-                recipient: owner,
-                deadline: deadline
-            })
-        );
+        usdcSentToTreasury = IERC20(USDC_MAINNET).balanceOf(address(this));
+        if (usdcSentToTreasury > 0) IERC20(USDC_MAINNET).safeTransfer(owner(), usdcSentToTreasury);
     }
 
-    /// @dev Rebalance unutilized balances via frxUSD PSM, then `increaseLiquidity` on narrow pos1.
-    function _sweepLeftovers(INonfungiblePositionManager nftMgr, uint256 deadline) internal {
-        uint256 leftoverDusd = IERC20(DUSD).balanceOf(address(this));
-        uint256 leftoverFrxUsd = IERC20(FRXUSD_MAINNET).balanceOf(address(this));
-
-        uint256 frxUsdToSell;
-        (dusdForLp, remainingFrxUsdToAddToLp, frxUsdToSell, frxUsdToBuyFromPsm) =
-            _computeSweepAmounts(leftoverDusd, leftoverFrxUsd);
-
-        frxUsdToSwapToDusd = frxUsdToSell;
-
-        if (dusdForLp == 0 && remainingFrxUsdToAddToLp == 0) return;
-
-        if (frxUsdToSell > 0) {
-            IERC20(FRXUSD_MAINNET).forceApprove(FRXUSD_USM, frxUsdToSell);
-            IUsm(FRXUSD_USM).sellAsset(frxUsdToSell, address(this));
-        }
-
-        if (frxUsdToBuyFromPsm > 0) {
-            IERC20(DUSD).forceApprove(FRXUSD_USM, frxUsdToBuyFromPsm);
-            IUsm(FRXUSD_USM).buyAsset(frxUsdToBuyFromPsm, address(this));
-        }
-
-        IERC20(DUSD).forceApprove(UNISWAP_V3_NFT_POSITION_MANAGER, dusdForLp);
-        IERC20(FRXUSD_MAINNET).forceApprove(UNISWAP_V3_NFT_POSITION_MANAGER, remainingFrxUsdToAddToLp);
-
-        (, sweepDusdDeposited, sweepFrxUsdDeposited) = nftMgr.increaseLiquidity(
-            IncreaseLiquidityParams({
-                tokenId: newPos1TokenId,
-                amount0Desired: dusdForLp,
-                amount1Desired: remainingFrxUsdToAddToLp,
-                amount0Min: 0,
-                amount1Min: 0,
-                deadline: deadline
-            })
-        );
-    }
-
-    /// @dev At 1:1 PSM, split leftovers so `dusdForLp / remainingFrxUsdToAddToLp ≈ 0.44`.
-    function _computeSweepAmounts(uint256 leftoverDusd, uint256 leftoverFrxUsd)
-        internal
-        pure
-        returns (uint256 dusdLp, uint256 frxUsdLp, uint256 frxUsdSell, uint256 frxUsdBuy)
-    {
-        uint256 total = leftoverDusd + leftoverFrxUsd;
-        if (total < MIN_SWEEP_VALUE) return (0, 0, 0, 0);
-
-        dusdLp = total * SWEEP_DUSD_NUM / SWEEP_SUM_DEN;
-        frxUsdLp = total * SWEEP_DUSD_DEN / SWEEP_SUM_DEN;
-
-        if (dusdLp == 0 || frxUsdLp == 0) return (0, 0, 0, 0);
-
-        if (leftoverFrxUsd < frxUsdLp) {
-            frxUsdBuy = frxUsdLp - leftoverFrxUsd;
-        } else if (leftoverFrxUsd > frxUsdLp) {
-            frxUsdSell = leftoverFrxUsd - frxUsdLp;
-        }
+    function _minAmountForSlippage(uint256 desiredAmount, uint256 minPct) internal pure returns (uint256) {
+        return desiredAmount * minPct / SLIPPAGE_PCT_DENOMINATOR;
     }
 }
