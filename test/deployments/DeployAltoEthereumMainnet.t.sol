@@ -30,9 +30,14 @@ import {IUsmRegistry} from "@alto/utils/UsmRegistry.sol";
 import {
     BUNDLER3_MAINNET,
     FRXUSD_MAINNET,
+    METH_MAINNET,
     USDC_MAINNET,
     WETH_MAINNET
 } from "@alto/deployments/ethereum-mainnet/Constants.sol";
+import {ILendingOracle, LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
+import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
+import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {IAltoVault, IAltoVaultBase} from "@alto/lending/interfaces/IAltoVault.sol";
 import {VaultRegistry} from "@alto/utils/VaultRegistry.sol";
@@ -671,6 +676,103 @@ contract TresuryPSMMigrationTest is DeployAltoEthereumMainnetTestBase {
 contract DeployAdapterPhaseTest is DeployAltoEthereumMainnetTestBase {
     function test_deployAdapterAndApproval() public {
         _assertDeployAdapterAndApproval();
+    }
+}
+
+contract DeprecateMethMintMarketTest is DeployAltoEthereumMainnetTestBase {
+    address internal constant TIMELOCK_ADMIN = 0xc49bf619CC9A68F84A6C9aB88506F2627565a4D0;
+    address internal constant FREEZER_MULTISIG = 0x1c11d2d42929bd17aB7212b79c91862Adfa8bbe4;
+    uint256 internal constant NEW_MINTER_CEILING = 1000 ether;
+
+    /// @dev Fork test for `PauseMethMintMarket.s.sol`: freeze blocks new activity, unwind paths stay open.
+    function test_pauseMethMintMarketScript_freezeBlocksNewActivity() public {
+        address market = input.contracts.methMarket.market;
+        address user = makeAddr("methBorrower");
+        uint256 initialCollateral = 1 ether;
+        uint256 borrowAmount = _methMaxBorrow(market, initialCollateral) / 2;
+
+        // Open a position before freeze (also asserts addCollateral + borrow succeed pre-freeze).
+        deal(METH_MAINNET, user, initialCollateral);
+        vm.startPrank(user);
+        IERC20(METH_MAINNET).approve(market, type(uint256).max);
+        IMarket(market).addCollateral(initialCollateral, user);
+        IMarket(market).borrow(borrowAmount, 0, user, user, "");
+        vm.stopPrank();
+
+        _executePauseMethMintMarketScript();
+
+        assertTrue(IPausable(market).paused(FROZEN_TYPE), "market should be frozen");
+
+        // After freeze: addCollateral and borrow revert.
+        deal(METH_MAINNET, user, 1 ether);
+        vm.startPrank(user);
+        IERC20(METH_MAINNET).approve(market, type(uint256).max);
+
+        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, FROZEN_TYPE));
+        IMarket(market).addCollateral(1 ether, user);
+
+        vm.expectRevert(abi.encodeWithSelector(IPausable.IsPaused.selector, FROZEN_TYPE));
+        IMarket(market).borrow(1 ether, 0, user, user, "");
+
+        // After freeze: removeCollateral and repay still work.
+        uint256 collateralBefore = IMarket(market).position(user).collateralAssets;
+        IMarket(market).removeCollateral(0.1 ether, user, user, "");
+        assertEq(
+            IMarket(market).position(user).collateralAssets,
+            collateralBefore - 0.1 ether,
+            "removeCollateral should succeed while frozen"
+        );
+
+        deal(input.contracts.dusd, user, 2 * borrowAmount);
+        IERC20(input.contracts.dusd).approve(market, type(uint256).max);
+        uint256 borrowSharesBefore = IMarket(market).position(user).borrowShares;
+        IMarket(market).repay(0, borrowSharesBefore, user);
+        assertEq(IMarket(market).position(user).borrowShares, 0, "repay should succeed while frozen");
+        vm.stopPrank();
+    }
+
+    /// @dev Fork test for `DeprecateMethMintMarket.s.sol` schedule + execute flow.
+    function test_deprecateMethMintMarketScript_lowersMinterCeiling() public {
+        address market = input.contracts.methMarket.market;
+        (, uint256 ceilingBefore) = IDUSD(input.contracts.dusd).minterConfig(market);
+        assertGt(ceilingBefore, NEW_MINTER_CEILING, "ceiling should decrease");
+
+        _executeDeprecateMethMintMarketScript();
+
+        (, uint256 ceilingAfter) = IDUSD(input.contracts.dusd).minterConfig(market);
+        assertEq(ceilingAfter, NEW_MINTER_CEILING, "minter ceiling should be 1000 DUSD");
+    }
+
+    function _executePauseMethMintMarketScript() internal {
+        vm.prank(FREEZER_MULTISIG);
+        IPausable(input.contracts.methMarket.market).pause(FROZEN_TYPE, true);
+    }
+
+    function _executeDeprecateMethMintMarketScript() internal {
+        TimelockController timelock = TimelockController(payable(input.contracts.timelock));
+        uint256 minDelay = timelock.getMinDelay();
+
+        address[] memory targets = new address[](1);
+        uint256[] memory values = new uint256[](1);
+        bytes[] memory payloads = new bytes[](1);
+
+        targets[0] = input.contracts.dusd;
+        values[0] = 0;
+        payloads[0] = abi.encodeCall(IDUSD.setMinterCeiling, (input.contracts.methMarket.market, NEW_MINTER_CEILING));
+
+        vm.prank(TIMELOCK_ADMIN);
+        timelock.scheduleBatch(targets, values, payloads, bytes32(0), bytes32(0), minDelay);
+
+        vm.warp(block.timestamp + minDelay);
+
+        vm.prank(TIMELOCK_ADMIN);
+        timelock.executeBatch(targets, values, payloads, bytes32(0), bytes32(0));
+    }
+
+    function _methMaxBorrow(address market, uint256 collateralAmount) internal view returns (uint256) {
+        uint256 price = ILendingOracle(IMarket(market).oracle()).getPrice();
+        uint256 collateralValue = collateralAmount * price / LENDING_ORACLE_PRICE_PRECISION;
+        return collateralValue * IMarket(market).maxLtv() / 1e18;
     }
 }
 
