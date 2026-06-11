@@ -729,7 +729,27 @@ contract MigrateDusdPoolToFrxusdTest is DeployAltoEthereumMainnetTestBase {
         assertEq(_bal(USDC_MAINNET, address(helper)), 0, "helper USDC should be swept");
         assertGt(helper.dusdSentToTreasury(), 0, "mint refund DUSD should be sent to treasury");
 
+        assertTrue(helper.isMigrationExecuted(), "migration should be marked executed");
         _verifySwapRate(helper.newPool(), helper.DUSD());
+    }
+
+    function test_RevertWhen_executeMigrationCalledTwice() public {
+        address treasury = params.treasuryMultisig;
+        DusdPoolMigrationHelper helper = new DusdPoolMigrationHelper(treasury);
+
+        DeprecateUsdcUsmAndExecuteMigrationScript script = new DeprecateUsdcUsmAndExecuteMigrationScript();
+        script.setMigrationConfig(address(helper), block.timestamp + 24 hours);
+
+        DusdPoolMigrationHelper.DrainMins memory drainMins = _migrationDrainMins(script);
+        uint256 deadline = script.migrationDeadline();
+
+        vm.startPrank(treasury);
+        _executeDeprecateUsdcUsmAndExecuteMigrationScript(treasury, script, helper);
+        assertTrue(helper.isMigrationExecuted());
+
+        vm.expectRevert(DusdPoolMigrationHelper.MigrationAlreadyExecuted.selector);
+        helper.executeMigration(drainMins, deadline);
+        vm.stopPrank();
     }
 
     /// @dev Fork execution of `DeprecateUsdcUsmAndExecuteMigration.s.sol` Tx 1-11. Call under `vm.startPrank(treasury)`.
@@ -753,18 +773,23 @@ contract MigrateDusdPoolToFrxusdTest is DeployAltoEthereumMainnetTestBase {
         nft.approve(address(helper), script.NARROW_POSITION_TOKEN_ID());
         nft.approve(address(helper), script.WIDE_POSITION_TOKEN_ID());
 
-        helper.executeMigration(
-            DusdPoolMigrationHelper.DrainMins({
-                minExpectedDusdFromNarrowPosition: script.minExpectedDusdFromNarrowPosition(),
-                minExpectedUsdcFromNarrowPosition: script.minExpectedUsdcFromNarrowPosition(),
-                minExpectedDusdFromWidePosition: script.minExpectedDusdFromWidePosition(),
-                minExpectedUsdcFromWidePosition: script.minExpectedUsdcFromWidePosition()
-            }),
-            script.migrationDeadline()
-        );
+        helper.executeMigration(_migrationDrainMins(script), script.migrationDeadline());
 
         nft.approve(address(0), script.NARROW_POSITION_TOKEN_ID());
         nft.approve(address(0), script.WIDE_POSITION_TOKEN_ID());
+    }
+
+    function _migrationDrainMins(DeprecateUsdcUsmAndExecuteMigrationScript script)
+        internal
+        view
+        returns (DusdPoolMigrationHelper.DrainMins memory)
+    {
+        return DusdPoolMigrationHelper.DrainMins({
+            minExpectedDusdFromNarrowPosition: script.minExpectedDusdFromNarrowPosition(),
+            minExpectedUsdcFromNarrowPosition: script.minExpectedUsdcFromNarrowPosition(),
+            minExpectedDusdFromWidePosition: script.minExpectedDusdFromWidePosition(),
+            minExpectedUsdcFromWidePosition: script.minExpectedUsdcFromWidePosition()
+        });
     }
 
     function _logMigrationHelperResults(DusdPoolMigrationHelper helper) internal view {

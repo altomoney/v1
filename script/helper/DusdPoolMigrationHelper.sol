@@ -19,6 +19,8 @@ import {USDC_MAINNET, FRXUSD_MAINNET} from "@alto/deployments/ethereum-mainnet/C
 contract DusdPoolMigrationHelper is Ownable {
     using SafeERC20 for IERC20;
 
+    error MigrationAlreadyExecuted();
+
     uint256 private constant USDC_TO_FRXUSD_SCALE = 1e12;
     uint256 private constant Q96 = 1 << 96;
     uint256 private constant NARROW_POSITION_SLIPPAGE = 70;
@@ -58,6 +60,8 @@ contract DusdPoolMigrationHelper is Ownable {
     uint256 public frxUsdSentToTreasury;
     uint256 public usdcSentToTreasury;
 
+    bool public isMigrationExecuted;
+
     struct DrainMins {
         uint256 minExpectedDusdFromNarrowPosition;
         uint256 minExpectedUsdcFromNarrowPosition;
@@ -88,6 +92,12 @@ contract DusdPoolMigrationHelper is Ownable {
     /// @param drainMins Slippage floors for `decreaseLiquidity` on each old position.
     /// @param deadline Uniswap NFT manager deadline for all liquidity ops in this migration.
     function executeMigration(DrainMins calldata drainMins, uint256 deadline) external onlyOwner {
+        if (isMigrationExecuted) {
+            revert MigrationAlreadyExecuted();
+        }
+
+        isMigrationExecuted = true;
+
         INonfungiblePositionManager uniswapPositionManager =
             INonfungiblePositionManager(UNISWAP_V3_NFT_POSITION_MANAGER);
 

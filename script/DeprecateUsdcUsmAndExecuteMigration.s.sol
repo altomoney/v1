@@ -26,8 +26,13 @@ import {USDC_MAINNET, FRXUSD_MAINNET} from "@alto/deployments/ethereum-mainnet/C
 ///           7-8   approve narrow/wide Uniswap position NFTs to migration helper
 ///           9     `DusdPoolMigrationHelper.executeMigration`
 ///           10-11 revoke NFT approvals from migration helper
+///         forge script script/DeprecateUsdcUsmAndExecuteMigration.s.sol:DeprecateUsdcUsmAndExecuteMigrationScript --fork-url $ETH_RPC_URL
+
 contract DeprecateUsdcUsmAndExecuteMigrationScript is Script {
     uint256 private constant USDC_TO_FRXUSD_SCALE = 1e12;
+    uint256 private constant TX_COUNT = 11;
+    string private constant OUTPUT_DIR = "contracts/deployments/ethereum-mainnet/output";
+    string private constant SAFE_TX_NAME = "deprecate-usdc-usm-execute-migration-of-uniswap-pool";
 
     address public constant DUSD = 0x63d74d22E689C715a04F2C13962b1f77F443d35b;
     address public constant TREASURY = 0xA1148A1b94262540994Cf9Aa431A13ad39764228;
@@ -40,11 +45,12 @@ contract DeprecateUsdcUsmAndExecuteMigrationScript is Script {
     uint256 public constant WIDE_POSITION_TOKEN_ID = 1150308;
 
     // ─── Placeholder: set deployed helper address before generating Tx 7-9 ─────
-    address public migrationHelper = address(0x0A50f3f1aDc0463062D34b846d53618d2F2a30Ee);
+    address public migrationHelper = address(0);
 
     // ─── Placeholder: slippage floors for `decreaseLiquidity` on old positions ─
-    uint256 public minExpectedDusdFromNarrowPosition = 230_000 ether;
-    uint256 public minExpectedUsdcFromNarrowPosition = 540_000 * 1e6;
+    // @dev Set this slippage floors to 1% of current onchain values.
+    uint256 public minExpectedDusdFromNarrowPosition = 250_000 ether;
+    uint256 public minExpectedUsdcFromNarrowPosition = 491_000 * 1e6;
     uint256 public minExpectedDusdFromWidePosition = 35_000 ether;
     uint256 public minExpectedUsdcFromWidePosition = 155_000 * 1e6;
 
@@ -57,7 +63,7 @@ contract DeprecateUsdcUsmAndExecuteMigrationScript is Script {
         migrationDeadline = migrationDeadline_;
     }
 
-    function run() public view {
+    function run() public {
         uint256 usdcUsmLiquidity = IUsm(USDC_USM).getAvailableLiquidity();
         uint256 dusdRequired = usdcUsmLiquidity * USDC_TO_FRXUSD_SCALE;
         uint256 deadline = migrationDeadline == 0 ? block.timestamp + 24 hours : migrationDeadline;
@@ -73,46 +79,17 @@ contract DeprecateUsdcUsmAndExecuteMigrationScript is Script {
         console.log("Migration deadline:", deadline);
         console.log("");
 
-        _logDeprecateUsdcUsm(usdcUsmLiquidity);
-        _logApprovePositionsToHelper();
-        _logExecuteMigration(deadline);
-        _logDisapprovePositionsFromHelper();
+        (address[] memory targets, bytes[] memory payloads) = _buildMigrationTransactions(usdcUsmLiquidity, deadline);
+        _logTransactions(targets, payloads);
+        _writeSafeBatchJson(SAFE_TX_NAME, targets, payloads);
     }
 
-    function _logDeprecateUsdcUsm(uint256 usdcUsmLiquidity) internal pure {
+    function _buildMigrationTransactions(uint256 usdcUsmLiquidity, uint256 deadline)
+        internal
+        view
+        returns (address[] memory targets, bytes[] memory payloads)
+    {
         uint256 frxUsdAmount = usdcUsmLiquidity * USDC_TO_FRXUSD_SCALE;
-
-        _logHeader(1, "approve USDC to frax custodian (source DUSD)", USDC_MAINNET);
-        console.logBytes(abi.encodeWithSelector(IERC20.approve.selector, FRAX_CUSTODIAN, usdcUsmLiquidity));
-
-        _logHeader(2, "frax custodian deposit (USDC to frxUSD)", FRAX_CUSTODIAN);
-        console.logBytes(abi.encodeWithSelector(IERC4626.deposit.selector, usdcUsmLiquidity, TREASURY));
-
-        _logHeader(3, "approve frxUSD to frxUSD USM", FRXUSD_MAINNET);
-        console.logBytes(abi.encodeWithSelector(IERC20.approve.selector, FRXUSD_USM, frxUsdAmount));
-
-        _logHeader(4, "frxUSD USM sellAsset - source DUSD from frxUSD", FRXUSD_USM);
-        console.logBytes(abi.encodeWithSelector(IUsm.sellAsset.selector, frxUsdAmount, TREASURY));
-
-        _logHeader(5, "approve DUSD to USDC USM", DUSD);
-        console.logBytes(abi.encodeWithSelector(IERC20.approve.selector, USDC_USM, frxUsdAmount));
-
-        _logHeader(6, "USDC USM buyAsset - drain liquidity to 0", USDC_USM);
-        console.logBytes(abi.encodeWithSelector(IUsm.buyAsset.selector, usdcUsmLiquidity, TREASURY));
-    }
-
-    function _logApprovePositionsToHelper() internal view {
-        require(migrationHelper != address(0), "set migrationHelper before logging position approve txs");
-
-        _logHeader(7, "approve narrow position NFT to migration helper", UNISWAP_V3_NFT_POSITION_MANAGER);
-        console.logBytes(abi.encodeWithSelector(IERC721.approve.selector, migrationHelper, NARROW_POSITION_TOKEN_ID));
-
-        _logHeader(8, "approve wide position NFT to migration helper", UNISWAP_V3_NFT_POSITION_MANAGER);
-        console.logBytes(abi.encodeWithSelector(IERC721.approve.selector, migrationHelper, WIDE_POSITION_TOKEN_ID));
-    }
-
-    function _logExecuteMigration(uint256 deadline) internal view {
-        require(migrationHelper != address(0), "set migrationHelper before logging executeMigration tx");
 
         DusdPoolMigrationHelper.DrainMins memory drainMins = DusdPoolMigrationHelper.DrainMins({
             minExpectedDusdFromNarrowPosition: minExpectedDusdFromNarrowPosition,
@@ -121,18 +98,99 @@ contract DeprecateUsdcUsmAndExecuteMigrationScript is Script {
             minExpectedUsdcFromWidePosition: minExpectedUsdcFromWidePosition
         });
 
-        _logHeader(9, "DusdPoolMigrationHelper.executeMigration", migrationHelper);
-        console.logBytes(abi.encodeWithSelector(DusdPoolMigrationHelper.executeMigration.selector, drainMins, deadline));
+        targets = new address[](TX_COUNT);
+        payloads = new bytes[](TX_COUNT);
+
+        targets[0] = USDC_MAINNET;
+        payloads[0] = abi.encodeWithSelector(IERC20.approve.selector, FRAX_CUSTODIAN, usdcUsmLiquidity);
+
+        targets[1] = FRAX_CUSTODIAN;
+        payloads[1] = abi.encodeWithSelector(IERC4626.deposit.selector, usdcUsmLiquidity, TREASURY);
+
+        targets[2] = FRXUSD_MAINNET;
+        payloads[2] = abi.encodeWithSelector(IERC20.approve.selector, FRXUSD_USM, frxUsdAmount);
+
+        targets[3] = FRXUSD_USM;
+        payloads[3] = abi.encodeWithSelector(IUsm.sellAsset.selector, frxUsdAmount, TREASURY);
+
+        targets[4] = DUSD;
+        payloads[4] = abi.encodeWithSelector(IERC20.approve.selector, USDC_USM, frxUsdAmount);
+
+        targets[5] = USDC_USM;
+        payloads[5] = abi.encodeWithSelector(IUsm.buyAsset.selector, usdcUsmLiquidity, TREASURY);
+
+        targets[6] = UNISWAP_V3_NFT_POSITION_MANAGER;
+        payloads[6] = abi.encodeWithSelector(IERC721.approve.selector, migrationHelper, NARROW_POSITION_TOKEN_ID);
+
+        targets[7] = UNISWAP_V3_NFT_POSITION_MANAGER;
+        payloads[7] = abi.encodeWithSelector(IERC721.approve.selector, migrationHelper, WIDE_POSITION_TOKEN_ID);
+
+        targets[8] = migrationHelper;
+        payloads[8] = abi.encodeWithSelector(DusdPoolMigrationHelper.executeMigration.selector, drainMins, deadline);
+
+        targets[9] = UNISWAP_V3_NFT_POSITION_MANAGER;
+        payloads[9] = abi.encodeWithSelector(IERC721.approve.selector, address(0), NARROW_POSITION_TOKEN_ID);
+
+        targets[10] = UNISWAP_V3_NFT_POSITION_MANAGER;
+        payloads[10] = abi.encodeWithSelector(IERC721.approve.selector, address(0), WIDE_POSITION_TOKEN_ID);
     }
 
-    function _logDisapprovePositionsFromHelper() internal view {
-        require(migrationHelper != address(0), "set migrationHelper before logging position disapprove txs");
+    function _logTransactions(address[] memory targets, bytes[] memory payloads) internal pure {
+        for (uint256 i = 0; i < targets.length; i++) {
+            _logHeader(i + 1, _txLabel(i + 1), targets[i]);
+            console.logBytes(payloads[i]);
+        }
+    }
 
-        _logHeader(10, "disapprove narrow position NFT from migration helper", UNISWAP_V3_NFT_POSITION_MANAGER);
-        console.logBytes(abi.encodeWithSelector(IERC721.approve.selector, address(0), NARROW_POSITION_TOKEN_ID));
+    function _txLabel(uint256 txNum) internal pure returns (string memory) {
+        if (txNum == 1) return "approve USDC to frax custodian (source DUSD)";
+        if (txNum == 2) return "frax custodian deposit (USDC to frxUSD)";
+        if (txNum == 3) return "approve frxUSD to frxUSD USM";
+        if (txNum == 4) return "frxUSD USM sellAsset - source DUSD from frxUSD";
+        if (txNum == 5) return "approve DUSD to USDC USM";
+        if (txNum == 6) return "USDC USM buyAsset - drain liquidity to 0";
+        if (txNum == 7) return "approve narrow position NFT to migration helper";
+        if (txNum == 8) return "approve wide position NFT to migration helper";
+        if (txNum == 9) return "DusdPoolMigrationHelper.executeMigration";
+        if (txNum == 10) return "disapprove narrow position NFT from migration helper";
+        if (txNum == 11) return "disapprove wide position NFT from migration helper";
+        return "unknown";
+    }
 
-        _logHeader(11, "disapprove wide position NFT from migration helper", UNISWAP_V3_NFT_POSITION_MANAGER);
-        console.logBytes(abi.encodeWithSelector(IERC721.approve.selector, address(0), WIDE_POSITION_TOKEN_ID));
+    function _writeSafeBatchJson(string memory name, address[] memory targets, bytes[] memory payloads) internal {
+        string memory fileName = string.concat(OUTPUT_DIR, "/safe-tx-", name, ".json");
+        vm.writeFile(fileName, _buildSafeBatchJson(name, targets, payloads));
+        console.log("");
+        console.log("Safe TX Builder JSON written:");
+        console.log(" ", fileName);
+    }
+
+    function _buildSafeBatchJson(string memory name, address[] memory targets, bytes[] memory payloads)
+        internal
+        pure
+        returns (string memory)
+    {
+        string memory json =
+            string.concat('{"version":"1.0","chainId":"1","meta":{"name":"', name, '"},"transactions":[');
+
+        for (uint256 i = 0; i < targets.length; i++) {
+            uint256 txNum = i + 1;
+            if (i > 0) json = string.concat(json, ",");
+            json = string.concat(
+                json,
+                '{"to":"',
+                vm.toString(targets[i]),
+                '","value":"0","data":"',
+                vm.toString(payloads[i]),
+                '","label":"Tx ',
+                vm.toString(txNum),
+                " | ",
+                _txLabel(txNum),
+                '"}'
+            );
+        }
+
+        return string.concat(json, "]}");
     }
 
     function _logHeader(uint256 txNum, string memory label, address to) internal pure {
