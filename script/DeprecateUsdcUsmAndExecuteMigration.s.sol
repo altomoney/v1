@@ -45,14 +45,14 @@ contract DeprecateUsdcUsmAndExecuteMigrationScript is Script {
     uint256 public constant WIDE_POSITION_TOKEN_ID = 1150308;
 
     // ─── Placeholder: set deployed helper address before generating Tx 7-9 ─────
-    address public migrationHelper = address(0);
+    address public migrationHelper = 0x68D83e51a0883201B1bA19ed7ab06580f06Da2f8;
 
     // ─── Placeholder: slippage floors for `decreaseLiquidity` on old positions ─
-    // @dev Set this slippage floors to 1% of current onchain values.
-    uint256 public minExpectedDusdFromNarrowPosition = 250_000 ether;
-    uint256 public minExpectedUsdcFromNarrowPosition = 491_000 * 1e6;
-    uint256 public minExpectedDusdFromWidePosition = 35_000 ether;
-    uint256 public minExpectedUsdcFromWidePosition = 155_000 * 1e6;
+    // @dev Set these slippage floors close to 1% below current onchain values.
+    uint256 public minExpectedDusdFromNarrowPosition = 291_500 ether;
+    uint256 public minExpectedUsdcFromNarrowPosition = 482_300 * 1e6;
+    uint256 public minExpectedDusdFromWidePosition = 36_600 ether;
+    uint256 public minExpectedUsdcFromWidePosition = 155_900 * 1e6;
 
     // ─── Placeholder: Uniswap NFT manager deadline for `executeMigration` ────
     uint256 public migrationDeadline;
