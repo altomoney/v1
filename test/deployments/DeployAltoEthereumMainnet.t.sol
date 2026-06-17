@@ -36,6 +36,11 @@ import {
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {IAltoVault, IAltoVaultBase} from "@alto/lending/interfaces/IAltoVault.sol";
 import {VaultRegistry} from "@alto/utils/VaultRegistry.sol";
+import {AltoMintMarket} from "@alto/lending/AltoMintMarket.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
+import {IOracle, LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
+import {SYRUPUSDC_MAINNET} from "@alto/deployments/ethereum-mainnet/Constants.sol";
 
 /// @dev Set to a non-zero deployment timestamp to load a real deployment's addresses.json
 ///      and skip re-deploying prerequisites. The file must be at:
@@ -44,6 +49,8 @@ uint256 constant DEPLOYMENT_ID_TO_LOAD = 1765364975;
 string constant OUTPUT_DIR = "./contracts/deployments/ethereum-mainnet/output";
 
 abstract contract DeployAltoEthereumMainnetTestBase is Test {
+    using FixedPointMath for uint256;
+
     AltoEthereumMainnetParams params;
     AltoEthereumMainnetInput input;
 
@@ -279,6 +286,35 @@ abstract contract DeployAltoEthereumMainnetTestBase is Test {
         (uint256 minted, uint256 _ceiling) = IDUSD(dusd).minterConfig(market);
         assertEq(minted, 0, string.concat(s, " market should have 0 minted initially"));
         assertEq(_ceiling, expectedMintCeiling, string.concat(s, " market mint ceiling should be correct"));
+    }
+
+    function _increaseSyrupUsdcMintMarketDebtCeiling(uint256 debtCeilingIncrease)
+        internal
+        returns (uint256 newDebtCeiling, uint256 newMinterCeiling)
+    {
+        address market = input.contracts.syrupUsdcMintMarket.market;
+        address dusd = input.contracts.dusd;
+        address timelock = input.contracts.timelock;
+
+        uint256 currentDebtCeiling = IMarket(market).totalSupply().assets;
+        newDebtCeiling = currentDebtCeiling + debtCeilingIncrease;
+
+        uint256 maxLiquidationLtv = IAltoLiquidationEngine(IMarket(market).liquidationEngine()).minLltv();
+        newMinterCeiling = newDebtCeiling * 1.05 ether / maxLiquidationLtv;
+
+        vm.startPrank(timelock);
+        AltoMintMarket(market).setDebtCeiling(newDebtCeiling);
+        IDUSD(dusd).setMinterCeiling(market, newMinterCeiling);
+        vm.stopPrank();
+    }
+
+    function _collateralNeededForBorrow(address market, uint256 borrowAmount) internal view returns (uint256) {
+        uint256 openingFee = borrowAmount.multiplyWithPrecisionUp(IMarket(market).borrowOpeningFee());
+        uint256 totalBorrowValue = borrowAmount + openingFee;
+        uint256 collateralValueNeeded = totalBorrowValue.divideWithPrecisionUp(IMarket(market).maxLtv());
+        uint256 collateralPrice = IOracle(IMarket(market).oracle()).getPrice();
+
+        return collateralValueNeeded.divideWithRounding(LENDING_ORACLE_PRICE_PRECISION, collateralPrice, true);
     }
 
     function _verifyMintCeiling(address contractAddress, uint256 ceiling) internal view {
@@ -671,6 +707,45 @@ contract TresuryPSMMigrationTest is DeployAltoEthereumMainnetTestBase {
 contract DeployAdapterPhaseTest is DeployAltoEthereumMainnetTestBase {
     function test_deployAdapterAndApproval() public {
         _assertDeployAdapterAndApproval();
+    }
+}
+
+contract SyrupUsdcMintMarketDebtCeilingIncreaseTest is DeployAltoEthereumMainnetTestBase {
+    uint256 internal constant DEBT_CEILING_INCREASE = 19_000 ether;
+    uint256 internal constant BORROW_AMOUNT = 45_000 ether;
+
+    function test_increaseSyrupUsdcMintMarketDebtCeilingAndBorrow() public {
+        address market = input.contracts.syrupUsdcMintMarket.market;
+        address dusd = input.contracts.dusd;
+
+        assertTrue(market != address(0), "syrupUsdcMintMarket should be loaded from addresses.json");
+
+        (uint256 newDebtCeiling, uint256 newMinterCeiling) =
+            _increaseSyrupUsdcMintMarketDebtCeiling(DEBT_CEILING_INCREASE);
+
+        assertEq(IMarket(market).totalSupply().assets, newDebtCeiling, "debt ceiling mismatch");
+        (, uint256 minterCeiling) = IDUSD(dusd).minterConfig(market);
+        assertEq(minterCeiling, newMinterCeiling, "minter ceiling mismatch");
+        assertGe(minterCeiling, BORROW_AMOUNT, "minter ceiling should cover borrow amount");
+
+        address borrower = makeAddr("syrupUsdcBorrower");
+        uint256 collateralAmount = _collateralNeededForBorrow(market, BORROW_AMOUNT);
+        (uint256 mintedBefore,) = IDUSD(dusd).minterConfig(market);
+
+        deal(SYRUPUSDC_MAINNET, borrower, collateralAmount);
+
+        vm.startPrank(borrower);
+        IERC20(SYRUPUSDC_MAINNET).approve(market, collateralAmount);
+        IMarket(market).addCollateral(collateralAmount, borrower);
+        (uint256 totalBorrowed,, uint256 openingFee) = IMarket(market).borrow(BORROW_AMOUNT, 0, borrower, borrower, "");
+        vm.stopPrank();
+
+        assertEq(totalBorrowed - openingFee, BORROW_AMOUNT, "borrowed assets mismatch");
+        assertEq(IERC20(dusd).balanceOf(borrower), BORROW_AMOUNT, "borrower DUSD balance mismatch");
+        assertGt(IMarket(market).position(borrower).borrowShares, 0, "borrower should have borrow shares");
+
+        (uint256 mintedAfter,) = IDUSD(dusd).minterConfig(market);
+        assertEq(mintedAfter, mintedBefore + BORROW_AMOUNT, "minter minted amount should increase");
     }
 }
 
