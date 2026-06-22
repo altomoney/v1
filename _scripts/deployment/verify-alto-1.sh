@@ -413,7 +413,7 @@ verify_contract "WethMarketImplementation" "$WETH_MARKET_IMPL" "contracts/lendin
 verify_contract "WethMarketIRM" "$WETH_MARKET_IRM" "contracts/lending/irm/FixedRateIrm.sol:FixedRateIrm"
 verify_contract "WethMarketOracle" "$WETH_MARKET_ORACLE" "contracts/oracles/AltoMultiChainlinkLendingOracle.sol:AltoMultiChainlinkLendingOracle"
 verify_contract "WethLiquidationEngine" "$WETH_LIQUIDATION_ENGINE" "contracts/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol:DlbDcfPriorityLiquidationEngine"
-verify_contract "WethLeverageSwapper" "$WETH_LEVERAGE_SWAPPER" "contracts/lending/leverage/AltoLeverageSwapper.sol:AltoLeverageSwapper"
+verify_contract "WethLeverageSwapper" "$WETH_LEVERAGE_SWAPPER" "contracts/lending/leverage/AltoLeverageSwapperMultiTarget.sol:AltoLeverageSwapperMultiTarget"
 verify_contract "WethLeverage" "$WETH_LEVERAGE" "contracts/lending/leverage/AltoLeverage.sol:AltoLeverage"
 
 # WSTETH Market contracts
@@ -422,7 +422,7 @@ verify_contract "WstethMarketImplementation" "$WSTETH_MARKET_IMPL" "contracts/le
 verify_contract "WstethMarketIRM" "$WSTETH_MARKET_IRM" "contracts/lending/irm/FixedRateIrm.sol:FixedRateIrm"
 verify_contract "WstethMarketOracle" "$WSTETH_MARKET_ORACLE" "contracts/oracles/AltoERC4626RatioChainlinkOracle/implementations/ERC4626RatioChainlinkOracleWSTETH.sol:ERC4626RatioChainlinkOracleWSTETH"
 verify_contract "WstethLiquidationEngine" "$WSTETH_LIQUIDATION_ENGINE" "contracts/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol:DlbDcfPriorityLiquidationEngine"
-verify_contract "WstethLeverageSwapper" "$WSTETH_LEVERAGE_SWAPPER" "contracts/lending/leverage/AltoLeverageSwapper.sol:AltoLeverageSwapper"
+verify_contract "WstethLeverageSwapper" "$WSTETH_LEVERAGE_SWAPPER" "contracts/lending/leverage/AltoLeverageSwapperMultiTarget.sol:AltoLeverageSwapperMultiTarget"
 verify_contract "WstethLeverage" "$WSTETH_LEVERAGE" "contracts/lending/leverage/AltoLeverage.sol:AltoLeverage"
 
 # RETH Market contracts
@@ -431,7 +431,7 @@ verify_contract "RethMarketImplementation" "$RETH_MARKET_IMPL" "contracts/lendin
 verify_contract "RethMarketIRM" "$RETH_MARKET_IRM" "contracts/lending/irm/FixedRateIrm.sol:FixedRateIrm"
 verify_contract "RethMarketOracle" "$RETH_MARKET_ORACLE" "contracts/oracles/AltoERC4626RatioChainlinkOracle/implementations/ERC4626RatioChainlinkOracleRETH.sol:ERC4626RatioChainlinkOracleRETH"
 verify_contract "RethLiquidationEngine" "$RETH_LIQUIDATION_ENGINE" "contracts/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol:DlbDcfPriorityLiquidationEngine"
-verify_contract "RethLeverageSwapper" "$RETH_LEVERAGE_SWAPPER" "contracts/lending/leverage/AltoLeverageSwapper.sol:AltoLeverageSwapper"
+verify_contract "RethLeverageSwapper" "$RETH_LEVERAGE_SWAPPER" "contracts/lending/leverage/AltoLeverageSwapperMultiTarget.sol:AltoLeverageSwapperMultiTarget"
 verify_contract "RethLeverage" "$RETH_LEVERAGE" "contracts/lending/leverage/AltoLeverage.sol:AltoLeverage"
 
 # METH Market contracts
@@ -440,7 +440,7 @@ verify_contract "MethMarketImplementation" "$METH_MARKET_IMPL" "contracts/lendin
 verify_contract "MethMarketIRM" "$METH_MARKET_IRM" "contracts/lending/irm/FixedRateIrm.sol:FixedRateIrm"
 verify_contract "MethMarketOracle" "$METH_MARKET_ORACLE" "contracts/oracles/AltoERC4626RatioChainlinkOracle/implementations/ERC4626RatioChainlinkOracleMETH.sol:ERC4626RatioChainlinkOracleMETH"
 verify_contract "MethLiquidationEngine" "$METH_LIQUIDATION_ENGINE" "contracts/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol:DlbDcfPriorityLiquidationEngine"
-verify_contract "MethLeverageSwapper" "$METH_LEVERAGE_SWAPPER" "contracts/lending/leverage/AltoLeverageSwapper.sol:AltoLeverageSwapper"
+verify_contract "MethLeverageSwapper" "$METH_LEVERAGE_SWAPPER" "contracts/lending/leverage/AltoLeverageSwapperMultiTarget.sol:AltoLeverageSwapperMultiTarget"
 verify_contract "MethLeverage" "$METH_LEVERAGE" "contracts/lending/leverage/AltoLeverage.sol:AltoLeverage"
 
 # TBTC Market contracts
@@ -449,7 +449,7 @@ verify_contract "TbtcMarketImplementation" "$TBTC_MARKET_IMPL" "contracts/lendin
 verify_contract "TbtcMarketIRM" "$TBTC_MARKET_IRM" "contracts/lending/irm/FixedRateIrm.sol:FixedRateIrm"
 verify_contract "TbtcMarketOracle" "$TBTC_MARKET_ORACLE" "contracts/oracles/AltoMultiChainlinkLendingOracle.sol:AltoMultiChainlinkLendingOracle"
 verify_contract "TbtcLiquidationEngine" "$TBTC_LIQUIDATION_ENGINE" "contracts/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol:DlbDcfPriorityLiquidationEngine"
-verify_contract "TbtcLeverageSwapper" "$TBTC_LEVERAGE_SWAPPER" "contracts/lending/leverage/AltoLeverageSwapper.sol:AltoLeverageSwapper"
+verify_contract "TbtcLeverageSwapper" "$TBTC_LEVERAGE_SWAPPER" "contracts/lending/leverage/AltoLeverageSwapperMultiTarget.sol:AltoLeverageSwapperMultiTarget"
 verify_contract "TbtcLeverage" "$TBTC_LEVERAGE" "contracts/lending/leverage/AltoLeverage.sol:AltoLeverage"
 
 # WBTC Borrow Market contracts
@@ -458,7 +458,7 @@ verify_contract "WbtcBorrowMarketImplementation" "$WBTC_MARKET_IMPL" "contracts/
 verify_contract "WbtcBorrowMarketIRM" "$WBTC_MARKET_IRM" "contracts/lending/irm/AdaptiveCurveIrm.sol:AdaptiveCurveIrm"
 verify_contract "WbtcBorrowMarketOracle" "$WBTC_MARKET_ORACLE" "contracts/oracles/AltoMultiChainlinkLendingOracle.sol:AltoMultiChainlinkLendingOracle"
 verify_contract "WbtcBorrowLiquidationEngine" "$WBTC_LIQUIDATION_ENGINE" "contracts/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol:DlbDcfPriorityLiquidationEngine"
-verify_contract "WbtcBorrowLeverageSwapper" "$WBTC_LEVERAGE_SWAPPER" "contracts/lending/leverage/AltoLeverageSwapper.sol:AltoLeverageSwapper"
+verify_contract "WbtcBorrowLeverageSwapper" "$WBTC_LEVERAGE_SWAPPER" "contracts/lending/leverage/AltoLeverageSwapperMultiTarget.sol:AltoLeverageSwapperMultiTarget"
 verify_contract "WbtcBorrowLeverage" "$WBTC_LEVERAGE" "contracts/lending/leverage/AltoLeverage.sol:AltoLeverage"
 
 # CBBTC Borrow Market contracts
@@ -467,7 +467,7 @@ verify_contract "CbbtcBorrowMarketImplementation" "$CBBTC_MARKET_IMPL" "contract
 verify_contract "CbbtcBorrowMarketIRM" "$CBBTC_MARKET_IRM" "contracts/lending/irm/AdaptiveCurveIrm.sol:AdaptiveCurveIrm"
 verify_contract "CbbtcBorrowMarketOracle" "$CBBTC_MARKET_ORACLE" "contracts/oracles/AltoMultiChainlinkLendingOracle.sol:AltoMultiChainlinkLendingOracle"
 verify_contract "CbbtcBorrowLiquidationEngine" "$CBBTC_LIQUIDATION_ENGINE" "contracts/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol:DlbDcfPriorityLiquidationEngine"
-verify_contract "CbbtcBorrowLeverageSwapper" "$CBBTC_LEVERAGE_SWAPPER" "contracts/lending/leverage/AltoLeverageSwapper.sol:AltoLeverageSwapper"
+verify_contract "CbbtcBorrowLeverageSwapper" "$CBBTC_LEVERAGE_SWAPPER" "contracts/lending/leverage/AltoLeverageSwapperMultiTarget.sol:AltoLeverageSwapperMultiTarget"
 verify_contract "CbbtcBorrowLeverage" "$CBBTC_LEVERAGE" "contracts/lending/leverage/AltoLeverage.sol:AltoLeverage"
 
 # SUSDE Borrow Market contracts
@@ -476,7 +476,7 @@ verify_contract "SusdeBorrowMarketImplementation" "$SUSDE_MARKET_IMPL" "contract
 verify_contract "SusdeBorrowMarketIRM" "$SUSDE_MARKET_IRM" "contracts/lending/irm/AdaptiveCurveIrm.sol:AdaptiveCurveIrm"
 verify_contract "SusdeBorrowMarketOracle" "$SUSDE_MARKET_ORACLE" "contracts/oracles/AltoERC4626RatioChainlinkOracle/implementations/ERC4626RatioChainlinkOracleSUSDE.sol:ERC4626RatioChainlinkOracleSUSDE"
 verify_contract "SusdeBorrowLiquidationEngine" "$SUSDE_LIQUIDATION_ENGINE" "contracts/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol:DlbDcfPriorityLiquidationEngine"
-verify_contract "SusdeBorrowLeverageSwapper" "$SUSDE_LEVERAGE_SWAPPER" "contracts/lending/leverage/AltoLeverageSwapper.sol:AltoLeverageSwapper"
+verify_contract "SusdeBorrowLeverageSwapper" "$SUSDE_LEVERAGE_SWAPPER" "contracts/lending/leverage/AltoLeverageSwapperMultiTarget.sol:AltoLeverageSwapperMultiTarget"
 verify_contract "SusdeBorrowLeverage" "$SUSDE_LEVERAGE" "contracts/lending/leverage/AltoLeverage.sol:AltoLeverage"
 
 # SYRUP USDC Borrow Market contracts
@@ -485,7 +485,7 @@ verify_contract "SyrupUsdcBorrowMarketImplementation" "$SYRUPUSDC_MARKET_IMPL" "
 verify_contract "SyrupUsdcBorrowMarketIRM" "$SYRUPUSDC_MARKET_IRM" "contracts/lending/irm/AdaptiveCurveIrm.sol:AdaptiveCurveIrm"
 verify_contract "SyrupUsdcBorrowMarketOracle" "$SYRUPUSDC_MARKET_ORACLE" "contracts/oracles/AltoERC4626RatioChainlinkOracle/implementations/ERC4626RatioChainlinkOracleSYRUPUSDC.sol:ERC4626RatioChainlinkOracleSYRUPUSDC"
 verify_contract "SyrupUsdcBorrowLiquidationEngine" "$SYRUPUSDC_LIQUIDATION_ENGINE" "contracts/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol:DlbDcfPriorityLiquidationEngine"
-verify_contract "SyrupUsdcBorrowLeverageSwapper" "$SYRUPUSDC_LEVERAGE_SWAPPER" "contracts/lending/leverage/AltoLeverageSwapper.sol:AltoLeverageSwapper"
+verify_contract "SyrupUsdcBorrowLeverageSwapper" "$SYRUPUSDC_LEVERAGE_SWAPPER" "contracts/lending/leverage/AltoLeverageSwapperMultiTarget.sol:AltoLeverageSwapperMultiTarget"
 verify_contract "SyrupUsdcBorrowLeverage" "$SYRUPUSDC_LEVERAGE" "contracts/lending/leverage/AltoLeverage.sol:AltoLeverage"
 
 # PAXG Borrow Market contracts
@@ -494,7 +494,7 @@ verify_contract "PaxgBorrowMarketImplementation" "$PAXG_MARKET_IMPL" "contracts/
 verify_contract "PaxgBorrowMarketIRM" "$PAXG_MARKET_IRM" "contracts/lending/irm/AdaptiveCurveIrm.sol:AdaptiveCurveIrm"
 verify_contract "PaxgBorrowMarketOracle" "$PAXG_MARKET_ORACLE" "contracts/oracles/AltoMultiChainlinkLendingOracle.sol:AltoMultiChainlinkLendingOracle"
 verify_contract "PaxgBorrowLiquidationEngine" "$PAXG_LIQUIDATION_ENGINE" "contracts/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol:DlbDcfPriorityLiquidationEngine"
-verify_contract "PaxgBorrowLeverageSwapper" "$PAXG_LEVERAGE_SWAPPER" "contracts/lending/leverage/AltoLeverageSwapper.sol:AltoLeverageSwapper"
+verify_contract "PaxgBorrowLeverageSwapper" "$PAXG_LEVERAGE_SWAPPER" "contracts/lending/leverage/AltoLeverageSwapperMultiTarget.sol:AltoLeverageSwapperMultiTarget"
 verify_contract "PaxgBorrowLeverage" "$PAXG_LEVERAGE" "contracts/lending/leverage/AltoLeverage.sol:AltoLeverage"
 
 # sUSDe Mint Market contracts
@@ -503,7 +503,7 @@ verify_contract "SusdeMintMarketImplementation" "$SUSDE_MINT_MARKET_IMPL" "contr
 verify_contract "SusdeMintMarketIRM" "$SUSDE_MINT_MARKET_IRM" "contracts/lending/irm/FixedRateIrm.sol:FixedRateIrm"
 verify_contract "SusdeMintMarketOracle" "$SUSDE_MINT_MARKET_ORACLE" "contracts/oracles/AltoERC4626RatioChainlinkOracle/implementations/ERC4626RatioChainlinkOracleSUSDE.sol:ERC4626RatioChainlinkOracleSUSDE"
 verify_contract "SusdeMintLiquidationEngine" "$SUSDE_MINT_LIQUIDATION_ENGINE" "contracts/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol:DlbDcfPriorityLiquidationEngine"
-verify_contract "SusdeMintLeverageSwapper" "$SUSDE_MINT_LEVERAGE_SWAPPER" "contracts/lending/leverage/AltoLeverageSwapper.sol:AltoLeverageSwapper"
+verify_contract "SusdeMintLeverageSwapper" "$SUSDE_MINT_LEVERAGE_SWAPPER" "contracts/lending/leverage/AltoLeverageSwapperMultiTarget.sol:AltoLeverageSwapperMultiTarget"
 verify_contract "SusdeMintLeverage" "$SUSDE_MINT_LEVERAGE" "contracts/lending/leverage/AltoLeverage.sol:AltoLeverage"
 
 # syrupUSDC Mint Market contracts
@@ -512,7 +512,7 @@ verify_contract "SyrupUsdcMintMarketImplementation" "$SYRUPUSDC_MINT_MARKET_IMPL
 verify_contract "SyrupUsdcMintMarketIRM" "$SYRUPUSDC_MINT_MARKET_IRM" "contracts/lending/irm/FixedRateIrm.sol:FixedRateIrm"
 verify_contract "SyrupUsdcMintMarketOracle" "$SYRUPUSDC_MINT_MARKET_ORACLE" "contracts/oracles/AltoERC4626RatioChainlinkOracle/implementations/ERC4626RatioChainlinkOracleSYRUPUSDC.sol:ERC4626RatioChainlinkOracleSYRUPUSDC"
 verify_contract "SyrupUsdcMintLiquidationEngine" "$SYRUPUSDC_MINT_LIQUIDATION_ENGINE" "contracts/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol:DlbDcfPriorityLiquidationEngine"
-verify_contract "SyrupUsdcMintLeverageSwapper" "$SYRUPUSDC_MINT_LEVERAGE_SWAPPER" "contracts/lending/leverage/AltoLeverageSwapper.sol:AltoLeverageSwapper"
+verify_contract "SyrupUsdcMintLeverageSwapper" "$SYRUPUSDC_MINT_LEVERAGE_SWAPPER" "contracts/lending/leverage/AltoLeverageSwapperMultiTarget.sol:AltoLeverageSwapperMultiTarget"
 verify_contract "SyrupUsdcMintLeverage" "$SYRUPUSDC_MINT_LEVERAGE" "contracts/lending/leverage/AltoLeverage.sol:AltoLeverage"
 
 # Permissioned USM contracts
