@@ -23,6 +23,12 @@ import {IAltoLiquidationEngine} from "@alto/lending/interfaces/IAltoLiquidationE
 import {Pausable} from "@alto/utils/Pausable.sol";
 import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
 import {AltoLeverageSwapper} from "@alto/lending/leverage/AltoLeverageSwapper.sol";
+import {AltoLeverageSwapperMultiTarget} from "@alto/lending/leverage/AltoLeverageSwapperMultiTarget.sol";
+import {
+    ZEROX_SWAP_TARGET_MAINNET,
+    ODOS_ROUTER_V3_MAINNET,
+    ONE_INCH_AGGREGATION_ROUTER_V6_MAINNET
+} from "@alto/deployments/ethereum-mainnet/Constants.sol";
 import {MarketRegistry} from "@alto/utils/MarketRegistry.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {IUsm, AccessMode} from "@alto/usm/interfaces/IUsm.sol";
@@ -671,6 +677,104 @@ contract TresuryPSMMigrationTest is DeployAltoEthereumMainnetTestBase {
 contract DeployAdapterPhaseTest is DeployAltoEthereumMainnetTestBase {
     function test_deployAdapterAndApproval() public {
         _assertDeployAdapterAndApproval();
+    }
+}
+
+contract DeployLeverageSwapperMultiTargetPhaseTest is DeployAltoEthereumMainnetTestBase {
+    function test_deployLeverageSwapperMultiTarget() public {
+        _assertDeployLeverageSwapperMultiTarget();
+    }
+
+    function _assertDeployLeverageSwapperMultiTarget() internal {
+        assertTrue(input.contracts.timelock != address(0), "need timelock from addresses.json");
+        assertTrue(input.contracts.wethMarket.leverage != address(0), "need weth leverage from addresses.json");
+
+        MarketContracts[12] memory marketsBefore = _allMarkets();
+        address[] memory oldSwappers = new address[](marketsBefore.length);
+        for (uint256 i; i < marketsBefore.length; ++i) {
+            assertTrue(marketsBefore[i].leverage != address(0), "market leverage missing");
+            assertTrue(marketsBefore[i].leverageSwapper != address(0), "market leverageSwapper missing");
+            oldSwappers[i] = marketsBefore[i].leverageSwapper;
+        }
+
+        params.phase = DeploymentPhase.ALTO_LEVERAGE_SWAPPER_MULTI_TARGET;
+        input = DeployAltoEthereumMainnet.deploy(params, input);
+
+        for (uint256 i; i < marketsBefore.length; ++i) {
+            MarketContracts memory market = _marketByLeverage(marketsBefore[i].leverage);
+            address newSwapper = market.leverageSwapper;
+            address leverage = marketsBefore[i].leverage;
+
+            assertTrue(newSwapper != oldSwappers[i], "swapper should be redeployed");
+            assertTrue(newSwapper.code.length > 0, "new swapper should have code");
+
+            AltoLeverageSwapperMultiTarget swapper = AltoLeverageSwapperMultiTarget(newSwapper);
+            assertEq(Ownable(newSwapper).owner(), input.contracts.timelock, "swapper owner should be timelock");
+            assertTrue(swapper.isWhitelisted(leverage), "leverage should be whitelisted on swapper");
+            assertTrue(swapper.isValidSwapTarget(ZEROX_SWAP_TARGET_MAINNET), "0x should be valid swap target");
+            assertTrue(swapper.isValidSwapTarget(ODOS_ROUTER_V3_MAINNET), "Odos should be valid swap target");
+            assertTrue(
+                swapper.isValidSwapTarget(ONE_INCH_AGGREGATION_ROUTER_V6_MAINNET), "1inch should be valid swap target"
+            );
+
+            assertEq(
+                address(AltoLeverage(leverage).swapper()),
+                oldSwappers[i],
+                "AltoLeverage swapper unchanged until timelock executes setSwapper"
+            );
+        }
+
+        assertTrue(
+            vm.exists("contracts/deployments/ethereum-mainnet/output/safe-tx-leverage-swapper-set-swapper-schedule.json"),
+            "schedule json should be written"
+        );
+        assertTrue(
+            vm.exists("contracts/deployments/ethereum-mainnet/output/safe-tx-leverage-swapper-set-swapper-execute.json"),
+            "execute json should be written"
+        );
+    }
+
+    function _allMarkets() internal view returns (MarketContracts[12] memory markets) {
+        markets = [
+            input.contracts.wethMarket,
+            input.contracts.wstethMarket,
+            input.contracts.rethMarket,
+            input.contracts.methMarket,
+            input.contracts.tbtcMarket,
+            input.contracts.wbtcBorrowMarket,
+            input.contracts.cbbtcBorrowMarket,
+            input.contracts.susdeBorrowMarket,
+            input.contracts.syrupUsdcBorrowMarket,
+            input.contracts.paxgBorrowMarket,
+            input.contracts.susdeMintMarket,
+            input.contracts.syrupUsdcMintMarket
+        ];
+    }
+
+    function _marketByLeverage(address leverage) internal view returns (MarketContracts memory market) {
+        MarketContracts[12] memory markets = _allMarkets();
+        for (uint256 i; i < markets.length; ++i) {
+            if (markets[i].leverage == leverage) {
+                return _getMarketByIndex(i);
+            }
+        }
+        revert("market not found");
+    }
+
+    function _getMarketByIndex(uint256 index) internal view returns (MarketContracts memory market) {
+        if (index == 0) return input.contracts.wethMarket;
+        if (index == 1) return input.contracts.wstethMarket;
+        if (index == 2) return input.contracts.rethMarket;
+        if (index == 3) return input.contracts.methMarket;
+        if (index == 4) return input.contracts.tbtcMarket;
+        if (index == 5) return input.contracts.wbtcBorrowMarket;
+        if (index == 6) return input.contracts.cbbtcBorrowMarket;
+        if (index == 7) return input.contracts.susdeBorrowMarket;
+        if (index == 8) return input.contracts.syrupUsdcBorrowMarket;
+        if (index == 9) return input.contracts.paxgBorrowMarket;
+        if (index == 10) return input.contracts.susdeMintMarket;
+        if (index == 11) return input.contracts.syrupUsdcMintMarket;
+        revert("invalid market index");
     }
 }
 
