@@ -50,6 +50,8 @@ address constant CHAINLINK_REUSD_USD_PRICE_FEED = 0x72B5760cFBE437DD01409f44055f
 address constant ZEROX_SWAP_TARGET_MAINNET = 0x0000000000001fF3684f28c67538d4D072C22734;
 // Odos Router V3 on Ethereum mainnet
 address constant ODOS_ROUTER_V3_MAINNET = 0x0D05a7D3448512B78fa8A9e46c4872C88C4a0D05;
+// OneInch Aggregation Router V6 on Ethereum mainnet
+address constant ONE_INCH_AGGREGATION_ROUTER_V6_MAINNET = 0x111111125421cA6dc452d289314280a0f8842A65;
 // Morpho's deployment of Bundler3
 address constant BUNDLER3_MAINNET = 0xAc80387009231b4D55B85Df27924B85f2ED6823D;
 // LayerZero endpoint for Ethereum mainnet

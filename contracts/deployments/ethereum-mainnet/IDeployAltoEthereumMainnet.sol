@@ -29,7 +29,8 @@ enum DeploymentPhase {
     ADAPTER, // Phase 20: Deploy AltoAdapter
     DUSD_VAULT, // Phase 21: Deploy DUSD ERC4626 Vault (`Alto DUSD Vault`, aDUSD)
     VAULT_REGISTRY, // Phase 22: Deploy VaultRegistry, register existing vaults, transfer to timelock
-    PERMISSIONLESS_FRXUSD_USM // Phase 23: Deploy Permissionless DUSD/FRXUSD Peg Stability Module
+    PERMISSIONLESS_FRXUSD_USM, // Phase 23: Deploy Permissionless DUSD/FRXUSD Peg Stability Module
+    ALTO_LEVERAGE_SWAPPER_MULTI_TARGET // Phase 24: Deploy AltoLeverageSwapperMultiTarget for each market
 }
 
 enum UsmFinalizeMode {

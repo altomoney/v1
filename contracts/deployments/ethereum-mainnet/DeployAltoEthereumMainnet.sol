@@ -27,6 +27,7 @@ import {
     LAYERZERO_ENDPOINT_MAINNET,
     ZEROX_SWAP_TARGET_MAINNET,
     ODOS_ROUTER_V3_MAINNET,
+    ONE_INCH_AGGREGATION_ROUTER_V6_MAINNET,
     getMulticallOwnerAddresses
 } from "@alto/deployments/ethereum-mainnet/Constants.sol";
 import {AltoAdapter} from "@alto/utils/AltoAdapter.sol";
@@ -47,6 +48,12 @@ import {MockFeeCollector} from "@alto/deployments/ethereum-mainnet/MockFeeCollec
 import {DUSDBatch, DUSDBatchParams, DUSDBatchReport} from "@alto/deployments/ethereum-mainnet/DUSDBatch.sol";
 import {MintMarketBatch, MintMarketBatchParams} from "@alto/deployments/ethereum-mainnet/MintMarketBatch.sol";
 import {BorrowMarketBatch, BorrowMarketBatchParams} from "@alto/deployments/ethereum-mainnet/BorrowMarketBatch.sol";
+import {
+    LeverageSwapperMultiTargetBatch,
+    LeverageSwapperMultiTargetBatchParams
+} from "@alto/deployments/ethereum-mainnet/LeverageSwapperMultiTargetBatch.sol";
+import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
+import {IAltoLeverageSwapper} from "@alto/lending/leverage/interfaces/IAltoLeverageSwapper.sol";
 import {UsmBatch, UsmBatchParams, UsmBatchReport} from "@alto/deployments/ethereum-mainnet/UsmBatch.sol";
 import {VaultBatch, VaultBatchParams, VaultBatchReport} from "@alto/deployments/ethereum-mainnet/VaultBatch.sol";
 import {IMarketRegistry, MarketRegistry} from "@alto/utils/MarketRegistry.sol";
@@ -642,6 +649,8 @@ library DeployAltoEthereumMainnet {
             DeployCoreParams memory adapterCoreParams =
                 DeployCoreParams({owner: params.deployer, bundler3: BUNDLER3_MAINNET, wNative: WETH_MAINNET});
             input.contracts.altoAdapter = _deployAdapterAndApproval(adapterCoreParams, params, input);
+        } else if (params.phase == DeploymentPhase.ALTO_LEVERAGE_SWAPPER_MULTI_TARGET) {
+            input = _deployLeverageSwapperMultiTarget(input);
         } else {
             revert("Invalid phase");
         }
@@ -1262,6 +1271,86 @@ library DeployAltoEthereumMainnet {
             vm.toString(data),
             '"}]}'
         );
+    }
+
+    /// @dev Deploys one AltoLeverageSwapperMultiTarget per market leverage contract and logs timelock
+    ///      batch transactions to call setSwapper on each AltoLeverage.
+    function _deployLeverageSwapperMultiTarget(AltoEthereumMainnetInput memory input)
+        internal
+        returns (AltoEthereumMainnetInput memory)
+    {
+        require(input.contracts.timelock != address(0), "Timelock not deployed");
+
+        address[] memory leverageContracts = new address[](12);
+        leverageContracts[0] = input.contracts.wethMarket.leverage;
+        leverageContracts[1] = input.contracts.wstethMarket.leverage;
+        leverageContracts[2] = input.contracts.rethMarket.leverage;
+        leverageContracts[3] = input.contracts.methMarket.leverage;
+        leverageContracts[4] = input.contracts.tbtcMarket.leverage;
+        leverageContracts[5] = input.contracts.wbtcBorrowMarket.leverage;
+        leverageContracts[6] = input.contracts.cbbtcBorrowMarket.leverage;
+        leverageContracts[7] = input.contracts.susdeBorrowMarket.leverage;
+        leverageContracts[8] = input.contracts.syrupUsdcBorrowMarket.leverage;
+        leverageContracts[9] = input.contracts.paxgBorrowMarket.leverage;
+        leverageContracts[10] = input.contracts.susdeMintMarket.leverage;
+        leverageContracts[11] = input.contracts.syrupUsdcMintMarket.leverage;
+
+        address[] memory validSwapTargets = new address[](3);
+        validSwapTargets[0] = ZEROX_SWAP_TARGET_MAINNET;
+        validSwapTargets[1] = ODOS_ROUTER_V3_MAINNET;
+        validSwapTargets[2] = ONE_INCH_AGGREGATION_ROUTER_V6_MAINNET;
+
+        LeverageSwapperMultiTargetBatch batch = new LeverageSwapperMultiTargetBatch(
+            LeverageSwapperMultiTargetBatchParams({
+                owner: input.contracts.timelock,
+                leverageContracts: leverageContracts,
+                validSwapTargets: validSwapTargets
+            })
+        );
+
+        address[] memory deployedSwappers = batch.getSwappers();
+
+        input.contracts.wethMarket.leverageSwapper = deployedSwappers[0];
+        input.contracts.wstethMarket.leverageSwapper = deployedSwappers[1];
+        input.contracts.rethMarket.leverageSwapper = deployedSwappers[2];
+        input.contracts.methMarket.leverageSwapper = deployedSwappers[3];
+        input.contracts.tbtcMarket.leverageSwapper = deployedSwappers[4];
+        input.contracts.wbtcBorrowMarket.leverageSwapper = deployedSwappers[5];
+        input.contracts.cbbtcBorrowMarket.leverageSwapper = deployedSwappers[6];
+        input.contracts.susdeBorrowMarket.leverageSwapper = deployedSwappers[7];
+        input.contracts.syrupUsdcBorrowMarket.leverageSwapper = deployedSwappers[8];
+        input.contracts.paxgBorrowMarket.leverageSwapper = deployedSwappers[9];
+        input.contracts.susdeMintMarket.leverageSwapper = deployedSwappers[10];
+        input.contracts.syrupUsdcMintMarket.leverageSwapper = deployedSwappers[11];
+
+        _logSetSwapperTimelockBatch(input, leverageContracts, deployedSwappers);
+
+        return input;
+    }
+
+    /// @dev Logs Safe TX JSON files for timelock batch setSwapper calls on each AltoLeverage contract.
+    function _logSetSwapperTimelockBatch(
+        AltoEthereumMainnetInput memory input,
+        address[] memory leverageContracts,
+        address[] memory swappers
+    ) internal {
+        require(leverageContracts.length == swappers.length, "Leverage/swapper length mismatch");
+
+        address timelock = input.contracts.timelock;
+        uint256 minDelay = TimelockController(payable(timelock)).getMinDelay();
+        uint256 count = leverageContracts.length;
+
+        address[] memory targets = new address[](count);
+        uint256[] memory values = new uint256[](count);
+        bytes[] memory payloads = new bytes[](count);
+
+        for (uint256 i = 0; i < count; i++) {
+            targets[i] = leverageContracts[i];
+            values[i] = 0;
+            payloads[i] = abi.encodeCall(AltoLeverage.setSwapper, (IAltoLeverageSwapper(swappers[i])));
+        }
+
+        _writeSafeTimelockBatchJson("leverage-swapper-set-swapper", timelock, targets, values, payloads, minDelay);
     }
 
     function _deployPost(AltoEthereumMainnetParams memory params, AltoEthereumMainnetInput memory input)
