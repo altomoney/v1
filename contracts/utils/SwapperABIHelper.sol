@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {SwapParams} from "@alto/lending/leverage/interfaces/IAltoLeverageSwapper.sol";
+import {SwapParams, SwapParamsMultiTarget} from "@alto/lending/leverage/interfaces/IAltoLeverageSwapper.sol";
 
 /// @title SwapperABIHelper
 /// @notice Helper contract for swap operations
@@ -9,6 +9,10 @@ import {SwapParams} from "@alto/lending/leverage/interfaces/IAltoLeverageSwapper
 /// @dev No deployment needed
 contract SwapperABIHelper {
     function swapParamsStructHelper(SwapParams calldata) external pure {
+        revert("Not implemented");
+    }
+
+    function swapParamsMultiTargetStructHelper(SwapParamsMultiTarget calldata) external pure {
         revert("Not implemented");
     }
 }
