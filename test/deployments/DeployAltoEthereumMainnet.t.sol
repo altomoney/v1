@@ -24,6 +24,7 @@ import {Pausable} from "@alto/utils/Pausable.sol";
 import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
 import {AltoLeverageSwapper} from "@alto/lending/leverage/AltoLeverageSwapper.sol";
 import {AltoLeverageSwapperMultiTarget} from "@alto/lending/leverage/AltoLeverageSwapperMultiTarget.sol";
+import {LiquidationPeriphery} from "@alto/lending/liquidation/LiquidationPeriphery.sol";
 import {
     ZEROX_SWAP_TARGET_MAINNET,
     ODOS_ROUTER_V3_MAINNET,
@@ -157,6 +158,7 @@ abstract contract DeployAltoEthereumMainnetTestBase is Test {
             _tryParseAddress(json, ".contracts.permissionedFrxUsdUsmFixedFeeStrategy");
 
         loaded.contracts.dusdVault = _tryParseAddress(json, ".contracts.dusdVault");
+        loaded.contracts.liquidationPeriphery = _tryParseAddress(json, ".contracts.liquidationPeriphery");
 
         input = loaded;
     }
@@ -775,6 +777,58 @@ contract DeployLeverageSwapperMultiTargetPhaseTest is DeployAltoEthereumMainnetT
         if (index == 10) return input.contracts.susdeMintMarket;
         if (index == 11) return input.contracts.syrupUsdcMintMarket;
         revert("invalid market index");
+    }
+}
+
+contract DeployLiquidationPeripheryPhaseTest is DeployAltoEthereumMainnetTestBase {
+    function test_deployLiquidationPeriphery() public {
+        _assertDeployLiquidationPeriphery();
+    }
+
+    function _assertDeployLiquidationPeriphery() internal {
+        assertTrue(input.contracts.timelock != address(0), "need timelock from addresses.json");
+        assertTrue(input.contracts.dusd != address(0), "need dusd from addresses.json");
+        assertTrue(input.contracts.usmRegistry != address(0), "need usmRegistry from addresses.json");
+        assertEq(input.contracts.liquidationPeriphery, address(0), "periphery should not be deployed yet");
+
+        MarketContracts[12] memory marketsBefore = _allMarkets();
+
+        params.phase = DeploymentPhase.LIQUIDATION_PERIPHERY;
+        input = DeployAltoEthereumMainnet.deploy(params, input);
+
+        address periphery = input.contracts.liquidationPeriphery;
+        assertTrue(periphery != address(0), "periphery should be deployed");
+        assertTrue(periphery.code.length > 0, "periphery should have code");
+
+        LiquidationPeriphery peripheryContract = LiquidationPeriphery(periphery);
+        assertEq(Ownable(periphery).owner(), input.contracts.timelock, "periphery owner should be timelock");
+        assertEq(peripheryContract.BORROW_TOKEN(), input.contracts.dusd, "borrow token should be DUSD");
+        assertEq(peripheryContract.usmRegistry(), input.contracts.usmRegistry, "usm registry mismatch");
+        assertEq(peripheryContract.treasury(), params.treasuryMultisig, "treasury mismatch");
+
+        for (uint256 i; i < marketsBefore.length; ++i) {
+            assertTrue(
+                peripheryContract.supportedMarkets(marketsBefore[i].market),
+                "market should be supported on periphery"
+            );
+        }
+    }
+
+    function _allMarkets() internal view returns (MarketContracts[12] memory markets) {
+        markets = [
+            input.contracts.wethMarket,
+            input.contracts.wstethMarket,
+            input.contracts.rethMarket,
+            input.contracts.methMarket,
+            input.contracts.tbtcMarket,
+            input.contracts.wbtcBorrowMarket,
+            input.contracts.cbbtcBorrowMarket,
+            input.contracts.susdeBorrowMarket,
+            input.contracts.syrupUsdcBorrowMarket,
+            input.contracts.paxgBorrowMarket,
+            input.contracts.susdeMintMarket,
+            input.contracts.syrupUsdcMintMarket
+        ];
     }
 }
 

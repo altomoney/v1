@@ -30,7 +30,8 @@ enum DeploymentPhase {
     DUSD_VAULT, // Phase 21: Deploy DUSD ERC4626 Vault (`Alto DUSD Vault`, aDUSD)
     VAULT_REGISTRY, // Phase 22: Deploy VaultRegistry, register existing vaults, transfer to timelock
     PERMISSIONLESS_FRXUSD_USM, // Phase 23: Deploy Permissionless DUSD/FRXUSD Peg Stability Module
-    ALTO_LEVERAGE_SWAPPER_MULTI_TARGET // Phase 24: Deploy AltoLeverageSwapperMultiTarget for each market
+    ALTO_LEVERAGE_SWAPPER_MULTI_TARGET, // Phase 24: Deploy AltoLeverageSwapperMultiTarget for each market
+    LIQUIDATION_PERIPHERY // Phase 25: Deploy LiquidationPeriphery and register all markets
 }
 
 enum UsmFinalizeMode {
@@ -88,6 +89,7 @@ struct Contracts {
     UsmContracts permissionlessFrxusdUsm;
     address dusdVault;
     address addressChange;
+    address liquidationPeriphery;
 }
 
 // PARAMETERS FOR THE DEPLOYMENT
