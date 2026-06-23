@@ -151,6 +151,10 @@ contract DeployAltoEthereumMainnetScript is Script {
         if (input.contracts.dusdVault != address(0)) {
             contractsJson = vm.serializeAddress("contracts", "dusdVault", input.contracts.dusdVault);
         }
+        if (input.contracts.liquidationPeriphery != address(0)) {
+            contractsJson =
+                vm.serializeAddress("contracts", "liquidationPeriphery", input.contracts.liquidationPeriphery);
+        }
 
         // Build final JSON and write to file
         string memory json = vm.serializeString("", "contracts", contractsJson);
@@ -251,6 +255,7 @@ contract DeployAltoEthereumMainnetScript is Script {
         loadedInput.contracts.permissionlessFrxusdUsm.fixedFeeStrategy =
             _tryParseAddress(json, ".contracts.permissionlessFrxUsdUsmFixedFeeStrategy");
         loadedInput.contracts.dusdVault = _tryParseAddress(json, ".contracts.dusdVault");
+        loadedInput.contracts.liquidationPeriphery = _tryParseAddress(json, ".contracts.liquidationPeriphery");
 
         input = loadedInput;
     }
@@ -359,6 +364,8 @@ contract DeployAltoEthereumMainnetScript is Script {
             _extractContractABI("AltoAdapter", abiFolder);
         } else if (PHASE_TO_DEPLOY == DeploymentPhase.ALTO_LEVERAGE_SWAPPER_MULTI_TARGET) {
             _extractContractABI("AltoLeverageSwapperMultiTarget", abiFolder);
+        } else if (PHASE_TO_DEPLOY == DeploymentPhase.LIQUIDATION_PERIPHERY) {
+            _extractContractABI("LiquidationPeriphery", abiFolder);
         }
 
         console.log("ABIs extracted to:", abiFolder);
