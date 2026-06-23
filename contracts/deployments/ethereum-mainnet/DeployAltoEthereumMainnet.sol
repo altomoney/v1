@@ -52,6 +52,10 @@ import {
     LeverageSwapperMultiTargetBatch,
     LeverageSwapperMultiTargetBatchParams
 } from "@alto/deployments/ethereum-mainnet/LeverageSwapperMultiTargetBatch.sol";
+import {
+    LiquidationPeripheryBatch,
+    LiquidationPeripheryBatchParams
+} from "@alto/deployments/ethereum-mainnet/LiquidationPeripheryBatch.sol";
 import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
 import {IAltoLeverageSwapper} from "@alto/lending/leverage/interfaces/IAltoLeverageSwapper.sol";
 import {UsmBatch, UsmBatchParams, UsmBatchReport} from "@alto/deployments/ethereum-mainnet/UsmBatch.sol";
@@ -651,6 +655,8 @@ library DeployAltoEthereumMainnet {
             input.contracts.altoAdapter = _deployAdapterAndApproval(adapterCoreParams, params, input);
         } else if (params.phase == DeploymentPhase.ALTO_LEVERAGE_SWAPPER_MULTI_TARGET) {
             input = _deployLeverageSwapperMultiTarget(input);
+        } else if (params.phase == DeploymentPhase.LIQUIDATION_PERIPHERY) {
+            input = _deployLiquidationPeriphery(params, input);
         } else {
             revert("Invalid phase");
         }
@@ -1351,6 +1357,51 @@ library DeployAltoEthereumMainnet {
         }
 
         _writeSafeTimelockBatchJson("leverage-swapper-set-swapper", timelock, targets, values, payloads, minDelay);
+    }
+
+    /// @dev Deploys LiquidationPeriphery and registers all 12 markets via LiquidationPeripheryBatch.
+    function _deployLiquidationPeriphery(AltoEthereumMainnetParams memory params, AltoEthereumMainnetInput memory input)
+        internal
+        returns (AltoEthereumMainnetInput memory)
+    {
+        require(input.contracts.timelock != address(0), "Timelock not deployed");
+        require(input.contracts.dusd != address(0), "DUSD not deployed");
+        require(input.contracts.usmRegistry != address(0), "UsmRegistry not deployed");
+        require(params.treasuryMultisig != address(0), "TreasuryMultisig must be set");
+
+        address[] memory markets = new address[](12);
+        markets[0] = input.contracts.wethMarket.market;
+        markets[1] = input.contracts.wstethMarket.market;
+        markets[2] = input.contracts.rethMarket.market;
+        markets[3] = input.contracts.methMarket.market;
+        markets[4] = input.contracts.tbtcMarket.market;
+        markets[5] = input.contracts.wbtcBorrowMarket.market;
+        markets[6] = input.contracts.cbbtcBorrowMarket.market;
+        markets[7] = input.contracts.susdeBorrowMarket.market;
+        markets[8] = input.contracts.syrupUsdcBorrowMarket.market;
+        markets[9] = input.contracts.paxgBorrowMarket.market;
+        markets[10] = input.contracts.susdeMintMarket.market;
+        markets[11] = input.contracts.syrupUsdcMintMarket.market;
+
+        for (uint256 i = 0; i < markets.length; i++) {
+            require(markets[i] != address(0), "Market not deployed");
+        }
+
+        LiquidationPeripheryBatch batch = new LiquidationPeripheryBatch(
+            LiquidationPeripheryBatchParams({
+                owner: input.contracts.timelock,
+                borrowToken: input.contracts.dusd,
+                usmRegistry: input.contracts.usmRegistry,
+                treasury: params.treasuryMultisig,
+                markets: markets
+            })
+        );
+
+        address periphery = batch.getReport().liquidationPeriphery;
+
+        input.contracts.liquidationPeriphery = periphery;
+
+        return input;
     }
 
     function _deployPost(AltoEthereumMainnetParams memory params, AltoEthereumMainnetInput memory input)
