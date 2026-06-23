@@ -52,6 +52,8 @@ address constant ZEROX_SWAP_TARGET_MAINNET = 0x0000000000001fF3684f28c67538d4D07
 address constant ODOS_ROUTER_V3_MAINNET = 0x0D05a7D3448512B78fa8A9e46c4872C88C4a0D05;
 // OneInch Aggregation Router V6 on Ethereum mainnet
 address constant ONE_INCH_AGGREGATION_ROUTER_V6_MAINNET = 0x111111125421cA6dc452d289314280a0f8842A65;
+// Velora Augustus V6 on Ethereum mainnet
+address constant VELORA_AUGUSTUS_V6_MAINNET = 0x6A000F20005980200259B80c5102003040001068;
 // Morpho's deployment of Bundler3
 address constant BUNDLER3_MAINNET = 0xAc80387009231b4D55B85Df27924B85f2ED6823D;
 // LayerZero endpoint for Ethereum mainnet
