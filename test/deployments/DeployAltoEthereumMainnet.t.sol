@@ -25,6 +25,17 @@ import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
 import {AltoLeverageSwapper} from "@alto/lending/leverage/AltoLeverageSwapper.sol";
 import {AltoLeverageSwapperMultiTarget} from "@alto/lending/leverage/AltoLeverageSwapperMultiTarget.sol";
 import {LiquidationPeriphery} from "@alto/lending/liquidation/LiquidationPeriphery.sol";
+import {DUSDAdvancedPermissionsUsm} from "@alto/usm/DUSDAdvancedPermissionsUsm.sol";
+import {AdvancedPermissionsFeeStrategy} from "@alto/usm/AdvancedPermissionsFeeStrategy.sol";
+import {DirectionAccess} from "@alto/usm/interfaces/IAdvancedPermissionsUsm.sol";
+import {FixedPriceStrategy} from "@alto/usm/FixedPriceStrategy.sol";
+import {IAdvancedPermissionsUsm} from "@alto/usm/interfaces/IAdvancedPermissionsUsm.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {AltoMintMarket} from "@alto/lending/AltoMintMarket.sol";
+import {UnsafeUpgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
+import {ILendingOracle, LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
+import {SimpleLiquidator} from "@alto-test/lending/liquidation/helpers/SimpleLiquidator.sol";
+import {MockSwapper} from "@alto-test/lending/liquidation/helpers/MockSwapper.sol";
 import {
     ZEROX_SWAP_TARGET_MAINNET,
     ODOS_ROUTER_V3_MAINNET,
@@ -67,7 +78,7 @@ abstract contract DeployAltoEthereumMainnetTestBase is Test {
     bytes32 immutable SWAPPER_ROLE = keccak256("SWAPPER_ROLE");
     bytes32 immutable DEFAULT_ADMIN_ROLE = bytes32(0);
 
-    function setUp() public {
+    function setUp() public virtual {
         string memory rpcUrl = vm.rpcUrl("ethereum");
         vm.createSelectFork(rpcUrl);
 
@@ -159,6 +170,14 @@ abstract contract DeployAltoEthereumMainnetTestBase is Test {
 
         loaded.contracts.dusdVault = _tryParseAddress(json, ".contracts.dusdVault");
         loaded.contracts.liquidationPeriphery = _tryParseAddress(json, ".contracts.liquidationPeriphery");
+        loaded.contracts.advancedPermissionsFrxusdUsm.dusdUsm =
+            _tryParseAddress(json, ".contracts.advancedPermissionsFrxusdUsm");
+        loaded.contracts.advancedPermissionsFrxusdUsm.dusdUsmImplementation =
+            _tryParseAddress(json, ".contracts.advancedPermissionsFrxusdUsmImplementation");
+        loaded.contracts.advancedPermissionsFrxusdUsm.fixedPriceStrategy =
+            _tryParseAddress(json, ".contracts.advancedPermissionsFrxusdUsmFixedPriceStrategy");
+        loaded.contracts.advancedPermissionsFrxusdUsm.advancedPermissionsFeeStrategy =
+            _tryParseAddress(json, ".contracts.advancedPermissionsFrxusdUsmFeeStrategy");
 
         input = loaded;
     }
@@ -727,11 +746,15 @@ contract DeployLeverageSwapperMultiTargetPhaseTest is DeployAltoEthereumMainnetT
         }
 
         assertTrue(
-            vm.exists("contracts/deployments/ethereum-mainnet/output/safe-tx-leverage-swapper-set-swapper-schedule.json"),
+            vm.exists(
+                "contracts/deployments/ethereum-mainnet/output/safe-tx-leverage-swapper-set-swapper-schedule.json"
+            ),
             "schedule json should be written"
         );
         assertTrue(
-            vm.exists("contracts/deployments/ethereum-mainnet/output/safe-tx-leverage-swapper-set-swapper-execute.json"),
+            vm.exists(
+                "contracts/deployments/ethereum-mainnet/output/safe-tx-leverage-swapper-set-swapper-execute.json"
+            ),
             "execute json should be written"
         );
     }
@@ -808,8 +831,7 @@ contract DeployLiquidationPeripheryPhaseTest is DeployAltoEthereumMainnetTestBas
 
         for (uint256 i; i < marketsBefore.length; ++i) {
             assertTrue(
-                peripheryContract.supportedMarkets(marketsBefore[i].market),
-                "market should be supported on periphery"
+                peripheryContract.supportedMarkets(marketsBefore[i].market), "market should be supported on periphery"
             );
         }
     }
@@ -832,3 +854,189 @@ contract DeployLiquidationPeripheryPhaseTest is DeployAltoEthereumMainnetTestBas
     }
 }
 
+contract DeployAdvancedPermissionsFrxUsdUsmPhaseTest is DeployAltoEthereumMainnetTestBase {
+    bytes32 internal constant BUY_SWAPPER_ROLE = keccak256("BUY_SWAPPER_ROLE");
+    bytes32 internal constant SELL_SWAPPER_ROLE = keccak256("SELL_SWAPPER_ROLE");
+
+    function setUp() public override {
+        super.setUp();
+
+        string memory fileName =
+            string.concat(OUTPUT_DIR, "/ethereum-mainnet-", vm.toString(block.chainid), "-1782144581/addresses.json");
+        _loadInputFromJson(fileName);
+    }
+
+    function test_deployAdvancedPermissionsFrxUsdUsm() public {
+        _assertDeployAdvancedPermissionsFrxUsdUsm();
+    }
+
+    function _assertDeployAdvancedPermissionsFrxUsdUsm() internal {
+        assertTrue(input.contracts.liquidationPeriphery != address(0), "need liquidation periphery from addresses.json");
+        assertEq(input.contracts.advancedPermissionsFrxusdUsm.dusdUsm, address(0), "USM should not be deployed yet");
+
+        params.phase = DeploymentPhase.ADVANCED_PERMISSIONS_FRXUSD_USM;
+        input = DeployAltoEthereumMainnet.deploy(params, input);
+
+        address usm = input.contracts.advancedPermissionsFrxusdUsm.dusdUsm;
+        address impl = input.contracts.advancedPermissionsFrxusdUsm.dusdUsmImplementation;
+        address priceStrategy = input.contracts.advancedPermissionsFrxusdUsm.fixedPriceStrategy;
+        address feeStrategy = input.contracts.advancedPermissionsFrxusdUsm.advancedPermissionsFeeStrategy;
+        address timelock = input.contracts.timelock;
+        address periphery = input.contracts.liquidationPeriphery;
+        uint256 mintCeiling = 5_000_000_000 ether;
+
+        _verifyDeployed(usm, "advanced permissions frxUSD USM proxy");
+        _verifyDeployed(impl, "advanced permissions frxUSD USM implementation");
+        _verifyDeployed(priceStrategy, "advanced permissions frxUSD FixedPriceStrategy");
+        _verifyDeployed(feeStrategy, "advanced permissions frxUSD FeeStrategy");
+
+        DUSDAdvancedPermissionsUsm usmContract = DUSDAdvancedPermissionsUsm(usm);
+        assertEq(
+            uint256(usmContract.getBuyAccess()),
+            uint256(DirectionAccess.PERMISSIONED),
+            "buy access should be permissioned"
+        );
+        assertEq(
+            uint256(usmContract.getSellAccess()),
+            uint256(DirectionAccess.PERMISSIONED),
+            "sell access should be permissioned"
+        );
+        assertEq(usmContract.UNDERLYING_ASSET(), FRXUSD_MAINNET, "underlying asset should be frxUSD");
+        assertEq(usmContract.getExposureCap(), mintCeiling, "exposure cap mismatch");
+        assertEq(FixedPriceStrategy(priceStrategy).priceRatio(), 1 ether, "price ratio should be 1:1 with DUSD");
+        assertEq(usmContract.getFeeStrategy(), feeStrategy, "fee strategy mismatch");
+
+        _verifyHasRole(usm, timelock, DEFAULT_ADMIN_ROLE, "advanced permissions frxUSD USM");
+        _verifyHasRole(usm, timelock, CONFIGURATOR_ROLE, "advanced permissions frxUSD USM");
+        _verifyHasRole(usm, MULTISIG_FREEZER_PAUSER, SWAP_FREEZER_ROLE, "advanced permissions frxUSD USM");
+        assertTrue(usmContract.hasRole(SELL_SWAPPER_ROLE, periphery), "periphery should have sell swapper role");
+        assertFalse(usmContract.hasRole(BUY_SWAPPER_ROLE, periphery), "periphery should not have buy swapper role");
+
+        AdvancedPermissionsFeeStrategy strategy = AdvancedPermissionsFeeStrategy(feeStrategy);
+        assertEq(strategy.getSellFeeForUser(periphery), 0, "periphery sell fee should be zero");
+
+        assertTrue(
+            vm.exists(
+                "contracts/deployments/ethereum-mainnet/output/safe-tx-frxusd-advanced-permissions-usm-registry-schedule.json"
+            ),
+            "schedule json should be written"
+        );
+        assertTrue(
+            vm.exists(
+                "contracts/deployments/ethereum-mainnet/output/safe-tx-frxusd-advanced-permissions-usm-registry-execute.json"
+            ),
+            "execute json should be written"
+        );
+
+        vm.startPrank(timelock);
+        IDUSD(input.contracts.dusd).setMinterStatus(usm, true);
+        IDUSD(input.contracts.dusd).setMinterCeiling(usm, mintCeiling);
+        IDUSD(input.contracts.dusd).setBurnerStatus(usm, true);
+        IUsmRegistry(input.contracts.usmRegistry).addUsm(usm);
+        vm.stopPrank();
+
+        _verifyMintCeiling(usm, mintCeiling);
+        assertTrue(IUsmRegistry(input.contracts.usmRegistry).isUsm(usm), "USM not registered in UsmRegistry");
+    }
+
+    function test_liquidateViaPeriphery_afterAdvancedPermissionsFrxUsdUsmDeployment() public {
+        _deployPeripheryAndAdvancedPermissionsFrxUsdUsm();
+        _assertLiquidationViaPeripheryOnFork();
+    }
+
+    function _deployPeripheryAndAdvancedPermissionsFrxUsdUsm() internal {
+        if (input.contracts.liquidationPeriphery.code.length == 0) {
+            params.phase = DeploymentPhase.LIQUIDATION_PERIPHERY;
+            input = DeployAltoEthereumMainnet.deploy(params, input);
+        }
+
+        _deployAndFinalizeAdvancedPermissionsFrxUsdUsm();
+    }
+
+    function _deployAndFinalizeAdvancedPermissionsFrxUsdUsm() internal {
+        assertTrue(input.contracts.liquidationPeriphery != address(0), "need liquidation periphery from addresses.json");
+
+        params.phase = DeploymentPhase.ADVANCED_PERMISSIONS_FRXUSD_USM;
+        input = DeployAltoEthereumMainnet.deploy(params, input);
+
+        address usm = input.contracts.advancedPermissionsFrxusdUsm.dusdUsm;
+        uint256 mintCeiling = 5_000_000_000 ether;
+
+        vm.startPrank(input.contracts.timelock);
+        IDUSD(input.contracts.dusd).setMinterStatus(usm, true);
+        IDUSD(input.contracts.dusd).setMinterCeiling(usm, mintCeiling);
+        IDUSD(input.contracts.dusd).setBurnerStatus(usm, true);
+        IUsmRegistry(input.contracts.usmRegistry).addUsm(usm);
+        vm.stopPrank();
+    }
+
+    function _assertLiquidationViaPeripheryOnFork() internal {
+        address market = input.contracts.wethMarket.market;
+        address periphery = input.contracts.liquidationPeriphery;
+        address usm = input.contracts.advancedPermissionsFrxusdUsm.dusdUsm;
+        address borrower = makeAddr("LiquidationBorrower");
+        address liquidatorEoa = makeAddr("LiquidationEoa");
+
+        assertTrue(LiquidationPeriphery(periphery).supportedMarkets(market), "weth market should be supported");
+        assertTrue(IUsmRegistry(input.contracts.usmRegistry).isUsm(usm), "USM should be registered");
+
+        _upgradeMintMarketAndAuthorizePeriphery(market, periphery);
+
+        MockSwapper swapper = new MockSwapper();
+        SimpleLiquidator simpleLiquidator = new SimpleLiquidator(periphery, usm, address(swapper));
+
+        _setupInsolventWethMintPosition(market, borrower);
+
+        uint256 repayBound = 10_000 ether;
+        (uint256 assetAmount,,,) = IAdvancedPermissionsUsm(usm).getAssetAmountForSellAsset(repayBound, periphery);
+        deal(FRXUSD_MAINNET, address(simpleLiquidator), assetAmount);
+        vm.prank(address(simpleLiquidator));
+        IERC20(FRXUSD_MAINNET).approve(periphery, type(uint256).max);
+
+        vm.prank(liquidatorEoa);
+        (uint256 seizedCollateral, uint256 repaidBorrow, uint256 protocolFee) =
+            simpleLiquidator.liquidateMarket(market, borrower, usm, "", "");
+
+        assertGt(seizedCollateral, 0, "seized collateral");
+        assertGt(repaidBorrow, 0, "repaid borrow");
+        assertGt(protocolFee, 0, "protocol fee");
+        assertGt(seizedCollateral, protocolFee, "liquidator receives net collateral");
+
+        assertEq(IERC20(input.contracts.dusd).balanceOf(address(periphery)), 0, "periphery DUSD dust");
+        assertEq(IERC20(FRXUSD_MAINNET).balanceOf(address(periphery)), 0, "periphery frxUSD dust");
+        assertEq(IERC20(WETH_MAINNET).balanceOf(address(periphery)), 0, "periphery WETH dust");
+        assertEq(IERC20(input.contracts.dusd).allowance(periphery, market), 0, "periphery borrow approval reset");
+        assertEq(IERC20(FRXUSD_MAINNET).allowance(periphery, usm), 0, "periphery frxUSD approval to USM reset");
+    }
+
+    function _upgradeMintMarketAndAuthorizePeriphery(address market, address periphery) internal {
+        address marketOwner = Ownable(market).owner();
+
+        vm.startPrank(marketOwner);
+        UnsafeUpgrades.upgradeProxy(market, address(new AltoMintMarket()), "");
+        IMarket(market).setAuthorizedLiquidationPeriphery(periphery, true);
+        vm.stopPrank();
+    }
+
+    function _setupInsolventWethMintPosition(address market, address borrower) internal {
+        IMarket wethMarket = IMarket(market);
+
+        deal(WETH_MAINNET, borrower, 10 ether);
+
+        vm.startPrank(borrower);
+        IERC20(WETH_MAINNET).approve(market, type(uint256).max);
+        wethMarket.setAuthorization(address(this), true);
+        wethMarket.addCollateral(2 ether, borrower);
+        wethMarket.borrow(2000 ether, 0, borrower, borrower, "");
+        vm.stopPrank();
+
+        wethMarket.accrueInterest();
+
+        address oracle = wethMarket.oracle();
+        vm.mockCall(
+            oracle,
+            abi.encodeWithSelector(ILendingOracle.getPrice.selector),
+            abi.encode(1000 * LENDING_ORACLE_PRICE_PRECISION)
+        );
+    }
+}
