@@ -4,16 +4,19 @@ pragma solidity ^0.8.22;
 import {Script, console} from "forge-std/Script.sol";
 import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
 import {AltoLeverageSwapperMultiTarget} from "@alto/lending/leverage/AltoLeverageSwapperMultiTarget.sol";
-import {VELORA_AUGUSTUS_V6_MAINNET} from "@alto/deployments/ethereum-mainnet/Constants.sol";
+import {
+    VELORA_AUGUSTUS_V6_MAINNET,
+    NORDSTERN_ROUTER_MAINNET
+} from "@alto/deployments/ethereum-mainnet/Constants.sol";
 
 uint256 constant DEPLOYMENT_ID = 1765364975;
 string constant OUTPUT_DIR = "./contracts/deployments/ethereum-mainnet/output";
-string constant BATCH_NAME = "leverage-swapper-set-velora-target";
+string constant BATCH_NAME = "leverage-swapper-set-swap-targets";
 
-/// @title Set Velora Augustus as valid swap target on all leverage swappers
+/// @title Set Velora Augustus and Nordstern Router as valid swap targets on all leverage swappers
 /// @notice Generates timelock scheduleBatch and executeBatch Safe TX JSON files
-/// @dev Run with: forge script script/SetLeverageSwapperVeloraTarget.s.sol --rpc-url ethereum -vvv
-contract SetLeverageSwapperVeloraTarget is Script {
+/// @dev Run with: forge script script/SetLeverageSwapperSwapTargets.s.sol --rpc-url ethereum -vvv
+contract SetLeverageSwapperSwapTargets is Script {
     function run() public {
         string memory addressesFile = string.concat(
             OUTPUT_DIR,
@@ -28,17 +31,26 @@ contract SetLeverageSwapperVeloraTarget is Script {
         address timelock = vm.parseJsonAddress(json, ".contracts.timelock");
 
         address[] memory swappers = _loadLeverageSwappers(json);
+        address[] memory swapTargets = new address[](2);
+        swapTargets[0] = VELORA_AUGUSTUS_V6_MAINNET;
+        swapTargets[1] = NORDSTERN_ROUTER_MAINNET;
+
+        uint256 actionCount = swappers.length * swapTargets.length;
         uint256 minDelay = TimelockController(payable(timelock)).getMinDelay();
 
-        address[] memory targets = new address[](swappers.length);
-        uint256[] memory values = new uint256[](swappers.length);
-        bytes[] memory payloads = new bytes[](swappers.length);
+        address[] memory targets = new address[](actionCount);
+        uint256[] memory values = new uint256[](actionCount);
+        bytes[] memory payloads = new bytes[](actionCount);
 
+        uint256 idx;
         for (uint256 i = 0; i < swappers.length; i++) {
-            targets[i] = swappers[i];
-            values[i] = 0;
-            payloads[i] =
-                abi.encodeCall(AltoLeverageSwapperMultiTarget.setValidSwapTarget, (VELORA_AUGUSTUS_V6_MAINNET, true));
+            for (uint256 j = 0; j < swapTargets.length; j++) {
+                targets[idx] = swappers[i];
+                values[idx] = 0;
+                payloads[idx] =
+                    abi.encodeCall(AltoLeverageSwapperMultiTarget.setValidSwapTarget, (swapTargets[j], true));
+                idx++;
+            }
         }
 
         _writeSafeTimelockBatchJson(BATCH_NAME, timelock, targets, values, payloads, minDelay);
@@ -46,7 +58,9 @@ contract SetLeverageSwapperVeloraTarget is Script {
         console.log("Loaded addresses from:", addressesFile);
         console.log("Timelock:", timelock);
         console.log("Velora Augustus V6:", VELORA_AUGUSTUS_V6_MAINNET);
+        console.log("Nordstern Router:", NORDSTERN_ROUTER_MAINNET);
         console.log("Leverage swappers:", swappers.length);
+        console.log("Timelock actions:", actionCount);
         console.log("Timelock delay:", minDelay);
     }
 

@@ -54,6 +54,8 @@ address constant ODOS_ROUTER_V3_MAINNET = 0x0D05a7D3448512B78fa8A9e46c4872C88C4a
 address constant ONE_INCH_AGGREGATION_ROUTER_V6_MAINNET = 0x111111125421cA6dc452d289314280a0f8842A65;
 // Velora Augustus V6 on Ethereum mainnet
 address constant VELORA_AUGUSTUS_V6_MAINNET = 0x6A000F20005980200259B80c5102003040001068;
+// Nordstern Router on Ethereum mainnet
+address constant NORDSTERN_ROUTER_MAINNET = 0xa929c559E5e6537359680F39CB4E3708E1a14dd1;
 // Morpho's deployment of Bundler3
 address constant BUNDLER3_MAINNET = 0xAc80387009231b4D55B85Df27924B85f2ED6823D;
 // LayerZero endpoint for Ethereum mainnet
