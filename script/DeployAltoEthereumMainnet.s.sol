@@ -13,7 +13,7 @@ import {
 import {console} from "forge-std/console.sol";
 
 uint256 constant DEPLOYMENT_ID_TO_LOAD = 1765364975;
-DeploymentPhase constant PHASE_TO_DEPLOY = DeploymentPhase.LIQUIDATION_PERIPHERY; // CORE, DUSD, MINT_MARKET_WETH, MINT_MARKET_WSTETH, MINT_MARKET_RETH, MINT_MARKET_METH, MINT_MARKET_TBTC, BORROW_MARKET_WBTC, BORROW_MARKET_CBBTC, BORROW_MARKET_SUSDE, USDC_USM, POST, REFERRAL_ADAPTER, BORROW_MARKET_SYRUP_USDC, BORROW_MARKET_PAXG, MINT_MARKET_SUSDE, MINT_MARKET_SYRUPUSDC, PERMISSIONED_FRXUSD_USM, ADAPTER, DUSD_VAULT, VAULT_REGISTRY, PERMISSIONLESS_FRXUSD_USM, ALTO_LEVERAGE_SWAPPER_MULTI_TARGET, LIQUIDATION_PERIPHERY
+DeploymentPhase constant PHASE_TO_DEPLOY = DeploymentPhase.ADVANCED_PERMISSIONS_FRXUSD_USM; // CORE, DUSD, MINT_MARKET_WETH, MINT_MARKET_WSTETH, MINT_MARKET_RETH, MINT_MARKET_METH, MINT_MARKET_TBTC, BORROW_MARKET_WBTC, BORROW_MARKET_CBBTC, BORROW_MARKET_SUSDE, USDC_USM, POST, REFERRAL_ADAPTER, BORROW_MARKET_SYRUP_USDC, BORROW_MARKET_PAXG, MINT_MARKET_SUSDE, MINT_MARKET_SYRUPUSDC, PERMISSIONED_FRXUSD_USM, ADAPTER, DUSD_VAULT, VAULT_REGISTRY, PERMISSIONLESS_FRXUSD_USM, ALTO_LEVERAGE_SWAPPER_MULTI_TARGET, LIQUIDATION_PERIPHERY, ADVANCED_PERMISSIONS_FRXUSD_USM
 string constant OUTPUT_DIR = "./contracts/deployments/ethereum-mainnet/output";
 
 contract DeployAltoEthereumMainnetScript is Script {
@@ -155,6 +155,26 @@ contract DeployAltoEthereumMainnetScript is Script {
             contractsJson =
                 vm.serializeAddress("contracts", "liquidationPeriphery", input.contracts.liquidationPeriphery);
         }
+        if (input.contracts.advancedPermissionsFrxusdUsm.dusdUsm != address(0)) {
+            contractsJson = vm.serializeAddress(
+                "contracts", "advancedPermissionsFrxusdUsm", input.contracts.advancedPermissionsFrxusdUsm.dusdUsm
+            );
+            contractsJson = vm.serializeAddress(
+                "contracts",
+                "advancedPermissionsFrxusdUsmImplementation",
+                input.contracts.advancedPermissionsFrxusdUsm.dusdUsmImplementation
+            );
+            contractsJson = vm.serializeAddress(
+                "contracts",
+                "advancedPermissionsFrxusdUsmFixedPriceStrategy",
+                input.contracts.advancedPermissionsFrxusdUsm.fixedPriceStrategy
+            );
+            contractsJson = vm.serializeAddress(
+                "contracts",
+                "advancedPermissionsFrxusdUsmFeeStrategy",
+                input.contracts.advancedPermissionsFrxusdUsm.advancedPermissionsFeeStrategy
+            );
+        }
 
         // Build final JSON and write to file
         string memory json = vm.serializeString("", "contracts", contractsJson);
@@ -254,6 +274,14 @@ contract DeployAltoEthereumMainnetScript is Script {
             _tryParseAddress(json, ".contracts.permissionlessFrxUsdUsmFixedFeeStrategy");
         loadedInput.contracts.dusdVault = _tryParseAddress(json, ".contracts.dusdVault");
         loadedInput.contracts.liquidationPeriphery = _tryParseAddress(json, ".contracts.liquidationPeriphery");
+        loadedInput.contracts.advancedPermissionsFrxusdUsm.dusdUsm =
+            _tryParseAddress(json, ".contracts.advancedPermissionsFrxusdUsm");
+        loadedInput.contracts.advancedPermissionsFrxusdUsm.dusdUsmImplementation =
+            _tryParseAddress(json, ".contracts.advancedPermissionsFrxusdUsmImplementation");
+        loadedInput.contracts.advancedPermissionsFrxusdUsm.fixedPriceStrategy =
+            _tryParseAddress(json, ".contracts.advancedPermissionsFrxusdUsmFixedPriceStrategy");
+        loadedInput.contracts.advancedPermissionsFrxusdUsm.advancedPermissionsFeeStrategy =
+            _tryParseAddress(json, ".contracts.advancedPermissionsFrxusdUsmFeeStrategy");
 
         input = loadedInput;
     }
@@ -365,6 +393,10 @@ contract DeployAltoEthereumMainnetScript is Script {
             _extractContractABI("AltoLeverageSwapperMultiTarget", abiFolder);
         } else if (PHASE_TO_DEPLOY == DeploymentPhase.LIQUIDATION_PERIPHERY) {
             _extractContractABI("LiquidationPeriphery", abiFolder);
+        } else if (PHASE_TO_DEPLOY == DeploymentPhase.ADVANCED_PERMISSIONS_FRXUSD_USM) {
+            _extractContractABI("DUSDAdvancedPermissionsUsm", abiFolder);
+            _extractContractABI("FixedPriceStrategy", abiFolder);
+            _extractContractABI("AdvancedPermissionsFeeStrategy", abiFolder);
         }
 
         console.log("ABIs extracted to:", abiFolder);

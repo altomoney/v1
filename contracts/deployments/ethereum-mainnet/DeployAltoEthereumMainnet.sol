@@ -56,6 +56,12 @@ import {
     LiquidationPeripheryBatch,
     LiquidationPeripheryBatchParams
 } from "@alto/deployments/ethereum-mainnet/LiquidationPeripheryBatch.sol";
+import {
+    AdvancedPermissionsUsmBatch,
+    AdvancedPermissionsUsmBatchParams,
+    AdvancedPermissionsUsmBatchReport
+} from "@alto/deployments/ethereum-mainnet/AdvancedPermissionsUsmBatch.sol";
+import {FRXUSD_MAINNET} from "@alto/deployments/ethereum-mainnet/Constants.sol";
 import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
 import {IAltoLeverageSwapper} from "@alto/lending/leverage/interfaces/IAltoLeverageSwapper.sol";
 import {UsmBatch, UsmBatchParams, UsmBatchReport} from "@alto/deployments/ethereum-mainnet/UsmBatch.sol";
@@ -77,6 +83,7 @@ import {
     DeployBorrowMarketParams,
     DeployUsmParams,
     UsmFinalizeMode,
+    AdvancedPermissionsUsmContracts,
     Contracts
 } from "@alto/deployments/ethereum-mainnet/IDeployAltoEthereumMainnet.sol";
 import {AccessMode} from "@alto/usm/interfaces/IUsm.sol";
@@ -657,6 +664,8 @@ library DeployAltoEthereumMainnet {
             input = _deployLeverageSwapperMultiTarget(input);
         } else if (params.phase == DeploymentPhase.LIQUIDATION_PERIPHERY) {
             input = _deployLiquidationPeriphery(params, input);
+        } else if (params.phase == DeploymentPhase.ADVANCED_PERMISSIONS_FRXUSD_USM) {
+            input = _deployAdvancedPermissionsFrxUsdUsm(params, input);
         } else {
             revert("Invalid phase");
         }
@@ -1402,6 +1411,91 @@ library DeployAltoEthereumMainnet {
         input.contracts.liquidationPeriphery = periphery;
 
         return input;
+    }
+
+    /// @dev Deploys Advanced Permissions frxUSD USM for liquidation periphery via AdvancedPermissionsUsmBatch.
+    function _deployAdvancedPermissionsFrxUsdUsm(
+        AltoEthereumMainnetParams memory params,
+        AltoEthereumMainnetInput memory input
+    ) internal returns (AltoEthereumMainnetInput memory) {
+        require(input.contracts.timelock != address(0), "Timelock not deployed");
+        require(input.contracts.dusd != address(0), "DUSD not deployed");
+        require(input.contracts.usmRegistry != address(0), "UsmRegistry not deployed");
+        require(input.contracts.feeRecipient != address(0), "FeeRecipient not deployed");
+        require(input.contracts.liquidationPeriphery != address(0), "LiquidationPeriphery not deployed");
+        require(params.freezer != address(0), "Freezer must be set");
+        require(params.treasuryMultisig != address(0), "TreasuryMultisig must be set");
+
+        uint128 exposureCap = 5_000_000_000 ether;
+        uint256 mintCeiling = exposureCap;
+
+        AdvancedPermissionsUsmBatch batch = new AdvancedPermissionsUsmBatch(
+            AdvancedPermissionsUsmBatchParams({
+                owner: input.contracts.timelock,
+                dusd: input.contracts.dusd,
+                usmRegistry: input.contracts.usmRegistry,
+                feeRecipient: input.contracts.feeRecipient,
+                freezer: params.freezer,
+                treasuryMultisig: params.treasuryMultisig,
+                liquidationPeriphery: input.contracts.liquidationPeriphery,
+                underlyingAsset: FRXUSD_MAINNET,
+                priceRatio: 1 ether,
+                buyFee: 0,
+                sellFee: 0,
+                exposureCap: exposureCap,
+                mintCeiling: mintCeiling,
+                useUnsafeUpgrades: params.useUnsafeUpgrades,
+                finalizeDusdAndRegistry: params.deployerHasOwnership
+            })
+        );
+
+        AdvancedPermissionsUsmBatchReport memory report = batch.getReport();
+
+        input.contracts.advancedPermissionsFrxusdUsm = AdvancedPermissionsUsmContracts({
+            dusdUsm: report.dusdUsm,
+            dusdUsmImplementation: report.dusdUsmImplementation,
+            fixedPriceStrategy: report.fixedPriceStrategy,
+            advancedPermissionsFeeStrategy: report.advancedPermissionsFeeStrategy
+        });
+
+        if (!params.deployerHasOwnership) {
+            _finalizeAdvancedPermissionsUsmViaTimelockBatch(input, report.dusdUsm, mintCeiling);
+        }
+
+        return input;
+    }
+
+    function _finalizeAdvancedPermissionsUsmViaTimelockBatch(
+        AltoEthereumMainnetInput memory input,
+        address usm,
+        uint256 mintCeiling
+    ) internal {
+        address timelock = input.contracts.timelock;
+        uint256 minDelay = TimelockController(payable(timelock)).getMinDelay();
+
+        address[] memory targets = new address[](4);
+        uint256[] memory values = new uint256[](4);
+        bytes[] memory payloads = new bytes[](4);
+
+        targets[0] = input.contracts.dusd;
+        values[0] = 0;
+        payloads[0] = abi.encodeCall(IDUSD.setMinterStatus, (usm, true));
+
+        targets[1] = input.contracts.dusd;
+        values[1] = 0;
+        payloads[1] = abi.encodeCall(IDUSD.setMinterCeiling, (usm, mintCeiling));
+
+        targets[2] = input.contracts.dusd;
+        values[2] = 0;
+        payloads[2] = abi.encodeCall(IDUSD.setBurnerStatus, (usm, true));
+
+        targets[3] = input.contracts.usmRegistry;
+        values[3] = 0;
+        payloads[3] = abi.encodeCall(IUsmRegistry.addUsm, (usm));
+
+        _writeSafeTimelockBatchJson(
+            "frxusd-advanced-permissions-usm-registry", timelock, targets, values, payloads, minDelay
+        );
     }
 
     function _deployPost(AltoEthereumMainnetParams memory params, AltoEthereumMainnetInput memory input)
