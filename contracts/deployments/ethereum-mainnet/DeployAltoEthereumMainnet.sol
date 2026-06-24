@@ -33,6 +33,7 @@ import {
 import {AltoAdapter} from "@alto/utils/AltoAdapter.sol";
 import {AdapterContractApproval} from "@alto/utils/AdapterContractApproval.sol";
 import {AdaptiveCurveIrm} from "@alto/lending/irm/AdaptiveCurveIrm.sol";
+import {IMarketBase} from "@alto/lending/interfaces/IMarket.sol";
 import {LiquidationConfiguration} from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";
 import {IDUSD} from "@alto/tokens/interfaces/IDUSD.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -65,7 +66,9 @@ import {
     AdvancedPermissionsUsmBatchFeeByRoleHash
 } from "@alto/deployments/ethereum-mainnet/AdvancedPermissionsUsmBatch.sol";
 import {IAdvancedPermissionsUsmFeeStrategy} from "@alto/usm/interfaces/IAdvancedPermissionsUsmFeeStrategy.sol";
+import {MarketUpgradeBatch, MarketUpgradeBatchReport} from "@alto/deployments/ethereum-mainnet/MarketUpgradeBatch.sol";
 import {FRXUSD_MAINNET} from "@alto/deployments/ethereum-mainnet/Constants.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
 import {IAltoLeverageSwapper} from "@alto/lending/leverage/interfaces/IAltoLeverageSwapper.sol";
 import {UsmBatch, UsmBatchParams, UsmBatchReport} from "@alto/deployments/ethereum-mainnet/UsmBatch.sol";
@@ -671,6 +674,8 @@ library DeployAltoEthereumMainnet {
             input = _deployLiquidationPeriphery(params, input);
         } else if (params.phase == DeploymentPhase.ADVANCED_PERMISSIONS_FRXUSD_USM) {
             input = _deployAdvancedPermissionsFrxUsdUsm(params, input);
+        } else if (params.phase == DeploymentPhase.UPGRADE_MARKETS_LIQUIDATION_PERIPHERY) {
+            input = _upgradeMarketsForLiquidationPeriphery(input);
         } else {
             revert("Invalid phase");
         }
@@ -1526,6 +1531,133 @@ library DeployAltoEthereumMainnet {
         _writeSafeTimelockBatchJson(
             "frxusd-advanced-permissions-usm-registry", timelock, targets, values, payloads, minDelay
         );
+    }
+
+    /// @dev Deploys new market implementations and logs timelock batches to upgrade all 12 markets and
+    ///      authorize the liquidation periphery on each market.
+    function _upgradeMarketsForLiquidationPeriphery(AltoEthereumMainnetInput memory input)
+        internal
+        returns (AltoEthereumMainnetInput memory)
+    {
+        require(input.contracts.timelock != address(0), "Timelock not deployed");
+        require(input.contracts.liquidationPeriphery != address(0), "LiquidationPeriphery not deployed");
+
+        address[] memory markets = _getAllMarkets(input);
+        MarketUpgradeBatchReport memory report = (new MarketUpgradeBatch(markets)).getReport();
+
+        _logMarketUpgradeTimelockBatch(input, report);
+        _logAuthorizeLiquidationPeripheryTimelockBatch(input, report.markets);
+
+        input = _updateMarketImplementations(input, report);
+
+        return input;
+    }
+
+    function _getAllMarkets(AltoEthereumMainnetInput memory input) internal view returns (address[] memory markets) {
+        require(input.contracts.marketRegistry != address(0), "MarketRegistry not deployed");
+
+        IMarketRegistry registry = IMarketRegistry(input.contracts.marketRegistry);
+        address[] memory mintMarkets = registry.getMintMarkets();
+        address[] memory borrowMarkets = registry.getBorrowMarkets();
+
+        uint256 mintCount = mintMarkets.length;
+        uint256 borrowCount = borrowMarkets.length;
+        markets = new address[](mintCount + borrowCount);
+
+        for (uint256 i = 0; i < mintCount; i++) {
+            markets[i] = mintMarkets[i];
+        }
+        for (uint256 i = 0; i < borrowCount; i++) {
+            markets[mintCount + i] = borrowMarkets[i];
+        }
+
+        require(markets.length > 0, "No markets in registry");
+    }
+
+    function _logMarketUpgradeTimelockBatch(
+        AltoEthereumMainnetInput memory input,
+        MarketUpgradeBatchReport memory report
+    ) internal {
+        address timelock = input.contracts.timelock;
+        uint256 minDelay = TimelockController(payable(timelock)).getMinDelay();
+        uint256 count = report.markets.length;
+
+        address[] memory targets = new address[](count);
+        uint256[] memory values = new uint256[](count);
+        bytes[] memory payloads = new bytes[](count);
+
+        for (uint256 i = 0; i < count; i++) {
+            targets[i] = report.markets[i];
+            values[i] = 0;
+            payloads[i] = abi.encodeCall(UUPSUpgradeable.upgradeToAndCall, (report.implementations[i], ""));
+        }
+
+        _writeSafeTimelockBatchJson(
+            "market-upgrade-liquidation-periphery", timelock, targets, values, payloads, minDelay
+        );
+    }
+
+    function _logAuthorizeLiquidationPeripheryTimelockBatch(
+        AltoEthereumMainnetInput memory input,
+        address[] memory markets
+    ) internal {
+        address timelock = input.contracts.timelock;
+        address periphery = input.contracts.liquidationPeriphery;
+        uint256 minDelay = TimelockController(payable(timelock)).getMinDelay();
+        uint256 count = markets.length;
+
+        address[] memory targets = new address[](count);
+        uint256[] memory values = new uint256[](count);
+        bytes[] memory payloads = new bytes[](count);
+
+        for (uint256 i = 0; i < count; i++) {
+            targets[i] = markets[i];
+            values[i] = 0;
+            payloads[i] = abi.encodeCall(IMarketBase.setAuthorizedLiquidationPeriphery, (periphery, true));
+        }
+
+        _writeSafeTimelockBatchJson(
+            "market-authorize-liquidation-periphery", timelock, targets, values, payloads, minDelay
+        );
+    }
+
+    function _updateMarketImplementations(AltoEthereumMainnetInput memory input, MarketUpgradeBatchReport memory report)
+        internal
+        pure
+        returns (AltoEthereumMainnetInput memory)
+    {
+        for (uint256 r = 0; r < report.markets.length; r++) {
+            address market = report.markets[r];
+            address newImplementation = report.implementations[r];
+
+            if (market == input.contracts.wethMarket.market) {
+                input.contracts.wethMarket.marketImplementation = newImplementation;
+            } else if (market == input.contracts.wstethMarket.market) {
+                input.contracts.wstethMarket.marketImplementation = newImplementation;
+            } else if (market == input.contracts.rethMarket.market) {
+                input.contracts.rethMarket.marketImplementation = newImplementation;
+            } else if (market == input.contracts.methMarket.market) {
+                input.contracts.methMarket.marketImplementation = newImplementation;
+            } else if (market == input.contracts.tbtcMarket.market) {
+                input.contracts.tbtcMarket.marketImplementation = newImplementation;
+            } else if (market == input.contracts.wbtcBorrowMarket.market) {
+                input.contracts.wbtcBorrowMarket.marketImplementation = newImplementation;
+            } else if (market == input.contracts.cbbtcBorrowMarket.market) {
+                input.contracts.cbbtcBorrowMarket.marketImplementation = newImplementation;
+            } else if (market == input.contracts.susdeBorrowMarket.market) {
+                input.contracts.susdeBorrowMarket.marketImplementation = newImplementation;
+            } else if (market == input.contracts.syrupUsdcBorrowMarket.market) {
+                input.contracts.syrupUsdcBorrowMarket.marketImplementation = newImplementation;
+            } else if (market == input.contracts.paxgBorrowMarket.market) {
+                input.contracts.paxgBorrowMarket.marketImplementation = newImplementation;
+            } else if (market == input.contracts.susdeMintMarket.market) {
+                input.contracts.susdeMintMarket.marketImplementation = newImplementation;
+            } else if (market == input.contracts.syrupUsdcMintMarket.market) {
+                input.contracts.syrupUsdcMintMarket.marketImplementation = newImplementation;
+            }
+        }
+
+        return input;
     }
 
     function _deployPost(AltoEthereumMainnetParams memory params, AltoEthereumMainnetInput memory input)

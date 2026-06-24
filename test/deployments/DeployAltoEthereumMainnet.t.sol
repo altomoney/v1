@@ -41,7 +41,7 @@ import {
     ODOS_ROUTER_V3_MAINNET,
     ONE_INCH_AGGREGATION_ROUTER_V6_MAINNET
 } from "@alto/deployments/ethereum-mainnet/Constants.sol";
-import {MarketRegistry} from "@alto/utils/MarketRegistry.sol";
+import {IMarketRegistry, MarketRegistry} from "@alto/utils/MarketRegistry.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {IUsm, AccessMode} from "@alto/usm/interfaces/IUsm.sol";
 import {IUsmRegistry} from "@alto/utils/UsmRegistry.sol";
@@ -54,6 +54,7 @@ import {
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {IAltoVault, IAltoVaultBase} from "@alto/lending/interfaces/IAltoVault.sol";
 import {VaultRegistry} from "@alto/utils/VaultRegistry.sol";
+import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
 
 /// @dev Set to a non-zero deployment timestamp to load a real deployment's addresses.json
 ///      and skip re-deploying prerequisites. The file must be at:
@@ -1056,5 +1057,143 @@ contract DeployAdvancedPermissionsFrxUsdUsmPhaseTest is DeployAltoEthereumMainne
             abi.encodeWithSelector(ILendingOracle.getPrice.selector),
             abi.encode(1000 * LENDING_ORACLE_PRICE_PRECISION)
         );
+    }
+}
+
+contract DeployUpgradeMarketsLiquidationPeripheryPhaseTest is DeployAltoEthereumMainnetTestBase {
+    address internal constant MAINNET_TIMELOCK_ADMIN = 0xc49bf619CC9A68F84A6C9aB88506F2627565a4D0;
+
+    string internal constant UPGRADE_SCHEDULE_JSON =
+        "contracts/deployments/ethereum-mainnet/output/safe-tx-market-upgrade-liquidation-periphery-schedule.json";
+    string internal constant UPGRADE_EXECUTE_JSON =
+        "contracts/deployments/ethereum-mainnet/output/safe-tx-market-upgrade-liquidation-periphery-execute.json";
+    string internal constant AUTHORIZE_SCHEDULE_JSON =
+        "contracts/deployments/ethereum-mainnet/output/safe-tx-market-authorize-liquidation-periphery-schedule.json";
+    string internal constant AUTHORIZE_EXECUTE_JSON =
+        "contracts/deployments/ethereum-mainnet/output/safe-tx-market-authorize-liquidation-periphery-execute.json";
+
+    function test_upgradeMarketsForLiquidationPeriphery() public {
+        _assertUpgradeMarketsForLiquidationPeriphery();
+    }
+
+    function _assertUpgradeMarketsForLiquidationPeriphery() internal {
+        assertTrue(input.contracts.timelock != address(0), "need timelock from addresses.json");
+
+        MarketContracts[12] memory marketsBefore = _allMarkets();
+        for (uint256 i; i < marketsBefore.length; ++i) {
+            assertTrue(marketsBefore[i].market != address(0), "market should be deployed");
+            assertTrue(marketsBefore[i].marketImplementation != address(0), "market impl should be set");
+        }
+
+        if (input.contracts.liquidationPeriphery == address(0)) {
+            params.phase = DeploymentPhase.LIQUIDATION_PERIPHERY;
+            input = DeployAltoEthereumMainnet.deploy(params, input);
+        }
+        assertTrue(input.contracts.liquidationPeriphery != address(0), "need liquidation periphery");
+
+        params.phase = DeploymentPhase.UPGRADE_MARKETS_LIQUIDATION_PERIPHERY;
+        input = DeployAltoEthereumMainnet.deploy(params, input);
+
+        address[] memory registryMarkets = _allRegistryMarkets();
+        assertEq(registryMarkets.length, marketsBefore.length, "registry market count mismatch");
+
+        MarketContracts[12] memory marketsAfter = _allMarkets();
+        for (uint256 i; i < marketsBefore.length; ++i) {
+            address newImpl = marketsAfter[i].marketImplementation;
+            assertTrue(newImpl != address(0), "market impl should be set");
+            assertTrue(newImpl.code.length > 0, "market impl should have code");
+            assertTrue(newImpl != marketsBefore[i].marketImplementation, "market impl should be new");
+            for (uint256 j = i + 1; j < marketsBefore.length; ++j) {
+                assertTrue(newImpl != marketsAfter[j].marketImplementation, "market impls should be unique");
+            }
+        }
+
+        for (uint256 i; i < registryMarkets.length; ++i) {
+            address market = registryMarkets[i];
+            address oldImpl = _marketImplementationFromInput(marketsBefore, market);
+            assertEq(UnsafeUpgrades.getImplementationAddress(market), oldImpl, "pre-upgrade on-chain impl");
+        }
+
+        _executeSafeTimelockBatch(UPGRADE_SCHEDULE_JSON, UPGRADE_EXECUTE_JSON);
+
+        for (uint256 i; i < registryMarkets.length; ++i) {
+            address market = registryMarkets[i];
+            address expectedImpl = _marketImplementationFromInput(marketsAfter, market);
+            assertEq(UnsafeUpgrades.getImplementationAddress(market), expectedImpl, "post-upgrade on-chain impl");
+        }
+
+        _executeSafeTimelockBatch(AUTHORIZE_SCHEDULE_JSON, AUTHORIZE_EXECUTE_JSON);
+
+        address periphery = input.contracts.liquidationPeriphery;
+        for (uint256 i; i < registryMarkets.length; ++i) {
+            assertTrue(
+                IMarket(registryMarkets[i]).authorizedLiquidationPeriphery(periphery),
+                "periphery should be authorized on market"
+            );
+        }
+    }
+
+    function _executeSafeTimelockBatch(string memory schedulePath, string memory executePath) internal {
+        TimelockController timelock = TimelockController(payable(input.contracts.timelock));
+        uint256 minDelay = timelock.getMinDelay();
+
+        bytes memory scheduleData = _readSafeTxData(schedulePath);
+        bytes memory executeData = _readSafeTxData(executePath);
+
+        vm.prank(MAINNET_TIMELOCK_ADMIN);
+        (bool scheduled,) = address(timelock).call(scheduleData);
+        assertTrue(scheduled, "timelock schedule failed");
+
+        vm.warp(block.timestamp + minDelay + 1);
+
+        vm.prank(MAINNET_TIMELOCK_ADMIN);
+        (bool executed,) = address(timelock).call(executeData);
+        assertTrue(executed, "timelock execute failed");
+    }
+
+    function _readSafeTxData(string memory path) internal view returns (bytes memory) {
+        string memory json = vm.readFile(path);
+        return vm.parseJsonBytes(json, ".transactions[0].data");
+    }
+
+    function _allRegistryMarkets() internal view returns (address[] memory markets) {
+        IMarketRegistry registry = IMarketRegistry(input.contracts.marketRegistry);
+        address[] memory mintMarkets = registry.getMintMarkets();
+        address[] memory borrowMarkets = registry.getBorrowMarkets();
+        markets = new address[](mintMarkets.length + borrowMarkets.length);
+        for (uint256 i; i < mintMarkets.length; ++i) {
+            markets[i] = mintMarkets[i];
+        }
+        for (uint256 i; i < borrowMarkets.length; ++i) {
+            markets[mintMarkets.length + i] = borrowMarkets[i];
+        }
+    }
+
+    function _marketImplementationFromInput(MarketContracts[12] memory markets, address market)
+        internal
+        pure
+        returns (address implementation)
+    {
+        for (uint256 i; i < markets.length; ++i) {
+            if (markets[i].market == market) return markets[i].marketImplementation;
+        }
+        revert("market not found in input");
+    }
+
+    function _allMarkets() internal view returns (MarketContracts[12] memory markets) {
+        markets = [
+            input.contracts.wethMarket,
+            input.contracts.wstethMarket,
+            input.contracts.rethMarket,
+            input.contracts.methMarket,
+            input.contracts.tbtcMarket,
+            input.contracts.wbtcBorrowMarket,
+            input.contracts.cbbtcBorrowMarket,
+            input.contracts.susdeBorrowMarket,
+            input.contracts.syrupUsdcBorrowMarket,
+            input.contracts.paxgBorrowMarket,
+            input.contracts.susdeMintMarket,
+            input.contracts.syrupUsdcMintMarket
+        ];
     }
 }
