@@ -42,6 +42,10 @@ import {
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {IAltoVault, IAltoVaultBase} from "@alto/lending/interfaces/IAltoVault.sol";
 import {VaultRegistry} from "@alto/utils/VaultRegistry.sol";
+import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
+import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
+import {PauseTbtcMintMarketScript} from "../../script/PauseTbtcMintMarket.s.sol";
+import {DeprecateTbtcMintMarketScript} from "../../script/DeprecateTbtcMintMarket.s.sol";
 
 /// @dev Set to a non-zero deployment timestamp to load a real deployment's addresses.json
 ///      and skip re-deploying prerequisites. The file must be at:
@@ -775,6 +779,168 @@ contract DeployLeverageSwapperMultiTargetPhaseTest is DeployAltoEthereumMainnetT
         if (index == 10) return input.contracts.susdeMintMarket;
         if (index == 11) return input.contracts.syrupUsdcMintMarket;
         revert("invalid market index");
+    }
+}
+
+abstract contract TbtcMintMarketScriptTestBase is DeployAltoEthereumMainnetTestBase {
+    address internal constant MAINNET_TIMELOCK_ADMIN = 0xc49bf619CC9A68F84A6C9aB88506F2627565a4D0;
+    address internal constant FREEZER_MULTISIG = 0x1c11d2d42929bd17aB7212b79c91862Adfa8bbe4;
+
+    function _readSafeTxData(string memory path) internal view returns (bytes memory) {
+        string memory json = vm.readFile(path);
+        return vm.parseJsonBytes(json, ".transactions[0].data");
+    }
+
+    function _readSafeTxTo(string memory path) internal view returns (address) {
+        string memory json = vm.readFile(path);
+        return vm.parseJsonAddress(json, ".transactions[0].to");
+    }
+
+    function _executeSafeTimelockBatch(string memory schedulePath, string memory executePath) internal {
+        TimelockController timelock = TimelockController(payable(input.contracts.timelock));
+        uint256 minDelay = timelock.getMinDelay();
+
+        bytes memory scheduleData = _readSafeTxData(schedulePath);
+        bytes memory executeData = _readSafeTxData(executePath);
+
+        vm.prank(MAINNET_TIMELOCK_ADMIN);
+        (bool scheduled,) = address(timelock).call(scheduleData);
+        assertTrue(scheduled, "timelock schedule failed");
+
+        vm.warp(block.timestamp + minDelay + 1);
+
+        vm.prank(MAINNET_TIMELOCK_ADMIN);
+        (bool executed,) = address(timelock).call(executeData);
+        assertTrue(executed, "timelock execute failed");
+    }
+
+    function _maxLiquidationLtv(address market) internal view returns (uint256) {
+        return IAltoLiquidationEngine(IMarket(market).liquidationEngine()).minLltv();
+    }
+
+    function _minterCeiling(uint256 debtCeiling, uint256 maxLiquidationLtv) internal pure returns (uint256) {
+        return debtCeiling * 1.05 ether / maxLiquidationLtv;
+    }
+}
+
+contract PauseTbtcMintMarketScriptTest is TbtcMintMarketScriptTestBase {
+    string internal constant PAUSE_JSON =
+        "contracts/deployments/ethereum-mainnet/output/safe-tx-pause-tbtc-market.json";
+
+    function test_pauseTbtcMintMarketScript() public {
+        address tbtcMarket = input.contracts.tbtcMarket.market;
+
+        assertFalse(IPausable(tbtcMarket).paused(FROZEN_TYPE), "market should not be frozen yet");
+        assertTrue(Pausable(tbtcMarket).pausers(FREEZER_MULTISIG, FROZEN_TYPE), "freezer should be pauser");
+
+        new PauseTbtcMintMarketScript().run();
+
+        assertTrue(vm.exists(PAUSE_JSON), "pause safe json should be written");
+        assertEq(_readSafeTxTo(PAUSE_JSON), tbtcMarket, "pause tx target mismatch");
+        assertEq(
+            _readSafeTxData(PAUSE_JSON),
+            abi.encodeCall(IPausable.pause, (FROZEN_TYPE, true)),
+            "pause calldata mismatch"
+        );
+
+        vm.prank(FREEZER_MULTISIG);
+        (bool ok,) = tbtcMarket.call(_readSafeTxData(PAUSE_JSON));
+        assertTrue(ok, "pause tx failed");
+
+        assertTrue(IPausable(tbtcMarket).paused(FROZEN_TYPE), "market should be frozen");
+    }
+}
+
+contract DeprecateTbtcMintMarketScriptTest is TbtcMintMarketScriptTestBase {
+    string internal constant DEPRECATE_SCHEDULE_JSON =
+        "contracts/deployments/ethereum-mainnet/output/safe-tx-deprecate-tbtc-mint-market-schedule.json";
+    string internal constant DEPRECATE_EXECUTE_JSON =
+        "contracts/deployments/ethereum-mainnet/output/safe-tx-deprecate-tbtc-mint-market-execute.json";
+
+    uint256 internal constant EXPECTED_TBTC_DEBT_CEILING = 20_000 ether;
+    uint256 internal constant NEW_TBTC_DEBT_CEILING = 4_000 ether;
+    uint256 internal constant REALLOCATION_PER_MARKET = 8_000 ether;
+
+    function test_deprecateTbtcMintMarketScript() public {
+        DeprecateExpectations memory expected = _buildDeprecateExpectations();
+        _assertDeprecatePreconditions(expected);
+
+        new DeprecateTbtcMintMarketScript().run();
+
+        assertTrue(vm.exists(DEPRECATE_SCHEDULE_JSON), "deprecate schedule json should be written");
+        assertTrue(vm.exists(DEPRECATE_EXECUTE_JSON), "deprecate execute json should be written");
+
+        _executeSafeTimelockBatch(DEPRECATE_SCHEDULE_JSON, DEPRECATE_EXECUTE_JSON);
+        _assertDeprecatePostconditions(expected);
+    }
+
+    struct DeprecateExpectations {
+        address tbtcMarket;
+        address susdeMintMarket;
+        address syrupMintMarket;
+        address dusd;
+        uint256 newSusdeDebtCeiling;
+        uint256 newSyrupDebtCeiling;
+        uint256 newTbtcMinterCeiling;
+        uint256 newSusdeMinterCeiling;
+        uint256 newSyrupMinterCeiling;
+        uint256 currentSusdeMinterCeiling;
+        uint256 currentSyrupMinterCeiling;
+        uint256 currentTbtcMinterCeiling;
+    }
+
+    function _buildDeprecateExpectations() internal view returns (DeprecateExpectations memory expected) {
+        expected.tbtcMarket = input.contracts.tbtcMarket.market;
+        expected.susdeMintMarket = input.contracts.susdeMintMarket.market;
+        expected.syrupMintMarket = input.contracts.syrupUsdcMintMarket.market;
+        expected.dusd = input.contracts.dusd;
+
+        uint256 currentSusdeDebtCeiling = IMarket(expected.susdeMintMarket).totalSupply().assets;
+        uint256 currentSyrupDebtCeiling = IMarket(expected.syrupMintMarket).totalSupply().assets;
+
+        expected.newSusdeDebtCeiling = currentSusdeDebtCeiling + REALLOCATION_PER_MARKET;
+        expected.newSyrupDebtCeiling = currentSyrupDebtCeiling + REALLOCATION_PER_MARKET;
+        expected.newTbtcMinterCeiling = _minterCeiling(NEW_TBTC_DEBT_CEILING, _maxLiquidationLtv(expected.tbtcMarket));
+        expected.newSusdeMinterCeiling =
+            _minterCeiling(expected.newSusdeDebtCeiling, _maxLiquidationLtv(expected.susdeMintMarket));
+        expected.newSyrupMinterCeiling =
+            _minterCeiling(expected.newSyrupDebtCeiling, _maxLiquidationLtv(expected.syrupMintMarket));
+
+        (, expected.currentSusdeMinterCeiling) = IDUSD(expected.dusd).minterConfig(expected.susdeMintMarket);
+        (, expected.currentSyrupMinterCeiling) = IDUSD(expected.dusd).minterConfig(expected.syrupMintMarket);
+        (, expected.currentTbtcMinterCeiling) = IDUSD(expected.dusd).minterConfig(expected.tbtcMarket);
+    }
+
+    function _assertDeprecatePreconditions(DeprecateExpectations memory expected) internal view {
+        uint256 currentTbtcDebtCeiling = IMarket(expected.tbtcMarket).totalSupply().assets;
+        assertEq(currentTbtcDebtCeiling, EXPECTED_TBTC_DEBT_CEILING, "tbtc debt ceiling");
+        assertEq(currentTbtcDebtCeiling - NEW_TBTC_DEBT_CEILING, REALLOCATION_PER_MARKET * 2, "freed capacity mismatch");
+    }
+
+    function _assertDeprecatePostconditions(DeprecateExpectations memory expected) internal view {
+        assertEq(IMarket(expected.tbtcMarket).totalSupply().assets, NEW_TBTC_DEBT_CEILING, "tbtc debt ceiling not updated");
+        assertEq(
+            IMarket(expected.susdeMintMarket).totalSupply().assets,
+            expected.newSusdeDebtCeiling,
+            "susde debt ceiling not updated"
+        );
+        assertEq(
+            IMarket(expected.syrupMintMarket).totalSupply().assets,
+            expected.newSyrupDebtCeiling,
+            "syrup debt ceiling not updated"
+        );
+
+        (, uint256 tbtcMinterCeilingAfter) = IDUSD(expected.dusd).minterConfig(expected.tbtcMarket);
+        (, uint256 susdeMinterCeilingAfter) = IDUSD(expected.dusd).minterConfig(expected.susdeMintMarket);
+        (, uint256 syrupMinterCeilingAfter) = IDUSD(expected.dusd).minterConfig(expected.syrupMintMarket);
+
+        assertEq(tbtcMinterCeilingAfter, expected.newTbtcMinterCeiling, "tbtc minter ceiling not updated");
+        assertEq(susdeMinterCeilingAfter, expected.newSusdeMinterCeiling, "susde minter ceiling not updated");
+        assertEq(syrupMinterCeilingAfter, expected.newSyrupMinterCeiling, "syrup minter ceiling not updated");
+
+        assertGt(expected.newSusdeMinterCeiling, expected.currentSusdeMinterCeiling, "susde minter ceiling should increase");
+        assertGt(expected.newSyrupMinterCeiling, expected.currentSyrupMinterCeiling, "syrup minter ceiling should increase");
+        assertLt(expected.newTbtcMinterCeiling, expected.currentTbtcMinterCeiling, "tbtc minter ceiling should decrease");
     }
 }
 
