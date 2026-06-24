@@ -32,7 +32,8 @@ enum DeploymentPhase {
     PERMISSIONLESS_FRXUSD_USM, // Phase 23: Deploy Permissionless DUSD/FRXUSD Peg Stability Module
     ALTO_LEVERAGE_SWAPPER_MULTI_TARGET, // Phase 24: Deploy AltoLeverageSwapperMultiTarget for each market
     LIQUIDATION_PERIPHERY, // Phase 25: Deploy LiquidationPeriphery and register all markets
-    ADVANCED_PERMISSIONS_FRXUSD_USM // Phase 26: Deploy Advanced Permissions frxUSD USM for liquidation periphery
+    ADVANCED_PERMISSIONS_FRXUSD_USM, // Phase 26: Deploy Advanced Permissions frxUSD USM for liquidation periphery
+    UPGRADE_MARKETS_LIQUIDATION_PERIPHERY // Phase 27: Upgrade all markets and authorize liquidation periphery
 }
 
 enum UsmFinalizeMode {
