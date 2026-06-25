@@ -59,8 +59,12 @@ import {
 import {
     AdvancedPermissionsUsmBatch,
     AdvancedPermissionsUsmBatchParams,
-    AdvancedPermissionsUsmBatchReport
+    AdvancedPermissionsUsmBatchReport,
+    AdvancedPermissionsUsmBatchOverriddenFee,
+    AdvancedPermissionsUsmBatchOverriddenRole,
+    AdvancedPermissionsUsmBatchFeeByRoleHash
 } from "@alto/deployments/ethereum-mainnet/AdvancedPermissionsUsmBatch.sol";
+import {IAdvancedPermissionsUsmFeeStrategy} from "@alto/usm/interfaces/IAdvancedPermissionsUsmFeeStrategy.sol";
 import {FRXUSD_MAINNET} from "@alto/deployments/ethereum-mainnet/Constants.sol";
 import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
 import {IAltoLeverageSwapper} from "@alto/lending/leverage/interfaces/IAltoLeverageSwapper.sol";
@@ -87,6 +91,7 @@ import {
     Contracts
 } from "@alto/deployments/ethereum-mainnet/IDeployAltoEthereumMainnet.sol";
 import {AccessMode} from "@alto/usm/interfaces/IUsm.sol";
+import {DirectionAccess} from "@alto/usm/interfaces/IAdvancedPermissionsUsm.sol";
 import {console} from "forge-std/console.sol";
 import {Vm} from "forge-std/Vm.sol";
 
@@ -1429,6 +1434,25 @@ library DeployAltoEthereumMainnet {
         uint128 exposureCap = 5_000_000_000 ether;
         uint256 mintCeiling = exposureCap;
 
+        AdvancedPermissionsUsmBatchOverriddenFee[] memory overriddenFees =
+            new AdvancedPermissionsUsmBatchOverriddenFee[](1);
+        overriddenFees[0] = AdvancedPermissionsUsmBatchOverriddenFee({
+            account: input.contracts.liquidationPeriphery,
+            fee: IAdvancedPermissionsUsmFeeStrategy.OverriddenFeeData({isOverridden: true, fee: 0}),
+            isSell: true
+        });
+
+        AdvancedPermissionsUsmBatchOverriddenRole[] memory overriddenRoles =
+            new AdvancedPermissionsUsmBatchOverriddenRole[](0);
+
+        AdvancedPermissionsUsmBatchFeeByRoleHash[] memory feesByRoleHash =
+            new AdvancedPermissionsUsmBatchFeeByRoleHash[](0);
+
+        address[] memory sellSwappers = new address[](1);
+        sellSwappers[0] = input.contracts.liquidationPeriphery;
+
+        address[] memory buySwappers = new address[](0);
+
         AdvancedPermissionsUsmBatch batch = new AdvancedPermissionsUsmBatch(
             AdvancedPermissionsUsmBatchParams({
                 owner: input.contracts.timelock,
@@ -1437,15 +1461,21 @@ library DeployAltoEthereumMainnet {
                 feeRecipient: input.contracts.feeRecipient,
                 freezer: params.freezer,
                 treasuryMultisig: params.treasuryMultisig,
-                liquidationPeriphery: input.contracts.liquidationPeriphery,
                 underlyingAsset: FRXUSD_MAINNET,
                 priceRatio: 1 ether,
-                buyFee: 0,
-                sellFee: 0,
+                buyFee: 5, // 0.05%
+                sellFee: 0, // sell fee is permissioned and others don't have access to sell except LiquidationPeriphery
                 exposureCap: exposureCap,
                 mintCeiling: mintCeiling,
+                buyAccess: DirectionAccess.PERMISSIONLESS,
+                sellAccess: DirectionAccess.PERMISSIONED,
                 useUnsafeUpgrades: params.useUnsafeUpgrades,
-                finalizeDusdAndRegistry: params.deployerHasOwnership
+                finalizeDusdAndRegistry: params.deployerHasOwnership,
+                sellSwappers: sellSwappers,
+                buySwappers: buySwappers,
+                overriddenFees: overriddenFees,
+                overriddenRoles: overriddenRoles,
+                feesByRoleHash: feesByRoleHash
             })
         );
 

@@ -13,6 +13,24 @@ import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {UnsafeUpgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {Options} from "openzeppelin-foundry-upgrades/Options.sol";
 
+struct AdvancedPermissionsUsmBatchOverriddenFee {
+    address account;
+    IAdvancedPermissionsUsmFeeStrategy.OverriddenFeeData fee;
+    bool isSell;
+}
+
+struct AdvancedPermissionsUsmBatchOverriddenRole {
+    address account;
+    bytes32 feeRole;
+    bool isSell;
+}
+
+struct AdvancedPermissionsUsmBatchFeeByRoleHash {
+    bytes32 roleHash;
+    IAdvancedPermissionsUsmFeeStrategy.OverriddenFeeData fee;
+    bool isSell;
+}
+
 struct AdvancedPermissionsUsmBatchParams {
     address owner;
     address dusd;
@@ -20,15 +38,21 @@ struct AdvancedPermissionsUsmBatchParams {
     address feeRecipient;
     address freezer;
     address treasuryMultisig;
-    address liquidationPeriphery;
     address underlyingAsset;
     uint256 priceRatio;
     uint256 buyFee;
     uint256 sellFee;
     uint128 exposureCap;
     uint256 mintCeiling;
+    DirectionAccess buyAccess;
+    DirectionAccess sellAccess;
     bool useUnsafeUpgrades;
     bool finalizeDusdAndRegistry;
+    address[] sellSwappers;
+    address[] buySwappers;
+    AdvancedPermissionsUsmBatchOverriddenFee[] overriddenFees;
+    AdvancedPermissionsUsmBatchOverriddenRole[] overriddenRoles;
+    AdvancedPermissionsUsmBatchFeeByRoleHash[] feesByRoleHash;
 }
 
 struct AdvancedPermissionsUsmBatchReport {
@@ -38,18 +62,16 @@ struct AdvancedPermissionsUsmBatchReport {
     address advancedPermissionsFeeStrategy;
 }
 
-/// @notice Deploys an Advanced Permissions USM and configures liquidation periphery sell access in one transaction
+/// @notice Deploys an Advanced Permissions USM with configurable fee overrides and USM role grants in one transaction
 contract AdvancedPermissionsUsmBatch {
     AdvancedPermissionsUsmBatchReport public report;
 
     constructor(AdvancedPermissionsUsmBatchParams memory _params) {
-        require(_params.liquidationPeriphery != address(0), "LiquidationPeriphery not set");
-
         address fixedPriceStrategy =
-            address(new FixedPriceStrategy(_params.priceRatio, _params.underlyingAsset, address(this)));
+            address(new FixedPriceStrategy(_params.priceRatio, _params.underlyingAsset, _params.owner));
 
-        address feeStrategy =
-            address(new AdvancedPermissionsFeeStrategy(_params.buyFee, _params.sellFee, address(this)));
+        AdvancedPermissionsFeeStrategy feeStrategy =
+            new AdvancedPermissionsFeeStrategy(_params.buyFee, _params.sellFee, address(this));
 
         bytes memory initData = abi.encodeCall(
             DUSDAdvancedPermissionsUsm.initialize,
@@ -58,8 +80,8 @@ contract AdvancedPermissionsUsmBatch {
                 _params.treasuryMultisig,
                 _params.exposureCap,
                 fixedPriceStrategy,
-                DirectionAccess.PERMISSIONED,
-                DirectionAccess.PERMISSIONED
+                _params.buyAccess,
+                _params.sellAccess
             )
         );
 
@@ -77,34 +99,52 @@ contract AdvancedPermissionsUsmBatch {
         }
 
         IAdvancedPermissionsUsm usm = IAdvancedPermissionsUsm(dusdUsm);
-        AdvancedPermissionsFeeStrategy(feeStrategy)
-            .overrideSellFee(
-                _params.liquidationPeriphery,
-                IAdvancedPermissionsUsmFeeStrategy.OverriddenFeeData({isOverridden: true, fee: 0})
-            );
+
+        for (uint256 i; i < _params.overriddenFees.length; ++i) {
+            AdvancedPermissionsUsmBatchOverriddenFee memory overriddenFee = _params.overriddenFees[i];
+            if (overriddenFee.isSell) {
+                feeStrategy.overrideSellFee(overriddenFee.account, overriddenFee.fee);
+            } else {
+                feeStrategy.overrideBuyFee(overriddenFee.account, overriddenFee.fee);
+            }
+        }
+
+        for (uint256 i; i < _params.overriddenRoles.length; ++i) {
+            AdvancedPermissionsUsmBatchOverriddenRole memory overriddenRole = _params.overriddenRoles[i];
+            if (overriddenRole.isSell) {
+                feeStrategy.setUserSellFeeRole(overriddenRole.account, overriddenRole.feeRole);
+            } else {
+                feeStrategy.setUserBuyFeeRole(overriddenRole.account, overriddenRole.feeRole);
+            }
+        }
+
+        for (uint256 i; i < _params.feesByRoleHash.length; ++i) {
+            AdvancedPermissionsUsmBatchFeeByRoleHash memory feeByRoleHash = _params.feesByRoleHash[i];
+            if (feeByRoleHash.isSell) {
+                feeStrategy.setSellFeeByRoleHash(feeByRoleHash.roleHash, feeByRoleHash.fee);
+            } else {
+                feeStrategy.setBuyFeeByRoleHash(feeByRoleHash.roleHash, feeByRoleHash.fee);
+            }
+        }
+
+        for (uint256 i; i < _params.sellSwappers.length; ++i) {
+            address swapper = _params.sellSwappers[i];
+            require(swapper != address(0), "Invalid sell swapper");
+            usm.grantRole(usm.SELL_SWAPPER_ROLE(), swapper);
+        }
+
+        for (uint256 i; i < _params.buySwappers.length; ++i) {
+            address swapper = _params.buySwappers[i];
+            require(swapper != address(0), "Invalid buy swapper");
+            usm.grantRole(usm.BUY_SWAPPER_ROLE(), swapper);
+        }
 
         usm.updateFeeRecipient(_params.feeRecipient);
-        usm.updateFeeStrategy(feeStrategy);
-        usm.grantRole(usm.SELL_SWAPPER_ROLE(), _params.liquidationPeriphery);
+        usm.updateFeeStrategy(address(feeStrategy));
         usm.grantRole(usm.SWAP_FREEZER_ROLE(), _params.freezer);
 
-        bytes32 adminRole = bytes32(0);
-        bytes32 configuratorRole = usm.CONFIGURATOR_ROLE();
-
-        IAccessControl(dusdUsm).grantRole(adminRole, _params.owner);
-        IAccessControl(dusdUsm).grantRole(configuratorRole, _params.owner);
-        IAccessControl(dusdUsm).revokeRole(configuratorRole, address(this));
-        IAccessControl(dusdUsm).revokeRole(adminRole, address(this));
-
-        IAccessControl(fixedPriceStrategy).grantRole(adminRole, _params.owner);
-        IAccessControl(fixedPriceStrategy).grantRole(configuratorRole, _params.owner);
-        IAccessControl(fixedPriceStrategy).revokeRole(configuratorRole, address(this));
-        IAccessControl(fixedPriceStrategy).revokeRole(adminRole, address(this));
-
-        IAccessControl(feeStrategy).grantRole(adminRole, _params.owner);
-        IAccessControl(feeStrategy).grantRole(configuratorRole, _params.owner);
-        IAccessControl(feeStrategy).revokeRole(configuratorRole, address(this));
-        IAccessControl(feeStrategy).revokeRole(adminRole, address(this));
+        _transferUsmRoles(dusdUsm, _params.owner);
+        _transferFeeStrategyRoles(address(feeStrategy), _params.owner);
 
         if (_params.finalizeDusdAndRegistry) {
             IDUSD(_params.dusd).setMinterStatus(dusdUsm, true);
@@ -117,8 +157,28 @@ contract AdvancedPermissionsUsmBatch {
             dusdUsm: dusdUsm,
             dusdUsmImplementation: dusdUsmImplementation,
             fixedPriceStrategy: fixedPriceStrategy,
-            advancedPermissionsFeeStrategy: feeStrategy
+            advancedPermissionsFeeStrategy: address(feeStrategy)
         });
+    }
+
+    function _transferUsmRoles(address usm, address owner) internal {
+        bytes32 adminRole = bytes32(0);
+        bytes32 configuratorRole = IAdvancedPermissionsUsm(usm).CONFIGURATOR_ROLE();
+
+        IAccessControl(usm).grantRole(adminRole, owner);
+        IAccessControl(usm).grantRole(configuratorRole, owner);
+        IAccessControl(usm).revokeRole(configuratorRole, address(this));
+        IAccessControl(usm).revokeRole(adminRole, address(this));
+    }
+
+    function _transferFeeStrategyRoles(address feeStrategy, address owner) internal {
+        bytes32 adminRole = bytes32(0);
+        bytes32 configuratorRole = AdvancedPermissionsFeeStrategy(feeStrategy).CONFIGURATOR_ROLE();
+
+        IAccessControl(feeStrategy).grantRole(adminRole, owner);
+        IAccessControl(feeStrategy).grantRole(configuratorRole, owner);
+        IAccessControl(feeStrategy).revokeRole(configuratorRole, address(this));
+        IAccessControl(feeStrategy).revokeRole(adminRole, address(this));
     }
 
     function getReport() external view returns (AdvancedPermissionsUsmBatchReport memory) {
