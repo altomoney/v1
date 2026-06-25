@@ -46,6 +46,7 @@ contract AltoBorrowMarketUpgraded is AltoBaseMarketUpgraded {
     /// @dev Reinitializer for version 2 upgrade - initializes new storage variables
     function initializeV2(uint256 _addedProperty1, uint256 _addedProperty2, address _addedProperty3)
         public
+        virtual
         reinitializer(2)
     {
         addedProperty1 = _addedProperty1;

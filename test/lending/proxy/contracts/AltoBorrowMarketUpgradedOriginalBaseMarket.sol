@@ -35,7 +35,7 @@ contract AltoBorrowMarketUpgradedOriginalBaseMarket is AltoBaseMarket {
     }
 
     /// @dev Reinitializer for version 2 upgrade - initializes new storage variables
-    function initializeV2() public reinitializer(2) {}
+    function initializeV2() public virtual reinitializer(2) {}
 
     function setAddedProperty1(uint128 value) external {
         addedProperty1 = value;
