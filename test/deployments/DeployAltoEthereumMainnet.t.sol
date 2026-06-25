@@ -858,20 +858,15 @@ contract DeployAdvancedPermissionsFrxUsdUsmPhaseTest is DeployAltoEthereumMainne
     bytes32 internal constant BUY_SWAPPER_ROLE = keccak256("BUY_SWAPPER_ROLE");
     bytes32 internal constant SELL_SWAPPER_ROLE = keccak256("SELL_SWAPPER_ROLE");
 
-    function setUp() public override {
-        super.setUp();
-
-        string memory fileName =
-            string.concat(OUTPUT_DIR, "/ethereum-mainnet-", vm.toString(block.chainid), "-1782144581/addresses.json");
-        _loadInputFromJson(fileName);
-    }
+    uint256 internal constant BUY_FEE_BPS = 5; // 0.05%
+    uint256 internal constant SELL_FEE_BPS = 0;
 
     function test_deployAdvancedPermissionsFrxUsdUsm() public {
         _assertDeployAdvancedPermissionsFrxUsdUsm();
     }
 
     function _assertDeployAdvancedPermissionsFrxUsdUsm() internal {
-        assertTrue(input.contracts.liquidationPeriphery != address(0), "need liquidation periphery from addresses.json");
+        _ensureLiquidationPeripheryDeployed();
         assertEq(input.contracts.advancedPermissionsFrxusdUsm.dusdUsm, address(0), "USM should not be deployed yet");
 
         params.phase = DeploymentPhase.ADVANCED_PERMISSIONS_FRXUSD_USM;
@@ -893,8 +888,8 @@ contract DeployAdvancedPermissionsFrxUsdUsmPhaseTest is DeployAltoEthereumMainne
         DUSDAdvancedPermissionsUsm usmContract = DUSDAdvancedPermissionsUsm(usm);
         assertEq(
             uint256(usmContract.getBuyAccess()),
-            uint256(DirectionAccess.PERMISSIONED),
-            "buy access should be permissioned"
+            uint256(DirectionAccess.PERMISSIONLESS),
+            "buy access should be permissionless"
         );
         assertEq(
             uint256(usmContract.getSellAccess()),
@@ -904,16 +899,30 @@ contract DeployAdvancedPermissionsFrxUsdUsmPhaseTest is DeployAltoEthereumMainne
         assertEq(usmContract.UNDERLYING_ASSET(), FRXUSD_MAINNET, "underlying asset should be frxUSD");
         assertEq(usmContract.getExposureCap(), mintCeiling, "exposure cap mismatch");
         assertEq(FixedPriceStrategy(priceStrategy).priceRatio(), 1 ether, "price ratio should be 1:1 with DUSD");
+        assertEq(FixedPriceStrategy(priceStrategy).UNDERLYING_ASSET(), FRXUSD_MAINNET, "price strategy underlying");
         assertEq(usmContract.getFeeStrategy(), feeStrategy, "fee strategy mismatch");
+        assertEq(usmContract.getFeeRecipient(), input.contracts.feeRecipient, "fee recipient mismatch");
 
         _verifyHasRole(usm, timelock, DEFAULT_ADMIN_ROLE, "advanced permissions frxUSD USM");
         _verifyHasRole(usm, timelock, CONFIGURATOR_ROLE, "advanced permissions frxUSD USM");
         _verifyHasRole(usm, MULTISIG_FREEZER_PAUSER, SWAP_FREEZER_ROLE, "advanced permissions frxUSD USM");
+        _verifyHasRole(priceStrategy, timelock, DEFAULT_ADMIN_ROLE, "advanced permissions frxUSD price strategy");
+        _verifyHasRole(feeStrategy, timelock, DEFAULT_ADMIN_ROLE, "advanced permissions frxUSD fee strategy");
+        _verifyHasRole(feeStrategy, timelock, CONFIGURATOR_ROLE, "advanced permissions frxUSD fee strategy");
+
         assertTrue(usmContract.hasRole(SELL_SWAPPER_ROLE, periphery), "periphery should have sell swapper role");
         assertFalse(usmContract.hasRole(BUY_SWAPPER_ROLE, periphery), "periphery should not have buy swapper role");
 
         AdvancedPermissionsFeeStrategy strategy = AdvancedPermissionsFeeStrategy(feeStrategy);
+        assertEq(strategy.getDefaultBuyFee(), BUY_FEE_BPS, "default buy fee mismatch");
+        assertEq(strategy.getDefaultSellFee(), SELL_FEE_BPS, "default sell fee mismatch");
+
+        address randomUser = makeAddr("randomUser");
+        assertEq(strategy.getBuyFeeForUser(randomUser), BUY_FEE_BPS, "random user buy fee mismatch");
+        assertEq(strategy.getSellFeeForUser(randomUser), SELL_FEE_BPS, "random user sell fee mismatch");
         assertEq(strategy.getSellFeeForUser(periphery), 0, "periphery sell fee should be zero");
+        assertEq(strategy.getUserBuyFeeRole(periphery), bytes32(0), "periphery should have no buy fee role");
+        assertEq(strategy.getUserSellFeeRole(periphery), bytes32(0), "periphery should have no sell fee role");
 
         assertTrue(
             vm.exists(
@@ -944,12 +953,16 @@ contract DeployAdvancedPermissionsFrxUsdUsmPhaseTest is DeployAltoEthereumMainne
         _assertLiquidationViaPeripheryOnFork();
     }
 
-    function _deployPeripheryAndAdvancedPermissionsFrxUsdUsm() internal {
+    function _ensureLiquidationPeripheryDeployed() internal {
         if (input.contracts.liquidationPeriphery.code.length == 0) {
             params.phase = DeploymentPhase.LIQUIDATION_PERIPHERY;
             input = DeployAltoEthereumMainnet.deploy(params, input);
         }
+        assertTrue(input.contracts.liquidationPeriphery != address(0), "need liquidation periphery");
+    }
 
+    function _deployPeripheryAndAdvancedPermissionsFrxUsdUsm() internal {
+        _ensureLiquidationPeripheryDeployed();
         _deployAndFinalizeAdvancedPermissionsFrxUsdUsm();
     }
 
