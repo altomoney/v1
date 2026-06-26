@@ -55,6 +55,7 @@ import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {IAltoVault, IAltoVaultBase} from "@alto/lending/interfaces/IAltoVault.sol";
 import {VaultRegistry} from "@alto/utils/VaultRegistry.sol";
 import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
+import {GrantUsmRolesToTimelock} from "../../script/GrantUsmRolesToTimelock.s.sol";
 
 /// @dev Set to a non-zero deployment timestamp to load a real deployment's addresses.json
 ///      and skip re-deploying prerequisites. The file must be at:
@@ -1212,5 +1213,75 @@ contract DeployUpgradeMarketsLiquidationPeripheryPhaseTest is DeployAltoEthereum
             input.contracts.susdeMintMarket,
             input.contracts.syrupUsdcMintMarket
         ];
+    }
+}
+
+contract GrantUsmRolesToTimelockTest is DeployAltoEthereumMainnetTestBase {
+    address internal constant MAINNET_TIMELOCK_ADMIN = 0xc49bf619CC9A68F84A6C9aB88506F2627565a4D0;
+
+    string internal constant SCHEDULE_JSON =
+        "contracts/deployments/ethereum-mainnet/output/safe-tx-usm-grant-rescuer-liquidator-roles-to-timelock-schedule.json";
+    string internal constant EXECUTE_JSON =
+        "contracts/deployments/ethereum-mainnet/output/safe-tx-usm-grant-rescuer-liquidator-roles-to-timelock-execute.json";
+
+    function test_grantUsmRolesToTimelock() public {
+        assertTrue(input.contracts.timelock != address(0), "need timelock from addresses.json");
+        assertTrue(input.contracts.usmRegistry != address(0), "need usmRegistry from addresses.json");
+
+        address timelock = input.contracts.timelock;
+        address[] memory usms = IUsmRegistry(input.contracts.usmRegistry).getUsmList();
+        assertGt(usms.length, 0, "registry should list at least one USM");
+
+        for (uint256 i; i < usms.length; ++i) {
+            assertFalse(
+                AccessControl(usms[i]).hasRole(TOKEN_RESCUER_ROLE, timelock),
+                "timelock should not have TOKEN_RESCUER_ROLE before batch"
+            );
+            assertFalse(
+                AccessControl(usms[i]).hasRole(LIQUIDATOR_ROLE, timelock),
+                "timelock should not have LIQUIDATOR_ROLE before batch"
+            );
+        }
+
+        new GrantUsmRolesToTimelock().run();
+
+        assertTrue(vm.exists(SCHEDULE_JSON), "schedule json should be written");
+        assertTrue(vm.exists(EXECUTE_JSON), "execute json should be written");
+
+        _executeSafeTimelockBatch(SCHEDULE_JSON, EXECUTE_JSON);
+
+        for (uint256 i; i < usms.length; ++i) {
+            assertTrue(
+                AccessControl(usms[i]).hasRole(TOKEN_RESCUER_ROLE, timelock),
+                "timelock should have TOKEN_RESCUER_ROLE after batch"
+            );
+            assertTrue(
+                AccessControl(usms[i]).hasRole(LIQUIDATOR_ROLE, timelock),
+                "timelock should have LIQUIDATOR_ROLE after batch"
+            );
+        }
+    }
+
+    function _executeSafeTimelockBatch(string memory schedulePath, string memory executePath) internal {
+        TimelockController timelockController = TimelockController(payable(input.contracts.timelock));
+        uint256 minDelay = timelockController.getMinDelay();
+
+        bytes memory scheduleData = _readSafeTxData(schedulePath);
+        bytes memory executeData = _readSafeTxData(executePath);
+
+        vm.prank(MAINNET_TIMELOCK_ADMIN);
+        (bool scheduled,) = address(timelockController).call(scheduleData);
+        assertTrue(scheduled, "timelock schedule failed");
+
+        vm.warp(block.timestamp + minDelay + 1);
+
+        vm.prank(MAINNET_TIMELOCK_ADMIN);
+        (bool executed,) = address(timelockController).call(executeData);
+        assertTrue(executed, "timelock execute failed");
+    }
+
+    function _readSafeTxData(string memory path) internal view returns (bytes memory) {
+        string memory json = vm.readFile(path);
+        return vm.parseJsonBytes(json, ".transactions[0].data");
     }
 }
