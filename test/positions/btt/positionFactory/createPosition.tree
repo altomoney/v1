@@ -1,0 +1,14 @@
+PositionFactory::createPosition(PositionType,bytes)
+├── when beacon is not set for positionType
+│   └── it should revert with PositionFactoryUnsupportedType
+├── when positionType is MINT_CURVE_CONVEX
+│   ├── when market is not a registered mint market
+│   │   └── it should revert with PositionFactoryUnsupportedMarket
+│   └── when market is a registered mint market
+│       ├── it should deploy a BeaconProxy for msg.sender
+│       ├── it should initialize the position with msg.sender as owner
+│       ├── it should initialize the position with address(this) as factory
+│       ├── it should initialize the position with the decoded market
+│       └── it should emit PositionCreated
+└── when positionType is unsupported
+    └── it should revert with PositionFactoryUnsupportedType

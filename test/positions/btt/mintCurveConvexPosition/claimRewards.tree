@@ -1,0 +1,9 @@
+MintCurveConvexPosition::claimRewards()
+├── given caller is not owner and not authorized spender
+│   └── it should revert with MintCurveConvexPositionUnauthorized
+└── given caller is owner or authorized spender
+    ├── when caller is authorized spender and not owner
+    │   └── it should succeed and transfer rewards to owner
+    ├── it should claim rewards from the configured Convex reward pool
+    ├── it should transfer the full CRV and CVX balances held by the position to owner
+    └── it should emit ClaimRewards with the transferred CRV and CVX amounts

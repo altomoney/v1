@@ -36,6 +36,7 @@ fs_permissions = [
 	{ access = "read", path = "./test/oracles/simulations/data/" },
 	{ access = "read", path = "./test/lending/leverage/0xswapData/" },
 	{ access = "read", path = "./test/lending/liquidation/fork/swapData/" },
+	{ access = "read", path = "./test/positions/fork/swapData/" },
 ]
 
 [profile.simulations]

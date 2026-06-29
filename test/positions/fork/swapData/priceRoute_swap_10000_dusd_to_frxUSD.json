@@ -1,0 +1,67 @@
+{
+  "priceRoute": {
+    "blockNumber": 25444922,
+    "network": 1,
+    "srcToken": "0x63d74d22e689c715a04f2c13962b1f77f443d35b",
+    "srcDecimals": 18,
+    "srcAmount": "10000000000000000000000",
+    "destToken": "0xcacd6fd266af91b8aed52accc382b4e165586e29",
+    "destDecimals": 18,
+    "destAmount": "9996333136989910380334",
+    "bestRoute": [
+      {
+        "percent": 100,
+        "swaps": [
+          {
+            "srcToken": "0x63d74d22e689c715a04f2c13962b1f77f443d35b",
+            "srcDecimals": 18,
+            "destToken": "0xcacd6fd266af91b8aed52accc382b4e165586e29",
+            "destDecimals": 18,
+            "swapExchanges": [
+              {
+                "exchange": "CurveV1StableNg",
+                "srcAmount": "10000000000000000000000",
+                "destAmount": "9996333136989910380334",
+                "percent": 100,
+                "poolAddresses": [
+                  "0x104d6a1b97a6cef88d905d7b865a378d90be932a"
+                ],
+                "poolIdentifiers": [
+                  "CurveV1StableNg_0x104d6a1b97a6cef88d905d7b865a378d90be932a_false"
+                ],
+                "data": {
+                  "path": [
+                    {
+                      "tokenIn": "0x63d74d22e689c715a04f2c13962b1f77f443d35b",
+                      "tokenOut": "0xcacd6fd266af91b8aed52accc382b4e165586e29",
+                      "exchange": "0x104d6a1b97a6cef88d905d7b865a378d90be932a",
+                      "i": 1,
+                      "j": 0,
+                      "underlyingSwap": false,
+                      "n_coins": 2
+                    }
+                  ],
+                  "gasUSD": "0.114481"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "gasCostUSD": "0.103201",
+    "gasCost": "180294",
+    "side": "SELL",
+    "version": "6.2",
+    "contractAddress": "0x6a000f20005980200259b80c5102003040001068",
+    "tokenTransferProxy": "0x6a000f20005980200259b80c5102003040001068",
+    "contractMethod": "swapExactAmountInOnCurveV1",
+    "partnerFee": 0.01,
+    "srcUSD": "9993.3300000000",
+    "destUSD": "9995.1535696797",
+    "destAmountAfterFee": "9995333503676211389296",
+    "partner": "anon",
+    "maxImpactReached": false,
+    "hmac": "17261d25532d2985db7051b232f2529fec2b54f0"
+  }
+}
