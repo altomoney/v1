@@ -71,7 +71,7 @@ contract AdvancedPermissionsUsmBatch {
             address(new FixedPriceStrategy(_params.priceRatio, _params.underlyingAsset, _params.owner));
 
         AdvancedPermissionsFeeStrategy feeStrategy =
-            new AdvancedPermissionsFeeStrategy(_params.buyFee, _params.sellFee, address(this));
+            new AdvancedPermissionsFeeStrategy(uint16(_params.buyFee), uint16(_params.sellFee), address(this));
 
         bytes memory initData = abi.encodeCall(
             DUSDAdvancedPermissionsUsm.initialize,
