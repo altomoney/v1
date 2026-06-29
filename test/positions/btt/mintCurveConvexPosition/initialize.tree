@@ -1,0 +1,11 @@
+MintCurveConvexPosition::initialize(address,address,address)
+├── when _factory is zero address
+│   └── it should revert with MintCurveConvexPositionInvalidInput
+├── when _market is zero address
+│   └── it should revert with MintCurveConvexPositionInvalidInput
+└── when _factory and _market are valid
+    ├── it should set factory to _factory
+    ├── it should set market to _market
+    ├── it should set owner to _owner
+    ├── it should initialize AuthUpgradeable for the position
+    └── it should not allow re-initialization

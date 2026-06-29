@@ -1,0 +1,89 @@
+MintCurveConvexPosition::remove(bytes)
+├── given caller is not owner and not authorized spender
+│   └── it should revert with MintCurveConvexPositionUnauthorized
+└── given caller is owner or authorized spender
+    ├── when mode is not NORMAL or EMERGENCY_UNWIND_LP
+    │   └── it should revert
+    ├── when caller is authorized spender
+    │   └── it should succeed for emergency unwind
+    ├── Normal: when mode is NORMAL
+    │   ├── given position has staked Convex LP
+    │   │   ├── when convexLpAmount is greater than 0
+    │   │   │   ├── when claimRewards is false
+    │   │   │   │   ├── it should withdraw convexLpAmount from Convex without claiming rewards
+    │   │   │   │   ├── it should not emit ClaimRewards
+    │   │   │   │   └── it should remove Curve liquidity for convexLpAmount
+    │   │   │   └── when claimRewards is true
+    │   │   │       ├── it should withdraw convexLpAmount from Convex and claim rewards
+    │   │   │       ├── it should transfer CRV and CVX balances to owner
+    │   │   │       ├── it should emit ClaimRewards
+    │   │   │       └── it should remove Curve liquidity for convexLpAmount
+    │   │   └── when convexLpAmount equals the full staked balance
+    │   │       └── it should withdraw the full staked amount from Convex
+    │   ├── given position has zero staked Convex LP
+    │   │   ├── when convexLpAmount is 0
+    │   │   │   ├── it should skip Convex withdrawal
+    │   │   │   ├── it should skip Curve liquidity removal
+    │   │   │   └── it should continue with swap, repay, collateral withdrawal, and owner payouts
+    │   ├── when frxUsdAmountToSwap is 0
+    │   │   └── it should skip the frxUSD to DUSD swap
+    │   ├── when frxUsdAmountToSwap is greater than 0
+    │   │   ├── when swapTarget is not approved by the factory
+    │   │   │   └── it should revert with MintCurveConvexPositionInvalidInput
+    │   │   ├── when the swap target call fails
+    │   │   │   └── it should revert with SwapPositionSwapFailed
+    │   │   ├── when DUSD received is less than minDusdOutFromFrxUsdSwap
+    │   │   │   └── it should revert with SwapPositionMinAmountOutNotMet
+    │   │   └── when swap succeeds
+    │   │       ├── it should emit Swap with frxUSD sold, DUSD bought, frxUsdAmountToSwap amountIn, swap target, and amountOut
+    │   │       ├── it should approve frxUsdAmountToSwap of frxUSD to the swap target
+    │   │       ├── it should swap frxUsdAmountToSwap of frxUSD to DUSD through the approved swap target
+    │   │       └── it should revoke the swap target allowance after the swap
+    │   ├── when repayShares is 0
+    │   │   └── it should skip mint market repayment
+    │   ├── when repayShares is greater than 0
+    │   │   ├── when position DUSD balance is insufficient for repayment
+    │   │   │   └── it should revert with ERC20InsufficientBalance
+    │   │   └── when position DUSD balance is sufficient for repayment
+    │   │       └── it should repay repayShares borrow shares on behalf of position
+    │   ├── when collateralAmountToWithdraw is 0
+    │   │   └── it should skip collateral withdrawal from the mint market
+    │   ├── when collateralAmountToWithdraw is greater than 0
+    │   │   └── it should withdraw collateralAmountToWithdraw collateral from the mint market to position owner
+    │   └── on successful Normal completion
+    │       ├── it should unwind Convex stake and Curve liquidity when staked LP is provided
+    │       ├── it should optionally repay debt on the mint market
+    │       ├── it should optionally withdraw collateral from the mint market to position owner
+    │       ├── it should transfer remaining DUSD balance to position owner
+    │       ├── it should transfer remaining frxUSD balance to position owner
+    │       ├── it should transfer remaining collateral token balance to position owner
+    │       └── it should emit RemovePosition with mode NORMAL, convexLpRemoved, collateralWithdrawn, and debtSharesRepaid
+    └── EmergencyUnwindLp: when mode is EMERGENCY_UNWIND_LP
+        ├── when convexLpAmount is 0
+        │   ├── it should skip Convex withdrawal
+        │   ├── it should skip Curve liquidity removal
+        │   └── it should transfer remaining token balances to owner without mint market interaction
+        └── when convexLpAmount is greater than 0
+            ├── given mint market position is healthy
+            │   └── on successful unwind
+            │       ├── it should withdraw staked LP from Convex with claimRewards enabled
+            │       ├── it should remove Curve liquidity for the withdrawn LP amount
+            │       ├── it should transfer remaining DUSD balance to owner
+            │       ├── it should transfer remaining frxUSD balance to owner
+            │       ├── it should transfer remaining Curve LP token balance to owner
+            │       ├── it should transfer CRV and CVX reward balances to owner
+            │       ├── it should emit RemovePosition with mode EMERGENCY_UNWIND_LP, convexLpRemoved, and zero collateralWithdrawn and debtSharesRepaid
+            │       ├── it should emit ClaimRewards with transferred CRV and CVX amounts
+            │       ├── it should not repay debt on the mint market
+            │       └── it should not withdraw collateral from the mint market
+            └── given mint market leg is impaired or liquidated
+                ├── given market collateral for the position is zero
+                │   └── on successful unwind
+                │       ├── it should still withdraw staked LP from Convex
+                │       ├── it should still remove Curve liquidity and transfer LP-side tokens to owner
+                │       ├── it should not attempt mint market repayment
+                │       └── it should not attempt mint market collateral withdrawal
+                └── given market debt for the position remains while collateral is impaired
+                    └── on successful unwind
+                        ├── it should still recover remaining Curve and Convex assets to owner
+                        └── it should leave the impaired mint-market debt position unchanged

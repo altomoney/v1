@@ -28,6 +28,18 @@ address constant SYRUPUSDC_MAINNET = 0x80ac24aA929eaF5013f6436cdA2a7ba190f5Cc0b;
 address constant PAXG_MAINNET = 0x45804880De22913dAFE09f4980848ECE6EcbAf78;
 // frxUsd on mainnet
 address constant FRXUSD_MAINNET = 0xCAcd6fd266aF91b8AeD52aCCc382b4e165586E29;
+// frxUsd/dUSD Curve pool on mainnet
+address constant FRXUSD_DUSD_CURVE_POOL_MAINNET = 0x104d6a1b97A6CEf88D905d7b865A378d90be932A;
+// poolId of frxUsd/dUSD Curve pool on mainnet
+uint256 constant POOL_ID_FRXUSD_DUSD_CURVE_POOL_MAINNET = 565;
+// Convex reward pool with staking token of curve LP token of frxUsd/dUSD poolon mainnet
+address constant CONVEX_REWARD_POOL_CVX_FRXUSD_DUSD_MAINNET = 0x0E80Fe9D6F6dF530ab2Ff69ad0259e77E2ffEdeb;
+// Convex booster contract on mainnet
+address constant CONVEX_BOOSTER_MAINNET = 0xF403C135812408BFbE8713b5A23a04b3D48AAE31;
+// Curve DAO(CRV) token address on mainnet
+address constant CRV_TOKEN_MAINNET = 0xD533a949740bb3306d119CC777fa900bA034cd52;
+// Convex token address on mainnet
+address constant CVX_TOKEN_MAINNET = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B;
 
 // Chainlink feeds
 // Standard Chainlink ETH/USD feed
@@ -52,6 +64,8 @@ address constant ZEROX_SWAP_TARGET_MAINNET = 0x0000000000001fF3684f28c67538d4D07
 address constant ODOS_ROUTER_V3_MAINNET = 0x0D05a7D3448512B78fa8A9e46c4872C88C4a0D05;
 // OneInch Aggregation Router V6 on Ethereum mainnet
 address constant ONE_INCH_AGGREGATION_ROUTER_V6_MAINNET = 0x111111125421cA6dc452d289314280a0f8842A65;
+// Velora Augustus V6 on Ethereum mainnet
+address constant VELORA_AUGUSTUS_V6_MAINNET = 0x6A000F20005980200259B80c5102003040001068;
 // Morpho's deployment of Bundler3
 address constant BUNDLER3_MAINNET = 0xAc80387009231b4D55B85Df27924B85f2ED6823D;
 // LayerZero endpoint for Ethereum mainnet
