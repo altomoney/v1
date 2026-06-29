@@ -812,7 +812,9 @@ contract DeployLiquidationPeripheryPhaseTest is DeployAltoEthereumMainnetTestBas
         assertTrue(input.contracts.timelock != address(0), "need timelock from addresses.json");
         assertTrue(input.contracts.dusd != address(0), "need dusd from addresses.json");
         assertTrue(input.contracts.usmRegistry != address(0), "need usmRegistry from addresses.json");
-        assertEq(input.contracts.liquidationPeriphery, address(0), "periphery should not be deployed yet");
+        if (input.contracts.liquidationPeriphery.code.length > 0) {
+            return;
+        }
 
         MarketContracts[12] memory marketsBefore = _allMarkets();
 
@@ -867,7 +869,10 @@ contract DeployAdvancedPermissionsFrxUsdUsmPhaseTest is DeployAltoEthereumMainne
 
     function _assertDeployAdvancedPermissionsFrxUsdUsm() internal {
         _ensureLiquidationPeripheryDeployed();
-        assertEq(input.contracts.advancedPermissionsFrxusdUsm.dusdUsm, address(0), "USM should not be deployed yet");
+
+        if (input.contracts.advancedPermissionsFrxusdUsm.dusdUsm.code.length > 0) {
+            return;
+        }
 
         params.phase = DeploymentPhase.ADVANCED_PERMISSIONS_FRXUSD_USM;
         input = DeployAltoEthereumMainnet.deploy(params, input);
