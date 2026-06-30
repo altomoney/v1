@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.28;
 
+import {Vm} from "forge-std/Vm.sol";
 import {MarketCommon, MarketType} from "./MarketCommon.t.sol";
 import {IPausable} from "@alto/utils/Pausable.sol";
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
@@ -34,6 +35,9 @@ contract AltoBorrowMarketliquidate is MarketCommon {
     using FixedPointMath for uint256;
     using AssetShareConversionMath for uint256;
     using Uint128Converter for uint256;
+
+    bytes32 internal constant LIQUIDATION_EVENT_SIG =
+        keccak256("Liquidation(address,address,uint256,uint256,uint256,uint256,uint256,uint256)");
 
     address internal immutable PRIORITY_LIQUIDATOR = makeAddr("PriorityLiquidator");
     address internal immutable TAGGER = makeAddr("Tagger");
@@ -106,6 +110,30 @@ contract AltoBorrowMarketliquidate is MarketCommon {
             market.liquidationEngine(),
             abi.encodeWithSelector(IAltoLiquidationEngine.prepareLiquidation.selector, expectedInput)
         );
+    }
+
+    function _assertLiquidationEventBorrowerAndLiquidator(address expectedBorrower, address expectedLiquidator)
+        internal
+    {
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        bool found;
+
+        for (uint256 i = 0; i < logs.length; i++) {
+            if (logs[i].topics[0] != LIQUIDATION_EVENT_SIG) {
+                continue;
+            }
+
+            assertEq(logs[i].topics.length, 2, "Liquidation event should index borrower");
+            assertEq(address(uint160(uint256(logs[i].topics[1]))), expectedBorrower, "borrower mismatch");
+
+            address liquidator = abi.decode(logs[i].data, (address));
+            assertEq(liquidator, expectedLiquidator, "originalLiquidator mismatch");
+
+            found = true;
+            break;
+        }
+
+        assertTrue(found, "Liquidation event not emitted");
     }
 
     function test_WhenCallerIsNotAuthorizedLiquidationPeriphery_WhenLiquidationDataIsEmpty()
@@ -201,13 +229,14 @@ contract AltoBorrowMarketliquidate is MarketCommon {
 
         // it should pass originalLiquidator to liquidation engine as liquidator
         // it should pass originalLiquidationData to liquidation engine as liquidationData
-        // it should emit Liquidation event with msg.sender as liquidator
+        // it should emit Liquidation event with originalLiquidator and borrower
         _expectPrepareLiquidation(PRIORITY_LIQUIDATOR, innerLiquidationData);
-        vm.expectEmit(true, false, false, false);
-        emit IMarketEvents.Liquidation(USER, address(this), 0, 0, 0, 0, 0, 0);
 
+        vm.recordLogs();
         (uint256 collateralAmount, uint256 repayAmount, uint256 protocolFee) =
             market.liquidate(USER, hex"", abi.encode(PRIORITY_LIQUIDATOR, innerLiquidationData));
+
+        _assertLiquidationEventBorrowerAndLiquidator(USER, PRIORITY_LIQUIDATOR);
 
         assertGt(collateralAmount, 0);
         assertGt(repayAmount, 0);
@@ -628,9 +657,42 @@ contract AltoBorrowMarketliquidate is MarketCommon {
         // it should pass collateral amount and data
     }
 
-    /// @dev This test is covered by AltoBorrowMarket.liquidations.sol
-    function test_GivenEventEmission() external {
-        // it should emit Liquidation event with correct parameters
+    function test_GivenEventEmission_WhenDirectLiquidator() external givenPositionIsInsolvent whenPriorityLiquidationIsEnabled whenCurrentLTVIsBelowDisablePriorityLiquidationThreshold {
+        _fundLiquidator(PRIORITY_LIQUIDATOR, 1 ether);
+
+        vm.recordLogs();
+        vm.prank(PRIORITY_LIQUIDATOR);
+        (uint256 collateralAmount, uint256 repayAmount, uint256 protocolFee) = market.liquidate(USER, hex"", hex"");
+
+        _assertLiquidationEventBorrowerAndLiquidator(USER, PRIORITY_LIQUIDATOR);
+
+        assertGt(collateralAmount, 0);
+        assertGt(repayAmount, 0);
+        assertGt(protocolFee, 0);
+    }
+
+    function test_GivenEventEmission_WhenAuthorizedPeripheryForwardsOriginalLiquidator()
+        external
+        givenPositionIsInsolvent
+        whenPriorityLiquidationIsEnabled
+        whenCurrentLTVIsBelowDisablePriorityLiquidationThreshold
+    {
+        vm.prank(OWNER);
+        AltoBaseMarket(address(market)).setAuthorizedLiquidationPeriphery(address(this), true);
+
+        _fundLiquidator(address(this), 1 ether);
+
+        bytes memory innerLiquidationData = hex"0102";
+
+        vm.recordLogs();
+        (uint256 collateralAmount, uint256 repayAmount, uint256 protocolFee) =
+            market.liquidate(USER, hex"", abi.encode(PRIORITY_LIQUIDATOR, innerLiquidationData));
+
+        _assertLiquidationEventBorrowerAndLiquidator(USER, PRIORITY_LIQUIDATOR);
+
+        assertGt(collateralAmount, 0);
+        assertGt(repayAmount, 0);
+        assertGt(protocolFee, 0);
     }
 
     /// @dev This test is covered by AltoBorrowMarket.liquidations.sol
