@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 import {IStableTokenFacilitator} from "./IStableTokenFacilitator.sol";
+import {UsmType} from "./IUsmCommon.sol";
 
 /// @notice The direction access configuration for a USM swap direction
 /// @dev PERMISSIONED: only role holders can use this direction
@@ -10,15 +11,6 @@ import {IStableTokenFacilitator} from "./IStableTokenFacilitator.sol";
 enum DirectionAccess {
     PERMISSIONED,
     PERMISSIONLESS
-}
-
-/// @notice Identifies which USM implementation
-/// @dev STANDARD — `Usm` base (e.g. `DUSDUsm`): unified `AccessMode` via `SWAPPER_ROLE`.
-/// @dev ADVANCED_PERMISSIONS — `AdvancedPermissionsUsm` base (e.g. `DUSDAdvancedPermissionsUsm`): independent
-///      per-direction `DirectionAccess` and fee tiers.
-enum UsmType {
-    STANDARD,
-    ADVANCED_PERMISSIONS
 }
 
 /**
