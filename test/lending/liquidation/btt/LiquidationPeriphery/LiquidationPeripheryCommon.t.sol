@@ -51,7 +51,7 @@ abstract contract LiquidationPeripheryCommon is Test, TestHelperOz5 {
 
     bytes32 internal constant BUY_SWAPPER_ROLE = keccak256("BUY_SWAPPER_ROLE");
     bytes32 internal constant SELL_SWAPPER_ROLE = keccak256("SELL_SWAPPER_ROLE");
-    uint256 internal constant MAX_USM_FEE_BPS = 4999;
+    uint16 internal constant MAX_USM_FEE_BPS = 4999;
     address internal constant WARMUP_SWAPPER = address(uint160(uint256(keccak256("WarmupSwapper"))));
 
     LiquidationPeriphery internal periphery;
@@ -293,17 +293,16 @@ abstract contract LiquidationPeripheryCommon is Test, TestHelperOz5 {
         priceStrategy.setPriceRatio(priceRatio);
     }
 
-    function _configureUsmFees(uint256 buyFeeBps, uint256 sellFeeBps) internal {
+    function _configureUsmFees(uint16 buyFeeBps, uint16 sellFeeBps) internal {
         AdvancedPermissionsFeeStrategy feeStrategy = AdvancedPermissionsFeeStrategy(usm.getFeeStrategy());
         vm.startPrank(OWNER);
         feeStrategy.setFee(buyFeeBps, sellFeeBps);
         feeStrategy.setBuyFeeByRoleHash(
-            BUY_SWAPPER_ROLE,
-            IAdvancedPermissionsUsmFeeStrategy.OverriddenFeeData({isOverridden: true, fee: uint16(buyFeeBps)})
+            BUY_SWAPPER_ROLE, IAdvancedPermissionsUsmFeeStrategy.OverriddenFeeData({isOverridden: true, fee: buyFeeBps})
         );
         feeStrategy.setSellFeeByRoleHash(
             SELL_SWAPPER_ROLE,
-            IAdvancedPermissionsUsmFeeStrategy.OverriddenFeeData({isOverridden: true, fee: uint16(sellFeeBps)})
+            IAdvancedPermissionsUsmFeeStrategy.OverriddenFeeData({isOverridden: true, fee: sellFeeBps})
         );
         vm.stopPrank();
     }

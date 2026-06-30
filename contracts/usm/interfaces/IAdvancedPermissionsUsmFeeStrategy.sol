@@ -81,7 +81,7 @@ interface IAdvancedPermissionsUsmFeeStrategy {
      * @param buyFee The new buy fee, expressed in bps
      * @param sellFee The new sell fee, expressed in bps
      */
-    function setFee(uint256 buyFee, uint256 sellFee) external;
+    function setFee(uint16 buyFee, uint16 sellFee) external;
 
     /**
      * @notice Overrides the buy fee for a specific originator
