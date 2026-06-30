@@ -141,7 +141,7 @@ contract LiquidationPeriphery is AltoOwnable2Step, ILiquidateCallback, ILiquidat
     /// @inheritdoc ILiquidationPeripheryBase
     function setSupportedMarket(address market, bool isSupported) external onlyOwner {
         if (market == address(0)) revert ZeroAddress();
-        if (IMarket(market).borrowToken() != BORROW_TOKEN) revert InvalidInput();
+        if (isSupported && IMarket(market).borrowToken() != BORROW_TOKEN) revert InvalidInput();
         supportedMarkets[market] = isSupported;
         emit SupportedMarketSet(market, isSupported);
     }

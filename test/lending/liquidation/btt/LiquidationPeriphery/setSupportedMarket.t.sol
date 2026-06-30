@@ -40,6 +40,15 @@ contract LiquidationPeriphery_SetSupportedMarket_Test is LiquidationPeripheryCom
         periphery.setSupportedMarket(address(otherMarket), true);
     }
 
+    function test_ClearsSupportedMarketWithoutBorrowTokenValidation() public {
+        IMarket otherMarket = _deployBorrowMarketWithBorrowToken(address(new DUSD(address(endpoints[1]), OWNER)));
+
+        vm.prank(OWNER);
+        periphery.setSupportedMarket(address(otherMarket), false);
+
+        assertFalse(periphery.supportedMarkets(address(otherMarket)));
+    }
+
     function test_SetsSupportedMarketAndEmitsSupportedMarketSet() public {
         vm.prank(OWNER);
         periphery.setSupportedMarket(address(borrowMarket), false);
