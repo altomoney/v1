@@ -25,9 +25,9 @@ contract AdvancedPermissionsFeeStrategy is IAdvancedPermissionsUsmFeeStrategy, A
     uint256 internal constant MAXIMUM_FEE_PERCENT = 5000;
 
     /// @dev default buy fee
-    uint256 internal _buyFee;
+    uint16 internal _buyFee;
     /// @dev default sell fee
-    uint256 internal _sellFee;
+    uint16 internal _sellFee;
     /// @dev overridden buy fee for a specific originator
     mapping(address => OverriddenFeeData) internal _overrideBuyFee;
     /// @dev overridden sell fee for a specific originator
@@ -54,18 +54,18 @@ contract AdvancedPermissionsFeeStrategy is IAdvancedPermissionsUsmFeeStrategy, A
         require(admin != address(0), "ZERO_ADDRESS_NOT_VALID");
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(CONFIGURATOR_ROLE, admin);
-        _buyFee = buyFee;
-        _sellFee = sellFee;
-        emit FeeSet(0, buyFee, 0, sellFee);
+        _buyFee = uint16(buyFee);
+        _sellFee = uint16(sellFee);
+        emit FeeSet(0, uint16(buyFee), 0, uint16(sellFee));
     }
 
     /// @inheritdoc IAdvancedPermissionsUsmFeeStrategy
     function setFee(uint256 buyFee, uint256 sellFee) external onlyRole(CONFIGURATOR_ROLE) {
         require(buyFee < MAXIMUM_FEE_PERCENT, "INVALID_BUY_FEE");
         require(sellFee < MAXIMUM_FEE_PERCENT, "INVALID_SELL_FEE");
-        emit FeeSet(_buyFee, buyFee, _sellFee, sellFee);
-        _buyFee = buyFee;
-        _sellFee = sellFee;
+        emit FeeSet(_buyFee, uint16(buyFee), _sellFee, uint16(sellFee));
+        _buyFee = uint16(buyFee);
+        _sellFee = uint16(sellFee);
     }
 
     /// @inheritdoc IAdvancedPermissionsUsmFeeStrategy
