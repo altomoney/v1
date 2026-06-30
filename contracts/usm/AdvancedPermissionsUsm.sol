@@ -214,6 +214,7 @@ abstract contract AdvancedPermissionsUsm is
 
     /// @inheritdoc IAdvancedPermissionsUsm
     function seize() external notSeized onlyRole(LIQUIDATOR_ROLE) returns (uint256) {
+        distributeFeesToFeeRecipient();
         _isSeized = true;
         _currentExposure = 0;
         _accruedFees = 0;

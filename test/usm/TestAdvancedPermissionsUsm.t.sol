@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import {TestDusdBase} from "./TestDusdBase.t.sol";
 import {DUSDAdvancedPermissionsUsm} from "@alto/usm/DUSDAdvancedPermissionsUsm.sol";
 import {IAdvancedPermissionsUsm, DirectionAccess} from "@alto/usm/interfaces/IAdvancedPermissionsUsm.sol";
+import {IStableTokenFacilitator} from "@alto/usm/interfaces/IStableTokenFacilitator.sol";
 import {IAdvancedPermissionsUsmFeeStrategy} from "@alto/usm/interfaces/IAdvancedPermissionsUsmFeeStrategy.sol";
 import {AdvancedPermissionsFeeStrategy} from "@alto/usm/AdvancedPermissionsFeeStrategy.sol";
 import {FixedPriceStrategy} from "@alto/usm/FixedPriceStrategy.sol";
@@ -59,6 +60,42 @@ contract TestAdvancedPermissionsUsm is TestDusdBase {
 
         // PERMISSIONED_SELL_USM: seed via BOB who holds SELL_SWAPPER_ROLE
         _seedLiquidityAs(PERMISSIONED_SELL_USM, BOB, DEFAULT_USM_USDC_AMOUNT);
+
+        USM.grantRole(USM_LIQUIDATOR_ROLE, address(DUSD_USM_LAST_RESORT_LIQUIDATOR));
+    }
+
+    function testSeize() public {
+        assertEq(USM.getIsSeized(), false);
+
+        uint256 fee = _doSell(ALICE, DEFAULT_USM_USDC_AMOUNT);
+        assertGt(fee, 0);
+        assertEq(USM.getAccruedFees(), fee);
+        assertEq(DUSD_TOKEN.balanceOf(address(USM)), fee);
+
+        (uint256 stableTokenMinted,) = DUSD_TOKEN.minterConfig(address(USM));
+        uint256 feeRecipientBalanceBefore = DUSD_TOKEN.balanceOf(FEE_RECIPIENT);
+
+        assertEq(USDC_TOKEN.balanceOf(TREASURY), 0);
+
+        vm.startPrank(address(DUSD_USM_LAST_RESORT_LIQUIDATOR));
+        vm.expectEmit(true, true, true, true, address(USM));
+        emit IStableTokenFacilitator.FeesDistributedToFeeRecipient(FEE_RECIPIENT, address(DUSD_TOKEN), fee);
+        vm.expectEmit(true, false, false, true, address(USM));
+        emit IAdvancedPermissionsUsm.Seized(
+            address(DUSD_USM_LAST_RESORT_LIQUIDATOR), TREASURY, DEFAULT_USM_USDC_AMOUNT, stableTokenMinted
+        );
+        uint256 seizedAmount = USM.seize();
+        vm.stopPrank();
+
+        assertEq(seizedAmount, DEFAULT_USM_USDC_AMOUNT);
+        assertEq(USM.getIsSeized(), true);
+        assertEq(USM.getAccruedFees(), 0);
+        assertEq(DUSD_TOKEN.balanceOf(address(USM)), 0);
+        assertEq(DUSD_TOKEN.balanceOf(FEE_RECIPIENT), feeRecipientBalanceBefore + fee);
+        assertEq(USDC_TOKEN.balanceOf(TREASURY), DEFAULT_USM_USDC_AMOUNT);
+        assertEq(USM.getAvailableLiquidity(), 0);
+        assertEq(USM.getAvailableUnderlyingExposure(), 0);
+        assertEq(USM.getExposureCap(), 0);
     }
 
     function testConstructor() public {
