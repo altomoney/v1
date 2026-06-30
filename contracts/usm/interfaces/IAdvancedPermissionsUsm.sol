@@ -12,6 +12,15 @@ enum DirectionAccess {
     PERMISSIONLESS
 }
 
+/// @notice Identifies which USM implementation
+/// @dev STANDARD — `Usm` base (e.g. `DUSDUsm`): unified `AccessMode` via `SWAPPER_ROLE`.
+/// @dev ADVANCED_PERMISSIONS — `AdvancedPermissionsUsm` base (e.g. `DUSDAdvancedPermissionsUsm`): independent
+///      per-direction `DirectionAccess` and fee tiers.
+enum UsmType {
+    STANDARD,
+    ADVANCED_PERMISSIONS
+}
+
 /**
  * @title IAdvancedPermissionsUsm
  * @author GPM
@@ -351,6 +360,12 @@ interface IAdvancedPermissionsUsm is IAccessControl, IStableTokenFacilitator {
      * @return The address of the underlying asset
      */
     function UNDERLYING_ASSET() external view returns (address);
+
+    /**
+     * @notice Returns the USM implementation type
+     * @return The USM implementation type
+     */
+    function USM_TYPE() external view returns (UsmType);
 
     /**
      * @notice Returns the price strategy of the USM
