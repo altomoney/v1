@@ -632,7 +632,7 @@ abstract contract AltoBaseMarket is
 
         emit Liquidation(
             borrower,
-            msg.sender,
+            originalLiquidator,
             result.seizedCollateralAssets,
             result.protocolSeizedCollateralFee,
             result.repaidBorrowAmount,
