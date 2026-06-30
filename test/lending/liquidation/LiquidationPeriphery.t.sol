@@ -106,16 +106,16 @@ contract LiquidationPeripheryTest is LiquidationPeripheryCommon {
 
     /// @dev Fuzzes USM buy/sell fees and prior swap activity, then asserts periphery `onLiquidateCallback` leaves no underlying asset on periphery.
     function testFuzz_OnLiquidateCallback_NoUnderlyingDustOnPeriphery(
-        uint256 buyFeeBps,
-        uint256 sellFeeBps,
+        uint16 buyFeeBps,
+        uint16 sellFeeBps,
         uint256 priceRatio,
         uint256 preSellUnderlying,
         uint256 preBuyMinUnderlying,
         uint256 preSellUnderlying2,
         uint256 repayAmount
     ) public {
-        buyFeeBps = bound(buyFeeBps, 0, MAX_USM_FEE_BPS);
-        sellFeeBps = bound(sellFeeBps, 0, MAX_USM_FEE_BPS);
+        buyFeeBps = uint16(bound(buyFeeBps, 0, MAX_USM_FEE_BPS));
+        sellFeeBps = uint16(bound(sellFeeBps, 0, MAX_USM_FEE_BPS));
         priceRatio = bound(priceRatio, 50e16, 105e18);
         preSellUnderlying = bound(preSellUnderlying, 1e6, 10_000e6);
         preBuyMinUnderlying = bound(preBuyMinUnderlying, 0, preSellUnderlying);
@@ -159,11 +159,11 @@ contract LiquidationPeripheryTest is LiquidationPeripheryCommon {
 
     /// @dev Quote via `getAssetAmountForSellAsset`, sell quoted underlying on USM, assert stable out is within 1e15 of `repayAmount`.
     function testFuzz_GetAssetAmountForSellAsset_MatchesSellAsset(
-        uint256 sellFeeBps,
+        uint16 sellFeeBps,
         uint256 priceRatio,
         uint256 repayAmount
     ) public {
-        sellFeeBps = bound(sellFeeBps, 0, MAX_USM_FEE_BPS);
+        sellFeeBps = uint16(bound(sellFeeBps, 0, MAX_USM_FEE_BPS));
         priceRatio = bound(priceRatio, 95e16, 105e18);
         repayAmount = bound(repayAmount, 1, 1000_000 ether);
 

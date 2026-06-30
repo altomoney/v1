@@ -26,12 +26,12 @@ contract TestAdvancedPermissionsUsm is TestDusdBase {
     bytes32 constant SELL_SWAPPER_ROLE = keccak256("SELL_SWAPPER_ROLE");
 
     // Fee tiers (basis points)
-    uint256 constant BUY_FEE = 100; // 1%    – default
-    uint256 constant SELL_FEE = 200; // 2%    – default
-    uint256 constant ROLE_BUY_FEE = 50; // 0.5%  – BOB (BUY_SWAPPER_ROLE holder)
-    uint256 constant ROLE_SELL_FEE = 100; // 1%    – BOB (SELL_SWAPPER_ROLE holder)
-    uint256 constant OVERRIDE_BUY_FEE = 75; // 0.75% – CHARLES (address override)
-    uint256 constant OVERRIDE_SELL_FEE = 125; // 1.25% – CHARLES (address override)
+    uint16 constant BUY_FEE = 100; // 1%    – default
+    uint16 constant SELL_FEE = 200; // 2%    – default
+    uint16 constant ROLE_BUY_FEE = 50; // 0.5%  – BOB (BUY_SWAPPER_ROLE holder)
+    uint16 constant ROLE_SELL_FEE = 100; // 1%    – BOB (SELL_SWAPPER_ROLE holder)
+    uint16 constant OVERRIDE_BUY_FEE = 75; // 0.75% – CHARLES (address override)
+    uint16 constant OVERRIDE_SELL_FEE = 125; // 1.25% – CHARLES (address override)
 
     // Derived fee amounts for DEFAULT_USM_DUSD_AMOUNT = 100e18 at 1:1 price
     uint256 constant ALICE_BUY_FEE = 1e18; // 100e18 * 100 / 10000

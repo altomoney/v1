@@ -48,24 +48,24 @@ contract AdvancedPermissionsFeeStrategy is IAdvancedPermissionsUsmFeeStrategy, A
      * @param sellFee The fee paid when selling the underlying asset in exchange for Stable Token, expressed in bps
      * @param admin The address of the admin who can configure the fee strategy
      */
-    constructor(uint256 buyFee, uint256 sellFee, address admin) {
+    constructor(uint16 buyFee, uint16 sellFee, address admin) {
         require(buyFee < MAXIMUM_FEE_PERCENT, "INVALID_BUY_FEE");
         require(sellFee < MAXIMUM_FEE_PERCENT, "INVALID_SELL_FEE");
         require(admin != address(0), "ZERO_ADDRESS_NOT_VALID");
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(CONFIGURATOR_ROLE, admin);
-        _buyFee = uint16(buyFee);
-        _sellFee = uint16(sellFee);
-        emit FeeSet(0, uint16(buyFee), 0, uint16(sellFee));
+        _buyFee = buyFee;
+        _sellFee = sellFee;
+        emit FeeSet(0, buyFee, 0, sellFee);
     }
 
     /// @inheritdoc IAdvancedPermissionsUsmFeeStrategy
-    function setFee(uint256 buyFee, uint256 sellFee) external onlyRole(CONFIGURATOR_ROLE) {
+    function setFee(uint16 buyFee, uint16 sellFee) external onlyRole(CONFIGURATOR_ROLE) {
         require(buyFee < MAXIMUM_FEE_PERCENT, "INVALID_BUY_FEE");
         require(sellFee < MAXIMUM_FEE_PERCENT, "INVALID_SELL_FEE");
-        emit FeeSet(_buyFee, uint16(buyFee), _sellFee, uint16(sellFee));
-        _buyFee = uint16(buyFee);
-        _sellFee = uint16(sellFee);
+        emit FeeSet(_buyFee, buyFee, _sellFee, sellFee);
+        _buyFee = buyFee;
+        _sellFee = sellFee;
     }
 
     /// @inheritdoc IAdvancedPermissionsUsmFeeStrategy
