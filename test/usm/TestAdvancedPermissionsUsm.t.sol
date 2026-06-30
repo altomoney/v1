@@ -3,7 +3,8 @@ pragma solidity ^0.8.0;
 
 import {TestDusdBase} from "./TestDusdBase.t.sol";
 import {DUSDAdvancedPermissionsUsm} from "@alto/usm/DUSDAdvancedPermissionsUsm.sol";
-import {IAdvancedPermissionsUsm, DirectionAccess} from "@alto/usm/interfaces/IAdvancedPermissionsUsm.sol";
+import {IStableTokenFacilitator} from "@alto/usm/interfaces/IStableTokenFacilitator.sol";
+import {IAdvancedPermissionsUsm, DirectionAccess, UsmType} from "@alto/usm/interfaces/IAdvancedPermissionsUsm.sol";
 import {IAdvancedPermissionsUsmFeeStrategy} from "@alto/usm/interfaces/IAdvancedPermissionsUsmFeeStrategy.sol";
 import {AdvancedPermissionsFeeStrategy} from "@alto/usm/AdvancedPermissionsFeeStrategy.sol";
 import {FixedPriceStrategy} from "@alto/usm/FixedPriceStrategy.sol";
@@ -66,6 +67,7 @@ contract TestAdvancedPermissionsUsm is TestDusdBase {
         assertEq(usm.STABLE_TOKEN(), address(DUSD_TOKEN));
         assertEq(usm.UNDERLYING_ASSET(), address(USDC_TOKEN));
         assertEq(usm.getExposureCap(), 0);
+        assertEq(uint8(usm.USM_TYPE()), uint8(UsmType.ADVANCED_PERMISSIONS));
     }
 
     function testRevertConstructorZeroAddress() public {

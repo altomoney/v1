@@ -5,7 +5,7 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {IStableTokenFacilitator} from "./interfaces/IStableTokenFacilitator.sol";
 import {IUsmPriceStrategy} from "./interfaces/IUsmPriceStrategy.sol";
 import {IAdvancedPermissionsUsmFeeStrategy} from "./interfaces/IAdvancedPermissionsUsmFeeStrategy.sol";
-import {IAdvancedPermissionsUsm, DirectionAccess} from "./interfaces/IAdvancedPermissionsUsm.sol";
+import {IAdvancedPermissionsUsm, DirectionAccess, UsmType} from "./interfaces/IAdvancedPermissionsUsm.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
@@ -61,6 +61,9 @@ abstract contract AdvancedPermissionsUsm is
     /// @inheritdoc IAdvancedPermissionsUsm
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     address public immutable UNDERLYING_ASSET;
+
+    /// @inheritdoc IAdvancedPermissionsUsm
+    UsmType public constant USM_TYPE = UsmType.ADVANCED_PERMISSIONS;
 
     /// @inheritdoc IAdvancedPermissionsUsm
     address public priceStrategy;
