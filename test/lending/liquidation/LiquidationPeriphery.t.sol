@@ -37,7 +37,8 @@ contract LiquidationPeripheryTest is LiquidationPeripheryCommon {
         AdvancedPermissionsFeeStrategy feeStrategy = AdvancedPermissionsFeeStrategy(usm.getFeeStrategy());
         vm.startPrank(OWNER);
         feeStrategy.setSellFeeByRoleHash(
-            SELL_SWAPPER_ROLE, IAdvancedPermissionsUsmFeeStrategy.OverriddenFeeData({isOverridden: true, fee: feeBps})
+            SELL_SWAPPER_ROLE,
+            IAdvancedPermissionsUsmFeeStrategy.OverriddenFeeData({isOverridden: true, fee: uint16(feeBps)})
         );
         feeStrategy.setUserSellFeeRole(address(periphery), SELL_SWAPPER_ROLE);
         vm.stopPrank();
