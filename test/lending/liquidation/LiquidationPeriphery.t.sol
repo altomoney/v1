@@ -130,7 +130,7 @@ contract LiquidationPeripheryTest is LiquidationPeripheryCommon {
 
         bytes memory peripheryCallbackData = _liquidationCallbackData(address(borrowMarket));
         uint256 collateralAmount = 1 ether;
-        deal(address(collateralToken), address(periphery), collateralAmount);
+        _simulateMarketCollateralTransferToLiquidator(address(simpleLiquidator), collateralAmount);
 
         _invokeOnLiquidateCallback(
             address(borrowMarket),

@@ -621,7 +621,7 @@ abstract contract AltoBaseMarket is
         uint256 collateralAmountToSend = result.seizedCollateralAssets - result.protocolSeizedCollateralFee;
 
         // transfer collateral and borrow tokens with applied protocol fee
-        IERC20(collateralToken).safeTransfer(msg.sender, collateralAmountToSend);
+        IERC20(collateralToken).safeTransfer(originalLiquidator, collateralAmountToSend);
 
         if (callbackData.length > 0) {
             ILiquidateCallback(msg.sender)

@@ -9,17 +9,14 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ILiquidationPeripheryErrors} from "@alto/lending/liquidation/interfaces/ILiquidationPeriphery.sol";
 
 contract LiquidationPeriphery_OnLiquidateCallback_Test is LiquidationPeripheryCommon {
+    function _assertCollateralUnchangedOnLiquidator(address liquidator, uint256 expectedBalance) internal view {
+        assertEq(collateralToken.balanceOf(liquidator), expectedBalance);
+        assertEq(collateralToken.balanceOf(address(periphery)), 0);
+    }
+
     function _assertBorrowTokenApprovedToMarket(IMarket target, uint256 repayAmount) internal view {
         assertEq(borrowToken.allowance(address(periphery), address(target)), repayAmount);
         assertEq(borrowToken.balanceOf(address(periphery)), repayAmount);
-    }
-
-    function _assertCollateralTransferredTo(address liquidator, uint256 collateralBefore, uint256 collateralAmount)
-        internal
-        view
-    {
-        assertEq(collateralToken.balanceOf(liquidator) - collateralBefore, collateralAmount);
-        assertEq(collateralToken.balanceOf(address(periphery)), 0);
     }
 
     function _assertZeroApprovalToPeriphery(address tokenOwner, address token) internal view {
@@ -84,13 +81,12 @@ contract LiquidationPeriphery_OnLiquidateCallback_Test is LiquidationPeripheryCo
         uint256 collateralAmount = 1 ether;
         (uint256 quotedUnderlying,,,) = usm.getAssetAmountForSellAsset(repayAmount, address(periphery));
 
-        deal(address(collateralToken), address(periphery), collateralAmount);
+        _simulateMarketCollateralTransferToLiquidator(address(simpleLiquidator), collateralAmount);
         _configureUsmOneToOne();
         _transferUnderlyingFromSwapperToSimpleLiquidator(quotedUnderlying);
         vm.prank(address(simpleLiquidator));
         underlyingToken.approve(address(periphery), quotedUnderlying);
 
-        uint256 collateralBefore = collateralToken.balanceOf(address(simpleLiquidator));
         uint256 underlyingBefore = underlyingToken.balanceOf(address(simpleLiquidator));
         uint256 stableBefore = borrowToken.balanceOf(address(simpleLiquidator));
 
@@ -101,7 +97,7 @@ contract LiquidationPeriphery_OnLiquidateCallback_Test is LiquidationPeripheryCo
             _callbackData(address(simpleLiquidator), address(borrowMarket), address(usm), "")
         );
 
-        _assertCollateralTransferredTo(address(simpleLiquidator), collateralBefore, collateralAmount);
+        _assertCollateralUnchangedOnLiquidator(address(simpleLiquidator), collateralAmount);
         assertEq(simpleLiquidator.callbackCallCount(), 0);
         assertEq(underlyingToken.balanceOf(address(simpleLiquidator)), underlyingBefore - quotedUnderlying);
         assertEq(borrowToken.balanceOf(address(simpleLiquidator)), stableBefore);
@@ -116,7 +112,7 @@ contract LiquidationPeriphery_OnLiquidateCallback_Test is LiquidationPeripheryCo
         (uint256 quotedUnderlying,,,) = usm.getAssetAmountForSellAsset(repayAmount, address(periphery));
         bytes memory peripheryCallbackData = _liquidationCallbackData(address(borrowMarket));
 
-        deal(address(collateralToken), address(periphery), collateralAmount);
+        _simulateMarketCollateralTransferToLiquidator(address(simpleLiquidator), collateralAmount);
         _configureUsmOneToOne();
 
         _invokeOnLiquidateCallback(
@@ -143,7 +139,7 @@ contract LiquidationPeriphery_OnLiquidateCallback_Test is LiquidationPeripheryCo
     function test_WhenStableTokenBoughtEqualsBorrowAmount_DoesNotRefundStableToLiquidator() public {
         uint256 repayAmount = 1 ether;
         uint256 collateralAmount = 1 ether;
-        deal(address(collateralToken), address(periphery), collateralAmount);
+        _simulateMarketCollateralTransferToLiquidator(address(simpleLiquidator), collateralAmount);
 
         _configureUsmOneToOne();
         (uint256 quotedUnderlying,,,) = usm.getAssetAmountForSellAsset(repayAmount, address(periphery));
@@ -154,7 +150,6 @@ contract LiquidationPeriphery_OnLiquidateCallback_Test is LiquidationPeripheryCo
         (, uint256 stableBought,,) = usm.getAssetAmountForSellAsset(repayAmount, address(periphery));
         assertEq(stableBought, repayAmount);
 
-        uint256 collateralBefore = collateralToken.balanceOf(address(simpleLiquidator));
         uint256 stableBefore = borrowToken.balanceOf(address(simpleLiquidator));
 
         _invokeOnLiquidateCallback(
@@ -164,7 +159,7 @@ contract LiquidationPeriphery_OnLiquidateCallback_Test is LiquidationPeripheryCo
             _callbackData(address(simpleLiquidator), address(borrowMarket), address(usm), "")
         );
 
-        _assertCollateralTransferredTo(address(simpleLiquidator), collateralBefore, collateralAmount);
+        _assertCollateralUnchangedOnLiquidator(address(simpleLiquidator), collateralAmount);
         assertEq(borrowToken.balanceOf(address(simpleLiquidator)), stableBefore);
         _assertBorrowTokenApprovedToMarket(borrowMarket, repayAmount);
         _assertUnderlyingApprovalResetToUsm();
@@ -174,7 +169,7 @@ contract LiquidationPeriphery_OnLiquidateCallback_Test is LiquidationPeripheryCo
     function test_WhenStableTokenBoughtExceedsBorrowAmount_RefundsExcessStableToLiquidator() public {
         uint256 repayAmount = 1 ether;
         uint256 collateralAmount = 1 ether;
-        deal(address(collateralToken), address(periphery), collateralAmount);
+        _simulateMarketCollateralTransferToLiquidator(address(simpleLiquidator), collateralAmount);
 
         _configureUsmExcessSell();
         (uint256 quotedUnderlying,,,) = usm.getAssetAmountForSellAsset(repayAmount, address(periphery));
@@ -185,7 +180,6 @@ contract LiquidationPeriphery_OnLiquidateCallback_Test is LiquidationPeripheryCo
         uint256 expectedRefund = _expectedStableRefund(repayAmount);
         assertGt(expectedRefund, 0);
 
-        uint256 collateralBefore = collateralToken.balanceOf(address(simpleLiquidator));
         uint256 stableBefore = borrowToken.balanceOf(address(simpleLiquidator));
 
         _invokeOnLiquidateCallback(
@@ -195,7 +189,7 @@ contract LiquidationPeriphery_OnLiquidateCallback_Test is LiquidationPeripheryCo
             _callbackData(address(simpleLiquidator), address(borrowMarket), address(usm), "")
         );
 
-        _assertCollateralTransferredTo(address(simpleLiquidator), collateralBefore, collateralAmount);
+        _assertCollateralUnchangedOnLiquidator(address(simpleLiquidator), collateralAmount);
         assertEq(borrowToken.balanceOf(address(simpleLiquidator)), stableBefore + expectedRefund);
         _assertBorrowTokenApprovedToMarket(borrowMarket, repayAmount);
         _assertUnderlyingApprovalResetToUsm();

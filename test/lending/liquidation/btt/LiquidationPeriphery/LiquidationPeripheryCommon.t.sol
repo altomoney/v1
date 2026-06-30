@@ -420,6 +420,10 @@ abstract contract LiquidationPeripheryCommon is Test, TestHelperOz5 {
         underlyingToken.transfer(address(simpleLiquidator), amount);
     }
 
+    function _simulateMarketCollateralTransferToLiquidator(address liquidator, uint256 collateralAmount) internal {
+        deal(address(collateralToken), liquidator, collateralAmount);
+    }
+
     function _expectedStableRefund(uint256 repayAmount) internal view returns (uint256) {
         (, uint256 stableBought,,) = usm.getAssetAmountForSellAsset(repayAmount, address(periphery));
         return stableBought - repayAmount;

@@ -84,6 +84,7 @@ contract LiquidationPeriphery is AltoOwnable2Step, ILiquidateCallback, ILiquidat
     /// for ex: external liquidator contractcalls market1.liquidate() which will call Periphery.onLiquidateCallback()
     /// and in callback, external liquidator contract calls market2.liquidate() which will call Periphery.onLiquidateCallback()
     /// This will revert due to nonReentrant modifier.
+    /// @dev collateral will already be transferred to the original liquidator by the market before receiving this callback
     function onLiquidateCallback(uint256 borrowAmountToRepay, uint256 collateralReceived, bytes calldata callbackData)
         external
         override
@@ -95,9 +96,6 @@ contract LiquidationPeriphery is AltoOwnable2Step, ILiquidateCallback, ILiquidat
         if (market != msg.sender || !supportedMarkets[market]) revert InvalidInput();
         if (!IUsmRegistry(usmRegistry).isUsm(usm)) revert InvalidInput();
         if (IAdvancedPermissionsUsm(usm).STABLE_TOKEN() != BORROW_TOKEN) revert InvalidInput();
-
-        // transfers the collateral seized of the borrower to the liquidator
-        IERC20(IMarket(market).collateralToken()).safeTransfer(liquidator, collateralReceived);
 
         // gets the asset amount of underlying asset required to repay the borrow amount
         (uint256 assetAmount,,,) =
