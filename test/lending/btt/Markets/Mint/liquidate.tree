@@ -19,7 +19,7 @@ AltoMintMarket::liquidate()
 │           │   └── it should revert with AltoBaseMarketInvalidInput
 │           ├── it should pass originalLiquidator to liquidation engine as liquidator
 │           ├── it should pass originalLiquidationData to liquidation engine as liquidationData
-│           └── it should emit Liquidation event with msg.sender as liquidator
+│           └── it should emit Liquidation event with originalLiquidator and borrower
 ├── given position is insolvent
 │   ├── given claimableFeesAssets is greater than zero
 │   │   ├── it should claim interest before liquidate
@@ -89,6 +89,9 @@ AltoMintMarket::liquidate()
 │       ├── it should call onLiquidateCallback on msg.sender
 │       └── it should pass collateral amount and data
 ├── given event emission
-│   └── it should emit Liquidation event with msg.sender as liquidator
+│   ├── when caller is direct liquidator
+│   │   └── it should emit Liquidation event with borrower and originalLiquidator
+│   └── when caller is authorized liquidation periphery
+│       └── it should emit Liquidation event with borrower and forwarded originalLiquidator
 └── given function completion
     └── it should return collateral amount and repay amount
