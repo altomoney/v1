@@ -15,12 +15,12 @@ contract TestAdvancedPermissionsFeeStrategy is Test, Constants {
     uint256 constant PERCENTAGE_PRECISION = 10000;
     uint256 constant TEST_GROSS_AMOUNT = 10000e18;
 
-    uint256 constant DEFAULT_BUY_FEE = 100; // 1%
-    uint256 constant DEFAULT_SELL_FEE = 200; // 2%
-    uint256 constant ROLE_BUY_FEE = 150; // 1.5%
-    uint256 constant ROLE_SELL_FEE = 250; // 2.5%
-    uint256 constant OVERRIDE_BUY_FEE = 75; // 0.75%
-    uint256 constant OVERRIDE_SELL_FEE = 125; // 1.25%
+    uint16 constant DEFAULT_BUY_FEE = 100; // 1%
+    uint16 constant DEFAULT_SELL_FEE = 200; // 2%
+    uint16 constant ROLE_BUY_FEE = 150; // 1.5%
+    uint16 constant ROLE_SELL_FEE = 250; // 2.5%
+    uint16 constant OVERRIDE_BUY_FEE = 75; // 0.75%
+    uint16 constant OVERRIDE_SELL_FEE = 125; // 1.25%
 
     function setUp() public {
         feeStrategy = new AdvancedPermissionsFeeStrategy(DEFAULT_BUY_FEE, DEFAULT_SELL_FEE, address(this));
@@ -188,7 +188,7 @@ contract TestAdvancedPermissionsFeeStrategy is Test, Constants {
     function testOverrideFee_SkipsFeeValidationWhenNotOverriding() public {
         uint256 overHighFee = 9999; // above MAXIMUM_FEE_PERCENT;
         IAdvancedPermissionsUsmFeeStrategy.OverriddenFeeData memory clearData =
-            IAdvancedPermissionsUsmFeeStrategy.OverriddenFeeData({isOverridden: false, fee: overHighFee});
+            IAdvancedPermissionsUsmFeeStrategy.OverriddenFeeData({isOverridden: false, fee: uint16(overHighFee)});
 
         feeStrategy.overrideBuyFee(ALICE, clearData);
         feeStrategy.overrideSellFee(ALICE, clearData);

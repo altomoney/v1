@@ -601,6 +601,6 @@ contract TestAdvancedPermissionsUsm is TestDusdBase {
     }
 
     function _feeData(uint256 fee) internal pure returns (IAdvancedPermissionsUsmFeeStrategy.OverriddenFeeData memory) {
-        return IAdvancedPermissionsUsmFeeStrategy.OverriddenFeeData({isOverridden: true, fee: fee});
+        return IAdvancedPermissionsUsmFeeStrategy.OverriddenFeeData({isOverridden: true, fee: uint16(fee)});
     }
 }

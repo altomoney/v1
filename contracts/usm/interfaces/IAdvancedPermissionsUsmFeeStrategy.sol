@@ -20,7 +20,7 @@ interface IAdvancedPermissionsUsmFeeStrategy {
      */
     struct OverriddenFeeData {
         bool isOverridden;
-        uint256 fee;
+        uint16 fee;
     }
 
     /**
@@ -58,7 +58,7 @@ interface IAdvancedPermissionsUsmFeeStrategy {
      * @param oldSellFee The old sell fee
      * @param newSellFee The new sell fee
      */
-    event FeeSet(uint256 oldBuyFee, uint256 newBuyFee, uint256 oldSellFee, uint256 newSellFee);
+    event FeeSet(uint16 oldBuyFee, uint16 newBuyFee, uint16 oldSellFee, uint16 newSellFee);
 
     /**
      * @notice Emitted when a buy fee-only role is assigned to an originator
