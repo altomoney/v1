@@ -25,9 +25,8 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
  *      `PERMISSIONLESS` mode anyone may call that direction.
  * @dev Fee quotes and settlement use `IAdvancedPermissionsUsmFeeStrategy` with an `originator` so per-user fee
  *      tiers can differ from access roles
- * @dev `canSwap()` reflects only freeze/seize state; it does not encode direction access—use `getBuyAccess` /
+ * @dev `canSwap()` reflects only freeze/seize state; it does not encode direction access - use `getBuyAccess` /
  *      `getSellAccess` for that.
- * @custom:audit Pending
  */
 abstract contract AdvancedPermissionsUsm is
     Initializable,

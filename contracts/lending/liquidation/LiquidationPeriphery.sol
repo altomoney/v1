@@ -17,7 +17,6 @@ import {IUsmRegistry} from "@alto/utils/interfaces/IUsmRegistry.sol";
 /// @custom:contact security@altofoundation.org
 /// @notice This contract is used as a periphery to liquidate positions in a market
 /// @notice This contract sources borrow tokens from USM by selling underlying asset of USM in USM
-/// @custom:audit Pending
 contract LiquidationPeriphery is AltoOwnable2Step, ILiquidateCallback, ILiquidationPeripheryBase, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
