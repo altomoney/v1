@@ -11,7 +11,6 @@ import {DirectionAccess} from "./interfaces/IAdvancedPermissionsUsm.sol";
  * @author Adapted from Aave (https://github.com/aave/gho-core/)
  * @custom:contact security@altofoundation.org
  * @notice Universal Stability Module with independent buy and sell access control for DUSD.
- * @custom:audit Pending
  */
 contract DUSDAdvancedPermissionsUsm is AdvancedPermissionsUsm {
     /// @custom:oz-upgrades-unsafe-allow constructor

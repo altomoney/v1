@@ -13,7 +13,6 @@ import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
  * @notice Fee strategy to calculate buy/sell fees for Advanced Permissions USMs.
  * @dev Per-direction fee resolution (buy vs sell) uses the same precedence: address override, then fee-only user
  *      role mapping, then the contract default (`_buyFee` / `_sellFee`).
- * @custom:audit Pending
  */
 contract AdvancedPermissionsFeeStrategy is IAdvancedPermissionsUsmFeeStrategy, AccessControl {
     using Math for uint256;
