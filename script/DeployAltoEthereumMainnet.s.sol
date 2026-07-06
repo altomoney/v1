@@ -13,7 +13,7 @@ import {
 import {console} from "forge-std/console.sol";
 
 uint256 constant DEPLOYMENT_ID_TO_LOAD = 1765364975;
-DeploymentPhase constant PHASE_TO_DEPLOY = DeploymentPhase.ALTO_LEVERAGE_SWAPPER_MULTI_TARGET; // CORE, DUSD, MINT_MARKET_WETH, MINT_MARKET_WSTETH, MINT_MARKET_RETH, MINT_MARKET_METH, MINT_MARKET_TBTC, BORROW_MARKET_WBTC, BORROW_MARKET_CBBTC, BORROW_MARKET_SUSDE, USDC_USM, POST, REFERRAL_ADAPTER, BORROW_MARKET_SYRUP_USDC, BORROW_MARKET_PAXG, MINT_MARKET_SUSDE, MINT_MARKET_SYRUPUSDC, PERMISSIONED_FRXUSD_USM, ADAPTER, DUSD_VAULT, VAULT_REGISTRY, PERMISSIONLESS_FRXUSD_USM, ALTO_LEVERAGE_SWAPPER_MULTI_TARGET
+DeploymentPhase constant PHASE_TO_DEPLOY = DeploymentPhase.LIQUIDATION_PERIPHERY; // CORE, DUSD, MINT_MARKET_WETH, MINT_MARKET_WSTETH, MINT_MARKET_RETH, MINT_MARKET_METH, MINT_MARKET_TBTC, BORROW_MARKET_WBTC, BORROW_MARKET_CBBTC, BORROW_MARKET_SUSDE, USDC_USM, POST, REFERRAL_ADAPTER, BORROW_MARKET_SYRUP_USDC, BORROW_MARKET_PAXG, MINT_MARKET_SUSDE, MINT_MARKET_SYRUPUSDC, PERMISSIONED_FRXUSD_USM, ADAPTER, DUSD_VAULT, VAULT_REGISTRY, PERMISSIONLESS_FRXUSD_USM, ALTO_LEVERAGE_SWAPPER_MULTI_TARGET, LIQUIDATION_PERIPHERY
 string constant OUTPUT_DIR = "./contracts/deployments/ethereum-mainnet/output";
 
 contract DeployAltoEthereumMainnetScript is Script {
@@ -158,9 +158,7 @@ contract DeployAltoEthereumMainnetScript is Script {
 
         // Build final JSON and write to file
         string memory json = vm.serializeString("", "contracts", contractsJson);
-        string memory deploymentFolder = string.concat(
-            OUTPUT_DIR, "/ethereum-mainnet-", vm.toString(block.chainid), "-", vm.toString(block.timestamp)
-        );
+        string memory deploymentFolder = _deploymentFolder();
         string memory fileName = string.concat(deploymentFolder, "/addresses.json");
 
         vm.createDir(deploymentFolder, true);
@@ -281,21 +279,22 @@ contract DeployAltoEthereumMainnetScript is Script {
         return market;
     }
 
+    function _deploymentFolder() internal view returns (string memory) {
+        uint256 deploymentId = DEPLOYMENT_ID_TO_LOAD == 0 ? block.timestamp : DEPLOYMENT_ID_TO_LOAD;
+        return
+            string.concat(OUTPUT_DIR, "/ethereum-mainnet-", vm.toString(block.chainid), "-", vm.toString(deploymentId));
+    }
+
     function _loadCurrentChainInput() internal {
         if (DEPLOYMENT_ID_TO_LOAD == 0) {
             return;
         }
-        string memory deploymentFolder = string.concat(
-            OUTPUT_DIR, "/ethereum-mainnet-", vm.toString(block.chainid), "-", vm.toString(DEPLOYMENT_ID_TO_LOAD)
-        );
-        string memory fileName = string.concat(deploymentFolder, "/addresses.json");
+        string memory fileName = string.concat(_deploymentFolder(), "/addresses.json");
         _loadInputFromJson(fileName);
     }
 
     function _extractABIs() internal {
-        string memory deploymentFolder = string.concat(
-            OUTPUT_DIR, "/ethereum-mainnet-", vm.toString(block.chainid), "-", vm.toString(block.timestamp)
-        );
+        string memory deploymentFolder = _deploymentFolder();
         string memory abiFolder = string.concat(deploymentFolder, "/abi");
 
         vm.createDir(abiFolder, true);
