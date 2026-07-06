@@ -65,6 +65,7 @@ contract DeployAltoEthereumMainnetScript is Script {
         contractsJson = vm.serializeAddress("contracts", "usmRegistry", input.contracts.usmRegistry);
         contractsJson = vm.serializeAddress("contracts", "vaultRegistry", input.contracts.vaultRegistry);
         contractsJson = vm.serializeAddress("contracts", "referralAdapter", input.contracts.referralAdapter);
+        contractsJson = vm.serializeAddress("contracts", "addressChange", input.contracts.addressChange);
 
         // Serialize market contracts using helper
         contractsJson = _serializeMarketContracts(contractsJson, "weth", input.contracts.wethMarket);
@@ -201,6 +202,7 @@ contract DeployAltoEthereumMainnetScript is Script {
         loadedInput.contracts.usmRegistry = _tryParseAddress(json, ".contracts.usmRegistry");
         loadedInput.contracts.vaultRegistry = _tryParseAddress(json, ".contracts.vaultRegistry");
         loadedInput.contracts.referralAdapter = _tryParseAddress(json, ".contracts.referralAdapter");
+        loadedInput.contracts.addressChange = _tryParseAddress(json, ".contracts.addressChange");
 
         // Load market contracts using helper
         loadedInput.contracts.wethMarket = _loadMarketContracts(json, "weth");
