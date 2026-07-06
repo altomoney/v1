@@ -87,6 +87,7 @@ struct Contracts {
     UsmContracts permissionedFrxusdUsm;
     UsmContracts permissionlessFrxusdUsm;
     address dusdVault;
+    address addressChange;
 }
 
 // PARAMETERS FOR THE DEPLOYMENT
