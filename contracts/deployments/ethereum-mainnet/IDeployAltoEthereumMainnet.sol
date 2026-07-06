@@ -33,7 +33,8 @@ enum DeploymentPhase {
     ALTO_LEVERAGE_SWAPPER_MULTI_TARGET, // Phase 24: Deploy AltoLeverageSwapperMultiTarget for each market
     LIQUIDATION_PERIPHERY, // Phase 25: Deploy LiquidationPeriphery and register all markets
     ADVANCED_PERMISSIONS_FRXUSD_USM, // Phase 26: Deploy Advanced Permissions frxUSD USM for liquidation periphery
-    UPGRADE_MARKETS_LIQUIDATION_PERIPHERY // Phase 27: Upgrade all markets and authorize liquidation periphery
+    UPGRADE_MARKETS_LIQUIDATION_PERIPHERY, // Phase 27: Upgrade all markets and authorize liquidation periphery
+    UNIVERSAL_REWARDS_DISTRIBUTOR // Phase 28: Deploy UniversalRewardsDistributor
 }
 
 enum UsmFinalizeMode {
@@ -100,6 +101,7 @@ struct Contracts {
     address dusdVault;
     address addressChange;
     address liquidationPeriphery;
+    address universalRewardsDistributor;
 }
 
 // PARAMETERS FOR THE DEPLOYMENT

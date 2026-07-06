@@ -55,6 +55,8 @@ import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {IAltoVault, IAltoVaultBase} from "@alto/lending/interfaces/IAltoVault.sol";
 import {VaultRegistry} from "@alto/utils/VaultRegistry.sol";
 import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
+import {UniversalRewardsDistributor} from "@alto/utils/UniversalRewardsDistributor.sol";
+import {IMerkleRootManager} from "@alto/utils/interfaces/IMerkleRootManager.sol";
 
 /// @dev Set to a non-zero deployment timestamp to load a real deployment's addresses.json
 ///      and skip re-deploying prerequisites. The file must be at:
@@ -179,6 +181,7 @@ abstract contract DeployAltoEthereumMainnetTestBase is Test {
             _tryParseAddress(json, ".contracts.advancedPermissionsFrxusdUsmFixedPriceStrategy");
         loaded.contracts.advancedPermissionsFrxusdUsm.advancedPermissionsFeeStrategy =
             _tryParseAddress(json, ".contracts.advancedPermissionsFrxusdUsmFeeStrategy");
+        loaded.contracts.universalRewardsDistributor = _tryParseAddress(json, ".contracts.universalRewardsDistributor");
 
         input = loaded;
     }
@@ -1212,5 +1215,36 @@ contract DeployUpgradeMarketsLiquidationPeripheryPhaseTest is DeployAltoEthereum
             input.contracts.susdeMintMarket,
             input.contracts.syrupUsdcMintMarket
         ];
+    }
+}
+
+contract DeployUniversalRewardsDistributorPhaseTest is DeployAltoEthereumMainnetTestBase {
+    function test_deployUniversalRewardsDistributor() public {
+        _assertDeployUniversalRewardsDistributor();
+    }
+
+    function _assertDeployUniversalRewardsDistributor() internal {
+        assertTrue(input.contracts.timelock != address(0), "need timelock from addresses.json");
+
+        if (input.contracts.universalRewardsDistributor.code.length > 0) {
+            return;
+        }
+
+        params.phase = DeploymentPhase.UNIVERSAL_REWARDS_DISTRIBUTOR;
+        input = DeployAltoEthereumMainnet.deploy(params, input);
+
+        address distributor = input.contracts.universalRewardsDistributor;
+        assertTrue(distributor != address(0), "distributor should be deployed");
+        assertTrue(distributor.code.length > 0, "distributor should have code");
+
+        assertEq(Ownable(distributor).owner(), input.contracts.timelock, "owner should be timelock");
+        assertTrue(
+            IMerkleRootManager(distributor).isMerkleRootUpdater(params.updater), "updater should be merkle root updater"
+        );
+        assertTrue(
+            UniversalRewardsDistributor(distributor).pausers(params.freezer, PAUSE_TYPE),
+            "freezer should be PAUSE_TYPE pauser"
+        );
+        assertEq(IMerkleRootManager(distributor).merkleRootTimelock(), 1 days, "merkle root timelock should be 1 day");
     }
 }

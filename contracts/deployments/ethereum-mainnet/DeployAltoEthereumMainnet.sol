@@ -58,6 +58,10 @@ import {
     LiquidationPeripheryBatchParams
 } from "@alto/deployments/ethereum-mainnet/LiquidationPeripheryBatch.sol";
 import {
+    UniversalRewardsDistributorBatch,
+    UniversalRewardsDistributorBatchParams
+} from "@alto/deployments/ethereum-mainnet/UniversalRewardsDistributorBatch.sol";
+import {
     AdvancedPermissionsUsmBatch,
     AdvancedPermissionsUsmBatchParams,
     AdvancedPermissionsUsmBatchReport,
@@ -676,6 +680,8 @@ library DeployAltoEthereumMainnet {
             input = _deployAdvancedPermissionsFrxUsdUsm(params, input);
         } else if (params.phase == DeploymentPhase.UPGRADE_MARKETS_LIQUIDATION_PERIPHERY) {
             input = _upgradeMarketsForLiquidationPeriphery(input);
+        } else if (params.phase == DeploymentPhase.UNIVERSAL_REWARDS_DISTRIBUTOR) {
+            input = _deployUniversalRewardsDistributor(params, input);
         } else {
             revert("Invalid phase");
         }
@@ -1419,6 +1425,29 @@ library DeployAltoEthereumMainnet {
         address periphery = batch.getReport().liquidationPeriphery;
 
         input.contracts.liquidationPeriphery = periphery;
+
+        return input;
+    }
+
+    /// @dev Deploys UniversalRewardsDistributor via UniversalRewardsDistributorBatch.
+    function _deployUniversalRewardsDistributor(
+        AltoEthereumMainnetParams memory params,
+        AltoEthereumMainnetInput memory input
+    ) internal returns (AltoEthereumMainnetInput memory) {
+        require(input.contracts.timelock != address(0), "Timelock not deployed");
+        require(params.updater != address(0), "Updater must be set");
+        require(params.freezer != address(0), "Freezer must be set");
+
+        UniversalRewardsDistributorBatch batch = new UniversalRewardsDistributorBatch(
+            UniversalRewardsDistributorBatchParams({
+                owner: input.contracts.timelock,
+                merkleRootUpdater: params.updater,
+                freezer: params.freezer,
+                initialTimelock: 1 days
+            })
+        );
+
+        input.contracts.universalRewardsDistributor = batch.getReport().universalRewardsDistributor;
 
         return input;
     }
