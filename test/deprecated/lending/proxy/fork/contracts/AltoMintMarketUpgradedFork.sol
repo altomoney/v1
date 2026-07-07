@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.0;
 
-import {AltoMintMarketUpgraded} from "../../contracts/AltoMintMarketUpgraded.sol";
+import {AltoMintMarketUpgraded} from "@alto-test/lending/proxy/contracts/AltoMintMarketUpgraded.sol";
 
 /// @custom:oz-upgrades-from AltoMintMarket
 /// @dev Mainnet mint markets are already at OZ init version 2.
