@@ -10,7 +10,7 @@ struct MarketUpgradeBatchReport {
     address[] implementations;
 }
 
-/// @notice Deploys a new market implementation per market address based on on-chain MARKET_TYPE
+/// @notice Deploys one new implementation per market type and maps each market to the matching implementation.
 contract MarketUpgradeBatch {
     MarketUpgradeBatchReport internal report;
 
@@ -21,13 +21,16 @@ contract MarketUpgradeBatch {
         report.markets = markets;
         report.implementations = new address[](count);
 
+        address mintMarketImplementation = address(new AltoMintMarket());
+        address borrowMarketImplementation = address(new AltoBorrowMarket());
+
         for (uint256 i = 0; i < count; i++) {
             MarketType marketType = IMarket(markets[i]).MARKET_TYPE();
 
             if (marketType == MarketType.MINT) {
-                report.implementations[i] = address(new AltoMintMarket());
+                report.implementations[i] = mintMarketImplementation;
             } else if (marketType == MarketType.BORROW) {
-                report.implementations[i] = address(new AltoBorrowMarket());
+                report.implementations[i] = borrowMarketImplementation;
             } else {
                 revert UnsupportedMarketType();
             }
