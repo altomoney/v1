@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import {
     AltoBorrowMarketUpgradedOriginalBaseMarket
-} from "../../contracts/AltoBorrowMarketUpgradedOriginalBaseMarket.sol";
+} from "@alto-test/lending/proxy/contracts/AltoBorrowMarketUpgradedOriginalBaseMarket.sol";
 
 /// @custom:oz-upgrades-from AltoBorrowMarket
 /// @dev Mainnet borrow markets are at OZ init version 1; fork upgrades use version 3.

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.0;
 
-import {AltoBorrowMarketUpgraded} from "../../contracts/AltoBorrowMarketUpgraded.sol";
+import {AltoBorrowMarketUpgraded} from "@alto-test/lending/proxy/contracts/AltoBorrowMarketUpgraded.sol";
 
 /// @custom:oz-upgrades-from AltoBorrowMarket
 /// @dev Mainnet borrow markets are at OZ init version 1; fork upgrades use version 3.
