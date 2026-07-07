@@ -94,6 +94,7 @@
     "tbtcMarketIrm": "0x0e4065C4Db1802d3f24D538C8F685571c7F83896",
     "tbtcMarketOracle": "0x3365e8DE476d416BF7bE20E8adBaA7f6E3CAaF3a",
     "timelock": "0xfAe841679dc1A93D225ECc827E4BbF3e8d703F86",
+    "universalRewardsDistributor": "0xF3fF591a625705BA9e99D333e1cd1e70fa0B64E4",
     "usmRegistry": "0xAD5620e10C33918E2C6A2E8E53325bf98c548E5e",
     "vaultRegistry": "0x696E7b1D5D11E2cf7F7b970aCf54cF1491f17A47",
     "wbtcBorrowLeverage": "0xcC51aCb1D625F06487D7D568e7E8F9620Ec6b082",
