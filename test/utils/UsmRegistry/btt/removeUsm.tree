@@ -1,0 +1,12 @@
+UsmRegistry::removeUsm(address)
+├── given caller is not owner
+│   └── it should revert with OwnableUnauthorizedAccount
+├── given caller is owner
+│   ├── when USM is zero address
+│   │   └── it should revert with UsmRegistryZeroAddress
+│   ├── when USM is not registered
+│   │   └── it should revert with UsmRegistryUsmDoesNotExist
+│   └── when USM is registered
+│       ├── it should remove USM from the list
+│       ├── it should emit UsmRemoved(usm)
+│       └── it should make isUsm(usm) return false

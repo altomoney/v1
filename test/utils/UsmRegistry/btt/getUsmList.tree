@@ -1,0 +1,8 @@
+UsmRegistry::getUsmList(UsmType)
+├── given registry has USMs of multiple types
+│   ├── when usmType is STANDARD
+│   │   └── it should return only STANDARD USMs
+│   ├── when usmType is ADVANCED_PERMISSIONS
+│   │   └── it should return only ADVANCED_PERMISSIONS USMs
+│   └── when no registered USM matches usmType
+│       └── it should return an empty array

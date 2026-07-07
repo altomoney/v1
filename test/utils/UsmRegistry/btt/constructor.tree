@@ -1,0 +1,7 @@
+UsmRegistry::constructor
+├── when owner is zero address
+│   └── it should revert with OwnableInvalidOwner
+└── when owner is valid address
+    ├── it should set owner to provided address
+    ├── it should initialize USM list as empty
+    └── it should initialize parent Ownable correctly

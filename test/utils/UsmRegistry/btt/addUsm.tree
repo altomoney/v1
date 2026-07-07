@@ -1,0 +1,12 @@
+UsmRegistry::addUsm(address)
+├── given caller is not owner
+│   └── it should revert with OwnableUnauthorizedAccount
+├── given caller is owner
+│   ├── when USM is zero address
+│   │   └── it should revert with UsmRegistryZeroAddress
+│   ├── when USM is already registered
+│   │   └── it should revert with UsmRegistryUsmAlreadyExists
+│   └── when USM is not registered
+│       ├── it should add USM to the list
+│       ├── it should emit UsmAdded(usm)
+│       └── it should make isUsm(usm) return true
