@@ -1098,15 +1098,32 @@ contract DeployUpgradeMarketsLiquidationPeripheryPhaseTest is DeployAltoEthereum
         assertEq(registryMarkets.length, marketsBefore.length, "registry market count mismatch");
 
         MarketContracts[12] memory marketsAfter = _allMarkets();
+        address mintImplementation;
+        address borrowImplementation;
         for (uint256 i; i < marketsBefore.length; ++i) {
             address newImpl = marketsAfter[i].marketImplementation;
             assertTrue(newImpl != address(0), "market impl should be set");
             assertTrue(newImpl.code.length > 0, "market impl should have code");
             assertTrue(newImpl != marketsBefore[i].marketImplementation, "market impl should be new");
-            for (uint256 j = i + 1; j < marketsBefore.length; ++j) {
-                assertTrue(newImpl != marketsAfter[j].marketImplementation, "market impls should be unique");
+
+            MarketType marketType = IMarket(marketsAfter[i].market).MARKET_TYPE();
+            if (marketType == MarketType.MINT) {
+                if (mintImplementation == address(0)) {
+                    mintImplementation = newImpl;
+                }
+                assertEq(newImpl, mintImplementation, "mint markets should share impl");
+            } else if (marketType == MarketType.BORROW) {
+                if (borrowImplementation == address(0)) {
+                    borrowImplementation = newImpl;
+                }
+                assertEq(newImpl, borrowImplementation, "borrow markets should share impl");
+            } else {
+                revert("unsupported market type");
             }
         }
+        assertTrue(mintImplementation != address(0), "mint impl should be deployed");
+        assertTrue(borrowImplementation != address(0), "borrow impl should be deployed");
+        assertTrue(mintImplementation != borrowImplementation, "mint and borrow impls should differ");
 
         for (uint256 i; i < registryMarkets.length; ++i) {
             address market = registryMarkets[i];
