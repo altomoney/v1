@@ -48,6 +48,7 @@ echo ""
 VERIFICATION_RESULTS=()
 SUCCESSFUL_VERIFICATIONS=0
 FAILED_VERIFICATIONS=0
+declare -A VERIFICATION_ATTEMPTS=()
 
 # Function to verify contract with rate limiting
 verify_contract() {
@@ -56,11 +57,19 @@ verify_contract() {
     local contract_path=$3
     local extra_args=${4:-""}
     
-    if [ -z "$address" ] || [ "$address" == "null" ]; then
+    if [ -z "$address" ] || [ "$address" == "null" ] || [ "$address" == "0x0000000000000000000000000000000000000000" ]; then
         echo "⚠️  Skipping $name - no address found"
         VERIFICATION_RESULTS+=("SKIPPED: $name - no address found")
         return
     fi
+
+    local verification_key="${address}|${contract_path}"
+    if [ -n "${VERIFICATION_ATTEMPTS[$verification_key]:-}" ]; then
+        echo "⚠️  Skipping $name at $address - already attempted for $contract_path"
+        VERIFICATION_RESULTS+=("SKIPPED: $name at $address - duplicate verification")
+        return
+    fi
+    VERIFICATION_ATTEMPTS[$verification_key]=1
     
     echo "🔍 Verifying $name at $address..."
     
@@ -139,6 +148,7 @@ DUSD_VAULT=$(get_address ".contracts.dusdVault")
 MARKET_REGISTRY=$(get_address ".contracts.marketRegistry")
 USM_REGISTRY=$(get_address ".contracts.usmRegistry")
 VAULT_REGISTRY=$(get_address ".contracts.vaultRegistry")
+LIQUIDATION_PERIPHERY=$(get_address ".contracts.liquidationPeriphery")
 
 # WETH Market contracts
 WETH_MARKET=$(get_address ".contracts.wethMarket")
@@ -272,6 +282,12 @@ PERMISSIONLESS_FRXUSD_USM_IMPL=$(get_address ".contracts.permissionlessFrxUsdUsm
 PERMISSIONLESS_FRXUSD_USM_FIXED_PRICE_STRATEGY=$(get_address ".contracts.permissionlessFrxUsdUsmFixedPriceStrategy")
 PERMISSIONLESS_FRXUSD_USM_FIXED_FEE_STRATEGY=$(get_address ".contracts.permissionlessFrxUsdUsmFixedFeeStrategy")
 
+# Advanced permissions frxUSD USM contracts
+ADVANCED_PERMISSIONS_FRXUSD_USM=$(get_address ".contracts.advancedPermissionsFrxusdUsm")
+ADVANCED_PERMISSIONS_FRXUSD_USM_IMPL=$(get_address ".contracts.advancedPermissionsFrxusdUsmImplementation")
+ADVANCED_PERMISSIONS_FRXUSD_USM_FIXED_PRICE_STRATEGY=$(get_address ".contracts.advancedPermissionsFrxusdUsmFixedPriceStrategy")
+ADVANCED_PERMISSIONS_FRXUSD_USM_FEE_STRATEGY=$(get_address ".contracts.advancedPermissionsFrxusdUsmFeeStrategy")
+
 echo "📋 Contract verification plan:"
 echo "- Timelock: $TIMELOCK"
 echo "- Fee Recipient: $FEE_RECIPIENT"
@@ -283,6 +299,7 @@ echo "- DUSD Vault: $DUSD_VAULT"
 echo "- Market Registry: $MARKET_REGISTRY"
 echo "- USM Registry: $USM_REGISTRY"
 echo "- Vault Registry: $VAULT_REGISTRY"
+echo "- Liquidation Periphery: $LIQUIDATION_PERIPHERY"
 echo "- WETH Market: $WETH_MARKET"
 echo "- WETH Market Implementation: $WETH_MARKET_IMPL"
 echo "- WETH Market IRM: $WETH_MARKET_IRM"
@@ -383,6 +400,10 @@ echo "- Permissionless frxUSD USM: $PERMISSIONLESS_FRXUSD_USM"
 echo "- Permissionless frxUSD USM Implementation: $PERMISSIONLESS_FRXUSD_USM_IMPL"
 echo "- Permissionless frxUSD USM Fixed Price Strategy: $PERMISSIONLESS_FRXUSD_USM_FIXED_PRICE_STRATEGY"
 echo "- Permissionless frxUSD USM Fixed Fee Strategy: $PERMISSIONLESS_FRXUSD_USM_FIXED_FEE_STRATEGY"
+echo "- Advanced Permissions frxUSD USM: $ADVANCED_PERMISSIONS_FRXUSD_USM"
+echo "- Advanced Permissions frxUSD USM Implementation: $ADVANCED_PERMISSIONS_FRXUSD_USM_IMPL"
+echo "- Advanced Permissions frxUSD USM Fixed Price Strategy: $ADVANCED_PERMISSIONS_FRXUSD_USM_FIXED_PRICE_STRATEGY"
+echo "- Advanced Permissions frxUSD USM Fee Strategy: $ADVANCED_PERMISSIONS_FRXUSD_USM_FEE_STRATEGY"
 echo ""
 
 read -p "Do you want to proceed with verification? (y/N): " -n 1 -r
@@ -406,6 +427,7 @@ verify_contract "DUSDVault" "$DUSD_VAULT" "contracts/lending/vault/AltoVault.sol
 verify_contract "MarketRegistry" "$MARKET_REGISTRY" "contracts/utils/MarketRegistry.sol:MarketRegistry"
 verify_contract "UsmRegistry" "$USM_REGISTRY" "contracts/utils/UsmRegistry.sol:UsmRegistry"
 verify_contract "VaultRegistry" "$VAULT_REGISTRY" "contracts/utils/VaultRegistry.sol:VaultRegistry"
+verify_contract "LiquidationPeriphery" "$LIQUIDATION_PERIPHERY" "contracts/lending/liquidation/LiquidationPeriphery.sol:LiquidationPeriphery"
 
 # WETH Market contracts
 verify_contract "WethMarket" "$WETH_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
@@ -538,6 +560,12 @@ verify_contract "PermissionlessFrxUsdUsm" "$PERMISSIONLESS_FRXUSD_USM" "lib/open
 verify_contract "PermissionlessFrxUsdUsmImplementation" "$PERMISSIONLESS_FRXUSD_USM_IMPL" "contracts/usm/DUSDUsm.sol:DUSDUsm"
 verify_contract "PermissionlessFrxUsdUsmFixedPriceStrategy" "$PERMISSIONLESS_FRXUSD_USM_FIXED_PRICE_STRATEGY" "contracts/usm/FixedPriceStrategy.sol:FixedPriceStrategy"
 verify_contract "PermissionlessFrxUsdUsmFixedFeeStrategy" "$PERMISSIONLESS_FRXUSD_USM_FIXED_FEE_STRATEGY" "contracts/usm/FixedFeeStrategy.sol:FixedFeeStrategy"
+
+# Advanced permissions frxUSD USM contracts
+verify_contract "AdvancedPermissionsFrxUsdUsm" "$ADVANCED_PERMISSIONS_FRXUSD_USM" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
+verify_contract "AdvancedPermissionsFrxUsdUsmImplementation" "$ADVANCED_PERMISSIONS_FRXUSD_USM_IMPL" "contracts/usm/DUSDAdvancedPermissionsUsm.sol:DUSDAdvancedPermissionsUsm"
+verify_contract "AdvancedPermissionsFrxUsdUsmFixedPriceStrategy" "$ADVANCED_PERMISSIONS_FRXUSD_USM_FIXED_PRICE_STRATEGY" "contracts/usm/FixedPriceStrategy.sol:FixedPriceStrategy"
+verify_contract "AdvancedPermissionsFrxUsdUsmFeeStrategy" "$ADVANCED_PERMISSIONS_FRXUSD_USM_FEE_STRATEGY" "contracts/usm/AdvancedPermissionsFeeStrategy.sol:AdvancedPermissionsFeeStrategy"
 
 echo "🎉 Contract verification process completed!"
 echo ""
