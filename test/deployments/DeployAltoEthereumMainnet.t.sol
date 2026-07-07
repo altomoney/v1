@@ -52,6 +52,7 @@ import {
     NORDSTERN_ROUTER_MAINNET
 } from "@alto/deployments/ethereum-mainnet/Constants.sol";
 import {IMarketRegistry, MarketRegistry} from "@alto/utils/MarketRegistry.sol";
+import {IUsmRegistry, UsmRegistry} from "@alto/utils/UsmRegistry.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {
     FRXUSD_MAINNET,
@@ -443,6 +444,34 @@ abstract contract DeployAltoEthereumMainnetTestBase is Test {
         } else {
             revert(string.concat(name, " invalid role"));
         }
+    }
+
+    function _assertDeployUsmRegistryUpdate() internal {
+        require(input.contracts.usmRegistry != address(0), "usmRegistry required");
+        require(input.contracts.timelock != address(0), "timelock required");
+
+        address oldRegistry = input.contracts.usmRegistry;
+        address timelock = input.contracts.timelock;
+        address[] memory oldUsms = IUsmRegistry(oldRegistry).getUsmList();
+        require(oldUsms.length > 0, "old registry should have USMs");
+
+        params.phase = DeploymentPhase.USM_REGISTRY_UPDATE;
+        input = DeployAltoEthereumMainnet.deploy(params, input);
+
+        address newRegistry = input.contracts.usmRegistry;
+
+        _verifyDeployed(newRegistry, "usmRegistry");
+        _verifyOwner(newRegistry, "usmRegistry");
+
+        assertTrue(newRegistry != oldRegistry, "new registry should be deployed");
+        assertEq(UsmRegistry(newRegistry).getUsmListLength(), oldUsms.length, "USM count mismatch");
+
+        for (uint256 i; i < oldUsms.length; ++i) {
+            assertTrue(IUsmRegistry(newRegistry).isUsm(oldUsms[i]), "USM not migrated");
+        }
+
+        assertEq(Ownable(oldRegistry).owner(), timelock, "old registry owner should be unchanged");
+        assertEq(IUsmRegistry(oldRegistry).getUsmListLength(), oldUsms.length, "old registry should be unchanged");
     }
 }
 
@@ -1124,5 +1153,11 @@ contract DeployRequiredAddressesTest is DeployAltoEthereumMainnetTestBase {
 
         vm.expectRevert("Emergency controller must be set");
         this.deployExternal(params, input);
+    }
+}
+
+contract DeployUsmRegistryUpdatePhaseTest is DeployAltoEthereumMainnetTestBase {
+    function test_deployUsmRegistryUpdate() public {
+        _assertDeployUsmRegistryUpdate();
     }
 }
