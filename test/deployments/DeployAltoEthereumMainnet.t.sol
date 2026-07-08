@@ -57,6 +57,12 @@ import {VaultRegistry} from "@alto/utils/VaultRegistry.sol";
 import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
 import {UniversalRewardsDistributor} from "@alto/utils/UniversalRewardsDistributor.sol";
 import {IMerkleRootManager} from "@alto/utils/interfaces/IMerkleRootManager.sol";
+import {
+    ISparkUsdsPsmWrapper,
+    ICurvePool,
+    IBooster,
+    IRewardPool
+} from "../../script/GenerateTreasurySafeTransactions.s.sol";
 
 /// @dev Set to a non-zero deployment timestamp to load a real deployment's addresses.json
 ///      and skip re-deploying prerequisites. The file must be at:
@@ -465,6 +471,156 @@ abstract contract DeployAltoEthereumMainnetTestBase is Test {
         assertEq(usdcPsmExposureBefore - usdcPsmExposureAfter, usdcAmount, "USDC PSM exposure reduction mismatch");
     }
 
+    /// @dev Fork test mirroring `script/GenerateTreasurySafeTransactions.s.sol` Safe batch.
+    function _assertTreasurySafeTransactions() internal {
+        TreasuryTxContext memory ctx = _treasuryTxContext();
+        _assertTreasuryHasPrerequisites(ctx);
+
+        vm.startPrank(ctx.treasury);
+        _treasuryStep1WithdrawDusdFromVault(ctx);
+        _treasuryStep2WithdrawUsdsFromSusds(ctx);
+        IERC20(ctx.usds).approve(ctx.sparkUsdsPsm, ctx.usdsWithdrawAmount);
+        _treasuryStep4BuyUsdcViaSparkPsm(ctx);
+        IERC20(USDC_MAINNET).approve(ctx.fraxCustodian, ctx.usdcBuyAmount);
+        _treasuryStep6SwapUsdcToFrxUsd(ctx);
+        IERC20(FRXUSD_MAINNET).approve(ctx.frxUsdUsm, ctx.frxUsdSellAmount);
+        _treasuryStep8SellFrxUsdForDusd(ctx);
+        IERC20(ctx.dusd).approve(ctx.curvePool, ctx.curveLiquidityAmount);
+        IERC20(FRXUSD_MAINNET).approve(ctx.curvePool, ctx.curveLiquidityAmount);
+        _treasuryStep11AddCurveLiquidity(ctx);
+        _treasuryStep12StakeCurveLpInBooster(ctx);
+        vm.stopPrank();
+    }
+
+    struct TreasuryTxContext {
+        address treasury;
+        address dusd;
+        address dusdVault;
+        address frxUsdUsm;
+        address susds;
+        address usds;
+        address sparkUsdsPsm;
+        address fraxCustodian;
+        address curvePool;
+        address booster;
+        address crvRewardsPool;
+        uint256 dusdWithdrawAmount;
+        uint256 usdsWithdrawAmount;
+        uint256 usdcBuyAmount;
+        uint256 frxUsdWithdrawAmount;
+        uint256 frxUsdSellAmount;
+        uint256 curveLiquidityAmount;
+        uint256 curveMinMintAmount;
+        uint256 boosterPoolId;
+    }
+
+    function _treasuryTxContext() internal view returns (TreasuryTxContext memory ctx) {
+        ctx.treasury = params.treasuryMultisig;
+        ctx.dusd = input.contracts.dusd;
+        ctx.dusdVault = input.contracts.dusdVault;
+        ctx.frxUsdUsm = input.contracts.permissionedFrxusdUsm.dusdUsm;
+        ctx.susds = 0xa3931d71877C0E7a3148CB7Eb4463524FEc27fbD;
+        ctx.usds = 0xdC035D45d973E3EC169d2276DDab16f1e407384F;
+        ctx.sparkUsdsPsm = 0xA188EEC8F81263234dA3622A406892F3D630f98c;
+        ctx.fraxCustodian = 0x4F95C5bA0C7c69FB2f9340E190cCeE890B3bd87c;
+        ctx.curvePool = 0x104d6a1b97A6CEf88D905d7b865A378d90be932A;
+        ctx.booster = 0xF403C135812408BFbE8713b5A23a04b3D48AAE31;
+        ctx.crvRewardsPool = 0x0E80Fe9D6F6dF530ab2Ff69ad0259e77E2ffEdeb;
+        ctx.dusdWithdrawAmount = 100_000 ether;
+        ctx.usdsWithdrawAmount = 500_000 ether;
+        ctx.usdcBuyAmount = 500_000 * 1e6;
+        ctx.frxUsdWithdrawAmount = 500_000 ether;
+        ctx.frxUsdSellAmount = 200_000 ether;
+        ctx.curveLiquidityAmount = 300_000 ether;
+        ctx.curveMinMintAmount = 599_900 ether;
+        ctx.boosterPoolId = 565;
+    }
+
+    function _assertTreasuryHasPrerequisites(TreasuryTxContext memory ctx) internal view {
+        assertTrue(ctx.dusdVault != address(0), "dusdVault required");
+        assertTrue(ctx.frxUsdUsm != address(0), "permissionedFrxUsdUsm required");
+        assertGe(
+            IERC4626(ctx.dusdVault).maxWithdraw(ctx.treasury),
+            ctx.dusdWithdrawAmount,
+            "insufficient DUSD vault liquidity"
+        );
+        assertGe(IERC4626(ctx.susds).maxWithdraw(ctx.treasury), ctx.usdsWithdrawAmount, "insufficient sUSDS liquidity");
+    }
+
+    function _treasuryStep1WithdrawDusdFromVault(TreasuryTxContext memory ctx) internal {
+        uint256 dusdBal = IERC20(ctx.dusd).balanceOf(ctx.treasury);
+        IERC4626(ctx.dusdVault).withdraw(ctx.dusdWithdrawAmount, ctx.treasury, ctx.treasury);
+        assertEq(IERC20(ctx.dusd).balanceOf(ctx.treasury), dusdBal + ctx.dusdWithdrawAmount, "DUSD vault withdraw");
+    }
+
+    function _treasuryStep2WithdrawUsdsFromSusds(TreasuryTxContext memory ctx) internal {
+        uint256 usdsBal = IERC20(ctx.usds).balanceOf(ctx.treasury);
+        IERC4626(ctx.susds).withdraw(ctx.usdsWithdrawAmount, ctx.treasury, ctx.treasury);
+        assertEq(IERC20(ctx.usds).balanceOf(ctx.treasury), usdsBal + ctx.usdsWithdrawAmount, "sUSDS withdraw");
+    }
+
+    function _treasuryStep4BuyUsdcViaSparkPsm(TreasuryTxContext memory ctx) internal {
+        uint256 usdcBal = IERC20(USDC_MAINNET).balanceOf(ctx.treasury);
+        uint256 usdsBal = IERC20(ctx.usds).balanceOf(ctx.treasury);
+        ISparkUsdsPsmWrapper(ctx.sparkUsdsPsm).buyGem(ctx.treasury, ctx.usdcBuyAmount);
+        assertEq(IERC20(USDC_MAINNET).balanceOf(ctx.treasury), usdcBal + ctx.usdcBuyAmount, "Spark PSM USDC received");
+        assertLe(IERC20(ctx.usds).balanceOf(ctx.treasury), usdsBal - ctx.usdsWithdrawAmount, "Spark PSM USDS spent");
+    }
+
+    function _treasuryStep6SwapUsdcToFrxUsd(TreasuryTxContext memory ctx) internal {
+        uint256 usdcBal = IERC20(USDC_MAINNET).balanceOf(ctx.treasury);
+        uint256 frxUsdBal = IERC20(FRXUSD_MAINNET).balanceOf(ctx.treasury);
+        // Frax Custodian mints frxUSD via ERC4626 deposit (USDC in, frxUSD out).
+        uint256 frxUsdReceived = IERC4626(ctx.fraxCustodian).deposit(ctx.usdcBuyAmount, ctx.treasury);
+        assertEq(IERC20(USDC_MAINNET).balanceOf(ctx.treasury), usdcBal - ctx.usdcBuyAmount, "Frax Custodian USDC spent");
+        assertEq(frxUsdReceived, ctx.frxUsdWithdrawAmount, "Frax Custodian frxUSD minted");
+        assertEq(
+            IERC20(FRXUSD_MAINNET).balanceOf(ctx.treasury),
+            frxUsdBal + ctx.frxUsdWithdrawAmount,
+            "Frax Custodian frxUSD received"
+        );
+    }
+
+    function _treasuryStep8SellFrxUsdForDusd(TreasuryTxContext memory ctx) internal {
+        uint256 dusdBal = IERC20(ctx.dusd).balanceOf(ctx.treasury);
+        uint256 frxUsdBal = IERC20(FRXUSD_MAINNET).balanceOf(ctx.treasury);
+        (uint256 assetSold, uint256 dusdReceived) = IUsm(ctx.frxUsdUsm).sellAsset(ctx.frxUsdSellAmount, ctx.treasury);
+        assertEq(assetSold, ctx.frxUsdSellAmount, "USM frxUSD sold");
+        assertEq(dusdReceived, ctx.frxUsdSellAmount, "USM DUSD received");
+        assertEq(
+            IERC20(ctx.dusd).balanceOf(ctx.treasury), dusdBal + ctx.frxUsdSellAmount, "treasury DUSD after USM swap"
+        );
+        assertEq(
+            IERC20(FRXUSD_MAINNET).balanceOf(ctx.treasury),
+            frxUsdBal - ctx.frxUsdSellAmount,
+            "treasury frxUSD after USM swap"
+        );
+    }
+
+    function _treasuryStep11AddCurveLiquidity(TreasuryTxContext memory ctx) internal {
+        uint256 dusdBal = IERC20(ctx.dusd).balanceOf(ctx.treasury);
+        uint256 frxUsdBal = IERC20(FRXUSD_MAINNET).balanceOf(ctx.treasury);
+        uint256 lpBal = IERC20(ctx.curvePool).balanceOf(ctx.treasury);
+        uint256[] memory amounts = new uint256[](2);
+        amounts[0] = ctx.curveLiquidityAmount;
+        amounts[1] = ctx.curveLiquidityAmount;
+        uint256 lpMinted = ICurvePool(ctx.curvePool).add_liquidity(amounts, ctx.curveMinMintAmount);
+        assertGe(lpMinted, ctx.curveMinMintAmount, "Curve LP minted");
+        assertEq(IERC20(ctx.dusd).balanceOf(ctx.treasury), dusdBal - ctx.curveLiquidityAmount, "Curve DUSD spent");
+        assertEq(
+            IERC20(FRXUSD_MAINNET).balanceOf(ctx.treasury), frxUsdBal - ctx.curveLiquidityAmount, "Curve frxUSD spent"
+        );
+        assertEq(IERC20(ctx.curvePool).balanceOf(ctx.treasury), lpBal + lpMinted, "Curve LP balance");
+    }
+
+    function _treasuryStep12StakeCurveLpInBooster(TreasuryTxContext memory ctx) internal {
+        uint256 lpBal = IERC20(ctx.curvePool).balanceOf(ctx.treasury);
+        uint256 stakedBal = IRewardPool(ctx.crvRewardsPool).balanceOf(ctx.treasury);
+        IBooster(ctx.booster).depositAll(ctx.boosterPoolId, true);
+        assertEq(IERC20(ctx.curvePool).balanceOf(ctx.treasury), 0, "Curve LP deposited");
+        assertEq(IRewardPool(ctx.crvRewardsPool).balanceOf(ctx.treasury), stakedBal + lpBal, "Convex staked LP amount");
+    }
+
     /// @dev Exercises `DeploymentPhase.ADAPTER` / `_deployAdapterAndApproval` against addresses loaded from
     ///      a prior deployment (requires `DEPLOYMENT_ID_TO_LOAD` and a valid `addresses.json`).
     function _assertDeployAdapterAndApproval() internal {
@@ -696,6 +852,12 @@ contract DeployPermissionlessFrxUsdPsmTest is DeployAltoEthereumMainnetTestBase 
 contract TresuryPSMMigrationTest is DeployAltoEthereumMainnetTestBase {
     function test_TresuryPSMMigration() public {
         _assertTresuryPSMMigration();
+    }
+}
+
+contract TreasurySafeTransactionsTest is DeployAltoEthereumMainnetTestBase {
+    function test_TreasurySafeTransactions() public {
+        _assertTreasurySafeTransactions();
     }
 }
 
