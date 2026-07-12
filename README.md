@@ -6,12 +6,12 @@ You may use prepared VS Code devcontainer that will set up all tools necessary.
 ### Fully Local Environment
 Install following tools
 - `foundry` tools
-- `yarn`
+- `pnpm`
 - `lcov` (optional for code coverage)
 
 and install dependencies
 ```bash
-yarn
+pnpm install
 ```
 
 ## Testing
@@ -45,11 +45,11 @@ cast wallet import --interactive <account_name>
 
 ### Testnet Deployment
 ```bash
-yarn deploy:testnet
+pnpm deploy:testnet
 ```
 The output is stored to `contracts/deployments/testnet/output`.
 
 Verify (Optional)
 ```bash
-yarn verify:testnet
+pnpm verify:testnet
 ```
