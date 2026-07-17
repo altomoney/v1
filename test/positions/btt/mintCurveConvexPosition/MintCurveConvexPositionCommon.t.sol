@@ -2,18 +2,10 @@
 pragma solidity ^0.8.28;
 
 import {Test} from "forge-std/Test.sol";
-import {Vm} from "forge-std/Vm.sol";
-import {PositionFactory} from "@alto/positions/PositionFactory.sol";
+import {MintCurveConvexPositionFactory} from "@alto/positions/MintCurveConvexPositionFactory.sol";
 import {PositionBeacon} from "@alto/positions/PositionBeacon.sol";
 import {MintCurveConvexPosition} from "@alto/positions/MintCurveConvexPosition.sol";
-import {PositionType} from "@alto/positions/interfaces/IPosition.sol";
-import {MintCurveConvexConfig} from "@alto/positions/interfaces/IPositionFactory.sol";
-import {
-    IMintCurveConvexPositionEvents,
-    MintCurveConvexAddParams,
-    MintCurveConvexRemoveMode,
-    MintCurveConvexRemoveParams
-} from "@alto/positions/interfaces/IMintCurveConvexPosition.sol";
+import {MintCurveConvexConfig} from "@alto/positions/interfaces/IMintCurveConvexPositionFactory.sol";
 import {IConvexRewardPool} from "@alto/positions/interfaces/IConvex.sol";
 import {AltoMintMarket} from "@alto/lending/AltoMintMarket.sol";
 import {BaseMarketInitParams, IMarket, MintMarketInitParams, Position} from "@alto/lending/interfaces/IMarket.sol";
@@ -32,29 +24,28 @@ import {UnsafeUpgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {MockConvexBooster} from "../mocks/MockConvexBooster.sol";
 import {MockConvexRewardPool} from "../mocks/MockConvexRewardPool.sol";
 import {MockCurvePool} from "../mocks/MockCurvePool.sol";
-import {MockSwapTarget} from "../mocks/MockSwapTarget.sol";
 
+/// @notice Shared harness for the dedicated MintCurveConvexPosition BTT suite.
+/// @dev The mint market mints/burns the DUSD mock directly, so the position must hold DUSD to repay.
 abstract contract MintCurveConvexPositionCommon is Test {
     uint256 internal constant DEFAULT_COLLATERAL = 10_000e18;
     uint256 internal constant DEFAULT_BORROW = 1_000e18;
     uint256 internal constant MARKET_MAX_LTV = 0.75 ether;
     uint256 internal constant MARKET_DEBT_CEILING = 1_000_000 ether;
-    uint256 internal constant POSITION_MAPPING_SLOT = 8;
 
     address internal immutable OWNER = makeAddr("Owner");
     address internal immutable FEE_RECIPIENT = makeAddr("FeeRecipient");
     address internal immutable AUTHORIZED_SPENDER = makeAddr("AuthorizedSpender");
     address internal immutable NON_AUTHORIZED = makeAddr("NonAuthorized");
-    address internal immutable UNAPPROVED_SWAP_TARGET = makeAddr("UnapprovedSwapTarget");
 
     MarketRegistry internal registry;
-    PositionFactory internal factory;
+    MintCurveConvexPositionFactory internal factory;
     MintCurveConvexPosition internal positionImplementation;
     PositionBeacon internal positionBeacon;
 
     ERC20MockMintable internal collateralToken;
-    ERC20MockMintable internal borrowToken;
-    ERC20MockMintable internal frxUsd;
+    ERC20MockMintable internal borrowToken; // DUSD
+    ERC20MockMintable internal pairToken; // second Curve coin
     ERC20MockMintable internal crv;
     ERC20MockMintable internal cvx;
 
@@ -63,22 +54,21 @@ abstract contract MintCurveConvexPositionCommon is Test {
     MockCurvePool internal curvePool;
     MockConvexRewardPool internal convexRewardPool;
     MockConvexBooster internal convexBooster;
-    MockSwapTarget internal swapTarget;
 
     MintCurveConvexPosition internal position;
 
     function setUp() public virtual {
         collateralToken = new ERC20MockMintable("Collateral", "COL");
         borrowToken = new ERC20MockMintable("DUSD", "DUSD");
-        frxUsd = new ERC20MockMintable("frxUSD", "frxUSD");
+        pairToken = new ERC20MockMintable("Pair", "PAIR");
         crv = new ERC20MockMintable("CRV", "CRV");
         cvx = new ERC20MockMintable("CVX", "CVX");
 
         mintMarket = _deployMintMarket();
-        curvePool = new MockCurvePool(address(borrowToken), address(frxUsd));
-        convexRewardPool = new MockConvexRewardPool(address(curvePool), address(crv), address(cvx));
+        // DUSD is coin0 of the pool by default.
+        curvePool = new MockCurvePool(address(borrowToken), address(pairToken));
+        convexRewardPool = new MockConvexRewardPool(address(curvePool), address(crv), address(cvx), 1);
         convexBooster = new MockConvexBooster(address(convexRewardPool), address(curvePool));
-        swapTarget = new MockSwapTarget();
 
         registry = new MarketRegistry(OWNER);
         vm.prank(OWNER);
@@ -89,13 +79,8 @@ abstract contract MintCurveConvexPositionCommon is Test {
         positionBeacon = new PositionBeacon(address(positionImplementation), OWNER);
 
         vm.startPrank(OWNER);
-        factory.setBeacon(PositionType.MINT_CURVE_CONVEX, address(positionBeacon));
-        factory.setMintCurveConvexConfig(_validConfig());
-        factory.setApprovedSwapTarget(address(swapTarget), true);
+        factory.setBeacon(address(positionBeacon));
         vm.stopPrank();
-
-        swapTarget.setSwapOutcome(false, 0);
-        curvePool.setLpMintOverride(0, false);
 
         position = _createPosition(OWNER);
     }
@@ -145,18 +130,24 @@ abstract contract MintCurveConvexPositionCommon is Test {
         return deployed;
     }
 
-    function _deployInitializedFactory() internal returns (PositionFactory) {
-        PositionFactory deployed = PositionFactory(UnsafeUpgrades.deployUUPSProxy(address(new PositionFactory()), ""));
-        deployed.initialize(OWNER, address(registry));
+    function _deployInitializedFactory() internal returns (MintCurveConvexPositionFactory) {
+        MintCurveConvexPositionFactory deployed =
+            MintCurveConvexPositionFactory(UnsafeUpgrades.deployUUPSProxy(address(new MintCurveConvexPositionFactory()), ""));
+        deployed.initialize(
+            OWNER, address(registry), _config(address(curvePool), address(convexBooster), address(convexRewardPool))
+        );
         return deployed;
     }
 
-    function _validConfig() internal view returns (MintCurveConvexConfig memory config) {
-        config = MintCurveConvexConfig({
-            frxUsd: address(frxUsd),
-            curvePool: address(curvePool),
-            convexBooster: address(convexBooster),
-            convexRewardPool: address(convexRewardPool),
+    function _config(address pool, address booster, address rewardPool)
+        internal
+        view
+        returns (MintCurveConvexConfig memory)
+    {
+        return MintCurveConvexConfig({
+            curvePool: pool,
+            convexBooster: booster,
+            convexRewardPool: rewardPool,
             convexPid: 1,
             crv: address(crv),
             cvx: address(cvx)
@@ -165,8 +156,23 @@ abstract contract MintCurveConvexPositionCommon is Test {
 
     function _createPosition(address owner) internal returns (MintCurveConvexPosition deployed) {
         vm.prank(owner);
-        address positionAddr = factory.createPosition(PositionType.MINT_CURVE_CONVEX, abi.encode(address(mintMarket)));
-        deployed = MintCurveConvexPosition(positionAddr);
+        deployed = MintCurveConvexPosition(factory.createPosition(address(mintMarket)));
+    }
+
+    /// @dev Deploys a fresh factory (config is fixed at initialize) and creates a position from it.
+    function _createPositionWithConfig(MintCurveConvexConfig memory cfg)
+        internal
+        returns (MintCurveConvexPosition deployed)
+    {
+        MintCurveConvexPositionFactory scopedFactory =
+            MintCurveConvexPositionFactory(UnsafeUpgrades.deployUUPSProxy(address(new MintCurveConvexPositionFactory()), ""));
+        scopedFactory.initialize(OWNER, address(registry), cfg);
+
+        vm.prank(OWNER);
+        scopedFactory.setBeacon(address(positionBeacon));
+
+        vm.prank(OWNER);
+        deployed = MintCurveConvexPosition(scopedFactory.createPosition(address(mintMarket)));
     }
 
     function _authorizeSpender(address owner, address spender) internal {
@@ -174,181 +180,42 @@ abstract contract MintCurveConvexPositionCommon is Test {
         position.setAuthorization(spender, true);
     }
 
-    function _mintCollateralToOwner(uint256 amount) internal {
-        _mintCollateralFor(address(position), amount);
+    /// @dev Mints collateral to `account` and approves the position to pull `amount`.
+    function _fundCollateral(address account, uint256 amount) internal {
+        collateralToken.mint(account, amount);
+        vm.prank(account);
+        collateralToken.approve(address(position), amount);
     }
 
-    function _mintCollateralFor(address positionAddr, uint256 amount) internal {
-        collateralToken.mint(OWNER, amount);
+    /// @dev Mints DUSD to `account` and approves the position to pull `amount` (used for repay top-ups).
+    function _fundDusd(address account, uint256 amount) internal {
+        borrowToken.mint(account, amount);
+        vm.prank(account);
+        borrowToken.approve(address(position), amount);
+    }
+
+    /// @dev Mints collateral to the owner and approves the position to pull `amount`.
+    function _fundOwnerCollateral(uint256 amount) internal {
+        _fundCollateral(OWNER, amount);
+    }
+
+    /// @dev Mints DUSD to the owner and approves the position to pull `amount` (used for repay top-ups).
+    function _fundOwnerDusd(uint256 amount) internal {
+        _fundDusd(OWNER, amount);
+    }
+
+    /// @dev Posts collateral through the position as the owner.
+    function _seedCollateral(uint256 amount) internal {
+        _fundOwnerCollateral(amount);
         vm.prank(OWNER);
-        collateralToken.approve(positionAddr, amount);
+        position.addCollateral(amount);
     }
 
-    function _swapDataDusdToFrx(uint256 amountIn) internal view returns (bytes memory) {
-        return abi.encodeWithSelector(
-            MockSwapTarget.swap.selector, address(borrowToken), address(frxUsd), amountIn
-        );
-    }
-
-    function _swapDataFrxToDusd(uint256 amountIn) internal view returns (bytes memory) {
-        return abi.encodeWithSelector(
-            MockSwapTarget.swap.selector, address(frxUsd), address(borrowToken), amountIn
-        );
-    }
-
-    function _addParams(
-        uint256 collateralAmount,
-        uint256 borrowAssets,
-        uint256 amountIn,
-        uint256 minFrxOut,
-        uint256 minLpOut
-    ) internal view returns (MintCurveConvexAddParams memory params) {
-        params = MintCurveConvexAddParams({
-            collateralAmount: collateralAmount,
-            borrowAssets: borrowAssets,
-            swapTarget: address(swapTarget),
-            swapData: _swapDataDusdToFrx(amountIn),
-            minFrxUsdOutFromDusdSwap: minFrxOut,
-            minLpOutFromCurve: minLpOut
-        });
-    }
-
-    /// @dev Default mocks swap 1:1 and mint LP equal to deposited token sums.
-    function _expectedAddMinFrxOut(uint256 borrowAssets) internal pure returns (uint256 minFrxOut) {
-        return borrowAssets / 2;
-    }
-
-    function _expectedAddMinLpOut(uint256 borrowAssets) internal pure returns (uint256 minLpOut) {
-        return borrowAssets;
-    }
-
-    /// @dev Borrow leg is skipped; mins are never checked but stay explicit in encoded params.
-    function _unusedAddMinOuts() internal pure returns (uint256 minFrxOut, uint256 minLpOut) {
-        return (0, 0);
-    }
-
-    function _assertAddPositionLogged(
-        uint256 expectedCollateral,
-        uint256 expectedBorrow,
-        uint256 minLpOut,
-        Vm.Log[] memory logs
-    ) internal {
-        bool found;
-        for (uint256 i = 0; i < logs.length; i++) {
-            if (logs[i].topics[0] == IMintCurveConvexPositionEvents.AddPosition.selector) {
-                (uint256 loggedCollateral, uint256 loggedBorrow, uint256 lpStaked) =
-                    abi.decode(logs[i].data, (uint256, uint256, uint256));
-                assertEq(loggedCollateral, expectedCollateral);
-                assertEq(loggedBorrow, expectedBorrow);
-                assertGe(lpStaked, minLpOut);
-                found = true;
-            }
-        }
-        assertTrue(found);
-    }
-
-    function _assertSwapLogged(
-        address sellToken,
-        address buyToken,
-        uint256 amountIn,
-        address expectedSwapTarget,
-        uint256 minAmountOut,
-        Vm.Log[] memory logs
-    ) internal {
-        bool found;
-        for (uint256 i = 0; i < logs.length; i++) {
-            if (logs[i].topics[0] == IMintCurveConvexPositionEvents.Swap.selector) {
-                assertEq(address(uint160(uint256(logs[i].topics[1]))), sellToken);
-                assertEq(address(uint160(uint256(logs[i].topics[2]))), buyToken);
-                (uint256 loggedAmountIn, address loggedSwapTarget, uint256 amountOut) =
-                    abi.decode(logs[i].data, (uint256, address, uint256));
-                assertEq(loggedAmountIn, amountIn);
-                assertEq(loggedSwapTarget, expectedSwapTarget);
-                assertGe(amountOut, minAmountOut);
-                found = true;
-            }
-        }
-        assertTrue(found);
-    }
-
-    function _encodeAdd(MintCurveConvexAddParams memory params) internal pure returns (bytes memory) {
-        return abi.encode(params);
-    }
-
-    function _defaultRemoveParams() internal view returns (MintCurveConvexRemoveParams memory params) {
-        params = MintCurveConvexRemoveParams({
-            mode: MintCurveConvexRemoveMode.NORMAL,
-            convexLpAmount: 0,
-            minDusdFromCurve: 0,
-            minFrxUsdFromCurve: 0,
-            frxUsdAmountToSwap: 0,
-            swapTarget: address(swapTarget),
-            swapData: _swapDataFrxToDusd(0),
-            minDusdOutFromFrxUsdSwap: 0,
-            repayShares: 0,
-            collateralAmountToWithdraw: 0,
-            claimRewards: false
-        });
-    }
-
-    function _encodeRemove(MintCurveConvexRemoveParams memory params) internal pure returns (bytes memory) {
-        return abi.encode(params);
-    }
-
-    function _encodeRemoveWithMode(uint256 mode, MintCurveConvexRemoveParams memory params)
-        internal
-        pure
-        returns (bytes memory)
-    {
-        return abi.encode(
-            mode,
-            params.convexLpAmount,
-            params.minDusdFromCurve,
-            params.minFrxUsdFromCurve,
-            params.frxUsdAmountToSwap,
-            params.swapTarget,
-            params.swapData,
-            params.minDusdOutFromFrxUsdSwap,
-            params.repayShares,
-            params.collateralAmountToWithdraw,
-            params.claimRewards
-        );
-    }
-
-    function _addCollateralOnly(uint256 collateralAmount) internal {
-        _mintCollateralToOwner(collateralAmount);
-        (uint256 minFrxOut, uint256 minLpOut) = _unusedAddMinOuts();
+    /// @dev Opens a position with collateral and a Curve/Convex deposit funded by borrowed DUSD.
+    function _openPosition(uint256 collateral, uint256 borrowAssets) internal {
+        _seedCollateral(collateral);
         vm.prank(OWNER);
-        position.add(_encodeAdd(_addParams(collateralAmount, 0, 0, minFrxOut, minLpOut)));
-    }
-
-    function _addWithBorrow(uint256 collateralAmount, uint256 borrowAssets) internal returns (uint256 lpStaked) {
-        if (collateralAmount > 0) {
-            _mintCollateralToOwner(collateralAmount);
-        }
-
-        (uint128 totalBorrowedAssetsBefore,) = mintMarket.totalBorrowed();
-        uint256 borrowSharesBefore = _marketPosition().borrowShares;
-
-        uint256 amountIn = borrowAssets / 2;
-        uint256 minFrxOut = _expectedAddMinFrxOut(borrowAssets);
-        uint256 minLpOut = _expectedAddMinLpOut(borrowAssets);
-
-        vm.recordLogs();
-        vm.prank(OWNER);
-        position.add(_encodeAdd(_addParams(collateralAmount, borrowAssets, amountIn, minFrxOut, minLpOut)));
-
-        (uint128 totalBorrowedAssetsAfter,) = mintMarket.totalBorrowed();
-        assertGt(totalBorrowedAssetsAfter, totalBorrowedAssetsBefore);
-        assertGt(_marketPosition().borrowShares, borrowSharesBefore);
-
-        Vm.Log[] memory logs = vm.getRecordedLogs();
-        for (uint256 i = 0; i < logs.length; i++) {
-            if (logs[i].topics[0] == IMintCurveConvexPositionEvents.AddPosition.selector) {
-                (,, lpStaked) = abi.decode(logs[i].data, (uint256, uint256, uint256));
-                break;
-            }
-        }
+        position.borrowAndDepositToLp(borrowAssets, borrowAssets);
     }
 
     function _stakedLpBalance() internal view returns (uint256) {
@@ -363,18 +230,12 @@ abstract contract MintCurveConvexPositionCommon is Test {
         return _marketPosition(address(position));
     }
 
+    function _borrowShares() internal view returns (uint256) {
+        return _marketPosition().borrowShares;
+    }
+
     function _fundRewards(uint256 crvAmount, uint256 cvxAmount) internal {
         crv.mint(address(convexRewardPool), crvAmount);
         cvx.mint(address(convexRewardPool), cvxAmount);
-    }
-
-    function _governanceLiquidatePosition(address user) internal {
-        vm.prank(OWNER);
-        mintMarket.governanceLiquidate(user, true);
-    }
-
-    function _zeroMarketCollateralKeepDebt(address user) internal {
-        uint256 baseSlot = uint256(keccak256(abi.encode(user, POSITION_MAPPING_SLOT)));
-        vm.store(address(mintMarket), bytes32(baseSlot + 1), bytes32(uint256(0)));
     }
 }

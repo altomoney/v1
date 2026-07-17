@@ -1,275 +1,287 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {PositionBase} from "./PositionBase.sol";
-import {IPosition, PositionType} from "./interfaces/IPosition.sol";
-import {
-    IMintCurveConvexPosition,
-    IMintCurveConvexPositionStaticTypes,
-    IMintCurveConvexPositionBase,
-    MintCurveConvexAddParams,
-    MintCurveConvexRemoveMode,
-    MintCurveConvexRemoveParams
-} from "./interfaces/IMintCurveConvexPosition.sol";
-import {IPositionFactory, MintCurveConvexConfig} from "./interfaces/IPositionFactory.sol";
-import {ConvexPositionLib} from "./libraries/ConvexPositionLib.sol";
-import {CurvePositionLib} from "./libraries/CurvePositionLib.sol";
-import {MintPositionLib} from "./libraries/MintPositionLib.sol";
-import {SwapPositionLib} from "./libraries/SwapPositionLib.sol";
-import {IConvexRewardPool} from "./interfaces/IConvex.sol";
+import {IMintCurveConvexPosition} from "./interfaces/IMintCurveConvexPosition.sol";
+import {IMintCurveConvexPositionFactory, MintCurveConvexConfig} from "./interfaces/IMintCurveConvexPositionFactory.sol";
+import {ICurveStablePool} from "./interfaces/ICurveStablePool.sol";
+import {IConvexBooster, IConvexRewardPool} from "./interfaces/IConvex.sol";
 
-import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
+import {IMarket, Balance} from "@alto/lending/interfaces/IMarket.sol";
+import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import {MulticallUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/MulticallUpgradeable.sol";
+import {AuthUpgradeable} from "@alto/utils/AuthUpgradeable.sol";
 
 /// @title MintCurveConvexPosition
-/// @notice Strategy contract for minting DUSD from mint market and supplying lp to curve and convex
-/// @dev This contract needs to be set as the implementation of PositionBeacon contract
-contract MintCurveConvexPosition is PositionBase, IMintCurveConvexPositionStaticTypes {
+/// @notice Dedicated position implementation for the Mint borrow token -> Curve -> Convex strategy and its reverse.
+/// @dev This contract needs to be deployed and set as the implementation in PositionBeacon contract.
+contract MintCurveConvexPosition is
+    IMintCurveConvexPosition,
+    Initializable,
+    OwnableUpgradeable,
+    AuthUpgradeable,
+    ReentrancyGuardUpgradeable,
+    MulticallUpgradeable
+{
     using SafeERC20 for IERC20;
+    using AssetShareConversionMath for uint256;
 
-    /// @inheritdoc IMintCurveConvexPositionBase
-    IPositionFactory public factory;
+    /// @inheritdoc IMintCurveConvexPosition
+    IMintCurveConvexPositionFactory public factory;
 
-    /// @inheritdoc IMintCurveConvexPositionBase
-    address public market;
+    /// @inheritdoc IMintCurveConvexPosition
+    IMarket public market;
 
-    uint256[48] private __gap;
+    /// @inheritdoc IMintCurveConvexPosition
+    MintCurveConvexConfig public config;
+
+    /// @inheritdoc IMintCurveConvexPosition
+    address public borrowToken;
+
+    /// @inheritdoc IMintCurveConvexPosition
+    uint256 public indexOfBorrowTokenInPool;
+
+    uint256[40] private __gap;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
     }
 
-    /// @notice Initializes a beacon proxy instance for one user.
+    /// @notice Initializes a beacon proxy instance for one owner.
     /// @param _owner The position owner.
-    /// @param _factory The position factory whose configuration this strategy reads at execution time.
-    /// @dev This contract will be deployed by position factory through createPosition function
-    /// @param _market The Alto mint market used for collateral and DUSD minting.
-    function initialize(address _owner, address _factory, address _market) external initializer {
-        if (_factory == address(0) || _market == address(0)) revert MintCurveConvexPositionInvalidInput();
-        __PositionBase_init(_owner);
-        factory = IPositionFactory(_factory);
-        market = _market;
+    /// @param _factory The factory that deployed this position.
+    /// @param _market The Alto mint market used for collateral and borrow token minting.
+    /// @param _config The Curve/Convex configuration snapshot for this position.
+    function initialize(address _owner, address _factory, address _market, MintCurveConvexConfig calldata _config)
+        external
+        virtual
+        initializer
+    {
+        __MintCurveConvexPosition_init(_owner, _factory, _market, _config);
     }
 
-    /// @inheritdoc PositionBase
-    function _add(bytes calldata data) internal override onlyOwnerOrAuthorized nonReentrant {
-        MintCurveConvexAddParams memory params = abi.decode(data, (MintCurveConvexAddParams));
-        // revert if neither collateral is to be added nor DUSD is borrowed
-        if (params.collateralAmount == 0 && params.borrowAssets == 0) revert MintCurveConvexPositionInvalidInput();
-
-        MintCurveConvexConfig memory config = config();
-        address collateralToken = IMarket(market).collateralToken();
-        address borrowToken = IMarket(market).borrowToken();
-        address positionOwner = owner();
-
-        if (params.collateralAmount > 0) {
-            MintPositionLib.addCollateral(market, collateralToken, positionOwner, params.collateralAmount);
-        }
-
-        uint256 lpStaked;
-
-        if (params.borrowAssets > 0) {
-            MintPositionLib.borrow(market, params.borrowAssets);
-
-            uint256 swapAmount = params.borrowAssets / 2; // swap half of the borrowed DUSD to frxUSD
-            _swap(
-                borrowToken,
-                config.frxUsd,
-                swapAmount,
-                params.swapTarget,
-                params.swapData,
-                params.minFrxUsdOutFromDusdSwap
-            );
-
-            // @dev this will add liquidity to curve pool with amount of borrowToken(DUSD) and frxUSD present in contract
-            // @dev Not using specific amount here because if amount is donated to this contract, it will be used to add liquidity to curve pool
-            uint256 borrowTokenLeft = IERC20(borrowToken).balanceOf(address(this));
-            uint256 frxLeft = IERC20(config.frxUsd).balanceOf(address(this));
-
-            lpStaked = CurvePositionLib.addLiquidity(
-                address(this),
-                config.curvePool,
-                borrowToken,
-                config.frxUsd,
-                borrowTokenLeft,
-                frxLeft,
-                params.minLpOutFromCurve
-            );
-
-            ConvexPositionLib.stake(config.convexBooster, config.convexPid, config.curvePool, lpStaked);
-        }
-
-        emit AddPosition(positionOwner, params.collateralAmount, params.borrowAssets, lpStaked);
-    }
-
-    /// @inheritdoc PositionBase
-    function _remove(bytes calldata data) internal override onlyOwnerOrAuthorized nonReentrant {
-        MintCurveConvexRemoveParams memory params = abi.decode(data, (MintCurveConvexRemoveParams));
-
-        if (params.mode == MintCurveConvexRemoveMode.EMERGENCY_UNWIND_LP) {
-            _emergencyUnwindLp(params);
-        } else if (params.mode == MintCurveConvexRemoveMode.NORMAL) {
-            _removeNormal(params);
-        } else {
+    function __MintCurveConvexPosition_init(
+        address _owner,
+        address _factory,
+        address _market,
+        MintCurveConvexConfig calldata _config
+    ) internal onlyInitializing {
+        if (_factory == address(0) || _market == address(0)) {
             revert MintCurveConvexPositionInvalidInput();
         }
+        __Ownable_init(_owner);
+        __Auth_init();
+        __ReentrancyGuard_init();
+        __Multicall_init();
+        factory = IMintCurveConvexPositionFactory(_factory);
+        market = IMarket(_market);
+        config = _config;
+        borrowToken = market.borrowToken();
+        indexOfBorrowTokenInPool = _coinIndex(_config.curvePool);
     }
 
-    /// @notice Removes the position normally when mode is NORMAL
-    function _removeNormal(MintCurveConvexRemoveParams memory params) internal {
-        MintCurveConvexConfig memory config = config();
-        address borrowToken = IMarket(market).borrowToken();
-        address collateralToken = IMarket(market).collateralToken();
+    /// @inheritdoc IMintCurveConvexPosition
+    function addCollateral(uint256 amount) external override onlyOwnerOrAuthorized nonReentrant {
+        if (amount == 0) revert MintCurveConvexPositionInvalidInput();
+
+        address collateralToken = market.collateralToken();
+
+        IERC20(collateralToken).safeTransferFrom(msg.sender, address(this), amount);
+        IERC20(collateralToken).forceApprove(address(market), amount);
+        market.addCollateral(amount, address(this));
+        IERC20(collateralToken).forceApprove(address(market), 0);
+
+        emit CollateralAdded(amount);
+    }
+
+    /// @inheritdoc IMintCurveConvexPosition
+    function removeCollateral(uint256 amount) external override onlyOwnerOrAuthorized nonReentrant {
+        if (amount == 0) revert MintCurveConvexPositionInvalidInput();
+
+        market.removeCollateral(amount, address(this), owner(), bytes(""));
+
+        emit CollateralRemoved(amount);
+    }
+
+    /// @inheritdoc IMintCurveConvexPosition
+    function borrowAndDepositToLp(uint256 assetsToBorrow, uint256 minLpOut)
+        external
+        override
+        onlyOwnerOrAuthorized
+        nonReentrant
+        returns (uint256 lpMinted)
+    {
+        if (assetsToBorrow == 0) revert MintCurveConvexPositionInvalidInput();
+
+        address curvePool = config.curvePool;
+        market.borrow(assetsToBorrow, 0, address(this), address(this), bytes(""));
+
+        lpMinted = _depositCoin(curvePool, assetsToBorrow, minLpOut);
+
+        _stakeToConvex(config.convexBooster, config.convexPid, curvePool, lpMinted);
+
+        emit Deposited(assetsToBorrow, lpMinted);
+    }
+
+    /// @inheritdoc IMintCurveConvexPosition
+    function withdrawFromLpAndRepay(
+        uint256 lpToWithdraw,
+        uint256 minBorrowTokenOut,
+        uint256 sharesToRepay,
+        bool claimRewards
+    )
+        external
+        override
+        onlyOwnerOrAuthorized
+        nonReentrant
+        returns (uint256 borrowTokenReceived, uint256 assetsRepaid, uint256 crvAmount, uint256 cvxAmount)
+    {
+        if (lpToWithdraw == 0 && sharesToRepay == 0) revert MintCurveConvexPositionInvalidInput();
+        if (lpToWithdraw == 0 && minBorrowTokenOut > 0) revert MintCurveConvexPositionInvalidInput();
+        if (lpToWithdraw == 0 && claimRewards) revert MintCurveConvexPositionInvalidInput();
+
         address positionOwner = owner();
 
-        uint256 lpToBurn = params.convexLpAmount;
+        if (lpToWithdraw > 0) {
+            IConvexRewardPool(config.convexRewardPool).withdrawAndUnwrap(lpToWithdraw, claimRewards);
+            borrowTokenReceived = _withdrawCoin(config.curvePool, lpToWithdraw, minBorrowTokenOut);
 
-        if (lpToBurn > 0) {
-            ConvexPositionLib.withdraw(config.convexRewardPool, lpToBurn, params.claimRewards);
-
-            if (params.claimRewards) {
-                uint256 crvBalance = _transferTokenBalanceIfAny(config.crv);
-                uint256 cvxBalance = _transferTokenBalanceIfAny(config.cvx);
-                emit ClaimRewards(positionOwner, crvBalance, cvxBalance);
+            if (claimRewards) {
+                (crvAmount, cvxAmount) = _sweepRewards(positionOwner);
             }
-
-            CurvePositionLib.removeLiquidity(
-                config.curvePool,
-                borrowToken,
-                config.frxUsd,
-                lpToBurn,
-                params.minDusdFromCurve,
-                params.minFrxUsdFromCurve
-            );
         }
 
-        _swap(
-            config.frxUsd,
-            borrowToken,
-            params.frxUsdAmountToSwap,
-            params.swapTarget,
-            params.swapData,
-            params.minDusdOutFromFrxUsdSwap
-        );
-
-        if (params.repayShares > 0) {
-            MintPositionLib.repay(market, borrowToken, 0, params.repayShares);
+        if (sharesToRepay > 0) {
+            assetsRepaid = _repay(sharesToRepay);
+            emit Repaid(positionOwner, sharesToRepay, assetsRepaid);
         }
 
-        if (params.collateralAmountToWithdraw > 0) {
-            MintPositionLib.removeCollateral(market, params.collateralAmountToWithdraw, positionOwner);
+        uint256 borrowTokenBalance = IERC20(borrowToken).balanceOf(address(this));
+        if (borrowTokenBalance > 0) {
+            IERC20(borrowToken).safeTransfer(positionOwner, borrowTokenBalance);
         }
 
-        _transferTokenBalanceIfAny(borrowToken);
-        _transferTokenBalanceIfAny(config.frxUsd);
-        _transferTokenBalanceIfAny(collateralToken);
-
-        emit RemovePosition(
-            positionOwner,
-            MintCurveConvexRemoveMode.NORMAL,
-            lpToBurn,
-            params.collateralAmountToWithdraw,
-            params.repayShares
-        );
+        emit Withdrawn(positionOwner, lpToWithdraw, borrowTokenReceived, sharesToRepay);
     }
 
-    /// @notice Removes the position  when mode is EMERGENCY_UNWIND_LP
-    function _emergencyUnwindLp(MintCurveConvexRemoveParams memory params) internal {
-        MintCurveConvexConfig memory config = config();
-        address positionOwner = owner();
+    /// @inheritdoc IMintCurveConvexPosition
+    function repay(uint256 repayShares)
+        external
+        override
+        onlyOwnerOrAuthorized
+        nonReentrant
+        returns (uint256 assetsRepaid)
+    {
+        if (repayShares == 0) revert MintCurveConvexPositionInvalidInput();
 
-        address borrowToken = IMarket(market).borrowToken();
+        assetsRepaid = _repay(repayShares);
 
-        uint256 lpToBurn = params.convexLpAmount;
-        if (lpToBurn > 0) {
-            // withdraw from convex reward pool with claim rewards enabled
-            ConvexPositionLib.withdraw(config.convexRewardPool, lpToBurn, true);
-            // remove liquidity from curve pool with amount of lpToBurn
-            CurvePositionLib.removeLiquidity(
-                config.curvePool,
-                borrowToken,
-                config.frxUsd,
-                lpToBurn,
-                params.minDusdFromCurve,
-                params.minFrxUsdFromCurve
-            );
-
-            uint256 crvBalance = _transferTokenBalanceIfAny(config.crv);
-            uint256 cvxBalance = _transferTokenBalanceIfAny(config.cvx);
-            emit ClaimRewards(positionOwner, crvBalance, cvxBalance);
-        }
-
-        _transferTokenBalanceIfAny(borrowToken);
-        _transferTokenBalanceIfAny(config.frxUsd);
-        _transferTokenBalanceIfAny(config.curvePool);
-
-        emit RemovePosition(positionOwner, MintCurveConvexRemoveMode.EMERGENCY_UNWIND_LP, lpToBurn, 0, 0);
+        emit Repaid(owner(), repayShares, assetsRepaid);
     }
 
-    /// @notice Swaps tokens from one token to another
-    /// @param fromToken The token to swap from
-    /// @param toToken The token to swap to
-    /// @param amountIn The amount of tokens to swap
-    /// @param swapTarget The target to swap through
-    /// @param swapData The data to pass to the swap target
-    /// @param minAmountOut The minimum amount of tokens to receive
-    /// @return amountOut The amount of toToken tokens received
-    function _swap(
-        address fromToken,
-        address toToken,
-        uint256 amountIn,
-        address swapTarget,
-        bytes memory swapData,
-        uint256 minAmountOut
-    ) internal returns (uint256 amountOut) {
-        if (amountIn == 0) return 0;
-
-        if (!factory.approvedSwapTarget(swapTarget)) {
-            revert MintCurveConvexPositionInvalidInput();
-        }
-
-        amountOut =
-            SwapPositionLib.swap(address(this), fromToken, toToken, amountIn, swapTarget, swapData, minAmountOut);
-        emit Swap(fromToken, toToken, amountIn, swapTarget, amountOut);
+    /// @inheritdoc IMintCurveConvexPosition
+    function claimRewards()
+        external
+        override
+        onlyOwnerOrAuthorized
+        nonReentrant
+        returns (uint256 crvAmount, uint256 cvxAmount)
+    {
+        IConvexRewardPool(config.convexRewardPool).getReward();
+        (crvAmount, cvxAmount) = _sweepRewards(owner());
     }
 
-    /// @inheritdoc IMintCurveConvexPositionBase
-    function claimRewards() external override onlyOwnerOrAuthorized nonReentrant {
-        MintCurveConvexConfig memory config = config();
-        ConvexPositionLib.claimRewards(config.convexRewardPool);
-        address positionOwner = owner();
+    /// @inheritdoc IMintCurveConvexPosition
+    function recoverERC20(address token, uint256 amount) external override onlyOwnerOrAuthorized nonReentrant {
+        if (token == address(0) || amount == 0) revert MintCurveConvexPositionInvalidInput();
 
-        uint256 crvBalance = _transferTokenBalanceIfAny(config.crv);
-        uint256 cvxBalance = _transferTokenBalanceIfAny(config.cvx);
-
-        emit ClaimRewards(positionOwner, crvBalance, cvxBalance);
+        IERC20(token).safeTransfer(owner(), amount);
     }
 
-    /// @notice Returns the configuration for the mint curve convex position
-    function config() internal view returns (MintCurveConvexConfig memory config) {
-        config = factory.mintCurveConvexConfig();
-    }
-
-    ///@inheritdoc IPosition
-    function version() external view virtual override returns (uint256) {
+    /// @inheritdoc IMintCurveConvexPosition
+    function version() external pure virtual override returns (uint256) {
         return 1;
     }
 
-    ///@inheritdoc IPosition
-    function positionType() external view virtual override returns (PositionType) {
-        return PositionType.MINT_CURVE_CONVEX;
+    /// @dev Deposits `borrowAmount` of borrow token into the Curve pool and mints LP to this contract.
+    /// @dev This is one sided deposit of borrow token into the Curve pool while keeping other coin amount as 0
+    function _depositCoin(address curvePool, uint256 borrowAmount, uint256 minLpOut)
+        internal
+        returns (uint256 lpMinted)
+    {
+        uint256[] memory amounts = new uint256[](2);
+        amounts[indexOfBorrowTokenInPool] = borrowAmount;
+
+        IERC20(borrowToken).forceApprove(curvePool, borrowAmount);
+        lpMinted = ICurveStablePool(curvePool).add_liquidity(amounts, minLpOut);
+        IERC20(borrowToken).forceApprove(curvePool, 0);
     }
 
-    /// @notice Transfers the contract's full token balance to the position owner.
-    /// @param token The token to transfer.
-    /// @return balance The balance transferred.
-    function _transferTokenBalanceIfAny(address token) internal returns (uint256 balance) {
-        balance = IERC20(token).balanceOf(address(this));
-        if (balance > 0) {
-            IERC20(token).safeTransfer(owner(), balance);
+    /// @dev Burns `lpToWithdraw` of Curve LP and withdraws borrow token back to this contract.
+    function _withdrawCoin(address curvePool, uint256 lpToWithdraw, uint256 minBorrowTokenOut)
+        internal
+        returns (uint256 borrowTokenReceived)
+    {
+        int128 index = int128(uint128(indexOfBorrowTokenInPool));
+        borrowTokenReceived =
+            ICurveStablePool(curvePool).remove_liquidity_one_coin(lpToWithdraw, index, minBorrowTokenOut);
+    }
+
+    /// @dev Stakes Curve LP through the Convex booster; the receipt tokens are staked in the reward pool.
+    function _stakeToConvex(address booster, uint256 poolId, address curveLpToken, uint256 lpAmount) internal {
+        if (lpAmount == 0) return;
+
+        IERC20(curveLpToken).forceApprove(booster, lpAmount);
+        IConvexBooster(booster).deposit(poolId, lpAmount, true);
+        IERC20(curveLpToken).forceApprove(booster, 0);
+    }
+
+    /// @dev Repays `repayShares` of debt, pulling any borrow token shortfall from the caller before repaying.
+    function _repay(uint256 repayShares) internal returns (uint256 assetsNeeded) {
+        market.accrueInterest();
+
+        Balance memory totalBorrowed = market.totalBorrowed();
+        assetsNeeded = repayShares.convertToAssetsUp(totalBorrowed.assets, totalBorrowed.shares);
+
+        uint256 borrowTokenBalance = IERC20(borrowToken).balanceOf(address(this));
+        if (borrowTokenBalance < assetsNeeded) {
+            IERC20(borrowToken).safeTransferFrom(msg.sender, address(this), assetsNeeded - borrowTokenBalance);
+        }
+
+        market.repay(0, repayShares, address(this));
+    }
+
+    /// @dev Transfers any CRV/CVX held by this contract to the owner.
+    function _sweepRewards(address owner) internal returns (uint256 crvAmount, uint256 cvxAmount) {
+        address crv = config.crv;
+        address cvx = config.cvx;
+        crvAmount = IERC20(crv).balanceOf(address(this));
+        if (crvAmount > 0) {
+            IERC20(crv).safeTransfer(owner, crvAmount);
+        }
+
+        cvxAmount = IERC20(cvx).balanceOf(address(this));
+        if (cvxAmount > 0) {
+            IERC20(cvx).safeTransfer(owner, cvxAmount);
+        }
+
+        emit RewardsClaimed(crvAmount, cvxAmount);
+    }
+
+    /// @dev Returns the index of borrow token within the two-coin Curve pool.
+    function _coinIndex(address curvePool) internal view returns (uint256) {
+        if (ICurveStablePool(curvePool).coins(0) == borrowToken) {
+            return 0;
+        } else if (ICurveStablePool(curvePool).coins(1) == borrowToken) {
+            return 1;
+        } else {
+            revert MintCurveConvexPositionInvalidInput();
         }
     }
 

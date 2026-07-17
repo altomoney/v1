@@ -2,494 +2,197 @@
 pragma solidity ^0.8.28;
 
 import {MintCurveConvexPositionForkCommon} from "./MintCurveConvexPositionForkCommon.t.sol";
-import {Vm} from "forge-std/Vm.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {
-    IMintCurveConvexPositionEvents,
-    MintCurveConvexRemoveMode,
-    MintCurveConvexRemoveParams
-} from "@alto/positions/interfaces/IMintCurveConvexPosition.sol";
+import {IMintCurveConvexPositionEvents} from "@alto/positions/interfaces/IMintCurveConvexPosition.sol";
 import {Position} from "@alto/lending/interfaces/IMarket.sol";
-import {
-    FRXUSD_MAINNET,
-    VELORA_AUGUSTUS_V6_MAINNET,
-    WETH_MAINNET
-} from "@alto/deployments/ethereum-mainnet/Constants.sol";
+import {CRV_TOKEN_MAINNET, CVX_TOKEN_MAINNET, WETH_MAINNET} from "@alto/deployments/ethereum-mainnet/Constants.sol";
 
+/// @dev Fork coverage for withdrawFromLpAndRepay (LP unwind + optional repay) and repay.
 contract MintCurveConvexPositionRemoveForkTest is MintCurveConvexPositionForkCommon {
-    string internal constant DUSD_TO_FRXUSD_TX_JSON =
-        "test/positions/fork/swapData/data_swap_10000_dusd_to_frxUSD.json";
-    string internal constant FRXUSD_TO_DUSD_PRICE_JSON =
-        "test/positions/fork/swapData/priceRoute_swap_5000_frxUSD_to_dusd.json";
-    string internal constant FRXUSD_TO_DUSD_TX_JSON = "test/positions/fork/swapData/data_swap_5000_frxUSD_to_dusd.json";
-    string internal constant FRXUSD_TO_DUSD_FULL_CLOSE_PRICE_JSON =
-        "test/positions/fork/swapData/priceRoute_swap_8500_frxUSD_to_dusd.json";
-    string internal constant FRXUSD_TO_DUSD_FULL_CLOSE_TX_JSON =
-        "test/positions/fork/swapData/data_swap_8500_frxUSD_to_dusd.json";
+    uint256 internal constant REWARD_ACCRUAL_BLOCKS = 100_000;
+    uint256 internal constant REWARD_ACCRUAL_PERIOD = 14 days;
 
-    uint256 internal constant FRX_SWAP_AMOUNT = 5_000 ether;
-    uint256 internal constant FRX_SWAP_AMOUNT_FULL_CLOSE = 8_570 ether;
-
-    bytes internal dusdToFrxUsdSwapData;
-    bytes internal frxUsdToDusdSwapData;
-    bytes internal frxUsdToDusdFullCloseSwapData;
-    uint256 internal expectedDusdFromFrxSwap;
-    uint256 internal expectedDusdFromFrxFullCloseSwap;
     uint256 internal stakedLp;
 
     function setUp() public override {
-        uint256 forkBlock = vm.parseJsonUint(vm.readFile(FRXUSD_TO_DUSD_PRICE_JSON), ".priceRoute.blockNumber");
-        vm.createSelectFork(vm.rpcUrl("ethereum"), forkBlock);
-
-        dusdToFrxUsdSwapData = vm.parseJsonBytes(vm.readFile(DUSD_TO_FRXUSD_TX_JSON), ".data");
-        expectedDusdFromFrxSwap = vm.parseJsonUint(vm.readFile(FRXUSD_TO_DUSD_PRICE_JSON), ".priceRoute.destAmount");
-        frxUsdToDusdSwapData = vm.parseJsonBytes(vm.readFile(FRXUSD_TO_DUSD_TX_JSON), ".data");
-        expectedDusdFromFrxFullCloseSwap =
-            vm.parseJsonUint(vm.readFile(FRXUSD_TO_DUSD_FULL_CLOSE_PRICE_JSON), ".priceRoute.destAmount");
-        frxUsdToDusdFullCloseSwapData = vm.parseJsonBytes(vm.readFile(FRXUSD_TO_DUSD_FULL_CLOSE_TX_JSON), ".data");
-
         super.setUp();
-        stakedLp = _openFullPosition();
+        stakedLp = _openBorrowPosition();
     }
 
-    function test_Remove_Normal_RepaysHalfDebtUnwindsFullLpAndLeavesCollateral() public {
-        Position memory marketPositionBefore = _marketPosition(address(position));
-        uint256 repayShares = marketPositionBefore.borrowShares / 2;
-        assertGt(repayShares, 0);
-
+    function test_WithdrawFromLpAndRepay_UnwindsFullLpIntoDusdAndSweepsToOwner() public {
+        Position memory before = _marketPosition(address(position));
         uint256 userDusdBefore = IERC20(DUSD_MAINNET).balanceOf(user);
-        uint256 userFrxBefore = IERC20(FRXUSD_MAINNET).balanceOf(user);
-        uint256 userWethBefore = IERC20(WETH_MAINNET).balanceOf(user);
 
-        uint256 repayAssets = _borrowAssetsForShares(repayShares);
+        vm.expectEmit(true, false, false, false, address(position));
+        emit IMintCurveConvexPositionEvents.Withdrawn(user, stakedLp, 0, 0);
 
-        MintCurveConvexRemoveParams memory params = _removeParams(
-            MintCurveConvexRemoveMode.NORMAL, // mode
-            stakedLp, // convexLpAmount
-            FRX_SWAP_AMOUNT, // frxUsdAmountToSwap
-            repayShares, // repayShares
-            0, // collateralAmountToWithdraw
-            false, // claimRewards
-            frxUsdToDusdSwapData, // swapData
-            expectedDusdFromFrxSwap // expectedDusdFromFrxSwap
-        );
-
-        vm.recordLogs();
         vm.prank(user);
-        position.remove(_encodeRemove(params));
+        position.withdrawFromLpAndRepay(stakedLp, 0, 0, false);
 
-        assertEq(_stakedLpBalance(), 0);
-        assertEq(_marketPosition(address(position)).collateralAssets, marketPositionBefore.collateralAssets);
-        assertEq(_marketPosition(address(position)).borrowShares, marketPositionBefore.borrowShares - repayShares);
-        assertEq(IERC20(DUSD_MAINNET).allowance(address(position), VELORA_AUGUSTUS_V6_MAINNET), 0);
-        assertEq(IERC20(FRXUSD_MAINNET).allowance(address(position), VELORA_AUGUSTUS_V6_MAINNET), 0);
-        assertEq(IERC20(DUSD_MAINNET).balanceOf(address(position)), 0);
-        assertEq(IERC20(FRXUSD_MAINNET).balanceOf(address(position)), 0);
-        assertEq(IERC20(WETH_MAINNET).balanceOf(address(position)), 0);
-        assertEq(IERC20(WETH_MAINNET).balanceOf(user), userWethBefore);
-
-        uint256 frxReceived = IERC20(FRXUSD_MAINNET).balanceOf(user) - userFrxBefore;
-        uint256 dusdReceived = IERC20(DUSD_MAINNET).balanceOf(user) - userDusdBefore;
-        uint256 lpSideRecovered = repayAssets + frxReceived + dusdReceived;
-
-        assertGe(
-            lpSideRecovered,
-            _applySlippage(BORROW_ASSETS),
-            "repaid + frxUSD + dusd should be within slippage of borrow amount"
-        );
-        assertLe(
-            lpSideRecovered,
-            _addSlippage(BORROW_ASSETS),
-            "repaid + frxUSD + dusd should be within slippage of borrow amount"
-        );
-
-        _assertRemovePositionLogged(MintCurveConvexRemoveMode.NORMAL, stakedLp, 0, repayShares);
-    }
-
-    function test_Remove_Normal_RepaysAllDebtWithdrawsAllCollateralAndUnwindsFullLp() public {
-        Position memory marketPositionBefore = _marketPosition(address(position));
-        uint256 repayShares = marketPositionBefore.borrowShares;
-        uint256 collateralWithdraw = marketPositionBefore.collateralAssets;
-        assertGt(repayShares, 0);
-        assertGt(collateralWithdraw, 0);
-
-        uint256 repayAssets = _borrowAssetsForShares(repayShares);
-
-        uint256 userDusdBefore = IERC20(DUSD_MAINNET).balanceOf(user);
-        uint256 userFrxBefore = IERC20(FRXUSD_MAINNET).balanceOf(user);
-        uint256 userWethBefore = IERC20(WETH_MAINNET).balanceOf(user);
-
-        uint256 dusdTopUp = _fullCloseRepayBuffer(repayAssets, stakedLp, expectedDusdFromFrxFullCloseSwap);
-        deal(DUSD_MAINNET, user, dusdTopUp);
-        vm.prank(user);
-        IERC20(DUSD_MAINNET).transfer(address(position), dusdTopUp);
-
-        MintCurveConvexRemoveParams memory params = _removeParams(
-            MintCurveConvexRemoveMode.NORMAL, // mode
-            stakedLp, // convexLpAmount
-            FRX_SWAP_AMOUNT_FULL_CLOSE, // frxUsdAmountToSwap
-            repayShares, // repayShares
-            collateralWithdraw, // collateralAmountToWithdraw
-            false, // claimRewards
-            frxUsdToDusdFullCloseSwapData, // swapData
-            expectedDusdFromFrxFullCloseSwap // expectedDusdFromFrxSwap
-        );
-
-        vm.recordLogs();
-        vm.prank(user);
-        position.remove(_encodeRemove(params));
-
-        assertEq(_stakedLpBalance(), 0);
-        assertEq(_marketPosition(address(position)).collateralAssets, 0);
-        assertEq(_marketPosition(address(position)).borrowShares, 0);
-        assertEq(IERC20(DUSD_MAINNET).allowance(address(position), VELORA_AUGUSTUS_V6_MAINNET), 0);
-        assertEq(IERC20(FRXUSD_MAINNET).allowance(address(position), VELORA_AUGUSTUS_V6_MAINNET), 0);
-        assertEq(IERC20(DUSD_MAINNET).balanceOf(address(position)), 0);
-        assertEq(IERC20(FRXUSD_MAINNET).balanceOf(address(position)), 0);
-        assertEq(IERC20(WETH_MAINNET).balanceOf(address(position)), 0);
-
-        uint256 frxReceived = IERC20(FRXUSD_MAINNET).balanceOf(user) - userFrxBefore;
-        uint256 dusdReceived = IERC20(DUSD_MAINNET).balanceOf(user) - userDusdBefore;
-        uint256 lpSideRecovered = dusdReceived + frxReceived + repayAssets - dusdTopUp;
-
-        assertGe(
-            lpSideRecovered,
-            _applySlippage(BORROW_ASSETS),
-            "frxUSD + dusd recovered should be within slippage of borrow added"
-        );
-        assertEq(IERC20(WETH_MAINNET).balanceOf(user), userWethBefore + collateralWithdraw);
-
-        _assertRemovePositionLogged(MintCurveConvexRemoveMode.NORMAL, stakedLp, collateralWithdraw, repayShares);
-    }
-
-    function test_Remove_Normal_AfterFullLiquidation_UnwindsLpAndDistributesProceedsAsDusd() public {
-        Position memory marketPositionBefore = _marketPosition(address(position));
-        assertGt(marketPositionBefore.collateralAssets, 0);
-        assertGt(marketPositionBefore.borrowShares, 0);
-
-        _governanceLiquidatePosition(address(position));
-
-        Position memory marketPositionAfterLiquidation = _marketPosition(address(position));
-        assertEq(marketPositionAfterLiquidation.collateralAssets, 0);
-        assertEq(marketPositionAfterLiquidation.borrowShares, 0);
-        assertGt(_stakedLpBalance(), 0);
-
-        uint256 userDusdBefore = IERC20(DUSD_MAINNET).balanceOf(user);
-        uint256 userFrxBefore = IERC20(FRXUSD_MAINNET).balanceOf(user);
-        uint256 userWethBefore = IERC20(WETH_MAINNET).balanceOf(user);
-
-        MintCurveConvexRemoveParams memory params = _removeParams(
-            MintCurveConvexRemoveMode.NORMAL, // mode
-            stakedLp, // convexLpAmount
-            FRX_SWAP_AMOUNT_FULL_CLOSE, // frxUsdAmountToSwap
-            0, // repayShares
-            0, // collateralAmountToWithdraw
-            false, // claimRewards
-            frxUsdToDusdFullCloseSwapData, // swapData
-            expectedDusdFromFrxFullCloseSwap // expectedDusdFromFrxSwap
-        );
-
-        vm.recordLogs();
-        vm.prank(user);
-        position.remove(_encodeRemove(params));
-
-        uint256 frxReceived = IERC20(FRXUSD_MAINNET).balanceOf(user) - userFrxBefore;
         uint256 dusdReceived = IERC20(DUSD_MAINNET).balanceOf(user) - userDusdBefore;
 
-        assertLt(frxReceived, 10 ether, "frxUSD received should be less than 10 ether");
-        assertGe(
-            dusdReceived, _applySlippage(BORROW_ASSETS), "dusd received should be within slippage of borrow amount"
-        );
-        assertLe(dusdReceived, _addSlippage(BORROW_ASSETS), "dusd received should be within slippage of borrow amount");
-
         assertEq(_stakedLpBalance(), 0);
-        assertEq(_marketPosition(address(position)).collateralAssets, 0);
-        assertEq(_marketPosition(address(position)).borrowShares, 0);
-        assertEq(IERC20(DUSD_MAINNET).balanceOf(address(position)), 0);
-        assertEq(IERC20(FRXUSD_MAINNET).balanceOf(address(position)), 0);
-        assertEq(IERC20(WETH_MAINNET).balanceOf(user), userWethBefore);
-
-        _assertRemovePositionLogged(MintCurveConvexRemoveMode.NORMAL, stakedLp, 0, 0);
+        assertEq(_marketPosition(address(position)).borrowShares, before.borrowShares, "debt unchanged");
+        assertEq(_marketPosition(address(position)).collateralAssets, before.collateralAssets, "collateral unchanged");
+        assertEq(IERC20(DUSD_MAINNET).balanceOf(address(position)), 0, "no residual dusd");
+        assertApproxEqRel(dusdReceived, stakedLp, 0.005e18, "one-sided round-trip within 0.5% of staked LP");
     }
 
-    function test_Remove_EmergencyUnwindLp_UnwindsLpWithoutChangingMarketPosition() public {
-        Position memory marketPositionBefore = _marketPosition(address(position));
-
-        uint256 userDusdBefore = IERC20(DUSD_MAINNET).balanceOf(user);
-        uint256 userFrxBefore = IERC20(FRXUSD_MAINNET).balanceOf(user);
-
-        MintCurveConvexRemoveParams memory params = _removeParams(
-            MintCurveConvexRemoveMode.EMERGENCY_UNWIND_LP, // mode
-            stakedLp, // convexLpAmount
-            0, // frxUsdAmountToSwap
-            0, // repayShares
-            0, // collateralAmountToWithdraw
-            false, // claimRewards
-            "", // swapData
-            0 // expectedDusdFromFrxSwap
-        );
-
-        vm.recordLogs();
-        vm.prank(user);
-        position.remove(_encodeRemove(params));
-
-        uint256 frxReceived = IERC20(FRXUSD_MAINNET).balanceOf(user) - userFrxBefore;
-        uint256 dusdReceived = IERC20(DUSD_MAINNET).balanceOf(user) - userDusdBefore;
-
-        assertGt(
-            dusdReceived + frxReceived,
-            _applySlippage(BORROW_ASSETS),
-            "frxUSD + dusd received should be near to what was borrowed earlier"
-        );
-
-        assertEq(_stakedLpBalance(), 0);
-        assertEq(_marketPosition(address(position)).collateralAssets, marketPositionBefore.collateralAssets);
-        assertEq(_marketPosition(address(position)).borrowShares, marketPositionBefore.borrowShares);
-        assertEq(IERC20(DUSD_MAINNET).balanceOf(address(position)), 0);
-        assertEq(IERC20(FRXUSD_MAINNET).balanceOf(address(position)), 0);
-
-        _assertRemovePositionLogged(MintCurveConvexRemoveMode.EMERGENCY_UNWIND_LP, stakedLp, 0, 0);
-    }
-
-    function test_Remove_Normal_UnwindsHalfLpWithoutRepayOrCollateralChange() public {
+    function test_WithdrawFromLpAndRepay_PartialLpUnwind() public {
         uint256 partialLp = stakedLp / 2;
-        assertGt(partialLp, 0);
-        assertLt(partialLp, stakedLp);
-
-        Position memory marketPositionBefore = _marketPosition(address(position));
+        Position memory before = _marketPosition(address(position));
         uint256 userDusdBefore = IERC20(DUSD_MAINNET).balanceOf(user);
-        uint256 userFrxBefore = IERC20(FRXUSD_MAINNET).balanceOf(user);
-        uint256 userWethBefore = IERC20(WETH_MAINNET).balanceOf(user);
 
-        MintCurveConvexRemoveParams memory params = _removeParams(
-            MintCurveConvexRemoveMode.NORMAL, // mode
-            partialLp, // convexLpAmount
-            0, // frxUsdAmountToSwap
-            0, // repayShares
-            0, // collateralAmountToWithdraw
-            false, // claimRewards
-            "", // swapData
-            0 // expectedDusdFromFrxSwap
-        );
-
-        vm.recordLogs();
         vm.prank(user);
-        position.remove(_encodeRemove(params));
+        position.withdrawFromLpAndRepay(partialLp, 0, 0, false);
 
-        uint256 frxReceived = IERC20(FRXUSD_MAINNET).balanceOf(user) - userFrxBefore;
         uint256 dusdReceived = IERC20(DUSD_MAINNET).balanceOf(user) - userDusdBefore;
-        uint256 expectedDusdFromLp = _estimateDusdFromLpRemove(partialLp);
 
         assertEq(_stakedLpBalance(), stakedLp - partialLp);
-        assertEq(_marketPosition(address(position)).collateralAssets, marketPositionBefore.collateralAssets);
-        assertEq(_marketPosition(address(position)).borrowShares, marketPositionBefore.borrowShares);
+        assertEq(_marketPosition(address(position)).borrowShares, before.borrowShares);
         assertEq(IERC20(DUSD_MAINNET).balanceOf(address(position)), 0);
-        assertEq(IERC20(FRXUSD_MAINNET).balanceOf(address(position)), 0);
-        assertEq(IERC20(WETH_MAINNET).balanceOf(user), userWethBefore);
-        assertGt(frxReceived, 0);
-        assertGe(dusdReceived, expectedDusdFromLp);
-
-        uint256 lpSideRecovered = dusdReceived + frxReceived;
-        uint256 halfBorrowAssets = BORROW_ASSETS / 2;
-        assertGe(
-            lpSideRecovered,
-            _applySlippage(halfBorrowAssets),
-            "partial unwind should recover within slippage of half the borrow leg"
-        );
-        assertLe(
-            lpSideRecovered,
-            _addSlippage(halfBorrowAssets),
-            "partial unwind should recover within slippage of half the borrow leg"
-        );
-
-        _assertRemovePositionLogged(MintCurveConvexRemoveMode.NORMAL, partialLp, 0, 0);
+        assertGe(dusdReceived, _applySlippage(BORROW_ASSETS / 2));
+        assertLe(dusdReceived, _addSlippage(BORROW_ASSETS / 2));
     }
 
-    function test_Remove_Normal_AfterPartialLiquidation_RepaysHalfDebtAndUnwindsLp() public {
-        Position memory marketPositionAfterLiquidation = _partialLiquidatePositionState();
-
-        uint256 repayShares = marketPositionAfterLiquidation.borrowShares / 2;
+    function test_WithdrawFromLpAndRepay_UnwindsLpAndRepaysPartialDebt() public {
+        Position memory before = _marketPosition(address(position));
+        uint256 repayShares = before.borrowShares / 2;
         assertGt(repayShares, 0);
 
         uint256 userDusdBefore = IERC20(DUSD_MAINNET).balanceOf(user);
-        uint256 userFrxBefore = IERC20(FRXUSD_MAINNET).balanceOf(user);
-
-        MintCurveConvexRemoveParams memory params = _removeParams(
-            MintCurveConvexRemoveMode.NORMAL, // mode
-            stakedLp, // convexLpAmount
-            FRX_SWAP_AMOUNT, // frxUsdAmountToSwap
-            repayShares, // repayShares
-            0, // collateralAmountToWithdraw
-            false, // claimRewards
-            frxUsdToDusdSwapData, // swapData
-            expectedDusdFromFrxSwap // expectedDusdFromFrxSwap
-        );
-
-        vm.prank(user);
-        position.remove(_encodeRemove(params));
-
-        assertEq(_stakedLpBalance(), 0);
-        assertEq(
-            _marketPosition(address(position)).borrowShares, marketPositionAfterLiquidation.borrowShares - repayShares
-        );
-        assertEq(_marketPosition(address(position)).collateralAssets, marketPositionAfterLiquidation.collateralAssets);
-        assertGt(IERC20(DUSD_MAINNET).balanceOf(user), userDusdBefore);
-        assertGt(IERC20(FRXUSD_MAINNET).balanceOf(user), userFrxBefore);
-    }
-
-    function test_Remove_Normal_AfterPartialLiquidation_ClosesRemainingDebtAndWithdrawsAllCollateral() public {
-        Position memory marketPositionAfterLiquidation = _partialLiquidatePositionState();
-        uint256 repayShares = marketPositionAfterLiquidation.borrowShares;
-        uint256 collateralWithdraw = marketPositionAfterLiquidation.collateralAssets;
-
-        uint256 userWethBefore = IERC20(WETH_MAINNET).balanceOf(user);
-
-        MintCurveConvexRemoveParams memory params = _removeParams(
-            MintCurveConvexRemoveMode.NORMAL, // mode
-            stakedLp, // convexLpAmount
-            FRX_SWAP_AMOUNT, // frxUsdAmountToSwap
-            repayShares, // repayShares
-            collateralWithdraw, // collateralAmountToWithdraw
-            false, // claimRewards
-            frxUsdToDusdSwapData, // swapData
-            expectedDusdFromFrxSwap // expectedDusdFromFrxSwap
-        );
 
         vm.recordLogs();
+        vm.expectEmit(true, false, false, false, address(position));
+        emit IMintCurveConvexPositionEvents.Repaid(user, repayShares, 0);
+
         vm.prank(user);
-        position.remove(_encodeRemove(params));
+        position.withdrawFromLpAndRepay(stakedLp, 0, repayShares, false);
 
         assertEq(_stakedLpBalance(), 0);
-        assertEq(_marketPosition(address(position)).collateralAssets, 0);
-        assertEq(_marketPosition(address(position)).borrowShares, 0);
-        assertEq(IERC20(WETH_MAINNET).balanceOf(user), userWethBefore + collateralWithdraw);
-
-        _assertRemovePositionLogged(MintCurveConvexRemoveMode.NORMAL, stakedLp, collateralWithdraw, repayShares);
+        assertEq(_marketPosition(address(position)).borrowShares, before.borrowShares - repayShares);
+        assertEq(_marketPosition(address(position)).collateralAssets, before.collateralAssets);
+        assertEq(IERC20(DUSD_MAINNET).balanceOf(address(position)), 0, "leftover dusd swept out");
+        // LP unwind (~full borrow) covers the half repay and leaves the remainder for the owner.
+        assertGt(IERC20(DUSD_MAINNET).balanceOf(user), userDusdBefore, "surplus dusd returned to owner");
     }
 
-    function test_Remove_Normal_AfterPartialLiquidation_RepaysAllDebtAndWithdrawsHalfCollateral() public {
-        Position memory marketPositionAfterLiquidation = _partialLiquidatePositionState();
-        uint256 repayShares = marketPositionAfterLiquidation.borrowShares;
-        uint256 collateralWithdraw = uint256(marketPositionAfterLiquidation.collateralAssets) / 2;
-        assertGt(collateralWithdraw, 0);
+    function test_WithdrawFromLpAndRepay_UnwindsLpAndRepaysAllDebtWithOwnerTopUp() public {
+        Position memory before = _marketPosition(address(position));
+        uint256 repayShares = before.borrowShares;
+        uint256 repayAssets = _borrowAssetsForShares(repayShares);
 
-        uint256 userWethBefore = IERC20(WETH_MAINNET).balanceOf(user);
+        // Fund a buffer so any shortfall between the one-sided LP proceeds and the debt is pulled from the owner.
+        _fundUserDusd(repayAssets);
+        uint256 userDusdBefore = IERC20(DUSD_MAINNET).balanceOf(user);
 
-        MintCurveConvexRemoveParams memory params = _removeParams(
-            MintCurveConvexRemoveMode.NORMAL, // mode
-            stakedLp, // convexLpAmount
-            FRX_SWAP_AMOUNT, // frxUsdAmountToSwap
-            repayShares, // repayShares
-            collateralWithdraw, // collateralAmountToWithdraw
-            false, // claimRewards
-            frxUsdToDusdSwapData, // swapData
-            expectedDusdFromFrxSwap // expectedDusdFromFrxSwap
-        );
-
-        vm.recordLogs();
         vm.prank(user);
-        position.remove(_encodeRemove(params));
+        position.withdrawFromLpAndRepay(stakedLp, 0, repayShares, false);
 
         assertEq(_stakedLpBalance(), 0);
-        assertEq(_marketPosition(address(position)).borrowShares, 0);
-        assertEq(
-            _marketPosition(address(position)).collateralAssets,
-            marketPositionAfterLiquidation.collateralAssets - uint128(collateralWithdraw)
-        );
-        assertEq(IERC20(WETH_MAINNET).balanceOf(user), userWethBefore + collateralWithdraw);
-
-        _assertRemovePositionLogged(MintCurveConvexRemoveMode.NORMAL, stakedLp, collateralWithdraw, repayShares);
+        assertEq(_marketPosition(address(position)).borrowShares, 0, "debt fully repaid");
+        assertEq(IERC20(DUSD_MAINNET).balanceOf(address(position)), 0);
+        assertLt(IERC20(DUSD_MAINNET).balanceOf(user), userDusdBefore, "shortfall pulled from owner");
     }
 
-    function test_Remove_EmergencyUnwindLp_AfterFullLiquidation_RecoversBorrowLegProceeds() public {
-        Position memory marketPositionBefore = _marketPosition(address(position));
-        assertGt(marketPositionBefore.collateralAssets, 0);
-        assertGt(marketPositionBefore.borrowShares, 0);
+    function test_WithdrawFromLpAndRepay_RepayOnlyThenFullLpWithdraw_RoundTripsDusdWithOwner() public {
+        uint256 repayShares = _marketPosition(address(position)).borrowShares;
+        uint256 repayAssets = _borrowAssetsForShares(repayShares);
 
+        // Fund the owner so the full debt can be repaid without any LP unwind.
+        _fundUserDusd(repayAssets + 1 ether);
+        uint256 userDusdBeforeRepay = IERC20(DUSD_MAINNET).balanceOf(user);
+
+        // First tx: no LP withdrawal, repay the full debt -> DUSD is pulled from the owner.
+        vm.prank(user);
+        position.withdrawFromLpAndRepay(0, 0, repayShares, false);
+
+        uint256 userDusdAfterRepay = IERC20(DUSD_MAINNET).balanceOf(user);
+        assertEq(_marketPosition(address(position)).borrowShares, 0, "debt fully repaid");
+        assertEq(_stakedLpBalance(), stakedLp, "LP stake untouched by repay-only tx");
+        assertLt(userDusdAfterRepay, userDusdBeforeRepay, "dusd taken from owner to repay");
+
+        // Second tx: withdraw the full staked LP with no repay -> proceeds are swept back to the owner.
+        vm.prank(user);
+        position.withdrawFromLpAndRepay(stakedLp, 0, 0, false);
+
+        assertEq(_stakedLpBalance(), 0, "full lp unwound");
+        assertGt(IERC20(DUSD_MAINNET).balanceOf(user), userDusdAfterRepay, "dusd added back to owner from lp proceeds");
+        assertEq(IERC20(DUSD_MAINNET).balanceOf(address(position)), 0, "no residual dusd");
+    }
+
+    function test_WithdrawFromLpAndRepay_ClaimRewardsTrueTransfersCrvCvxToOwner() public {
+        _advanceChainForRewards();
+
+        uint256 userCrvBefore = IERC20(CRV_TOKEN_MAINNET).balanceOf(user);
+        uint256 userCvxBefore = IERC20(CVX_TOKEN_MAINNET).balanceOf(user);
+
+        vm.expectEmit(false, false, false, false, address(position));
+        emit IMintCurveConvexPositionEvents.RewardsClaimed(0, 0);
+
+        vm.prank(user);
+        position.withdrawFromLpAndRepay(stakedLp / 2, 0, 0, true);
+
+        assertGt(_stakedLpBalance(), 0);
+        assertGt(IERC20(CRV_TOKEN_MAINNET).balanceOf(user), userCrvBefore, "crv rewards claimed to owner");
+        assertGt(IERC20(CVX_TOKEN_MAINNET).balanceOf(user), userCvxBefore, "cvx rewards claimed to owner");
+        assertEq(IERC20(CRV_TOKEN_MAINNET).balanceOf(address(position)), 0);
+        assertEq(IERC20(CVX_TOKEN_MAINNET).balanceOf(address(position)), 0);
+    }
+
+    function test_WithdrawFromLpAndRepay_AfterGovernanceLiquidation_UnwindsResidualLp() public {
         _governanceLiquidatePosition(address(position));
 
-        Position memory marketPositionAfterLiquidation = _marketPosition(address(position));
-        assertEq(marketPositionAfterLiquidation.collateralAssets, 0);
-        assertEq(marketPositionAfterLiquidation.borrowShares, 0);
-        assertGt(_stakedLpBalance(), 0);
+        Position memory afterLiq = _marketPosition(address(position));
+        assertEq(afterLiq.collateralAssets, 0);
+        assertEq(afterLiq.borrowShares, 0);
+        assertGt(_stakedLpBalance(), 0, "LP survives market liquidation");
 
         uint256 userDusdBefore = IERC20(DUSD_MAINNET).balanceOf(user);
-        uint256 userFrxBefore = IERC20(FRXUSD_MAINNET).balanceOf(user);
-
-        MintCurveConvexRemoveParams memory params = _removeParams(
-            MintCurveConvexRemoveMode.EMERGENCY_UNWIND_LP, // mode
-            stakedLp, // convexLpAmount
-            0, // frxUsdAmountToSwap
-            0, // repayShares
-            0, // collateralAmountToWithdraw
-            false, // claimRewards
-            frxUsdToDusdSwapData, // swapData
-            expectedDusdFromFrxSwap // expectedDusdFromFrxSwap
-        );
 
         vm.prank(user);
-        position.remove(_encodeRemove(params));
+        position.withdrawFromLpAndRepay(stakedLp, 0, 0, false);
 
-        uint256 frxReceived = IERC20(FRXUSD_MAINNET).balanceOf(user) - userFrxBefore;
-        uint256 dusdReceived = IERC20(DUSD_MAINNET).balanceOf(user) - userDusdBefore;
-
-        assertGt(
-            frxReceived + dusdReceived,
-            _applySlippage(BORROW_ASSETS),
-            "frxUSD + dusd received should be near to what was borrowed earlier"
-        );
         assertEq(_stakedLpBalance(), 0);
-        assertEq(_marketPosition(address(position)).collateralAssets, 0);
-        assertEq(_marketPosition(address(position)).borrowShares, 0);
+        assertGt(IERC20(DUSD_MAINNET).balanceOf(user), userDusdBefore, "residual LP recovered to owner");
+        assertEq(IERC20(DUSD_MAINNET).balanceOf(address(position)), 0);
     }
 
-    function _partialLiquidatePositionState() internal returns (Position memory marketPositionAfterLiquidation) {
-        Position memory marketPositionBefore = _marketPosition(address(position));
+    function test_Repay_PullsDusdFromOwnerAndReducesDebt() public {
+        Position memory before = _marketPosition(address(position));
+        uint256 repayShares = before.borrowShares / 2;
+        assertGt(repayShares, 0);
 
-        _makePositionLiquidatable();
-        (uint256 seizedCollateral, uint256 repaidBorrow) = _partialLiquidatePosition(address(position));
-        assertGt(seizedCollateral, 0);
-        assertGt(repaidBorrow, 0);
+        uint256 repayAssets = _borrowAssetsForShares(repayShares);
+        _fundUserDusd(repayAssets + 1 ether);
+        uint256 userDusdBefore = IERC20(DUSD_MAINNET).balanceOf(user);
 
-        marketPositionAfterLiquidation = _marketPosition(address(position));
-        assertLt(marketPositionAfterLiquidation.collateralAssets, marketPositionBefore.collateralAssets);
-        assertLt(marketPositionAfterLiquidation.borrowShares, marketPositionBefore.borrowShares);
-        assertGt(marketPositionAfterLiquidation.collateralAssets, 0, "partial liquidation should leave collateral");
-        assertGt(marketPositionAfterLiquidation.borrowShares, 0, "partial liquidation should leave debt");
-        assertGt(_stakedLpBalance(), 0);
-    }
+        vm.expectEmit(true, false, false, false, address(position));
+        emit IMintCurveConvexPositionEvents.Repaid(user, repayShares, 0);
 
-    function _openFullPosition() internal returns (uint256 lpStaked) {
-        _fundUserWeth(COLLATERAL_WETH);
         vm.prank(user);
-        position.add(_encodeAdd(_addParams(COLLATERAL_WETH, BORROW_ASSETS, dusdToFrxUsdSwapData, true)));
-        lpStaked = _stakedLpBalance();
-        assertGt(lpStaked, 0);
+        position.repay(repayShares);
+
+        assertEq(_marketPosition(address(position)).borrowShares, before.borrowShares - repayShares);
+        assertEq(_stakedLpBalance(), stakedLp, "repay does not touch the LP stake");
+        assertLt(IERC20(DUSD_MAINNET).balanceOf(user), userDusdBefore, "dusd pulled from owner");
+        assertEq(IERC20(DUSD_MAINNET).balanceOf(address(position)), 0);
     }
 
-    function _assertRemovePositionLogged(
-        MintCurveConvexRemoveMode expectedMode,
-        uint256 expectedConvexLpRemoved,
-        uint256 expectedCollateralWithdrawn,
-        uint256 expectedDebtSharesRepaid
-    ) internal {
-        Vm.Log[] memory logs = vm.getRecordedLogs();
-        bool found;
-        for (uint256 i = 0; i < logs.length; i++) {
-            if (logs[i].topics[0] == IMintCurveConvexPositionEvents.RemovePosition.selector) {
-                (
-                    MintCurveConvexRemoveMode mode,
-                    uint256 convexLpRemoved,
-                    uint256 collateralWithdrawn,
-                    uint256 debtSharesRepaid
-                ) = abi.decode(logs[i].data, (MintCurveConvexRemoveMode, uint256, uint256, uint256));
-                assertEq(uint256(mode), uint256(expectedMode));
-                assertEq(convexLpRemoved, expectedConvexLpRemoved);
-                assertEq(collateralWithdrawn, expectedCollateralWithdrawn);
-                assertEq(debtSharesRepaid, expectedDebtSharesRepaid);
-                found = true;
-            }
-        }
-        assertTrue(found);
+    function test_Repay_RepaysAllDebt() public {
+        uint256 repayShares = _marketPosition(address(position)).borrowShares;
+        uint256 repayAssets = _borrowAssetsForShares(repayShares);
+        _fundUserDusd(repayAssets + 1 ether);
+
+        vm.prank(user);
+        position.repay(repayShares);
+
+        assertEq(_marketPosition(address(position)).borrowShares, 0, "debt fully repaid");
+        assertEq(_stakedLpBalance(), stakedLp);
+    }
+
+    function _advanceChainForRewards() internal {
+        vm.roll(block.number + REWARD_ACCRUAL_BLOCKS);
+        vm.warp(block.timestamp + REWARD_ACCRUAL_PERIOD);
     }
 }

@@ -1,0 +1,18 @@
+MintCurveConvexPosition::removeCollateral(uint256)
+├── given caller is not owner and not authorized spender
+│   └── it should revert with MintCurveConvexPositionUnauthorized
+└── given caller is owner or authorized spender
+    ├── when amount is zero
+    │   └── it should revert with MintCurveConvexPositionInvalidInput
+    └── when amount is greater than zero
+        ├── given amount exceeds the position's collateral in the market
+        │   └── it should revert due to arithmetic underflow
+        ├── given the withdrawal would leave the position insolvent
+        │   └── it should revert with AltoBaseMarketInsufficientUserCollateral
+        └── given the position stays solvent after the withdrawal
+            ├── given caller is the owner
+            │   ├── it should withdraw amount of collateral from the mint market to the owner
+            │   └── it should emit CollateralRemoved
+            └── given caller is an authorized spender
+                ├── it should withdraw amount of collateral from the mint market to the owner
+                └── it should emit CollateralRemoved

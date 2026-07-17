@@ -14,6 +14,9 @@ interface IConvexBooster {
 /// @title IConvexRewardPool
 /// @notice Minimal Convex reward pool interface for LP withdrawal.
 interface IConvexRewardPool {
+    // @notice the Convex pool id this reward pool corresponds to
+    function pid() external view returns (uint256);
+
     // @notice get the balance of the account
     function balanceOf(address account) external view returns (uint256);
 

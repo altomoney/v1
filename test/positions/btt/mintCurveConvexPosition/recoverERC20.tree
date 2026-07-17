@@ -1,0 +1,14 @@
+MintCurveConvexPosition::recoverERC20(address,uint256)
+├── given caller is not owner and not authorized spender
+│   └── it should revert with MintCurveConvexPositionUnauthorized
+└── given caller is owner or authorized spender
+    ├── when caller is authorized spender and not owner
+    │   └── it should succeed and transfer tokens to owner
+    ├── when token address is zero
+    │   └── it should revert with MintCurveConvexPositionInvalidInput
+    ├── when amount is zero
+    │   └── it should revert with MintCurveConvexPositionInvalidInput
+    ├── given amount exceeds the position token balance
+    │   └── it should revert with ERC20InsufficientBalance
+    └── given the position holds at least amount
+        └── it should transfer amount to owner
