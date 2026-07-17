@@ -13,6 +13,7 @@ contract MockConvexRewardPool is IConvexRewardPool {
     IERC20 public lpToken;
     IERC20 public crv;
     IERC20 public cvx;
+    uint256 public pid;
 
     uint256 public withdrawCallCount;
     uint256 public claimRewardsCallCount;
@@ -21,10 +22,11 @@ contract MockConvexRewardPool is IConvexRewardPool {
 
     mapping(address => uint256) internal stakedBalance;
 
-    constructor(address lpToken_, address crv_, address cvx_) {
+    constructor(address lpToken_, address crv_, address cvx_, uint256 pid_) {
         lpToken = IERC20(lpToken_);
         crv = IERC20(crv_);
         cvx = IERC20(cvx_);
+        pid = pid_;
     }
 
     function stake(address account, uint256 amount) external {

@@ -2,13 +2,12 @@
 pragma solidity ^0.8.28;
 
 import {Test} from "forge-std/Test.sol";
-import {PositionFactory} from "@alto/positions/PositionFactory.sol";
+import {MintCurveConvexPositionFactory} from "@alto/positions/MintCurveConvexPositionFactory.sol";
 import {PositionBeacon} from "@alto/positions/PositionBeacon.sol";
 import {MintCurveConvexPosition} from "@alto/positions/MintCurveConvexPosition.sol";
-import {PositionType} from "@alto/positions/interfaces/IPosition.sol";
-import {MintCurveConvexConfig} from "@alto/positions/interfaces/IPositionFactory.sol";
+import {MintCurveConvexConfig} from "@alto/positions/interfaces/IMintCurveConvexPositionFactory.sol";
 import {MarketRegistry} from "@alto/utils/MarketRegistry.sol";
-import {PositionFactoryUpgraded} from "./implementation/PositionFactoryUpgraded.sol";
+import {MintCurveConvexPositionFactoryUpgraded} from "./implementation/MintCurveConvexPositionFactoryUpgraded.sol";
 import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {UnsafeUpgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {MockCurvePool} from "../btt/mocks/MockCurvePool.sol";
@@ -20,22 +19,21 @@ abstract contract PositionsProxyCommon is Test {
     address internal immutable OTHER_USER = makeAddr("OtherUser");
     address internal immutable MINT_MARKET = makeAddr("MintMarket");
 
-    address internal immutable FRX_USD = makeAddr("FrxUsd");
+    address internal immutable PAIR_TOKEN = makeAddr("PairToken");
     address internal immutable DUSD = makeAddr("Dusd");
     MockCurvePool internal curvePool;
     address internal immutable CONVEX_BOOSTER = makeAddr("ConvexBooster");
     address internal immutable CONVEX_REWARD_POOL = makeAddr("ConvexRewardPool");
     address internal immutable CRV = makeAddr("Crv");
     address internal immutable CVX = makeAddr("Cvx");
-    address internal immutable SWAP_TARGET = makeAddr("SwapTarget");
 
     MarketRegistry internal registry;
-    PositionFactory internal factory;
+    MintCurveConvexPositionFactory internal factory;
     MintCurveConvexPosition internal positionImplementation;
     PositionBeacon internal positionBeacon;
 
     function setUp() public virtual {
-        curvePool = new MockCurvePool(DUSD, FRX_USD);
+        curvePool = new MockCurvePool(DUSD, PAIR_TOKEN);
 
         registry = new MarketRegistry(OWNER);
 
@@ -43,22 +41,26 @@ abstract contract PositionsProxyCommon is Test {
         registry.addMintMarket(MINT_MARKET);
         vm.stopPrank();
 
+        // Positions read borrowToken() from the market at initialization; DUSD is coin0 of the pool.
+        vm.mockCall(MINT_MARKET, abi.encodeWithSignature("borrowToken()"), abi.encode(DUSD));
+
+        // Config validation checks the reward pool's pid matches convexPid (1).
+        vm.mockCall(CONVEX_REWARD_POOL, abi.encodeWithSignature("pid()"), abi.encode(uint256(1)));
+
         factory = _deployInitializedFactory();
         positionImplementation = new MintCurveConvexPosition();
         positionBeacon = new PositionBeacon(address(positionImplementation), OWNER);
 
         vm.startPrank(OWNER);
-        factory.setBeacon(PositionType.MINT_CURVE_CONVEX, address(positionBeacon));
-        factory.setMintCurveConvexConfig(_validConfig());
-        factory.setApprovedSwapTarget(SWAP_TARGET, true);
+        factory.setBeacon(address(positionBeacon));
         vm.stopPrank();
     }
 
-    function _deployInitializedFactory() internal returns (PositionFactory) {
-        PositionFactory deployed = PositionFactory(
-            UnsafeUpgrades.deployUUPSProxy(address(new PositionFactory()), "")
+    function _deployInitializedFactory() internal returns (MintCurveConvexPositionFactory) {
+        MintCurveConvexPositionFactory deployed = MintCurveConvexPositionFactory(
+            UnsafeUpgrades.deployUUPSProxy(address(new MintCurveConvexPositionFactory()), "")
         );
-        deployed.initialize(OWNER, address(registry));
+        deployed.initialize(OWNER, address(registry), _validConfig());
         return deployed;
     }
 
@@ -69,24 +71,25 @@ abstract contract PositionsProxyCommon is Test {
     function _upgradeFactoryProxy(bytes memory data) internal {
         vm.startPrank(OWNER);
         if (_shouldUseSafeProxy()) {
-            Upgrades.upgradeProxy(address(factory), "PositionFactoryUpgraded.sol", data);
+            Upgrades.upgradeProxy(address(factory), "MintCurveConvexPositionFactoryUpgraded.sol", data);
         } else {
-            UnsafeUpgrades.upgradeProxy(address(factory), address(new PositionFactoryUpgraded()), data);
+            UnsafeUpgrades.upgradeProxy(address(factory), address(new MintCurveConvexPositionFactoryUpgraded()), data);
         }
         vm.stopPrank();
     }
 
-    function upgradeFactoryProxyExternal(address proxy, string memory contractName, bytes memory data) external {
+    /// @dev Pranks inside this frame so the underlying `upgradeToAndCall` originates with `caller` as msg.sender
+    ///      (a plain vm.prank at the test level would not propagate into the OZ upgrade call).
+    function upgradeFactoryProxyExternal(address caller, address proxy, string memory contractName, bytes memory data)
+        external
+    {
+        vm.startPrank(caller);
         Upgrades.upgradeProxy(proxy, contractName, data);
-    }
-
-    function upgradeFactoryProxyExternalUnsafe(address proxy, address newImpl, bytes memory data) external {
-        UnsafeUpgrades.upgradeProxy(proxy, newImpl, data);
+        vm.stopPrank();
     }
 
     function _validConfig() internal view returns (MintCurveConvexConfig memory config) {
         config = MintCurveConvexConfig({
-            frxUsd: FRX_USD,
             curvePool: address(curvePool),
             convexBooster: CONVEX_BOOSTER,
             convexRewardPool: CONVEX_REWARD_POOL,
@@ -98,29 +101,27 @@ abstract contract PositionsProxyCommon is Test {
 
     function _createPosition(address owner) internal returns (address position) {
         vm.prank(owner);
-        position = factory.createPosition(PositionType.MINT_CURVE_CONVEX, abi.encode(MINT_MARKET));
+        position = factory.createPosition(MINT_MARKET);
     }
 
     function _factoryConfigSnapshot()
         internal
         view
-        returns (MintCurveConvexConfig memory config, address marketRegistry, address beaconAddr, bool swapApproved)
+        returns (MintCurveConvexConfig memory config, address marketRegistry, address beaconAddr)
     {
         marketRegistry = factory.marketRegistry();
-        beaconAddr = factory.beacon(PositionType.MINT_CURVE_CONVEX);
-        swapApproved = factory.approvedSwapTarget(SWAP_TARGET);
+        beaconAddr = factory.beacon();
         config = _readFactoryConfig();
     }
 
     function _readFactoryConfig() internal view returns (MintCurveConvexConfig memory config) {
         (
-            config.frxUsd,
             config.curvePool,
             config.convexBooster,
             config.convexRewardPool,
             config.convexPid,
             config.crv,
             config.cvx
-        ) = factory.mintCurveConvexConfig();
+        ) = factory.config();
     }
 }

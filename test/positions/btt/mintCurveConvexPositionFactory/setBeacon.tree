@@ -1,0 +1,11 @@
+MintCurveConvexPositionFactory::setBeacon(address)
+├── given caller is not owner
+│   └── it should revert with OwnableUnauthorizedAccount
+└── given caller is owner
+    ├── when _beacon is zero address
+    │   └── it should revert with MintCurveConvexPositionFactoryZeroAddress
+    ├── given beacon is already set
+    │   └── it should revert with MintCurveConvexPositionFactoryBeaconAlreadySet
+    └── given beacon is not set
+        ├── it should set beacon
+        └── it should emit BeaconSet

@@ -1,11 +1,22 @@
-MintCurveConvexPosition::initialize(address,address,address)
+MintCurveConvexPosition::initialize(address,address,address,MintCurveConvexConfig)
 ├── when _factory is zero address
 │   └── it should revert with MintCurveConvexPositionInvalidInput
 ├── when _market is zero address
 │   └── it should revert with MintCurveConvexPositionInvalidInput
-└── when _factory and _market are valid
+├── when _owner is zero address
+│   └── it should revert with OwnableInvalidOwner
+├── when borrow token is not a coin in the configured Curve pool
+│   └── it should revert with MintCurveConvexPositionInvalidInput
+└── when _owner, _factory and _market are valid
     ├── it should set factory to _factory
     ├── it should set market to _market
     ├── it should set owner to _owner
+    ├── it should snapshot config on the position
+    ├── it should set borrowToken to market.borrowToken()
+    ├── given borrow token is coin0 of the Curve pool
+    │   └── it should set indexOfBorrowTokenInPool to 0
+    ├── given borrow token is coin1 of the Curve pool
+    │   └── it should set indexOfBorrowTokenInPool to 1
+    ├── it should emit OwnershipTransferred
     ├── it should initialize AuthUpgradeable for the position
     └── it should not allow re-initialization

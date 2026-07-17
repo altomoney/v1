@@ -12,6 +12,7 @@ contract MockCurvePool is ICurveStablePool, ERC20MockMintable {
     using SafeERC20 for IERC20;
 
     error MockCurvePoolMinLpNotMet(uint256 minMintAmount, uint256 lpMinted);
+    error MockCurvePoolMinReceivedNotMet(uint256 minReceived, uint256 received);
 
     IERC20 public immutable token0;
     IERC20 public immutable token1;
@@ -20,10 +21,16 @@ contract MockCurvePool is ICurveStablePool, ERC20MockMintable {
     uint256 public removeLiquidityCallCount;
     uint256 public lastLpMinted;
     uint256 public lastLpRemoved;
+    uint256 public lastAmount0;
+    uint256 public lastAmount1;
+    int128 public lastRemoveIndex;
 
     /// @notice When enabled, `add_liquidity` returns `lpMintOverride` instead of the deposited sum.
     uint256 public lpMintOverride;
     bool public useLpMintOverride;
+    /// @notice When enabled, `remove_liquidity_one_coin` returns `oneCoinOutputOverride` instead of the burnt amount.
+    uint256 public oneCoinOutputOverride;
+    bool public useOneCoinOutputOverride;
     uint256 public nCoins = 2;
 
     constructor(address token0_, address token1_) ERC20MockMintable("Curve LP", "cLP") {
@@ -34,6 +41,11 @@ contract MockCurvePool is ICurveStablePool, ERC20MockMintable {
     function setLpMintOverride(uint256 lpMintOverride_, bool enabled_) external {
         lpMintOverride = lpMintOverride_;
         useLpMintOverride = enabled_;
+    }
+
+    function setOneCoinOutputOverride(uint256 oneCoinOutputOverride_, bool enabled_) external {
+        oneCoinOutputOverride = oneCoinOutputOverride_;
+        useOneCoinOutputOverride = enabled_;
     }
 
     function setNCoins(uint256 nCoins_) external {
@@ -48,12 +60,11 @@ contract MockCurvePool is ICurveStablePool, ERC20MockMintable {
         return nCoins;
     }
 
-    function add_liquidity(uint256[] calldata amounts, uint256 minMintAmount, address receiver)
-        external
-        returns (uint256)
-    {
+    function add_liquidity(uint256[] calldata amounts, uint256 minMintAmount) external returns (uint256) {
         require(amounts.length == 2, "MockCurvePool: invalid amounts length");
         addLiquidityCallCount++;
+        lastAmount0 = amounts[0];
+        lastAmount1 = amounts[1];
         if (amounts[0] > 0) token0.safeTransferFrom(msg.sender, address(this), amounts[0]);
         if (amounts[1] > 0) token1.safeTransferFrom(msg.sender, address(this), amounts[1]);
 
@@ -61,23 +72,23 @@ contract MockCurvePool is ICurveStablePool, ERC20MockMintable {
         if (lpMinted < minMintAmount) revert MockCurvePoolMinLpNotMet(minMintAmount, lpMinted);
 
         lastLpMinted = lpMinted;
-        _mint(receiver, lpMinted);
+        _mint(msg.sender, lpMinted);
         return lpMinted;
     }
 
-    function remove_liquidity(uint256 amount, uint256[] calldata)
-        external
-        returns (uint256[] memory received)
-    {
+    /// @notice Burns LP and returns a single coin, mirroring Curve's one-sided removal.
+    /// @dev Mints the requested coin 1:1 with the burnt LP unless the output override is enabled.
+    function remove_liquidity_one_coin(uint256 burnAmount, int128 i, uint256 minReceived) external returns (uint256) {
         removeLiquidityCallCount++;
-        lastLpRemoved = amount;
-        _burn(msg.sender, amount);
+        lastLpRemoved = burnAmount;
+        lastRemoveIndex = i;
+        _burn(msg.sender, burnAmount);
 
-        uint256 half = amount / 2;
-        received = new uint256[](2);
-        received[0] = half;
-        received[1] = amount - half;
-        if (received[0] > 0) ERC20MockMintable(address(token0)).mint(msg.sender, received[0]);
-        if (received[1] > 0) ERC20MockMintable(address(token1)).mint(msg.sender, received[1]);
+        uint256 received = useOneCoinOutputOverride ? oneCoinOutputOverride : burnAmount;
+        if (received < minReceived) revert MockCurvePoolMinReceivedNotMet(minReceived, received);
+
+        address coin = i == 0 ? address(token0) : address(token1);
+        if (received > 0) ERC20MockMintable(coin).mint(msg.sender, received);
+        return received;
     }
 }
