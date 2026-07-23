@@ -6,6 +6,10 @@ MintCurveConvexPositionFactory::setBeacon(address)
     │   └── it should revert with MintCurveConvexPositionFactoryZeroAddress
     ├── given beacon is already set
     │   └── it should revert with MintCurveConvexPositionFactoryBeaconAlreadySet
-    └── given beacon is not set
+    ├── when the beacon implementation is the zero address
+    │   └── it should revert with MintCurveConvexPositionFactoryInvalidBeacon
+    ├── when the beacon implementation reports an unexpected version
+    │   └── it should revert with MintCurveConvexPositionFactoryInvalidImplementationVersion
+    └── given beacon is not set and the implementation is valid
         ├── it should set beacon
         └── it should emit BeaconSet

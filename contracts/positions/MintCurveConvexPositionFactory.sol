@@ -3,7 +3,7 @@ pragma solidity ^0.8.28;
 
 import {IMarketRegistry} from "@alto/utils/interfaces/IMarketRegistry.sol";
 import {ICurveStablePool} from "./interfaces/ICurveStablePool.sol";
-import {IConvexRewardPool} from "./interfaces/IConvex.sol";
+import {IConvexBooster, IConvexRewardPool} from "./interfaces/IConvex.sol";
 import {
     IMintCurveConvexPositionFactoryBase,
     IMintCurveConvexPositionFactoryStaticTypes,
@@ -12,6 +12,7 @@ import {
 import {MintCurveConvexPosition} from "./MintCurveConvexPosition.sol";
 
 import {BeaconProxy} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
+import {IBeacon} from "@openzeppelin/contracts/proxy/beacon/IBeacon.sol";
 import {AltoOwnable2StepUpgradeable} from "@alto/utils/AltoOwnable2StepUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
@@ -25,6 +26,9 @@ contract MintCurveConvexPositionFactory is
     AltoOwnable2StepUpgradeable,
     UUPSUpgradeable
 {
+    /// @inheritdoc IMintCurveConvexPositionFactoryBase
+    uint256 public constant EXPECTED_POSITION_VERSION = 1;
+
     /// @inheritdoc IMintCurveConvexPositionFactoryBase
     address public beacon;
 
@@ -59,7 +63,9 @@ contract MintCurveConvexPositionFactory is
         address _marketRegistry,
         MintCurveConvexConfig calldata _config
     ) internal onlyInitializing {
-        if (admin == address(0) || _marketRegistry == address(0)) revert MintCurveConvexPositionFactoryZeroAddress();
+        if (admin == address(0) || _marketRegistry == address(0)) {
+            revert MintCurveConvexPositionFactoryZeroAddress();
+        }
         _validateConfig(_config);
 
         marketRegistry = _marketRegistry;
@@ -77,6 +83,13 @@ contract MintCurveConvexPositionFactory is
     function setBeacon(address _beacon) external onlyOwner {
         if (_beacon == address(0)) revert MintCurveConvexPositionFactoryZeroAddress();
         if (beacon != address(0)) revert MintCurveConvexPositionFactoryBeaconAlreadySet();
+
+        address implementation = IBeacon(_beacon).implementation();
+        if (implementation == address(0)) revert MintCurveConvexPositionFactoryInvalidBeacon();
+        if (MintCurveConvexPosition(implementation).version() != EXPECTED_POSITION_VERSION) {
+            revert MintCurveConvexPositionFactoryInvalidImplementationVersion();
+        }
+
         beacon = _beacon;
         emit BeaconSet(_beacon);
     }
@@ -109,6 +122,13 @@ contract MintCurveConvexPositionFactory is
                 || ICurveStablePool(config.curvePool).N_COINS() != 2
                 || IConvexRewardPool(config.convexRewardPool).pid() != config.convexPid
         ) {
+            revert MintCurveConvexPositionFactoryInvalidConfig();
+        }
+
+        // Bind the booster's on-chain registry entry for this pid to the rest of the config.
+        (address lptoken,,, address crvRewards,, bool shutdown) =
+            IConvexBooster(config.convexBooster).poolInfo(config.convexPid);
+        if (lptoken != config.curvePool || crvRewards != config.convexRewardPool || shutdown) {
             revert MintCurveConvexPositionFactoryInvalidConfig();
         }
     }

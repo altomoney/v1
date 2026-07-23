@@ -11,6 +11,8 @@ MintCurveConvexPosition::withdrawFromLpAndRepay(uint256,uint256,uint256,bool)
     ├── when lpToWithdraw is greater than zero
     │   ├── given the position has fewer staked LP than lpToWithdraw
     │   │   └── it should revert
+    │   ├── when the Convex reward pool withdrawAndUnwrap returns false
+    │   │   └── it should revert with MintCurveConvexPositionWithdrawalFromConvexRewardPoolFailed
     │   ├── when the borrow token received from the Curve removal is less than minBorrowTokenOut
     │   │   └── it should revert
     │   ├── when claimRewards is true

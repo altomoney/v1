@@ -17,6 +17,12 @@ MintCurveConvexPositionFactory::initialize(address,address,MintCurveConvexConfig
 │   └── it should revert with MintCurveConvexPositionFactoryInvalidConfig
 ├── when reward pool pid does not match convexPid
 │   └── it should revert with MintCurveConvexPositionFactoryInvalidConfig
+├── when the booster poolInfo LP token does not match curvePool
+│   └── it should revert with MintCurveConvexPositionFactoryInvalidConfig
+├── when the booster poolInfo reward pool does not match convexRewardPool
+│   └── it should revert with MintCurveConvexPositionFactoryInvalidConfig
+├── when the booster poolInfo reports the pool as shut down
+│   └── it should revert with MintCurveConvexPositionFactoryInvalidConfig
 └── when admin, _marketRegistry and config are valid
     ├── it should set marketRegistry
     ├── it should emit MarketRegistrySet

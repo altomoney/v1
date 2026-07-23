@@ -10,6 +10,18 @@ interface IMintCurveConvexPositionErrors {
 
     /// @notice Thrown when inputs are invalid (e.g. zero amounts, zero addresses).
     error MintCurveConvexPositionInvalidInput();
+
+    /// @notice Thrown when attempting to renounce ownership, which is permanently disabled.
+    error MintCurveConvexPositionRenounceDisabled();
+
+    /// @notice Thrown when staking Curve LP through the Convex booster returns false.
+    error MintCurveConvexPositionStakingFailed();
+
+    /// @notice Thrown when withdrawing/unwrapping staked LP from the Convex reward pool returns false.
+    error MintCurveConvexPositionWithdrawalFromConvexRewardPoolFailed();
+
+    /// @notice Thrown when claiming rewards from the Convex reward pool returns false.
+    error MintCurveConvexPositionClaimingRewardsFailed();
 }
 
 interface IMintCurveConvexPositionEvents {
@@ -43,6 +55,11 @@ interface IMintCurveConvexPositionEvents {
     /// @param crvAmount The amount of CRV transferred to the owner.
     /// @param cvxAmount The amount of CVX transferred to the owner.
     event RewardsClaimed(uint256 crvAmount, uint256 cvxAmount);
+
+    /// @notice Emitted when an ERC20 token is recovered from the position to the owner.
+    /// @param token The recovered token.
+    /// @param amount The amount recovered.
+    event ERC20Recovered(address indexed token, uint256 amount);
 }
 
 /// @title IMintCurveConvexPosition
@@ -82,6 +99,25 @@ interface IMintCurveConvexPosition is IMintCurveConvexPositionErrors, IMintCurve
 
     /// @notice Implementation version, bumped when the implementation in beaconis upgraded.
     function version() external view returns (uint256);
+
+    /// @notice The account nominated to become the next owner via {transferOwnership}.
+    /// @dev Zero when there is no pending transfer.
+    function pendingOwner() external view returns (address);
+
+    /// @notice Nominates `newOwner` as the pending owner; ownership only moves once they call {acceptOwnership}.
+    /// @dev Two-step transfer guards against handing the position (and its collateral/debt) to a mistyped address.
+    ///      Passing the zero address cancels any in-flight transfer. Callable only by the current owner.
+    /// @param newOwner The account nominated to take over ownership.
+    function transferOwnership(address newOwner) external;
+
+    /// @notice Accepts a pending ownership transfer, making the caller the new owner.
+    /// @dev Callable only by the address previously set as `pendingOwner`.
+    function acceptOwnership() external;
+
+    /// @notice Permanently disabled; always reverts with {MintCurveConvexPositionRenounceDisabled}.
+    /// @dev An ownerless position could never manage or unwind its market collateral and debt, nor
+    ///      withdraw its staked LP from Convex and Curve, permanently stranding all of its funds.
+    function renounceOwnership() external;
 
     /// @notice Pulls collateral from the owner and deposits it into the mint market.
     /// @param amount The amount of collateral to add.

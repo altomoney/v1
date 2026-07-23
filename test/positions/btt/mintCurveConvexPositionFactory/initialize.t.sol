@@ -19,6 +19,9 @@ contract MintCurveConvexPositionFactory_Initialize_Test is MintCurveConvexPositi
 
         // Config validation checks the reward pool's pid matches convexPid (1).
         vm.mockCall(CONVEX_REWARD_POOL, abi.encodeWithSignature("pid()"), abi.encode(uint256(1)));
+
+        // Config validation binds the booster's poolInfo(pid) to the curve pool and reward pool.
+        _mockPoolInfo(CONVEX_BOOSTER, address(curvePool), CONVEX_REWARD_POOL, false);
     }
 
     function test_RevertWhen_AdminIsZeroAddress() public {
@@ -77,6 +80,26 @@ contract MintCurveConvexPositionFactory_Initialize_Test is MintCurveConvexPositi
     function test_RevertWhen_RewardPoolPidDoesNotMatchConvexPid() public {
         MintCurveConvexConfig memory config = _validConfig();
         vm.mockCall(config.convexRewardPool, abi.encodeWithSignature("pid()"), abi.encode(config.convexPid + 1));
+        _expectInvalidConfigOnInitialize(config);
+    }
+
+    function test_RevertWhen_BoosterLpTokenDoesNotMatchCurvePool() public {
+        MintCurveConvexConfig memory config = _validConfig();
+        // Booster's pid points at a different LP token than the configured curve pool.
+        _mockPoolInfo(config.convexBooster, makeAddr("OtherLpToken"), config.convexRewardPool, false);
+        _expectInvalidConfigOnInitialize(config);
+    }
+
+    function test_RevertWhen_BoosterRewardPoolDoesNotMatchConfig() public {
+        MintCurveConvexConfig memory config = _validConfig();
+        // Booster's pid points at a different reward pool than the configured one.
+        _mockPoolInfo(config.convexBooster, config.curvePool, makeAddr("OtherRewardPool"), false);
+        _expectInvalidConfigOnInitialize(config);
+    }
+
+    function test_RevertWhen_BoosterPoolIsShutdown() public {
+        MintCurveConvexConfig memory config = _validConfig();
+        _mockPoolInfo(config.convexBooster, config.curvePool, config.convexRewardPool, true);
         _expectInvalidConfigOnInitialize(config);
     }
 

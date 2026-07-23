@@ -54,6 +54,20 @@ contract MintCurveConvexPosition_WithdrawFromLpAndRepay_Test is MintCurveConvexP
         position.withdrawFromLpAndRepay(tooMuchLp, 0, 0, false);
     }
 
+    function test_RevertWhen_ConvexWithdrawReturnsFalse() public {
+        vm.mockCall(
+            address(convexRewardPool),
+            abi.encodeWithSignature("withdrawAndUnwrap(uint256,bool)"),
+            abi.encode(false)
+        );
+
+        vm.prank(OWNER);
+        vm.expectRevert(
+            IMintCurveConvexPositionErrors.MintCurveConvexPositionWithdrawalFromConvexRewardPoolFailed.selector
+        );
+        position.withdrawFromLpAndRepay(DEFAULT_BORROW, 0, 0, false);
+    }
+
     function test_RevertWhen_BorrowTokenReceivedIsLessThanMinBorrowTokenOut() public {
         // Default one-coin output is 1:1 with the burnt LP, so requiring more reverts.
         vm.prank(OWNER);

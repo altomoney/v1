@@ -9,6 +9,19 @@ interface IConvexBooster {
     // @param amount the amount of curve LP tokens to deposit
     // @param stake whether to stake the receipt tokens received on depositing the LP tokens
     function deposit(uint256 pid, uint256 amount, bool stake) external returns (bool);
+
+    /// @notice The booster's registry entry for a given pool id.
+    /// @param pid The Convex pool id to look up.
+    /// @return lptoken The Curve LP token staked for this pid.
+    /// @return token The Convex deposit/receipt token minted for this pid.
+    /// @return gauge The Curve gauge for this pid.
+    /// @return crvRewards The reward pool (BaseRewardPool) tracking staked LP and rewards for this pid.
+    /// @return stash The extra-rewards stash for this pid.
+    /// @return shutdown Whether this pool has been shut down on the booster.
+    function poolInfo(uint256 pid)
+        external
+        view
+        returns (address lptoken, address token, address gauge, address crvRewards, address stash, bool shutdown);
 }
 
 /// @title IConvexRewardPool

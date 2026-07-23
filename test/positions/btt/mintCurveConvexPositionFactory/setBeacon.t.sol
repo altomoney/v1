@@ -24,6 +24,28 @@ contract MintCurveConvexPositionFactory_SetBeacon_Test is MintCurveConvexPositio
         factory.setBeacon(makeAddr("OtherBeacon"));
     }
 
+    function test_RevertWhen_BeaconImplementationIsZero() public {
+        address emptyBeacon = makeAddr("EmptyBeacon");
+        vm.mockCall(emptyBeacon, abi.encodeWithSignature("implementation()"), abi.encode(address(0)));
+
+        vm.prank(OWNER);
+        vm.expectRevert(IMintCurveConvexPositionFactoryErrors.MintCurveConvexPositionFactoryInvalidBeacon.selector);
+        factory.setBeacon(emptyBeacon);
+    }
+
+    function test_RevertWhen_ImplementationVersionIsUnexpected() public {
+        address staleBeacon = makeAddr("StaleBeacon");
+        address staleImpl = makeAddr("StaleImpl");
+        vm.mockCall(staleBeacon, abi.encodeWithSignature("implementation()"), abi.encode(staleImpl));
+        vm.mockCall(staleImpl, abi.encodeWithSignature("version()"), abi.encode(uint256(2)));
+
+        vm.prank(OWNER);
+        vm.expectRevert(
+            IMintCurveConvexPositionFactoryErrors.MintCurveConvexPositionFactoryInvalidImplementationVersion.selector
+        );
+        factory.setBeacon(staleBeacon);
+    }
+
     function test_SetBeacon_WhenBeaconIsNotSet() public {
         vm.expectEmit(true, false, false, true);
         emit IMintCurveConvexPositionFactoryEvents.BeaconSet(address(positionBeacon));

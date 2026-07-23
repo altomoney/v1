@@ -41,6 +41,17 @@ contract MintCurveConvexPosition_BorrowAndDepositToLp_Test is MintCurveConvexPos
         position.borrowAndDepositToLp(DEFAULT_BORROW, DEFAULT_BORROW);
     }
 
+    function test_RevertWhen_ConvexStakingReturnsFalse() public {
+        _seedCollateral(DEFAULT_COLLATERAL);
+        vm.mockCall(
+            address(convexBooster), abi.encodeWithSignature("deposit(uint256,uint256,bool)"), abi.encode(false)
+        );
+
+        vm.prank(OWNER);
+        vm.expectRevert(IMintCurveConvexPositionErrors.MintCurveConvexPositionStakingFailed.selector);
+        position.borrowAndDepositToLp(DEFAULT_BORROW, DEFAULT_BORROW);
+    }
+
     function test_BorrowAndDepositToLp_WhenDusdIsCoin0() public {
         _seedCollateral(DEFAULT_COLLATERAL);
 

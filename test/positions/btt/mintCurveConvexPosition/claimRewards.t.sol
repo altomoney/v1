@@ -15,6 +15,14 @@ contract MintCurveConvexPosition_ClaimRewards_Test is MintCurveConvexPositionCom
         position.claimRewards();
     }
 
+    function test_RevertWhen_ConvexClaimReturnsFalse() public {
+        vm.mockCall(address(convexRewardPool), abi.encodeWithSignature("getReward()"), abi.encode(false));
+
+        vm.prank(OWNER);
+        vm.expectRevert(IMintCurveConvexPositionErrors.MintCurveConvexPositionClaimingRewardsFailed.selector);
+        position.claimRewards();
+    }
+
     function test_ClaimRewards_WhenPositionHasRewards() public {
         _fundRewards(CRV_REWARD, CVX_REWARD);
 
