@@ -13,6 +13,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {MulticallUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/MulticallUpgradeable.sol";
 import {AuthUpgradeable} from "@alto/utils/AuthUpgradeable.sol";
@@ -23,7 +24,7 @@ import {AuthUpgradeable} from "@alto/utils/AuthUpgradeable.sol";
 contract MintCurveConvexPosition is
     IMintCurveConvexPosition,
     Initializable,
-    OwnableUpgradeable,
+    Ownable2StepUpgradeable,
     AuthUpgradeable,
     ReentrancyGuardUpgradeable,
     MulticallUpgradeable
@@ -76,6 +77,7 @@ contract MintCurveConvexPosition is
             revert MintCurveConvexPositionInvalidInput();
         }
         __Ownable_init(_owner);
+        __Ownable2Step_init();
         __Auth_init();
         __ReentrancyGuard_init();
         __Multicall_init();
@@ -149,7 +151,8 @@ contract MintCurveConvexPosition is
         address positionOwner = owner();
 
         if (lpToWithdraw > 0) {
-            IConvexRewardPool(config.convexRewardPool).withdrawAndUnwrap(lpToWithdraw, claimRewards);
+            bool success = IConvexRewardPool(config.convexRewardPool).withdrawAndUnwrap(lpToWithdraw, claimRewards);
+            if (!success) revert MintCurveConvexPositionWithdrawalFromConvexRewardPoolFailed();
             borrowTokenReceived = _withdrawCoin(config.curvePool, lpToWithdraw, minBorrowTokenOut);
 
             if (claimRewards) {
@@ -193,7 +196,8 @@ contract MintCurveConvexPosition is
         nonReentrant
         returns (uint256 crvAmount, uint256 cvxAmount)
     {
-        IConvexRewardPool(config.convexRewardPool).getReward();
+        bool success = IConvexRewardPool(config.convexRewardPool).getReward();
+        if (!success) revert MintCurveConvexPositionClaimingRewardsFailed();
         (crvAmount, cvxAmount) = _sweepRewards(owner());
     }
 
@@ -202,11 +206,33 @@ contract MintCurveConvexPosition is
         if (token == address(0) || amount == 0) revert MintCurveConvexPositionInvalidInput();
 
         IERC20(token).safeTransfer(owner(), amount);
+
+        emit ERC20Recovered(token, amount);
     }
 
     /// @inheritdoc IMintCurveConvexPosition
     function version() external pure virtual override returns (uint256) {
         return 1;
+    }
+
+    /// @inheritdoc IMintCurveConvexPosition
+    function renounceOwnership() public pure override(IMintCurveConvexPosition, OwnableUpgradeable) {
+        revert MintCurveConvexPositionRenounceDisabled();
+    }
+
+    /// @inheritdoc IMintCurveConvexPosition
+    function pendingOwner() public view override(IMintCurveConvexPosition, Ownable2StepUpgradeable) returns (address) {
+        return super.pendingOwner();
+    }
+
+    /// @inheritdoc IMintCurveConvexPosition
+    function transferOwnership(address newOwner) public override(IMintCurveConvexPosition, Ownable2StepUpgradeable) {
+        super.transferOwnership(newOwner);
+    }
+
+    /// @inheritdoc IMintCurveConvexPosition
+    function acceptOwnership() public override(IMintCurveConvexPosition, Ownable2StepUpgradeable) {
+        super.acceptOwnership();
     }
 
     /// @dev Deposits `borrowAmount` of borrow token into the Curve pool and mints LP to this contract.
@@ -238,7 +264,8 @@ contract MintCurveConvexPosition is
         if (lpAmount == 0) return;
 
         IERC20(curveLpToken).forceApprove(booster, lpAmount);
-        IConvexBooster(booster).deposit(poolId, lpAmount, true);
+        bool success = IConvexBooster(booster).deposit(poolId, lpAmount, true);
+        if (!success) revert MintCurveConvexPositionStakingFailed();
         IERC20(curveLpToken).forceApprove(booster, 0);
     }
 

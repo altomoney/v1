@@ -47,6 +47,13 @@ abstract contract PositionsProxyCommon is Test {
         // Config validation checks the reward pool's pid matches convexPid (1).
         vm.mockCall(CONVEX_REWARD_POOL, abi.encodeWithSignature("pid()"), abi.encode(uint256(1)));
 
+        // Config validation binds the booster's poolInfo(pid) to the curve pool and reward pool.
+        vm.mockCall(
+            CONVEX_BOOSTER,
+            abi.encodeWithSignature("poolInfo(uint256)"),
+            abi.encode(address(curvePool), address(0), address(0), CONVEX_REWARD_POOL, address(0), false)
+        );
+
         factory = _deployInitializedFactory();
         positionImplementation = new MintCurveConvexPosition();
         positionBeacon = new PositionBeacon(address(positionImplementation), OWNER);

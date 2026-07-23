@@ -2,7 +2,10 @@
 pragma solidity ^0.8.28;
 
 import {MintCurveConvexPositionCommon} from "./MintCurveConvexPositionCommon.t.sol";
-import {IMintCurveConvexPositionErrors} from "@alto/positions/interfaces/IMintCurveConvexPosition.sol";
+import {
+    IMintCurveConvexPositionErrors,
+    IMintCurveConvexPositionEvents
+} from "@alto/positions/interfaces/IMintCurveConvexPosition.sol";
 import {IERC20Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
 import {ERC20MockMintable} from "@alto-test/helpers/ERC20MockMintable.sol";
 
@@ -62,6 +65,9 @@ contract MintCurveConvexPosition_RecoverERC20_Test is MintCurveConvexPositionCom
 
         uint256 ownerBalanceBefore = borrowToken.balanceOf(OWNER);
         uint256 positionBalanceBefore = borrowToken.balanceOf(address(position));
+
+        vm.expectEmit(true, false, false, true, address(position));
+        emit IMintCurveConvexPositionEvents.ERC20Recovered(address(borrowToken), RECOVER_AMOUNT);
 
         vm.prank(OWNER);
         position.recoverERC20(address(borrowToken), RECOVER_AMOUNT);

@@ -50,6 +50,9 @@ abstract contract MintCurveConvexPositionFactoryCommon is Test {
         // Config validation checks the reward pool's pid matches convexPid (1).
         vm.mockCall(CONVEX_REWARD_POOL, abi.encodeWithSignature("pid()"), abi.encode(uint256(1)));
 
+        // Config validation binds the booster's poolInfo(pid) to the curve pool and reward pool.
+        _mockPoolInfo(CONVEX_BOOSTER, address(curvePool), CONVEX_REWARD_POOL, false);
+
         factory = _deployInitializedFactory();
         positionImplementation = new MintCurveConvexPosition();
         positionBeacon = new PositionBeacon(address(positionImplementation), OWNER);
@@ -84,5 +87,14 @@ abstract contract MintCurveConvexPositionFactoryCommon is Test {
     function _expectOwnableUnauthorized(address caller) internal {
         vm.prank(caller);
         vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, caller));
+    }
+
+    /// @dev Mocks a Convex booster's poolInfo(pid) registry entry used by config validation.
+    function _mockPoolInfo(address booster, address lptoken, address crvRewards, bool shutdown) internal {
+        vm.mockCall(
+            booster,
+            abi.encodeWithSignature("poolInfo(uint256)"),
+            abi.encode(lptoken, address(0), address(0), crvRewards, address(0), shutdown)
+        );
     }
 }

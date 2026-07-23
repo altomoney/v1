@@ -12,6 +12,7 @@ contract MockConvexBooster is IConvexBooster {
 
     MockConvexRewardPool public rewardPool;
     IERC20 public lpToken;
+    bool public shutdown;
 
     uint256 public depositCallCount;
     uint256 public lastDepositAmount;
@@ -21,11 +22,23 @@ contract MockConvexBooster is IConvexBooster {
         lpToken = IERC20(lpToken_);
     }
 
+    function setShutdown(bool shutdown_) external {
+        shutdown = shutdown_;
+    }
+
     function deposit(uint256, uint256 amount, bool) external returns (bool) {
         depositCallCount++;
         lastDepositAmount = amount;
         lpToken.safeTransferFrom(msg.sender, address(this), amount);
         rewardPool.stake(msg.sender, amount);
         return true;
+    }
+
+    function poolInfo(uint256)
+        external
+        view
+        returns (address lptoken, address token, address gauge, address crvRewards, address stash, bool shutdown_)
+    {
+        return (address(lpToken), address(0), address(0), address(rewardPool), address(0), shutdown);
     }
 }

@@ -27,6 +27,12 @@ interface IMintCurveConvexPositionFactoryErrors {
     /// @notice Thrown when the beacon is already set.
     error MintCurveConvexPositionFactoryBeaconAlreadySet();
 
+    /// @notice Thrown when the beacon has no implementation set.
+    error MintCurveConvexPositionFactoryInvalidBeacon();
+
+    /// @notice Thrown when the beacon implementation reports an unexpected version.
+    error MintCurveConvexPositionFactoryInvalidImplementationVersion();
+
     /// @notice Thrown when creating a position before the beacon is set.
     error MintCurveConvexPositionFactoryBeaconNotSet();
 
@@ -52,6 +58,11 @@ interface IMintCurveConvexPositionFactoryBase is
     IMintCurveConvexPositionFactoryErrors,
     IMintCurveConvexPositionFactoryEvents
 {
+    /// @notice The position implementation version that the configured beacon must expose.
+    /// @dev {setBeacon} rejects any beacon whose implementation reports a different version.
+    /// @return The expected position implementation version.
+    function EXPECTED_POSITION_VERSION() external view returns (uint256);
+
     /// @notice Beacon whose implementation is used for all deployed positions
     /// @return Beacon address
     function beacon() external view returns (address);
