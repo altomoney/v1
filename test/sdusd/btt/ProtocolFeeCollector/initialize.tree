@@ -1,0 +1,43 @@
+ProtocolFeeCollector::initialize
+├── when the proxy has already been initialized
+│   └── it should revert with InvalidInitialization
+├── when admin is zero address
+│   └── it should revert with ProtocolFeeCollectorZeroAddress
+├── when collateral operator is zero address
+│   └── it should revert with ProtocolFeeCollectorZeroAddress
+├── when pauser is zero address
+│   └── it should revert with ProtocolFeeCollectorZeroAddress
+├── when DUSD is zero address
+│   └── it should revert with ProtocolFeeCollectorZeroAddress
+├── when market registry is zero address
+│   └── it should revert with ProtocolFeeCollectorZeroAddress
+├── when USM registry is zero address
+│   └── it should revert with ProtocolFeeCollectorZeroAddress
+├── when flash minter is zero address
+│   └── it should revert with ProtocolFeeCollectorZeroAddress
+├── when treasury is zero address
+│   └── it should revert with ProtocolFeeCollectorZeroAddress
+├── when manual swap receiver is zero address
+│   └── it should revert with ProtocolFeeCollectorZeroAddress
+├── when rewards bps is greater than PERCENTAGE_PRECISION
+│   └── it should revert with ProtocolFeeCollectorInvalidRewardsBps
+└── when all initialization parameters are valid
+    ├── it should set admin as owner
+    ├── it should set the collateral operator as authorized
+    ├── it should authorize the configured pauser for PAUSE_TYPE
+    ├── it should set admin as a pauser for PAUSE_TYPE
+    ├── it should set DUSD
+    ├── it should set the market registry
+    ├── it should set the USM registry
+    ├── it should set the flash minter
+    ├── it should set the treasury
+    ├── it should set the manual swap receiver
+    ├── it should leave the sDUSD vault unset
+    ├── it should leave PAUSE_TYPE unpaused
+    ├── it should emit the ownership, role, and configured-address update events
+    ├── when rewards bps is zero
+    │   ├── it should initialize rewardsBps to zero
+    │   └── it should not emit RewardsBpsUpdated
+    └── when rewards bps is non-zero
+        ├── it should set rewardsBps to the provided value
+        └── it should emit RewardsBpsUpdated

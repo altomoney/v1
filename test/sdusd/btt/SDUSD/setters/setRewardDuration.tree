@@ -1,0 +1,32 @@
+SDUSD::setRewardDuration
+├── when caller is not owner
+│   └── it should revert with OwnableUnauthorizedAccount
+└── when caller is owner
+    ├── when new duration is less than MIN_REWARD_DURATION
+    │   └── it should revert with SDUSDInvalidRewardDuration
+    ├── when new duration is greater than MAX_REWARD_DURATION
+    │   └── it should revert with SDUSDInvalidRewardDuration
+    ├── when new duration equals the current duration
+    │   └── it should revert with SDUSDNoStateChange
+    ├── when new duration is valid and different
+    │   ├── it should update rewardDuration
+    │   ├── it should emit RewardDurationUpdated with old and new duration
+    │   ├── when the current reward period is active
+    │   │   ├── it should not change periodStart or rewardPeriodFinish
+    │   │   ├── it should not change rewardsForPeriod, locked rewards, accounted assets, total assets, supply, or exchange rate
+    │   │   ├── at the original period midpoint
+    │   │   │   └── it should have released half the rewards and increased the exchange rate accordingly
+    │   │   └── when the next reward period is notified
+    │   │       ├── it should apply the new duration
+    │   │       ├── it should not spike the exchange rate at the new period start
+    │   │       └── at the new period midpoint
+    │   │           └── it should have released half the rewards and increased the exchange rate accordingly
+    │   └── when the current reward period has finished
+    │       ├── it should not alter the completed reward period state
+    │       └── it should apply the new duration to the next notified reward period
+    ├── when block timestamp equals rewardPeriodFinish
+    │   └── it should allow the update
+    ├── when new duration equals MIN_REWARD_DURATION
+    │   └── it should allow the update
+    └── when new duration equals MAX_REWARD_DURATION
+        └── it should allow the update

@@ -1,0 +1,17 @@
+ProtocolFeeCollector::upgradeToAndCall
+├── when called directly on the implementation
+│   └── it should revert with UUPSUnauthorizedCallContext
+├── when called through the proxy by a non-owner
+│   └── it should revert with OwnableUnauthorizedAccount
+└── when called through the proxy by the owner
+    ├── when the new implementation is not UUPS compatible
+    │   └── it should revert
+    └── when the new implementation is UUPS compatible
+        ├── it should update the proxy implementation
+        ├── it should preserve ownership and pending ownership
+        ├── it should preserve collateral-operator and pauser permissions
+        ├── it should preserve pause state
+        ├── it should preserve configured addresses and registries
+        ├── it should preserve rewards bps
+        └── when initialization calldata is provided
+            └── it should delegatecall the new implementation with the provided calldata

@@ -1,0 +1,6 @@
+ProtocolFeeCollector::constructor
+├── when the implementation contract is deployed
+│   ├── it should deploy successfully
+│   └── it should disable initializers
+└── when initialize is called directly on the implementation
+    └── it should revert with InvalidInitialization

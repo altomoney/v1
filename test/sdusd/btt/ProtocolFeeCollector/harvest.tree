@@ -1,0 +1,64 @@
+ProtocolFeeCollector::harvest
+├── given PAUSE_TYPE is paused
+│   └── it should revert with IsPaused
+└── given PAUSE_TYPE is not paused
+    ├── when sourceTypes and sources lengths do not match
+    │   └── it should revert with ProtocolFeeCollectorLengthMismatch
+    ├── when both arrays are empty
+    │   └── it should complete without emitting Harvested
+    ├── when the source type is BORROW_MARKET
+    │   ├── given source is not an allowlisted borrow market
+    │   │   └── it should revert with ProtocolFeeCollectorInvalidSource
+    │   ├── given source borrow token is not DUSD
+    │   │   └── it should revert with ProtocolFeeCollectorInvalidSource
+    │   └── given source is an allowlisted DUSD borrow market
+    │       ├── it should accrue market interest before reading the collector position
+    │       ├── it should harvest fee shares created for the collector during accrual
+    │       ├── when the collector has zero supply shares
+    │       │   ├── it should not call removeSupply
+    │       │   └── it should emit Harvested with zero DUSD received
+    │       ├── when the collector supply shares convert to zero assets
+    │       │   ├── it should not call removeSupply
+    │       │   └── it should emit Harvested with zero DUSD received
+    │       ├── when the market has zero available liquidity
+    │       │   ├── it should not call removeSupply
+    │       │   └── it should emit Harvested with zero DUSD received
+    │       ├── when the market DUSD balance is below its accounting liquidity
+    │       │   └── it should cap available liquidity to the market DUSD balance
+    │       ├── when claimable assets are less than or equal to available liquidity
+    │       │   ├── it should remove the collector's full supply share balance
+    │       │   ├── it should send the withdrawn DUSD to the collector
+    │       │   └── it should emit Harvested with the collector's DUSD balance increase
+    │       └── when claimable assets are greater than available liquidity
+    │           ├── it should remove only the available DUSD assets
+    │           ├── it should send the withdrawn DUSD to the collector
+    │           └── it should emit Harvested with the collector's DUSD balance increase
+    ├── when the source type is MINT_MARKET
+    │   ├── given source is not an allowlisted mint market
+    │   │   └── it should revert with ProtocolFeeCollectorInvalidSource
+    │   ├── given source borrow token is not DUSD
+    │   │   └── it should revert with ProtocolFeeCollectorInvalidSource
+    │   └── given source is an allowlisted DUSD mint market
+    │       ├── it should accrue market interest before claiming fees
+    │       ├── it should call claimInterest with zero to claim all fees
+    │       └── it should emit Harvested with the collector's DUSD balance increase
+    ├── when the source type is USM
+    │   ├── given source is not an allowlisted USM
+    │   │   └── it should revert with ProtocolFeeCollectorInvalidSource
+    │   ├── given source stable token is not DUSD
+    │   │   └── it should revert with ProtocolFeeCollectorInvalidSource
+    │   └── given source is an allowlisted DUSD USM
+    │       ├── it should call distributeFeesToFeeRecipient
+    │       └── it should emit Harvested with the collector's DUSD balance increase
+    ├── when the source type is FLASH_MINTER
+    │   ├── given source is not the configured flash minter
+    │   │   └── it should revert with ProtocolFeeCollectorInvalidSource
+    │   ├── given source DUSD token is not the configured DUSD
+    │   │   └── it should revert with ProtocolFeeCollectorInvalidSource
+    │   └── given source is the configured DUSD flash minter
+    │       ├── it should call distributeFeesToFeeRecipient
+    │       └── it should emit Harvested with the collector's DUSD balance increase
+    └── when multiple valid sources are provided
+        ├── it should harvest each source in array order
+        ├── it should emit Harvested once for each source
+        └── it should be callable by any address

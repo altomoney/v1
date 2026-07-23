@@ -1,0 +1,34 @@
+SDUSD::notifyRewardAmount
+├── given PAUSE_TYPE is paused
+│   └── it should revert with IsPaused
+└── given PAUSE_TYPE is not paused
+    ├── when caller is not the configured rewarder
+    │   └── it should revert with SDUSDNotRewarder
+    └── when caller is the configured rewarder
+        ├── when the previous reward period is active
+        │   └── it should revert with SDUSDRewardPeriodNotFinished
+        ├── when the vault has no share supply
+        │   └── it should revert with SDUSDNoActiveStakers
+        ├── when all real stakers have exited and only seed shares remain
+        │   └── it should revert with SDUSDNoActiveStakers
+        ├── when amount is zero
+        │   └── it should revert with SDUSDZeroAmount
+        ├── when the rewarder has insufficient DUSD balance or allowance
+        │   ├── it should revert with the underlying token transfer error
+        │   └── it should leave all reward accounting unchanged
+        └── when the previous period has finished, amount is non-zero, and real stakers exist
+            ├── it should pull exactly amount DUSD from the rewarder
+            ├── it should increase accountedAssets by amount
+            ├── it should set rewardsForPeriod to amount
+            ├── it should set periodStart to the current timestamp
+            ├── it should set rewardPeriodFinish to periodStart plus rewardDuration
+            ├── it should leave total supply and all share balances unchanged
+            ├── it should exclude the new reward amount from totalAssets at periodStart
+            ├── it should preserve the exchange rate at periodStart without an immediate reward spike
+            ├── it should emit RewardAdded with amount and rewardPeriodFinish
+            ├── when block timestamp equals the previous rewardPeriodFinish
+            │   ├── it should start the new reward period
+            │   └── it should preserve the fully vested exchange rate when the new period starts
+            └── when a completed period already has rewardsForPeriod recorded
+                ├── it should replace the period reward state without removing previously accounted rewards
+                └── it should not spike the exchange rate when replacing the period state

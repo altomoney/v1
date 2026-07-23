@@ -1,0 +1,14 @@
+ProtocolFeeCollector::setCollateralOperator
+├── when caller is not owner
+│   └── it should revert with OwnableUnauthorizedAccount
+└── when caller is owner
+    ├── when operator is zero address
+    │   └── it should revert with ProtocolFeeCollectorZeroAddress
+    ├── when operator already has the requested status
+    │   └── it should revert with ProtocolFeeCollectorNoStateChange
+    ├── when enabling a new collateral operator
+    │   ├── it should set isCollateralOperator to true
+    │   └── it should emit CollateralOperatorSet
+    └── when disabling an existing collateral operator
+        ├── it should set isCollateralOperator to false
+        └── it should emit CollateralOperatorSet

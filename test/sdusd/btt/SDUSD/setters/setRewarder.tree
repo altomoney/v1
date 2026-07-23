@@ -1,0 +1,11 @@
+SDUSD::setRewarder
+├── when caller is not owner
+│   └── it should revert with OwnableUnauthorizedAccount
+└── when caller is owner
+    ├── when new rewarder is zero address
+    │   └── it should revert with SDUSDZeroAddress
+    ├── when new rewarder equals the current rewarder
+    │   └── it should revert with SDUSDNoStateChange
+    └── when new rewarder is a different non-zero address
+        ├── it should update rewarder
+        └── it should emit RewarderUpdated with old and new rewarder

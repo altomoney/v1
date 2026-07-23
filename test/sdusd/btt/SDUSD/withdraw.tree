@@ -1,0 +1,40 @@
+SDUSD::withdraw
+├── when requested assets exceeds maxWithdraw for owner
+│   └── it should revert with ERC4626ExceededMaxWithdraw
+└── when requested assets does not exceed maxWithdraw for owner
+    ├── when caller is neither owner nor sufficiently approved
+    │   └── it should revert with ERC20InsufficientAllowance
+    ├── when receiver is zero address
+    │   └── it should revert with ERC20InvalidReceiver
+    └── when caller is authorized
+        ├── it should calculate shares to burn by rounding up
+        ├── it should decrease accountedAssets by the withdrawn assets
+        ├── it should burn the calculated shares from owner
+        ├── it should transfer exactly the requested DUSD assets to receiver
+        ├── it should return the burned share amount
+        ├── it should emit Withdraw
+        ├── it should not decrease the exchange rate because burned shares round up in favor of the vault
+        ├── when caller is owner
+        │   └── it should not require or spend an allowance
+        ├── when caller is approved with a finite allowance
+        │   └── it should decrease allowance by the burned shares
+        ├── when caller is approved with maximum allowance
+        │   └── it should leave the allowance unchanged
+        ├── when requested assets is zero
+        │   ├── it should complete without changing accounting, token balances, or share balances
+        │   ├── it should leave the exchange rate unchanged
+        │   └── it should emit Withdraw with zero assets and shares
+        ├── when PAUSE_TYPE is paused
+        │   └── it should remain available
+        ├── when a reward period is active
+        │   ├── it should set maxWithdraw to the owner's share of currently unlocked assets
+        │   ├── it should revert above that maximum
+        │   ├── it should not make locked rewards withdrawable
+        │   ├── it should leave the reward amount and period boundaries unchanged
+        │   └── it should not decrease the remaining holders' exchange rate
+        ├── when owner withdraws all available assets
+        │   └── it should leave the permanent seed shares in total supply
+        └── when the vault has received a raw DUSD donation
+            ├── it should not make the donation withdrawable
+            ├── it should leave the exchange rate unchanged
+            └── a subsequent withdrawal should not decrease the remaining holders' exchange rate

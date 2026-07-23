@@ -1,0 +1,38 @@
+SDUSD::mint
+├── given PAUSE_TYPE is paused
+│   └── it should revert with IsPaused
+└── given PAUSE_TYPE is not paused
+    ├── when receiver is zero address
+    │   └── it should revert with ERC20InvalidReceiver
+    ├── when caller has insufficient DUSD balance or allowance
+    │   ├── it should revert with the underlying token transfer error
+    │   └── it should leave accounted assets and share supply unchanged
+    ├── when total supply is zero
+    │   ├── it should calculate required assets by rounding up
+    │   ├── it should transfer required assets from caller to the vault
+    │   ├── it should increase accountedAssets by required assets
+    │   ├── it should mint all requested shares to receiver
+    │   ├── it should not mint shares to address(1)
+    │   ├── it should return the required asset amount
+    │   ├── it should emit Deposit
+    │   └── it should not decrease the initial exchange rate
+    └── when total supply is non-zero
+        ├── it should calculate required assets by rounding up
+        ├── it should transfer required assets from caller to the vault
+        ├── it should increase accountedAssets by required assets
+        ├── it should mint the requested shares to receiver
+        ├── it should leave the seed share balance unchanged
+        ├── it should return the required asset amount
+        ├── it should emit Deposit
+        ├── it should not decrease the exchange rate because required assets round up in favor of the vault
+        ├── when requested shares is zero
+        │   ├── it should complete without changing accounting or balances
+        │   ├── it should emit Deposit with zero assets and shares
+        │   └── it should preserve the exchange rate
+        ├── when a reward period is active
+        │   ├── it should price the mint using only currently unlocked assets
+        │   └── it should not decrease the exchange rate when required assets round up
+        └── when the vault has received a raw DUSD donation
+            ├── it should ignore the donation when calculating required assets
+            ├── it should leave the exchange rate unchanged before the mint
+            └── it should not decrease the exchange rate when required assets round up
