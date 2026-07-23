@@ -1,0 +1,13 @@
+SDUSD::maxWithdraw
+├── when owner has no shares
+│   └── it should return zero
+├── when owner has shares and no reward period is active
+│   ├── it should return the rounded-down asset value of the owner's shares
+│   └── it should exclude assets backing the permanent seed shares
+├── when a reward period is active
+│   ├── it should include only currently unlocked rewards
+│   └── it should exclude all still-locked rewards
+├── when PAUSE_TYPE is paused
+│   └── it should continue returning the owner's available assets
+└── when the vault has received a raw DUSD donation
+    └── it should not include the donation

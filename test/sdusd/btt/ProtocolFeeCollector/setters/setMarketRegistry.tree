@@ -1,0 +1,11 @@
+ProtocolFeeCollector::setMarketRegistry
+├── when caller is not owner
+│   └── it should revert with OwnableUnauthorizedAccount
+└── when caller is owner
+    ├── when new market registry is zero address
+    │   └── it should revert with ProtocolFeeCollectorZeroAddress
+    ├── when new market registry equals the current registry
+    │   └── it should revert with ProtocolFeeCollectorNoStateChange
+    └── when new market registry is valid and different
+        ├── it should update marketRegistry
+        └── it should emit MarketRegistryUpdated

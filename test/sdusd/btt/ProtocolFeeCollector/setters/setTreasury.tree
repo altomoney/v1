@@ -1,0 +1,11 @@
+ProtocolFeeCollector::setTreasury
+├── when caller is not owner
+│   └── it should revert with OwnableUnauthorizedAccount
+└── when caller is owner
+    ├── when new treasury is zero address
+    │   └── it should revert with ProtocolFeeCollectorZeroAddress
+    ├── when new treasury equals the current treasury
+    │   └── it should revert with ProtocolFeeCollectorNoStateChange
+    └── when new treasury is valid and different
+        ├── it should update treasury
+        └── it should emit TreasuryUpdated

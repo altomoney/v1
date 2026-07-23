@@ -1,0 +1,31 @@
+ProtocolFeeCollector::withdrawLiquidationFees
+├── given PAUSE_TYPE is paused
+│   └── it should revert with IsPaused
+└── given PAUSE_TYPE is not paused
+    ├── when caller is not an authorized collateral operator
+    │   └── it should revert with ProtocolFeeCollectorUnauthorized
+    └── when caller is an authorized collateral operator
+        ├── when markets and amounts lengths do not match
+        │   └── it should revert with ProtocolFeeCollectorLengthMismatch
+        ├── when both arrays are empty
+        │   └── it should complete without emitting LiquidationFeesWithdrawn
+        ├── when a market is neither an allowlisted borrow market nor mint market
+        │   └── it should revert with ProtocolFeeCollectorInvalidSource
+        ├── when an allowlisted market borrow token is not DUSD
+        │   └── it should revert with ProtocolFeeCollectorInvalidSource
+        ├── when an allowlisted DUSD borrow market is provided
+        │   ├── it should call removeCollateral for the requested amount
+        │   ├── it should set the collector as onBehalf
+        │   ├── it should set the configured manual swap receiver as receiver
+        │   ├── it should pass empty callback data
+        │   └── it should emit LiquidationFeesWithdrawn
+        ├── when an allowlisted DUSD mint market is provided
+        │   ├── it should call removeCollateral for the requested amount
+        │   ├── it should set the collector as onBehalf
+        │   ├── it should set the configured manual swap receiver as receiver
+        │   ├── it should pass empty callback data
+        │   └── it should emit LiquidationFeesWithdrawn
+        └── when multiple valid markets are provided
+            ├── it should withdraw each requested amount in array order
+            ├── it should always use the configured manual swap receiver
+            └── it should emit LiquidationFeesWithdrawn once for each market

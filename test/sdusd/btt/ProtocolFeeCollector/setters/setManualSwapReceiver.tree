@@ -1,0 +1,11 @@
+ProtocolFeeCollector::setManualSwapReceiver
+├── when caller is not owner
+│   └── it should revert with OwnableUnauthorizedAccount
+└── when caller is owner
+    ├── when new manual swap receiver is zero address
+    │   └── it should revert with ProtocolFeeCollectorZeroAddress
+    ├── when new manual swap receiver equals the current receiver
+    │   └── it should revert with ProtocolFeeCollectorNoStateChange
+    └── when new manual swap receiver is valid and different
+        ├── it should update manualSwapReceiver
+        └── it should emit ManualSwapReceiverUpdated

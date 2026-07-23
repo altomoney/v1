@@ -1,0 +1,12 @@
+SDUSD::convertToAssets
+├── when total supply and total assets are zero
+│   └── it should convert shares to assets at the initial ratio
+├── when the vault has existing supply
+│   ├── it should use SDUSD totalAssets and total supply
+│   └── it should round the converted asset amount down
+├── when a reward period is active
+│   └── it should value shares using only currently unlocked assets
+├── when the reward period has finished
+│   └── it should value shares using all accounted rewards
+└── when the vault has received a raw DUSD donation
+    └── it should ignore the donation in the conversion

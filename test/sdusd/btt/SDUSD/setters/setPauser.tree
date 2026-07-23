@@ -1,0 +1,19 @@
+SDUSD::setPauser
+├── when caller is not owner
+│   └── it should revert with OwnableUnauthorizedAccount
+└── when caller is owner
+    ├── when enabling a pauser
+    │   ├── it should set the pauser status for the specified pause type to true
+    │   └── it should emit PauserUpdated
+    ├── when disabling a pauser
+    │   ├── it should set the pauser status for the specified pause type to false
+    │   └── it should emit PauserUpdated
+    ├── when pauser is zero address
+    │   ├── it should set the requested status
+    │   └── it should emit PauserUpdated
+    ├── when pauser already has the requested status
+    │   ├── it should complete successfully
+    │   └── it should emit PauserUpdated
+    └── when pause type differs from PAUSE_TYPE
+        ├── it should update only the specified pause type
+        └── it should leave PAUSE_TYPE authorization unchanged

@@ -1,0 +1,23 @@
+SDUSD::upgradeToAndCall
+├── when called directly on an implementation
+│   └── it should revert with UUPSUnauthorizedCallContext
+├── when called through the proxy by a non-owner
+│   ├── when the new implementation is UUPS compatible
+│   │   └── it should revert with OwnableUnauthorizedAccount
+│   └── when the new implementation is not UUPS compatible
+│       └── it should revert with OwnableUnauthorizedAccount before checking compatibility
+└── when called through the proxy by the owner
+    ├── when the new implementation is not UUPS compatible
+    │   └── it should revert
+    └── when the new implementation is UUPS compatible
+        ├── it should update the proxy implementation
+        ├── it should emit Upgraded
+        ├── it should preserve ownership and pending ownership
+        ├── it should preserve pauser permissions and pause state
+        ├── it should preserve the asset, seed shares, rewarder, and next reward duration
+        ├── it should preserve total supply, accounted assets, and share balances
+        ├── it should preserve the active reward amount and period timestamps
+        ├── it should preserve locked rewards, total assets, and the exchange rate at the upgrade timestamp
+        ├── it should continue releasing the active reward over its original duration
+        └── when initialization calldata is provided
+            └── it should delegatecall the new implementation with the provided calldata

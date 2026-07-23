@@ -1,0 +1,11 @@
+ProtocolFeeCollector::setFlashMinter
+├── when caller is not owner
+│   └── it should revert with OwnableUnauthorizedAccount
+└── when caller is owner
+    ├── when new flash minter is zero address
+    │   └── it should revert with ProtocolFeeCollectorZeroAddress
+    ├── when new flash minter equals the current flash minter
+    │   └── it should revert with ProtocolFeeCollectorNoStateChange
+    └── when new flash minter is valid and different
+        ├── it should update flashMinter
+        └── it should emit FlashMinterUpdated

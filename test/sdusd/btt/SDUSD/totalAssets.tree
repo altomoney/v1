@@ -1,0 +1,24 @@
+SDUSD::totalAssets
+├── when no reward period has been started
+│   └── it should return accountedAssets
+├── when a reward period is active
+│   ├── at periodStart
+│   │   ├── it should exclude the entire reward amount from total assets
+│   │   └── it should preserve the pre-notification exchange rate without a spike
+│   ├── between periodStart and rewardPeriodFinish
+│   │   ├── it should return accountedAssets minus lockedRewardsRemaining
+│   │   └── it should increase the exchange rate integer-linearly as rewards unlock
+│   └── immediately before rewardPeriodFinish
+│       └── it should include all rewards except the final still-locked fraction
+├── when block timestamp equals rewardPeriodFinish
+│   ├── it should return accountedAssets
+│   └── it should include the full reward amount in the exchange rate
+├── when block timestamp is after rewardPeriodFinish
+│   ├── it should return accountedAssets
+│   └── it should leave the fully vested exchange rate unchanged absent another state transition
+└── when DUSD is transferred directly to the vault
+    ├── it should not change accountedAssets
+    ├── it should not change totalAssets or the exchange rate
+    └── when a reward period is active
+        ├── it should not change the locked reward amount or period timestamps
+        └── it should not bypass the linear release schedule or change the exchange rate

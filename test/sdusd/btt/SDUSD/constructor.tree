@@ -1,0 +1,49 @@
+SDUSD::initialize
+├── when called directly on the implementation
+│   └── it should revert with InvalidInitialization because implementation initializers are disabled
+├── when called on an already initialized proxy
+│   └── it should revert with InvalidInitialization
+├── when admin is zero address
+│   └── it should revert with SDUSDZeroAddress
+├── when pauser is zero address
+│   └── it should revert with SDUSDZeroAddress
+├── when DUSD is zero address
+│   └── it should revert with SDUSDZeroAddress
+├── when rewarder is zero address
+│   └── it should revert with SDUSDZeroAddress
+├── when seed shares is zero
+│   └── it should revert with SDUSDZeroAmount
+├── when reward duration is less than MIN_REWARD_DURATION
+│   └── it should revert with SDUSDInvalidRewardDuration
+├── when reward duration is greater than MAX_REWARD_DURATION
+│   └── it should revert with SDUSDInvalidRewardDuration
+└── when all initialization parameters are valid
+    ├── it should set admin as owner
+    ├── it should leave pending owner unset
+    ├── it should set DUSD as the ERC-4626 asset
+    ├── it should set the name to Staked DUSD
+    ├── it should set the symbol to sDUSD
+    ├── it should use the DUSD decimals
+    ├── it should set the configured seed shares
+    ├── it should set the configured rewarder
+    ├── it should emit RewarderUpdated from zero address
+    ├── it should set the configured reward duration
+    ├── it should emit RewardDurationUpdated from zero
+    ├── it should authorize the configured pauser for PAUSE_TYPE
+    ├── it should emit PauserUpdated for pauser
+    ├── it should authorize admin as a pauser for PAUSE_TYPE
+    ├── it should emit PauserUpdated for admin
+    ├── it should leave PAUSE_TYPE unpaused
+    ├── it should initialize accounted assets to zero
+    ├── it should initialize reward state to zero
+    ├── it should initialize total supply to zero
+    ├── it should initialize total assets to zero
+    ├── it should initialize the exchange rate at one DUSD per sDUSD
+    ├── when reward duration equals MIN_REWARD_DURATION
+    │   └── it should deploy successfully
+    └── when reward duration equals MAX_REWARD_DURATION
+        └── it should deploy successfully
+
+SDUSD::deployment seed setup
+└── when the deployer completes the required post-initialization seed deposit
+    └── it should mint the configured seed shares to address(1) and fund them with matching DUSD

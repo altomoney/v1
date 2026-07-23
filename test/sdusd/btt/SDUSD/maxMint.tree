@@ -1,0 +1,6 @@
+SDUSD::maxMint
+├── given PAUSE_TYPE is paused
+│   └── it should return zero for every receiver
+└── given PAUSE_TYPE is not paused
+    ├── it should return the ERC-4626 maximum uint256 value
+    └── it should not vary by receiver

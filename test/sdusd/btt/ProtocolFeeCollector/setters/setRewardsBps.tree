@@ -1,0 +1,13 @@
+ProtocolFeeCollector::setRewardsBps
+├── when caller is not owner
+│   └── it should revert with OwnableUnauthorizedAccount
+└── when caller is owner
+    ├── when new rewards bps is greater than PERCENTAGE_PRECISION
+    │   └── it should revert with ProtocolFeeCollectorInvalidRewardsBps
+    ├── when new rewards bps equals the current rewards bps
+    │   └── it should revert with ProtocolFeeCollectorNoStateChange
+    └── when new rewards bps is valid and different
+        ├── it should update rewardsBps
+        ├── it should allow zero
+        ├── it should allow PERCENTAGE_PRECISION
+        └── it should emit RewardsBpsUpdated

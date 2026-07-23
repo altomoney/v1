@@ -1,0 +1,17 @@
+SDUSD::lockedRewardsRemaining
+├── when no reward period has been started
+│   └── it should return zero
+├── when a reward period is active
+│   ├── at periodStart
+│   │   └── it should return rewardsForPeriod
+│   ├── between periodStart and rewardPeriodFinish
+│   │   ├── it should calculate the remaining linear fraction
+│   │   └── it should round the locked amount up
+│   ├── when the remaining fraction divides exactly
+│   │   └── it should not add an extra wei while rounding up
+│   └── immediately before rewardPeriodFinish
+│       └── it should return the final still-locked fraction
+├── when block timestamp equals rewardPeriodFinish
+│   └── it should return zero
+└── when block timestamp is after rewardPeriodFinish
+    └── it should return zero

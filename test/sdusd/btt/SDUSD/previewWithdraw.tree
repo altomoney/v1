@@ -1,0 +1,11 @@
+SDUSD::previewWithdraw
+├── when total supply and total assets are zero
+│   └── it should preview required shares at the initial ratio
+├── when the vault has existing supply
+│   └── it should round the required share amount up
+├── when a reward period is active
+│   └── it should use only currently unlocked assets
+├── when PAUSE_TYPE is paused
+│   └── it should continue returning the mathematical preview
+└── when the vault has received a raw DUSD donation
+    └── it should ignore the donation in the preview
