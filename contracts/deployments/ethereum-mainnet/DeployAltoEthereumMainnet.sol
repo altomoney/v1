@@ -458,8 +458,7 @@ library DeployAltoEthereumMainnet {
                     finalizeMode: UsmFinalizeMode.DIRECT,
                     safeBatchName: ""
                 }),
-                input,
-                params.useUnsafeUpgrades
+                input
             );
         } else if (params.phase == DeploymentPhase.PERMISSIONLESS_USM) {
             input.contracts.permissionlessUsm = _deployUsm(
@@ -478,8 +477,7 @@ library DeployAltoEthereumMainnet {
                     finalizeMode: UsmFinalizeMode.DIRECT,
                     safeBatchName: ""
                 }),
-                input,
-                params.useUnsafeUpgrades
+                input
             );
         } else if (params.phase == DeploymentPhase.POST) {
             input = _deployPost(params, input);
@@ -660,8 +658,7 @@ library DeployAltoEthereumMainnet {
                     finalizeMode: UsmFinalizeMode.TIMELOCK_BATCH,
                     safeBatchName: "frxusd-permissioned-usm-registry"
                 }),
-                input,
-                params.useUnsafeUpgrades
+                input
             );
         } else if (params.phase == DeploymentPhase.PERMISSIONLESS_FRXUSD_USM) {
             input.contracts.permissionlessFrxusdUsm = _deployUsm(
@@ -680,8 +677,7 @@ library DeployAltoEthereumMainnet {
                     finalizeMode: UsmFinalizeMode.TIMELOCK_BATCH,
                     safeBatchName: "frxusd-permissionless-usm-registry"
                 }),
-                input,
-                params.useUnsafeUpgrades
+                input
             );
         } else if (params.phase == DeploymentPhase.ADAPTER) {
             DeployCoreParams memory adapterCoreParams =
@@ -698,7 +694,7 @@ library DeployAltoEthereumMainnet {
         } else if (params.phase == DeploymentPhase.UNIVERSAL_REWARDS_DISTRIBUTOR) {
             input = _deployUniversalRewardsDistributor(params, input);
         } else if (params.phase == DeploymentPhase.MINT_CURVE_CONVEX_POSITION) {
-            input = _deployMintCurveConvexPositionFactory(params, input);
+            input = _deployMintCurveConvexPositionFactory(input);
         } else {
             revert("Invalid phase");
         }
@@ -933,7 +929,7 @@ library DeployAltoEthereumMainnet {
         return report;
     }
 
-    function _deployUsm(DeployUsmParams memory usmParams, AltoEthereumMainnetInput memory input, bool useUnsafeUpgrades)
+    function _deployUsm(DeployUsmParams memory usmParams, AltoEthereumMainnetInput memory input)
         internal
         returns (UsmContracts memory)
     {
@@ -952,7 +948,6 @@ library DeployAltoEthereumMainnet {
                 underlyingAsset: usmParams.underlyingAsset,
                 priceRatio: 1 ether,
                 isPermissioned: usmParams.isPermissioned,
-                useUnsafeUpgrades: useUnsafeUpgrades,
                 treasuryMultisig: usmParams.treasuryMultisig
             })
         );
@@ -1472,10 +1467,10 @@ library DeployAltoEthereumMainnet {
     /// @dev Deploys the MintCurveConvexPosition strategy stack (factory proxy, position implementation,
     ///      PositionBeacon) and wires the beacon into the factory via MintCurveConvexPositionFactoryBatch.
     ///      Ownership of the factory and beacon is handed to the timelock inside the batch.
-    function _deployMintCurveConvexPositionFactory(
-        AltoEthereumMainnetParams memory params,
-        AltoEthereumMainnetInput memory input
-    ) internal returns (AltoEthereumMainnetInput memory) {
+    function _deployMintCurveConvexPositionFactory(AltoEthereumMainnetInput memory input)
+        internal
+        returns (AltoEthereumMainnetInput memory)
+    {
         require(input.contracts.timelock != address(0), "Timelock not deployed");
         require(input.contracts.marketRegistry != address(0), "MarketRegistry not deployed");
 
@@ -1490,10 +1485,7 @@ library DeployAltoEthereumMainnet {
 
         MintCurveConvexPositionFactoryBatch batch = new MintCurveConvexPositionFactoryBatch(
             MintCurveConvexPositionFactoryBatchParams({
-                owner: input.contracts.timelock,
-                marketRegistry: input.contracts.marketRegistry,
-                config: config,
-                useUnsafeUpgrades: params.useUnsafeUpgrades
+                owner: input.contracts.timelock, marketRegistry: input.contracts.marketRegistry, config: config
             })
         );
 
@@ -1560,7 +1552,6 @@ library DeployAltoEthereumMainnet {
                 mintCeiling: mintCeiling,
                 buyAccess: DirectionAccess.PERMISSIONLESS,
                 sellAccess: DirectionAccess.PERMISSIONED,
-                useUnsafeUpgrades: params.useUnsafeUpgrades,
                 finalizeDusdAndRegistry: params.deployerHasOwnership,
                 sellSwappers: sellSwappers,
                 buySwappers: buySwappers,
@@ -1767,4 +1758,3 @@ library DeployAltoEthereumMainnet {
         return input;
     }
 }
-

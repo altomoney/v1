@@ -11,6 +11,9 @@ import {
     MarketContracts
 } from "@alto/deployments/ethereum-mainnet/DeployAltoEthereumMainnet.sol";
 import {console} from "forge-std/console.sol";
+import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
+import {Options} from "openzeppelin-foundry-upgrades/Options.sol";
+import {USDC_MAINNET, FRXUSD_MAINNET} from "@alto/deployments/ethereum-mainnet/Constants.sol";
 
 uint256 constant DEPLOYMENT_ID_TO_LOAD = 1765364975;
 DeploymentPhase constant PHASE_TO_DEPLOY = DeploymentPhase.MINT_CURVE_CONVEX_POSITION; // CORE, DUSD, MINT_MARKET_WETH, MINT_MARKET_WSTETH, MINT_MARKET_RETH, MINT_MARKET_METH, MINT_MARKET_TBTC, BORROW_MARKET_WBTC, BORROW_MARKET_CBBTC, BORROW_MARKET_SUSDE, USDC_USM, POST, REFERRAL_ADAPTER, BORROW_MARKET_SYRUP_USDC, BORROW_MARKET_PAXG, MINT_MARKET_SUSDE, MINT_MARKET_SYRUPUSDC, PERMISSIONED_FRXUSD_USM, ADAPTER, DUSD_VAULT, VAULT_REGISTRY, PERMISSIONLESS_FRXUSD_USM, ALTO_LEVERAGE_SWAPPER_MULTI_TARGET, LIQUIDATION_PERIPHERY, ADVANCED_PERMISSIONS_FRXUSD_USM, UPGRADE_MARKETS_LIQUIDATION_PERIPHERY, UNIVERSAL_REWARDS_DISTRIBUTOR, MINT_CURVE_CONVEX_POSITION
@@ -22,6 +25,7 @@ contract DeployAltoEthereumMainnetScript is Script {
 
     function run() public {
         _loadCurrentChainInput();
+        _validateImplementations(PHASE_TO_DEPLOY, input);
 
         vm.startBroadcast();
 
@@ -48,6 +52,36 @@ contract DeployAltoEthereumMainnetScript is Script {
         _extractABIs();
 
         console.log("Deployment completed successfully");
+    }
+
+    /// @dev Upgrade-safety validation uses Foundry cheatcodes and must run outside the broadcasted
+    ///      batch constructor. The batch can then deploy the implementation and proxy on-chain.
+    function _validateImplementations(DeploymentPhase phase, AltoEthereumMainnetInput memory deploymentInput) internal {
+        if (phase == DeploymentPhase.MINT_CURVE_CONVEX_POSITION) {
+            Options memory opts;
+            Upgrades.validateImplementation("MintCurveConvexPositionFactory.sol:MintCurveConvexPositionFactory", opts);
+            Upgrades.validateImplementation("MintCurveConvexPosition.sol:MintCurveConvexPosition", opts);
+        } else if (phase == DeploymentPhase.PERMISSIONED_USM || phase == DeploymentPhase.PERMISSIONLESS_USM) {
+            _validateUsmImplementation("DUSDUsm.sol:DUSDUsm", deploymentInput.contracts.dusd, USDC_MAINNET);
+        } else if (
+            phase == DeploymentPhase.PERMISSIONED_FRXUSD_USM || phase == DeploymentPhase.PERMISSIONLESS_FRXUSD_USM
+        ) {
+            _validateUsmImplementation("DUSDUsm.sol:DUSDUsm", deploymentInput.contracts.dusd, FRXUSD_MAINNET);
+        } else if (phase == DeploymentPhase.ADVANCED_PERMISSIONS_FRXUSD_USM) {
+            _validateUsmImplementation(
+                "DUSDAdvancedPermissionsUsm.sol:DUSDAdvancedPermissionsUsm",
+                deploymentInput.contracts.dusd,
+                FRXUSD_MAINNET
+            );
+        }
+    }
+
+    function _validateUsmImplementation(string memory contractName, address dusd, address underlyingAsset) internal {
+        require(dusd != address(0), "DUSD not deployed");
+
+        Options memory opts;
+        opts.constructorData = abi.encode(dusd, underlyingAsset);
+        Upgrades.validateImplementation(contractName, opts);
     }
 
     function _writeInputToJson() internal {
@@ -484,4 +518,3 @@ contract DeployAltoEthereumMainnetScript is Script {
         }
     }
 }
-
