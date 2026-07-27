@@ -13,7 +13,7 @@ import {
 import {console} from "forge-std/console.sol";
 
 uint256 constant DEPLOYMENT_ID_TO_LOAD = 1765364975;
-DeploymentPhase constant PHASE_TO_DEPLOY = DeploymentPhase.UNIVERSAL_REWARDS_DISTRIBUTOR; // CORE, DUSD, MINT_MARKET_WETH, MINT_MARKET_WSTETH, MINT_MARKET_RETH, MINT_MARKET_METH, MINT_MARKET_TBTC, BORROW_MARKET_WBTC, BORROW_MARKET_CBBTC, BORROW_MARKET_SUSDE, USDC_USM, POST, REFERRAL_ADAPTER, BORROW_MARKET_SYRUP_USDC, BORROW_MARKET_PAXG, MINT_MARKET_SUSDE, MINT_MARKET_SYRUPUSDC, PERMISSIONED_FRXUSD_USM, ADAPTER, DUSD_VAULT, VAULT_REGISTRY, PERMISSIONLESS_FRXUSD_USM, ALTO_LEVERAGE_SWAPPER_MULTI_TARGET, LIQUIDATION_PERIPHERY, ADVANCED_PERMISSIONS_FRXUSD_USM, UPGRADE_MARKETS_LIQUIDATION_PERIPHERY, UNIVERSAL_REWARDS_DISTRIBUTOR
+DeploymentPhase constant PHASE_TO_DEPLOY = DeploymentPhase.MINT_CURVE_CONVEX_POSITION; // CORE, DUSD, MINT_MARKET_WETH, MINT_MARKET_WSTETH, MINT_MARKET_RETH, MINT_MARKET_METH, MINT_MARKET_TBTC, BORROW_MARKET_WBTC, BORROW_MARKET_CBBTC, BORROW_MARKET_SUSDE, USDC_USM, POST, REFERRAL_ADAPTER, BORROW_MARKET_SYRUP_USDC, BORROW_MARKET_PAXG, MINT_MARKET_SUSDE, MINT_MARKET_SYRUPUSDC, PERMISSIONED_FRXUSD_USM, ADAPTER, DUSD_VAULT, VAULT_REGISTRY, PERMISSIONLESS_FRXUSD_USM, ALTO_LEVERAGE_SWAPPER_MULTI_TARGET, LIQUIDATION_PERIPHERY, ADVANCED_PERMISSIONS_FRXUSD_USM, UPGRADE_MARKETS_LIQUIDATION_PERIPHERY, UNIVERSAL_REWARDS_DISTRIBUTOR, MINT_CURVE_CONVEX_POSITION
 string constant OUTPUT_DIR = "./contracts/deployments/ethereum-mainnet/output";
 
 contract DeployAltoEthereumMainnetScript is Script {
@@ -180,6 +180,24 @@ contract DeployAltoEthereumMainnetScript is Script {
                 "contracts", "universalRewardsDistributor", input.contracts.universalRewardsDistributor
             );
         }
+        if (input.contracts.mintCurveConvexPosition.factory != address(0)) {
+            contractsJson = vm.serializeAddress(
+                "contracts", "mintCurveConvexPositionFactory", input.contracts.mintCurveConvexPosition.factory
+            );
+            contractsJson = vm.serializeAddress(
+                "contracts",
+                "mintCurveConvexPositionFactoryImplementation",
+                input.contracts.mintCurveConvexPosition.factoryImplementation
+            );
+            contractsJson = vm.serializeAddress(
+                "contracts",
+                "mintCurveConvexPositionImplementation",
+                input.contracts.mintCurveConvexPosition.positionImplementation
+            );
+            contractsJson = vm.serializeAddress(
+                "contracts", "mintCurveConvexPositionBeacon", input.contracts.mintCurveConvexPosition.positionBeacon
+            );
+        }
 
         // Build final JSON and write to file
         string memory json = vm.serializeString("", "contracts", contractsJson);
@@ -289,6 +307,14 @@ contract DeployAltoEthereumMainnetScript is Script {
             _tryParseAddress(json, ".contracts.advancedPermissionsFrxusdUsmFeeStrategy");
         loadedInput.contracts.universalRewardsDistributor =
             _tryParseAddress(json, ".contracts.universalRewardsDistributor");
+        loadedInput.contracts.mintCurveConvexPosition.factory =
+            _tryParseAddress(json, ".contracts.mintCurveConvexPositionFactory");
+        loadedInput.contracts.mintCurveConvexPosition.factoryImplementation =
+            _tryParseAddress(json, ".contracts.mintCurveConvexPositionFactoryImplementation");
+        loadedInput.contracts.mintCurveConvexPosition.positionImplementation =
+            _tryParseAddress(json, ".contracts.mintCurveConvexPositionImplementation");
+        loadedInput.contracts.mintCurveConvexPosition.positionBeacon =
+            _tryParseAddress(json, ".contracts.mintCurveConvexPositionBeacon");
 
         input = loadedInput;
     }
@@ -409,6 +435,10 @@ contract DeployAltoEthereumMainnetScript is Script {
             _extractContractABI("AltoBorrowMarket", abiFolder);
         } else if (PHASE_TO_DEPLOY == DeploymentPhase.UNIVERSAL_REWARDS_DISTRIBUTOR) {
             _extractContractABI("UniversalRewardsDistributor", abiFolder);
+        } else if (PHASE_TO_DEPLOY == DeploymentPhase.MINT_CURVE_CONVEX_POSITION) {
+            _extractContractABI("MintCurveConvexPositionFactory", abiFolder);
+            _extractContractABI("MintCurveConvexPosition", abiFolder);
+            _extractContractABI("PositionBeacon", abiFolder);
         }
 
         console.log("ABIs extracted to:", abiFolder);
