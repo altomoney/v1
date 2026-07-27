@@ -71,7 +71,21 @@ import {
 } from "@alto/deployments/ethereum-mainnet/AdvancedPermissionsUsmBatch.sol";
 import {IAdvancedPermissionsUsmFeeStrategy} from "@alto/usm/interfaces/IAdvancedPermissionsUsmFeeStrategy.sol";
 import {MarketUpgradeBatch, MarketUpgradeBatchReport} from "@alto/deployments/ethereum-mainnet/MarketUpgradeBatch.sol";
+import {
+    MintCurveConvexPositionFactoryBatch,
+    MintCurveConvexPositionFactoryBatchParams,
+    MintCurveConvexPositionFactoryBatchReport
+} from "@alto/deployments/ethereum-mainnet/MintCurveConvexPositionFactoryBatch.sol";
+import {MintCurveConvexConfig} from "@alto/positions/interfaces/IMintCurveConvexPositionFactory.sol";
 import {FRXUSD_MAINNET} from "@alto/deployments/ethereum-mainnet/Constants.sol";
+import {
+    FRXUSD_DUSD_CURVE_POOL_MAINNET,
+    POOL_ID_FRXUSD_DUSD_CURVE_POOL_MAINNET,
+    CONVEX_REWARD_POOL_CVX_FRXUSD_DUSD_MAINNET,
+    CONVEX_BOOSTER_MAINNET,
+    CRV_TOKEN_MAINNET,
+    CVX_TOKEN_MAINNET
+} from "@alto/deployments/ethereum-mainnet/Constants.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
 import {IAltoLeverageSwapper} from "@alto/lending/leverage/interfaces/IAltoLeverageSwapper.sol";
@@ -95,6 +109,7 @@ import {
     DeployUsmParams,
     UsmFinalizeMode,
     AdvancedPermissionsUsmContracts,
+    MintCurveConvexPositionContracts,
     Contracts
 } from "@alto/deployments/ethereum-mainnet/IDeployAltoEthereumMainnet.sol";
 import {AccessMode} from "@alto/usm/interfaces/IUsm.sol";
@@ -682,6 +697,8 @@ library DeployAltoEthereumMainnet {
             input = _upgradeMarketsForLiquidationPeriphery(input);
         } else if (params.phase == DeploymentPhase.UNIVERSAL_REWARDS_DISTRIBUTOR) {
             input = _deployUniversalRewardsDistributor(params, input);
+        } else if (params.phase == DeploymentPhase.MINT_CURVE_CONVEX_POSITION) {
+            input = _deployMintCurveConvexPositionFactory(params, input);
         } else {
             revert("Invalid phase");
         }
@@ -1448,6 +1465,46 @@ library DeployAltoEthereumMainnet {
         );
 
         input.contracts.universalRewardsDistributor = batch.getReport().universalRewardsDistributor;
+
+        return input;
+    }
+
+    /// @dev Deploys the MintCurveConvexPosition strategy stack (factory proxy, position implementation,
+    ///      PositionBeacon) and wires the beacon into the factory via MintCurveConvexPositionFactoryBatch.
+    ///      Ownership of the factory and beacon is handed to the timelock inside the batch.
+    function _deployMintCurveConvexPositionFactory(
+        AltoEthereumMainnetParams memory params,
+        AltoEthereumMainnetInput memory input
+    ) internal returns (AltoEthereumMainnetInput memory) {
+        require(input.contracts.timelock != address(0), "Timelock not deployed");
+        require(input.contracts.marketRegistry != address(0), "MarketRegistry not deployed");
+
+        MintCurveConvexConfig memory config = MintCurveConvexConfig({
+            curvePool: FRXUSD_DUSD_CURVE_POOL_MAINNET,
+            convexBooster: CONVEX_BOOSTER_MAINNET,
+            convexRewardPool: CONVEX_REWARD_POOL_CVX_FRXUSD_DUSD_MAINNET,
+            convexPid: POOL_ID_FRXUSD_DUSD_CURVE_POOL_MAINNET,
+            crv: CRV_TOKEN_MAINNET,
+            cvx: CVX_TOKEN_MAINNET
+        });
+
+        MintCurveConvexPositionFactoryBatch batch = new MintCurveConvexPositionFactoryBatch(
+            MintCurveConvexPositionFactoryBatchParams({
+                owner: input.contracts.timelock,
+                marketRegistry: input.contracts.marketRegistry,
+                config: config,
+                useUnsafeUpgrades: params.useUnsafeUpgrades
+            })
+        );
+
+        MintCurveConvexPositionFactoryBatchReport memory report = batch.getReport();
+
+        input.contracts.mintCurveConvexPosition = MintCurveConvexPositionContracts({
+            factory: report.factory,
+            factoryImplementation: report.factoryImplementation,
+            positionImplementation: report.positionImplementation,
+            positionBeacon: report.positionBeacon
+        });
 
         return input;
     }

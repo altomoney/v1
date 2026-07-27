@@ -34,7 +34,8 @@ enum DeploymentPhase {
     LIQUIDATION_PERIPHERY, // Phase 25: Deploy LiquidationPeriphery and register all markets
     ADVANCED_PERMISSIONS_FRXUSD_USM, // Phase 26: Deploy Advanced Permissions frxUSD USM for liquidation periphery
     UPGRADE_MARKETS_LIQUIDATION_PERIPHERY, // Phase 27: Upgrade all markets and authorize liquidation periphery
-    UNIVERSAL_REWARDS_DISTRIBUTOR // Phase 28: Deploy UniversalRewardsDistributor
+    UNIVERSAL_REWARDS_DISTRIBUTOR, // Phase 28: Deploy UniversalRewardsDistributor
+    MINT_CURVE_CONVEX_POSITION // Phase 29: Deploy MintCurveConvexPositionFactory, PositionBeacon and setBeacon
 }
 
 enum UsmFinalizeMode {
@@ -64,6 +65,13 @@ struct UsmContracts {
     address dusdUsmImplementation;
     address fixedPriceStrategy;
     address fixedFeeStrategy;
+}
+
+struct MintCurveConvexPositionContracts {
+    address factory; // MintCurveConvexPositionFactory UUPS proxy
+    address factoryImplementation; // Factory implementation behind the proxy
+    address positionImplementation; // MintCurveConvexPosition implementation (beacon implementation)
+    address positionBeacon; // PositionBeacon wired into the factory
 }
 
 struct AltoEthereumMainnetInput {
@@ -102,6 +110,7 @@ struct Contracts {
     address addressChange;
     address liquidationPeriphery;
     address universalRewardsDistributor;
+    MintCurveConvexPositionContracts mintCurveConvexPosition;
 }
 
 // PARAMETERS FOR THE DEPLOYMENT
