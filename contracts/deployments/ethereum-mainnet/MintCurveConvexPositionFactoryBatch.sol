@@ -6,7 +6,6 @@ import {MintCurveConvexPosition} from "@alto/positions/MintCurveConvexPosition.s
 import {PositionBeacon} from "@alto/positions/PositionBeacon.sol";
 import {MintCurveConvexConfig} from "@alto/positions/interfaces/IMintCurveConvexPositionFactory.sol";
 
-import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {UnsafeUpgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 
 struct MintCurveConvexPositionFactoryBatchParams {
@@ -16,8 +15,6 @@ struct MintCurveConvexPositionFactoryBatchParams {
     address marketRegistry;
     /// @notice Shared Curve/Convex configuration applied to all deployed positions.
     MintCurveConvexConfig config;
-    /// @notice When true, skips the OpenZeppelin upgrade-safety validation for the proxy deploy.
-    bool useUnsafeUpgrades;
 }
 
 struct MintCurveConvexPositionFactoryBatchReport {
@@ -41,6 +38,7 @@ struct MintCurveConvexPositionFactoryBatchReport {
 ///      5. factory.transferOwnershipSkip2Step(owner) to hand the factory to the final owner.
 /// @dev The factory initializer validates the Curve/Convex config via on-chain calls, so this
 ///      batch must be deployed against a chain where those contracts exist (Ethereum mainnet).
+/// @dev Upgrade safety must be validated by the calling deployment script before broadcasting.
 contract MintCurveConvexPositionFactoryBatch {
     MintCurveConvexPositionFactoryBatchReport public report;
 
@@ -56,16 +54,8 @@ contract MintCurveConvexPositionFactoryBatch {
             MintCurveConvexPositionFactory.initialize, (address(this), _params.marketRegistry, _params.config)
         );
 
-        address factory;
-        address factoryImplementation;
-        if (_params.useUnsafeUpgrades) {
-            factoryImplementation = address(new MintCurveConvexPositionFactory());
-            factory = UnsafeUpgrades.deployUUPSProxy(factoryImplementation, initData);
-        } else {
-            factory =
-                Upgrades.deployUUPSProxy("MintCurveConvexPositionFactory.sol:MintCurveConvexPositionFactory", initData);
-            factoryImplementation = Upgrades.getImplementationAddress(factory);
-        }
+        address factoryImplementation = address(new MintCurveConvexPositionFactory());
+        address factory = UnsafeUpgrades.deployUUPSProxy(factoryImplementation, initData);
 
         // 2. Deploy the beacon implementation (MintCurveConvexPosition, version() == 1).
         address positionImplementation = address(new MintCurveConvexPosition());

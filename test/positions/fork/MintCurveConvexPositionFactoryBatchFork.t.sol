@@ -46,7 +46,6 @@ contract MintCurveConvexPositionFactoryBatchForkTest is Test {
 
         AltoEthereumMainnetParams memory params;
         params.phase = DeploymentPhase.MINT_CURVE_CONVEX_POSITION;
-        params.useUnsafeUpgrades = true;
         params.deployer = address(this);
 
         input = DeployAltoEthereumMainnet.deploy(params, input);

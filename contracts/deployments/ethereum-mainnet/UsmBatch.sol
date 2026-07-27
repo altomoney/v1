@@ -8,10 +8,7 @@ import {IUsm, AccessMode} from "@alto/usm/interfaces/IUsm.sol";
 import {IDUSD} from "@alto/tokens/interfaces/IDUSD.sol";
 import {AltoAdapter} from "@alto/utils/AltoAdapter.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
-import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {UnsafeUpgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
-import {Options} from "openzeppelin-foundry-upgrades/Options.sol";
-import {AccessMode} from "@alto/usm/interfaces/IUsm.sol";
 
 struct UsmBatchParams {
     address owner;
@@ -25,7 +22,6 @@ struct UsmBatchParams {
     address underlyingAsset;
     uint256 priceRatio;
     bool isPermissioned;
-    bool useUnsafeUpgrades;
     address treasuryMultisig;
 }
 
@@ -37,6 +33,7 @@ struct UsmBatchReport {
 }
 
 /// @notice Deploys USM components in a single transaction
+/// @dev Upgrade safety must be validated by the calling deployment script before broadcasting.
 contract UsmBatch {
     UsmBatchReport public report;
 
@@ -62,17 +59,8 @@ contract UsmBatch {
             DUSDUsm.initialize,
             (address(this), _params.treasuryMultisig, uint128(_params.exposureCap), fixedPriceStrategy, accessMode)
         );
-        address dusdUsm;
-        address dusdUsmImplementation;
-        if (_params.useUnsafeUpgrades) {
-            dusdUsmImplementation = address(new DUSDUsm(_params.dusd, _params.underlyingAsset));
-            dusdUsm = UnsafeUpgrades.deployUUPSProxy(dusdUsmImplementation, initData);
-        } else {
-            Options memory opts;
-            opts.constructorData = abi.encode(_params.dusd, _params.underlyingAsset);
-            dusdUsm = Upgrades.deployUUPSProxy("DUSDUsm.sol:DUSDUsm", initData, opts);
-            dusdUsmImplementation = Upgrades.getImplementationAddress(dusdUsm);
-        }
+        address dusdUsmImplementation = address(new DUSDUsm(_params.dusd, _params.underlyingAsset));
+        address dusdUsm = UnsafeUpgrades.deployUUPSProxy(dusdUsmImplementation, initData);
 
         // Grant SWAP_FREEZER_ROLE to freezer (requires DUSDUsm admin role)
         IAccessControl(dusdUsm).grantRole(IUsm(dusdUsm).SWAP_FREEZER_ROLE(), _params.freezer);
@@ -108,4 +96,3 @@ contract UsmBatch {
         return report;
     }
 }
-

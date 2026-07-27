@@ -9,9 +9,7 @@ import {IAdvancedPermissionsUsmFeeStrategy} from "@alto/usm/interfaces/IAdvanced
 import {IDUSD} from "@alto/tokens/interfaces/IDUSD.sol";
 import {IUsmRegistry} from "@alto/utils/interfaces/IUsmRegistry.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
-import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {UnsafeUpgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
-import {Options} from "openzeppelin-foundry-upgrades/Options.sol";
 
 struct AdvancedPermissionsUsmBatchOverriddenFee {
     address account;
@@ -46,7 +44,6 @@ struct AdvancedPermissionsUsmBatchParams {
     uint256 mintCeiling;
     DirectionAccess buyAccess;
     DirectionAccess sellAccess;
-    bool useUnsafeUpgrades;
     bool finalizeDusdAndRegistry;
     address[] sellSwappers;
     address[] buySwappers;
@@ -63,6 +60,7 @@ struct AdvancedPermissionsUsmBatchReport {
 }
 
 /// @notice Deploys an Advanced Permissions USM with configurable fee overrides and USM role grants in one transaction
+/// @dev Upgrade safety must be validated by the calling deployment script before broadcasting.
 contract AdvancedPermissionsUsmBatch {
     AdvancedPermissionsUsmBatchReport public report;
 
@@ -85,18 +83,8 @@ contract AdvancedPermissionsUsmBatch {
             )
         );
 
-        address dusdUsm;
-        address dusdUsmImplementation;
-        if (_params.useUnsafeUpgrades) {
-            dusdUsmImplementation = address(new DUSDAdvancedPermissionsUsm(_params.dusd, _params.underlyingAsset));
-            dusdUsm = UnsafeUpgrades.deployUUPSProxy(dusdUsmImplementation, initData);
-        } else {
-            Options memory opts;
-            opts.constructorData = abi.encode(_params.dusd, _params.underlyingAsset);
-            dusdUsm =
-                Upgrades.deployUUPSProxy("DUSDAdvancedPermissionsUsm.sol:DUSDAdvancedPermissionsUsm", initData, opts);
-            dusdUsmImplementation = Upgrades.getImplementationAddress(dusdUsm);
-        }
+        address dusdUsmImplementation = address(new DUSDAdvancedPermissionsUsm(_params.dusd, _params.underlyingAsset));
+        address dusdUsm = UnsafeUpgrades.deployUUPSProxy(dusdUsmImplementation, initData);
 
         IAdvancedPermissionsUsm usm = IAdvancedPermissionsUsm(dusdUsm);
 
