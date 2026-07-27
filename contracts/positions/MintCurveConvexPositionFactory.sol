@@ -20,6 +20,7 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 /// @title MintCurveConvexPositionFactory
 /// @notice UUPS-upgradeable factory that deploys beacon-backed MintCurveConvexPosition  strategy instances.
 /// @dev The beacon implementation must be MintCurveConvexPosition contract.
+/// @custom:audit Pending
 contract MintCurveConvexPositionFactory is
     IMintCurveConvexPositionFactoryStaticTypes,
     Initializable,

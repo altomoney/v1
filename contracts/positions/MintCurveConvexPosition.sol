@@ -21,6 +21,7 @@ import {AuthUpgradeable} from "@alto/utils/AuthUpgradeable.sol";
 /// @title MintCurveConvexPosition
 /// @notice Dedicated position implementation for the Mint borrow token -> Curve -> Convex strategy and its reverse.
 /// @dev This contract needs to be deployed and set as the implementation in PositionBeacon contract.
+/// @custom:audit Pending
 contract MintCurveConvexPosition is
     IMintCurveConvexPosition,
     Initializable,
