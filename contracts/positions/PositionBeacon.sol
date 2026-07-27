@@ -7,6 +7,7 @@ import {UpgradeableBeacon} from "@openzeppelin/contracts/proxy/beacon/Upgradeabl
 /// @notice Thin wrapper around OpenZeppelin's upgradeable beacon
 /// @dev The implementation of this beacon needs to be MintCurveConvexPosition contract for MintCurveConvexPosition strategy
 /// @dev This beacon contract will be set in MintCurveConvexPositionFactory contract as a beacon
+/// @custom:audit Pending
 contract PositionBeacon is UpgradeableBeacon {
     constructor(address implementation, address admin) UpgradeableBeacon(implementation, admin) {}
 }
