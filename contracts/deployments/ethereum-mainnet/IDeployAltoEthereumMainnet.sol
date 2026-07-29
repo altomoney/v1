@@ -36,6 +36,7 @@ enum DeploymentPhase {
     UPGRADE_MARKETS_LIQUIDATION_PERIPHERY, // Phase 27: Upgrade all markets and authorize liquidation periphery
     UNIVERSAL_REWARDS_DISTRIBUTOR, // Phase 28: Deploy UniversalRewardsDistributor
     MINT_CURVE_CONVEX_POSITION // Phase 29: Deploy MintCurveConvexPositionFactory, PositionBeacon and setBeacon
+
 }
 
 enum UsmFinalizeMode {
@@ -152,7 +153,7 @@ struct DeployBorrowMarketParams {
     uint128 supplyCapAssets; // Supply cap in assets
     LiquidationConfiguration liquidationConfig; // Liquidation configuration
     address freezer; // Pauser/Freezer Multisig address
-    address swapRouter; // swap router address
+    address[] validSwapTargets; // valid swap target addresses
 }
 
 struct DeployUsmParams {
@@ -184,5 +185,5 @@ struct DeployMintMarketParams {
     uint256 debtCeiling; // Debt ceiling
     LiquidationConfiguration liquidationConfig; // Liquidation configuration
     address freezer; // Pauser/Freezer Multisig address
-    address swapRouter; // swap router address
+    address[] validSwapTargets; // valid swap target addresses
 }

@@ -64,8 +64,12 @@ address constant ZEROX_SWAP_TARGET_MAINNET = 0x0000000000001fF3684f28c67538d4D07
 address constant ODOS_ROUTER_V3_MAINNET = 0x0D05a7D3448512B78fa8A9e46c4872C88C4a0D05;
 // OneInch Aggregation Router V6 on Ethereum mainnet
 address constant ONE_INCH_AGGREGATION_ROUTER_V6_MAINNET = 0x111111125421cA6dc452d289314280a0f8842A65;
-// Velora Augustus V6 on Ethereum mainnet
-address constant VELORA_AUGUSTUS_V6_MAINNET = 0x6A000F20005980200259B80c5102003040001068;
+// KyberSwap Meta Aggregation Router V2 on Ethereum mainnet
+address constant KYBERSWAP_META_AGGREGATION_ROUTER_V2_MAINNET = 0x6131B5fae19EA4f9D964eAc0408E4408b66337b5;
+// Velora's Augustus Swapper on Ethereum mainnet
+address constant VELORA_AUGUSTUS_MAINNET = 0x6A000F20005980200259B80c5102003040001068;
+// Nordstern Router on Ethereum mainnet
+address constant NORDSTERN_ROUTER_MAINNET = 0xa929c559E5e6537359680F39CB4E3708E1a14dd1;
 // Morpho's deployment of Bundler3
 address constant BUNDLER3_MAINNET = 0xAc80387009231b4D55B85Df27924B85f2ED6823D;
 // LayerZero endpoint for Ethereum mainnet
@@ -81,4 +85,3 @@ function getMulticallOwnerAddresses() pure returns (address[] memory) {
     addresses[1] = 0xFC3567948D827F928a82cF1263c5851a74BD90C9;
     return addresses;
 }
-

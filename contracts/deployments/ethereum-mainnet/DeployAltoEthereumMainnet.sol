@@ -4,9 +4,8 @@ pragma solidity ^0.8.22;
 import {AltoOwnable2Step} from "@alto/utils/AltoOwnable2Step.sol";
 import {AltoOwnable2StepUpgradeable} from "@alto/utils/AltoOwnable2StepUpgradeable.sol";
 import {AltoTimelockController} from "@alto/utils/AltoTimelockController.sol";
-import {
-    AltoTimelockControllerMintMarketFee
-} from "@alto/deployments/ethereum-mainnet/contracts/AltoTimelockControllerMintMarketFee.sol";
+import {AltoTimelockControllerMintMarketFee} from
+    "@alto/deployments/ethereum-mainnet/contracts/AltoTimelockControllerMintMarketFee.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
 
@@ -26,8 +25,10 @@ import {
     FRXUSD_MAINNET,
     LAYERZERO_ENDPOINT_MAINNET,
     ZEROX_SWAP_TARGET_MAINNET,
-    ODOS_ROUTER_V3_MAINNET,
     ONE_INCH_AGGREGATION_ROUTER_V6_MAINNET,
+    KYBERSWAP_META_AGGREGATION_ROUTER_V2_MAINNET,
+    VELORA_AUGUSTUS_MAINNET,
+    NORDSTERN_ROUTER_MAINNET,
     getMulticallOwnerAddresses
 } from "@alto/deployments/ethereum-mainnet/Constants.sol";
 import {AltoAdapter} from "@alto/utils/AltoAdapter.sol";
@@ -168,7 +169,7 @@ library DeployAltoEthereumMainnet {
                         liquidationWindowTag: 0
                     }),
                     freezer: params.freezer,
-                    swapRouter: ZEROX_SWAP_TARGET_MAINNET
+                    validSwapTargets: _validSwapTargets()
                 }),
                 input,
                 params,
@@ -203,7 +204,7 @@ library DeployAltoEthereumMainnet {
                         liquidationWindowTag: 0
                     }),
                     freezer: params.freezer,
-                    swapRouter: ZEROX_SWAP_TARGET_MAINNET
+                    validSwapTargets: _validSwapTargets()
                 }),
                 input,
                 params,
@@ -238,7 +239,7 @@ library DeployAltoEthereumMainnet {
                         liquidationWindowTag: 0
                     }),
                     freezer: params.freezer,
-                    swapRouter: ZEROX_SWAP_TARGET_MAINNET
+                    validSwapTargets: _validSwapTargets()
                 }),
                 input,
                 params,
@@ -273,7 +274,7 @@ library DeployAltoEthereumMainnet {
                         liquidationWindowTag: 0
                     }),
                     freezer: params.freezer,
-                    swapRouter: ZEROX_SWAP_TARGET_MAINNET
+                    validSwapTargets: _validSwapTargets()
                 }),
                 input,
                 params,
@@ -308,7 +309,7 @@ library DeployAltoEthereumMainnet {
                         liquidationWindowTag: 0
                     }),
                     freezer: params.freezer,
-                    swapRouter: ZEROX_SWAP_TARGET_MAINNET
+                    validSwapTargets: _validSwapTargets()
                 }),
                 input,
                 params,
@@ -350,7 +351,7 @@ library DeployAltoEthereumMainnet {
                         liquidationWindowTag: 0
                     }),
                     freezer: params.freezer,
-                    swapRouter: ZEROX_SWAP_TARGET_MAINNET
+                    validSwapTargets: _validSwapTargets()
                 }),
                 input,
                 params,
@@ -392,7 +393,7 @@ library DeployAltoEthereumMainnet {
                         liquidationWindowTag: 0
                     }),
                     freezer: params.freezer,
-                    swapRouter: ZEROX_SWAP_TARGET_MAINNET
+                    validSwapTargets: _validSwapTargets()
                 }),
                 input,
                 params,
@@ -434,7 +435,7 @@ library DeployAltoEthereumMainnet {
                         liquidationWindowTag: 0
                     }),
                     freezer: params.freezer,
-                    swapRouter: ZEROX_SWAP_TARGET_MAINNET
+                    validSwapTargets: _validSwapTargets()
                 }),
                 input,
                 params,
@@ -518,7 +519,7 @@ library DeployAltoEthereumMainnet {
                         liquidationWindowTag: 0
                     }),
                     freezer: params.freezer,
-                    swapRouter: ODOS_ROUTER_V3_MAINNET
+                    validSwapTargets: _validSwapTargets()
                 }),
                 input,
                 params,
@@ -560,7 +561,7 @@ library DeployAltoEthereumMainnet {
                         liquidationWindowTag: 0
                     }),
                     freezer: params.freezer,
-                    swapRouter: ZEROX_SWAP_TARGET_MAINNET
+                    validSwapTargets: _validSwapTargets()
                 }),
                 input,
                 params,
@@ -595,7 +596,7 @@ library DeployAltoEthereumMainnet {
                         liquidationWindowTag: 0
                     }),
                     freezer: params.freezer,
-                    swapRouter: ZEROX_SWAP_TARGET_MAINNET
+                    validSwapTargets: _validSwapTargets()
                 }),
                 input,
                 params,
@@ -630,7 +631,7 @@ library DeployAltoEthereumMainnet {
                         liquidationWindowTag: 0
                     }),
                     freezer: params.freezer,
-                    swapRouter: ODOS_ROUTER_V3_MAINNET
+                    validSwapTargets: _validSwapTargets()
                 }),
                 input,
                 params,
@@ -824,7 +825,7 @@ library DeployAltoEthereumMainnet {
                 debtCeiling: marketParams.debtCeiling,
                 liquidationConfig: marketParams.liquidationConfig,
                 minterCeiling: minterCeiling,
-                swapRouter: marketParams.swapRouter,
+                validSwapTargets: marketParams.validSwapTargets,
                 freezer: marketParams.freezer,
                 useUnsafeUpgrades: useUnsafeUpgrades
             })
@@ -893,7 +894,7 @@ library DeployAltoEthereumMainnet {
                 initialBorrowOpeningFee: marketParams.initialBorrowOpeningFee,
                 supplyCapAssets: marketParams.supplyCapAssets,
                 liquidationConfig: marketParams.liquidationConfig,
-                swapRouter: marketParams.swapRouter,
+                validSwapTargets: marketParams.validSwapTargets,
                 freezer: marketParams.freezer,
                 useUnsafeUpgrades: useUnsafeUpgrades
             })
@@ -1338,10 +1339,7 @@ library DeployAltoEthereumMainnet {
         leverageContracts[10] = input.contracts.susdeMintMarket.leverage;
         leverageContracts[11] = input.contracts.syrupUsdcMintMarket.leverage;
 
-        address[] memory validSwapTargets = new address[](3);
-        validSwapTargets[0] = ZEROX_SWAP_TARGET_MAINNET;
-        validSwapTargets[1] = ODOS_ROUTER_V3_MAINNET;
-        validSwapTargets[2] = ONE_INCH_AGGREGATION_ROUTER_V6_MAINNET;
+        address[] memory validSwapTargets = _validSwapTargets();
 
         LeverageSwapperMultiTargetBatch batch = new LeverageSwapperMultiTargetBatch(
             LeverageSwapperMultiTargetBatchParams({
@@ -1369,6 +1367,15 @@ library DeployAltoEthereumMainnet {
         _logSetSwapperTimelockBatch(input, leverageContracts, deployedSwappers);
 
         return input;
+    }
+
+    function _validSwapTargets() internal pure returns (address[] memory validSwapTargets) {
+        validSwapTargets = new address[](5);
+        validSwapTargets[0] = ZEROX_SWAP_TARGET_MAINNET;
+        validSwapTargets[1] = ONE_INCH_AGGREGATION_ROUTER_V6_MAINNET;
+        validSwapTargets[2] = KYBERSWAP_META_AGGREGATION_ROUTER_V2_MAINNET;
+        validSwapTargets[3] = VELORA_AUGUSTUS_MAINNET;
+        validSwapTargets[4] = NORDSTERN_ROUTER_MAINNET;
     }
 
     /// @dev Logs Safe TX JSON files for timelock batch setSwapper calls on each AltoLeverage contract.
