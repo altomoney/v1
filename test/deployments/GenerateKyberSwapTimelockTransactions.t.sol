@@ -4,6 +4,7 @@ pragma solidity ^0.8.22;
 import {Test} from "forge-std/Test.sol";
 import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
 import {IAltoLeverageSwapperMultiTarget} from "@alto/lending/leverage/interfaces/IAltoLeverageSwapper.sol";
+import {ODOS_ROUTER_V3_MAINNET} from "deployments/ethereum-mainnet/Constants.sol";
 import {GenerateKyberSwapTimelockTransactionsScript} from "../../script/GenerateKyberSwapTimelockTransactions.s.sol";
 
 contract GenerateKyberSwapTimelockTransactionsTest is Test {
@@ -12,20 +13,24 @@ contract GenerateKyberSwapTimelockTransactionsTest is Test {
     address internal constant KYBERSWAP_META_AGGREGATION_ROUTER_V2 = 0x6131B5fae19EA4f9D964eAc0408E4408b66337b5;
 
     string internal constant SCHEDULE_JSON =
-        "contracts/deployments/ethereum-mainnet/output/safe-tx-kyberswap-allowlist-leverage-swappers-schedule.json";
+        "contracts/deployments/ethereum-mainnet/output/safe-tx-kyberswap-add-odos-remove-leverage-swappers-schedule.json";
     string internal constant EXECUTE_JSON =
-        "contracts/deployments/ethereum-mainnet/output/safe-tx-kyberswap-allowlist-leverage-swappers-execute.json";
+        "contracts/deployments/ethereum-mainnet/output/safe-tx-kyberswap-add-odos-remove-leverage-swappers-execute.json";
 
     function setUp() public {
         vm.createSelectFork(vm.rpcUrl("ethereum"));
     }
 
-    function test_run_writesSafeJsonsThatAllowlistKyberSwapOnAllMainnetSwappers() public {
+    function test_run_writesSafeJsonsThatAddKyberSwapAndRemoveOdosOnAllMainnetSwappers() public {
         address[] memory swappers = _swappers();
         for (uint256 i; i < swappers.length; ++i) {
             assertFalse(
                 IAltoLeverageSwapperMultiTarget(swappers[i]).isValidSwapTarget(KYBERSWAP_META_AGGREGATION_ROUTER_V2),
                 "kyber should not already be allow-listed"
+            );
+            assertTrue(
+                IAltoLeverageSwapperMultiTarget(swappers[i]).isValidSwapTarget(ODOS_ROUTER_V3_MAINNET),
+                "odos should initially be allow-listed"
             );
         }
 
@@ -42,6 +47,10 @@ contract GenerateKyberSwapTimelockTransactionsTest is Test {
             assertTrue(
                 IAltoLeverageSwapperMultiTarget(swappers[i]).isValidSwapTarget(KYBERSWAP_META_AGGREGATION_ROUTER_V2),
                 "kyber should be allow-listed"
+            );
+            assertFalse(
+                IAltoLeverageSwapperMultiTarget(swappers[i]).isValidSwapTarget(ODOS_ROUTER_V3_MAINNET),
+                "odos should be removed"
             );
         }
     }
@@ -94,20 +103,29 @@ contract GenerateKyberSwapTimelockTransactionsTest is Test {
         bytes32 salt,
         address[] memory expectedTargets
     ) internal pure {
-        assertEq(targets.length, 12, "target length");
-        assertEq(values.length, 12, "value length");
-        assertEq(payloads.length, 12, "payload length");
+        assertEq(targets.length, 24, "target length");
+        assertEq(values.length, 24, "value length");
+        assertEq(payloads.length, 24, "payload length");
         assertEq(predecessor, bytes32(0), "predecessor");
         assertEq(salt, bytes32(0), "salt");
 
-        bytes memory expectedPayload = abi.encodeCall(
+        bytes memory expectedKyberPayload = abi.encodeCall(
             IAltoLeverageSwapperMultiTarget.setValidSwapTarget, (KYBERSWAP_META_AGGREGATION_ROUTER_V2, true)
         );
+        bytes memory expectedOdosPayload =
+            abi.encodeCall(IAltoLeverageSwapperMultiTarget.setValidSwapTarget, (ODOS_ROUTER_V3_MAINNET, false));
 
         for (uint256 i; i < expectedTargets.length; ++i) {
-            assertEq(targets[i], expectedTargets[i], "target");
-            assertEq(values[i], 0, "value");
-            assertEq(payloads[i], expectedPayload, "payload");
+            uint256 kyberOperation = i * 2;
+            uint256 odosOperation = kyberOperation + 1;
+
+            assertEq(targets[kyberOperation], expectedTargets[i], "kyber target");
+            assertEq(values[kyberOperation], 0, "kyber value");
+            assertEq(payloads[kyberOperation], expectedKyberPayload, "kyber payload");
+
+            assertEq(targets[odosOperation], expectedTargets[i], "odos target");
+            assertEq(values[odosOperation], 0, "odos value");
+            assertEq(payloads[odosOperation], expectedOdosPayload, "odos payload");
         }
     }
 

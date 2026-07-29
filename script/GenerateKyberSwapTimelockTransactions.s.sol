@@ -4,16 +4,18 @@ pragma solidity ^0.8.22;
 import {Script, console} from "forge-std/Script.sol";
 import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
 import {IAltoLeverageSwapperMultiTarget} from "@alto/lending/leverage/interfaces/IAltoLeverageSwapper.sol";
+import {ODOS_ROUTER_V3_MAINNET} from "deployments/ethereum-mainnet/Constants.sol";
 
-/// @title Generate KyberSwap Timelock Transaction Data
+/// @title Generate Swap Target Timelock Transaction Data
 /// @dev Run with: forge script script/GenerateKyberSwapTimelockTransactions.s.sol --rpc-url $ETH_RPC_URL
-/// @notice Writes Safe Transaction Builder JSON files to allow-list KyberSwap on all mainnet leverage swappers.
+/// @notice Writes Safe Transaction Builder JSON files to allow-list KyberSwap and remove ODOS from all mainnet
+/// leverage swappers.
 contract GenerateKyberSwapTimelockTransactionsScript is Script {
     address internal constant TIMELOCK = 0xfAe841679dc1A93D225ECc827E4BbF3e8d703F86;
     address internal constant KYBERSWAP_META_AGGREGATION_ROUTER_V2 = 0x6131B5fae19EA4f9D964eAc0408E4408b66337b5;
 
     string internal constant OUTPUT_DIR = "contracts/deployments/ethereum-mainnet/output";
-    string internal constant BATCH_NAME = "kyberswap-allowlist-leverage-swappers";
+    string internal constant BATCH_NAME = "kyberswap-add-odos-remove-leverage-swappers";
 
     function run() public {
         (address[] memory targets, uint256[] memory values, bytes[] memory payloads) = _buildBatch();
@@ -22,7 +24,8 @@ contract GenerateKyberSwapTimelockTransactionsScript is Script {
         _writeSafeTimelockBatchJson(BATCH_NAME, TIMELOCK, targets, values, payloads, timelockDelay);
 
         console.log("KyberSwap target:", KYBERSWAP_META_AGGREGATION_ROUTER_V2);
-        console.log("Swappers updated:", targets.length);
+        console.log("ODOS target removed:", ODOS_ROUTER_V3_MAINNET);
+        console.log("Swappers updated:", targets.length / 2);
         console.log("Timelock:", TIMELOCK);
         console.log("Timelock delay:", timelockDelay);
     }
@@ -32,14 +35,24 @@ contract GenerateKyberSwapTimelockTransactionsScript is Script {
         pure
         returns (address[] memory targets, uint256[] memory values, bytes[] memory payloads)
     {
-        targets = _swappers();
-        values = new uint256[](targets.length);
-        payloads = new bytes[](targets.length);
+        address[] memory swappers = _swappers();
+        uint256 operationCount = swappers.length * 2;
+        targets = new address[](operationCount);
+        values = new uint256[](operationCount);
+        payloads = new bytes[](operationCount);
 
-        for (uint256 i = 0; i < targets.length; i++) {
-            payloads[i] = abi.encodeCall(
+        for (uint256 i = 0; i < swappers.length; i++) {
+            uint256 kyberOperation = i * 2;
+            uint256 odosOperation = kyberOperation + 1;
+
+            targets[kyberOperation] = swappers[i];
+            payloads[kyberOperation] = abi.encodeCall(
                 IAltoLeverageSwapperMultiTarget.setValidSwapTarget, (KYBERSWAP_META_AGGREGATION_ROUTER_V2, true)
             );
+
+            targets[odosOperation] = swappers[i];
+            payloads[odosOperation] =
+                abi.encodeCall(IAltoLeverageSwapperMultiTarget.setValidSwapTarget, (ODOS_ROUTER_V3_MAINNET, false));
         }
     }
 
