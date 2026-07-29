@@ -5,7 +5,7 @@ import {DlbDcfPriorityLiquidationEngine} from "@alto/lending/liquidation/DlbDcfP
 import {AltoMintMarket} from "@alto/lending/AltoMintMarket.sol";
 import {MintMarketInitParams, BaseMarketInitParams} from "@alto/lending/interfaces/IMarket.sol";
 import {LiquidationConfiguration} from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";
-import {AltoLeverageSwapper} from "@alto/lending/leverage/AltoLeverageSwapper.sol";
+import {AltoLeverageSwapperMultiTarget} from "@alto/lending/leverage/AltoLeverageSwapperMultiTarget.sol";
 import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
 import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
 import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
@@ -38,7 +38,7 @@ struct MintMarketBatchParams {
     uint256 debtCeiling;
     LiquidationConfiguration liquidationConfig;
     uint256 minterCeiling;
-    address swapRouter;
+    address[] validSwapTargets;
     address freezer;
     bool useUnsafeUpgrades;
 }
@@ -57,7 +57,8 @@ library MintMarketBatch {
         // Deploy Market Proxy
         bytes memory initData = abi.encodeCall(
             AltoMintMarket.initialize,
-            (MintMarketInitParams({
+            (
+                MintMarketInitParams({
                     baseMarketInitParams: BaseMarketInitParams({
                         borrowToken: _params.dusd,
                         collateralToken: _params.collateralToken,
@@ -70,7 +71,8 @@ library MintMarketBatch {
                     }),
                     debtCeiling: _params.debtCeiling,
                     initialBorrowOpeningFee: _params.initialBorrowOpeningFee
-                }))
+                })
+            )
         );
         address marketProxy;
         address marketImplementation = ALTO_MINT_MARKET_IMPL;
@@ -94,12 +96,13 @@ library MintMarketBatch {
 
         // Deploy leverage components with deployer as owner temporarily to allow configuration
         // owner will be transferred to _params.owner after configuration
-        address leverageSwapper = address(new AltoLeverageSwapper(_params.deployer, _params.swapRouter));
+        address leverageSwapper =
+            address(new AltoLeverageSwapperMultiTarget(_params.deployer, _params.validSwapTargets));
         address leverage = address(new AltoLeverage(leverageSwapper, _params.deployer));
 
         // Configure leverage components (requires ownership)
         AltoLeverage(leverage).setMarket(marketProxy, true);
-        AltoLeverageSwapper(leverageSwapper).setWhitelisted(leverage, true);
+        AltoLeverageSwapperMultiTarget(leverageSwapper).setWhitelisted(leverage, true);
 
         // Configure market to authorize leverage callback (requires market ownership)
         IMarket(marketProxy).setAuthorizedCallback(leverage, true);
@@ -122,4 +125,3 @@ library MintMarketBatch {
         });
     }
 }
-

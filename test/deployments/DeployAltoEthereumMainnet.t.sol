@@ -22,7 +22,6 @@ import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IER
 import {IAltoLiquidationEngine} from "@alto/lending/interfaces/IAltoLiquidationEngine.sol";
 import {Pausable} from "@alto/utils/Pausable.sol";
 import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
-import {AltoLeverageSwapper} from "@alto/lending/leverage/AltoLeverageSwapper.sol";
 import {AltoLeverageSwapperMultiTarget} from "@alto/lending/leverage/AltoLeverageSwapperMultiTarget.sol";
 import {LiquidationPeriphery} from "@alto/lending/liquidation/LiquidationPeriphery.sol";
 import {DUSDAdvancedPermissionsUsm} from "@alto/usm/DUSDAdvancedPermissionsUsm.sol";
@@ -39,7 +38,10 @@ import {MockSwapper} from "@alto-test/lending/liquidation/helpers/MockSwapper.so
 import {
     ZEROX_SWAP_TARGET_MAINNET,
     ODOS_ROUTER_V3_MAINNET,
-    ONE_INCH_AGGREGATION_ROUTER_V6_MAINNET
+    ONE_INCH_AGGREGATION_ROUTER_V6_MAINNET,
+    KYBERSWAP_META_AGGREGATION_ROUTER_V2_MAINNET,
+    VELORA_AUGUSTUS_MAINNET,
+    NORDSTERN_ROUTER_MAINNET
 } from "@alto/deployments/ethereum-mainnet/Constants.sol";
 import {IMarketRegistry, MarketRegistry} from "@alto/utils/MarketRegistry.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
@@ -260,10 +262,9 @@ abstract contract DeployAltoEthereumMainnetTestBase is Test {
         assertTrue(
             AltoLeverage(payable(market.leverage)).supportedMarkets(market.market), "Leverage should support market"
         );
-        assertTrue(
-            AltoLeverageSwapper(payable(market.leverageSwapper)).isWhitelisted(market.leverage),
-            "Leverage should be whitelisted"
-        );
+        AltoLeverageSwapperMultiTarget leverageSwapper = AltoLeverageSwapperMultiTarget(market.leverageSwapper);
+        assertTrue(leverageSwapper.isWhitelisted(market.leverage), "Leverage should be whitelisted");
+        _verifyValidSwapTargets(leverageSwapper);
         assertTrue(
             IMarket(market.market).authorizedCallbacks(market.leverage), "Market should authorize leverage callback"
         );
@@ -273,6 +274,20 @@ abstract contract DeployAltoEthereumMainnetTestBase is Test {
             market.market,
             "Liquidation engine should have correct market"
         );
+    }
+
+    function _verifyValidSwapTargets(AltoLeverageSwapperMultiTarget swapper) internal view {
+        assertTrue(swapper.isValidSwapTarget(ZEROX_SWAP_TARGET_MAINNET), "0x should be valid swap target");
+        assertTrue(
+            swapper.isValidSwapTarget(ONE_INCH_AGGREGATION_ROUTER_V6_MAINNET), "1inch should be valid swap target"
+        );
+        assertTrue(
+            swapper.isValidSwapTarget(KYBERSWAP_META_AGGREGATION_ROUTER_V2_MAINNET),
+            "KyberSwap should be valid swap target"
+        );
+        assertTrue(swapper.isValidSwapTarget(VELORA_AUGUSTUS_MAINNET), "Velora should be valid swap target");
+        assertTrue(swapper.isValidSwapTarget(NORDSTERN_ROUTER_MAINNET), "Nordstern should be valid swap target");
+        assertFalse(swapper.isValidSwapTarget(ODOS_ROUTER_V3_MAINNET), "ODOS should not be valid swap target");
     }
 
     function _verifyDeployed(address addr, string memory name) internal view {
@@ -736,11 +751,7 @@ contract DeployLeverageSwapperMultiTargetPhaseTest is DeployAltoEthereumMainnetT
             AltoLeverageSwapperMultiTarget swapper = AltoLeverageSwapperMultiTarget(newSwapper);
             assertEq(Ownable(newSwapper).owner(), input.contracts.timelock, "swapper owner should be timelock");
             assertTrue(swapper.isWhitelisted(leverage), "leverage should be whitelisted on swapper");
-            assertTrue(swapper.isValidSwapTarget(ZEROX_SWAP_TARGET_MAINNET), "0x should be valid swap target");
-            assertTrue(swapper.isValidSwapTarget(ODOS_ROUTER_V3_MAINNET), "Odos should be valid swap target");
-            assertTrue(
-                swapper.isValidSwapTarget(ONE_INCH_AGGREGATION_ROUTER_V6_MAINNET), "1inch should be valid swap target"
-            );
+            _verifyValidSwapTargets(swapper);
 
             assertEq(
                 address(AltoLeverage(leverage).swapper()),
@@ -756,9 +767,7 @@ contract DeployLeverageSwapperMultiTargetPhaseTest is DeployAltoEthereumMainnetT
             "schedule json should be written"
         );
         assertTrue(
-            vm.exists(
-                "contracts/deployments/ethereum-mainnet/output/safe-tx-leverage-swapper-set-swapper-execute.json"
-            ),
+            vm.exists("contracts/deployments/ethereum-mainnet/output/safe-tx-leverage-swapper-set-swapper-execute.json"),
             "execute json should be written"
         );
     }

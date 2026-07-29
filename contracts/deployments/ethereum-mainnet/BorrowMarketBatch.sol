@@ -5,7 +5,7 @@ import {DlbDcfPriorityLiquidationEngine} from "@alto/lending/liquidation/DlbDcfP
 import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";
 import {BorrowMarketInitParams, BaseMarketInitParams} from "@alto/lending/interfaces/IMarket.sol";
 import {LiquidationConfiguration} from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";
-import {AltoLeverageSwapper} from "@alto/lending/leverage/AltoLeverageSwapper.sol";
+import {AltoLeverageSwapperMultiTarget} from "@alto/lending/leverage/AltoLeverageSwapperMultiTarget.sol";
 import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
 import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
 import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
@@ -36,7 +36,7 @@ struct BorrowMarketBatchParams {
     uint256 initialBorrowOpeningFee;
     uint128 supplyCapAssets;
     LiquidationConfiguration liquidationConfig;
-    address swapRouter;
+    address[] validSwapTargets;
     address freezer;
     bool useUnsafeUpgrades;
 }
@@ -55,7 +55,8 @@ library BorrowMarketBatch {
         // Deploy Market Proxy
         bytes memory initData = abi.encodeCall(
             AltoBorrowMarket.initialize,
-            (BorrowMarketInitParams({
+            (
+                BorrowMarketInitParams({
                     baseMarketInitParams: BaseMarketInitParams({
                         borrowToken: _params.dusd,
                         collateralToken: _params.collateralToken,
@@ -69,7 +70,8 @@ library BorrowMarketBatch {
                     initialBorrowOpeningFee: _params.initialBorrowOpeningFee,
                     supplyCapAssets: _params.supplyCapAssets,
                     initialInterestFee: 0
-                }))
+                })
+            )
         );
         address marketProxy;
         address marketImplementation = ALTO_BORROW_MARKET_IMPL;
@@ -92,12 +94,13 @@ library BorrowMarketBatch {
 
         // Deploy leverage components with deployer as owner temporarily to allow configuration
         // owner will be transferred to _params.owner after configuration
-        address leverageSwapper = address(new AltoLeverageSwapper(_params.deployer, _params.swapRouter));
+        address leverageSwapper =
+            address(new AltoLeverageSwapperMultiTarget(_params.deployer, _params.validSwapTargets));
         address leverage = address(new AltoLeverage(leverageSwapper, _params.deployer));
 
         // Configure leverage components (requires ownership)
         AltoLeverage(leverage).setMarket(marketProxy, true);
-        AltoLeverageSwapper(leverageSwapper).setWhitelisted(leverage, true);
+        AltoLeverageSwapperMultiTarget(leverageSwapper).setWhitelisted(leverage, true);
 
         // Configure market to authorize leverage callback (requires market ownership)
         IMarket(marketProxy).setAuthorizedCallback(leverage, true);
@@ -120,4 +123,3 @@ library BorrowMarketBatch {
         });
     }
 }
-
