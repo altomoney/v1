@@ -7,6 +7,8 @@ const CRVUSD = "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e";
 const TOKEN_METADATA = new Map([
   ["0xd533a949740bb3306d119cc777fa900ba034cd52", { symbol: "CRV", decimals: 18 }],
   ["0x4e3fbd56cd56c3e72c1403e103b45db9da5b9d2b", { symbol: "CVX", decimals: 18 }],
+  ["0xcacd6fd266af91b8aed52accc382b4e165586e29", { symbol: "frxUSD", decimals: 18 }],
+  ["0x63d74d22e689c715a04f2c13962b1f77f443d35b", { symbol: "DUSD", decimals: 18 }],
   [CRVUSD, { symbol: "crvUSD", decimals: 18 }],
 ]);
 const SUPPORTED_SELL_TOKENS = new Set([...TOKEN_METADATA.keys()].filter((token) => token !== CRVUSD));
@@ -237,7 +239,10 @@ export async function createCowPresignOrder({
   now = () => new Date(),
 }) {
   const normalizedSellToken = normalizeAddress(sellToken, "sell token");
-  requireCondition(SUPPORTED_SELL_TOKENS.has(normalizedSellToken), "sell token must be CRV or CVX");
+  requireCondition(
+    SUPPORTED_SELL_TOKENS.has(normalizedSellToken),
+    "sell token must be CRV, CVX, frxUSD, or DUSD",
+  );
   const parsedSellAmount = parseUnsignedInteger(sellAmount, "sell amount");
   requireCondition(parsedSellAmount > 0n, "sell amount must be non-zero");
   requireCondition(Number.isInteger(validFor) && validFor >= 1_800 && validFor <= 604_800, "validity must be 1800-604800 seconds");

@@ -5,15 +5,20 @@ import {Test} from "forge-std/Test.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {
+    CurveWithdrawalData,
     CowOrderAnalytics,
     CowOrderData,
     GenerateLiquidityIncentivesTransactionsScript,
     ICowSettlement,
+    ICurveStableSwapNg,
     IMulticall3,
+    IStakeDaoAccountant,
     IUniversalRewardsDistributor,
     IVotium,
+    IYearnV2Vault,
     LiquidityIncentivesSafeTx,
-    StakeDaoClaimData
+    StakeDaoClaimData,
+    YearnWithdrawalData
 } from "../../script/liquidity-incentives/GenerateLiquidityIncentivesTransactions.s.sol";
 
 contract GenerateLiquidityIncentivesTransactionsTest is Test {
@@ -50,6 +55,98 @@ contract GenerateLiquidityIncentivesTransactionsTest is Test {
         );
     }
 
+    function test_GetClaimTransactions_skipsYearnWhenThereIsNoYield() public view {
+        StakeDaoClaimData memory claimData = _claimData();
+        YearnWithdrawalData memory yearnData =
+            generator.calculateYearnWithdrawalData(215_246 ether, 1 ether, generator.YEARN_RETAINED_PRINCIPAL_LP(), 1);
+        LiquidityIncentivesSafeTx[] memory txs = generator.getClaimTransactions(claimData, yearnData);
+
+        assertEq(yearnData.safeAssets, generator.YEARN_RETAINED_PRINCIPAL_LP());
+        assertEq(yearnData.rewardShares, 0);
+        assertEq(yearnData.expectedLpAssets, 0);
+        assertEq(txs.length, 2, "zero Yearn yield must not add a transaction");
+    }
+
+    function test_GetClaimTransactions_optionallyClaimsStakeDaoCrvWithExactUiCalldata() public view {
+        StakeDaoClaimData memory claimData = _claimData();
+        YearnWithdrawalData memory yearnData;
+        LiquidityIncentivesSafeTx[] memory txs = generator.getClaimTransactions(claimData, yearnData, true);
+
+        assertEq(txs.length, 3);
+        assertEq(txs[2].to, generator.STAKEDAO_ACCOUNTANT());
+        assertEq(_selector(txs[2].data), IStakeDaoAccountant.claim.selector);
+        assertEq(
+            keccak256(txs[2].data),
+            0x0431d747a944283cd090ca0290d9ae1ee2351579a75b809b2b93ee1ac7c38835,
+            "Stake DAO CRV claim must exactly match the supplied UI calldata"
+        );
+        (address[] memory gauges, bytes[] memory harvestData) =
+            abi.decode(_arguments(txs[2].data), (address[], bytes[]));
+        assertEq(gauges.length, 1);
+        assertEq(gauges[0], generator.DUSD_FRXUSD_GAUGE());
+        assertEq(harvestData.length, 1);
+        assertEq(harvestData[0], bytes(""));
+    }
+
+    function test_GetClaimTransactions_withdrawsOnlyYearnYield() public view {
+        StakeDaoClaimData memory claimData = _claimData();
+        uint256 retainedPrincipal = generator.YEARN_RETAINED_PRINCIPAL_LP();
+        YearnWithdrawalData memory yearnData =
+            generator.calculateYearnWithdrawalData(215_246 ether, 1.01 ether, retainedPrincipal, 1);
+        LiquidityIncentivesSafeTx[] memory txs = generator.getClaimTransactions(claimData, yearnData);
+
+        assertGt(yearnData.rewardShares, 0);
+        assertGt(yearnData.expectedLpAssets, 0);
+        assertGe(
+            (yearnData.safeShares - yearnData.rewardShares) * yearnData.pricePerShare / 1 ether,
+            retainedPrincipal,
+            "Yearn principal must remain represented by retained shares"
+        );
+        assertEq(txs.length, 3);
+        assertEq(txs[2].to, generator.YEARN_VAULT());
+        assertEq(_selector(txs[2].data), IYearnV2Vault.withdraw.selector);
+        (uint256 shares, address recipient, uint256 maxLossBps) =
+            abi.decode(_arguments(txs[2].data), (uint256, address, uint256));
+        assertEq(shares, yearnData.rewardShares);
+        assertEq(recipient, generator.TREASURY_SAFE());
+        assertEq(maxLossBps, 1);
+    }
+
+    function test_CalculateYearnWithdrawalData_rejectsExcessiveMaxLoss() public {
+        vm.expectRevert(bytes("Yearn max loss exceeds 1%"));
+        generator.calculateYearnWithdrawalData(215_246 ether, 1.01 ether, 215_246 ether, 101);
+    }
+
+    function test_GetCurveWithdrawalTransactions_encodesBalancedWithdrawal() public view {
+        CurveWithdrawalData memory curveData = CurveWithdrawalData({
+            lpAmount: 100 ether,
+            expectedFrxUsd: 60 ether,
+            expectedDusd: 40 ether,
+            minimumFrxUsd: 59.4 ether,
+            minimumDusd: 39.6 ether,
+            slippageBps: 100
+        });
+        LiquidityIncentivesSafeTx[] memory txs = generator.getCurveWithdrawalTransactions(curveData);
+
+        assertEq(txs.length, 1);
+        assertEq(txs[0].to, generator.DUSD_FRXUSD_CURVE_POOL());
+        assertEq(_selector(txs[0].data), ICurveStableSwapNg.remove_liquidity.selector);
+        (uint256 lpAmount, uint256[] memory minimumAmounts, address receiver, bool claimAdminFees) =
+            abi.decode(_arguments(txs[0].data), (uint256, uint256[], address, bool));
+        assertEq(lpAmount, curveData.lpAmount);
+        assertEq(minimumAmounts.length, 2);
+        assertEq(minimumAmounts[0], curveData.minimumFrxUsd);
+        assertEq(minimumAmounts[1], curveData.minimumDusd);
+        assertEq(receiver, generator.TREASURY_SAFE());
+        assertTrue(claimAdminFees);
+    }
+
+    function test_GetCurveWithdrawalTransactions_acceptsZeroLpAmount() public view {
+        CurveWithdrawalData memory curveData;
+        LiquidityIncentivesSafeTx[] memory txs = generator.getCurveWithdrawalTransactions(curveData);
+        assertEq(txs.length, 0);
+    }
+
     function test_GetConsolidationTransactions_encodesRedeemApprovalsAndPresignatures() public view {
         CowOrderData[] memory orders = new CowOrderData[](2);
         orders[0] = _cowOrder(generator.CRV(), 100 ether, 20 ether, 1);
@@ -77,6 +174,17 @@ contract GenerateLiquidityIncentivesTransactionsTest is Test {
 
         vm.expectRevert(bytes("CoW order UID owner mismatch"));
         generator.getConsolidationTransactions(0, orders);
+    }
+
+    function test_GetConsolidationTransactions_supportsFrxUsdAndDusd() public view {
+        CowOrderData[] memory orders = new CowOrderData[](2);
+        orders[0] = _cowOrder(generator.FRXUSD(), 100 ether, 100 ether, 3);
+        orders[1] = _cowOrder(generator.DUSD(), 50 ether, 50 ether, 4);
+        LiquidityIncentivesSafeTx[] memory txs = generator.getConsolidationTransactions(0, orders);
+
+        assertEq(txs.length, 4);
+        _assertCowTransactions(txs[0], txs[1], orders[0]);
+        _assertCowTransactions(txs[2], txs[3], orders[1]);
     }
 
     function test_GetVotiumTransactions_approvesExactCrvUsdAndDeposits() public view {
@@ -229,15 +337,64 @@ contract GenerateLiquidityIncentivesTransactionsForkTest is Test {
         );
     }
 
+    function test_Fork_zeroYearnYieldDoesNotBlockClaims() public {
+        StakeDaoClaimData memory claimData = _claimData();
+        YearnWithdrawalData memory yearnData =
+            generator.getYearnWithdrawalData(generator.YEARN_RETAINED_PRINCIPAL_LP(), 1);
+        LiquidityIncentivesSafeTx[] memory txs = generator.getClaimTransactions(claimData, yearnData);
+
+        assertEq(yearnData.rewardShares, 0);
+        assertEq(txs.length, 2);
+        generator.validateAndSimulateClaimTransactions(txs, claimData, yearnData);
+    }
+
+    function test_Fork_optionalStakeDaoCrvClaimExecutesOnCurrentMainnet() public {
+        string memory rpcUrl = vm.envOr("ETHEREUM_RPC_URL", string("https://rpc.stakedao.org/main/evm/1"));
+        vm.createSelectFork(rpcUrl);
+        generator = new GenerateLiquidityIncentivesTransactionsScript();
+
+        StakeDaoClaimData memory claimData = _claimData();
+        YearnWithdrawalData memory yearnData;
+        LiquidityIncentivesSafeTx[] memory txs = generator.getClaimTransactions(claimData, yearnData, true);
+        IStakeDaoAccountant accountant = IStakeDaoAccountant(generator.STAKEDAO_ACCOUNTANT());
+        uint256 pendingBefore = accountant.getPendingRewards(generator.DUSD_FRXUSD_GAUGE(), generator.TREASURY_SAFE());
+        uint256 crvBefore = IERC20(generator.CRV()).balanceOf(generator.TREASURY_SAFE());
+
+        vm.prank(generator.TREASURY_SAFE());
+        (bool success,) = txs[2].to.call(txs[2].data);
+
+        assertTrue(success, "current Stake DAO CRV claim reverted");
+        assertEq(accountant.getPendingRewards(generator.DUSD_FRXUSD_GAUGE(), generator.TREASURY_SAFE()), 0);
+        assertGe(IERC20(generator.CRV()).balanceOf(generator.TREASURY_SAFE()), crvBefore + pendingBefore);
+    }
+
+    function test_Fork_curveWithdrawalBurnsExactLpAndReturnsBothCoins() public {
+        uint256 lpAmount = 1 ether;
+        deal(generator.DUSD_FRXUSD_CURVE_POOL(), generator.TREASURY_SAFE(), lpAmount);
+        CurveWithdrawalData memory curveData = generator.getCurveWithdrawalData(lpAmount, 10);
+        LiquidityIncentivesSafeTx[] memory txs = generator.getCurveWithdrawalTransactions(curveData);
+
+        generator.validateAndSimulateCurveWithdrawalTransactions(txs, curveData);
+        assertEq(
+            IERC20(generator.DUSD_FRXUSD_CURVE_POOL()).balanceOf(generator.TREASURY_SAFE()),
+            lpAmount,
+            "Curve simulation must revert state"
+        );
+    }
+
     function test_Fork_consolidationPhaseRedeemsAndPresigns() public {
         uint256 scrvUsdAmount = 10 ether;
         deal(generator.SCRVUSD(), generator.TREASURY_SAFE(), scrvUsdAmount);
         deal(generator.CRV(), generator.TREASURY_SAFE(), 100 ether);
         deal(generator.CVX(), generator.TREASURY_SAFE(), 50 ether);
+        deal(generator.FRXUSD(), generator.TREASURY_SAFE(), 75 ether);
+        deal(generator.DUSD(), generator.TREASURY_SAFE(), 25 ether);
 
-        CowOrderData[] memory orders = new CowOrderData[](2);
+        CowOrderData[] memory orders = new CowOrderData[](4);
         orders[0] = _cowOrder(generator.CRV(), 100 ether, 20 ether, 1);
         orders[1] = _cowOrder(generator.CVX(), 50 ether, 100 ether, 2);
+        orders[2] = _cowOrder(generator.FRXUSD(), 75 ether, 75 ether, 3);
+        orders[3] = _cowOrder(generator.DUSD(), 25 ether, 25 ether, 4);
         LiquidityIncentivesSafeTx[] memory txs = generator.getConsolidationTransactions(scrvUsdAmount, orders);
         generator.validateAndSimulateConsolidationTransactions(txs, scrvUsdAmount, orders);
     }
