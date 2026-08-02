@@ -4,17 +4,19 @@ import { buildPresignOrder, buildQuoteAnalytics, createCowPresignOrder } from ".
 
 const safe = "0xa1148a1b94262540994cf9aa431a13ad39764228";
 const crv = "0xd533a949740bb3306d119cc777fa900ba034cd52";
+const frxUsd = "0xcacd6fd266af91b8aed52accc382b4e165586e29";
+const dusd = "0x63d74d22e689c715a04f2c13962b1f77f443d35b";
 const crvUsd = "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e";
 const uid = `0x${"11".repeat(32)}${safe.slice(2)}${"70000000"}`;
 const oneEther = 10n ** 18n;
 const requestedSellAmount = (1_000n * oneEther).toString();
 const fixedTimestamp = "2026-07-20T12:00:00.000Z";
 
-function quoteResponse() {
+function quoteResponse(sellToken = crv) {
   return {
     id: 42,
     quote: {
-      sellToken: crv,
+      sellToken,
       buyToken: crvUsd,
       receiver: safe,
       sellAmount: (990n * oneEther).toString(),
@@ -33,6 +35,9 @@ function quoteResponse() {
 
 function priceResponse(url) {
   if (url.includes(crv)) return new Response(JSON.stringify({ price: 1 }), { status: 200 });
+  if (url.includes(frxUsd) || url.includes(dusd)) {
+    return new Response(JSON.stringify({ price: 1 }), { status: 200 });
+  }
   if (url.includes(crvUsd)) return new Response(JSON.stringify({ price: 2 }), { status: 200 });
   throw new Error(`unexpected price URL: ${url}`);
 }
@@ -99,6 +104,29 @@ test("quote-only mode reports expected and worst-case price impact without posti
   assert.equal(result.analytics.worstCasePriceImpactBps, "100.00");
   assert.equal(result.analytics.worstCasePriceImpactPercent, "1.0000%");
   assert.equal(result.analytics.priceReferenceTimestamp, fixedTimestamp);
+});
+
+test("quote-only mode supports Curve withdrawal coins", async () => {
+  for (const [sellToken, symbol] of [[frxUsd, "frxUSD"], [dusd, "DUSD"]]) {
+    const fetchImpl = async (url) => {
+      if (url.endsWith("/quote")) {
+        return new Response(JSON.stringify(quoteResponse(sellToken)), { status: 200 });
+      }
+      return priceResponse(url);
+    };
+    const result = await createCowPresignOrder({
+      sellToken,
+      sellAmount: requestedSellAmount,
+      slippageBps: 100,
+      validFor: 86_400,
+      fetchImpl,
+      now: () => new Date(fixedTimestamp),
+    });
+
+    assert.equal(result.sellToken, sellToken);
+    assert.equal(result.analytics.sellTokenSymbol, symbol);
+    assert.equal(result.analytics.inputDisplay, `1000 ${symbol} ($1000.000000)`);
+  }
 });
 
 test("quote creation fails closed when reference prices are unavailable", async () => {
