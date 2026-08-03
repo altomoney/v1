@@ -4,7 +4,8 @@ pragma solidity >=0.8.0;
 
 enum IRMType {
     FIXED_RATE, // FixedRateIrm
-    ADAPTIVE_CURVE // AdaptiveCurveIrm
+    ADAPTIVE_CURVE, // AdaptiveCurveIrm
+    PEG_RESPONSIVE // PegResponsiveIrm
 }
 
 interface IIrm {
@@ -47,3 +48,4 @@ interface IIrm {
     /// @return new interest rate in second percent yield (SPY), new interest since last update
     function updateInterestRateView(uint256 totalSupply, uint256 totalBorrowed) external view returns (uint256, uint256);
 }
+
