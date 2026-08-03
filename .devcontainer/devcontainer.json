@@ -5,9 +5,9 @@
 		"dockerfile": "Dockerfile"
 	},
 	"postStartCommand": [
-        "/bin/bash",
-        ".devcontainer/post_install.sh"
-    ],
+		"/bin/bash",
+		".devcontainer/post_install.sh"
+	],
 	"customizations": {
 		"vscode": {
 			"settings": {
@@ -16,7 +16,8 @@
 			"extensions": [
 				"NomicFoundation.hardhat-solidity",
 				"Graphite.gti-vscode",
-				"tamasfe.even-better-toml"
+				"tamasfe.even-better-toml",
+				"openai.chatgpt"
 			]
 		}
 	}
