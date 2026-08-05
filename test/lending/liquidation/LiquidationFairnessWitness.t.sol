@@ -127,9 +127,7 @@ contract LiquidationFairnessWitnessTest is Test {
     function test_liveDeployedWethEngine_Witness() public {
         if (!vm.envOr("RUN_LIVE_FORK", false)) return;
 
-        string memory defaultRpcUrl = "https://ethereum-rpc.publicnode.com";
-        string memory rpcUrl = vm.envOr("ETH_RPC_URL", defaultRpcUrl);
-        vm.createSelectFork(rpcUrl);
+        vm.createSelectFork(vm.rpcUrl("ethereum"));
 
         uint128 collateral = 10e18;
         uint256 collateralValue = (uint256(collateral) * LIVE_WETH_PRICE) / ORACLE_PREC;
