@@ -38,6 +38,9 @@ interface IMintCurveConvexPositionFactoryErrors {
 
     /// @notice Thrown when the market is not a supported mint market.
     error MintCurveConvexPositionFactoryUnsupportedMarket();
+
+    /// @notice Thrown when an ownership update is not called by a position tracked under the previous owner.
+    error MintCurveConvexPositionFactoryInvalidPosition();
 }
 
 interface IMintCurveConvexPositionFactoryEvents {
@@ -69,6 +72,20 @@ interface IMintCurveConvexPositionFactoryBase is
 
     /// @notice returns the market registry used to validate mint markets
     function marketRegistry() external view returns (address);
+
+    /// @notice Returns every position currently owned by `owner`.
+    /// @dev Ownership transfers update this list. Removal uses swap-and-pop, so ordering
+    ///      can change after a transfer. Returns the full unbounded array and is intended
+    ///      for off-chain reads when the position count is known to be small.
+    /// @param owner The current position owner.
+    /// @return The position proxy addresses.
+    function positionsOf(address owner) external view returns (address[] memory);
+
+    /// @notice Moves a position from `previousOwner` to its current owner in the owner index.
+    /// @dev Callable only by a position currently tracked under `previousOwner`. The destination
+    ///      owner is read directly from the calling position rather than supplied by the caller.
+    /// @param previousOwner The owner before {MintCurveConvexPosition.acceptOwnership}.
+    function onPositionOwnershipTransferred(address previousOwner) external;
 
     /// @notice Sets the position beacon for MintCurveConvex strategy.
     /// @dev This can only be set once because if it's updated, there can be positions with
