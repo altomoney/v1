@@ -42,6 +42,12 @@ contract MintCurveConvexPosition_AcceptOwnership_Test is MintCurveConvexPosition
 
         assertEq(position.owner(), NEW_OWNER, "owner rolled over");
         assertEq(position.pendingOwner(), address(0), "pendingOwner cleared");
+
+        address[] memory previousOwnerPositions = factory.positionsOf(OWNER);
+        address[] memory newOwnerPositions = factory.positionsOf(NEW_OWNER);
+        assertEq(previousOwnerPositions.length, 0, "factory removes previous owner position");
+        assertEq(newOwnerPositions.length, 1, "factory indexes new owner position");
+        assertEq(newOwnerPositions[0], address(position), "factory indexes transferred position");
     }
 
     function test_AcceptOwnership_RollsOverAuthorization_PreviousOwnerSpenderLosesAccess() public {
@@ -122,6 +128,12 @@ contract MintCurveConvexPosition_AcceptOwnership_Test is MintCurveConvexPosition
         vm.prank(OWNER);
         position.acceptOwnership();
         assertEq(position.owner(), OWNER, "ownership restored");
+
+        address[] memory ownerPositions = factory.positionsOf(OWNER);
+        address[] memory newOwnerPositions = factory.positionsOf(NEW_OWNER);
+        assertEq(ownerPositions.length, 1, "factory restores original owner position");
+        assertEq(ownerPositions[0], address(position), "factory indexes round-tripped position");
+        assertEq(newOwnerPositions.length, 0, "factory removes outgoing owner position");
 
         // The original owner's authorization was never cleared, so the spender regains access.
         vm.prank(AUTHORIZED_SPENDER);

@@ -233,7 +233,9 @@ contract MintCurveConvexPosition is
 
     /// @inheritdoc IMintCurveConvexPosition
     function acceptOwnership() public override(IMintCurveConvexPosition, Ownable2StepUpgradeable) {
+        address previousOwner = owner();
         super.acceptOwnership();
+        factory.onPositionOwnershipTransferred(previousOwner);
     }
 
     /// @dev Deposits `borrowAmount` of borrow token into the Curve pool and mints LP to this contract.

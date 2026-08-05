@@ -26,17 +26,14 @@ contract MintCurveConvexPositionFactoryUpgrade_Test is PositionsProxyCommon {
                 success = true;
             } catch (bytes memory reason) {
                 assertEq(
-                    reason,
-                    abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, NON_OWNER)
+                    reason, abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, NON_OWNER)
                 );
             }
         } else {
             MintCurveConvexPositionFactoryUpgraded upgradedImpl = new MintCurveConvexPositionFactoryUpgraded();
 
             vm.prank(NON_OWNER);
-            vm.expectRevert(
-                abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, NON_OWNER)
-            );
+            vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, NON_OWNER));
             UUPSUpgradeable(address(factory)).upgradeToAndCall(address(upgradedImpl), "");
             return;
         }
@@ -45,12 +42,17 @@ contract MintCurveConvexPositionFactoryUpgrade_Test is PositionsProxyCommon {
     }
 
     function test_OwnerUpgradesFactoryAndPreservesExistingStorage() public {
+        address createdPosition = _createPosition(USER);
         (MintCurveConvexConfig memory configBefore, address registryBefore, address beaconBefore) =
             _factoryConfigSnapshot();
+        address[] memory positionsBefore = factory.positionsOf(USER);
 
-        _upgradeFactoryProxy(abi.encodeCall(MintCurveConvexPositionFactoryUpgraded.initializeV2, (7, ADDED_ADMIN, true)));
+        _upgradeFactoryProxy(
+            abi.encodeCall(MintCurveConvexPositionFactoryUpgraded.initializeV2, (7, ADDED_ADMIN, true))
+        );
 
-        MintCurveConvexPositionFactoryUpgraded upgradedFactory = MintCurveConvexPositionFactoryUpgraded(address(factory));
+        MintCurveConvexPositionFactoryUpgraded upgradedFactory =
+            MintCurveConvexPositionFactoryUpgraded(address(factory));
 
         assertEq(upgradedFactory.owner(), OWNER);
         assertEq(upgradedFactory.addedCounter(), 7);
@@ -59,6 +61,7 @@ contract MintCurveConvexPositionFactoryUpgrade_Test is PositionsProxyCommon {
 
         (MintCurveConvexConfig memory configAfter, address registryAfter, address beaconAfter) =
             _factoryConfigSnapshot();
+        address[] memory positionsAfter = upgradedFactory.positionsOf(USER);
 
         assertEq(registryAfter, registryBefore);
         assertEq(beaconAfter, beaconBefore);
@@ -68,12 +71,29 @@ contract MintCurveConvexPositionFactoryUpgrade_Test is PositionsProxyCommon {
         assertEq(configAfter.convexPid, configBefore.convexPid);
         assertEq(configAfter.crv, configBefore.crv);
         assertEq(configAfter.cvx, configBefore.cvx);
+        assertEq(positionsBefore.length, 1);
+        assertEq(positionsBefore[0], createdPosition);
+        assertEq(positionsAfter, positionsBefore);
+
+        vm.prank(USER);
+        IMintCurveConvexPosition(createdPosition).transferOwnership(OTHER_USER);
+        vm.prank(OTHER_USER);
+        IMintCurveConvexPosition(createdPosition).acceptOwnership();
+
+        address[] memory previousOwnerPositions = upgradedFactory.positionsOf(USER);
+        address[] memory newOwnerPositions = upgradedFactory.positionsOf(OTHER_USER);
+        assertEq(previousOwnerPositions.length, 0);
+        assertEq(newOwnerPositions.length, 1);
+        assertEq(newOwnerPositions[0], createdPosition);
     }
 
     function test_OwnerCanMutateNewStorageAfterFactoryUpgrade() public {
-        _upgradeFactoryProxy(abi.encodeCall(MintCurveConvexPositionFactoryUpgraded.initializeV2, (1, ADDED_ADMIN, false)));
+        _upgradeFactoryProxy(
+            abi.encodeCall(MintCurveConvexPositionFactoryUpgraded.initializeV2, (1, ADDED_ADMIN, false))
+        );
 
-        MintCurveConvexPositionFactoryUpgraded upgradedFactory = MintCurveConvexPositionFactoryUpgraded(address(factory));
+        MintCurveConvexPositionFactoryUpgraded upgradedFactory =
+            MintCurveConvexPositionFactoryUpgraded(address(factory));
 
         vm.startPrank(OWNER);
         upgradedFactory.setAddedCounter(99);
@@ -87,7 +107,9 @@ contract MintCurveConvexPositionFactoryUpgrade_Test is PositionsProxyCommon {
     }
 
     function test_CreatePositionWorksAfterFactoryUpgrade() public {
-        _upgradeFactoryProxy(abi.encodeCall(MintCurveConvexPositionFactoryUpgraded.initializeV2, (0, ADDED_ADMIN, false)));
+        _upgradeFactoryProxy(
+            abi.encodeCall(MintCurveConvexPositionFactoryUpgraded.initializeV2, (0, ADDED_ADMIN, false))
+        );
 
         address position = _createPosition(USER);
 
@@ -100,9 +122,7 @@ contract MintCurveConvexPositionFactoryUpgrade_Test is PositionsProxyCommon {
         _upgradeFactoryProxy("");
 
         vm.prank(NON_OWNER);
-        vm.expectRevert(
-            abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, NON_OWNER)
-        );
+        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, NON_OWNER));
         MintCurveConvexPositionFactoryUpgraded(address(factory)).initializeV2(1, ADDED_ADMIN, true);
     }
 
@@ -130,7 +150,9 @@ contract MintCurveConvexPositionFactoryUpgrade_Test is PositionsProxyCommon {
     function test_ImplementationSlotChangesAfterFactoryUpgrade() public {
         address implBefore = UnsafeUpgrades.getImplementationAddress(address(factory));
 
-        _upgradeFactoryProxy(abi.encodeCall(MintCurveConvexPositionFactoryUpgraded.initializeV2, (0, ADDED_ADMIN, false)));
+        _upgradeFactoryProxy(
+            abi.encodeCall(MintCurveConvexPositionFactoryUpgraded.initializeV2, (0, ADDED_ADMIN, false))
+        );
 
         address implAfter = UnsafeUpgrades.getImplementationAddress(address(factory));
 

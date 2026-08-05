@@ -39,7 +39,10 @@ contract MintCurveConvexPositionFactory is
     /// @inheritdoc IMintCurveConvexPositionFactoryBase
     address public marketRegistry;
 
-    uint256[42] private __gap;
+    mapping(address owner => address[] positions) internal _positionsOf;
+    mapping(address position => uint256 index) internal _positionIndex;
+
+    uint256[40] private __gap;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -103,6 +106,52 @@ contract MintCurveConvexPositionFactory is
     }
 
     /// @inheritdoc IMintCurveConvexPositionFactoryBase
+    function positionsOf(address owner) external view returns (address[] memory) {
+        return _positionsOf[owner];
+    }
+
+    /// @inheritdoc IMintCurveConvexPositionFactoryBase
+    function positionsOf(address owner, uint256 offset, uint256 limit)
+        external
+        view
+        returns (address[] memory positions)
+    {
+        address[] storage ownerPositions = _positionsOf[owner];
+        if (limit == 0 || offset >= ownerPositions.length) return new address[](0);
+
+        uint256 remaining = ownerPositions.length - offset;
+        uint256 resultLength = limit < remaining ? limit : remaining;
+        positions = new address[](resultLength);
+
+        for (uint256 i = 0; i < resultLength; i++) {
+            positions[i] = ownerPositions[offset + i];
+        }
+    }
+
+    /// @inheritdoc IMintCurveConvexPositionFactoryBase
+    function onPositionOwnershipTransferred(address previousOwner) external {
+        address[] storage previousOwnerPositions = _positionsOf[previousOwner];
+        uint256 positionIndex = _positionIndex[msg.sender];
+        if (positionIndex >= previousOwnerPositions.length || previousOwnerPositions[positionIndex] != msg.sender) {
+            revert MintCurveConvexPositionFactoryInvalidPosition();
+        }
+
+        address newOwner = MintCurveConvexPosition(msg.sender).owner();
+        if (newOwner == address(0)) revert MintCurveConvexPositionFactoryZeroAddress();
+
+        uint256 lastPositionIndex = previousOwnerPositions.length - 1;
+        if (positionIndex != lastPositionIndex) {
+            address lastPosition = previousOwnerPositions[lastPositionIndex];
+            previousOwnerPositions[positionIndex] = lastPosition;
+            _positionIndex[lastPosition] = positionIndex;
+        }
+        previousOwnerPositions.pop();
+
+        _positionIndex[msg.sender] = _positionsOf[newOwner].length;
+        _positionsOf[newOwner].push(msg.sender);
+    }
+
+    /// @inheritdoc IMintCurveConvexPositionFactoryBase
     function createPosition(address market) external returns (address position) {
         if (beacon == address(0)) revert MintCurveConvexPositionFactoryBeaconNotSet();
         if (!IMarketRegistry(marketRegistry).isMintMarket(market)) {
@@ -113,6 +162,8 @@ contract MintCurveConvexPositionFactory is
             abi.encodeCall(MintCurveConvexPosition.initialize, (msg.sender, address(this), market, config));
         position = address(new BeaconProxy(beacon, initData));
 
+        _positionIndex[position] = _positionsOf[msg.sender].length;
+        _positionsOf[msg.sender].push(position);
         emit PositionCreated(msg.sender, position);
     }
 

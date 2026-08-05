@@ -1,0 +1,26 @@
+MintCurveConvexPositionFactory::positionsOf(address)
+├── when owner has no current positions
+│   └── it should return an empty array
+├── when owner creates one position
+│   └── it should return the address returned by createPosition
+├── when owner creates two positions for the same market
+│   ├── it should return both positions
+│   └── it should preserve creation order
+├── when different owners create positions
+│   └── it should keep their position lists isolated
+├── when positions are created
+│   └── it should match the addresses emitted in PositionCreated
+├── when a position transfers ownership
+│   ├── it should remove the position from the previous owner
+│   ├── it should add the position to the new owner
+│   ├── it should derive the new owner from the calling position
+│   ├── it should maintain the moved last position index after swap-and-pop
+│   └── it should not duplicate a position after an ownership round trip
+├── when an untracked caller reports an ownership transfer
+│   └── it should revert with MintCurveConvexPositionFactoryInvalidPosition
+├── when a bounded page is requested
+│   ├── it should return the requested slice
+│   ├── it should return an empty array for zero limit or an out-of-range offset
+│   └── it should handle the maximum limit without overflow
+└── when owner has 1,000 positions
+    └── it should report gas and ABI response size for full and paged reads
