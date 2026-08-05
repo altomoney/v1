@@ -320,8 +320,7 @@ contract GenerateLiquidityIncentivesTransactionsForkTest is Test {
     GenerateLiquidityIncentivesTransactionsScript internal generator;
 
     function setUp() public {
-        string memory rpcUrl = vm.envOr("ETHEREUM_RPC_URL", string("https://rpc.stakedao.org/main/evm/1"));
-        vm.createSelectFork(rpcUrl, FORK_BLOCK);
+        vm.createSelectFork(vm.rpcUrl("ethereum"), FORK_BLOCK);
         generator = new GenerateLiquidityIncentivesTransactionsScript();
     }
 
@@ -349,8 +348,7 @@ contract GenerateLiquidityIncentivesTransactionsForkTest is Test {
     }
 
     function test_Fork_optionalStakeDaoCrvClaimExecutesOnCurrentMainnet() public {
-        string memory rpcUrl = vm.envOr("ETHEREUM_RPC_URL", string("https://rpc.stakedao.org/main/evm/1"));
-        vm.createSelectFork(rpcUrl);
+        vm.createSelectFork(vm.rpcUrl("ethereum"));
         generator = new GenerateLiquidityIncentivesTransactionsScript();
 
         StakeDaoClaimData memory claimData = _claimData();
