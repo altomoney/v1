@@ -35,6 +35,7 @@ contract DUSDBatch {
 
         // Set freezer as pauser
         DUSD(dusd).setPauser(_params.freezer, PAUSE_TYPE, true);
+        DUSD(dusd).setPauser(address(this), PAUSE_TYPE, false);
 
         // Deploy DUSDFlashMinter
         address dusdFlashMinter =

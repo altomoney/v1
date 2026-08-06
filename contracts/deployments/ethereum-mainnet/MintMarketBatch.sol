@@ -93,6 +93,8 @@ library MintMarketBatch {
         // Set freezer as pauser for PAUSE_TYPE and FROZEN_TYPE (requires market ownership)
         IPausable(marketProxy).setPauser(_params.freezer, PAUSE_TYPE, true);
         IPausable(marketProxy).setPauser(_params.freezer, FROZEN_TYPE, true);
+        IPausable(marketProxy).setPauser(_params.deployer, PAUSE_TYPE, false);
+        IPausable(marketProxy).setPauser(_params.deployer, FROZEN_TYPE, false);
 
         // Deploy leverage components with deployer as owner temporarily to allow configuration
         // owner will be transferred to _params.owner after configuration
