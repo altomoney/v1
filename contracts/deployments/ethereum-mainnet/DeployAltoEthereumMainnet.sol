@@ -1492,7 +1492,9 @@ library DeployAltoEthereumMainnet {
 
         MintCurveConvexPositionFactoryBatch batch = new MintCurveConvexPositionFactoryBatch(
             MintCurveConvexPositionFactoryBatchParams({
-                owner: input.contracts.timelock, marketRegistry: input.contracts.marketRegistry, config: config
+                owner: input.contracts.timelock,
+                marketRegistry: input.contracts.marketRegistry,
+                config: config
             })
         );
 
