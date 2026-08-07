@@ -1,0 +1,47 @@
+DusdPegOracleCurve::rawPoolState()
+├── given an underlying pool read reverts
+│   ├── when ma_last_time reverts
+│   │   └── it should bubble the pool revert
+│   ├── when get_balances reverts
+│   │   └── it should bubble the pool revert
+│   ├── when get_p(0) reverts
+│   │   └── it should bubble the pool revert
+│   ├── when last_price(0) reverts
+│   │   └── it should bubble the pool revert
+│   ├── when ema_price(0) reverts
+│   │   └── it should bubble the pool revert
+│   ├── when price_oracle(0) reverts
+│   │   └── it should bubble the pool revert
+│   ├── when ma_exp_time reverts
+│   │   └── it should bubble the pool revert
+│   ├── when A_precise reverts
+│   │   └── it should bubble the pool revert
+│   └── when future_A reverts
+│       └── it should bubble the pool revert
+├── given every underlying pool read succeeds
+│   ├── when get_balances returns an empty array
+│   │   └── it should revert with array-out-of-bounds panic 0x32
+│   ├── when get_balances returns an array with one element
+│   │   └── it should revert with array-out-of-bounds panic 0x32
+│   ├── when get_balances returns exactly two elements
+│   │   ├── it should set quoteTokenBalance from element 0
+│   │   └── it should set dusdBalance from element 1
+│   ├── when get_balances returns more than two elements
+│   │   ├── it should set balances from elements 0 and 1
+│   │   └── it should ignore every additional element
+│   ├── it should call get_p with ORACLE_INDEX and return it as currentStatePriceWad
+│   ├── it should call last_price with ORACLE_INDEX and return it as lastStatePriceWad
+│   ├── it should call ema_price with ORACLE_INDEX and return it as storedEmaPriceWad
+│   ├── it should call price_oracle with ORACLE_INDEX and return it as currentEmaPriceWad
+│   ├── it should decode the low 128 timestamp bits as priceUpdatedAt
+│   ├── it should decode the high 128 timestamp bits as invariantUpdatedAt
+│   ├── it should return ma_exp_time as maExpTime
+│   ├── it should return A_precise as aPrecise
+│   ├── it should return future_A as futureAPrecise
+│   ├── when prices, timestamps or controller configuration values are zero or inconsistent
+│   │   └── it should return the raw values without validation
+│   └── when runtimeConfigChecksEnabled is either true or false
+│       └── it should return the same snapshot for the same pool responses
+└── given any successful execution
+    ├── it should not modify contract state
+    └── it should not emit events

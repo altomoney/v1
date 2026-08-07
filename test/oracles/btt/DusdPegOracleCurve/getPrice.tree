@@ -1,0 +1,74 @@
+DusdPegOracleCurve::getPrice()
+├── given ma_last_time reverts
+│   └── it should bubble the pool revert
+├── given ma_last_time returns packed timestamps
+│   ├── when the low 128 bits are zero
+│   │   ├── it should return priceWad as zero
+│   │   ├── it should return observedAt as zero
+│   │   ├── it should return valid as false
+│   │   └── it should not perform runtime configuration or price reads
+│   ├── when the low 128 bits are non-zero and greater than block.timestamp
+│   │   ├── it should return priceWad as zero
+│   │   ├── it should return observedAt as zero
+│   │   ├── it should return valid as false
+│   │   └── it should not perform runtime configuration or price reads
+│   ├── when block.timestamp is greater than type(uint48).max and the low 128 bits are not in the future but exceed type(uint48).max
+│   │   ├── it should return priceWad as zero
+│   │   ├── it should return observedAt as zero
+│   │   ├── it should return valid as false
+│   │   └── it should not perform runtime configuration or price reads
+│   ├── when the low 128 bits equal block.timestamp and fit uint48
+│   │   └── it should treat the timestamp as valid
+│   ├── when the low 128 bits equal type(uint48).max and are not in the future
+│   │   └── it should treat the timestamp as valid
+│   ├── when the low 128 bits contain an arbitrarily old non-zero timestamp
+│   │   └── it should not apply a freshness check
+│   └── when the high 128 bits differ while the low 128 bits are unchanged
+│       └── it should return the same observedAt and validity result
+├── given the observation timestamp is valid
+│   ├── when runtimeConfigChecksEnabled is false
+│   │   ├── it should skip ma_exp_time, A_precise and future_A reads
+│   │   └── it should proceed to price_oracle even if the live configuration is mismatched
+│   └── when runtimeConfigChecksEnabled is true
+│       ├── when ma_exp_time reverts
+│       │   └── it should bubble the pool revert
+│       ├── when ma_exp_time differs from expectedMaExpTime
+│       │   ├── it should return priceWad as zero
+│       │   ├── it should preserve the decoded observedAt
+│       │   ├── it should return valid as false
+│       │   └── it should not query A_precise, future_A or price_oracle
+│       ├── when ma_exp_time matches and A_precise reverts
+│       │   └── it should bubble the pool revert
+│       ├── when ma_exp_time matches and A_precise differs from expectedAPrecise
+│       │   ├── it should return priceWad as zero
+│       │   ├── it should preserve the decoded observedAt
+│       │   ├── it should return valid as false
+│       │   └── it should not query future_A or price_oracle
+│       ├── when ma_exp_time and A_precise match and future_A reverts
+│       │   └── it should bubble the pool revert
+│       ├── when ma_exp_time and A_precise match and future_A differs from expectedAPrecise
+│       │   ├── it should return priceWad as zero
+│       │   ├── it should preserve the decoded observedAt
+│       │   ├── it should return valid as false
+│       │   └── it should not query price_oracle
+│       └── when ma_exp_time, A_precise and future_A match their approved values
+│           └── it should proceed to price_oracle
+├── given execution reaches the price read
+│   ├── when price_oracle(0) reverts
+│   │   └── it should bubble the pool revert
+│   ├── when price_oracle(0) returns zero
+│   │   ├── it should return priceWad as zero
+│   │   ├── it should preserve the decoded observedAt
+│   │   └── it should return valid as false
+│   ├── when price_oracle(0) returns a non-zero price below the peg
+│   │   ├── it should return the exact price
+│   │   ├── it should preserve the decoded observedAt
+│   │   └── it should return valid as true
+│   ├── when price_oracle(0) returns type(uint256).max
+│   │   ├── it should return type(uint256).max as priceWad
+│   │   ├── it should preserve the decoded observedAt
+│   │   └── it should return valid as true
+│   └── it should query price_oracle with ORACLE_INDEX
+└── given any non-reverting execution path
+    ├── it should not modify contract state
+    └── it should not emit events
