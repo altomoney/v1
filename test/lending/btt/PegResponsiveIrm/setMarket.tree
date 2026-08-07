@@ -1,0 +1,32 @@
+PegResponsiveIrm::setMarket(address)
+├── given market is already set
+│   ├── when the supplied market is zero, the existing market, or another non-zero address
+│   │   └── it should revert with IrmMarketAlreadySet
+│   ├── it should prioritize the already-set check over supplied-address validation
+│   ├── it should leave market and the complete IRState unchanged
+│   └── it should not emit events or make external calls
+└── given market is not set
+    ├── when the supplied market is the zero address
+    │   ├── it should revert with IrmInvalidParams
+    │   ├── it should leave market and the complete IRState unchanged
+    │   └── it should not emit events or make external calls
+    └── when the supplied market is non-zero
+        ├── when block.timestamp is greater than type(uint48).max
+        │   ├── it should revert with SafeCastOverflowedUintDowncast(48, block.timestamp)
+        │   ├── it should roll back the market assignment and IRState changes
+        │   └── it should not emit events
+        └── when block.timestamp fits uint48
+            ├── when block.timestamp is zero
+            │   └── it should accept the minimum timestamp
+            ├── when block.timestamp equals type(uint48).max
+            │   └── it should accept the maximum uint48 timestamp
+            ├── when caller is the owner, a non-owner, or differs from the supplied market
+            │   └── it should allow the first caller because binding is permissionless
+            ├── when the supplied market is an EOA or has no expected market interface
+            │   └── it should accept the address without code or interface validation
+            ├── it should set market to the supplied address exactly
+            ├── it should set lastUpdate to block.timestamp
+            ├── it should preserve borrowRate, recoveryStartedAt and stressMode
+            ├── it should emit exactly IRStateUpdated with the complete resulting state
+            ├── it should not read the oracle or call the supplied market
+            └── it should make every later setMarket call revert with IrmMarketAlreadySet

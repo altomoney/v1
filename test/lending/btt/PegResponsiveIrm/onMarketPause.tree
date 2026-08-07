@@ -1,0 +1,35 @@
+PegResponsiveIrm::onMarketPause(bool)
+├── given caller is not the bound market
+│   ├── when market is unset, caller is owner, caller is pending owner, or caller is any other address
+│   │   └── it should revert with IrmUnauthorized
+│   ├── it should reject before inspecting paused or casting block.timestamp
+│   ├── it should leave the complete IRState unchanged
+│   └── it should not emit events or read the oracle
+└── given caller is the bound market
+    ├── when paused is true
+    │   ├── when block.timestamp is greater than type(uint48).max
+    │   │   └── it should still succeed because the timestamp is not cast
+    │   ├── it should leave borrowRate, lastUpdate, recoveryStartedAt and stressMode unchanged
+    │   ├── it should not inspect whether the market is actually paused
+    │   └── it should not emit events or read the oracle
+    └── when paused is false
+        ├── when block.timestamp is greater than type(uint48).max
+        │   ├── it should revert with SafeCastOverflowedUintDowncast(48, block.timestamp)
+        │   ├── it should preserve any active recovery confirmation
+        │   └── it should not emit events
+        └── when block.timestamp fits uint48
+            ├── when block.timestamp is zero or type(uint48).max
+            │   └── it should accept the exact boundary timestamp
+            ├── given recoveryStartedAt is zero
+            │   ├── it should set lastUpdate to block.timestamp
+            │   ├── it should preserve borrowRate and stressMode
+            │   ├── it should emit exactly IRStateUpdated with the resulting state
+            │   └── it should not emit StressStateUpdated or BorrowRateUpdated
+            └── given recoveryStartedAt is non-zero
+                ├── it should set lastUpdate to block.timestamp
+                ├── it should clear recoveryStartedAt
+                ├── it should preserve borrowRate and stressMode
+                ├── it should emit StressStateUpdated(stressMode, 0, 0)
+                ├── it should then emit IRStateUpdated with the resulting state
+                ├── it should not emit BorrowRateUpdated
+                └── it should not read the oracle or refresh the borrow rate
