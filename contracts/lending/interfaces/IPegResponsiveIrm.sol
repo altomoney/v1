@@ -87,7 +87,7 @@ interface IPegResponsiveIrmBase is IIrm, IPegResponsiveIrmErrors, IPegResponsive
     /// @notice The maximum supported input to the exponential approximation.
     function MAX_EXPONENT_INPUT() external view returns (uint256);
 
-    /// @notice Returns the active DUSD/USD peg oracle.
+    /// @notice Returns the active DUSD/quoteToken peg oracle.
     function oracle() external view returns (address);
 
     /// @notice Returns the market bound to this interest-rate model.
@@ -110,7 +110,7 @@ interface IPegResponsiveIrmBase is IIrm, IPegResponsiveIrmErrors, IPegResponsive
     function setCurveConfig(CurveConfig calldata _newConfig) external;
 
     /// @notice Previews the oracle observation and rate that would be stored by a checkpoint.
-    /// @return priceWad Valid DUSD/USD price, or zero for an unusable observation.
+    /// @return priceWad Valid DUSD/quoteToken price, or zero for an unusable observation.
     /// @return observedAt Timestamp supplied by the oracle.
     /// @return oracleValid Whether the observation passed validity and freshness checks.
     /// @return borrowRate Effective rate that would be stored for the next interval.
@@ -119,7 +119,7 @@ interface IPegResponsiveIrmBase is IIrm, IPegResponsiveIrmErrors, IPegResponsive
         view
         returns (uint256 priceWad, uint48 observedAt, bool oracleValid, uint256 borrowRate);
 
-    /// @notice Returns the raw target SPY rate for a given DUSD/USD price.
+    /// @notice Returns the raw target SPY rate for a given DUSD/quoteToken price.
     /// @param _priceWad The price at which the rate will be calculated.
     /// @dev The rate curve has three regions:
     /// - At or above the recovery price: fixed at the base rate.

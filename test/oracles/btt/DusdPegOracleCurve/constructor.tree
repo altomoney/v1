@@ -15,6 +15,8 @@ DusdPegOracleCurve::constructor()
 │   │   └── when validationConfig.quoteToken is zero
 │   │       └── it should revert with DusdPegOracleCurveZeroAddress
 │   ├── given all required configuration addresses are non-zero
+│   │   ├── when validationConfig.dusd equals validationConfig.quoteToken
+│   │   │   └── it should revert with DusdPegOracleCurveIdenticalCoins
 │   │   ├── when initialRuntimeConfig.expectedMaExpTime is zero
 │   │   │   └── it should revert with DusdPegOracleCurveInvalidConfig
 │   │   └── when initialRuntimeConfig.expectedAPrecise is zero
@@ -95,8 +97,6 @@ DusdPegOracleCurve::constructor()
 │   │       └── given factory validation succeeds
 │   │           ├── when price_oracle(0) returns zero during validation
 │   │           │   └── it should deploy successfully
-│   │           ├── when validationConfig.dusd equals validationConfig.quoteToken and both sources report that address
-│   │           │   └── it should deploy successfully under the current validation policy
 │   │           ├── it should set curvePool to curvePoolAddress
 │   │           ├── it should not store or expose the deployment-only validation configuration
 │   │           ├── it should set runtimeConfig to initialRuntimeConfig

@@ -26,7 +26,8 @@ The draft oracle is:
 
 - non-upgradeable and owner-managed;
 - immutably bound to one exact pool after validating its factory,
-  implementation, DUSD token, quote token, and coin order during construction;
+  implementation, distinct DUSD and quote-token addresses, and coin order during
+  construction;
 - configured with an approved EMA time constant and precise amplification
   value that the owner may update only when both match the live pool and no
   amplification ramp is in progress;
@@ -47,7 +48,7 @@ view, not an alternate oracle path.
 
 ## Price definition and reference asset
 
-- [ ] **ORACLE-001: Decide whether the controlled peg is DUSD/quote-token or
+- [x] **ORACLE-001: Decide whether the controlled peg is DUSD/quoteToken or
       DUSD/USD**
 
   **Current behavior**
@@ -63,8 +64,9 @@ view, not an alternate oracle path.
 
   Choose whether to:
 
-  - explicitly defend DUSD/quote-token parity and accept quote-token peg risk;
-  - compose the Curve result with an independently validated quote-token/USD
+  - explicitly define the controlled peg as DUSD/quoteToken and accept
+    quote-token peg risk;
+  - compose the Curve result with an independently validated quoteToken/USD
     feed; or
   - add a separate sanity source without changing the primary price definition.
 
@@ -72,12 +74,29 @@ view, not an alternate oracle path.
   revert handling, and the combined observation timestamp. The conservative
   timestamp is normally the older of its inputs.
 
+  **Resolution**
+
+  The first option was selected. The controller intentionally responds to
+  DUSD/quoteToken and does not compose the result with quoteToken/USD. This
+  accepts quote-token basis risk and keeps the signal tied to the approved pool.
+  The currently intended deployment uses frxUSD as `quoteToken`; any different
+  quote token requires separate economic approval and a reviewed deployment
+  record.
+
   **Closure evidence**
 
-  - [ ] Price definition approved in the economic specification.
-  - [ ] Quote-token depeg scenarios simulated.
-  - [ ] Any composite or sanity source separately specified and tested.
-  - [ ] User-facing and governance documentation uses the approved unit.
+  - [x] The price definition and quote-token depeg rationale were approved in
+        the protocol discussion recorded on the associated Notion task.
+  - [x] Quote-token depeg simulations and their controller implications are
+        summarized in that Notion task discussion.
+  - [x] A composite or sanity source was explicitly not selected, so no
+        additional source is required by this price definition.
+  - [x] User-facing, oracle-interface, and PRM documentation use the approved
+        DUSD/quoteToken unit.
+
+  Production monitoring must track the configured quoteToken/USD peg. The
+  remaining economic-review and monitoring requirements are tracked under
+  ORACLE-006.
 
 ## Smoothing, freshness, and controller liveness
 
@@ -166,9 +185,11 @@ view, not an alternate oracle path.
 
   **Current state**
 
-  Unit and fork test files are scaffolded but contain no assertions. Mainnet
-  addresses, expected configuration, and the fork block remain zero-valued
-  placeholders.
+  Four deterministic unit suites currently contain 93 passing tests for the
+  constructor, validated price path, raw diagnostics, and runtime configuration.
+  Oracle-specific fuzz tests and a dedicated mainnet-fork suite do not yet exist.
+  Production oracle addresses, approved configuration, and a pinned fork block
+  have not been recorded in a reviewed oracle deployment record.
 
   Before completing them, independently record:
 
@@ -185,7 +206,9 @@ view, not an alternate oracle path.
   **Closure evidence**
 
   - [ ] Deployment record independently reviewed.
-  - [ ] Constructor, price, raw-state, revert, and fuzz unit suites completed.
+  - [x] Constructor, price, raw-state, runtime-config, and source-revert
+        deterministic unit suites completed.
+  - [ ] Oracle-specific fuzz suite completed.
   - [ ] Mainnet-fork constants pinned to a reviewed historical block.
   - [ ] Fork suite verifies ABI, provenance, configuration, timestamps, and
         returned values without deriving expected constants from the DUT.
@@ -196,8 +219,9 @@ view, not an alternate oracle path.
 - [ ] **ORACLE-006: Complete economic and external security review**
 
   The current work does not establish that Curve's EMA is manipulation-proof,
-  that the quote token is dollar-stable, or that copied Curve interfaces and
-  the approved implementation behave correctly across their full domains.
+  that the accepted quote-token basis risk is economically safe, or that copied
+  Curve interfaces and the approved implementation behave correctly across
+  their full domains.
 
   **Closure evidence**
 
@@ -218,7 +242,7 @@ view, not an alternate oracle path.
 | Wrong coin direction               | Exact pool and factory coin-order checks                                    | A different orientation requires a different reviewed adapter |
 | `A` or EMA change                  | Exact current/future `A` and `ma_exp_time` checks                           | Oracle remains unusable until coordinated remediation         |
 | Fee change                         | Off-chain review only                                                       | Manipulation cost can change without invalidating the oracle  |
-| Quote-token depeg                  | No current mitigation                                                       | DUSD/quote-token can diverge from DUSD/USD                    |
+| Quote-token depeg                  | Accepted by the DUSD/quoteToken definition; monitor separately                | The controller does not necessarily measure DUSD/USD          |
 | Liquidity loss                     | No current on-chain mitigation                                              | Manipulation cost can fall substantially                      |
 | Curve call failure                 | Revert reaches PRM, which treats it as unusable                             | Other consumers must implement compatible handling            |
 | Keeper failure                     | Permissionless PRM checkpointing permits automation                         | No on-chain checkpoint-latency guarantee                      |

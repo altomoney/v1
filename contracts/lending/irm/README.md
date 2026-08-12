@@ -2,15 +2,15 @@
 
 > [!WARNING]
 > `PegResponsiveIrm` has **not been audited** and is **not ready for production
-> deployment**. Economic parameter selection, the completed Curve-oracle test
-> suite, full Mint Market integration, deployment tooling, and external security
-> review remain outstanding.
+> deployment**. Economic parameter selection, Curve-oracle fuzz and mainnet-fork
+> testing, full Mint Market integration, deployment tooling, and external
+> security review remain outstanding.
 
 ## Overview
 
 This document describes [`PegResponsiveIrm`](./PegResponsiveIrm.sol), an
 interest-rate model for an Alto Mint Market that responds to an observed
-DUSD/USD peg price.
+DUSD/quoteToken peg price.
 
 The controller is intended to make borrowing progressively more expensive as
 DUSD trades below its target:
@@ -29,8 +29,8 @@ The completed PRM work is deliberately narrow:
 - **Separate component:** the draft Curve-backed peg oracle is documented in
   its [local README](../../oracles/dusd/README.md).
 - **Not yet completed:** integration testing against a real Alto Mint Market,
-  completed oracle tests, deployment tooling, economic parameter selection, an
-  audit, or production deployment.
+  oracle-specific fuzz and mainnet-fork testing, deployment tooling, economic
+  parameter selection, an audit, or production deployment.
 
 Several contracts, interfaces, libraries, and utilities have been copied from
 the main repository only to provide the dependencies needed to compile and
@@ -225,7 +225,7 @@ checklisted in [`NOTES.md`](./NOTES.md).
 
 Let:
 
-- $p$ be the observed DUSD/USD price;
+- $p$ be the observed DUSD/quoteToken price;
 - $P_r$ be `recoveryPrice`;
 - $P_s$ be `stressPrice`;
 - $R_b$ be `baseRate`;
@@ -463,10 +463,11 @@ The IRM does **not**:
 - cap a valid reported spot price.
 
 The draft [`DusdPegOracleCurve`](../../oracles/dusd/README.md) is responsible
-for turning an approved high-amplification DUSD/quote-token Curve pool into a
-validated observation. Treating that observation as DUSD/USD assumes the quote
-token remains worth one USD. The Curve EMA period and `maxOracleAge` solve
-different problems:
+for turning an approved high-amplification `[quoteToken, DUSD]` Curve pool into
+a validated DUSD/quoteToken observation. The controller intentionally does not
+treat or compose that observation as DUSD/USD; quoteToken/USD is a separate
+monitored risk signal. The currently intended deployment uses frxUSD as
+`quoteToken`. The Curve EMA period and `maxOracleAge` solve different problems:
 
 - the Curve EMA period controls how quickly price history loses weight; and
 - `maxOracleAge` controls how recently that observation must have been produced.

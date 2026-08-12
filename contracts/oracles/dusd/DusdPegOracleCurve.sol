@@ -15,15 +15,17 @@ import {ICurveStableSwapNGOracle} from "@alto/interfaces/curve/ICurveStableSwapN
 import {ICurveStableSwapNGFactory} from "@alto/interfaces/curve/ICurveStableSwapNGFactory.sol";
 import {AltoOwnable2Step, Ownable} from "@alto/utils/AltoOwnable2Step.sol";
 
-/// @title DUSD Curve Peg Oracle
+/// @title DUSD/quoteToken Curve Peg Oracle
 /// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice Supplies the DUSD peg-responsive interest-rate model with the EMA
-/// price of DUSD quoted in an immutable USD-par reference token.
+/// price of DUSD quoted in the deployment-approved reference token.
 /// @dev The oracle accepts only a factory-registered, non-meta, two-coin Curve
 /// StableSwap NG pool whose coin order is [quote token, DUSD] and whose coins
-/// are both registered as standard ERC-20 assets. Treating the returned quote
-/// as a DUSD/USD price assumes that the quote token remains worth one USD.
+/// are both registered as standard ERC-20 assets. The controlled price is
+/// intentionally DUSD/quoteToken, not necessarily DUSD/USD. Deployment governance
+/// must configure `quoteToken` as an economically reviewed reference asset; the
+/// currently intended deployment uses frxUSD.
 /// @dev The pool implementation, EMA averaging time, and amplification coefficient
 /// are approved at deployment. Every validated read checks the current and
 /// future amplification and the averaging time. The owner may approve new EMA
@@ -68,6 +70,10 @@ contract DusdPegOracleCurve is AltoOwnable2Step, IDusdPegOracleCurve {
         _assertNonZero(validationConfig.curveFactory);
         _assertNonZero(validationConfig.dusd);
         _assertNonZero(validationConfig.quoteToken);
+
+        if (validationConfig.dusd == validationConfig.quoteToken) {
+            revert DusdPegOracleCurveIdenticalCoins();
+        }
 
         _assertNonZero(initialRuntimeConfig.expectedMaExpTime);
         _assertNonZero(initialRuntimeConfig.expectedAPrecise);
@@ -115,15 +121,10 @@ contract DusdPegOracleCurve is AltoOwnable2Step, IDusdPegOracleCurve {
         // defense in depth but do not, by themselves, guarantee manipulation
         // resistance.
         //
-        // 2. The Curve price is DUSD quoted in `quoteToken`, not necessarily
-        // DUSD/USD. A composite oracle could combine it with a separately
-        // configured quoteToken/USD feed:
-        //
-        //     DUSD/USD = DUSD/quoteToken * quoteToken/USD
-        //
-        // Both inputs would require independent precision, freshness, validity,
-        // and orientation checks. The composite observation timestamp should be
-        // the older of the two source timestamps.
+        // 2. The approved controller price is DUSD/quoteToken. It intentionally
+        // does not compose this value with quoteToken/USD. A quote-token depeg is
+        // therefore an accepted basis risk of the controller definition and must
+        // be monitored separately rather than being interpreted as DUSD/USD here.
         // ---------------------------------------------------------------------
         priceWad = curvePoolContract.price_oracle(ORACLE_INDEX);
         if (priceWad == 0) return (0, observedAt, false);

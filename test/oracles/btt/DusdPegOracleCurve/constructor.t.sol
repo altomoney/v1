@@ -385,20 +385,12 @@ contract DusdPegOracleCurveConstructorTest is DusdPegOracleCurveCommon {
         assertEq(address(deployedOracle.curvePool()), address(pool));
     }
 
-    function test_WhenDusdEqualsQuoteToken() external {
+    function test_RevertWhen_DusdEqualsQuoteToken() external {
         DusdPegOracleCurveValidationConfig memory duplicateValidationConfig = oracleValidationConfig;
         duplicateValidationConfig.dusd = QUOTE_TOKEN;
 
-        _mockPoolReturn(
-            abi.encodeWithSelector(ICurveStableSwapNGBase.coins.selector, uint256(1)), abi.encode(QUOTE_TOKEN)
-        );
-        address[] memory coins = _addressArray(QUOTE_TOKEN, QUOTE_TOKEN);
-        _mockFactoryReturn(
-            abi.encodeWithSelector(ICurveStableSwapFactory.get_coins.selector, address(pool)), abi.encode(coins)
-        );
-
-        DusdPegOracleCurve deployedOracle = _deployOracle(runtimeConfig, duplicateValidationConfig, OWNER);
-        assertEq(deployedOracle.curvePool(), address(pool));
+        vm.expectRevert(IDusdPegOracleCurveErrors.DusdPegOracleCurveIdenticalCoins.selector);
+        _deployOracle(runtimeConfig, duplicateValidationConfig, OWNER);
     }
 
     function test_WhenValidConfigurationIsProvided() external {
