@@ -7,6 +7,7 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {
     DusdPegOracleCurveConfig,
     DusdPegOracleCurveRawPoolState,
+    DusdPegOracleCurveValidationConfig,
     IDusdPegOracleCurve,
     IDusdPegOracleCurveBase
 } from "@alto/oracles/dusd/interfaces/IDusdPegOracleCurve.sol";
@@ -46,19 +47,7 @@ contract DusdPegOracleCurve is AltoOwnable2Step, IDusdPegOracleCurve {
     uint256 public constant PRICE_TIMESTAMP_MASK = type(uint128).max;
 
     /// @inheritdoc IDusdPegOracleCurveBase
-    address public immutable pool;
-
-    /// @inheritdoc IDusdPegOracleCurveBase
-    address public immutable factory;
-
-    /// @inheritdoc IDusdPegOracleCurveBase
-    address public immutable poolImplementation;
-
-    /// @inheritdoc IDusdPegOracleCurveBase
-    address public immutable dusd;
-
-    /// @inheritdoc IDusdPegOracleCurveBase
-    address public immutable quoteToken;
+    address public immutable curvePool;
 
     /// @inheritdoc IDusdPegOracleCurveBase
     uint256 public immutable expectedMaExpTime;
@@ -71,33 +60,33 @@ contract DusdPegOracleCurve is AltoOwnable2Step, IDusdPegOracleCurve {
 
     /// @notice Deploys an immutable oracle after verifying the pool against its
     /// live state and factory metadata.
-    /// @param cfg              Pool identity and controller-relevant parameters to approve.
-    /// @param runtimeChecks    Whether runtime checks are enabled.
+    /// @param config                 Parameters retained and checked by the deployed oracle.
+    /// @param validationConfig       Pool identity and provenance checked only during deployment.
+    /// @param runtimeChecksEnabled   Whether runtime checks are enabled.
     /// @param initialOwner     The contract's initial owner.
-    constructor(DusdPegOracleCurveConfig memory cfg, bool runtimeChecks, address initialOwner) Ownable(initialOwner) {
-        _assertNonZero(cfg.pool);
-        _assertNonZero(cfg.poolImpl);
-        _assertNonZero(cfg.factory);
-        _assertNonZero(cfg.dusd);
-        _assertNonZero(cfg.quoteToken);
+    constructor(
+        DusdPegOracleCurveConfig memory config,
+        DusdPegOracleCurveValidationConfig memory validationConfig,
+        bool runtimeChecksEnabled,
+        address initialOwner
+    ) Ownable(initialOwner) {
+        _assertNonZero(config.curvePool);
+        _assertNonZero(validationConfig.expectedCurvePoolImplementation);
+        _assertNonZero(validationConfig.curveFactory);
+        _assertNonZero(validationConfig.dusd);
+        _assertNonZero(validationConfig.quoteToken);
 
-        _assertNonZero(cfg.maExpTime);
-        _assertNonZero(cfg.aPrecise);
+        _assertNonZero(config.expectedMaExpTime);
+        _assertNonZero(config.expectedAPrecise);
 
-        _verifyAgainstPool(cfg);
-        _verifyAgainstFactory(cfg);
+        _verifyAgainstPool(config, validationConfig);
+        _verifyAgainstFactory(config.curvePool, validationConfig);
 
-        pool = cfg.pool;
-        factory = cfg.factory;
-        poolImplementation = cfg.poolImpl;
+        curvePool = config.curvePool;
+        expectedMaExpTime = config.expectedMaExpTime;
+        expectedAPrecise = config.expectedAPrecise;
 
-        dusd = cfg.dusd;
-        quoteToken = cfg.quoteToken;
-
-        expectedMaExpTime = cfg.maExpTime;
-        expectedAPrecise = cfg.aPrecise;
-
-        runtimeConfigChecksEnabled = runtimeChecks;
+        runtimeConfigChecksEnabled = runtimeChecksEnabled;
     }
 
     /// @inheritdoc IDusdPegOracleCurveBase
@@ -108,8 +97,8 @@ contract DusdPegOracleCurve is AltoOwnable2Step, IDusdPegOracleCurve {
 
     /// @inheritdoc IDusdPegOracleCurveBase
     function getPrice() external view returns (uint256 priceWad, uint48 observedAt, bool valid) {
-        ICurveStableSwapNGOracle curvePool = ICurveStableSwapNGOracle(pool);
-        uint256 observedAtRaw = curvePool.ma_last_time() & PRICE_TIMESTAMP_MASK;
+        ICurveStableSwapNGOracle curvePoolContract = ICurveStableSwapNGOracle(curvePool);
+        uint256 observedAtRaw = curvePoolContract.ma_last_time() & PRICE_TIMESTAMP_MASK;
 
         if (observedAtRaw == 0 || observedAtRaw > block.timestamp || observedAtRaw > type(uint48).max) {
             return (0, 0, false);
@@ -140,7 +129,7 @@ contract DusdPegOracleCurve is AltoOwnable2Step, IDusdPegOracleCurve {
         // and orientation checks. The composite observation timestamp should be
         // the older of the two source timestamps.
         // ---------------------------------------------------------------------
-        priceWad = curvePool.price_oracle(ORACLE_INDEX);
+        priceWad = curvePoolContract.price_oracle(ORACLE_INDEX);
         if (priceWad == 0) return (0, observedAt, false);
 
         // A price far below the peg is still valid as far as the oracle is
@@ -154,21 +143,21 @@ contract DusdPegOracleCurve is AltoOwnable2Step, IDusdPegOracleCurve {
 
     /// @inheritdoc IDusdPegOracleCurve
     function rawPoolState() external view returns (DusdPegOracleCurveRawPoolState memory state) {
-        ICurveStableSwapNGOracle curvePool = ICurveStableSwapNGOracle(pool);
-        uint256 packedTimestamps = curvePool.ma_last_time();
-        uint256[] memory balances = curvePool.get_balances();
+        ICurveStableSwapNGOracle curvePoolContract = ICurveStableSwapNGOracle(curvePool);
+        uint256 packedTimestamps = curvePoolContract.ma_last_time();
+        uint256[] memory balances = curvePoolContract.get_balances();
 
-        state.currentStatePriceWad = curvePool.get_p(ORACLE_INDEX);
-        state.lastStatePriceWad = curvePool.last_price(ORACLE_INDEX);
-        state.storedEmaPriceWad = curvePool.ema_price(ORACLE_INDEX);
-        state.currentEmaPriceWad = curvePool.price_oracle(ORACLE_INDEX);
+        state.currentStatePriceWad = curvePoolContract.get_p(ORACLE_INDEX);
+        state.lastStatePriceWad = curvePoolContract.last_price(ORACLE_INDEX);
+        state.storedEmaPriceWad = curvePoolContract.ema_price(ORACLE_INDEX);
+        state.currentEmaPriceWad = curvePoolContract.price_oracle(ORACLE_INDEX);
 
         state.priceUpdatedAt = packedTimestamps & PRICE_TIMESTAMP_MASK;
         state.invariantUpdatedAt = packedTimestamps >> 128;
 
-        state.maExpTime = curvePool.ma_exp_time();
-        state.aPrecise = curvePool.A_precise();
-        state.futureAPrecise = curvePool.future_A();
+        state.maExpTime = curvePoolContract.ma_exp_time();
+        state.aPrecise = curvePoolContract.A_precise();
+        state.futureAPrecise = curvePoolContract.future_A();
 
         // The constructor verifies a two-coin pool with the direct
         // [quote token, DUSD] order.
@@ -180,39 +169,49 @@ contract DusdPegOracleCurve is AltoOwnable2Step, IDusdPegOracleCurve {
     /// matches the configuration against which this oracle was approved.
     /// @return valid Whether all live parameters match their approved values.
     function _validCurrentState() private view returns (bool valid) {
-        ICurveStableSwapNGOracle curvePool = ICurveStableSwapNGOracle(pool);
-        if (curvePool.ma_exp_time() != expectedMaExpTime) return false;
-        if (curvePool.A_precise() != expectedAPrecise) return false;
-        if (curvePool.future_A() != expectedAPrecise) return false;
+        ICurveStableSwapNGOracle curvePoolContract = ICurveStableSwapNGOracle(curvePool);
+        if (curvePoolContract.ma_exp_time() != expectedMaExpTime) return false;
+        if (curvePoolContract.A_precise() != expectedAPrecise) return false;
+        if (curvePoolContract.future_A() != expectedAPrecise) return false;
         return true;
     }
 
     /// @dev Verifies the pool's coin layout, oracle availability, EMA averaging
-    /// time, and current and future amplification against `cfg`.
-    /// @param cfg Pool configuration proposed for approval.
-    function _verifyAgainstPool(DusdPegOracleCurveConfig memory cfg) private view {
-        ICurveStableSwapNGOracle curvePool = ICurveStableSwapNGOracle(cfg.pool);
+    /// time, and current and future amplification against the proposed configs.
+    /// @param config Parameters retained and checked by the deployed oracle.
+    /// @param validationConfig Pool identity checked only during deployment.
+    function _verifyAgainstPool(
+        DusdPegOracleCurveConfig memory config,
+        DusdPegOracleCurveValidationConfig memory validationConfig
+    ) private view {
+        ICurveStableSwapNGOracle curvePoolContract = ICurveStableSwapNGOracle(config.curvePool);
 
-        if (curvePool.N_COINS() != EXPECTED_COIN_COUNT) {
+        if (curvePoolContract.N_COINS() != EXPECTED_COIN_COUNT) {
             revert DusdPegOracleCurveInvalidCoinCount();
         }
 
         // Require the direct, non-inverted oracle orientation.
-        if (curvePool.coins(0) != cfg.quoteToken || curvePool.coins(1) != cfg.dusd) {
+        if (
+            curvePoolContract.coins(0) != validationConfig.quoteToken
+                || curvePoolContract.coins(1) != validationConfig.dusd
+        ) {
             revert DusdPegOracleCurveInvalidCoinOrder();
         }
 
-        if (curvePool.ma_exp_time() != cfg.maExpTime) {
+        if (curvePoolContract.ma_exp_time() != config.expectedMaExpTime) {
             revert DusdPegOracleCurveInvalidMaExpTime();
         }
 
         // `future_A` catches a newly initiated ramp before `A_precise` has moved
         // materially away from its starting value.
-        if (curvePool.A_precise() != cfg.aPrecise || curvePool.future_A() != cfg.aPrecise) {
+        if (
+            curvePoolContract.A_precise() != config.expectedAPrecise
+                || curvePoolContract.future_A() != config.expectedAPrecise
+        ) {
             revert DusdPegOracleCurveInvalidAmplification();
         }
 
-        try curvePool.price_oracle(ORACLE_INDEX) returns (uint256) {}
+        try curvePoolContract.price_oracle(ORACLE_INDEX) returns (uint256) {}
         catch {
             revert DusdPegOracleCurveOracleUnavailable();
         }
@@ -220,31 +219,35 @@ contract DusdPegOracleCurve is AltoOwnable2Step, IDusdPegOracleCurve {
 
     /// @dev Verifies the pool's factory registration, implementation, pool
     /// classification, coin order, and standard ERC-20 asset types.
-    /// @param cfg Pool configuration proposed for approval.
-    function _verifyAgainstFactory(DusdPegOracleCurveConfig memory cfg) private view {
+    /// @param curvePoolAddress Curve pool proposed for approval.
+    /// @param validationConfig Pool identity and provenance checked during deployment.
+    function _verifyAgainstFactory(address curvePoolAddress, DusdPegOracleCurveValidationConfig memory validationConfig)
+        private
+        view
+    {
         // On pool deployment, the Factory registers a number of details that we
         // can use as a provenance check.
-        ICurveStableSwapNGFactory curveFactory = ICurveStableSwapNGFactory(cfg.factory);
+        ICurveStableSwapNGFactory curveFactory = ICurveStableSwapNGFactory(validationConfig.curveFactory);
 
-        if (curveFactory.get_n_coins(cfg.pool) != EXPECTED_COIN_COUNT) {
+        if (curveFactory.get_n_coins(curvePoolAddress) != EXPECTED_COIN_COUNT) {
             revert DusdPegOracleCurveInvalidCoinCount();
         }
 
-        if (curveFactory.is_meta(cfg.pool)) {
+        if (curveFactory.is_meta(curvePoolAddress)) {
             revert DusdPegOracleCurveUnsupportedMetapool();
         }
 
-        address[] memory registeredCoins = curveFactory.get_coins(cfg.pool);
+        address[] memory registeredCoins = curveFactory.get_coins(curvePoolAddress);
 
         if (registeredCoins.length != EXPECTED_COIN_COUNT) {
             revert DusdPegOracleCurveInvalidCoinCount();
         }
 
-        if (registeredCoins[0] != cfg.quoteToken || registeredCoins[1] != cfg.dusd) {
+        if (registeredCoins[0] != validationConfig.quoteToken || registeredCoins[1] != validationConfig.dusd) {
             revert DusdPegOracleCurveInvalidCoinOrder();
         }
 
-        uint8[] memory assetTypes = curveFactory.get_pool_asset_types(cfg.pool);
+        uint8[] memory assetTypes = curveFactory.get_pool_asset_types(curvePoolAddress);
 
         if (assetTypes.length != EXPECTED_COIN_COUNT) {
             revert DusdPegOracleCurveInvalidAssetTypeCount();
@@ -256,14 +259,16 @@ contract DusdPegOracleCurve is AltoOwnable2Step, IDusdPegOracleCurve {
             }
         }
 
-        address impl = curveFactory.get_implementation_address(cfg.pool);
+        address actualCurvePoolImplementation = curveFactory.get_implementation_address(curvePoolAddress);
 
-        if (impl == address(0)) {
+        if (actualCurvePoolImplementation == address(0)) {
             revert DusdPegOracleCurvePoolNotRegistered();
         }
 
-        if (impl != cfg.poolImpl) {
-            revert DusdPegOracleCurveUnexpectedImplementation(impl, cfg.poolImpl);
+        if (actualCurvePoolImplementation != validationConfig.expectedCurvePoolImplementation) {
+            revert DusdPegOracleCurveUnexpectedImplementation(
+                actualCurvePoolImplementation, validationConfig.expectedCurvePoolImplementation
+            );
         }
     }
 

@@ -1,22 +1,26 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0;
 
-/// @notice Immutable pool identity and controller-relevant parameters.
+/// @notice Immutable parameters retained and used by the deployed oracle.
 struct DusdPegOracleCurveConfig {
     /// @dev Address of the Curve StableSwap NG pool.
-    address pool;
-    /// @dev Expected implementation registered for `pool` by `factory`.
-    address poolImpl;
-    /// @dev Address of the Curve StableSwap NG factory that registered `pool`.
-    address factory;
+    address curvePool;
+    /// @dev Required Curve EMA averaging time.
+    uint256 expectedMaExpTime;
+    /// @dev Required amplification coefficient, including Curve's precision factor.
+    uint256 expectedAPrecise;
+}
+
+/// @notice Pool identity and provenance used only during deployment validation.
+struct DusdPegOracleCurveValidationConfig {
+    /// @dev Address of the Curve StableSwap NG factory that registered the pool.
+    address curveFactory;
+    /// @dev Expected implementation registered for the pool by `curveFactory`.
+    address expectedCurvePoolImplementation;
     /// @dev Address of DUSD, which must be coin 1.
     address dusd;
     /// @dev Address of the USD-par quote token, which must be coin 0.
     address quoteToken;
-    /// @dev Required Curve EMA averaging time.
-    uint256 maExpTime;
-    /// @dev Required amplification coefficient, including Curve's precision factor.
-    uint256 aPrecise;
 }
 
 /// @notice Unvalidated diagnostic snapshot of the underlying Curve pool.
@@ -86,7 +90,7 @@ interface IDusdPegOracleCurveErrors {
 
     /// @notice Error thrown when the factory reports an implementation other than the approved implementation
     /// @param actual Implementation reported by the factory
-    /// @param expected Implementation supplied in the immutable configuration
+    /// @param expected Implementation supplied in the deployment validation configuration
     error DusdPegOracleCurveUnexpectedImplementation(address actual, address expected);
 }
 
@@ -110,19 +114,7 @@ interface IDusdPegOracleCurveBase is IDusdPegOracleCurveErrors, IDusdPegOracleCu
     function PRICE_TIMESTAMP_MASK() external view returns (uint256);
 
     /// @notice Returns the configured Curve pool.
-    function pool() external view returns (address);
-
-    /// @notice Returns the factory used to verify the pool.
-    function factory() external view returns (address);
-
-    /// @notice Returns the approved Curve pool implementation.
-    function poolImplementation() external view returns (address);
-
-    /// @notice Returns the configured DUSD token.
-    function dusd() external view returns (address);
-
-    /// @notice Returns the configured USD-par quote token.
-    function quoteToken() external view returns (address);
+    function curvePool() external view returns (address);
 
     /// @notice Returns the approved Curve EMA averaging time.
     function expectedMaExpTime() external view returns (uint256);

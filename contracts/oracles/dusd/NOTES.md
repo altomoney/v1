@@ -26,8 +26,9 @@ The draft oracle is:
 
 - non-upgradeable and ownerless;
 - immutable after construction;
-- bound to one exact pool, factory, implementation, DUSD token, quote token,
-  coin order, EMA time constant, and precise amplification value;
+- bound at runtime to one exact pool, EMA time constant, and precise
+  amplification value, after validating the factory, implementation, DUSD
+  token, quote token, and coin order during construction;
 - restricted to a factory-registered, non-meta, two-coin Curve StableSwap NG
   pool whose two asset types are standard ERC-20 type `0`; and
 - replaced through `PegResponsiveIrm.setPegOracle()` when its approved
@@ -221,4 +222,3 @@ view, not an alternate oracle path.
 | Curve call failure                 | Revert reaches PRM, which treats it as unusable                             | Other consumers must implement compatible handling            |
 | Keeper failure                     | Permissionless PRM checkpointing permits automation                         | No on-chain checkpoint-latency guarantee                      |
 | Oracle replacement                 | Immutable adapter replaced through the PRM                                  | Current PRM applies the new source at a later checkpoint      |
-

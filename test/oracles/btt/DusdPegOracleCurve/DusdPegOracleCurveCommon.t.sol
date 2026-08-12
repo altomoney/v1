@@ -5,7 +5,10 @@ pragma solidity 0.8.28;
 import {Test} from "forge-std/Test.sol";
 
 import {DusdPegOracleCurve} from "@alto/oracles/dusd/DusdPegOracleCurve.sol";
-import {DusdPegOracleCurveConfig} from "@alto/oracles/dusd/interfaces/IDusdPegOracleCurve.sol";
+import {
+    DusdPegOracleCurveConfig,
+    DusdPegOracleCurveValidationConfig
+} from "@alto/oracles/dusd/interfaces/IDusdPegOracleCurve.sol";
 import {ICurveStableSwapNGOracle as ICurveStableSwap} from "@alto/interfaces/curve/ICurveStableSwapNG.sol";
 import {MockCurveStableSwapFactory} from "@alto-test/oracles/btt/mocks/MockCurveStableSwapFactory.sol";
 import {MockCurveStableSwapNG} from "@alto-test/oracles/btt/mocks/MockCurveStableSwapNG.sol";
@@ -39,14 +42,16 @@ abstract contract DusdPegOracleCurveCommon is Test {
     MockCurveStableSwapNG internal pool;
     MockCurveStableSwapFactory internal factory;
     DusdPegOracleCurve internal oracle;
-    DusdPegOracleCurveConfig internal cfg;
+    DusdPegOracleCurveConfig internal oracleConfig;
+    DusdPegOracleCurveValidationConfig internal oracleValidationConfig;
 
     function setUp() public virtual {
         vm.warp(DEFAULT_NOW);
 
         pool = new MockCurveStableSwapNG(_addressArray(QUOTE_TOKEN, DUSD), MA_EXP_TIME, A_PRECISE);
         factory = new MockCurveStableSwapFactory();
-        cfg = _validConfig();
+        oracleConfig = _validConfig();
+        oracleValidationConfig = _validValidationConfig();
 
         _setValidPoolState();
         _setValidFactoryState();
@@ -55,25 +60,37 @@ abstract contract DusdPegOracleCurveCommon is Test {
 
     function _validConfig() internal view returns (DusdPegOracleCurveConfig memory config) {
         config = DusdPegOracleCurveConfig({
-            pool: address(pool),
-            poolImpl: POOL_IMPLEMENTATION,
-            factory: address(factory),
-            dusd: DUSD,
-            quoteToken: QUOTE_TOKEN,
-            maExpTime: MA_EXP_TIME,
-            aPrecise: A_PRECISE
+            curvePool: address(pool), expectedMaExpTime: MA_EXP_TIME, expectedAPrecise: A_PRECISE
         });
     }
 
-    function _deployOracle(bool runtimeChecks) internal returns (DusdPegOracleCurve deployedOracle) {
-        return _deployOracle(cfg, runtimeChecks, OWNER);
+    function _validValidationConfig() internal view returns (DusdPegOracleCurveValidationConfig memory config) {
+        config = DusdPegOracleCurveValidationConfig({
+            curveFactory: address(factory),
+            expectedCurvePoolImplementation: POOL_IMPLEMENTATION,
+            dusd: DUSD,
+            quoteToken: QUOTE_TOKEN
+        });
     }
 
-    function _deployOracle(DusdPegOracleCurveConfig memory config, bool runtimeChecks, address initialOwner)
+    function _deployOracle(bool runtimeChecksEnabled) internal returns (DusdPegOracleCurve deployedOracle) {
+        return _deployOracle(oracleConfig, runtimeChecksEnabled, OWNER);
+    }
+
+    function _deployOracle(DusdPegOracleCurveConfig memory config, bool runtimeChecksEnabled, address initialOwner)
         internal
         returns (DusdPegOracleCurve deployedOracle)
     {
-        return new DusdPegOracleCurve(config, runtimeChecks, initialOwner);
+        return _deployOracle(config, oracleValidationConfig, runtimeChecksEnabled, initialOwner);
+    }
+
+    function _deployOracle(
+        DusdPegOracleCurveConfig memory config,
+        DusdPegOracleCurveValidationConfig memory validationConfig,
+        bool runtimeChecksEnabled,
+        address initialOwner
+    ) internal returns (DusdPegOracleCurve deployedOracle) {
+        return new DusdPegOracleCurve(config, validationConfig, runtimeChecksEnabled, initialOwner);
     }
 
     function _setValidPoolState() internal {
