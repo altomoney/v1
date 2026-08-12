@@ -89,7 +89,7 @@ contract FixedRateIrmTest is Test {
         vm.stopPrank();
     }
 
-    function testSetBorrowRateViaConstuctor(uint256 borrowRate) external {
+    function testSetBorrowRateViaConstructor(uint256 borrowRate) external {
         borrowRate = bound(borrowRate, 1, fixedRateIrm.MAX_BORROW_RATE());
 
         FixedRateIrmMock newFixedRateIrm = new FixedRateIrmMock(borrowRate, address(this));
@@ -97,12 +97,13 @@ contract FixedRateIrmTest is Test {
         assertEq(newFixedRateIrm.borrowRate(), borrowRate);
     }
 
-    function testSetBorrowRateViaConstuctorZero() external {
-        vm.expectRevert(IIrm.IrmInvalidParams.selector);
-        new FixedRateIrmMock(0, address(this));
+    function testSetBorrowRateViaConstructorZero() external {
+        FixedRateIrmMock newFixedRateIrm = new FixedRateIrmMock(0, address(this));
+
+        assertEq(newFixedRateIrm.borrowRate(), 0);
     }
 
-    function testSetBorrowRateViaConstuctorOverMaxBorrowRate(uint256 borrowRate) external {
+    function testSetBorrowRateViaConstructorOverMaxBorrowRate(uint256 borrowRate) external {
         borrowRate = bound(borrowRate, fixedRateIrm.MAX_BORROW_RATE() + 1, type(uint256).max);
 
         vm.expectRevert(IIrm.IrmInvalidParams.selector);
@@ -182,8 +183,20 @@ contract FixedRateIrmTest is Test {
     }
 
     function testSetBorrowRateZero() external {
-        vm.expectRevert(IIrm.IrmInvalidParams.selector);
         fixedRateIrm.setBorrowRate(0);
+
+        assertEq(fixedRateIrm.borrowRate(), 0);
+    }
+
+    function testZeroBorrowRateAccruesNoInterest() external {
+        FixedRateIrmMock zeroRateIrm = new FixedRateIrmMock(0, address(this));
+        zeroRateIrm.setMarket(address(this));
+        vm.warp(block.timestamp + 365 days);
+
+        (uint256 interest, uint256 borrowRate) = zeroRateIrm.updateInterestRate(0, 1 ether);
+
+        assertEq(interest, 0);
+        assertEq(borrowRate, 0);
     }
 
     function testSetBorrowRateOverMaxBorrowRate(uint256 borrowRate) external {
