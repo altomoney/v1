@@ -57,7 +57,8 @@ import {
     BUNDLER3_MAINNET,
     FRXUSD_MAINNET,
     USDC_MAINNET,
-    WETH_MAINNET
+    WETH_MAINNET,
+    WSTETH_MAINNET
 } from "@alto/deployments/ethereum-mainnet/Constants.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {IAltoVault, IAltoVaultBase} from "@alto/lending/interfaces/IAltoVault.sol";
@@ -987,6 +988,28 @@ contract DeployWethMintMarketPhaseTest is DeployMarketPhaseTestBase {
 
         _assertMintMarketParams(deployed, expected, 0.02134 ether / uint256(365 days));
         _assertAndExecuteMarketGovernance(deployed, expected, SCHEDULE_JSON, EXECUTE_JSON);
+    }
+}
+
+contract DeployWstethMintMarketPhaseTest is DeployMarketPhaseTestBase {
+    function test_deployWstethMintMarketParameters() public {
+        _deployMarket(DeploymentPhase.MINT_MARKET_WSTETH);
+
+        _assertMintMarketParams(
+            input.contracts.wstethMarket,
+            ExpectedMarketParams({
+                marketType: MarketType.MINT,
+                collateralToken: WSTETH_MAINNET,
+                maxLtv: 0.75 ether,
+                borrowOpeningFee: 0.0015 ether,
+                capacity: 60_000 ether,
+                maxLiquidationLtv: 0.78 ether,
+                dynamicBonusFeeStart: 0.02 ether,
+                ltvForCompleteLiquidation: 0.815 ether,
+                liquidationBaseFee: 0.07 ether
+            }),
+            0.02295163663 ether / uint256(365 days)
+        );
     }
 }
 
