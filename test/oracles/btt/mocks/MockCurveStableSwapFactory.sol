@@ -2,13 +2,13 @@
 
 pragma solidity 0.8.28;
 
-import {ICurveStableSwapFactory} from "@alto/oracles/dusd/interfaces/ICurveStableSwapFactory.sol";
+import {ICurveStableSwapNGFactory} from "@alto/interfaces/curve/ICurveStableSwapNGFactory.sol";
 
 /// @notice Stateful mock of the StableSwap NG factory registry reads used by
 /// `DusdPegOracleCurve`.
 /// @dev Metadata is stored per pool, matching the production factory's
 /// `pool_data` model.
-contract MockCurveStableSwapFactory is ICurveStableSwapFactory {
+contract MockCurveStableSwapFactory is ICurveStableSwapNGFactory {
     error InvalidRegistration();
 
     uint256 private constant MIN_COINS = 2;
@@ -25,27 +25,27 @@ contract MockCurveStableSwapFactory is ICurveStableSwapFactory {
 
     mapping(address pool => PoolData data) private s_poolData;
 
-    /// @inheritdoc ICurveStableSwapFactory
+    /// @inheritdoc ICurveStableSwapNGFactory
     function get_n_coins(address pool) external view override returns (uint256 coinCount) {
         return s_poolData[pool].nCoins;
     }
 
-    /// @inheritdoc ICurveStableSwapFactory
+    /// @inheritdoc ICurveStableSwapNGFactory
     function get_coins(address pool) external view override returns (address[] memory registeredCoins) {
         return s_poolData[pool].coins;
     }
 
-    /// @inheritdoc ICurveStableSwapFactory
+    /// @inheritdoc ICurveStableSwapNGFactory
     function get_implementation_address(address pool) external view override returns (address implementation) {
         return s_poolData[pool].implementation;
     }
 
-    /// @inheritdoc ICurveStableSwapFactory
+    /// @inheritdoc ICurveStableSwapNGFactory
     function is_meta(address pool) external view override returns (bool isMetapool) {
         return s_poolData[pool].basePool != address(0);
     }
 
-    /// @inheritdoc ICurveStableSwapFactory
+    /// @inheritdoc ICurveStableSwapNGFactory
     function get_pool_asset_types(address pool) external view override returns (uint8[] memory assetTypes) {
         return s_poolData[pool].assetTypes;
     }

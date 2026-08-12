@@ -3,7 +3,7 @@ pragma solidity ^0.8.28;
 
 import {IMintCurveConvexPosition} from "./interfaces/IMintCurveConvexPosition.sol";
 import {IMintCurveConvexPositionFactory, MintCurveConvexConfig} from "./interfaces/IMintCurveConvexPositionFactory.sol";
-import {ICurveStablePool} from "./interfaces/ICurveStablePool.sol";
+import {ICurveStableSwapNGLiquidity} from "@alto/interfaces/curve/ICurveStableSwapNG.sol";
 import {IConvexBooster, IConvexRewardPool} from "./interfaces/IConvex.sol";
 
 import {IMarket, Balance} from "@alto/lending/interfaces/IMarket.sol";
@@ -248,7 +248,7 @@ contract MintCurveConvexPosition is
         amounts[indexOfBorrowTokenInPool] = borrowAmount;
 
         IERC20(borrowToken).forceApprove(curvePool, borrowAmount);
-        lpMinted = ICurveStablePool(curvePool).add_liquidity(amounts, minLpOut);
+        lpMinted = ICurveStableSwapNGLiquidity(curvePool).add_liquidity(amounts, minLpOut);
         IERC20(borrowToken).forceApprove(curvePool, 0);
     }
 
@@ -259,7 +259,7 @@ contract MintCurveConvexPosition is
     {
         int128 index = int128(uint128(indexOfBorrowTokenInPool));
         borrowTokenReceived =
-            ICurveStablePool(curvePool).remove_liquidity_one_coin(lpToWithdraw, index, minBorrowTokenOut);
+            ICurveStableSwapNGLiquidity(curvePool).remove_liquidity_one_coin(lpToWithdraw, index, minBorrowTokenOut);
     }
 
     /// @dev Stakes Curve LP through the Convex booster; the receipt tokens are staked in the reward pool.
@@ -306,9 +306,9 @@ contract MintCurveConvexPosition is
 
     /// @dev Returns the index of borrow token within the two-coin Curve pool.
     function _coinIndex(address curvePool) internal view returns (uint256) {
-        if (ICurveStablePool(curvePool).coins(0) == borrowToken) {
+        if (ICurveStableSwapNGLiquidity(curvePool).coins(0) == borrowToken) {
             return 0;
-        } else if (ICurveStablePool(curvePool).coins(1) == borrowToken) {
+        } else if (ICurveStableSwapNGLiquidity(curvePool).coins(1) == borrowToken) {
             return 1;
         } else {
             revert MintCurveConvexPositionInvalidInput();

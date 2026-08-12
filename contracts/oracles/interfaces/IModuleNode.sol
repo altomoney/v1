@@ -3,7 +3,7 @@ pragma solidity >=0.8.0;
 
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
-import {ICurvePool} from "@alto/oracles/interfaces/ICurvePool.sol";
+import {ICurveStableSwapNGOracle} from "@alto/interfaces/curve/ICurveStableSwapNG.sol";
 
 /// @notice The direction of the conversion
 /// @dev See individual node structs for more details
@@ -68,7 +68,7 @@ struct UniswapNode {
 /// @notice The node for the Curve oracle
 struct CurveNode {
     // @notice The Curve pool to query
-    ICurvePool pool;
+    ICurveStableSwapNGOracle pool;
     // @notice The index of the coin to query
     uint256 coinIndex;
     // @notice Whether we should multiply or divide by this rate

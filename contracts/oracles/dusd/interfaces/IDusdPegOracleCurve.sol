@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0;
 
-import {ICurveStableSwapFactory} from "@alto/oracles/dusd/interfaces/ICurveStableSwapFactory.sol";
-import {ICurveStableSwap} from "@alto/oracles/interfaces/ICurveStableSwap.sol";
-
 /// @notice Immutable pool identity and controller-relevant parameters.
 struct DusdPegOracleCurveConfig {
     /// @dev Address of the Curve StableSwap NG pool.
