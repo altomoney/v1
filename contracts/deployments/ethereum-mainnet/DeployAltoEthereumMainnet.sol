@@ -492,23 +492,23 @@ library DeployAltoEthereumMainnet {
                     collateralToken: SYRUPUSDC_MAINNET,
                     oracleAsset: EthereumMainnetLendingOracleAsset.SYRUPUSDC,
                     irmConfig: AdaptiveCurveIrm.AdaptiveCurveIrmConfig({
-                        curveSteepness: 4 ether,
-                        adjustmentSpeed: 50 ether / int256(365 days),
-                        targetUtilization: 0.9 ether, // 90%
-                        initialRateAtTarget: 0.1 ether / int256(365 days), // 10%
-                        minRateAtTarget: 0.001 ether / int256(365 days), // 0.1%
-                        maxRateAtTarget: 2 ether / int256(365 days) // 200%
+                        curveSteepness: 2 ether,
+                        adjustmentSpeed: 25 ether / int256(365 days),
+                        targetUtilization: 0.7553719008 ether, // 75.53719008%
+                        initialRateAtTarget: 0.08661776418 ether / int256(365 days), // 8.661776418%
+                        minRateAtTarget: 0.06929421135 ether / int256(365 days), // 6.929421135%
+                        maxRateAtTarget: 4 ether / int256(365 days) // 400%
                     }),
-                    maxLtv: 0.8 ether, // 80%
-                    initialBorrowOpeningFee: 0.002 ether, // 0.2%
-                    initialInterestFee: 0,
-                    supplyCapAssets: 0,
+                    maxLtv: 0.7 ether, // 70%
+                    initialBorrowOpeningFee: 0.0015 ether, // 0.15%
+                    initialInterestFee: 0.1 ether, // 10%
+                    supplyCapAssets: uint128(105269.0051 ether),
                     liquidationConfig: LiquidationConfiguration({
-                        maxLiquidationLtv: 0.85 ether, // 85%
-                        dynamicBonusFeeStart: 0.01 ether, // 1%
-                        ltvForCompleteLiquidation: 0.93 ether, // 93%
+                        maxLiquidationLtv: 0.71 ether, // 71%
+                        dynamicBonusFeeStart: 0.015 ether, // 1.5%
+                        ltvForCompleteLiquidation: 0.72 ether, // 72%
                         dynamicBonusFeeDecaySteepness: 5 ether, // 5
-                        liquidationBaseFee: 0.06 ether, // 6%
+                        liquidationBaseFee: 0.04 ether, // 4%
                         minPenaltyPercentage: 0.005 ether, // 0.5%
                         protocolFeePercentage: 0.07 ether, // 7%
                         isEnabledPriorityLiquidation: false,
