@@ -33,9 +33,24 @@ interface IConvexRewardPool {
     // @notice get the balance of the account
     function balanceOf(address account) external view returns (uint256);
 
+    // @notice number of extra reward pools currently registered
+    function extraRewardsLength() external view returns (uint256);
+
+    // @notice extra reward pool registered at `index`
+    function extraRewards(uint256 index) external view returns (address);
+
+    // @notice reward token distributed by this reward pool
+    function rewardToken() external view returns (address);
+
     // @notice withdraw the convex LP tokens and unwrap the LP tokens to curve LP tokens
     function withdrawAndUnwrap(uint256 amount, bool claim) external returns (bool);
 
-    // @notice claim the CRV and CVX rewards accumulated by the caller
+    // @notice claim all Convex rewards accumulated by the caller
     function getReward() external returns (bool);
+}
+
+/// @title IConvexStashTokenWrapper
+/// @notice Minimal interface for resolving a Convex stash wrapper to its underlying reward token.
+interface IConvexStashTokenWrapper {
+    function token() external view returns (address);
 }

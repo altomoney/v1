@@ -4,7 +4,7 @@ pragma solidity ^0.8.28;
 import {IMintCurveConvexPosition} from "./interfaces/IMintCurveConvexPosition.sol";
 import {IMintCurveConvexPositionFactory, MintCurveConvexConfig} from "./interfaces/IMintCurveConvexPositionFactory.sol";
 import {ICurveStableSwapNGLiquidity} from "@alto/interfaces/curve/ICurveStableSwapNG.sol";
-import {IConvexBooster, IConvexRewardPool} from "./interfaces/IConvex.sol";
+import {IConvexBooster, IConvexRewardPool, IConvexStashTokenWrapper} from "./interfaces/IConvex.sol";
 
 import {IMarket, Balance} from "@alto/lending/interfaces/IMarket.sol";
 import {AssetShareConversionMath} from "@alto/lending/libraries/AssetShareConversionMath.sol";
@@ -32,6 +32,9 @@ contract MintCurveConvexPosition is
 {
     using SafeERC20 for IERC20;
     using AssetShareConversionMath for uint256;
+
+    bytes4 private constant CONVEX_STASH_REWARD_POOL_SELECTOR = bytes4(keccak256("rewardPool()"));
+    bytes4 private constant CONVEX_STASH_BOOSTER_SELECTOR = bytes4(keccak256("booster()"));
 
     /// @inheritdoc IMintCurveConvexPosition
     IMintCurveConvexPositionFactory public factory;
@@ -143,9 +146,16 @@ contract MintCurveConvexPosition is
         override
         onlyOwnerOrAuthorized
         nonReentrant
-        returns (uint256 borrowTokenReceived, uint256 assetsRepaid, uint256 crvAmount, uint256 cvxAmount)
+        returns (
+            uint256 borrowTokenReceived,
+            uint256 assetsRepaid,
+            address[] memory rewardTokens,
+            uint256[] memory rewardAmounts
+        )
     {
-        if (lpToWithdraw == 0 && sharesToRepay == 0) revert MintCurveConvexPositionInvalidInput();
+        if (lpToWithdraw == 0 && sharesToRepay == 0) {
+            revert MintCurveConvexPositionInvalidInput();
+        }
         if (lpToWithdraw == 0 && minBorrowTokenOut > 0) revert MintCurveConvexPositionInvalidInput();
         if (lpToWithdraw == 0 && claimRewards) revert MintCurveConvexPositionInvalidInput();
 
@@ -155,15 +165,17 @@ contract MintCurveConvexPosition is
             bool success = IConvexRewardPool(config.convexRewardPool).withdrawAndUnwrap(lpToWithdraw, claimRewards);
             if (!success) revert MintCurveConvexPositionWithdrawalFromConvexRewardPoolFailed();
             borrowTokenReceived = _withdrawCoin(config.curvePool, lpToWithdraw, minBorrowTokenOut);
-
-            if (claimRewards) {
-                (crvAmount, cvxAmount) = _sweepRewards(positionOwner);
-            }
         }
 
         if (sharesToRepay > 0) {
             assetsRepaid = _repay(sharesToRepay);
             emit Repaid(positionOwner, sharesToRepay, assetsRepaid);
+        }
+
+        // Commit unwind proceeds to the requested repayment before sweeping arbitrary reward tokens.
+        // An extra reward may legitimately use the borrow token, so it cannot safely be swept earlier.
+        if (claimRewards) {
+            (rewardTokens, rewardAmounts) = _sweepRewards(positionOwner);
         }
 
         uint256 borrowTokenBalance = IERC20(borrowToken).balanceOf(address(this));
@@ -195,11 +207,11 @@ contract MintCurveConvexPosition is
         override
         onlyOwnerOrAuthorized
         nonReentrant
-        returns (uint256 crvAmount, uint256 cvxAmount)
+        returns (address[] memory tokens, uint256[] memory amounts)
     {
         bool success = IConvexRewardPool(config.convexRewardPool).getReward();
         if (!success) revert MintCurveConvexPositionClaimingRewardsFailed();
-        (crvAmount, cvxAmount) = _sweepRewards(owner());
+        (tokens, amounts) = _sweepRewards(owner());
     }
 
     /// @inheritdoc IMintCurveConvexPosition
@@ -287,21 +299,100 @@ contract MintCurveConvexPosition is
         market.repay(0, repayShares, address(this));
     }
 
-    /// @dev Transfers any CRV/CVX held by this contract to the owner.
-    function _sweepRewards(address owner) internal returns (uint256 crvAmount, uint256 cvxAmount) {
-        address crv = config.crv;
-        address cvx = config.cvx;
-        crvAmount = IERC20(crv).balanceOf(address(this));
-        if (crvAmount > 0) {
-            IERC20(crv).safeTransfer(owner, crvAmount);
+    /// @dev Transfers all Convex rewards held by this contract to `recipient`.
+    function _sweepRewards(address recipient) internal returns (address[] memory tokens, uint256[] memory amounts) {
+        tokens = _rewardTokens();
+        amounts = new uint256[](tokens.length);
+
+        for (uint256 i = 0; i < tokens.length; ++i) {
+            address token = tokens[i];
+            uint256 amount = IERC20(token).balanceOf(address(this));
+            amounts[i] = amount;
+
+            if (amount > 0) {
+                IERC20(token).safeTransfer(recipient, amount);
+                emit RewardClaimed(recipient, token, amount);
+            }
+        }
+    }
+
+    /// @dev Queries Convex for the current complete reward-token list and removes duplicates.
+    function _rewardTokens() internal view returns (address[] memory tokens) {
+        address rewardPool = config.convexRewardPool;
+        uint256 extraRewardsLength = _extraRewardsLength(rewardPool);
+        tokens = new address[](extraRewardsLength + 2);
+
+        uint256 tokenCount = _appendUnique(tokens, 0, config.crv);
+        tokenCount = _appendUnique(tokens, tokenCount, config.cvx);
+
+        for (uint256 i = 0; i < extraRewardsLength; ++i) {
+            (bool extraPoolSuccess, address extraRewardPool) =
+                _readAddress(rewardPool, abi.encodeCall(IConvexRewardPool.extraRewards, (i)));
+            if (!extraPoolSuccess || extraRewardPool.code.length == 0) continue;
+
+            (bool rewardTokenSuccess, address rewardToken) =
+                _readAddress(extraRewardPool, abi.encodeCall(IConvexRewardPool.rewardToken, ()));
+            if (!rewardTokenSuccess || rewardToken.code.length == 0) continue;
+
+            tokenCount = _appendUnique(tokens, tokenCount, _resolveRewardToken(extraRewardPool, rewardToken));
         }
 
-        cvxAmount = IERC20(cvx).balanceOf(address(this));
-        if (cvxAmount > 0) {
-            IERC20(cvx).safeTransfer(owner, cvxAmount);
+        assembly ("memory-safe") {
+            mstore(tokens, tokenCount)
+        }
+    }
+
+    /// @dev Returns zero when the primary pool's extra-reward metadata cannot be queried safely.
+    function _extraRewardsLength(address rewardPool) internal view returns (uint256 length) {
+        (bool success, bytes memory returnData) =
+            rewardPool.staticcall(abi.encodeCall(IConvexRewardPool.extraRewardsLength, ()));
+        if (success && returnData.length == 32) {
+            length = abi.decode(returnData, (uint256));
+        }
+    }
+
+    /// @dev Uses the underlying token only for a positively identified Convex stash wrapper.
+    function _resolveRewardToken(address extraRewardPool, address rewardToken) internal view returns (address token) {
+        token = rewardToken;
+        (bool tokenSuccess, address underlyingToken) =
+            _readAddress(rewardToken, abi.encodeCall(IConvexStashTokenWrapper.token, ()));
+        if (!tokenSuccess || underlyingToken.code.length == 0) return token;
+
+        (bool rewardPoolSuccess, address wrapperRewardPool) =
+            _readAddress(rewardToken, abi.encodeWithSelector(CONVEX_STASH_REWARD_POOL_SELECTOR));
+        if (!rewardPoolSuccess || wrapperRewardPool != extraRewardPool) return token;
+
+        (bool boosterSuccess, address wrapperBooster) =
+            _readAddress(rewardToken, abi.encodeWithSelector(CONVEX_STASH_BOOSTER_SELECTOR));
+        if (!boosterSuccess || wrapperBooster != config.convexBooster) return token;
+
+        return underlyingToken;
+    }
+
+    /// @dev Safely reads one ABI-encoded, nonzero address from `target`.
+    function _readAddress(address target, bytes memory callData) internal view returns (bool success, address result) {
+        bytes memory returnData;
+        (success, returnData) = target.staticcall(callData);
+        if (!success || returnData.length != 32) return (false, address(0));
+
+        uint256 decodedAddress = abi.decode(returnData, (uint256));
+        if (decodedAddress == 0 || decodedAddress > type(uint160).max) return (false, address(0));
+
+        // The bounds check above guarantees this narrowing conversion is safe.
+        // forge-lint: disable-next-line(unsafe-typecast)
+        result = address(uint160(decodedAddress));
+    }
+
+    /// @dev Appends `token` if it is nonzero and has not already been discovered.
+    function _appendUnique(address[] memory tokens, uint256 tokenCount, address token) internal pure returns (uint256) {
+        if (token == address(0)) return tokenCount;
+
+        for (uint256 i = 0; i < tokenCount; ++i) {
+            if (tokens[i] == token) return tokenCount;
         }
 
-        emit RewardsClaimed(crvAmount, cvxAmount);
+        tokens[tokenCount] = token;
+        return tokenCount + 1;
     }
 
     /// @dev Returns the index of borrow token within the two-coin Curve pool.

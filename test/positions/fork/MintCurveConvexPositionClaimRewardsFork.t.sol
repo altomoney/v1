@@ -12,6 +12,7 @@ import {CRV_TOKEN_MAINNET, CVX_TOKEN_MAINNET, WETH_MAINNET} from "@alto/deployme
 contract MintCurveConvexPositionClaimRewardsForkTest is MintCurveConvexPositionForkCommon {
     uint256 internal constant REWARD_ACCRUAL_BLOCKS = 100_000;
     uint256 internal constant REWARD_ACCRUAL_PERIOD = 14 days;
+    address internal constant WFRAX_MAINNET = 0x04ACaF8D2865c0714F79da09645C13FD2888977f;
 
     uint256 internal stakedLp;
 
@@ -29,18 +30,21 @@ contract MintCurveConvexPositionClaimRewardsForkTest is MintCurveConvexPositionF
 
         uint256 userCrvBefore = IERC20(CRV_TOKEN_MAINNET).balanceOf(user);
         uint256 userCvxBefore = IERC20(CVX_TOKEN_MAINNET).balanceOf(user);
+        uint256 userWfraxBefore = IERC20(WFRAX_MAINNET).balanceOf(user);
 
         vm.recordLogs();
         vm.prank(user);
-        position.claimRewards();
+        (address[] memory tokens, uint256[] memory amounts) = position.claimRewards();
 
         uint256 crvReceived = IERC20(CRV_TOKEN_MAINNET).balanceOf(user) - userCrvBefore;
         uint256 cvxReceived = IERC20(CVX_TOKEN_MAINNET).balanceOf(user) - userCvxBefore;
+        uint256 wfraxReceived = IERC20(WFRAX_MAINNET).balanceOf(user) - userWfraxBefore;
 
         assertGt(crvReceived, 0, "crv accrued and forwarded");
         assertGt(cvxReceived, 0, "cvx accrued and forwarded");
         assertEq(IERC20(CRV_TOKEN_MAINNET).balanceOf(address(position)), 0, "no crv left in position");
         assertEq(IERC20(CVX_TOKEN_MAINNET).balanceOf(address(position)), 0, "no cvx left in position");
+        assertEq(IERC20(WFRAX_MAINNET).balanceOf(address(position)), 0, "no wfrax left in position");
 
         // Claiming never touches the underlying market position or stake.
         assertEq(_stakedLpBalance(), stakedLp);
@@ -49,25 +53,44 @@ contract MintCurveConvexPositionClaimRewardsForkTest is MintCurveConvexPositionF
         assertEq(IERC20(DUSD_MAINNET).balanceOf(address(position)), 0);
         assertEq(IERC20(WETH_MAINNET).balanceOf(address(position)), 0);
 
-        _assertRewardsClaimedLogged(crvReceived, cvxReceived);
+        assertEq(tokens.length, 3, "live CVX and WFRAX wrappers deduplicated");
+        assertEq(amounts.length, 3);
+        assertEq(tokens[0], CRV_TOKEN_MAINNET);
+        assertEq(tokens[1], CVX_TOKEN_MAINNET);
+        assertEq(tokens[2], WFRAX_MAINNET);
+        assertEq(amounts[0], crvReceived);
+        assertEq(amounts[1], cvxReceived);
+        assertEq(amounts[2], wfraxReceived);
+        _assertBaseRewardEvents(crvReceived, cvxReceived);
     }
 
     function test_ClaimRewards_WithNoAccrualEmitsZeroAmounts() public {
         // Immediately after opening the position, no meaningful rewards have accrued.
         uint256 userCrvBefore = IERC20(CRV_TOKEN_MAINNET).balanceOf(user);
         uint256 userCvxBefore = IERC20(CVX_TOKEN_MAINNET).balanceOf(user);
+        uint256 userWfraxBefore = IERC20(WFRAX_MAINNET).balanceOf(user);
 
         vm.recordLogs();
         vm.prank(user);
-        position.claimRewards();
+        (address[] memory tokens, uint256[] memory amounts) = position.claimRewards();
 
         // Whatever dust is claimed is fully forwarded, leaving nothing in the position.
         assertEq(IERC20(CRV_TOKEN_MAINNET).balanceOf(address(position)), 0);
         assertEq(IERC20(CVX_TOKEN_MAINNET).balanceOf(address(position)), 0);
+        assertEq(IERC20(WFRAX_MAINNET).balanceOf(address(position)), 0);
 
         uint256 crvReceived = IERC20(CRV_TOKEN_MAINNET).balanceOf(user) - userCrvBefore;
         uint256 cvxReceived = IERC20(CVX_TOKEN_MAINNET).balanceOf(user) - userCvxBefore;
-        _assertRewardsClaimedLogged(crvReceived, cvxReceived);
+        uint256 wfraxReceived = IERC20(WFRAX_MAINNET).balanceOf(user) - userWfraxBefore;
+        assertEq(tokens.length, 3);
+        assertEq(amounts.length, 3);
+        assertEq(tokens[0], CRV_TOKEN_MAINNET);
+        assertEq(tokens[1], CVX_TOKEN_MAINNET);
+        assertEq(tokens[2], WFRAX_MAINNET);
+        assertEq(amounts[0], crvReceived);
+        assertEq(amounts[1], cvxReceived);
+        assertEq(amounts[2], wfraxReceived);
+        _assertBaseRewardEvents(crvReceived, cvxReceived);
     }
 
     function _advanceChainForRewards() internal {
@@ -75,17 +98,27 @@ contract MintCurveConvexPositionClaimRewardsForkTest is MintCurveConvexPositionF
         vm.warp(block.timestamp + REWARD_ACCRUAL_PERIOD);
     }
 
-    function _assertRewardsClaimedLogged(uint256 expectedCrv, uint256 expectedCvx) internal {
+    function _assertBaseRewardEvents(uint256 expectedCrv, uint256 expectedCvx) internal {
         Vm.Log[] memory logs = vm.getRecordedLogs();
-        bool found;
+        bool foundCrv;
+        bool foundCvx;
         for (uint256 i = 0; i < logs.length; i++) {
-            if (logs[i].topics[0] == IMintCurveConvexPositionEvents.RewardsClaimed.selector) {
-                (uint256 loggedCrv, uint256 loggedCvx) = abi.decode(logs[i].data, (uint256, uint256));
-                assertEq(loggedCrv, expectedCrv);
-                assertEq(loggedCvx, expectedCvx);
-                found = true;
+            if (
+                logs[i].emitter == address(position)
+                    && logs[i].topics[0] == IMintCurveConvexPositionEvents.RewardClaimed.selector
+            ) {
+                assertEq(address(uint160(uint256(logs[i].topics[1]))), user);
+                address token = address(uint160(uint256(logs[i].topics[2])));
+                if (token == CRV_TOKEN_MAINNET) {
+                    assertEq(abi.decode(logs[i].data, (uint256)), expectedCrv);
+                    foundCrv = true;
+                } else if (token == CVX_TOKEN_MAINNET) {
+                    assertEq(abi.decode(logs[i].data, (uint256)), expectedCvx);
+                    foundCvx = true;
+                }
             }
         }
-        assertTrue(found);
+        assertEq(foundCrv, expectedCrv > 0, "CRV event emitted exactly for nonzero transfer");
+        assertEq(foundCvx, expectedCvx > 0, "CVX event emitted exactly for nonzero transfer");
     }
 }

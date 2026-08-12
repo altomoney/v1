@@ -155,6 +155,7 @@ contract MintCurveConvexPositionFactory is
                 || config.convexRewardPool == address(0) || config.crv == address(0) || config.cvx == address(0)
                 || ICurveStableSwapNGLiquidity(config.curvePool).N_COINS() != 2
                 || IConvexRewardPool(config.convexRewardPool).pid() != config.convexPid
+                || IConvexRewardPool(config.convexRewardPool).rewardToken() != config.crv
         ) {
             revert MintCurveConvexPositionFactoryInvalidConfig();
         }

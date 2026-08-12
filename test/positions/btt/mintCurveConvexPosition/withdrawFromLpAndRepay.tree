@@ -18,8 +18,8 @@ MintCurveConvexPosition::withdrawFromLpAndRepay(uint256,uint256,uint256,bool)
     │   ├── when claimRewards is true
     │   │   ├── it should withdraw and unwrap lpToWithdraw of LP from Convex claiming rewards
     │   │   ├── it should remove liquidity one-sided from Curve into the borrow token
-    │   │   ├── it should transfer the CRV and CVX rewards to the owner
-    │   │   └── it should emit RewardsClaimed
+    │   │   ├── it should transfer all Convex rewards to the owner
+    │   │   └── it should emit RewardClaimed for every nonzero token
     │   └── when claimRewards is false
     │       ├── it should withdraw and unwrap lpToWithdraw of LP from Convex without claiming rewards
     │       ├── it should remove liquidity one-sided from Curve into the borrow token
@@ -35,6 +35,8 @@ MintCurveConvexPosition::withdrawFromLpAndRepay(uint256,uint256,uint256,bool)
     │       └── it should emit Repaid
     ├── when lpToWithdraw, sharesToRepay are non-zero and claimRewards is true
     │   ├── it should unwind the LP, repay the debt and claim rewards in a single call
+    │   ├── it should repay before sweeping a reward token that equals the borrow token
+    │   ├── it should skip malformed extra reward metadata without blocking the unwind
     │   └── it should sweep any surplus borrow token to the owner
     └── given the flow completes
         ├── it should transfer any remaining borrow token to the owner

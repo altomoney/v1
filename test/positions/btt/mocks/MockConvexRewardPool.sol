@@ -5,6 +5,7 @@ import {IConvexRewardPool} from "@alto/positions/interfaces/IConvex.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ERC20MockMintable} from "@alto-test/helpers/ERC20MockMintable.sol";
+import {MockConvexExtraRewardPool} from "./MockConvexExtraRewardPool.sol";
 
 /// @notice Convex reward pool mock tracking staked balances per account.
 contract MockConvexRewardPool is IConvexRewardPool {
@@ -14,6 +15,7 @@ contract MockConvexRewardPool is IConvexRewardPool {
     IERC20 public crv;
     IERC20 public cvx;
     uint256 public pid;
+    address[] public extraRewards;
 
     uint256 public withdrawCallCount;
     uint256 public claimRewardsCallCount;
@@ -35,6 +37,22 @@ contract MockConvexRewardPool is IConvexRewardPool {
 
     function balanceOf(address account) external view returns (uint256) {
         return stakedBalance[account];
+    }
+
+    function extraRewardsLength() external view returns (uint256) {
+        return extraRewards.length;
+    }
+
+    function rewardToken() external view returns (address) {
+        return address(crv);
+    }
+
+    function addExtraReward(address extraReward) external {
+        extraRewards.push(extraReward);
+    }
+
+    function removeLastExtraReward() external {
+        extraRewards.pop();
     }
 
     function withdrawAndUnwrap(uint256 amount, bool claim) external returns (bool) {
@@ -63,5 +81,9 @@ contract MockConvexRewardPool is IConvexRewardPool {
 
         uint256 cvxBalance = cvx.balanceOf(address(this));
         if (cvxBalance > 0) cvx.safeTransfer(to, cvxBalance);
+
+        for (uint256 i = 0; i < extraRewards.length; ++i) {
+            MockConvexExtraRewardPool(extraRewards[i]).getReward(to);
+        }
     }
 }
