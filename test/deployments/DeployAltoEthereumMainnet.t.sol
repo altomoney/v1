@@ -1166,6 +1166,36 @@ contract DeploySusdeBorrowMarketPhaseTest is DeployMarketPhaseTestBase {
     }
 }
 
+contract DeploySyrupUsdcBorrowMarketPhaseTest is DeployMarketPhaseTestBase {
+    function test_deploySyrupUsdcBorrowMarketParameters() public {
+        _deployMarket(DeploymentPhase.BORROW_MARKET_SYRUP_USDC);
+
+        _assertBorrowMarketParams(
+            input.contracts.syrupUsdcBorrowMarket,
+            ExpectedMarketParams({
+                marketType: MarketType.BORROW,
+                collateralToken: SYRUPUSDC_MAINNET,
+                maxLtv: 0.7 ether,
+                borrowOpeningFee: 0.0015 ether,
+                capacity: uint128(105269.0051 ether),
+                maxLiquidationLtv: 0.71 ether,
+                dynamicBonusFeeStart: 0.015 ether,
+                ltvForCompleteLiquidation: 0.72 ether,
+                liquidationBaseFee: 0.04 ether
+            }),
+            AdaptiveCurveIrm.AdaptiveCurveIrmConfig({
+                curveSteepness: 2 ether,
+                adjustmentSpeed: 25 ether / int256(365 days),
+                targetUtilization: 0.7553719008 ether,
+                initialRateAtTarget: 0.08661776418 ether / int256(365 days),
+                minRateAtTarget: 0.06929421135 ether / int256(365 days),
+                maxRateAtTarget: 4 ether / int256(365 days)
+            }),
+            0.1 ether
+        );
+    }
+}
+
 contract DeploySyrupUsdcMintMarketPhaseTest is DeployMarketPhaseTestBase {
     function test_deploySyrupUsdcMintMarketParameters() public {
         _deployMarket(DeploymentPhase.MINT_MARKET_SYRUPUSDC);
