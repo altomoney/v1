@@ -81,28 +81,6 @@ contract DusdPegOracleCurveGetPriceTest is DusdPegOracleCurveCommon {
         assertTrue(secondValid);
     }
 
-    function test_WhenRuntimeChecksAreDisabled_ItSkipsControllerReads() external {
-        vm.prank(OWNER);
-        oracle.setRuntimeChecks(false);
-        _mockValidTimestamp();
-        _mockPoolReadRevert(_maExpTimeCall());
-        _mockPoolReadRevert(_aPreciseCall());
-        _mockPoolReadRevert(_futureACall());
-        _mockPrice(PRICE_WAD);
-
-        _assertPriceResult(PRICE_WAD, uint48(block.timestamp), true);
-    }
-
-    function test_WhenRuntimeChecksAreDisabled_ItIgnoresMismatchedControllerValues() external {
-        vm.prank(OWNER);
-        oracle.setRuntimeChecks(false);
-        _mockValidTimestamp();
-        _mockController(MA_EXP_TIME + 1, A_PRECISE + 1, A_PRECISE + 2);
-        _mockPrice(PRICE_WAD);
-
-        _assertPriceResult(PRICE_WAD, uint48(block.timestamp), true);
-    }
-
     function test_RevertWhen_RuntimeMaExpTimeReadReverts() external {
         _mockValidTimestamp();
         _mockPoolReadRevert(_maExpTimeCall());
@@ -205,7 +183,7 @@ contract DusdPegOracleCurveGetPriceTest is DusdPegOracleCurveCommon {
         _mockPrice(PRICE_WAD);
         address ownerBefore = oracle.owner();
         address pendingOwnerBefore = oracle.pendingOwner();
-        bool runtimeChecksBefore = oracle.runtimeConfigChecksEnabled();
+        (uint256 expectedMaExpTimeBefore, uint256 expectedAPreciseBefore) = oracle.runtimeConfig();
 
         vm.recordLogs();
         oracle.getPrice();
@@ -213,7 +191,7 @@ contract DusdPegOracleCurveGetPriceTest is DusdPegOracleCurveCommon {
 
         assertEq(oracle.owner(), ownerBefore);
         assertEq(oracle.pendingOwner(), pendingOwnerBefore);
-        assertEq(oracle.runtimeConfigChecksEnabled(), runtimeChecksBefore);
+        _assertRuntimeConfig(oracle, expectedMaExpTimeBefore, expectedAPreciseBefore);
         assertEq(logs.length, 0);
     }
 

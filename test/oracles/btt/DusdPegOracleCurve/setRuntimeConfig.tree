@@ -1,0 +1,25 @@
+DusdPegOracleCurve::setRuntimeConfig(DusdPegOracleCurveRuntimeConfig)
+├── given caller is not the current owner
+│   ├── it should revert with OwnableUnauthorizedAccount(caller)
+│   ├── it should leave both approved values unchanged
+│   └── it should not emit SetRuntimeConfig
+├── given caller is the pending owner but has not accepted ownership
+│   ├── it should revert with OwnableUnauthorizedAccount(caller)
+│   ├── it should leave both approved values unchanged
+│   └── it should not emit SetRuntimeConfig
+└── given caller is the current owner
+    ├── when either proposed value is zero
+    │   └── it should revert with DusdPegOracleCurveInvalidConfig
+    ├── when ma_exp_time cannot be read
+    │   └── it should bubble the pool revert
+    ├── when ma_exp_time differs from newExpectedMaExpTime
+    │   └── it should revert with DusdPegOracleCurveInvalidMaExpTime
+    ├── when A_precise or future_A cannot be read
+    │   └── it should bubble the pool revert
+    ├── when A_precise or future_A differs from newExpectedAPrecise
+    │   └── it should revert with DusdPegOracleCurveInvalidAmplification
+    └── when both proposed values match the pool's current state
+        ├── it should replace runtimeConfig atomically
+        ├── it should allow subsequent matching pool observations
+        ├── it should preserve ownership state
+        └── it should emit SetRuntimeConfig(newRuntimeConfig)

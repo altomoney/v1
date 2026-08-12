@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0;
 
-/// @notice Immutable parameters retained and used by the deployed oracle.
-struct DusdPegOracleCurveConfig {
-    /// @dev Address of the Curve StableSwap NG pool.
-    address curvePool;
+/// @notice Owner-managed Curve pool parameters checked on every validated read.
+struct DusdPegOracleCurveRuntimeConfig {
     /// @dev Required Curve EMA averaging time.
     uint256 expectedMaExpTime;
     /// @dev Required amplification coefficient, including Curve's precision factor.
@@ -95,9 +93,9 @@ interface IDusdPegOracleCurveErrors {
 }
 
 interface IDusdPegOracleCurveEvents {
-    /// @notice Emitted when the owner updates runtime check status
-    /// @param enabled Whether the checks were enabled
-    event SetRuntimeChecks(bool enabled);
+    /// @notice Emitted when the owner approves new Curve pool parameters.
+    /// @param runtimeConfig New approved Curve pool parameters.
+    event SetRuntimeConfig(DusdPegOracleCurveRuntimeConfig runtimeConfig);
 }
 
 interface IDusdPegOracleCurveBase is IDusdPegOracleCurveErrors, IDusdPegOracleCurveEvents {
@@ -116,14 +114,10 @@ interface IDusdPegOracleCurveBase is IDusdPegOracleCurveErrors, IDusdPegOracleCu
     /// @notice Returns the configured Curve pool.
     function curvePool() external view returns (address);
 
-    /// @notice Returns the approved Curve EMA averaging time.
-    function expectedMaExpTime() external view returns (uint256);
-
-    /// @notice Returns the approved amplification coefficient.
-    function expectedAPrecise() external view returns (uint256);
-
-    /// @notice Returns whether runtime configuration checks are enabled.
-    function runtimeConfigChecksEnabled() external view returns (bool);
+    /// @notice Returns the approved Curve pool parameters checked on every validated read.
+    /// @return expectedMaExpTime Approved Curve EMA averaging time.
+    /// @return expectedAPrecise Approved amplification coefficient, including Curve's precision factor.
+    function runtimeConfig() external view returns (uint256 expectedMaExpTime, uint256 expectedAPrecise);
 
     /// @notice Returns the current DUSD/USD price and associated metadata.
     /// @return priceWad DUSD/USD price using 1e18 precision.
@@ -131,17 +125,17 @@ interface IDusdPegOracleCurveBase is IDusdPegOracleCurveErrors, IDusdPegOracleCu
     /// @return valid Whether the observation passed the oracle checks.
     function getPrice() external view returns (uint256 priceWad, uint48 observedAt, bool valid);
 
-    /// @notice Updates the runtime validation checks.
-    /// @param enabled Whether to enable the checks.
-    /// @dev Only callable by the contract owner.
-    function setRuntimeChecks(bool enabled) external;
+    /// @notice Approves the current Curve EMA averaging time and amplification coefficient.
+    /// @param newRuntimeConfig New approved Curve pool parameters.
+    /// @dev Only callable by the owner. Both values must match the pool's current state.
+    function setRuntimeConfig(DusdPegOracleCurveRuntimeConfig calldata newRuntimeConfig) external;
 }
 
 /// @title IDusdPegOracleCurve
 /// @author GPM
 /// @custom:contact security@altofoundation.org
-/// @notice Interface for an immutable DUSD peg oracle backed by a two-coin
-/// Curve StableSwap NG pool.
+/// @notice Interface for a DUSD peg oracle bound to one two-coin Curve
+/// StableSwap NG pool with owner-managed approved pool parameters.
 interface IDusdPegOracleCurve is IDusdPegOracleCurveBase {
     /// @notice Returns an unvalidated snapshot of the underlying Curve pool.
     /// @return state Unvalidated pool state at the current block.

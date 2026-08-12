@@ -24,11 +24,12 @@ Change a top-level checkbox to `[x]` only when that evidence is attached.
 
 The draft oracle is:
 
-- non-upgradeable and ownerless;
-- immutable after construction;
-- bound at runtime to one exact pool, EMA time constant, and precise
-  amplification value, after validating the factory, implementation, DUSD
-  token, quote token, and coin order during construction;
+- non-upgradeable and owner-managed;
+- immutably bound to one exact pool after validating its factory,
+  implementation, DUSD token, quote token, and coin order during construction;
+- configured with an approved EMA time constant and precise amplification
+  value that the owner may update only when both match the live pool and no
+  amplification ramp is in progress;
 - restricted to a factory-registered, non-meta, two-coin Curve StableSwap NG
   pool whose two asset types are standard ERC-20 type `0`; and
 - replaced through `PegResponsiveIrm.setPegOracle()` when its approved

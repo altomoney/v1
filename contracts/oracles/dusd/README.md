@@ -15,9 +15,10 @@ deployment, and validation decisions are tracked in [`NOTES.md`](./NOTES.md).
 
 ## Contract Summary
 
-`DusdPegOracleCurve` is an immutable adapter around one approved two-coin Curve
-StableSwap NG pool. It returns Curve's EMA price for DUSD quoted in a USD-par
-reference token, together with Curve's last stored price-update timestamp.
+`DusdPegOracleCurve` is an adapter bound immutably to one approved two-coin
+Curve StableSwap NG pool. It returns Curve's EMA price for DUSD quoted in a
+USD-par reference token, together with Curve's last stored price-update
+timestamp.
 
 The contract is deliberately narrow:
 
@@ -32,15 +33,18 @@ The contract is deliberately narrow:
 These properties are checked at deployment. The controller-relevant values
 `ma_exp_time`, `A_precise`, and `future_A` are checked again on every validated
 price read. If governance changes any of them, the oracle stops producing a
-valid observation until the protocol deliberately replaces it or restores the
-approved pool state.
+valid observation until the pool state is restored or the oracle owner approves
+new values that match the pool's current `ma_exp_time`, `A_precise`, and
+`future_A`. These checks cannot be disabled.
 
-The constructor separates these inputs by lifecycle. `DusdPegOracleCurveConfig`
-contains `curvePool` and the approved EMA and amplification values retained by
-the deployed oracle. `DusdPegOracleCurveValidationConfig` contains
-`curveFactory`, `expectedCurvePoolImplementation`, DUSD, and quote-token
-addresses used only for deployment validation; those values are not stored or
-exposed as oracle getters.
+The constructor separates these inputs by lifecycle. `curvePoolAddress` is a
+standalone immutable pool binding. `DusdPegOracleCurveRuntimeConfig` contains
+the approved EMA and amplification values retained by the deployed oracle and
+accepted by the owner-only `setRuntimeConfig()` function.
+`DusdPegOracleCurveValidationConfig` contains `curveFactory`,
+`expectedCurvePoolImplementation`, DUSD, and quote-token addresses used only
+for deployment validation; those values are not stored or exposed as oracle
+getters.
 
 ### Validated price path
 
@@ -342,7 +346,9 @@ The half-life alone should not be treated as a maximum response time.
 Curve administration can change important parameters, including `A`, fees and
 `ma_exp_time`. The current adapter requires exact approved `ma_exp_time`,
 `A_precise`, and `future_A` values on validated reads. It does not pin fees or
-the off-peg fee multiplier.
+the off-peg fee multiplier. Its owner can approve a new EMA time and precise
+amplification only when both values match the live pool and no `A` ramp is in
+progress.
 
 A deep pool and an EMA make short-lived manipulation more expensive, but do not
 make manipulation impossible. The pool is also a single price venue. Before
@@ -385,8 +391,9 @@ they cannot establish that manipulating that source is prohibitively expensive.
 - Pool fees and the off-peg fee multiplier are not pinned by this oracle, even
   though they affect manipulation economics.
 - Curve administration can change relevant pool behavior. Changes to pinned
-  `A` or `ma_exp_time` invalidate reads; changes to unpinned parameters require
-  monitoring and economic review.
+  `A` or `ma_exp_time` invalidate reads until restored or explicitly approved
+  by the oracle owner; changes to unpinned parameters require monitoring and
+  economic review.
 - Curve's EMA needs state-changing pool activity to store a new state price.
 - The oracle cannot make the PRM checkpoint and therefore cannot bound the time
   for a new price to affect borrowing rates.
