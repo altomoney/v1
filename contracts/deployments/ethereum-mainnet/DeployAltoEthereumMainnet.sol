@@ -571,14 +571,14 @@ library DeployAltoEthereumMainnet {
                     feeRecipient: input.contracts.feeRecipientMintMarkets,
                     collateralToken: SUSDE_MAINNET,
                     oracleAsset: EthereumMainnetLendingOracleAsset.SUSDE,
-                    irmInterestRate: 0.015 ether / uint256(365 days), // 1.5%
-                    maxLtv: 0.8 ether, // 80%
-                    initialBorrowOpeningFee: 0.0005 ether, // 0.05%
-                    debtCeiling: 250_000 ether, // 250,000 DUSD
+                    irmInterestRate: 0.0216426871 ether / uint256(365 days), // 2.16426871%
+                    maxLtv: 0.7 ether, // 70%
+                    initialBorrowOpeningFee: 0.001 ether, // 0.10%
+                    debtCeiling: 31394 ether, // 31,394 DUSD
                     liquidationConfig: LiquidationConfiguration({
-                        maxLiquidationLtv: 0.85 ether, // 85%
-                        dynamicBonusFeeStart: 0.005 ether, // 0.5%
-                        ltvForCompleteLiquidation: 0.93 ether, // 93%
+                        maxLiquidationLtv: 0.72 ether, // 72%
+                        dynamicBonusFeeStart: 0.015 ether, // 1.5%
+                        ltvForCompleteLiquidation: 0.73 ether, // 73%
                         dynamicBonusFeeDecaySteepness: 5 ether, // 5
                         liquidationBaseFee: 0.04 ether, // 4%
                         minPenaltyPercentage: 0.005 ether, // 0.5%
