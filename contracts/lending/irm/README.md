@@ -1,14 +1,14 @@
-# Peg-Responsive Interest Rate Model
+# Peg-Responsive Exponential Interest Rate Model
 
 > [!WARNING]
-> `PegResponsiveIrm` has **not been audited** and is **not ready for production
+> `PegResponsiveExponentialIrm` has **not been audited** and is **not ready for production
 > deployment**. Economic parameter selection, Curve-oracle fuzz and mainnet-fork
 > testing, full Mint Market integration, deployment tooling, and external
 > security review remain outstanding.
 
 ## Overview
 
-This document describes [`PegResponsiveIrm`](./PegResponsiveIrm.sol), an
+This document describes [`PegResponsiveExponentialIrm`](./PegResponsiveExponentialIrm.sol), an
 interest-rate model for an Alto Mint Market that responds to an observed
 DUSD/quoteToken peg price.
 
@@ -27,7 +27,7 @@ The completed PRM work is deliberately narrow:
 - **In scope:** the peg-responsive IRM, its interface, mocks, unit tests, fuzz
   tests, and stateful invariant tests.
 - **Separate component:** the draft Curve-backed peg oracle is documented in
-  its [local README](../../oracles/dusd/README.md).
+  its [local README](../../oracles/DusdPegCurveOracle/README.md).
 - **Not yet completed:** integration testing against a real Alto Mint Market,
   oracle-specific fuzz and mainnet-fork testing, deployment tooling, economic
   parameter selection, an audit, or production deployment.
@@ -112,7 +112,7 @@ selected rate is stored in the IRM and applies prospectively. A newly observed
 depeg therefore does not retroactively charge a higher rate for time that has
 already elapsed.
 
-`PegResponsiveIrm` is best understood as a discrete, checkpoint-driven
+`PegResponsiveExponentialIrm` is best understood as a discrete, checkpoint-driven
 controller. It accrues the elapsed interval using the previously stored rate,
 then samples the oracle and installs a new rate for the next interval.
 `maxOracleAge` limits the age of an observation when a checkpoint occurs; it
@@ -391,7 +391,7 @@ Rates use 18-decimal per-second yield, referred to as second percent yield
 (`SPY`). They are not stored as APY values.
 
 The curve acts on SPY values. Human-readable annualized percentages used in
-examples or simulations must be converted before constructing `PegResponsiveIrmConfig`.
+examples or simulations must be converted before constructing `PegResponsiveExponentialIrmConfig`.
 
 ### Interest
 
@@ -462,7 +462,7 @@ The IRM does **not**:
 - compare independent price sources; or
 - cap a valid reported spot price.
 
-The draft [`DusdPegOracleCurve`](../../oracles/dusd/README.md) is responsible
+The draft [`DusdPegCurveOracle`](../../oracles/DusdPegCurveOracle/README.md) is responsible
 for turning an approved high-amplification `[quoteToken, DUSD]` Curve pool into
 a validated DUSD/quoteToken observation. The controller intentionally does not
 treat or compose that observation as DUSD/USD; quoteToken/USD is a separate
@@ -474,8 +474,8 @@ monitored risk signal. The currently intended deployment uses frxUSD as
 
 A longer EMA period reduces short-term noise but delays response. A shorter
 period responds sooner but may be noisier and more influenceable. The oracle's
-local [README](../../oracles/dusd/README.md) and
-[handoff notes](../../oracles/dusd/NOTES.md) document this boundary and its
+local [README](../../oracles/DusdPegCurveOracle/README.md) and
+[handoff notes](../../oracles/DusdPegCurveOracle/NOTES.md) document this boundary and its
 unresolved decisions.
 
 ## Market integration boundary
@@ -518,7 +518,7 @@ existing interest helper, but it does not independently prove the
 ### Invariant scope
 
 The invariant campaign is specifically a
-`PegResponsiveIrm` **controller-state** campaign.
+`PegResponsiveExponentialIrm` **controller-state** campaign.
 
 The handler can:
 

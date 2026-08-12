@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.28;
 
-import {IDusdPegOracle} from "@alto/oracles/dusd/interfaces/IDusdPegOracle.sol";
+import {IDusdPegOracle} from "@alto/oracles/interfaces/IDusdPegOracle.sol";
 
 /// @notice Interface-faithful DUSD peg oracle double with a configurable price
 /// observation and failure mode.

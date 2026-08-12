@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 import {ICurveStableSwapNGBase, ICurveStableSwapNGOracle} from "@alto/interfaces/curve/ICurveStableSwapNG.sol";
 
 /// @notice Minimal stateful mock of the Curve StableSwap NG pool reads used by
-/// `DusdPegOracleCurve`.
+/// `DusdPegCurveOracle`.
 /// @dev The mock preserves Curve's externally visible array shapes and packing
 /// conventions. Test-only setters replace Curve's AMM and EMA calculations so
 /// callers can exercise adapter boundary conditions deterministically.

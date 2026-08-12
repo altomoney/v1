@@ -1,4 +1,4 @@
-# `PegResponsiveIrm` Handoff Notes and Open Decisions
+# `PegResponsiveExponentialIrm` Handoff Notes and Open Decisions
 
 This document complements the component [README](./README.md) by tracking
 design and integration decisions that must be resolved before the
@@ -30,7 +30,7 @@ When a decision is complete, change its top-level checkbox to `[x]` and replace
 
   **Current behavior**
 
-  `PegResponsiveIrm` is a lazy, checkpoint-driven controller. Oracle updates do
+  `PegResponsiveExponentialIrm` is a lazy, checkpoint-driven controller. Oracle updates do
   not execute the IRM. Until the market checkpoints, the previously stored rate
   continues to accrue.
 

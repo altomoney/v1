@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.28;
 
-import {IDusdPegOracle} from "@alto/oracles/dusd/interfaces/IDusdPegOracle.sol";
+import {IDusdPegOracle} from "@alto/oracles/interfaces/IDusdPegOracle.sol";
 
 /// @notice Low-level oracle double used to exercise caller-side ABI decoding.
 /// @dev Normal behavior tests should use `MockDusdPegOracle`. This contract is
