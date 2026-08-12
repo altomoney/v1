@@ -188,16 +188,16 @@ library DeployAltoEthereumMainnet {
                     feeRecipient: input.contracts.feeRecipientMintMarkets,
                     collateralToken: WSTETH_MAINNET,
                     oracleAsset: EthereumMainnetLendingOracleAsset.stETH,
-                    irmInterestRate: 0.025 ether / uint256(365 days), // 2.5%
-                    maxLtv: 0.78 ether, // 78%
-                    initialBorrowOpeningFee: 0.0005 ether, // 0.05%
-                    debtCeiling: 500_000 ether, // 500,000 DUSD
+                    irmInterestRate: 0.02295163663 ether / uint256(365 days), // 2.295163663%
+                    maxLtv: 0.75 ether, // 75%
+                    initialBorrowOpeningFee: 0.0015 ether, // 0.15%
+                    debtCeiling: 60000 ether, // 60,000 DUSD
                     liquidationConfig: LiquidationConfiguration({
-                        maxLiquidationLtv: 0.83 ether, // 83%
+                        maxLiquidationLtv: 0.78 ether, // 78%
                         dynamicBonusFeeStart: 0.02 ether, // 2%
-                        ltvForCompleteLiquidation: 0.91 ether, // 91%
+                        ltvForCompleteLiquidation: 0.815 ether, // 81.5%
                         dynamicBonusFeeDecaySteepness: 5 ether, // 5
-                        liquidationBaseFee: 0.06 ether, // 6%
+                        liquidationBaseFee: 0.07 ether, // 7%
                         minPenaltyPercentage: 0.005 ether, // 0.5%
                         protocolFeePercentage: 0.07 ether, // 7%
                         isEnabledPriorityLiquidation: false,
