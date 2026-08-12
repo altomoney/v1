@@ -13,6 +13,7 @@ import {
 } from "@alto/oracles/dusd/interfaces/IDusdPegOracleCurve.sol";
 import {ICurveStableSwapNGOracle} from "@alto/interfaces/curve/ICurveStableSwapNG.sol";
 import {ICurveStableSwapNGFactory} from "@alto/interfaces/curve/ICurveStableSwapNGFactory.sol";
+import {IDusdPegOracle} from "@alto/oracles/dusd/interfaces/IDusdPegOracle.sol";
 import {AltoOwnable2Step, Ownable} from "@alto/utils/AltoOwnable2Step.sol";
 
 /// @title DUSD/quoteToken Curve Peg Oracle
@@ -97,7 +98,7 @@ contract DusdPegOracleCurve is AltoOwnable2Step, IDusdPegOracleCurve {
         emit SetRuntimeConfig(newRuntimeConfig);
     }
 
-    /// @inheritdoc IDusdPegOracleCurveBase
+    /// @inheritdoc IDusdPegOracle
     function getPrice() external view returns (uint256 priceWad, uint48 observedAt, bool valid) {
         ICurveStableSwapNGOracle curvePoolContract = ICurveStableSwapNGOracle(curvePool);
         uint256 observedAtRaw = curvePoolContract.ma_last_time() & PRICE_TIMESTAMP_MASK;

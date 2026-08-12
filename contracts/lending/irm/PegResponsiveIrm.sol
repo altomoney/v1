@@ -13,7 +13,7 @@ import {
 } from "@alto/lending/interfaces/IPegResponsiveIrm.sol";
 import {IIrm, IRMType} from "@alto/lending/interfaces/IIrm.sol";
 import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
-import {IDusdPegOracleCurveBase} from "@alto/oracles/dusd/interfaces/IDusdPegOracleCurve.sol";
+import {IDusdPegOracle} from "@alto/oracles/dusd/interfaces/IDusdPegOracle.sol";
 import {ExpLib} from "@alto/lending/libraries/ExpLib.sol";
 import {AltoOwnable2Step, Ownable} from "@alto/utils/AltoOwnable2Step.sol";
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
@@ -388,7 +388,7 @@ contract PegResponsiveIrm is AltoOwnable2Step, IPegResponsiveIrmStaticTypes {
     /// @return observedAt  The oracle observation timestamp, or zero when the oracle call reverts.
     /// @return valid       Whether the observation passed all validation checks.
     function _readPegPrice() private view returns (uint256 priceWad, uint48 observedAt, bool valid) {
-        try IDusdPegOracleCurveBase(oracle).getPrice() returns (uint256 _priceWad, uint48 _observedAt, bool _valid) {
+        try IDusdPegOracle(oracle).getPrice() returns (uint256 _priceWad, uint48 _observedAt, bool _valid) {
             observedAt = _observedAt;
 
             if (!_valid || _priceWad == 0 || _observedAt == 0 || uint256(_observedAt) > block.timestamp) {
