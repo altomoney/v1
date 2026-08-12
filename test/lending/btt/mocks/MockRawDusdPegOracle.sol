@@ -17,8 +17,8 @@ contract MockRawDusdPegOracle {
     }
 
     /// @notice Configures raw bytes to return from `getPrice`.
-    function setRawReturnData(bytes calldata responseData_) external {
-        s_responseData = responseData_;
+    function setRawReturnData(bytes calldata responseData) external {
+        s_responseData = responseData;
     }
 
     fallback() external {

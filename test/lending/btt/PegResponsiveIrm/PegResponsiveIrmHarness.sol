@@ -8,13 +8,13 @@ import {PegResponsiveIrm} from "@alto/lending/irm/PegResponsiveIrm.sol";
 /// @notice Test harness for reaching cached controller states that are otherwise
 /// only produced over multiple market checkpoints.
 contract PegResponsiveIrmHarness is PegResponsiveIrm {
-    constructor(address oracle_, PegResponsiveIrmConfig memory config_, address initialOwner_)
-        PegResponsiveIrm(oracle_, config_, initialOwner_)
+    constructor(address initialPegOracle, PegResponsiveIrmConfig memory initialConfig, address initialOwner)
+        PegResponsiveIrm(initialPegOracle, initialConfig, initialOwner)
     {}
 
     /// @notice Replaces the complete cached controller state.
     /// @dev This is the only production-state hook exposed by the harness.
-    function setIRStateForTest(IRState calldata state_) external {
-        irState = state_;
+    function setIRStateForTest(IRState calldata state) external {
+        irState = state;
     }
 }

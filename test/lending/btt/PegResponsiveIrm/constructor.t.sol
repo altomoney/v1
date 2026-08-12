@@ -203,14 +203,14 @@ contract PegResponsiveIrmConstructorTest is PegResponsiveIrmCommon {
         assertEq(noCodeOracle.code.length, 0);
 
         PegResponsiveIrmHarness deployedIrm = _deployIrm(irmConfig, noCodeOracle, OWNER);
-        assertEq(address(deployedIrm.oracle()), noCodeOracle);
+        assertEq(address(deployedIrm.pegOracle()), noCodeOracle);
     }
 
     function test_DoesNotSampleOracleDuringConstruction() external {
         rawOracle.setRawReturnData(hex"01");
 
         PegResponsiveIrmHarness deployedIrm = _deployIrm(irmConfig, address(rawOracle), OWNER);
-        assertEq(address(deployedIrm.oracle()), address(rawOracle));
+        assertEq(address(deployedIrm.pegOracle()), address(rawOracle));
     }
 
     function test_WhenAllInputsAreValid_StoresStateAndEmitsExactOrderedEvents() external {
@@ -220,7 +220,7 @@ contract PegResponsiveIrmConstructorTest is PegResponsiveIrmCommon {
 
         irm = deployedIrm;
         _assertIrmConfig(irmConfig);
-        assertEq(address(deployedIrm.oracle()), address(oracle));
+        assertEq(address(deployedIrm.pegOracle()), address(oracle));
         assertEq(deployedIrm.market(), address(0));
         assertEq(deployedIrm.owner(), OWNER);
         assertEq(deployedIrm.pendingOwner(), address(0));
