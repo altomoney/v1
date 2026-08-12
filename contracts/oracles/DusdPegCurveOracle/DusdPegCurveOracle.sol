@@ -34,6 +34,7 @@ import {AltoOwnable2Step, Ownable} from "@alto/utils/AltoOwnable2Step.sol";
 /// returned timestamp is Curve's last stored price-update timestamp; the PRM,
 /// rather than this oracle, applies its configured maximum observation age.
 /// @dev `rawPoolState()` exposes unvalidated pool diagnostics for monitoring only.
+/// @custom:audit Pending
 contract DusdPegCurveOracle is AltoOwnable2Step, IDusdPegCurveOracle {
     using SafeCast for uint256;
 
