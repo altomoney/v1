@@ -76,7 +76,7 @@ contract DeployAltoEthereumMainnetScript is Script {
             phase == DeploymentPhase.MINT_MARKET_WETH || phase == DeploymentPhase.MINT_MARKET_WSTETH
                 || phase == DeploymentPhase.MINT_MARKET_RETH || phase == DeploymentPhase.MINT_MARKET_METH
                 || phase == DeploymentPhase.MINT_MARKET_TBTC || phase == DeploymentPhase.MINT_MARKET_SUSDE
-                || phase == DeploymentPhase.MINT_MARKET_SYRUPUSDC
+                || phase == DeploymentPhase.MINT_MARKET_SYRUPUSDC || phase == DeploymentPhase.MINT_MARKET_FRXUSD
         ) {
             Options memory opts;
             Upgrades.validateImplementation("AltoMintMarket.sol:AltoMintMarket", opts);
@@ -133,6 +133,7 @@ contract DeployAltoEthereumMainnetScript is Script {
         contractsJson = _serializeMarketContracts(contractsJson, "paxgBorrow", input.contracts.paxgBorrowMarket);
         contractsJson = _serializeMarketContracts(contractsJson, "susdeMint", input.contracts.susdeMintMarket);
         contractsJson = _serializeMarketContracts(contractsJson, "syrupUsdcMint", input.contracts.syrupUsdcMintMarket);
+        contractsJson = _serializeMarketContracts(contractsJson, "frxUsd", input.contracts.frxUsdMarket);
 
         // Serialize USDC USM contracts
         if (input.contracts.permissionedUsm.dusdUsm != address(0)) {
@@ -317,6 +318,7 @@ contract DeployAltoEthereumMainnetScript is Script {
         loadedInput.contracts.paxgBorrowMarket = _loadMarketContracts(json, "paxgBorrow");
         loadedInput.contracts.susdeMintMarket = _loadMarketContracts(json, "susdeMint");
         loadedInput.contracts.syrupUsdcMintMarket = _loadMarketContracts(json, "syrupUsdcMint");
+        loadedInput.contracts.frxUsdMarket = _loadMarketContracts(json, "frxUsd");
 
         // Load USDC USM contracts
         loadedInput.contracts.permissionedUsm.dusdUsm = _tryParseAddress(json, ".contracts.permissionedUsm");
@@ -475,6 +477,8 @@ contract DeployAltoEthereumMainnetScript is Script {
             _extractMintMarketABIs(abiFolder, "ERC4626RatioChainlinkOracleSUSDE");
         } else if (PHASE_TO_DEPLOY == DeploymentPhase.MINT_MARKET_SYRUPUSDC) {
             _extractMintMarketABIs(abiFolder, "ERC4626RatioChainlinkOracleSYRUPUSDC");
+        } else if (PHASE_TO_DEPLOY == DeploymentPhase.MINT_MARKET_FRXUSD) {
+            _extractMintMarketABIs(abiFolder, "AltoMultiChainlinkLendingOracle");
         } else if (PHASE_TO_DEPLOY == DeploymentPhase.ADAPTER) {
             _extractContractABI("AltoAdapter", abiFolder);
         } else if (PHASE_TO_DEPLOY == DeploymentPhase.ALTO_LEVERAGE_SWAPPER_MULTI_TARGET) {

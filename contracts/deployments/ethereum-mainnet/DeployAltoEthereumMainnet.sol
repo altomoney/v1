@@ -79,7 +79,6 @@ import {
     MintCurveConvexPositionFactoryBatchReport
 } from "@alto/deployments/ethereum-mainnet/MintCurveConvexPositionFactoryBatch.sol";
 import {MintCurveConvexConfig} from "@alto/positions/interfaces/IMintCurveConvexPositionFactory.sol";
-import {FRXUSD_MAINNET} from "@alto/deployments/ethereum-mainnet/Constants.sol";
 import {
     FRXUSD_DUSD_CURVE_POOL_MAINNET,
     POOL_ID_FRXUSD_DUSD_CURVE_POOL_MAINNET,
@@ -688,6 +687,40 @@ library DeployAltoEthereumMainnet {
             input = _deployUniversalRewardsDistributor(params, input);
         } else if (params.phase == DeploymentPhase.MINT_CURVE_CONVEX_POSITION) {
             input = _deployMintCurveConvexPositionFactory(input);
+        } else if (params.phase == DeploymentPhase.MINT_MARKET_FRXUSD) {
+            input.contracts.frxUsdMarket = _deployMintMarket(
+                DeployMintMarketParams({
+                    owner: input.contracts.timelock,
+                    dusd: input.contracts.dusd,
+                    altoAdapter: input.contracts.altoAdapter,
+                    feeRecipient: input.contracts.feeRecipientMintMarkets,
+                    collateralToken: FRXUSD_MAINNET,
+                    oracleAsset: EthereumMainnetLendingOracleAsset.FRXUSD,
+                    irmInterestRate: 0, // 0%
+                    maxLtv: 0.8 ether, // 80%
+                    initialBorrowOpeningFee: 0.0017 ether, // 0.17%
+                    debtCeiling: 30000 ether, // 30,000 DUSD
+                    liquidationConfig: LiquidationConfiguration({
+                        maxLiquidationLtv: 0.81 ether, // 81%
+                        dynamicBonusFeeStart: 0.01 ether, // 1%
+                        ltvForCompleteLiquidation: 0.82 ether, // 82%
+                        dynamicBonusFeeDecaySteepness: 5 ether, // 5
+                        liquidationBaseFee: 0.03 ether, // 3%
+                        minPenaltyPercentage: 0.005 ether, // 0.5%
+                        protocolFeePercentage: 0.07 ether, // 7%
+                        isEnabledPriorityLiquidation: false,
+                        disablePriorityLiquidationAbovePositionLtv: 0,
+                        priorityLiquidationGracePeriod: 0,
+                        taggerLiquidationGracePeriod: 0,
+                        liquidationWindowTag: 0
+                    }),
+                    freezer: params.freezer,
+                    validSwapTargets: _validSwapTargets()
+                }),
+                input,
+                params,
+                params.deployerHasOwnership
+            );
         } else {
             revert("Invalid phase");
         }

@@ -38,6 +38,7 @@ import {
 } from "@alto/oracles/AltoERC4626RatioChainlinkOracle/implementations/ERC4626RatioChainlinkOracleSYRUPUSDC.sol";
 import {ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
+import {AltoMultiChainlinkLendingOracle} from "@alto/oracles/AltoMultiChainlinkLendingOracle.sol";
 import {
     IDcfDlbPriorityLiquidationEngine,
     LiquidationConfiguration
@@ -77,7 +78,8 @@ import {
     SYRUPUSDC_MAINNET,
     CHAINLINK_ETH_USD_PRICE_FEED,
     CHAINLINK_USDE_USD_PRICE_FEED,
-    CHAINLINK_USDC_USD_PRICE_FEED
+    CHAINLINK_USDC_USD_PRICE_FEED,
+    CHAINLINK_FRXUSD_USD_PRICE_FEED
 } from "@alto/deployments/ethereum-mainnet/Constants.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {IAltoVault, IAltoVaultBase} from "@alto/lending/interfaces/IAltoVault.sol";
@@ -217,6 +219,7 @@ abstract contract DeployAltoEthereumMainnetTestBase is Test {
         loaded.contracts.paxgBorrowMarket = _loadMarketContracts(json, "paxgBorrow");
         loaded.contracts.susdeMintMarket = _loadMarketContracts(json, "susdeMint");
         loaded.contracts.syrupUsdcMintMarket = _loadMarketContracts(json, "syrupUsdcMint");
+        loaded.contracts.frxUsdMarket = _loadMarketContracts(json, "frxUsd");
 
         loaded.contracts.permissionedUsm.dusdUsm = _tryParseAddress(json, ".contracts.permissionedUsm");
         loaded.contracts.permissionedUsm.dusdUsmImplementation =
@@ -1172,6 +1175,47 @@ contract DeploySyrupUsdcMintMarketPhaseTest is DeployMarketPhaseTestBase {
         assertEq(stalePeriod, 86700, "stale period");
         assertEq(inDecimals, 6, "input decimals");
         assertEq(outDecimals, 48, "output decimals");
+        assertEq(feedDecimals, 8, "feed decimals");
+    }
+}
+
+contract DeployFrxUsdMintMarketPhaseTest is DeployMarketPhaseTestBase {
+    function test_deployFrxUsdMintMarketParameters() public {
+        _deployMarket(DeploymentPhase.MINT_MARKET_FRXUSD);
+
+        MarketContracts memory deployed = input.contracts.frxUsdMarket;
+        _assertMintMarketParams(
+            deployed,
+            ExpectedMarketParams({
+                marketType: MarketType.MINT,
+                collateralToken: FRXUSD_MAINNET,
+                maxLtv: 0.8 ether,
+                borrowOpeningFee: 0.0017 ether,
+                capacity: 30_000 ether,
+                maxLiquidationLtv: 0.81 ether,
+                dynamicBonusFeeStart: 0.01 ether,
+                ltvForCompleteLiquidation: 0.82 ether,
+                liquidationBaseFee: 0.03 ether
+            }),
+            0
+        );
+        _assertFrxUsdOracleConfiguration(deployed.marketOracle);
+    }
+
+    function _assertFrxUsdOracleConfiguration(address oracleAddress) internal view {
+        (
+            AggregatorV3Interface feed,
+            ConversionDirection direction,
+            uint32 stalePeriod,
+            uint8 inDecimals,
+            uint8 outDecimals,
+            uint8 feedDecimals
+        ) = AltoMultiChainlinkLendingOracle(oracleAddress).chainlinkNodes(0);
+        assertEq(address(feed), CHAINLINK_FRXUSD_USD_PRICE_FEED, "frxUSD/USD feed");
+        assertEq(uint256(direction), uint256(ConversionDirection.IN_TO_OUT), "conversion direction");
+        assertEq(stalePeriod, 86700, "stale period");
+        assertEq(inDecimals, 18, "input decimals");
+        assertEq(outDecimals, 36, "output decimals");
         assertEq(feedDecimals, 8, "feed decimals");
     }
 }
