@@ -33,6 +33,7 @@ struct BorrowMarketBatchParams {
     AdaptiveCurveIrm.AdaptiveCurveIrmConfig irmConfig;
     uint256 maxLtv;
     uint256 initialBorrowOpeningFee;
+    uint256 initialInterestFee;
     uint128 supplyCapAssets;
     LiquidationConfiguration liquidationConfig;
     address[] validSwapTargets;
@@ -69,7 +70,7 @@ library BorrowMarketBatch {
                     }),
                     initialBorrowOpeningFee: _params.initialBorrowOpeningFee,
                     supplyCapAssets: _params.supplyCapAssets,
-                    initialInterestFee: 0
+                    initialInterestFee: _params.initialInterestFee
                 }))
         );
         address marketImplementation = ALTO_BORROW_MARKET_IMPL;

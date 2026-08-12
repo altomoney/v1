@@ -333,6 +333,7 @@ library DeployAltoEthereumMainnet {
                     }),
                     maxLtv: 0.75 ether, // 75%
                     initialBorrowOpeningFee: 0.002 ether, // 0.2%
+                    initialInterestFee: 0,
                     supplyCapAssets: 0,
                     liquidationConfig: LiquidationConfiguration({
                         maxLiquidationLtv: 0.8 ether, // 80%
@@ -374,6 +375,7 @@ library DeployAltoEthereumMainnet {
                     }),
                     maxLtv: 0.75 ether, // 75%
                     initialBorrowOpeningFee: 0.002 ether, // 0.2%
+                    initialInterestFee: 0,
                     supplyCapAssets: 0,
                     liquidationConfig: LiquidationConfiguration({
                         maxLiquidationLtv: 0.8 ether, // 80%
@@ -406,22 +408,23 @@ library DeployAltoEthereumMainnet {
                     collateralToken: SUSDE_MAINNET,
                     oracleAsset: EthereumMainnetLendingOracleAsset.SUSDE,
                     irmConfig: AdaptiveCurveIrm.AdaptiveCurveIrmConfig({
-                        curveSteepness: 4 ether,
-                        adjustmentSpeed: 50 ether / int256(365 days),
-                        targetUtilization: 0.9 ether, // 90%
-                        initialRateAtTarget: 0.1 ether / int256(365 days), // 10%
-                        minRateAtTarget: 0.001 ether / int256(365 days), // 0.1%
-                        maxRateAtTarget: 2 ether / int256(365 days) // 200%
+                        curveSteepness: 2 ether,
+                        adjustmentSpeed: 25 ether / int256(365 days),
+                        targetUtilization: 0.8298099174 ether, // 82.98099174%
+                        initialRateAtTarget: 0.08099633377 ether / int256(365 days), // 8.099633377%
+                        minRateAtTarget: 0.06479706701 ether / int256(365 days), // 6.479706701%
+                        maxRateAtTarget: 4 ether / int256(365 days) // 400%
                     }),
-                    maxLtv: 0.8 ether, // 80%
-                    initialBorrowOpeningFee: 0.002 ether, // 0.2%
-                    supplyCapAssets: 0,
+                    maxLtv: 0.7 ether, // 70%
+                    initialBorrowOpeningFee: 0.001 ether, // 0.10%
+                    initialInterestFee: 0.1 ether,
+                    supplyCapAssets: uint128(70300.1222 ether),
                     liquidationConfig: LiquidationConfiguration({
-                        maxLiquidationLtv: 0.85 ether, // 85%
-                        dynamicBonusFeeStart: 0.005 ether, // 0.5%
-                        ltvForCompleteLiquidation: 0.93 ether, // 93%
+                        maxLiquidationLtv: 0.72 ether, // 72%
+                        dynamicBonusFeeStart: 0.015 ether, // 1.5%
+                        ltvForCompleteLiquidation: 0.73 ether, // 73%
                         dynamicBonusFeeDecaySteepness: 5 ether, // 5
-                        liquidationBaseFee: 0.06 ether, // 6%
+                        liquidationBaseFee: 0.04 ether, // 4%
                         minPenaltyPercentage: 0.005 ether, // 0.5%
                         protocolFeePercentage: 0.07 ether, // 7%
                         isEnabledPriorityLiquidation: false, // priority liquidation is not enabled
@@ -498,6 +501,7 @@ library DeployAltoEthereumMainnet {
                     }),
                     maxLtv: 0.8 ether, // 80%
                     initialBorrowOpeningFee: 0.002 ether, // 0.2%
+                    initialInterestFee: 0,
                     supplyCapAssets: 0,
                     liquidationConfig: LiquidationConfiguration({
                         maxLiquidationLtv: 0.85 ether, // 85%
@@ -539,6 +543,7 @@ library DeployAltoEthereumMainnet {
                     }),
                     maxLtv: 0.75 ether, // 75%
                     initialBorrowOpeningFee: 0.002 ether, // 0.2%
+                    initialInterestFee: 0,
                     supplyCapAssets: 0,
                     liquidationConfig: LiquidationConfiguration({
                         maxLiquidationLtv: 0.8 ether, // 80%
@@ -933,6 +938,7 @@ library DeployAltoEthereumMainnet {
                 irmConfig: marketParams.irmConfig,
                 maxLtv: marketParams.maxLtv,
                 initialBorrowOpeningFee: marketParams.initialBorrowOpeningFee,
+                initialInterestFee: marketParams.initialInterestFee,
                 supplyCapAssets: marketParams.supplyCapAssets,
                 liquidationConfig: marketParams.liquidationConfig,
                 validSwapTargets: marketParams.validSwapTargets,

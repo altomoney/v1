@@ -152,6 +152,7 @@ struct DeployBorrowMarketParams {
     AdaptiveCurveIrm.AdaptiveCurveIrmConfig irmConfig; // AdaptiveCurveIrm configuration
     uint256 maxLtv; // Maximum loan-to-value ratio
     uint256 initialBorrowOpeningFee; // Initial borrow opening fee
+    uint256 initialInterestFee; // Initial share of accrued borrower interest charged as a fee
     uint128 supplyCapAssets; // Supply cap in assets
     LiquidationConfiguration liquidationConfig; // Liquidation configuration
     address freezer; // Pauser/Freezer Multisig address

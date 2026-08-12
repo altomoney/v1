@@ -1131,6 +1131,41 @@ contract DeploySusdeMintMarketPhaseTest is DeployMarketPhaseTestBase {
     }
 }
 
+contract DeploySusdeBorrowMarketPhaseTest is DeployMarketPhaseTestBase {
+    string internal constant SCHEDULE_JSON =
+        "contracts/deployments/ethereum-mainnet/output/safe-tx-sUSDe-borrow-market-registry-and-authorize-liquidation-periphery-schedule.json";
+    string internal constant EXECUTE_JSON =
+        "contracts/deployments/ethereum-mainnet/output/safe-tx-sUSDe-borrow-market-registry-and-authorize-liquidation-periphery-execute.json";
+
+    function test_deploySusdeBorrowMarketAndExecuteTimelockTransactions() public {
+        _deployMarket(DeploymentPhase.BORROW_MARKET_SUSDE);
+
+        MarketContracts memory deployed = input.contracts.susdeBorrowMarket;
+        ExpectedMarketParams memory expected = ExpectedMarketParams({
+            marketType: MarketType.BORROW,
+            collateralToken: SUSDE_MAINNET,
+            maxLtv: 0.7 ether,
+            borrowOpeningFee: 0.001 ether,
+            capacity: uint128(70300.1222 ether),
+            maxLiquidationLtv: 0.72 ether,
+            dynamicBonusFeeStart: 0.015 ether,
+            ltvForCompleteLiquidation: 0.73 ether,
+            liquidationBaseFee: 0.04 ether
+        });
+        AdaptiveCurveIrm.AdaptiveCurveIrmConfig memory expectedIrmConfig = AdaptiveCurveIrm.AdaptiveCurveIrmConfig({
+            curveSteepness: 2 ether,
+            adjustmentSpeed: 25 ether / int256(365 days),
+            targetUtilization: 0.8298099174 ether,
+            initialRateAtTarget: 0.08099633377 ether / int256(365 days),
+            minRateAtTarget: 0.06479706701 ether / int256(365 days),
+            maxRateAtTarget: 4 ether / int256(365 days)
+        });
+
+        _assertBorrowMarketParams(deployed, expected, expectedIrmConfig, 0.1 ether);
+        _assertAndExecuteMarketGovernance(deployed, expected, SCHEDULE_JSON, EXECUTE_JSON);
+    }
+}
+
 contract DeploySyrupUsdcMintMarketPhaseTest is DeployMarketPhaseTestBase {
     function test_deploySyrupUsdcMintMarketParameters() public {
         _deployMarket(DeploymentPhase.MINT_MARKET_SYRUPUSDC);
