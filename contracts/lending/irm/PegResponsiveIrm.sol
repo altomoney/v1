@@ -22,7 +22,7 @@ import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 /// @title Price-Responsive Interest Rate Model
 /// @author GPM
 /// @custom:contact security@altofoundation.org
-/// @notice Adjusts a mint market's borrow rate in response to a validated DUSD/USD
+/// @notice Adjusts a mint market's borrow rate in response to a validated DUSD/quoteToken
 /// peg price.
 /// @dev This is a discrete, checkpoint-driven controller. Each update first
 /// calculates interest for the elapsed interval using the previously stored
@@ -84,7 +84,7 @@ contract PegResponsiveIrm is AltoOwnable2Step, IPegResponsiveIrmStaticTypes {
     address public market;
 
     /// @notice Constructor.
-    /// @param _oracle          Oracle returning a validated, timestamped DUSD/USD price.
+    /// @param _oracle          Oracle returning a validated, timestamped DUSD/quoteToken price.
     /// @param _config          Initial curve, recovery, and oracle-freshness configuration.
     /// @param _initialOwner    Owner of the IRM.
     constructor(address _oracle, CurveConfig memory _config, address _initialOwner) Ownable(_initialOwner) {
@@ -280,7 +280,7 @@ contract PegResponsiveIrm is AltoOwnable2Step, IPegResponsiveIrmStaticTypes {
     /// @dev Returns the controller state implied by the latest observation.
     /// Invalid observations keep stress mode active but interrupt recovery
     /// confirmation.
-    /// @param _priceWad    The latest reported DUSD/USD price, using 1e18 precision.
+    /// @param _priceWad    The latest reported DUSD/quoteToken price, using 1e18 precision.
     /// @param _oracleValid Whether the latest oracle observation is usable.
     /// @return stressMode          Whether the controller should be in stress mode.
     /// @return recoveryStartedAt   The recovery confirmation start time, or zero when inactive.
@@ -339,7 +339,7 @@ contract PegResponsiveIrm is AltoOwnable2Step, IPegResponsiveIrmStaticTypes {
     }
 
     /// @dev Applies and emits the stress state implied by the latest observation.
-    /// @param _priceWad    The latest reported DUSD/USD price, using 1e18 precision.
+    /// @param _priceWad    The latest reported DUSD/quoteToken price, using 1e18 precision.
     /// @param _oracleValid Whether the latest oracle observation is usable.
     /// @return stressMode Whether the controller is in stress mode after the update.
     function _applyStressState(uint256 _priceWad, bool _oracleValid) private returns (bool stressMode) {
@@ -359,7 +359,7 @@ contract PegResponsiveIrm is AltoOwnable2Step, IPegResponsiveIrmStaticTypes {
     }
 
     /// @dev Applies the stress-mode floor to the raw price-derived target.
-    /// @param _priceWad    The latest valid DUSD/USD price, using 1e18 precision.
+    /// @param _priceWad    The latest valid DUSD/quoteToken price, using 1e18 precision.
     /// @param _stressMode  Whether the controller is currently in stress mode.
     /// @return borrowRate The price-derived target rate after applying the stress floor.
     function _effectiveTargetRate(uint256 _priceWad, bool _stressMode) private view returns (uint256 borrowRate) {
@@ -384,7 +384,7 @@ contract PegResponsiveIrm is AltoOwnable2Step, IPegResponsiveIrmStaticTypes {
 
     /// @dev Treats reverts, invalid flags, zero/future timestamps, stale data,
     /// and zero prices as unusable.
-    /// @return priceWad    The reported DUSD/USD price, or zero when unusable.
+    /// @return priceWad    The reported DUSD/quoteToken price, or zero when unusable.
     /// @return observedAt  The oracle observation timestamp, or zero when the oracle call reverts.
     /// @return valid       Whether the observation passed all validation checks.
     function _readPegPrice() private view returns (uint256 priceWad, uint48 observedAt, bool valid) {

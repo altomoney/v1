@@ -17,7 +17,8 @@ struct DusdPegOracleCurveValidationConfig {
     address expectedCurvePoolImplementation;
     /// @dev Address of DUSD, which must be coin 1.
     address dusd;
-    /// @dev Address of the USD-par quote token, which must be coin 0.
+    /// @dev Address of the deployment-approved quote token, which must be coin 0.
+    /// The currently intended deployment uses frxUSD.
     address quoteToken;
 }
 
@@ -62,6 +63,9 @@ interface IDusdPegOracleCurveErrors {
 
     /// @notice Error thrown when coin 0 is not the quote token or coin 1 is not DUSD
     error DusdPegOracleCurveInvalidCoinOrder();
+
+    /// @notice Error thrown when DUSD and the quote token are configured as the same token
+    error DusdPegOracleCurveIdenticalCoins();
 
     /// @notice Error thrown when the pool's EMA averaging time does not match the approved value
     error DusdPegOracleCurveInvalidMaExpTime();
@@ -119,8 +123,8 @@ interface IDusdPegOracleCurveBase is IDusdPegOracleCurveErrors, IDusdPegOracleCu
     /// @return expectedAPrecise Approved amplification coefficient, including Curve's precision factor.
     function runtimeConfig() external view returns (uint256 expectedMaExpTime, uint256 expectedAPrecise);
 
-    /// @notice Returns the current DUSD/USD price and associated metadata.
-    /// @return priceWad DUSD/USD price using 1e18 precision.
+    /// @notice Returns the current DUSD/quoteToken price and associated metadata.
+    /// @return priceWad DUSD/quoteToken price using 1e18 precision.
     /// @return observedAt Timestamp represented by the observation.
     /// @return valid Whether the observation passed the oracle checks.
     function getPrice() external view returns (uint256 priceWad, uint48 observedAt, bool valid);
@@ -134,8 +138,8 @@ interface IDusdPegOracleCurveBase is IDusdPegOracleCurveErrors, IDusdPegOracleCu
 /// @title IDusdPegOracleCurve
 /// @author GPM
 /// @custom:contact security@altofoundation.org
-/// @notice Interface for a DUSD peg oracle bound to one two-coin Curve
-/// StableSwap NG pool with owner-managed approved pool parameters.
+/// @notice Interface for the DUSD/quoteToken peg oracle bound to one two-coin
+/// Curve StableSwap NG pool with owner-managed approved pool parameters.
 interface IDusdPegOracleCurve is IDusdPegOracleCurveBase {
     /// @notice Returns an unvalidated snapshot of the underlying Curve pool.
     /// @return state Unvalidated pool state at the current block.

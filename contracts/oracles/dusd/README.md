@@ -1,13 +1,15 @@
-# DUSD Price Oracle
+# DUSD/quoteToken Peg Oracle
 
 > [!WARNING]
-> `DusdPegOracleCurve` is a draft. It has **not been audited**, its deterministic
-> and mainnet-fork test suites are only scaffolded, and its production pool and
-> parameters have not been approved.
+> `DusdPegOracleCurve` is a draft. Its deterministic unit suites are implemented,
+> but it does not yet have oracle-specific fuzz tests or a mainnet-fork suite, and
+> its production deployment record and parameters have not been approved.
 
 This document summarizes the Curve concepts and assumptions that matter when
-deciding whether to use a DUSD/USD-par-token pool, such as DUSD/frxUSD, as the
-price source for the DUSD peg-responsive interest rate model.
+using an approved `[quoteToken, DUSD]` pool as the price source for the DUSD
+peg-responsive interest rate model. The controlled price is intentionally
+DUSD/quoteToken, not necessarily DUSD/USD. The currently intended deployment
+uses frxUSD as `quoteToken`.
 
 It also records the behavior of
 [`DusdPegOracleCurve`](./DusdPegOracleCurve.sol). Unresolved design,
@@ -16,14 +18,15 @@ deployment, and validation decisions are tracked in [`NOTES.md`](./NOTES.md).
 ## Contract Summary
 
 `DusdPegOracleCurve` is an adapter bound immutably to one approved two-coin
-Curve StableSwap NG pool. It returns Curve's EMA price for DUSD quoted in a
-USD-par reference token, together with Curve's last stored price-update
+Curve StableSwap NG pool. It returns Curve's EMA price for DUSD quoted in the
+configured `quoteToken`, together with Curve's last stored price-update
 timestamp.
 
 The contract is deliberately narrow:
 
-- coin 0 must be the quote token;
+- coin 0 must be the deployment-approved `quoteToken`;
 - coin 1 must be DUSD;
+- the configured `quoteToken` and DUSD addresses must be distinct;
 - both coins must be standard ERC-20 Curve asset type `0`;
 - the pool must be a non-meta, factory-registered two-coin pool;
 - the factory-reported implementation must match the approved implementation;
@@ -303,30 +306,25 @@ can update `D` without changing the relative price.
 
 ## Decision-Relevant Assumptions
 
-### DUSD/frxUSD is not necessarily DUSD/USD
+### Approved price definition: DUSD/quoteToken
 
-The pool reports the relative price of its assets. It does not prove that frxUSD
-is worth one USD.
+The peg-responsive controller intentionally responds to DUSD/quoteToken. It
+accepts quote-token basis risk and does not treat the Curve observation as a
+direct DUSD/USD measurement. Each deployment must use an independently reviewed
+reference asset as `quoteToken`; the currently intended deployment uses frxUSD.
 
-Using the result directly as DUSD/USD assumes:
-
-```math
-P_{\mathrm{frxUSD/USD}} = 1
-```
-
-Otherwise, it must be combined with an independent frxUSD/USD source:
+The pool reports only the relative price of its assets; it does not prove that
+the configured `quoteToken` is worth one USD:
 
 ```math
-P_{\mathrm{DUSD/USD}}
-
-=
-
-P_{\mathrm{DUSD/frxUSD}}
-
-\cdot
-
-P_{\mathrm{frxUSD/USD}}
+P_{\mathrm{quoteToken/USD}} = 1
 ```
+
+Consequently, consumers must preserve the DUSD/quoteToken unit and must not
+present or use this value as DUSD/USD unless that conversion is performed by a
+separately specified composite oracle. Production operations must monitor the
+configured quoteToken/USD peg as a separate risk signal; it is not composed into
+this controller oracle.
 
 ### Response Time
 
@@ -358,25 +356,22 @@ interval.
 
 ## Testing Status
 
-The oracle test structure is present but the assertions are intentionally not
-yet implemented.
-
-Planned deterministic suites use configurable mock pool and factory contracts
-to cover:
+Four deterministic unit suites are implemented using configurable mock pool and
+factory contracts. They currently contain 93 passing tests covering:
 
 - every constructor validation independently;
 - retained operational configuration and constructor-only factory provenance;
 - validated timestamp, parameter-drift, and price behavior;
 - source-call failures;
-- broad valid and invalid fuzz inputs; and
+- owner-only runtime configuration changes; and
 - exact `rawPoolState()` field mapping and deliberate revert behavior.
 
-A separate read-only Ethereum mainnet-fork suite is scaffolded to verify the
-real pool ABI, factory registration, implementation, coin order, asset types,
-approved `A` and EMA settings, timestamp interpretation, and returned prices at
-a pinned block. Its addresses, expected values, pinned block, and assertions
-must be filled from independently reviewed deployment records before the suite
-provides evidence.
+Oracle-specific fuzz coverage and a read-only Ethereum mainnet-fork suite have
+not yet been implemented. The fork suite must verify the real pool ABI, factory
+registration, implementation, coin order, asset types, approved `A` and EMA
+settings, timestamp interpretation, and returned prices at a pinned block. Its
+expected values must come from independently reviewed deployment records rather
+than being derived from the contract under test.
 
 These tests do not replace economic analysis. Passing unit and fork tests can
 show that the adapter reads the intended source according to its specification;
@@ -384,8 +379,10 @@ they cannot establish that manipulating that source is prohibitively expensive.
 
 ## Limitations
 
-- The returned value is DUSD/quote-token, not inherently DUSD/USD.
-- The quote token's dollar peg is not checked.
+- The returned value intentionally controls DUSD/quoteToken, not necessarily
+  DUSD/USD.
+- The quoteToken/USD peg is not checked on-chain; its basis risk is explicitly
+  accepted by this controller definition and requires separate monitoring.
 - The pool is a single price venue and no independent sanity source is used.
 - No minimum-liquidity or manipulation-cost threshold is enforced.
 - Pool fees and the off-peg fee multiplier are not pinned by this oracle, even
@@ -397,8 +394,8 @@ they cannot establish that manipulating that source is prohibitively expensive.
 - Curve's EMA needs state-changing pool activity to store a new state price.
 - The oracle cannot make the PRM checkpoint and therefore cannot bound the time
   for a new price to affect borrowing rates.
-- The contract and its copied Curve interfaces have not been audited in this
-  repository.
+- The deterministic unit tests do not replace a completed economic review,
+  mainnet-fork validation, or external production security review.
 
 The exact production choices and evidence required to close these limitations
 are checklisted in [`NOTES.md`](./NOTES.md).
