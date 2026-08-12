@@ -10,8 +10,8 @@ import {
     IDusdPegOracleCurve,
     IDusdPegOracleCurveBase
 } from "@alto/oracles/dusd/interfaces/IDusdPegOracleCurve.sol";
-import {ICurveStableSwap} from "@alto/oracles/interfaces/ICurveStableSwap.sol";
-import {ICurveStableSwapFactory} from "@alto/oracles/dusd/interfaces/ICurveStableSwapFactory.sol";
+import {ICurveStableSwapNGOracle} from "@alto/interfaces/curve/ICurveStableSwapNG.sol";
+import {ICurveStableSwapNGFactory} from "@alto/interfaces/curve/ICurveStableSwapNGFactory.sol";
 import {AltoOwnable2Step, Ownable} from "@alto/utils/AltoOwnable2Step.sol";
 
 /// @title DUSD Curve Peg Oracle
@@ -108,7 +108,7 @@ contract DusdPegOracleCurve is AltoOwnable2Step, IDusdPegOracleCurve {
 
     /// @inheritdoc IDusdPegOracleCurveBase
     function getPrice() external view returns (uint256 priceWad, uint48 observedAt, bool valid) {
-        ICurveStableSwap curvePool = ICurveStableSwap(pool);
+        ICurveStableSwapNGOracle curvePool = ICurveStableSwapNGOracle(pool);
         uint256 observedAtRaw = curvePool.ma_last_time() & PRICE_TIMESTAMP_MASK;
 
         if (observedAtRaw == 0 || observedAtRaw > block.timestamp || observedAtRaw > type(uint48).max) {
@@ -154,7 +154,7 @@ contract DusdPegOracleCurve is AltoOwnable2Step, IDusdPegOracleCurve {
 
     /// @inheritdoc IDusdPegOracleCurve
     function rawPoolState() external view returns (DusdPegOracleCurveRawPoolState memory state) {
-        ICurveStableSwap curvePool = ICurveStableSwap(pool);
+        ICurveStableSwapNGOracle curvePool = ICurveStableSwapNGOracle(pool);
         uint256 packedTimestamps = curvePool.ma_last_time();
         uint256[] memory balances = curvePool.get_balances();
 
@@ -180,7 +180,7 @@ contract DusdPegOracleCurve is AltoOwnable2Step, IDusdPegOracleCurve {
     /// matches the configuration against which this oracle was approved.
     /// @return valid Whether all live parameters match their approved values.
     function _validCurrentState() private view returns (bool valid) {
-        ICurveStableSwap curvePool = ICurveStableSwap(pool);
+        ICurveStableSwapNGOracle curvePool = ICurveStableSwapNGOracle(pool);
         if (curvePool.ma_exp_time() != expectedMaExpTime) return false;
         if (curvePool.A_precise() != expectedAPrecise) return false;
         if (curvePool.future_A() != expectedAPrecise) return false;
@@ -191,7 +191,7 @@ contract DusdPegOracleCurve is AltoOwnable2Step, IDusdPegOracleCurve {
     /// time, and current and future amplification against `cfg`.
     /// @param cfg Pool configuration proposed for approval.
     function _verifyAgainstPool(DusdPegOracleCurveConfig memory cfg) private view {
-        ICurveStableSwap curvePool = ICurveStableSwap(cfg.pool);
+        ICurveStableSwapNGOracle curvePool = ICurveStableSwapNGOracle(cfg.pool);
 
         if (curvePool.N_COINS() != EXPECTED_COIN_COUNT) {
             revert DusdPegOracleCurveInvalidCoinCount();
@@ -224,7 +224,7 @@ contract DusdPegOracleCurve is AltoOwnable2Step, IDusdPegOracleCurve {
     function _verifyAgainstFactory(DusdPegOracleCurveConfig memory cfg) private view {
         // On pool deployment, the Factory registers a number of details that we
         // can use as a provenance check.
-        ICurveStableSwapFactory curveFactory = ICurveStableSwapFactory(cfg.factory);
+        ICurveStableSwapNGFactory curveFactory = ICurveStableSwapNGFactory(cfg.factory);
 
         if (curveFactory.get_n_coins(cfg.pool) != EXPECTED_COIN_COUNT) {
             revert DusdPegOracleCurveInvalidCoinCount();

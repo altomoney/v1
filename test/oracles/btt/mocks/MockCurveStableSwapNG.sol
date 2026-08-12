@@ -2,14 +2,14 @@
 
 pragma solidity 0.8.28;
 
-import {ICurveStableSwap} from "@alto/oracles/interfaces/ICurveStableSwap.sol";
+import {ICurveStableSwapNGBase, ICurveStableSwapNGOracle} from "@alto/interfaces/curve/ICurveStableSwapNG.sol";
 
 /// @notice Minimal stateful mock of the Curve StableSwap NG pool reads used by
 /// `DusdPegOracleCurve`.
 /// @dev The mock preserves Curve's externally visible array shapes and packing
 /// conventions. Test-only setters replace Curve's AMM and EMA calculations so
 /// callers can exercise adapter boundary conditions deterministically.
-contract MockCurveStableSwapNG is ICurveStableSwap {
+contract MockCurveStableSwapNG is ICurveStableSwapNGOracle {
     error InvalidInitialization();
     error InvalidBalancesLength();
 
@@ -17,16 +17,16 @@ contract MockCurveStableSwapNG is ICurveStableSwap {
     uint256 private constant MAX_COINS = 8;
     uint256 private constant UINT128_MASK = type(uint128).max;
 
-    /// @inheritdoc ICurveStableSwap
+    /// @inheritdoc ICurveStableSwapNGBase
     uint256 public immutable override N_COINS;
 
-    /// @inheritdoc ICurveStableSwap
+    /// @inheritdoc ICurveStableSwapNGOracle
     uint256 public override future_A;
 
-    /// @inheritdoc ICurveStableSwap
+    /// @inheritdoc ICurveStableSwapNGOracle
     uint256 public override ma_exp_time;
 
-    /// @inheritdoc ICurveStableSwap
+    /// @inheritdoc ICurveStableSwapNGOracle
     uint256 public override ma_last_time;
 
     uint256 private s_aPrecise;
@@ -66,37 +66,37 @@ contract MockCurveStableSwapNG is ICurveStableSwap {
         }
     }
 
-    /// @inheritdoc ICurveStableSwap
+    /// @inheritdoc ICurveStableSwapNGBase
     function coins(uint256 index) external view override returns (address coin) {
         return s_coins[index];
     }
 
-    /// @inheritdoc ICurveStableSwap
+    /// @inheritdoc ICurveStableSwapNGOracle
     function A_precise() external view override returns (uint256 preciseA) {
         return s_aPrecise;
     }
 
-    /// @inheritdoc ICurveStableSwap
+    /// @inheritdoc ICurveStableSwapNGOracle
     function get_p(uint256 index) external view override returns (uint256 statePriceWad) {
         return s_currentStatePrices[index];
     }
 
-    /// @inheritdoc ICurveStableSwap
+    /// @inheritdoc ICurveStableSwapNGOracle
     function last_price(uint256 index) external view override returns (uint256 statePriceWad) {
         return s_lastPricesPacked[index] & UINT128_MASK;
     }
 
-    /// @inheritdoc ICurveStableSwap
+    /// @inheritdoc ICurveStableSwapNGOracle
     function ema_price(uint256 index) external view override returns (uint256 emaPriceWad) {
         return s_lastPricesPacked[index] >> 128;
     }
 
-    /// @inheritdoc ICurveStableSwap
+    /// @inheritdoc ICurveStableSwapNGOracle
     function price_oracle(uint256 index) external view override returns (uint256 emaPriceWad) {
         return s_projectedEmaPrices[index];
     }
 
-    /// @inheritdoc ICurveStableSwap
+    /// @inheritdoc ICurveStableSwapNGOracle
     function get_balances() external view override returns (uint256[] memory balances) {
         return s_balances;
     }

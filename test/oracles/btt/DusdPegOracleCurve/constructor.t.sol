@@ -6,15 +6,21 @@ import {Vm} from "forge-std/Vm.sol";
 import {DusdPegOracleCurveCommon} from "./DusdPegOracleCurveCommon.t.sol";
 import {DusdPegOracleCurve} from "@alto/oracles/dusd/DusdPegOracleCurve.sol";
 import {
-    DusdPegOracleCurveConfig, IDusdPegOracleCurveErrors
+    DusdPegOracleCurveConfig,
+    IDusdPegOracleCurveErrors
 } from "@alto/oracles/dusd/interfaces/IDusdPegOracleCurve.sol";
-import {ICurveStableSwapFactory} from "@alto/oracles/dusd/interfaces/ICurveStableSwapFactory.sol";
-import {ICurveStableSwap} from "@alto/oracles/interfaces/ICurveStableSwap.sol";
+import {
+    ICurveStableSwapNGFactory as ICurveStableSwapFactory
+} from "@alto/interfaces/curve/ICurveStableSwapNGFactory.sol";
+import {
+    ICurveStableSwapNGBase,
+    ICurveStableSwapNGOracle as ICurveStableSwap
+} from "@alto/interfaces/curve/ICurveStableSwapNG.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 contract DusdPegOracleCurveConstructorTest is DusdPegOracleCurveCommon {
     function test_RevertWhen_InitialOwnerIsZero() external {
-        _mockPoolReadRevert(abi.encodeWithSelector(ICurveStableSwap.N_COINS.selector));
+        _mockPoolReadRevert(abi.encodeWithSelector(ICurveStableSwapNGBase.N_COINS.selector));
         _mockFactoryReadRevert(abi.encodeWithSelector(ICurveStableSwapFactory.get_n_coins.selector, address(pool)));
 
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableInvalidOwner.selector, address(0)));
@@ -71,44 +77,46 @@ contract DusdPegOracleCurveConstructorTest is DusdPegOracleCurveCommon {
     }
 
     function test_RevertWhen_PoolNCoinsReverts() external {
-        _mockPoolReadRevert(abi.encodeWithSelector(ICurveStableSwap.N_COINS.selector));
+        _mockPoolReadRevert(abi.encodeWithSelector(ICurveStableSwapNGBase.N_COINS.selector));
 
         _expectPoolReadDeployRevert();
     }
 
     function test_RevertWhen_PoolNCoinsIsLessThanTwo() external {
-        _mockPoolReturn(abi.encodeWithSelector(ICurveStableSwap.N_COINS.selector), abi.encode(uint256(1)));
+        _mockPoolReturn(abi.encodeWithSelector(ICurveStableSwapNGBase.N_COINS.selector), abi.encode(uint256(1)));
 
         _expectDeployRevert(IDusdPegOracleCurveErrors.DusdPegOracleCurveInvalidCoinCount.selector, cfg, true, OWNER);
     }
 
     function test_RevertWhen_PoolNCoinsIsGreaterThanTwo() external {
-        _mockPoolReturn(abi.encodeWithSelector(ICurveStableSwap.N_COINS.selector), abi.encode(uint256(3)));
+        _mockPoolReturn(abi.encodeWithSelector(ICurveStableSwapNGBase.N_COINS.selector), abi.encode(uint256(3)));
 
         _expectDeployRevert(IDusdPegOracleCurveErrors.DusdPegOracleCurveInvalidCoinCount.selector, cfg, true, OWNER);
     }
 
     function test_RevertWhen_PoolCoinZeroReadReverts() external {
-        _mockPoolReadRevert(abi.encodeWithSelector(ICurveStableSwap.coins.selector, uint256(0)));
+        _mockPoolReadRevert(abi.encodeWithSelector(ICurveStableSwapNGBase.coins.selector, uint256(0)));
 
         _expectPoolReadDeployRevert();
     }
 
     function test_RevertWhen_PoolCoinZeroIsNotQuoteToken_WithoutReadingCoinOne() external {
-        _mockPoolReturn(abi.encodeWithSelector(ICurveStableSwap.coins.selector, uint256(0)), abi.encode(DUSD));
-        _mockPoolReadRevert(abi.encodeWithSelector(ICurveStableSwap.coins.selector, uint256(1)));
+        _mockPoolReturn(abi.encodeWithSelector(ICurveStableSwapNGBase.coins.selector, uint256(0)), abi.encode(DUSD));
+        _mockPoolReadRevert(abi.encodeWithSelector(ICurveStableSwapNGBase.coins.selector, uint256(1)));
 
         _expectDeployRevert(IDusdPegOracleCurveErrors.DusdPegOracleCurveInvalidCoinOrder.selector, cfg, true, OWNER);
     }
 
     function test_RevertWhen_PoolCoinOneReadReverts() external {
-        _mockPoolReadRevert(abi.encodeWithSelector(ICurveStableSwap.coins.selector, uint256(1)));
+        _mockPoolReadRevert(abi.encodeWithSelector(ICurveStableSwapNGBase.coins.selector, uint256(1)));
 
         _expectPoolReadDeployRevert();
     }
 
     function test_RevertWhen_PoolCoinOneIsNotDusd() external {
-        _mockPoolReturn(abi.encodeWithSelector(ICurveStableSwap.coins.selector, uint256(1)), abi.encode(QUOTE_TOKEN));
+        _mockPoolReturn(
+            abi.encodeWithSelector(ICurveStableSwapNGBase.coins.selector, uint256(1)), abi.encode(QUOTE_TOKEN)
+        );
 
         _expectDeployRevert(IDusdPegOracleCurveErrors.DusdPegOracleCurveInvalidCoinOrder.selector, cfg, true, OWNER);
     }
@@ -364,7 +372,9 @@ contract DusdPegOracleCurveConstructorTest is DusdPegOracleCurveCommon {
         DusdPegOracleCurveConfig memory duplicateCfg = cfg;
         duplicateCfg.dusd = QUOTE_TOKEN;
 
-        _mockPoolReturn(abi.encodeWithSelector(ICurveStableSwap.coins.selector, uint256(1)), abi.encode(QUOTE_TOKEN));
+        _mockPoolReturn(
+            abi.encodeWithSelector(ICurveStableSwapNGBase.coins.selector, uint256(1)), abi.encode(QUOTE_TOKEN)
+        );
         address[] memory coins = _addressArray(QUOTE_TOKEN, QUOTE_TOKEN);
         _mockFactoryReturn(
             abi.encodeWithSelector(ICurveStableSwapFactory.get_coins.selector, address(pool)), abi.encode(coins)
@@ -404,9 +414,9 @@ contract DusdPegOracleCurveConstructorTest is DusdPegOracleCurveCommon {
     }
 
     function test_WhenRuntimeChecksIsFalse_StillValidatesPoolAndFactory() external {
-        vm.expectCall(address(pool), abi.encodeWithSelector(ICurveStableSwap.N_COINS.selector), 1);
-        vm.expectCall(address(pool), abi.encodeWithSelector(ICurveStableSwap.coins.selector, uint256(0)), 1);
-        vm.expectCall(address(pool), abi.encodeWithSelector(ICurveStableSwap.coins.selector, uint256(1)), 1);
+        vm.expectCall(address(pool), abi.encodeWithSelector(ICurveStableSwapNGBase.N_COINS.selector), 1);
+        vm.expectCall(address(pool), abi.encodeWithSelector(ICurveStableSwapNGBase.coins.selector, uint256(0)), 1);
+        vm.expectCall(address(pool), abi.encodeWithSelector(ICurveStableSwapNGBase.coins.selector, uint256(1)), 1);
         vm.expectCall(address(pool), abi.encodeWithSelector(ICurveStableSwap.ma_exp_time.selector), 1);
         vm.expectCall(address(pool), abi.encodeWithSelector(ICurveStableSwap.A_precise.selector), 1);
         vm.expectCall(address(pool), abi.encodeWithSelector(ICurveStableSwap.future_A.selector), 1);

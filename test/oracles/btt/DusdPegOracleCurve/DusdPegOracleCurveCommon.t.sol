@@ -6,7 +6,7 @@ import {Test} from "forge-std/Test.sol";
 
 import {DusdPegOracleCurve} from "@alto/oracles/dusd/DusdPegOracleCurve.sol";
 import {DusdPegOracleCurveConfig} from "@alto/oracles/dusd/interfaces/IDusdPegOracleCurve.sol";
-import {ICurveStableSwap} from "@alto/oracles/interfaces/ICurveStableSwap.sol";
+import {ICurveStableSwapNGOracle as ICurveStableSwap} from "@alto/interfaces/curve/ICurveStableSwapNG.sol";
 import {MockCurveStableSwapFactory} from "@alto-test/oracles/btt/mocks/MockCurveStableSwapFactory.sol";
 import {MockCurveStableSwapNG} from "@alto-test/oracles/btt/mocks/MockCurveStableSwapNG.sol";
 
@@ -140,10 +140,7 @@ abstract contract DusdPegOracleCurveCommon is Test {
         return abi.encodeWithSelector(MockFactoryReadReverted.selector, MOCK_FACTORY_REVERT_CODE);
     }
 
-    function _assertPriceResult(uint256 expectedPriceWad, uint48 expectedObservedAt, bool expectedValid)
-        internal
-        view
-    {
+    function _assertPriceResult(uint256 expectedPriceWad, uint48 expectedObservedAt, bool expectedValid) internal view {
         (uint256 priceWad, uint48 observedAt, bool valid) = oracle.getPrice();
 
         assertEq(priceWad, expectedPriceWad, "priceWad");

@@ -2,7 +2,7 @@
 pragma solidity ^0.8.28;
 
 import {IMarketRegistry} from "@alto/utils/interfaces/IMarketRegistry.sol";
-import {ICurveStablePool} from "./interfaces/ICurveStablePool.sol";
+import {ICurveStableSwapNGLiquidity} from "@alto/interfaces/curve/ICurveStableSwapNG.sol";
 import {IConvexBooster, IConvexRewardPool} from "./interfaces/IConvex.sol";
 import {
     IMintCurveConvexPositionFactoryBase,
@@ -153,7 +153,7 @@ contract MintCurveConvexPositionFactory is
         if (
             config.curvePool == address(0) || config.convexBooster == address(0)
                 || config.convexRewardPool == address(0) || config.crv == address(0) || config.cvx == address(0)
-                || ICurveStablePool(config.curvePool).N_COINS() != 2
+                || ICurveStableSwapNGLiquidity(config.curvePool).N_COINS() != 2
                 || IConvexRewardPool(config.convexRewardPool).pid() != config.convexPid
         ) {
             revert MintCurveConvexPositionFactoryInvalidConfig();

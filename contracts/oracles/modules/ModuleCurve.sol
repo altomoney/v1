@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.7;
 
-import {ICurvePool} from "@alto/oracles/interfaces/ICurvePool.sol";
 import {FixedPointMath, MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 import {CurveNode} from "@alto/oracles/interfaces/IModuleNode.sol";
 
