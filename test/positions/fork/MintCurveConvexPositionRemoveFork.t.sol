@@ -127,9 +127,6 @@ contract MintCurveConvexPositionRemoveForkTest is MintCurveConvexPositionForkCom
         uint256 userCrvBefore = IERC20(CRV_TOKEN_MAINNET).balanceOf(user);
         uint256 userCvxBefore = IERC20(CVX_TOKEN_MAINNET).balanceOf(user);
 
-        vm.expectEmit(false, false, false, false, address(position));
-        emit IMintCurveConvexPositionEvents.RewardsClaimed(0, 0);
-
         vm.prank(user);
         position.withdrawFromLpAndRepay(stakedLp / 2, 0, 0, true);
 

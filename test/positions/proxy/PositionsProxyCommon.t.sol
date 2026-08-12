@@ -46,6 +46,7 @@ abstract contract PositionsProxyCommon is Test {
 
         // Config validation checks the reward pool's pid matches convexPid (1).
         vm.mockCall(CONVEX_REWARD_POOL, abi.encodeWithSignature("pid()"), abi.encode(uint256(1)));
+        vm.mockCall(CONVEX_REWARD_POOL, abi.encodeWithSignature("rewardToken()"), abi.encode(CRV));
 
         // Config validation binds the booster's poolInfo(pid) to the curve pool and reward pool.
         vm.mockCall(

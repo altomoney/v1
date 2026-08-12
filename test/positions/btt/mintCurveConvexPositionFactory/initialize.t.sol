@@ -19,6 +19,7 @@ contract MintCurveConvexPositionFactory_Initialize_Test is MintCurveConvexPositi
 
         // Config validation checks the reward pool's pid matches convexPid (1).
         vm.mockCall(CONVEX_REWARD_POOL, abi.encodeWithSignature("pid()"), abi.encode(uint256(1)));
+        vm.mockCall(CONVEX_REWARD_POOL, abi.encodeWithSignature("rewardToken()"), abi.encode(CRV));
 
         // Config validation binds the booster's poolInfo(pid) to the curve pool and reward pool.
         _mockPoolInfo(CONVEX_BOOSTER, address(curvePool), CONVEX_REWARD_POOL, false);
@@ -80,6 +81,12 @@ contract MintCurveConvexPositionFactory_Initialize_Test is MintCurveConvexPositi
     function test_RevertWhen_RewardPoolPidDoesNotMatchConvexPid() public {
         MintCurveConvexConfig memory config = _validConfig();
         vm.mockCall(config.convexRewardPool, abi.encodeWithSignature("pid()"), abi.encode(config.convexPid + 1));
+        _expectInvalidConfigOnInitialize(config);
+    }
+
+    function test_RevertWhen_RewardPoolTokenDoesNotMatchCrv() public {
+        MintCurveConvexConfig memory config = _validConfig();
+        vm.mockCall(config.convexRewardPool, abi.encodeWithSignature("rewardToken()"), abi.encode(CVX));
         _expectInvalidConfigOnInitialize(config);
     }
 

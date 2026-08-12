@@ -127,7 +127,7 @@ contract MintCurveConvexPositionMulticallForkTest is MintCurveConvexPositionFork
         vm.warp(block.timestamp + REWARD_ACCRUAL_PERIOD);
     }
 
-    /// @dev Sum of CRV+CVX now held by the owner; both accrue during the reward window.
+    /// @dev Sum of the two configured base Convex reward-token balances held by the owner.
     function _rewardTokenBalanceGained() internal view returns (uint256) {
         return IERC20(CRV_TOKEN_MAINNET).balanceOf(user) + IERC20(CVX_TOKEN_MAINNET).balanceOf(user);
     }

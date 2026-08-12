@@ -51,10 +51,11 @@ interface IMintCurveConvexPositionEvents {
     /// @param assetsRepaid The amount of DUSD burnt to repay the shares.
     event Repaid(address indexed owner, uint256 repayShares, uint256 assetsRepaid);
 
-    /// @notice Emitted when CRV(Curve token) and CVX(Convex token) rewards are claimed and transferred to the owner.
-    /// @param crvAmount The amount of CRV transferred to the owner.
-    /// @param cvxAmount The amount of CVX transferred to the owner.
-    event RewardsClaimed(uint256 crvAmount, uint256 cvxAmount);
+    /// @notice Emitted for each nonzero Convex reward transferred to the owner.
+    /// @param owner The position owner receiving the reward.
+    /// @param token The reward token transferred.
+    /// @param amount The amount transferred.
+    event RewardClaimed(address indexed owner, address indexed token, uint256 amount);
 
     /// @notice Emitted when an ERC20 token is recovered from the position to the owner.
     /// @param token The recovered token.
@@ -140,27 +141,34 @@ interface IMintCurveConvexPosition is IMintCurveConvexPositionErrors, IMintCurve
     /// @param lpToWithdraw The amount of staked Curve LP to withdraw from Convex. Pass 0 to skip the LP unwind.
     /// @param minBorrowTokenOut The minimum amount of borrow token expected from the one-sided Curve removal.
     /// @param sharesToRepay The amount of borrow shares to repay. Pass 0 to skip repayment.
-    /// @param claimRewards Whether to also claim CRV(Curve token) and CVX(Convex token) rewards during the Convex withdrawal.
+    /// @param claimRewards Whether to also claim all Convex rewards during the Convex withdrawal.
     /// @return borrowTokenReceived The amount of borrow token received from burning the LP.
     /// @return assetsRepaid The amount of borrow token used to repay `sharesToRepay` (0 if sharesToRepay is 0).
-    /// @return crvAmount The amount of CRV claimed and transferred to the owner (0 if claimRewards is false).
-    /// @return cvxAmount The amount of CVX claimed and transferred to the owner (0 if claimRewards is false).
+    /// @return rewardTokens The complete deduplicated reward-token list (empty if claimRewards is false).
+    /// @return rewardAmounts The amount of each corresponding reward token transferred to the owner.
     function withdrawFromLpAndRepay(
         uint256 lpToWithdraw,
         uint256 minBorrowTokenOut,
         uint256 sharesToRepay,
         bool claimRewards
-    ) external returns (uint256 borrowTokenReceived, uint256 assetsRepaid, uint256 crvAmount, uint256 cvxAmount);
+    )
+        external
+        returns (
+            uint256 borrowTokenReceived,
+            uint256 assetsRepaid,
+            address[] memory rewardTokens,
+            uint256[] memory rewardAmounts
+        );
 
     /// @notice Repays debt to the mint market, pulling any DUSD shortfall from the owner.
     /// @param repayShares The exact amount of borrow shares to repay.
     /// @return assetsRepaid The amount of DUSD used to repay `repayShares`.
     function repay(uint256 repayShares) external returns (uint256 assetsRepaid);
 
-    /// @notice Claims accrued CRV/CVX rewards from Convex and transfers them to the owner.
-    /// @return crvAmount The amount of CRV transferred to the owner.
-    /// @return cvxAmount The amount of CVX transferred to the owner.
-    function claimRewards() external returns (uint256 crvAmount, uint256 cvxAmount);
+    /// @notice Claims all accrued Convex rewards and transfers them to the owner.
+    /// @return tokens The complete deduplicated reward-token list queried from Convex at claim time.
+    /// @return amounts The amount of each corresponding reward token transferred to the owner.
+    function claimRewards() external returns (address[] memory tokens, uint256[] memory amounts);
 
     /// @notice Recovers ERC20 tokens held by this position to the owner.
     /// @param token The token to recover.

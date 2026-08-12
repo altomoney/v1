@@ -5,10 +5,18 @@ MintCurveConvexPosition::claimRewards()
     ├── when the Convex reward pool getReward returns false
     │   └── it should revert with MintCurveConvexPositionClaimingRewardsFailed
     ├── it should claim rewards from the configured Convex reward pool
-    ├── given the position holds CRV and CVX rewards
-    │   ├── it should transfer the full CRV and CVX balances held by the position to owner
-    │   └── it should emit RewardsClaimed with the transferred CRV and CVX amounts
+    ├── given the position holds Convex rewards
+    │   ├── it should always include configured CRV and CVX
+    │   ├── it should discover direct and Convex stash-wrapped extra rewards dynamically
+    │   ├── it should deduplicate repeated reward-token addresses
+    │   ├── it should not treat an arbitrary ERC20 token() getter as a stash wrapper
+    │   ├── it should transfer all Convex rewards held by the position to owner
+    │   └── it should emit RewardClaimed for each nonzero transfer
+    ├── given optional Convex extra-reward metadata is malformed
+    │   ├── it should retain CRV and CVX when extraRewardsLength reverts
+    │   ├── it should skip a malformed extra reward pool address
+    │   └── it should skip an extra pool whose rewardToken query reverts
     ├── given the position holds no rewards
-    │   └── it should emit RewardsClaimed with zero CRV and CVX amounts
+    │   └── it should return zero amounts without emitting RewardClaimed
     └── given caller is an authorized spender
         └── it should transfer the rewards to the owner
