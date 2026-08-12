@@ -32,6 +32,10 @@ import {
 import {
     ERC4626RatioChainlinkOracleSUSDE
 } from "@alto/oracles/AltoERC4626RatioChainlinkOracle/implementations/ERC4626RatioChainlinkOracleSUSDE.sol";
+import {
+    ERC4626RatioChainlinkOracleSYRUPUSDC,
+    ISyrupAsset
+} from "@alto/oracles/AltoERC4626RatioChainlinkOracle/implementations/ERC4626RatioChainlinkOracleSYRUPUSDC.sol";
 import {ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import {
@@ -70,8 +74,10 @@ import {
     WSTETH_MAINNET,
     RETH_MAINNET,
     SUSDE_MAINNET,
+    SYRUPUSDC_MAINNET,
     CHAINLINK_ETH_USD_PRICE_FEED,
-    CHAINLINK_USDE_USD_PRICE_FEED
+    CHAINLINK_USDE_USD_PRICE_FEED,
+    CHAINLINK_USDC_USD_PRICE_FEED
 } from "@alto/deployments/ethereum-mainnet/Constants.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {IAltoVault, IAltoVaultBase} from "@alto/lending/interfaces/IAltoVault.sol";
@@ -1118,6 +1124,54 @@ contract DeploySusdeMintMarketPhaseTest is DeployMarketPhaseTestBase {
         assertEq(stalePeriod, 83100, "stale period");
         assertEq(inDecimals, 18, "input decimals");
         assertEq(outDecimals, 36, "output decimals");
+        assertEq(feedDecimals, 8, "feed decimals");
+    }
+}
+
+contract DeploySyrupUsdcMintMarketPhaseTest is DeployMarketPhaseTestBase {
+    function test_deploySyrupUsdcMintMarketParameters() public {
+        _deployMarket(DeploymentPhase.MINT_MARKET_SYRUPUSDC);
+
+        MarketContracts memory deployed = input.contracts.syrupUsdcMintMarket;
+        _assertMintMarketParams(
+            deployed,
+            ExpectedMarketParams({
+                marketType: MarketType.MINT,
+                collateralToken: SYRUPUSDC_MAINNET,
+                maxLtv: 0.7 ether,
+                borrowOpeningFee: 0.0015 ether,
+                capacity: 54_000 ether,
+                maxLiquidationLtv: 0.71 ether,
+                dynamicBonusFeeStart: 0.015 ether,
+                ltvForCompleteLiquidation: 0.72 ether,
+                liquidationBaseFee: 0.04 ether
+            }),
+            0.02271416921 ether / uint256(365 days)
+        );
+        _assertSyrupUsdcOracleConfiguration(deployed.marketOracle);
+    }
+
+    function _assertSyrupUsdcOracleConfiguration(address oracleAddress) internal view {
+        ERC4626RatioChainlinkOracleSYRUPUSDC oracle = ERC4626RatioChainlinkOracleSYRUPUSDC(oracleAddress);
+        assertEq(oracle.SYRUP_USDC(), SYRUPUSDC_MAINNET, "ratio source");
+
+        (uint256 initialRatio,, uint256 maxYearlyGrowthRatioWad) = oracle.erc4626RatioNode();
+        assertEq(initialRatio, ISyrupAsset(SYRUPUSDC_MAINNET).convertToExitAssets(1e6) * 1005 / 1000, "initial ratio");
+        assertEq(maxYearlyGrowthRatioWad, 0.12 ether, "maximum yearly ratio growth");
+
+        (
+            AggregatorV3Interface feed,
+            ConversionDirection direction,
+            uint32 stalePeriod,
+            uint8 inDecimals,
+            uint8 outDecimals,
+            uint8 feedDecimals
+        ) = oracle.chainlinkNode();
+        assertEq(address(feed), CHAINLINK_USDC_USD_PRICE_FEED, "USDC/USD feed");
+        assertEq(uint256(direction), uint256(ConversionDirection.IN_TO_OUT), "conversion direction");
+        assertEq(stalePeriod, 86700, "stale period");
+        assertEq(inDecimals, 6, "input decimals");
+        assertEq(outDecimals, 48, "output decimals");
         assertEq(feedDecimals, 8, "feed decimals");
     }
 }

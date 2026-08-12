@@ -605,14 +605,14 @@ library DeployAltoEthereumMainnet {
                     feeRecipient: input.contracts.feeRecipientMintMarkets,
                     collateralToken: SYRUPUSDC_MAINNET,
                     oracleAsset: EthereumMainnetLendingOracleAsset.SYRUPUSDC,
-                    irmInterestRate: 0.03 ether / uint256(365 days), // 3%
-                    maxLtv: 0.8 ether, // 80%
-                    initialBorrowOpeningFee: 0.0005 ether, // 0.05%
-                    debtCeiling: 250_000 ether, // 250,000 DUSD
+                    irmInterestRate: 0.02271416921 ether / uint256(365 days), // 2.271416921%
+                    maxLtv: 0.7 ether, // 70%
+                    initialBorrowOpeningFee: 0.0015 ether, // 0.15%
+                    debtCeiling: 54000 ether, // 54,000 DUSD
                     liquidationConfig: LiquidationConfiguration({
-                        maxLiquidationLtv: 0.85 ether, // 85%
-                        dynamicBonusFeeStart: 0.005 ether, // 0.5%
-                        ltvForCompleteLiquidation: 0.93 ether, // 93%
+                        maxLiquidationLtv: 0.71 ether, // 71%
+                        dynamicBonusFeeStart: 0.015 ether, // 1.5%
+                        ltvForCompleteLiquidation: 0.72 ether, // 72%
                         dynamicBonusFeeDecaySteepness: 5 ether, // 5
                         liquidationBaseFee: 0.04 ether, // 4%
                         minPenaltyPercentage: 0.005 ether, // 0.5%
