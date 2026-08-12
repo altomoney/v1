@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.28;
 
-import {IDusdPegOracleCurveBase} from "@alto/oracles/dusd/interfaces/IDusdPegOracleCurve.sol";
+import {IDusdPegOracle} from "@alto/oracles/dusd/interfaces/IDusdPegOracle.sol";
 
 /// @notice Low-level oracle double used to exercise caller-side ABI decoding.
 /// @dev Normal behavior tests should use `MockDusdPegOracle`. This contract is
@@ -22,7 +22,7 @@ contract MockRawDusdPegOracle {
     }
 
     fallback() external {
-        if (msg.sig != IDusdPegOracleCurveBase.getPrice.selector) {
+        if (msg.sig != IDusdPegOracle.getPrice.selector) {
             revert MockRawDusdPegOracleUnsupportedCall(msg.sig);
         }
 

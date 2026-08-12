@@ -6,7 +6,7 @@ import {Test} from "forge-std/Test.sol";
 
 import {PegResponsiveIrmConfig, IRState} from "@alto/lending/interfaces/IPegResponsiveIrm.sol";
 import {IIrm} from "@alto/lending/interfaces/IIrm.sol";
-import {IDusdPegOracleCurveBase} from "@alto/oracles/dusd/interfaces/IDusdPegOracleCurve.sol";
+import {IDusdPegOracle} from "@alto/oracles/dusd/interfaces/IDusdPegOracle.sol";
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {PegResponsiveIrmHarness} from "@alto-test/lending/btt/PegResponsiveIrm/PegResponsiveIrmHarness.sol";
 import {MockDusdPegOracle} from "@alto-test/lending/btt/mocks/MockDusdPegOracle.sol";
@@ -146,7 +146,7 @@ abstract contract PegResponsiveIrmCommon is Test {
     }
 
     function _getPriceCall() internal pure returns (bytes memory) {
-        return abi.encodeWithSelector(IDusdPegOracleCurveBase.getPrice.selector);
+        return abi.encodeWithSelector(IDusdPegOracle.getPrice.selector);
     }
 
     function _mockOracleReturnData(bytes memory returnData) internal {

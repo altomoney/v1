@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0;
 
+import {IDusdPegOracle} from "@alto/oracles/dusd/interfaces/IDusdPegOracle.sol";
+
 /// @notice Owner-managed Curve pool parameters checked on every validated read.
 struct DusdPegOracleCurveRuntimeConfig {
     /// @dev Required Curve EMA averaging time.
@@ -102,7 +104,7 @@ interface IDusdPegOracleCurveEvents {
     event SetRuntimeConfig(DusdPegOracleCurveRuntimeConfig runtimeConfig);
 }
 
-interface IDusdPegOracleCurveBase is IDusdPegOracleCurveErrors, IDusdPegOracleCurveEvents {
+interface IDusdPegOracleCurveBase is IDusdPegOracle, IDusdPegOracleCurveErrors, IDusdPegOracleCurveEvents {
     /// @notice A two-coin pool exposes one oracle price: coin 1 relative to coin 0.
     function ORACLE_INDEX() external view returns (uint256);
 
@@ -122,12 +124,6 @@ interface IDusdPegOracleCurveBase is IDusdPegOracleCurveErrors, IDusdPegOracleCu
     /// @return expectedMaExpTime Approved Curve EMA averaging time.
     /// @return expectedAPrecise Approved amplification coefficient, including Curve's precision factor.
     function runtimeConfig() external view returns (uint256 expectedMaExpTime, uint256 expectedAPrecise);
-
-    /// @notice Returns the current DUSD/quoteToken price and associated metadata.
-    /// @return priceWad DUSD/quoteToken price using 1e18 precision.
-    /// @return observedAt Timestamp represented by the observation.
-    /// @return valid Whether the observation passed the oracle checks.
-    function getPrice() external view returns (uint256 priceWad, uint48 observedAt, bool valid);
 
     /// @notice Approves the current Curve EMA averaging time and amplification coefficient.
     /// @param newRuntimeConfig New approved Curve pool parameters.

@@ -443,7 +443,7 @@ operating rate.
 
 ## Oracle boundary
 
-The IRM consumes:
+The IRM depends only on the generic `IDusdPegOracle` interface:
 
 ```solidity
 function getPrice()
