@@ -963,6 +963,33 @@ contract TresuryPSMMigrationTest is DeployAltoEthereumMainnetTestBase {
     }
 }
 
+contract DeployWethMintMarketPhaseTest is DeployMarketPhaseTestBase {
+    string internal constant SCHEDULE_JSON =
+        "contracts/deployments/ethereum-mainnet/output/safe-tx-WETH-mint-market-registry-and-authorize-liquidation-periphery-schedule.json";
+    string internal constant EXECUTE_JSON =
+        "contracts/deployments/ethereum-mainnet/output/safe-tx-WETH-mint-market-registry-and-authorize-liquidation-periphery-execute.json";
+
+    function test_deployWethMintMarketAndExecuteTimelockTransactions() public {
+        _deployMarket(DeploymentPhase.MINT_MARKET_WETH);
+
+        MarketContracts memory deployed = input.contracts.wethMarket;
+        ExpectedMarketParams memory expected = ExpectedMarketParams({
+            marketType: MarketType.MINT,
+            collateralToken: WETH_MAINNET,
+            maxLtv: 0.76 ether,
+            borrowOpeningFee: 0.0005 ether,
+            capacity: 60_000 ether,
+            maxLiquidationLtv: 0.81 ether,
+            dynamicBonusFeeStart: 0.02 ether,
+            ltvForCompleteLiquidation: 0.86 ether,
+            liquidationBaseFee: 0.07 ether
+        });
+
+        _assertMintMarketParams(deployed, expected, 0.02134 ether / uint256(365 days));
+        _assertAndExecuteMarketGovernance(deployed, expected, SCHEDULE_JSON, EXECUTE_JSON);
+    }
+}
+
 contract DeployAdapterPhaseTest is DeployAltoEthereumMainnetTestBase {
     function test_deployAdapterAndApproval() public {
         _assertDeployAdapterAndApproval();
