@@ -61,7 +61,7 @@ contract PegResponsiveIrmOnMarketPauseTest is PegResponsiveIrmCommon {
     function test_WhenPausedIsTrue_AtOverflowingTimestamp_DoesNothing() external {
         _bindMarket();
         IRState memory seededState =
-            IRState({borrowRate: cfg.stressRate, lastUpdate: 123, recoveryStartedAt: 456, stressMode: true});
+            IRState({borrowRate: irmConfig.stressRate, lastUpdate: 123, recoveryStartedAt: 456, stressMode: true});
         _setIRState(seededState);
         _mockOracleReturnData(hex"01");
         market.setPaused(PAUSE_TYPE, false);
@@ -78,7 +78,7 @@ contract PegResponsiveIrmOnMarketPauseTest is PegResponsiveIrmCommon {
     function test_RevertWhen_UnpausingAtTimestampAboveUint48_PreservesRecovery() external {
         _bindMarket();
         IRState memory seededState =
-            IRState({borrowRate: cfg.stressRate, lastUpdate: 123, recoveryStartedAt: 456, stressMode: true});
+            IRState({borrowRate: irmConfig.stressRate, lastUpdate: 123, recoveryStartedAt: 456, stressMode: true});
         _setIRState(seededState);
         uint256 overflowingTimestamp = uint256(type(uint48).max) + 1;
         vm.warp(overflowingTimestamp);
@@ -114,7 +114,7 @@ contract PegResponsiveIrmOnMarketPauseTest is PegResponsiveIrmCommon {
     function test_WhenRecoveryIsInactive_UpdatesOnlyTimestampAndEmitsOnlyState() external {
         _bindMarket();
         IRState memory seededState =
-            IRState({borrowRate: cfg.stressRate, lastUpdate: 123, recoveryStartedAt: 0, stressMode: true});
+            IRState({borrowRate: irmConfig.stressRate, lastUpdate: 123, recoveryStartedAt: 0, stressMode: true});
         _setIRState(seededState);
         _mockOracleReturnData(hex"01");
         vm.warp(DEFAULT_NOW + 1 days);
@@ -126,8 +126,9 @@ contract PegResponsiveIrmOnMarketPauseTest is PegResponsiveIrmCommon {
 
     function testFuzz_WhenRecoveryIsActive_ClearsOnlyRecoveryAndEmitsOrderedStateEvents(bool stressMode) external {
         _bindMarket();
-        IRState memory seededState =
-            IRState({borrowRate: cfg.stressRate, lastUpdate: 123, recoveryStartedAt: 456, stressMode: stressMode});
+        IRState memory seededState = IRState({
+            borrowRate: irmConfig.stressRate, lastUpdate: 123, recoveryStartedAt: 456, stressMode: stressMode
+        });
         _setIRState(seededState);
         _mockOracleReturnData(hex"01");
         vm.warp(DEFAULT_NOW + 1 days);

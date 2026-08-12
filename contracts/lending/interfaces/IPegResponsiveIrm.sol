@@ -7,7 +7,7 @@ import {IIrm} from "@alto/lending/interfaces/IIrm.sol";
 /// and oracle freshness.
 /// @dev Each rate is a continuously compounded SPY value, not an annual
 /// percentage yield. Prices and `doublingDistance` use 1e18 precision.
-struct CurveConfig {
+struct PegResponsiveIrmConfig {
     /// @dev Price at or above which the raw curve returns `baseRate`.
     uint256 recoveryPrice;
     /// @dev Price below which the raw curve grows exponentially.
@@ -58,8 +58,8 @@ interface IPegResponsiveIrmEvents {
     /// @notice Emitted when the peg oracle changes.
     event SetPegOracle(address indexed oldPegOracle, address indexed newPegOracle);
 
-    /// @notice Emitted when the curve configuration changes.
-    event SetCurveConfig(CurveConfig newConfig);
+    /// @notice Emitted when the IRM configuration changes.
+    event SetIrmConfig(PegResponsiveIrmConfig newConfig);
 
     /// @notice Emitted when stress-mode or recovery-confirmation state changes.
     event StressStateUpdated(bool stressMode, uint48 recoveryStartedAt, uint256 priceWad);
@@ -107,7 +107,7 @@ interface IPegResponsiveIrmBase is IIrm, IPegResponsiveIrmErrors, IPegResponsive
     /// - Only callable by the contract owner.
     /// - Configuration is validated according to `_validateConfig`.
     /// - The new max rate must be greater than, or equal to, the current borrow rate.
-    function setCurveConfig(CurveConfig calldata _newConfig) external;
+    function setIrmConfig(PegResponsiveIrmConfig calldata _newConfig) external;
 
     /// @notice Previews the oracle observation and rate that would be stored by a checkpoint.
     /// @return priceWad Valid DUSD/quoteToken price, or zero for an unusable observation.
@@ -136,7 +136,7 @@ interface IPegResponsiveIrmBase is IIrm, IPegResponsiveIrmErrors, IPegResponsive
 interface IPegResponsiveIrm is IPegResponsiveIrmBase {
     /// @notice Returns the complete price-curve and controller configuration.
     /// @return configuration The current configuration.
-    function curveConfig() external view returns (CurveConfig memory configuration);
+    function irmConfig() external view returns (PegResponsiveIrmConfig memory configuration);
 
     /// @notice Returns the complete cached interest-rate controller state.
     /// @return state The cached interest-rate state.
@@ -153,7 +153,7 @@ interface IPegResponsiveIrmStaticTypes is IPegResponsiveIrmBase {
     /// @return doublingDistance Price decline below the stress price that doubles the stress rate.
     /// @return recoveryDelay Time price must remain at or above the recovery price before stress mode exits.
     /// @return maxOracleAge Maximum permitted age of an oracle observation.
-    function curveConfig()
+    function irmConfig()
         external
         view
         returns (

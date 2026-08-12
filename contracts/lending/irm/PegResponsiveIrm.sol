@@ -6,7 +6,7 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 import {
-    CurveConfig,
+    PegResponsiveIrmConfig,
     IRState,
     IPegResponsiveIrmBase,
     IPegResponsiveIrmStaticTypes
@@ -75,7 +75,7 @@ contract PegResponsiveIrm is AltoOwnable2Step, IPegResponsiveIrmStaticTypes {
     address public oracle;
 
     /// @inheritdoc IPegResponsiveIrmStaticTypes
-    CurveConfig public curveConfig;
+    PegResponsiveIrmConfig public irmConfig;
 
     /// @inheritdoc IPegResponsiveIrmStaticTypes
     IRState public irState;
@@ -87,16 +87,16 @@ contract PegResponsiveIrm is AltoOwnable2Step, IPegResponsiveIrmStaticTypes {
     /// @param _oracle          Oracle returning a validated, timestamped DUSD/quoteToken price.
     /// @param _config          Initial curve, recovery, and oracle-freshness configuration.
     /// @param _initialOwner    Owner of the IRM.
-    constructor(address _oracle, CurveConfig memory _config, address _initialOwner) Ownable(_initialOwner) {
+    constructor(address _oracle, PegResponsiveIrmConfig memory _config, address _initialOwner) Ownable(_initialOwner) {
         if (_oracle == address(0)) revert PegResponsiveIrmInvalidOracle();
         _validateConfig(_config);
 
         oracle = _oracle;
-        curveConfig = _config;
+        irmConfig = _config;
         irState.borrowRate = _config.baseRate;
 
         emit SetPegOracle(address(0), _oracle);
-        emit SetCurveConfig(_config);
+        emit SetIrmConfig(_config);
         emit IRStateUpdated(irState);
     }
 
@@ -158,14 +158,14 @@ contract PegResponsiveIrm is AltoOwnable2Step, IPegResponsiveIrmStaticTypes {
     }
 
     /// @inheritdoc IPegResponsiveIrmBase
-    function setCurveConfig(CurveConfig calldata _newConfig) external onlyOwner {
+    function setIrmConfig(PegResponsiveIrmConfig calldata _newConfig) external onlyOwner {
         _validateConfig(_newConfig);
         _checkpointMarket();
         if (irState.borrowRate > _newConfig.maxRate) revert PegResponsiveIrmInvalidRateConfig();
 
-        curveConfig = _newConfig;
+        irmConfig = _newConfig;
         if (_resetRecoveryConfirmation()) emit IRStateUpdated(irState);
-        emit SetCurveConfig(_newConfig);
+        emit SetIrmConfig(_newConfig);
     }
 
     /// @inheritdoc IPegResponsiveIrmBase
@@ -186,38 +186,38 @@ contract PegResponsiveIrm is AltoOwnable2Step, IPegResponsiveIrmStaticTypes {
 
     /// @inheritdoc IPegResponsiveIrmBase
     function targetBorrowRate(uint256 _priceWad) public view returns (uint256 borrowRate) {
-        CurveConfig memory cfg = curveConfig;
+        PegResponsiveIrmConfig memory config = irmConfig;
 
         // 1. Healthy price region: use the minimum configured borrow rate.
-        if (_priceWad >= cfg.recoveryPrice) {
-            return cfg.baseRate;
+        if (_priceWad >= config.recoveryPrice) {
+            return config.baseRate;
         }
 
         // 2. Recovery-to-stress region: linearly interpolate from baseRate to stressRate.
-        if (_priceWad >= cfg.stressPrice) {
-            uint256 drop = cfg.recoveryPrice - _priceWad;
-            uint256 width = cfg.recoveryPrice - cfg.stressPrice;
+        if (_priceWad >= config.stressPrice) {
+            uint256 drop = config.recoveryPrice - _priceWad;
+            uint256 width = config.recoveryPrice - config.stressPrice;
             uint256 pos = Math.mulDiv(drop, WAD, width);
-            uint256 rateRange = cfg.stressRate - cfg.baseRate;
+            uint256 rateRange = config.stressRate - config.baseRate;
 
-            return cfg.baseRate + Math.mulDiv(rateRange, pos, WAD);
+            return config.baseRate + Math.mulDiv(rateRange, pos, WAD);
         }
 
         // 3. Stress region: increase the stress rate exponentially as price falls.
-        uint256 stressDrop = cfg.stressPrice - _priceWad;
+        uint256 stressDrop = config.stressPrice - _priceWad;
 
         // Convert the price decline into the input for e^x:
         //
         //      2^n = e^(ln(2) * n)
         //
         // where n is the number of configured doubling distances below stressPrice.
-        uint256 exp = Math.mulDiv(LN_2_WAD, stressDrop, cfg.doublingDistance);
+        uint256 exp = Math.mulDiv(LN_2_WAD, stressDrop, config.doublingDistance);
         exp = Math.min(exp, MAX_EXPONENT_INPUT);
 
         uint256 mul = ExpLib.wExp(exp.toInt256()).toUint256();
-        uint256 uncappedRate = Math.mulDiv(cfg.stressRate, mul, WAD);
+        uint256 uncappedRate = Math.mulDiv(config.stressRate, mul, WAD);
 
-        return Math.min(uncappedRate, cfg.maxRate);
+        return Math.min(uncappedRate, config.maxRate);
     }
 
     /// @dev Checkpoints the active market before an owner changes controller inputs.
@@ -290,7 +290,7 @@ contract PegResponsiveIrm is AltoOwnable2Step, IPegResponsiveIrmStaticTypes {
         returns (bool stressMode, uint48 recoveryStartedAt)
     {
         IRState memory state = irState;
-        CurveConfig memory config = curveConfig;
+        PegResponsiveIrmConfig memory config = irmConfig;
 
         // The oracle observation was invalid. Keep the current stress mode status.
         //
@@ -365,8 +365,8 @@ contract PegResponsiveIrm is AltoOwnable2Step, IPegResponsiveIrmStaticTypes {
     function _effectiveTargetRate(uint256 _priceWad, bool _stressMode) private view returns (uint256 borrowRate) {
         uint256 targetRate = targetBorrowRate(_priceWad);
 
-        if (_stressMode && targetRate < curveConfig.stressRate) {
-            return curveConfig.stressRate;
+        if (_stressMode && targetRate < irmConfig.stressRate) {
+            return irmConfig.stressRate;
         }
 
         return targetRate;
@@ -395,7 +395,7 @@ contract PegResponsiveIrm is AltoOwnable2Step, IPegResponsiveIrmStaticTypes {
                 return (0, observedAt, false);
             }
 
-            if (block.timestamp - uint256(_observedAt) > curveConfig.maxOracleAge) {
+            if (block.timestamp - uint256(_observedAt) > irmConfig.maxOracleAge) {
                 return (0, observedAt, false);
             }
 
@@ -408,7 +408,7 @@ contract PegResponsiveIrm is AltoOwnable2Step, IPegResponsiveIrmStaticTypes {
     /// @dev Reverts when curve thresholds, rates, or controller timings are
     /// outside supported bounds.
     /// @param _config The curve configuration to validate.
-    function _validateConfig(CurveConfig memory _config) private pure {
+    function _validateConfig(PegResponsiveIrmConfig memory _config) private pure {
         // stressPrice must be nonzero and strictly below recoveryPrice.
         // Equal thresholds would make the linear bridge divide by zero, while
         // reversed thresholds would invalidate the ordering of the curve regions.

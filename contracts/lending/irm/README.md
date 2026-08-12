@@ -391,7 +391,7 @@ Rates use 18-decimal per-second yield, referred to as second percent yield
 (`SPY`). They are not stored as APY values.
 
 The curve acts on SPY values. Human-readable annualized percentages used in
-examples or simulations must be converted before constructing `CurveConfig`.
+examples or simulations must be converted before constructing `PegResponsiveIrmConfig`.
 
 ### Interest
 

@@ -6,7 +6,7 @@ import {Vm} from "forge-std/Vm.sol";
 import {stdError} from "forge-std/StdError.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
-import {CurveConfig, IRState, IPegResponsiveIrmEvents} from "@alto/lending/interfaces/IPegResponsiveIrm.sol";
+import {PegResponsiveIrmConfig, IRState, IPegResponsiveIrmEvents} from "@alto/lending/interfaces/IPegResponsiveIrm.sol";
 import {IIrm} from "@alto/lending/interfaces/IIrm.sol";
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 import {MockPegResponsiveIrmMarket} from "@alto-test/lending/btt/mocks/MockPegResponsiveIrmMarket.sol";
@@ -26,7 +26,7 @@ contract PegResponsiveIrmUpdateInterestRateTest is PegResponsiveIrmCommon {
     }
 
     function test_RevertWhen_MarketIsUnsetEvenIfCallerIsTheProspectiveMarket() external {
-        irm = _deployIrm(cfg);
+        irm = _deployIrm(irmConfig);
         _mockOracleReturnData(hex"01");
         IRState memory stateBefore = _readIRState();
 
@@ -141,7 +141,7 @@ contract PegResponsiveIrmUpdateInterestRateTest is PegResponsiveIrmCommon {
     }
 
     function test_RevertWhen_OracleIsANonContractAddress() external {
-        _replaceBoundIrm(cfg, address(0xBEEF));
+        _replaceBoundIrm(irmConfig, address(0xBEEF));
         IRState memory stateBefore = _readIRState();
 
         vm.recordLogs();
@@ -354,8 +354,8 @@ contract PegResponsiveIrmUpdateInterestRateTest is PegResponsiveIrmCommon {
     }
 
     function test_WhenBaseRateEqualsStressRate_HealthyStressFloorEqualityIsPreserved() external {
-        cfg.baseRate = cfg.stressRate;
-        _replaceBoundIrm(cfg, address(oracle));
+        irmConfig.baseRate = irmConfig.stressRate;
+        _replaceBoundIrm(irmConfig, address(oracle));
         _setCurrentObservation(RECOVERY_PRICE);
         _setIRState(STRESS_RATE, uint48(block.timestamp), 0, true);
         IRState memory expectedState = _state(STRESS_RATE, uint48(block.timestamp), uint48(block.timestamp), true);
@@ -364,8 +364,8 @@ contract PegResponsiveIrmUpdateInterestRateTest is PegResponsiveIrmCommon {
     }
 
     function test_WhenBaseRateEqualsStressRate_StrictBridgePreservesEqualRawTarget() external {
-        cfg.baseRate = cfg.stressRate;
-        _replaceBoundIrm(cfg, address(oracle));
+        irmConfig.baseRate = irmConfig.stressRate;
+        _replaceBoundIrm(irmConfig, address(oracle));
         _setCurrentObservation(MID_BRIDGE_PRICE);
         _setIRState(STRESS_RATE, uint48(block.timestamp), 0, true);
         IRState memory expectedState = _state(STRESS_RATE, uint48(block.timestamp), 0, true);
@@ -423,31 +423,31 @@ contract PegResponsiveIrmUpdateInterestRateTest is PegResponsiveIrmCommon {
     }
 
     function test_WhenSameObservationRemainsFresh_ItCanStartAndCompleteRecovery() external {
-        cfg.recoveryDelay = 100;
-        cfg.maxOracleAge = 100;
-        _replaceBoundIrm(cfg, address(oracle));
+        irmConfig.recoveryDelay = 100;
+        irmConfig.maxOracleAge = 100;
+        _replaceBoundIrm(irmConfig, address(oracle));
         uint48 observedAt = uint48(block.timestamp);
         _setObservation(RECOVERY_PRICE, observedAt, true);
         _setIRState(STRESS_RATE, observedAt, 0, true);
         IRState memory startedState = _state(STRESS_RATE, observedAt, observedAt, true);
         _assertCheckpoint(0, 0, startedState, _observation(RECOVERY_PRICE, observedAt, true), true);
 
-        vm.warp(block.timestamp + cfg.recoveryDelay);
+        vm.warp(block.timestamp + irmConfig.recoveryDelay);
         IRState memory recoveredState = _state(BASE_RATE, uint48(block.timestamp), 0, false);
         _assertCheckpoint(0, 0, recoveredState, _observation(RECOVERY_PRICE, observedAt, true), true);
     }
 
     function test_WhenRecoveryObservationBecomesStale_ItInterruptsInsteadOfCompleting() external {
-        cfg.recoveryDelay = 100;
-        cfg.maxOracleAge = 10;
-        _replaceBoundIrm(cfg, address(oracle));
+        irmConfig.recoveryDelay = 100;
+        irmConfig.maxOracleAge = 10;
+        _replaceBoundIrm(irmConfig, address(oracle));
         uint48 observedAt = uint48(block.timestamp);
         _setObservation(RECOVERY_PRICE, observedAt, true);
         _setIRState(STRESS_RATE, observedAt, 0, true);
         IRState memory startedState = _state(STRESS_RATE, observedAt, observedAt, true);
         _assertCheckpoint(0, 0, startedState, _observation(RECOVERY_PRICE, observedAt, true), true);
 
-        vm.warp(block.timestamp + cfg.maxOracleAge + 1);
+        vm.warp(block.timestamp + irmConfig.maxOracleAge + 1);
         IRState memory interruptedState = _state(STRESS_RATE, uint48(block.timestamp), 0, true);
         _assertCheckpoint(0, 0, interruptedState, _observation(0, observedAt, false), true);
     }
@@ -515,7 +515,7 @@ contract PegResponsiveIrmUpdateInterestRateTest is PegResponsiveIrmCommon {
 
     function _assertMalformedOracleData(bytes memory returnData) private {
         rawOracle.setRawReturnData(returnData);
-        _replaceBoundIrm(cfg, address(rawOracle));
+        _replaceBoundIrm(irmConfig, address(rawOracle));
         IRState memory stateBefore = _readIRState();
         vm.expectCall(address(rawOracle), _getPriceCall(), 1);
         vm.recordLogs();
@@ -609,8 +609,8 @@ contract PegResponsiveIrmUpdateInterestRateTest is PegResponsiveIrmCommon {
         _assertIRState(expectedState);
     }
 
-    function _replaceBoundIrm(CurveConfig memory config, address oracleAddress) private {
-        cfg = config;
+    function _replaceBoundIrm(PegResponsiveIrmConfig memory config, address oracleAddress) private {
+        irmConfig = config;
         irm = _deployIrm(config, oracleAddress, OWNER);
         market = new MockPegResponsiveIrmMarket(IIrm(address(irm)));
         _bindMarket();
@@ -622,10 +622,7 @@ contract PegResponsiveIrmUpdateInterestRateTest is PegResponsiveIrmCommon {
         returns (IRState memory state)
     {
         return IRState({
-            borrowRate: borrowRate,
-            lastUpdate: lastUpdate,
-            recoveryStartedAt: recoveryStartedAt,
-            stressMode: stressMode
+            borrowRate: borrowRate, lastUpdate: lastUpdate, recoveryStartedAt: recoveryStartedAt, stressMode: stressMode
         });
     }
 

@@ -85,7 +85,7 @@ contract PegResponsiveIrmSetMarketTest is PegResponsiveIrmCommon {
 
     function test_SetsTimestampPreservesOtherStateAndEmitsOnlyIRStateUpdated() external {
         IRState memory seededState =
-            IRState({borrowRate: cfg.stressRate, lastUpdate: 123, recoveryStartedAt: 456, stressMode: true});
+            IRState({borrowRate: irmConfig.stressRate, lastUpdate: 123, recoveryStartedAt: 456, stressMode: true});
         _setIRState(seededState);
         _mockOracleReturnData(hex"01");
         vm.mockCall(address(market), abi.encodeWithSelector(IPausable.paused.selector, PAUSE_TYPE), hex"01");
@@ -111,7 +111,7 @@ contract PegResponsiveIrmSetMarketTest is PegResponsiveIrmCommon {
     }
 
     function _assertPermissionlessBinding(address caller, address suppliedMarket) private {
-        irm = _deployIrm(cfg);
+        irm = _deployIrm(irmConfig);
         vm.prank(caller);
         irm.setMarket(suppliedMarket);
 

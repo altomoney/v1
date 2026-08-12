@@ -7,7 +7,9 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 import {IMarketBase} from "@alto/lending/interfaces/IMarket.sol";
 import {
-    IRState, IPegResponsiveIrmErrors, IPegResponsiveIrmEvents
+    IRState,
+    IPegResponsiveIrmErrors,
+    IPegResponsiveIrmEvents
 } from "@alto/lending/interfaces/IPegResponsiveIrm.sol";
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
@@ -146,7 +148,7 @@ contract PegResponsiveIrmSetPegOracleTest is PegResponsiveIrmCommon {
         _bindMarket();
         uint48 recoveryStartedAt = uint48(block.timestamp - 10);
         IRState memory seededState = IRState({
-            borrowRate: cfg.baseRate,
+            borrowRate: irmConfig.baseRate,
             lastUpdate: uint48(block.timestamp - 100),
             recoveryStartedAt: recoveryStartedAt,
             stressMode: true
@@ -162,7 +164,7 @@ contract PegResponsiveIrmSetPegOracleTest is PegResponsiveIrmCommon {
         Vm.Log[] memory logs = vm.getRecordedLogs();
 
         IRState memory checkpointState = IRState({
-            borrowRate: cfg.stressRate,
+            borrowRate: irmConfig.stressRate,
             lastUpdate: uint48(block.timestamp),
             recoveryStartedAt: recoveryStartedAt,
             stressMode: true
@@ -228,7 +230,7 @@ contract PegResponsiveIrmSetPegOracleTest is PegResponsiveIrmCommon {
     function test_WhenRecoveryIsActive_ClearsOnlyRecoveryInExactEventOrder() external {
         MockDusdPegOracle newOracle = new MockDusdPegOracle();
         IRState memory seededState =
-            IRState({borrowRate: cfg.stressRate, lastUpdate: 123, recoveryStartedAt: 456, stressMode: true});
+            IRState({borrowRate: irmConfig.stressRate, lastUpdate: 123, recoveryStartedAt: 456, stressMode: true});
         _setIRState(seededState);
 
         vm.recordLogs();

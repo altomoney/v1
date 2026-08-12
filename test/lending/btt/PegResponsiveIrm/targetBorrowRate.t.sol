@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 import {Vm} from "forge-std/Vm.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
-import {CurveConfig, IRState} from "@alto/lending/interfaces/IPegResponsiveIrm.sol";
+import {PegResponsiveIrmConfig, IRState} from "@alto/lending/interfaces/IPegResponsiveIrm.sol";
 
 import {PegResponsiveIrmCommon} from "./PegResponsiveIrmCommon.t.sol";
 
@@ -33,13 +33,13 @@ contract PegResponsiveIrmTargetBorrowRateTest is PegResponsiveIrmCommon {
     function test_WhenPriceIsOneUnitBelowRecoveryPrice_ItUsesTwoStageFloorRounding() external view {
         uint256 price = RECOVERY_PRICE - 1;
 
-        assertEq(irm.targetBorrowRate(price), _bridgeExpected(cfg, price));
+        assertEq(irm.targetBorrowRate(price), _bridgeExpected(irmConfig, price));
     }
 
     function test_WhenPriceIsOneUnitAboveStressPrice_ItUsesTwoStageFloorRounding() external view {
         uint256 price = STRESS_PRICE + 1;
 
-        assertEq(irm.targetBorrowRate(price), _bridgeExpected(cfg, price));
+        assertEq(irm.targetBorrowRate(price), _bridgeExpected(irmConfig, price));
     }
 
     function test_WhenPriceIsTheExactBridgeMidpoint_ItReturnsTheMidpointRate() external view {
@@ -47,27 +47,26 @@ contract PegResponsiveIrmTargetBorrowRateTest is PegResponsiveIrmCommon {
     }
 
     function test_WhenTwoStageRoundingDiffersFromSingleFraction_ItUsesTheImplementedTwoStageResult() external {
-        CurveConfig memory config = _curveConfig(4, 1, 1, 4, 5, 1);
+        PegResponsiveIrmConfig memory config = _irmConfig(4, 1, 1, 4, 5, 1);
         _useConfig(config);
 
         uint256 twoStageResult = irm.targetBorrowRate(3);
-        uint256 singleFractionResult = config.baseRate
-            + (config.stressRate - config.baseRate) * (config.recoveryPrice - 3)
-                / (config.recoveryPrice - config.stressPrice);
+        uint256 singleFractionResult = config.baseRate + (config.stressRate - config.baseRate)
+            * (config.recoveryPrice - 3) / (config.recoveryPrice - config.stressPrice);
 
         assertEq(twoStageResult, 1);
         assertEq(singleFractionResult, 2);
     }
 
     function test_WhenBridgeWidthIsOne_ItDoesNotDivideByZero() external {
-        CurveConfig memory config = _curveConfig(2, 1, 10, 20, 21, 1);
+        PegResponsiveIrmConfig memory config = _irmConfig(2, 1, 10, 20, 21, 1);
         _useConfig(config);
 
         assertEq(irm.targetBorrowRate(1), 20);
     }
 
     function test_WhenBaseRateEqualsStressRate_TheBridgeIsFlat() external {
-        CurveConfig memory config = _curveConfig(10, 1, 100, 100, 101, 1);
+        PegResponsiveIrmConfig memory config = _irmConfig(10, 1, 100, 100, 101, 1);
         _useConfig(config);
 
         assertEq(irm.targetBorrowRate(5), 100);
@@ -78,14 +77,14 @@ contract PegResponsiveIrmTargetBorrowRateTest is PegResponsiveIrmCommon {
     }
 
     function test_WhenRawExponentFloorsToZero_ItReturnsStressRate() external {
-        CurveConfig memory config = _curveConfig(11, 10, 1, 2, 3, LN_2 + 1);
+        PegResponsiveIrmConfig memory config = _irmConfig(11, 10, 1, 2, 3, LN_2 + 1);
         _useConfig(config);
 
         assertEq(irm.targetBorrowRate(9), 2);
     }
 
     function test_WhenExponentIsNonZeroButRateMultiplicationRoundsDown_ItReturnsStressRate() external {
-        CurveConfig memory config = _curveConfig(11, 10, 1, 2, 3, LN_2);
+        PegResponsiveIrmConfig memory config = _irmConfig(11, 10, 1, 2, 3, LN_2);
         _useConfig(config);
 
         assertEq(Math.mulDiv(LN_2, 1, config.doublingDistance), 1);
@@ -101,7 +100,7 @@ contract PegResponsiveIrmTargetBorrowRateTest is PegResponsiveIrmCommon {
     }
 
     function test_WhenPriceIsHalfADoublingDistanceBelowStress_ItUsesTheExactExpLibApproximation() external {
-        CurveConfig memory config = _curveConfig(1e18, 995e15, 100, 200, 10_000, DOUBLING_DISTANCE);
+        PegResponsiveIrmConfig memory config = _irmConfig(1e18, 995e15, 100, 200, 10_000, DOUBLING_DISTANCE);
         _useConfig(config);
 
         uint256 expectedExponent = 346_573_590_279_972_654;
@@ -113,28 +112,28 @@ contract PegResponsiveIrmTargetBorrowRateTest is PegResponsiveIrmCommon {
     }
 
     function test_WhenUncappedRateIsBelowMaxRate_ItReturnsUncappedRate() external {
-        CurveConfig memory config = _curveConfig(1e18, 995e15, 50, 100, 201, DOUBLING_DISTANCE);
+        PegResponsiveIrmConfig memory config = _irmConfig(1e18, 995e15, 50, 100, 201, DOUBLING_DISTANCE);
         _useConfig(config);
 
         assertEq(irm.targetBorrowRate(config.stressPrice - config.doublingDistance), 200);
     }
 
     function test_WhenUncappedRateEqualsMaxRate_ItReturnsMaxRate() external {
-        CurveConfig memory config = _curveConfig(1e18, 995e15, 50, 100, 200, DOUBLING_DISTANCE);
+        PegResponsiveIrmConfig memory config = _irmConfig(1e18, 995e15, 50, 100, 200, DOUBLING_DISTANCE);
         _useConfig(config);
 
         assertEq(irm.targetBorrowRate(config.stressPrice - config.doublingDistance), config.maxRate);
     }
 
     function test_WhenUncappedRateExceedsMaxRate_ItReturnsMaxRate() external {
-        CurveConfig memory config = _curveConfig(1e18, 995e15, 50, 100, 199, DOUBLING_DISTANCE);
+        PegResponsiveIrmConfig memory config = _irmConfig(1e18, 995e15, 50, 100, 199, DOUBLING_DISTANCE);
         _useConfig(config);
 
         assertEq(irm.targetBorrowRate(config.stressPrice - config.doublingDistance), config.maxRate);
     }
 
     function test_WhenRawExponentIsBelowClamp_ItPassesTheRawExponentThrough() external {
-        CurveConfig memory config = _curveConfig(1.01e18, 1e18, 50, 100, 200, 1e15);
+        PegResponsiveIrmConfig memory config = _irmConfig(1.01e18, 1e18, 50, 100, 200, 1e15);
         _useConfig(config);
         uint256 stressDrop = 72e15;
 
@@ -145,7 +144,7 @@ contract PegResponsiveIrmTargetBorrowRateTest is PegResponsiveIrmCommon {
     function test_WhenRawExponentEqualsClamp_ItUsesTheExactBoundary() external {
         uint256 stressDrop = 298_429_495_007_687_623;
         uint256 doublingDistance = 4_137_111_261_210_139;
-        CurveConfig memory config = _curveConfig(1.01e18, 1e18, 50, 100, 200, doublingDistance);
+        PegResponsiveIrmConfig memory config = _irmConfig(1.01e18, 1e18, 50, 100, 200, doublingDistance);
         _useConfig(config);
 
         assertEq(Math.mulDiv(LN_2, stressDrop, doublingDistance), irm.MAX_EXPONENT_INPUT());
@@ -153,7 +152,7 @@ contract PegResponsiveIrmTargetBorrowRateTest is PegResponsiveIrmCommon {
     }
 
     function test_WhenRawExponentExceedsClamp_ItClampsWithoutReverting() external {
-        CurveConfig memory config = _curveConfig(1.01e18, 1e18, 50, 100, 200, 1e15);
+        PegResponsiveIrmConfig memory config = _irmConfig(1.01e18, 1e18, 50, 100, 200, 1e15);
         _useConfig(config);
         uint256 stressDrop = 73e15;
 
@@ -162,7 +161,7 @@ contract PegResponsiveIrmTargetBorrowRateTest is PegResponsiveIrmCommon {
     }
 
     function test_WhenPriceIsZeroAndDepegIsExtreme_ItCapsWithoutOverflow() external {
-        CurveConfig memory config = _curveConfig(1.01e18, 1e18, 50, 100, 200, 1);
+        PegResponsiveIrmConfig memory config = _irmConfig(1.01e18, 1e18, 50, 100, 200, 1);
         _useConfig(config);
 
         assertEq(irm.targetBorrowRate(0), config.maxRate);
@@ -180,7 +179,7 @@ contract PegResponsiveIrmTargetBorrowRateTest is PegResponsiveIrmCommon {
         uint256 firstPrice,
         uint256 secondPrice
     ) external {
-        CurveConfig memory config = _boundValidConfig(
+        PegResponsiveIrmConfig memory config = _boundValidConfig(
             rawRecoveryPrice,
             rawStressPrice,
             rawBaseRate,
@@ -212,7 +211,7 @@ contract PegResponsiveIrmTargetBorrowRateTest is PegResponsiveIrmCommon {
         _mockOracleReturnData(hex"01");
         _setIRState(STRESS_RATE, uint48(block.timestamp), uint48(block.timestamp), true);
         IRState memory stateBefore = _readIRState();
-        CurveConfig memory configBefore = _readCurveConfig();
+        PegResponsiveIrmConfig memory configBefore = _readIrmConfig();
 
         vm.recordLogs();
         vm.prank(NON_OWNER);
@@ -224,23 +223,23 @@ contract PegResponsiveIrmTargetBorrowRateTest is PegResponsiveIrmCommon {
         assertEq(address(irm.market()), address(0));
         assertEq(logs.length, 0);
         _assertIRState(stateBefore);
-        _assertCurveConfig(configBefore);
+        _assertIrmConfig(configBefore);
     }
 
-    function _useConfig(CurveConfig memory config) private {
-        cfg = config;
+    function _useConfig(PegResponsiveIrmConfig memory config) private {
+        irmConfig = config;
         irm = _deployIrm(config);
     }
 
-    function _curveConfig(
+    function _irmConfig(
         uint256 recoveryPrice,
         uint256 stressPrice,
         uint256 baseRate,
         uint256 stressRate,
         uint256 maxRate,
         uint256 doublingDistance
-    ) private pure returns (CurveConfig memory config) {
-        config = CurveConfig({
+    ) private pure returns (PegResponsiveIrmConfig memory config) {
+        config = PegResponsiveIrmConfig({
             recoveryPrice: recoveryPrice,
             stressPrice: stressPrice,
             baseRate: baseRate,
@@ -252,7 +251,7 @@ contract PegResponsiveIrmTargetBorrowRateTest is PegResponsiveIrmCommon {
         });
     }
 
-    function _bridgeExpected(CurveConfig memory config, uint256 price) private pure returns (uint256) {
+    function _bridgeExpected(PegResponsiveIrmConfig memory config, uint256 price) private pure returns (uint256) {
         uint256 position = Math.mulDiv(config.recoveryPrice - price, WAD, config.recoveryPrice - config.stressPrice);
         return config.baseRate + Math.mulDiv(config.stressRate - config.baseRate, position, WAD);
     }
@@ -266,7 +265,7 @@ contract PegResponsiveIrmTargetBorrowRateTest is PegResponsiveIrmCommon {
         uint256 rawDoublingDistance,
         uint48 rawRecoveryDelay,
         uint48 rawMaxOracleAge
-    ) private pure returns (CurveConfig memory config) {
+    ) private pure returns (PegResponsiveIrmConfig memory config) {
         config.stressPrice = bound(rawStressPrice, 1, MAX_RECOVERY - 1);
         config.recoveryPrice = bound(rawRecoveryPrice, config.stressPrice + 1, MAX_RECOVERY);
         config.baseRate = bound(rawBaseRate, 1, MAX_RATE - 2);
