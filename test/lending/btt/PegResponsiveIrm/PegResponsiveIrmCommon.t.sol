@@ -62,15 +62,15 @@ abstract contract PegResponsiveIrmCommon is Test {
         });
     }
 
-    function _deployIrm(PegResponsiveIrmConfig memory config_, address oracle_, address owner_)
+    function _deployIrm(PegResponsiveIrmConfig memory config, address pegOracleAddress, address owner)
         internal
         returns (PegResponsiveIrmHarness deployedIrm)
     {
-        return new PegResponsiveIrmHarness(oracle_, config_, owner_);
+        return new PegResponsiveIrmHarness(pegOracleAddress, config, owner);
     }
 
-    function _deployIrm(PegResponsiveIrmConfig memory config_) internal returns (PegResponsiveIrmHarness deployedIrm) {
-        return _deployIrm(config_, address(oracle), OWNER);
+    function _deployIrm(PegResponsiveIrmConfig memory config) internal returns (PegResponsiveIrmHarness deployedIrm) {
+        return _deployIrm(config, address(oracle), OWNER);
     }
 
     function _bindMarket() internal {

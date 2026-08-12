@@ -31,7 +31,7 @@ contract PegResponsiveIrmSetPegOracleTest is PegResponsiveIrmCommon {
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, NON_OWNER));
         irm.setPegOracle(address(0));
 
-        assertEq(address(irm.oracle()), address(oracle));
+        assertEq(address(irm.pegOracle()), address(oracle));
         _assertIRState(stateBefore);
     }
 
@@ -46,7 +46,7 @@ contract PegResponsiveIrmSetPegOracleTest is PegResponsiveIrmCommon {
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, PENDING_OWNER));
         irm.setPegOracle(address(0));
 
-        assertEq(address(irm.oracle()), address(oracle));
+        assertEq(address(irm.pegOracle()), address(oracle));
         _assertIRState(stateBefore);
     }
 
@@ -59,7 +59,7 @@ contract PegResponsiveIrmSetPegOracleTest is PegResponsiveIrmCommon {
         vm.expectRevert(IPegResponsiveIrmErrors.PegResponsiveIrmInvalidOracle.selector);
         irm.setPegOracle(address(0));
 
-        assertEq(address(irm.oracle()), address(oracle));
+        assertEq(address(irm.pegOracle()), address(oracle));
         _assertIRState(stateBefore);
     }
 
@@ -72,7 +72,7 @@ contract PegResponsiveIrmSetPegOracleTest is PegResponsiveIrmCommon {
         _setPegOracleAsOwner(address(newOracle));
         Vm.Log[] memory logs = vm.getRecordedLogs();
 
-        assertEq(address(irm.oracle()), address(newOracle));
+        assertEq(address(irm.pegOracle()), address(newOracle));
         _assertIRState(stateBefore);
         assertEq(logs.length, 1);
         _assertSetPegOracleEvent(logs[0], address(oracle), address(newOracle));
@@ -86,7 +86,7 @@ contract PegResponsiveIrmSetPegOracleTest is PegResponsiveIrmCommon {
 
         _setPegOracleAsOwner(address(newOracle));
 
-        assertEq(address(irm.oracle()), address(newOracle));
+        assertEq(address(irm.pegOracle()), address(newOracle));
         assertEq(market.accrueInterestCalls(), 0);
     }
 
@@ -100,7 +100,7 @@ contract PegResponsiveIrmSetPegOracleTest is PegResponsiveIrmCommon {
         vm.expectRevert(_pausedQueryRevertData());
         irm.setPegOracle(address(newOracle));
 
-        assertEq(address(irm.oracle()), address(oracle));
+        assertEq(address(irm.pegOracle()), address(oracle));
         _assertIRState(stateBefore);
     }
 
@@ -114,7 +114,7 @@ contract PegResponsiveIrmSetPegOracleTest is PegResponsiveIrmCommon {
         vm.expectRevert();
         irm.setPegOracle(address(newOracle));
 
-        assertEq(address(irm.oracle()), address(oracle));
+        assertEq(address(irm.pegOracle()), address(oracle));
         _assertIRState(stateBefore);
     }
 
@@ -138,7 +138,7 @@ contract PegResponsiveIrmSetPegOracleTest is PegResponsiveIrmCommon {
         );
         irm.setPegOracle(address(newOracle));
 
-        assertEq(address(irm.oracle()), address(oracle));
+        assertEq(address(irm.pegOracle()), address(oracle));
         _assertIRState(stateBefore);
     }
 
@@ -176,7 +176,7 @@ contract PegResponsiveIrmSetPegOracleTest is PegResponsiveIrmCommon {
             stressMode: checkpointState.stressMode
         });
 
-        assertEq(address(irm.oracle()), address(newOracle));
+        assertEq(address(irm.pegOracle()), address(newOracle));
         assertEq(market.accrueInterestCalls(), 1);
         assertEq(market.lastBorrowRate(), seededState.borrowRate);
         assertEq(market.lastInterest(), 0);
@@ -207,7 +207,7 @@ contract PegResponsiveIrmSetPegOracleTest is PegResponsiveIrmCommon {
         _setPegOracleAsOwner(address(oracle));
         Vm.Log[] memory logs = vm.getRecordedLogs();
 
-        assertEq(address(irm.oracle()), address(oracle));
+        assertEq(address(irm.pegOracle()), address(oracle));
         assertEq(market.accrueInterestCalls(), 1);
         assertEq(logs.length, 3);
         _assertIrmEvent(logs[0], IPegResponsiveIrmEvents.BorrowRateUpdated.selector);
@@ -222,7 +222,7 @@ contract PegResponsiveIrmSetPegOracleTest is PegResponsiveIrmCommon {
 
         _setPegOracleAsOwner(noCodeOracle);
 
-        assertEq(address(irm.oracle()), noCodeOracle);
+        assertEq(address(irm.pegOracle()), noCodeOracle);
         vm.expectRevert();
         irm.previewBorrowRate();
     }

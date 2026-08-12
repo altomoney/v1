@@ -88,26 +88,26 @@ interface IPegResponsiveIrmBase is IIrm, IPegResponsiveIrmErrors, IPegResponsive
     function MAX_EXPONENT_INPUT() external view returns (uint256);
 
     /// @notice Returns the active DUSD/quoteToken peg oracle.
-    function oracle() external view returns (address);
+    function pegOracle() external view returns (address);
 
     /// @notice Returns the market bound to this interest-rate model.
     function market() external view returns (address);
 
     /// @notice Changes the oracle after checkpointing the old configuration.
-    /// @param _newOracle The address of the new oracle.
+    /// @param newPegOracle The address of the new peg oracle.
     /// @dev Requirements:
     /// - Only callable by the contract owner.
     /// - New oracle address cannot be the zero address.
-    function setPegOracle(address _newOracle) external;
+    function setPegOracle(address newPegOracle) external;
 
     /// @notice Changes the price curve and controller configuration.
-    /// @param _newConfig The new curve configuration to apply.
+    /// @param newConfig The new IRM configuration to apply.
     /// @dev Recovery confirmation is restarted under the new configuration.
     /// @dev Requirements:
     /// - Only callable by the contract owner.
     /// - Configuration is validated according to `_validateConfig`.
     /// - The new max rate must be greater than, or equal to, the current borrow rate.
-    function setIrmConfig(PegResponsiveIrmConfig calldata _newConfig) external;
+    function setIrmConfig(PegResponsiveIrmConfig calldata newConfig) external;
 
     /// @notice Previews the oracle observation and rate that would be stored by a checkpoint.
     /// @return priceWad Valid DUSD/quoteToken price, or zero for an unusable observation.
@@ -120,13 +120,13 @@ interface IPegResponsiveIrmBase is IIrm, IPegResponsiveIrmErrors, IPegResponsive
         returns (uint256 priceWad, uint48 observedAt, bool oracleValid, uint256 borrowRate);
 
     /// @notice Returns the raw target SPY rate for a given DUSD/quoteToken price.
-    /// @param _priceWad The price at which the rate will be calculated.
+    /// @param priceWad The price at which the rate will be calculated.
     /// @dev The rate curve has three regions:
     /// - At or above the recovery price: fixed at the base rate.
     /// - Between recovery and stress: linearly increases to the stress rate.
     /// - Below stress: exponentially increases, capped at the maximum rate.
     /// @dev Stress-mode hysteresis is handled separately.
-    function targetBorrowRate(uint256 _priceWad) external view returns (uint256 borrowRate);
+    function targetBorrowRate(uint256 priceWad) external view returns (uint256 borrowRate);
 }
 
 /// @title IPegResponsiveIrm

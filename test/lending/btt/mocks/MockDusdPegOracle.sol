@@ -15,15 +15,15 @@ contract MockDusdPegOracle is IDusdPegOracle {
     bool private s_getPriceReverts;
 
     /// @notice Sets the exact observation returned by `getPrice`.
-    function setPrice(uint256 priceWad_, uint48 observedAt_, bool valid_) external {
-        s_priceWad = priceWad_;
-        s_observedAt = observedAt_;
-        s_valid = valid_;
+    function setPrice(uint256 priceWad, uint48 observedAt, bool valid) external {
+        s_priceWad = priceWad;
+        s_observedAt = observedAt;
+        s_valid = valid;
     }
 
     /// @notice Enables or disables a revert from `getPrice`.
-    function setGetPriceReverts(bool reverts_) external {
-        s_getPriceReverts = reverts_;
+    function setGetPriceReverts(bool reverts) external {
+        s_getPriceReverts = reverts;
     }
 
     /// @inheritdoc IDusdPegOracle

@@ -72,7 +72,7 @@ contract PegResponsiveIrm is AltoOwnable2Step, IPegResponsiveIrmStaticTypes {
     uint256 public constant MAX_EXPONENT_INPUT = 50e18;
 
     /// @inheritdoc IPegResponsiveIrmBase
-    address public oracle;
+    address public pegOracle;
 
     /// @inheritdoc IPegResponsiveIrmStaticTypes
     PegResponsiveIrmConfig public irmConfig;
@@ -84,44 +84,46 @@ contract PegResponsiveIrm is AltoOwnable2Step, IPegResponsiveIrmStaticTypes {
     address public market;
 
     /// @notice Constructor.
-    /// @param _oracle          Oracle returning a validated, timestamped DUSD/quoteToken price.
-    /// @param _config          Initial curve, recovery, and oracle-freshness configuration.
-    /// @param _initialOwner    Owner of the IRM.
-    constructor(address _oracle, PegResponsiveIrmConfig memory _config, address _initialOwner) Ownable(_initialOwner) {
-        if (_oracle == address(0)) revert PegResponsiveIrmInvalidOracle();
-        _validateConfig(_config);
+    /// @param initialPegOracle Oracle returning a validated, timestamped DUSD/quoteToken price.
+    /// @param initialConfig Initial curve, recovery, and oracle-freshness configuration.
+    /// @param initialOwner Owner of the IRM.
+    constructor(address initialPegOracle, PegResponsiveIrmConfig memory initialConfig, address initialOwner)
+        Ownable(initialOwner)
+    {
+        if (initialPegOracle == address(0)) revert PegResponsiveIrmInvalidOracle();
+        _validateConfig(initialConfig);
 
-        oracle = _oracle;
-        irmConfig = _config;
-        irState.borrowRate = _config.baseRate;
+        pegOracle = initialPegOracle;
+        irmConfig = initialConfig;
+        irState.borrowRate = initialConfig.baseRate;
 
-        emit SetPegOracle(address(0), _oracle);
-        emit SetIrmConfig(_config);
+        emit SetPegOracle(address(0), initialPegOracle);
+        emit SetIrmConfig(initialConfig);
         emit IRStateUpdated(irState);
     }
 
     /// @inheritdoc IIrm
-    function setMarket(address _market) external {
+    function setMarket(address newMarket) external {
         // No access control: Mirrors current IRM design. Must be deployed and
         // set in one transaction to avoid frontrunning.
         if (market != address(0)) revert IrmMarketAlreadySet();
-        if (_market == address(0)) revert IrmInvalidParams();
+        if (newMarket == address(0)) revert IrmInvalidParams();
 
-        market = _market;
+        market = newMarket;
         irState.lastUpdate = block.timestamp.toUint48();
 
         emit IRStateUpdated(irState);
     }
 
     /// @inheritdoc IIrm
-    function onMarketPause(bool _paused) external {
+    function onMarketPause(bool paused) external {
         if (msg.sender != market) revert IrmUnauthorized();
 
         // The market checkpoints immediately before pausing. Resetting on
         // unpause prevents interest from being charged for the paused interval.
         // Recovery confirmation is also restarted because no observations were
         // processed while the market was paused.
-        if (!_paused) {
+        if (!paused) {
             irState.lastUpdate = block.timestamp.toUint48();
             _resetRecoveryConfirmation();
             emit IRStateUpdated(irState);
@@ -129,43 +131,43 @@ contract PegResponsiveIrm is AltoOwnable2Step, IPegResponsiveIrmStaticTypes {
     }
 
     /// @inheritdoc IIrm
-    function updateInterestRateView(uint256 _totalSupply, uint256 _totalBorrowed)
+    function updateInterestRateView(uint256 totalSupply, uint256 totalBorrowed)
         external
         view
         returns (uint256 interest, uint256 borrowRate)
     {
-        return _accrueInterest(_totalSupply, _totalBorrowed);
+        return _accrueInterest(totalSupply, totalBorrowed);
     }
 
     /// @inheritdoc IIrm
-    function updateInterestRate(uint256 _totalSupply, uint256 _totalBorrowed)
+    function updateInterestRate(uint256 totalSupply, uint256 totalBorrowed)
         external
         returns (uint256 interest, uint256 borrowRate)
     {
         if (msg.sender != market) revert IrmUnauthorized();
-        return _updateInterestRate(_totalSupply, _totalBorrowed);
+        return _updateInterestRate(totalSupply, totalBorrowed);
     }
 
     /// @inheritdoc IPegResponsiveIrmBase
-    function setPegOracle(address _newOracle) external onlyOwner {
-        if (_newOracle == address(0)) revert PegResponsiveIrmInvalidOracle();
+    function setPegOracle(address newPegOracle) external onlyOwner {
+        if (newPegOracle == address(0)) revert PegResponsiveIrmInvalidOracle();
 
         _checkpointMarket();
 
-        emit SetPegOracle(oracle, _newOracle);
-        oracle = _newOracle;
+        emit SetPegOracle(pegOracle, newPegOracle);
+        pegOracle = newPegOracle;
         if (_resetRecoveryConfirmation()) emit IRStateUpdated(irState);
     }
 
     /// @inheritdoc IPegResponsiveIrmBase
-    function setIrmConfig(PegResponsiveIrmConfig calldata _newConfig) external onlyOwner {
-        _validateConfig(_newConfig);
+    function setIrmConfig(PegResponsiveIrmConfig calldata newConfig) external onlyOwner {
+        _validateConfig(newConfig);
         _checkpointMarket();
-        if (irState.borrowRate > _newConfig.maxRate) revert PegResponsiveIrmInvalidRateConfig();
+        if (irState.borrowRate > newConfig.maxRate) revert PegResponsiveIrmInvalidRateConfig();
 
-        irmConfig = _newConfig;
+        irmConfig = newConfig;
         if (_resetRecoveryConfirmation()) emit IRStateUpdated(irState);
-        emit SetIrmConfig(_newConfig);
+        emit SetIrmConfig(newConfig);
     }
 
     /// @inheritdoc IPegResponsiveIrmBase
@@ -185,17 +187,17 @@ contract PegResponsiveIrm is AltoOwnable2Step, IPegResponsiveIrmStaticTypes {
     }
 
     /// @inheritdoc IPegResponsiveIrmBase
-    function targetBorrowRate(uint256 _priceWad) public view returns (uint256 borrowRate) {
+    function targetBorrowRate(uint256 priceWad) public view returns (uint256 borrowRate) {
         PegResponsiveIrmConfig memory config = irmConfig;
 
         // 1. Healthy price region: use the minimum configured borrow rate.
-        if (_priceWad >= config.recoveryPrice) {
+        if (priceWad >= config.recoveryPrice) {
             return config.baseRate;
         }
 
         // 2. Recovery-to-stress region: linearly interpolate from baseRate to stressRate.
-        if (_priceWad >= config.stressPrice) {
-            uint256 drop = config.recoveryPrice - _priceWad;
+        if (priceWad >= config.stressPrice) {
+            uint256 drop = config.recoveryPrice - priceWad;
             uint256 width = config.recoveryPrice - config.stressPrice;
             uint256 pos = Math.mulDiv(drop, WAD, width);
             uint256 rateRange = config.stressRate - config.baseRate;
@@ -204,7 +206,7 @@ contract PegResponsiveIrm is AltoOwnable2Step, IPegResponsiveIrmStaticTypes {
         }
 
         // 3. Stress region: increase the stress rate exponentially as price falls.
-        uint256 stressDrop = config.stressPrice - _priceWad;
+        uint256 stressDrop = config.stressPrice - priceWad;
 
         // Convert the price decline into the input for e^x:
         //
@@ -231,10 +233,10 @@ contract PegResponsiveIrm is AltoOwnable2Step, IPegResponsiveIrmStaticTypes {
     /// @dev Calculates interest using the rate that was active throughout the
     /// elapsed interval.
     /// @dev The unused supply argument preserves parity with the IRM update interface.
-    /// @param _totalBorrowed The market's total outstanding debt before accrual.
+    /// @param totalBorrowed The market's total outstanding debt before accrual.
     /// @return interest    The interest accrued since the previous update.
     /// @return borrowRate  The stored borrow rate used to calculate the interest.
-    function _accrueInterest(uint256, uint256 _totalBorrowed)
+    function _accrueInterest(uint256, uint256 totalBorrowed)
         private
         view
         returns (uint256 interest, uint256 borrowRate)
@@ -243,22 +245,22 @@ contract PegResponsiveIrm is AltoOwnable2Step, IPegResponsiveIrmStaticTypes {
 
         borrowRate = irState.borrowRate;
         uint256 dt = block.timestamp - irState.lastUpdate;
-        interest = _totalBorrowed.multiplyWithPrecision(borrowRate.calculateCompoundInterest(dt));
+        interest = totalBorrowed.multiplyWithPrecision(borrowRate.calculateCompoundInterest(dt));
 
         return (interest, borrowRate);
     }
 
     /// @dev Accrues the old rate first, then stores the oracle-driven rate for
     /// the next interval.
-    /// @param _totalSupply     The market's total supplied assets before accrual.
-    /// @param _totalBorrowed   The market's total outstanding debt before accrual.
+    /// @param totalSupply The market's total supplied assets before accrual.
+    /// @param totalBorrowed The market's total outstanding debt before accrual.
     /// @return interest    The interest accrued using the previously stored rate.
     /// @return borrowRate  The previously stored borrow rate used for the elapsed interval.
-    function _updateInterestRate(uint256 _totalSupply, uint256 _totalBorrowed)
+    function _updateInterestRate(uint256 totalSupply, uint256 totalBorrowed)
         private
         returns (uint256 interest, uint256 borrowRate)
     {
-        (interest, borrowRate) = _accrueInterest(_totalSupply, _totalBorrowed);
+        (interest, borrowRate) = _accrueInterest(totalSupply, totalBorrowed);
 
         (uint256 priceWad, uint48 observedAt, bool oracleValid) = _readPegPrice();
         bool nextStressMode = _applyStressState(priceWad, oracleValid);
@@ -280,11 +282,11 @@ contract PegResponsiveIrm is AltoOwnable2Step, IPegResponsiveIrmStaticTypes {
     /// @dev Returns the controller state implied by the latest observation.
     /// Invalid observations keep stress mode active but interrupt recovery
     /// confirmation.
-    /// @param _priceWad    The latest reported DUSD/quoteToken price, using 1e18 precision.
-    /// @param _oracleValid Whether the latest oracle observation is usable.
+    /// @param priceWad The latest reported DUSD/quoteToken price, using 1e18 precision.
+    /// @param oracleValid Whether the latest oracle observation is usable.
     /// @return stressMode          Whether the controller should be in stress mode.
     /// @return recoveryStartedAt   The recovery confirmation start time, or zero when inactive.
-    function _nextStressState(uint256 _priceWad, bool _oracleValid)
+    function _nextStressState(uint256 priceWad, bool oracleValid)
         private
         view
         returns (bool stressMode, uint48 recoveryStartedAt)
@@ -296,7 +298,7 @@ contract PegResponsiveIrm is AltoOwnable2Step, IPegResponsiveIrmStaticTypes {
         //
         // Reset the recovery timestamp so an invalid observation cannot count
         // towards completing recovery.
-        if (!_oracleValid) {
+        if (!oracleValid) {
             return (state.stressMode, 0);
         }
 
@@ -304,7 +306,7 @@ contract PegResponsiveIrm is AltoOwnable2Step, IPegResponsiveIrmStaticTypes {
         if (!state.stressMode) {
             // The price has reached or fallen below the stress threshold.
             // Enter stress mode with no recovery timer running.
-            if (_priceWad <= config.stressPrice) return (true, 0);
+            if (priceWad <= config.stressPrice) return (true, 0);
 
             // The price is still above the stress threshold. Remain outside
             // stress mode.
@@ -315,7 +317,7 @@ contract PegResponsiveIrm is AltoOwnable2Step, IPegResponsiveIrmStaticTypes {
 
         // The price has not yet reached the recovery threshold.
         // Remain stressed and cancel any recovery timer that may have started.
-        if (_priceWad < config.recoveryPrice) {
+        if (priceWad < config.recoveryPrice) {
             return (true, 0);
         }
 
@@ -339,33 +341,33 @@ contract PegResponsiveIrm is AltoOwnable2Step, IPegResponsiveIrmStaticTypes {
     }
 
     /// @dev Applies and emits the stress state implied by the latest observation.
-    /// @param _priceWad    The latest reported DUSD/quoteToken price, using 1e18 precision.
-    /// @param _oracleValid Whether the latest oracle observation is usable.
+    /// @param priceWad The latest reported DUSD/quoteToken price, using 1e18 precision.
+    /// @param oracleValid Whether the latest oracle observation is usable.
     /// @return stressMode Whether the controller is in stress mode after the update.
-    function _applyStressState(uint256 _priceWad, bool _oracleValid) private returns (bool stressMode) {
+    function _applyStressState(uint256 priceWad, bool oracleValid) private returns (bool stressMode) {
         bool previousStressMode = irState.stressMode;
         uint48 previousRecoveryStartedAt = irState.recoveryStartedAt;
 
-        (bool nextStressMode, uint48 nextRecoveryStartedAt) = _nextStressState(_priceWad, _oracleValid);
+        (bool nextStressMode, uint48 nextRecoveryStartedAt) = _nextStressState(priceWad, oracleValid);
 
         irState.stressMode = nextStressMode;
         irState.recoveryStartedAt = nextRecoveryStartedAt;
 
         if (previousStressMode != nextStressMode || previousRecoveryStartedAt != nextRecoveryStartedAt) {
-            emit StressStateUpdated(nextStressMode, nextRecoveryStartedAt, _priceWad);
+            emit StressStateUpdated(nextStressMode, nextRecoveryStartedAt, priceWad);
         }
 
         return nextStressMode;
     }
 
     /// @dev Applies the stress-mode floor to the raw price-derived target.
-    /// @param _priceWad    The latest valid DUSD/quoteToken price, using 1e18 precision.
-    /// @param _stressMode  Whether the controller is currently in stress mode.
+    /// @param priceWad The latest valid DUSD/quoteToken price, using 1e18 precision.
+    /// @param stressMode Whether the controller is currently in stress mode.
     /// @return borrowRate The price-derived target rate after applying the stress floor.
-    function _effectiveTargetRate(uint256 _priceWad, bool _stressMode) private view returns (uint256 borrowRate) {
-        uint256 targetRate = targetBorrowRate(_priceWad);
+    function _effectiveTargetRate(uint256 priceWad, bool stressMode) private view returns (uint256 borrowRate) {
+        uint256 targetRate = targetBorrowRate(priceWad);
 
-        if (_stressMode && targetRate < irmConfig.stressRate) {
+        if (stressMode && targetRate < irmConfig.stressRate) {
             return irmConfig.stressRate;
         }
 
@@ -388,18 +390,21 @@ contract PegResponsiveIrm is AltoOwnable2Step, IPegResponsiveIrmStaticTypes {
     /// @return observedAt  The oracle observation timestamp, or zero when the oracle call reverts.
     /// @return valid       Whether the observation passed all validation checks.
     function _readPegPrice() private view returns (uint256 priceWad, uint48 observedAt, bool valid) {
-        try IDusdPegOracle(oracle).getPrice() returns (uint256 _priceWad, uint48 _observedAt, bool _valid) {
-            observedAt = _observedAt;
+        try IDusdPegOracle(pegOracle).getPrice() returns (
+            uint256 reportedPriceWad, uint48 reportedAt, bool observationValid
+        ) {
+            observedAt = reportedAt;
 
-            if (!_valid || _priceWad == 0 || _observedAt == 0 || uint256(_observedAt) > block.timestamp) {
+            if (!observationValid || reportedPriceWad == 0 || reportedAt == 0 || uint256(reportedAt) > block.timestamp)
+            {
                 return (0, observedAt, false);
             }
 
-            if (block.timestamp - uint256(_observedAt) > irmConfig.maxOracleAge) {
+            if (block.timestamp - uint256(reportedAt) > irmConfig.maxOracleAge) {
                 return (0, observedAt, false);
             }
 
-            return (_priceWad, observedAt, true);
+            return (reportedPriceWad, observedAt, true);
         } catch {
             return (0, 0, false);
         }
@@ -407,8 +412,8 @@ contract PegResponsiveIrm is AltoOwnable2Step, IPegResponsiveIrmStaticTypes {
 
     /// @dev Reverts when curve thresholds, rates, or controller timings are
     /// outside supported bounds.
-    /// @param _config The curve configuration to validate.
-    function _validateConfig(PegResponsiveIrmConfig memory _config) private pure {
+    /// @param config The IRM configuration to validate.
+    function _validateConfig(PegResponsiveIrmConfig memory config) private pure {
         // stressPrice must be nonzero and strictly below recoveryPrice.
         // Equal thresholds would make the linear bridge divide by zero, while
         // reversed thresholds would invalidate the ordering of the curve regions.
@@ -424,24 +429,24 @@ contract PegResponsiveIrm is AltoOwnable2Step, IPegResponsiveIrmStaticTypes {
 
         // forgefmt: disable-next-item
         if (
-            _config.stressPrice == 0 ||
-            _config.recoveryPrice > MAX_RECOVERY_PRICE ||
-            _config.stressPrice >= _config.recoveryPrice
+            config.stressPrice == 0 ||
+            config.recoveryPrice > MAX_RECOVERY_PRICE ||
+            config.stressPrice >= config.recoveryPrice
         ) {
             revert PegResponsiveIrmInvalidPriceConfig();
         }
 
         // forgefmt: disable-next-item
         if (
-            _config.baseRate == 0 ||
-            _config.baseRate > _config.stressRate ||
-            _config.stressRate >= _config.maxRate ||
-            _config.maxRate > MAX_BORROW_RATE
+            config.baseRate == 0 ||
+            config.baseRate > config.stressRate ||
+            config.stressRate >= config.maxRate ||
+            config.maxRate > MAX_BORROW_RATE
         ) {
             revert PegResponsiveIrmInvalidRateConfig();
         }
 
-        if (_config.doublingDistance == 0 || _config.recoveryDelay == 0 || _config.maxOracleAge == 0) {
+        if (config.doublingDistance == 0 || config.recoveryDelay == 0 || config.maxOracleAge == 0) {
             revert PegResponsiveIrmInvalidControllerConfig();
         }
     }
