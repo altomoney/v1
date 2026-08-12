@@ -56,6 +56,8 @@ address constant CHAINLINK_USDC_USD_PRICE_FEED = 0x8fFfFfd4AfB6115b954Bd326cbe7B
 address constant CHAINLINK_PAXG_USD_PRICE_FEED = 0x9944D86CEB9160aF5C5feB251FD671923323f8C3;
 // ReProtocolExchangeRateChainlinkAdapter feed by Re-protocol
 address constant CHAINLINK_REUSD_USD_PRICE_FEED = 0x72B5760cFBE437DD01409f44055fDfB8f8121B46;
+// Standard Chainlink FRXUSD/USD feed
+address constant CHAINLINK_FRXUSD_USD_PRICE_FEED = 0x9B4a96210bc8D9D55b1908B465D8B0de68B7fF83;
 
 // Miscellaneous
 // 0x.org swap target for Ethereum mainnet

@@ -25,15 +25,12 @@ import {
     ERC4626RatioChainlinkOracleSUSDE,
     IERC4626
 } from "@alto/oracles/AltoERC4626RatioChainlinkOracle/implementations/ERC4626RatioChainlinkOracleSUSDE.sol";
-import {
-    ISyrupAsset
-} from "@alto/oracles/AltoERC4626RatioChainlinkOracle/implementations/ERC4626RatioChainlinkOracleSYRUPUSDC.sol";
-import {
-    ERC4626RatioChainlinkOracleSYRUPUSDC
-} from "@alto/oracles/AltoERC4626RatioChainlinkOracle/implementations/ERC4626RatioChainlinkOracleSYRUPUSDC.sol";
-import {
-    AltoChainlinkERC4626RatioMultiplierOracle
-} from "@alto/oracles/AltoChainlinkERC4626RatioMultiplierOracle/AltoChainlinkERC4626RatioMultiplierOracle.sol";
+import {ISyrupAsset} from
+    "@alto/oracles/AltoERC4626RatioChainlinkOracle/implementations/ERC4626RatioChainlinkOracleSYRUPUSDC.sol";
+import {ERC4626RatioChainlinkOracleSYRUPUSDC} from
+    "@alto/oracles/AltoERC4626RatioChainlinkOracle/implementations/ERC4626RatioChainlinkOracleSYRUPUSDC.sol";
+import {AltoChainlinkERC4626RatioMultiplierOracle} from
+    "@alto/oracles/AltoChainlinkERC4626RatioMultiplierOracle/AltoChainlinkERC4626RatioMultiplierOracle.sol";
 
 import {
     CHAINLINK_ETH_USD_PRICE_FEED,
@@ -43,6 +40,7 @@ import {
     CHAINLINK_USDC_USD_PRICE_FEED,
     CHAINLINK_PAXG_USD_PRICE_FEED,
     CHAINLINK_REUSD_USD_PRICE_FEED,
+    CHAINLINK_FRXUSD_USD_PRICE_FEED,
     WSTETH_MAINNET,
     RETH_MAINNET,
     METH_STAKING_MAINNET,
@@ -61,7 +59,8 @@ enum EthereumMainnetLendingOracleAsset {
     stETH,
     SYRUPUSDC,
     PAXG,
-    REUSD
+    REUSD,
+    FRXUSD
 }
 
 library EthereumMainnetOracleDeployer {
@@ -88,6 +87,8 @@ library EthereumMainnetOracleDeployer {
             return deployPaxgOracle(owner);
         } else if (asset == EthereumMainnetLendingOracleAsset.REUSD) {
             return deployReusdOracle(owner);
+        } else if (asset == EthereumMainnetLendingOracleAsset.FRXUSD) {
+            return deployFrxUsdOracle(owner);
         }
 
         revert("Invalid asset");
@@ -309,9 +310,23 @@ library EthereumMainnetOracleDeployer {
 
         // the decimals of reUSD is 18, so we want output in 36 decimals since decimals of DUSD is also 18
         // the decimals of chainlink node output is 18, so we want to multiply by 10 ** 18 to get the price in 36 decimals
-        return
-            address(
-                new AltoChainlinkERC4626RatioMultiplierOracle(owner, chainlinkNode, erc4626RatioNode, multiplierNode)
-            );
+        return address(
+            new AltoChainlinkERC4626RatioMultiplierOracle(owner, chainlinkNode, erc4626RatioNode, multiplierNode)
+        );
+    }
+
+    function deployFrxUsdOracle(address owner) internal returns (address) {
+        ChainlinkNode[] memory chainlinkNodes = new ChainlinkNode[](1);
+
+        chainlinkNodes[0] = ChainlinkNode({
+            feed: AggregatorV3Interface(CHAINLINK_FRXUSD_USD_PRICE_FEED),
+            direction: ConversionDirection.IN_TO_OUT, // FRXUSD to USD
+            stalePeriod: 86700, // 86700 seconds
+            inDecimals: 18, // FRXUSD decimals
+            outDecimals: 36, // LENDING_ORACLE_PRICE_PRECISION + DUSD decimals - FRXUSD decimals
+            feedDecimals: 8
+        });
+
+        return address(new AltoMultiChainlinkLendingOracle(owner, chainlinkNodes));
     }
 }
