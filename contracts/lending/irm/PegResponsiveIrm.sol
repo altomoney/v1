@@ -190,22 +190,16 @@ contract PegResponsiveIrm is AltoOwnable2Step, IPegResponsiveIrmStaticTypes {
     function targetBorrowRate(uint256 priceWad) public view returns (uint256 borrowRate) {
         PegResponsiveIrmConfig memory config = irmConfig;
 
-        // 1. Healthy price region: use the minimum configured borrow rate.
-        if (priceWad >= config.recoveryPrice) {
-            return config.baseRate;
-        }
+        if (priceWad >= config.recoveryPrice) return config.baseRate;
 
-        // 2. Recovery-to-stress region: linearly interpolate from baseRate to stressRate.
         if (priceWad >= config.stressPrice) {
-            uint256 drop = config.recoveryPrice - priceWad;
-            uint256 width = config.recoveryPrice - config.stressPrice;
-            uint256 pos = Math.mulDiv(drop, WAD, width);
-            uint256 rateRange = config.stressRate - config.baseRate;
+            uint256 position =
+                Math.mulDiv(config.recoveryPrice - priceWad, WAD, config.recoveryPrice - config.stressPrice);
+            uint256 rateIncrease = Math.mulDiv(config.stressRate - config.baseRate, position, WAD);
 
-            return config.baseRate + Math.mulDiv(rateRange, pos, WAD);
+            return config.baseRate + rateIncrease;
         }
 
-        // 3. Stress region: increase the stress rate exponentially as price falls.
         uint256 stressDrop = config.stressPrice - priceWad;
 
         // Convert the price decline into the input for e^x:
@@ -213,13 +207,10 @@ contract PegResponsiveIrm is AltoOwnable2Step, IPegResponsiveIrmStaticTypes {
         //      2^n = e^(ln(2) * n)
         //
         // where n is the number of configured doubling distances below stressPrice.
-        uint256 exp = Math.mulDiv(LN_2_WAD, stressDrop, config.doublingDistance);
-        exp = Math.min(exp, MAX_EXPONENT_INPUT);
+        uint256 exponent = Math.min(Math.mulDiv(LN_2_WAD, stressDrop, config.doublingDistance), MAX_EXPONENT_INPUT);
+        uint256 multiplier = ExpLib.wExp(exponent.toInt256()).toUint256();
 
-        uint256 mul = ExpLib.wExp(exp.toInt256()).toUint256();
-        uint256 uncappedRate = Math.mulDiv(config.stressRate, mul, WAD);
-
-        return Math.min(uncappedRate, config.maxRate);
+        return Math.min(Math.mulDiv(config.stressRate, multiplier, WAD), config.maxRate);
     }
 
     /// @dev Checkpoints the active market before an owner changes controller inputs.
@@ -317,12 +308,7 @@ contract PegResponsiveIrm is AltoOwnable2Step, IPegResponsiveIrmStaticTypes {
     /// @return borrowRate The price-derived target rate after applying the stress floor.
     function _effectiveTargetRate(uint256 priceWad, bool stressMode) private view returns (uint256 borrowRate) {
         uint256 targetRate = targetBorrowRate(priceWad);
-
-        if (stressMode && targetRate < irmConfig.stressRate) {
-            return irmConfig.stressRate;
-        }
-
-        return targetRate;
+        return stressMode ? Math.max(targetRate, irmConfig.stressRate) : targetRate;
     }
 
     /// @dev Interrupts an in-progress recovery confirmation.
