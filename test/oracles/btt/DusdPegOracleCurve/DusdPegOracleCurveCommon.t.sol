@@ -6,7 +6,7 @@ import {Test} from "forge-std/Test.sol";
 
 import {DusdPegOracleCurve} from "@alto/oracles/dusd/DusdPegOracleCurve.sol";
 import {
-    DusdPegOracleCurveConfig,
+    DusdPegOracleCurveRuntimeConfig,
     DusdPegOracleCurveValidationConfig
 } from "@alto/oracles/dusd/interfaces/IDusdPegOracleCurve.sol";
 import {ICurveStableSwapNGOracle as ICurveStableSwap} from "@alto/interfaces/curve/ICurveStableSwapNG.sol";
@@ -42,7 +42,7 @@ abstract contract DusdPegOracleCurveCommon is Test {
     MockCurveStableSwapNG internal pool;
     MockCurveStableSwapFactory internal factory;
     DusdPegOracleCurve internal oracle;
-    DusdPegOracleCurveConfig internal oracleConfig;
+    DusdPegOracleCurveRuntimeConfig internal runtimeConfig;
     DusdPegOracleCurveValidationConfig internal oracleValidationConfig;
 
     function setUp() public virtual {
@@ -50,18 +50,16 @@ abstract contract DusdPegOracleCurveCommon is Test {
 
         pool = new MockCurveStableSwapNG(_addressArray(QUOTE_TOKEN, DUSD), MA_EXP_TIME, A_PRECISE);
         factory = new MockCurveStableSwapFactory();
-        oracleConfig = _validConfig();
+        runtimeConfig = _validRuntimeConfig();
         oracleValidationConfig = _validValidationConfig();
 
         _setValidPoolState();
         _setValidFactoryState();
-        oracle = _deployOracle(true);
+        oracle = _deployOracle();
     }
 
-    function _validConfig() internal view returns (DusdPegOracleCurveConfig memory config) {
-        config = DusdPegOracleCurveConfig({
-            curvePool: address(pool), expectedMaExpTime: MA_EXP_TIME, expectedAPrecise: A_PRECISE
-        });
+    function _validRuntimeConfig() internal pure returns (DusdPegOracleCurveRuntimeConfig memory config) {
+        config = DusdPegOracleCurveRuntimeConfig({expectedMaExpTime: MA_EXP_TIME, expectedAPrecise: A_PRECISE});
     }
 
     function _validValidationConfig() internal view returns (DusdPegOracleCurveValidationConfig memory config) {
@@ -73,24 +71,32 @@ abstract contract DusdPegOracleCurveCommon is Test {
         });
     }
 
-    function _deployOracle(bool runtimeChecksEnabled) internal returns (DusdPegOracleCurve deployedOracle) {
-        return _deployOracle(oracleConfig, runtimeChecksEnabled, OWNER);
+    function _deployOracle() internal returns (DusdPegOracleCurve deployedOracle) {
+        return _deployOracle(runtimeConfig, OWNER);
     }
 
-    function _deployOracle(DusdPegOracleCurveConfig memory config, bool runtimeChecksEnabled, address initialOwner)
+    function _deployOracle(DusdPegOracleCurveRuntimeConfig memory config, address initialOwner)
         internal
         returns (DusdPegOracleCurve deployedOracle)
     {
-        return _deployOracle(config, oracleValidationConfig, runtimeChecksEnabled, initialOwner);
+        return _deployOracle(address(pool), config, oracleValidationConfig, initialOwner);
     }
 
     function _deployOracle(
-        DusdPegOracleCurveConfig memory config,
+        DusdPegOracleCurveRuntimeConfig memory config,
         DusdPegOracleCurveValidationConfig memory validationConfig,
-        bool runtimeChecksEnabled,
         address initialOwner
     ) internal returns (DusdPegOracleCurve deployedOracle) {
-        return new DusdPegOracleCurve(config, validationConfig, runtimeChecksEnabled, initialOwner);
+        return _deployOracle(address(pool), config, validationConfig, initialOwner);
+    }
+
+    function _deployOracle(
+        address curvePoolAddress,
+        DusdPegOracleCurveRuntimeConfig memory config,
+        DusdPegOracleCurveValidationConfig memory validationConfig,
+        address initialOwner
+    ) internal returns (DusdPegOracleCurve deployedOracle) {
+        return new DusdPegOracleCurve(curvePoolAddress, config, validationConfig, initialOwner);
     }
 
     function _setValidPoolState() internal {
@@ -163,6 +169,16 @@ abstract contract DusdPegOracleCurveCommon is Test {
         assertEq(priceWad, expectedPriceWad, "priceWad");
         assertEq(observedAt, expectedObservedAt, "observedAt");
         assertEq(valid, expectedValid, "valid");
+    }
+
+    function _assertRuntimeConfig(
+        DusdPegOracleCurve deployedOracle,
+        uint256 expectedMaExpTime,
+        uint256 expectedAPrecise
+    ) internal view {
+        (uint256 actualMaExpTime, uint256 actualAPrecise) = deployedOracle.runtimeConfig();
+        assertEq(actualMaExpTime, expectedMaExpTime, "expectedMaExpTime");
+        assertEq(actualAPrecise, expectedAPrecise, "expectedAPrecise");
     }
 
     function _maLastTimeCall() internal pure returns (bytes memory) {

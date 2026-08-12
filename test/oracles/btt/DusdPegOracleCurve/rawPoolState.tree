@@ -38,10 +38,8 @@ DusdPegOracleCurve::rawPoolState()
 │   ├── it should return ma_exp_time as maExpTime
 │   ├── it should return A_precise as aPrecise
 │   ├── it should return future_A as futureAPrecise
-│   ├── when prices, timestamps or controller configuration values are zero or inconsistent
-│   │   └── it should return the raw values without validation
-│   └── when runtimeConfigChecksEnabled is either true or false
-│       └── it should return the same snapshot for the same pool responses
+│   └── when prices, timestamps or controller configuration values are zero or inconsistent
+│       └── it should return the raw values without validation
 └── given any successful execution
     ├── it should not modify contract state
     └── it should not emit events

@@ -4,6 +4,7 @@ pragma solidity 0.8.28;
 
 import {
     DusdPegOracleCurveRawPoolState,
+    DusdPegOracleCurveRuntimeConfig,
     IDusdPegOracleCurve,
     IDusdPegOracleCurveBase
 } from "@alto/oracles/dusd/interfaces/IDusdPegOracleCurve.sol";
@@ -29,13 +30,7 @@ contract MockDusdPegOracle is IDusdPegOracleCurve {
     address public override curvePool;
 
     /// @inheritdoc IDusdPegOracleCurveBase
-    uint256 public override expectedMaExpTime;
-
-    /// @inheritdoc IDusdPegOracleCurveBase
-    uint256 public override expectedAPrecise;
-
-    /// @inheritdoc IDusdPegOracleCurveBase
-    bool public override runtimeConfigChecksEnabled;
+    DusdPegOracleCurveRuntimeConfig public override runtimeConfig;
 
     uint256 private s_priceWad;
     uint48 private s_observedAt;
@@ -61,9 +56,9 @@ contract MockDusdPegOracle is IDusdPegOracleCurve {
     }
 
     /// @inheritdoc IDusdPegOracleCurveBase
-    function setRuntimeChecks(bool enabled) external override {
-        runtimeConfigChecksEnabled = enabled;
-        emit SetRuntimeChecks(enabled);
+    function setRuntimeConfig(DusdPegOracleCurveRuntimeConfig calldata newRuntimeConfig) external override {
+        runtimeConfig = newRuntimeConfig;
+        emit SetRuntimeConfig(newRuntimeConfig);
     }
 
     /// @inheritdoc IDusdPegOracleCurve

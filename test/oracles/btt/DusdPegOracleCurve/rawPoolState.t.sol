@@ -131,23 +131,11 @@ contract DusdPegOracleCurveRawPoolStateTest is DusdPegOracleCurveCommon {
         assertEq(state.dusdBalance, 0);
     }
 
-    function test_WhenRuntimeChecksToggle_ItReturnsTheSameSnapshot() external {
-        _mockDistinctRawState();
-
-        DusdPegOracleCurveRawPoolState memory enabledState = oracle.rawPoolState();
-
-        vm.prank(OWNER);
-        oracle.setRuntimeChecks(false);
-        DusdPegOracleCurveRawPoolState memory disabledState = oracle.rawPoolState();
-
-        assertEq(keccak256(abi.encode(disabledState)), keccak256(abi.encode(enabledState)));
-    }
-
     function test_WhenExecutionSucceeds_ItDoesNotModifyStateOrEmitEvents() external {
         _mockDistinctRawState();
         address ownerBefore = oracle.owner();
         address pendingOwnerBefore = oracle.pendingOwner();
-        bool runtimeChecksBefore = oracle.runtimeConfigChecksEnabled();
+        (uint256 expectedMaExpTimeBefore, uint256 expectedAPreciseBefore) = oracle.runtimeConfig();
 
         vm.recordLogs();
         oracle.rawPoolState();
@@ -155,7 +143,7 @@ contract DusdPegOracleCurveRawPoolStateTest is DusdPegOracleCurveCommon {
 
         assertEq(oracle.owner(), ownerBefore);
         assertEq(oracle.pendingOwner(), pendingOwnerBefore);
-        assertEq(oracle.runtimeConfigChecksEnabled(), runtimeChecksBefore);
+        _assertRuntimeConfig(oracle, expectedMaExpTimeBefore, expectedAPreciseBefore);
         assertEq(logs.length, 0);
     }
 
