@@ -141,7 +141,7 @@ When a decision is complete, change its top-level checkbox to `[x]` and replace
 
   **Current behavior**
 
-  `setPegOracle()` and `setCurveConfig()` checkpoint the market under the old
+  `setPegOracle()` and `setIrmConfig()` checkpoint the market under the old
   inputs before installing the new inputs. That checkpoint also installs an
   old-input-derived next rate. The new oracle or curve does not determine the
   live rate until a later checkpoint.

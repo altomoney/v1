@@ -7,7 +7,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 import {IMarketBase} from "@alto/lending/interfaces/IMarket.sol";
 import {
-    CurveConfig,
+    PegResponsiveIrmConfig,
     IRState,
     IPegResponsiveIrmErrors,
     IPegResponsiveIrmEvents
@@ -17,13 +17,13 @@ import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
 import {MockPegResponsiveIrmMarket} from "@alto-test/lending/btt/mocks/MockPegResponsiveIrmMarket.sol";
 import {PegResponsiveIrmCommon} from "./PegResponsiveIrmCommon.t.sol";
 
-contract PegResponsiveIrmSetCurveConfigTest is PegResponsiveIrmCommon {
+contract PegResponsiveIrmSetIrmConfigTest is PegResponsiveIrmCommon {
     error MockPausedQueryReverted(uint256 code);
 
     uint256 private constant PAUSED_REVERT_CODE = 0xC0FFEE;
 
     function test_RevertWhen_CallerIsNotOwner_BeforeValidationOrCheckpoint() external {
-        CurveConfig memory invalidConfig = cfg;
+        PegResponsiveIrmConfig memory invalidConfig = irmConfig;
         invalidConfig.stressPrice = 0;
         _bindMarket();
         _mockPausedQueryRevert();
@@ -31,14 +31,14 @@ contract PegResponsiveIrmSetCurveConfigTest is PegResponsiveIrmCommon {
 
         vm.prank(NON_OWNER);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, NON_OWNER));
-        irm.setCurveConfig(invalidConfig);
+        irm.setIrmConfig(invalidConfig);
 
-        _assertCurveConfig(cfg);
+        _assertIrmConfig(irmConfig);
         _assertIRState(stateBefore);
     }
 
     function test_RevertWhen_CallerIsPendingOwner() external {
-        CurveConfig memory invalidConfig = cfg;
+        PegResponsiveIrmConfig memory invalidConfig = irmConfig;
         invalidConfig.stressPrice = 0;
         vm.prank(OWNER);
         irm.transferOwnership(PENDING_OWNER);
@@ -48,86 +48,86 @@ contract PegResponsiveIrmSetCurveConfigTest is PegResponsiveIrmCommon {
 
         vm.prank(PENDING_OWNER);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, PENDING_OWNER));
-        irm.setCurveConfig(invalidConfig);
+        irm.setIrmConfig(invalidConfig);
 
-        _assertCurveConfig(cfg);
+        _assertIrmConfig(irmConfig);
         _assertIRState(stateBefore);
     }
 
     function test_RevertWhen_StressPriceIsZero() external {
-        CurveConfig memory invalidConfig = cfg;
+        PegResponsiveIrmConfig memory invalidConfig = irmConfig;
         invalidConfig.stressPrice = 0;
         _expectConfigRevert(invalidConfig, IPegResponsiveIrmErrors.PegResponsiveIrmInvalidPriceConfig.selector);
     }
 
     function test_RevertWhen_RecoveryPriceExceedsMaximum() external {
-        CurveConfig memory invalidConfig = cfg;
+        PegResponsiveIrmConfig memory invalidConfig = irmConfig;
         invalidConfig.recoveryPrice = irm.MAX_RECOVERY_PRICE() + 1;
         _expectConfigRevert(invalidConfig, IPegResponsiveIrmErrors.PegResponsiveIrmInvalidPriceConfig.selector);
     }
 
     function test_RevertWhen_StressPriceEqualsRecoveryPrice() external {
-        CurveConfig memory invalidConfig = cfg;
+        PegResponsiveIrmConfig memory invalidConfig = irmConfig;
         invalidConfig.stressPrice = invalidConfig.recoveryPrice;
         _expectConfigRevert(invalidConfig, IPegResponsiveIrmErrors.PegResponsiveIrmInvalidPriceConfig.selector);
     }
 
     function test_RevertWhen_StressPriceExceedsRecoveryPrice() external {
-        CurveConfig memory invalidConfig = cfg;
+        PegResponsiveIrmConfig memory invalidConfig = irmConfig;
         invalidConfig.stressPrice = invalidConfig.recoveryPrice + 1;
         _expectConfigRevert(invalidConfig, IPegResponsiveIrmErrors.PegResponsiveIrmInvalidPriceConfig.selector);
     }
 
     function test_RevertWhen_BaseRateIsZero() external {
-        CurveConfig memory invalidConfig = cfg;
+        PegResponsiveIrmConfig memory invalidConfig = irmConfig;
         invalidConfig.baseRate = 0;
         _expectConfigRevert(invalidConfig, IPegResponsiveIrmErrors.PegResponsiveIrmInvalidRateConfig.selector);
     }
 
     function test_RevertWhen_BaseRateExceedsStressRate() external {
-        CurveConfig memory invalidConfig = cfg;
+        PegResponsiveIrmConfig memory invalidConfig = irmConfig;
         invalidConfig.baseRate = invalidConfig.stressRate + 1;
         _expectConfigRevert(invalidConfig, IPegResponsiveIrmErrors.PegResponsiveIrmInvalidRateConfig.selector);
     }
 
     function test_RevertWhen_StressRateEqualsMaxRate() external {
-        CurveConfig memory invalidConfig = cfg;
+        PegResponsiveIrmConfig memory invalidConfig = irmConfig;
         invalidConfig.stressRate = invalidConfig.maxRate;
         _expectConfigRevert(invalidConfig, IPegResponsiveIrmErrors.PegResponsiveIrmInvalidRateConfig.selector);
     }
 
     function test_RevertWhen_StressRateExceedsMaxRate() external {
-        CurveConfig memory invalidConfig = cfg;
+        PegResponsiveIrmConfig memory invalidConfig = irmConfig;
         invalidConfig.stressRate = invalidConfig.maxRate + 1;
         _expectConfigRevert(invalidConfig, IPegResponsiveIrmErrors.PegResponsiveIrmInvalidRateConfig.selector);
     }
 
     function test_RevertWhen_MaxRateExceedsMaximumBorrowRate() external {
-        CurveConfig memory invalidConfig = cfg;
+        PegResponsiveIrmConfig memory invalidConfig = irmConfig;
         invalidConfig.maxRate = irm.MAX_BORROW_RATE() + 1;
         _expectConfigRevert(invalidConfig, IPegResponsiveIrmErrors.PegResponsiveIrmInvalidRateConfig.selector);
     }
 
     function test_RevertWhen_DoublingDistanceIsZero() external {
-        CurveConfig memory invalidConfig = cfg;
+        PegResponsiveIrmConfig memory invalidConfig = irmConfig;
         invalidConfig.doublingDistance = 0;
         _expectConfigRevert(invalidConfig, IPegResponsiveIrmErrors.PegResponsiveIrmInvalidControllerConfig.selector);
     }
 
     function test_RevertWhen_RecoveryDelayIsZero() external {
-        CurveConfig memory invalidConfig = cfg;
+        PegResponsiveIrmConfig memory invalidConfig = irmConfig;
         invalidConfig.recoveryDelay = 0;
         _expectConfigRevert(invalidConfig, IPegResponsiveIrmErrors.PegResponsiveIrmInvalidControllerConfig.selector);
     }
 
     function test_RevertWhen_MaxOracleAgeIsZero() external {
-        CurveConfig memory invalidConfig = cfg;
+        PegResponsiveIrmConfig memory invalidConfig = irmConfig;
         invalidConfig.maxOracleAge = 0;
         _expectConfigRevert(invalidConfig, IPegResponsiveIrmErrors.PegResponsiveIrmInvalidControllerConfig.selector);
     }
 
     function test_RevertWhen_PriceAndLaterGroupsAreInvalid_PrioritizesPriceError() external {
-        CurveConfig memory invalidConfig = cfg;
+        PegResponsiveIrmConfig memory invalidConfig = irmConfig;
         invalidConfig.stressPrice = 0;
         invalidConfig.baseRate = 0;
         invalidConfig.maxOracleAge = 0;
@@ -135,14 +135,14 @@ contract PegResponsiveIrmSetCurveConfigTest is PegResponsiveIrmCommon {
     }
 
     function test_RevertWhen_RateAndControllerGroupsAreInvalid_PrioritizesRateError() external {
-        CurveConfig memory invalidConfig = cfg;
+        PegResponsiveIrmConfig memory invalidConfig = irmConfig;
         invalidConfig.baseRate = 0;
         invalidConfig.maxOracleAge = 0;
         _expectConfigRevert(invalidConfig, IPegResponsiveIrmErrors.PegResponsiveIrmInvalidRateConfig.selector);
     }
 
     function test_RevertWhen_ConfigIsInvalid_BeforeCheckpointingMarket() external {
-        CurveConfig memory invalidConfig = cfg;
+        PegResponsiveIrmConfig memory invalidConfig = irmConfig;
         invalidConfig.maxOracleAge = 0;
         _bindMarket();
         _mockPausedQueryRevert();
@@ -151,66 +151,66 @@ contract PegResponsiveIrmSetCurveConfigTest is PegResponsiveIrmCommon {
     }
 
     function test_AcceptsPriceBoundaryConfigurations() external {
-        CurveConfig memory boundaryConfig = cfg;
+        PegResponsiveIrmConfig memory boundaryConfig = irmConfig;
         boundaryConfig.stressPrice = 1;
         boundaryConfig.recoveryPrice = 2;
         _setAndAssertConfig(boundaryConfig);
 
-        boundaryConfig = cfg;
+        boundaryConfig = irmConfig;
         boundaryConfig.stressPrice = boundaryConfig.recoveryPrice - 1;
         _setAndAssertConfig(boundaryConfig);
 
-        boundaryConfig = cfg;
+        boundaryConfig = irmConfig;
         boundaryConfig.recoveryPrice = irm.MAX_RECOVERY_PRICE();
         _setAndAssertConfig(boundaryConfig);
     }
 
     function test_AcceptsRateBoundaryConfigurations() external {
-        CurveConfig memory boundaryConfig = cfg;
+        PegResponsiveIrmConfig memory boundaryConfig = irmConfig;
         boundaryConfig.baseRate = 1;
         _setAndAssertConfig(boundaryConfig);
 
-        boundaryConfig = cfg;
+        boundaryConfig = irmConfig;
         boundaryConfig.baseRate = boundaryConfig.stressRate;
         _setAndAssertConfig(boundaryConfig);
 
-        boundaryConfig = cfg;
+        boundaryConfig = irmConfig;
         boundaryConfig.maxRate = boundaryConfig.stressRate + 1;
         _setAndAssertConfig(boundaryConfig);
 
-        boundaryConfig = cfg;
+        boundaryConfig = irmConfig;
         boundaryConfig.maxRate = irm.MAX_BORROW_RATE();
         _setAndAssertConfig(boundaryConfig);
     }
 
     function test_AcceptsControllerBoundaryConfigurations() external {
-        CurveConfig memory boundaryConfig = cfg;
+        PegResponsiveIrmConfig memory boundaryConfig = irmConfig;
         boundaryConfig.doublingDistance = 1;
         _setAndAssertConfig(boundaryConfig);
 
-        boundaryConfig = cfg;
+        boundaryConfig = irmConfig;
         boundaryConfig.recoveryDelay = 1;
         _setAndAssertConfig(boundaryConfig);
 
-        boundaryConfig = cfg;
+        boundaryConfig = irmConfig;
         boundaryConfig.maxOracleAge = 1;
         _setAndAssertConfig(boundaryConfig);
 
-        boundaryConfig = cfg;
+        boundaryConfig = irmConfig;
         boundaryConfig.doublingDistance = type(uint256).max;
         _setAndAssertConfig(boundaryConfig);
 
-        boundaryConfig = cfg;
+        boundaryConfig = irmConfig;
         boundaryConfig.recoveryDelay = type(uint48).max;
         _setAndAssertConfig(boundaryConfig);
 
-        boundaryConfig = cfg;
+        boundaryConfig = irmConfig;
         boundaryConfig.maxOracleAge = type(uint48).max;
         _setAndAssertConfig(boundaryConfig);
     }
 
     function test_DoesNotRequireRelationshipBetweenRecoveryDelayAndMaxOracleAge() external {
-        CurveConfig memory boundaryConfig = cfg;
+        PegResponsiveIrmConfig memory boundaryConfig = irmConfig;
         boundaryConfig.recoveryDelay = 2;
         boundaryConfig.maxOracleAge = 1;
         _setAndAssertConfig(boundaryConfig);
@@ -223,37 +223,37 @@ contract PegResponsiveIrmSetCurveConfigTest is PegResponsiveIrmCommon {
     }
 
     function test_WhenMarketIsUnset_SkipsCheckpointAndStoresEveryField() external {
-        CurveConfig memory newConfig = cfg;
+        PegResponsiveIrmConfig memory newConfig = irmConfig;
         newConfig.recoveryDelay += 1;
         _mockOracleReturnData(hex"01");
         IRState memory stateBefore = _readIRState();
 
         vm.recordLogs();
-        _setCurveConfigAsOwner(newConfig);
+        _setIrmConfigAsOwner(newConfig);
         Vm.Log[] memory logs = vm.getRecordedLogs();
 
-        _assertCurveConfig(newConfig);
+        _assertIrmConfig(newConfig);
         _assertIRState(stateBefore);
         assertEq(logs.length, 1);
-        _assertIrmEvent(logs[0], IPegResponsiveIrmEvents.SetCurveConfig.selector);
+        _assertIrmEvent(logs[0], IPegResponsiveIrmEvents.SetIrmConfig.selector);
         assertEq(logs[0].data, abi.encode(newConfig));
     }
 
     function test_WhenMarketIsPaused_QueriesExactPauseTypeAndSkipsAccrual() external {
-        CurveConfig memory newConfig = cfg;
+        PegResponsiveIrmConfig memory newConfig = irmConfig;
         newConfig.recoveryDelay += 1;
         _bindMarket();
         market.setPaused(PAUSE_TYPE, true);
         vm.expectCall(address(market), _pausedCall(), 1);
 
-        _setCurveConfigAsOwner(newConfig);
+        _setIrmConfigAsOwner(newConfig);
 
-        _assertCurveConfig(newConfig);
+        _assertIrmConfig(newConfig);
         assertEq(market.accrueInterestCalls(), 0);
     }
 
     function test_RevertWhen_PausedQueryReverts_BubblesAndRollsBack() external {
-        CurveConfig memory newConfig = cfg;
+        PegResponsiveIrmConfig memory newConfig = irmConfig;
         newConfig.recoveryDelay += 1;
         _bindMarket();
         _mockPausedQueryRevert();
@@ -261,14 +261,14 @@ contract PegResponsiveIrmSetCurveConfigTest is PegResponsiveIrmCommon {
 
         vm.prank(OWNER);
         vm.expectRevert(_pausedQueryRevertData());
-        irm.setCurveConfig(newConfig);
+        irm.setIrmConfig(newConfig);
 
-        _assertCurveConfig(cfg);
+        _assertIrmConfig(irmConfig);
         _assertIRState(stateBefore);
     }
 
     function test_RevertWhen_PausedReturnDataIsMalformed_RollsBack() external {
-        CurveConfig memory newConfig = cfg;
+        PegResponsiveIrmConfig memory newConfig = irmConfig;
         newConfig.recoveryDelay += 1;
         _bindMarket();
         vm.mockCall(address(market), _pausedCall(), hex"01");
@@ -276,14 +276,14 @@ contract PegResponsiveIrmSetCurveConfigTest is PegResponsiveIrmCommon {
 
         vm.prank(OWNER);
         vm.expectRevert();
-        irm.setCurveConfig(newConfig);
+        irm.setIrmConfig(newConfig);
 
-        _assertCurveConfig(cfg);
+        _assertIrmConfig(irmConfig);
         _assertIRState(stateBefore);
     }
 
     function test_RevertWhen_AccrualRevertsAfterCallback_RollsBackNestedState() external {
-        CurveConfig memory newConfig = cfg;
+        PegResponsiveIrmConfig memory newConfig = irmConfig;
         newConfig.recoveryDelay += 1;
         _bindMarket();
         vm.warp(DEFAULT_NOW + 1);
@@ -301,16 +301,16 @@ contract PegResponsiveIrmSetCurveConfigTest is PegResponsiveIrmCommon {
                 MockPegResponsiveIrmMarket.AccrueRevertPoint.AFTER_CALLBACK
             )
         );
-        irm.setCurveConfig(newConfig);
+        irm.setIrmConfig(newConfig);
 
-        _assertCurveConfig(cfg);
+        _assertIrmConfig(irmConfig);
         _assertIRState(stateBefore);
     }
 
     function test_RevertWhen_CallbackRaisesRateAboveNewMax_UsesPostCheckpointOldConfigState() external {
-        CurveConfig memory newConfig = cfg;
-        newConfig.stressRate = cfg.baseRate;
-        newConfig.maxRate = cfg.stressRate - 1;
+        PegResponsiveIrmConfig memory newConfig = irmConfig;
+        newConfig.stressRate = irmConfig.baseRate;
+        newConfig.maxRate = irmConfig.stressRate - 1;
         _bindMarket();
         vm.warp(DEFAULT_NOW + 1);
         _setCurrentObservation(STRESS_PRICE);
@@ -321,21 +321,21 @@ contract PegResponsiveIrmSetCurveConfigTest is PegResponsiveIrmCommon {
 
         vm.prank(OWNER);
         vm.expectRevert(IPegResponsiveIrmErrors.PegResponsiveIrmInvalidRateConfig.selector);
-        irm.setCurveConfig(newConfig);
+        irm.setIrmConfig(newConfig);
 
-        _assertCurveConfig(cfg);
+        _assertIrmConfig(irmConfig);
         _assertIRState(stateBefore);
     }
 
     function test_When_CallbackLowersRateToNewMaxOrBelow_UsesPostCheckpointStateAndOldConfig() external {
-        CurveConfig memory newConfig = cfg;
+        PegResponsiveIrmConfig memory newConfig = irmConfig;
         newConfig.baseRate = 1;
         newConfig.stressRate = 1;
-        newConfig.maxRate = (cfg.baseRate + cfg.stressRate) / 2;
+        newConfig.maxRate = (irmConfig.baseRate + irmConfig.stressRate) / 2;
         _bindMarket();
         vm.warp(DEFAULT_NOW + 100);
         IRState memory seededState = IRState({
-            borrowRate: cfg.stressRate,
+            borrowRate: irmConfig.stressRate,
             lastUpdate: uint48(block.timestamp - 100),
             recoveryStartedAt: 0,
             stressMode: false
@@ -347,17 +347,14 @@ contract PegResponsiveIrmSetCurveConfigTest is PegResponsiveIrmCommon {
         vm.expectCall(address(oracle), _getPriceCall(), 1);
 
         vm.recordLogs();
-        _setCurveConfigAsOwner(newConfig);
+        _setIrmConfigAsOwner(newConfig);
         Vm.Log[] memory logs = vm.getRecordedLogs();
 
         IRState memory expectedState = IRState({
-            borrowRate: cfg.baseRate,
-            lastUpdate: uint48(block.timestamp),
-            recoveryStartedAt: 0,
-            stressMode: false
+            borrowRate: irmConfig.baseRate, lastUpdate: uint48(block.timestamp), recoveryStartedAt: 0, stressMode: false
         });
         assertLt(expectedState.borrowRate, newConfig.maxRate);
-        _assertCurveConfig(newConfig);
+        _assertIrmConfig(newConfig);
         _assertIRState(expectedState);
         assertEq(market.accrueInterestCalls(), 1);
         assertEq(logs.length, 3);
@@ -368,35 +365,35 @@ contract PegResponsiveIrmSetCurveConfigTest is PegResponsiveIrmCommon {
         );
         _assertIrmEvent(logs[1], IPegResponsiveIrmEvents.IRStateUpdated.selector);
         assertEq(logs[1].data, abi.encode(expectedState));
-        _assertIrmEvent(logs[2], IPegResponsiveIrmEvents.SetCurveConfig.selector);
+        _assertIrmEvent(logs[2], IPegResponsiveIrmEvents.SetIrmConfig.selector);
         assertEq(logs[2].data, abi.encode(newConfig));
     }
 
     function test_RevertWhen_PostCheckpointRateExceedsNewMax() external {
-        CurveConfig memory newConfig = cfg;
-        newConfig.maxRate = cfg.stressRate + 1;
+        PegResponsiveIrmConfig memory newConfig = irmConfig;
+        newConfig.maxRate = irmConfig.stressRate + 1;
         IRState memory seededState = _readIRState();
         seededState.borrowRate = newConfig.maxRate + 1;
         _setIRState(seededState);
 
         vm.prank(OWNER);
         vm.expectRevert(IPegResponsiveIrmErrors.PegResponsiveIrmInvalidRateConfig.selector);
-        irm.setCurveConfig(newConfig);
+        irm.setIrmConfig(newConfig);
 
-        _assertCurveConfig(cfg);
+        _assertIrmConfig(irmConfig);
         _assertIRState(seededState);
     }
 
     function test_When_PostCheckpointRateEqualsNewMax_AcceptsBoundary() external {
-        CurveConfig memory newConfig = cfg;
-        newConfig.maxRate = cfg.stressRate + 1;
+        PegResponsiveIrmConfig memory newConfig = irmConfig;
+        newConfig.maxRate = irmConfig.stressRate + 1;
         IRState memory seededState = _readIRState();
         seededState.borrowRate = newConfig.maxRate;
         _setIRState(seededState);
 
-        _setCurveConfigAsOwner(newConfig);
+        _setIrmConfigAsOwner(newConfig);
 
-        _assertCurveConfig(newConfig);
+        _assertIrmConfig(newConfig);
         _assertIRState(seededState);
     }
 
@@ -405,94 +402,94 @@ contract PegResponsiveIrmSetCurveConfigTest is PegResponsiveIrmCommon {
         vm.expectCall(address(market), _accrueInterestCall(), 1);
 
         vm.recordLogs();
-        _setCurveConfigAsOwner(cfg);
+        _setIrmConfigAsOwner(irmConfig);
         Vm.Log[] memory logs = vm.getRecordedLogs();
 
         assertEq(market.accrueInterestCalls(), 1);
-        _assertCurveConfig(cfg);
+        _assertIrmConfig(irmConfig);
         assertEq(logs.length, 3);
         _assertIrmEvent(logs[0], IPegResponsiveIrmEvents.BorrowRateUpdated.selector);
         _assertIrmEvent(logs[1], IPegResponsiveIrmEvents.IRStateUpdated.selector);
-        _assertIrmEvent(logs[2], IPegResponsiveIrmEvents.SetCurveConfig.selector);
-        assertEq(logs[2].data, abi.encode(cfg));
+        _assertIrmEvent(logs[2], IPegResponsiveIrmEvents.SetIrmConfig.selector);
+        assertEq(logs[2].data, abi.encode(irmConfig));
     }
 
     function test_AcceptsStoredRateBelowNewBaseAndStressWithoutImmediateRepricing() external {
-        CurveConfig memory newConfig = cfg;
+        PegResponsiveIrmConfig memory newConfig = irmConfig;
         IRState memory seededState = _readIRState();
         seededState.borrowRate = 1;
         _setIRState(seededState);
 
-        _setCurveConfigAsOwner(newConfig);
+        _setIrmConfigAsOwner(newConfig);
 
         assertLt(seededState.borrowRate, newConfig.baseRate);
         assertLt(seededState.borrowRate, newConfig.stressRate);
-        _assertCurveConfig(newConfig);
+        _assertIrmConfig(newConfig);
         _assertIRState(seededState);
     }
 
     function test_DoesNotReadOracleOrReevaluateStressAgainstNewThresholds() external {
-        CurveConfig memory newConfig = cfg;
+        PegResponsiveIrmConfig memory newConfig = irmConfig;
         newConfig.stressPrice = RECOVERY_PRICE - 1;
         IRState memory seededState = _readIRState();
         seededState.stressMode = false;
         _setIRState(seededState);
         _mockOracleReturnData(hex"01");
 
-        _setCurveConfigAsOwner(newConfig);
+        _setIrmConfigAsOwner(newConfig);
 
-        _assertCurveConfig(newConfig);
+        _assertIrmConfig(newConfig);
         _assertIRState(seededState);
     }
 
     function test_WhenRecoveryIsActive_ClearsOnlyRecoveryAndEmitsExactOrder() external {
-        CurveConfig memory newConfig = cfg;
+        PegResponsiveIrmConfig memory newConfig = irmConfig;
         newConfig.recoveryDelay += 1;
         IRState memory seededState =
-            IRState({borrowRate: cfg.stressRate, lastUpdate: 123, recoveryStartedAt: 456, stressMode: true});
+            IRState({borrowRate: irmConfig.stressRate, lastUpdate: 123, recoveryStartedAt: 456, stressMode: true});
         _setIRState(seededState);
 
         vm.recordLogs();
-        _setCurveConfigAsOwner(newConfig);
+        _setIrmConfigAsOwner(newConfig);
         Vm.Log[] memory logs = vm.getRecordedLogs();
 
         IRState memory expectedState = seededState;
         expectedState.recoveryStartedAt = 0;
-        _assertCurveConfig(newConfig);
+        _assertIrmConfig(newConfig);
         _assertIRState(expectedState);
         assertEq(logs.length, 3);
         _assertIrmEvent(logs[0], IPegResponsiveIrmEvents.StressStateUpdated.selector);
         assertEq(logs[0].data, abi.encode(true, uint48(0), uint256(0)));
         _assertIrmEvent(logs[1], IPegResponsiveIrmEvents.IRStateUpdated.selector);
         assertEq(logs[1].data, abi.encode(expectedState));
-        _assertIrmEvent(logs[2], IPegResponsiveIrmEvents.SetCurveConfig.selector);
+        _assertIrmEvent(logs[2], IPegResponsiveIrmEvents.SetIrmConfig.selector);
         assertEq(logs[2].data, abi.encode(newConfig));
     }
 
-    function _expectConfigRevert(CurveConfig memory invalidConfig, bytes4 selector) private {
-        CurveConfig memory configBefore = _readCurveConfig();
+    function _expectConfigRevert(PegResponsiveIrmConfig memory invalidConfig, bytes4 selector) private {
+        PegResponsiveIrmConfig memory configBefore = _readIrmConfig();
         IRState memory stateBefore = _readIRState();
 
         vm.recordLogs();
         vm.prank(OWNER);
         vm.expectRevert(selector);
-        irm.setCurveConfig(invalidConfig);
+        irm.setIrmConfig(invalidConfig);
 
         assertEq(vm.getRecordedLogs().length, 0);
-        _assertCurveConfig(configBefore);
+        _assertIrmConfig(configBefore);
         _assertIRState(stateBefore);
     }
 
-    function _setAndAssertConfig(CurveConfig memory newConfig) private {
+    function _setAndAssertConfig(PegResponsiveIrmConfig memory newConfig) private {
         IRState memory stateBefore = _readIRState();
-        _setCurveConfigAsOwner(newConfig);
-        _assertCurveConfig(newConfig);
+        _setIrmConfigAsOwner(newConfig);
+        _assertIrmConfig(newConfig);
         _assertIRState(stateBefore);
     }
 
-    function _setCurveConfigAsOwner(CurveConfig memory newConfig) private {
+    function _setIrmConfigAsOwner(PegResponsiveIrmConfig memory newConfig) private {
         vm.prank(OWNER);
-        irm.setCurveConfig(newConfig);
+        irm.setIrmConfig(newConfig);
     }
 
     function _pausedCall() private pure returns (bytes memory) {

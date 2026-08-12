@@ -1,9 +1,9 @@
-PegResponsiveIrm::setCurveConfig(CurveConfig)
+PegResponsiveIrm::setIrmConfig(PegResponsiveIrmConfig)
 ├── given caller is not the current owner
 │   ├── when caller is a non-owner or the pending owner has not accepted ownership
 │   │   └── it should revert with OwnableUnauthorizedAccount(caller)
 │   ├── it should prioritize authorization over configuration validation and checkpointing
-│   ├── it should leave curveConfig and the complete IRState unchanged
+│   ├── it should leave irmConfig and the complete IRState unchanged
 │   └── it should not call the market or emit events
 └── given caller is the current owner
     ├── given the price configuration is invalid
@@ -40,7 +40,7 @@ PegResponsiveIrm::setCurveConfig(CurveConfig)
     │       └── it should prioritize PegResponsiveIrmInvalidRateConfig
     ├── given any configuration input is structurally invalid
     │   ├── it should reject before querying or checkpointing the market
-    │   ├── it should leave curveConfig and the complete IRState unchanged
+    │   ├── it should leave irmConfig and the complete IRState unchanged
     │   └── it should not emit events
     └── given the new configuration passes structural validation
         ├── when stressPrice is one and recoveryPrice is two
@@ -82,7 +82,7 @@ PegResponsiveIrm::setCurveConfig(CurveConfig)
         │   ├── it should query paused with the exact PAUSE_TYPE
         │   ├── when the paused query reverts or its return data cannot be decoded
         │   │   ├── it should bubble the failure
-        │   │   ├── it should leave curveConfig and IRState unchanged
+        │   │   ├── it should leave irmConfig and IRState unchanged
         │   │   └── it should not emit setter events
         │   ├── when paused returns true
         │   │   └── it should skip accrueInterest
@@ -93,7 +93,7 @@ PegResponsiveIrm::setCurveConfig(CurveConfig)
         │       │   └── it should not emit setter events
         │       └── when accrueInterest succeeds
         │           ├── it should call market.accrueInterest exactly once
-        │           ├── if the market calls back into this IRM, that callback should observe the old oracle and old curveConfig
+        │           ├── if the market calls back into this IRM, that callback should observe the old oracle and old irmConfig
         │           └── it should use any callback-driven post-checkpoint IRState for subsequent checks
         ├── given the post-checkpoint borrowRate is greater than newConfig.maxRate
         │   ├── it should revert with PegResponsiveIrmInvalidRateConfig
@@ -116,11 +116,11 @@ PegResponsiveIrm::setCurveConfig(CurveConfig)
             ├── it should not re-evaluate stressMode against the new thresholds
             ├── given post-checkpoint recoveryStartedAt is zero
             │   ├── it should preserve the complete post-checkpoint IRState
-            │   ├── it should emit exactly SetCurveConfig(newConfig) among setter events
+            │   ├── it should emit exactly SetIrmConfig(newConfig) among setter events
             │   └── it should not emit an additional StressStateUpdated or IRStateUpdated for recovery reset
             └── given post-checkpoint recoveryStartedAt is non-zero
                 ├── it should clear recoveryStartedAt
                 ├── it should preserve post-checkpoint borrowRate, lastUpdate and stressMode
                 ├── it should emit StressStateUpdated(stressMode, 0, 0)
                 ├── it should then emit IRStateUpdated with the resulting state
-                └── it should then emit SetCurveConfig(newConfig)
+                └── it should then emit SetIrmConfig(newConfig)

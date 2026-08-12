@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 
 import {Test} from "forge-std/Test.sol";
 
-import {CurveConfig, IRState} from "@alto/lending/interfaces/IPegResponsiveIrm.sol";
+import {PegResponsiveIrmConfig, IRState} from "@alto/lending/interfaces/IPegResponsiveIrm.sol";
 import {IIrm} from "@alto/lending/interfaces/IIrm.sol";
 import {IDusdPegOracleCurveBase} from "@alto/oracles/dusd/interfaces/IDusdPegOracleCurve.sol";
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
@@ -36,21 +36,21 @@ abstract contract PegResponsiveIrmCommon is Test {
     MockRawDusdPegOracle internal rawOracle;
     MockPegResponsiveIrmMarket internal market;
     PegResponsiveIrmHarness internal irm;
-    CurveConfig internal cfg;
+    PegResponsiveIrmConfig internal irmConfig;
 
     function setUp() public virtual {
         vm.warp(DEFAULT_NOW);
 
         oracle = new MockDusdPegOracle();
         rawOracle = new MockRawDusdPegOracle();
-        cfg = _validConfig();
-        irm = _deployIrm(cfg, address(oracle), OWNER);
+        irmConfig = _validConfig();
+        irm = _deployIrm(irmConfig, address(oracle), OWNER);
         market = new MockPegResponsiveIrmMarket(IIrm(address(irm)));
         _setObservation(RECOVERY_PRICE, uint48(block.timestamp), true);
     }
 
-    function _validConfig() internal pure returns (CurveConfig memory config) {
-        config = CurveConfig({
+    function _validConfig() internal pure returns (PegResponsiveIrmConfig memory config) {
+        config = PegResponsiveIrmConfig({
             recoveryPrice: RECOVERY_PRICE,
             stressPrice: STRESS_PRICE,
             baseRate: BASE_RATE,
@@ -62,14 +62,14 @@ abstract contract PegResponsiveIrmCommon is Test {
         });
     }
 
-    function _deployIrm(CurveConfig memory config_, address oracle_, address owner_)
+    function _deployIrm(PegResponsiveIrmConfig memory config_, address oracle_, address owner_)
         internal
         returns (PegResponsiveIrmHarness deployedIrm)
     {
         return new PegResponsiveIrmHarness(oracle_, config_, owner_);
     }
 
-    function _deployIrm(CurveConfig memory config_) internal returns (PegResponsiveIrmHarness deployedIrm) {
+    function _deployIrm(PegResponsiveIrmConfig memory config_) internal returns (PegResponsiveIrmHarness deployedIrm) {
         return _deployIrm(config_, address(oracle), OWNER);
     }
 
@@ -104,7 +104,7 @@ abstract contract PegResponsiveIrmCommon is Test {
         (state.borrowRate, state.lastUpdate, state.recoveryStartedAt, state.stressMode) = irm.irState();
     }
 
-    function _readCurveConfig() internal view returns (CurveConfig memory config) {
+    function _readIrmConfig() internal view returns (PegResponsiveIrmConfig memory config) {
         (
             config.recoveryPrice,
             config.stressPrice,
@@ -114,7 +114,7 @@ abstract contract PegResponsiveIrmCommon is Test {
             config.doublingDistance,
             config.recoveryDelay,
             config.maxOracleAge
-        ) = irm.curveConfig();
+        ) = irm.irmConfig();
     }
 
     function _assertIRState(IRState memory expected) internal view {
@@ -125,8 +125,8 @@ abstract contract PegResponsiveIrmCommon is Test {
         assertEq(actual.stressMode, expected.stressMode, "stressMode");
     }
 
-    function _assertCurveConfig(CurveConfig memory expected) internal view {
-        CurveConfig memory actual = _readCurveConfig();
+    function _assertIrmConfig(PegResponsiveIrmConfig memory expected) internal view {
+        PegResponsiveIrmConfig memory actual = _readIrmConfig();
         assertEq(actual.recoveryPrice, expected.recoveryPrice, "recoveryPrice");
         assertEq(actual.stressPrice, expected.stressPrice, "stressPrice");
         assertEq(actual.baseRate, expected.baseRate, "baseRate");

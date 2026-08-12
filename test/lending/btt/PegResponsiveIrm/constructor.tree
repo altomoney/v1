@@ -1,4 +1,4 @@
-PegResponsiveIrm::constructor(address,CurveConfig,address)
+PegResponsiveIrm::constructor(address,PegResponsiveIrmConfig,address)
 ├── given initialOwner is the zero address
 │   ├── it should revert with OwnableInvalidOwner(address(0))
 │   ├── it should reject before checking oracle or configuration inputs
@@ -77,13 +77,13 @@ PegResponsiveIrm::constructor(address,CurveConfig,address)
             ├── when oracle has no code
             │   ├── it should deploy successfully
             │   └── it should not call getPrice or otherwise validate the oracle implementation
-            ├── it should store oracle and every CurveConfig field exactly
+            ├── it should store oracle and every PegResponsiveIrmConfig field exactly
             ├── it should set market to the zero address
             ├── it should initialize IRState with borrowRate equal to baseRate
             ├── it should initialize lastUpdate and recoveryStartedAt to zero and stressMode to false
             ├── it should set owner to initialOwner and pendingOwner to the zero address
             ├── it should emit OwnershipTransferred(address(0), initialOwner)
             ├── it should then emit SetPegOracle(address(0), oracle)
-            ├── it should then emit SetCurveConfig(config)
+            ├── it should then emit SetIrmConfig(config)
             ├── it should then emit IRStateUpdated(initialState)
             └── it should not emit StressStateUpdated or BorrowRateUpdated

@@ -6,13 +6,13 @@ import {Vm} from "forge-std/Vm.sol";
 import {stdError} from "forge-std/StdError.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
-import {CurveConfig, IRState} from "@alto/lending/interfaces/IPegResponsiveIrm.sol";
+import {PegResponsiveIrmConfig, IRState} from "@alto/lending/interfaces/IPegResponsiveIrm.sol";
 
 import {PegResponsiveIrmCommon} from "./PegResponsiveIrmCommon.t.sol";
 
 contract PegResponsiveIrmPreviewBorrowRateTest is PegResponsiveIrmCommon {
     function test_RevertWhen_OracleIsANonContractAddress() external {
-        irm = _deployIrm(cfg, address(0xBEEF), OWNER);
+        irm = _deployIrm(irmConfig, address(0xBEEF), OWNER);
         IRState memory stateBefore = _readIRState();
 
         vm.expectRevert();
@@ -233,8 +233,8 @@ contract PegResponsiveIrmPreviewBorrowRateTest is PegResponsiveIrmCommon {
     }
 
     function test_WhenExistingTimerAndTimestampExceedUint48_ItDoesNotDowncastBeforeDelay() external {
-        cfg.maxOracleAge = cfg.recoveryDelay;
-        irm = _deployIrm(cfg);
+        irmConfig.maxOracleAge = irmConfig.recoveryDelay;
+        irm = _deployIrm(irmConfig);
         uint48 recoveryStartedAt = type(uint48).max;
         vm.warp(uint256(recoveryStartedAt) + 1);
         _setObservation(RECOVERY_PRICE, recoveryStartedAt, true);
@@ -247,8 +247,8 @@ contract PegResponsiveIrmPreviewBorrowRateTest is PegResponsiveIrmCommon {
     }
 
     function test_WhenExistingTimerAndTimestampExceedUint48_ItDoesNotDowncastAtDelayCompletion() external {
-        cfg.maxOracleAge = cfg.recoveryDelay;
-        irm = _deployIrm(cfg);
+        irmConfig.maxOracleAge = irmConfig.recoveryDelay;
+        irm = _deployIrm(irmConfig);
         uint48 recoveryStartedAt = type(uint48).max;
         vm.warp(uint256(recoveryStartedAt) + RECOVERY_DELAY);
         _setObservation(RECOVERY_PRICE, recoveryStartedAt, true);
@@ -261,8 +261,8 @@ contract PegResponsiveIrmPreviewBorrowRateTest is PegResponsiveIrmCommon {
     }
 
     function test_WhenBaseRateEqualsStressRate_ItReturnsTheEqualRawTarget() external {
-        cfg.baseRate = cfg.stressRate;
-        irm = _deployIrm(cfg);
+        irmConfig.baseRate = irmConfig.stressRate;
+        irm = _deployIrm(irmConfig);
         _setCurrentObservation(RECOVERY_PRICE);
         _setIRState(STRESS_RATE, uint48(block.timestamp), 0, true);
 
@@ -272,7 +272,7 @@ contract PegResponsiveIrmPreviewBorrowRateTest is PegResponsiveIrmCommon {
     function test_WhenValidCallSucceeds_ItCallsOracleOnceWithoutMarketBindingAndChangesNothing() external {
         _setCurrentObservation(MID_BRIDGE_PRICE);
         IRState memory stateBefore = _readIRState();
-        CurveConfig memory configBefore = _readCurveConfig();
+        PegResponsiveIrmConfig memory configBefore = _readIrmConfig();
 
         vm.recordLogs();
         vm.prank(NON_OWNER);
@@ -282,12 +282,12 @@ contract PegResponsiveIrmPreviewBorrowRateTest is PegResponsiveIrmCommon {
         assertEq(address(irm.market()), address(0));
         assertEq(logs.length, 0);
         _assertIRState(stateBefore);
-        _assertCurveConfig(configBefore);
+        _assertIrmConfig(configBefore);
     }
 
     function _assertMalformedOracleData(bytes memory returnData) private {
         rawOracle.setRawReturnData(returnData);
-        irm = _deployIrm(cfg, address(rawOracle), OWNER);
+        irm = _deployIrm(irmConfig, address(rawOracle), OWNER);
         IRState memory stateBefore = _readIRState();
 
         vm.expectRevert();
