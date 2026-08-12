@@ -48,6 +48,7 @@ import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 /// the oracle or replace the pre-pause rate.
 /// @dev `setMarket` is permissionless and one-shot. Deployment must bind the
 /// intended market atomically or otherwise prevent an unintended first caller.
+/// @custom:audit Pending
 contract PegResponsiveExponentialIrm is AltoOwnable2Step, IPegResponsiveExponentialIrmStaticTypes {
     using FixedPointMath for uint256;
     using SafeCast for uint256;
