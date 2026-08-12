@@ -222,14 +222,14 @@ library DeployAltoEthereumMainnet {
                     feeRecipient: input.contracts.feeRecipientMintMarkets,
                     collateralToken: RETH_MAINNET,
                     oracleAsset: EthereumMainnetLendingOracleAsset.rETH,
-                    irmInterestRate: 0.025 ether / uint256(365 days), // 2.5%
-                    maxLtv: 0.7 ether, // 70%
-                    initialBorrowOpeningFee: 0.0005 ether, // 0.05%
-                    debtCeiling: 200_000 ether, // 200,000 DUSD
+                    irmInterestRate: 0.02333714138 ether / uint256(365 days), // 2.333714138%
+                    maxLtv: 0.75 ether, // 75%
+                    initialBorrowOpeningFee: 0.0016 ether, // 0.16%
+                    debtCeiling: 20000 ether, // 20,000 DUSD
                     liquidationConfig: LiquidationConfiguration({
-                        maxLiquidationLtv: 0.75 ether, // 75%
+                        maxLiquidationLtv: 0.78 ether, // 78%
                         dynamicBonusFeeStart: 0.02 ether, // 2%
-                        ltvForCompleteLiquidation: 0.83 ether, // 83%
+                        ltvForCompleteLiquidation: 0.81 ether, // 81%
                         dynamicBonusFeeDecaySteepness: 5 ether, // 5
                         liquidationBaseFee: 0.07 ether, // 7%
                         minPenaltyPercentage: 0.005 ether, // 0.5%

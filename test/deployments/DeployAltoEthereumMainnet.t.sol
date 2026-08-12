@@ -26,6 +26,12 @@ import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {AdaptiveCurveIrm} from "@alto/lending/irm/AdaptiveCurveIrm.sol";
 import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";
 import {
+    ERC4626RatioChainlinkOracleRETH,
+    IReth
+} from "@alto/oracles/AltoERC4626RatioChainlinkOracle/implementations/ERC4626RatioChainlinkOracleRETH.sol";
+import {ConversionDirection} from "@alto/oracles/interfaces/IModuleNode.sol";
+import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
+import {
     IDcfDlbPriorityLiquidationEngine,
     LiquidationConfiguration
 } from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";
@@ -58,7 +64,9 @@ import {
     FRXUSD_MAINNET,
     USDC_MAINNET,
     WETH_MAINNET,
-    WSTETH_MAINNET
+    WSTETH_MAINNET,
+    RETH_MAINNET,
+    CHAINLINK_ETH_USD_PRICE_FEED
 } from "@alto/deployments/ethereum-mainnet/Constants.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {IAltoVault, IAltoVaultBase} from "@alto/lending/interfaces/IAltoVault.sol";
@@ -1010,6 +1018,54 @@ contract DeployWstethMintMarketPhaseTest is DeployMarketPhaseTestBase {
             }),
             0.02295163663 ether / uint256(365 days)
         );
+    }
+}
+
+contract DeployRethMintMarketPhaseTest is DeployMarketPhaseTestBase {
+    function test_deployRethMintMarketParameters() public {
+        _deployMarket(DeploymentPhase.MINT_MARKET_RETH);
+
+        MarketContracts memory deployed = input.contracts.rethMarket;
+        _assertMintMarketParams(
+            deployed,
+            ExpectedMarketParams({
+                marketType: MarketType.MINT,
+                collateralToken: RETH_MAINNET,
+                maxLtv: 0.75 ether,
+                borrowOpeningFee: 0.0016 ether,
+                capacity: 20_000 ether,
+                maxLiquidationLtv: 0.78 ether,
+                dynamicBonusFeeStart: 0.02 ether,
+                ltvForCompleteLiquidation: 0.81 ether,
+                liquidationBaseFee: 0.07 ether
+            }),
+            0.02333714138 ether / uint256(365 days)
+        );
+        _assertRethOracleConfiguration(deployed.marketOracle);
+    }
+
+    function _assertRethOracleConfiguration(address oracleAddress) internal view {
+        ERC4626RatioChainlinkOracleRETH oracle = ERC4626RatioChainlinkOracleRETH(oracleAddress);
+        assertEq(oracle.RETH(), RETH_MAINNET, "ratio source");
+
+        (uint256 initialRatio,, uint256 maxYearlyGrowthRatioWad) = oracle.erc4626RatioNode();
+        assertEq(initialRatio, IReth(RETH_MAINNET).getExchangeRate() * 1005 / 1000, "initial ratio");
+        assertEq(maxYearlyGrowthRatioWad, 0.07 ether, "maximum yearly ratio growth");
+
+        (
+            AggregatorV3Interface feed,
+            ConversionDirection direction,
+            uint32 stalePeriod,
+            uint8 inDecimals,
+            uint8 outDecimals,
+            uint8 feedDecimals
+        ) = oracle.chainlinkNode();
+        assertEq(address(feed), CHAINLINK_ETH_USD_PRICE_FEED, "ETH/USD feed");
+        assertEq(uint256(direction), uint256(ConversionDirection.IN_TO_OUT), "conversion direction");
+        assertEq(stalePeriod, 3900, "stale period");
+        assertEq(inDecimals, 18, "input decimals");
+        assertEq(outDecimals, 36, "output decimals");
+        assertEq(feedDecimals, 8, "feed decimals");
     }
 }
 
