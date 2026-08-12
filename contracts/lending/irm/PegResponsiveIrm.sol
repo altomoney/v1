@@ -131,21 +131,21 @@ contract PegResponsiveIrm is AltoOwnable2Step, IPegResponsiveIrmStaticTypes {
     }
 
     /// @inheritdoc IIrm
-    function updateInterestRateView(uint256 totalSupply, uint256 totalBorrowed)
+    function updateInterestRateView(uint256, uint256 totalBorrowed)
         external
         view
         returns (uint256 interest, uint256 borrowRate)
     {
-        return _accrueInterest(totalSupply, totalBorrowed);
+        return _accrueInterest(totalBorrowed);
     }
 
     /// @inheritdoc IIrm
-    function updateInterestRate(uint256 totalSupply, uint256 totalBorrowed)
+    function updateInterestRate(uint256, uint256 totalBorrowed)
         external
         returns (uint256 interest, uint256 borrowRate)
     {
         if (msg.sender != market) revert IrmUnauthorized();
-        return _updateInterestRate(totalSupply, totalBorrowed);
+        return _updateInterestRate(totalBorrowed);
     }
 
     /// @inheritdoc IPegResponsiveIrmBase
@@ -232,15 +232,10 @@ contract PegResponsiveIrm is AltoOwnable2Step, IPegResponsiveIrmStaticTypes {
 
     /// @dev Calculates interest using the rate that was active throughout the
     /// elapsed interval.
-    /// @dev The unused supply argument preserves parity with the IRM update interface.
     /// @param totalBorrowed The market's total outstanding debt before accrual.
     /// @return interest    The interest accrued since the previous update.
     /// @return borrowRate  The stored borrow rate used to calculate the interest.
-    function _accrueInterest(uint256, uint256 totalBorrowed)
-        private
-        view
-        returns (uint256 interest, uint256 borrowRate)
-    {
+    function _accrueInterest(uint256 totalBorrowed) private view returns (uint256 interest, uint256 borrowRate) {
         if (market == address(0)) revert IrmMarketNotSet();
 
         borrowRate = irState.borrowRate;
@@ -252,23 +247,15 @@ contract PegResponsiveIrm is AltoOwnable2Step, IPegResponsiveIrmStaticTypes {
 
     /// @dev Accrues the old rate first, then stores the oracle-driven rate for
     /// the next interval.
-    /// @param totalSupply The market's total supplied assets before accrual.
     /// @param totalBorrowed The market's total outstanding debt before accrual.
     /// @return interest    The interest accrued using the previously stored rate.
     /// @return borrowRate  The previously stored borrow rate used for the elapsed interval.
-    function _updateInterestRate(uint256 totalSupply, uint256 totalBorrowed)
-        private
-        returns (uint256 interest, uint256 borrowRate)
-    {
-        (interest, borrowRate) = _accrueInterest(totalSupply, totalBorrowed);
+    function _updateInterestRate(uint256 totalBorrowed) private returns (uint256 interest, uint256 borrowRate) {
+        (interest, borrowRate) = _accrueInterest(totalBorrowed);
 
         (uint256 priceWad, uint48 observedAt, bool oracleValid) = _readPegPrice();
         bool nextStressMode = _applyStressState(priceWad, oracleValid);
-
-        uint256 newRate = borrowRate;
-        if (oracleValid) {
-            newRate = _effectiveTargetRate(priceWad, nextStressMode);
-        }
+        uint256 newRate = oracleValid ? _effectiveTargetRate(priceWad, nextStressMode) : borrowRate;
 
         irState.borrowRate = newRate;
         irState.lastUpdate = block.timestamp.toUint48();
@@ -371,12 +358,12 @@ contract PegResponsiveIrm is AltoOwnable2Step, IPegResponsiveIrmStaticTypes {
         ) {
             observedAt = reportedAt;
 
-            if (!observationValid || reportedPriceWad == 0 || reportedAt == 0 || uint256(reportedAt) > block.timestamp)
-            {
-                return (0, observedAt, false);
-            }
-
-            if (block.timestamp - uint256(reportedAt) > irmConfig.maxOracleAge) {
+            // Keep this order: each timestamp check relies on the prior checks
+            // short-circuiting before the age subtraction.
+            if (
+                !observationValid || reportedPriceWad == 0 || reportedAt == 0 || uint256(reportedAt) > block.timestamp
+                    || block.timestamp - uint256(reportedAt) > irmConfig.maxOracleAge
+            ) {
                 return (0, observedAt, false);
             }
 
