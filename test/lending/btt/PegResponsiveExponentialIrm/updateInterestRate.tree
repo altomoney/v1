@@ -1,0 +1,161 @@
+PegResponsiveExponentialIrm::updateInterestRate(uint256,uint256)
+├── given caller is not the bound market
+│   ├── when market is unset
+│   │   └── it should revert with IrmUnauthorized before IrmMarketNotSet can be reached
+│   ├── when caller is owner, pending owner, or any other non-market address
+│   │   └── it should revert with IrmUnauthorized
+│   ├── it should reject before calculating interest or reading the oracle
+│   └── it should leave the complete IRState unchanged and emit no events
+└── given caller is the bound market
+    ├── given elapsed-interest calculation cannot complete
+    │   ├── when block.timestamp is less than lastUpdate
+    │   │   └── it should revert with arithmetic-underflow panic 0x11
+    │   ├── when the compound-interest dependency or final fixed-point multiplication overflows for unsupported extreme inputs
+    │   │   └── it should bubble arithmetic-overflow panic 0x11
+    │   ├── it should fail before reading the oracle
+    │   └── it should leave the complete IRState unchanged and emit no events
+    └── given elapsed-interest calculation completes
+        ├── given accrual inputs
+        │   ├── when elapsed time is zero
+        │   │   └── it should calculate zero interest while still processing the oracle checkpoint
+        │   ├── when totalBorrowed is zero
+        │   │   └── it should calculate zero interest while still processing the oracle checkpoint
+        │   ├── when totalBorrowed and elapsed time are non-zero
+        │   │   └── it should calculate the exact floor-rounded FixedPointMath interest using the stored borrowRate
+        │   ├── when totalSupply varies while debt, old rate and elapsed time remain equal
+        │   │   └── it should calculate identical interest because totalSupply is unused
+        │   └── it should calculate elapsed interest before reading or applying the new peg observation
+        ├── given the configured oracle cannot produce ABI-decodable return data
+        │   ├── when oracle is a non-contract address
+        │   │   └── it should revert when caller-side ABI decoding receives empty return data outside the catch
+        │   ├── when getPrice returns short data, an invalid bool encoding, or a uint48 word with dirty high bits
+        │   │   └── it should revert because caller-side ABI decoding is outside the catch
+        │   └── it should roll back all state and emit no events
+        ├── given an oracle contract getPrice call reverts
+        │   ├── it should catch the oracle revert
+        │   └── it should process priceWad zero, observedAt zero and oracleValid false
+        ├── given the oracle call returns successfully
+        │   ├── when valid is false
+        │   │   ├── it should normalize priceWad to zero and preserve the supplied observedAt
+        │   │   └── it should reject before relying on price or timestamp metadata
+        │   ├── when valid is true and priceWad is zero
+        │   │   ├── it should normalize priceWad to zero and preserve the supplied observedAt
+        │   │   └── it should reject before relying on timestamp metadata
+        │   ├── when valid is true, priceWad is non-zero and observedAt is zero
+        │   │   └── it should normalize priceWad to zero and retain observedAt zero for BorrowRateUpdated
+        │   ├── when observedAt is greater than block.timestamp
+        │   │   ├── it should normalize priceWad to zero and preserve the future observedAt
+        │   │   └── it should reject before subtracting the timestamp
+        │   ├── when observation age is greater than maxOracleAge
+        │   │   └── it should normalize priceWad to zero and preserve the stale observedAt
+        │   ├── when observation age equals maxOracleAge
+        │   │   └── it should accept the observation as valid
+        │   ├── when observedAt equals block.timestamp
+        │   │   └── it should accept the zero-age observation as valid
+        │   └── when a non-zero price including type(uint256).max has valid fresh metadata
+        │       └── it should accept the price without applying an upper price bound
+        ├── given the processed oracle observation is invalid and recoveryStartedAt is zero
+        │   ├── when stressMode is false or true
+        │   │   └── it should preserve stressMode
+        │   ├── it should preserve the old borrowRate instead of evaluating the target curve
+        │   ├── it should keep recoveryStartedAt zero
+        │   ├── it should set lastUpdate to block.timestamp
+        │   ├── it should not emit StressStateUpdated
+        │   ├── it should emit BorrowRateUpdated(oldRate, oldRate, 0, observedAt, false)
+        │   └── it should then emit IRStateUpdated with the resulting state
+        ├── given the processed oracle observation is invalid and recoveryStartedAt is non-zero
+        │   ├── it should preserve stressMode and the old borrowRate
+        │   ├── it should clear recoveryStartedAt without evaluating elapsed recovery time
+        │   ├── it should set lastUpdate to block.timestamp
+        │   ├── it should emit StressStateUpdated(stressMode, 0, 0)
+        │   ├── it should then emit BorrowRateUpdated(oldRate, oldRate, 0, observedAt, false)
+        │   └── it should then emit IRStateUpdated with the resulting state
+        ├── given the processed oracle observation is valid and stressMode is false
+        │   ├── when price is below stressPrice
+        │   │   ├── it should enter stress mode with recoveryStartedAt zero
+        │   │   ├── it should install the exponential raw target subject to maxRate
+        │   │   └── it should emit StressStateUpdated(true, 0, price)
+        │   ├── when price equals stressPrice
+        │   │   ├── it should enter stress mode at the inclusive threshold
+        │   │   ├── it should install stressRate
+        │   │   └── it should emit StressStateUpdated(true, 0, stressPrice)
+        │   ├── when price is one unit above stressPrice and below recoveryPrice
+        │   │   ├── it should remain outside stress mode
+        │   │   ├── it should install the raw bridge target
+        │   │   └── it should not emit StressStateUpdated
+        │   ├── when price is any strict bridge value
+        │   │   └── it should directly install the floor-rounded interpolated target without a movement limiter
+        │   └── when price is equal to or greater than recoveryPrice
+        │       ├── it should remain outside stress mode with no recovery timer
+        │       ├── it should install baseRate
+        │       └── it should not emit StressStateUpdated
+        ├── given the processed oracle observation is valid, stressMode is true and price is below recoveryPrice
+        │   ├── given recoveryStartedAt is zero
+        │   │   ├── it should remain stressed with recoveryStartedAt zero
+        │   │   └── it should not emit StressStateUpdated
+        │   ├── given recoveryStartedAt is non-zero
+        │   │   ├── it should remain stressed and clear recoveryStartedAt
+        │   │   ├── it should not subtract recoveryStartedAt even if that timer is artificially in the future
+        │   │   └── it should emit StressStateUpdated(true, 0, price)
+        │   ├── when price is below stressPrice
+        │   │   └── it should install the exponential raw target because it is not below the stress floor
+        │   ├── when price equals stressPrice
+        │   │   └── it should install the raw stressRate because the floor comparison is strict
+        │   └── when stressPrice is less than price and price is less than recoveryPrice
+        │       └── it should install stressRate by flooring a lower raw target when baseRate is less than stressRate and preserving equality otherwise
+        ├── given the processed oracle observation is valid, stressMode is true and price is at or above recoveryPrice
+        │   ├── given recoveryStartedAt is zero
+        │   │   ├── when block.timestamp fits uint48
+        │   │   │   ├── it should remain stressed and start recovery at block.timestamp
+        │   │   │   ├── it should install stressRate by flooring baseRate when lower and preserving it when already equal
+        │   │   │   └── it should emit StressStateUpdated(true, block.timestamp, price)
+        │   │   └── when block.timestamp is greater than type(uint48).max
+        │   │       └── it should revert with SafeCastOverflowedUintDowncast(48, block.timestamp)
+        │   └── given recoveryStartedAt is non-zero
+        │       ├── when block.timestamp is less than recoveryStartedAt
+        │       │   └── it should revert with arithmetic-underflow panic 0x11
+        │       ├── when elapsed recovery time is recoveryDelay minus one
+        │       │   ├── it should remain stressed and preserve the original recoveryStartedAt
+        │       │   ├── it should install stressRate
+        │       │   └── it should not emit StressStateUpdated
+        │       ├── when elapsed recovery time equals recoveryDelay
+        │       │   ├── it should exit stress mode and clear recoveryStartedAt
+        │       │   ├── it should install baseRate
+        │       │   └── it should emit StressStateUpdated(false, 0, price)
+        │       └── when elapsed recovery time is greater than recoveryDelay
+        │           ├── it should exit stress mode and clear recoveryStartedAt
+        │           ├── it should install baseRate
+        │           └── it should emit StressStateUpdated(false, 0, price)
+        ├── given block.timestamp is greater than type(uint48).max and execution reaches the final lastUpdate cast
+        │   ├── it should revert with SafeCastOverflowedUintDowncast(48, block.timestamp)
+        │   └── it should roll back any prior stress write and every emitted event
+        ├── given block.timestamp equals type(uint48).max and the observation remains fresh
+        │   └── it should store the exact boundary timestamp successfully
+        ├── given a recovery confirmation sequence
+        │   ├── when an invalid observation is processed before completion
+        │   │   ├── it should interrupt recovery
+        │   │   └── a later qualifying observation should start a new timer
+        │   ├── when a valid below-recovery observation is processed before completion
+        │   │   ├── it should interrupt recovery
+        │   │   └── a later qualifying observation should start a new timer
+        │   ├── when maxOracleAge permits the same still-fresh observation at both checkpoints
+        │   │   └── the same observedAt should be able to start and later complete recovery
+        │   └── when that observation becomes stale before recoveryDelay
+        │       └── it should interrupt recovery as invalid instead of completing it
+        ├── given a complete equilibrium lifecycle of valid checkpoints
+        │   ├── it should move from healthy baseRate to the raw bridge rate as price weakens
+        │   ├── it should enter stress at the exact stressPrice and then follow the deeper exponential rate
+        │   ├── it should hold the effective recovering bridge rate at stressRate while stress remains active
+        │   ├── it should start recovery at the exact recoveryPrice and keep the stressRate floor
+        │   ├── it should preserve stress through recoveryDelay minus one
+        │   ├── it should exit stress at the exact recoveryDelay and return to baseRate
+        │   └── at every step it should accrue the elapsed interval at the prior stored rate and apply the new rate prospectively
+        └── given any successful checkpoint
+            ├── it should call getPrice exactly once
+            ├── it should not query the market paused state
+            ├── it should set lastUpdate to block.timestamp
+            ├── it should return interest and the old stored borrowRate
+            ├── it should store the new effective rate only for the next interval
+            ├── it should emit StressStateUpdated first only when stressMode or recoveryStartedAt changes
+            ├── it should emit BorrowRateUpdated with old rate, new rate, normalized price, observedAt and validity
+            └── it should then emit IRStateUpdated with the complete resulting state

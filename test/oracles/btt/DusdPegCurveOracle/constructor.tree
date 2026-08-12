@@ -1,0 +1,110 @@
+DusdPegCurveOracle::constructor()
+├── given initialOwner is the zero address
+│   ├── it should revert with OwnableInvalidOwner(address(0))
+│   └── it should perform no pool or factory validation
+├── given initialOwner is valid
+│   ├── given a required configuration address is zero
+│   │   ├── when curvePoolAddress is zero
+│   │   │   └── it should revert with DusdPegCurveOracleZeroAddress
+│   │   ├── when validationConfig.expectedCurvePoolImplementation is zero
+│   │   │   └── it should revert with DusdPegCurveOracleZeroAddress
+│   │   ├── when validationConfig.curveFactory is zero
+│   │   │   └── it should revert with DusdPegCurveOracleZeroAddress
+│   │   ├── when validationConfig.dusd is zero
+│   │   │   └── it should revert with DusdPegCurveOracleZeroAddress
+│   │   └── when validationConfig.quoteToken is zero
+│   │       └── it should revert with DusdPegCurveOracleZeroAddress
+│   ├── given all required configuration addresses are non-zero
+│   │   ├── when validationConfig.dusd equals validationConfig.quoteToken
+│   │   │   └── it should revert with DusdPegCurveOracleIdenticalCoins
+│   │   ├── when initialRuntimeConfig.expectedMaExpTime is zero
+│   │   │   └── it should revert with DusdPegCurveOracleInvalidConfig
+│   │   └── when initialRuntimeConfig.expectedAPrecise is zero
+│   │       └── it should revert with DusdPegCurveOracleInvalidConfig
+│   ├── given all scalar configuration values are valid
+│   │   ├── given pool validation
+│   │   │   ├── when N_COINS reverts
+│   │   │   │   └── it should bubble the pool revert
+│   │   │   ├── when N_COINS is less than EXPECTED_COIN_COUNT
+│   │   │   │   └── it should revert with DusdPegCurveOracleInvalidCoinCount
+│   │   │   ├── when N_COINS is greater than EXPECTED_COIN_COUNT
+│   │   │   │   └── it should revert with DusdPegCurveOracleInvalidCoinCount
+│   │   │   ├── when coins(0) reverts
+│   │   │   │   └── it should bubble the pool revert
+│   │   │   ├── when coin 0 is not validationConfig.quoteToken
+│   │   │   │   ├── it should revert with DusdPegCurveOracleInvalidCoinOrder
+│   │   │   │   └── it should not query coins(1)
+│   │   │   ├── when coin 0 is validationConfig.quoteToken and coins(1) reverts
+│   │   │   │   └── it should bubble the pool revert
+│   │   │   ├── when coin 0 is validationConfig.quoteToken and coin 1 is not validationConfig.dusd
+│   │   │   │   └── it should revert with DusdPegCurveOracleInvalidCoinOrder
+│   │   │   ├── when ma_exp_time reverts
+│   │   │   │   └── it should bubble the pool revert
+│   │   │   ├── when ma_exp_time does not equal initialRuntimeConfig.expectedMaExpTime
+│   │   │   │   └── it should revert with DusdPegCurveOracleInvalidMaExpTime
+│   │   │   ├── when A_precise reverts
+│   │   │   │   └── it should bubble the pool revert
+│   │   │   ├── when A_precise does not equal initialRuntimeConfig.expectedAPrecise
+│   │   │   │   ├── it should revert with DusdPegCurveOracleInvalidAmplification
+│   │   │   │   └── it should not query future_A
+│   │   │   ├── when A_precise matches and future_A reverts
+│   │   │   │   └── it should bubble the pool revert
+│   │   │   ├── when A_precise matches and future_A does not equal initialRuntimeConfig.expectedAPrecise
+│   │   │   │   └── it should revert with DusdPegCurveOracleInvalidAmplification
+│   │   │   ├── when price_oracle(0) reverts
+│   │   │   │   └── it should revert with DusdPegCurveOracleOracleUnavailable
+│   │   │   └── when price_oracle(0) returns ABI-undecodable data
+│   │   │       └── it should revert during caller-side ABI decoding outside the catch
+│   │   └── given pool validation succeeds
+│   │       ├── given factory validation
+│   │       │   ├── when get_n_coins reverts
+│   │       │   │   └── it should bubble the factory revert
+│   │       │   ├── when get_n_coins is less than EXPECTED_COIN_COUNT
+│   │       │   │   └── it should revert with DusdPegCurveOracleInvalidCoinCount
+│   │       │   ├── when get_n_coins is greater than EXPECTED_COIN_COUNT
+│   │       │   │   └── it should revert with DusdPegCurveOracleInvalidCoinCount
+│   │       │   ├── when is_meta reverts
+│   │       │   │   └── it should bubble the factory revert
+│   │       │   ├── when is_meta returns true
+│   │       │   │   └── it should revert with DusdPegCurveOracleUnsupportedMetapool
+│   │       │   ├── when get_coins reverts
+│   │       │   │   └── it should bubble the factory revert
+│   │       │   ├── when the registered coin array has fewer than two elements
+│   │       │   │   └── it should revert with DusdPegCurveOracleInvalidCoinCount
+│   │       │   ├── when the registered coin array has more than two elements
+│   │       │   │   └── it should revert with DusdPegCurveOracleInvalidCoinCount
+│   │       │   ├── when registered coin 0 is not validationConfig.quoteToken
+│   │       │   │   └── it should revert with DusdPegCurveOracleInvalidCoinOrder
+│   │       │   ├── when registered coin 0 matches and registered coin 1 is not validationConfig.dusd
+│   │       │   │   └── it should revert with DusdPegCurveOracleInvalidCoinOrder
+│   │       │   ├── when get_pool_asset_types reverts
+│   │       │   │   └── it should bubble the factory revert
+│   │       │   ├── when the asset-type array has fewer than two elements
+│   │       │   │   └── it should revert with DusdPegCurveOracleInvalidAssetTypeCount
+│   │       │   ├── when the asset-type array has more than two elements
+│   │       │   │   └── it should revert with DusdPegCurveOracleInvalidAssetTypeCount
+│   │       │   ├── when asset type 0 is not STANDARD_ASSET_TYPE
+│   │       │   │   ├── it should revert with DusdPegCurveOracleUnsupportedAssetType(0, actualAssetType)
+│   │       │   │   └── it should not validate asset type 1
+│   │       │   ├── when asset type 0 is standard and asset type 1 is not STANDARD_ASSET_TYPE
+│   │       │   │   └── it should revert with DusdPegCurveOracleUnsupportedAssetType(1, actualAssetType)
+│   │       │   ├── when get_implementation_address reverts
+│   │       │   │   └── it should bubble the factory revert
+│   │       │   ├── when get_implementation_address returns the zero address
+│   │       │   │   └── it should revert with DusdPegCurveOraclePoolNotRegistered
+│   │       │   └── when the registered implementation differs from validationConfig.expectedCurvePoolImplementation
+│   │       │       └── it should revert with DusdPegCurveOracleUnexpectedImplementation(actual, expected)
+│   │       └── given factory validation succeeds
+│   │           ├── when price_oracle(0) returns zero during validation
+│   │           │   └── it should deploy successfully
+│   │           ├── it should set curvePool to curvePoolAddress
+│   │           ├── it should not store or expose the deployment-only validation configuration
+│   │           ├── it should set runtimeConfig to initialRuntimeConfig
+│   │           ├── it should set owner to initialOwner
+│   │           ├── it should set pendingOwner to the zero address
+│   │           ├── it should emit OwnershipTransferred(address(0), initialOwner)
+│   │           ├── it should not emit SetRuntimeConfig
+│   │           ├── it should expose ORACLE_INDEX as zero
+│   │           ├── it should expose EXPECTED_COIN_COUNT as two
+│   │           ├── it should expose STANDARD_ASSET_TYPE as zero
+│   │           └── it should expose PRICE_TIMESTAMP_MASK as type(uint128).max

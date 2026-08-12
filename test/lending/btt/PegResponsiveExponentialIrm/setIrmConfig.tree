@@ -1,0 +1,126 @@
+PegResponsiveExponentialIrm::setIrmConfig(PegResponsiveExponentialIrmConfig)
+├── given caller is not the current owner
+│   ├── when caller is a non-owner or the pending owner has not accepted ownership
+│   │   └── it should revert with OwnableUnauthorizedAccount(caller)
+│   ├── it should prioritize authorization over configuration validation and checkpointing
+│   ├── it should leave irmConfig and the complete IRState unchanged
+│   └── it should not call the market or emit events
+└── given caller is the current owner
+    ├── given the price configuration is invalid
+    │   ├── when stressPrice is zero
+    │   │   └── it should revert with PegResponsiveExponentialIrmInvalidPriceConfig
+    │   ├── when recoveryPrice is greater than MAX_RECOVERY_PRICE
+    │   │   └── it should revert with PegResponsiveExponentialIrmInvalidPriceConfig
+    │   ├── when stressPrice equals recoveryPrice
+    │   │   └── it should revert with PegResponsiveExponentialIrmInvalidPriceConfig
+    │   └── when stressPrice is greater than recoveryPrice
+    │       └── it should revert with PegResponsiveExponentialIrmInvalidPriceConfig
+    ├── given the price configuration is valid and the rate configuration is invalid
+    │   ├── when baseRate is zero
+    │   │   └── it should revert with PegResponsiveExponentialIrmInvalidRateConfig
+    │   ├── when baseRate is greater than stressRate
+    │   │   └── it should revert with PegResponsiveExponentialIrmInvalidRateConfig
+    │   ├── when stressRate equals maxRate
+    │   │   └── it should revert with PegResponsiveExponentialIrmInvalidRateConfig
+    │   ├── when stressRate is greater than maxRate
+    │   │   └── it should revert with PegResponsiveExponentialIrmInvalidRateConfig
+    │   └── when maxRate is greater than MAX_BORROW_RATE
+    │       └── it should revert with PegResponsiveExponentialIrmInvalidRateConfig
+    ├── given the price and rate configuration are valid and the controller configuration is invalid
+    │   ├── when doublingDistance is zero
+    │   │   └── it should revert with PegResponsiveExponentialIrmInvalidControllerConfig
+    │   ├── when recoveryDelay is zero
+    │   │   └── it should revert with PegResponsiveExponentialIrmInvalidControllerConfig
+    │   └── when maxOracleAge is zero
+    │       └── it should revert with PegResponsiveExponentialIrmInvalidControllerConfig
+    ├── given more than one configuration group is invalid
+    │   ├── when the price group is invalid
+    │   │   └── it should prioritize PegResponsiveExponentialIrmInvalidPriceConfig
+    │   └── when the price group is valid and both rate and controller groups are invalid
+    │       └── it should prioritize PegResponsiveExponentialIrmInvalidRateConfig
+    ├── given any configuration input is structurally invalid
+    │   ├── it should reject before querying or checkpointing the market
+    │   ├── it should leave irmConfig and the complete IRState unchanged
+    │   └── it should not emit events
+    └── given the new configuration passes structural validation
+        ├── when stressPrice is one and recoveryPrice is two
+        │   └── it should accept the minimum non-zero ordered price thresholds subject to the post-checkpoint rate ceiling
+        ├── when stressPrice equals recoveryPrice minus one
+        │   └── it should accept the immediate valid side of the strict price ordering subject to the post-checkpoint rate ceiling
+        ├── when recoveryPrice equals MAX_RECOVERY_PRICE
+        │   └── it should accept the exact supported price ceiling subject to the post-checkpoint rate ceiling
+        ├── when baseRate is one
+        │   └── it should accept the minimum non-zero base rate subject to the post-checkpoint rate ceiling
+        ├── when baseRate equals stressRate
+        │   └── it should accept the inclusive rate boundary subject to the post-checkpoint rate ceiling
+        ├── when maxRate equals stressRate plus one
+        │   └── it should accept the immediate valid side of the strict rate ordering subject to the post-checkpoint rate ceiling
+        ├── when maxRate equals MAX_BORROW_RATE
+        │   └── it should accept the exact rate ceiling subject to the post-checkpoint rate check
+        ├── when doublingDistance is one
+        │   └── it should accept the minimum non-zero doubling distance subject to the post-checkpoint rate ceiling
+        ├── when recoveryDelay is one
+        │   └── it should accept the minimum non-zero recovery delay subject to the post-checkpoint rate ceiling
+        ├── when maxOracleAge is one
+        │   └── it should accept the minimum non-zero oracle age subject to the post-checkpoint rate ceiling
+        ├── when doublingDistance is type(uint256).max
+        │   └── it should accept the unbounded upper distance subject to the post-checkpoint rate ceiling
+        ├── when recoveryDelay is type(uint48).max
+        │   └── it should accept the maximum stored delay subject to the post-checkpoint rate ceiling
+        ├── when maxOracleAge is type(uint48).max
+        │   └── it should accept the maximum stored age subject to the post-checkpoint rate ceiling
+        ├── when maxOracleAge is less than recoveryDelay
+        │   └── it should not enforce a relationship between those fields
+        ├── when maxOracleAge equals recoveryDelay
+        │   └── it should not enforce a relationship between those fields
+        ├── when maxOracleAge is greater than recoveryDelay
+        │   └── it should not enforce a relationship between those fields
+        ├── given market is not set
+        │   ├── it should skip the market paused query
+        │   └── it should skip market accrual
+        ├── given market is set
+        │   ├── it should query paused with the exact PAUSE_TYPE
+        │   ├── when the paused query reverts or its return data cannot be decoded
+        │   │   ├── it should bubble the failure
+        │   │   ├── it should leave irmConfig and IRState unchanged
+        │   │   └── it should not emit setter events
+        │   ├── when paused returns true
+        │   │   └── it should skip accrueInterest
+        │   └── when paused returns false
+        │       ├── when accrueInterest reverts
+        │       │   ├── it should bubble the market revert
+        │       │   ├── it should atomically roll back market and IRM effects
+        │       │   └── it should not emit setter events
+        │       └── when accrueInterest succeeds
+        │           ├── it should call market.accrueInterest exactly once
+        │           ├── if the market calls back into this IRM, that callback should observe the old oracle and old irmConfig
+        │           └── it should use any callback-driven post-checkpoint IRState for subsequent checks
+        ├── given the post-checkpoint borrowRate is greater than newConfig.maxRate
+        │   ├── it should revert with PegResponsiveExponentialIrmInvalidRateConfig
+        │   ├── it should roll back the nested checkpoint and all setter effects atomically
+        │   └── it should not emit surviving events
+        ├── given the pre-checkpoint borrowRate is at most newConfig.maxRate but the checkpoint raises it above the new maximum
+        │   └── it should reject using the post-checkpoint rate
+        ├── given the pre-checkpoint borrowRate is above newConfig.maxRate but the checkpoint lowers it to the new maximum or below
+        │   └── it should accept using the post-checkpoint rate
+        ├── given the post-checkpoint borrowRate equals newConfig.maxRate
+        │   └── it should accept the exact ceiling boundary
+        └── given the post-checkpoint borrowRate is at most newConfig.maxRate
+            ├── when newConfig equals the stored configuration
+            │   ├── it should still perform the applicable checkpoint
+            │   └── it should accept and emit the replacement event
+            ├── when the stored rate is below newConfig.baseRate or newConfig.stressRate
+            │   ├── it should accept the configuration because only the maximum is checked
+            │   └── it should not immediately derive a rate from the new configuration
+            ├── it should store every newConfig field exactly
+            ├── it should not re-evaluate stressMode against the new thresholds
+            ├── given post-checkpoint recoveryStartedAt is zero
+            │   ├── it should preserve the complete post-checkpoint IRState
+            │   ├── it should emit exactly SetIrmConfig(newConfig) among setter events
+            │   └── it should not emit an additional StressStateUpdated or IRStateUpdated for recovery reset
+            └── given post-checkpoint recoveryStartedAt is non-zero
+                ├── it should clear recoveryStartedAt
+                ├── it should preserve post-checkpoint borrowRate, lastUpdate and stressMode
+                ├── it should emit StressStateUpdated(stressMode, 0, 0)
+                ├── it should then emit IRStateUpdated with the resulting state
+                └── it should then emit SetIrmConfig(newConfig)

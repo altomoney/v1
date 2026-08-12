@@ -5,7 +5,7 @@ pragma solidity >=0.8.0;
 enum IRMType {
     FIXED_RATE, // FixedRateIrm
     ADAPTIVE_CURVE, // AdaptiveCurveIrm
-    PEG_RESPONSIVE // PegResponsiveIrm
+    PEG_RESPONSIVE_EXPONENTIAL // PegResponsiveExponentialIrm
 }
 
 interface IIrm {

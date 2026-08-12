@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 import {ICurveStableSwapNGFactory} from "@alto/interfaces/curve/ICurveStableSwapNGFactory.sol";
 
 /// @notice Stateful mock of the StableSwap NG factory registry reads used by
-/// `DusdPegOracleCurve`.
+/// `DusdPegCurveOracle`.
 /// @dev Metadata is stored per pool, matching the production factory's
 /// `pool_data` model.
 contract MockCurveStableSwapFactory is ICurveStableSwapNGFactory {
