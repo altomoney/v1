@@ -4,20 +4,20 @@ DusdPegOracleCurve::constructor()
 │   └── it should perform no pool or factory validation
 ├── given initialOwner is valid
 │   ├── given a required configuration address is zero
-│   │   ├── when cfg.pool is zero
+│   │   ├── when config.curvePool is zero
 │   │   │   └── it should revert with DusdPegOracleCurveZeroAddress
-│   │   ├── when cfg.poolImpl is zero
+│   │   ├── when validationConfig.expectedCurvePoolImplementation is zero
 │   │   │   └── it should revert with DusdPegOracleCurveZeroAddress
-│   │   ├── when cfg.factory is zero
+│   │   ├── when validationConfig.curveFactory is zero
 │   │   │   └── it should revert with DusdPegOracleCurveZeroAddress
-│   │   ├── when cfg.dusd is zero
+│   │   ├── when validationConfig.dusd is zero
 │   │   │   └── it should revert with DusdPegOracleCurveZeroAddress
-│   │   └── when cfg.quoteToken is zero
+│   │   └── when validationConfig.quoteToken is zero
 │   │       └── it should revert with DusdPegOracleCurveZeroAddress
 │   ├── given all required configuration addresses are non-zero
-│   │   ├── when cfg.maExpTime is zero
+│   │   ├── when config.expectedMaExpTime is zero
 │   │   │   └── it should revert with DusdPegOracleCurveInvalidConfig
-│   │   └── when cfg.aPrecise is zero
+│   │   └── when config.expectedAPrecise is zero
 │   │       └── it should revert with DusdPegOracleCurveInvalidConfig
 │   ├── given all scalar configuration values are valid
 │   │   ├── given pool validation
@@ -29,25 +29,25 @@ DusdPegOracleCurve::constructor()
 │   │   │   │   └── it should revert with DusdPegOracleCurveInvalidCoinCount
 │   │   │   ├── when coins(0) reverts
 │   │   │   │   └── it should bubble the pool revert
-│   │   │   ├── when coin 0 is not cfg.quoteToken
+│   │   │   ├── when coin 0 is not validationConfig.quoteToken
 │   │   │   │   ├── it should revert with DusdPegOracleCurveInvalidCoinOrder
 │   │   │   │   └── it should not query coins(1)
-│   │   │   ├── when coin 0 is cfg.quoteToken and coins(1) reverts
+│   │   │   ├── when coin 0 is validationConfig.quoteToken and coins(1) reverts
 │   │   │   │   └── it should bubble the pool revert
-│   │   │   ├── when coin 0 is cfg.quoteToken and coin 1 is not cfg.dusd
+│   │   │   ├── when coin 0 is validationConfig.quoteToken and coin 1 is not validationConfig.dusd
 │   │   │   │   └── it should revert with DusdPegOracleCurveInvalidCoinOrder
 │   │   │   ├── when ma_exp_time reverts
 │   │   │   │   └── it should bubble the pool revert
-│   │   │   ├── when ma_exp_time does not equal cfg.maExpTime
+│   │   │   ├── when ma_exp_time does not equal config.expectedMaExpTime
 │   │   │   │   └── it should revert with DusdPegOracleCurveInvalidMaExpTime
 │   │   │   ├── when A_precise reverts
 │   │   │   │   └── it should bubble the pool revert
-│   │   │   ├── when A_precise does not equal cfg.aPrecise
+│   │   │   ├── when A_precise does not equal config.expectedAPrecise
 │   │   │   │   ├── it should revert with DusdPegOracleCurveInvalidAmplification
 │   │   │   │   └── it should not query future_A
 │   │   │   ├── when A_precise matches and future_A reverts
 │   │   │   │   └── it should bubble the pool revert
-│   │   │   ├── when A_precise matches and future_A does not equal cfg.aPrecise
+│   │   │   ├── when A_precise matches and future_A does not equal config.expectedAPrecise
 │   │   │   │   └── it should revert with DusdPegOracleCurveInvalidAmplification
 │   │   │   ├── when price_oracle(0) reverts
 │   │   │   │   └── it should revert with DusdPegOracleCurveOracleUnavailable
@@ -71,9 +71,9 @@ DusdPegOracleCurve::constructor()
 │   │       │   │   └── it should revert with DusdPegOracleCurveInvalidCoinCount
 │   │       │   ├── when the registered coin array has more than two elements
 │   │       │   │   └── it should revert with DusdPegOracleCurveInvalidCoinCount
-│   │       │   ├── when registered coin 0 is not cfg.quoteToken
+│   │       │   ├── when registered coin 0 is not validationConfig.quoteToken
 │   │       │   │   └── it should revert with DusdPegOracleCurveInvalidCoinOrder
-│   │       │   ├── when registered coin 0 matches and registered coin 1 is not cfg.dusd
+│   │       │   ├── when registered coin 0 matches and registered coin 1 is not validationConfig.dusd
 │   │       │   │   └── it should revert with DusdPegOracleCurveInvalidCoinOrder
 │   │       │   ├── when get_pool_asset_types reverts
 │   │       │   │   └── it should bubble the factory revert
@@ -90,24 +90,21 @@ DusdPegOracleCurve::constructor()
 │   │       │   │   └── it should bubble the factory revert
 │   │       │   ├── when get_implementation_address returns the zero address
 │   │       │   │   └── it should revert with DusdPegOracleCurvePoolNotRegistered
-│   │       │   └── when the registered implementation is non-zero and differs from cfg.poolImpl
-│   │       │       └── it should revert with DusdPegOracleCurveUnexpectedImplementation(actual, cfg.poolImpl)
+│   │       │   └── when the registered implementation differs from validationConfig.expectedCurvePoolImplementation
+│   │       │       └── it should revert with DusdPegOracleCurveUnexpectedImplementation(actual, expected)
 │   │       └── given factory validation succeeds
-│   │           ├── when runtimeChecks is false
+│   │           ├── when runtimeChecksEnabled is false
 │   │           │   └── it should set runtimeConfigChecksEnabled to false
-│   │           ├── when runtimeChecks is true
+│   │           ├── when runtimeChecksEnabled is true
 │   │           │   └── it should set runtimeConfigChecksEnabled to true
 │   │           ├── when price_oracle(0) returns zero during validation
 │   │           │   └── it should deploy successfully
-│   │           ├── when cfg.dusd equals cfg.quoteToken and both pool positions and factory positions report that address
+│   │           ├── when validationConfig.dusd equals validationConfig.quoteToken and both sources report that address
 │   │           │   └── it should deploy successfully under the current validation policy
-│   │           ├── it should set pool to cfg.pool
-│   │           ├── it should set factory to cfg.factory
-│   │           ├── it should set poolImplementation to cfg.poolImpl
-│   │           ├── it should set dusd to cfg.dusd
-│   │           ├── it should set quoteToken to cfg.quoteToken
-│   │           ├── it should set expectedMaExpTime to cfg.maExpTime
-│   │           ├── it should set expectedAPrecise to cfg.aPrecise
+│   │           ├── it should set curvePool to config.curvePool
+│   │           ├── it should not store or expose the deployment-only validation configuration
+│   │           ├── it should set expectedMaExpTime to config.expectedMaExpTime
+│   │           ├── it should set expectedAPrecise to config.expectedAPrecise
 │   │           ├── it should set owner to initialOwner
 │   │           ├── it should set pendingOwner to the zero address
 │   │           ├── it should emit OwnershipTransferred(address(0), initialOwner)
@@ -116,5 +113,5 @@ DusdPegOracleCurve::constructor()
 │   │           ├── it should expose EXPECTED_COIN_COUNT as two
 │   │           ├── it should expose STANDARD_ASSET_TYPE as zero
 │   │           └── it should expose PRICE_TIMESTAMP_MASK as type(uint128).max
-│   └── given runtimeChecks is false
+│   └── given runtimeChecksEnabled is false
 │       └── it should still perform every constructor-time pool and factory validation

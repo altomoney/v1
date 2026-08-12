@@ -35,6 +35,13 @@ price read. If governance changes any of them, the oracle stops producing a
 valid observation until the protocol deliberately replaces it or restores the
 approved pool state.
 
+The constructor separates these inputs by lifecycle. `DusdPegOracleCurveConfig`
+contains `curvePool` and the approved EMA and amplification values retained by
+the deployed oracle. `DusdPegOracleCurveValidationConfig` contains
+`curveFactory`, `expectedCurvePoolImplementation`, DUSD, and quote-token
+addresses used only for deployment validation; those values are not stored or
+exposed as oracle getters.
+
 ### Validated price path
 
 `getPrice()` returns:
@@ -352,7 +359,7 @@ Planned deterministic suites use configurable mock pool and factory contracts
 to cover:
 
 - every constructor validation independently;
-- immutable configuration and factory provenance;
+- retained operational configuration and constructor-only factory provenance;
 - validated timestamp, parameter-drift, and price behavior;
 - source-call failures;
 - broad valid and invalid fuzz inputs; and

@@ -26,19 +26,7 @@ contract MockDusdPegOracle is IDusdPegOracleCurve {
     uint256 public constant override PRICE_TIMESTAMP_MASK = type(uint128).max;
 
     /// @inheritdoc IDusdPegOracleCurveBase
-    address public override pool;
-
-    /// @inheritdoc IDusdPegOracleCurveBase
-    address public override factory;
-
-    /// @inheritdoc IDusdPegOracleCurveBase
-    address public override poolImplementation;
-
-    /// @inheritdoc IDusdPegOracleCurveBase
-    address public override dusd;
-
-    /// @inheritdoc IDusdPegOracleCurveBase
-    address public override quoteToken;
+    address public override curvePool;
 
     /// @inheritdoc IDusdPegOracleCurveBase
     uint256 public override expectedMaExpTime;

@@ -7,6 +7,7 @@ import {DusdPegOracleCurveCommon} from "./DusdPegOracleCurveCommon.t.sol";
 import {DusdPegOracleCurve} from "@alto/oracles/dusd/DusdPegOracleCurve.sol";
 import {
     DusdPegOracleCurveConfig,
+    DusdPegOracleCurveValidationConfig,
     IDusdPegOracleCurveErrors
 } from "@alto/oracles/dusd/interfaces/IDusdPegOracleCurve.sol";
 import {
@@ -24,56 +25,86 @@ contract DusdPegOracleCurveConstructorTest is DusdPegOracleCurveCommon {
         _mockFactoryReadRevert(abi.encodeWithSelector(ICurveStableSwapFactory.get_n_coins.selector, address(pool)));
 
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableInvalidOwner.selector, address(0)));
-        _deployOracle(cfg, true, address(0));
+        _deployOracle(oracleConfig, true, address(0));
     }
 
     function test_RevertWhen_PoolIsZeroAddress() external {
-        DusdPegOracleCurveConfig memory invalidCfg = cfg;
-        invalidCfg.pool = address(0);
+        DusdPegOracleCurveConfig memory invalidConfig = oracleConfig;
+        invalidConfig.curvePool = address(0);
 
-        _expectDeployRevert(IDusdPegOracleCurveErrors.DusdPegOracleCurveZeroAddress.selector, invalidCfg, true, OWNER);
+        _expectDeployRevert(
+            IDusdPegOracleCurveErrors.DusdPegOracleCurveZeroAddress.selector, invalidConfig, true, OWNER
+        );
     }
 
     function test_RevertWhen_PoolImplementationIsZeroAddress() external {
-        DusdPegOracleCurveConfig memory invalidCfg = cfg;
-        invalidCfg.poolImpl = address(0);
+        DusdPegOracleCurveValidationConfig memory invalidValidationConfig = oracleValidationConfig;
+        invalidValidationConfig.expectedCurvePoolImplementation = address(0);
 
-        _expectDeployRevert(IDusdPegOracleCurveErrors.DusdPegOracleCurveZeroAddress.selector, invalidCfg, true, OWNER);
+        _expectDeployRevert(
+            IDusdPegOracleCurveErrors.DusdPegOracleCurveZeroAddress.selector,
+            oracleConfig,
+            invalidValidationConfig,
+            true,
+            OWNER
+        );
     }
 
     function test_RevertWhen_FactoryIsZeroAddress() external {
-        DusdPegOracleCurveConfig memory invalidCfg = cfg;
-        invalidCfg.factory = address(0);
+        DusdPegOracleCurveValidationConfig memory invalidValidationConfig = oracleValidationConfig;
+        invalidValidationConfig.curveFactory = address(0);
 
-        _expectDeployRevert(IDusdPegOracleCurveErrors.DusdPegOracleCurveZeroAddress.selector, invalidCfg, true, OWNER);
+        _expectDeployRevert(
+            IDusdPegOracleCurveErrors.DusdPegOracleCurveZeroAddress.selector,
+            oracleConfig,
+            invalidValidationConfig,
+            true,
+            OWNER
+        );
     }
 
     function test_RevertWhen_DusdIsZeroAddress() external {
-        DusdPegOracleCurveConfig memory invalidCfg = cfg;
-        invalidCfg.dusd = address(0);
+        DusdPegOracleCurveValidationConfig memory invalidValidationConfig = oracleValidationConfig;
+        invalidValidationConfig.dusd = address(0);
 
-        _expectDeployRevert(IDusdPegOracleCurveErrors.DusdPegOracleCurveZeroAddress.selector, invalidCfg, true, OWNER);
+        _expectDeployRevert(
+            IDusdPegOracleCurveErrors.DusdPegOracleCurveZeroAddress.selector,
+            oracleConfig,
+            invalidValidationConfig,
+            true,
+            OWNER
+        );
     }
 
     function test_RevertWhen_QuoteTokenIsZeroAddress() external {
-        DusdPegOracleCurveConfig memory invalidCfg = cfg;
-        invalidCfg.quoteToken = address(0);
+        DusdPegOracleCurveValidationConfig memory invalidValidationConfig = oracleValidationConfig;
+        invalidValidationConfig.quoteToken = address(0);
 
-        _expectDeployRevert(IDusdPegOracleCurveErrors.DusdPegOracleCurveZeroAddress.selector, invalidCfg, true, OWNER);
+        _expectDeployRevert(
+            IDusdPegOracleCurveErrors.DusdPegOracleCurveZeroAddress.selector,
+            oracleConfig,
+            invalidValidationConfig,
+            true,
+            OWNER
+        );
     }
 
     function test_RevertWhen_MaExpTimeIsZero() external {
-        DusdPegOracleCurveConfig memory invalidCfg = cfg;
-        invalidCfg.maExpTime = 0;
+        DusdPegOracleCurveConfig memory invalidConfig = oracleConfig;
+        invalidConfig.expectedMaExpTime = 0;
 
-        _expectDeployRevert(IDusdPegOracleCurveErrors.DusdPegOracleCurveInvalidConfig.selector, invalidCfg, true, OWNER);
+        _expectDeployRevert(
+            IDusdPegOracleCurveErrors.DusdPegOracleCurveInvalidConfig.selector, invalidConfig, true, OWNER
+        );
     }
 
     function test_RevertWhen_APreciseIsZero() external {
-        DusdPegOracleCurveConfig memory invalidCfg = cfg;
-        invalidCfg.aPrecise = 0;
+        DusdPegOracleCurveConfig memory invalidConfig = oracleConfig;
+        invalidConfig.expectedAPrecise = 0;
 
-        _expectDeployRevert(IDusdPegOracleCurveErrors.DusdPegOracleCurveInvalidConfig.selector, invalidCfg, true, OWNER);
+        _expectDeployRevert(
+            IDusdPegOracleCurveErrors.DusdPegOracleCurveInvalidConfig.selector, invalidConfig, true, OWNER
+        );
     }
 
     function test_RevertWhen_PoolNCoinsReverts() external {
@@ -85,13 +116,17 @@ contract DusdPegOracleCurveConstructorTest is DusdPegOracleCurveCommon {
     function test_RevertWhen_PoolNCoinsIsLessThanTwo() external {
         _mockPoolReturn(abi.encodeWithSelector(ICurveStableSwapNGBase.N_COINS.selector), abi.encode(uint256(1)));
 
-        _expectDeployRevert(IDusdPegOracleCurveErrors.DusdPegOracleCurveInvalidCoinCount.selector, cfg, true, OWNER);
+        _expectDeployRevert(
+            IDusdPegOracleCurveErrors.DusdPegOracleCurveInvalidCoinCount.selector, oracleConfig, true, OWNER
+        );
     }
 
     function test_RevertWhen_PoolNCoinsIsGreaterThanTwo() external {
         _mockPoolReturn(abi.encodeWithSelector(ICurveStableSwapNGBase.N_COINS.selector), abi.encode(uint256(3)));
 
-        _expectDeployRevert(IDusdPegOracleCurveErrors.DusdPegOracleCurveInvalidCoinCount.selector, cfg, true, OWNER);
+        _expectDeployRevert(
+            IDusdPegOracleCurveErrors.DusdPegOracleCurveInvalidCoinCount.selector, oracleConfig, true, OWNER
+        );
     }
 
     function test_RevertWhen_PoolCoinZeroReadReverts() external {
@@ -104,7 +139,9 @@ contract DusdPegOracleCurveConstructorTest is DusdPegOracleCurveCommon {
         _mockPoolReturn(abi.encodeWithSelector(ICurveStableSwapNGBase.coins.selector, uint256(0)), abi.encode(DUSD));
         _mockPoolReadRevert(abi.encodeWithSelector(ICurveStableSwapNGBase.coins.selector, uint256(1)));
 
-        _expectDeployRevert(IDusdPegOracleCurveErrors.DusdPegOracleCurveInvalidCoinOrder.selector, cfg, true, OWNER);
+        _expectDeployRevert(
+            IDusdPegOracleCurveErrors.DusdPegOracleCurveInvalidCoinOrder.selector, oracleConfig, true, OWNER
+        );
     }
 
     function test_RevertWhen_PoolCoinOneReadReverts() external {
@@ -118,7 +155,9 @@ contract DusdPegOracleCurveConstructorTest is DusdPegOracleCurveCommon {
             abi.encodeWithSelector(ICurveStableSwapNGBase.coins.selector, uint256(1)), abi.encode(QUOTE_TOKEN)
         );
 
-        _expectDeployRevert(IDusdPegOracleCurveErrors.DusdPegOracleCurveInvalidCoinOrder.selector, cfg, true, OWNER);
+        _expectDeployRevert(
+            IDusdPegOracleCurveErrors.DusdPegOracleCurveInvalidCoinOrder.selector, oracleConfig, true, OWNER
+        );
     }
 
     function test_RevertWhen_PoolMaExpTimeReadReverts() external {
@@ -132,7 +171,9 @@ contract DusdPegOracleCurveConstructorTest is DusdPegOracleCurveCommon {
             abi.encodeWithSelector(ICurveStableSwap.ma_exp_time.selector), abi.encode(uint256(MA_EXP_TIME + 1))
         );
 
-        _expectDeployRevert(IDusdPegOracleCurveErrors.DusdPegOracleCurveInvalidMaExpTime.selector, cfg, true, OWNER);
+        _expectDeployRevert(
+            IDusdPegOracleCurveErrors.DusdPegOracleCurveInvalidMaExpTime.selector, oracleConfig, true, OWNER
+        );
     }
 
     function test_RevertWhen_PoolAPreciseReadReverts() external {
@@ -145,7 +186,9 @@ contract DusdPegOracleCurveConstructorTest is DusdPegOracleCurveCommon {
         _mockPoolReturn(abi.encodeWithSelector(ICurveStableSwap.A_precise.selector), abi.encode(uint256(A_PRECISE + 1)));
         _mockPoolReadRevert(abi.encodeWithSelector(ICurveStableSwap.future_A.selector));
 
-        _expectDeployRevert(IDusdPegOracleCurveErrors.DusdPegOracleCurveInvalidAmplification.selector, cfg, true, OWNER);
+        _expectDeployRevert(
+            IDusdPegOracleCurveErrors.DusdPegOracleCurveInvalidAmplification.selector, oracleConfig, true, OWNER
+        );
     }
 
     function test_RevertWhen_PoolFutureAReadReverts() external {
@@ -157,20 +200,24 @@ contract DusdPegOracleCurveConstructorTest is DusdPegOracleCurveCommon {
     function test_RevertWhen_PoolFutureADoesNotMatchConfig() external {
         _mockPoolReturn(abi.encodeWithSelector(ICurveStableSwap.future_A.selector), abi.encode(uint256(A_PRECISE + 1)));
 
-        _expectDeployRevert(IDusdPegOracleCurveErrors.DusdPegOracleCurveInvalidAmplification.selector, cfg, true, OWNER);
+        _expectDeployRevert(
+            IDusdPegOracleCurveErrors.DusdPegOracleCurveInvalidAmplification.selector, oracleConfig, true, OWNER
+        );
     }
 
     function test_RevertWhen_PoolPriceOracleReadReverts() external {
         _mockPoolReadRevert(abi.encodeWithSelector(ICurveStableSwap.price_oracle.selector, uint256(0)));
 
-        _expectDeployRevert(IDusdPegOracleCurveErrors.DusdPegOracleCurveOracleUnavailable.selector, cfg, true, OWNER);
+        _expectDeployRevert(
+            IDusdPegOracleCurveErrors.DusdPegOracleCurveOracleUnavailable.selector, oracleConfig, true, OWNER
+        );
     }
 
     function test_RevertWhen_PoolPriceOracleReturnDataCannotBeDecoded() external {
         _mockPoolReturn(abi.encodeWithSelector(ICurveStableSwap.price_oracle.selector, uint256(0)), hex"01");
 
         vm.expectRevert(bytes(""));
-        _deployOracle(cfg, true, OWNER);
+        _deployOracle(oracleConfig, true, OWNER);
     }
 
     function test_RevertWhen_FactoryNCoinsReadReverts() external {
@@ -184,7 +231,9 @@ contract DusdPegOracleCurveConstructorTest is DusdPegOracleCurveCommon {
             abi.encodeWithSelector(ICurveStableSwapFactory.get_n_coins.selector, address(pool)), abi.encode(uint256(1))
         );
 
-        _expectDeployRevert(IDusdPegOracleCurveErrors.DusdPegOracleCurveInvalidCoinCount.selector, cfg, true, OWNER);
+        _expectDeployRevert(
+            IDusdPegOracleCurveErrors.DusdPegOracleCurveInvalidCoinCount.selector, oracleConfig, true, OWNER
+        );
     }
 
     function test_RevertWhen_FactoryNCoinsIsGreaterThanTwo() external {
@@ -192,7 +241,9 @@ contract DusdPegOracleCurveConstructorTest is DusdPegOracleCurveCommon {
             abi.encodeWithSelector(ICurveStableSwapFactory.get_n_coins.selector, address(pool)), abi.encode(uint256(3))
         );
 
-        _expectDeployRevert(IDusdPegOracleCurveErrors.DusdPegOracleCurveInvalidCoinCount.selector, cfg, true, OWNER);
+        _expectDeployRevert(
+            IDusdPegOracleCurveErrors.DusdPegOracleCurveInvalidCoinCount.selector, oracleConfig, true, OWNER
+        );
     }
 
     function test_RevertWhen_FactoryIsMetaReadReverts() external {
@@ -206,7 +257,9 @@ contract DusdPegOracleCurveConstructorTest is DusdPegOracleCurveCommon {
             abi.encodeWithSelector(ICurveStableSwapFactory.is_meta.selector, address(pool)), abi.encode(true)
         );
 
-        _expectDeployRevert(IDusdPegOracleCurveErrors.DusdPegOracleCurveUnsupportedMetapool.selector, cfg, true, OWNER);
+        _expectDeployRevert(
+            IDusdPegOracleCurveErrors.DusdPegOracleCurveUnsupportedMetapool.selector, oracleConfig, true, OWNER
+        );
     }
 
     function test_RevertWhen_FactoryCoinsReadReverts() external {
@@ -221,7 +274,9 @@ contract DusdPegOracleCurveConstructorTest is DusdPegOracleCurveCommon {
             abi.encodeWithSelector(ICurveStableSwapFactory.get_coins.selector, address(pool)), abi.encode(coins)
         );
 
-        _expectDeployRevert(IDusdPegOracleCurveErrors.DusdPegOracleCurveInvalidCoinCount.selector, cfg, true, OWNER);
+        _expectDeployRevert(
+            IDusdPegOracleCurveErrors.DusdPegOracleCurveInvalidCoinCount.selector, oracleConfig, true, OWNER
+        );
     }
 
     function test_RevertWhen_FactoryCoinsHasMoreThanTwoElements() external {
@@ -230,7 +285,9 @@ contract DusdPegOracleCurveConstructorTest is DusdPegOracleCurveCommon {
             abi.encodeWithSelector(ICurveStableSwapFactory.get_coins.selector, address(pool)), abi.encode(coins)
         );
 
-        _expectDeployRevert(IDusdPegOracleCurveErrors.DusdPegOracleCurveInvalidCoinCount.selector, cfg, true, OWNER);
+        _expectDeployRevert(
+            IDusdPegOracleCurveErrors.DusdPegOracleCurveInvalidCoinCount.selector, oracleConfig, true, OWNER
+        );
     }
 
     function test_RevertWhen_FactoryCoinZeroIsNotQuoteToken() external {
@@ -239,7 +296,9 @@ contract DusdPegOracleCurveConstructorTest is DusdPegOracleCurveCommon {
             abi.encodeWithSelector(ICurveStableSwapFactory.get_coins.selector, address(pool)), abi.encode(coins)
         );
 
-        _expectDeployRevert(IDusdPegOracleCurveErrors.DusdPegOracleCurveInvalidCoinOrder.selector, cfg, true, OWNER);
+        _expectDeployRevert(
+            IDusdPegOracleCurveErrors.DusdPegOracleCurveInvalidCoinOrder.selector, oracleConfig, true, OWNER
+        );
     }
 
     function test_RevertWhen_FactoryCoinOneIsNotDusd() external {
@@ -248,7 +307,9 @@ contract DusdPegOracleCurveConstructorTest is DusdPegOracleCurveCommon {
             abi.encodeWithSelector(ICurveStableSwapFactory.get_coins.selector, address(pool)), abi.encode(coins)
         );
 
-        _expectDeployRevert(IDusdPegOracleCurveErrors.DusdPegOracleCurveInvalidCoinOrder.selector, cfg, true, OWNER);
+        _expectDeployRevert(
+            IDusdPegOracleCurveErrors.DusdPegOracleCurveInvalidCoinOrder.selector, oracleConfig, true, OWNER
+        );
     }
 
     function test_RevertWhen_FactoryAssetTypesReadReverts() external {
@@ -267,7 +328,7 @@ contract DusdPegOracleCurveConstructorTest is DusdPegOracleCurveCommon {
         );
 
         _expectDeployRevert(
-            IDusdPegOracleCurveErrors.DusdPegOracleCurveInvalidAssetTypeCount.selector, cfg, true, OWNER
+            IDusdPegOracleCurveErrors.DusdPegOracleCurveInvalidAssetTypeCount.selector, oracleConfig, true, OWNER
         );
     }
 
@@ -279,7 +340,7 @@ contract DusdPegOracleCurveConstructorTest is DusdPegOracleCurveCommon {
         );
 
         _expectDeployRevert(
-            IDusdPegOracleCurveErrors.DusdPegOracleCurveInvalidAssetTypeCount.selector, cfg, true, OWNER
+            IDusdPegOracleCurveErrors.DusdPegOracleCurveInvalidAssetTypeCount.selector, oracleConfig, true, OWNER
         );
     }
 
@@ -295,7 +356,7 @@ contract DusdPegOracleCurveConstructorTest is DusdPegOracleCurveCommon {
                 IDusdPegOracleCurveErrors.DusdPegOracleCurveUnsupportedAssetType.selector, uint256(0), uint8(1)
             )
         );
-        _deployOracle(cfg, true, OWNER);
+        _deployOracle(oracleConfig, true, OWNER);
     }
 
     function test_RevertWhen_FactoryAssetTypeOneIsNotStandard() external {
@@ -310,7 +371,7 @@ contract DusdPegOracleCurveConstructorTest is DusdPegOracleCurveCommon {
                 IDusdPegOracleCurveErrors.DusdPegOracleCurveUnsupportedAssetType.selector, uint256(1), uint8(2)
             )
         );
-        _deployOracle(cfg, true, OWNER);
+        _deployOracle(oracleConfig, true, OWNER);
     }
 
     function test_RevertWhen_FactoryImplementationReadReverts() external {
@@ -327,7 +388,9 @@ contract DusdPegOracleCurveConstructorTest is DusdPegOracleCurveCommon {
             abi.encode(address(0))
         );
 
-        _expectDeployRevert(IDusdPegOracleCurveErrors.DusdPegOracleCurvePoolNotRegistered.selector, cfg, true, OWNER);
+        _expectDeployRevert(
+            IDusdPegOracleCurveErrors.DusdPegOracleCurvePoolNotRegistered.selector, oracleConfig, true, OWNER
+        );
     }
 
     function test_RevertWhen_FactoryImplementationDiffersFromConfig() external {
@@ -344,17 +407,17 @@ contract DusdPegOracleCurveConstructorTest is DusdPegOracleCurveCommon {
                 POOL_IMPLEMENTATION
             )
         );
-        _deployOracle(cfg, true, OWNER);
+        _deployOracle(oracleConfig, true, OWNER);
     }
 
     function test_WhenRuntimeChecksIsFalse() external {
-        DusdPegOracleCurve deployedOracle = _deployOracle(cfg, false, OWNER);
+        DusdPegOracleCurve deployedOracle = _deployOracle(oracleConfig, false, OWNER);
 
         assertFalse(deployedOracle.runtimeConfigChecksEnabled());
     }
 
     function test_WhenRuntimeChecksIsTrue() external {
-        DusdPegOracleCurve deployedOracle = _deployOracle(cfg, true, OWNER);
+        DusdPegOracleCurve deployedOracle = _deployOracle(oracleConfig, true, OWNER);
 
         assertTrue(deployedOracle.runtimeConfigChecksEnabled());
     }
@@ -364,13 +427,13 @@ contract DusdPegOracleCurveConstructorTest is DusdPegOracleCurveCommon {
             abi.encodeWithSelector(ICurveStableSwap.price_oracle.selector, uint256(0)), abi.encode(uint256(0))
         );
 
-        DusdPegOracleCurve deployedOracle = _deployOracle(cfg, true, OWNER);
-        assertEq(address(deployedOracle.pool()), address(pool));
+        DusdPegOracleCurve deployedOracle = _deployOracle(oracleConfig, true, OWNER);
+        assertEq(address(deployedOracle.curvePool()), address(pool));
     }
 
     function test_WhenDusdEqualsQuoteToken() external {
-        DusdPegOracleCurveConfig memory duplicateCfg = cfg;
-        duplicateCfg.dusd = QUOTE_TOKEN;
+        DusdPegOracleCurveValidationConfig memory duplicateValidationConfig = oracleValidationConfig;
+        duplicateValidationConfig.dusd = QUOTE_TOKEN;
 
         _mockPoolReturn(
             abi.encodeWithSelector(ICurveStableSwapNGBase.coins.selector, uint256(1)), abi.encode(QUOTE_TOKEN)
@@ -380,20 +443,16 @@ contract DusdPegOracleCurveConstructorTest is DusdPegOracleCurveCommon {
             abi.encodeWithSelector(ICurveStableSwapFactory.get_coins.selector, address(pool)), abi.encode(coins)
         );
 
-        DusdPegOracleCurve deployedOracle = _deployOracle(duplicateCfg, true, OWNER);
-        assertEq(deployedOracle.dusd(), deployedOracle.quoteToken());
+        DusdPegOracleCurve deployedOracle = _deployOracle(oracleConfig, duplicateValidationConfig, true, OWNER);
+        assertEq(deployedOracle.curvePool(), address(pool));
     }
 
     function test_WhenValidConfigurationIsProvided() external {
         vm.recordLogs();
-        DusdPegOracleCurve deployedOracle = _deployOracle(cfg, true, OWNER);
+        DusdPegOracleCurve deployedOracle = _deployOracle(oracleConfig, true, OWNER);
         Vm.Log[] memory logs = vm.getRecordedLogs();
 
-        assertEq(address(deployedOracle.pool()), address(pool));
-        assertEq(address(deployedOracle.factory()), address(factory));
-        assertEq(deployedOracle.poolImplementation(), POOL_IMPLEMENTATION);
-        assertEq(deployedOracle.dusd(), DUSD);
-        assertEq(deployedOracle.quoteToken(), QUOTE_TOKEN);
+        assertEq(address(deployedOracle.curvePool()), address(pool));
         assertEq(deployedOracle.expectedMaExpTime(), MA_EXP_TIME);
         assertEq(deployedOracle.expectedAPrecise(), A_PRECISE);
         assertTrue(deployedOracle.runtimeConfigChecksEnabled());
@@ -441,27 +500,38 @@ contract DusdPegOracleCurveConstructorTest is DusdPegOracleCurveCommon {
             1
         );
 
-        DusdPegOracleCurve deployedOracle = _deployOracle(cfg, false, OWNER);
+        DusdPegOracleCurve deployedOracle = _deployOracle(oracleConfig, false, OWNER);
         assertFalse(deployedOracle.runtimeConfigChecksEnabled());
     }
 
     function _expectDeployRevert(
         bytes4 selector,
         DusdPegOracleCurveConfig memory config,
-        bool runtimeChecks,
+        bool runtimeChecksEnabled,
         address initialOwner
     ) private {
         vm.expectRevert(selector);
-        _deployOracle(config, runtimeChecks, initialOwner);
+        _deployOracle(config, runtimeChecksEnabled, initialOwner);
+    }
+
+    function _expectDeployRevert(
+        bytes4 selector,
+        DusdPegOracleCurveConfig memory config,
+        DusdPegOracleCurveValidationConfig memory validationConfig,
+        bool runtimeChecksEnabled,
+        address initialOwner
+    ) private {
+        vm.expectRevert(selector);
+        _deployOracle(config, validationConfig, runtimeChecksEnabled, initialOwner);
     }
 
     function _expectPoolReadDeployRevert() private {
         _expectPoolReadRevert();
-        _deployOracle(cfg, true, OWNER);
+        _deployOracle(oracleConfig, true, OWNER);
     }
 
     function _expectFactoryReadDeployRevert() private {
         _expectFactoryReadRevert();
-        _deployOracle(cfg, true, OWNER);
+        _deployOracle(oracleConfig, true, OWNER);
     }
 }
