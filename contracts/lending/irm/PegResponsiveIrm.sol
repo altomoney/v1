@@ -294,50 +294,24 @@ contract PegResponsiveIrm is AltoOwnable2Step, IPegResponsiveIrmStaticTypes {
         IRState memory state = irState;
         PegResponsiveIrmConfig memory config = irmConfig;
 
-        // The oracle observation was invalid. Keep the current stress mode status.
-        //
-        // Reset the recovery timestamp so an invalid observation cannot count
-        // towards completing recovery.
-        if (!oracleValid) {
-            return (state.stressMode, 0);
+        // Invalid observations preserve stress mode but interrupt recovery.
+        if (!oracleValid) return (state.stressMode, 0);
+
+        // Crossing the stress threshold enters stress mode immediately.
+        if (!state.stressMode) return (priceWad <= config.stressPrice, 0);
+
+        // Falling below the recovery threshold interrupts recovery.
+        if (priceWad < config.recoveryPrice) return (true, 0);
+
+        // The first healthy checkpoint starts recovery confirmation.
+        if (state.recoveryStartedAt == 0) return (true, block.timestamp.toUint48());
+
+        // A later healthy checkpoint exits stress once the delay has elapsed.
+        if (block.timestamp - uint256(state.recoveryStartedAt) < config.recoveryDelay) {
+            return (true, state.recoveryStartedAt);
         }
 
-        // The system is not currently in stress mode.
-        if (!state.stressMode) {
-            // The price has reached or fallen below the stress threshold.
-            // Enter stress mode with no recovery timer running.
-            if (priceWad <= config.stressPrice) return (true, 0);
-
-            // The price is still above the stress threshold. Remain outside
-            // stress mode.
-            return (false, 0);
-        }
-
-        // From here onward, the system is already in stress mode.
-
-        // The price has not yet reached the recovery threshold.
-        // Remain stressed and cancel any recovery timer that may have started.
-        if (priceWad < config.recoveryPrice) {
-            return (true, 0);
-        }
-
-        // The price is now at or above the recovery threshold, but no recovery
-        // timer is currently running. Start the recovery confirmation period now.
-        if (state.recoveryStartedAt == 0) {
-            return (true, block.timestamp.toUint48());
-        }
-
-        // A recovery timer is already running.
-        // If the required delay has elapsed, recovery is confirmed:
-        // exit stress mode and clear the timer.
-        if (block.timestamp - uint256(state.recoveryStartedAt) >= config.recoveryDelay) {
-            return (false, 0);
-        }
-
-        // The price is still at or above the recovery threshold, but the required
-        // recovery delay has not elapsed yet.
-        // Remain stressed and preserve the original recovery start time.
-        return (true, state.recoveryStartedAt);
+        return (false, 0);
     }
 
     /// @dev Applies and emits the stress state implied by the latest observation.
@@ -345,19 +319,9 @@ contract PegResponsiveIrm is AltoOwnable2Step, IPegResponsiveIrmStaticTypes {
     /// @param oracleValid Whether the latest oracle observation is usable.
     /// @return stressMode Whether the controller is in stress mode after the update.
     function _applyStressState(uint256 priceWad, bool oracleValid) private returns (bool stressMode) {
-        bool previousStressMode = irState.stressMode;
-        uint48 previousRecoveryStartedAt = irState.recoveryStartedAt;
-
-        (bool nextStressMode, uint48 nextRecoveryStartedAt) = _nextStressState(priceWad, oracleValid);
-
-        irState.stressMode = nextStressMode;
-        irState.recoveryStartedAt = nextRecoveryStartedAt;
-
-        if (previousStressMode != nextStressMode || previousRecoveryStartedAt != nextRecoveryStartedAt) {
-            emit StressStateUpdated(nextStressMode, nextRecoveryStartedAt, priceWad);
-        }
-
-        return nextStressMode;
+        uint48 recoveryStartedAt;
+        (stressMode, recoveryStartedAt) = _nextStressState(priceWad, oracleValid);
+        _setStressState(stressMode, recoveryStartedAt, priceWad);
     }
 
     /// @dev Applies the stress-mode floor to the raw price-derived target.
@@ -377,10 +341,22 @@ contract PegResponsiveIrm is AltoOwnable2Step, IPegResponsiveIrmStaticTypes {
     /// @dev Interrupts an in-progress recovery confirmation.
     /// @return reset Whether an active recovery confirmation was cleared.
     function _resetRecoveryConfirmation() private returns (bool reset) {
-        if (irState.recoveryStartedAt == 0) return false;
+        return _setStressState(irState.stressMode, 0, 0);
+    }
 
-        irState.recoveryStartedAt = 0;
-        emit StressStateUpdated(irState.stressMode, 0, 0);
+    /// @dev Stores and emits a stress-state transition when either field changes.
+    /// @return changed Whether the stress state changed.
+    function _setStressState(bool stressMode, uint48 recoveryStartedAt, uint256 priceWad)
+        private
+        returns (bool changed)
+    {
+        if (irState.stressMode == stressMode && irState.recoveryStartedAt == recoveryStartedAt) {
+            return false;
+        }
+
+        irState.stressMode = stressMode;
+        irState.recoveryStartedAt = recoveryStartedAt;
+        emit StressStateUpdated(stressMode, recoveryStartedAt, priceWad);
         return true;
     }
 
