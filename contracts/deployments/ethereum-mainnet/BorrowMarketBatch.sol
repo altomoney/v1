@@ -12,7 +12,6 @@ import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
 import {AltoOwnable2StepUpgradeable} from "@alto/utils/AltoOwnable2StepUpgradeable.sol";
 import {AltoOwnable2Step} from "@alto/utils/AltoOwnable2Step.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {UnsafeUpgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {
     EthereumMainnetOracleDeployer,
@@ -38,10 +37,10 @@ struct BorrowMarketBatchParams {
     LiquidationConfiguration liquidationConfig;
     address[] validSwapTargets;
     address freezer;
-    bool useUnsafeUpgrades;
 }
 
 /// @notice Deploys all borrow market components in a single transaction
+/// @dev Upgrade safety must be validated by the calling deployment script before broadcasting.
 library BorrowMarketBatch {
     function deploy(BorrowMarketBatchParams memory _params) internal returns (MarketContracts memory) {
         // Deploy Oracle and IRM first (deployed directly with _params.owner as owner)
@@ -73,14 +72,8 @@ library BorrowMarketBatch {
                 })
             )
         );
-        address marketProxy;
         address marketImplementation = ALTO_BORROW_MARKET_IMPL;
-        if (_params.useUnsafeUpgrades) {
-            marketProxy = UnsafeUpgrades.deployUUPSProxy(marketImplementation, initData);
-        } else {
-            marketProxy = Upgrades.deployUUPSProxy("AltoBorrowMarket.sol:AltoBorrowMarket", initData);
-            marketImplementation = Upgrades.getImplementationAddress(marketProxy);
-        }
+        address marketProxy = UnsafeUpgrades.deployUUPSProxy(marketImplementation, initData);
 
         // Set liquidation configuration (requires ownership)
         DlbDcfPriorityLiquidationEngine(liquidationEngine).setLiquidationConfiguration(_params.liquidationConfig);

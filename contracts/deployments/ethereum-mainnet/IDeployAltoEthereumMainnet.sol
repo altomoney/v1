@@ -122,7 +122,6 @@ struct AltoEthereumMainnetParams {
     address freezer;
     address deployer;
     DeploymentPhase phase;
-    bool useUnsafeUpgrades;
     address treasuryMultisig;
     address updater;
     bool deployerHasOwnership;

@@ -60,7 +60,6 @@ contract DeployAltoEthereumMainnetTest is Test {
             freezer: MULTISIG_FREEZER_PAUSER,
             deployer: DEPLOYER,
             phase: DeploymentPhase.CORE,
-            useUnsafeUpgrades: true,
             treasuryMultisig: address(1), // TODO: Set to actual treasury multisig address
             updater: MERKLE_ROOT_UPDATER,
             deployerHasOwnership: true // Deployer has ownership in tests, execute directly
@@ -375,4 +374,3 @@ contract DeployAltoEthereumMainnetTest is Test {
         }
     }
 }
-
