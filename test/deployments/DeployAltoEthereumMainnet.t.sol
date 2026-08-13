@@ -3,7 +3,7 @@ pragma solidity ^0.8.22;
 
 import {Test} from "forge-std/Test.sol";
 import {console} from "forge-std/console.sol";
-import {MarketType} from "@alto/lending/interfaces/IMarket.sol";
+import {Balance, IMarket, MarketType} from "@alto/lending/interfaces/IMarket.sol";
 
 import {
     DeployAltoEthereumMainnet,
@@ -17,12 +17,19 @@ import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {AltoAdapter} from "@alto/utils/AltoAdapter.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {PAUSE_TYPE, FROZEN_TYPE} from "@alto/utils/Constants.sol";
-import {IMarket} from "@alto/lending/interfaces/IMarket.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {IAltoLiquidationEngine} from "@alto/lending/interfaces/IAltoLiquidationEngine.sol";
 import {Pausable} from "@alto/utils/Pausable.sol";
 import {AltoLeverage} from "@alto/lending/leverage/AltoLeverage.sol";
 import {AltoLeverageSwapperMultiTarget} from "@alto/lending/leverage/AltoLeverageSwapperMultiTarget.sol";
+import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
+import {AdaptiveCurveIrm} from "@alto/lending/irm/AdaptiveCurveIrm.sol";
+import {AltoBorrowMarket} from "@alto/lending/AltoBorrowMarket.sol";
+import {
+    IDcfDlbPriorityLiquidationEngine,
+    LiquidationConfiguration
+} from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";
+import {ILiquidationPeripheryBase} from "@alto/lending/liquidation/interfaces/ILiquidationPeriphery.sol";
 import {LiquidationPeriphery} from "@alto/lending/liquidation/LiquidationPeriphery.sol";
 import {DUSDAdvancedPermissionsUsm} from "@alto/usm/DUSDAdvancedPermissionsUsm.sol";
 import {AdvancedPermissionsFeeStrategy} from "@alto/usm/AdvancedPermissionsFeeStrategy.sol";
@@ -65,6 +72,18 @@ import {IMerkleRootManager} from "@alto/utils/interfaces/IMerkleRootManager.sol"
 ///      contracts/deployments/ethereum-mainnet/output/ethereum-mainnet-1-<DEPLOYMENT_ID>/addresses.json
 uint256 constant DEPLOYMENT_ID_TO_LOAD = 1765364975;
 string constant OUTPUT_DIR = "./contracts/deployments/ethereum-mainnet/output";
+
+struct ExpectedMarketParams {
+    MarketType marketType;
+    address collateralToken;
+    uint256 maxLtv;
+    uint256 borrowOpeningFee;
+    uint256 capacity;
+    uint256 maxLiquidationLtv;
+    uint256 dynamicBonusFeeStart;
+    uint256 ltvForCompleteLiquidation;
+    uint256 liquidationBaseFee;
+}
 
 abstract contract DeployAltoEthereumMainnetTestBase is Test {
     AltoEthereumMainnetParams params;
@@ -688,6 +707,196 @@ abstract contract DeployAltoEthereumMainnetTestBase is Test {
         assertEq(dusdReceived, 999.5 ether, "DUSD received should be 0.05% less than frxUSD sold");
         assertEq(IERC20Metadata(FRXUSD_MAINNET).balanceOf(randomUser), 0, "user should have no frxUSD left");
         assertEq(IERC20Metadata(input.contracts.dusd).balanceOf(randomUser), dusdReceived, "user DUSD balance mismatch");
+    }
+}
+
+abstract contract DeployMarketPhaseTestBase is DeployAltoEthereumMainnetTestBase {
+    address internal constant MAINNET_TIMELOCK_ADMIN = 0xc49bf619CC9A68F84A6C9aB88506F2627565a4D0;
+    address internal constant PRODUCTION_FREEZER = 0x1c11d2d42929bd17aB7212b79c91862Adfa8bbe4;
+    address internal constant TREASURY_MULTISIG = 0xA1148A1b94262540994Cf9Aa431A13ad39764228;
+    address internal constant PRODUCTION_UPDATER = 0x7db7C14533a4186EcC07950F78835859320835Be;
+
+    function _deployMarket(DeploymentPhase phase) internal {
+        params = AltoEthereumMainnetParams({
+            timelockAdmin: MAINNET_TIMELOCK_ADMIN,
+            timelockDelay: 1 hours,
+            freezer: PRODUCTION_FREEZER,
+            deployer: msg.sender,
+            phase: phase,
+            treasuryMultisig: TREASURY_MULTISIG,
+            updater: PRODUCTION_UPDATER,
+            deployerHasOwnership: false
+        });
+
+        vm.startBroadcast();
+        input = DeployAltoEthereumMainnet.deploy(params, input);
+        vm.stopBroadcast();
+    }
+
+    function _assertMintMarketParams(
+        MarketContracts memory deployed,
+        ExpectedMarketParams memory expected,
+        uint256 expectedBorrowRate
+    ) internal view {
+        _assertCommonMarketParams(deployed, expected);
+
+        IMarket market = IMarket(deployed.market);
+        Balance memory totalSupply = market.totalSupply();
+        assertEq(totalSupply.assets, expected.capacity, "debt ceiling");
+        assertEq(market.feeRecipient(), input.contracts.feeRecipientMintMarkets, "fee recipient");
+
+        FixedRateIrm irm = FixedRateIrm(deployed.marketIrm);
+        (uint256 borrowRate,) = irm.irState();
+        assertEq(borrowRate, expectedBorrowRate, "borrow rate");
+        assertEq(irm.market(), deployed.market, "IRM market");
+    }
+
+    function _assertBorrowMarketParams(
+        MarketContracts memory deployed,
+        ExpectedMarketParams memory expected,
+        AdaptiveCurveIrm.AdaptiveCurveIrmConfig memory expectedIrmConfig,
+        uint256 expectedInterestFee
+    ) internal view {
+        _assertCommonMarketParams(deployed, expected);
+
+        AltoBorrowMarket market = AltoBorrowMarket(deployed.market);
+        assertEq(market.supplyCapAssets(), expected.capacity, "supply cap");
+        assertEq(market.interestFee(), expectedInterestFee, "interest fee");
+        assertEq(market.feeRecipient(), input.contracts.feeRecipient, "fee recipient");
+
+        AdaptiveCurveIrm irm = AdaptiveCurveIrm(deployed.marketIrm);
+        (
+            int256 curveSteepness,
+            int256 adjustmentSpeed,
+            int256 targetUtilization,
+            int256 initialRateAtTarget,
+            int256 minRateAtTarget,
+            int256 maxRateAtTarget
+        ) = irm.irmConfig();
+        assertEq(curveSteepness, expectedIrmConfig.curveSteepness, "curve steepness");
+        assertEq(adjustmentSpeed, expectedIrmConfig.adjustmentSpeed, "adjustment speed");
+        assertEq(targetUtilization, expectedIrmConfig.targetUtilization, "target utilization");
+        assertEq(initialRateAtTarget, expectedIrmConfig.initialRateAtTarget, "initial target rate");
+        assertEq(minRateAtTarget, expectedIrmConfig.minRateAtTarget, "minimum target rate");
+        assertEq(maxRateAtTarget, expectedIrmConfig.maxRateAtTarget, "maximum target rate");
+        assertEq(irm.market(), deployed.market, "IRM market");
+    }
+
+    function _assertCommonMarketParams(MarketContracts memory deployed, ExpectedMarketParams memory expected)
+        private
+        view
+    {
+        IMarket market = IMarket(deployed.market);
+        assertEq(uint256(market.MARKET_TYPE()), uint256(expected.marketType), "market type");
+        assertEq(market.borrowToken(), input.contracts.dusd, "borrow token");
+        assertEq(market.collateralToken(), expected.collateralToken, "collateral token");
+        assertEq(market.irm(), deployed.marketIrm, "IRM");
+        assertEq(market.oracle(), deployed.marketOracle, "oracle");
+        assertEq(market.liquidationEngine(), deployed.liquidationEngine, "liquidation engine");
+        assertEq(market.maxLtv(), expected.maxLtv, "max LTV");
+        assertEq(market.borrowOpeningFee(), expected.borrowOpeningFee, "borrow opening fee");
+
+        LiquidationConfiguration memory config =
+            IDcfDlbPriorityLiquidationEngine(deployed.liquidationEngine).liquidationConfiguration();
+        assertEq(config.maxLiquidationLtv, expected.maxLiquidationLtv, "max liquidation LTV");
+        assertEq(config.dynamicBonusFeeStart, expected.dynamicBonusFeeStart, "dynamic bonus fee start");
+        assertEq(config.ltvForCompleteLiquidation, expected.ltvForCompleteLiquidation, "complete liquidation LTV");
+        assertEq(config.liquidationBaseFee, expected.liquidationBaseFee, "liquidation base fee");
+    }
+
+    function _assertAndExecuteMarketGovernance(
+        MarketContracts memory deployed,
+        ExpectedMarketParams memory expected,
+        string memory schedulePath,
+        string memory executePath
+    ) internal {
+        _assertMarketGovernanceState(deployed.market, expected, false);
+        _assertSafeJson(schedulePath, TimelockController.scheduleBatch.selector);
+        _assertSafeJson(executePath, TimelockController.executeBatch.selector);
+        _executeMarketSafeTimelockBatch(schedulePath, executePath);
+        _assertMarketGovernanceState(deployed.market, expected, true);
+        _assertMarketWiring(deployed);
+    }
+
+    function _assertMarketGovernanceState(address market, ExpectedMarketParams memory expected, bool enabled)
+        private
+        view
+    {
+        IMarketRegistry registry = IMarketRegistry(input.contracts.marketRegistry);
+        bool isMintMarket = expected.marketType == MarketType.MINT;
+        assertEq(
+            isMintMarket ? registry.isMintMarket(market) : registry.isBorrowMarket(market), enabled, "registry status"
+        );
+        assertEq(
+            AltoAdapter(payable(input.contracts.altoAdapter)).isApprovedContract(market), enabled, "adapter approval"
+        );
+        assertEq(
+            ILiquidationPeripheryBase(input.contracts.liquidationPeriphery).supportedMarkets(market),
+            enabled,
+            "liquidation periphery support"
+        );
+        assertEq(
+            IMarket(market).authorizedLiquidationPeriphery(input.contracts.liquidationPeriphery),
+            enabled,
+            "market liquidation periphery authorization"
+        );
+
+        if (isMintMarket) {
+            IDUSD dusd = IDUSD(input.contracts.dusd);
+            assertEq(dusd.allowedMinter(market), enabled, "DUSD minter status");
+            assertEq(dusd.allowedBurner(market), enabled, "DUSD burner status");
+            (uint256 minted, uint256 ceiling) = dusd.minterConfig(market);
+            assertEq(minted, 0, "initial minted amount");
+            assertEq(
+                ceiling,
+                enabled ? expected.capacity * 1.05 ether / expected.maxLiquidationLtv : 0,
+                "DUSD minter ceiling"
+            );
+        }
+    }
+
+    function _assertSafeJson(string memory path, bytes4 expectedSelector) private view {
+        assertTrue(vm.exists(path), "Safe JSON must be written");
+        string memory json = vm.readFile(path);
+        assertEq(vm.parseJsonAddress(json, ".transactions[0].to"), input.contracts.timelock, "Safe target");
+        assertEq(vm.parseJsonString(json, ".transactions[0].value"), "0", "Safe value");
+        assertEq(bytes4(vm.parseJsonBytes(json, ".transactions[0].data")), expectedSelector, "Safe selector");
+    }
+
+    function _executeMarketSafeTimelockBatch(string memory schedulePath, string memory executePath) private {
+        TimelockController timelock = TimelockController(payable(input.contracts.timelock));
+
+        vm.prank(MAINNET_TIMELOCK_ADMIN);
+        (bool scheduled,) = address(timelock).call(_readSafeTxData(schedulePath));
+        assertTrue(scheduled, "timelock schedule failed");
+
+        vm.warp(block.timestamp + timelock.getMinDelay() + 1);
+
+        vm.prank(MAINNET_TIMELOCK_ADMIN);
+        (bool executed,) = address(timelock).call(_readSafeTxData(executePath));
+        assertTrue(executed, "timelock execute failed");
+    }
+
+    function _readSafeTxData(string memory path) private view returns (bytes memory) {
+        return vm.parseJsonBytes(vm.readFile(path), ".transactions[0].data");
+    }
+
+    function _assertMarketWiring(MarketContracts memory deployed) private view {
+        assertTrue(deployed.marketImplementation.code.length > 0, "market implementation");
+        assertEq(Ownable(deployed.market).owner(), input.contracts.timelock, "market owner");
+        assertEq(Ownable(deployed.marketIrm).owner(), input.contracts.timelock, "IRM owner");
+        assertEq(Ownable(deployed.marketOracle).owner(), input.contracts.timelock, "oracle owner");
+        assertEq(Ownable(deployed.liquidationEngine).owner(), input.contracts.timelock, "liquidation engine owner");
+        assertEq(Ownable(deployed.leverageSwapper).owner(), input.contracts.timelock, "leverage swapper owner");
+        assertEq(Ownable(deployed.leverage).owner(), input.contracts.timelock, "leverage owner");
+        assertTrue(Pausable(deployed.market).pausers(PRODUCTION_FREEZER, PAUSE_TYPE), "production pauser");
+        assertTrue(Pausable(deployed.market).pausers(PRODUCTION_FREEZER, FROZEN_TYPE), "production freezer");
+        assertTrue(IMarket(deployed.market).authorizedCallbacks(deployed.leverage), "leverage callback");
+        assertTrue(AltoLeverage(payable(deployed.leverage)).supportedMarkets(deployed.market), "leverage market");
+        assertTrue(
+            AltoLeverageSwapperMultiTarget(deployed.leverageSwapper).isWhitelisted(deployed.leverage),
+            "swapper whitelist"
+        );
     }
 }
 
