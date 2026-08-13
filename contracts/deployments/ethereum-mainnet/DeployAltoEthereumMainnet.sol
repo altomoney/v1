@@ -113,6 +113,7 @@ import {
     MintCurveConvexPositionContracts,
     Contracts
 } from "@alto/deployments/ethereum-mainnet/IDeployAltoEthereumMainnet.sol";
+import {ILiquidationPeripheryBase} from "@alto/lending/liquidation/interfaces/ILiquidationPeriphery.sol";
 import {AccessMode} from "@alto/usm/interfaces/IUsm.sol";
 import {DirectionAccess} from "@alto/usm/interfaces/IAdvancedPermissionsUsm.sol";
 import {console} from "forge-std/console.sol";
@@ -828,9 +829,9 @@ library DeployAltoEthereumMainnet {
             address timelock = input.contracts.timelock;
             uint256 minDelay = TimelockController(payable(timelock)).getMinDelay();
 
-            address[] memory targets = new address[](5);
-            uint256[] memory values = new uint256[](5);
-            bytes[] memory payloads = new bytes[](5);
+            address[] memory targets = new address[](7);
+            uint256[] memory values = new uint256[](7);
+            bytes[] memory payloads = new bytes[](7);
 
             targets[0] = marketParams.dusd;
             values[0] = 0;
@@ -852,7 +853,25 @@ library DeployAltoEthereumMainnet {
             values[4] = 0;
             payloads[4] = abi.encodeCall(AdapterContractApproval.approveContract, (report.market));
 
-            _writeSafeTimelockBatchJson("mint-market-registry", timelock, targets, values, payloads, minDelay);
+            targets[5] = input.contracts.liquidationPeriphery;
+            values[5] = 0;
+            payloads[5] = abi.encodeCall(ILiquidationPeripheryBase.setSupportedMarket, (report.market, true));
+
+            targets[6] = report.market;
+            values[6] = 0;
+            payloads[6] = abi.encodeCall(
+                IMarketBase.setAuthorizedLiquidationPeriphery, (input.contracts.liquidationPeriphery, true)
+            );
+
+            string memory collateralSymbol = IERC20Metadata(marketParams.collateralToken).symbol();
+            _writeSafeTimelockBatchJson(
+                string.concat(collateralSymbol, "-mint-market-registry-and-authorize-liquidation-periphery"),
+                timelock,
+                targets,
+                values,
+                payloads,
+                minDelay
+            );
         }
 
         return report;
@@ -894,9 +913,9 @@ library DeployAltoEthereumMainnet {
             address timelock = input.contracts.timelock;
             uint256 minDelay = TimelockController(payable(timelock)).getMinDelay();
 
-            address[] memory targets = new address[](2);
-            uint256[] memory values = new uint256[](2);
-            bytes[] memory payloads = new bytes[](2);
+            address[] memory targets = new address[](4);
+            uint256[] memory values = new uint256[](4);
+            bytes[] memory payloads = new bytes[](4);
 
             // Transaction 1: Add borrow market to registry
             targets[0] = input.contracts.marketRegistry;
@@ -908,7 +927,25 @@ library DeployAltoEthereumMainnet {
             values[1] = 0;
             payloads[1] = abi.encodeCall(AdapterContractApproval.approveContract, (report.market));
 
-            _writeSafeTimelockBatchJson("borrow-market-registry", timelock, targets, values, payloads, minDelay);
+            targets[2] = input.contracts.liquidationPeriphery;
+            values[2] = 0;
+            payloads[2] = abi.encodeCall(ILiquidationPeripheryBase.setSupportedMarket, (report.market, true));
+
+            targets[3] = report.market;
+            values[3] = 0;
+            payloads[3] = abi.encodeCall(
+                IMarketBase.setAuthorizedLiquidationPeriphery, (input.contracts.liquidationPeriphery, true)
+            );
+
+            string memory collateralSymbol = IERC20Metadata(marketParams.collateralToken).symbol();
+            _writeSafeTimelockBatchJson(
+                string.concat(collateralSymbol, "-borrow-market-registry-and-authorize-liquidation-periphery"),
+                timelock,
+                targets,
+                values,
+                payloads,
+                minDelay
+            );
         }
 
         return report;
