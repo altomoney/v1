@@ -77,7 +77,6 @@ contract DeployDusdUsdcCustomPositionsTest is Test {
             freezer: makeAddr("FREEZER_PAUSER"),
             deployer: DEPLOYER,
             phase: DeploymentPhase.CORE,
-            useUnsafeUpgrades: true,
             treasuryMultisig: address(1),
             updater: makeAddr("UPDATER"),
             deployerHasOwnership: true
@@ -359,4 +358,3 @@ contract SwapHelper {
         }
     }
 }
-

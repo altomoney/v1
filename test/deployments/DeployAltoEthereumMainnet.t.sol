@@ -95,7 +95,6 @@ abstract contract DeployAltoEthereumMainnetTestBase is Test {
             freezer: MULTISIG_FREEZER_PAUSER,
             deployer: DEPLOYER,
             phase: DeploymentPhase.CORE,
-            useUnsafeUpgrades: true,
             treasuryMultisig: address(0xA1148A1b94262540994Cf9Aa431A13ad39764228),
             updater: MERKLE_ROOT_UPDATER,
             deployerHasOwnership: false

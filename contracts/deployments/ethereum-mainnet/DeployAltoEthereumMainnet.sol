@@ -173,7 +173,6 @@ library DeployAltoEthereumMainnet {
                 }),
                 input,
                 params,
-                params.useUnsafeUpgrades,
                 params.deployerHasOwnership
             );
         } else if (params.phase == DeploymentPhase.MINT_MARKET_WSTETH) {
@@ -208,7 +207,6 @@ library DeployAltoEthereumMainnet {
                 }),
                 input,
                 params,
-                params.useUnsafeUpgrades,
                 params.deployerHasOwnership
             );
         } else if (params.phase == DeploymentPhase.MINT_MARKET_RETH) {
@@ -243,7 +241,6 @@ library DeployAltoEthereumMainnet {
                 }),
                 input,
                 params,
-                params.useUnsafeUpgrades,
                 params.deployerHasOwnership
             );
         } else if (params.phase == DeploymentPhase.MINT_MARKET_METH) {
@@ -278,7 +275,6 @@ library DeployAltoEthereumMainnet {
                 }),
                 input,
                 params,
-                params.useUnsafeUpgrades,
                 params.deployerHasOwnership
             );
         } else if (params.phase == DeploymentPhase.MINT_MARKET_TBTC) {
@@ -313,7 +309,6 @@ library DeployAltoEthereumMainnet {
                 }),
                 input,
                 params,
-                params.useUnsafeUpgrades,
                 params.deployerHasOwnership
             );
         } else if (params.phase == DeploymentPhase.BORROW_MARKET_WBTC) {
@@ -355,7 +350,6 @@ library DeployAltoEthereumMainnet {
                 }),
                 input,
                 params,
-                params.useUnsafeUpgrades,
                 params.deployerHasOwnership
             );
         } else if (params.phase == DeploymentPhase.BORROW_MARKET_CBBTC) {
@@ -397,7 +391,6 @@ library DeployAltoEthereumMainnet {
                 }),
                 input,
                 params,
-                params.useUnsafeUpgrades,
                 params.deployerHasOwnership
             );
         } else if (params.phase == DeploymentPhase.BORROW_MARKET_SUSDE) {
@@ -439,7 +432,6 @@ library DeployAltoEthereumMainnet {
                 }),
                 input,
                 params,
-                params.useUnsafeUpgrades,
                 params.deployerHasOwnership
             );
         } else if (params.phase == DeploymentPhase.PERMISSIONED_USM) {
@@ -523,7 +515,6 @@ library DeployAltoEthereumMainnet {
                 }),
                 input,
                 params,
-                params.useUnsafeUpgrades,
                 params.deployerHasOwnership
             );
         } else if (params.phase == DeploymentPhase.BORROW_MARKET_PAXG) {
@@ -565,7 +556,6 @@ library DeployAltoEthereumMainnet {
                 }),
                 input,
                 params,
-                params.useUnsafeUpgrades,
                 params.deployerHasOwnership
             );
         } else if (params.phase == DeploymentPhase.MINT_MARKET_SUSDE) {
@@ -600,7 +590,6 @@ library DeployAltoEthereumMainnet {
                 }),
                 input,
                 params,
-                params.useUnsafeUpgrades,
                 params.deployerHasOwnership
             );
         } else if (params.phase == DeploymentPhase.MINT_MARKET_SYRUPUSDC) {
@@ -635,7 +624,6 @@ library DeployAltoEthereumMainnet {
                 }),
                 input,
                 params,
-                params.useUnsafeUpgrades,
                 params.deployerHasOwnership
             );
         } else if (params.phase == DeploymentPhase.DUSD_VAULT) {
@@ -806,7 +794,6 @@ library DeployAltoEthereumMainnet {
         DeployMintMarketParams memory marketParams,
         AltoEthereumMainnetInput memory input,
         AltoEthereumMainnetParams memory params,
-        bool useUnsafeUpgrades,
         bool deployerHasOwnership
     ) internal returns (MarketContracts memory) {
         uint256 minterCeiling = marketParams.debtCeiling * 1.05 ether / marketParams.liquidationConfig.maxLiquidationLtv;
@@ -826,8 +813,7 @@ library DeployAltoEthereumMainnet {
                 liquidationConfig: marketParams.liquidationConfig,
                 minterCeiling: minterCeiling,
                 validSwapTargets: marketParams.validSwapTargets,
-                freezer: marketParams.freezer,
-                useUnsafeUpgrades: useUnsafeUpgrades
+                freezer: marketParams.freezer
             })
         );
 
@@ -876,7 +862,6 @@ library DeployAltoEthereumMainnet {
         DeployBorrowMarketParams memory marketParams,
         AltoEthereumMainnetInput memory input,
         AltoEthereumMainnetParams memory params,
-        bool useUnsafeUpgrades,
         bool deployerHasOwnership
     ) internal returns (MarketContracts memory) {
         // Deploy batch - deploys all market components in single constructor (including Oracle and IRM)
@@ -895,8 +880,7 @@ library DeployAltoEthereumMainnet {
                 supplyCapAssets: marketParams.supplyCapAssets,
                 liquidationConfig: marketParams.liquidationConfig,
                 validSwapTargets: marketParams.validSwapTargets,
-                freezer: marketParams.freezer,
-                useUnsafeUpgrades: useUnsafeUpgrades
+                freezer: marketParams.freezer
             })
         );
 

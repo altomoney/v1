@@ -43,6 +43,12 @@ contract DeployAltoEthereumMainnetUpgradeValidationTest is Test {
         validator.validateImplementations(DeploymentPhase.ADVANCED_PERMISSIONS_FRXUSD_USM, DUSD);
     }
 
+    function test_MarketImplementationsPassUpgradeSafetyValidation() public {
+        if (!_shouldVerifyProxy()) return;
+        validator.validateImplementations(DeploymentPhase.MINT_MARKET_WETH, address(0));
+        validator.validateImplementations(DeploymentPhase.BORROW_MARKET_WBTC, address(0));
+    }
+
     function test_RevertWhen_UsmValidationHasNoDusd() public {
         vm.expectRevert("DUSD not deployed");
         validator.validateImplementations(DeploymentPhase.PERMISSIONED_USM, address(0));

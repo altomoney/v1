@@ -35,7 +35,6 @@ contract DeployAltoEthereumMainnetScript is Script {
             freezer: 0x1c11d2d42929bd17aB7212b79c91862Adfa8bbe4,
             deployer: msg.sender,
             phase: PHASE_TO_DEPLOY,
-            useUnsafeUpgrades: false,
             treasuryMultisig: 0xA1148A1b94262540994Cf9Aa431A13ad39764228,
             updater: 0x7db7C14533a4186EcC07950F78835859320835Be,
             deployerHasOwnership: false // Deployer doesn't have ownership, log txs for multisig
@@ -73,6 +72,21 @@ contract DeployAltoEthereumMainnetScript is Script {
                 deploymentInput.contracts.dusd,
                 FRXUSD_MAINNET
             );
+        } else if (
+            phase == DeploymentPhase.MINT_MARKET_WETH || phase == DeploymentPhase.MINT_MARKET_WSTETH
+                || phase == DeploymentPhase.MINT_MARKET_RETH || phase == DeploymentPhase.MINT_MARKET_METH
+                || phase == DeploymentPhase.MINT_MARKET_TBTC || phase == DeploymentPhase.MINT_MARKET_SUSDE
+                || phase == DeploymentPhase.MINT_MARKET_SYRUPUSDC
+        ) {
+            Options memory opts;
+            Upgrades.validateImplementation("AltoMintMarket.sol:AltoMintMarket", opts);
+        } else if (
+            phase == DeploymentPhase.BORROW_MARKET_WBTC || phase == DeploymentPhase.BORROW_MARKET_CBBTC
+                || phase == DeploymentPhase.BORROW_MARKET_SUSDE || phase == DeploymentPhase.BORROW_MARKET_SYRUP_USDC
+                || phase == DeploymentPhase.BORROW_MARKET_PAXG
+        ) {
+            Options memory opts;
+            Upgrades.validateImplementation("AltoBorrowMarket.sol:AltoBorrowMarket", opts);
         }
     }
 
