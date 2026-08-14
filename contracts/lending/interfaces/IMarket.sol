@@ -9,6 +9,7 @@ enum MarketType {
     BORROW, // AltoBorrowMarket
     MINT, // AltoMintMarket
     DAO_MINT // AltoDaoMintMarket
+    CREDIT_MINT // AltoCreditLine and other credit facilities without public liquidation
 }
 
 /// @notice Struct that represents the balance of a token
