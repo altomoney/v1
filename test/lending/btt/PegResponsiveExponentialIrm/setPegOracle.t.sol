@@ -14,9 +14,7 @@ import {
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
 import {MockDusdPegOracle} from "@alto-test/lending/btt/mocks/MockDusdPegOracle.sol";
-import {
-    MockPegResponsiveExponentialIrmMarket
-} from "@alto-test/lending/btt/mocks/MockPegResponsiveExponentialIrmMarket.sol";
+import {stdError} from "forge-std/StdError.sol";
 import {PegResponsiveExponentialIrmCommon} from "./PegResponsiveExponentialIrmCommon.t.sol";
 
 contract PegResponsiveExponentialIrmSetPegOracleTest is PegResponsiveExponentialIrmCommon {
@@ -83,13 +81,15 @@ contract PegResponsiveExponentialIrmSetPegOracleTest is PegResponsiveExponential
     function test_WhenMarketIsPaused_QueriesExactPauseTypeAndSkipsAccrual() external {
         MockDusdPegOracle newOracle = new MockDusdPegOracle();
         _bindMarket();
-        market.setPaused(PAUSE_TYPE, true);
+        _pauseMarket();
+        _mockOracleReturnData(hex"01");
+        IRState memory stateBefore = _readIRState();
         vm.expectCall(address(market), _pausedCall(), 1);
 
         _setPegOracleAsOwner(address(newOracle));
 
         assertEq(address(irm.pegOracle()), address(newOracle));
-        assertEq(market.accrueInterestCalls(), 0);
+        _assertIRState(stateBefore);
     }
 
     function test_RevertWhen_PausedQueryReverts_BubblesAndRollsBack() external {
@@ -123,21 +123,14 @@ contract PegResponsiveExponentialIrmSetPegOracleTest is PegResponsiveExponential
     function test_RevertWhen_AccrualRevertsAfterCallback_RollsBackNestedState() external {
         MockDusdPegOracle newOracle = new MockDusdPegOracle();
         _bindMarket();
-        vm.warp(DEFAULT_NOW + 1);
-        _setCurrentObservation(STRESS_PRICE);
-        market.setAccrueRevertPoint(MockPegResponsiveExponentialIrmMarket.AccrueRevertPoint.AFTER_CALLBACK);
+        _prepareMarketAccrualOverflow();
         IRState memory stateBefore = _readIRState();
         vm.expectCall(address(market), _pausedCall(), 1);
         vm.expectCall(address(market), abi.encodeWithSelector(IMarketBase.accrueInterest.selector), 1);
         vm.expectCall(address(oracle), _getPriceCall(), 1);
 
         vm.prank(OWNER);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                MockPegResponsiveExponentialIrmMarket.MockPegResponsiveExponentialIrmMarketAccrueReverted.selector,
-                MockPegResponsiveExponentialIrmMarket.AccrueRevertPoint.AFTER_CALLBACK
-            )
-        );
+        vm.expectRevert(stdError.arithmeticError);
         irm.setPegOracle(address(newOracle));
 
         assertEq(address(irm.pegOracle()), address(oracle));
@@ -179,9 +172,9 @@ contract PegResponsiveExponentialIrmSetPegOracleTest is PegResponsiveExponential
         });
 
         assertEq(address(irm.pegOracle()), address(newOracle));
-        assertEq(market.accrueInterestCalls(), 1);
-        assertEq(market.lastBorrowRate(), seededState.borrowRate);
-        assertEq(market.lastInterest(), 0);
+        (uint128 totalBorrowAssets,) = market.totalBorrowed();
+        assertEq(totalBorrowAssets, 0);
+        assertEq(market.claimableFeesAssets(), 0);
         _assertIRState(finalState);
 
         assertEq(logs.length, 5);
@@ -210,7 +203,7 @@ contract PegResponsiveExponentialIrmSetPegOracleTest is PegResponsiveExponential
         Vm.Log[] memory logs = vm.getRecordedLogs();
 
         assertEq(address(irm.pegOracle()), address(oracle));
-        assertEq(market.accrueInterestCalls(), 1);
+        assertEq(market.irm(), address(irm));
         assertEq(logs.length, 3);
         _assertIrmEvent(logs[0], IPegResponsiveExponentialIrmEvents.BorrowRateUpdated.selector);
         _assertIrmEvent(logs[1], IPegResponsiveExponentialIrmEvents.IRStateUpdated.selector);
