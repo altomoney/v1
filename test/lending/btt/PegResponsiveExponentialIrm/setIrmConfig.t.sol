@@ -14,9 +14,7 @@ import {
 } from "@alto/lending/interfaces/IPegResponsiveExponentialIrm.sol";
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
-import {
-    MockPegResponsiveExponentialIrmMarket
-} from "@alto-test/lending/btt/mocks/MockPegResponsiveExponentialIrmMarket.sol";
+import {stdError} from "forge-std/StdError.sol";
 import {PegResponsiveExponentialIrmCommon} from "./PegResponsiveExponentialIrmCommon.t.sol";
 
 contract PegResponsiveExponentialIrmSetIrmConfigTest is PegResponsiveExponentialIrmCommon {
@@ -279,13 +277,15 @@ contract PegResponsiveExponentialIrmSetIrmConfigTest is PegResponsiveExponential
         PegResponsiveExponentialIrmConfig memory newConfig = irmConfig;
         newConfig.recoveryDelay += 1;
         _bindMarket();
-        market.setPaused(PAUSE_TYPE, true);
+        _pauseMarket();
+        _mockOracleReturnData(hex"01");
+        IRState memory stateBefore = _readIRState();
         vm.expectCall(address(market), _pausedCall(), 1);
 
         _setIrmConfigAsOwner(newConfig);
 
         _assertIrmConfig(newConfig);
-        assertEq(market.accrueInterestCalls(), 0);
+        _assertIRState(stateBefore);
     }
 
     function test_RevertWhen_PausedQueryReverts_BubblesAndRollsBack() external {
@@ -322,21 +322,14 @@ contract PegResponsiveExponentialIrmSetIrmConfigTest is PegResponsiveExponential
         PegResponsiveExponentialIrmConfig memory newConfig = irmConfig;
         newConfig.recoveryDelay += 1;
         _bindMarket();
-        vm.warp(DEFAULT_NOW + 1);
-        _setCurrentObservation(STRESS_PRICE);
-        market.setAccrueRevertPoint(MockPegResponsiveExponentialIrmMarket.AccrueRevertPoint.AFTER_CALLBACK);
+        _prepareMarketAccrualOverflow();
         IRState memory stateBefore = _readIRState();
         vm.expectCall(address(market), _pausedCall(), 1);
         vm.expectCall(address(market), _accrueInterestCall(), 1);
         vm.expectCall(address(oracle), _getPriceCall(), 1);
 
         vm.prank(OWNER);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                MockPegResponsiveExponentialIrmMarket.MockPegResponsiveExponentialIrmMarketAccrueReverted.selector,
-                MockPegResponsiveExponentialIrmMarket.AccrueRevertPoint.AFTER_CALLBACK
-            )
-        );
+        vm.expectRevert(stdError.arithmeticError);
         irm.setIrmConfig(newConfig);
 
         _assertIrmConfig(irmConfig);
@@ -387,12 +380,15 @@ contract PegResponsiveExponentialIrmSetIrmConfigTest is PegResponsiveExponential
         Vm.Log[] memory logs = vm.getRecordedLogs();
 
         IRState memory expectedState = IRState({
-            borrowRate: irmConfig.baseRate, lastUpdate: uint48(block.timestamp), recoveryStartedAt: 0, stressMode: false
+            borrowRate: irmConfig.baseRate,
+            lastUpdate: uint48(block.timestamp),
+            recoveryStartedAt: 0,
+            stressMode: false
         });
         assertLt(expectedState.borrowRate, newConfig.maxRate);
         _assertIrmConfig(newConfig);
         _assertIRState(expectedState);
-        assertEq(market.accrueInterestCalls(), 1);
+        assertEq(market.irm(), address(irm));
         assertEq(logs.length, 3);
         _assertIrmEvent(logs[0], IPegResponsiveExponentialIrmEvents.BorrowRateUpdated.selector);
         assertEq(
@@ -441,7 +437,7 @@ contract PegResponsiveExponentialIrmSetIrmConfigTest is PegResponsiveExponential
         _setIrmConfigAsOwner(irmConfig);
         Vm.Log[] memory logs = vm.getRecordedLogs();
 
-        assertEq(market.accrueInterestCalls(), 1);
+        assertEq(market.irm(), address(irm));
         _assertIrmConfig(irmConfig);
         assertEq(logs.length, 3);
         _assertIrmEvent(logs[0], IPegResponsiveExponentialIrmEvents.BorrowRateUpdated.selector);

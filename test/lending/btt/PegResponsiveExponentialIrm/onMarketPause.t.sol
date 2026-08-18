@@ -6,9 +6,8 @@ import {Vm} from "forge-std/Vm.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 import {IIrm} from "@alto/lending/interfaces/IIrm.sol";
-import {IRState, IPegResponsiveExponentialIrmEvents} from "@alto/lending/interfaces/IPegResponsiveExponentialIrm.sol";
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
-import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
+import {IRState, IPegResponsiveExponentialIrmEvents} from "@alto/lending/interfaces/IPegResponsiveExponentialIrm.sol";
 import {PegResponsiveExponentialIrmCommon} from "./PegResponsiveExponentialIrmCommon.t.sol";
 
 contract PegResponsiveExponentialIrmOnMarketPauseTest is PegResponsiveExponentialIrmCommon {
@@ -58,25 +57,26 @@ contract PegResponsiveExponentialIrmOnMarketPauseTest is PegResponsiveExponentia
         _assertIRState(stateBefore);
     }
 
-    function test_WhenPausedIsTrue_AtOverflowingTimestamp_DoesNothing() external {
+    function test_WhenPausing_ItCheckpointsThroughMarketBeforeSettingPause() external {
         _bindMarket();
-        IRState memory seededState =
-            IRState({borrowRate: irmConfig.stressRate, lastUpdate: 123, recoveryStartedAt: 456, stressMode: true});
-        _setIRState(seededState);
-        _mockOracleReturnData(hex"01");
-        market.setPaused(PAUSE_TYPE, false);
-        vm.warp(uint256(type(uint48).max) + 1);
-        vm.mockCall(address(market), abi.encodeWithSelector(IPausable.paused.selector, PAUSE_TYPE), hex"01");
+        _setCurrentObservation(STRESS_PRICE);
+        _setIRState(BASE_RATE, uint48(block.timestamp - 10), 0, false);
+        IRState memory expectedState = IRState({
+            borrowRate: STRESS_RATE,
+            lastUpdate: uint48(block.timestamp),
+            recoveryStartedAt: 0,
+            stressMode: true
+        });
 
-        vm.recordLogs();
-        market.callOnMarketPause(true);
+        _pauseMarket();
 
-        assertEq(vm.getRecordedLogs().length, 0);
-        _assertIRState(seededState);
+        assertTrue(market.paused(PAUSE_TYPE), "market paused");
+        _assertIRState(expectedState);
     }
 
     function test_RevertWhen_UnpausingAtTimestampAboveUint48_PreservesRecovery() external {
         _bindMarket();
+        _pauseMarket();
         IRState memory seededState =
             IRState({borrowRate: irmConfig.stressRate, lastUpdate: 123, recoveryStartedAt: 456, stressMode: true});
         _setIRState(seededState);
@@ -87,7 +87,7 @@ contract PegResponsiveExponentialIrmOnMarketPauseTest is PegResponsiveExponentia
         vm.expectRevert(
             abi.encodeWithSelector(SafeCast.SafeCastOverflowedUintDowncast.selector, uint8(48), overflowingTimestamp)
         );
-        market.callOnMarketPause(false);
+        _unpauseMarket();
 
         assertEq(vm.getRecordedLogs().length, 0);
         _assertIRState(seededState);
@@ -95,6 +95,7 @@ contract PegResponsiveExponentialIrmOnMarketPauseTest is PegResponsiveExponentia
 
     function test_WhenUnpausing_AcceptsZeroTimestamp() external {
         _bindMarket();
+        _pauseMarket();
         vm.warp(0);
 
         IRState memory expectedState = _readIRState();
@@ -104,6 +105,7 @@ contract PegResponsiveExponentialIrmOnMarketPauseTest is PegResponsiveExponentia
 
     function test_WhenUnpausing_AcceptsMaximumUint48Timestamp() external {
         _bindMarket();
+        _pauseMarket();
         vm.warp(type(uint48).max);
 
         IRState memory expectedState = _readIRState();
@@ -113,6 +115,7 @@ contract PegResponsiveExponentialIrmOnMarketPauseTest is PegResponsiveExponentia
 
     function test_WhenRecoveryIsInactive_UpdatesOnlyTimestampAndEmitsOnlyState() external {
         _bindMarket();
+        _pauseMarket();
         IRState memory seededState =
             IRState({borrowRate: irmConfig.stressRate, lastUpdate: 123, recoveryStartedAt: 0, stressMode: true});
         _setIRState(seededState);
@@ -126,9 +129,9 @@ contract PegResponsiveExponentialIrmOnMarketPauseTest is PegResponsiveExponentia
 
     function testFuzz_WhenRecoveryIsActive_ClearsOnlyRecoveryAndEmitsOrderedStateEvents(bool stressMode) external {
         _bindMarket();
-        IRState memory seededState = IRState({
-            borrowRate: irmConfig.stressRate, lastUpdate: 123, recoveryStartedAt: 456, stressMode: stressMode
-        });
+        _pauseMarket();
+        IRState memory seededState =
+            IRState({borrowRate: irmConfig.stressRate, lastUpdate: 123, recoveryStartedAt: 456, stressMode: stressMode});
         _setIRState(seededState);
         _mockOracleReturnData(hex"01");
         vm.warp(DEFAULT_NOW + 1 days);
@@ -138,11 +141,11 @@ contract PegResponsiveExponentialIrmOnMarketPauseTest is PegResponsiveExponentia
         expectedState.recoveryStartedAt = 0;
 
         vm.recordLogs();
-        market.callOnMarketPause(false);
+        _unpauseMarket();
         Vm.Log[] memory logs = vm.getRecordedLogs();
 
         _assertIRState(expectedState);
-        assertEq(logs.length, 2);
+        assertEq(logs.length, 3);
         _assertIrmEvent(logs[0], IPegResponsiveExponentialIrmEvents.StressStateUpdated.selector);
         assertEq(logs[0].data, abi.encode(stressMode, uint48(0), uint256(0)));
         _assertIrmEvent(logs[1], IPegResponsiveExponentialIrmEvents.IRStateUpdated.selector);
@@ -151,11 +154,11 @@ contract PegResponsiveExponentialIrmOnMarketPauseTest is PegResponsiveExponentia
 
     function _assertUnpauseWithNoRecovery(IRState memory expectedState) private {
         vm.recordLogs();
-        market.callOnMarketPause(false);
+        _unpauseMarket();
         Vm.Log[] memory logs = vm.getRecordedLogs();
 
         _assertIRState(expectedState);
-        assertEq(logs.length, 1);
+        assertEq(logs.length, 2);
         _assertIrmEvent(logs[0], IPegResponsiveExponentialIrmEvents.IRStateUpdated.selector);
         assertEq(logs[0].data, abi.encode(expectedState));
     }

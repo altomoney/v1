@@ -7,11 +7,6 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 import {IIrm} from "@alto/lending/interfaces/IIrm.sol";
 import {IRState, IPegResponsiveExponentialIrmEvents} from "@alto/lending/interfaces/IPegResponsiveExponentialIrm.sol";
-import {
-    MockPegResponsiveExponentialIrmMarket
-} from "@alto-test/lending/btt/mocks/MockPegResponsiveExponentialIrmMarket.sol";
-import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
-import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
 import {PegResponsiveExponentialIrmCommon} from "./PegResponsiveExponentialIrmCommon.t.sol";
 
 contract PegResponsiveExponentialIrmSetMarketTest is PegResponsiveExponentialIrmCommon {
@@ -89,10 +84,7 @@ contract PegResponsiveExponentialIrmSetMarketTest is PegResponsiveExponentialIrm
         IRState memory seededState =
             IRState({borrowRate: irmConfig.stressRate, lastUpdate: 123, recoveryStartedAt: 456, stressMode: true});
         _setIRState(seededState);
-        _mockOracleReturnData(hex"01");
-        vm.mockCall(address(market), abi.encodeWithSelector(IPausable.paused.selector, PAUSE_TYPE), hex"01");
-        market.setAccrueRevertPoint(MockPegResponsiveExponentialIrmMarket.AccrueRevertPoint.BEFORE_CALLBACK);
-
+        assertEq(market.irm(), address(0));
         IRState memory expectedState = seededState;
         expectedState.lastUpdate = uint48(block.timestamp);
 
@@ -102,7 +94,7 @@ contract PegResponsiveExponentialIrmSetMarketTest is PegResponsiveExponentialIrm
 
         assertEq(irm.market(), address(market));
         _assertIRState(expectedState);
-        assertEq(market.accrueInterestCalls(), 0);
+        assertEq(market.irm(), address(0));
         assertEq(logs.length, 1);
         assertEq(logs[0].emitter, address(irm));
         assertEq(logs[0].topics[0], IPegResponsiveExponentialIrmEvents.IRStateUpdated.selector);
