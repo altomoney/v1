@@ -35,8 +35,13 @@ import {
 import {AltoAdapter} from "@alto/utils/AltoAdapter.sol";
 import {AdapterContractApproval} from "@alto/utils/AdapterContractApproval.sol";
 import {AdaptiveCurveIrm} from "@alto/lending/irm/AdaptiveCurveIrm.sol";
+import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {IMarketBase} from "@alto/lending/interfaces/IMarket.sol";
-import {LiquidationConfiguration} from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";
+import {
+    IDcfDlbPriorityLiquidationEngine,
+    IDcfDlbPriorityLiquidationEngineBase,
+    LiquidationConfiguration
+} from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";
 import {IDUSD} from "@alto/tokens/interfaces/IDUSD.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
@@ -74,6 +79,11 @@ import {
 import {IAdvancedPermissionsUsmFeeStrategy} from "@alto/usm/interfaces/IAdvancedPermissionsUsmFeeStrategy.sol";
 import {MarketUpgradeBatch, MarketUpgradeBatchReport} from "@alto/deployments/ethereum-mainnet/MarketUpgradeBatch.sol";
 import {
+    MarketDeprecationPhase0,
+    MarketDeprecationPhase0Params,
+    MarketDeprecationPhase0Report
+} from "@alto/deployments/ethereum-mainnet/MarketDeprecationPhase0.sol";
+import {
     MintCurveConvexPositionFactoryBatch,
     MintCurveConvexPositionFactoryBatchParams,
     MintCurveConvexPositionFactoryBatchReport
@@ -110,7 +120,8 @@ import {
     UsmFinalizeMode,
     AdvancedPermissionsUsmContracts,
     MintCurveConvexPositionContracts,
-    Contracts
+    Contracts,
+    MarketDeprecationCorrectionParams
 } from "@alto/deployments/ethereum-mainnet/IDeployAltoEthereumMainnet.sol";
 import {ILiquidationPeripheryBase} from "@alto/lending/liquidation/interfaces/ILiquidationPeriphery.sol";
 import {AccessMode} from "@alto/usm/interfaces/IUsm.sol";
@@ -726,6 +737,146 @@ library DeployAltoEthereumMainnet {
                 params,
                 params.deployerHasOwnership
             );
+        } else if (params.phase == DeploymentPhase.MARKET_DEPRECATION_PHASE_0) {
+            address[] memory borrowMarketsToDeprecate = new address[](5);
+            borrowMarketsToDeprecate[0] = input.contracts.wbtcBorrowMarket.market;
+            borrowMarketsToDeprecate[1] = input.contracts.cbbtcBorrowMarket.market;
+            borrowMarketsToDeprecate[2] = input.contracts.susdeBorrowMarket.market;
+            borrowMarketsToDeprecate[3] = input.contracts.syrupUsdcBorrowMarket.market;
+            borrowMarketsToDeprecate[4] = input.contracts.paxgBorrowMarket.market;
+
+            address[] memory mintMarketsToDeprecate = new address[](5);
+            mintMarketsToDeprecate[0] = input.contracts.susdeMintMarket.market;
+            mintMarketsToDeprecate[1] = input.contracts.syrupUsdcMintMarket.market;
+            mintMarketsToDeprecate[2] = input.contracts.wethMarket.market;
+            mintMarketsToDeprecate[3] = input.contracts.wstethMarket.market;
+            mintMarketsToDeprecate[4] = input.contracts.rethMarket.market;
+
+            address[] memory mintMarketsAlreadyDeprecated = new address[](2);
+            mintMarketsAlreadyDeprecated[0] = input.contracts.methMarket.market;
+            mintMarketsAlreadyDeprecated[1] = input.contracts.tbtcMarket.market;
+
+            uint256[] memory borrowMarketsToDeprecateT0RatesSpy = new uint256[](borrowMarketsToDeprecate.length);
+            for (uint256 i; i < borrowMarketsToDeprecateT0RatesSpy.length; ++i) {
+                borrowMarketsToDeprecateT0RatesSpy[i] = 0.1 ether / uint256(365 days); // 10%
+            }
+
+            uint256[] memory mintMarketsToDeprecateT0RatesSpy = new uint256[](mintMarketsToDeprecate.length);
+            for (uint256 i; i < mintMarketsToDeprecateT0RatesSpy.length; ++i) {
+                mintMarketsToDeprecateT0RatesSpy[i] = 0.1 ether / uint256(365 days); // 10%
+            }
+
+            uint256[] memory mintMarketsAlreadyDeprecatedT0RatesSpy = new uint256[](mintMarketsAlreadyDeprecated.length);
+            for (uint256 i; i < mintMarketsAlreadyDeprecatedT0RatesSpy.length; ++i) {
+                mintMarketsAlreadyDeprecatedT0RatesSpy[i] = 0.1 ether / uint256(365 days); // 10%
+            }
+
+            input = _deployMarketDeprecationPhase0(
+                MarketDeprecationPhase0Params({
+                    timelock: input.contracts.timelock,
+                    freezer: params.freezer,
+                    vault: input.contracts.dusdVault,
+                    borrowMarketsToDeprecate: borrowMarketsToDeprecate,
+                    borrowMarketsToDeprecateT0RatesSpy: borrowMarketsToDeprecateT0RatesSpy,
+                    mintMarketsToDeprecate: mintMarketsToDeprecate,
+                    mintMarketsToDeprecateT0RatesSpy: mintMarketsToDeprecateT0RatesSpy,
+                    mintMarketsAlreadyDeprecated: mintMarketsAlreadyDeprecated,
+                    mintMarketsAlreadyDeprecatedT0RatesSpy: mintMarketsAlreadyDeprecatedT0RatesSpy
+                }),
+                input
+            );
+        } else if (
+            params.phase == DeploymentPhase.MARKET_DEPRECATION_PHASE_X
+                || params.phase == DeploymentPhase.MARKET_DEPRECATION_PHASE_Y
+                || params.phase == DeploymentPhase.MARKET_DEPRECATION_PHASE_Z
+        ) {
+            // TODO(Risk): Replace every zero below with the approved values for each correction phase.
+            MarketDeprecationCorrectionParams[] memory correctionParams = new MarketDeprecationCorrectionParams[](12);
+            correctionParams[0] = MarketDeprecationCorrectionParams({
+                market: input.contracts.wbtcBorrowMarket.market,
+                irmBorrowRate: 0,
+                maxLtv: 0,
+                liquidationLtv: 0,
+                completeLiquidationLtv: 0
+            });
+            correctionParams[1] = MarketDeprecationCorrectionParams({
+                market: input.contracts.cbbtcBorrowMarket.market,
+                irmBorrowRate: 0,
+                maxLtv: 0,
+                liquidationLtv: 0,
+                completeLiquidationLtv: 0
+            });
+            correctionParams[2] = MarketDeprecationCorrectionParams({
+                market: input.contracts.susdeBorrowMarket.market,
+                irmBorrowRate: 0,
+                maxLtv: 0,
+                liquidationLtv: 0,
+                completeLiquidationLtv: 0
+            });
+            correctionParams[3] = MarketDeprecationCorrectionParams({
+                market: input.contracts.syrupUsdcBorrowMarket.market,
+                irmBorrowRate: 0,
+                maxLtv: 0,
+                liquidationLtv: 0,
+                completeLiquidationLtv: 0
+            });
+            correctionParams[4] = MarketDeprecationCorrectionParams({
+                market: input.contracts.paxgBorrowMarket.market,
+                irmBorrowRate: 0,
+                maxLtv: 0,
+                liquidationLtv: 0,
+                completeLiquidationLtv: 0
+            });
+            correctionParams[5] = MarketDeprecationCorrectionParams({
+                market: input.contracts.susdeMintMarket.market,
+                irmBorrowRate: 0,
+                maxLtv: 0,
+                liquidationLtv: 0,
+                completeLiquidationLtv: 0
+            });
+            correctionParams[6] = MarketDeprecationCorrectionParams({
+                market: input.contracts.syrupUsdcMintMarket.market,
+                irmBorrowRate: 0,
+                maxLtv: 0,
+                liquidationLtv: 0,
+                completeLiquidationLtv: 0
+            });
+            correctionParams[7] = MarketDeprecationCorrectionParams({
+                market: input.contracts.wethMarket.market,
+                irmBorrowRate: 0,
+                maxLtv: 0,
+                liquidationLtv: 0,
+                completeLiquidationLtv: 0
+            });
+            correctionParams[8] = MarketDeprecationCorrectionParams({
+                market: input.contracts.wstethMarket.market,
+                irmBorrowRate: 0,
+                maxLtv: 0,
+                liquidationLtv: 0,
+                completeLiquidationLtv: 0
+            });
+            correctionParams[9] = MarketDeprecationCorrectionParams({
+                market: input.contracts.rethMarket.market,
+                irmBorrowRate: 0,
+                maxLtv: 0,
+                liquidationLtv: 0,
+                completeLiquidationLtv: 0
+            });
+            correctionParams[10] = MarketDeprecationCorrectionParams({
+                market: input.contracts.methMarket.market,
+                irmBorrowRate: 0,
+                maxLtv: 0,
+                liquidationLtv: 0,
+                completeLiquidationLtv: 0
+            });
+            correctionParams[11] = MarketDeprecationCorrectionParams({
+                market: input.contracts.tbtcMarket.market,
+                irmBorrowRate: 0,
+                maxLtv: 0,
+                liquidationLtv: 0,
+                completeLiquidationLtv: 0
+            });
+            input = _deployMarketDeprecationCorrection(correctionParams, params.phase, input);
         } else {
             revert("Invalid phase");
         }
@@ -1368,6 +1519,51 @@ library DeployAltoEthereumMainnet {
         console.log("  2. safe-tx-%s-execute.json   (execute after delay)", name);
     }
 
+    /// @dev Writes one Safe Transaction Builder JSON containing an ordered direct-call batch.
+    function _writeSafeDirectBatchJson(
+        string memory name,
+        address safe,
+        address[] memory targets,
+        uint256[] memory values,
+        bytes[] memory payloads
+    ) internal {
+        uint256 callCount = targets.length;
+        require(safe != address(0), "Invalid Safe");
+        require(callCount != 0 && values.length == callCount && payloads.length == callCount, "Invalid Safe batch");
+
+        string memory transactions;
+        for (uint256 i = 0; i < callCount; i++) {
+            transactions = string.concat(
+                transactions,
+                i == 0 ? "" : ",",
+                '{"to":"',
+                vm.toString(targets[i]),
+                '","value":"',
+                vm.toString(values[i]),
+                '","data":"',
+                vm.toString(payloads[i]),
+                '","contractMethod":null,"contractInputsValues":null}'
+            );
+        }
+
+        string memory outputDir = "contracts/deployments/ethereum-mainnet/output";
+        vm.writeFile(
+            string.concat(outputDir, "/safe-tx-", name, ".json"),
+            string.concat(
+                '{"version":"1.0","chainId":"1","meta":{"name":"',
+                name,
+                '","txBuilderVersion":"1.16.5","createdFromSafeAddress":"',
+                vm.toString(safe),
+                '"},"transactions":[',
+                transactions,
+                "]}"
+            )
+        );
+
+        console.log("Safe TX Builder JSON written: safe-tx-%s.json", name);
+        console.log("  Submit from Safe:", safe);
+    }
+
     function _buildSafeJson(string memory name, address to, bytes memory data) internal pure returns (string memory) {
         return string.concat(
             '{"version":"1.0","chainId":"1","meta":{"name":"',
@@ -1804,6 +2000,99 @@ library DeployAltoEthereumMainnet {
         }
 
         return input;
+    }
+
+    function _deployMarketDeprecationPhase0(
+        MarketDeprecationPhase0Params memory params,
+        AltoEthereumMainnetInput memory input
+    ) internal returns (AltoEthereumMainnetInput memory) {
+        // This phase deploys the OwnerFixedRateIrmFactory used by the atomic Timelock IRM update batch.
+        require(input.contracts.ownerFixedRateIrmFactory == address(0), "Market deprecation phase already prepared");
+
+        MarketDeprecationPhase0Report memory report = MarketDeprecationPhase0.prepare(params);
+
+        address timelock = input.contracts.timelock;
+        uint256 minDelay = TimelockController(payable(timelock)).getMinDelay();
+
+        _writeSafeDirectBatchJson(
+            "market-deprecation-phase-0-freezer",
+            params.freezer,
+            report.freezerBatch.targets,
+            report.freezerBatch.values,
+            report.freezerBatch.payloads
+        );
+        _writeSafeDirectBatchJson(
+            "market-deprecation-phase-0-vault-caps",
+            report.vaultCurator,
+            report.vaultCuratorBatch.targets,
+            report.vaultCuratorBatch.values,
+            report.vaultCuratorBatch.payloads
+        );
+        _writeSafeTimelockBatchJson(
+            "market-deprecation-phase-0",
+            timelock,
+            report.timelockBatch.targets,
+            report.timelockBatch.values,
+            report.timelockBatch.payloads,
+            minDelay
+        );
+
+        // After the Timelock batch executes, the developer must manually update the five borrow-market IRM addresses.
+        input.contracts.ownerFixedRateIrmFactory = report.ownerFixedRateIrmFactory;
+
+        return input;
+    }
+
+    function _deployMarketDeprecationCorrection(
+        MarketDeprecationCorrectionParams[] memory correctionParams,
+        DeploymentPhase phase,
+        AltoEthereumMainnetInput memory input
+    ) internal returns (AltoEthereumMainnetInput memory) {
+        uint256 callCount = correctionParams.length * 3;
+        address[] memory targets = new address[](callCount);
+        uint256[] memory values = new uint256[](callCount);
+        bytes[] memory payloads = new bytes[](callCount);
+
+        uint256 callIndex;
+        for (uint256 i; i < correctionParams.length; ++i) {
+            MarketDeprecationCorrectionParams memory correction = correctionParams[i];
+            address fixedRateIrm = IMarketBase(correction.market).irm();
+            address liquidationEngine = IMarketBase(correction.market).liquidationEngine();
+
+            LiquidationConfiguration memory liquidationConfiguration =
+                IDcfDlbPriorityLiquidationEngine(liquidationEngine).liquidationConfiguration();
+            liquidationConfiguration.maxLiquidationLtv = correction.liquidationLtv;
+            liquidationConfiguration.ltvForCompleteLiquidation = correction.completeLiquidationLtv;
+
+            targets[callIndex] = fixedRateIrm;
+            payloads[callIndex] = abi.encodeCall(FixedRateIrm.setBorrowRate, (correction.irmBorrowRate));
+            ++callIndex;
+
+            targets[callIndex] = correction.market;
+            payloads[callIndex] = abi.encodeCall(IMarketBase.setMaxLtv, (correction.maxLtv));
+            ++callIndex;
+
+            targets[callIndex] = liquidationEngine;
+            payloads[callIndex] = abi.encodeCall(
+                IDcfDlbPriorityLiquidationEngineBase.setLiquidationConfiguration, (liquidationConfiguration)
+            );
+            ++callIndex;
+        }
+
+        address timelock = input.contracts.timelock;
+        uint256 minDelay = TimelockController(payable(timelock)).getMinDelay();
+        _writeSafeTimelockBatchJson(
+            _marketDeprecationCorrectionBatchName(phase), timelock, targets, values, payloads, minDelay
+        );
+
+        return input;
+    }
+
+    function _marketDeprecationCorrectionBatchName(DeploymentPhase phase) internal pure returns (string memory) {
+        if (phase == DeploymentPhase.MARKET_DEPRECATION_PHASE_X) return "market-deprecation-phase-x";
+        if (phase == DeploymentPhase.MARKET_DEPRECATION_PHASE_Y) return "market-deprecation-phase-y";
+        if (phase == DeploymentPhase.MARKET_DEPRECATION_PHASE_Z) return "market-deprecation-phase-z";
+        revert("Invalid correction phase");
     }
 
     function _deployPost(AltoEthereumMainnetParams memory params, AltoEthereumMainnetInput memory input)

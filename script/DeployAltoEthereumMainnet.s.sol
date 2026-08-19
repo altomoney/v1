@@ -10,13 +10,14 @@ import {
     DeploymentPhase,
     MarketContracts
 } from "@alto/deployments/ethereum-mainnet/DeployAltoEthereumMainnet.sol";
+
 import {console} from "forge-std/console.sol";
 import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 import {Options} from "openzeppelin-foundry-upgrades/Options.sol";
 import {USDC_MAINNET, FRXUSD_MAINNET} from "@alto/deployments/ethereum-mainnet/Constants.sol";
 
 uint256 constant DEPLOYMENT_ID_TO_LOAD = 1765364975;
-DeploymentPhase constant PHASE_TO_DEPLOY = DeploymentPhase.MINT_CURVE_CONVEX_POSITION; // CORE, DUSD, MINT_MARKET_WETH, MINT_MARKET_WSTETH, MINT_MARKET_RETH, MINT_MARKET_METH, MINT_MARKET_TBTC, BORROW_MARKET_WBTC, BORROW_MARKET_CBBTC, BORROW_MARKET_SUSDE, USDC_USM, POST, REFERRAL_ADAPTER, BORROW_MARKET_SYRUP_USDC, BORROW_MARKET_PAXG, MINT_MARKET_SUSDE, MINT_MARKET_SYRUPUSDC, PERMISSIONED_FRXUSD_USM, ADAPTER, DUSD_VAULT, VAULT_REGISTRY, PERMISSIONLESS_FRXUSD_USM, ALTO_LEVERAGE_SWAPPER_MULTI_TARGET, LIQUIDATION_PERIPHERY, ADVANCED_PERMISSIONS_FRXUSD_USM, UPGRADE_MARKETS_LIQUIDATION_PERIPHERY, UNIVERSAL_REWARDS_DISTRIBUTOR, MINT_CURVE_CONVEX_POSITION
+DeploymentPhase constant PHASE_TO_DEPLOY = DeploymentPhase.MARKET_DEPRECATION_PHASE_0; // CORE, DUSD, MINT_MARKET_WETH, MINT_MARKET_WSTETH, MINT_MARKET_RETH, MINT_MARKET_METH, MINT_MARKET_TBTC, BORROW_MARKET_WBTC, BORROW_MARKET_CBBTC, BORROW_MARKET_SUSDE, USDC_USM, POST, REFERRAL_ADAPTER, BORROW_MARKET_SYRUP_USDC, BORROW_MARKET_PAXG, MINT_MARKET_SUSDE, MINT_MARKET_SYRUPUSDC, PERMISSIONED_FRXUSD_USM, ADAPTER, DUSD_VAULT, VAULT_REGISTRY, PERMISSIONLESS_FRXUSD_USM, ALTO_LEVERAGE_SWAPPER_MULTI_TARGET, LIQUIDATION_PERIPHERY, ADVANCED_PERMISSIONS_FRXUSD_USM, UPGRADE_MARKETS_LIQUIDATION_PERIPHERY, UNIVERSAL_REWARDS_DISTRIBUTOR, MINT_CURVE_CONVEX_POSITION, MARKET_DEPRECATION_PHASE_0, MARKET_DEPRECATION_PHASE_X, MARKET_DEPRECATION_PHASE_Y, MARKET_DEPRECATION_PHASE_Z
 string constant OUTPUT_DIR = "./contracts/deployments/ethereum-mainnet/output";
 
 contract DeployAltoEthereumMainnetScript is Script {
@@ -118,6 +119,8 @@ contract DeployAltoEthereumMainnetScript is Script {
         );
         contractsJson = vm.serializeAddress("contracts", "referralAdapter", input.contracts.referralAdapter);
         contractsJson = vm.serializeAddress("contracts", "addressChange", input.contracts.addressChange);
+        contractsJson =
+            vm.serializeAddress("contracts", "ownerFixedRateIrmFactory", input.contracts.ownerFixedRateIrmFactory);
 
         // Serialize market contracts using helper
         contractsJson = _serializeMarketContracts(contractsJson, "weth", input.contracts.wethMarket);
@@ -304,6 +307,7 @@ contract DeployAltoEthereumMainnetScript is Script {
             _tryParseAddress(json, ".contracts.emergencyControllerImplementation");
         loadedInput.contracts.referralAdapter = _tryParseAddress(json, ".contracts.referralAdapter");
         loadedInput.contracts.addressChange = _tryParseAddress(json, ".contracts.addressChange");
+        loadedInput.contracts.ownerFixedRateIrmFactory = _tryParseAddress(json, ".contracts.ownerFixedRateIrmFactory");
 
         // Load market contracts using helper
         loadedInput.contracts.wethMarket = _loadMarketContracts(json, "weth");
@@ -498,6 +502,9 @@ contract DeployAltoEthereumMainnetScript is Script {
             _extractContractABI("MintCurveConvexPositionFactory", abiFolder);
             _extractContractABI("MintCurveConvexPosition", abiFolder);
             _extractContractABI("PositionBeacon", abiFolder);
+        } else if (PHASE_TO_DEPLOY == DeploymentPhase.MARKET_DEPRECATION_PHASE_0) {
+            _extractContractABI("OwnerFixedRateIrmFactory", abiFolder);
+            _extractContractABI("FixedRateIrm", abiFolder);
         }
 
         console.log("ABIs extracted to:", abiFolder);
