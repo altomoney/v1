@@ -3,7 +3,7 @@ pragma solidity ^0.8.22;
 
 import {Test} from "forge-std/Test.sol";
 import {console} from "forge-std/console.sol";
-import {Balance, IMarket, MarketType} from "@alto/lending/interfaces/IMarket.sol";
+import {Balance, IMarket, IMarketBase, MarketType} from "@alto/lending/interfaces/IMarket.sol";
 
 import {
     DeployAltoEthereumMainnet,
@@ -12,6 +12,7 @@ import {
     DeploymentPhase,
     MarketContracts
 } from "@alto/deployments/ethereum-mainnet/DeployAltoEthereumMainnet.sol";
+import {MarketDeprecationCorrectionParams} from "@alto/deployments/ethereum-mainnet/IDeployAltoEthereumMainnet.sol";
 import {IDUSD} from "@alto/tokens/interfaces/IDUSD.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {AltoAdapter} from "@alto/utils/AltoAdapter.sol";
@@ -82,11 +83,15 @@ import {
     CHAINLINK_FRXUSD_USD_PRICE_FEED
 } from "@alto/deployments/ethereum-mainnet/Constants.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
-import {IAltoVault, IAltoVaultBase} from "@alto/lending/interfaces/IAltoVault.sol";
+import {IAltoVault, IAltoVaultBase, IAltoVaultStaticTypes} from "@alto/lending/interfaces/IAltoVault.sol";
 import {VaultRegistry} from "@alto/utils/VaultRegistry.sol";
 import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
 import {UniversalRewardsDistributor} from "@alto/utils/UniversalRewardsDistributor.sol";
 import {IMerkleRootManager} from "@alto/utils/interfaces/IMerkleRootManager.sol";
+import {IRMType} from "@alto/lending/interfaces/IIrm.sol";
+import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
+import {AltoOwnable2Step} from "@alto/utils/AltoOwnable2Step.sol";
+import {OwnerFixedRateIrmFactory} from "@alto/deployments/ethereum-mainnet/OwnerFixedRateIrmFactory.sol";
 
 /// @dev Set to a non-zero deployment timestamp to load a real deployment's addresses.json
 ///      and skip re-deploying prerequisites. The file must be at:
@@ -1831,5 +1836,499 @@ contract DeployRequiredAddressesTest is DeployAltoEthereumMainnetTestBase {
 
         vm.expectRevert("Emergency controller must be set");
         this.deployExternal(params, input);
+    }
+}
+
+contract DeployMarketDeprecationPhase0Test is DeployAltoEthereumMainnetTestBase {
+    uint256 internal constant T0_RATE_SPY = 0.1 ether / uint256(365 days);
+    // NOTE: These fixed placeholders make Phase X exercise real state changes instead of replaying current values.
+    // TODO(Risk): Replace each market entry below with its approved Phase X parameters once finalized.
+    uint256 internal constant PHASE_X_DEFAULT_RATE_SPY = 0.2 ether / uint256(365 days);
+    uint256 internal constant PHASE_X_DEFAULT_MAX_LTV = 0.6 ether;
+    uint256 internal constant PHASE_X_DEFAULT_LIQUIDATION_LTV = 0.75 ether;
+    uint256 internal constant PHASE_X_DEFAULT_COMPLETE_LIQUIDATION_LTV = 0.85 ether;
+
+    address internal constant PRODUCTION_FREEZER = 0x1c11d2d42929bd17aB7212b79c91862Adfa8bbe4;
+
+    function test_marketDeprecationPhase0GeneratedCalldataExecutesAndSetsExpectedState() public {
+        address[] memory borrowMarkets = _borrowMarkets();
+        address[] memory mintMarkets = _mintMarkets();
+        address[] memory oldBorrowIrms = _currentIrms(borrowMarkets);
+        address[] memory mintIrms = _currentIrms(mintMarkets);
+        address[] memory alreadyDeprecatedMintMarkets = _alreadyDeprecatedMintMarkets();
+        address[] memory alreadyDeprecatedMintIrms = _currentIrms(alreadyDeprecatedMintMarkets);
+
+        _assertInitialState(borrowMarkets, oldBorrowIrms, mintMarkets, mintIrms);
+        _assertAlreadyDeprecatedInitialState(alreadyDeprecatedMintMarkets, alreadyDeprecatedMintIrms);
+
+        params.phase = DeploymentPhase.MARKET_DEPRECATION_PHASE_0;
+        params.freezer = PRODUCTION_FREEZER;
+        input = DeployAltoEthereumMainnet.deploy(params, input);
+
+        OwnerFixedRateIrmFactory factory = OwnerFixedRateIrmFactory(input.contracts.ownerFixedRateIrmFactory);
+        address[] memory newBorrowIrms = _predictedIrms(factory, borrowMarkets.length);
+
+        assertTrue(address(factory).code.length > 0, "factory not deployed");
+        assertEq(factory.owner(), input.contracts.timelock, "factory owner");
+        assertEq(factory.pendingOwner(), address(0), "factory pending owner");
+        assertEq(factory.nonce(), 0, "factory nonce before Timelock execution");
+        for (uint256 i; i < newBorrowIrms.length; ++i) {
+            assertEq(newBorrowIrms[i].code.length, 0, "fixed IRM deployed before Timelock execution");
+        }
+
+        _executeTimelockCalldata(
+            _safeTxPath("market-deprecation-phase-0", "schedule"), TimelockController.scheduleBatch.selector
+        );
+        vm.warp(block.timestamp + TimelockController(payable(input.contracts.timelock)).getMinDelay() + 1);
+
+        _executeFreezerCalldata(borrowMarkets, mintMarkets);
+        _assertFrozenWithExpectedIrms(borrowMarkets, oldBorrowIrms);
+        _assertFrozenWithExpectedIrms(mintMarkets, mintIrms);
+
+        _executeTimelockCalldata(
+            _safeTxPath("market-deprecation-phase-0", "execute"), TimelockController.executeBatch.selector
+        );
+        _executeVaultCapCalldata(borrowMarkets);
+
+        assertEq(factory.nonce(), borrowMarkets.length, "factory nonce after Timelock execution");
+        _assertBorrowMarketFinalState(borrowMarkets, oldBorrowIrms, newBorrowIrms);
+        _assertMintMarketFinalState(mintMarkets, mintIrms);
+        _assertMintMarketFinalState(alreadyDeprecatedMintMarkets, alreadyDeprecatedMintIrms);
+        _assertVaultCapFinalState(borrowMarkets);
+    }
+
+    function test_marketDeprecationCorrectionPlaceholderBatchesAreGenerated() public {
+        DeploymentPhase[3] memory correctionPhases = [
+            DeploymentPhase.MARKET_DEPRECATION_PHASE_X,
+            DeploymentPhase.MARKET_DEPRECATION_PHASE_Y,
+            DeploymentPhase.MARKET_DEPRECATION_PHASE_Z
+        ];
+        string[3] memory batchNames = [
+            string("market-deprecation-phase-x"),
+            string("market-deprecation-phase-y"),
+            string("market-deprecation-phase-z")
+        ];
+
+        for (uint256 i; i < correctionPhases.length; ++i) {
+            params.phase = correctionPhases[i];
+            input = DeployAltoEthereumMainnet.deploy(params, input);
+
+            _assertAndReadTimelockTransaction(
+                _safeTxPath(batchNames[i], "schedule"), TimelockController.scheduleBatch.selector
+            );
+            _assertAndReadTimelockTransaction(
+                _safeTxPath(batchNames[i], "execute"), TimelockController.executeBatch.selector
+            );
+        }
+    }
+
+    function test_marketDeprecationPhaseXGeneratedCalldataExecutesWithValidValues() public {
+        test_marketDeprecationPhase0GeneratedCalldataExecutesAndSetsExpectedState();
+
+        address[] memory markets = _allDeprecatedMarkets();
+        MarketDeprecationCorrectionParams[] memory correctionParams = _phaseXTestCorrectionParams(markets);
+        address[] memory expectedIrms = new address[](markets.length);
+        address[] memory expectedLiquidationEngines = new address[](markets.length);
+        for (uint256 i; i < markets.length; ++i) {
+            expectedIrms[i] = IMarket(markets[i]).irm();
+            expectedLiquidationEngines[i] = IMarket(markets[i]).liquidationEngine();
+        }
+
+        input = DeployAltoEthereumMainnet._deployMarketDeprecationCorrection(
+            correctionParams, DeploymentPhase.MARKET_DEPRECATION_PHASE_X, input
+        );
+
+        _executeTimelockCalldata(
+            _safeTxPath("market-deprecation-phase-x", "schedule"), TimelockController.scheduleBatch.selector
+        );
+        vm.warp(block.timestamp + TimelockController(payable(input.contracts.timelock)).getMinDelay() + 1);
+
+        _executeTimelockCalldata(
+            _safeTxPath("market-deprecation-phase-x", "execute"), TimelockController.executeBatch.selector
+        );
+
+        _assertMarketDeprecationCorrectionFinalState(correctionParams, expectedIrms, expectedLiquidationEngines);
+    }
+
+    function _allDeprecatedMarkets() internal view returns (address[] memory markets) {
+        address[] memory borrowMarkets = _borrowMarkets();
+        address[] memory mintMarkets = _mintMarkets();
+        address[] memory alreadyDeprecatedMintMarkets = _alreadyDeprecatedMintMarkets();
+
+        markets = new address[](borrowMarkets.length + mintMarkets.length + alreadyDeprecatedMintMarkets.length);
+        uint256 marketIndex;
+        for (uint256 i; i < borrowMarkets.length; ++i) {
+            markets[marketIndex++] = borrowMarkets[i];
+        }
+        for (uint256 i; i < mintMarkets.length; ++i) {
+            markets[marketIndex++] = mintMarkets[i];
+        }
+        for (uint256 i; i < alreadyDeprecatedMintMarkets.length; ++i) {
+            markets[marketIndex++] = alreadyDeprecatedMintMarkets[i];
+        }
+    }
+
+    function _phaseXTestCorrectionParams(address[] memory markets)
+        internal
+        pure
+        returns (MarketDeprecationCorrectionParams[] memory correctionParams)
+    {
+        correctionParams = new MarketDeprecationCorrectionParams[](12);
+
+        correctionParams[0] = MarketDeprecationCorrectionParams({
+            market: markets[0], // WBTC borrow market
+            irmBorrowRate: PHASE_X_DEFAULT_RATE_SPY,
+            maxLtv: PHASE_X_DEFAULT_MAX_LTV,
+            liquidationLtv: PHASE_X_DEFAULT_LIQUIDATION_LTV,
+            completeLiquidationLtv: PHASE_X_DEFAULT_COMPLETE_LIQUIDATION_LTV
+        });
+        correctionParams[1] = MarketDeprecationCorrectionParams({
+            market: markets[1], // cbBTC borrow market
+            irmBorrowRate: PHASE_X_DEFAULT_RATE_SPY,
+            maxLtv: PHASE_X_DEFAULT_MAX_LTV,
+            liquidationLtv: PHASE_X_DEFAULT_LIQUIDATION_LTV,
+            completeLiquidationLtv: PHASE_X_DEFAULT_COMPLETE_LIQUIDATION_LTV
+        });
+        correctionParams[2] = MarketDeprecationCorrectionParams({
+            market: markets[2], // sUSDe borrow market
+            irmBorrowRate: PHASE_X_DEFAULT_RATE_SPY,
+            maxLtv: PHASE_X_DEFAULT_MAX_LTV,
+            liquidationLtv: PHASE_X_DEFAULT_LIQUIDATION_LTV,
+            completeLiquidationLtv: PHASE_X_DEFAULT_COMPLETE_LIQUIDATION_LTV
+        });
+        correctionParams[3] = MarketDeprecationCorrectionParams({
+            market: markets[3], // syrupUSDC borrow market
+            irmBorrowRate: PHASE_X_DEFAULT_RATE_SPY,
+            maxLtv: PHASE_X_DEFAULT_MAX_LTV,
+            liquidationLtv: PHASE_X_DEFAULT_LIQUIDATION_LTV,
+            completeLiquidationLtv: PHASE_X_DEFAULT_COMPLETE_LIQUIDATION_LTV
+        });
+        correctionParams[4] = MarketDeprecationCorrectionParams({
+            market: markets[4], // PAXG borrow market
+            irmBorrowRate: PHASE_X_DEFAULT_RATE_SPY,
+            maxLtv: PHASE_X_DEFAULT_MAX_LTV,
+            liquidationLtv: PHASE_X_DEFAULT_LIQUIDATION_LTV,
+            completeLiquidationLtv: PHASE_X_DEFAULT_COMPLETE_LIQUIDATION_LTV
+        });
+        correctionParams[5] = MarketDeprecationCorrectionParams({
+            market: markets[5], // sUSDe mint market
+            irmBorrowRate: PHASE_X_DEFAULT_RATE_SPY,
+            maxLtv: PHASE_X_DEFAULT_MAX_LTV,
+            liquidationLtv: PHASE_X_DEFAULT_LIQUIDATION_LTV,
+            completeLiquidationLtv: PHASE_X_DEFAULT_COMPLETE_LIQUIDATION_LTV
+        });
+        correctionParams[6] = MarketDeprecationCorrectionParams({
+            market: markets[6], // syrupUSDC mint market
+            irmBorrowRate: PHASE_X_DEFAULT_RATE_SPY,
+            maxLtv: PHASE_X_DEFAULT_MAX_LTV,
+            liquidationLtv: PHASE_X_DEFAULT_LIQUIDATION_LTV,
+            completeLiquidationLtv: PHASE_X_DEFAULT_COMPLETE_LIQUIDATION_LTV
+        });
+        correctionParams[7] = MarketDeprecationCorrectionParams({
+            market: markets[7], // WETH mint market
+            irmBorrowRate: PHASE_X_DEFAULT_RATE_SPY,
+            maxLtv: PHASE_X_DEFAULT_MAX_LTV,
+            liquidationLtv: PHASE_X_DEFAULT_LIQUIDATION_LTV,
+            completeLiquidationLtv: PHASE_X_DEFAULT_COMPLETE_LIQUIDATION_LTV
+        });
+        correctionParams[8] = MarketDeprecationCorrectionParams({
+            market: markets[8], // wstETH mint market
+            irmBorrowRate: PHASE_X_DEFAULT_RATE_SPY,
+            maxLtv: PHASE_X_DEFAULT_MAX_LTV,
+            liquidationLtv: PHASE_X_DEFAULT_LIQUIDATION_LTV,
+            completeLiquidationLtv: PHASE_X_DEFAULT_COMPLETE_LIQUIDATION_LTV
+        });
+        correctionParams[9] = MarketDeprecationCorrectionParams({
+            market: markets[9], // rETH mint market
+            irmBorrowRate: PHASE_X_DEFAULT_RATE_SPY,
+            maxLtv: PHASE_X_DEFAULT_MAX_LTV,
+            liquidationLtv: PHASE_X_DEFAULT_LIQUIDATION_LTV,
+            completeLiquidationLtv: PHASE_X_DEFAULT_COMPLETE_LIQUIDATION_LTV
+        });
+        correctionParams[10] = MarketDeprecationCorrectionParams({
+            market: markets[10], // already-deprecated mETH mint market
+            irmBorrowRate: PHASE_X_DEFAULT_RATE_SPY,
+            maxLtv: PHASE_X_DEFAULT_MAX_LTV,
+            liquidationLtv: PHASE_X_DEFAULT_LIQUIDATION_LTV,
+            completeLiquidationLtv: PHASE_X_DEFAULT_COMPLETE_LIQUIDATION_LTV
+        });
+        correctionParams[11] = MarketDeprecationCorrectionParams({
+            market: markets[11], // already-deprecated tBTC mint market
+            irmBorrowRate: PHASE_X_DEFAULT_RATE_SPY,
+            maxLtv: PHASE_X_DEFAULT_MAX_LTV,
+            liquidationLtv: PHASE_X_DEFAULT_LIQUIDATION_LTV,
+            completeLiquidationLtv: PHASE_X_DEFAULT_COMPLETE_LIQUIDATION_LTV
+        });
+    }
+
+    function _assertMarketDeprecationCorrectionFinalState(
+        MarketDeprecationCorrectionParams[] memory correctionParams,
+        address[] memory expectedIrms,
+        address[] memory expectedLiquidationEngines
+    ) internal view {
+        for (uint256 i; i < correctionParams.length; ++i) {
+            MarketDeprecationCorrectionParams memory correction = correctionParams[i];
+            address market = correction.market;
+            address irm = IMarket(market).irm();
+            address liquidationEngine = IMarket(market).liquidationEngine();
+
+            assertEq(irm, expectedIrms[i], "Phase X changed market IRM");
+            assertEq(liquidationEngine, expectedLiquidationEngines[i], "Phase X changed liquidation engine");
+            assertTrue(IPausable(market).paused(FROZEN_TYPE), "Phase X market not frozen");
+            assertFalse(IPausable(market).paused(PAUSE_TYPE), "Phase X market paused");
+            assertEq(Ownable(market).owner(), input.contracts.timelock, "Phase X market owner");
+            assertEq(IMarket(market).maxLtv(), correction.maxLtv, "Phase X max LTV");
+
+            assertEq(Ownable(irm).owner(), input.contracts.timelock, "Phase X IRM owner");
+            assertEq(FixedRateIrm(irm).market(), market, "Phase X IRM market binding");
+            (uint256 borrowRate,) = FixedRateIrm(irm).irState();
+            assertEq(borrowRate, correction.irmBorrowRate, "Phase X IRM borrow rate");
+
+            assertEq(Ownable(liquidationEngine).owner(), input.contracts.timelock, "Phase X engine owner");
+            LiquidationConfiguration memory liquidationConfiguration =
+                IDcfDlbPriorityLiquidationEngine(liquidationEngine).liquidationConfiguration();
+            assertEq(liquidationConfiguration.maxLiquidationLtv, correction.liquidationLtv, "Phase X liquidation LTV");
+            assertEq(
+                liquidationConfiguration.ltvForCompleteLiquidation,
+                correction.completeLiquidationLtv,
+                "Phase X complete liquidation LTV"
+            );
+        }
+    }
+
+    function _assertInitialState(
+        address[] memory borrowMarkets,
+        address[] memory oldBorrowIrms,
+        address[] memory mintMarkets,
+        address[] memory mintIrms
+    ) internal view {
+        for (uint256 i; i < borrowMarkets.length; ++i) {
+            _assertMarketState(borrowMarkets[i], oldBorrowIrms[i], MarketType.BORROW, false);
+            _assertIrmState(oldBorrowIrms[i], borrowMarkets[i], IRMType.ADAPTIVE_CURVE, 0, false);
+        }
+
+        for (uint256 i; i < mintMarkets.length; ++i) {
+            _assertMarketState(mintMarkets[i], mintIrms[i], MarketType.MINT, false);
+            _assertIrmState(mintIrms[i], mintMarkets[i], IRMType.FIXED_RATE, 0, false);
+        }
+    }
+
+    function _assertAlreadyDeprecatedInitialState(address[] memory markets, address[] memory irms) internal view {
+        for (uint256 i; i < markets.length; ++i) {
+            _assertMarketState(markets[i], irms[i], MarketType.MINT, true);
+            _assertIrmState(irms[i], markets[i], IRMType.FIXED_RATE, 0, false);
+            (uint256 borrowRate,) = FixedRateIrm(irms[i]).irState();
+            assertTrue(borrowRate != T0_RATE_SPY, "already-deprecated IRM already at T0 rate");
+        }
+    }
+
+    function _assertBorrowMarketFinalState(
+        address[] memory borrowMarkets,
+        address[] memory oldBorrowIrms,
+        address[] memory newBorrowIrms
+    ) internal view {
+        for (uint256 i; i < borrowMarkets.length; ++i) {
+            _assertMarketState(borrowMarkets[i], newBorrowIrms[i], MarketType.BORROW, true);
+            _assertIrmState(newBorrowIrms[i], borrowMarkets[i], IRMType.FIXED_RATE, T0_RATE_SPY, true);
+
+            assertEq(FixedRateIrm(oldBorrowIrms[i]).market(), borrowMarkets[i], "old IRM binding changed");
+            assertEq(
+                uint256(FixedRateIrm(oldBorrowIrms[i]).IRM_TYPE()),
+                uint256(IRMType.ADAPTIVE_CURVE),
+                "old IRM type changed"
+            );
+            assertEq(Ownable(oldBorrowIrms[i]).owner(), input.contracts.timelock, "old IRM owner changed");
+        }
+    }
+
+    function _assertMintMarketFinalState(address[] memory markets, address[] memory irms) internal view {
+        for (uint256 i; i < markets.length; ++i) {
+            _assertMarketState(markets[i], irms[i], MarketType.MINT, true);
+            _assertIrmState(irms[i], markets[i], IRMType.FIXED_RATE, T0_RATE_SPY, true);
+        }
+    }
+
+    function _assertMarketState(address market, address expectedIrm, MarketType expectedType, bool frozen)
+        internal
+        view
+    {
+        assertEq(IMarket(market).irm(), expectedIrm, "market IRM");
+        assertEq(uint256(IMarket(market).MARKET_TYPE()), uint256(expectedType), "market type");
+        assertEq(Ownable(market).owner(), input.contracts.timelock, "market owner");
+        assertEq(IPausable(market).paused(FROZEN_TYPE), frozen, "market frozen state");
+        assertFalse(IPausable(market).paused(PAUSE_TYPE), "market must not be paused");
+        assertTrue(Pausable(market).pausers(PRODUCTION_FREEZER, FROZEN_TYPE), "Freezer role changed");
+        assertFalse(Pausable(market).pausers(input.contracts.timelock, FROZEN_TYPE), "Timelock gained Freezer role");
+    }
+
+    function _assertIrmState(
+        address irmAddress,
+        address expectedMarket,
+        IRMType expectedType,
+        uint256 expectedRate,
+        bool assertRate
+    ) internal view {
+        FixedRateIrm irm = FixedRateIrm(irmAddress);
+        assertTrue(irmAddress.code.length > 0, "IRM not deployed");
+        assertEq(uint256(irm.IRM_TYPE()), uint256(expectedType), "IRM type");
+        assertEq(irm.market(), expectedMarket, "IRM market binding");
+        assertEq(Ownable(irmAddress).owner(), input.contracts.timelock, "IRM owner");
+        assertEq(AltoOwnable2Step(irmAddress).pendingOwner(), address(0), "IRM pending owner");
+
+        if (assertRate) {
+            (uint256 borrowRate, uint48 lastUpdate) = irm.irState();
+            assertEq(borrowRate, expectedRate, "IRM borrow rate");
+            assertEq(uint256(lastUpdate), block.timestamp, "IRM last update");
+        }
+    }
+
+    function _executeTimelockCalldata(string memory path, bytes4 expectedSelector) internal {
+        bytes memory data = _assertAndReadTimelockTransaction(path, expectedSelector);
+        _callFrom(MAINNET_TIMELOCK_ADMIN, input.contracts.timelock, data, "Timelock calldata failed");
+    }
+
+    function _executeFreezerCalldata(address[] memory borrowMarkets, address[] memory mintMarkets) internal {
+        string memory path = _safeTxPath("market-deprecation-phase-0", "freezer");
+        assertTrue(vm.exists(path), "Freezer JSON not written");
+        string memory json = vm.readFile(path);
+        assertEq(vm.parseJsonAddress(json, ".meta.createdFromSafeAddress"), PRODUCTION_FREEZER, "Freezer Safe address");
+
+        uint256 callCount = borrowMarkets.length + mintMarkets.length;
+        for (uint256 i; i < callCount; ++i) {
+            string memory prefix = string.concat(".transactions[", vm.toString(i), "]");
+            address expectedMarket = i < borrowMarkets.length ? borrowMarkets[i] : mintMarkets[i - borrowMarkets.length];
+            address target = vm.parseJsonAddress(json, string.concat(prefix, ".to"));
+            bytes memory data = vm.parseJsonBytes(json, string.concat(prefix, ".data"));
+
+            assertEq(target, expectedMarket, "Freezer target/order");
+            assertEq(vm.parseJsonString(json, string.concat(prefix, ".value")), "0", "Freezer call value");
+            assertEq(bytes4(data), IPausable.pause.selector, "Freezer selector");
+            _callFrom(PRODUCTION_FREEZER, target, data, "Freezer calldata failed");
+        }
+        assertFalse(
+            vm.keyExistsJson(json, string.concat(".transactions[", vm.toString(callCount), "]")),
+            "unexpected extra Freezer call"
+        );
+    }
+
+    function _executeVaultCapCalldata(address[] memory borrowMarkets) internal {
+        string memory path = _safeTxPath("market-deprecation-phase-0", "vault-caps");
+        assertTrue(vm.exists(path), "Vault caps JSON not written");
+        string memory json = vm.readFile(path);
+        IAltoVaultBase vault = IAltoVaultBase(input.contracts.dusdVault);
+        address curator = vault.curator();
+        assertEq(vm.parseJsonAddress(json, ".meta.createdFromSafeAddress"), curator, "Vault curator Safe address");
+
+        for (uint256 i; i < borrowMarkets.length; ++i) {
+            string memory prefix = string.concat(".transactions[", vm.toString(i), "]");
+            address target = vm.parseJsonAddress(json, string.concat(prefix, ".to"));
+            bytes memory data = vm.parseJsonBytes(json, string.concat(prefix, ".data"));
+            bytes memory expectedData = abi.encodeCall(IAltoVaultBase.submitCap, (borrowMarkets[i], 0));
+
+            (uint184 cap,,) = IAltoVaultStaticTypes(address(vault)).config(borrowMarkets[i]);
+            assertGt(cap, 0, "Vault cap already zero");
+            assertEq(target, input.contracts.dusdVault, "Vault cap target");
+            assertEq(vm.parseJsonString(json, string.concat(prefix, ".value")), "0", "Vault cap call value");
+            assertEq(data, expectedData, "Vault cap calldata/order");
+            _callFrom(curator, target, data, "Vault cap calldata failed");
+        }
+        assertFalse(
+            vm.keyExistsJson(json, string.concat(".transactions[", vm.toString(borrowMarkets.length), "]")),
+            "unexpected extra Vault cap call"
+        );
+    }
+
+    function _assertVaultCapFinalState(address[] memory borrowMarkets) internal view {
+        IAltoVaultBase vault = IAltoVaultBase(input.contracts.dusdVault);
+        for (uint256 i; i < borrowMarkets.length; ++i) {
+            (uint184 cap, bool enabled, uint64 removableAt) =
+                IAltoVaultStaticTypes(address(vault)).config(borrowMarkets[i]);
+            assertEq(cap, 0, "old BM Vault cap");
+            assertTrue(enabled, "old BM Vault config disabled at T0");
+            assertEq(removableAt, 0, "old BM removal submitted at T0");
+            assertTrue(_isInWithdrawQueue(vault, borrowMarkets[i]), "old BM removed from withdrawal queue at T0");
+        }
+    }
+
+    function _isInWithdrawQueue(IAltoVaultBase vault, address market) internal view returns (bool) {
+        uint256 length = vault.withdrawQueueLength();
+        for (uint256 i; i < length; ++i) {
+            if (vault.withdrawQueue(i) == market) return true;
+        }
+        return false;
+    }
+
+    function _safeTxPath(string memory batchName, string memory action) internal pure returns (string memory) {
+        return string.concat("contracts/deployments/ethereum-mainnet/output/safe-tx-", batchName, "-", action, ".json");
+    }
+
+    function _assertAndReadTimelockTransaction(string memory path, bytes4 expectedSelector)
+        internal
+        view
+        returns (bytes memory data)
+    {
+        assertTrue(vm.exists(path), "Safe JSON not written");
+        string memory json = vm.readFile(path);
+        assertEq(vm.parseJsonAddress(json, ".transactions[0].to"), input.contracts.timelock, "Safe target");
+        assertEq(vm.parseJsonString(json, ".transactions[0].value"), "0", "Safe value");
+        assertFalse(vm.keyExistsJson(json, ".transactions[1]"), "unexpected extra Safe transaction");
+        data = vm.parseJsonBytes(json, ".transactions[0].data");
+        assertEq(bytes4(data), expectedSelector, "Safe selector");
+    }
+
+    function _callFrom(address caller, address target, bytes memory data, string memory errorMessage) internal {
+        vm.prank(caller);
+        (bool success,) = target.call(data);
+        assertTrue(success, errorMessage);
+    }
+
+    function _assertFrozenWithExpectedIrms(address[] memory markets, address[] memory expectedIrms) internal view {
+        for (uint256 i; i < markets.length; ++i) {
+            assertTrue(IPausable(markets[i]).paused(FROZEN_TYPE), "market not frozen");
+            assertFalse(IPausable(markets[i]).paused(PAUSE_TYPE), "market paused instead of frozen");
+            assertEq(IMarket(markets[i]).irm(), expectedIrms[i], "IRM changed before Timelock execution");
+        }
+    }
+
+    function _predictedIrms(OwnerFixedRateIrmFactory factory, uint256 count)
+        internal
+        view
+        returns (address[] memory irms)
+    {
+        irms = new address[](count);
+        for (uint256 i; i < count; ++i) {
+            irms[i] = factory.predictIrmAddress(T0_RATE_SPY, input.contracts.timelock, i);
+        }
+    }
+
+    function _currentIrms(address[] memory markets) internal view returns (address[] memory irms) {
+        irms = new address[](markets.length);
+        for (uint256 i; i < markets.length; ++i) {
+            irms[i] = IMarket(markets[i]).irm();
+        }
+    }
+
+    function _borrowMarkets() internal view returns (address[] memory markets) {
+        markets = new address[](5);
+        markets[0] = input.contracts.wbtcBorrowMarket.market;
+        markets[1] = input.contracts.cbbtcBorrowMarket.market;
+        markets[2] = input.contracts.susdeBorrowMarket.market;
+        markets[3] = input.contracts.syrupUsdcBorrowMarket.market;
+        markets[4] = input.contracts.paxgBorrowMarket.market;
+    }
+
+    function _mintMarkets() internal view returns (address[] memory markets) {
+        markets = new address[](5);
+        markets[0] = input.contracts.susdeMintMarket.market;
+        markets[1] = input.contracts.syrupUsdcMintMarket.market;
+        markets[2] = input.contracts.wethMarket.market;
+        markets[3] = input.contracts.wstethMarket.market;
+        markets[4] = input.contracts.rethMarket.market;
+    }
+
+    function _alreadyDeprecatedMintMarkets() internal view returns (address[] memory markets) {
+        markets = new address[](2);
+        markets[0] = input.contracts.methMarket.market;
+        markets[1] = input.contracts.tbtcMarket.market;
     }
 }
