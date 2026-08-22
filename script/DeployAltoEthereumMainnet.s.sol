@@ -17,7 +17,7 @@ import {Options} from "openzeppelin-foundry-upgrades/Options.sol";
 import {USDC_MAINNET, FRXUSD_MAINNET} from "@alto/deployments/ethereum-mainnet/Constants.sol";
 
 uint256 constant DEPLOYMENT_ID_TO_LOAD = 1765364975;
-DeploymentPhase constant PHASE_TO_DEPLOY = DeploymentPhase.MARKET_DEPRECATION_PHASE_0; // CORE, DUSD, MINT_MARKET_WETH, MINT_MARKET_WSTETH, MINT_MARKET_RETH, MINT_MARKET_METH, MINT_MARKET_TBTC, BORROW_MARKET_WBTC, BORROW_MARKET_CBBTC, BORROW_MARKET_SUSDE, USDC_USM, POST, REFERRAL_ADAPTER, BORROW_MARKET_SYRUP_USDC, BORROW_MARKET_PAXG, MINT_MARKET_SUSDE, MINT_MARKET_SYRUPUSDC, PERMISSIONED_FRXUSD_USM, ADAPTER, DUSD_VAULT, VAULT_REGISTRY, PERMISSIONLESS_FRXUSD_USM, ALTO_LEVERAGE_SWAPPER_MULTI_TARGET, LIQUIDATION_PERIPHERY, ADVANCED_PERMISSIONS_FRXUSD_USM, UPGRADE_MARKETS_LIQUIDATION_PERIPHERY, UNIVERSAL_REWARDS_DISTRIBUTOR, MINT_CURVE_CONVEX_POSITION, MARKET_DEPRECATION_PHASE_0, MARKET_DEPRECATION_PHASE_X, MARKET_DEPRECATION_PHASE_Y, MARKET_DEPRECATION_PHASE_Z
+DeploymentPhase constant PHASE_TO_DEPLOY = DeploymentPhase.OWNER_FIXED_RATE_IRM_FACTORY;
 string constant OUTPUT_DIR = "./contracts/deployments/ethereum-mainnet/output";
 
 contract DeployAltoEthereumMainnetScript is Script {
@@ -27,22 +27,10 @@ contract DeployAltoEthereumMainnetScript is Script {
     function run() public {
         _loadCurrentChainInput();
         _validateImplementations(PHASE_TO_DEPLOY, input);
+        params = _deploymentParams(PHASE_TO_DEPLOY);
 
         vm.startBroadcast();
-
-        params = AltoEthereumMainnetParams({
-            timelockAdmin: 0xc49bf619CC9A68F84A6C9aB88506F2627565a4D0,
-            timelockDelay: 1 hours,
-            freezer: 0x1c11d2d42929bd17aB7212b79c91862Adfa8bbe4,
-            deployer: msg.sender,
-            phase: PHASE_TO_DEPLOY,
-            treasuryMultisig: 0xA1148A1b94262540994Cf9Aa431A13ad39764228,
-            updater: 0x7db7C14533a4186EcC07950F78835859320835Be,
-            deployerHasOwnership: false // Deployer doesn't have ownership, log txs for multisig
-        });
-
         input = DeployAltoEthereumMainnet.deploy(params, input);
-
         vm.stopBroadcast();
 
         // Store input to JSON format
@@ -52,6 +40,36 @@ contract DeployAltoEthereumMainnetScript is Script {
         _extractABIs();
 
         console.log("Deployment completed successfully");
+    }
+
+    function preflightMarketDeprecationPhase0() public {
+        _loadCurrentChainInput();
+        DeployAltoEthereumMainnet.preflightMarketDeprecationPhase0(
+            _deploymentParams(DeploymentPhase.MARKET_DEPRECATION_PHASE_0), input
+        );
+        console.log("Market deprecation Phase 0 preflight passed");
+    }
+
+    function reconcileMarketDeprecationPhase0() public {
+        _loadCurrentChainInput();
+        input = DeployAltoEthereumMainnet.reconcileMarketDeprecationPhase0(
+            _deploymentParams(DeploymentPhase.MARKET_DEPRECATION_PHASE_0), input
+        );
+        _writeInputToJson();
+        console.log("Market deprecation Phase 0 reconciliation passed");
+    }
+
+    function _deploymentParams(DeploymentPhase phase) internal view returns (AltoEthereumMainnetParams memory) {
+        return AltoEthereumMainnetParams({
+            timelockAdmin: 0xc49bf619CC9A68F84A6C9aB88506F2627565a4D0,
+            timelockDelay: 1 hours,
+            freezer: 0x1c11d2d42929bd17aB7212b79c91862Adfa8bbe4,
+            deployer: msg.sender,
+            phase: phase,
+            treasuryMultisig: 0xA1148A1b94262540994Cf9Aa431A13ad39764228,
+            updater: 0x7db7C14533a4186EcC07950F78835859320835Be,
+            deployerHasOwnership: false
+        });
     }
 
     /// @dev Upgrade-safety validation uses Foundry cheatcodes and must run outside the broadcasted
@@ -502,8 +520,9 @@ contract DeployAltoEthereumMainnetScript is Script {
             _extractContractABI("MintCurveConvexPositionFactory", abiFolder);
             _extractContractABI("MintCurveConvexPosition", abiFolder);
             _extractContractABI("PositionBeacon", abiFolder);
-        } else if (PHASE_TO_DEPLOY == DeploymentPhase.MARKET_DEPRECATION_PHASE_0) {
+        } else if (PHASE_TO_DEPLOY == DeploymentPhase.OWNER_FIXED_RATE_IRM_FACTORY) {
             _extractContractABI("OwnerFixedRateIrmFactory", abiFolder);
+        } else if (PHASE_TO_DEPLOY == DeploymentPhase.MARKET_DEPRECATION_PHASE_0) {
             _extractContractABI("FixedRateIrm", abiFolder);
         }
 

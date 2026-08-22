@@ -32,6 +32,7 @@ extra_output = ["storageLayout"]
 fs_permissions = [
 	{ access = "read-write", path = "./contracts/deployments/testnet/output" },
 	{ access = "read-write", path = "./contracts/deployments/ethereum-mainnet/output" },
+	{ access = "read", path = "./contracts/deployments/ethereum-mainnet/config" },
 	{ access = "read", path = "./out/" },
 	{ access = "read", path = "./test/oracles/simulations/data/" },
 	{ access = "read", path = "./test/lending/leverage/0xswapData/" },
