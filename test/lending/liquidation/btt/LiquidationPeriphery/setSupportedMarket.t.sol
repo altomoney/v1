@@ -75,6 +75,7 @@ contract LiquidationPeriphery_SetSupportedMarket_Test is LiquidationPeripheryCom
                 collateralToken: address(collateralToken),
                 irm: address(new FixedRateIrm(0.04 ether / uint256(365 days), address(this))),
                 owner: OWNER,
+                emergencyAdmin: OWNER,
                 oracle: address(marketOracle),
                 maxLtv: 0.75 ether,
                 feeRecipient: makeAddr("FeeRecipient"),

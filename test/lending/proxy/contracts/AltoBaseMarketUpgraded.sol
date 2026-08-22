@@ -106,7 +106,8 @@ abstract contract AltoBaseMarketUpgraded is
 
         if (
             _initParams.borrowToken == address(0) || _initParams.collateralToken == address(0)
-                || _initParams.oracle == address(0) || _initParams.liquidationEngine == address(0)
+                || _initParams.emergencyAdmin == address(0) || _initParams.oracle == address(0)
+                || _initParams.liquidationEngine == address(0)
         ) {
             revert AltoBaseMarketInvalidInput();
         }
@@ -140,8 +141,8 @@ abstract contract AltoBaseMarketUpgraded is
             IIrm(irm).setMarket(address(this));
         }
 
-        _setPauser(_initParams.owner, PAUSE_TYPE, true);
-        _setPauser(_initParams.owner, FROZEN_TYPE, true);
+        _setPauser(_initParams.emergencyAdmin, PAUSE_TYPE, true);
+        _setPauser(_initParams.emergencyAdmin, FROZEN_TYPE, true);
 
         __Ownable_init(_initParams.owner);
         __Auth_init();

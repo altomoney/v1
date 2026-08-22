@@ -62,6 +62,7 @@ contract LiquidateTest is Test {
             collateralToken: address(collateralToken),
             irm: address(irm),
             owner: owner,
+            emergencyAdmin: owner,
             oracle: address(oracle),
             maxLtv: 0.75 ether,
             feeRecipient: owner,

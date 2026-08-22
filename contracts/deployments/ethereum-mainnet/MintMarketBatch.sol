@@ -57,13 +57,13 @@ library MintMarketBatch {
         // Deploy Market Proxy
         bytes memory initData = abi.encodeCall(
             AltoMintMarket.initialize,
-            (
-                MintMarketInitParams({
+            (MintMarketInitParams({
                     baseMarketInitParams: BaseMarketInitParams({
                         borrowToken: _params.dusd,
                         collateralToken: _params.collateralToken,
                         irm: marketIrm,
                         owner: _params.deployer,
+                        emergencyAdmin: _params.freezer,
                         oracle: marketOracle,
                         maxLtv: _params.maxLtv,
                         feeRecipient: _params.feeRecipient,
@@ -71,8 +71,7 @@ library MintMarketBatch {
                     }),
                     debtCeiling: _params.debtCeiling,
                     initialBorrowOpeningFee: _params.initialBorrowOpeningFee
-                })
-            )
+                }))
         );
         address marketImplementation = ALTO_MINT_MARKET_IMPL;
         address marketProxy = UnsafeUpgrades.deployUUPSProxy(marketImplementation, initData);

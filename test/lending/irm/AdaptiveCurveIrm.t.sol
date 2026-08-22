@@ -71,6 +71,7 @@ contract AdaptiveCurveIrmTest is IrmCommon {
             collateralToken: address(2),
             irm: address(0),
             owner: OWNER,
+            emergencyAdmin: OWNER,
             oracle: address(oracle),
             maxLtv: 0.75 ether,
             feeRecipient: OWNER,

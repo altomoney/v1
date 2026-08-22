@@ -113,6 +113,7 @@ abstract contract MintCurveConvexPositionCommon is Test {
                 collateralToken: address(collateralToken),
                 irm: irm,
                 owner: OWNER,
+                emergencyAdmin: OWNER,
                 oracle: address(oracle),
                 maxLtv: MARKET_MAX_LTV,
                 feeRecipient: FEE_RECIPIENT,

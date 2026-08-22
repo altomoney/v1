@@ -71,6 +71,7 @@ contract AltoLeverageTbtcMarketTest is Test {
                 collateralToken: address(collateralToken),
                 irm: address(irm),
                 owner: address(this),
+                emergencyAdmin: address(this),
                 oracle: address(oracle),
                 maxLtv: 0.8 ether,
                 feeRecipient: address(this),

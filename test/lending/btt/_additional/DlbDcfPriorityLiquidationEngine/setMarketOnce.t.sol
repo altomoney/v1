@@ -39,6 +39,7 @@ contract SetMarketOnceTest is Test {
             collateralToken: address(collateralToken),
             irm: address(irm),
             owner: owner,
+            emergencyAdmin: owner,
             oracle: address(oracle),
             maxLtv: 0.75 ether,
             feeRecipient: owner,
@@ -126,6 +127,7 @@ contract SetMarketOnceTest is Test {
             collateralToken: address(collateralToken),
             irm: address(irm),
             owner: owner,
+            emergencyAdmin: owner,
             oracle: address(oracle),
             maxLtv: 0.75 ether,
             feeRecipient: owner,
@@ -151,4 +153,3 @@ contract SetMarketOnceTest is Test {
         assertEq(liquidationEngine.market(), marketAddress);
     }
 }
-

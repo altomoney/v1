@@ -68,6 +68,7 @@ contract AltoBorrowMarketProxyTest is Test {
             collateralToken: address(collateralToken),
             irm: address(irm),
             owner: OWNER,
+            emergencyAdmin: PAUSER,
             oracle: address(oracle),
             maxLtv: 0.75 ether,
             feeRecipient: OWNER,
@@ -83,12 +84,14 @@ contract AltoBorrowMarketProxyTest is Test {
 
         market = IMarket(MarketDeployer.deployBorrowMarket(borrowMarketInitParams));
 
+        assertFalse(AltoBaseMarket(address(market)).pausers(OWNER, PAUSE_TYPE));
+        assertFalse(AltoBaseMarket(address(market)).pausers(OWNER, FROZEN_TYPE));
+        assertTrue(AltoBaseMarket(address(market)).pausers(PAUSER, PAUSE_TYPE));
+        assertTrue(AltoBaseMarket(address(market)).pausers(PAUSER, FROZEN_TYPE));
+
         // Market initialization automatically calls setMarketOnce on the liquidation engine
         vm.startPrank(OWNER);
         IDcfDlbPriorityLiquidationEngine(liquidationEngine).setLiquidationConfiguration(liquidationConfig);
-
-        market.setPauser(PAUSER, PAUSE_TYPE, true);
-        market.setPauser(PAUSER, FROZEN_TYPE, true);
         vm.stopPrank();
 
         deal(address(borrowToken), address(this), type(uint256).max);

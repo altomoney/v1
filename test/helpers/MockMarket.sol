@@ -183,6 +183,7 @@ library MockMarketDeployer {
                 collateralToken: _collateralToken,
                 irm: _irm,
                 owner: _owner,
+                emergencyAdmin: _owner,
                 oracle: _oracle,
                 maxLtv: _maxLtv,
                 feeRecipient: _feeRecipient,
