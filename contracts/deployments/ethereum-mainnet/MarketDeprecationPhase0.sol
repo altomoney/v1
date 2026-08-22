@@ -8,6 +8,20 @@ import {FROZEN_TYPE} from "@alto/utils/Constants.sol";
 import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
 import {OwnerFixedRateIrmFactory} from "@alto/deployments/ethereum-mainnet/OwnerFixedRateIrmFactory.sol";
 
+uint256 constant T0_IRM_VERSION = 1;
+
+struct MarketRate {
+    address market;
+    uint256 rateSpy;
+}
+
+struct MarketDeprecationPhase0Config {
+    uint256 sourceBlock;
+    MarketRate[] borrowMarkets;
+    MarketRate[] mintMarkets;
+    MarketRate[] alreadyDeprecatedMintMarkets;
+}
+
 struct MarketDeprecationPhase0Batch {
     address[] targets;
     uint256[] values;
@@ -16,130 +30,112 @@ struct MarketDeprecationPhase0Batch {
 
 struct MarketDeprecationPhase0Params {
     address timelock;
-    address freezer;
     address vault;
-    address[] borrowMarketsToDeprecate;
-    uint256[] borrowMarketsToDeprecateT0RatesSpy;
-    address[] mintMarketsToDeprecate;
-    uint256[] mintMarketsToDeprecateT0RatesSpy;
-    address[] mintMarketsAlreadyDeprecated;
-    uint256[] mintMarketsAlreadyDeprecatedT0RatesSpy;
+    address factory;
+    MarketRate[] borrowMarkets;
+    MarketRate[] mintMarkets;
+    MarketRate[] alreadyDeprecatedMintMarkets;
 }
 
 struct MarketDeprecationPhase0Report {
-    address ownerFixedRateIrmFactory;
     address vaultCurator;
     MarketDeprecationPhase0Batch freezerBatch;
-    MarketDeprecationPhase0Batch vaultCuratorBatch;
+    MarketDeprecationPhase0Batch vaultCapBatch;
     MarketDeprecationPhase0Batch timelockBatch;
 }
 
-/// @notice Builds the T0 Freezer Safe payload and atomic Timelock IRM operation for the August 2026 deprecation.
 library MarketDeprecationPhase0 {
     function prepare(MarketDeprecationPhase0Params memory params)
         internal
+        view
         returns (MarketDeprecationPhase0Report memory report)
     {
-        address timelock = params.timelock;
-        address vault = params.vault;
-        address[] memory borrowMarkets = params.borrowMarketsToDeprecate;
-        address[] memory mintMarkets = params.mintMarketsToDeprecate;
-
-        OwnerFixedRateIrmFactory factory = new OwnerFixedRateIrmFactory(timelock);
-        report.ownerFixedRateIrmFactory = address(factory);
-
-        report.freezerBatch = _buildFreezerBatch(borrowMarkets, mintMarkets);
-
-        report.vaultCurator = IAltoVaultBase(vault).curator();
-        report.vaultCuratorBatch = _buildVaultCuratorBatch(vault, borrowMarkets);
-        report.timelockBatch = _buildTimelockBatch(params, address(factory));
+        report.vaultCurator = IAltoVaultBase(params.vault).curator();
+        report.freezerBatch = _buildFreezerBatch(params.borrowMarkets, params.mintMarkets);
+        report.vaultCapBatch = _buildVaultCapBatch(params.vault, params.borrowMarkets);
+        report.timelockBatch = _buildTimelockBatch(params);
     }
 
-    function _buildFreezerBatch(address[] memory borrowMarkets, address[] memory mintMarkets)
+    function _buildFreezerBatch(MarketRate[] memory borrowMarkets, MarketRate[] memory mintMarkets)
         private
         pure
         returns (MarketDeprecationPhase0Batch memory batch)
     {
-        uint256 callCount = borrowMarkets.length + mintMarkets.length;
-        batch.targets = new address[](callCount);
-        batch.values = new uint256[](callCount);
-        batch.payloads = new bytes[](callCount);
+        batch = _newBatch(borrowMarkets.length + mintMarkets.length);
 
         uint256 callIndex;
         for (uint256 i; i < borrowMarkets.length; ++i) {
-            batch.targets[callIndex] = borrowMarkets[i];
+            batch.targets[callIndex] = borrowMarkets[i].market;
             batch.payloads[callIndex] = abi.encodeCall(IPausable.pause, (FROZEN_TYPE, true));
             ++callIndex;
         }
         for (uint256 i; i < mintMarkets.length; ++i) {
-            batch.targets[callIndex] = mintMarkets[i];
+            batch.targets[callIndex] = mintMarkets[i].market;
             batch.payloads[callIndex] = abi.encodeCall(IPausable.pause, (FROZEN_TYPE, true));
             ++callIndex;
         }
-        assert(callIndex == batch.targets.length);
     }
 
-    function _buildVaultCuratorBatch(address vault, address[] memory borrowMarkets)
+    function _buildVaultCapBatch(address vault, MarketRate[] memory borrowMarkets)
         private
         pure
         returns (MarketDeprecationPhase0Batch memory batch)
     {
-        batch.targets = new address[](borrowMarkets.length);
-        batch.values = new uint256[](borrowMarkets.length);
-        batch.payloads = new bytes[](borrowMarkets.length);
+        batch = _newBatch(borrowMarkets.length);
 
         for (uint256 i; i < borrowMarkets.length; ++i) {
             batch.targets[i] = vault;
-            batch.payloads[i] = abi.encodeCall(IAltoVaultBase.submitCap, (borrowMarkets[i], 0));
+            batch.payloads[i] = abi.encodeCall(IAltoVaultBase.submitCap, (borrowMarkets[i].market, 0));
         }
     }
 
-    function _buildTimelockBatch(MarketDeprecationPhase0Params memory params, address factory)
+    function _buildTimelockBatch(MarketDeprecationPhase0Params memory params)
         private
         view
         returns (MarketDeprecationPhase0Batch memory batch)
     {
-        uint256 callCount = params.borrowMarketsToDeprecate.length * 2 + params.mintMarketsToDeprecate.length
-            + params.mintMarketsAlreadyDeprecated.length;
-        batch.targets = new address[](callCount);
-        batch.values = new uint256[](callCount);
-        batch.payloads = new bytes[](callCount);
+        batch = _newBatch(
+            params.borrowMarkets.length * 2 + params.mintMarkets.length + params.alreadyDeprecatedMintMarkets.length
+        );
 
+        OwnerFixedRateIrmFactory factory = OwnerFixedRateIrmFactory(params.factory);
         uint256 callIndex;
-        for (uint256 i; i < params.borrowMarketsToDeprecate.length; ++i) {
-            batch.targets[callIndex] = factory;
+
+        for (uint256 i; i < params.borrowMarkets.length; ++i) {
+            MarketRate memory marketRate = params.borrowMarkets[i];
+            address irm = factory.predictIrmAddress(marketRate.market, T0_IRM_VERSION, marketRate.rateSpy);
+
+            batch.targets[callIndex] = params.factory;
             batch.payloads[callIndex] = abi.encodeCall(
-                OwnerFixedRateIrmFactory.deploy,
-                (params.borrowMarketsToDeprecate[i], params.borrowMarketsToDeprecateT0RatesSpy[i], params.timelock)
+                OwnerFixedRateIrmFactory.deploy, (marketRate.market, T0_IRM_VERSION, marketRate.rateSpy)
             );
             ++callIndex;
-        }
 
-        OwnerFixedRateIrmFactory fixedRateIrmFactory = OwnerFixedRateIrmFactory(factory);
-        uint256 initialNonce = fixedRateIrmFactory.nonce();
-        for (uint256 i; i < params.borrowMarketsToDeprecate.length; ++i) {
-            address fixedRateIrm = fixedRateIrmFactory.predictIrmAddress(
-                params.borrowMarketsToDeprecateT0RatesSpy[i], params.timelock, initialNonce + i
-            );
-            batch.targets[callIndex] = params.borrowMarketsToDeprecate[i];
-            batch.payloads[callIndex] = abi.encodeCall(IMarketBase.setIrm, (fixedRateIrm, false));
+            batch.targets[callIndex] = marketRate.market;
+            batch.payloads[callIndex] = abi.encodeCall(IMarketBase.setIrm, (irm, false));
             ++callIndex;
         }
 
-        for (uint256 i; i < params.mintMarketsToDeprecate.length; ++i) {
-            batch.targets[callIndex] = IMarketBase(params.mintMarketsToDeprecate[i]).irm();
-            batch.payloads[callIndex] =
-                abi.encodeCall(FixedRateIrm.setBorrowRate, (params.mintMarketsToDeprecateT0RatesSpy[i]));
+        callIndex = _appendRateCalls(batch, callIndex, params.mintMarkets);
+        _appendRateCalls(batch, callIndex, params.alreadyDeprecatedMintMarkets);
+    }
+
+    function _appendRateCalls(MarketDeprecationPhase0Batch memory batch, uint256 callIndex, MarketRate[] memory markets)
+        private
+        view
+        returns (uint256)
+    {
+        for (uint256 i; i < markets.length; ++i) {
+            batch.targets[callIndex] = IMarketBase(markets[i].market).irm();
+            batch.payloads[callIndex] = abi.encodeCall(FixedRateIrm.setBorrowRate, (markets[i].rateSpy));
             ++callIndex;
         }
+        return callIndex;
+    }
 
-        for (uint256 i; i < params.mintMarketsAlreadyDeprecated.length; ++i) {
-            batch.targets[callIndex] = IMarketBase(params.mintMarketsAlreadyDeprecated[i]).irm();
-            batch.payloads[callIndex] =
-                abi.encodeCall(FixedRateIrm.setBorrowRate, (params.mintMarketsAlreadyDeprecatedT0RatesSpy[i]));
-            ++callIndex;
-        }
-
-        assert(callIndex == batch.targets.length);
+    function _newBatch(uint256 length) private pure returns (MarketDeprecationPhase0Batch memory batch) {
+        batch.targets = new address[](length);
+        batch.values = new uint256[](length);
+        batch.payloads = new bytes[](length);
     }
 }

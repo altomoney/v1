@@ -1,0 +1,21 @@
+{
+  "sourceBlock": 25782397,
+  "borrowMarkets": [
+    { "market": "0xefd78a5970a43e25b30426C3952065217c55e5E4", "rateSpy": 3170979198 },
+    { "market": "0xaE4f2B998783e2041E87E08Da73985e4E0420159", "rateSpy": 3170979198 },
+    { "market": "0x133cf03d2A7a87B9239b1a3a8Dd62f3f27c46788", "rateSpy": 3170979198 },
+    { "market": "0x33B24510233281350bF8679A7c427d04db0ed208", "rateSpy": 3170979198 },
+    { "market": "0x99f538Ec7c840197DcAf30A25B635482ba9e8817", "rateSpy": 3170979198 }
+  ],
+  "mintMarkets": [
+    { "market": "0x210bF54092B66443FddFec0f3F156e74B04CD2a2", "rateSpy": 3170979198 },
+    { "market": "0xD2eA320713158a7b7eaE46025B8Ad4CBF3cdc87e", "rateSpy": 3170979198 },
+    { "market": "0x8DED9e2B8Bc5128B862dD534b97c8a32991959ff", "rateSpy": 3170979198 },
+    { "market": "0xfd8c25047f4397dC5461B919999585a2a3EaC2eF", "rateSpy": 3170979198 },
+    { "market": "0xc0E2DdB06bB034c1F980531EC5CAd944D71AfFbf", "rateSpy": 3170979198 }
+  ],
+  "alreadyDeprecatedMintMarkets": [
+    { "market": "0xF897188DCd300Fa80a2f7f0f0290F9eF64F2D47b", "rateSpy": 3170979198 },
+    { "market": "0xE17F10f8535336143d4F2FE304f3Dcf7B23671e1", "rateSpy": 3170979198 }
+  ]
+}

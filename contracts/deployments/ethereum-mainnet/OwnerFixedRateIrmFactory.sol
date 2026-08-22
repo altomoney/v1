@@ -4,55 +4,59 @@ pragma solidity ^0.8.22;
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {AltoOwnable2Step, Ownable} from "@alto/utils/AltoOwnable2Step.sol";
 
-/// @notice Deterministically deploys FixedRateIrms owned by the caller-designated owner.
-/// @dev Only the factory owner can consume the global nonce. The factory intentionally does not bind
-///      the IRM to a market; a later `market.setIrm(irm, false)` call performs the one-time binding.
+/// @notice Deterministically deploys FixedRateIrms owned by the factory owner.
 contract OwnerFixedRateIrmFactory is AltoOwnable2Step {
-    uint256 public nonce;
+    struct Deployment {
+        address irm;
+        address owner;
+        uint256 borrowRate;
+    }
+
+    mapping(address market => mapping(uint256 version => Deployment)) public deployments;
 
     event FixedRateIrmDeployed(
-        address indexed market,
-        address indexed irm,
-        address indexed initialOwner,
-        uint256 borrowRate,
-        uint256 deploymentNonce
+        address indexed market, address indexed irm, address indexed owner, uint256 borrowRate, uint256 version
     );
 
     constructor(address initialOwner) Ownable(initialOwner) {}
 
-    /// @notice Deploys, or returns, the FixedRateIrm at the next deterministic nonce.
-    function deploy(address market, uint256 borrowRate, address initialOwner)
+    /// @notice Deploys one immutable FixedRateIrm for a market version, or returns an exact prior deployment.
+    function deploy(address market, uint256 version, uint256 borrowRate)
         external
         onlyOwner
         returns (address fixedRateIrm)
     {
-        uint256 deploymentNonce = nonce;
-        fixedRateIrm = predictIrmAddress(borrowRate, initialOwner, deploymentNonce);
-        nonce = deploymentNonce + 1;
+        require(market != address(0), "Invalid market");
 
-        // Check before CREATE2 so an occupied deterministic address does not revert this call.
-        if (fixedRateIrm.code.length != 0) return fixedRateIrm;
+        address irmOwner = owner();
+        Deployment memory existing = deployments[market][version];
+        if (existing.irm != address(0)) {
+            require(existing.owner == irmOwner && existing.borrowRate == borrowRate, "Version already used");
+            require(existing.irm.code.length != 0 && Ownable(existing.irm).owner() == irmOwner, "Invalid deployment");
+            return existing.irm;
+        }
 
-        fixedRateIrm = address(new FixedRateIrm{salt: bytes32(deploymentNonce)}(borrowRate, initialOwner));
+        fixedRateIrm = address(new FixedRateIrm{salt: _salt(market, version)}(borrowRate, irmOwner));
+        deployments[market][version] = Deployment(fixedRateIrm, irmOwner, borrowRate);
 
-        emit FixedRateIrmDeployed(market, fixedRateIrm, initialOwner, borrowRate, deploymentNonce);
+        emit FixedRateIrmDeployed(market, fixedRateIrm, irmOwner, borrowRate, version);
     }
 
-    /// @notice Predicts the CREATE2 address for a borrow rate, initial owner, and factory nonce.
-    function predictIrmAddress(uint256 borrowRate, address initialOwner, uint256 deploymentNonce)
-        public
-        view
-        returns (address)
-    {
+    function predictIrmAddress(address market, uint256 version, uint256 borrowRate) public view returns (address) {
+        address deployed = deployments[market][version].irm;
+        if (deployed != address(0)) return deployed;
+
         bytes32 initCodeHash =
-            keccak256(abi.encodePacked(type(FixedRateIrm).creationCode, abi.encode(borrowRate, initialOwner)));
+            keccak256(abi.encodePacked(type(FixedRateIrm).creationCode, abi.encode(borrowRate, owner())));
 
         return address(
             uint160(
-                uint256(
-                    keccak256(abi.encodePacked(bytes1(0xff), address(this), bytes32(deploymentNonce), initCodeHash))
-                )
+                uint256(keccak256(abi.encodePacked(bytes1(0xff), address(this), _salt(market, version), initCodeHash)))
             )
         );
+    }
+
+    function _salt(address market, uint256 version) private pure returns (bytes32) {
+        return keccak256(abi.encode(market, version));
     }
 }

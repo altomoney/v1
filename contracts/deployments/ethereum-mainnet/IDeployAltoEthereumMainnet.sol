@@ -37,10 +37,8 @@ enum DeploymentPhase {
     UNIVERSAL_REWARDS_DISTRIBUTOR, // Phase 28: Deploy UniversalRewardsDistributor
     MINT_CURVE_CONVEX_POSITION, // Phase 29: Deploy MintCurveConvexPositionFactory, PositionBeacon and setBeacon
     MINT_MARKET_FRXUSD, // Phase 30: Deploy frxUSD Mint Market
-    MARKET_DEPRECATION_PHASE_0, // Phase 31: Freeze ten old markets and apply the T0 fixed rates
-    MARKET_DEPRECATION_PHASE_X, // Phase 32: First Risk-approved rate and LTV correction
-    MARKET_DEPRECATION_PHASE_Y, // Phase 33: Second Risk-approved rate and LTV correction
-    MARKET_DEPRECATION_PHASE_Z // Phase 34: Third Risk-approved rate and LTV correction
+    OWNER_FIXED_RATE_IRM_FACTORY, // Phase 31: Deploy the reusable Timelock-owned FixedRateIrm factory
+    MARKET_DEPRECATION_PHASE_0 // Phase 32: Freeze ten old markets and apply the T0 fixed rates
 }
 
 enum UsmFinalizeMode {
@@ -133,14 +131,6 @@ struct AltoEthereumMainnetParams {
     address treasuryMultisig;
     address updater;
     bool deployerHasOwnership;
-}
-
-struct MarketDeprecationCorrectionParams {
-    address market;
-    uint256 irmBorrowRate;
-    uint256 maxLtv;
-    uint256 liquidationLtv;
-    uint256 completeLiquidationLtv;
 }
 
 struct DeployCoreParams {

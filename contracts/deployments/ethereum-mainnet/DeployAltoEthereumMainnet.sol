@@ -731,13 +731,10 @@ library DeployAltoEthereumMainnet {
                 params,
                 params.deployerHasOwnership
             );
-        } else if (
-            params.phase == DeploymentPhase.MARKET_DEPRECATION_PHASE_0
-                || params.phase == DeploymentPhase.MARKET_DEPRECATION_PHASE_X
-                || params.phase == DeploymentPhase.MARKET_DEPRECATION_PHASE_Y
-                || params.phase == DeploymentPhase.MARKET_DEPRECATION_PHASE_Z
-        ) {
-            input = MarketDeprecationDeployment.deploy(params, input);
+        } else if (params.phase == DeploymentPhase.OWNER_FIXED_RATE_IRM_FACTORY) {
+            input = MarketDeprecationDeployment.deployFactory(input);
+        } else if (params.phase == DeploymentPhase.MARKET_DEPRECATION_PHASE_0) {
+            input = MarketDeprecationDeployment.generate(params, input);
         } else {
             revert("Invalid phase");
         }
@@ -1771,6 +1768,20 @@ library DeployAltoEthereumMainnet {
         }
 
         return input;
+    }
+
+    function preflightMarketDeprecationPhase0(
+        AltoEthereumMainnetParams memory deploymentParams,
+        AltoEthereumMainnetInput memory input
+    ) internal view {
+        MarketDeprecationDeployment.preflight(deploymentParams, input);
+    }
+
+    function reconcileMarketDeprecationPhase0(
+        AltoEthereumMainnetParams memory deploymentParams,
+        AltoEthereumMainnetInput memory input
+    ) internal view returns (AltoEthereumMainnetInput memory) {
+        return MarketDeprecationDeployment.reconcile(deploymentParams, input);
     }
 
     function _deployPost(AltoEthereumMainnetParams memory params, AltoEthereumMainnetInput memory input)
