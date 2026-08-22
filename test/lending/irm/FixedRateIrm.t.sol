@@ -68,6 +68,7 @@ contract FixedRateIrmTest is Test {
             collateralToken: address(2),
             irm: address(fixedRateIrm),
             owner: OWNER,
+            emergencyAdmin: OWNER,
             oracle: address(oracle),
             maxLtv: 0.75 ether,
             feeRecipient: OWNER,

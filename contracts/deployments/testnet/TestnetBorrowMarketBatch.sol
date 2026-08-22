@@ -75,6 +75,7 @@ contract TestnetBorrowMarketBatch is ITestnetMarketBatch {
             collateralToken: _params.collateralToken,
             irm: marketIrm,
             owner: address(this),
+            emergencyAdmin: _params.owner,
             oracle: marketOracle,
             maxLtv: _params.maxLtv,
             feeRecipient: _params.owner,

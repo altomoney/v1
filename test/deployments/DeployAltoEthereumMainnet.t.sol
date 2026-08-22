@@ -915,6 +915,8 @@ abstract contract DeployMarketPhaseTestBase is DeployAltoEthereumMainnetTestBase
         assertTrue(Pausable(deployed.market).pausers(PRODUCTION_FREEZER, FROZEN_TYPE), "production freezer");
         assertTrue(Pausable(deployed.market).pausers(FUTURE_EMERGENCY_CONTROLLER, PAUSE_TYPE), "controller pauser");
         assertTrue(Pausable(deployed.market).pausers(FUTURE_EMERGENCY_CONTROLLER, FROZEN_TYPE), "controller freezer");
+        assertFalse(Pausable(deployed.market).pausers(params.deployer, PAUSE_TYPE), "deployer pauser");
+        assertFalse(Pausable(deployed.market).pausers(params.deployer, FROZEN_TYPE), "deployer freezer");
         assertTrue(IMarket(deployed.market).authorizedCallbacks(deployed.leverage), "leverage callback");
         assertTrue(AltoLeverage(payable(deployed.leverage)).supportedMarkets(deployed.market), "leverage market");
         assertTrue(
@@ -1016,7 +1018,9 @@ contract DeployLeverageSwapperMultiTargetPhaseTest is DeployAltoEthereumMainnetT
             "schedule json should be written"
         );
         assertTrue(
-            vm.exists("contracts/deployments/ethereum-mainnet/output/safe-tx-leverage-swapper-set-swapper-execute.json"),
+            vm.exists(
+                "contracts/deployments/ethereum-mainnet/output/safe-tx-leverage-swapper-set-swapper-execute.json"
+            ),
             "execute json should be written"
         );
     }

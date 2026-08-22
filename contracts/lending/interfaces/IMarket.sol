@@ -34,6 +34,8 @@ struct BaseMarketInitParams {
     address irm;
     /// @notice The address of the owner.
     address owner;
+    /// @notice The address initially authorized to pause and freeze the market.
+    address emergencyAdmin;
     /// @notice The address of the oracle contract.
     address oracle;
     /// @notice The max LTV for the market.

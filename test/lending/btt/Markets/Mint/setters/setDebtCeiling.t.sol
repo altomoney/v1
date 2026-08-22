@@ -50,7 +50,10 @@ contract SetDebtCeilingTestMint is MarketCommon {
     }
 
     function test_WhenMarketIsPaused() external whenCallerIsOwner {
+        vm.stopPrank();
+        vm.prank(PAUSER);
         market.pause(PAUSE_TYPE, true);
+        vm.startPrank(OWNER);
 
         // it should update totalSupply assets
         uint256 oldDebtCeiling = market.totalSupply().assets;

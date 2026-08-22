@@ -90,6 +90,7 @@ abstract contract MarketCommon is Test {
             collateralToken: address(collateralToken),
             irm: address(irm),
             owner: address(OWNER),
+            emergencyAdmin: PAUSER,
             oracle: address(oracle),
             maxLtv: LTV,
             feeRecipient: address(FEE_RECIPIENT),
@@ -115,9 +116,6 @@ abstract contract MarketCommon is Test {
         // Market initialization automatically calls setMarketOnce on the liquidation engine
         // Set liquidation configuration
         IDcfDlbPriorityLiquidationEngine(liquidationEngine).setLiquidationConfiguration(liquidationConfig);
-
-        market.setPauser(PAUSER, PAUSE_TYPE, true);
-        market.setPauser(PAUSER, FROZEN_TYPE, true);
 
         deal(address(borrowToken), address(swapper), type(uint128).max);
         deal(address(collateralToken), address(swapper), type(uint128).max);

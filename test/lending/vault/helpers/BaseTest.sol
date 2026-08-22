@@ -162,6 +162,7 @@ contract BaseTest is Test {
                 collateralToken: collateralToken_,
                 irm: irmToUse,
                 owner: MARKET_OWNER,
+                emergencyAdmin: MARKET_OWNER,
                 oracle: oracleToUse,
                 maxLtv: lltv,
                 feeRecipient: MARKET_FEE_RECIPIENT,

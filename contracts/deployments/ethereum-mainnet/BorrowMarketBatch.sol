@@ -55,13 +55,13 @@ library BorrowMarketBatch {
         // Deploy Market Proxy
         bytes memory initData = abi.encodeCall(
             AltoBorrowMarket.initialize,
-            (
-                BorrowMarketInitParams({
+            (BorrowMarketInitParams({
                     baseMarketInitParams: BaseMarketInitParams({
                         borrowToken: _params.dusd,
                         collateralToken: _params.collateralToken,
                         irm: marketIrm,
                         owner: _params.deployer, // ownership of market is temporarily set to deployer
+                        emergencyAdmin: _params.freezer,
                         oracle: marketOracle,
                         maxLtv: _params.maxLtv,
                         feeRecipient: _params.feeRecipient,
@@ -70,8 +70,7 @@ library BorrowMarketBatch {
                     initialBorrowOpeningFee: _params.initialBorrowOpeningFee,
                     supplyCapAssets: _params.supplyCapAssets,
                     initialInterestFee: 0
-                })
-            )
+                }))
         );
         address marketImplementation = ALTO_BORROW_MARKET_IMPL;
         address marketProxy = UnsafeUpgrades.deployUUPSProxy(marketImplementation, initData);
