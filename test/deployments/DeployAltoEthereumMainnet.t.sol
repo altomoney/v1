@@ -92,6 +92,7 @@ import {IRMType} from "@alto/lending/interfaces/IIrm.sol";
 import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
 import {AltoOwnable2Step} from "@alto/utils/AltoOwnable2Step.sol";
 import {OwnerFixedRateIrmFactory} from "@alto/deployments/ethereum-mainnet/OwnerFixedRateIrmFactory.sol";
+import {MarketDeprecationDeployment} from "@alto/deployments/ethereum-mainnet/MarketDeprecationDeployment.sol";
 
 /// @dev Set to a non-zero deployment timestamp to load a real deployment's addresses.json
 ///      and skip re-deploying prerequisites. The file must be at:
@@ -1934,7 +1935,7 @@ contract DeployMarketDeprecationPhase0Test is DeployAltoEthereumMainnetTestBase 
             expectedLiquidationEngines[i] = IMarket(markets[i]).liquidationEngine();
         }
 
-        input = DeployAltoEthereumMainnet._deployMarketDeprecationCorrection(
+        input = MarketDeprecationDeployment.deployCorrection(
             correctionParams, DeploymentPhase.MARKET_DEPRECATION_PHASE_X, input
         );
 
