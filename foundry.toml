@@ -6,6 +6,8 @@ test = 'test'
 script = 'script'
 no-match-path = '{playground/*,test/deprecated/*}'
 no-match-test = "testSimulate*"
+gas_limit = "20000000000"
+via_ir = true
 
 evm_version = 'cancun'
 optimizer = true
@@ -44,6 +46,11 @@ fs_permissions = [
 gas_limit = "20000000000"
 match-test = "testSimulate"
 no-match-test = "testNeverExists" # Override default to allow simulation tests
+
+[profile.erp_offboard_02]
+test = "ERP/ERP-OFFBOARD-02/tests"
+script = "ERP/ERP-OFFBOARD-02/scripts"
+threads = 1
 
 [lint]
 exclude_lints = [
