@@ -9,6 +9,8 @@ node_modules
 cache
 out
 broadcast
+/ERP/ERP-OFFBOARD-02/output/**
+!/ERP/ERP-OFFBOARD-02/output/.gitkeep
 
 # coverage
 /coverage

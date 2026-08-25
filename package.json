@@ -8,6 +8,8 @@
     "clean": "forge clean",
     "test": "forge test",
     "test:simulations": "FOUNDRY_PROFILE=simulations forge test -vvv",
+    "test:erp-offboard-02": "FOUNDRY_PROFILE=erp_offboard_02 forge test -vvv",
+    "test:erp-offboard-02:live": "FOUNDRY_PROFILE=erp_offboard_02_live forge test -vvv",
     "coverage:lending": "rm -rf lcov.info coverage && FOUNDRY_PROFILE=market forge coverage --no-match-coverage '(script|test|contracts/deployments|contracts/lending/mocks|contracts/oracles/mocks|contracts/tokens|contracts/utils/OFT.sol|contracts/utils/LeverageABIHelper.sol)' --report lcov && sleep 2 && genhtml ./lcov.info -o coverage --branch-coverage --rc derive_function_end_line=0 ",
     "coverage:open": "npx -y open-cli coverage/index.html",
     "coverage:server": "npx -y http-server coverage",

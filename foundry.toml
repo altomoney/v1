@@ -33,6 +33,7 @@ fs_permissions = [
 	{ access = "read-write", path = "./contracts/deployments/testnet/output" },
 	{ access = "read-write", path = "./contracts/deployments/ethereum-mainnet/output" },
 	{ access = "read", path = "./contracts/deployments/ethereum-mainnet/config" },
+	{ access = "read-write", path = "./ERP/ERP-OFFBOARD-02/output" },
 	{ access = "read", path = "./out/" },
 	{ access = "read", path = "./test/oracles/simulations/data/" },
 	{ access = "read", path = "./test/lending/leverage/0xswapData/" },
@@ -62,3 +63,18 @@ test = "test/lending"
 
 [profile.deployment]
 optimizer_runs = 100
+
+[profile.erp_offboard_02]
+test = "ERP/ERP-OFFBOARD-02/tests"
+script = "ERP/ERP-OFFBOARD-02/scripts"
+gas_limit = "20000000000"
+no-match-test = "testLive"
+via_ir = true
+
+[profile.erp_offboard_02_live]
+test = "ERP/ERP-OFFBOARD-02/tests/live"
+script = "ERP/ERP-OFFBOARD-02/scripts"
+gas_limit = "20000000000"
+match-test = "testLive"
+no-match-test = "testNeverExists"
+via_ir = true
