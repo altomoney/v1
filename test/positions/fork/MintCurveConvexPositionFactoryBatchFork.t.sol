@@ -43,10 +43,12 @@ contract MintCurveConvexPositionFactoryBatchForkTest is Test {
         AltoEthereumMainnetInput memory input;
         input.contracts.timelock = TIMELOCK_MAINNET;
         input.contracts.marketRegistry = MARKET_REGISTRY_MAINNET;
+        input.contracts.emergencyController = makeAddr("EMERGENCY_CONTROLLER");
 
         AltoEthereumMainnetParams memory params;
         params.phase = DeploymentPhase.MINT_CURVE_CONVEX_POSITION;
         params.deployer = address(this);
+        params.freezer = makeAddr("FREEZER");
 
         input = DeployAltoEthereumMainnet.deploy(params, input);
         return input.contracts.mintCurveConvexPosition;

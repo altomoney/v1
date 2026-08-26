@@ -39,6 +39,7 @@ struct MintMarketBatchParams {
     uint256 minterCeiling;
     address[] validSwapTargets;
     address freezer;
+    address emergencyController;
 }
 
 /// @notice Deploys all mint market components in a single transaction
@@ -86,6 +87,8 @@ library MintMarketBatch {
         // Set freezer as pauser for PAUSE_TYPE and FROZEN_TYPE (requires market ownership)
         IPausable(marketProxy).setPauser(_params.freezer, PAUSE_TYPE, true);
         IPausable(marketProxy).setPauser(_params.freezer, FROZEN_TYPE, true);
+        IPausable(marketProxy).setPauser(_params.emergencyController, PAUSE_TYPE, true);
+        IPausable(marketProxy).setPauser(_params.emergencyController, FROZEN_TYPE, true);
         IPausable(marketProxy).setPauser(_params.deployer, PAUSE_TYPE, false);
         IPausable(marketProxy).setPauser(_params.deployer, FROZEN_TYPE, false);
 

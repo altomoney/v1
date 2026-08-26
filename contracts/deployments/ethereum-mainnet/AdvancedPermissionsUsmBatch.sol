@@ -35,6 +35,7 @@ struct AdvancedPermissionsUsmBatchParams {
     address usmRegistry;
     address feeRecipient;
     address freezer;
+    address emergencyController;
     address treasuryMultisig;
     address underlyingAsset;
     uint256 priceRatio;
@@ -129,7 +130,9 @@ contract AdvancedPermissionsUsmBatch {
 
         usm.updateFeeRecipient(_params.feeRecipient);
         usm.updateFeeStrategy(address(feeStrategy));
-        usm.grantRole(usm.SWAP_FREEZER_ROLE(), _params.freezer);
+        bytes32 swapFreezerRole = usm.SWAP_FREEZER_ROLE();
+        usm.grantRole(swapFreezerRole, _params.freezer);
+        usm.grantRole(swapFreezerRole, _params.emergencyController);
 
         _transferUsmRoles(dusdUsm, _params.owner);
         _transferFeeStrategyRoles(address(feeStrategy), _params.owner);

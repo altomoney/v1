@@ -14,12 +14,9 @@ import {
 } from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";
 import {IMarketRegistry} from "@alto/utils/MarketRegistry.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
 import {Upgrades, UnsafeUpgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 
 abstract contract MarketUpgradeForkTestBase is DeployAltoEthereumMainnetTestBase {
-    address internal constant MAINNET_TIMELOCK_ADMIN = 0xc49bf619CC9A68F84A6C9aB88506F2627565a4D0;
-
     string internal constant UPGRADE_SCHEDULE_JSON =
         "contracts/deployments/ethereum-mainnet/output/safe-tx-market-upgrade-liquidation-periphery-schedule.json";
     string internal constant UPGRADE_EXECUTE_JSON =
@@ -235,29 +232,6 @@ abstract contract MarketUpgradeForkTestBase is DeployAltoEthereumMainnetTestBase
             before.liquidationConfiguration.liquidationWindowTag,
             afterUpgrade.liquidationConfiguration.liquidationWindowTag
         );
-    }
-
-    function _executeSafeTimelockBatch(string memory schedulePath, string memory executePath) internal {
-        TimelockController timelock = TimelockController(payable(input.contracts.timelock));
-        uint256 minDelay = timelock.getMinDelay();
-
-        bytes memory scheduleData = _readSafeTxData(schedulePath);
-        bytes memory executeData = _readSafeTxData(executePath);
-
-        vm.prank(MAINNET_TIMELOCK_ADMIN);
-        (bool scheduled,) = address(timelock).call(scheduleData);
-        assertTrue(scheduled, "timelock schedule failed");
-
-        vm.warp(block.timestamp + minDelay + 1);
-
-        vm.prank(MAINNET_TIMELOCK_ADMIN);
-        (bool executed,) = address(timelock).call(executeData);
-        assertTrue(executed, "timelock execute failed");
-    }
-
-    function _readSafeTxData(string memory path) internal view returns (bytes memory) {
-        string memory json = vm.readFile(path);
-        return vm.parseJsonBytes(json, ".transactions[0].data");
     }
 
     function _allRegistryMarkets() internal view returns (address[] memory markets) {

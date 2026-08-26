@@ -150,6 +150,8 @@ USM_REGISTRY=$(get_address ".contracts.usmRegistry")
 VAULT_REGISTRY=$(get_address ".contracts.vaultRegistry")
 LIQUIDATION_PERIPHERY=$(get_address ".contracts.liquidationPeriphery")
 UNIVERSAL_REWARDS_DISTRIBUTOR=$(get_address ".contracts.universalRewardsDistributor")
+EMERGENCY_CONTROLLER=$(get_address ".contracts.emergencyController")
+EMERGENCY_CONTROLLER_IMPL=$(get_address ".contracts.emergencyControllerImplementation")
 
 # WETH Market contracts
 WETH_MARKET=$(get_address ".contracts.wethMarket")
@@ -302,6 +304,8 @@ echo "- USM Registry: $USM_REGISTRY"
 echo "- Vault Registry: $VAULT_REGISTRY"
 echo "- Liquidation Periphery: $LIQUIDATION_PERIPHERY"
 echo "- Universal Rewards Distributor: $UNIVERSAL_REWARDS_DISTRIBUTOR"
+echo "- Emergency Controller: $EMERGENCY_CONTROLLER"
+echo "- Emergency Controller Implementation: $EMERGENCY_CONTROLLER_IMPL"
 echo "- WETH Market: $WETH_MARKET"
 echo "- WETH Market Implementation: $WETH_MARKET_IMPL"
 echo "- WETH Market IRM: $WETH_MARKET_IRM"
@@ -431,6 +435,8 @@ verify_contract "UsmRegistry" "$USM_REGISTRY" "contracts/utils/UsmRegistry.sol:U
 verify_contract "VaultRegistry" "$VAULT_REGISTRY" "contracts/utils/VaultRegistry.sol:VaultRegistry"
 verify_contract "LiquidationPeriphery" "$LIQUIDATION_PERIPHERY" "contracts/lending/liquidation/LiquidationPeriphery.sol:LiquidationPeriphery"
 verify_contract "UniversalRewardsDistributor" "$UNIVERSAL_REWARDS_DISTRIBUTOR" "contracts/utils/UniversalRewardsDistributor.sol:UniversalRewardsDistributor"
+verify_contract "EmergencyController" "$EMERGENCY_CONTROLLER" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
+verify_contract "EmergencyControllerImplementation" "$EMERGENCY_CONTROLLER_IMPL" "contracts/utils/EmergencyController.sol:EmergencyController"
 
 # WETH Market contracts
 verify_contract "WethMarket" "$WETH_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"

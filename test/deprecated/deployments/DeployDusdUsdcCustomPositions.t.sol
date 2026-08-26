@@ -81,6 +81,7 @@ contract DeployDusdUsdcCustomPositionsTest is Test {
             updater: makeAddr("UPDATER"),
             deployerHasOwnership: true
         });
+        input.contracts.emergencyController = makeAddr("EMERGENCY_CONTROLLER");
 
         input = DeployAltoEthereumMainnet.deploy(params, input);
         params.phase = DeploymentPhase.DUSD;
