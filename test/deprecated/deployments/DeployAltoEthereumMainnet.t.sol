@@ -64,6 +64,7 @@ contract DeployAltoEthereumMainnetTest is Test {
             updater: MERKLE_ROOT_UPDATER,
             deployerHasOwnership: true // Deployer has ownership in tests, execute directly
         });
+        input.contracts.emergencyController = makeAddr("EMERGENCY_CONTROLLER");
     }
 
     function _deployPrerequisites(DeploymentPhase targetPhase) internal {

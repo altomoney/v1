@@ -16,6 +16,7 @@ struct UsmBatchParams {
     address altoAdapter;
     address feeRecipient;
     address freezer;
+    address emergencyController;
     uint256 buyFee;
     uint256 sellFee;
     uint256 exposureCap;
@@ -63,7 +64,9 @@ contract UsmBatch {
         address dusdUsm = UnsafeUpgrades.deployUUPSProxy(dusdUsmImplementation, initData);
 
         // Grant SWAP_FREEZER_ROLE to freezer (requires DUSDUsm admin role)
-        IAccessControl(dusdUsm).grantRole(IUsm(dusdUsm).SWAP_FREEZER_ROLE(), _params.freezer);
+        bytes32 swapFreezerRole = IUsm(dusdUsm).SWAP_FREEZER_ROLE();
+        IAccessControl(dusdUsm).grantRole(swapFreezerRole, _params.freezer);
+        IAccessControl(dusdUsm).grantRole(swapFreezerRole, _params.emergencyController);
 
         if (!_params.isPermissioned) {
             // Set fee recipient (requires CONFIGURATOR_ROLE)
