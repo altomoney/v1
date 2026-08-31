@@ -2,8 +2,10 @@
 pragma solidity ^0.8.28;
 
 import {MintCurveConvexPositionCommon} from "./MintCurveConvexPositionCommon.t.sol";
-import {IMintCurveConvexPositionErrors, IMintCurveConvexPositionEvents} from
-    "@alto/positions/interfaces/IMintCurveConvexPosition.sol";
+import {
+    IMintCurveConvexPositionErrors,
+    IMintCurveConvexPositionEvents
+} from "@alto/positions/interfaces/IMintCurveConvexPosition.sol";
 import {IERC20Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
 import {MockCurvePool} from "../mocks/MockCurvePool.sol";
 import {stdError} from "forge-std/StdError.sol";
@@ -56,9 +58,7 @@ contract MintCurveConvexPosition_WithdrawFromLpAndRepay_Test is MintCurveConvexP
 
     function test_RevertWhen_ConvexWithdrawReturnsFalse() public {
         vm.mockCall(
-            address(convexRewardPool),
-            abi.encodeWithSignature("withdrawAndUnwrap(uint256,bool)"),
-            abi.encode(false)
+            address(convexRewardPool), abi.encodeWithSignature("withdrawAndUnwrap(uint256,bool)"), abi.encode(false)
         );
 
         vm.prank(OWNER);

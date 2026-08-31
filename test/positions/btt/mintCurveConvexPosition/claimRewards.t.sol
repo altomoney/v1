@@ -2,8 +2,10 @@
 pragma solidity ^0.8.28;
 
 import {MintCurveConvexPositionCommon} from "./MintCurveConvexPositionCommon.t.sol";
-import {IMintCurveConvexPositionErrors, IMintCurveConvexPositionEvents} from
-    "@alto/positions/interfaces/IMintCurveConvexPosition.sol";
+import {
+    IMintCurveConvexPositionErrors,
+    IMintCurveConvexPositionEvents
+} from "@alto/positions/interfaces/IMintCurveConvexPosition.sol";
 
 contract MintCurveConvexPosition_ClaimRewards_Test is MintCurveConvexPositionCommon {
     uint256 internal constant CRV_REWARD = 5e18;

@@ -132,8 +132,9 @@ abstract contract MintCurveConvexPositionCommon is Test {
     }
 
     function _deployInitializedFactory() internal returns (MintCurveConvexPositionFactory) {
-        MintCurveConvexPositionFactory deployed =
-            MintCurveConvexPositionFactory(UnsafeUpgrades.deployUUPSProxy(address(new MintCurveConvexPositionFactory()), ""));
+        MintCurveConvexPositionFactory deployed = MintCurveConvexPositionFactory(
+            UnsafeUpgrades.deployUUPSProxy(address(new MintCurveConvexPositionFactory()), "")
+        );
         deployed.initialize(
             OWNER, address(registry), _config(address(curvePool), address(convexBooster), address(convexRewardPool))
         );
@@ -165,8 +166,9 @@ abstract contract MintCurveConvexPositionCommon is Test {
         internal
         returns (MintCurveConvexPosition deployed)
     {
-        MintCurveConvexPositionFactory scopedFactory =
-            MintCurveConvexPositionFactory(UnsafeUpgrades.deployUUPSProxy(address(new MintCurveConvexPositionFactory()), ""));
+        MintCurveConvexPositionFactory scopedFactory = MintCurveConvexPositionFactory(
+            UnsafeUpgrades.deployUUPSProxy(address(new MintCurveConvexPositionFactory()), "")
+        );
         scopedFactory.initialize(OWNER, address(registry), cfg);
 
         vm.prank(OWNER);

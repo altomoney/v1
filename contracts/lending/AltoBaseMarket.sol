@@ -583,15 +583,15 @@ abstract contract AltoBaseMarket is
         LiquidationEngineResult memory result = IAltoLiquidationEngine(liquidationEngine)
             .prepareLiquidation(
                 LiquidationEngineInput({
-                    borrower: borrower,
-                    liquidator: originalLiquidator,
-                    totalSupply: totalSupply,
-                    totalBorrowed: totalBorrowed,
-                    position: position[borrower],
-                    maxLtv: maxLtv,
-                    collateralPrice: ILendingOracle(oracle).getPrice(),
-                    liquidationData: liquidationData
-                })
+                borrower: borrower,
+                liquidator: originalLiquidator,
+                totalSupply: totalSupply,
+                totalBorrowed: totalBorrowed,
+                position: position[borrower],
+                maxLtv: maxLtv,
+                collateralPrice: ILendingOracle(oracle).getPrice(),
+                liquidationData: liquidationData
+            })
             );
         // apply liquidation
         position[borrower].collateralAssets -= result.seizedCollateralAssets.toUint128();

@@ -122,13 +122,7 @@ abstract contract PositionsProxyCommon is Test {
     }
 
     function _readFactoryConfig() internal view returns (MintCurveConvexConfig memory config) {
-        (
-            config.curvePool,
-            config.convexBooster,
-            config.convexRewardPool,
-            config.convexPid,
-            config.crv,
-            config.cvx
-        ) = factory.config();
+        (config.curvePool, config.convexBooster, config.convexRewardPool, config.convexPid, config.crv, config.cvx) =
+            factory.config();
     }
 }

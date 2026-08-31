@@ -2,8 +2,10 @@
 pragma solidity ^0.8.28;
 
 import {MintCurveConvexPositionCommon} from "./MintCurveConvexPositionCommon.t.sol";
-import {IMintCurveConvexPositionErrors, IMintCurveConvexPositionEvents} from
-    "@alto/positions/interfaces/IMintCurveConvexPosition.sol";
+import {
+    IMintCurveConvexPositionErrors,
+    IMintCurveConvexPositionEvents
+} from "@alto/positions/interfaces/IMintCurveConvexPosition.sol";
 import {IMarketErrors} from "@alto/lending/interfaces/IMarket.sol";
 import {stdError} from "forge-std/StdError.sol";
 

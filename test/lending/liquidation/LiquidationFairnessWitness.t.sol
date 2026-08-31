@@ -6,13 +6,8 @@ pragma solidity ^0.8.28;
 /// This can make liquidator gain exceed a fee computed only on repaid debt.
 import {Test} from "forge-std/Test.sol";
 import {DlbDcfPriorityLiquidationEngine} from "@alto/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol";
-import {
-    LiquidationConfiguration
-} from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";
-import {
-    LiquidationEngineInput,
-    LiquidationEngineResult
-} from "@alto/lending/interfaces/IAltoLiquidationEngine.sol";
+import {LiquidationConfiguration} from "@alto/lending/liquidation/interfaces/IDcfDlbPriorityLiquidationEngine.sol";
+import {LiquidationEngineInput, LiquidationEngineResult} from "@alto/lending/interfaces/IAltoLiquidationEngine.sol";
 import {Position, Balance} from "@alto/lending/interfaces/IMarket.sol";
 
 contract LiquidationFairnessMockMarket {
@@ -134,9 +129,8 @@ contract LiquidationFairnessWitnessTest is Test {
         uint128 borrowShares = uint128((collateralValue * 0.86e18) / WAD);
 
         vm.prank(LIVE_WETH_MARKET);
-        LiquidationEngineResult memory r = DlbDcfPriorityLiquidationEngine(LIVE_WETH_ENGINE).prepareLiquidation(
-            _input(collateral, borrowShares, LIVE_WETH_PRICE)
-        );
+        LiquidationEngineResult memory r = DlbDcfPriorityLiquidationEngine(LIVE_WETH_ENGINE)
+            .prepareLiquidation(_input(collateral, borrowShares, LIVE_WETH_PRICE));
 
         uint256 seizedValue = (r.seizedCollateralAssets * LIVE_WETH_PRICE) / ORACLE_PREC;
         uint256 repaidValue = r.repaidBorrowAmount;

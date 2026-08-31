@@ -657,7 +657,12 @@ contract AltoBorrowMarketliquidate is MarketCommon {
         // it should pass collateral amount and data
     }
 
-    function test_GivenEventEmission_WhenDirectLiquidator() external givenPositionIsInsolvent whenPriorityLiquidationIsEnabled whenCurrentLTVIsBelowDisablePriorityLiquidationThreshold {
+    function test_GivenEventEmission_WhenDirectLiquidator()
+        external
+        givenPositionIsInsolvent
+        whenPriorityLiquidationIsEnabled
+        whenCurrentLTVIsBelowDisablePriorityLiquidationThreshold
+    {
         _fundLiquidator(PRIORITY_LIQUIDATOR, 1 ether);
 
         vm.recordLogs();

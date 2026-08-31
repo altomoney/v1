@@ -89,9 +89,8 @@ contract MintCurveConvexPosition_Initialize_Test is MintCurveConvexPositionCommo
         MintCurveConvexConfig memory cfg =
             _config(address(invalidPool), address(convexBooster), address(convexRewardPool));
 
-        bytes memory initData = abi.encodeCall(
-            MintCurveConvexPosition.initialize, (OWNER, address(factory), address(mintMarket), cfg)
-        );
+        bytes memory initData =
+            abi.encodeCall(MintCurveConvexPosition.initialize, (OWNER, address(factory), address(mintMarket), cfg));
 
         vm.expectRevert(IMintCurveConvexPositionErrors.MintCurveConvexPositionInvalidInput.selector);
         new BeaconProxy(address(positionBeacon), initData);
