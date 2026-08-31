@@ -76,8 +76,8 @@ address constant BUNDLER3_MAINNET = 0xAc80387009231b4D55B85Df27924B85f2ED6823D;
 address constant LAYERZERO_ENDPOINT_MAINNET = 0x1a44076050125825900e736c501f859c50fE728c;
 
 // Deployed implementation contracts (shared across all markets of same type)
-address constant ALTO_MINT_MARKET_IMPL = 0x60da676bDF3d205e980a3276713796F8230572bd;
-address constant ALTO_BORROW_MARKET_IMPL = 0x52Ff3B59915286C7d6C0A8ef94fA9e44Ba4e9375;
+address constant ALTO_MINT_MARKET_IMPL = 0xFa82D4a97C2E7Ac747A37d1c3e2a4782dee8DE67;
+address constant ALTO_BORROW_MARKET_IMPL = 0x29B6e2D9BfFCb4d70AC568CD0Ff93F61e79c9b57;
 
 function getMulticallOwnerAddresses() pure returns (address[] memory) {
     address[] memory addresses = new address[](2);

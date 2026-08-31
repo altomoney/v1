@@ -82,13 +82,9 @@ library BorrowMarketBatch {
         // Transfer liquidation engine ownership to _params.owner
         AltoOwnable2Step(liquidationEngine).transferOwnershipSkip2Step(_params.owner);
 
-        // Set freezer as pauser for PAUSE_TYPE and FROZEN_TYPE (requires market ownership)
-        IPausable(marketProxy).setPauser(_params.freezer, PAUSE_TYPE, true);
-        IPausable(marketProxy).setPauser(_params.freezer, FROZEN_TYPE, true);
+        // The initializer grants the freezer roles; authorize the emergency controller as well.
         IPausable(marketProxy).setPauser(_params.emergencyController, PAUSE_TYPE, true);
         IPausable(marketProxy).setPauser(_params.emergencyController, FROZEN_TYPE, true);
-        IPausable(marketProxy).setPauser(_params.deployer, PAUSE_TYPE, false);
-        IPausable(marketProxy).setPauser(_params.deployer, FROZEN_TYPE, false);
 
         // Deploy leverage components with deployer as owner temporarily to allow configuration
         // owner will be transferred to _params.owner after configuration
