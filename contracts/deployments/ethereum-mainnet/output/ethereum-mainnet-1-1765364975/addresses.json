@@ -16,6 +16,8 @@
     "dusd": "0x63d74d22E689C715a04F2C13962b1f77F443d35b",
     "dusdFlashMinter": "0x8b7448877E292b8422608d1dCbf066E484461948",
     "dusdVault": "0x6954785783c6EE90400fA715E591fBbA0D0Bd749",
+    "emergencyController": "0x3c822f14a90955bf35278b42BA509FeEcAD3a305",
+    "emergencyControllerImplementation": "0xFE329F88663b9B8833b180A139315C131A033167",
     "feeRecipient": "0xb9F06fEFc4c53dEd77A90Cb798eD08DC068Bb6dd",
     "feeRecipientMintMarkets": "0x5F80c18b6B73B1C4F06fa5233De32778eC90FA96",
     "liquidationPeriphery": "0xa9DDC8833A7eEcbcFd48F6cBa17c521099683615",
