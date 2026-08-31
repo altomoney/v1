@@ -7,9 +7,7 @@ import {AltoTimelockController} from "@alto/utils/AltoTimelockController.sol";
 import {AltoTimelockControllerMintMarketFee} from
     "@alto/deployments/ethereum-mainnet/contracts/AltoTimelockControllerMintMarketFee.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
-import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
-import {UnsafeUpgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 
 import {
     BUNDLER3_MAINNET,
@@ -97,9 +95,6 @@ import {VaultBatch, VaultBatchParams, VaultBatchReport} from "@alto/deployments/
 import {IMarketRegistry, MarketRegistry} from "@alto/utils/MarketRegistry.sol";
 import {IUsmRegistry, UsmRegistry} from "@alto/utils/UsmRegistry.sol";
 import {VaultRegistry} from "@alto/utils/VaultRegistry.sol";
-import {EmergencyController} from "@alto/utils/EmergencyController.sol";
-import {FROZEN_TYPE, PAUSE_TYPE} from "@alto/utils/Constants.sol";
-import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
 import {AltoReferralWhitelistAdapter} from "@alto/rewards/adapters/AltoReferralWhitelistAdapter.sol";
 import {
     MarketContracts,
@@ -118,7 +113,7 @@ import {
     Contracts
 } from "@alto/deployments/ethereum-mainnet/IDeployAltoEthereumMainnet.sol";
 import {ILiquidationPeripheryBase} from "@alto/lending/liquidation/interfaces/ILiquidationPeriphery.sol";
-import {AccessMode, IUsm} from "@alto/usm/interfaces/IUsm.sol";
+import {AccessMode} from "@alto/usm/interfaces/IUsm.sol";
 import {DirectionAccess} from "@alto/usm/interfaces/IAdvancedPermissionsUsm.sol";
 import {console} from "forge-std/console.sol";
 import {Vm} from "forge-std/Vm.sol";
@@ -131,10 +126,7 @@ library DeployAltoEthereumMainnet {
         returns (AltoEthereumMainnetInput memory)
     {
         require(params.freezer != address(0), "Freezer must be set");
-        // This phase bootstraps the controller; every other deployment must include the deployed controller.
-        if (params.phase != DeploymentPhase.EMERGENCY_CONTROLLER) {
-            require(input.contracts.emergencyController != address(0), "Emergency controller must be set");
-        }
+        require(input.contracts.emergencyController != address(0), "Emergency controller must be set");
 
         if (params.phase == DeploymentPhase.CORE) {
             DeployCoreParams memory coreParams =
@@ -695,123 +687,11 @@ library DeployAltoEthereumMainnet {
             input = _deployUniversalRewardsDistributor(params, input);
         } else if (params.phase == DeploymentPhase.MINT_CURVE_CONVEX_POSITION) {
             input = _deployMintCurveConvexPositionFactory(input);
-        } else if (params.phase == DeploymentPhase.EMERGENCY_CONTROLLER) {
-            input = _deployEmergencyController(params, input);
         } else {
             revert("Invalid phase");
         }
 
         return input;
-    }
-
-    /// @dev Deploys the controller behind a UUPS proxy owned by the timelock.
-    /// This phase must run exactly once: a re-run deploys a second controller while the first
-    /// keeps its pauser/freezer grants on every market and USM, and the authorization batch only
-    /// covers contracts registered at the time it is generated.
-    function _deployEmergencyController(AltoEthereumMainnetParams memory params, AltoEthereumMainnetInput memory input)
-        internal
-        returns (AltoEthereumMainnetInput memory)
-    {
-        require(input.contracts.timelock != address(0), "Timelock not deployed");
-        require(input.contracts.marketRegistry != address(0), "MarketRegistry not deployed");
-        require(input.contracts.usmRegistry != address(0), "UsmRegistry not deployed");
-        require(input.contracts.dusd != address(0), "DUSD not deployed");
-        require(input.contracts.universalRewardsDistributor != address(0), "UniversalRewardsDistributor not deployed");
-
-        EmergencyController implementation = new EmergencyController();
-        bytes memory initData = abi.encodeCall(
-            EmergencyController.initialize,
-            (
-                input.contracts.timelock,
-                params.freezer,
-                input.contracts.marketRegistry,
-                input.contracts.usmRegistry,
-                input.contracts.dusd,
-                input.contracts.universalRewardsDistributor
-            )
-        );
-        address controller = UnsafeUpgrades.deployUUPSProxy(address(implementation), initData);
-
-        input.contracts.emergencyController = controller;
-        input.contracts.emergencyControllerImplementation = address(implementation);
-
-        _writeEmergencyControllerAuthorization(input);
-
-        return input;
-    }
-
-    function _writeEmergencyControllerAuthorization(AltoEthereumMainnetInput memory input) internal {
-        address[] memory mintMarkets = IMarketRegistry(input.contracts.marketRegistry).getMintMarkets();
-        address[] memory borrowMarkets = IMarketRegistry(input.contracts.marketRegistry).getBorrowMarkets();
-        address[] memory usms = IUsmRegistry(input.contracts.usmRegistry).getUsmList();
-        uint256 actionCount = (mintMarkets.length + borrowMarkets.length) * 2 + usms.length + 2;
-
-        address[] memory targets = new address[](actionCount);
-        uint256[] memory values = new uint256[](actionCount);
-        bytes[] memory payloads = new bytes[](actionCount);
-        uint256 filledActionCount =
-            _fillEmergencyControllerActions(input, mintMarkets, borrowMarkets, usms, targets, payloads);
-        assert(filledActionCount == actionCount);
-
-        address timelock = input.contracts.timelock;
-        _writeSafeTimelockBatchJson(
-            "emergency-controller-authorization",
-            timelock,
-            targets,
-            values,
-            payloads,
-            TimelockController(payable(timelock)).getMinDelay()
-        );
-    }
-
-    function _fillEmergencyControllerActions(
-        AltoEthereumMainnetInput memory input,
-        address[] memory mintMarkets,
-        address[] memory borrowMarkets,
-        address[] memory usms,
-        address[] memory targets,
-        bytes[] memory payloads
-    ) internal pure returns (uint256 actionIndex) {
-        address controller = input.contracts.emergencyController;
-
-        for (uint256 i; i < mintMarkets.length; ++i) {
-            actionIndex = _addMarketPauserActions(targets, payloads, actionIndex, mintMarkets[i], controller);
-        }
-        for (uint256 i; i < borrowMarkets.length; ++i) {
-            actionIndex = _addMarketPauserActions(targets, payloads, actionIndex, borrowMarkets[i], controller);
-        }
-
-        for (uint256 i; i < usms.length; ++i) {
-            targets[actionIndex] = usms[i];
-            payloads[actionIndex] =
-                abi.encodeCall(IAccessControl.grantRole, (IUsm(usms[i]).SWAP_FREEZER_ROLE(), controller));
-            ++actionIndex;
-        }
-
-        targets[actionIndex] = input.contracts.dusd;
-        payloads[actionIndex] = abi.encodeCall(IPausable.setPauser, (controller, PAUSE_TYPE, true));
-        ++actionIndex;
-
-        targets[actionIndex] = input.contracts.universalRewardsDistributor;
-        payloads[actionIndex] = abi.encodeCall(IPausable.setPauser, (controller, PAUSE_TYPE, true));
-        return actionIndex + 1;
-    }
-
-    function _addMarketPauserActions(
-        address[] memory targets,
-        bytes[] memory payloads,
-        uint256 actionIndex,
-        address market,
-        address controller
-    ) internal pure returns (uint256) {
-        targets[actionIndex] = market;
-        payloads[actionIndex] = abi.encodeCall(IPausable.setPauser, (controller, PAUSE_TYPE, true));
-        ++actionIndex;
-
-        targets[actionIndex] = market;
-        payloads[actionIndex] = abi.encodeCall(IPausable.setPauser, (controller, FROZEN_TYPE, true));
-
-        return actionIndex + 1;
     }
 
     function _deployCore(

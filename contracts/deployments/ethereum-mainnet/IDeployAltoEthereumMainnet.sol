@@ -35,8 +35,7 @@ enum DeploymentPhase {
     ADVANCED_PERMISSIONS_FRXUSD_USM, // Phase 26: Deploy Advanced Permissions frxUSD USM for liquidation periphery
     UPGRADE_MARKETS_LIQUIDATION_PERIPHERY, // Phase 27: Upgrade all markets and authorize liquidation periphery
     UNIVERSAL_REWARDS_DISTRIBUTOR, // Phase 28: Deploy UniversalRewardsDistributor
-    MINT_CURVE_CONVEX_POSITION, // Phase 29: Deploy MintCurveConvexPositionFactory, PositionBeacon and setBeacon
-    EMERGENCY_CONTROLLER // Phase 30: Deploy and authorize the EmergencyController proxy
+    MINT_CURVE_CONVEX_POSITION // Phase 29: Deploy MintCurveConvexPositionFactory, PositionBeacon and setBeacon
 }
 
 enum UsmFinalizeMode {

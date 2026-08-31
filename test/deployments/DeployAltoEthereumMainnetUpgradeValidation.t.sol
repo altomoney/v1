@@ -30,11 +30,6 @@ contract DeployAltoEthereumMainnetUpgradeValidationTest is Test {
         validator.validateImplementations(DeploymentPhase.MINT_CURVE_CONVEX_POSITION, address(0));
     }
 
-    function test_EmergencyControllerPassesUpgradeSafetyValidation() public {
-        if (!_shouldVerifyProxy()) return;
-        validator.validateImplementations(DeploymentPhase.EMERGENCY_CONTROLLER, address(0));
-    }
-
     function test_StandardUsmsPassUpgradeSafetyValidation() public {
         if (!_shouldVerifyProxy()) return;
         validator.validateImplementations(DeploymentPhase.PERMISSIONED_USM, DUSD);
