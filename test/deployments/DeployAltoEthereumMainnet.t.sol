@@ -66,7 +66,6 @@ import {VaultRegistry} from "@alto/utils/VaultRegistry.sol";
 import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
 import {UniversalRewardsDistributor} from "@alto/utils/UniversalRewardsDistributor.sol";
 import {IMerkleRootManager} from "@alto/utils/interfaces/IMerkleRootManager.sol";
-import {EmergencyController, ISafeOwnerManager} from "@alto/utils/EmergencyController.sol";
 
 /// @dev Set to a non-zero deployment timestamp to load a real deployment's addresses.json
 ///      and skip re-deploying prerequisites. The file must be at:
@@ -1488,119 +1487,25 @@ contract DeployUniversalRewardsDistributorPhaseTest is DeployAltoEthereumMainnet
     }
 }
 
-contract DeployEmergencyControllerPhaseTest is DeployAltoEthereumMainnetTestBase {
-    string internal constant AUTHORIZATION_SCHEDULE_JSON =
-        "contracts/deployments/ethereum-mainnet/output/safe-tx-emergency-controller-authorization-schedule.json";
-    string internal constant AUTHORIZATION_EXECUTE_JSON =
-        "contracts/deployments/ethereum-mainnet/output/safe-tx-emergency-controller-authorization-execute.json";
-
-    function deployExternal(AltoEthereumMainnetParams memory deploymentParams, AltoEthereumMainnetInput memory deploymentInput)
-        external
-        returns (AltoEthereumMainnetInput memory)
-    {
+contract DeployRequiredAddressesTest is DeployAltoEthereumMainnetTestBase {
+    function deployExternal(
+        AltoEthereumMainnetParams memory deploymentParams,
+        AltoEthereumMainnetInput memory deploymentInput
+    ) external returns (AltoEthereumMainnetInput memory) {
         return DeployAltoEthereumMainnet.deploy(deploymentParams, deploymentInput);
     }
 
-    function test_deployEmergencyController() public {
-        input.contracts.emergencyController = address(0);
-        params.phase = DeploymentPhase.EMERGENCY_CONTROLLER;
-        input = DeployAltoEthereumMainnet.deploy(params, input);
-
-        EmergencyController controller = EmergencyController(input.contracts.emergencyController);
-
-        assertTrue(address(controller).code.length > 0, "controller proxy should have code");
-        assertTrue(input.contracts.emergencyControllerImplementation.code.length > 0, "implementation should have code");
-        assertEq(controller.owner(), input.contracts.timelock, "controller owner should be timelock");
-        assertEq(address(controller.pauserSafe()), params.freezer, "pauser Safe mismatch");
-        assertEq(address(controller.marketRegistry()), input.contracts.marketRegistry, "market registry mismatch");
-        assertEq(address(controller.usmRegistry()), input.contracts.usmRegistry, "USM registry mismatch");
-        assertEq(address(controller.dusd()), input.contracts.dusd, "DUSD mismatch");
-        assertEq(
-            address(controller.universalRewardsDistributor()),
-            input.contracts.universalRewardsDistributor,
-            "rewards distributor mismatch"
-        );
-        assertTrue(vm.exists(AUTHORIZATION_SCHEDULE_JSON), "authorization schedule JSON should be written");
-        assertTrue(vm.exists(AUTHORIZATION_EXECUTE_JSON), "authorization execute JSON should be written");
-
-        _executeSafeTimelockBatch(AUTHORIZATION_SCHEDULE_JSON, AUTHORIZATION_EXECUTE_JSON);
-        _assertControllerCoverage(controller);
-        _assertControllerCanPauseMarket(controller);
-    }
-
-    function test_emergencyControllerPhaseStillRequiresFreezer() public {
-        input.contracts.emergencyController = address(0);
+    function test_deploymentRequiresFreezer() public {
         params.freezer = address(0);
-        params.phase = DeploymentPhase.EMERGENCY_CONTROLLER;
 
         vm.expectRevert("Freezer must be set");
         this.deployExternal(params, input);
     }
 
-    function test_otherPhasesRequireEmergencyController() public {
+    function test_deploymentRequiresEmergencyController() public {
         input.contracts.emergencyController = address(0);
-        params.phase = DeploymentPhase.CORE;
 
         vm.expectRevert("Emergency controller must be set");
         this.deployExternal(params, input);
-    }
-
-    function _assertControllerCoverage(EmergencyController controller) private view {
-        address controllerAddress = address(controller);
-        address[] memory mintMarkets = IMarketRegistry(input.contracts.marketRegistry).getMintMarkets();
-        address[] memory borrowMarkets = IMarketRegistry(input.contracts.marketRegistry).getBorrowMarkets();
-        address[] memory usms = IUsmRegistry(input.contracts.usmRegistry).getUsmList();
-
-        for (uint256 i; i < mintMarkets.length; ++i) {
-            _assertMarketControllerPermissions(mintMarkets[i], controllerAddress);
-        }
-        for (uint256 i; i < borrowMarkets.length; ++i) {
-            _assertMarketControllerPermissions(borrowMarkets[i], controllerAddress);
-        }
-        for (uint256 i; i < usms.length; ++i) {
-            assertTrue(
-                AccessControl(usms[i]).hasRole(IUsm(usms[i]).SWAP_FREEZER_ROLE(), controllerAddress),
-                "controller should be USM freezer"
-            );
-        }
-
-        assertTrue(Pausable(input.contracts.dusd).pausers(controllerAddress, PAUSE_TYPE), "controller DUSD pauser");
-        assertTrue(
-            Pausable(input.contracts.universalRewardsDistributor).pausers(controllerAddress, PAUSE_TYPE),
-            "controller rewards distributor pauser"
-        );
-    }
-
-    function _assertMarketControllerPermissions(address market, address controller) private view {
-        assertTrue(Pausable(market).pausers(controller, PAUSE_TYPE), "controller should be market pauser");
-        assertTrue(Pausable(market).pausers(controller, FROZEN_TYPE), "controller should be market freezer");
-    }
-
-    function _assertControllerCanPauseMarket(EmergencyController controller) private {
-        address market = _findUnpausedMarket();
-        assertNotEq(market, address(0), "an unpaused market is required");
-
-        address responder = makeAddr("emergencyResponder");
-        vm.mockCall(
-            address(controller.pauserSafe()), abi.encodeCall(ISafeOwnerManager.isOwner, (responder)), abi.encode(true)
-        );
-        vm.prank(responder);
-        controller.pauseMarket(market);
-
-        assertTrue(Pausable(market).paused(PAUSE_TYPE), "controller should pause market");
-    }
-
-    function _findUnpausedMarket() private view returns (address) {
-        address[] memory mintMarkets = IMarketRegistry(input.contracts.marketRegistry).getMintMarkets();
-        for (uint256 i; i < mintMarkets.length; ++i) {
-            if (!Pausable(mintMarkets[i]).paused(PAUSE_TYPE)) return mintMarkets[i];
-        }
-
-        address[] memory borrowMarkets = IMarketRegistry(input.contracts.marketRegistry).getBorrowMarkets();
-        for (uint256 i; i < borrowMarkets.length; ++i) {
-            if (!Pausable(borrowMarkets[i]).paused(PAUSE_TYPE)) return borrowMarkets[i];
-        }
-
-        return address(0);
     }
 }
