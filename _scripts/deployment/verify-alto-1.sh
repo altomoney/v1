@@ -261,6 +261,15 @@ SYRUPUSDC_MINT_LIQUIDATION_ENGINE=$(get_address ".contracts.syrupUsdcMintLiquida
 SYRUPUSDC_MINT_LEVERAGE_SWAPPER=$(get_address ".contracts.syrupUsdcMintLeverageSwapper")
 SYRUPUSDC_MINT_LEVERAGE=$(get_address ".contracts.syrupUsdcMintLeverage")
 
+# frxUSD Mint Market contracts
+FRXUSD_MINT_MARKET=$(get_address ".contracts.frxUsdMarket")
+FRXUSD_MINT_MARKET_IMPL=$(get_address ".contracts.frxUsdMarketImplementation")
+FRXUSD_MINT_MARKET_IRM=$(get_address ".contracts.frxUsdMarketIrm")
+FRXUSD_MINT_MARKET_ORACLE=$(get_address ".contracts.frxUsdMarketOracle")
+FRXUSD_MINT_LIQUIDATION_ENGINE=$(get_address ".contracts.frxUsdLiquidationEngine")
+FRXUSD_MINT_LEVERAGE_SWAPPER=$(get_address ".contracts.frxUsdLeverageSwapper")
+FRXUSD_MINT_LEVERAGE=$(get_address ".contracts.frxUsdLeverage")
+
 # Permissioned USM contracts
 PERMISSIONED_USM=$(get_address ".contracts.permissionedUsm")
 PERMISSIONED_USM_IMPL=$(get_address ".contracts.permissionedUsmImplementation")
@@ -390,6 +399,13 @@ echo "- syrupUSDC Mint Market Oracle: $SYRUPUSDC_MINT_MARKET_ORACLE"
 echo "- syrupUSDC Mint Liquidation Engine: $SYRUPUSDC_MINT_LIQUIDATION_ENGINE"
 echo "- syrupUSDC Mint Leverage Swapper: $SYRUPUSDC_MINT_LEVERAGE_SWAPPER"
 echo "- syrupUSDC Mint Leverage: $SYRUPUSDC_MINT_LEVERAGE"
+echo "- frxUSD Mint Market: $FRXUSD_MINT_MARKET"
+echo "- frxUSD Mint Market Implementation: $FRXUSD_MINT_MARKET_IMPL"
+echo "- frxUSD Mint Market IRM: $FRXUSD_MINT_MARKET_IRM"
+echo "- frxUSD Mint Market Oracle: $FRXUSD_MINT_MARKET_ORACLE"
+echo "- frxUSD Mint Liquidation Engine: $FRXUSD_MINT_LIQUIDATION_ENGINE"
+echo "- frxUSD Mint Leverage Swapper: $FRXUSD_MINT_LEVERAGE_SWAPPER"
+echo "- frxUSD Mint Leverage: $FRXUSD_MINT_LEVERAGE"
 echo "- Permissioned USM: $PERMISSIONED_USM"
 echo "- Permissioned USM Implementation: $PERMISSIONED_USM_IMPL"
 echo "- Permissioned USM Fixed Price Strategy: $PERMISSIONED_USM_FIXED_PRICE_STRATEGY"
@@ -545,6 +561,15 @@ verify_contract "SyrupUsdcMintMarketOracle" "$SYRUPUSDC_MINT_MARKET_ORACLE" "con
 verify_contract "SyrupUsdcMintLiquidationEngine" "$SYRUPUSDC_MINT_LIQUIDATION_ENGINE" "contracts/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol:DlbDcfPriorityLiquidationEngine"
 verify_contract "SyrupUsdcMintLeverageSwapper" "$SYRUPUSDC_MINT_LEVERAGE_SWAPPER" "contracts/lending/leverage/AltoLeverageSwapperMultiTarget.sol:AltoLeverageSwapperMultiTarget"
 verify_contract "SyrupUsdcMintLeverage" "$SYRUPUSDC_MINT_LEVERAGE" "contracts/lending/leverage/AltoLeverage.sol:AltoLeverage"
+
+# frxUSD Mint Market contracts
+verify_contract "FrxUsdMintMarket" "$FRXUSD_MINT_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
+verify_contract "FrxUsdMintMarketImplementation" "$FRXUSD_MINT_MARKET_IMPL" "contracts/lending/AltoMintMarket.sol:AltoMintMarket"
+verify_contract "FrxUsdMintMarketIRM" "$FRXUSD_MINT_MARKET_IRM" "contracts/lending/irm/FixedRateIrm.sol:FixedRateIrm"
+verify_contract "FrxUsdMintMarketOracle" "$FRXUSD_MINT_MARKET_ORACLE" "contracts/oracles/AltoMultiChainlinkLendingOracle.sol:AltoMultiChainlinkLendingOracle"
+verify_contract "FrxUsdMintLiquidationEngine" "$FRXUSD_MINT_LIQUIDATION_ENGINE" "contracts/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol:DlbDcfPriorityLiquidationEngine"
+verify_contract "FrxUsdMintLeverageSwapper" "$FRXUSD_MINT_LEVERAGE_SWAPPER" "contracts/lending/leverage/AltoLeverageSwapperMultiTarget.sol:AltoLeverageSwapperMultiTarget"
+verify_contract "FrxUsdMintLeverage" "$FRXUSD_MINT_LEVERAGE" "contracts/lending/leverage/AltoLeverage.sol:AltoLeverage"
 
 # Permissioned USM contracts
 verify_contract "PermissionedUsm" "$PERMISSIONED_USM" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
