@@ -4,8 +4,9 @@ pragma solidity ^0.8.22;
 import {AltoOwnable2Step} from "@alto/utils/AltoOwnable2Step.sol";
 import {AltoOwnable2StepUpgradeable} from "@alto/utils/AltoOwnable2StepUpgradeable.sol";
 import {AltoTimelockController} from "@alto/utils/AltoTimelockController.sol";
-import {AltoTimelockControllerMintMarketFee} from
-    "@alto/deployments/ethereum-mainnet/contracts/AltoTimelockControllerMintMarketFee.sol";
+import {
+    AltoTimelockControllerMintMarketFee
+} from "@alto/deployments/ethereum-mainnet/contracts/AltoTimelockControllerMintMarketFee.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
 
@@ -1514,9 +1515,7 @@ library DeployAltoEthereumMainnet {
 
         MintCurveConvexPositionFactoryBatch batch = new MintCurveConvexPositionFactoryBatch(
             MintCurveConvexPositionFactoryBatchParams({
-                owner: input.contracts.timelock,
-                marketRegistry: input.contracts.marketRegistry,
-                config: config
+                owner: input.contracts.timelock, marketRegistry: input.contracts.marketRegistry, config: config
             })
         );
 

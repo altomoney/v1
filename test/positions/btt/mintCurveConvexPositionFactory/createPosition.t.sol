@@ -2,7 +2,10 @@
 pragma solidity ^0.8.28;
 
 import {MintCurveConvexPositionFactoryCommon} from "./MintCurveConvexPositionFactoryCommon.t.sol";
-import {IMintCurveConvexPositionFactoryErrors, IMintCurveConvexPositionFactoryEvents} from "@alto/positions/interfaces/IMintCurveConvexPositionFactory.sol";
+import {
+    IMintCurveConvexPositionFactoryErrors,
+    IMintCurveConvexPositionFactoryEvents
+} from "@alto/positions/interfaces/IMintCurveConvexPositionFactory.sol";
 import {IMintCurveConvexPosition} from "@alto/positions/interfaces/IMintCurveConvexPosition.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 

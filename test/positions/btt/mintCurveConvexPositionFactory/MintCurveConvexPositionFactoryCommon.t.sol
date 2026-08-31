@@ -59,7 +59,9 @@ abstract contract MintCurveConvexPositionFactoryCommon is Test {
     }
 
     function _deployUninitializedFactory() internal returns (MintCurveConvexPositionFactory) {
-        return MintCurveConvexPositionFactory(UnsafeUpgrades.deployUUPSProxy(address(new MintCurveConvexPositionFactory()), ""));
+        return MintCurveConvexPositionFactory(
+            UnsafeUpgrades.deployUUPSProxy(address(new MintCurveConvexPositionFactory()), "")
+        );
     }
 
     function _deployInitializedFactory() internal returns (MintCurveConvexPositionFactory) {

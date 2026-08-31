@@ -2,8 +2,10 @@
 pragma solidity ^0.8.28;
 
 import {MintCurveConvexPositionCommon} from "./MintCurveConvexPositionCommon.t.sol";
-import {IMintCurveConvexPositionErrors, IMintCurveConvexPositionEvents} from
-    "@alto/positions/interfaces/IMintCurveConvexPosition.sol";
+import {
+    IMintCurveConvexPositionErrors,
+    IMintCurveConvexPositionEvents
+} from "@alto/positions/interfaces/IMintCurveConvexPosition.sol";
 import {IMarketErrors} from "@alto/lending/interfaces/IMarket.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {MockCurvePool} from "../mocks/MockCurvePool.sol";
@@ -43,9 +45,7 @@ contract MintCurveConvexPosition_BorrowAndDepositToLp_Test is MintCurveConvexPos
 
     function test_RevertWhen_ConvexStakingReturnsFalse() public {
         _seedCollateral(DEFAULT_COLLATERAL);
-        vm.mockCall(
-            address(convexBooster), abi.encodeWithSignature("deposit(uint256,uint256,bool)"), abi.encode(false)
-        );
+        vm.mockCall(address(convexBooster), abi.encodeWithSignature("deposit(uint256,uint256,bool)"), abi.encode(false));
 
         vm.prank(OWNER);
         vm.expectRevert(IMintCurveConvexPositionErrors.MintCurveConvexPositionStakingFailed.selector);

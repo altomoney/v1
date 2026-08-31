@@ -48,7 +48,9 @@ abstract contract MintCurveConvexPositionForkCommon is Test {
     }
 
     function _deployPositionInfrastructure() internal {
-        factory = MintCurveConvexPositionFactory(UnsafeUpgrades.deployUUPSProxy(address(new MintCurveConvexPositionFactory()), ""));
+        factory = MintCurveConvexPositionFactory(
+            UnsafeUpgrades.deployUUPSProxy(address(new MintCurveConvexPositionFactory()), "")
+        );
         factory.initialize(address(this), MARKET_REGISTRY_MAINNET, _mainnetConfig());
 
         MintCurveConvexPosition implementation = new MintCurveConvexPosition();

@@ -25,8 +25,7 @@ contract LeverageSwapperMultiTargetBatch {
             address leverage = _params.leverageContracts[i];
             require(leverage != address(0), "Invalid leverage contract");
 
-            address swapper =
-                address(new AltoLeverageSwapperMultiTarget(address(this), _params.validSwapTargets));
+            address swapper = address(new AltoLeverageSwapperMultiTarget(address(this), _params.validSwapTargets));
 
             AltoLeverageSwapperMultiTarget(swapper).setWhitelisted(leverage, true);
 

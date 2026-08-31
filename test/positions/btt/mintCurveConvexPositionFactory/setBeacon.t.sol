@@ -2,7 +2,10 @@
 pragma solidity ^0.8.28;
 
 import {MintCurveConvexPositionFactoryCommon} from "./MintCurveConvexPositionFactoryCommon.t.sol";
-import {IMintCurveConvexPositionFactoryErrors, IMintCurveConvexPositionFactoryEvents} from "@alto/positions/interfaces/IMintCurveConvexPositionFactory.sol";
+import {
+    IMintCurveConvexPositionFactoryErrors,
+    IMintCurveConvexPositionFactoryEvents
+} from "@alto/positions/interfaces/IMintCurveConvexPositionFactory.sol";
 
 contract MintCurveConvexPositionFactory_SetBeacon_Test is MintCurveConvexPositionFactoryCommon {
     function test_RevertWhen_CallerIsNotOwner() public {

@@ -169,10 +169,11 @@ abstract contract MarketUpgradeForkTestBase is DeployAltoEthereumMainnetTestBase
         _assertMarketDataEqual(before, afterUpgrade, false);
     }
 
-    function _assertMarketDataEqual(MarketData memory before, MarketData memory afterUpgrade, bool skipBorrowOpeningFeeCheck)
-        internal
-        pure
-    {
+    function _assertMarketDataEqual(
+        MarketData memory before,
+        MarketData memory afterUpgrade,
+        bool skipBorrowOpeningFeeCheck
+    ) internal pure {
         assertEq(before.borrowToken, afterUpgrade.borrowToken);
         assertEq(before.collateralToken, afterUpgrade.collateralToken);
         assertEq(before.totalSupply.assets, afterUpgrade.totalSupply.assets);
@@ -189,8 +190,7 @@ abstract contract MarketUpgradeForkTestBase is DeployAltoEthereumMainnetTestBase
         assertEq(before.feeRecipient, afterUpgrade.feeRecipient);
         assertEq(before.authorizedPeriphery, afterUpgrade.authorizedPeriphery);
         assertEq(
-            before.liquidationConfiguration.maxLiquidationLtv,
-            afterUpgrade.liquidationConfiguration.maxLiquidationLtv
+            before.liquidationConfiguration.maxLiquidationLtv, afterUpgrade.liquidationConfiguration.maxLiquidationLtv
         );
         assertEq(
             before.liquidationConfiguration.dynamicBonusFeeStart,
@@ -205,8 +205,7 @@ abstract contract MarketUpgradeForkTestBase is DeployAltoEthereumMainnetTestBase
             afterUpgrade.liquidationConfiguration.dynamicBonusFeeDecaySteepness
         );
         assertEq(
-            before.liquidationConfiguration.liquidationBaseFee,
-            afterUpgrade.liquidationConfiguration.liquidationBaseFee
+            before.liquidationConfiguration.liquidationBaseFee, afterUpgrade.liquidationConfiguration.liquidationBaseFee
         );
         assertEq(
             before.liquidationConfiguration.minPenaltyPercentage,

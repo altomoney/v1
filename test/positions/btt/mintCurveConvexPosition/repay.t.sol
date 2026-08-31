@@ -2,8 +2,10 @@
 pragma solidity ^0.8.28;
 
 import {MintCurveConvexPositionCommon} from "./MintCurveConvexPositionCommon.t.sol";
-import {IMintCurveConvexPositionErrors, IMintCurveConvexPositionEvents} from
-    "@alto/positions/interfaces/IMintCurveConvexPosition.sol";
+import {
+    IMintCurveConvexPositionErrors,
+    IMintCurveConvexPositionEvents
+} from "@alto/positions/interfaces/IMintCurveConvexPosition.sol";
 import {IERC20Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
 import {Vm} from "forge-std/Vm.sol";
 import {stdError} from "forge-std/StdError.sol";
