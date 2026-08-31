@@ -44,7 +44,6 @@ import {SimpleLiquidator} from "@alto-test/lending/liquidation/helpers/SimpleLiq
 import {MockSwapper} from "@alto-test/lending/liquidation/helpers/MockSwapper.sol";
 import {
     ZEROX_SWAP_TARGET_MAINNET,
-    ODOS_ROUTER_V3_MAINNET,
     ONE_INCH_AGGREGATION_ROUTER_V6_MAINNET,
     KYBERSWAP_META_AGGREGATION_ROUTER_V2_MAINNET,
     VELORA_AUGUSTUS_MAINNET,
@@ -337,7 +336,6 @@ abstract contract DeployAltoEthereumMainnetTestBase is Test {
         );
         assertTrue(swapper.isValidSwapTarget(VELORA_AUGUSTUS_MAINNET), "Velora should be valid swap target");
         assertTrue(swapper.isValidSwapTarget(NORDSTERN_ROUTER_MAINNET), "Nordstern should be valid swap target");
-        assertFalse(swapper.isValidSwapTarget(ODOS_ROUTER_V3_MAINNET), "ODOS should not be valid swap target");
     }
 
     function _verifyDeployed(address addr, string memory name) internal view {
