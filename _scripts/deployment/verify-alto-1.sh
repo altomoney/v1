@@ -154,32 +154,32 @@ EMERGENCY_CONTROLLER=$(get_address ".contracts.emergencyController")
 EMERGENCY_CONTROLLER_IMPL=$(get_address ".contracts.emergencyControllerImplementation")
 OWNER_FIXED_RATE_IRM_FACTORY=$(get_address ".contracts.ownerFixedRateIrmFactory")
 
-# WETH Market contracts
-WETH_MARKET=$(get_address ".contracts.wethMarket")
-WETH_MARKET_IMPL=$(get_address ".contracts.wethMarketImplementation")
-WETH_MARKET_IRM=$(get_address ".contracts.wethMarketIrm")
-WETH_MARKET_ORACLE=$(get_address ".contracts.wethMarketOracle")
-WETH_LIQUIDATION_ENGINE=$(get_address ".contracts.wethLiquidationEngine")
-WETH_LEVERAGE_SWAPPER=$(get_address ".contracts.wethLeverageSwapper")
-WETH_LEVERAGE=$(get_address ".contracts.wethLeverage")
+# Refreshed WETH Market contracts
+WETH_MARKET=$(get_address ".contracts.refreshWethMarket")
+WETH_MARKET_IMPL=$(get_address ".contracts.refreshWethMarketImplementation")
+WETH_MARKET_IRM=$(get_address ".contracts.refreshWethMarketIrm")
+WETH_MARKET_ORACLE=$(get_address ".contracts.refreshWethMarketOracle")
+WETH_LIQUIDATION_ENGINE=$(get_address ".contracts.refreshWethLiquidationEngine")
+WETH_LEVERAGE_SWAPPER=$(get_address ".contracts.refreshWethLeverageSwapper")
+WETH_LEVERAGE=$(get_address ".contracts.refreshWethLeverage")
 
-# WSTETH Market contracts
-WSTETH_MARKET=$(get_address ".contracts.wstethMarket")
-WSTETH_MARKET_IMPL=$(get_address ".contracts.wstethMarketImplementation")
-WSTETH_MARKET_IRM=$(get_address ".contracts.wstethMarketIrm")
-WSTETH_MARKET_ORACLE=$(get_address ".contracts.wstethMarketOracle")
-WSTETH_LIQUIDATION_ENGINE=$(get_address ".contracts.wstethLiquidationEngine")
-WSTETH_LEVERAGE_SWAPPER=$(get_address ".contracts.wstethLeverageSwapper")
-WSTETH_LEVERAGE=$(get_address ".contracts.wstethLeverage")
+# Refreshed WSTETH Market contracts
+WSTETH_MARKET=$(get_address ".contracts.refreshWstethMarket")
+WSTETH_MARKET_IMPL=$(get_address ".contracts.refreshWstethMarketImplementation")
+WSTETH_MARKET_IRM=$(get_address ".contracts.refreshWstethMarketIrm")
+WSTETH_MARKET_ORACLE=$(get_address ".contracts.refreshWstethMarketOracle")
+WSTETH_LIQUIDATION_ENGINE=$(get_address ".contracts.refreshWstethLiquidationEngine")
+WSTETH_LEVERAGE_SWAPPER=$(get_address ".contracts.refreshWstethLeverageSwapper")
+WSTETH_LEVERAGE=$(get_address ".contracts.refreshWstethLeverage")
 
-# RETH Market contracts
-RETH_MARKET=$(get_address ".contracts.rethMarket")
-RETH_MARKET_IMPL=$(get_address ".contracts.rethMarketImplementation")
-RETH_MARKET_IRM=$(get_address ".contracts.rethMarketIrm")
-RETH_MARKET_ORACLE=$(get_address ".contracts.rethMarketOracle")
-RETH_LIQUIDATION_ENGINE=$(get_address ".contracts.rethLiquidationEngine")
-RETH_LEVERAGE_SWAPPER=$(get_address ".contracts.rethLeverageSwapper")
-RETH_LEVERAGE=$(get_address ".contracts.rethLeverage")
+# Refreshed RETH Market contracts
+RETH_MARKET=$(get_address ".contracts.refreshRethMarket")
+RETH_MARKET_IMPL=$(get_address ".contracts.refreshRethMarketImplementation")
+RETH_MARKET_IRM=$(get_address ".contracts.refreshRethMarketIrm")
+RETH_MARKET_ORACLE=$(get_address ".contracts.refreshRethMarketOracle")
+RETH_LIQUIDATION_ENGINE=$(get_address ".contracts.refreshRethLiquidationEngine")
+RETH_LEVERAGE_SWAPPER=$(get_address ".contracts.refreshRethLeverageSwapper")
+RETH_LEVERAGE=$(get_address ".contracts.refreshRethLeverage")
 
 # METH Market contracts
 METH_MARKET=$(get_address ".contracts.methMarket")
@@ -217,23 +217,23 @@ CBBTC_LIQUIDATION_ENGINE=$(get_address ".contracts.cbbtcBorrowLiquidationEngine"
 CBBTC_LEVERAGE_SWAPPER=$(get_address ".contracts.cbbtcBorrowLeverageSwapper")
 CBBTC_LEVERAGE=$(get_address ".contracts.cbbtcBorrowLeverage")
 
-# SUSDE Borrow Market contracts
-SUSDE_MARKET=$(get_address ".contracts.susdeBorrowMarket")
-SUSDE_MARKET_IMPL=$(get_address ".contracts.susdeBorrowMarketImplementation")
-SUSDE_MARKET_IRM=$(get_address ".contracts.susdeBorrowMarketIrm")
-SUSDE_MARKET_ORACLE=$(get_address ".contracts.susdeBorrowMarketOracle")
-SUSDE_LIQUIDATION_ENGINE=$(get_address ".contracts.susdeBorrowLiquidationEngine")
-SUSDE_LEVERAGE_SWAPPER=$(get_address ".contracts.susdeBorrowLeverageSwapper")
-SUSDE_LEVERAGE=$(get_address ".contracts.susdeBorrowLeverage")
+# Refreshed SUSDE Borrow Market contracts
+SUSDE_MARKET=$(get_address ".contracts.refreshSusdeBorrowMarket")
+SUSDE_MARKET_IMPL=$(get_address ".contracts.refreshSusdeBorrowMarketImplementation")
+SUSDE_MARKET_IRM=$(get_address ".contracts.refreshSusdeBorrowMarketIrm")
+SUSDE_MARKET_ORACLE=$(get_address ".contracts.refreshSusdeBorrowMarketOracle")
+SUSDE_LIQUIDATION_ENGINE=$(get_address ".contracts.refreshSusdeBorrowLiquidationEngine")
+SUSDE_LEVERAGE_SWAPPER=$(get_address ".contracts.refreshSusdeBorrowLeverageSwapper")
+SUSDE_LEVERAGE=$(get_address ".contracts.refreshSusdeBorrowLeverage")
 
-# SYRUP USDC Borrow Market contracts
-SYRUPUSDC_MARKET=$(get_address ".contracts.syrupUsdcBorrowMarket")
-SYRUPUSDC_MARKET_IMPL=$(get_address ".contracts.syrupUsdcBorrowMarketImplementation")
-SYRUPUSDC_MARKET_IRM=$(get_address ".contracts.syrupUsdcBorrowMarketIrm")
-SYRUPUSDC_MARKET_ORACLE=$(get_address ".contracts.syrupUsdcBorrowMarketOracle")
-SYRUPUSDC_LIQUIDATION_ENGINE=$(get_address ".contracts.syrupUsdcBorrowLiquidationEngine")
-SYRUPUSDC_LEVERAGE_SWAPPER=$(get_address ".contracts.syrupUsdcBorrowLeverageSwapper")
-SYRUPUSDC_LEVERAGE=$(get_address ".contracts.syrupUsdcBorrowLeverage")
+# Refreshed SYRUP USDC Borrow Market contracts
+SYRUPUSDC_MARKET=$(get_address ".contracts.refreshSyrupUsdcBorrowMarket")
+SYRUPUSDC_MARKET_IMPL=$(get_address ".contracts.refreshSyrupUsdcBorrowMarketImplementation")
+SYRUPUSDC_MARKET_IRM=$(get_address ".contracts.refreshSyrupUsdcBorrowMarketIrm")
+SYRUPUSDC_MARKET_ORACLE=$(get_address ".contracts.refreshSyrupUsdcBorrowMarketOracle")
+SYRUPUSDC_LIQUIDATION_ENGINE=$(get_address ".contracts.refreshSyrupUsdcBorrowLiquidationEngine")
+SYRUPUSDC_LEVERAGE_SWAPPER=$(get_address ".contracts.refreshSyrupUsdcBorrowLeverageSwapper")
+SYRUPUSDC_LEVERAGE=$(get_address ".contracts.refreshSyrupUsdcBorrowLeverage")
 
 # PAXG Borrow Market contracts
 PAXG_MARKET=$(get_address ".contracts.paxgBorrowMarket")
@@ -244,32 +244,32 @@ PAXG_LIQUIDATION_ENGINE=$(get_address ".contracts.paxgBorrowLiquidationEngine")
 PAXG_LEVERAGE_SWAPPER=$(get_address ".contracts.paxgBorrowLeverageSwapper")
 PAXG_LEVERAGE=$(get_address ".contracts.paxgBorrowLeverage")
 
-# sUSDe Mint Market contracts
-SUSDE_MINT_MARKET=$(get_address ".contracts.susdeMintMarket")
-SUSDE_MINT_MARKET_IMPL=$(get_address ".contracts.susdeMintMarketImplementation")
-SUSDE_MINT_MARKET_IRM=$(get_address ".contracts.susdeMintMarketIrm")
-SUSDE_MINT_MARKET_ORACLE=$(get_address ".contracts.susdeMintMarketOracle")
-SUSDE_MINT_LIQUIDATION_ENGINE=$(get_address ".contracts.susdeMintLiquidationEngine")
-SUSDE_MINT_LEVERAGE_SWAPPER=$(get_address ".contracts.susdeMintLeverageSwapper")
-SUSDE_MINT_LEVERAGE=$(get_address ".contracts.susdeMintLeverage")
+# Refreshed sUSDe Mint Market contracts
+SUSDE_MINT_MARKET=$(get_address ".contracts.refreshSusdeMintMarket")
+SUSDE_MINT_MARKET_IMPL=$(get_address ".contracts.refreshSusdeMintMarketImplementation")
+SUSDE_MINT_MARKET_IRM=$(get_address ".contracts.refreshSusdeMintMarketIrm")
+SUSDE_MINT_MARKET_ORACLE=$(get_address ".contracts.refreshSusdeMintMarketOracle")
+SUSDE_MINT_LIQUIDATION_ENGINE=$(get_address ".contracts.refreshSusdeMintLiquidationEngine")
+SUSDE_MINT_LEVERAGE_SWAPPER=$(get_address ".contracts.refreshSusdeMintLeverageSwapper")
+SUSDE_MINT_LEVERAGE=$(get_address ".contracts.refreshSusdeMintLeverage")
 
-# syrupUSDC Mint Market contracts
-SYRUPUSDC_MINT_MARKET=$(get_address ".contracts.syrupUsdcMintMarket")
-SYRUPUSDC_MINT_MARKET_IMPL=$(get_address ".contracts.syrupUsdcMintMarketImplementation")
-SYRUPUSDC_MINT_MARKET_IRM=$(get_address ".contracts.syrupUsdcMintMarketIrm")
-SYRUPUSDC_MINT_MARKET_ORACLE=$(get_address ".contracts.syrupUsdcMintMarketOracle")
-SYRUPUSDC_MINT_LIQUIDATION_ENGINE=$(get_address ".contracts.syrupUsdcMintLiquidationEngine")
-SYRUPUSDC_MINT_LEVERAGE_SWAPPER=$(get_address ".contracts.syrupUsdcMintLeverageSwapper")
-SYRUPUSDC_MINT_LEVERAGE=$(get_address ".contracts.syrupUsdcMintLeverage")
+# Refreshed syrupUSDC Mint Market contracts
+SYRUPUSDC_MINT_MARKET=$(get_address ".contracts.refreshSyrupUsdcMintMarket")
+SYRUPUSDC_MINT_MARKET_IMPL=$(get_address ".contracts.refreshSyrupUsdcMintMarketImplementation")
+SYRUPUSDC_MINT_MARKET_IRM=$(get_address ".contracts.refreshSyrupUsdcMintMarketIrm")
+SYRUPUSDC_MINT_MARKET_ORACLE=$(get_address ".contracts.refreshSyrupUsdcMintMarketOracle")
+SYRUPUSDC_MINT_LIQUIDATION_ENGINE=$(get_address ".contracts.refreshSyrupUsdcMintLiquidationEngine")
+SYRUPUSDC_MINT_LEVERAGE_SWAPPER=$(get_address ".contracts.refreshSyrupUsdcMintLeverageSwapper")
+SYRUPUSDC_MINT_LEVERAGE=$(get_address ".contracts.refreshSyrupUsdcMintLeverage")
 
-# frxUSD Mint Market contracts
-FRXUSD_MINT_MARKET=$(get_address ".contracts.frxUsdMarket")
-FRXUSD_MINT_MARKET_IMPL=$(get_address ".contracts.frxUsdMarketImplementation")
-FRXUSD_MINT_MARKET_IRM=$(get_address ".contracts.frxUsdMarketIrm")
-FRXUSD_MINT_MARKET_ORACLE=$(get_address ".contracts.frxUsdMarketOracle")
-FRXUSD_MINT_LIQUIDATION_ENGINE=$(get_address ".contracts.frxUsdLiquidationEngine")
-FRXUSD_MINT_LEVERAGE_SWAPPER=$(get_address ".contracts.frxUsdLeverageSwapper")
-FRXUSD_MINT_LEVERAGE=$(get_address ".contracts.frxUsdLeverage")
+# Refreshed frxUSD Mint Market contracts
+FRXUSD_MINT_MARKET=$(get_address ".contracts.refreshFrxUsdMarket")
+FRXUSD_MINT_MARKET_IMPL=$(get_address ".contracts.refreshFrxUsdMarketImplementation")
+FRXUSD_MINT_MARKET_IRM=$(get_address ".contracts.refreshFrxUsdMarketIrm")
+FRXUSD_MINT_MARKET_ORACLE=$(get_address ".contracts.refreshFrxUsdMarketOracle")
+FRXUSD_MINT_LIQUIDATION_ENGINE=$(get_address ".contracts.refreshFrxUsdLiquidationEngine")
+FRXUSD_MINT_LEVERAGE_SWAPPER=$(get_address ".contracts.refreshFrxUsdLeverageSwapper")
+FRXUSD_MINT_LEVERAGE=$(get_address ".contracts.refreshFrxUsdLeverage")
 
 # Permissioned USM contracts
 PERMISSIONED_USM=$(get_address ".contracts.permissionedUsm")
@@ -457,7 +457,7 @@ verify_contract "EmergencyController" "$EMERGENCY_CONTROLLER" "lib/openzeppelin-
 verify_contract "EmergencyControllerImplementation" "$EMERGENCY_CONTROLLER_IMPL" "contracts/utils/EmergencyController.sol:EmergencyController"
 verify_contract "OwnerFixedRateIrmFactory" "$OWNER_FIXED_RATE_IRM_FACTORY" "contracts/deployments/ethereum-mainnet/OwnerFixedRateIrmFactory.sol:OwnerFixedRateIrmFactory"
 
-# WETH Market contracts
+# Refreshed WETH Market contracts
 verify_contract "WethMarket" "$WETH_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
 verify_contract "WethMarketImplementation" "$WETH_MARKET_IMPL" "contracts/lending/AltoMintMarket.sol:AltoMintMarket"
 verify_contract "WethMarketIRM" "$WETH_MARKET_IRM" "contracts/lending/irm/FixedRateIrm.sol:FixedRateIrm"
@@ -466,7 +466,7 @@ verify_contract "WethLiquidationEngine" "$WETH_LIQUIDATION_ENGINE" "contracts/le
 verify_contract "WethLeverageSwapper" "$WETH_LEVERAGE_SWAPPER" "contracts/lending/leverage/AltoLeverageSwapperMultiTarget.sol:AltoLeverageSwapperMultiTarget"
 verify_contract "WethLeverage" "$WETH_LEVERAGE" "contracts/lending/leverage/AltoLeverage.sol:AltoLeverage"
 
-# WSTETH Market contracts
+# Refreshed WSTETH Market contracts
 verify_contract "WstethMarket" "$WSTETH_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
 verify_contract "WstethMarketImplementation" "$WSTETH_MARKET_IMPL" "contracts/lending/AltoMintMarket.sol:AltoMintMarket"
 verify_contract "WstethMarketIRM" "$WSTETH_MARKET_IRM" "contracts/lending/irm/FixedRateIrm.sol:FixedRateIrm"
@@ -475,7 +475,7 @@ verify_contract "WstethLiquidationEngine" "$WSTETH_LIQUIDATION_ENGINE" "contract
 verify_contract "WstethLeverageSwapper" "$WSTETH_LEVERAGE_SWAPPER" "contracts/lending/leverage/AltoLeverageSwapperMultiTarget.sol:AltoLeverageSwapperMultiTarget"
 verify_contract "WstethLeverage" "$WSTETH_LEVERAGE" "contracts/lending/leverage/AltoLeverage.sol:AltoLeverage"
 
-# RETH Market contracts
+# Refreshed RETH Market contracts
 verify_contract "RethMarket" "$RETH_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
 verify_contract "RethMarketImplementation" "$RETH_MARKET_IMPL" "contracts/lending/AltoMintMarket.sol:AltoMintMarket"
 verify_contract "RethMarketIRM" "$RETH_MARKET_IRM" "contracts/lending/irm/FixedRateIrm.sol:FixedRateIrm"
@@ -520,7 +520,7 @@ verify_contract "CbbtcBorrowLiquidationEngine" "$CBBTC_LIQUIDATION_ENGINE" "cont
 verify_contract "CbbtcBorrowLeverageSwapper" "$CBBTC_LEVERAGE_SWAPPER" "contracts/lending/leverage/AltoLeverageSwapperMultiTarget.sol:AltoLeverageSwapperMultiTarget"
 verify_contract "CbbtcBorrowLeverage" "$CBBTC_LEVERAGE" "contracts/lending/leverage/AltoLeverage.sol:AltoLeverage"
 
-# SUSDE Borrow Market contracts
+# Refreshed SUSDE Borrow Market contracts
 verify_contract "SusdeBorrowMarket" "$SUSDE_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
 verify_contract "SusdeBorrowMarketImplementation" "$SUSDE_MARKET_IMPL" "contracts/lending/AltoBorrowMarket.sol:AltoBorrowMarket"
 verify_contract "SusdeBorrowMarketIRM" "$SUSDE_MARKET_IRM" "contracts/lending/irm/AdaptiveCurveIrm.sol:AdaptiveCurveIrm"
@@ -529,7 +529,7 @@ verify_contract "SusdeBorrowLiquidationEngine" "$SUSDE_LIQUIDATION_ENGINE" "cont
 verify_contract "SusdeBorrowLeverageSwapper" "$SUSDE_LEVERAGE_SWAPPER" "contracts/lending/leverage/AltoLeverageSwapperMultiTarget.sol:AltoLeverageSwapperMultiTarget"
 verify_contract "SusdeBorrowLeverage" "$SUSDE_LEVERAGE" "contracts/lending/leverage/AltoLeverage.sol:AltoLeverage"
 
-# SYRUP USDC Borrow Market contracts
+# Refreshed SYRUP USDC Borrow Market contracts
 verify_contract "SyrupUsdcBorrowMarket" "$SYRUPUSDC_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
 verify_contract "SyrupUsdcBorrowMarketImplementation" "$SYRUPUSDC_MARKET_IMPL" "contracts/lending/AltoBorrowMarket.sol:AltoBorrowMarket"
 verify_contract "SyrupUsdcBorrowMarketIRM" "$SYRUPUSDC_MARKET_IRM" "contracts/lending/irm/AdaptiveCurveIrm.sol:AdaptiveCurveIrm"
@@ -547,7 +547,7 @@ verify_contract "PaxgBorrowLiquidationEngine" "$PAXG_LIQUIDATION_ENGINE" "contra
 verify_contract "PaxgBorrowLeverageSwapper" "$PAXG_LEVERAGE_SWAPPER" "contracts/lending/leverage/AltoLeverageSwapperMultiTarget.sol:AltoLeverageSwapperMultiTarget"
 verify_contract "PaxgBorrowLeverage" "$PAXG_LEVERAGE" "contracts/lending/leverage/AltoLeverage.sol:AltoLeverage"
 
-# sUSDe Mint Market contracts
+# Refreshed sUSDe Mint Market contracts
 verify_contract "SusdeMintMarket" "$SUSDE_MINT_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
 verify_contract "SusdeMintMarketImplementation" "$SUSDE_MINT_MARKET_IMPL" "contracts/lending/AltoMintMarket.sol:AltoMintMarket"
 verify_contract "SusdeMintMarketIRM" "$SUSDE_MINT_MARKET_IRM" "contracts/lending/irm/FixedRateIrm.sol:FixedRateIrm"
@@ -556,7 +556,7 @@ verify_contract "SusdeMintLiquidationEngine" "$SUSDE_MINT_LIQUIDATION_ENGINE" "c
 verify_contract "SusdeMintLeverageSwapper" "$SUSDE_MINT_LEVERAGE_SWAPPER" "contracts/lending/leverage/AltoLeverageSwapperMultiTarget.sol:AltoLeverageSwapperMultiTarget"
 verify_contract "SusdeMintLeverage" "$SUSDE_MINT_LEVERAGE" "contracts/lending/leverage/AltoLeverage.sol:AltoLeverage"
 
-# syrupUSDC Mint Market contracts
+# Refreshed syrupUSDC Mint Market contracts
 verify_contract "SyrupUsdcMintMarket" "$SYRUPUSDC_MINT_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
 verify_contract "SyrupUsdcMintMarketImplementation" "$SYRUPUSDC_MINT_MARKET_IMPL" "contracts/lending/AltoMintMarket.sol:AltoMintMarket"
 verify_contract "SyrupUsdcMintMarketIRM" "$SYRUPUSDC_MINT_MARKET_IRM" "contracts/lending/irm/FixedRateIrm.sol:FixedRateIrm"
@@ -565,7 +565,7 @@ verify_contract "SyrupUsdcMintLiquidationEngine" "$SYRUPUSDC_MINT_LIQUIDATION_EN
 verify_contract "SyrupUsdcMintLeverageSwapper" "$SYRUPUSDC_MINT_LEVERAGE_SWAPPER" "contracts/lending/leverage/AltoLeverageSwapperMultiTarget.sol:AltoLeverageSwapperMultiTarget"
 verify_contract "SyrupUsdcMintLeverage" "$SYRUPUSDC_MINT_LEVERAGE" "contracts/lending/leverage/AltoLeverage.sol:AltoLeverage"
 
-# frxUSD Mint Market contracts
+# Refreshed frxUSD Mint Market contracts
 verify_contract "FrxUsdMintMarket" "$FRXUSD_MINT_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
 verify_contract "FrxUsdMintMarketImplementation" "$FRXUSD_MINT_MARKET_IMPL" "contracts/lending/AltoMintMarket.sol:AltoMintMarket"
 verify_contract "FrxUsdMintMarketIRM" "$FRXUSD_MINT_MARKET_IRM" "contracts/lending/irm/FixedRateIrm.sol:FixedRateIrm"

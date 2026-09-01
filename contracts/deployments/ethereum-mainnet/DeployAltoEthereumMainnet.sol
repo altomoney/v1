@@ -150,7 +150,7 @@ library DeployAltoEthereumMainnet {
                 input
             );
         } else if (params.phase == DeploymentPhase.MINT_MARKET_WETH) {
-            input.contracts.wethMarket = _deployMintMarket(
+            input.contracts.refreshWethMarket = _deployMintMarket(
                 DeployMintMarketParams({
                     owner: input.contracts.timelock,
                     dusd: input.contracts.dusd,
@@ -184,7 +184,7 @@ library DeployAltoEthereumMainnet {
                 params.deployerHasOwnership
             );
         } else if (params.phase == DeploymentPhase.MINT_MARKET_WSTETH) {
-            input.contracts.wstethMarket = _deployMintMarket(
+            input.contracts.refreshWstethMarket = _deployMintMarket(
                 DeployMintMarketParams({
                     owner: input.contracts.timelock,
                     dusd: input.contracts.dusd,
@@ -218,7 +218,7 @@ library DeployAltoEthereumMainnet {
                 params.deployerHasOwnership
             );
         } else if (params.phase == DeploymentPhase.MINT_MARKET_RETH) {
-            input.contracts.rethMarket = _deployMintMarket(
+            input.contracts.refreshRethMarket = _deployMintMarket(
                 DeployMintMarketParams({
                     owner: input.contracts.timelock,
                     dusd: input.contracts.dusd,
@@ -404,7 +404,7 @@ library DeployAltoEthereumMainnet {
                 params.deployerHasOwnership
             );
         } else if (params.phase == DeploymentPhase.BORROW_MARKET_SUSDE) {
-            input.contracts.susdeBorrowMarket = _deployBorrowMarket(
+            input.contracts.refreshSusdeBorrowMarket = _deployBorrowMarket(
                 DeployBorrowMarketParams({
                     owner: input.contracts.timelock,
                     dusd: input.contracts.dusd,
@@ -488,7 +488,7 @@ library DeployAltoEthereumMainnet {
         } else if (params.phase == DeploymentPhase.REFERRAL_ADAPTER) {
             input = _deployReferralAdapter(params, input);
         } else if (params.phase == DeploymentPhase.BORROW_MARKET_SYRUP_USDC) {
-            input.contracts.syrupUsdcBorrowMarket = _deployBorrowMarket(
+            input.contracts.refreshSyrupUsdcBorrowMarket = _deployBorrowMarket(
                 DeployBorrowMarketParams({
                     owner: input.contracts.timelock,
                     dusd: input.contracts.dusd,
@@ -572,7 +572,7 @@ library DeployAltoEthereumMainnet {
                 params.deployerHasOwnership
             );
         } else if (params.phase == DeploymentPhase.MINT_MARKET_SUSDE) {
-            input.contracts.susdeMintMarket = _deployMintMarket(
+            input.contracts.refreshSusdeMintMarket = _deployMintMarket(
                 DeployMintMarketParams({
                     owner: input.contracts.timelock,
                     dusd: input.contracts.dusd,
@@ -606,7 +606,7 @@ library DeployAltoEthereumMainnet {
                 params.deployerHasOwnership
             );
         } else if (params.phase == DeploymentPhase.MINT_MARKET_SYRUPUSDC) {
-            input.contracts.syrupUsdcMintMarket = _deployMintMarket(
+            input.contracts.refreshSyrupUsdcMintMarket = _deployMintMarket(
                 DeployMintMarketParams({
                     owner: input.contracts.timelock,
                     dusd: input.contracts.dusd,
@@ -698,7 +698,7 @@ library DeployAltoEthereumMainnet {
         } else if (params.phase == DeploymentPhase.MINT_CURVE_CONVEX_POSITION) {
             input = _deployMintCurveConvexPositionFactory(input);
         } else if (params.phase == DeploymentPhase.MINT_MARKET_FRXUSD) {
-            input.contracts.frxUsdMarket = _deployMintMarket(
+            input.contracts.refreshFrxUsdMarket = _deployMintMarket(
                 DeployMintMarketParams({
                     owner: input.contracts.timelock,
                     dusd: input.contracts.dusd,

@@ -155,6 +155,20 @@ contract DeployAltoEthereumMainnetScript is Script {
         contractsJson = _serializeMarketContracts(contractsJson, "susdeMint", input.contracts.susdeMintMarket);
         contractsJson = _serializeMarketContracts(contractsJson, "syrupUsdcMint", input.contracts.syrupUsdcMintMarket);
         contractsJson = _serializeMarketContracts(contractsJson, "frxUsd", input.contracts.frxUsdMarket);
+        contractsJson = _serializeMarketContracts(contractsJson, "refreshWeth", input.contracts.refreshWethMarket);
+        contractsJson = _serializeMarketContracts(contractsJson, "refreshWsteth", input.contracts.refreshWstethMarket);
+        contractsJson = _serializeMarketContracts(contractsJson, "refreshReth", input.contracts.refreshRethMarket);
+        contractsJson =
+            _serializeMarketContracts(contractsJson, "refreshSusdeBorrow", input.contracts.refreshSusdeBorrowMarket);
+        contractsJson = _serializeMarketContracts(
+            contractsJson, "refreshSyrupUsdcBorrow", input.contracts.refreshSyrupUsdcBorrowMarket
+        );
+        contractsJson =
+            _serializeMarketContracts(contractsJson, "refreshSusdeMint", input.contracts.refreshSusdeMintMarket);
+        contractsJson = _serializeMarketContracts(
+            contractsJson, "refreshSyrupUsdcMint", input.contracts.refreshSyrupUsdcMintMarket
+        );
+        contractsJson = _serializeMarketContracts(contractsJson, "refreshFrxUsd", input.contracts.refreshFrxUsdMarket);
 
         // Serialize USDC USM contracts
         if (input.contracts.permissionedUsm.dusdUsm != address(0)) {
@@ -341,6 +355,14 @@ contract DeployAltoEthereumMainnetScript is Script {
         loadedInput.contracts.susdeMintMarket = _loadMarketContracts(json, "susdeMint");
         loadedInput.contracts.syrupUsdcMintMarket = _loadMarketContracts(json, "syrupUsdcMint");
         loadedInput.contracts.frxUsdMarket = _loadMarketContracts(json, "frxUsd");
+        loadedInput.contracts.refreshWethMarket = _loadMarketContracts(json, "refreshWeth");
+        loadedInput.contracts.refreshWstethMarket = _loadMarketContracts(json, "refreshWsteth");
+        loadedInput.contracts.refreshRethMarket = _loadMarketContracts(json, "refreshReth");
+        loadedInput.contracts.refreshSusdeBorrowMarket = _loadMarketContracts(json, "refreshSusdeBorrow");
+        loadedInput.contracts.refreshSyrupUsdcBorrowMarket = _loadMarketContracts(json, "refreshSyrupUsdcBorrow");
+        loadedInput.contracts.refreshSusdeMintMarket = _loadMarketContracts(json, "refreshSusdeMint");
+        loadedInput.contracts.refreshSyrupUsdcMintMarket = _loadMarketContracts(json, "refreshSyrupUsdcMint");
+        loadedInput.contracts.refreshFrxUsdMarket = _loadMarketContracts(json, "refreshFrxUsd");
 
         // Load USDC USM contracts
         loadedInput.contracts.permissionedUsm.dusdUsm = _tryParseAddress(json, ".contracts.permissionedUsm");

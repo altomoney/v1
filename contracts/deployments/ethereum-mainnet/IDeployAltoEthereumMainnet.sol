@@ -9,22 +9,22 @@ enum DeploymentPhase {
     CORE, // Phase 0: Deploy TimelockController, AltoAdapter, and MockFeeCollector
     REGISTRY, // Phase 1: Deploy MarketRegistry and UsmRegistry
     DUSD, // Phase 2: Deploy DUSD and DUSDFlashMinter
-    MINT_MARKET_WETH, // Phase 3: Deploy WETH Mint Market
-    MINT_MARKET_WSTETH, // Phase 4: Deploy wstETH Mint Market
-    MINT_MARKET_RETH, // Phase 5: Deploy rETH Mint Market
+    MINT_MARKET_WETH, // Phase 3: Deploy refreshed WETH Mint Market
+    MINT_MARKET_WSTETH, // Phase 4: Deploy refreshed wstETH Mint Market
+    MINT_MARKET_RETH, // Phase 5: Deploy refreshed rETH Mint Market
     MINT_MARKET_METH, // Phase 6: Deploy mETH Mint Market
     MINT_MARKET_TBTC, // Phase 7: Deploy tBTC Mint Market
     BORROW_MARKET_WBTC, // Phase 8: Deploy WBTC Borrow Market
     BORROW_MARKET_CBBTC, // Phase 9: Deploy cbBTC Borrow Market
-    BORROW_MARKET_SUSDE, // Phase 10: Deploy sUSDe Borrow Market
+    BORROW_MARKET_SUSDE, // Phase 10: Deploy refreshed sUSDe Borrow Market
     PERMISSIONED_USM, // Phase 11: Deploy Permissioned DUSD/USDC Peg Stability Module
     PERMISSIONLESS_USM, // Phase 12: Deploy Permissionless DUSD/USDC Peg Stability Module
     POST, // Phase 13: Configure TimelockController and transfer ownership
     REFERRAL_ADAPTER, // Phase 14: Deploy AltoReferralWhitelistAdapter
-    BORROW_MARKET_SYRUP_USDC, // Phase 15: Deploy syrupUSDC Borrow Market
+    BORROW_MARKET_SYRUP_USDC, // Phase 15: Deploy refreshed syrupUSDC Borrow Market
     BORROW_MARKET_PAXG, // Phase 16: Deploy PAXG Borrow Market
-    MINT_MARKET_SUSDE, // Phase 17: Deploy sUSDe Mint Market
-    MINT_MARKET_SYRUPUSDC, // Phase 18: Deploy syrupUSDC Mint Market
+    MINT_MARKET_SUSDE, // Phase 17: Deploy refreshed sUSDe Mint Market
+    MINT_MARKET_SYRUPUSDC, // Phase 18: Deploy refreshed syrupUSDC Mint Market
     PERMISSIONED_FRXUSD_USM, // Phase 19: Deploy Permissioned DUSD/FRXUSD Peg Stability Module
     ADAPTER, // Phase 20: Deploy AltoAdapter
     DUSD_VAULT, // Phase 21: Deploy DUSD ERC4626 Vault (`Alto DUSD Vault`, aDUSD)
@@ -36,7 +36,7 @@ enum DeploymentPhase {
     UPGRADE_MARKETS_LIQUIDATION_PERIPHERY, // Phase 27: Upgrade all markets and authorize liquidation periphery
     UNIVERSAL_REWARDS_DISTRIBUTOR, // Phase 28: Deploy UniversalRewardsDistributor
     MINT_CURVE_CONVEX_POSITION, // Phase 29: Deploy MintCurveConvexPositionFactory, PositionBeacon and setBeacon
-    MINT_MARKET_FRXUSD, // Phase 30: Deploy frxUSD Mint Market
+    MINT_MARKET_FRXUSD, // Phase 30: Deploy refreshed frxUSD Mint Market
     OWNER_FIXED_RATE_IRM_FACTORY, // Phase 31: Deploy the reusable Timelock-owned FixedRateIrm factory
     MARKET_DEPRECATION_PHASE_0 // Phase 32: Freeze ten old markets and apply the T0 fixed rates
 }
@@ -118,6 +118,14 @@ struct Contracts {
     address ownerFixedRateIrmFactory;
     MintCurveConvexPositionContracts mintCurveConvexPosition;
     MarketContracts frxUsdMarket;
+    MarketContracts refreshWethMarket;
+    MarketContracts refreshWstethMarket;
+    MarketContracts refreshRethMarket;
+    MarketContracts refreshSusdeBorrowMarket;
+    MarketContracts refreshSyrupUsdcBorrowMarket;
+    MarketContracts refreshSusdeMintMarket;
+    MarketContracts refreshSyrupUsdcMintMarket;
+    MarketContracts refreshFrxUsdMarket;
 }
 
 // PARAMETERS FOR THE DEPLOYMENT
