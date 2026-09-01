@@ -152,6 +152,7 @@ LIQUIDATION_PERIPHERY=$(get_address ".contracts.liquidationPeriphery")
 UNIVERSAL_REWARDS_DISTRIBUTOR=$(get_address ".contracts.universalRewardsDistributor")
 EMERGENCY_CONTROLLER=$(get_address ".contracts.emergencyController")
 EMERGENCY_CONTROLLER_IMPL=$(get_address ".contracts.emergencyControllerImplementation")
+OWNER_FIXED_RATE_IRM_FACTORY=$(get_address ".contracts.ownerFixedRateIrmFactory")
 
 # WETH Market contracts
 WETH_MARKET=$(get_address ".contracts.wethMarket")
@@ -315,6 +316,7 @@ echo "- Liquidation Periphery: $LIQUIDATION_PERIPHERY"
 echo "- Universal Rewards Distributor: $UNIVERSAL_REWARDS_DISTRIBUTOR"
 echo "- Emergency Controller: $EMERGENCY_CONTROLLER"
 echo "- Emergency Controller Implementation: $EMERGENCY_CONTROLLER_IMPL"
+echo "- Owner Fixed Rate IRM Factory: $OWNER_FIXED_RATE_IRM_FACTORY"
 echo "- WETH Market: $WETH_MARKET"
 echo "- WETH Market Implementation: $WETH_MARKET_IMPL"
 echo "- WETH Market IRM: $WETH_MARKET_IRM"
@@ -453,6 +455,7 @@ verify_contract "LiquidationPeriphery" "$LIQUIDATION_PERIPHERY" "contracts/lendi
 verify_contract "UniversalRewardsDistributor" "$UNIVERSAL_REWARDS_DISTRIBUTOR" "contracts/utils/UniversalRewardsDistributor.sol:UniversalRewardsDistributor"
 verify_contract "EmergencyController" "$EMERGENCY_CONTROLLER" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"
 verify_contract "EmergencyControllerImplementation" "$EMERGENCY_CONTROLLER_IMPL" "contracts/utils/EmergencyController.sol:EmergencyController"
+verify_contract "OwnerFixedRateIrmFactory" "$OWNER_FIXED_RATE_IRM_FACTORY" "contracts/deployments/ethereum-mainnet/OwnerFixedRateIrmFactory.sol:OwnerFixedRateIrmFactory"
 
 # WETH Market contracts
 verify_contract "WethMarket" "$WETH_MARKET" "lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy"

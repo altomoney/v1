@@ -29,6 +29,7 @@
     "methMarketImplementation": "0x60da676bDF3d205e980a3276713796F8230572bd",
     "methMarketIrm": "0x1eF7694Adc1B3478536a98c092be274970e58663",
     "methMarketOracle": "0x98a253d9Cec9dFad9c40a9Edcf5e35Fe33A45a6A",
+    "ownerFixedRateIrmFactory": "0xb236C44F2A243e7F0f03a1eff6D447cd043A5c9C",
     "paxgBorrowLeverage": "0xE670757B4D1a9ead3af30a225446162A14667Ee3",
     "paxgBorrowLeverageSwapper": "0xe4fE4bD13Da7EA32d4E9e2D89F007588cD8003CD",
     "paxgBorrowLiquidationEngine": "0xd4Ff4C427664645D357d3E6dC0Fd6F52DF1d3005",
