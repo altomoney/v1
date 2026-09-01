@@ -230,6 +230,14 @@ abstract contract DeployAltoEthereumMainnetTestBase is Test {
         loaded.contracts.susdeMintMarket = _loadMarketContracts(json, "susdeMint");
         loaded.contracts.syrupUsdcMintMarket = _loadMarketContracts(json, "syrupUsdcMint");
         loaded.contracts.frxUsdMarket = _loadMarketContracts(json, "frxUsd");
+        loaded.contracts.refreshWethMarket = _loadMarketContracts(json, "refreshWeth");
+        loaded.contracts.refreshWstethMarket = _loadMarketContracts(json, "refreshWsteth");
+        loaded.contracts.refreshRethMarket = _loadMarketContracts(json, "refreshReth");
+        loaded.contracts.refreshSusdeBorrowMarket = _loadMarketContracts(json, "refreshSusdeBorrow");
+        loaded.contracts.refreshSyrupUsdcBorrowMarket = _loadMarketContracts(json, "refreshSyrupUsdcBorrow");
+        loaded.contracts.refreshSusdeMintMarket = _loadMarketContracts(json, "refreshSusdeMint");
+        loaded.contracts.refreshSyrupUsdcMintMarket = _loadMarketContracts(json, "refreshSyrupUsdcMint");
+        loaded.contracts.refreshFrxUsdMarket = _loadMarketContracts(json, "refreshFrxUsd");
 
         loaded.contracts.permissionedUsm.dusdUsm = _tryParseAddress(json, ".contracts.permissionedUsm");
         loaded.contracts.permissionedUsm.dusdUsmImplementation =
@@ -960,7 +968,7 @@ abstract contract DeployMarketPhaseTestBase is DeployAltoEthereumMainnetTestBase
 contract DeployFutureMarketEmergencyControllerTest is DeployMarketPhaseTestBase {
     function test_futureMintMarketAuthorizesEmergencyController() public {
         _deployMarket(DeploymentPhase.MINT_MARKET_SUSDE);
-        _assertEmergencyControllerPermissions(input.contracts.susdeMintMarket.market);
+        _assertEmergencyControllerPermissions(input.contracts.refreshSusdeMintMarket.market);
     }
 
     function test_futureBorrowMarketAuthorizesEmergencyController() public {
@@ -1003,9 +1011,11 @@ contract DeployWethMintMarketPhaseTest is DeployMarketPhaseTestBase {
         "contracts/deployments/ethereum-mainnet/output/safe-tx-WETH-mint-market-registry-and-authorize-liquidation-periphery-execute.json";
 
     function test_deployWethMintMarketAndExecuteTimelockTransactions() public {
+        address legacyMarket = input.contracts.wethMarket.market;
         _deployMarket(DeploymentPhase.MINT_MARKET_WETH);
 
-        MarketContracts memory deployed = input.contracts.wethMarket;
+        MarketContracts memory deployed = input.contracts.refreshWethMarket;
+        assertEq(input.contracts.wethMarket.market, legacyMarket, "legacy WETH market changed");
         ExpectedMarketParams memory expected = ExpectedMarketParams({
             marketType: MarketType.MINT,
             collateralToken: WETH_MAINNET,
@@ -1025,10 +1035,12 @@ contract DeployWethMintMarketPhaseTest is DeployMarketPhaseTestBase {
 
 contract DeployWstethMintMarketPhaseTest is DeployMarketPhaseTestBase {
     function test_deployWstethMintMarketParameters() public {
+        address legacyMarket = input.contracts.wstethMarket.market;
         _deployMarket(DeploymentPhase.MINT_MARKET_WSTETH);
 
+        assertEq(input.contracts.wstethMarket.market, legacyMarket, "legacy wstETH market changed");
         _assertMintMarketParams(
-            input.contracts.wstethMarket,
+            input.contracts.refreshWstethMarket,
             ExpectedMarketParams({
                 marketType: MarketType.MINT,
                 collateralToken: WSTETH_MAINNET,
@@ -1047,9 +1059,11 @@ contract DeployWstethMintMarketPhaseTest is DeployMarketPhaseTestBase {
 
 contract DeployRethMintMarketPhaseTest is DeployMarketPhaseTestBase {
     function test_deployRethMintMarketParameters() public {
+        address legacyMarket = input.contracts.rethMarket.market;
         _deployMarket(DeploymentPhase.MINT_MARKET_RETH);
 
-        MarketContracts memory deployed = input.contracts.rethMarket;
+        MarketContracts memory deployed = input.contracts.refreshRethMarket;
+        assertEq(input.contracts.rethMarket.market, legacyMarket, "legacy rETH market changed");
         _assertMintMarketParams(
             deployed,
             ExpectedMarketParams({
@@ -1095,9 +1109,11 @@ contract DeployRethMintMarketPhaseTest is DeployMarketPhaseTestBase {
 
 contract DeploySusdeMintMarketPhaseTest is DeployMarketPhaseTestBase {
     function test_deploySusdeMintMarketParameters() public {
+        address legacyMarket = input.contracts.susdeMintMarket.market;
         _deployMarket(DeploymentPhase.MINT_MARKET_SUSDE);
 
-        MarketContracts memory deployed = input.contracts.susdeMintMarket;
+        MarketContracts memory deployed = input.contracts.refreshSusdeMintMarket;
+        assertEq(input.contracts.susdeMintMarket.market, legacyMarket, "legacy sUSDe mint market changed");
         _assertMintMarketParams(
             deployed,
             ExpectedMarketParams({
@@ -1148,9 +1164,11 @@ contract DeploySusdeBorrowMarketPhaseTest is DeployMarketPhaseTestBase {
         "contracts/deployments/ethereum-mainnet/output/safe-tx-sUSDe-borrow-market-registry-and-authorize-liquidation-periphery-execute.json";
 
     function test_deploySusdeBorrowMarketAndExecuteTimelockTransactions() public {
+        address legacyMarket = input.contracts.susdeBorrowMarket.market;
         _deployMarket(DeploymentPhase.BORROW_MARKET_SUSDE);
 
-        MarketContracts memory deployed = input.contracts.susdeBorrowMarket;
+        MarketContracts memory deployed = input.contracts.refreshSusdeBorrowMarket;
+        assertEq(input.contracts.susdeBorrowMarket.market, legacyMarket, "legacy sUSDe borrow market changed");
         ExpectedMarketParams memory expected = ExpectedMarketParams({
             marketType: MarketType.BORROW,
             collateralToken: SUSDE_MAINNET,
@@ -1178,10 +1196,12 @@ contract DeploySusdeBorrowMarketPhaseTest is DeployMarketPhaseTestBase {
 
 contract DeploySyrupUsdcBorrowMarketPhaseTest is DeployMarketPhaseTestBase {
     function test_deploySyrupUsdcBorrowMarketParameters() public {
+        address legacyMarket = input.contracts.syrupUsdcBorrowMarket.market;
         _deployMarket(DeploymentPhase.BORROW_MARKET_SYRUP_USDC);
 
+        assertEq(input.contracts.syrupUsdcBorrowMarket.market, legacyMarket, "legacy syrupUSDC borrow market changed");
         _assertBorrowMarketParams(
-            input.contracts.syrupUsdcBorrowMarket,
+            input.contracts.refreshSyrupUsdcBorrowMarket,
             ExpectedMarketParams({
                 marketType: MarketType.BORROW,
                 collateralToken: SYRUPUSDC_MAINNET,
@@ -1208,9 +1228,11 @@ contract DeploySyrupUsdcBorrowMarketPhaseTest is DeployMarketPhaseTestBase {
 
 contract DeploySyrupUsdcMintMarketPhaseTest is DeployMarketPhaseTestBase {
     function test_deploySyrupUsdcMintMarketParameters() public {
+        address legacyMarket = input.contracts.syrupUsdcMintMarket.market;
         _deployMarket(DeploymentPhase.MINT_MARKET_SYRUPUSDC);
 
-        MarketContracts memory deployed = input.contracts.syrupUsdcMintMarket;
+        MarketContracts memory deployed = input.contracts.refreshSyrupUsdcMintMarket;
+        assertEq(input.contracts.syrupUsdcMintMarket.market, legacyMarket, "legacy syrupUSDC mint market changed");
         _assertMintMarketParams(
             deployed,
             ExpectedMarketParams({
@@ -1256,9 +1278,11 @@ contract DeploySyrupUsdcMintMarketPhaseTest is DeployMarketPhaseTestBase {
 
 contract DeployFrxUsdMintMarketPhaseTest is DeployMarketPhaseTestBase {
     function test_deployFrxUsdMintMarketParameters() public {
+        address legacyMarket = input.contracts.frxUsdMarket.market;
         _deployMarket(DeploymentPhase.MINT_MARKET_FRXUSD);
 
-        MarketContracts memory deployed = input.contracts.frxUsdMarket;
+        MarketContracts memory deployed = input.contracts.refreshFrxUsdMarket;
+        assertEq(input.contracts.frxUsdMarket.market, legacyMarket, "legacy frxUSD market changed");
         _assertMintMarketParams(
             deployed,
             ExpectedMarketParams({
