@@ -1,10 +1,15 @@
-// SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.22;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.28;
 
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {AltoOwnable2Step, Ownable} from "@alto/utils/AltoOwnable2Step.sol";
 
+/// @title Owner Fixed Rate Interest Rate Model Factory
+/// @author GPM
+/// @custom:contact security@altofoundation.org
 /// @notice Deterministically deploys FixedRateIrms owned by the factory owner.
+/// @dev A newly deployed IRM has a permissionless, one-time `setMarket`. Deploy it and wire it to its market
+///      atomically so another account cannot consume that initialization first.
 contract OwnerFixedRateIrmFactory is AltoOwnable2Step {
     struct Deployment {
         address irm;
@@ -43,11 +48,15 @@ contract OwnerFixedRateIrmFactory is AltoOwnable2Step {
     }
 
     function predictIrmAddress(address market, uint256 version, uint256 borrowRate) public view returns (address) {
-        address deployed = deployments[market][version].irm;
-        if (deployed != address(0)) return deployed;
+        address irmOwner = owner();
+        Deployment memory existing = deployments[market][version];
+        if (existing.irm != address(0)) {
+            require(existing.owner == irmOwner && existing.borrowRate == borrowRate, "Version already used");
+            return existing.irm;
+        }
 
         bytes32 initCodeHash =
-            keccak256(abi.encodePacked(type(FixedRateIrm).creationCode, abi.encode(borrowRate, owner())));
+            keccak256(abi.encodePacked(type(FixedRateIrm).creationCode, abi.encode(borrowRate, irmOwner)));
 
         return address(
             uint160(
