@@ -22,7 +22,6 @@ import {
 } from "@alto/deployments/ethereum-mainnet/IDeployAltoEthereumMainnet.sol";
 import {FROZEN_TYPE, PAUSE_TYPE} from "@alto/utils/Constants.sol";
 import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
-import {Pausable} from "@alto/utils/Pausable.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
 import {Vm} from "forge-std/Vm.sol";
@@ -49,7 +48,7 @@ library MarketDeprecationDeployment {
         MarketDeprecationPhase0Config memory config = _loadConfig();
         MarketDeprecationPhase0Params memory params = _params(input, config);
         _validateConfig(input, config);
-        _validateState(params, deploymentParams.timelockAdmin, deploymentParams.freezer, false);
+        _validateState(params, deploymentParams.timelockAdmin, false);
 
         MarketDeprecationPhase0Report memory report = MarketDeprecationPhase0.prepare(params);
         address timelock = params.timelock;
@@ -73,14 +72,6 @@ library MarketDeprecationDeployment {
             scheduleBatch.targets,
             scheduleBatch.values,
             scheduleBatch.payloads
-        );
-
-        SafeTransactionBuilder.writeDirectBatch(
-            "market-deprecation-phase-0-freezer",
-            deploymentParams.freezer,
-            report.freezerBatch.targets,
-            report.freezerBatch.values,
-            report.freezerBatch.payloads
         );
 
         bytes memory executeData = abi.encodeCall(
@@ -111,7 +102,7 @@ library MarketDeprecationDeployment {
         MarketDeprecationPhase0Config memory config = _loadConfig();
         MarketDeprecationPhase0Params memory params = _params(input, config);
         _validateConfig(input, config);
-        _validateState(params, deploymentParams.timelockAdmin, deploymentParams.freezer, true);
+        _validateState(params, deploymentParams.timelockAdmin, true);
 
         MarketDeprecationPhase0Batch memory batch = MarketDeprecationPhase0.prepare(params).timelockBatch;
         TimelockController timelock = TimelockController(payable(params.timelock));
@@ -128,7 +119,7 @@ library MarketDeprecationDeployment {
         MarketDeprecationPhase0Config memory config = _loadConfig();
         MarketDeprecationPhase0Params memory params = _params(input, config);
         _validateConfig(input, config);
-        _validateFinalState(params, deploymentParams.timelockAdmin, deploymentParams.freezer);
+        _validateFinalState(params, deploymentParams.timelockAdmin);
 
         input.contracts.wbtcBorrowMarket.marketIrm = IMarketBase(config.borrowMarkets[0].market).irm();
         input.contracts.cbbtcBorrowMarket.marketIrm = IMarketBase(config.borrowMarkets[1].market).irm();
@@ -187,35 +178,25 @@ library MarketDeprecationDeployment {
         require(config.alreadyDeprecatedMintMarkets[1].market == input.contracts.tbtcMarket.market, "Wrong tBTC market");
     }
 
-    function _validateState(
-        MarketDeprecationPhase0Params memory params,
-        address ownerSafe,
-        address freezer,
-        bool frozen
-    ) private view {
+    function _validateState(MarketDeprecationPhase0Params memory params, address ownerSafe, bool frozen) private view {
         _validateFactory(params.factory, params.timelock);
         require(IAltoVaultBase(params.vault).curator() == ownerSafe, "Wrong vault curator");
 
         OwnerFixedRateIrmFactory factory = OwnerFixedRateIrmFactory(params.factory);
         for (uint256 i; i < params.borrowMarkets.length; ++i) {
             MarketRate memory marketRate = params.borrowMarkets[i];
-            _validateMarket(
-                marketRate.market, params.timelock, freezer, MarketType.BORROW, IRMType.ADAPTIVE_CURVE, frozen
-            );
+            _validateMarket(marketRate.market, params.timelock, MarketType.BORROW, IRMType.ADAPTIVE_CURVE, frozen);
             _validateVaultCap(params.vault, marketRate.market);
             (address deployed,,) = factory.deployments(marketRate.market, T0_IRM_VERSION);
             require(deployed == address(0), "IRM version already deployed");
         }
         for (uint256 i; i < params.mintMarkets.length; ++i) {
-            _validateMarket(
-                params.mintMarkets[i].market, params.timelock, freezer, MarketType.MINT, IRMType.FIXED_RATE, frozen
-            );
+            _validateMarket(params.mintMarkets[i].market, params.timelock, MarketType.MINT, IRMType.FIXED_RATE, frozen);
         }
         for (uint256 i; i < params.alreadyDeprecatedMintMarkets.length; ++i) {
             _validateMarket(
                 params.alreadyDeprecatedMintMarkets[i].market,
                 params.timelock,
-                freezer,
                 MarketType.MINT,
                 IRMType.FIXED_RATE,
                 true
@@ -223,17 +204,14 @@ library MarketDeprecationDeployment {
         }
     }
 
-    function _validateFinalState(MarketDeprecationPhase0Params memory params, address ownerSafe, address freezer)
-        private
-        view
-    {
+    function _validateFinalState(MarketDeprecationPhase0Params memory params, address ownerSafe) private view {
         _validateFactory(params.factory, params.timelock);
         require(IAltoVaultBase(params.vault).curator() == ownerSafe, "Wrong vault curator");
 
         OwnerFixedRateIrmFactory factory = OwnerFixedRateIrmFactory(params.factory);
         for (uint256 i; i < params.borrowMarkets.length; ++i) {
             MarketRate memory marketRate = params.borrowMarkets[i];
-            _validateMarket(marketRate.market, params.timelock, freezer, MarketType.BORROW, IRMType.FIXED_RATE, true);
+            _validateMarket(marketRate.market, params.timelock, MarketType.BORROW, IRMType.FIXED_RATE, true);
             _validateFixedRate(marketRate.market, marketRate.rateSpy);
 
             (address deployed, address irmOwner, uint256 borrowRate) =
@@ -247,12 +225,12 @@ library MarketDeprecationDeployment {
         }
         for (uint256 i; i < params.mintMarkets.length; ++i) {
             MarketRate memory marketRate = params.mintMarkets[i];
-            _validateMarket(marketRate.market, params.timelock, freezer, MarketType.MINT, IRMType.FIXED_RATE, true);
+            _validateMarket(marketRate.market, params.timelock, MarketType.MINT, IRMType.FIXED_RATE, true);
             _validateFixedRate(marketRate.market, marketRate.rateSpy);
         }
         for (uint256 i; i < params.alreadyDeprecatedMintMarkets.length; ++i) {
             MarketRate memory marketRate = params.alreadyDeprecatedMintMarkets[i];
-            _validateMarket(marketRate.market, params.timelock, freezer, MarketType.MINT, IRMType.FIXED_RATE, true);
+            _validateMarket(marketRate.market, params.timelock, MarketType.MINT, IRMType.FIXED_RATE, true);
             _validateFixedRate(marketRate.market, marketRate.rateSpy);
         }
     }
@@ -263,14 +241,10 @@ library MarketDeprecationDeployment {
         require(OwnerFixedRateIrmFactory(factory).pendingOwner() == address(0), "Unexpected pending factory owner");
     }
 
-    function _validateMarket(
-        address market,
-        address timelock,
-        address freezer,
-        MarketType marketType,
-        IRMType irmType,
-        bool frozen
-    ) private view {
+    function _validateMarket(address market, address timelock, MarketType marketType, IRMType irmType, bool frozen)
+        private
+        view
+    {
         IMarketBase marketContract = IMarketBase(market);
         address irm = marketContract.irm();
 
@@ -278,8 +252,6 @@ library MarketDeprecationDeployment {
         require(marketContract.MARKET_TYPE() == marketType, "Wrong market type");
         require(IPausable(market).paused(FROZEN_TYPE) == frozen, "Wrong frozen state");
         require(!IPausable(market).paused(PAUSE_TYPE), "Market fully paused");
-        require(Pausable(market).pausers(freezer, FROZEN_TYPE), "Wrong freezer");
-
         require(irm.code.length != 0 && Ownable(irm).owner() == timelock, "Wrong IRM owner");
         require(IIrm(irm).IRM_TYPE() == irmType, "Wrong IRM type");
         require(FixedRateIrm(irm).market() == market, "Wrong IRM binding");
