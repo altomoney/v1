@@ -1,0 +1,829 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>Alto Emergency Console</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0c0d10;
+      --panel: #15171c;
+      --panel-2: #1b1e24;
+      --border: #2d313a;
+      --text: #f4f5f7;
+      --muted: #9ba3af;
+      --accent: #ff6b4a;
+      --accent-hover: #ff8267;
+      --danger-bg: #321b19;
+      --danger-border: #73342d;
+      --ok: #70d6a3;
+      --warn: #ffc46b;
+      --error: #ff8a7a;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    button, select, input { font: inherit; }
+
+    button {
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 10px 14px;
+      background: var(--panel-2);
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    button:hover:not(:disabled) { border-color: #555d6b; }
+    button:disabled { cursor: not-allowed; opacity: .45; }
+    button.primary { border-color: var(--accent); background: var(--accent); color: #160704; font-weight: 700; }
+    button.primary:hover:not(:disabled) { background: var(--accent-hover); }
+
+    a { color: #b9c9ff; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .page { width: min(1040px, calc(100% - 32px)); margin: 0 auto; padding: 36px 0 72px; }
+
+    header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+
+    h1 { margin: 0 0 5px; font-size: clamp(25px, 4vw, 36px); letter-spacing: -.03em; }
+    h2 { margin: 0; font-size: 18px; }
+    p { margin: 0; }
+    .subtitle, .muted { color: var(--muted); }
+
+    .wallet-controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+    select { max-width: 190px; border: 1px solid var(--border); border-radius: 9px; padding: 10px; background: var(--panel); color: var(--text); }
+
+    .notice {
+      padding: 14px 16px;
+      border: 1px solid var(--danger-border);
+      border-radius: 11px;
+      background: var(--danger-bg);
+      color: #ffd5cf;
+      margin-bottom: 18px;
+    }
+
+    .panel { border: 1px solid var(--border); border-radius: 13px; background: var(--panel); margin-top: 16px; overflow: hidden; }
+    .panel-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 16px 18px; border-bottom: 1px solid var(--border); }
+    .panel-body { padding: 18px; }
+
+    .facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .fact { padding: 12px; border: 1px solid var(--border); border-radius: 9px; background: var(--panel-2); min-width: 0; }
+    .fact-label { display: block; color: var(--muted); font-size: 12px; margin-bottom: 4px; }
+    .fact-value { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .badge { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); border-radius: 99px; padding: 5px 9px; color: var(--muted); font-size: 12px; }
+    .badge.ok { color: var(--ok); border-color: #275943; }
+    .badge.error { color: var(--error); border-color: #71372f; }
+
+    .target-list { display: grid; gap: 9px; }
+    .target {
+      display: grid;
+      grid-template-columns: minmax(200px, 1fr) auto;
+      align-items: center;
+      gap: 16px;
+      padding: 13px 14px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--panel-2);
+    }
+
+    .target-name { font-weight: 650; }
+    .address { display: block; margin-top: 2px; color: var(--muted); font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .actions { display: flex; gap: 13px; flex-wrap: wrap; justify-content: flex-end; }
+    .choice { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
+    .choice input { width: 17px; height: 17px; accent-color: var(--accent); }
+    .already { color: var(--error); font-size: 12px; }
+    .unsupported { color: var(--warn); font-size: 12px; }
+
+    .toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 16px; }
+    .review-list, .activity-list { margin: 0; padding-left: 22px; }
+    .review-list li, .activity-list li { margin: 8px 0; }
+    .confirmation { display: flex; gap: 9px; align-items: flex-start; margin: 17px 0; color: #ffd5cf; }
+    .confirmation input { margin-top: 4px; width: 17px; height: 17px; accent-color: var(--accent); }
+    .activity-list .ok { color: var(--ok); }
+    .activity-list .error { color: var(--error); }
+    .activity-list .pending { color: var(--warn); }
+    .status { min-height: 23px; margin-top: 12px; color: var(--muted); }
+    .hidden { display: none !important; }
+
+    @media (max-width: 720px) {
+      .page { width: min(100% - 20px, 1040px); padding-top: 22px; }
+      header { display: block; }
+      .wallet-controls { margin-top: 16px; justify-content: flex-start; }
+      .facts { grid-template-columns: 1fr; }
+      .target { grid-template-columns: 1fr; }
+      .actions { justify-content: flex-start; }
+      .toolbar { align-items: stretch; flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <div>
+        <h1>Alto Emergency Console</h1>
+        <p class="subtitle">Direct emergency actions through the Ethereum mainnet Emergency Controller.</p>
+      </div>
+      <div class="wallet-controls">
+        <select id="walletSelect" aria-label="Wallet provider"></select>
+        <button id="connectButton">Connect wallet</button>
+      </div>
+    </header>
+
+    <div class="notice">
+      These actions restrict protocol functionality and cannot be reversed through this controller. Verify every
+      selected target. Each selected action is a separate transaction and is not atomic with the others.
+    </div>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Connection</h2>
+        <span id="authBadge" class="badge">Not connected</span>
+      </div>
+      <div class="panel-body">
+        <div class="facts">
+          <div class="fact">
+            <span class="fact-label">Network</span>
+            <span id="networkValue" class="fact-value">Ethereum mainnet required</span>
+          </div>
+          <div class="fact">
+            <span class="fact-label">Connected account</span>
+            <span id="accountValue" class="fact-value">Not connected</span>
+          </div>
+          <div class="fact">
+            <span class="fact-label">Emergency Controller</span>
+            <a id="controllerLink" class="fact-value" target="_blank" rel="noopener noreferrer"></a>
+          </div>
+          <div class="fact">
+            <span class="fact-label">Pauser Safe</span>
+            <a id="safeLink" class="fact-value" target="_blank" rel="noopener noreferrer">Not loaded</a>
+          </div>
+          <div class="fact">
+            <span class="fact-label">Market Registry</span>
+            <a id="marketRegistryLink" class="fact-value" target="_blank" rel="noopener noreferrer">Not loaded</a>
+          </div>
+          <div class="fact">
+            <span class="fact-label">USM Registry</span>
+            <a id="usmRegistryLink" class="fact-value" target="_blank" rel="noopener noreferrer">Not loaded</a>
+          </div>
+        </div>
+        <div id="status" class="status">Connect an injected wallet to load live registry data.</div>
+      </div>
+    </section>
+
+    <div id="dashboard" class="hidden">
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Mint markets</h2>
+          <span id="mintCount" class="badge"></span>
+        </div>
+        <div class="panel-body"><div id="mintMarkets" class="target-list"></div></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Borrow markets</h2>
+          <span id="borrowCount" class="badge"></span>
+        </div>
+        <div class="panel-body"><div id="borrowMarkets" class="target-list"></div></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>USMs</h2>
+          <span id="usmCount" class="badge"></span>
+        </div>
+        <div class="panel-body"><div id="usms" class="target-list"></div></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Protocol contracts</h2></div>
+        <div class="panel-body"><div id="singletons" class="target-list"></div></div>
+      </section>
+
+      <div class="toolbar">
+        <span id="selectionCount" class="muted">No actions selected</span>
+        <div>
+          <button id="refreshButton">Refresh state</button>
+          <button id="reviewButton" class="primary" disabled>Review selected actions</button>
+        </div>
+      </div>
+
+      <section id="reviewPanel" class="panel hidden">
+        <div class="panel-head"><h2>Final review</h2></div>
+        <div class="panel-body">
+          <ol id="reviewList" class="review-list"></ol>
+          <label class="confirmation">
+            <input id="confirmation" type="checkbox">
+            <span>I understand that these transactions pause or freeze live mainnet contracts and that previously
+              submitted transactions remain valid if a later one is rejected.</span>
+          </label>
+          <button id="executeButton" class="primary" disabled>Submit transactions</button>
+        </div>
+      </section>
+
+      <section id="activityPanel" class="panel hidden">
+        <div class="panel-head"><h2>Transaction activity</h2></div>
+        <div class="panel-body"><ol id="activityList" class="activity-list"></ol></div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const CONTROLLER = "0x3c822f14a90955bf35278b42BA509FeEcAD3a305";
+      const MAINNET_CHAIN_ID = "0x1";
+      const EXPLORER = "https://etherscan.io";
+      const PAUSE_TYPE = "0x31533cf09d9fd562a4609906b5c62508f0dd93bd2222c49d6a9d4cd4326f5725";
+      const FROZEN_TYPE = "0x587e479931b32b4bcfb1625b83bf110c2402b6e624bcdc3b8ff7d5fb2ffe3350";
+
+      const SELECTOR = Object.freeze({
+        pauserSafe: "0x45007ee3",
+        marketRegistry: "0xecb96fe6",
+        usmRegistry: "0x49347a63",
+        dusd: "0xde1409ce",
+        universalRewardsDistributor: "0x6e395620",
+        getMintMarkets: "0xf0f783d2",
+        getBorrowMarkets: "0x89545353",
+        getUsmList: "0xeeba88ec",
+        isOwner: "0x2f54bf6e",
+        paused: "0x9e9e4666",
+        getIsFrozen: "0x236fc8ad",
+        getAccessMode: "0x48c07568",
+        getBuyAccess: "0x20fe4cb2",
+        getSellAccess: "0xefdad811",
+        borrowToken: "0x456dc17a",
+        collateralToken: "0xb2016bd4",
+        underlyingAsset: "0xe6025393",
+        symbol: "0x95d89b41",
+        pausers: "0x48780d2e",
+        swapFreezerRole: "0x353f03bd",
+        hasRole: "0x91d14854",
+        pauseMarket: "0xe952cba9",
+        freezeMarket: "0x0403188d",
+        freezeUsm: "0x20f9b461",
+        pauseDusd: "0x2ef6d674",
+        pauseUniversalRewardsDistributor: "0xe8f17d34"
+      });
+
+      const state = {
+        providers: new Map(),
+        provider: null,
+        account: null,
+        authorized: false,
+        reviewActions: [],
+        loadId: 0,
+        executing: false
+      };
+      const listenedProviders = new WeakSet();
+
+      const el = id => document.getElementById(id);
+      const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+      const strip0x = value => value.startsWith("0x") ? value.slice(2) : value;
+      const shortAddress = address => `${address.slice(0, 6)}…${address.slice(-4)}`;
+      const addressUrl = address => `${EXPLORER}/address/${address}`;
+      const txUrl = hash => `${EXPLORER}/tx/${hash}`;
+
+      function errorMessage(error) {
+        return error?.shortMessage || error?.data?.message || error?.message || String(error);
+      }
+
+      function encodeAddress(address) {
+        const hex = strip0x(address);
+        if (!/^[0-9a-fA-F]{40}$/.test(hex)) throw new Error(`Invalid address: ${address}`);
+        return hex.padStart(64, "0");
+      }
+
+      function readWord(hex, byteOffset) {
+        const word = hex.slice(byteOffset * 2, byteOffset * 2 + 64);
+        if (word.length !== 64) throw new Error("Malformed RPC response");
+        return word;
+      }
+
+      function decodeAddress(data) {
+        const hex = strip0x(data);
+        return `0x${readWord(hex, 0).slice(24)}`;
+      }
+
+      function decodeBool(data) {
+        return BigInt(`0x${readWord(strip0x(data), 0)}`) !== 0n;
+      }
+
+      function decodeUint(data) {
+        return Number(BigInt(`0x${readWord(strip0x(data), 0)}`));
+      }
+
+      function decodeAddressArray(data) {
+        const hex = strip0x(data);
+        const offset = Number(BigInt(`0x${readWord(hex, 0)}`));
+        const length = Number(BigInt(`0x${readWord(hex, offset)}`));
+        if (!Number.isSafeInteger(length) || length > 1000) throw new Error("Invalid registry response");
+        return Array.from({ length }, (_, index) => `0x${readWord(hex, offset + 32 + index * 32).slice(24)}`);
+      }
+
+      function decodeSymbol(data) {
+        const hex = strip0x(data);
+        let bytes;
+        if (hex.length === 64) {
+          bytes = hex.match(/.{2}/g).map(value => parseInt(value, 16)).filter(value => value !== 0);
+        } else {
+          const offset = Number(BigInt(`0x${readWord(hex, 0)}`));
+          const length = Number(BigInt(`0x${readWord(hex, offset)}`));
+          const body = hex.slice((offset + 32) * 2, (offset + 32 + length) * 2);
+          bytes = body.match(/.{2}/g)?.map(value => parseInt(value, 16)) || [];
+        }
+        return new TextDecoder().decode(new Uint8Array(bytes)).replace(/[\u0000-\u001f\u007f]/g, "").trim();
+      }
+
+      async function request(method, params = []) {
+        if (!state.provider) throw new Error("Wallet is not connected");
+        return state.provider.request({ method, params });
+      }
+
+      async function call(to, data) {
+        return request("eth_call", [{ to, data }, "latest"]);
+      }
+
+      async function callAddress(to, selector) {
+        return decodeAddress(await call(to, selector));
+      }
+
+      async function callBool(to, data) {
+        return decodeBool(await call(to, data));
+      }
+
+      function setAddressLink(node, address) {
+        node.textContent = shortAddress(address);
+        node.href = addressUrl(address);
+        node.title = address;
+      }
+
+      function setStatus(message, kind = "") {
+        el("status").textContent = message;
+        el("status").style.color = kind === "error" ? "var(--error)" : kind === "ok" ? "var(--ok)" : "";
+      }
+
+      function registerProvider(detail) {
+        if (!detail?.provider?.request) return;
+        const existing = [...state.providers.values()].find(item => item.provider === detail.provider);
+        if (existing) return;
+        const key = detail.info?.uuid || detail.info?.rdns || `wallet-${state.providers.size}`;
+        state.providers.set(key, {
+          provider: detail.provider,
+          name: detail.info?.name || "Browser wallet"
+        });
+        renderProviders();
+      }
+
+      function renderProviders() {
+        const select = el("walletSelect");
+        const previous = select.value;
+        select.replaceChildren();
+        for (const [key, wallet] of state.providers) {
+          const option = document.createElement("option");
+          option.value = key;
+          option.textContent = wallet.name;
+          select.append(option);
+        }
+        if (state.providers.has(previous)) select.value = previous;
+        const available = state.providers.size > 0;
+        select.classList.toggle("hidden", !available);
+        el("connectButton").disabled = !available || state.executing;
+        if (!available) el("connectButton").textContent = "No wallet found";
+      }
+
+      async function ensureMainnet() {
+        let chainId = await request("eth_chainId");
+        if (chainId !== MAINNET_CHAIN_ID) {
+          await request("wallet_switchEthereumChain", [{ chainId: MAINNET_CHAIN_ID }]);
+          chainId = await request("eth_chainId");
+        }
+        if (chainId !== MAINNET_CHAIN_ID) throw new Error("Ethereum mainnet is required");
+      }
+
+      async function connect() {
+        try {
+          const selected = state.providers.get(el("walletSelect").value);
+          if (!selected) throw new Error("No injected wallet was found");
+          state.provider = selected.provider;
+          const accounts = await request("eth_requestAccounts");
+          if (!accounts.length) throw new Error("No wallet account is available");
+          state.account = accounts[0];
+          await ensureMainnet();
+          attachProviderListeners();
+          await loadDashboard();
+        } catch (error) {
+          setStatus(errorMessage(error), "error");
+        }
+      }
+
+      function attachProviderListeners() {
+        if (!state.provider?.on || listenedProviders.has(state.provider)) return;
+        listenedProviders.add(state.provider);
+        state.provider.on("accountsChanged", accounts => {
+          state.account = accounts[0] || null;
+          state.account ? loadDashboard() : disconnectView();
+        });
+        state.provider.on("chainChanged", chainId => {
+          if (chainId === MAINNET_CHAIN_ID && state.account) loadDashboard();
+          else {
+            el("dashboard").classList.add("hidden");
+            setStatus("Switch the connected wallet to Ethereum mainnet.", "error");
+          }
+        });
+      }
+
+      function disconnectView() {
+        state.account = null;
+        state.authorized = false;
+        el("dashboard").classList.add("hidden");
+        el("accountValue").textContent = "Not connected";
+        el("authBadge").textContent = "Not connected";
+        el("authBadge").className = "badge";
+        el("connectButton").textContent = "Connect wallet";
+        setStatus("Connect an injected wallet to load live registry data.");
+      }
+
+      async function getSymbol(token, cache) {
+        const key = token.toLowerCase();
+        if (!cache.has(key)) {
+          cache.set(key, call(token, SELECTOR.symbol).then(decodeSymbol).catch(() => shortAddress(token)));
+        }
+        return cache.get(key);
+      }
+
+      async function loadMarket(address, type, symbolCache) {
+        const [paused, frozen, canPause, canFreeze, borrowToken, collateralToken] = await Promise.all([
+          callBool(address, SELECTOR.paused + strip0x(PAUSE_TYPE)),
+          callBool(address, SELECTOR.paused + strip0x(FROZEN_TYPE)),
+          callBool(address, SELECTOR.pausers + encodeAddress(CONTROLLER) + strip0x(PAUSE_TYPE)),
+          callBool(address, SELECTOR.pausers + encodeAddress(CONTROLLER) + strip0x(FROZEN_TYPE)),
+          callAddress(address, SELECTOR.borrowToken),
+          callAddress(address, SELECTOR.collateralToken)
+        ]);
+        const [borrowSymbol, collateralSymbol] = await Promise.all([
+          getSymbol(borrowToken, symbolCache),
+          getSymbol(collateralToken, symbolCache)
+        ]);
+        return { address, type, name: `${collateralSymbol} / ${borrowSymbol}`, paused, frozen, canPause, canFreeze };
+      }
+
+      async function loadUsm(address, symbolCache) {
+        const [frozen, underlying, freezerRole, access] = await Promise.all([
+          callBool(address, SELECTOR.getIsFrozen),
+          callAddress(address, SELECTOR.underlyingAsset),
+          call(address, SELECTOR.swapFreezerRole),
+          loadUsmAccess(address)
+        ]);
+        const [symbol, canFreeze] = await Promise.all([
+          getSymbol(underlying, symbolCache),
+          callBool(address, SELECTOR.hasRole + strip0x(freezerRole) + encodeAddress(CONTROLLER))
+        ]);
+        return { address, name: `${symbol} USM: ${access}`, frozen, canFreeze };
+      }
+
+      async function loadUsmAccess(address) {
+        try {
+          const mode = decodeUint(await call(address, SELECTOR.getAccessMode));
+          return mode === 0 ? "Permissionless" : mode === 1 ? "Permissioned" : `Unknown mode ${mode}`;
+        } catch {
+          try {
+            const [buy, sell] = await Promise.all([
+              call(address, SELECTOR.getBuyAccess).then(decodeUint),
+              call(address, SELECTOR.getSellAccess).then(decodeUint)
+            ]);
+            const label = mode => mode === 0 ? "permissioned" : mode === 1 ? "permissionless" : `unknown (${mode})`;
+            return `Buy ${label(buy)} / Sell ${label(sell)}`;
+          } catch {
+            return "Access mode unavailable";
+          }
+        }
+      }
+
+      async function loadDashboard() {
+        const loadId = ++state.loadId;
+        try {
+          setStatus("Loading live controller and registry state…");
+          el("dashboard").classList.add("hidden");
+          el("networkValue").textContent = "Ethereum mainnet";
+          el("accountValue").textContent = shortAddress(state.account);
+          el("accountValue").title = state.account;
+          el("connectButton").textContent = shortAddress(state.account);
+
+          await ensureMainnet();
+          const code = await request("eth_getCode", [CONTROLLER, "latest"]);
+          if (!code || code === "0x") throw new Error("Emergency Controller is not deployed at the configured address");
+
+          const [safe, marketRegistry, usmRegistry, dusd, rewardsDistributor] = await Promise.all([
+            callAddress(CONTROLLER, SELECTOR.pauserSafe),
+            callAddress(CONTROLLER, SELECTOR.marketRegistry),
+            callAddress(CONTROLLER, SELECTOR.usmRegistry),
+            callAddress(CONTROLLER, SELECTOR.dusd),
+            callAddress(CONTROLLER, SELECTOR.universalRewardsDistributor)
+          ]);
+
+          const [authorized, mintAddresses, borrowAddresses, usmAddresses] = await Promise.all([
+            callBool(safe, SELECTOR.isOwner + encodeAddress(state.account)),
+            call(marketRegistry, SELECTOR.getMintMarkets).then(decodeAddressArray),
+            call(marketRegistry, SELECTOR.getBorrowMarkets).then(decodeAddressArray),
+            call(usmRegistry, SELECTOR.getUsmList).then(decodeAddressArray)
+          ]);
+
+          const symbolCache = new Map();
+          const [mintMarkets, borrowMarkets, usms, dusdPaused, rewardsPaused, canPauseDusd, canPauseRewards] = await Promise.all([
+            Promise.all(mintAddresses.map(address => loadMarket(address, "Mint market", symbolCache))),
+            Promise.all(borrowAddresses.map(address => loadMarket(address, "Borrow market", symbolCache))),
+            Promise.all(usmAddresses.map(address => loadUsm(address, symbolCache))),
+            callBool(dusd, SELECTOR.paused + strip0x(PAUSE_TYPE)),
+            callBool(rewardsDistributor, SELECTOR.paused + strip0x(PAUSE_TYPE)),
+            callBool(dusd, SELECTOR.pausers + encodeAddress(CONTROLLER) + strip0x(PAUSE_TYPE)),
+            callBool(rewardsDistributor, SELECTOR.pausers + encodeAddress(CONTROLLER) + strip0x(PAUSE_TYPE))
+          ]);
+
+          if (loadId !== state.loadId) return;
+          state.authorized = authorized;
+          setAddressLink(el("safeLink"), safe);
+          setAddressLink(el("marketRegistryLink"), marketRegistry);
+          setAddressLink(el("usmRegistryLink"), usmRegistry);
+          renderTargets(mintMarkets, borrowMarkets, usms, {
+            dusd,
+            dusdPaused,
+            canPauseDusd,
+            rewardsDistributor,
+            rewardsPaused,
+            canPauseRewards
+          });
+
+          const badge = el("authBadge");
+          badge.textContent = authorized ? "Authorized Safe owner" : "Read only: not a Safe owner";
+          badge.className = `badge ${authorized ? "ok" : "error"}`;
+          el("dashboard").classList.remove("hidden");
+          setStatus(
+            authorized ? "Live state loaded. Select emergency actions below." : "This account is not a current owner of the configured Pauser Safe.",
+            authorized ? "ok" : "error"
+          );
+          invalidateReview();
+        } catch (error) {
+          if (loadId !== state.loadId) return;
+          setStatus(errorMessage(error), "error");
+        }
+      }
+
+      function makeAction(label, kind, target, active, activeLabel, supported) {
+        if (active) {
+          const status = document.createElement("span");
+          status.className = "already";
+          status.textContent = activeLabel;
+          return status;
+        }
+        if (!supported) {
+          const status = document.createElement("span");
+          status.className = "unsupported";
+          status.textContent = `Controller cannot ${label.toLowerCase()}`;
+          return status;
+        }
+        const wrapper = document.createElement("label");
+        wrapper.className = "choice";
+        const input = document.createElement("input");
+        input.type = "checkbox";
+        input.className = "action";
+        input.dataset.kind = kind;
+        input.dataset.target = target || "";
+        input.dataset.label = label;
+        input.disabled = !state.authorized || state.executing;
+        wrapper.append(input, document.createTextNode(label));
+        return wrapper;
+      }
+
+      function makeTarget(name, address, actions) {
+        const row = document.createElement("div");
+        row.className = "target";
+        const identity = document.createElement("div");
+        const title = document.createElement("div");
+        title.className = "target-name";
+        title.textContent = name;
+        const link = document.createElement("a");
+        link.className = "address";
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        setAddressLink(link, address);
+        identity.append(title, link);
+        const choices = document.createElement("div");
+        choices.className = "actions";
+        actions.forEach(action => choices.append(action));
+        row.append(identity, choices);
+        return row;
+      }
+
+      function renderTargets(mintMarkets, borrowMarkets, usms, singletons) {
+        const renderMarkets = (container, markets) => {
+          container.replaceChildren();
+          for (const market of markets) {
+            const name = `${market.type}: ${market.name}`;
+            container.append(makeTarget(name, market.address, [
+              makeAction("Pause", "pauseMarket", market.address, market.paused, "Paused", market.canPause),
+              makeAction("Freeze", "freezeMarket", market.address, market.frozen, "Frozen", market.canFreeze)
+            ]));
+          }
+        };
+
+        renderMarkets(el("mintMarkets"), mintMarkets);
+        renderMarkets(el("borrowMarkets"), borrowMarkets);
+        el("mintCount").textContent = `${mintMarkets.length} registered`;
+        el("borrowCount").textContent = `${borrowMarkets.length} registered`;
+
+        el("usms").replaceChildren();
+        for (const usm of usms) {
+          el("usms").append(makeTarget(usm.name, usm.address, [
+            makeAction("Freeze swaps", "freezeUsm", usm.address, usm.frozen, "Swaps frozen", usm.canFreeze)
+          ]));
+        }
+        el("usmCount").textContent = `${usms.length} registered`;
+
+        el("singletons").replaceChildren(
+          makeTarget("DUSD minting and burning", singletons.dusd, [
+            makeAction("Pause", "pauseDusd", "", singletons.dusdPaused, "Paused", singletons.canPauseDusd)
+          ]),
+          makeTarget("Universal Rewards Distributor claims", singletons.rewardsDistributor, [
+            makeAction(
+              "Pause",
+              "pauseUniversalRewardsDistributor",
+              "",
+              singletons.rewardsPaused,
+              "Paused",
+              singletons.canPauseRewards
+            )
+          ])
+        );
+      }
+
+      function selectedActions() {
+        return [...document.querySelectorAll("input.action:checked:not(:disabled)")].map(input => {
+          const target = input.dataset.target;
+          const kind = input.dataset.kind;
+          const suffix = target ? ` (${shortAddress(target)})` : "";
+          const definitions = {
+            pauseMarket: { selector: SELECTOR.pauseMarket, description: `Pause market${suffix}` },
+            freezeMarket: { selector: SELECTOR.freezeMarket, description: `Freeze market${suffix}` },
+            freezeUsm: { selector: SELECTOR.freezeUsm, description: `Freeze USM swaps${suffix}` },
+            pauseDusd: { selector: SELECTOR.pauseDusd, description: "Pause DUSD minting and burning" },
+            pauseUniversalRewardsDistributor: {
+              selector: SELECTOR.pauseUniversalRewardsDistributor,
+              description: "Pause Universal Rewards Distributor claims"
+            }
+          };
+          const definition = definitions[kind];
+          return {
+            description: definition.description,
+            data: definition.selector + (target ? encodeAddress(target) : "")
+          };
+        });
+      }
+
+      function updateSelectionCount() {
+        const count = selectedActions().length;
+        el("selectionCount").textContent = count ? `${count} action${count === 1 ? "" : "s"} selected` : "No actions selected";
+        el("reviewButton").disabled = !count || !state.authorized || state.executing;
+      }
+
+      function invalidateReview() {
+        state.reviewActions = [];
+        el("reviewPanel").classList.add("hidden");
+        el("confirmation").checked = false;
+        el("executeButton").disabled = true;
+        updateSelectionCount();
+      }
+
+      function review() {
+        state.reviewActions = selectedActions();
+        const list = el("reviewList");
+        list.replaceChildren();
+        for (const action of state.reviewActions) {
+          const item = document.createElement("li");
+          item.textContent = action.description;
+          list.append(item);
+        }
+        el("confirmation").checked = false;
+        el("executeButton").disabled = true;
+        el("reviewPanel").classList.remove("hidden");
+        el("reviewPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+
+      function appendActivity(message, kind = "", hash = "") {
+        el("activityPanel").classList.remove("hidden");
+        const item = document.createElement("li");
+        item.className = kind;
+        item.append(document.createTextNode(message));
+        if (hash) {
+          const link = document.createElement("a");
+          link.href = txUrl(hash);
+          link.target = "_blank";
+          link.rel = "noopener noreferrer";
+          link.textContent = ` ${shortAddress(hash)}`;
+          item.append(link);
+        }
+        el("activityList").append(item);
+      }
+
+      async function waitForReceipt(hash) {
+        for (let attempt = 0; attempt < 180; attempt++) {
+          const receipt = await request("eth_getTransactionReceipt", [hash]);
+          if (receipt) return receipt;
+          await sleep(2000);
+        }
+        return null;
+      }
+
+      async function execute() {
+        if (!state.reviewActions.length || !el("confirmation").checked || state.executing) return;
+        state.executing = true;
+        el("activityList").replaceChildren();
+        el("executeButton").disabled = true;
+        el("reviewButton").disabled = true;
+        el("refreshButton").disabled = true;
+        renderProviders();
+
+        try {
+          await ensureMainnet();
+          const safe = await callAddress(CONTROLLER, SELECTOR.pauserSafe);
+          const stillAuthorized = await callBool(safe, SELECTOR.isOwner + encodeAddress(state.account));
+          if (!stillAuthorized) throw new Error("Connected account is no longer a Pauser Safe owner");
+
+          appendActivity("Validating all selected calls…", "pending");
+          for (const action of state.reviewActions) {
+            await request("eth_estimateGas", [{ from: state.account, to: CONTROLLER, data: action.data }]);
+          }
+
+          const submitted = [];
+          for (const action of state.reviewActions) {
+            appendActivity(`Requesting wallet approval: ${action.description}`, "pending");
+            const hash = await request("eth_sendTransaction", [{ from: state.account, to: CONTROLLER, data: action.data, value: "0x0" }]);
+            submitted.push({ ...action, hash });
+            appendActivity(`Submitted: ${action.description}`, "pending", hash);
+          }
+
+          const receipts = await Promise.all(submitted.map(async transaction => ({
+            ...transaction,
+            receipt: await waitForReceipt(transaction.hash)
+          })));
+          for (const transaction of receipts) {
+            if (!transaction.receipt) {
+              appendActivity(`Still pending: ${transaction.description}`, "pending", transaction.hash);
+            } else if (BigInt(transaction.receipt.status) === 1n) {
+              appendActivity(`Confirmed: ${transaction.description}`, "ok", transaction.hash);
+            } else {
+              appendActivity(`Reverted: ${transaction.description}`, "error", transaction.hash);
+            }
+          }
+        } catch (error) {
+          appendActivity(`Stopped: ${errorMessage(error)}`, "error");
+        } finally {
+          state.executing = false;
+          el("refreshButton").disabled = false;
+          renderProviders();
+          await loadDashboard();
+        }
+      }
+
+      setAddressLink(el("controllerLink"), CONTROLLER);
+      el("connectButton").addEventListener("click", connect);
+      el("refreshButton").addEventListener("click", loadDashboard);
+      el("reviewButton").addEventListener("click", review);
+      el("confirmation").addEventListener("change", () => {
+        el("executeButton").disabled = !el("confirmation").checked || state.executing;
+      });
+      el("executeButton").addEventListener("click", execute);
+      el("dashboard").addEventListener("change", event => {
+        if (event.target.classList.contains("action")) invalidateReview();
+      });
+
+      window.addEventListener("eip6963:announceProvider", event => registerProvider(event.detail));
+      window.dispatchEvent(new Event("eip6963:requestProvider"));
+      setTimeout(() => {
+        if (window.ethereum) registerProvider({ provider: window.ethereum, info: { name: "Browser wallet" } });
+        renderProviders();
+      }, 100);
+      renderProviders();
+    })();
+  </script>
+</body>
+</html>

@@ -4,8 +4,6 @@ pragma solidity ^0.8.22;
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {IMarketBase} from "@alto/lending/interfaces/IMarket.sol";
 import {IAltoVaultBase} from "@alto/lending/interfaces/IAltoVault.sol";
-import {FROZEN_TYPE} from "@alto/utils/Constants.sol";
-import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
 import {OwnerFixedRateIrmFactory} from "@alto/deployments/ethereum-mainnet/OwnerFixedRateIrmFactory.sol";
 
 uint256 constant T0_IRM_VERSION = 1;
@@ -39,7 +37,6 @@ struct MarketDeprecationPhase0Params {
 
 struct MarketDeprecationPhase0Report {
     address vaultCurator;
-    MarketDeprecationPhase0Batch freezerBatch;
     MarketDeprecationPhase0Batch vaultCapBatch;
     MarketDeprecationPhase0Batch timelockBatch;
 }
@@ -51,29 +48,8 @@ library MarketDeprecationPhase0 {
         returns (MarketDeprecationPhase0Report memory report)
     {
         report.vaultCurator = IAltoVaultBase(params.vault).curator();
-        report.freezerBatch = _buildFreezerBatch(params.borrowMarkets, params.mintMarkets);
         report.vaultCapBatch = _buildVaultCapBatch(params.vault, params.borrowMarkets);
         report.timelockBatch = _buildTimelockBatch(params);
-    }
-
-    function _buildFreezerBatch(MarketRate[] memory borrowMarkets, MarketRate[] memory mintMarkets)
-        private
-        pure
-        returns (MarketDeprecationPhase0Batch memory batch)
-    {
-        batch = _newBatch(borrowMarkets.length + mintMarkets.length);
-
-        uint256 callIndex;
-        for (uint256 i; i < borrowMarkets.length; ++i) {
-            batch.targets[callIndex] = borrowMarkets[i].market;
-            batch.payloads[callIndex] = abi.encodeCall(IPausable.pause, (FROZEN_TYPE, true));
-            ++callIndex;
-        }
-        for (uint256 i; i < mintMarkets.length; ++i) {
-            batch.targets[callIndex] = mintMarkets[i].market;
-            batch.payloads[callIndex] = abi.encodeCall(IPausable.pause, (FROZEN_TYPE, true));
-            ++callIndex;
-        }
     }
 
     function _buildVaultCapBatch(address vault, MarketRate[] memory borrowMarkets)

@@ -91,6 +91,11 @@ import {IRMType} from "@alto/lending/interfaces/IIrm.sol";
 import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
 import {AltoOwnable2Step} from "@alto/utils/AltoOwnable2Step.sol";
 import {OwnerFixedRateIrmFactory} from "@alto/deployments/ethereum-mainnet/OwnerFixedRateIrmFactory.sol";
+import {EmergencyController} from "@alto/utils/EmergencyController.sol";
+
+interface ISafeOwners {
+    function getOwners() external view returns (address[] memory);
+}
 
 /// @dev Set to a non-zero deployment timestamp to load a real deployment's addresses.json
 ///      and skip re-deploying prerequisites. The file must be at:
@@ -1859,7 +1864,7 @@ contract DeployMarketDeprecationPhase0Test is DeployAltoEthereumMainnetTestBase 
 
         _executeGeneratedBatch(_safeTxPath("schedule"), MAINNET_TIMELOCK_ADMIN);
         vm.warp(block.timestamp + TimelockController(payable(input.contracts.timelock)).getMinDelay() + 1);
-        _executeGeneratedBatch(_safeTxPath("freezer"), PRODUCTION_FREEZER);
+        _freezeMarketsThroughEmergencyController();
 
         DeployAltoEthereumMainnet.preflightMarketDeprecationPhase0(params, input);
         _executeGeneratedBatch(_safeTxPath("execute"), MAINNET_TIMELOCK_ADMIN);
@@ -1874,7 +1879,6 @@ contract DeployMarketDeprecationPhase0Test is DeployAltoEthereumMainnetTestBase 
 
         assertTrue(vm.exists(_safeTxPath("schedule")), "schedule JSON missing");
         assertTrue(vm.exists(_safeTxPath("execute")), "execute JSON missing");
-        assertTrue(vm.exists(_safeTxPath("freezer")), "freezer JSON missing");
     }
 
     function test_ownerFixedRateIrmFactoryUsesImmutableMarketVersions() public {
@@ -1915,16 +1919,6 @@ contract DeployMarketDeprecationPhase0Test is DeployAltoEthereumMainnetTestBase 
         _assertTransaction(scheduleJson, 0, input.contracts.timelock, TimelockController.scheduleBatch.selector);
         assertFalse(vm.keyExistsJson(scheduleJson, ".transactions[1]"), "unexpected schedule transaction");
 
-        string memory freezerJson = vm.readFile(_safeTxPath("freezer"));
-        address[] memory mintMarkets = _mintMarkets();
-        for (uint256 i; i < borrowMarkets.length; ++i) {
-            _assertTransaction(freezerJson, i, borrowMarkets[i], IPausable.pause.selector);
-        }
-        for (uint256 i; i < mintMarkets.length; ++i) {
-            _assertTransaction(freezerJson, borrowMarkets.length + i, mintMarkets[i], IPausable.pause.selector);
-        }
-        assertFalse(vm.keyExistsJson(freezerJson, ".transactions[10]"), "unexpected freezer transaction");
-
         string memory executeJson = vm.readFile(_safeTxPath("execute"));
         for (uint256 i; i < borrowMarkets.length; ++i) {
             string memory dataPath = string.concat(".transactions[", vm.toString(i), "].data");
@@ -1937,6 +1931,32 @@ contract DeployMarketDeprecationPhase0Test is DeployAltoEthereumMainnetTestBase 
         }
         _assertTransaction(executeJson, 5, input.contracts.timelock, TimelockController.executeBatch.selector);
         assertFalse(vm.keyExistsJson(executeJson, ".transactions[6]"), "unexpected execute transaction");
+    }
+
+    function _freezeMarketsThroughEmergencyController() internal {
+        address controllerAddress = input.contracts.emergencyController;
+        address[] memory borrowMarkets = _borrowMarkets();
+        address[] memory mintMarkets = _mintMarkets();
+
+        vm.startPrank(input.contracts.timelock);
+        for (uint256 i; i < borrowMarkets.length; ++i) {
+            Pausable(borrowMarkets[i]).setPauser(controllerAddress, FROZEN_TYPE, true);
+        }
+        for (uint256 i; i < mintMarkets.length; ++i) {
+            Pausable(mintMarkets[i]).setPauser(controllerAddress, FROZEN_TYPE, true);
+        }
+        vm.stopPrank();
+
+        EmergencyController controller = EmergencyController(controllerAddress);
+        address[] memory safeOwners = ISafeOwners(address(controller.pauserSafe())).getOwners();
+        vm.startPrank(safeOwners[0]);
+        for (uint256 i; i < borrowMarkets.length; ++i) {
+            controller.freezeMarket(borrowMarkets[i]);
+        }
+        for (uint256 i; i < mintMarkets.length; ++i) {
+            controller.freezeMarket(mintMarkets[i]);
+        }
+        vm.stopPrank();
     }
 
     function _assertTransaction(string memory json, uint256 index, address target, bytes4 selector) internal view {
