@@ -8,8 +8,9 @@ import {IPausable} from "@alto/utils/interfaces/IPausable.sol";
 enum MarketType {
     BORROW, // AltoBorrowMarket
     MINT, // AltoMintMarket
-    DAO_MINT // AltoDaoMintMarket
-    CREDIT_MINT // AltoCreditLine and other credit facilities without public liquidation
+    DAO_MINT, // AltoDaoMintMarket
+    // AltoCreditMarketBase
+    CREDIT_MINT
 }
 
 /// @notice Struct that represents the balance of a token
