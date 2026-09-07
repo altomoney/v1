@@ -1,188 +1,122 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {IMarketStaticTypes} from "@alto/lending/interfaces/IMarket.sol";
+import {IMarketStaticTypes} from "./IMarket.sol";
 
-/// @notice Parameters used to initialize a single-account credit mint market.
+/// @notice Struct that represents the parameters for initializing a credit market
 struct CreditMarketInitParams {
-    /// @dev Token minted when credit is drawn and burned when debt is repaid.
+    /// @notice The address of the borrow token.
     address borrowToken;
-
-    /// @dev Token deposited to support the credit account's borrowing capacity.
+    /// @notice The address of the collateral token.
     address collateralToken;
-
-    /// @dev Fixed-rate interest rate model used to accrue debt.
+    /// @notice The address of the fixed-rate IRM contract.
     address irm;
-
-    /// @dev Initial governance owner of the market.
+    /// @notice The address of the owner.
     address owner;
-
-    /// @dev Lending oracle that quotes collateral in borrow-token units using
-    /// 1e36 price convention.
+    /// @notice The address of the lending oracle.
     address oracle;
-
-    /// @dev Sole account permitted to own collateral and debt in the facility.
+    /// @notice The sole account permitted to own collateral and debt.
     address creditAccount;
-
-    /// @dev Account that receives minted opening fees and accrued interest when
-    ///fees are claimed.
+    /// @notice The address of the fee recipient.
     address feeRecipient;
-
-    /// @dev Maximum total debt assets permitted when a new draw is made.
+    /// @notice The maximum total debt assets permitted for new borrows.
     uint256 creditLimit;
-
-    /// @dev Maximum post-draw loan-to-value ratio, expressed with 1e18 precision.
+    /// @notice The maximum LTV for the market.
     uint256 maxLtv;
-
-    /// @dev Loan-to-value ratio above which governance may foreclose, expressed
-    /// with 1e18 precision.
+    /// @notice The LTV above which governance may foreclose.
     uint256 foreclosureLtv;
-
-    /// @dev Fee charged on each draw and added to debt, expressed with 1e18
-    /// precision.
+    /// @notice The initial borrow opening fee.
     uint256 initialBorrowOpeningFee;
 }
 
-/// @title Alto Credit Market
-///
-/// @author Alto
-///
-/// @notice Interface for a single-account, collateral-supported mint credit facility.
-interface IAltoCreditMarket is IMarketStaticTypes {
-    /// @notice A required address was the zero address.
-    error AltoCreditMarket__ZeroAddress();
+interface IAltoCreditMarketErrors {
+    /// @notice Error thrown when a required address is the zero address
+    error AltoCreditMarketZeroAddress();
 
-    /// @notice An argument or proposed configuration violated a market invariant.
-    error AltoCreditMarket__InvalidInput();
+    /// @notice Error thrown when the input is invalid
+    error AltoCreditMarketInvalidInput();
 
-    /// @notice The caller or account is not authorized for the requested
-    /// credit-market operation.
-    error AltoCreditMarket__UnauthorizedAccount();
+    /// @notice Error thrown when an account is unauthorized
+    error AltoCreditMarketUnauthorizedAccount();
 
-    /// @notice Callback or swap data was supplied to an operation that does not
-    /// support callbacks.
-    error AltoCreditMarket__CallbacksUnsupported();
+    /// @notice Error thrown when callback data is provided
+    error AltoCreditMarketCallbacksUnsupported();
 
-    /// @notice A proposed draw would leave debt above the oracle-supported
-    /// maximum LTV.
-    error AltoCreditMarket__BorrowingTooMuch();
+    /// @notice Error thrown when a borrow would exceed the maximum LTV
+    error AltoCreditMarketBorrowingTooMuch();
 
-    /// @notice A proposed draw would leave total debt assets above the
-    /// configured credit limit.
-    error AltoCreditMarket__CreditLimitExceeded();
+    /// @notice Error thrown when a borrow would exceed the credit limit
+    error AltoCreditMarketCreditLimitExceeded();
 
-    /// @notice The lending oracle returned a zero collateral price.
-    error AltoCreditMarket__InvalidOraclePrice();
+    /// @notice Error thrown when the oracle returns a zero price
+    error AltoCreditMarketInvalidOraclePrice();
 
-    /// @notice Governance attempted to foreclose before the foreclosure LTV was
-    /// breached.
-    error AltoCreditMarket__PositionNotForeclosable();
+    /// @notice Error thrown when a position is not eligible for foreclosure
+    error AltoCreditMarketPositionNotForeclosable();
 
-    /// @notice An operation from the standard market surface is intentionally
-    /// unsupported by this credit market.
-    error AltoCreditMarket__UnsupportedOperation();
+    /// @notice Error thrown when a standard market operation is unsupported
+    error AltoCreditMarketUnsupportedOperation();
 
-    /// @notice Public liquidation was attempted on a market that permits only
-    /// governance foreclosure.
-    error AltoCreditMarket__NonLiquidatable();
+    /// @notice Error thrown when public liquidation is attempted
+    error AltoCreditMarketNonLiquidatable();
 
-    /// @notice Collateral withdrawal was attempted while the credit account
-    /// still had borrow shares.
-    error AltoCreditMarket__OutstandingDebt();
+    /// @notice Error thrown when collateral withdrawal is attempted with outstanding debt
+    error AltoCreditMarketOutstandingDebt();
+}
 
-    /// @notice Emitted when governance changes the maximum debt capacity of the
-    /// facility.
-    ///
-    /// @param oldCreditLimit Previous credit limit.
-    /// @param newCreditLimit New credit limit.
+interface IAltoCreditMarketEvents {
+    /// @notice Emitted when the credit limit is set
+    /// @param oldCreditLimit The old credit limit
+    /// @param newCreditLimit The new credit limit
     event SetCreditLimit(uint256 oldCreditLimit, uint256 newCreditLimit);
 
-    /// @notice Emitted when governance changes the threshold for permissioned
-    /// full foreclosure.
-    ///
-    /// @param oldForeclosureLtv Previous foreclosure LTV.
-    /// @param newForeclosureLtv New foreclosure LTV.
+    /// @notice Emitted when the foreclosure LTV is set
+    /// @param oldForeclosureLtv The old foreclosure LTV
+    /// @param newForeclosureLtv The new foreclosure LTV
     event SetForeclosureLtv(uint256 oldForeclosureLtv, uint256 newForeclosureLtv);
 
-    /// @notice Emitted when governance changes the fee charged on new draws.
-    ///
-    /// @param oldBorrowOpeningFee Previous opening fee.
-    /// @param newBorrowOpeningFee New opening fee.
+    /// @notice Emitted when the borrow opening fee is set
+    /// @param oldBorrowOpeningFee The old borrow opening fee
+    /// @param newBorrowOpeningFee The new borrow opening fee
     event SetBorrowOpeningFee(uint256 oldBorrowOpeningFee, uint256 newBorrowOpeningFee);
 
-    /// @notice Emitted when claimable fees are minted to the configured fee
-    /// recipient.
-    ///
-    /// @param recipient    Account that received the newly minted borrow tokens.
-    /// @param amount       Amount minted.
+    /// @notice Emitted when interest and fees are claimed
+    /// @param recipient The account that received the borrow tokens
+    /// @param amount The amount of borrow tokens minted
     event InterestClaimed(address indexed recipient, uint256 amount);
+}
 
-    /// @notice Returns the sole account that may own the market's collateral
-    /// and borrow position.
-    ///
-    /// @return account Configured credit account.
-    function creditAccount() external view returns (address account);
+/// @title Alto Credit Market
+/// @author GPM
+/// @custom:contact security@altofoundation.org
+/// @notice Interface for a single-account mint credit market
+interface IAltoCreditMarket is IMarketStaticTypes, IAltoCreditMarketErrors, IAltoCreditMarketEvents {
+    /// @notice The sole account permitted to own the market's collateral and debt
+    function creditAccount() external view returns (address);
 
-    /// @notice Returns the maximum total debt permitted when making a new draw.
-    ///
-    /// @return limit Credit limit denominated in borrow-token asset units.
-    ///
-    /// @dev This is the same synthetic asset value exposed as
-    /// `totalSupply().assets`. Accrued interest may move existing debt above
-    /// the limit, but further draws will be blocked.
-    function creditLimit() external view returns (uint256 limit);
+    /// @notice The maximum total debt permitted for new borrows
+    function creditLimit() external view returns (uint256);
 
-    /// @notice Returns the LTV above which governance may fully foreclose the
-    /// credit position.
-    ///
-    /// @return ltv Foreclosure LTV expressed with 1e18 precision.
-    ///
-    /// @dev Foreclosure requires debt value to be strictly greater than
-    /// collateral value multiplied by this ratio.
-    function foreclosureLtv() external view returns (uint256 ltv);
+    /// @notice The LTV above which governance may foreclose
+    function foreclosureLtv() external view returns (uint256);
 
-    /// @notice Returns opening fees and accrued interest that may be minted to
-    /// the fee recipient.
-    ///
-    /// @return assets Claimable amount denominated in borrow-token asset units.
-    function claimableFeesAssets() external view returns (uint128 assets);
+    /// @notice The opening fees and accrued interest available to claim
+    function claimableFeesAssets() external view returns (uint128);
 
-    /// @notice Changes the maximum total debt permitted for new draws.
-    ///
-    /// @param newCreditLimit New limit denominated in borrow-token asset units.
-    ///
-    /// @dev Callable only by the owner. Interest is accrued first while the
-    /// market is unpaused. The new limit must be nonzero, fit in `uint128`, and
-    /// not be below current debt assets.
+    /// @notice Sets the maximum total debt permitted for new borrows
+    /// @param newCreditLimit The new credit limit
     function setCreditLimit(uint256 newCreditLimit) external;
 
-    /// @notice Changes the threshold for permissioned full foreclosure.
-    ///
-    /// @param newForeclosureLtv New foreclosure LTV expressed with 1e18 precision.
-    ///
-    /// @dev Callable only by the owner. The threshold must be greater than
-    /// `maxLtv()` and no greater than 1e18.
+    /// @notice Sets the LTV above which governance may foreclose
+    /// @param newForeclosureLtv The new foreclosure LTV
     function setForeclosureLtv(uint256 newForeclosureLtv) external;
 
-    /// @notice Changes the fee charged when the credit account draws debt.
-    ///
-    /// @param newBorrowOpeningFee New opening fee expressed with 1e18 precision.
-    ///
-    /// @dev Callable only by the owner. The fee may not exceed 1e18. The fee is
-    /// added to the borrower's debt and becomes claimable by the protocol; only
-    /// the requested draw assets are minted to the receiver.
+    /// @notice Sets the borrow opening fee
+    /// @param newBorrowOpeningFee The new borrow opening fee
     function setBorrowOpeningFee(uint256 newBorrowOpeningFee) external;
 
-    /// @notice Mints claimable fees to the configured fee recipient.
-    ///
-    /// @param interest Amount to claim in borrow-token asset units, or zero to
-    /// claim all available fees.
-    ///
-    /// @return claimed Amount minted to the fee recipient in borrow-token asset
-    /// units.
-    ///
-    /// @dev Callable by either the owner or the fee recipient while the market
-    /// is unpaused. Passing zero claims the entire available balance. Tokens
-    /// are always minted to `feeRecipient()`, not to the caller.
+    /// @notice Claims interest and fees for the fee recipient
+    /// @param interest The amount to claim, or zero to claim all
+    /// @return claimed The amount minted to the fee recipient
     function claimInterest(uint256 interest) external returns (uint256 claimed);
 }
