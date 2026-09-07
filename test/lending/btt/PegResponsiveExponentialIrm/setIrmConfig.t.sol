@@ -259,7 +259,7 @@ contract PegResponsiveExponentialIrmSetIrmConfigTest is PegResponsiveExponential
     function test_WhenMarketIsUnset_SkipsCheckpointAndStoresEveryField() external {
         PegResponsiveExponentialIrmConfig memory newConfig = irmConfig;
         newConfig.recoveryDelay += 1;
-        _mockOracleReturnData(hex"01");
+        oracle.setGetPriceReverts(true);
         IRState memory stateBefore = _readIRState();
 
         vm.recordLogs();
@@ -268,7 +268,7 @@ contract PegResponsiveExponentialIrmSetIrmConfigTest is PegResponsiveExponential
 
         _assertIrmConfig(newConfig);
         _assertIRState(stateBefore);
-        assertEq(logs.length, 1);
+        assertEq(logs.length, 3);
         _assertIrmEvent(logs[0], IPegResponsiveExponentialIrmEvents.SetIrmConfig.selector);
         assertEq(logs[0].data, abi.encode(newConfig));
     }
@@ -278,7 +278,7 @@ contract PegResponsiveExponentialIrmSetIrmConfigTest is PegResponsiveExponential
         newConfig.recoveryDelay += 1;
         _bindMarket();
         _pauseMarket();
-        _mockOracleReturnData(hex"01");
+        oracle.setGetPriceReverts(true);
         IRState memory stateBefore = _readIRState();
         vm.expectCall(address(market), _pausedCall(), 1);
 
@@ -336,7 +336,7 @@ contract PegResponsiveExponentialIrmSetIrmConfigTest is PegResponsiveExponential
         _assertIRState(stateBefore);
     }
 
-    function test_RevertWhen_CallbackRaisesRateAboveNewMax_UsesPostCheckpointOldConfigState() external {
+    function test_WhenCallbackRaisesRateAboveNewMax_AppliesNewCurve() external {
         PegResponsiveExponentialIrmConfig memory newConfig = irmConfig;
         newConfig.stressRate = irmConfig.baseRate;
         newConfig.maxRate = irmConfig.stressRate - 1;
@@ -346,13 +346,14 @@ contract PegResponsiveExponentialIrmSetIrmConfigTest is PegResponsiveExponential
         IRState memory stateBefore = _readIRState();
         assertLe(stateBefore.borrowRate, newConfig.maxRate);
         vm.expectCall(address(market), _accrueInterestCall(), 1);
-        vm.expectCall(address(oracle), _getPriceCall(), 1);
+        vm.expectCall(address(oracle), _getPriceCall(), 2);
 
-        vm.prank(OWNER);
-        vm.expectRevert(IPegResponsiveExponentialIrmErrors.PegResponsiveExponentialIrmInvalidRateConfig.selector);
-        irm.setIrmConfig(newConfig);
+        _setIrmConfigAsOwner(newConfig);
 
-        _assertIrmConfig(irmConfig);
+        stateBefore.borrowRate = newConfig.stressRate;
+        stateBefore.stressMode = true;
+        stateBefore.lastUpdate = uint48(block.timestamp);
+        _assertIrmConfig(newConfig);
         _assertIRState(stateBefore);
     }
 
@@ -373,23 +374,26 @@ contract PegResponsiveExponentialIrmSetIrmConfigTest is PegResponsiveExponential
         _setCurrentObservation(RECOVERY_PRICE);
         assertGt(seededState.borrowRate, newConfig.maxRate);
         vm.expectCall(address(market), _accrueInterestCall(), 1);
-        vm.expectCall(address(oracle), _getPriceCall(), 1);
+        vm.expectCall(address(oracle), _getPriceCall(), 2);
 
         vm.recordLogs();
         _setIrmConfigAsOwner(newConfig);
         Vm.Log[] memory logs = vm.getRecordedLogs();
 
         IRState memory expectedState = IRState({
-            borrowRate: irmConfig.baseRate,
-            lastUpdate: uint48(block.timestamp),
-            recoveryStartedAt: 0,
-            stressMode: false
+            borrowRate: irmConfig.baseRate, lastUpdate: uint48(block.timestamp), recoveryStartedAt: 0, stressMode: false
         });
         assertLt(expectedState.borrowRate, newConfig.maxRate);
         _assertIrmConfig(newConfig);
-        _assertIRState(expectedState);
+        IRState memory finalState = IRState({
+            borrowRate: newConfig.baseRate,
+            lastUpdate: expectedState.lastUpdate,
+            recoveryStartedAt: 0,
+            stressMode: false
+        });
+        _assertIRState(finalState);
         assertEq(market.irm(), address(irm));
-        assertEq(logs.length, 3);
+        assertEq(logs.length, 5);
         _assertIrmEvent(logs[0], IPegResponsiveExponentialIrmEvents.BorrowRateUpdated.selector);
         assertEq(
             logs[0].data,
@@ -399,24 +403,32 @@ contract PegResponsiveExponentialIrmSetIrmConfigTest is PegResponsiveExponential
         assertEq(logs[1].data, abi.encode(expectedState));
         _assertIrmEvent(logs[2], IPegResponsiveExponentialIrmEvents.SetIrmConfig.selector);
         assertEq(logs[2].data, abi.encode(newConfig));
+        _assertIrmEvent(logs[3], IPegResponsiveExponentialIrmEvents.BorrowRateUpdated.selector);
+        assertEq(
+            logs[3].data,
+            abi.encode(expectedState.borrowRate, newConfig.baseRate, RECOVERY_PRICE, uint48(block.timestamp), true)
+        );
+        _assertIrmEvent(logs[4], IPegResponsiveExponentialIrmEvents.IRStateUpdated.selector);
+        assertEq(logs[4].data, abi.encode(finalState));
     }
 
-    function test_RevertWhen_PostCheckpointRateExceedsNewMax() external {
+    function test_WhenOracleIsInvalid_ClampsHeldRateToNewMax() external {
         PegResponsiveExponentialIrmConfig memory newConfig = irmConfig;
         newConfig.maxRate = irmConfig.stressRate + 1;
         IRState memory seededState = _readIRState();
         seededState.borrowRate = newConfig.maxRate + 1;
         _setIRState(seededState);
 
-        vm.prank(OWNER);
-        vm.expectRevert(IPegResponsiveExponentialIrmErrors.PegResponsiveExponentialIrmInvalidRateConfig.selector);
-        irm.setIrmConfig(newConfig);
+        oracle.setGetPriceReverts(true);
+        _setIrmConfigAsOwner(newConfig);
 
-        _assertIrmConfig(irmConfig);
+        seededState.borrowRate = newConfig.maxRate;
+        _assertIrmConfig(newConfig);
         _assertIRState(seededState);
     }
 
     function test_When_PostCheckpointRateEqualsNewMax_AcceptsBoundary() external {
+        oracle.setGetPriceReverts(true);
         PegResponsiveExponentialIrmConfig memory newConfig = irmConfig;
         newConfig.maxRate = irmConfig.stressRate + 1;
         IRState memory seededState = _readIRState();
@@ -439,14 +451,14 @@ contract PegResponsiveExponentialIrmSetIrmConfigTest is PegResponsiveExponential
 
         assertEq(market.irm(), address(irm));
         _assertIrmConfig(irmConfig);
-        assertEq(logs.length, 3);
+        assertEq(logs.length, 5);
         _assertIrmEvent(logs[0], IPegResponsiveExponentialIrmEvents.BorrowRateUpdated.selector);
         _assertIrmEvent(logs[1], IPegResponsiveExponentialIrmEvents.IRStateUpdated.selector);
         _assertIrmEvent(logs[2], IPegResponsiveExponentialIrmEvents.SetIrmConfig.selector);
         assertEq(logs[2].data, abi.encode(irmConfig));
     }
 
-    function test_AcceptsStoredRateBelowNewBaseAndStressWithoutImmediateRepricing() external {
+    function test_RaisesStoredRateToNewBaseImmediately() external {
         PegResponsiveExponentialIrmConfig memory newConfig = irmConfig;
         IRState memory seededState = _readIRState();
         seededState.borrowRate = 1;
@@ -456,25 +468,28 @@ contract PegResponsiveExponentialIrmSetIrmConfigTest is PegResponsiveExponential
 
         assertLt(seededState.borrowRate, newConfig.baseRate);
         assertLt(seededState.borrowRate, newConfig.stressRate);
+        seededState.borrowRate = newConfig.baseRate;
         _assertIrmConfig(newConfig);
         _assertIRState(seededState);
     }
 
-    function test_DoesNotReadOracleOrReevaluateStressAgainstNewThresholds() external {
+    function test_ReevaluatesStressAgainstNewThresholds() external {
         PegResponsiveExponentialIrmConfig memory newConfig = irmConfig;
         newConfig.stressPrice = RECOVERY_PRICE - 1;
         IRState memory seededState = _readIRState();
         seededState.stressMode = false;
         _setIRState(seededState);
-        _mockOracleReturnData(hex"01");
+        _setCurrentObservation(STRESS_PRICE);
 
         _setIrmConfigAsOwner(newConfig);
 
+        seededState.stressMode = true;
+        seededState.borrowRate = irm.targetBorrowRate(STRESS_PRICE);
         _assertIrmConfig(newConfig);
         _assertIRState(seededState);
     }
 
-    function test_WhenRecoveryIsActive_ClearsOnlyRecoveryAndEmitsExactOrder() external {
+    function test_WhenRecoveryIsActive_RestartsConfirmationAndEmitsExactOrder() external {
         PegResponsiveExponentialIrmConfig memory newConfig = irmConfig;
         newConfig.recoveryDelay += 1;
         IRState memory seededState =
@@ -486,16 +501,61 @@ contract PegResponsiveExponentialIrmSetIrmConfigTest is PegResponsiveExponential
         Vm.Log[] memory logs = vm.getRecordedLogs();
 
         IRState memory expectedState = seededState;
-        expectedState.recoveryStartedAt = 0;
+        expectedState.recoveryStartedAt = uint48(block.timestamp);
         _assertIrmConfig(newConfig);
         _assertIRState(expectedState);
-        assertEq(logs.length, 3);
-        _assertIrmEvent(logs[0], IPegResponsiveExponentialIrmEvents.StressStateUpdated.selector);
-        assertEq(logs[0].data, abi.encode(true, uint48(0), uint256(0)));
-        _assertIrmEvent(logs[1], IPegResponsiveExponentialIrmEvents.IRStateUpdated.selector);
-        assertEq(logs[1].data, abi.encode(expectedState));
-        _assertIrmEvent(logs[2], IPegResponsiveExponentialIrmEvents.SetIrmConfig.selector);
-        assertEq(logs[2].data, abi.encode(newConfig));
+        assertEq(logs.length, 5);
+        _assertIrmEvent(logs[0], IPegResponsiveExponentialIrmEvents.SetIrmConfig.selector);
+        assertEq(logs[0].data, abi.encode(newConfig));
+        _assertIrmEvent(logs[1], IPegResponsiveExponentialIrmEvents.StressStateUpdated.selector);
+        assertEq(logs[1].data, abi.encode(true, uint48(0), uint256(0)));
+        _assertIrmEvent(logs[2], IPegResponsiveExponentialIrmEvents.StressStateUpdated.selector);
+        assertEq(logs[2].data, abi.encode(true, uint48(block.timestamp), RECOVERY_PRICE));
+        _assertIrmEvent(logs[3], IPegResponsiveExponentialIrmEvents.BorrowRateUpdated.selector);
+        _assertIrmEvent(logs[4], IPegResponsiveExponentialIrmEvents.IRStateUpdated.selector);
+        assertEq(logs[4].data, abi.encode(expectedState));
+    }
+
+    function testFuzz_InvalidObservationKeepsRateWithinNewBounds(
+        uint256 heldRate,
+        uint256 baseRate,
+        uint256 stressRate,
+        uint256 maxRate,
+        bool stressed,
+        uint8 marketState,
+        uint8 failure
+    ) external {
+        marketState = uint8(bound(marketState, 0, 2));
+        if (marketState != 0) _bindMarket();
+        if (marketState == 2) _pauseMarket();
+        heldRate = bound(heldRate, stressed ? irmConfig.stressRate : irmConfig.baseRate, irmConfig.maxRate);
+        _setIRState(heldRate, uint48(block.timestamp), stressed ? uint48(block.timestamp - 1) : 0, stressed);
+        IRState memory expected = _readIRState();
+        vm.warp(block.timestamp + 100);
+
+        PegResponsiveExponentialIrmConfig memory newConfig = irmConfig;
+        newConfig.maxRate = bound(maxRate, 2, MAX_RATE);
+        newConfig.stressRate = bound(stressRate, 1, newConfig.maxRate - 1);
+        newConfig.baseRate = bound(baseRate, 1, newConfig.stressRate);
+        failure = uint8(bound(failure, 0, 4));
+        if (failure == 0) oracle.setGetPriceReverts(true);
+        if (failure == 1) _setObservation(RECOVERY_PRICE, uint48(block.timestamp), false);
+        if (failure == 2) _setObservation(RECOVERY_PRICE, uint48(block.timestamp - irmConfig.maxOracleAge - 1), true);
+        if (failure == 3) _setObservation(RECOVERY_PRICE, uint48(block.timestamp + 1), true);
+        if (failure == 4) _setObservation(0, uint48(block.timestamp), true);
+
+        _setIrmConfigAsOwner(newConfig);
+
+        uint256 floor = stressed ? newConfig.stressRate : newConfig.baseRate;
+        expected.borrowRate = heldRate;
+        if (heldRate < floor) expected.borrowRate = floor;
+        if (heldRate > newConfig.maxRate) expected.borrowRate = newConfig.maxRate;
+        expected.recoveryStartedAt = 0;
+        if (marketState == 1) expected.lastUpdate = uint48(block.timestamp);
+        _assertIRState(expected);
+        _assertIrmConfig(newConfig);
+        (,,, uint256 previewRate) = irm.previewBorrowRate();
+        assertEq(previewRate, expected.borrowRate);
     }
 
     function _expectConfigRevert(PegResponsiveExponentialIrmConfig memory invalidConfig, bytes4 selector) private {
@@ -516,6 +576,7 @@ contract PegResponsiveExponentialIrmSetIrmConfigTest is PegResponsiveExponential
         IRState memory stateBefore = _readIRState();
         _setIrmConfigAsOwner(newConfig);
         _assertIrmConfig(newConfig);
+        stateBefore.borrowRate = irm.targetBorrowRate(RECOVERY_PRICE);
         _assertIRState(stateBefore);
     }
 

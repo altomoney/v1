@@ -63,7 +63,7 @@ contract PegResponsiveExponentialIrmSetPegOracleTest is PegResponsiveExponential
         _assertIRState(stateBefore);
     }
 
-    function test_WhenMarketIsUnset_SkipsCheckpointAndEmitsOnlySetterEvent() external {
+    function test_WhenMarketIsUnset_SkipsCheckpointAndRefreshesRate() external {
         MockDusdPegOracle newOracle = new MockDusdPegOracle();
         _mockOracleReturnData(hex"01");
         IRState memory stateBefore = _readIRState();
@@ -74,7 +74,7 @@ contract PegResponsiveExponentialIrmSetPegOracleTest is PegResponsiveExponential
 
         assertEq(address(irm.pegOracle()), address(newOracle));
         _assertIRState(stateBefore);
-        assertEq(logs.length, 1);
+        assertEq(logs.length, 3);
         _assertSetPegOracleEvent(logs[0], address(oracle), address(newOracle));
     }
 
@@ -177,7 +177,7 @@ contract PegResponsiveExponentialIrmSetPegOracleTest is PegResponsiveExponential
         assertEq(market.claimableFeesAssets(), 0);
         _assertIRState(finalState);
 
-        assertEq(logs.length, 5);
+        assertEq(logs.length, 6);
         _assertIrmEvent(logs[0], IPegResponsiveExponentialIrmEvents.BorrowRateUpdated.selector);
         assertEq(
             logs[0].data,
@@ -190,8 +190,10 @@ contract PegResponsiveExponentialIrmSetPegOracleTest is PegResponsiveExponential
         _assertSetPegOracleEvent(logs[2], address(oracle), address(newOracle));
         _assertIrmEvent(logs[3], IPegResponsiveExponentialIrmEvents.StressStateUpdated.selector);
         assertEq(logs[3].data, abi.encode(true, uint48(0), uint256(0)));
-        _assertIrmEvent(logs[4], IPegResponsiveExponentialIrmEvents.IRStateUpdated.selector);
-        assertEq(logs[4].data, abi.encode(finalState));
+        _assertIrmEvent(logs[4], IPegResponsiveExponentialIrmEvents.BorrowRateUpdated.selector);
+        assertEq(logs[4].data, abi.encode(checkpointState.borrowRate, finalState.borrowRate, 0, uint48(0), false));
+        _assertIrmEvent(logs[5], IPegResponsiveExponentialIrmEvents.IRStateUpdated.selector);
+        assertEq(logs[5].data, abi.encode(finalState));
     }
 
     function test_WhenNewOracleEqualsCurrent_StillCheckpointsAndEmitsSameAddress() external {
@@ -204,22 +206,21 @@ contract PegResponsiveExponentialIrmSetPegOracleTest is PegResponsiveExponential
 
         assertEq(address(irm.pegOracle()), address(oracle));
         assertEq(market.irm(), address(irm));
-        assertEq(logs.length, 3);
+        assertEq(logs.length, 5);
         _assertIrmEvent(logs[0], IPegResponsiveExponentialIrmEvents.BorrowRateUpdated.selector);
         _assertIrmEvent(logs[1], IPegResponsiveExponentialIrmEvents.IRStateUpdated.selector);
         _assertSetPegOracleEvent(logs[2], address(oracle), address(oracle));
     }
 
-    function test_AcceptsOracleWithoutCodeAndDoesNotSampleIt() external {
+    function test_RevertWhen_ReplacementHasNoCode_RollsBack() external {
         address noCodeOracle = address(0xBEEF);
         assertEq(noCodeOracle.code.length, 0);
         _mockOracleReturnData(hex"01");
 
+        vm.expectRevert();
         _setPegOracleAsOwner(noCodeOracle);
 
-        assertEq(address(irm.pegOracle()), noCodeOracle);
-        vm.expectRevert();
-        irm.previewBorrowRate();
+        assertEq(address(irm.pegOracle()), address(oracle));
     }
 
     function test_WhenRecoveryIsActive_ClearsOnlyRecoveryInExactEventOrder() external {
@@ -235,12 +236,13 @@ contract PegResponsiveExponentialIrmSetPegOracleTest is PegResponsiveExponential
         IRState memory expectedState = seededState;
         expectedState.recoveryStartedAt = 0;
         _assertIRState(expectedState);
-        assertEq(logs.length, 3);
+        assertEq(logs.length, 4);
         _assertSetPegOracleEvent(logs[0], address(oracle), address(newOracle));
         _assertIrmEvent(logs[1], IPegResponsiveExponentialIrmEvents.StressStateUpdated.selector);
         assertEq(logs[1].data, abi.encode(true, uint48(0), uint256(0)));
-        _assertIrmEvent(logs[2], IPegResponsiveExponentialIrmEvents.IRStateUpdated.selector);
-        assertEq(logs[2].data, abi.encode(expectedState));
+        _assertIrmEvent(logs[2], IPegResponsiveExponentialIrmEvents.BorrowRateUpdated.selector);
+        _assertIrmEvent(logs[3], IPegResponsiveExponentialIrmEvents.IRStateUpdated.selector);
+        assertEq(logs[3].data, abi.encode(expectedState));
     }
 
     function _setPegOracleAsOwner(address newOracle) private {
