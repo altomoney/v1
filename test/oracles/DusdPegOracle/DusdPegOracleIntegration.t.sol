@@ -477,6 +477,7 @@ contract DusdPegOracleIntegrationTest is DusdPegCurveOracleCommon {
                 collateralToken: address(collateralToken),
                 irm: address(irm),
                 owner: OWNER,
+                emergencyAdmin: OWNER,
                 oracle: address(lendingOracle),
                 maxLtv: MARKET_MAX_LTV,
                 feeRecipient: OWNER,
