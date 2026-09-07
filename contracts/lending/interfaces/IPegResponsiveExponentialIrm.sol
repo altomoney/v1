@@ -22,9 +22,12 @@ struct PegResponsiveExponentialIrmConfig {
     /// The stressed curve is `stressRate * 2 ** (depeg / doublingDistance)`.
     /// For example, 0.0025e18 maps 7.5% at $0.995 to 30% at $0.990.
     uint256 doublingDistance;
-    /// @dev Time price must remain at or above `recoveryPrice` before stress mode exits.
+    /// @dev Minimum block-time delay between qualifying recovery observations.
+    /// This confirms sampled recovery, not a continuously healthy price.
     uint48 recoveryDelay;
     /// @dev Maximum permitted age of an oracle observation.
+    /// Configure below recoveryDelay to prevent reuse of one observation for recovery.
+    /// This relationship is not enforced on-chain.
     uint48 maxOracleAge;
 }
 
@@ -64,7 +67,7 @@ interface IPegResponsiveExponentialIrmEvents {
     /// @notice Emitted when stress-mode or recovery-confirmation state changes.
     event StressStateUpdated(bool stressMode, uint48 recoveryStartedAt, uint256 priceWad);
 
-    /// @notice Emitted after an interest checkpoint evaluates the peg controller.
+    /// @notice Emitted after a checkpoint or owner input change refreshes the rate.
     event BorrowRateUpdated(uint256 prev, uint256 curr, uint256 priceWad, uint48 observedAt, bool oracleValid);
 
     /// @notice Emitted when the interest rate state has been updated.
@@ -97,20 +100,23 @@ interface IPegResponsiveExponentialIrmBase is
     /// @notice Returns the market bound to this interest-rate model.
     function market() external view returns (address);
 
-    /// @notice Changes the oracle after checkpointing the old configuration.
+    /// @notice Checkpoints the old inputs, replaces the oracle, and refreshes the rate.
     /// @param newPegOracle The address of the new peg oracle.
     /// @dev Requirements:
     /// - Only callable by the contract owner.
     /// - New oracle address cannot be the zero address.
+    /// @dev Restarts recovery confirmation. Paused and unbound markets skip accrual
+    /// but still refresh the rate without changing the accrual timestamp.
     function setPegOracle(address newPegOracle) external;
 
     /// @notice Changes the price curve and controller configuration.
     /// @param newConfig The new IRM configuration to apply.
-    /// @dev Recovery confirmation is restarted under the new configuration.
+    /// @dev Checkpoints the old inputs before applying the new configuration and rate.
+    /// Recovery confirmation restarts. An invalid observation holds the rate within
+    /// the new applicable floor and cap. Paused and unbound markets skip accrual.
     /// @dev Requirements:
     /// - Only callable by the contract owner.
     /// - Configuration is validated according to `_validateConfig`.
-    /// - The new max rate must be greater than, or equal to, the current borrow rate.
     function setIrmConfig(PegResponsiveExponentialIrmConfig calldata newConfig) external;
 
     /// @notice Previews the oracle observation and rate that would be stored by a checkpoint.
@@ -155,7 +161,7 @@ interface IPegResponsiveExponentialIrmStaticTypes is IPegResponsiveExponentialIr
     /// @return stressRate SPY rate returned at the stress price and stress-mode rate floor.
     /// @return maxRate Extreme safety ceiling for the SPY rate.
     /// @return doublingDistance Price decline below the stress price that doubles the stress rate.
-    /// @return recoveryDelay Time price must remain at or above the recovery price before stress mode exits.
+    /// @return recoveryDelay Minimum block-time delay between qualifying recovery observations.
     /// @return maxOracleAge Maximum permitted age of an oracle observation.
     function irmConfig()
         external

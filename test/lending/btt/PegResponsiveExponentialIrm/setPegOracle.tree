@@ -1,53 +1,27 @@
 PegResponsiveExponentialIrm::setPegOracle(address)
 ├── given caller is not the current owner
-│   ├── when caller is a non-owner or the pending owner has not accepted ownership
-│   │   └── it should revert with OwnableUnauthorizedAccount(caller)
-│   ├── it should prioritize authorization over zero-oracle validation and checkpointing
-│   ├── it should leave oracle and the complete IRState unchanged
-│   └── it should not call the market or emit events
+│   └── it should reject before validation or checkpointing, including pending owners
 └── given caller is the current owner
-    ├── when newOracle is the zero address
-    │   ├── it should revert with PegResponsiveExponentialIrmInvalidOracle
-    │   ├── it should reject before checkpointing the market
-    │   ├── it should leave oracle and the complete IRState unchanged
-    │   └── it should not emit events
-    └── when newOracle is non-zero
-        ├── given market is not set
-        │   ├── it should skip the market paused query
-        │   └── it should skip market accrual
-        ├── given market is set
-        │   ├── it should query paused with the exact PAUSE_TYPE
-        │   ├── when the paused query reverts or its return data cannot be decoded
-        │   │   ├── it should bubble the failure
-        │   │   ├── it should leave oracle and IRState unchanged
-        │   │   └── it should not emit setter events
-        │   ├── when paused returns true
-        │   │   └── it should skip accrueInterest
-        │   └── when paused returns false
-        │       ├── when accrueInterest reverts
-        │       │   ├── it should bubble the market revert
-        │       │   ├── it should atomically roll back market and IRM effects
-        │       │   └── it should not emit setter events
-        │       └── when accrueInterest succeeds
-        │           ├── it should call market.accrueInterest exactly once
-        │           ├── if the market calls back into this IRM, that callback should observe the old oracle
-        │           └── it should retain callback-driven IRState changes except for a later recovery reset
-        ├── when newOracle equals the current non-zero oracle
-        │   ├── it should still perform the applicable checkpoint
-        │   ├── it should accept the no-op address replacement
-        │   └── it should emit SetPegOracle(currentOracle, currentOracle)
-        ├── when newOracle has no code or no declared getPrice implementation
-        │   ├── it should accept and store the address without sampling it
-        │   └── later reads should depend on whether the target reverts or returns valid, empty, or malformed ABI data
-        ├── given the post-checkpoint recoveryStartedAt is zero
-        │   ├── it should emit exactly SetPegOracle(oldOracle, newOracle) among setter events
-        │   ├── it should store newOracle
-        │   ├── it should not emit an additional StressStateUpdated or IRStateUpdated for recovery reset
-        │   └── it should preserve the complete post-checkpoint IRState
-        └── given the post-checkpoint recoveryStartedAt is non-zero
-            ├── it should emit SetPegOracle(oldOracle, newOracle)
-            ├── it should store newOracle
-            ├── it should clear recoveryStartedAt
-            ├── it should preserve post-checkpoint borrowRate, lastUpdate and stressMode
-            ├── it should then emit StressStateUpdated(stressMode, 0, 0)
-            └── it should then emit IRStateUpdated with the resulting state
+    ├── when newOracle is zero
+    │   └── it should reject before checkpointing
+    └── when newOracle is nonzero
+        ├── given market is unbound
+        │   └── it should skip market queries and accrual
+        ├── given market is paused
+        │   └── it should query the exact PAUSE_TYPE and skip accrual
+        ├── given market is active
+        │   ├── it should accrue exactly once using the old oracle
+        │   └── it should roll back all effects if the pause query or market accounting fails
+        ├── it should emit SetPegOracle and install the new source
+        ├── it should reset prior recovery confirmation and sample the new source
+        ├── when the new observation is valid
+        │   ├── it should immediately apply its effective rate
+        │   └── it should preserve hysteresis and restart qualifying recovery
+        ├── when the new observation is invalid or reverts
+        │   └── it should hold the bounded rate and stress mode with recovery cleared
+        ├── when the new address has no code
+        │   └── the typed read should revert and roll back replacement
+        ├── when the new source equals the current source
+        │   └── it should still checkpoint, emit replacement, and refresh
+        ├── it should preserve the accrual timestamp when paused or unbound
+        └── it should emit BorrowRateUpdated and IRStateUpdated after the setter and stress events

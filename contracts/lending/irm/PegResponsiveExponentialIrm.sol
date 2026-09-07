@@ -34,12 +34,14 @@ import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 /// @dev Stress-mode hysteresis is applied separately from the raw curve. Stress
 /// begins at or below `stressPrice` and keeps the effective rate at or above
 /// `stressRate` until qualifying recovery checkpoints are separated by at least
-/// `recoveryDelay`. This is sampled confirmation; the contract does not prove
+/// `recoveryDelay`. This is sampled confirmation. The contract does not prove
 /// continuous recovery between checkpoints.
 /// @dev An unusable oracle observation holds the stored rate and stress-mode
 /// status, but interrupts recovery confirmation. Observation freshness is
 /// checked only when the controller is called and does not guarantee checkpoint
 /// liveness.
+/// @dev Owner input changes checkpoint the old inputs and refresh the rate
+/// immediately. Invalid observations hold the rate within the new floor and cap.
 /// @dev Prices, price distances, and rates use 1e18 fixed-point precision.
 /// Rates are expressed as second percent yield (SPY). Delay and observation-age
 /// parameters are expressed in seconds.
@@ -250,6 +252,8 @@ contract PegResponsiveExponentialIrm is AltoOwnable2Step, IPegResponsiveExponent
         return (interest, borrowRate);
     }
 
+    /// @dev Refreshes the prospective rate within the current bounds without
+    /// advancing the accrual timestamp. Setters also use this while paused or unbound.
     function _refreshBorrowRate() private {
         uint256 borrowRate = irState.borrowRate;
         (uint256 priceWad, uint48 observedAt, bool oracleValid) = _readPegPrice();
