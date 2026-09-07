@@ -245,6 +245,52 @@ contract PegResponsiveExponentialIrmSetPegOracleTest is PegResponsiveExponential
         assertEq(logs[3].data, abi.encode(expectedState));
     }
 
+    function test_WhenReplacementIsHealthyDuringStress_RestartsFullRecoveryDelay() external {
+        _bindMarket();
+        _setCurrentObservation(STRESS_PRICE);
+        market.accrueInterest();
+        _setCurrentObservation(RECOVERY_PRICE);
+        market.accrueInterest();
+        uint48 oldRecoveryStartedAt = uint48(block.timestamp);
+        assertEq(_readIRState().recoveryStartedAt, oldRecoveryStartedAt);
+
+        vm.warp(block.timestamp + RECOVERY_DELAY / 2);
+        _setCurrentObservation(RECOVERY_PRICE);
+        MockDusdPegOracle newOracle = new MockDusdPegOracle();
+        uint48 replacementTime = uint48(block.timestamp);
+        newOracle.setPrice(RECOVERY_PRICE, replacementTime, true);
+        vm.expectCall(address(oracle), _getPriceCall(), 1);
+
+        _setPegOracleAsOwner(address(newOracle));
+
+        assertEq(irm.pegOracle(), address(newOracle));
+        IRState memory expected = IRState({
+            borrowRate: STRESS_RATE, lastUpdate: replacementTime, recoveryStartedAt: replacementTime, stressMode: true
+        });
+        _assertIRState(expected);
+
+        vm.warp(uint256(oldRecoveryStartedAt) + RECOVERY_DELAY);
+        newOracle.setPrice(RECOVERY_PRICE, uint48(block.timestamp), true);
+        market.accrueInterest();
+        expected.lastUpdate = uint48(block.timestamp);
+        _assertIRState(expected);
+
+        vm.warp(uint256(replacementTime) + RECOVERY_DELAY - 1);
+        newOracle.setPrice(RECOVERY_PRICE, uint48(block.timestamp), true);
+        market.accrueInterest();
+        expected.lastUpdate = uint48(block.timestamp);
+        _assertIRState(expected);
+
+        vm.warp(uint256(replacementTime) + RECOVERY_DELAY);
+        newOracle.setPrice(RECOVERY_PRICE, uint48(block.timestamp), true);
+        market.accrueInterest();
+        expected.borrowRate = BASE_RATE;
+        expected.lastUpdate = uint48(block.timestamp);
+        expected.recoveryStartedAt = 0;
+        expected.stressMode = false;
+        _assertIRState(expected);
+    }
+
     function _setPegOracleAsOwner(address newOracle) private {
         vm.prank(OWNER);
         irm.setPegOracle(newOracle);
