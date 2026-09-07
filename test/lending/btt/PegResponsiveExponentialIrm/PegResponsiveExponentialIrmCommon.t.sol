@@ -220,6 +220,7 @@ abstract contract PegResponsiveExponentialIrmCommon is Test {
                 collateralToken: address(collateralToken),
                 irm: address(0),
                 owner: OWNER,
+                emergencyAdmin: OWNER,
                 oracle: address(lendingOracle),
                 maxLtv: MARKET_MAX_LTV,
                 feeRecipient: OWNER,
