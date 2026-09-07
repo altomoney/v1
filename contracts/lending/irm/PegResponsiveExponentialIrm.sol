@@ -157,18 +157,18 @@ contract PegResponsiveExponentialIrm is AltoOwnable2Step, IPegResponsiveExponent
 
         emit SetPegOracle(pegOracle, newPegOracle);
         pegOracle = newPegOracle;
-        if (_resetRecoveryConfirmation()) emit IRStateUpdated(irState);
+        _resetRecoveryConfirmation();
+        _refreshBorrowRate();
     }
 
     /// @inheritdoc IPegResponsiveExponentialIrmBase
     function setIrmConfig(PegResponsiveExponentialIrmConfig calldata newConfig) external onlyOwner {
         _validateConfig(newConfig);
         _checkpointMarket();
-        if (irState.borrowRate > newConfig.maxRate) revert PegResponsiveExponentialIrmInvalidRateConfig();
-
         irmConfig = newConfig;
-        if (_resetRecoveryConfirmation()) emit IRStateUpdated(irState);
         emit SetIrmConfig(newConfig);
+        _resetRecoveryConfirmation();
+        _refreshBorrowRate();
     }
 
     /// @inheritdoc IPegResponsiveExponentialIrmBase
@@ -244,18 +244,25 @@ contract PegResponsiveExponentialIrm is AltoOwnable2Step, IPegResponsiveExponent
     /// @return borrowRate  The previously stored borrow rate used for the elapsed interval.
     function _updateInterestRate(uint256 totalBorrowed) private returns (uint256 interest, uint256 borrowRate) {
         (interest, borrowRate) = _accrueInterest(totalBorrowed);
+        irState.lastUpdate = block.timestamp.toUint48();
+        _refreshBorrowRate();
 
+        return (interest, borrowRate);
+    }
+
+    function _refreshBorrowRate() private {
+        uint256 borrowRate = irState.borrowRate;
         (uint256 priceWad, uint48 observedAt, bool oracleValid) = _readPegPrice();
         bool nextStressMode = _applyStressState(priceWad, oracleValid);
-        uint256 newRate = oracleValid ? _effectiveTargetRate(priceWad, nextStressMode) : borrowRate;
+        uint256 floor = nextStressMode ? irmConfig.stressRate : irmConfig.baseRate;
+        uint256 newRate = oracleValid
+            ? _effectiveTargetRate(priceWad, nextStressMode)
+            : Math.min(Math.max(borrowRate, floor), irmConfig.maxRate);
 
         irState.borrowRate = newRate;
-        irState.lastUpdate = block.timestamp.toUint48();
 
         emit BorrowRateUpdated(borrowRate, newRate, priceWad, observedAt, oracleValid);
         emit IRStateUpdated(irState);
-
-        return (interest, borrowRate);
     }
 
     /// @dev Returns the controller state implied by the latest observation.

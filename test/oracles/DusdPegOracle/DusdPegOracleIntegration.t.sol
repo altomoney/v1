@@ -212,21 +212,19 @@ contract DusdPegOracleIntegrationTest is DusdPegCurveOracleCommon {
         _assertHeldRate();
     }
 
-    /// @dev Replacement checkpoints the old oracle, affects previews immediately, and changes the stored rate only
-    /// at the next market checkpoint.
-    function test_NewOracleIsDeferredUntilCheckpointAfterReplacement() external {
+    /// @dev Replacement checkpoints the old oracle and immediately applies the new observation.
+    function test_NewOracleAppliesImmediatelyAfterReplacement() external {
         DusdPegCurveOracle replacementOracle = _deployIndependentOracle(DEEP_DEPEG_PRICE, uint48(block.timestamp));
         _setPoolObservation(MID_BRIDGE_PRICE, uint48(block.timestamp));
-        uint256 oldInputRate = irm.targetBorrowRate(MID_BRIDGE_PRICE);
 
         vm.prank(OWNER);
         irm.setPegOracle(address(replacementOracle));
 
         assertEq(irm.pegOracle(), address(replacementOracle), "replacement oracle");
         (uint256 storedRate,, uint48 recoveryStartedAt, bool stressMode) = irm.irState();
-        assertEq(storedRate, oldInputRate, "old-oracle rate remains active");
+        assertEq(storedRate, HELD_RATE, "new-oracle rate applies immediately");
         assertEq(recoveryStartedAt, 0, "recoveryStartedAt");
-        assertFalse(stressMode, "stressMode before new-oracle checkpoint");
+        assertTrue(stressMode, "stressMode after replacement");
 
         (uint256 priceWad, uint48 observedAt, bool oracleValid, uint256 previewRate) = irm.previewBorrowRate();
         assertEq(priceWad, DEEP_DEPEG_PRICE, "new-oracle price");
@@ -241,8 +239,8 @@ contract DusdPegOracleIntegrationTest is DusdPegCurveOracleCommon {
         assertTrue(stressMode, "stressMode after checkpoint");
     }
 
-    /// @dev Shows that a new healthy curve can leave the stored rate below its new base until the next checkpoint.
-    function test_NewCurveConfigCanLeaveStoredRateBelowNewBaseUntilNextCheckpoint() external {
+    /// @dev A healthy observation applies the new base rate during the setter.
+    function test_NewCurveConfigAppliesNewBaseImmediately() external {
         PegResponsiveExponentialIrmConfig memory newConfig = _validIrmConfig();
         newConfig.baseRate = (BASE_RATE + STRESS_RATE) / 2;
         _setPoolObservation(RECOVERY_PRICE, uint48(block.timestamp));
@@ -251,7 +249,7 @@ contract DusdPegOracleIntegrationTest is DusdPegCurveOracleCommon {
         irm.setIrmConfig(newConfig);
 
         (uint256 storedRate,, uint48 recoveryStartedAt, bool stressMode) = irm.irState();
-        assertEq(storedRate, BASE_RATE, "old-config rate remains active");
+        assertEq(storedRate, newConfig.baseRate, "new base applies immediately");
         assertEq(recoveryStartedAt, 0, "recoveryStartedAt");
         assertFalse(stressMode, "stressMode");
         assertEq(irm.targetBorrowRate(RECOVERY_PRICE), newConfig.baseRate, "new configured base");
@@ -269,8 +267,8 @@ contract DusdPegOracleIntegrationTest is DusdPegCurveOracleCommon {
         assertFalse(stressMode, "stressMode after checkpoint");
     }
 
-    /// @dev Shows that a new stressed curve can leave the stored rate below its new floor until the next checkpoint.
-    function test_NewCurveConfigWhileStressedIsDeferredUntilNextCheckpoint() external {
+    /// @dev A depeg observation applies the new stressed curve during the setter.
+    function test_NewCurveConfigWhileStressedAppliesImmediately() external {
         _setHeldRate();
         PegResponsiveExponentialIrmConfig memory newConfig = _validIrmConfig();
         newConfig.stressRate = HELD_RATE + 1;
@@ -279,8 +277,8 @@ contract DusdPegOracleIntegrationTest is DusdPegCurveOracleCommon {
         irm.setIrmConfig(newConfig);
 
         (uint256 storedRate,, uint48 recoveryStartedAt, bool stressMode) = irm.irState();
-        assertEq(storedRate, HELD_RATE, "old stressed rate remains active");
-        assertLt(storedRate, newConfig.stressRate, "stored rate below new stress floor");
+        assertEq(storedRate, irm.targetBorrowRate(DEEP_DEPEG_PRICE), "new stressed rate applies immediately");
+        assertGe(storedRate, newConfig.stressRate, "new stress floor");
         assertEq(recoveryStartedAt, 0, "recoveryStartedAt");
         assertTrue(stressMode, "stressMode");
 
@@ -307,7 +305,7 @@ contract DusdPegOracleIntegrationTest is DusdPegCurveOracleCommon {
         irm.setPegOracle(address(replacementOracle));
 
         (uint256 storedRate,, uint48 recoveryStartedAt, bool stressMode) = irm.irState();
-        assertEq(storedRate, STRESS_RATE, "old-oracle recovery rate");
+        assertEq(storedRate, HELD_RATE, "new-oracle depeg rate");
         assertEq(recoveryStartedAt, 0, "replacement clears recovery");
         assertTrue(stressMode, "stressMode after replacement");
         assertEq(irm.pegOracle(), address(replacementOracle), "replacement oracle");
@@ -319,7 +317,7 @@ contract DusdPegOracleIntegrationTest is DusdPegCurveOracleCommon {
         assertTrue(stressMode, "stressMode after checkpoint");
     }
 
-    /// @dev Paused setters skip market checkpoints, preserve rate/time/stress, and clear recovery.
+    /// @dev Paused setters refresh the rate without accruing interest for the paused interval.
     function test_ReplacingOracleAndConfigWhilePausedSkipsCheckpointAndClearsRecovery() external {
         _startRecovery();
         _setMarketPaused(true);
@@ -327,7 +325,7 @@ contract DusdPegOracleIntegrationTest is DusdPegCurveOracleCommon {
         DusdPegCurveOracle replacementOracle = _deployIndependentOracle(DEEP_DEPEG_PRICE, uint48(block.timestamp));
         PegResponsiveExponentialIrmConfig memory newConfig = _validIrmConfig();
         newConfig.baseRate = (BASE_RATE + STRESS_RATE) / 2;
-        (uint256 rateBefore, uint48 lastUpdateBefore, uint48 recoveryBefore, bool stressBefore) = irm.irState();
+        (, uint48 lastUpdateBefore, uint48 recoveryBefore, bool stressBefore) = irm.irState();
         assertGt(recoveryBefore, 0, "active recovery setup");
 
         vm.startPrank(OWNER);
@@ -336,7 +334,7 @@ contract DusdPegOracleIntegrationTest is DusdPegCurveOracleCommon {
         vm.stopPrank();
 
         (uint256 rateAfter, uint48 lastUpdateAfter, uint48 recoveryAfter, bool stressAfter) = irm.irState();
-        assertEq(rateAfter, rateBefore, "setters preserve paused rate");
+        assertEq(rateAfter, HELD_RATE, "setters refresh paused rate");
         assertEq(lastUpdateAfter, lastUpdateBefore, "setters skip paused checkpoint");
         assertEq(recoveryAfter, 0, "setter clears recovery");
         assertEq(stressAfter, stressBefore, "setters preserve stress mode");
@@ -344,7 +342,7 @@ contract DusdPegOracleIntegrationTest is DusdPegCurveOracleCommon {
         assertEq(irm.targetBorrowRate(RECOVERY_PRICE), newConfig.baseRate, "paused config replacement");
     }
 
-    /// @dev Shows that an unbound controller replaces its oracle without checkpointing or changing its initial state.
+    /// @dev An unbound controller refreshes its rate without starting the accrual clock.
     function test_UnboundOracleReplacementChangesInputWithoutCheckpointing() external {
         DusdPegCurveOracle replacementOracle = _deployIndependentOracle(DEEP_DEPEG_PRICE, uint48(block.timestamp));
         PegResponsiveExponentialIrm unboundIrm =
@@ -356,10 +354,10 @@ contract DusdPegOracleIntegrationTest is DusdPegCurveOracleCommon {
         assertEq(unboundIrm.market(), address(0), "unbound market");
         assertEq(unboundIrm.pegOracle(), address(replacementOracle), "unbound replacement oracle");
         (uint256 storedRate, uint48 lastUpdate, uint48 recoveryStartedAt, bool stressMode) = unboundIrm.irState();
-        assertEq(storedRate, BASE_RATE, "unbound stored rate");
+        assertEq(storedRate, HELD_RATE, "unbound stored rate");
         assertEq(lastUpdate, 0, "unbound lastUpdate");
         assertEq(recoveryStartedAt, 0, "unbound recoveryStartedAt");
-        assertFalse(stressMode, "unbound stressMode");
+        assertTrue(stressMode, "unbound stressMode");
     }
 
     /// @dev Shows that a deep depeg during pause is not sampled until a checkpoint after unpause.
@@ -443,6 +441,63 @@ contract DusdPegOracleIntegrationTest is DusdPegCurveOracleCommon {
         assertEq(checkpointAt, block.timestamp, "invalid checkpoint time");
         assertEq(checkpointRecovery, 0, "invalid checkpoint recovery");
         assertTrue(checkpointStressMode, "invalid checkpoint stressMode");
+    }
+
+    function test_LoweringCapAccruesOldDebtBeforeApplyingNewRate() external {
+        _openDebt(100e18);
+        _setHeldRate();
+        vm.warp(block.timestamp + CHECKPOINT_INTERVAL);
+        _setPoolObservation(DEEP_DEPEG_PRICE, uint48(block.timestamp));
+        (uint128 debtBefore, uint128 sharesBefore) = market.totalBorrowed();
+        uint256 feesBefore = market.claimableFeesAssets();
+        (uint256 oldInterest, uint256 oldRate) = irm.updateInterestRateView(0, debtBefore);
+        assertEq(oldRate, HELD_RATE);
+        assertGt(oldInterest, 0);
+        PegResponsiveExponentialIrmConfig memory newConfig = _validIrmConfig();
+        newConfig.maxRate = STRESS_RATE + 1;
+
+        vm.prank(OWNER);
+        irm.setIrmConfig(newConfig);
+
+        (uint128 debtAfter, uint128 sharesAfter) = market.totalBorrowed();
+        assertEq(uint256(debtAfter), uint256(debtBefore) + oldInterest);
+        assertEq(sharesAfter, sharesBefore);
+        assertEq(market.claimableFeesAssets(), feesBefore + oldInterest);
+        (uint256 storedRate, uint48 updatedAt,, bool stressed) = irm.irState();
+        assertEq(storedRate, newConfig.maxRate);
+        assertEq(updatedAt, block.timestamp);
+        assertTrue(stressed);
+        (uint256 immediateInterest,) = irm.updateInterestRateView(0, debtAfter);
+        assertEq(immediateInterest, 0);
+
+        vm.warp(block.timestamp + CHECKPOINT_INTERVAL);
+        (uint256 nextInterest, uint256 nextRate) = irm.updateInterestRateView(0, debtAfter);
+        assertEq(nextRate, newConfig.maxRate);
+        _setPoolObservation(DEEP_DEPEG_PRICE, uint48(block.timestamp));
+        market.accrueInterest();
+        (uint128 finalDebt,) = market.totalBorrowed();
+        assertEq(uint256(finalDebt), uint256(debtAfter) + nextInterest);
+    }
+
+    function test_OracleReplacementAccruesOldRateBeforeApplyingNewObservation() external {
+        _openDebt(100e18);
+        vm.warp(block.timestamp + CHECKPOINT_INTERVAL);
+        _setPoolObservation(RECOVERY_PRICE, uint48(block.timestamp));
+        DusdPegCurveOracle replacement = _deployIndependentOracle(DEEP_DEPEG_PRICE, uint48(block.timestamp));
+        (uint128 debtBefore,) = market.totalBorrowed();
+        (uint256 oldInterest, uint256 oldRate) = irm.updateInterestRateView(0, debtBefore);
+        assertEq(oldRate, BASE_RATE);
+        assertGt(oldInterest, 0);
+
+        vm.prank(OWNER);
+        irm.setPegOracle(address(replacement));
+
+        (uint128 debtAfter,) = market.totalBorrowed();
+        assertEq(uint256(debtAfter), uint256(debtBefore) + oldInterest);
+        (uint256 storedRate,,,) = irm.irState();
+        assertEq(storedRate, HELD_RATE);
+        (uint256 immediateInterest,) = irm.updateInterestRateView(0, debtAfter);
+        assertEq(immediateInterest, 0);
     }
 
     function _setMarketPaused(bool paused) private {
