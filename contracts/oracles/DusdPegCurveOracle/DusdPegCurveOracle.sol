@@ -170,10 +170,9 @@ contract DusdPegCurveOracle is AltoOwnable2Step, IDusdPegCurveOracle {
     function _validCurrentState() private view returns (bool valid) {
         ICurveStableSwapNGOracle curvePoolContract = ICurveStableSwapNGOracle(curvePool);
         DusdPegCurveOracleRuntimeConfig memory config = runtimeConfig;
-        if (curvePoolContract.ma_exp_time() != config.expectedMaExpTime) return false;
-        if (curvePoolContract.A_precise() != config.expectedAPrecise) return false;
-        if (curvePoolContract.future_A() != config.expectedAPrecise) return false;
-        return true;
+        return curvePoolContract.ma_exp_time() == config.expectedMaExpTime
+            && curvePoolContract.A_precise() == config.expectedAPrecise
+            && curvePoolContract.future_A() == config.expectedAPrecise;
     }
 
     /// @dev Verifies the pool's coin layout, oracle availability, EMA averaging
