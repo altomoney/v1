@@ -1,0 +1,180 @@
+// SPDX-License-Identifier: MIT
+pragma solidity >=0.8.0;
+
+import {IDusdPegOracle} from "@alto/oracles/interfaces/IDusdPegOracle.sol";
+
+/// @notice Owner-managed Curve pool parameters checked on every validated read.
+struct DusdPegCurveOracleRuntimeConfig {
+    /// @dev Required Curve EMA averaging time.
+    uint256 expectedMaExpTime;
+    /// @dev Required amplification coefficient, including Curve's precision factor.
+    uint256 expectedAPrecise;
+}
+
+/// @notice Pool identity and provenance used only during deployment validation.
+struct DusdPegCurveOracleValidationConfig {
+    /// @dev Address of the Curve StableSwap NG factory that registered the pool.
+    address curveFactory;
+    /// @dev Expected implementation registered for the pool by `curveFactory`.
+    address expectedCurvePoolImplementation;
+    /// @dev Address of DUSD, which must be coin 1.
+    address dusd;
+    /// @dev Address of the deployment-approved quote token, which must be coin 0.
+    /// The currently intended deployment uses frxUSD.
+    address quoteToken;
+}
+
+/// @notice Unvalidated diagnostic snapshot of the underlying Curve pool.
+/// @dev Values are returned directly from the pool and are not approved for
+/// use by the PRM.
+struct DusdPegCurveOracleRawPoolState {
+    /// @dev Instantaneous AMM state price returned by `get_p(0)`.
+    uint256 currentStatePriceWad;
+    /// @dev Most recent AMM state price stored by Curve.
+    uint256 lastStatePriceWad;
+    /// @dev EMA value stored at Curve's most recent oracle update.
+    uint256 storedEmaPriceWad;
+    /// @dev EMA projected by Curve to the current block timestamp.
+    uint256 currentEmaPriceWad;
+    /// @dev Timestamp of Curve's most recent stored price update.
+    uint256 priceUpdatedAt;
+    /// @dev Timestamp of Curve's most recent stored invariant update.
+    uint256 invariantUpdatedAt;
+    /// @dev Pool's current EMA averaging time.
+    uint256 maExpTime;
+    /// @dev Pool's current amplification coefficient, including Curve's
+    /// precision factor.
+    uint256 aPrecise;
+    /// @dev Pool's target amplification coefficient.
+    uint256 futureAPrecise;
+    /// @dev Current balance of coin 0, the quote token.
+    uint256 quoteTokenBalance;
+    /// @dev Current balance of coin 1, DUSD.
+    uint256 dusdBalance;
+}
+
+interface IDusdPegCurveOracleErrors {
+    /// @notice Error thrown when a required address is zero
+    error DusdPegCurveOracleZeroAddress();
+
+    /// @notice Error thrown when a required numeric configuration value is zero
+    error DusdPegCurveOracleInvalidConfig();
+
+    /// @notice Error thrown when the pool or factory does not report exactly two coins
+    error DusdPegCurveOracleInvalidCoinCount();
+
+    /// @notice Error thrown when coin 0 is not the quote token or coin 1 is not DUSD
+    error DusdPegCurveOracleInvalidCoinOrder();
+
+    /// @notice Error thrown when DUSD and the quote token are configured as the same token
+    error DusdPegCurveOracleIdenticalCoins();
+
+    /// @notice Error thrown when the pool's EMA averaging time does not match the approved value
+    error DusdPegCurveOracleInvalidMaExpTime();
+
+    /// @notice Error thrown when the pool's current or future amplification differs from the approved value
+    error DusdPegCurveOracleInvalidAmplification();
+
+    /// @notice Error thrown when the factory reports an unexpected number of asset types
+    error DusdPegCurveOracleInvalidAssetTypeCount();
+
+    /// @notice Error thrown when a coin is not registered as a standard ERC-20 asset
+    /// @param index Index of the unsupported coin
+    /// @param assetType Curve asset-type identifier reported by the factory
+    error DusdPegCurveOracleUnsupportedAssetType(uint256 index, uint8 assetType);
+
+    /// @notice Error thrown when the factory identifies the pool as a metapool
+    error DusdPegCurveOracleUnsupportedMetapool();
+
+    /// @notice Error thrown when the factory does not recognize the configured pool
+    error DusdPegCurveOraclePoolNotRegistered();
+
+    /// @notice Error thrown when the pool does not expose the expected EMA price
+    error DusdPegCurveOracleOracleUnavailable();
+
+    /// @notice Error thrown when the factory reports an implementation other than the approved implementation
+    /// @param actual Implementation reported by the factory
+    /// @param expected Implementation supplied in the deployment validation configuration
+    error DusdPegCurveOracleUnexpectedImplementation(address actual, address expected);
+}
+
+interface IDusdPegCurveOracleEvents {
+    /// @notice Emitted when the owner approves new Curve pool parameters.
+    /// @param runtimeConfig New approved Curve pool parameters.
+    event SetRuntimeConfig(DusdPegCurveOracleRuntimeConfig runtimeConfig);
+}
+
+interface IDusdPegCurveOracleBase is IDusdPegOracle, IDusdPegCurveOracleErrors, IDusdPegCurveOracleEvents {
+    /// @notice A two-coin pool exposes one oracle price: coin 1 relative to coin 0.
+    function ORACLE_INDEX() external view returns (uint256);
+
+    /// @notice The expected number of coins supported by the pool.
+    function EXPECTED_COIN_COUNT() external view returns (uint256);
+
+    /// @notice Curve asset type 0 identifies a standard ERC-20 with no special price handling.
+    function STANDARD_ASSET_TYPE() external view returns (uint8);
+
+    /// @notice The Curve price timestamp occupies the low 128 bits.
+    function PRICE_TIMESTAMP_MASK() external view returns (uint256);
+
+    /// @notice Returns the configured Curve pool.
+    function curvePool() external view returns (address);
+
+    /// @notice Returns the approved Curve pool parameters checked on every validated read.
+    /// @return expectedMaExpTime Approved Curve EMA averaging time.
+    /// @return expectedAPrecise Approved amplification coefficient, including Curve's precision factor.
+    function runtimeConfig() external view returns (uint256 expectedMaExpTime, uint256 expectedAPrecise);
+
+    /// @notice Approves the current Curve EMA averaging time and amplification coefficient.
+    /// @param newRuntimeConfig New approved Curve pool parameters.
+    /// @dev Only callable by the owner. Both values must match the pool's current state.
+    function setRuntimeConfig(DusdPegCurveOracleRuntimeConfig calldata newRuntimeConfig) external;
+}
+
+/// @title IDusdPegCurveOracle
+/// @author GPM
+/// @custom:contact security@altofoundation.org
+/// @notice Interface for the DUSD/quoteToken peg oracle bound to one two-coin
+/// Curve StableSwap NG pool with owner-managed approved pool parameters.
+interface IDusdPegCurveOracle is IDusdPegCurveOracleBase {
+    /// @notice Returns an unvalidated snapshot of the underlying Curve pool.
+    /// @return state Unvalidated pool state at the current block.
+    /// @dev This function deliberately performs no source validation, error
+    /// handling, or freshness checks and may revert if a pool read fails. It is
+    /// intended only for monitoring and debugging.
+    function rawPoolState() external view returns (DusdPegCurveOracleRawPoolState memory state);
+}
+
+interface IDusdPegCurveOracleStaticTypes is IDusdPegCurveOracleBase {
+    /// @notice Returns an unvalidated snapshot of the underlying Curve pool.
+    /// @return currentStatePriceWad Instantaneous AMM state price returned by `get_p(0)`.
+    /// @return lastStatePriceWad Most recent AMM state price stored by Curve.
+    /// @return storedEmaPriceWad EMA value stored at Curve's most recent oracle update.
+    /// @return currentEmaPriceWad EMA projected by Curve to the current block timestamp.
+    /// @return priceUpdatedAt Timestamp of Curve's most recent stored price update.
+    /// @return invariantUpdatedAt Timestamp of Curve's most recent stored invariant update.
+    /// @return maExpTime Pool's current EMA averaging time.
+    /// @return aPrecise Pool's current amplification coefficient, including Curve's precision factor.
+    /// @return futureAPrecise Pool's target amplification coefficient.
+    /// @return quoteTokenBalance Current balance of coin 0, the quote token.
+    /// @return dusdBalance Current balance of coin 1, DUSD.
+    /// @dev This function deliberately performs no source validation, error
+    /// handling, or freshness checks and may revert if a pool read fails. It is
+    /// intended only for monitoring and debugging.
+    function rawPoolState()
+        external
+        view
+        returns (
+            uint256 currentStatePriceWad,
+            uint256 lastStatePriceWad,
+            uint256 storedEmaPriceWad,
+            uint256 currentEmaPriceWad,
+            uint256 priceUpdatedAt,
+            uint256 invariantUpdatedAt,
+            uint256 maExpTime,
+            uint256 aPrecise,
+            uint256 futureAPrecise,
+            uint256 quoteTokenBalance,
+            uint256 dusdBalance
+        );
+}

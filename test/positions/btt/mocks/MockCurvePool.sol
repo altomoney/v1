@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.28;
 
-import {ICurveStablePool} from "@alto/positions/interfaces/ICurveStablePool.sol";
+import {ICurveStableSwapNGLiquidity} from "@alto/interfaces/curve/ICurveStableSwapNG.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ERC20MockMintable} from "@alto-test/helpers/ERC20MockMintable.sol";
 
 /// @notice Curve pool mock that mints LP 1:1 with deposited token sums.
 /// @dev The pool contract is also the LP token, matching real Curve stable pools.
-contract MockCurvePool is ICurveStablePool, ERC20MockMintable {
+contract MockCurvePool is ICurveStableSwapNGLiquidity, ERC20MockMintable {
     using SafeERC20 for IERC20;
 
     error MockCurvePoolMinLpNotMet(uint256 minMintAmount, uint256 lpMinted);
