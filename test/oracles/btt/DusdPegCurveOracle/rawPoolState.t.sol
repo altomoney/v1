@@ -4,7 +4,7 @@ pragma solidity ^0.8.28;
 import {Vm} from "forge-std/Vm.sol";
 import {stdError} from "forge-std/StdError.sol";
 
-import {DusdPegCurveOracleRawPoolState} from "@alto/oracles/DusdPegCurveOracle/interfaces/IDusdPegCurveOracle.sol";
+import {DusdPegCurveOracleRawPoolState} from "@alto/oracles/interfaces/IDusdPegCurveOracle.sol";
 import {DusdPegCurveOracleCommon} from "./DusdPegCurveOracleCommon.t.sol";
 
 contract DusdPegCurveOracleRawPoolStateTest is DusdPegCurveOracleCommon {

@@ -10,7 +10,7 @@ import {PegResponsiveExponentialIrmConfig} from "@alto/lending/interfaces/IPegRe
 import {LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 import {DusdPegCurveOracle} from "@alto/oracles/DusdPegCurveOracle/DusdPegCurveOracle.sol";
-import {DusdPegCurveOracleValidationConfig} from "@alto/oracles/DusdPegCurveOracle/interfaces/IDusdPegCurveOracle.sol";
+import {DusdPegCurveOracleValidationConfig} from "@alto/oracles/interfaces/IDusdPegCurveOracle.sol";
 import {MockCurveStableSwapFactory} from "@alto-test/oracles/btt/mocks/MockCurveStableSwapFactory.sol";
 import {MockCurveStableSwapNG} from "@alto-test/oracles/btt/mocks/MockCurveStableSwapNG.sol";
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";

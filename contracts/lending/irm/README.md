@@ -69,7 +69,7 @@ settings or replace the adapter.
 ## Audit evidence and gaps
 
 [IRM tests](../../../test/lending/btt/PegResponsiveExponentialIrm) and
-[adapter integration tests](../../../test/oracles/DusdPegOracle/DusdPegOracleIntegration.t.sol)
+[adapter integration tests](../../../test/oracles/DusdPegCurveOracle/DusdPegOracleIntegration.t.sol)
 cover rate bounds, recovery, pause, replacement, debt accounting, and rollback.
 Independent math verification, long-sequence market accounting, and economic
 parameter approval remain open.

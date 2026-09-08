@@ -16,7 +16,7 @@ import {
     DusdPegCurveOracleRawPoolState,
     DusdPegCurveOracleRuntimeConfig,
     DusdPegCurveOracleValidationConfig
-} from "@alto/oracles/DusdPegCurveOracle/interfaces/IDusdPegCurveOracle.sol";
+} from "@alto/oracles/interfaces/IDusdPegCurveOracle.sol";
 
 interface ICurveStableSwapNGForkSnapshot {
     function initial_A() external view returns (uint256);
@@ -216,8 +216,7 @@ contract DusdPegOracleForkTest is Test {
 
     function _runtimeConfig() private pure returns (DusdPegCurveOracleRuntimeConfig memory config) {
         config = DusdPegCurveOracleRuntimeConfig({
-            expectedMaExpTime: EXPECTED_MA_EXP_TIME,
-            expectedAPrecise: EXPECTED_A_PRECISE
+            expectedMaExpTime: EXPECTED_MA_EXP_TIME, expectedAPrecise: EXPECTED_A_PRECISE
         });
     }
 
