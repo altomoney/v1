@@ -16,8 +16,8 @@ PegResponsiveExponentialIrm::targetBorrowRate(uint256)
 │   ├── when price is an exact midpoint
 │   │   └── it should return the corresponding midpoint rate when both divisions are exact
 │   ├── when the bridge position is fractional
-│   │   ├── it should first floor (recoveryPrice - price) times WAD divided by bridge width
-│   │   └── it should then floor rateRange times the floored position divided by WAD
+│   │   ├── it should first floor (recoveryPrice - price) times MATH_PRECISION divided by bridge width
+│   │   └── it should then floor rateRange times the floored position divided by MATH_PRECISION
 │   ├── when the two-stage calculation differs from a single-fraction interpolation by one rate unit
 │   │   └── it should return the two-stage implementation result
 │   ├── when recoveryPrice is exactly one unit above stressPrice
@@ -26,7 +26,7 @@ PegResponsiveExponentialIrm::targetBorrowRate(uint256)
 │       └── it should return the same flat rate throughout the bridge
 ├── given price is below stressPrice
 │   ├── it should calculate stressDrop as stressPrice minus price
-│   ├── it should calculate rawExponent as floor(LN_2_WAD times stressDrop divided by doublingDistance)
+│   ├── it should calculate rawExponent as floor(ExpLib.LN_2_INT times stressDrop divided by doublingDistance)
 │   ├── when rawExponent is less than MAX_EXPONENT_INPUT
 │   │   └── it should pass rawExponent unchanged to ExpLib.wExp
 │   ├── when rawExponent equals MAX_EXPONENT_INPUT
@@ -52,7 +52,7 @@ PegResponsiveExponentialIrm::targetBorrowRate(uint256)
 │   ├── when price is one unit below stressPrice
 │   │   └── it should return the exact exponential implementation result, which may equal or exceed stressRate
 │   └── when price is zero and the depeg is extreme
-│       ├── it should return no more than maxRate
+│       ├── it should reach MAX_BORROW_RATE even with the minimum stressRate of 1
 │       └── it should not overflow for any constructor-valid configuration
 ├── given an arbitrary constructor-valid configuration and arbitrary price
 │   ├── it should return a value greater than or equal to baseRate

@@ -85,12 +85,6 @@ interface IPegResponsiveExponentialIrmBase is
     /// @notice The maximum supported recovery price.
     function MAX_RECOVERY_PRICE() external view returns (uint256);
 
-    /// @notice The fixed-point scalar used by the controller.
-    function WAD() external view returns (uint256);
-
-    /// @notice The value of ln(2) used to evaluate the exponential curve.
-    function LN_2_WAD() external view returns (uint256);
-
     /// @notice The maximum supported input to the exponential approximation.
     function MAX_EXPONENT_INPUT() external view returns (uint256);
 
