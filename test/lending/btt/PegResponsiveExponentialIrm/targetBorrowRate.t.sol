@@ -161,7 +161,7 @@ contract PegResponsiveExponentialIrmTargetBorrowRateTest is PegResponsiveExponen
     }
 
     function test_WhenPriceIsZeroAndDepegIsExtreme_ItCapsWithoutOverflow() external {
-        PegResponsiveExponentialIrmConfig memory config = _irmConfig(1.01e18, 1e18, 50, 100, 200, 1);
+        PegResponsiveExponentialIrmConfig memory config = _irmConfig(1.01e18, 1e18, 1, 1, irm.MAX_BORROW_RATE(), 1);
         _useConfig(config);
 
         assertEq(irm.targetBorrowRate(0), config.maxRate);

@@ -17,7 +17,7 @@ import {IDusdPegOracle} from "@alto/oracles/interfaces/IDusdPegOracle.sol";
 import {ExpLib} from "@alto/lending/libraries/ExpLib.sol";
 import {AltoOwnable2Step, Ownable} from "@alto/utils/AltoOwnable2Step.sol";
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
-import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
+import {FixedPointMath, MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 
 /// @title Peg-Responsive Exponential Interest Rate Model
 /// @author GPM
@@ -66,12 +66,9 @@ contract PegResponsiveExponentialIrm is AltoOwnable2Step, IPegResponsiveExponent
     uint256 public constant MAX_RECOVERY_PRICE = 1.01e18;
 
     /// @inheritdoc IPegResponsiveExponentialIrmBase
-    uint256 public constant WAD = 1e18;
-
-    /// @inheritdoc IPegResponsiveExponentialIrmBase
-    uint256 public constant LN_2_WAD = 0.693147180559945309 ether;
-
-    /// @inheritdoc IPegResponsiveExponentialIrmBase
+    /// @dev Conservative curve cap below ExpLib's clipping bound. At e^50, even
+    /// a stressRate of 1 exceeds MAX_BORROW_RATE, so every positive stress rate
+    /// already reaches maxRate. This is not ExpLib's numerical limit.
     uint256 public constant MAX_EXPONENT_INPUT = 50e18;
 
     /// @inheritdoc IPegResponsiveExponentialIrmBase
@@ -197,8 +194,8 @@ contract PegResponsiveExponentialIrm is AltoOwnable2Step, IPegResponsiveExponent
 
         if (priceWad >= config.stressPrice) {
             uint256 position =
-                Math.mulDiv(config.recoveryPrice - priceWad, WAD, config.recoveryPrice - config.stressPrice);
-            uint256 rateIncrease = Math.mulDiv(config.stressRate - config.baseRate, position, WAD);
+                Math.mulDiv(config.recoveryPrice - priceWad, MATH_PRECISION, config.recoveryPrice - config.stressPrice);
+            uint256 rateIncrease = Math.mulDiv(config.stressRate - config.baseRate, position, MATH_PRECISION);
 
             return config.baseRate + rateIncrease;
         }
@@ -210,10 +207,11 @@ contract PegResponsiveExponentialIrm is AltoOwnable2Step, IPegResponsiveExponent
         //      2^n = e^(ln(2) * n)
         //
         // where n is the number of configured doubling distances below stressPrice.
-        uint256 exponent = Math.min(Math.mulDiv(LN_2_WAD, stressDrop, config.doublingDistance), MAX_EXPONENT_INPUT);
+        uint256 exponent =
+            Math.min(Math.mulDiv(uint256(ExpLib.LN_2_INT), stressDrop, config.doublingDistance), MAX_EXPONENT_INPUT);
         uint256 multiplier = ExpLib.wExp(exponent.toInt256()).toUint256();
 
-        return Math.min(Math.mulDiv(config.stressRate, multiplier, WAD), config.maxRate);
+        return Math.min(Math.mulDiv(config.stressRate, multiplier, MATH_PRECISION), config.maxRate);
     }
 
     /// @dev Checkpoints the active market before an owner changes controller inputs.
