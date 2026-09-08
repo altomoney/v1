@@ -155,8 +155,7 @@ contract AltoMintMarket is AltoBaseMarket {
             revert AltoMintMarketInvalidInput();
         }
 
-        emit SetFeeRecipient(feeRecipient, _feeRecipient);
-        feeRecipient = _feeRecipient;
+        _updateFeeRecipient(_feeRecipient);
     }
 
     /// @dev Disabled on mint market

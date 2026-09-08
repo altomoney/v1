@@ -10,6 +10,11 @@
 Curve LP deposit gates access to a revolving credit limit and is staked in one
 validated Ethereum Convex pool.
 
+The contract is a direct `AltoBaseMarket` variant, like `AltoBorrowMarket` and
+`AltoMintMarket`. The narrowly scoped changes made to the audited base contract
+to support this inheritance are recorded in
+[`README_ALTO_BASE_MARKET_CHANGES.md`](README_ALTO_BASE_MARKET_CHANGES.md).
+
 An Alto-compatible lending oracle values the LP for borrowing. New debt must
 remain below `maxLtv`, while a separate, higher `foreclosureLtv` gives the
 account room to cure a position after price movement or interest accrual. The
