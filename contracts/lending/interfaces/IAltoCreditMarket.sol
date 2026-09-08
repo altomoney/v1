@@ -1,28 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {IMarketStaticTypes} from "./IMarket.sol";
+import {BaseMarketInitParams, IMarketStaticTypes} from "./IMarket.sol";
 
 /// @notice Struct that represents the parameters for initializing a credit market
 struct CreditMarketInitParams {
-    /// @notice The address of the borrow token.
-    address borrowToken;
-    /// @notice The address of the collateral token.
-    address collateralToken;
-    /// @notice The address of the fixed-rate IRM contract.
-    address irm;
-    /// @notice The address of the owner.
-    address owner;
-    /// @notice The address of the lending oracle.
-    address oracle;
+    /// @notice The parameters for initializing the base market.
+    BaseMarketInitParams baseMarketInitParams;
     /// @notice The sole account permitted to own collateral and debt.
     address creditAccount;
-    /// @notice The address of the fee recipient.
-    address feeRecipient;
     /// @notice The maximum total debt assets permitted for new borrows.
     uint256 creditLimit;
-    /// @notice The maximum LTV for the market.
-    uint256 maxLtv;
     /// @notice The LTV above which governance may foreclose.
     uint256 foreclosureLtv;
     /// @notice The initial borrow opening fee.

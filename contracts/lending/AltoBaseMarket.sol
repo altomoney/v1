@@ -110,7 +110,7 @@ abstract contract AltoBaseMarket is
         if (
             _initParams.borrowToken == address(0) || _initParams.collateralToken == address(0)
                 || _initParams.emergencyAdmin == address(0) || _initParams.oracle == address(0)
-                || _initParams.liquidationEngine == address(0)
+                || _initParams.oracle == address(0)
         ) {
             revert AltoBaseMarketInvalidInput();
         }
@@ -157,6 +157,11 @@ abstract contract AltoBaseMarket is
 
     /// @inheritdoc IMarketBase
     function setIrm(address _irm, bool _skipAccrueInterest) external onlyOwner {
+        _setIrm(_irm, _skipAccrueInterest);
+    }
+
+    /// @dev See `IMarketBase.setIrm`.
+    function _setIrm(address _irm, bool _skipAccrueInterest) internal virtual {
         if (!paused[PAUSE_TYPE] && !_skipAccrueInterest) {
             _accrueInterest();
         }
@@ -171,6 +176,11 @@ abstract contract AltoBaseMarket is
 
     /// @inheritdoc IMarketBase
     function setOracle(address _oracle) external onlyOwner {
+        _setOracle(_oracle);
+    }
+
+    /// @dev See `IMarketBase.setOracle`.
+    function _setOracle(address _oracle) internal virtual {
         if (_oracle == address(0)) {
             revert AltoBaseMarketInvalidInput();
         }
@@ -181,6 +191,11 @@ abstract contract AltoBaseMarket is
 
     /// @inheritdoc IMarketBase
     function setMaxLtv(uint256 _maxLtv) external onlyOwner {
+        _setMaxLtv(_maxLtv);
+    }
+
+    /// @dev See `IMarketBase.setMaxLtv`.
+    function _setMaxLtv(uint256 _maxLtv) internal virtual {
         uint256 maxLiquidationLtv = IAltoLiquidationEngine(liquidationEngine).minLltv();
         if (_maxLtv > MATH_PRECISION || _maxLtv > maxLiquidationLtv) {
             revert AltoBaseMarketInvalidInput();
@@ -192,7 +207,12 @@ abstract contract AltoBaseMarket is
 
     /// @inheritdoc IMarketBase
     function setLiquidationEngine(address _liquidationEngine) external onlyOwner {
-        if (_liquidationEngine == address(0) || liquidationEngine == address(0)) {
+        _setLiquidationEngine(_liquidationEngine);
+    }
+
+    /// @dev See `IMarketBase.setLiquidationEngine`.
+    function _setLiquidationEngine(address _liquidationEngine) internal virtual {
+        if (_liquidationEngine == address(0)) {
             revert AltoBaseMarketInvalidInput();
         }
 
@@ -212,8 +232,33 @@ abstract contract AltoBaseMarket is
         emit SetAuthorizedLiquidationPeriphery(periphery, value);
     }
 
+    function setFeeRecipient(address _feeRecipient) external onlyOwner {
+        _setFeeRecipient(_feeRecipient);
+    }
+
+    /// @dev See `IMarketBase.setFeeRecipient`.
+    function _setFeeRecipient(address _feeRecipient) internal virtual {
+        uint256 protocolFeePercentage = IAltoLiquidationEngine(liquidationEngine).protocolFeePercentage();
+        if (_feeRecipient == address(0) && (borrowOpeningFee() > 0 || protocolFeePercentage > 0)) {
+            revert AltoBaseMarketInvalidInput();
+        }
+
+        _updateFeeRecipient(_feeRecipient);
+    }
+
+    /// @dev Updates the fee recipient and emits the corresponding event.
+    function _updateFeeRecipient(address _feeRecipient) internal {
+        emit SetFeeRecipient(feeRecipient, _feeRecipient);
+        feeRecipient = _feeRecipient;
+    }
+
     /// @inheritdoc IMarketBase
     function setAuthorizedCallback(address callback, bool value) external onlyOwner {
+        _setAuthorizedCallback(callback, value);
+    }
+
+    /// @dev See `IMarketBase.setAuthorizedCallback`.
+    function _setAuthorizedCallback(address callback, bool value) internal virtual {
         if (callback == address(0)) {
             revert AltoBaseMarketInvalidInput();
         }
@@ -330,11 +375,17 @@ abstract contract AltoBaseMarket is
 
         position[onBehalf].collateralAssets += assets.toUint128();
 
-        IERC20(collateralToken).safeTransferFrom(msg.sender, address(this), assets);
+        _receiveCollateral(assets);
 
         emit AddCollateral(msg.sender, onBehalf, assets);
 
         return (assets);
+    }
+
+    /// @dev Receives collateral from the caller.
+    /// @dev This function is virtual to allow for custom collateral custody logic.
+    function _receiveCollateral(uint256 assets) internal virtual {
+        IERC20(collateralToken).safeTransferFrom(msg.sender, address(this), assets);
     }
 
     /// @inheritdoc IMarketBase
@@ -366,7 +417,7 @@ abstract contract AltoBaseMarket is
 
         position[onBehalf].collateralAssets -= assets.toUint128();
 
-        IERC20(collateralToken).safeTransfer(receiver, assets);
+        _sendCollateral(receiver, assets);
 
         if (authorizedCallbacks[receiver] && swapParams.length > 0) {
             IRemoveCollateralCallback(receiver).onRemoveCollateralCallback(assets, onBehalf, swapParams);
@@ -381,6 +432,12 @@ abstract contract AltoBaseMarket is
         emit RemoveCollateral(msg.sender, onBehalf, receiver, assets);
 
         return (assets);
+    }
+
+    /// @dev Sends collateral to the receiver.
+    /// @dev This function is virtual to allow for custom collateral custody logic.
+    function _sendCollateral(address receiver, uint256 assets) internal virtual {
+        IERC20(collateralToken).safeTransfer(receiver, assets);
     }
 
     /// @inheritdoc IMarketBase
@@ -478,7 +535,11 @@ abstract contract AltoBaseMarket is
     }
 
     /// @inheritdoc IMarketBase
-    function repay(uint256 assets, uint256 shares, address onBehalf) external whenNotPaused returns (uint256, uint256) {
+    function repay(uint256 assets, uint256 shares, address onBehalf)
+        external
+        whenNotPaused
+        returns (uint256, uint256)
+    {
         return _repay(assets, shares, onBehalf);
     }
 
@@ -536,10 +597,11 @@ abstract contract AltoBaseMarket is
 
     /// @dev Returns true if the user's position is solvent.
     /// @param _user The address of the user whose position is being checked
-    function _isSolvent(address _user) internal view returns (bool) {
+    function _isSolvent(address _user) internal view virtual returns (bool) {
         uint256 collateralPrice = ILendingOracle(oracle).getPrice();
-        uint256 collateralValue = uint256(position[_user].collateralAssets)
-            .divideWithRounding(collateralPrice, LENDING_ORACLE_PRICE_PRECISION, false);
+        uint256 collateralValue = uint256(position[_user].collateralAssets).divideWithRounding(
+            collateralPrice, LENDING_ORACLE_PRICE_PRECISION, false
+        );
         uint256 maxBorrowValue = collateralValue.multiplyWithPrecision(maxLtv);
         uint256 borrowValue =
             uint256(position[_user].borrowShares).convertToAssetsUp(totalBorrowed.assets, totalBorrowed.shares);
@@ -580,9 +642,8 @@ abstract contract AltoBaseMarket is
             }
         }
 
-        LiquidationEngineResult memory result = IAltoLiquidationEngine(liquidationEngine)
-            .prepareLiquidation(
-                LiquidationEngineInput({
+        LiquidationEngineResult memory result = IAltoLiquidationEngine(liquidationEngine).prepareLiquidation(
+            LiquidationEngineInput({
                 borrower: borrower,
                 liquidator: originalLiquidator,
                 totalSupply: totalSupply,
@@ -592,16 +653,15 @@ abstract contract AltoBaseMarket is
                 collateralPrice: ILendingOracle(oracle).getPrice(),
                 liquidationData: liquidationData
             })
-            );
+        );
         // apply liquidation
         position[borrower].collateralAssets -= result.seizedCollateralAssets.toUint128();
         position[borrower].borrowShares -= result.repaidBorrowShares.toUint128();
 
         totalBorrowed.shares -= result.repaidBorrowShares.toUint128();
-        totalBorrowed.assets = (totalBorrowed.assets > result.repaidBorrowAmount
-                ? totalBorrowed.assets - result.repaidBorrowAmount
-                : 0)
-        .toUint128();
+        totalBorrowed.assets = (
+            totalBorrowed.assets > result.repaidBorrowAmount ? totalBorrowed.assets - result.repaidBorrowAmount : 0
+        ).toUint128();
 
         Balance memory badDebt;
         if (position[borrower].collateralAssets == 0) {
@@ -625,8 +685,9 @@ abstract contract AltoBaseMarket is
         IERC20(collateralToken).safeTransfer(msg.sender, collateralAmountToSend);
 
         if (callbackData.length > 0) {
-            ILiquidateCallback(msg.sender)
-                .onLiquidateCallback(result.repaidBorrowAmount, collateralAmountToSend, callbackData);
+            ILiquidateCallback(msg.sender).onLiquidateCallback(
+                result.repaidBorrowAmount, collateralAmountToSend, callbackData
+            );
         }
 
         _sendBorrowToken(msg.sender, address(this), result.repaidBorrowAmount);
