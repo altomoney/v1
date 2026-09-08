@@ -8,7 +8,7 @@ import {DusdPegCurveOracle} from "@alto/oracles/DusdPegCurveOracle/DusdPegCurveO
 import {
     DusdPegCurveOracleRuntimeConfig,
     DusdPegCurveOracleValidationConfig
-} from "@alto/oracles/DusdPegCurveOracle/interfaces/IDusdPegCurveOracle.sol";
+} from "@alto/oracles/interfaces/IDusdPegCurveOracle.sol";
 import {ICurveStableSwapNGOracle as ICurveStableSwap} from "@alto/interfaces/curve/ICurveStableSwapNG.sol";
 import {MockCurveStableSwapFactory} from "@alto-test/oracles/btt/mocks/MockCurveStableSwapFactory.sol";
 import {MockCurveStableSwapNG} from "@alto-test/oracles/btt/mocks/MockCurveStableSwapNG.sol";

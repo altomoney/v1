@@ -9,7 +9,7 @@ import {
     DusdPegCurveOracleRuntimeConfig,
     DusdPegCurveOracleValidationConfig,
     IDusdPegCurveOracleErrors
-} from "@alto/oracles/DusdPegCurveOracle/interfaces/IDusdPegCurveOracle.sol";
+} from "@alto/oracles/interfaces/IDusdPegCurveOracle.sol";
 import {
     ICurveStableSwapNGFactory as ICurveStableSwapFactory
 } from "@alto/interfaces/curve/ICurveStableSwapNGFactory.sol";

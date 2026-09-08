@@ -5,7 +5,7 @@ pragma solidity 0.8.28;
 import {
     DusdPegCurveOracleRawPoolState,
     DusdPegCurveOracleRuntimeConfig
-} from "@alto/oracles/DusdPegCurveOracle/interfaces/IDusdPegCurveOracle.sol";
+} from "@alto/oracles/interfaces/IDusdPegCurveOracle.sol";
 
 import {DusdPegCurveOracleCommon} from "@alto-test/oracles/btt/DusdPegCurveOracle/DusdPegCurveOracleCommon.t.sol";
 

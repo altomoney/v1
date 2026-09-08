@@ -42,8 +42,8 @@ requires the relevant owner. Active IRM replacement checkpoints the old source f
 ## Audit evidence and gaps
 
 [Unit tests](../../../test/oracles/btt/DusdPegCurveOracle),
-[fuzz/integration tests](../../../test/oracles/DusdPegOracle), and the
-[mainnet fork suite](../../../test/oracles/DusdPegOracle/DusdPegOracleFork.t.sol)
+[fuzz/integration tests](../../../test/oracles/DusdPegCurveOracle), and the
+[mainnet fork suite](../../../test/oracles/DusdPegCurveOracle/DusdPegOracleFork.t.sol)
 cover source validation and IRM consumption. The fork is pinned to block
 `25_746_611`. Production identity/parameter approval and manipulation-cost
 analysis remain open. Retain factory, implementation, token, and administrative

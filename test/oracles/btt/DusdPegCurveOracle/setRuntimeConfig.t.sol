@@ -8,7 +8,7 @@ import {
     DusdPegCurveOracleRuntimeConfig,
     IDusdPegCurveOracleErrors,
     IDusdPegCurveOracleEvents
-} from "@alto/oracles/DusdPegCurveOracle/interfaces/IDusdPegCurveOracle.sol";
+} from "@alto/oracles/interfaces/IDusdPegCurveOracle.sol";
 import {DusdPegCurveOracleCommon} from "./DusdPegCurveOracleCommon.t.sol";
 
 contract DusdPegCurveOracleSetRuntimeConfigTest is DusdPegCurveOracleCommon {
