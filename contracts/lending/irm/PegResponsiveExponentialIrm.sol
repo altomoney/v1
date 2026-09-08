@@ -131,21 +131,23 @@ contract PegResponsiveExponentialIrm is AltoOwnable2Step, IPegResponsiveExponent
     }
 
     /// @inheritdoc IIrm
-    function updateInterestRateView(uint256, uint256 totalBorrowed)
-        external
-        view
-        returns (uint256 interest, uint256 borrowRate)
-    {
+    function updateInterestRateView(uint256, uint256 totalBorrowed) external view returns (uint256, uint256) {
         return _accrueInterest(totalBorrowed);
     }
 
     /// @inheritdoc IIrm
+    /// @dev Accrues elapsed interest at the stored rate, then updates the rate for
+    /// future accrual. Returns the interest and the rate used to calculate it.
     function updateInterestRate(uint256, uint256 totalBorrowed)
         external
         returns (uint256 interest, uint256 borrowRate)
     {
         if (msg.sender != market) revert IrmUnauthorized();
-        return _updateInterestRate(totalBorrowed);
+        (interest, borrowRate) = _accrueInterest(totalBorrowed);
+        irState.lastUpdate = block.timestamp.toUint48();
+        _refreshBorrowRate();
+
+        return (interest, borrowRate);
     }
 
     /// @inheritdoc IPegResponsiveExponentialIrmBase
@@ -227,27 +229,14 @@ contract PegResponsiveExponentialIrm is AltoOwnable2Step, IPegResponsiveExponent
     /// @param totalBorrowed The market's total outstanding debt before accrual.
     /// @return interest    The interest accrued since the previous update.
     /// @return borrowRate  The stored borrow rate used to calculate the interest.
-    function _accrueInterest(uint256 totalBorrowed) private view returns (uint256 interest, uint256 borrowRate) {
+    function _accrueInterest(uint256 totalBorrowed) private view returns (uint256, uint256) {
         if (market == address(0)) revert IrmMarketNotSet();
 
-        borrowRate = irState.borrowRate;
-        uint256 dt = block.timestamp - irState.lastUpdate;
-        interest = totalBorrowed.multiplyWithPrecision(borrowRate.calculateCompoundInterest(dt));
+        uint256 interest = totalBorrowed.multiplyWithPrecision(
+            irState.borrowRate.calculateCompoundInterest(block.timestamp - irState.lastUpdate)
+        );
 
-        return (interest, borrowRate);
-    }
-
-    /// @dev Accrues the old rate first, then stores the oracle-driven rate for
-    /// the next interval.
-    /// @param totalBorrowed The market's total outstanding debt before accrual.
-    /// @return interest    The interest accrued using the previously stored rate.
-    /// @return borrowRate  The previously stored borrow rate used for the elapsed interval.
-    function _updateInterestRate(uint256 totalBorrowed) private returns (uint256 interest, uint256 borrowRate) {
-        (interest, borrowRate) = _accrueInterest(totalBorrowed);
-        irState.lastUpdate = block.timestamp.toUint48();
-        _refreshBorrowRate();
-
-        return (interest, borrowRate);
+        return (interest, irState.borrowRate);
     }
 
     /// @dev Refreshes the prospective rate within the current bounds without
@@ -322,25 +311,19 @@ contract PegResponsiveExponentialIrm is AltoOwnable2Step, IPegResponsiveExponent
     }
 
     /// @dev Interrupts an in-progress recovery confirmation.
-    /// @return reset Whether an active recovery confirmation was cleared.
-    function _resetRecoveryConfirmation() private returns (bool reset) {
-        return _setStressState(irState.stressMode, 0, 0);
+    function _resetRecoveryConfirmation() private {
+        _setStressState(irState.stressMode, 0, 0);
     }
 
     /// @dev Stores and emits a stress-state transition when either field changes.
-    /// @return changed Whether the stress state changed.
-    function _setStressState(bool stressMode, uint48 recoveryStartedAt, uint256 priceWad)
-        private
-        returns (bool changed)
-    {
+    function _setStressState(bool stressMode, uint48 recoveryStartedAt, uint256 priceWad) private {
         if (irState.stressMode == stressMode && irState.recoveryStartedAt == recoveryStartedAt) {
-            return false;
+            return;
         }
 
         irState.stressMode = stressMode;
         irState.recoveryStartedAt = recoveryStartedAt;
         emit StressStateUpdated(stressMode, recoveryStartedAt, priceWad);
-        return true;
     }
 
     /// @dev Treats reverts, invalid flags, zero/future timestamps, stale data,
@@ -386,21 +369,16 @@ contract PegResponsiveExponentialIrm is AltoOwnable2Step, IPegResponsiveExponent
         // recoveryDelay and maxOracleAge must be nonzero so recovery confirmation
         // and oracle freshness validation cannot be disabled accidentally.
 
-        // forgefmt: disable-next-item
         if (
-            config.stressPrice == 0 ||
-            config.recoveryPrice > MAX_RECOVERY_PRICE ||
-            config.stressPrice >= config.recoveryPrice
+            config.stressPrice == 0 || config.recoveryPrice > MAX_RECOVERY_PRICE
+                || config.stressPrice >= config.recoveryPrice
         ) {
             revert PegResponsiveExponentialIrmInvalidPriceConfig();
         }
 
-        // forgefmt: disable-next-item
         if (
-            config.baseRate == 0 ||
-            config.baseRate > config.stressRate ||
-            config.stressRate >= config.maxRate ||
-            config.maxRate > MAX_BORROW_RATE
+            config.baseRate == 0 || config.baseRate > config.stressRate || config.stressRate >= config.maxRate
+                || config.maxRate > MAX_BORROW_RATE
         ) {
             revert PegResponsiveExponentialIrmInvalidRateConfig();
         }
