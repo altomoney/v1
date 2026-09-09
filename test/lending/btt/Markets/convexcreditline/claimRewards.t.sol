@@ -5,10 +5,10 @@ import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/ut
 
 import {AltoConvexCreditLineMarket} from "@alto/lending/credit-market/AltoConvexCreditLineMarket.sol";
 import {
-    IAltoConvexCreditLineErrors,
-    IAltoConvexCreditLineEvents
-} from "@alto/lending/interfaces/IAltoConvexCreditLine.sol";
-import {ConvexCreditLineInitParams} from "@alto/lending/interfaces/IAltoConvexCreditLine.sol";
+    IAltoConvexCreditLineMarketErrors,
+    IAltoConvexCreditLineMarketEvents,
+    ConvexCreditLineInitParams
+} from "@alto/lending/interfaces/IAltoConvexCreditLineMarket.sol";
 import {PAUSE_TYPE, FROZEN_TYPE} from "@alto/utils/Constants.sol";
 
 import {ConvexCreditLineCommon} from "./ConvexCreditLineCommon.t.sol";
@@ -47,16 +47,20 @@ contract AltoConvexCreditLineMarketClaimRewardsTest is ConvexCreditLineCommon {
         assertEq(primaryRewardToken.balanceOf(REWARD_RECIPIENT), 0);
 
         rewardPool.setRewardBehavior(false, false);
-        vm.expectRevert(IAltoConvexCreditLineErrors.AltoConvexCreditLineExternalCallFailed.selector);
+        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoConvexCreditLineExternalCallFailed.selector);
         market.claimRewards();
         assertEq(primaryRewardToken.balanceOf(address(market)), 3 ether);
     }
 
     function test_ZeroBalancesEmitAndReturnZeroForEveryConfiguredToken() external {
         vm.expectEmit(address(market));
-        emit IAltoConvexCreditLineEvents.RewardsClaimed(address(this), REWARD_RECIPIENT, address(primaryRewardToken), 0);
+        emit IAltoConvexCreditLineMarketEvents.RewardsClaimed(
+            address(this), REWARD_RECIPIENT, address(primaryRewardToken), 0
+        );
         vm.expectEmit(address(market));
-        emit IAltoConvexCreditLineEvents.RewardsClaimed(address(this), REWARD_RECIPIENT, address(extraRewardToken), 0);
+        emit IAltoConvexCreditLineMarketEvents.RewardsClaimed(
+            address(this), REWARD_RECIPIENT, address(extraRewardToken), 0
+        );
         uint256[] memory amounts = market.claimRewards();
         assertEq(amounts.length, 2);
         assertEq(amounts[0], 0);
@@ -184,7 +188,7 @@ contract AltoConvexCreditLineMarketClaimRewardsTest is ConvexCreditLineCommon {
         _addCollateral(10 ether);
         deal(address(primaryRewardToken), address(market), 3 ether);
         AccountingState memory beforeState = _state();
-        address[] memory rewardsBefore = _configuredRewards();
+        address[] memory rewardsBefore = _configuredRewards(2);
 
         market.claimRewards();
 

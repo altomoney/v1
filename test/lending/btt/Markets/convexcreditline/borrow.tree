@@ -46,6 +46,16 @@ AltoConvexCreditLineMarket::borrow()
 │   │   └── it should revert with AltoBaseMarketInsufficientMarketLiquidity
 │   ├── when gross post-accrual debt equals creditLimit
 │   │   └── it should succeed if solvent
+│   ├── given accumulated badDebtAssets
+│   │   ├── it should reduce available capacity by the full accumulated bad debt
+│   │   ├── when active debt plus bad debt equals creditLimit
+│   │   │   └── it should succeed if solvent
+│   │   └── when active debt plus bad debt exceeds creditLimit
+│   │       ├── it should revert with AltoBaseMarketInsufficientMarketLiquidity
+│   │       └── it should roll back debt fee and borrow-token minting atomically
+│   ├── given bad debt containing unclaimed opening fees and the actual DUSD implementation
+│   │   ├── it should reserve capacity for both already minted DUSD and unclaimed fees
+│   │   └── it should roll back DUSD balance supply and minter accounting when remaining capacity is exceeded
 │   ├── when both credit capacity and solvency would fail
 │   │   └── it should revert with AltoBaseMarketInsufficientMarketLiquidity before querying the oracle
 │   ├── when the oracle price is zero

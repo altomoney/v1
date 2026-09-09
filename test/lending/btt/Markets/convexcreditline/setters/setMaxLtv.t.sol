@@ -2,7 +2,7 @@
 pragma solidity ^0.8.28;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {IAltoCreditMarketErrors} from "@alto/lending/interfaces/IAltoCreditMarket.sol";
+import {IAltoConvexCreditLineMarketErrors} from "@alto/lending/interfaces/IAltoConvexCreditLineMarket.sol";
 import {IMarketEvents} from "@alto/lending/interfaces/IMarket.sol";
 import {PAUSE_TYPE, FROZEN_TYPE} from "@alto/utils/Constants.sol";
 
@@ -16,9 +16,9 @@ contract AltoConvexCreditLineMarketSetMaxLtvTest is ConvexCreditLineCommon {
 
     function test_RevertAtOrAboveForeclosureLtv() external {
         vm.startPrank(OWNER);
-        vm.expectRevert(IAltoCreditMarketErrors.AltoCreditMarketInvalidInput.selector);
+        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketInvalidInput.selector);
         market.setMaxLtv(FORECLOSURE_LTV);
-        vm.expectRevert(IAltoCreditMarketErrors.AltoCreditMarketInvalidInput.selector);
+        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketInvalidInput.selector);
         market.setMaxLtv(FORECLOSURE_LTV + 1);
         vm.stopPrank();
         assertEq(market.maxLtv(), MAX_LTV);

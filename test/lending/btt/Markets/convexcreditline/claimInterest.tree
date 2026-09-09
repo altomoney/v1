@@ -43,5 +43,6 @@ AltoConvexCreditLineMarket::claimInterest()
     ├── it should not accrue interest or call the IRM oracle or Convex contracts
     ├── it should claim opening fees and accrued interest from the same balance
     ├── it should remain claimable after governance foreclosure leaves recorded fees outstanding
+    ├── it should not reduce badDebtAssets when fees from foreclosed debt are claimed
     ├── it should emit InterestClaimed with recipient and claimed amount
     └── it should return the claimed amount

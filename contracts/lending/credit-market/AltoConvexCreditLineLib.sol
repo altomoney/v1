@@ -4,8 +4,10 @@ pragma solidity ^0.8.0;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import {IAltoCreditMarketErrors} from "../interfaces/IAltoCreditMarket.sol";
-import {IAltoConvexCreditLineErrors, IAltoConvexCreditLineEvents} from "../interfaces/IAltoConvexCreditLine.sol";
+import {
+    IAltoConvexCreditLineMarketErrors,
+    IAltoConvexCreditLineMarketEvents
+} from "../interfaces/IAltoConvexCreditLineMarket.sol";
 import {IConvexBooster} from "../interfaces/vendor/IConvexBooster.sol";
 import {IConvexRewardPool} from "../interfaces/vendor/IConvexRewardPool.sol";
 
@@ -13,12 +15,22 @@ import {IConvexRewardPool} from "../interfaces/vendor/IConvexRewardPool.sol";
 /// @author GPM
 /// @custom:contact security@altofoundation.org
 /// @notice Stateless Convex custody and reward operations for AltoConvexCreditLineMarket
+/// @dev Linked functions execute in the calling market's context, so `address(this)` and storage refer to the market.
 library AltoConvexCreditLineLib {
     using SafeERC20 for IERC20;
 
     uint256 internal constant MAX_REWARD_TOKENS = 16;
 
-    /// @notice Validates Convex initialization inputs and returns the pool contracts used by the market
+    /// @notice Validates the Convex pool configuration used to initialize the market.
+    /// @dev Confirms that the pool is active, matches the collateral token and is internally consistent with its
+    /// reward pool. At least one reward token must be configured by the market.
+    /// @param convexBooster The Convex Booster that registers and accepts deposits for the pool.
+    /// @param convexPoolId The identifier of the pool registered in the Convex Booster.
+    /// @param collateralToken The Curve LP token used as market collateral.
+    /// @param rewardRecipient The account configured to receive claimed reward tokens.
+    /// @param rewardTokenCount The number of reward tokens supplied during initialization.
+    /// @return depositToken The Convex deposit token associated with the pool.
+    /// @return rewardPool The Convex reward pool in which collateral will be staked.
     function validateConvexInitialization(
         address convexBooster,
         uint256 convexPoolId,
@@ -27,7 +39,7 @@ library AltoConvexCreditLineLib {
         uint256 rewardTokenCount
     ) external view returns (address depositToken, address rewardPool) {
         if (convexBooster == address(0) || rewardRecipient == address(0)) {
-            revert IAltoCreditMarketErrors.AltoCreditMarketZeroAddress();
+            revert IAltoConvexCreditLineMarketErrors.AltoCreditMarketZeroAddress();
         }
 
         address lpToken;
@@ -36,10 +48,10 @@ library AltoConvexCreditLineLib {
         (lpToken, depositToken, gauge, rewardPool,, shutdown) = IConvexBooster(convexBooster).poolInfo(convexPoolId);
 
         if (lpToken == address(0) || depositToken == address(0) || gauge == address(0) || rewardPool == address(0)) {
-            revert IAltoCreditMarketErrors.AltoCreditMarketZeroAddress();
+            revert IAltoConvexCreditLineMarketErrors.AltoCreditMarketZeroAddress();
         }
         if (shutdown || lpToken != collateralToken) {
-            revert IAltoCreditMarketErrors.AltoCreditMarketInvalidInput();
+            revert IAltoConvexCreditLineMarketErrors.AltoCreditMarketInvalidInput();
         }
 
         IConvexRewardPool rewards = IConvexRewardPool(rewardPool);
@@ -47,63 +59,51 @@ library AltoConvexCreditLineLib {
             rewards.pid() != convexPoolId || rewards.operator() != convexBooster
                 || rewards.stakingToken() != depositToken || rewardTokenCount == 0
         ) {
-            revert IAltoCreditMarketErrors.AltoCreditMarketInvalidInput();
+            revert IAltoConvexCreditLineMarketErrors.AltoCreditMarketInvalidInput();
         }
     }
 
-    /// @notice Deposits received collateral into Convex and verifies the resulting balances
-    function depositCollateralToConvex(
-        address collateralToken,
-        address convexBooster,
-        uint256 convexPoolId,
-        address convexRewardPool,
-        uint256 assets,
-        uint256 idleBefore
-    ) external {
-        IERC20 lpToken = IERC20(collateralToken);
-        if (lpToken.balanceOf(address(this)) - idleBefore != assets) {
-            revert IAltoConvexCreditLineErrors.AltoConvexCreditLineUnexpectedAssetDelta();
-        }
-
-        uint256 stakedBefore = IConvexRewardPool(convexRewardPool).balanceOf(address(this));
+    /// @notice Requests that Convex deposit collateral held by the market and stake the resulting deposit tokens.
+    /// @dev Does not independently verify the resulting collateral or stake balance changes.
+    /// @param convexBooster The Convex Booster through which the collateral is deposited.
+    /// @param convexPoolId The Convex pool identifier used for the deposit.
+    /// @param assets The amount of collateral requested for deposit and staking.
+    function depositCollateralToConvex(address convexBooster, uint256 convexPoolId, uint256 assets) external {
         bool success = IConvexBooster(convexBooster).deposit(convexPoolId, assets, true);
         if (!success) {
-            revert IAltoConvexCreditLineErrors.AltoConvexCreditLineExternalCallFailed();
+            revert IAltoConvexCreditLineMarketErrors.AltoConvexCreditLineExternalCallFailed();
         }
 
-        uint256 idleAfter = lpToken.balanceOf(address(this));
-        if (
-            idleAfter != idleBefore
-                || IConvexRewardPool(convexRewardPool).balanceOf(address(this)) - stakedBefore != assets
-        ) {
-            revert IAltoConvexCreditLineErrors.AltoConvexCreditLineUnexpectedAssetDelta();
-        }
-
-        emit IAltoConvexCreditLineEvents.CollateralStaked(msg.sender, assets);
+        emit IAltoConvexCreditLineMarketEvents.CollateralStaked(msg.sender, assets);
     }
 
-    /// @notice Withdraws and unwraps collateral from Convex
-    function withdrawAndUnwrapCollateral(address collateralToken, address convexRewardPool, uint256 assets) external {
-        IERC20 lpToken = IERC20(collateralToken);
-        uint256 idleBefore = lpToken.balanceOf(address(this));
+    /// @notice Requests withdrawal and unwrapping of collateral from Convex into the market.
+    /// @dev Does not independently verify the recovered collateral balance. The caller remains responsible for
+    /// transferring the recovered collateral to its final receiver.
+    /// @param convexRewardPool The reward pool from which the market withdraws its stake.
+    /// @param assets The amount of staked collateral requested for withdrawal and unwrapping.
+    function withdrawAndUnwrapCollateral(address convexRewardPool, uint256 assets) external {
         bool success = IConvexRewardPool(convexRewardPool).withdrawAndUnwrap(assets, false);
         if (!success) {
-            revert IAltoConvexCreditLineErrors.AltoConvexCreditLineExternalCallFailed();
-        }
-
-        if (lpToken.balanceOf(address(this)) - idleBefore != assets) {
-            revert IAltoConvexCreditLineErrors.AltoConvexCreditLineUnexpectedAssetDelta();
+            revert IAltoConvexCreditLineMarketErrors.AltoConvexCreditLineExternalCallFailed();
         }
     }
 
-    /// @notice Claims and forwards every configured reward token
+    /// @notice Claims Convex rewards and forwards every configured reward-token balance to the recipient.
+    /// @dev Requests primary and extra rewards, then transfers each token's entire market balance, including any
+    /// balance held before the claim. A `RewardsClaimed` event is emitted for every configured token, including zero
+    /// amounts.
+    /// @param convexRewardPool The reward pool from which rewards are claimed.
+    /// @param recipient The account that receives every claimed reward token.
+    /// @param rewardTokens The market's configured reward-token list, processed in storage order.
+    /// @return claimedAmounts The amount forwarded for each token at the corresponding list index.
     function claimRewards(address convexRewardPool, address recipient, address[] storage rewardTokens)
         external
         returns (uint256[] memory claimedAmounts)
     {
         bool success = IConvexRewardPool(convexRewardPool).getReward(address(this), true);
         if (!success) {
-            revert IAltoConvexCreditLineErrors.AltoConvexCreditLineExternalCallFailed();
+            revert IAltoConvexCreditLineMarketErrors.AltoConvexCreditLineExternalCallFailed();
         }
 
         uint256 tokenCount = rewardTokens.length;
@@ -117,27 +117,34 @@ library AltoConvexCreditLineLib {
                 token.safeTransfer(recipient, amount);
             }
 
-            emit IAltoConvexCreditLineEvents.RewardsClaimed(msg.sender, recipient, address(token), amount);
+            emit IAltoConvexCreditLineMarketEvents.RewardsClaimed(msg.sender, recipient, address(token), amount);
         }
     }
 
-    /// @notice Withdraws the full Convex position into idle collateral
-    function emergencyWithdraw(address collateralToken, address convexRewardPool) external returns (uint256 assets) {
+    /// @notice Requests withdrawal and unwrapping of the market's entire reported Convex position.
+    /// @dev Skips the external withdrawal when no collateral is staked and does not independently verify the recovered
+    /// collateral balance.
+    /// @param convexRewardPool The reward pool from which the full position is withdrawn.
+    /// @return assets The reward-pool stake balance requested for withdrawal.
+    function emergencyWithdraw(address convexRewardPool) external returns (uint256 assets) {
         assets = IConvexRewardPool(convexRewardPool).balanceOf(address(this));
         if (assets != 0) {
-            uint256 idleBefore = IERC20(collateralToken).balanceOf(address(this));
             bool success = IConvexRewardPool(convexRewardPool).withdrawAndUnwrap(assets, false);
             if (!success) {
-                revert IAltoConvexCreditLineErrors.AltoConvexCreditLineExternalCallFailed();
-            }
-
-            if (IERC20(collateralToken).balanceOf(address(this)) - idleBefore != assets) {
-                revert IAltoConvexCreditLineErrors.AltoConvexCreditLineUnexpectedAssetDelta();
+                revert IAltoConvexCreditLineMarketErrors.AltoConvexCreditLineExternalCallFailed();
             }
         }
     }
 
-    /// @notice Validates a token before it is added to the reward forwarding list
+    /// @notice Validates a token before it is added to the reward forwarding list.
+    /// @dev Rejects zero addresses, non-contracts, duplicates, reserved market tokens and additions beyond the list
+    /// limit.
+    /// @param rewardTokenCount The current number of configured reward tokens.
+    /// @param tokenAlreadyAdded Whether the token is already present in the reward-token mapping.
+    /// @param token The candidate reward-token address.
+    /// @param collateralToken The market collateral token, which cannot be added as a reward token.
+    /// @param borrowToken The market borrow token, which cannot be added as a reward token.
+    /// @param convexDepositToken The Convex deposit token, which cannot be added as a reward token.
     function validateRewardTokenAddition(
         uint256 rewardTokenCount,
         bool tokenAlreadyAdded,
@@ -147,17 +154,23 @@ library AltoConvexCreditLineLib {
         address convexDepositToken
     ) external view {
         if (token == address(0)) {
-            revert IAltoCreditMarketErrors.AltoCreditMarketZeroAddress();
+            revert IAltoConvexCreditLineMarketErrors.AltoCreditMarketZeroAddress();
         }
         if (
             token.code.length == 0 || rewardTokenCount >= MAX_REWARD_TOKENS || token == collateralToken
                 || token == borrowToken || token == convexDepositToken || tokenAlreadyAdded
         ) {
-            revert IAltoCreditMarketErrors.AltoCreditMarketInvalidInput();
+            revert IAltoConvexCreditLineMarketErrors.AltoCreditMarketInvalidInput();
         }
     }
 
-    /// @notice Removes a non-primary token with no pending market balance
+    /// @notice Removes a non-primary reward token that has no balance held by the market.
+    /// @dev Removes the token with swap-and-pop, so the ordering of the remaining list may change. The current primary
+    /// reward token cannot be removed.
+    /// @param rewardTokens The market's reward-token list.
+    /// @param isRewardToken The mapping that records whether a token is configured.
+    /// @param convexRewardPool The reward pool used to identify the current primary reward token.
+    /// @param token The configured reward token to remove.
     function removeRewardToken(
         address[] storage rewardTokens,
         mapping(address => bool) storage isRewardToken,
@@ -168,7 +181,7 @@ library AltoConvexCreditLineLib {
             !isRewardToken[token] || token == IConvexRewardPool(convexRewardPool).rewardToken()
                 || IERC20(token).balanceOf(address(this)) != 0
         ) {
-            revert IAltoCreditMarketErrors.AltoCreditMarketInvalidInput();
+            revert IAltoConvexCreditLineMarketErrors.AltoCreditMarketInvalidInput();
         }
 
         uint256 tokenCount = rewardTokens.length;
@@ -182,7 +195,7 @@ library AltoConvexCreditLineLib {
         }
 
         if (tokenIndex == tokenCount) {
-            revert IAltoCreditMarketErrors.AltoCreditMarketInvalidInput();
+            revert IAltoConvexCreditLineMarketErrors.AltoCreditMarketInvalidInput();
         }
 
         uint256 lastIndex = tokenCount - 1;

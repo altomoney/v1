@@ -2,14 +2,16 @@
 pragma solidity ^0.8.28;
 
 import {Test} from "forge-std/Test.sol";
+import {Vm} from "forge-std/Vm.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 import {AltoConvexCreditLineMarket} from "@alto/lending/credit-market/AltoConvexCreditLineMarket.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
-import {CreditMarketInitParams, IAltoCreditMarketEvents} from "@alto/lending/interfaces/IAltoCreditMarket.sol";
 import {
-    ConvexCreditLineInitParams, IAltoConvexCreditLineEvents
-} from "@alto/lending/interfaces/IAltoConvexCreditLine.sol";
+    CreditMarketInitParams,
+    IAltoConvexCreditLineMarketEvents,
+    ConvexCreditLineInitParams
+} from "@alto/lending/interfaces/IAltoConvexCreditLineMarket.sol";
 import {Balance, BaseMarketInitParams, IMarketEvents, Position} from "@alto/lending/interfaces/IMarket.sol";
 import {IIrm} from "@alto/lending/interfaces/IIrm.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
@@ -20,12 +22,7 @@ import {ConvexBoosterMock} from "./mocks/ConvexBoosterMock.sol";
 import {ConvexRewardPoolMock} from "./mocks/ConvexRewardPoolMock.sol";
 import {CreditLineMarketCollateralTokenMock} from "./mocks/CreditLineMarketCollateralTokenMock.sol";
 
-abstract contract ConvexCreditLineCommon is
-    Test,
-    IMarketEvents,
-    IAltoCreditMarketEvents,
-    IAltoConvexCreditLineEvents
-{
+abstract contract ConvexCreditLineCommon is Test, IMarketEvents, IAltoConvexCreditLineMarketEvents {
     uint256 internal constant POOL_ID = 7;
     uint256 internal constant MAX_LTV = 0.75 ether;
     uint256 internal constant FORECLOSURE_LTV = 0.9 ether;
@@ -57,6 +54,7 @@ abstract contract ConvexCreditLineCommon is
         Balance totalBorrowed;
         Position creditPosition;
         uint128 claimableFees;
+        uint256 badDebt;
         uint256 creditBalance;
         uint256 receiverBorrowBalance;
         uint256 idleCollateral;
@@ -101,6 +99,7 @@ abstract contract ConvexCreditLineCommon is
                     collateralToken: address(collateralToken),
                     irm: address(paramsIrm),
                     owner: OWNER,
+                    emergencyAdmin: OWNER,
                     oracle: address(oracle),
                     maxLtv: MAX_LTV,
                     feeRecipient: FEE_RECIPIENT,
@@ -218,9 +217,10 @@ abstract contract ConvexCreditLineCommon is
         (state.creditPosition.supplyShares, state.creditPosition.borrowShares, state.creditPosition.collateralAssets) =
             market.position(CREDIT_ACCOUNT);
         state.claimableFees = market.claimableFeesAssets();
+        state.badDebt = market.badDebtAssets();
         state.creditBalance = borrowToken.balanceOf(CREDIT_ACCOUNT);
         state.receiverBorrowBalance = borrowToken.balanceOf(RECEIVER);
-        state.idleCollateral = market.idleCollateralAssets();
+        state.idleCollateral = collateralToken.balanceOf(address(market));
         state.stakedCollateral = market.stakedCollateralAssets();
     }
 
@@ -237,6 +237,7 @@ abstract contract ConvexCreditLineCommon is
             "position.collateralAssets"
         );
         assertEq(actual.claimableFees, expected.claimableFees, "claimableFeesAssets");
+        assertEq(actual.badDebt, expected.badDebt, "badDebtAssets");
         assertEq(actual.creditBalance, expected.creditBalance, "credit borrow-token balance");
         assertEq(actual.receiverBorrowBalance, expected.receiverBorrowBalance, "receiver borrow-token balance");
         assertEq(actual.idleCollateral, expected.idleCollateral, "idle collateral");
@@ -252,19 +253,38 @@ abstract contract ConvexCreditLineCommon is
         market.setBorrowOpeningFee(fee);
     }
 
-    function _configuredRewards() internal view returns (address[] memory tokens) {
-        uint256 count = market.rewardTokenCount();
+    function _configuredRewards(uint256 count) internal view returns (address[] memory tokens) {
         tokens = new address[](count);
         for (uint256 i; i < count; ++i) {
             tokens[i] = market.rewardToken(i);
         }
     }
 
-    function _assertRewardList(address[] memory expected) internal view {
-        assertEq(market.rewardTokenCount(), expected.length);
+    function _assertRewardList(address[] memory expected) internal {
         for (uint256 i; i < expected.length; ++i) {
             assertEq(market.rewardToken(i), expected[i]);
             assertTrue(market.isRewardToken(expected[i]));
+        }
+        _assertRewardTokenCount(expected.length);
+    }
+
+    function _assertRewardTokenCount(uint256 expectedCount) internal {
+        if (expectedCount != 0) {
+            assertTrue(market.rewardToken(expectedCount - 1) != address(0));
+        }
+        vm.expectRevert();
+        market.rewardToken(expectedCount);
+    }
+
+    function _assertNoCollateralUnstakedEvent() internal {
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        for (uint256 i; i < logs.length; ++i) {
+            if (
+                logs[i].emitter == address(market) && logs[i].topics.length != 0
+                    && logs[i].topics[0] == IAltoConvexCreditLineMarketEvents.CollateralUnstaked.selector
+            ) {
+                fail("CollateralUnstaked emitted");
+            }
         }
     }
 
