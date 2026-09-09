@@ -1,0 +1,34 @@
+AltoConvexCreditLineMarket::removeRewardToken()
+├── when caller is not owner
+│   └── it should revert with OwnableUnauthorizedAccount before external reward checks
+├── when token is not configured
+│   └── it should revert with AltoCreditMarketInvalidInput without calling reward pool or token
+├── when token is the reward pool primary reward token
+│   └── it should revert with AltoCreditMarketInvalidInput without querying token balance
+├── when token has a nonzero market balance
+│   ├── when balance is one smallest token unit
+│   │   └── it should revert with AltoCreditMarketInvalidInput
+│   └── when balance is larger
+│       └── it should revert with AltoCreditMarketInvalidInput
+├── when reward pool rewardToken query reverts or returns malformed data
+│   └── it should propagate the failure without changing the list
+├── when token balanceOf reverts or returns malformed data
+│   └── it should propagate the failure without changing the list
+├── given a configured non-primary token with zero balance
+│   ├── when token is the last list element
+│   │   └── it should pop the last element without changing earlier order
+│   ├── when token is the first or middle list element
+│   │   └── it should move the prior last token into the removed index and pop the list
+│   ├── it should decrement rewardTokenCount
+│   ├── it should set isRewardToken for the removed token to false
+│   ├── it should preserve membership for every remaining token
+│   ├── it should emit RewardTokenRemoved
+│   ├── it should not transfer or claim any token
+│   ├── it should allow the removed token to be added again later
+│   ├── it should exclude the removed token from later claims even if Convex distributes it again
+│   └── it should not change market accounting or Convex custody
+├── when reward pool reports a different primary token after initialization
+│   ├── it should protect the currently reported primary token from removal
+│   └── it should treat the formerly reported primary token as removable if its balance is zero
+└── when market is paused frozen or Convex inactive
+    └── it should remain callable by owner subject to the same token checks

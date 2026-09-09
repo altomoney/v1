@@ -5,6 +5,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import {AltoBaseMarket} from "../AltoBaseMarket.sol";
+import {AltoConvexCreditLineLib} from "./AltoConvexCreditLineLib.sol";
 import {AssetShareConversionMath} from "../libraries/AssetShareConversionMath.sol";
 import {Uint128Converter} from "../libraries/Uint128Converter.sol";
 import {CreditMarketInitParams, IAltoCreditMarket} from "../interfaces/IAltoCreditMarket.sol";
@@ -12,7 +13,6 @@ import {ConvexCreditLineInitParams, IAltoConvexCreditLine} from "../interfaces/I
 import {IIrm, IRMType} from "../interfaces/IIrm.sol";
 import {BaseMarketInitParams, IMarketBase, MarketType, Position} from "../interfaces/IMarket.sol";
 import {IMintableERC20} from "../interfaces/IMintableERC20.sol";
-import {IConvexBooster} from "../interfaces/vendor/IConvexBooster.sol";
 import {IConvexRewardPool} from "../interfaces/vendor/IConvexRewardPool.sol";
 
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
@@ -24,14 +24,11 @@ import {ILendingOracle, LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/inte
 /// @custom:contact security@altofoundation.org
 /// @notice An Isolated Convex Credit Line
 /// @dev `totalSupply.assets` represents synthetic credit capacity rather than lender-supplied liquidity.
-contract AltoConvexCreditLine is AltoBaseMarket, IAltoConvexCreditLine {
+contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLine {
     using FixedPointMath for uint256;
     using AssetShareConversionMath for uint256;
     using Uint128Converter for uint256;
     using SafeERC20 for IERC20;
-
-    /// @notice Maximum number of reward tokens processed by a single claim
-    uint256 public constant MAX_REWARD_TOKENS = 16;
 
     /// @inheritdoc IAltoCreditMarket
     address public creditAccount;
@@ -63,8 +60,8 @@ contract AltoConvexCreditLine is AltoBaseMarket, IAltoConvexCreditLine {
     /// @inheritdoc IAltoConvexCreditLine
     bool public convexActive;
 
-    /// @dev Reward tokens forwarded by `claimRewards`; order may change after removal
-    address[] private _rewardTokens;
+    /// @inheritdoc IAltoConvexCreditLine
+    address[] public rewardToken;
 
     /// @inheritdoc IAltoConvexCreditLine
     mapping(address => bool) public isRewardToken;
@@ -76,27 +73,20 @@ contract AltoConvexCreditLine is AltoBaseMarket, IAltoConvexCreditLine {
 
     /// @notice Initializes the credit market and Convex pool
     /// @param _initParams The credit market and Convex initialization parameters
-    function initialize(ConvexCreditLineInitParams memory _initParams) public initializer {
+    function initialize(ConvexCreditLineInitParams memory _initParams) external initializer {
         _initializeCreditMarket(_initParams.creditMarketInitParams);
         _initializeConvex(_initParams);
     }
 
-    /// @dev Initializes the Base market with no liquidation engine and then initializes Credit state.
+    /// @dev Initializes the Base market and then initializes Credit state.
     function _initializeCreditMarket(CreditMarketInitParams memory _initParams) internal onlyInitializing {
         BaseMarketInitParams memory baseMarketInitParams = _initParams.baseMarketInitParams;
 
+        _requireNonZeroAddress(_initParams.creditAccount);
+        _requireNonZeroAddress(baseMarketInitParams.feeRecipient);
         if (
-            baseMarketInitParams.irm == address(0) || _initParams.creditAccount == address(0)
-                || baseMarketInitParams.feeRecipient == address(0)
-        ) {
-            revert AltoCreditMarketZeroAddress();
-        }
-        if (
-            _initParams.creditLimit == 0 || baseMarketInitParams.borrowToken == baseMarketInitParams.collateralToken
-                || baseMarketInitParams.liquidationEngine != address(0)
-                || _initParams.initialBorrowOpeningFee > MATH_PRECISION
+            _initParams.creditLimit == 0 || _initParams.initialBorrowOpeningFee > MATH_PRECISION
                 || baseMarketInitParams.maxLtv >= _initParams.foreclosureLtv || _initParams.foreclosureLtv > MATH_PRECISION
-                || _initParams.creditLimit > type(uint128).max
                 || IIrm(baseMarketInitParams.irm).IRM_TYPE() != IRMType.FIXED_RATE
         ) {
             revert AltoCreditMarketInvalidInput();
@@ -119,7 +109,7 @@ contract AltoConvexCreditLine is AltoBaseMarket, IAltoConvexCreditLine {
 
     /// @inheritdoc IAltoCreditMarket
     function setCreditLimit(uint256 _newCreditLimit) external nonReentrant onlyOwner {
-        if (_newCreditLimit == 0 || _newCreditLimit > type(uint128).max) {
+        if (_newCreditLimit == 0) {
             revert AltoCreditMarketInvalidInput();
         }
 
@@ -168,9 +158,7 @@ contract AltoConvexCreditLine is AltoBaseMarket, IAltoConvexCreditLine {
     /// @inheritdoc AltoBaseMarket
     /// @dev Unlike `AltoBaseMarket`, only a nonzero fixed-rate IRM can be set.
     function _setIrm(address _irm, bool _skipAccrueInterest) internal override nonReentrant {
-        if (_irm == address(0)) {
-            revert AltoCreditMarketZeroAddress();
-        }
+        _requireNonZeroAddress(_irm);
         if (_irm == irm || IIrm(_irm).IRM_TYPE() != IRMType.FIXED_RATE) {
             revert AltoCreditMarketInvalidInput();
         }
@@ -180,15 +168,13 @@ contract AltoConvexCreditLine is AltoBaseMarket, IAltoConvexCreditLine {
 
     /// @inheritdoc AltoBaseMarket
     function _setFeeRecipient(address _feeRecipient) internal override {
-        if (_feeRecipient == address(0)) {
-            revert AltoCreditMarketZeroAddress();
-        }
+        _requireNonZeroAddress(_feeRecipient);
 
         _updateFeeRecipient(_feeRecipient);
     }
 
     /// @inheritdoc IAltoCreditMarket
-    function creditLimit() public view returns (uint256) {
+    function creditLimit() external view returns (uint256) {
         return totalSupply.assets;
     }
 
@@ -205,22 +191,17 @@ contract AltoConvexCreditLine is AltoBaseMarket, IAltoConvexCreditLine {
     }
 
     /// @inheritdoc AltoBaseMarket
-    /// @dev Callbacks are unsupported and collateral can be removed only after `creditAccount` repays all debt.
+    /// @dev Callbacks are unsupported and collateral can be removed only while the remaining position is solvent.
     function _removeCollateral(uint256 assets, address onBehalf, address receiver, bytes calldata swapParams)
         internal
         override
         returns (uint256)
     {
-        if (receiver == address(0)) {
-            revert AltoCreditMarketZeroAddress();
-        }
+        _requireNonZeroAddress(receiver);
         if (swapParams.length != 0) {
             revert AltoCreditMarketCallbacksUnsupported();
         }
         _requireCreditAccount(onBehalf);
-        if (position[onBehalf].borrowShares != 0) {
-            revert AltoCreditMarketOutstandingDebt();
-        }
 
         return super._removeCollateral(assets, onBehalf, receiver, swapParams);
     }
@@ -260,9 +241,7 @@ contract AltoConvexCreditLine is AltoBaseMarket, IAltoConvexCreditLine {
         if (interest > claimableFeesAssets) {
             revert AltoCreditMarketInvalidInput();
         }
-        if (feeRecipient == address(0)) {
-            revert AltoCreditMarketZeroAddress();
-        }
+        _requireNonZeroAddress(feeRecipient);
         if (msg.sender != owner() && msg.sender != feeRecipient) {
             revert AltoCreditMarketUnauthorizedAccount();
         }
@@ -412,18 +391,20 @@ contract AltoConvexCreditLine is AltoBaseMarket, IAltoConvexCreditLine {
         }
     }
 
+    /// @dev Reverts when the supplied address is zero.
+    function _requireNonZeroAddress(address account) internal pure {
+        if (account == address(0)) {
+            revert AltoCreditMarketZeroAddress();
+        }
+    }
+
     /// @inheritdoc IAltoConvexCreditLine
     function rewardTokenCount() external view returns (uint256) {
-        return _rewardTokens.length;
+        return rewardToken.length;
     }
 
     /// @inheritdoc IAltoConvexCreditLine
-    function rewardToken(uint256 index) external view returns (address) {
-        return _rewardTokens[index];
-    }
-
-    /// @inheritdoc IAltoConvexCreditLine
-    function stakedCollateralAssets() public view returns (uint256) {
+    function stakedCollateralAssets() external view returns (uint256) {
         return IConvexRewardPool(convexRewardPool).balanceOf(address(this));
     }
 
@@ -434,33 +415,13 @@ contract AltoConvexCreditLine is AltoBaseMarket, IAltoConvexCreditLine {
 
     /// @inheritdoc IAltoConvexCreditLine
     function claimRewards() external nonReentrant returns (uint256[] memory claimedAmounts) {
-        bool success = IConvexRewardPool(convexRewardPool).getReward(address(this), true);
-        if (!success) {
-            revert AltoConvexCreditLineExternalCallFailed();
-        }
-
-        address recipient = rewardRecipient;
-        uint256 tokenCount = _rewardTokens.length;
-        claimedAmounts = new uint256[](tokenCount);
-        for (uint256 i = 0; i < tokenCount; ++i) {
-            IERC20 token = IERC20(_rewardTokens[i]);
-            uint256 amount = token.balanceOf(address(this));
-            claimedAmounts[i] = amount;
-
-            if (amount != 0) {
-                token.safeTransfer(recipient, amount);
-            }
-
-            emit RewardsClaimed(msg.sender, recipient, address(token), amount);
-        }
+        return AltoConvexCreditLineLib.claimRewards(convexRewardPool, rewardRecipient, rewardToken);
     }
 
     /// @inheritdoc IAltoConvexCreditLine
     function setRewardRecipient(address _newRecipient) external {
         _requireCreditAccount(msg.sender);
-        if (_newRecipient == address(0)) {
-            revert AltoCreditMarketZeroAddress();
-        }
+        _requireNonZeroAddress(_newRecipient);
 
         emit SetRewardRecipient(rewardRecipient, _newRecipient);
         rewardRecipient = _newRecipient;
@@ -474,33 +435,7 @@ contract AltoConvexCreditLine is AltoBaseMarket, IAltoConvexCreditLine {
 
     /// @inheritdoc IAltoConvexCreditLine
     function removeRewardToken(address _token) external onlyOwner {
-        if (
-            !isRewardToken[_token] || _token == IConvexRewardPool(convexRewardPool).rewardToken()
-                || IERC20(_token).balanceOf(address(this)) != 0
-        ) {
-            revert AltoCreditMarketInvalidInput();
-        }
-
-        uint256 tokenCount = _rewardTokens.length;
-        uint256 tokenIndex = tokenCount;
-
-        for (uint256 i; i < tokenCount; ++i) {
-            if (_rewardTokens[i] == _token) {
-                tokenIndex = i;
-                break;
-            }
-        }
-
-        if (tokenIndex == tokenCount) {
-            revert AltoCreditMarketInvalidInput();
-        }
-
-        uint256 lastIndex = tokenCount - 1;
-        if (tokenIndex != lastIndex) {
-            _rewardTokens[tokenIndex] = _rewardTokens[lastIndex];
-        }
-        _rewardTokens.pop();
-        delete isRewardToken[_token];
+        AltoConvexCreditLineLib.removeRewardToken(rewardToken, isRewardToken, convexRewardPool, _token);
 
         emit RewardTokenRemoved(_token);
     }
@@ -514,18 +449,7 @@ contract AltoConvexCreditLine is AltoBaseMarket, IAltoConvexCreditLine {
             revert AltoConvexCreditLineStrategyInactive();
         }
 
-        assets = stakedCollateralAssets();
-        if (assets != 0) {
-            uint256 idleBefore = idleCollateralAssets();
-            bool success = IConvexRewardPool(convexRewardPool).withdrawAndUnwrap(assets, false);
-            if (!success) {
-                revert AltoConvexCreditLineExternalCallFailed();
-            }
-
-            if (idleCollateralAssets() - idleBefore != assets) {
-                revert AltoConvexCreditLineUnexpectedAssetDelta();
-            }
-        }
+        assets = AltoConvexCreditLineLib.emergencyWithdraw(collateralToken, convexRewardPool);
 
         convexActive = false;
         IERC20(collateralToken).forceApprove(convexBooster, 0);
@@ -534,32 +458,14 @@ contract AltoConvexCreditLine is AltoBaseMarket, IAltoConvexCreditLine {
 
     /// @dev Validates and stores the Convex custody and reward configuration.
     function _initializeConvex(ConvexCreditLineInitParams memory _initParams) private {
-        if (_initParams.convexBooster == address(0) || _initParams.rewardRecipient == address(0)) {
-            revert AltoCreditMarketZeroAddress();
-        }
-
-        (address lpToken, address depositToken, address gauge, address rewardPool,, bool shutdown) =
-            IConvexBooster(_initParams.convexBooster).poolInfo(_initParams.convexPoolId);
-
-        if (lpToken == address(0) || depositToken == address(0) || gauge == address(0) || rewardPool == address(0)) {
-            revert AltoCreditMarketZeroAddress();
-        }
-        if (shutdown || lpToken != collateralToken) {
-            revert AltoCreditMarketInvalidInput();
-        }
-
-        IConvexRewardPool rewards = IConvexRewardPool(rewardPool);
-        if (
-            rewards.pid() != _initParams.convexPoolId || rewards.operator() != _initParams.convexBooster
-                || rewards.stakingToken() != depositToken
-        ) {
-            revert AltoCreditMarketInvalidInput();
-        }
-
         uint256 tokenCount = _initParams.rewardTokens.length;
-        if (tokenCount == 0) {
-            revert AltoCreditMarketInvalidInput();
-        }
+        (address depositToken, address rewardPool) = AltoConvexCreditLineLib.validateConvexInitialization(
+            _initParams.convexBooster,
+            _initParams.convexPoolId,
+            collateralToken,
+            _initParams.rewardRecipient,
+            tokenCount
+        );
 
         convexBooster = _initParams.convexBooster;
         convexPoolId = _initParams.convexPoolId;
@@ -572,7 +478,7 @@ contract AltoConvexCreditLine is AltoBaseMarket, IAltoConvexCreditLine {
             _addRewardToken(_initParams.rewardTokens[i]);
         }
 
-        if (!isRewardToken[rewards.rewardToken()]) {
+        if (!isRewardToken[IConvexRewardPool(rewardPool).rewardToken()]) {
             revert AltoCreditMarketInvalidInput();
         }
 
@@ -585,18 +491,12 @@ contract AltoConvexCreditLine is AltoBaseMarket, IAltoConvexCreditLine {
 
     /// @dev Adds a validated token to the reward forwarding list.
     function _addRewardToken(address _token) private {
-        if (_token == address(0)) {
-            revert AltoCreditMarketZeroAddress();
-        }
-        if (
-            _token.code.length == 0 || _rewardTokens.length >= MAX_REWARD_TOKENS || _token == collateralToken
-                || _token == borrowToken || _token == convexDepositToken || isRewardToken[_token]
-        ) {
-            revert AltoCreditMarketInvalidInput();
-        }
+        AltoConvexCreditLineLib.validateRewardTokenAddition(
+            rewardToken.length, isRewardToken[_token], _token, collateralToken, borrowToken, convexDepositToken
+        );
 
         isRewardToken[_token] = true;
-        _rewardTokens.push(_token);
+        rewardToken.push(_token);
     }
 
     /// @inheritdoc AltoBaseMarket
@@ -605,47 +505,23 @@ contract AltoConvexCreditLine is AltoBaseMarket, IAltoConvexCreditLine {
             revert AltoCreditMarketInvalidInput();
         }
 
-        IERC20 lpToken = IERC20(collateralToken);
-        uint256 idleBefore = lpToken.balanceOf(address(this));
-        uint256 stakedBefore = stakedCollateralAssets();
+        uint256 idleBefore = idleCollateralAssets();
 
-        lpToken.safeTransferFrom(msg.sender, address(this), assets);
-        if (lpToken.balanceOf(address(this)) - idleBefore != assets) {
-            revert AltoConvexCreditLineUnexpectedAssetDelta();
-        }
-
-        bool success = IConvexBooster(convexBooster).deposit(convexPoolId, assets, true);
-        if (!success) {
-            revert AltoConvexCreditLineExternalCallFailed();
-        }
-
-        uint256 idleAfter = lpToken.balanceOf(address(this));
-        if (idleAfter != idleBefore || stakedCollateralAssets() - stakedBefore != assets) {
-            revert AltoConvexCreditLineUnexpectedAssetDelta();
-        }
-
-        emit CollateralStaked(msg.sender, assets);
+        super._receiveCollateral(assets);
+        AltoConvexCreditLineLib.depositCollateralToConvex(
+            collateralToken, convexBooster, convexPoolId, convexRewardPool, assets, idleBefore
+        );
     }
 
     /// @inheritdoc AltoBaseMarket
     function _sendCollateral(address receiver, uint256 assets) internal override {
-        IERC20 lpToken = IERC20(collateralToken);
-
         if (convexActive) {
-            uint256 idleBefore = lpToken.balanceOf(address(this));
-            bool success = IConvexRewardPool(convexRewardPool).withdrawAndUnwrap(assets, false);
-            if (!success) {
-                revert AltoConvexCreditLineExternalCallFailed();
-            }
-
-            if (lpToken.balanceOf(address(this)) - idleBefore != assets) {
-                revert AltoConvexCreditLineUnexpectedAssetDelta();
-            }
-        } else if (lpToken.balanceOf(address(this)) < assets) {
+            AltoConvexCreditLineLib.withdrawAndUnwrapCollateral(collateralToken, convexRewardPool, assets);
+        } else if (idleCollateralAssets() < assets) {
             revert AltoConvexCreditLineUnexpectedAssetDelta();
         }
 
-        lpToken.safeTransfer(receiver, assets);
+        super._sendCollateral(receiver, assets);
         emit CollateralUnstaked(receiver, assets);
     }
 }

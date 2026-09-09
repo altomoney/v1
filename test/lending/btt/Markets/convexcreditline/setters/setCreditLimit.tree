@@ -1,0 +1,33 @@
+AltoConvexCreditLineMarket::setCreditLimit()
+├── when caller is not owner
+│   └── it should revert with OwnableUnauthorizedAccount
+├── when new credit limit is zero
+│   └── it should revert with AltoCreditMarketInvalidInput before accruing interest
+├── when new credit limit exceeds uint128 max
+│   └── it should accrue and then revert with MathUtilsMaxUint128Overflow during checked conversion
+├── given market is not paused
+│   ├── it should accrue interest before comparing the new limit with debt
+│   ├── when IRM accrual fails
+│   │   └── it should revert without changing the credit limit
+│   └── when accrued debt exceeds the proposed limit
+│       └── it should revert with AltoCreditMarketInvalidInput and roll back accrual
+├── given market is paused
+│   ├── it should skip interest accrual regardless of elapsed time
+│   └── it should compare the proposed limit with currently recorded debt
+├── given market is frozen but not paused
+│   └── it should accrue and remain callable
+├── when new credit limit is less than totalBorrowed assets
+│   └── it should revert with AltoCreditMarketInvalidInput
+├── when new credit limit equals totalBorrowed assets
+│   └── it should succeed
+└── when new credit limit is valid
+    ├── it should permit increases and decreases above recorded debt
+    ├── it should accept exactly uint128 max
+    ├── when new value equals current credit limit
+    │   └── it should still emit and leave the same value
+    ├── it should update totalSupply assets and creditLimit
+    ├── it should leave totalSupply shares at zero
+    ├── it should not change totalBorrowed shares positions or claimableFeesAssets except through accrual
+    ├── it should emit SetCreditLimit with old and new values after any AccrueInterest event
+    ├── it should not query the oracle or interact with tokens or Convex
+    └── it should reject and roll back an IRM reentrancy attempt

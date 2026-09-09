@@ -47,9 +47,6 @@ interface IAltoCreditMarketErrors {
 
     /// @notice Error thrown when public liquidation is attempted
     error AltoCreditMarketNonLiquidatable();
-
-    /// @notice Error thrown when collateral withdrawal is attempted with outstanding debt
-    error AltoCreditMarketOutstandingDebt();
 }
 
 interface IAltoCreditMarketEvents {

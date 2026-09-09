@@ -1,0 +1,117 @@
+AltoConvexCreditLineMarket::initialize()
+├── when called on the implementation contract
+│   └── it should revert because initializers are disabled
+├── when the proxy is already initialized
+│   └── it should revert with InvalidInitialization
+├── given invalid credit market parameters
+│   ├── when IRM is zero address
+│   │   └── it should revert when the fixed-rate type query returns no data
+│   ├── when credit account is zero address
+│   │   └── it should revert with AltoCreditMarketZeroAddress
+│   ├── when fee recipient is zero address
+│   │   └── it should revert with AltoCreditMarketZeroAddress
+│   ├── when borrow token is zero address and differs from collateral token
+│   │   └── it should revert with AltoBaseMarketInvalidInput
+│   ├── when collateral token is zero address and differs from borrow token
+│   │   └── it should revert with AltoBaseMarketInvalidInput
+│   ├── when oracle is zero address
+│   │   └── it should revert with AltoBaseMarketInvalidInput
+│   ├── when owner is zero address
+│   │   └── it should revert with OwnableInvalidOwner
+│   ├── when credit limit is zero
+│   │   └── it should revert with AltoCreditMarketInvalidInput
+│   ├── when credit limit exceeds uint128 max
+│   │   └── it should revert with MathUtilsMaxUint128Overflow during checked conversion
+│   ├── when opening fee exceeds MATH_PRECISION
+│   │   └── it should revert with AltoCreditMarketInvalidInput
+│   ├── when max LTV equals foreclosure LTV
+│   │   └── it should revert with AltoCreditMarketInvalidInput
+│   ├── when max LTV exceeds foreclosure LTV
+│   │   └── it should revert with AltoCreditMarketInvalidInput
+│   ├── when foreclosure LTV exceeds MATH_PRECISION
+│   │   └── it should revert with AltoCreditMarketInvalidInput
+│   ├── when IRM type is not FIXED_RATE
+│   │   └── it should revert with AltoCreditMarketInvalidInput
+│   ├── when IRM type query reverts or returns malformed data
+│   │   └── it should propagate the failure and leave the proxy uninitialized
+│   └── when IRM rejects market registration
+│       └── it should revert atomically and leave the proxy uninitialized
+├── given invalid Convex configuration
+│   ├── when Booster is zero address
+│   │   └── it should revert with AltoCreditMarketZeroAddress
+│   ├── when reward recipient is zero address
+│   │   └── it should revert with AltoCreditMarketZeroAddress
+│   ├── when Booster poolInfo reverts or returns malformed data
+│   │   └── it should propagate the failure and roll back all initialization
+│   ├── when pool LP token is zero address
+│   │   └── it should revert with AltoCreditMarketZeroAddress
+│   ├── when pool deposit token is zero address
+│   │   └── it should revert with AltoCreditMarketZeroAddress
+│   ├── when pool gauge is zero address
+│   │   └── it should revert with AltoCreditMarketZeroAddress
+│   ├── when pool reward pool is zero address
+│   │   └── it should revert with AltoCreditMarketZeroAddress
+│   ├── when pool is shut down
+│   │   └── it should revert with AltoCreditMarketInvalidInput
+│   ├── when pool LP token differs from collateral token
+│   │   └── it should revert with AltoCreditMarketInvalidInput
+│   ├── when reward pool PID differs from configured pool ID
+│   │   └── it should revert with AltoCreditMarketInvalidInput
+│   ├── when reward pool operator differs from Booster
+│   │   └── it should revert with AltoCreditMarketInvalidInput
+│   ├── when reward pool staking token differs from deposit token
+│   │   └── it should revert with AltoCreditMarketInvalidInput
+│   ├── when reward pool PID operator or staking token query reverts or returns malformed data
+│   │   └── it should propagate the failure and roll back all initialization
+│   ├── when reward token list is empty
+│   │   └── it should revert with AltoCreditMarketInvalidInput
+│   ├── when a reward token is zero address
+│   │   └── it should revert with AltoCreditMarketZeroAddress
+│   ├── when a reward token has no code
+│   │   └── it should revert with AltoCreditMarketInvalidInput
+│   ├── when a reward token is the collateral token
+│   │   └── it should revert with AltoCreditMarketInvalidInput
+│   ├── when a reward token is the borrow token
+│   │   └── it should revert with AltoCreditMarketInvalidInput
+│   ├── when a reward token is the Convex deposit token
+│   │   └── it should revert with AltoCreditMarketInvalidInput
+│   ├── when a reward token is duplicated
+│   │   └── it should revert with AltoCreditMarketInvalidInput
+│   ├── when reward token count exceeds MAX_REWARD_TOKENS
+│   │   └── it should revert with AltoCreditMarketInvalidInput
+│   ├── when the primary reward token is not configured
+│   │   └── it should revert with AltoCreditMarketInvalidInput
+│   ├── when primary reward token query reverts or returns malformed data
+│   │   └── it should propagate the failure and roll back all initialization
+│   └── when collateral approval to Booster fails
+│       └── it should revert atomically and leave the proxy uninitialized
+└── given valid parameters
+    ├── when initializer caller differs from configured owner
+    │   └── it should initialize successfully and assign ownership only to configured owner
+    ├── when max LTV is zero foreclosure LTV is MATH_PRECISION opening fee is MATH_PRECISION and credit limit is uint128 max
+    │   └── it should accept every inclusive boundary
+    ├── when convexPoolId is zero and all reported pool metadata matches
+    │   └── it should accept pool ID zero
+    ├── when ignored pool stash address is zero
+    │   └── it should initialize successfully
+    ├── when borrow token equals collateral token
+    │   └── it should initialize successfully
+    ├── when liquidation engine is nonzero and accepts registration
+    │   └── it should store the engine and register the market
+    ├── it should set MARKET_TYPE to CREDIT_MINT
+    ├── it should initialize Base token oracle IRM LTV fee recipient and owner state
+    ├── it should leave liquidationEngine at zero
+    ├── it should register the market with the fixed-rate IRM exactly once
+    ├── it should grant the owner PAUSE_TYPE and FROZEN_TYPE pauser permissions
+    ├── it should set creditAccount foreclosureLtv and borrowOpeningFee
+    ├── it should set totalSupply assets to the credit limit and shares to zero
+    ├── it should leave totalBorrowed and the credit account position empty
+    ├── it should leave claimableFeesAssets at zero
+    ├── it should store the validated Convex configuration and mark it active
+    ├── it should preserve initial reward token order and membership
+    ├── it should not emit RewardTokenAdded for initial reward tokens
+    ├── it should allow exactly MAX_REWARD_TOKENS including the primary reward token
+    ├── it should approve the Booster for maximum collateral allowance
+    ├── it should leave idle and staked collateral at zero without calling Booster deposit
+    ├── it should emit Base Credit and Convex configuration events in initialization order
+    └── it should initialize authorization reentrancy ownership and UUPS state

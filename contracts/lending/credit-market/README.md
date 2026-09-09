@@ -1,12 +1,13 @@
 # Convex Credit Line
 
 > [!WARNING]
-> This implementation has not been tested or audited and is not ready for
-> production deployment.
+> This implementation has not been audited and is not ready for production
+> deployment. Passing unit and fork tests does not replace an independent
+> security review.
 
 ## Facility model
 
-`AltoConvexCreditLine` is a dedicated, single-account Mint Market. A configured
+`AltoConvexCreditLineMarket` is a dedicated, single-account Mint Market. A configured
 Curve LP deposit gates access to a revolving credit limit and is staked in one
 validated Ethereum Convex pool.
 
@@ -14,6 +15,55 @@ The contract is a direct `AltoBaseMarket` variant, like `AltoBorrowMarket` and
 `AltoMintMarket`. The narrowly scoped changes made to the audited base contract
 to support this inheritance are recorded in
 [`README_ALTO_BASE_MARKET_CHANGES.md`](README_ALTO_BASE_MARKET_CHANGES.md).
+
+Credit initialization accepts matching borrow and collateral token addresses
+and any Base liquidation-engine value. A nonzero engine is registered by Base
+but is not used by the Credit liquidation path. An oversized credit limit still
+reverts through the checked `uint128` conversion, while a zero IRM fails the
+required fixed-rate IRM type query.
+
+## Linked operations library
+
+`AltoConvexCreditLineMarket` links `AltoConvexCreditLineLib` to remain below the
+EIP-170 runtime-code limit without using the via-IR compiler pipeline. The
+library contains only stateless Convex custody, reward forwarding, reward-list
+mutation, and initialization validation. Credit accounting, authorization,
+pause handling, reentrancy guards, configuration storage, token approvals, and
+every public entry point remain in the market. For collateral
+withdrawals, the library only calls Convex's `withdrawAndUnwrap` and validates
+the received LP amount; the market performs the final transfer and emits
+`CollateralUnstaked`. For collateral deposits, the market pulls LP through the
+inherited Base hook before the library deposits it into Convex and validates
+the balance changes. Reward
+token addition follows the same boundary: the library only validates the token,
+then the market updates `isRewardToken` and `rewardToken` in that order.
+
+External library functions execute with `delegatecall`. Consequently,
+`address(this)` remains the market, the original `msg.sender` is preserved,
+storage references point to the market's reward array and mapping, and library
+events are emitted from the market address. The linked library has no storage,
+owner, upgrade path, or configurable address inside the proxy.
+
+Deployment must follow this order:
+
+1. deploy `AltoConvexCreditLineLib`;
+2. link its address into the `AltoConvexCreditLineMarket` implementation bytecode;
+3. deploy the linked implementation; and
+4. deploy and initialize the UUPS proxy normally.
+
+Every future implementation upgrade must be compiled and verified with its
+linked library address. Reusing the existing library preserves the operations
+code; deploying and linking a new library version changes the code executed by
+the upgraded implementation. The linked library address is immutable in each
+implementation's bytecode and cannot be changed through market storage.
+
+With Solidity 0.8.28, the legacy compiler pipeline, optimizer enabled, and one
+optimizer run, the extraction reduced the implementation runtime from 26,170
+bytes to 23,353 bytes. External market-action and event selectors and the
+storage layout are unchanged. The obsolete `AltoCreditMarketOutstandingDebt`
+error was removed when solvent partial collateral withdrawals were enabled,
+and the internal library limit replaced the unused market
+`MAX_REWARD_TOKENS()` getter.
 
 An Alto-compatible lending oracle values the LP for borrowing. New debt must
 remain below `maxLtv`, while a separate, higher `foreclosureLtv` gives the
@@ -37,12 +87,13 @@ Existing integrations can query the familiar tuples:
 
 `oracle()` and `maxLtv()` retain their standard market meanings. The
 credit-specific `foreclosureLtv()` reports the threshold for permissioned full
-foreclosure. `liquidationEngine()` continues to return zero. Supply,
-liquidation-engine, callback-authorization, and public `liquidate` operations
-revert explicitly. `governanceLiquidate` is supported only for the configured
-credit account after its foreclosure threshold is breached. Indexers and
-frontends must still branch on `MARKET_TYPE()` because this market has no public
-or partial liquidation path.
+foreclosure. `liquidationEngine()` returns the initialization value, although
+the engine is not used by Credit foreclosure and cannot be changed afterward.
+Supply, liquidation-engine configuration, callback authorization, and public
+`liquidate` operations revert explicitly. `governanceLiquidate` is supported
+only for the configured credit account after its foreclosure threshold is
+breached. Indexers and frontends must still branch on `MARKET_TYPE()` because
+this market has no public or partial liquidation path.
 
 ## Borrowing and repayment
 
@@ -62,7 +113,9 @@ the debt permitted by its current value and `maxLtv`.
 Interest may take existing debt above the credit limit. That prevents new draws
 but does not itself execute foreclosure. Anyone may repay the credit account.
 LP withdrawal requires the caller to be the account or an authorized delegate
-and requires exactly zero remaining borrow shares.
+and requires the remaining post-withdrawal position to be solvent at `maxLtv`.
+Debt-free withdrawals use the zero-debt solvency fast path and do not query the
+oracle.
 
 The oracle follows `ILendingOracle`: one unit of LP is quoted in one unit of the
 borrow token with `1e36` precision. Collateral value is rounded down and debt is
@@ -103,7 +156,7 @@ extra-reward claim is not intended to block repayment-driven LP exit.
 The owner can permanently exit Convex only while the market is fully paused.
 This moves all reward-pool stake into idle market custody without changing
 position accounting, clears the Booster allowance, and disables future LP
-deposits. After unpausing, repayment and zero-debt withdrawal use the idle LP.
+deposits. After unpausing, repayment and solvent withdrawals use the idle LP.
 
 Governance foreclosure uses the same withdrawal path to seize the full LP
 position after an oracle-confirmed foreclosure-LTV breach.

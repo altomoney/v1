@@ -1,7 +1,7 @@
 # AltoBaseMarket Inheritance Changes
 
 This document records every change made to the audited `AltoBaseMarket` to
-support `AltoConvexCreditLine` as a direct market variant. The comparison
+support `AltoConvexCreditLineMarket` as a direct market variant. The comparison
 baseline is Git commit `66c0a9a71df3aebe98fda08503de56c9aea2c4fb`.
 
 ## Scope and conclusion
@@ -24,7 +24,7 @@ flow; this is documented under Verification.
 
 ## Initializer change
 
-`__AltoBaseMarket_init` itself is reused by `AltoConvexCreditLine`. Its signature,
+`__AltoBaseMarket_init` itself is reused by `AltoConvexCreditLineMarket`. Its signature,
 modifiers, assignments, events, parent initializers, and statement order remain
 unchanged.
 
@@ -63,10 +63,9 @@ The Base initializer still assigns the supplied value and emits
 `SetLiquidationEngine`. Any variant initialized without an engine therefore
 emits `SetLiquidationEngine(address(0), address(0))`.
 
-`AltoConvexCreditLine` additionally requires the nested Base parameter to contain
-a zero liquidation engine, preventing a Credit deployment from silently using
-the Base liquidation path. This is a concrete-market rule rather than Base
-knowledge of a specific market type.
+`AltoConvexCreditLineMarket` accepts the nested Base liquidation-engine value. A
+nonzero engine is stored and registered by Base initialization, but Credit's
+public liquidation and post-deployment engine configuration remain unsupported.
 
 ## Administrative hook extractions
 
@@ -145,9 +144,15 @@ The surrounding order remains:
 - remove collateral: input checks, authorization, interest accrual, accounting
   decrease, transfer, optional callback, solvency check, event, return.
 
-The Convex overrides replace only custody: `_receiveCollateral` deposits LP
-tokens into Convex, while `_sendCollateral` withdraws them before transferring
-to the receiver.
+The Convex overrides replace only custody. `_receiveCollateral` calls the Base
+hook to pull LP from the user, then the linked library deposits it into Convex
+and validates the balance changes. During `_sendCollateral`, the library
+performs and validates the Convex `withdrawAndUnwrap`; the override then calls
+the Base hook for the final transfer and emits `CollateralUnstaked`.
+The Credit override rejects callbacks and restricts `onBehalf` to the credit
+account, then relies on Base's post-transfer `_isSolvent` check. This permits a
+partial unwind with outstanding debt only when the remaining position stays
+within `maxLtv`; a failure rolls back the custody and accounting changes.
 
 ## Virtual-only changes
 
@@ -181,9 +186,9 @@ those operations or overriding them.
 The Credit variant isolates all three Base dereferences: `_setMaxLtv` validates
 against `foreclosureLtv`, `_setFeeRecipient` does not query an engine, and
 `_liquidate` reverts as an unsupported operation. It also disables
-`_setLiquidationEngine` so its deployment-time zero value cannot later be
-changed. Its `governanceLiquidate` override exists for Credit foreclosure
-semantics, not because the Base implementation dereferences the engine.
+`_setLiquidationEngine`, so the deployment-time value cannot later be changed.
+Its `governanceLiquidate` override exists for Credit foreclosure semantics, not
+because the Base implementation dereferences the engine.
 
 Borrow and Mint may now also be initialized with a zero engine. If they are,
 their owner must configure a nonzero engine through `setLiquidationEngine`
@@ -194,10 +199,16 @@ the engine. This responsibility is intentionally independent of `MarketType`.
 ## Resulting Credit initialization and storage
 
 Like Borrow and Mint initialization parameters, `CreditMarketInitParams` now
-contains `BaseMarketInitParams baseMarketInitParams`. `AltoConvexCreditLine`
+contains `BaseMarketInitParams baseMarketInitParams`. `AltoConvexCreditLineMarket`
 calls `__AltoBaseMarket_init(baseMarketInitParams, MarketType.CREDIT_MINT)` and
 then initializes foreclosure LTV, credit account, credit limit, opening fee, and
 Convex configuration.
+
+Credit initialization does not separately reject a zero IRM, matching borrow
+and collateral token addresses, a nonzero liquidation engine, or a credit limit
+above `uint128`. The fixed-rate IRM query rejects an unusable zero IRM, the Base
+initializer handles and registers a supplied liquidation engine, and the
+checked `toUint128` conversion rejects an oversized credit limit.
 
 `__UUPSUpgradeable_init` remains a separate Credit call because
 `__AltoBaseMarket_init` does not call it. Base initializes Ownable, Auth,
@@ -249,10 +260,12 @@ as the working tree.
 - Targeted `forge lint` and `git diff --check` pass. `forge fmt --check` reports
   only existing formatter differences in untouched Base lines; those lines
   were not reformatted to keep the audited diff narrow.
-- The current Convex deployed runtime is 26,170 bytes, which is 1,594 bytes
-  above the EIP-170 limit of 24,576 bytes. Direct inheritance currently
-  prioritizes shared audited logic over deployable bytecode size; this must be
-  resolved before mainnet deployment.
+- Before the Credit-only operations-library extraction, the Convex deployed
+  runtime was 26,170 bytes, which was 1,594 bytes above the EIP-170 limit of
+  24,576 bytes. Moving stateless Convex operations into the linked
+  `AltoConvexCreditLineLib` library reduced the market runtime to 23,353 bytes
+  without any additional `AltoBaseMarket` change. Deployment and upgrade
+  linking requirements are documented in the Credit Market README.
 
 The runtime-bytecode hashes are not identical, so this review does not claim
 bytecode equivalence. Source review and matched test results establish that the

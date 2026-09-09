@@ -1,0 +1,47 @@
+AltoConvexCreditLineMarket::claimInterest()
+├── when market is paused
+│   └── it should revert with IsPaused for PAUSE_TYPE
+├── when market is frozen but not paused
+│   └── it should remain available
+├── when interest exceeds claimableFeesAssets
+│   └── it should revert with AltoCreditMarketInvalidInput before fee recipient and caller checks
+├── when fee recipient is zero address
+│   └── it should revert with AltoCreditMarketZeroAddress
+├── when caller is neither owner nor fee recipient
+│   └── it should revert with AltoCreditMarketUnauthorizedAccount
+├── given caller is owner
+│   ├── when interest is zero
+│   │   ├── it should claim all available fees
+│   │   └── it should emit and return zero without minting when no fees are available
+│   └── when interest is nonzero and at most claimable fees
+│       ├── when interest is less than claimable fees
+│       │   └── it should perform a partial claim and preserve the remainder
+│       └── when interest equals claimable fees
+│           └── it should claim the full balance and set claimableFeesAssets to zero
+├── given caller is fee recipient
+│   ├── when interest is zero
+│   │   ├── it should claim all available fees
+│   │   └── it should emit and return zero without minting when no fees are available
+│   └── when interest is nonzero and at most claimable fees
+│       ├── when interest is less than claimable fees
+│       │   └── it should perform a partial claim and preserve the remainder
+│       └── when interest equals claimable fees
+│           └── it should claim the full balance and set claimableFeesAssets to zero
+├── given a borrow token mint failure or reentrancy attempt
+│   └── it should revert atomically and preserve claimableFeesAssets
+├── given DUSD mint restrictions
+│   ├── when market lacks minter permission
+│   │   └── it should revert atomically
+│   ├── when token ceiling has insufficient headroom
+│   │   └── it should revert atomically
+│   └── when borrow token is paused
+│       └── it should revert atomically
+└── given a successful claim
+    ├── it should decrease claimableFeesAssets by the claimed amount
+    ├── it should mint the claimed amount only to fee recipient
+    ├── it should not change debt supply collateral or share accounting
+    ├── it should not accrue interest or call the IRM oracle or Convex contracts
+    ├── it should claim opening fees and accrued interest from the same balance
+    ├── it should remain claimable after governance foreclosure leaves recorded fees outstanding
+    ├── it should emit InterestClaimed with recipient and claimed amount
+    └── it should return the claimed amount

@@ -9,7 +9,7 @@ enum MarketType {
     BORROW, // AltoBorrowMarket
     MINT, // AltoMintMarket
     DAO_MINT, // AltoDaoMintMarket
-    // AltoConvexCreditLine
+    // AltoConvexCreditLineMarket
     CREDIT_MINT
 }
 

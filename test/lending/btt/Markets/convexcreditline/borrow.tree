@@ -1,0 +1,98 @@
+AltoConvexCreditLineMarket::borrow()
+├── when market is paused
+│   └── it should revert with IsPaused for PAUSE_TYPE
+├── when market is frozen but not paused
+│   └── it should revert with IsPaused for FROZEN_TYPE
+├── given callback data is nonempty
+│   ├── it should revert with AltoCreditMarketCallbacksUnsupported
+│   ├── it should check onBehalf is creditAccount before rejecting callback data
+│   ├── it should reject the data before Base input and sender authorization checks
+│   ├── it should reject callback data before validating a zero receiver
+│   └── it should never call a receiver callback even if authorization storage is manipulated
+├── given invalid Credit account
+│   ├── when onBehalf is not creditAccount
+│   │   └── it should revert with AltoCreditMarketUnauthorizedAccount
+│   └── when onBehalf is zero address
+│       └── it should revert with AltoCreditMarketUnauthorizedAccount
+├── given invalid Base inputs
+│   ├── when assets and shares are both zero
+│   │   └── it should revert with AltoBaseMarketInvalidInput
+│   ├── when assets and shares are both nonzero
+│   │   └── it should revert with AltoBaseMarketInvalidInput
+│   ├── when receiver is zero address
+│   │   └── it should revert with AltoBaseMarketInvalidInput
+│   └── when caller is neither creditAccount nor its authorized delegate
+│       └── it should revert with AltoBaseMarketUnauthorized
+├── given interest accrual
+│   ├── it should accrue with the old debt before calculating the draw
+│   ├── when IRM call fails
+│   │   └── it should revert without changing debt or minting tokens
+│   └── when accrued debt leaves insufficient credit capacity
+│       └── it should revert with AltoBaseMarketInsufficientMarketLiquidity
+├── given borrowing by assets
+│   ├── it should round the opening fee up from requested assets
+│   ├── it should charge at least one fee asset when a positive fee rounds up from a small draw
+│   ├── it should add the opening fee to debt assets
+│   ├── it should calculate borrow shares rounded up from gross debt assets
+│   └── it should mint only the requested net assets to receiver
+├── given borrowing by shares
+│   ├── it should round opening fee shares up from requested shares
+│   ├── it should charge at least one fee share when a positive fee rounds up from a small share draw
+│   ├── it should add opening fee shares before calculating gross debt assets
+│   ├── it should calculate gross debt assets rounded down from total shares
+│   └── it should mint gross debt assets minus opening fee assets to receiver
+├── given credit and collateral limits
+│   ├── when gross post-accrual debt exceeds creditLimit
+│   │   └── it should revert with AltoBaseMarketInsufficientMarketLiquidity
+│   ├── when gross post-accrual debt equals creditLimit
+│   │   └── it should succeed if solvent
+│   ├── when both credit capacity and solvency would fail
+│   │   └── it should revert with AltoBaseMarketInsufficientMarketLiquidity before querying the oracle
+│   ├── when the oracle price is zero
+│   │   └── it should revert with AltoCreditMarketInvalidOraclePrice
+│   ├── when the oracle call reverts
+│   │   └── it should propagate the failure atomically
+│   ├── when debt exceeds collateral value multiplied by maxLtv
+│   │   └── it should revert with AltoBaseMarketBorrowingTooMuch
+│   ├── when debt equals collateral value multiplied by maxLtv after rounding
+│   │   └── it should succeed
+│   └── when creditAccount has no collateral
+│       └── it should revert for every positive draw
+├── given uint128 accounting boundaries
+│   ├── when gross debt assets cannot fit in totalBorrowed assets
+│   │   └── it should revert atomically
+│   ├── when calculated borrow shares cannot fit in totalBorrowed or position shares
+│   │   └── it should revert atomically
+│   └── when opening fee cannot fit in claimableFeesAssets
+│       └── it should revert atomically including token mint and debt updates
+├── given borrow token minting
+│   ├── when market lacks minter permission
+│   │   └── it should revert atomically
+│   ├── when token ceiling is insufficient
+│   │   └── it should revert atomically
+│   ├── when borrow token is paused or mint otherwise reverts
+│   │   └── it should revert atomically
+│   ├── when mint succeeds but the later oracle or solvency check fails
+│   │   └── it should roll back receiver balance and token minter accounting
+│   ├── when borrow token attempts reentrancy
+│   │   └── it should reject reentrancy and revert atomically
+│   └── when receiver is any nonzero address
+│       └── it should mint net assets to that receiver
+└── given a successful draw
+    ├── when caller is creditAccount
+    │   └── it should succeed
+    ├── when caller is an authorized delegate of creditAccount
+    │   └── it should succeed
+    ├── when opening fee is zero
+    │   └── it should leave claimableFeesAssets unchanged
+    ├── when opening fee is nonzero
+    │   ├── it should increase claimableFeesAssets by opening fee assets
+    │   └── it should return zero fee supply shares
+    ├── when opening fee equals MATH_PRECISION
+    │   └── it should apply the full permitted fee using the same rounding rules
+    ├── it should update totalBorrowed assets and shares and creditAccount borrowShares
+    ├── it should not change totalSupply or supply shares
+    ├── it should not change collateral accounting staked assets idle assets or rewards
+    ├── it should add both newly accrued interest and opening fee to claimableFeesAssets
+    ├── it should emit AccrueInterest before Borrow with net assets and fee values
+    └── it should return gross debt assets borrow shares and opening fee assets

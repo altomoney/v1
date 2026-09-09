@@ -1,0 +1,57 @@
+AltoConvexCreditLineMarket::emergencyExitConvex()
+├── when caller is not owner
+│   └── it should revert with OwnableUnauthorizedAccount
+├── when PAUSE_TYPE is not active
+│   ├── when market is active
+│   │   └── it should revert with AltoConvexCreditLineMustBePaused
+│   └── when only FROZEN_TYPE is active
+│       └── it should revert with AltoConvexCreditLineMustBePaused
+├── when Convex strategy is already inactive
+│   └── it should revert with AltoConvexCreditLineStrategyInactive
+├── when Convex strategy is inactive and PAUSE_TYPE is not active
+│   └── it should revert with AltoConvexCreditLineMustBePaused before checking strategy status
+├── given market is paused and staked collateral is zero
+│   ├── it should not call withdrawAndUnwrap
+│   ├── it should preserve any raw LP already idle in the market
+│   ├── it should mark Convex inactive
+│   ├── it should clear Booster collateral allowance
+│   ├── it should emit ConvexEmergencyExit with zero
+│   └── it should return zero
+├── given market is paused and staked collateral is nonzero
+│   ├── when reward pool balance query reverts
+│   │   └── it should propagate the failure and keep Convex active
+│   ├── when withdrawAndUnwrap reverts
+│   │   └── it should propagate the failure and keep Convex active
+│   ├── when withdrawAndUnwrap returns false
+│   │   └── it should revert with AltoConvexCreditLineExternalCallFailed
+│   ├── when post-withdrawal idle balance query reverts or returns malformed data
+│   │   └── it should propagate the failure and roll back the withdrawal
+│   ├── when raw LP increases by a smaller or larger nonnegative delta
+│   │   └── it should revert with AltoConvexCreditLineUnexpectedAssetDelta
+│   ├── when raw LP balance decreases below its pre-withdrawal value
+│   │   └── it should revert with arithmetic panic
+│   ├── when clearing Booster allowance fails
+│   │   └── it should revert the withdrawal and state changes atomically
+│   └── when withdrawal and allowance clearing succeed
+│       ├── it should call withdrawAndUnwrap for all stake with claim false
+│       ├── it should hold all recovered LP idle in the market
+│       ├── it should preserve raw LP that was already idle before the exit
+│       ├── it should leave reward pool stake at zero when the pool withdraws the reported balance correctly
+│       ├── it should mark Convex inactive permanently
+│       ├── it should set Booster collateral allowance to zero
+│       ├── it should emit ConvexEmergencyExit with recovered assets
+│       └── it should return recovered assets
+├── given a successful exit
+│   ├── it should not change creditAccount collateralAssets
+│   ├── it should not change totalSupply totalBorrowed positions or claimableFeesAssets
+│   ├── it should not transfer collateral to owner or creditAccount
+│   ├── it should not claim or forward rewards
+│   ├── it should make later addCollateral revert because strategy is inactive
+│   ├── it should make later solvent removeCollateral use idle LP after unpause
+│   ├── it should make a second emergency exit revert with AltoConvexCreditLineStrategyInactive
+│   ├── when reported stake is smaller than recorded collateral
+│   │   └── it should still mark Convex inactive while recorded collateral exceeds recovered idle LP
+│   └── when reported stake is larger than recorded collateral
+│       └── it should recover the entire reported stake without increasing recorded collateral
+└── when an external dependency attempts reentrancy
+    └── it should reject reentrancy and revert atomically
