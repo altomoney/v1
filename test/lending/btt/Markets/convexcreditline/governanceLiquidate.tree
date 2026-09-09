@@ -1,0 +1,69 @@
+AltoConvexCreditLineMarket::governanceLiquidate()
+├── when caller is not owner
+│   └── it should revert with OwnableUnauthorizedAccount
+├── when borrower is not creditAccount
+│   └── it should revert with AltoCreditMarketUnauthorizedAccount before accruing interest
+├── given pause state
+│   ├── when market is active
+│   │   └── it should remain available
+│   ├── when market is frozen
+│   │   └── it should remain available
+│   └── when market is fully paused
+│       └── it should remain available and accrue through the current timestamp
+├── given foreclosure eligibility
+│   ├── when creditAccount has no debt
+│   │   └── it should revert with AltoCreditMarketPositionNotForeclosable
+│   ├── when debt is below collateral value multiplied by foreclosureLtv
+│   │   └── it should revert with AltoCreditMarketPositionNotForeclosable
+│   ├── when debt equals collateral value multiplied by foreclosureLtv
+│   │   └── it should revert with AltoCreditMarketPositionNotForeclosable
+│   ├── when interest accrual moves debt strictly above foreclosure threshold
+│   │   └── it should proceed using post-accrual debt
+│   ├── it should round collateral value down and debt assets up before applying strict comparison
+│   ├── when oracle price is zero
+│   │   └── it should revert with AltoCreditMarketInvalidOraclePrice
+│   └── when oracle or IRM call fails
+│       └── it should propagate the failure atomically
+├── given Convex strategy is active and collateral is nonzero
+│   ├── when pre-withdrawal idle balance query reverts or returns malformed data
+│   │   └── it should propagate the failure and preserve foreclosure accounting
+│   ├── when reward pool withdrawal reverts
+│   │   └── it should revert atomically without clearing debt or collateral
+│   ├── when reward pool withdrawal returns false
+│   │   └── it should revert with AltoConvexCreditLineExternalCallFailed
+│   ├── when post-withdrawal idle balance query reverts or returns malformed data
+│   │   └── it should propagate the failure and restore debt collateral and withdrawal state
+│   ├── when raw LP increases by a smaller or larger nonnegative delta
+│   │   └── it should revert with AltoConvexCreditLineUnexpectedAssetDelta
+│   ├── when raw LP balance decreases below its pre-withdrawal value
+│   │   └── it should revert with arithmetic panic
+│   └── when withdrawal succeeds
+│       ├── it should call withdrawAndUnwrap with all recorded collateral and claim false
+│       ├── it should preserve any unrelated raw LP already idle in the market
+│       └── it should transfer all unwrapped LP to owner
+├── given Convex strategy is inactive after emergency exit
+│   ├── when idle LP is insufficient
+│   │   └── it should revert with AltoConvexCreditLineUnexpectedAssetDelta without clearing accounting
+│   └── when idle LP covers recorded collateral
+│       ├── it should not call Booster or reward pool
+│       ├── it should transfer exactly recorded collateral to owner
+│       └── it should leave any idle LP surplus in the market
+├── when collateral transfer to owner fails
+│   └── it should revert atomically and restore debt collateral and Convex withdrawal state
+├── given foreclosable debt and zero collateral
+│   ├── it should not call collateral withdrawal or transfer
+│   └── it should still clear debt and emit foreclosure values
+└── given successful foreclosure
+    ├── it should accrue interest before testing foreclosure and calculating bad debt
+    ├── it should clear all totalBorrowed assets and shares
+    ├── it should clear creditAccount borrowShares and collateralAssets
+    ├── it should leave creditLimit totalSupply and supply shares unchanged
+    ├── it should preserve claimableFeesAssets apart from interest added by pre-foreclosure accrual
+    ├── it should not burn outstanding borrow tokens
+    ├── it should not claim or forward Convex rewards
+    ├── it should leave convexActive unchanged
+    ├── it should leave the credit limit immediately reusable after new collateral is deposited
+    ├── it should leave previously minted bad-debt borrow tokens and token minter accounting outstanding
+    ├── it should emit CollateralUnstaked before GovernanceLiquidation when collateral is nonzero
+    ├── it should emit GovernanceLiquidation with owner collateral bad debt assets and shares
+    └── it should return collateral amount and the entire post-accrual debt assets

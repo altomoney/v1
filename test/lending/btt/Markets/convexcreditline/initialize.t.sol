@@ -1,0 +1,461 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.28;
+
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Vm} from "forge-std/Vm.sol";
+
+import {AltoConvexCreditLineMarket} from "@alto/lending/credit-market/AltoConvexCreditLineMarket.sol";
+import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
+import {DlbDcfPriorityLiquidationEngine} from "@alto/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol";
+import {Uint128Converter} from "@alto/lending/libraries/Uint128Converter.sol";
+import {IAltoCreditMarketErrors, IAltoCreditMarketEvents} from "@alto/lending/interfaces/IAltoCreditMarket.sol";
+import {
+    ConvexCreditLineInitParams, IAltoConvexCreditLineEvents
+} from "@alto/lending/interfaces/IAltoConvexCreditLine.sol";
+import {IMarketErrors, IMarketEvents, MarketType} from "@alto/lending/interfaces/IMarket.sol";
+import {IIrm, IRMType} from "@alto/lending/interfaces/IIrm.sol";
+import {IConvexRewardPool} from "@alto/lending/interfaces/vendor/IConvexRewardPool.sol";
+import {PAUSE_TYPE, FROZEN_TYPE} from "@alto/utils/Constants.sol";
+import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
+
+import {ConvexCreditLineCommon} from "./ConvexCreditLineCommon.t.sol";
+import {ConvexBoosterMock} from "./mocks/ConvexBoosterMock.sol";
+import {ConvexRewardPoolMock} from "./mocks/ConvexRewardPoolMock.sol";
+import {CreditLineMarketCollateralTokenMock} from "./mocks/CreditLineMarketCollateralTokenMock.sol";
+
+contract AltoConvexCreditLineMarketInitializeTest is ConvexCreditLineCommon {
+    function test_RevertWhenImplementationIsInitializedDirectly() external {
+        AltoConvexCreditLineMarket implementation = new AltoConvexCreditLineMarket();
+        ConvexCreditLineInitParams memory params = _validInitParams();
+
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
+        implementation.initialize(params);
+    }
+
+    function test_RevertWhenProxyIsAlreadyInitialized() external {
+        ConvexCreditLineInitParams memory params = _validInitParams();
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
+        market.initialize(params);
+    }
+
+    function test_RevertForInvalidCreditAddresses() external {
+        ConvexCreditLineInitParams memory params = _validInitParams();
+        AltoConvexCreditLineMarket candidate = _newUninitializedMarket();
+
+        params.creditMarketInitParams.baseMarketInitParams.irm = address(0);
+        vm.expectRevert();
+        candidate.initialize(params);
+
+        params = _validInitParams();
+        params.creditMarketInitParams.creditAccount = address(0);
+        vm.expectRevert(IAltoCreditMarketErrors.AltoCreditMarketZeroAddress.selector);
+        candidate.initialize(params);
+
+        params = _validInitParams();
+        params.creditMarketInitParams.baseMarketInitParams.feeRecipient = address(0);
+        vm.expectRevert(IAltoCreditMarketErrors.AltoCreditMarketZeroAddress.selector);
+        candidate.initialize(params);
+
+        assertEq(candidate.owner(), address(0));
+    }
+
+    function test_RevertForInvalidBaseAddressesAndOwner() external {
+        ConvexCreditLineInitParams memory params = _validInitParams();
+        AltoConvexCreditLineMarket candidate = _newUninitializedMarket();
+
+        params.creditMarketInitParams.baseMarketInitParams.borrowToken = address(0);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketInvalidInput.selector);
+        candidate.initialize(params);
+
+        params = _validInitParams();
+        params.creditMarketInitParams.baseMarketInitParams.collateralToken = address(0);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketInvalidInput.selector);
+        candidate.initialize(params);
+
+        params = _validInitParams();
+        params.creditMarketInitParams.baseMarketInitParams.oracle = address(0);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketInvalidInput.selector);
+        candidate.initialize(params);
+
+        params = _validInitParams();
+        params.creditMarketInitParams.baseMarketInitParams.owner = address(0);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableInvalidOwner.selector, address(0)));
+        candidate.initialize(params);
+    }
+
+    function test_RevertForInvalidCreditBoundsAndRelationships() external {
+        ConvexCreditLineInitParams memory params = _validInitParams();
+        AltoConvexCreditLineMarket candidate = _newUninitializedMarket();
+
+        params.creditMarketInitParams.creditLimit = 0;
+        _expectCreditInvalid(candidate, params);
+
+        params = _validInitParams();
+        params.creditMarketInitParams.creditLimit = uint256(type(uint128).max) + 1;
+        vm.expectRevert(Uint128Converter.MathUtilsMaxUint128Overflow.selector);
+        candidate.initialize(params);
+
+        params = _validInitParams();
+        params.creditMarketInitParams.initialBorrowOpeningFee = MATH_PRECISION + 1;
+        _expectCreditInvalid(candidate, params);
+
+        params = _validInitParams();
+        params.creditMarketInitParams.baseMarketInitParams.maxLtv = FORECLOSURE_LTV;
+        _expectCreditInvalid(candidate, params);
+
+        params = _validInitParams();
+        params.creditMarketInitParams.baseMarketInitParams.maxLtv = FORECLOSURE_LTV + 1;
+        _expectCreditInvalid(candidate, params);
+
+        params = _validInitParams();
+        params.creditMarketInitParams.foreclosureLtv = MATH_PRECISION + 1;
+        _expectCreditInvalid(candidate, params);
+    }
+
+    function test_AllowsMatchingBorrowAndCollateralTokens() external {
+        ConvexCreditLineInitParams memory params = _validInitParams();
+        params.creditMarketInitParams.baseMarketInitParams.borrowToken = address(collateralToken);
+
+        AltoConvexCreditLineMarket candidate = _initialize(params);
+
+        assertEq(candidate.borrowToken(), address(collateralToken));
+        assertEq(candidate.collateralToken(), address(collateralToken));
+    }
+
+    function test_AllowsAndRegistersNonzeroLiquidationEngine() external {
+        ConvexCreditLineInitParams memory params = _validInitParams();
+        DlbDcfPriorityLiquidationEngine liquidationEngine = new DlbDcfPriorityLiquidationEngine(address(this));
+        params.creditMarketInitParams.baseMarketInitParams.liquidationEngine = address(liquidationEngine);
+
+        AltoConvexCreditLineMarket candidate = _initialize(params);
+
+        assertEq(candidate.liquidationEngine(), address(liquidationEngine));
+        assertEq(liquidationEngine.market(), address(candidate));
+    }
+
+    function test_RevertForInvalidIrmTypeAndRegistrationFailure() external {
+        ConvexCreditLineInitParams memory params = _validInitParams();
+        AltoConvexCreditLineMarket candidate = _newUninitializedMarket();
+        FixedRateIrm candidateIrm = FixedRateIrm(params.creditMarketInitParams.baseMarketInitParams.irm);
+        bytes memory typeCall = abi.encodeCall(IIrm.IRM_TYPE, ());
+
+        vm.mockCall(address(candidateIrm), typeCall, abi.encode(IRMType.ADAPTIVE_CURVE));
+        _expectCreditInvalid(candidate, params);
+        vm.clearMockedCalls();
+
+        vm.mockCallRevert(
+            address(candidateIrm), abi.encodeWithSelector(IIrm.setMarket.selector), bytes("SET_MARKET_REVERTED")
+        );
+        vm.expectRevert(bytes("SET_MARKET_REVERTED"));
+        candidate.initialize(params);
+        assertEq(candidate.owner(), address(0));
+        assertEq(candidateIrm.market(), address(0));
+    }
+
+    function test_RevertAndRollbackWhenIrmTypeQueryRevertsOrIsMalformed() external {
+        ConvexCreditLineInitParams memory params = _validInitParams();
+        AltoConvexCreditLineMarket candidate = _newUninitializedMarket();
+        address candidateIrm = params.creditMarketInitParams.baseMarketInitParams.irm;
+        bytes memory callData = abi.encodeCall(IIrm.IRM_TYPE, ());
+
+        vm.mockCallRevert(candidateIrm, callData, "IRM_TYPE_REVERTED");
+        vm.expectRevert(bytes("IRM_TYPE_REVERTED"));
+        candidate.initialize(params);
+        vm.clearMockedCalls();
+
+        vm.mockCall(candidateIrm, callData, hex"01");
+        vm.expectRevert();
+        candidate.initialize(params);
+        vm.clearMockedCalls();
+        assertEq(candidate.owner(), address(0));
+    }
+
+    function test_RevertForZeroConvexAddresses() external {
+        ConvexCreditLineInitParams memory params = _validInitParams();
+        AltoConvexCreditLineMarket candidate = _newUninitializedMarket();
+
+        params.convexBooster = address(0);
+        vm.expectRevert(IAltoCreditMarketErrors.AltoCreditMarketZeroAddress.selector);
+        candidate.initialize(params);
+
+        params = _validInitParams();
+        params.rewardRecipient = address(0);
+        vm.expectRevert(IAltoCreditMarketErrors.AltoCreditMarketZeroAddress.selector);
+        candidate.initialize(params);
+    }
+
+    function test_RevertForZeroPoolMetadata() external {
+        ConvexCreditLineInitParams memory params = _validInitParams();
+        AltoConvexCreditLineMarket candidate = _newUninitializedMarket();
+
+        booster.setPoolInfo(address(0), address(depositToken), GAUGE, address(rewardPool), address(0), false);
+        _expectCreditZero(candidate, params);
+        booster.setPoolInfo(address(collateralToken), address(0), GAUGE, address(rewardPool), address(0), false);
+        _expectCreditZero(candidate, params);
+        booster.setPoolInfo(
+            address(collateralToken), address(depositToken), address(0), address(rewardPool), address(0), false
+        );
+        _expectCreditZero(candidate, params);
+        booster.setPoolInfo(address(collateralToken), address(depositToken), GAUGE, address(0), address(0), false);
+        _expectCreditZero(candidate, params);
+    }
+
+    function test_RevertForMismatchedOrShutdownPool() external {
+        ConvexCreditLineInitParams memory params = _validInitParams();
+        AltoConvexCreditLineMarket candidate = _newUninitializedMarket();
+
+        booster.setPoolInfo(
+            address(collateralToken), address(depositToken), GAUGE, address(rewardPool), address(0), true
+        );
+        _expectCreditInvalid(candidate, params);
+
+        booster.setPoolInfo(USER, address(depositToken), GAUGE, address(rewardPool), address(0), false);
+        _expectCreditInvalid(candidate, params);
+
+        booster.setPoolInfo(
+            address(collateralToken), address(depositToken), GAUGE, address(rewardPool), address(0), false
+        );
+        rewardPool.setPoolMetadata(POOL_ID + 1, address(booster), address(depositToken), address(primaryRewardToken));
+        _expectCreditInvalid(candidate, params);
+        rewardPool.setPoolMetadata(POOL_ID, USER, address(depositToken), address(primaryRewardToken));
+        _expectCreditInvalid(candidate, params);
+        rewardPool.setPoolMetadata(POOL_ID, address(booster), USER, address(primaryRewardToken));
+        _expectCreditInvalid(candidate, params);
+    }
+
+    function test_RevertAndRollbackWhenConvexMetadataCallsFail() external {
+        ConvexCreditLineInitParams memory params = _validInitParams();
+        AltoConvexCreditLineMarket candidate = _newUninitializedMarket();
+
+        vm.mockCallRevert(address(booster), abi.encodeCall(ConvexBoosterMock.poolInfo, (POOL_ID)), "POOL_REVERTED");
+        vm.expectRevert(bytes("POOL_REVERTED"));
+        candidate.initialize(params);
+        vm.clearMockedCalls();
+
+        vm.mockCall(address(booster), abi.encodeCall(ConvexBoosterMock.poolInfo, (POOL_ID)), hex"01");
+        vm.expectRevert();
+        candidate.initialize(params);
+        vm.clearMockedCalls();
+
+        bytes memory pidCall = abi.encodeWithSelector(IConvexRewardPool.pid.selector);
+        vm.mockCallRevert(address(rewardPool), pidCall, "PID_REVERTED");
+        vm.expectRevert(bytes("PID_REVERTED"));
+        candidate.initialize(params);
+        vm.clearMockedCalls();
+
+        vm.mockCall(address(rewardPool), pidCall, hex"01");
+        vm.expectRevert();
+        candidate.initialize(params);
+        vm.clearMockedCalls();
+        assertEq(candidate.owner(), address(0));
+    }
+
+    function test_RevertAndRollbackWhenPrimaryRewardQueryFails() external {
+        ConvexCreditLineInitParams memory params = _validInitParams();
+        AltoConvexCreditLineMarket candidate = _newUninitializedMarket();
+        bytes memory rewardTokenCall = abi.encodeWithSelector(IConvexRewardPool.rewardToken.selector);
+
+        vm.mockCallRevert(address(rewardPool), rewardTokenCall, "REWARD_TOKEN_REVERTED");
+        vm.expectRevert(bytes("REWARD_TOKEN_REVERTED"));
+        candidate.initialize(params);
+        vm.clearMockedCalls();
+
+        vm.mockCall(address(rewardPool), rewardTokenCall, hex"01");
+        vm.expectRevert();
+        candidate.initialize(params);
+        vm.clearMockedCalls();
+        assertEq(candidate.owner(), address(0));
+    }
+
+    function test_ApprovalFailureRollsBackEntireInitialization() external {
+        ConvexCreditLineInitParams memory params = _validInitParams();
+        FixedRateIrm candidateIrm = FixedRateIrm(params.creditMarketInitParams.baseMarketInitParams.irm);
+        AltoConvexCreditLineMarket candidate = _newUninitializedMarket();
+        collateralToken.setApproveFailure(true);
+
+        vm.expectRevert(bytes("APPROVE_REVERTED"));
+        candidate.initialize(params);
+
+        assertEq(candidate.owner(), address(0));
+        assertEq(candidateIrm.market(), address(0));
+        assertEq(collateralToken.allowance(address(candidate), address(booster)), 0);
+    }
+
+    function test_InitializationEmitsBaseThenCreditThenConvexEventsWithoutRewardAddedEvents() external {
+        ConvexCreditLineInitParams memory params = _validInitParams();
+        AltoConvexCreditLineMarket candidate = _newUninitializedMarket();
+        vm.recordLogs();
+        candidate.initialize(params);
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+
+        uint256 irmIndex = type(uint256).max;
+        uint256 foreclosureIndex = type(uint256).max;
+        uint256 creditLimitIndex = type(uint256).max;
+        uint256 feeIndex = type(uint256).max;
+        uint256 convexIndex = type(uint256).max;
+        for (uint256 i; i < logs.length; ++i) {
+            if (logs[i].emitter != address(candidate)) continue;
+            bytes32 topic = logs[i].topics[0];
+            if (topic == IMarketEvents.SetIrm.selector) irmIndex = i;
+            if (topic == IAltoCreditMarketEvents.SetForeclosureLtv.selector) foreclosureIndex = i;
+            if (topic == IAltoCreditMarketEvents.SetCreditLimit.selector) creditLimitIndex = i;
+            if (topic == IAltoCreditMarketEvents.SetBorrowOpeningFee.selector) feeIndex = i;
+            if (topic == IAltoConvexCreditLineEvents.ConvexConfigured.selector) convexIndex = i;
+            assertTrue(topic != IAltoConvexCreditLineEvents.RewardTokenAdded.selector);
+        }
+
+        assertLt(irmIndex, foreclosureIndex);
+        assertLt(foreclosureIndex, creditLimitIndex);
+        assertLt(creditLimitIndex, feeIndex);
+        assertLt(feeIndex, convexIndex);
+    }
+
+    function test_RevertForInvalidInitialRewardList() external {
+        ConvexCreditLineInitParams memory params = _validInitParams();
+        AltoConvexCreditLineMarket candidate = _newUninitializedMarket();
+
+        params.rewardTokens = new address[](0);
+        _expectCreditInvalid(candidate, params);
+
+        params = _validInitParams();
+        params.rewardTokens[0] = address(0);
+        _expectCreditZero(candidate, params);
+
+        params = _validInitParams();
+        params.rewardTokens[0] = USER;
+        _expectCreditInvalid(candidate, params);
+
+        params = _validInitParams();
+        params.rewardTokens[0] = address(collateralToken);
+        _expectCreditInvalid(candidate, params);
+
+        params = _validInitParams();
+        params.rewardTokens[0] = address(borrowToken);
+        _expectCreditInvalid(candidate, params);
+
+        params = _validInitParams();
+        params.rewardTokens[0] = address(depositToken);
+        _expectCreditInvalid(candidate, params);
+
+        params = _validInitParams();
+        params.rewardTokens[1] = address(primaryRewardToken);
+        _expectCreditInvalid(candidate, params);
+
+        params = _validInitParams();
+        params.rewardTokens = new address[](17);
+        for (uint256 i; i < 17; ++i) {
+            params.rewardTokens[i] = address(new CreditLineMarketCollateralTokenMock("R", "R"));
+        }
+        params.rewardTokens[0] = address(primaryRewardToken);
+        _expectCreditInvalid(candidate, params);
+
+        params = _validInitParams();
+        params.rewardTokens[0] = address(extraRewardToken);
+        params.rewardTokens[1] = address(new CreditLineMarketCollateralTokenMock("Other", "OTH"));
+        _expectCreditInvalid(candidate, params);
+    }
+
+    function test_InitializesAllBaseCreditAndConvexState() external {
+        assertEq(uint256(market.MARKET_TYPE()), uint256(MarketType.CREDIT_MINT));
+        assertEq(market.borrowToken(), address(borrowToken));
+        assertEq(market.collateralToken(), address(collateralToken));
+        assertEq(market.irm(), address(irm));
+        assertEq(market.oracle(), address(oracle));
+        assertEq(market.maxLtv(), MAX_LTV);
+        assertEq(market.feeRecipient(), FEE_RECIPIENT);
+        assertEq(market.owner(), OWNER);
+        assertEq(market.liquidationEngine(), address(0));
+        assertEq(irm.market(), address(market));
+        assertTrue(market.pausers(OWNER, PAUSE_TYPE));
+        assertTrue(market.pausers(OWNER, FROZEN_TYPE));
+
+        assertEq(market.creditAccount(), CREDIT_ACCOUNT);
+        assertEq(market.creditLimit(), CREDIT_LIMIT);
+        assertEq(market.foreclosureLtv(), FORECLOSURE_LTV);
+        assertEq(market.borrowOpeningFee(), 0);
+        assertEq(market.claimableFeesAssets(), 0);
+        (uint128 supplyAssets, uint128 supplyShares) = market.totalSupply();
+        assertEq(supplyAssets, CREDIT_LIMIT);
+        assertEq(supplyShares, 0);
+        (uint128 borrowAssets, uint128 borrowShares) = market.totalBorrowed();
+        assertEq(borrowAssets, 0);
+        assertEq(borrowShares, 0);
+
+        assertEq(market.convexBooster(), address(booster));
+        assertEq(market.convexPoolId(), POOL_ID);
+        assertEq(market.convexRewardPool(), address(rewardPool));
+        assertEq(market.convexDepositToken(), address(depositToken));
+        assertEq(market.rewardRecipient(), REWARD_RECIPIENT);
+        assertTrue(market.convexActive());
+        assertEq(market.rewardTokenCount(), 2);
+        assertEq(market.rewardToken(0), address(primaryRewardToken));
+        assertEq(market.rewardToken(1), address(extraRewardToken));
+        assertEq(collateralToken.allowance(address(market), address(booster)), type(uint256).max);
+        assertEq(market.idleCollateralAssets(), 0);
+        assertEq(market.stakedCollateralAssets(), 0);
+        assertEq(booster.depositCalls(), 0);
+    }
+
+    function test_AcceptsInclusiveBoundsPoolZeroAndZeroStashFromNonOwnerCaller() external {
+        FixedRateIrm newIrm = _newFixedRateIrm();
+        ConvexRewardPoolMock newPool = new ConvexRewardPoolMock(
+            0, address(0), address(depositToken), address(primaryRewardToken), address(collateralToken)
+        );
+        ConvexBoosterMock newBooster =
+            new ConvexBoosterMock(address(collateralToken), address(depositToken), GAUGE, address(newPool));
+        newPool.setPoolMetadata(0, address(newBooster), address(depositToken), address(primaryRewardToken));
+
+        ConvexCreditLineInitParams memory params = _validInitParams();
+        params.creditMarketInitParams.baseMarketInitParams.irm = address(newIrm);
+        params.creditMarketInitParams.baseMarketInitParams.maxLtv = 0;
+        params.creditMarketInitParams.creditLimit = type(uint128).max;
+        params.creditMarketInitParams.foreclosureLtv = MATH_PRECISION;
+        params.creditMarketInitParams.initialBorrowOpeningFee = MATH_PRECISION;
+        params.convexBooster = address(newBooster);
+        params.convexPoolId = 0;
+        params.rewardTokens = new address[](1);
+        params.rewardTokens[0] = address(primaryRewardToken);
+
+        AltoConvexCreditLineMarket candidate = _newUninitializedMarket();
+        vm.prank(USER);
+        candidate.initialize(params);
+
+        assertEq(candidate.owner(), OWNER);
+        assertEq(candidate.convexPoolId(), 0);
+        assertEq(candidate.creditLimit(), type(uint128).max);
+        assertEq(candidate.foreclosureLtv(), MATH_PRECISION);
+        assertEq(candidate.borrowOpeningFee(), MATH_PRECISION);
+    }
+
+    function test_AllowsExactlyMaximumRewardTokensAndPreservesOrder() external {
+        ConvexCreditLineInitParams memory params = _validInitParams();
+        params.creditMarketInitParams.baseMarketInitParams.irm = address(_newFixedRateIrm());
+        params.rewardTokens = new address[](16);
+        params.rewardTokens[0] = address(primaryRewardToken);
+        for (uint256 i = 1; i < 16; ++i) {
+            params.rewardTokens[i] = address(new CreditLineMarketCollateralTokenMock("R", "R"));
+        }
+
+        AltoConvexCreditLineMarket candidate = _initialize(params);
+        assertEq(candidate.rewardTokenCount(), 16);
+        for (uint256 i; i < 16; ++i) {
+            assertEq(candidate.rewardToken(i), params.rewardTokens[i]);
+            assertTrue(candidate.isRewardToken(params.rewardTokens[i]));
+        }
+    }
+
+    function _expectCreditInvalid(AltoConvexCreditLineMarket candidate, ConvexCreditLineInitParams memory params)
+        private
+    {
+        vm.expectRevert(IAltoCreditMarketErrors.AltoCreditMarketInvalidInput.selector);
+        candidate.initialize(params);
+    }
+
+    function _expectCreditZero(AltoConvexCreditLineMarket candidate, ConvexCreditLineInitParams memory params)
+        private
+    {
+        vm.expectRevert(IAltoCreditMarketErrors.AltoCreditMarketZeroAddress.selector);
+        candidate.initialize(params);
+    }
+}

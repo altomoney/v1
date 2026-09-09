@@ -1,0 +1,10 @@
+AltoConvexCreditLineMarket::removeSupply()
+├── when market is paused
+│   └── it should revert with IsPaused for PAUSE_TYPE
+├── when market is frozen but not paused
+│   └── it should revert with AltoCreditMarketUnsupportedOperation
+└── when market is active
+    ├── it should revert with AltoCreditMarketUnsupportedOperation for every input
+    ├── it should not accrue interest
+    ├── it should not transfer borrow tokens
+    └── it should not change market or position accounting

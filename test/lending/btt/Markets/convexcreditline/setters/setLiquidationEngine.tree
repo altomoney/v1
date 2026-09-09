@@ -1,0 +1,9 @@
+AltoConvexCreditLineMarket::setLiquidationEngine()
+├── when caller is not owner
+│   └── it should revert with OwnableUnauthorizedAccount
+└── when caller is owner
+    ├── it should revert with AltoCreditMarketUnsupportedOperation for zero or nonzero input
+    ├── it should not call the proposed liquidation engine
+    ├── it should leave liquidationEngine at zero
+    ├── it should not emit SetLiquidationEngine
+    └── it should remain unsupported while paused or frozen

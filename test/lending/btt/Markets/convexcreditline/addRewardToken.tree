@@ -1,0 +1,27 @@
+AltoConvexCreditLineMarket::addRewardToken()
+├── when caller is not owner
+│   └── it should revert with OwnableUnauthorizedAccount
+├── when token is zero address
+│   └── it should revert with AltoCreditMarketZeroAddress
+├── when token has no contract code
+│   └── it should revert with AltoCreditMarketInvalidInput
+├── when token is collateralToken
+│   └── it should revert with AltoCreditMarketInvalidInput
+├── when token is borrowToken
+│   └── it should revert with AltoCreditMarketInvalidInput
+├── when token is convexDepositToken
+│   └── it should revert with AltoCreditMarketInvalidInput
+├── when token is already configured
+│   └── it should revert with AltoCreditMarketInvalidInput without duplicating it
+├── when reward token list already contains MAX_REWARD_TOKENS
+│   └── it should revert with AltoCreditMarketInvalidInput
+└── when owner adds a valid token below the cap
+    ├── it should append the token to the end of the list
+    ├── it should increment rewardTokenCount
+    ├── it should set isRewardToken to true
+    ├── it should emit RewardTokenAdded
+    ├── it should not call or validate the token's ERC20 methods
+    ├── it should accept a contract whose balanceOf or transfer behavior is malformed
+    ├── it should allow a previously removed token to be added again at the end of the list
+    ├── it should not change market accounting or Convex custody
+    └── it should remain callable while paused frozen or Convex inactive

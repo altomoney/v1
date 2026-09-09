@@ -1,0 +1,74 @@
+AltoConvexCreditLineMarket::removeCollateral()
+├── when market is paused
+│   └── it should revert with IsPaused for PAUSE_TYPE
+├── when market is frozen but not paused
+│   └── it should remain available
+├── given invalid Credit inputs
+│   ├── when receiver is zero address
+│   │   └── it should revert with AltoCreditMarketZeroAddress before other Credit checks
+│   ├── when callback data is nonempty
+│   │   └── it should revert with AltoCreditMarketCallbacksUnsupported before account and authorization checks
+│   ├── when onBehalf is not creditAccount
+│   │   └── it should revert with AltoCreditMarketUnauthorizedAccount
+│   ├── when onBehalf is zero address
+│   │   └── it should revert with AltoCreditMarketUnauthorizedAccount
+│   ├── when assets is zero and creditAccount has no debt
+│   │   └── it should revert with AltoBaseMarketInvalidInput
+│   ├── when caller is neither creditAccount nor its authorized delegate
+│   │   └── it should revert with AltoBaseMarketUnauthorized
+│   └── when assets exceeds recorded collateral
+│       └── it should revert with arithmetic underflow without changing accounting or custody
+├── given Convex strategy is active
+│   ├── when pre-withdrawal idle balance query reverts or returns malformed data
+│   │   └── it should propagate the failure and roll back accounting
+│   ├── when reward pool withdrawal reverts
+│   │   └── it should propagate the failure and roll back accounting
+│   ├── when reward pool withdrawal returns false
+│   │   └── it should revert with AltoConvexCreditLineExternalCallFailed
+│   ├── when post-withdrawal idle balance query reverts or returns malformed data
+│   │   └── it should propagate the failure and roll back accounting and withdrawal
+│   ├── when raw LP increases by a smaller or larger nonnegative delta
+│   │   └── it should revert with AltoConvexCreditLineUnexpectedAssetDelta
+│   ├── when raw LP balance decreases below its pre-withdrawal value
+│   │   └── it should revert with arithmetic panic
+│   └── given a successful withdrawal
+│       ├── it should call withdrawAndUnwrap with assets and claim false
+│       ├── it should decrease staked collateral by exactly assets
+│       ├── it should preserve raw LP that was idle before withdrawal
+│       └── it should not claim or forward rewards
+├── given Convex strategy is inactive after emergency exit
+│   ├── when idle LP balance is less than assets
+│   │   └── it should revert with AltoConvexCreditLineUnexpectedAssetDelta
+│   └── when idle LP balance covers assets
+│       ├── it should not call Booster or reward pool
+│       └── it should spend the idle LP
+├── given collateral transfer to receiver fails
+│   └── it should revert atomically and restore position and Convex state
+├── given a withdrawal while debt remains
+│   ├── when the remaining position is solvent at maxLtv
+│   │   ├── it should succeed and preserve debt assets and shares
+│   │   └── it should decrease collateral accounting and Convex stake by assets
+│   ├── when the remaining position would be insolvent at maxLtv
+│   │   └── it should revert with AltoBaseMarketInsufficientUserCollateral and roll back accounting and custody
+│   └── when the oracle returns zero or reverts
+│       └── it should revert atomically after the attempted unwind
+└── given a valid debt-free withdrawal
+    ├── when caller is creditAccount
+    │   └── it should succeed
+    ├── when caller is an authorized delegate of creditAccount
+    │   └── it should succeed
+    ├── when oracle returns zero or reverts
+    │   └── it should still succeed because a debt-free position is solvent without an oracle call
+    ├── when IRM accrual reverts
+    │   └── it should revert before changing accounting or withdrawing collateral
+    ├── when creditAccount borrow shares are zero but residual global debt assets remain
+    │   └── it should still permit collateral withdrawal without querying the oracle
+    ├── it should accrue interest before changing collateral accounting
+    ├── it should decrease creditAccount collateralAssets by assets
+    ├── when assets equals all recorded collateral
+    │   └── it should set collateralAssets to zero and return all corresponding LP
+    ├── it should transfer assets of raw LP to receiver
+    ├── it should not change totalSupply totalBorrowed or claimable fees
+    ├── it should emit AccrueInterest CollateralUnstaked and RemoveCollateral in order
+    ├── it should include caller creditAccount receiver and assets in RemoveCollateral
+    └── it should return assets
