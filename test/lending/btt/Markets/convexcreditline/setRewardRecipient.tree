@@ -1,0 +1,20 @@
+AltoConvexCreditLineMarket::setRewardRecipient()
+├── when caller is not the exact creditAccount
+│   ├── when caller is owner
+│   │   └── it should revert with AltoCreditMarketUnauthorizedAccount
+│   ├── when caller is an authorized delegate of creditAccount
+│   │   └── it should revert with AltoCreditMarketUnauthorizedAccount
+│   └── when caller is unrelated
+│       └── it should revert with AltoCreditMarketUnauthorizedAccount
+├── when caller is creditAccount
+│   ├── when new recipient is zero address
+│   │   └── it should revert with AltoCreditMarketZeroAddress
+│   ├── when new recipient equals current recipient
+│   │   ├── it should keep the same recipient
+│   │   └── it should emit SetRewardRecipient with equal old and new values
+│   └── when new recipient is nonzero
+│       ├── it should update rewardRecipient
+│       ├── it should emit SetRewardRecipient with old and new recipients
+│       └── it should forward all configured rewards to the new recipient on later claims
+└── when market is paused frozen or Convex inactive
+    └── it should remain callable by creditAccount

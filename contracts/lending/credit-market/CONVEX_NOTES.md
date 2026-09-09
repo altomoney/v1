@@ -1,7 +1,7 @@
 # Curve LP and Convex Flow
 
 This document is a practical guide to how Curve LP tokens move through Convex
-in `AltoConvexCreditLine`. It is intended to give enough context surrounding the
+in `AltoConvexCreditLineMarket`. It is intended to give enough context surrounding the
 follow of custody, rewards, and withdrawals.
 
 The important tokens are:
@@ -93,8 +93,8 @@ Before interacting with this market, a user obtains Curve LP by adding liquidity
 to the relevant Curve pool. Depositing that LP into the credit line then follows
 this general flow:
 
-1. User deposits the Curve LP to the `AltoConvexCreditLine` contract.
-2. `AltoConvexCreditLine` calls into the Convex `Booster` contract to deposit.
+1. User deposits the Curve LP to the `AltoConvexCreditLineMarket` contract.
+2. `AltoConvexCreditLineMarket` calls into the Convex `Booster` contract to deposit.
 3. The Convex system places the Curve LP into the pool's Gauge, creates the
    deposit-token receipt, and stakes that token in the reward pool.
 
@@ -170,8 +170,9 @@ balance can be forwarded.
 
 ## Withdrawal flow
 
-The credit account cannot withdraw any LP while it has borrow shares. Once its
-debt shares are zero, removing collateral reverses the Convex position.
+The credit account can unwind part or all of its LP while it has borrow shares,
+provided the remaining position is solvent at the market's `maxLtv`. Removing
+collateral reverses the corresponding portion of the Convex position.
 
 `withdrawAndUnwrap(amount, false)` performs both layers of the exit: it removes
 the deposit token from the reward pool and unwraps the Convex receipt back into
@@ -193,7 +194,7 @@ The operation:
 - does not change `position.collateralAssets`;
 - clears the Booster allowance;
 - permanently marks the Convex strategy inactive; and
-- leaves repayment and zero-debt LP withdrawal available after unpausing.
+- leaves repayment and solvent LP withdrawal available after unpausing.
 
 This is a custody migration from “staked through Convex” to “idle in the credit
 line,” not a collateral withdrawal.

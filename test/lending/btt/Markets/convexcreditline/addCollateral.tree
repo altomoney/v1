@@ -1,0 +1,64 @@
+AltoConvexCreditLineMarket::addCollateral()
+├── when market is paused
+│   └── it should revert with IsPaused for PAUSE_TYPE
+├── when market is frozen but not paused
+│   └── it should revert with IsPaused for FROZEN_TYPE
+├── given invalid inputs
+│   ├── when onBehalf is not creditAccount
+│   │   └── it should revert with AltoCreditMarketUnauthorizedAccount
+│   ├── when onBehalf is zero address
+│   │   └── it should revert with AltoCreditMarketUnauthorizedAccount
+│   ├── when assets is zero for creditAccount
+│   │   └── it should revert with AltoBaseMarketInvalidInput
+│   └── when assets cannot fit in uint128 position accounting
+│       └── it should revert without changing state
+├── given Convex strategy is inactive
+│   ├── it should revert with AltoCreditMarketInvalidInput
+│   ├── it should not transfer collateral
+│   └── it should not update the credit account position
+├── given collateral transfer fails
+│   ├── when caller balance is insufficient
+│   │   └── it should revert atomically
+│   ├── when caller allowance is insufficient
+│   │   └── it should revert atomically
+│   ├── when collateral balanceOf reverts or returns malformed data
+│   │   └── it should propagate the failure and roll back position accounting
+│   └── when received raw LP does not increase exactly by assets
+│       ├── when balance increases by a smaller or larger nonnegative delta
+│       │   └── it should revert with AltoConvexCreditLineUnexpectedAssetDelta
+│       └── when balance decreases below its pre-transfer value
+│           └── it should revert with arithmetic panic
+├── given Convex deposit fails
+│   ├── when pre-deposit staked balance query reverts or returns malformed data
+│   │   └── it should propagate the failure before transferring collateral
+│   ├── when Booster call reverts
+│   │   └── it should propagate the failure and roll back the collateral transfer
+│   ├── when Booster returns false
+│   │   └── it should revert with AltoConvexCreditLineExternalCallFailed
+│   ├── when idle raw LP does not return to its pre-deposit balance
+│   │   └── it should revert with AltoConvexCreditLineUnexpectedAssetDelta
+│   ├── when post-deposit staked balance query reverts or returns malformed data
+│   │   └── it should propagate the failure and roll back the deposit
+│   ├── when staked balance increases by a smaller or larger nonnegative delta
+│   │   └── it should revert with AltoConvexCreditLineUnexpectedAssetDelta
+│   ├── when staked balance decreases below its pre-deposit value
+│   │   └── it should revert with arithmetic panic
+│   └── when an external dependency attempts reentrancy
+│       └── it should reject reentrancy and revert atomically
+└── given a valid deposit for creditAccount
+    ├── when caller is creditAccount
+    │   └── it should succeed
+    ├── when caller is an unrelated account
+    │   └── it should succeed without position authorization
+    ├── it should transfer exactly assets of raw LP from caller
+    ├── it should call Booster deposit with the configured PID assets and stake true
+    ├── it should restore the prior idle LP balance
+    ├── it should preserve any raw LP that was already idle before the deposit
+    ├── it should increase market staked collateral by exactly assets
+    ├── it should preserve the full pre-deposit staked balance
+    ├── it should increase only creditAccount collateralAssets by assets
+    ├── it should not change totalSupply totalBorrowed or debt shares
+    ├── it should emit CollateralStaked before AddCollateral
+    ├── it should include msg.sender and assets in CollateralStaked
+    ├── it should support repeated deposits by different callers into the same creditAccount position
+    └── it should return assets

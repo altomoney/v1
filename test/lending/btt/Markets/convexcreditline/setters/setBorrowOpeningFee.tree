@@ -1,0 +1,14 @@
+AltoConvexCreditLineMarket::setBorrowOpeningFee()
+├── when caller is not owner
+│   └── it should revert with OwnableUnauthorizedAccount
+├── when new opening fee exceeds MATH_PRECISION
+│   └── it should revert with AltoCreditMarketInvalidInput
+└── when new opening fee is at most MATH_PRECISION
+    ├── it should update borrowOpeningFee
+    ├── it should allow zero and exactly MATH_PRECISION
+    ├── when new value equals current value
+    │   └── it should still emit and leave the same value
+    ├── it should emit SetBorrowOpeningFee with old and new values
+    ├── it should affect only later borrows and not reprice existing debt
+    ├── it should not accrue interest or change claimableFeesAssets
+    └── it should remain callable while paused or frozen
