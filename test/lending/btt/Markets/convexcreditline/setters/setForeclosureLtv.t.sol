@@ -2,7 +2,10 @@
 pragma solidity ^0.8.28;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {IAltoCreditMarketErrors, IAltoCreditMarketEvents} from "@alto/lending/interfaces/IAltoCreditMarket.sol";
+import {
+    IAltoConvexCreditLineMarketErrors,
+    IAltoConvexCreditLineMarketEvents
+} from "@alto/lending/interfaces/IAltoConvexCreditLineMarket.sol";
 import {PAUSE_TYPE, FROZEN_TYPE} from "@alto/utils/Constants.sol";
 import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 
@@ -16,11 +19,11 @@ contract AltoConvexCreditLineMarketSetForeclosureLtvTest is ConvexCreditLineComm
 
     function test_RevertAtOrBelowMaxLtvAndAboveMaximum() external {
         vm.startPrank(OWNER);
-        vm.expectRevert(IAltoCreditMarketErrors.AltoCreditMarketInvalidInput.selector);
+        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketInvalidInput.selector);
         market.setForeclosureLtv(MAX_LTV - 1);
-        vm.expectRevert(IAltoCreditMarketErrors.AltoCreditMarketInvalidInput.selector);
+        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketInvalidInput.selector);
         market.setForeclosureLtv(MAX_LTV);
-        vm.expectRevert(IAltoCreditMarketErrors.AltoCreditMarketInvalidInput.selector);
+        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketInvalidInput.selector);
         market.setForeclosureLtv(MATH_PRECISION + 1);
         vm.stopPrank();
     }
@@ -29,12 +32,12 @@ contract AltoConvexCreditLineMarketSetForeclosureLtvTest is ConvexCreditLineComm
         uint256 newLtv = 0.95 ether;
         _mockIrmUpdateRevert();
         vm.expectEmit(address(market));
-        emit IAltoCreditMarketEvents.SetForeclosureLtv(FORECLOSURE_LTV, newLtv);
+        emit IAltoConvexCreditLineMarketEvents.SetForeclosureLtv(FORECLOSURE_LTV, newLtv);
         vm.prank(OWNER);
         market.setForeclosureLtv(newLtv);
 
         vm.expectEmit(address(market));
-        emit IAltoCreditMarketEvents.SetForeclosureLtv(newLtv, newLtv);
+        emit IAltoConvexCreditLineMarketEvents.SetForeclosureLtv(newLtv, newLtv);
         vm.prank(OWNER);
         market.setForeclosureLtv(newLtv);
         assertEq(market.foreclosureLtv(), newLtv);
@@ -61,6 +64,6 @@ contract AltoConvexCreditLineMarketSetForeclosureLtvTest is ConvexCreditLineComm
         assertEq(market.foreclosureLtv(), 0.76 ether);
 
         vm.prank(OWNER);
-        market.governanceLiquidate(CREDIT_ACCOUNT);
+        market.governanceLiquidate(CREDIT_ACCOUNT, false);
     }
 }

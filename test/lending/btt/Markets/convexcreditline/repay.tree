@@ -30,11 +30,23 @@ AltoConvexCreditLineMarket::repay()
 ├── given borrow token burn failure
 │   ├── when caller balance is insufficient
 │   │   └── it should revert atomically
-│   ├── when market minter accounting cannot burn the amount
-│   │   └── it should revert atomically
 │   ├── when market lacks burner permission or borrow token is paused
 │   │   └── it should revert atomically
 │   └── when the token attempts reentrancy
+│       └── it should reject reentrancy and revert atomically
+├── given automatic fee claiming
+│   ├── it should accrue interest before determining the fees to claim
+│   ├── it should claim all opening fees and the first interest accrual before burning repayment assets
+│   ├── it should perform the inherited repayment accrual after the automatic fee claim
+│   ├── when the inherited repayment accrual returns additional interest
+│   │   └── it should leave that later interest in claimableFeesAssets
+│   ├── it should clear the pre-claim fee balance and mint those fees only to feeRecipient
+│   ├── it should allow all shares to be repaid with DUSD after updating the market's minted amount
+│   ├── when fee minting fails
+│   │   └── it should revert the fee claim and repayment atomically
+│   ├── when DUSD minter permission or ceiling headroom is missing
+│   │   └── it should revert the fee claim and repayment atomically
+│   └── when fee minting attempts reentrancy
 │       └── it should reject reentrancy and revert atomically
 └── given a valid repayment
     ├── when caller is creditAccount
@@ -47,7 +59,8 @@ AltoConvexCreditLineMarket::repay()
     ├── it should decrease totalBorrowed assets and shares
     ├── it should decrease only creditAccount borrowShares
     ├── it should not change totalSupply or collateralAssets
-    ├── it should preserve claimableFeesAssets apart from interest added by pre-repayment accrual
+    ├── it should mint the pre-claim fees to feeRecipient and leave only fees from the inherited accrual
+    ├── it should not reduce badDebtAssets when repaying debt from a new position
     ├── it should not query the oracle or interact with Convex custody and rewards
     ├── when all borrow shares are repaid
     │   ├── it should leave the position eligible for collateral withdrawal

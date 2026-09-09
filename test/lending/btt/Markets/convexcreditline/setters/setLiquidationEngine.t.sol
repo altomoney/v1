@@ -2,7 +2,7 @@
 pragma solidity ^0.8.28;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {IAltoCreditMarketErrors} from "@alto/lending/interfaces/IAltoCreditMarket.sol";
+import {IAltoConvexCreditLineMarketErrors} from "@alto/lending/interfaces/IAltoConvexCreditLineMarket.sol";
 import {PAUSE_TYPE, FROZEN_TYPE} from "@alto/utils/Constants.sol";
 
 import {ConvexCreditLineCommon} from "../ConvexCreditLineCommon.t.sol";
@@ -26,7 +26,7 @@ contract AltoConvexCreditLineMarketSetLiquidationEngineTest is ConvexCreditLineC
 
     function _assertUnsupported(address engine) private {
         vm.prank(OWNER);
-        vm.expectRevert(IAltoCreditMarketErrors.AltoCreditMarketUnsupportedOperation.selector);
+        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketUnsupportedOperation.selector);
         market.setLiquidationEngine(engine);
     }
 }

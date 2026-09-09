@@ -8,8 +8,12 @@ import {AltoBaseMarket} from "../AltoBaseMarket.sol";
 import {AltoConvexCreditLineLib} from "./AltoConvexCreditLineLib.sol";
 import {AssetShareConversionMath} from "../libraries/AssetShareConversionMath.sol";
 import {Uint128Converter} from "../libraries/Uint128Converter.sol";
-import {CreditMarketInitParams, IAltoCreditMarket} from "../interfaces/IAltoCreditMarket.sol";
-import {ConvexCreditLineInitParams, IAltoConvexCreditLine} from "../interfaces/IAltoConvexCreditLine.sol";
+import {
+    CreditMarketInitParams,
+    IAltoConvexCreditLineMarketBase,
+    ConvexCreditLineInitParams,
+    IAltoConvexCreditLineMarketStaticTypes
+} from "../interfaces/IAltoConvexCreditLineMarket.sol";
 import {IIrm, IRMType} from "../interfaces/IIrm.sol";
 import {BaseMarketInitParams, IMarketBase, MarketType, Position} from "../interfaces/IMarket.sol";
 import {IMintableERC20} from "../interfaces/IMintableERC20.sol";
@@ -19,52 +23,55 @@ import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 import {FixedPointMath, MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 import {ILendingOracle, LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 
-/// @title Alto Convex Credit Line
+/// @title Alto Convex Credit Line Market
 /// @author GPM
 /// @custom:contact security@altofoundation.org
-/// @notice An Isolated Convex Credit Line
-/// @dev `totalSupply.assets` represents synthetic credit capacity rather than lender-supplied liquidity.
-contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLine {
+/// @notice An Isolated Convex Credit Line Market
+/// @dev `totalSupply.assets` is the credit capacity shared by active debt and cumulative bad debt.
+contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMarketStaticTypes {
     using FixedPointMath for uint256;
     using AssetShareConversionMath for uint256;
     using Uint128Converter for uint256;
     using SafeERC20 for IERC20;
 
-    /// @inheritdoc IAltoCreditMarket
+    /// @inheritdoc IAltoConvexCreditLineMarketBase
     address public creditAccount;
 
-    /// @inheritdoc IAltoCreditMarket
+    /// @inheritdoc IAltoConvexCreditLineMarketBase
     uint256 public foreclosureLtv;
 
-    /// @inheritdoc IAltoCreditMarket
+    /// @inheritdoc IAltoConvexCreditLineMarketBase
     uint128 public claimableFeesAssets;
 
     /// @notice The borrow opening fee in MATH_PRECISION
     uint256 private _borrowOpeningFee;
 
-    /// @inheritdoc IAltoConvexCreditLine
+    /// @inheritdoc IAltoConvexCreditLineMarketBase
     address public convexBooster;
 
-    /// @inheritdoc IAltoConvexCreditLine
+    /// @inheritdoc IAltoConvexCreditLineMarketBase
     uint256 public convexPoolId;
 
-    /// @inheritdoc IAltoConvexCreditLine
+    /// @inheritdoc IAltoConvexCreditLineMarketBase
     address public convexRewardPool;
 
-    /// @inheritdoc IAltoConvexCreditLine
+    /// @inheritdoc IAltoConvexCreditLineMarketBase
     address public convexDepositToken;
 
-    /// @inheritdoc IAltoConvexCreditLine
+    /// @inheritdoc IAltoConvexCreditLineMarketBase
     address public rewardRecipient;
 
-    /// @inheritdoc IAltoConvexCreditLine
+    /// @inheritdoc IAltoConvexCreditLineMarketBase
     bool public convexActive;
 
-    /// @inheritdoc IAltoConvexCreditLine
+    /// @inheritdoc IAltoConvexCreditLineMarketBase
     address[] public rewardToken;
 
-    /// @inheritdoc IAltoConvexCreditLine
+    /// @inheritdoc IAltoConvexCreditLineMarketBase
     mapping(address => bool) public isRewardToken;
+
+    /// @inheritdoc IAltoConvexCreditLineMarketBase
+    uint256 public badDebtAssets;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -78,6 +85,161 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLine {
         _initializeConvex(_initParams);
     }
 
+    /// @inheritdoc IAltoConvexCreditLineMarketBase
+    function creditLimit() external view returns (uint256) {
+        return totalSupply.assets;
+    }
+
+    /// @inheritdoc AltoBaseMarket
+    function borrowOpeningFee() public view override(AltoBaseMarket, IMarketBase) returns (uint256) {
+        return _borrowOpeningFee;
+    }
+
+    /// @inheritdoc IAltoConvexCreditLineMarketBase
+    function stakedCollateralAssets() external view returns (uint256) {
+        return IConvexRewardPool(convexRewardPool).balanceOf(address(this));
+    }
+
+    /// @inheritdoc IAltoConvexCreditLineMarketBase
+    function setCreditLimit(uint256 _newCreditLimit) external nonReentrant onlyOwner {
+        if (_newCreditLimit == 0) {
+            revert AltoCreditMarketInvalidInput();
+        }
+
+        if (!paused[PAUSE_TYPE]) {
+            _accrueInterest();
+        }
+        if (uint256(totalBorrowed.assets) + badDebtAssets > _newCreditLimit) {
+            revert AltoBaseMarketInsufficientMarketLiquidity();
+        }
+
+        uint256 oldCreditLimit = totalSupply.assets;
+        totalSupply.assets = _newCreditLimit.toUint128();
+        emit SetCreditLimit(oldCreditLimit, _newCreditLimit);
+    }
+
+    /// @inheritdoc IAltoConvexCreditLineMarketBase
+    function setForeclosureLtv(uint256 _newForeclosureLtv) external onlyOwner {
+        if (_newForeclosureLtv <= maxLtv || _newForeclosureLtv > MATH_PRECISION) {
+            revert AltoCreditMarketInvalidInput();
+        }
+
+        emit SetForeclosureLtv(foreclosureLtv, _newForeclosureLtv);
+        foreclosureLtv = _newForeclosureLtv;
+    }
+
+    /// @inheritdoc IAltoConvexCreditLineMarketBase
+    function setBorrowOpeningFee(uint256 _newBorrowOpeningFee) external onlyOwner {
+        if (_newBorrowOpeningFee > MATH_PRECISION) {
+            revert AltoCreditMarketInvalidInput();
+        }
+
+        emit SetBorrowOpeningFee(_borrowOpeningFee, _newBorrowOpeningFee);
+        _borrowOpeningFee = _newBorrowOpeningFee;
+    }
+
+    /// @inheritdoc IMarketBase
+    function setFeeRecipient(address _feeRecipient) external override onlyOwner {
+        _requireNonZeroAddress(_feeRecipient);
+
+        emit SetFeeRecipient(feeRecipient, _feeRecipient);
+        feeRecipient = _feeRecipient;
+    }
+
+    /// @inheritdoc IAltoConvexCreditLineMarketBase
+    function claimInterest(uint256 interest) external nonReentrant whenNotPaused returns (uint256) {
+        if (interest > claimableFeesAssets) {
+            revert AltoCreditMarketInvalidInput();
+        }
+        _requireNonZeroAddress(feeRecipient);
+        if (msg.sender != owner() && msg.sender != feeRecipient) {
+            revert AltoCreditMarketUnauthorizedAccount();
+        }
+
+        return _claimInterest(interest);
+    }
+
+    /// @inheritdoc AltoBaseMarket
+    /// @dev Foreclosure is available only after debt strictly exceeds the foreclosure LTV.
+    function governanceLiquidate(address borrower, bool skipAccrueInterest)
+        external
+        override(AltoBaseMarket, IMarketBase)
+        nonReentrant
+        onlyOwner
+        returns (uint256 collateralAmount, uint256 badDebtAmount)
+    {
+        _requireCreditAccount(borrower);
+        if (!paused[PAUSE_TYPE] && !skipAccrueInterest) {
+            _accrueInterest();
+        }
+
+        if (!_isLiquidatable(borrower)) {
+            revert AltoCreditMarketPositionNotForeclosable();
+        }
+
+        Position storage borrowerPosition = position[borrower];
+        collateralAmount = borrowerPosition.collateralAssets;
+        uint128 badDebtShares = borrowerPosition.borrowShares;
+        badDebtAmount = totalBorrowed.assets;
+
+        totalBorrowed.assets = 0;
+        totalBorrowed.shares = 0;
+
+        badDebtAssets += badDebtAmount;
+        emit BadDebtAccrued(badDebtAmount);
+
+        borrowerPosition.borrowShares = 0;
+        borrowerPosition.collateralAssets = 0;
+
+        if (collateralAmount != 0) {
+            _sendCollateral(msg.sender, collateralAmount);
+        }
+
+        emit GovernanceLiquidation(borrower, msg.sender, collateralAmount, badDebtAmount, badDebtShares);
+    }
+
+    /// @inheritdoc IAltoConvexCreditLineMarketBase
+    function claimRewards() external nonReentrant returns (uint256[] memory claimedAmounts) {
+        return AltoConvexCreditLineLib.claimRewards(convexRewardPool, rewardRecipient, rewardToken);
+    }
+
+    /// @inheritdoc IAltoConvexCreditLineMarketBase
+    function setRewardRecipient(address _newRecipient) external {
+        _requireCreditAccount(msg.sender);
+        _requireNonZeroAddress(_newRecipient);
+
+        emit SetRewardRecipient(rewardRecipient, _newRecipient);
+        rewardRecipient = _newRecipient;
+    }
+
+    /// @inheritdoc IAltoConvexCreditLineMarketBase
+    function addRewardToken(address _token) external onlyOwner {
+        _addRewardToken(_token);
+        emit RewardTokenAdded(_token);
+    }
+
+    /// @inheritdoc IAltoConvexCreditLineMarketBase
+    function removeRewardToken(address _token) external onlyOwner {
+        AltoConvexCreditLineLib.removeRewardToken(rewardToken, isRewardToken, convexRewardPool, _token);
+
+        emit RewardTokenRemoved(_token);
+    }
+
+    /// @inheritdoc IAltoConvexCreditLineMarketBase
+    function emergencyExitConvex() external nonReentrant onlyOwner returns (uint256 assets) {
+        if (!paused[PAUSE_TYPE]) {
+            revert AltoConvexCreditLineMustBePaused();
+        }
+        if (!convexActive) {
+            revert AltoConvexCreditLineStrategyInactive();
+        }
+
+        assets = AltoConvexCreditLineLib.emergencyWithdraw(convexRewardPool);
+
+        convexActive = false;
+        emit ConvexEmergencyExit(assets);
+    }
+
     /// @dev Initializes the Base market and then initializes Credit state.
     function _initializeCreditMarket(CreditMarketInitParams memory _initParams) internal onlyInitializing {
         BaseMarketInitParams memory baseMarketInitParams = _initParams.baseMarketInitParams;
@@ -86,7 +248,8 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLine {
         _requireNonZeroAddress(baseMarketInitParams.feeRecipient);
         if (
             _initParams.creditLimit == 0 || _initParams.initialBorrowOpeningFee > MATH_PRECISION
-                || baseMarketInitParams.maxLtv >= _initParams.foreclosureLtv || _initParams.foreclosureLtv > MATH_PRECISION
+                || baseMarketInitParams.maxLtv >= _initParams.foreclosureLtv
+                || _initParams.foreclosureLtv > MATH_PRECISION
                 || IIrm(baseMarketInitParams.irm).IRM_TYPE() != IRMType.FIXED_RATE
         ) {
             revert AltoCreditMarketInvalidInput();
@@ -107,54 +270,6 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLine {
         emit SetBorrowOpeningFee(0, _initParams.initialBorrowOpeningFee);
     }
 
-    /// @inheritdoc IAltoCreditMarket
-    function setCreditLimit(uint256 _newCreditLimit) external nonReentrant onlyOwner {
-        if (_newCreditLimit == 0) {
-            revert AltoCreditMarketInvalidInput();
-        }
-
-        if (!paused[PAUSE_TYPE]) {
-            _accrueInterest();
-        }
-        if (_newCreditLimit < totalBorrowed.assets) {
-            revert AltoCreditMarketInvalidInput();
-        }
-
-        uint256 oldCreditLimit = totalSupply.assets;
-        totalSupply.assets = _newCreditLimit.toUint128();
-        emit SetCreditLimit(oldCreditLimit, _newCreditLimit);
-    }
-
-    /// @inheritdoc AltoBaseMarket
-    function _setMaxLtv(uint256 _maxLtv) internal override {
-        if (_maxLtv >= foreclosureLtv) {
-            revert AltoCreditMarketInvalidInput();
-        }
-
-        emit SetMaxLtv(maxLtv, _maxLtv);
-        maxLtv = _maxLtv;
-    }
-
-    /// @inheritdoc IAltoCreditMarket
-    function setForeclosureLtv(uint256 _newForeclosureLtv) external onlyOwner {
-        if (_newForeclosureLtv <= maxLtv || _newForeclosureLtv > MATH_PRECISION) {
-            revert AltoCreditMarketInvalidInput();
-        }
-
-        emit SetForeclosureLtv(foreclosureLtv, _newForeclosureLtv);
-        foreclosureLtv = _newForeclosureLtv;
-    }
-
-    /// @inheritdoc IAltoCreditMarket
-    function setBorrowOpeningFee(uint256 _newBorrowOpeningFee) external onlyOwner {
-        if (_newBorrowOpeningFee > MATH_PRECISION) {
-            revert AltoCreditMarketInvalidInput();
-        }
-
-        emit SetBorrowOpeningFee(_borrowOpeningFee, _newBorrowOpeningFee);
-        _borrowOpeningFee = _newBorrowOpeningFee;
-    }
-
     /// @inheritdoc AltoBaseMarket
     /// @dev Unlike `AltoBaseMarket`, only a nonzero fixed-rate IRM can be set.
     function _setIrm(address _irm, bool _skipAccrueInterest) internal override nonReentrant {
@@ -167,20 +282,33 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLine {
     }
 
     /// @inheritdoc AltoBaseMarket
-    function _setFeeRecipient(address _feeRecipient) internal override {
-        _requireNonZeroAddress(_feeRecipient);
+    function _setMaxLtv(uint256 _maxLtv) internal override {
+        if (_maxLtv >= foreclosureLtv) {
+            revert AltoCreditMarketInvalidInput();
+        }
 
-        _updateFeeRecipient(_feeRecipient);
+        emit SetMaxLtv(maxLtv, _maxLtv);
+        maxLtv = _maxLtv;
     }
 
-    /// @inheritdoc IAltoCreditMarket
-    function creditLimit() external view returns (uint256) {
-        return totalSupply.assets;
+    /// @dev Disabled because this market does not support a liquidation engine.
+    function _setLiquidationEngine(address) internal pure override {
+        revert AltoCreditMarketUnsupportedOperation();
     }
 
-    /// @inheritdoc AltoBaseMarket
-    function borrowOpeningFee() public view override(AltoBaseMarket, IMarketBase) returns (uint256) {
-        return _borrowOpeningFee;
+    /// @dev Disabled because borrow and collateral-removal callbacks are unsupported.
+    function _setAuthorizedCallback(address, bool) internal pure override {
+        revert AltoCreditMarketUnsupportedOperation();
+    }
+
+    /// @dev Disabled because this market does not support lender supply.
+    function _addSupply(uint256, uint256, address) internal pure override returns (uint256, uint256) {
+        revert AltoCreditMarketUnsupportedOperation();
+    }
+
+    /// @dev Disabled because this market does not support lender supply.
+    function _removeSupply(uint256, uint256, address, address) internal pure override returns (uint256, uint256) {
+        revert AltoCreditMarketUnsupportedOperation();
     }
 
     /// @inheritdoc AltoBaseMarket
@@ -191,7 +319,20 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLine {
     }
 
     /// @inheritdoc AltoBaseMarket
-    /// @dev Callbacks are unsupported and collateral can be removed only while the remaining position is solvent.
+    function _receiveCollateral(uint256 assets) internal override {
+        if (!convexActive) {
+            revert AltoCreditMarketInvalidInput();
+        }
+
+        super._receiveCollateral(assets);
+        IERC20(collateralToken).forceApprove(convexBooster, assets);
+        AltoConvexCreditLineLib.depositCollateralToConvex(convexBooster, convexPoolId, assets);
+        IERC20(collateralToken).forceApprove(convexBooster, 0);
+    }
+
+    /// @inheritdoc AltoBaseMarket
+    /// @dev Callbacks are unsupported. Active collateral is unwrapped from Convex, while collateral recovered by an
+    /// emergency exit is transferred from idle custody. The remaining position must be solvent.
     function _removeCollateral(uint256 assets, address onBehalf, address receiver, bytes calldata swapParams)
         internal
         override
@@ -207,7 +348,17 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLine {
     }
 
     /// @inheritdoc AltoBaseMarket
-    /// @dev Only `creditAccount` can borrow and callbacks are unsupported.
+    function _sendCollateral(address receiver, uint256 assets) internal override {
+        if (convexActive) {
+            AltoConvexCreditLineLib.withdrawAndUnwrapCollateral(convexRewardPool, assets);
+            emit CollateralUnstaked(receiver, assets);
+        }
+
+        super._sendCollateral(receiver, assets);
+    }
+
+    /// @inheritdoc AltoBaseMarket
+    /// @dev Debt may only be assigned to `creditAccount`; it or an authorized delegate may call. Callbacks are unsupported.
     function _borrow(uint256 assets, uint256 shares, address onBehalf, address receiver, bytes calldata swapParams)
         internal
         override
@@ -218,7 +369,22 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLine {
             revert AltoCreditMarketCallbacksUnsupported();
         }
 
-        return super._borrow(assets, shares, onBehalf, receiver, swapParams);
+        uint256 openingFeeAssets;
+        (assets, shares, openingFeeAssets) = super._borrow(assets, shares, onBehalf, receiver, swapParams);
+
+        if (uint256(totalBorrowed.assets) + badDebtAssets > totalSupply.assets) {
+            revert AltoBaseMarketInsufficientMarketLiquidity();
+        }
+
+        return (assets, shares, openingFeeAssets);
+    }
+
+    /// @dev Adds the opening fee to `claimableFeesAssets` without creating fee-recipient supply shares.
+    /// @param openingFeeAssets The opening fee added to the claimable balance.
+    /// @return Always zero because this market has no lender supply shares.
+    function _applyBorrowOpeningFee(uint256 openingFeeAssets) internal override returns (uint256) {
+        claimableFeesAssets += openingFeeAssets.toUint128();
+        return 0;
     }
 
     /// @inheritdoc AltoBaseMarket
@@ -233,19 +399,17 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLine {
             revert AltoCreditMarketInvalidInput();
         }
         _requireCreditAccount(onBehalf);
+
+        _accrueInterest();
+        if (claimableFeesAssets > 0) {
+            _claimInterest(0);
+        }
+
         return super._repay(assets, shares, onBehalf);
     }
 
-    /// @inheritdoc IAltoCreditMarket
-    function claimInterest(uint256 interest) external nonReentrant whenNotPaused returns (uint256) {
-        if (interest > claimableFeesAssets) {
-            revert AltoCreditMarketInvalidInput();
-        }
-        _requireNonZeroAddress(feeRecipient);
-        if (msg.sender != owner() && msg.sender != feeRecipient) {
-            revert AltoCreditMarketUnauthorizedAccount();
-        }
-
+    /// @dev Claims interest and fees by minting borrow tokens to the fee recipient.
+    function _claimInterest(uint256 interest) internal returns (uint256) {
         if (interest == 0) {
             interest = claimableFeesAssets;
         }
@@ -259,7 +423,7 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLine {
         return interest;
     }
 
-    /// @inheritdoc AltoBaseMarket
+    /// @dev Accrues fixed-rate interest into active debt and `claimableFeesAssets` without changing the credit limit.
     function _accrueInterest() internal override {
         (uint256 interest, uint256 borrowRate) = IIrm(irm).updateInterestRate(totalSupply.assets, totalBorrowed.assets);
 
@@ -269,84 +433,6 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLine {
         }
 
         emit AccrueInterest(borrowRate, interest, totalBorrowed.assets, totalSupply.assets);
-    }
-
-    /// @inheritdoc AltoBaseMarket
-    function _applyBorrowOpeningFee(uint256 openingFeeAssets) internal override returns (uint256) {
-        claimableFeesAssets += openingFeeAssets.toUint128();
-        return 0;
-    }
-
-    /// @inheritdoc AltoBaseMarket
-    function _setLiquidationEngine(address) internal pure override {
-        revert AltoCreditMarketUnsupportedOperation();
-    }
-
-    /// @inheritdoc AltoBaseMarket
-    function _setAuthorizedCallback(address, bool) internal pure override {
-        revert AltoCreditMarketUnsupportedOperation();
-    }
-
-    /// @inheritdoc AltoBaseMarket
-    function _addSupply(uint256, uint256, address) internal pure override returns (uint256, uint256) {
-        revert AltoCreditMarketUnsupportedOperation();
-    }
-
-    /// @inheritdoc AltoBaseMarket
-    function _removeSupply(uint256, uint256, address, address) internal pure override returns (uint256, uint256) {
-        revert AltoCreditMarketUnsupportedOperation();
-    }
-
-    /// @inheritdoc AltoBaseMarket
-    function _liquidate(address, bytes calldata, bytes calldata)
-        internal
-        pure
-        override
-        returns (uint256, uint256, uint256)
-    {
-        revert AltoCreditMarketNonLiquidatable();
-    }
-
-    /// @inheritdoc AltoBaseMarket
-    /// @dev Foreclosure is available only after debt strictly exceeds the foreclosure LTV.
-    function governanceLiquidate(address borrower)
-        external
-        override(AltoBaseMarket, IMarketBase)
-        nonReentrant
-        onlyOwner
-        returns (uint256 collateralAmount, uint256 badDebtAmount)
-    {
-        _requireCreditAccount(borrower);
-        _accrueInterest();
-
-        if (!_isLiquidatable(borrower)) {
-            revert AltoCreditMarketPositionNotForeclosable();
-        }
-
-        Position storage borrowerPosition = position[borrower];
-        collateralAmount = borrowerPosition.collateralAssets;
-        uint128 badDebtShares = borrowerPosition.borrowShares;
-        badDebtAmount = totalBorrowed.assets;
-
-        totalBorrowed.assets = 0;
-        totalBorrowed.shares = 0;
-        borrowerPosition.borrowShares = 0;
-        borrowerPosition.collateralAssets = 0;
-
-        if (collateralAmount != 0) {
-            _sendCollateral(msg.sender, collateralAmount);
-        }
-
-        emit GovernanceLiquidation(borrower, msg.sender, collateralAmount, badDebtAmount, badDebtShares);
-    }
-
-    /// @inheritdoc AltoBaseMarket
-    function _sendBorrowToken(address from, address to, uint256 amount) internal override {
-        if (from == address(this)) {
-            IMintableERC20(borrowToken).mint(to, amount);
-        } else {
-            IMintableERC20(borrowToken).burn(from, amount);
-        }
     }
 
     /// @inheritdoc AltoBaseMarket
@@ -367,27 +453,22 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLine {
         return _borrowValue(_user) > foreclosureBorrowValue;
     }
 
-    /// @dev Returns the user's collateral value in borrow-token asset units.
-    function _collateralValue(address _user) private view returns (uint256) {
-        uint256 collateralPrice = ILendingOracle(oracle).getPrice();
-        if (collateralPrice == 0) {
-            revert AltoCreditMarketInvalidOraclePrice();
-        }
-
-        uint256 collateralAssets = uint256(position[_user].collateralAssets);
-        return collateralAssets.divideWithRounding(collateralPrice, LENDING_ORACLE_PRICE_PRECISION, false);
+    /// @dev Disabled because this market supports governance foreclosure instead of public liquidation.
+    function _liquidate(address, bytes calldata, bytes memory)
+        internal
+        pure
+        override
+        returns (uint256, uint256, uint256)
+    {
+        revert AltoCreditMarketNonLiquidatable();
     }
 
-    /// @dev Returns the user's borrow value in borrow-token asset units.
-    function _borrowValue(address _user) private view returns (uint256) {
-        uint256 borrowShares = uint256(position[_user].borrowShares);
-        return borrowShares.convertToAssetsUp(totalBorrowed.assets, totalBorrowed.shares);
-    }
-
-    /// @dev Reverts unless the account is the configured credit account.
-    function _requireCreditAccount(address account) private view {
-        if (account != creditAccount) {
-            revert AltoCreditMarketUnauthorizedAccount();
+    /// @inheritdoc AltoBaseMarket
+    function _sendBorrowToken(address from, address to, uint256 amount) internal override {
+        if (from == address(this)) {
+            IMintableERC20(borrowToken).mint(to, amount);
+        } else {
+            IMintableERC20(borrowToken).burn(from, amount);
         }
     }
 
@@ -396,64 +477,6 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLine {
         if (account == address(0)) {
             revert AltoCreditMarketZeroAddress();
         }
-    }
-
-    /// @inheritdoc IAltoConvexCreditLine
-    function rewardTokenCount() external view returns (uint256) {
-        return rewardToken.length;
-    }
-
-    /// @inheritdoc IAltoConvexCreditLine
-    function stakedCollateralAssets() external view returns (uint256) {
-        return IConvexRewardPool(convexRewardPool).balanceOf(address(this));
-    }
-
-    /// @inheritdoc IAltoConvexCreditLine
-    function idleCollateralAssets() public view returns (uint256) {
-        return IERC20(collateralToken).balanceOf(address(this));
-    }
-
-    /// @inheritdoc IAltoConvexCreditLine
-    function claimRewards() external nonReentrant returns (uint256[] memory claimedAmounts) {
-        return AltoConvexCreditLineLib.claimRewards(convexRewardPool, rewardRecipient, rewardToken);
-    }
-
-    /// @inheritdoc IAltoConvexCreditLine
-    function setRewardRecipient(address _newRecipient) external {
-        _requireCreditAccount(msg.sender);
-        _requireNonZeroAddress(_newRecipient);
-
-        emit SetRewardRecipient(rewardRecipient, _newRecipient);
-        rewardRecipient = _newRecipient;
-    }
-
-    /// @inheritdoc IAltoConvexCreditLine
-    function addRewardToken(address _token) external onlyOwner {
-        _addRewardToken(_token);
-        emit RewardTokenAdded(_token);
-    }
-
-    /// @inheritdoc IAltoConvexCreditLine
-    function removeRewardToken(address _token) external onlyOwner {
-        AltoConvexCreditLineLib.removeRewardToken(rewardToken, isRewardToken, convexRewardPool, _token);
-
-        emit RewardTokenRemoved(_token);
-    }
-
-    /// @inheritdoc IAltoConvexCreditLine
-    function emergencyExitConvex() external nonReentrant onlyOwner returns (uint256 assets) {
-        if (!paused[PAUSE_TYPE]) {
-            revert AltoConvexCreditLineMustBePaused();
-        }
-        if (!convexActive) {
-            revert AltoConvexCreditLineStrategyInactive();
-        }
-
-        assets = AltoConvexCreditLineLib.emergencyWithdraw(collateralToken, convexRewardPool);
-
-        convexActive = false;
-        IERC20(collateralToken).forceApprove(convexBooster, 0);
-        emit ConvexEmergencyExit(assets);
     }
 
     /// @dev Validates and stores the Convex custody and reward configuration.
@@ -482,8 +505,6 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLine {
             revert AltoCreditMarketInvalidInput();
         }
 
-        IERC20(collateralToken).forceApprove(_initParams.convexBooster, type(uint256).max);
-
         emit ConvexConfigured(
             _initParams.convexBooster, _initParams.convexPoolId, rewardPool, depositToken, _initParams.rewardRecipient
         );
@@ -499,29 +520,27 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLine {
         rewardToken.push(_token);
     }
 
-    /// @inheritdoc AltoBaseMarket
-    function _receiveCollateral(uint256 assets) internal override {
-        if (!convexActive) {
-            revert AltoCreditMarketInvalidInput();
+    /// @dev Returns the user's collateral value in borrow-token asset units.
+    function _collateralValue(address _user) private view returns (uint256) {
+        uint256 collateralPrice = ILendingOracle(oracle).getPrice();
+        if (collateralPrice == 0) {
+            revert AltoCreditMarketInvalidOraclePrice();
         }
 
-        uint256 idleBefore = idleCollateralAssets();
-
-        super._receiveCollateral(assets);
-        AltoConvexCreditLineLib.depositCollateralToConvex(
-            collateralToken, convexBooster, convexPoolId, convexRewardPool, assets, idleBefore
-        );
+        uint256 collateralAssets = uint256(position[_user].collateralAssets);
+        return collateralAssets.divideWithRounding(collateralPrice, LENDING_ORACLE_PRICE_PRECISION, false);
     }
 
-    /// @inheritdoc AltoBaseMarket
-    function _sendCollateral(address receiver, uint256 assets) internal override {
-        if (convexActive) {
-            AltoConvexCreditLineLib.withdrawAndUnwrapCollateral(collateralToken, convexRewardPool, assets);
-        } else if (idleCollateralAssets() < assets) {
-            revert AltoConvexCreditLineUnexpectedAssetDelta();
-        }
+    /// @dev Returns the user's borrow value in borrow-token asset units.
+    function _borrowValue(address _user) private view returns (uint256) {
+        uint256 borrowShares = uint256(position[_user].borrowShares);
+        return borrowShares.convertToAssetsUp(totalBorrowed.assets, totalBorrowed.shares);
+    }
 
-        super._sendCollateral(receiver, assets);
-        emit CollateralUnstaked(receiver, assets);
+    /// @dev Reverts unless the account is the configured credit account.
+    function _requireCreditAccount(address account) private view {
+        if (account != creditAccount) {
+            revert AltoCreditMarketUnauthorizedAccount();
+        }
     }
 }

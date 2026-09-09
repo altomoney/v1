@@ -17,7 +17,7 @@ AltoConvexCreditLineMarket::addRewardToken()
 │   └── it should revert with AltoCreditMarketInvalidInput
 └── when owner adds a valid token below the cap
     ├── it should append the token to the end of the list
-    ├── it should increment rewardTokenCount
+    ├── it should increase the reward-token array length
     ├── it should set isRewardToken to true
     ├── it should emit RewardTokenAdded
     ├── it should not call or validate the token's ERC20 methods

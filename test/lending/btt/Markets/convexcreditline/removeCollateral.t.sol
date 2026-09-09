@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {IAltoCreditMarketErrors} from "@alto/lending/interfaces/IAltoCreditMarket.sol";
+import {IERC20Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
 import {
-    IAltoConvexCreditLineErrors,
-    IAltoConvexCreditLineEvents
-} from "@alto/lending/interfaces/IAltoConvexCreditLine.sol";
+    IAltoConvexCreditLineMarketErrors,
+    IAltoConvexCreditLineMarketEvents
+} from "@alto/lending/interfaces/IAltoConvexCreditLineMarket.sol";
 import {IMarketErrors, IMarketEvents} from "@alto/lending/interfaces/IMarket.sol";
 import {ILendingOracle, LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {PAUSE_TYPE, FROZEN_TYPE} from "@alto/utils/Constants.sol";
@@ -28,11 +28,11 @@ contract AltoConvexCreditLineMarketRemoveCollateralTest is ConvexCreditLineCommo
     function test_CreditInputChecksHaveSpecifiedPrecedence() external {
         _openPosition(100 ether, 10 ether);
 
-        vm.expectRevert(IAltoCreditMarketErrors.AltoCreditMarketZeroAddress.selector);
+        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketZeroAddress.selector);
         market.removeCollateral(0, USER, address(0), hex"01");
-        vm.expectRevert(IAltoCreditMarketErrors.AltoCreditMarketCallbacksUnsupported.selector);
+        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketCallbacksUnsupported.selector);
         market.removeCollateral(0, USER, RECEIVER, hex"01");
-        vm.expectRevert(IAltoCreditMarketErrors.AltoCreditMarketUnauthorizedAccount.selector);
+        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketUnauthorizedAccount.selector);
         market.removeCollateral(0, USER, RECEIVER, "");
     }
 
@@ -65,64 +65,78 @@ contract AltoConvexCreditLineMarketRemoveCollateralTest is ConvexCreditLineCommo
 
         rewardPool.setWithdrawBehavior(false, false, type(uint256).max, type(uint256).max);
         vm.prank(CREDIT_ACCOUNT);
-        vm.expectRevert(IAltoConvexCreditLineErrors.AltoConvexCreditLineExternalCallFailed.selector);
+        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoConvexCreditLineExternalCallFailed.selector);
         market.removeCollateral(10 ether, CREDIT_ACCOUNT, RECEIVER, "");
         _assertUnchanged(beforeState);
     }
 
-    function test_ActiveWithdrawalRequiresExactNonnegativeRawLpDelta() external {
+    function test_InsufficientRecoveredLpRevertsAtReceiverTransfer() external {
         _addCollateral(30 ether);
         AccountingState memory beforeState = _state();
 
         rewardPool.setWithdrawBehavior(false, true, 9 ether, 10 ether);
         vm.prank(CREDIT_ACCOUNT);
-        vm.expectRevert(IAltoConvexCreditLineErrors.AltoConvexCreditLineUnexpectedAssetDelta.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(IERC20Errors.ERC20InsufficientBalance.selector, address(market), 9 ether, 10 ether)
+        );
         market.removeCollateral(10 ether, CREDIT_ACCOUNT, RECEIVER, "");
-        _assertUnchanged(beforeState);
 
-        deal(address(collateralToken), address(rewardPool), 40 ether);
-        rewardPool.setWithdrawBehavior(false, true, 11 ether, 10 ether);
-        vm.prank(CREDIT_ACCOUNT);
-        vm.expectRevert(IAltoConvexCreditLineErrors.AltoConvexCreditLineUnexpectedAssetDelta.selector);
-        market.removeCollateral(10 ether, CREDIT_ACCOUNT, RECEIVER, "");
         _assertUnchanged(beforeState);
-
-        deal(address(collateralToken), address(market), 1 ether);
-        rewardPool.setWithdrawBehavior(false, true, 1 ether, 10 ether);
-        collateralToken.setTransferBehavior(false, false, 10_000, 2 ether);
-        vm.prank(CREDIT_ACCOUNT);
-        vm.expectRevert();
-        market.removeCollateral(10 ether, CREDIT_ACCOUNT, RECEIVER, "");
     }
 
-    function test_InactiveWithdrawalUsesIdleOnlyAndRequiresCoverage() external {
+    function test_InactiveWithdrawalTransfersRecoveredCollateralWithoutCallingConvexAndPreservesSurplus() external {
         _addCollateral(10 ether);
         _exitConvex();
         _unpause(PAUSE_TYPE);
+        deal(address(collateralToken), address(market), 13 ether);
         uint256 callsBefore = rewardPool.withdrawCalls();
 
-        deal(address(collateralToken), address(market), 5 ether);
+        vm.recordLogs();
         vm.prank(CREDIT_ACCOUNT);
-        vm.expectRevert(IAltoConvexCreditLineErrors.AltoConvexCreditLineUnexpectedAssetDelta.selector);
+        uint256 assets = market.removeCollateral(10 ether, CREDIT_ACCOUNT, RECEIVER, "");
+
+        assertEq(assets, 10 ether);
+        (,, uint128 collateralAfter) = market.position(CREDIT_ACCOUNT);
+        assertEq(collateralAfter, 0);
+        assertEq(collateralToken.balanceOf(RECEIVER), 10 ether);
+        assertEq(collateralToken.balanceOf(address(market)), 3 ether);
+        assertEq(market.stakedCollateralAssets(), 0);
+        assertEq(rewardPool.withdrawCalls(), callsBefore);
+        _assertNoCollateralUnstakedEvent();
+    }
+
+    function test_InactiveWithdrawalWithInsufficientIdleCollateralRevertsAtomically() external {
+        _addCollateral(10 ether);
+        _exitConvex();
+        _unpause(PAUSE_TYPE);
+        deal(address(collateralToken), address(market), 9 ether);
+        AccountingState memory beforeState = _state();
+        uint256 callsBefore = rewardPool.withdrawCalls();
+
+        vm.prank(CREDIT_ACCOUNT);
+        vm.expectRevert(
+            abi.encodeWithSelector(IERC20Errors.ERC20InsufficientBalance.selector, address(market), 9 ether, 10 ether)
+        );
         market.removeCollateral(10 ether, CREDIT_ACCOUNT, RECEIVER, "");
 
-        deal(address(collateralToken), address(market), 10 ether);
-        vm.prank(CREDIT_ACCOUNT);
-        market.removeCollateral(10 ether, CREDIT_ACCOUNT, RECEIVER, "");
-        assertEq(collateralToken.balanceOf(RECEIVER), 10 ether);
+        _assertUnchanged(beforeState);
+        assertEq(collateralToken.balanceOf(RECEIVER), 0);
         assertEq(rewardPool.withdrawCalls(), callsBefore);
     }
 
-    function test_ReceiverTransferFailureRestoresInactiveCustodyAndAccounting() external {
+    function test_ReceiverTransferFailureRestoresActiveCustodyAndAccounting() external {
         _addCollateral(10 ether);
-        _exitConvex();
-        _unpause(PAUSE_TYPE);
-        collateralToken.setTransferBehavior(true, false, 10_000, 0);
+        vm.mockCallRevert(
+            address(collateralToken),
+            abi.encodeCall(collateralToken.transfer, (RECEIVER, 1 ether)),
+            bytes("TRANSFER_REVERTED")
+        );
         AccountingState memory beforeState = _state();
 
         vm.prank(CREDIT_ACCOUNT);
         vm.expectRevert(bytes("TRANSFER_REVERTED"));
         market.removeCollateral(1 ether, CREDIT_ACCOUNT, RECEIVER, "");
+        vm.clearMockedCalls();
 
         _assertUnchanged(beforeState);
     }
@@ -135,7 +149,7 @@ contract AltoConvexCreditLineMarketRemoveCollateralTest is ConvexCreditLineCommo
         vm.expectEmit(address(market));
         emit IMarketEvents.AccrueInterest(29, 0, 0, uint128(CREDIT_LIMIT));
         vm.expectEmit(address(market));
-        emit IAltoConvexCreditLineEvents.CollateralUnstaked(RECEIVER, 10 ether);
+        emit IAltoConvexCreditLineMarketEvents.CollateralUnstaked(RECEIVER, 10 ether);
         vm.expectEmit(address(market));
         emit IMarketEvents.RemoveCollateral(CREDIT_ACCOUNT, CREDIT_ACCOUNT, RECEIVER, 10 ether);
         vm.prank(CREDIT_ACCOUNT);
@@ -147,6 +161,7 @@ contract AltoConvexCreditLineMarketRemoveCollateralTest is ConvexCreditLineCommo
         assertEq(collateralAfter, 0);
         assertEq(collateralToken.balanceOf(RECEIVER), 10 ether);
         assertEq(market.stakedCollateralAssets(), 0);
+        assertEq(rewardPool.balanceOf(address(market)), 0);
         assertEq(rewardPool.lastWithdrawAmount(), 10 ether);
         assertFalse(rewardPool.lastWithdrawClaim());
     }
@@ -169,6 +184,7 @@ contract AltoConvexCreditLineMarketRemoveCollateralTest is ConvexCreditLineCommo
         assertEq(debtSharesAfter, debtSharesBefore);
         assertEq(collateralToken.balanceOf(RECEIVER), 20 ether);
         assertEq(market.stakedCollateralAssets(), 80 ether);
+        assertEq(rewardPool.balanceOf(address(market)), 80 ether);
     }
 
     function test_PartialWithdrawalThatWouldMakePositionInsolventRevertsAtomically() external {
@@ -192,7 +208,7 @@ contract AltoConvexCreditLineMarketRemoveCollateralTest is ConvexCreditLineCommo
 
         oracle.setPrice(0);
         vm.prank(CREDIT_ACCOUNT);
-        vm.expectRevert(IAltoCreditMarketErrors.AltoCreditMarketInvalidOraclePrice.selector);
+        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketInvalidOraclePrice.selector);
         market.removeCollateral(1 ether, CREDIT_ACCOUNT, RECEIVER, "");
         _assertUnchanged(beforeState);
 

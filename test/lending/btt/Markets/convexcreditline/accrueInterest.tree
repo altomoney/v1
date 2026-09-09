@@ -10,6 +10,7 @@ AltoConvexCreditLineMarket::accrueInterest()
 ├── given the IRM call
 │   ├── it should pass creditLimit as total supply assets
 │   ├── it should pass current totalBorrowed assets
+│   ├── it should exclude accumulated badDebtAssets from the IRM debt input
 │   └── it should not query the oracle or interact with Convex or tokens
 ├── when returned interest is zero
 │   ├── it should leave debt assets and claimableFeesAssets unchanged
@@ -21,6 +22,7 @@ AltoConvexCreditLineMarket::accrueInterest()
 │   ├── it should add the same interest to claimableFeesAssets
 │   ├── it should not change totalBorrowed shares
 │   ├── it should not change totalSupply assets or shares
+│   ├── it should not change or accrue interest onto badDebtAssets
 │   ├── it should not change any position shares
 │   └── it should emit AccrueInterest with the IRM borrow rate and updated balances
 └── given uint128 accounting boundaries

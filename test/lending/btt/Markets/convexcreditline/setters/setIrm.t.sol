@@ -5,7 +5,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
-import {IAltoCreditMarketErrors} from "@alto/lending/interfaces/IAltoCreditMarket.sol";
+import {IAltoConvexCreditLineMarketErrors} from "@alto/lending/interfaces/IAltoConvexCreditLineMarket.sol";
 import {IIrm, IRMType} from "@alto/lending/interfaces/IIrm.sol";
 import {IMarketEvents} from "@alto/lending/interfaces/IMarket.sol";
 import {PAUSE_TYPE, FROZEN_TYPE} from "@alto/utils/Constants.sol";
@@ -25,11 +25,11 @@ contract AltoConvexCreditLineMarketSetIrmTest is ConvexCreditLineCommon {
         _mockIrmUpdateRevert();
 
         vm.startPrank(OWNER);
-        vm.expectRevert(IAltoCreditMarketErrors.AltoCreditMarketZeroAddress.selector);
+        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketZeroAddress.selector);
         market.setIrm(address(0), false);
-        vm.expectRevert(IAltoCreditMarketErrors.AltoCreditMarketInvalidInput.selector);
+        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketInvalidInput.selector);
         market.setIrm(address(irm), false);
-        vm.expectRevert(IAltoCreditMarketErrors.AltoCreditMarketInvalidInput.selector);
+        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketInvalidInput.selector);
         market.setIrm(address(adaptive), false);
         vm.stopPrank();
 

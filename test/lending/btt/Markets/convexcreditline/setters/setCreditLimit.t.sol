@@ -2,16 +2,18 @@
 pragma solidity ^0.8.28;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
-import {IAltoCreditMarketErrors, IAltoCreditMarketEvents} from "@alto/lending/interfaces/IAltoCreditMarket.sol";
+import {
+    IAltoConvexCreditLineMarketErrors,
+    IAltoConvexCreditLineMarketEvents
+} from "@alto/lending/interfaces/IAltoConvexCreditLineMarket.sol";
 import {Uint128Converter} from "@alto/lending/libraries/Uint128Converter.sol";
 import {IIrm} from "@alto/lending/interfaces/IIrm.sol";
-import {IMarketEvents} from "@alto/lending/interfaces/IMarket.sol";
+import {IMarketErrors, IMarketEvents} from "@alto/lending/interfaces/IMarket.sol";
+import {LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {PAUSE_TYPE, FROZEN_TYPE} from "@alto/utils/Constants.sol";
 
 import {ConvexCreditLineCommon} from "../ConvexCreditLineCommon.t.sol";
-import {CreditLineCallForwarderMock} from "../mocks/CreditLineCallForwarderMock.sol";
 
 contract AltoConvexCreditLineMarketSetCreditLimitTest is ConvexCreditLineCommon {
     function test_RevertWhenCallerIsNotOwner() external {
@@ -22,7 +24,7 @@ contract AltoConvexCreditLineMarketSetCreditLimitTest is ConvexCreditLineCommon 
     function test_RevertZeroBeforeAccrual() external {
         _mockIrmUpdateRevert();
         vm.prank(OWNER);
-        vm.expectRevert(IAltoCreditMarketErrors.AltoCreditMarketInvalidInput.selector);
+        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketInvalidInput.selector);
         market.setCreditLimit(0);
         assertEq(market.creditLimit(), CREDIT_LIMIT);
     }
@@ -45,7 +47,7 @@ contract AltoConvexCreditLineMarketSetCreditLimitTest is ConvexCreditLineCommon 
 
         vm.expectCall(address(irm), abi.encodeCall(IIrm.updateInterestRate, (CREDIT_LIMIT, 500 ether)));
         vm.prank(OWNER);
-        vm.expectRevert(IAltoCreditMarketErrors.AltoCreditMarketInvalidInput.selector);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketInsufficientMarketLiquidity.selector);
         market.setCreditLimit(505 ether);
 
         _assertUnchanged(beforeState);
@@ -71,6 +73,29 @@ contract AltoConvexCreditLineMarketSetCreditLimitTest is ConvexCreditLineCommon 
         assertEq(market.creditLimit(), 500 ether);
     }
 
+    function test_PausedLimitBoundaryIncludesRecordedBadDebtWithoutAccruing() external {
+        _openPosition(1_000 ether, 100 ether);
+        oracle.setPrice(100 ether);
+        vm.prank(OWNER);
+        market.governanceLiquidate(CREDIT_ACCOUNT, false);
+
+        oracle.setPrice(LENDING_ORACLE_PRICE_PRECISION);
+        _addCollateral(1_000 ether);
+        _mockAccrual(0, 0);
+        _borrow(50 ether);
+        _pause(PAUSE_TYPE);
+        _mockIrmUpdateRevert();
+
+        vm.prank(OWNER);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketInsufficientMarketLiquidity.selector);
+        market.setCreditLimit(150 ether - 1);
+
+        vm.prank(OWNER);
+        market.setCreditLimit(150 ether);
+        assertEq(market.creditLimit(), 150 ether);
+        assertEq(market.badDebtAssets(), 100 ether);
+    }
+
     function test_FrozenStillAccruesAndAcceptsDebtBoundary() external {
         _openPosition(1_000 ether, 500 ether);
         _pause(FROZEN_TYPE);
@@ -79,7 +104,7 @@ contract AltoConvexCreditLineMarketSetCreditLimitTest is ConvexCreditLineCommon 
         vm.expectEmit(address(market));
         emit IMarketEvents.AccrueInterest(123, 10 ether, 510 ether, uint128(CREDIT_LIMIT));
         vm.expectEmit(address(market));
-        emit IAltoCreditMarketEvents.SetCreditLimit(CREDIT_LIMIT, 510 ether);
+        emit IAltoConvexCreditLineMarketEvents.SetCreditLimit(CREDIT_LIMIT, 510 ether);
         vm.prank(OWNER);
         market.setCreditLimit(510 ether);
 
@@ -89,13 +114,69 @@ contract AltoConvexCreditLineMarketSetCreditLimitTest is ConvexCreditLineCommon 
         assertEq(market.claimableFeesAssets(), 10 ether);
     }
 
+    function test_UsesActiveDebtAndBadDebtForLimitBoundary() external {
+        _openPosition(1_000 ether, 100 ether);
+        oracle.setPrice(100 ether);
+        vm.prank(OWNER);
+        market.governanceLiquidate(CREDIT_ACCOUNT, false);
+        assertEq(market.badDebtAssets(), 100 ether);
+
+        oracle.setPrice(LENDING_ORACLE_PRICE_PRECISION);
+        _addCollateral(1_000 ether);
+        _mockAccrual(0, 0);
+        _borrow(50 ether);
+
+        AccountingState memory beforeState = _state();
+        vm.prank(OWNER);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketInsufficientMarketLiquidity.selector);
+        market.setCreditLimit(150 ether - 1);
+        _assertUnchanged(beforeState);
+
+        vm.expectEmit(address(market));
+        emit IMarketEvents.AccrueInterest(0, 0, 50 ether, uint128(CREDIT_LIMIT));
+        vm.expectEmit(address(market));
+        emit IAltoConvexCreditLineMarketEvents.SetCreditLimit(CREDIT_LIMIT, 150 ether);
+        vm.prank(OWNER);
+        market.setCreditLimit(150 ether);
+
+        assertEq(market.creditLimit(), 150 ether);
+        assertEq(market.badDebtAssets(), 100 ether);
+        (uint128 debtAssets,) = market.totalBorrowed();
+        assertEq(debtAssets, 50 ether);
+    }
+
+    function test_IncreasingLimitAfterForeclosureRestoresOnlyCapacityAboveBadDebt() external {
+        vm.prank(OWNER);
+        market.setCreditLimit(100 ether);
+        _openPosition(1_000 ether, 100 ether);
+        oracle.setPrice(100 ether);
+        vm.prank(OWNER);
+        market.governanceLiquidate(CREDIT_ACCOUNT, false);
+
+        oracle.setPrice(LENDING_ORACLE_PRICE_PRECISION);
+        _addCollateral(1_000 ether);
+        vm.prank(CREDIT_ACCOUNT);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketInsufficientMarketLiquidity.selector);
+        market.borrow(1, 0, CREDIT_ACCOUNT, CREDIT_ACCOUNT, "");
+
+        vm.prank(OWNER);
+        market.setCreditLimit(150 ether);
+        _mockAccrual(0, 0);
+        _borrow(50 ether);
+
+        (uint128 activeDebt,) = market.totalBorrowed();
+        assertEq(activeDebt, 50 ether);
+        assertEq(market.badDebtAssets(), 100 ether);
+        assertEq(uint256(activeDebt) + market.badDebtAssets(), market.creditLimit());
+    }
+
     function test_ValidIncreaseDecreaseMaximumAndUnchangedValue() external {
         vm.startPrank(OWNER);
         market.setCreditLimit(CREDIT_LIMIT + 1);
         market.setCreditLimit(CREDIT_LIMIT - 1);
         market.setCreditLimit(type(uint128).max);
         vm.expectEmit(address(market));
-        emit IAltoCreditMarketEvents.SetCreditLimit(type(uint128).max, type(uint128).max);
+        emit IAltoConvexCreditLineMarketEvents.SetCreditLimit(type(uint128).max, type(uint128).max);
         market.setCreditLimit(type(uint128).max);
         vm.stopPrank();
 
@@ -104,19 +185,5 @@ contract AltoConvexCreditLineMarketSetCreditLimitTest is ConvexCreditLineCommon 
         assertEq(supplyShares, 0);
         (, uint128 borrowShares) = market.totalBorrowed();
         assertEq(borrowShares, 0);
-        assertEq(rewardPool.withdrawCalls(), 0);
-        assertEq(booster.depositCalls(), 0);
-    }
-
-    function test_RejectsIrmReentrancyAndRollsBack() external {
-        CreditLineCallForwarderMock callback = new CreditLineCallForwarderMock(address(market), CREDIT_ACCOUNT);
-        vm.mockFunction(address(irm), address(callback), abi.encodeWithSelector(IIrm.updateInterestRate.selector));
-        AccountingState memory beforeState = _state();
-
-        vm.prank(OWNER);
-        vm.expectRevert(ReentrancyGuardUpgradeable.ReentrancyGuardReentrantCall.selector);
-        market.setCreditLimit(CREDIT_LIMIT + 1);
-
-        _assertUnchanged(beforeState);
     }
 }

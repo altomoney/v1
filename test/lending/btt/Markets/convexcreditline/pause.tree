@@ -1,0 +1,20 @@
+AltoConvexCreditLineMarket::pause()
+├── when caller lacks the requested pauser role
+│   └── it should revert with Unauthorized without changing pause or accounting state
+├── when enabling PAUSE_TYPE
+│   ├── it should accrue interest before marking the market paused
+│   ├── it should add accrued interest to active debt and claimableFeesAssets but not badDebtAssets
+│   ├── it should emit AccrueInterest before Paused
+│   └── when IRM accrual fails
+│       └── it should propagate the failure and remain unpaused atomically
+├── when disabling PAUSE_TYPE
+│   ├── it should notify the IRM before marking the market unpaused
+│   ├── it should restart fixed-rate accrual from the unpause timestamp
+│   └── when the IRM notification fails
+│       └── it should propagate the failure and remain paused atomically
+├── when enabling or disabling FROZEN_TYPE
+│   ├── it should update only the frozen state
+│   └── it should not accrue interest or notify the IRM pause hook
+└── when requested state equals current state
+    ├── it should revert with StateNotChanged
+    └── it should roll back any PAUSE_TYPE hook effects atomically

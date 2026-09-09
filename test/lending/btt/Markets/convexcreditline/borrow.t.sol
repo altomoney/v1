@@ -5,8 +5,10 @@ import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/ut
 import {EndpointV2Mock} from "@layerzerolabs/test-devtools-evm-foundry/contracts/mocks/EndpointV2Mock.sol";
 
 import {AltoConvexCreditLineMarket} from "@alto/lending/credit-market/AltoConvexCreditLineMarket.sol";
-import {IAltoCreditMarketErrors} from "@alto/lending/interfaces/IAltoCreditMarket.sol";
-import {ConvexCreditLineInitParams} from "@alto/lending/interfaces/IAltoConvexCreditLine.sol";
+import {
+    IAltoConvexCreditLineMarketErrors,
+    ConvexCreditLineInitParams
+} from "@alto/lending/interfaces/IAltoConvexCreditLineMarket.sol";
 import {IIrm} from "@alto/lending/interfaces/IIrm.sol";
 import {IMarketErrors, IMarketEvents} from "@alto/lending/interfaces/IMarket.sol";
 import {ILendingOracle, LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
@@ -30,19 +32,19 @@ contract AltoConvexCreditLineMarketBorrowTest is ConvexCreditLineCommon {
     }
 
     function test_CallbackAndCreditChecksPrecedeBaseValidationAndAuthorization() external {
-        vm.expectRevert(IAltoCreditMarketErrors.AltoCreditMarketUnauthorizedAccount.selector);
+        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketUnauthorizedAccount.selector);
         market.borrow(0, 0, USER, address(0), hex"01");
 
-        vm.expectRevert(IAltoCreditMarketErrors.AltoCreditMarketCallbacksUnsupported.selector);
+        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketCallbacksUnsupported.selector);
         market.borrow(0, 0, CREDIT_ACCOUNT, address(0), hex"01");
 
-        vm.expectRevert(IAltoCreditMarketErrors.AltoCreditMarketUnauthorizedAccount.selector);
+        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketUnauthorizedAccount.selector);
         market.borrow(1, 0, address(0), RECEIVER, "");
 
         bytes32 callbackSlot = keccak256(abi.encode(RECEIVER, uint256(9)));
         vm.store(address(market), callbackSlot, bytes32(uint256(1)));
         vm.prank(CREDIT_ACCOUNT);
-        vm.expectRevert(IAltoCreditMarketErrors.AltoCreditMarketCallbacksUnsupported.selector);
+        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketCallbacksUnsupported.selector);
         market.borrow(1, 0, CREDIT_ACCOUNT, RECEIVER, hex"01");
     }
 
@@ -139,11 +141,39 @@ contract AltoConvexCreditLineMarketBorrowTest is ConvexCreditLineCommon {
         assertEq(debtAssets, 750 ether);
     }
 
+    function test_BadDebtReducesCapacityAndPostMintFailureRollsBackAtomically() external {
+        vm.prank(OWNER);
+        market.setCreditLimit(200 ether);
+        _openPosition(1_000 ether, 100 ether);
+        oracle.setPrice(100 ether);
+        vm.prank(OWNER);
+        market.governanceLiquidate(CREDIT_ACCOUNT, false);
+
+        assertEq(market.badDebtAssets(), 100 ether);
+
+        oracle.setPrice(LENDING_ORACLE_PRICE_PRECISION);
+        _addCollateral(1_000 ether);
+        _mockAccrual(0, 0);
+        _borrow(100 ether);
+
+        (uint128 debtAssets,) = market.totalBorrowed();
+        assertEq(debtAssets, 100 ether);
+        assertEq(uint256(debtAssets) + market.badDebtAssets(), market.creditLimit());
+
+        AccountingState memory beforeState = _state();
+        vm.prank(CREDIT_ACCOUNT);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketInsufficientMarketLiquidity.selector);
+        market.borrow(1, 0, CREDIT_ACCOUNT, RECEIVER, "");
+
+        _assertUnchanged(beforeState);
+        assertEq(borrowToken.balanceOf(RECEIVER), 0);
+    }
+
     function test_RevertForZeroOracleInsolvencyAndNoCollateral() external {
         _addCollateral(1_000 ether);
         oracle.setPrice(0);
         vm.prank(CREDIT_ACCOUNT);
-        vm.expectRevert(IAltoCreditMarketErrors.AltoCreditMarketInvalidOraclePrice.selector);
+        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketInvalidOraclePrice.selector);
         market.borrow(1, 0, CREDIT_ACCOUNT, RECEIVER, "");
 
         oracle.setPrice(LENDING_ORACLE_PRICE_PRECISION);
@@ -230,6 +260,62 @@ contract AltoConvexCreditLineMarketBorrowTest is ConvexCreditLineCommon {
         assertEq(minted, 0);
     }
 
+    function test_BadDebtReservesActualDusdCapacityForUnclaimedFees() external {
+        DUSD dusd = new DUSD(address(new EndpointV2Mock(1, address(this))), OWNER);
+        ConvexCreditLineInitParams memory params = _validInitParams();
+        params.creditMarketInitParams.baseMarketInitParams.borrowToken = address(dusd);
+        params.creditMarketInitParams.creditLimit = 300 ether;
+        params.creditMarketInitParams.initialBorrowOpeningFee = MATH_PRECISION;
+        AltoConvexCreditLineMarket dusdMarket = _initialize(params);
+
+        vm.startPrank(OWNER);
+        dusd.setMinterStatus(address(dusdMarket), true);
+        dusd.setMinterCeiling(address(dusdMarket), 300 ether);
+        vm.stopPrank();
+
+        deal(address(collateralToken), CREDIT_ACCOUNT, 1_000 ether);
+        vm.startPrank(CREDIT_ACCOUNT);
+        collateralToken.approve(address(dusdMarket), type(uint256).max);
+        dusdMarket.addCollateral(1_000 ether, CREDIT_ACCOUNT);
+        dusdMarket.borrow(100 ether, 0, CREDIT_ACCOUNT, CREDIT_ACCOUNT, "");
+        vm.stopPrank();
+
+        oracle.setPrice(100 ether);
+        vm.prank(OWNER);
+        dusdMarket.governanceLiquidate(CREDIT_ACCOUNT, false);
+        assertEq(dusdMarket.badDebtAssets(), 200 ether);
+        assertEq(dusdMarket.claimableFeesAssets(), 100 ether);
+
+        oracle.setPrice(LENDING_ORACLE_PRICE_PRECISION);
+        deal(address(collateralToken), CREDIT_ACCOUNT, 1_000 ether);
+        vm.startPrank(CREDIT_ACCOUNT);
+        dusdMarket.addCollateral(1_000 ether, CREDIT_ACCOUNT);
+        dusdMarket.borrow(50 ether, 0, CREDIT_ACCOUNT, CREDIT_ACCOUNT, "");
+        vm.stopPrank();
+
+        (uint128 debtAssets, uint128 debtShares) = dusdMarket.totalBorrowed();
+        (uint256 mintedBefore,) = dusd.minterConfig(address(dusdMarket));
+        uint256 balanceBefore = dusd.balanceOf(CREDIT_ACCOUNT);
+        uint256 feesBefore = dusdMarket.claimableFeesAssets();
+        assertEq(debtAssets, 100 ether);
+        assertGt(debtShares, 0);
+        assertEq(uint256(debtAssets) + dusdMarket.badDebtAssets(), 300 ether);
+        assertEq(mintedBefore + feesBefore, 300 ether);
+
+        vm.prank(CREDIT_ACCOUNT);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketInsufficientMarketLiquidity.selector);
+        dusdMarket.borrow(1 ether, 0, CREDIT_ACCOUNT, CREDIT_ACCOUNT, "");
+
+        (uint128 debtAssetsAfter, uint128 debtSharesAfter) = dusdMarket.totalBorrowed();
+        (uint256 mintedAfter,) = dusd.minterConfig(address(dusdMarket));
+        assertEq(debtAssetsAfter, debtAssets);
+        assertEq(debtSharesAfter, debtShares);
+        assertEq(dusd.balanceOf(CREDIT_ACCOUNT), balanceBefore);
+        assertEq(dusdMarket.claimableFeesAssets(), feesBefore);
+        assertEq(dusdMarket.badDebtAssets(), 200 ether);
+        assertEq(mintedAfter, mintedBefore);
+    }
+
     function test_RejectsBorrowTokenReentrancyAtomically() external {
         _addCollateral(100 ether);
         borrowToken.setCallback(address(market), abi.encodeCall(market.repay, (1, 0, CREDIT_ACCOUNT)), 1);
@@ -258,7 +344,7 @@ contract AltoConvexCreditLineMarketBorrowTest is ConvexCreditLineCommon {
         assertEq(fee, 100 ether);
         assertEq(borrowToken.balanceOf(RECEIVER), 100 ether);
         assertEq(market.claimableFeesAssets(), 100 ether);
-        assertEq(market.idleCollateralAssets(), 0);
+        assertEq(collateralToken.balanceOf(address(market)), 0);
         assertEq(market.stakedCollateralAssets(), 1_000 ether);
     }
 

@@ -9,10 +9,12 @@ import {AltoConvexCreditLineMarket} from "@alto/lending/credit-market/AltoConvex
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {DlbDcfPriorityLiquidationEngine} from "@alto/lending/liquidation/DlbDcfPriorityLiquidationEngine.sol";
 import {Uint128Converter} from "@alto/lending/libraries/Uint128Converter.sol";
-import {IAltoCreditMarketErrors, IAltoCreditMarketEvents} from "@alto/lending/interfaces/IAltoCreditMarket.sol";
 import {
-    ConvexCreditLineInitParams, IAltoConvexCreditLineEvents
-} from "@alto/lending/interfaces/IAltoConvexCreditLine.sol";
+    IAltoConvexCreditLineMarketErrors,
+    IAltoConvexCreditLineMarketEvents,
+    ConvexCreditLineInitParams
+} from "@alto/lending/interfaces/IAltoConvexCreditLineMarket.sol";
+import {IAltoLiquidationEngine} from "@alto/lending/interfaces/IAltoLiquidationEngine.sol";
 import {IMarketErrors, IMarketEvents, MarketType} from "@alto/lending/interfaces/IMarket.sol";
 import {IIrm, IRMType} from "@alto/lending/interfaces/IIrm.sol";
 import {IConvexRewardPool} from "@alto/lending/interfaces/vendor/IConvexRewardPool.sol";
@@ -49,12 +51,12 @@ contract AltoConvexCreditLineMarketInitializeTest is ConvexCreditLineCommon {
 
         params = _validInitParams();
         params.creditMarketInitParams.creditAccount = address(0);
-        vm.expectRevert(IAltoCreditMarketErrors.AltoCreditMarketZeroAddress.selector);
+        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketZeroAddress.selector);
         candidate.initialize(params);
 
         params = _validInitParams();
         params.creditMarketInitParams.baseMarketInitParams.feeRecipient = address(0);
-        vm.expectRevert(IAltoCreditMarketErrors.AltoCreditMarketZeroAddress.selector);
+        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketZeroAddress.selector);
         candidate.initialize(params);
 
         assertEq(candidate.owner(), address(0));
@@ -75,6 +77,11 @@ contract AltoConvexCreditLineMarketInitializeTest is ConvexCreditLineCommon {
 
         params = _validInitParams();
         params.creditMarketInitParams.baseMarketInitParams.oracle = address(0);
+        vm.expectRevert(IMarketErrors.AltoBaseMarketInvalidInput.selector);
+        candidate.initialize(params);
+
+        params = _validInitParams();
+        params.creditMarketInitParams.baseMarketInitParams.emergencyAdmin = address(0);
         vm.expectRevert(IMarketErrors.AltoBaseMarketInvalidInput.selector);
         candidate.initialize(params);
 
@@ -134,6 +141,27 @@ contract AltoConvexCreditLineMarketInitializeTest is ConvexCreditLineCommon {
         assertEq(liquidationEngine.market(), address(candidate));
     }
 
+    function test_LiquidationEngineRegistrationFailureRollsBackInitialization() external {
+        ConvexCreditLineInitParams memory params = _validInitParams();
+        FixedRateIrm candidateIrm = FixedRateIrm(params.creditMarketInitParams.baseMarketInitParams.irm);
+        DlbDcfPriorityLiquidationEngine liquidationEngine = new DlbDcfPriorityLiquidationEngine(address(this));
+        params.creditMarketInitParams.baseMarketInitParams.liquidationEngine = address(liquidationEngine);
+        AltoConvexCreditLineMarket candidate = _newUninitializedMarket();
+
+        vm.mockCallRevert(
+            address(liquidationEngine),
+            abi.encodeCall(IAltoLiquidationEngine.setMarketOnce, (address(candidate))),
+            bytes("ENGINE_REGISTRATION_REVERTED")
+        );
+        vm.expectRevert(bytes("ENGINE_REGISTRATION_REVERTED"));
+        candidate.initialize(params);
+        vm.clearMockedCalls();
+
+        assertEq(candidate.owner(), address(0));
+        assertEq(liquidationEngine.market(), address(0));
+        assertEq(candidateIrm.market(), address(0));
+    }
+
     function test_RevertForInvalidIrmTypeAndRegistrationFailure() external {
         ConvexCreditLineInitParams memory params = _validInitParams();
         AltoConvexCreditLineMarket candidate = _newUninitializedMarket();
@@ -176,12 +204,12 @@ contract AltoConvexCreditLineMarketInitializeTest is ConvexCreditLineCommon {
         AltoConvexCreditLineMarket candidate = _newUninitializedMarket();
 
         params.convexBooster = address(0);
-        vm.expectRevert(IAltoCreditMarketErrors.AltoCreditMarketZeroAddress.selector);
+        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketZeroAddress.selector);
         candidate.initialize(params);
 
         params = _validInitParams();
         params.rewardRecipient = address(0);
-        vm.expectRevert(IAltoCreditMarketErrors.AltoCreditMarketZeroAddress.selector);
+        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketZeroAddress.selector);
         candidate.initialize(params);
     }
 
@@ -268,17 +296,16 @@ contract AltoConvexCreditLineMarketInitializeTest is ConvexCreditLineCommon {
         assertEq(candidate.owner(), address(0));
     }
 
-    function test_ApprovalFailureRollsBackEntireInitialization() external {
+    function test_InitializationDoesNotApproveBooster() external {
         ConvexCreditLineInitParams memory params = _validInitParams();
         FixedRateIrm candidateIrm = FixedRateIrm(params.creditMarketInitParams.baseMarketInitParams.irm);
         AltoConvexCreditLineMarket candidate = _newUninitializedMarket();
         collateralToken.setApproveFailure(true);
 
-        vm.expectRevert(bytes("APPROVE_REVERTED"));
         candidate.initialize(params);
 
-        assertEq(candidate.owner(), address(0));
-        assertEq(candidateIrm.market(), address(0));
+        assertEq(candidate.owner(), OWNER);
+        assertEq(candidateIrm.market(), address(candidate));
         assertEq(collateralToken.allowance(address(candidate), address(booster)), 0);
     }
 
@@ -298,11 +325,11 @@ contract AltoConvexCreditLineMarketInitializeTest is ConvexCreditLineCommon {
             if (logs[i].emitter != address(candidate)) continue;
             bytes32 topic = logs[i].topics[0];
             if (topic == IMarketEvents.SetIrm.selector) irmIndex = i;
-            if (topic == IAltoCreditMarketEvents.SetForeclosureLtv.selector) foreclosureIndex = i;
-            if (topic == IAltoCreditMarketEvents.SetCreditLimit.selector) creditLimitIndex = i;
-            if (topic == IAltoCreditMarketEvents.SetBorrowOpeningFee.selector) feeIndex = i;
-            if (topic == IAltoConvexCreditLineEvents.ConvexConfigured.selector) convexIndex = i;
-            assertTrue(topic != IAltoConvexCreditLineEvents.RewardTokenAdded.selector);
+            if (topic == IAltoConvexCreditLineMarketEvents.SetForeclosureLtv.selector) foreclosureIndex = i;
+            if (topic == IAltoConvexCreditLineMarketEvents.SetCreditLimit.selector) creditLimitIndex = i;
+            if (topic == IAltoConvexCreditLineMarketEvents.SetBorrowOpeningFee.selector) feeIndex = i;
+            if (topic == IAltoConvexCreditLineMarketEvents.ConvexConfigured.selector) convexIndex = i;
+            assertTrue(topic != IAltoConvexCreditLineMarketEvents.RewardTokenAdded.selector);
         }
 
         assertLt(irmIndex, foreclosureIndex);
@@ -375,6 +402,7 @@ contract AltoConvexCreditLineMarketInitializeTest is ConvexCreditLineCommon {
         assertEq(market.foreclosureLtv(), FORECLOSURE_LTV);
         assertEq(market.borrowOpeningFee(), 0);
         assertEq(market.claimableFeesAssets(), 0);
+        assertEq(market.badDebtAssets(), 0);
         (uint128 supplyAssets, uint128 supplyShares) = market.totalSupply();
         assertEq(supplyAssets, CREDIT_LIMIT);
         assertEq(supplyShares, 0);
@@ -388,13 +416,28 @@ contract AltoConvexCreditLineMarketInitializeTest is ConvexCreditLineCommon {
         assertEq(market.convexDepositToken(), address(depositToken));
         assertEq(market.rewardRecipient(), REWARD_RECIPIENT);
         assertTrue(market.convexActive());
-        assertEq(market.rewardTokenCount(), 2);
+        _assertRewardTokenCount(2);
         assertEq(market.rewardToken(0), address(primaryRewardToken));
         assertEq(market.rewardToken(1), address(extraRewardToken));
-        assertEq(collateralToken.allowance(address(market), address(booster)), type(uint256).max);
-        assertEq(market.idleCollateralAssets(), 0);
+        assertEq(collateralToken.allowance(address(market), address(booster)), 0);
+        assertEq(collateralToken.balanceOf(address(market)), 0);
         assertEq(market.stakedCollateralAssets(), 0);
         assertEq(booster.depositCalls(), 0);
+    }
+
+    function test_GrantsPauseRolesOnlyToConfiguredEmergencyAdmin() external {
+        address emergencyAdmin = makeAddr("EmergencyAdmin");
+        ConvexCreditLineInitParams memory params = _validInitParams();
+        params.creditMarketInitParams.baseMarketInitParams.irm = address(_newFixedRateIrm());
+        params.creditMarketInitParams.baseMarketInitParams.emergencyAdmin = emergencyAdmin;
+
+        AltoConvexCreditLineMarket candidate = _initialize(params);
+
+        assertEq(candidate.owner(), OWNER);
+        assertTrue(candidate.pausers(emergencyAdmin, PAUSE_TYPE));
+        assertTrue(candidate.pausers(emergencyAdmin, FROZEN_TYPE));
+        assertFalse(candidate.pausers(OWNER, PAUSE_TYPE));
+        assertFalse(candidate.pausers(OWNER, FROZEN_TYPE));
     }
 
     function test_AcceptsInclusiveBoundsPoolZeroAndZeroStashFromNonOwnerCaller() external {
@@ -438,24 +481,23 @@ contract AltoConvexCreditLineMarketInitializeTest is ConvexCreditLineCommon {
         }
 
         AltoConvexCreditLineMarket candidate = _initialize(params);
-        assertEq(candidate.rewardTokenCount(), 16);
         for (uint256 i; i < 16; ++i) {
             assertEq(candidate.rewardToken(i), params.rewardTokens[i]);
             assertTrue(candidate.isRewardToken(params.rewardTokens[i]));
         }
+        vm.expectRevert();
+        candidate.rewardToken(16);
     }
 
     function _expectCreditInvalid(AltoConvexCreditLineMarket candidate, ConvexCreditLineInitParams memory params)
         private
     {
-        vm.expectRevert(IAltoCreditMarketErrors.AltoCreditMarketInvalidInput.selector);
+        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketInvalidInput.selector);
         candidate.initialize(params);
     }
 
-    function _expectCreditZero(AltoConvexCreditLineMarket candidate, ConvexCreditLineInitParams memory params)
-        private
-    {
-        vm.expectRevert(IAltoCreditMarketErrors.AltoCreditMarketZeroAddress.selector);
+    function _expectCreditZero(AltoConvexCreditLineMarket candidate, ConvexCreditLineInitParams memory params) private {
+        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketZeroAddress.selector);
         candidate.initialize(params);
     }
 }

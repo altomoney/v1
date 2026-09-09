@@ -19,29 +19,25 @@ AltoConvexCreditLineMarket::removeCollateral()
 │   └── when assets exceeds recorded collateral
 │       └── it should revert with arithmetic underflow without changing accounting or custody
 ├── given Convex strategy is active
-│   ├── when pre-withdrawal idle balance query reverts or returns malformed data
-│   │   └── it should propagate the failure and roll back accounting
 │   ├── when reward pool withdrawal reverts
 │   │   └── it should propagate the failure and roll back accounting
 │   ├── when reward pool withdrawal returns false
 │   │   └── it should revert with AltoConvexCreditLineExternalCallFailed
-│   ├── when post-withdrawal idle balance query reverts or returns malformed data
-│   │   └── it should propagate the failure and roll back accounting and withdrawal
-│   ├── when raw LP increases by a smaller or larger nonnegative delta
-│   │   └── it should revert with AltoConvexCreditLineUnexpectedAssetDelta
-│   ├── when raw LP balance decreases below its pre-withdrawal value
-│   │   └── it should revert with arithmetic panic
+│   ├── when reward pool returns fewer LP than assets and no idle balance covers the shortfall
+│   │   └── it should revert with ERC20InsufficientBalance and restore accounting and withdrawal state
 │   └── given a successful withdrawal
 │       ├── it should call withdrawAndUnwrap with assets and claim false
 │       ├── it should decrease staked collateral by exactly assets
 │       ├── it should preserve raw LP that was idle before withdrawal
 │       └── it should not claim or forward rewards
 ├── given Convex strategy is inactive after emergency exit
-│   ├── when idle LP balance is less than assets
-│   │   └── it should revert with AltoConvexCreditLineUnexpectedAssetDelta
-│   └── when idle LP balance covers assets
-│       ├── it should not call Booster or reward pool
-│       └── it should spend the idle LP
+│   ├── when recovered idle LP covers assets
+│   │   ├── it should transfer exactly the removed collateral to receiver
+│   │   ├── it should decrease recorded collateral without calling Booster or reward pool
+│   │   ├── it should not emit CollateralUnstaked because no Convex unstake occurs
+│   │   └── it should preserve unrelated surplus LP held by the market
+│   └── when recovered idle LP is insufficient
+│       └── it should revert with ERC20InsufficientBalance and preserve collateral accounting
 ├── given collateral transfer to receiver fails
 │   └── it should revert atomically and restore position and Convex state
 ├── given a withdrawal while debt remains

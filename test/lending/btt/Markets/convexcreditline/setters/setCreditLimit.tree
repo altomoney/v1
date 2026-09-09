@@ -10,24 +10,23 @@ AltoConvexCreditLineMarket::setCreditLimit()
 │   ├── when IRM accrual fails
 │   │   └── it should revert without changing the credit limit
 │   └── when accrued debt exceeds the proposed limit
-│       └── it should revert with AltoCreditMarketInvalidInput and roll back accrual
+│       └── it should revert with AltoBaseMarketInsufficientMarketLiquidity and roll back accrual
 ├── given market is paused
 │   ├── it should skip interest accrual regardless of elapsed time
-│   └── it should compare the proposed limit with currently recorded debt
+│   └── it should compare the proposed limit with currently recorded active debt plus badDebtAssets
 ├── given market is frozen but not paused
 │   └── it should accrue and remain callable
-├── when new credit limit is less than totalBorrowed assets
-│   └── it should revert with AltoCreditMarketInvalidInput
-├── when new credit limit equals totalBorrowed assets
+├── when new credit limit is less than active debt plus badDebtAssets
+│   └── it should revert with AltoBaseMarketInsufficientMarketLiquidity
+├── when new credit limit equals active debt plus badDebtAssets
 │   └── it should succeed
 └── when new credit limit is valid
-    ├── it should permit increases and decreases above recorded debt
+    ├── it should permit increases and decreases at or above active debt plus badDebtAssets
+    ├── it should restore only the capacity above badDebtAssets when increased after foreclosure
     ├── it should accept exactly uint128 max
     ├── when new value equals current credit limit
     │   └── it should still emit and leave the same value
     ├── it should update totalSupply assets and creditLimit
     ├── it should leave totalSupply shares at zero
-    ├── it should not change totalBorrowed shares positions or claimableFeesAssets except through accrual
-    ├── it should emit SetCreditLimit with old and new values after any AccrueInterest event
-    ├── it should not query the oracle or interact with tokens or Convex
-    └── it should reject and roll back an IRM reentrancy attempt
+    ├── it should not change totalBorrowed shares positions claimableFeesAssets or badDebtAssets except through accrual
+    └── it should emit SetCreditLimit with old and new values after any AccrueInterest event
