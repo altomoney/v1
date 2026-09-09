@@ -3,6 +3,7 @@ pragma solidity ^0.8.28;
 
 import {IMarketEvents} from "@alto/lending/interfaces/IMarket.sol";
 import {IIrm} from "@alto/lending/interfaces/IIrm.sol";
+import {LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {PAUSE_TYPE, FROZEN_TYPE} from "@alto/utils/Constants.sol";
 
 import {ConvexCreditLineCommon} from "./ConvexCreditLineCommon.t.sol";
@@ -64,6 +65,27 @@ contract AltoConvexCreditLineMarketAccrueInterestTest is ConvexCreditLineCommon 
         assertEq(afterState.totalSupply.shares, beforeState.totalSupply.shares);
         assertEq(afterState.creditPosition.borrowShares, beforeState.creditPosition.borrowShares);
         assertEq(afterState.creditPosition.collateralAssets, beforeState.creditPosition.collateralAssets);
+    }
+
+    function test_BadDebtDoesNotAccrueAndIsExcludedFromIrmDebtInput() external {
+        _openPosition(1_000 ether, 100 ether);
+        oracle.setPrice(100 ether);
+        vm.prank(OWNER);
+        market.governanceLiquidate(CREDIT_ACCOUNT, false);
+
+        oracle.setPrice(LENDING_ORACLE_PRICE_PRECISION);
+        _addCollateral(1_000 ether);
+        _mockAccrual(0, 0);
+        _borrow(50 ether);
+        _mockAccrual(5 ether, 41);
+
+        vm.expectCall(address(irm), abi.encodeCall(IIrm.updateInterestRate, (CREDIT_LIMIT, 50 ether)));
+        market.accrueInterest();
+
+        (uint128 debtAssets,) = market.totalBorrowed();
+        assertEq(debtAssets, 55 ether);
+        assertEq(market.claimableFeesAssets(), 5 ether);
+        assertEq(market.badDebtAssets(), 100 ether);
     }
 
     function test_IrmRevertOrMalformedReturnRollsBack() external {

@@ -4,11 +4,10 @@ pragma solidity ^0.8.28;
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
-import {IAltoCreditMarketErrors} from "@alto/lending/interfaces/IAltoCreditMarket.sol";
 import {
-    IAltoConvexCreditLineErrors,
-    IAltoConvexCreditLineEvents
-} from "@alto/lending/interfaces/IAltoConvexCreditLine.sol";
+    IAltoConvexCreditLineMarketErrors,
+    IAltoConvexCreditLineMarketEvents
+} from "@alto/lending/interfaces/IAltoConvexCreditLineMarket.sol";
 import {PAUSE_TYPE, FROZEN_TYPE} from "@alto/utils/Constants.sol";
 
 import {ConvexCreditLineCommon} from "./ConvexCreditLineCommon.t.sol";
@@ -22,39 +21,39 @@ contract AltoConvexCreditLineMarketEmergencyExitTest is ConvexCreditLineCommon {
 
     function test_MustBePausedEvenWhenFrozenOrAlreadyInactive() external {
         vm.prank(OWNER);
-        vm.expectRevert(IAltoConvexCreditLineErrors.AltoConvexCreditLineMustBePaused.selector);
+        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoConvexCreditLineMustBePaused.selector);
         market.emergencyExitConvex();
 
         _pause(FROZEN_TYPE);
         vm.prank(OWNER);
-        vm.expectRevert(IAltoConvexCreditLineErrors.AltoConvexCreditLineMustBePaused.selector);
+        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoConvexCreditLineMustBePaused.selector);
         market.emergencyExitConvex();
 
         _unpause(FROZEN_TYPE);
         _exitConvex();
         _unpause(PAUSE_TYPE);
         vm.prank(OWNER);
-        vm.expectRevert(IAltoConvexCreditLineErrors.AltoConvexCreditLineMustBePaused.selector);
+        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoConvexCreditLineMustBePaused.selector);
         market.emergencyExitConvex();
 
         _pause(PAUSE_TYPE);
         vm.prank(OWNER);
-        vm.expectRevert(IAltoConvexCreditLineErrors.AltoConvexCreditLineStrategyInactive.selector);
+        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoConvexCreditLineStrategyInactive.selector);
         market.emergencyExitConvex();
     }
 
-    function test_ZeroStakeSkipsWithdrawalPreservesIdleAndClearsAllowance() external {
+    function test_ZeroStakeSkipsWithdrawalPreservesIdleAndLeavesAllowanceZero() external {
         deal(address(collateralToken), address(market), 3 ether);
         _pause(PAUSE_TYPE);
 
         vm.expectEmit(address(market));
-        emit IAltoConvexCreditLineEvents.ConvexEmergencyExit(0);
+        emit IAltoConvexCreditLineMarketEvents.ConvexEmergencyExit(0);
         vm.prank(OWNER);
         uint256 assets = market.emergencyExitConvex();
 
         assertEq(assets, 0);
         assertEq(rewardPool.withdrawCalls(), 0);
-        assertEq(market.idleCollateralAssets(), 3 ether);
+        assertEq(collateralToken.balanceOf(address(market)), 3 ether);
         assertFalse(market.convexActive());
         assertEq(collateralToken.allowance(address(market), address(booster)), 0);
     }
@@ -81,74 +80,56 @@ contract AltoConvexCreditLineMarketEmergencyExitTest is ConvexCreditLineCommon {
 
         rewardPool.setWithdrawBehavior(false, false, type(uint256).max, type(uint256).max);
         vm.prank(OWNER);
-        vm.expectRevert(IAltoConvexCreditLineErrors.AltoConvexCreditLineExternalCallFailed.selector);
+        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoConvexCreditLineExternalCallFailed.selector);
         market.emergencyExitConvex();
         _assertUnchanged(beforeState);
         assertTrue(market.convexActive());
     }
 
-    function test_RequiresExactRecoveredLpDeltaAndRollsBack() external {
+    function test_DoesNotValidateRecoveredLpDelta() external {
         _addCollateral(10 ether);
         _pause(PAUSE_TYPE);
-        AccountingState memory beforeState = _state();
-
         rewardPool.setWithdrawBehavior(false, true, 9 ether, 10 ether);
-        vm.prank(OWNER);
-        vm.expectRevert(IAltoConvexCreditLineErrors.AltoConvexCreditLineUnexpectedAssetDelta.selector);
-        market.emergencyExitConvex();
-        _assertUnchanged(beforeState);
 
-        deal(address(collateralToken), address(rewardPool), 20 ether);
-        rewardPool.setWithdrawBehavior(false, true, 11 ether, 10 ether);
         vm.prank(OWNER);
-        vm.expectRevert(IAltoConvexCreditLineErrors.AltoConvexCreditLineUnexpectedAssetDelta.selector);
-        market.emergencyExitConvex();
-        _assertUnchanged(beforeState);
+        uint256 assets = market.emergencyExitConvex();
+
+        assertEq(assets, 10 ether);
+        assertEq(market.stakedCollateralAssets(), 0);
+        assertEq(collateralToken.balanceOf(address(market)), 9 ether);
+        assertFalse(market.convexActive());
+        assertEq(collateralToken.allowance(address(market), address(booster)), 0);
+        (,, uint128 collateralAssets) = market.position(CREDIT_ACCOUNT);
+        assertEq(collateralAssets, 10 ether);
     }
 
-    function test_PostWithdrawalBalanceFailureRollsBackWithdrawal() external {
+    function test_DoesNotQueryCollateralBalanceAfterWithdrawal() external {
         _addCollateral(10 ether);
         _pause(PAUSE_TYPE);
-        AccountingState memory beforeState = _state();
         collateralToken.setBalanceFailure(false, true);
 
         vm.prank(OWNER);
-        vm.expectRevert(bytes("BALANCE_REVERTED"));
-        market.emergencyExitConvex();
+        uint256 assets = market.emergencyExitConvex();
 
         collateralToken.setBalanceFailure(false, false);
-        _assertUnchanged(beforeState);
-        assertTrue(market.convexActive());
+        assertEq(assets, 10 ether);
+        assertEq(collateralToken.balanceOf(address(market)), 10 ether);
+        assertFalse(market.convexActive());
     }
 
-    function test_RawLpDecreaseBelowPreExitBalancePanicsAndRollsBack() external {
-        _addCollateral(10 ether);
-        deal(address(collateralToken), address(market), 1 ether);
-        _pause(PAUSE_TYPE);
-        AccountingState memory beforeState = _state();
-        rewardPool.setWithdrawBehavior(false, true, 1 ether, 10 ether);
-        collateralToken.setTransferBehavior(false, false, 10_000, 2 ether);
-
-        vm.prank(OWNER);
-        vm.expectRevert();
-        market.emergencyExitConvex();
-
-        _assertUnchanged(beforeState);
-    }
-
-    function test_AllowanceClearFailureRollsBackWithdrawalAndState() external {
+    function test_ApprovalFailureCannotBlockEmergencyExit() external {
         _addCollateral(10 ether);
         _pause(PAUSE_TYPE);
-        AccountingState memory beforeState = _state();
         collateralToken.setApproveFailure(true);
 
         vm.prank(OWNER);
-        vm.expectRevert(bytes("APPROVE_REVERTED"));
-        market.emergencyExitConvex();
+        uint256 assets = market.emergencyExitConvex();
 
-        _assertUnchanged(beforeState);
-        assertTrue(market.convexActive());
-        assertEq(collateralToken.allowance(address(market), address(booster)), type(uint256).max);
+        assertEq(assets, 10 ether);
+        assertFalse(market.convexActive());
+        assertEq(market.stakedCollateralAssets(), 0);
+        assertEq(collateralToken.balanceOf(address(market)), 10 ether);
+        assertEq(collateralToken.allowance(address(market), address(booster)), 0);
     }
 
     function test_SuccessRecoversAllStakePreservesIdleAndAccounting() external {
@@ -158,7 +139,7 @@ contract AltoConvexCreditLineMarketEmergencyExitTest is ConvexCreditLineCommon {
         _pause(PAUSE_TYPE);
 
         vm.expectEmit(address(market));
-        emit IAltoConvexCreditLineEvents.ConvexEmergencyExit(100 ether);
+        emit IAltoConvexCreditLineMarketEvents.ConvexEmergencyExit(100 ether);
         vm.prank(OWNER);
         uint256 assets = market.emergencyExitConvex();
 
@@ -166,7 +147,8 @@ contract AltoConvexCreditLineMarketEmergencyExitTest is ConvexCreditLineCommon {
         assertEq(rewardPool.lastWithdrawAmount(), 100 ether);
         assertFalse(rewardPool.lastWithdrawClaim());
         assertEq(market.stakedCollateralAssets(), 0);
-        assertEq(market.idleCollateralAssets(), 103 ether);
+        assertEq(rewardPool.balanceOf(address(market)), 0);
+        assertEq(collateralToken.balanceOf(address(market)), 103 ether);
         assertFalse(market.convexActive());
         assertEq(collateralToken.allowance(address(market), address(booster)), 0);
         AccountingState memory afterState = _state();
@@ -176,25 +158,31 @@ contract AltoConvexCreditLineMarketEmergencyExitTest is ConvexCreditLineCommon {
         assertEq(afterState.creditPosition.borrowShares, beforePause.creditPosition.borrowShares);
     }
 
-    function test_PostExitLifecycleUsesIdleAndRejectsNewDepositsAndSecondExit() external {
+    function test_PostExitLifecycleUsesIdleCollateralButRejectsNewDepositsAndSecondExit() external {
         _addCollateral(10 ether);
         _exitConvex();
         _unpause(PAUSE_TYPE);
+        uint256 withdrawalsBefore = rewardPool.withdrawCalls();
 
         vm.prank(CREDIT_ACCOUNT);
-        market.removeCollateral(10 ether, CREDIT_ACCOUNT, RECEIVER, "");
+        uint256 assets = market.removeCollateral(10 ether, CREDIT_ACCOUNT, RECEIVER, "");
+        assertEq(assets, 10 ether);
         assertEq(collateralToken.balanceOf(RECEIVER), 10 ether);
+        assertEq(collateralToken.balanceOf(address(market)), 0);
+        (,, uint128 collateralAfter) = market.position(CREDIT_ACCOUNT);
+        assertEq(collateralAfter, 0);
+        assertEq(rewardPool.withdrawCalls(), withdrawalsBefore);
 
         deal(address(collateralToken), USER, 1 ether);
         vm.prank(USER);
         collateralToken.approve(address(market), type(uint256).max);
         vm.prank(USER);
-        vm.expectRevert(IAltoCreditMarketErrors.AltoCreditMarketInvalidInput.selector);
+        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketInvalidInput.selector);
         market.addCollateral(1 ether, CREDIT_ACCOUNT);
 
         _pause(PAUSE_TYPE);
         vm.prank(OWNER);
-        vm.expectRevert(IAltoConvexCreditLineErrors.AltoConvexCreditLineStrategyInactive.selector);
+        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoConvexCreditLineStrategyInactive.selector);
         market.emergencyExitConvex();
     }
 
@@ -206,7 +194,7 @@ contract AltoConvexCreditLineMarketEmergencyExitTest is ConvexCreditLineCommon {
         vm.prank(OWNER);
         uint256 assets = market.emergencyExitConvex();
         assertEq(assets, 6 ether);
-        assertEq(market.idleCollateralAssets(), 6 ether);
+        assertEq(collateralToken.balanceOf(address(market)), 6 ether);
         (,, uint128 recordedCollateral) = market.position(CREDIT_ACCOUNT);
         assertEq(recordedCollateral, 10 ether);
 
@@ -218,7 +206,7 @@ contract AltoConvexCreditLineMarketEmergencyExitTest is ConvexCreditLineCommon {
         vm.prank(OWNER);
         assets = market.emergencyExitConvex();
         assertEq(assets, 15 ether);
-        assertEq(market.idleCollateralAssets(), 15 ether);
+        assertEq(collateralToken.balanceOf(address(market)), 15 ether);
     }
 
     function test_RejectsRewardPoolReentrancyAtomically() external {

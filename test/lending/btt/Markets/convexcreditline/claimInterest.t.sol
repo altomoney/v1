@@ -3,7 +3,10 @@ pragma solidity ^0.8.28;
 
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
-import {IAltoCreditMarketErrors, IAltoCreditMarketEvents} from "@alto/lending/interfaces/IAltoCreditMarket.sol";
+import {
+    IAltoConvexCreditLineMarketErrors,
+    IAltoConvexCreditLineMarketEvents
+} from "@alto/lending/interfaces/IAltoConvexCreditLineMarket.sol";
 import {PAUSE_TYPE, FROZEN_TYPE} from "@alto/utils/Constants.sol";
 
 import {ConvexCreditLineCommon} from "./ConvexCreditLineCommon.t.sol";
@@ -26,24 +29,24 @@ contract AltoConvexCreditLineMarketClaimInterestTest is ConvexCreditLineCommon {
     function test_AmountCheckPrecedesFeeRecipientAndCallerChecks() external {
         vm.store(address(market), bytes32(uint256(13)), bytes32(0));
         vm.prank(USER);
-        vm.expectRevert(IAltoCreditMarketErrors.AltoCreditMarketInvalidInput.selector);
+        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketInvalidInput.selector);
         market.claimInterest(1);
 
         vm.prank(USER);
-        vm.expectRevert(IAltoCreditMarketErrors.AltoCreditMarketZeroAddress.selector);
+        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketZeroAddress.selector);
         market.claimInterest(0);
     }
 
     function test_RevertWhenCallerIsNeitherOwnerNorFeeRecipient() external {
         vm.prank(USER);
-        vm.expectRevert(IAltoCreditMarketErrors.AltoCreditMarketUnauthorizedAccount.selector);
+        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketUnauthorizedAccount.selector);
         market.claimInterest(0);
     }
 
     function test_ZeroClaimsAllAndZeroBalanceEmitsWithoutMinting() external {
         _createFees(10 ether);
         vm.expectEmit(address(market));
-        emit IAltoCreditMarketEvents.InterestClaimed(FEE_RECIPIENT, 10 ether);
+        emit IAltoConvexCreditLineMarketEvents.InterestClaimed(FEE_RECIPIENT, 10 ether);
         vm.prank(FEE_RECIPIENT);
         uint256 claimed = market.claimInterest(0);
         assertEq(claimed, 10 ether);
@@ -52,7 +55,7 @@ contract AltoConvexCreditLineMarketClaimInterestTest is ConvexCreditLineCommon {
 
         uint256 supplyBefore = borrowToken.totalSupply();
         vm.expectEmit(address(market));
-        emit IAltoCreditMarketEvents.InterestClaimed(FEE_RECIPIENT, 0);
+        emit IAltoConvexCreditLineMarketEvents.InterestClaimed(FEE_RECIPIENT, 0);
         vm.prank(OWNER);
         claimed = market.claimInterest(0);
         assertEq(claimed, 0);
@@ -128,12 +131,15 @@ contract AltoConvexCreditLineMarketClaimInterestTest is ConvexCreditLineCommon {
         uint256 fees = market.claimableFeesAssets();
         oracle.setPrice(100 ether);
         vm.prank(OWNER);
-        market.governanceLiquidate(CREDIT_ACCOUNT);
+        market.governanceLiquidate(CREDIT_ACCOUNT, false);
 
         assertEq(market.claimableFeesAssets(), fees);
+        uint256 badDebt = market.badDebtAssets();
+        assertEq(badDebt, 110 ether);
         vm.prank(FEE_RECIPIENT);
         market.claimInterest(0);
         assertEq(borrowToken.balanceOf(FEE_RECIPIENT), fees);
+        assertEq(market.badDebtAssets(), badDebt);
     }
 
     function _createFees(uint256 expectedFee) private {

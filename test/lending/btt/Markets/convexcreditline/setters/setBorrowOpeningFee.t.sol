@@ -2,7 +2,10 @@
 pragma solidity ^0.8.28;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {IAltoCreditMarketErrors, IAltoCreditMarketEvents} from "@alto/lending/interfaces/IAltoCreditMarket.sol";
+import {
+    IAltoConvexCreditLineMarketErrors,
+    IAltoConvexCreditLineMarketEvents
+} from "@alto/lending/interfaces/IAltoConvexCreditLineMarket.sol";
 import {PAUSE_TYPE, FROZEN_TYPE} from "@alto/utils/Constants.sol";
 import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 
@@ -16,7 +19,7 @@ contract AltoConvexCreditLineMarketSetBorrowOpeningFeeTest is ConvexCreditLineCo
 
     function test_RevertAboveMaximumWithoutChangingState() external {
         vm.prank(OWNER);
-        vm.expectRevert(IAltoCreditMarketErrors.AltoCreditMarketInvalidInput.selector);
+        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketInvalidInput.selector);
         market.setBorrowOpeningFee(MATH_PRECISION + 1);
         assertEq(market.borrowOpeningFee(), 0);
     }
@@ -24,13 +27,13 @@ contract AltoConvexCreditLineMarketSetBorrowOpeningFeeTest is ConvexCreditLineCo
     function test_SetsInclusiveBoundsAndEmitsEvenWhenUnchanged() external {
         _mockIrmUpdateRevert();
         vm.expectEmit(address(market));
-        emit IAltoCreditMarketEvents.SetBorrowOpeningFee(0, MATH_PRECISION);
+        emit IAltoConvexCreditLineMarketEvents.SetBorrowOpeningFee(0, MATH_PRECISION);
         vm.prank(OWNER);
         market.setBorrowOpeningFee(MATH_PRECISION);
         assertEq(market.borrowOpeningFee(), MATH_PRECISION);
 
         vm.expectEmit(address(market));
-        emit IAltoCreditMarketEvents.SetBorrowOpeningFee(MATH_PRECISION, MATH_PRECISION);
+        emit IAltoConvexCreditLineMarketEvents.SetBorrowOpeningFee(MATH_PRECISION, MATH_PRECISION);
         vm.prank(OWNER);
         market.setBorrowOpeningFee(MATH_PRECISION);
 

@@ -14,7 +14,7 @@ AltoConvexCreditLineMarket::emergencyExitConvex()
 │   ├── it should not call withdrawAndUnwrap
 │   ├── it should preserve any raw LP already idle in the market
 │   ├── it should mark Convex inactive
-│   ├── it should clear Booster collateral allowance
+│   ├── it should leave Booster collateral allowance at zero
 │   ├── it should emit ConvexEmergencyExit with zero
 │   └── it should return zero
 ├── given market is paused and staked collateral is nonzero
@@ -24,30 +24,27 @@ AltoConvexCreditLineMarket::emergencyExitConvex()
 │   │   └── it should propagate the failure and keep Convex active
 │   ├── when withdrawAndUnwrap returns false
 │   │   └── it should revert with AltoConvexCreditLineExternalCallFailed
-│   ├── when post-withdrawal idle balance query reverts or returns malformed data
-│   │   └── it should propagate the failure and roll back the withdrawal
-│   ├── when raw LP increases by a smaller or larger nonnegative delta
-│   │   └── it should revert with AltoConvexCreditLineUnexpectedAssetDelta
-│   ├── when raw LP balance decreases below its pre-withdrawal value
-│   │   └── it should revert with arithmetic panic
-│   ├── when clearing Booster allowance fails
-│   │   └── it should revert the withdrawal and state changes atomically
-│   └── when withdrawal and allowance clearing succeed
+│   ├── when collateral balanceOf would revert after withdrawal
+│   │   └── it should not query the collateral balance
+│   ├── when reward pool reports the full stake but transfers fewer LP
+│   │   └── it should not independently validate the recovered LP delta
+│   └── when withdrawal succeeds
 │       ├── it should call withdrawAndUnwrap for all stake with claim false
 │       ├── it should hold all recovered LP idle in the market
 │       ├── it should preserve raw LP that was already idle before the exit
 │       ├── it should leave reward pool stake at zero when the pool withdraws the reported balance correctly
 │       ├── it should mark Convex inactive permanently
-│       ├── it should set Booster collateral allowance to zero
-│       ├── it should emit ConvexEmergencyExit with recovered assets
-│       └── it should return recovered assets
+│       ├── it should leave Booster collateral allowance at zero
+│       ├── it should emit ConvexEmergencyExit with reported staked assets
+│       └── it should return reported staked assets
 ├── given a successful exit
 │   ├── it should not change creditAccount collateralAssets
 │   ├── it should not change totalSupply totalBorrowed positions or claimableFeesAssets
 │   ├── it should not transfer collateral to owner or creditAccount
 │   ├── it should not claim or forward rewards
 │   ├── it should make later addCollateral revert because strategy is inactive
-│   ├── it should make later solvent removeCollateral use idle LP after unpause
+│   ├── it should allow later removeCollateral to transfer recovered idle LP directly after unpause
+│   ├── it should not call Convex again during a later collateral removal
 │   ├── it should make a second emergency exit revert with AltoConvexCreditLineStrategyInactive
 │   ├── when reported stake is smaller than recorded collateral
 │   │   └── it should still mark Convex inactive while recorded collateral exceeds recovered idle LP

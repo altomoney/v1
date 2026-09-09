@@ -179,9 +179,11 @@ the deposit token from the reward pool and unwraps the Convex receipt back into
 raw Curve LP. Passing `false` avoids coupling a collateral withdrawal to reward
 claiming.
 
-The credit line checks that its raw LP balance increases by exactly `amount`
-before sending that LP to the receiver. This deliberately rejects fee-on-
-transfer tokens and other behavior that breaks the assumed 1:1 accounting.
+The credit line relies on the validated Convex contracts to unwrap `amount`
+one-for-one and then transfers exactly `amount` to the receiver with
+`SafeERC20`. The transfer itself reverts if the market lacks sufficient LP;
+there is no separate raw-LP balance precheck or balance-delta validation. The
+configured Curve LP must therefore retain standard exact-transfer semantics.
 
 ## Emergency exit
 
@@ -192,7 +194,6 @@ line rather than sending it to the borrower.
 The operation:
 
 - does not change `position.collateralAssets`;
-- clears the Booster allowance;
 - permanently marks the Convex strategy inactive; and
 - leaves repayment and solvent LP withdrawal available after unpausing.
 

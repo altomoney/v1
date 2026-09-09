@@ -16,6 +16,8 @@ AltoConvexCreditLineMarket::initialize()
 │   │   └── it should revert with AltoBaseMarketInvalidInput
 │   ├── when oracle is zero address
 │   │   └── it should revert with AltoBaseMarketInvalidInput
+│   ├── when emergency admin is zero address
+│   │   └── it should revert with AltoBaseMarketInvalidInput
 │   ├── when owner is zero address
 │   │   └── it should revert with OwnableInvalidOwner
 │   ├── when credit limit is zero
@@ -83,8 +85,6 @@ AltoConvexCreditLineMarket::initialize()
 │   │   └── it should revert with AltoCreditMarketInvalidInput
 │   ├── when primary reward token query reverts or returns malformed data
 │   │   └── it should propagate the failure and roll back all initialization
-│   └── when collateral approval to Booster fails
-│       └── it should revert atomically and leave the proxy uninitialized
 └── given valid parameters
     ├── when initializer caller differs from configured owner
     │   └── it should initialize successfully and assign ownership only to configured owner
@@ -98,20 +98,23 @@ AltoConvexCreditLineMarket::initialize()
     │   └── it should initialize successfully
     ├── when liquidation engine is nonzero and accepts registration
     │   └── it should store the engine and register the market
+    ├── when liquidation engine rejects market registration
+    │   └── it should propagate the failure and leave the proxy and IRM uninitialized
     ├── it should set MARKET_TYPE to CREDIT_MINT
     ├── it should initialize Base token oracle IRM LTV fee recipient and owner state
     ├── it should leave liquidationEngine at zero
     ├── it should register the market with the fixed-rate IRM exactly once
-    ├── it should grant the owner PAUSE_TYPE and FROZEN_TYPE pauser permissions
+    ├── it should grant only the configured emergency admin PAUSE_TYPE and FROZEN_TYPE pauser permissions
     ├── it should set creditAccount foreclosureLtv and borrowOpeningFee
     ├── it should set totalSupply assets to the credit limit and shares to zero
     ├── it should leave totalBorrowed and the credit account position empty
     ├── it should leave claimableFeesAssets at zero
+    ├── it should leave badDebtAssets at zero
     ├── it should store the validated Convex configuration and mark it active
     ├── it should preserve initial reward token order and membership
     ├── it should not emit RewardTokenAdded for initial reward tokens
     ├── it should allow exactly MAX_REWARD_TOKENS including the primary reward token
-    ├── it should approve the Booster for maximum collateral allowance
+    ├── it should leave the Booster collateral allowance at zero
     ├── it should leave idle and staked collateral at zero without calling Booster deposit
     ├── it should emit Base Credit and Convex configuration events in initialization order
     └── it should initialize authorization reentrancy ownership and UUPS state

@@ -2,7 +2,7 @@
 pragma solidity ^0.8.28;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {IAltoCreditMarketErrors} from "@alto/lending/interfaces/IAltoCreditMarket.sol";
+import {IAltoConvexCreditLineMarketErrors} from "@alto/lending/interfaces/IAltoConvexCreditLineMarket.sol";
 import {IMarketEvents} from "@alto/lending/interfaces/IMarket.sol";
 import {PAUSE_TYPE, FROZEN_TYPE} from "@alto/utils/Constants.sol";
 
@@ -16,7 +16,7 @@ contract AltoConvexCreditLineMarketSetFeeRecipientTest is ConvexCreditLineCommon
 
     function test_RevertForZeroRecipient() external {
         vm.prank(OWNER);
-        vm.expectRevert(IAltoCreditMarketErrors.AltoCreditMarketZeroAddress.selector);
+        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketZeroAddress.selector);
         market.setFeeRecipient(address(0));
         assertEq(market.feeRecipient(), FEE_RECIPIENT);
     }
@@ -44,7 +44,7 @@ contract AltoConvexCreditLineMarketSetFeeRecipientTest is ConvexCreditLineCommon
         market.setFeeRecipient(RECEIVER);
 
         vm.prank(FEE_RECIPIENT);
-        vm.expectRevert(IAltoCreditMarketErrors.AltoCreditMarketUnauthorizedAccount.selector);
+        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketUnauthorizedAccount.selector);
         market.claimInterest(0);
 
         vm.prank(RECEIVER);

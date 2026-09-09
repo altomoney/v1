@@ -19,30 +19,19 @@ AltoConvexCreditLineMarket::addCollateral()
 ├── given collateral transfer fails
 │   ├── when caller balance is insufficient
 │   │   └── it should revert atomically
-│   ├── when caller allowance is insufficient
-│   │   └── it should revert atomically
-│   ├── when collateral balanceOf reverts or returns malformed data
-│   │   └── it should propagate the failure and roll back position accounting
-│   └── when received raw LP does not increase exactly by assets
-│       ├── when balance increases by a smaller or larger nonnegative delta
-│       │   └── it should revert with AltoConvexCreditLineUnexpectedAssetDelta
-│       └── when balance decreases below its pre-transfer value
-│           └── it should revert with arithmetic panic
+│   └── when caller allowance is insufficient
+│         └── it should revert atomically
 ├── given Convex deposit fails
-│   ├── when pre-deposit staked balance query reverts or returns malformed data
-│   │   └── it should propagate the failure before transferring collateral
+│   ├── when approving the exact deposit amount fails
+│   │   └── it should revert atomically before calling the Booster
 │   ├── when Booster call reverts
 │   │   └── it should propagate the failure and roll back the collateral transfer
 │   ├── when Booster returns false
 │   │   └── it should revert with AltoConvexCreditLineExternalCallFailed
-│   ├── when idle raw LP does not return to its pre-deposit balance
-│   │   └── it should revert with AltoConvexCreditLineUnexpectedAssetDelta
-│   ├── when post-deposit staked balance query reverts or returns malformed data
-│   │   └── it should propagate the failure and roll back the deposit
-│   ├── when staked balance increases by a smaller or larger nonnegative delta
-│   │   └── it should revert with AltoConvexCreditLineUnexpectedAssetDelta
-│   ├── when staked balance decreases below its pre-deposit value
-│   │   └── it should revert with arithmetic panic
+│   ├── when clearing the temporary approval fails
+│   │   └── it should roll back the Convex deposit and all accounting
+│   ├── when Booster attempts to transfer more than assets
+│   │   └── it should revert because the temporary allowance is capped at assets
 │   └── when an external dependency attempts reentrancy
 │       └── it should reject reentrancy and revert atomically
 └── given a valid deposit for creditAccount
@@ -52,6 +41,7 @@ AltoConvexCreditLineMarket::addCollateral()
     │   └── it should succeed without position authorization
     ├── it should transfer exactly assets of raw LP from caller
     ├── it should call Booster deposit with the configured PID assets and stake true
+    ├── it should approve only assets for the Booster call and leave allowance at zero afterward
     ├── it should restore the prior idle LP balance
     ├── it should preserve any raw LP that was already idle before the deposit
     ├── it should increase market staked collateral by exactly assets
