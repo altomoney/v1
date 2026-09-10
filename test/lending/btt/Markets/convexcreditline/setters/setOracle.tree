@@ -5,9 +5,5 @@ AltoConvexCreditLineMarket::setOracle()
 │   └── it should revert with AltoBaseMarketInvalidInput
 └── when owner supplies a nonzero oracle
     ├── it should update oracle and emit SetOracle with old and new addresses
-    ├── when new oracle equals current oracle
-    │   └── it should still emit and leave the same value
-    ├── it should accept an address without validating contract code or oracle output
-    ├── it should not accrue interest or change accounting or custody
-    ├── it should remain callable while paused or frozen
-    └── it should use the new oracle for later solvency and foreclosure checks even while debt is outstanding
+    └── when new oracle equals current oracle
+        └── it should still emit and leave the same value
