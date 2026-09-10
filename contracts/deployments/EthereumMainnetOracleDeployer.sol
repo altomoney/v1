@@ -25,12 +25,15 @@ import {
     ERC4626RatioChainlinkOracleSUSDE,
     IERC4626
 } from "@alto/oracles/AltoERC4626RatioChainlinkOracle/implementations/ERC4626RatioChainlinkOracleSUSDE.sol";
-import {ISyrupAsset} from
-    "@alto/oracles/AltoERC4626RatioChainlinkOracle/implementations/ERC4626RatioChainlinkOracleSYRUPUSDC.sol";
-import {ERC4626RatioChainlinkOracleSYRUPUSDC} from
-    "@alto/oracles/AltoERC4626RatioChainlinkOracle/implementations/ERC4626RatioChainlinkOracleSYRUPUSDC.sol";
-import {AltoChainlinkERC4626RatioMultiplierOracle} from
-    "@alto/oracles/AltoChainlinkERC4626RatioMultiplierOracle/AltoChainlinkERC4626RatioMultiplierOracle.sol";
+import {
+    ISyrupAsset
+} from "@alto/oracles/AltoERC4626RatioChainlinkOracle/implementations/ERC4626RatioChainlinkOracleSYRUPUSDC.sol";
+import {
+    ERC4626RatioChainlinkOracleSYRUPUSDC
+} from "@alto/oracles/AltoERC4626RatioChainlinkOracle/implementations/ERC4626RatioChainlinkOracleSYRUPUSDC.sol";
+import {
+    AltoChainlinkERC4626RatioMultiplierOracle
+} from "@alto/oracles/AltoChainlinkERC4626RatioMultiplierOracle/AltoChainlinkERC4626RatioMultiplierOracle.sol";
 
 import {
     CHAINLINK_ETH_USD_PRICE_FEED,
@@ -310,9 +313,10 @@ library EthereumMainnetOracleDeployer {
 
         // the decimals of reUSD is 18, so we want output in 36 decimals since decimals of DUSD is also 18
         // the decimals of chainlink node output is 18, so we want to multiply by 10 ** 18 to get the price in 36 decimals
-        return address(
-            new AltoChainlinkERC4626RatioMultiplierOracle(owner, chainlinkNode, erc4626RatioNode, multiplierNode)
-        );
+        return
+            address(
+                new AltoChainlinkERC4626RatioMultiplierOracle(owner, chainlinkNode, erc4626RatioNode, multiplierNode)
+            );
     }
 
     function deployFrxUsdOracle(address owner) internal returns (address) {

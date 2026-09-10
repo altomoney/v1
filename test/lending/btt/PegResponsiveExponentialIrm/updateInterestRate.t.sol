@@ -547,8 +547,9 @@ contract PegResponsiveExponentialIrmUpdateInterestRateTest is PegResponsiveExpon
     ) private returns (uint256 interest, uint256 borrowRate) {
         IRState memory stateBefore = _readIRState();
         MarketSnapshot memory marketBefore = _marketSnapshot();
-        uint256 expectedInterest =
-            _expectedInterest(marketBefore.debtAssets, stateBefore.borrowRate, block.timestamp - stateBefore.lastUpdate);
+        uint256 expectedInterest = _expectedInterest(
+            marketBefore.debtAssets, stateBefore.borrowRate, block.timestamp - stateBefore.lastUpdate
+        );
 
         if (stressEventExpected) {
             vm.expectEmit(false, false, false, true, address(irm));
@@ -615,10 +616,7 @@ contract PegResponsiveExponentialIrmUpdateInterestRateTest is PegResponsiveExpon
         returns (IRState memory state)
     {
         return IRState({
-            borrowRate: borrowRate,
-            lastUpdate: lastUpdate,
-            recoveryStartedAt: recoveryStartedAt,
-            stressMode: stressMode
+            borrowRate: borrowRate, lastUpdate: lastUpdate, recoveryStartedAt: recoveryStartedAt, stressMode: stressMode
         });
     }
 

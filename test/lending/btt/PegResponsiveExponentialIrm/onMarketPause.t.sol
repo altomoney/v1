@@ -62,10 +62,7 @@ contract PegResponsiveExponentialIrmOnMarketPauseTest is PegResponsiveExponentia
         _setCurrentObservation(STRESS_PRICE);
         _setIRState(BASE_RATE, uint48(block.timestamp - 10), 0, false);
         IRState memory expectedState = IRState({
-            borrowRate: STRESS_RATE,
-            lastUpdate: uint48(block.timestamp),
-            recoveryStartedAt: 0,
-            stressMode: true
+            borrowRate: STRESS_RATE, lastUpdate: uint48(block.timestamp), recoveryStartedAt: 0, stressMode: true
         });
 
         _pauseMarket();
@@ -130,8 +127,9 @@ contract PegResponsiveExponentialIrmOnMarketPauseTest is PegResponsiveExponentia
     function testFuzz_WhenRecoveryIsActive_ClearsOnlyRecoveryAndEmitsOrderedStateEvents(bool stressMode) external {
         _bindMarket();
         _pauseMarket();
-        IRState memory seededState =
-            IRState({borrowRate: irmConfig.stressRate, lastUpdate: 123, recoveryStartedAt: 456, stressMode: stressMode});
+        IRState memory seededState = IRState({
+            borrowRate: irmConfig.stressRate, lastUpdate: 123, recoveryStartedAt: 456, stressMode: stressMode
+        });
         _setIRState(seededState);
         _mockOracleReturnData(hex"01");
         vm.warp(DEFAULT_NOW + 1 days);
