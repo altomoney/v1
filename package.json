@@ -3,7 +3,7 @@
   "license": "BUSL-1.1",
   "packageManager": "pnpm@11.11.0",
   "scripts": {
-    "prepare": "forge install",
+    "prepare": "husky && forge install",
     "lint": "forge fmt --check",
     "clean": "forge clean",
     "test": "forge test",
@@ -16,6 +16,9 @@
     "deploy:1": "./_scripts/deployment/alto-1.sh",
     "verify:testnet": "./_scripts/deployment/verify-testnet.sh"
   },
+  "lint-staged": {
+    "**/*.sol": "forge fmt"
+  },
   "devDependencies": {
     "@openzeppelin/contracts": "5.4.0",
     "@layerzerolabs/oft-evm": "3.1.4",
@@ -24,6 +27,8 @@
     "@layerzerolabs/test-devtools-evm-foundry": "6.0.3",
     "@layerzerolabs/lz-evm-messagelib-v2": "3.0.94",
     "@layerzerolabs/lz-evm-v1-0.7": "3.0.94",
-    "solidity-bytes-utils": "0.8.3"
+    "solidity-bytes-utils": "0.8.3",
+    "husky": "9.1.7",
+    "lint-staged": "16.2.7"
   }
 }
