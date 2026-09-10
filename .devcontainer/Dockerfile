@@ -1,5 +1,7 @@
 FROM mcr.microsoft.com/vscode/devcontainers/base:debian
 
+ARG FOUNDRY_VERSION=1.7.1
+
 # Update package list
 RUN apt update
 # Set `DEVCONTAINER` environment variable to help with orientation
@@ -13,8 +15,7 @@ USER vscode
 
 # Install foundry suite
 RUN curl -L https://foundry.paradigm.xyz | ENV="$HOME/.bashrc" SHELL="$(which bash)" bash -
-# RUN foundryup
-RUN /home/vscode/.foundry/bin/foundryup
+RUN /home/vscode/.foundry/bin/foundryup --install "${FOUNDRY_VERSION}"
 
 # Install FNM
 RUN curl -o- https://fnm.vercel.app/install | ENV="$HOME/.bashrc" SHELL="$(which bash)" bash -
