@@ -14,8 +14,9 @@ import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 import {IDusdPegOracle} from "@alto/oracles/interfaces/IDusdPegOracle.sol";
 import {FixedPointMath} from "@alto/utils/FixedPointMath.sol";
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
-import {PegResponsiveExponentialIrmHarness} from
-    "@alto-test/lending/btt/PegResponsiveExponentialIrm/PegResponsiveExponentialIrmHarness.sol";
+import {
+    PegResponsiveExponentialIrmHarness
+} from "@alto-test/lending/btt/PegResponsiveExponentialIrm/PegResponsiveExponentialIrmHarness.sol";
 import {MockDusdPegOracle} from "@alto-test/lending/btt/mocks/MockDusdPegOracle.sol";
 import {MockRawDusdPegOracle} from "@alto-test/lending/btt/mocks/MockRawDusdPegOracle.sol";
 import {ERC20Mock} from "@alto-test/helpers/ERC20Mock.sol";
