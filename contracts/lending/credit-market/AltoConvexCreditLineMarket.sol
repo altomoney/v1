@@ -159,6 +159,18 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
         return _claimInterest(interest);
     }
 
+    /// @inheritdoc IAltoConvexCreditLineMarketBase
+    function settleBadDebt(uint256 assets) external nonReentrant onlyOwner {
+        if (assets == 0 || assets > badDebtAssets) {
+            revert AltoCreditMarketInvalidInput();
+        }
+
+        _sendBorrowToken(msg.sender, address(this), assets);
+        badDebtAssets -= assets;
+
+        emit BadDebtSettled(assets);
+    }
+
     /// @inheritdoc AltoBaseMarket
     /// @dev Foreclosure is available only after debt strictly exceeds the foreclosure LTV.
     function governanceLiquidate(address borrower, bool skipAccrueInterest)
@@ -293,6 +305,11 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
 
     /// @dev Disabled because this market does not support a liquidation engine.
     function _setLiquidationEngine(address) internal pure override {
+        revert AltoCreditMarketUnsupportedOperation();
+    }
+
+    /// @dev Disabled because this market does not support a liquidation periphery.
+    function _setAuthorizedLiquidationPeriphery(address, bool) internal pure override {
         revert AltoCreditMarketUnsupportedOperation();
     }
 
