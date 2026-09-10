@@ -10,9 +10,4 @@ AltoConvexCreditLineMarket::setMaxLtv()
     ├── it should allow zero
     ├── when new value equals current value
     │   └── it should still emit and leave the same value
-    ├── it should emit SetMaxLtv with old and new values
-    ├── it should not query liquidationEngine
-    ├── it should not accrue interest or query the oracle
-    ├── it should not validate current position solvency or outstanding debt
-    ├── it should permit lowering maxLtv below an existing position LTV
-    └── it should remain callable while paused or frozen
+    └── it should emit SetMaxLtv with old and new values

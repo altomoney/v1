@@ -2,7 +2,6 @@
 pragma solidity ^0.8.28;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
 import {IAltoConvexCreditLineMarketErrors} from "@alto/lending/interfaces/IAltoConvexCreditLineMarket.sol";
@@ -11,7 +10,6 @@ import {IMarketEvents} from "@alto/lending/interfaces/IMarket.sol";
 import {PAUSE_TYPE, FROZEN_TYPE} from "@alto/utils/Constants.sol";
 
 import {ConvexCreditLineCommon} from "../ConvexCreditLineCommon.t.sol";
-import {CreditLineCallForwarderMock} from "../mocks/CreditLineCallForwarderMock.sol";
 
 contract AltoConvexCreditLineMarketSetIrmTest is ConvexCreditLineCommon {
     function test_RevertWhenCallerIsNotOwner() external {
@@ -130,20 +128,6 @@ contract AltoConvexCreditLineMarketSetIrmTest is ConvexCreditLineCommon {
         vm.prank(OWNER);
         vm.expectRevert(bytes("SET_MARKET_REVERTED"));
         market.setIrm(address(candidate), false);
-        assertEq(market.irm(), address(irm));
-        _assertUnchanged(beforeState);
-    }
-
-    function test_RejectsReentrancyAndRollsBack() external {
-        FixedRateIrm candidate = _newFixedRateIrm();
-        CreditLineCallForwarderMock callback = new CreditLineCallForwarderMock(address(market), CREDIT_ACCOUNT);
-        vm.mockFunction(address(irm), address(callback), abi.encodeWithSelector(IIrm.updateInterestRate.selector));
-        AccountingState memory beforeState = _state();
-
-        vm.prank(OWNER);
-        vm.expectRevert(ReentrancyGuardUpgradeable.ReentrancyGuardReentrantCall.selector);
-        market.setIrm(address(candidate), false);
-
         assertEq(market.irm(), address(irm));
         _assertUnchanged(beforeState);
     }

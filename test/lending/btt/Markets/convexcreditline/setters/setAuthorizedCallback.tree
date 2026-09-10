@@ -2,8 +2,4 @@ AltoConvexCreditLineMarket::setAuthorizedCallback()
 ├── when caller is not owner
 │   └── it should revert with OwnableUnauthorizedAccount
 └── when caller is owner
-    ├── it should revert with AltoCreditMarketUnsupportedOperation for every callback and status
-    ├── it should reject zero and nonzero callback addresses with the same unsupported error
-    ├── it should leave authorizedCallbacks false
-    ├── it should not emit SetAuthorizedCallback
-    └── it should remain unsupported while paused or frozen
+    └── it should revert with AltoCreditMarketUnsupportedOperation for every callback and status

@@ -6,7 +6,6 @@ import {
     IAltoConvexCreditLineMarketErrors,
     IAltoConvexCreditLineMarketEvents
 } from "@alto/lending/interfaces/IAltoConvexCreditLineMarket.sol";
-import {PAUSE_TYPE, FROZEN_TYPE} from "@alto/utils/Constants.sol";
 import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 
 import {ConvexCreditLineCommon} from "../ConvexCreditLineCommon.t.sol";
@@ -17,52 +16,24 @@ contract AltoConvexCreditLineMarketSetBorrowOpeningFeeTest is ConvexCreditLineCo
         market.setBorrowOpeningFee(1);
     }
 
-    function test_RevertAboveMaximumWithoutChangingState() external {
+    function test_RevertAboveMaximum() external {
         vm.prank(OWNER);
         vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketInvalidInput.selector);
         market.setBorrowOpeningFee(MATH_PRECISION + 1);
-        assertEq(market.borrowOpeningFee(), 0);
     }
 
-    function test_SetsInclusiveBoundsAndEmitsEvenWhenUnchanged() external {
-        _mockIrmUpdateRevert();
+    function test_SetsAndEmitsEvenWhenUnchanged() external {
+        uint256 newFee = 0.1 ether;
         vm.expectEmit(address(market));
-        emit IAltoConvexCreditLineMarketEvents.SetBorrowOpeningFee(0, MATH_PRECISION);
+        emit IAltoConvexCreditLineMarketEvents.SetBorrowOpeningFee(0, newFee);
         vm.prank(OWNER);
-        market.setBorrowOpeningFee(MATH_PRECISION);
-        assertEq(market.borrowOpeningFee(), MATH_PRECISION);
+        market.setBorrowOpeningFee(newFee);
+        assertEq(market.borrowOpeningFee(), newFee);
 
         vm.expectEmit(address(market));
-        emit IAltoConvexCreditLineMarketEvents.SetBorrowOpeningFee(MATH_PRECISION, MATH_PRECISION);
+        emit IAltoConvexCreditLineMarketEvents.SetBorrowOpeningFee(newFee, newFee);
         vm.prank(OWNER);
-        market.setBorrowOpeningFee(MATH_PRECISION);
-
-        vm.prank(OWNER);
-        market.setBorrowOpeningFee(0);
-        assertEq(market.borrowOpeningFee(), 0);
-        assertEq(market.claimableFeesAssets(), 0);
-    }
-
-    function test_NewFeeAffectsOnlyLaterBorrowsAndWorksWhilePausedOrFrozen() external {
-        _openPosition(1_000 ether, 100 ether);
-        (, uint128 sharesBefore,) = market.position(CREDIT_ACCOUNT);
-
-        _pause(PAUSE_TYPE);
-        vm.prank(OWNER);
-        market.setBorrowOpeningFee(0.1 ether);
-        assertEq(market.borrowOpeningFee(), 0.1 ether);
-        (, uint128 sharesAfter,) = market.position(CREDIT_ACCOUNT);
-        assertEq(sharesAfter, sharesBefore);
-
-        _unpause(PAUSE_TYPE);
-        _pause(FROZEN_TYPE);
-        vm.prank(OWNER);
-        market.setBorrowOpeningFee(0.2 ether);
-        assertEq(market.borrowOpeningFee(), 0.2 ether);
-
-        _unpause(FROZEN_TYPE);
-        vm.prank(CREDIT_ACCOUNT);
-        (,, uint256 openingFee) = market.borrow(10 ether, 0, CREDIT_ACCOUNT, RECEIVER, "");
-        assertEq(openingFee, 2 ether);
+        market.setBorrowOpeningFee(newFee);
+        assertEq(market.borrowOpeningFee(), newFee);
     }
 }

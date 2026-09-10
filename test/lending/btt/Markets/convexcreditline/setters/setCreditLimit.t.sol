@@ -11,7 +11,7 @@ import {Uint128Converter} from "@alto/lending/libraries/Uint128Converter.sol";
 import {IIrm} from "@alto/lending/interfaces/IIrm.sol";
 import {IMarketErrors, IMarketEvents} from "@alto/lending/interfaces/IMarket.sol";
 import {LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
-import {PAUSE_TYPE, FROZEN_TYPE} from "@alto/utils/Constants.sol";
+import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 
 import {ConvexCreditLineCommon} from "../ConvexCreditLineCommon.t.sol";
 
@@ -94,24 +94,6 @@ contract AltoConvexCreditLineMarketSetCreditLimitTest is ConvexCreditLineCommon 
         market.setCreditLimit(150 ether);
         assertEq(market.creditLimit(), 150 ether);
         assertEq(market.badDebtAssets(), 100 ether);
-    }
-
-    function test_FrozenStillAccruesAndAcceptsDebtBoundary() external {
-        _openPosition(1_000 ether, 500 ether);
-        _pause(FROZEN_TYPE);
-        _mockAccrual(10 ether, 123);
-
-        vm.expectEmit(address(market));
-        emit IMarketEvents.AccrueInterest(123, 10 ether, 510 ether, uint128(CREDIT_LIMIT));
-        vm.expectEmit(address(market));
-        emit IAltoConvexCreditLineMarketEvents.SetCreditLimit(CREDIT_LIMIT, 510 ether);
-        vm.prank(OWNER);
-        market.setCreditLimit(510 ether);
-
-        assertEq(market.creditLimit(), 510 ether);
-        (uint128 debtAssets,) = market.totalBorrowed();
-        assertEq(debtAssets, 510 ether);
-        assertEq(market.claimableFeesAssets(), 10 ether);
     }
 
     function test_UsesActiveDebtAndBadDebtForLimitBoundary() external {

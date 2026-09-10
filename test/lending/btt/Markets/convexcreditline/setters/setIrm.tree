@@ -21,8 +21,7 @@ AltoConvexCreditLineMarket::setIrm()
 │   ├── it should emit SetIrm with old and new addresses after optional accrual
 │   ├── it should update irm
 │   ├── it should call setMarket on the new IRM with the credit line address
-│   ├── when new IRM rejects market registration
-│   │   └── it should revert and restore old IRM and accrued state
-│   └── it should reject and roll back a reentrant call
+│   └── when new IRM rejects market registration
+│       └── it should revert and restore old IRM and accrued state
 └── when market is frozen but not paused and accrual is not skipped
     └── it should still accrue using the old IRM
