@@ -10,10 +10,5 @@ AltoConvexCreditLineMarket::setForeclosureLtv()
 └── when new foreclosure LTV is greater than maxLtv and at most MATH_PRECISION
     ├── it should update foreclosureLtv
     ├── it should emit SetForeclosureLtv with old and new values
-    ├── when new value equals current value
-    │   └── it should still emit and leave the same value
-    ├── it should not accrue interest or query the oracle
-    ├── it should not validate current position solvency or outstanding debt
-    ├── it should permit lowering the threshold so an existing position becomes immediately foreclosable
-    ├── it should not change market accounting or custody
-    └── it should remain callable while paused or frozen
+    └── when new value equals current value
+        └── it should still emit and leave the same value

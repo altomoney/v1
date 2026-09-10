@@ -1,11 +1,5 @@
 AltoConvexCreditLineMarket::setAuthorizedLiquidationPeriphery()
 ├── when caller is not owner
 │   └── it should revert with OwnableUnauthorizedAccount
-├── when periphery is zero address
-│   └── it should revert with AltoBaseMarketInvalidInput
-└── when owner supplies a nonzero periphery
-    ├── it should set and clear authorizedLiquidationPeriphery
-    ├── it should emit SetAuthorizedLiquidationPeriphery even when the value is unchanged
-    ├── it should not change market accounting or custody
-    ├── it should remain callable while paused or frozen
-    └── it should not enable public liquidation on the credit market
+└── when caller is owner
+    └── it should revert with AltoCreditMarketUnsupportedOperation for every periphery and status

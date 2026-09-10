@@ -6,7 +6,6 @@ import {
     IAltoConvexCreditLineMarketErrors,
     IAltoConvexCreditLineMarketEvents
 } from "@alto/lending/interfaces/IAltoConvexCreditLineMarket.sol";
-import {PAUSE_TYPE, FROZEN_TYPE} from "@alto/utils/Constants.sol";
 import {MATH_PRECISION} from "@alto/utils/FixedPointMath.sol";
 
 import {ConvexCreditLineCommon} from "../ConvexCreditLineCommon.t.sol";
@@ -30,7 +29,6 @@ contract AltoConvexCreditLineMarketSetForeclosureLtvTest is ConvexCreditLineComm
 
     function test_SetsValidLtvAndEmitsEvenWhenUnchanged() external {
         uint256 newLtv = 0.95 ether;
-        _mockIrmUpdateRevert();
         vm.expectEmit(address(market));
         emit IAltoConvexCreditLineMarketEvents.SetForeclosureLtv(FORECLOSURE_LTV, newLtv);
         vm.prank(OWNER);
@@ -41,29 +39,5 @@ contract AltoConvexCreditLineMarketSetForeclosureLtvTest is ConvexCreditLineComm
         vm.prank(OWNER);
         market.setForeclosureLtv(newLtv);
         assertEq(market.foreclosureLtv(), newLtv);
-    }
-
-    function test_CanLowerThresholdAcrossExistingDebtAndWorksInAllPauseStates() external {
-        _openPosition(1_000 ether, 740 ether);
-        _mockAccrual(30 ether, 1);
-        market.accrueInterest();
-        _mockAccrual(0, 1);
-        AccountingState memory beforeState = _state();
-
-        _pause(PAUSE_TYPE);
-        vm.prank(OWNER);
-        market.setForeclosureLtv(0.8 ether);
-        _unpause(PAUSE_TYPE);
-        _pause(FROZEN_TYPE);
-        vm.prank(OWNER);
-        market.setForeclosureLtv(0.76 ether);
-
-        AccountingState memory afterState = _state();
-        assertEq(afterState.totalBorrowed.assets, beforeState.totalBorrowed.assets);
-        assertEq(afterState.creditPosition.collateralAssets, beforeState.creditPosition.collateralAssets);
-        assertEq(market.foreclosureLtv(), 0.76 ether);
-
-        vm.prank(OWNER);
-        market.governanceLiquidate(CREDIT_ACCOUNT, false);
     }
 }

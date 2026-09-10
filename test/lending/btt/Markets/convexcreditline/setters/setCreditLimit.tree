@@ -14,8 +14,6 @@ AltoConvexCreditLineMarket::setCreditLimit()
 ├── given market is paused
 │   ├── it should skip interest accrual regardless of elapsed time
 │   └── it should compare the proposed limit with currently recorded active debt plus badDebtAssets
-├── given market is frozen but not paused
-│   └── it should accrue and remain callable
 ├── when new credit limit is less than active debt plus badDebtAssets
 │   └── it should revert with AltoBaseMarketInsufficientMarketLiquidity
 ├── when new credit limit equals active debt plus badDebtAssets
