@@ -266,17 +266,13 @@ contract AltoConvexCreditLineMarketInitializeTest is ConvexCreditLineCommon {
         candidate.initialize(params);
         vm.clearMockedCalls();
 
-        bytes memory pidCall = abi.encodeWithSelector(IConvexRewardPool.pid.selector);
-        vm.mockCallRevert(address(rewardPool), pidCall, "PID_REVERTED");
-        vm.expectRevert(bytes("PID_REVERTED"));
-        candidate.initialize(params);
-        vm.clearMockedCalls();
-
-        vm.mockCall(address(rewardPool), pidCall, hex"01");
-        vm.expectRevert();
-        candidate.initialize(params);
-        vm.clearMockedCalls();
-        assertEq(candidate.owner(), address(0));
+        _assertRewardPoolMetadataQueryFailure(candidate, params, IConvexRewardPool.pid.selector, "PID_REVERTED");
+        _assertRewardPoolMetadataQueryFailure(
+            candidate, params, IConvexRewardPool.operator.selector, "OPERATOR_REVERTED"
+        );
+        _assertRewardPoolMetadataQueryFailure(
+            candidate, params, IConvexRewardPool.stakingToken.selector, "STAKING_TOKEN_REVERTED"
+        );
     }
 
     function test_RevertAndRollbackWhenPrimaryRewardQueryFails() external {
@@ -499,5 +495,26 @@ contract AltoConvexCreditLineMarketInitializeTest is ConvexCreditLineCommon {
     function _expectCreditZero(AltoConvexCreditLineMarket candidate, ConvexCreditLineInitParams memory params) private {
         vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketZeroAddress.selector);
         candidate.initialize(params);
+    }
+
+    function _assertRewardPoolMetadataQueryFailure(
+        AltoConvexCreditLineMarket candidate,
+        ConvexCreditLineInitParams memory params,
+        bytes4 selector,
+        bytes memory revertData
+    ) private {
+        bytes memory callData = abi.encodeWithSelector(selector);
+
+        vm.mockCallRevert(address(rewardPool), callData, revertData);
+        vm.expectRevert(revertData);
+        candidate.initialize(params);
+        vm.clearMockedCalls();
+        assertEq(candidate.owner(), address(0));
+
+        vm.mockCall(address(rewardPool), callData, hex"01");
+        vm.expectRevert();
+        candidate.initialize(params);
+        vm.clearMockedCalls();
+        assertEq(candidate.owner(), address(0));
     }
 }
