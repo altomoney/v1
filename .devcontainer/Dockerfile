@@ -6,6 +6,7 @@ ARG FOUNDRY_VERSION=1.7.1
 RUN apt update
 # Set `DEVCONTAINER` environment variable to help with orientation
 ENV DEVCONTAINER=true
+ENV PATH="/home/vscode/.foundry/bin:${PATH}"
 
 # Install dependencies
 RUN apt install -y lcov
