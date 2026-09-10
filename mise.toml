@@ -1,0 +1,14 @@
+min_version = "2026.9.4"
+
+[tools]
+node = "22.23.2"
+foundry = "1.7.1"
+graphite = "1.8.6"
+
+[settings]
+# package.json is the source of truth for the pnpm version.
+idiomatic_version_file_enable_tools = ["pnpm"]
+
+[tasks.setup]
+description = "Install Node and Solidity dependencies and configure commit hooks"
+run = ["pnpm install --frozen-lockfile", "forge install"]

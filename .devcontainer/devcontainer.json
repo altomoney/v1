@@ -4,10 +4,8 @@
 	"build": {
 		"dockerfile": "Dockerfile"
 	},
-	"postStartCommand": [
-		"/bin/bash",
-		".devcontainer/post_install.sh"
-	],
+	"remoteUser": "vscode",
+	"postCreateCommand": "mise install && mise run setup",
 	"customizations": {
 		"vscode": {
 			"settings": {
@@ -16,6 +14,7 @@
 			"extensions": [
 				"NomicFoundation.hardhat-solidity",
 				"Graphite.gti-vscode",
+				"hverlin.mise-vscode",
 				"tamasfe.even-better-toml",
 				"openai.chatgpt"
 			]

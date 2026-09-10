@@ -1,28 +1,16 @@
-FROM mcr.microsoft.com/vscode/devcontainers/base:debian
+FROM mcr.microsoft.com/devcontainers/base:bookworm
 
-ARG FOUNDRY_VERSION=1.7.1
+ARG MISE_VERSION=2026.9.4
 
-# Update package list
-RUN apt update
-# Set `DEVCONTAINER` environment variable to help with orientation
-ENV DEVCONTAINER=true
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-# Install dependencies
-RUN apt install -y lcov
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends lcov \
+    && rm -rf /var/lib/apt/lists/*
 
-###### user running scripts ######
 USER vscode
 
-# Install foundry suite
-RUN curl -L https://foundry.paradigm.xyz | ENV="$HOME/.bashrc" SHELL="$(which bash)" bash -
-RUN /home/vscode/.foundry/bin/foundryup --install "${FOUNDRY_VERSION}"
+ENV DEVCONTAINER=true
+ENV PATH="/home/vscode/.local/bin:/home/vscode/.local/share/mise/shims:${PATH}"
 
-# Install FNM
-RUN curl -o- https://fnm.vercel.app/install | ENV="$HOME/.bashrc" SHELL="$(which bash)" bash -
-# Install Node.js
-RUN /home/vscode/.local/share/fnm/fnm install 22
-# Install yarn and graphite CLI
-RUN eval "$(/home/vscode/.local/share/fnm/fnm env --use-on-cd)" && npm install -g yarn && npm install -g @withgraphite/graphite-cli@stable
-
-# Switch back to root user
-USER root
+RUN curl -fsSL https://mise.run | MISE_VERSION="${MISE_VERSION}" sh
