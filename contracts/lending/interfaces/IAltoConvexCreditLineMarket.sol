@@ -91,6 +91,10 @@ interface IAltoConvexCreditLineMarketEvents {
     /// @param badDebtAmount The amount of bad debt accrued
     event BadDebtAccrued(uint256 badDebtAmount);
 
+    /// @notice Emitted when recovered borrow tokens are burned to settle bad debt
+    /// @param settledAssets The amount of bad debt settled
+    event BadDebtSettled(uint256 settledAssets);
+
     /// @notice Emitted when the Convex pool is configured
     /// @param booster The address of the Convex Booster
     /// @param poolId The Convex pool identifier
@@ -180,6 +184,10 @@ interface IAltoConvexCreditLineMarketBase is IAltoConvexCreditLineMarketErrors, 
     /// @param interest The amount to claim, or zero to claim all
     /// @return claimed The amount minted to the fee recipient
     function claimInterest(uint256 interest) external returns (uint256 claimed);
+
+    /// @notice Burns recovered borrow tokens from the owner and reduces recorded bad debt
+    /// @param assets The amount of bad debt to settle in borrow-token assets
+    function settleBadDebt(uint256 assets) external;
 
     /// @notice The Convex Booster used to deposit collateral
     function convexBooster() external view returns (address);

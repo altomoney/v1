@@ -223,6 +223,11 @@ abstract contract AltoBaseMarket is
 
     /// @inheritdoc IMarketBase
     function setAuthorizedLiquidationPeriphery(address periphery, bool value) external onlyOwner {
+        _setAuthorizedLiquidationPeriphery(periphery, value);
+    }
+
+    /// @dev See `IMarketBase.setAuthorizedLiquidationPeriphery`.
+    function _setAuthorizedLiquidationPeriphery(address periphery, bool value) internal virtual {
         if (periphery == address(0)) {
             revert AltoBaseMarketInvalidInput();
         }

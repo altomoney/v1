@@ -10,8 +10,9 @@ This note summarizes the changes made to `AltoBaseMarket` for
   accepts `liquidationEngine == address(0)` and skips `setMarketOnce` in that
   case.
 - **Virtual admin hooks:** Existing external owner-only setters now delegate to
-  `_setIrm`, `_setOracle`, `_setMaxLtv`, `_setLiquidationEngine`, and
-  `_setAuthorizedCallback`. Their default behavior is unchanged.
+  `_setIrm`, `_setOracle`, `_setMaxLtv`, `_setLiquidationEngine`,
+  `_setAuthorizedLiquidationPeriphery`, and `_setAuthorizedCallback`. Their
+  default behavior is unchanged.
 - **Virtual collateral hooks:** `_addCollateral` calls `_receiveCollateral`, and
   `_removeCollateral` calls `_sendCollateral`. The default hooks retain the
   original ERC-20 transfers.
@@ -23,8 +24,8 @@ This note summarizes the changes made to `AltoBaseMarket` for
 
 - Accepts only fixed-rate IRMs.
 - Validates `maxLtv` against `foreclosureLtv`.
-- Disables public liquidation, liquidation-engine replacement, callback
-  authorization, and lender supply.
+- Disables public liquidation, liquidation-engine replacement, liquidation-
+  periphery authorization, callback authorization, and lender supply.
 - Uses the collateral hooks to stake Curve LP in Convex and unwrap it during
   withdrawal or foreclosure.
 - Uses governance foreclosure to move active debt into cumulative

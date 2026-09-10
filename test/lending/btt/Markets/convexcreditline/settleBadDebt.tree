@@ -1,0 +1,35 @@
+AltoConvexCreditLineMarket::settleBadDebt(uint256)
+├── when caller is not owner
+│   └── it should revert with OwnableUnauthorizedAccount before validating amount or burning tokens
+├── when assets is zero
+│   └── it should revert with AltoCreditMarketInvalidInput without changing state
+├── when assets exceeds badDebtAssets
+│   └── it should revert with AltoCreditMarketInvalidInput without changing state
+├── when the owner lacks enough borrow tokens
+│   └── it should revert atomically
+├── when borrow-token burn reverts
+│   └── it should revert atomically
+├── when borrow-token burn reenters the market
+│   └── it should revert with ReentrancyGuardReentrantCall and restore all state
+├── when the market is active, frozen, or paused
+│   └── it should remain available
+├── when settling part of recorded bad debt
+│   ├── it should burn assets directly from the owner without allowance or transfer
+│   ├── it should reduce badDebtAssets by the burned amount
+│   ├── it should emit BadDebtSettled
+│   └── it should preserve active debt, positions, collateral, credit limit, claimable fees, and Convex state
+├── when settling all recorded bad debt
+│   └── it should reduce badDebtAssets to zero
+├── when settlement restores unused credit capacity
+│   └── it should permit new borrowing only up to the restored amount
+└── when borrow token is DUSD
+    ├── given the market is an authorized burner
+    │   ├── it should burn DUSD directly from the owner without allowance
+    │   ├── it should reduce DUSD total supply and the market minter bucket
+    │   └── it should leave no DUSD in the market
+    ├── given the market is not an authorized burner
+    │   └── it should revert atomically
+    ├── given DUSD is paused
+    │   └── it should revert atomically
+    └── given bad debt exceeds the market minter bucket because fees remain unclaimed
+        ├── it should reject settlement above the minted bucket atomically
