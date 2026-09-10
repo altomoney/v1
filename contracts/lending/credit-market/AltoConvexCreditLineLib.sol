@@ -65,15 +65,23 @@ library AltoConvexCreditLineLib {
 
     /// @notice Requests that Convex deposit collateral held by the market and stake the resulting deposit tokens.
     /// @dev Does not independently verify the resulting collateral or stake balance changes.
+    /// @param collateralToken The Curve LP token deposited as collateral.
     /// @param convexBooster The Convex Booster through which the collateral is deposited.
     /// @param convexPoolId The Convex pool identifier used for the deposit.
     /// @param assets The amount of collateral requested for deposit and staking.
-    function depositCollateralToConvex(address convexBooster, uint256 convexPoolId, uint256 assets) external {
+    function depositCollateralToConvex(
+        address collateralToken,
+        address convexBooster,
+        uint256 convexPoolId,
+        uint256 assets
+    ) external {
+        IERC20(collateralToken).forceApprove(convexBooster, assets);
         bool success = IConvexBooster(convexBooster).deposit(convexPoolId, assets, true);
         if (!success) {
             revert IAltoConvexCreditLineMarketErrors.AltoConvexCreditLineExternalCallFailed();
         }
 
+        IERC20(collateralToken).forceApprove(convexBooster, 0);
         emit IAltoConvexCreditLineMarketEvents.CollateralStaked(msg.sender, assets);
     }
 

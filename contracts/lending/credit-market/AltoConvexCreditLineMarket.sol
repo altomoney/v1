@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.0;
 
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-
 import {AltoBaseMarket} from "../AltoBaseMarket.sol";
 import {AltoConvexCreditLineLib} from "./AltoConvexCreditLineLib.sol";
 import {AssetShareConversionMath} from "../libraries/AssetShareConversionMath.sol";
@@ -32,7 +29,6 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
     using FixedPointMath for uint256;
     using AssetShareConversionMath for uint256;
     using Uint128Converter for uint256;
-    using SafeERC20 for IERC20;
 
     /// @inheritdoc IAltoConvexCreditLineMarketBase
     address public creditAccount;
@@ -342,9 +338,7 @@ contract AltoConvexCreditLineMarket is AltoBaseMarket, IAltoConvexCreditLineMark
         }
 
         super._receiveCollateral(assets);
-        IERC20(collateralToken).forceApprove(convexBooster, assets);
-        AltoConvexCreditLineLib.depositCollateralToConvex(convexBooster, convexPoolId, assets);
-        IERC20(collateralToken).forceApprove(convexBooster, 0);
+        AltoConvexCreditLineLib.depositCollateralToConvex(collateralToken, convexBooster, convexPoolId, assets);
     }
 
     /// @inheritdoc AltoBaseMarket
