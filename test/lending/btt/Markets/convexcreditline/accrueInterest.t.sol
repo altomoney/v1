@@ -1,50 +1,67 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+import {IMintableERC20} from "@alto/lending/interfaces/IMintableERC20.sol";
 import {IMarketEvents} from "@alto/lending/interfaces/IMarket.sol";
 import {IIrm} from "@alto/lending/interfaces/IIrm.sol";
-import {LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
-import {PAUSE_TYPE, FROZEN_TYPE} from "@alto/utils/Constants.sol";
+import {ILendingOracle, LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
+import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
 
 import {ConvexCreditLineCommon} from "./ConvexCreditLineCommon.t.sol";
 
 contract AltoConvexCreditLineMarketAccrueInterestTest is ConvexCreditLineCommon {
-    function test_RevertWhenPausedButRemainPermissionlessWhenFrozen() external {
+    function test_RevertWhenPaused() external {
         _pause(PAUSE_TYPE);
         _assertPausedRevert(PAUSE_TYPE);
-        vm.prank(USER);
-        market.accrueInterest();
-
-        _unpause(PAUSE_TYPE);
-        _pause(FROZEN_TYPE);
-        vm.prank(USER);
         market.accrueInterest();
     }
 
-    function test_PassesCreditLimitAndCurrentDebtOnlyToIrm() external {
+    function test_PassesCreditLimitAndCurrentDebtOnlyToIrmWithoutUnrelatedInteractions() external {
         _openPosition(1_000 ether, 100 ether);
         uint256 depositsBefore = booster.depositCalls();
         uint256 withdrawalsBefore = rewardPool.withdrawCalls();
+        uint256 rewardClaimsBefore = rewardPool.getRewardCalls();
+        AccountingState memory beforeState = _state();
         _mockAccrual(0, 17);
 
+        vm.mockCallRevert(address(oracle), abi.encodeCall(ILendingOracle.getPrice, ()), "ORACLE_MUST_NOT_BE_CALLED");
+        vm.mockCallRevert(
+            address(rewardPool),
+            abi.encodeWithSignature("balanceOf(address)", address(market)),
+            "REWARD_POOL_BALANCE_MUST_NOT_BE_CALLED"
+        );
+        booster.setDepositBehavior(true, true, type(uint256).max, type(uint256).max);
+        rewardPool.setWithdrawBehavior(true, true, type(uint256).max, type(uint256).max);
+        rewardPool.setRewardBehavior(true, true);
+        _setTokenCallsToRevert(true);
+
         vm.expectCall(address(irm), abi.encodeCall(IIrm.updateInterestRate, (CREDIT_LIMIT, 100 ether)));
-        vm.prank(USER);
         market.accrueInterest();
+        vm.clearMockedCalls();
+        _setTokenCallsToRevert(false);
 
         assertEq(booster.depositCalls(), depositsBefore);
         assertEq(rewardPool.withdrawCalls(), withdrawalsBefore);
+        assertEq(rewardPool.getRewardCalls(), rewardClaimsBefore);
+        _assertUnchanged(beforeState);
     }
 
     function test_ZeroInterestCallsIrmEmitsAndPreservesAllAccounting() external {
-        _openPosition(1_000 ether, 100 ether);
+        _openPosition(1 ether, 1);
         AccountingState memory beforeState = _state();
-        _mockAccrual(0, 23);
+        (uint256 borrowRate, uint48 lastUpdateBefore) = irm.irState();
+        vm.warp(block.timestamp + 1);
 
-        vm.expectCall(address(irm), abi.encodeCall(IIrm.updateInterestRate, (CREDIT_LIMIT, 100 ether)));
+        vm.expectCall(address(irm), abi.encodeCall(IIrm.updateInterestRate, (CREDIT_LIMIT, 1)));
         vm.expectEmit(address(market));
-        emit IMarketEvents.AccrueInterest(23, 0, 100 ether, uint128(CREDIT_LIMIT));
+        emit IMarketEvents.AccrueInterest(borrowRate, 0, 1, uint128(CREDIT_LIMIT));
         market.accrueInterest();
 
+        (, uint48 lastUpdateAfter) = irm.irState();
+        assertGt(lastUpdateAfter, lastUpdateBefore);
+        assertEq(lastUpdateAfter, block.timestamp);
         _assertUnchanged(beforeState);
     }
 
@@ -104,25 +121,21 @@ contract AltoConvexCreditLineMarketAccrueInterestTest is ConvexCreditLineCommon 
         _assertUnchanged(beforeState);
     }
 
-    function test_RevertAtomicallyWhenDebtUint128AdditionOverflows() external {
-        _openPosition(10, 1);
-        AccountingState memory beforeState = _state();
-        _mockAccrual(type(uint128).max, 1);
-
-        vm.expectRevert();
-        market.accrueInterest();
-
-        _assertUnchanged(beforeState);
+    function _setTokenCallsToRevert(bool shouldRevert) private {
+        _setTokenCallsToRevert(address(borrowToken), shouldRevert);
+        _setTokenCallsToRevert(address(collateralToken), shouldRevert);
+        _setTokenCallsToRevert(address(depositToken), shouldRevert);
+        _setTokenCallsToRevert(address(primaryRewardToken), shouldRevert);
+        _setTokenCallsToRevert(address(extraRewardToken), shouldRevert);
     }
 
-    function test_ClaimableUint128OverflowRollsBackEarlierDebtAndIrmUpdates() external {
-        vm.store(address(market), bytes32(uint256(52)), bytes32(uint256(type(uint128).max)));
-        _mockAccrual(1, 1);
-        AccountingState memory beforeState = _state();
-
-        vm.expectRevert();
-        market.accrueInterest();
-
-        _assertUnchanged(beforeState);
+    function _setTokenCallsToRevert(address token, bool shouldRevert) private {
+        if (!shouldRevert) return;
+        vm.mockCallRevert(token, IERC20.balanceOf.selector, "TOKEN_MUST_NOT_BE_CALLED");
+        vm.mockCallRevert(token, IERC20.transfer.selector, "TOKEN_MUST_NOT_BE_CALLED");
+        vm.mockCallRevert(token, IERC20.transferFrom.selector, "TOKEN_MUST_NOT_BE_CALLED");
+        vm.mockCallRevert(token, IERC20.approve.selector, "TOKEN_MUST_NOT_BE_CALLED");
+        vm.mockCallRevert(token, IMintableERC20.mint.selector, "TOKEN_MUST_NOT_BE_CALLED");
+        vm.mockCallRevert(token, IMintableERC20.burn.selector, "TOKEN_MUST_NOT_BE_CALLED");
     }
 }

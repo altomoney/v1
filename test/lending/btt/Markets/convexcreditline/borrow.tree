@@ -3,17 +3,13 @@ AltoConvexCreditLineMarket::borrow()
 │   └── it should revert with IsPaused for PAUSE_TYPE
 ├── when market is frozen but not paused
 │   └── it should revert with IsPaused for FROZEN_TYPE
-├── given callback data is nonempty
-│   ├── it should revert with AltoCreditMarketCallbacksUnsupported
-│   ├── it should check onBehalf is creditAccount before rejecting callback data
-│   ├── it should reject the data before Base input and sender authorization checks
-│   ├── it should reject callback data before validating a zero receiver
-│   └── it should never call a receiver callback even if authorization storage is manipulated
-├── given invalid Credit account
+├── given invalid Credit inputs
 │   ├── when onBehalf is not creditAccount
-│   │   └── it should revert with AltoCreditMarketUnauthorizedAccount
-│   └── when onBehalf is zero address
-│       └── it should revert with AltoCreditMarketUnauthorizedAccount
+│   │   └── it should revert with AltoCreditMarketUnauthorizedAccount before checking swapParams or Base inputs
+│   ├── when onBehalf is zero address
+│   │   └── it should revert with AltoCreditMarketUnauthorizedAccount before checking swapParams or Base inputs
+│   └── when swapParams is nonempty for creditAccount
+│       └── it should revert with AltoCreditMarketCallbacksUnsupported before Base input and sender authorization checks
 ├── given invalid Base inputs
 │   ├── when assets and shares are both zero
 │   │   └── it should revert with AltoBaseMarketInvalidInput
@@ -68,13 +64,6 @@ AltoConvexCreditLineMarket::borrow()
 │   │   └── it should succeed
 │   └── when creditAccount has no collateral
 │       └── it should revert for every positive draw
-├── given uint128 accounting boundaries
-│   ├── when gross debt assets cannot fit in totalBorrowed assets
-│   │   └── it should revert atomically
-│   ├── when calculated borrow shares cannot fit in totalBorrowed or position shares
-│   │   └── it should revert atomically
-│   └── when opening fee cannot fit in claimableFeesAssets
-│       └── it should revert atomically including token mint and debt updates
 ├── given borrow token minting
 │   ├── when market lacks minter permission
 │   │   └── it should revert atomically

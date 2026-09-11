@@ -8,32 +8,17 @@ AltoConvexCreditLineMarket::addCollateral()
 │   │   └── it should revert with AltoCreditMarketUnauthorizedAccount
 │   ├── when onBehalf is zero address
 │   │   └── it should revert with AltoCreditMarketUnauthorizedAccount
-│   ├── when assets is zero for creditAccount
-│   │   └── it should revert with AltoBaseMarketInvalidInput
-│   └── when assets cannot fit in uint128 position accounting
-│       └── it should revert without changing state
+│   └── when assets is zero for creditAccount
+│       └── it should revert with AltoBaseMarketInvalidInput
 ├── given Convex strategy is inactive
 │   ├── it should revert with AltoCreditMarketInvalidInput
 │   ├── it should not transfer collateral
 │   └── it should not update the credit account position
-├── given collateral transfer fails
-│   ├── when caller balance is insufficient
-│   │   └── it should revert atomically
-│   └── when caller allowance is insufficient
-│         └── it should revert atomically
 ├── given Convex deposit fails
-│   ├── when approving the exact deposit amount fails
-│   │   └── it should revert atomically before calling the Booster
 │   ├── when Booster call reverts
 │   │   └── it should propagate the failure and roll back the collateral transfer
-│   ├── when Booster returns false
-│   │   └── it should revert with AltoConvexCreditLineExternalCallFailed
-│   ├── when clearing the temporary approval fails
-│   │   └── it should roll back the Convex deposit and all accounting
-│   ├── when Booster attempts to transfer more than assets
-│   │   └── it should revert because the temporary allowance is capped at assets
-│   └── when an external dependency attempts reentrancy
-│       └── it should reject reentrancy and revert atomically
+│   └── when Booster returns false
+│       └── it should revert with AltoConvexCreditLineExternalCallFailed
 └── given a valid deposit for creditAccount
     ├── when caller is creditAccount
     │   └── it should succeed

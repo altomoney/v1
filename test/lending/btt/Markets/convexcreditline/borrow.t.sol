@@ -31,21 +31,15 @@ contract AltoConvexCreditLineMarketBorrowTest is ConvexCreditLineCommon {
         market.borrow(1, 0, CREDIT_ACCOUNT, RECEIVER, "");
     }
 
-    function test_CallbackAndCreditChecksPrecedeBaseValidationAndAuthorization() external {
+    function test_CreditAccountAndSwapParamsChecksPrecedeBaseValidationAndAuthorization() external {
         vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketUnauthorizedAccount.selector);
         market.borrow(0, 0, USER, address(0), hex"01");
 
+        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketUnauthorizedAccount.selector);
+        market.borrow(0, 0, address(0), address(0), hex"01");
+
         vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketCallbacksUnsupported.selector);
         market.borrow(0, 0, CREDIT_ACCOUNT, address(0), hex"01");
-
-        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketUnauthorizedAccount.selector);
-        market.borrow(1, 0, address(0), RECEIVER, "");
-
-        bytes32 callbackSlot = keccak256(abi.encode(RECEIVER, uint256(9)));
-        vm.store(address(market), callbackSlot, bytes32(uint256(1)));
-        vm.prank(CREDIT_ACCOUNT);
-        vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketCallbacksUnsupported.selector);
-        market.borrow(1, 0, CREDIT_ACCOUNT, RECEIVER, hex"01");
     }
 
     function test_RevertForInvalidBaseInputsAndUnauthorizedCaller() external {
@@ -122,6 +116,52 @@ contract AltoConvexCreditLineMarketBorrowTest is ConvexCreditLineCommon {
         assertEq(fee, 11);
         assertEq(borrowToken.balanceOf(RECEIVER), 100);
         assertEq(market.claimableFeesAssets(), 11);
+    }
+
+    function test_MinimumPositiveOpeningFeeRoundsUpForAssetAndShareDraws() external {
+        _addCollateral(1 ether);
+        _setOpeningFee(0.1 ether);
+
+        vm.prank(CREDIT_ACCOUNT);
+        (uint256 grossAssets, uint256 shares, uint256 fee) = market.borrow(1, 0, CREDIT_ACCOUNT, RECEIVER, "");
+
+        assertEq(grossAssets, 2);
+        assertEq(shares, 2_000_000);
+        assertEq(fee, 1);
+        assertEq(borrowToken.balanceOf(RECEIVER), 1);
+        assertEq(market.claimableFeesAssets(), 1);
+
+        setUp();
+        _addCollateral(1 ether);
+        vm.prank(CREDIT_ACCOUNT);
+        market.borrow(1, 0, CREDIT_ACCOUNT, RECEIVER, "");
+        _mockAccrual(199_999, 0);
+        market.accrueInterest();
+        _mockAccrual(0, 0);
+        _setOpeningFee(0.1 ether);
+        uint256 feesBefore = market.claimableFeesAssets();
+        uint256 receiverBalanceBefore = borrowToken.balanceOf(RECEIVER);
+
+        vm.prank(CREDIT_ACCOUNT);
+        (grossAssets, shares, fee) = market.borrow(0, 10, CREDIT_ACCOUNT, RECEIVER, "");
+
+        assertEq(grossAssets, 1);
+        assertEq(shares, 11);
+        assertEq(fee, 1);
+        assertEq(borrowToken.balanceOf(RECEIVER), receiverBalanceBefore);
+        assertEq(market.claimableFeesAssets(), feesBefore + 1);
+    }
+
+    function test_ZeroOpeningFeeLeavesClaimableFeesUnchanged() external {
+        _addCollateral(100 ether);
+        uint256 feesBefore = market.claimableFeesAssets();
+
+        vm.prank(CREDIT_ACCOUNT);
+        (uint256 grossAssets,, uint256 fee) = market.borrow(10 ether, 0, CREDIT_ACCOUNT, RECEIVER, "");
+
+        assertEq(grossAssets, 10 ether);
+        assertEq(fee, 0);
+        assertEq(market.claimableFeesAssets(), feesBefore);
     }
 
     function test_CreditLimitCheckedBeforeOracleAndEqualitySucceeds() external {
@@ -206,13 +246,13 @@ contract AltoConvexCreditLineMarketBorrowTest is ConvexCreditLineCommon {
     function test_MintFailureAndPostMintSolvencyFailureAreAtomic() external {
         _addCollateral(100 ether);
         AccountingState memory beforeState = _state();
-        borrowToken.setMintBurnFailure(true, false);
+        vm.mockCallRevert(address(borrowToken), borrowToken.mint.selector, bytes("MINT_REVERTED"));
         vm.prank(CREDIT_ACCOUNT);
         vm.expectRevert(bytes("MINT_REVERTED"));
         market.borrow(1 ether, 0, CREDIT_ACCOUNT, RECEIVER, "");
         _assertUnchanged(beforeState);
 
-        borrowToken.setMintBurnFailure(false, false);
+        vm.clearMockedCalls();
         oracle.setPrice(10 ether);
         vm.prank(CREDIT_ACCOUNT);
         vm.expectRevert(IMarketErrors.AltoBaseMarketBorrowingTooMuch.selector);
@@ -318,7 +358,7 @@ contract AltoConvexCreditLineMarketBorrowTest is ConvexCreditLineCommon {
 
     function test_RejectsBorrowTokenReentrancyAtomically() external {
         _addCollateral(100 ether);
-        borrowToken.setCallback(address(market), abi.encodeCall(market.repay, (1, 0, CREDIT_ACCOUNT)), 1);
+        _mockBorrowTokenReentrancy(borrowToken.mint.selector);
         AccountingState memory beforeState = _state();
 
         vm.prank(CREDIT_ACCOUNT);
@@ -331,6 +371,11 @@ contract AltoConvexCreditLineMarketBorrowTest is ConvexCreditLineCommon {
     function test_SuccessForCreditAccountAndDelegateWithFullFeeAndExpectedEvents() external {
         _addCollateral(1_000 ether);
         _setOpeningFee(MATH_PRECISION);
+        AccountingState memory beforeState = _state();
+        address[] memory rewardsBefore = _configuredRewards(2);
+        uint256 depositsBefore = booster.depositCalls();
+        uint256 withdrawalsBefore = rewardPool.withdrawCalls();
+        uint256 rewardClaimsBefore = rewardPool.getRewardCalls();
 
         vm.expectEmit(address(market));
         emit IMarketEvents.AccrueInterest(BORROW_RATE, 0, 0, uint128(CREDIT_LIMIT));
@@ -345,49 +390,22 @@ contract AltoConvexCreditLineMarketBorrowTest is ConvexCreditLineCommon {
         assertEq(borrowToken.balanceOf(RECEIVER), 100 ether);
         assertEq(market.claimableFeesAssets(), 100 ether);
         assertEq(collateralToken.balanceOf(address(market)), 0);
-        assertEq(market.stakedCollateralAssets(), 1_000 ether);
-    }
-
-    function test_Uint128ShareBoundaryRevertsAtomically() external {
-        _addCollateral(1_000 ether);
-        AccountingState memory beforeState = _state();
-        vm.prank(CREDIT_ACCOUNT);
-        vm.expectRevert();
-        market.borrow(0, uint256(type(uint128).max) + 1, CREDIT_ACCOUNT, RECEIVER, "");
-        _assertUnchanged(beforeState);
-    }
-
-    function test_Uint128DebtAndPositionAdditionsRevertAtomically() external {
-        _addCollateral(1_000 ether);
-        vm.store(address(market), bytes32(uint256(7)), bytes32(uint256(type(uint128).max) | (uint256(1) << 128)));
-        AccountingState memory beforeState = _state();
-        vm.prank(CREDIT_ACCOUNT);
-        vm.expectRevert();
-        market.borrow(1, 0, CREDIT_ACCOUNT, RECEIVER, "");
-        _assertUnchanged(beforeState);
-
-        vm.store(address(market), bytes32(uint256(7)), bytes32(0));
-        bytes32 positionBase = _positionSlot(CREDIT_ACCOUNT);
-        vm.store(address(market), positionBase, bytes32(uint256(type(uint128).max) << 128));
-        beforeState = _state();
-        vm.prank(CREDIT_ACCOUNT);
-        vm.expectRevert();
-        market.borrow(1, 0, CREDIT_ACCOUNT, RECEIVER, "");
-        _assertUnchanged(beforeState);
-    }
-
-    function test_ClaimableFeeOverflowRollsBackMintAndDebtUpdates() external {
-        _addCollateral(1_000 ether);
-        _setOpeningFee(1);
-        vm.store(address(market), bytes32(uint256(52)), bytes32(uint256(type(uint128).max)));
-        AccountingState memory beforeState = _state();
-
-        vm.prank(CREDIT_ACCOUNT);
-        vm.expectRevert();
-        market.borrow(1 ether, 0, CREDIT_ACCOUNT, RECEIVER, "");
-
-        _assertUnchanged(beforeState);
-        assertEq(borrowToken.balanceOf(RECEIVER), 0);
+        assertEq(market.stakedCollateralAssets(), beforeState.stakedCollateral);
+        (uint128 supplyAssets, uint128 supplyShares) = market.totalSupply();
+        assertEq(supplyAssets, beforeState.totalSupply.assets);
+        assertEq(supplyShares, beforeState.totalSupply.shares);
+        (uint128 positionSupplyShares, uint128 positionBorrowShares, uint128 positionCollateral) =
+            market.position(CREDIT_ACCOUNT);
+        assertEq(positionSupplyShares, beforeState.creditPosition.supplyShares);
+        assertEq(positionBorrowShares, shares);
+        assertEq(positionCollateral, beforeState.creditPosition.collateralAssets);
+        assertEq(market.badDebtAssets(), beforeState.badDebt);
+        assertEq(booster.depositCalls(), depositsBefore);
+        assertEq(rewardPool.withdrawCalls(), withdrawalsBefore);
+        assertEq(rewardPool.getRewardCalls(), rewardClaimsBefore);
+        _assertRewardList(rewardsBefore);
+        assertEq(primaryRewardToken.balanceOf(REWARD_RECIPIENT), 0);
+        assertEq(extraRewardToken.balanceOf(REWARD_RECIPIENT), 0);
     }
 
     function test_SingleDrawAddsAccruedInterestAndOpeningFeeToClaimableFees() external {

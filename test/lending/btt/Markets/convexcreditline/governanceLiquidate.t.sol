@@ -215,6 +215,7 @@ contract AltoConvexCreditLineMarketGovernanceLiquidateTest is ConvexCreditLineCo
         oracle.setPrice(100 ether);
         _mockAccrual(5 ether, 37);
         uint256 tokenSupplyBefore = borrowToken.totalSupply();
+        (uint128 supplyAssetsBefore, uint128 supplySharesBefore) = market.totalSupply();
         uint256 creditLimitBefore = market.creditLimit();
         uint256 claimableBefore = market.claimableFeesAssets();
         (, uint128 sharesBefore,) = market.position(CREDIT_ACCOUNT);
@@ -239,6 +240,9 @@ contract AltoConvexCreditLineMarketGovernanceLiquidateTest is ConvexCreditLineCo
         assertEq(positionShares, 0);
         assertEq(positionCollateral, 0);
         assertEq(market.creditLimit(), creditLimitBefore);
+        (uint128 supplyAssetsAfter, uint128 supplySharesAfter) = market.totalSupply();
+        assertEq(supplyAssetsAfter, supplyAssetsBefore);
+        assertEq(supplySharesAfter, supplySharesBefore);
         assertEq(market.claimableFeesAssets(), claimableBefore + 5 ether);
         assertEq(market.badDebtAssets(), 115 ether);
         assertEq(borrowToken.totalSupply(), tokenSupplyBefore);

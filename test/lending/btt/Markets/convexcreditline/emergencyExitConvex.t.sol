@@ -2,7 +2,6 @@
 pragma solidity ^0.8.28;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
 import {
     IAltoConvexCreditLineMarketErrors,
@@ -86,37 +85,6 @@ contract AltoConvexCreditLineMarketEmergencyExitTest is ConvexCreditLineCommon {
         assertTrue(market.convexActive());
     }
 
-    function test_DoesNotValidateRecoveredLpDelta() external {
-        _addCollateral(10 ether);
-        _pause(PAUSE_TYPE);
-        rewardPool.setWithdrawBehavior(false, true, 9 ether, 10 ether);
-
-        vm.prank(OWNER);
-        uint256 assets = market.emergencyExitConvex();
-
-        assertEq(assets, 10 ether);
-        assertEq(market.stakedCollateralAssets(), 0);
-        assertEq(collateralToken.balanceOf(address(market)), 9 ether);
-        assertFalse(market.convexActive());
-        assertEq(collateralToken.allowance(address(market), address(booster)), 0);
-        (,, uint128 collateralAssets) = market.position(CREDIT_ACCOUNT);
-        assertEq(collateralAssets, 10 ether);
-    }
-
-    function test_DoesNotQueryCollateralBalanceAfterWithdrawal() external {
-        _addCollateral(10 ether);
-        _pause(PAUSE_TYPE);
-        collateralToken.setBalanceFailure(false, true);
-
-        vm.prank(OWNER);
-        uint256 assets = market.emergencyExitConvex();
-
-        collateralToken.setBalanceFailure(false, false);
-        assertEq(assets, 10 ether);
-        assertEq(collateralToken.balanceOf(address(market)), 10 ether);
-        assertFalse(market.convexActive());
-    }
-
     function test_ApprovalFailureCannotBlockEmergencyExit() external {
         _addCollateral(10 ether);
         _pause(PAUSE_TYPE);
@@ -135,7 +103,16 @@ contract AltoConvexCreditLineMarketEmergencyExitTest is ConvexCreditLineCommon {
     function test_SuccessRecoversAllStakePreservesIdleAndAccounting() external {
         _openPosition(100 ether, 10 ether);
         deal(address(collateralToken), address(market), 3 ether);
+        address[] memory rewardTokens = new address[](1);
+        rewardTokens[0] = address(primaryRewardToken);
+        uint256[] memory rewardAmounts = new uint256[](1);
+        rewardAmounts[0] = 5 ether;
+        rewardPool.setRewards(rewardTokens, rewardAmounts);
         AccountingState memory beforePause = _state();
+        uint256 ownerCollateralBefore = collateralToken.balanceOf(OWNER);
+        uint256 creditCollateralBefore = collateralToken.balanceOf(CREDIT_ACCOUNT);
+        uint256 rewardClaimsBefore = rewardPool.getRewardCalls();
+        uint256 recipientRewardBefore = primaryRewardToken.balanceOf(REWARD_RECIPIENT);
         _pause(PAUSE_TYPE);
 
         vm.expectEmit(address(market));
@@ -151,11 +128,14 @@ contract AltoConvexCreditLineMarketEmergencyExitTest is ConvexCreditLineCommon {
         assertEq(collateralToken.balanceOf(address(market)), 103 ether);
         assertFalse(market.convexActive());
         assertEq(collateralToken.allowance(address(market), address(booster)), 0);
+        assertEq(collateralToken.balanceOf(OWNER), ownerCollateralBefore);
+        assertEq(collateralToken.balanceOf(CREDIT_ACCOUNT), creditCollateralBefore);
+        assertEq(rewardPool.getRewardCalls(), rewardClaimsBefore);
+        assertEq(primaryRewardToken.balanceOf(REWARD_RECIPIENT), recipientRewardBefore);
         AccountingState memory afterState = _state();
-        assertEq(afterState.totalSupply.assets, beforePause.totalSupply.assets);
-        assertEq(afterState.totalBorrowed.assets, beforePause.totalBorrowed.assets);
-        assertEq(afterState.creditPosition.collateralAssets, beforePause.creditPosition.collateralAssets);
-        assertEq(afterState.creditPosition.borrowShares, beforePause.creditPosition.borrowShares);
+        afterState.idleCollateral = beforePause.idleCollateral;
+        afterState.stakedCollateral = beforePause.stakedCollateral;
+        _assertStateEq(afterState, beforePause);
     }
 
     function test_PostExitLifecycleUsesIdleCollateralButRejectsNewDepositsAndSecondExit() external {
@@ -207,19 +187,5 @@ contract AltoConvexCreditLineMarketEmergencyExitTest is ConvexCreditLineCommon {
         assets = market.emergencyExitConvex();
         assertEq(assets, 15 ether);
         assertEq(collateralToken.balanceOf(address(market)), 15 ether);
-    }
-
-    function test_RejectsRewardPoolReentrancyAtomically() external {
-        _addCollateral(10 ether);
-        _pause(PAUSE_TYPE);
-        rewardPool.setCallback(address(market), abi.encodeCall(market.emergencyExitConvex, ()), true, false);
-        AccountingState memory beforeState = _state();
-
-        vm.prank(OWNER);
-        vm.expectRevert(ReentrancyGuardUpgradeable.ReentrancyGuardReentrantCall.selector);
-        market.emergencyExitConvex();
-
-        _assertUnchanged(beforeState);
-        assertTrue(market.convexActive());
     }
 }

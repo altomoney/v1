@@ -4,6 +4,8 @@ pragma solidity ^0.8.28;
 import {Test} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {EndpointV2Mock} from "@layerzerolabs/test-devtools-evm-foundry/contracts/mocks/EndpointV2Mock.sol";
+import {ERC20Mock} from "morpho-blue/src/mocks/ERC20Mock.sol";
 
 import {AltoConvexCreditLineMarket} from "@alto/lending/credit-market/AltoConvexCreditLineMarket.sol";
 import {FixedRateIrm} from "@alto/lending/irm/FixedRateIrm.sol";
@@ -17,10 +19,29 @@ import {IIrm} from "@alto/lending/interfaces/IIrm.sol";
 import {OracleMock} from "@alto/oracles/mocks/OracleMock.sol";
 import {LENDING_ORACLE_PRICE_PRECISION} from "@alto/oracles/interfaces/IOracle.sol";
 import {PAUSE_TYPE} from "@alto/utils/Constants.sol";
+import {DUSD} from "@alto/tokens/DUSD.sol";
 
 import {ConvexBoosterMock} from "./mocks/ConvexBoosterMock.sol";
 import {ConvexRewardPoolMock} from "./mocks/ConvexRewardPoolMock.sol";
 import {CreditLineMarketCollateralTokenMock} from "./mocks/CreditLineMarketCollateralTokenMock.sol";
+
+contract BorrowTokenReentrantCallMock {
+    AltoConvexCreditLineMarket internal immutable MARKET;
+    address internal immutable CREDIT_ACCOUNT;
+
+    constructor(AltoConvexCreditLineMarket market, address creditAccount) {
+        MARKET = market;
+        CREDIT_ACCOUNT = creditAccount;
+    }
+
+    function mint(address, uint256) external {
+        MARKET.repay(1, 0, CREDIT_ACCOUNT);
+    }
+
+    function burn(address, uint256) external {
+        MARKET.repay(1, 0, CREDIT_ACCOUNT);
+    }
+}
 
 abstract contract ConvexCreditLineCommon is Test, IMarketEvents, IAltoConvexCreditLineMarketEvents {
     uint256 internal constant POOL_ID = 7;
@@ -39,11 +60,11 @@ abstract contract ConvexCreditLineCommon is Test, IMarketEvents, IAltoConvexCred
     address internal GAUGE = makeAddr("Gauge");
 
     AltoConvexCreditLineMarket internal market;
-    CreditLineMarketCollateralTokenMock internal borrowToken;
+    DUSD internal borrowToken;
     CreditLineMarketCollateralTokenMock internal collateralToken;
-    CreditLineMarketCollateralTokenMock internal depositToken;
-    CreditLineMarketCollateralTokenMock internal primaryRewardToken;
-    CreditLineMarketCollateralTokenMock internal extraRewardToken;
+    ERC20Mock internal depositToken;
+    ERC20Mock internal primaryRewardToken;
+    ERC20Mock internal extraRewardToken;
     FixedRateIrm internal irm;
     OracleMock internal oracle;
     ConvexRewardPoolMock internal rewardPool;
@@ -62,11 +83,11 @@ abstract contract ConvexCreditLineCommon is Test, IMarketEvents, IAltoConvexCred
     }
 
     function setUp() public virtual {
-        borrowToken = new CreditLineMarketCollateralTokenMock("Borrow", "BORROW");
+        borrowToken = new DUSD(address(new EndpointV2Mock(1, address(this))), OWNER);
         collateralToken = new CreditLineMarketCollateralTokenMock("Curve LP", "LP");
-        depositToken = new CreditLineMarketCollateralTokenMock("Convex Deposit", "cvxLP");
-        primaryRewardToken = new CreditLineMarketCollateralTokenMock("Primary Reward", "PRM");
-        extraRewardToken = new CreditLineMarketCollateralTokenMock("Extra Reward", "EXT");
+        depositToken = new ERC20Mock();
+        primaryRewardToken = new ERC20Mock();
+        extraRewardToken = new ERC20Mock();
         irm = _newFixedRateIrm();
         oracle = new OracleMock();
         oracle.setPrice(LENDING_ORACLE_PRICE_PRECISION);
@@ -79,6 +100,12 @@ abstract contract ConvexCreditLineCommon is Test, IMarketEvents, IAltoConvexCred
 
         market = _newUninitializedMarket();
         market.initialize(_validInitParams());
+
+        vm.startPrank(OWNER);
+        borrowToken.setMinterStatus(address(market), true);
+        borrowToken.setMinterCeiling(address(market), type(uint256).max);
+        borrowToken.setBurnerStatus(address(market), true);
+        vm.stopPrank();
 
         vm.prank(CREDIT_ACCOUNT);
         market.setAuthorization(DELEGATE, true);
@@ -155,6 +182,11 @@ abstract contract ConvexCreditLineCommon is Test, IMarketEvents, IAltoConvexCred
         vm.mockCallRevert(
             address(irm), abi.encodeWithSelector(IIrm.updateInterestRate.selector), bytes("UPDATE_REVERTED")
         );
+    }
+
+    function _mockBorrowTokenReentrancy(bytes4 selector) internal {
+        BorrowTokenReentrantCallMock callback = new BorrowTokenReentrantCallMock(market, CREDIT_ACCOUNT);
+        vm.mockFunction(address(borrowToken), address(callback), abi.encodeWithSelector(selector));
     }
 
     function _addCollateral(uint256 assets) internal {

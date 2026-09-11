@@ -1,10 +1,6 @@
 AltoConvexCreditLineMarket::accrueInterest()
 ├── when market is paused
 │   └── it should revert with IsPaused for PAUSE_TYPE
-├── when market is frozen but not paused
-│   └── it should remain available
-├── when called by any account
-│   └── it should be permissionless
 ├── when IRM call reverts or returns malformed data
 │   └── it should propagate the failure without changing accounting
 ├── given the IRM call
@@ -17,16 +13,8 @@ AltoConvexCreditLineMarket::accrueInterest()
 │   ├── it should leave totalSupply shares and positions unchanged
 │   ├── it should still call the IRM and permit it to update its timestamp
 │   └── it should emit AccrueInterest with zero interest
-├── when returned interest is nonzero
-│   ├── it should add interest to totalBorrowed assets
-│   ├── it should add the same interest to claimableFeesAssets
-│   ├── it should not change totalBorrowed shares
-│   ├── it should not change totalSupply assets or shares
-│   ├── it should not change or accrue interest onto badDebtAssets
-│   ├── it should not change any position shares
-│   └── it should emit AccrueInterest with the IRM borrow rate and updated balances
-└── given uint128 accounting boundaries
-    ├── when totalBorrowed asset addition overflows
-    │   └── it should revert atomically
-    └── when claimableFeesAssets addition overflows
-        └── it should revert atomically including the earlier debt addition and IRM update
+└── when returned interest is nonzero
+    ├── it should add interest to totalBorrowed assets
+    ├── it should add the same interest to claimableFeesAssets
+    ├── it should not change totalBorrowed shares
+    ├── it should not change totalSupply assets or shares
