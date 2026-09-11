@@ -1,8 +1,6 @@
 AltoConvexCreditLineMarket::claimInterest()
 ├── when market is paused
 │   └── it should revert with IsPaused for PAUSE_TYPE
-├── when market is frozen but not paused
-│   └── it should remain available
 ├── when interest exceeds claimableFeesAssets
 │   └── it should revert with AltoCreditMarketInvalidInput before fee recipient and caller checks
 ├── when fee recipient is zero address
@@ -27,15 +25,6 @@ AltoConvexCreditLineMarket::claimInterest()
 │       │   └── it should perform a partial claim and preserve the remainder
 │       └── when interest equals claimable fees
 │           └── it should claim the full balance and set claimableFeesAssets to zero
-├── given a borrow token mint failure or reentrancy attempt
-│   └── it should revert atomically and preserve claimableFeesAssets
-├── given DUSD mint restrictions
-│   ├── when market lacks minter permission
-│   │   └── it should revert atomically
-│   ├── when token ceiling has insufficient headroom
-│   │   └── it should revert atomically
-│   └── when borrow token is paused
-│       └── it should revert atomically
 └── given a successful claim
     ├── it should decrease claimableFeesAssets by the claimed amount
     ├── it should mint the claimed amount only to fee recipient

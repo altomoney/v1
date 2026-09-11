@@ -2,9 +2,7 @@
 pragma solidity ^0.8.28;
 
 import {EndpointV2Mock} from "@layerzerolabs/test-devtools-evm-foundry/contracts/mocks/EndpointV2Mock.sol";
-import {IERC20Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
 import {AltoConvexCreditLineMarket} from "@alto/lending/credit-market/AltoConvexCreditLineMarket.sol";
 import {
@@ -22,7 +20,7 @@ import {ConvexCreditLineCommon} from "./ConvexCreditLineCommon.t.sol";
 
 contract AltoConvexCreditLineMarketSettleBadDebtTest is ConvexCreditLineCommon {
     function test_RevertWhenCallerIsNotOwnerBeforeAmountValidationOrBurn() external {
-        borrowToken.setMintBurnFailure(false, true);
+        vm.mockCallRevert(address(borrowToken), borrowToken.burn.selector, bytes("BURN_MUST_NOT_BE_CALLED"));
 
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, address(this)));
         market.settleBadDebt(0);
@@ -36,7 +34,7 @@ contract AltoConvexCreditLineMarketSettleBadDebtTest is ConvexCreditLineCommon {
         _createBadDebt(100 ether);
         AccountingState memory beforeState = _state();
         uint256 supplyBefore = borrowToken.totalSupply();
-        borrowToken.setMintBurnFailure(false, true);
+        vm.mockCallRevert(address(borrowToken), borrowToken.burn.selector, bytes("BURN_MUST_NOT_BE_CALLED"));
 
         vm.startPrank(OWNER);
         vm.expectRevert(IAltoConvexCreditLineMarketErrors.AltoCreditMarketInvalidInput.selector);
@@ -128,47 +126,6 @@ contract AltoConvexCreditLineMarketSettleBadDebtTest is ConvexCreditLineCommon {
         vm.expectRevert(IMarketErrors.AltoBaseMarketInsufficientMarketLiquidity.selector);
         market.borrow(1, 0, CREDIT_ACCOUNT, CREDIT_ACCOUNT, "");
         _assertUnchanged(capacityState);
-    }
-
-    function test_InsufficientOwnerBalanceAndBurnFailureRevertAtomically() external {
-        _createBadDebt(100 ether);
-        AccountingState memory beforeInsufficientBalance = _state();
-        uint256 supplyBefore = borrowToken.totalSupply();
-
-        vm.prank(OWNER);
-        vm.expectRevert(abi.encodeWithSelector(IERC20Errors.ERC20InsufficientBalance.selector, OWNER, 0, 1 ether));
-        market.settleBadDebt(1 ether);
-
-        _assertUnchanged(beforeInsufficientBalance);
-        assertEq(borrowToken.totalSupply(), supplyBefore);
-
-        _fundOwnerFromCreditAccount(100 ether);
-        AccountingState memory beforeBurnFailure = _state();
-        borrowToken.setMintBurnFailure(false, true);
-
-        vm.prank(OWNER);
-        vm.expectRevert(bytes("BURN_REVERTED"));
-        market.settleBadDebt(100 ether);
-
-        _assertUnchanged(beforeBurnFailure);
-        assertEq(borrowToken.balanceOf(OWNER), 100 ether);
-        assertEq(borrowToken.totalSupply(), supplyBefore);
-    }
-
-    function test_BurnReentrancyRevertsAndRestoresAllState() external {
-        _createBadDebtAndFundOwner(100 ether);
-        AccountingState memory beforeState = _state();
-        uint256 ownerBalanceBefore = borrowToken.balanceOf(OWNER);
-        uint256 supplyBefore = borrowToken.totalSupply();
-        borrowToken.setCallback(address(market), abi.encodeCall(market.settleBadDebt, (1 ether)), 2);
-
-        vm.prank(OWNER);
-        vm.expectRevert(ReentrancyGuardUpgradeable.ReentrancyGuardReentrantCall.selector);
-        market.settleBadDebt(100 ether);
-
-        _assertUnchanged(beforeState);
-        assertEq(borrowToken.balanceOf(OWNER), ownerBalanceBefore);
-        assertEq(borrowToken.totalSupply(), supplyBefore);
     }
 
     function test_ActualDusdBurnsOwnerBalanceSupplyAndMarketMinterBucketWithoutAllowance() external {

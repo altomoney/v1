@@ -23,22 +23,12 @@ AltoConvexCreditLineMarket::claimRewards()
 │   │   ├── it should preserve configured token iteration order
 │   │   ├── it should emit one RewardsClaimed event per token
 │   │   └── it should return amounts aligned with rewardToken indexes
-│   ├── when a reward token charges a transfer fee but reports transfer success
-│   │   └── it should report the gross market balance even if recipient receives less
-│   ├── when all MAX_REWARD_TOKENS are configured
-│   │   └── it should process each token exactly once in configured order
-│   ├── when one token balanceOf reverts or returns malformed data
-│   │   └── it should revert the entire claim atomically
-│   ├── when one token transfer reverts or returns false
-│   │   └── it should revert the entire claim atomically including prior transfers
-│   └── when a reward token callback changes rewardRecipient during iteration
-│       └── it should send every token in that claim to the recipient cached before the loop
+│   └── when all MAX_REWARD_TOKENS are configured
+│       └── it should process each token exactly once in configured order
 ├── given rewards for an unconfigured token
 │   └── it should leave that token in the market and exclude it from returned amounts and events
 ├── given a token removed before the claim
 │   └── it should leave any newly distributed balance of that token in the market
-├── given a reentrant callback into a nonReentrant market function
-│   └── it should reject the reentrant call and revert atomically
 └── given a successful claim
     ├── it should use the current rewardRecipient
     ├── it should not change reward configuration

@@ -41,6 +41,35 @@ contract AltoConvexCreditLineMarketInitializeTest is ConvexCreditLineCommon {
         market.initialize(params);
     }
 
+    function test_InitializesUupsAuthorizationAndPreservesStateAcrossUpgrade() external {
+        AccountingState memory beforeState = _state();
+        address creditAccountBefore = market.creditAccount();
+        address boosterBefore = market.convexBooster();
+        address rewardPoolBefore = market.convexRewardPool();
+        AltoConvexCreditLineMarket newImplementation = new AltoConvexCreditLineMarket();
+
+        vm.prank(USER);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, USER));
+        market.upgradeToAndCall(address(newImplementation), "");
+
+        vm.prank(OWNER);
+        market.upgradeToAndCall(address(newImplementation), "");
+
+        assertEq(market.owner(), OWNER);
+        assertEq(market.creditAccount(), creditAccountBefore);
+        assertEq(market.convexBooster(), boosterBefore);
+        assertEq(market.convexRewardPool(), rewardPoolBefore);
+        assertEq(market.foreclosureLtv(), FORECLOSURE_LTV);
+        assertEq(market.creditLimit(), CREDIT_LIMIT);
+        assertEq(market.rewardToken(0), address(primaryRewardToken));
+        assertEq(market.rewardToken(1), address(extraRewardToken));
+        _assertUnchanged(beforeState);
+
+        ConvexCreditLineInitParams memory params = _validInitParams();
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
+        market.initialize(params);
+    }
+
     function test_RevertForInvalidCreditAddresses() external {
         ConvexCreditLineInitParams memory params = _validInitParams();
         AltoConvexCreditLineMarket candidate = _newUninitializedMarket();
@@ -312,26 +341,39 @@ contract AltoConvexCreditLineMarketInitializeTest is ConvexCreditLineCommon {
         candidate.initialize(params);
         Vm.Log[] memory logs = vm.getRecordedLogs();
 
+        uint256 liquidationEngineIndex = type(uint256).max;
         uint256 irmIndex = type(uint256).max;
+        uint256 oracleIndex = type(uint256).max;
+        uint256 maxLtvIndex = type(uint256).max;
+        uint256 feeRecipientIndex = type(uint256).max;
         uint256 foreclosureIndex = type(uint256).max;
         uint256 creditLimitIndex = type(uint256).max;
-        uint256 feeIndex = type(uint256).max;
+        uint256 openingFeeIndex = type(uint256).max;
         uint256 convexIndex = type(uint256).max;
         for (uint256 i; i < logs.length; ++i) {
             if (logs[i].emitter != address(candidate)) continue;
             bytes32 topic = logs[i].topics[0];
+            if (topic == IMarketEvents.SetLiquidationEngine.selector) liquidationEngineIndex = i;
             if (topic == IMarketEvents.SetIrm.selector) irmIndex = i;
+            if (topic == IMarketEvents.SetOracle.selector) oracleIndex = i;
+            if (topic == IMarketEvents.SetMaxLtv.selector) maxLtvIndex = i;
+            if (topic == IMarketEvents.SetFeeRecipient.selector) feeRecipientIndex = i;
             if (topic == IAltoConvexCreditLineMarketEvents.SetForeclosureLtv.selector) foreclosureIndex = i;
             if (topic == IAltoConvexCreditLineMarketEvents.SetCreditLimit.selector) creditLimitIndex = i;
-            if (topic == IAltoConvexCreditLineMarketEvents.SetBorrowOpeningFee.selector) feeIndex = i;
+            if (topic == IAltoConvexCreditLineMarketEvents.SetBorrowOpeningFee.selector) openingFeeIndex = i;
             if (topic == IAltoConvexCreditLineMarketEvents.ConvexConfigured.selector) convexIndex = i;
             assertTrue(topic != IAltoConvexCreditLineMarketEvents.RewardTokenAdded.selector);
         }
 
+        assertLt(liquidationEngineIndex, irmIndex);
         assertLt(irmIndex, foreclosureIndex);
+        assertLt(irmIndex, oracleIndex);
+        assertLt(oracleIndex, maxLtvIndex);
+        assertLt(maxLtvIndex, feeRecipientIndex);
+        assertLt(feeRecipientIndex, foreclosureIndex);
         assertLt(foreclosureIndex, creditLimitIndex);
-        assertLt(creditLimitIndex, feeIndex);
-        assertLt(feeIndex, convexIndex);
+        assertLt(creditLimitIndex, openingFeeIndex);
+        assertLt(openingFeeIndex, convexIndex);
     }
 
     function test_RevertForInvalidInitialRewardList() external {
@@ -405,6 +447,11 @@ contract AltoConvexCreditLineMarketInitializeTest is ConvexCreditLineCommon {
         (uint128 borrowAssets, uint128 borrowShares) = market.totalBorrowed();
         assertEq(borrowAssets, 0);
         assertEq(borrowShares, 0);
+        (uint128 supplyPositionShares, uint128 positionBorrowShares, uint128 positionCollateralAssets) =
+            market.position(CREDIT_ACCOUNT);
+        assertEq(supplyPositionShares, 0);
+        assertEq(positionBorrowShares, 0);
+        assertEq(positionCollateralAssets, 0);
 
         assertEq(market.convexBooster(), address(booster));
         assertEq(market.convexPoolId(), POOL_ID);

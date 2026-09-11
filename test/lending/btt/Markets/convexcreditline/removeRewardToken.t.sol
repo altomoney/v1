@@ -82,6 +82,9 @@ contract AltoConvexCreditLineMarketRemoveRewardTokenTest is ConvexCreditLineComm
         CreditLineMarketCollateralTokenMock third = new CreditLineMarketCollateralTokenMock("Third", "THIRD");
         vm.prank(OWNER);
         market.addRewardToken(address(third));
+        AccountingState memory beforeState = _state();
+        uint256 rewardClaimsBefore = rewardPool.getRewardCalls();
+        third.setTransferBehavior(true, true, 10_000, 0);
 
         vm.expectEmit(address(market));
         emit IAltoConvexCreditLineMarketEvents.RewardTokenRemoved(address(third));
@@ -89,9 +92,16 @@ contract AltoConvexCreditLineMarketRemoveRewardTokenTest is ConvexCreditLineComm
         market.removeRewardToken(address(third));
         _assertRewardTokenCount(2);
         assertEq(market.rewardToken(1), address(extraRewardToken));
+        _assertUnchanged(beforeState);
+        assertEq(rewardPool.getRewardCalls(), rewardClaimsBefore);
 
         vm.prank(OWNER);
         market.addRewardToken(address(third));
+        vm.mockCallRevert(
+            address(extraRewardToken),
+            abi.encodeCall(extraRewardToken.transfer, (REWARD_RECIPIENT, 0)),
+            bytes("TRANSFER_MUST_NOT_BE_CALLED")
+        );
         vm.prank(OWNER);
         market.removeRewardToken(address(extraRewardToken));
         _assertRewardTokenCount(2);
@@ -99,6 +109,8 @@ contract AltoConvexCreditLineMarketRemoveRewardTokenTest is ConvexCreditLineComm
         assertEq(market.rewardToken(1), address(third));
         assertFalse(market.isRewardToken(address(extraRewardToken)));
         assertTrue(market.isRewardToken(address(third)));
+        _assertUnchanged(beforeState);
+        assertEq(rewardPool.getRewardCalls(), rewardClaimsBefore);
     }
 
     function test_RemovedTokenCanBeReaddedAndIsExcludedFromClaims() external {

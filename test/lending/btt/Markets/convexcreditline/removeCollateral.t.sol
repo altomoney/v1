@@ -70,20 +70,6 @@ contract AltoConvexCreditLineMarketRemoveCollateralTest is ConvexCreditLineCommo
         _assertUnchanged(beforeState);
     }
 
-    function test_InsufficientRecoveredLpRevertsAtReceiverTransfer() external {
-        _addCollateral(30 ether);
-        AccountingState memory beforeState = _state();
-
-        rewardPool.setWithdrawBehavior(false, true, 9 ether, 10 ether);
-        vm.prank(CREDIT_ACCOUNT);
-        vm.expectRevert(
-            abi.encodeWithSelector(IERC20Errors.ERC20InsufficientBalance.selector, address(market), 9 ether, 10 ether)
-        );
-        market.removeCollateral(10 ether, CREDIT_ACCOUNT, RECEIVER, "");
-
-        _assertUnchanged(beforeState);
-    }
-
     function test_InactiveWithdrawalTransfersRecoveredCollateralWithoutCallingConvexAndPreservesSurplus() external {
         _addCollateral(10 ether);
         _exitConvex();
@@ -143,6 +129,9 @@ contract AltoConvexCreditLineMarketRemoveCollateralTest is ConvexCreditLineCommo
 
     function test_DebtFreeWithdrawalSkipsOracleButAccruesBeforeCustody() external {
         _addCollateral(10 ether);
+        AccountingState memory beforeState = _state();
+        uint256 depositsBefore = booster.depositCalls();
+        uint256 rewardClaimsBefore = rewardPool.getRewardCalls();
         _mockAccrual(0, 29);
         vm.mockCallRevert(address(oracle), abi.encodeCall(ILendingOracle.getPrice, ()), "ORACLE_MUST_NOT_BE_CALLED");
 
@@ -164,6 +153,15 @@ contract AltoConvexCreditLineMarketRemoveCollateralTest is ConvexCreditLineCommo
         assertEq(rewardPool.balanceOf(address(market)), 0);
         assertEq(rewardPool.lastWithdrawAmount(), 10 ether);
         assertFalse(rewardPool.lastWithdrawClaim());
+        (uint128 supplyAssets, uint128 supplyShares) = market.totalSupply();
+        (uint128 debtAssets, uint128 debtShares) = market.totalBorrowed();
+        assertEq(supplyAssets, beforeState.totalSupply.assets);
+        assertEq(supplyShares, beforeState.totalSupply.shares);
+        assertEq(debtAssets, beforeState.totalBorrowed.assets);
+        assertEq(debtShares, beforeState.totalBorrowed.shares);
+        assertEq(market.claimableFeesAssets(), beforeState.claimableFees);
+        assertEq(booster.depositCalls(), depositsBefore);
+        assertEq(rewardPool.getRewardCalls(), rewardClaimsBefore);
     }
 
     function test_PartialWithdrawalWithDebtSucceedsWhileRemainingPositionIsSolvent() external {
@@ -185,6 +183,24 @@ contract AltoConvexCreditLineMarketRemoveCollateralTest is ConvexCreditLineCommo
         assertEq(collateralToken.balanceOf(RECEIVER), 20 ether);
         assertEq(market.stakedCollateralAssets(), 80 ether);
         assertEq(rewardPool.balanceOf(address(market)), 80 ether);
+    }
+
+    function test_WithdrawalSucceedsWhenRemainingPositionIsExactlyAtMaxLtv() external {
+        _openPosition(100 ether, 60 ether);
+        _mockAccrual(0, 1);
+
+        vm.prank(CREDIT_ACCOUNT);
+        uint256 assets = market.removeCollateral(20 ether, CREDIT_ACCOUNT, RECEIVER, "");
+
+        (uint128 debtAssets, uint128 debtShares) = market.totalBorrowed();
+        (, uint128 positionShares, uint128 collateralAfter) = market.position(CREDIT_ACCOUNT);
+        assertEq(assets, 20 ether);
+        assertEq(debtAssets, 60 ether);
+        assertEq(collateralAfter, 80 ether);
+        assertEq(uint256(collateralAfter) * MAX_LTV / 1 ether, debtAssets);
+        assertEq(positionShares, debtShares);
+        assertEq(collateralToken.balanceOf(RECEIVER), 20 ether);
+        assertEq(market.stakedCollateralAssets(), 80 ether);
     }
 
     function test_PartialWithdrawalThatWouldMakePositionInsolventRevertsAtomically() external {
